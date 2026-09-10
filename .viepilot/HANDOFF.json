@@ -1,58 +1,61 @@
-{
-  "project": "DailyIntelEnglish",
-  "version": "0.1.0",
-  "crystallize_version": "0.8.0",
-  "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_1_in_progress",
-  "current_phase": 1,
-  "tech_stack": {
-    "backend": "Python 3.11+ / FastAPI / Uvicorn",
-    "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
-    "ai": "Google Gemini API (gemini-2.0-flash)",
-    "tts_primary": "OmniVoice (k2-fsa) local GPU",
-    "tts_backup": "Edge TTS (online free)",
-    "tts_offline": "Piper TTS",
-    "audio": "pydub + ffmpeg",
-    "video": "ffmpeg + LivePortrait",
-    "thumbnail": "Pillow + Gemini Vision",
-    "database": "SQLite (aiosqlite)",
-    "storage": "Local filesystem"
-  },
-  "hardware": {
-    "gpu": "NVIDIA RTX 3060",
-    "vram_gb": 12,
-    "os": "Windows"
-  },
-  "phases": {
-    "1": {
-      "name": "Full Feature Build",
-      "days": "1-7",
-      "status": "in_progress",
-      "tasks_done": 0,
-      "tasks_total": 40
-    },
-    "2": {
-      "name": "Testing & Polish",
-      "days": "8-14",
-      "status": "not_started",
-      "tasks_done": 0,
-      "tasks_total": 10
-    },
-    "3": {
-      "name": "Review & Documentation",
-      "days": "15-21",
-      "status": "not_started",
-      "tasks_done": 0,
-      "tasks_total": 6
-    }
-  },
-  "key_decisions": [
-    "Subtitle: burned-in + SRT (both)",
-    "TTS: build own pipeline (OmniVoice primary)",
-    "Thumbnail: Template + AI fill + Manual editor",
-    "Video: Level 3 with Level 2 fallback",
-    "Lips-sync: LivePortrait (primary) > MuseTalk > SadTalker"
-  ],
-  "open_questions": [],
-  "profile_id": "none"
+﻿{
+    "project":  "DailyIntelEnglish",
+    "version":  "0.1.0",
+    "crystallize_version":  "0.8.0",
+    "crystallized_at":  "2026-09-10T07:56:00+07:00",
+    "status":  "phase_1_in_progress",
+    "current_phase":  1,
+    "tech_stack":  {
+                       "backend":  "Python 3.11+ / FastAPI / Uvicorn",
+                       "frontend":  "HTML5 + Vanilla CSS + Vanilla JS",
+                       "ai":  "Google Gemini API (gemini-2.0-flash)",
+                       "tts_primary":  "OmniVoice (k2-fsa) local GPU",
+                       "tts_backup":  "Edge TTS (online free)",
+                       "tts_offline":  "Piper TTS",
+                       "audio":  "pydub + ffmpeg",
+                       "video":  "ffmpeg + LivePortrait",
+                       "thumbnail":  "Pillow + Gemini Vision",
+                       "database":  "SQLite (aiosqlite)",
+                       "storage":  "Local filesystem"
+                   },
+    "hardware":  {
+                     "gpu":  "NVIDIA RTX 3060",
+                     "vram_gb":  12,
+                     "os":  "Windows"
+                 },
+    "phases":  {
+                   "1":  {
+                             "name":  "Full Feature Build",
+                             "days":  "1-7",
+                             "status":  "in_progress",
+                             "tasks_done":  0,
+                             "tasks_total":  40
+                         },
+                   "2":  {
+                             "name":  "Testing \u0026 Polish",
+                             "days":  "8-14",
+                             "status":  "not_started",
+                             "tasks_done":  0,
+                             "tasks_total":  10
+                         },
+                   "3":  {
+                             "name":  "Review \u0026 Documentation",
+                             "days":  "15-21",
+                             "status":  "not_started",
+                             "tasks_done":  0,
+                             "tasks_total":  6
+                         }
+               },
+    "key_decisions":  [
+                          "Subtitle: burned-in + SRT (both)",
+                          "TTS: build own pipeline (OmniVoice primary)",
+                          "Thumbnail: Template + AI fill + Manual editor",
+                          "Video: Level 3 with Level 2 fallback",
+                          "Lips-sync: LivePortrait (primary) \u003e MuseTalk \u003e SadTalker"
+                      ],
+    "open_questions":  [
+
+                       ],
+    "profile_id":  "none",
+    "repository":  "https://github.com/danghoangsqtt-sys/dailyintelenglish"
 }

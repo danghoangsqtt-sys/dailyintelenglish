@@ -1,4 +1,4 @@
-# Changelog — Daily Intel English Studio
+﻿# Changelog â€” Daily Intel English Studio
 
 All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
@@ -16,12 +16,13 @@ Versioning: [SemVer](https://semver.org/)
 
 ---
 
-## [0.1.0] — 2026-09-10
+## [0.1.0] â€” 2026-09-10
 
 ### Added
 - Project initialized
 - `.viepilot/` architecture artifacts created
 - Brainstorm session completed
 
-[Unreleased]: https://github.com/user/DailyIntelEnglish/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/user/DailyIntelEnglish/releases/tag/v0.1.0
+[Unreleased]: https://github.com/danghoangsqtt-sys/dailyintelenglish/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/danghoangsqtt-sys/dailyintelenglish/releases/tag/v0.1.0
+
