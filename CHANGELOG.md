@@ -25,6 +25,16 @@ Versioning: [SemVer](https://semver.org/)
 - Step 1 — Script Config wizard (`/step1`): full form (name, topic, CEFR, duration presets/custom, num_speakers, 10 genres, 10 accents, 6 language-feature toggles, dynamic speaker cards), submitting via `Api.createProject()` with a loading state, double-submit lock, and a friendly-only error banner (raw API errors are logged to console, never shown to the user)
 - Dashboard's "New Project" button now opens `/step1` instead of a placeholder alert
 - A minimal Step 2 entry-point placeholder (`/step2`) that carries the created `project_id`/name — the real Step 2 UI ships in Task 1.4
+- Script prompt templates (`prompts/script/`): 1 Jinja2 base + 10 genre blocks + 6 CEFR blocks, loaded async via `app/core/prompt_loader.py`
+- `ScriptService` (`app/services/script_service.py`): `generate_script()`/`regenerate_line()` via the Gemini REST API (`httpx.AsyncClient`, `responseMimeType=application/json`, exponential backoff 1s→2s→4s on HTTP 429 only), plus persistence (`save_script`/`get_script`/`get_script_line`/`update_script_line`)
+- Step 2 — Script Generation UI (`/step2`, `step2_script.html`/`.js`) replacing the Task 1.3 placeholder: generate, per-line regenerate, click-to-edit with autosave, "Regenerate All", and `GET /api/projects/{id}/script` so a reload/revisit never loses the script
+- `POST .../script/generate` and `PUT .../script` auto-advance a project from `draft` to `script_generated`
+
+### Fixed
+- Step 2 autosave now resyncs script-line ids from the `PUT .../script` response (the save always reissues fresh ids) and serializes overlapping autosaves into one coalesced trailing save instead of firing them concurrently; Regenerate is disabled for the full duration of an in-flight save
+- Step 2 no longer shows the "Generate Script" panel when loading an existing script fails — previously this could invite overwriting a script that actually exists but just failed to load
+- `GEMINI_MODEL` moved off the shut-down `gemini-2.0-flash` to `gemini-3.8-flash` (Google's current default Flash model)
+- Every write to the shared `aiosqlite` connection (create/update/delete project, script generate/regenerate/save) and every read from it (list/get project, `GET .../script`, and the pre-read steps of generate/regenerate/save) now serializes on one connection-wide lock (`app/api/projects.py::_write_transaction` / `_read_transaction`) — closes a HIGH-severity bug where an unrelated concurrent request could interleave into another request's uncommitted transaction and be wiped out by its rollback (dirty/phantom reads and writes). The lock is never held across a Gemini call. `db.commit()` now runs inside the `try` so a commit failure also triggers a rollback
 
 ---
 

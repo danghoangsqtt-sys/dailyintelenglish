@@ -285,6 +285,7 @@ async def save_script(
     project_id: str,
     lines: list[dict],
     known_speaker_ids: set[str] | None = None,
+    commit: bool = True,
 ) -> list[dict]:
     """Replace all script lines for a project (delete + insert) in the given order.
 
@@ -295,6 +296,9 @@ async def save_script(
         known_speaker_ids: If given, every line's speaker_id must be a member —
             used by the PUT /script route to reject edits referencing a
             speaker that doesn't belong to this project.
+        commit: If False, skip the commit — the caller is responsible for
+            committing (or rolling back) as part of a larger transaction
+            (see `app.api.projects`, which also advances project status).
 
     Returns:
         The saved lines, as get_script would return them.
@@ -321,14 +325,24 @@ async def save_script(
                 json.dumps(line.get("language_notes") or {}),
             ),
         )
-    await db.commit()
+    if commit:
+        await db.commit()
     return await get_script(db, project_id)
 
 
 async def update_script_line(
-    db: aiosqlite.Connection, project_id: str, line_id: str, text: str, language_notes: dict
+    db: aiosqlite.Connection,
+    project_id: str,
+    line_id: str,
+    text: str,
+    language_notes: dict,
+    commit: bool = True,
 ) -> dict:
     """Update one script line's text/language_notes in place, preserving its position.
+
+    Args:
+        commit: If False, skip the commit — the caller is responsible for
+            committing (or rolling back) as part of a larger transaction.
 
     Raises:
         NotFoundError: If no such line exists for this project.
@@ -337,7 +351,8 @@ async def update_script_line(
         "UPDATE script_lines SET text = ?, language_notes = ? WHERE id = ? AND project_id = ?",
         (text, json.dumps(language_notes), line_id, project_id),
     )
-    await db.commit()
+    if commit:
+        await db.commit()
     if cursor.rowcount == 0:
         raise NotFoundError(f"Script line {line_id} not found in project {project_id}")
     return await get_script_line(db, project_id, line_id)

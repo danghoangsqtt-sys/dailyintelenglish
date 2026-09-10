@@ -109,12 +109,16 @@ async def list_projects(db: aiosqlite.Connection) -> list[dict]:
     return [dict(row) for row in rows]
 
 
-async def create_project(db: aiosqlite.Connection, config: ScriptConfig) -> dict:
+async def create_project(
+    db: aiosqlite.Connection, config: ScriptConfig, commit: bool = True
+) -> dict:
     """Create a new project and its speakers from a script config.
 
     Args:
         db: Open aiosqlite connection.
         config: Validated Step 1 wizard configuration.
+        commit: If False, skip the commit — the caller is responsible for
+            committing (or rolling back) as part of a larger transaction.
 
     Returns:
         The newly created project, including its speakers.
@@ -154,7 +158,8 @@ async def create_project(db: aiosqlite.Connection, config: ScriptConfig) -> dict
         ),
     )
     await _replace_speakers(db, project_id, config.speakers)
-    await db.commit()
+    if commit:
+        await db.commit()
     return await get_project(db, project_id)
 
 
@@ -190,7 +195,9 @@ async def get_project(db: aiosqlite.Connection, project_id: str) -> dict:
     return project
 
 
-async def update_project(db: aiosqlite.Connection, project_id: str, patch: ProjectUpdate) -> dict:
+async def update_project(
+    db: aiosqlite.Connection, project_id: str, patch: ProjectUpdate, commit: bool = True
+) -> dict:
     """Apply a partial update to a project and bump updated_at (used for auto-save).
 
     `config_json` is recomputed from the merged (current + patched) state on every
@@ -203,6 +210,8 @@ async def update_project(db: aiosqlite.Connection, project_id: str, patch: Proje
         db: Open aiosqlite connection.
         project_id: UUID of the project.
         patch: Fields to change; omitted fields are left untouched.
+        commit: If False, skip the commit — the caller is responsible for
+            committing (or rolling back) as part of a larger transaction.
 
     Returns:
         The updated project.
@@ -243,20 +252,24 @@ async def update_project(db: aiosqlite.Connection, project_id: str, patch: Proje
     if patch.speakers is not None:
         await _replace_speakers(db, project_id, patch.speakers)
 
-    await db.commit()
+    if commit:
+        await db.commit()
     return await get_project(db, project_id)
 
 
-async def delete_project(db: aiosqlite.Connection, project_id: str) -> None:
+async def delete_project(db: aiosqlite.Connection, project_id: str, commit: bool = True) -> None:
     """Delete a project and its cascade-linked rows (speakers, script lines, jobs).
 
     Args:
         db: Open aiosqlite connection.
         project_id: UUID of the project.
+        commit: If False, skip the commit — the caller is responsible for
+            committing (or rolling back) as part of a larger transaction.
 
     Raises:
         NotFoundError: If no project with this id exists.
     """
     await get_project(db, project_id)
     await db.execute("DELETE FROM projects WHERE id = ?", (project_id,))
-    await db.commit()
+    if commit:
+        await db.commit()

@@ -59,7 +59,7 @@ graph TB
     end
 
     subgraph AI["🤖 AI Engines"]
-        GEM[Gemini API\ngemini-2.0-flash]
+        GEM[Gemini API\ngemini-3.8-flash]
         OV[OmniVoice\nLocal GPU RTX 3060]
         ETSS[Edge TTS\nOnline Free]
         PTTS[Piper TTS\nOffline]
@@ -280,6 +280,7 @@ DELETE /api/projects/{id}         # Delete project
 
 ### Script Generation
 ```
+GET    /api/projects/{id}/script             # Get the current script (empty list if not generated yet)
 POST   /api/projects/{id}/script/generate    # Generate script via Gemini
 POST   /api/projects/{id}/script/regenerate  # Regenerate specific segment
 PUT    /api/projects/{id}/script             # Save edited script

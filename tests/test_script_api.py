@@ -5,13 +5,16 @@ are monkeypatched with fakes — no real network calls, no real Gemini API key
 needed.
 """
 
+import asyncio
+
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
 from app.core.exceptions import ScriptGenerationError
 from app.main import app
-from app.services import script_service
+from app.services import project_service, script_service
 from app.services.script_service import LanguageNotesOut, ScriptLineOut
 
 PROJECT_PAYLOAD = {
@@ -330,3 +333,96 @@ def test_generate_script_does_not_touch_status_if_already_past_draft(client, mon
 
     assert second.status_code == 200
     assert client.get(f"/api/projects/{project['id']}").json()["data"]["status"] == "script_generated"
+
+
+# --- FIX2 regression: line ids must be resynced from the save response ---
+
+
+def test_put_script_reissues_fresh_ids_and_invalidates_stale_ones(client, monkeypatch):
+    """save_script always mints new ids (delete+insert) — a client using the pre-save id
+    for a later Regenerate must fail, and using the id from the save response must work.
+    """
+    project = create_project(client)
+    speaker_ids = [s["id"] for s in project["speakers"]]
+    payload = {"lines": [{"speaker_id": speaker_ids[0], "text": "First save."}]}
+
+    first_save = client.put(f"/api/projects/{project['id']}/script", json=payload).json()["data"]
+    stale_id = first_save[0]["id"]
+
+    second_save = client.put(f"/api/projects/{project['id']}/script", json=payload).json()["data"]
+    fresh_id = second_save[0]["id"]
+
+    assert stale_id != fresh_id
+
+    stale_response = client.post(
+        f"/api/projects/{project['id']}/script/regenerate", json={"line_id": stale_id}
+    )
+    assert stale_response.status_code == 404
+
+    async def fake_regenerate_line(project_id, config, line_id_arg, current_text, speaker_id):
+        return ScriptLineOut(id=line_id_arg, speaker_id=speaker_id, text="Regenerated.")
+
+    monkeypatch.setattr(script_service, "regenerate_line", fake_regenerate_line)
+
+    fresh_response = client.post(
+        f"/api/projects/{project['id']}/script/regenerate", json={"line_id": fresh_id}
+    )
+    assert fresh_response.status_code == 200
+    assert fresh_response.json()["data"]["text"] == "Regenerated."
+
+
+# --- FIX2 regression: concurrent saves must not interleave ---
+
+
+async def test_concurrent_script_saves_do_not_interleave(client):
+    """Two overlapping PUT /script requests for the same project must each persist
+    a complete, uncorrupted script — never a row-level mix of both payloads.
+    """
+    project = create_project(client)
+    speaker_ids = [s["id"] for s in project["speakers"]]
+
+    payload_a = {"lines": [{"speaker_id": speaker_ids[0], "text": f"A-{i}"} for i in range(5)]}
+    payload_b = {"lines": [{"speaker_id": speaker_ids[1], "text": f"B-{i}"} for i in range(5)]}
+
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as async_client:
+        responses = await asyncio.gather(
+            async_client.put(f"/api/projects/{project['id']}/script", json=payload_a),
+            async_client.put(f"/api/projects/{project['id']}/script", json=payload_b),
+        )
+
+    assert all(r.status_code == 200 for r in responses)
+
+    final = client.get(f"/api/projects/{project['id']}/script").json()["data"]
+    texts = [line["text"] for line in final]
+
+    assert len(final) == 5
+    assert texts == [f"A-{i}" for i in range(5)] or texts == [f"B-{i}" for i in range(5)]
+
+
+# --- FIX2 regression: script save + status advance roll back together ---
+
+
+def test_generate_script_rolls_back_script_save_if_status_advance_fails(client, monkeypatch):
+    """If advancing the project status fails after the script was written but not yet
+    committed, the whole transaction must roll back — never a persisted script left
+    behind with the project still stuck on `draft`.
+    """
+    project = create_project(client)
+    speaker_ids = [s["id"] for s in project["speakers"]]
+
+    async def fake_generate_script(project_id, config):
+        return [ScriptLineOut(id="line_001", speaker_id=speaker_ids[0], text="Should not persist.")]
+
+    monkeypatch.setattr(script_service, "generate_script", fake_generate_script)
+
+    async def failing_update_project(db, project_id, patch, commit=True):
+        raise RuntimeError("simulated failure advancing status")
+
+    monkeypatch.setattr(project_service, "update_project", failing_update_project)
+
+    with pytest.raises(RuntimeError, match="simulated failure"):
+        client.post(f"/api/projects/{project['id']}/script/generate")
+
+    assert client.get(f"/api/projects/{project['id']}/script").json()["data"] == []
+    assert client.get(f"/api/projects/{project['id']}").json()["data"]["status"] == "draft"

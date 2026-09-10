@@ -149,7 +149,7 @@ Các accent khác nhau ảnh hưởng đến vocabulary choice và expressions:
   "error": null,
   "meta": {
     "processing_time_ms": 1234,
-    "model_used": "gemini-2.0-flash"
+    "model_used": "gemini-3.8-flash"
   }
 }
 ```

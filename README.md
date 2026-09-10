@@ -78,7 +78,7 @@ http://localhost:8000
 
 - **Backend**: Python 3.11+ / FastAPI / Uvicorn / aiosqlite
 - **Frontend**: Vanilla HTML5 / CSS3 / JavaScript
-- **AI**: Google Gemini API (gemini-2.0-flash)
+- **AI**: Google Gemini API (gemini-3.8-flash)
 - **TTS**: OmniVoice (local GPU) + Edge TTS + Piper TTS
 - **Audio**: pydub + ffmpeg
 - **Video**: ffmpeg + LivePortrait (lips-sync)

@@ -11,6 +11,9 @@
     lines: [],
     isGenerating: false,
     regeneratingLineId: null,
+    isSaving: false,
+    saveQueued: false,
+    scriptLoadFailed: false,
   };
 
   function escapeHtml(str) {
@@ -81,12 +84,13 @@
     const idioms = (notes.idioms || []).join(", ") || "—";
     const grammar = notes.grammar_point || "—";
     const isRegenerating = state.regeneratingLineId === line.id;
+    const regenerateDisabled = isRegenerating || state.isSaving;
 
     return `
       <div class="card line-card" data-line-id="${line.id}">
         <div class="line-header">
           <span class="speaker-chip" style="background:${hexToRgba(color, 0.15)}; border-color:${hexToRgba(color, 0.4)}; color:${color};">${escapeHtml(name)}</span>
-          <button class="btn btn-ghost btn-sm" data-action="regenerate" ${isRegenerating ? "disabled" : ""}>
+          <button class="btn btn-ghost btn-sm" data-action="regenerate" ${regenerateDisabled ? "disabled" : ""}>
             ${isRegenerating ? '<span class="spinner spinner-dark"></span> Regenerating…' : "🔄 Regenerate this line"}
           </button>
         </div>
@@ -107,6 +111,15 @@
     const list = document.getElementById("script-list");
     const actions = document.getElementById("script-actions");
 
+    if (state.scriptLoadFailed) {
+      // Loading the existing script failed — never show "Generate", since a
+      // real script may already exist and Generate would silently overwrite it.
+      generatePanel.hidden = true;
+      actions.hidden = true;
+      list.innerHTML = "";
+      return;
+    }
+
     if (state.lines.length === 0) {
       generatePanel.hidden = false;
       actions.hidden = true;
@@ -119,7 +132,33 @@
     list.innerHTML = state.lines.map(lineCardHtml).join("");
   }
 
-  async function autosave() {
+  // Toggles the regenerate buttons' disabled state directly in the DOM (rather than a full
+  // renderScript()) so an in-flight save never wipes out a textarea another line is mid-edit in.
+  function applyIsSavingToDom() {
+    document.querySelectorAll('#script-list [data-action="regenerate"]').forEach((btn) => {
+      const card = btn.closest("[data-line-id]");
+      const isRegenerating = card && state.regeneratingLineId === card.dataset.lineId;
+      btn.disabled = Boolean(isRegenerating) || state.isSaving;
+    });
+  }
+
+  // The PUT /script response carries the server-assigned line ids (save_script always
+  // reissues fresh ids — see app/services/script_service.py), which differ from whatever
+  // ids state.lines/the DOM held before this save. Sync both so a later Regenerate on
+  // this line targets an id that still exists in the database.
+  function syncLineIdsFromServer(saved) {
+    const cards = document.querySelectorAll("#script-list [data-line-id]");
+    state.lines.forEach((line, index) => {
+      const savedLine = saved[index];
+      if (!savedLine || savedLine.id === line.id) return;
+      line.id = savedLine.id;
+      if (cards[index]) cards[index].dataset.lineId = savedLine.id;
+    });
+  }
+
+  async function runAutosave() {
+    state.isSaving = true;
+    applyIsSavingToDom();
     setSaveStatus("Saving…");
     try {
       const payload = state.lines.map((line) => ({
@@ -127,7 +166,8 @@
         text: line.text,
         language_notes: line.language_notes || { collocations: [], idioms: [], grammar_point: "" },
       }));
-      await Api.saveScript(state.projectId, payload);
+      const saved = await Api.saveScript(state.projectId, payload);
+      syncLineIdsFromServer(saved);
       setSaveStatus("Saved");
       setTimeout(() => {
         if (document.getElementById("save-status").textContent === "Saved") setSaveStatus("");
@@ -136,7 +176,24 @@
       console.error("Failed to save script:", err);
       setSaveStatus("");
       showError("We couldn't save your edit. Please try again.");
+    } finally {
+      state.isSaving = false;
+      applyIsSavingToDom();
+      // Coalesce any edits that arrived while this save was in flight into one trailing save,
+      // instead of firing overlapping requests that could race and clobber each other.
+      if (state.saveQueued) {
+        state.saveQueued = false;
+        runAutosave();
+      }
     }
+  }
+
+  function autosave() {
+    if (state.isSaving) {
+      state.saveQueued = true;
+      return;
+    }
+    runAutosave();
   }
 
   function startEdit(textEl) {
@@ -261,8 +318,10 @@
 
     try {
       state.lines = await Api.getScript(state.projectId);
+      state.scriptLoadFailed = false;
     } catch (err) {
       console.error("Failed to load existing script:", err);
+      state.scriptLoadFailed = true;
       showError("We couldn't load the existing script. Please try refreshing.");
     }
     renderScript();

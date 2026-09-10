@@ -1,5 +1,6 @@
 """Shared pytest fixtures — an in-memory database with migrations applied."""
 
+from asyncio import Lock
 from pathlib import Path
 
 import aiosqlite
@@ -19,3 +20,20 @@ async def db() -> aiosqlite.Connection:
     await connection.commit()
     yield connection
     await connection.close()
+
+
+@pytest.fixture(autouse=True)
+def _reset_write_lock():
+    """Give every test a fresh app.api.projects._write_lock.
+
+    asyncio.Lock binds to whichever event loop first calls acquire() on it,
+    and pytest-asyncio hands each test function its own loop (function-scoped
+    by default). Without this, the second test to exercise a write endpoint
+    would fail with "Lock ... is bound to a different event loop" — an
+    artifact of the test runner, never reachable in production where the app
+    has exactly one event loop for its entire lifetime.
+    """
+    from app.api import projects as projects_api
+
+    projects_api._write_lock = Lock()
+    yield

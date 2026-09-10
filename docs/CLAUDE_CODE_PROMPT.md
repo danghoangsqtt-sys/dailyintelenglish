@@ -28,7 +28,7 @@
 |-------|-----------|
 | Backend | Python 3.11+ / FastAPI / Uvicorn |
 | Frontend | Vanilla HTML5 + CSS3 + JavaScript (NO framework) |
-| AI | Google Gemini API (`gemini-2.0-flash`) |
+| AI | Google Gemini API (`gemini-3.8-flash`) |
 | TTS Primary | OmniVoice (k2-fsa) — local GPU RTX 3060 |
 | TTS Backup | Edge TTS (free, online) |
 | TTS Offline | Piper TTS |

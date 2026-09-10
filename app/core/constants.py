@@ -29,7 +29,9 @@ MIN_SPEAKERS = 1
 MAX_SPEAKERS = 6
 
 # Gemini API
-GEMINI_MODEL = "gemini-2.0-flash"
+# gemini-2.0-flash was shut down 2026-06-01; gemini-3.8-flash is Google's current
+# "New Stable" default Flash model (ai.google.dev/gemini-api/docs/models, checked 2026-09-10).
+GEMINI_MODEL = "gemini-3.8-flash"
 GEMINI_MAX_RETRIES = 4
 GEMINI_RETRY_BASE_DELAY = 1.0  # seconds, exponential backoff
 GEMINI_RATE_LIMIT_RPM = 15
