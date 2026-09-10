@@ -1,0 +1,47 @@
+graph TB
+    subgraph Browser["🖥️ Browser (localhost:8000)"]
+        UI[HTML/CSS/JS Frontend]
+        WZ[7-Step Wizard UI]
+    end
+
+    subgraph FastAPI["⚙️ FastAPI Backend"]
+        AR[API Routes]
+        SS[Script Service]
+        TS[TTS Service]
+        AS[Audio Service]
+        VS[Video Service]
+        THS[Thumbnail Service]
+        PS[Project Service]
+        YTS[YouTube Package Service]
+    end
+
+    subgraph AI["🤖 AI Engines"]
+        GEM[Gemini API\ngemini-2.0-flash]
+        OV[OmniVoice\nLocal GPU RTX 3060]
+        ETSS[Edge TTS\nOnline Free]
+        PTTS[Piper TTS\nOffline]
+    end
+
+    subgraph Media["🎬 Media Processing"]
+        FFMP[ffmpeg\nAudio Mix + Video]
+        PDY[pydub\nAudio Manipulation]
+        PIL[Pillow\nThumbnail]
+    end
+
+    subgraph Storage["💾 Local Storage"]
+        DB[(SQLite\nProject DB)]
+        FS[Filesystem\nAudio/Video/Images]
+        ML[Music Library\nUser Background Music]
+    end
+
+    UI --> AR
+    WZ --> AR
+    AR --> SS & TS & AS & VS & THS & PS & YTS
+    SS --> GEM
+    TS --> OV & ETSS & PTTS
+    AS --> FFMP & PDY & ML
+    VS --> FFMP & PIL
+    THS --> GEM & PIL
+    YTS --> GEM
+    PS --> DB
+    AS & VS & THS --> FS

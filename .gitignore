@@ -1,0 +1,48 @@
+# Gitignore — Daily Intel English Studio
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+*.env.local
+
+# Data (runtime — don't commit generated content)
+data/projects/
+data/audio/
+data/video/
+data/thumbnails/
+data/tts_cache/
+
+# Keep music library structure but not files
+data/music_library/*
+!data/music_library/.gitkeep
+
+# AI Models (large binary files)
+models/*
+!models/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# SQLite DB (runtime)
+*.db
+*.sqlite
+*.sqlite3
