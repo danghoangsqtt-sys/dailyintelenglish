@@ -22,9 +22,17 @@ from app.core.exceptions import ValidationError
 
 PROMPTS_DIR = Path(__file__).resolve().parent.parent.parent / "prompts"
 SCRIPT_PROMPTS_DIR = PROMPTS_DIR / "script"
+LEARNING_PROMPTS_DIR = PROMPTS_DIR / "learning"
 
 _env = Environment(
     loader=FileSystemLoader(str(SCRIPT_PROMPTS_DIR)),
+    undefined=StrictUndefined,
+    trim_blocks=True,
+    lstrip_blocks=True,
+)
+
+_learning_env = Environment(
+    loader=FileSystemLoader(str(LEARNING_PROMPTS_DIR)),
     undefined=StrictUndefined,
     trim_blocks=True,
     lstrip_blocks=True,
@@ -124,3 +132,49 @@ async def render_script_prompt(*, genre: str, cefr_level: str, **context: object
             was not supplied in `context`.
     """
     return await asyncio.to_thread(_render_script_prompt_sync, genre=genre, cefr_level=cefr_level, **context)
+
+
+def _render_learning_prompt_sync(
+    *, topic: str, cefr_level: str, genre: str, transcript_text: str
+) -> str:
+    """Blocking: validate cefr_level/genre, then render learning_pack.txt. Runs in a worker thread."""
+    if cefr_level.upper() not in CEFR_LEVELS:
+        raise ValidationError(f"No learning prompt support for CEFR level: {cefr_level!r}")
+    if genre not in GENRES:
+        raise ValidationError(f"No learning prompt support for genre: {genre!r}")
+    try:
+        template = _learning_env.get_template("learning_pack.txt")
+    except TemplateNotFound as exc:
+        raise ValidationError(f"Prompt template not found: {exc}") from exc
+
+    return template.render(
+        topic=topic, cefr_level=cefr_level, genre=genre, transcript_text=transcript_text
+    )
+
+
+async def render_learning_prompt(
+    *, topic: str, cefr_level: str, genre: str, transcript_text: str
+) -> str:
+    """Render the Learning Content generation prompt for one project's script.
+
+    Args:
+        topic: The project's topic.
+        cefr_level: One of app.core.constants.CEFR_LEVELS.
+        genre: One of app.core.constants.GENRES.
+        transcript_text: The full script transcript (all lines joined) that
+            the learning pack must be extracted from.
+
+    Returns:
+        The fully rendered prompt text.
+
+    Raises:
+        ValidationError: If the CEFR level or genre value is not recognized,
+            or the template file is missing.
+    """
+    return await asyncio.to_thread(
+        _render_learning_prompt_sync,
+        topic=topic,
+        cefr_level=cefr_level,
+        genre=genre,
+        transcript_text=transcript_text,
+    )
