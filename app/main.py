@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -65,6 +66,21 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
         content={"success": False, "data": None, "error": exc.message, "meta": {}},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Convert Pydantic request-validation failures into the standard error envelope."""
+    details = [
+        f"{'.'.join(str(part) for part in error['loc'] if part != 'body')}: {error['msg']}"
+        for error in exc.errors()
+    ]
+    return JSONResponse(
+        status_code=422,
+        content={"success": False, "data": None, "error": "; ".join(details), "meta": {}},
     )
 
 

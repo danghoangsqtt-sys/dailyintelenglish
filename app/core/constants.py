@@ -21,6 +21,12 @@ MAX_CONCURRENT_TTS = 2
 TTS_SPEED_MIN = 0.75
 TTS_SPEED_MAX = 1.5
 TTS_SPEED_DEFAULT = 1.0
+TTS_ENGINES = ["omnivoice", "edge_tts", "piper", "google", "azure"]
+
+# Speakers
+GENDERS = ["male", "female", "neutral"]
+MIN_SPEAKERS = 1
+MAX_SPEAKERS = 6
 
 # Gemini API
 GEMINI_MODEL = "gemini-2.0-flash"

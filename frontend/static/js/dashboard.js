@@ -104,10 +104,31 @@
     });
   }
 
+  function setupProjectActions() {
+    document.getElementById("project-grid").addEventListener("click", async (e) => {
+      const button = e.target.closest("[data-action]");
+      if (!button) return;
+      const card = button.closest("[data-id]");
+      const id = card.dataset.id;
+
+      if (button.dataset.action === "delete") {
+        if (!confirm("Delete this project? This cannot be undone.")) return;
+        try {
+          await Api.deleteProject(id);
+          allProjects = allProjects.filter((p) => p.id !== id);
+          render();
+        } catch (err) {
+          alert(`Failed to delete project: ${err.message}`);
+        }
+      }
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     setupFilters();
     setupSearch();
     setupNewProjectButton();
+    setupProjectActions();
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
     loadProjects();
   });
