@@ -44,6 +44,11 @@ const Api = (() => {
         method: "PUT",
         body: JSON.stringify({ lines }),
       }),
+    generateLearningPack: (projectId) =>
+      request(`/api/projects/${projectId}/learning/generate`, { method: "POST" }),
+    getLearningPack: (projectId) => request(`/api/projects/${projectId}/learning`),
+    saveLearningPack: (projectId, pack) =>
+      request(`/api/projects/${projectId}/learning`, { method: "PUT", body: JSON.stringify(pack) }),
     listTtsEngines: () => request("/api/tts/engines"),
     listMusic: () => request("/api/music"),
     health: () => request("/health"),

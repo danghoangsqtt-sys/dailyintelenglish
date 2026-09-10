@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import music, projects, tts
+from app.api import learning, music, projects, tts
 from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.responses import ok
@@ -85,6 +85,7 @@ async def validation_error_handler(
 
 
 app.include_router(projects.router)
+app.include_router(learning.router)
 app.include_router(tts.router)
 app.include_router(music.router)
 
