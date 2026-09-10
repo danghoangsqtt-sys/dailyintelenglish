@@ -110,6 +110,12 @@ async def step2_script() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "pages" / "step2_script.html")
 
 
+@app.get("/step3")
+async def step3_learning() -> FileResponse:
+    """Serve the Step 3 — Learning Content page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step3_learning.html")
+
+
 @app.get("/health")
 async def health() -> dict:
     """Report readiness of the database, ffmpeg, and GPU for the check_dependencies script and UI."""

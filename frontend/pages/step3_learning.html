@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Learning Content — Daily Intel English Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    body { margin: 0; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--surface-border);
+      background: var(--bg-elevated);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 40px 100px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+
+    .page-title {
+      margin: 0 0 6px;
+      font-size: 26px;
+      font-weight: 800;
+    }
+
+    .page-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .save-status {
+      font-size: 12px;
+      color: var(--text-muted);
+      min-height: 16px;
+    }
+
+    #error-banner {
+      padding: 14px 18px;
+      border-radius: 10px;
+      background: rgba(248, 81, 73, 0.1);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .generate-panel {
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .generate-panel p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin: 0 0 20px;
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-top-color: #fff;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+      vertical-align: -2px;
+    }
+
+    .spinner-dark {
+      border: 2px solid var(--surface-border);
+      border-top-color: var(--accent);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .btn[disabled] {
+      opacity: 0.65;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* --- Tabs --- */
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--surface-border);
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      appearance: none;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      font-family: var(--font);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .tab-panel[hidden] {
+      display: none;
+    }
+
+    /* --- Item cards --- */
+
+    .item-card {
+      padding: 18px 20px;
+    }
+
+    .item-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .item-title {
+      font-size: 16px;
+      font-weight: 700;
+      cursor: text;
+      padding: 2px 6px;
+      margin: 0 -6px;
+      border-radius: 6px;
+    }
+
+    .item-title:hover,
+    .field:hover {
+      background: var(--surface);
+    }
+
+    .field {
+      cursor: text;
+      padding: 2px 6px;
+      margin: 0 -6px;
+      border-radius: 6px;
+      outline: none;
+      transition: background 0.15s ease;
+    }
+
+    .field:focus {
+      background: var(--bg-elevated);
+      box-shadow: 0 0 0 1px var(--accent) inset;
+    }
+
+    .field-row {
+      font-size: 14px;
+      line-height: 1.5;
+      margin-top: 4px;
+      color: var(--text);
+    }
+
+    .field-row .field-label {
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-right: 4px;
+    }
+
+    .ipa {
+      font-family: "Courier New", monospace;
+      color: var(--info);
+    }
+
+    .example-sentence {
+      font-style: italic;
+      color: var(--text-muted);
+    }
+
+    .examples-list {
+      margin: 6px 0 0;
+      padding-left: 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .options-list {
+      margin: 10px 0 0;
+      padding-left: 20px;
+      font-size: 14px;
+    }
+
+    .options-list li.correct {
+      color: var(--success);
+      font-weight: 700;
+    }
+
+    .quiz-answer {
+      margin-top: 12px;
+      padding: 12px 14px;
+      background: var(--surface);
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .quiz-answer[hidden] {
+      display: none;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .content-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--surface-border);
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">🎙️ Daily Intel English Studio</div>
+    <div class="topbar-actions">
+      <a href="/" class="btn btn-ghost btn-sm">← Dashboard</a>
+      <button id="theme-toggle" class="icon-toggle" aria-label="Toggle dark/light mode">☀️</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title" id="project-name">Loading…</h1>
+        <div class="page-badges" id="project-badges"></div>
+      </div>
+      <div class="save-status" id="save-status"></div>
+    </div>
+
+    <div id="error-banner" hidden></div>
+
+    <section id="generate-panel" class="card generate-panel" hidden>
+      <p>No learning content yet for this project. Generate a pack with AI from the script.</p>
+      <button id="generate-btn" class="btn btn-primary">✨ Generate Learning Pack</button>
+    </section>
+
+    <div id="content-wrap" hidden>
+      <div class="tabs" id="content-tabs">
+        <button class="tab-btn active" data-tab="vocabulary">📚 Vocabulary</button>
+        <button class="tab-btn" data-tab="idioms">💬 Idioms</button>
+        <button class="tab-btn" data-tab="grammar">🔍 Grammar</button>
+        <button class="tab-btn" data-tab="quiz">❓ Quiz</button>
+      </div>
+
+      <section class="tab-panel" id="vocabulary-panel" data-tab-panel="vocabulary"></section>
+      <section class="tab-panel" id="idioms-panel" data-tab-panel="idioms" hidden></section>
+      <section class="tab-panel" id="grammar-panel" data-tab-panel="grammar" hidden></section>
+      <section class="tab-panel" id="quiz-panel" data-tab-panel="quiz" hidden></section>
+
+      <div class="content-actions">
+        <button id="regenerate-btn" class="btn btn-ghost">🔄 Regenerate Pack</button>
+        <button id="next-step-btn" class="btn btn-primary">Next: TTS Audio Studio →</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/step3_learning.js"></script>
+</body>
+</html>

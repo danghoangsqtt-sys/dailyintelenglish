@@ -11,7 +11,7 @@
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
-| Phase 1 — Build | 🔄 In Progress | 11 | 40 |
+| Phase 1 — Build | 🔄 In Progress | 12 | 40 |
 | Phase 2 — Testing | ⏳ Not Started | 0 | 10 |
 | Phase 3 — Review | ⏳ Not Started | 0 | 6 |
 
@@ -44,7 +44,7 @@
 ### 1.5 Learning Content
 - [x] Prompt templates — `prompts/learning/learning_pack.txt`, rendered async via `app/core/prompt_loader.py`
 - [x] LearningContentService — `app/services/learning_service.py` (Gemini REST via `httpx.AsyncClient`, `gemini-3.8-flash`, 429 backoff 1s→2s→4s, Pydantic schema validation `LearningPackOut`, SQLite persistence `learning_contents` table with UPSERT and `commit` parameter). 20 tests. **Committed** (`b06eb07`).
-- [ ] Learning Content UI
+- [x] Learning Content UI — `frontend/pages/step3_learning.html` + `step3_learning.js` + route `/step3` in `app/main.py`: 4 tabs (Vocabulary with IPA/PoS/definitions, Idioms, Grammar, Quiz with answer toggle), Coalesced Trailing Autosave with dirty-sections queue, Regenerate Pack confirm dialog, and Next Step navigation to `/step4`. 196 tests pass.
 
 ### 1.6 TTS Audio Studio
 - [ ] TTSService — OmniVoice
