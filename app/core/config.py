@@ -9,7 +9,10 @@ class Settings(BaseSettings):
     """Central application configuration.
 
     Values are read from the process environment first, falling back to
-    a `.env` file in the project root.
+    a `.env` file in the project root. All variables are namespaced under
+    the `DIE_` prefix (e.g. `DIE_DEBUG`, `DIE_APP_PORT`) so generic system
+    env vars of the same bare name (`DEBUG`, `APP_HOST`, ...) are never
+    picked up and can't crash startup with a bad type (e.g. `DEBUG=release`).
     """
 
     GEMINI_API_KEY: str = ""
@@ -29,7 +32,12 @@ class Settings(BaseSettings):
     AZURE_TTS_API_KEY: str = ""
     AZURE_TTS_REGION: str = "eastus"
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_prefix="DIE_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     @property
     def db_path(self) -> Path:

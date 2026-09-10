@@ -9,6 +9,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app.core.config import settings  # noqa: E402
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MIN_PYTHON = (3, 11)
 REQUIRED_DATA_DIRS = [
@@ -28,18 +32,21 @@ def check_python_version() -> tuple[bool, str]:
 
 
 def check_ffmpeg() -> tuple[bool, str]:
-    """Verify ffmpeg is installed and runnable from PATH."""
-    ffmpeg_path = shutil.which("ffmpeg")
-    if ffmpeg_path is None:
-        return False, "ffmpeg not found in PATH"
+    """Verify the configured ffmpeg binary (settings.FFMPEG_PATH) is installed and runnable.
+
+    Mirrors the resolution logic in app.core.system_checks.check_ffmpeg so both
+    the startup check and this CLI script agree on which binary is actually used.
+    """
+    configured = settings.FFMPEG_PATH
+    ffmpeg_path = shutil.which(configured) or configured
     try:
         result = subprocess.run(
             [ffmpeg_path, "-version"], capture_output=True, text=True, timeout=10
         )
         version_line = result.stdout.splitlines()[0] if result.stdout else ffmpeg_path
         return result.returncode == 0, version_line
-    except (subprocess.SubprocessError, OSError) as exc:
-        return False, f"ffmpeg found but failed to run: {exc}"
+    except (subprocess.SubprocessError, OSError):
+        return False, f"'{configured}' not found in PATH (DIE_FFMPEG_PATH)"
 
 
 def check_gpu() -> tuple[bool, str]:
@@ -62,19 +69,34 @@ def check_gpu() -> tuple[bool, str]:
         return False, f"nvidia-smi found but failed to run: {exc}"
 
 
+PLACEHOLDER_API_KEY = "your_gemini_api_key_here"
+
+
 def check_env_file() -> tuple[bool, str]:
-    """Verify .env exists and GEMINI_API_KEY is set to a non-placeholder value."""
-    env_path = PROJECT_ROOT / ".env"
-    if not env_path.exists():
-        return False, ".env file not found (copy .env.example to .env)"
-    content = env_path.read_text(encoding="utf-8")
-    for line in content.splitlines():
-        if line.strip().startswith("GEMINI_API_KEY="):
-            value = line.split("=", 1)[1].strip()
-            if value and value != "your_gemini_api_key_here":
-                return True, "GEMINI_API_KEY is set"
-            return False, "GEMINI_API_KEY is empty or still a placeholder"
-    return False, "GEMINI_API_KEY not found in .env"
+    """Verify DIE_GEMINI_API_KEY resolves to a real value via settings.
+
+    settings.GEMINI_API_KEY already reflects the process environment first,
+    falling back to `.env` (see app.core.config.Settings), so this checks the
+    same source of truth the app itself uses instead of re-parsing `.env`.
+    """
+    api_key = settings.GEMINI_API_KEY
+    if api_key and api_key != PLACEHOLDER_API_KEY:
+        return True, "DIE_GEMINI_API_KEY is set"
+    if not (PROJECT_ROOT / ".env").exists():
+        return False, "DIE_GEMINI_API_KEY not set (no env var, and .env not found — copy .env.example to .env)"
+    return False, "DIE_GEMINI_API_KEY is empty or still a placeholder"
+
+
+def check_omnivoice_model() -> tuple[bool, str]:
+    """Verify the OmniVoice model directory exists and is non-empty."""
+    model_path = settings.OMNIVOICE_MODEL_PATH
+    if not model_path.is_absolute():
+        model_path = PROJECT_ROOT / model_path
+    if not model_path.exists():
+        return False, f"model path not found: {model_path}"
+    if not any(model_path.iterdir()):
+        return False, f"model path is empty: {model_path}"
+    return True, f"model files present at {model_path}"
 
 
 def check_data_dirs() -> tuple[bool, str]:
@@ -97,6 +119,7 @@ def main() -> int:
         ("ffmpeg", check_ffmpeg),
         ("NVIDIA GPU", check_gpu),
         (".env / GEMINI_API_KEY", check_env_file),
+        ("OmniVoice model", check_omnivoice_model),
         ("data/ directories", check_data_dirs),
     ]
 
