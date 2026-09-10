@@ -28,7 +28,7 @@
                              "name":  "Full Feature Build",
                              "days":  "1-7",
                              "status":  "in_progress",
-                             "tasks_done":  0,
+                             "tasks_done":  6,
                              "tasks_total":  40
                          },
                    "2":  {
@@ -51,7 +51,10 @@
                           "TTS: build own pipeline (OmniVoice primary)",
                           "Thumbnail: Template + AI fill + Manual editor",
                           "Video: Level 3 with Level 2 fallback",
-                          "Lips-sync: LivePortrait (primary) \u003e MuseTalk \u003e SadTalker"
+                          "Lips-sync: LivePortrait (primary) \u003e MuseTalk \u003e SadTalker",
+                          "All env vars namespaced under DIE_ prefix to avoid collisions with system env vars",
+                          "ProjectUpdate rejects explicit null, num_speakers/speakers change atomically, status advances one step at a time only",
+                          "config_json recomputed from merged state on every project update, not only at creation"
                       ],
     "open_questions":  [
 

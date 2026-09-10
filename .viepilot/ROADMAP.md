@@ -14,48 +14,48 @@
 
 ### 1.1 Project Setup & Infrastructure
 
-- [ ] **Setup Python environment**
+- [x] **Setup Python environment**
   - `python -m venv venv` + `pip install fastapi uvicorn pydub aiosqlite python-dotenv pillow jinja2 httpx`
   - Verify: `uvicorn app.main:app --reload` starts without error
   
-- [ ] **Directory structure creation**
+- [x] **Directory structure creation**
   - Tạo đầy đủ: `app/`, `frontend/`, `data/`, `prompts/`, `models/`, `tests/`
   - Verify: all dirs exist
 
-- [ ] **FastAPI app skeleton**
+- [x] **FastAPI app skeleton**
   - `app/main.py` với CORS, lifespan, routers mount
-  - `app/core/config.py` — Settings (DATA_DIR, GEMINI_API_KEY, etc.)
+  - `app/core/config.py` — Settings (DATA_DIR, GEMINI_API_KEY, etc.), namespaced under `DIE_` prefix
   - `app/core/constants.py` — Magic numbers
   - Verify: `GET /health` returns 200
 
-- [ ] **SQLite setup (aiosqlite)**
+- [x] **SQLite setup (aiosqlite)**
   - `app/db/init.sql` — projects, speakers, scripts, audio_jobs tables
   - `app/db/database.py` — async connection pool
   - Verify: DB created on startup
 
 - [ ] **Verify ffmpeg & OmniVoice**
   - `scripts/check_dependencies.py` — check ffmpeg, OmniVoice model, GPU
-  - Verify: script reports all GREEN
+  - Verify: script reports all GREEN — **not yet**: ffmpeg not on PATH, `.env`/`DIE_GEMINI_API_KEY` not set, OmniVoice model not downloaded on this machine (see TRACKER Known Issues). Script logic itself is done and tested, but the task's verify condition (all-GREEN) is not met.
 
 ### 1.2 Dashboard & Project Management
 
-- [ ] **ProjectService CRUD**
+- [x] **ProjectService CRUD**
   - `app/services/project_service.py` — create, get, list, update, delete, auto-save
-  - Verify: unit tests pass for all CRUD
+  - Verify: unit tests pass for all CRUD — 30 automated tests (service-level + full HTTP via TestClient) pass; includes validation, atomic speaker updates, config_json sync, and forward-only status transitions
 
 - [ ] **Dashboard UI** (`frontend/pages/dashboard.html`)
   - Project cards grid với status badges
   - "New Project" button → Step 1 wizard
   - Search + filter (by CEFR, genre, status)
   - Dark/Light mode toggle
-  - Verify: Dashboard loads, shows empty state, new project button works
+  - Verify: Dashboard loads, shows empty state, new project button works — **not yet**: "New Project" and "Continue" are still placeholders (Step 1 wizard UI not built), no automated UI test
 
 ### 1.3 Step 1 — Script Config Wizard
 
-- [ ] **Config API route** (`app/api/projects.py`)
+- [x] **Config API route** (`app/api/projects.py`)
   - `POST /api/projects` — create with config
   - Pydantic models: `ScriptConfig`, `SpeakerConfig`
-  - Verify: API accepts valid config, rejects invalid CEFR level
+  - Verify: API accepts valid config, rejects invalid CEFR level — tested via `tests/test_projects_api.py`
 
 - [ ] **Script Config UI** (`frontend/pages/step1_config.html`)
   - Form fields: Topic, CEFR level (dropdown), Duration (presets + custom), Num speakers
