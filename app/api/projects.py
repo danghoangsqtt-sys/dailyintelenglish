@@ -14,6 +14,14 @@ from app.services import project_service, script_service
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
+async def _advance_to_script_generated(
+    db: aiosqlite.Connection, project_id: str, project: dict
+) -> None:
+    """Move a draft project to script_generated once it has a persisted script."""
+    if project["status"] == "draft":
+        await project_service.update_project(db, project_id, ProjectUpdate(status="script_generated"))
+
+
 @router.get("")
 async def list_projects(db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """List all projects for the dashboard grid."""
@@ -58,6 +66,15 @@ async def delete_project(project_id: str, db: aiosqlite.Connection = Depends(get
     return ok(None, started_at=started_at)
 
 
+@router.get("/{project_id}/script")
+async def get_script(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Fetch the current script for a project (empty list if not generated yet)."""
+    started_at = time.perf_counter()
+    await project_service.get_project(db, project_id)
+    lines = await script_service.get_script(db, project_id)
+    return ok(lines, started_at=started_at)
+
+
 @router.post("/{project_id}/script/generate")
 async def generate_script(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Generate a full script for a project via Gemini and persist it."""
@@ -65,6 +82,7 @@ async def generate_script(project_id: str, db: aiosqlite.Connection = Depends(ge
     project = await project_service.get_project(db, project_id)
     lines = await script_service.generate_script(project_id, project)
     saved = await script_service.save_script(db, project_id, [line.model_dump() for line in lines])
+    await _advance_to_script_generated(db, project_id, project)
     return ok(saved, started_at=started_at)
 
 
@@ -99,4 +117,5 @@ async def save_script(
         [line.model_dump() for line in payload.lines],
         known_speaker_ids,
     )
+    await _advance_to_script_generated(db, project_id, project)
     return ok(saved, started_at=started_at)

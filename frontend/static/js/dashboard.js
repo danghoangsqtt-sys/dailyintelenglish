@@ -120,6 +120,13 @@
           alert(`Failed to delete project: ${err.message}`);
         }
       }
+
+      if (button.dataset.action === "continue") {
+        const project = allProjects.find((p) => p.id === id);
+        if (project && (project.status === "draft" || project.status === "script_generated")) {
+          window.location.href = `/step2?project_id=${encodeURIComponent(id)}`;
+        }
+      }
     });
   }
 

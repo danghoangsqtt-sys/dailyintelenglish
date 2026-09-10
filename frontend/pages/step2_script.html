@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Script — Daily Intel English Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    body { margin: 0; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--surface-border);
+      background: var(--bg-elevated);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 40px 100px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+
+    .page-title {
+      margin: 0 0 6px;
+      font-size: 26px;
+      font-weight: 800;
+    }
+
+    .page-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .save-status {
+      font-size: 12px;
+      color: var(--text-muted);
+      min-height: 16px;
+    }
+
+    #error-banner {
+      padding: 14px 18px;
+      border-radius: 10px;
+      background: rgba(248, 81, 73, 0.1);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .generate-panel {
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .generate-panel p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin: 0 0 20px;
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-top-color: #fff;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+      vertical-align: -2px;
+    }
+
+    .spinner-dark {
+      border: 2px solid var(--surface-border);
+      border-top-color: var(--accent);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .btn[disabled] {
+      opacity: 0.65;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    #script-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .line-card {
+      padding: 18px 20px;
+    }
+
+    .line-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .speaker-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid;
+    }
+
+    .line-text {
+      font-size: 15px;
+      line-height: 1.5;
+      cursor: text;
+      padding: 4px 6px;
+      margin: 0 -6px;
+      border-radius: 6px;
+      transition: background 0.15s ease;
+    }
+
+    .line-text:hover {
+      background: var(--surface);
+    }
+
+    .line-text textarea {
+      width: 100%;
+      min-height: 60px;
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.5;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--accent);
+      background: var(--bg-elevated);
+      color: var(--text);
+      resize: vertical;
+    }
+
+    .notes-details {
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
+    .notes-details summary {
+      cursor: pointer;
+      color: var(--text-muted);
+      font-weight: 600;
+      user-select: none;
+    }
+
+    .notes-body {
+      margin-top: 8px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      color: var(--text-muted);
+    }
+
+    .notes-body strong {
+      color: var(--text);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .script-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--surface-border);
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">🎙️ Daily Intel English Studio</div>
+    <div class="topbar-actions">
+      <a href="/" class="btn btn-ghost btn-sm">← Dashboard</a>
+      <button id="theme-toggle" class="icon-toggle" aria-label="Toggle dark/light mode">☀️</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title" id="project-name">Loading…</h1>
+        <div class="page-badges" id="project-badges"></div>
+      </div>
+      <div class="save-status" id="save-status"></div>
+    </div>
+
+    <div id="error-banner" hidden></div>
+
+    <section id="generate-panel" class="card generate-panel" hidden>
+      <p>No script yet for this project. Generate one with AI.</p>
+      <button id="generate-btn" class="btn btn-primary">✨ Generate Script</button>
+    </section>
+
+    <div id="script-list"></div>
+
+    <div id="script-actions" class="script-actions" hidden>
+      <button id="regenerate-all-btn" class="btn btn-ghost">🔁 Regenerate All</button>
+      <button id="next-step-btn" class="btn btn-primary">Next: Learning Content →</button>
+    </div>
+  </main>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/step2_script.js"></script>
+</body>
+</html>

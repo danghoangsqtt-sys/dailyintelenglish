@@ -225,3 +225,108 @@ def test_save_script_missing_project_returns_404(client):
 
     assert response.status_code == 404
     _envelope_error(response.json())
+
+
+# --- GET /script ---
+
+
+def test_get_script_returns_empty_list_before_generation(client):
+    project = create_project(client)
+
+    response = client.get(f"/api/projects/{project['id']}/script")
+
+    assert response.status_code == 200
+    body = response.json()
+    _envelope_ok(body)
+    assert body["data"] == []
+
+
+def test_get_script_returns_lines_after_generate(client, monkeypatch):
+    project = create_project(client)
+    speaker_ids = [s["id"] for s in project["speakers"]]
+
+    async def fake_generate_script(project_id, config):
+        return [ScriptLineOut(id="line_001", speaker_id=speaker_ids[0], text="Hello there.")]
+
+    monkeypatch.setattr(script_service, "generate_script", fake_generate_script)
+    client.post(f"/api/projects/{project['id']}/script/generate")
+
+    response = client.get(f"/api/projects/{project['id']}/script")
+
+    assert response.status_code == 200
+    body = response.json()
+    _envelope_ok(body)
+    assert len(body["data"]) == 1
+    assert body["data"][0]["text"] == "Hello there."
+
+
+def test_get_script_returns_lines_after_put_save(client):
+    project = create_project(client)
+    speaker_ids = [s["id"] for s in project["speakers"]]
+    payload = {"lines": [{"speaker_id": speaker_ids[0], "text": "Saved directly."}]}
+
+    client.put(f"/api/projects/{project['id']}/script", json=payload)
+    response = client.get(f"/api/projects/{project['id']}/script")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["data"][0]["text"] == "Saved directly."
+
+
+def test_get_script_missing_project_returns_404(client):
+    response = client.get("/api/projects/does-not-exist/script")
+
+    assert response.status_code == 404
+    _envelope_error(response.json())
+
+
+# --- status transition draft -> script_generated ---
+
+
+def test_generate_script_advances_status_from_draft(client, monkeypatch):
+    project = create_project(client)
+    assert project["status"] == "draft"
+    speaker_ids = [s["id"] for s in project["speakers"]]
+
+    async def fake_generate_script(project_id, config):
+        return [ScriptLineOut(id="line_001", speaker_id=speaker_ids[0], text="Hello there.")]
+
+    monkeypatch.setattr(script_service, "generate_script", fake_generate_script)
+    client.post(f"/api/projects/{project['id']}/script/generate")
+
+    response = client.get(f"/api/projects/{project['id']}")
+
+    assert response.json()["data"]["status"] == "script_generated"
+
+
+def test_save_script_advances_status_from_draft(client):
+    project = create_project(client)
+    assert project["status"] == "draft"
+    speaker_ids = [s["id"] for s in project["speakers"]]
+    payload = {"lines": [{"speaker_id": speaker_ids[0], "text": "Saved directly."}]}
+
+    client.put(f"/api/projects/{project['id']}/script", json=payload)
+    response = client.get(f"/api/projects/{project['id']}")
+
+    assert response.json()["data"]["status"] == "script_generated"
+
+
+def test_generate_script_does_not_touch_status_if_already_past_draft(client, monkeypatch):
+    project = create_project(client)
+    speaker_ids = [s["id"] for s in project["speakers"]]
+
+    async def fake_generate_script(project_id, config):
+        return [ScriptLineOut(id="line_001", speaker_id=speaker_ids[0], text="First pass.")]
+
+    monkeypatch.setattr(script_service, "generate_script", fake_generate_script)
+    client.post(f"/api/projects/{project['id']}/script/generate")
+    assert client.get(f"/api/projects/{project['id']}").json()["data"]["status"] == "script_generated"
+
+    async def fake_generate_script_again(project_id, config):
+        return [ScriptLineOut(id="line_001", speaker_id=speaker_ids[0], text="Second pass.")]
+
+    monkeypatch.setattr(script_service, "generate_script", fake_generate_script_again)
+    second = client.post(f"/api/projects/{project['id']}/script/generate")
+
+    assert second.status_code == 200
+    assert client.get(f"/api/projects/{project['id']}").json()["data"]["status"] == "script_generated"

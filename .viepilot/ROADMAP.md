@@ -78,12 +78,12 @@
   - Retry with backoff on Gemini rate limit (1s → 2s → 4s, HTTP 429 only)
   - Verify: 22 automated tests (mocked Gemini) — success, retry/backoff, non-429 no-retry, invalid JSON, schema failure, hallucinated/non-UUID speaker_id rejected, missing API key. Exposed via `POST/PUT` routes in `app/api/projects.py` (`app/models/script.py`), all errors routed through the existing global `AppError` handler
 
-- [ ] **Script Generation UI** (`frontend/pages/step2_script.html`)
+- [x] **Script Generation UI** (`frontend/pages/step2_script.html`)
   - "Generate" button → progress spinner → script display
   - Script viewer: each line as card (speaker chip, text, language notes expandable)
   - Inline text editor for each line
   - "Re-generate this line" button per line
-  - Verify: generate script, edit a line, re-generate a line — all work
+  - Verify: generate script, edit a line, re-generate a line — all work. Also: loads a persisted script on init (`GET /api/projects/{id}/script`) so it survives reload/revisit, drives `draft → script_generated`, "Regenerate All" (confirm-gated), and Dashboard's "Continue" button. Verified end-to-end in a real headless browser, including an actual SQLite reload check. 7 new API tests, 160 total pass.
 
 ### 1.5 Step 3 — Learning Content
 

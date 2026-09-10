@@ -104,9 +104,9 @@ async def step1_config() -> FileResponse:
 
 
 @app.get("/step2")
-async def step2_entry_point() -> FileResponse:
-    """Serve the Step 2 entry-point placeholder — the real wizard UI ships in Task 1.4."""
-    return FileResponse(FRONTEND_DIR / "pages" / "step2_placeholder.html")
+async def step2_script() -> FileResponse:
+    """Serve the Step 2 — AI Script Generation page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step2_script.html")
 
 
 @app.get("/health")
