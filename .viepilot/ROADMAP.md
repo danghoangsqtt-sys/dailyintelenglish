@@ -66,17 +66,17 @@
 
 ### 1.4 Step 2 — AI Script Generation
 
-- [ ] **Prompt templates** (`prompts/script/`)
+- [x] **Prompt templates** (`prompts/script/`)
   - Base template: `script_base.txt`
   - Per-genre: `debate.txt`, `instructions.txt`, `interview.txt`, `small_talk.txt`, etc. (10 files)
   - CEFR constraint blocks: `cefr_a1.txt` → `cefr_c2.txt`
-  - Verify: prompts load via Jinja2, variables inject correctly
+  - Verify: prompts load via Jinja2, variables inject correctly — 101 automated tests, incl. solo-speaker mode, duplicate-name/UUID disambiguation, CEFR-ceiling-vs-toggle precedence, and path-traversal rejection
 
-- [ ] **ScriptService** (`app/services/script_service.py`)
-  - `generate_script(project_id, config)` → calls Gemini, parses JSON response
-  - `regenerate_segment(project_id, line_id)` → re-generates single line
-  - Retry with backoff on Gemini rate limit
-  - Verify: generates valid JSON script for each genre × CEFR combination (sample: 3 pairs)
+- [x] **ScriptService** (`app/services/script_service.py`)
+  - `generate_script(project_id, config)` → calls Gemini (REST via httpx, not the SDK), parses JSON response
+  - `regenerate_line(project_id, config, line_id, current_text, speaker_id)` → re-generates single line
+  - Retry with backoff on Gemini rate limit (1s → 2s → 4s, HTTP 429 only)
+  - Verify: 22 automated tests (mocked Gemini) — success, retry/backoff, non-429 no-retry, invalid JSON, schema failure, hallucinated/non-UUID speaker_id rejected, missing API key. Exposed via `POST/PUT` routes in `app/api/projects.py` (`app/models/script.py`), all errors routed through the existing global `AppError` handler
 
 - [ ] **Script Generation UI** (`frontend/pages/step2_script.html`)
   - "Generate" button → progress spinner → script display
