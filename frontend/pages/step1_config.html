@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>New Project — Daily Intel English Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    body { margin: 0; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--surface-border);
+      background: var(--bg-elevated);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 40px 100px;
+    }
+
+    .page-title {
+      margin: 0 0 6px;
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    .page-subtitle {
+      margin: 0 0 32px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    fieldset {
+      border: none;
+      margin: 0 0 32px;
+      padding: 0;
+    }
+
+    .section-card {
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      margin: 0 0 4px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .section-hint {
+      margin: 0 0 18px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    label.field-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-muted);
+    }
+
+    .field-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .field {
+      flex: 1;
+      min-width: 200px;
+      margin-bottom: 16px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--surface-border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px;
+      font-family: var(--font);
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--surface-border-hover);
+    }
+
+    .chip-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--surface-border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+    }
+
+    .chip:hover {
+      border-color: var(--surface-border-hover);
+    }
+
+    .chip[aria-pressed="true"] {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .preset-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .preset-btn {
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--surface-border);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .preset-btn[aria-pressed="true"] {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .toggle-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--surface-border);
+      background: var(--surface);
+    }
+
+    .toggle-row span {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .switch-track {
+      position: absolute;
+      inset: 0;
+      background: var(--surface-border);
+      border-radius: 999px;
+      transition: background 0.15s ease;
+      cursor: pointer;
+    }
+
+    .switch-track::before {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.15s ease;
+    }
+
+    .switch input:checked + .switch-track {
+      background: var(--accent);
+    }
+
+    .switch input:checked + .switch-track::before {
+      transform: translateX(18px);
+    }
+
+    #speaker-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .speaker-card {
+      padding: 16px;
+    }
+
+    .speaker-card .field-label {
+      margin-top: 10px;
+    }
+
+    .speaker-card .field-label:first-child {
+      margin-top: 0;
+    }
+
+    #error-banner {
+      padding: 14px 18px;
+      border-radius: 10px;
+      background: rgba(248, 81, 73, 0.1);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .form-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-top-color: #fff;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .btn[disabled] {
+      opacity: 0.65;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">🎙️ Daily Intel English Studio</div>
+    <div class="topbar-actions">
+      <a href="/" class="btn btn-ghost btn-sm">← Dashboard</a>
+      <button id="theme-toggle" class="icon-toggle" aria-label="Toggle dark/light mode">☀️</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <h1 class="page-title">Step 1 — Project Configuration</h1>
+    <p class="page-subtitle">Set up the topic, level, speakers, and language focus for your new episode.</p>
+
+    <div id="error-banner" hidden></div>
+
+    <form id="config-form" novalidate>
+      <section class="card section-card">
+        <h2 class="section-title">Basics</h2>
+        <p class="section-hint">What is this episode about?</p>
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label" for="name">Project Name</label>
+            <input type="text" id="name" name="name" placeholder="e.g. AI in Daily Life" maxlength="200" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="topic">Topic</label>
+            <input type="text" id="topic" name="topic" placeholder="e.g. How AI assistants are changing daily routines" maxlength="500" />
+          </div>
+        </div>
+      </section>
+
+      <section class="card section-card">
+        <h2 class="section-title">Level &amp; Duration</h2>
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label" for="cefr">CEFR Level</label>
+            <select id="cefr" name="cefr"></select>
+          </div>
+          <div class="field">
+            <label class="field-label">Duration</label>
+            <div id="duration-presets" class="preset-row"></div>
+            <input type="number" id="duration-custom" min="0.5" step="0.5" placeholder="Custom minutes" hidden />
+          </div>
+        </div>
+      </section>
+
+      <section class="card section-card">
+        <h2 class="section-title">Speakers</h2>
+        <p class="section-hint">Number of speakers determines how many voice cards appear below.</p>
+        <div class="field" style="max-width: 200px;">
+          <label class="field-label" for="num-speakers">Number of Speakers</label>
+          <input type="number" id="num-speakers" name="num_speakers" min="1" max="6" step="1" value="2" />
+        </div>
+        <div id="speaker-grid"></div>
+      </section>
+
+      <section class="card section-card">
+        <h2 class="section-title">Genre</h2>
+        <div id="genre-grid" class="chip-grid" role="group" aria-label="Genre"></div>
+      </section>
+
+      <section class="card section-card">
+        <h2 class="section-title">Accent</h2>
+        <p class="section-hint">Overall narration accent for the episode.</p>
+        <div id="accent-grid" class="chip-grid" role="group" aria-label="Accent"></div>
+      </section>
+
+      <section class="card section-card">
+        <h2 class="section-title">Language Features</h2>
+        <p class="section-hint">Toggle which language phenomena the script should emphasize.</p>
+        <div id="language-features" class="toggle-list"></div>
+      </section>
+
+      <div class="form-actions">
+        <a href="/" class="btn btn-ghost">Cancel</a>
+        <button type="submit" id="submit-btn" class="btn btn-primary">Create Project</button>
+      </div>
+    </form>
+  </main>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/step1_config.js"></script>
+</body>
+</html>

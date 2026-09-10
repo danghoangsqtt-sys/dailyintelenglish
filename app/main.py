@@ -97,6 +97,18 @@ async def root() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "pages" / "dashboard.html")
 
 
+@app.get("/step1")
+async def step1_config() -> FileResponse:
+    """Serve the Step 1 — Script Config wizard."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step1_config.html")
+
+
+@app.get("/step2")
+async def step2_entry_point() -> FileResponse:
+    """Serve the Step 2 entry-point placeholder — the real wizard UI ships in Task 1.4."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step2_placeholder.html")
+
+
 @app.get("/health")
 async def health() -> dict:
     """Report readiness of the database, ffmpeg, and GPU for the check_dependencies script and UI."""

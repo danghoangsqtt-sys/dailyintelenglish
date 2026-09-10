@@ -99,8 +99,7 @@
 
   function setupNewProjectButton() {
     document.getElementById("new-project-btn").addEventListener("click", () => {
-      // Step 1 Config Wizard ships in Task 1.3 — placeholder until that route exists.
-      alert("The New Project wizard is coming up next (Task 1.3).");
+      window.location.href = "/step1";
     });
   }
 
