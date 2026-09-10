@@ -28,7 +28,7 @@
                              "name":  "Full Feature Build",
                              "days":  "1-7",
                              "status":  "in_progress",
-                             "tasks_done":  6,
+                             "tasks_done":  7,
                              "tasks_total":  40
                          },
                    "2":  {
@@ -54,7 +54,9 @@
                           "Lips-sync: LivePortrait (primary) \u003e MuseTalk \u003e SadTalker",
                           "All env vars namespaced under DIE_ prefix to avoid collisions with system env vars",
                           "ProjectUpdate rejects explicit null, num_speakers/speakers change atomically, status advances one step at a time only",
-                          "config_json recomputed from merged state on every project update, not only at creation"
+                          "config_json recomputed from merged state on every project update, not only at creation",
+                          "Task 1.3 closed: Script Config UI (step1_config.html/js) live at /step1, submits via Api.createProject only, num_speakers sanitized to an integer 1-6, topic required, API errors shown only as a fixed friendly banner (raw errors to console)",
+                          "Step 2 is a minimal placeholder (/step2) carrying project_id/name only - real UI is Task 1.4"
                       ],
     "open_questions":  [
 

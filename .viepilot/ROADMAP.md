@@ -57,12 +57,12 @@
   - Pydantic models: `ScriptConfig`, `SpeakerConfig`
   - Verify: API accepts valid config, rejects invalid CEFR level — tested via `tests/test_projects_api.py`
 
-- [ ] **Script Config UI** (`frontend/pages/step1_config.html`)
-  - Form fields: Topic, CEFR level (dropdown), Duration (presets + custom), Num speakers
+- [x] **Script Config UI** (`frontend/pages/step1_config.html`)
+  - Form fields: Project Name, Topic (required), CEFR level (dropdown), Duration (presets + custom), Num speakers (integer 1–6, sanitized live)
   - Genre selector (10 options với icon), Accent selector (10 regions + flag)
   - Language features toggles (collocation, idiom, slang, etc.)
-  - Speaker cards: name, gender, accent per speaker
-  - Verify: form saves config, advances to Step 2
+  - Speaker cards: name, gender, accent per speaker — count always kept in sync with `num_speakers`
+  - Verify: form saves config via `POST /api/projects`, advances to the Step 2 entry point (placeholder — full UI is Task 1.4) with the created `project_id` preserved. Verified in a real headless browser (Playwright): dashboard → Step 1 → valid submit → 200 → Step 2 placeholder → project reappears on Dashboard; invalid payload blocks submit client-side (0 requests) with a friendly banner; dark/light mode works. API errors never leak raw backend text into the UI (logged to console instead, per CR-05).
 
 ### 1.4 Step 2 — AI Script Generation
 

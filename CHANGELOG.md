@@ -22,6 +22,9 @@ Versioning: [SemVer](https://semver.org/)
 - All settings namespaced under a `DIE_` env-var prefix, so generic system env vars (e.g. bare `DEBUG`) can no longer crash startup or leak into config
 - `scripts/check_dependencies.py` now checks the configured ffmpeg path and Gemini API key the same way the app itself resolves them (`settings.FFMPEG_PATH`, `settings.GEMINI_API_KEY`), plus a new OmniVoice model directory check
 - `ruff` added as the lint gate; 30 automated tests (`pytest`) covering project CRUD, validation, and dependency-check logic
+- Step 1 — Script Config wizard (`/step1`): full form (name, topic, CEFR, duration presets/custom, num_speakers, 10 genres, 10 accents, 6 language-feature toggles, dynamic speaker cards), submitting via `Api.createProject()` with a loading state, double-submit lock, and a friendly-only error banner (raw API errors are logged to console, never shown to the user)
+- Dashboard's "New Project" button now opens `/step1` instead of a placeholder alert
+- A minimal Step 2 entry-point placeholder (`/step2`) that carries the created `project_id`/name — the real Step 2 UI ships in Task 1.4
 
 ---
 
