@@ -1,4 +1,4 @@
-﻿{
+{
     "project":  "DailyIntelEnglish",
     "version":  "0.1.0",
     "crystallize_version":  "0.8.0",
@@ -28,7 +28,7 @@
                              "name":  "Full Feature Build",
                              "days":  "1-7",
                              "status":  "in_progress",
-                             "tasks_done":  9,
+                             "tasks_done":  11,
                              "tasks_total":  40
                          },
                    "2":  {
@@ -59,7 +59,8 @@
                           "Task 1.4 ScriptService closed: generate_script + regenerate_line + script persistence (save_script/get_script/get_script_line/update_script_line) + 3 API routes (generate/regenerate/PUT script), 153 tests",
                           "Task 1.4 CLOSED: Script Generation UI (step2_script.html/js) replaces the step2 placeholder, loads persisted script via new GET /api/projects/{id}/script, generate/save auto-advance draft->script_generated, Dashboard Continue wired. 160 tests",
                           "1.4D-FIX2 gate CLOSED: step2_script.js autosave resyncs line ids from the PUT response and serializes overlapping saves (coalesced trailing save), Regenerate disabled while a save is in flight, Generate panel stays hidden when the existing script fails to load, script-save+status-advance merged into one transaction with rollback, GEMINI_MODEL moved gemini-2.0-flash (shut down) -> gemini-3.8-flash. 163 tests",
-                          "1.4D-FIX2B gate CLOSED: replaced the FIX2 per-project asyncio.Lock with one connection-wide _write_lock (app/api/projects.py::_write_transaction) applied to every write route (create/update/delete project, script generate/regenerate/save) -- the whole app shares one aiosqlite connection with exactly one implicit transaction at a time, so a per-project lock left cross-request rollback corruption open; db.commit() moved inside the try so a commit failure also rolls back. 165 tests, incl. 2 new deterministic concurrency/rollback regression tests (tests/test_projects_write_lock.py). Not committed -- held pending PM sign-off, Sprint 1.5A still on hold"
+                          "1.4D-FIX2B gate CLOSED: replaced the FIX2 per-project asyncio.Lock with one connection-wide _write_lock (app/api/projects.py::_write_transaction) applied to every write route, 166 tests passed (commit fc7b471)",
+                          "Task 1.5 Sprint 1.5A CLOSED: LearningContentService (gemini-3.8-flash, 429 backoff, schema validation LearningPackOut) + learning_contents DB table (002 migration) + prompt_loader, 186 tests passed (commit b06eb07)"
                       ],
     "open_questions":  [
 

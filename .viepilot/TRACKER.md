@@ -11,7 +11,7 @@
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
-| Phase 1 — Build | 🔄 In Progress | 9 | 40 |
+| Phase 1 — Build | 🔄 In Progress | 11 | 40 |
 | Phase 2 — Testing | ⏳ Not Started | 0 | 10 |
 | Phase 3 — Review | ⏳ Not Started | 0 | 6 |
 
@@ -42,8 +42,8 @@
   - Test count: 160 → 163 (FIX2) → 165 (FIX2B, +2 deterministic concurrency/rollback tests in `tests/test_projects_write_lock.py`). `ruff check` clean, `pytest -x` 165/165, `node --check` clean, browser E2E (Playwright, real Chromium) green both rounds. Not committed — held pending PM sign-off.
 
 ### 1.5 Learning Content
-- [ ] Prompt templates
-- [ ] LearningContentService
+- [x] Prompt templates — `prompts/learning/learning_pack.txt`, rendered async via `app/core/prompt_loader.py`
+- [x] LearningContentService — `app/services/learning_service.py` (Gemini REST via `httpx.AsyncClient`, `gemini-3.8-flash`, 429 backoff 1s→2s→4s, Pydantic schema validation `LearningPackOut`, SQLite persistence `learning_contents` table with UPSERT and `commit` parameter). 20 tests. **Committed** (`b06eb07`).
 - [ ] Learning Content UI
 
 ### 1.6 TTS Audio Studio
