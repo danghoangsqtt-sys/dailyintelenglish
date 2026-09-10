@@ -1,0 +1,18 @@
+Level: C1 (Advanced)
+Vocabulary: use a broad, nuanced vocabulary (~8000 words), including
+lower-frequency words where they are the most precise choice.
+Grammar: full native-level grammar range — inversion, cleft sentences,
+mixed conditionals, and nuanced modal usage are all appropriate.
+Sentence length: long and varied, matching natural native-speaker rhythm.
+Pace: target about 130 words per minute of audio (near-native pace).
+Collocations: ceiling is advanced, precise, field-specific collocations —
+only if the Collocation toggle is enabled below.
+Idioms: ceiling is advanced, nuanced idioms — only if the Idiom toggle is
+enabled below.
+Slang: ceiling is light, contemporary (post-2020) slang, used only where it
+fits the genre and speaker persona — only if the Slang toggle is enabled
+below.
+Phrasal verbs: ceiling is the full native range, including less common ones
+— only if the Phrasal Verbs toggle is enabled below.
+Tone: sophisticated and nuanced, with natural hedging, emphasis, and
+register shifts appropriate to the genre.

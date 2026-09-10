@@ -1,0 +1,19 @@
+Level: B2 (Upper-Intermediate)
+Vocabulary: use the ~4000 most common English words, including abstract and
+opinion-related vocabulary.
+Grammar: complex grammar is expected — all conditionals, passive voice,
+reported speech, a full range of relative and subordinate clauses.
+Sentence length: medium to long, with natural variety and some
+subordination within a single sentence.
+Pace: target about 115 words per minute of audio.
+Collocations: ceiling is a wide range of natural, verifiable collocations,
+including some field-specific ones relevant to the topic — only if the
+Collocation toggle is enabled below.
+Idioms: ceiling is common idioms used naturally — only if the Idiom toggle
+is enabled below.
+Slang: ceiling is none at this level, regardless of the Slang toggle below
+(slang is reserved for C1+).
+Phrasal verbs: ceiling is the full range of common phrasal verbs, including
+three-part ones (e.g. "come up with", "put up with") — only if the Phrasal
+Verbs toggle is enabled below.
+Tone: fluent, nuanced, closer to native-speaker conversational pace.

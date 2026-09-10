@@ -1,0 +1,9 @@
+Structure: one speaker is the interviewer, the other(s) are the guest(s)
+being interviewed about the topic.
+Turn pattern: structured question-and-answer; the interviewer's lines are
+mostly questions or brief follow-ups, the guest's lines are the substantive
+answers.
+Typical turn length: mixed — short questions, longer answers.
+Natural fillers to use sparingly: "Hmm", "Right", "That's a great question.".
+Vary question types (open questions, follow-ups, clarifying questions) rather
+than repeating the same question shape.

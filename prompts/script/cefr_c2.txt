@@ -1,0 +1,20 @@
+Level: C2 (Proficiency)
+Vocabulary: native-like range (16000+ words), including rare, literary, or
+highly specific vocabulary where it is the natural, precise choice.
+Grammar: full native command of grammar, including rare or stylistic
+constructions used by educated native speakers.
+Sentence length: fully natural and varied, exactly as a native speaker would
+structure it, with no simplification.
+Pace: target about 150 words per minute of audio (full native pace).
+Collocations: ceiling is native-level precision, including subtle or
+field-specific collocations a non-native speaker might not know — only if
+the Collocation toggle is enabled below.
+Idioms: ceiling is the full native idiom range, used naturally and
+unexplained — only if the Idiom toggle is enabled below.
+Slang: ceiling is the full native slang range, contemporary (post-2020) —
+only if the Slang toggle is enabled below.
+Phrasal verbs: ceiling is the full native range, including obscure or
+highly colloquial ones where appropriate — only if the Phrasal Verbs toggle
+is enabled below.
+Tone: indistinguishable from a native speaker's natural conversational or
+professional register, exactly matching the genre.

@@ -1,0 +1,16 @@
+Level: A1 (Beginner)
+Vocabulary: use only the ~500 most common English words; avoid rare or
+technical words entirely.
+Grammar: simple sentences only, present simple tense as the default; avoid
+complex clauses, conditionals, and passive voice.
+Sentence length: short (roughly 5-10 words per sentence).
+Pace: target about 80 words per minute of audio.
+Collocations: ceiling is the most basic, high-frequency collocations only
+(e.g. "make a mistake", "have breakfast") — only if the Collocation toggle
+is enabled below.
+Idioms: ceiling is none at this level, regardless of the Idiom toggle below.
+Slang: ceiling is none at this level, regardless of the Slang toggle below.
+Phrasal verbs: ceiling is none at this level, regardless of the Phrasal
+Verbs toggle below.
+Tone: clear, warm, and encouraging; repeat key vocabulary naturally so a
+beginner can follow along.

@@ -1,0 +1,19 @@
+Level: B1 (Intermediate)
+Vocabulary: use the ~2000 most common English words, with occasional
+topic-specific words explained naturally through context.
+Grammar: a full range of common tenses (present, past, present perfect,
+future with "will"/"going to"), plus simple relative clauses and the first
+and second conditional.
+Sentence length: medium (roughly 10-18 words per sentence), with some
+sentence variety.
+Pace: target about 100 words per minute of audio.
+Collocations: ceiling is everyday and moderately advanced collocations,
+verifiable in a standard learner's dictionary — only if the Collocation
+toggle is enabled below.
+Idioms: ceiling is simple, common idioms (e.g. "under the weather",
+"piece of cake") — only if the Idiom toggle is enabled below.
+Slang: ceiling is none at this level, regardless of the Slang toggle below.
+Phrasal verbs: ceiling is both separable and inseparable phrasal verbs if
+common (e.g. "look forward to", "run into") — only if the Phrasal Verbs
+toggle is enabled below.
+Tone: natural and conversational, closer to native pace but still clear.

@@ -1,0 +1,16 @@
+Level: A2 (Elementary)
+Vocabulary: use the ~1000 most common English words; a few slightly less
+common words are fine if the context makes the meaning clear.
+Grammar: simple compound sentences (joined with "and", "but", "so"); past
+simple tense is allowed alongside present simple. Avoid complex subordinate
+clauses and conditionals beyond the simple first conditional.
+Sentence length: short to medium (roughly 8-14 words per sentence).
+Pace: target about 90 words per minute of audio.
+Collocations: ceiling is common, everyday collocations (e.g. "take a break",
+"do homework") — only if the Collocation toggle is enabled below.
+Idioms: ceiling is none at this level, regardless of the Idiom toggle below.
+Slang: ceiling is none at this level, regardless of the Slang toggle below.
+Phrasal verbs: ceiling is simple, separable phrasal verbs
+(e.g. "pick up", "turn on/off") — only if the Phrasal Verbs toggle is
+enabled below.
+Tone: friendly and simple; introduce one new idea at a time.
