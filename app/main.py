@@ -1,0 +1,101 @@
+"""FastAPI application entrypoint for Daily Intel English Studio."""
+
+import time
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+from app.api import music, projects, tts
+from app.core.config import settings
+from app.core.exceptions import AppError
+from app.core.responses import ok
+from app.core.system_checks import check_ffmpeg, get_gpu_info
+from app.db.database import Database, close_db, init_db
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+FRONTEND_DIR = PROJECT_ROOT / "frontend"
+
+app_state: dict = {"ffmpeg_ok": False, "gpu_info": None}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize the database and verify external tooling on startup.
+
+    OmniVoice's model is loaded lazily on first TTS request (Task 1.6),
+    not here — startup should stay fast.
+    """
+    for subdir in (
+        "audio",
+        "music_library",
+        "projects",
+        "thumbnails",
+        "tts_cache",
+        "video",
+    ):
+        (settings.DATA_DIR / subdir).mkdir(parents=True, exist_ok=True)
+
+    await init_db()
+    app_state["ffmpeg_ok"] = await check_ffmpeg()
+    app_state["gpu_info"] = await get_gpu_info()
+
+    yield
+
+    await close_db()
+
+
+app = FastAPI(title="Daily Intel English Studio", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^https?://localhost(:\d+)?$",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.exception_handler(AppError)
+async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+    """Convert typed service exceptions into the standard error envelope."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"success": False, "data": None, "error": exc.message, "meta": {}},
+    )
+
+
+app.include_router(projects.router)
+app.include_router(tts.router)
+app.include_router(music.router)
+
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
+
+
+@app.get("/")
+async def root() -> FileResponse:
+    """Serve the dashboard as the app's landing page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "dashboard.html")
+
+
+@app.get("/health")
+async def health() -> dict:
+    """Report readiness of the database, ffmpeg, and GPU for the check_dependencies script and UI."""
+    started_at = time.perf_counter()
+    db_ok = True
+    try:
+        await Database.instance().connection.execute("SELECT 1")
+    except Exception:
+        db_ok = False
+    return ok(
+        {
+            "status": "ok",
+            "database": db_ok,
+            "ffmpeg": app_state["ffmpeg_ok"],
+            "gpu": app_state["gpu_info"],
+        },
+        started_at=started_at,
+    )
