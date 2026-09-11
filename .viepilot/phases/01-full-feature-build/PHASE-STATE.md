@@ -8,8 +8,8 @@
 - **Current Day:** Day 2 / 21 (2026-09-11)
 - **Target Completion:** 2026-09-17
 - **Milestone Progress:** 4 / 10 major tasks (40%)
-- **Subtask Progress:** 15 / 29 granular subtasks (52%)
-- **Test Suite Status:** 230 passed (218 unit/integration + 5 browser E2E + 7 dashboard browser E2E), 0 failures, ruff clean
+- **Subtask Progress:** 16 / 29 granular subtasks (55%)
+- **Test Suite Status:** 252 passed (218 unit/integration + 5 browser E2E + 7 dashboard browser E2E + 22 TTS unit/API), 0 failures, ruff clean
 
 ---
 
@@ -59,11 +59,17 @@
   - **Evidence:** 20 dedicated service/API tests, 223 total tests passing cleanly (218 unit/integration + 5 browser E2E).
 
 ### Task 1.6: Step 4 — TTS Audio Studio
-- **Status:** 🔄 In Progress (Sub-task 1.6a: Edge-TTS-first vertical slice)
+- **Status:** 🔄 In Progress (Sub-task 1.6a done; 1.6b/1.6c pending)
 - **Details:** Split into sub-tasks since ffmpeg/OmniVoice model are unavailable on this
-  machine (see Known Issues). 1.6a: TTSService line-level synthesis via Edge TTS with an
-  honest OmniVoice-unavailable fallback path, `POST /api/projects/{id}/tts/preview` route.
-  1.6b (AudioService, mixing) and 1.6c (TTS Studio UI) deferred until ffmpeg is installed.
+  machine (see Known Issues).
+  - **1.6a DONE:** `TTSService.synthesize_line()` — Edge TTS synthesis (all 10 accents x
+    3 genders mapped in `EDGE_TTS_VOICE_MAP`, live-verified 20/20), OmniVoice path with
+    `asyncio.Semaphore(2)` and an honest not-yet-available fallback (no model weights on
+    this machine), retry-once-on-empty-audio for a real transient Edge TTS failure found
+    during live testing. Routes: `POST /api/projects/{id}/tts/preview`,
+    `GET /api/projects/{id}/tts/cache/{line_id}.mp3`. 22 new tests, 252 total passing.
+  - **1.6b (AudioService, mixing/normalization) and 1.6c (TTS Studio UI):** deferred until
+    `ffmpeg` is installed on this machine.
 
 ### Task 1.7: Step 5 — Video Studio
 - **Status:** ⏳ Planned

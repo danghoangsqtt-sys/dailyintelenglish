@@ -23,6 +23,23 @@ TTS_SPEED_MAX = 1.5
 TTS_SPEED_DEFAULT = 1.0
 TTS_ENGINES = ["omnivoice", "edge_tts", "piper", "google", "azure"]
 
+# Edge TTS voice map: accent -> gender -> ShortName, verified live against
+# edge_tts.list_voices() on 2026-09-11. "scottish" has no distinct Edge TTS locale,
+# so it falls back to the British (en-GB) voices. Edge TTS has no true gender-neutral
+# neural voice, so "neutral" falls back to that locale's female voice.
+EDGE_TTS_VOICE_MAP: dict[str, dict[str, str]] = {
+    "american": {"male": "en-US-GuyNeural", "female": "en-US-JennyNeural", "neutral": "en-US-AriaNeural"},
+    "british": {"male": "en-GB-RyanNeural", "female": "en-GB-SoniaNeural", "neutral": "en-GB-LibbyNeural"},
+    "australian": {"male": "en-AU-WilliamMultilingualNeural", "female": "en-AU-NatashaNeural", "neutral": "en-AU-NatashaNeural"},
+    "canadian": {"male": "en-CA-LiamNeural", "female": "en-CA-ClaraNeural", "neutral": "en-CA-ClaraNeural"},
+    "irish": {"male": "en-IE-ConnorNeural", "female": "en-IE-EmilyNeural", "neutral": "en-IE-EmilyNeural"},
+    "scottish": {"male": "en-GB-RyanNeural", "female": "en-GB-SoniaNeural", "neutral": "en-GB-LibbyNeural"},
+    "indian": {"male": "en-IN-PrabhatNeural", "female": "en-IN-NeerjaNeural", "neutral": "en-IN-NeerjaNeural"},
+    "singaporean": {"male": "en-SG-WayneNeural", "female": "en-SG-LunaNeural", "neutral": "en-SG-LunaNeural"},
+    "new_zealand": {"male": "en-NZ-MitchellNeural", "female": "en-NZ-MollyNeural", "neutral": "en-NZ-MollyNeural"},
+    "south_african": {"male": "en-ZA-LukeNeural", "female": "en-ZA-LeahNeural", "neutral": "en-ZA-LeahNeural"},
+}
+
 # Speakers
 GENDERS = ["male", "female", "neutral"]
 MIN_SPEAKERS = 1

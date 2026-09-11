@@ -79,3 +79,21 @@ Files:
 Forbidden Scope for this sub-task: no AudioService, no ffmpeg calls, no TTS Studio UI, no
 duration extraction, no real OmniVoice model integration (that needs the actual model weights
 this machine doesn't have).
+
+## Sub-task 1.6a Result (2026-09-11) — DONE
+Delivered: `app/services/tts_service.py`, `app/models/tts.py`, extended `app/api/tts.py`
+(`POST /api/projects/{id}/tts/preview`, `GET /api/projects/{id}/tts/cache/{line_id}.mp3`),
+`EDGE_TTS_VOICE_MAP` in `app/core/constants.py`, 22 new tests (`tests/test_tts_service.py`,
+`tests/test_tts_api.py`), plus a defensive fixture in `tests/conftest.py` resetting the
+module-level `_omnivoice_semaphore` per test (same event-loop-binding hazard already fixed
+once for `_write_lock`).
+
+Live-verified (not just mocked): a real `_synthesize_edge_tts` smoke test across all 10
+accents x 2 genders succeeded 20/20; one run hit a transient Edge TTS "no audio received"
+response, which surfaced a real gap — the first implementation had no retry — fixed by adding
+a retry-once-on-empty-audio guard (`EDGE_TTS_MAX_ATTEMPTS = 2`) before landing the sub-task,
+not after. 252/252 tests pass, `ruff check` clean.
+
+Not done (deferred to 1.6b/1.6c, blocked on local ffmpeg + OmniVoice model weights):
+AudioService (mixing/normalization), TTS Studio UI, duration extraction, real OmniVoice
+GPU inference.

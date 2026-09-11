@@ -1,6 +1,6 @@
 """Shared pytest fixtures — an in-memory database with migrations applied."""
 
-from asyncio import Lock
+from asyncio import Lock, Semaphore
 from pathlib import Path
 
 import aiosqlite
@@ -36,4 +36,16 @@ def _reset_write_lock():
     from app.api import projects as projects_api
 
     projects_api._write_lock = Lock()
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _reset_omnivoice_semaphore():
+    """Give every test a fresh tts_service._omnivoice_semaphore — same event-loop-binding
+    hazard as `_write_lock` above (module-level asyncio primitive constructed once at
+    import time, reused across pytest-asyncio's per-test event loops)."""
+    from app.core.constants import MAX_CONCURRENT_TTS
+    from app.services import tts_service
+
+    tts_service._omnivoice_semaphore = Semaphore(MAX_CONCURRENT_TTS)
     yield

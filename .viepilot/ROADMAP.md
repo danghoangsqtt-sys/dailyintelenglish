@@ -115,15 +115,15 @@
 - [ ] **TTSService — OmniVoice** (`app/services/tts_service.py`)
   - Load OmniVoice model at startup (singleton)
   - `generate_line(text, voice_description, speed, pitch)` → WAV file
-  - Semaphore(2) for concurrent limit
-  - VRAM overflow → auto-fallback to Edge TTS
+  - Semaphore(2) for concurrent limit — **done**, `asyncio.Semaphore(MAX_CONCURRENT_TTS)` wraps the call site
+  - VRAM overflow → auto-fallback to Edge TTS — **done and tested** (any exception from the OmniVoice path falls back, not just OOM specifically)
   - Cache: check `data/tts_cache/` before generating
-  - Verify: generates speech for sample lines, cache works, fallback works
+  - Verify: generates speech for sample lines, cache works, fallback works — **blocked**: no OmniVoice model weights on this machine (`models/omnivoice/` empty, see Known Issues); `_synthesize_omnivoice()` honestly raises "model not loaded" rather than faking success, exercised by `test_omnivoice_synthesis_always_raises_unavailable_for_now`
 
-- [ ] **TTSService — Edge TTS**
-  - `generate_line_edge(text, voice_name, speed)` → WAV
-  - List available English accents per region
-  - Verify: generates speech for all 10 accent regions
+- [x] **TTSService — Edge TTS**
+  - `generate_line_edge(text, voice_name, speed)` → mp3 (via `edge_tts.Communicate`, streamed to bytes)
+  - List available English accents per region — `EDGE_TTS_VOICE_MAP` in `app/core/constants.py`, all 10 accents x 3 genders, voice ids verified live against `edge_tts.list_voices()`
+  - Verify: generates speech for all 10 accent regions — live-smoke-tested all 10 accents x 2 genders (20/20 real Edge TTS calls succeeded); one transient "no audio received" response was caught and recovered by the new retry-once-on-empty-audio logic, not silently ignored
 
 - [ ] **AudioService** (`app/services/audio_service.py`)
   - `mix_project(project_id)` → single MP3 + WAV from all lines

@@ -56,6 +56,7 @@ Versioning: [SemVer](https://semver.org/)
 - `BUG-011`: Switched `ScriptService`/`LearningContentService` from the unsupported `responseSchema` field to Gemini's `responseJsonSchema` field (the correct carrier for Pydantic's `$defs`/`$ref` output), removed the silent schema-less fallback on `TypeError`, added wire-payload regression tests
 - `BUG-012`: Added explicit `saveStatus` state machine (`saved`/`dirty`/`saving`/`failed`) to Step 2/Step 3 so navigation only proceeds after a confirmed save, with a real `/step4` placeholder route and a Playwright regression suite (`tests/test_ui_async_browser.py`) for save/failure/retry/rapid-edit races
 - Task 1.2 closed: Dashboard automated browser tests (`tests/test_dashboard_browser.py`, 7 Playwright tests) covering listing/status badges, filter, search, empty state, "New Project" → `/step1` navigation, "Continue" → `/step2?project_id=...` navigation, and delete-after-confirm
+- Task 1.6 Sub-task 1.6a (Edge-TTS-first): `TTSService` (`app/services/tts_service.py`) synthesizes script lines via Edge TTS (`EDGE_TTS_VOICE_MAP` covering all 10 accents x 3 genders, voice ids verified live), with an OmniVoice path guarded by `asyncio.Semaphore(MAX_CONCURRENT_TTS)` that honestly falls back to Edge TTS since no local model weights exist yet; `POST /api/projects/{id}/tts/preview` and `GET /api/projects/{id}/tts/cache/{line_id}.mp3` routes; retry-once-on-empty-audio guard added after live testing surfaced a real transient Edge TTS failure. AudioService and the TTS Studio UI are deferred to 1.6b/1.6c pending `ffmpeg`
 
 ---
 
