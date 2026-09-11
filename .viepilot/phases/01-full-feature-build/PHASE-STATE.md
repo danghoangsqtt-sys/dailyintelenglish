@@ -7,8 +7,9 @@
 - **Started:** 2026-09-10
 - **Current Day:** Day 2 / 21 (2026-09-11)
 - **Target Completion:** 2026-09-17
-- **Subtask Progress:** 14 / 29 (48%)
-- **Test Suite Status:** 196 passed, 0 failures, ruff clean, node --check clean
+- **Milestone Progress:** 3 / 10 major tasks (30%)
+- **Subtask Progress:** 14 / 29 granular subtasks (48%)
+- **Test Suite Status:** 223 passed (218 unit/integration + 5 browser E2E), 0 failures, ruff clean, node --check clean
 
 ---
 
@@ -44,7 +45,7 @@
   - Jinja2 prompt templates for 10 genres × 6 CEFR levels (`prompts/script/`).
   - `ScriptService` with REST Gemini API, 429 exponential backoff, UUID speaker validation, DB persistence.
   - Step 2 Script UI (`frontend/pages/step2_script.html`, `frontend/static/js/step2_script.js`) with per-line editing, single-line regen, confirm dialog for "Regenerate All".
-  - **Hardening (1.4D-FIX2/FIX2B/FIX2C gate):** Connection-wide `_write_lock` and `_read_lock` preventing cross-project race conditions and dirty reads; `GEMINI_MODEL` updated to `gemini-3.8-flash`.
+  - **Hardening (1.4D-FIX2/FIX2B/FIX2C gate):** Connection-wide `_write_lock` shared across both `_read_transaction` and `_write_transaction` preventing cross-project race conditions and dirty reads; `GEMINI_MODEL` updated to `gemini-3.8-flash`.
   - **Evidence:** 166 automated tests pass (`tests/test_script_service.py`, `tests/test_projects_write_lock.py`, etc.); real headless browser E2E verified.
 
 ### Task 1.5: Step 3 — Learning Content
@@ -54,7 +55,7 @@
   - `LearningContentService` (`app/services/learning_service.py`) generating vocabulary, idioms, grammar, and quizzes with `LearningPackOut` schema validation.
   - `learning_contents` table with UPSERT persistence.
   - Step 3 UI (`frontend/pages/step3_learning.html`, `frontend/static/js/step3_learning.js`) with 4 tabs, coalesced trailing autosave, dirty state tracking.
-  - **Evidence:** 20 dedicated service/API tests, 196 total tests passing cleanly (`commit b06eb07`, `commit b57428e`).
+  - **Evidence:** 20 dedicated service/API tests, 223 total tests passing cleanly (218 unit/integration + 5 browser E2E).
 
 ### Task 1.6: Step 4 — TTS Audio Studio
 - **Status:** ⏳ Planned

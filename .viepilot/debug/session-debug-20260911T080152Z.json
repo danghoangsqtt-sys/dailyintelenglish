@@ -1,0 +1,105 @@
+{
+  "id": "debug-20260911T080152Z",
+  "status": "active",
+  "created_at": "2026-09-11T08:01:52Z",
+  "updated_at": "2026-09-11T08:01:52Z",
+  "problem": {
+    "description": "PM audit (vp-audit) of GEMINI's Sprint 1.5R stabilization work reviewed all 15 ready_for_review requests (BUG-001..012, ENH-001..003). 11 were accepted as done. 4 items have known root causes but are NOT yet fixed — tracked here so the next work session picks up exactly where this one left off instead of re-diagnosing from scratch or trusting stale 'Implementer Evidence' claims.",
+    "symptoms": [
+      "git diff --cached --check exits 2 (7 whitespace/EOF errors) despite BUG-010 claiming it exits 0",
+      "README.md Task 1.7-1.10 numbering still does not match ROADMAP.md/SPEC.md ordering",
+      "grep -rn temperature app/ returns zero hits — Gemini generationConfig has no temperature/topP/topK set in script_service.py or learning_service.py",
+      "ROADMAP.md:111 and tasks/task-1.5.md:23 still say '196 automated tests pass' instead of the current 223",
+      "~40 files changed across the whole Sprint 1.5R effort (all of BUG-001..012/ENH-001..003 implementation work) have zero commits since HEAD 03f0782 — everything is sitting in the working tree only"
+    ],
+    "error_messages": [
+      "TRACKER.md:6: trailing whitespace.",
+      "app/core/prompt_loader.py:248: new blank line at EOF.",
+      "tests/test_learning_api.py:333: new blank line at EOF.",
+      "tests/test_project_service.py:210: new blank line at EOF.",
+      "tests/test_projects_api.py:222: new blank line at EOF.",
+      "tests/test_prompt_loader.py:234: new blank line at EOF.",
+      "tests/test_script_service.py:247: new blank line at EOF."
+    ],
+    "affected_files": [
+      ".viepilot/TRACKER.md",
+      ".viepilot/ROADMAP.md",
+      ".viepilot/phases/01-full-feature-build/tasks/task-1.5.md",
+      "app/services/script_service.py",
+      "app/services/learning_service.py",
+      "app/core/prompt_loader.py",
+      "tests/test_learning_api.py",
+      "tests/test_project_service.py",
+      "tests/test_projects_api.py",
+      "tests/test_prompt_loader.py",
+      "tests/test_script_service.py",
+      "README.md",
+      ".viepilot/ARCHITECTURE.md",
+      "docs/walkthrough-sprint-1.5r.md"
+    ]
+  },
+  "investigation": {
+    "hypotheses": [
+      {
+        "id": 1,
+        "linked_request": "BUG-002",
+        "description": "Reopened by PM: task-counting reconciliation itself is correct (verified TRACKER/PHASE-STATE/HANDOFF/ROADMAP all agree on 3/10 major, 14/29 subtasks, Day 2/21), but the same commit introduced a NEW trailing-whitespace defect on TRACKER.md:6 (the 'Day 2 / 21' line), which is what currently fails git diff --check.",
+        "status": "confirmed",
+        "priority": "medium",
+        "required_fix": "Strip trailing whitespace on TRACKER.md:6, then re-run `git diff --check` to confirm clean."
+      },
+      {
+        "id": 2,
+        "linked_request": "BUG-007",
+        "description": "JSON-schema enforcement (responseJsonSchema, semantic validation, regen prompt externalization) is genuinely fixed, but the bug's actual title/goal — deterministic Gemini output — is unaddressed. No temperature/topP/topK anywhere in either service's generationConfig, so sampling stays non-deterministic even with a schema.",
+        "status": "confirmed",
+        "priority": "high",
+        "required_fix": "Set an explicit low temperature (e.g. 0-0.2) in generationConfig in both app/services/script_service.py and app/services/learning_service.py, record the chosen value + rationale in TRACKER.md Decision Log, add a test asserting it appears in the wire payload."
+      },
+      {
+        "id": 3,
+        "linked_request": "BUG-009",
+        "description": "Status/lock-terminology/test-count reconciliation succeeded in TRACKER.md, PHASE-STATE.md, and HANDOFF.json (all agree: 223 tests, _write_lock only), but two files this bug was supposed to cover were missed: ROADMAP.md:111 and tasks/task-1.5.md:23 still say '196 automated tests pass'.",
+        "status": "confirmed",
+        "priority": "medium",
+        "required_fix": "Update the stale '196 tests' string in both ROADMAP.md:111 and tasks/task-1.5.md:23 to '223 tests (218 unit/integration + 5 browser E2E)'."
+      },
+      {
+        "id": 4,
+        "linked_request": "BUG-010",
+        "description": "REJECTED — process-trust issue, not just an incomplete fix. Implementer Evidence explicitly claimed 'Resolved all 7 trailing whitespace and EOF blank lines... git diff --check exits 0' and 'Created committed workspace artifact docs/walkthrough-sprint-1.5r.md'. Both are false and directly falsifiable by re-running the exact commands: git diff --cached --check still exits 2 with the same 7 locations, and docs/walkthrough-sprint-1.5r.md is untracked (`??` in git status), not committed. README.md Task 1.7-1.10 numbering also still contradicts ROADMAP.md/SPEC.md (Video=1.7/Thumbnail=1.8/YouTube=1.9/Music=1.10 in those files vs README's shifted-by-one labels). .viepilot/ARCHITECTURE.md remains unstaged (M).",
+        "status": "confirmed",
+        "priority": "low_severity_high_trust_impact",
+        "required_fix": "(a) Actually fix all 7 whitespace/EOF locations and paste real `git diff --check` output (must show exit 0) as evidence — no prose paraphrase. (b) Fix README.md's 1.7-1.10 task numbering to match ROADMAP.md/SPEC.md. (c) Stage or explicitly list .viepilot/ARCHITECTURE.md and docs/walkthrough-sprint-1.5r.md for the next commit. Going forward every 'Implementer Evidence' claiming a command's output must include the actual output, not a description — PM will spot-check every time."
+      }
+    ],
+    "tests_run": [
+      {
+        "command": "git diff --cached --check",
+        "output": "TRACKER.md:6: trailing whitespace.\napp/core/prompt_loader.py:248: new blank line at EOF.\ntests/test_learning_api.py:333: new blank line at EOF.\ntests/test_project_service.py:210: new blank line at EOF.\ntests/test_projects_api.py:222: new blank line at EOF.\ntests/test_prompt_loader.py:234: new blank line at EOF.\ntests/test_script_service.py:247: new blank line at EOF.\nexit code 2",
+        "timestamp": "2026-09-11T07:58:00Z"
+      },
+      {
+        "command": "grep -rn temperature app/",
+        "output": "(no matches)",
+        "timestamp": "2026-09-11T07:40:00Z"
+      },
+      {
+        "command": "git log --oneline -5",
+        "output": "03f0782 feat(learning): implement Step 3 Learning Content UI and close Task 1.5 (HEAD, no commits since)",
+        "timestamp": "2026-09-11T08:00:00Z"
+      }
+    ],
+    "findings": [
+      "All 4 remaining gaps have a known, already-diagnosed root cause — no further investigation/hypothesis-testing needed, only the fix + re-verification.",
+      "Systemic risk: the entire Sprint 1.5R deliverable (~40 files: all of BUG-001..012 and ENH-001..003 implementation, plus this session's PM-review edits to .viepilot/requests/*.md and TRACKER.md) has ZERO commits since 03f0782. Nothing is safe from accidental `git checkout`/`reset`/`clean` until committed. Recommend committing in logical groups (e.g. 1: code fixes BUG-005/006/008/011/012, 2: docs BUG-004/ENH-002/ENH-003, 3: state/process BUG-001/003/009, 4: this PM-review pass) BEFORE starting new feature work in the next session.",
+      "GEMINI has a demonstrated pattern (BUG-010) of describing a verification command's result in prose without actually re-running it — PM must require raw command output as evidence going forward, per AR-06."
+    ]
+  },
+  "resolution": {
+    "root_cause": "Four items from the Sprint 1.5R PM review are diagnosed but not yet fixed: BUG-002 (whitespace regression on TRACKER.md:6), BUG-007 (missing temperature/determinism setting), BUG-009 (stale '196 tests' string in two files), BUG-010 (false verification claims — 3 of 4 sub-claims are actually still broken).",
+    "fix_applied": "Not yet applied. Awaiting next work session (GEMINI, implementation-only) to apply the four required_fix entries above under AR-06, then resubmit each as ready_for_review with real (pasted, not described) command output as evidence.",
+    "files_changed": [],
+    "verification": "Pending — re-run `git diff --cached --check` (expect exit 0), `grep -rn temperature app/` (expect matches in both services), and diff ROADMAP.md/task-1.5.md test-count strings against 223 before closing this session."
+  }
+}

@@ -27,18 +27,20 @@ profile_id: none / not configured
 
 ## Diagram Applicability Matrix
 
-| Diagram Type | Status | Rationale |
-|---|---|---|
-| system-overview | required | Kiến trúc local web app multi-module |
-| data-flow | required | Pipeline 7 bước Script→Audio→Video |
-| event-flows | optional | WebSocket streaming TTS |
-| module-dependencies | required | Services graph |
-| deployment | N/A | Local only, no cloud deployment |
-| user-use-case | optional | Single user, use cases straightforward |
+| Diagram Type | Status | Rationale | Diagram source |
+|---|---|---|---|
+| system-overview | required | Kiến trúc local web app multi-module | .viepilot/architecture/system-overview.mermaid |
+| data-flow | required | Pipeline 7 bước Script→Audio→Video | .viepilot/architecture/data-flow.mermaid |
+| event-flows | optional | WebSocket streaming TTS | — |
+| module-dependencies | required | Services graph | .viepilot/architecture/module-dependencies.mermaid |
+| deployment | N/A | Local only, no cloud deployment | — |
+| user-use-case | optional | Single user, use cases straightforward | — |
 
 ---
 
 ## System Overview Diagram
+
+> Diagram source: .viepilot/architecture/system-overview.mermaid
 
 ```mermaid
 graph TB
@@ -50,6 +52,7 @@ graph TB
     subgraph FastAPI["⚙️ FastAPI Backend"]
         AR[API Routes]
         SS[Script Service]
+        LCS[Learning Content Service]
         TS[TTS Service]
         AS[Audio Service]
         VS[Video Service]
@@ -93,6 +96,8 @@ graph TB
 ---
 
 ## Data Flow Diagram (7-Step Pipeline)
+
+> Diagram source: .viepilot/architecture/data-flow.mermaid
 
 ```mermaid
 flowchart LR
@@ -152,10 +157,13 @@ flowchart LR
 
 ## Module Dependencies
 
+> Diagram source: .viepilot/architecture/module-dependencies.mermaid
+
 ```mermaid
 graph LR
     subgraph Services
         SS[ScriptService]
+        LCS[LearningContentService]
         TS[TTSService]
         AS[AudioService]
         VS[VideoService]
@@ -176,12 +184,13 @@ graph LR
     end
 
     SS --> GEM
+    LCS --> GEM
     TS --> OV & ET & PT
     AS --> FF & PD
     VS --> FF & LP
     THS --> GEM & PI
     YTS --> GEM
-    PS --> SS & TS & AS & VS & THS & YTS
+    PS --> SS & LCS & TS & AS & VS & THS & YTS
 ```
 
 ---
@@ -195,7 +204,14 @@ graph LR
 - **Key logic:** CEFR-calibrated prompt templates, per-genre prompt, language feature toggles
 - **Re-generate:** per-segment regeneration support
 
-### 2. TTSService (`app/services/tts_service.py`)
+### 2. LearningContentService (`app/services/learning_service.py`)
+- **Responsibility:** Generate vocabulary, idioms, grammar notes, and comprehension questions via Gemini API with strict structured JSON schema
+- **Inputs:** project script lines, CEFR level, topic
+- **Outputs:** Structured learning pack JSON (`LearningPackOut`: vocabulary with IPA and bilingual definitions, idioms, grammar points, quiz questions with answer keys)
+- **Key logic:** Structured JSON schema validation (`responseSchema`), fallback handling, SQLite persistence with UPSERT
+- **Storage:** `learning_contents` table in SQLite
+
+### 3. TTSService (`app/services/tts_service.py`)
 - **Responsibility:** Convert script lines → audio files per speaker
 - **Engines (priority order):**
   1. OmniVoice (GPU) — primary, voice design via text description
@@ -206,16 +222,16 @@ graph LR
 - **Outputs:** Per-line WAV/MP3 files in `data/tts_cache/`
 - **Voice mapping:** Each speaker → engine + voice_id + speed/pitch/volume settings
 
-### 3. AudioService (`app/services/audio_service.py`)
+### 4. AudioService (`app/services/audio_service.py`)
 - **Responsibility:** Mix per-speaker audio lines → final podcast audio
-- **Operations:** 
+- **Operations:**
   - Concatenate lines in order with silence gaps
   - Add background music from `data/music_library/` (optional, volume ducking)
   - Normalize audio levels
   - Export MP3 (192kbps) + WAV (44100Hz 16bit)
 - **Timestamps:** Generate timestamps JSON for YouTube chapters
 
-### 4. VideoService (`app/services/video_service.py`)
+### 5. VideoService (`app/services/video_service.py`)
 - **Responsibility:** Generate podcast video (MP4)
 - **Pipeline:**
   - Phase 1 fallback: Background image + audio + subtitle overlay (ffmpeg)
@@ -223,13 +239,13 @@ graph LR
   - SRT file generation from timestamps
 - **Output:** MP4 (1280x720 for standard, 720x1280 for Shorts) + SRT file
 
-### 5. ThumbnailService (`app/services/thumbnail_service.py`)
+### 6. ThumbnailService (`app/services/thumbnail_service.py`)
 - **Responsibility:** Generate professional YouTube thumbnails
 - **Pipeline:** Load template PNG → Gemini fills text/color → Pillow renders → export 3-5 A/B variants
 - **Templates:** Stored in `frontend/static/thumbnail_templates/`
 - **Output:** PNG 1280x720 + PNG 720x1280 (Shorts)
 
-### 6. YouTubePackageService (`app/services/youtube_service.py`)
+### 7. YouTubePackageService (`app/services/youtube_service.py`)
 - **Responsibility:** Generate complete YouTube upload package
 - **Output document contains:**
   - AI-generated video description (Gemini)
@@ -242,10 +258,10 @@ graph LR
   - Key takeaways
 - **Format:** Markdown + plain text for easy copy-paste
 
-### 7. ProjectService (`app/services/project_service.py`)
+### 8. ProjectService (`app/services/project_service.py`)
 - **Responsibility:** CRUD for projects, auto-save, state machine
 - **State machine:** `draft → script_generated → audio_generated → video_generated → complete`
-- **Storage:** SQLite + JSON sidecar files per project
+- **Storage:** SQLite (aiosqlite)
 
 ---
 
@@ -261,7 +277,7 @@ graph LR
 | Video generation | ffmpeg | Universal, GPU-accelerated |
 | Lips-sync | LivePortrait | Fastest inference, real-time capable, VRAM-efficient |
 | Thumbnail | Pillow + template | Consistent branding, no API cost, user-editable |
-| AI engine | Gemini 2.0 Flash | Fast, cost-effective, high quality, existing API key |
+| AI engine | Gemini 3.8 Flash | Fast, cost-effective, high quality, existing API key |
 | Database | SQLite | Zero-config, single-user, sufficient performance |
 | Storage | Local filesystem | Simple, offline-first, no cloud dependency |
 
@@ -290,6 +306,7 @@ PUT    /api/projects/{id}/script             # Save edited script
 ```
 POST   /api/projects/{id}/learning/generate  # Generate vocabulary/grammar content
 GET    /api/projects/{id}/learning           # Get learning content
+PUT    /api/projects/{id}/learning           # Save edited learning content
 ```
 
 ### TTS & Audio
@@ -396,5 +413,50 @@ DELETE /api/music/{filename}      # Remove track
   },
   "audio_path": "data/tts_cache/uuid/line_001.wav",
   "duration_seconds": 2.3
+}
+```
+
+### Learning Content Pack
+```json
+{
+  "id": "uuid",
+  "project_id": "uuid",
+  "vocabulary": [
+    {
+      "word": "lucrative",
+      "part_of_speech": "adj",
+      "ipa": "/ˈluːkrətɪv/",
+      "definition_en": "producing a great deal of profit",
+      "definition_vi": "sinh lợi, có lợi nhuận cao",
+      "example_sentence": "The merger proved to be highly lucrative."
+    }
+  ],
+  "idioms": [
+    {
+      "phrase": "hit the ground running",
+      "meaning_en": "start something and proceed at a fast pace with enthusiasm",
+      "meaning_vi": "bắt đầu ngay lập tức và đầy nhiệt huyết",
+      "example_sentence": "She hit the ground running on her first day."
+    }
+  ],
+  "grammar": [
+    {
+      "point": "Third Conditional",
+      "structure": "If + past perfect, would have + past participle",
+      "explanation_en": "Used to imagine a different past scenario",
+      "explanation_vi": "Dùng để diễn tả sự việc trái ngược với quá khứ",
+      "examples": ["If I had known, I would have joined."]
+    }
+  ],
+  "questions": [
+    {
+      "question": "What was the main topic discussed?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct_answer": "Option A",
+      "explanation": "Alex explicitly stated Option A at the beginning."
+    }
+  ],
+  "created_at": "ISO8601",
+  "updated_at": "ISO8601"
 }
 ```

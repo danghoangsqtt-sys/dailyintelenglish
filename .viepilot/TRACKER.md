@@ -9,7 +9,7 @@
 
 ## Progress Overview
 
-*Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) with 29 discrete checklist subtasks. Progress reflects completed subtasks.*
+*Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) [currently 3/10 done, 30%] with 29 discrete checklist subtasks [currently 14/29 done, 48%]. Progress reflects completed subtasks.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -46,7 +46,7 @@
 ### 1.5 Learning Content
 - [x] Prompt templates — `prompts/learning/learning_pack.txt`, rendered async via `app/core/prompt_loader.py`
 - [x] LearningContentService — `app/services/learning_service.py` (Gemini REST via `httpx.AsyncClient`, `gemini-3.8-flash`, 429 backoff 1s→2s→4s, Pydantic schema validation `LearningPackOut`, SQLite persistence `learning_contents` table with UPSERT and `commit` parameter). 20 tests. **Committed** (`b06eb07`).
-- [x] Learning Content UI — `frontend/pages/step3_learning.html` + `step3_learning.js` + route `/step3` in `app/main.py`: 4 tabs (Vocabulary with IPA/PoS/definitions, Idioms, Grammar, Quiz with answer toggle), Coalesced Trailing Autosave with dirty-sections queue, Regenerate Pack confirm dialog, and Next Step navigation to `/step4`. 196 tests pass.
+- [x] Learning Content UI — `frontend/pages/step3_learning.html` + `step3_learning.js` + route `/step3` in `app/main.py`: 4 tabs (Vocabulary with IPA/PoS/definitions, Idioms, Grammar, Quiz with answer toggle), Coalesced Trailing Autosave with dirty-sections queue, Regenerate Pack confirm dialog, and Next Step navigation to `/step4`. 223 tests pass (218 unit/integration + 5 browser E2E).
 
 ### 1.6 TTS Audio Studio
 - [ ] TTSService — OmniVoice
@@ -102,6 +102,11 @@
 | 2026-09-11 | BUG-007 auto-logged by vp-audit Tier 3: deterministic Gemini output contract | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-008 auto-logged by vp-audit Tier 3: prevent UI lost updates and dead navigation | `vp-audit`; Backlog |
 | 2026-09-11 | ENH-003 auto-logged by vp-audit Tier 3: strict PM-GEMINI delivery contract | `vp-audit`; Backlog |
+| 2026-09-11 | BUG-009 auto-logged by vp-audit Tier 1: restore PM-only acceptance state after Gemini handoff | `vp-audit`; Backlog |
+| 2026-09-11 | BUG-010 auto-logged by vp-audit Tier 2: reconcile stabilization documentation and delivery evidence | `vp-audit`; Backlog |
+| 2026-09-11 | BUG-011 auto-logged by vp-audit Tier 3: send Pydantic schemas through the supported Gemini JSON Schema field | `vp-audit`; Backlog |
+| 2026-09-11 | BUG-012 auto-logged by vp-audit Tier 3: close autosave failure races with browser-level regression coverage | `vp-audit`; Backlog |
+| 2026-09-11 | PM audit review of all 15 `ready_for_review` requests: 11 accepted (BUG-001, 003, 004, 005, 006, 008, 011, 012, ENH-001, ENH-002, ENH-003) — `done`. 4 sent back `changes_requested`: BUG-002 (trailing whitespace on TRACKER.md:6 introduced by its own fix), BUG-007 (schema fixed but no `temperature` set — title promised "deterministic" output, not delivered), BUG-009 (stale "196 tests" left in ROADMAP.md/task-1.5.md), BUG-010 (**rejected — false claim**: implementer stated `git diff --check` exits 0 but it still exits 2 with the same 7 errors; README task numbering and ARCHITECTURE.md staging also unfixed despite being claimed done). See PM Acceptance/PM Review sections in each `.viepilot/requests/*.md` for full evidence. | PM (Claude Code); Backlog |
 
 ## Known Issues
 
@@ -121,4 +126,18 @@
 ### Pending Requests
 | ID | Type | Title | Priority | Status |
 |----|------|-------|----------|--------|
+| BUG-001 | Bug | Restore valid machine-readable ViePilot state | medium | done |
+| BUG-002 | Bug | Reconcile Phase 1 progress counters | medium | changes_requested |
+| BUG-003 | Bug | Enforce doc-first incremental task gates | medium | done |
+| BUG-004 | Bug | Synchronize project documentation with implemented state | low | done |
+| BUG-005 | Bug | Reject explicit null in Learning Content updates | high | done |
+| BUG-006 | Bug | Enforce nonblank project configuration at API boundary | high | done |
+| BUG-007 | Bug | Make Gemini output contract deterministic | high | changes_requested |
+| BUG-008 | Bug | Prevent UI lost updates and dead Step 4 navigation | high | done |
+| BUG-009 | Bug | Restore PM-only acceptance state after Gemini handoff | medium | changes_requested |
+| BUG-010 | Bug | Reconcile stabilization documentation and delivery evidence | low | changes_requested (rejected: false verification claim) |
+| BUG-011 | Bug | Send Pydantic schemas through the supported Gemini JSON Schema field | high | done |
+| BUG-012 | Bug | Close autosave failure races with browser-level regression coverage | high | done |
 | ENH-001 | Enhancement | Phân quyền AI Agents (PM vs Dev) | high | done |
+| ENH-002 | Enhancement | Restore architecture diagram sidecars | low | done |
+| ENH-003 | Enhancement | Establish strict PM-GEMINI delivery contract | medium | done |
