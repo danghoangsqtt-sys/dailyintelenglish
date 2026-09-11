@@ -59,8 +59,11 @@
   - **Evidence:** 20 dedicated service/API tests, 223 total tests passing cleanly (218 unit/integration + 5 browser E2E).
 
 ### Task 1.6: Step 4 — TTS Audio Studio
-- **Status:** ⏳ Planned
-- **Details:** TTSService (OmniVoice GPU primary + Edge TTS backup), AudioService, TTS UI.
+- **Status:** 🔄 In Progress (Sub-task 1.6a: Edge-TTS-first vertical slice)
+- **Details:** Split into sub-tasks since ffmpeg/OmniVoice model are unavailable on this
+  machine (see Known Issues). 1.6a: TTSService line-level synthesis via Edge TTS with an
+  honest OmniVoice-unavailable fallback path, `POST /api/projects/{id}/tts/preview` route.
+  1.6b (AudioService, mixing) and 1.6c (TTS Studio UI) deferred until ffmpeg is installed.
 
 ### Task 1.7: Step 5 — Video Studio
 - **Status:** ⏳ Planned
