@@ -3,7 +3,7 @@
 ## Meta
 - **ID**: 1.2
 - **Phase**: 1
-- **Status**: in_progress
+- **Status**: done
 - **Priority**: high
 - **Assignee**: AI
 
@@ -19,7 +19,7 @@
 ## Acceptance Criteria
 - [x] ProjectService CRUD with atomic speaker updates, config_json sync, forward-only status machine
 - [x] Automated test suite covering project CRUD and validation (30 tests pass)
-- [ ] Automated UI tests for dashboard listing, filtering, navigation
+- [x] Automated UI tests for dashboard listing, filtering, navigation — `tests/test_dashboard_browser.py`, 7 tests pass
 
 ## Forbidden Scope
 - No direct database writes outside ProjectService and write transaction lock

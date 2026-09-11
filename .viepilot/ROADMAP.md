@@ -43,12 +43,12 @@
   - `app/services/project_service.py` — create, get, list, update, delete, auto-save
   - Verify: unit tests pass for all CRUD — 30 automated tests (service-level + full HTTP via TestClient) pass; includes validation, atomic speaker updates, config_json sync, and forward-only status transitions
 
-- [ ] **Dashboard UI** (`frontend/pages/dashboard.html`)
+- [x] **Dashboard UI** (`frontend/pages/dashboard.html`)
   - Project cards grid với status badges
   - "New Project" button → Step 1 wizard
   - Search + filter (by CEFR, genre, status)
   - Dark/Light mode toggle
-  - Verify: Dashboard loads, shows empty state, new project button works — **not yet**: "New Project" and "Continue" are still placeholders (Step 1 wizard UI not built), no automated UI test
+  - Verify: 7 automated Playwright browser tests (`tests/test_dashboard_browser.py`) — listing with status badges, filter, search, empty state, "New Project" → `/step1`, "Continue" → `/step2?project_id=...` for draft projects, delete removes card after confirm. 230 total tests pass.
 
 ### 1.3 Step 1 — Script Config Wizard
 

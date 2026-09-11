@@ -9,11 +9,11 @@
 
 ## Progress Overview
 
-*Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) [currently 3/10 done, 30%] with 29 discrete checklist subtasks [currently 14/29 done, 48%]. Progress reflects completed subtasks.*
+*Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) [currently 4/10 done, 40%] with 29 discrete checklist subtasks [currently 15/29 done, 52%]. Progress reflects completed subtasks.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
-| Phase 1 — Build | 🔄 In Progress | 14 | 29 |
+| Phase 1 — Build | 🔄 In Progress | 15 | 29 |
 | Phase 2 — Testing | ⏳ Not Started | 0 | 10 |
 | Phase 3 — Review | ⏳ Not Started | 0 | 6 |
 
@@ -28,7 +28,7 @@
 
 ### 1.2 Dashboard
 - [x] ProjectService CRUD — full create/get/list/update/delete, validated (Pydantic), atomic speaker updates, config_json always kept in sync, forward-only status state machine. 30 automated tests (service-level + full HTTP via TestClient) pass.
-- [ ] Dashboard UI — "New Project" navigates to `/step1` (Task 1.3); "Continue" now navigates to `/step2?project_id=...` for `draft`/`script_generated` projects (Task 1.4). Still no automated UI test for the dashboard page itself, so leaving unchecked.
+- [x] Dashboard UI — "New Project" navigates to `/step1` (Task 1.3); "Continue" navigates to `/step2?project_id=...` for `draft`/`script_generated` projects (Task 1.4). 7 automated Playwright browser tests (`tests/test_dashboard_browser.py`): listing with status badges, status filter, name search, empty state, New Project navigation, Continue navigation, delete-after-confirm removes card without reload. 230 total tests pass.
 
 ### 1.3 Script Config Wizard
 - [x] Config API route — `POST/GET/PUT/DELETE /api/projects[/{id}]`, `ScriptConfig`/`SpeakerConfig`/`ProjectUpdate` validated, invalid CEFR/genre/accent/status rejected with 422 in the standard envelope
@@ -93,6 +93,7 @@
 | 2026-09-10 | `GEMINI_MODEL` moved from `gemini-2.0-flash` to `gemini-3.8-flash` | `gemini-2.0-flash` was shut down 2026-06-01; `gemini-3.8-flash` is Google's current "New Stable" default Flash model per `ai.google.dev/gemini-api/docs/models` (checked live, FIX2 gate) |
 | 2026-09-10 | Every write endpoint on `app/api/projects.py` (create/update/delete project, script generate/regenerate/save) serializes on **one connection-wide** `asyncio.Lock` (`_write_transaction`), not a per-project lock | FIX2's first pass used a per-project lock, which only stops two requests for the *same* project from interleaving. PM review (FIX2B) found the whole app shares a single `aiosqlite` connection with exactly one implicit transaction at a time — an unrelated concurrent write (e.g. a project rename) could still interleave into another request's transaction and get wiped out by that request's `rollback()`. A connection-wide lock is the only correct fix given one shared connection; `db.commit()` was also moved inside the `try` so a commit failure rolls back too, not just a failure in the wrapped writes |
 | 2026-09-11 | Gemini `generationConfig.temperature` is deliberately left unset (Gemini default) in `script_service.py` and `learning_service.py`, NOT pinned low | BUG-007 asked for a "deterministic output contract," but "Regenerate"/"Regenerate All"/"Regenerate Pack" resend the identical prompt expecting *different* wording each click — a low temperature would make Gemini return near-identical text every time, breaking that feature. Structural determinism (always-valid, schema-conforming JSON) is already guaranteed by `responseJsonSchema` + semantic validation (BUG-011), which is what actually matters for reliability; content-sampling determinism is neither required nor desirable here |
+| 2026-09-11 | Task 1.2 closed via `/vp-auto` (PM-executed): added `tests/test_dashboard_browser.py` (7 Playwright tests — listing/badges, filter, search, empty state, New Project nav, Continue nav, delete-after-confirm) covering the last open acceptance criterion. No production code changes needed; dashboard.js already behaved correctly. 230/230 tests pass, ruff clean | `/vp-auto`; git tag `die-vp-p1-t1.2` |
 | 2026-09-11 | BUG-001 auto-logged by vp-audit Tier 1: restore valid machine-readable state | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-002 auto-logged by vp-audit Tier 1: reconcile Phase 1 progress counters | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-003 auto-logged by vp-audit Tier 1: enforce doc-first task gates | `vp-audit`; Backlog |

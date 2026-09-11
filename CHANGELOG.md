@@ -55,6 +55,7 @@ Versioning: [SemVer](https://semver.org/)
 - `BUG-010`: Fixed `README.md` Task 1.7–1.10 numbering to match `ROADMAP.md`/`SPEC.md` (1.7 Video Studio, 1.8 Thumbnail Generator, 1.9 YouTube Package, 1.10 Music Library), confirmed `.viepilot/ARCHITECTURE.md` and `docs/walkthrough-sprint-1.5r.md` are committed and `git diff --check` is clean
 - `BUG-011`: Switched `ScriptService`/`LearningContentService` from the unsupported `responseSchema` field to Gemini's `responseJsonSchema` field (the correct carrier for Pydantic's `$defs`/`$ref` output), removed the silent schema-less fallback on `TypeError`, added wire-payload regression tests
 - `BUG-012`: Added explicit `saveStatus` state machine (`saved`/`dirty`/`saving`/`failed`) to Step 2/Step 3 so navigation only proceeds after a confirmed save, with a real `/step4` placeholder route and a Playwright regression suite (`tests/test_ui_async_browser.py`) for save/failure/retry/rapid-edit races
+- Task 1.2 closed: Dashboard automated browser tests (`tests/test_dashboard_browser.py`, 7 Playwright tests) covering listing/status badges, filter, search, empty state, "New Project" → `/step1` navigation, "Continue" → `/step2?project_id=...` navigation, and delete-after-confirm
 
 ---
 

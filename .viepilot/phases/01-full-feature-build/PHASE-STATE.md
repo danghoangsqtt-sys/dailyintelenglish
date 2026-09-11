@@ -7,9 +7,9 @@
 - **Started:** 2026-09-10
 - **Current Day:** Day 2 / 21 (2026-09-11)
 - **Target Completion:** 2026-09-17
-- **Milestone Progress:** 3 / 10 major tasks (30%)
-- **Subtask Progress:** 14 / 29 granular subtasks (48%)
-- **Test Suite Status:** 223 passed (218 unit/integration + 5 browser E2E), 0 failures, ruff clean, node --check clean
+- **Milestone Progress:** 4 / 10 major tasks (40%)
+- **Subtask Progress:** 15 / 29 granular subtasks (52%)
+- **Test Suite Status:** 230 passed (218 unit/integration + 5 browser E2E + 7 dashboard browser E2E), 0 failures, ruff clean
 
 ---
 
@@ -25,11 +25,12 @@
   - Dependency check script (`scripts/check_dependencies.py`) verified in code; waiting on local machine environment setup (`ffmpeg`, `.env` key, local model weights).
 
 ### Task 1.2: Dashboard & Project Management
-- **Status:** 🔄 In Progress (1 / 2 subtasks complete)
+- **Status:** ✅ Done
 - **Details:**
   - `ProjectService` CRUD fully implemented with Pydantic validation, atomic speaker replacement, `config_json` auto-sync, and forward-only status state machine.
   - **Evidence:** 30 automated service and HTTP API tests pass (`tests/test_projects_api.py`, `tests/test_project_service.py`).
-  - Dashboard UI (`frontend/pages/dashboard.html`): loads, routes to `/step1` on "New Project" and `/step2?project_id=...` on "Continue". Awaiting automated UI test coverage.
+  - Dashboard UI (`frontend/pages/dashboard.html`): loads, routes to `/step1` on "New Project" and `/step2?project_id=...` on "Continue".
+  - **Evidence:** 7 automated Playwright browser tests (`tests/test_dashboard_browser.py`) covering listing/status badges, filter, search, empty state, New Project navigation, Continue navigation, and delete-after-confirm.
 
 ### Task 1.3: Step 1 — Script Config Wizard
 - **Status:** ✅ Done
