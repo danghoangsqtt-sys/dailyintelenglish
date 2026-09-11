@@ -106,7 +106,7 @@ def queue_responses(monkeypatch, responses: list[FakeResponse]):
     """Monkeypatch _call_gemini to return `responses` in order, one per call."""
     calls = {"n": 0}
 
-    async def fake_call_gemini(prompt: str):
+    async def fake_call_gemini(prompt: str, schema: dict | None = None):
         index = calls["n"]
         calls["n"] += 1
         return responses[index], 12.3
@@ -271,7 +271,7 @@ async def test_generate_learning_pack_schema_validation_failure_raises(monkeypat
 async def test_generate_learning_pack_empty_script_raises_without_calling_gemini(monkeypatch):
     calls = {"n": 0}
 
-    async def fake_call_gemini(prompt: str):
+    async def fake_call_gemini(prompt: str, schema: dict | None = None):
         calls["n"] += 1
         raise AssertionError("Gemini should never be called for an empty script")
 
@@ -287,7 +287,7 @@ async def test_generate_learning_pack_missing_api_key_raises_without_calling_gem
     monkeypatch.setattr(learning_service.settings, "GEMINI_API_KEY", "")
     calls = {"n": 0}
 
-    async def fake_call_gemini(prompt: str):
+    async def fake_call_gemini(prompt: str, schema: dict | None = None):
         calls["n"] += 1
         raise AssertionError("Gemini should never be called without an API key")
 
@@ -303,7 +303,7 @@ async def test_generate_learning_pack_preserves_cefr_level_in_prompt(monkeypatch
     """The rendered prompt actually carries the project's CEFR level through to Gemini."""
     captured = {}
 
-    async def fake_call_gemini(prompt: str):
+    async def fake_call_gemini(prompt: str, schema: dict | None = None):
         captured["prompt"] = prompt
         return gemini_ok_response(VALID_PACK), 5.0
 
@@ -383,3 +383,82 @@ async def test_deleting_project_cascades_to_learning_content(db):
     await project_service.delete_project(db, project["id"])
 
     assert await learning_service.get_learning_content(db, project["id"]) is None
+
+
+async def test_call_gemini_includes_response_json_schema(monkeypatch):
+    """_call_gemini includes responseJsonSchema (and not responseSchema) in generationConfig."""
+    captured = {}
+
+    class FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def post(self, url, params=None, json=None):
+            captured["url"] = url
+            captured["json"] = json
+            return FakeResponse(200, json_data={"candidates": [{"content": {"parts": [{"text": "{}"}]}}]})
+
+    monkeypatch.setattr(learning_service.httpx, "AsyncClient", FakeAsyncClient)
+
+    schema = {"type": "object"}
+    await learning_service._call_gemini("test prompt", schema=schema)
+
+    assert "generationConfig" in captured["json"]
+    assert captured["json"]["generationConfig"]["responseMimeType"] == "application/json"
+    assert captured["json"]["generationConfig"]["responseJsonSchema"] == schema
+    assert "responseSchema" not in captured["json"]["generationConfig"]
+
+
+async def test_generate_learning_pack_wire_payload_includes_response_json_schema(monkeypatch):
+    """generate_learning_pack transmits responseJsonSchema in generationConfig over the wire."""
+    captured = {}
+
+    class FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def post(self, url, params=None, json=None):
+            captured["json"] = json
+            return FakeResponse(200, json_data={"candidates": [{"content": {"parts": [{"text": json_module.dumps(VALID_PACK)}]}}]})
+
+    import json as json_module
+    monkeypatch.setattr(learning_service.httpx, "AsyncClient", FakeAsyncClient)
+
+    pack = await learning_service.generate_learning_pack(
+        "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES
+    )
+    assert len(pack.vocabulary) == 1
+    gen_config = captured["json"]["generationConfig"]
+    assert "responseJsonSchema" in gen_config
+    assert "responseSchema" not in gen_config
+    assert gen_config["responseJsonSchema"]["type"] == "object"
+
+
+async def test_generate_learning_with_retry_never_downgrades_to_schema_less(monkeypatch):
+    """If Gemini returns a fatal error or network fails, _generate_with_retry must not retry schema-less."""
+    calls = []
+
+    async def fake_call_gemini(prompt: str, schema: dict | None = None):
+        calls.append(schema)
+        raise learning_service.httpx.RequestError("Network error")
+
+    monkeypatch.setattr(learning_service, "_call_gemini", fake_call_gemini)
+
+    schema = {"type": "object"}
+    with pytest.raises(LearningGenerationError, match="Gemini API request failed"):
+        await learning_service._generate_with_retry("prompt", schema=schema)
+
+    assert len(calls) == 1
+    assert calls[0] == schema

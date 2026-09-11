@@ -1,6 +1,6 @@
 """Pydantic models for Learning Content (Task 1.5) generation and persistence."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class VocabularyItem(BaseModel):
@@ -56,9 +56,23 @@ class LearningPackUpdate(BaseModel):
 
     Only fields present in the request are written — omitted fields are left
     unchanged (see learning_service.update_learning_content).
+    Sending explicit null is rejected — omission is the only way to skip a field.
     """
 
     vocabulary: list[VocabularyItem] | None = None
     idioms: list[IdiomItem] | None = None
     grammar: list[GrammarItem] | None = None
     questions: list[QuestionItem] | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def forbid_explicit_null(cls, data: object) -> object:
+        """Reject any field sent as explicit JSON null — omission is the only way to leave unchanged."""
+        if isinstance(data, dict):
+            nulled = [key for key, value in data.items() if value is None]
+            if nulled:
+                raise ValueError(
+                    f"explicit null not allowed for: {', '.join(nulled)} "
+                    "— omit the field instead to leave it unchanged"
+                )
+        return data

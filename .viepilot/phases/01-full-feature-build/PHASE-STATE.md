@@ -1,0 +1,77 @@
+# Phase 1 State — Full Feature Build
+
+## Metadata
+- **Phase:** 1
+- **Slug:** 01-full-feature-build
+- **Status:** in_progress
+- **Started:** 2026-09-10
+- **Current Day:** Day 2 / 21 (2026-09-11)
+- **Target Completion:** 2026-09-17
+- **Subtask Progress:** 14 / 29 (48%)
+- **Test Suite Status:** 196 passed, 0 failures, ruff clean, node --check clean
+
+---
+
+## Tasks Status & Acceptance Evidence
+
+### Task 1.1: Project Setup & Infrastructure
+- **Status:** 🔄 In Progress (4 / 5 subtasks complete)
+- **Details:**
+  - Python virtual environment configured (`venv`).
+  - Directory structure created: `app/`, `frontend/`, `data/`, `prompts/`, `models/`, `tests/`.
+  - FastAPI skeleton initialized (`app/main.py`) with CORS, lifespan, router mounts, `/health` 200.
+  - SQLite database initialized (`app/db/database.py`) with schema tables.
+  - Dependency check script (`scripts/check_dependencies.py`) verified in code; waiting on local machine environment setup (`ffmpeg`, `.env` key, local model weights).
+
+### Task 1.2: Dashboard & Project Management
+- **Status:** 🔄 In Progress (1 / 2 subtasks complete)
+- **Details:**
+  - `ProjectService` CRUD fully implemented with Pydantic validation, atomic speaker replacement, `config_json` auto-sync, and forward-only status state machine.
+  - **Evidence:** 30 automated service and HTTP API tests pass (`tests/test_projects_api.py`, `tests/test_project_service.py`).
+  - Dashboard UI (`frontend/pages/dashboard.html`): loads, routes to `/step1` on "New Project" and `/step2?project_id=...` on "Continue". Awaiting automated UI test coverage.
+
+### Task 1.3: Step 1 — Script Config Wizard
+- **Status:** ✅ Done
+- **Details:**
+  - Config API route (`POST /api/projects` + `ScriptConfig`/`SpeakerConfig`) operational.
+  - Step 1 Config UI (`frontend/pages/step1_config.html`, `frontend/static/js/step1_config.js`) complete.
+  - Required topic validation, integer-clamped num_speakers (1–6), speaker card sync, friendly error banners.
+  - **Evidence:** Headless browser E2E (Playwright) verified all 6 scenarios; 30 unit/integration tests.
+
+### Task 1.4: Step 2 — AI Script Generation
+- **Status:** ✅ Done
+- **Details:**
+  - Jinja2 prompt templates for 10 genres × 6 CEFR levels (`prompts/script/`).
+  - `ScriptService` with REST Gemini API, 429 exponential backoff, UUID speaker validation, DB persistence.
+  - Step 2 Script UI (`frontend/pages/step2_script.html`, `frontend/static/js/step2_script.js`) with per-line editing, single-line regen, confirm dialog for "Regenerate All".
+  - **Hardening (1.4D-FIX2/FIX2B/FIX2C gate):** Connection-wide `_write_lock` and `_read_lock` preventing cross-project race conditions and dirty reads; `GEMINI_MODEL` updated to `gemini-3.8-flash`.
+  - **Evidence:** 166 automated tests pass (`tests/test_script_service.py`, `tests/test_projects_write_lock.py`, etc.); real headless browser E2E verified.
+
+### Task 1.5: Step 3 — Learning Content
+- **Status:** ✅ Done
+- **Details:**
+  - Prompt templates (`prompts/learning/learning_pack.txt`).
+  - `LearningContentService` (`app/services/learning_service.py`) generating vocabulary, idioms, grammar, and quizzes with `LearningPackOut` schema validation.
+  - `learning_contents` table with UPSERT persistence.
+  - Step 3 UI (`frontend/pages/step3_learning.html`, `frontend/static/js/step3_learning.js`) with 4 tabs, coalesced trailing autosave, dirty state tracking.
+  - **Evidence:** 20 dedicated service/API tests, 196 total tests passing cleanly (`commit b06eb07`, `commit b57428e`).
+
+### Task 1.6: Step 4 — TTS Audio Studio
+- **Status:** ⏳ Planned
+- **Details:** TTSService (OmniVoice GPU primary + Edge TTS backup), AudioService, TTS UI.
+
+### Task 1.7: Step 5 — Video Studio
+- **Status:** ⏳ Planned
+- **Details:** VideoService (background + subtitle burned + SRT), LivePortrait, Video UI.
+
+### Task 1.8: Step 6 — Thumbnail Generator
+- **Status:** ⏳ Planned
+- **Details:** ThumbnailService, 5 Pillow templates + Gemini Vision, Thumbnail UI.
+
+### Task 1.9: Step 7 — YouTube Package
+- **Status:** ⏳ Planned
+- **Details:** YouTubePackageService, metadata/tags/chapters generator, UI.
+
+### Task 1.10: Music Library
+- **Status:** ⏳ Planned
+- **Details:** Background music management and mixing UI.

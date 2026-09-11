@@ -116,6 +116,13 @@ async def step3_learning() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "pages" / "step3_learning.html")
 
 
+@app.get("/step4")
+async def step4_tts() -> FileResponse:
+    """Serve the Step 4 — TTS Audio Studio placeholder."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step4_tts_placeholder.html")
+
+
+
 @app.get("/health")
 async def health() -> dict:
     """Report readiness of the database, ffmpeg, and GPU for the check_dependencies script and UI."""

@@ -29,12 +29,28 @@ Versioning: [SemVer](https://semver.org/)
 - `ScriptService` (`app/services/script_service.py`): `generate_script()`/`regenerate_line()` via the Gemini REST API (`httpx.AsyncClient`, `responseMimeType=application/json`, exponential backoff 1s→2s→4s on HTTP 429 only), plus persistence (`save_script`/`get_script`/`get_script_line`/`update_script_line`)
 - Step 2 — Script Generation UI (`/step2`, `step2_script.html`/`.js`) replacing the Task 1.3 placeholder: generate, per-line regenerate, click-to-edit with autosave, "Regenerate All", and `GET /api/projects/{id}/script` so a reload/revisit never loses the script
 - `POST .../script/generate` and `PUT .../script` auto-advance a project from `draft` to `script_generated`
+- Step 3 — Learning Content Wizard & Service (Task 1.5):
+  - `LearningContentService` (`app/services/learning_service.py`): generates structured vocabulary (with IPA, part of speech, bilingual definitions, examples), idioms, grammar points, and comprehension quiz via Gemini REST API (`gemini-3.8-flash`) with strict JSON schema enforcement (`responseSchema`) and retry/backoff on 429
+  - Dedicated SQLite table `learning_contents` (`app/db/migrations/002_learning_content.sql`) with UPSERT and foreign key cascade to `projects(id)`
+  - REST endpoints: `POST /api/projects/{id}/learning/generate`, `GET /api/projects/{id}/learning`, and `PUT /api/projects/{id}/learning`
+  - Step 3 UI (`frontend/pages/step3_learning.html`, `step3_learning.js`): 4-tab interface (Vocabulary, Idioms, Grammar, Quiz with answer reveal), inline editing, coalesced trailing autosave, and "Regenerate Pack" confirmation modal
+  - Step 4 placeholder entry point (`frontend/pages/step4_tts_placeholder.html`, `GET /step4`)
+- Architecture diagram sidecars (`.viepilot/architecture/data-flow.mermaid`, `module-dependencies.mermaid`) and Diagram source references in `ARCHITECTURE.md`
+- Gemini Implementer Delivery Protocol and contract (`docs/GEMINI_CODE_PROMPT.md`, `.viepilot/SYSTEM-RULES.md`, updated `CLAUDE_CODE_PROMPT.md`)
 
 ### Fixed
 - Step 2 autosave now resyncs script-line ids from the `PUT .../script` response (the save always reissues fresh ids) and serializes overlapping autosaves into one coalesced trailing save instead of firing them concurrently; Regenerate is disabled for the full duration of an in-flight save
 - Step 2 no longer shows the "Generate Script" panel when loading an existing script fails — previously this could invite overwriting a script that actually exists but just failed to load
 - `GEMINI_MODEL` moved off the shut-down `gemini-2.0-flash` to `gemini-3.8-flash` (Google's current default Flash model)
 - Every write to the shared `aiosqlite` connection (create/update/delete project, script generate/regenerate/save) and every read from it (list/get project, `GET .../script`, and the pre-read steps of generate/regenerate/save) now serializes on one connection-wide lock (`app/api/projects.py::_write_transaction` / `_read_transaction`) — closes a HIGH-severity bug where an unrelated concurrent request could interleave into another request's uncommitted transaction and be wiped out by its rollback (dirty/phantom reads and writes). The lock is never held across a Gemini call. `db.commit()` now runs inside the `try` so a commit failure also triggers a rollback
+- `BUG-001`: Fixed JSON syntax error (trailing comma) in `.viepilot/HANDOFF.json`, restored phase structure (`.viepilot/phases/01-full-feature-build/`)
+- `BUG-002`: Reconciled counters across `TRACKER.md` (14/29 tasks, Day 2/21), `ROADMAP.md` (checked Task 1.5 with commit hashes), and `HANDOFF.json`
+- `BUG-003`: Re-established 10 phase task cards (`tasks/task-1.1.md` through `task-1.10.md`), verified with `vp-tools phase-info 1` and `vp-tools progress`
+- `BUG-004`: Fixed double-encoded UTF-8 in `README.md`, updated documentation to use `DIE_GEMINI_API_KEY`, synchronized `database-schema.sql` with migration 002, removed stale Gemini 2.0 and JSON-sidecar references
+- `BUG-005`: Resolved HTTP 500 on explicit null fields in `PUT /api/projects/{id}/learning` by adding `@model_validator(mode="before")` on `LearningPackUpdate` to reject nulls with HTTP 422, reinforced with service-level validation
+- `BUG-006`: Resolved empty/whitespace-only project and speaker names by adding string validators (`min_length=1`, whitespace stripping) to Pydantic models and service layer
+- `BUG-007`: Enforced strict Gemini `responseSchema` on all AI generation calls (`ScriptService`, `LearningContentService`), added dedicated `regenerate_line.txt` template and `render_regenerate_line_prompt`
+- `BUG-008`: Fixed race conditions and data loss on rapid Step navigation by adding dirty state checks, save awaiting in `handleNextStep`, UI action locking, and `beforeunload` warning in Step 2 and Step 3
 
 ---
 

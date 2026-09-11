@@ -51,17 +51,19 @@ CREATE TABLE IF NOT EXISTS script_lines (
     FOREIGN KEY (speaker_id) REFERENCES speakers(id) ON DELETE CASCADE
 );
 
--- Learning content table
-CREATE TABLE IF NOT EXISTS learning_content (
+-- Learning content table (Sprint 1.5A / Task 1.5)
+CREATE TABLE IF NOT EXISTS learning_contents (
     id TEXT PRIMARY KEY,
-    project_id TEXT NOT NULL UNIQUE,
-    vocabulary_json TEXT,                   -- JSON: [{word, type, definition, example, level}]
-    collocations_json TEXT,                 -- JSON: [{collocation, explanation, example}]
-    grammar_structures_json TEXT,           -- JSON: [{structure, explanation, examples}]
-    comprehension_questions_json TEXT,      -- JSON: [{question, answer}]
-    key_takeaways_json TEXT,               -- JSON: [string]
-    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    project_id TEXT NOT NULL UNIQUE REFERENCES projects(id) ON DELETE CASCADE,
+    vocabulary_json TEXT NOT NULL DEFAULT '[]',  -- JSON: [{word, part_of_speech, ipa, definition_en, definition_vi, example_sentence}]
+    idioms_json TEXT NOT NULL DEFAULT '[]',       -- JSON: [{phrase, meaning_en, meaning_vi, example_sentence}]
+    grammar_json TEXT NOT NULL DEFAULT '[]',      -- JSON: [{point, structure, explanation_en, explanation_vi, examples}]
+    questions_json TEXT NOT NULL DEFAULT '[]',    -- JSON: [{question, options, correct_answer, explanation}]
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_learning_contents_project_id ON learning_contents(project_id);
 
 -- Audio jobs table
 CREATE TABLE IF NOT EXISTS audio_jobs (

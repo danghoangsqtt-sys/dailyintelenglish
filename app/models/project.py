@@ -39,6 +39,19 @@ class SpeakerConfig(BaseModel):
     pitch: float = Field(default=0.0, ge=-1.0, le=1.0)
     volume: float = Field(default=1.0, ge=0.0, le=2.0)
 
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("speaker name cannot be blank or whitespace-only")
+        return value
+
+    @field_validator("voice_description")
+    @classmethod
+    def strip_voice_description(cls, value: str) -> str:
+        return value.strip()
+
     @field_validator("gender")
     @classmethod
     def validate_gender(cls, value: str) -> str:
@@ -65,7 +78,7 @@ class ScriptConfig(BaseModel):
     """Full configuration submitted from the Step 1 wizard to create a project."""
 
     name: str = Field(min_length=1)
-    topic: str = ""
+    topic: str = Field(min_length=1)
     cefr_level: str = "B1"
     duration_minutes: float = Field(default=10.0, gt=0)
     num_speakers: int = Field(default=2, ge=MIN_SPEAKERS, le=MAX_SPEAKERS)
@@ -73,6 +86,22 @@ class ScriptConfig(BaseModel):
     accent: str = "american"
     language_features: LanguageFeatures = Field(default_factory=LanguageFeatures)
     speakers: list[SpeakerConfig] = Field(default_factory=list)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("project name cannot be blank or whitespace-only")
+        return value
+
+    @field_validator("topic")
+    @classmethod
+    def validate_topic(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("topic cannot be blank or whitespace-only")
+        return value
 
     @field_validator("cefr_level")
     @classmethod
@@ -123,6 +152,25 @@ class ProjectUpdate(BaseModel):
     accent: str | None = None
     language_features: LanguageFeatures | None = None
     speakers: list[SpeakerConfig] | None = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str | None) -> str | None:
+        if value is not None:
+            value = value.strip()
+            if not value:
+                raise ValueError("project name cannot be blank or whitespace-only")
+        return value
+
+    @field_validator("topic")
+    @classmethod
+    def validate_topic(cls, value: str | None) -> str | None:
+        if value is not None:
+            value = value.strip()
+            if not value:
+                raise ValueError("topic cannot be blank or whitespace-only")
+        return value
+
 
     @model_validator(mode="before")
     @classmethod

@@ -91,7 +91,7 @@ def queue_responses(monkeypatch, responses: list[FakeResponse]):
     """Monkeypatch _call_gemini to return `responses` in order, one per call."""
     calls = {"n": 0}
 
-    async def fake_call_gemini(prompt: str):
+    async def fake_call_gemini(prompt: str, schema: dict | None = None):
         index = calls["n"]
         calls["n"] += 1
         return responses[index], 12.3
@@ -205,7 +205,7 @@ async def test_generate_script_missing_api_key_raises_without_calling_gemini(mon
     monkeypatch.setattr(script_service.settings, "GEMINI_API_KEY", "")
     calls = {"n": 0}
 
-    async def fake_call_gemini(prompt: str):
+    async def fake_call_gemini(prompt: str, schema: dict | None = None):
         calls["n"] += 1
         raise AssertionError("Gemini should never be called without an API key")
 
@@ -215,3 +215,112 @@ async def test_generate_script_missing_api_key_raises_without_calling_gemini(mon
         await script_service.generate_script("proj-1", SAMPLE_CONFIG)
 
     assert calls["n"] == 0
+
+
+async def test_call_gemini_includes_response_json_schema(monkeypatch):
+    """_call_gemini includes responseJsonSchema (and not responseSchema) in generationConfig (BUG-011)."""
+    captured = {}
+
+    class FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def post(self, url, params=None, json=None):
+            captured["url"] = url
+            captured["json"] = json
+            return FakeResponse(200, json_data={"candidates": [{"content": {"parts": [{"text": "[]"}]}}]})
+
+    monkeypatch.setattr(script_service.httpx, "AsyncClient", FakeAsyncClient)
+
+    schema = {"type": "array"}
+    await script_service._call_gemini("test prompt", schema=schema)
+
+    assert "generationConfig" in captured["json"]
+    assert captured["json"]["generationConfig"]["responseMimeType"] == "application/json"
+    assert captured["json"]["generationConfig"]["responseJsonSchema"] == schema
+    assert "responseSchema" not in captured["json"]["generationConfig"]
+
+
+async def test_generate_script_wire_payload_includes_response_json_schema(monkeypatch):
+    """generate_script transmits responseJsonSchema in generationConfig over the wire."""
+    captured = {}
+
+    class FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def post(self, url, params=None, json=None):
+            captured["json"] = json
+            return FakeResponse(200, json_data={"candidates": [{"content": {"parts": [{"text": json_module.dumps(VALID_LINES)}]}}]})
+
+    import json as json_module
+    monkeypatch.setattr(script_service.httpx, "AsyncClient", FakeAsyncClient)
+
+    lines = await script_service.generate_script("proj-1", SAMPLE_CONFIG)
+    assert len(lines) == 2
+    assert "generationConfig" in captured["json"]
+    gen_config = captured["json"]["generationConfig"]
+    assert "responseJsonSchema" in gen_config
+    assert "responseSchema" not in gen_config
+    assert gen_config["responseJsonSchema"]["type"] == "array"
+
+
+async def test_regenerate_line_wire_payload_includes_response_json_schema(monkeypatch):
+    """regenerate_line transmits responseJsonSchema in generationConfig over the wire."""
+    captured = {}
+
+    class FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+        async def post(self, url, params=None, json=None):
+            captured["json"] = json
+            return FakeResponse(200, json_data={"candidates": [{"content": {"parts": [{"text": json_module.dumps(VALID_LINES[0])}]}}]})
+
+    import json as json_module
+    monkeypatch.setattr(script_service.httpx, "AsyncClient", FakeAsyncClient)
+
+    line = await script_service.regenerate_line(
+        "proj-1", SAMPLE_CONFIG, "line_001", "old text", "11111111-1111-1111-1111-111111111111"
+    )
+    assert line.id == "line_001"
+    gen_config = captured["json"]["generationConfig"]
+    assert "responseJsonSchema" in gen_config
+    assert "responseSchema" not in gen_config
+    assert gen_config["responseJsonSchema"]["type"] == "object"
+
+
+async def test_generate_with_retry_never_downgrades_to_schema_less(monkeypatch):
+    """If Gemini returns a fatal error or network fails, _generate_with_retry must not retry schema-less."""
+    calls = []
+
+    async def fake_call_gemini(prompt: str, schema: dict | None = None):
+        calls.append(schema)
+        raise script_service.httpx.RequestError("Network error")
+
+    monkeypatch.setattr(script_service, "_call_gemini", fake_call_gemini)
+
+    schema = {"type": "array"}
+    with pytest.raises(ScriptGenerationError, match="Gemini API request failed"):
+        await script_service._generate_with_retry("prompt", schema=schema)
+
+    assert len(calls) == 1
+    assert calls[0] == schema

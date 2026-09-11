@@ -15,7 +15,7 @@ from pydantic import ValidationError as PydanticValidationError
 from app.core.config import settings
 from app.core.constants import GEMINI_MAX_RETRIES, GEMINI_MODEL, GEMINI_RETRY_BASE_DELAY
 from app.core.exceptions import NotFoundError, ScriptGenerationError, ValidationError
-from app.core.prompt_loader import render_script_prompt
+from app.core.prompt_loader import render_regenerate_line_prompt, render_script_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +52,15 @@ class ScriptLineOut(BaseModel):
 _SCRIPT_LINES_ADAPTER = TypeAdapter(list[ScriptLineOut])
 
 
-async def _call_gemini(prompt: str) -> tuple[httpx.Response, float]:
+async def _call_gemini(prompt: str, schema: dict | None = None) -> tuple[httpx.Response, float]:
     """Make one HTTP call to Gemini generateContent. Returns (response, latency_ms)."""
     url = GEMINI_ENDPOINT.format(model=GEMINI_MODEL)
+    generation_config: dict[str, object] = {"responseMimeType": "application/json"}
+    if schema is not None:
+        generation_config["responseJsonSchema"] = schema
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"responseMimeType": "application/json"},
+        "generationConfig": generation_config,
     }
     started_at = time.perf_counter()
     async with httpx.AsyncClient(timeout=60.0) as client:
@@ -66,7 +69,7 @@ async def _call_gemini(prompt: str) -> tuple[httpx.Response, float]:
     return response, latency_ms
 
 
-async def _generate_with_retry(prompt: str) -> str:
+async def _generate_with_retry(prompt: str, schema: dict | None = None) -> str:
     """Call Gemini with exponential backoff on HTTP 429, returning the raw response text.
 
     Retries only on 429 (rate limit) — any other non-200 status fails immediately,
@@ -77,7 +80,7 @@ async def _generate_with_retry(prompt: str) -> str:
 
     for attempt in range(1, GEMINI_MAX_RETRIES + 1):
         try:
-            response, latency_ms = await _call_gemini(prompt)
+            response, latency_ms = await _call_gemini(prompt, schema=schema)
         except httpx.RequestError as exc:
             raise ScriptGenerationError(f"Gemini API request failed: {exc}") from exc
 
@@ -150,7 +153,7 @@ async def generate_script(project_id: str, config: dict) -> list[ScriptLineOut]:
         language_features=config["language_features"],
     )
 
-    raw_text = await _generate_with_retry(prompt)
+    raw_text = await _generate_with_retry(prompt, schema=_SCRIPT_LINES_ADAPTER.json_schema())
 
     try:
         parsed = json.loads(raw_text)
@@ -201,23 +204,17 @@ async def regenerate_line(
     if speaker is None:
         raise ScriptGenerationError(f"speaker_id {speaker_id!r} not found in project {project_id}")
 
-    prompt = (
-        f"You are rewriting ONE line of a {config['genre']} podcast script at CEFR "
-        f"{config['cefr_level']} about \"{config['topic']}\".\n"
-        f"The line is spoken by {speaker['name']} ({speaker['gender']}, {speaker['accent']} accent).\n"
-        f'Current line: "{current_text}"\n'
-        "Rewrite this single line with different wording, the same meaning, and the same "
-        "speaker, staying strictly within the CEFR level above.\n"
-        "Return ONLY one JSON object (no markdown fences, no commentary) with this shape:\n"
-        "{\n"
-        f'  "id": "{line_id}",\n'
-        f'  "speaker_id": "{speaker_id}",\n'
-        '  "text": "...",\n'
-        '  "language_notes": {"collocations": ["..."], "idioms": ["..."], "grammar_point": "..."}\n'
-        "}"
+    prompt = await render_regenerate_line_prompt(
+        genre=config["genre"],
+        cefr_level=config["cefr_level"],
+        topic=config["topic"],
+        speaker=speaker,
+        current_text=current_text,
+        line_id=line_id,
+        speaker_id=speaker_id,
     )
 
-    raw_text = await _generate_with_retry(prompt)
+    raw_text = await _generate_with_retry(prompt, schema=ScriptLineOut.model_json_schema())
 
     try:
         parsed = json.loads(raw_text)

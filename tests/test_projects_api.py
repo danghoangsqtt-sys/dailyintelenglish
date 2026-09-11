@@ -165,3 +165,57 @@ def test_update_project_config_json_stays_in_sync(client):
     assert snapshot["topic"] == "Updated topic"
     assert snapshot["name"] == project["name"]
     assert len(snapshot["speakers"]) == project["num_speakers"]
+
+
+def test_create_project_rejects_blank_name(client):
+    payload = dict(VALID_PAYLOAD, name="   ")
+    response = client.post("/api/projects", json=payload)
+    assert response.status_code == 422
+    _envelope_error(response.json())
+
+
+def test_create_project_rejects_empty_or_blank_topic(client):
+    for topic in ["", "   "]:
+        payload = dict(VALID_PAYLOAD, topic=topic)
+        response = client.post("/api/projects", json=payload)
+        assert response.status_code == 422
+        _envelope_error(response.json())
+
+
+def test_create_project_rejects_blank_speaker_name(client):
+    speakers = [
+        {"name": "   ", "gender": "male", "accent": "british"},
+        {"name": "Sam", "gender": "female", "accent": "british"},
+    ]
+    payload = dict(VALID_PAYLOAD, speakers=speakers)
+    response = client.post("/api/projects", json=payload)
+    assert response.status_code == 422
+    _envelope_error(response.json())
+
+
+def test_create_and_update_strips_surrounding_whitespace(client):
+    payload = dict(
+        VALID_PAYLOAD,
+        name="  Trimmed Episode  ",
+        topic="  Trimmed Topic  ",
+        speakers=[
+            {"name": "  Alex  ", "gender": "male", "accent": "british"},
+            {"name": "  Sam  ", "gender": "female", "accent": "british"},
+        ],
+    )
+    response = client.post("/api/projects", json=payload)
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["name"] == "Trimmed Episode"
+    assert data["topic"] == "Trimmed Topic"
+    assert data["speakers"][0]["name"] == "Alex"
+    assert data["speakers"][1]["name"] == "Sam"
+
+    # Also test update strips whitespace
+    update_response = client.put(
+        f"/api/projects/{data['id']}", json={"name": "  Updated Name  ", "topic": "  Updated Topic  "}
+    )
+    assert update_response.status_code == 200
+    updated_data = update_response.json()["data"]
+    assert updated_data["name"] == "Updated Name"
+    assert updated_data["topic"] == "Updated Topic"

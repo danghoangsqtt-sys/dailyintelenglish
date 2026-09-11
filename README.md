@@ -1,6 +1,6 @@
-﻿# Daily Intel English Studio
+# Daily Intel English Studio
 
-> ðŸŽ™ï¸ AI-powered podcast production studio for English learning YouTube content
+> 🎙️ AI-powered podcast production studio for English learning YouTube content
 
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-latest-green)](https://fastapi.tiangolo.com)
@@ -9,19 +9,28 @@
 
 ## What is Daily Intel English Studio?
 
-**Daily Intel English Studio** lÃ  cÃ´ng cá»¥ sáº£n xuáº¥t ná»™i dung tiáº¿ng Anh há»— trá»£ bá»Ÿi AI dÃ nh cho content creator YouTube. á»¨ng dá»¥ng tá»± Ä‘á»™ng hÃ³a toÃ n bá»™ pipeline tá»« Ã½ tÆ°á»Ÿng â†’ ká»‹ch báº£n â†’ giá»ng Ä‘á»c â†’ video â†’ YouTube description.
+**Daily Intel English Studio** là công cụ sản xuất nội dung tiếng Anh hỗ trợ bởi AI dành cho content creator YouTube. Ứng dụng tự động hóa toàn bộ pipeline từ ý tưởng → kịch bản → giọng đọc → video → YouTube description.
 
-### âœ¨ Key Features
+### ✨ Key Features
 
-| Feature | Description |
-|---------|-------------|
-| ðŸ¤– **AI Script Generation** | Gemini API táº¡o ká»‹ch báº£n chuáº©n CEFR (A1-C2), 10 thá»ƒ loáº¡i, 10 giá»ng vÃ¹ng miá»n |
-| ðŸŽ™ï¸ **Multi-voice TTS** | OmniVoice (local GPU) + Edge TTS, 2-6 ngÆ°á»i nÃ³i, voice design |
-| ðŸ“š **Learning Content** | Auto-generate vocabulary, idioms, grammar notes, comprehension questions |
-| ðŸŽ¬ **Video Export** | MP4 vá»›i subtitle, avatar lips-sync (LivePortrait), background templates |
-| ðŸ–¼ï¸ **Thumbnail Generator** | Template + AI fill + manual editor, A/B variants |
-| ðŸ“‹ **YouTube Package** | Complete description, chapters, tags, full transcript |
-| ðŸŽµ **Music Library** | User-managed copyright-safe background music |
+#### Shipped / Implemented (Phase 1, Tasks 1.1–1.5)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| 📊 **Dashboard & Project Management** | Quản lý dự án podcast, trạng thái pipeline forward-only, lưu trữ SQLite bất đồng bộ (`aiosqlite`) | ✅ Shipped (Task 1.1–1.2) |
+| ⚙️ **Script Config Wizard** | Cấu hình chủ đề, trình độ CEFR (A1–C2), thời lượng, 1–6 người nói, 10 thể loại, 10 giọng vùng miền, toggles tính năng ngôn ngữ | ✅ Shipped (Task 1.3) |
+| 🤖 **AI Script Generation & Inline Editor** | Gemini API (`gemini-3.8-flash`) tạo kịch bản chuẩn CEFR với JSON Schema validation, chỉnh sửa inline, re-generate từng câu, coalesced autosave | ✅ Shipped (Task 1.4) |
+| 📚 **Learning Content Generation & Editor** | Tự động trích xuất từ vựng (IPA, định nghĩa song ngữ Anh-Việt), thành ngữ, cấu trúc ngữ pháp, trắc nghiệm đọc hiểu kèm đáp án và giải thích | ✅ Shipped (Task 1.5) |
+
+#### Planned / In Development (Phase 1, Tasks 1.6–1.10)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| 🎙️ **Multi-voice TTS Studio** | OmniVoice (GPU cục bộ RTX 3060) + Edge TTS (dự phòng đám mây miễn phí) + Piper TTS, phân vai giọng đọc | ⏳ Planned (Task 1.6) |
+| 🎵 **Audio Mixing & Music Library** | Nối audio, chèn nhạc nền bản quyền an toàn, ducking âm lượng, chuẩn hóa âm thanh | ⏳ Planned (Task 1.7) |
+| 🎬 **Video Studio** | Xuất MP4 với phụ đề tự động (SRT/burned-in), LivePortrait lips-sync avatar theo từng nhân vật | ⏳ Planned (Task 1.8) |
+| 🖼️ **Thumbnail Generator** | Template + AI gợi ý nội dung + Pillow editor, xuất biến thể A/B (16:9 & 9:16 Shorts) | ⏳ Planned (Task 1.9) |
+| 📋 **YouTube Package** | Sinh trọn bộ YouTube metadata: tiêu đề, mô tả chuẩn SEO, timestamps/chapters, tags, transcript | ⏳ Planned (Task 1.10) |
 
 ## Quick Start
 
@@ -47,7 +56,8 @@ pip install -r requirements.txt
 
 # 4. Setup environment
 copy .env.example .env
-# Edit .env â€” add your GEMINI_API_KEY
+# Edit .env — set your DIE_GEMINI_API_KEY
+# (All application settings use the DIE_ prefix, e.g. DIE_GEMINI_API_KEY)
 
 # 5. Check dependencies
 python scripts/check_dependencies.py
@@ -65,46 +75,45 @@ http://localhost:8000
 ## Workflow (7 Steps)
 
 ```
-1ï¸âƒ£  Dashboard        â†’ Create new project
-2ï¸âƒ£  Script Config    â†’ Topic, CEFR level, duration, speakers, genre, accent
-3ï¸âƒ£  AI Script        â†’ Generate, preview, inline edit
-4ï¸âƒ£  Learning Content â†’ Vocabulary, idioms, grammar, comprehension questions
-5ï¸âƒ£  TTS Audio Studio â†’ Voice assignment, preview, mix, music library
-6ï¸âƒ£  Video Studio     â†’ Background/avatar, subtitle, export MP4
-7ï¸âƒ£  YouTube Package  â†’ Description, chapters, tags, full transcript
+1️⃣  Dashboard        → Create new project (Implemented)
+2️⃣  Script Config    → Topic, CEFR level, duration, speakers, genre, accent (Implemented)
+3️⃣  AI Script        → Generate, preview, inline edit, per-line regenerate (Implemented)
+4️⃣  Learning Content → Vocabulary, idioms, grammar, comprehension questions (Implemented)
+5️⃣  TTS Audio Studio → Voice assignment, preview, mix, music library (Planned)
+6️⃣  Video Studio     → Background/avatar, subtitle, export MP4 (Planned)
+7️⃣  YouTube Package  → Description, chapters, tags, full transcript (Planned)
 ```
 
 ## Tech Stack
 
 - **Backend**: Python 3.11+ / FastAPI / Uvicorn / aiosqlite
 - **Frontend**: Vanilla HTML5 / CSS3 / JavaScript
-- **AI**: Google Gemini API (gemini-3.8-flash)
+- **AI**: Google Gemini API (`gemini-3.8-flash`) with strict structured JSON schema
 - **TTS**: OmniVoice (local GPU) + Edge TTS + Piper TTS
 - **Audio**: pydub + ffmpeg
 - **Video**: ffmpeg + LivePortrait (lips-sync)
 - **Thumbnail**: Pillow
-- **Database**: SQLite
+- **Database**: SQLite (aiosqlite async transactions)
 
 ## Project Structure
 
 ```
 Daily_Intel_English/
-â”œâ”€â”€ app/                    # FastAPI backend
-â”œâ”€â”€ frontend/               # HTML/CSS/JS pages
-â”œâ”€â”€ data/                   # Runtime data (gitignored)
-â”œâ”€â”€ prompts/                # Gemini prompt templates
-â”œâ”€â”€ models/                 # Local AI models
-â”œâ”€â”€ scripts/                # Setup utilities
-â”œâ”€â”€ tests/                  # Test suite
-â”œâ”€â”€ .viepilot/              # Project architecture docs
-â””â”€â”€ docs/                   # User documentation
+├── app/                    # FastAPI backend
+├── frontend/               # HTML/CSS/JS pages
+├── data/                   # Runtime data (gitignored)
+├── prompts/                # Gemini prompt templates
+├── models/                 # Local AI models
+├── scripts/                # Setup utilities
+├── tests/                  # Automated test suite (pytest)
+├── .viepilot/              # Project architecture & governance docs
+└── docs/                   # Developer & user documentation
 ```
 
 ## License
 
-MIT License â€” see [LICENSE](LICENSE)
+MIT License — see [LICENSE](LICENSE)
 
 ---
 
 *Built with ViePilot | Crystallized: 2026-09-10*
-

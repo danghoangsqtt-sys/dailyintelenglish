@@ -1,0 +1,51 @@
+flowchart LR
+    A([▶ New Project]) --> B
+
+    subgraph B["Step 1: Config"]
+        B1[Topic\nCEFR Level\nDuration]
+        B2[Speakers\nGender\nAccent]
+        B3[Language Features\nCollocation/Idiom/Slang]
+    end
+
+    subgraph C["Step 2: AI Script"]
+        C1[Gemini API\nStrict Prompt]
+        C2[Script Preview\n+ Inline Editor]
+        C3[Re-generate\nper segment]
+    end
+
+    subgraph D["Step 3: Learning Content"]
+        D1[Vocabulary List\ntiered]
+        D2[Collocation\n& Idiom explain]
+        D3[Grammar Structures\n+ Comprehension Q]
+    end
+
+    subgraph E["Step 4: TTS Audio Studio"]
+        E1[Voice Assignment\nper speaker]
+        E2[OmniVoice GPU\ngenerate per line]
+        E3[Preview + Mix\npydub + ffmpeg]
+        E4[Export\nMP3 + WAV]
+    end
+
+    subgraph F["Step 5: Video Studio"]
+        F1[Background\nTemplate / Image]
+        F2[Subtitle Overlay\nburned-in + SRT]
+        F3[Lips-sync Avatar\nLivePortrait]
+        F4[Export MP4]
+    end
+
+    subgraph G["Step 6: Thumbnail"]
+        G1[Template Select]
+        G2[AI Fill\nGemini]
+        G3[Manual Editor]
+        G4[A/B Export\n16:9 + 9:16]
+    end
+
+    subgraph H["Step 7: YouTube Package"]
+        H1[AI Description\nGemini]
+        H2[Auto Timestamps\nfrom audio]
+        H3[Tags & Keywords]
+        H4[Full Transcript\n+ Vocab + Grammar]
+    end
+
+    B --> C --> D --> E --> F --> G --> H
+    H --> I([📦 Export Package\nReady for YouTube])

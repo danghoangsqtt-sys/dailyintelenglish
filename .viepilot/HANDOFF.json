@@ -28,8 +28,8 @@
                              "name":  "Full Feature Build",
                              "days":  "1-7",
                              "status":  "in_progress",
-                             "tasks_done":  12,
-                             "tasks_total":  40
+                             "tasks_done":  14,
+                             "tasks_total":  29
                          },
                    "2":  {
                              "name":  "Testing \u0026 Polish",
@@ -60,7 +60,7 @@
                           "Task 1.4 CLOSED: Script Generation UI (step2_script.html/js) replaces the step2 placeholder, loads persisted script via new GET /api/projects/{id}/script, generate/save auto-advance draft->script_generated, Dashboard Continue wired. 160 tests",
                           "1.4D-FIX2 gate CLOSED: step2_script.js autosave resyncs line ids from the PUT response and serializes overlapping saves (coalesced trailing save), Regenerate disabled while a save is in flight, Generate panel stays hidden when the existing script fails to load, script-save+status-advance merged into one transaction with rollback, GEMINI_MODEL moved gemini-2.0-flash (shut down) -> gemini-3.8-flash. 163 tests",
                           "1.4D-FIX2B gate CLOSED: replaced the FIX2 per-project asyncio.Lock with one connection-wide _write_lock (app/api/projects.py::_write_transaction) applied to every write route, 166 tests passed (commit fc7b471)",
-                          "Task 1.5 CLOSED: Step 3 Learning Content (prompt template, LearningContentService, API routes POST/GET/PUT, step3_learning.html/js UI with 4 tabs, coalesced trailing autosave, regenerate confirm, 196 tests passed)",
+                          "Task 1.5 CLOSED: Step 3 Learning Content (prompt template, LearningContentService, API routes POST/GET/PUT, step3_learning.html/js UI with 4 tabs, coalesced trailing autosave, regenerate confirm, 196 tests passed)"
                       ],
     "open_questions":  [
 

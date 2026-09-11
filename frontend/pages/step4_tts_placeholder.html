@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TTS Audio Studio — Daily Intel English Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    body { margin: 0; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--surface-border);
+      background: var(--bg-elevated);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 20px;
+      font-weight: 800;
+    }
+    .main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 60px 40px;
+      text-align: center;
+    }
+    .placeholder-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--surface-border);
+      border-radius: 16px;
+      padding: 48px 32px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+    .step-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(124, 58, 237, 0.2);
+      color: #a78bfa;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .title {
+      font-size: 28px;
+      font-weight: 800;
+      margin: 0 0 12px;
+    }
+    .desc {
+      font-size: 15px;
+      color: var(--text-muted);
+      max-width: 580px;
+      margin: 0 auto 32px;
+      line-height: 1.6;
+    }
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">
+      <span>🎙️</span>
+      <span>Daily Intel English Studio</span>
+    </div>
+    <a href="/" class="btn btn-secondary">Dashboard</a>
+  </header>
+
+  <main class="main">
+    <div class="placeholder-card">
+      <div class="step-badge">Step 4 — Task 1.6 Pipeline</div>
+      <h1 class="title">TTS Audio Studio</h1>
+      <p class="desc">
+        You've reached the TTS Audio Studio entry point.
+        This step is scheduled for Phase 1 Task 1.6: Local OmniVoice GPU synthesis with Edge TTS fallback, multi-speaker voice assignment, and audio mastering.
+      </p>
+      <div class="actions">
+        <a id="back-to-learning-btn" href="/step3" class="btn btn-secondary">← Back to Step 3: Learning Content</a>
+        <a href="/" class="btn btn-primary">Go to Dashboard</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const projectId = params.get("project_id");
+    if (projectId) {
+      document.getElementById("back-to-learning-btn").href = `/step3?project_id=${projectId}`;
+    }
+  </script>
+</body>
+</html>

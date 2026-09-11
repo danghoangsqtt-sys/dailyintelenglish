@@ -178,3 +178,70 @@ async def render_learning_prompt(
         genre=genre,
         transcript_text=transcript_text,
     )
+
+
+def _render_regenerate_line_prompt_sync(
+    *,
+    genre: str,
+    cefr_level: str,
+    topic: str,
+    speaker: dict,
+    current_text: str,
+    line_id: str,
+    speaker_id: str,
+) -> str:
+    """Blocking: validate genre/cefr, then render regenerate_line.txt."""
+    if genre not in GENRES:
+        raise ValidationError(f"No prompt support for genre: {genre!r}")
+    if cefr_level.upper() not in CEFR_LEVELS:
+        raise ValidationError(f"No prompt support for CEFR level: {cefr_level!r}")
+    try:
+        template = _env.get_template("regenerate_line.txt")
+    except TemplateNotFound as exc:
+        raise ValidationError(f"Prompt template not found: {exc}") from exc
+
+    return template.render(
+        genre=genre,
+        cefr_level=cefr_level,
+        topic=topic,
+        speaker=speaker,
+        current_text=current_text,
+        line_id=line_id,
+        speaker_id=speaker_id,
+    )
+
+
+async def render_regenerate_line_prompt(
+    *,
+    genre: str,
+    cefr_level: str,
+    topic: str,
+    speaker: dict,
+    current_text: str,
+    line_id: str,
+    speaker_id: str,
+) -> str:
+    """Render the single-line regeneration prompt using prompts/script/regenerate_line.txt.
+
+    Args:
+        genre: One of app.core.constants.GENRES.
+        cefr_level: One of app.core.constants.CEFR_LEVELS.
+        topic: Project topic.
+        speaker: Speaker dict with name, gender, accent.
+        current_text: Current text of the line to rewrite.
+        line_id: Existing line UUID.
+        speaker_id: Speaker UUID.
+
+    Returns:
+        The rendered prompt string.
+    """
+    return await asyncio.to_thread(
+        _render_regenerate_line_prompt_sync,
+        genre=genre,
+        cefr_level=cefr_level,
+        topic=topic,
+        speaker=speaker,
+        current_text=current_text,
+        line_id=line_id,
+        speaker_id=speaker_id,
+    )

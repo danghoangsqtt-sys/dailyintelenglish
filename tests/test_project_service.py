@@ -171,3 +171,39 @@ async def test_status_transition_same_status_is_idempotent(db):
     updated = await project_service.update_project(db, project["id"], ProjectUpdate(status="draft"))
 
     assert updated["status"] == "draft"
+
+
+
+def test_script_config_rejects_blank_strings():
+    with pytest.raises(PydanticValidationError):
+        make_config(name="   ")
+
+    with pytest.raises(PydanticValidationError):
+        make_config(topic="   ")
+
+    with pytest.raises(PydanticValidationError):
+        make_config(speakers=[SpeakerConfig(name="   ", gender="male", accent="american")])
+
+
+def test_project_update_rejects_blank_strings():
+    with pytest.raises(PydanticValidationError):
+        ProjectUpdate(name="   ")
+
+    with pytest.raises(PydanticValidationError):
+        ProjectUpdate(topic="   ")
+
+
+async def test_service_create_strips_whitespace(db):
+    config = make_config(
+        name="  Service Episode  ",
+        topic="  Service Topic  ",
+        speakers=[
+            SpeakerConfig(name="  Alex  ", gender="male", accent="american"),
+            SpeakerConfig(name="  Sam  ", gender="female", accent="british"),
+        ],
+    )
+    project = await project_service.create_project(db, config)
+    assert project["name"] == "Service Episode"
+    assert project["topic"] == "Service Topic"
+    assert project["speakers"][0]["name"] == "Alex"
+    assert project["speakers"][1]["name"] == "Sam"

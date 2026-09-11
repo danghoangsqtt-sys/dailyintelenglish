@@ -1,0 +1,11 @@
+You are rewriting ONE line of a {{ genre }} podcast script at CEFR {{ cefr_level }} about "{{ topic }}".
+The line is spoken by {{ speaker.name }} ({{ speaker.gender }}, {{ speaker.accent }} accent).
+Current line: "{{ current_text }}"
+Rewrite this single line with different wording, the same meaning, and the same speaker, staying strictly within the CEFR level above.
+Return ONLY one JSON object (no markdown fences, no commentary) with this shape:
+{
+  "id": "{{ line_id }}",
+  "speaker_id": "{{ speaker_id }}",
+  "text": "...",
+  "language_notes": {"collocations": ["..."], "idioms": ["..."], "grammar_point": "..."}
+}

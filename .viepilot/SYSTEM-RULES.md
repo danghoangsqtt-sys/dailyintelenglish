@@ -36,6 +36,15 @@ async def generate_script(id: str, config: ScriptConfig):
 - TTS generation, ffmpeg, Pillow → run in `asyncio.get_event_loop().run_in_executor()`
 - Never call `subprocess.run(block=True)` from async context
 
+### AR-06: PM-GEMINI Delivery Contract (No Self-Approval)
+- Product Manager (PM) is the sole authority on scope, prioritization, acceptance, marking tasks done, commits, and releases.
+- GEMINI / AI Developer is an implementation-only agent with strictly NO self-approval privileges.
+- Before coding, implementer MUST produce: plan, bounded `allowed_files` list, risk evaluation, and tests to run, then WAIT for PM confirmation.
+- Only modify files within `allowed_files`; no out-of-scope refactoring or unassigned bugfixes.
+- Never use `git add .`, never push directly without PM sign-off.
+- AI output requires two-layer validation: JSON Schema validation at API layer and Pydantic semantic validation.
+- UI async operations must enforce double-submit lock, serialization, trailing autosave, and dirty navigation guards.
+
 ---
 
 ## Coding Rules
@@ -166,9 +175,12 @@ test(script): add CEFR level vocabulary tests
 
 ## Quality Gates
 
-### Before Each Commit
-- [ ] `ruff check app/` — no linting errors
-- [ ] `python -m pytest tests/ -x` — all tests pass
+### Before Each Commit & Handoff
+- [ ] `ruff check .` — 0 linting errors
+- [ ] `python -m pytest tests/ -x` — all tests pass 100%
+- [ ] `node --check` — clean validation on all modified frontend JS files
+- [ ] UI tasks: Browser E2E verification (happy path, error path, reload, and race conditions)
+- [ ] Explicit staging only: `git add <file>` (NEVER `git add .`)
 - [ ] No hardcoded API keys or secrets
 - [ ] All new service methods have docstrings
 

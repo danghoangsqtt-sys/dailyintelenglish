@@ -192,13 +192,16 @@ Sau đó tiếp tục với **Task 1.3 — Script Config Wizard** (Step 1 UI + A
 
 ---
 
-## Git workflow
+## Git workflow & PM Delivery Control
+
+> [!IMPORTANT]
+> **PM Approval Required**: Không dùng `git add .` bừa bãi. PM là người duy nhất quyết định commit, push và release. AI Implementer chỉ stage các file thuộc `allowed_files` khi được PM yêu cầu.
 
 ```bash
-# Sau mỗi task hoàn thành:
-git add .
-git commit -m "feat(setup): implement FastAPI skeleton + DB init + dashboard UI"
-git push origin main
+# Sau khi toàn bộ quality gates pass và được PM phê duyệt:
+git add <file1> <file2> ...
+git commit -m "feat(scope): conventional commit message"
+# git push chỉ do PM thực hiện hoặc khi PM chỉ định
 ```
 
 Commit message theo Conventional Commits (từ SYSTEM-RULES.md):

@@ -7,6 +7,7 @@ graph TB
     subgraph FastAPI["⚙️ FastAPI Backend"]
         AR[API Routes]
         SS[Script Service]
+        LCS[Learning Content Service]
         TS[TTS Service]
         AS[Audio Service]
         VS[Video Service]
@@ -36,8 +37,8 @@ graph TB
 
     UI --> AR
     WZ --> AR
-    AR --> SS & TS & AS & VS & THS & PS & YTS
-    SS --> GEM
+    AR --> SS & LCS & TS & AS & VS & THS & PS & YTS
+    SS & LCS --> GEM
     TS --> OV & ETSS & PTTS
     AS --> FFMP & PDY & ML
     VS --> FFMP & PIL

@@ -34,12 +34,15 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-async def _call_gemini(prompt: str) -> tuple[httpx.Response, float]:
+async def _call_gemini(prompt: str, schema: dict | None = None) -> tuple[httpx.Response, float]:
     """Make one HTTP call to Gemini generateContent. Returns (response, latency_ms)."""
     url = GEMINI_ENDPOINT.format(model=GEMINI_MODEL)
+    generation_config: dict[str, object] = {"responseMimeType": "application/json"}
+    if schema is not None:
+        generation_config["responseJsonSchema"] = schema
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"responseMimeType": "application/json"},
+        "generationConfig": generation_config,
     }
     started_at = time.perf_counter()
     async with httpx.AsyncClient(timeout=60.0) as client:
@@ -48,7 +51,7 @@ async def _call_gemini(prompt: str) -> tuple[httpx.Response, float]:
     return response, latency_ms
 
 
-async def _generate_with_retry(prompt: str) -> str:
+async def _generate_with_retry(prompt: str, schema: dict | None = None) -> str:
     """Call Gemini with exponential backoff on HTTP 429, returning the raw response text.
 
     Retries only on 429 (rate limit) — any other non-200 status fails immediately,
@@ -60,7 +63,7 @@ async def _generate_with_retry(prompt: str) -> str:
 
     for attempt in range(1, GEMINI_MAX_RETRIES + 1):
         try:
-            response, latency_ms = await _call_gemini(prompt)
+            response, latency_ms = await _call_gemini(prompt, schema=schema)
         except httpx.RequestError as exc:
             raise LearningGenerationError(f"Gemini API request failed: {exc}") from exc
 
@@ -136,7 +139,7 @@ async def generate_learning_pack(
         transcript_text=transcript_text,
     )
 
-    raw_text = await _generate_with_retry(prompt)
+    raw_text = await _generate_with_retry(prompt, schema=LearningPackOut.model_json_schema())
 
     try:
         parsed = json.loads(raw_text)
@@ -255,11 +258,17 @@ async def update_learning_content(
     if existing is None:
         raise NotFoundError(f"No learning content found for project {project_id}")
 
+    for section in ("vocabulary", "idioms", "grammar", "questions"):
+        if section in patch and patch[section] is None:
+            raise ValueError(
+                f"explicit null not allowed for: {section} — omit the field instead to leave it unchanged"
+            )
+
     merged = {
-        "vocabulary": patch.get("vocabulary", existing["vocabulary"]),
-        "idioms": patch.get("idioms", existing["idioms"]),
-        "grammar": patch.get("grammar", existing["grammar"]),
-        "questions": patch.get("questions", existing["questions"]),
+        "vocabulary": patch["vocabulary"] if "vocabulary" in patch else existing["vocabulary"],
+        "idioms": patch["idioms"] if "idioms" in patch else existing["idioms"],
+        "grammar": patch["grammar"] if "grammar" in patch else existing["grammar"],
+        "questions": patch["questions"] if "questions" in patch else existing["questions"],
     }
 
     await db.execute(

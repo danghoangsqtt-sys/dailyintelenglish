@@ -12,7 +12,7 @@
     pack: null,
     packLoadFailed: false,
     isGenerating: false,
-    isSaving: false,
+    saveStatus: "saved", // "saved" | "dirty" | "saving" | "failed"
     saveQueued: false,
     dirtySections: new Set(),
     revealedQuiz: new Set(),
@@ -38,8 +38,43 @@
     banner.textContent = "";
   }
 
-  function setSaveStatus(text) {
-    document.getElementById("save-status").textContent = text;
+  function setSaveStatusState(newStatus, customMessage) {
+    state.saveStatus = newStatus;
+    const el = document.getElementById("save-status");
+    if (!el) return;
+    if (newStatus === "saving") {
+      el.innerHTML = customMessage || "Saving…";
+    } else if (newStatus === "saved") {
+      el.innerHTML = customMessage || "Saved";
+      setTimeout(() => {
+        if (state.saveStatus === "saved" && el.textContent === (customMessage || "Saved")) {
+          el.innerHTML = "";
+        }
+      }, 2000);
+    } else if (newStatus === "dirty") {
+      el.innerHTML = customMessage || "Unsaved changes";
+    } else if (newStatus === "failed") {
+      el.innerHTML =
+        customMessage ||
+        'Save failed — <button type="button" class="btn btn-ghost btn-xs" id="retry-save-btn" style="text-decoration:underline;padding:0 4px;font-size:12px;">Retry</button>';
+      const retryBtn = document.getElementById("retry-save-btn");
+      if (retryBtn) {
+        retryBtn.onclick = (e) => {
+          e.stopPropagation();
+          autosave();
+        };
+      }
+    }
+    applyStateToDom();
+  }
+
+  function applyStateToDom() {
+    const isBusy = state.saveStatus === "saving" || state.isGenerating;
+    const hasUnsaved = state.saveStatus === "dirty" || state.saveStatus === "failed" || state.dirtySections.size > 0;
+    const regenBtn = document.getElementById("regenerate-btn");
+    if (regenBtn) regenBtn.disabled = isBusy || hasUnsaved;
+    const nextBtn = document.getElementById("next-step-btn");
+    if (nextBtn) nextBtn.disabled = state.saveStatus === "saving";
   }
 
   function setGenerateLoading(loading) {
@@ -142,6 +177,7 @@
 
   function renderAllTabs() {
     Object.keys(TAB_RENDERERS).forEach(renderTab);
+    applyStateToDom();
   }
 
   function render() {
@@ -189,49 +225,56 @@
 
   function markDirty(section) {
     state.dirtySections.add(section);
+    setSaveStatusState("dirty");
     autosave();
   }
 
   async function runAutosave() {
+    if (state.saveStatus === "saving") {
+      state.saveQueued = true;
+      return;
+    }
     const sections = Array.from(state.dirtySections);
-    state.dirtySections.clear();
-    if (sections.length === 0) return;
+    if (sections.length === 0) {
+      if (state.saveStatus !== "failed") {
+        setSaveStatusState("saved");
+      }
+      return;
+    }
 
-    state.isSaving = true;
-    setSaveStatus("Saving…");
+    state.dirtySections.clear();
+    setSaveStatusState("saving");
+    clearError();
+
     try {
       const payload = {};
       sections.forEach((section) => {
         payload[section] = state.pack[section];
       });
-      // The response is just a persisted echo of what we sent — never assign it back
-      // into state.pack, since a section edited *after* this payload was built (while
-      // the request was in flight) would otherwise be clobbered by the stale echo.
       await Api.saveLearningPack(state.projectId, payload);
-      setSaveStatus("Saved");
-      setTimeout(() => {
-        if (document.getElementById("save-status").textContent === "Saved") setSaveStatus("");
-      }, 2000);
+
+      if (state.dirtySections.size > 0 || state.saveQueued) {
+        state.saveQueued = false;
+        setSaveStatusState("dirty");
+        await runAutosave();
+      } else {
+        setSaveStatusState("saved");
+      }
     } catch (err) {
       console.error("Failed to save learning content:", err);
-      setSaveStatus("");
-      showError("We couldn't save your edit. Please try again.");
-      // Put the sections back so the next autosave retries them.
-      sections.forEach((section) => state.dirtySections.add(section));
-    } finally {
-      state.isSaving = false;
-      if (state.saveQueued) {
-        state.saveQueued = false;
-        runAutosave();
-      }
+      // Re-add unsaved sections so edits remain dirty and recoverable
+      sections.forEach((s) => state.dirtySections.add(s));
+      setSaveStatusState("failed");
+      showError("We couldn't save your edit. Please check your connection and click Retry.");
     }
   }
 
   function autosave() {
-    if (state.isSaving) {
+    if (state.saveStatus === "saving") {
       state.saveQueued = true;
       return;
     }
+    setSaveStatusState("dirty");
     runAutosave();
   }
 
@@ -290,7 +333,12 @@
   // --- Generate / Regenerate ---
 
   async function handleGenerate() {
-    if (state.isGenerating) return;
+    if (state.isGenerating || state.saveStatus !== "saved" || state.dirtySections.size > 0) {
+      if (state.saveStatus !== "saved" || state.dirtySections.size > 0) {
+        showError("Please save or resolve unsaved edits before generating a new pack.");
+      }
+      return;
+    }
     state.isGenerating = true;
     setGenerateLoading(true);
     clearError();
@@ -309,15 +357,40 @@
   }
 
   function handleRegenerate() {
-    if (state.isGenerating) return;
+    if (state.isGenerating || state.saveStatus !== "saved" || state.dirtySections.size > 0) {
+      if (state.saveStatus !== "saved" || state.dirtySections.size > 0) {
+        showError("Please save or resolve unsaved edits before regenerating the learning pack.");
+      }
+      return;
+    }
     const confirmed = confirm(
       "This will overwrite the entire learning pack (vocabulary, idioms, grammar, quiz) with a brand new AI-generated version. Continue?"
     );
     if (confirmed) handleGenerate();
   }
 
-  function handleNextStep() {
-    window.location.href = `/step4?project_id=${encodeURIComponent(state.projectId)}`;
+  async function handleNextStep() {
+    const nextBtn = document.getElementById("next-step-btn");
+
+    if (state.saveStatus === "saving") {
+      setSaveStatusState("saving", "Saving changes before proceeding…");
+      if (nextBtn) nextBtn.disabled = true;
+      const startTime = Date.now();
+      while (state.saveStatus === "saving") {
+        if (Date.now() - startTime > 10000) break; // 10s timeout
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    } else if (state.saveStatus === "dirty" || state.saveStatus === "failed" || state.dirtySections.size > 0 || state.saveQueued) {
+      if (nextBtn) nextBtn.disabled = true;
+      await runAutosave();
+    }
+
+    if (state.saveStatus === "saved" && state.dirtySections.size === 0) {
+      window.location.href = `/step4?project_id=${encodeURIComponent(state.projectId)}`;
+    } else {
+      if (nextBtn) nextBtn.disabled = false;
+      showError("Cannot proceed: Changes could not be saved. Please click Retry.");
+    }
   }
 
   async function init() {
@@ -359,6 +432,12 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
+    window.addEventListener("beforeunload", (e) => {
+      if (state.saveStatus !== "saved" || state.saveQueued || state.dirtySections.size > 0) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    });
     init();
   });
 })();

@@ -3,15 +3,17 @@
 ## Current Status
 
 **Phase:** 1 — Full Feature Build  
-**Day:** 1 / 21  
+**Day:** 2 / 21  
 **Started:** 2026-09-10  
 **Target:** 2026-09-30  
 
 ## Progress Overview
 
+*Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) with 29 discrete checklist subtasks. Progress reflects completed subtasks.*
+
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
-| Phase 1 — Build | 🔄 In Progress | 12 | 40 |
+| Phase 1 — Build | 🔄 In Progress | 14 | 29 |
 | Phase 2 — Testing | ⏳ Not Started | 0 | 10 |
 | Phase 3 — Review | ⏳ Not Started | 0 | 6 |
 
@@ -90,6 +92,16 @@
 | 2026-09-10 | Added `GET /api/projects/{id}/script`; `POST .../script/generate` and `PUT .../script` auto-advance a `draft` project to `script_generated` | PM review of the first Sprint 1.4D UI caught that `script_service.get_script()` existed but was never exposed, so Step 2 always showed the empty "Generate" state on reload/revisit — the "no GET route" call was framed as an intentional scope cut but was actually a data-loss risk (re-generate would silently overwrite an existing script) and a broken state machine (Dashboard's "Script Ready" filter never triggered) |
 | 2026-09-10 | `GEMINI_MODEL` moved from `gemini-2.0-flash` to `gemini-3.8-flash` | `gemini-2.0-flash` was shut down 2026-06-01; `gemini-3.8-flash` is Google's current "New Stable" default Flash model per `ai.google.dev/gemini-api/docs/models` (checked live, FIX2 gate) |
 | 2026-09-10 | Every write endpoint on `app/api/projects.py` (create/update/delete project, script generate/regenerate/save) serializes on **one connection-wide** `asyncio.Lock` (`_write_transaction`), not a per-project lock | FIX2's first pass used a per-project lock, which only stops two requests for the *same* project from interleaving. PM review (FIX2B) found the whole app shares a single `aiosqlite` connection with exactly one implicit transaction at a time — an unrelated concurrent write (e.g. a project rename) could still interleave into another request's transaction and get wiped out by that request's `rollback()`. A connection-wide lock is the only correct fix given one shared connection; `db.commit()` was also moved inside the `try` so a commit failure rolls back too, not just a failure in the wrapped writes |
+| 2026-09-11 | BUG-001 auto-logged by vp-audit Tier 1: restore valid machine-readable state | `vp-audit`; Backlog |
+| 2026-09-11 | BUG-002 auto-logged by vp-audit Tier 1: reconcile Phase 1 progress counters | `vp-audit`; Backlog |
+| 2026-09-11 | BUG-003 auto-logged by vp-audit Tier 1: enforce doc-first task gates | `vp-audit`; Backlog |
+| 2026-09-11 | BUG-004 auto-logged by vp-audit Tier 2: synchronize project documentation | `vp-audit`; Backlog |
+| 2026-09-11 | ENH-002 auto-logged by vp-audit Tier 2: restore diagram sidecars | `vp-audit`; Backlog |
+| 2026-09-11 | BUG-005 auto-logged by vp-audit Tier 3: reject Learning Content null updates | `vp-audit`; Backlog |
+| 2026-09-11 | BUG-006 auto-logged by vp-audit Tier 3: enforce nonblank project configuration | `vp-audit`; Backlog |
+| 2026-09-11 | BUG-007 auto-logged by vp-audit Tier 3: deterministic Gemini output contract | `vp-audit`; Backlog |
+| 2026-09-11 | BUG-008 auto-logged by vp-audit Tier 3: prevent UI lost updates and dead navigation | `vp-audit`; Backlog |
+| 2026-09-11 | ENH-003 auto-logged by vp-audit Tier 3: strict PM-GEMINI delivery contract | `vp-audit`; Backlog |
 
 ## Known Issues
 

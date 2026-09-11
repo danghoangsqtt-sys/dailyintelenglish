@@ -210,3 +210,24 @@ async def test_every_genre_cefr_combination_renders_cleanly(genre, cefr_level):
     assert prompt.strip()
     assert "{{" not in prompt and "}}" not in prompt
     assert "Undefined" not in prompt
+
+
+async def test_render_regenerate_line_prompt_renders_cleanly():
+    from app.core.prompt_loader import render_regenerate_line_prompt
+
+    prompt = await render_regenerate_line_prompt(
+        genre="interview",
+        cefr_level="B1",
+        topic="Remote work culture",
+        speaker={"name": "Alex", "gender": "male", "accent": "american"},
+        current_text="I work remotely.",
+        line_id="line-123",
+        speaker_id="speaker-456",
+    )
+
+    assert prompt.strip()
+    assert "{{" not in prompt and "}}" not in prompt
+    assert "Alex" in prompt
+    assert "I work remotely." in prompt
+    assert "line-123" in prompt
+    assert "speaker-456" in prompt

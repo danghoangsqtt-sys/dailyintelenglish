@@ -1,0 +1,31 @@
+graph LR
+    subgraph Services
+        SS[ScriptService]
+        LCS[LearningContentService]
+        TS[TTSService]
+        AS[AudioService]
+        VS[VideoService]
+        THS[ThumbnailService]
+        YTS[YouTubePackageService]
+        PS[ProjectService]
+    end
+
+    subgraph External
+        GEM[Gemini API]
+        OV[OmniVoice]
+        ET[Edge TTS]
+        PT[Piper TTS]
+        FF[ffmpeg]
+        PD[pydub]
+        PI[Pillow]
+        LP[LivePortrait]
+    end
+
+    SS --> GEM
+    LCS --> GEM
+    TS --> OV & ET & PT
+    AS --> FF & PD
+    VS --> FF & LP
+    THS --> GEM & PI
+    YTS --> GEM
+    PS --> SS & LCS & TS & AS & VS & THS & YTS

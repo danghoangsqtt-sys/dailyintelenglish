@@ -93,20 +93,22 @@
 
 ### 1.5 Step 3 — Learning Content
 
-- [ ] **Prompt templates** (`prompts/learning/`)
-  - `vocabulary.txt`, `grammar.txt`, `comprehension.txt`, `takeaways.txt`
-  - Verify: Jinja2 injection works
+- [x] **Prompt templates** (`prompts/learning/`)
+  - `prompts/learning/learning_pack.txt` rendered async via `app/core/prompt_loader.py`
+  - Verify: Jinja2 injection works with project topic, CEFR level, and script lines
 
-- [ ] **LearningContentService** (`app/services/learning_service.py`)
-  - `generate_vocabulary(script, cefr_level)` → tiered vocabulary list
-  - `generate_grammar_notes(script)` → grammar structures
-  - `generate_comprehension_questions(script)` → 5 questions
-  - Verify: generates coherent learning content for a sample script
+- [x] **LearningContentService** (`app/services/learning_service.py`)
+  - `generate_learning_content(script, cefr_level)` → `LearningPackOut` with vocabulary, idioms, grammar, quiz
+  - Gemini REST via `httpx.AsyncClient`, `gemini-3.8-flash`, 429 exponential backoff 1s→2s→4s
+  - SQLite persistence in `learning_contents` table with UPSERT
+  - Verify: 20 automated tests in `tests/test_learning_api.py` pass; committed (`b06eb07`)
 
-- [ ] **Learning Content UI** (`frontend/pages/step3_learning.html`)
-  - Tabs: Vocabulary | Collocations & Idioms | Grammar | Comprehension Q | Key Takeaways
-  - Vocabulary table: word, type, definition, example, level badge
-  - Verify: content displays correctly, editable fields work
+- [x] **Learning Content UI** (`frontend/pages/step3_learning.html`)
+  - `frontend/pages/step3_learning.html` + `step3_learning.js` served at `/step3`
+  - 4 tabs: Vocabulary (IPA, PoS, definition, example), Idioms, Grammar, Quiz (with answer toggle)
+  - Coalesced trailing autosave (`PUT /api/projects/{id}/learning`) with dirty section queue
+  - Regenerate Pack confirm dialog, and Next Step navigation
+  - Verify: 196 automated tests pass, browser E2E verified; committed (`b57428e`)
 
 ### 1.6 Step 4 — TTS Audio Studio
 

@@ -251,3 +251,82 @@ def test_put_missing_project_returns_404(client):
 
     assert response.status_code == 404
     _envelope_error(response.json())
+
+
+async def fake_generate_pack(project_id, config, script_lines):
+    return VALID_PACK
+
+
+@pytest.mark.parametrize("section", ["vocabulary", "idioms", "grammar", "questions"])
+def test_put_explicit_null_rejected_with_422(client, monkeypatch, section):
+    """Explicit null in LearningPackUpdate must be rejected with HTTP 422 (BUG-005)."""
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "fake-key")
+    monkeypatch.setattr(
+        learning_service, "generate_learning_pack", fake_generate_pack
+    )
+
+    project = create_project(client)
+    save_script(client, project)
+    client.post(f"/api/projects/{project['id']}/learning/generate")
+
+    response = client.put(
+        f"/api/projects/{project['id']}/learning", json={section: None}
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert "explicit null not allowed" in str(body).lower()
+
+
+def test_put_empty_list_remains_valid(client, monkeypatch):
+    """Empty list is valid and empties the section without error (BUG-005)."""
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "fake-key")
+    monkeypatch.setattr(
+        learning_service, "generate_learning_pack", fake_generate_pack
+    )
+
+    project = create_project(client)
+    save_script(client, project)
+    client.post(f"/api/projects/{project['id']}/learning/generate")
+
+    response = client.put(
+        f"/api/projects/{project['id']}/learning", json={"vocabulary": []}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    _envelope_ok(body)
+    assert body["data"]["vocabulary"] == []
+    # Omitted fields remain untouched
+    assert len(body["data"]["idioms"]) > 0
+
+
+@pytest.mark.asyncio
+async def test_service_update_explicit_null_raises_value_error(db):
+    """Direct service update with explicit null raises ValueError (BUG-005)."""
+
+    import uuid
+    pid = str(uuid.uuid4())
+    now = "2026-09-11T00:00:00Z"
+    await db.execute(
+        "INSERT INTO projects (id, name, topic, cefr_level, num_speakers, genre, accent, created_at, updated_at) "
+        "VALUES (?, 'Test', 'Topic', 'B1', 1, 'interview', 'american', ?, ?)",
+        (pid, now, now)
+    )
+
+    await learning_service.save_learning_content(
+        db, pid, VALID_PACK.model_dump(), commit=True
+    )
+
+    with pytest.raises(ValueError, match="explicit null not allowed"):
+        await learning_service.update_learning_content(
+            db, pid, {"vocabulary": None}
+        )
+
+
+def test_step4_route_returns_200(client):
+    """GET /step4 serves the TTS Studio placeholder page without 404 (BUG-008)."""
+    response = client.get("/step4")
+    assert response.status_code == 200
+    assert "TTS Audio Studio" in response.text
+    assert "Step 4" in response.text

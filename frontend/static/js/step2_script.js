@@ -11,7 +11,7 @@
     lines: [],
     isGenerating: false,
     regeneratingLineId: null,
-    isSaving: false,
+    saveStatus: "saved", // "saved" | "dirty" | "saving" | "failed"
     saveQueued: false,
     scriptLoadFailed: false,
   };
@@ -42,8 +42,34 @@
     banner.textContent = "";
   }
 
-  function setSaveStatus(text) {
-    document.getElementById("save-status").textContent = text;
+  function setSaveStatusState(newStatus, customMessage) {
+    state.saveStatus = newStatus;
+    const el = document.getElementById("save-status");
+    if (!el) return;
+    if (newStatus === "saving") {
+      el.innerHTML = customMessage || "Saving…";
+    } else if (newStatus === "saved") {
+      el.innerHTML = customMessage || "Saved";
+      setTimeout(() => {
+        if (state.saveStatus === "saved" && el.textContent === (customMessage || "Saved")) {
+          el.innerHTML = "";
+        }
+      }, 2000);
+    } else if (newStatus === "dirty") {
+      el.innerHTML = customMessage || "Unsaved changes";
+    } else if (newStatus === "failed") {
+      el.innerHTML =
+        customMessage ||
+        'Save failed — <button type="button" class="btn btn-ghost btn-xs" id="retry-save-btn" style="text-decoration:underline;padding:0 4px;font-size:12px;">Retry</button>';
+      const retryBtn = document.getElementById("retry-save-btn");
+      if (retryBtn) {
+        retryBtn.onclick = (e) => {
+          e.stopPropagation();
+          autosave();
+        };
+      }
+    }
+    applyStateToDom();
   }
 
   function setGenerateLoading(loading) {
@@ -84,7 +110,9 @@
     const idioms = (notes.idioms || []).join(", ") || "—";
     const grammar = notes.grammar_point || "—";
     const isRegenerating = state.regeneratingLineId === line.id;
-    const regenerateDisabled = isRegenerating || state.isSaving;
+    const isBusy = state.saveStatus === "saving" || state.isGenerating;
+    const hasUnsaved = state.saveStatus === "dirty" || state.saveStatus === "failed";
+    const regenerateDisabled = isRegenerating || isBusy || hasUnsaved;
 
     return `
       <div class="card line-card" data-line-id="${line.id}">
@@ -130,16 +158,24 @@
     generatePanel.hidden = true;
     actions.hidden = false;
     list.innerHTML = state.lines.map(lineCardHtml).join("");
+    applyStateToDom();
   }
 
-  // Toggles the regenerate buttons' disabled state directly in the DOM (rather than a full
+  // Toggles the buttons' disabled states directly in the DOM (rather than a full
   // renderScript()) so an in-flight save never wipes out a textarea another line is mid-edit in.
-  function applyIsSavingToDom() {
+  function applyStateToDom() {
+    const isBusy = state.saveStatus === "saving" || state.isGenerating;
+    const hasUnsaved = state.saveStatus === "dirty" || state.saveStatus === "failed";
+
     document.querySelectorAll('#script-list [data-action="regenerate"]').forEach((btn) => {
       const card = btn.closest("[data-line-id]");
       const isRegenerating = card && state.regeneratingLineId === card.dataset.lineId;
-      btn.disabled = Boolean(isRegenerating) || state.isSaving;
+      btn.disabled = Boolean(isRegenerating) || isBusy || hasUnsaved;
     });
+    const regenAllBtn = document.getElementById("regenerate-all-btn");
+    if (regenAllBtn) regenAllBtn.disabled = isBusy || hasUnsaved;
+    const nextBtn = document.getElementById("next-step-btn");
+    if (nextBtn) nextBtn.disabled = state.saveStatus === "saving";
   }
 
   // The PUT /script response carries the server-assigned line ids (save_script always
@@ -157,9 +193,12 @@
   }
 
   async function runAutosave() {
-    state.isSaving = true;
-    applyIsSavingToDom();
-    setSaveStatus("Saving…");
+    if (state.saveStatus === "saving") {
+      state.saveQueued = true;
+      return;
+    }
+    setSaveStatusState("saving");
+    clearError();
     try {
       const payload = state.lines.map((line) => ({
         speaker_id: line.speaker_id,
@@ -168,31 +207,26 @@
       }));
       const saved = await Api.saveScript(state.projectId, payload);
       syncLineIdsFromServer(saved);
-      setSaveStatus("Saved");
-      setTimeout(() => {
-        if (document.getElementById("save-status").textContent === "Saved") setSaveStatus("");
-      }, 2000);
-    } catch (err) {
-      console.error("Failed to save script:", err);
-      setSaveStatus("");
-      showError("We couldn't save your edit. Please try again.");
-    } finally {
-      state.isSaving = false;
-      applyIsSavingToDom();
-      // Coalesce any edits that arrived while this save was in flight into one trailing save,
-      // instead of firing overlapping requests that could race and clobber each other.
       if (state.saveQueued) {
         state.saveQueued = false;
-        runAutosave();
+        setSaveStatusState("dirty");
+        await runAutosave();
+      } else {
+        setSaveStatusState("saved");
       }
+    } catch (err) {
+      console.error("Failed to save script:", err);
+      setSaveStatusState("failed");
+      showError("We couldn't save your edit. Please check your connection and click Retry.");
     }
   }
 
   function autosave() {
-    if (state.isSaving) {
+    if (state.saveStatus === "saving") {
       state.saveQueued = true;
       return;
     }
+    setSaveStatusState("dirty");
     runAutosave();
   }
 
@@ -233,7 +267,12 @@
   }
 
   async function handleRegenerate(lineId) {
-    if (state.regeneratingLineId) return;
+    if (state.regeneratingLineId || state.saveStatus !== "saved") {
+      if (state.saveStatus !== "saved") {
+        showError("Please save or resolve unsaved edits before regenerating a line.");
+      }
+      return;
+    }
     state.regeneratingLineId = lineId;
     clearError();
     renderScript();
@@ -252,7 +291,12 @@
   }
 
   async function handleGenerate() {
-    if (state.isGenerating) return;
+    if (state.isGenerating || state.saveStatus !== "saved") {
+      if (state.saveStatus !== "saved") {
+        showError("Please save or resolve unsaved edits before generating a new script.");
+      }
+      return;
+    }
     state.isGenerating = true;
     setGenerateLoading(true);
     clearError();
@@ -270,15 +314,40 @@
   }
 
   function handleRegenerateAll() {
-    if (state.isGenerating) return;
+    if (state.isGenerating || state.saveStatus !== "saved") {
+      if (state.saveStatus !== "saved") {
+        showError("Please save or resolve unsaved edits before regenerating the script.");
+      }
+      return;
+    }
     const confirmed = confirm(
       "This will overwrite the entire script with a brand new AI-generated version. Continue?"
     );
     if (confirmed) handleGenerate();
   }
 
-  function handleNextStep() {
-    window.location.href = `/step3?project_id=${encodeURIComponent(state.projectId)}`;
+  async function handleNextStep() {
+    const nextBtn = document.getElementById("next-step-btn");
+
+    if (state.saveStatus === "saving") {
+      setSaveStatusState("saving", "Saving changes before proceeding…");
+      if (nextBtn) nextBtn.disabled = true;
+      const startTime = Date.now();
+      while (state.saveStatus === "saving") {
+        if (Date.now() - startTime > 10000) break; // 10s timeout
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    } else if (state.saveStatus === "dirty" || state.saveStatus === "failed" || state.saveQueued) {
+      if (nextBtn) nextBtn.disabled = true;
+      await runAutosave();
+    }
+
+    if (state.saveStatus === "saved") {
+      window.location.href = `/step3?project_id=${encodeURIComponent(state.projectId)}`;
+    } else {
+      if (nextBtn) nextBtn.disabled = false;
+      showError("Cannot proceed: Changes could not be saved. Please click Retry.");
+    }
   }
 
   function handleScriptListClick(e) {
@@ -329,6 +398,12 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
+    window.addEventListener("beforeunload", (e) => {
+      if (state.saveStatus !== "saved" || state.saveQueued) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    });
     init();
   });
 })();
