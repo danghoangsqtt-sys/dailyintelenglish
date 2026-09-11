@@ -20,7 +20,7 @@
 - [x] LearningContentService extracts vocab, idioms, grammar, and quiz via Gemini REST with `LearningPackOut` validation
 - [x] SQLite persistence in `learning_contents` table with UPSERT
 - [x] Step 3 UI renders 4 tabs with answer toggle, coalesced trailing autosave, and confirm on regen
-- [x] 20 dedicated automated tests pass; 196 total tests pass
+- [x] 20 dedicated automated tests pass; 223 total tests pass (218 unit/integration + 5 browser E2E)
 
 ## Forbidden Scope
 - No synchronous/blocking network calls

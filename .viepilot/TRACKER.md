@@ -92,6 +92,7 @@
 | 2026-09-10 | Added `GET /api/projects/{id}/script`; `POST .../script/generate` and `PUT .../script` auto-advance a `draft` project to `script_generated` | PM review of the first Sprint 1.4D UI caught that `script_service.get_script()` existed but was never exposed, so Step 2 always showed the empty "Generate" state on reload/revisit — the "no GET route" call was framed as an intentional scope cut but was actually a data-loss risk (re-generate would silently overwrite an existing script) and a broken state machine (Dashboard's "Script Ready" filter never triggered) |
 | 2026-09-10 | `GEMINI_MODEL` moved from `gemini-2.0-flash` to `gemini-3.8-flash` | `gemini-2.0-flash` was shut down 2026-06-01; `gemini-3.8-flash` is Google's current "New Stable" default Flash model per `ai.google.dev/gemini-api/docs/models` (checked live, FIX2 gate) |
 | 2026-09-10 | Every write endpoint on `app/api/projects.py` (create/update/delete project, script generate/regenerate/save) serializes on **one connection-wide** `asyncio.Lock` (`_write_transaction`), not a per-project lock | FIX2's first pass used a per-project lock, which only stops two requests for the *same* project from interleaving. PM review (FIX2B) found the whole app shares a single `aiosqlite` connection with exactly one implicit transaction at a time — an unrelated concurrent write (e.g. a project rename) could still interleave into another request's transaction and get wiped out by that request's `rollback()`. A connection-wide lock is the only correct fix given one shared connection; `db.commit()` was also moved inside the `try` so a commit failure rolls back too, not just a failure in the wrapped writes |
+| 2026-09-11 | Gemini `generationConfig.temperature` is deliberately left unset (Gemini default) in `script_service.py` and `learning_service.py`, NOT pinned low | BUG-007 asked for a "deterministic output contract," but "Regenerate"/"Regenerate All"/"Regenerate Pack" resend the identical prompt expecting *different* wording each click — a low temperature would make Gemini return near-identical text every time, breaking that feature. Structural determinism (always-valid, schema-conforming JSON) is already guaranteed by `responseJsonSchema` + semantic validation (BUG-011), which is what actually matters for reliability; content-sampling determinism is neither required nor desirable here |
 | 2026-09-11 | BUG-001 auto-logged by vp-audit Tier 1: restore valid machine-readable state | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-002 auto-logged by vp-audit Tier 1: reconcile Phase 1 progress counters | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-003 auto-logged by vp-audit Tier 1: enforce doc-first task gates | `vp-audit`; Backlog |
@@ -107,6 +108,7 @@
 | 2026-09-11 | BUG-011 auto-logged by vp-audit Tier 3: send Pydantic schemas through the supported Gemini JSON Schema field | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-012 auto-logged by vp-audit Tier 3: close autosave failure races with browser-level regression coverage | `vp-audit`; Backlog |
 | 2026-09-11 | PM audit review of all 15 `ready_for_review` requests: 11 accepted (BUG-001, 003, 004, 005, 006, 008, 011, 012, ENH-001, ENH-002, ENH-003) — `done`. 4 sent back `changes_requested`: BUG-002 (trailing whitespace on TRACKER.md:6 introduced by its own fix), BUG-007 (schema fixed but no `temperature` set — title promised "deterministic" output, not delivered), BUG-009 (stale "196 tests" left in ROADMAP.md/task-1.5.md), BUG-010 (**rejected — false claim**: implementer stated `git diff --check` exits 0 but it still exits 2 with the same 7 errors; README task numbering and ARCHITECTURE.md staging also unfixed despite being claimed done). See PM Acceptance/PM Review sections in each `.viepilot/requests/*.md` for full evidence. | PM (Claude Code); Backlog |
+| 2026-09-11 | PM closed the remaining 4 items directly (user approved PM fixing in-session rather than round-tripping to GEMINI): **BUG-002** — corrected own finding: TRACKER.md:6's trailing spaces are the standard Markdown hard-line-break convention shared by lines 5/7/8, not a defect; no change made. **BUG-007** — corrected own finding: NOT setting `temperature` is the right call, not a gap — `step2_script.js`/`step3_learning.js` regenerate features depend on Gemini returning different wording for the same prompt each click; pinning temperature low would silently break "Regenerate". Structural determinism (BUG-007's actual acceptance criteria) is already satisfied via `responseJsonSchema` (BUG-011). **BUG-009** — fixed stale "196 tests" → "223 tests (218 unit/integration + 5 browser E2E)" in ROADMAP.md:111 and task-1.5.md:23; re-ran `pytest tests/ -q` live to confirm 223 before writing it. **BUG-010** — fixed README.md Task 1.7-1.10 numbering to match ROADMAP/TRACKER/SPEC (1.7=Video Studio, 1.8=Thumbnail, 1.9=YouTube Package, 1.10=Music Library; audio mixing folded into 1.6); re-verified whitespace/EOF and staging claims are now all true (`git diff --check` exit 0; ARCHITECTURE.md + walkthrough doc confirmed committed in `7c9f3d9`). All 15 Sprint 1.5R requests are now `done`. | PM (Claude Code); Backlog |
 
 ## Known Issues
 
@@ -127,15 +129,15 @@
 | ID | Type | Title | Priority | Status |
 |----|------|-------|----------|--------|
 | BUG-001 | Bug | Restore valid machine-readable ViePilot state | medium | done |
-| BUG-002 | Bug | Reconcile Phase 1 progress counters | medium | changes_requested |
+| BUG-002 | Bug | Reconcile Phase 1 progress counters | medium | done |
 | BUG-003 | Bug | Enforce doc-first incremental task gates | medium | done |
 | BUG-004 | Bug | Synchronize project documentation with implemented state | low | done |
 | BUG-005 | Bug | Reject explicit null in Learning Content updates | high | done |
 | BUG-006 | Bug | Enforce nonblank project configuration at API boundary | high | done |
-| BUG-007 | Bug | Make Gemini output contract deterministic | high | changes_requested |
+| BUG-007 | Bug | Make Gemini output contract deterministic | high | done |
 | BUG-008 | Bug | Prevent UI lost updates and dead Step 4 navigation | high | done |
-| BUG-009 | Bug | Restore PM-only acceptance state after Gemini handoff | medium | changes_requested |
-| BUG-010 | Bug | Reconcile stabilization documentation and delivery evidence | low | changes_requested (rejected: false verification claim) |
+| BUG-009 | Bug | Restore PM-only acceptance state after Gemini handoff | medium | done |
+| BUG-010 | Bug | Reconcile stabilization documentation and delivery evidence | low | done |
 | BUG-011 | Bug | Send Pydantic schemas through the supported Gemini JSON Schema field | high | done |
 | BUG-012 | Bug | Close autosave failure races with browser-level regression coverage | high | done |
 | ENH-001 | Enhancement | Phân quyền AI Agents (PM vs Dev) | high | done |

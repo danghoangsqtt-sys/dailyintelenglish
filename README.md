@@ -32,11 +32,11 @@
 
 | Task | Feature | Description | Status |
 |------|---------|-------------|--------|
-| **Task 1.6** | 🎙️ **TTS Audio Studio** (`/step4`) | OmniVoice (GPU cục bộ RTX 3060) + Edge TTS + Piper TTS, phân vai giọng đọc | ⏳ Planned |
-| **Task 1.7** | 🎵 **Audio Mixing & Music Library** | Nối audio, chèn nhạc nền bản quyền an toàn, ducking âm lượng, chuẩn hóa LUFS | ⏳ Planned |
-| **Task 1.8** | 🎬 **Video Studio** | Xuất MP4 với phụ đề tự động (SRT/burned-in), LivePortrait lips-sync avatar | ⏳ Planned |
-| **Task 1.9** | 🖼️ **Thumbnail Generator** | Template + AI gợi ý nội dung + Pillow editor, xuất biến thể A/B (16:9 & 9:16) | ⏳ Planned |
-| **Task 1.10** | 📋 **YouTube Package** | Sinh trọn bộ YouTube metadata: mô tả chuẩn SEO, timestamps/chapters, tags, transcript | ⏳ Planned |
+| **Task 1.6** | 🎙️ **TTS Audio Studio** (`/step4`) | OmniVoice (GPU cục bộ RTX 3060) + Edge TTS + Piper TTS, phân vai giọng đọc, nối audio/ducking/chuẩn hóa LUFS | ⏳ Planned |
+| **Task 1.7** | 🎬 **Video Studio** | Xuất MP4 với phụ đề tự động (SRT/burned-in), LivePortrait lips-sync avatar | ⏳ Planned |
+| **Task 1.8** | 🖼️ **Thumbnail Generator** | Template + AI gợi ý nội dung + Pillow editor, xuất biến thể A/B (16:9 & 9:16) | ⏳ Planned |
+| **Task 1.9** | 📋 **YouTube Package** | Sinh trọn bộ YouTube metadata: mô tả chuẩn SEO, timestamps/chapters, tags, transcript | ⏳ Planned |
+| **Task 1.10** | 🎵 **Music Library** | Quản lý & trộn nhạc nền bản quyền an toàn cho thư viện dự án | ⏳ Planned |
 
 ## Quick Start
 
@@ -84,12 +84,12 @@ http://localhost:8000
 1️⃣  Step 1: Script Config    → Topic, CEFR level, duration, speakers, genre, accent (Shipped - Task 1.3)
 2️⃣  Step 2: AI Script        → Generate, preview, inline edit, per-line regenerate (Shipped - Task 1.4)
 3️⃣  Step 3: Learning Content → Vocabulary, idioms, grammar, comprehension quiz (Shipped - Task 1.5)
-4️⃣  Step 4: TTS Audio Studio → Voice assignment, local GPU / online voice synthesis (Planned - Task 1.6)
-5️⃣  Step 5: Audio Mixing     → Audio concatenation, ducking background music, normalization (Planned - Task 1.7)
-6️⃣  Step 6: Video Studio     → Background, burned-in subtitles/SRT, LivePortrait lips-sync (Planned - Task 1.8)
-7️⃣  Step 7: Thumbnail        → AI-assisted templates, A/B variants export (Planned - Task 1.9)
-8️⃣  Step 8: YouTube Package  → Description, chapters, tags, transcript export (Planned - Task 1.10)
+4️⃣  Step 4: TTS Audio Studio → Voice synthesis, audio concatenation, ducking, normalization (Planned - Task 1.6)
+5️⃣  Step 5: Video Studio     → Background, burned-in subtitles/SRT, LivePortrait lips-sync (Planned - Task 1.7)
+6️⃣  Step 6: Thumbnail        → AI-assisted templates, A/B variants export (Planned - Task 1.8)
+7️⃣  Step 7: YouTube Package  → Description, chapters, tags, transcript export (Planned - Task 1.9)
 ```
+Music Library (Task 1.10) is a standalone background-music management feature, not a numbered pipeline step.
 
 ## Tech Stack
 

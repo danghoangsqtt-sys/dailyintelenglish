@@ -108,7 +108,7 @@
   - 4 tabs: Vocabulary (IPA, PoS, definition, example), Idioms, Grammar, Quiz (with answer toggle)
   - Coalesced trailing autosave (`PUT /api/projects/{id}/learning`) with dirty section queue
   - Regenerate Pack confirm dialog, and Next Step navigation
-  - Verify: 196 automated tests pass, browser E2E verified; committed (`b57428e`)
+  - Verify: 223 automated tests pass (218 unit/integration + 5 browser E2E), browser E2E verified; committed (`b57428e`)
 
 ### 1.6 Step 4 — TTS Audio Studio
 

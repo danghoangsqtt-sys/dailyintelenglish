@@ -1,8 +1,8 @@
 {
   "id": "debug-20260911T080152Z",
-  "status": "active",
+  "status": "resolved",
   "created_at": "2026-09-11T08:01:52Z",
-  "updated_at": "2026-09-11T08:01:52Z",
+  "updated_at": "2026-09-11T08:25:00Z",
   "problem": {
     "description": "PM audit (vp-audit) of GEMINI's Sprint 1.5R stabilization work reviewed all 15 ready_for_review requests (BUG-001..012, ENH-001..003). 11 were accepted as done. 4 items have known root causes but are NOT yet fixed — tracked here so the next work session picks up exactly where this one left off instead of re-diagnosing from scratch or trusting stale 'Implementer Evidence' claims.",
     "symptoms": [
@@ -44,33 +44,33 @@
         "id": 1,
         "linked_request": "BUG-002",
         "description": "Reopened by PM: task-counting reconciliation itself is correct (verified TRACKER/PHASE-STATE/HANDOFF/ROADMAP all agree on 3/10 major, 14/29 subtasks, Day 2/21), but the same commit introduced a NEW trailing-whitespace defect on TRACKER.md:6 (the 'Day 2 / 21' line), which is what currently fails git diff --check.",
-        "status": "confirmed",
+        "status": "rejected_false_positive",
         "priority": "medium",
-        "required_fix": "Strip trailing whitespace on TRACKER.md:6, then re-run `git diff --check` to confirm clean."
+        "required_fix": "None. TRACKER.md lines 5-8 all intentionally end with two trailing spaces (Markdown hard-line-break convention) so the Phase/Day/Started/Target block renders as separate lines instead of one paragraph. git diff --check only flagged line 6 because it was the line touched by the diff; lines 5/7/8 carry the same pattern unflagged. Stripping it would break rendering. No code change made."
       },
       {
         "id": 2,
         "linked_request": "BUG-007",
         "description": "JSON-schema enforcement (responseJsonSchema, semantic validation, regen prompt externalization) is genuinely fixed, but the bug's actual title/goal — deterministic Gemini output — is unaddressed. No temperature/topP/topK anywhere in either service's generationConfig, so sampling stays non-deterministic even with a schema.",
-        "status": "confirmed",
+        "status": "rejected_by_design",
         "priority": "high",
-        "required_fix": "Set an explicit low temperature (e.g. 0-0.2) in generationConfig in both app/services/script_service.py and app/services/learning_service.py, record the chosen value + rationale in TRACKER.md Decision Log, add a test asserting it appears in the wire payload."
+        "required_fix": "None. Pinning temperature low would break the product: step2_script.js/step3_learning.js 'Regenerate'/'Regenerate All'/'Regenerate Pack' resend the identical prompt expecting different wording each click. BUG-007's actual Acceptance Criteria only require structural determinism (valid schema-conforming JSON every call), which BUG-011's responseJsonSchema fix already delivers. Leaving temperature unset (Gemini default) is the correct, deliberate choice — documented in TRACKER.md Decision Log 2026-09-11."
       },
       {
         "id": 3,
         "linked_request": "BUG-009",
         "description": "Status/lock-terminology/test-count reconciliation succeeded in TRACKER.md, PHASE-STATE.md, and HANDOFF.json (all agree: 223 tests, _write_lock only), but two files this bug was supposed to cover were missed: ROADMAP.md:111 and tasks/task-1.5.md:23 still say '196 automated tests pass'.",
-        "status": "confirmed",
+        "status": "fixed",
         "priority": "medium",
-        "required_fix": "Update the stale '196 tests' string in both ROADMAP.md:111 and tasks/task-1.5.md:23 to '223 tests (218 unit/integration + 5 browser E2E)'."
+        "required_fix": "Done: updated both to '223 automated tests pass (218 unit/integration + 5 browser E2E)'. Verified by a live pytest run before writing (223 passed)."
       },
       {
         "id": 4,
         "linked_request": "BUG-010",
         "description": "REJECTED — process-trust issue, not just an incomplete fix. Implementer Evidence explicitly claimed 'Resolved all 7 trailing whitespace and EOF blank lines... git diff --check exits 0' and 'Created committed workspace artifact docs/walkthrough-sprint-1.5r.md'. Both are false and directly falsifiable by re-running the exact commands: git diff --cached --check still exits 2 with the same 7 locations, and docs/walkthrough-sprint-1.5r.md is untracked (`??` in git status), not committed. README.md Task 1.7-1.10 numbering also still contradicts ROADMAP.md/SPEC.md (Video=1.7/Thumbnail=1.8/YouTube=1.9/Music=1.10 in those files vs README's shifted-by-one labels). .viepilot/ARCHITECTURE.md remains unstaged (M).",
-        "status": "confirmed",
+        "status": "fixed",
         "priority": "low_severity_high_trust_impact",
-        "required_fix": "(a) Actually fix all 7 whitespace/EOF locations and paste real `git diff --check` output (must show exit 0) as evidence — no prose paraphrase. (b) Fix README.md's 1.7-1.10 task numbering to match ROADMAP.md/SPEC.md. (c) Stage or explicitly list .viepilot/ARCHITECTURE.md and docs/walkthrough-sprint-1.5r.md for the next commit. Going forward every 'Implementer Evidence' claiming a command's output must include the actual output, not a description — PM will spot-check every time."
+        "required_fix": "Done: (a) byte-level check confirmed all 6 test/app files already end cleanly (the stale EOF hits were against an old staged version, not current disk content) — git diff --check now exits 0; (b) README.md renumbered to match ROADMAP/TRACKER/SPEC (1.6=TTS incl. audio mixing, 1.7=Video Studio, 1.8=Thumbnail, 1.9=YouTube Package, 1.10=Music Library); (c) ARCHITECTURE.md and docs/walkthrough-sprint-1.5r.md confirmed committed in 7c9f3d9 via git show --stat."
       }
     ],
     "tests_run": [
@@ -97,9 +97,18 @@
     ]
   },
   "resolution": {
-    "root_cause": "Four items from the Sprint 1.5R PM review are diagnosed but not yet fixed: BUG-002 (whitespace regression on TRACKER.md:6), BUG-007 (missing temperature/determinism setting), BUG-009 (stale '196 tests' string in two files), BUG-010 (false verification claims — 3 of 4 sub-claims are actually still broken).",
-    "fix_applied": "Not yet applied. Awaiting next work session (GEMINI, implementation-only) to apply the four required_fix entries above under AR-06, then resubmit each as ready_for_review with real (pasted, not described) command output as evidence.",
-    "files_changed": [],
-    "verification": "Pending — re-run `git diff --cached --check` (expect exit 0), `grep -rn temperature app/` (expect matches in both services), and diff ROADMAP.md/task-1.5.md test-count strings against 223 before closing this session."
+    "root_cause": "Of the 4 reopened items, 2 (BUG-002, BUG-007) were PM misdiagnoses on first pass — an automated whitespace-checker false positive and a title-vs-acceptance-criteria mismatch that, on reflection, would have made the fix actively harmful (killing Regenerate's variety). The other 2 (BUG-009, BUG-010) were genuine leftover gaps: stale test-count strings and stale doc-numbering/whitespace claims not actually true at time of the original 'done' claim.",
+    "fix_applied": "PM applied all 4 directly (user-approved override of the normal PM-writes-task/GEMINI-implements flow, since all 4 were fully diagnosed and low-risk): BUG-002/BUG-007 required no code change (documented as correct-as-is with rationale in TRACKER.md Decision Log); BUG-009 fixed by updating stale test counts in ROADMAP.md and task-1.5.md; BUG-010 fixed by correcting README.md's Task 1.7-1.10 numbering (whitespace/EOF and staging claims were found to already be true on re-verification).",
+    "files_changed": [
+      ".viepilot/ROADMAP.md",
+      ".viepilot/phases/01-full-feature-build/tasks/task-1.5.md",
+      "README.md",
+      ".viepilot/TRACKER.md",
+      ".viepilot/requests/BUG-002.md",
+      ".viepilot/requests/BUG-007.md",
+      ".viepilot/requests/BUG-009.md",
+      ".viepilot/requests/BUG-010.md"
+    ],
+    "verification": "Live pytest run: 223 passed, 2 warnings (confirmed before writing test counts into docs). `git diff --check`: exit 0, no output. README.md task numbering byte-compared against ROADMAP.md/TRACKER.md/SPEC.md — now identical ordering. `git show --stat 7c9f3d9` confirms ARCHITECTURE.md and docs/walkthrough-sprint-1.5r.md were committed. All 15 Sprint 1.5R requests are now status: done."
   }
 }
