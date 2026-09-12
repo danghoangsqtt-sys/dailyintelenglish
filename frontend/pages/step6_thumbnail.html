@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thumbnail Generator — Daily Intel English Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    body { margin: 0; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 18px 36px;
+      border-bottom: 1px solid var(--surface-border);
+      background: var(--bg-elevated);
+    }
+
+    .logo { font-size: 20px; font-weight: 800; text-decoration: none; }
+    .topbar-actions { display: flex; align-items: center; gap: 12px; }
+
+    .main {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 34px 36px 80px;
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .page-title { margin: 0 0 6px; font-size: 28px; font-weight: 800; }
+    .page-subtitle { margin: 0; color: var(--text-muted); font-size: 14px; }
+    .page-badges { display: flex; gap: 8px; margin-top: 12px; }
+
+    #error-banner {
+      margin-bottom: 20px;
+      padding: 14px 18px;
+      border: 1px solid var(--danger);
+      border-radius: 10px;
+      background: rgba(248, 81, 73, 0.1);
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .loading-panel, .empty-state {
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .section { margin-bottom: 28px; }
+    .section-title { margin: 0 0 14px; font-size: 18px; font-weight: 800; }
+
+    .generator-card { padding: 22px; }
+    .generator-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-top: 18px;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    select, input[type="text"] {
+      width: 100%;
+      border: 1px solid var(--surface-border);
+      border-radius: 9px;
+      padding: 10px 12px;
+      background: var(--bg-elevated);
+      color: var(--text);
+      font: inherit;
+      outline: none;
+    }
+
+    select:focus, input[type="text"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .template-gallery {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    .template-option {
+      appearance: none;
+      padding: 0;
+      overflow: hidden;
+      text-align: left;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .template-option:hover { border-color: var(--surface-border-hover); }
+    .template-option.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+    }
+
+    .template-option img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      background: #151922;
+    }
+
+    .template-copy { display: block; padding: 11px 12px 13px; }
+    .template-name { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 800; }
+    .template-description { display: block; color: var(--text-muted); font-size: 11px; line-height: 1.4; }
+
+    .variant-count-wrap { width: 155px; }
+    .generator-actions { display: flex; align-items: center; gap: 12px; }
+    .helper-text { color: var(--text-muted); font-size: 12px; }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn[disabled], button[disabled], a[aria-disabled="true"] {
+      opacity: 0.55;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .variant-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .variant-card {
+      appearance: none;
+      position: relative;
+      padding: 0;
+      overflow: hidden;
+      text-align: left;
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .variant-card.selected {
+      border-color: var(--warning);
+      box-shadow: 0 0 0 2px rgba(210, 153, 34, 0.2);
+    }
+
+    .variant-card img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      background: #090b10;
+    }
+
+    .variant-copy { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 14px; }
+    .variant-headline { overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .favorite-badge { color: var(--warning); font-size: 12px; font-weight: 800; white-space: nowrap; }
+
+    .editor-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(330px, 0.75fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .preview-card, .editor-card { padding: 20px; }
+    .preview-frame {
+      display: flex;
+      min-height: 360px;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 1px solid var(--surface-border);
+      border-radius: 12px;
+      background: #07090d;
+    }
+
+    .preview-frame img { display: block; max-width: 100%; max-height: 650px; object-fit: contain; }
+    .preview-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+    .aspect-toggle { display: flex; gap: 6px; }
+    .aspect-btn.active { border-color: var(--accent); color: var(--accent); }
+
+    .editor-card h3 { margin: 0 0 18px; font-size: 17px; }
+    .form-group { margin-bottom: 17px; }
+    .color-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .color-field {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px;
+      border: 1px solid var(--surface-border);
+      border-radius: 9px;
+      background: var(--bg-elevated);
+    }
+
+    .color-field input { width: 38px; height: 30px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+    .color-field span { font-size: 12px; font-weight: 700; }
+    .save-row { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+    .save-status { min-height: 18px; color: var(--text-muted); font-size: 12px; }
+
+    .download-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 18px; }
+    .download-group { padding: 12px; border: 1px solid var(--surface-border); border-radius: 10px; }
+    .download-group strong { display: block; margin-bottom: 9px; font-size: 12px; }
+    .download-links { display: flex; gap: 8px; }
+    .btn-sm { padding: 7px 11px; font-size: 12px; text-decoration: none; }
+    .editor-placeholder { padding: 42px 24px; text-align: center; color: var(--text-muted); }
+
+    @media (max-width: 1180px) {
+      .template-gallery { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+      .variant-grid { grid-template-columns: repeat(2, minmax(260px, 1fr)); }
+      .editor-layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="logo" href="/">🎙 Daily Intel English</a>
+    <div class="topbar-actions">
+      <a class="btn btn-ghost" href="/">Dashboard</a>
+      <button class="icon-toggle" id="theme-toggle" type="button" aria-label="Toggle theme">☀</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Step 6 — Thumbnail Generator</h1>
+        <p class="page-subtitle" id="project-name">Loading project…</p>
+        <div class="page-badges" id="project-badges"></div>
+      </div>
+      <span class="badge">Pillow + Gemini text</span>
+    </header>
+
+    <div id="error-banner" role="alert" hidden></div>
+    <div class="card loading-panel" id="loading-panel">Loading thumbnail workspace…</div>
+
+    <div id="workspace" hidden>
+      <section class="section card generator-card" id="generator-section">
+        <h2 class="section-title">1. Choose a template</h2>
+        <div class="template-gallery" id="template-gallery"></div>
+        <div class="generator-row">
+          <label class="variant-count-wrap">
+            <span class="field-label">A/B variants</span>
+            <select id="variant-count">
+              <option value="3">3 variants</option>
+              <option value="4">4 variants</option>
+              <option value="5">5 variants</option>
+            </select>
+          </label>
+          <div class="generator-actions">
+            <span class="helper-text">Generating replaces the current variant set.</span>
+            <button class="btn btn-primary" id="generate-btn" type="button">✨ Generate thumbnails</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="variants-section">
+        <h2 class="section-title">2. Select a favorite</h2>
+        <div class="variant-grid" id="variant-grid"></div>
+        <div class="card empty-state" id="variant-empty">Choose a template and generate 3–5 variants to begin.</div>
+      </section>
+
+      <section class="section" id="editor-section">
+        <h2 class="section-title">3. Edit, preview, and download</h2>
+        <div class="card editor-placeholder" id="editor-placeholder">
+          Select a favorite variant to open the manual editor and download controls.
+        </div>
+        <div class="editor-layout" id="editor-layout" hidden>
+          <div class="card preview-card">
+            <div class="preview-toolbar">
+              <strong>Live rendered preview</strong>
+              <div class="aspect-toggle" id="aspect-toggle" aria-label="Preview aspect ratio">
+                <button class="btn btn-ghost btn-sm aspect-btn active" type="button" data-aspect="16x9">16:9</button>
+                <button class="btn btn-ghost btn-sm aspect-btn" type="button" data-aspect="9x16">9:16</button>
+              </div>
+            </div>
+            <div class="preview-frame"><img id="preview-image" alt="Selected thumbnail preview" /></div>
+          </div>
+
+          <aside class="card editor-card">
+            <h3>Manual editor</h3>
+            <div class="form-group">
+              <label class="field-label" for="headline-input">Headline</label>
+              <input id="headline-input" type="text" maxlength="80" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <span class="field-label">Color palette</span>
+              <div class="color-grid">
+                <label class="color-field"><input id="color-primary" type="color" data-color="primary" /><span>Primary</span></label>
+                <label class="color-field"><input id="color-secondary" type="color" data-color="secondary" /><span>Secondary</span></label>
+                <label class="color-field"><input id="color-accent" type="color" data-color="accent" /><span>Accent</span></label>
+                <label class="color-field"><input id="color-text" type="color" data-color="text" /><span>Text</span></label>
+              </div>
+            </div>
+            <div class="save-status" id="save-status" aria-live="polite"></div>
+            <div class="save-row">
+              <button class="btn btn-primary" id="save-btn" type="button">Save &amp; re-render</button>
+              <button class="btn btn-ghost btn-sm" id="retry-save-btn" type="button" hidden>Retry</button>
+            </div>
+
+            <div class="download-grid" id="download-grid">
+              <div class="download-group">
+                <strong>16:9 — YouTube</strong>
+                <div class="download-links">
+                  <a class="btn btn-ghost btn-sm download-link" id="download-16x9-png" download>PNG</a>
+                  <a class="btn btn-ghost btn-sm download-link" id="download-16x9-jpg" download>JPG</a>
+                </div>
+              </div>
+              <div class="download-group">
+                <strong>9:16 — Shorts</strong>
+                <div class="download-links">
+                  <a class="btn btn-ghost btn-sm download-link" id="download-9x16-png" download>PNG</a>
+                  <a class="btn btn-ghost btn-sm download-link" id="download-9x16-jpg" download>JPG</a>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/step6_thumbnail.js"></script>
+</body>
+</html>

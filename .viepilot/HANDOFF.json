@@ -28,7 +28,7 @@
                              "name":  "Full Feature Build",
                              "days":  "1-7",
                              "status":  "in_progress",
-                             "tasks_done":  18,
+                             "tasks_done":  19,
                              "tasks_total":  29
                          },
                    "2":  {
@@ -65,7 +65,8 @@
                           "Task 1.2 CLOSED: Dashboard UI automated browser tests (tests/test_dashboard_browser.py, 7 Playwright tests) close the last open acceptance criterion, no production code changes needed. 230 tests passed",
                           "Task 1.6 Sub-task 1.6a CLOSED (Edge-TTS-first): TTSService.synthesize_line() with EDGE_TTS_VOICE_MAP (10 accents x 3 genders, live-verified 20/20), OmniVoice path honestly unavailable (no model weights) with semaphore(2) + fallback, POST /api/projects/{id}/tts/preview route, retry-once-on-empty-audio fix found via live testing. 1.6b (AudioService) and 1.6c (UI) deferred pending ffmpeg. 252 tests passed",
                           "Codex joined as second AI Implementer (Claude Code stays PM); SYSTEM-RULES.md AR-06 generalized to PM-Implementer, docs/CODEX_CODE_PROMPT.md added. Codex correctly self-deferred Task 1.6 Sub-task 1.6b after finding no ffmpeg/pydub in its sandbox; redirected to Task 1.10 Sub-task 1.10a (ffmpeg-independent Music Library UI) instead, PM-accepted 2026-09-12 after independent re-verification: upload/list/preview/delete at /music, 50MB limit, magic-byte validation, atomic no-clobber duplicate naming (real concurrency-tested). 271 tests passed. Confirmed pydub also fails on Python 3.14 (ModuleNotFoundError: audioop) independent of ffmpeg -- needs audioop-lts before 1.6b/1.10b",
-                          "Task 1.8 Sub-task 1.8a CLOSED (Thumbnail Generator backend, by Codex): Gemini text/palette suggestions via responseJsonSchema, 5 deterministic Pillow templates using Pillow's embedded scalable default font (no system font path), rollback-safe render+persist sequencing, safe content route. PM independently re-rendered all 5 templates and confirmed real image quality before accepting. 27 new tests, 298 tests passed. Sub-task 1.8b (UI editor) deferred pending its own plan"
+                          "Task 1.8 Sub-task 1.8a CLOSED (Thumbnail Generator backend, by Codex): Gemini text/palette suggestions via responseJsonSchema, 5 deterministic Pillow templates using Pillow's embedded scalable default font (no system font path), rollback-safe render+persist sequencing, safe content route. PM independently re-rendered all 5 templates and confirmed real image quality before accepting. 27 new tests, 298 tests passed. Sub-task 1.8b (UI editor) deferred pending its own plan",
+                          "Task 1.8 CLOSED (fully done): Sub-task 1.8b (interactive UI) by Codex -- template gallery, generate/regenerate, favorite selection (atomic single-UPDATE), manual headline/color editor with true SQL-level optimistic-concurrency compare-and-swap re-render, revision-token cache-busted asset URLs, Step2/3-style async-safety state machine. Codex's session ran out of quota mid-task before writing evidence; PM independently verified/completed acceptance from the actual code plus a fresh full test run. 17 new tests, 314 tests passed. Phase 1: 5/10 major tasks (50%), 19/29 subtasks (66%)"
                       ],
     "open_questions":  [
 

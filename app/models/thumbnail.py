@@ -1,6 +1,7 @@
 """Pydantic contracts for thumbnail templates, Gemini suggestions, and API requests."""
 
 from typing import Annotated, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
@@ -88,6 +89,16 @@ class ThumbnailGenerateRequest(BaseModel):
         return value
 
 
+class ThumbnailEditRequest(BaseModel):
+    """Complete user-editable subset for one optimistic thumbnail re-render."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    revision: UUID
+    headline: str = Field(min_length=1, max_length=80)
+    palette: ThumbnailPalette
+
+
 class TextZone(BaseModel):
     """Normalized text rectangle and font-size bounds for a template."""
 
@@ -129,4 +140,3 @@ class ThumbnailTemplateConfig(BaseModel):
         if self.base_image != f"{self.id}.png":
             raise ValueError("base_image must match the template id")
         return self
-

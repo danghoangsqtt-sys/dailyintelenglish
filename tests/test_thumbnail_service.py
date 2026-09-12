@@ -16,8 +16,8 @@ from app.core.constants import (
     THUMBNAIL_WIDTH_16X9,
     THUMBNAIL_WIDTH_9X16,
 )
-from app.core.exceptions import ThumbnailGenerationError
-from app.models.thumbnail import ThumbnailSuggestion, ThumbnailSuggestionPack
+from app.core.exceptions import ConflictError, ThumbnailGenerationError
+from app.models.thumbnail import ThumbnailEditRequest, ThumbnailSuggestion, ThumbnailSuggestionPack
 from app.services import thumbnail_service
 
 PROJECT = {
@@ -55,6 +55,20 @@ def suggestion(index: int = 0) -> ThumbnailSuggestion:
 def suggestion_json(count: int = 3) -> str:
     """Serialize a valid Gemini suggestion pack fixture."""
     return json.dumps({"variants": [suggestion(index).model_dump() for index in range(count)]})
+
+
+def persisted_row(record: dict) -> dict:
+    """Adapt one render record to the shape loaded from the thumbnails table."""
+    return {
+        "id": record["id"],
+        "project_id": record["project_id"],
+        "template_name": record["template_name"],
+        "variant_index": record["variant_index"],
+        "image_path_16x9": record["assets"]["16x9"]["png"],
+        "image_path_9x16": record["assets"]["9x16"]["png"],
+        "is_selected": 1,
+        "created_at": "2026-09-12T00:00:00Z",
+    }
 
 
 @pytest.mark.asyncio
@@ -147,6 +161,64 @@ async def test_render_failure_removes_every_partial_variant_directory(
 
 
 @pytest.mark.asyncio
+async def test_edit_render_stages_new_revision_and_preserves_noneditable_fields(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    template = await thumbnail_service.load_template("minimal_clean")
+    original = (await thumbnail_service.render_batch("project-1", template, [suggestion()]))[0]
+    row = persisted_row(original)
+    edit = ThumbnailEditRequest.model_validate(
+        {
+            "revision": original["revision"],
+            "headline": "A Better Headline",
+            "palette": {
+                "primary": "#201040",
+                "secondary": "#8050E0",
+                "accent": "#00FFAA",
+                "text": "#FFFFFF",
+            },
+        }
+    )
+
+    edited = await thumbnail_service.render_edited_thumbnail(row, edit)
+
+    assert edited["id"] == original["id"]
+    assert edited["variant_index"] == original["variant_index"]
+    assert edited["revision"] != original["revision"]
+    assert edited["suggestion"]["headline"] == "A Better Headline"
+    assert edited["suggestion"]["supporting_text"] == original["suggestion"]["supporting_text"]
+    assert edited["suggestion"]["topic_keywords"] == original["suggestion"]["topic_keywords"]
+    assert Path(edited["assets"]["16x9"]["png"]).is_file()
+    assert Path(original["assets"]["16x9"]["png"]).is_file()
+
+
+@pytest.mark.asyncio
+async def test_edit_render_rejects_stale_revision_before_creating_files(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    template = await thumbnail_service.load_template("minimal_clean")
+    original = (await thumbnail_service.render_batch("project-1", template, [suggestion()]))[0]
+    row = persisted_row(original)
+    edit = ThumbnailEditRequest.model_validate(
+        {
+            "revision": "00000000-0000-0000-0000-000000000001",
+            "headline": "Stale Headline",
+            "palette": original["suggestion"]["palette"],
+        }
+    )
+
+    with pytest.raises(ConflictError):
+        await thumbnail_service.render_edited_thumbnail(row, edit)
+
+    project_dir = tmp_path / "thumbnails" / "project-1"
+    assert [path.name for path in project_dir.iterdir()] == [original["revision"]]
+
+
+@pytest.mark.asyncio
 async def test_gemini_network_payload_uses_response_json_schema(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -219,4 +291,3 @@ async def test_generate_suggestions_rejects_wrong_count_and_invalid_schema(
     monkeypatch.setattr(thumbnail_service, "_generate_with_retry", invalid_schema)
     with pytest.raises(ThumbnailGenerationError, match="schema validation"):
         await thumbnail_service.generate_suggestions(PROJECT, template, 3)
-

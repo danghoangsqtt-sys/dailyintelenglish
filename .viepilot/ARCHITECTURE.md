@@ -328,6 +328,8 @@ GET    /api/projects/{id}/video/download     # Download video
 ```
 POST   /api/projects/{id}/thumbnails/generate  # Generate A/B thumbnails
 GET    /api/projects/{id}/thumbnails           # List thumbnails
+PATCH  /api/projects/{id}/thumbnails/{thumbnail_id}  # Edit and re-render one thumbnail
+PUT    /api/projects/{id}/thumbnails/{thumbnail_id}/favorite  # Select favorite
 GET    /api/projects/{id}/thumbnails/{thumbnail_id}/{aspect}.{format}  # Get PNG/JPG derivative
 GET    /api/thumbnails/templates               # List templates
 ```

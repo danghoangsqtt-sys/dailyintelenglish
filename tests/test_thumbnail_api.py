@@ -122,7 +122,190 @@ def test_list_endpoint_restores_render_metadata_and_urls(client: TestClient) -> 
     assert response.status_code == 200
     restored = response.json()["data"]
     assert [item["suggestion"] for item in restored] == [item["suggestion"] for item in generated]
-    assert restored[0]["assets"]["16x9"]["png"].endswith("/16x9.png")
+    assert "/16x9.png?revision=" in restored[0]["assets"]["16x9"]["png"]
+    assert restored[0]["revision"] == generated[0]["revision"]
+
+
+def test_favorite_selection_is_exclusive_idempotent_and_persistent(client: TestClient) -> None:
+    project = create_project(client)
+    variants = client.post(
+        f"/api/projects/{project['id']}/thumbnails/generate",
+        json={"template_name": "modern_split", "variant_count": 3},
+    ).json()["data"]
+    endpoint = f"/api/projects/{project['id']}/thumbnails/{variants[1]['id']}/favorite"
+
+    first = client.put(endpoint)
+    repeat = client.put(endpoint)
+    restored = client.get(f"/api/projects/{project['id']}/thumbnails").json()["data"]
+
+    assert first.status_code == 200
+    assert repeat.status_code == 200
+    assert first.json()["data"]["is_selected"] is True
+    assert [item["is_selected"] for item in restored] == [False, True, False]
+
+    second = client.put(
+        f"/api/projects/{project['id']}/thumbnails/{variants[2]['id']}/favorite"
+    )
+    restored = client.get(f"/api/projects/{project['id']}/thumbnails").json()["data"]
+    assert second.status_code == 200
+    assert [item["is_selected"] for item in restored] == [False, False, True]
+
+
+def test_manual_edit_rerenders_one_row_and_persists_latest_revision(client: TestClient) -> None:
+    project = create_project(client)
+    variants = client.post(
+        f"/api/projects/{project['id']}/thumbnails/generate",
+        json={"template_name": "gradient_bold", "variant_count": 3},
+    ).json()["data"]
+    original = variants[0]
+    client.put(f"/api/projects/{project['id']}/thumbnails/{original['id']}/favorite")
+    original_dir = settings.DATA_DIR / "thumbnails" / project["id"] / original["revision"]
+    original_bytes = client.get(original["assets"]["16x9"]["png"]).content
+    payload = {
+        "revision": original["revision"],
+        "headline": "Manual Career Breakthrough",
+        "palette": {
+            "primary": "#101830",
+            "secondary": "#4060C0",
+            "accent": "#FF3355",
+            "text": "#FFFFFF",
+        },
+    }
+
+    response = client.patch(
+        f"/api/projects/{project['id']}/thumbnails/{original['id']}",
+        json=payload,
+    )
+
+    assert response.status_code == 200
+    edited = response.json()["data"]
+    assert edited["id"] == original["id"]
+    assert edited["revision"] != original["revision"]
+    assert edited["is_selected"] is True
+    assert edited["suggestion"]["headline"] == payload["headline"]
+    assert edited["suggestion"]["palette"] == payload["palette"]
+    assert edited["suggestion"]["supporting_text"] == original["suggestion"]["supporting_text"]
+    assert edited["suggestion"]["topic_keywords"] == original["suggestion"]["topic_keywords"]
+    assert f"revision={edited['revision']}" in edited["assets"]["16x9"]["png"]
+    assert not original_dir.exists()
+    assert client.get(edited["assets"]["16x9"]["png"]).content != original_bytes
+
+    restored = client.get(f"/api/projects/{project['id']}/thumbnails").json()["data"]
+    assert restored[0] == edited
+    assert [item["id"] for item in restored[1:]] == [item["id"] for item in variants[1:]]
+
+
+@pytest.mark.parametrize(
+    "patch",
+    [
+        {"headline": ""},
+        {"palette": {"primary": "red"}},
+        {"revision": "not-a-uuid"},
+    ],
+)
+def test_manual_edit_rejects_invalid_contract(client: TestClient, patch: dict) -> None:
+    project = create_project(client)
+    original = client.post(
+        f"/api/projects/{project['id']}/thumbnails/generate",
+        json={"template_name": "minimal_clean", "variant_count": 3},
+    ).json()["data"][0]
+    payload = {
+        "revision": original["revision"],
+        "headline": "Valid headline",
+        "palette": original["suggestion"]["palette"],
+    }
+    if "palette" in patch:
+        payload["palette"] = {**payload["palette"], **patch["palette"]}
+    else:
+        payload.update(patch)
+
+    response = client.patch(
+        f"/api/projects/{project['id']}/thumbnails/{original['id']}",
+        json=payload,
+    )
+
+    assert response.status_code == 422
+
+
+def test_stale_edit_returns_409_without_changing_latest_revision(client: TestClient) -> None:
+    project = create_project(client)
+    original = client.post(
+        f"/api/projects/{project['id']}/thumbnails/generate",
+        json={"template_name": "minimal_clean", "variant_count": 3},
+    ).json()["data"][0]
+    endpoint = f"/api/projects/{project['id']}/thumbnails/{original['id']}"
+    first_payload = {
+        "revision": original["revision"],
+        "headline": "First committed edit",
+        "palette": original["suggestion"]["palette"],
+    }
+    first = client.patch(endpoint, json=first_payload)
+    latest = first.json()["data"]
+    dirs_before = set((settings.DATA_DIR / "thumbnails" / project["id"]).iterdir())
+
+    stale = client.patch(endpoint, json={**first_payload, "headline": "Stale overwrite"})
+
+    assert stale.status_code == 409
+    assert set((settings.DATA_DIR / "thumbnails" / project["id"]).iterdir()) == dirs_before
+    restored = client.get(f"/api/projects/{project['id']}/thumbnails").json()["data"][0]
+    assert restored["revision"] == latest["revision"]
+    assert restored["suggestion"]["headline"] == "First committed edit"
+
+
+def test_thumbnail_mutations_enforce_project_ownership(client: TestClient) -> None:
+    owner = create_project(client)
+    other_payload = {**PROJECT_PAYLOAD, "name": "Other thumbnail project"}
+    other = client.post("/api/projects", json=other_payload).json()["data"]
+    original = client.post(
+        f"/api/projects/{owner['id']}/thumbnails/generate",
+        json={"template_name": "minimal_clean", "variant_count": 3},
+    ).json()["data"][0]
+
+    favorite = client.put(
+        f"/api/projects/{other['id']}/thumbnails/{original['id']}/favorite"
+    )
+    edit = client.patch(
+        f"/api/projects/{other['id']}/thumbnails/{original['id']}",
+        json={
+            "revision": original["revision"],
+            "headline": "Wrong owner",
+            "palette": original["suggestion"]["palette"],
+        },
+    )
+
+    assert favorite.status_code == 404
+    assert edit.status_code == 404
+
+
+def test_edit_db_failure_removes_staged_revision_and_keeps_original(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = create_project(client)
+    original = client.post(
+        f"/api/projects/{project['id']}/thumbnails/generate",
+        json={"template_name": "minimal_clean", "variant_count": 3},
+    ).json()["data"][0]
+    project_dir = settings.DATA_DIR / "thumbnails" / project["id"]
+    dirs_before = set(project_dir.iterdir())
+
+    async def fail_update(*args: object, **kwargs: object) -> dict:
+        raise RuntimeError("simulated DB failure")
+
+    monkeypatch.setattr(thumbnail_service, "update_thumbnail_revision", fail_update)
+    with pytest.raises(RuntimeError, match="simulated DB failure"):
+        client.patch(
+            f"/api/projects/{project['id']}/thumbnails/{original['id']}",
+            json={
+                "revision": original["revision"],
+                "headline": "Should roll back",
+                "palette": original["suggestion"]["palette"],
+            },
+        )
+
+    assert set(project_dir.iterdir()) == dirs_before
+    restored = client.get(f"/api/projects/{project['id']}/thumbnails").json()["data"][0]
+    assert restored["revision"] == original["revision"]
 
 
 def test_regeneration_replaces_rows_and_removes_superseded_files(

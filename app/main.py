@@ -124,6 +124,12 @@ async def step4_tts() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "pages" / "step4_tts_placeholder.html")
 
 
+@app.get("/step6")
+async def step6_thumbnail() -> FileResponse:
+    """Serve the Step 6 — interactive Thumbnail Generator page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step6_thumbnail.html")
+
+
 @app.get("/music")
 async def music_library() -> FileResponse:
     """Serve the background Music Library management page."""

@@ -9,11 +9,11 @@
 
 ## Progress Overview
 
-*Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) [currently 4/10 done, 40%] with 29 discrete checklist subtasks [currently 18/29 done, 62%]. Progress reflects completed subtasks.*
+*Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) [currently 5/10 done, 50%] with 29 discrete checklist subtasks [currently 19/29 done, 66%]. Progress reflects completed subtasks.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
-| Phase 1 — Build | 🔄 In Progress | 18 | 29 |
+| Phase 1 — Build | 🔄 In Progress | 19 | 29 |
 | Phase 2 — Testing | ⏳ Not Started | 0 | 10 |
 | Phase 3 — Review | ⏳ Not Started | 0 | 6 |
 
@@ -59,10 +59,10 @@
 - [ ] VideoService — LivePortrait (if time)
 - [ ] Video Studio UI
 
-### 1.8 Thumbnail Generator
+### 1.8 Thumbnail Generator — ✅ DONE (2026-09-12)
 - [x] ThumbnailService — Sub-task 1.8a by Codex: Gemini text/palette suggestions (`responseJsonSchema`, exact-count + duplicate rejection), atomic render+persist with rollback-safe filesystem/DB sequencing, safe content route. 27 new tests, 298 total pass. PM independently re-rendered all 5 templates and confirmed real image quality.
 - [x] 5 thumbnail templates — `minimal_clean`, `gradient_bold`, `modern_split`, `dynamic_wave`, `podcast_classic`, deterministically generated, font is Pillow's embedded scalable default (no system path)
-- [ ] Thumbnail UI — deferred to Sub-task 1.8b (template gallery, manual editor, download)
+- [x] Thumbnail UI — Sub-task 1.8b by Codex (session ran out of quota mid-task; PM independently verified/completed acceptance from the actual code and a fresh full test run, not a written report): `/step6` page, template gallery, generate/regenerate (confirm-gated), favorite selection (atomic single-UPDATE), manual headline/color editor with optimistic-concurrency re-render (SQL-level compare-and-swap, `ConflictError` 409 on stale edits), revision-token cache-busted asset URLs, full `saved`/`dirty`/`saving`/`failed` async-safety state machine matching Step 2/3. 17 new tests (11 service/API + 6 real-browser), 314 total pass, ruff clean, no flaky test recurrence.
 
 ### 1.9 YouTube Package
 - [ ] YouTubePackageService
@@ -98,6 +98,7 @@
 | 2026-09-12 | User is bringing in Codex as a second AI Implementer (Claude Code stays PM). Generalized `SYSTEM-RULES.md` AR-06 from "PM-GEMINI" to "PM-Implementer" (binds whichever coding AI is assigned, not one vendor). Added `docs/CODEX_CODE_PROMPT.md` — Codex-specific variant of `docs/GEMINI_CODE_PROMPT.md`, same AR-06 contract, plus a mandatory environment-preflight step (Codex's sandbox may not match this Windows dev machine: ffmpeg/network/.env availability must be checked and reported, never assumed) and a stricter "paste real command output, not prose" evidence requirement given the BUG-010 false-claim incident. | User; PM (Claude Code) |
 | 2026-09-12 | Codex's first assignment (Task 1.6 Sub-task 1.6b, AudioService) correctly self-deferred after a real environment preflight: no `ffmpeg`, no `pydub` in its sandbox. Redirected (PM-approved) to Task 1.10 Sub-task 1.10a — ffmpeg-independent Music Library UI — with 4 PM-required additions (50MB upload limit, no-clobber duplicate naming, magic-byte validation, `ARCHITECTURE.md` sync). Codex delivered all 4; PM independently re-ran every verification command (not just trusted the pasted output) and read the actual diff before accepting — first real Codex delivery matched its own report exactly, no BUG-010-style discrepancy. 19 new tests (real `ThreadPoolExecutor`/`Barrier` concurrency test proves the no-clobber placement is actually race-safe, not just sequentially tested). Also confirmed independently: `pydub` fails on this venv's Python 3.14 with `ModuleNotFoundError: No module named 'audioop'` (Codex's sandbox hit the same error) — logged in Known Issues, will still block Sub-task 1.6b/1.10b later even after `ffmpeg` is installed, unless `audioop-lts` is added first. | Codex; PM (Claude Code) |
 | 2026-09-12 | Task 1.8 (Thumbnail Generator) assigned to Codex — chosen over Task 1.9 because 1.9's acceptance criteria require a .zip with video/thumbnail/SRT that don't exist yet. Codex proposed splitting into 1.8a (backend: Gemini suggestions, 5 Pillow templates, render+persist, APIs) and 1.8b (UI editor, separate plan). PM verified the font claim independently (`ImageFont.load_default(size=...)` genuinely scales, confirmed by measuring rendered text width at two sizes; the font itself — Aileron — is base64-embedded in Pillow's own source, zero filesystem/OS dependency) before approving. PM also required one clarification before implementation: the pre-existing `thumbnails` DB table has one row per `(template_name, variant_index)`, not a many-to-many shape, so the variant→template assignment rule needed to be explicit — Codex resolved this by making `template_name` a required request field (one template per generation batch, not round-robin across all 5), which PM confirmed matches the schema. After implementation, PM independently re-rendered all 5 templates using the actual service code and visually confirmed professional-quality output (not just trusting the "visually inspected" claim in the report) before accepting. 27 new tests, 298/298 pass. | Codex; PM (Claude Code) |
+| 2026-09-12 | Task 1.8 CLOSED: Codex's Sub-task 1.8b plan (PUT .../favorite exclusive select, PATCH .../thumbnails/{id} optimistic-concurrency edit with a `revision` compare-and-swap, cache-busted asset URLs) was PM-approved without changes — Codex identified two real races/bugs (stale-edit clobbering, stale browser image cache) beyond the minimum ask and solved both correctly. Codex's session ran out of quota mid-implementation, before running final verification or writing its evidence report. PM (Claude Code) independently read every changed/new file end-to-end (not reconstructing from a report that was never written), confirmed the SQL-level CAS in `update_thumbnail_revision` and the single-statement atomic `select_favorite`, confirmed the Step 2/3-style async-safety state machine in the new `step6_thumbnail.js`, and ran a fresh full verification pass (314/314 tests, ruff clean, no flaky-test recurrence) before completing the acceptance record and closing Task 1.8 end-to-end. | Codex; PM (Claude Code) |
 | 2026-09-11 | BUG-001 auto-logged by vp-audit Tier 1: restore valid machine-readable state | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-002 auto-logged by vp-audit Tier 1: reconcile Phase 1 progress counters | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-003 auto-logged by vp-audit Tier 1: enforce doc-first task gates | `vp-audit`; Backlog |

@@ -23,6 +23,12 @@ class ValidationError(AppError):
     status_code = 422
 
 
+class ConflictError(AppError):
+    """Raised when an optimistic write targets a stale resource revision."""
+
+    status_code = 409
+
+
 class ScriptGenerationError(AppError):
     """Raised when the Gemini API fails or returns content violating script rules."""
 

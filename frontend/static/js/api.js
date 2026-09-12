@@ -20,7 +20,9 @@ const Api = (() => {
     }
 
     if (!response.ok || envelope.success === false) {
-      throw new Error(envelope.error || `Request to ${path} failed`);
+      const error = new Error(envelope.error || `Request to ${path} failed`);
+      error.status = response.status;
+      throw error;
     }
 
     return envelope.data;
@@ -60,6 +62,22 @@ const Api = (() => {
     deleteMusic: (filename) =>
       request(`/api/music/${encodeURIComponent(filename)}`, { method: "DELETE" }),
     musicContentUrl: (filename) => `/api/music/${encodeURIComponent(filename)}`,
+    listThumbnailTemplates: () => request("/api/thumbnails/templates"),
+    listThumbnails: (projectId) => request(`/api/projects/${projectId}/thumbnails`),
+    generateThumbnails: (projectId, templateName, variantCount) =>
+      request(`/api/projects/${projectId}/thumbnails/generate`, {
+        method: "POST",
+        body: JSON.stringify({ template_name: templateName, variant_count: variantCount }),
+      }),
+    selectThumbnailFavorite: (projectId, thumbnailId) =>
+      request(`/api/projects/${projectId}/thumbnails/${thumbnailId}/favorite`, {
+        method: "PUT",
+      }),
+    editThumbnail: (projectId, thumbnailId, edit) =>
+      request(`/api/projects/${projectId}/thumbnails/${thumbnailId}`, {
+        method: "PATCH",
+        body: JSON.stringify(edit),
+      }),
     health: () => request("/health"),
   };
 })();

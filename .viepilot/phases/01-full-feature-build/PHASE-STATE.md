@@ -7,9 +7,9 @@
 - **Started:** 2026-09-10
 - **Current Day:** Day 2 / 21 (2026-09-11)
 - **Target Completion:** 2026-09-17
-- **Milestone Progress:** 4 / 10 major tasks (40%)
-- **Subtask Progress:** 18 / 29 granular subtasks (62%)
-- **Test Suite Status:** 298 passed (218 unit/integration + 5 browser E2E + 7 dashboard browser E2E + 22 TTS unit/API + 19 music unit/API/browser + 27 thumbnail prompt/service/API), ruff clean. One pre-existing flaky test in `test_script_service.py` observed twice under full-suite load, confirmed passing in isolation both times — tracked, not a regression.
+- **Milestone Progress:** 5 / 10 major tasks (50%)
+- **Subtask Progress:** 19 / 29 granular subtasks (66%)
+- **Test Suite Status:** 314 passed (218 unit/integration + 5 browser E2E + 7 dashboard browser E2E + 22 TTS unit/API + 19 music unit/API/browser + 44 thumbnail prompt/service/API/browser), ruff clean. One pre-existing flaky test in `test_script_service.py` observed twice under full-suite load (not in the most recent run), confirmed passing in isolation both times — tracked, not a regression.
 
 ---
 
@@ -76,9 +76,9 @@
 - **Details:** VideoService (background + subtitle burned + SRT), LivePortrait, Video UI.
 
 ### Task 1.8: Step 6 — Thumbnail Generator
-- **Status:** 🔄 In Progress (Sub-task 1.8a done; 1.8b pending)
+- **Status:** ✅ Done (2026-09-12)
 - **Details:** By Codex, PM-accepted 2026-09-12.
-  - **1.8a DONE:** `ThumbnailService` — Gemini text/palette suggestions (`responseJsonSchema`,
+  - **1.8a:** `ThumbnailService` — Gemini text/palette suggestions (`responseJsonSchema`,
     exact-count + duplicate-rejection Pydantic validation, no vision call needed — text-only),
     5 deterministic Pillow templates (`minimal_clean`, `gradient_bold`, `modern_split`,
     `dynamic_wave`, `podcast_classic`) using Pillow's embedded scalable default font (no
@@ -87,8 +87,15 @@
     route `GET /api/projects/{id}/thumbnails/{thumbnail_id}/{aspect}.{format}`. 27 new tests
     (6 prompt + 11 service + 10 API). PM independently re-rendered all 5 templates from the
     actual service code and visually confirmed professional-quality output.
-  - **1.8b (interactive UI — template gallery, manual editor, download):** deferred, needs its
-    own plan/review.
+  - **1.8b:** `/step6` interactive UI — template gallery, generate/regenerate (confirm-gated),
+    exclusive favorite selection (`select_favorite`, one atomic `UPDATE ... CASE WHEN`),
+    manual headline/color editor with optimistic-concurrency re-render (`update_thumbnail_revision`
+    is a true SQL-level compare-and-swap; stale edits get `ConflictError` 409), cache-busted
+    asset URLs (`?revision=` token). Full `saved`/`dirty`/`saving`/`failed` async-safety state
+    machine in `step6_thumbnail.js` matching the established Step 2/3 pattern. Codex's session
+    ran out of quota mid-implementation before writing its own evidence report; PM independently
+    read every changed file end-to-end and ran a fresh full verification pass before accepting.
+    17 new tests (11 service/API + 6 real-browser Playwright). 314 total tests pass, ruff clean.
 
 ### Task 1.9: Step 7 — YouTube Package
 - **Status:** ⏳ Planned

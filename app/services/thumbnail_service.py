@@ -11,6 +11,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 import aiosqlite
 import httpx
@@ -33,11 +34,12 @@ from app.core.constants import (
     THUMBNAIL_WIDTH_16X9,
     THUMBNAIL_WIDTH_9X16,
 )
-from app.core.exceptions import NotFoundError, ThumbnailGenerationError
+from app.core.exceptions import ConflictError, NotFoundError, ThumbnailGenerationError
 from app.core.prompt_loader import render_thumbnail_prompt
 from app.models.thumbnail import (
     TextZone,
     ThumbnailAspect,
+    ThumbnailEditRequest,
     ThumbnailFormat,
     ThumbnailSuggestion,
     ThumbnailSuggestionPack,
@@ -288,6 +290,48 @@ def _render_image(
     return image
 
 
+def _render_record_sync(
+    project_id: str,
+    thumbnail_id: str,
+    variant_index: int,
+    template: ThumbnailTemplateConfig,
+    suggestion: ThumbnailSuggestion,
+    revision: str,
+) -> dict:
+    """Render and stage one complete four-file thumbnail revision."""
+    variant_dir = settings.DATA_DIR / "thumbnails" / project_id / revision
+    variant_dir.parent.mkdir(parents=True, exist_ok=True)
+    variant_dir.mkdir()
+    try:
+        assets: dict[str, dict[str, str]] = {}
+        for aspect in ASPECT_SIZES:
+            image = _render_image(template, suggestion, aspect)
+            try:
+                png_path = variant_dir / f"{aspect}.png"
+                jpg_path = variant_dir / f"{aspect}.jpg"
+                image.save(png_path, format="PNG", optimize=True)
+                image.save(jpg_path, format="JPEG", quality=THUMBNAIL_JPEG_QUALITY)
+            finally:
+                image.close()
+            assets[aspect] = {"png": str(png_path), "jpg": str(jpg_path)}
+        sidecar = {
+            "id": thumbnail_id,
+            "project_id": project_id,
+            "template_name": template.id,
+            "variant_index": variant_index,
+            "revision": revision,
+            "suggestion": suggestion.model_dump(),
+            "assets": assets,
+        }
+        (variant_dir / "render.json").write_text(
+            json.dumps(sidecar, indent=2), encoding="utf-8"
+        )
+        return sidecar
+    except Exception:
+        shutil.rmtree(variant_dir, ignore_errors=True)
+        raise
+
+
 def _render_batch_sync(
     project_id: str,
     template: ThumbnailTemplateConfig,
@@ -297,36 +341,22 @@ def _render_batch_sync(
     project_dir = settings.DATA_DIR / "thumbnails" / project_id
     project_dir.mkdir(parents=True, exist_ok=True)
     records: list[dict] = []
-    created_dirs: list[Path] = []
     try:
         for variant_index, suggestion in enumerate(suggestions):
             thumbnail_id = str(uuid.uuid4())
-            variant_dir = project_dir / thumbnail_id
-            variant_dir.mkdir()
-            created_dirs.append(variant_dir)
-            assets: dict[str, dict[str, str]] = {}
-            for aspect in ASPECT_SIZES:
-                image = _render_image(template, suggestion, aspect)
-                png_path = variant_dir / f"{aspect}.png"
-                jpg_path = variant_dir / f"{aspect}.jpg"
-                image.save(png_path, format="PNG", optimize=True)
-                image.save(jpg_path, format="JPEG", quality=THUMBNAIL_JPEG_QUALITY)
-                assets[aspect] = {"png": str(png_path), "jpg": str(jpg_path)}
-            sidecar = {
-                "id": thumbnail_id,
-                "project_id": project_id,
-                "template_name": template.id,
-                "variant_index": variant_index,
-                "suggestion": suggestion.model_dump(),
-                "assets": assets,
-            }
-            (variant_dir / "render.json").write_text(
-                json.dumps(sidecar, indent=2), encoding="utf-8"
+            records.append(
+                _render_record_sync(
+                    project_id,
+                    thumbnail_id,
+                    variant_index,
+                    template,
+                    suggestion,
+                    thumbnail_id,
+                )
             )
-            records.append(sidecar)
     except Exception:
-        for variant_dir in created_dirs:
-            shutil.rmtree(variant_dir, ignore_errors=True)
+        for record in records:
+            shutil.rmtree(Path(record["assets"]["16x9"]["png"]).parent, ignore_errors=True)
         raise
     return records
 
@@ -345,6 +375,61 @@ async def render_batch(
         raise ThumbnailGenerationError(f"Thumbnail rendering failed: {exc}") from exc
 
 
+def _record_revision(record: dict) -> str:
+    return Path(record["image_path_16x9"]).parent.name
+
+
+def _load_suggestion_sync(record: dict) -> ThumbnailSuggestion:
+    sidecar_path = Path(record["image_path_16x9"]).parent / "render.json"
+    try:
+        metadata = json.loads(sidecar_path.read_text("utf-8"))
+        for field in ("id", "project_id", "template_name", "variant_index"):
+            if metadata[field] != record[field]:
+                raise ValueError(f"sidecar {field} does not match its database row")
+        return ThumbnailSuggestion.model_validate(metadata["suggestion"])
+    except (OSError, KeyError, ValueError, json.JSONDecodeError, PydanticValidationError) as exc:
+        raise ThumbnailGenerationError(
+            f"Thumbnail render metadata is unavailable: {record['id']}"
+        ) from exc
+
+
+async def load_suggestion(record: dict) -> ThumbnailSuggestion:
+    """Load and validate the persisted suggestion for one thumbnail row."""
+    return await asyncio.to_thread(_load_suggestion_sync, record)
+
+
+async def render_edited_thumbnail(record: dict, edit: ThumbnailEditRequest) -> dict:
+    """Stage a fresh revision for one row while preserving its non-editable metadata."""
+    if _record_revision(record) != str(edit.revision):
+        raise ConflictError("Thumbnail was changed by another request; reload and try again.")
+    template, current = await asyncio.gather(
+        load_template(record["template_name"]),
+        load_suggestion(record),
+    )
+    suggestion = ThumbnailSuggestion.model_validate(
+        {
+            **current.model_dump(),
+            "headline": edit.headline,
+            "palette": edit.palette.model_dump(),
+        }
+    )
+    revision = str(uuid.uuid4())
+    try:
+        return await asyncio.to_thread(
+            _render_record_sync,
+            record["project_id"],
+            record["id"],
+            record["variant_index"],
+            template,
+            suggestion,
+            revision,
+        )
+    except ThumbnailGenerationError:
+        raise
+    except Exception as exc:
+        raise ThumbnailGenerationError(f"Thumbnail rendering failed: {exc}") from exc
+
+
 async def get_thumbnail_rows(db: aiosqlite.Connection, project_id: str) -> list[dict]:
     """Return persisted thumbnail rows ordered by their A/B variant index."""
     cursor = await db.execute(
@@ -354,6 +439,24 @@ async def get_thumbnail_rows(db: aiosqlite.Connection, project_id: str) -> list[
         (project_id,),
     )
     return [dict(row) for row in await cursor.fetchall()]
+
+
+async def get_thumbnail_row(
+    db: aiosqlite.Connection,
+    project_id: str,
+    thumbnail_id: str,
+) -> dict:
+    """Return one thumbnail only when it belongs to the requested project."""
+    cursor = await db.execute(
+        "SELECT id, project_id, template_name, variant_index, image_path_16x9, "
+        "image_path_9x16, is_selected, created_at FROM thumbnails "
+        "WHERE id = ? AND project_id = ?",
+        (thumbnail_id, project_id),
+    )
+    row = await cursor.fetchone()
+    if row is None:
+        raise NotFoundError("Thumbnail not found.")
+    return dict(row)
 
 
 async def replace_thumbnail_rows(
@@ -388,16 +491,61 @@ async def replace_thumbnail_rows(
     return old_rows
 
 
+async def update_thumbnail_revision(
+    db: aiosqlite.Connection,
+    project_id: str,
+    thumbnail_id: str,
+    expected_revision: str,
+    rendered: dict,
+    commit: bool = True,
+) -> dict:
+    """CAS-update one row to a staged revision and return its superseded row."""
+    current = await get_thumbnail_row(db, project_id, thumbnail_id)
+    if _record_revision(current) != expected_revision:
+        raise ConflictError("Thumbnail was changed by another request; reload and try again.")
+    cursor = await db.execute(
+        "UPDATE thumbnails SET image_path_16x9 = ?, image_path_9x16 = ? "
+        "WHERE id = ? AND project_id = ? AND image_path_16x9 = ?",
+        (
+            rendered["assets"]["16x9"]["png"],
+            rendered["assets"]["9x16"]["png"],
+            thumbnail_id,
+            project_id,
+            current["image_path_16x9"],
+        ),
+    )
+    if cursor.rowcount != 1:
+        raise ConflictError("Thumbnail was changed by another request; reload and try again.")
+    if commit:
+        await db.commit()
+    return current
+
+
+async def select_favorite(
+    db: aiosqlite.Connection,
+    project_id: str,
+    thumbnail_id: str,
+    commit: bool = True,
+) -> dict:
+    """Idempotently select exactly one favorite thumbnail for a project."""
+    selected = await get_thumbnail_row(db, project_id, thumbnail_id)
+    await db.execute(
+        "UPDATE thumbnails SET is_selected = CASE WHEN id = ? THEN 1 ELSE 0 END "
+        "WHERE project_id = ?",
+        (thumbnail_id, project_id),
+    )
+    if commit:
+        await db.commit()
+    selected["is_selected"] = 1
+    return selected
+
+
 def _public_record(record: dict) -> dict:
     thumbnail_id = record["id"]
     project_id = record["project_id"]
-    sidecar_path = Path(record["image_path_16x9"]).parent / "render.json"
-    try:
-        suggestion = json.loads(sidecar_path.read_text("utf-8"))["suggestion"]
-    except (OSError, KeyError, json.JSONDecodeError) as exc:
-        raise ThumbnailGenerationError(
-            f"Thumbnail render metadata is unavailable: {thumbnail_id}"
-        ) from exc
+    suggestion = _load_suggestion_sync(record).model_dump()
+    revision = _record_revision(record)
+    encoded_revision = quote(revision, safe="")
     base_url = f"/api/projects/{project_id}/thumbnails/{thumbnail_id}"
     return {
         "id": thumbnail_id,
@@ -406,10 +554,13 @@ def _public_record(record: dict) -> dict:
         "variant_index": record["variant_index"],
         "is_selected": bool(record["is_selected"]),
         "created_at": record["created_at"],
+        "revision": revision,
         "suggestion": suggestion,
         "assets": {
             aspect: {
-                image_format: f"{base_url}/{aspect}.{image_format}"
+                image_format: (
+                    f"{base_url}/{aspect}.{image_format}?revision={encoded_revision}"
+                )
                 for image_format in ("png", "jpg")
             }
             for aspect in ASPECT_SIZES

@@ -181,13 +181,13 @@
   - JSON config per template: text zones, color zones, font specs — done (font is Pillow's embedded scalable default, not a system/hardcoded path)
   - Verify: all templates render correctly — PM independently rendered and viewed all 5
 
-- [ ] **Thumbnail UI** (`frontend/pages/step6_thumbnail.html`)
-  - Template gallery (5 options, hover preview)
-  - Generate button → 3-5 A/B variants display
-  - Click to select favorite
-  - In-app editor: change title text, colors, add/remove elements
-  - Download selected variant (16:9 + 9:16)
-  - Verify: select template, generate, edit, download — all work
+- [x] **Thumbnail UI** (`frontend/pages/step6_thumbnail.html`) — Sub-task 1.8b, by Codex (completed/verified by PM after Codex's session ran out of quota mid-task), PM-accepted 2026-09-12
+  - Template gallery (5 options, hover preview) — done
+  - Generate button → 3-5 A/B variants display — done, confirm-gated when replacing an existing batch
+  - Click to select favorite — done, atomic single-UPDATE exclusive selection
+  - In-app editor: change title text, colors, add/remove elements — done for text+colors (optimistic-concurrency re-render); add/remove elements and drag/drop explicitly out of scope (see task-1.8.md "Layout-tweak scope decision")
+  - Download selected variant (16:9 + 9:16) — done, PNG+JPG both aspects, cache-busted via revision token
+  - Verify: select template, generate, edit, download — all work — 17 new tests (11 service/API + 6 real-browser Playwright), 314 total tests pass
 
 ### 1.9 Step 7 — YouTube Package
 

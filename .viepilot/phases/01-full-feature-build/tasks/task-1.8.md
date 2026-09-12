@@ -3,7 +3,7 @@
 ## Meta
 - **ID**: 1.8
 - **Phase**: 1
-- **Status**: in_progress (Sub-task 1.8a done)
+- **Status**: done
 - **Priority**: medium
 - **Assignee**: AI (Codex)
 
@@ -16,7 +16,7 @@
 ## Acceptance Criteria
 - [x] 5 Pillow thumbnail templates (minimal, bold, split, dark, educational) — deterministic, PM-verified visually (see PM Acceptance)
 - [x] AI prompt generation for headline & color palette via Gemini — `responseJsonSchema` contract, exact-count + duplicate-rejection validation
-- [ ] Interactive manual text editor and layout tweaks — deferred to Sub-task 1.8b
+- [x] Interactive manual text editor and layout tweaks — Sub-task 1.8b: headline + 4-color palette editor with optimistic-concurrency re-render (revision compare-and-swap), favorite selection; scope explicitly excludes drag/drop and template-swap (see Layout-tweak scope decision)
 - [x] Export 1280x720 PNG/JPG — done, plus 720x1280 (bonus, matches ROADMAP's "both aspects" note)
 
 ## Forbidden Scope
@@ -507,3 +507,92 @@ explicit and reasonable. Backward compatibility for 1.8a's existing rows (derivi
 revision from the current canonical directory, no migration) is correct.
 
 Proceed to implementation as planned.
+
+## Implementer Evidence (2026-09-12, Sub-task 1.8b) — completed by PM after Codex ran out of quota
+
+Codex implemented the full approved plan (backend routes/service logic, frontend page/JS, and
+all three test files) before its session ran out of quota mid-task, before it could run final
+verification or write this evidence section itself. PM (Claude Code) independently inspected
+every changed/new file end-to-end and ran all verification commands fresh rather than
+reconstructing a report from partial context.
+
+### What was implemented (verified by direct code reading, not by trusting a report)
+
+- `app/core/exceptions.py`: `ConflictError` (409) for stale optimistic writes.
+- `app/models/thumbnail.py`: `ThumbnailEditRequest` (revision: UUID, headline, palette) reusing
+  the existing strict `ThumbnailPalette` hex validation.
+- `app/services/thumbnail_service.py`:
+  - `_render_record_sync` factored out of `_render_batch_sync` so both batch-generate and
+    single-row edit share one render/stage/cleanup-on-failure code path.
+  - `render_edited_thumbnail`: fails fast with `ConflictError` *before* rendering if the
+    client's revision is already stale (checked against the current row's revision, derived
+    from its canonical directory name — no schema/migration needed); otherwise merges the
+    edited headline/palette into the existing suggestion (preserving supporting_text/
+    topic_keywords) and stages a fresh four-file revision under a new UUID directory.
+  - `update_thumbnail_revision`: true compare-and-swap at the SQL layer — the `UPDATE`
+    statement's `WHERE` clause includes the *previously read* `image_path_16x9` value, so the
+    write only succeeds if nothing changed the row since it was read; `cursor.rowcount != 1`
+    (row moved or vanished) raises `ConflictError`. This is correct optimistic concurrency, not
+    an application-level check-then-write race.
+  - `select_favorite`: one atomic `UPDATE ... SET is_selected = CASE WHEN id = ? THEN 1 ELSE 0
+    END WHERE project_id = ?` — exclusive selection in a single statement, no window with zero
+    or multiple favorites.
+  - `_public_record` now appends `?revision=<token>` to every asset URL (URL-encoded), fixing
+    the real cache-invalidation problem the plan identified: a stable content URL that now
+    points to different bytes after an edit.
+- `app/api/thumbnail.py`: `PUT .../thumbnails/{id}/favorite` and `PATCH .../thumbnails/{id}`,
+  both following the established stage-new → write-transaction CAS → cleanup-old-after-commit
+  sequence (verified identical ordering/safety to the 1.8a batch-generate route).
+- `app/main.py` + `.viepilot/ARCHITECTURE.md`: `/step6` page route and the two new API routes
+  documented.
+- `frontend/static/js/api.js`: `request()` now attaches the real HTTP status to thrown errors
+  (`error.status`) — additive, verified it does not change behavior for any existing caller
+  that only read `.message` — plus four new centralized thumbnail methods (CR-05).
+- `frontend/pages/step6_thumbnail.html` + `frontend/static/js/step6_thumbnail.js`: template
+  gallery, generate/regenerate with a confirm-gated destructive replace, variant grid with
+  favorite selection, manual headline/color editor with a `saved`/`dirty`/`saving`/`failed`
+  state machine matching the established Step 2/3 pattern exactly (single in-flight save +
+  trailing-save coalescing via `draftVersion`/`saveQueued`, `beforeunload` guard while
+  unresolved, friendly 409 handling with a "Reload latest" recovery path, disabled
+  generate/template/variant/download controls while an edit is unresolved or the workspace is
+  busy).
+
+### PM verification (independently re-run, not trusted from a report that was never written)
+
+`venv\Scripts\python -m pytest tests/test_thumbnail_service.py tests/test_thumbnail_api.py -q`
+
+```text
+...............................                                          [100%]
+31 passed in 8.73s
+```
+
+`venv\Scripts\python -m pytest tests/test_thumbnail_browser.py -q`
+
+```text
+......                                                                   [100%]
+6 passed in 13.36s
+```
+
+`venv\Scripts\python -m pytest tests/ -q`
+
+```text
+314 passed, 2 warnings in 76.93s
+```
+
+`venv\Scripts\python -m ruff check app/ tests/`
+
+```text
+All checks passed!
+```
+
+`node --check frontend/static/js/api.js` and `node --check frontend/static/js/step6_thumbnail.js`: both exit 0.
+
+`git diff --check`: exit 0, no whitespace/EOF issues.
+
+No pre-existing flaky test recurred in this run.
+
+## PM Acceptance (2026-09-12)
+
+**Accepted.** This closes Sub-task 1.8b and, with it, all of Task 1.8's acceptance criteria
+(5 templates, Gemini generation, interactive manual editor, PNG/JPG export at both aspects).
+Task 1.8 is now fully **done**.
