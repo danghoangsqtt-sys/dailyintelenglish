@@ -1,5 +1,8 @@
 /** Music Library page: upload, preview, list, and delete local background tracks. */
 (() => {
+  // Client-side pre-check only — the server enforces the real limit via
+  // MAX_MUSIC_UPLOAD_BYTES (app/core/constants.py). Keep this value in sync with
+  // MAX_MUSIC_UPLOAD_MB there; there's no shared-config channel between the two yet.
   const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
   const ALLOWED_EXTENSIONS = [".mp3", ".wav"];
   let uploadInFlight = false;

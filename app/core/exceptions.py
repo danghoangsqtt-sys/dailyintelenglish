@@ -69,3 +69,9 @@ class ThumbnailGenerationError(AppError):
     """Raised when thumbnail suggestion, rendering, or persistence fails."""
 
     status_code = 502
+
+
+class MusicUploadTooLargeError(AppError):
+    """Raised when a music upload exceeds the configured size limit."""
+
+    status_code = 413

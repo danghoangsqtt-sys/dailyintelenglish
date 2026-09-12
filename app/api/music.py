@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 
 from app.core.config import settings
 from app.core.constants import MAX_MUSIC_UPLOAD_BYTES, MAX_MUSIC_UPLOAD_MB, MUSIC_UPLOAD_CHUNK_BYTES
-from app.core.exceptions import AppError, NotFoundError, ValidationError
+from app.core.exceptions import MusicUploadTooLargeError, NotFoundError, ValidationError
 from app.core.responses import ok
 
 router = APIRouter(prefix="/api/music", tags=["music"])
@@ -27,12 +27,6 @@ AUDIO_MEDIA_TYPES = {
     ".m4a": "audio/mp4",
 }
 MP3_FRAME_SYNC_BYTES = {0xFB, 0xF3, 0xFA, 0xF2}
-
-
-class MusicUploadTooLargeError(AppError):
-    """Raised when a music upload exceeds the configured size limit."""
-
-    status_code = 413
 
 
 def _music_dir() -> Path:
