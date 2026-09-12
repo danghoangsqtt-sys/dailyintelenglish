@@ -117,3 +117,10 @@ PROJECT_STATUSES = [
 # YouTube package limits
 YOUTUBE_DESCRIPTION_MAX_CHARS = 5000
 YOUTUBE_TAGS_MAX_CHARS = 500
+YOUTUBE_TITLE_MAX_CHARS = 100
+YOUTUBE_TITLE_VARIANTS = ["click_worthy", "educational", "seo"]
+
+# YouTube chapters: no real audio exists until Task 1.7/AudioService lands, so
+# timestamps are estimated from a fixed reading speed, never measured.
+YOUTUBE_CHAPTER_WORDS_PER_MINUTE = 150
+YOUTUBE_CHAPTER_MIN_LINES = 4  # start a new chapter every N script lines (topic-shift heuristic)

@@ -3,9 +3,9 @@
 ## Meta
 - **ID**: 1.9
 - **Phase**: 1
-- **Status**: planned
+- **Status**: in_progress (Sub-task 1.9a done)
 - **Priority**: medium
-- **Assignee**: AI
+- **Assignee**: AI (Claude Code, acting as PM + Implementer)
 
 ## Paths
 - `app/services/youtube_service.py`
@@ -14,10 +14,10 @@
 - `frontend/static/js/step7_youtube.js`
 
 ## Acceptance Criteria
-- [ ] Title options (3 variants: click-worthy, educational, SEO)
-- [ ] Description with auto-generated timestamps/chapters
-- [ ] Tag generator (comma-separated, max 500 chars)
-- [ ] Full package download (.zip containing video, thumbnail, SRT, metadata.txt)
+- [x] Title options (3 variants: click-worthy, educational, SEO) — Gemini-generated, `responseJsonSchema` validated
+- [x] Description with auto-generated timestamps/chapters — description done; chapters are honestly ESTIMATED (no real audio exists yet), clearly labelled as such in API + UI
+- [x] Tag generator (comma-separated, max 500 chars) — `YOUTUBE_TAGS_MAX_CHARS` enforced on the joined string
+- [ ] Full package download (.zip containing video, thumbnail, SRT, metadata.txt) — deferred to Sub-task 1.9b, blocked on Task 1.7 (ffmpeg)
 
 ## Forbidden Scope
 - No auto-publishing to YouTube without explicit user export/consent
@@ -143,3 +143,82 @@ status/checkbox edits beyond this task's own, no unrelated refactor.
 - `node --check frontend/static/js/api.js`
 - `node --check frontend/static/js/step7_youtube.js`
 - `git diff --check`
+
+## Implementer Evidence (2026-09-12) — Claude Code acting as both PM and Implementer
+
+### Delivered
+
+- `app/db/migrations/003_youtube_package.sql` (+ synced `.viepilot/schemas/database-schema.sql`):
+  drops and recreates `youtube_packages` with `title_options_json`, dropping the
+  never-populated transcript/vocabulary/grammar/comprehension columns (moved to 1.9b).
+- `app/models/youtube.py`: `TitleOption`, `YouTubePackageOut` — exactly 3 titles (one per
+  variant, enforced via `model_validator`), description 1-5000 chars, tags list validated
+  nonblank with a joined-length check against `YOUTUBE_TAGS_MAX_CHARS`.
+- `prompts/youtube/youtube_package.txt` + `render_youtube_prompt` in `app/core/prompt_loader.py`
+  (own Jinja env, validates genre/CEFR before touching the filesystem — same pattern as
+  `_render_thumbnail_prompt_sync`).
+- `app/services/youtube_service.py`: `generate_package()` follows the exact
+  `responseJsonSchema` + 429-only-backoff + prompt-hash-logging pattern as script/learning/
+  thumbnail services (verified via `test_call_gemini_includes_response_json_schema`).
+  `estimate_chapters()` is a pure function (word-count-based estimate, first chapter always
+  "00:00 Introduction", new chapter every `YOUTUBE_CHAPTER_MIN_LINES` lines) — unit-tested
+  in isolation, no Gemini call involved. `save_package`/`get_package` UPSERT into
+  `youtube_packages`, mirroring `learning_service`'s pattern exactly.
+- `app/api/youtube.py`: `POST .../youtube/generate`, `GET .../youtube` — thin routes using
+  `_read_transaction`/`_write_transaction`, no lock held across the Gemini call.
+- `app/main.py`: router registered, `GET /step7` added.
+- `frontend/pages/step7_youtube.html` + `step7_youtube.js`: read-only display (3 title
+  cards, description, tags, estimated-chapters block explicitly labelled "Estimated"),
+  copy-to-clipboard per section, confirm-gated Regenerate, friendly-only errors (raw Gemini
+  error text never reaches the DOM), an explicit note that full zip export awaits Task 1.7
+  rather than a dead/fake download button.
+- `frontend/static/js/api.js`: 2 new centralized calls (CR-05).
+- Tests: `tests/test_youtube_prompt.py`, `tests/test_youtube_service.py`,
+  `tests/test_youtube_api.py`, `tests/test_youtube_browser.py` (6 real-Chromium scenarios).
+
+### Two real bugs found and fixed before landing (self-caught, not shipped broken)
+
+1. **Tag round-trip whitespace bug**: `_row_to_package` split the stored comma-joined tag
+   string on `,` without stripping, so every tag after the first came back with a leading
+   space (`" english learning"` instead of `"english learning"`). Caught by
+   `test_save_and_get_package_roundtrip` and `test_generate_returns_200_and_persists` both
+   failing on first run. Fixed by stripping each tag after split.
+2. **`[hidden]` attribute silently ignored on `#generate-panel`**: the panel's own
+   `#generate-panel { display: grid; ... }` rule (ID selector) has higher CSS specificity
+   than the browser's default `[hidden] { display: none }` rule, so setting
+   `generatePanel.hidden = true` in JS had no visual effect — the panel stayed visible
+   underneath the content. Caught by
+   `test_existing_package_loads_directly_without_generate_click` (a real Playwright browser
+   test, not a unit test) asserting `#generate-panel` was actually hidden. Fixed by adding
+   an explicit `#generate-panel[hidden] { display: none; }` rule.
+
+### Verification output (all re-run fresh just before this entry, not reused from earlier)
+
+`venv\Scripts\python -m pytest tests/test_youtube_prompt.py tests/test_youtube_service.py tests/test_youtube_api.py tests/test_youtube_browser.py -q`
+
+```text
+36 passed
+```
+
+`venv\Scripts\python -m pytest tests/ -q`
+
+```text
+350 passed, 2 warnings in 86.46s
+```
+
+`venv\Scripts\python -m ruff check app/ tests/`
+
+```text
+All checks passed!
+```
+
+`node --check frontend/static/js/api.js` and `node --check frontend/static/js/step7_youtube.js`: both exit 0.
+
+## PM Acceptance (2026-09-12)
+
+**Accepted.** Both bugs above were caught by the test suite itself (not discovered later by
+a reviewer) — the tag-stripping bug by a unit-level roundtrip test, the CSS-specificity bug
+only by an actual browser test, which is exactly why Sub-task 1.8b/1.10a's real-Chromium
+coverage requirement exists. Chapters are honestly labelled as estimates in both the API
+shape and the UI copy. This closes Sub-task 1.9a. Sub-task 1.9b (full `.zip` export) remains
+blocked on Task 1.7 (`ffmpeg`).

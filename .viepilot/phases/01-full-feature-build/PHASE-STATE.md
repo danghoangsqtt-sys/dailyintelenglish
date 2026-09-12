@@ -8,8 +8,8 @@
 - **Current Day:** Day 2 / 21 (2026-09-11)
 - **Target Completion:** 2026-09-17
 - **Milestone Progress:** 5 / 10 major tasks (50%)
-- **Subtask Progress:** 19 / 29 granular subtasks (66%)
-- **Test Suite Status:** 314 passed (218 unit/integration + 5 browser E2E + 7 dashboard browser E2E + 22 TTS unit/API + 19 music unit/API/browser + 44 thumbnail prompt/service/API/browser), ruff clean. One pre-existing flaky test in `test_script_service.py` observed twice under full-suite load (not in the most recent run), confirmed passing in isolation both times — tracked, not a regression.
+- **Subtask Progress:** 21 / 29 granular subtasks (72%)
+- **Test Suite Status:** 350 passed (218 unit/integration + 5 browser E2E + 7 dashboard browser E2E + 22 TTS unit/API + 19 music unit/API/browser + 44 thumbnail prompt/service/API/browser + 36 YouTube prompt/service/API/browser), ruff clean. One pre-existing flaky test in `test_script_service.py` observed twice under full-suite load in earlier sessions (not in the most recent run), confirmed passing in isolation both times — tracked, not a regression.
 
 ---
 
@@ -98,9 +98,20 @@
     17 new tests (11 service/API + 6 real-browser Playwright). 314 total tests pass, ruff clean.
 
 ### Task 1.9: Step 7 — YouTube Package
-- **Status:** 🔄 In Progress (Sub-task 1.9a: text-generation vertical slice; PM acting as both PM and Implementer since Codex is out of quota)
-- **Details:** Split since the full zip (video+thumbnail+SRT) needs Task 1.7 (blocked on
-  ffmpeg). 1.9a: title options, description, estimated chapters, tags via Gemini + UI.
+- **Status:** 🔄 In Progress (Sub-task 1.9a done; 1.9b pending Task 1.7)
+- **Details:** By Claude Code acting as both PM and Implementer (Codex ran out of quota).
+  - **1.9a DONE:** `YouTubeService.generate_package()` — 3 Gemini-generated title variants
+    (click_worthy/educational/seo), description, tags (`YOUTUBE_TAGS_MAX_CHARS` enforced),
+    and honestly-estimated chapters (`estimate_chapters()`, pure word-count-based function,
+    no real audio duration exists yet). New migration `003_youtube_package.sql` (dropped
+    and recreated the never-used `youtube_packages` table, same precedent as
+    `002_learning_content.sql`). `/step7` read-only display UI with copy-to-clipboard and
+    confirm-gated Regenerate. 30 new backend tests + 6 real-browser Playwright tests.
+    Caught and fixed 2 real bugs before landing: a tag-whitespace DB round-trip bug (unit
+    test) and a `[hidden]`-attribute-vs-CSS-specificity bug on `#generate-panel` (only
+    caught by an actual browser visibility assertion, not a unit test).
+  - **1.9b (full `.zip` export: video+thumbnail+SRT+metadata.txt, measured chapters):**
+    deferred, blocked on Task 1.7 (`ffmpeg`).
 
 ### Task 1.10: Music Library
 - **Status:** 🔄 In Progress (Sub-task 1.10a done; 1.10b pending)

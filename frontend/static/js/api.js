@@ -78,6 +78,9 @@ const Api = (() => {
         method: "PATCH",
         body: JSON.stringify(edit),
       }),
+    generateYoutubePackage: (projectId) =>
+      request(`/api/projects/${projectId}/youtube/generate`, { method: "POST" }),
+    getYoutubePackage: (projectId) => request(`/api/projects/${projectId}/youtube`),
     health: () => request("/health"),
   };
 })();

@@ -191,19 +191,20 @@
 
 ### 1.9 Step 7 — YouTube Package
 
-- [ ] **YouTubePackageService** (`app/services/youtube_service.py`)
-  - `generate_package(project_id)` → full YouTube upload package
-  - Description: hook + overview + chapters + CTA (Gemini generated)
-  - Chapters: formatted from timestamps
-  - Tags: 20 relevant tags (Gemini + CEFR + genre tags)
-  - Verify: package text fits YouTube limits, chapters correct
+- [x] **YouTubePackageService** (`app/services/youtube_service.py`) — Sub-task 1.9a, by Claude Code (acting as PM + Implementer since Codex ran out of quota), PM-accepted 2026-09-12
+  - `generate_package(project, script_lines)` → titles + description + tags + estimated chapters — done
+  - Description: Gemini-generated summary — done
+  - Chapters: formatted, but **estimated** from script word count (no real audio duration exists yet — Task 1.7 blocked on ffmpeg), not measured; clearly labelled in API + UI
+  - Tags: 5-15 relevant tags (Gemini), joined string capped at `YOUTUBE_TAGS_MAX_CHARS` (500)
+  - Full transcript/vocabulary/grammar formatting: deferred to Sub-task 1.9b alongside the zip export
+  - Verify: 30 new backend tests (prompt/service/API); a real bug (tag whitespace on DB round-trip) was caught and fixed by these tests before landing
 
-- [ ] **YouTube Package UI** (`frontend/pages/step7_youtube.html`)
-  - Collapsible sections: Description | Chapters | Tags | Full Transcript | Vocabulary | Grammar
-  - "Copy to clipboard" button per section
-  - "Export as .txt" for full package
-  - Edit fields inline
-  - Verify: all sections populated, copy works, export works
+- [x] **YouTube Package UI** (`frontend/pages/step7_youtube.html`) — Sub-task 1.9a
+  - Sections: Title options (3 variants) | Description | Chapters (labelled "Estimated") | Tags — done (not collapsible accordions, plain stacked cards; no Full Transcript/Vocabulary/Grammar sections yet, deferred to 1.9b)
+  - "Copy to clipboard" button per section — done
+  - "Export as .txt" — deferred to 1.9b (full zip export)
+  - Edit fields inline — out of scope for 1.9a (read-only display + Regenerate, matching the plan's explicit scope decision)
+  - Verify: 6 real-browser Playwright tests; a real CSS bug (`[hidden]` attribute silently overridden by an ID-selector `display: grid` rule) was caught by browser testing — a unit test alone would have missed it
 
 ### 1.10 Music Library Management
 

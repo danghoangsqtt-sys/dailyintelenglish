@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import learning, music, projects, thumbnail, tts
+from app.api import learning, music, projects, thumbnail, tts, youtube
 from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.responses import ok
@@ -90,6 +90,7 @@ app.include_router(tts.router)
 app.include_router(tts.preview_router)
 app.include_router(music.router)
 app.include_router(thumbnail.router)
+app.include_router(youtube.router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
 
@@ -128,6 +129,12 @@ async def step4_tts() -> FileResponse:
 async def step6_thumbnail() -> FileResponse:
     """Serve the Step 6 — interactive Thumbnail Generator page."""
     return FileResponse(FRONTEND_DIR / "pages" / "step6_thumbnail.html")
+
+
+@app.get("/step7")
+async def step7_youtube() -> FileResponse:
+    """Serve the Step 7 — YouTube Package page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step7_youtube.html")
 
 
 @app.get("/music")

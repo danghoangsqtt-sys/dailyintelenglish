@@ -112,19 +112,19 @@ CREATE TABLE IF NOT EXISTS thumbnails (
 );
 
 -- YouTube package table
+-- Sprint 1.9A / Task 1.9 (migration 003_youtube_package.sql)
 CREATE TABLE IF NOT EXISTS youtube_packages (
     id TEXT PRIMARY KEY,
-    project_id TEXT NOT NULL UNIQUE,
-    description TEXT,
-    chapters_text TEXT,
-    tags TEXT,                              -- Comma-separated
-    full_transcript TEXT,
-    vocabulary_formatted TEXT,
-    grammar_formatted TEXT,
-    comprehension_formatted TEXT,
-    generated_at TEXT,
-    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    project_id TEXT NOT NULL UNIQUE REFERENCES projects(id) ON DELETE CASCADE,
+    title_options_json TEXT NOT NULL DEFAULT '[]',  -- JSON: [{variant, text}] x3
+    description TEXT NOT NULL DEFAULT '',
+    chapters_text TEXT NOT NULL DEFAULT '',          -- Estimated "MM:SS Label" lines, not measured
+    tags TEXT NOT NULL DEFAULT '',                   -- Comma-separated
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_youtube_packages_project_id ON youtube_packages(project_id);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);

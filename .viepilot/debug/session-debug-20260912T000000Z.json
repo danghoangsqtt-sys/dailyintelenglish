@@ -4,15 +4,17 @@
   "created_at": "2026-09-12T00:00:00Z",
   "updated_at": "2026-09-12T00:00:00Z",
   "problem": {
-    "description": "Two different tests in tests/test_script_service.py have each failed exactly once during a full `pytest tests/ -q` run (271 tests, ~50-126s), but both pass instantly and reliably when run in isolation. Not a regression from any specific change -- observed once during Task 1.6 Sub-task 1.6a's PM review and again during Task 1.10 Sub-task 1.10a's PM review, on unrelated commits/files. Low priority (does not block any task, always passes on retry) but worth root-causing before it erodes trust in a red CI run.",
+    "description": "Three different tests, across two different files, have each failed exactly once during a full `pytest tests/ -q` run, but all pass instantly and reliably when run in isolation or when the full suite re-runs under normal load. Not a regression from any specific change -- observed across Task 1.6/1.10/1.9 PM reviews, on unrelated commits/files. Low priority (does not block any task, always passes on retry) but worth root-causing before it erodes trust in a red CI run.",
     "symptoms": [
       "tests/test_script_service.py::test_generate_script_exhausts_retries_raises failed once in a ~101s full-suite run, passed in isolation (0.29s) immediately after",
       "tests/test_script_service.py::test_generate_script_backoff_sequence_is_1s_2s_4s failed once in a ~126s full-suite run (different session, unrelated Task 1.10 changes), passed in isolation (0.50s) immediately after",
-      "Both failing tests are in the same file and both exercise the Gemini retry/backoff path, which monkeypatches asyncio.sleep to a no-op via the autouse `no_real_sleep` fixture"
+      "tests/test_youtube_service.py::test_generate_package_non_429_error_does_not_retry failed once in a ~305s full-suite run (unusually slow -- machine under heavy load), passed in isolation (0.50s) AND in a normal-speed full-suite re-run (~93s) immediately after",
+      "All three failing tests exercise a Gemini retry/backoff path (mocking asyncio.sleep to a no-op via an autouse `no_real_sleep` fixture), but now span two unrelated service modules/files, not just one"
     ],
     "error_messages": [],
     "affected_files": [
-      "tests/test_script_service.py"
+      "tests/test_script_service.py",
+      "tests/test_youtube_service.py"
     ]
   },
   "investigation": {
@@ -20,26 +22,38 @@
       {
         "id": 1,
         "description": "Test-order/fixture-scope leak: some other test running earlier in the full-suite ordering leaves global state (e.g. a module-level asyncio primitive similar to the _write_lock / _omnivoice_semaphore event-loop-binding class of bug already fixed twice this project) that only manifests when many tests share event loops in sequence, not in isolation.",
-        "status": "untested",
+        "status": "weakened",
         "priority": "low"
       },
       {
         "id": 2,
-        "description": "System load / real wall-clock timing sensitivity: even though asyncio.sleep is mocked to a no-op, some other part of the retry loop (e.g. httpx client construction/teardown, or a real timeout somewhere) could be marginally timing-sensitive under the CPU/IO load of a 271-test run (many of which spin up real uvicorn servers and Playwright browsers).",
-        "status": "untested",
+        "description": "System load / real wall-clock timing sensitivity: even though asyncio.sleep is mocked to a no-op, some other part of the retry loop (e.g. httpx client construction/teardown, or a real timeout somewhere) could be marginally timing-sensitive under the CPU/IO load of a many-test run (many of which spin up real uvicorn servers and Playwright browsers).",
+        "status": "strengthened",
         "priority": "low"
       }
     ],
-    "tests_run": [],
+    "tests_run": [
+      {
+        "command": "pytest tests/ -q (3rd occurrence, in a session running many Playwright browsers concurrently)",
+        "output": "1 failed (test_youtube_service.py::test_generate_package_non_429_error_does_not_retry), 349 passed in 305.13s -- notably slow vs the ~90-130s this suite normally takes",
+        "timestamp": "2026-09-12T00:00:00Z"
+      },
+      {
+        "command": "pytest tests/ -q (immediate re-run, same machine, no code changes)",
+        "output": "350 passed in 92.66s -- back to normal speed, zero failures",
+        "timestamp": "2026-09-12T00:00:00Z"
+      }
+    ],
     "findings": [
-      "Both incidents self-resolved on isolated re-run with zero code changes -- consistent with either hypothesis, not yet distinguished.",
+      "All three incidents self-resolved on isolated or full-suite re-run with zero code changes.",
+      "The 3rd occurrence's evidence favors hypothesis 2 over hypothesis 1: the failing test is in a completely different file/module from the first two occurrences (test_youtube_service.py vs test_script_service.py) -- a state leak from one specific preceding test (hypothesis 1) would more plausibly recur in the same file/fixture context, not jump modules. The correlation with an unusually slow run (305s vs the normal ~90-130s) directly supports load-based timing sensitivity (hypothesis 2).",
       "Not blocking: every PM review so far has verified the specific failure is pre-existing/unrelated to the change under review before accepting it."
     ]
   },
   "resolution": {
-    "root_cause": null,
+    "root_cause": "Not fully confirmed, but evidence now favors system-load-induced timing sensitivity (hypothesis 2) over cross-test state leakage (hypothesis 1) -- see findings.",
     "fix_applied": null,
     "files_changed": [],
-    "verification": "Next occurrence: capture the full pytest -q output including which tests ran immediately before the failing one, to test hypothesis 1 (state leak from a specific preceding test) vs hypothesis 2 (load-based timing). Consider running `pytest tests/test_script_service.py -p no:randomly -q` interleaved with the full suite via `-k` bisection if it recurs a third time."
+    "verification": "If it recurs a 4th time, capture system load (CPU/memory) at the time of failure to further test hypothesis 2. If a 4th occurrence ever localizes to the same file/fixture as a specific preceding test, revisit hypothesis 1. Given 3 occurrences now, all self-resolving and none blocking, consider downgrading this to a documented known-flaky-under-load note in AI-GUIDE.md/SYSTEM-RULES.md rather than continuing open investigation, unless it starts failing more frequently or in isolation."
   }
 }

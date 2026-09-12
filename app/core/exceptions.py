@@ -41,6 +41,12 @@ class LearningGenerationError(AppError):
     status_code = 502
 
 
+class YouTubePackageGenerationError(AppError):
+    """Raised when the Gemini API fails or returns content violating YouTube package rules."""
+
+    status_code = 502
+
+
 class TTSError(AppError):
     """Raised when all configured TTS engines fail to synthesize a line."""
 

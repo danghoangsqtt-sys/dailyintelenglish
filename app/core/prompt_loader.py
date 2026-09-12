@@ -30,6 +30,7 @@ PROMPTS_DIR = Path(__file__).resolve().parent.parent.parent / "prompts"
 SCRIPT_PROMPTS_DIR = PROMPTS_DIR / "script"
 LEARNING_PROMPTS_DIR = PROMPTS_DIR / "learning"
 THUMBNAIL_PROMPTS_DIR = PROMPTS_DIR / "thumbnail"
+YOUTUBE_PROMPTS_DIR = PROMPTS_DIR / "youtube"
 
 _env = Environment(
     loader=FileSystemLoader(str(SCRIPT_PROMPTS_DIR)),
@@ -47,6 +48,13 @@ _learning_env = Environment(
 
 _thumbnail_env = Environment(
     loader=FileSystemLoader(str(THUMBNAIL_PROMPTS_DIR)),
+    undefined=StrictUndefined,
+    trim_blocks=True,
+    lstrip_blocks=True,
+)
+
+_youtube_env = Environment(
+    loader=FileSystemLoader(str(YOUTUBE_PROMPTS_DIR)),
     undefined=StrictUndefined,
     trim_blocks=True,
     lstrip_blocks=True,
@@ -318,4 +326,39 @@ async def render_regenerate_line_prompt(
         current_text=current_text,
         line_id=line_id,
         speaker_id=speaker_id,
+    )
+
+
+def _render_youtube_prompt_sync(
+    *, project_name: str, topic: str, genre: str, cefr_level: str, transcript_text: str
+) -> str:
+    """Blocking: validate genre/CEFR, then render youtube_package.txt."""
+    if genre not in GENRES:
+        raise ValidationError(f"No YouTube prompt support for genre: {genre!r}")
+    if cefr_level.upper() not in CEFR_LEVELS:
+        raise ValidationError(f"No YouTube prompt support for CEFR level: {cefr_level!r}")
+    try:
+        template = _youtube_env.get_template("youtube_package.txt")
+    except TemplateNotFound as exc:
+        raise ValidationError(f"Prompt template not found: {exc}") from exc
+    return template.render(
+        project_name=project_name,
+        topic=topic,
+        genre=genre,
+        cefr_level=cefr_level,
+        transcript_text=transcript_text,
+    )
+
+
+async def render_youtube_prompt(
+    *, project_name: str, topic: str, genre: str, cefr_level: str, transcript_text: str
+) -> str:
+    """Render the YouTube package (titles/description/tags) generation prompt."""
+    return await asyncio.to_thread(
+        _render_youtube_prompt_sync,
+        project_name=project_name,
+        topic=topic,
+        genre=genre,
+        cefr_level=cefr_level,
+        transcript_text=transcript_text,
     )

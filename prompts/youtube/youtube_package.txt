@@ -1,0 +1,23 @@
+You are writing YouTube metadata for an English-learning podcast episode.
+
+Project name: {{ project_name }}
+Topic: {{ topic }}
+Genre: {{ genre }}
+CEFR level: {{ cefr_level }}
+
+Full episode transcript:
+{{ transcript_text }}
+
+Produce exactly 3 titles, one per angle:
+- "click_worthy": curiosity-driven, energetic, still truthful to the content;
+- "educational": clearly states what the learner will practice or learn;
+- "seo": keyword-forward, matches how a learner would search for this topic.
+Each title must be a single line, at most 100 characters, and truthful to the transcript.
+
+Produce one YouTube description (1-5000 characters) that summarizes the episode, mentions the
+CEFR level and genre, and would make sense pasted directly into a YouTube upload form.
+
+Produce 5-15 relevant tags/keywords as a list of short strings (no leading '#', no commas
+inside a single tag) — their combined comma-joined length must stay well under 500 characters.
+
+Return JSON only. The API-provided JSON Schema is authoritative.
