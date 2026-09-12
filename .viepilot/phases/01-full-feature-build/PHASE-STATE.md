@@ -98,8 +98,9 @@
     17 new tests (11 service/API + 6 real-browser Playwright). 314 total tests pass, ruff clean.
 
 ### Task 1.9: Step 7 — YouTube Package
-- **Status:** ⏳ Planned
-- **Details:** YouTubePackageService, metadata/tags/chapters generator, UI.
+- **Status:** 🔄 In Progress (Sub-task 1.9a: text-generation vertical slice; PM acting as both PM and Implementer since Codex is out of quota)
+- **Details:** Split since the full zip (video+thumbnail+SRT) needs Task 1.7 (blocked on
+  ffmpeg). 1.9a: title options, description, estimated chapters, tags via Gemini + UI.
 
 ### Task 1.10: Music Library
 - **Status:** 🔄 In Progress (Sub-task 1.10a done; 1.10b pending)
