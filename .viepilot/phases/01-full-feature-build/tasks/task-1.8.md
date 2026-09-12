@@ -338,3 +338,172 @@ Independently re-verified, not just trusted:
 All PM-required items from the plan-review round are satisfied. **Accepted.** This closes Sub-task 1.8a.
 Full Task 1.8 stays `in_progress` — the interactive manual editor (Sub-task 1.8b) is next, pending its
 own plan and PM review.
+
+## Implementation Notes (2026-09-12, Sub-task 1.8b plan for PM review)
+
+### Environment and UI preflight
+
+`node --version` and a real syntax check against an existing project script returned:
+
+```text
+v24.20.0
+NODE_CHECK_OK=True
+```
+
+Python Playwright and its installed Chromium were verified by launching and closing a real
+headless browser, not by import-only inspection:
+
+```text
+PLAYWRIGHT_IMPORT_OK=True
+CHROMIUM_EXECUTABLE=C:\Users\Admin\AppData\Local\ms-playwright\chromium-1234\chrome-win64\chrome.exe
+CHROMIUM_EXISTS=True
+CHROMIUM_LAUNCH_OK=True
+CHROMIUM_VERSION=151.0.7922.34
+```
+
+There is no root `design.md` and no Step 6 binding in `.viepilot/PROJECT-CONTEXT.md`; the page
+will therefore follow the existing Step 2/3 page structure and shared tokens in
+`frontend/static/css/style.css`, without changing the shared stylesheet.
+
+### Proposed API contract
+
+1. `PUT /api/projects/{project_id}/thumbnails/{thumbnail_id}/favorite`
+   - No request body. Idempotently sets the target row to `is_selected=1` and every other row
+     for that project to `0` in one `_write_transaction`.
+   - Rejects a missing thumbnail or a thumbnail owned by another project with 404.
+   - Returns the selected public thumbnail record so the client can reconcile state.
+2. `PATCH /api/projects/{project_id}/thumbnails/{thumbnail_id}`
+   - Accepts the complete manually editable subset: `revision`, `headline`, and the four-color
+     `palette` (`primary`, `secondary`, `accent`, `text`). Headline and colors reuse the strict
+     bounds/hex validation already used for Gemini output.
+   - Loads the persisted sidecar, merges only those editable fields, and preserves
+     `supporting_text`, `topic_keywords`, `template_name`, `variant_index`, row id, and
+     `is_selected`.
+   - Renders a fresh four-file revision in a new UUID directory outside the DB lock. Inside one
+     `_write_transaction`, a compare-and-swap update succeeds only when the submitted
+     `revision` still matches the DB row. On a stale revision it returns typed HTTP 409 and
+     deletes only the newly staged revision; it never overwrites the newer edit.
+   - After commit, removes the superseded revision directory and returns the updated public
+     record. A DB failure removes the staged revision and leaves the previous row/files intact.
+
+Public thumbnail records will gain a non-secret `revision` token derived from the current render
+directory. Asset URLs will carry that token as a query parameter so browsers do not display a
+cached pre-edit image at the otherwise stable content URL. The existing batch-generate route and
+one-row-per-suggestion behavior remain unchanged.
+
+### Layout-tweak scope decision
+
+For Sub-task 1.8b, “layout tweaks” means:
+
+- choose one of the five layouts/templates before batch generation;
+- edit the selected variant's headline, which naturally re-wraps and shrink-fits within the
+  template's approved text zone; and
+- edit its primary, secondary, accent, and text colors with color inputs.
+
+The editor will not expose free-form drag/drop, text-zone coordinates, font selection,
+supporting-text/topic-keyword editing, arbitrary add/remove elements, or post-generation template
+swapping. Those controls would require a new persisted layout schema and substantially expand
+the renderer/API contract. The five checked-in templates remain the source of safe text zones and
+composition.
+
+### UI behavior and implementation approach
+
+1. Add `/step6` in `app/main.py` and a new Step 6 page using the existing shared theme and page
+   conventions. The page contains project context, five-template gallery, a 3-5 variant selector,
+   Generate/Regenerate control, variant gallery, explicit favorite selection, aspect preview
+   toggle, manual editor, save status/retry UI, and PNG/JPG download links for both 16:9 and 9:16.
+2. Add all thumbnail calls to `frontend/static/js/api.js`; `step6_thumbnail.js` will never call
+   `fetch()` directly and will never surface raw backend validation text in the DOM.
+3. Initialization loads project, templates, and existing thumbnails. A thumbnail-list failure
+   hides destructive generation controls rather than presenting a false empty state. Reload
+   restores variants, selected favorite, latest edited suggestion/revision, preview, and download
+   links. When rows exist, their template is reflected in the gallery; generating with a different
+   selected template requires confirmation because it replaces the batch.
+4. Clicking a variant/favorite control selects exactly one favorite through the idempotent route
+   and opens that row in the editor. Only the persisted favorite is styled selected; controls show
+   loading/disabled state during the request.
+5. Headline/color edits mark the editor dirty and schedule a short debounced re-render. “Save &
+   Re-render” flushes immediately. There is at most one PATCH in flight; changes made during it set
+   `saveQueued` and produce one trailing save containing the latest editor state and the revision
+   returned by the prior save. Failed saves retain the draft and expose a friendly Retry action.
+6. Generation has a double-submit lock. Generate/favorite/card switching/download actions are
+   disabled while editor changes are dirty, saving, queued, or failed, preventing state crossover.
+   A `beforeunload` handler guards dirty/saving/queued/failed edits. A 409 stale-edit response is
+   logged for diagnostics but shown as a friendly reload/retry message.
+7. Download controls are ordinary same-origin links to the already validated content route, with
+   explicit filenames and the current revision query token. No client-side canvas/image mutation
+   or blob duplication is introduced.
+
+### File-level plan and proposed `allowed_files`
+
+- `.viepilot/phases/01-full-feature-build/tasks/task-1.8.md` — this approved plan and later raw
+  implementer evidence only; no status/checkbox/PM Acceptance edits.
+- `.viepilot/ARCHITECTURE.md` — add only the two proposed mutation routes under Thumbnails.
+- `app/core/exceptions.py` — add a typed 409 conflict exception for stale thumbnail revisions.
+- `app/models/thumbnail.py` — add the strict manual-edit request/revision contract.
+- `app/services/thumbnail_service.py` — revision hydration, sidecar loading/merge, single-row
+  staged re-render, optimistic DB update, exclusive favorite selection, and cleanup helpers.
+- `app/api/thumbnail.py` — add thin favorite and manual-edit routes; keep Pillow/filesystem work
+  outside transactions and reuse `_read_transaction`/`_write_transaction`.
+- `app/main.py` — add only the `/step6` page route.
+- `frontend/pages/step6_thumbnail.html` — Step 6 gallery/editor/preview/download markup and
+  page-local responsive styles built from existing shared CSS variables.
+- `frontend/static/js/api.js` — centralized thumbnail list/generate/favorite/edit API methods.
+- `frontend/static/js/step6_thumbnail.js` — page state, rendering, validation, serialized trailing
+  saves, double-submit/loading locks, friendly errors, cache-busted preview, and unload guard.
+- `tests/test_thumbnail_service.py` — single-revision render/cleanup and optimistic-update tests.
+- `tests/test_thumbnail_api.py` — favorite exclusivity/idempotence, edit/persistence/content,
+  validation, stale revision, ownership, and rollback/cleanup coverage.
+- `tests/test_thumbnail_browser.py` — real Chromium coverage for template/generate flow,
+  double-submit lock, favorite/reload persistence, edit/re-render coalescing, save recovery,
+  beforeunload guard, friendly-only errors, preview/aspect switching, and download targets.
+
+No migration, shared CSS edit, prompt/Gemini change, batch-generate redesign, arbitrary layout
+schema, drag/drop canvas, Step 5/7 implementation, task-state update, tracker update, commit, push,
+tag, or unrelated refactor is included.
+
+### Risks and mitigations
+
+- **Filesystem/SQLite cannot be one physical transaction:** stage a new revision first, CAS-update
+  the row under the write lock, delete staged files on failure, and delete old files only after a
+  successful commit.
+- **Late responses can clobber a newer edit:** server revision matching rejects stale writes with
+  409; the client serializes requests and reuses the revision from each successful response.
+- **Stable image URLs can show stale browser cache:** append the public revision token to preview
+  and download URLs.
+- **Color inputs can emit many events:** debounce plus one in-flight/one trailing-save coalescing
+  bounds Pillow renders while retaining the latest values.
+- **Generate replaces the whole batch:** confirm when variants already exist, and block generation
+  whenever an editor save is unresolved.
+- **Existing row sidecars have no explicit revision field:** derive the initial token from the
+  canonical image directory, so all 1.8a output remains backward-compatible without migration.
+- **Browser tests can become timing-sensitive:** await DOM/network states rather than fixed sleeps;
+  use controlled route delays only to prove locking/coalescing behavior.
+
+### Verification commands
+
+- `venv\Scripts\python -m pytest tests/test_thumbnail_service.py -q`
+- `venv\Scripts\python -m pytest tests/test_thumbnail_api.py -q`
+- `venv\Scripts\python -m pytest tests/test_thumbnail_browser.py -q`
+- `venv\Scripts\python -m pytest tests/ -q`
+- `venv\Scripts\python -m ruff check app/ tests/ scripts/generate_thumbnail_template_assets.py`
+- `node --check frontend/static/js/api.js`
+- `node --check frontend/static/js/step6_thumbnail.js`
+- `git diff --check`
+
+Implementation is paused pending explicit PM approval of the route contract, layout-tweak scope,
+behavior, risks, and bounded `allowed_files` above.
+
+## PM Plan Approval (2026-09-12, Sub-task 1.8b)
+
+APPROVED as proposed — no changes required. Notably strong points verified by reading the
+actual reasoning, not just skimming: the `revision` compare-and-swap on `PATCH` correctly
+prevents a stale edit from clobbering a newer one (a race I had not explicitly asked for but
+is clearly necessary once concurrent/rapid edits are possible); appending `revision` as a
+query token on asset URLs correctly fixes a real cache-invalidation bug (stable content URL,
+changed bytes) that the 1.8a design did not need to consider since it never re-rendered a row
+in place. Layout-tweak scope (headline + 4 colors only, no drag/drop/template-swap) is
+explicit and reasonable. Backward compatibility for 1.8a's existing rows (deriving the initial
+revision from the current canonical directory, no migration) is correct.
+
+Proceed to implementation as planned.
