@@ -36,9 +36,9 @@ async def generate_script(id: str, config: ScriptConfig):
 - TTS generation, ffmpeg, Pillow → run in `asyncio.get_event_loop().run_in_executor()`
 - Never call `subprocess.run(block=True)` from async context
 
-### AR-06: PM-GEMINI Delivery Contract (No Self-Approval)
+### AR-06: PM-Implementer Delivery Contract (No Self-Approval)
 - Product Manager (PM) is the sole authority on scope, prioritization, acceptance, marking tasks done, commits, and releases.
-- GEMINI / AI Developer is an implementation-only agent with strictly NO self-approval privileges.
+- The AI Implementer — GEMINI, Codex, or any other coding AI assigned to this project — is an implementation-only agent with strictly NO self-approval privileges. This contract binds whichever implementer is currently assigned, not one specific vendor.
 - Before coding, implementer MUST produce: plan, bounded `allowed_files` list, risk evaluation, and tests to run, then WAIT for PM confirmation.
 - Only modify files within `allowed_files`; no out-of-scope refactoring or unassigned bugfixes.
 - Never use `git add .`, never push directly without PM sign-off.
