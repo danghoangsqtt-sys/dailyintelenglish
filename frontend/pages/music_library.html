@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Music Library — Daily Intel English Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    body { margin: 0; }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--surface-border);
+      background: var(--bg-elevated);
+    }
+
+    .topbar-actions { display: flex; align-items: center; gap: 12px; }
+    .logo { font-size: 20px; font-weight: 800; text-decoration: none; }
+
+    .main {
+      width: min(920px, calc(100% - 80px));
+      margin: 0 auto;
+      padding: 48px 0 80px;
+    }
+
+    .page-heading { margin-bottom: 28px; }
+    .page-heading h1 { margin: 0 0 10px; font-size: 32px; }
+    .page-heading p { margin: 0; color: var(--text-muted); line-height: 1.6; }
+
+    .upload-zone {
+      display: grid;
+      place-items: center;
+      min-height: 210px;
+      padding: 32px;
+      text-align: center;
+      border: 2px dashed var(--surface-border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+    }
+
+    .upload-zone:hover,
+    .upload-zone:focus-visible,
+    .upload-zone.is-dragging {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .upload-zone.is-uploading { cursor: wait; opacity: 0.7; }
+    .upload-icon { font-size: 42px; margin-bottom: 12px; }
+    .upload-title { margin: 0 0 8px; font-size: 18px; font-weight: 700; }
+    .upload-help { margin: 0 0 20px; color: var(--text-muted); font-size: 13px; }
+    #music-file-input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+    .message {
+      margin-top: 14px;
+      padding: 11px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    .message-success { color: var(--success); background: rgba(63, 185, 80, 0.1); }
+    .message-error { color: var(--danger); background: rgba(248, 81, 73, 0.1); }
+
+    .library-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin: 42px 0 18px;
+    }
+
+    .library-header h2 { margin: 0; font-size: 21px; }
+    .track-count { color: var(--text-muted); font-size: 13px; }
+    .track-list { display: grid; gap: 14px; }
+
+    .track-card {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) minmax(320px, 2fr) auto;
+      align-items: center;
+      gap: 18px;
+      padding: 18px;
+    }
+
+    .track-name {
+      margin: 0 0 6px;
+      overflow-wrap: anywhere;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .track-size { color: var(--text-muted); font-size: 12px; }
+    .track-card audio { width: 100%; min-width: 0; }
+    .delete-btn:hover { border-color: var(--danger); color: var(--danger); }
+    .btn:disabled { cursor: not-allowed; opacity: 0.55; transform: none; }
+
+    .empty-state {
+      padding: 54px 20px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .empty-state-icon { display: block; margin-bottom: 12px; font-size: 38px; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="logo" href="/">🎙️ Daily Intel English Studio</a>
+    <div class="topbar-actions">
+      <a class="btn btn-ghost" href="/">← Dashboard</a>
+      <button id="theme-toggle" class="icon-toggle" type="button" aria-label="Toggle dark/light mode">☀️</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="page-heading">
+      <h1>Music Library</h1>
+      <p>Upload your royalty-free background tracks, preview them, and keep the library tidy.</p>
+    </section>
+
+    <label id="upload-zone" class="upload-zone" for="music-file-input" tabindex="0">
+      <span>
+        <span class="upload-icon" aria-hidden="true">🎵</span>
+        <span class="upload-title">Drop an MP3 or WAV file here</span>
+        <span class="upload-help">Maximum 50 MB. Existing tracks are preserved when names match.</span>
+        <span id="upload-button" class="btn btn-primary">Choose Music File</span>
+      </span>
+      <input id="music-file-input" type="file" accept=".mp3,.wav,audio/mpeg,audio/wav" />
+    </label>
+
+    <div id="status-message" class="message message-success" role="status" hidden></div>
+    <div id="error-message" class="message message-error" role="alert" hidden></div>
+
+    <section aria-labelledby="library-title">
+      <div class="library-header">
+        <h2 id="library-title">Your tracks</h2>
+        <span id="track-count" class="track-count">Loading…</span>
+      </div>
+      <div id="track-list" class="track-list" aria-live="polite"></div>
+      <div id="empty-state" class="empty-state" hidden>
+        <span class="empty-state-icon" aria-hidden="true">🎧</span>
+        No music yet. Upload your first royalty-free track above.
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/music_library.js"></script>
+</body>
+</html>

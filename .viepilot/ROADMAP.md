@@ -207,11 +207,12 @@
 
 ### 1.10 Music Library Management
 
-- [ ] **Music Library UI** (`frontend/pages/music_library.html`)
-  - Drag-and-drop upload to `data/music_library/`
-  - List tracks with player preview
-  - Delete track
-  - Verify: upload, preview, delete work
+- [x] **Music Library UI** (`frontend/pages/music_library.html`) — Sub-task 1.10a (ffmpeg-independent), by Codex, PM-accepted 2026-09-12
+  - Drag-and-drop upload to `data/music_library/` — done, plus file-picker fallback, 50MB limit, magic-byte validation, atomic no-clobber duplicate naming
+  - List tracks with player preview — done, native browser `<audio>` preview (not a waveform visualization)
+  - Delete track — done, confirm-gated
+  - Verify: upload, preview, delete work — 19 dedicated tests (15 API incl. a real concurrency test, 4 Playwright browser E2E), PM independently re-ran all; 271 total tests pass (1 unrelated pre-existing flaky test confirmed passing in isolation)
+  - Not done (needs ffmpeg/pydub, deferred to Sub-task 1.10b): waveform visualization, volume leveling, Step 4/5 background-track selection/ducking
 
 ---
 

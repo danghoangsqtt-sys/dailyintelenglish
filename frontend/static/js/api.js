@@ -6,9 +6,10 @@ const Api = (() => {
   const BASE_URL = "";
 
   async function request(path, options = {}) {
+    const defaultHeaders = options.body instanceof FormData ? {} : { "Content-Type": "application/json" };
     const response = await fetch(`${BASE_URL}${path}`, {
-      headers: { "Content-Type": "application/json" },
       ...options,
+      headers: { ...defaultHeaders, ...(options.headers || {}) },
     });
 
     let envelope;
@@ -51,6 +52,14 @@ const Api = (() => {
       request(`/api/projects/${projectId}/learning`, { method: "PUT", body: JSON.stringify(pack) }),
     listTtsEngines: () => request("/api/tts/engines"),
     listMusic: () => request("/api/music"),
+    uploadMusic: (file) => {
+      const body = new FormData();
+      body.append("file", file);
+      return request("/api/music", { method: "POST", body });
+    },
+    deleteMusic: (filename) =>
+      request(`/api/music/${encodeURIComponent(filename)}`, { method: "DELETE" }),
+    musicContentUrl: (filename) => `/api/music/${encodeURIComponent(filename)}`,
     health: () => request("/health"),
   };
 })();

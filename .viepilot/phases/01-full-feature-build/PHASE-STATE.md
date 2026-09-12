@@ -8,8 +8,8 @@
 - **Current Day:** Day 2 / 21 (2026-09-11)
 - **Target Completion:** 2026-09-17
 - **Milestone Progress:** 4 / 10 major tasks (40%)
-- **Subtask Progress:** 16 / 29 granular subtasks (55%)
-- **Test Suite Status:** 252 passed (218 unit/integration + 5 browser E2E + 7 dashboard browser E2E + 22 TTS unit/API), 0 failures, ruff clean
+- **Subtask Progress:** 17 / 29 granular subtasks (59%)
+- **Test Suite Status:** 271 passed (218 unit/integration + 5 browser E2E + 7 dashboard browser E2E + 22 TTS unit/API + 19 music unit/API/browser), ruff clean. One pre-existing flaky test in `test_script_service.py` observed twice under full-suite load, confirmed passing in isolation both times — tracked, not a regression.
 
 ---
 
@@ -84,5 +84,14 @@
 - **Details:** YouTubePackageService, metadata/tags/chapters generator, UI.
 
 ### Task 1.10: Music Library
-- **Status:** ⏳ Planned
-- **Details:** Background music management and mixing UI.
+- **Status:** 🔄 In Progress (Sub-task 1.10a done; 1.10b pending)
+- **Details:** By Codex (second AI Implementer), PM-accepted 2026-09-12.
+  - **1.10a DONE:** ffmpeg-independent Music Library UI at `/music` — upload (50MB limit,
+    magic-byte validation, atomic no-clobber duplicate naming via `os.link`), list, native
+    `<audio>` preview, confirm-gated delete. `app/api/music.py`
+    (`GET/POST /api/music`, `GET/DELETE /api/music/{filename}`), `ARCHITECTURE.md` synced.
+    19 new tests (15 API incl. a real `ThreadPoolExecutor`/`Barrier` concurrency test, 4
+    Playwright browser E2E). 271 total tests pass.
+  - **1.10b (waveform visualization, volume leveling, Step 4/5 background-track
+    selection/ducking):** deferred — needs `ffmpeg` AND the `audioop-lts` backport for
+    `pydub` (Python 3.14 removed the stdlib `audioop` module it depends on).

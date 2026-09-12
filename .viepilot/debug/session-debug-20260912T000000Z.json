@@ -1,0 +1,45 @@
+{
+  "id": "debug-20260912T000000Z",
+  "status": "active",
+  "created_at": "2026-09-12T00:00:00Z",
+  "updated_at": "2026-09-12T00:00:00Z",
+  "problem": {
+    "description": "Two different tests in tests/test_script_service.py have each failed exactly once during a full `pytest tests/ -q` run (271 tests, ~50-126s), but both pass instantly and reliably when run in isolation. Not a regression from any specific change -- observed once during Task 1.6 Sub-task 1.6a's PM review and again during Task 1.10 Sub-task 1.10a's PM review, on unrelated commits/files. Low priority (does not block any task, always passes on retry) but worth root-causing before it erodes trust in a red CI run.",
+    "symptoms": [
+      "tests/test_script_service.py::test_generate_script_exhausts_retries_raises failed once in a ~101s full-suite run, passed in isolation (0.29s) immediately after",
+      "tests/test_script_service.py::test_generate_script_backoff_sequence_is_1s_2s_4s failed once in a ~126s full-suite run (different session, unrelated Task 1.10 changes), passed in isolation (0.50s) immediately after",
+      "Both failing tests are in the same file and both exercise the Gemini retry/backoff path, which monkeypatches asyncio.sleep to a no-op via the autouse `no_real_sleep` fixture"
+    ],
+    "error_messages": [],
+    "affected_files": [
+      "tests/test_script_service.py"
+    ]
+  },
+  "investigation": {
+    "hypotheses": [
+      {
+        "id": 1,
+        "description": "Test-order/fixture-scope leak: some other test running earlier in the full-suite ordering leaves global state (e.g. a module-level asyncio primitive similar to the _write_lock / _omnivoice_semaphore event-loop-binding class of bug already fixed twice this project) that only manifests when many tests share event loops in sequence, not in isolation.",
+        "status": "untested",
+        "priority": "low"
+      },
+      {
+        "id": 2,
+        "description": "System load / real wall-clock timing sensitivity: even though asyncio.sleep is mocked to a no-op, some other part of the retry loop (e.g. httpx client construction/teardown, or a real timeout somewhere) could be marginally timing-sensitive under the CPU/IO load of a 271-test run (many of which spin up real uvicorn servers and Playwright browsers).",
+        "status": "untested",
+        "priority": "low"
+      }
+    ],
+    "tests_run": [],
+    "findings": [
+      "Both incidents self-resolved on isolated re-run with zero code changes -- consistent with either hypothesis, not yet distinguished.",
+      "Not blocking: every PM review so far has verified the specific failure is pre-existing/unrelated to the change under review before accepting it."
+    ]
+  },
+  "resolution": {
+    "root_cause": null,
+    "fix_applied": null,
+    "files_changed": [],
+    "verification": "Next occurrence: capture the full pytest -q output including which tests ran immediately before the failing one, to test hypothesis 1 (state leak from a specific preceding test) vs hypothesis 2 (load-based timing). Consider running `pytest tests/test_script_service.py -p no:randomly -q` interleaved with the full suite via `-k` bisection if it recurs a third time."
+  }
+}

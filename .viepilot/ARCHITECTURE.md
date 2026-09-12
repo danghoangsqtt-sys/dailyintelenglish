@@ -347,6 +347,8 @@ POST   /api/tts/test              # Test voice
 ### Music Library
 ```
 GET    /api/music                 # List music library
+POST   /api/music                 # Upload MP3/WAV track
+GET    /api/music/{filename}      # Stream track for browser preview
 DELETE /api/music/{filename}      # Remove track
 ```
 

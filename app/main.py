@@ -123,6 +123,12 @@ async def step4_tts() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "pages" / "step4_tts_placeholder.html")
 
 
+@app.get("/music")
+async def music_library() -> FileResponse:
+    """Serve the background Music Library management page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "music_library.html")
+
+
 
 @app.get("/health")
 async def health() -> dict:
