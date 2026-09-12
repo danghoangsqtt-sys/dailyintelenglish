@@ -119,6 +119,7 @@
 - `.env` not created yet — `DIE_GEMINI_API_KEY` unset, blocks Task 1.4 (Script Generation) once it calls Gemini. `.env.example` added (now with the `DIE_` env-var prefix — see Decision Log); user must copy it to `.env` and fill in the key.
 - OmniVoice model not downloaded yet (`models/omnivoice` empty) — blocks Task 1.6 (TTS). `scripts/check_dependencies.py` now checks for this explicitly.
 - None of the three items above are code bugs; they're machine/secrets setup the user must do locally.
+- `pydub` (already in `requirements.txt`, used by the not-yet-built AudioService) fails to import on this venv's Python 3.14.7 with `ModuleNotFoundError: No module named 'audioop'` — Python 3.13 removed the `audioop` stdlib module (PEP 594) and `pydub` still depends on it. Will block Task 1.6 Sub-task 1.6b even once `ffmpeg` is installed, unless the `audioop-lts` PyPI backport is added to `requirements.txt` first. Discovered 2026-09-12 during PM review of Codex's Task 1.10 preflight (Codex's sandbox reported the same `pydub` import failure independently).
 
 ## Version
 
