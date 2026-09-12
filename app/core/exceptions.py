@@ -51,3 +51,9 @@ class VideoRenderError(AppError):
     """Raised when ffmpeg/LivePortrait video rendering fails."""
 
     status_code = 500
+
+
+class ThumbnailGenerationError(AppError):
+    """Raised when thumbnail suggestion, rendering, or persistence fails."""
+
+    status_code = 502

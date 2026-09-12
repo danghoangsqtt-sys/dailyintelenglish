@@ -8,8 +8,8 @@
 - **Current Day:** Day 2 / 21 (2026-09-11)
 - **Target Completion:** 2026-09-17
 - **Milestone Progress:** 4 / 10 major tasks (40%)
-- **Subtask Progress:** 17 / 29 granular subtasks (59%)
-- **Test Suite Status:** 271 passed (218 unit/integration + 5 browser E2E + 7 dashboard browser E2E + 22 TTS unit/API + 19 music unit/API/browser), ruff clean. One pre-existing flaky test in `test_script_service.py` observed twice under full-suite load, confirmed passing in isolation both times — tracked, not a regression.
+- **Subtask Progress:** 18 / 29 granular subtasks (62%)
+- **Test Suite Status:** 298 passed (218 unit/integration + 5 browser E2E + 7 dashboard browser E2E + 22 TTS unit/API + 19 music unit/API/browser + 27 thumbnail prompt/service/API), ruff clean. One pre-existing flaky test in `test_script_service.py` observed twice under full-suite load, confirmed passing in isolation both times — tracked, not a regression.
 
 ---
 
@@ -76,8 +76,19 @@
 - **Details:** VideoService (background + subtitle burned + SRT), LivePortrait, Video UI.
 
 ### Task 1.8: Step 6 — Thumbnail Generator
-- **Status:** ⏳ Planned
-- **Details:** ThumbnailService, 5 Pillow templates + Gemini Vision, Thumbnail UI.
+- **Status:** 🔄 In Progress (Sub-task 1.8a done; 1.8b pending)
+- **Details:** By Codex, PM-accepted 2026-09-12.
+  - **1.8a DONE:** `ThumbnailService` — Gemini text/palette suggestions (`responseJsonSchema`,
+    exact-count + duplicate-rejection Pydantic validation, no vision call needed — text-only),
+    5 deterministic Pillow templates (`minimal_clean`, `gradient_bold`, `modern_split`,
+    `dynamic_wave`, `podcast_classic`) using Pillow's embedded scalable default font (no
+    system/hardcoded font path), render+persist with rollback-safe filesystem/DB sequencing
+    (new files staged before the DB swap, old files removed only after commit), safe content
+    route `GET /api/projects/{id}/thumbnails/{thumbnail_id}/{aspect}.{format}`. 27 new tests
+    (6 prompt + 11 service + 10 API). PM independently re-rendered all 5 templates from the
+    actual service code and visually confirmed professional-quality output.
+  - **1.8b (interactive UI — template gallery, manual editor, download):** deferred, needs its
+    own plan/review.
 
 ### Task 1.9: Step 7 — YouTube Package
 - **Status:** ⏳ Planned

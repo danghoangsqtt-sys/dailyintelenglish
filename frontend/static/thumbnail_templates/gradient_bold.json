@@ -1,0 +1,26 @@
+{
+  "id": "gradient_bold",
+  "display_name": "Gradient Bold",
+  "category": "bold",
+  "description": "High-energy gradient with oversized uppercase copy and angular movement.",
+  "base_image": "gradient_bold.png",
+  "headline_zone": {
+    "x": 0.07,
+    "y": 0.13,
+    "width": 0.66,
+    "height": 0.46,
+    "min_font_size": 38,
+    "max_font_size": 108,
+    "align": "left"
+  },
+  "supporting_zone": {
+    "x": 0.08,
+    "y": 0.64,
+    "width": 0.57,
+    "height": 0.14,
+    "min_font_size": 20,
+    "max_font_size": 36,
+    "align": "left"
+  },
+  "uppercase_headline": true
+}

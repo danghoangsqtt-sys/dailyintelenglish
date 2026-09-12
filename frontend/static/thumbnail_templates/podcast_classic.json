@@ -1,0 +1,26 @@
+{
+  "id": "podcast_classic",
+  "display_name": "Podcast Classic",
+  "category": "educational",
+  "description": "Friendly educational podcast card with a microphone focal element.",
+  "base_image": "podcast_classic.png",
+  "headline_zone": {
+    "x": 0.09,
+    "y": 0.16,
+    "width": 0.52,
+    "height": 0.36,
+    "min_font_size": 34,
+    "max_font_size": 88,
+    "align": "left"
+  },
+  "supporting_zone": {
+    "x": 0.09,
+    "y": 0.58,
+    "width": 0.48,
+    "height": 0.16,
+    "min_font_size": 19,
+    "max_font_size": 34,
+    "align": "left"
+  },
+  "uppercase_headline": false
+}

@@ -1,0 +1,26 @@
+{
+  "id": "modern_split",
+  "display_name": "Modern Split",
+  "category": "split",
+  "description": "Two-panel composition balancing strong copy with a visual focal area.",
+  "base_image": "modern_split.png",
+  "headline_zone": {
+    "x": 0.06,
+    "y": 0.13,
+    "width": 0.42,
+    "height": 0.44,
+    "min_font_size": 34,
+    "max_font_size": 94,
+    "align": "left"
+  },
+  "supporting_zone": {
+    "x": 0.06,
+    "y": 0.64,
+    "width": 0.4,
+    "height": 0.16,
+    "min_font_size": 18,
+    "max_font_size": 34,
+    "align": "left"
+  },
+  "uppercase_headline": false
+}

@@ -17,12 +17,19 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateNotFound
 
-from app.core.constants import CEFR_LEVELS, GENRES
+from app.core.constants import (
+    CEFR_LEVELS,
+    GENRES,
+    THUMBNAIL_MAX_VARIANTS,
+    THUMBNAIL_MIN_VARIANTS,
+    THUMBNAIL_TEMPLATE_IDS,
+)
 from app.core.exceptions import ValidationError
 
 PROMPTS_DIR = Path(__file__).resolve().parent.parent.parent / "prompts"
 SCRIPT_PROMPTS_DIR = PROMPTS_DIR / "script"
 LEARNING_PROMPTS_DIR = PROMPTS_DIR / "learning"
+THUMBNAIL_PROMPTS_DIR = PROMPTS_DIR / "thumbnail"
 
 _env = Environment(
     loader=FileSystemLoader(str(SCRIPT_PROMPTS_DIR)),
@@ -33,6 +40,13 @@ _env = Environment(
 
 _learning_env = Environment(
     loader=FileSystemLoader(str(LEARNING_PROMPTS_DIR)),
+    undefined=StrictUndefined,
+    trim_blocks=True,
+    lstrip_blocks=True,
+)
+
+_thumbnail_env = Environment(
+    loader=FileSystemLoader(str(THUMBNAIL_PROMPTS_DIR)),
     undefined=StrictUndefined,
     trim_blocks=True,
     lstrip_blocks=True,
@@ -177,6 +191,66 @@ async def render_learning_prompt(
         cefr_level=cefr_level,
         genre=genre,
         transcript_text=transcript_text,
+    )
+
+
+def _render_thumbnail_prompt_sync(
+    *,
+    project_name: str,
+    topic: str,
+    genre: str,
+    cefr_level: str,
+    template_name: str,
+    template_description: str,
+    variant_count: int,
+) -> str:
+    """Blocking: validate inputs and render the thumbnail suggestion prompt."""
+    if genre not in GENRES:
+        raise ValidationError(f"No thumbnail prompt support for genre: {genre!r}")
+    if cefr_level.upper() not in CEFR_LEVELS:
+        raise ValidationError(f"No thumbnail prompt support for CEFR level: {cefr_level!r}")
+    if template_name not in THUMBNAIL_TEMPLATE_IDS:
+        raise ValidationError(f"Unknown thumbnail template: {template_name!r}")
+    if not THUMBNAIL_MIN_VARIANTS <= variant_count <= THUMBNAIL_MAX_VARIANTS:
+        raise ValidationError(
+            f"Thumbnail variant_count must be between {THUMBNAIL_MIN_VARIANTS} "
+            f"and {THUMBNAIL_MAX_VARIANTS}"
+        )
+    try:
+        template = _thumbnail_env.get_template("thumbnail_suggestions.txt")
+    except TemplateNotFound as exc:
+        raise ValidationError(f"Prompt template not found: {exc}") from exc
+    return template.render(
+        project_name=project_name,
+        topic=topic,
+        genre=genre,
+        cefr_level=cefr_level,
+        template_name=template_name,
+        template_description=template_description,
+        variant_count=variant_count,
+    )
+
+
+async def render_thumbnail_prompt(
+    *,
+    project_name: str,
+    topic: str,
+    genre: str,
+    cefr_level: str,
+    template_name: str,
+    template_description: str,
+    variant_count: int,
+) -> str:
+    """Render the Gemini text-suggestion prompt for a thumbnail generation batch."""
+    return await asyncio.to_thread(
+        _render_thumbnail_prompt_sync,
+        project_name=project_name,
+        topic=topic,
+        genre=genre,
+        cefr_level=cefr_level,
+        template_name=template_name,
+        template_description=template_description,
+        variant_count=variant_count,
     )
 
 

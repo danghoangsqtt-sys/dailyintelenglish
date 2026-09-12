@@ -1,0 +1,26 @@
+{
+  "id": "dynamic_wave",
+  "display_name": "Dynamic Wave",
+  "category": "dark",
+  "description": "Dark cinematic field with bright audio-wave motion and centered impact copy.",
+  "base_image": "dynamic_wave.png",
+  "headline_zone": {
+    "x": 0.08,
+    "y": 0.18,
+    "width": 0.68,
+    "height": 0.38,
+    "min_font_size": 36,
+    "max_font_size": 100,
+    "align": "left"
+  },
+  "supporting_zone": {
+    "x": 0.09,
+    "y": 0.62,
+    "width": 0.58,
+    "height": 0.14,
+    "min_font_size": 20,
+    "max_font_size": 36,
+    "align": "left"
+  },
+  "uppercase_headline": true
+}

@@ -1,0 +1,18 @@
+You are creating YouTube thumbnail copy and color directions for an English-learning podcast.
+
+Project name: {{ project_name }}
+Topic: {{ topic }}
+Genre: {{ genre }}
+CEFR level: {{ cefr_level }}
+Selected template: {{ template_name }}
+Template visual character: {{ template_description }}
+
+Return exactly {{ variant_count }} distinct variants. Each variant must:
+- use a concise, high-impact English headline suitable for a thumbnail;
+- keep the headline truthful to the topic and readable at small size;
+- optionally add one short supporting line;
+- provide 1-5 useful topic keywords;
+- provide primary, secondary, accent, and text colors as full six-digit hex values;
+- differ meaningfully from every other variant in headline, palette, or both.
+
+Return JSON only. The API-provided JSON Schema is authoritative.

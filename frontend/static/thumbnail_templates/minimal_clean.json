@@ -1,0 +1,26 @@
+{
+  "id": "minimal_clean",
+  "display_name": "Minimal Clean",
+  "category": "minimal",
+  "description": "Airy editorial layout with restrained geometry and generous whitespace.",
+  "base_image": "minimal_clean.png",
+  "headline_zone": {
+    "x": 0.07,
+    "y": 0.14,
+    "width": 0.58,
+    "height": 0.34,
+    "min_font_size": 34,
+    "max_font_size": 92,
+    "align": "left"
+  },
+  "supporting_zone": {
+    "x": 0.07,
+    "y": 0.54,
+    "width": 0.54,
+    "height": 0.18,
+    "min_font_size": 20,
+    "max_font_size": 38,
+    "align": "left"
+  },
+  "uppercase_headline": false
+}

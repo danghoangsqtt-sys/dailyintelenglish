@@ -9,11 +9,11 @@
 
 ## Progress Overview
 
-*Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) [currently 4/10 done, 40%] with 29 discrete checklist subtasks [currently 17/29 done, 59%]. Progress reflects completed subtasks.*
+*Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) [currently 4/10 done, 40%] with 29 discrete checklist subtasks [currently 18/29 done, 62%]. Progress reflects completed subtasks.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
-| Phase 1 — Build | 🔄 In Progress | 17 | 29 |
+| Phase 1 — Build | 🔄 In Progress | 18 | 29 |
 | Phase 2 — Testing | ⏳ Not Started | 0 | 10 |
 | Phase 3 — Review | ⏳ Not Started | 0 | 6 |
 
@@ -60,9 +60,9 @@
 - [ ] Video Studio UI
 
 ### 1.8 Thumbnail Generator
-- [ ] ThumbnailService
-- [ ] 5 thumbnail templates
-- [ ] Thumbnail UI
+- [x] ThumbnailService — Sub-task 1.8a by Codex: Gemini text/palette suggestions (`responseJsonSchema`, exact-count + duplicate rejection), atomic render+persist with rollback-safe filesystem/DB sequencing, safe content route. 27 new tests, 298 total pass. PM independently re-rendered all 5 templates and confirmed real image quality.
+- [x] 5 thumbnail templates — `minimal_clean`, `gradient_bold`, `modern_split`, `dynamic_wave`, `podcast_classic`, deterministically generated, font is Pillow's embedded scalable default (no system path)
+- [ ] Thumbnail UI — deferred to Sub-task 1.8b (template gallery, manual editor, download)
 
 ### 1.9 YouTube Package
 - [ ] YouTubePackageService
@@ -97,6 +97,7 @@
 | 2026-09-11 | Task 1.6 split into sub-tasks (1.6a/1.6b/1.6c) since `ffmpeg` and OmniVoice model weights are unavailable on this machine. Sub-task 1.6a (Edge-TTS-first) closed via `/vp-auto`: `TTSService.synthesize_line()`, `EDGE_TTS_VOICE_MAP` (all 10 accents x 3 genders, voice ids verified live against `edge_tts.list_voices()`), OmniVoice path wrapped in `asyncio.Semaphore(MAX_CONCURRENT_TTS)` with an honest "model not loaded" fallback (not a fake success), `POST /api/projects/{id}/tts/preview` + cache-serving route. Live smoke-testing across all 10 accents caught one transient real Edge TTS "no audio received" response — fixed by adding a retry-once-on-empty-audio guard *before* landing the sub-task, not shipped broken. Also fixed a latent event-loop-binding hazard on the new module-level `_omnivoice_semaphore` (same class of bug as `_write_lock`, same fix: reset per test in `conftest.py`). 22 new tests, 252/252 total pass, ruff clean | `/vp-auto`; git tag `die-vp-p1-t1.6a` |
 | 2026-09-12 | User is bringing in Codex as a second AI Implementer (Claude Code stays PM). Generalized `SYSTEM-RULES.md` AR-06 from "PM-GEMINI" to "PM-Implementer" (binds whichever coding AI is assigned, not one vendor). Added `docs/CODEX_CODE_PROMPT.md` — Codex-specific variant of `docs/GEMINI_CODE_PROMPT.md`, same AR-06 contract, plus a mandatory environment-preflight step (Codex's sandbox may not match this Windows dev machine: ffmpeg/network/.env availability must be checked and reported, never assumed) and a stricter "paste real command output, not prose" evidence requirement given the BUG-010 false-claim incident. | User; PM (Claude Code) |
 | 2026-09-12 | Codex's first assignment (Task 1.6 Sub-task 1.6b, AudioService) correctly self-deferred after a real environment preflight: no `ffmpeg`, no `pydub` in its sandbox. Redirected (PM-approved) to Task 1.10 Sub-task 1.10a — ffmpeg-independent Music Library UI — with 4 PM-required additions (50MB upload limit, no-clobber duplicate naming, magic-byte validation, `ARCHITECTURE.md` sync). Codex delivered all 4; PM independently re-ran every verification command (not just trusted the pasted output) and read the actual diff before accepting — first real Codex delivery matched its own report exactly, no BUG-010-style discrepancy. 19 new tests (real `ThreadPoolExecutor`/`Barrier` concurrency test proves the no-clobber placement is actually race-safe, not just sequentially tested). Also confirmed independently: `pydub` fails on this venv's Python 3.14 with `ModuleNotFoundError: No module named 'audioop'` (Codex's sandbox hit the same error) — logged in Known Issues, will still block Sub-task 1.6b/1.10b later even after `ffmpeg` is installed, unless `audioop-lts` is added first. | Codex; PM (Claude Code) |
+| 2026-09-12 | Task 1.8 (Thumbnail Generator) assigned to Codex — chosen over Task 1.9 because 1.9's acceptance criteria require a .zip with video/thumbnail/SRT that don't exist yet. Codex proposed splitting into 1.8a (backend: Gemini suggestions, 5 Pillow templates, render+persist, APIs) and 1.8b (UI editor, separate plan). PM verified the font claim independently (`ImageFont.load_default(size=...)` genuinely scales, confirmed by measuring rendered text width at two sizes; the font itself — Aileron — is base64-embedded in Pillow's own source, zero filesystem/OS dependency) before approving. PM also required one clarification before implementation: the pre-existing `thumbnails` DB table has one row per `(template_name, variant_index)`, not a many-to-many shape, so the variant→template assignment rule needed to be explicit — Codex resolved this by making `template_name` a required request field (one template per generation batch, not round-robin across all 5), which PM confirmed matches the schema. After implementation, PM independently re-rendered all 5 templates using the actual service code and visually confirmed professional-quality output (not just trusting the "visually inspected" claim in the report) before accepting. 27 new tests, 298/298 pass. | Codex; PM (Claude Code) |
 | 2026-09-11 | BUG-001 auto-logged by vp-audit Tier 1: restore valid machine-readable state | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-002 auto-logged by vp-audit Tier 1: reconcile Phase 1 progress counters | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-003 auto-logged by vp-audit Tier 1: enforce doc-first task gates | `vp-audit`; Backlog |
