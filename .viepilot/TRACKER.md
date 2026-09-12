@@ -120,11 +120,10 @@
 
 ## Known Issues
 
-- `ffmpeg` not found in PATH on this machine — blocks Task 1.6 (Audio) / 1.7 (Video). Needs manual install by user.
-- `.env` not created yet — `DIE_GEMINI_API_KEY` unset, blocks Task 1.4 (Script Generation) once it calls Gemini. `.env.example` added (now with the `DIE_` env-var prefix — see Decision Log); user must copy it to `.env` and fill in the key.
-- OmniVoice model not downloaded yet (`models/omnivoice` empty) — blocks Task 1.6 (TTS). `scripts/check_dependencies.py` now checks for this explicitly.
-- None of the three items above are code bugs; they're machine/secrets setup the user must do locally.
-- `pydub` (already in `requirements.txt`, used by the not-yet-built AudioService) fails to import on this venv's Python 3.14.7 with `ModuleNotFoundError: No module named 'audioop'` — Python 3.13 removed the `audioop` stdlib module (PEP 594) and `pydub` still depends on it. Will block Task 1.6 Sub-task 1.6b even once `ffmpeg` is installed, unless the `audioop-lts` PyPI backport is added to `requirements.txt` first. Discovered 2026-09-12 during PM review of Codex's Task 1.10 preflight (Codex's sandbox reported the same `pydub` import failure independently).
+- ~~`ffmpeg` not found in PATH~~ **RESOLVED 2026-09-12**: installed via `winget install Gyan.FFmpeg` (9.0.1, full build). Note: Windows PATH updates only apply to newly-started processes — any shell open before the install won't see it. `.env`'s `DIE_FFMPEG_PATH` now points at the absolute exe path so the app itself doesn't depend on shell PATH freshness. Unblocks Task 1.6 Sub-task 1.6b (AudioService) and Task 1.7 (Video Studio) — see the `pydub`/`audioop` item below for a second, separate blocker on 1.6b.
+- `.env` created 2026-09-12 (`DIE_FFMPEG_PATH` filled in) but `DIE_GEMINI_API_KEY` is still empty — user must fill in their real key. Blocks any *live* Gemini call; all services (script/learning/thumbnail/youtube) are otherwise fully implemented and tested against mocks.
+- OmniVoice model still not downloaded (`models/omnivoice` empty) — blocks the OmniVoice branch of Task 1.6 (Edge TTS branch is fully shipped and unaffected). `scripts/check_dependencies.py` checks for this explicitly.
+- ~~`pydub` `ModuleNotFoundError: No module named 'audioop'`~~ **RESOLVED 2026-09-12**: added `audioop-lts>=0.2.1; python_version >= "3.13"` to `requirements.txt` and installed it. Verified end-to-end for real (not just import): `pydub.AudioSegment.silent()` → `set_frame_rate()` → `.export(..., format="mp3")` actually produced a valid non-empty MP3 file via the real ffmpeg binary. **Task 1.6 Sub-task 1.6b (AudioService) and Sub-task 1.10b are now fully unblocked** — only `DIE_GEMINI_API_KEY` (for any *live* Gemini call) and the OmniVoice model download remain outstanding, and neither blocks AudioService.
 
 ## Version
 
