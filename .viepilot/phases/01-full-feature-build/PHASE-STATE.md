@@ -3,23 +3,22 @@
 ## Metadata
 - **Phase:** 1
 - **Slug:** 01-full-feature-build
-- **Status:** done (2026-09-13) for all 10 individual task cards' own acceptance criteria.
-  **One gap found during close-out review** against ROADMAP.md's separate, stricter
-  phase-level "Acceptance Criteria (Phase 1 Complete)" checklist: the YouTube `.zip`
-  export doesn't yet include the full transcript or Learning Content
-  (vocabulary/grammar/idioms) — tracked as Sub-task 1.9c, assigned to Codex 2026-09-13.
-  Two further items remain deliberately deferred pending a real user decision (not
-  blocking any task's own acceptance criteria): real OmniVoice GPU voice cloning
-  (Task 1.6, needs a `ref_audio` source) and Level 3 LivePortrait avatar lip-sync
-  (Task 1.7, needs an avatar image source).
+- **Status:** done (2026-09-13) — all 10 task cards done, including the one gap found
+  during close-out review against ROADMAP.md's separate, stricter phase-level
+  "Acceptance Criteria (Phase 1 Complete)" checklist (transcript + Learning Content
+  missing from the YouTube `.zip` export — closed via Sub-task 1.9c, implemented by
+  Codex, PM-accepted). Two items remain deliberately deferred pending a real user
+  decision (not blocking any task's own acceptance criteria): real OmniVoice GPU voice
+  cloning (Task 1.6, needs a `ref_audio` source) and Level 3 LivePortrait avatar
+  lip-sync (Task 1.7, needs an avatar image source).
 - **Started:** 2026-09-10
 - **Completed:** 2026-09-13 (Day 3 of a 21-day target — well ahead of schedule)
 - **Milestone Progress:** 10 / 10 major tasks (100%)
 - **Subtask Progress:** 27 / 29 granular subtasks (93% — the 2 remaining are the deferred
   items above)
-- **Test Suite Status:** 432 passed, ruff clean, all `node --check` clean. One known,
+- **Test Suite Status:** 437 passed, ruff clean, all `node --check` clean. One known,
   accepted flake affecting Gemini retry/backoff-pattern tests under a slow/loaded
-  full-suite run (5 occurrences across 3 unrelated modules, always passes in isolation —
+  full-suite run (6 occurrences across 3 unrelated modules, always passes in isolation —
   tracked in `.viepilot/debug/session-debug-20260912T000000Z.json`, closed `wontfix`), not
   a real defect.
 
@@ -150,11 +149,10 @@
     17 new tests (11 service/API + 6 real-browser Playwright). 314 total tests pass, ruff clean.
 
 ### Task 1.9: Step 7 — YouTube Package
-- **Status:** ✅ Done (2026-09-13) for its own Acceptance Criteria (both sub-tasks 1.9a,
-  1.9b complete). **Sub-task 1.9c open** (assigned to Codex): a Phase 1 close-out review
-  against ROADMAP.md's separate phase-level checklist found the `.zip` export is missing
-  the full transcript + Learning Content — see `tasks/task-1.9c.md`.
-- **Details:** By Claude Code acting as both PM and Implementer (Codex ran out of quota).
+- **Status:** ✅ Done (2026-09-13) — all three sub-tasks (1.9a, 1.9b, 1.9c) complete, no
+  open gaps against this card's own criteria or ROADMAP.md's phase-level checklist.
+- **Details:** 1.9a/1.9b by Claude Code acting as both PM and Implementer (Codex ran out
+  of quota); 1.9c by Codex (quota restored), PM-accepted.
   - **1.9a DONE:** `YouTubeService.generate_package()` — 3 Gemini-generated title variants
     (click_worthy/educational/seo), description, tags (`YOUTUBE_TAGS_MAX_CHARS` enforced),
     and honestly-estimated chapters (`estimate_chapters()`, pure word-count-based function,
@@ -176,6 +174,16 @@
     (real end-to-end pipeline test included, not mocked), 421 total pass. Caught a real
     bug via a browser test: the frontend defaulted to claiming "Measured" when
     `chapters_estimated` was simply undefined — fixed to require an explicit `=== false`.
+  - **1.9c DONE (2026-09-13, by Codex):** `.zip` export gains a fifth file,
+    `transcript_and_vocabulary.txt` — the full script transcript (speaker-name resolved,
+    same fallback pattern as `AudioService`) plus, if generated, the Learning Content
+    pack (vocabulary/idioms/grammar/comprehension questions); a project with no Learning
+    Content yet still exports successfully with a plain notice instead — Learning Content
+    was deliberately never made a hard export prerequisite. `metadata.txt` unchanged.
+    10 new tests (unit formatting incl. real Vietnamese/emoji/long-text Unicode, plus a
+    real end-to-end pipeline test), 437 total pass (1 pre-existing unrelated flaky
+    Gemini-retry test — the 6th occurrence of a known/accepted flake — confirmed passing
+    in isolation). Closes the one gap found in Phase 1's close-out review.
 
 ### Task 1.10: Music Library
 - **Status:** ✅ Done (2026-09-13) — all acceptance criteria complete

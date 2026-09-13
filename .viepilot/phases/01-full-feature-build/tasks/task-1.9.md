@@ -3,13 +3,11 @@
 ## Meta
 - **ID**: 1.9
 - **Phase**: 1
-- **Status**: done (2026-09-13) for this card's own Acceptance Criteria (both sub-tasks
-  1.9a, 1.9b complete). **Sub-task 1.9c is open** — see note below and its own task card
-  `task-1.9c.md` — found during Phase 1 close-out review against ROADMAP.md's separate,
-  stricter phase-level checklist ("Acceptance Criteria (Phase 1 Complete)"), which
-  requires transcript + vocabulary in the YouTube package; this card's own Acceptance
-  Criteria below never included that, which is why it wasn't caught until the close-out
-  review, not a contradiction of "done" above.
+- **Status**: done (2026-09-13) — all three sub-tasks (1.9a, 1.9b, 1.9c) complete. 1.9c
+  (transcript + Learning Content in the export, implemented by Codex, PM-accepted) closed
+  the one gap found during Phase 1 close-out review against ROADMAP.md's separate,
+  stricter phase-level checklist ("Acceptance Criteria (Phase 1 Complete)") — see
+  `task-1.9c.md`.
 - **Priority**: medium
 - **Assignee**: AI (Claude Code, acting as PM + Implementer)
 

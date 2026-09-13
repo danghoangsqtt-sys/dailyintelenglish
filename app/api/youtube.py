@@ -9,7 +9,15 @@ from app.api.projects import _read_transaction, _write_transaction
 from app.core.exceptions import ValidationError
 from app.core.responses import ok
 from app.db.database import get_db
-from app.services import audio_service, project_service, script_service, thumbnail_service, video_service, youtube_service
+from app.services import (
+    audio_service,
+    learning_service,
+    project_service,
+    script_service,
+    thumbnail_service,
+    video_service,
+    youtube_service,
+)
 
 router = APIRouter(prefix="/api/projects/{project_id}/youtube", tags=["youtube"])
 
@@ -49,16 +57,18 @@ async def get_youtube_package(project_id: str, db: aiosqlite.Connection = Depend
 
 @router.get("/export")
 async def export_youtube_package(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> Response:
-    """Download the full YouTube package as a .zip (video, thumbnail, SRT, metadata.txt).
+    """Download the full YouTube package as a .zip, including transcript/Learning Content.
 
     Requires a generated YouTube package, a completed video, and a selected favorite
     thumbnail — a ValidationError names exactly which piece is missing.
     """
     async with _read_transaction():
-        await project_service.get_project(db, project_id)
+        project = await project_service.get_project(db, project_id)
         package = await youtube_service.get_package(db, project_id)
         video_job = await video_service.get_video_job(db, project_id)
         thumbnail_rows = await thumbnail_service.get_thumbnail_rows(db, project_id)
+        script_lines = await script_service.get_script(db, project_id)
+        learning_content = await learning_service.get_learning_content(db, project_id)
 
     missing = []
     if package is None:
@@ -71,7 +81,14 @@ async def export_youtube_package(project_id: str, db: aiosqlite.Connection = Dep
     if missing:
         raise ValidationError(f"Cannot export the full package yet: missing {', '.join(missing)}.")
 
-    zip_bytes = youtube_service.build_export_zip(package, video_job, favorite_thumbnail)
+    zip_bytes = youtube_service.build_export_zip(
+        package,
+        video_job,
+        favorite_thumbnail,
+        project,
+        script_lines,
+        learning_content,
+    )
     return Response(
         content=zip_bytes,
         media_type="application/zip",

@@ -2,8 +2,8 @@
 
 Exercises the real chain end-to-end: real script -> real Edge TTS (network mocked, real
 decodable audio) -> real AudioService mix -> real VideoService render -> real Pillow
-thumbnail render (only the Gemini text call is mocked) -> real zip assembly. Only the two
-Gemini-backed calls (YouTube package text, thumbnail suggestions) are mocked.
+thumbnail render -> real zip assembly. Only the three Gemini-backed calls (YouTube
+package text, thumbnail suggestions, and Learning Content) are mocked.
 """
 
 import io
@@ -16,7 +16,7 @@ from pydub.generators import Sine
 
 from app.core.config import settings
 from app.main import app
-from app.services import thumbnail_service, tts_service, youtube_service
+from app.services import learning_service, thumbnail_service, tts_service, youtube_service
 
 PROJECT_PAYLOAD = {
     "name": "Export API Test Episode",
@@ -37,6 +37,44 @@ VALID_YOUTUBE_PACKAGE = {
     ],
     "description": "A test episode about full package export.",
     "tags": ["testing", "export", "b1 podcast"],
+}
+
+VALID_LEARNING_PACK = {
+    "vocabulary": [
+        {
+            "word": "thorough",
+            "part_of_speech": "adjective",
+            "ipa": "/ˈθʌrə/",
+            "definition_en": "careful and complete",
+            "definition_vi": "kỹ lưỡng và đầy đủ",
+            "example_sentence": "Alex ran a thorough export test. 🚀",
+        }
+    ],
+    "idioms": [
+        {
+            "phrase": "cover all the bases",
+            "meaning_en": "deal with every important part",
+            "meaning_vi": "xem xét đầy đủ mọi khía cạnh",
+            "example_sentence": "The package covers all the bases.",
+        }
+    ],
+    "grammar": [
+        {
+            "point": "Present perfect",
+            "structure": "have/has + past participle",
+            "explanation_en": "Connects a past action to the present.",
+            "explanation_vi": "Liên kết hành động quá khứ với hiện tại.",
+            "examples": ["We have completed the export."],
+        }
+    ],
+    "questions": [
+        {
+            "question": "What did Alex test?",
+            "options": ["An export", "A recipe"],
+            "correct_answer": "An export",
+            "explanation": "Alex explicitly mentioned the export test.",
+        }
+    ],
 }
 
 
@@ -74,9 +112,13 @@ def client(tmp_path, monkeypatch):
     async def fake_thumbnail_generate(prompt: str, schema: dict) -> str:
         return _thumbnail_suggestion_json()
 
+    async def fake_learning_generate(prompt: str, schema: dict | None = None) -> str:
+        return json.dumps(VALID_LEARNING_PACK, ensure_ascii=False)
+
     monkeypatch.setattr(tts_service, "_synthesize_edge_tts", fake_edge_tts)
     monkeypatch.setattr(youtube_service, "generate_package", fake_generate_package)
     monkeypatch.setattr(thumbnail_service, "_generate_with_retry", fake_thumbnail_generate)
+    monkeypatch.setattr(learning_service, "_generate_with_retry", fake_learning_generate)
 
     with TestClient(app) as test_client:
         yield test_client
@@ -97,7 +139,16 @@ def save_script(client: TestClient, project: dict) -> list[dict]:
     return response.json()["data"]
 
 
-def build_full_pipeline(client: TestClient, project: dict, lines: list[dict]) -> None:
+def build_full_pipeline(
+    client: TestClient, project: dict, lines: list[dict], *, generate_learning: bool = True
+) -> None:
+    if generate_learning:
+        assert (
+            client.post(
+                f"/api/projects/{project['id']}/learning/generate"
+            ).status_code
+            == 200
+        )
     for line in lines:
         assert client.post(f"/api/projects/{project['id']}/tts/preview", json={"line_id": line["id"]}).status_code == 200
     assert client.post(f"/api/projects/{project['id']}/audio/generate", json={}).status_code == 200
@@ -114,7 +165,7 @@ def build_full_pipeline(client: TestClient, project: dict, lines: list[dict]) ->
     assert client.post(f"/api/projects/{project['id']}/youtube/generate").status_code == 200
 
 
-def test_export_returns_a_real_zip_with_all_four_files(client: TestClient):
+def test_export_returns_a_real_zip_with_all_five_files(client: TestClient):
     project = create_project(client)
     lines = save_script(client, project)
     build_full_pipeline(client, project, lines)
@@ -125,12 +176,44 @@ def test_export_returns_a_real_zip_with_all_four_files(client: TestClient):
     assert response.headers["content-type"] == "application/zip"
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
         names = set(archive.namelist())
-        assert names == {"video.mp4", "subtitles.srt", "thumbnail.png", "metadata.txt"}
+        assert names == {
+            "video.mp4",
+            "subtitles.srt",
+            "thumbnail.png",
+            "metadata.txt",
+            "transcript_and_vocabulary.txt",
+        }
         assert len(archive.read("video.mp4")) > 0
         assert len(archive.read("thumbnail.png")) > 0
         metadata = archive.read("metadata.txt").decode("utf-8")
         assert "Measured (from real audio)" in metadata
         assert VALID_YOUTUBE_PACKAGE["description"] in metadata
+        assert "FULL TRANSCRIPT" not in metadata
+        assert "VOCABULARY" not in metadata
+        learning_text = archive.read("transcript_and_vocabulary.txt").decode("utf-8")
+        assert "=== FULL TRANSCRIPT ===" in learning_text
+        assert "Alex: Welcome!" in learning_text
+        assert "=== VOCABULARY ===" in learning_text
+        assert "=== IDIOMS & COLLOCATIONS ===" in learning_text
+        assert "=== GRAMMAR POINTS ===" in learning_text
+        assert "=== COMPREHENSION QUESTIONS ===" in learning_text
+        assert "kỹ lưỡng và đầy đủ" in learning_text
+        assert "🚀" in learning_text
+
+
+def test_export_without_learning_content_still_succeeds(client: TestClient):
+    project = create_project(client)
+    lines = save_script(client, project)
+    build_full_pipeline(client, project, lines, generate_learning=False)
+
+    response = client.get(f"/api/projects/{project['id']}/youtube/export")
+
+    assert response.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        learning_text = archive.read("transcript_and_vocabulary.txt").decode("utf-8")
+        assert "Alex: Welcome!" in learning_text
+        assert "Learning Content was not generated for this project." in learning_text
+        assert "=== VOCABULARY ===" not in learning_text
 
 
 def test_export_before_anything_generated_returns_422_naming_all_missing_pieces(client: TestClient):

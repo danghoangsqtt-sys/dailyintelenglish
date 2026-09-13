@@ -390,10 +390,133 @@ async def test_save_package_persists_chapters_estimated_flag(db):
     assert resaved["chapters_estimated"] is True
 
 
+# --- transcript and Learning Content formatting ---
+
+
+def _project_with_speakers() -> dict:
+    return {
+        "speakers": [
+            {"id": "speaker-alex", "name": "Alex"},
+            {"id": "speaker-linh", "name": "Linh"},
+        ]
+    }
+
+
+def _full_learning_content() -> dict:
+    return {
+        "vocabulary": [
+            {
+                "word": "nuance",
+                "part_of_speech": "noun",
+                "ipa": "/ˈnjuːɑːns/",
+                "definition_en": "a subtle difference",
+                "definition_vi": "một sắc thái khác biệt tinh tế",
+                "example_sentence": "Linh explained every nuance clearly.",
+            }
+        ],
+        "idioms": [
+            {
+                "phrase": "break the ice",
+                "meaning_en": "make people feel more comfortable",
+                "meaning_vi": "phá vỡ sự ngại ngùng ban đầu",
+                "example_sentence": "Alex told a joke to break the ice.",
+            }
+        ],
+        "grammar": [
+            {
+                "point": "Present perfect",
+                "structure": "have/has + past participle",
+                "explanation_en": "Links a past action to the present.",
+                "explanation_vi": "Liên kết hành động quá khứ với hiện tại.",
+                "examples": ["We have learned a lot.", "She has finished."],
+            }
+        ],
+        "questions": [
+            {
+                "question": "Who explained the nuance?",
+                "options": ["Alex", "Linh"],
+                "correct_answer": "Linh",
+                "explanation": "The transcript attributes the explanation to Linh.",
+            }
+        ],
+    }
+
+
+def test_build_transcript_without_learning_content_includes_clear_notice():
+    script_lines = [
+        {"speaker_id": "speaker-alex", "text": "Welcome to the lesson."},
+        {"speaker_id": "unknown-speaker", "text": "Fallback names stay honest."},
+    ]
+
+    text = youtube_service._build_transcript_and_learning_text(
+        _project_with_speakers(), script_lines, None
+    )
+
+    assert "=== FULL TRANSCRIPT ===" in text
+    assert "Alex: Welcome to the lesson." in text
+    assert "unknown-speaker: Fallback names stay honest." in text
+    assert "Learning Content was not generated for this project." in text
+    assert "=== VOCABULARY ===" not in text
+
+
+def test_build_transcript_with_full_learning_content_formats_every_section():
+    script_lines = [
+        {"speaker_id": "speaker-alex", "text": "First line."},
+        {"speaker_id": "speaker-linh", "text": "Second line."},
+    ]
+
+    text = youtube_service._build_transcript_and_learning_text(
+        _project_with_speakers(), script_lines, _full_learning_content()
+    )
+
+    assert text.index("Alex: First line.") < text.index("Linh: Second line.")
+    assert "=== VOCABULARY ===" in text
+    assert "nuance (noun) — /ˈnjuːɑːns/ — a subtle difference" in text
+    assert "=== IDIOMS & COLLOCATIONS ===" in text
+    assert "break the ice — make people feel more comfortable" in text
+    assert "=== GRAMMAR POINTS ===" in text
+    assert "Examples: We have learned a lot. | She has finished." in text
+    assert "=== COMPREHENSION QUESTIONS ===" in text
+    assert "Options: Alex | Linh — Correct answer: Linh" in text
+
+
+def test_build_transcript_with_generated_empty_pack_keeps_all_section_headings():
+    empty_pack = {"vocabulary": [], "idioms": [], "grammar": [], "questions": []}
+
+    text = youtube_service._build_transcript_and_learning_text(
+        _project_with_speakers(),
+        [{"speaker_id": "speaker-alex", "text": "Nothing was extracted."}],
+        empty_pack,
+    )
+
+    assert "Learning Content was not generated" not in text
+    assert "=== VOCABULARY ===" in text
+    assert "=== IDIOMS & COLLOCATIONS ===" in text
+    assert "=== GRAMMAR POINTS ===" in text
+    assert "=== COMPREHENSION QUESTIONS ===" in text
+    assert text.count("No items.") == 4
+
+
+def test_build_transcript_preserves_unicode_special_characters_and_long_text():
+    long_text = ("Tiếng Việt có dấu 🚀 — “trích dẫn”, ký hiệu <>& và café. " * 200).strip()
+    learning_content = _full_learning_content()
+    learning_content["vocabulary"][0]["definition_vi"] = long_text
+
+    text = youtube_service._build_transcript_and_learning_text(
+        _project_with_speakers(),
+        [{"speaker_id": "speaker-linh", "text": long_text}],
+        learning_content,
+    )
+
+    assert f"Linh: {long_text}" in text
+    assert long_text in text
+    assert text.encode("utf-8").decode("utf-8") == text
+
+
 # --- build_export_zip ---
 
 
-def test_build_export_zip_contains_all_four_files(tmp_path):
+def test_build_export_zip_contains_all_five_files(tmp_path):
     video_path = tmp_path / "video.mp4"
     video_path.write_bytes(b"fake-mp4-bytes")
     srt_path = tmp_path / "subtitles.srt"
@@ -409,13 +532,35 @@ def test_build_export_zip_contains_all_four_files(tmp_path):
     video_job = {"mp4_path": str(video_path), "srt_path": str(srt_path)}
     thumbnail_row = {"image_path_16x9": str(thumbnail_path)}
 
-    zip_bytes = youtube_service.build_export_zip(package, video_job, thumbnail_row)
+    project = _project_with_speakers()
+    script_lines = [
+        {"speaker_id": "speaker-alex", "text": "Xin chào! 👋"},
+        {"speaker_id": "speaker-linh", "text": "Hôm nay chúng ta học tiếng Anh."},
+    ]
+    zip_bytes = youtube_service.build_export_zip(
+        package,
+        video_job,
+        thumbnail_row,
+        project,
+        script_lines,
+        _full_learning_content(),
+    )
 
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
         names = set(archive.namelist())
-        assert names == {"video.mp4", "subtitles.srt", "thumbnail.png", "metadata.txt"}
+        assert names == {
+            "video.mp4",
+            "subtitles.srt",
+            "thumbnail.png",
+            "metadata.txt",
+            "transcript_and_vocabulary.txt",
+        }
         assert archive.read("video.mp4") == b"fake-mp4-bytes"
         metadata = archive.read("metadata.txt").decode("utf-8")
         assert "TITLES" in metadata
         assert VALID_PACKAGE["description"] in metadata
         assert "Measured (from real audio)" in metadata
+        transcript = archive.read("transcript_and_vocabulary.txt").decode("utf-8")
+        assert "Alex: Xin chào! 👋" in transcript
+        assert "Linh: Hôm nay chúng ta học tiếng Anh." in transcript
+        assert "một sắc thái khác biệt tinh tế" in transcript

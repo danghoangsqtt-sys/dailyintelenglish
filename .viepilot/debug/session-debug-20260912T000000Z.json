@@ -65,10 +65,21 @@
         "command": "pytest tests/test_learning_service.py::test_generate_learning_pack_backoff_sequence_is_1s_2s_4s -q (immediate isolation re-run)",
         "output": "1 passed in 0.54s",
         "timestamp": "2026-09-13T00:00:00Z"
+      },
+      {
+        "command": "pytest tests/ -q (6th occurrence, PM independent re-verification of Codex's Task 1.9c delivery -- transcript/Learning Content added to the YouTube export zip, touches only youtube_service.py/youtube.py/their tests, nothing in script_service.py or Gemini retry logic)",
+        "output": "1 failed (test_script_service.py::test_generate_script_backoff_sequence_is_1s_2s_4s -- same exact test as the 2nd/4th occurrences), 436 passed in 248.22s -- again notably slower than the ~90-130s baseline",
+        "timestamp": "2026-09-13T00:00:00Z"
+      },
+      {
+        "command": "pytest tests/test_script_service.py::test_generate_script_backoff_sequence_is_1s_2s_4s -q (immediate isolation re-run)",
+        "output": "1 passed in 0.55s",
+        "timestamp": "2026-09-13T00:00:00Z"
       }
     ],
     "findings": [
-      "All five incidents self-resolved on isolated or full-suite re-run with zero code changes.",
+      "All six incidents self-resolved on isolated or full-suite re-run with zero code changes.",
+      "The 6th occurrence is the third time specifically test_generate_script_backoff_sequence_is_1s_2s_4s has been hit (2nd, 4th, 6th), each time on an unrelated change set and each time correlated with a full-suite run well above the ~90-130s baseline (248.22s this time) -- consistent with hypothesis 2, and also the first occurrence to happen during Codex-authored work rather than Claude Code's own, confirming this is an environment/timing property of the suite itself, not specific to one contributor's code or process.",
       "The 3rd occurrence's evidence favors hypothesis 2 over hypothesis 1: the failing test is in a completely different file/module from the first two occurrences (test_youtube_service.py vs test_script_service.py) -- a state leak from one specific preceding test (hypothesis 1) would more plausibly recur in the same file/fixture context, not jump modules. The correlation with an unusually slow run (305s vs the normal ~90-130s) directly supports load-based timing sensitivity (hypothesis 2).",
       "The 4th occurrence again correlates with an unusually slow full-suite run (243.88s), a second independent data point supporting hypothesis 2 (system load), and happened on a change set (Task 1.6 Sub-task 1.6c: new frontend page + a project_service/speakers route) that touches nothing in script_service.py, gemini retry logic, or asyncio.sleep mocking -- ruling out a regression from that specific work.",
       "The 5th occurrence hit a THIRD distinct file (test_learning_service.py, never seen before), again correlated with an unusually slow full-suite run (229.00s), and again happened on a change set (Task 1.7 Sub-task 1.7a: video_service.py/video.py/video-related code) that touches nothing in learning_service.py or Gemini retry logic -- strongly reinforces hypothesis 2 (system-load timing sensitivity) over any file-specific or state-leak explanation, since three unrelated modules sharing only the same 'mocked asyncio.sleep in a retry/backoff test' shape have each been hit exactly once, always during a notably slow full-suite run.",
@@ -79,6 +90,6 @@
     "root_cause": "Not fully confirmed, but evidence now strongly favors system-load-induced timing sensitivity (hypothesis 2) over cross-test state leakage (hypothesis 1) -- see findings. Three of five occurrences correlate with a full-suite run notably slower than the ~90-130s baseline, and the failure has now appeared in three unrelated files, ruling out a single-module state leak.",
     "fix_applied": null,
     "files_changed": [],
-    "verification": "5 occurrences now, all self-resolving on isolation/retry, none blocking, none tied to the change under review each time. Remains closed `wontfix` as a known, accepted, low-priority flake affecting any Gemini retry/backoff-pattern test under a slow/loaded full-suite run (see TRACKER.md Known Issues). Reopen only if it starts failing in isolation (not just under full-suite load) or blocks an actual task."
+    "verification": "6 occurrences now, all self-resolving on isolation/retry, none blocking, none tied to the change under review each time. Remains closed `wontfix` as a known, accepted, low-priority flake affecting any Gemini retry/backoff-pattern test under a slow/loaded full-suite run (see TRACKER.md Known Issues). Reopen only if it starts failing in isolation (not just under full-suite load) or blocks an actual task."
   }
 }

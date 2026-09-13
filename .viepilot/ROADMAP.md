@@ -197,8 +197,8 @@
   - Chapters: **measured** from AudioService's real per-line timestamps once a project's audio exists (`real_chapters_from_timestamps()`, Sub-task 1.9b), otherwise **estimated** from script word count (Sub-task 1.9a's original behavior); `chapters_estimated` says which, clearly labelled in API + UI
   - Tags: 5-15 relevant tags (Gemini), joined string capped at `YOUTUBE_TAGS_MAX_CHARS` (500)
   - Full `.zip` export (`GET .../youtube/export`) — done, Sub-task 1.9b: video.mp4 + subtitles.srt (Task 1.7) + thumbnail.png (Task 1.8 favorite) + metadata.txt, in-memory zip, requires all three prerequisites
-  - Full transcript/vocabulary/grammar formatting inside the export: not implemented — not part of the ROADMAP acceptance criterion (video+thumbnail+SRT+metadata.txt only)
-  - Verify: 30 tests (1.9a) + 13 tests (1.9b, including a real end-to-end pipeline test, not mocked); real bugs caught and fixed before landing each time (1.9a: tag whitespace on DB round-trip; 1.9b: frontend defaulting to "Measured" on an undefined flag, caught by a browser test)
+  - Full transcript/vocabulary/grammar formatting inside the export — done, Sub-task 1.9c (2026-09-13, by Codex): 5th zip file `transcript_and_vocabulary.txt` with the full script transcript plus Learning Content (vocabulary/idioms/grammar/comprehension questions) when generated; Learning Content stays optional, never a new export prerequisite
+  - Verify: 30 tests (1.9a) + 13 tests (1.9b) + 10 tests (1.9c, including a real end-to-end pipeline test with real Unicode content); real bugs caught and fixed before landing each time (1.9a: tag whitespace on DB round-trip; 1.9b: frontend defaulting to "Measured" on an undefined flag, caught by a browser test)
 
 - [x] **YouTube Package UI** (`frontend/pages/step7_youtube.html`) — Sub-tasks 1.9a + 1.9b
   - Sections: Title options (3 variants) | Description | Chapters (labelled Estimated/Measured accurately) | Tags — done
@@ -297,11 +297,10 @@
 - [x] TTS generates audio for all speakers, mixes into single MP3/WAV — Tasks 1.6
 - [x] Video exports as MP4 with synced subtitles + SRT file — Task 1.7
 - [x] Thumbnail generates 3+ A/B variants — Task 1.8
-- [ ] YouTube package includes complete description + chapters + transcript + vocabulary —
-  **partially done**: description/chapters/titles/tags done (Task 1.9), but the `.zip`
-  export's `metadata.txt` does not yet include the full transcript or vocabulary/grammar
-  content from Learning Content (Task 1.5) — found during Phase 1 close-out review, not
-  part of Task 1.9's own (narrower) acceptance criteria, tracked as Sub-task 1.9c
+- [x] YouTube package includes complete description + chapters + transcript + vocabulary —
+  Sub-task 1.9c (2026-09-13, by Codex): the `.zip` export's 5th file,
+  `transcript_and_vocabulary.txt`, adds the full script transcript plus Learning Content
+  (vocabulary/idioms/grammar/comprehension questions) when generated for the project
 - [x] All steps persist data (auto-save) — refresh doesn't lose progress — verified across
   Tasks 1.3-1.9 (each step's `GET` route restores state; audio/video/thumbnail/youtube
   jobs are all re-fetched on page load, not just held in memory)

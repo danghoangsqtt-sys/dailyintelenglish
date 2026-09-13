@@ -2,27 +2,24 @@
 
 ## Current Status
 
-**Phase:** 1 close-out (Sub-task 1.9c open) + Phase 2 started  
+**Phase:** 1 done; Phase 2 started  
 **Day:** 3 / 21  
 **Started:** 2026-09-10 (Phase 2 opened 2026-09-13)  
 **Target:** 2026-09-30  
 
 ## Progress Overview
 
-*Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) [currently 10/10 done per each
-task card's own acceptance criteria, 100%] with 29 discrete checklist subtasks [currently
-27/29 done, 93% — the remaining 2 are Level 3 LivePortrait avatar lip-sync (Task 1.7,
-blocked on a user decision) and real OmniVoice GPU inference integration (Task 1.6, also
-blocked on a user decision), neither required for any task's own acceptance criteria].
-**Separately**, a close-out review against ROADMAP.md's stricter phase-level "Acceptance
-Criteria (Phase 1 Complete)" checklist found one real gap not captured by any individual
-task card: the YouTube export is missing the full transcript + Learning Content
-(vocabulary/grammar) — tracked as Sub-task 1.9c, assigned to Codex. Progress reflects
-completed subtasks.*
+*Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) [currently 10/10 done, 100%,
+including Sub-task 1.9c which closed the one gap found during Phase 1 close-out review
+against ROADMAP.md's stricter phase-level "Acceptance Criteria (Phase 1 Complete)"
+checklist] with 29 discrete checklist subtasks [currently 27/29 done, 93% — the remaining
+2 are Level 3 LivePortrait avatar lip-sync (Task 1.7, blocked on a user decision) and real
+OmniVoice GPU inference integration (Task 1.6, also blocked on a user decision), neither
+required for any task's own acceptance criteria]. Progress reflects completed subtasks.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
-| Phase 1 — Build | 🔄 Task cards complete; 1 close-out gap open (1.9c) | 27 | 29 |
+| Phase 1 — Build | ✅ Complete | 27 | 29 |
 | Phase 2 — Testing | 🔄 In Progress | 0 | 10 |
 | Phase 3 — Review | ⏳ Not Started | 0 | 6 |
 
@@ -73,11 +70,11 @@ completed subtasks.*
 - [x] 5 thumbnail templates — `minimal_clean`, `gradient_bold`, `modern_split`, `dynamic_wave`, `podcast_classic`, deterministically generated, font is Pillow's embedded scalable default (no system path)
 - [x] Thumbnail UI — Sub-task 1.8b by Codex (session ran out of quota mid-task; PM independently verified/completed acceptance from the actual code and a fresh full test run, not a written report): `/step6` page, template gallery, generate/regenerate (confirm-gated), favorite selection (atomic single-UPDATE), manual headline/color editor with optimistic-concurrency re-render (SQL-level compare-and-swap, `ConflictError` 409 on stale edits), revision-token cache-busted asset URLs, full `saved`/`dirty`/`saving`/`failed` async-safety state machine matching Step 2/3. 17 new tests (11 service/API + 6 real-browser), 314 total pass, ruff clean, no flaky test recurrence.
 
-### 1.9 YouTube Package — ✅ DONE for its own task-card criteria (2026-09-13); Sub-task 1.9c open
+### 1.9 YouTube Package — ✅ DONE (2026-09-13), all three sub-tasks complete
 - [x] YouTubePackageService — Sub-task 1.9a by Claude Code (PM+Implementer, Codex out of quota): titles (3 variants)/description/tags/estimated chapters via Gemini `responseJsonSchema`. New migration `003_youtube_package.sql`. 30 new backend tests; caught+fixed a real tag-whitespace round-trip bug before landing.
 - [x] YouTube Package UI — `/step7`, read-only display + copy-to-clipboard + confirm-gated Regenerate. 6 new browser tests; caught+fixed a real `[hidden]`-vs-CSS-specificity bug via actual Playwright browser testing (a unit test would have missed it).
 - [x] Sub-task 1.9b (2026-09-13) — closes Task 1.9's own acceptance criteria: chapters now **measured** from AudioService's real timestamps when audio exists (`real_chapters_from_timestamps()`, additive migration `004_youtube_chapters_measured.sql`), else estimated as before. New `GET .../youtube/export` streams an in-memory `.zip` (video+thumbnail+SRT+metadata.txt) once video + a favorite thumbnail both exist. 13 new tests including a real end-to-end pipeline test (not mocked), 421 total pass. Caught+fixed a real bug via browser test: frontend defaulted to claiming "Measured" on an `undefined` flag — fixed to require explicit `=== false`.
-- [ ] **Sub-task 1.9c (open, assigned to Codex 2026-09-13)** — found during Phase 1 close-out review: ROADMAP.md's separate, stricter phase-level "Acceptance Criteria (Phase 1 Complete)" checklist requires the YouTube package to include "complete description + chapters + transcript + vocabulary," but the `.zip` export's `metadata.txt` only has description/chapters/titles/tags — the full script transcript and Learning Content (vocabulary/idioms/grammar/quiz, Task 1.5) are missing. Not part of 1.9a/1.9b's own narrower specs, which is why it slipped through until this review. See `.viepilot/phases/01-full-feature-build/tasks/task-1.9.md` for the sub-task plan.
+- [x] **Sub-task 1.9c (2026-09-13, by Codex, PM-accepted)** — closes the gap found during Phase 1 close-out review: `.zip` export gains a 5th file, `transcript_and_vocabulary.txt`, with the full script transcript (speaker names resolved, `AudioService`-style ID fallback) plus Learning Content (vocabulary/idioms/grammar/comprehension questions) when generated — a project with no Learning Content still exports successfully with a plain notice, never a new hard prerequisite. `metadata.txt` untouched. 10 new tests (real Vietnamese/emoji/long-text Unicode round-tripped through an actual zip decode, plus a real end-to-end pipeline test), 437 total pass (1 pre-existing unrelated flaky Gemini-retry test —6th occurrence of the known/accepted flake — confirmed passing in isolation). PM independently re-verified every command and read the full diff before accepting — see `.viepilot/phases/01-full-feature-build/tasks/task-1.9c.md`.
 
 ### 1.10 Music Library — ✅ DONE (2026-09-13)
 - [x] Music Library UI — Sub-task 1.10a (ffmpeg-independent) by Codex: upload (50MB limit, magic-byte validation, atomic no-clobber duplicate naming), list, native audio preview, confirm-gated delete at `/music`. 19 new tests (15 API + 4 Playwright), 271 total pass.
@@ -135,6 +132,7 @@ completed subtasks.*
 | 2026-09-13 | User said "tiếp tục" (continue). Task 1.7 Sub-task 1.7b (Video Studio UI) delivered, **closing Task 1.7's sub-task split**: `/step5` (`frontend/pages/step5_video.html`/`step5_video.js`) with a background-template selector (3 fixed templates only — no avatar/lips-sync controls, since that backend path doesn't exist and building UI for a feature that always fails would be a fake feature, not a scope cut), synchronous Generate (no fake progress bar for a near-instant ffmpeg render), `<video>` preview, MP4/SRT downloads, and an empty state directing back to Step 4 when no audio exists yet. `/step4` gained its first pipeline-navigation button ("Next: Video Studio →") — it never had one before since Task 1.6's acceptance criteria didn't require it, but closing the chain now that Step 5 exists was a natural, low-risk addition. 7 new Playwright tests (network-mocked, same pattern as the Task 1.6c browser suite), 428/428 total pass, ruff clean. Live-smoke-tested the real API end-to-end (real project → real script → real Edge-TTS-mocked synthesis → real AudioService mix → real VideoService render, all through the same TestClient the page's JS would call) and took a real Playwright screenshot confirming visual consistency with the rest of the app before calling this done. Phase 1 now stands at 9/10 major tasks done — only Task 1.10 (waveform visualization, unassigned) remains in progress. | User; PM (Claude Code) |
 | 2026-09-13 | Task 1.10 Sub-task 1.10c (waveform visualization) delivered, **closing Task 1.10 — all 10 Phase 1 major tasks now done**. Implemented directly (no separate plan-then-implement round-trip) since it's a small, self-contained, additive, pure-frontend feature with no backend change or architecture decision — but still verified as thoroughly as any larger sub-task before landing. New `frontend/static/js/waveform.js`: decodes each track via the Web Audio API, draws a canvas waveform with played/unplayed tinting (colors resolved from the real `--accent`/`--text-muted` CSS custom properties, not duplicated), and supports click-to-seek; wired into `/music`'s track cards. Deliberately did not touch Step 4's audio players or reopen the already-closed Task 1.6 — this sub-task closes only Task 1.10's own remaining acceptance criterion. **Real bug avoided by testing deliberately**: the project's existing music-library browser tests all use a fake `ID3...` byte string that passes the backend's magic-byte check but is not real MP3 frame data and does NOT decode via the Web Audio API — testing the new feature against that fixture would have only proven the graceful-failure path. `tests/test_music_library_waveform_browser.py` uses real pydub-generated audio instead, with a separate dedicated test for the undecodable-audio graceful-failure path. Verified with a disposable Playwright script before writing the committed suite: confirmed real non-transparent pixels via `canvas.getImageData()` and that clicking at 70% of the waveform moved `audio.currentTime` to ~70% of its duration; took a full-page screenshot to visually confirm the bar shape and tinting render correctly. 4 new tests, ruff clean. Two items remain deliberately open across the whole phase, neither blocking any task's acceptance criteria: real OmniVoice GPU inference (Task 1.6) and Level 3 LivePortrait avatar lip-sync (Task 1.7) — both need a real user decision on a reference-asset source (`ref_audio` / avatar images) that no amount of autonomous engineering judgment can substitute for. | User; PM (Claude Code) |
 | 2026-09-13 | Codex's quota restored. Phase 2 (Testing & Polish) opened: `.viepilot/phases/02-testing-polish/` scaffolded (`PHASE-STATE.md`), first task card `tasks/task-2.3.md` written (PM) and assigned to Codex — a deliberately narrow first slice of ROADMAP.md's 7-item "UX Polish" bullet: shared step-progress + breadcrumb navigation (`StepNav.render()`) across all 7 step pages, since the pipeline only became fully navigable end-to-end this session and had no way to jump between steps. Also caught and fixed a real doc-drift bug while scaffolding Phase 2: `.viepilot/phases/01-full-feature-build/PHASE-STATE.md`'s top `## Metadata` block (milestone/subtask/test-count summary) had been stale since early in Phase 1 (still read "5/10 major tasks, 350 tests") even though every individual task section below it was kept current all session — corrected to 10/10, 432 tests, done. | User; PM (Claude Code) |
+| 2026-09-13 | Task 1.9c (transcript + Learning Content in the YouTube export) delivered by Codex — its first assignment since quota was restored — and PM-accepted after independent re-verification of every command and a full diff read, not just the pasted report. `build_export_zip()` gained a 5th zip member, `transcript_and_vocabulary.txt`: the full script transcript (speaker names resolved with the same `AudioService`-style ID fallback) plus, when generated, the Learning Content pack — a project with none still exports successfully with a plain notice, correctly never made a hard prerequisite. `metadata.txt` byte-for-byte unchanged, confirmed via new negative assertions in the API test. PM specifically traced `learning_service.update_learning_content()`'s write path back to `app/api/learning.py`'s `payload: LearningPackUpdate` typed route parameter to confirm Codex's direct dict-key access on required fields (`item['word']`, etc.) is safe by construction, not a missed edge case. 10 new tests including a real end-to-end pipeline test (project → script → audio → video → thumbnail → Learning Content, only Gemini calls mocked) and real Vietnamese/emoji/long-text Unicode round-tripped through an actual zip decode. 437 total, 436 passed + 1 failed in that run — the failure is the known Gemini-retry flake (6th occurrence), confirmed passing in isolation, unrelated to this change. **This closes Task 1.9 entirely and closes the one gap found in Phase 1's close-out review — Phase 1 now has zero open items against any task's own acceptance criteria or the phase-level completion checklist**, leaving only the two already-known, deliberately deferred items (OmniVoice `ref_audio`, LivePortrait avatar images) that need a user decision, not more engineering. | Codex; PM (Claude Code) |
 | 2026-09-11 | BUG-001 auto-logged by vp-audit Tier 1: restore valid machine-readable state | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-002 auto-logged by vp-audit Tier 1: reconcile Phase 1 progress counters | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-003 auto-logged by vp-audit Tier 1: enforce doc-first task gates | `vp-audit`; Backlog |
@@ -166,8 +164,9 @@ completed subtasks.*
   `asyncio.sleep` to a no-op" shape) occasionally fails exactly once during a full `pytest
   tests/ -q` run — always passes instantly in isolation, and most recurrences correlate
   with the full-suite run itself being unusually slow (229–305s vs the ~90–130s baseline),
-  pointing at system-load-induced timing sensitivity rather than a real defect. 5
-  occurrences now, tracked in `.viepilot/debug/session-debug-20260912T000000Z.json` (closed
+  pointing at system-load-induced timing sensitivity rather than a real defect. 6
+  occurrences now (248.22s full-suite run for the 6th), tracked in
+  `.viepilot/debug/session-debug-20260912T000000Z.json` (closed
   `wontfix` 2026-09-13). If a full-suite run ever shows a Gemini retry/backoff test
   failing, re-run it in isolation before treating it as a real regression — do not block
   on it if isolation passes.

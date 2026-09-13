@@ -7,8 +7,9 @@ Pydantic schema validation of the response.
 Chapter timestamps are ESTIMATED from a fixed reading speed when no audio mix exists yet
 (Sub-task 1.9a's original behavior), or MEASURED from AudioService's real per-line
 timestamps once one does (Sub-task 1.9b) — `chapters_estimated` on the persisted package
-says which. `build_export_zip` (Sub-task 1.9b) assembles the final downloadable package
-(video + thumbnail + SRT + metadata.txt) once all three exist.
+says which. `build_export_zip` assembles the final downloadable package (video +
+thumbnail + SRT + metadata + transcript/Learning Content) once the existing media
+prerequisites exist.
 """
 
 import asyncio
@@ -308,7 +309,84 @@ def _build_metadata_text(package: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def build_export_zip(package: dict, video_job: dict, thumbnail_row: dict) -> bytes:
+def _build_transcript_and_learning_text(
+    project: dict, script_lines: list[dict], learning_content: dict | None
+) -> str:
+    """Render the full transcript and optional Learning Content as UTF-8-ready text."""
+    speaker_names_by_id = {
+        speaker["id"]: speaker["name"] for speaker in project["speakers"]
+    }
+    lines = ["=== FULL TRANSCRIPT ===", ""]
+    for script_line in script_lines:
+        speaker_id = script_line["speaker_id"]
+        speaker_name = speaker_names_by_id.get(speaker_id, speaker_id)
+        lines.append(f"{speaker_name}: {script_line['text']}")
+
+    if learning_content is None:
+        lines += ["", "Learning Content was not generated for this project."]
+        return "\n".join(lines) + "\n"
+
+    lines += ["", "=== VOCABULARY ===", ""]
+    vocabulary = learning_content.get("vocabulary", [])
+    if vocabulary:
+        for item in vocabulary:
+            lines.append(
+                f"{item['word']} ({item['part_of_speech']}) — {item['ipa']} — "
+                f"{item['definition_en']} — {item['definition_vi']} — "
+                f"{item['example_sentence']}"
+            )
+    else:
+        lines.append("No items.")
+
+    lines += ["", "=== IDIOMS & COLLOCATIONS ===", ""]
+    idioms = learning_content.get("idioms", [])
+    if idioms:
+        for item in idioms:
+            lines.append(
+                f"{item['phrase']} — {item['meaning_en']} — {item['meaning_vi']} — "
+                f"{item['example_sentence']}"
+            )
+    else:
+        lines.append("No items.")
+
+    lines += ["", "=== GRAMMAR POINTS ===", ""]
+    grammar = learning_content.get("grammar", [])
+    if grammar:
+        for item in grammar:
+            examples = " | ".join(item.get("examples", [])) or "None"
+            lines.append(
+                f"{item['point']} — {item['structure']} — {item['explanation_en']} — "
+                f"{item['explanation_vi']} — Examples: {examples}"
+            )
+    else:
+        lines.append("No items.")
+
+    lines += ["", "=== COMPREHENSION QUESTIONS ===", ""]
+    questions = learning_content.get("questions", [])
+    if questions:
+        for item in questions:
+            parts = [item["question"]]
+            if item.get("options"):
+                parts.append(f"Options: {' | '.join(item['options'])}")
+            parts += [
+                f"Correct answer: {item.get('correct_answer', '')}",
+                f"Explanation: {item.get('explanation', '')}",
+            ]
+            lines.append(" — ".join(parts))
+    else:
+        lines.append("No items.")
+
+    return "\n".join(lines) + "\n"
+
+
+def build_export_zip(
+    package: dict,
+    video_job: dict,
+    thumbnail_row: dict,
+    project: dict,
+    script_lines: list[dict],
+    learning_content: dict | None,
+) -> bytes:
     """Assemble the full downloadable YouTube package as an in-memory zip.
 
     Args:
@@ -316,6 +394,9 @@ def build_export_zip(package: dict, video_job: dict, thumbnail_row: dict) -> byt
         video_job: A completed `video_jobs` row (from `video_service.get_video_job`) —
             caller must have already checked `status == "complete"`.
         thumbnail_row: The project's favorite (`is_selected`) thumbnail row.
+        project: Project dict containing the speakers used to label transcript lines.
+        script_lines: The project's persisted script lines, in order.
+        learning_content: The project's Learning Content pack, or None if not generated.
 
     Returns:
         Raw zip file bytes, ready to stream as an HTTP response body.
@@ -326,4 +407,10 @@ def build_export_zip(package: dict, video_job: dict, thumbnail_row: dict) -> byt
         archive.write(video_job["srt_path"], arcname="subtitles.srt")
         archive.write(thumbnail_row["image_path_16x9"], arcname="thumbnail.png")
         archive.writestr("metadata.txt", _build_metadata_text(package))
+        transcript_text = _build_transcript_and_learning_text(
+            project, script_lines, learning_content
+        )
+        archive.writestr(
+            "transcript_and_vocabulary.txt", transcript_text.encode("utf-8")
+        )
     return buffer.getvalue()
