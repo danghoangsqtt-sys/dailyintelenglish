@@ -59,17 +59,24 @@
   - **Evidence:** 20 dedicated service/API tests, 223 total tests passing cleanly (218 unit/integration + 5 browser E2E).
 
 ### Task 1.6: Step 4 — TTS Audio Studio
-- **Status:** 🔄 In Progress (Sub-task 1.6a done; 1.6b/1.6c pending)
-- **Details:** Split into sub-tasks since ffmpeg/OmniVoice model are unavailable on this
-  machine (see Known Issues).
+- **Status:** 🔄 In Progress (Sub-tasks 1.6a, 1.6b done; 1.6c pending)
+- **Details:** Split into sub-tasks since ffmpeg/OmniVoice model were unavailable on this
+  machine at the time (now resolved — see Known Issues).
   - **1.6a DONE:** `TTSService.synthesize_line()` — Edge TTS synthesis (all 10 accents x
     3 genders mapped in `EDGE_TTS_VOICE_MAP`, live-verified 20/20), OmniVoice path with
     `asyncio.Semaphore(2)` and an honest not-yet-available fallback (no model weights on
     this machine), retry-once-on-empty-audio for a real transient Edge TTS failure found
     during live testing. Routes: `POST /api/projects/{id}/tts/preview`,
     `GET /api/projects/{id}/tts/cache/{line_id}.mp3`. 22 new tests, 252 total passing.
-  - **1.6b (AudioService, mixing/normalization) and 1.6c (TTS Studio UI):** deferred until
-    `ffmpeg` is installed on this machine.
+  - **1.6b DONE (2026-09-13):** `AudioService.mix_project()` — real silence gaps
+    (300ms/500ms same/different speaker), real ITU-R BS.1770 loudness normalization to
+    -16 LUFS (`pyloudnorm`), background-music static-level ducking, MP3+WAV export,
+    real per-line timestamps JSON. Routes: `POST/GET /api/projects/{id}/audio/generate`,
+    `/status`, `/download`. Real bug found+fixed: this pydub version's `ffprobe` lookup
+    ignores `AudioSegment.converter`, needed a process-PATH shim for `DIE_FFMPEG_PATH`.
+    25 new tests (real ffmpeg pipeline, not mocked), 375 total passing. Also closes
+    Task 1.10's deferred background-music/loudness piece.
+  - **1.6c (TTS Studio UI):** pending — `frontend/pages/step4_audio.html`.
 
 ### Task 1.7: Step 5 — Video Studio
 - **Status:** ⏳ Planned

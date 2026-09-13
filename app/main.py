@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import learning, music, projects, thumbnail, tts, youtube
+from app.api import audio, learning, music, projects, thumbnail, tts, youtube
 from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.responses import ok
@@ -88,6 +88,7 @@ app.include_router(projects.router)
 app.include_router(learning.router)
 app.include_router(tts.router)
 app.include_router(tts.preview_router)
+app.include_router(audio.router)
 app.include_router(music.router)
 app.include_router(thumbnail.router)
 app.include_router(youtube.router)

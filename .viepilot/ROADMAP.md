@@ -125,13 +125,13 @@
   - List available English accents per region — `EDGE_TTS_VOICE_MAP` in `app/core/constants.py`, all 10 accents x 3 genders, voice ids verified live against `edge_tts.list_voices()`
   - Verify: generates speech for all 10 accent regions — live-smoke-tested all 10 accents x 2 genders (20/20 real Edge TTS calls succeeded); one transient "no audio received" response was caught and recovered by the new retry-once-on-empty-audio logic, not silently ignored
 
-- [ ] **AudioService** (`app/services/audio_service.py`)
-  - `mix_project(project_id)` → single MP3 + WAV from all lines
-  - Add silence gaps between lines
-  - Background music ducking (if music selected)
-  - Normalize to -16 LUFS
-  - Generate timestamps JSON
-  - Verify: mixed audio sounds natural, timestamps accurate
+- [x] **AudioService** (`app/services/audio_service.py`) — Sub-task 1.6b, done 2026-09-13
+  - `mix_project(project, lines, background_music_filename)` → single MP3 + WAV from all lines — done
+  - Add silence gaps between lines — done, 300ms same-speaker / 500ms different-speaker
+  - Background music ducking (if music selected) — done, static-level cap at `MUSIC_DUCKING_MAX_DBFS` (not dynamic speech-reactive ducking)
+  - Normalize to -16 LUFS — done, real ITU-R BS.1770 measurement via `pyloudnorm`, not a dBFS approximation
+  - Generate timestamps JSON — done, real measured per-line start/end seconds
+  - Verify: 25 dedicated tests against a real ffmpeg pipeline (not mocked) — silence-gap timing, loudness within tolerance of target, ducking ceiling respected both directions, timestamps monotonic and duration-accurate; 375 total tests pass
 
 - [ ] **TTS Audio Studio UI** (`frontend/pages/step4_audio.html`)
   - Speaker voice assignment panel (engine + voice per speaker)
@@ -213,7 +213,9 @@
   - List tracks with player preview — done, native browser `<audio>` preview (not a waveform visualization)
   - Delete track — done, confirm-gated
   - Verify: upload, preview, delete work — 19 dedicated tests (15 API incl. a real concurrency test, 4 Playwright browser E2E), PM independently re-ran all; 271 total tests pass (1 unrelated pre-existing flaky test confirmed passing in isolation)
-  - Not done (needs ffmpeg/pydub, deferred to Sub-task 1.10b): waveform visualization, volume leveling, Step 4/5 background-track selection/ducking
+  - Volume leveling + Step 4/5 background-track selection/ducking — delivered in Task 1.6
+    Sub-task 1.6b (`app/services/audio_service.py`), 2026-09-13
+  - Not done: waveform visualization (visual UI only — no task assigned yet)
 
 ---
 

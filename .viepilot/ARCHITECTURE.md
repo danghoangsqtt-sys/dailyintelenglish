@@ -222,14 +222,26 @@ graph LR
 - **Outputs:** Per-line WAV/MP3 files in `data/tts_cache/`
 - **Voice mapping:** Each speaker → engine + voice_id + speed/pitch/volume settings
 
-### 4. AudioService (`app/services/audio_service.py`)
-- **Responsibility:** Mix per-speaker audio lines → final podcast audio
+### 4. AudioService (`app/services/audio_service.py`) — Sub-task 1.6b, DONE
+- **Responsibility:** Mix per-speaker audio lines → final podcast audio. Only processes
+  already-synthesized audio (never calls a TTS engine itself — that split is deliberate).
 - **Operations:**
-  - Concatenate lines in order with silence gaps
-  - Add background music from `data/music_library/` (optional, volume ducking)
-  - Normalize audio levels
-  - Export MP3 (192kbps) + WAV (44100Hz 16bit)
-- **Timestamps:** Generate timestamps JSON for YouTube chapters
+  - Concatenate lines in `line_index` order with silence gaps (`SILENCE_SAME_SPEAKER_MS`
+    same-speaker, `SILENCE_DIFFERENT_SPEAKER_MS` different-speaker)
+  - Normalize integrated loudness to `TARGET_LOUDNESS_LUFS` via real ITU-R BS.1770
+    measurement (`pyloudnorm`), gain-clamped so near-silent input can't be over-boosted
+  - Add background music from `data/music_library/` (optional, filename passed per
+    generate-call — no project-level "selected track" column yet): looped/trimmed to the
+    mix's duration and capped at a **flat** `MUSIC_DUCKING_MAX_DBFS` ceiling for its whole
+    length — a static-level duck, not dynamic speech-reactive ducking
+  - Export MP3 (192kbps) + WAV (44100Hz 16-bit) to `data/audio_output/{project_id}/`
+  - Advances `projects.status` to `audio_generated`, but only when the current status is
+    exactly `script_generated` (best-effort — a later re-mix doesn't fight the forward-only
+    state machine)
+- **Timestamps:** Real per-line start/end seconds (measured, not estimated) persisted to
+  `audio_jobs.timestamps_json` — this becomes the real source for YouTube chapters once
+  Sub-task 1.9b consumes it (1.9a still estimates chapters from word count only, since no
+  audio existed yet at that time)
 
 ### 5. VideoService (`app/services/video_service.py`)
 - **Responsibility:** Generate podcast video (MP4)
@@ -314,9 +326,9 @@ PUT    /api/projects/{id}/learning           # Save edited learning content
 ### TTS & Audio
 ```
 POST   /api/projects/{id}/tts/preview        # Preview single line TTS
-POST   /api/projects/{id}/audio/generate     # Generate full audio mix
-GET    /api/projects/{id}/audio/status       # Check generation status (SSE)
-GET    /api/projects/{id}/audio/download     # Download final audio
+POST   /api/projects/{id}/audio/generate     # Generate full audio mix (synchronous; body: {background_music?})
+GET    /api/projects/{id}/audio/status       # Poll current audio_jobs row (plain GET, not SSE — see below)
+GET    /api/projects/{id}/audio/download     # Download final audio (?format=mp3|wav)
 ```
 
 ### Video

@@ -3,9 +3,9 @@
 ## Meta
 - **ID**: 1.10
 - **Phase**: 1
-- **Status**: in_progress (Sub-task 1.10a done)
+- **Status**: in_progress (Sub-tasks 1.10a, 1.10b-loudness done; waveform visualization pending)
 - **Priority**: low
-- **Assignee**: AI (Codex)
+- **Assignee**: AI (Codex / PM)
 
 ## Paths
 - `app/api/music.py`
@@ -14,8 +14,13 @@
 
 ## Acceptance Criteria
 - [x] User can upload royalty-free MP3/WAV tracks — upload/list/preview/delete UI at `/music`, magic-byte + size validated (royalty-free-ness itself is a content/licensing judgment, not a code check)
-- [ ] Audio wave preview and volume leveling — native browser `<audio>` preview done; waveform visualization and loudness leveling need ffmpeg/pydub, deferred to Sub-task 1.10b
-- [ ] Selection of background track for auto-ducking during speech in Step 4/5 — deferred to Sub-task 1.10b alongside AudioService
+- [ ] Audio wave preview — native browser `<audio>` preview done; waveform *visualization* (visual UI) is still pending, no task assigned yet
+- [x] Volume leveling — real ITU-R BS.1770 loudness normalization delivered in Task 1.6
+  Sub-task 1.6b (`app/services/audio_service.py`), applied to the full mixed track
+- [x] Selection of background track for auto-ducking during speech in Step 4/5 — delivered
+  in Task 1.6 Sub-task 1.6b as a per-generate-call `background_music` filename
+  (`POST /api/projects/{id}/audio/generate`); ducking is a **static-level** cap
+  (`MUSIC_DUCKING_MAX_DBFS`), not dynamic speech-reactive ducking — see task-1.6.md
 
 ## Forbidden Scope
 - No saving audio files outside `data/music_library/` (corrected 2026-09-12 — the task
