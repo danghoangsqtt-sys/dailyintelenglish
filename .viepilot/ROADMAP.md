@@ -272,7 +272,12 @@
   above (same component): 7 clickable pills, missing `project_id` degrades to a clean
   bare URL rather than a broken link
 - [ ] **Auto-save indicator**: "Saved" / "Saving..." in header
-- [ ] **Keyboard shortcuts**: `Ctrl+Enter` to generate, `Esc` to cancel
+- [x] **Keyboard shortcuts**: `Ctrl+Enter` to generate, `Esc` to cancel — done 2026-09-13
+  (Task 2.3b): a new shared `KeyboardShortcuts.init({ primaryButtonId })` (same pattern as
+  `StepNav`) mounted on all 7 step pages triggers each page's real primary button, only
+  when it's genuinely visible and not disabled. `Esc` needed no code — every confirm-gated
+  action already uses native `window.confirm()` (Escape-cancelable for free), and the two
+  pages with inline-edit-then-commit fields (`/step2`, `/step3`) already revert on Escape
 - [ ] **Empty states**: helpful messages when no projects / no music library
 - [ ] **Error toasts**: user-friendly error messages (not stack traces)
 - [ ] **Responsive layout**: works at 1024px width minimum

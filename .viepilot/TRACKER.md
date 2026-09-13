@@ -109,7 +109,7 @@ required for any task's own acceptance criteria]. Progress reflects completed su
 ### 2.2 Bug Fixes & Performance
 - [ ] No task card yet
 
-### 2.3 UX Polish (1/7 ROADMAP items done)
+### 2.3 UX Polish (2/7 ROADMAP items done)
 - [x] Step progress indicator + breadcrumb navigation — done 2026-09-13, by Codex,
   PM-accepted. New `frontend/static/js/step_nav.js` (`StepNav.render()`, pure synchronous
   DOM, no network) mounted on all 7 step pages showing "Step X of 7" + 7 clickable pills;
@@ -119,8 +119,29 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   on a usage limit (implementation, its own tests, and lint were already done and correct
   on disk — only the write-up was missing); PM independently re-verified every command
   from scratch and took its own screenshot before accepting. Deliberately narrow first
-  slice of the 7-item "UX Polish" ROADMAP bullet — the other 5 items (auto-save indicator,
-  keyboard shortcuts, empty states, error toasts, responsive layout) have no task card yet.
+  slice of the 7-item "UX Polish" ROADMAP bullet.
+- [x] Keyboard shortcuts (Ctrl+Enter to generate, Esc to cancel) — done 2026-09-13,
+  Task 2.3b, PM as Implementer (`/vp-auto` autonomous continuation). Audited first: every
+  step page already has one consistent primary-button id (`submit-btn` on `/step1`,
+  `generate-btn` on `/step2`-`/step7`), all with a real `.disabled` property; `Esc` to
+  cancel was already substantially satisfied (native `confirm()` dialogs are
+  Escape-cancelable for free; `/step2`/`/step3`'s inline-edit fields already revert on
+  Escape) — so the only real gap was `Ctrl+Enter`. New `frontend/static/js/
+  keyboard_shortcuts.js` (`KeyboardShortcuts.init({ primaryButtonId })`, same pattern as
+  `StepNav`), one line + one init call per page (14 files, 14 insertions, 0 deletions —
+  confirmed via `git diff --stat`). Safely does nothing when the button is hidden (an
+  existing script/pack/package case) or genuinely disabled, so it can never fire the
+  wrong action. Caught and fixed a real bug in the new module before shipping (a top-level
+  `const` doesn't attach to `window` in a classic script — silently "worked" via shared
+  lexical scope between same-page classic scripts, but `window.KeyboardShortcuts` was
+  `undefined`; fixed to match `StepNav`'s explicit `window.X = Object.freeze(...)`
+  pattern) plus two test-writing mistakes caught before they could hide a real defect (a
+  wrong 404-vs-`data:null` assumption about `GET .../youtube`'s "no package yet" contract,
+  and a missing `/tts/preview` mock that let `/step4`'s generate flow silently hit the
+  real, unmocked backend and fail before ever reaching `/audio/generate`). 6 new
+  Playwright tests (`/step2`, `/step4`, `/step7`), 480 total pass. See `task-2.3b.md` for
+  the full record. The other 4 UX Polish items (auto-save indicator, empty states, error
+  toasts, responsive layout) still have no task card.
 
 ## Decision Log
 
@@ -162,7 +183,21 @@ required for any task's own acceptance criteria]. Progress reflects completed su
 | 2026-09-13 | Task 1.9c (transcript + Learning Content in the YouTube export) delivered by Codex — its first assignment since quota was restored — and PM-accepted after independent re-verification of every command and a full diff read, not just the pasted report. `build_export_zip()` gained a 5th zip member, `transcript_and_vocabulary.txt`: the full script transcript (speaker names resolved with the same `AudioService`-style ID fallback) plus, when generated, the Learning Content pack — a project with none still exports successfully with a plain notice, correctly never made a hard prerequisite. `metadata.txt` byte-for-byte unchanged, confirmed via new negative assertions in the API test. PM specifically traced `learning_service.update_learning_content()`'s write path back to `app/api/learning.py`'s `payload: LearningPackUpdate` typed route parameter to confirm Codex's direct dict-key access on required fields (`item['word']`, etc.) is safe by construction, not a missed edge case. 10 new tests including a real end-to-end pipeline test (project → script → audio → video → thumbnail → Learning Content, only Gemini calls mocked) and real Vietnamese/emoji/long-text Unicode round-tripped through an actual zip decode. 437 total, 436 passed + 1 failed in that run — the failure is the known Gemini-retry flake (6th occurrence), confirmed passing in isolation, unrelated to this change. **This closes Task 1.9 entirely and closes the one gap found in Phase 1's close-out review — Phase 1 now has zero open items against any task's own acceptance criteria or the phase-level completion checklist**, leaving only the two already-known, deliberately deferred items (OmniVoice `ref_audio`, LivePortrait avatar images) that need a user decision, not more engineering. | Codex; PM (Claude Code) |
 | 2026-09-13 | Task 2.3's step-progress + breadcrumb slice delivered by Codex and PM-accepted, but under an unusual circumstance: Codex's session hit its usage limit mid-verification, after finishing the plan, implementation, its own `tests/test_step_nav_browser.py` run (15 passed), and lint/syntax checks — all already correct on disk — but while still watching a full-suite run reach its summary (it had explicitly chosen to wait for the real result rather than guess at the cause of the one failure it had seen, which is exactly the right call per this project's process). It was cut off before writing any evidence into the task card. PM treated this the same as the earlier Codex-quota-exhaustion incident on Task 1.8b: read every diff line-by-line across all 18 changed/new files from scratch (not reconstructing from a report that didn't exist), independently re-ran every verification command, and took its own Playwright screenshot of `/step2` to visually confirm the rendered component before writing up both the Implementer Evidence and PM Acceptance sections itself. Full re-run: 452/452 pass, no flake this time. New `frontend/static/js/step_nav.js` (`StepNav.render()`) is a pure synchronous DOM component — no network calls, no async state — mounted identically on all 7 step pages; confirmed the one specific risk flagged during plan review (each page independently parsing its own `location.search` rather than depending on `init()`-internal state) was implemented exactly as specified. | Codex; PM (Claude Code) |
 | 2026-09-13 | User asked PM to analyze and decide the two deliberately-deferred Phase 1 items (OmniVoice `ref_audio` sourcing, LivePortrait avatar sourcing) and implement directly. PM presented the real tradeoffs rather than picking silently — OmniVoice's real API is voice *cloning* (needs a real audio sample, raising consent/rights questions), not the text-described "voice design" the original plan assumed, and doesn't clearly beat the already-working Edge TTS; LivePortrait's own model integration is a separate large effort from just picking an avatar source. User confirmed both PM recommendations via AskUserQuestion: (1) stop pursuing OmniVoice cloning, Edge TTS becomes the sole official TTS engine; (2) build only the avatar-upload feature now (matches the original ROADMAP design of user-supplied images, never app-generated likenesses), defer actual LivePortrait model research/integration. |
-| 2026-09-13 | Both decisions above implemented in two chunks, verified and committed separately. **Chunk A** (formalize Edge-TTS-only): `SpeakerConfig.tts_engine` default `"omnivoice"` → `"edge_tts"`; Step 4's now-dead engine `<select>` removed (only speed/pitch/volume remain editable); `ROADMAP.md`/`ARCHITECTURE.md`/`SYSTEM-RULES.md`/`task-1.6.md` updated to record the decision and reasoning; OmniVoice's fallback code path deliberately left in place as an honest, still-tested branch. 453/453 tests pass. Committed `3e0895d`, pushed. **Chunk B** (Sub-task 1.7c, avatar upload — doc-first task card written before any code, per standing discipline): new `app/services/avatar_service.py`, 3 new routes, `/step5` gets an upload/preview/remove section per speaker, `project_service.get_project` now maps the stored path to a served URL so a raw filesystem path is never returned to a client. Live-verified end-to-end with a real (non-mocked) upload→serve→delete cycle through the real API, then a live Playwright screenshot caught a real bug before it shipped: the Remove button used `.hidden` on a `.btn`-classed element, which this app's stylesheet's unconditional `.btn { display: inline-flex }` silently overrides (author-stylesheet rules always beat same/lower-specificity UA rules like `[hidden]`, regardless of source order) — fixed by not appending the button when unneeded, re-verified with a second screenshot. Flagged (not fixed, out of this task's scope) that `step6_thumbnail.js`'s `retry-save-btn` likely has the exact same latent bug. 20 new backend tests + 1 new Playwright test, 474 total; two separate full-suite runs each hit exactly one instance of the pre-existing documented Gemini-retry timing flake (a different test each time), both confirmed passing in isolation — not a regression. | User; PM (Claude Code) | User; PM (Claude Code) |
+| 2026-09-13 | Both decisions above implemented in two chunks, verified and committed separately. **Chunk A** (formalize Edge-TTS-only): `SpeakerConfig.tts_engine` default `"omnivoice"` → `"edge_tts"`; Step 4's now-dead engine `<select>` removed (only speed/pitch/volume remain editable); `ROADMAP.md`/`ARCHITECTURE.md`/`SYSTEM-RULES.md`/`task-1.6.md` updated to record the decision and reasoning; OmniVoice's fallback code path deliberately left in place as an honest, still-tested branch. 453/453 tests pass. Committed `3e0895d`, pushed. **Chunk B** (Sub-task 1.7c, avatar upload — doc-first task card written before any code, per standing discipline): new `app/services/avatar_service.py`, 3 new routes, `/step5` gets an upload/preview/remove section per speaker, `project_service.get_project` now maps the stored path to a served URL so a raw filesystem path is never returned to a client. Live-verified end-to-end with a real (non-mocked) upload→serve→delete cycle through the real API, then a live Playwright screenshot caught a real bug before it shipped: the Remove button used `.hidden` on a `.btn`-classed element, which this app's stylesheet's unconditional `.btn { display: inline-flex }` silently overrides (author-stylesheet rules always beat same/lower-specificity UA rules like `[hidden]`, regardless of source order) — fixed by not appending the button when unneeded, re-verified with a second screenshot. Flagged (not fixed, out of this task's scope) that `step6_thumbnail.js`'s `retry-save-btn` likely has the exact same latent bug. 20 new backend tests + 1 new Playwright test, 474 total; two separate full-suite runs each hit exactly one instance of the pre-existing documented Gemini-retry timing flake (a different test each time), both confirmed passing in isolation — not a regression. | User; PM (Claude Code) |
+| 2026-09-13 | `/vp-auto` continuation ("tiếp tục nào"): audited ROADMAP.md's remaining 5
+  "UX Polish" items before picking one, rather than assuming the wording maps 1:1 onto
+  missing work — found "Error toasts" and "Empty states" already substantially satisfied
+  by existing patterns (friendly-only `#error-banner` on every page since Task 1.3's
+  CR-05; contextual `.empty-state` panels already exist for every "nothing yet" state that
+  matters), and "Esc to cancel" already covered by native `confirm()` dialogs plus
+  `/step2`/`/step3`'s existing inline-edit revert handlers. Picked "Keyboard shortcuts"
+  (`Ctrl+Enter` to generate) as the one genuinely unbuilt, cleanly-scoped item — new
+  `task-2.3b.md`, doc-first plan written before any code. Delivered
+  `frontend/static/js/keyboard_shortcuts.js` on all 7 step pages; caught and fixed a real
+  bug in the module itself (top-level `const` doesn't attach to `window` in a classic
+  script) and two test-writing mistakes (wrong 404-vs-null API contract assumption, a
+  missing `/tts/preview` mock) before either could hide a real defect. 6 new tests, 480
+  total pass. | PM (Claude Code) |
 | 2026-09-11 | BUG-001 auto-logged by vp-audit Tier 1: restore valid machine-readable state | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-002 auto-logged by vp-audit Tier 1: reconcile Phase 1 progress counters | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-003 auto-logged by vp-audit Tier 1: enforce doc-first task gates | `vp-audit`; Backlog |
@@ -236,9 +271,11 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   pointing at system-load-induced timing sensitivity rather than a real defect. 6
   occurrences now (248.22s full-suite run for the 6th; two more during Task 1.7c's
   verification — `test_learning_service.py` (2 tests) at 307.72s, then a *different* test,
-  `test_script_service.py::test_generate_script_non_429_error_does_not_retry`, at 350.80s —
-  both fully consistent with the pattern: slower-than-baseline full-suite runs, instant
-  pass in isolation), tracked in `.viepilot/debug/session-debug-20260912T000000Z.json`
+  `test_script_service.py::test_generate_script_non_429_error_does_not_retry`, at 350.80s
+  — plus one more during Task 2.3b's verification,
+  `test_learning_service.py::test_generate_learning_pack_exhausts_retries_raises`, at
+  453.85s — all fully consistent with the pattern: slower-than-baseline full-suite runs,
+  instant pass in isolation), tracked in `.viepilot/debug/session-debug-20260912T000000Z.json`
   (closed `wontfix` 2026-09-13). If a full-suite run ever shows a Gemini retry/backoff test
   failing, re-run it in isolation before treating it as a real regression — do not block
   on it if isolation passes.

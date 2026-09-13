@@ -398,6 +398,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 2 });
+    KeyboardShortcuts.init({ primaryButtonId: "generate-btn" });
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
     window.addEventListener("beforeunload", (e) => {
       if (state.saveStatus !== "saved" || state.saveQueued) {

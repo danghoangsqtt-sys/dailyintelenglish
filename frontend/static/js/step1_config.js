@@ -326,6 +326,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 1 });
+    KeyboardShortcuts.init({ primaryButtonId: "submit-btn" });
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
 
     renderCefr();
