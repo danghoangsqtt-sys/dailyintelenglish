@@ -292,11 +292,18 @@
 
 ## Acceptance Criteria (Phase 1 Complete)
 
-- [ ] Can create a new project with full configuration
-- [ ] AI generates a grammatically correct, level-appropriate script for any genre + CEFR combination
-- [ ] TTS generates audio for all speakers, mixes into single MP3/WAV
-- [ ] Video exports as MP4 with synced subtitles + SRT file
-- [ ] Thumbnail generates 3+ A/B variants
-- [ ] YouTube package includes complete description + chapters + transcript + vocabulary
-- [ ] All steps persist data (auto-save) — refresh doesn't lose progress
-- [ ] Dark mode works across all pages
+- [x] Can create a new project with full configuration — Task 1.3
+- [x] AI generates a grammatically correct, level-appropriate script for any genre + CEFR combination — Task 1.4
+- [x] TTS generates audio for all speakers, mixes into single MP3/WAV — Tasks 1.6
+- [x] Video exports as MP4 with synced subtitles + SRT file — Task 1.7
+- [x] Thumbnail generates 3+ A/B variants — Task 1.8
+- [ ] YouTube package includes complete description + chapters + transcript + vocabulary —
+  **partially done**: description/chapters/titles/tags done (Task 1.9), but the `.zip`
+  export's `metadata.txt` does not yet include the full transcript or vocabulary/grammar
+  content from Learning Content (Task 1.5) — found during Phase 1 close-out review, not
+  part of Task 1.9's own (narrower) acceptance criteria, tracked as Sub-task 1.9c
+- [x] All steps persist data (auto-save) — refresh doesn't lose progress — verified across
+  Tasks 1.3-1.9 (each step's `GET` route restores state; audio/video/thumbnail/youtube
+  jobs are all re-fetched on page load, not just held in memory)
+- [x] Dark mode works across all pages — `data-theme="dark"` default + `theme.js` toggle,
+  present on every page since Task 1.1/1.2

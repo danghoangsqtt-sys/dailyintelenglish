@@ -3,13 +3,25 @@
 ## Metadata
 - **Phase:** 1
 - **Slug:** 01-full-feature-build
-- **Status:** in_progress
+- **Status:** done (2026-09-13) for all 10 individual task cards' own acceptance criteria.
+  **One gap found during close-out review** against ROADMAP.md's separate, stricter
+  phase-level "Acceptance Criteria (Phase 1 Complete)" checklist: the YouTube `.zip`
+  export doesn't yet include the full transcript or Learning Content
+  (vocabulary/grammar/idioms) — tracked as Sub-task 1.9c, assigned to Codex 2026-09-13.
+  Two further items remain deliberately deferred pending a real user decision (not
+  blocking any task's own acceptance criteria): real OmniVoice GPU voice cloning
+  (Task 1.6, needs a `ref_audio` source) and Level 3 LivePortrait avatar lip-sync
+  (Task 1.7, needs an avatar image source).
 - **Started:** 2026-09-10
-- **Current Day:** Day 3 / 21 (2026-09-12)
-- **Target Completion:** 2026-09-17
-- **Milestone Progress:** 5 / 10 major tasks (50%)
-- **Subtask Progress:** 21 / 29 granular subtasks (72%)
-- **Test Suite Status:** 350 passed (218 unit/integration + 5 browser E2E + 7 dashboard browser E2E + 22 TTS unit/API + 19 music unit/API/browser + 44 thumbnail prompt/service/API/browser + 36 YouTube prompt/service/API/browser), ruff clean. One pre-existing flaky test in `test_script_service.py` observed twice under full-suite load in earlier sessions (not in the most recent run), confirmed passing in isolation both times — tracked, not a regression.
+- **Completed:** 2026-09-13 (Day 3 of a 21-day target — well ahead of schedule)
+- **Milestone Progress:** 10 / 10 major tasks (100%)
+- **Subtask Progress:** 27 / 29 granular subtasks (93% — the 2 remaining are the deferred
+  items above)
+- **Test Suite Status:** 432 passed, ruff clean, all `node --check` clean. One known,
+  accepted flake affecting Gemini retry/backoff-pattern tests under a slow/loaded
+  full-suite run (5 occurrences across 3 unrelated modules, always passes in isolation —
+  tracked in `.viepilot/debug/session-debug-20260912T000000Z.json`, closed `wontfix`), not
+  a real defect.
 
 ---
 
@@ -138,7 +150,10 @@
     17 new tests (11 service/API + 6 real-browser Playwright). 314 total tests pass, ruff clean.
 
 ### Task 1.9: Step 7 — YouTube Package
-- **Status:** ✅ Done (2026-09-13) — both sub-tasks (1.9a, 1.9b) complete
+- **Status:** ✅ Done (2026-09-13) for its own Acceptance Criteria (both sub-tasks 1.9a,
+  1.9b complete). **Sub-task 1.9c open** (assigned to Codex): a Phase 1 close-out review
+  against ROADMAP.md's separate phase-level checklist found the `.zip` export is missing
+  the full transcript + Learning Content — see `tasks/task-1.9c.md`.
 - **Details:** By Claude Code acting as both PM and Implementer (Codex ran out of quota).
   - **1.9a DONE:** `YouTubeService.generate_package()` — 3 Gemini-generated title variants
     (click_worthy/educational/seo), description, tags (`YOUTUBE_TAGS_MAX_CHARS` enforced),
