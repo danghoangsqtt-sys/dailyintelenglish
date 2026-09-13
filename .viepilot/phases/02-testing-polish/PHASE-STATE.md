@@ -8,8 +8,9 @@
 - **Target Completion:** 2026-09-20 (per ROADMAP.md's Day 8-14 target, adjusted forward
   since Phase 1 finished on Day 3 instead of Day 7)
 - **Milestone Progress:** 0 / 3 major tasks fully done (2.1 Quality Testing, 2.2 Bug Fixes
-  & Performance not started; 2.3 UX Polish has 2 of 7 items done)
-- **Test Suite Status:** 480 passed, ruff clean, all `node --check` clean
+  & Performance not started; 2.3 UX Polish has 4 of 7 items done — 2 shipped, 2 audited and
+  found already satisfied with no code change needed)
+- **Test Suite Status:** 482 passed, ruff clean, all `node --check` clean
 
 ---
 
@@ -22,11 +23,13 @@
 - **Status:** ⏳ Planned — no task card yet
 
 ### Task 2.3: UX Polish
-- **Status:** 🔄 In Progress (2 of 7 ROADMAP items done)
+- **Status:** 🔄 In Progress (4 of 7 ROADMAP items resolved — 2 shipped code, 2 audited and
+  found already satisfied)
 - **Details:** ROADMAP.md's "UX Polish" bullet has 7 items; `task-2.3.md` covers the
   first 2 (step progress indicator, breadcrumb navigation), `task-2.3b.md` covers item 3
-  (keyboard shortcuts). The other 4 (auto-save indicator, empty states, error toasts,
-  responsive layout) are not yet assigned to a task card.
+  (keyboard shortcuts), `task-2.3c.md` covers item 5 (error toasts) and closes item 4
+  (empty states) via audit with no code change needed. Only 2 items remain unassigned:
+  auto-save indicator, responsive layout.
   - **Step progress indicator + breadcrumb navigation — DONE (2026-09-13, by Codex,
     PM-accepted):** new `frontend/static/js/step_nav.js` — `StepNav.render(containerId,
     { projectId, currentStep })`, a pure synchronous DOM component (no network/async
@@ -56,3 +59,19 @@
     contract for `GET .../youtube`, and a missing `/tts/preview` mock that silently hit
     the real backend). 6 new Playwright tests, 480 total pass. See `tasks/task-2.3b.md`
     for the full record.
+  - **Error toasts — DONE (2026-09-13, Task 2.3c, PM as Implementer via `/vp-auto`
+    continuation) — also closes "Empty states" via audit:** audited first rather than
+    assuming — all 7 step pages and `music_library.js` already had a working
+    friendly-error system (the latter under different element ids, `#error-message`/
+    `#status-message`, which a naive grep initially missed). The Dashboard (`/`) was the
+    one real gap: a failed project load silently rendered the same "No projects yet."
+    copy as a genuinely empty account, and a failed delete used a raw
+    `alert(err.message)` — the one remaining CR-05 violation in the whole app. Fixed both
+    with the same `#error-banner` pattern already proven everywhere else (new
+    `showError`/`clearError` helpers in `dashboard.js`, a `loadFailed` flag so a failed
+    load never looks like an empty account). "Empty states" needed no code at all —
+    every page that can be meaningfully empty already handles it. 2 new Playwright
+    tests; caught a real test-authoring bug along the way (a dialog handler returning a
+    tuple hid its `dialog.accept()` coroutine from Playwright's fire-and-forget
+    scheduling, deadlocking a `confirm()` dialog). 482 total tests pass. See
+    `tasks/task-2.3c.md` for the full record.

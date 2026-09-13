@@ -51,6 +51,17 @@
       padding: 0 40px 80px;
     }
 
+    #error-banner {
+      padding: 14px 18px;
+      border-radius: 10px;
+      background: rgba(248, 81, 73, 0.1);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
     .toolbar {
       display: flex;
       align-items: center;
@@ -215,6 +226,8 @@
         <input id="search-input" type="text" placeholder="Search projects..." />
       </div>
     </div>
+
+    <div id="error-banner" role="alert" hidden></div>
 
     <div id="project-grid" class="project-grid"></div>
 

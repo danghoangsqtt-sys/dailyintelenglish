@@ -278,8 +278,18 @@
   when it's genuinely visible and not disabled. `Esc` needed no code — every confirm-gated
   action already uses native `window.confirm()` (Escape-cancelable for free), and the two
   pages with inline-edit-then-commit fields (`/step2`, `/step3`) already revert on Escape
-- [ ] **Empty states**: helpful messages when no projects / no music library
-- [ ] **Error toasts**: user-friendly error messages (not stack traces)
+- [x] **Empty states**: helpful messages when no projects / no music library — audited
+  2026-09-13 (Task 2.3c) and found already satisfied: Dashboard's `#empty-state` and Music
+  Library's `#empty-state` both already show a helpful message when their list is
+  genuinely empty (distinct from a load *failure*, fixed separately under "Error toasts"
+  above); `/step1` is a pure form with no "empty" concept and `/step7`'s `#generate-panel`
+  already serves as its own empty/call-to-action state. No code change needed
+- [x] **Error toasts**: user-friendly error messages (not stack traces) — done 2026-09-13
+  (Task 2.3c). Audited first: all 7 step pages and `music_library.js` already had a
+  working friendly-error system; the Dashboard was the one real gap (a failed project
+  load silently rendered the misleading "No projects yet" empty state, and a failed
+  delete used a raw `alert(err.message)`). Both fixed with the same `#error-banner`
+  pattern used everywhere else — no new UI paradigm introduced
 - [ ] **Responsive layout**: works at 1024px width minimum
 
 ---

@@ -3,6 +3,20 @@
   let allProjects = [];
   let activeFilter = "all";
   let searchTerm = "";
+  let loadFailed = false;
+
+  function showError(message) {
+    const banner = document.getElementById("error-banner");
+    banner.textContent = message;
+    banner.hidden = false;
+    banner.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function clearError() {
+    const banner = document.getElementById("error-banner");
+    banner.textContent = "";
+    banner.hidden = true;
+  }
 
   const STATUS_LABELS = {
     draft: "Draft",
@@ -55,6 +69,15 @@
       return matchesFilter && matchesSearch;
     });
 
+    if (loadFailed) {
+      // A failed load must never look identical to a genuinely empty account —
+      // the error banner already explains what happened, so show neither the
+      // grid nor the "No projects yet" copy here.
+      grid.innerHTML = "";
+      emptyState.hidden = true;
+      return;
+    }
+
     if (filtered.length === 0) {
       grid.innerHTML = "";
       emptyState.hidden = false;
@@ -71,9 +94,13 @@
   async function loadProjects() {
     try {
       allProjects = await Api.listProjects();
+      loadFailed = false;
+      clearError();
     } catch (err) {
       console.error("Failed to load projects:", err);
       allProjects = [];
+      loadFailed = true;
+      showError("We couldn't load your projects. Please refresh the page.");
     }
     render();
   }
@@ -115,9 +142,11 @@
         try {
           await Api.deleteProject(id);
           allProjects = allProjects.filter((p) => p.id !== id);
+          clearError();
           render();
         } catch (err) {
-          alert(`Failed to delete project: ${err.message}`);
+          console.error("Failed to delete project:", err);
+          showError("We couldn't delete this project. Please try again.");
         }
       }
 

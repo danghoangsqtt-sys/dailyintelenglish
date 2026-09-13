@@ -213,3 +213,73 @@ async def test_dashboard_delete_removes_card_after_confirm(browser_instance: Bro
     await page.wait_for_selector("[data-id='proj-complete-1']", state="detached")
     assert await page.locator(".project-card").count() == 2
     await page.close()
+
+
+@pytest.mark.asyncio
+async def test_dashboard_load_failure_shows_error_banner_not_misleading_empty_state(
+    browser_instance: Browser, live_server_url: str
+):
+    """A failed load must never look identical to a genuinely empty account (Task 2.3c)."""
+    page = await browser_instance.new_page()
+
+    async def handle_routes(route):
+        if route.request.url.endswith("/api/projects") and route.request.method == "GET":
+            await route.fulfill(
+                status=500,
+                content_type="application/json",
+                body=json.dumps({"success": False, "data": None, "error": "Database connection lost"}),
+            )
+        else:
+            await route.continue_()
+
+    await page.route("**/api/projects", handle_routes)
+    await page.goto(f"{live_server_url}/")
+
+    await page.wait_for_selector("#error-banner:not([hidden])")
+    banner_text = await page.text_content("#error-banner")
+    assert "couldn't load" in banner_text.lower()
+    assert "Database connection lost" not in banner_text
+    assert await page.locator("#empty-state:not([hidden])").count() == 0
+    assert await page.locator(".project-card").count() == 0
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_dashboard_delete_failure_shows_error_banner_not_native_alert(
+    browser_instance: Browser, live_server_url: str
+):
+    """The delete failure path must use the friendly banner, never a raw alert() (Task 2.3c)."""
+    page = await browser_instance.new_page()
+    await _mock_list_projects(page, MOCK_PROJECTS)
+
+    async def handle_delete(route):
+        if route.request.method == "DELETE":
+            await route.fulfill(
+                status=500,
+                content_type="application/json",
+                body=json.dumps({"success": False, "data": None, "error": "Disk write failed"}),
+            )
+        else:
+            await route.continue_()
+
+    await page.route("**/api/projects/proj-complete-1", handle_delete)
+    dialog_messages = []
+
+    def handle_dialog(dialog):
+        dialog_messages.append(dialog.message)
+        return dialog.accept()
+
+    page.on("dialog", handle_dialog)
+
+    await page.goto(f"{live_server_url}/")
+    await page.wait_for_selector("[data-id='proj-complete-1']")
+    await page.click("[data-id='proj-complete-1'] [data-action='delete']")
+
+    await page.wait_for_selector("#error-banner:not([hidden])")
+    banner_text = await page.text_content("#error-banner")
+    assert "couldn't delete" in banner_text.lower()
+    assert "Disk write failed" not in banner_text
+    # Only the confirm() dialog should have fired — never a second alert() with raw error text.
+    assert dialog_messages == ["Delete this project? This cannot be undone."]
+    assert await page.locator("[data-id='proj-complete-1']").count() == 1
+    await page.close()

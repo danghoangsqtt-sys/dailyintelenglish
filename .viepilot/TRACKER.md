@@ -109,7 +109,7 @@ required for any task's own acceptance criteria]. Progress reflects completed su
 ### 2.2 Bug Fixes & Performance
 - [ ] No task card yet
 
-### 2.3 UX Polish (2/7 ROADMAP items done)
+### 2.3 UX Polish (4/7 ROADMAP items resolved — 2 shipped code, 2 audited/already satisfied)
 - [x] Step progress indicator + breadcrumb navigation — done 2026-09-13, by Codex,
   PM-accepted. New `frontend/static/js/step_nav.js` (`StepNav.render()`, pure synchronous
   DOM, no network) mounted on all 7 step pages showing "Step X of 7" + 7 clickable pills;
@@ -140,8 +140,25 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   and a missing `/tts/preview` mock that let `/step4`'s generate flow silently hit the
   real, unmocked backend and fail before ever reaching `/audio/generate`). 6 new
   Playwright tests (`/step2`, `/step4`, `/step7`), 480 total pass. See `task-2.3b.md` for
-  the full record. The other 4 UX Polish items (auto-save indicator, empty states, error
-  toasts, responsive layout) still have no task card.
+  the full record.
+- [x] Error toasts — done 2026-09-13, Task 2.3c, PM as Implementer (`/vp-auto` autonomous
+  continuation). Audited first: all 7 step pages and `music_library.js` already had a
+  working friendly-error system (the latter under different element ids — a naive
+  `error-banner` grep missed it, not a real gap). The Dashboard was the one real gap: a
+  failed project load silently rendered "No projects yet." — indistinguishable from a
+  genuinely empty account — and a failed delete used a raw `alert(err.message)`, the last
+  remaining CR-05 violation in the app. Fixed both with the same `#error-banner` pattern
+  already used everywhere else; new `loadFailed` flag stops a failed load from ever
+  looking like an empty account. 2 new Playwright tests; caught a real test-authoring bug
+  along the way (a dialog handler returning a tuple hid its `dialog.accept()` coroutine
+  from Playwright's fire-and-forget scheduling, deadlocking a `confirm()` dialog — fixed
+  by using a named function that returns the coroutine directly). 482 total pass.
+- [x] Empty states — closed 2026-09-13 via audit alongside Task 2.3c, no code needed:
+  Dashboard and Music Library both already show a helpful message for a genuinely empty
+  list; `/step1` is a pure form with nothing to be "empty"; `/step7`'s `#generate-panel`
+  already serves as its own empty/call-to-action state.
+- Remaining 2 UX Polish items (auto-save indicator, responsive layout) still have no task
+  card.
 
 ## Decision Log
 
@@ -198,6 +215,21 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   script) and two test-writing mistakes (wrong 404-vs-null API contract assumption, a
   missing `/tts/preview` mock) before either could hide a real defect. 6 new tests, 480
   total pass. | PM (Claude Code) |
+| 2026-09-13 | `/vp-auto` continuation ("tiếp tục"): re-audited the two "substantially
+  satisfied" UX Polish items from the previous entry — "Error toasts" and "Empty states"
+  — with a real page-by-page check rather than resting on the earlier high-level read.
+  Found `music_library.js` genuinely already covers "Error toasts" (different element
+  ids than the step-page convention, which a naive grep had missed), but the Dashboard
+  (`/`) had two real, confirmed gaps: a failed project load silently rendered "No
+  projects yet." — indistinguishable from a genuinely empty account — and a failed
+  delete used a raw `alert(err.message)`, the last remaining CR-05 violation anywhere in
+  the app. New `task-2.3c.md`, doc-first plan first. Fixed both with the same
+  `#error-banner` pattern already proven on every step page; "Empty states" needed no
+  code at all once checked (every page that can be meaningfully empty already handles
+  it). 2 new Playwright tests; caught a real test-authoring bug along the way (a dialog
+  handler returning a tuple hid its `dialog.accept()` coroutine from Playwright's
+  fire-and-forget scheduling, deadlocking a `confirm()` dialog). Full suite: 482 passed,
+  0 failures, no flake this run. | PM (Claude Code) |
 | 2026-09-11 | BUG-001 auto-logged by vp-audit Tier 1: restore valid machine-readable state | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-002 auto-logged by vp-audit Tier 1: reconcile Phase 1 progress counters | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-003 auto-logged by vp-audit Tier 1: enforce doc-first task gates | `vp-audit`; Backlog |
