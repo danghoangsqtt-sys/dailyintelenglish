@@ -3,18 +3,18 @@
     "version":  "0.1.0",
     "crystallize_version":  "0.8.0",
     "crystallized_at":  "2026-09-10T07:56:00+07:00",
-    "status":  "phase_1_in_progress",
-    "current_phase":  1,
+    "status":  "phase_2_in_progress",
+    "current_phase":  2,
     "tech_stack":  {
                        "backend":  "Python 3.11+ / FastAPI / Uvicorn",
                        "frontend":  "HTML5 + Vanilla CSS + Vanilla JS",
                        "ai":  "Google Gemini API (gemini-3.8-flash)",
-                       "tts_primary":  "OmniVoice (k2-fsa) local GPU",
-                       "tts_backup":  "Edge TTS (online free)",
-                       "tts_offline":  "Piper TTS",
+                       "tts_primary":  "Edge TTS (sole official engine, decided 2026-09-13 -- see key_decisions)",
+                       "tts_backup":  "n/a -- Edge TTS is the only official engine now",
+                       "tts_offline":  "Piper TTS (availability-checked, not actively used)",
                        "audio":  "pydub + ffmpeg",
-                       "video":  "ffmpeg + LivePortrait",
-                       "thumbnail":  "Pillow + Gemini Vision",
+                       "video":  "ffmpeg + burned-in subtitles (Level 2). LivePortrait (Level 3) not started -- see key_decisions",
+                       "thumbnail":  "Pillow + Gemini text/palette suggestions",
                        "database":  "SQLite (aiosqlite)",
                        "storage":  "Local filesystem"
                    },
@@ -27,19 +27,23 @@
                    "1":  {
                              "name":  "Full Feature Build",
                              "days":  "1-7",
-                             "status":  "in_progress",
-                             "tasks_done":  21,
-                             "tasks_total":  29
+                             "status":  "complete",
+                             "tasks_done":  10,
+                             "tasks_total":  10,
+                             "subtasks_done":  28,
+                             "subtasks_total":  30,
+                             "note":  "All 10 major tasks (1.1-1.10) done, including Sub-task 1.9c which closed the one gap found in Phase 1 close-out review. 2 of 30 discrete subtasks remain permanently open, neither blocking any task's own acceptance criteria: real OmniVoice GPU inference (Task 1.6, decided 2026-09-13 not to pursue) and LivePortrait lip-sync inference (Task 1.7, avatar-sourcing question resolved via Sub-task 1.7c but the model integration itself not started)."
                          },
                    "2":  {
-                             "name":  "Testing \u0026 Polish",
+                             "name":  "Testing & Polish",
                              "days":  "8-14",
-                             "status":  "not_started",
-                             "tasks_done":  0,
-                             "tasks_total":  10
+                             "status":  "in_progress",
+                             "tasks_done":  1,
+                             "tasks_total":  3,
+                             "note":  "Task 2.3 UX Polish: DONE, all 7 ROADMAP items resolved (4 shipped code, 3 closed via audit with no code needed). Task 2.2 Bug Fixes & Performance: done for its buildable scope (blocking-calls fix shipped, 429-retry closed via audit) -- 'Add progress cancellation' explicitly left open as a separate future task (needs a real architectural change, not a quick fix), 'Optimize OmniVoice batch' is moot post-decision. Task 2.1 Quality Testing: NOT STARTED -- this is a manual QA campaign (generate/review real scripts across CEFR levels+genres, multi-accent TTS listening, audio/video quality checks), not autonomous coding work the way the other Phase 2 tasks were."
                          },
                    "3":  {
-                             "name":  "Review \u0026 Documentation",
+                             "name":  "Review & Documentation",
                              "days":  "15-21",
                              "status":  "not_started",
                              "tasks_done":  0,
@@ -47,31 +51,32 @@
                          }
                },
     "key_decisions":  [
-                          "Subtitle: burned-in + SRT (both)",
-                          "TTS: build own pipeline (OmniVoice primary)",
-                          "Thumbnail: Template + AI fill + Manual editor",
-                          "Video: Level 3 with Level 2 fallback",
-                          "Lips-sync: LivePortrait (primary) \u003e MuseTalk \u003e SadTalker",
+                          "Subtitle: burned-in + SRT (both) -- delivered, Task 1.7a",
+                          "TTS: Edge TTS is the SOLE official engine (superseding the original 'OmniVoice primary' decision -- see 2026-09-13 entry below)",
+                          "Thumbnail: Template + AI fill + Manual editor -- delivered, Task 1.8",
+                          "Video: Level 2 (background+subtitle) delivered Task 1.7a/b; Level 3 (LivePortrait) not started -- see 2026-09-13 entry below",
                           "All env vars namespaced under DIE_ prefix to avoid collisions with system env vars",
                           "ProjectUpdate rejects explicit null, num_speakers/speakers change atomically, status advances one step at a time only",
                           "config_json recomputed from merged state on every project update, not only at creation",
-                          "Task 1.3 closed: Script Config UI (step1_config.html/js) live at /step1, submits via Api.createProject only, num_speakers sanitized to an integer 1-6, topic required, API errors shown only as a fixed friendly banner (raw errors to console)",
-                          "Task 1.4 ScriptService closed: generate_script + regenerate_line + script persistence (save_script/get_script/get_script_line/update_script_line) + 3 API routes (generate/regenerate/PUT script), 153 tests",
-                          "Task 1.4 CLOSED: Script Generation UI (step2_script.html/js) replaces the step2 placeholder, loads persisted script via new GET /api/projects/{id}/script, generate/save auto-advance draft->script_generated, Dashboard Continue wired. 160 tests",
-                          "1.4D-FIX2 gate CLOSED: step2_script.js autosave resyncs line ids from the PUT response and serializes overlapping saves (coalesced trailing save), Regenerate disabled while a save is in flight, Generate panel stays hidden when the existing script fails to load, script-save+status-advance merged into one transaction with rollback, GEMINI_MODEL moved gemini-2.0-flash (shut down) -> gemini-3.8-flash. 163 tests",
-                          "1.4D-FIX2B gate CLOSED: replaced the FIX2 per-project asyncio.Lock with one connection-wide _write_lock (app/api/projects.py::_write_transaction) applied to every write route, 166 tests passed (commit fc7b471)",
-                          "Task 1.5 CLOSED: Step 3 Learning Content (prompt template, LearningContentService, API routes POST/GET/PUT, step3_learning.html/js UI with 4 tabs, coalesced trailing autosave, regenerate confirm, 223 tests passed (218 unit/integration + 5 browser E2E))",
-                          "Sprint 1.5R stabilization CLOSED: all 15 BUG-001..012/ENH-001..003 requests accepted by PM (2 required no code change on reflection: intentional TRACKER.md markdown hard-break, and Gemini temperature deliberately left unset so Regenerate keeps returning varied content)",
-                          "Task 1.2 CLOSED: Dashboard UI automated browser tests (tests/test_dashboard_browser.py, 7 Playwright tests) close the last open acceptance criterion, no production code changes needed. 230 tests passed",
-                          "Task 1.6 Sub-task 1.6a CLOSED (Edge-TTS-first): TTSService.synthesize_line() with EDGE_TTS_VOICE_MAP (10 accents x 3 genders, live-verified 20/20), OmniVoice path honestly unavailable (no model weights) with semaphore(2) + fallback, POST /api/projects/{id}/tts/preview route, retry-once-on-empty-audio fix found via live testing. 1.6b (AudioService) and 1.6c (UI) deferred pending ffmpeg. 252 tests passed",
-                          "Codex joined as second AI Implementer (Claude Code stays PM); SYSTEM-RULES.md AR-06 generalized to PM-Implementer, docs/CODEX_CODE_PROMPT.md added. Codex correctly self-deferred Task 1.6 Sub-task 1.6b after finding no ffmpeg/pydub in its sandbox; redirected to Task 1.10 Sub-task 1.10a (ffmpeg-independent Music Library UI) instead, PM-accepted 2026-09-12 after independent re-verification: upload/list/preview/delete at /music, 50MB limit, magic-byte validation, atomic no-clobber duplicate naming (real concurrency-tested). 271 tests passed. Confirmed pydub also fails on Python 3.14 (ModuleNotFoundError: audioop) independent of ffmpeg -- needs audioop-lts before 1.6b/1.10b",
-                          "Task 1.8 Sub-task 1.8a CLOSED (Thumbnail Generator backend, by Codex): Gemini text/palette suggestions via responseJsonSchema, 5 deterministic Pillow templates using Pillow's embedded scalable default font (no system font path), rollback-safe render+persist sequencing, safe content route. PM independently re-rendered all 5 templates and confirmed real image quality before accepting. 27 new tests, 298 tests passed. Sub-task 1.8b (UI editor) deferred pending its own plan",
-                          "Task 1.8 CLOSED (fully done): Sub-task 1.8b (interactive UI) by Codex -- template gallery, generate/regenerate, favorite selection (atomic single-UPDATE), manual headline/color editor with true SQL-level optimistic-concurrency compare-and-swap re-render, revision-token cache-busted asset URLs, Step2/3-style async-safety state machine. Codex's session ran out of quota mid-task before writing evidence; PM independently verified/completed acceptance from the actual code plus a fresh full test run. 17 new tests, 314 tests passed. Phase 1: 5/10 major tasks (50%), 19/29 subtasks (66%)",
-                          "Codex ran out of quota entirely; Claude Code took over as both PM and Implementer. Task 1.9 Sub-task 1.9a CLOSED: YouTubeService.generate_package() -- 3 Gemini title variants, description, tags, honestly-estimated chapters (no real audio yet). New migration 003_youtube_package.sql (dropped/recreated the never-used youtube_packages table). /step7 read-only UI. Caught and fixed 2 real bugs pre-landing: tag-whitespace DB round-trip (unit test) and a [hidden]-vs-CSS-specificity bug on #generate-panel (caught only by a real browser test). 36 new tests, 350 tests passed. Sub-task 1.9b (zip export) deferred pending Task 1.7/ffmpeg. Phase 1: 5/10 major tasks (50%), 21/29 subtasks (72%)"
+                          "--- Phase 1 completion summary (2026-09-10 through 2026-09-13, Day 3 of 21 -- well ahead of schedule) ---",
+                          "Tasks 1.1-1.5 delivered across early sessions: Project setup, Dashboard, Script Config wizard, AI script generation (ScriptService + Step 2 UI), Learning Content (Step 3). Sprint 1.5R stabilization closed all 15 BUG/ENH requests.",
+                          "Codex joined as second AI Implementer 2026-09-12 (Claude Code stays PM, SYSTEM-RULES.md AR-06 contract). Codex delivered: Task 1.10 Sub-task 1.10a (Music Library UI, ffmpeg-independent), Task 1.8 (Thumbnail Generator, both sub-tasks -- 1.8b's evidence reconstructed by PM after Codex ran out of quota mid-task), Task 1.9 Sub-task 1.9a (YouTube package text generation), Task 2.3's step-progress+breadcrumb slice, Task 1.9c (transcript+Learning Content export). Codex ran out of quota multiple times across the session; each time PM independently re-verified the actual code/tests from scratch rather than trusting a partial report, per AR-06.",
+                          "Claude Code (PM) took over as Implementer too whenever Codex was out of quota: Task 1.6 (TTS Audio Studio, all 3 sub-tasks), Task 1.7 (Video Studio, all 3 sub-tasks incl. 1.7c avatar upload), Task 1.9 Sub-tasks 1.9a/1.9b, Task 1.10 Sub-task 1.10c (waveform viz), and all of Phase 2 so far.",
+                          "Phase 1 CLOSED 2026-09-13: all 10 major tasks done (10/10, 100%), including Sub-task 1.9c which closed the one gap found in a close-out review against ROADMAP.md's stricter phase-level 'Acceptance Criteria (Phase 1 Complete)' checklist (transcript+vocabulary was missing from the YouTube .zip export).",
+                          "--- 2026-09-13: Two long-deferred Phase 1 decisions resolved by the user (via AskUserQuestion, PM presented tradeoffs rather than picking silently) ---",
+                          "DECIDED: Real OmniVoice GPU voice-cloning integration will NOT be pursued. The actual k2-fsa/OmniVoice API is zero-shot voice cloning requiring a reference audio sample, not the natural-language 'voice design' the original ROADMAP envisioned -- and raises consent/rights questions the project can't resolve on its own. Edge TTS (already working, 10 accents x 3 genders, live-verified) is now the SOLE official TTS engine. Implemented: SpeakerConfig.tts_engine now defaults to edge_tts, Step 4's per-speaker engine picker (a dead choice) removed. OmniVoice's semaphore/fallback code stays in place as an honest, still-tested branch -- just no longer a build target.",
+                          "DECIDED: LivePortrait avatar images will be user-uploaded (matches the original ROADMAP design -- never app-generated likenesses). Sub-task 1.7c delivered: app/services/avatar_service.py (magic-byte-checked PNG/JPEG upload, 8MB cap, one file per speaker), POST/GET/DELETE /api/projects/{id}/speakers/{id}/avatar, /step5 upload/preview/remove UI. Real LivePortrait lip-sync model integration itself remains a separate, NOT-YET-STARTED future effort -- this only unblocked the avatar-sourcing question, not the inference pipeline.",
+                          "--- Phase 2 progress (2026-09-13 onward) ---",
+                          "Task 2.3 UX Polish CLOSED (all 7 ROADMAP items resolved): (1)+(2) step progress indicator + breadcrumb nav (StepNav.render(), all 7 step pages, by Codex). (3) Keyboard shortcuts: Ctrl+Enter triggers each page's primary button when visible+enabled (KeyboardShortcuts.init()); Esc-to-cancel already covered by native confirm() dialogs + existing inline-edit revert handlers, no code needed there. (4) Empty states: audited, already satisfied everywhere it matters, no code needed. (5) Error toasts: Dashboard had 2 real gaps (misleading empty-state on load failure, raw alert() on delete failure) -- fixed with the same #error-banner pattern used everywhere else; music_library.js already had an equivalent system under different element ids. (6) Auto-save indicator: new shared save_indicator.js mounted in the header of /step2, /step3, /step6 (the 3 pages with a real page-level autosave concept), purely additive alongside each page's existing inline indicator -- /step4 (per-field autosave, no single document) and pages with no autosave concept intentionally excluded. (7) Responsive layout: audited at 1024px, zero horizontal overflow anywhere already (thanks to repeat(auto-fit, minmax(...)) grids + one existing @media rule) -- closed via a new permanent 9-page regression suite, no code change needed.",
+                          "Task 2.2 Bug Fixes & Performance done for its buildable scope: fixed 4 real event-loop-blocking calls (video_service.generate_video, tts_service.synthesize_line -- a per-line hot path, audio_service.mix_project, app/api/tts.py's list_engines) by wrapping them in asyncio.to_thread; zero behavior change (55 pre-existing tests pass unmodified). 'Fix Gemini retry logic for 429' was already done since Phase 1 -- closed via audit. 'Optimize OmniVoice batch' is moot post-decision. 'Add progress cancellation (stop mid-generation)' explicitly LEFT OPEN, not closed -- every generation route is a synchronous request/response call with no background-job/cancellation mechanism anywhere; building real cancellation needs an architectural change, correctly recognized as too large for this slice.",
+                          "Test suite at end of this entry: 493 tests passing (0 failures on a clean run; a documented, tracked Gemini-retry-pattern timing flake occasionally trips exactly one test during an unusually slow full-suite run -- always passes in isolation, tracked in .viepilot/debug/session-debug-20260912T000000Z.json, closed wontfix). Latest commit: 98ba6b8, pushed, working tree clean.",
+                          "NEXT UP for Phase 2: Task 2.1 Quality Testing (CEFR accuracy across levels/genres, multi-accent TTS listening review, audio quality checks, video/subtitle sync checks) -- this is a manual QA campaign requiring real Gemini API usage and human judgment, not a code-audit-and-close task like the others. No task card yet. Separately, 'progress cancellation' (Task 2.2) and real LivePortrait lip-sync integration (Task 1.7) remain deferred, larger future efforts whenever picked up."
                       ],
     "open_questions":  [
-
+                           "Who reviews Task 2.1's Quality Testing campaign output (CEFR accuracy, TTS accent quality, audio/video checks) -- the user, or can PM+Implementer do a reasonable automated-proxy pass and flag anything needing human judgment?",
+                           "Is 'progress cancellation' (Task 2.2, deferred) and/or real LivePortrait lip-sync (Task 1.7, deferred) worth scoping as a real task soon, or should Phase 2 continue toward Task 2.1 / Phase 3 first?"
                        ],
     "profile_id":  "none",
-    "repository":  "https://github.com/danghoangsqtt-sys/dailyintelenglish"
+    "repository":  "https://github.com/danghoangsqtt-sys/dailyintelenglish",
+    "codex_availability":  "Quota restored 2026-09-14 per the user -- available again as second AI Implementer under the existing AR-06 PM-Implementer contract (docs/CODEX_CODE_PROMPT.md, .viepilot/SYSTEM-RULES.md)."
 }
