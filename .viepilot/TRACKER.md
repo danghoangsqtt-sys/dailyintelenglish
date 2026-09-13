@@ -109,7 +109,7 @@ required for any task's own acceptance criteria]. Progress reflects completed su
 ### 2.2 Bug Fixes & Performance
 - [ ] No task card yet
 
-### 2.3 UX Polish (6/7 ROADMAP items resolved — 3 shipped code, 3 audited/already satisfied)
+### 2.3 UX Polish — ✅ DONE (2026-09-13), all 7/7 ROADMAP items resolved (4 shipped code, 3 audited/already satisfied)
 - [x] Step progress indicator + breadcrumb navigation — done 2026-09-13, by Codex,
   PM-accepted. New `frontend/static/js/step_nav.js` (`StepNav.render()`, pure synchronous
   DOM, no network) mounted on all 7 step pages showing "Step X of 7" + 7 clickable pills;
@@ -164,7 +164,17 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   (max-width: 1180px)` rule (already covers 1024px). No code change needed. New
   permanent `tests/test_responsive_layout_browser.py` (9 tests) pins the finding. 491
   total pass.
-- Only "auto-save indicator" remains unassigned in the 7-item "UX Polish" bullet.
+- [x] Auto-save indicator — closed 2026-09-13, Task 2.3e, PM as Implementer (`/vp-auto`
+  autonomous continuation). New shared `frontend/static/js/save_indicator.js`
+  (`SaveIndicator.mount()`, same pattern as `StepNav`/`KeyboardShortcuts`) mounted in the
+  header of `/step2`, `/step3`, `/step6` — the 3 pages with an existing page-level
+  autosave state machine — as an addition alongside each page's existing inline
+  `#save-status` element, wired via one new line inside each page's existing central
+  setter function. `/step4` (per-speaker-field autosave, no single "document" concept)
+  and `/step1`/`/step5`/`/step7`/Dashboard/Music Library (no page-level autosave concept)
+  intentionally excluded. 2 new Playwright tests; existing autosave-race suite re-run
+  unmodified and still passes. 493 total pass. **This closes Task 2.3 entirely — all 7
+  "UX Polish" ROADMAP items resolved.**
 
 ## Decision Log
 
@@ -252,6 +262,22 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   (`tests/test_responsive_layout_browser.py`) so this can't silently regress later — no
   production code touched. 491 total pass. This closes 6 of ROADMAP.md's 7 "UX Polish"
   items; only "auto-save indicator" remains unassigned. | PM (Claude Code) |
+| 2026-09-13 | `/vp-auto` continuation: tackled the last "UX Polish" item, "Auto-save
+  indicator" — the one already flagged as genuinely bigger than a pure audit (unlike the
+  prior 2 items) since it touches 3 pages' existing, tested autosave state machines.
+  Audited exactly which pages have a real page-level autosave concept first:
+  `/step2`/`/step3`/`/step6` each already have one central save-status setter function
+  (BUG-012/Task 1.8b); `/step4` autosaves per-speaker-field independently with no single
+  "document" to reflect; `/step1`/`/step5`/`/step7`/Dashboard/Music Library have no
+  page-level autosave concept at all. New `task-2.3e.md` scoped to exactly the 3 pages
+  that qualify, as a purely *additive* change (new shared `save_indicator.js` header
+  component, one new line inside each page's existing setter function) — deliberately
+  not touching or relocating the existing inline `#save-status` elements, so
+  `tests/test_ui_async_browser.py`'s existing autosave-race assertions needed zero
+  changes and were re-run unmodified to prove it. 2 new Playwright tests, 493 total pass.
+  **This closes Task 2.3 entirely — all 7 ROADMAP.md "UX Polish" items now resolved**
+  (4 shipped code across 2.3/2.3b/2.3e, 3 closed via audit with no code change across
+  2.3c/2.3d). | PM (Claude Code) |
 | 2026-09-11 | BUG-001 auto-logged by vp-audit Tier 1: restore valid machine-readable state | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-002 auto-logged by vp-audit Tier 1: reconcile Phase 1 progress counters | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-003 auto-logged by vp-audit Tier 1: enforce doc-first task gates | `vp-audit`; Backlog |

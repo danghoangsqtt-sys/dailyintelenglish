@@ -33,6 +33,14 @@
       gap: 12px;
     }
 
+    .save-indicator {
+      min-width: 0;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .save-indicator[data-status="failed"] { color: var(--danger); }
+
     .main {
       max-width: 860px;
       margin: 0 auto;
@@ -220,6 +228,7 @@
   <header class="topbar">
     <div class="logo">🎙️ Daily Intel English Studio</div>
     <div class="topbar-actions">
+      <span id="save-indicator" class="save-indicator"></span>
       <a href="/" class="btn btn-ghost btn-sm">← Dashboard</a>
       <button id="theme-toggle" class="icon-toggle" aria-label="Toggle dark/light mode">☀️</button>
     </div>
@@ -255,6 +264,7 @@
   <script src="/static/js/api.js"></script>
   <script src="/static/js/step_nav.js"></script>
   <script src="/static/js/keyboard_shortcuts.js"></script>
+  <script src="/static/js/save_indicator.js"></script>
   <script src="/static/js/step2_script.js"></script>
 </body>
 </html>

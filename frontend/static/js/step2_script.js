@@ -16,6 +16,8 @@
     scriptLoadFailed: false,
   };
 
+  let saveIndicator = null;
+
   function escapeHtml(str) {
     const div = document.createElement("div");
     div.textContent = str == null ? "" : str;
@@ -44,6 +46,7 @@
 
   function setSaveStatusState(newStatus, customMessage) {
     state.saveStatus = newStatus;
+    if (saveIndicator) saveIndicator.update(newStatus);
     const el = document.getElementById("save-status");
     if (!el) return;
     if (newStatus === "saving") {
@@ -399,6 +402,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 2 });
     KeyboardShortcuts.init({ primaryButtonId: "generate-btn" });
+    saveIndicator = SaveIndicator.mount("save-indicator");
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
     window.addEventListener("beforeunload", (e) => {
       if (state.saveStatus !== "saved" || state.saveQueued) {

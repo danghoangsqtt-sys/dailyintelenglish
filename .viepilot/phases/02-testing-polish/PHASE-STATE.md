@@ -7,10 +7,9 @@
 - **Started:** 2026-09-13
 - **Target Completion:** 2026-09-20 (per ROADMAP.md's Day 8-14 target, adjusted forward
   since Phase 1 finished on Day 3 instead of Day 7)
-- **Milestone Progress:** 0 / 3 major tasks fully done (2.1 Quality Testing, 2.2 Bug Fixes
-  & Performance not started; 2.3 UX Polish has 6 of 7 items resolved — 3 shipped code, 3
-  audited and found already satisfied with no code change needed)
-- **Test Suite Status:** 491 passed, ruff clean, all `node --check` clean
+- **Milestone Progress:** 1 / 3 major tasks fully done (2.3 UX Polish — ✅ DONE, all 7
+  ROADMAP items resolved; 2.1 Quality Testing and 2.2 Bug Fixes & Performance not started)
+- **Test Suite Status:** 493 passed, ruff clean, all `node --check` clean
 
 ---
 
@@ -22,14 +21,13 @@
 ### Task 2.2: Bug Fixes & Performance
 - **Status:** ⏳ Planned — no task card yet
 
-### Task 2.3: UX Polish
-- **Status:** 🔄 In Progress (6 of 7 ROADMAP items resolved — only "auto-save indicator"
-  remains unassigned)
-- **Details:** ROADMAP.md's "UX Polish" bullet has 7 items; `task-2.3.md` covers the
+### Task 2.3: UX Polish — ✅ DONE (2026-09-13), all 7 ROADMAP items resolved
+- **Status:** ✅ Done
+- **Details:** ROADMAP.md's "UX Polish" bullet had 7 items; `task-2.3.md` covers the
   first 2 (step progress indicator, breadcrumb navigation), `task-2.3b.md` covers item 3
   (keyboard shortcuts), `task-2.3c.md` covers item 5 (error toasts) and closes item 4
-  (empty states) via audit, `task-2.3d.md` closes item 7 (responsive layout) via audit.
-  Only "auto-save indicator" remains unassigned.
+  (empty states) via audit, `task-2.3d.md` closes item 7 (responsive layout) via audit,
+  `task-2.3e.md` covers item 6 (auto-save indicator) and closes this task entirely.
   - **Step progress indicator + breadcrumb navigation — DONE (2026-09-13, by Codex,
     PM-accepted):** new `frontend/static/js/step_nav.js` — `StepNav.render(containerId,
     { projectId, currentStep })`, a pure synchronous DOM component (no network/async
@@ -84,3 +82,19 @@
     tests, one per page, realistic mocked data reused from each page's own existing test
     fixtures) pins the finding so it can't silently regress. 491 total tests pass. See
     `tasks/task-2.3d.md` for the full record.
+  - **Auto-save indicator — DONE (2026-09-13, Task 2.3e, PM as Implementer via `/vp-auto`
+    continuation) — closes Task 2.3 entirely:** new shared
+    `frontend/static/js/save_indicator.js` (`SaveIndicator.mount()`, same pattern as
+    `StepNav`/`KeyboardShortcuts`) mounted in the header of `/step2`, `/step3`, `/step6`
+    — the 3 pages with an existing page-level `saved`/`dirty`/`saving`/`failed` state
+    machine (BUG-012/Task 1.8b) — as an addition alongside each page's existing inline
+    `#save-status` element, wired via exactly one new line inside each page's existing
+    central setter function. `/step4` (per-speaker-field autosave, no single "document"
+    concept), `/step1`/`/step5`/`/step7`/Dashboard/Music Library (no page-level autosave
+    concept) intentionally excluded — documented reasoning per page, same class of
+    deliberate scope cut as this session's prior sub-tasks. 2 new Playwright tests
+    (`/step2`, `/step6` — the two distinct setter-function implementations); the existing
+    `tests/test_ui_async_browser.py` autosave-race suite re-run unmodified and still
+    passes, confirming the existing inline indicator is untouched. Live-verified with a
+    real delayed-response screenshot showing "Saving…" in the header. 493 total tests
+    pass. See `tasks/task-2.3e.md` for the full record.

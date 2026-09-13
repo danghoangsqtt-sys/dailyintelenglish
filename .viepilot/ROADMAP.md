@@ -271,7 +271,14 @@
 - [x] **Breadcrumb navigation**: jump back to any previous step — done alongside the item
   above (same component): 7 clickable pills, missing `project_id` degrades to a clean
   bare URL rather than a broken link
-- [ ] **Auto-save indicator**: "Saved" / "Saving..." in header
+- [x] **Auto-save indicator**: "Saved" / "Saving..." in header — done 2026-09-13 (Task
+  2.3e, closes Task 2.3 entirely). New shared `frontend/static/js/save_indicator.js`
+  (`SaveIndicator.mount()`, same pattern as `StepNav`/`KeyboardShortcuts`) mounted in the
+  header of `/step2`, `/step3`, `/step6` — the 3 pages with an existing page-level
+  autosave state machine — as an addition alongside each page's existing inline
+  `#save-status` element, not a replacement. `/step4` (per-speaker-field autosave, no
+  single "document" concept), `/step1`/`/step5`/`/step7`/Dashboard/Music Library (no
+  page-level autosave concept at all) intentionally excluded
 - [x] **Keyboard shortcuts**: `Ctrl+Enter` to generate, `Esc` to cancel — done 2026-09-13
   (Task 2.3b): a new shared `KeyboardShortcuts.init({ primaryButtonId })` (same pattern as
   `StepNav`) mounted on all 7 step pages triggers each page's real primary button, only

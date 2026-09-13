@@ -23,6 +23,14 @@
     .logo { font-size: 20px; font-weight: 800; text-decoration: none; }
     .topbar-actions { display: flex; align-items: center; gap: 12px; }
 
+    .save-indicator {
+      min-width: 0;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .save-indicator[data-status="failed"] { color: var(--danger); }
+
     .main {
       max-width: 1360px;
       margin: 0 auto;
@@ -245,6 +253,7 @@
   <header class="topbar">
     <a class="logo" href="/">🎙 Daily Intel English</a>
     <div class="topbar-actions">
+      <span id="save-indicator" class="save-indicator"></span>
       <a class="btn btn-ghost" href="/">Dashboard</a>
       <button class="icon-toggle" id="theme-toggle" type="button" aria-label="Toggle theme">☀</button>
     </div>
@@ -355,6 +364,7 @@
   <script src="/static/js/api.js"></script>
   <script src="/static/js/step_nav.js"></script>
   <script src="/static/js/keyboard_shortcuts.js"></script>
+  <script src="/static/js/save_indicator.js"></script>
   <script src="/static/js/step6_thumbnail.js"></script>
 </body>
 </html>

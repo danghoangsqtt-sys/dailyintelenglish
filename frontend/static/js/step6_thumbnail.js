@@ -24,6 +24,8 @@
     staleConflict: false,
   };
 
+  let saveIndicator = null;
+
   const byId = (id) => document.getElementById(id);
   const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -50,6 +52,7 @@
 
   function setSaveStatus(status, message = null) {
     state.saveStatus = status;
+    if (saveIndicator) saveIndicator.update(status);
     const statusElement = byId("save-status");
     const retryButton = byId("retry-save-btn");
     const labels = {
@@ -423,6 +426,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 6 });
     KeyboardShortcuts.init({ primaryButtonId: "generate-btn" });
+    saveIndicator = SaveIndicator.mount("save-indicator");
     byId("theme-toggle").addEventListener("click", Theme.toggle);
     byId("generate-btn").addEventListener("click", generateThumbnails);
     byId("save-btn").addEventListener("click", runSave);
