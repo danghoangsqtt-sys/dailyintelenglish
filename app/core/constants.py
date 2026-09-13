@@ -40,6 +40,12 @@ VIDEO_WIDTH_STANDARD = 1280
 VIDEO_HEIGHT_STANDARD = 720
 VIDEO_WIDTH_SHORTS = 720
 VIDEO_HEIGHT_SHORTS = 1280
+VIDEO_TEMPLATE_IDS = ("midnight", "deep_purple", "charcoal_wave")
+VIDEO_TEMPLATE_LABELS = {
+    "midnight": "Midnight",
+    "deep_purple": "Deep Purple",
+    "charcoal_wave": "Charcoal Wave",
+}
 
 # TTS
 MAX_CONCURRENT_TTS = 2

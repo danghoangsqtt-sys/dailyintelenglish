@@ -4,17 +4,20 @@
   "created_at": "2026-09-12T00:00:00Z",
   "updated_at": "2026-09-13T00:00:00Z",
   "problem": {
-    "description": "Three different tests, across two different files, have each failed exactly once during a full `pytest tests/ -q` run, but all pass instantly and reliably when run in isolation or when the full suite re-runs under normal load. Not a regression from any specific change -- observed across Task 1.6/1.10/1.9 PM reviews, on unrelated commits/files. Low priority (does not block any task, always passes on retry) but worth root-causing before it erodes trust in a red CI run.",
+    "description": "Different Gemini-retry/backoff tests, across three different files now, have each failed exactly once during a full `pytest tests/ -q` run, but all pass instantly and reliably when run in isolation or when the full suite re-runs under normal load. Not a regression from any specific change -- observed across Task 1.6/1.7/1.9/1.10 PM reviews, on unrelated commits/files. Low priority (does not block any task, always passes on retry) but worth root-causing before it erodes trust in a red CI run.",
     "symptoms": [
       "tests/test_script_service.py::test_generate_script_exhausts_retries_raises failed once in a ~101s full-suite run, passed in isolation (0.29s) immediately after",
       "tests/test_script_service.py::test_generate_script_backoff_sequence_is_1s_2s_4s failed once in a ~126s full-suite run (different session, unrelated Task 1.10 changes), passed in isolation (0.50s) immediately after",
       "tests/test_youtube_service.py::test_generate_package_non_429_error_does_not_retry failed once in a ~305s full-suite run (unusually slow -- machine under heavy load), passed in isolation (0.50s) AND in a normal-speed full-suite re-run (~93s) immediately after",
-      "All three failing tests exercise a Gemini retry/backoff path (mocking asyncio.sleep to a no-op via an autouse `no_real_sleep` fixture), but now span two unrelated service modules/files, not just one"
+      "tests/test_script_service.py::test_generate_script_backoff_sequence_is_1s_2s_4s failed again in a ~244s full-suite run (Task 1.6 Sub-task 1.6c changes, unrelated), passed in isolation (0.51s) immediately after",
+      "tests/test_learning_service.py::test_generate_learning_pack_backoff_sequence_is_1s_2s_4s failed once in a ~229s full-suite run (Task 1.7 Sub-task 1.7a changes, unrelated), passed in isolation (0.54s) immediately after -- a THIRD distinct file/module now hit",
+      "All failing tests exercise a Gemini retry/backoff path (mocking asyncio.sleep to a no-op via an autouse `no_real_sleep` fixture), now spanning three unrelated service modules/files (script_service, youtube_service, learning_service)"
     ],
     "error_messages": [],
     "affected_files": [
       "tests/test_script_service.py",
-      "tests/test_youtube_service.py"
+      "tests/test_youtube_service.py",
+      "tests/test_learning_service.py"
     ]
   },
   "investigation": {
@@ -52,19 +55,30 @@
         "command": "pytest tests/test_script_service.py::test_generate_script_backoff_sequence_is_1s_2s_4s -q (immediate isolation re-run)",
         "output": "1 passed in 0.51s",
         "timestamp": "2026-09-13T00:00:00Z"
+      },
+      {
+        "command": "pytest tests/ -q (5th occurrence, final verification pass for Task 1.7 Sub-task 1.7a -- new video_service.py/video.py/video.py-models code, no learning_service.py or Gemini retry logic touched)",
+        "output": "1 failed (test_learning_service.py::test_generate_learning_pack_backoff_sequence_is_1s_2s_4s -- a third distinct file/module), 407 passed in 229.00s -- again notably slower than the ~90-130s baseline",
+        "timestamp": "2026-09-13T00:00:00Z"
+      },
+      {
+        "command": "pytest tests/test_learning_service.py::test_generate_learning_pack_backoff_sequence_is_1s_2s_4s -q (immediate isolation re-run)",
+        "output": "1 passed in 0.54s",
+        "timestamp": "2026-09-13T00:00:00Z"
       }
     ],
     "findings": [
-      "All four incidents self-resolved on isolated or full-suite re-run with zero code changes.",
+      "All five incidents self-resolved on isolated or full-suite re-run with zero code changes.",
       "The 3rd occurrence's evidence favors hypothesis 2 over hypothesis 1: the failing test is in a completely different file/module from the first two occurrences (test_youtube_service.py vs test_script_service.py) -- a state leak from one specific preceding test (hypothesis 1) would more plausibly recur in the same file/fixture context, not jump modules. The correlation with an unusually slow run (305s vs the normal ~90-130s) directly supports load-based timing sensitivity (hypothesis 2).",
       "The 4th occurrence again correlates with an unusually slow full-suite run (243.88s), a second independent data point supporting hypothesis 2 (system load), and happened on a change set (Task 1.6 Sub-task 1.6c: new frontend page + a project_service/speakers route) that touches nothing in script_service.py, gemini retry logic, or asyncio.sleep mocking -- ruling out a regression from that specific work.",
+      "The 5th occurrence hit a THIRD distinct file (test_learning_service.py, never seen before), again correlated with an unusually slow full-suite run (229.00s), and again happened on a change set (Task 1.7 Sub-task 1.7a: video_service.py/video.py/video-related code) that touches nothing in learning_service.py or Gemini retry logic -- strongly reinforces hypothesis 2 (system-load timing sensitivity) over any file-specific or state-leak explanation, since three unrelated modules sharing only the same 'mocked asyncio.sleep in a retry/backoff test' shape have each been hit exactly once, always during a notably slow full-suite run.",
       "Not blocking: every PM review so far has verified the specific failure is pre-existing/unrelated to the change under review before accepting it."
     ]
   },
   "resolution": {
-    "root_cause": "Not fully confirmed, but evidence now favors system-load-induced timing sensitivity (hypothesis 2) over cross-test state leakage (hypothesis 1) -- see findings. Two of four occurrences correlate with a full-suite run notably slower than the ~90-130s baseline.",
+    "root_cause": "Not fully confirmed, but evidence now strongly favors system-load-induced timing sensitivity (hypothesis 2) over cross-test state leakage (hypothesis 1) -- see findings. Three of five occurrences correlate with a full-suite run notably slower than the ~90-130s baseline, and the failure has now appeared in three unrelated files, ruling out a single-module state leak.",
     "fix_applied": null,
     "files_changed": [],
-    "verification": "4 occurrences now, all self-resolving on isolation/retry, none blocking, none tied to the change under review each time. Per the standing recommendation after the 3rd occurrence, downgrading this to a documented known-flaky-under-load note (see TRACKER.md Known Issues) rather than continuing open investigation -- closing this session as a known, accepted, low-priority flake. Reopen only if it starts failing in isolation (not just under full-suite load) or blocks an actual task."
+    "verification": "5 occurrences now, all self-resolving on isolation/retry, none blocking, none tied to the change under review each time. Remains closed `wontfix` as a known, accepted, low-priority flake affecting any Gemini retry/backoff-pattern test under a slow/loaded full-suite run (see TRACKER.md Known Issues). Reopen only if it starts failing in isolation (not just under full-suite load) or blocks an actual task."
   }
 }

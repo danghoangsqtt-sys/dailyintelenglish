@@ -145,13 +145,16 @@
 
 ### 1.7 Step 5 — Video Studio
 
-- [ ] **VideoService — Background + Subtitle** (`app/services/video_service.py`)
-  - `generate_video_basic(project_id)` — audio + background image + subtitle overlay (ffmpeg)
-  - SRT file generation from timestamps
-  - Burned-in subtitles (ffmpeg subtitles filter)
-  - Verify: MP4 generates correctly with synced subtitles
+- [x] **VideoService — Background + Subtitle** (`app/services/video_service.py`) — Sub-task 1.7a, done 2026-09-13
+  - `generate_video(project_id, audio_job, template_id)` — real completed audio mix (Task 1.6) + one of 3 fixed background templates + burned-in subtitles (ffmpeg) — done
+  - SRT file generation from timestamps — done, from AudioService's real *measured* per-line timestamps (not estimated), including actual dialogue text
+  - Burned-in subtitles (ffmpeg subtitles filter) — done, verified the installed ffmpeg build has `--enable-libass` before relying on it, and worked out the Windows path-escaping rule the filter needs
+  - Verify: MP4 generates correctly with synced subtitles — 20 new tests (real ffmpeg pipeline, not mocked) + a live end-to-end smoke run with a real extracted video frame visually confirming the correct speaker name + dialogue text burned in
 
-- [ ] **VideoService — LivePortrait lips-sync** (Phase 1 primary if time allows)
+- [ ] **VideoService — LivePortrait lips-sync** (Phase 1 primary if time allows) — deferred,
+  blocked on a real user decision: no speaker has an avatar image
+  (`speakers.avatar_image_path` is null for every speaker, no upload/generation feature
+  exists) — same class of blocker as OmniVoice's `ref_audio` requirement
   - `generate_video_avatar(project_id, avatar_images)` — per-speaker avatar lip-sync
   - Side-by-side layout: speaker1 left, speaker2 right
   - Active speaker highlight (border glow on speaking turn)

@@ -153,6 +153,7 @@ def _mix_project_sync(
                 "end_sec": round(cursor_ms / 1000, 3),
                 "label": speaker_names_by_id.get(line["speaker_id"], line["speaker_id"]),
                 "speaker_id": line["speaker_id"],
+                "text": line.get("text", ""),
             }
         )
         previous_speaker_id = line["speaker_id"]
@@ -233,7 +234,7 @@ async def mix_project(
 async def get_lines_for_mixing(db: aiosqlite.Connection, project_id: str) -> list[dict]:
     """Script lines with the fields AudioService needs, ordered by line_index."""
     cursor = await db.execute(
-        "SELECT id, line_index, speaker_id, audio_cache_path, duration_seconds "
+        "SELECT id, line_index, speaker_id, text, audio_cache_path, duration_seconds "
         "FROM script_lines WHERE project_id = ? ORDER BY line_index",
         (project_id,),
     )

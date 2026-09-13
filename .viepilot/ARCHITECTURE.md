@@ -243,13 +243,22 @@ graph LR
   Sub-task 1.9b consumes it (1.9a still estimates chapters from word count only, since no
   audio existed yet at that time)
 
-### 5. VideoService (`app/services/video_service.py`)
-- **Responsibility:** Generate podcast video (MP4)
+### 5. VideoService (`app/services/video_service.py`) — Sub-task 1.7a, DONE
+- **Responsibility:** Generate podcast video (MP4). Only processes an already-completed
+  audio mix from AudioService (Task 1.6) — never generates audio itself.
 - **Pipeline:**
-  - Phase 1 fallback: Background image + audio + subtitle overlay (ffmpeg)
-  - Phase 1 primary: LivePortrait lips-sync per speaker avatar
-  - SRT file generation from timestamps
-- **Output:** MP4 (1280x720 for standard, 720x1280 for Shorts) + SRT file
+  - **Phase 1 fallback (DONE):** one of 3 fixed pre-rendered background templates
+    (`frontend/static/video_backgrounds/{midnight,deep_purple,charcoal_wave}.png`, no
+    custom upload yet) + the real completed audio mix + burned-in subtitles via ffmpeg's
+    `subtitles` filter (libass) — real SRT cues built from AudioService's measured
+    per-line timestamps (start/end seconds + actual dialogue text + speaker label), not
+    estimated.
+  - **Phase 1 primary (NOT DONE, deferred):** LivePortrait lips-sync per speaker avatar —
+    blocked on a real user decision (same class of blocker as OmniVoice's `ref_audio`):
+    no speaker has an avatar image (`speakers.avatar_image_path` is null for every
+    speaker) and no upload/generation feature exists yet.
+  - SRT file generation from timestamps — done, see above.
+- **Output:** MP4 (1280x720 standard only for now — Shorts 720x1280 not implemented) + SRT file
 
 ### 6. ThumbnailService (`app/services/thumbnail_service.py`)
 - **Responsibility:** Generate professional YouTube thumbnails
@@ -333,9 +342,10 @@ GET    /api/projects/{id}/audio/download     # Download final audio (?format=mp3
 
 ### Video
 ```
-POST   /api/projects/{id}/video/generate     # Generate video
-GET    /api/projects/{id}/video/status       # Check status (SSE)
-GET    /api/projects/{id}/video/download     # Download video
+GET    /api/video/templates                  # List the 3 fixed background templates
+POST   /api/projects/{id}/video/generate     # Generate video (body: {template_id}; synchronous)
+GET    /api/projects/{id}/video/status       # Poll current video_jobs row (plain GET, not SSE — see Task 1.6's audio/status for the same documented deviation)
+GET    /api/projects/{id}/video/download     # Download video (?format=mp4|srt)
 ```
 
 ### Thumbnails

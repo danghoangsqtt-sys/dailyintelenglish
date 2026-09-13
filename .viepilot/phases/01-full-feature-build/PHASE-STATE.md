@@ -16,13 +16,14 @@
 ## Tasks Status & Acceptance Evidence
 
 ### Task 1.1: Project Setup & Infrastructure
-- **Status:** 🔄 In Progress (4 / 5 subtasks complete)
+- **Status:** ✅ Done (2026-09-13)
 - **Details:**
   - Python virtual environment configured (`venv`).
   - Directory structure created: `app/`, `frontend/`, `data/`, `prompts/`, `models/`, `tests/`.
   - FastAPI skeleton initialized (`app/main.py`) with CORS, lifespan, router mounts, `/health` 200.
   - SQLite database initialized (`app/db/database.py`) with schema tables.
-  - Dependency check script (`scripts/check_dependencies.py`) verified in code; waiting on local machine environment setup (`ffmpeg`, `.env` key, local model weights).
+  - Dependency check script (`scripts/check_dependencies.py`) now reports all-GREEN on this
+    machine (ffmpeg, GPU, Gemini key, OmniVoice model, data dirs all resolved this session).
 
 ### Task 1.2: Dashboard & Project Management
 - **Status:** ✅ Done
@@ -89,8 +90,24 @@
     (6 API + 7 Playwright E2E, network-mocked), 388 total passing.
 
 ### Task 1.7: Step 5 — Video Studio
-- **Status:** ⏳ Planned
-- **Details:** VideoService (background + subtitle burned + SRT), LivePortrait, Video UI.
+- **Status:** 🔄 In Progress (Sub-task 1.7a done; 1.7b UI + Level 3 pending)
+- **Details:** Split into sub-tasks: 1.7a (VideoService background+subtitle backend) /
+  1.7b (Video Studio UI, deferred) / Level 3 LivePortrait avatar lip-sync (deferred
+  indefinitely — needs a user decision on avatar image sourcing, same class of blocker as
+  OmniVoice's `ref_audio`).
+  - **1.7a DONE (2026-09-13):** `app/services/video_service.py` — real ffmpeg-rendered MP4
+    from a project's completed audio mix (Task 1.6) + one of 3 fixed pre-rendered
+    background templates (`frontend/static/video_backgrounds/`, via
+    `scripts/generate_video_background_assets.py`) + real burned-in subtitles (ffmpeg
+    `subtitles` filter/libass, confirmed present in the installed build via a real
+    proof-of-concept before any production code was written). SRT built from
+    AudioService's real measured per-line timestamps, extended with a `text` field
+    (small backward-compatible change) so subtitles carry actual dialogue.
+    `GET /api/video/templates`, `POST/GET /api/projects/{id}/video/{generate,status,download}`.
+    20 new tests (real ffmpeg pipeline, not mocked), 407/408 pass (1 pre-existing
+    unrelated flaky Gemini-retry test confirmed passing in isolation). Live-smoke-tested
+    end-to-end with a real extracted video frame confirming correct speaker name +
+    dialogue burned in.
 
 ### Task 1.8: Step 6 — Thumbnail Generator
 - **Status:** ✅ Done (2026-09-12)
@@ -131,14 +148,19 @@
     deferred, blocked on Task 1.7 (`ffmpeg`).
 
 ### Task 1.10: Music Library
-- **Status:** 🔄 In Progress (Sub-task 1.10a done; 1.10b pending)
-- **Details:** By Codex (second AI Implementer), PM-accepted 2026-09-12.
+- **Status:** 🔄 In Progress (upload/list/preview/delete + volume leveling + background-track
+  selection all done; only waveform visualization remains, unassigned)
+- **Details:** By Codex (second AI Implementer), PM-accepted 2026-09-12; loudness/ducking
+  piece delivered by PM (Claude Code) in Task 1.6 Sub-task 1.6b.
   - **1.10a DONE:** ffmpeg-independent Music Library UI at `/music` — upload (50MB limit,
     magic-byte validation, atomic no-clobber duplicate naming via `os.link`), list, native
     `<audio>` preview, confirm-gated delete. `app/api/music.py`
     (`GET/POST /api/music`, `GET/DELETE /api/music/{filename}`), `ARCHITECTURE.md` synced.
     19 new tests (15 API incl. a real `ThreadPoolExecutor`/`Barrier` concurrency test, 4
     Playwright browser E2E). 271 total tests pass.
-  - **1.10b (waveform visualization, volume leveling, Step 4/5 background-track
-    selection/ducking):** deferred — needs `ffmpeg` AND the `audioop-lts` backport for
-    `pydub` (Python 3.14 removed the stdlib `audioop` module it depends on).
+  - **Volume leveling + Step 4/5 background-track selection/ducking — DONE (2026-09-13):**
+    delivered as part of Task 1.6 Sub-task 1.6b (`app/services/audio_service.py`, real
+    ITU-R BS.1770 loudness normalization + static-level ducking) and 1.6c (the `/step4`
+    background-music `<select>`), not as a separate "1.10b" — see Task 1.6 above.
+  - **Waveform visualization:** not done, no task assigned anywhere yet (visual-only UI
+    element, same standing gap noted since Sub-task 1.10a).
