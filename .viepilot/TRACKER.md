@@ -9,7 +9,7 @@
 
 ## Progress Overview
 
-*Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) [currently 6/10 done, 60%] with 29 discrete checklist subtasks [currently 25/29 done, 86%]. Progress reflects completed subtasks.*
+*Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) [currently 7/10 done, 70% — 1.1/1.2/1.3/1.4/1.5/1.6/1.8] with 29 discrete checklist subtasks [currently 25/29 done, 86%]. Progress reflects completed subtasks.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
