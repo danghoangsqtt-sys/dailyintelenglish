@@ -12,14 +12,18 @@
 *Task counting rule: Phase 1 has 10 major tasks (1.1–1.10) [currently 10/10 done, 100%,
 including Sub-task 1.9c which closed the one gap found during Phase 1 close-out review
 against ROADMAP.md's stricter phase-level "Acceptance Criteria (Phase 1 Complete)"
-checklist] with 29 discrete checklist subtasks [currently 27/29 done, 93% — the remaining
-2 are Level 3 LivePortrait avatar lip-sync (Task 1.7, blocked on a user decision) and real
-OmniVoice GPU inference integration (Task 1.6, also blocked on a user decision), neither
+checklist] with 30 discrete checklist subtasks (29 original + Sub-task 1.7c, added
+2026-09-13 once the user resolved the avatar-sourcing decision) [currently 28/30 done,
+93% — the remaining 2 are real OmniVoice GPU inference integration (Task 1.6 — **decided
+2026-09-13: will not be pursued**, Edge TTS is now the sole official engine, not "blocked"
+anymore) and LivePortrait lip-sync inference itself (Task 1.7 — the separate
+avatar-sourcing question is resolved and delivered as Sub-task 1.7c, but the actual
+lip-sync model integration is a distinct, not-yet-started future effort), neither
 required for any task's own acceptance criteria]. Progress reflects completed subtasks.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
-| Phase 1 — Build | ✅ Complete | 27 | 29 |
+| Phase 1 — Build | ✅ Complete | 28 | 30 |
 | Phase 2 — Testing | 🔄 In Progress | 0 | 10 |
 | Phase 3 — Review | ⏳ Not Started | 0 | 6 |
 
@@ -55,15 +59,31 @@ required for any task's own acceptance criteria]. Progress reflects completed su
 - [x] Learning Content UI — `frontend/pages/step3_learning.html` + `step3_learning.js` + route `/step3` in `app/main.py`: 4 tabs (Vocabulary with IPA/PoS/definitions, Idioms, Grammar, Quiz with answer toggle), Coalesced Trailing Autosave with dirty-sections queue, Regenerate Pack confirm dialog, and Next Step navigation to `/step4`. 223 tests pass (218 unit/integration + 5 browser E2E).
 
 ### 1.6 TTS Audio Studio
-- [ ] TTSService — OmniVoice — semaphore(2) + fallback logic implemented and tested, but no real GPU inference (model weights now downloaded and load-verified — see Known Issues — but `_synthesize_omnivoice()` integration itself is a separate, deliberately deferred design decision: where does each speaker's `ref_audio` sample come from?)
+- [x] TTSService — OmniVoice — **Won't do, by user decision 2026-09-13.** Semaphore(2) +
+  fallback logic stay in place as a tested, honest fallback branch; model weights stay
+  downloaded and load-verified as evidence of an informed decision (see Known Issues), but
+  real `_synthesize_omnivoice()` integration will not be pursued — the actual API is
+  zero-shot voice cloning from a reference sample, not the "voice design" the original
+  ROADMAP envisioned, and Edge TTS is now the sole official TTS engine.
 - [x] TTSService — Edge TTS — `app/services/tts_service.py`, `EDGE_TTS_VOICE_MAP` (10 accents x 3 genders), retry-once-on-empty-audio, live-verified 20/20 real synthesis calls. `POST /api/projects/{id}/tts/preview` + `GET .../tts/cache/{line_id}.mp3`. 22 new tests, 252 total pass.
 - [x] AudioService — Sub-task 1.6b (2026-09-13): `app/services/audio_service.py` — real silence gaps (300ms/500ms), real ITU-R BS.1770 loudness normalization (`pyloudnorm`) to -16 LUFS, background-music static-level ducking, MP3+WAV export, real per-line timestamps. `POST/GET .../audio/generate`, `/status`, `/download`. 25 new tests against a real ffmpeg pipeline (not mocked), 375 total pass. Also closes Task 1.10's deferred loudness/background-music piece.
 - [x] TTS Audio Studio UI — Sub-task 1.6c (2026-09-13): `frontend/pages/step4_tts.html` + `step4_tts.js` at `/step4`. Per-speaker engine/speed/pitch/volume autosave via a new narrow `PATCH /api/projects/{id}/speakers/{speaker_id}` (avoids a real cascade-delete landmine in the existing full-replace speakers route — see task-1.6.md), per-line preview playback, sequential "Generate All" (synthesize every line, then mix), MP3/WAV download. 13 new tests (6 API + 7 Playwright E2E), 388 total pass. **Task 1.6 sub-task split now fully done** — only real OmniVoice GPU inference remains, blocked on a user design decision (not part of the 1.6a/b/c split).
 
 ### 1.7 Video Studio — ✅ DONE (2026-09-13) for both sub-tasks
 - [x] VideoService — Background + Subtitle — Sub-task 1.7a (2026-09-13): `app/services/video_service.py` renders a project's completed audio mix (Task 1.6) into an MP4 using one of 3 fixed pre-rendered background templates (`frontend/static/video_backgrounds/`, generated via `scripts/generate_video_background_assets.py`, same deterministic-asset precedent as thumbnail templates) plus real burned-in subtitles (ffmpeg `subtitles` filter, libass, confirmed present in the installed build) built from AudioService's real measured per-line timestamps. `GET /api/video/templates`, `POST/GET /api/projects/{id}/video/{generate,status,download}`. 20 new tests (real ffmpeg pipeline, not mocked), 407 pass + 1 pre-existing unrelated flaky Gemini-retry test confirmed passing in isolation (see Known Issues).
-- [ ] VideoService — LivePortrait (if time) — deferred, blocked on a user decision: no speaker has an avatar image and no upload/generation feature exists (same class of blocker as OmniVoice's `ref_audio`)
-- [x] Video Studio UI — Sub-task 1.7b (2026-09-13): `/step5` (`frontend/pages/step5_video.html`/`step5_video.js`) — background-template selector, synchronous Generate, `<video>` preview, MP4/SRT downloads, empty state directing to Step 4 when no audio exists. `/step4` gained its first pipeline-nav button ("Next: Video Studio →"). No avatar/lips-sync controls (that backend path doesn't exist). 7 new Playwright tests, 428 total pass. **Closes Task 1.7's sub-task split** — only Level 3 LivePortrait remains, blocked on a user decision.
+- [ ] VideoService — LivePortrait lip-sync inference — the avatar-sourcing question that
+  used to block this is resolved (user decision 2026-09-13: upload, see Sub-task 1.7c,
+  done); the actual lip-sync model integration itself remains a separate, not-yet-started
+  future effort
+- [x] Video Studio UI — Sub-task 1.7b (2026-09-13): `/step5` (`frontend/pages/step5_video.html`/`step5_video.js`) — background-template selector, synchronous Generate, `<video>` preview, MP4/SRT downloads, empty state directing to Step 4 when no audio exists. `/step4` gained its first pipeline-nav button ("Next: Video Studio →"). No avatar/lips-sync controls (that backend path doesn't exist). 7 new Playwright tests, 428 total pass. **Closes Task 1.7's sub-task split.**
+- [x] Speaker avatar upload — Sub-task 1.7c (2026-09-13): `app/services/avatar_service.py`
+  (magic-byte-checked PNG/JPEG upload, 8MB cap, one mutable file per speaker) +
+  `POST/GET/DELETE /api/projects/{id}/speakers/{id}/avatar` + a `/step5` upload/preview/
+  remove section, not wired into video generation. `project_service.get_project` now maps
+  the stored path to a served URL — never a raw filesystem path in any API response. 20
+  new backend tests + 1 new Playwright test, 473 total pass (1 pre-existing unrelated flaky
+  Gemini-retry test, see Known Issues). Caught+fixed a real `.hidden`-vs-`.btn`-CSS bug via
+  a live screenshot (see Known Issues).
 
 ### 1.8 Thumbnail Generator — ✅ DONE (2026-09-12)
 - [x] ThumbnailService — Sub-task 1.8a by Codex: Gemini text/palette suggestions (`responseJsonSchema`, exact-count + duplicate rejection), atomic render+persist with rollback-safe filesystem/DB sequencing, safe content route. 27 new tests, 298 total pass. PM independently re-rendered all 5 templates and confirmed real image quality.
@@ -141,7 +161,8 @@ required for any task's own acceptance criteria]. Progress reflects completed su
 | 2026-09-13 | Codex's quota restored. Phase 2 (Testing & Polish) opened: `.viepilot/phases/02-testing-polish/` scaffolded (`PHASE-STATE.md`), first task card `tasks/task-2.3.md` written (PM) and assigned to Codex — a deliberately narrow first slice of ROADMAP.md's 7-item "UX Polish" bullet: shared step-progress + breadcrumb navigation (`StepNav.render()`) across all 7 step pages, since the pipeline only became fully navigable end-to-end this session and had no way to jump between steps. Also caught and fixed a real doc-drift bug while scaffolding Phase 2: `.viepilot/phases/01-full-feature-build/PHASE-STATE.md`'s top `## Metadata` block (milestone/subtask/test-count summary) had been stale since early in Phase 1 (still read "5/10 major tasks, 350 tests") even though every individual task section below it was kept current all session — corrected to 10/10, 432 tests, done. | User; PM (Claude Code) |
 | 2026-09-13 | Task 1.9c (transcript + Learning Content in the YouTube export) delivered by Codex — its first assignment since quota was restored — and PM-accepted after independent re-verification of every command and a full diff read, not just the pasted report. `build_export_zip()` gained a 5th zip member, `transcript_and_vocabulary.txt`: the full script transcript (speaker names resolved with the same `AudioService`-style ID fallback) plus, when generated, the Learning Content pack — a project with none still exports successfully with a plain notice, correctly never made a hard prerequisite. `metadata.txt` byte-for-byte unchanged, confirmed via new negative assertions in the API test. PM specifically traced `learning_service.update_learning_content()`'s write path back to `app/api/learning.py`'s `payload: LearningPackUpdate` typed route parameter to confirm Codex's direct dict-key access on required fields (`item['word']`, etc.) is safe by construction, not a missed edge case. 10 new tests including a real end-to-end pipeline test (project → script → audio → video → thumbnail → Learning Content, only Gemini calls mocked) and real Vietnamese/emoji/long-text Unicode round-tripped through an actual zip decode. 437 total, 436 passed + 1 failed in that run — the failure is the known Gemini-retry flake (6th occurrence), confirmed passing in isolation, unrelated to this change. **This closes Task 1.9 entirely and closes the one gap found in Phase 1's close-out review — Phase 1 now has zero open items against any task's own acceptance criteria or the phase-level completion checklist**, leaving only the two already-known, deliberately deferred items (OmniVoice `ref_audio`, LivePortrait avatar images) that need a user decision, not more engineering. | Codex; PM (Claude Code) |
 | 2026-09-13 | Task 2.3's step-progress + breadcrumb slice delivered by Codex and PM-accepted, but under an unusual circumstance: Codex's session hit its usage limit mid-verification, after finishing the plan, implementation, its own `tests/test_step_nav_browser.py` run (15 passed), and lint/syntax checks — all already correct on disk — but while still watching a full-suite run reach its summary (it had explicitly chosen to wait for the real result rather than guess at the cause of the one failure it had seen, which is exactly the right call per this project's process). It was cut off before writing any evidence into the task card. PM treated this the same as the earlier Codex-quota-exhaustion incident on Task 1.8b: read every diff line-by-line across all 18 changed/new files from scratch (not reconstructing from a report that didn't exist), independently re-ran every verification command, and took its own Playwright screenshot of `/step2` to visually confirm the rendered component before writing up both the Implementer Evidence and PM Acceptance sections itself. Full re-run: 452/452 pass, no flake this time. New `frontend/static/js/step_nav.js` (`StepNav.render()`) is a pure synchronous DOM component — no network calls, no async state — mounted identically on all 7 step pages; confirmed the one specific risk flagged during plan review (each page independently parsing its own `location.search` rather than depending on `init()`-internal state) was implemented exactly as specified. | Codex; PM (Claude Code) |
-| 2026-09-13 | User asked PM to analyze and decide the two deliberately-deferred Phase 1 items (OmniVoice `ref_audio` sourcing, LivePortrait avatar sourcing) and implement directly. PM presented the real tradeoffs rather than picking silently — OmniVoice's real API is voice *cloning* (needs a real audio sample, raising consent/rights questions), not the text-described "voice design" the original plan assumed, and doesn't clearly beat the already-working Edge TTS; LivePortrait's own model integration is a separate large effort from just picking an avatar source. User confirmed both PM recommendations via AskUserQuestion: (1) stop pursuing OmniVoice cloning, Edge TTS becomes the sole official TTS engine; (2) build only the avatar-upload feature now (matches the original ROADMAP design of user-supplied images, never app-generated likenesses), defer actual LivePortrait model research/integration. | User; PM (Claude Code) |
+| 2026-09-13 | User asked PM to analyze and decide the two deliberately-deferred Phase 1 items (OmniVoice `ref_audio` sourcing, LivePortrait avatar sourcing) and implement directly. PM presented the real tradeoffs rather than picking silently — OmniVoice's real API is voice *cloning* (needs a real audio sample, raising consent/rights questions), not the text-described "voice design" the original plan assumed, and doesn't clearly beat the already-working Edge TTS; LivePortrait's own model integration is a separate large effort from just picking an avatar source. User confirmed both PM recommendations via AskUserQuestion: (1) stop pursuing OmniVoice cloning, Edge TTS becomes the sole official TTS engine; (2) build only the avatar-upload feature now (matches the original ROADMAP design of user-supplied images, never app-generated likenesses), defer actual LivePortrait model research/integration. |
+| 2026-09-13 | Both decisions above implemented in two chunks, verified and committed separately. **Chunk A** (formalize Edge-TTS-only): `SpeakerConfig.tts_engine` default `"omnivoice"` → `"edge_tts"`; Step 4's now-dead engine `<select>` removed (only speed/pitch/volume remain editable); `ROADMAP.md`/`ARCHITECTURE.md`/`SYSTEM-RULES.md`/`task-1.6.md` updated to record the decision and reasoning; OmniVoice's fallback code path deliberately left in place as an honest, still-tested branch. 453/453 tests pass. Committed `3e0895d`, pushed. **Chunk B** (Sub-task 1.7c, avatar upload — doc-first task card written before any code, per standing discipline): new `app/services/avatar_service.py`, 3 new routes, `/step5` gets an upload/preview/remove section per speaker, `project_service.get_project` now maps the stored path to a served URL so a raw filesystem path is never returned to a client. Live-verified end-to-end with a real (non-mocked) upload→serve→delete cycle through the real API, then a live Playwright screenshot caught a real bug before it shipped: the Remove button used `.hidden` on a `.btn`-classed element, which this app's stylesheet's unconditional `.btn { display: inline-flex }` silently overrides (author-stylesheet rules always beat same/lower-specificity UA rules like `[hidden]`, regardless of source order) — fixed by not appending the button when unneeded, re-verified with a second screenshot. Flagged (not fixed, out of this task's scope) that `step6_thumbnail.js`'s `retry-save-btn` likely has the exact same latent bug. 20 new backend tests + 1 new Playwright test, 474 total; two separate full-suite runs each hit exactly one instance of the pre-existing documented Gemini-retry timing flake (a different test each time), both confirmed passing in isolation — not a regression. | User; PM (Claude Code) | User; PM (Claude Code) |
 | 2026-09-11 | BUG-001 auto-logged by vp-audit Tier 1: restore valid machine-readable state | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-002 auto-logged by vp-audit Tier 1: reconcile Phase 1 progress counters | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-003 auto-logged by vp-audit Tier 1: enforce doc-first task gates | `vp-audit`; Backlog |
@@ -186,10 +207,25 @@ required for any task's own acceptance criteria]. Progress reflects completed su
 - **LivePortrait avatar lip-sync (Task 1.7 Level 3) — scope decided 2026-09-13, by the
   user:** avatar image sourcing follows the original ROADMAP design (user uploads their
   own image per speaker; the app never auto-generates or reuses a real person's likeness
-  without their action) — building the upload feature itself is in scope now (Sub-task
-  1.7c). Real LivePortrait model integration (the actual lip-sync inference pipeline) is
-  explicitly deferred as a separate, later research+build effort comparable in size to
-  the OmniVoice deep-dive — not started, not scheduled yet.
+  without their action). **Sub-task 1.7c (avatar upload) delivered 2026-09-13** —
+  `app/services/avatar_service.py` + `POST/GET/DELETE /api/projects/{id}/speakers/{id}/avatar`
+  + a `/step5` upload/preview/remove section — see task-1.7c.md. Real LivePortrait model
+  integration (the actual lip-sync inference pipeline) remains explicitly deferred as a
+  separate, later research+build effort comparable in size to the OmniVoice deep-dive —
+  not started, not scheduled yet.
+- **`.hidden` silently ignored on `.btn`-classed elements (found 2026-09-13 while building
+  Task 1.7c, via a live screenshot, not the automated suite):** this app's `style.css` has
+  no `[hidden]` rule anywhere, so an unconditional `.btn { display: inline-flex }` — an
+  author-stylesheet rule, which the CSS cascade always ranks above a same-origin-tier
+  user-agent rule like `[hidden] { display: none }` regardless of selector specificity —
+  keeps a `.btn`-classed element visibly showing even with `el.hidden = true`. Fixed in
+  `step5_video.js`'s new Remove-avatar button by not appending it to the DOM at all when
+  unneeded, rather than toggling `.hidden`. **Not yet fixed**, and likely present:
+  `frontend/static/js/step6_thumbnail.js`'s `retry-save-btn` (`class="btn btn-ghost
+  btn-sm" hidden` in `frontend/pages/step6_thumbnail.html`) uses the exact same pattern —
+  worth a small dedicated cleanup pass (either add a real `[hidden] { display: none
+  !important; }` rule to `style.css` once, or convert call sites to conditional DOM
+  insertion like 1.7c's fix).
 - Real gotcha found while building AudioService (2026-09-13, not a blocker, documented so it isn't re-discovered from scratch): this pydub version's media-probing step (`pydub.utils.get_prober_name()`) does its own `which("ffprobe")` PATH lookup and silently ignores `AudioSegment.converter`/any class-attribute override — `AudioSegment.from_file()` failed with `FileNotFoundError` even with `DIE_FFMPEG_PATH` correctly configured, until `app/services/audio_service.py::_ensure_ffmpeg_dir_on_path` prepended ffmpeg's directory onto this process's `PATH` env var at import time.
 - **Known, accepted flake (not a bug in project code):** any Gemini retry/backoff-pattern
   test (seen so far in `tests/test_script_service.py`, `tests/test_youtube_service.py`,
@@ -198,9 +234,12 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   tests/ -q` run — always passes instantly in isolation, and most recurrences correlate
   with the full-suite run itself being unusually slow (229–305s vs the ~90–130s baseline),
   pointing at system-load-induced timing sensitivity rather than a real defect. 6
-  occurrences now (248.22s full-suite run for the 6th), tracked in
-  `.viepilot/debug/session-debug-20260912T000000Z.json` (closed
-  `wontfix` 2026-09-13). If a full-suite run ever shows a Gemini retry/backoff test
+  occurrences now (248.22s full-suite run for the 6th; two more during Task 1.7c's
+  verification — `test_learning_service.py` (2 tests) at 307.72s, then a *different* test,
+  `test_script_service.py::test_generate_script_non_429_error_does_not_retry`, at 350.80s —
+  both fully consistent with the pattern: slower-than-baseline full-suite runs, instant
+  pass in isolation), tracked in `.viepilot/debug/session-debug-20260912T000000Z.json`
+  (closed `wontfix` 2026-09-13). If a full-suite run ever shows a Gemini retry/backoff test
   failing, re-run it in isolation before treating it as a real regression — do not block
   on it if isolation passes.
 

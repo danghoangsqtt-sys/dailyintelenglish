@@ -60,6 +60,35 @@
     .section { margin-bottom: 28px; }
     .section-title { margin: 0 0 14px; font-size: 18px; font-weight: 800; }
 
+    .avatar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+    .avatar-card { padding: 14px; text-align: center; }
+    .avatar-preview {
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 10px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--bg-elevated);
+      border: 1px solid var(--surface-border);
+    }
+    .avatar-placeholder {
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 10px;
+      border-radius: 50%;
+      background: var(--bg-elevated);
+      border: 1px dashed var(--surface-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+    .avatar-name { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+    .avatar-actions { display: flex; flex-direction: column; gap: 6px; }
+    .avatar-actions input[type="file"] { display: none; }
+    .avatar-status { min-height: 14px; margin-top: 6px; color: var(--text-muted); font-size: 11px; }
+
     .template-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
     .template-option {
       appearance: none;
@@ -128,7 +157,16 @@
 
     <div id="workspace" hidden>
       <section class="section">
-        <h2 class="section-title">1. Choose a background</h2>
+        <h2 class="section-title">1. Speaker avatars (optional)</h2>
+        <p class="section-hint" style="margin:-8px 0 14px; color: var(--text-muted); font-size: 12.5px;">
+          Upload a portrait image per speaker for future use. Lip-sync video isn't built yet —
+          these images aren't used by "Generate video" below.
+        </p>
+        <div class="avatar-grid" id="avatar-grid"></div>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title">2. Choose a background</h2>
         <div class="template-grid" id="template-grid"></div>
         <div class="generate-row">
           <button class="btn btn-primary" id="generate-btn" type="button">🎬 Generate video</button>
@@ -137,7 +175,7 @@
       </section>
 
       <section class="section">
-        <h2 class="section-title">2. Preview and download</h2>
+        <h2 class="section-title">3. Preview and download</h2>
         <div class="card result-card" id="result-card" hidden>
           <video class="result-player" id="result-player" controls></video>
           <div class="download-links">

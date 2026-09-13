@@ -218,3 +218,73 @@ async def test_step5_back_link_points_to_step4(browser_instance: Browser, live_s
     back_href = await page.locator("#back-link").get_attribute("href")
     assert back_href == f"/step4?project_id={PROJECT['id']}"
     await page.close()
+
+
+@pytest.mark.asyncio
+async def test_avatar_upload_shows_preview_then_remove_reverts_to_placeholder(
+    browser_instance: Browser, live_server_url: str, tmp_path
+):
+    """Task 1.7c: upload/remove is UI-only groundwork, not wired into video generation."""
+    page = await browser_instance.new_page()
+    project_with_speaker = {
+        **PROJECT,
+        "speakers": [
+            {
+                "id": "sp1",
+                "name": "Alex",
+                "gender": "male",
+                "accent": "american",
+                "tts_engine": "edge_tts",
+                "voice_id": None,
+                "voice_description": "",
+                "speed": 1.0,
+                "pitch": 0.0,
+                "volume": 1.0,
+                "avatar_image_path": None,
+            }
+        ],
+    }
+    state = {"project": json.loads(json.dumps(project_with_speaker))}
+    avatar_url_suffix = "/speakers/sp1/avatar"
+
+    async def handle_routes(route):
+        url = route.request.url
+        method = route.request.method
+        if url.endswith(avatar_url_suffix) and method == "POST":
+            state["project"]["speakers"][0]["avatar_image_path"] = (
+                f"/api/projects/{PROJECT['id']}/speakers/sp1/avatar"
+            )
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(state["project"]))
+        elif url.endswith(avatar_url_suffix) and method == "DELETE":
+            state["project"]["speakers"][0]["avatar_image_path"] = None
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(state["project"]))
+        elif url.endswith(f"/api/projects/{PROJECT['id']}") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(state["project"]))
+        elif url.endswith("/audio/status") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope({"status": "complete"}))
+        elif url.endswith("/api/video/templates") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(TEMPLATES))
+        elif url.endswith("/video/status") and method == "GET":
+            await route.fulfill(status=404, content_type="application/json", body=_envelope(None, "no video"))
+        else:
+            await route.continue_()
+
+    await page.route("**/api/**", handle_routes)
+    await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
+    await page.wait_for_selector("#workspace:not([hidden])")
+
+    assert await page.locator(".avatar-placeholder").count() == 1
+    assert await page.locator(".avatar-preview").count() == 0
+
+    fixture = tmp_path / "avatar.png"
+    fixture.write_bytes(b"\x89PNG\r\n\x1a\nfake-png-bytes")
+    await page.locator("#avatar-grid input[type='file']").set_input_files(str(fixture))
+
+    await page.wait_for_selector(".avatar-preview")
+    assert await page.locator(".avatar-placeholder").count() == 0
+
+    await page.locator("#avatar-grid button:has-text('Remove')").click()
+
+    await page.wait_for_selector(".avatar-placeholder")
+    assert await page.locator(".avatar-preview").count() == 0
+    await page.close()

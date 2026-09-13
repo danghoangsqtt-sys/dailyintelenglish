@@ -1,8 +1,8 @@
 /**
  * Step 5 — Video Studio. Business rules stay on the backend; this file owns only UI
- * state and calls through Api (CR-05). Only the fixed background-template path is built
- * here — no avatar/lips-sync controls, since that backend path doesn't exist yet (see
- * task-1.7.md: Level 3 needs a real user decision on avatar image sourcing).
+ * state and calls through Api (CR-05). Speakers can upload/remove a portrait image
+ * (Task 1.7c) but nothing consumes it yet — no lip-sync controls, since LivePortrait
+ * integration itself is still deferred (see task-1.7.md / task-1.7c.md).
  */
 (() => {
   const state = {
@@ -12,6 +12,7 @@
     selectedTemplate: null,
     audioReady: false,
     isGenerating: false,
+    avatarBusy: {},
   };
 
   const byId = (id) => document.getElementById(id);
@@ -39,6 +40,101 @@
       badge.textContent = label;
       badges.appendChild(badge);
     });
+  }
+
+  function renderAvatars() {
+    const grid = byId("avatar-grid");
+    grid.replaceChildren();
+    (state.project.speakers || []).forEach((speaker) => {
+      const card = document.createElement("div");
+      card.className = "card avatar-card";
+
+      const preview = speaker.avatar_image_path
+        ? Object.assign(document.createElement("img"), {
+            className: "avatar-preview",
+            src: `${speaker.avatar_image_path}?t=${Date.now()}`,
+            alt: `${speaker.name}'s avatar`,
+          })
+        : Object.assign(document.createElement("div"), {
+            className: "avatar-placeholder",
+            textContent: "No image",
+          });
+
+      const name = document.createElement("div");
+      name.className = "avatar-name";
+      name.textContent = speaker.name;
+
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = "image/png,image/jpeg";
+      fileInput.id = `avatar-file-${speaker.id}`;
+
+      const uploadLabel = document.createElement("label");
+      uploadLabel.className = "btn btn-ghost btn-sm";
+      uploadLabel.htmlFor = fileInput.id;
+      uploadLabel.textContent = speaker.avatar_image_path ? "Replace" : "Upload";
+
+      const status = document.createElement("div");
+      status.className = "avatar-status";
+
+      const busy = Boolean(state.avatarBusy[speaker.id]);
+      fileInput.disabled = busy;
+      status.textContent = busy ? "Saving…" : "";
+
+      fileInput.addEventListener("change", () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (file) uploadAvatar(speaker.id, file);
+      });
+
+      const actions = document.createElement("div");
+      actions.className = "avatar-actions";
+      actions.append(uploadLabel, fileInput);
+
+      // Not `.hidden` on a `.btn`-classed element: this app's stylesheet has no
+      // `[hidden]` rule, so an unconditional `.btn { display: inline-flex }` (an
+      // author rule, which always beats the UA `[hidden]` rule regardless of
+      // specificity) would keep it visibly showing. Only append it when needed.
+      if (speaker.avatar_image_path) {
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "btn btn-ghost btn-sm";
+        removeButton.textContent = "Remove";
+        removeButton.disabled = busy;
+        removeButton.addEventListener("click", () => removeAvatar(speaker.id));
+        actions.append(removeButton);
+      }
+
+      card.append(preview, name, actions, status);
+      grid.appendChild(card);
+    });
+  }
+
+  async function uploadAvatar(speakerId, file) {
+    state.avatarBusy[speakerId] = true;
+    renderAvatars();
+    try {
+      state.project = await Api.uploadSpeakerAvatar(state.projectId, speakerId, file);
+    } catch (error) {
+      console.error("Failed to upload avatar:", error);
+      showError("We couldn't upload that image. Please try a PNG or JPEG under 8 MB.");
+    } finally {
+      delete state.avatarBusy[speakerId];
+      renderAvatars();
+    }
+  }
+
+  async function removeAvatar(speakerId) {
+    state.avatarBusy[speakerId] = true;
+    renderAvatars();
+    try {
+      state.project = await Api.deleteSpeakerAvatar(state.projectId, speakerId);
+    } catch (error) {
+      console.error("Failed to remove avatar:", error);
+      showError("We couldn't remove that image. Please try again.");
+    } finally {
+      delete state.avatarBusy[speakerId];
+      renderAvatars();
+    }
   }
 
   function renderTemplates() {
@@ -172,6 +268,7 @@
 
     byId("loading-panel").hidden = true;
     byId("workspace").hidden = false;
+    renderAvatars();
     renderTemplates();
     applyLocks();
   }

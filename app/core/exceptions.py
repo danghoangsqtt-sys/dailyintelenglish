@@ -75,3 +75,9 @@ class MusicUploadTooLargeError(AppError):
     """Raised when a music upload exceeds the configured size limit."""
 
     status_code = 413
+
+
+class AvatarUploadTooLargeError(AppError):
+    """Raised when a speaker avatar upload exceeds the configured size limit."""
+
+    status_code = 413

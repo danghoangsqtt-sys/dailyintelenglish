@@ -3,9 +3,10 @@
 ## Meta
 - **ID**: 1.7
 - **Phase**: 1
-- **Status**: done (2026-09-13) for both sub-tasks (1.7a backend, 1.7b UI) — the only
-  remaining item is Level 3 LivePortrait, which was never part of the sub-task split and
-  stays blocked on a user avatar-image-sourcing decision (see Acceptance Criteria item 2)
+- **Status**: done (2026-09-13) for both sub-tasks (1.7a backend, 1.7b UI). The
+  avatar-image-sourcing decision (Acceptance Criteria item 2) was resolved by the user on
+  2026-09-13: build only the upload feature now — see Task 1.7c, done. Real LivePortrait
+  lip-sync inference remains not started; it was never part of this task's sub-task split.
 - **Priority**: medium
 - **Assignee**: AI
 
@@ -18,9 +19,9 @@
 ## Acceptance Criteria
 - [x] Level 2 video: Background image (from a fixed template set, not a looping video) +
   burned-in subtitles + SRT export — Sub-task 1.7a, 2026-09-13
-- [ ] Level 3 video: LivePortrait lips-sync on portrait avatar — deferred, blocked on a
-  user decision (where do per-speaker avatar images come from?), same class of blocker as
-  OmniVoice's `ref_audio`
+- [ ] Level 3 video: LivePortrait lips-sync on portrait avatar — the avatar-sourcing
+  question is resolved (user decision 2026-09-13: upload, see Task 1.7c, done) but the
+  actual LivePortrait inference pipeline is a separate, not-yet-started effort
 - [ ] Safe fallback from Level 3 to Level 2 on error/VRAM limit — moot until Level 3 exists
 - [x] Video Studio UI with preview player and export options — Sub-task 1.7b, 2026-09-13
   (background-template selector only — no avatar/lips-sync controls, since that backend

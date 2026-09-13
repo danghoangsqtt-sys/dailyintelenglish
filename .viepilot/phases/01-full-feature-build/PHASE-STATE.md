@@ -7,18 +7,21 @@
   during close-out review against ROADMAP.md's separate, stricter phase-level
   "Acceptance Criteria (Phase 1 Complete)" checklist (transcript + Learning Content
   missing from the YouTube `.zip` export — closed via Sub-task 1.9c, implemented by
-  Codex, PM-accepted). Two items remain deliberately deferred pending a real user
-  decision (not blocking any task's own acceptance criteria): real OmniVoice GPU voice
-  cloning (Task 1.6, needs a `ref_audio` source) and Level 3 LivePortrait avatar
-  lip-sync (Task 1.7, needs an avatar image source).
+  Codex, PM-accepted). Both previously-deferred decisions were resolved by the user on
+  2026-09-13: real OmniVoice GPU voice cloning (Task 1.6) **will not be pursued** — Edge
+  TTS is now the sole official engine; Level 3 LivePortrait avatar lip-sync (Task 1.7)
+  had its avatar-sourcing question resolved as upload-only, delivered as Sub-task 1.7c —
+  the actual lip-sync model integration itself remains a separate, not-yet-started
+  future effort.
 - **Started:** 2026-09-10
 - **Completed:** 2026-09-13 (Day 3 of a 21-day target — well ahead of schedule)
 - **Milestone Progress:** 10 / 10 major tasks (100%)
-- **Subtask Progress:** 27 / 29 granular subtasks (93% — the 2 remaining are the deferred
-  items above)
-- **Test Suite Status:** 437 passed, ruff clean, all `node --check` clean. One known,
+- **Subtask Progress:** 28 / 30 granular subtasks (93% — Sub-task 1.7c added and done
+  2026-09-13; the 2 remaining are real OmniVoice GPU integration, decided against, and
+  LivePortrait lip-sync inference itself, not yet started)
+- **Test Suite Status:** 474 passed, ruff clean, all `node --check` clean. One known,
   accepted flake affecting Gemini retry/backoff-pattern tests under a slow/loaded
-  full-suite run (6 occurrences across 3 unrelated modules, always passes in isolation —
+  full-suite run (8 occurrences across 3 unrelated modules, always passes in isolation —
   tracked in `.viepilot/debug/session-debug-20260912T000000Z.json`, closed `wontfix`), not
   a real defect.
 
@@ -101,10 +104,9 @@
     (6 API + 7 Playwright E2E, network-mocked), 388 total passing.
 
 ### Task 1.7: Step 5 — Video Studio
-- **Status:** ✅ Done (2026-09-13) for both sub-tasks (1.7a backend, 1.7b UI). Level 3
-  LivePortrait avatar lip-sync remains open, blocked on a user decision on avatar image
-  sourcing (same class of blocker as OmniVoice's `ref_audio`) — not part of the sub-task
-  split.
+- **Status:** ✅ Done (2026-09-13) for all three sub-tasks (1.7a backend, 1.7b UI, 1.7c
+  avatar upload). Real LivePortrait lip-sync inference remains open and not started —
+  the avatar-sourcing question that used to block it is resolved (Sub-task 1.7c).
   - **1.7a DONE (2026-09-13):** `app/services/video_service.py` — real ffmpeg-rendered MP4
     from a project's completed audio mix (Task 1.6) + one of 3 fixed pre-rendered
     background templates (`frontend/static/video_backgrounds/`, via
@@ -125,6 +127,20 @@
     first pipeline-nav button ("Next: Video Studio →"). 7 new Playwright tests
     (network-mocked), 428/428 total tests pass. Live-smoke-tested end-to-end through the
     real API and took a real screenshot to confirm visual consistency.
+  - **1.7c DONE (2026-09-13):** `app/services/avatar_service.py` — magic-byte-checked
+    PNG/JPEG upload (8MB cap), one mutable file per speaker at
+    `data/avatars/{project_id}/{speaker_id}.{ext}`, safe containment-checked serving
+    (never a raw filesystem path in any API response — `project_service.get_project` now
+    maps the stored path to a served URL). `POST/GET/DELETE
+    /api/projects/{id}/speakers/{id}/avatar`; `/step5` gained a per-speaker upload/
+    preview/remove section, not wired into video generation. 20 new backend tests + 1 new
+    Playwright test, 474 total pass (1 flaky Gemini-retry test, confirmed passing in
+    isolation, unrelated). Live-verified end-to-end with a real (non-mocked)
+    upload→serve→delete cycle. Caught and fixed a real rendering bug via a live
+    screenshot: `.hidden` on a `.btn`-classed Remove button was silently ineffective
+    (this app's stylesheet has no `[hidden]` rule, so `.btn`'s unconditional `display:
+    inline-flex` — an author rule — always wins over the UA `[hidden]` rule) — fixed by
+    not appending the button when unneeded.
 
 ### Task 1.8: Step 6 — Thumbnail Generator
 - **Status:** ✅ Done (2026-09-12)

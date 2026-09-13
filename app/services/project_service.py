@@ -191,7 +191,12 @@ async def get_project(db: aiosqlite.Connection, project_id: str) -> dict:
         (project_id,),
     )
     speaker_rows = await speaker_cursor.fetchall()
-    project["speakers"] = [dict(speaker_row) for speaker_row in speaker_rows]
+    speakers = [dict(speaker_row) for speaker_row in speaker_rows]
+    for speaker in speakers:
+        # Never leak the raw on-disk path to API clients — only a served URL, or null.
+        if speaker["avatar_image_path"]:
+            speaker["avatar_image_path"] = f"/api/projects/{project_id}/speakers/{speaker['id']}/avatar"
+    project["speakers"] = speakers
     return project
 
 

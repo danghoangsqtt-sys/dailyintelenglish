@@ -155,10 +155,10 @@
   - Burned-in subtitles (ffmpeg subtitles filter) — done, verified the installed ffmpeg build has `--enable-libass` before relying on it, and worked out the Windows path-escaping rule the filter needs
   - Verify: MP4 generates correctly with synced subtitles — 20 new tests (real ffmpeg pipeline, not mocked) + a live end-to-end smoke run with a real extracted video frame visually confirming the correct speaker name + dialogue text burned in
 
-- [ ] **VideoService — LivePortrait lips-sync** (Phase 1 primary if time allows) — deferred,
-  blocked on a real user decision: no speaker has an avatar image
-  (`speakers.avatar_image_path` is null for every speaker, no upload/generation feature
-  exists) — same class of blocker as OmniVoice's `ref_audio` requirement
+- [ ] **VideoService — LivePortrait lips-sync** (Phase 1 primary if time allows) — the
+  avatar-sourcing question that used to block this is resolved (user decision 2026-09-13:
+  upload only, see Sub-task 1.7c, done); the actual lip-sync inference pipeline itself
+  remains not started
   - `generate_video_avatar(project_id, avatar_images)` — per-speaker avatar lip-sync
   - Side-by-side layout: speaker1 left, speaker2 right
   - Active speaker highlight (border glow on speaking turn)
@@ -166,7 +166,12 @@
 
 - [x] **Video Studio UI** (`frontend/pages/step5_video.html`) — Sub-task 1.7b, done 2026-09-13
   - Background selector — done, choose from the 3 fixed templates (no custom upload yet, matches 1.7a's own scope decision)
-  - Avatar uploader per speaker / Subtitle style picker / Mode toggle / "Copy prompt to generate avatar image" — not built: all belong to Level 3 (LivePortrait), which isn't implemented; building UI controls for a backend path that always fails would be a fake feature
+  - Avatar uploader per speaker — done, Sub-task 1.7c (2026-09-13): upload/preview/remove
+    per speaker at `/step5`, `app/services/avatar_service.py`, never wired into video
+    generation since the lip-sync pipeline itself doesn't exist yet
+  - Subtitle style picker / Mode toggle / "Copy prompt to generate avatar image" — not
+    built: still belong to Level 3 (LivePortrait), which isn't implemented; building UI
+    controls for a backend path that always fails would be a fake feature
   - Progress bar → a plain "Rendering…" status text instead (ffmpeg render is well under a second per the 1.7a live smoke test — a fake animated progress bar for a near-instant operation was rejected) + preview player — done
   - Download MP4 + SRT buttons — done
   - Verify: 7 new Playwright tests (network-mocked) + a live end-to-end smoke run through the real API + a real screenshot confirming visual consistency

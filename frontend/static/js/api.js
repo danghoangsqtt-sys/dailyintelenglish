@@ -108,6 +108,13 @@ const Api = (() => {
         body: JSON.stringify({ template_id: templateId }),
       }),
     videoDownloadUrl: (projectId, format) => `/api/projects/${projectId}/video/download?format=${format}`,
+    uploadSpeakerAvatar: (projectId, speakerId, file) => {
+      const body = new FormData();
+      body.append("file", file);
+      return request(`/api/projects/${projectId}/speakers/${speakerId}/avatar`, { method: "POST", body });
+    },
+    deleteSpeakerAvatar: (projectId, speakerId) =>
+      request(`/api/projects/${projectId}/speakers/${speakerId}/avatar`, { method: "DELETE" }),
     health: () => request("/health"),
   };
 })();
