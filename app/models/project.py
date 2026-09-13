@@ -33,7 +33,7 @@ class SpeakerConfig(BaseModel):
     name: str = Field(min_length=1)
     gender: str = "neutral"
     accent: str = "american"
-    tts_engine: str = "omnivoice"
+    tts_engine: str = "edge_tts"
     voice_description: str = ""
     speed: float = Field(default=1.0, ge=TTS_SPEED_MIN, le=TTS_SPEED_MAX)
     pitch: float = Field(default=0.0, ge=-1.0, le=1.0)

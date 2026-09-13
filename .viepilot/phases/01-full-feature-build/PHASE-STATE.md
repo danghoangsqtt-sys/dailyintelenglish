@@ -72,8 +72,8 @@
 
 ### Task 1.6: Step 4 — TTS Audio Studio
 - **Status:** ✅ Done (2026-09-13) for all 3 sub-tasks (1.6a/1.6b/1.6c). Real OmniVoice GPU
-  inference remains open, blocked on a user design decision (not part of the sub-task
-  split) — see TRACKER.md.
+  inference **will not be pursued** — user decision 2026-09-13, Edge TTS is the sole
+  official TTS engine going forward — see TRACKER.md Known Issues.
 - **Details:** Split into sub-tasks since ffmpeg/OmniVoice model were unavailable on this
   machine at the time (now resolved — see Known Issues).
   - **1.6a DONE:** `TTSService.synthesize_line()` — Edge TTS synthesis (all 10 accents x

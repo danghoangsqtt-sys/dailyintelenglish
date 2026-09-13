@@ -28,10 +28,12 @@
 | **Task 1.7** | 🎬 **Video Studio** (`/step5`) | `VideoService` xuất MP4 thật từ audio mix + 1 trong 3 background template + phụ đề burned-in (ffmpeg/libass) từ timestamp thật; chọn template, xem trước, tải MP4/SRT. LivePortrait lips-sync avatar chưa có (cần ảnh avatar per-speaker, chưa có tính năng upload/tạo ảnh) | ✅ Shipped |
 | **Task 1.10** | 🎵 **Music Library** (`/music`) | Upload/list/preview/delete nhạc nền (giới hạn 50MB, kiểm tra magic-byte, chống trùng tên); volume leveling + chọn nhạc nền cho Step 4 (qua Task 1.6); waveform visualization thật (Web Audio API, click-to-seek) | ✅ Shipped |
 
-All 10 Phase 1 major tasks are now shipped. Two items remain deliberately deferred, each
-needing a real product/asset decision rather than more engineering: real OmniVoice GPU
-voice cloning (Task 1.6 — needs a `ref_audio` reference-sample source per speaker) and
-Level 3 LivePortrait avatar lip-sync (Task 1.7 — needs a per-speaker avatar image source).
+All 10 Phase 1 major tasks are now shipped. Two follow-up product decisions were made
+2026-09-13: real OmniVoice GPU voice cloning will not be pursued (Edge TTS is the sole
+official TTS engine — OmniVoice's real API turned out to be voice *cloning* from a
+reference sample, not the text-described voice design first planned); Level 3
+LivePortrait avatar lip-sync stays deferred as a separate future research effort, but its
+avatar-upload groundwork (user supplies their own image per speaker) is in scope now.
 
 ## Quick Start
 
@@ -91,7 +93,7 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
 - **Backend**: Python 3.11+ / FastAPI / Uvicorn / aiosqlite
 - **Frontend**: Vanilla HTML5 / CSS3 / JavaScript
 - **AI**: Google Gemini API (`gemini-3.8-flash`) with strict structured JSON schema
-- **TTS**: OmniVoice (local GPU) + Edge TTS + Piper TTS
+- **TTS**: Edge TTS (sole engine — OmniVoice GPU cloning considered, dropped 2026-09-13)
 - **Audio**: pydub + ffmpeg
 - **Video**: ffmpeg + LivePortrait (lips-sync)
 - **Thumbnail**: Pillow

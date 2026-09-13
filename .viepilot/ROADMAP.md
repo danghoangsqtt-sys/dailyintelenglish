@@ -112,13 +112,17 @@
 
 ### 1.6 Step 4 — TTS Audio Studio
 
-- [ ] **TTSService — OmniVoice** (`app/services/tts_service.py`)
-  - Load OmniVoice model at startup (singleton)
-  - `generate_line(text, voice_description, speed, pitch)` → WAV file
-  - Semaphore(2) for concurrent limit — **done**, `asyncio.Semaphore(MAX_CONCURRENT_TTS)` wraps the call site
+- [x] **TTSService — OmniVoice** (`app/services/tts_service.py`) — **Won't do, by user
+  decision 2026-09-13.** Real GPU inference will not be integrated: OmniVoice's actual
+  API is zero-shot voice *cloning* from a reference audio sample, not the
+  text-described "voice design" this bullet originally assumed
+  (`generate_line(text, voice_description, ...)`), and closing that gap doesn't clearly
+  improve on the already-working Edge TTS enough to justify the voice-cloning
+  consent/rights questions a reference-sample source would raise. **Edge TTS is the sole
+  official TTS engine.**
+  - Semaphore(2) for concurrent limit — **done**, `asyncio.Semaphore(MAX_CONCURRENT_TTS)` wraps the call site (left in place, harmless)
   - VRAM overflow → auto-fallback to Edge TTS — **done and tested** (any exception from the OmniVoice path falls back, not just OOM specifically)
-  - Cache: check `data/tts_cache/` before generating
-  - Verify: generates speech for sample lines, cache works, fallback works — **blocked**: no OmniVoice model weights on this machine (`models/omnivoice/` empty, see Known Issues); `_synthesize_omnivoice()` honestly raises "model not loaded" rather than faking success, exercised by `test_omnivoice_synthesis_always_raises_unavailable_for_now`
+  - Real model loading / cache / generation — **not pursued**; `_synthesize_omnivoice()` honestly and permanently raises "model not loaded" rather than faking success, exercised by `test_omnivoice_synthesis_always_raises_unavailable_for_now`. The Step 4 UI does not offer OmniVoice as a selectable engine (no real behavior difference to choose between)
 
 - [x] **TTSService — Edge TTS**
   - `generate_line_edge(text, voice_name, speed)` → mp3 (via `edge_tts.Communicate`, streamed to bytes)

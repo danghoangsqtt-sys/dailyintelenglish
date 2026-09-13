@@ -206,6 +206,10 @@ test(script): add CEFR level vocabulary tests
 - Use `response_schema` (JSON mode) for structured outputs
 
 ### OmniVoice Rules
+> **Not currently applicable** — the user decided 2026-09-13 not to pursue real OmniVoice
+> integration (its real API is voice cloning from a reference sample, not the
+> text-described voice design originally planned; Edge TTS is the sole official TTS
+> engine — see TRACKER.md Known Issues). Kept here in case that decision is revisited.
 - Load model ONCE at startup (not per-request) — 15-30s startup time
 - Use semaphore(2) for concurrent request limit
 - Catch `torch.cuda.OutOfMemoryError` → fallback to Edge TTS automatically

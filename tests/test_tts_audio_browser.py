@@ -206,7 +206,10 @@ async def test_empty_script_shows_empty_state_not_workspace(browser_instance: Br
 
 
 @pytest.mark.asyncio
-async def test_speaker_engine_change_autosaves(browser_instance: Browser, live_server_url: str):
+async def test_speaker_slider_change_autosaves(browser_instance: Browser, live_server_url: str):
+    """Edge TTS is the sole official engine (no engine picker in the UI anymore — see
+    TRACKER.md Known Issues, decided 2026-09-13); speed/pitch/volume sliders are the only
+    editable speaker fields, so this covers the autosave mechanism through one of them."""
     page = await browser_instance.new_page()
     patch_bodies = []
 
@@ -219,11 +222,24 @@ async def test_speaker_engine_change_autosaves(browser_instance: Browser, live_s
     await page.goto(f"{live_server_url}/step4?project_id={PROJECT['id']}")
     await page.wait_for_selector("#workspace:not([hidden])")
 
-    first_engine_select = page.locator(".speaker-card select").first
-    await first_engine_select.select_option("edge_tts")
+    first_speed_slider = page.locator(".speaker-card input[type='range'][data-field='speed']").first
+    await first_speed_slider.fill("1.25")
+    await first_speed_slider.dispatch_event("input")
     await page.wait_for_timeout(600)  # past the 400ms debounce
     assert len(patch_bodies) == 1
-    assert patch_bodies[0]["tts_engine"] == "edge_tts"
+    assert patch_bodies[0]["speed"] == 1.25
+    await page.close()
+
+
+async def test_step4_no_longer_offers_a_tts_engine_picker(browser_instance: Browser, live_server_url: str):
+    """Regression guard for the 2026-09-13 decision: Edge TTS is the sole official
+    engine, so the per-speaker engine <select> must not be rendered."""
+    page = await browser_instance.new_page()
+    await _default_routes(page)
+    await page.goto(f"{live_server_url}/step4?project_id={PROJECT['id']}")
+    await page.wait_for_selector("#workspace:not([hidden])")
+
+    assert await page.locator(".speaker-card select").count() == 0
     await page.close()
 
 

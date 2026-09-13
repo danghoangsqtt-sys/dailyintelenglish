@@ -3,10 +3,9 @@
 ## Meta
 - **ID**: 1.6
 - **Phase**: 1
-- **Status**: done (2026-09-13) for all 3 sub-tasks (1.6a Edge TTS, 1.6b AudioService, 1.6c
-  UI) — the only remaining item is real OmniVoice GPU inference, which was never part of
-  the sub-task split and stays blocked on a user design decision (see Acceptance Criteria
-  item 1 and TRACKER.md)
+- **Status**: done (2026-09-13) — all 3 sub-tasks complete, and the user has since decided
+  (2026-09-13) not to pursue real OmniVoice GPU inference; Edge TTS is the sole official
+  TTS engine going forward (see Acceptance Criteria item 1 and TRACKER.md Known Issues)
 - **Priority**: high
 - **Assignee**: AI
 
@@ -18,10 +17,16 @@
 - `frontend/static/js/step4_tts.js`
 
 ## Acceptance Criteria
-- [ ] TTSService supports OmniVoice local GPU with concurrency semaphore(2) — semaphore
-  wired (`asyncio.Semaphore(MAX_CONCURRENT_TTS)`), but real GPU inference is not yet
-  integrated into `_synthesize_omnivoice()` (deliberately deferred — needs a ref_audio
-  design decision, see TRACKER.md)
+- [x] ~~TTSService supports OmniVoice local GPU with concurrency semaphore(2)~~ **Won't
+  do, by user decision 2026-09-13** — semaphore is wired
+  (`asyncio.Semaphore(MAX_CONCURRENT_TTS)`) and the honest fallback branch stays in place,
+  but real GPU inference will not be integrated into `_synthesize_omnivoice()`. Reason:
+  OmniVoice's actual API is zero-shot voice *cloning* from a reference audio sample, not
+  the text-described "voice design" this criterion originally assumed — closing that gap
+  safely needs either the user's own licensed voice recordings or a royalty-free
+  reference-voice library, and doesn't clearly improve on the already-working Edge TTS
+  enough to justify the added voice-cloning consent/rights surface. See TRACKER.md Known
+  Issues for the full reasoning.
 - [x] Automatic fallback to Edge TTS on OOM / error — any `_synthesize_omnivoice` exception
   falls back, tested in `tests/test_tts_service.py`
 - [x] AudioService mixes tracks with speaker pauses and volume normalization — Sub-task 1.6b

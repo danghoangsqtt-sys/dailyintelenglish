@@ -238,7 +238,7 @@ def test_update_speaker_persists_engine_and_slider_changes(client):
     assert updated["volume"] == 0.5
     # Untouched speaker (and untouched fields) must survive unchanged.
     other = next(s for s in response.json()["data"]["speakers"] if s["id"] != speaker_id)
-    assert other["tts_engine"] == "omnivoice"
+    assert other["tts_engine"] == "edge_tts"
 
 
 def test_update_speaker_partial_patch_leaves_other_fields_untouched(client):

@@ -213,14 +213,21 @@ graph LR
 
 ### 3. TTSService (`app/services/tts_service.py`)
 - **Responsibility:** Convert script lines → audio files per speaker
-- **Engines (priority order):**
-  1. OmniVoice (GPU) — primary, voice design via text description
-  2. Edge TTS — backup (free, online, many accents)
-  3. Piper TTS — offline fallback
-  4. Google Cloud TTS — optional API
-  5. Azure TTS — optional API
+- **Engine: Edge TTS** (free, online, 10 accents x 3 genders, live-verified) — the sole
+  official engine, by user decision 2026-09-13.
+  - OmniVoice (local GPU) was the originally-planned primary engine, but its real API
+    turned out to be zero-shot voice *cloning* from a reference audio sample, not the
+    text-described "voice design" originally envisioned — pursuing it further didn't
+    clearly improve on Edge TTS enough to justify the voice-cloning consent/rights
+    questions a reference-sample source would raise. The semaphore-guarded fallback
+    branch (`_synthesize_omnivoice()` → honest "model not loaded" → Edge TTS) stays in
+    the code as a harmless, tested example of the fallback pattern, but is not a live
+    engine choice in the UI.
+  - Piper TTS / Google Cloud TTS / Azure TTS were never implemented — `TTS_ENGINES` keeps
+    them as valid enum values for schema flexibility only.
 - **Outputs:** Per-line WAV/MP3 files in `data/tts_cache/`
-- **Voice mapping:** Each speaker → engine + voice_id + speed/pitch/volume settings
+- **Voice mapping:** Each speaker → accent + gender → a concrete Edge TTS neural voice
+  (`EDGE_TTS_VOICE_MAP`), plus speed/pitch/volume settings
 
 ### 4. AudioService (`app/services/audio_service.py`) — Sub-task 1.6b, DONE
 - **Responsibility:** Mix per-speaker audio lines → final podcast audio. Only processes
@@ -300,8 +307,7 @@ graph LR
 |---|---|---|
 | Backend framework | FastAPI | Async, fast, auto OpenAPI docs, Python ecosystem |
 | Frontend | Vanilla HTML/CSS/JS | Nhẹ, không dependency, dễ maintain |
-| Primary TTS | OmniVoice (k2-fsa) | 600+ langs, voice design, RTF 0.025 trên RTX 3060 |
-| Backup TTS | Edge TTS | Free, online, 300+ voices including all English accents |
+| TTS engine | Edge TTS (sole engine, decided 2026-09-13) | Free, online, 300+ voices including all English accents — OmniVoice (k2-fsa) considered but dropped: real API is voice cloning (needs a reference sample), not text-described voice design as first assumed |
 | Audio processing | pydub + ffmpeg | Mature, well-documented, wide format support |
 | Video generation | ffmpeg | Universal, GPU-accelerated |
 | Lips-sync | LivePortrait | Fastest inference, real-time capable, VRAM-efficient |

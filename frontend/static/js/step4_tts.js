@@ -10,10 +10,6 @@
  */
 (() => {
   const SAVE_DEBOUNCE_MS = 400;
-  const ENGINE_OPTIONS = [
-    { value: "omnivoice", label: "OmniVoice (falls back to Edge TTS)" },
-    { value: "edge_tts", label: "Edge TTS" },
-  ];
 
   const state = {
     projectId: null,
@@ -101,21 +97,7 @@
       meta.className = "speaker-meta";
       meta.textContent = `${speaker.gender} · ${speaker.accent}`;
 
-      const engineLabel = document.createElement("label");
-      engineLabel.className = "field-label";
-      engineLabel.textContent = "TTS engine";
-      const engineSelect = document.createElement("select");
-      engineSelect.dataset.speakerId = speaker.id;
-      engineSelect.dataset.field = "tts_engine";
-      ENGINE_OPTIONS.forEach((option) => {
-        const opt = document.createElement("option");
-        opt.value = option.value;
-        opt.textContent = option.label;
-        opt.selected = option.value === speaker.tts_engine;
-        engineSelect.appendChild(opt);
-      });
-
-      card.append(nameRow, meta, engineLabel, engineSelect);
+      card.append(nameRow, meta);
       card.appendChild(buildSlider(speaker, "speed", "Speed", 0.75, 1.5, 0.05));
       card.appendChild(buildSlider(speaker, "pitch", "Pitch", -1, 1, 0.1));
       card.appendChild(buildSlider(speaker, "volume", "Volume", 0, 2, 0.1));
@@ -157,7 +139,9 @@
 
   function scheduleSpeakerSave(speakerId, field, rawValue) {
     const entry = state.speakerSave[speakerId];
-    const value = field === "tts_engine" ? rawValue : Number(rawValue);
+    // Speed/pitch/volume are the only editable speaker fields now that TTS engine
+    // choice was removed (Edge TTS is the sole official engine) — all numeric.
+    const value = Number(rawValue);
     entry.draft = { ...(entry.draft || {}), [field]: value };
 
     if (entry.timer) clearTimeout(entry.timer);
