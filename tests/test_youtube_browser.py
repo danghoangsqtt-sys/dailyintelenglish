@@ -31,6 +31,7 @@ PACKAGE = {
     ],
     "description": "An English-learning podcast episode about remote work culture.",
     "chapters_text": "00:00 Introduction\n01:20 Working from home",
+    "chapters_estimated": True,
     "tags": ["remote work", "english learning", "b1 podcast"],
     "created_at": "2026-09-12T00:00:00Z",
     "updated_at": "2026-09-12T00:00:00Z",
@@ -71,11 +72,31 @@ async def browser_instance() -> AsyncGenerator[Browser, None]:
         await browser.close()
 
 
-async def _mock_project_and_package(page, package_response) -> None:
+async def _mock_project_and_package(page, package_response, *, video_ready=False, thumbnail_ready=False) -> None:
     async def handle_routes(route):
         url = route.request.url
         method = route.request.method
-        if url.endswith(f"/api/projects/{PROJECT['id']}/youtube/generate") and method == "POST":
+        if url.endswith(f"/api/projects/{PROJECT['id']}/video/status") and method == "GET":
+            if video_ready:
+                await route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps({"success": True, "data": {"status": "complete"}, "error": None, "meta": {}}),
+                )
+            else:
+                await route.fulfill(
+                    status=404,
+                    content_type="application/json",
+                    body=json.dumps({"success": False, "data": None, "error": "no video", "meta": {}}),
+                )
+        elif url.endswith(f"/api/projects/{PROJECT['id']}/thumbnails") and method == "GET":
+            thumbnails = [{"id": "t1", "is_selected": thumbnail_ready}] if thumbnail_ready else []
+            await route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"success": True, "data": thumbnails, "error": None, "meta": {}}),
+            )
+        elif url.endswith(f"/api/projects/{PROJECT['id']}/youtube/generate") and method == "POST":
             await route.fulfill(
                 status=200,
                 content_type="application/json",
@@ -127,7 +148,7 @@ async def test_generate_renders_titles_description_tags_and_estimated_chapters(
     assert await page.locator("#title-text-educational").text_content() == PACKAGE["titles"][1]["text"]
     assert await page.locator("#title-text-seo").text_content() == PACKAGE["titles"][2]["text"]
     assert await page.locator("#description-text").text_content() == PACKAGE["description"]
-    assert "Estimated from script length" in await page.locator(".estimate-note").text_content()
+    assert "Estimated from script length" in await page.locator("#chapters-estimate-note").text_content()
     chapters_text = await page.locator("#chapters-text").text_content()
     assert "00:00 Introduction" in chapters_text
     tag_chips = page.locator(".tag-chip")
@@ -237,4 +258,38 @@ async def test_generate_failure_shows_friendly_error_only(browser_instance: Brow
     banner_text = await page.locator("#error-banner").text_content()
     assert "couldn't generate" in banner_text.lower()
     assert "429" not in banner_text
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_export_link_disabled_when_video_and_thumbnail_not_ready(browser_instance: Browser, live_server_url: str):
+    page = await browser_instance.new_page()
+    await _mock_project_and_package(page, PACKAGE, video_ready=False, thumbnail_ready=False)
+
+    await page.goto(f"{live_server_url}/step7?project_id={PROJECT['id']}")
+    await page.wait_for_selector("#content-wrap:not([hidden])")
+
+    assert await page.locator("#export-zip-link").get_attribute("aria-disabled") == "true"
+    status_text = await page.locator("#export-status-note").text_content()
+    assert "video" in status_text.lower()
+    assert "thumbnail" in status_text.lower()
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_export_link_enabled_and_chapters_marked_measured_when_ready(
+    browser_instance: Browser, live_server_url: str
+):
+    page = await browser_instance.new_page()
+    measured_package = {**PACKAGE, "chapters_estimated": False}
+    await _mock_project_and_package(page, measured_package, video_ready=True, thumbnail_ready=True)
+
+    await page.goto(f"{live_server_url}/step7?project_id={PROJECT['id']}")
+    await page.wait_for_selector("#content-wrap:not([hidden])")
+
+    assert await page.locator("#export-zip-link").get_attribute("aria-disabled") == "false"
+    href = await page.locator("#export-zip-link").get_attribute("href")
+    assert href.endswith(f"/api/projects/{PROJECT['id']}/youtube/export")
+    note_text = await page.locator("#chapters-estimate-note").text_content()
+    assert "Measured" in note_text
     await page.close()

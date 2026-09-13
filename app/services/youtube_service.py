@@ -1,20 +1,24 @@
-"""Generates and persists YouTube Package metadata via the Gemini API (Task 1.9, Sub-task 1.9a).
+"""Generates and persists YouTube Package metadata via the Gemini API (Task 1.9).
 
 Mirrors app/services/learning_service.py's approach: Gemini is called directly over
 its REST endpoint via httpx.AsyncClient, with 429-only exponential backoff and strict
 Pydantic schema validation of the response.
 
-Chapter timestamps are ESTIMATED from a fixed reading speed (no real audio duration
-exists yet — Task 1.7/AudioService are blocked on ffmpeg, see TRACKER.md Known Issues),
-never measured. This is documented in the API response shape and the UI copy.
+Chapter timestamps are ESTIMATED from a fixed reading speed when no audio mix exists yet
+(Sub-task 1.9a's original behavior), or MEASURED from AudioService's real per-line
+timestamps once one does (Sub-task 1.9b) — `chapters_estimated` on the persisted package
+says which. `build_export_zip` (Sub-task 1.9b) assembles the final downloadable package
+(video + thumbnail + SRT + metadata.txt) once all three exist.
 """
 
 import asyncio
 import hashlib
+import io
 import json
 import logging
 import time
 import uuid
+import zipfile
 from datetime import datetime, timezone
 
 import aiosqlite
@@ -146,8 +150,36 @@ def estimate_chapters(script_lines: list[dict]) -> str:
     return "\n".join(chapters)
 
 
-async def generate_package(project: dict, script_lines: list[dict]) -> dict:
-    """Generate a full YouTube package (titles/description/tags/estimated chapters) via Gemini.
+def real_chapters_from_timestamps(timestamps: list[dict]) -> str:
+    """Build YouTube chapter markers from AudioService's real measured per-line timestamps.
+
+    Same topic-shift heuristic as `estimate_chapters` (new chapter every
+    YOUTUBE_CHAPTER_MIN_LINES lines, first chapter always "00:00 Introduction"), but using
+    real `start_sec` values and real line text (both present in AudioService's timestamps
+    since Task 1.7) instead of a word-count projection.
+
+    Returns:
+        Plain-text "MM:SS Label" lines, or "" if there are no timestamps.
+    """
+    if not timestamps:
+        return ""
+    chapters: list[str] = []
+    for index, cue in enumerate(timestamps):
+        if index == 0:
+            chapters.append("00:00 Introduction")
+        elif index % YOUTUBE_CHAPTER_MIN_LINES == 0:
+            minutes, secs = divmod(round(cue["start_sec"]), 60)
+            chapters.append(f"{minutes:02d}:{secs:02d} {_chapter_label(cue.get('text', ''))}")
+    return "\n".join(chapters)
+
+
+async def generate_package(project: dict, script_lines: list[dict], timestamps: list[dict] | None = None) -> dict:
+    """Generate a full YouTube package (titles/description/tags/chapters) via Gemini.
+
+    `timestamps` is the project's completed `audio_jobs.timestamps` (Task 1.6), when one
+    exists. When present, chapters are measured from real audio; otherwise they fall back
+    to `estimate_chapters`' word-count projection (Sub-task 1.9a's original behavior,
+    preserved for a project with no audio yet).
 
     Args:
         project: Project-shaped dict as returned by project_service.get_project —
@@ -191,11 +223,19 @@ async def generate_package(project: dict, script_lines: list[dict]) -> dict:
             f"Gemini response failed schema validation: {exc}"
         ) from exc
 
+    if timestamps:
+        chapters_text = real_chapters_from_timestamps(timestamps)
+        chapters_estimated = False
+    else:
+        chapters_text = estimate_chapters(script_lines)
+        chapters_estimated = True
+
     return {
         "titles": [title.model_dump() for title in package.titles],
         "description": package.description,
         "tags": package.tags,
-        "chapters_text": estimate_chapters(script_lines),
+        "chapters_text": chapters_text,
+        "chapters_estimated": chapters_estimated,
     }
 
 
@@ -204,6 +244,7 @@ def _row_to_package(row: aiosqlite.Row) -> dict:
     package = dict(row)
     package["titles"] = json.loads(package.pop("title_options_json"))
     package["tags"] = [tag.strip() for tag in package["tags"].split(",") if tag.strip()]
+    package["chapters_estimated"] = bool(package["chapters_estimated"])
     return package
 
 
@@ -211,7 +252,7 @@ async def get_package(db: aiosqlite.Connection, project_id: str) -> dict | None:
     """Fetch a project's YouTube package, or None if never generated."""
     cursor = await db.execute(
         "SELECT id, project_id, title_options_json, description, chapters_text, tags, "
-        "created_at, updated_at FROM youtube_packages WHERE project_id = ?",
+        "chapters_estimated, created_at, updated_at FROM youtube_packages WHERE project_id = ?",
         (project_id,),
     )
     row = await cursor.fetchone()
@@ -230,12 +271,13 @@ async def save_package(
     await db.execute(
         "INSERT INTO youtube_packages "
         "(id, project_id, title_options_json, description, chapters_text, tags, "
-        "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+        "chapters_estimated, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
         "ON CONFLICT(project_id) DO UPDATE SET "
         "title_options_json = excluded.title_options_json, "
         "description = excluded.description, "
         "chapters_text = excluded.chapters_text, "
         "tags = excluded.tags, "
+        "chapters_estimated = excluded.chapters_estimated, "
         "updated_at = excluded.updated_at",
         (
             str(uuid.uuid4()),
@@ -244,6 +286,7 @@ async def save_package(
             package["description"],
             package["chapters_text"],
             ", ".join(package["tags"]),
+            int(package.get("chapters_estimated", True)),
             now,
             now,
         ),
@@ -251,3 +294,36 @@ async def save_package(
     if commit:
         await db.commit()
     return await get_package(db, project_id)
+
+
+def _build_metadata_text(package: dict) -> str:
+    """Render the package's text fields as a plain-text metadata.txt for the export zip."""
+    lines = ["=== TITLES ===", ""]
+    for title in package["titles"]:
+        lines.append(f"[{title['variant']}] {title['text']}")
+    lines += ["", "=== DESCRIPTION ===", "", package["description"]]
+    lines += ["", "=== TAGS ===", "", ", ".join(package["tags"])]
+    chapter_kind = "Estimated (word-count projection)" if package["chapters_estimated"] else "Measured (from real audio)"
+    lines += ["", f"=== CHAPTERS ({chapter_kind}) ===", "", package["chapters_text"]]
+    return "\n".join(lines) + "\n"
+
+
+def build_export_zip(package: dict, video_job: dict, thumbnail_row: dict) -> bytes:
+    """Assemble the full downloadable YouTube package as an in-memory zip.
+
+    Args:
+        package: A YouTube package dict (from `get_package`).
+        video_job: A completed `video_jobs` row (from `video_service.get_video_job`) —
+            caller must have already checked `status == "complete"`.
+        thumbnail_row: The project's favorite (`is_selected`) thumbnail row.
+
+    Returns:
+        Raw zip file bytes, ready to stream as an HTTP response body.
+    """
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.write(video_job["mp4_path"], arcname="video.mp4")
+        archive.write(video_job["srt_path"], arcname="subtitles.srt")
+        archive.write(thumbnail_row["image_path_16x9"], arcname="thumbnail.png")
+        archive.writestr("metadata.txt", _build_metadata_text(package))
+    return buffer.getvalue()

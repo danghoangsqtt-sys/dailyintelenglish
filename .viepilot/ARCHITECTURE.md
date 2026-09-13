@@ -266,19 +266,25 @@ graph LR
 - **Templates:** Stored in `frontend/static/thumbnail_templates/`
 - **Output:** PNG 1280x720 + PNG 720x1280 (Shorts)
 
-### 7. YouTubePackageService (`app/services/youtube_service.py`)
-- **Responsibility:** Generate YouTube upload metadata (Sub-task 1.9a — text only; the
-  full zip export with video/thumbnail/SRT is Sub-task 1.9b, pending Task 1.7)
-- **Output (Sub-task 1.9a, `youtube_packages` table via `003_youtube_package.sql`):**
+### 7. YouTubePackageService (`app/services/youtube_service.py`) — Sub-tasks 1.9a + 1.9b, DONE
+- **Responsibility:** Generate YouTube upload metadata and assemble the final downloadable
+  package.
+- **Output (`youtube_packages` table, `003_youtube_package.sql` + `004_youtube_chapters_measured.sql`):**
   - 3 AI-generated title options (Gemini): `click_worthy`, `educational`, `seo` variants
   - AI-generated video description (Gemini)
-  - Chapters with **estimated** timestamps — derived from cumulative script word count at
-    a fixed reading speed (`YOUTUBE_CHAPTER_WORDS_PER_MINUTE`), not measured from real
-    audio (no audio exists yet — Task 1.7/AudioService are blocked on `ffmpeg`); the API
-    response and UI both label these as estimates
+  - Chapters: **measured** from AudioService's real per-line timestamps once a project's
+    audio has been mixed (Task 1.6/1.7), otherwise **estimated** from cumulative script
+    word count at a fixed reading speed (`YOUTUBE_CHAPTER_WORDS_PER_MINUTE`) for a project
+    with no audio yet — `chapters_estimated` on the row/API response says which, and the
+    UI shows the correct label rather than always claiming "estimated"
   - Tags & keywords (SEO), comma-joined, capped at `YOUTUBE_TAGS_MAX_CHARS`
-- **Deferred to Sub-task 1.9b (needs Task 1.7):** full transcript, vocabulary/grammar/
-  comprehension formatting, and the `.zip` package (video + thumbnail + SRT + metadata.txt)
+- **Full `.zip` export (Sub-task 1.9b, `GET .../youtube/export`):** streams an in-memory
+  zip containing `video.mp4` + `subtitles.srt` (from the completed `video_jobs` row, Task
+  1.7) + `thumbnail.png` (the selected favorite, Task 1.8) + `metadata.txt` (titles,
+  description, tags, chapters as plain text). Requires all three prerequisites to exist;
+  a clear error names exactly which is missing. Full transcript/vocabulary/grammar/
+  comprehension formatting in the export is not implemented (not part of the ROADMAP
+  acceptance criterion, which only asks for video+thumbnail+SRT+metadata.txt).
 - **Format:** Markdown + plain text for easy copy-paste
 
 ### 8. ProjectService (`app/services/project_service.py`)
@@ -360,8 +366,9 @@ GET    /api/thumbnails/templates               # List templates
 
 ### YouTube Package
 ```
-POST   /api/projects/{id}/youtube/generate   # Generate YouTube package
+POST   /api/projects/{id}/youtube/generate   # Generate YouTube package (chapters measured if audio exists, else estimated)
 GET    /api/projects/{id}/youtube            # Get package content
+GET    /api/projects/{id}/youtube/export     # Download full .zip (video+thumbnail+SRT+metadata.txt)
 ```
 
 ### TTS Engines

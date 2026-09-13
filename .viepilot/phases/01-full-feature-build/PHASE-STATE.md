@@ -132,7 +132,7 @@
     17 new tests (11 service/API + 6 real-browser Playwright). 314 total tests pass, ruff clean.
 
 ### Task 1.9: Step 7 — YouTube Package
-- **Status:** 🔄 In Progress (Sub-task 1.9a done; 1.9b pending Task 1.7)
+- **Status:** ✅ Done (2026-09-13) — both sub-tasks (1.9a, 1.9b) complete
 - **Details:** By Claude Code acting as both PM and Implementer (Codex ran out of quota).
   - **1.9a DONE:** `YouTubeService.generate_package()` — 3 Gemini-generated title variants
     (click_worthy/educational/seo), description, tags (`YOUTUBE_TAGS_MAX_CHARS` enforced),
@@ -144,8 +144,17 @@
     Caught and fixed 2 real bugs before landing: a tag-whitespace DB round-trip bug (unit
     test) and a `[hidden]`-attribute-vs-CSS-specificity bug on `#generate-panel` (only
     caught by an actual browser visibility assertion, not a unit test).
-  - **1.9b (full `.zip` export: video+thumbnail+SRT+metadata.txt, measured chapters):**
-    deferred, blocked on Task 1.7 (`ffmpeg`).
+  - **1.9b DONE (2026-09-13):** Chapters now **measured** from AudioService's real
+    per-line timestamps when a project's audio exists (`real_chapters_from_timestamps()`),
+    falling back to the 1.9a word-count estimate otherwise — `chapters_estimated` on the
+    row says which, additive migration `004_youtube_chapters_measured.sql`. New
+    `GET .../youtube/export` streams an in-memory `.zip` (video.mp4 + subtitles.srt +
+    thumbnail.png + metadata.txt) once a completed video and a selected favorite
+    thumbnail both exist. `/step7` UI shows the correct estimated-vs-measured label and a
+    real download link (disabled with an explanatory note until ready). 13 new tests
+    (real end-to-end pipeline test included, not mocked), 421 total pass. Caught a real
+    bug via a browser test: the frontend defaulted to claiming "Measured" when
+    `chapters_estimated` was simply undefined — fixed to require an explicit `=== false`.
 
 ### Task 1.10: Music Library
 - **Status:** 🔄 In Progress (upload/list/preview/delete + volume leveling + background-track

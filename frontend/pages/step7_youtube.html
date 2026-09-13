@@ -82,14 +82,7 @@
 
     .copy-btn { font-size: 12px; }
 
-    .zip-note {
-      padding: 14px 18px;
-      border-radius: 10px;
-      background: var(--surface);
-      border: 1px dashed var(--surface-border);
-      color: var(--text-muted);
-      font-size: 13px;
-    }
+    .btn[aria-disabled="true"] { opacity: 0.55; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -105,7 +98,7 @@
     <section class="page-header">
       <div>
         <h1 class="page-title" id="project-name">Loading…</h1>
-        <p class="page-subtitle">Step 7 — YouTube Package: titles, description, tags, and estimated chapters.</p>
+        <p class="page-subtitle">Step 7 — YouTube Package: titles, description, tags, and chapters.</p>
         <div class="page-badges" id="project-badges"></div>
       </div>
     </section>
@@ -113,7 +106,7 @@
     <div id="error-banner" role="alert" hidden></div>
 
     <section id="generate-panel">
-      <p>Generate AI-written titles, a description, tags, and estimated chapters from this project's script.</p>
+      <p>Generate AI-written titles, a description, tags, and chapters from this project's script (chapters are measured from the real audio once it's been generated in Step 4, otherwise estimated from script length).</p>
       <button id="generate-btn" type="button" class="btn btn-primary">✨ Generate YouTube Package</button>
     </section>
 
@@ -138,7 +131,7 @@
           <h2>Chapters</h2>
           <button type="button" class="btn btn-ghost copy-btn" data-copy-target="chapters-text">📋 Copy</button>
         </div>
-        <p class="estimate-note">⏱ Estimated from script length and reading speed — real timestamps require the final audio (coming with Task 1.7).</p>
+        <p class="estimate-note" id="chapters-estimate-note"></p>
         <p id="chapters-text"></p>
       </section>
 
@@ -151,7 +144,13 @@
         <span id="tags-text" hidden></span>
       </section>
 
-      <div class="zip-note">📦 Full package export (video + thumbnail + SRT + metadata.txt) will be available once Task 1.7 (Video Studio) is built.</div>
+      <section class="section-block card">
+        <div class="section-header">
+          <h2>Full Package Export</h2>
+        </div>
+        <p class="estimate-note" id="export-status-note">Checking export readiness…</p>
+        <a id="export-zip-link" class="btn btn-primary" href="#" aria-disabled="true">📦 Download full package (.zip)</a>
+      </section>
 
       <div style="margin-top: 20px; display: flex; gap: 10px;">
         <button id="regenerate-btn" type="button" class="btn btn-ghost">🔄 Regenerate</button>

@@ -4,7 +4,9 @@ No real network calls: `youtube_service._call_gemini` is monkeypatched, mirrorin
 tests/test_learning_service.py's approach for LearningService.
 """
 
+import io
 import json
+import zipfile
 
 import pytest
 
@@ -141,6 +143,28 @@ def test_estimate_chapters_timestamps_increase_with_word_count():
     assert chapters[1] != chapters[0]  # timestamp genuinely advanced, not stuck at 00:00
 
 
+# --- real_chapters_from_timestamps (pure function, no Gemini) ---
+
+
+def test_real_chapters_empty_timestamps_returns_empty_string():
+    assert youtube_service.real_chapters_from_timestamps([]) == ""
+
+
+def test_real_chapters_first_chapter_is_always_introduction():
+    timestamps = [{"start_sec": 0.0, "end_sec": 1.0, "text": "Hello!"}]
+    assert youtube_service.real_chapters_from_timestamps(timestamps) == "00:00 Introduction"
+
+
+def test_real_chapters_uses_real_seconds_not_word_count():
+    timestamps = [{"start_sec": float(i), "end_sec": float(i + 1), "text": f"Line {i}"} for i in range(YOUTUBE_CHAPTER_MIN_LINES + 1)]
+    chapters = youtube_service.real_chapters_from_timestamps(timestamps).split("\n")
+    assert len(chapters) == 2
+    assert chapters[0] == "00:00 Introduction"
+    minutes, seconds = divmod(YOUTUBE_CHAPTER_MIN_LINES, 60)
+    assert chapters[1].startswith(f"{minutes:02d}:{seconds:02d} ")
+    assert f"Line {YOUTUBE_CHAPTER_MIN_LINES}" in chapters[1]
+
+
 # --- generate_package ---
 
 
@@ -155,6 +179,29 @@ async def test_generate_package_success_on_http_200(monkeypatch):
     assert package["description"] == VALID_PACKAGE["description"]
     assert package["tags"] == VALID_PACKAGE["tags"]
     assert package["chapters_text"] == "00:00 Introduction"
+    assert package["chapters_estimated"] is True
+
+
+async def test_generate_package_without_timestamps_falls_back_to_estimate(monkeypatch):
+    queue_responses(monkeypatch, [gemini_ok_response(VALID_PACKAGE)])
+
+    package = await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, timestamps=None)
+
+    assert package["chapters_estimated"] is True
+    assert package["chapters_text"] == youtube_service.estimate_chapters(SAMPLE_SCRIPT_LINES)
+
+
+async def test_generate_package_with_timestamps_uses_measured_chapters(monkeypatch):
+    queue_responses(monkeypatch, [gemini_ok_response(VALID_PACKAGE)])
+    timestamps = [
+        {"start_sec": 0.0, "end_sec": 1.0, "text": SAMPLE_SCRIPT_LINES[0]["text"]},
+        {"start_sec": 5.0, "end_sec": 6.0, "text": SAMPLE_SCRIPT_LINES[1]["text"]},
+    ]
+
+    package = await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, timestamps=timestamps)
+
+    assert package["chapters_estimated"] is False
+    assert package["chapters_text"] == youtube_service.real_chapters_from_timestamps(timestamps)
 
 
 async def test_generate_package_retries_on_429_then_succeeds(monkeypatch, no_real_sleep):
@@ -325,3 +372,50 @@ async def test_deleting_project_cascades_to_youtube_package(db):
     await project_service.delete_project(db, project["id"])
 
     assert await youtube_service.get_package(db, project["id"]) is None
+
+
+async def test_save_package_persists_chapters_estimated_flag(db):
+    project = await project_service.create_project(db, make_project_config())
+    measured = {**VALID_PACKAGE, "chapters_text": "00:00 Introduction", "chapters_estimated": False}
+
+    saved = await youtube_service.save_package(db, project["id"], measured)
+    assert saved["chapters_estimated"] is False
+
+    fetched = await youtube_service.get_package(db, project["id"])
+    assert fetched["chapters_estimated"] is False
+
+    # Regenerating without audio (chapters_estimated defaults True) flips it back.
+    estimated_again = {**VALID_PACKAGE, "chapters_text": "00:00 Introduction"}
+    resaved = await youtube_service.save_package(db, project["id"], estimated_again)
+    assert resaved["chapters_estimated"] is True
+
+
+# --- build_export_zip ---
+
+
+def test_build_export_zip_contains_all_four_files(tmp_path):
+    video_path = tmp_path / "video.mp4"
+    video_path.write_bytes(b"fake-mp4-bytes")
+    srt_path = tmp_path / "subtitles.srt"
+    srt_path.write_text("1\n00:00:00,000 --> 00:00:01,000\nHello!\n", encoding="utf-8")
+    thumbnail_path = tmp_path / "thumb.png"
+    thumbnail_path.write_bytes(b"fake-png-bytes")
+
+    package = {
+        **VALID_PACKAGE,
+        "chapters_text": "00:00 Introduction",
+        "chapters_estimated": False,
+    }
+    video_job = {"mp4_path": str(video_path), "srt_path": str(srt_path)}
+    thumbnail_row = {"image_path_16x9": str(thumbnail_path)}
+
+    zip_bytes = youtube_service.build_export_zip(package, video_job, thumbnail_row)
+
+    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
+        names = set(archive.namelist())
+        assert names == {"video.mp4", "subtitles.srt", "thumbnail.png", "metadata.txt"}
+        assert archive.read("video.mp4") == b"fake-mp4-bytes"
+        metadata = archive.read("metadata.txt").decode("utf-8")
+        assert "TITLES" in metadata
+        assert VALID_PACKAGE["description"] in metadata
+        assert "Measured (from real audio)" in metadata

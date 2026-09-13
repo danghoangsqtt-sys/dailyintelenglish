@@ -3,7 +3,7 @@
 ## Meta
 - **ID**: 1.9
 - **Phase**: 1
-- **Status**: in_progress (Sub-task 1.9a done)
+- **Status**: done (2026-09-13) — both sub-tasks (1.9a, 1.9b) complete
 - **Priority**: medium
 - **Assignee**: AI (Claude Code, acting as PM + Implementer)
 
@@ -15,9 +15,9 @@
 
 ## Acceptance Criteria
 - [x] Title options (3 variants: click-worthy, educational, SEO) — Gemini-generated, `responseJsonSchema` validated
-- [x] Description with auto-generated timestamps/chapters — description done; chapters are honestly ESTIMATED (no real audio exists yet), clearly labelled as such in API + UI
+- [x] Description with auto-generated timestamps/chapters — chapters are MEASURED from real audio when one exists (Sub-task 1.9b), or honestly ESTIMATED when it doesn't; the API response and UI both label which one applies
 - [x] Tag generator (comma-separated, max 500 chars) — `YOUTUBE_TAGS_MAX_CHARS` enforced on the joined string
-- [ ] Full package download (.zip containing video, thumbnail, SRT, metadata.txt) — deferred to Sub-task 1.9b, blocked on Task 1.7 (ffmpeg)
+- [x] Full package download (.zip containing video, thumbnail, SRT, metadata.txt) — Sub-task 1.9b, 2026-09-13
 
 ## Forbidden Scope
 - No auto-publishing to YouTube without explicit user export/consent
@@ -222,3 +222,118 @@ only by an actual browser test, which is exactly why Sub-task 1.8b/1.10a's real-
 coverage requirement exists. Chapters are honestly labelled as estimates in both the API
 shape and the UI copy. This closes Sub-task 1.9a. Sub-task 1.9b (full `.zip` export) remains
 blocked on Task 1.7 (`ffmpeg`).
+
+## Implementation Notes (2026-09-13, Sub-task 1.9b: full .zip export + measured chapters)
+
+User unreachable this session (traveling), autonomous PM+Implementer authorization
+standing. Task 1.7 Sub-task 1.7a (real video+SRT) and Task 1.6 Sub-task 1.6b (real
+per-line timestamps) now both exist, unblocking this sub-task exactly as planned.
+
+### Measured chapters (was: word-count estimate only)
+
+`youtube_service.generate_package()` now accepts an optional `timestamps` argument (the
+completed `audio_jobs.timestamps` list, when one exists). When present, chapters are built
+from AudioService's real measured `start_sec` values via a new `real_chapters_from_timestamps()`
+(same topic-shift heuristic as `estimate_chapters` — new chapter every
+`YOUTUBE_CHAPTER_MIN_LINES` lines, first chapter always "00:00 Introduction" — just fed
+real seconds and the real line text AudioService's timestamps now carry, instead of a
+word-count projection). When no audio exists yet, falls back to the existing
+`estimate_chapters()` unchanged — 1.9a's behavior is preserved for a project with no audio.
+
+A new `chapters_estimated: bool` flag is persisted alongside `chapters_text` so the UI can
+say the true thing instead of always claiming "Estimated" (which became false the moment
+real timestamps exist). Schema change: **additive** `ALTER TABLE ADD COLUMN` this time
+(`004_youtube_chapters_measured.sql`), not a drop-and-recreate like `002`/`003` — those were
+justified specifically because `youtube_packages` was dead/unused at the time; it is now a
+live, working table (1.9a shipped and works), so the correct move is additive.
+
+### Full `.zip` export
+
+New `GET /api/projects/{id}/youtube/export` streams an in-memory zip (no temp file to
+clean up) containing:
+- `video.mp4` (from the completed `video_jobs` row, Task 1.7)
+- `thumbnail.png` (the current favorite `is_selected=1` thumbnail's 16:9 PNG, Task 1.8 —
+  YouTube's upload requirement is a single 16:9 image, so 9:16 isn't included)
+- `subtitles.srt` (from the same `video_jobs` row)
+- `metadata.txt` (plain text: all 3 title variants, description, tags, chapters)
+
+Requires all three (YouTube package, completed video job, a selected thumbnail favorite)
+to exist — a clear `ValidationError` names exactly which piece is missing rather than a
+generic failure, so the user knows which earlier step to go back and finish.
+
+Files:
+- `app/db/migrations/004_youtube_chapters_measured.sql` (new, additive).
+- `.viepilot/schemas/database-schema.sql` (synced, same precedent as 1.9a).
+- `app/services/youtube_service.py`: `real_chapters_from_timestamps(timestamps) -> str`,
+  `generate_package(project, script_lines, timestamps=None)`, `_row_to_package` reads
+  `chapters_estimated`, `save_package` persists it, `build_export_zip(package, video_job,
+  thumbnail_row) -> bytes` (pure — takes already-fetched rows, doesn't touch the DB itself).
+- `app/api/youtube.py`: `generate_youtube_package` now also reads the audio job (if any)
+  and passes its timestamps through; new `GET .../youtube/export` route reads the package,
+  video job, and thumbnail rows via their existing service `get_*` functions and calls
+  `build_export_zip`.
+- `frontend/pages/step7_youtube.html` + `step7_youtube.js`: the "Estimated..." note now
+  reads correctly based on `chapters_estimated` (a real "✅ Measured from the final audio"
+  message once true), plus a "Download full package (.zip)" button — disabled with a
+  tooltip-style hint when video/thumbnail aren't ready yet rather than a dead link.
+- `tests/test_youtube_service.py`: `real_chapters_from_timestamps` unit tests, and
+  `generate_package` with/without `timestamps` producing the right `chapters_estimated`.
+- `tests/test_youtube_api.py`: export route tests (success with a real in-memory zip whose
+  contents are verified, and each missing-piece 422 case).
+
+Forbidden Scope: no change to the existing estimate-chapters behavior for projects with no
+audio yet, no change to `youtube_packages` beyond the additive column, no Shorts (9:16)
+thumbnail in the zip, no auto-upload to YouTube (Task 1.9's own Forbidden Scope already
+rules this out).
+
+## Sub-task 1.9b Result (2026-09-13) — DONE, closes Task 1.9
+
+Delivered exactly the plan above. New: `app/db/migrations/004_youtube_chapters_measured.sql`
+(additive), `.viepilot/schemas/database-schema.sql` synced, `real_chapters_from_timestamps()`
++ `build_export_zip()` in `app/services/youtube_service.py`, `GET .../youtube/export` in
+`app/api/youtube.py`. Frontend: `step7_youtube.html`/`.js` now show the correct
+estimated-vs-measured label and a real "Download full package (.zip)" link, disabled with
+an explanatory status line until both a completed video and a selected favorite thumbnail
+exist. 13 new tests (7 `tests/test_youtube_service.py`, 4 new
+`tests/test_youtube_export_api.py`, 2 new `tests/test_youtube_browser.py`), plus 4 existing
+`tests/test_youtube_api.py` fixtures updated for `generate_package`'s new optional
+`timestamps` parameter. 421/421 total tests pass, ruff clean, both JS files `node --check`
+clean.
+
+**Real bug caught by a browser test, not by inline review** (same pattern as the
+`#generate-panel` bug from 1.9a): the first version of the frontend logic used
+`state.package.chapters_estimated ? "Estimated…" : "Measured…"` — since the *existing*
+`tests/test_youtube_browser.py` mock fixture never set `chapters_estimated` at all,
+`undefined` is falsy in JavaScript, so the ternary took the "Measured" branch by default
+even though nothing was actually measured. A live Playwright assertion on the rendered
+text caught this immediately. Fixed by flipping the check to require an explicit
+`=== false` for the "Measured" branch — the safe default (missing/falsy/`true`) is always
+"Estimated," never a false claim of precision.
+
+`tests/test_youtube_export_api.py` exercises the real end-to-end chain (real script → real
+Edge TTS, network mocked → real AudioService mix → real VideoService render → real Pillow
+thumbnail render, only its Gemini text call mocked → real zip assembly) rather than mocking
+away the very features Sub-task 1.9b's export depends on — the same "exercise the real
+local pipeline" philosophy as `tests/test_audio_service.py`/`tests/test_video_service.py`.
+
+### Verification output
+
+`venv\Scripts\python -m pytest tests/test_youtube_service.py tests/test_youtube_api.py tests/test_youtube_export_api.py tests/test_youtube_browser.py -q` (exit 0):
+```
+25 passed  (test_youtube_service.py)
+26 passed  (test_youtube_api.py)
+4 passed   (test_youtube_export_api.py)
+8 passed   (test_youtube_browser.py)
+```
+
+`venv\Scripts\python -m pytest tests/ -q` (exit 0):
+```
+421 passed, 3 warnings in 157.32s (0:02:37)
+```
+
+`venv\Scripts\python -m ruff check app/ tests/ scripts/` (exit 0): `All checks passed!`
+
+`node --check frontend/static/js/api.js` and `node --check frontend/static/js/step7_youtube.js`: both exit 0.
+
+**This closes Task 1.9 entirely** (all acceptance criteria done: titles, description,
+tags, chapters — measured when available — and the full `.zip` export).

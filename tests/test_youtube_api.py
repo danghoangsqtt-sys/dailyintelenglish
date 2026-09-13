@@ -81,7 +81,7 @@ def test_generate_returns_200_and_persists(client: TestClient, monkeypatch):
     project = create_project(client)
     save_script(client, project)
 
-    async def fake_generate_package(project_dict, script_lines):
+    async def fake_generate_package(project_dict, script_lines, timestamps=None):
         assert project_dict["id"] == project["id"]
         assert len(script_lines) == 2
         return VALID_PACKAGE
@@ -118,7 +118,7 @@ def test_generate_gemini_failure_returns_502(client: TestClient, monkeypatch):
     project = create_project(client)
     save_script(client, project)
 
-    async def failing_generate_package(project_dict, script_lines):
+    async def failing_generate_package(project_dict, script_lines, timestamps=None):
         raise YouTubePackageGenerationError("Gemini API returned HTTP 429 after 4 attempt(s): rate limited")
 
     monkeypatch.setattr(youtube_service, "generate_package", failing_generate_package)
@@ -147,7 +147,7 @@ def test_get_returns_package_after_generate(client: TestClient, monkeypatch):
     project = create_project(client)
     save_script(client, project)
 
-    async def fake_generate_package(project_dict, script_lines):
+    async def fake_generate_package(project_dict, script_lines, timestamps=None):
         return VALID_PACKAGE
 
     monkeypatch.setattr(youtube_service, "generate_package", fake_generate_package)
@@ -172,13 +172,13 @@ def test_regenerate_replaces_previous_package(client: TestClient, monkeypatch):
     project = create_project(client)
     save_script(client, project)
 
-    async def fake_generate_package(project_dict, script_lines):
+    async def fake_generate_package(project_dict, script_lines, timestamps=None):
         return VALID_PACKAGE
 
     monkeypatch.setattr(youtube_service, "generate_package", fake_generate_package)
     first = client.post(f"/api/projects/{project['id']}/youtube/generate").json()["data"]
 
-    async def fake_generate_package_v2(project_dict, script_lines):
+    async def fake_generate_package_v2(project_dict, script_lines, timestamps=None):
         return {**VALID_PACKAGE, "description": "A regenerated description."}
 
     monkeypatch.setattr(youtube_service, "generate_package", fake_generate_package_v2)

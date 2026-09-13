@@ -194,20 +194,21 @@
 
 ### 1.9 Step 7 — YouTube Package
 
-- [x] **YouTubePackageService** (`app/services/youtube_service.py`) — Sub-task 1.9a, by Claude Code (acting as PM + Implementer since Codex ran out of quota), PM-accepted 2026-09-12
-  - `generate_package(project, script_lines)` → titles + description + tags + estimated chapters — done
+- [x] **YouTubePackageService** (`app/services/youtube_service.py`) — Sub-tasks 1.9a + 1.9b, by Claude Code (acting as PM + Implementer), PM-accepted; 1.9b closed 2026-09-13
+  - `generate_package(project, script_lines, timestamps=None)` → titles + description + tags + chapters — done
   - Description: Gemini-generated summary — done
-  - Chapters: formatted, but **estimated** from script word count (no real audio duration exists yet — Task 1.7 blocked on ffmpeg), not measured; clearly labelled in API + UI
+  - Chapters: **measured** from AudioService's real per-line timestamps once a project's audio exists (`real_chapters_from_timestamps()`, Sub-task 1.9b), otherwise **estimated** from script word count (Sub-task 1.9a's original behavior); `chapters_estimated` says which, clearly labelled in API + UI
   - Tags: 5-15 relevant tags (Gemini), joined string capped at `YOUTUBE_TAGS_MAX_CHARS` (500)
-  - Full transcript/vocabulary/grammar formatting: deferred to Sub-task 1.9b alongside the zip export
-  - Verify: 30 new backend tests (prompt/service/API); a real bug (tag whitespace on DB round-trip) was caught and fixed by these tests before landing
+  - Full `.zip` export (`GET .../youtube/export`) — done, Sub-task 1.9b: video.mp4 + subtitles.srt (Task 1.7) + thumbnail.png (Task 1.8 favorite) + metadata.txt, in-memory zip, requires all three prerequisites
+  - Full transcript/vocabulary/grammar formatting inside the export: not implemented — not part of the ROADMAP acceptance criterion (video+thumbnail+SRT+metadata.txt only)
+  - Verify: 30 tests (1.9a) + 13 tests (1.9b, including a real end-to-end pipeline test, not mocked); real bugs caught and fixed before landing each time (1.9a: tag whitespace on DB round-trip; 1.9b: frontend defaulting to "Measured" on an undefined flag, caught by a browser test)
 
-- [x] **YouTube Package UI** (`frontend/pages/step7_youtube.html`) — Sub-task 1.9a
-  - Sections: Title options (3 variants) | Description | Chapters (labelled "Estimated") | Tags — done (not collapsible accordions, plain stacked cards; no Full Transcript/Vocabulary/Grammar sections yet, deferred to 1.9b)
+- [x] **YouTube Package UI** (`frontend/pages/step7_youtube.html`) — Sub-tasks 1.9a + 1.9b
+  - Sections: Title options (3 variants) | Description | Chapters (labelled Estimated/Measured accurately) | Tags — done
   - "Copy to clipboard" button per section — done
-  - "Export as .txt" — deferred to 1.9b (full zip export)
-  - Edit fields inline — out of scope for 1.9a (read-only display + Regenerate, matching the plan's explicit scope decision)
-  - Verify: 6 real-browser Playwright tests; a real CSS bug (`[hidden]` attribute silently overridden by an ID-selector `display: grid` rule) was caught by browser testing — a unit test alone would have missed it
+  - "Download full package (.zip)" — done, Sub-task 1.9b: disabled with an explanatory status note until video + favorite thumbnail both exist
+  - Edit fields inline — out of scope (read-only display + Regenerate, matching the original plan's explicit scope decision)
+  - Verify: 6 (1.9a) + 2 (1.9b) real-browser Playwright tests; real bugs caught by browser testing both times, not by unit tests alone
 
 ### 1.10 Music Library Management
 

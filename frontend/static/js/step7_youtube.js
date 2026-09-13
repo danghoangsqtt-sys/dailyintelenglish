@@ -13,6 +13,8 @@
     package: null,
     packageLoadFailed: false,
     isGenerating: false,
+    videoReady: false,
+    thumbnailReady: false,
   };
 
   const byId = (id) => document.getElementById(id);
@@ -99,7 +101,29 @@
     renderTitles();
     byId("description-text").textContent = state.package.description;
     byId("chapters-text").textContent = state.package.chapters_text;
+    // Default to "Estimated" unless the backend explicitly says otherwise — never claim
+    // "Measured" on a false-y/missing value (safer default than assuming precision).
+    byId("chapters-estimate-note").textContent = state.package.chapters_estimated === false
+      ? "✅ Measured from the final generated audio."
+      : "⏱ Estimated from script length and reading speed — generate the audio in Step 4 for real measured timestamps.";
     renderTags();
+    renderExportStatus();
+  }
+
+  function renderExportStatus() {
+    const note = byId("export-status-note");
+    const link = byId("export-zip-link");
+    const canExport = state.videoReady && state.thumbnailReady;
+    link.href = canExport ? Api.youtubeExportUrl(state.projectId) : "#";
+    link.setAttribute("aria-disabled", canExport ? "false" : "true");
+    if (canExport) {
+      note.textContent = "Ready — includes the final video, thumbnail, subtitles, and metadata.";
+    } else {
+      const missing = [];
+      if (!state.videoReady) missing.push("a generated video (Step 5)");
+      if (!state.thumbnailReady) missing.push("a selected favorite thumbnail (Step 6)");
+      note.textContent = `Not ready yet — still needs: ${missing.join(" and ")}.`;
+    }
   }
 
   function setGenerateLoading(loading) {
@@ -176,6 +200,21 @@
       state.packageLoadFailed = true;
       showError("We couldn't load the existing YouTube package. Please try refreshing.");
     }
+
+    try {
+      const videoStatus = await Api.getVideoStatus(state.projectId);
+      state.videoReady = videoStatus.status === "complete";
+    } catch (error) {
+      state.videoReady = false; // 404 (no video yet) is expected, not an error to surface
+    }
+
+    try {
+      const thumbnails = await Api.listThumbnails(state.projectId);
+      state.thumbnailReady = thumbnails.some((thumbnail) => thumbnail.is_selected);
+    } catch (error) {
+      state.thumbnailReady = false;
+    }
+
     render();
   }
 

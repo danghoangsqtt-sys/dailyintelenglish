@@ -24,13 +24,13 @@
 | **Task 1.8** | 🖼️ **Thumbnail Generator** (`/step6`) | 5 template Pillow, Gemini sinh headline/bảng màu, chọn template + generate 3-5 biến thể, favorite selection, chỉnh sửa thủ công headline/màu (optimistic concurrency), xuất PNG/JPG 16:9 & 9:16 | ✅ Shipped |
 | **Task 1.1** | 🏗️ **Project Setup & Dependencies** | FastAPI skeleton, SQLite (`aiosqlite`), `scripts/check_dependencies.py` báo GREEN toàn bộ (Python, ffmpeg, GPU, Gemini key, OmniVoice model, thư mục data) | ✅ Shipped |
 | **Task 1.6** | 🎙️ **TTS Audio Studio** (`/step4`) | Edge TTS (10 giọng vùng miền × 3 giới tính) cho preview từng dòng; `AudioService` nối audio + ducking + chuẩn hóa loudness thật (-16 LUFS, ITU-R BS.1770); phân giọng/tốc độ/cao độ/âm lượng theo speaker, chọn nhạc nền, "Generate All" + xuất MP3/WAV | ✅ Shipped |
+| **Task 1.9** | 📋 **YouTube Package** (`/step7`) | 3 title variants + description + tags qua Gemini; chapters **đo thật** từ audio khi đã có (hoặc ước tính nếu chưa); export `.zip` đầy đủ (video + thumbnail + SRT + metadata.txt) | ✅ Shipped |
 
 #### Core Foundation & In Progress
 
 | Task | Feature | Description | Status |
 |------|---------|-------------|--------|
 | **Task 1.7** | 🎬 **Video Studio** | `VideoService` xuất MP4 thật từ audio mix + 1 trong 3 background template + phụ đề burned-in (ffmpeg/libass) từ timestamp thật; LivePortrait lips-sync avatar và UI Step 5 vẫn chưa có (LivePortrait cần ảnh avatar per-speaker, chưa có tính năng upload/tạo ảnh) | 🔄 In Progress |
-| **Task 1.9** | 📋 **YouTube Package** (`/step7`) | 3 title variants + description + tags qua Gemini, chapters ước tính (chưa đo thật vì chưa có audio khi viết); export `.zip` (video+thumbnail+SRT) chờ Task 1.7 hoàn thiện UI | 🔄 In Progress |
 | **Task 1.10** | 🎵 **Music Library** (`/music`) | Upload/list/preview/delete nhạc nền (giới hạn 50MB, kiểm tra magic-byte, chống trùng tên); volume leveling + chọn nhạc nền cho Step 4 đã xong (qua Task 1.6); chỉ còn thiếu waveform visualization | 🔄 In Progress |
 
 ## Quick Start
@@ -82,7 +82,7 @@ http://localhost:8000
 4️⃣  Step 4: TTS Audio Studio → Voice assignment, per-line preview, real audio mix + loudness normalization, MP3/WAV export (Shipped - Task 1.6)
 5️⃣  Step 5: Video Studio     → Real MP4 with background template + burned-in subtitles/SRT (shipped); LivePortrait lips-sync + Step 5 UI pending (In Progress - Task 1.7)
 6️⃣  Step 6: Thumbnail        → AI-assisted templates, A/B variants, manual editor, export (Shipped - Task 1.8)
-7️⃣  Step 7: YouTube Package  → Titles/description/tags (shipped); zip export pending Task 1.7's UI (In Progress - Task 1.9)
+7️⃣  Step 7: YouTube Package  → Titles/description/tags/chapters (measured once audio exists) + full .zip export (Shipped - Task 1.9)
 ```
 Music Library (Task 1.10, `/music`) is a standalone background-music management feature, not a numbered pipeline step — upload/list/preview/delete, volume leveling, and Step 4 background-track selection are all shipped; only waveform visualization remains.
 

@@ -99,6 +99,8 @@ const Api = (() => {
     generateYoutubePackage: (projectId) =>
       request(`/api/projects/${projectId}/youtube/generate`, { method: "POST" }),
     getYoutubePackage: (projectId) => request(`/api/projects/${projectId}/youtube`),
+    youtubeExportUrl: (projectId) => `/api/projects/${projectId}/youtube/export`,
+    getVideoStatus: (projectId) => request(`/api/projects/${projectId}/video/status`),
     health: () => request("/health"),
   };
 })();

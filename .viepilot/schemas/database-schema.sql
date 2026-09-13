@@ -118,10 +118,11 @@ CREATE TABLE IF NOT EXISTS youtube_packages (
     project_id TEXT NOT NULL UNIQUE REFERENCES projects(id) ON DELETE CASCADE,
     title_options_json TEXT NOT NULL DEFAULT '[]',  -- JSON: [{variant, text}] x3
     description TEXT NOT NULL DEFAULT '',
-    chapters_text TEXT NOT NULL DEFAULT '',          -- Estimated "MM:SS Label" lines, not measured
+    chapters_text TEXT NOT NULL DEFAULT '',          -- "MM:SS Label" lines -- estimated or measured, see chapters_estimated
     tags TEXT NOT NULL DEFAULT '',                   -- Comma-separated
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    chapters_estimated INTEGER NOT NULL DEFAULT 1     -- 1 = word-count estimate, 0 = measured from real audio (004_youtube_chapters_measured.sql)
 );
 
 CREATE INDEX IF NOT EXISTS idx_youtube_packages_project_id ON youtube_packages(project_id);
