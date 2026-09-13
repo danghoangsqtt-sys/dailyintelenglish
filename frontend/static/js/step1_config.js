@@ -325,6 +325,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 1 });
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
 
     renderCefr();

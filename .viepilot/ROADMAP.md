@@ -256,8 +256,12 @@
 
 ### 2.3 UX Polish
 
-- [ ] **Step progress indicator**: header bar shows "Step 2 of 7"
-- [ ] **Breadcrumb navigation**: jump back to any previous step
+- [x] **Step progress indicator**: header bar shows "Step 2 of 7" — done 2026-09-13, by
+  Codex, PM-accepted: `frontend/static/js/step_nav.js` (`StepNav.render()`), mounted on
+  all 7 step pages. 15 new Playwright tests, 452 total pass.
+- [x] **Breadcrumb navigation**: jump back to any previous step — done alongside the item
+  above (same component): 7 clickable pills, missing `project_id` degrades to a clean
+  bare URL rather than a broken link
 - [ ] **Auto-save indicator**: "Saved" / "Saving..." in header
 - [ ] **Keyboard shortcuts**: `Ctrl+Enter` to generate, `Esc` to cancel
 - [ ] **Empty states**: helpful messages when no projects / no music library

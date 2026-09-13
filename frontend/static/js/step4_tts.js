@@ -366,6 +366,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 4 });
     byId("theme-toggle").addEventListener("click", Theme.toggle);
     byId("generate-btn").addEventListener("click", generateAll);
     byId("music-select").addEventListener("change", (event) => {
