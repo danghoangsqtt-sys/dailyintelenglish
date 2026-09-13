@@ -96,6 +96,8 @@
     }
 
     .track-size { color: var(--text-muted); font-size: 12px; }
+    .track-preview { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .track-waveform { display: block; width: 100%; height: 56px; border-radius: 8px; background: var(--surface); cursor: pointer; }
     .track-card audio { width: 100%; min-width: 0; }
     .delete-btn:hover { border-color: var(--danger); color: var(--danger); }
     .btn:disabled { cursor: not-allowed; opacity: 0.55; transform: none; }
@@ -152,6 +154,7 @@
 
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/api.js"></script>
+  <script src="/static/js/waveform.js"></script>
   <script src="/static/js/music_library.js"></script>
 </body>
 </html>

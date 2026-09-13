@@ -3,7 +3,7 @@
 ## Meta
 - **ID**: 1.10
 - **Phase**: 1
-- **Status**: in_progress (Sub-tasks 1.10a, 1.10b-loudness done; waveform visualization pending)
+- **Status**: done (2026-09-13) — all acceptance criteria complete
 - **Priority**: low
 - **Assignee**: AI (Codex / PM)
 
@@ -14,7 +14,7 @@
 
 ## Acceptance Criteria
 - [x] User can upload royalty-free MP3/WAV tracks — upload/list/preview/delete UI at `/music`, magic-byte + size validated (royalty-free-ness itself is a content/licensing judgment, not a code check)
-- [ ] Audio wave preview — native browser `<audio>` preview done; waveform *visualization* (visual UI) is still pending, no task assigned yet
+- [x] Audio wave preview — Sub-task 1.10c (2026-09-13): `frontend/static/js/waveform.js` renders a real canvas waveform (Web Audio API decode) per track, with played/unplayed tinting and click-to-seek
 - [x] Volume leveling — real ITU-R BS.1770 loudness normalization delivered in Task 1.6
   Sub-task 1.6b (`app/services/audio_service.py`), applied to the full mixed track
 - [x] Selection of background track for auto-ducking during speech in Step 4/5 — delivered
@@ -250,3 +250,80 @@ Read the actual diff, not just the report:
 All 4 PM-requested additions from the plan-review round are present and correctly implemented: upload size limit, no-clobber duplicate naming (with real concurrency proof), magic-byte validation, and `ARCHITECTURE.md` sync.
 
 **Accepted.** This closes Sub-task 1.10a (ffmpeg-independent slice) of Task 1.10. Full Task 1.10 stays `in_progress` — waveform visualization/volume leveling and Step 4/5 background-track selection remain blocked on `ffmpeg` + the `audioop-lts` fix (see TRACKER.md Known Issues) and are deferred to a future Sub-task 1.10b alongside AudioService.
+
+## Implementation Notes & Result (2026-09-13, Sub-task 1.10c: waveform visualization — closes Task 1.10)
+
+User continued autonomous session ("tiếp tục"). With volume leveling and background-track
+selection already delivered in Task 1.6 Sub-task 1.6b, waveform visualization was the last
+open item in this task's own Acceptance Criteria. Implemented directly rather than through
+the full plan-then-implement round-trip used for larger sub-tasks: this is a small,
+self-contained, additive, pure-frontend feature (no backend changes, no new architecture
+decision, no missing asset/model the way OmniVoice/LivePortrait were blocked) — genuinely
+low risk, verified thoroughly before landing rather than assumed safe because it's small.
+
+### Scope
+
+- New `frontend/static/js/waveform.js`: a reusable `Waveform.render(canvas, audioUrl,
+  audioElement)` — decodes the audio once via the Web Audio API
+  (`AudioContext.decodeAudioData`), computes peak amplitudes per pixel-bucket from channel
+  0, draws bars on a `<canvas>`, tints the played portion using `--accent` vs
+  `--text-muted` (resolved from the real CSS custom properties, not hardcoded duplicate
+  colors) as the paired `<audio>` element's `timeupdate` fires, and supports click-to-seek.
+  Decode failures are caught and logged, never thrown — a cosmetic feature must never break
+  the native `<audio>` control, which stays fully functional either way.
+- `frontend/pages/music_library.html` / `frontend/static/js/music_library.js`: each track
+  card now renders a `<canvas class="track-waveform">` above its `<audio>` element, and
+  `Waveform.render()` is called once the card is in the DOM (needed for a real
+  `clientWidth` to size the canvas against).
+- Deliberately NOT touched: Step 4's TTS/audio players (`/step4`) or the video/audio
+  download players elsewhere. Task 1.6 already closed with its own waveform gap
+  explicitly noted as an accepted simplification, not a blocking checkbox — reopening a
+  closed task to add a nice-to-have would be scope creep. This sub-task closes only
+  Task 1.10's own still-open acceptance criterion.
+
+### Real verification before writing the committed test suite
+
+Per this project's standing "verify before committing" discipline: ran a real, disposable
+Playwright script — real project server, a real Sine-tone MP3 (via pydub, not a fake byte
+string) uploaded through the actual `/music` upload flow — and confirmed via
+`canvas.getImageData()` that real, non-transparent pixels were drawn (not just "no JS
+error"), that clicking at 70% of the waveform's width moved `audio.currentTime` to ~70% of
+its duration, and took a full-page screenshot to visually confirm the waveform's bar shape
+and played/unplayed tinting render correctly against the app's real dark theme.
+
+### Real bug avoided by testing with genuinely decodable audio
+
+The project's *existing* music-library browser tests (`tests/test_music_library_browser.py`)
+all use a fake `b"ID3\x04\x00\x00\x00\x00\x00\x00..."` byte string as upload content — valid
+enough to pass the backend's lightweight magic-byte check, but not real MP3 frame data, so
+it does NOT decode via the Web Audio API. Testing the waveform feature against that fixture
+would have only exercised the graceful-failure path, never proven the feature draws
+anything. `tests/test_music_library_waveform_browser.py` uses real pydub-generated MP3
+bytes instead, specifically to prove genuine decoding + drawing + seeking, with one
+dedicated test confirming the graceful-failure path (undecodable audio) separately and
+explicitly, rather than by accident.
+
+### Files
+
+- `frontend/static/js/waveform.js` (new)
+- `frontend/pages/music_library.html` (waveform canvas + CSS)
+- `frontend/static/js/music_library.js` (wire `Waveform.render()` per track)
+- `tests/test_music_library_waveform_browser.py` (new, 4 tests)
+
+### Verification output
+
+`venv\Scripts\python -m pytest tests/test_music_library_waveform_browser.py -q` (exit 0):
+```
+4 passed in 12.59s
+```
+
+`venv\Scripts\python -m pytest tests/test_music_library_browser.py tests/test_music_api.py -q` (exit 0, confirms no regression):
+```
+19 passed in 13.80s
+```
+
+`venv\Scripts\python -m ruff check app/ tests/ scripts/` (exit 0): `All checks passed!`
+
+`node --check frontend/static/js/waveform.js` and `node --check frontend/static/js/music_library.js`: both exit 0.
+
+**This closes Task 1.10 entirely** — all 4 acceptance criteria now done.

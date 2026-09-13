@@ -26,12 +26,12 @@
 | **Task 1.6** | 🎙️ **TTS Audio Studio** (`/step4`) | Edge TTS (10 giọng vùng miền × 3 giới tính) cho preview từng dòng; `AudioService` nối audio + ducking + chuẩn hóa loudness thật (-16 LUFS, ITU-R BS.1770); phân giọng/tốc độ/cao độ/âm lượng theo speaker, chọn nhạc nền, "Generate All" + xuất MP3/WAV | ✅ Shipped |
 | **Task 1.9** | 📋 **YouTube Package** (`/step7`) | 3 title variants + description + tags qua Gemini; chapters **đo thật** từ audio khi đã có (hoặc ước tính nếu chưa); export `.zip` đầy đủ (video + thumbnail + SRT + metadata.txt) | ✅ Shipped |
 | **Task 1.7** | 🎬 **Video Studio** (`/step5`) | `VideoService` xuất MP4 thật từ audio mix + 1 trong 3 background template + phụ đề burned-in (ffmpeg/libass) từ timestamp thật; chọn template, xem trước, tải MP4/SRT. LivePortrait lips-sync avatar chưa có (cần ảnh avatar per-speaker, chưa có tính năng upload/tạo ảnh) | ✅ Shipped |
+| **Task 1.10** | 🎵 **Music Library** (`/music`) | Upload/list/preview/delete nhạc nền (giới hạn 50MB, kiểm tra magic-byte, chống trùng tên); volume leveling + chọn nhạc nền cho Step 4 (qua Task 1.6); waveform visualization thật (Web Audio API, click-to-seek) | ✅ Shipped |
 
-#### Core Foundation & In Progress
-
-| Task | Feature | Description | Status |
-|------|---------|-------------|--------|
-| **Task 1.10** | 🎵 **Music Library** (`/music`) | Upload/list/preview/delete nhạc nền (giới hạn 50MB, kiểm tra magic-byte, chống trùng tên); volume leveling + chọn nhạc nền cho Step 4 đã xong (qua Task 1.6); chỉ còn thiếu waveform visualization | 🔄 In Progress |
+All 10 Phase 1 major tasks are now shipped. Two items remain deliberately deferred, each
+needing a real product/asset decision rather than more engineering: real OmniVoice GPU
+voice cloning (Task 1.6 — needs a `ref_audio` reference-sample source per speaker) and
+Level 3 LivePortrait avatar lip-sync (Task 1.7 — needs a per-speaker avatar image source).
 
 ## Quick Start
 
@@ -84,7 +84,7 @@ http://localhost:8000
 6️⃣  Step 6: Thumbnail        → AI-assisted templates, A/B variants, manual editor, export (Shipped - Task 1.8)
 7️⃣  Step 7: YouTube Package  → Titles/description/tags/chapters (measured once audio exists) + full .zip export (Shipped - Task 1.9)
 ```
-Music Library (Task 1.10, `/music`) is a standalone background-music management feature, not a numbered pipeline step — upload/list/preview/delete, volume leveling, and Step 4 background-track selection are all shipped; only waveform visualization remains.
+Music Library (Task 1.10, `/music`) is a standalone background-music management feature, not a numbered pipeline step — upload/list/preview/delete, volume leveling, Step 4 background-track selection, and waveform visualization are all shipped.
 
 ## Tech Stack
 

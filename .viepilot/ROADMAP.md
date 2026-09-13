@@ -216,7 +216,10 @@
   - Verify: upload, preview, delete work — 19 dedicated tests (15 API incl. a real concurrency test, 4 Playwright browser E2E), PM independently re-ran all; 271 total tests pass (1 unrelated pre-existing flaky test confirmed passing in isolation)
   - Volume leveling + Step 4/5 background-track selection/ducking — delivered in Task 1.6
     Sub-task 1.6b (`app/services/audio_service.py`), 2026-09-13
-  - Not done: waveform visualization (visual UI only — no task assigned yet)
+  - Waveform visualization — done, Sub-task 1.10c, 2026-09-13: `frontend/static/js/waveform.js`
+    (Web Audio API decode, canvas rendering, played/unplayed tinting, click-to-seek),
+    verified with real decodable audio and a real Playwright pixel-content check. **Closes
+    Task 1.10.**
 
 ---
 

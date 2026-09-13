@@ -46,11 +46,19 @@
       size.textContent = formatBytes(track.size_bytes);
       details.append(name, size);
 
+      const preview = document.createElement("div");
+      preview.className = "track-preview";
+      const waveformCanvas = document.createElement("canvas");
+      waveformCanvas.className = "track-waveform";
+      waveformCanvas.setAttribute("role", "img");
+      waveformCanvas.setAttribute("aria-label", `Waveform for ${track.filename}`);
+
       const player = document.createElement("audio");
       player.controls = true;
       player.preload = "metadata";
       player.src = track.content_url || Api.musicContentUrl(track.filename);
       player.setAttribute("aria-label", `Preview ${track.filename}`);
+      preview.append(waveformCanvas, player);
 
       const deleteButton = document.createElement("button");
       deleteButton.type = "button";
@@ -59,8 +67,10 @@
       deleteButton.textContent = "Delete";
       deleteButton.disabled = deletesInFlight.has(track.filename);
 
-      card.append(details, player, deleteButton);
+      card.append(details, preview, deleteButton);
       list.append(card);
+      // Rendered into the DOM first so the canvas has a real clientWidth to size against.
+      Waveform.render(waveformCanvas, player.src, player);
     });
   }
 

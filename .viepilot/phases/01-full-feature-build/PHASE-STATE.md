@@ -163,10 +163,10 @@
     `chapters_estimated` was simply undefined — fixed to require an explicit `=== false`.
 
 ### Task 1.10: Music Library
-- **Status:** 🔄 In Progress (upload/list/preview/delete + volume leveling + background-track
-  selection all done; only waveform visualization remains, unassigned)
+- **Status:** ✅ Done (2026-09-13) — all acceptance criteria complete
 - **Details:** By Codex (second AI Implementer), PM-accepted 2026-09-12; loudness/ducking
-  piece delivered by PM (Claude Code) in Task 1.6 Sub-task 1.6b.
+  piece delivered by PM (Claude Code) in Task 1.6 Sub-task 1.6b; waveform visualization
+  delivered by PM (Claude Code) in Sub-task 1.10c.
   - **1.10a DONE:** ffmpeg-independent Music Library UI at `/music` — upload (50MB limit,
     magic-byte validation, atomic no-clobber duplicate naming via `os.link`), list, native
     `<audio>` preview, confirm-gated delete. `app/api/music.py`
@@ -177,5 +177,10 @@
     delivered as part of Task 1.6 Sub-task 1.6b (`app/services/audio_service.py`, real
     ITU-R BS.1770 loudness normalization + static-level ducking) and 1.6c (the `/step4`
     background-music `<select>`), not as a separate "1.10b" — see Task 1.6 above.
-  - **Waveform visualization:** not done, no task assigned anywhere yet (visual-only UI
-    element, same standing gap noted since Sub-task 1.10a).
+  - **Waveform visualization — DONE (2026-09-13), Sub-task 1.10c:** new
+    `frontend/static/js/waveform.js` decodes each track via the Web Audio API and draws a
+    real canvas waveform with played/unplayed tinting and click-to-seek, wired into
+    `/music`'s track cards. Verified with real pydub-generated audio (not the existing
+    tests' fake `ID3...` byte string, which doesn't decode) — confirmed real pixels drawn
+    and accurate seek behavior via a disposable Playwright script before committing the
+    permanent test suite. 4 new tests, 432 total tests pass. **Closes Task 1.10.**
