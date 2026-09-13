@@ -219,3 +219,90 @@ def test_create_and_update_strips_surrounding_whitespace(client):
     updated_data = update_response.json()["data"]
     assert updated_data["name"] == "Updated Name"
     assert updated_data["topic"] == "Updated Topic"
+
+
+def test_update_speaker_persists_engine_and_slider_changes(client):
+    project = client.post("/api/projects", json=VALID_PAYLOAD).json()["data"]
+    speaker_id = project["speakers"][0]["id"]
+
+    response = client.patch(
+        f"/api/projects/{project['id']}/speakers/{speaker_id}",
+        json={"tts_engine": "edge_tts", "speed": 1.25, "pitch": 0.5, "volume": 0.5},
+    )
+
+    assert response.status_code == 200
+    updated = next(s for s in response.json()["data"]["speakers"] if s["id"] == speaker_id)
+    assert updated["tts_engine"] == "edge_tts"
+    assert updated["speed"] == 1.25
+    assert updated["pitch"] == 0.5
+    assert updated["volume"] == 0.5
+    # Untouched speaker (and untouched fields) must survive unchanged.
+    other = next(s for s in response.json()["data"]["speakers"] if s["id"] != speaker_id)
+    assert other["tts_engine"] == "omnivoice"
+
+
+def test_update_speaker_partial_patch_leaves_other_fields_untouched(client):
+    project = client.post("/api/projects", json=VALID_PAYLOAD).json()["data"]
+    speaker_id = project["speakers"][0]["id"]
+    client.patch(f"/api/projects/{project['id']}/speakers/{speaker_id}", json={"speed": 1.3})
+
+    response = client.patch(f"/api/projects/{project['id']}/speakers/{speaker_id}", json={"pitch": -0.2})
+
+    updated = next(s for s in response.json()["data"]["speakers"] if s["id"] == speaker_id)
+    assert updated["speed"] == 1.3  # from the first patch, not reset
+    assert updated["pitch"] == -0.2
+
+
+def test_update_speaker_unknown_speaker_returns_404(client):
+    project = client.post("/api/projects", json=VALID_PAYLOAD).json()["data"]
+    response = client.patch(f"/api/projects/{project['id']}/speakers/does-not-exist", json={"speed": 1.1})
+    assert response.status_code == 404
+
+
+def test_update_speaker_unknown_project_returns_404(client):
+    project = client.post("/api/projects", json=VALID_PAYLOAD).json()["data"]
+    speaker_id = project["speakers"][0]["id"]
+    response = client.patch(f"/api/projects/does-not-exist/speakers/{speaker_id}", json={"speed": 1.1})
+    assert response.status_code == 404
+
+
+def test_update_speaker_rejects_invalid_engine_and_out_of_range_slider(client):
+    project = client.post("/api/projects", json=VALID_PAYLOAD).json()["data"]
+    speaker_id = project["speakers"][0]["id"]
+
+    bad_engine = client.patch(
+        f"/api/projects/{project['id']}/speakers/{speaker_id}", json={"tts_engine": "not-a-real-engine"}
+    )
+    bad_speed = client.patch(f"/api/projects/{project['id']}/speakers/{speaker_id}", json={"speed": 99.0})
+
+    assert bad_engine.status_code == 422
+    assert bad_speed.status_code == 422
+
+
+def test_update_speaker_after_script_exists_does_not_delete_script_lines(client):
+    """Regression test for the exact landmine this route exists to avoid: unlike
+    PUT /{project_id} with `speakers` (full delete-and-reinsert, new ids), this route
+    must never cascade-delete script_lines when a script already exists."""
+    project = client.post("/api/projects", json=VALID_PAYLOAD).json()["data"]
+    speaker_id = project["speakers"][0]["id"]
+    script_payload = {
+        "lines": [
+            {"speaker_id": speaker_id, "text": "Welcome to the show!"},
+            {"speaker_id": project["speakers"][1]["id"], "text": "Thanks for having me."},
+        ]
+    }
+    client.put(f"/api/projects/{project['id']}/script", json=script_payload)
+
+    response = client.patch(
+        f"/api/projects/{project['id']}/speakers/{speaker_id}", json={"speed": 1.4, "tts_engine": "edge_tts"}
+    )
+    assert response.status_code == 200
+
+    script_response = client.get(f"/api/projects/{project['id']}/script")
+    lines = script_response.json()["data"]
+    assert len(lines) == 2
+    # The speaker id itself must be unchanged too (proves no delete/reinsert happened).
+    updated_speaker_id = next(
+        s["id"] for s in response.json()["data"]["speakers"] if s["speed"] == 1.4
+    )
+    assert updated_speaker_id == speaker_id

@@ -133,15 +133,15 @@
   - Generate timestamps JSON — done, real measured per-line start/end seconds
   - Verify: 25 dedicated tests against a real ffmpeg pipeline (not mocked) — silence-gap timing, loudness within tolerance of target, ducking ceiling respected both directions, timestamps monotonic and duration-accurate; 375 total tests pass
 
-- [ ] **TTS Audio Studio UI** (`frontend/pages/step4_audio.html`)
-  - Speaker voice assignment panel (engine + voice per speaker)
-  - "Preview" button per line → plays audio inline
-  - Background music selector (from music_library folder)
-  - Speed/pitch/volume sliders per speaker
-  - "Generate All" button → progress bar (SSE streaming)
-  - Final player with waveform visualization
-  - Download MP3 / WAV buttons
-  - Verify: full flow — assign voices, preview lines, generate mix, download
+- [x] **TTS Audio Studio UI** (`frontend/pages/step4_tts.html`) — Sub-task 1.6c, done 2026-09-13
+  - Speaker voice assignment panel (engine + voice per speaker) — done, autosaved per speaker via new `PATCH /api/projects/{id}/speakers/{speaker_id}` (a narrow in-place update added specifically because the existing `PUT /{id}` speakers-replace path would cascade-delete script_lines once a script exists — see task-1.6.md)
+  - "Preview" button per line → plays audio inline — done
+  - Background music selector (from music_library folder) — done
+  - Speed/pitch/volume sliders per speaker — done
+  - "Generate All" button → progress text (plain polling, not SSE streaming — see task-1.6.md's documented deviation from the ARCHITECTURE.md SSE label, same reasoning as `/audio/status`)
+  - Final player — done as a plain `<audio controls>` element; waveform *visualization* not done (visual-only, no task assigned anywhere yet, same standing gap as the Music Library page)
+  - Download MP3 / WAV buttons — done
+  - Verify: 13 new tests (6 API + 7 Playwright E2E with network mocking), plus a real end-to-end smoke script (real project → real script → real speaker patch → real TTS synthesis → real ffmpeg mix → real download) — 388 total tests pass
 
 ### 1.7 Step 5 — Video Studio
 

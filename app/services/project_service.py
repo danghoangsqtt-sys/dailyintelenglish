@@ -8,7 +8,7 @@ import aiosqlite
 
 from app.core.constants import PROJECT_STATUSES
 from app.core.exceptions import NotFoundError, ValidationError
-from app.models.project import ProjectUpdate, ScriptConfig, SpeakerConfig
+from app.models.project import ProjectUpdate, ScriptConfig, SpeakerConfig, SpeakerUpdate
 
 _LIST_COLUMNS = "id, name, status, cefr_level, genre, accent, created_at, updated_at"
 _DETAIL_COLUMNS = (
@@ -193,6 +193,34 @@ async def get_project(db: aiosqlite.Connection, project_id: str) -> dict:
     speaker_rows = await speaker_cursor.fetchall()
     project["speakers"] = [dict(speaker_row) for speaker_row in speaker_rows]
     return project
+
+
+async def update_speaker(
+    db: aiosqlite.Connection, project_id: str, speaker_id: str, patch: SpeakerUpdate, commit: bool = True
+) -> dict:
+    """Update one speaker's TTS voice settings in place (Step 4 Audio Studio).
+
+    Unlike `update_project`'s `speakers` replace-all path (new ids every call — see
+    `_replace_speakers`), this updates the existing row by id and never touches any other
+    speaker or any script_lines row. Safe to call after a script/audio already exists.
+
+    Raises:
+        NotFoundError: If the project or the speaker (within that project) doesn't exist.
+    """
+    project = await get_project(db, project_id)
+    if not any(speaker["id"] == speaker_id for speaker in project["speakers"]):
+        raise NotFoundError(f"Speaker {speaker_id} not found on project {project_id}")
+
+    fields = patch.model_dump(exclude_unset=True)
+    if fields:
+        set_clause = ", ".join(f"{key} = ?" for key in fields)
+        await db.execute(
+            f"UPDATE speakers SET {set_clause} WHERE id = ? AND project_id = ?",
+            (*fields.values(), speaker_id, project_id),
+        )
+        if commit:
+            await db.commit()
+    return await get_project(db, project_id)
 
 
 async def update_project(

@@ -59,7 +59,9 @@
   - **Evidence:** 20 dedicated service/API tests, 223 total tests passing cleanly (218 unit/integration + 5 browser E2E).
 
 ### Task 1.6: Step 4 — TTS Audio Studio
-- **Status:** 🔄 In Progress (Sub-tasks 1.6a, 1.6b done; 1.6c pending)
+- **Status:** ✅ Done (2026-09-13) for all 3 sub-tasks (1.6a/1.6b/1.6c). Real OmniVoice GPU
+  inference remains open, blocked on a user design decision (not part of the sub-task
+  split) — see TRACKER.md.
 - **Details:** Split into sub-tasks since ffmpeg/OmniVoice model were unavailable on this
   machine at the time (now resolved — see Known Issues).
   - **1.6a DONE:** `TTSService.synthesize_line()` — Edge TTS synthesis (all 10 accents x
@@ -76,7 +78,15 @@
     ignores `AudioSegment.converter`, needed a process-PATH shim for `DIE_FFMPEG_PATH`.
     25 new tests (real ffmpeg pipeline, not mocked), 375 total passing. Also closes
     Task 1.10's deferred background-music/loudness piece.
-  - **1.6c (TTS Studio UI):** pending — `frontend/pages/step4_audio.html`.
+  - **1.6c DONE (2026-09-13):** `frontend/pages/step4_tts.html` + `step4_tts.js` at
+    `/step4` (superseded placeholder deleted). Speaker voice-assignment panel (per-speaker
+    autosave via a new narrow `PATCH /api/projects/{id}/speakers/{speaker_id}` — added
+    specifically because the existing full-replace `PUT /{id}` speakers path would
+    cascade-delete `script_lines` once a script exists, a real landmine found during
+    planning and proved with a regression test before being avoided by design), per-line
+    preview, background-music selector, sequential "Generate All" (synthesize each line,
+    then mix — `AudioService` never calls TTS itself), MP3/WAV download. 13 new tests
+    (6 API + 7 Playwright E2E, network-mocked), 388 total passing.
 
 ### Task 1.7: Step 5 — Video Studio
 - **Status:** ⏳ Planned

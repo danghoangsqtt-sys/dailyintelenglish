@@ -122,8 +122,8 @@ async def step3_learning() -> FileResponse:
 
 @app.get("/step4")
 async def step4_tts() -> FileResponse:
-    """Serve the Step 4 — TTS Audio Studio placeholder."""
-    return FileResponse(FRONTEND_DIR / "pages" / "step4_tts_placeholder.html")
+    """Serve the Step 4 — TTS Audio Studio."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step4_tts.html")
 
 
 @app.get("/step6")

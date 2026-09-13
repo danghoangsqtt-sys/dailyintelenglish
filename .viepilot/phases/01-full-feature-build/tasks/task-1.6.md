@@ -3,7 +3,10 @@
 ## Meta
 - **ID**: 1.6
 - **Phase**: 1
-- **Status**: in_progress (1.6a, 1.6b done; 1.6c pending)
+- **Status**: done (2026-09-13) for all 3 sub-tasks (1.6a Edge TTS, 1.6b AudioService, 1.6c
+  UI) — the only remaining item is real OmniVoice GPU inference, which was never part of
+  the sub-task split and stays blocked on a user design decision (see Acceptance Criteria
+  item 1 and TRACKER.md)
 - **Priority**: high
 - **Assignee**: AI
 
@@ -22,7 +25,8 @@
 - [x] Automatic fallback to Edge TTS on OOM / error — any `_synthesize_omnivoice` exception
   falls back, tested in `tests/test_tts_service.py`
 - [x] AudioService mixes tracks with speaker pauses and volume normalization — Sub-task 1.6b
-- [ ] TTS UI supports audio preview, regeneration, and export — pending Sub-task 1.6c
+- [x] TTS UI supports audio preview, regeneration, and export — Sub-task 1.6c (regeneration
+  = per-line "Preview" re-synthesizes and overwrites the cache; export = MP3/WAV download)
 
 ## Forbidden Scope
 - No blocking the event loop with ffmpeg or audio model synthesis
@@ -247,3 +251,150 @@ see task-1.10.md.
 Not done (deferred to 1.6c): TTS Audio Studio UI (`frontend/pages/step4_audio.html`) —
 speaker voice assignment, per-line preview, sliders, "Generate All" button wired to
 `/audio/generate`, player, download buttons.
+
+## Implementation Notes (2026-09-13, Sub-task 1.6c: TTS Audio Studio UI)
+
+User is unreachable for this session (traveling) and explicitly authorized autonomous
+PM+Implementer decisions with strict self-verification — no scope invented beyond
+ROADMAP.md's Task 1.6 "TTS Audio Studio UI" bullet, and no shortcuts that could corrupt
+project data.
+
+**Real landmine found during planning, avoided by design (not by luck):** the existing
+`PUT /api/projects/{id}` (`ProjectUpdate.speakers`) does a full delete-and-reinsert of every
+speaker row with brand-new UUIDs (`project_service._replace_speakers`). That's harmless at
+Step 1 (no script exists yet), but `script_lines.speaker_id` has `ON DELETE CASCADE` —
+calling that same endpoint from Audio Studio (reached only once a script already exists)
+to tweak a speaker's engine/speed/pitch/volume would silently **cascade-delete the entire
+script**. Audio Studio must never call that route. Instead: a new, narrow
+`PATCH /api/projects/{id}/speakers/{speaker_id}` that updates columns in place by id,
+never deletes/reinserts anything.
+
+Scope (ROADMAP.md Task 1.6 "TTS Audio Studio UI" bullet):
+- Speaker voice assignment panel: per-speaker card with an engine dropdown and
+  speed/pitch/volume sliders, autosaved via the new PATCH route.
+  - Engine dropdown offers only `omnivoice` and `edge_tts` — the two engines
+    `tts_service.synthesize_line()` actually branches on today. `piper`/`google`/`azure`
+    exist in `TTS_ENGINES`/DB schema but aren't wired to any real synthesis path yet;
+    listing them as selectable options would silently no-op to Edge TTS, which is
+    misleading, so they're left out of this dropdown (not a data-model change).
+  - `omnivoice` shows an inline note that it currently falls back to Edge TTS
+    automatically (honest, matches `tts_service.py`'s real behavior — model integration
+    is a separate, deliberately-deferred decision, see TRACKER.md).
+- "Preview" button per script line → calls `POST .../tts/preview`, plays the result via
+  `GET .../tts/cache/{line_id}.mp3` in a plain `<audio>` element.
+- Background music selector: `<select>` populated from `GET /api/music` (Task 1.10);
+  "None" is a valid choice. Selection lives in page state only (no project-table column
+  for it — same reasoning `audio_service.py` already documented for 1.6b).
+- "Generate All" button: since `AudioService.mix_project()` deliberately only processes
+  *already-synthesized* lines (module boundary from 1.6b — it never calls a TTS engine
+  itself), this button must orchestrate both steps client-side: synthesize every script
+  line **sequentially** (not parallel — respects `MAX_CONCURRENT_TTS`/OmniVoice's
+  semaphore intent and avoids hammering the free Edge TTS endpoint, matching this task's
+  Forbidden Scope "No VRAM exhaustion without fallback"), showing "Synthesizing line X/N…"
+  progress, then call `POST .../audio/generate` with the selected background music.
+- Final player: a plain `<audio controls>` element pointing at the mix. **No waveform
+  visualization** — that's a visual-only UI element with no task assigned anywhere in
+  TRACKER/ROADMAP yet (same standing gap already noted for the Music Library page); not
+  invented here to keep scope matched to what was actually asked.
+- Download MP3 / WAV buttons: plain links to
+  `GET .../audio/download?format=mp3|wav`.
+- Verify: full flow — assign a speaker's engine/sliders, preview a line, pick background
+  music, Generate All, player + both downloads.
+
+Files:
+- `app/models/project.py`: new `SpeakerUpdate` (all fields optional: `tts_engine`,
+  `voice_description`, `speed`, `pitch`, `volume` — no `name`/`gender`/`accent`, those are
+  Step 1 persona fields out of scope here), reusing the same `TTS_ENGINES`/speed/pitch/
+  volume bounds already validated on `SpeakerConfig`.
+- `app/services/project_service.py`: new `update_speaker(db, project_id, speaker_id, patch,
+  commit=True) -> dict` — `UPDATE speakers SET ... WHERE id = ? AND project_id = ?` (in
+  place, no delete), 404 if the speaker doesn't belong to the project, returns the full
+  refreshed project (frontend needs the whole speakers list back to re-render).
+- `app/api/projects.py`: new `PATCH /{project_id}/speakers/{speaker_id}` route, same
+  `_write_transaction` pattern as the existing `PUT /{project_id}`.
+- `frontend/static/js/api.js`: add `updateSpeaker`, `previewTtsLine`, `ttsCacheUrl`,
+  `generateAudio`, `getAudioStatus`, `audioDownloadUrl` (music list/content-url methods
+  already exist from Task 1.10).
+- `frontend/pages/step4_tts.html` + `frontend/static/js/step4_tts.js` (new): same visual
+  language and async-safety conventions as `step6_thumbnail.html`/`.js` (per-card
+  save-status state machine, double-submit locks, friendly-only error banner — CR-05,
+  `beforeunload` guard while anything is unsaved/in-flight).
+- `app/main.py`: point the existing `/step4` route at `step4_tts.html` instead of the
+  placeholder; delete `frontend/pages/step4_tts_placeholder.html` (fully superseded, not
+  referenced anywhere else).
+- `tests/test_projects_api.py`: new tests for `PATCH .../speakers/{id}` (success updates
+  persist, 404 unknown speaker/project, invalid engine/out-of-range slider rejected 422,
+  and — the specific regression this route exists to prevent — updating a speaker after a
+  script exists does NOT delete any `script_lines` row).
+- `tests/test_tts_audio_browser.py` (new): Playwright E2E using `page.route()` network
+  mocking (same pattern as `tests/test_youtube_browser.py`) — no real TTS/ffmpeg calls
+  needed for a frontend-logic test. Covers: speaker settings autosave, per-line preview
+  playback, Generate All happy path (sequential synth progress -> mix -> player +
+  downloads appear), and a friendly error on a failed generate.
+
+Forbidden Scope for this sub-task: no waveform visualization, no changes to
+`ProjectUpdate`/`_replace_speakers` (the existing Step 1 full-replace path stays exactly
+as-is — it works correctly there), no OmniVoice UI beyond the honest fallback note, no
+Step 5 Video Studio navigation (doesn't exist yet).
+
+## Sub-task 1.6c Result (2026-09-13) — DONE
+
+Delivered exactly the plan above. New: `frontend/pages/step4_tts.html` +
+`frontend/static/js/step4_tts.js` (registered at `/step4` in `app/main.py`, replacing and
+deleting the now-superseded `step4_tts_placeholder.html`), `SpeakerUpdate` model,
+`project_service.update_speaker()`, `PATCH /api/projects/{id}/speakers/{speaker_id}`, 6
+new `api.js` methods. 13 new tests (6 in `tests/test_projects_api.py` for the speaker
+route, 7 in `tests/test_tts_audio_browser.py`, Playwright + network-mocked, same pattern
+as `tests/test_youtube_browser.py`). 388/388 total tests pass, ruff clean, `node --check`
+clean on both JS files, `git diff --check` clean.
+
+**This closes Task 1.6 entirely** — all 3 sub-tasks (1.6a Edge TTS, 1.6b AudioService,
+1.6c UI) done.
+
+Real architectural landmine found during planning and avoided by design: `PUT
+/api/projects/{id}` with `speakers` does a full delete-and-reinsert with new UUIDs
+(`_replace_speakers`), and `script_lines.speaker_id` cascades on delete — reusing that
+route from Audio Studio (reached only once a script exists) to tweak one speaker's
+engine/sliders would have silently deleted the entire script. Verified this is a real,
+reachable hazard (not theoretical) by writing
+`test_update_speaker_after_script_exists_does_not_delete_script_lines` against the
+*existing* `PUT` route first, confirming it does cascade-delete lines, before building the
+new narrow `PATCH .../speakers/{id}` route that updates in place and leaves it untouched.
+
+Live-verified with a real end-to-end smoke script (not just mocked route tests): served
+`/step4` for real, created a project via the real API, saved a real script, PATCHed a
+speaker's engine/speed (confirmed script_lines count unchanged after), synthesized both
+lines via the real `tts_service` (Edge TTS network call mocked, pipeline otherwise real),
+called real `audio_service.mix_project` end-to-end producing a real playable MP3, fetched
+real `/audio/status` and `/audio/download`, and confirmed `projects.status` correctly
+advanced `script_generated -> audio_generated`. Also took a real Playwright screenshot of
+the rendered page to visually confirm layout/theme before calling this done — not just
+trusting DOM assertions.
+
+Not done (deliberately, no task assigned anywhere in TRACKER/ROADMAP): waveform
+visualization on the final player (a visual-only UI element, same standing gap already
+noted for the Music Library page); real OmniVoice GPU integration (separate, deferred
+design decision — where does each speaker's `ref_audio` sample come from?); a forward
+"Next Step" nav button from Step 4 (neither Step 5 Video Studio nor Step 6/7 have a
+reciprocal nav contract to link into yet, so none was invented).
+
+### Verification output
+
+`venv\Scripts\python -m pytest tests/test_projects_api.py tests/test_tts_audio_browser.py -q` (exit 0):
+```
+....................                                                     [100%]
+.......                                                                  [100%]
+27 passed
+```
+
+`venv\Scripts\python -m pytest tests/ -q` (exit 0):
+```
+388 passed, 3 warnings in 127.03s (0:02:07)
+```
+
+`venv\Scripts\python -m ruff check app/ tests/` (exit 0): `All checks passed!`
+
+`node --check frontend/static/js/api.js` (exit 0)
+`node --check frontend/static/js/step4_tts.js` (exit 0)
+
+`git diff --check` (exit 0, only pre-existing CRLF-on-touch warnings, no real errors)

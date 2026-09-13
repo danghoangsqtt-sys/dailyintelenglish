@@ -74,6 +74,35 @@ class SpeakerConfig(BaseModel):
         return value
 
 
+class SpeakerUpdate(BaseModel):
+    """Partial update for one speaker's TTS voice settings (Step 4 Audio Studio).
+
+    Deliberately narrower than SpeakerConfig: no `name`/`gender`/`accent` — those are
+    persona fields set at Step 1. This model backs a route that updates one speaker row
+    in place by id, unlike `ProjectUpdate.speakers` which replaces every speaker row with
+    new ids (safe only before a script exists, since script_lines.speaker_id cascades on
+    delete) — Audio Studio must never risk that path once a script exists.
+    """
+
+    tts_engine: str | None = None
+    voice_description: str | None = None
+    speed: float | None = Field(default=None, ge=TTS_SPEED_MIN, le=TTS_SPEED_MAX)
+    pitch: float | None = Field(default=None, ge=-1.0, le=1.0)
+    volume: float | None = Field(default=None, ge=0.0, le=2.0)
+
+    @field_validator("voice_description")
+    @classmethod
+    def strip_voice_description(cls, value: str | None) -> str | None:
+        return value.strip() if value is not None else value
+
+    @field_validator("tts_engine")
+    @classmethod
+    def validate_tts_engine(cls, value: str | None) -> str | None:
+        if value is not None and value not in TTS_ENGINES:
+            raise ValueError(f"tts_engine must be one of {TTS_ENGINES}")
+        return value
+
+
 class ScriptConfig(BaseModel):
     """Full configuration submitted from the Step 1 wizard to create a project."""
 

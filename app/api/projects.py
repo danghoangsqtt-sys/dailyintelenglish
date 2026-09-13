@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends
 
 from app.core.responses import ok
 from app.db.database import get_db
-from app.models.project import ProjectUpdate, ScriptConfig
+from app.models.project import ProjectUpdate, ScriptConfig, SpeakerUpdate
 from app.models.script import RegenerateLineRequest, ScriptUpdate
 from app.services import project_service, script_service
 
@@ -132,6 +132,21 @@ async def update_project(
     started_at = time.perf_counter()
     async with _write_transaction(db):
         project = await project_service.update_project(db, project_id, patch, commit=False)
+    return ok(project, started_at=started_at)
+
+
+@router.patch("/{project_id}/speakers/{speaker_id}")
+async def update_speaker(
+    project_id: str, speaker_id: str, patch: SpeakerUpdate, db: aiosqlite.Connection = Depends(get_db)
+) -> dict:
+    """Update one speaker's TTS engine/speed/pitch/volume in place (Step 4 Audio Studio).
+
+    Deliberately separate from `PUT /{project_id}` — see SpeakerUpdate's docstring for why
+    the full-replace `speakers` path on that route is unsafe to reuse here.
+    """
+    started_at = time.perf_counter()
+    async with _write_transaction(db):
+        project = await project_service.update_speaker(db, project_id, speaker_id, patch, commit=False)
     return ok(project, started_at=started_at)
 
 

@@ -52,7 +52,25 @@ const Api = (() => {
     getLearningPack: (projectId) => request(`/api/projects/${projectId}/learning`),
     saveLearningPack: (projectId, pack) =>
       request(`/api/projects/${projectId}/learning`, { method: "PUT", body: JSON.stringify(pack) }),
+    updateSpeaker: (projectId, speakerId, patch) =>
+      request(`/api/projects/${projectId}/speakers/${speakerId}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      }),
     listTtsEngines: () => request("/api/tts/engines"),
+    previewTtsLine: (projectId, lineId) =>
+      request(`/api/projects/${projectId}/tts/preview`, {
+        method: "POST",
+        body: JSON.stringify({ line_id: lineId }),
+      }),
+    ttsCacheUrl: (projectId, lineId) => `/api/projects/${projectId}/tts/cache/${lineId}.mp3`,
+    generateAudio: (projectId, backgroundMusic) =>
+      request(`/api/projects/${projectId}/audio/generate`, {
+        method: "POST",
+        body: JSON.stringify({ background_music: backgroundMusic || null }),
+      }),
+    getAudioStatus: (projectId) => request(`/api/projects/${projectId}/audio/status`),
+    audioDownloadUrl: (projectId, format) => `/api/projects/${projectId}/audio/download?format=${format}`,
     listMusic: () => request("/api/music"),
     uploadMusic: (file) => {
       const body = new FormData();
