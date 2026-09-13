@@ -3,8 +3,9 @@
 ## Meta
 - **ID**: 1.7
 - **Phase**: 1
-- **Status**: in_progress (Sub-task 1.7a done 2026-09-13; 1.7b UI and Level 3 LivePortrait
-  pending — Level 3 blocked on a user avatar-image-sourcing decision)
+- **Status**: done (2026-09-13) for both sub-tasks (1.7a backend, 1.7b UI) — the only
+  remaining item is Level 3 LivePortrait, which was never part of the sub-task split and
+  stays blocked on a user avatar-image-sourcing decision (see Acceptance Criteria item 2)
 - **Priority**: medium
 - **Assignee**: AI
 
@@ -21,7 +22,9 @@
   user decision (where do per-speaker avatar images come from?), same class of blocker as
   OmniVoice's `ref_audio`
 - [ ] Safe fallback from Level 3 to Level 2 on error/VRAM limit — moot until Level 3 exists
-- [ ] Video Studio UI with preview player and export options — pending Sub-task 1.7b
+- [x] Video Studio UI with preview player and export options — Sub-task 1.7b, 2026-09-13
+  (background-template selector only — no avatar/lips-sync controls, since that backend
+  path doesn't exist; see acceptance criterion 2)
 
 ## Forbidden Scope
 - No synchronous ffmpeg calls on event loop
@@ -162,3 +165,83 @@ OK: 3 video background template assets match deterministic sources
 Not done (deferred): Level 3 LivePortrait avatar lip-sync (needs a user decision on avatar
 image sourcing — see task file header), Video Studio UI (`frontend/pages/step5_video.html`,
 Sub-task 1.7b), custom background image upload, Shorts (9:16) video export.
+
+## Implementation Notes (2026-09-13, Sub-task 1.7b: Video Studio UI)
+
+User continued autonomous session ("tiếp tục"), same standing authorization.
+
+Scope is deliberately narrower than ROADMAP.md's full "Video Studio UI" bullet list,
+matching the backend reality Sub-task 1.7a actually built (no dead/fake controls for a
+mode that doesn't work — same principle already applied on `/step4`'s TTS engine
+dropdown, which only lists the 2 engines that actually do something):
+- **Background selector**: choose one of the 3 fixed templates (`GET /api/video/templates`)
+  — no custom upload UI, matching 1.7a's own scope decision (templates-only for now).
+- **NOT built**: avatar uploader, subtitle style picker, mode toggle, "copy prompt to
+  generate avatar image" — all belong to Level 3 (LivePortrait), which isn't implemented
+  and is blocked on a real user decision (see Task 1.7 header). Building UI controls for
+  a backend path that always fails would be a fake feature, not a scope cut.
+- **Generate button**: synchronous call to `POST .../video/generate` (rendering takes well
+  under a second for a typical episode — verified in 1.7a's live smoke test), busy-state
+  text while in flight, same pattern as `/step4`'s "Generate All" progress text (no fake
+  animated progress bar for a near-instant operation).
+- **Preview player**: `<video controls>` once a completed job exists (either just
+  generated, or already existed on page load/revisit).
+- **Download MP4 / SRT buttons**: plain links to `GET .../video/download?format=mp4|srt`.
+- **Empty state**: if no completed audio mix exists yet (Task 1.6), show a message
+  directing back to Step 4 instead of a broken/confusing generate attempt — same pattern
+  as `/step4`'s own empty-state for a project with no script yet.
+- **Pipeline navigation**: add `/step5` route in `app/main.py`; give `/step4` a "Next:
+  Video Studio →" forward button (it never had one — Task 1.6's acceptance criteria didn't
+  require pipeline nav, but now that Step 5 exists, closing the chain is a natural,
+  low-risk addition matching the established Step 2→3→4 pattern exactly) and `/step5` a
+  "← Back to Step 4" link.
+
+Files:
+- `frontend/pages/step5_video.html` + `frontend/static/js/step5_video.js` (new): same
+  visual language and async-safety conventions as `step4_tts.html`/`.js` (friendly-only
+  error banner, double-submit lock on Generate, `beforeunload` guard while generating).
+- `app/main.py`: new `GET /step5` route serving `step5_video.html`.
+- `frontend/static/js/api.js`: add `listVideoTemplates`, `generateVideo`,
+  `videoDownloadUrl` (`getVideoStatus` already added in Task 1.9 Sub-task 1.9b).
+- `frontend/pages/step4_tts.html` + `step4_tts.js`: add a "Next: Video Studio →" button
+  navigating to `/step5?project_id=...`.
+- `tests/test_video_studio_browser.py` (new): Playwright E2E with `page.route()` network
+  mocking (same pattern as `tests/test_tts_audio_browser.py`) — no real ffmpeg needed for
+  a frontend-logic test. Covers: empty state before audio exists, template selection +
+  generate happy path, existing-job-shown-on-load, download link hrefs, friendly error on
+  a failed generate, and the new Step 4 → Step 5 → (back) navigation links.
+
+Forbidden Scope: no avatar/lips-sync UI, no custom background upload UI, no subtitle style
+picker, no fake progress bar for a near-instant operation.
+
+## Sub-task 1.7b Result (2026-09-13) — DONE, closes Task 1.7's sub-task split
+
+Delivered exactly the plan above. New: `frontend/pages/step5_video.html` +
+`frontend/static/js/step5_video.js` (registered at `/step5` in `app/main.py`), 3 new
+`api.js` methods (`listVideoTemplates`, `generateVideo`, `videoDownloadUrl`). `/step4` now
+has a "Next: Video Studio →" button (it never had pipeline nav before — added here since
+Step 5 now exists to link to). 7 new Playwright tests (network-mocked, same pattern as
+`tests/test_tts_audio_browser.py`), 428/428 total tests pass, ruff clean, all touched JS
+files `node --check` clean.
+
+Live-verified with a real end-to-end smoke script (not just mocked route tests): listed
+the 3 real templates, created a real project, ran real Edge-TTS-mocked synthesis, real
+`AudioService` mix, then called the real `POST .../video/generate` and
+`GET .../video/status` through the same TestClient — both returned real success. Also took
+a real Playwright screenshot of the rendered page to visually confirm layout/theme
+consistency with the rest of the app before calling this done.
+
+**This closes Task 1.7's sub-task split** (1.7a AudioService-consuming backend, 1.7b UI)
+— only Level 3 LivePortrait avatar lip-sync remains, which was never part of that split
+and stays blocked on a real user decision (where do per-speaker avatar images come from?).
+
+### Verification output
+
+`venv\Scripts\python -m pytest tests/test_video_studio_browser.py -q` (exit 0):
+```
+7 passed in 15.42s
+```
+
+`venv\Scripts\python -m ruff check app/ tests/ scripts/` (exit 0): `All checks passed!`
+
+`node --check` on `api.js`, `step4_tts.js`, `step5_video.js`: all exit 0.

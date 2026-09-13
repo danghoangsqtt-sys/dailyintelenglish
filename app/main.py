@@ -128,6 +128,12 @@ async def step4_tts() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "pages" / "step4_tts.html")
 
 
+@app.get("/step5")
+async def step5_video() -> FileResponse:
+    """Serve the Step 5 — Video Studio page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step5_video.html")
+
+
 @app.get("/step6")
 async def step6_thumbnail() -> FileResponse:
     """Serve the Step 6 — interactive Thumbnail Generator page."""

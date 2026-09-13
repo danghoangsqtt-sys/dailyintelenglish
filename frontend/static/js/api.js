@@ -101,6 +101,13 @@ const Api = (() => {
     getYoutubePackage: (projectId) => request(`/api/projects/${projectId}/youtube`),
     youtubeExportUrl: (projectId) => `/api/projects/${projectId}/youtube/export`,
     getVideoStatus: (projectId) => request(`/api/projects/${projectId}/video/status`),
+    listVideoTemplates: () => request("/api/video/templates"),
+    generateVideo: (projectId, templateId) =>
+      request(`/api/projects/${projectId}/video/generate`, {
+        method: "POST",
+        body: JSON.stringify({ template_id: templateId }),
+      }),
+    videoDownloadUrl: (projectId, format) => `/api/projects/${projectId}/video/download?format=${format}`,
     health: () => request("/health"),
   };
 })();

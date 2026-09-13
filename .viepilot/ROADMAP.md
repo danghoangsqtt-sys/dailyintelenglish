@@ -160,15 +160,12 @@
   - Active speaker highlight (border glow on speaking turn)
   - Verify: lips-sync avatar video generates for 2-speaker dialogue
 
-- [ ] **Video Studio UI** (`frontend/pages/step5_video.html`)
-  - Background selector (upload image / choose from templates)
-  - Avatar uploader per speaker (for lips-sync mode)
-  - Subtitle style picker (font, size, color, position)
-  - Mode toggle: "Background + Subtitles" vs "Avatar + Lips-sync"
-  - AI prompt export: "Copy prompt to generate avatar image"
-  - Progress bar + preview player
-  - Download MP4 + SRT buttons
-  - Verify: both modes work, downloads correct
+- [x] **Video Studio UI** (`frontend/pages/step5_video.html`) — Sub-task 1.7b, done 2026-09-13
+  - Background selector — done, choose from the 3 fixed templates (no custom upload yet, matches 1.7a's own scope decision)
+  - Avatar uploader per speaker / Subtitle style picker / Mode toggle / "Copy prompt to generate avatar image" — not built: all belong to Level 3 (LivePortrait), which isn't implemented; building UI controls for a backend path that always fails would be a fake feature
+  - Progress bar → a plain "Rendering…" status text instead (ffmpeg render is well under a second per the 1.7a live smoke test — a fake animated progress bar for a near-instant operation was rejected) + preview player — done
+  - Download MP4 + SRT buttons — done
+  - Verify: 7 new Playwright tests (network-mocked) + a live end-to-end smoke run through the real API + a real screenshot confirming visual consistency
 
 ### 1.8 Step 6 — Thumbnail Generator
 

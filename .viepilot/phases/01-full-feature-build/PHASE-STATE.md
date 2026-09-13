@@ -90,11 +90,10 @@
     (6 API + 7 Playwright E2E, network-mocked), 388 total passing.
 
 ### Task 1.7: Step 5 — Video Studio
-- **Status:** 🔄 In Progress (Sub-task 1.7a done; 1.7b UI + Level 3 pending)
-- **Details:** Split into sub-tasks: 1.7a (VideoService background+subtitle backend) /
-  1.7b (Video Studio UI, deferred) / Level 3 LivePortrait avatar lip-sync (deferred
-  indefinitely — needs a user decision on avatar image sourcing, same class of blocker as
-  OmniVoice's `ref_audio`).
+- **Status:** ✅ Done (2026-09-13) for both sub-tasks (1.7a backend, 1.7b UI). Level 3
+  LivePortrait avatar lip-sync remains open, blocked on a user decision on avatar image
+  sourcing (same class of blocker as OmniVoice's `ref_audio`) — not part of the sub-task
+  split.
   - **1.7a DONE (2026-09-13):** `app/services/video_service.py` — real ffmpeg-rendered MP4
     from a project's completed audio mix (Task 1.6) + one of 3 fixed pre-rendered
     background templates (`frontend/static/video_backgrounds/`, via
@@ -108,6 +107,13 @@
     unrelated flaky Gemini-retry test confirmed passing in isolation). Live-smoke-tested
     end-to-end with a real extracted video frame confirming correct speaker name +
     dialogue burned in.
+  - **1.7b DONE (2026-09-13):** `frontend/pages/step5_video.html` + `step5_video.js` at
+    `/step5` — background-template selector (3 fixed templates, no custom upload UI),
+    synchronous Generate (no fake progress bar), `<video>` preview, MP4/SRT downloads,
+    empty state directing back to Step 4 when no audio exists yet. `/step4` gained its
+    first pipeline-nav button ("Next: Video Studio →"). 7 new Playwright tests
+    (network-mocked), 428/428 total tests pass. Live-smoke-tested end-to-end through the
+    real API and took a real screenshot to confirm visual consistency.
 
 ### Task 1.8: Step 6 — Thumbnail Generator
 - **Status:** ✅ Done (2026-09-12)

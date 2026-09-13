@@ -316,6 +316,7 @@
       return;
     }
     byId("back-link").href = `/step3?project_id=${encodeURIComponent(state.projectId)}`;
+    byId("next-step-link").href = `/step5?project_id=${encodeURIComponent(state.projectId)}`;
 
     try {
       state.project = await Api.getProject(state.projectId);

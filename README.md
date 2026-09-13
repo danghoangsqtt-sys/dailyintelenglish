@@ -25,12 +25,12 @@
 | **Task 1.1** | 🏗️ **Project Setup & Dependencies** | FastAPI skeleton, SQLite (`aiosqlite`), `scripts/check_dependencies.py` báo GREEN toàn bộ (Python, ffmpeg, GPU, Gemini key, OmniVoice model, thư mục data) | ✅ Shipped |
 | **Task 1.6** | 🎙️ **TTS Audio Studio** (`/step4`) | Edge TTS (10 giọng vùng miền × 3 giới tính) cho preview từng dòng; `AudioService` nối audio + ducking + chuẩn hóa loudness thật (-16 LUFS, ITU-R BS.1770); phân giọng/tốc độ/cao độ/âm lượng theo speaker, chọn nhạc nền, "Generate All" + xuất MP3/WAV | ✅ Shipped |
 | **Task 1.9** | 📋 **YouTube Package** (`/step7`) | 3 title variants + description + tags qua Gemini; chapters **đo thật** từ audio khi đã có (hoặc ước tính nếu chưa); export `.zip` đầy đủ (video + thumbnail + SRT + metadata.txt) | ✅ Shipped |
+| **Task 1.7** | 🎬 **Video Studio** (`/step5`) | `VideoService` xuất MP4 thật từ audio mix + 1 trong 3 background template + phụ đề burned-in (ffmpeg/libass) từ timestamp thật; chọn template, xem trước, tải MP4/SRT. LivePortrait lips-sync avatar chưa có (cần ảnh avatar per-speaker, chưa có tính năng upload/tạo ảnh) | ✅ Shipped |
 
 #### Core Foundation & In Progress
 
 | Task | Feature | Description | Status |
 |------|---------|-------------|--------|
-| **Task 1.7** | 🎬 **Video Studio** | `VideoService` xuất MP4 thật từ audio mix + 1 trong 3 background template + phụ đề burned-in (ffmpeg/libass) từ timestamp thật; LivePortrait lips-sync avatar và UI Step 5 vẫn chưa có (LivePortrait cần ảnh avatar per-speaker, chưa có tính năng upload/tạo ảnh) | 🔄 In Progress |
 | **Task 1.10** | 🎵 **Music Library** (`/music`) | Upload/list/preview/delete nhạc nền (giới hạn 50MB, kiểm tra magic-byte, chống trùng tên); volume leveling + chọn nhạc nền cho Step 4 đã xong (qua Task 1.6); chỉ còn thiếu waveform visualization | 🔄 In Progress |
 
 ## Quick Start
@@ -80,7 +80,7 @@ http://localhost:8000
 2️⃣  Step 2: AI Script        → Generate, preview, inline edit, per-line regenerate (Shipped - Task 1.4)
 3️⃣  Step 3: Learning Content → Vocabulary, idioms, grammar, comprehension quiz (Shipped - Task 1.5)
 4️⃣  Step 4: TTS Audio Studio → Voice assignment, per-line preview, real audio mix + loudness normalization, MP3/WAV export (Shipped - Task 1.6)
-5️⃣  Step 5: Video Studio     → Real MP4 with background template + burned-in subtitles/SRT (shipped); LivePortrait lips-sync + Step 5 UI pending (In Progress - Task 1.7)
+5️⃣  Step 5: Video Studio     → Template selector, real MP4 with burned-in subtitles/SRT, preview + downloads (Shipped - Task 1.7); LivePortrait lips-sync pending a user decision
 6️⃣  Step 6: Thumbnail        → AI-assisted templates, A/B variants, manual editor, export (Shipped - Task 1.8)
 7️⃣  Step 7: YouTube Package  → Titles/description/tags/chapters (measured once audio exists) + full .zip export (Shipped - Task 1.9)
 ```
