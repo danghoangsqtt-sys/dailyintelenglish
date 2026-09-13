@@ -8,9 +8,9 @@
 - **Target Completion:** 2026-09-20 (per ROADMAP.md's Day 8-14 target, adjusted forward
   since Phase 1 finished on Day 3 instead of Day 7)
 - **Milestone Progress:** 0 / 3 major tasks fully done (2.1 Quality Testing, 2.2 Bug Fixes
-  & Performance not started; 2.3 UX Polish has 4 of 7 items done — 2 shipped, 2 audited and
-  found already satisfied with no code change needed)
-- **Test Suite Status:** 482 passed, ruff clean, all `node --check` clean
+  & Performance not started; 2.3 UX Polish has 6 of 7 items resolved — 3 shipped code, 3
+  audited and found already satisfied with no code change needed)
+- **Test Suite Status:** 491 passed, ruff clean, all `node --check` clean
 
 ---
 
@@ -23,13 +23,13 @@
 - **Status:** ⏳ Planned — no task card yet
 
 ### Task 2.3: UX Polish
-- **Status:** 🔄 In Progress (4 of 7 ROADMAP items resolved — 2 shipped code, 2 audited and
-  found already satisfied)
+- **Status:** 🔄 In Progress (6 of 7 ROADMAP items resolved — only "auto-save indicator"
+  remains unassigned)
 - **Details:** ROADMAP.md's "UX Polish" bullet has 7 items; `task-2.3.md` covers the
   first 2 (step progress indicator, breadcrumb navigation), `task-2.3b.md` covers item 3
   (keyboard shortcuts), `task-2.3c.md` covers item 5 (error toasts) and closes item 4
-  (empty states) via audit with no code change needed. Only 2 items remain unassigned:
-  auto-save indicator, responsive layout.
+  (empty states) via audit, `task-2.3d.md` closes item 7 (responsive layout) via audit.
+  Only "auto-save indicator" remains unassigned.
   - **Step progress indicator + breadcrumb navigation — DONE (2026-09-13, by Codex,
     PM-accepted):** new `frontend/static/js/step_nav.js` — `StepNav.render(containerId,
     { projectId, currentStep })`, a pure synchronous DOM component (no network/async
@@ -75,3 +75,12 @@
     tuple hid its `dialog.accept()` coroutine from Playwright's fire-and-forget
     scheduling, deadlocking a `confirm()` dialog). 482 total tests pass. See
     `tasks/task-2.3c.md` for the full record.
+  - **Responsive layout — DONE (2026-09-13, Task 2.3d, PM as Implementer via `/vp-auto`
+    continuation):** ran a real Playwright audit before any planning — all 9 pages
+    already have zero horizontal overflow at a 1024px viewport, thanks to the consistent
+    `repeat(auto-fit, minmax(...))` grid pattern used app-wide plus `/step6`'s existing
+    `@media (max-width: 1180px)` stacking rule (already covers 1024px). No code change
+    needed. New permanent regression suite `tests/test_responsive_layout_browser.py` (9
+    tests, one per page, realistic mocked data reused from each page's own existing test
+    fixtures) pins the finding so it can't silently regress. 491 total tests pass. See
+    `tasks/task-2.3d.md` for the full record.

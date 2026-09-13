@@ -109,7 +109,7 @@ required for any task's own acceptance criteria]. Progress reflects completed su
 ### 2.2 Bug Fixes & Performance
 - [ ] No task card yet
 
-### 2.3 UX Polish (4/7 ROADMAP items resolved — 2 shipped code, 2 audited/already satisfied)
+### 2.3 UX Polish (6/7 ROADMAP items resolved — 3 shipped code, 3 audited/already satisfied)
 - [x] Step progress indicator + breadcrumb navigation — done 2026-09-13, by Codex,
   PM-accepted. New `frontend/static/js/step_nav.js` (`StepNav.render()`, pure synchronous
   DOM, no network) mounted on all 7 step pages showing "Step X of 7" + 7 clickable pills;
@@ -157,8 +157,14 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   Dashboard and Music Library both already show a helpful message for a genuinely empty
   list; `/step1` is a pure form with nothing to be "empty"; `/step7`'s `#generate-panel`
   already serves as its own empty/call-to-action state.
-- Remaining 2 UX Polish items (auto-save indicator, responsive layout) still have no task
-  card.
+- [x] Responsive layout — closed 2026-09-13, Task 2.3d, PM as Implementer (`/vp-auto`
+  autonomous continuation). Ran a real Playwright audit before any planning: all 9 pages
+  already have zero horizontal overflow at a 1024px viewport, thanks to the app-wide
+  `repeat(auto-fit, minmax(...))` grid pattern plus `/step6`'s existing `@media
+  (max-width: 1180px)` rule (already covers 1024px). No code change needed. New
+  permanent `tests/test_responsive_layout_browser.py` (9 tests) pins the finding. 491
+  total pass.
+- Only "auto-save indicator" remains unassigned in the 7-item "UX Polish" bullet.
 
 ## Decision Log
 
@@ -230,6 +236,22 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   handler returning a tuple hid its `dialog.accept()` coroutine from Playwright's
   fire-and-forget scheduling, deadlocking a `confirm()` dialog). Full suite: 482 passed,
   0 failures, no flake this run. | PM (Claude Code) |
+| 2026-09-13 | `/vp-auto` continuation ("tiếp tục"): picked "Responsive layout" (the last
+  auditable item before the genuinely bigger "auto-save indicator" one) — same discipline
+  as the prior two turns, ran a real proof-of-concept audit before writing a plan. A
+  disposable Playwright script loaded all 9 pages at a real 1024x800 viewport with
+  realistic mocked data and checked `scrollWidth` vs `clientWidth`: zero overflow
+  anywhere. Screenshots of the two most layout-complex pages (`/step4`'s two-column
+  speaker grid, `/step6`'s preview+editor grid) confirmed clean, non-overlapping layouts,
+  not just "no scrollbar." Root cause of why this already worked with no dedicated
+  effort: this app's CSS consistently uses `repeat(auto-fit, minmax(...))` for every
+  card/variant grid (self-reflowing by construction), and `/step6`'s one fixed
+  two-column layout already had a `@media (max-width: 1180px)` rule stacking it well
+  before 1024px. New `task-2.3d.md` (doc-first, written after the audit but before any
+  test file existed), then a permanent 9-page regression suite
+  (`tests/test_responsive_layout_browser.py`) so this can't silently regress later — no
+  production code touched. 491 total pass. This closes 6 of ROADMAP.md's 7 "UX Polish"
+  items; only "auto-save indicator" remains unassigned. | PM (Claude Code) |
 | 2026-09-11 | BUG-001 auto-logged by vp-audit Tier 1: restore valid machine-readable state | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-002 auto-logged by vp-audit Tier 1: reconcile Phase 1 progress counters | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-003 auto-logged by vp-audit Tier 1: enforce doc-first task gates | `vp-audit`; Backlog |

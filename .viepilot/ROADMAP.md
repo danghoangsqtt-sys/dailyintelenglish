@@ -290,7 +290,12 @@
   load silently rendered the misleading "No projects yet" empty state, and a failed
   delete used a raw `alert(err.message)`). Both fixed with the same `#error-banner`
   pattern used everywhere else — no new UI paradigm introduced
-- [ ] **Responsive layout**: works at 1024px width minimum
+- [x] **Responsive layout**: works at 1024px width minimum — closed 2026-09-13 (Task 2.3d)
+  via a real Playwright audit before any planning: all 9 pages already have zero
+  horizontal overflow at 1024px, thanks to the consistent `repeat(auto-fit, minmax(...))`
+  grid pattern used everywhere plus `/step6`'s existing `@media (max-width: 1180px)`
+  stacking rule. No code change needed; a permanent 9-page regression suite
+  (`tests/test_responsive_layout_browser.py`) now pins this so it can't silently regress
 
 ---
 
