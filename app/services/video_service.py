@@ -104,6 +104,15 @@ def _render_video_sync(background_path: Path, audio_path: str, srt_path: Path, o
         raise VideoRenderError(f"ffmpeg video render failed: {result.stderr[-500:]}")
 
 
+def _write_video_outputs_sync(background_path: Path, output_dir: Path, srt_path: Path, srt_content: str) -> None:
+    """Blocking filesystem prep for a video render — must run in a thread, never on the
+    event loop directly (this task's Forbidden Scope)."""
+    if not background_path.is_file():
+        raise VideoRenderError(f"Background template not found: {background_path.stem}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    srt_path.write_text(srt_content, encoding="utf-8")
+
+
 async def generate_video(project_id: str, audio_job: dict | None, template_id: str) -> dict:
     """Render a project's completed audio mix into an MP4 with a background + burned-in subtitles.
 
@@ -119,14 +128,13 @@ async def generate_video(project_id: str, audio_job: dict | None, template_id: s
         raise VideoRenderError("Cannot generate video: the audio mix hasn't been generated yet.")
 
     background_path = TEMPLATE_DIR / f"{template_id}.png"
-    if not background_path.is_file():
-        raise VideoRenderError(f"Background template not found: {template_id}")
-
     output_dir = settings.DATA_DIR / "video" / project_id
-    output_dir.mkdir(parents=True, exist_ok=True)
     srt_path = output_dir / "subtitles.srt"
-    srt_path.write_text(generate_srt(audio_job["timestamps"]), encoding="utf-8")
     mp4_path = output_dir / "video.mp4"
+
+    await asyncio.to_thread(
+        _write_video_outputs_sync, background_path, output_dir, srt_path, generate_srt(audio_job["timestamps"])
+    )
 
     try:
         await asyncio.to_thread(_render_video_sync, background_path, audio_job["mp3_path"], srt_path, mp4_path)

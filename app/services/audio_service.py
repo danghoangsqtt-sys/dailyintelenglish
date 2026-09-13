@@ -214,7 +214,7 @@ async def mix_project(
     background_music_path: Path | None = None
     if background_music_filename:
         candidate = settings.DATA_DIR / "music_library" / background_music_filename
-        if not candidate.is_file():
+        if not await asyncio.to_thread(candidate.is_file):
             raise AudioMixError(f"Background music file not found: {background_music_filename}")
         background_music_path = candidate
 

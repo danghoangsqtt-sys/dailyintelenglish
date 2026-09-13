@@ -258,10 +258,24 @@
 
 ### 2.2 Bug Fixes & Performance
 
-- [ ] Fix any blocking API calls → move to executor
-- [ ] Optimize OmniVoice batch: generate 5 lines per batch instead of sequential
-- [ ] Add progress cancellation (stop mid-generation)
-- [ ] Fix Gemini retry logic for 429 rate limit errors
+- [x] Fix any blocking API calls → move to executor — done 2026-09-13 (Task 2.2). A
+  research-agent audit + direct file review found 4 real gaps (not the ~25 already-correct
+  usages elsewhere): `video_service.generate_video()`'s background-check/mkdir/SRT-write,
+  `tts_service.synthesize_line()`'s model-exists-check/mkdir/audio-write (a per-line hot
+  path), `audio_service.mix_project()`'s background-music existence check, and
+  `app/api/tts.py`'s `list_engines()` (model-exists + `shutil.which("piper")`). All 4
+  wrapped in `asyncio.to_thread`; 55 pre-existing tests across the touched files pass
+  completely unmodified, proving zero behavior change
+- [ ] Optimize OmniVoice batch: generate 5 lines per batch instead of sequential — moot,
+  per the user's 2026-09-13 decision (TRACKER.md Known Issues) real OmniVoice integration
+  will not be pursued
+- [ ] Add progress cancellation (stop mid-generation) — audited 2026-09-13: every
+  generation route is a synchronous request/response call with no background-job/cancel
+  mechanism anywhere in the app; building real cancellation is a genuinely large
+  architectural change, not a bug fix — deferred as its own future task
+- [x] Fix Gemini retry logic for 429 rate limit errors — already done during Phase 1 (all
+  4 Gemini-calling services have 1s→2s→4s exponential backoff on 429 only); this line
+  predated that work and was never updated. Closed via audit 2026-09-13, no code needed
 
 ### 2.3 UX Polish
 

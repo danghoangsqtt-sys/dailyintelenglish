@@ -106,8 +106,25 @@ required for any task's own acceptance criteria]. Progress reflects completed su
 ### 2.1 Quality Testing
 - [ ] No task card yet (CEFR accuracy, multi-accent TTS, audio quality, video testing — see ROADMAP.md)
 
-### 2.2 Bug Fixes & Performance
-- [ ] No task card yet
+### 2.2 Bug Fixes & Performance — buildable scope done 2026-09-13 (Task 2.2)
+- [x] Fix any blocking API calls → move to executor — a research-agent audit + direct
+  file review found 4 real gaps (not the ~25 already-correct usages elsewhere):
+  `video_service.generate_video()` (background-check/mkdir/SRT-write),
+  `tts_service.synthesize_line()` (model-exists-check/mkdir/audio-write — a per-line hot
+  path), `audio_service.mix_project()` (background-music existence check), and
+  `app/api/tts.py`'s `list_engines()` (model-exists + `shutil.which("piper")`). All 4
+  wrapped in `asyncio.to_thread`; 55 pre-existing tests pass completely unmodified,
+  proving zero behavior change.
+- [ ] Optimize OmniVoice batch — moot, real OmniVoice integration will not be pursued
+  (2026-09-13 decision).
+- [ ] Add progress cancellation (stop mid-generation) — **genuinely deferred, not
+  closed**: audited the architecture and found every generation route is a synchronous
+  request/response call with no background-job/cancellation mechanism anywhere; building
+  real cancellation is a large architectural change, a separate future task.
+- [x] Fix Gemini retry logic for 429 — already done during Phase 1 (1s→2s→4s backoff on
+  429 only, all 4 Gemini-calling services); this line predated that work. Closed via
+  audit, no code needed.
+- See `.viepilot/phases/02-testing-polish/tasks/task-2.2.md` for the full record.
 
 ### 2.3 UX Polish — ✅ DONE (2026-09-13), all 7/7 ROADMAP items resolved (4 shipped code, 3 audited/already satisfied)
 - [x] Step progress indicator + breadcrumb navigation — done 2026-09-13, by Codex,
@@ -278,6 +295,25 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   **This closes Task 2.3 entirely — all 7 ROADMAP.md "UX Polish" items now resolved**
   (4 shipped code across 2.3/2.3b/2.3e, 3 closed via audit with no code change across
   2.3c/2.3d). | PM (Claude Code) |
+| 2026-09-13 | `/vp-auto` continuation: with all of "2.3 UX Polish" done, moved to Task 2.2
+  "Bug Fixes & Performance." Audited all 4 ROADMAP items before scoping: dispatched a
+  read-only research agent to grep every `async def` in `app/services/*.py`/`app/api/*.py`
+  for blocking filesystem calls not wrapped in `asyncio.to_thread`, then independently
+  confirmed its findings by reading each file directly (and found one more of the same
+  class — `shutil.which("piper")` in `app/api/tts.py` — that the agent's search patterns
+  hadn't targeted). 4 genuine gaps found and fixed (not the ~25 already-correct usages
+  elsewhere), the most consequential being `tts_service.synthesize_line()`'s unwrapped
+  model-check/mkdir/audio-write, since that function runs per script line during
+  "Generate All" — a real hot path under concurrent synthesis, not just a one-off
+  request. "Fix Gemini retry logic for 429" turned out to already be done (built during
+  Phase 1, the ROADMAP line simply never got checked off). "Optimize OmniVoice batch" is
+  moot post-decision. "Add progress cancellation" was explicitly NOT closed — audited the
+  architecture (every generate route is synchronous request/response, no background-job
+  or cancellation mechanism exists anywhere) and correctly recognized this needs a real
+  architectural change, not a quick fix, so it stays open as a separate future task
+  rather than being forced into a slice it doesn't fit. 55 pre-existing tests across the
+  4 touched files pass completely unmodified, proving zero behavior change. 493 total
+  pass. | PM (Claude Code) |
 | 2026-09-11 | BUG-001 auto-logged by vp-audit Tier 1: restore valid machine-readable state | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-002 auto-logged by vp-audit Tier 1: reconcile Phase 1 progress counters | `vp-audit`; Backlog |
 | 2026-09-11 | BUG-003 auto-logged by vp-audit Tier 1: enforce doc-first task gates | `vp-audit`; Backlog |
@@ -354,8 +390,11 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   `test_script_service.py::test_generate_script_non_429_error_does_not_retry`, at 350.80s
   — plus one more during Task 2.3b's verification,
   `test_learning_service.py::test_generate_learning_pack_exhausts_retries_raises`, at
-  453.85s — all fully consistent with the pattern: slower-than-baseline full-suite runs,
-  instant pass in isolation), tracked in `.viepilot/debug/session-debug-20260912T000000Z.json`
+  453.85s — plus two at once during Task 2.2's verification (both in
+  `test_learning_service.py`: `test_generate_learning_pack_exhausts_retries_raises` and
+  `test_generate_learning_pack_non_429_error_does_not_retry`) at 447.13s — all fully
+  consistent with the pattern: slower-than-baseline full-suite runs, instant pass in
+  isolation), tracked in `.viepilot/debug/session-debug-20260912T000000Z.json`
   (closed `wontfix` 2026-09-13). If a full-suite run ever shows a Gemini retry/backoff test
   failing, re-run it in isolation before treating it as a real regression — do not block
   on it if isolation passes.

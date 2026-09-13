@@ -13,6 +13,7 @@ it is what Sub-task 1.6a actually delivers and tests.
 
 import asyncio
 import logging
+from pathlib import Path
 
 import aiosqlite
 import edge_tts
@@ -117,6 +118,13 @@ def _find_speaker(project: dict, speaker_id: str) -> dict:
     raise NotFoundError(f"Speaker {speaker_id} not found on project {project['id']}")
 
 
+def _write_audio_cache_sync(cache_dir: Path, audio_path: Path, audio_bytes: bytes) -> None:
+    """Blocking cache-directory creation + file write — must run in a thread, never on
+    the event loop directly."""
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    audio_path.write_bytes(audio_bytes)
+
+
 async def synthesize_line(
     db: aiosqlite.Connection, project: dict, line: dict, *, commit: bool = True
 ) -> dict:
@@ -134,7 +142,8 @@ async def synthesize_line(
 
     audio_bytes: bytes
     engine_used: str
-    if speaker["tts_engine"] == "omnivoice" and settings.OMNIVOICE_MODEL_PATH.exists():
+    omnivoice_model_present = await asyncio.to_thread(settings.OMNIVOICE_MODEL_PATH.exists)
+    if speaker["tts_engine"] == "omnivoice" and omnivoice_model_present:
         async with _omnivoice_semaphore:
             try:
                 audio_bytes = await _synthesize_omnivoice(line["text"], speaker)
@@ -148,9 +157,8 @@ async def synthesize_line(
         engine_used = "edge_tts"
 
     cache_dir = settings.DATA_DIR / "tts_cache" / project["id"]
-    cache_dir.mkdir(parents=True, exist_ok=True)
     audio_path = cache_dir / f"{line['id']}.mp3"
-    audio_path.write_bytes(audio_bytes)
+    await asyncio.to_thread(_write_audio_cache_sync, cache_dir, audio_path, audio_bytes)
 
     await db.execute(
         "UPDATE script_lines SET audio_cache_path = ? WHERE id = ? AND project_id = ?",

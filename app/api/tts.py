@@ -1,5 +1,6 @@
 """TTS engine discovery + per-line preview routes (Task 1.6)."""
 
+import asyncio
 import shutil
 import time
 
@@ -19,6 +20,11 @@ router = APIRouter(prefix="/api/tts", tags=["tts"])
 preview_router = APIRouter(prefix="/api/projects/{project_id}/tts", tags=["tts"])
 
 
+def _detect_engine_availability_sync() -> tuple[bool, bool]:
+    """Blocking filesystem/PATH checks — must run in a thread, never on the event loop."""
+    return settings.OMNIVOICE_MODEL_PATH.exists(), shutil.which("piper") is not None
+
+
 @router.get("/engines")
 async def list_engines() -> dict:
     """Report which TTS engines are currently usable on this machine.
@@ -28,18 +34,11 @@ async def list_engines() -> dict:
     scripts/check_dependencies.py, not on every request here.
     """
     started_at = time.perf_counter()
+    omnivoice_available, piper_available = await asyncio.to_thread(_detect_engine_availability_sync)
     engines = [
-        {
-            "id": "omnivoice",
-            "available": settings.OMNIVOICE_MODEL_PATH.exists(),
-            "kind": "local_gpu",
-        },
+        {"id": "omnivoice", "available": omnivoice_available, "kind": "local_gpu"},
         {"id": "edge_tts", "available": True, "kind": "online_free"},
-        {
-            "id": "piper",
-            "available": shutil.which("piper") is not None,
-            "kind": "local_offline",
-        },
+        {"id": "piper", "available": piper_available, "kind": "local_offline"},
     ]
     return ok(engines, started_at=started_at)
 

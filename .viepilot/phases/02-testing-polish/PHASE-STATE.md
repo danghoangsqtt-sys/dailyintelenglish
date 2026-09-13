@@ -8,7 +8,9 @@
 - **Target Completion:** 2026-09-20 (per ROADMAP.md's Day 8-14 target, adjusted forward
   since Phase 1 finished on Day 3 instead of Day 7)
 - **Milestone Progress:** 1 / 3 major tasks fully done (2.3 UX Polish — ✅ DONE, all 7
-  ROADMAP items resolved; 2.1 Quality Testing and 2.2 Bug Fixes & Performance not started)
+  ROADMAP items resolved; 2.2 Bug Fixes & Performance has its buildable scope done — 1
+  item fixed, 1 already-done-closed-via-audit, 1 moot, 1 genuinely deferred as a future
+  task; 2.1 Quality Testing not started)
 - **Test Suite Status:** 493 passed, ruff clean, all `node --check` clean
 
 ---
@@ -19,7 +21,26 @@
 - **Status:** ⏳ Planned — no task card yet
 
 ### Task 2.2: Bug Fixes & Performance
-- **Status:** ⏳ Planned — no task card yet
+- **Status:** ✅ Done for its buildable scope (2026-09-13, Task 2.2) — 2 of 4 ROADMAP
+  items resolved, 1 moot, 1 genuinely deferred (see below); no further code planned under
+  this task card
+- **Details:** Audited all 4 ROADMAP items first. (1) "Fix any blocking API calls → move
+  to executor" — a research-agent grep + direct file review found 4 real gaps across
+  `video_service.py`, `tts_service.py`, `audio_service.py`, `app/api/tts.py` (not the
+  ~25 already-correct `asyncio.to_thread` usages elsewhere); all 4 fixed, wrapping each
+  in `asyncio.to_thread` (new small sync helpers where more than one blocking call needed
+  grouping). 55 pre-existing tests across the 5 touched-file test suites pass completely
+  unmodified — proves zero behavior change, purely an event-loop-blocking fix. (2)
+  "Optimize OmniVoice batch" — moot, real OmniVoice integration will not be pursued per
+  the user's 2026-09-13 decision. (3) "Add progress cancellation (stop mid-generation)" —
+  audited the architecture: every generation route is a synchronous request/response call
+  with no background-job/cancellation mechanism anywhere in the app; building real
+  cancellation is a genuinely large architectural change, not a bug fix — **explicitly
+  deferred as a separate future task**, not closed. (4) "Fix Gemini retry logic for 429" —
+  already done during Phase 1 (all 4 Gemini-calling services have 1s→2s→4s backoff on
+  429 only); this ROADMAP line predated that work and was never updated — closed via
+  audit, no code needed. 493 total tests pass. See `tasks/task-2.2.md` for the full
+  record.
 
 ### Task 2.3: UX Polish — ✅ DONE (2026-09-13), all 7 ROADMAP items resolved
 - **Status:** ✅ Done
