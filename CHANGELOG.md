@@ -37,6 +37,10 @@ Versioning: [SemVer](https://semver.org/)
   - Step 4 placeholder entry point (`frontend/pages/step4_tts_placeholder.html`, `GET /step4`)
 - `ENH-002`: Architecture diagram sidecars (`.viepilot/architecture/data-flow.mermaid`, `module-dependencies.mermaid`) and Diagram source references in `ARCHITECTURE.md`
 - `ENH-003`: Gemini Implementer Delivery Protocol and contract (`docs/GEMINI_CODE_PROMPT.md`, `.viepilot/SYSTEM-RULES.md`, updated `CLAUDE_CODE_PROMPT.md`)
+- Task 2.4 — UI Redesign Slice 1 (Dashboard + Script workspace): Dashboard rebuilt as a light, high-contrast project launcher (hero, filter/search toolbar, light project cards) with all existing list/filter/search/delete/new-project behavior unchanged; Step 2 rebuilt as a CapCut-style Script workspace via new `frontend/static/js/shell.js` (`WorkspaceShell`) — resizable/collapsible sidebar, central script stage (original inline editor untouched), a selected-line inspector (speaker/text/language notes, Listen via the existing TTS preview endpoint, Regenerate), and a three-track Script/Voice/Music timeline; shared CSS tokens flipped to light-by-default with dark values moved under `[data-theme="dark"]`
+
+### Changed
+- `theme.js`'s stored-preference fallback changed from `"dark"` to `"light"` (Task 2.4) — first-visit default is now light; explicit user choice via `#theme-toggle` still persists and overrides
 
 ### Fixed
 - Step 2 autosave now resyncs script-line ids from the `PUT .../script` response (the save always reissues fresh ids) and serializes overlapping autosaves into one coalesced trailing save instead of firing them concurrently; Regenerate is disabled for the full duration of an in-flight save

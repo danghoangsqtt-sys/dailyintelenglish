@@ -19,12 +19,17 @@ checklist] with 30 discrete checklist subtasks (29 original + Sub-task 1.7c, add
 anymore) and LivePortrait lip-sync inference itself (Task 1.7 — the separate
 avatar-sourcing question is resolved and delivered as Sub-task 1.7c, but the actual
 lip-sync model integration is a distinct, not-yet-started future effort), neither
-required for any task's own acceptance criteria]. Progress reflects completed subtasks.*
+required for any task's own acceptance criteria]. Progress reflects completed subtasks.
+Phase 2's row counts discrete ROADMAP checklist items across 2.1 (4), 2.2 (4), 2.3 (7),
+and 2.4 (3, new scope added 2026-09-14, not in the original Phase 2 plan) = 18 total,
+12 done (2.2's 2 real fixes — "Optimize OmniVoice batch" and "Add progress cancellation"
+are moot/deferred, not counted done; 2.3's 7; 2.4's 3); this row was stale at 0/10 before
+2026-09-14's Task 2.4 update, not updated in sync during 2.2/2.3 — corrected here.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
 | Phase 1 — Build | ✅ Complete | 28 | 30 |
-| Phase 2 — Testing | 🔄 In Progress | 0 | 10 |
+| Phase 2 — Testing | 🔄 In Progress | 12 | 18 |
 | Phase 3 — Review | ⏳ Not Started | 0 | 6 |
 
 ## Phase 1 Task Status
@@ -192,6 +197,40 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   intentionally excluded. 2 new Playwright tests; existing autosave-race suite re-run
   unmodified and still passes. 493 total pass. **This closes Task 2.3 entirely — all 7
   "UX Polish" ROADMAP items resolved.**
+
+### 2.4 UI Redesign Slice 1 — Dashboard + Script Workspace — ✅ DONE (2026-09-14)
+- [x] Dashboard → light, high-contrast project launcher — new hero + toolbar + light
+  project-card shell; every existing list/filter/search/delete/new-project selector and
+  behavior retained exactly (`#project-grid`, `#empty-state`, `[data-filter]`,
+  `#search-input`, `[data-action]`/`[data-id]`, `#theme-toggle`).
+- [x] Step 2 → CapCut-style Script workspace — new `frontend/static/js/shell.js`
+  (`WorkspaceShell`): resizable/collapsible sidebar (vertical `StepNav`, sidebar
+  56-420px), central script stage (original `[data-line-id]` inline-edit cards
+  byte-for-byte behaviorally untouched), a selected-line inspector (260-480px; speaker,
+  text, language notes, Listen via the existing `previewTtsLine` →
+  `POST /api/projects/{id}/tts/preview` endpoint — no new backend surface — and
+  Regenerate via the existing guarded `handleRegenerate` path), and a three-track
+  Script/Voice/Music timeline (110px-70vh) whose Script lane drives selection.
+- [x] Light-by-default theme migration — shared CSS tokens moved to light-first `:root`
+  with dark values under `[data-theme="dark"]`, legacy variable aliases kept so untouched
+  pages render unaffected; `theme.js`'s stored-preference fallback changed from `"dark"`
+  to `"light"` (the one and only permitted line change in that file, verified via `git
+  diff` byte-for-byte).
+- Doc-first plan (`tasks/task-2.4.md`) flagged 2 real contradictions in the original
+  brief before any code was written — PM resolved both explicitly (light-default needs
+  `theme.js` in scope; the Listen action needs the existing preview endpoint, not a new
+  one) rather than letting the Implementer guess. 49 new/updated Playwright tests (46
+  across the touched shared-module suites — Dashboard, keyboard shortcuts, StepNav, save
+  indicator, responsive layout, UI-async — + 3 new in
+  `tests/test_new_shell_resize_browser.py` covering pointer/keyboard resize,
+  collapse/expand, selection+inline-edit coexistence, and the real Listen call including
+  its loading/error path). Full suite: 515/516 pass — the 1 failure
+  (`test_learning_service.py::test_generate_learning_pack_retries_on_503_then_succeeds`)
+  is the pre-existing tracked Gemini-retry timing flake (see Known Issues), confirmed via
+  an isolated re-run (passed in 0.55s) since Task 2.4 touched zero backend/Gemini code.
+  `ruff check app/ tests/` clean; `node --check` clean on all 6 touched JS files. Real
+  Playwright screenshots at 1440×900 confirmed both pages render correctly in both themes
+  against the live app. See `tasks/task-2.4.md` for the full record and evidence.
 
 ## Decision Log
 
@@ -396,6 +435,18 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   `GEMINI_MODEL_FALLBACKS` (an extra quota bucket, explicitly documented in the constants.py
   comment as a known-tradeoff addition, not a technical recommendation). 92/92 tests still
   pass, ruff clean. | User; PM (Claude Code) |
+| 2026-09-14 | Task 2.4 (UI Redesign Slice 1) shipped: Dashboard → light high-contrast
+  launcher, Step 2 → CapCut-style resizable Script workspace (new `shell.js`
+  `WorkspaceShell`, inspector, 3-track timeline), shared tokens flipped light-by-default.
+  New scope beyond the original Phase 2 ROADMAP plan, from an approved UI direction
+  (`.viepilot/ui-direction/2026-09-14/`). Doc-first plan flagged 2 real brief
+  contradictions before coding — PM resolved both explicitly rather than letting the
+  Implementer guess (see task-2.4.md). All existing selectors/behavior retained
+  (list/filter/search/delete on Dashboard; inline-edit/autosave/regenerate on Script); no
+  app/API/schema/state-machine file touched. 49 new/updated Playwright tests; full suite
+  515/516 pass (1 pre-existing tracked Gemini-retry flake, confirmed via isolated re-run,
+  not a regression). `ruff`/`node --check` clean. Live-verified with real Playwright
+  screenshots at 1440×900, both pages, both themes. | User; PM (Claude Code) |
 
 ## Known Issues
 

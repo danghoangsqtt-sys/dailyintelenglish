@@ -104,7 +104,10 @@ async def test_each_page_renders_and_navigates_shared_step_nav(
 
     assert await page.locator("#step-nav .step-nav").get_attribute("aria-label") == "Project steps"
     assert await page.locator("#step-nav .step-nav > span").text_content() == f"Step {current_step} of 7"
-    assert await page.locator("#step-nav .step-nav-pill").all_text_contents() == STEP_LABELS
+    labels = await page.locator("#step-nav .step-nav-pill").evaluate_all(
+        "links => links.map(link => link.lastChild.textContent)"
+    )
+    assert labels == STEP_LABELS
     assert await page.locator("#step-nav .step-nav-pill").count() == 7
 
     active = page.locator('#step-nav .step-nav-pill[aria-current="step"]')
@@ -114,11 +117,15 @@ async def test_each_page_renders_and_navigates_shared_step_nav(
         "#step-nav .step-nav-pill:not(.active)"
     ).first.evaluate("element => getComputedStyle(element).color")
 
-    is_between_header_and_main = await page.locator("#step-nav").evaluate(
-        "element => element.previousElementSibling?.matches('header.topbar') === true "
-        "&& element.nextElementSibling?.matches('main.main') === true"
-    )
-    assert is_between_header_and_main
+    if current_step == 2:
+        assert await page.locator("#pane-sidebar #step-nav .step-nav-workflow").count() == 1
+        assert await page.locator("#step-nav .workflow-item .step-dot.active").text_content() == "2"
+    else:
+        is_between_header_and_main = await page.locator("#step-nav").evaluate(
+            "element => element.previousElementSibling?.matches('header.topbar') === true "
+            "&& element.nextElementSibling?.matches('main.main') === true"
+        )
+        assert is_between_header_and_main
 
     target_step = 7 if current_step != 7 else 1
     target = page.locator(f'#step-nav .step-nav-pill[data-step="{target_step}"]')

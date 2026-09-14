@@ -11,7 +11,7 @@ const Theme = (() => {
   function init() {
     let stored = "dark";
     try {
-      stored = localStorage.getItem(STORAGE_KEY) || "dark";
+      stored = localStorage.getItem(STORAGE_KEY) || "light";
     } catch {
       /* localStorage unavailable — default to dark */
     }

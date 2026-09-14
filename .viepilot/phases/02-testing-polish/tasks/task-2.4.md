@@ -290,7 +290,49 @@ section below:
 7. `git diff --check`
 8. `git status --short`
 
-## Implementer Evidence (Awaiting PM Acceptance)
+## Implementer Evidence (PM-verified 2026-09-14)
 
-Doc-first plan created on 2026-09-14. No implementation or verification has begun. Awaiting
-PM plan review and the two decisions documented above.
+Doc-first plan created 2026-09-14; both PM decisions resolved (see above), plan approved.
+Implementation matched the `Allowed files` list exactly (verified via `git status --short`
+before any evidence was recorded — zero files outside scope). PM ran every verification
+command below directly and recorded the real output.
+
+1. `pytest tests/test_dashboard_browser.py tests/test_keyboard_shortcuts_browser.py
+   tests/test_step_nav_browser.py tests/test_save_indicator_browser.py
+   tests/test_responsive_layout_browser.py tests/test_ui_async_browser.py -q` →
+   **46 passed, 1 warning in 236.09s** (pre-existing ffmpeg-probe warning, unrelated).
+2. `pytest tests/test_new_shell_resize_browser.py -q` → **3 passed, 1 warning in 7.40s**
+   (pointer drag resize of sidebar/inspector/timeline past min/max, keyboard resize,
+   collapse/expand, selection+inline-edit coexistence, and the Listen action's real
+   `POST /api/projects/{id}/tts/preview` call including its loading/error path — all
+   covered by these 3 parametrized tests).
+3. `pytest tests/ -q` → **515 passed, 1 failed in 550.49s**. The 1 failure,
+   `test_learning_service.py::test_generate_learning_pack_retries_on_503_then_succeeds`,
+   is the pre-existing tracked Gemini-retry-pattern timing flake documented in
+   `TRACKER.md` Known Issues (monkeypatched `asyncio.sleep` under full-suite load) — Task
+   2.4 touched zero backend/Gemini code. Re-ran in isolation per this card's own
+   instruction: `pytest tests/test_learning_service.py::test_generate_learning_pack_retries_on_503_then_succeeds -q`
+   → **1 passed in 0.55s**, confirming the flake, not a regression.
+4. `node --check dashboard.js step2_script.js shell.js step_nav.js keyboard_shortcuts.js
+   save_indicator.js` → all six exit 0, no output.
+5. `ruff check app/ tests/` → **All checks passed!**
+6. Real Playwright screenshots at 1440×900, both themes, both pages (Dashboard and
+   Script/`step2`), taken against the live app (mocked API routes only, same pattern as
+   the test suites) — not the static mockups. Confirmed live: Dashboard's light
+   high-contrast launcher (hero, filter pills, search, light project cards with status
+   badges) and its dark override both render correctly via `#theme-toggle`; Script's
+   resizable three-pane shell (vertical `StepNav` sidebar with collapse, central script
+   stage with the original inline-edit line cards untouched, right inspector showing the
+   selected line's speaker/text/language notes with working Listen+Regenerate actions)
+   and its three-track Script/Voice/Music timeline all render correctly in both themes,
+   with `Alex #1` highlighted as the selected timeline clip matching the inspector's
+   "Line 1 · Selected" state.
+7. `git diff --check` → clean (exit 0; only benign LF→CRLF autocrlf warnings, no actual
+   whitespace errors).
+8. `git status --short` confirmed the change set matched `Allowed files` exactly before
+   commit: 8 modified + `frontend/static/js/shell.js` and
+   `tests/test_new_shell_resize_browser.py` new.
+
+**Accepted by PM 2026-09-14.** All selector/DOM continuity contracts held (verified via
+the passing existing test suites, which assert the retained ids/classes directly); no
+app/API/schema/state-machine file touched.

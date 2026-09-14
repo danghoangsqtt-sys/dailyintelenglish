@@ -318,6 +318,29 @@
   stacking rule. No code change needed; a permanent 9-page regression suite
   (`tests/test_responsive_layout_browser.py`) now pins this so it can't silently regress
 
+### 2.4 UI Redesign Slice 1 — Dashboard + Script Workspace
+
+New scope added 2026-09-14 (not in the original Phase 2 plan above), from an approved
+CapCut-style UI direction (`.viepilot/ui-direction/2026-09-14/`).
+
+- [x] **Dashboard → light, high-contrast project launcher** — done 2026-09-14 (Task 2.4):
+  new hero + toolbar + light project-card shell while retaining every existing
+  list/filter/search/delete/new-project behavior and selector
+- [x] **Step 2 → CapCut-style Script workspace** — done 2026-09-14 (Task 2.4): new
+  `frontend/static/js/shell.js` (`WorkspaceShell`) drives a resizable/collapsible
+  workflow sidebar, central script stage (original inline editor untouched), a
+  selected-line inspector (speaker/text/language notes, Listen via the existing
+  `previewTtsLine` endpoint, Regenerate via the existing guarded path), and a three-track
+  Script/Voice/Music timeline
+- [x] **Light-by-default theme migration** — done 2026-09-14 (Task 2.4): shared CSS
+  tokens moved to light-first `:root` with dark values under `[data-theme="dark"]`;
+  `theme.js`'s stored-preference fallback changed from `"dark"` to `"light"`
+  (byte-for-byte otherwise unchanged); legacy variable aliases kept so untouched pages
+  render unaffected
+  49 new/updated Playwright tests, 515/516 passing (1 pre-existing tracked Gemini-retry
+  flake, confirmed via isolated re-run — Task 2.4 touched zero backend code). See
+  `.viepilot/phases/02-testing-polish/tasks/task-2.4.md` for the full record.
+
 ---
 
 ## Phase 3 — Review & Documentation (Day 15–21)

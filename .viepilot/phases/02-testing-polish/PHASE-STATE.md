@@ -7,11 +7,14 @@
 - **Started:** 2026-09-13
 - **Target Completion:** 2026-09-20 (per ROADMAP.md's Day 8-14 target, adjusted forward
   since Phase 1 finished on Day 3 instead of Day 7)
-- **Milestone Progress:** 1 / 3 major tasks fully done (2.3 UX Polish — ✅ DONE, all 7
-  ROADMAP items resolved; 2.2 Bug Fixes & Performance has its buildable scope done — 1
-  item fixed, 1 already-done-closed-via-audit, 1 moot, 1 genuinely deferred as a future
-  task; 2.1 Quality Testing not started)
-- **Test Suite Status:** 493 passed, ruff clean, all `node --check` clean
+- **Milestone Progress:** 2 / 4 major tasks fully done (2.3 UX Polish — ✅ DONE, all 7
+  ROADMAP items resolved; 2.4 UI Redesign Slice 1 — ✅ DONE; 2.2 Bug Fixes & Performance
+  has its buildable scope done — 1 item fixed, 1 already-done-closed-via-audit, 1 moot, 1
+  genuinely deferred as a future task; 2.1 Quality Testing not started). Task 2.4 was
+  added as new scope after the original ROADMAP.md Phase 2 bullets were written (see
+  `.viepilot/ui-direction/2026-09-14/notes.md`), so the 3-task ROADMAP count predates it.
+- **Test Suite Status:** 515 passed, 1 pre-existing tracked flake (confirmed via isolated
+  re-run, not a regression), ruff clean, all `node --check` clean
 
 ---
 
@@ -119,3 +122,29 @@
     passes, confirming the existing inline indicator is untouched. Live-verified with a
     real delayed-response screenshot showing "Saving…" in the header. 493 total tests
     pass. See `tasks/task-2.3e.md` for the full record.
+
+### Task 2.4: UI Redesign Slice 1 — Dashboard + Script Workspace
+- **Status:** ✅ Done (2026-09-14)
+- **Details:** Doc-first plan approved with 2 PM decisions resolved (`theme.js` added to
+  allowed files for the light-by-default fallback; Script inspector permitted to call the
+  existing `previewTtsLine`/`POST /api/projects/{id}/tts/preview` endpoint — no new
+  backend surface). Dashboard rebuilt as the light, high-contrast launcher (hero,
+  filter/search toolbar, light project cards) while keeping every existing
+  list/filter/search/delete/new-project behavior and selector (`#project-grid`,
+  `#empty-state`, `[data-filter]`, `#search-input`, `[data-action]`/`[data-id]`,
+  `#theme-toggle`). Step 2 rebuilt as the CapCut-style Script workspace: new
+  `frontend/static/js/shell.js` (`WorkspaceShell`) drives a resizable/collapsible
+  sidebar (vertical `StepNav`), central script stage (original inline-edit line cards
+  untouched — `[data-line-id]`, `[data-action="edit-text"]` preserved exactly), a
+  selected-line inspector (speaker/text/language notes + Listen + Regenerate), and a
+  three-track Script/Voice/Music timeline. Shared tokens flipped to light-by-default in
+  `:root` with dark values moved under `[data-theme="dark"]`, legacy variable aliases
+  kept so untouched pages don't break. 49 new/updated Playwright tests (46 across the
+  touched shared-module suites + 3 new in `tests/test_new_shell_resize_browser.py`
+  covering pointer/keyboard resize, collapse/expand, selection+inline-edit coexistence,
+  and the real Listen→preview-endpoint call including its error path), 516 total tests
+  (515 pass + 1 pre-existing tracked Gemini-retry flake, confirmed via isolated re-run,
+  not a regression — Task 2.4 touched zero backend code). `ruff` clean, all six touched
+  JS files `node --check` clean. Real Playwright screenshots at 1440×900 confirmed both
+  pages in both themes render correctly against the live app. See `tasks/task-2.4.md`
+  for the full record and evidence.

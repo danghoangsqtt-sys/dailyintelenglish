@@ -16,7 +16,7 @@
     return `${path}?${query.toString()}`;
   }
 
-  function render(containerId, { projectId, currentStep }) {
+  function render(containerId, { projectId, currentStep, variant = "pills" }) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -26,20 +26,30 @@
     }
 
     const nav = document.createElement("nav");
-    nav.className = "step-nav";
+    nav.className = `step-nav step-nav-${variant}`;
     nav.setAttribute("aria-label", "Project steps");
 
     const progress = document.createElement("span");
+    progress.className = "step-nav-progress";
     progress.textContent = `Step ${current} of ${STEPS.length}`;
     nav.appendChild(progress);
 
     STEPS.forEach((step) => {
       const link = document.createElement("a");
-      link.className = "step-nav-pill";
+      link.className = variant === "workflow" ? "step-nav-pill workflow-item" : "step-nav-pill";
       link.classList.toggle("active", step.number === current);
       link.dataset.step = String(step.number);
       link.href = stepHref(step.path, projectId);
-      link.textContent = step.label;
+      if (variant === "workflow") {
+        const dot = document.createElement("span");
+        dot.className = "step-dot";
+        dot.textContent = step.number < current ? "✓" : String(step.number);
+        if (step.number < current) dot.classList.add("done");
+        if (step.number === current) dot.classList.add("active");
+        link.append(dot, document.createTextNode(step.label));
+      } else {
+        link.textContent = step.label;
+      }
       if (step.number === current) link.setAttribute("aria-current", "step");
       nav.appendChild(link);
     });

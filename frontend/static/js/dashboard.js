@@ -34,6 +34,7 @@
     const created = new Date(project.created_at || Date.now()).toLocaleDateString();
     return `
       <div class="project-card card" data-id="${project.id}">
+        <div class="project-thumb" aria-hidden="true">🎙️ Project preview</div>
         <div class="project-card-header">
           <h3>${escapeHtml(project.name || "Untitled Project")}</h3>
           <span class="badge badge-status-${project.status}">${statusLabel(project.status)}</span>

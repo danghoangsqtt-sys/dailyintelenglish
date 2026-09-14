@@ -14,6 +14,9 @@
     saveStatus: "saved", // "saved" | "dirty" | "saving" | "failed"
     saveQueued: false,
     scriptLoadFailed: false,
+    selectedLineId: null,
+    previewingLineId: null,
+    previewReadyLineId: null,
   };
 
   let saveIndicator = null;
@@ -117,8 +120,10 @@
     const hasUnsaved = state.saveStatus === "dirty" || state.saveStatus === "failed";
     const regenerateDisabled = isRegenerating || isBusy || hasUnsaved;
 
+    const isSelected = state.selectedLineId === line.id;
+
     return `
-      <div class="card line-card" data-line-id="${line.id}">
+      <div class="card line-card${isSelected ? " selected" : ""}" data-line-id="${line.id}">
         <div class="line-header">
           <span class="speaker-chip" style="background:${hexToRgba(color, 0.15)}; border-color:${hexToRgba(color, 0.4)}; color:${color};">${escapeHtml(name)}</span>
           <button class="btn btn-ghost btn-sm" data-action="regenerate" ${regenerateDisabled ? "disabled" : ""}>
@@ -137,6 +142,63 @@
       </div>`;
   }
 
+  function selectedLine() {
+    return state.lines.find((line) => line.id === state.selectedLineId) || null;
+  }
+
+  function renderTimeline() {
+    const lane = document.getElementById("script-timeline");
+    if (!lane) return;
+    lane.innerHTML = state.lines
+      .map((line, index) => {
+        const active = line.id === state.selectedLineId ? " active" : "";
+        const speakerClass = speakerIndex(line.speaker_id) % 2 === 0 ? " speaker-a" : "";
+        return `<button type="button" class="timeline-clip${speakerClass}${active}" data-line-id="${line.id}" title="${escapeHtml(line.text)}">${escapeHtml(speakerName(line.speaker_id))} #${index + 1}</button>`;
+      })
+      .join("");
+  }
+
+  function renderInspector() {
+    const container = document.getElementById("script-inspector");
+    if (!container) return;
+    const line = selectedLine();
+    if (!line) {
+      container.className = "inspector-empty";
+      container.textContent = "Select a script line to inspect it.";
+      return;
+    }
+
+    const notes = line.language_notes || {};
+    const notesSummary = [
+      notes.collocations && notes.collocations.length ? `Collocations: ${notes.collocations.join(", ")}` : null,
+      notes.idioms && notes.idioms.length ? `Idioms: ${notes.idioms.join(", ")}` : null,
+      notes.grammar_point ? `Grammar: ${notes.grammar_point}` : null,
+    ].filter(Boolean).join(" · ") || "No language notes are available for this line.";
+    const previewing = state.previewingLineId === line.id;
+    const hasUnsaved = state.saveStatus === "dirty" || state.saveStatus === "failed";
+    const regenerateDisabled = previewing || state.regeneratingLineId === line.id || state.saveStatus === "saving" || state.isGenerating || hasUnsaved;
+
+    container.className = "";
+    container.innerHTML = `
+      <h2 class="inspector-title">Line ${state.lines.indexOf(line) + 1}</h2>
+      <div class="inspector-meta"><span class="speaker-chip" style="background:${hexToRgba(speakerColor(line.speaker_id), 0.15)}; border-color:${hexToRgba(speakerColor(line.speaker_id), 0.4)}; color:${speakerColor(line.speaker_id)};">${escapeHtml(speakerName(line.speaker_id))}</span><span class="badge">Selected</span></div>
+      <p class="inspector-copy">${escapeHtml(line.text)}</p>
+      <div class="callout"><strong>Language notes</strong><br />${escapeHtml(notesSummary)}</div>
+      <div class="inspector-actions">
+        <button type="button" class="btn btn-ghost" data-inspector-action="listen" ${previewing ? "disabled" : ""}>${previewing ? '<span class="spinner spinner-dark"></span> Synthesizing…' : "🔊 Listen"}</button>
+        <button type="button" class="btn btn-primary" data-inspector-action="regenerate" ${regenerateDisabled ? "disabled" : ""}>🔁 Regenerate</button>
+      </div>
+      <audio id="inspector-audio" class="inspector-audio" controls ${state.previewReadyLineId === line.id ? "" : "hidden"}></audio>`;
+  }
+
+  function selectLine(lineId) {
+    if (!state.lines.some((line) => line.id === lineId)) return;
+    if (state.selectedLineId === lineId) return;
+    state.selectedLineId = lineId;
+    state.previewReadyLineId = null;
+    renderScript();
+  }
+
   function renderScript() {
     const generatePanel = document.getElementById("generate-panel");
     const list = document.getElementById("script-list");
@@ -148,6 +210,9 @@
       generatePanel.hidden = true;
       actions.hidden = true;
       list.innerHTML = "";
+      state.selectedLineId = null;
+      renderTimeline();
+      renderInspector();
       return;
     }
 
@@ -155,12 +220,20 @@
       generatePanel.hidden = false;
       actions.hidden = true;
       list.innerHTML = "";
+      state.selectedLineId = null;
+      renderTimeline();
+      renderInspector();
       return;
     }
 
+    if (!state.lines.some((line) => line.id === state.selectedLineId)) {
+      state.selectedLineId = state.lines[0].id;
+    }
     generatePanel.hidden = true;
     actions.hidden = false;
     list.innerHTML = state.lines.map(lineCardHtml).join("");
+    renderTimeline();
+    renderInspector();
     applyStateToDom();
   }
 
@@ -179,6 +252,8 @@
     if (regenAllBtn) regenAllBtn.disabled = isBusy || hasUnsaved;
     const nextBtn = document.getElementById("next-step-btn");
     if (nextBtn) nextBtn.disabled = state.saveStatus === "saving";
+    const inspectorRegenerateBtn = document.querySelector('[data-inspector-action="regenerate"]');
+    if (inspectorRegenerateBtn) inspectorRegenerateBtn.disabled = isBusy || hasUnsaved;
   }
 
   // The PUT /script response carries the server-assigned line ids (save_script always
@@ -269,6 +344,36 @@
     });
   }
 
+  async function handleListen(lineId) {
+    if (state.previewingLineId || state.isGenerating) return;
+    state.previewingLineId = lineId;
+    state.previewReadyLineId = null;
+    clearError();
+    renderInspector();
+    let previewReady = false;
+    try {
+      await Api.previewTtsLine(state.projectId, lineId);
+      state.previewingLineId = null;
+      state.previewReadyLineId = lineId;
+      renderInspector();
+      const audio = document.getElementById("inspector-audio");
+      if (audio) {
+        audio.src = `${Api.ttsCacheUrl(state.projectId, lineId)}?t=${Date.now()}`;
+        audio.hidden = false;
+        await audio.play().catch(() => {});
+      }
+      previewReady = true;
+    } catch (err) {
+      console.error("Failed to synthesize script-line preview:", err);
+      showError("We couldn't synthesize that line. Please try again.");
+    } finally {
+      if (!previewReady) {
+        state.previewingLineId = null;
+        renderInspector();
+      }
+    }
+  }
+
   async function handleRegenerate(lineId) {
     if (state.regeneratingLineId || state.saveStatus !== "saved") {
       if (state.saveStatus !== "saved") {
@@ -356,14 +461,35 @@
   function handleScriptListClick(e) {
     const editTarget = e.target.closest("[data-action='edit-text']");
     if (editTarget && !editTarget.classList.contains("editing")) {
-      startEdit(editTarget);
+      const lineId = editTarget.closest("[data-line-id]").dataset.lineId;
+      selectLine(lineId);
+      const currentText = document.querySelector(`#script-list [data-line-id="${lineId}"] [data-action="edit-text"]`);
+      if (currentText) startEdit(currentText);
       return;
     }
     const regenBtn = e.target.closest("[data-action='regenerate']");
     if (regenBtn && !regenBtn.disabled) {
       const card = regenBtn.closest("[data-line-id]");
+      selectLine(card.dataset.lineId);
       handleRegenerate(card.dataset.lineId);
+      return;
     }
+    const card = e.target.closest("[data-line-id]");
+    if (card) selectLine(card.dataset.lineId);
+  }
+
+  function handleInspectorClick(e) {
+    const action = e.target.closest("[data-inspector-action]");
+    if (!action || action.disabled) return;
+    const line = selectedLine();
+    if (!line) return;
+    if (action.dataset.inspectorAction === "listen") handleListen(line.id);
+    if (action.dataset.inspectorAction === "regenerate") handleRegenerate(line.id);
+  }
+
+  function handleTimelineClick(e) {
+    const clip = e.target.closest("[data-line-id]");
+    if (clip) selectLine(clip.dataset.lineId);
   }
 
   async function init() {
@@ -400,10 +526,21 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 2 });
+    StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 2, variant: "workflow" });
     KeyboardShortcuts.init({ primaryButtonId: "generate-btn" });
     saveIndicator = SaveIndicator.mount("save-indicator");
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
+    WorkspaceShell.init({
+      sidebar: document.getElementById("pane-sidebar"),
+      resizerLeft: document.getElementById("resizer-left"),
+      inspector: document.getElementById("pane-inspector"),
+      resizerRight: document.getElementById("resizer-right"),
+      timeline: document.getElementById("pane-timeline"),
+      resizerTop: document.getElementById("resizer-top"),
+      collapseBtn: document.getElementById("sidebar-collapse-btn"),
+    });
+    document.getElementById("script-inspector").addEventListener("click", handleInspectorClick);
+    document.getElementById("script-timeline").addEventListener("click", handleTimelineClick);
     window.addEventListener("beforeunload", (e) => {
       if (state.saveStatus !== "saved" || state.saveQueued) {
         e.preventDefault();
