@@ -10,9 +10,11 @@
 - **Milestone Progress:** 2 / 4 major tasks fully done (2.3 UX Polish — ✅ DONE, all 7
   ROADMAP items resolved; 2.4 UI Redesign Slice 1 — ✅ DONE; 2.2 Bug Fixes & Performance
   has its buildable scope done — 1 item fixed, 1 already-done-closed-via-audit, 1 moot, 1
-  genuinely deferred as a future task; 2.1 Quality Testing not started). Task 2.4 was
-  added as new scope after the original ROADMAP.md Phase 2 bullets were written (see
-  `.viepilot/ui-direction/2026-09-14/notes.md`), so the 3-task ROADMAP count predates it.
+  genuinely deferred as a future task; 2.1 Quality Testing 1/4 ROADMAP items done — CEFR
+  accuracy testing closed via Tasks 2.1a+2.1b, multi-accent TTS/audio quality/video
+  testing not started). Task 2.4 was added as new scope after the original ROADMAP.md
+  Phase 2 bullets were written (see `.viepilot/ui-direction/2026-09-14/notes.md`), so the
+  3-task ROADMAP count predates it.
 - **Test Suite Status:** 515 passed, 1 pre-existing tracked flake (confirmed via isolated
   re-run, not a regression), ruff clean, all `node --check` clean
 
@@ -21,7 +23,19 @@
 ## Tasks Status & Acceptance Evidence
 
 ### Task 2.1: Quality Testing
-- **Status:** ⏳ Planned — no task card yet
+- **Status:** 🔄 In Progress (2026-09-14). Split into sub-tasks like 2.3 was.
+  - [x] **Task 2.1a + 2.1b — CEFR accuracy testing: DONE.** Task 2.1a
+    (`scripts/generate_cefr_review_samples.py`) is code-complete and PM-accepted, and its
+    real 18-call run now lands 18/18 (prior partial runs hit real network/quota
+    conditions, not a code defect). Task 2.1b: PM read all 18 generated scripts in full
+    (user-approved at a `/vp-auto` control point: PM does an automated-proxy review
+    first, flags anything needing human judgment) — verdict **14 PASS, 4 BORDERLINE
+    (A2/B1/B2 × news, a genre-specific idiom-density drift, not a defect), 0 FLAG**.
+    Nothing required the user's own read. See `tasks/task-2.1a.md` and
+    `tasks/task-2.1b.md`.
+  - [ ] Multi-accent TTS testing — not started
+  - [ ] Audio quality testing — not started
+  - [ ] Video testing — not started
 
 ### Task 2.2: Bug Fixes & Performance
 - **Status:** ✅ Done for its buildable scope (2026-09-13, Task 2.2) — 2 of 4 ROADMAP

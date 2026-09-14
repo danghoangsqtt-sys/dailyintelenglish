@@ -236,10 +236,19 @@
 
 ### 2.1 Quality Testing
 
-- [ ] **CEFR accuracy testing**
-  - Generate 1 script per level (A1 → C2) × 3 genres = 18 test scripts
-  - Manual review: vocabulary, grammar, collocation accuracy
-  - Document issues → fix prompt templates
+- [x] **CEFR accuracy testing** — done 2026-09-14 (Task 2.1a + 2.1b). Task 2.1a: a
+  standalone CLI (`scripts/generate_cefr_review_samples.py`) generates the 18-case matrix
+  (6 CEFR levels × 3 genres) via the real production `generate_script()` path, no fake
+  success path. Task 2.1b (user-approved at a `/vp-auto` control point: PM does an
+  automated-proxy review first): PM read all 18 real Gemini-generated scripts in full
+  and recorded a traceable per-case verdict — **14 PASS, 4 BORDERLINE, 0 FLAG**. The 4
+  BORDERLINE cases (A2/B1/B2 × `news`) share one pattern: the `news` genre pulls
+  idiom/grammar sophistication about half a level higher than `small_talk`/`interview`
+  at the same CEFR level; A1/C1/C2 × `news` stay well-calibrated. No grammar errors,
+  no misused idioms, no off-topic drift, no safety/factual issues found across all 18.
+  Nothing required the user's own read; the news-genre calibration pattern is logged as
+  an optional future prompt-tuning task, not acted on here (read-only review). See
+  `tasks/task-2.1a.md` and `tasks/task-2.1b.md` for the full record.
 
 - [ ] **Multi-accent TTS testing**
   - Test OmniVoice voice design for 10 accent regions

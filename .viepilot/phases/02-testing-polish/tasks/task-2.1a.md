@@ -315,3 +315,8 @@ that the code is done; the campaign's "18 real samples ready for review" outcome
 pending on the external Gemini quota condition above, so this is not the same as declaring
 Task 2.1 (the parent ROADMAP item) complete.
 
+**Follow-up (2026-09-14):** the actual CEFR-accuracy read/verdict pass (this task
+deliberately produces no automated verdict — see Context above) continues in
+`tasks/task-2.1b.md`, per a user decision at a `/vp-auto` control point: PM does an
+automated-proxy review pass first, flags anything needing human judgment.
+

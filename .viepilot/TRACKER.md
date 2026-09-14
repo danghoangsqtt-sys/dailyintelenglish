@@ -29,7 +29,7 @@ are moot/deferred, not counted done; 2.3's 7; 2.4's 3); this row was stale at 0/
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
 | Phase 1 — Build | ✅ Complete | 28 | 30 |
-| Phase 2 — Testing | 🔄 In Progress | 12 | 18 |
+| Phase 2 — Testing | 🔄 In Progress | 13 | 18 |
 | Phase 3 — Review | ⏳ Not Started | 0 | 6 |
 
 ## Phase 1 Task Status
@@ -108,8 +108,17 @@ are moot/deferred, not counted done; 2.3's 7; 2.4's 3); this row was stale at 0/
 
 ## Phase 2 Task Status
 
-### 2.1 Quality Testing
-- [ ] No task card yet (CEFR accuracy, multi-accent TTS, audio quality, video testing — see ROADMAP.md)
+### 2.1 Quality Testing — 1/4 ROADMAP items done (2026-09-14)
+- [x] CEFR accuracy testing — done via Task 2.1a (CLI:
+  `scripts/generate_cefr_review_samples.py`, code-complete and PM-accepted, real 18-call
+  run now lands 18/18) + Task 2.1b (PM read all 18 real generated scripts in full,
+  user-approved automated-proxy review at a `/vp-auto` control point). Verdict: 14 PASS,
+  4 BORDERLINE (A2/B1/B2 × news — a genre-specific idiom-density drift, not a defect),
+  0 FLAG. Nothing required the user's own read. See `tasks/task-2.1a.md` and
+  `tasks/task-2.1b.md` for the full record.
+- [ ] Multi-accent TTS testing — not started
+- [ ] Audio quality testing — not started
+- [ ] Video testing — not started
 
 ### 2.2 Bug Fixes & Performance — buildable scope done 2026-09-13 (Task 2.2)
 - [x] Fix any blocking API calls → move to executor — a research-agent audit + direct
@@ -447,6 +456,23 @@ are moot/deferred, not counted done; 2.3's 7; 2.4's 3); this row was stale at 0/
   515/516 pass (1 pre-existing tracked Gemini-retry flake, confirmed via isolated re-run,
   not a regression). `ruff`/`node --check` clean. Live-verified with real Playwright
   screenshots at 1440×900, both pages, both themes. | User; PM (Claude Code) |
+| 2026-09-14 | At a `/vp-auto` control point, user decided Task 2.1's Quality Testing
+  campaign (4 ROADMAP items) is reviewed by PM as an automated-proxy pass first, flagging
+  anything that genuinely needs the user's own judgment, rather than the user reviewing
+  every artifact personally. First item closed under this approach: CEFR accuracy
+  testing. Re-ran Task 2.1a's CLI (`scripts/generate_cefr_review_samples.py`) for a clean
+  run — 18/18 succeeded this time (prior run was 11/18 on real `httpx.RequestError`
+  connection failures, not a code defect; the `GEMINI_MODEL_FALLBACKS` chain absorbed
+  heavy 429 rate-limiting throughout). PM then read all 18 real generated scripts in
+  full and recorded a traceable per-case verdict in `tasks/task-2.1b.md`: **14 PASS, 4
+  BORDERLINE, 0 FLAG**. The 4 BORDERLINE cases (A2/B1/B2 × `news`) share one pattern —
+  the `news` genre consistently pulls idiom/grammar sophistication about half a level
+  higher than `small_talk`/`interview` at the same CEFR level, while A1/C1/C2 × `news`
+  stay well-calibrated; no grammar errors, misused idioms, off-topic drift, or
+  safety/factual issues found anywhere in the batch. Nothing required the user's own
+  read this round; the news-genre calibration pattern is logged as an optional future
+  prompt-tuning task, not acted on (this was a read-only review, no `prompts/script/`
+  change). | User; PM (Claude Code) |
 
 ## Known Issues
 
