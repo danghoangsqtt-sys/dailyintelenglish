@@ -19,7 +19,12 @@ import httpx
 from pydantic import ValidationError as PydanticValidationError
 
 from app.core.config import settings
-from app.core.constants import GEMINI_MAX_RETRIES, GEMINI_MODEL, GEMINI_RETRY_BASE_DELAY
+from app.core.constants import (
+    GEMINI_MAX_RETRIES,
+    GEMINI_MODEL,
+    GEMINI_MODEL_FALLBACKS,
+    GEMINI_RETRY_BASE_DELAY,
+)
 from app.core.exceptions import LearningGenerationError, NotFoundError
 from app.core.prompt_loader import render_learning_prompt
 from app.models.learning import LearningPackOut
@@ -34,9 +39,14 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-async def _call_gemini(prompt: str, schema: dict | None = None) -> tuple[httpx.Response, float]:
+_RETRYABLE_STATUS_CODES = (429, 503)  # 429 = rate/quota limit, 503 = model temporarily overloaded
+
+
+async def _call_gemini(
+    prompt: str, schema: dict | None = None, model: str = GEMINI_MODEL
+) -> tuple[httpx.Response, float]:
     """Make one HTTP call to Gemini generateContent. Returns (response, latency_ms)."""
-    url = GEMINI_ENDPOINT.format(model=GEMINI_MODEL)
+    url = GEMINI_ENDPOINT.format(model=model)
     generation_config: dict[str, object] = {"responseMimeType": "application/json"}
     if schema is not None:
         generation_config["responseJsonSchema"] = schema
@@ -51,19 +61,22 @@ async def _call_gemini(prompt: str, schema: dict | None = None) -> tuple[httpx.R
     return response, latency_ms
 
 
-async def _generate_with_retry(prompt: str, schema: dict | None = None) -> str:
-    """Call Gemini with exponential backoff on HTTP 429, returning the raw response text.
+async def _attempt_model(
+    model: str, prompt: str, schema: dict | None, prompt_hash: str
+) -> tuple[str | None, int | None, str]:
+    """Try one model with exponential backoff on 429/503.
 
-    Retries only on 429 (rate limit) — any other non-200 status fails immediately,
-    since retrying won't fix a bad request or an auth error. Never logs the raw
-    prompt or API key — only a hash of the prompt, for correlating log lines.
+    Returns (text, None, "") on success. Returns (None, last_status, last_body) once this
+    model's retries are exhausted on a retryable error — the caller then falls back to the
+    next model in GEMINI_MODEL_FALLBACKS.
     """
-    prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16]
     delay = GEMINI_RETRY_BASE_DELAY
+    last_status: int | None = None
+    last_body = ""
 
     for attempt in range(1, GEMINI_MAX_RETRIES + 1):
         try:
-            response, latency_ms = await _call_gemini(prompt, schema=schema)
+            response, latency_ms = await _call_gemini(prompt, schema=schema, model=model)
         except httpx.RequestError as exc:
             raise LearningGenerationError(f"Gemini API request failed: {exc}") from exc
 
@@ -72,21 +85,26 @@ async def _generate_with_retry(prompt: str, schema: dict | None = None) -> str:
             tokens_used = data.get("usageMetadata", {}).get("totalTokenCount")
             logger.info(
                 "gemini_learning_call model=%s prompt_hash=%s latency_ms=%.1f tokens_used=%s attempt=%d",
-                GEMINI_MODEL,
+                model,
                 prompt_hash,
                 latency_ms,
                 tokens_used,
                 attempt,
             )
             try:
-                return data["candidates"][0]["content"]["parts"][0]["text"]
+                return data["candidates"][0]["content"]["parts"][0]["text"], None, ""
             except (KeyError, IndexError) as exc:
                 raise LearningGenerationError(f"Unexpected Gemini response shape: {exc}") from exc
 
-        if response.status_code == 429 and attempt < GEMINI_MAX_RETRIES:
+        last_status = response.status_code
+        last_body = response.text[:200]
+
+        if response.status_code in _RETRYABLE_STATUS_CODES and attempt < GEMINI_MAX_RETRIES:
             logger.warning(
-                "gemini_learning_rate_limited prompt_hash=%s attempt=%d retry_in_s=%.1f",
+                "gemini_learning_retryable_error model=%s prompt_hash=%s status=%d attempt=%d retry_in_s=%.1f",
+                model,
                 prompt_hash,
+                response.status_code,
                 attempt,
                 delay,
             )
@@ -94,10 +112,42 @@ async def _generate_with_retry(prompt: str, schema: dict | None = None) -> str:
             delay *= 2
             continue
 
-        raise LearningGenerationError(
-            f"Gemini API returned HTTP {response.status_code} after {attempt} attempt(s): "
-            f"{response.text[:200]}"
+        if response.status_code not in _RETRYABLE_STATUS_CODES:
+            raise LearningGenerationError(
+                f"Gemini API returned HTTP {response.status_code} after {attempt} attempt(s): "
+                f"{last_body}"
+            )
+
+    return None, last_status, last_body
+
+
+async def _generate_with_retry(prompt: str, schema: dict | None = None) -> str:
+    """Call Gemini with per-model exponential backoff on 429/503.
+
+    Falls back through GEMINI_MODEL_FALLBACKS (each a separate quota bucket, confirmed via
+    live Google AI Studio usage data 2026-09-14) once a model's own retries are exhausted.
+    Never logs the raw prompt or API key — only a hash of the prompt.
+    """
+    prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16]
+    last_status: int | None = None
+    last_body = ""
+
+    for model in GEMINI_MODEL_FALLBACKS:
+        text, status, body = await _attempt_model(model, prompt, schema, prompt_hash)
+        if text is not None:
+            return text
+        last_status, last_body = status, body
+        logger.warning(
+            "gemini_learning_model_exhausted model=%s prompt_hash=%s status=%s — trying next fallback model",
+            model,
+            prompt_hash,
+            last_status,
         )
+
+    raise LearningGenerationError(
+        f"Gemini API returned HTTP {last_status} after exhausting all fallback models "
+        f"({', '.join(GEMINI_MODEL_FALLBACKS)}): {last_body}"
+    )
 
 
 async def generate_learning_pack(

@@ -85,10 +85,36 @@ MAX_SPEAKERS = 6
 # Gemini API
 # gemini-2.0-flash was shut down 2026-06-01; gemini-3.8-flash is Google's current
 # "New Stable" default Flash model (ai.google.dev/gemini-api/docs/models, checked 2026-09-10).
-GEMINI_MODEL = "gemini-3.8-flash"
+# GEMINI_MODEL_FALLBACKS: real Google AI Studio dashboard data (2026-09-14) showed each Flash
+# model version tracks its OWN separate RPM/RPD quota bucket on this account (3.8 Flash was at
+# 26/20 RPD and 8/5 RPM while 3.7/3.6 Flash sat at 0/20 and 0/5, completely unused) — so when
+# the primary model's quota is exhausted, falling back to a same-generation sibling model is a
+# real, distinct quota pool, not a workaround. Order matters: newest/most-capable first.
+# 3.5-flash / 3.5-flash-lite added the same day to spread load further — this is purely to
+# reduce quota contention (confirmed with the user), NOT a per-CEFR-level quality tier; both
+# are real GA models (verified live via models.list, no "-preview" suffix), unlike the only
+# available Pro-tier model (`gemini-3.1-pro-preview`), which was deliberately NOT added here —
+# preview models carry the same instability risk that forced gemini-2.0-flash's forced migration.
+# gemini-3.1-flash-lite added at the user's explicit request (2026-09-14) as one more quota
+# bucket. Known tradeoff, disclosed to the user before adding: per ai.google.dev's live
+# deprecations page it already has an announced shutdown date (2027-05-07) and its own
+# Google-recommended replacement is gemini-3.5-flash-lite, already earlier in this list — so it
+# adds a 6th quota bucket, not new capability. Kept last since every model ahead of it is
+# expected to remain supported longer.
+GEMINI_MODEL_FALLBACKS = [
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+]
+GEMINI_MODEL = GEMINI_MODEL_FALLBACKS[0]
 GEMINI_MAX_RETRIES = 4
 GEMINI_RETRY_BASE_DELAY = 1.0  # seconds, exponential backoff
-GEMINI_RATE_LIMIT_RPM = 15
+# Real Google AI Studio dashboard data (2026-09-14) showed gemini-3.8-flash's actual limit on
+# this account is 5 RPM / 20 RPD — not the 15 RPM previously assumed here without verification.
+GEMINI_RATE_LIMIT_RPM = 5
 
 # Domain enums
 CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]

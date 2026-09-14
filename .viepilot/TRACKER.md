@@ -330,6 +330,50 @@ required for any task's own acceptance criteria]. Progress reflects completed su
 | 2026-09-11 | BUG-012 auto-logged by vp-audit Tier 3: close autosave failure races with browser-level regression coverage | `vp-audit`; Backlog |
 | 2026-09-11 | PM audit review of all 15 `ready_for_review` requests: 11 accepted (BUG-001, 003, 004, 005, 006, 008, 011, 012, ENH-001, ENH-002, ENH-003) — `done`. 4 sent back `changes_requested`: BUG-002 (trailing whitespace on TRACKER.md:6 introduced by its own fix), BUG-007 (schema fixed but no `temperature` set — title promised "deterministic" output, not delivered), BUG-009 (stale "196 tests" left in ROADMAP.md/task-1.5.md), BUG-010 (**rejected — false claim**: implementer stated `git diff --check` exits 0 but it still exits 2 with the same 7 errors; README task numbering and ARCHITECTURE.md staging also unfixed despite being claimed done). See PM Acceptance/PM Review sections in each `.viepilot/requests/*.md` for full evidence. | PM (Claude Code); Backlog |
 | 2026-09-11 | PM closed the remaining 4 items directly (user approved PM fixing in-session rather than round-tripping to GEMINI): **BUG-002** — corrected own finding: TRACKER.md:6's trailing spaces are the standard Markdown hard-line-break convention shared by lines 5/7/8, not a defect; no change made. **BUG-007** — corrected own finding: NOT setting `temperature` is the right call, not a gap — `step2_script.js`/`step3_learning.js` regenerate features depend on Gemini returning different wording for the same prompt each click; pinning temperature low would silently break "Regenerate". Structural determinism (BUG-007's actual acceptance criteria) is already satisfied via `responseJsonSchema` (BUG-011). **BUG-009** — fixed stale "196 tests" → "223 tests (218 unit/integration + 5 browser E2E)" in ROADMAP.md:111 and task-1.5.md:23; re-ran `pytest tests/ -q` live to confirm 223 before writing it. **BUG-010** — fixed README.md Task 1.7-1.10 numbering to match ROADMAP/TRACKER/SPEC (1.7=Video Studio, 1.8=Thumbnail, 1.9=YouTube Package, 1.10=Music Library; audio mixing folded into 1.6); re-verified whitespace/EOF and staging claims are now all true (`git diff --check` exit 0; ARCHITECTURE.md + walkthrough doc confirmed committed in `7c9f3d9`). All 15 Sprint 1.5R requests are now `done`. | PM (Claude Code); Backlog |
+| 2026-09-14 | Codex ran out of quota again mid-Task 2.1a; user handed coding back to PM (Claude Code)
+  for the rest of this session. PM independently verified Codex's already-complete
+  `scripts/generate_cefr_review_samples.py`/test file (task card had stayed at "not started"
+  — same recurring pattern as Task 1.8b/2.3): 499/499 full suite, ruff clean, real 18-call
+  campaign run — only 1/18 succeeded, 17 failed on real Gemini `503`/`429`. User then shared
+  real Google AI Studio dashboard screenshots showing `gemini-3.8-flash`'s actual limit on
+  this account is **5 RPM / 20 RPD** (not the unverified `15 RPM` the code assumed), and that
+  `3.7`/`3.6` Flash sat completely unused (0/5, 0/20) — separate quota buckets per model
+  version. User proposed a model-downgrade-on-quota-exceeded mechanism; PM implemented a
+  `GEMINI_MODEL_FALLBACKS` chain (`3.8 → 3.7 → 3.6`, verified live via `models.list` that all
+  three are real callable IDs first) across all 4 Gemini-calling services, plus 503 becoming
+  retryable alongside 429 (closing the resilience gap flagged earlier this session), plus
+  correcting `GEMINI_RATE_LIMIT_RPM` 15→5 (fixes Task 2.1a's CLI throttle 4.1s→12.1s).
+  Live-verified end-to-end against the real API while 3.8 was still quota-exhausted: 3.8
+  failed 429 x3, fell back to 3.7, which failed 503 x2 then succeeded on attempt 3 — a real
+  generation that would have failed outright before this fix. 12 new/updated tests across
+  the 4 services' test files, 86/86 passing, zero regressions. Also flagged 2 unrelated
+  structural risks found via a fresh Tier-3-style audit, not yet fixed: `google-generativeai`
+  is an unused dependency in `requirements.txt` (never imported, dead since the httpx-REST
+  switch), and `requirements.txt` has zero pinned versions (`>=` everywhere) despite installed
+  versions already running far ahead of the declared floors. | User; PM (Claude Code) |
+| 2026-09-14 | User proposed tiering models by content difficulty (harder CEFR levels → a
+  stronger/more-accurate model, easier levels → a lighter one). PM checked live via
+  `models.list` before agreeing to anything: the only available "stronger" model is
+  `gemini-3.1-pro-preview` (no GA/stable Pro tier exists on this account at all) — a real
+  instability risk, the same class that forced the earlier `gemini-2.0-flash` migration.
+  PM asked the user to clarify intent via AskUserQuestion before building anything; **user
+  confirmed the actual goal is spreading quota load, not a quality upgrade for hard content**.
+  Decision: extended `GEMINI_MODEL_FALLBACKS` with two more real GA models
+  (`gemini-3.5-flash`, `gemini-3.5-flash-lite`, verified live, no `-preview` suffix) instead of
+  building CEFR-based model routing — same mechanism as the same-day fallback-chain fix, just
+  a longer chain (5 models now), no new architecture needed. Deliberately did NOT add
+  `gemini-3.1-pro-preview` anywhere. 92/92 tests pass on the affected files after the change. | User; PM (Claude Code) |
+| 2026-09-14 | User separately asked to add "3.1" specifically, believing it stable with no
+  announced retirement. PM checked the live `ai.google.dev/gemini-api/docs/deprecations` page
+  before adding anything (not just `models.list`, which carries no lifecycle metadata): the
+  only real, non-preview "3.1" model for this use case, `gemini-3.1-flash-lite`, **does**
+  already have an announced shutdown date (2027-05-07), and Google's own recommended
+  replacement for it is `gemini-3.5-flash-lite` — already in the chain from the entry above.
+  PM disclosed this plainly rather than silently complying or silently refusing. User chose to
+  add it anyway ("tôi thích dùng 3.1 vì nó rất ổn định"). Added as the 6th and last entry in
+  `GEMINI_MODEL_FALLBACKS` (an extra quota bucket, explicitly documented in the constants.py
+  comment as a known-tradeoff addition, not a technical recommendation). 92/92 tests still
+  pass, ruff clean. | User; PM (Claude Code) |
 
 ## Known Issues
 
@@ -398,6 +442,24 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   (closed `wontfix` 2026-09-13). If a full-suite run ever shows a Gemini retry/backoff test
   failing, re-run it in isolation before treating it as a real regression — do not block
   on it if isolation passes.
+  **2026-09-14 update:** 2 more full-suite runs while verifying the Gemini model-fallback fix
+  (both unusually slow: 781.34s then 695.93s, vs the ~257s same-day baseline) each hit this
+  same flake class, now also reaching the new fallback-chain tests (same
+  monkeypatched-`asyncio.sleep`-and-assert-exact-sequence shape as the pre-existing ones): run
+  1 failed `test_script_service.py::test_generate_script_exhausts_one_model_then_falls_back_to_next`
+  only; run 2 failed 3 *different* tests
+  (`test_script_service.py::test_generate_script_retries_on_429_then_succeeds`,
+  `test_script_service.py::test_generate_script_backoff_sequence_is_1s_2s_4s`,
+  `test_youtube_service.py::test_generate_package_retries_on_503_then_succeeds`) — a different
+  set each run is itself evidence this is the same nondeterministic timing class, not a fixed
+  logic bug in the new fallback code. A targeted bisected run of the 6 files that precede
+  `test_script_service.py` in collection order plus `test_script_service.py` itself passed
+  clean (72/72) at normal speed, and all 3 of run 2's failing tests passed instantly in
+  isolation immediately after — consistent with the existing pattern, not a new root cause.
+  Root cause still not fixed (this was flagged `wontfix` in 2026-09-13, a real fix would mean
+  no longer sharing one global patched `asyncio.sleep` across the whole test process) — noting
+  here only because it now reaches more tests than before, purely because there are more
+  Gemini-retry-shaped tests to be caught by it after today's fallback-chain work.
 
 ## Version
 

@@ -103,12 +103,16 @@ def api_key(monkeypatch):
 
 
 def queue_responses(monkeypatch, responses: list[FakeResponse]):
-    """Monkeypatch _call_gemini to return `responses` in order, one per call."""
-    calls = {"n": 0}
+    """Monkeypatch _call_gemini to return `responses` in order, one per call.
 
-    async def fake_call_gemini(prompt: str, schema: dict | None = None):
+    Also records which `model` each call used, so fallback-chain tests can assert on it.
+    """
+    calls = {"n": 0, "models": []}
+
+    async def fake_call_gemini(prompt: str, schema: dict | None = None, model: str | None = None):
         index = calls["n"]
         calls["n"] += 1
+        calls["models"].append(model)
         return responses[index], 12.3
 
     monkeypatch.setattr(learning_service, "_call_gemini", fake_call_gemini)
@@ -232,14 +236,54 @@ async def test_generate_learning_pack_backoff_sequence_is_1s_2s_4s(monkeypatch, 
     assert no_real_sleep == [1.0, 2.0, 4.0]
 
 
-async def test_generate_learning_pack_exhausts_retries_raises(monkeypatch, no_real_sleep):
-    calls = queue_responses(monkeypatch, [FakeResponse(429, text="rate limited")] * 4)
+async def test_generate_learning_pack_exhausts_one_model_then_falls_back(monkeypatch, no_real_sleep):
+    """After 4 failed attempts on the primary model, the next fallback model is tried."""
+    calls = queue_responses(
+        monkeypatch,
+        [FakeResponse(429, text="rate limited")] * 4 + [gemini_ok_response(VALID_PACK)],
+    )
 
-    with pytest.raises(LearningGenerationError, match="HTTP 429 after 4 attempt"):
+    pack = await learning_service.generate_learning_pack(
+        "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES
+    )
+
+    assert len(pack.vocabulary) == 1
+    assert calls["n"] == 5
+    assert calls["models"] == [learning_service.GEMINI_MODEL_FALLBACKS[0]] * 4 + [
+        learning_service.GEMINI_MODEL_FALLBACKS[1]
+    ]
+    assert no_real_sleep == [1.0, 2.0, 4.0]
+
+
+async def test_generate_learning_pack_retries_on_503_then_succeeds(monkeypatch, no_real_sleep):
+    """503 (model temporarily overloaded) is retried just like 429, not treated as fatal."""
+    calls = queue_responses(
+        monkeypatch,
+        [FakeResponse(503, text="model overloaded"), gemini_ok_response(VALID_PACK)],
+    )
+
+    pack = await learning_service.generate_learning_pack(
+        "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES
+    )
+
+    assert calls["n"] == 2
+    assert len(pack.vocabulary) == 1
+    assert no_real_sleep == [1.0]
+
+
+async def test_generate_learning_pack_exhausts_all_fallback_models_raises(monkeypatch, no_real_sleep):
+    """Only once every model in GEMINI_MODEL_FALLBACKS is exhausted does generation fail."""
+    fallbacks = learning_service.GEMINI_MODEL_FALLBACKS
+    calls = queue_responses(monkeypatch, [FakeResponse(429, text="rate limited")] * (4 * len(fallbacks)))
+
+    with pytest.raises(LearningGenerationError, match="exhausting all fallback models") as exc_info:
         await learning_service.generate_learning_pack("proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES)
 
-    assert calls["n"] == 4
-    assert no_real_sleep == [1.0, 2.0, 4.0]
+    assert calls["n"] == 4 * len(fallbacks)
+    assert calls["models"] == [model for model in fallbacks for _ in range(4)]
+    assert no_real_sleep == [1.0, 2.0, 4.0] * len(fallbacks)
+    for model in fallbacks:
+        assert model in str(exc_info.value)
 
 
 async def test_generate_learning_pack_non_429_error_does_not_retry(monkeypatch, no_real_sleep):
@@ -271,7 +315,7 @@ async def test_generate_learning_pack_schema_validation_failure_raises(monkeypat
 async def test_generate_learning_pack_empty_script_raises_without_calling_gemini(monkeypatch):
     calls = {"n": 0}
 
-    async def fake_call_gemini(prompt: str, schema: dict | None = None):
+    async def fake_call_gemini(prompt: str, schema: dict | None = None, model: str | None = None):
         calls["n"] += 1
         raise AssertionError("Gemini should never be called for an empty script")
 
@@ -287,7 +331,7 @@ async def test_generate_learning_pack_missing_api_key_raises_without_calling_gem
     monkeypatch.setattr(learning_service.settings, "GEMINI_API_KEY", "")
     calls = {"n": 0}
 
-    async def fake_call_gemini(prompt: str, schema: dict | None = None):
+    async def fake_call_gemini(prompt: str, schema: dict | None = None, model: str | None = None):
         calls["n"] += 1
         raise AssertionError("Gemini should never be called without an API key")
 
@@ -303,7 +347,7 @@ async def test_generate_learning_pack_preserves_cefr_level_in_prompt(monkeypatch
     """The rendered prompt actually carries the project's CEFR level through to Gemini."""
     captured = {}
 
-    async def fake_call_gemini(prompt: str, schema: dict | None = None):
+    async def fake_call_gemini(prompt: str, schema: dict | None = None, model: str | None = None):
         captured["prompt"] = prompt
         return gemini_ok_response(VALID_PACK), 5.0
 
@@ -450,7 +494,7 @@ async def test_generate_learning_with_retry_never_downgrades_to_schema_less(monk
     """If Gemini returns a fatal error or network fails, _generate_with_retry must not retry schema-less."""
     calls = []
 
-    async def fake_call_gemini(prompt: str, schema: dict | None = None):
+    async def fake_call_gemini(prompt: str, schema: dict | None = None, model: str | None = None):
         calls.append(schema)
         raise learning_service.httpx.RequestError("Network error")
 

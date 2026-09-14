@@ -30,6 +30,7 @@ from app.core.config import settings
 from app.core.constants import (
     GEMINI_MAX_RETRIES,
     GEMINI_MODEL,
+    GEMINI_MODEL_FALLBACKS,
     GEMINI_RETRY_BASE_DELAY,
     YOUTUBE_CHAPTER_MIN_LINES,
     YOUTUBE_CHAPTER_WORDS_PER_MINUTE,
@@ -48,9 +49,12 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-async def _call_gemini(prompt: str, schema: dict) -> tuple[httpx.Response, float]:
+_RETRYABLE_STATUS_CODES = (429, 503)  # 429 = rate/quota limit, 503 = model temporarily overloaded
+
+
+async def _call_gemini(prompt: str, schema: dict, model: str = GEMINI_MODEL) -> tuple[httpx.Response, float]:
     """Make one HTTP call to Gemini generateContent. Returns (response, latency_ms)."""
-    url = GEMINI_ENDPOINT.format(model=GEMINI_MODEL)
+    url = GEMINI_ENDPOINT.format(model=model)
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
@@ -64,18 +68,17 @@ async def _call_gemini(prompt: str, schema: dict) -> tuple[httpx.Response, float
     return response, (time.perf_counter() - started_at) * 1000
 
 
-async def _generate_with_retry(prompt: str, schema: dict) -> str:
-    """Call Gemini with exponential backoff on HTTP 429, returning the raw response text.
-
-    Retries only on 429 (rate limit) — any other non-200 status fails immediately.
-    Never logs the raw prompt or API key — only a hash of the prompt.
-    """
-    prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16]
+async def _attempt_model(
+    model: str, prompt: str, schema: dict, prompt_hash: str
+) -> tuple[str | None, int | None, str]:
+    """Try one model with exponential backoff on 429/503; see script_service._attempt_model."""
     delay = GEMINI_RETRY_BASE_DELAY
+    last_status: int | None = None
+    last_body = ""
 
     for attempt in range(1, GEMINI_MAX_RETRIES + 1):
         try:
-            response, latency_ms = await _call_gemini(prompt, schema)
+            response, latency_ms = await _call_gemini(prompt, schema, model=model)
         except httpx.RequestError as exc:
             raise YouTubePackageGenerationError(f"Gemini API request failed: {exc}") from exc
 
@@ -84,23 +87,28 @@ async def _generate_with_retry(prompt: str, schema: dict) -> str:
             logger.info(
                 "gemini_youtube_call model=%s prompt_hash=%s latency_ms=%.1f "
                 "tokens_used=%s attempt=%d",
-                GEMINI_MODEL,
+                model,
                 prompt_hash,
                 latency_ms,
                 data.get("usageMetadata", {}).get("totalTokenCount"),
                 attempt,
             )
             try:
-                return data["candidates"][0]["content"]["parts"][0]["text"]
+                return data["candidates"][0]["content"]["parts"][0]["text"], None, ""
             except (KeyError, IndexError) as exc:
                 raise YouTubePackageGenerationError(
                     f"Unexpected Gemini response shape: {exc}"
                 ) from exc
 
-        if response.status_code == 429 and attempt < GEMINI_MAX_RETRIES:
+        last_status = response.status_code
+        last_body = response.text[:200]
+
+        if response.status_code in _RETRYABLE_STATUS_CODES and attempt < GEMINI_MAX_RETRIES:
             logger.warning(
-                "gemini_youtube_rate_limited prompt_hash=%s attempt=%d retry_in_s=%.1f",
+                "gemini_youtube_retryable_error model=%s prompt_hash=%s status=%d attempt=%d retry_in_s=%.1f",
+                model,
                 prompt_hash,
+                response.status_code,
                 attempt,
                 delay,
             )
@@ -108,11 +116,40 @@ async def _generate_with_retry(prompt: str, schema: dict) -> str:
             delay *= 2
             continue
 
-        raise YouTubePackageGenerationError(
-            f"Gemini API returned HTTP {response.status_code} after {attempt} attempt(s): "
-            f"{response.text[:200]}"
+        if response.status_code not in _RETRYABLE_STATUS_CODES:
+            raise YouTubePackageGenerationError(
+                f"Gemini API returned HTTP {response.status_code} after {attempt} attempt(s): "
+                f"{last_body}"
+            )
+
+    return None, last_status, last_body
+
+
+async def _generate_with_retry(prompt: str, schema: dict) -> str:
+    """Call Gemini, falling back through GEMINI_MODEL_FALLBACKS on 429/503 exhaustion.
+
+    Never logs the raw prompt or API key — only a hash of the prompt.
+    """
+    prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16]
+    last_status: int | None = None
+    last_body = ""
+
+    for model in GEMINI_MODEL_FALLBACKS:
+        text, status, body = await _attempt_model(model, prompt, schema, prompt_hash)
+        if text is not None:
+            return text
+        last_status, last_body = status, body
+        logger.warning(
+            "gemini_youtube_model_exhausted model=%s prompt_hash=%s status=%s — trying next fallback model",
+            model,
+            prompt_hash,
+            last_status,
         )
-    raise YouTubePackageGenerationError("Gemini API retry loop ended unexpectedly")
+
+    raise YouTubePackageGenerationError(
+        f"Gemini API returned HTTP {last_status} after exhausting all fallback models "
+        f"({', '.join(GEMINI_MODEL_FALLBACKS)}): {last_body}"
+    )
 
 
 def _chapter_label(text: str, max_words: int = 6) -> str:
