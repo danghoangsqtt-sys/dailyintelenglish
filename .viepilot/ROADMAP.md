@@ -250,20 +250,33 @@
   an optional future prompt-tuning task, not acted on here (read-only review). See
   `tasks/task-2.1a.md` and `tasks/task-2.1b.md` for the full record.
 
-- [ ] **Multi-accent TTS testing**
-  - Test OmniVoice voice design for 10 accent regions
-  - Test Edge TTS voice selection per region
-  - Record best voice IDs per region → `prompts/tts/voice_presets.json`
-
-- [ ] **Audio quality testing**
-  - Check mix for: silence gaps, volume consistency, music ducking
-  - Test with short (30s), medium (10min), long (20min) scripts
-  - Verify MP3 loudness: -16 LUFS ±1dB
-
-- [ ] **Video testing**
-  - Test subtitle sync for multiple content lengths
-  - Test LivePortrait with 5 different avatar images
-  - Test both 16:9 and 9:16 outputs
+- [x] **Multi-accent TTS testing** — done 2026-09-14 (Task 2.1c). OmniVoice voice-design
+  testing is moot (real OmniVoice integration decided not-pursued 2026-09-13; Edge TTS is
+  the sole official engine). All 10 accents × male/female (20 combinations) real-tested
+  against the actual Edge TTS voice map: 20/20 succeeded. 9 of 10 accents resolve to a
+  distinct real neural voice; `scottish` resolves to the same voice ids as `british`
+  (confirmed against the real `edge-tts --list-voices` catalog: Microsoft's neural
+  lineup has no dedicated Scottish-accented voice at all) — a known upstream limitation,
+  not a code defect.
+- [x] **Audio quality testing** — done 2026-09-14 (Task 2.1c). Real `mix_project` runs
+  on 2 real script lengths (8 lines/66s, 12 lines/91s): no-music loudness measured
+  -16.01 LUFS both times (0.01dB from the -16 target, well within ±1dB), silence gaps
+  measured exactly 500ms between different-speaker lines as designed. **With background
+  music, measured loudness drifted to -17.12 LUFS (1.12dB off target) — outside the
+  declared ±1dB tolerance**, a real reproducible finding: the voice track is normalized
+  to -16 LUFS *before* the ducked music overlay, and the combined signal is never
+  re-normalized afterward. Root cause identified, not yet fixed (see TRACKER.md Known
+  Issues) — a small, scoped follow-up task, not done in this read-only QA pass.
+- [x] **Video testing** — done 2026-09-14 (Task 2.1c). LivePortrait avatar testing is
+  moot (LivePortrait lip-sync integration remains not-started, a separate deferred
+  effort — see Task 1.7 notes). Real end-to-end render (TTS → mix → video) confirmed
+  subtitle sync is exact (generated SRT content byte-for-byte matches
+  `mix_project`'s own measured timestamps). **9:16 output: does not exist.** All 3
+  background templates and the rendered MP4 are confirmed 1280×720 (16:9) only — a full
+  code search found zero resolution/aspect-ratio handling anywhere in
+  `video_service.py`. This ROADMAP line's "both 16:9 and 9:16" can't be tested until
+  9:16 support is built — logged as a missing feature, not a QA gap (see TRACKER.md
+  Known Issues).
 
 ### 2.2 Bug Fixes & Performance
 

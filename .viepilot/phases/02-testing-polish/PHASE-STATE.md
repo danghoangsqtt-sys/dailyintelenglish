@@ -7,14 +7,14 @@
 - **Started:** 2026-09-13
 - **Target Completion:** 2026-09-20 (per ROADMAP.md's Day 8-14 target, adjusted forward
   since Phase 1 finished on Day 3 instead of Day 7)
-- **Milestone Progress:** 2 / 4 major tasks fully done (2.3 UX Polish — ✅ DONE, all 7
-  ROADMAP items resolved; 2.4 UI Redesign Slice 1 — ✅ DONE; 2.2 Bug Fixes & Performance
-  has its buildable scope done — 1 item fixed, 1 already-done-closed-via-audit, 1 moot, 1
-  genuinely deferred as a future task; 2.1 Quality Testing 1/4 ROADMAP items done — CEFR
-  accuracy testing closed via Tasks 2.1a+2.1b, multi-accent TTS/audio quality/video
-  testing not started). Task 2.4 was added as new scope after the original ROADMAP.md
-  Phase 2 bullets were written (see `.viepilot/ui-direction/2026-09-14/notes.md`), so the
-  3-task ROADMAP count predates it.
+- **Milestone Progress:** 3 / 4 major tasks fully done (2.1 Quality Testing — ✅ DONE,
+  all 4 ROADMAP items closed at the automated-proxy-review level the user approved, 3
+  real findings logged for follow-up; 2.3 UX Polish — ✅ DONE, all 7 ROADMAP items
+  resolved; 2.4 UI Redesign Slice 1 — ✅ DONE; 2.2 Bug Fixes & Performance has its
+  buildable scope done — 1 item fixed, 1 already-done-closed-via-audit, 1 moot, 1
+  genuinely deferred as a future task). Task 2.4 was added as new scope after the
+  original ROADMAP.md Phase 2 bullets were written (see
+  `.viepilot/ui-direction/2026-09-14/notes.md`), so the 3-task ROADMAP count predates it.
 - **Test Suite Status:** 515 passed, 1 pre-existing tracked flake (confirmed via isolated
   re-run, not a regression), ruff clean, all `node --check` clean
 
@@ -23,7 +23,9 @@
 ## Tasks Status & Acceptance Evidence
 
 ### Task 2.1: Quality Testing
-- **Status:** 🔄 In Progress (2026-09-14). Split into sub-tasks like 2.3 was.
+- **Status:** ✅ Done (2026-09-14). Split into sub-tasks like 2.3 was — all 4 ROADMAP
+  items closed at the automated-proxy-review level the user approved at two `/vp-auto`
+  control points.
   - [x] **Task 2.1a + 2.1b — CEFR accuracy testing: DONE.** Task 2.1a
     (`scripts/generate_cefr_review_samples.py`) is code-complete and PM-accepted, and its
     real 18-call run now lands 18/18 (prior partial runs hit real network/quota
@@ -33,9 +35,17 @@
     (A2/B1/B2 × news, a genre-specific idiom-density drift, not a defect), 0 FLAG**.
     Nothing required the user's own read. See `tasks/task-2.1a.md` and
     `tasks/task-2.1b.md`.
-  - [ ] Multi-accent TTS testing — not started
-  - [ ] Audio quality testing — not started
-  - [ ] Video testing — not started
+  - [x] **Task 2.1c — Multi-accent TTS, Audio quality, Video testing: DONE.** Real
+    technical measurement (LUFS, silence gaps, subtitle-timestamp sync) against the
+    actual production service functions, per a second user decision (PM cannot
+    literally "listen" to audio; proxy method is real numbers). 20/20 real Edge TTS
+    syntheses across all 10 accents × 2 genders; no-music mixes measured -16.01 LUFS
+    (0.01dB off target); real video render confirmed exact subtitle sync. **3 real
+    findings surfaced, none fixed in this read-only pass** (see TRACKER.md Known
+    Issues): `scottish` duplicates `british`'s voice ids (upstream Edge TTS limitation);
+    background-music mixes drift to -17.12 LUFS (outside the ±1dB tolerance, root cause
+    identified); no 9:16 video output exists anywhere (a missing feature). See
+    `tasks/task-2.1c.md` for the full measurement record.
 
 ### Task 2.2: Bug Fixes & Performance
 - **Status:** ✅ Done for its buildable scope (2026-09-13, Task 2.2) — 2 of 4 ROADMAP

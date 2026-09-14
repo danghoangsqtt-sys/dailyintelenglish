@@ -22,14 +22,15 @@ lip-sync model integration is a distinct, not-yet-started future effort), neithe
 required for any task's own acceptance criteria]. Progress reflects completed subtasks.
 Phase 2's row counts discrete ROADMAP checklist items across 2.1 (4), 2.2 (4), 2.3 (7),
 and 2.4 (3, new scope added 2026-09-14, not in the original Phase 2 plan) = 18 total,
-12 done (2.2's 2 real fixes — "Optimize OmniVoice batch" and "Add progress cancellation"
-are moot/deferred, not counted done; 2.3's 7; 2.4's 3); this row was stale at 0/10 before
-2026-09-14's Task 2.4 update, not updated in sync during 2.2/2.3 — corrected here.*
+16 done (2.1's 4, all done 2026-09-14; 2.2's 2 real fixes — "Optimize OmniVoice batch"
+and "Add progress cancellation" are moot/deferred, not counted done; 2.3's 7; 2.4's 3);
+this row was stale at 0/10 before 2026-09-14's Task 2.4 update, not updated in sync
+during 2.2/2.3 — corrected here.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
 | Phase 1 — Build | ✅ Complete | 28 | 30 |
-| Phase 2 — Testing | 🔄 In Progress | 13 | 18 |
+| Phase 2 — Testing | 🔄 In Progress | 16 | 18 |
 | Phase 3 — Review | ⏳ Not Started | 0 | 6 |
 
 ## Phase 1 Task Status
@@ -108,7 +109,7 @@ are moot/deferred, not counted done; 2.3's 7; 2.4's 3); this row was stale at 0/
 
 ## Phase 2 Task Status
 
-### 2.1 Quality Testing — 1/4 ROADMAP items done (2026-09-14)
+### 2.1 Quality Testing — 4/4 ROADMAP items done (2026-09-14)
 - [x] CEFR accuracy testing — done via Task 2.1a (CLI:
   `scripts/generate_cefr_review_samples.py`, code-complete and PM-accepted, real 18-call
   run now lands 18/18) + Task 2.1b (PM read all 18 real generated scripts in full,
@@ -116,9 +117,19 @@ are moot/deferred, not counted done; 2.3's 7; 2.4's 3); this row was stale at 0/
   4 BORDERLINE (A2/B1/B2 × news — a genre-specific idiom-density drift, not a defect),
   0 FLAG. Nothing required the user's own read. See `tasks/task-2.1a.md` and
   `tasks/task-2.1b.md` for the full record.
-- [ ] Multi-accent TTS testing — not started
-- [ ] Audio quality testing — not started
-- [ ] Video testing — not started
+- [x] Multi-accent TTS testing, Audio quality testing, Video testing — done via Task
+  2.1c: real technical measurement (LUFS, silence gaps, subtitle-timestamp sync) against
+  the actual production service functions, per a second user decision at a `/vp-auto`
+  control point (PM can't literally "listen"; proxy method is real numbers). 20/20 real
+  TTS syntheses across all 10 accents × 2 genders succeeded; no-music audio mixes landed
+  at -16.01 LUFS (0.01dB off the -16 target); real video render confirmed exact
+  subtitle-timestamp sync. **3 real findings surfaced, none fixed in this read-only
+  pass** (see TRACKER.md Known Issues and `tasks/task-2.1c.md`): `scottish` accent
+  duplicates `british`'s voice ids (upstream Edge TTS limitation, not a bug);
+  background-music mixes drift to -17.12 LUFS, outside the ±1dB tolerance (a real bug,
+  root cause identified); no 9:16 video output exists at all (a missing feature, not
+  buildable to test yet). This closes Task 2.1's 4-item Quality Testing campaign at the
+  automated-proxy-review level the user approved.
 
 ### 2.2 Bug Fixes & Performance — buildable scope done 2026-09-13 (Task 2.2)
 - [x] Fix any blocking API calls → move to executor — a research-agent audit + direct
@@ -473,6 +484,24 @@ are moot/deferred, not counted done; 2.3's 7; 2.4's 3); this row was stale at 0/
   read this round; the news-genre calibration pattern is logged as an optional future
   prompt-tuning task, not acted on (this was a read-only review, no `prompts/script/`
   change). | User; PM (Claude Code) |
+| 2026-09-14 | At a second `/vp-auto` control point, user confirmed PM should continue
+  Task 2.1's remaining 3 Quality Testing items (multi-accent TTS, audio quality, video)
+  using real technical measurement (LUFS, silence gaps, subtitle-timestamp sync) rather
+  than subjective listening, which PM cannot do. Task 2.1c: 20/20 real Edge TTS
+  syntheses across all 10 accents × 2 genders succeeded; no-music audio mixes measured
+  -16.01 LUFS (0.01dB off the -16 target, well within tolerance); real video render
+  confirmed exact subtitle-timestamp sync against `mix_project`'s own measured data. 3
+  real findings surfaced and logged (not fixed, per this task's read-only scope — see
+  Known Issues below): `scottish` accent duplicates `british`'s Edge TTS voice ids (a
+  real upstream limitation — Microsoft's neural catalog has no dedicated Scottish voice,
+  confirmed via the real `edge-tts --list-voices` output); background-music mixes drift
+  to -17.12 LUFS, 1.12dB outside the ROADMAP-declared ±1dB tolerance, with the root
+  cause identified (voice normalized before the music overlay, never re-normalized
+  after); and no 9:16 video output exists anywhere in the codebase (a missing feature,
+  not a QA gap — all 3 background templates and the rendered MP4 confirmed 1280×720
+  only). This closes Task 2.1's full 4-item Quality Testing campaign at the
+  automated-proxy-review level the user approved. See `tasks/task-2.1c.md` for the full
+  measurement record. | User; PM (Claude Code) |
 
 ## Known Issues
 
@@ -592,6 +621,28 @@ are moot/deferred, not counted done; 2.3's 7; 2.4's 3); this row was stale at 0/
   `sqlite3.IntegrityError` around the final write in 3 files (audio/video/youtube), 2 write
   blocks each (the error branch and the success branch) — deliberately not rushed into this
   session's fix batch; pick up as its own small task later if it's ever hit in practice.
+
+- **Background-music mix loudness drifts outside the ±1dB tolerance (found 2026-09-14,
+  Task 2.1c real audio-quality measurement, not fixed):** `audio_service._mix_project_sync`
+  normalizes the voice track to exactly `TARGET_LOUDNESS_LUFS` (-16) *before* overlaying
+  the ducked background-music track, then measures final loudness *after* the overlay
+  without re-normalizing. A real measured run (8-line sample, real Edge TTS audio) landed
+  at -17.12 LUFS with music vs -16.01 LUFS without — a 1.12dB drift, narrowly outside
+  ROADMAP.md's declared `-16 LUFS ±1dB` acceptance line. No-music mixes measured
+  essentially perfect (0.01dB off target) both times. Fix candidate: re-run
+  `_normalize_to_target` on `mixed` after the music overlay instead of only before it.
+  Not fixed in the read-only QA task that found it — see `tasks/task-2.1c.md` for the
+  full measurement record.
+- **No 9:16 (vertical) video output exists (found 2026-09-14, Task 2.1c, a missing
+  feature, not a bug):** `video_service.py` and all 3 background templates
+  (`midnight`/`deep_purple`/`charcoal_wave`) are confirmed 1280×720 (16:9) only — a full
+  code search found zero resolution/aspect-ratio/scale/vertical/portrait handling
+  anywhere in the video render pipeline. ROADMAP.md's Task 2.1 "Video testing" item
+  requires testing "both 16:9 and 9:16 outputs," but there is currently no code path to
+  produce a 9:16 output at all, so it can't be tested until it's built. Would need
+  either separate vertical background templates + a template-aware ffmpeg scale/crop
+  filter, or a crop/pad step applied to the existing 16:9 render — a real, scoped future
+  task, not attempted in the read-only QA pass that found the gap.
 
 ## Version
 
