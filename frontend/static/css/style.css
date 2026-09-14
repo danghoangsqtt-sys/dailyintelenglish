@@ -74,6 +74,15 @@
 
 * { box-sizing: border-box; }
 html, body { min-height: 100%; }
+/* Real UA-equivalent [hidden] rule (Task 2.5b): without this, an unconditional
+   `.btn { display: inline-flex }` below always wins over the browser's own implicit
+   `[hidden] { display: none }` rule (same specificity, but `.btn` is an author rule vs.
+   a user-agent-tier rule), so `el.hidden = true` silently does nothing on any
+   `.btn`-classed element. Found via a real Playwright test failure while building the
+   Task 2.5b vertical-video download link; also fixes the same pre-existing, previously
+   flagged-but-unfixed gap on step6_thumbnail.js's retry-save-btn (see TRACKER.md Known
+   Issues) — !important guarantees this always wins regardless of selector order. */
+[hidden] { display: none !important; }
 body { min-width: 1024px; margin: 0; font-family: var(--font); background: var(--bg); color: var(--text); transition: background .2s ease, color .2s ease; }
 a { color: inherit; }
 button, input, textarea, select { font: inherit; }

@@ -21,7 +21,7 @@ from app.services import audio_service, project_service, video_service
 router = APIRouter(prefix="/api/projects/{project_id}/video", tags=["video"])
 templates_router = APIRouter(prefix="/api/video", tags=["video"])
 
-_DOWNLOAD_FORMATS = {"mp4": "video/mp4", "srt": "application/x-subrip"}
+_DOWNLOAD_FORMATS = {"mp4": "video/mp4", "mp4_vertical": "video/mp4", "srt": "application/x-subrip"}
 
 
 @templates_router.get("/templates")
@@ -46,7 +46,9 @@ async def generate_video(
     # No lock held across the render itself (CPU-bound, runs in a thread — see
     # video_service.generate_video).
     try:
-        result = await video_service.generate_video(project_id, audio_job, payload.template_id)
+        result = await video_service.generate_video(
+            project_id, audio_job, payload.template_id, payload.aspect_ratio
+        )
     except Exception as exc:
         async with _write_transaction(db):
             await video_service.save_video_job(
@@ -60,6 +62,7 @@ async def generate_video(
             project_id,
             status="complete",
             mp4_path=result["mp4_path"],
+            mp4_path_vertical=result.get("mp4_path_vertical"),
             srt_path=result["srt_path"],
             background_image=result["background_image"],
             commit=False,
@@ -87,14 +90,19 @@ async def get_video_status(project_id: str, db: aiosqlite.Connection = Depends(g
 async def download_video(
     project_id: str, format: str = "mp4", db: aiosqlite.Connection = Depends(get_db)
 ) -> FileResponse:
-    """Download the generated video as MP4 (default) or the SRT subtitle file."""
+    """Download the generated video as MP4 (default), the 9:16 vertical MP4, or the SRT
+    subtitle file."""
     media_type = _DOWNLOAD_FORMATS.get(format)
     if media_type is None:
-        raise ValidationError(f"Unsupported format {format!r}: expected 'mp4' or 'srt'")
+        raise ValidationError(f"Unsupported format {format!r}: expected 'mp4', 'mp4_vertical', or 'srt'")
     async with _read_transaction():
         await project_service.get_project(db, project_id)
         job = await video_service.get_video_job(db, project_id)
     if job is None or job["status"] != "complete":
         raise NotFoundError(f"No completed video for project {project_id}")
-    path = job["mp4_path"] if format == "mp4" else job["srt_path"]
-    return FileResponse(path, media_type=media_type, filename=f"{project_id}.{format}")
+    path_by_format = {"mp4": job["mp4_path"], "mp4_vertical": job["mp4_path_vertical"], "srt": job["srt_path"]}
+    path = path_by_format[format]
+    if path is None:
+        raise NotFoundError(f"No {format!r} output was generated for project {project_id}")
+    extension = "mp4" if format in ("mp4", "mp4_vertical") else format
+    return FileResponse(path, media_type=media_type, filename=f"{project_id}.{extension}")

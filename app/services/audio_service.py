@@ -162,15 +162,21 @@ def _mix_project_sync(
     for segment in segments[1:]:
         mixed += segment
 
-    mixed, _ = _normalize_to_target(mixed, TARGET_LOUDNESS_LUFS)
-
     if background_music_path is not None:
         music = AudioSegment.from_file(background_music_path)
         music = _loop_to_length(music, len(mixed))
         music = _duck_music(music, MUSIC_DUCKING_MAX_DBFS)
         mixed = mixed.overlay(music)
 
-    final_loudness = _measure_lufs(mixed)
+    # Normalize the FINAL mix (voice + any ducked music), not just the voice stem —
+    # EBU R128 measures/targets integrated loudness over the whole program, and ducking
+    # is already an absolute ceiling on the music track's own level (independent of
+    # dialogue), so doing this after the overlay is always correct and never breaks
+    # ducking. Measuring only the voice stem before overlay (the old order) left the
+    # actually-delivered file's loudness unmeasured and unnormalized whenever music was
+    # present — real measured drift up to 1.12dB outside the declared ±1dB tolerance
+    # (Task 2.1c, TRACKER.md Known Issues).
+    mixed, final_loudness = _normalize_to_target(mixed, TARGET_LOUDNESS_LUFS)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     mp3_path = output_dir / "mix.mp3"

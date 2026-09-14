@@ -7,16 +7,18 @@
 - **Started:** 2026-09-13
 - **Target Completion:** 2026-09-20 (per ROADMAP.md's Day 8-14 target, adjusted forward
   since Phase 1 finished on Day 3 instead of Day 7)
-- **Milestone Progress:** 3 / 4 major tasks fully done (2.1 Quality Testing — ✅ DONE,
-  all 4 ROADMAP items closed at the automated-proxy-review level the user approved, 3
-  real findings logged for follow-up; 2.3 UX Polish — ✅ DONE, all 7 ROADMAP items
-  resolved; 2.4 UI Redesign Slice 1 — ✅ DONE; 2.2 Bug Fixes & Performance has its
-  buildable scope done — 1 item fixed, 1 already-done-closed-via-audit, 1 moot, 1
-  genuinely deferred as a future task). Task 2.4 was added as new scope after the
-  original ROADMAP.md Phase 2 bullets were written (see
-  `.viepilot/ui-direction/2026-09-14/notes.md`), so the 3-task ROADMAP count predates it.
-- **Test Suite Status:** 515 passed, 1 pre-existing tracked flake (confirmed via isolated
-  re-run, not a regression), ruff clean, all `node --check` clean
+- **Milestone Progress:** 5 / 5 tasks (4 original + Task 2.5, new scope) fully done
+  except Task 2.2's one explicitly-deferred item: 2.1 Quality Testing — ✅ DONE, all 4
+  ROADMAP items closed; 2.3 UX Polish — ✅ DONE, all 7 ROADMAP items resolved; 2.4 UI
+  Redesign Slice 1 — ✅ DONE; 2.5 Fix Task 2.1c's 3 findings — ✅ DONE, plus 2 more real
+  bugs found+fixed while verifying; 2.2 Bug Fixes & Performance has its buildable scope
+  done — 1 item fixed, 1 already-done-closed-via-audit, 1 moot, **1 genuinely deferred as
+  a separate future task ("progress cancellation" — the only item keeping Phase 2 from
+  being fully closed)**. Tasks 2.4 and 2.5 were both added as new scope after the
+  original ROADMAP.md Phase 2 bullets were written, so the original 3-task ROADMAP count
+  predates them.
+- **Test Suite Status:** 530 passed, 0 failed, zero flakes on the most recent run, ruff
+  clean, all `node --check` clean
 
 ---
 
@@ -172,3 +174,34 @@
   JS files `node --check` clean. Real Playwright screenshots at 1440×900 confirmed both
   pages in both themes render correctly against the live app. See `tasks/task-2.4.md`
   for the full record and evidence.
+
+### Task 2.5: Fix the 3 real findings from Task 2.1c
+- **Status:** ✅ Done (2026-09-14)
+- **Details:** New scope born from Task 2.1c's real QA findings, per explicit user
+  request to research + plan + fix all 3. Research: EBU R128 confirms loudness
+  normalization must target the final complete mix, not an isolated stem (the real root
+  cause of the LUFS drift); the ffmpeg blurred-background-pad technique is the real
+  industry convention for 16:9→9:16 conversion; live-confirmed via the actual installed
+  `edge-tts` package's `--list-voices` output that no Scottish neural voice exists at
+  all.
+  - **2.5a (LUFS fix):** `audio_service._mix_project_sync` now normalizes the *final*
+    mixed signal (voice + ducked music) once, after the overlay — previously only the
+    pre-music voice stem was normalized. `test_mix_project_with_background_music_caps_at_ducking_ceiling`
+    tightened to the real `±1dB` tolerance (was a loose `< target+3` bound that would
+    have missed the bug).
+  - **2.5b (9:16 video):** new `_render_vertical_sync` (second ffmpeg pass, blur-pad,
+    audio copied) wired through `generate_video(..., aspect_ratio="9:16")`, a new
+    migration (`video_jobs.mp4_path_vertical`), API validation/route/download support,
+    and a Step 5 UI toggle. Default (`"16:9"`) is byte-for-byte unchanged. Real `ffprobe`
+    confirms the output is genuinely 720×1280. **2 real, blocking bugs found and fixed
+    while verifying** (disclosed, not silent scope creep): the exact `.hidden`-on-`.btn`
+    CSS trap pre-flagged in Known Issues (fixed with the one real `[hidden]` rule
+    TRACKER itself recommended), and a real `init_db()` migration-replay crash on any
+    second real app restart once a non-idempotent `ALTER TABLE ADD COLUMN` migration
+    exists (004, and this task's own 005) — fixed with a `schema_migrations` tracking
+    table, reproduced and re-verified against the actual persisted `data/app.db`.
+  - **2.5c (Scottish/British disclosure):** a `title` tooltip on the Scottish accent
+    option/chip in Step 1, disclosing it currently shares British's voice — UI-only, no
+    behavior change.
+  - 530/530 full suite passes (up from 515), zero flakes this run, `ruff`/`node --check`
+    clean. See `tasks/task-2.5.md` for the full record and evidence.

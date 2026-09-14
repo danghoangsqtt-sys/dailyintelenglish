@@ -180,6 +180,90 @@ async def test_generate_failure_shows_friendly_error_only(browser_instance: Brow
 
 
 @pytest.mark.asyncio
+async def test_aspect_ratio_defaults_to_16x9_and_hides_vertical_download(
+    browser_instance: Browser, live_server_url: str
+):
+    """Task 2.5b: the default toggle state must send `"16:9"` and never show a vertical
+    download link when the server didn't produce one (`mp4_path_vertical: null`)."""
+    page = await browser_instance.new_page()
+    captured_bodies = []
+
+    async def handle_routes(route):
+        url, method = route.request.url, route.request.method
+        if url.endswith(f"/api/projects/{PROJECT['id']}") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(PROJECT))
+        elif url.endswith("/audio/status") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope({"status": "complete"}))
+        elif url.endswith("/api/video/templates") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(TEMPLATES))
+        elif url.endswith("/video/status") and method == "GET":
+            await route.fulfill(status=404, content_type="application/json", body=_envelope(None, "no video"))
+        elif url.endswith("/video/generate") and method == "POST":
+            captured_bodies.append(json.loads(route.request.post_data))
+            await route.fulfill(
+                status=200, content_type="application/json", body=_envelope({**VIDEO_JOB, "mp4_path_vertical": None})
+            )
+        else:
+            await route.continue_()
+
+    await page.route("**/api/**", handle_routes)
+    await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
+    await page.wait_for_selector("#workspace:not([hidden])")
+
+    assert await page.locator("[data-aspect-ratio='16:9']").get_attribute("aria-pressed") == "true"
+    assert await page.locator("[data-aspect-ratio='9:16']").get_attribute("aria-pressed") == "false"
+
+    await page.click("#generate-btn")
+    await page.wait_for_selector("#result-card:not([hidden])", timeout=5000)
+
+    assert captured_bodies == [{"template_id": "midnight", "aspect_ratio": "16:9"}]
+    assert await page.locator("#download-mp4-vertical").is_hidden()
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_selecting_9x16_sends_it_and_shows_vertical_download(browser_instance: Browser, live_server_url: str):
+    """Task 2.5b: selecting the 9:16 chip sends `aspect_ratio: "9:16"`, and a real
+    `mp4_path_vertical` in the response reveals the second download link."""
+    page = await browser_instance.new_page()
+    captured_bodies = []
+    vertical_job = {**VIDEO_JOB, "mp4_path_vertical": "data/video/video-proj-e2e/video_vertical.mp4"}
+
+    async def handle_routes(route):
+        url, method = route.request.url, route.request.method
+        if url.endswith(f"/api/projects/{PROJECT['id']}") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(PROJECT))
+        elif url.endswith("/audio/status") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope({"status": "complete"}))
+        elif url.endswith("/api/video/templates") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(TEMPLATES))
+        elif url.endswith("/video/status") and method == "GET":
+            await route.fulfill(status=404, content_type="application/json", body=_envelope(None, "no video"))
+        elif url.endswith("/video/generate") and method == "POST":
+            captured_bodies.append(json.loads(route.request.post_data))
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(vertical_job))
+        else:
+            await route.continue_()
+
+    await page.route("**/api/**", handle_routes)
+    await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
+    await page.wait_for_selector("#workspace:not([hidden])")
+
+    await page.click("[data-aspect-ratio='9:16']")
+    assert await page.locator("[data-aspect-ratio='9:16']").get_attribute("aria-pressed") == "true"
+    assert await page.locator("[data-aspect-ratio='16:9']").get_attribute("aria-pressed") == "false"
+
+    await page.click("#generate-btn")
+    await page.wait_for_selector("#result-card:not([hidden])", timeout=5000)
+
+    assert captured_bodies == [{"template_id": "midnight", "aspect_ratio": "9:16"}]
+    vertical_href = await page.locator("#download-mp4-vertical").get_attribute("href")
+    assert "format=mp4_vertical" in vertical_href
+    assert await page.locator("#download-mp4-vertical").is_visible()
+    await page.close()
+
+
+@pytest.mark.asyncio
 async def test_step4_next_step_link_points_to_step5(browser_instance: Browser, live_server_url: str):
     page = await browser_instance.new_page()
     project_with_speaker = {**PROJECT, "speakers": [{"id": "sp1", "name": "Alex", "gender": "male", "accent": "american", "tts_engine": "edge_tts", "voice_id": None, "voice_description": "", "speed": 1.0, "pitch": 0.0, "volume": 1.0, "avatar_image_path": None}]}

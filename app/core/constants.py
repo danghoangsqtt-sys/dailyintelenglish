@@ -46,6 +46,9 @@ VIDEO_WIDTH_STANDARD = 1280
 VIDEO_HEIGHT_STANDARD = 720
 VIDEO_WIDTH_SHORTS = 720
 VIDEO_HEIGHT_SHORTS = 1280
+# VIDEO_WIDTH_SHORTS/VIDEO_HEIGHT_SHORTS existed but were never wired up until Task 2.5b
+# closed the real "no 9:16 output exists" gap found by Task 2.1c's QA pass.
+VIDEO_ASPECT_RATIOS = ("16:9", "9:16")
 VIDEO_TEMPLATE_IDS = ("midnight", "deep_purple", "charcoal_wave")
 VIDEO_TEMPLATE_LABELS = {
     "midnight": "Midnight",

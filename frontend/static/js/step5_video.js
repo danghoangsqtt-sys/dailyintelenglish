@@ -10,6 +10,7 @@
     project: null,
     templates: [],
     selectedTemplate: null,
+    aspectRatio: "16:9",
     audioReady: false,
     isGenerating: false,
     avatarBusy: {},
@@ -168,6 +169,20 @@
     document.querySelectorAll(".template-option").forEach((button) => {
       button.disabled = state.isGenerating;
     });
+    document.querySelectorAll("#aspect-ratio-group .chip").forEach((button) => {
+      button.disabled = state.isGenerating;
+    });
+  }
+
+  function setupAspectRatioToggle() {
+    const group = byId("aspect-ratio-group");
+    group.querySelectorAll(".chip").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (state.isGenerating) return;
+        state.aspectRatio = button.dataset.aspectRatio;
+        group.querySelectorAll(".chip").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+      });
+    });
   }
 
   function setGenerateLoading(loading) {
@@ -192,6 +207,15 @@
     byId("download-srt").href = `${Api.videoDownloadUrl(state.projectId, "srt")}&t=${cacheBust}`;
     byId("download-mp4").download = `${state.projectId}.mp4`;
     byId("download-srt").download = `${state.projectId}.srt`;
+
+    const verticalLink = byId("download-mp4-vertical");
+    if (job.mp4_path_vertical) {
+      verticalLink.href = `${Api.videoDownloadUrl(state.projectId, "mp4_vertical")}&t=${cacheBust}`;
+      verticalLink.download = `${state.projectId}_vertical.mp4`;
+      verticalLink.hidden = false;
+    } else {
+      verticalLink.hidden = true;
+    }
   }
 
   async function generateVideo() {
@@ -201,7 +225,7 @@
     setGenerateLoading(true);
     byId("generate-progress").textContent = "Rendering with ffmpeg…";
     try {
-      const job = await Api.generateVideo(state.projectId, state.selectedTemplate);
+      const job = await Api.generateVideo(state.projectId, state.selectedTemplate, state.aspectRatio);
       renderResult(job);
       byId("generate-progress").textContent = "Done.";
     } catch (error) {
@@ -270,6 +294,7 @@
     byId("workspace").hidden = false;
     renderAvatars();
     renderTemplates();
+    setupAspectRatioToggle();
     applyLocks();
   }
 

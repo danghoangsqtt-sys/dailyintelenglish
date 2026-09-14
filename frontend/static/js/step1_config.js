@@ -25,7 +25,12 @@
     { value: "australian", label: "Australian", flag: "🇦🇺" },
     { value: "canadian", label: "Canadian", flag: "🇨🇦" },
     { value: "irish", label: "Irish", flag: "🇮🇪" },
-    { value: "scottish", label: "Scottish", flag: "🏴" },
+    {
+      value: "scottish",
+      label: "Scottish",
+      flag: "🏴",
+      note: "Uses the same voice as British — Edge TTS has no distinct Scottish voice yet",
+    },
     { value: "indian", label: "Indian", flag: "🇮🇳" },
     { value: "singaporean", label: "Singaporean", flag: "🇸🇬" },
     { value: "new_zealand", label: "New Zealand", flag: "🇳🇿" },
@@ -176,7 +181,8 @@
         <label class="field-label" for="speaker-accent-${index}">Accent</label>
         <select id="speaker-accent-${index}" data-field="accent" data-index="${index}">
           ${ACCENTS.map(
-            (a) => `<option value="${a.value}" ${a.value === speaker.accent ? "selected" : ""}>${a.flag} ${a.label}</option>`
+            (a) =>
+              `<option value="${a.value}" ${a.value === speaker.accent ? "selected" : ""} ${a.note ? `title="${escapeHtml(a.note)}"` : ""}>${a.flag} ${a.label}</option>`
           ).join("")}
         </select>
       </div>`;
@@ -221,7 +227,7 @@
       container.innerHTML = items
         .map(
           (item) =>
-            `<button type="button" class="chip" data-value="${item.value}" aria-pressed="${item.value === value}">${item.icon || item.flag} ${item.label}</button>`
+            `<button type="button" class="chip" data-value="${item.value}" aria-pressed="${item.value === value}" ${item.note ? `title="${escapeHtml(item.note)}"` : ""}>${item.icon || item.flag} ${item.label}</button>`
         )
         .join("");
     }

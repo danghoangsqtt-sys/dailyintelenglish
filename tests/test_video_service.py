@@ -92,6 +92,83 @@ async def test_generate_video_produces_a_real_playable_mp4(tmp_path, monkeypatch
     assert result["background_image"] == "midnight"
 
 
+async def test_generate_video_default_aspect_ratio_does_not_render_vertical(tmp_path, monkeypatch):
+    """Task 2.5b: default (`"16:9"`) must be byte-for-byte the existing behavior --
+    no vertical file, no `mp4_path_vertical` key, zero extra ffmpeg calls."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    audio_path = tmp_path / "mix.mp3"
+    Sine(440).to_audio_segment(duration=500).apply_gain(-20).export(str(audio_path), format="mp3", bitrate="192k")
+    audio_job = {
+        "status": "complete",
+        "mp3_path": str(audio_path),
+        "timestamps": [{"start_sec": 0.0, "end_sec": 0.5, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}],
+    }
+
+    result = await video_service.generate_video("proj-default-ratio", audio_job, "midnight")
+
+    assert "mp4_path_vertical" not in result
+
+
+async def test_generate_video_9x16_produces_a_real_playable_vertical_mp4(tmp_path, monkeypatch):
+    """Task 2.5b, closing the real gap Task 2.1c found: real ffprobe confirms the
+    rendered vertical MP4 is genuinely 9:16 (VIDEO_WIDTH_SHORTS x VIDEO_HEIGHT_SHORTS),
+    not the same 16:9 file relabeled."""
+    import subprocess
+    from pathlib import Path
+
+    from app.core.config import settings
+    from app.core.constants import VIDEO_HEIGHT_SHORTS, VIDEO_WIDTH_SHORTS
+
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    audio_path = tmp_path / "mix.mp3"
+    Sine(440).to_audio_segment(duration=800).apply_gain(-20).export(str(audio_path), format="mp3", bitrate="192k")
+    audio_job = {
+        "status": "complete",
+        "mp3_path": str(audio_path),
+        "timestamps": [{"start_sec": 0.0, "end_sec": 0.8, "label": "Alex", "speaker_id": "sp1", "text": "Hello!"}],
+    }
+
+    result = await video_service.generate_video("proj-vertical", audio_job, "midnight", "9:16")
+
+    assert "mp4_path_vertical" in result
+    vertical_path = Path(result["mp4_path_vertical"])
+    assert vertical_path.is_file() and vertical_path.stat().st_size > 0
+    # The 16:9 output must still exist and be untouched by the second ffmpeg pass.
+    assert Path(result["mp4_path"]).is_file()
+
+    probe = subprocess.run(
+        [
+            "ffprobe", "-v", "error", "-select_streams", "v:0",
+            "-show_entries", "stream=width,height", "-of", "csv=s=x:p=0",
+            str(vertical_path),
+        ],
+        capture_output=True, text=True, timeout=30,
+    )
+    assert probe.stdout.strip() == f"{VIDEO_WIDTH_SHORTS}x{VIDEO_HEIGHT_SHORTS}"
+
+
+async def test_generate_video_invalid_aspect_ratio_does_not_render_vertical(tmp_path, monkeypatch):
+    """`generate_video` itself doesn't validate aspect_ratio (the API layer's Pydantic
+    validator does) -- confirms only the exact `"9:16"` string triggers the second pass,
+    so an unrecognized value degrades to the safe default rather than silently rendering."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    audio_path = tmp_path / "mix.mp3"
+    Sine(440).to_audio_segment(duration=500).apply_gain(-20).export(str(audio_path), format="mp3", bitrate="192k")
+    audio_job = {
+        "status": "complete",
+        "mp3_path": str(audio_path),
+        "timestamps": [{"start_sec": 0.0, "end_sec": 0.5, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}],
+    }
+
+    result = await video_service.generate_video("proj-bad-ratio", audio_job, "midnight", "not-a-ratio")
+
+    assert "mp4_path_vertical" not in result
+
+
 async def test_save_and_get_video_job_roundtrip(db):
     await db.execute(
         "INSERT INTO projects (id, name, status, created_at, updated_at) "
@@ -100,10 +177,17 @@ async def test_save_and_get_video_job_roundtrip(db):
     await db.commit()
 
     saved = await video_service.save_video_job(
-        db, "p1", status="complete", mp4_path="v.mp4", srt_path="v.srt", background_image="midnight"
+        db,
+        "p1",
+        status="complete",
+        mp4_path="v.mp4",
+        mp4_path_vertical="v_vertical.mp4",
+        srt_path="v.srt",
+        background_image="midnight",
     )
     assert saved["status"] == "complete"
     assert saved["background_image"] == "midnight"
+    assert saved["mp4_path_vertical"] == "v_vertical.mp4"
 
     fetched = await video_service.get_video_job(db, "p1")
     assert fetched == saved

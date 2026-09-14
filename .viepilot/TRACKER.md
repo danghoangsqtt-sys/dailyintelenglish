@@ -21,16 +21,16 @@ avatar-sourcing question is resolved and delivered as Sub-task 1.7c, but the act
 lip-sync model integration is a distinct, not-yet-started future effort), neither
 required for any task's own acceptance criteria]. Progress reflects completed subtasks.
 Phase 2's row counts discrete ROADMAP checklist items across 2.1 (4), 2.2 (4), 2.3 (7),
-and 2.4 (3, new scope added 2026-09-14, not in the original Phase 2 plan) = 18 total,
-16 done (2.1's 4, all done 2026-09-14; 2.2's 2 real fixes — "Optimize OmniVoice batch"
-and "Add progress cancellation" are moot/deferred, not counted done; 2.3's 7; 2.4's 3);
-this row was stale at 0/10 before 2026-09-14's Task 2.4 update, not updated in sync
-during 2.2/2.3 — corrected here.*
+2.4 (3), and 2.5 (3, new scope added 2026-09-14, not in the original Phase 2 plan) = 21
+total, 19 done (2.1's 4; 2.2's 2 real fixes — "Optimize OmniVoice batch" and "Add
+progress cancellation" are moot/deferred, not counted done; 2.3's 7; 2.4's 3; 2.5's 3,
+all done 2026-09-14); this row was stale at 0/10 before 2026-09-14's Task 2.4 update,
+not updated in sync during 2.2/2.3 — corrected then and kept current since.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
 | Phase 1 — Build | ✅ Complete | 28 | 30 |
-| Phase 2 — Testing | 🔄 In Progress | 16 | 18 |
+| Phase 2 — Testing | 🔄 In Progress | 19 | 21 |
 | Phase 3 — Review | ⏳ Not Started | 0 | 6 |
 
 ## Phase 1 Task Status
@@ -251,6 +251,25 @@ during 2.2/2.3 — corrected here.*
   `ruff check app/ tests/` clean; `node --check` clean on all 6 touched JS files. Real
   Playwright screenshots at 1440×900 confirmed both pages render correctly in both themes
   against the live app. See `tasks/task-2.4.md` for the full record and evidence.
+
+### 2.5 Fix the 3 real findings from Task 2.1c — ✅ DONE (2026-09-14)
+- [x] Background-music LUFS drift — fixed in `audio_service._mix_project_sync`:
+  normalize the final mix (voice + ducked music) once, after the overlay, instead of
+  only the pre-music voice stem. Real measured result now within the declared ±1dB
+  tolerance.
+- [x] No 9:16 video output — fixed: new `_render_vertical_sync` (blurred-background-pad
+  ffmpeg technique) as a second pass over the existing 16:9 render, wired through a new
+  `aspect_ratio` field/column/download-format/UI-toggle. Default (16:9) unchanged. Real
+  `ffprobe` confirms genuine 720×1280 output.
+- [x] Scottish/British voice duplication — disclosed via a `title` tooltip on Step 1's
+  Scottish accent option/chip (confirmed live: no Scottish Edge TTS voice exists to fix
+  this in code).
+- 2 additional real, blocking bugs found and fixed while verifying (disclosed): the
+  `.hidden`-on-`.btn` CSS trap pre-flagged in Known Issues, and a real `init_db()`
+  migration-replay crash on any second real app restart. See TRACKER.md Known Issues
+  (both now marked RESOLVED) and `tasks/task-2.5.md` for the full record.
+- 530/530 full suite passes (up from 515), zero flakes this run, `ruff`/`node --check`
+  clean.
 
 ## Decision Log
 
@@ -502,6 +521,21 @@ during 2.2/2.3 — corrected here.*
   only). This closes Task 2.1's full 4-item Quality Testing campaign at the
   automated-proxy-review level the user approved. See `tasks/task-2.1c.md` for the full
   measurement record. | User; PM (Claude Code) |
+| 2026-09-14 | User asked PM to research and fix all 3 real findings from Task 2.1c
+  strictly. Research: EBU R128 confirms loudness normalization must target the final
+  complete mix, not an isolated stem (root cause of the LUFS drift); ffmpeg's blurred-
+  background-pad is the real industry convention for 16:9→9:16 conversion; live-confirmed
+  via the actual `edge-tts` package that no Scottish voice exists upstream. Fixed all 3:
+  (1) `_mix_project_sync` normalizes the final mixed signal once, after the music overlay;
+  (2) new `_render_vertical_sync` second ffmpeg pass + `aspect_ratio` field/column/
+  download-format/Step 5 UI toggle, real `ffprobe`-confirmed 720×1280 output, default
+  16:9 unchanged; (3) a `title` tooltip discloses the Scottish/British voice limitation.
+  While verifying #2 against the real app, found and fixed 2 more real, blocking bugs
+  (disclosed, needed to actually prove the feature worked): the `.hidden`-on-`.btn` CSS
+  trap already flagged in Known Issues, and a real `init_db()` migration-replay crash on
+  any second real app restart (fixed with a `schema_migrations` tracking table). 530/530
+  full suite passes (up from 515), zero flakes. See `tasks/task-2.5.md`. | User; PM
+  (Claude Code) |
 
 ## Known Issues
 
@@ -622,27 +656,49 @@ during 2.2/2.3 — corrected here.*
   blocks each (the error branch and the success branch) — deliberately not rushed into this
   session's fix batch; pick up as its own small task later if it's ever hit in practice.
 
-- **Background-music mix loudness drifts outside the ±1dB tolerance (found 2026-09-14,
-  Task 2.1c real audio-quality measurement, not fixed):** `audio_service._mix_project_sync`
-  normalizes the voice track to exactly `TARGET_LOUDNESS_LUFS` (-16) *before* overlaying
-  the ducked background-music track, then measures final loudness *after* the overlay
-  without re-normalizing. A real measured run (8-line sample, real Edge TTS audio) landed
-  at -17.12 LUFS with music vs -16.01 LUFS without — a 1.12dB drift, narrowly outside
-  ROADMAP.md's declared `-16 LUFS ±1dB` acceptance line. No-music mixes measured
-  essentially perfect (0.01dB off target) both times. Fix candidate: re-run
-  `_normalize_to_target` on `mixed` after the music overlay instead of only before it.
-  Not fixed in the read-only QA task that found it — see `tasks/task-2.1c.md` for the
-  full measurement record.
-- **No 9:16 (vertical) video output exists (found 2026-09-14, Task 2.1c, a missing
-  feature, not a bug):** `video_service.py` and all 3 background templates
-  (`midnight`/`deep_purple`/`charcoal_wave`) are confirmed 1280×720 (16:9) only — a full
-  code search found zero resolution/aspect-ratio/scale/vertical/portrait handling
-  anywhere in the video render pipeline. ROADMAP.md's Task 2.1 "Video testing" item
-  requires testing "both 16:9 and 9:16 outputs," but there is currently no code path to
-  produce a 9:16 output at all, so it can't be tested until it's built. Would need
-  either separate vertical background templates + a template-aware ffmpeg scale/crop
-  filter, or a crop/pad step applied to the existing 16:9 render — a real, scoped future
-  task, not attempted in the read-only QA pass that found the gap.
+- ~~Background-music mix loudness drifts outside the ±1dB tolerance~~ **RESOLVED
+  2026-09-14 (Task 2.5a):** found 2026-09-14 via Task 2.1c's real audio-quality
+  measurement — `audio_service._mix_project_sync` normalized the voice track *before*
+  overlaying ducked background music and never re-normalized the combined signal,
+  measuring -17.12 LUFS with music vs the -16 target (1.12dB outside ROADMAP.md's
+  declared ±1dB tolerance). Fixed by moving the single `_normalize_to_target` call to
+  run on the *final* mixed signal (voice + music) instead of the voice stem alone — per
+  EBU R128 guidance that loudness normalization must target the complete final mix.
+  `test_mix_project_with_background_music_caps_at_ducking_ceiling` tightened to assert
+  the real `±1dB` bound (was a loose `< target+3` check that would have missed this).
+- ~~No 9:16 (vertical) video output exists~~ **RESOLVED 2026-09-14 (Task 2.5b):** found
+  2026-09-14 via Task 2.1c — `video_service.py` had zero resolution/aspect-ratio
+  handling anywhere, all 3 background templates and every render were 1280×720 (16:9)
+  only. Fixed with a real second ffmpeg pass (`_render_vertical_sync`, blurred-
+  background-pad technique — the real industry convention for 16:9→9:16 conversion),
+  wired through a new `aspect_ratio` request field (default `"16:9"`, byte-for-byte
+  unchanged), a new `video_jobs.mp4_path_vertical` column (migration 005), a new
+  download format, and a Step 5 UI toggle. Real `ffprobe` confirms the output is
+  genuinely 720×1280 (reusing the existing-but-previously-unwired `VIDEO_WIDTH_SHORTS`/
+  `VIDEO_HEIGHT_SHORTS` constants). See `tasks/task-2.5.md`.
+- ~~`.hidden` silently ignored on `.btn`-classed elements~~ **RESOLVED 2026-09-14 (Task
+  2.5b):** this was flagged 2026-09-13 (found while building Task 1.7c) as "likely
+  present" on `step6_thumbnail.js`'s `retry-save-btn` but not yet fixed. It resurfaced
+  for real 2026-09-14 on Task 2.5b's new `#download-mp4-vertical` link (caught by a real
+  Playwright test failure, not by inspection). Fixed with the one real `[hidden] {
+  display: none !important; }` rule this entry itself already recommended — resolves the
+  bug everywhere in the app, including the still-unfixed-in-its-own-right
+  `retry-save-btn` call site (not touched, no longer silently broken either).
+- **Real, reproducible `init_db()` migration-replay crash — RESOLVED 2026-09-14 (Task
+  2.5b, found while verifying it):** `init_db()` re-executed every migration file on
+  every app startup with no tracking of what was already applied. Harmless for
+  migrations 001-003 (`CREATE TABLE/INDEX IF NOT EXISTS`), but migrations 004 and 005
+  both use `ALTER TABLE ADD COLUMN` (SQLite has no `ADD COLUMN IF NOT EXISTS`) — a real
+  `sqlite3.OperationalError: duplicate column name` crash on any second real app restart
+  after either landed. Reproduced for real against the actual persisted `data/app.db`
+  (not a hypothetical) via `test_video_studio_browser.py`'s real-server fixture failing
+  to start. Fixed with a `schema_migrations` tracking table so each migration file runs
+  exactly once, with a defensive fallback for databases that already have 004/005's
+  columns applied from before this fix existed. New `tests/test_database.py` proves
+  `init_db()` called twice against the same on-disk file no longer raises. Re-verified
+  by running `test_video_studio_browser.py` three times in a row against the real,
+  already-migrated `data/app.db` — 10/10 pass every time (was failing to start at all
+  before this fix).
 
 ## Version
 

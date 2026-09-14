@@ -19,7 +19,12 @@ from pathlib import Path
 import aiosqlite
 
 from app.core.config import settings
-from app.core.constants import VIDEO_TEMPLATE_IDS, VIDEO_TEMPLATE_LABELS
+from app.core.constants import (
+    VIDEO_HEIGHT_SHORTS,
+    VIDEO_TEMPLATE_IDS,
+    VIDEO_TEMPLATE_LABELS,
+    VIDEO_WIDTH_SHORTS,
+)
 from app.core.exceptions import VideoRenderError
 
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "static" / "video_backgrounds"
@@ -104,6 +109,40 @@ def _render_video_sync(background_path: Path, audio_path: str, srt_path: Path, o
         raise VideoRenderError(f"ffmpeg video render failed: {result.stderr[-500:]}")
 
 
+def _render_vertical_sync(source_mp4_path: Path, output_path: Path) -> None:
+    """Second ffmpeg pass: reformat an already-rendered 16:9 MP4 into a 9:16 vertical MP4.
+
+    Blurred-background-pad technique (Task 2.5b research — the real convention used by
+    YouTube Shorts/TikTok/Reels tooling): the source is scaled+cropped to fill the full
+    vertical canvas as a blurred backdrop, then the same source scaled to fit the width
+    is overlaid centered on top. Runs over the finished 16:9 render, not a rewrite of the
+    tested subtitle-burn path in `_render_video_sync` — audio is copied, not re-encoded,
+    since the audio content itself never changes.
+
+    Must run in a thread (asyncio.to_thread), never on the event loop directly.
+    """
+    filter_complex = (
+        f"[0:v]scale={VIDEO_WIDTH_SHORTS}:{VIDEO_HEIGHT_SHORTS}:force_original_aspect_ratio=increase,"
+        f"crop={VIDEO_WIDTH_SHORTS}:{VIDEO_HEIGHT_SHORTS},gblur=sigma=20[bg];"
+        f"[0:v]scale={VIDEO_WIDTH_SHORTS}:-2[fg];"
+        f"[bg][fg]overlay=(W-w)/2:(H-h)/2,format=yuv420p[v]"
+    )
+    command = [
+        settings.FFMPEG_PATH,
+        "-y",
+        "-i", str(source_mp4_path),
+        "-filter_complex", filter_complex,
+        "-map", "[v]",
+        "-map", "0:a",
+        "-c:v", "libx264",
+        "-c:a", "copy",
+        str(output_path),
+    ]
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise VideoRenderError(f"ffmpeg vertical (9:16) render failed: {result.stderr[-500:]}")
+
+
 def _write_video_outputs_sync(background_path: Path, output_dir: Path, srt_path: Path, srt_content: str) -> None:
     """Blocking filesystem prep for a video render — must run in a thread, never on the
     event loop directly (this task's Forbidden Scope)."""
@@ -113,13 +152,19 @@ def _write_video_outputs_sync(background_path: Path, output_dir: Path, srt_path:
     srt_path.write_text(srt_content, encoding="utf-8")
 
 
-async def generate_video(project_id: str, audio_job: dict | None, template_id: str) -> dict:
+async def generate_video(
+    project_id: str, audio_job: dict | None, template_id: str, aspect_ratio: str = "16:9"
+) -> dict:
     """Render a project's completed audio mix into an MP4 with a background + burned-in subtitles.
 
     Args:
         project_id: Project UUID.
         audio_job: The project's `audio_jobs` row (from `audio_service.get_audio_job`).
         template_id: One of `VIDEO_TEMPLATE_IDS`.
+        aspect_ratio: One of `VIDEO_ASPECT_RATIOS`. `"16:9"` (default) renders only the
+            existing background+subtitle path, unchanged. `"9:16"` additionally renders a
+            second, vertical MP4 via `_render_vertical_sync` (Task 2.5b) — a real gap
+            found by Task 2.1c's QA pass (no 9:16 output existed anywhere before this).
 
     Raises:
         VideoRenderError: If no completed audio mix exists yet, or ffmpeg fails.
@@ -131,6 +176,7 @@ async def generate_video(project_id: str, audio_job: dict | None, template_id: s
     output_dir = settings.DATA_DIR / "video" / project_id
     srt_path = output_dir / "subtitles.srt"
     mp4_path = output_dir / "video.mp4"
+    mp4_path_vertical = output_dir / "video_vertical.mp4"
 
     await asyncio.to_thread(
         _write_video_outputs_sync, background_path, output_dir, srt_path, generate_srt(audio_job["timestamps"])
@@ -143,7 +189,18 @@ async def generate_video(project_id: str, audio_job: dict | None, template_id: s
     except Exception as exc:
         raise VideoRenderError(f"Video rendering failed: {exc}") from exc
 
-    return {"mp4_path": str(mp4_path), "srt_path": str(srt_path), "background_image": template_id}
+    result = {"mp4_path": str(mp4_path), "srt_path": str(srt_path), "background_image": template_id}
+
+    if aspect_ratio == "9:16":
+        try:
+            await asyncio.to_thread(_render_vertical_sync, mp4_path, mp4_path_vertical)
+        except VideoRenderError:
+            raise
+        except Exception as exc:
+            raise VideoRenderError(f"Vertical video rendering failed: {exc}") from exc
+        result["mp4_path_vertical"] = str(mp4_path_vertical)
+
+    return result
 
 
 def _row_to_video_job(row: aiosqlite.Row) -> dict:
@@ -153,8 +210,8 @@ def _row_to_video_job(row: aiosqlite.Row) -> dict:
 async def get_video_job(db: aiosqlite.Connection, project_id: str) -> dict | None:
     """Fetch a project's video job row, or None if video has never been generated."""
     cursor = await db.execute(
-        "SELECT id, project_id, status, mode, mp4_path, srt_path, background_image, "
-        "subtitle_style_json, error_message, started_at, completed_at "
+        "SELECT id, project_id, status, mode, mp4_path, mp4_path_vertical, srt_path, "
+        "background_image, subtitle_style_json, error_message, started_at, completed_at "
         "FROM video_jobs WHERE project_id = ?",
         (project_id,),
     )
@@ -169,6 +226,7 @@ async def save_video_job(
     status: str,
     mode: str = "background",
     mp4_path: str | None = None,
+    mp4_path_vertical: str | None = None,
     srt_path: str | None = None,
     background_image: str | None = None,
     error_message: str | None = None,
@@ -179,11 +237,12 @@ async def save_video_job(
     completed_at = now if status in ("complete", "error") else None
     await db.execute(
         "INSERT INTO video_jobs "
-        "(id, project_id, status, mode, mp4_path, srt_path, background_image, "
+        "(id, project_id, status, mode, mp4_path, mp4_path_vertical, srt_path, background_image, "
         "subtitle_style_json, error_message, started_at, completed_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
         "ON CONFLICT(project_id) DO UPDATE SET "
         "status = excluded.status, mode = excluded.mode, mp4_path = excluded.mp4_path, "
+        "mp4_path_vertical = excluded.mp4_path_vertical, "
         "srt_path = excluded.srt_path, background_image = excluded.background_image, "
         "error_message = excluded.error_message, started_at = excluded.started_at, "
         "completed_at = excluded.completed_at",
@@ -193,6 +252,7 @@ async def save_video_job(
             status,
             mode,
             mp4_path,
+            mp4_path_vertical,
             srt_path,
             background_image,
             None,

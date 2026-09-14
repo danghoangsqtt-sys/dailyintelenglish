@@ -363,6 +363,34 @@ CapCut-style UI direction (`.viepilot/ui-direction/2026-09-14/`).
   flake, confirmed via isolated re-run — Task 2.4 touched zero backend code). See
   `.viepilot/phases/02-testing-polish/tasks/task-2.4.md` for the full record.
 
+### 2.5 Fix the 3 real findings from Task 2.1c
+
+New scope added 2026-09-14 (not in the original Phase 2 plan above), per explicit user
+request to research + plan + fix all 3 real findings from Task 2.1c's QA pass.
+
+- [x] **Background-music LUFS drift** — fixed: `audio_service._mix_project_sync` now
+  normalizes the final mixed signal (voice + ducked music) once, after the overlay,
+  instead of only the pre-music voice stem — per EBU R128 guidance that loudness
+  normalization must target the complete final mix. Real measured result: within the
+  declared ±1dB tolerance (was 1.12dB off before the fix).
+- [x] **No 9:16 video output** — fixed: new `_render_vertical_sync` (blurred-background-
+  pad ffmpeg technique, the real industry convention for 16:9→9:16 conversion) as a
+  second pass over the existing 16:9 render; new `aspect_ratio` request field, DB column,
+  download format, and Step 5 UI toggle. Default (16:9) is byte-for-byte unchanged. Real
+  `ffprobe` confirms the vertical output is genuinely 720×1280.
+- [x] **Scottish/British voice duplication** — disclosed, not code-fixable (confirmed
+  live against the real `edge-tts` package that no Scottish neural voice exists
+  upstream): a `title` tooltip on Step 1's Scottish accent option/chip explains the
+  limitation.
+
+**2 additional real bugs found and fixed while verifying 9:16 video** (disclosed, needed
+to actually prove the feature works against the real app): the `.hidden`-on-`.btn` CSS
+trap pre-flagged in TRACKER.md Known Issues (fixed with the one real `[hidden]` rule
+recommended there), and a real `init_db()` migration-replay crash on any second real app
+restart once a non-idempotent migration exists (fixed with a `schema_migrations`
+tracking table). 530/530 full suite passes (up from 515), zero flakes. See
+`.viepilot/phases/02-testing-polish/tasks/task-2.5.md` for the full record.
+
 ---
 
 ## Phase 3 — Review & Documentation (Day 15–21)

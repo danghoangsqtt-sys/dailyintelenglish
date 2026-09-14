@@ -102,10 +102,10 @@ const Api = (() => {
     youtubeExportUrl: (projectId) => `/api/projects/${projectId}/youtube/export`,
     getVideoStatus: (projectId) => request(`/api/projects/${projectId}/video/status`),
     listVideoTemplates: () => request("/api/video/templates"),
-    generateVideo: (projectId, templateId) =>
+    generateVideo: (projectId, templateId, aspectRatio = "16:9") =>
       request(`/api/projects/${projectId}/video/generate`, {
         method: "POST",
-        body: JSON.stringify({ template_id: templateId }),
+        body: JSON.stringify({ template_id: templateId, aspect_ratio: aspectRatio }),
       }),
     videoDownloadUrl: (projectId, format) => `/api/projects/${projectId}/video/download?format=${format}`,
     uploadSpeakerAvatar: (projectId, speakerId, file) => {

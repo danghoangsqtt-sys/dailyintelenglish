@@ -176,3 +176,73 @@ def test_download_unsupported_format_returns_422(client: TestClient):
 
     response = client.get(f"/api/projects/{project['id']}/video/download?format=avi")
     assert response.status_code == 422
+
+
+# --- Task 2.5b: 9:16 vertical output (real gap found by Task 2.1c's QA pass) ---
+
+
+def test_generate_video_default_omits_vertical_output(client: TestClient):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+
+    response = client.post(f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"})
+
+    assert response.status_code == 200
+    assert response.json()["data"]["mp4_path_vertical"] is None
+
+
+def test_generate_video_with_9x16_returns_vertical_path(client: TestClient):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+
+    response = client.post(
+        f"/api/projects/{project['id']}/video/generate",
+        json={"template_id": "midnight", "aspect_ratio": "9:16"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["mp4_path_vertical"]
+    # The 16:9 path is still produced alongside the vertical one.
+    assert data["mp4_path"]
+
+
+def test_generate_video_invalid_aspect_ratio_returns_422(client: TestClient):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+
+    response = client.post(
+        f"/api/projects/{project['id']}/video/generate",
+        json={"template_id": "midnight", "aspect_ratio": "4:3"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_download_mp4_vertical_after_9x16_generate(client: TestClient):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+    client.post(
+        f"/api/projects/{project['id']}/video/generate",
+        json={"template_id": "midnight", "aspect_ratio": "9:16"},
+    )
+
+    response = client.get(f"/api/projects/{project['id']}/video/download?format=mp4_vertical")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "video/mp4"
+
+
+def test_download_mp4_vertical_returns_404_when_not_generated(client: TestClient):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+    client.post(f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"})
+
+    response = client.get(f"/api/projects/{project['id']}/video/download?format=mp4_vertical")
+
+    assert response.status_code == 404

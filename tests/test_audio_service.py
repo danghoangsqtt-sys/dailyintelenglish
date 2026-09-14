@@ -113,9 +113,11 @@ async def test_mix_project_with_background_music_caps_at_ducking_ceiling(tmp_pat
 
     result = await audio_service.mix_project(PROJECT, lines, background_music_filename="bg.mp3")
 
-    # The final mix includes speech (normalized to -16) overlaid with music capped at -18,
-    # so the combined loudness should not spike far above either component.
-    assert result["loudness_lufs"] < TARGET_LOUDNESS_LUFS + 3
+    # The final mix (speech + ducked music) is normalized as a whole, so the delivered
+    # file must land within ROADMAP.md's declared ±1dB tolerance even with music present
+    # (Task 2.5a fix — previously only the pre-music voice stem was normalized, leaving
+    # the actually-delivered with-music file's loudness unmeasured/unnormalized).
+    assert result["loudness_lufs"] == pytest.approx(TARGET_LOUDNESS_LUFS, abs=1.0)
 
 
 async def test_mix_project_raises_on_missing_background_music_file(tmp_path):
