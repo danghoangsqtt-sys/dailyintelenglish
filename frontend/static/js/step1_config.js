@@ -74,9 +74,13 @@
   }
 
   function escapeHtml(str) {
+    // textContent -> innerHTML escapes &, <, > (text-node context) but leaves " and '
+    // untouched, since neither is special in text content -- only inside an
+    // attribute value, which is exactly how every call site here uses the result
+    // (value="...", title="..."). Escape those too so this is genuinely safe for both.
     const div = document.createElement("div");
     div.textContent = str == null ? "" : str;
-    return div.innerHTML;
+    return div.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function showError(message) {

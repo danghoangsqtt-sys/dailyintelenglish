@@ -21,16 +21,16 @@ avatar-sourcing question is resolved and delivered as Sub-task 1.7c, but the act
 lip-sync model integration is a distinct, not-yet-started future effort), neither
 required for any task's own acceptance criteria]. Progress reflects completed subtasks.
 Phase 2's row counts discrete ROADMAP checklist items across 2.1 (4), 2.2 (4), 2.3 (7),
-2.4 (3), and 2.5 (3, new scope added 2026-09-14, not in the original Phase 2 plan) = 21
-total, 19 done (2.1's 4; 2.2's 2 real fixes — "Optimize OmniVoice batch" and "Add
-progress cancellation" are moot/deferred, not counted done; 2.3's 7; 2.4's 3; 2.5's 3,
-all done 2026-09-14); this row was stale at 0/10 before 2026-09-14's Task 2.4 update,
-not updated in sync during 2.2/2.3 — corrected then and kept current since.*
+2.4 (3), 2.5 (3), and 2.6 (3, new scope added 2026-09-14, not in the original Phase 2
+plan) = 24 total, 22 done (2.1's 4; 2.2's 2 real fixes — "Optimize OmniVoice batch" and
+"Add progress cancellation" are moot/deferred, not counted done; 2.3's 7; 2.4's 3; 2.5's
+3; 2.6's 3, all done 2026-09-14); this row was stale at 0/10 before 2026-09-14's Task
+2.4 update, not updated in sync during 2.2/2.3 — corrected then and kept current since.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
 | Phase 1 — Build | ✅ Complete | 28 | 30 |
-| Phase 2 — Testing | 🔄 In Progress | 19 | 21 |
+| Phase 2 — Testing | 🔄 In Progress | 22 | 24 |
 | Phase 3 — Review | ⏳ Not Started | 0 | 6 |
 
 ## Phase 1 Task Status
@@ -270,6 +270,18 @@ not updated in sync during 2.2/2.3 — corrected then and kept current since.*
   (both now marked RESOLVED) and `tasks/task-2.5.md` for the full record.
 - 530/530 full suite passes (up from 515), zero flakes this run, `ruff`/`node --check`
   clean.
+
+### 2.6 Fix 3 findings from the post-Task-2.5 audit pass — ✅ DONE (2026-09-14)
+- [x] `ARCHITECTURE.md` doc drift — updated `### Video` API docs for `aspect_ratio` and
+  the `mp4_vertical` download format.
+- [x] Orphaned `mp4_path_vertical` on regenerate — `generate_video()` now deletes a
+  stale vertical file when a later regenerate doesn't request `"9:16"` again.
+- [x] `escapeHtml()` unsafe for attribute contexts — now escapes `"`/`'` too. Verified
+  as a real bug via revert-and-confirm-failure before restoring the fix.
+- 3 other findings (missing phase-completion tag, pre-existing error-path field-wiping,
+  a migration-fallback design note) left noted-only in Known Issues per user choice.
+- 532/533 full suite passes (1 pre-existing tracked flake, confirmed via isolated
+  re-run), `ruff`/`node --check` clean.
 
 ## Decision Log
 
@@ -536,6 +548,18 @@ not updated in sync during 2.2/2.3 — corrected then and kept current since.*
   any second real app restart (fixed with a `schema_migrations` tracking table). 530/530
   full suite passes (up from 515), zero flakes. See `tasks/task-2.5.md`. | User; PM
   (Claude Code) |
+| 2026-09-14 | User ran `/vp-audit` before starting Phase 3. PM found 6 real findings
+  (self-review of Task 2.4/2.5's own code, not just a docs check): stale `ARCHITECTURE.md`
+  API docs, `mp4_path_vertical` orphaning on a 16:9-only regenerate, `escapeHtml()` unsafe
+  for attribute-value contexts (already-exploitable for `speaker.name`, pre-existing),
+  `save_video_job`'s error path wiping previous successful paths to NULL (pre-existing),
+  no `die-vp-p1-complete` tag (tag hygiene), and a single-statement assumption in
+  `init_db()`'s new migration fallback (design note). User chose to fix the first 3 now
+  (Task 2.6), leave the other 3 noted-only. All 3 fixes real-verified — the
+  `escapeHtml()` fix specifically via revert-and-confirm-failure (a real quote-breakout
+  payload broke a rendered attribute without the fix) before restoring it. 532/533 full
+  suite passes (1 pre-existing tracked flake). See `tasks/task-2.6.md`. | User; PM
+  (Claude Code) |
 
 ## Known Issues
 
@@ -699,6 +723,33 @@ not updated in sync during 2.2/2.3 — corrected then and kept current since.*
   by running `test_video_studio_browser.py` three times in a row against the real,
   already-migrated `data/app.db` — 10/10 pass every time (was failing to start at all
   before this fix).
+
+- **No `die-vp-p1-complete` git tag despite Phase 1 being marked done (found 2026-09-14,
+  `/vp-audit` pass before Phase 3, not fixed):** PHASE-STATE.md has recorded Phase 1 as
+  `done` since 2026-09-13, but no `die-vp-p1-complete` tag was ever created (the
+  per-task `-done` tags exist, the phase-level one doesn't). Pure tag-hygiene gap, no
+  functional impact — user chose not to act on it now.
+- **`save_video_job`'s error path wipes `mp4_path`/`srt_path`/`mp4_path_vertical`/
+  `background_image` to NULL on a failed regenerate (found 2026-09-14, `/vp-audit` pass,
+  pre-existing, not fixed):** `app/api/video.py`'s `except Exception` handler calls
+  `save_video_job(db, project_id, status="error", error_message=str(exc), commit=False)`
+  without passing through the previous successful values — the UPSERT's
+  `ON CONFLICT DO UPDATE SET x = excluded.x` then sets all of them to `NULL`/default,
+  even though the actual files from the last successful render likely still exist on
+  disk. Real but narrow (only triggers if a user explicitly re-triggers generation and
+  it fails after a prior success) and pre-existing (Task 2.5b's `mp4_path_vertical` just
+  inherited the same already-existing pattern for the other 3 fields, not a new
+  introduction) — user chose not to act on it now.
+- **`init_db()`'s migration-idempotency fallback assumes single-statement migrations
+  (found 2026-09-14, `/vp-audit` pass, design note, not fixed):** the `duplicate column
+  name`/`already exists` fallback in `app/db/database.py::init_db()` (added 2026-09-14,
+  see the resolved entry above) treats a caught error as "this whole migration file was
+  already applied." Correct for migrations 004/005 (each exactly one `ALTER TABLE ADD
+  COLUMN` statement) but would silently skip the *rest* of a hypothetical future
+  migration file that mixed one already-applied non-idempotent statement with a genuinely
+  new one. Not exploitable today — logged so a future migration author keeps each
+  migration file to one non-idempotent statement, or the fallback gets upgraded to
+  per-statement tracking if that stops being true.
 
 ## Version
 

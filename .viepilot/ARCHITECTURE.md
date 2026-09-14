@@ -355,9 +355,9 @@ GET    /api/projects/{id}/audio/download     # Download final audio (?format=mp3
 ### Video
 ```
 GET    /api/video/templates                  # List the 3 fixed background templates
-POST   /api/projects/{id}/video/generate     # Generate video (body: {template_id}; synchronous)
+POST   /api/projects/{id}/video/generate     # Generate video (body: {template_id, aspect_ratio?: "16:9"|"9:16"}; synchronous)
 GET    /api/projects/{id}/video/status       # Poll current video_jobs row (plain GET, not SSE — see Task 1.6's audio/status for the same documented deviation)
-GET    /api/projects/{id}/video/download     # Download video (?format=mp4|srt)
+GET    /api/projects/{id}/video/download     # Download video (?format=mp4|mp4_vertical|srt)
 ```
 
 ### Thumbnails

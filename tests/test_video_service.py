@@ -111,6 +111,33 @@ async def test_generate_video_default_aspect_ratio_does_not_render_vertical(tmp_
     assert "mp4_path_vertical" not in result
 
 
+async def test_generate_video_16x9_regenerate_deletes_stale_vertical_file(tmp_path, monkeypatch):
+    """Task 2.6b: a vertical file from an earlier `"9:16"` call must not linger as an
+    orphan on disk once a later regenerate call doesn't ask for it again -- it was
+    derived from the 16:9 render/subtitles that call just replaced, so it's stale."""
+    from pathlib import Path
+
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    audio_path = tmp_path / "mix.mp3"
+    Sine(440).to_audio_segment(duration=500).apply_gain(-20).export(str(audio_path), format="mp3", bitrate="192k")
+    audio_job = {
+        "status": "complete",
+        "mp3_path": str(audio_path),
+        "timestamps": [{"start_sec": 0.0, "end_sec": 0.5, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}],
+    }
+
+    first = await video_service.generate_video("proj-stale-vertical", audio_job, "midnight", "9:16")
+    vertical_path = Path(first["mp4_path_vertical"])
+    assert vertical_path.is_file()
+
+    second = await video_service.generate_video("proj-stale-vertical", audio_job, "midnight")
+
+    assert "mp4_path_vertical" not in second
+    assert not vertical_path.exists()
+
+
 async def test_generate_video_9x16_produces_a_real_playable_vertical_mp4(tmp_path, monkeypatch):
     """Task 2.5b, closing the real gap Task 2.1c found: real ffprobe confirms the
     rendered vertical MP4 is genuinely 9:16 (VIDEO_WIDTH_SHORTS x VIDEO_HEIGHT_SHORTS),

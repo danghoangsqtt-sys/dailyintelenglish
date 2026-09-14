@@ -391,6 +391,26 @@ restart once a non-idempotent migration exists (fixed with a `schema_migrations`
 tracking table). 530/530 full suite passes (up from 515), zero flakes. See
 `.viepilot/phases/02-testing-polish/tasks/task-2.5.md` for the full record.
 
+### 2.6 Fix 3 findings from the post-Task-2.5 audit pass
+
+New scope added 2026-09-14: user ran `/vp-audit` before starting Phase 3 and selected 3
+of 6 real findings to fix immediately (the other 3 are pre-existing/low-severity, noted
+only in TRACKER.md Known Issues).
+
+- [x] **ARCHITECTURE.md doc drift** — fixed: the `### Video` API docs now mention
+  `aspect_ratio` and the `mp4_vertical` download format (stale since Task 2.5b).
+- [x] **Orphaned `mp4_path_vertical` on regenerate** — fixed: `generate_video()` now
+  deletes a stale vertical file left over from an earlier `"9:16"` call when a later
+  regenerate doesn't request it again. Real bug in Task 2.5b's own design, found by
+  self-review during this audit pass.
+- [x] **`escapeHtml()` unsafe for attribute-value contexts** — fixed: now also escapes
+  `"`/`'`, not just `&`/`<`/`>`. Verified as a real bug (not just theoretical) by
+  reverting the fix, watching a real Playwright test fail for the right reason (a quote
+  breaking out of a rendered `value="..."` attribute), then restoring it.
+
+532/533 full suite passes (1 pre-existing tracked Gemini-retry flake, confirmed via
+isolated re-run). See `.viepilot/phases/02-testing-polish/tasks/task-2.6.md`.
+
 ---
 
 ## Phase 3 — Review & Documentation (Day 15–21)

@@ -199,6 +199,13 @@ async def generate_video(
         except Exception as exc:
             raise VideoRenderError(f"Vertical video rendering failed: {exc}") from exc
         result["mp4_path_vertical"] = str(mp4_path_vertical)
+    else:
+        # A previous call for this project may have rendered a vertical file (Task 2.6b
+        # fix): it was derived from the 16:9 render/subtitle-burn we just replaced, so
+        # it's now stale and would otherwise linger on disk as an orphan even though the
+        # DB row's mp4_path_vertical is about to go back to NULL (nothing references it
+        # any more, but nothing deleted it either — found in the post-Task-2.5 audit).
+        await asyncio.to_thread(mp4_path_vertical.unlink, missing_ok=True)
 
     return result
 

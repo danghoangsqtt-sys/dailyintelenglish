@@ -7,18 +7,18 @@
 - **Started:** 2026-09-13
 - **Target Completion:** 2026-09-20 (per ROADMAP.md's Day 8-14 target, adjusted forward
   since Phase 1 finished on Day 3 instead of Day 7)
-- **Milestone Progress:** 5 / 5 tasks (4 original + Task 2.5, new scope) fully done
+- **Milestone Progress:** 6 / 6 tasks (4 original + Tasks 2.5+2.6, new scope) fully done
   except Task 2.2's one explicitly-deferred item: 2.1 Quality Testing — ✅ DONE, all 4
   ROADMAP items closed; 2.3 UX Polish — ✅ DONE, all 7 ROADMAP items resolved; 2.4 UI
   Redesign Slice 1 — ✅ DONE; 2.5 Fix Task 2.1c's 3 findings — ✅ DONE, plus 2 more real
-  bugs found+fixed while verifying; 2.2 Bug Fixes & Performance has its buildable scope
-  done — 1 item fixed, 1 already-done-closed-via-audit, 1 moot, **1 genuinely deferred as
-  a separate future task ("progress cancellation" — the only item keeping Phase 2 from
-  being fully closed)**. Tasks 2.4 and 2.5 were both added as new scope after the
-  original ROADMAP.md Phase 2 bullets were written, so the original 3-task ROADMAP count
-  predates them.
-- **Test Suite Status:** 530 passed, 0 failed, zero flakes on the most recent run, ruff
-  clean, all `node --check` clean
+  bugs found+fixed while verifying; 2.6 Fix 3 post-Task-2.5 audit findings — ✅ DONE; 2.2
+  Bug Fixes & Performance has its buildable scope done — 1 item fixed, 1
+  already-done-closed-via-audit, 1 moot, **1 genuinely deferred as a separate future task
+  ("progress cancellation" — the only item keeping Phase 2 from being fully closed)**.
+  Tasks 2.4, 2.5, and 2.6 were all added as new scope after the original ROADMAP.md
+  Phase 2 bullets were written, so the original 3-task ROADMAP count predates them.
+- **Test Suite Status:** 532 passed, 1 pre-existing tracked flake (confirmed via isolated
+  re-run, not a regression), ruff clean, all `node --check` clean
 
 ---
 
@@ -205,3 +205,25 @@
     behavior change.
   - 530/530 full suite passes (up from 515), zero flakes this run, `ruff`/`node --check`
     clean. See `tasks/task-2.5.md` for the full record and evidence.
+
+### Task 2.6: Fix 3 findings from the post-Task-2.5 audit pass
+- **Status:** ✅ Done (2026-09-14)
+- **Details:** User ran `/vp-audit` before Phase 3; selected 3 of 6 findings to fix now.
+  - **2.6a:** `ARCHITECTURE.md`'s `### Video` API docs updated to mention `aspect_ratio`
+    and the `mp4_vertical` download format (was stale since Task 2.5b).
+  - **2.6b:** `generate_video()` now deletes a stale `video_vertical.mp4` left over from
+    an earlier `"9:16"` call when a later regenerate doesn't request it again — was
+    silently orphaning the file on disk while the DB row's `mp4_path_vertical` quietly
+    went back to `NULL`. New real-file-deletion test.
+  - **2.6c:** `escapeHtml()` (Step 1) now also escapes `"`/`'`, not just `&`/`<`/`>` —
+    was unsafe for the attribute-value contexts (`value="..."`, `title="..."`) it's
+    actually used in. **Verified as a real, not just plausible, bug**: reverted the fix,
+    watched the new Playwright test fail for the right reason (a quote-breakout payload
+    in a speaker name actually broke the rendered `value` attribute), restored the fix,
+    confirmed it passes.
+  - 3 other audit findings (missing `die-vp-p1-complete` tag, pre-existing error-path
+    field-wiping in `save_video_job`, a design note on `init_db()`'s migration fallback)
+    were left noted-only in TRACKER.md Known Issues per the user's explicit choice.
+  - 532/533 full suite passes (1 pre-existing tracked Gemini-retry flake, confirmed via
+    isolated re-run — Task 2.6 touched zero Gemini code), `ruff`/`node --check` clean.
+    See `tasks/task-2.6.md` for the full record.
