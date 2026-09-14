@@ -275,17 +275,36 @@ quota/billing is resolved. **Flagging back to the user separately**, since this 
 API key needs a billing/plan check on Google AI Studio, not just "wait a few minutes" as
 diagnosed earlier today.
 
-**Final real-run result (completed 2026-09-14):** `data/quality_reviews/script-samples/20260914T020330.711707Z/` —
+**First real-run result (2026-09-14, before the model-fallback fix):** `data/quality_reviews/script-samples/20260914T020330.711707Z/` —
 `manifest.json` confirms **1/18 succeeded, 17/18 failed**, `status: completed_with_errors`, exit
 code 1 (truthful, matches design). Only `B1__news` (10 lines) generated successfully; every
 other case failed on real `HTTP 503` (early cases) or real `HTTP 429 "You exceeded your current
 quota"` (case 2 onward, and consistently for every case from #10 through #18) — a hard quota
 wall, not a flaky retry situation. PM spot-checked the manifest directly (not just the console
 log): the one success is real and complete, every failure's stored `error.type`/`error.message`
-matches the real exception, no secrets present. This is far short of the 18 samples Task 2.1
-needs for an actual CEFR review campaign — re-running command 7 once Gemini quota/billing is
-resolved is required before Task 2.1a can be considered to have delivered its real output, even
-though the code itself is already fully accepted.
+matches the real exception, no secrets present.
+
+**Second real-run result (2026-09-14, after shipping the `GEMINI_MODEL_FALLBACKS` fix —
+see TRACKER.md 2026-09-14 Decision Log entries):** `data/quality_reviews/script-samples/20260914T070018.898570Z/` —
+`manifest.json` confirms **11/18 succeeded, 7/18 failed**, `status: completed_with_errors`,
+exit code 1. Real improvement directly attributable to the fallback chain: multiple cases only
+succeeded after `gemini-3.8-flash` and `gemini-3.7-flash` both exhausted their retries on real
+429/503 responses and the request fell through to `gemini-3.6-flash` (console log shows this
+explicitly per case). The 7 remaining failures are a *different* failure class — real
+connection-level errors (`httpx.RequestError`: "All connection attempts failed" / empty message)
+rather than HTTP 429/503 — which the current design deliberately does not retry or fall back on
+("any other non-200 status / connection failure fails immediately, since retrying won't fix a
+bad request" — this reasoning was written for auth/bad-request errors, not transient network
+drops, and is a legitimate candidate to revisit in a future task, not this one). PM verified the
+manifest directly: 11 real successes (A1/A2 nearly complete, B1 complete, B2 partial, only
+C1_small_talk from C1/C2), 7 failures clustered at the end of the run (`A2_news`, `B2_news`,
+`C1_interview`, `C1_news`, `C2_small_talk`, `C2_interview`, `C2_news`), consistent with the
+underlying network/API degrading further as the run progressed rather than anything specific to
+higher CEFR levels. **This is real, usable evidence for 11 of 18 CEFR×genre combinations** — a
+material improvement, though still short of full coverage. Re-running with
+`--levels C1 C2 --genres interview news` (or a full re-run) once the network/API is stable again
+would close the remaining gap; not done in this session since 11/18 already gives PM/user real
+content to start a CEFR review pass on the levels most complete (A1–B1).
 
 ## PM Acceptance
 
