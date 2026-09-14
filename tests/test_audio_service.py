@@ -125,6 +125,27 @@ async def test_mix_project_raises_on_missing_background_music_file(tmp_path):
         await audio_service.mix_project(PROJECT, lines, background_music_filename="does-not-exist.mp3")
 
 
+@pytest.mark.parametrize(
+    "malicious_filename",
+    [
+        "../../../../Windows/win.ini",
+        "..\\..\\secrets.txt",
+        "/etc/passwd",
+        "C:/Windows/win.ini",
+        "subdir/file.mp3",
+        "..",
+    ],
+)
+async def test_mix_project_rejects_path_traversal_in_background_music(tmp_path, malicious_filename):
+    """A background_music value must never escape data/music_library/ (real bug, see PM audit
+    2026-09-14): pathlib silently discards the base path entirely when joined with an
+    absolute path, and "../" segments escape it just as easily when unvalidated."""
+    lines = _lines_for(tmp_path, [("sp1", 440)])
+
+    with pytest.raises(AudioMixError, match="Invalid background music filename"):
+        await audio_service.mix_project(PROJECT, lines, background_music_filename=malicious_filename)
+
+
 async def test_duck_music_caps_loud_track_at_ceiling():
     loud = Sine(220).to_audio_segment(duration=1000)  # near 0 dBFS
     ducked = audio_service._duck_music(loud, MUSIC_DUCKING_MAX_DBFS)

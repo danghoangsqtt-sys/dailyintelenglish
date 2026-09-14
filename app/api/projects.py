@@ -193,6 +193,10 @@ async def delete_project(project_id: str, db: aiosqlite.Connection = Depends(get
     started_at = time.perf_counter()
     async with _write_transaction(db):
         await project_service.delete_project(db, project_id, commit=False)
+    # Only after the transaction above has durably committed -- filesystem cleanup is
+    # best-effort and must never run before the DB delete is confirmed (see
+    # cleanup_project_artifacts docstring).
+    await project_service.cleanup_project_artifacts(project_id)
     return ok(None, started_at=started_at)
 
 

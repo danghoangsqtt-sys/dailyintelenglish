@@ -1,5 +1,6 @@
 """YouTube Package routes (Task 1.9)."""
 
+import asyncio
 import time
 
 import aiosqlite
@@ -81,7 +82,11 @@ async def export_youtube_package(project_id: str, db: aiosqlite.Connection = Dep
     if missing:
         raise ValidationError(f"Cannot export the full package yet: missing {', '.join(missing)}.")
 
-    zip_bytes = youtube_service.build_export_zip(
+    # build_export_zip is synchronous (real disk reads + zipfile DEFLATE compression of a
+    # multi-MB video) -- must not block the event loop, same class of bug fixed for 4 other
+    # call sites in Task 2.2 (this route was added separately and missed that pass).
+    zip_bytes = await asyncio.to_thread(
+        youtube_service.build_export_zip,
         package,
         video_job,
         favorite_thumbnail,

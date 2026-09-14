@@ -1,14 +1,26 @@
 """Project CRUD and state-machine logic."""
 
+import asyncio
 import json
+import logging
+import shutil
 import uuid
 from datetime import datetime, timezone
 
 import aiosqlite
 
+from app.core.config import settings
 from app.core.constants import PROJECT_STATUSES
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.project import ProjectUpdate, ScriptConfig, SpeakerConfig, SpeakerUpdate
+
+logger = logging.getLogger(__name__)
+
+# Every per-project data directory that a real project deletion must also clean up
+# (project_service knows none of these services' internals -- this list must stay in
+# sync with the "<category>/<project_id>" convention used by avatar_service, tts_service,
+# audio_service, video_service, and thumbnail_service).
+_PROJECT_ARTIFACT_CATEGORIES = ("avatars", "audio", "video", "thumbnails", "tts_cache")
 
 _LIST_COLUMNS = "id, name, status, cefr_level, genre, accent, created_at, updated_at"
 _DETAIL_COLUMNS = (
@@ -306,3 +318,33 @@ async def delete_project(db: aiosqlite.Connection, project_id: str, commit: bool
     await db.execute("DELETE FROM projects WHERE id = ?", (project_id,))
     if commit:
         await db.commit()
+
+
+def _remove_project_directory_sync(category: str, project_id: str) -> None:
+    """Best-effort removal of one per-project data directory; never raises for a
+    directory that was never created (nothing was ever generated in that category)."""
+    directory = settings.DATA_DIR / category / project_id
+    try:
+        shutil.rmtree(directory)
+    except FileNotFoundError:
+        pass
+    except OSError:
+        logger.warning(
+            "project_artifact_cleanup_failed category=%s project_id=%s",
+            category,
+            project_id,
+            exc_info=True,
+        )
+
+
+async def cleanup_project_artifacts(project_id: str) -> None:
+    """Remove a deleted project's on-disk files (avatars, audio, video, thumbnails, TTS
+    cache) — the DB row's ON DELETE CASCADE only ever removed related table rows, never
+    these directories, so every deleted project previously leaked its files permanently.
+
+    Best-effort by design: call only *after* the project's DB row is durably committed as
+    deleted, never inside the same transaction — a filesystem failure here must not roll
+    back (or block) the fact that the project record itself is already gone.
+    """
+    for category in _PROJECT_ARTIFACT_CATEGORIES:
+        await asyncio.to_thread(_remove_project_directory_sync, category, project_id)

@@ -363,6 +363,28 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   building CEFR-based model routing — same mechanism as the same-day fallback-chain fix, just
   a longer chain (5 models now), no new architecture needed. Deliberately did NOT add
   `gemini-3.1-pro-preview` anywhere. 92/92 tests pass on the affected files after the change. | User; PM (Claude Code) |
+| 2026-09-14 | User asked PM to handle the 2 flagged structural risks and run a deep
+  bug-hunting audit. Risks: removed unused `google-generativeai` dependency (confirmed via
+  whole-repo grep, zero imports anywhere), pinned every `requirements.txt` entry to its
+  exact installed/tested version (was unbounded `>=` everywhere), and added `playwright`
+  (was missing entirely despite 12 `test_*_browser.py` files depending on it directly —
+  confirmed a fresh install would fail to collect those tests). Audit: dispatched a
+  research agent with explicit context on what NOT to re-flag (already-reviewed patterns),
+  then independently re-verified every one of its 5 findings against the real code (and,
+  for the path-traversal one, with a live pathlib repro) before fixing anything — PM does
+  not act on a subagent's claim without checking it first. 4 real bugs fixed: (1) HIGH —
+  `audio_service.mix_project`'s `background_music_filename` had zero validation before
+  being joined onto `music_library/`, letting an absolute path silently discard the base
+  directory or a `../` sequence escape it entirely (confirmed live); fixed with the same
+  guard `music.py` already uses. (2) MEDIUM — `youtube.py`'s export route ran synchronous
+  `build_export_zip` (real disk reads + zip compression of a multi-MB video) directly on
+  the event loop, same bug class as Task 2.2, missed because this route was added
+  separately; wrapped in `asyncio.to_thread`. (3) MEDIUM — `delete_project` never cleaned
+  up any of the 5 per-project data directories, an unbounded storage leak; new
+  `cleanup_project_artifacts()`, called only after the DB transaction commits. (4) LOW —
+  `tts_service.get_cached_audio_path` was the one file-resolver in the app skipping the
+  containment/existence check its siblings use; brought in line. 16 new tests, full suite
+  re-run green. See Known Issues for the one finding deliberately left open. | User; PM (Claude Code) |
 | 2026-09-14 | User separately asked to add "3.1" specifically, believing it stable with no
   announced retirement. PM checked the live `ai.google.dev/gemini-api/docs/deprecations` page
   before adding anything (not just `models.list`, which carries no lifecycle metadata): the
@@ -460,6 +482,39 @@ required for any task's own acceptance criteria]. Progress reflects completed su
   no longer sharing one global patched `asyncio.sleep` across the whole test process) — noting
   here only because it now reaches more tests than before, purely because there are more
   Gemini-retry-shaped tests to be caught by it after today's fallback-chain work.
+  **2026-09-14, third occurrence, different root cause identified:** a third full-suite run
+  (after the security/correctness audit fixes) took 884.83s — the slowest yet — and failed 8
+  tests: 3 of the known Gemini-retry-pattern class, plus for the first time 5 real Playwright
+  browser tests (`test_music_library_browser.py`, `test_music_library_waveform_browser.py`
+  x2, `test_responsive_layout_browser.py` x2). Investigated *why* the machine was unusually
+  slow this time instead of just re-running blind: `tasklist` showed 17 `chrome.exe`
+  processes and the UI-preview dev server (`uvicorn`, port 8000) still running from earlier
+  in this same session — real accumulated resource contention, not just the existing
+  sleep-mock-leak theory. Stopped the dev server (confirmed via `netstat` it was mine before
+  killing it). Deliberately did NOT kill the 17 Chrome processes — could not confirm via
+  `tasklist`/`wmic` (PowerShell was also temporarily unavailable) whether all of them were
+  orphaned Playwright test browsers or included a real user window, and killing a real
+  browser window without that certainty was judged not worth the risk; left for the user to
+  clean up if desired. All 8 failing tests passed instantly/cleanly when re-run in isolation
+  immediately after (3 Gemini tests instant, all 5 browser tests in 31s total) — consistent
+  with resource contention, not a regression from the same session's bug fixes.
+
+- **Known, deliberately deferred race (found 2026-09-14 by PM audit, not fixed):**
+  `app/api/audio.py`, `video.py`, and `youtube.py`'s `/generate`/export routes each snapshot
+  the project in a `_read_transaction`, do slow unlocked work (mix/render/zip), then
+  re-acquire `_write_transaction` to insert/update a job row keyed on `project_id` — without
+  re-checking the project still exists. If `DELETE /api/projects/{id}` completes in that
+  window, the subsequent `INSERT` violates the `ON DELETE CASCADE` foreign key (`PRAGMA
+  foreign_keys = ON`), raising an unhandled `sqlite3.IntegrityError` that surfaces as a raw
+  500 instead of a clean 404, and leaves whatever files were already rendered as further
+  orphans (on top of the orphan class already fixed today for the delete-then-nothing-
+  running case). Real, but requires this app's single local user to run two conflicting
+  actions on the *same* project from separate sessions/tabs simultaneously — a narrow
+  trigger, not a remotely-exploitable or data-corrupting one (the FK constraint itself
+  still holds; nothing inconsistent is ever persisted). A clean fix means catching
+  `sqlite3.IntegrityError` around the final write in 3 files (audio/video/youtube), 2 write
+  blocks each (the error branch and the success branch) — deliberately not rushed into this
+  session's fix batch; pick up as its own small task later if it's ever hit in practice.
 
 ## Version
 

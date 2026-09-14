@@ -89,6 +89,35 @@ async def test_delete_project_missing_raises_not_found(db):
         await project_service.delete_project(db, "does-not-exist")
 
 
+async def test_cleanup_project_artifacts_removes_every_category_directory(monkeypatch, tmp_path):
+    """Real bug found by PM audit 2026-09-14: delete_project only ever removed DB rows
+    (cascade), never any of the 5 per-project data directories -- every deleted project
+    permanently leaked its avatars/audio/video/thumbnails/tts_cache files."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    project_id = "proj-cleanup-1"
+    for category in ("avatars", "audio", "video", "thumbnails", "tts_cache"):
+        directory = tmp_path / category / project_id
+        directory.mkdir(parents=True)
+        (directory / "file.bin").write_bytes(b"data")
+
+    await project_service.cleanup_project_artifacts(project_id)
+
+    for category in ("avatars", "audio", "video", "thumbnails", "tts_cache"):
+        assert not (tmp_path / category / project_id).exists()
+
+
+async def test_cleanup_project_artifacts_is_a_noop_when_nothing_was_ever_generated(monkeypatch, tmp_path):
+    """A project deleted before any avatar/audio/video/thumbnail/TTS work ever happened
+    has no directories to remove -- must not raise."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+
+    await project_service.cleanup_project_artifacts("never-generated-anything")
+
+
 async def test_update_project_syncs_config_json_even_for_unrelated_field(db):
     project = await project_service.create_project(db, make_config())
 

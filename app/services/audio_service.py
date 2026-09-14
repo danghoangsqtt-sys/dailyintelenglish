@@ -188,6 +188,31 @@ def _mix_project_sync(
     }
 
 
+def _validate_music_filename(filename: str) -> str:
+    """Reject a background-music filename that could escape `data/music_library/`.
+
+    Same character-level check as `app/api/music.py::_validate_filename` — this is a
+    separate call site (mix_project accepts a bare filename from the audio-generate
+    request body, not the music-library upload/list/delete routes) so it needs its own
+    guard rather than assuming a filename reaching here was already validated there.
+    Without this, an absolute path (e.g. "C:/Windows/win.ini") silently discards the
+    `music_library` base entirely (pathlib join semantics), and "../"-style relative
+    paths escape it just as easily.
+    """
+    cleaned = filename.strip()
+    if (
+        not cleaned
+        or cleaned != filename
+        or cleaned in {".", ".."}
+        or "/" in cleaned
+        or "\\" in cleaned
+        or Path(cleaned).name != cleaned
+        or Path(cleaned).is_absolute()
+    ):
+        raise AudioMixError(f"Invalid background music filename: {filename!r}")
+    return cleaned
+
+
 async def mix_project(
     project: dict,
     lines: list[dict],
@@ -213,7 +238,8 @@ async def mix_project(
 
     background_music_path: Path | None = None
     if background_music_filename:
-        candidate = settings.DATA_DIR / "music_library" / background_music_filename
+        safe_name = _validate_music_filename(background_music_filename)
+        candidate = settings.DATA_DIR / "music_library" / safe_name
         if not await asyncio.to_thread(candidate.is_file):
             raise AudioMixError(f"Background music file not found: {background_music_filename}")
         background_music_path = candidate

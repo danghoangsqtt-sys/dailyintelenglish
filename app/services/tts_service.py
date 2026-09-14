@@ -170,8 +170,22 @@ async def synthesize_line(
     return {"audio_path": str(audio_path), "engine_used": engine_used}
 
 
+def _resolve_cached_audio_sync(project_id: str, stored_path: str) -> str:
+    """Validate a stored audio-cache path is still a real file under this project's own
+    cache directory before it's ever handed to FileResponse — same containment check
+    already used by avatar_service._resolve_avatar_sync and
+    thumbnail_service._resolve_content_sync, applied here for consistency (a moved/deleted
+    cache file would otherwise surface as an unhandled FileNotFoundError/500 instead of a
+    clean 404)."""
+    candidate = Path(stored_path).resolve()
+    project_root = (settings.DATA_DIR / "tts_cache" / project_id).resolve()
+    if project_root not in candidate.parents or not candidate.is_file():
+        raise NotFoundError(f"Cached audio for line not found under project {project_id}")
+    return str(candidate)
+
+
 async def get_cached_audio_path(db: aiosqlite.Connection, project_id: str, line_id: str) -> str | None:
-    """Look up a previously synthesized line's cached audio file path, if any."""
+    """Look up a previously synthesized line's cached, validated audio file path, if any."""
     cursor = await db.execute(
         "SELECT audio_cache_path FROM script_lines WHERE project_id = ? AND id = ?",
         (project_id, line_id),
@@ -179,4 +193,6 @@ async def get_cached_audio_path(db: aiosqlite.Connection, project_id: str, line_
     row = await cursor.fetchone()
     if row is None:
         raise NotFoundError(f"Script line {line_id} not found for project {project_id}")
-    return row["audio_cache_path"]
+    if not row["audio_cache_path"]:
+        return None
+    return await asyncio.to_thread(_resolve_cached_audio_sync, project_id, row["audio_cache_path"])
