@@ -1,0 +1,62 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CapCut-style — Dashboard</title><link rel="stylesheet" href="../style.css">
+<style>
+  .main { max-width: 1200px; margin: 0 auto; padding: 0 32px 64px; }
+  .hero { padding: 48px 32px 32px; text-align: center; }
+  .hero h1 { font-size: 30px; font-weight: 800; margin: 0 0 10px; color: var(--text); }
+  .hero p { color: var(--muted); font-size: 15px; margin: 0 0 22px; }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
+  .filter-bar { display: flex; gap: 8px; }
+  .filter-btn { padding: 7px 15px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--muted); font-size: 13px; font-weight: 650; }
+  .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .search-box input { min-width: 240px; padding: 9px 14px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); }
+  .project-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .project-card-header h3 { margin: 0; font-size: 16px; font-weight: 750; color: var(--text); }
+  .project-date { font-size: 12px; color: var(--muted); }
+  .thumb { height: 120px; border-radius: 8px; background: var(--surface-3); display: grid; place-items: center; color: var(--muted); font-size: 12px; font-weight: 700; border: 1px solid var(--border); }
+</style>
+</head><body>
+<div class="prototype-banner">UI Direction · Dashboard (launcher) · not production UI</div>
+<header class="topbar">
+  <span class="brand"><span class="brand-mark">D</span>Daily Intel English Studio</span>
+  <div class="actions"><button class="icon-toggle" title="Chế độ tối (tuỳ chọn)">🌙</button></div>
+</header>
+
+<section class="hero">
+  <h1>Tạo podcast tiếng Anh chuẩn với AI</h1>
+  <p>Kịch bản chuẩn CEFR, giọng đọc tự nhiên, video và YouTube package — tất cả trong một workspace.</p>
+  <button class="btn btn-primary large">➕ Tạo dự án mới</button>
+</section>
+
+<main class="main">
+  <div class="toolbar">
+    <div class="filter-bar">
+      <button class="filter-btn active">Tất cả</button>
+      <button class="filter-btn">Nháp</button>
+      <button class="filter-btn">Đang xử lý</button>
+      <button class="filter-btn">Hoàn tất</button>
+    </div>
+    <div class="search-box"><input type="text" placeholder="Tìm dự án..."></div>
+  </div>
+
+  <div class="project-grid">
+    <a class="card project-card" href="workspace-script.html">
+      <div class="thumb">🎙️ Preview</div>
+      <div class="project-card-header"><h3>Tech Trends Weekly</h3><span class="pill running">Đang tạo script</span></div>
+      <div class="muted small">B1 · Interview · 2 giọng · American</div>
+      <div class="project-card-footer"><span class="project-date">Cập nhật 2 giờ trước</span><div class="row"><button class="btn btn-ghost btn-sm">Tiếp tục →</button></div></div>
+    </a>
+    <a class="card project-card" href="workspace-script.html">
+      <div class="thumb">🎙️ Preview</div>
+      <div class="project-card-header"><h3>Daily Small Talk #12</h3><span class="pill done">Hoàn tất</span></div>
+      <div class="muted small">A2 · Small talk · 2 giọng · British</div>
+      <div class="project-card-footer"><span class="project-date">Cập nhật hôm qua</span><div class="row"><button class="btn btn-ghost btn-sm">Mở →</button></div></div>
+    </a>
+    <a class="card project-card" href="workspace-script.html">
+      <div class="thumb">🎙️ Preview</div>
+      <div class="project-card-header"><h3>News Roundup C1</h3><span class="pill warning">Cần duyệt</span></div>
+      <div class="muted small">C1 · News · 3 giọng · Australian</div>
+      <div class="project-card-footer"><span class="project-date">Cập nhật 3 ngày trước</span><div class="row"><button class="btn btn-ghost btn-sm">Mở →</button></div></div>
+    </a>
+  </div>
+</main>
+</body></html>

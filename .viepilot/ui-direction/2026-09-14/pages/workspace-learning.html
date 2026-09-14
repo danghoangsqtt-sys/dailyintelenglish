@@ -1,0 +1,72 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CapCut-style — Workspace · Learning (Step 3)</title><link rel="stylesheet" href="../style.css">
+<style>
+  .vocab-row { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 10px 12px; }
+  .vocab-row.selected { border-color: var(--accent); background: var(--accent-soft); }
+</style>
+</head><body>
+<div class="prototype-banner">UI Direction · Workspace · Learning (maps to real /step3) · not production UI</div>
+<header class="topbar">
+  <span class="brand"><span class="brand-mark">D</span>Daily Intel English Studio</span>
+  <span class="project-name">Tech Trends Weekly</span>
+  <div class="actions"><span class="muted small" id="save-indicator">Đã lưu ✓</span><button class="icon-toggle">🌙</button></div>
+</header>
+
+<div class="shell-flex">
+  <div class="shell-row">
+    <aside class="pane-sidebar" id="pane-sidebar">
+      <button class="btn btn-ghost sidebar-collapse-btn" id="sidebar-collapse-btn">⟨⟨ Thu gọn</button>
+      <div class="sidebar-label">
+        <div class="card-title"><span>Quy trình</span><span class="badge">3 / 7</span></div>
+        <div class="workflow-list">
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Cấu hình</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Kịch bản</span></div>
+          <div class="workflow-item active"><span class="step-dot active">3</span><span>Learning</span></div>
+          <div class="workflow-item"><span class="step-dot">4</span><span class="muted">Giọng đọc (TTS)</span></div>
+          <div class="workflow-item"><span class="step-dot">5</span><span class="muted">Video</span></div>
+          <div class="workflow-item"><span class="step-dot">6</span><span class="muted">Thumbnail</span></div>
+          <div class="workflow-item"><span class="step-dot">7</span><span class="muted">YouTube</span></div>
+        </div>
+        <div class="quick-tabs" style="margin-top:14px">
+          <span class="tab active">Từ vựng</span><span class="tab">Idiom</span><span class="tab">Ngữ pháp</span><span class="tab">Quiz</span>
+        </div>
+      </div>
+    </aside>
+    <div class="resizer-v" id="resizer-left" role="separator" aria-orientation="vertical" tabindex="0"></div>
+
+    <main class="pane-main">
+      <div class="pane-stage">
+        <h1 style="margin:0 0 4px;font-size:22px;color:var(--text)">Learning Content — Từ vựng</h1>
+        <span class="muted small">8 từ vựng · CEFR B1</span>
+        <div id="error-banner" hidden style="margin-top:12px"></div>
+        <div class="stack" style="margin-top:14px">
+          <div class="card vocab-row selected"><div><strong>pick up the slack</strong><div class="muted small">/pɪk ʌp ðə slæk/ · phrasal collocation</div></div><span class="pill done">B1 phù hợp</span></div>
+          <div class="card vocab-row"><div><strong>async collaboration</strong><div class="muted small">/eɪˈsɪŋk/ · noun phrase</div></div><span class="pill done">B1 phù hợp</span></div>
+          <div class="card vocab-row"><div><strong>remote work</strong><div class="muted small">/rɪˈmoʊt wɜːrk/ · noun phrase</div></div><span class="pill done">B1 phù hợp</span></div>
+          <div class="card vocab-row"><div><strong>touch base</strong><div class="muted small">/tʌtʃ beɪs/ · idiom</div></div><span class="pill warning">Kiểm tra lại</span></div>
+        </div>
+        <div class="row" style="justify-content:space-between;margin-top:20px"><button class="btn btn-ghost">🔁 Tạo lại toàn bộ Pack</button><button class="btn btn-primary">Tiếp: Giọng đọc (TTS) →</button></div>
+      </div>
+    </main>
+
+    <div class="resizer-v" id="resizer-right" role="separator" aria-orientation="vertical" tabindex="0"></div>
+    <aside class="pane-inspector" id="pane-inspector">
+      <div class="inspector-title">pick up the slack</div>
+      <div class="stack" style="margin-top:10px">
+        <div class="row between small"><span class="muted">IPA</span><strong>/pɪk ʌp ðə slæk/</strong></div>
+        <div class="row between small"><span class="muted">Từ loại</span><strong>Collocation</strong></div>
+        <label><span class="label">Định nghĩa</span><textarea class="control">To take on extra work/responsibility that someone else isn't doing.</textarea></label>
+        <label><span class="label">Ví dụ trong kịch bản</span><textarea class="control" readonly>"...async collaboration tools have picked up the slack..."</textarea></label>
+        <button class="btn btn-ghost">🔁 Tạo lại mục này</button>
+      </div>
+    </aside>
+  </div>
+</div>
+<script src="../shell.js"></script>
+<script>
+WorkspaceShell.init({
+  sidebar: document.getElementById('pane-sidebar'), resizerLeft: document.getElementById('resizer-left'),
+  inspector: document.getElementById('pane-inspector'), resizerRight: document.getElementById('resizer-right'),
+  collapseBtn: document.getElementById('sidebar-collapse-btn'),
+});
+</script>
+</body></html>

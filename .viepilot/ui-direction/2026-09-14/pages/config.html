@@ -1,0 +1,94 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CapCut-style — Config (Step 1)</title><link rel="stylesheet" href="../style.css">
+<style>
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+  .chip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 8px; }
+  .chip-option { padding: 9px 10px; border: 1px solid var(--border-strong); border-radius: 8px; text-align: center; font-size: 12px; font-weight: 650; color: var(--text-2); background: var(--surface); }
+  .chip-option.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+</style>
+</head><body>
+<div class="prototype-banner">UI Direction · Config (Step 1) · not production UI</div>
+<header class="topbar">
+  <span class="brand"><span class="brand-mark">D</span>Daily Intel English Studio</span>
+  <span class="project-name">Dự án mới</span>
+  <div class="actions"><button class="icon-toggle" title="Chế độ tối (tuỳ chọn)">🌙</button></div>
+</header>
+
+<div class="shell-flex">
+  <div class="shell-row" id="shell-row">
+    <aside class="pane-sidebar" id="pane-sidebar">
+      <button class="btn btn-ghost sidebar-collapse-btn" id="sidebar-collapse-btn">⟨⟨ Thu gọn</button>
+      <div class="sidebar-label">
+        <div class="card-title"><span>Quy trình</span><span class="badge">1 / 7</span></div>
+        <div class="workflow-list">
+          <div class="workflow-item active"><span class="step-dot active">1</span><span>Cấu hình</span></div>
+          <div class="workflow-item"><span class="step-dot">2</span><span class="muted">Kịch bản</span></div>
+          <div class="workflow-item"><span class="step-dot">3</span><span class="muted">Learning</span></div>
+          <div class="workflow-item"><span class="step-dot">4</span><span class="muted">Giọng đọc (TTS)</span></div>
+          <div class="workflow-item"><span class="step-dot">5</span><span class="muted">Video</span></div>
+          <div class="workflow-item"><span class="step-dot">6</span><span class="muted">Thumbnail</span></div>
+          <div class="workflow-item"><span class="step-dot">7</span><span class="muted">YouTube</span></div>
+        </div>
+        <div class="callout small" style="margin-top:14px">Các bước 2–7 mở khoá sau khi bạn tạo dự án ở đây.</div>
+      </div>
+    </aside>
+    <div class="resizer-v" id="resizer-left" role="separator" aria-orientation="vertical" tabindex="0"></div>
+
+    <main class="pane-main">
+      <div class="pane-stage">
+        <h1 style="margin:0 0 4px;font-size:22px;color:var(--text)">Tạo dự án mới</h1>
+        <p class="muted small" style="margin:0 0 18px">Chọn cấu hình kịch bản — AI sẽ dùng đúng các lựa chọn này để sinh nội dung.</p>
+        <div id="error-banner" hidden></div>
+        <div class="card stack">
+          <div class="form-grid">
+            <label><span class="label">Tên dự án</span><input class="control" value="Tech Trends Weekly"></label>
+            <label><span class="label">Chủ đề</span><input class="control" value="remote work &amp; productivity tools"></label>
+          </div>
+          <div class="form-grid">
+            <label><span class="label">Trình độ CEFR</span><select class="control"><option>B1</option></select></label>
+            <label><span class="label">Thời lượng</span><select class="control"><option>7–10 phút</option></select></label>
+          </div>
+          <div>
+            <span class="label">Thể loại</span>
+            <div class="chip-grid">
+              <div class="chip-option">Hướng dẫn</div><div class="chip-option">Chỉ đường</div><div class="chip-option">Tranh luận</div>
+              <div class="chip-option selected">Interview</div><div class="chip-option">Ý kiến</div><div class="chip-option">Kể chuyện</div>
+              <div class="chip-option">Small talk</div><div class="chip-option">Đàm phán</div><div class="chip-option">Tin tức</div>
+            </div>
+          </div>
+          <div>
+            <span class="label">Giọng vùng</span>
+            <div class="chip-grid">
+              <div class="chip-option selected">🇺🇸 American</div><div class="chip-option">🇬🇧 British</div><div class="chip-option">🇦🇺 Australian</div>
+              <div class="chip-option">🇨🇦 Canadian</div><div class="chip-option">🇮🇪 Irish</div><div class="chip-option">🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scottish</div>
+            </div>
+          </div>
+        </div>
+        <div class="row" style="justify-content:flex-end;margin-top:18px"><button class="btn btn-primary large">Tạo dự án →</button></div>
+      </div>
+    </main>
+
+    <div class="resizer-v" id="resizer-right" role="separator" aria-orientation="vertical" tabindex="0"></div>
+    <aside class="pane-inspector" id="pane-inspector">
+      <div class="inspector-title">Xem trước cấu hình</div>
+      <div class="stack" style="margin-top:10px">
+        <div class="row between small"><span class="muted">CEFR</span><strong>B1</strong></div>
+        <div class="row between small"><span class="muted">Thể loại</span><strong>Interview</strong></div>
+        <div class="row between small"><span class="muted">Giọng vùng</span><strong>American</strong></div>
+        <div class="row between small"><span class="muted">Thời lượng</span><strong>~8 phút</strong></div>
+        <div class="row between small"><span class="muted">Số người nói</span><strong>2</strong></div>
+        <div class="callout small">2 thẻ người nói sẽ hiện ở đây khi bạn tăng số người nói — mỗi thẻ gồm tên, giới tính, giọng vùng riêng.</div>
+      </div>
+    </aside>
+  </div>
+</div>
+<script src="../shell.js"></script>
+<script>
+WorkspaceShell.init({
+  sidebar: document.getElementById('pane-sidebar'),
+  resizerLeft: document.getElementById('resizer-left'),
+  inspector: document.getElementById('pane-inspector'),
+  resizerRight: document.getElementById('resizer-right'),
+  collapseBtn: document.getElementById('sidebar-collapse-btn'),
+});
+</script>
+</body></html>

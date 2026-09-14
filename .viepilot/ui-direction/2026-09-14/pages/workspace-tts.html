@@ -1,0 +1,101 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CapCut-style — Workspace · TTS (Step 4)</title><link rel="stylesheet" href="../style.css">
+<style>
+  .speaker-card { display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: center; padding: 12px; }
+  .avatar-dot { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #fff; }
+  .timeline-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; color: var(--muted); border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface-2); z-index: 2; }
+</style>
+</head><body>
+<div class="prototype-banner">UI Direction · Workspace · TTS Audio Studio (maps to real /step4) · not production UI</div>
+<header class="topbar">
+  <span class="brand"><span class="brand-mark">D</span>Daily Intel English Studio</span>
+  <span class="project-name">Tech Trends Weekly</span>
+  <div class="actions"><button class="btn btn-ghost">🔊 Nghe thử mix</button><button class="icon-toggle">🌙</button></div>
+</header>
+
+<div class="shell-flex">
+  <div class="shell-row">
+    <aside class="pane-sidebar" id="pane-sidebar">
+      <button class="btn btn-ghost sidebar-collapse-btn" id="sidebar-collapse-btn">⟨⟨ Thu gọn</button>
+      <div class="sidebar-label">
+        <div class="card-title"><span>Quy trình</span><span class="badge">4 / 7</span></div>
+        <div class="workflow-list">
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Cấu hình</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Kịch bản</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Learning</span></div>
+          <div class="workflow-item active"><span class="step-dot active">4</span><span>Giọng đọc (TTS)</span></div>
+          <div class="workflow-item"><span class="step-dot">5</span><span class="muted">Video</span></div>
+          <div class="workflow-item"><span class="step-dot">6</span><span class="muted">Thumbnail</span></div>
+          <div class="workflow-item"><span class="step-dot">7</span><span class="muted">YouTube</span></div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="card-title">Người nói</div>
+          <div class="stack">
+            <div class="row speaker-card"><span class="avatar-dot" style="background:var(--speaker-a)">A</span><div><strong>Alex</strong><div class="muted small">Edge TTS · American · Nam</div></div></div>
+            <div class="row speaker-card"><span class="avatar-dot" style="background:var(--speaker-b)">S</span><div><strong>Sam</strong><div class="muted small">Edge TTS · American · Nữ</div></div></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:10px">
+          <div class="card-title">Nhạc nền</div>
+          <select class="control"><option>ambient_focus.mp3</option><option>Không dùng nhạc nền</option></select>
+        </div>
+      </div>
+    </aside>
+    <div class="resizer-v" id="resizer-left" role="separator" aria-orientation="vertical" tabindex="0"></div>
+
+    <main class="pane-main">
+      <div class="pane-stage">
+        <div class="row between" style="margin-bottom:14px">
+          <div><h1 style="margin:0;font-size:22px;color:var(--text)">Giọng đọc (TTS)</h1><span class="muted small">12 dòng · đã tạo giọng 9/12</span></div>
+          <div class="row"><button class="btn btn-ghost">⬇ Tải MP3</button><button class="btn btn-primary">🎙️ Tạo tất cả</button></div>
+        </div>
+        <div id="error-banner" hidden></div>
+        <div class="stack">
+          <div class="card line-card">
+            <div class="row between"><span class="speaker-chip speaker-a">Alex</span><div class="row"><span class="pill done">Đã tạo</span><button class="btn btn-ghost btn-sm">▶ Nghe</button></div></div>
+            <p class="line-text">So, what's the biggest shift you've seen in remote work tools this year?</p>
+          </div>
+          <div class="card line-card active">
+            <div class="row between"><span class="speaker-chip speaker-b">Sam</span><div class="row"><span class="pill running">Đang tạo…</span><button class="btn btn-ghost btn-sm">▶ Nghe</button></div></div>
+            <p class="line-text">Honestly, it's the way async collaboration tools have picked up the slack.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="resizer-h" id="resizer-top" role="separator" aria-orientation="horizontal" tabindex="0"></div>
+      <section class="pane-timeline" id="pane-timeline">
+        <div class="timeline-toolbar"><button class="icon-btn">↶</button><button class="icon-btn">↷</button><span class="grow"></span><span class="tiny">00:14 / 08:42</span><span class="grow"></span><span class="tiny">100%</span></div>
+        <div class="track-row"><div class="track-label">📝 Phụ đề</div><div class="track-lane script-lane">
+          <div class="clip speaker-a">Alex #1</div><div class="clip speaker-b active">Sam #2</div><div class="clip speaker-a">Alex #3</div><div class="clip speaker-b">Sam #4</div>
+        </div></div>
+        <div class="track-row"><div class="track-label">🔊 Giọng đọc</div><div class="track-lane voice-lane">
+          <div class="clip">Alex.mp3</div><div class="clip active">Sam.mp3 (đang tạo)</div><div class="clip" style="opacity:.4">chờ…</div><div class="clip" style="opacity:.4">chờ…</div>
+        </div></div>
+        <div class="track-row"><div class="track-label">🎵 Nhạc nền</div><div class="track-lane music-lane">
+          <div class="clip">ambient_focus.mp3 — ducking tự động khi có thoại</div>
+        </div></div>
+      </section>
+    </main>
+
+    <div class="resizer-v" id="resizer-right" role="separator" aria-orientation="vertical" tabindex="0"></div>
+    <aside class="pane-inspector" id="pane-inspector">
+      <div class="inspector-title">Sam — dòng #2</div>
+      <div class="stack" style="margin-top:10px">
+        <label><span class="label">Tốc độ</span><input class="control" type="range" min="0.5" max="2" step="0.05" value="1"></label>
+        <label><span class="label">Cao độ (pitch)</span><input class="control" type="range" min="-1" max="1" step="0.1" value="0"></label>
+        <label><span class="label">Âm lượng</span><input class="control" type="range" min="0" max="2" step="0.1" value="1"></label>
+        <div class="callout small">Đang tạo giọng thật qua Edge TTS — có thể mất vài giây mỗi dòng.</div>
+        <button class="btn btn-primary">▶ Nghe thử với thông số này</button>
+      </div>
+    </aside>
+  </div>
+</div>
+<script src="../shell.js"></script>
+<script>
+WorkspaceShell.init({
+  sidebar: document.getElementById('pane-sidebar'), resizerLeft: document.getElementById('resizer-left'),
+  inspector: document.getElementById('pane-inspector'), resizerRight: document.getElementById('resizer-right'),
+  timeline: document.getElementById('pane-timeline'), resizerTop: document.getElementById('resizer-top'),
+  collapseBtn: document.getElementById('sidebar-collapse-btn'),
+});
+</script>
+</body></html>

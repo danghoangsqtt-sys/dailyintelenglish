@@ -1,0 +1,160 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CapCut-style — Workspace · Script (v2, resizable)</title><link rel="stylesheet" href="../style.css">
+<style>
+  .line-card.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .line-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .timeline-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; color: var(--muted); border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface-2); z-index: 2; }
+</style>
+</head><body>
+<div class="prototype-banner">UI Direction v2 · Workspace · Script · panel kéo-thả + timeline nhiều track thật (không phải ảnh tĩnh) · not production UI</div>
+
+<header class="topbar">
+  <span class="brand"><span class="brand-mark">D</span>Daily Intel English Studio</span>
+  <span class="project-name">Tech Trends Weekly</span>
+  <div class="actions">
+    <span class="muted small" id="save-indicator">Đã lưu ✓</span>
+    <button class="btn btn-ghost">👁 Xem nhanh</button>
+    <button class="icon-toggle" title="Chế độ tối (tuỳ chọn)">🌙</button>
+  </div>
+</header>
+
+<div class="shell-flex">
+  <div class="shell-row" id="shell-row">
+    <!-- Sidebar: collapsible + resizable (drag right edge, or click ⟨⟩ to collapse to an icon rail) -->
+    <aside class="pane-sidebar" id="pane-sidebar">
+      <button class="btn btn-ghost sidebar-collapse-btn" id="sidebar-collapse-btn" title="Thu gọn/mở rộng (kéo cạnh phải cũng được)">⟨⟨ Thu gọn</button>
+      <div class="sidebar-label">
+        <div class="card-title"><span>Quy trình</span><span class="badge">2 / 7</span></div>
+        <div class="workflow-list">
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Cấu hình</span></div>
+          <div class="workflow-item active"><span class="step-dot active">2</span><span>Kịch bản</span></div>
+          <div class="workflow-item"><span class="step-dot">3</span><span class="muted">Learning</span></div>
+          <div class="workflow-item"><span class="step-dot">4</span><span class="muted">Giọng đọc (TTS)</span></div>
+          <div class="workflow-item"><span class="step-dot">5</span><span class="muted">Video</span></div>
+          <div class="workflow-item"><span class="step-dot">6</span><span class="muted">Thumbnail</span></div>
+          <div class="workflow-item"><span class="step-dot">7</span><span class="muted">YouTube</span></div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title">Cấu hình nhanh</div>
+          <div class="stack">
+            <div class="row between small"><span class="muted">CEFR</span><strong>B1</strong></div>
+            <div class="row between small"><span class="muted">Thể loại</span><strong>Interview</strong></div>
+            <div class="row between small"><span class="muted">Giọng vùng</span><strong>American</strong></div>
+            <div class="row between small"><span class="muted">Số người nói</span><strong>2</strong></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+    <div class="resizer-v" id="resizer-left" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Kéo để đổi độ rộng sidebar"></div>
+
+    <!-- Main: script content stage, timeline pinned below (own vertical resizer) -->
+    <main class="pane-main">
+      <div class="pane-stage">
+        <div class="row between" style="margin-bottom:14px">
+          <div>
+            <h1 style="margin:0;font-size:22px;color:var(--text)">Kịch bản</h1>
+            <span class="muted small">12 dòng thoại · 2 giọng · chưa duyệt xong 3 dòng</span>
+          </div>
+          <div class="row">
+            <button class="btn btn-ghost">🔁 Tạo lại tất cả</button>
+            <button class="btn btn-primary">Tiếp: Learning Content →</button>
+          </div>
+        </div>
+
+        <div id="error-banner" hidden></div>
+
+        <div id="script-list" class="stack">
+          <div class="card line-card">
+            <div class="line-header">
+              <span class="speaker-chip speaker-a">Alex</span>
+              <div class="row"><span class="pill done">Đã duyệt</span><button class="btn btn-ghost btn-sm">🔁</button></div>
+            </div>
+            <p class="line-text">So, what's the biggest shift you've seen in remote work tools this year?</p>
+          </div>
+          <div class="card line-card active">
+            <div class="line-header">
+              <span class="speaker-chip speaker-b">Sam</span>
+              <div class="row"><span class="pill warning">Cần duyệt</span><button class="btn btn-ghost btn-sm">🔁</button></div>
+            </div>
+            <p class="line-text">Honestly, it's the way async collaboration tools have picked up the slack — teams barely need to be online at the same time anymore.</p>
+          </div>
+          <div class="card line-card">
+            <div class="line-header">
+              <span class="speaker-chip speaker-a">Alex</span>
+              <div class="row"><span class="pill done">Đã duyệt</span><button class="btn btn-ghost btn-sm">🔁</button></div>
+            </div>
+            <p class="line-text">That's a great point. Do you think that trend holds for smaller teams too, or is it mostly the big companies?</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="resizer-h" id="resizer-top" role="separator" aria-orientation="horizontal" tabindex="0" aria-label="Kéo để đổi chiều cao timeline"></div>
+
+      <!-- Timeline: multi-track, same paradigm as ảnh EZMAXSUB — subtitle / voice / background music -->
+      <section class="pane-timeline" id="pane-timeline">
+        <div class="timeline-toolbar">
+          <button class="icon-btn">↶</button><button class="icon-btn">↷</button><button class="icon-btn">✂</button>
+          <span class="grow"></span><span class="tiny">00:08 / 00:42</span><span class="grow"></span>
+          <span class="tiny">100%</span><button class="btn btn-ghost btn-sm">＋ Track nhạc nền</button>
+        </div>
+        <div class="track-row">
+          <div class="track-label">📝 Phụ đề</div>
+          <div class="track-lane script-lane">
+            <div class="clip speaker-a">Alex #1</div>
+            <div class="clip speaker-b active">Sam #2</div>
+            <div class="clip speaker-a">Alex #3</div>
+            <div class="clip speaker-b">Sam #4</div>
+            <div class="clip speaker-a">Alex #5</div>
+            <div class="clip speaker-b">Sam #6</div>
+            <div class="clip speaker-a">Alex #7</div>
+            <div class="clip speaker-b">Sam #8</div>
+          </div>
+        </div>
+        <div class="track-row">
+          <div class="track-label">🔊 Giọng đọc</div>
+          <div class="track-lane voice-lane">
+            <div class="clip">Alex.mp3 #1</div>
+            <div class="clip">Sam.mp3 #2</div>
+            <div class="clip">Alex.mp3 #3</div>
+            <div class="clip">Sam.mp3 #4</div>
+            <div class="clip">Alex.mp3 #5</div>
+          </div>
+        </div>
+        <div class="track-row">
+          <div class="track-label">🎵 Nhạc nền</div>
+          <div class="track-lane music-lane">
+            <div class="clip">ambient_focus.mp3 — từ Music Library, ducking tự động khi có thoại</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="resizer-v" id="resizer-right" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Kéo để đổi độ rộng inspector"></div>
+    <aside class="pane-inspector" id="pane-inspector">
+      <div class="row between"><div class="inspector-title">Dòng #2</div><span class="pill warning">Cần duyệt</span></div>
+      <div class="row between small" style="margin:6px 0 14px"><span class="speaker-chip speaker-b">Sam</span><span class="muted">00:08 → 00:14</span></div>
+      <div class="stack">
+        <label><span class="label">Nội dung</span><textarea class="control">Honestly, it's the way async collaboration tools have picked up the slack — teams barely need to be online at the same time anymore.</textarea></label>
+        <div class="callout small"><strong>Ghi chú ngôn ngữ:</strong> "pick up the slack" — collocation, phù hợp CEFR B1.</div>
+        <div class="row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button class="btn btn-ghost">🔊 Nghe thử</button>
+          <button class="btn btn-primary">🔁 Tạo lại dòng này</button>
+        </div>
+        <button class="btn btn-ghost">✓ Đánh dấu đã duyệt</button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="../shell.js"></script>
+<script>
+WorkspaceShell.init({
+  sidebar: document.getElementById('pane-sidebar'),
+  resizerLeft: document.getElementById('resizer-left'),
+  inspector: document.getElementById('pane-inspector'),
+  resizerRight: document.getElementById('resizer-right'),
+  timeline: document.getElementById('pane-timeline'),
+  resizerTop: document.getElementById('resizer-top'),
+  collapseBtn: document.getElementById('sidebar-collapse-btn'),
+});
+</script>
+</body></html>

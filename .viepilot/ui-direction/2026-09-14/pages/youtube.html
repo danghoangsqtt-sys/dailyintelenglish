@@ -1,0 +1,80 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CapCut-style — Workspace · YouTube (Step 7)</title><link rel="stylesheet" href="../style.css">
+<style>
+  .title-option { padding: 10px 12px; }
+  .checklist-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+</style>
+</head><body>
+<div class="prototype-banner">UI Direction · Workspace · YouTube Package (maps to real /step7) · not production UI</div>
+<header class="topbar">
+  <span class="brand"><span class="brand-mark">D</span>Daily Intel English Studio</span>
+  <span class="project-name">Tech Trends Weekly</span>
+  <div class="actions"><button class="icon-toggle">🌙</button></div>
+</header>
+
+<div class="shell-flex">
+  <div class="shell-row">
+    <aside class="pane-sidebar" id="pane-sidebar">
+      <button class="btn btn-ghost sidebar-collapse-btn" id="sidebar-collapse-btn">⟨⟨ Thu gọn</button>
+      <div class="sidebar-label">
+        <div class="card-title"><span>Quy trình</span><span class="badge">7 / 7</span></div>
+        <div class="workflow-list">
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Cấu hình</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Kịch bản</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Learning</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Giọng đọc (TTS)</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Video</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Thumbnail</span></div>
+          <div class="workflow-item active"><span class="step-dot active">7</span><span>YouTube</span></div>
+        </div>
+      </div>
+    </aside>
+    <div class="resizer-v" id="resizer-left" role="separator" aria-orientation="vertical" tabindex="0"></div>
+
+    <main class="pane-main">
+      <div class="pane-stage">
+        <div class="row between" style="margin-bottom:14px">
+          <div><h1 style="margin:0;font-size:22px;color:var(--text)">YouTube Package</h1><span class="muted small">Chương đã đo thật từ audio</span></div>
+          <button class="btn btn-ghost">🔁 Tạo lại</button>
+        </div>
+        <div id="error-banner" hidden></div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">Tiêu đề (3 phương án)</div>
+          <div class="stack">
+            <div class="card title-option selected">How Remote Work Tools Changed Everything in 2026</div>
+            <div class="card title-option">The Async Revolution: Remote Work Explained (B1 English)</div>
+            <div class="card title-option">Remote Work Trends — English Practice Interview</div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title">Mô tả</div>
+          <p class="muted small">A B1-level English interview about how async collaboration tools are reshaping remote work in 2026. Practice listening with natural turn-taking and real collocations...</p>
+        </div>
+        <div class="card">
+          <div class="card-title">Chương <span class="pill done">Đã đo</span></div>
+          <div class="stack small"><div class="row between"><span>00:00 Intro</span></div><div class="row between"><span>01:12 Async tools</span></div><div class="row between"><span>04:30 Small team impact</span></div></div>
+        </div>
+      </div>
+    </main>
+
+    <div class="resizer-v" id="resizer-right" role="separator" aria-orientation="vertical" tabindex="0"></div>
+    <aside class="pane-inspector" id="pane-inspector">
+      <div class="inspector-title">Xuất gói hoàn chỉnh</div>
+      <div class="stack" style="margin-top:10px">
+        <div class="checklist-item"><span class="step-dot done">✓</span><span>Video (MP4 + SRT)</span></div>
+        <div class="checklist-item"><span class="step-dot done">✓</span><span>Thumbnail favorite</span></div>
+        <div class="checklist-item"><span class="step-dot done">✓</span><span>Transcript + Learning Content</span></div>
+        <div class="callout small">Đủ điều kiện — sẵn sàng tải gói .zip đầy đủ.</div>
+        <button class="btn btn-primary large">⬇ Tải gói .zip đầy đủ</button>
+      </div>
+    </aside>
+  </div>
+</div>
+<script src="../shell.js"></script>
+<script>
+WorkspaceShell.init({
+  sidebar: document.getElementById('pane-sidebar'), resizerLeft: document.getElementById('resizer-left'),
+  inspector: document.getElementById('pane-inspector'), resizerRight: document.getElementById('resizer-right'),
+  collapseBtn: document.getElementById('sidebar-collapse-btn'),
+});
+</script>
+</body></html>

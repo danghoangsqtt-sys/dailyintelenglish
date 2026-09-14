@@ -1,0 +1,84 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CapCut-style — Workspace · Thumbnail (Step 6)</title><link rel="stylesheet" href="../style.css">
+<style>
+  .thumb-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap: 12px; }
+  .thumb-card { aspect-ratio: 16/9; border-radius: 8px; border: 2px solid var(--border-strong); background: var(--surface-3); display: grid; place-items: center; font-size: 12px; color: var(--muted); font-weight: 700; }
+  .thumb-card.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .swatch { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--border-strong); display: inline-block; }
+</style>
+</head><body>
+<div class="prototype-banner">UI Direction · Workspace · Thumbnail (maps to real /step6) · not production UI</div>
+<header class="topbar">
+  <span class="brand"><span class="brand-mark">D</span>Daily Intel English Studio</span>
+  <span class="project-name">Tech Trends Weekly</span>
+  <div class="actions"><span class="muted small" id="save-status">Đã lưu ✓</span><button class="icon-toggle">🌙</button></div>
+</header>
+
+<div class="shell-flex">
+  <div class="shell-row">
+    <aside class="pane-sidebar" id="pane-sidebar">
+      <button class="btn btn-ghost sidebar-collapse-btn" id="sidebar-collapse-btn">⟨⟨ Thu gọn</button>
+      <div class="sidebar-label">
+        <div class="card-title"><span>Quy trình</span><span class="badge">6 / 7</span></div>
+        <div class="workflow-list">
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Cấu hình</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Kịch bản</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Learning</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Giọng đọc (TTS)</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Video</span></div>
+          <div class="workflow-item active"><span class="step-dot active">6</span><span>Thumbnail</span></div>
+          <div class="workflow-item"><span class="step-dot">7</span><span class="muted">YouTube</span></div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="card-title">Mẫu (template)</div>
+          <div class="stack small">
+            <div class="row between"><span>Minimal Clean</span><span class="badge">Đang dùng</span></div>
+            <div class="row between muted"><span>Gradient Bold</span></div>
+            <div class="row between muted"><span>Modern Split</span></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+    <div class="resizer-v" id="resizer-left" role="separator" aria-orientation="vertical" tabindex="0"></div>
+
+    <main class="pane-main">
+      <div class="pane-stage">
+        <div class="row between" style="margin-bottom:14px">
+          <div><h1 style="margin:0;font-size:22px;color:var(--text)">Thumbnail</h1><span class="muted small">4 biến thể · 1 đã chọn làm favorite</span></div>
+          <button class="btn btn-primary">✨ Tạo thêm biến thể</button>
+        </div>
+        <div id="error-banner" hidden></div>
+        <div class="thumb-grid">
+          <div class="thumb-card selected">Biến thể 1 ★</div>
+          <div class="thumb-card">Biến thể 2</div>
+          <div class="thumb-card">Biến thể 3</div>
+          <div class="thumb-card">Biến thể 4</div>
+        </div>
+      </div>
+    </main>
+
+    <div class="resizer-v" id="resizer-right" role="separator" aria-orientation="vertical" tabindex="0"></div>
+    <aside class="pane-inspector" id="pane-inspector">
+      <div class="inspector-title">Chỉnh sửa — Biến thể 1</div>
+      <div class="stack" style="margin-top:10px">
+        <label><span class="label">Tiêu đề</span><textarea class="control">Remote Work Is Changing FAST</textarea></label>
+        <div class="row between"><span class="label" style="margin:0">Màu chữ</span><span class="swatch" style="background:#12151c"></span></div>
+        <div class="row between"><span class="label" style="margin:0">Màu nền</span><span class="swatch" style="background:#6425c4"></span></div>
+        <div class="row between"><span class="label" style="margin:0">Màu nhấn</span><span class="swatch" style="background:#f5a65b"></span></div>
+        <div class="row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button class="btn btn-ghost">16:9</button><button class="btn btn-ghost">9:16</button>
+        </div>
+        <button class="btn btn-primary">💾 Lưu & render lại</button>
+        <button class="btn btn-ghost">⬇ Tải cả 2 tỉ lệ</button>
+      </div>
+    </aside>
+  </div>
+</div>
+<script src="../shell.js"></script>
+<script>
+WorkspaceShell.init({
+  sidebar: document.getElementById('pane-sidebar'), resizerLeft: document.getElementById('resizer-left'),
+  inspector: document.getElementById('pane-inspector'), resizerRight: document.getElementById('resizer-right'),
+  collapseBtn: document.getElementById('sidebar-collapse-btn'),
+});
+</script>
+</body></html>

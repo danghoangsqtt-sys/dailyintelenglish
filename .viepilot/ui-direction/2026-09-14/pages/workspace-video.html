@@ -1,0 +1,86 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CapCut-style — Workspace · Video (Step 5)</title><link rel="stylesheet" href="../style.css">
+<style>
+  .video-stage { min-height: 280px; display: grid; place-items: center; padding: 20px; background: var(--surface-3); border-radius: var(--r-md); border: 1px solid var(--border); }
+  .video-frame { position: relative; width: min(80%, 560px); aspect-ratio: 16/9; background: linear-gradient(140deg,#dfe6f2,#c9d3e4 55%,#e8ded4); border: 1px solid var(--border-strong); border-radius: 4px; overflow: hidden; }
+  .subtitle-preview { position: absolute; left: 50%; bottom: 8%; transform: translateX(-50%); width: 84%; text-align: center; font-size: 15px; font-weight: 800; color: #12151c; text-shadow: 0 1px 0 #fff, 0 0 6px #fff; }
+  .timeline-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; color: var(--muted); border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface-2); z-index: 2; }
+  .template-thumb { height: 64px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface-3); display: grid; place-items: center; font-size: 11px; color: var(--muted); }
+  .template-thumb.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+</style>
+</head><body>
+<div class="prototype-banner">UI Direction · Workspace · Video Studio (maps to real /step5) · not production UI</div>
+<header class="topbar">
+  <span class="brand"><span class="brand-mark">D</span>Daily Intel English Studio</span>
+  <span class="project-name">Tech Trends Weekly</span>
+  <div class="actions"><button class="btn btn-primary">🎬 Render video</button><button class="icon-toggle">🌙</button></div>
+</header>
+
+<div class="shell-flex">
+  <div class="shell-row">
+    <aside class="pane-sidebar" id="pane-sidebar">
+      <button class="btn btn-ghost sidebar-collapse-btn" id="sidebar-collapse-btn">⟨⟨ Thu gọn</button>
+      <div class="sidebar-label">
+        <div class="card-title"><span>Quy trình</span><span class="badge">5 / 7</span></div>
+        <div class="workflow-list">
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Cấu hình</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Kịch bản</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Learning</span></div>
+          <div class="workflow-item"><span class="step-dot done">✓</span><span>Giọng đọc (TTS)</span></div>
+          <div class="workflow-item active"><span class="step-dot active">5</span><span>Video</span></div>
+          <div class="workflow-item"><span class="step-dot">6</span><span class="muted">Thumbnail</span></div>
+          <div class="workflow-item"><span class="step-dot">7</span><span class="muted">YouTube</span></div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <div class="card-title">Nền video</div>
+          <div class="stack" style="grid-template-columns:1fr 1fr;display:grid;gap:8px">
+            <div class="template-thumb selected">Mẫu 1</div><div class="template-thumb">Mẫu 2</div><div class="template-thumb">Mẫu 3</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+    <div class="resizer-v" id="resizer-left" role="separator" aria-orientation="vertical" tabindex="0"></div>
+
+    <main class="pane-main">
+      <div class="pane-stage">
+        <div class="row between" style="margin-bottom:14px">
+          <div><h1 style="margin:0;font-size:22px;color:var(--text)">Video</h1><span class="muted small">Đã render · 08:42 · 1080p</span></div>
+          <div class="row"><button class="btn btn-ghost">⬇ MP4</button><button class="btn btn-ghost">⬇ SRT</button></div>
+        </div>
+        <div id="error-banner" hidden></div>
+        <div class="video-stage">
+          <div class="video-frame"><span class="subtitle-preview">"...async collaboration tools have picked up the slack."</span></div>
+        </div>
+      </div>
+
+      <div class="resizer-h" id="resizer-top" role="separator" aria-orientation="horizontal" tabindex="0"></div>
+      <section class="pane-timeline" id="pane-timeline">
+        <div class="timeline-toolbar"><button class="icon-btn">↶</button><button class="icon-btn">↷</button><span class="grow"></span><span class="tiny">00:14 / 08:42</span><span class="grow"></span><span class="tiny">100%</span></div>
+        <div class="track-row"><div class="track-label">🎬 Video</div><div class="track-lane"><div class="clip" style="flex:1 1 auto;justify-content:center;background:var(--surface-3)">Nền · Mẫu 1 · 08:42</div></div></div>
+        <div class="track-row"><div class="track-label">📝 Phụ đề</div><div class="track-lane script-lane">
+          <div class="clip speaker-a">#1</div><div class="clip speaker-b active">#2</div><div class="clip speaker-a">#3</div><div class="clip speaker-b">#4</div><div class="clip speaker-a">#5</div><div class="clip speaker-b">#6</div>
+        </div></div>
+        <div class="track-row"><div class="track-label">🔊 Âm thanh</div><div class="track-lane voice-lane"><div class="clip" style="flex:1 1 auto;justify-content:center">audio_mix.mp3 (thoại + nhạc nền đã trộn)</div></div></div>
+      </section>
+    </main>
+
+    <div class="resizer-v" id="resizer-right" role="separator" aria-orientation="vertical" tabindex="0"></div>
+    <aside class="pane-inspector" id="pane-inspector">
+      <div class="inspector-title">Cue #2 — phụ đề</div>
+      <div class="stack" style="margin-top:10px">
+        <div class="row between small"><span class="muted">Thời gian</span><strong>00:08 → 00:14</strong></div>
+        <textarea class="control" readonly>Honestly, it's the way async collaboration tools have picked up the slack.</textarea>
+        <div class="callout small">Phụ đề burned-in khớp timestamp thật từ AudioService — không cần chỉnh tay ở bước này.</div>
+      </div>
+    </aside>
+  </div>
+</div>
+<script src="../shell.js"></script>
+<script>
+WorkspaceShell.init({
+  sidebar: document.getElementById('pane-sidebar'), resizerLeft: document.getElementById('resizer-left'),
+  inspector: document.getElementById('pane-inspector'), resizerRight: document.getElementById('resizer-right'),
+  timeline: document.getElementById('pane-timeline'), resizerTop: document.getElementById('resizer-top'),
+  collapseBtn: document.getElementById('sidebar-collapse-btn'),
+});
+</script>
+</body></html>
