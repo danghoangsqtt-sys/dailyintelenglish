@@ -3,10 +3,9 @@
 ## Metadata
 - **Phase:** 2
 - **Slug:** 02-testing-polish
-- **Status:** in_progress
+- **Status:** done (2026-09-15)
 - **Started:** 2026-09-13
-- **Target Completion:** 2026-09-20 (per ROADMAP.md's Day 8-14 target, adjusted forward
-  since Phase 1 finished on Day 3 instead of Day 7)
+- **Completed:** 2026-09-15 (Day 6 of a 21-day target — well ahead of schedule)
 - **Milestone Progress:** 6 / 6 tasks (4 original + Tasks 2.5+2.6, new scope) fully done
   except Task 2.2's one explicitly-deferred item: 2.1 Quality Testing — ✅ DONE, all 4
   ROADMAP items closed; 2.3 UX Polish — ✅ DONE, all 7 ROADMAP items resolved; 2.4 UI
@@ -14,11 +13,16 @@
   bugs found+fixed while verifying; 2.6 Fix 3 post-Task-2.5 audit findings — ✅ DONE; 2.2
   Bug Fixes & Performance has its buildable scope done — 1 item fixed, 1
   already-done-closed-via-audit, 1 moot, **1 genuinely deferred as a separate future task
-  ("progress cancellation" — the only item keeping Phase 2 from being fully closed)**.
-  Tasks 2.4, 2.5, and 2.6 were all added as new scope after the original ROADMAP.md
-  Phase 2 bullets were written, so the original 3-task ROADMAP count predates them.
-- **Test Suite Status:** 532 passed, 1 pre-existing tracked flake (confirmed via isolated
-  re-run, not a regression), ruff clean, all `node --check` clean
+  ("progress cancellation")**. **Phase formally closed 2026-09-15** at a `/vp-auto`
+  control point: user chose to close at this buildable scope (22/24 discrete ROADMAP
+  items) rather than pull "progress cancellation" or real LivePortrait lip-sync into
+  Phase 2 first — both remain logged as deferred future work, not phase blockers. Tasks
+  2.4, 2.5, and 2.6 were all added as new scope after the original ROADMAP.md Phase 2
+  bullets were written, so the original 3-task ROADMAP count predates them.
+- **Test Suite Status:** 533/533 pass, re-verified clean at phase close (2026-09-15) —
+  the previously-tracked Gemini-retry timing flake did not recur this run. `ruff` clean,
+  all `node --check` clean. Git tags `die-vp-p1-complete` (retroactive) and
+  `die-vp-p2-complete` applied at close.
 
 ---
 

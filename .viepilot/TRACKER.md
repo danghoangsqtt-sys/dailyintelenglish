@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 started  
-**Day:** 3 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13)  
+**Phase:** 1 done; Phase 2 done; Phase 3 started  
+**Day:** 6 / 21  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened 2026-09-15)  
 **Target:** 2026-09-30  
 
 ## Progress Overview
@@ -23,15 +23,19 @@ required for any task's own acceptance criteria]. Progress reflects completed su
 Phase 2's row counts discrete ROADMAP checklist items across 2.1 (4), 2.2 (4), 2.3 (7),
 2.4 (3), 2.5 (3), and 2.6 (3, new scope added 2026-09-14, not in the original Phase 2
 plan) = 24 total, 22 done (2.1's 4; 2.2's 2 real fixes — "Optimize OmniVoice batch" and
-"Add progress cancellation" are moot/deferred, not counted done; 2.3's 7; 2.4's 3; 2.5's
-3; 2.6's 3, all done 2026-09-14); this row was stale at 0/10 before 2026-09-14's Task
-2.4 update, not updated in sync during 2.2/2.3 — corrected then and kept current since.*
+"Add progress cancellation" are moot/deferred, not counted done, and never will be under
+this task card; 2.3's 7; 2.4's 3; 2.5's 3; 2.6's 3, all done 2026-09-14). **Phase 2
+formally closed 2026-09-15** at 22/24 (92%) — the user chose to close at this buildable
+scope rather than pull "progress cancellation"/LivePortrait lip-sync into Phase 2 first
+(see Decision Log 2026-09-15); both remain logged as deferred future work, not phase
+blockers. Phase 3 counts discrete ROADMAP checklist items across 3.1 (4), 3.2 (3), and
+3.3 (4) = 11 total, 4 done (3.1's 4, all done 2026-09-15 — see Task 3.1 below).*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
 | Phase 1 — Build | ✅ Complete | 28 | 30 |
-| Phase 2 — Testing | 🔄 In Progress | 22 | 24 |
-| Phase 3 — Review | ⏳ Not Started | 0 | 6 |
+| Phase 2 — Testing | ✅ Complete (buildable scope) | 22 | 24 |
+| Phase 3 — Review | 🔄 In Progress | 4 | 11 |
 
 ## Phase 1 Task Status
 
@@ -282,6 +286,43 @@ plan) = 24 total, 22 done (2.1's 4; 2.2's 2 real fixes — "Optimize OmniVoice b
   a migration-fallback design note) left noted-only in Known Issues per user choice.
 - 532/533 full suite passes (1 pre-existing tracked flake, confirmed via isolated
   re-run), `ruff`/`node --check` clean.
+
+**Phase 2 formally closed 2026-09-15** at a `/vp-auto` control point, user-approved: all
+buildable scope done (22/24 discrete ROADMAP items); "Optimize OmniVoice batch" is moot
+post-decision and "Add progress cancellation" remains explicitly deferred as a separate
+future architectural task, neither blocking phase close. Full suite re-run clean before
+closing: **533/533 pass** (the previously-tracked Gemini-retry timing flake did not recur
+this run). Git tags `die-vp-p1-complete` (retroactive — a missing-tag gap found during
+Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
+
+## Phase 3 Task Status
+
+### 3.1 Documentation — ✅ DONE (2026-09-15), all 4/4 ROADMAP items resolved
+- [x] `README.md` — updated with a Phase 2 section (Tasks 2.1–2.6 summary table, current
+  532/533→533/533 test count), corrected the Step 5 pipeline-workflow line (LivePortrait
+  status was stale — said "pending a user decision" when that decision was already made
+  2026-09-13), corrected the Tech Stack Video line (previously implied LivePortrait
+  shipped), added a Documentation table linking the 3 new docs below plus the existing
+  `.viepilot/` references.
+- [x] `docs/prompt-guide.md` (new) — how to customize `prompts/script/` (base + 10 genre
+  blocks + 6 CEFR blocks) and `prompts/learning/learning_pack.txt`; documents the real
+  CEFR-ceiling-vs-language-feature-toggle precedence rule and solo-speaker override
+  exactly as implemented in `script_base.txt`/`prompt_loader.py`, not invented behavior;
+  also covers thumbnail/YouTube prompts and the temperature-left-unset rationale.
+- [x] `docs/tts-setup.md` (new) — Edge TTS voice map (`EDGE_TTS_VOICE_MAP`, 10 accents × 3
+  genders), the Scottish/British voice-id duplication (upstream limitation, disclosed
+  in-UI per Task 2.5c), and a full record of the OmniVoice investigation (real model
+  downloaded/GPU-verified, why real integration was decided against, what's deliberately
+  left in the code and why).
+- [x] `docs/api.md` (new) — auto-generated from the app's real FastAPI OpenAPI schema
+  (ROADMAP's own wording) via new `scripts/generate_api_docs.py`, which loads the app via
+  `TestClient` and reads `app.openapi()` directly (no live server needed) rather than
+  hand-written prose that can drift — the exact class of staleness Task 2.6a had to fix
+  for `ARCHITECTURE.md`. 49 routes documented across all 9 mounted routers.
+- Pure documentation task — no `app/`, `frontend/`, or `tests/` files touched. Also fixed
+  a real doc-sync gap found while closing Phase 2: Task 2.6 had never been added to
+  `CHANGELOG.md`'s `[Unreleased]` section despite being done and tagged — added
+  retroactively.
 
 ## Decision Log
 
@@ -560,6 +601,24 @@ plan) = 24 total, 22 done (2.1's 4; 2.2's 2 real fixes — "Optimize OmniVoice b
   payload broke a rendered attribute without the fix) before restoring it. 532/533 full
   suite passes (1 pre-existing tracked flake). See `tasks/task-2.6.md`. | User; PM
   (Claude Code) |
+| 2026-09-15 | At a `/vp-auto` control point, PM presented the remaining open question from
+  `HANDOFF.json` (declare Phase 2 done and move to Phase 3, or scope "progress
+  cancellation"/LivePortrait lip-sync as real tasks first) via `AskUserQuestion` rather
+  than picking silently — both remaining items are genuinely large architectural/research
+  efforts, not quick fixes, so which one (if either) to prioritize next is a real product
+  call. **User chose: close Phase 2, start Phase 3.** Re-ran the full suite clean before
+  closing: **533/533 pass** (the previously-tracked Gemini-retry timing flake did not
+  recur this run) — Phase 2 formally closed with zero known app-code regressions.
+  "Progress cancellation" (Task 2.2) and real LivePortrait lip-sync (Task 1.7) remain
+  logged as deferred future work, not blocking. Phase 3 (Review & Documentation) opened:
+  `.viepilot/phases/03-review-documentation/` scaffolded, Task 3.1 (Documentation)
+  doc-first plan written and delivered in the same session — `README.md` updated for
+  Phase 2; new `docs/prompt-guide.md`, `docs/tts-setup.md`; new `docs/api.md`
+  auto-generated via new `scripts/generate_api_docs.py` (49 routes, reads the real
+  `app.openapi()` schema so it can't drift like `ARCHITECTURE.md` once did — see Task
+  2.6a). Also fixed a real doc-sync gap found while closing out Phase 2: Task 2.6 had
+  never been added to `CHANGELOG.md`'s `[Unreleased]` section despite being done and
+  tagged — added retroactively. | User; PM (Claude Code) |
 
 ## Known Issues
 
@@ -724,11 +783,10 @@ plan) = 24 total, 22 done (2.1's 4; 2.2's 2 real fixes — "Optimize OmniVoice b
   already-migrated `data/app.db` — 10/10 pass every time (was failing to start at all
   before this fix).
 
-- **No `die-vp-p1-complete` git tag despite Phase 1 being marked done (found 2026-09-14,
-  `/vp-audit` pass before Phase 3, not fixed):** PHASE-STATE.md has recorded Phase 1 as
-  `done` since 2026-09-13, but no `die-vp-p1-complete` tag was ever created (the
-  per-task `-done` tags exist, the phase-level one doesn't). Pure tag-hygiene gap, no
-  functional impact — user chose not to act on it now.
+- ~~No `die-vp-p1-complete` git tag despite Phase 1 being marked done~~ **RESOLVED
+  2026-09-15**: found 2026-09-14 by a `/vp-audit` pass before Phase 3 (pure tag-hygiene
+  gap, no functional impact, user chose not to act on it immediately); applied
+  retroactively while closing Phase 2, alongside the new `die-vp-p2-complete` tag.
 - **`save_video_job`'s error path wipes `mp4_path`/`srt_path`/`mp4_path_vertical`/
   `background_image` to NULL on a failed regenerate (found 2026-09-14, `/vp-audit` pass,
   pre-existing, not fixed):** `app/api/video.py`'s `except Exception` handler calls

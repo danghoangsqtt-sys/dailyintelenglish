@@ -114,6 +114,29 @@ Versioning: [SemVer](https://semver.org/)
   16 new tests across the touched files, full suite green.
 - Gemini reliability (Phase 2, by Claude Code as PM + Implementer, 2026-09-14): all four Gemini-calling services (`script_service`, `learning_service`, `thumbnail_service`, `youtube_service`) now retry on HTTP 503 ("model temporarily overloaded") in addition to 429, and fall back through a new `GEMINI_MODEL_FALLBACKS` chain (`gemini-3.8-flash` → `gemini-3.7-flash` → `gemini-3.6-flash` → `gemini-3.5-flash` → `gemini-3.5-flash-lite` → `gemini-3.1-flash-lite`) once a model's own retries are exhausted, instead of failing outright. `gemini-3.1-flash-lite` was added last at the user's explicit request; PM disclosed beforehand that it already has an announced 2027-05-07 shutdown date and that Google's own recommended replacement for it is `gemini-3.5-flash-lite` (already earlier in the chain) — user chose to keep it anyway as one more quota bucket. Real Google AI Studio usage data showed each Flash model version tracks its own separate RPM/RPD quota bucket on this account (3.8 Flash was at 26/20 RPD and 8/5 RPM while 3.7/3.6 sat completely unused at 0/20 and 0/5) — confirmed live via `models.list` that every model ID in the chain is real, GA (no `-preview` suffix), and callable before wiring it in; deliberately excluded the only available Pro-tier model (`gemini-3.1-pro-preview`) since it carries the same preview-instability risk that forced the earlier `gemini-2.0-flash` migration, and the user confirmed the goal here is spreading quota load, not a per-difficulty quality tier. Also corrected `GEMINI_RATE_LIMIT_RPM` from an unverified `15` to the account's real measured `5`, fixing `scripts/generate_cefr_review_samples.py`'s inter-request throttle (4.1s → 12.1s). Live-verified end-to-end against the real API while 3.8 Flash was still quota-exhausted: 3.8 failed 429 three times, fell back to 3.7, which failed 503 twice then succeeded on its third attempt — a real generation that would have failed outright before this fix. 12 new/updated tests across the four services' test files (503-retry, model-fallback-after-exhaustion, full-chain-exhaustion) plus the CEFR sample CLI's throttle test, 92/92 passing on the affected files
 - Task 2.5 (2026-09-14, by Claude Code as PM + Implementer): fixed all 3 real findings from Task 2.1c's audio/video QA pass. `audio_service._mix_project_sync` now normalizes the final mixed signal (voice + any ducked background music) once, after the overlay, instead of only the pre-music voice stem — background-music mixes previously drifted to -17.12 LUFS (1.12dB outside the declared ±1dB tolerance), now land within it (per EBU R128 guidance that loudness normalization must target the complete final mix). New 9:16 (vertical) video output: `_render_vertical_sync` runs a second ffmpeg pass (the real blurred-background-pad convention used by YouTube Shorts/TikTok/Reels tooling) over the existing 16:9 render, exposed via a new `aspect_ratio` request field (default `"16:9"`, byte-for-byte unchanged), a new `video_jobs.mp4_path_vertical` column, a new download format, and a Step 5 UI toggle — real `ffprobe` confirms the output is genuinely 720×1280. Step 1's Scottish accent option now discloses via a tooltip that it shares British's Edge TTS voice (confirmed live against the real `edge-tts` package that no distinct Scottish voice exists upstream — not fixable in code without a different TTS provider). Also fixed 2 more real bugs found while verifying: the `.hidden`-on-`.btn` CSS trap already flagged in TRACKER.md Known Issues (a missing `[hidden] { display: none !important; }` rule let an unconditional `.btn { display: inline-flex }` always win), and a real `init_db()` crash on any second real app restart once a non-idempotent `ALTER TABLE ADD COLUMN` migration exists (fixed with a `schema_migrations` tracking table). 530/530 full suite passes (up from 515), zero flakes.
+- Task 2.6 (2026-09-14, by Claude Code as PM + Implementer): fixed 3 of 6 findings from a
+  post-Task-2.5 `/vp-audit` self-review pass. `ARCHITECTURE.md`'s `### Video` API docs now
+  mention `aspect_ratio` and the `mp4_vertical` download format (stale since Task 2.5b).
+  `video_service.generate_video()` now deletes a stale `video_vertical.mp4` left on disk
+  when a later regenerate call doesn't request `"9:16"` again, instead of silently
+  orphaning it while the DB column quietly returns to `NULL`. `step1_config.js`'s
+  `escapeHtml()` now also escapes `"`/`'`, not just `&`/`<`/`>` -- verified as a real,
+  reachable bug (not just theoretical) by reverting the fix and watching a quote-breakout
+  payload actually corrupt a rendered `value="..."` attribute before restoring it. The
+  other 3 findings (a missing `die-vp-p1-complete` git tag, `save_video_job`'s pre-existing
+  error-path field-wiping, a design note on `init_db()`'s migration-fallback assumption)
+  were left noted-only in TRACKER.md Known Issues per the user's explicit choice. 532/533
+  full suite passes (1 pre-existing tracked flake).
+- Phase 3 documentation (2026-09-15, by Claude Code as PM + Implementer): `README.md`
+  updated to reflect Phase 2's completion; new `docs/prompt-guide.md` (how to customize
+  the Gemini script/learning/thumbnail/YouTube prompt templates, including the
+  CEFR-ceiling-vs-language-toggle precedence rule and solo-speaker override); new
+  `docs/tts-setup.md` (Edge TTS voice map, the Scottish/British voice-id limitation, and
+  why real OmniVoice integration was investigated but not pursued); new `docs/api.md`
+  auto-generated from the app's real FastAPI OpenAPI schema via new
+  `scripts/generate_api_docs.py` (49 routes documented) instead of hand-written prose that
+  could drift. 533/533 full suite passes (the previously-tracked Gemini-retry timing flake
+  did not recur this run).
 
 ---
 

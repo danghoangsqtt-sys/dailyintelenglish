@@ -415,12 +415,20 @@ isolated re-run). See `.viepilot/phases/02-testing-polish/tasks/task-2.6.md`.
 
 ## Phase 3 — Review & Documentation (Day 15–21)
 
-### 3.1 Documentation
+### 3.1 Documentation — ✅ DONE (2026-09-15)
 
-- [ ] **README.md** — installation guide, quick start, features overview
-- [ ] **Prompt Engineering Guide** (`docs/prompt-guide.md`) — how to customize prompts
-- [ ] **TTS Setup Guide** (`docs/tts-setup.md`) — OmniVoice + Edge TTS installation
-- [ ] **API Reference** (`docs/api.md`) — auto-generated from FastAPI OpenAPI
+- [x] **README.md** — installation guide, quick start, features overview — updated with a
+  Phase 2 summary table, corrected stale LivePortrait status lines, and a new
+  Documentation table linking the 3 docs below
+- [x] **Prompt Engineering Guide** (`docs/prompt-guide.md`) — how to customize prompts —
+  covers script genre/CEFR blocks, the CEFR-ceiling-vs-language-toggle precedence rule,
+  solo-speaker override, learning content, thumbnail, and YouTube prompts
+- [x] **TTS Setup Guide** (`docs/tts-setup.md`) — Edge TTS voice map + known
+  Scottish/British limitation, and the full OmniVoice investigation record (real model
+  downloaded/GPU-verified, decided against integrating — see key_decisions)
+- [x] **API Reference** (`docs/api.md`) — auto-generated from FastAPI OpenAPI via new
+  `scripts/generate_api_docs.py` (reads the real `app.openapi()` schema, 49 routes
+  documented) — re-run the script after any route change instead of hand-editing
 
 ### 3.2 Demo & Review
 

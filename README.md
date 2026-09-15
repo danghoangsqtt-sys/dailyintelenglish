@@ -35,6 +35,25 @@ reference sample, not the text-described voice design first planned); Level 3
 LivePortrait avatar lip-sync stays deferred as a separate future research effort, but its
 avatar-upload groundwork (user supplies their own image per speaker) is in scope now.
 
+#### Testing & Polish (Phase 2) — ✅ Done 2026-09-14
+
+| Task | Feature | Status |
+|------|---------|--------|
+| **Task 2.1** | 🔍 **Quality Testing** — CEFR accuracy across 18 real generated samples (14 PASS / 4 BORDERLINE, a genre-specific calibration note, 0 FLAG), real technical measurement of multi-accent TTS (20/20), audio loudness, and video/subtitle sync | ✅ Done |
+| **Task 2.2** | 🐛 **Bug Fixes & Performance** — moved 4 blocking calls off the event loop; progress cancellation deliberately deferred as a separate architectural task | ✅ Done (buildable scope) |
+| **Task 2.3** | ✨ **UX Polish** — step progress/breadcrumbs, `Ctrl+Enter` shortcuts, error toasts, responsive layout (1024px+), auto-save indicator, across all 7 step pages | ✅ Done |
+| **Task 2.4** | 🎨 **UI Redesign Slice 1** — light, high-contrast Dashboard launcher; CapCut-style resizable Script workspace (`/step2`) with a line inspector and 3-track timeline; light-by-default theme | ✅ Done |
+| **Task 2.5** | 🔧 **Fix Task 2.1's findings** — background-music loudness now stays within tolerance, real 9:16 vertical video export added, Scottish/British voice overlap disclosed in-UI | ✅ Done |
+| **Task 2.6** | 🧹 **Post-audit fixes** — doc drift, an orphaned vertical-video file on regenerate, and an unsafe HTML-attribute escaping bug | ✅ Done |
+
+532/533 automated tests pass (1 pre-existing, tracked timing flake — always passes in
+isolation). See `.viepilot/TRACKER.md` for the full evidence trail.
+
+#### Review & Documentation (Phase 3) — 🔄 In Progress
+
+Final documentation pass, demo assets, and release cleanup. See
+`.viepilot/ROADMAP.md`'s Phase 3 section for the task list.
+
 ## Quick Start
 
 ### Requirements
@@ -82,7 +101,7 @@ http://localhost:8000
 2️⃣  Step 2: AI Script        → Generate, preview, inline edit, per-line regenerate (Shipped - Task 1.4)
 3️⃣  Step 3: Learning Content → Vocabulary, idioms, grammar, comprehension quiz (Shipped - Task 1.5)
 4️⃣  Step 4: TTS Audio Studio → Voice assignment, per-line preview, real audio mix + loudness normalization, MP3/WAV export (Shipped - Task 1.6)
-5️⃣  Step 5: Video Studio     → Template selector, real MP4 with burned-in subtitles/SRT, preview + downloads (Shipped - Task 1.7); LivePortrait lips-sync pending a user decision
+5️⃣  Step 5: Video Studio     → Template selector, real MP4 with burned-in subtitles/SRT, 16:9 + 9:16 export, per-speaker avatar upload, preview + downloads (Shipped - Task 1.7/2.5b); LivePortrait lips-sync inference itself remains a deferred, not-yet-started effort
 6️⃣  Step 6: Thumbnail        → AI-assisted templates, A/B variants, manual editor, export (Shipped - Task 1.8)
 7️⃣  Step 7: YouTube Package  → Titles/description/tags/chapters (measured once audio exists) + full .zip export (Shipped - Task 1.9)
 ```
@@ -93,11 +112,22 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
 - **Backend**: Python 3.11+ / FastAPI / Uvicorn / aiosqlite
 - **Frontend**: Vanilla HTML5 / CSS3 / JavaScript
 - **AI**: Google Gemini API (`gemini-3.8-flash`) with strict structured JSON schema
-- **TTS**: Edge TTS (sole engine — OmniVoice GPU cloning considered, dropped 2026-09-13)
-- **Audio**: pydub + ffmpeg
-- **Video**: ffmpeg + LivePortrait (lips-sync)
-- **Thumbnail**: Pillow
+- **TTS**: Edge TTS (sole engine — OmniVoice GPU cloning considered, dropped 2026-09-13; see [docs/tts-setup.md](docs/tts-setup.md))
+- **Audio**: pydub + ffmpeg (real ITU-R BS.1770 loudness normalization via `pyloudnorm`)
+- **Video**: ffmpeg (background templates + burned-in subtitles, 16:9 and 9:16 export). LivePortrait lip-sync avatar remains a deferred, not-yet-started research effort
+- **Thumbnail**: Pillow + Gemini text/palette suggestions
 - **Database**: SQLite (aiosqlite async transactions)
+
+## Documentation
+
+| Doc | Purpose |
+|-----|---------|
+| [docs/prompt-guide.md](docs/prompt-guide.md) | How to customize the Gemini prompt templates (script genres, CEFR blocks, learning content, thumbnails, YouTube package) |
+| [docs/tts-setup.md](docs/tts-setup.md) | Edge TTS voice map and known limitations; why OmniVoice was investigated but not integrated |
+| [docs/api.md](docs/api.md) | Full API reference, auto-generated from the app's real FastAPI OpenAPI schema (`scripts/generate_api_docs.py`) — also live at `/docs` while the app is running |
+| [.viepilot/ARCHITECTURE.md](.viepilot/ARCHITECTURE.md) | System design, services, data models |
+| [.viepilot/ROADMAP.md](.viepilot/ROADMAP.md) | Phase/task plan with acceptance criteria |
+| [.viepilot/TRACKER.md](.viepilot/TRACKER.md) | Full progress and decision log |
 
 ## Project Structure
 
