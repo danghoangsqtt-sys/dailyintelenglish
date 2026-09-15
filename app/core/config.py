@@ -23,14 +23,8 @@ class Settings(BaseSettings):
 
     DATA_DIR: Path = Path("data")
     OMNIVOICE_MODEL_PATH: Path = Path("models/omnivoice")
-    OMNIVOICE_DEVICE: str = "cuda"
-    OMNIVOICE_MAX_CONCURRENT: int = 2
 
     FFMPEG_PATH: str = "ffmpeg"
-
-    GOOGLE_TTS_API_KEY: str = ""
-    AZURE_TTS_API_KEY: str = ""
-    AZURE_TTS_REGION: str = "eastus"
 
     model_config = SettingsConfigDict(
         env_prefix="DIE_",

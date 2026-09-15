@@ -2,10 +2,10 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 started  
+**Phase:** 1 done; Phase 2 done; Phase 3 done  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened 2026-09-15)  
-**Target:** 2026-09-30  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15)  
+**Target:** 2026-09-30 (all 3 planned phases complete Day 6 — well ahead of schedule)  
 
 ## Progress Overview
 
@@ -29,14 +29,14 @@ formally closed 2026-09-15** at 22/24 (92%) — the user chose to close at this 
 scope rather than pull "progress cancellation"/LivePortrait lip-sync into Phase 2 first
 (see Decision Log 2026-09-15); both remain logged as deferred future work, not phase
 blockers. Phase 3 counts discrete ROADMAP checklist items across 3.1 (4), 3.2 (3), and
-3.3 (4) = 11 total, 7 done (3.1's 4 and 3.2's 3, both done 2026-09-15 — see Task 3.1/3.2
-below).*
+3.3 (4) = 11 total, all 11 done 2026-09-15 — **Phase 3 formally closed** (see Task
+3.1/3.2/3.3 below).*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
 | Phase 1 — Build | ✅ Complete | 28 | 30 |
 | Phase 2 — Testing | ✅ Complete (buildable scope) | 22 | 24 |
-| Phase 3 — Review | 🔄 In Progress | 7 | 11 |
+| Phase 3 — Review | ✅ Complete | 11 | 11 |
 
 ## Phase 1 Task Status
 
@@ -352,6 +352,24 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   calibration drift, Phase 3's own remaining items).
 - Pure deliverables task — no `app/`, `frontend/`, or `tests/` files touched.
 
+### 3.3 Final Cleanup — ✅ DONE (2026-09-15), all 4/4 ROADMAP items resolved
+- [x] Remove `print()` debug statements → `logging` — audited: `grep -rn "print(" app/
+  --include="*.py"` returns zero matches. Already satisfied, no code needed.
+- [x] `.env.example` — was stale: removed 5 dead `Settings` fields with zero real usages
+  (`GOOGLE_TTS_API_KEY`, `AZURE_TTS_API_KEY`, `AZURE_TTS_REGION` — vestiges of the
+  pre-decision multi-engine TTS design; `OMNIVOICE_DEVICE`/`OMNIVOICE_MAX_CONCURRENT` —
+  the real concurrency limit is the unrelated hardcoded `MAX_CONCURRENT_TTS` constant)
+  from both `app/core/config.py` and `.env.example`.
+- [x] `requirements.txt` complete and pinned — audited: every entry already uses `==`
+  (done during Phase 2's structural-risk audit, 2026-09-14). Already satisfied.
+- [x] Git tag `v1.0.0-beta` — applied after verification and push.
+- 2 full-suite runs during verification (1285.10s, 1054.27s — abnormally slow due to
+  real system load, a Chrome Remote Desktop session active on this machine) each hit
+  the pre-existing, tracked Gemini-retry timing flake once; confirmed non-regressive via
+  isolated re-run (0.56s pass both times) — the change touched only `app/core/config.py`,
+  unrelated to `script_service.py`'s retry timing. `ruff check app/core/config.py` clean.
+  **This closes Task 3.3 and Phase 3 in full — 11/11 discrete ROADMAP items done.**
+
 ## Decision Log
 
 | Date | Decision | Rationale |
@@ -658,6 +676,20 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   cross-checked its feature checklist against ROADMAP.md rather than restating from
   memory. This closes Task 3.2 — Phase 3 now stands at 7/11 discrete ROADMAP items done.
   | User; PM (Claude Code) |
+| 2026-09-15 | User chose to continue with Task 3.3 (Final Cleanup) at a `/vp-auto`
+  control point, closing Phase 3. Audited all 4 ROADMAP items before assuming any needed
+  work: 2 already satisfied (zero `print()` in `app/`; `requirements.txt` already fully
+  pinned), 2 real gaps fixed (`.env.example` was stale, advertising 5 dead `Settings`
+  fields with zero real usages — `GOOGLE_TTS_API_KEY`/`AZURE_TTS_API_KEY`/
+  `AZURE_TTS_REGION` from the pre-decision multi-engine TTS design, plus
+  `OMNIVOICE_DEVICE`/`OMNIVOICE_MAX_CONCURRENT` — removed from both
+  `app/core/config.py` and `.env.example`). Verification hit 2 abnormally slow full-suite
+  runs (real system load — a Chrome Remote Desktop session active on this machine, same
+  resource-contention pattern documented earlier this session); each hit the project's
+  pre-existing, tracked Gemini-retry timing flake exactly once, confirmed non-regressive
+  via isolated re-run. Git tag `v1.0.0-beta` applied after push. **This closes Task 3.3
+  and Phase 3 in full (11/11 discrete ROADMAP items done) — all 3 planned phases now
+  complete on Day 6 of a 21-day target.** | User; PM (Claude Code) |
 
 ## Known Issues
 
@@ -760,6 +792,18 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   clean up if desired. All 8 failing tests passed instantly/cleanly when re-run in isolation
   immediately after (3 Gemini tests instant, all 5 browser tests in 31s total) — consistent
   with resource contention, not a regression from the same session's bug fixes.
+  **2026-09-15, Task 3.3 verification:** 2 more full-suite runs (1285.10s and 1054.27s —
+  both far above the ~250-450s baseline) each hit exactly
+  `test_generate_script_backoff_sequence_is_1s_2s_4s` once. Checked for the same resource-
+  contention cause before re-running blind: `tasklist /V` found 15 `chrome.exe` processes,
+  but one of them was a real, active Chrome Remote Desktop window (the user's own remote
+  session into this machine) — deliberately did NOT kill any of them (same reasoning as
+  the entry above: cannot safely tell orphaned Playwright browsers apart from a real user
+  session, and this time a real one is confirmed present). Confirmed via isolated re-run:
+  passed instantly (0.56s) both times. The change under test (Task 3.3's removal of 5
+  dead `Settings` fields from `app/core/config.py`) has zero code-path relationship to
+  `script_service.py`'s retry timing — consistent with resource contention, not a
+  regression.
 
 - **Known, deliberately deferred race (found 2026-09-14 by PM audit, not fixed):**
   `app/api/audio.py`, `video.py`, and `youtube.py`'s `/generate`/export routes each snapshot

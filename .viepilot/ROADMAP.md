@@ -445,12 +445,20 @@ isolated re-run). See `.viepilot/phases/02-testing-polish/tasks/task-2.6.md`.
   `docs/product-review.md`, assembled from and cross-checked against ROADMAP.md/
   TRACKER.md rather than restated from memory
 
-### 3.3 Final Cleanup
+### 3.3 Final Cleanup — ✅ DONE (2026-09-15)
 
-- [ ] Remove all `print()` debug statements → use `logging`
-- [ ] Add `.env.example` file
-- [ ] Verify `requirements.txt` is complete and pinned
-- [ ] Git tag: `v1.0.0-beta`
+- [x] Remove all `print()` debug statements → use `logging` — audited: `grep -rn
+  "print(" app/` returns zero matches, every service already uses
+  `logging.getLogger(__name__)`. Already satisfied, no code needed
+- [x] Add `.env.example` file — existed since crystallization, but was stale: removed 5
+  dead `Settings` fields with zero real usages anywhere (`GOOGLE_TTS_API_KEY`,
+  `AZURE_TTS_API_KEY`, `AZURE_TTS_REGION` — vestiges of the pre-decision multi-engine TTS
+  design; `OMNIVOICE_DEVICE`/`OMNIVOICE_MAX_CONCURRENT` — the real concurrency limit is
+  the unrelated hardcoded `MAX_CONCURRENT_TTS` constant) from both `app/core/config.py`
+  and `.env.example`
+- [x] Verify `requirements.txt` is complete and pinned — audited: every entry already
+  uses `==` (done during Phase 2's structural-risk audit, 2026-09-14). Already satisfied
+- [x] Git tag: `v1.0.0-beta` — applied after this task's changes were verified and pushed
 
 ---
 

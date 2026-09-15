@@ -150,6 +150,19 @@ Versioning: [SemVer](https://semver.org/)
   building the recording script: Step 1's speaker-name fields are empty by default and
   block form submission, and Step 4's original 120s wait timeout was too tight for ~29
   sequential real Edge TTS calls (raised to 300s with diagnostics added).
+- Phase 3 Task 3.3, Final Cleanup (2026-09-15, by Claude Code as PM + Implementer),
+  closing Phase 3 in full: audited all 4 ROADMAP items first — "remove `print()` debug
+  statements" and "verify `requirements.txt` is complete and pinned" were both already
+  satisfied (zero `print()` calls anywhere in `app/`; every dependency already pinned
+  with `==`); `.env.example` was genuinely stale, advertising 5 dead `Settings` fields
+  with zero real usages anywhere (`GOOGLE_TTS_API_KEY`/`AZURE_TTS_API_KEY`/
+  `AZURE_TTS_REGION` — vestiges of the pre-decision multi-engine TTS design superseded by
+  the 2026-09-13 Edge-TTS-only decision; `OMNIVOICE_DEVICE`/`OMNIVOICE_MAX_CONCURRENT` —
+  the real concurrency limit is the unrelated hardcoded `MAX_CONCURRENT_TTS` constant) —
+  removed from both `app/core/config.py` and `.env.example`. Verification hit 2
+  abnormally slow full-suite runs (real system load — a Chrome Remote Desktop session
+  active on this machine) each triggering the project's pre-existing, tracked
+  Gemini-retry timing flake once; confirmed non-regressive via isolated re-run.
 
 ---
 

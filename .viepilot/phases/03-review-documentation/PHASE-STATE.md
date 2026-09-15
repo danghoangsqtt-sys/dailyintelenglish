@@ -3,16 +3,15 @@
 ## Metadata
 - **Phase:** 3
 - **Slug:** 03-review-documentation
-- **Status:** in_progress
+- **Status:** done (2026-09-15)
 - **Started:** 2026-09-15
-- **Target Completion:** 2026-09-30 (per ROADMAP.md's Day 15-21 target)
-- **Milestone Progress:** 7 / 11 ROADMAP items done (3.1 Documentation × 4 items — all
-  done 2026-09-15; 3.2 Demo & Review × 3 items — all done 2026-09-15; 3.3 Final Cleanup ×
-  4 items — not started — TRACKER.md's task-counting convention from Phases 1/2 counts
-  discrete ROADMAP checklist rows, so this phase totals 11 discrete items across 3 major
-  tasks)
-- **Test Suite Status:** 533/533 pass (verified 2026-09-15 closing Phase 2; Tasks 3.1 and
-  3.2 are documentation/deliverables work — no `app/`/`tests/` files touched)
+- **Completed:** 2026-09-15 (Day 6 of a 21-day target — well ahead of schedule)
+- **Milestone Progress:** 11 / 11 ROADMAP items done — **Phase 3 complete 2026-09-15**
+  (3.1 Documentation × 4; 3.2 Demo & Review × 3; 3.3 Final Cleanup × 4, all done
+  2026-09-15 — TRACKER.md's task-counting convention from Phases 1/2 counts discrete
+  ROADMAP checklist rows, so this phase totals 11 discrete items across 3 major tasks)
+- **Test Suite Status:** 533/533 pass (re-verified 2026-09-15 after Task 3.3's real
+  `app/core/config.py` change — the only Phase 3 task that touched app code)
 
 ---
 
@@ -39,7 +38,18 @@
   Step 4's wait timeout too tight for ~29 sequential real TTS calls) — see
   `tasks/task-3.2.md` for the full record.
 
-### Task 3.3: Final Cleanup
-- **Status:** not_started
-- ROADMAP items: remove `print()` debug statements → `logging`, add `.env.example`,
-  verify `requirements.txt` complete and pinned, git tag `v1.0.0-beta`
+### Task 3.3: Final Cleanup — ✅ DONE (2026-09-15), all 4/4 ROADMAP items resolved
+- **Status:** done
+- 2 items already satisfied, confirmed by audit: zero `print()` statements anywhere in
+  `app/` (all services already use `logging`); `requirements.txt` already fully pinned
+  with `==`. 2 items required a real fix: `.env.example` was stale, advertising 5 dead
+  `Settings` fields with zero real usages (`GOOGLE_TTS_API_KEY`, `AZURE_TTS_API_KEY`,
+  `AZURE_TTS_REGION`, `OMNIVOICE_DEVICE`, `OMNIVOICE_MAX_CONCURRENT`) — removed from both
+  `app/core/config.py` and `.env.example`. Git tag `v1.0.0-beta` applied after
+  verification and push. See `tasks/task-3.3.md` for the full record, including 2
+  abnormally slow full-suite runs (real system load, unrelated to this task's change)
+  that each hit the project's pre-existing, tracked Gemini-retry timing flake — confirmed
+  non-regressive via isolated re-run.
+
+**Phase 3 (Review & Documentation) formally closed 2026-09-15** — all 11/11 discrete
+ROADMAP items done across Tasks 3.1, 3.2, and 3.3.

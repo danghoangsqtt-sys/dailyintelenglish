@@ -49,10 +49,16 @@ avatar-upload groundwork (user supplies their own image per speaker) is in scope
 532/533 automated tests pass (1 pre-existing, tracked timing flake — always passes in
 isolation). See `.viepilot/TRACKER.md` for the full evidence trail.
 
-#### Review & Documentation (Phase 3) — 🔄 In Progress
+#### Review & Documentation (Phase 3) — ✅ Done 2026-09-15
 
-Final documentation pass, demo assets, and release cleanup. See
-`.viepilot/ROADMAP.md`'s Phase 3 section for the task list.
+| Task | Feature | Status |
+|------|---------|--------|
+| **Task 3.1** | 📖 **Documentation** — README, [Prompt Engineering Guide](docs/prompt-guide.md), [TTS Setup Guide](docs/tts-setup.md), auto-generated [API Reference](docs/api.md) | ✅ Done |
+| **Task 3.2** | 🎬 **Demo & Review** — [3 sample episodes](docs/samples/) (A1/B1/C1, real script+audio), a real [223.9s end-to-end demo recording](docs/demo-video.md), and a [product review report](docs/product-review.md) | ✅ Done |
+| **Task 3.3** | 🧹 **Final Cleanup** — removed 5 dead `Settings` fields and synced `.env.example`; `print()`/`logging` and pinned `requirements.txt` already satisfied | ✅ Done |
+
+All 3 planned phases (Full Feature Build, Testing & Polish, Review & Documentation) are
+complete as of Day 6 of a 21-day target. Tagged `v1.0.0-beta`.
 
 ## Quick Start
 
