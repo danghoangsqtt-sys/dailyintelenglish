@@ -29,7 +29,9 @@ PHẢI báo cáo rõ cho PM: "X không khả dụng trong sandbox này, đây l�
 1. **Đọc kỹ tài liệu** theo đúng thứ tự:
    - `.viepilot/AI-GUIDE.md` (file map)
    - `.viepilot/TRACKER.md` (trạng thái hiện tại, Decision Log, Known Issues)
-   - `.viepilot/ROADMAP.md` + task card cụ thể trong `.viepilot/phases/01-full-feature-build/tasks/`
+   - `.viepilot/ROADMAP.md` + task card cụ thể trong `.viepilot/phases/{phase}/tasks/`
+     (ví dụ hiện tại: `.viepilot/phases/04-post-beta-polish/tasks/task-4.2b.md` — PM sẽ
+     luôn nói rõ đường dẫn task card trong tin nhắn giao việc, không đoán)
    - `.viepilot/SYSTEM-RULES.md` (đặc biệt AR-06)
    - `.viepilot/ARCHITECTURE.md` và mọi file trong `allowed_files` của task
 2. **Xuất trình kế hoạch trước khi code** (dán vào chat, không tự chạy trước):
@@ -67,4 +69,4 @@ Task chỉ được đề xuất `ready_for_review` khi vượt qua toàn bộ:
 
 ## Bàn giao cho PM
 
-Ghi kết quả vào đúng task card (`.viepilot/phases/01-full-feature-build/tasks/task-X.Y.md`) dưới mục `## Implementer Evidence (Awaiting PM Acceptance)` — giữ nguyên format các task trước đó đã dùng. Không tự sửa `Status` field trong task card hay trong `.viepilot/requests/*.md` — đó là quyền của PM.
+Ghi kết quả vào đúng task card (đường dẫn PM đã chỉ định trong tin nhắn giao việc, ví dụ `.viepilot/phases/04-post-beta-polish/tasks/task-4.2b.md`) dưới mục `## Implementer Evidence (Awaiting PM Acceptance)` — giữ nguyên format các task trước đó đã dùng. Không tự sửa `Status` field trong task card hay trong `.viepilot/requests/*.md` — đó là quyền của PM.

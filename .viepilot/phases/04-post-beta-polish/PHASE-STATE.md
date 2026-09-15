@@ -41,4 +41,8 @@
   assumed only Script used the shell layout, and `step3_learning.js`'s `StepNav.render()`
   call was missing `variant: "workflow"` — both fixed at the root cause. 536/536 full
   suite passes (up from 533). See `tasks/task-4.2a.md` for the full record.
-- Remaining: TTS, Video, Thumbnail, YouTube, Music Library, Step1-Config — not started.
+- **4.2b — TTS Audio Studio (`/step4`)**: in_progress, assigned to Codex (Implementer),
+  PM (Claude Code) writes/accepts per AR-06. Doc-first task card written
+  2026-09-15 — see `tasks/task-4.2b.md`. Not yet implemented; awaiting Codex.
+- Remaining after 4.2b: Video, Thumbnail, YouTube, Music Library, Step1-Config — not
+  started.
