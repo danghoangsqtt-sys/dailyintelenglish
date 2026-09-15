@@ -32,7 +32,8 @@ blockers. Phase 3 counts discrete ROADMAP checklist items across 3.1 (4), 3.2 (3
 3.3 (4) = 11 total, all 11 done 2026-09-15 — **Phase 3 formally closed** (see Task
 3.1/3.2/3.3 below). Phase 4 (new, scoped in the 2026-09-15 brainstorm session, not part
 of the original plan) has 2 tasks: 4.1 done 2026-09-15 (partial improvement, honestly
-reported), 4.2 not started.*
+reported), 4.2 in progress (split per-page — 1/7 pages done: Learning/4.2a, 2026-09-15;
+TTS/Video/Thumbnail/YouTube/Music Library/Step1-Config remain).*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -388,6 +389,29 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   consistent with tuning a probabilistic model. See `tasks/task-4.1.md` for full
   before/after evidence. Single-file, prompt-only change — no `app/`/`tests/` touched.
 
+### 4.2 UI Redesign Slice 2 — 🔄 IN PROGRESS (1/7 pages done)
+
+- [x] **4.2a — Learning (`/step3`) — ✅ DONE (2026-09-15)**: wrapped in the same
+  3-panel shell Task 2.4 built for Script, deliberately no timeline (Learning has no
+  sequential-items concept, confirmed decision from the 2026-09-14 UI-redesign session).
+  New read-only item inspector (click a vocabulary/idiom/grammar/quiz card → full detail
+  in the inspector; quiz inspector always shows the correct answer, independent of the
+  main list's show/hide toggle) — deliberately no per-item action buttons, since no
+  backend endpoint exists to regenerate a single item (would be a fake feature per this
+  project's own precedent). Existing inline-`contenteditable`-edit + coalesced-trailing-
+  autosave behavior kept exactly as-is — the inspector is a new, independent read path,
+  never a second write path. 3 new Playwright tests — **first browser coverage this page
+  has ever had** (previously only API/service-level tests existed). Real screenshots
+  (1440×900, empty + populated) confirmed clean light-theme rendering.
+  **Real regression found and fixed during verification**: `test_step_nav_browser.py`'s
+  shared parametrized test assumed only Script (`current_step == 2`) used the 3-panel
+  shell layout, so it failed for the newly-shell-based Step 3; root cause on the
+  implementation side was `step3_learning.js`'s `StepNav.render()` call missing
+  `variant: "workflow"` (present on Script's call) — fixed both the test's branching and
+  the missing option, not just the test. 536/536 full suite passes (up from 533).
+  Remaining pages (TTS, Video, Thumbnail, YouTube, Music Library, Step1-Config) not
+  started. See `tasks/task-4.2a.md` for the full record.
+
 ## Decision Log
 
 | Date | Decision | Rationale |
@@ -739,6 +763,20 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   `.viepilot/phases/04-post-beta-polish/PHASE-STATE.md`, wrote `tasks/task-4.1.md`
   doc-first before implementing. Delivered Task 4.1 (see Phase 4 Task Status above) with
   an honest partial-improvement result, not overclaimed. | User; PM (Claude Code) |
+| 2026-09-15 | User said "tiếp tục" (continue) to start Task 4.2 (UI Redesign Slice 2).
+  Delivered sub-task 4.2a (Learning, `/step3`) first, per the brainstorm session's
+  suggested pipeline order. Wrapped in the same 3-panel shell as Script (Task 2.4), no
+  timeline (Learning has no sequential-items concept). Inspector design was a real PM
+  judgment call, disclosed: read-only detail view only, no per-item action buttons,
+  since no backend endpoint exists to regenerate a single vocabulary/idiom/grammar/quiz
+  item (only whole-pack regenerate) — building fake per-item actions would violate this
+  project's own "no fake features" precedent. First browser test coverage this page has
+  ever had (3 new tests). Found and fixed a real regression during verification:
+  `test_step_nav_browser.py` assumed only Script used the shell layout, and
+  `step3_learning.js`'s new `StepNav.render()` call was missing `variant: "workflow"` —
+  fixed both at the root cause rather than only loosening the test. 536/536 full suite
+  passes (up from 533). Remaining 6 pages (TTS, Video, Thumbnail, YouTube, Music
+  Library, Step1-Config) not started. | User; PM (Claude Code) |
 
 ## Known Issues
 

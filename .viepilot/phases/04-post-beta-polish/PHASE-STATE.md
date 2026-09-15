@@ -28,5 +28,17 @@
   probabilistic model. See `tasks/task-4.1.md` for the full evidence.
 
 ### Task 4.2: UI Redesign Slice 2 (7 remaining pages)
-- **Status:** not_started
+- **Status:** in_progress (1/7 pages done)
 - Split into per-page sub-tasks, written doc-first individually as each is picked up.
+- **4.2a — Learning (`/step3`)**: ✅ DONE (2026-09-15). Wrapped in the same 3-panel
+  shell as Script (Task 2.4), no timeline (confirmed decision — Learning has no
+  sequential-items concept). New read-only item inspector (click a vocabulary/idiom/
+  grammar/quiz card to see its full detail; quiz inspector always shows the answer,
+  independent of the main list's toggle) — no fake per-item actions invented, since no
+  backend supports regenerating a single item. Existing inline-edit/autosave/tabs
+  behavior unchanged. First browser test coverage this page has ever had (3 new tests).
+  Found and fixed a real regression during verification: `test_step_nav_browser.py`
+  assumed only Script used the shell layout, and `step3_learning.js`'s `StepNav.render()`
+  call was missing `variant: "workflow"` — both fixed at the root cause. 536/536 full
+  suite passes (up from 533). See `tasks/task-4.2a.md` for the full record.
+- Remaining: TTS, Video, Thumbnail, YouTube, Music Library, Step1-Config — not started.

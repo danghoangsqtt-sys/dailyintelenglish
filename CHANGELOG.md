@@ -22,6 +22,23 @@ Versioning: [SemVer](https://semver.org/)
   model. Single genre-scoped prompt file, no `app/`/`tests/` code touched. See
   `.viepilot/phases/04-post-beta-polish/tasks/task-4.1.md` for the full before/after
   evidence.
+- Phase 4 Task 4.2a, UI Redesign Slice 2 — Learning page (2026-09-15, by Claude Code as
+  PM + Implementer): `/step3` wrapped in the same 3-panel shell Task 2.4 built for
+  Script (`frontend/pages/step3_learning.html`, `frontend/static/js/step3_learning.js`)
+  — no timeline (Learning has no sequential-items concept). New read-only item inspector:
+  click any vocabulary/idiom/grammar/quiz card to see its full detail; the quiz
+  inspector always shows the correct answer, independent of the main list's show/hide
+  toggle. Deliberately no per-item action buttons — no backend endpoint exists to
+  regenerate a single item, only the whole pack. Existing inline-`contenteditable`-edit
+  and coalesced-trailing-autosave behavior unchanged. New
+  `tests/test_learning_shell_browser.py` (3 tests) — first browser coverage this page
+  has ever had.
+
+### Fixed
+- `tests/test_step_nav_browser.py` assumed only the Script page (`/step2`) used the new
+  3-panel shell layout; fixed its branching to also cover Learning (`/step3`), and fixed
+  the real root cause on the implementation side — `step3_learning.js`'s
+  `StepNav.render()` call was missing `variant: "workflow"`.
 
 ## [1.0.0-beta] - 2026-09-15
 

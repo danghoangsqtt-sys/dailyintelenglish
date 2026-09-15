@@ -17,6 +17,7 @@
     dirtySections: new Set(),
     revealedQuiz: new Set(),
     activeTab: "vocabulary",
+    selectedItem: null, // { section, index } | null
   };
 
   let saveIndicator = null;
@@ -100,9 +101,15 @@
     return `<span class="field ${extraClass}" contenteditable="true" data-section="${section}" data-index="${index}" data-field="${field}">${escapeHtml(value)}</span>`;
   }
 
+  function itemSelectedClass(section, index) {
+    return state.selectedItem && state.selectedItem.section === section && state.selectedItem.index === index
+      ? " selected"
+      : "";
+  }
+
   function vocabItemHtml(item, index) {
     return `
-      <div class="card item-card">
+      <div class="card item-card${itemSelectedClass("vocabulary", index)}" data-section="vocabulary" data-index="${index}">
         <div class="item-head">
           ${fieldSpan("vocabulary", index, "word", item.word, "item-title")}
           ${fieldSpan("vocabulary", index, "part_of_speech", item.part_of_speech, "badge")}
@@ -116,7 +123,7 @@
 
   function idiomItemHtml(item, index) {
     return `
-      <div class="card item-card">
+      <div class="card item-card${itemSelectedClass("idioms", index)}" data-section="idioms" data-index="${index}">
         <div class="item-head">
           ${fieldSpan("idioms", index, "phrase", item.phrase, "item-title")}
         </div>
@@ -129,7 +136,7 @@
   function grammarItemHtml(item, index) {
     const examples = (item.examples || []).map((ex) => `<li>${escapeHtml(ex)}</li>`).join("");
     return `
-      <div class="card item-card">
+      <div class="card item-card${itemSelectedClass("grammar", index)}" data-section="grammar" data-index="${index}">
         <div class="item-head">
           ${fieldSpan("grammar", index, "point", item.point, "item-title")}
         </div>
@@ -147,7 +154,7 @@
       .join("");
     const revealed = state.revealedQuiz.has(index);
     return `
-      <div class="card item-card">
+      <div class="card item-card${itemSelectedClass("questions", index)}" data-section="questions" data-index="${index}">
         <div class="item-head">
           ${fieldSpan("questions", index, "question", item.question, "item-title")}
         </div>
@@ -181,6 +188,64 @@
   function renderAllTabs() {
     Object.keys(TAB_RENDERERS).forEach(renderTab);
     applyStateToDom();
+  }
+
+  // --- Inspector: read-only detail view of the selected item (no per-item backend
+  // action exists to expose here — regenerate only works on the whole pack). ---
+
+  function selectItem(section, index) {
+    if (state.selectedItem && state.selectedItem.section === section && state.selectedItem.index === index) return;
+    state.selectedItem = { section, index };
+    const tab = Object.keys(TAB_SECTION).find((key) => TAB_SECTION[key] === section);
+    if (tab) renderTab(tab);
+    renderInspector();
+  }
+
+  function renderInspector() {
+    const container = document.getElementById("learning-inspector");
+    if (!container) return;
+    const selected = state.selectedItem;
+    const item = selected && state.pack && state.pack[selected.section] && state.pack[selected.section][selected.index];
+    if (!item) {
+      container.className = "inspector-empty";
+      container.textContent = "Select an item to inspect it.";
+      return;
+    }
+
+    container.className = "";
+    if (selected.section === "vocabulary") {
+      container.innerHTML = `
+        <h2 class="inspector-title">${escapeHtml(item.word)}</h2>
+        <div class="inspector-meta"><span class="badge">${escapeHtml(item.part_of_speech || "")}</span><span class="ipa">${escapeHtml(item.ipa || "")}</span></div>
+        <p class="inspector-copy">${escapeHtml(item.definition_en)}<br />${escapeHtml(item.definition_vi)}</p>
+        <div class="callout"><strong>Example</strong><br />${escapeHtml(item.example_sentence || "—")}</div>`;
+    } else if (selected.section === "idioms") {
+      container.innerHTML = `
+        <h2 class="inspector-title">${escapeHtml(item.phrase)}</h2>
+        <p class="inspector-copy">${escapeHtml(item.meaning_en)}<br />${escapeHtml(item.meaning_vi)}</p>
+        <div class="callout"><strong>Example</strong><br />${escapeHtml(item.example_sentence || "—")}</div>`;
+    } else if (selected.section === "grammar") {
+      const examples = (item.examples || []).map((ex) => `<li>${escapeHtml(ex)}</li>`).join("");
+      container.innerHTML = `
+        <h2 class="inspector-title">${escapeHtml(item.point)}</h2>
+        <div class="inspector-meta"><span class="ipa">${escapeHtml(item.structure || "")}</span></div>
+        <p class="inspector-copy">${escapeHtml(item.explanation_en)}<br />${escapeHtml(item.explanation_vi)}</p>
+        ${examples ? `<div class="callout"><strong>Examples</strong><ul class="examples-list">${examples}</ul></div>` : ""}`;
+    } else if (selected.section === "questions") {
+      // Always shows the answer here, independent of the main list's show/hide toggle —
+      // a genuine quick-reference use of already-generated data, not a new action.
+      container.innerHTML = `
+        <h2 class="inspector-title">${escapeHtml(item.question)}</h2>
+        <p class="inspector-copy">${escapeHtml(item.correct_answer)}</p>
+        <div class="callout"><strong>Why</strong><br />${escapeHtml(item.explanation || "—")}</div>`;
+    }
+  }
+
+  function handleTabPanelClick(e) {
+    const card = e.target.closest(".item-card");
+    if (!card) return;
+    const { section, index } = card.dataset;
+    if (section && index !== undefined) selectItem(section, Number(index));
   }
 
   function render() {
@@ -217,6 +282,12 @@
     document.querySelectorAll(".tab-panel").forEach((panel) => {
       panel.hidden = panel.dataset.tabPanel !== tab;
     });
+    // A selection from another tab points at a different item list — clear it rather
+    // than show stale/wrong data in the inspector.
+    if (state.selectedItem && state.selectedItem.section !== TAB_SECTION[tab]) {
+      state.selectedItem = null;
+      renderInspector();
+    }
   }
 
   function handleTabsClick(e) {
@@ -349,7 +420,9 @@
     try {
       state.pack = await Api.generateLearningPack(state.projectId);
       state.revealedQuiz.clear();
+      state.selectedItem = null;
       render();
+      renderInspector();
     } catch (err) {
       console.error("Failed to generate learning content:", err);
       showError("We couldn't generate the learning pack. Please try again.");
@@ -419,6 +492,7 @@
     document.getElementById("content-tabs").addEventListener("click", handleTabsClick);
     const contentWrap = document.getElementById("content-wrap");
     contentWrap.addEventListener("click", handleContentClick);
+    contentWrap.addEventListener("click", handleTabPanelClick);
     contentWrap.addEventListener("focusout", handleContentFocusOut);
     contentWrap.addEventListener("keydown", handleContentKeydown);
 
@@ -434,10 +508,17 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 3 });
+    StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 3, variant: "workflow" });
     KeyboardShortcuts.init({ primaryButtonId: "generate-btn" });
     saveIndicator = SaveIndicator.mount("save-indicator");
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
+    WorkspaceShell.init({
+      sidebar: document.getElementById("pane-sidebar"),
+      resizerLeft: document.getElementById("resizer-left"),
+      inspector: document.getElementById("pane-inspector"),
+      resizerRight: document.getElementById("resizer-right"),
+      collapseBtn: document.getElementById("sidebar-collapse-btn"),
+    });
     window.addEventListener("beforeunload", (e) => {
       if (state.saveStatus !== "saved" || state.saveQueued || state.dirtySections.size > 0) {
         e.preventDefault();

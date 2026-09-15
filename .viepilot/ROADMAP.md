@@ -513,11 +513,15 @@ explicitly deferred, not part of this phase.
     harder than nominal, so this closes at the honest result rather than iterating
     further on a low-priority item.
 
-### 4.2 UI Redesign Slice 2 (7 remaining pages)
+### 4.2 UI Redesign Slice 2 (7 remaining pages) — 1/7 done
 
-- [ ] **Learning** (`/step3`) — apply the approved 3-panel shell (see
-  `.viepilot/ui-direction/2026-09-14/pages/`); inspector shows vocabulary/idiom/grammar
-  detail (no timeline — confirmed decision from the 2026-09-14 session)
+- [x] **Learning** (`/step3`) — ✅ DONE (2026-09-15). Applied the 3-panel shell (no
+  timeline, confirmed decision); inspector is a read-only detail view of the selected
+  vocabulary/idiom/grammar/quiz item (quiz inspector always shows the answer). 3 new
+  Playwright tests (first browser coverage this page has had). Found+fixed a real
+  regression in `test_step_nav_browser.py`'s shell-layout assumption and a missing
+  `variant: "workflow"` on the page's own `StepNav.render()` call. 536/536 full suite
+  passes. See `.viepilot/phases/04-post-beta-polish/tasks/task-4.2a.md`.
 - [ ] **TTS Audio Studio** (`/step4`) — shell + timeline (Script/Voice/Music tracks)
 - [ ] **Video Studio** (`/step5`) — shell + timeline
 - [ ] **Thumbnail Generator** (`/step6`) — shell, no timeline

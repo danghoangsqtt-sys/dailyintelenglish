@@ -117,9 +117,11 @@ async def test_each_page_renders_and_navigates_shared_step_nav(
         "#step-nav .step-nav-pill:not(.active)"
     ).first.evaluate("element => getComputedStyle(element).color")
 
-    if current_step == 2:
+    if current_step in (2, 3):
+        # Step 2 (Script, Task 2.4) and Step 3 (Learning, Task 4.2a) use the 3-panel
+        # shell — #step-nav lives inside #pane-sidebar, not directly under the topbar.
         assert await page.locator("#pane-sidebar #step-nav .step-nav-workflow").count() == 1
-        assert await page.locator("#step-nav .workflow-item .step-dot.active").text_content() == "2"
+        assert await page.locator("#step-nav .workflow-item .step-dot.active").text_content() == str(current_step)
     else:
         is_between_header_and_main = await page.locator("#step-nav").evaluate(
             "element => element.previousElementSibling?.matches('header.topbar') === true "
