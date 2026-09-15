@@ -39,6 +39,13 @@ Versioning: [SemVer](https://semver.org/)
   3-panel shell layout; fixed its branching to also cover Learning (`/step3`), and fixed
   the real root cause on the implementation side — `step3_learning.js`'s
   `StepNav.render()` call was missing `variant: "workflow"`.
+- `/vp-audit` pass after Task 4.2a (2026-09-15): `README.md` had no mention of Phase 4
+  despite Tasks 4.1/4.2a already shipping — added a summary section matching the
+  existing Phase 2/3 format. `step3_learning.js`'s `commitField()` never called
+  `renderInspector()`, so editing the currently-selected item's field left the inspector
+  showing stale text until re-selected — fixed, and verified as a real bug via
+  revert-and-confirm-failure (Script's equivalent `commit()` already handles this
+  correctly, confirming it was a Learning-specific oversight, not a systemic pattern).
 
 ## [1.0.0-beta] - 2026-09-15
 

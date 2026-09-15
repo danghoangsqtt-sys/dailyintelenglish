@@ -219,4 +219,8 @@ async def test_learning_inline_edit_and_autosave_still_works(browser_instance: B
     assert len(save_calls) >= 1
     payload = json.loads(save_calls[-1])
     assert payload["vocabulary"][0]["word"] == "meticulous"
+
+    # The click-to-edit also selects the card (bubbles to the tab-panel click handler),
+    # so the inspector should reflect the edited value too, not the stale pre-edit text.
+    assert "meticulous" in await page.locator("#learning-inspector").text_content()
     await page.close()

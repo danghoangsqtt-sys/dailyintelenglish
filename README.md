@@ -60,6 +60,20 @@ isolation). See `.viepilot/TRACKER.md` for the full evidence trail.
 All 3 planned phases (Full Feature Build, Testing & Polish, Review & Documentation) are
 complete as of Day 6 of a 21-day target. Tagged `v1.0.0-beta`.
 
+#### Post-v1.0.0-beta Polish (Phase 4) — 🔄 In Progress
+
+New scope beyond the original 3-phase plan, scoped in the
+[2026-09-15 brainstorm session](docs/brainstorm/session-2026-09-15.md) after v1.0.0-beta
+shipped.
+
+| Task | Feature | Status |
+|------|---------|--------|
+| **Task 4.1** | 🎯 **CEFR `news`-genre prompt tuning** — targeted the 3 patterns Task 2.1b flagged as BORDERLINE; honest result was a partial, mixed improvement, not a full fix | ✅ Done |
+| **Task 4.2** | 🎨 **UI Redesign Slice 2** — shell for the 7 pages not covered by Slice 1, split per-page (4.2a Learning done; TTS/Video/Thumbnail/YouTube/Music Library/Step1-Config remain) | 🔄 In Progress (1/7) |
+
+Progress cancellation and real LivePortrait lip-sync remain deliberately deferred — see
+`.viepilot/TRACKER.md` Known Issues.
+
 ## Quick Start
 
 ### Requirements

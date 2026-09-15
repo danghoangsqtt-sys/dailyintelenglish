@@ -371,6 +371,10 @@
     item[field] = newValue;
     markDirty(section);
     renderTab(state.activeTab);
+    // The inspector holds its own rendered copy of the selected item's fields — refresh
+    // it too, or an edit to the currently-inspected item would show stale text there
+    // until the user re-selects it.
+    renderInspector();
   }
 
   function handleContentFocusOut(e) {

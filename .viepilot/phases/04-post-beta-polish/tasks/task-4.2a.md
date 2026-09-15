@@ -144,3 +144,20 @@ real screenshots taken and reviewed, one real regression found by running the ac
 suite (not assumed away) and fixed at its root cause rather than papered over. Existing
 inline-edit/autosave/tabs/generate/regenerate behavior verified unchanged. Closes Task
 4.2a.
+
+## Post-acceptance `/vp-audit` pass (2026-09-15) — 2 more real findings, both fixed
+
+- **README.md doc drift (Tier 2)**: had no mention of Phase 4 at all, even though Tasks
+  4.1 and 4.2a had already shipped — added a "Post-v1.0.0-beta Polish (Phase 4)" section
+  matching the existing Phase 2/3 summary format.
+- **Real bug (Tier 3, code quality): stale inspector after editing the selected item**
+  — `commitField()` updated `item[field]` and called `renderTab(state.activeTab)`, but
+  never `renderInspector()`. Editing a field on the currently-selected item (e.g.
+  "thorough" → "meticulous") left the inspector showing the old value until the user
+  re-selected the card. Compared against Script's equivalent `commit()` (Task 2.4):
+  Script's `renderScript()` already calls `renderInspector()` on every path, so this was
+  a Learning-specific oversight, not a systemic pattern. **Verified as a real, not
+  theoretical, bug**: reverted the fix (`git stash`), watched the new inspector
+  assertion in `test_learning_inline_edit_and_autosave_still_works` fail for the right
+  reason (stale `"thorough"` text), then restored the fix and confirmed it passes.
+  536/536 full suite passes.

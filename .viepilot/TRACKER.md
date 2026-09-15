@@ -777,6 +777,21 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   fixed both at the root cause rather than only loosening the test. 536/536 full suite
   passes (up from 533). Remaining 6 pages (TTS, Video, Thumbnail, YouTube, Music
   Library, Step1-Config) not started. | User; PM (Claude Code) |
+| 2026-09-15 | User ran `/vp-audit` after Task 4.2a, before starting the next page.
+  Tier 1 (state consistency across TRACKER/ROADMAP/PHASE-STATE/HANDOFF/git tags for
+  Phase 4) clean. Tier 2 found one real doc-drift gap: `README.md` had no mention of
+  Phase 4 at all despite Tasks 4.1/4.2a already shipping — added a "Post-v1.0.0-beta
+  Polish (Phase 4)" section matching the existing Phase 2/3 format. Tier 3 (re-reading
+  Task 4.2a's own new code, not just re-trusting the prior session) found one real bug:
+  `commitField()` in `step3_learning.js` never called `renderInspector()`, so editing
+  the currently-selected item's field left the inspector showing stale text until
+  re-selected — confirmed real via revert-and-confirm-failure (a new inspector
+  assertion in the existing inline-edit test failed for the right reason before the
+  fix, matching Task 2.6c's verification discipline). Compared against Script's
+  equivalent `commit()` (Task 2.4) and confirmed it already calls `renderInspector()`
+  on every path — this was a Learning-specific oversight, not a systemic pattern
+  worth auditing elsewhere. Both findings fixed; 536/536 full suite passes. Tier 4
+  skipped (not the ViePilot framework repo). | User; PM (Claude Code) |
 
 ## Known Issues
 
