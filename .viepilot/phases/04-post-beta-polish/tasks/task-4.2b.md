@@ -103,11 +103,17 @@ state, just `scrollIntoView` on an existing element).
 - `frontend/pages/step4_tts.html`
 - `frontend/static/js/step4_tts.js`
 - `tests/test_tts_shell_browser.py` (new)
+- **`tests/test_step_nav_browser.py` — narrow, pre-authorized fix (PM decision,
+  2026-09-15, in response to Codex correctly flagging this exact conflict before
+  writing any code):** update line ~120's `if current_step in (2, 3):` to
+  `if current_step in (2, 3, 4):` (and its adjoining comment) — the same one-line class
+  of fix PM made directly for Task 4.2a's `current_step == 3` case, now pre-approved for
+  Codex to apply itself since it's already correctly diagnosed and mechanically
+  identical. **Scope is that one branch condition only** — no other change to this file.
 - Do **not** touch `app/` (zero API/schema change), `shell.js`, or any other page's
-  files. If a real bug is found in a shared file (`style.css`, `shell.js`,
-  `step_nav.js`) while implementing, **report it to PM, do not fix it silently** — same
-  rule as Task 4.2a's own `test_step_nav_browser.py` fix, which PM made directly, not
-  Codex.
+  files. If a real bug is found in any *other* shared file (`style.css`, `shell.js`,
+  `step_nav.js`, or any test file not listed above) while implementing, **report it to
+  PM, do not fix it silently**.
 - State-tracking files (`.viepilot/ROADMAP.md`, `.viepilot/TRACKER.md`,
   `.viepilot/HANDOFF.json`, `.viepilot/phases/04-post-beta-polish/PHASE-STATE.md`,
   `CHANGELOG.md`) are updated by **PM only**, after acceptance — Codex does not touch
