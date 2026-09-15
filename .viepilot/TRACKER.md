@@ -690,6 +690,26 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   via isolated re-run. Git tag `v1.0.0-beta` applied after push. **This closes Task 3.3
   and Phase 3 in full (11/11 discrete ROADMAP items done) — all 3 planned phases now
   complete on Day 6 of a 21-day target.** | User; PM (Claude Code) |
+| 2026-09-15 | User ran `/vp-audit` after Phase 3 closed, asking to find and fix real
+  errors before continuing. Full 4-tier pass (Tier 4 skipped — this is not the ViePilot
+  framework repo): Tier 1/2 found 3 real, pre-existing drift issues, all fixed. (1)
+  `ROADMAP.md`'s Task 1.1 "Verify ffmpeg & OmniVoice" checklist item was still unchecked
+  with stale "not yet" text describing a blocked state from 2026-09-11, even though
+  TRACKER.md has recorded all 3 blockers resolved since 2026-09-12/13 and Task 1.1 closed
+  — re-ran `scripts/check_dependencies.py` live to confirm all 6 checks are still GREEN
+  before flipping the checkbox. (2) `CHANGELOG.md` had no version section for the new
+  `v1.0.0-beta` tag — everything sat under `[Unreleased]` — and its `[0.1.0]` compare
+  link pointed at a tag (`v0.1.0`) that was never actually created; renamed the section to
+  `## [1.0.0-beta] - 2026-09-15`, added a fresh empty `[Unreleased]`, and repointed the
+  `[0.1.0]` link at the real initial commit (`3fc1cb8`). (3) `HANDOFF.json`'s top-level
+  `version` field was still `"0.1.0"`, not updated alongside the new tag — bumped to
+  `"1.0.0-beta"`. Tier 3: `ruff check scripts/ app/` clean, `pip check` clean, no new
+  code-quality findings — the codebase has already been through several deep audit passes
+  this session (Task 2.6, the 2026-09-14 structural-risk audit). Verified the
+  `.viepilot/architecture/*.mermaid` sidecar files still match `ARCHITECTURE.md`'s
+  diagram matrix exactly (3 required, 3 optional/N/A with no stray files) and that
+  `ARCHITECTURE.md` doesn't reference the Task 3.3 dead-settings cleanup (nothing to
+  sync). | User; PM (Claude Code) |
 
 ## Known Issues
 

@@ -33,9 +33,13 @@
   - `app/db/database.py` — async connection pool
   - Verify: DB created on startup
 
-- [ ] **Verify ffmpeg & OmniVoice**
+- [x] **Verify ffmpeg & OmniVoice**
   - `scripts/check_dependencies.py` — check ffmpeg, OmniVoice model, GPU
-  - Verify: script reports all GREEN — **not yet**: ffmpeg not on PATH, `.env`/`DIE_GEMINI_API_KEY` not set, OmniVoice model not downloaded on this machine (see TRACKER Known Issues). Script logic itself is done and tested, but the task's verify condition (all-GREEN) is not met.
+  - Verify: script reports all GREEN — resolved 2026-09-13 (ffmpeg installed via
+    `winget`, `DIE_GEMINI_API_KEY` filled in, OmniVoice model downloaded and GPU-load
+    verified; see TRACKER.md Known Issues for the full resolution record). Re-confirmed
+    live 2026-09-15 (`/vp-audit`): all 6 checks (Python, ffmpeg, GPU, Gemini key,
+    OmniVoice model, data dirs) still report GREEN on this machine.
 
 ### 1.2 Dashboard & Project Management
 

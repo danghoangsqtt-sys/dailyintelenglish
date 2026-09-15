@@ -8,6 +8,13 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.0.0-beta] - 2026-09-15
+
+All 3 planned phases (Full Feature Build, Testing & Polish, Review & Documentation)
+complete — see `.viepilot/TRACKER.md` for the full evidence trail. 533/533 tests pass.
+
 ### Added
 - Initial project crystallization from brainstorm session 2026-09-10
 - Architecture design: FastAPI + OmniVoice + Gemini + ffmpeg stack
@@ -173,5 +180,6 @@ Versioning: [SemVer](https://semver.org/)
 - `.viepilot/` architecture artifacts created
 - Brainstorm session completed
 
-[Unreleased]: https://github.com/danghoangsqtt-sys/dailyintelenglish/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/danghoangsqtt-sys/dailyintelenglish/releases/tag/v0.1.0
+[Unreleased]: https://github.com/danghoangsqtt-sys/dailyintelenglish/compare/v1.0.0-beta...HEAD
+[1.0.0-beta]: https://github.com/danghoangsqtt-sys/dailyintelenglish/compare/3fc1cb8...v1.0.0-beta
+[0.1.0]: https://github.com/danghoangsqtt-sys/dailyintelenglish/commit/3fc1cb8
