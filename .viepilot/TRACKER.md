@@ -2,10 +2,10 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done  
+**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 started (new, post-beta)  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15)  
-**Target:** 2026-09-30 (all 3 planned phases complete Day 6 — well ahead of schedule)  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, new scope beyond the original 21-day plan)  
+**Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
 
@@ -30,13 +30,16 @@ scope rather than pull "progress cancellation"/LivePortrait lip-sync into Phase 
 (see Decision Log 2026-09-15); both remain logged as deferred future work, not phase
 blockers. Phase 3 counts discrete ROADMAP checklist items across 3.1 (4), 3.2 (3), and
 3.3 (4) = 11 total, all 11 done 2026-09-15 — **Phase 3 formally closed** (see Task
-3.1/3.2/3.3 below).*
+3.1/3.2/3.3 below). Phase 4 (new, scoped in the 2026-09-15 brainstorm session, not part
+of the original plan) has 2 tasks: 4.1 done 2026-09-15 (partial improvement, honestly
+reported), 4.2 not started.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
 | Phase 1 — Build | ✅ Complete | 28 | 30 |
 | Phase 2 — Testing | ✅ Complete (buildable scope) | 22 | 24 |
 | Phase 3 — Review | ✅ Complete | 11 | 11 |
+| Phase 4 — Post-Beta Polish (new) | 🔄 In Progress | 1 | 2 |
 
 ## Phase 1 Task Status
 
@@ -369,6 +372,21 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   isolated re-run (0.56s pass both times) — the change touched only `app/core/config.py`,
   unrelated to `script_service.py`'s retry timing. `ruff check app/core/config.py` clean.
   **This closes Task 3.3 and Phase 3 in full — 11/11 discrete ROADMAP items done.**
+
+## Phase 4 Task Status
+
+### 4.1 CEFR `news`-genre prompt tuning — ✅ DONE (2026-09-15), partial improvement
+- [x] Added register-vs-complexity guidance to `prompts/script/news.txt`, directly
+  targeting the 3 quoted failure patterns from Task 2.1b's real 18-sample review
+  (Future Simple drift at A2, B2-leaning idioms at B1, C1-bordering vocabulary at B2).
+- Verified with 3 real Gemini calls (`generate_cefr_review_samples.py --levels A2 B1 B2
+  --genres news`), re-reviewed against Task 2.1b's exact rubric. **Honest result:
+  partial, mixed improvement** — A2's specific indefinite-pronoun+modal pattern didn't
+  recur but Future Simple usage persists; B1's exact flagged idiom ("a breath of fresh
+  air") recurred verbatim; B2's idiom choice improved (more solidly B2-appropriate) but
+  grammar (Past Perfect Continuous) still borders C1. Not overclaimed as a full fix —
+  consistent with tuning a probabilistic model. See `tasks/task-4.1.md` for full
+  before/after evidence. Single-file, prompt-only change — no `app/`/`tests/` touched.
 
 ## Decision Log
 
@@ -710,6 +728,17 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   diagram matrix exactly (3 required, 3 optional/N/A with no stray files) and that
   `ARCHITECTURE.md` doesn't reference the Task 3.3 dead-settings cleanup (nothing to
   sync). | User; PM (Claude Code) |
+| 2026-09-15 | User ran `/vp-brainstorm` to plan post-v1.0.0-beta work. PM reviewed known
+  deferred items (progress cancellation, LivePortrait lip-sync, remaining UI redesign
+  pages, CEFR calibration) and presented a risk/value table; user approved 2 low-risk,
+  clear-value tasks as Phase 4 (CEFR `news` tuning, UI Redesign Slice 2 — 7 pages, split
+  per-page), keeping progress cancellation and LivePortrait lip-sync deferred. See
+  `docs/brainstorm/session-2026-09-15.md`. Scaffolded Phase 4 directly within the
+  following `/vp-auto` invocation (same established pattern as opening Phase 3): added
+  `## Phase 4` to `ROADMAP.md`, created
+  `.viepilot/phases/04-post-beta-polish/PHASE-STATE.md`, wrote `tasks/task-4.1.md`
+  doc-first before implementing. Delivered Task 4.1 (see Phase 4 Task Status above) with
+  an honest partial-improvement result, not overclaimed. | User; PM (Claude Code) |
 
 ## Known Issues
 

@@ -6,3 +6,18 @@ Natural fillers to use sparingly: almost none — keep language crisp and
 professional; a rare "Now," or "In other news," is acceptable at transitions.
 Follow a classic news structure: headline/hook, key details, brief context or
 implication, closing line.
+
+Register vs. complexity: the formal, structured tone above describes SHAPE and TONE —
+how the report is organized and the professionalism of the word choice — not permission
+to raise grammar or idiom complexity beyond the CEFR level's ceiling set elsewhere in
+this prompt. A well-written A2 or B1 news report still sounds like a real news report;
+it is simply built from simpler sentences and everyday idioms.
+- Do not reach for a sophisticated idiom (e.g. "turn over a new leaf", "bridge the gap",
+  "cutting corners") just because the topic is a news story — use one only if it belongs
+  to the current CEFR level's allowed idiom sophistication.
+- Prefer the simplest tense/structure that states the fact clearly (e.g. Present Simple
+  for scheduled events, "going to" for near-future plans) over Future Simple, passive
+  voice, or non-defining relative clauses, unless the requested CEFR level is B2 or
+  higher.
+- A short, plain closing line (e.g. "That's the news for today.") is entirely authentic
+  at every level — it never needs embellishing to sound like real news.

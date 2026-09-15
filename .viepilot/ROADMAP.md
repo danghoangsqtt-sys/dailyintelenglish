@@ -482,3 +482,51 @@ isolated re-run). See `.viepilot/phases/02-testing-polish/tasks/task-2.6.md`.
   jobs are all re-fetched on page load, not just held in memory)
 - [x] Dark mode works across all pages — `data-theme="dark"` default + `theme.js` toggle,
   present on every page since Task 1.1/1.2
+
+---
+
+## Phase 4 — Post-v1.0.0-beta Polish
+
+New phase, not in the original 21-day/3-phase plan — scoped in the 2026-09-15 brainstorm
+session (`docs/brainstorm/session-2026-09-15.md`) after all 3 original phases closed.
+PM presented a risk/value review of known deferred items (progress cancellation,
+LivePortrait lip-sync, remaining UI redesign pages, CEFR calibration); user approved 2
+low-risk, clear-value tasks. Progress cancellation and real LivePortrait lip-sync remain
+explicitly deferred, not part of this phase.
+
+### 4.1 CEFR `news`-genre prompt tuning — ✅ DONE (2026-09-15), partial improvement
+
+- [x] **Tune `prompts/script/news.txt`** — Task 2.1b's real 18-sample review (2026-09-14)
+  found A2/B1/B2 × `news` BORDERLINE (idiom/grammar sophistication ~half a CEFR level
+  higher than `small_talk`/`interview` at the same level; A1/C1/C2 × `news` were already
+  well-calibrated). Added explicit register-vs-complexity guidance so the genre's formal
+  tone doesn't push Gemini past the CEFR ceiling set elsewhere in the prompt.
+  - Verified: re-ran `scripts/generate_cefr_review_samples.py --levels A2 B1 B2 --genres
+    news` (3/3 real Gemini calls) and re-reviewed against Task 2.1b's exact rubric.
+    **Honest result: partial, mixed improvement, not a full fix** — A2's specific
+    "indefinite pronoun + modal" pattern didn't recur but Future Simple usage persists;
+    B1's exact flagged idiom ("a breath of fresh air") recurred verbatim; B2's idiom
+    choice became more solidly B2-appropriate but grammar (Past Perfect Continuous)
+    still borders C1. See `tasks/task-4.1.md` for the full before/after evidence.
+    Consistent with tuning a probabilistic model — a real, measured, disclosed effect,
+    not overclaimed as solved. None of the original cases were unusable, only slightly
+    harder than nominal, so this closes at the honest result rather than iterating
+    further on a low-priority item.
+
+### 4.2 UI Redesign Slice 2 (7 remaining pages)
+
+- [ ] **Learning** (`/step3`) — apply the approved 3-panel shell (see
+  `.viepilot/ui-direction/2026-09-14/pages/`); inspector shows vocabulary/idiom/grammar
+  detail (no timeline — confirmed decision from the 2026-09-14 session)
+- [ ] **TTS Audio Studio** (`/step4`) — shell + timeline (Script/Voice/Music tracks)
+- [ ] **Video Studio** (`/step5`) — shell + timeline
+- [ ] **Thumbnail Generator** (`/step6`) — shell, no timeline
+- [ ] **YouTube Package** (`/step7`) — shell, no timeline
+- [ ] **Music Library** (`/music`) — deliberately NOT shell-based (shared utility page,
+  not part of the 7-step pipeline — same decision as the 2026-09-14 session)
+- [ ] **Step 1 Config** (`/step1`) — deliberately NOT shell-based (pure form, no
+  workspace concept)
+
+Each page is its own sub-task (task cards written individually, doc-first, per the
+2026-09-15 brainstorm session's explicit pacing decision) — not one large task, per
+Task 2.4's precedent (2 pages needed 49 new/updated tests).

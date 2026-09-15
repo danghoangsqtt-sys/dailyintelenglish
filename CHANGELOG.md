@@ -8,7 +8,20 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+- Phase 4 Task 4.1, CEFR `news`-genre prompt tuning (2026-09-15, by Claude Code as PM +
+  Implementer): added register-vs-complexity guidance to `prompts/script/news.txt`,
+  targeting the exact 3 patterns Task 2.1b's real 18-sample review flagged as BORDERLINE
+  (Future Simple drift at A2, B2-leaning idioms at B1, C1-bordering vocabulary at B2).
+  Re-tested A2/B1/B2 × `news` with 3 real Gemini calls, re-reviewed against Task 2.1b's
+  exact rubric. Honest result: **partial, mixed improvement, not a full fix** — one
+  specific pattern (A2's indefinite-pronoun+modal) didn't recur but Future Simple usage
+  persists; B1's exact flagged idiom ("a breath of fresh air") recurred verbatim; B2's
+  idiom choice became more solidly B2-appropriate but grammar (Past Perfect Continuous)
+  still borders C1. Not overclaimed as solved — consistent with tuning a probabilistic
+  model. Single genre-scoped prompt file, no `app/`/`tests/` code touched. See
+  `.viepilot/phases/04-post-beta-polish/tasks/task-4.1.md` for the full before/after
+  evidence.
 
 ## [1.0.0-beta] - 2026-09-15
 
