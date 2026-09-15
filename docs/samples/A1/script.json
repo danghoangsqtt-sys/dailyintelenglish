@@ -1,0 +1,238 @@
+{
+  "project_id": "f0549c70-d4dc-4ca2-b4f0-5b5c29813824",
+  "config": {
+    "speakers": [
+      {
+        "id": "56af5ced-7569-4f37-9c7b-c85730aa0380",
+        "name": "Alex",
+        "gender": "male",
+        "accent": "american",
+        "tts_engine": "edge_tts",
+        "voice_description": "",
+        "speed": 1.0,
+        "pitch": 0.0,
+        "volume": 1.0
+      },
+      {
+        "id": "98ecd1b5-3807-4dc6-8009-f60d87cb5c48",
+        "name": "Maya",
+        "gender": "female",
+        "accent": "american",
+        "tts_engine": "edge_tts",
+        "voice_description": "",
+        "speed": 1.0,
+        "pitch": 0.0,
+        "volume": 1.0
+      }
+    ],
+    "name": "Sample Episode A1",
+    "topic": "Planning a healthy weekday routine",
+    "cefr_level": "A1",
+    "genre": "small_talk",
+    "accent": "american",
+    "duration_minutes": 2.0,
+    "num_speakers": 2,
+    "language_features": {
+      "collocation": true,
+      "idiom": true,
+      "slang": false,
+      "local_expressions": false,
+      "phrasal_verbs": true,
+      "business_register": false
+    }
+  },
+  "lines": [
+    {
+      "id": "line_001",
+      "speaker_id": "56af5ced-7569-4f37-9c7b-c85730aa0380",
+      "text": "Hi Maya! Do you have a healthy routine?",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Present Simple — question with do"
+      }
+    },
+    {
+      "id": "line_002",
+      "speaker_id": "98ecd1b5-3807-4dc6-8009-f60d87cb5c48",
+      "text": "Yes, I do! I start my day early.",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Present Simple — statement"
+      }
+    },
+    {
+      "id": "line_003",
+      "speaker_id": "56af5ced-7569-4f37-9c7b-c85730aa0380",
+      "text": "That is great. What do you do first?",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Present Simple — question word"
+      }
+    },
+    {
+      "id": "line_004",
+      "speaker_id": "98ecd1b5-3807-4dc6-8009-f60d87cb5c48",
+      "text": "I drink water. Then I have breakfast.",
+      "language_notes": {
+        "collocations": [
+          "have breakfast"
+        ],
+        "idioms": [],
+        "grammar_point": "Present Simple — habit"
+      }
+    },
+    {
+      "id": "line_005",
+      "speaker_id": "56af5ced-7569-4f37-9c7b-c85730aa0380",
+      "text": "Oh really? What do you eat for breakfast?",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Present Simple — question"
+      }
+    },
+    {
+      "id": "line_006",
+      "speaker_id": "98ecd1b5-3807-4dc6-8009-f60d87cb5c48",
+      "text": "I eat fruit and eggs. It is good.",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Present Simple — preference"
+      }
+    },
+    {
+      "id": "line_007",
+      "speaker_id": "56af5ced-7569-4f37-9c7b-c85730aa0380",
+      "text": "Nice! Do you do exercise in the morning?",
+      "language_notes": {
+        "collocations": [
+          "do exercise"
+        ],
+        "idioms": [],
+        "grammar_point": "Present Simple — yes/no question"
+      }
+    },
+    {
+      "id": "line_008",
+      "speaker_id": "98ecd1b5-3807-4dc6-8009-f60d87cb5c48",
+      "text": "Yes, I walk in the park. Do you?",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Present Simple — short question"
+      }
+    },
+    {
+      "id": "line_009",
+      "speaker_id": "56af5ced-7569-4f37-9c7b-c85730aa0380",
+      "text": "No, I do exercise in the evening.",
+      "language_notes": {
+        "collocations": [
+          "do exercise"
+        ],
+        "idioms": [],
+        "grammar_point": "Present Simple — routine"
+      }
+    },
+    {
+      "id": "line_010",
+      "speaker_id": "98ecd1b5-3807-4dc6-8009-f60d87cb5c48",
+      "text": "Totally. Do you cook healthy food for dinner?",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Present Simple — yes/no question"
+      }
+    },
+    {
+      "id": "line_011",
+      "speaker_id": "56af5ced-7569-4f37-9c7b-c85730aa0380",
+      "text": "Yes, I make dinner at home every night.",
+      "language_notes": {
+        "collocations": [
+          "make dinner"
+        ],
+        "idioms": [],
+        "grammar_point": "Present Simple — routine"
+      }
+    },
+    {
+      "id": "line_012",
+      "speaker_id": "98ecd1b5-3807-4dc6-8009-f60d87cb5c48",
+      "text": "That is very healthy. What time do you sleep?",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Present Simple — time question"
+      }
+    },
+    {
+      "id": "line_013",
+      "speaker_id": "56af5ced-7569-4f37-9c7b-c85730aa0380",
+      "text": "I go to sleep at ten o'clock.",
+      "language_notes": {
+        "collocations": [
+          "go to sleep"
+        ],
+        "idioms": [],
+        "grammar_point": "Present Simple — time prepositions"
+      }
+    },
+    {
+      "id": "line_014",
+      "speaker_id": "98ecd1b5-3807-4dc6-8009-f60d87cb5c48",
+      "text": "Good sleep is very important for us.",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Present Simple — adjective statement"
+      }
+    },
+    {
+      "id": "line_015",
+      "speaker_id": "56af5ced-7569-4f37-9c7b-c85730aa0380",
+      "text": "I know, right? A good routine is easy.",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Present Simple — simple opinion"
+      }
+    },
+    {
+      "id": "line_016",
+      "speaker_id": "98ecd1b5-3807-4dc6-8009-f60d87cb5c48",
+      "text": "Yes! Eat well, sleep well, and feel good.",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Imperative — simple advice"
+      }
+    },
+    {
+      "id": "line_017",
+      "speaker_id": "56af5ced-7569-4f37-9c7b-c85730aa0380",
+      "text": "Totally! I feel happy every weekday now.",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Present Simple — feelings"
+      }
+    },
+    {
+      "id": "line_018",
+      "speaker_id": "98ecd1b5-3807-4dc6-8009-f60d87cb5c48",
+      "text": "Me too! Let us keep this good routine.",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Imperative — suggestion with let us"
+      }
+    }
+  ],
+  "duration_seconds": 78.892,
+  "loudness_lufs": -16.01
+}

@@ -1,0 +1,194 @@
+{
+  "project_id": "22657ccc-516a-4e10-9035-d41576916cd9",
+  "config": {
+    "speakers": [
+      {
+        "id": "62b69800-fcb3-4c95-9425-1bf976b4fabb",
+        "name": "Alex",
+        "gender": "male",
+        "accent": "american",
+        "tts_engine": "edge_tts",
+        "voice_description": "",
+        "speed": 1.0,
+        "pitch": 0.0,
+        "volume": 1.0
+      },
+      {
+        "id": "af538508-e620-4fcf-a20a-792a284801be",
+        "name": "Maya",
+        "gender": "female",
+        "accent": "american",
+        "tts_engine": "edge_tts",
+        "voice_description": "",
+        "speed": 1.0,
+        "pitch": 0.0,
+        "volume": 1.0
+      }
+    ],
+    "name": "Sample Episode B1",
+    "topic": "Planning a healthy weekday routine",
+    "cefr_level": "B1",
+    "genre": "small_talk",
+    "accent": "american",
+    "duration_minutes": 2.0,
+    "num_speakers": 2,
+    "language_features": {
+      "collocation": true,
+      "idiom": true,
+      "slang": false,
+      "local_expressions": false,
+      "phrasal_verbs": true,
+      "business_register": false
+    }
+  },
+  "lines": [
+    {
+      "id": "line_001",
+      "speaker_id": "62b69800-fcb3-4c95-9425-1bf976b4fabb",
+      "text": "Hey Maya! Are you ready to talk about planning a healthy weekday routine?",
+      "language_notes": {
+        "collocations": [
+          "healthy routine",
+          "weekday routine"
+        ],
+        "idioms": [],
+        "grammar_point": "Present Simple — question"
+      }
+    },
+    {
+      "id": "line_002",
+      "speaker_id": "af538508-e620-4fcf-a20a-792a284801be",
+      "text": "Totally! I really need to stick to a good schedule because work has been so busy lately.",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Present Perfect — recent state/situation"
+      }
+    },
+    {
+      "id": "line_003",
+      "speaker_id": "62b69800-fcb3-4c95-9425-1bf976b4fabb",
+      "text": "I hear you. If you wake up early, it is much easier to start on the right foot.",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [
+          "start on the right foot"
+        ],
+        "grammar_point": "First Conditional — real condition"
+      }
+    },
+    {
+      "id": "line_004",
+      "speaker_id": "af538508-e620-4fcf-a20a-792a284801be",
+      "text": "That is so true. I usually try to work out for twenty minutes before I start my workday.",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [],
+        "grammar_point": "Present Simple — routine habit"
+      }
+    },
+    {
+      "id": "line_005",
+      "speaker_id": "62b69800-fcb3-4c95-9425-1bf976b4fabb",
+      "text": "Oh really? I can never work up the energy for exercise so early in the morning.",
+      "language_notes": {
+        "collocations": [
+          "early in the morning"
+        ],
+        "idioms": [],
+        "grammar_point": "Modal Verbs — expressing ability"
+      }
+    },
+    {
+      "id": "line_006",
+      "speaker_id": "af538508-e620-4fcf-a20a-792a284801be",
+      "text": "Well, if you go to bed earlier, you will definitely feel much more refreshed.",
+      "language_notes": {
+        "collocations": [
+          "go to bed"
+        ],
+        "idioms": [],
+        "grammar_point": "First Conditional — future consequence"
+      }
+    },
+    {
+      "id": "line_007",
+      "speaker_id": "62b69800-fcb3-4c95-9425-1bf976b4fabb",
+      "text": "I know, right? I should really cut down on my screen time late at night.",
+      "language_notes": {
+        "collocations": [
+          "screen time"
+        ],
+        "idioms": [],
+        "grammar_point": "Modal Verbs — recommendation"
+      }
+    },
+    {
+      "id": "line_008",
+      "speaker_id": "af538508-e620-4fcf-a20a-792a284801be",
+      "text": "Definitely! Also, preparing your lunch ahead of time is a piece of cake once you practice.",
+      "language_notes": {
+        "collocations": [
+          "ahead of time"
+        ],
+        "idioms": [
+          "piece of cake"
+        ],
+        "grammar_point": "Gerund phrase as subject"
+      }
+    },
+    {
+      "id": "line_009",
+      "speaker_id": "62b69800-fcb3-4c95-9425-1bf976b4fabb",
+      "text": "I agree. Having healthy snacks ready keeps me from eating junk food when I am tired.",
+      "language_notes": {
+        "collocations": [
+          "healthy snacks",
+          "junk food"
+        ],
+        "idioms": [],
+        "grammar_point": "Present Simple — habit and result"
+      }
+    },
+    {
+      "id": "line_010",
+      "speaker_id": "af538508-e620-4fcf-a20a-792a284801be",
+      "text": "Exactly! Taking small steps like that will help us stay on track all week long.",
+      "language_notes": {
+        "collocations": [
+          "small steps"
+        ],
+        "idioms": [
+          "stay on track"
+        ],
+        "grammar_point": "Future Simple — general prediction"
+      }
+    },
+    {
+      "id": "line_011",
+      "speaker_id": "62b69800-fcb3-4c95-9425-1bf976b4fabb",
+      "text": "Yeah, that makes total sense. Let me write down these goals so I do not forget.",
+      "language_notes": {
+        "collocations": [
+          "make sense"
+        ],
+        "idioms": [],
+        "grammar_point": "Imperative with 'let me'"
+      }
+    },
+    {
+      "id": "line_012",
+      "speaker_id": "af538508-e620-4fcf-a20a-792a284801be",
+      "text": "Great idea! If we support each other, sticking to our healthy routine will be easy.",
+      "language_notes": {
+        "collocations": [
+          "healthy routine"
+        ],
+        "idioms": [],
+        "grammar_point": "First Conditional — real future condition"
+      }
+    }
+  ],
+  "duration_seconds": 78.82,
+  "loudness_lufs": -16.01
+}

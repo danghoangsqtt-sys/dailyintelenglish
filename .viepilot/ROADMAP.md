@@ -430,11 +430,20 @@ isolated re-run). See `.viepilot/phases/02-testing-polish/tasks/task-2.6.md`.
   `scripts/generate_api_docs.py` (reads the real `app.openapi()` schema, 49 routes
   documented) — re-run the script after any route change instead of hand-editing
 
-### 3.2 Demo & Review
+### 3.2 Demo & Review — ✅ DONE (2026-09-15)
 
-- [ ] **Demo video**: Record full workflow from project creation to YouTube package (10 min video)
-- [ ] **Sample outputs**: 3 sample podcast scripts (A1, B1, C1) with audio
-- [ ] **Product review report**: feature checklist, known issues, future improvements
+- [x] **Demo video**: Record full workflow from project creation to YouTube package — a
+  real 223.9-second Playwright screen recording (`docs/demo/demo-video.webm`, see
+  `docs/demo-video.md`) of the actual running app: real Gemini calls, real Edge TTS,
+  real ffmpeg. Shorter than the original "10 min" figure because the real pipeline is
+  genuinely this fast, not because footage was cut
+- [x] **Sample outputs**: 3 sample podcast scripts (A1, B1, C1) with audio —
+  `docs/samples/{A1,B1,C1}/` via new `scripts/generate_sample_episodes.py`: real Gemini
+  script generation + real Edge TTS/ffmpeg audio mix per level, same topic/genre/speakers
+  held constant so CEFR level is the only variable
+- [x] **Product review report**: feature checklist, known issues, future improvements —
+  `docs/product-review.md`, assembled from and cross-checked against ROADMAP.md/
+  TRACKER.md rather than restated from memory
 
 ### 3.3 Final Cleanup
 

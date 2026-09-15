@@ -1,0 +1,183 @@
+{
+  "project_id": "9f26b054-8676-4576-acb2-b2354545c5c2",
+  "config": {
+    "speakers": [
+      {
+        "id": "98124b23-e331-473a-989c-d39c8eba66dd",
+        "name": "Alex",
+        "gender": "male",
+        "accent": "american",
+        "tts_engine": "edge_tts",
+        "voice_description": "",
+        "speed": 1.0,
+        "pitch": 0.0,
+        "volume": 1.0
+      },
+      {
+        "id": "cf02048c-e2f1-4bf5-9676-b27a7c024a55",
+        "name": "Maya",
+        "gender": "female",
+        "accent": "american",
+        "tts_engine": "edge_tts",
+        "voice_description": "",
+        "speed": 1.0,
+        "pitch": 0.0,
+        "volume": 1.0
+      }
+    ],
+    "name": "Sample Episode C1",
+    "topic": "Planning a healthy weekday routine",
+    "cefr_level": "C1",
+    "genre": "small_talk",
+    "accent": "american",
+    "duration_minutes": 2.0,
+    "num_speakers": 2,
+    "language_features": {
+      "collocation": true,
+      "idiom": true,
+      "slang": false,
+      "local_expressions": false,
+      "phrasal_verbs": true,
+      "business_register": false
+    }
+  },
+  "lines": [
+    {
+      "id": "line_001",
+      "speaker_id": "98124b23-e331-473a-989c-d39c8eba66dd",
+      "text": "Hey Maya, I've been trying to revamp my morning routine lately, but I always seem to run out of time before I can even squeeze in a decent breakfast.",
+      "language_notes": {
+        "collocations": [
+          "morning routine",
+          "decent breakfast"
+        ],
+        "idioms": [],
+        "grammar_point": "Present Perfect Continuous"
+      }
+    },
+    {
+      "id": "line_002",
+      "speaker_id": "cf02048c-e2f1-4bf5-9676-b27a7c024a55",
+      "text": "Oh, I feel you. I used to struggle with that constantly until I decided to map out my entire evening the night before. Honestly, prep work is a total game-changer.",
+      "language_notes": {
+        "collocations": [
+          "prep work"
+        ],
+        "idioms": [
+          "game-changer"
+        ],
+        "grammar_point": "Used to for past habits"
+      }
+    },
+    {
+      "id": "line_003",
+      "speaker_id": "98124b23-e331-473a-989c-d39c8eba66dd",
+      "text": "A game-changer? Really? So what does that look like in practice? Are we talking about packing lunches at midnight, or is it more about mental prep?",
+      "language_notes": {
+        "collocations": [
+          "in practice",
+          "mental prep"
+        ],
+        "idioms": [],
+        "grammar_point": "Complex question structure with gerunds"
+      }
+    },
+    {
+      "id": "line_004",
+      "speaker_id": "cf02048c-e2f1-4bf5-9676-b27a7c024a55",
+      "text": "A bit of both, actually! I usually set aside fifteen minutes before hitting the sack to lay out my workout gear and chop some veggies for the next day's meals.",
+      "language_notes": {
+        "collocations": [
+          "workout gear"
+        ],
+        "idioms": [
+          "hitting the sack"
+        ],
+        "grammar_point": "Gerunds after prepositions"
+      }
+    },
+    {
+      "id": "line_005",
+      "speaker_id": "98124b23-e331-473a-989c-d39c8eba66dd",
+      "text": "That sounds incredibly disciplined. I usually just wind down by scrolling on my phone, which, let's face it, is a terrible habit that ruins my sleep hygiene.",
+      "language_notes": {
+        "collocations": [
+          "terrible habit",
+          "sleep hygiene"
+        ],
+        "idioms": [],
+        "grammar_point": "Non-defining relative clauses"
+      }
+    },
+    {
+      "id": "line_006",
+      "speaker_id": "cf02048c-e2f1-4bf5-9676-b27a7c024a55",
+      "text": "Exactly! That blue light will definitely throw off your circadian rhythm. If you can kick that habit, you'll find waking up early is no longer an uphill battle.",
+      "language_notes": {
+        "collocations": [
+          "circadian rhythm",
+          "kick that habit"
+        ],
+        "idioms": [
+          "uphill battle"
+        ],
+        "grammar_point": "First Conditional"
+      }
+    },
+    {
+      "id": "line_007",
+      "speaker_id": "98124b23-e331-473a-989c-d39c8eba66dd",
+      "text": "True. I suppose if I actually get a head start the night before, I won't have to rush through my morning cup of coffee. I want to actually savor it, you know?",
+      "language_notes": {
+        "collocations": [
+          "cup of coffee"
+        ],
+        "idioms": [
+          "get a head start"
+        ],
+        "grammar_point": "Conditional clauses with hypothetical scenarios"
+      }
+    },
+    {
+      "id": "line_008",
+      "speaker_id": "cf02048c-e2f1-4bf5-9676-b27a7c024a55",
+      "text": "Absolutely, mindfulness is key. Once you establish that solid foundation, the rest of your weekday routine just falls into place naturally.",
+      "language_notes": {
+        "collocations": [
+          "solid foundation",
+          "weekday routine"
+        ],
+        "idioms": [
+          "falls into place"
+        ],
+        "grammar_point": "Time clauses with present tense"
+      }
+    },
+    {
+      "id": "line_009",
+      "speaker_id": "98124b23-e331-473a-989c-d39c8eba66dd",
+      "text": "Well, I'm sold. I'll give this evening prep thing a shot tonight. Let's see if I can actually stick to it this time!",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [
+          "give it a shot"
+        ],
+        "grammar_point": "Future intention with will"
+      }
+    },
+    {
+      "id": "line_010",
+      "speaker_id": "cf02048c-e2f1-4bf5-9676-b27a7c024a55",
+      "text": "Do it! Just take it one step at a time, and don't beat yourself up if you slip up occasionally.",
+      "language_notes": {
+        "collocations": [],
+        "idioms": [
+          "one step at a time"
+        ],
+        "grammar_point": "Imperatives for advice and encouragement"
+      }
+    }
+  ],
+  "duration_seconds": 102.876,
+  "loudness_lufs": -16.01
+}

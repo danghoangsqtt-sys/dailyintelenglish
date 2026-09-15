@@ -29,13 +29,14 @@ formally closed 2026-09-15** at 22/24 (92%) — the user chose to close at this 
 scope rather than pull "progress cancellation"/LivePortrait lip-sync into Phase 2 first
 (see Decision Log 2026-09-15); both remain logged as deferred future work, not phase
 blockers. Phase 3 counts discrete ROADMAP checklist items across 3.1 (4), 3.2 (3), and
-3.3 (4) = 11 total, 4 done (3.1's 4, all done 2026-09-15 — see Task 3.1 below).*
+3.3 (4) = 11 total, 7 done (3.1's 4 and 3.2's 3, both done 2026-09-15 — see Task 3.1/3.2
+below).*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
 | Phase 1 — Build | ✅ Complete | 28 | 30 |
 | Phase 2 — Testing | ✅ Complete (buildable scope) | 22 | 24 |
-| Phase 3 — Review | 🔄 In Progress | 4 | 11 |
+| Phase 3 — Review | 🔄 In Progress | 7 | 11 |
 
 ## Phase 1 Task Status
 
@@ -323,6 +324,33 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   a real doc-sync gap found while closing Phase 2: Task 2.6 had never been added to
   `CHANGELOG.md`'s `[Unreleased]` section despite being done and tagged — added
   retroactively.
+
+### 3.2 Demo & Review — ✅ DONE (2026-09-15), all 3/3 ROADMAP items resolved
+- [x] Sample outputs — new `scripts/generate_sample_episodes.py` generated 3 real
+  episodes (A1/B1/C1, same topic/genre/speakers held constant so CEFR level is the only
+  variable): real Gemini script generation + real Edge TTS synthesis + real ffmpeg mix
+  for each, saved to `docs/samples/{level}/` (`script.md`, `script.json`, `audio.mp3`).
+  First attempt hit a real transient `httpx.ReadTimeout` on A1 (same class of network
+  flakiness as Task 2.1a's documented history, not a code defect); retried cleanly: A1
+  (18 lines, 78.9s, -16.01 LUFS), B1 (12 lines, 78.8s), C1 (10 lines, 102.9s).
+- [x] Demo video — new `scripts/record_demo_video.py` drives a real in-process
+  `uvicorn` server + Playwright through the entire pipeline (project creation → script →
+  learning content → TTS/audio → video → thumbnail → YouTube package) with video
+  recording enabled, producing `docs/demo/demo-video.webm` (`ffprobe`-confirmed 223.9s,
+  8.77MB — a real recording, not a stub). Two real bugs found and fixed while building
+  the script: Step 1's speaker-name fields are empty by default and block submission
+  (`Speaker N needs a name`) — diagnosed with a disposable debug script rather than
+  guessed; and Step 4's original 120s wait timeout was too tight for ~29 sequential real
+  Edge TTS calls — raised to 300s with error-banner/progress diagnostics added on
+  timeout. The successful run absorbed several real Gemini 429/503s via the existing
+  `GEMINI_MODEL_FALLBACKS` chain — real production resilience code exercising itself
+  live, not a scripted scenario. See `docs/demo-video.md`.
+- [x] Product review report — `docs/product-review.md`: feature checklist (Phases 1-3,
+  every status cross-checked against ROADMAP.md), known issues (summarized from
+  TRACKER.md's real Known Issues, linked back rather than duplicated), and future
+  improvements (progress cancellation, LivePortrait lip-sync, the `news`-genre
+  calibration drift, Phase 3's own remaining items).
+- Pure deliverables task — no `app/`, `frontend/`, or `tests/` files touched.
 
 ## Decision Log
 
@@ -619,6 +647,17 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   2.6a). Also fixed a real doc-sync gap found while closing out Phase 2: Task 2.6 had
   never been added to `CHANGELOG.md`'s `[Unreleased]` section despite being done and
   tagged — added retroactively. | User; PM (Claude Code) |
+| 2026-09-15 | User chose to continue with Task 3.2 (Demo & Review) over Task 3.3 (Final
+  Cleanup) at a `/vp-auto` control point. Delivered all 3 ROADMAP items with real,
+  verifiable artifacts rather than placeholders: `scripts/generate_sample_episodes.py`
+  produced 3 real sample episodes (A1/B1/C1, real Gemini scripts + real Edge TTS/ffmpeg
+  audio); `scripts/record_demo_video.py` produced a real 223.9-second end-to-end
+  pipeline recording (`ffprobe`-verified), catching and fixing 2 real bugs along the way
+  (Step 1's speaker-name fields blocking submission when left empty; Step 4's wait
+  timeout too tight for ~29 sequential real TTS calls); `docs/product-review.md`
+  cross-checked its feature checklist against ROADMAP.md rather than restating from
+  memory. This closes Task 3.2 — Phase 3 now stands at 7/11 discrete ROADMAP items done.
+  | User; PM (Claude Code) |
 
 ## Known Issues
 

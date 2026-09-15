@@ -137,6 +137,19 @@ Versioning: [SemVer](https://semver.org/)
   `scripts/generate_api_docs.py` (49 routes documented) instead of hand-written prose that
   could drift. 533/533 full suite passes (the previously-tracked Gemini-retry timing flake
   did not recur this run).
+- Phase 3 Task 3.2, Demo & Review (2026-09-15, by Claude Code as PM + Implementer): new
+  `scripts/generate_sample_episodes.py` produces 3 real sample episodes (A1/B1/C1) under
+  `docs/samples/` — real Gemini script generation, real Edge TTS synthesis, real ffmpeg
+  mix, same topic/genre/speakers held constant so CEFR level is the only variable; new
+  `scripts/record_demo_video.py` drives a real in-process `uvicorn` server + Playwright
+  through the entire pipeline (project creation → script → learning content → TTS/audio
+  → video → thumbnail → YouTube package) with video recording enabled, producing a real
+  `ffprobe`-verified 223.9-second `docs/demo/demo-video.webm`; new
+  `docs/product-review.md` (feature checklist/known issues/future improvements,
+  cross-checked against `ROADMAP.md`/`TRACKER.md`). Two real bugs found and fixed while
+  building the recording script: Step 1's speaker-name fields are empty by default and
+  block form submission, and Step 4's original 120s wait timeout was too tight for ~29
+  sequential real Edge TTS calls (raised to 300s with diagnostics added).
 
 ---
 
