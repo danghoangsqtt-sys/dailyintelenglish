@@ -147,6 +147,40 @@ no invented regeneration/cascade logic.
   not listed here.
 - This task card (`task-4.4.md`) for plan/evidence updates.
 
+## PM Plan Review (2026-09-16) — APPROVED
+
+Codex presented its pre-code plan per AR-06's 3-step process. PM independently
+verified the 2 load-bearing technical claims before approving (not accepted on
+description alone):
+- **Confirmed**: `_replace_speakers()` (`app/services/project_service.py:62-72`)
+  deletes all speaker rows and generates fresh `uuid.uuid4()` ids on every `PUT` that
+  includes `speakers` — this is exactly why Codex's plan is right to gate the write
+  path strictly on `status === "draft"` from the server response (never trust a
+  client-side assumption about status) and never allow it once script/audio/video
+  already reference the old speaker ids.
+- **Checked Codex's own out-of-scope flag**: `step1_config.js::buildPayload()`
+  hardcodes `tts_engine: "omnivoice"` for new speakers on the create path — real, but
+  harmless today because `tts_service.py::_synthesize_omnivoice()` (line 70)
+  unconditionally raises `_OmniVoiceUnavailableError`, so every synthesis silently
+  falls back to Edge TTS regardless. Confirmed correct to leave untouched — logged as
+  a low-priority backlog cleanup item (stale code contradicting the 2026-09-13
+  "Edge TTS is the sole official engine" decision and the backend model's own
+  `edge_tts` default), not a functional bug, not part of Task 4.4.
+
+**Allowed files — confirmed/locked, exactly as Codex named them**:
+- `frontend/static/js/dashboard.js`
+- `frontend/static/js/api.js`
+- `frontend/static/js/step1_config.js`
+- `frontend/pages/step1_config.html` (minimal: mode-based title/subtitle hook + a
+  read-only-state banner element; no layout redesign)
+- `tests/test_dashboard_browser.py` (extend — confirmed pre-existing, no conflict)
+- `tests/test_step1_config_edit_browser.py` (new — confirmed no existing file at
+  this path)
+- This task card, for evidence only (Status field remains PM-only)
+
+**Plan approved as presented — no changes requested.** Codex may proceed to
+implementation.
+
 ## Verification checklist
 - [ ] Manual: dashboard with a project in each of the 5 statuses (seed via direct DB
   write or by walking a real project through the pipeline) — click Continue on each,
