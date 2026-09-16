@@ -128,7 +128,152 @@ state, just `scrollIntoView` on an existing element).
 - Real Playwright screenshot at 1440×900 (both empty state and populated state) —
   attach or describe exactly what's shown, matching Task 4.2a's own bar.
 
-## PM Acceptance
-_Pending — filled in by PM (Claude Code) after independently re-running every
-verification command above and reading the full diff, per AR-06. Do not mark this task
-`done` — that is PM's decision alone._
+## Implementer Evidence (Awaiting PM Acceptance)
+
+### Implementation summary
+
+- `frontend/pages/step4_tts.html`: migrated `/step4` to the shared resizable shell with
+  workflow sidebar, TTS stage, inspector, and Script/Voice/Music timeline. Existing
+  workspace controls and selector IDs remain in place.
+- `frontend/static/js/step4_tts.js`: added first-line default selection, synchronized
+  stage/timeline selection, a read-only line inspector, the existing preview endpoint
+  behind Inspector Listen, a real scroll/focus Voice settings affordance, and honest
+  current-browser-session preview states. The existing speaker debounce/PATCH functions
+  and sequential preview-all-then-mix request order remain intact.
+- `tests/test_tts_shell_browser.py`: 5 browser tests cover shell resizing/collapse,
+  workflow variant, all three tracks, selection/inspector sync, Listen success/error,
+  session-state reset on reload, serialized trailing speaker autosave, and Generate All
+  request order.
+- `tests/test_step_nav_browser.py`: applied only the PM-authorized `(2, 3)` → `(2, 3,
+  4)` branch change and adjoining comment.
+- One real implementation defect was caught by the first targeted run: the selection
+  updater initially matched every descendant carrying `data-line-id`, so it added
+  `.selected` to the line's preview button and audio element as well as its card. The
+  selector was narrowed to `.line-card[data-line-id]`; the new suite then passed 5/5.
+
+### Browser verification
+
+- Targeted new suite: `5 passed in 113.30s (0:01:53)`.
+- Existing Step 4 browser coverage plus the StepNav step-4 and responsive-1024 cases:
+  `10 passed in 219.61s (0:03:39)`.
+- Real Playwright screenshots were captured and inspected at exactly 1440×900 (temporary
+  evidence files outside the repository):
+  - Populated: light shell rendered with the workflow sidebar, two speaker cards, first
+    line selected in the stage, matching Line 1 inspector with `Not previewed`, and
+    populated Script/Voice plus honest `No music selected` Music tracks.
+  - Empty: the same three-pane shell remained stable, the stage showed the no-script
+    guidance, the inspector showed its selection prompt, Script/Voice lanes were empty,
+    and Music showed `No music selected`.
+
+### Required verification output
+
+`venv\Scripts\python -m pytest tests/ -q` (exit code 0):
+
+```text
+........................................................................ [ 13%]
+........................................................................ [ 26%]
+........................................................................ [ 39%]
+........................................................................ [ 53%]
+........................................................................ [ 66%]
+........................................................................ [ 79%]
+........................................................................ [ 93%]
+.....................................                                    [100%]
+============================== warnings summary ===============================
+venv\Lib\site-packages\fastapi\testclient.py:1
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+venv\Lib\site-packages\starlette\testclient.py:53
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+541 passed, 2 warnings in 544.83s (0:09:04)
+```
+
+`venv\Scripts\python -m ruff check app/ tests/` (exit code 0):
+
+```text
+All checks passed!
+```
+
+`node --check frontend/static/js/step4_tts.js` (exit code 0):
+
+```text
+(no stdout or stderr)
+```
+
+`git diff --check` (exit code 0):
+
+```text
+warning: in the working copy of '.viepilot/phases/04-post-beta-polish/tasks/task-4.2b.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/pages/step4_tts.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/step4_tts.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_step_nav_browser.py', LF will be replaced by CRLF the next time Git touches it
+```
+
+The messages above are Git's existing Windows line-ending conversion notices; the
+command returned 0 and reported no whitespace errors.
+
+## PM Review (2026-09-16) — CHANGES REQUESTED, 1 real bug found
+
+PM independently re-ran every verification command and read the full diff before
+touching anything else, per AR-06.
+
+**Re-verified, all matched Codex's report:**
+- `node --check frontend/static/js/step4_tts.js` — clean.
+- `venv\Scripts\python -m ruff check app/ tests/` — clean.
+- `git diff --check` — exit 0, same LF/CRLF-only warnings, no real whitespace issues.
+- Full suite: **540 passed, 1 failed** —
+  `test_script_service.py::test_generate_script_exhausts_one_model_then_falls_back_to_next`,
+  the project's pre-existing, TRACKER-documented Gemini-retry timing flake (unrelated
+  module, took 1065.73s — well above the ~250-450s baseline). Confirmed non-regressive:
+  passes instantly (0.62s) in isolation. This is the same flake class, not a new one —
+  does not block acceptance.
+- Diff read in full for both `frontend/pages/step4_tts.html` and
+  `frontend/static/js/step4_tts.js`: shell structure, IDs, autosave/Generate-All
+  preservation, `variant: "workflow"`, and the `test_step_nav_browser.py` fix all match
+  the approved plan exactly. `.spinner`/`@keyframes spin` CSS removal confirmed safe —
+  grepped the pre-Codex version of the file, that class was already dead/unused before
+  this change. New `tests/test_tts_shell_browser.py` (5 tests) is genuinely thorough:
+  notably `test_inspector_listen_calls_preview_and_reload_resets_session_state`
+  actually reloads the page and asserts preview state resets to `not-previewed`,
+  proving the "honest, session-only, not persisted" design claim for real rather than
+  just describing it.
+
+**Real bug found via independent screenshot (not caught by the test suite or the
+Implementer's own described screenshots):** `renderTimeline()` calls
+`scriptLane.replaceChildren()` and `voiceLane.replaceChildren()` before repopulating
+those two lanes, but **never calls `musicLane.replaceChildren()`** before
+`musicLane.appendChild(musicClip)`. Since `renderTimeline()` runs on every selection
+change, preview-state transition, and music-selector change, the Music track
+accumulates one stale duplicate clip per call instead of ever clearing old ones.
+Reproduced live: a fresh page load + one line-selection click already showed **2**
+"No music selected" badges stacked in the Music lane instead of 1. Not caught by
+`tests/test_tts_shell_browser.py` because its Music-track assertions only check
+substring presence (`"focus-bed.mp3" in ... .text_content()`), never element count.
+
+**Requested fix (same file, same allowed_files scope — no new file access needed):**
+add `musicLane.replaceChildren();` in `renderTimeline()` right before the `musicClip`
+creation block (mirroring the pattern already used for `scriptLane`/`voiceLane`).
+Please also add one assertion to the existing test suite (e.g. in
+`test_tts_shell_resizes_collapses_and_syncs_three_track_selection`, after the
+line-selection interactions already in that test) asserting
+`await page.locator("#music-timeline .timeline-clip, #music-timeline
+.timeline-placeholder").count() == 1` — so this can't silently regress again.
+
+**Not requesting a change, disclosed for awareness only:** `previewLine()` accepts
+`button`/`audio` DOM element references from either the line-list card or the
+inspector's Listen button. If a user clicks Listen on line A, then selects line B
+before A's preview resolves, `renderInspector()` fully replaces the inspector's
+DOM (including a new button/audio for B), leaving A's in-flight closure holding
+references to now-detached nodes — harmless (no crash, just a silently-discarded
+update on an invisible node) and not a regression: the original pre-Codex
+`previewLine(lineId, button, audio)` signature already had this same shape for the
+line-list case. Not blocking, just noting it exists in case a future task wants to
+harden this to a pure state-driven re-render like Script's `handleListen` pattern.
+
+**Verdict: do not mark this task `done`.** One targeted fix + one test assertion
+needed, everything else is accepted as-is. Re-review will be fast once the fix lands —
+no need to re-plan or re-verify anything beyond the Music-track fix and its new
+assertion.
