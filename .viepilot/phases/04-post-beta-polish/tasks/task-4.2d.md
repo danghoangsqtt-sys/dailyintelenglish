@@ -117,6 +117,45 @@ as the other 3 shell pages do (Learning/TTS/Video) — do not modify `shell.js` 
   convention from 4.2a/4.2c)
 - This task card, for plan/evidence updates.
 
+## PM Plan Review (2026-09-16) — APPROVED
+
+Codex presented its pre-code plan per AR-06's 3-step process. PM independently
+verified the 2 technical claims the plan's risk section rests on before approving:
+- **Confirmed**: `frontend/static/css/style.css:225` really does
+  `@media (max-width: 1050px) { .pane-inspector, #resizer-right { display: none; } }`
+  — Codex's claim that the shared shell already hides the inspector below 1050px
+  (out of scope, not this task's concern) is accurate.
+- **Confirmed**: `frontend/static/js/shell.js:87` really does clamp the inspector
+  resizer to `min: 260, max: 480`, and the `collapseBtn` wiring (line 89-93) only ever
+  targets `sidebar` — there is genuinely no inspector-collapse API today. Codex's test
+  plan (resize both panes, collapse/re-expand sidebar only) correctly matches what the
+  shared shell actually supports, not an invented capability.
+
+**One open risk PM is tracking, not blocking approval on**: relocating the "Manual
+editor" (live preview + editing form) into a 260-480px inspector is a real width
+reduction from its current ~1.45fr two-column layout, and a thumbnail's whole purpose
+is visual judgment — a preview that becomes too small to actually evaluate would be a
+real regression even if every test passes. This was already decided in the task card
+("required decision, do not re-litigate") before this narrower-than-expected width was
+concretely understood, so PM is not asking Codex to re-litigate the stage/inspector
+split now. Instead: **please include a real screenshot of the relocated preview in the
+evidence** (not just a passing test) so PM can judge legibility during review. If it
+turns out to be too small to be useful, that becomes a fast, scoped follow-up
+(e.g., a page-specific override to the inspector's default/max width) — not a reason to
+redo this task now.
+
+**Allowed files — confirmed/locked, exactly as Codex named them**:
+- `frontend/pages/step6_thumbnail.html`
+- `frontend/static/js/step6_thumbnail.js`
+- `tests/test_step_nav_browser.py`
+- `tests/test_thumbnail_shell_browser.py` (new)
+- `tests/test_thumbnail_browser.py` — confirmed **not** touched (Codex's baseline check
+  found all 6 existing tests use stable ids unaffected by the relocation)
+- This task card, for evidence only (Status field remains PM-only)
+
+**Plan approved as presented — no changes requested.** Codex may proceed to
+implementation.
+
 ## Verification checklist
 - [ ] All 6 existing `tests/test_thumbnail_browser.py` tests still pass (updated
   selectors if needed, but the same real behaviors — double-submit lock, favorite
