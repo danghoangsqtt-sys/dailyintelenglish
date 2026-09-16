@@ -3,22 +3,26 @@
 ## Metadata
 - **Phase:** 4
 - **Slug:** 04-post-beta-polish
-- **Status:** in_progress
+- **Status:** complete
 - **Started:** 2026-09-15
-- **Milestone Progress:** 3 / 3 currently-tracked tasks done — 4.1 CEFR `news` prompt
-  tuning done 2026-09-15 (partial, honestly-reported improvement — see
-  `tasks/task-4.1.md`); 4.4 P0 navigation bug fixes done 2026-09-16 (see below); 4.2 UI
-  Redesign Slice 2 **fully closed 2026-09-16** — 5/7 pages redesigned into the shell
-  (Learning, TTS, Video, Thumbnail, YouTube), 2/7 formally confirmed and closed as
-  intentionally out of scope (Music Library, Step1-Config — no code change, decision
-  re-verified still holds). New phase, scoped in the 2026-09-15 brainstorm session
+- **Closed:** 2026-09-16
+- **Milestone Progress:** 3 / 3 tasks done — 4.1 CEFR `news` prompt tuning done
+  2026-09-15 (partial, honestly-reported improvement — see `tasks/task-4.1.md`); 4.4
+  P0 navigation bug fixes done 2026-09-16 (see below); 4.2 UI Redesign Slice 2 **fully
+  closed 2026-09-16** — 5/7 pages redesigned into the shell (Learning, TTS, Video,
+  Thumbnail, YouTube), 2/7 formally confirmed and closed as intentionally out of scope
+  (Music Library, Step1-Config — no code change, decision re-verified still holds).
+  New phase, scoped in the 2026-09-15 brainstorm session
   (`docs/brainstorm/session-2026-09-15.md`), not part of the original 21-day/3-phase
   plan. Progress cancellation and real LivePortrait lip-sync remain explicitly
-  deferred, not part of this phase. **Phase not yet closed**: Task 4.3 (Vietnamese UI
-  localization) was scoped in the same brainstorm session, explicitly sequenced to
-  start only once Task 4.2 finished — that condition is now met, so Task 4.3 is
-  eligible to start, but has not been picked up yet pending the user's go-ahead. See
-  `docs/brainstorm/session-2026-09-15.md`'s 2026-09-15 update.
+  deferred, not part of this phase. **Task 4.3 (Vietnamese UI localization) DROPPED
+  2026-09-16**: was scoped in the same brainstorm session and became eligible to start
+  once Task 4.2 finished; at the first real planning question (loanword-handling style
+  for terms like Video/Thumbnail/Podcast), the user decided not to pursue UI
+  localization at all rather than answer it — explicitly said to drop the plan. No
+  code was touched (the question was asked before any task card was written). **Phase
+  4 formally closed 2026-09-16** at this scope — all 3 pursued tasks done, Task 4.3
+  dropped by explicit user decision, not deferred.
 - **Test Suite Status:** 562/562 pass (2026-09-16, after Task 4.2e) — see TRACKER.md
 
 ---

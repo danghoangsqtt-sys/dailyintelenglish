@@ -574,9 +574,16 @@ explicitly deferred, not part of this phase.
 intentionally out of scope (Music Library, Step1-Config). Each shell page is its own
 sub-task (task cards written individually, doc-first, per the 2026-09-15 brainstorm
 session's explicit pacing decision) — not one large task, per Task 2.4's precedent (2
-pages needed 49 new/updated tests). Task 4.3 (Vietnamese UI localization) is now
-eligible to start per the explicit sequencing decision in
-`docs/brainstorm/session-2026-09-15.md` — not started yet, pending the user's go-ahead.
+pages needed 49 new/updated tests).
+
+**Task 4.3 (Vietnamese UI localization) — DROPPED 2026-09-16.** Became eligible once
+Task 4.2 finished, per the explicit sequencing decision in
+`docs/brainstorm/session-2026-09-15.md`. At the first real planning question (how to
+handle common creator-vocabulary loanwords like Video/Thumbnail/Podcast when
+translating), the user decided not to pursue UI localization at all and asked to drop
+the plan instead of answering it. No task card was written, no code was touched.
+**Phase 4 formally closed 2026-09-16** at 3 pursued tasks (4.1, 4.2, 4.4), all done;
+Task 4.3 dropped by explicit user decision, not deferred.
 
 ### 4.4 P0 navigation bug fixes — ✅ DONE (2026-09-16)
 

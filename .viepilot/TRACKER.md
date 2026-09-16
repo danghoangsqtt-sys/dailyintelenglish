@@ -39,18 +39,19 @@ Learning/4.2a 2026-09-15, TTS/4.2b, Video/4.2c, Thumbnail/4.2d, and YouTube/4.2e
 2026-09-16, all four of 4.2b/c/d/e by Codex; 2/7 confirmed and closed as intentionally
 out of scope: Music Library/Step1-Config, both deliberately NOT shell-based per the
 2026-09-14 session, re-verified before closing rather than rubber-stamped). Task 4.3
-(Vietnamese UI localization) was scoped in the same brainstorm session, explicitly
-queued behind Task 4.2's completion — that condition is now met, so Task 4.3 is
-eligible to start but has not been picked up yet. Phase 4 itself remains open (not
-formally closed) until Task 4.3 is resolved one way or another. See
-`docs/brainstorm/session-2026-09-15.md`.*
+(Vietnamese UI localization) was scoped in the same brainstorm session, became
+eligible once Task 4.2 finished, but was **DROPPED 2026-09-16** by explicit user
+decision at the first real planning question (loanword-handling style for terms like
+Video/Thumbnail/Podcast) rather than answered — no task card written, no code
+touched. **Phase 4 formally closed 2026-09-16** at 3 pursued tasks (4.1/4.2/4.4), all
+done. See `docs/brainstorm/session-2026-09-15.md`.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
 | Phase 1 — Build | ✅ Complete | 28 | 30 |
 | Phase 2 — Testing | ✅ Complete (buildable scope) | 22 | 24 |
 | Phase 3 — Review | ✅ Complete | 11 | 11 |
-| Phase 4 — Post-Beta Polish (new) | 🔄 In Progress (Task 4.3 pending) | 3 | 3 |
+| Phase 4 — Post-Beta Polish (new) | ✅ Complete (Task 4.3 dropped) | 3 | 3 |
 
 ## Phase 1 Task Status
 
@@ -602,8 +603,10 @@ semantic role/`tabindex` for keyboard users; the timeline's horizontal resizer h
 inspector starts empty (340px) instead of defaulting to the first item; header/nav
 styling differs between shell-based pages and Config/Thumbnail/YouTube, and Step 6
 still says "Daily Intel English" instead of "Daily Intel English Studio"; UI mixes
-Vietnamese and English copy (Task 4.3 will resolve this); Video's avatar section
-exposes a not-yet-functional feature (LivePortrait lip-sync) without collapsing it.
+Vietnamese and English copy (was expected to be resolved by Task 4.3, but Task 4.3 was
+dropped 2026-09-16 by explicit user decision — the app UI will stay English-only going
+forward, this is now accepted, not a pending fix); Video's avatar section exposes a
+not-yet-functional feature (LivePortrait lip-sync) without collapsing it.
 None of these are regressions from Task 4.2's own work — they're either pre-existing
 or inherent to the current dashboard's real project volume. Candidates for a future
 Task 4.5 (or folded into remaining Task 4.2 sub-tasks where directly relevant, e.g.
@@ -1152,6 +1155,28 @@ work is still pending) — not decided yet, revisit after Task 4.4 closes.
   Task 4.3 (Vietnamese UI localization) is now eligible to start per the explicit
   sequencing decision in `docs/brainstorm/session-2026-09-15.md` — not started yet,
   awaiting the user's decision on whether/when to begin it. | User; PM (Claude Code) |
+| 2026-09-16 | User ran `/vp-auto` to proceed with the next Phase 4 work — Task 4.3
+  (Vietnamese UI localization), the only remaining item. PM read the brainstorm
+  session's locked decisions (full replace, no toggle, technical terms stay English,
+  split per page) and did preliminary research: grepped all 9 pages' JS files for
+  hardcoded UI strings (~39-201 candidate string literals per file depending on page
+  size) and identified 3 shared cross-page components with their own hardcoded
+  strings (`step_nav.js`'s 7 step labels + progress text, `shell.js`'s collapse
+  button, `save_indicator.js`'s 4 status labels) that would need translating once,
+  centrally, before any per-page work to avoid inconsistent terminology across pages.
+  Before writing any task card, PM asked the user a real, consequential style
+  question — how to handle common creator-vocabulary English loanwords (Video,
+  Thumbnail, Podcast, Template) when translating, since this sets precedent for
+  dozens of strings across all 9 pages and getting it wrong would mean redoing work.
+  **User's answer: drop the localization plan entirely** rather than choose a style,
+  and asked PM to switch to `/vp-brainstorm` instead. No task card was written, no
+  code was touched — the question surfaced the user's actual preference (not wanting
+  this feature at all) before any implementation cost was sunk, which is exactly what
+  asking early is for. Task 4.3 marked DROPPED (not deferred) across
+  ROADMAP.md/TRACKER.md/PHASE-STATE.md/HANDOFF.json; the mixed Vietnamese/English UI
+  copy noted in the 2026-09-16 Codex UI audit's P2 backlog is now accepted as
+  permanent, not a pending fix. **Phase 4 formally closed** at 3 pursued tasks
+  (4.1/4.2/4.4), all done. | User; PM (Claude Code) |
 
 ## Known Issues
 
