@@ -60,5 +60,7 @@
   accumulated duplicate clips — sent back to Codex with the exact fix, which PM then
   re-verified independently (including a 5-interaction stress-test screenshot) before
   accepting. 541/541 full suite passes. See `tasks/task-4.2b.md` for the full record.
-- Remaining after 4.2b: Video, Thumbnail, YouTube, Music Library, Step1-Config — not
-  started.
+- **4.2c — Video Studio (`/step5`)**: in_progress, assigned to Codex (Implementer),
+  PM (Claude Code) writes/accepts per AR-06. Doc-first task card written 2026-09-16 —
+  see `tasks/task-4.2c.md`. Not yet implemented; awaiting Codex.
+- Remaining after 4.2c: Thumbnail, YouTube, Music Library, Step1-Config — not started.
