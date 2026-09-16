@@ -3,7 +3,7 @@
 ## Meta
 - **ID**: 4.2e (fifth sub-task of Task 4.2 — UI Redesign Slice 2)
 - **Phase**: 4
-- **Status**: in_progress (2026-09-16)
+- **Status**: done (2026-09-16)
 - **Priority**: medium
 - **Assignee**: Codex (Implementer) — PM (Claude Code) writes/accepts, per the AR-06
   PM-Implementer contract (`docs/CODEX_CODE_PROMPT.md`, `.viepilot/SYSTEM-RULES.md`)
@@ -171,3 +171,174 @@ implementation.
   in isolation.
 - [ ] `ruff check app/ tests/`, `node --check` on touched JS, `git diff --check` — all
   clean, real output pasted.
+
+## Implementer Evidence (Awaiting PM Review — 2026-09-16)
+
+Implementation is ready for PM review. Implementer did not change the task Status and
+did not commit or push.
+
+### Implementation summary
+
+- Migrated YouTube Package to the shared shell with workflow StepNav, resizable
+  sidebar and inspector, and no timeline.
+- Kept Generate, Title Options, Description, Chapters, Tags, and Regenerate in the
+  stage. Moved the existing Full Package Export readiness panel into the inspector.
+- Preserved every existing element id and all generate/regenerate/copy/readiness logic.
+  The only page-JS changes are the workflow StepNav variant and
+  `WorkspaceShell.init()`.
+- Did not add selection state, click handlers, or an inspector detail view to the three
+  title cards.
+- Changed only the export note's static initial HTML copy to the honest
+  “Generate the YouTube package to check export readiness.” Since the export panel is
+  now always visible, this replaces the old “Checking…” text that `render()` never
+  updates while no package exists. Existing `renderExportStatus()` takes over after a
+  package loads or is generated.
+- Added real-Chromium coverage for shell structure, absence of a timeline, both pane
+  resizers, sidebar collapse/re-expand, Generate populating all four stage sections,
+  not-ready export gating, and ready export URL wiring.
+- Applied only the pre-authorized Step 7 tuple/comment change in
+  `tests/test_step_nav_browser.py`. All eight existing YouTube browser tests remain
+  unchanged.
+
+### Visual browser verification
+
+Used the real local app and real Chromium at an explicit 1440×900 viewport with
+deterministic API interception, matching the browser suite.
+
+- Not-ready state: inspector note named both missing prerequisites, export link had
+  `aria-disabled="true"`, all four content sections remained in the stage, and the
+  page had no horizontal document overflow.
+- Ready state: inspector note changed to Ready, export link had
+  `aria-disabled="false"` with the real project export URL, and the long download label
+  stayed inside the default 340px inspector without clipping or overflow.
+- Temporary screenshots outside the repository (to respect `allowed_files`):
+  - `C:\Users\Admin\AppData\Local\Temp\daily-intel-english-task-4.2e-not-ready.png`
+  - `C:\Users\Admin\AppData\Local\Temp\daily-intel-english-task-4.2e-ready.png`
+
+### Targeted browser verification
+
+The first targeted run caught a test-authoring mismatch only: `getAttribute("href")`
+returns the relative `/api/...` value, while the new assertion expected an absolute
+localhost URL. The assertion was corrected to the exact relative URL; production code
+was unchanged. The full targeted set then passed.
+
+`venv\Scripts\python.exe -m pytest tests/test_youtube_shell_browser.py tests/test_youtube_browser.py tests/test_step_nav_browser.py tests/test_responsive_layout_browser.py::test_step7_no_overflow_at_1024 tests/test_keyboard_shortcuts_browser.py::test_step7_ctrl_enter_triggers_generate_when_panel_visible tests/test_keyboard_shortcuts_browser.py::test_step7_ctrl_enter_does_nothing_when_panel_hidden -q` (exit code 0):
+
+```text
+............................                                             [100%]
+28 passed in 40.39s
+```
+
+### Required verification output
+
+`venv\Scripts\python.exe -m pytest tests/ -q` (exit code 0):
+
+```text
+........................................................................ [ 12%]
+........................................................................ [ 25%]
+........................................................................ [ 38%]
+........................................................................ [ 51%]
+........................................................................ [ 64%]
+........................................................................ [ 76%]
+........................................................................ [ 89%]
+..........................................................               [100%]
+============================== warnings summary ===============================
+venv\Lib\site-packages\fastapi\testclient.py:1
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+venv\Lib\site-packages\starlette\testclient.py:53
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+562 passed, 2 warnings in 281.02s (0:04:41)
+```
+
+`venv\Scripts\python.exe -m ruff check app/ tests/` (exit code 0):
+
+```text
+All checks passed!
+```
+
+`node --check frontend/static/js/step7_youtube.js` (exit code 0):
+
+```text
+(no stdout or stderr)
+```
+
+`git diff --check` (exit code 0):
+
+```text
+warning: in the working copy of '.viepilot/phases/04-post-beta-polish/tasks/task-4.2e.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/pages/step7_youtube.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/step7_youtube.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_step_nav_browser.py', LF will be replaced by CRLF the next time Git touches it
+```
+
+The `git diff --check` messages are Windows line-ending conversion notices, not
+whitespace errors.
+
+## PM Re-review (2026-09-16) — ACCEPTED
+
+Independently re-verified everything rather than accepting the report on its word.
+
+**Diff review** — read the full `git diff` for both touched files plus the new test
+file:
+- `step7_youtube.js`: exactly the 2 approved additions (`variant: "workflow"`,
+  `WorkspaceShell.init()` matching the other 4 shell pages' exact shape) — zero other
+  lines changed.
+- `step7_youtube.html`: confirmed the "Full Package Export" section
+  (`#export-status-note`/`#export-zip-link`) is now a standalone, always-visible
+  `<section class="card export-card">` inside `#pane-inspector`, structurally outside
+  `#content-wrap` — exactly the approved design. Confirmed the static initial text was
+  changed to exactly "Generate the YouTube package to check export readiness." as
+  agreed at plan review. Confirmed every other required element id survives unrenamed
+  (`#error-banner`, `#project-name`, `#project-badges`, `#generate-panel`,
+  `#generate-btn`, `#content-wrap`, `#title-grid`, `#description-text`,
+  `#chapters-text`, `#chapters-estimate-note`, `#tags-list`, `#tags-text`,
+  `#regenerate-btn`). CSS custom-property renames are the same verified pre-existing
+  `style.css` aliases as 4.2d. No title-card selection state or click-to-inspect
+  interaction was added — confirmed by absence in the diff.
+- `tests/test_step_nav_browser.py`: exactly the pre-authorized one-line change.
+
+**New test file review**: `test_youtube_shell_resizes_toggles_and_generate_populates_stage`
+directly asserts the initial honest export text, confirms `#pane-timeline`/
+`#resizer-top` don't exist, exercises both resizers and sidebar collapse with real
+mouse/DOM events, then generates a package and confirms all 4 stage sections populate
+while export correctly stays disabled with a status message naming both missing
+prerequisites. `test_ready_export_stays_in_inspector_with_all_content_in_stage` loads
+directly into the ready state and confirms the export link's exact real URL and
+enabled state. Both tests directly exercise the one non-obvious risk this task carried
+(the static-text fix) rather than just asserting structure.
+
+**PM independently re-ran every verification command**: 28/28 targeted+regression
+pass, `ruff check` clean, `node --check` clean, `git diff --check` exit 0 — all
+matched the Implementer's report exactly.
+
+**PM's own independent script** (mocked API routes directly against the real backend
+contract, not reusing the Implementer's test file), beyond what was asked:
+- First verified against the actual backend (`app/api/youtube.py:49-56`) that
+  `GET .../youtube` returns `200` with `data: null` when no package exists yet — not a
+  404 as PM's own first draft mock incorrectly assumed — confirming Codex's test
+  mocks (which used `200`/`null`) accurately model the real API contract, not just a
+  convenient fiction.
+- Confirmed keyboard-driven resize on `#resizer-right` works (340px → 460px).
+- Confirmed the inspector correctly hides below the shared shell's 1050px breakpoint
+  (out of scope, unchanged, still works).
+
+**Full suite, run independently**: 561 passed, 1 failed
+(`test_generate_script_retries_on_429_then_succeeds`) in 1147.57s — the known
+Gemini-retry timing flake class, confirmed passing in isolation at 0.71s. The
+19-minute run time (vs. the ~250-450s baseline) is consistent with the documented
+pattern that slow full-suite runs (system load) trigger this flake; Task 4.2e touched
+zero backend/Gemini code. Non-regressive.
+
+**Zero real defects found on PM review this round.** Accepted as delivered — no
+changes requested.
+
+**This closes Task 4.2e.** 5 of 7 Task 4.2 pages now use the shell conventions
+(Learning, TTS, Video, Thumbnail, YouTube — plus Script from Task 2.4, which set the
+original pattern but isn't counted in Task 4.2's own 7-page split). Remaining in Task
+4.2's split: Music Library and Step1-Config, both deliberately NOT shell-based per the
+2026-09-14 session decision.

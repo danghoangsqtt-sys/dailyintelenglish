@@ -8,15 +8,14 @@
 - **Milestone Progress:** 2 / 3 tasks done — 4.1 CEFR `news` prompt tuning done
   2026-09-15 (partial, honestly-reported improvement — see `tasks/task-4.1.md`); 4.4 P0
   navigation bug fixes done 2026-09-16 (see below); 4.2 UI Redesign Slice 2 (7 pages) in
-  progress, 4/7 pages done (Learning, TTS, Video, Thumbnail), 4.2e (YouTube) now in
-  progress, handed to Codex. New phase,
+  progress, 5/7 pages done (Learning, TTS, Video, Thumbnail, YouTube). New phase,
   scoped in the 2026-09-15 brainstorm session (`docs/brainstorm/session-2026-09-15.md`),
   not part of the original 21-day/3-phase plan. Progress cancellation and real
   LivePortrait lip-sync remain explicitly deferred, not part of this phase. A new
   Task 4.3 (Vietnamese UI localization) is scoped and queued to start once Task 4.2's
   remaining 5 pages are done — see `docs/brainstorm/session-2026-09-15.md`'s
   2026-09-15 update.
-- **Test Suite Status:** 560/560 pass (2026-09-16, after Task 4.2d) — see TRACKER.md
+- **Test Suite Status:** 562/562 pass (2026-09-16, after Task 4.2e) — see TRACKER.md
 
 ---
 
@@ -33,7 +32,7 @@
   probabilistic model. See `tasks/task-4.1.md` for the full evidence.
 
 ### Task 4.2: UI Redesign Slice 2 (7 remaining pages)
-- **Status:** in_progress (4/7 pages done)
+- **Status:** in_progress (5/7 pages done)
 - Split into per-page sub-tasks, written doc-first individually as each is picked up.
 - **4.2a — Learning (`/step3`)**: ✅ DONE (2026-09-15). Wrapped in the same 3-panel
   shell as Script (Task 2.4), no timeline (confirmed decision — Learning has no
@@ -104,16 +103,28 @@
   works, and that the relocated preview — flagged as an open risk at plan-review time —
   stays visually usable in the narrower inspector). 560/560 full suite passes. See
   `tasks/task-4.2d.md` for the full record.
-- **4.2e — YouTube Package (`/step7`)**: 🔄 IN PROGRESS (2026-09-16), handed to Codex
-  as Implementer per AR-06. Shell, no timeline. Real design question different from
-  every prior sub-task: this page has no per-item selection concept at all (titles,
-  description, chapters, tags are all fully shown at once, not click-to-select), so
-  there's no natural "selected item" for the inspector. Decision: inspector hosts the
-  "Full Package Export" section (real dynamic readiness state — video + thumbnail
-  present or not) as a persistent workflow-status panel, not an item detail view; the 3
-  title-variant cards deliberately do NOT get a click-to-inspect interaction invented
-  for them (would be a new feature, not a structural move). See `tasks/task-4.2e.md`
-  for the full plan.
+- **4.2e — YouTube Package (`/step7`)**: ✅ DONE (2026-09-16), implemented by Codex,
+  accepted by PM per AR-06 — fourth task delegated end-to-end to Codex. Shell, no
+  timeline. Real design question different from every prior sub-task: this page has no
+  per-item selection concept at all (titles, description, chapters, tags are all fully
+  shown at once, not click-to-select), so there's no natural "selected item" for the
+  inspector. Decision: inspector hosts the "Full Package Export" section (real dynamic
+  readiness state — video + thumbnail present or not) as a persistent workflow-status
+  panel, not an item detail view; the 3 title-variant cards deliberately did NOT get a
+  click-to-inspect interaction invented for them. A real consequence of the relocation
+  was caught during plan review: the export section's static "Checking export
+  readiness…" text was previously invisible (nested inside `#content-wrap`, hidden
+  until a package exists) but would become visible and misleading once always-shown in
+  the inspector — fixed with an honest static default
+  ("Generate the YouTube package to check export readiness."), zero new JS logic. 2 new
+  browser tests (`test_youtube_shell_browser.py`) directly exercising both the
+  not-ready and ready export states plus the static-text fix. Same pre-authorized
+  `test_step_nav_browser.py` one-line extension (`current_step == 7`). **Zero real
+  defects found on PM review** — PM independently re-verified everything including
+  confirming against the real backend (`app/api/youtube.py`) that "no package yet"
+  really does return `200`/`null`, not `404`, matching the Implementer's test mocks.
+  562/562 full suite passes (1 known Gemini-retry flake seen on PM's run, confirmed
+  passing in isolation, non-regressive). See `tasks/task-4.2e.md` for the full record.
 - Remaining after 4.2e: Music Library, Step1-Config — not started (both deliberately
   NOT shell-based, per the 2026-09-14 session decision).
 

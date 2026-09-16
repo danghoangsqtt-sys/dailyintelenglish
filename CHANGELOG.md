@@ -86,6 +86,17 @@ Versioning: [SemVer](https://semver.org/)
   real defects found on PM review — PM had flagged the relocated live preview's
   reduced width as an open risk during plan review and confirmed via its own
   screenshots (both themes) that it stays legible.
+- Phase 4 Task 4.2e, UI Redesign Slice 2 — YouTube Package page (2026-09-16,
+  implemented by Codex, accepted by Claude Code as PM per AR-06 — the fourth task
+  delegated end-to-end to Codex): `/step7` wrapped in the same 3-panel shell, no
+  timeline. This page has no per-item selection concept at all (titles, description,
+  chapters, tags are all fully shown at once), so unlike every prior sub-task there is
+  no natural "selected item" for the inspector — the inspector instead hosts the "Full
+  Package Export" section, a real dynamic readiness panel (video + thumbnail present
+  or not), while the generated content stays in the stage. Deliberately did not invent
+  a click-to-inspect interaction for the 3 title-variant cards. New
+  `tests/test_youtube_shell_browser.py` (2 tests). Zero real defects found on PM
+  review.
 
 ### Fixed
 - Found via a Codex read-only UI audit (2026-09-16), independently confirmed by PM:
@@ -125,6 +136,14 @@ Versioning: [SemVer](https://semver.org/)
   lanes) and a regression-test assertion; re-verified independently, including a
   disposable 5-interaction stress test confirming exactly 1 clip survives repeated
   re-renders.
+- Task 4.2e plan review: relocating YouTube Package's "Full Package Export" section
+  into the always-visible inspector would have surfaced a previously-invisible,
+  misleading static placeholder ("Checking export readiness…" — inert HTML text that
+  `render()` never updates before a package exists, harmlessly hidden today because
+  the whole section was nested inside `#content-wrap`). Fixed with an honest static
+  default ("Generate the YouTube package to check export readiness."); the existing
+  `renderExportStatus()` still overwrites it correctly once a package loads or is
+  generated — no new JS logic.
 
 ## [1.0.0-beta] - 2026-09-15
 

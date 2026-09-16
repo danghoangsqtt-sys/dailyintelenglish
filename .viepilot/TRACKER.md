@@ -34,10 +34,11 @@ blockers. Phase 3 counts discrete ROADMAP checklist items across 3.1 (4), 3.2 (3
 of the original plan) has 3 tasks: 4.1 done 2026-09-15 (partial improvement, honestly
 reported), 4.4 done 2026-09-16 (2 real P0 navigation bugs found by a Codex UI audit,
 fixed by Codex, accepted by PM — see Task 4.4 below), 4.2 in progress (split per-page —
-4/7 pages done: Learning/4.2a 2026-09-15, TTS/4.2b, Video/4.2c, and Thumbnail/4.2d all
-2026-09-16, all three of 4.2b/c/d by Codex; YouTube/Music Library/Step1-Config remain).
-Task 4.3 (Vietnamese UI localization) scoped and queued behind Task 4.2's completion —
-see `docs/brainstorm/session-2026-09-15.md`.*
+5/7 pages done: Learning/4.2a 2026-09-15, TTS/4.2b, Video/4.2c, Thumbnail/4.2d, and
+YouTube/4.2e all 2026-09-16, all four of 4.2b/c/d/e by Codex; Music Library/
+Step1-Config remain, both deliberately NOT shell-based). Task 4.3 (Vietnamese UI
+localization) scoped and queued behind Task 4.2's completion — see
+`docs/brainstorm/session-2026-09-15.md`.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -393,7 +394,7 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   consistent with tuning a probabilistic model. See `tasks/task-4.1.md` for full
   before/after evidence. Single-file, prompt-only change — no `app/`/`tests/` touched.
 
-### 4.2 UI Redesign Slice 2 — 🔄 IN PROGRESS (4/7 pages done)
+### 4.2 UI Redesign Slice 2 — 🔄 IN PROGRESS (5/7 pages done)
 
 - [x] **4.2a — Learning (`/step3`) — ✅ DONE (2026-09-15)**: wrapped in the same
   3-panel shell Task 2.4 built for Script, deliberately no timeline (Learning has no
@@ -502,13 +503,32 @@ Task 4.2 **paused after 4.2c** (2026-09-16) to fix Task 4.4's P0 bugs first — 
   mouse drag). 560/560 full suite passes (up from 558). See `tasks/task-4.2d.md` for
   the full record. 4/7 Task 4.2 pages now done.
 
-- [ ] **4.2e — YouTube Package (`/step7`) — 🔄 IN PROGRESS (2026-09-16)**: fourth task
-  handed to Codex as Implementer per AR-06. Shell, no timeline. Real design question
-  unique to this page: no per-item selection concept exists at all (titles/
-  description/chapters/tags are all fully shown at once) — decision: inspector hosts
-  the "Full Package Export" readiness panel (real dynamic state) instead of an item
-  detail view; deliberately not inventing a click-to-inspect interaction for the 3
-  title-variant cards. See `tasks/task-4.2e.md` for the full plan.
+- [x] **4.2e — YouTube Package (`/step7`) — ✅ DONE (2026-09-16)**: fourth task
+  delegated end-to-end to Codex as Implementer, accepted by PM per AR-06. Shell, no
+  timeline. Real design question unique to this page: no per-item selection concept
+  exists at all (titles/description/chapters/tags are all fully shown at once) —
+  decision: inspector hosts the "Full Package Export" readiness panel (real dynamic
+  state) instead of an item detail view; deliberately did not invent a click-to-inspect
+  interaction for the 3 title-variant cards. Plan review caught a real consequence of
+  the relocation: the export section's static "Checking export readiness…" text was
+  previously invisible (nested inside `#content-wrap`, only shown once a package
+  exists) but would become visible and misleading once permanently shown in the
+  inspector — Codex proposed and PM approved the minimal fix, an honest static default
+  ("Generate the YouTube package to check export readiness."), zero new JS logic since
+  the existing `renderExportStatus()` already overwrites it once a package exists. 2
+  new Playwright tests (`test_youtube_shell_browser.py`) directly exercise both the
+  not-ready and ready export states, confirming the static-text fix and the real
+  readiness computation. Same pre-authorized `test_step_nav_browser.py` extension
+  (`current_step == 7`). **Zero real defects found on PM review** — PM independently
+  re-ran every verification command, read the full diff (confirmed every required
+  element id survived, no title-card selection state was added), and additionally
+  verified against the real backend (`app/api/youtube.py:49-56`) that "no package yet"
+  genuinely returns `200`/`null` (not `404`), confirming Codex's test mocks accurately
+  model the real API contract rather than a convenient fiction. 562/562 full suite
+  passes; PM's own run hit 1 known Gemini-retry timing flake
+  (`test_generate_script_retries_on_429_then_succeeds`), confirmed passing in isolation
+  at 0.71s, non-regressive (Task 4.2e touched zero backend code). See
+  `tasks/task-4.2e.md` for the full record. 5/7 Task 4.2 pages now done.
 
 Remaining after 4.2e: Music Library, Step1-Config — both deliberately NOT shell-based.
 
@@ -1078,6 +1098,30 @@ work is still pending) — not decided yet, revisit after Task 4.4 closes.
   feature outside this structural-only task's scope. Pre-authorized the same
   `test_step_nav_browser.py` one-line extension. Handed to Codex per AR-06; awaiting
   its pre-code plan. | User; PM (Claude Code) |
+| 2026-09-16 | Codex delivered Task 4.2e. Plan review had already caught a real
+  consequence of relocating "Full Package Export" into the always-visible inspector:
+  its static "Checking export readiness…" text was previously invisible (nested
+  inside `#content-wrap`, hidden until a package exists) and would become visible and
+  misleading once permanently shown — PM confirmed this by reading `render()`'s
+  early-return logic before approving Codex's proposed fix (an honest static default,
+  zero new JS). Codex implemented exactly per plan and delivered 2 new tests directly
+  exercising both export states and the text fix. PM independently re-verified rather
+  than accepting the report on its word: read the full diff (confirmed every element
+  id survived, no title-card selection state was added), re-ran every verification
+  command (28/28 targeted+regression, ruff/node/git-diff-check clean), and
+  additionally checked the real backend (`app/api/youtube.py:49-56`) to confirm "no
+  package yet" genuinely returns `200`/`null` rather than `404` — validating that
+  Codex's test mocks model the real API contract, not a convenient fiction PM's own
+  first-draft verification script had wrongly assumed (a 404). Full suite run
+  independently: 562 passed, 1 failed
+  (`test_generate_script_retries_on_429_then_succeeds`, the known Gemini-retry timing
+  flake, confirmed passing in isolation at 0.71s) in 1147.57s — a genuinely slow run
+  (19 minutes vs. the ~250-450s baseline), consistent with the documented pattern that
+  slow runs trigger this flake; Task 4.2e touched zero backend code. **Zero real
+  defects found.** This is the fourth task delegated to Codex end-to-end — closes Task
+  4.2e; Task 4.2 now at 5/7 pages done, with only Music Library and Step1-Config
+  remaining (both deliberately NOT shell-based). | User; PM (Claude Code); Codex
+  (Implementer) |
 
 ## Known Issues
 

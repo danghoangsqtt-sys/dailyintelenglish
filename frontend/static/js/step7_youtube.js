@@ -219,9 +219,20 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 7 });
+    StepNav.render("step-nav", {
+      projectId: new URLSearchParams(window.location.search).get("project_id"),
+      currentStep: 7,
+      variant: "workflow",
+    });
     KeyboardShortcuts.init({ primaryButtonId: "generate-btn" });
     byId("theme-toggle").addEventListener("click", Theme.toggle);
+    WorkspaceShell.init({
+      sidebar: byId("pane-sidebar"),
+      resizerLeft: byId("resizer-left"),
+      inspector: byId("pane-inspector"),
+      resizerRight: byId("resizer-right"),
+      collapseBtn: byId("sidebar-collapse-btn"),
+    });
     byId("generate-btn").addEventListener("click", handleGenerate);
     byId("regenerate-btn").addEventListener("click", handleRegenerate);
     document.body.addEventListener("click", handleCopyClick);
