@@ -609,3 +609,40 @@ from 555). See `.viepilot/phases/04-post-beta-polish/tasks/task-4.4.md` for the 
 record. P1/P2 findings from the same audit (timeline duration not proportional,
 dashboard doesn't scale past ~150 projects, accessibility gaps, EN/VI mixed copy)
 logged as backlog, not part of this task — see TRACKER.md Decision Log, 2026-09-16.
+
+---
+
+## Phase 5 — UI Polish Backlog
+
+**Status:** 🔄 In Progress | **Started:** 2026-09-16
+
+New phase, scoped in `docs/brainstorm/session-2026-09-16.md` after Phase 4 closed.
+Addresses the real, still-current P1/P2 findings from the 2026-09-16 Codex UI audit
+(2 of the original 9 findings turned out to already be fixed as side effects of Task
+4.2d/4.2e's shell redesign — re-verified before scoping, not assumed).
+
+### 5.1 Dashboard scale (pagination) — 🔄 IN PROGRESS
+
+- [ ] Client-side pagination for the Dashboard's project grid — no backend change,
+  since the measured problem is unbounded DOM rendering (176 real project cards / 358
+  buttons in one `innerHTML` pass, ~17,000px page height), not the data fetch itself.
+  See `.viepilot/phases/05-ui-polish-backlog/tasks/task-5.1.md` for the full plan.
+
+### 5.2 Timeline polish (proportional width + keyboard resizer) — not started
+
+- [ ] Timeline clip width made proportional to real clip duration (Script/TTS/Video —
+  currently a 3s and a 7s line render at nearly the same width).
+- [ ] The shared shell's horizontal timeline resizer (`#resizer-top`) gets a keydown
+  handler — currently has `tabindex="0"` but only the vertical sidebar/inspector
+  resizers in `shell.js` handle keyboard input.
+
+### 5.3 Small polish batch — not started
+
+- [ ] Learning's card click targets get a semantic role/`tabindex` for keyboard users.
+- [ ] Learning's inspector defaults to the first item instead of starting empty.
+- [ ] Video's avatar section (not-yet-functional LivePortrait feature) gets
+  collapsed/hidden by default instead of always showing.
+
+Task order: 5.1 (highest measured value) → 5.2 → 5.3, per the risk/value review in
+`docs/brainstorm/session-2026-09-16.md`. Continuing to delegate to Codex as
+Implementer per AR-06, same pattern as Phase 4.

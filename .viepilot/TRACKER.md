@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 started (new, post-beta)  
+**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 started (new, UI polish backlog)  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, new scope beyond the original 21-day plan)  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, new scope beyond the original 21-day plan)  
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
@@ -44,7 +44,11 @@ eligible once Task 4.2 finished, but was **DROPPED 2026-09-16** by explicit user
 decision at the first real planning question (loanword-handling style for terms like
 Video/Thumbnail/Podcast) rather than answered — no task card written, no code
 touched. **Phase 4 formally closed 2026-09-16** at 3 pursued tasks (4.1/4.2/4.4), all
-done. See `docs/brainstorm/session-2026-09-15.md`.*
+done. See `docs/brainstorm/session-2026-09-15.md`. **Phase 5** (new, scoped in
+`docs/brainstorm/session-2026-09-16.md` right after Phase 4 closed) addresses the
+real, still-current P1/P2 findings from the 2026-09-16 Codex UI audit — 3 tasks: 5.1
+Dashboard pagination (in progress), 5.2 timeline polish, 5.3 small polish batch, both
+not started.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -52,6 +56,7 @@ done. See `docs/brainstorm/session-2026-09-15.md`.*
 | Phase 2 — Testing | ✅ Complete (buildable scope) | 22 | 24 |
 | Phase 3 — Review | ✅ Complete | 11 | 11 |
 | Phase 4 — Post-Beta Polish (new) | ✅ Complete (Task 4.3 dropped) | 3 | 3 |
+| Phase 5 — UI Polish Backlog (new) | 🔄 In Progress | 0 | 3 |
 
 ## Phase 1 Task Status
 
@@ -608,10 +613,38 @@ dropped 2026-09-16 by explicit user decision — the app UI will stay English-on
 forward, this is now accepted, not a pending fix); Video's avatar section exposes a
 not-yet-functional feature (LivePortrait lip-sync) without collapsing it.
 None of these are regressions from Task 4.2's own work — they're either pre-existing
-or inherent to the current dashboard's real project volume. Candidates for a future
-Task 4.5 (or folded into remaining Task 4.2 sub-tasks where directly relevant, e.g.
-timeline-duration-proportional width should probably land in whichever page's timeline
-work is still pending) — not decided yet, revisit after Task 4.4 closes.
+or inherent to the current dashboard's real project volume. **Picked up as Phase 5
+(UI Polish Backlog) on 2026-09-16** after Phase 4 closed and Task 4.3 was dropped — see
+below. 2 of the original 9 findings (Step 6's stale brand text, header/nav styling
+inconsistency) turned out to already be fixed as side effects of Task 4.2d/4.2e; the
+mixed Vietnamese/English copy finding is now permanently accepted (Task 4.3 dropped),
+not a pending fix.
+
+## Phase 5 Task Status
+
+### 5.1 Dashboard scale (pagination) — 🔄 IN PROGRESS (2026-09-16)
+
+Client-side pagination for the Dashboard's project grid — no backend change, since the
+measured problem (176 real project cards / 358 buttons rendered in one `innerHTML`
+pass, ~17,000px page height) is unbounded DOM rendering, not the data fetch (which
+already returns the full list in one small payload, and stays that way). Fixed-size
+pagination (Prev/Next), page size chosen to divide cleanly across the grid's common
+column counts; filter/search changes reset to page 1; deleting the last card on the
+last page clamps back to a valid page rather than showing an empty page with active
+controls. Handed to Codex as Implementer per AR-06. See `tasks/task-5.1.md`.
+
+### 5.2 Timeline polish (proportional width + keyboard resizer) — not started
+
+Timeline clip width made proportional to real clip duration (Script/TTS/Video); the
+shared shell's horizontal timeline resizer (`#resizer-top`) gets a keydown handler
+(currently only the vertical sidebar/inspector resizers in `shell.js` handle keyboard
+input).
+
+### 5.3 Small polish batch — not started
+
+Learning's card click targets get a semantic role/`tabindex`; Learning's inspector
+defaults to the first item instead of starting empty; Video's avatar section
+(not-yet-functional LivePortrait feature) gets collapsed/hidden by default.
 
 ## Decision Log
 
@@ -1177,6 +1210,29 @@ work is still pending) — not decided yet, revisit after Task 4.4 closes.
   copy noted in the 2026-09-16 Codex UI audit's P2 backlog is now accepted as
   permanent, not a pending fix. **Phase 4 formally closed** at 3 pursued tasks
   (4.1/4.2/4.4), all done. | User; PM (Claude Code) |
+| 2026-09-16 | User ran `/vp-brainstorm` to plan what's next after Phase 4 closed. PM
+  reviewed known deferred items (progress cancellation, LivePortrait lip-sync) plus
+  the 2026-09-16 UI audit's P1/P2 backlog — re-verifying each backlog finding against
+  the *current* codebase rather than trusting the original audit text, which surfaced
+  that 2 of 9 findings (Step 6's stale "Daily Intel English" brand text, header/nav
+  styling inconsistency between shell and non-shell pages) were already fixed as side
+  effects of Task 4.2d/4.2e's shell redesign work. PM presented a risk/value table;
+  user chose to open a new Phase 5 addressing all 6 remaining real findings, split
+  into 3 tasks by technical relatedness (5.1 Dashboard pagination, standalone,
+  highest measured value; 5.2 timeline polish, bundles 2 findings that both touch the
+  shared timeline component used by Script/TTS/Video; 5.3 a small bundled batch of 3
+  low-effort items, mirroring Task 2.3's and Task 4.4's precedent of bundling related
+  small items rather than creating one task per finding). PM scaffolded Phase 5
+  directly (`.viepilot/phases/05-ui-polish-backlog/`, same pattern as opening Phase 3
+  and Phase 4) and wrote the doc-first task card for Task 5.1, researching the real
+  current `dashboard.js`/`dashboard.html` structure first (confirmed
+  `Api.listProjects()`/`GET /api/projects` has no `limit`/`offset` support at all, and
+  `render()` slices nothing — every filtered result renders every time) and locking
+  in the key design decision: client-side pagination only, no backend change, since
+  176 projects is a small fetch payload and the real problem is unbounded DOM
+  rendering. Continuing to delegate to Codex as Implementer per AR-06, same pattern
+  used throughout Phase 4. See `docs/brainstorm/session-2026-09-16.md` and
+  `tasks/task-5.1.md`. | User; PM (Claude Code) |
 
 ## Known Issues
 
