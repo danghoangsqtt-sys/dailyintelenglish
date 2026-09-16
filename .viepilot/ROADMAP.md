@@ -513,7 +513,7 @@ explicitly deferred, not part of this phase.
     harder than nominal, so this closes at the honest result rather than iterating
     further on a low-priority item.
 
-### 4.2 UI Redesign Slice 2 (7 remaining pages) — 5/7 done
+### 4.2 UI Redesign Slice 2 (7 remaining pages) — ✅ 7/7 CLOSED (2026-09-16)
 
 - [x] **Learning** (`/step3`) — ✅ DONE (2026-09-15). Applied the 3-panel shell (no
   timeline, confirmed decision); inspector is a read-only detail view of the selected
@@ -560,14 +560,23 @@ explicitly deferred, not part of this phase.
   plan review and fixed with an honest static default, zero new JS logic. 2 new
   browser tests. Zero real defects found on PM review. 562/562 full suite passes. See
   `tasks/task-4.2e.md`.
-- [ ] **Music Library** (`/music`) — deliberately NOT shell-based (shared utility page,
-  not part of the 7-step pipeline — same decision as the 2026-09-14 session)
-- [ ] **Step 1 Config** (`/step1`) — deliberately NOT shell-based (pure form, no
-  workspace concept)
+- [x] **Music Library** (`/music`) — ✅ CLOSED (2026-09-16), no code change —
+  deliberately NOT shell-based (shared utility page, not part of the 7-step pipeline,
+  no `StepNav` at all — decision made 2026-09-14, re-confirmed by PM before closing:
+  page still has no `pane-sidebar`/shell wiring, consistent with the decision).
+- [x] **Step 1 Config** (`/step1`) — ✅ CLOSED (2026-09-16), no code change beyond
+  Task 4.4's — deliberately NOT shell-based (pure form, no workspace concept; `StepNav`
+  stays in `pills` variant, never `workflow` — confirmed correct, since this page was
+  never meant to use the shell layout).
 
-Each page is its own sub-task (task cards written individually, doc-first, per the
-2026-09-15 brainstorm session's explicit pacing decision) — not one large task, per
-Task 2.4's precedent (2 pages needed 49 new/updated tests).
+**Task 4.2 fully closed 2026-09-16** — 5 of 7 pages redesigned into the shell
+(Learning, TTS, Video, Thumbnail, YouTube), 2 of 7 formally confirmed and closed as
+intentionally out of scope (Music Library, Step1-Config). Each shell page is its own
+sub-task (task cards written individually, doc-first, per the 2026-09-15 brainstorm
+session's explicit pacing decision) — not one large task, per Task 2.4's precedent (2
+pages needed 49 new/updated tests). Task 4.3 (Vietnamese UI localization) is now
+eligible to start per the explicit sequencing decision in
+`docs/brainstorm/session-2026-09-15.md` — not started yet, pending the user's go-ahead.
 
 ### 4.4 P0 navigation bug fixes — ✅ DONE (2026-09-16)
 

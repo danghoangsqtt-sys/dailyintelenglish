@@ -31,13 +31,18 @@ scope rather than pull "progress cancellation"/LivePortrait lip-sync into Phase 
 blockers. Phase 3 counts discrete ROADMAP checklist items across 3.1 (4), 3.2 (3), and
 3.3 (4) = 11 total, all 11 done 2026-09-15 — **Phase 3 formally closed** (see Task
 3.1/3.2/3.3 below). Phase 4 (new, scoped in the 2026-09-15 brainstorm session, not part
-of the original plan) has 3 tasks: 4.1 done 2026-09-15 (partial improvement, honestly
-reported), 4.4 done 2026-09-16 (2 real P0 navigation bugs found by a Codex UI audit,
-fixed by Codex, accepted by PM — see Task 4.4 below), 4.2 in progress (split per-page —
-5/7 pages done: Learning/4.2a 2026-09-15, TTS/4.2b, Video/4.2c, Thumbnail/4.2d, and
-YouTube/4.2e all 2026-09-16, all four of 4.2b/c/d/e by Codex; Music Library/
-Step1-Config remain, both deliberately NOT shell-based). Task 4.3 (Vietnamese UI
-localization) scoped and queued behind Task 4.2's completion — see
+of the original plan) has 3 currently-tracked tasks, all now done: 4.1 done 2026-09-15
+(partial improvement, honestly reported), 4.4 done 2026-09-16 (2 real P0 navigation
+bugs found by a Codex UI audit, fixed by Codex, accepted by PM — see Task 4.4 below),
+4.2 **fully closed 2026-09-16** (split per-page — 5/7 pages redesigned into the shell:
+Learning/4.2a 2026-09-15, TTS/4.2b, Video/4.2c, Thumbnail/4.2d, and YouTube/4.2e all
+2026-09-16, all four of 4.2b/c/d/e by Codex; 2/7 confirmed and closed as intentionally
+out of scope: Music Library/Step1-Config, both deliberately NOT shell-based per the
+2026-09-14 session, re-verified before closing rather than rubber-stamped). Task 4.3
+(Vietnamese UI localization) was scoped in the same brainstorm session, explicitly
+queued behind Task 4.2's completion — that condition is now met, so Task 4.3 is
+eligible to start but has not been picked up yet. Phase 4 itself remains open (not
+formally closed) until Task 4.3 is resolved one way or another. See
 `docs/brainstorm/session-2026-09-15.md`.*
 
 | Phase | Status | Tasks Done | Tasks Total |
@@ -45,7 +50,7 @@ localization) scoped and queued behind Task 4.2's completion — see
 | Phase 1 — Build | ✅ Complete | 28 | 30 |
 | Phase 2 — Testing | ✅ Complete (buildable scope) | 22 | 24 |
 | Phase 3 — Review | ✅ Complete | 11 | 11 |
-| Phase 4 — Post-Beta Polish (new) | 🔄 In Progress | 2 | 3 |
+| Phase 4 — Post-Beta Polish (new) | 🔄 In Progress (Task 4.3 pending) | 3 | 3 |
 
 ## Phase 1 Task Status
 
@@ -394,7 +399,7 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   consistent with tuning a probabilistic model. See `tasks/task-4.1.md` for full
   before/after evidence. Single-file, prompt-only change — no `app/`/`tests/` touched.
 
-### 4.2 UI Redesign Slice 2 — 🔄 IN PROGRESS (5/7 pages done)
+### 4.2 UI Redesign Slice 2 — ✅ CLOSED (2026-09-16), 7/7 pages resolved
 
 - [x] **4.2a — Learning (`/step3`) — ✅ DONE (2026-09-15)**: wrapped in the same
   3-panel shell Task 2.4 built for Script, deliberately no timeline (Learning has no
@@ -530,7 +535,20 @@ Task 4.2 **paused after 4.2c** (2026-09-16) to fix Task 4.4's P0 bugs first — 
   at 0.71s, non-regressive (Task 4.2e touched zero backend code). See
   `tasks/task-4.2e.md` for the full record. 5/7 Task 4.2 pages now done.
 
-Remaining after 4.2e: Music Library, Step1-Config — both deliberately NOT shell-based.
+- [x] **Music Library (`/music`) and Step 1 Config (`/step1`) — ✅ CLOSED
+  (2026-09-16), no code change**: both were decided at the 2026-09-14 UI-redesign
+  session to be deliberately NOT shell-based — Music Library is a shared utility page
+  outside the 7-step pipeline, Step 1 Config is a pure form with no workspace concept.
+  PM re-verified rather than rubber-stamping the standing decision: confirmed
+  `music_library.js` has no `pane-sidebar`/shell wiring at all, and confirmed
+  `step1_config.js`'s `StepNav.render()` call still uses the default `pills` variant,
+  never `workflow`. No regression, formally closed as out-of-scope-by-design.
+
+**Task 4.2 fully closed.** 5/7 pages redesigned into the shell (Learning, TTS, Video,
+Thumbnail, YouTube — 4 of 5 delegated to and delivered by Codex per AR-06, 1
+self-implemented by PM), 2/7 confirmed and closed as intentionally out of scope. Task
+4.3 (Vietnamese UI localization) is now eligible to start per the explicit sequencing
+decision in `docs/brainstorm/session-2026-09-15.md` — not started yet.
 
 ### 4.4 P0 navigation bug fixes (Dashboard Continue + Config duplicate-project) — ✅ DONE (2026-09-16)
 
@@ -1122,6 +1140,18 @@ work is still pending) — not decided yet, revisit after Task 4.4 closes.
   4.2e; Task 4.2 now at 5/7 pages done, with only Music Library and Step1-Config
   remaining (both deliberately NOT shell-based). | User; PM (Claude Code); Codex
   (Implementer) |
+| 2026-09-16 | User asked PM to formally close out the last 2 items in Task 4.2's
+  7-page split (Music Library, Step1-Config) rather than leave them open indefinitely
+  now that all 5 shell-eligible pages were done. PM did not rubber-stamp the
+  standing 2026-09-14 decision — re-verified it still held before closing: grepped
+  `music_library.js` for any `pane-sidebar`/shell wiring (none found) and confirmed
+  `step1_config.js`'s `StepNav.render()` call still passes no `variant` (defaults to
+  `pills`, never `workflow`) — both consistent with "deliberately NOT shell-based."
+  No code change needed or made. This formally closes Task 4.2 in full: 5/7 pages
+  redesigned into the shell, 2/7 confirmed and closed as intentionally out of scope.
+  Task 4.3 (Vietnamese UI localization) is now eligible to start per the explicit
+  sequencing decision in `docs/brainstorm/session-2026-09-15.md` — not started yet,
+  awaiting the user's decision on whether/when to begin it. | User; PM (Claude Code) |
 
 ## Known Issues
 
