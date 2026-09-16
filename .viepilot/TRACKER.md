@@ -32,8 +32,10 @@ blockers. Phase 3 counts discrete ROADMAP checklist items across 3.1 (4), 3.2 (3
 3.3 (4) = 11 total, all 11 done 2026-09-15 — **Phase 3 formally closed** (see Task
 3.1/3.2/3.3 below). Phase 4 (new, scoped in the 2026-09-15 brainstorm session, not part
 of the original plan) has 2 tasks: 4.1 done 2026-09-15 (partial improvement, honestly
-reported), 4.2 in progress (split per-page — 1/7 pages done: Learning/4.2a, 2026-09-15;
-TTS/Video/Thumbnail/YouTube/Music Library/Step1-Config remain).*
+reported), 4.2 in progress (split per-page — 2/7 pages done: Learning/4.2a 2026-09-15,
+TTS/4.2b 2026-09-16 by Codex; Video/Thumbnail/YouTube/Music Library/Step1-Config
+remain). Task 4.3 (Vietnamese UI localization) scoped and queued behind Task 4.2's
+completion — see `docs/brainstorm/session-2026-09-15.md`.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -389,7 +391,7 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   consistent with tuning a probabilistic model. See `tasks/task-4.1.md` for full
   before/after evidence. Single-file, prompt-only change — no `app/`/`tests/` touched.
 
-### 4.2 UI Redesign Slice 2 — 🔄 IN PROGRESS (1/7 pages done)
+### 4.2 UI Redesign Slice 2 — 🔄 IN PROGRESS (2/7 pages done)
 
 - [x] **4.2a — Learning (`/step3`) — ✅ DONE (2026-09-15)**: wrapped in the same
   3-panel shell Task 2.4 built for Script, deliberately no timeline (Learning has no
@@ -411,6 +413,34 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   the missing option, not just the test. 536/536 full suite passes (up from 533).
   Remaining pages (TTS, Video, Thumbnail, YouTube, Music Library, Step1-Config) not
   started. See `tasks/task-4.2a.md` for the full record.
+
+- [x] **4.2b — TTS Audio Studio (`/step4`) — ✅ DONE (2026-09-16)**: first task
+  delegated to Codex as Implementer since its quota was restored — Claude Code acted as
+  PM per the AR-06 contract (`docs/CODEX_CODE_PROMPT.md`), writing the doc-first task
+  card, reviewing the plan, and independently re-verifying before accepting. Wrapped in
+  the same 3-panel shell, this time **with** a real 3-track timeline (Script/Voice/
+  Music — TTS is one of the 3 pages with a genuine sequential-items concept, per the
+  2026-09-14 session). Read-only inspector shows the selected line with an honest
+  session-only preview-state badge (Not previewed/Synthesizing/Preview ready — never
+  guesses persisted cache state on reload, verified by an actual page-reload test), a
+  real Listen action reusing the existing preview endpoint, and a real
+  scroll-to-speaker-card "Voice settings" affordance (no new write path). Existing
+  per-speaker autosave debounce and the sequential Generate-All request order verified
+  unchanged. 5 new Playwright tests.
+  **Review round 1**: Codex correctly identified, before writing any other code, that
+  `test_step_nav_browser.py`'s shell-layout branch would break for `current_step == 4`
+  too (same class as 4.2a's regression) — reported it instead of silently fixing a file
+  outside its assigned scope; PM pre-authorized the exact one-line fix.
+  **Review round 2**: PM's own independent screenshot (not the test suite, not the
+  Implementer's described screenshots) caught a real bug — `renderTimeline()` cleared
+  the Script and Voice lanes on every re-render but never the Music lane, so it
+  accumulated a duplicate stale clip on every selection/preview/music-change event;
+  reproduced live (2 duplicate badges after just one click). Sent back to Codex with
+  the exact fix and a regression-test assertion rather than accepting or patching it
+  personally. Codex applied the scoped fix; PM re-verified independently, including a
+  disposable 5-interaction stress-test script confirming exactly 1 clip survives
+  repeated re-renders. 541/541 full suite passes (up from 536), zero flakes on PM's
+  final run. See `tasks/task-4.2b.md` for the complete 2-round review record.
 
 ## Decision Log
 
@@ -792,6 +822,30 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   on every path — this was a Learning-specific oversight, not a systemic pattern
   worth auditing elsewhere. Both findings fixed; 536/536 full suite passes. Tier 4
   skipped (not the ViePilot framework repo). | User; PM (Claude Code) |
+| 2026-09-15 | User reported Codex's quota restored, asked PM to shift into pure PM
+  role and delegate Task 4.2b (TTS Audio Studio) to Codex as Implementer, per the
+  existing AR-06 PM-Implementer contract. PM wrote the doc-first task card
+  (`tasks/task-4.2b.md`) and a ready-to-send Codex prompt; also fixed a real doc-drift
+  bug found while preparing it — `docs/CODEX_CODE_PROMPT.md` hard-coded the Phase 1
+  tasks path, which could misdirect Codex now that the project has 4 phases. Separately,
+  scoped a new Task 4.3 (Vietnamese UI localization — full replace, no EN/VI toggle,
+  technical terms like CEFR levels/genre/accent codes stay in English since they're API
+  values) in the brainstorm session, explicitly sequenced to start only after Task 4.2's
+  remaining pages are done (avoids touching the same files twice). See
+  `docs/brainstorm/session-2026-09-15.md`. | User; PM (Claude Code) |
+| 2026-09-16 | Codex delivered Task 4.2b. PM reviewed in 2 real rounds rather than
+  trusting the report outright: round 1 approved Codex's presented plan and
+  pre-authorized a narrow, already-anticipated `test_step_nav_browser.py` fix Codex
+  correctly flagged instead of touching outside its scope; round 2 (after Codex's
+  first delivery) PM's own independent screenshot — not the test suite — caught a real
+  bug (`renderTimeline()` never cleared the Music timeline lane, accumulating duplicate
+  clips on every re-render), sent back with the exact fix requested rather than
+  patching it personally or accepting with a known defect. Codex's fix was independently
+  re-verified (including a disposable 5-interaction stress-test script) before
+  acceptance. 541/541 full suite passes. This is the first task fully delegated to
+  Codex since Phase 4 opened, and the delegation contract worked as designed — Codex
+  correctly escalated instead of guessing on both real issues it hit. | User; PM
+  (Claude Code); Codex (Implementer) |
 
 ## Known Issues
 

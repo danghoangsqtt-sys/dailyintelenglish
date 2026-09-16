@@ -513,7 +513,7 @@ explicitly deferred, not part of this phase.
     harder than nominal, so this closes at the honest result rather than iterating
     further on a low-priority item.
 
-### 4.2 UI Redesign Slice 2 (7 remaining pages) — 1/7 done
+### 4.2 UI Redesign Slice 2 (7 remaining pages) — 2/7 done
 
 - [x] **Learning** (`/step3`) — ✅ DONE (2026-09-15). Applied the 3-panel shell (no
   timeline, confirmed decision); inspector is a read-only detail view of the selected
@@ -522,7 +522,16 @@ explicitly deferred, not part of this phase.
   regression in `test_step_nav_browser.py`'s shell-layout assumption and a missing
   `variant: "workflow"` on the page's own `StepNav.render()` call. 536/536 full suite
   passes. See `.viepilot/phases/04-post-beta-polish/tasks/task-4.2a.md`.
-- [ ] **TTS Audio Studio** (`/step4`) — shell + timeline (Script/Voice/Music tracks)
+- [x] **TTS Audio Studio** (`/step4`) — ✅ DONE (2026-09-16), implemented by Codex
+  (Implementer), accepted by PM per AR-06. Shell + 3-track timeline (Script/Voice/Music);
+  read-only inspector with an honest session-only preview-state badge, a real Listen
+  action, and a real scroll-to-speaker-card "Voice settings" affordance. Existing
+  per-speaker autosave and Generate-All order unchanged. 5 new Playwright tests. 2 real
+  review rounds: a pre-authorized `test_step_nav_browser.py` fix (same class as 4.2a's),
+  and a PM-caught real bug (`renderTimeline()` never cleared the Music lane, causing
+  duplicate clips on re-render) that Codex fixed and PM independently re-verified,
+  including a 5-interaction stress-test screenshot. 541/541 full suite passes. See
+  `.viepilot/phases/04-post-beta-polish/tasks/task-4.2b.md`.
 - [ ] **Video Studio** (`/step5`) — shell + timeline
 - [ ] **Thumbnail Generator** (`/step6`) — shell, no timeline
 - [ ] **YouTube Package** (`/step7`) — shell, no timeline

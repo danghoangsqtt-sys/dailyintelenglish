@@ -19,11 +19,20 @@
     selectedMusic: "",
     isGenerating: false,
     linesInFlight: new Set(),
+    previewedLineIds: new Set(),
+    selectedLineId: null,
     speakerSave: {}, // speakerId -> { status, timer, queued, draft }
   };
 
   const byId = (id) => document.getElementById(id);
   const speakerById = (id) => (state.project?.speakers || []).find((s) => s.id === id);
+  const selectedLine = () => state.lines.find((line) => line.id === state.selectedLineId) || null;
+
+  function previewState(lineId) {
+    if (state.linesInFlight.has(lineId)) return { key: "synthesizing", label: "Synthesizing" };
+    if (state.previewedLineIds.has(lineId)) return { key: "preview-ready", label: "Preview ready" };
+    return { key: "not-previewed", label: "Not previewed" };
+  }
 
   function showError(message) {
     const banner = byId("error-banner");
@@ -89,6 +98,8 @@
 
       const card = document.createElement("div");
       card.className = "card speaker-card";
+      card.dataset.speakerId = speaker.id;
+      card.tabIndex = -1;
 
       const nameRow = document.createElement("div");
       nameRow.className = "speaker-name";
@@ -190,7 +201,8 @@
     list.replaceChildren();
     state.lines.forEach((line) => {
       const card = document.createElement("div");
-      card.className = "card line-card";
+      card.className = `card line-card${line.id === state.selectedLineId ? " selected" : ""}`;
+      card.dataset.lineId = line.id;
 
       const speakerLabel = document.createElement("div");
       speakerLabel.className = "line-speaker";
@@ -215,12 +227,147 @@
       audio.hidden = true;
       audio.dataset.lineId = line.id;
 
-      button.addEventListener("click", () => previewLine(line.id, button, audio));
+      button.addEventListener("click", () => {
+        selectLine(line.id);
+        previewLine(line.id, button, audio);
+      });
+      card.addEventListener("click", () => selectLine(line.id));
       controls.append(button, audio);
       body.append(text, controls);
       card.append(speakerLabel, body);
       list.appendChild(card);
     });
+  }
+
+  function renderTimeline() {
+    const scriptLane = byId("script-timeline");
+    const voiceLane = byId("voice-timeline");
+    const musicLane = byId("music-timeline");
+    if (!scriptLane || !voiceLane || !musicLane) return;
+
+    scriptLane.replaceChildren();
+    voiceLane.replaceChildren();
+    state.lines.forEach((line, index) => {
+      const speaker = speakerById(line.speaker_id);
+      const speakerName = speaker?.name || "Unknown";
+      const speakerIndex = Math.max(
+        0,
+        (state.project?.speakers || []).findIndex((candidate) => candidate.id === line.speaker_id)
+      );
+      const activeClass = line.id === state.selectedLineId ? " active" : "";
+      const speakerClass = speakerIndex % 2 === 0 ? " speaker-a" : "";
+
+      const scriptClip = document.createElement("button");
+      scriptClip.type = "button";
+      scriptClip.className = `timeline-clip${speakerClass}${activeClass}`;
+      scriptClip.dataset.lineId = line.id;
+      scriptClip.title = line.text;
+      scriptClip.textContent = `${speakerName} #${index + 1}`;
+      scriptLane.appendChild(scriptClip);
+
+      const status = previewState(line.id);
+      const voiceClip = document.createElement("button");
+      voiceClip.type = "button";
+      voiceClip.className = `timeline-clip ${status.key}${activeClass}`;
+      voiceClip.dataset.lineId = line.id;
+      voiceClip.dataset.previewState = status.key;
+      voiceClip.title = `${speakerName}: ${status.label}`;
+      voiceClip.textContent = `#${index + 1} · ${status.label}`;
+      voiceLane.appendChild(voiceClip);
+    });
+
+    musicLane.replaceChildren();
+    const musicClip = document.createElement("span");
+    musicClip.className = state.selectedMusic
+      ? "timeline-clip music-clip"
+      : "timeline-clip timeline-placeholder";
+    musicClip.textContent = state.selectedMusic || "No music selected";
+    musicLane.appendChild(musicClip);
+  }
+
+  function renderInspector() {
+    const container = byId("tts-inspector");
+    if (!container) return;
+    const line = selectedLine();
+    if (!line) {
+      container.className = "inspector-empty";
+      container.textContent = "Select a script or voice clip to inspect it.";
+      return;
+    }
+
+    const speaker = speakerById(line.speaker_id);
+    const status = previewState(line.id);
+    const title = document.createElement("h2");
+    title.className = "inspector-title";
+    title.textContent = `Line ${state.lines.indexOf(line) + 1}`;
+
+    const meta = document.createElement("div");
+    meta.className = "inspector-meta";
+    const speakerChip = document.createElement("span");
+    speakerChip.className = "speaker-chip";
+    speakerChip.textContent = speaker?.name || "Unknown speaker";
+    const statusBadge = document.createElement("span");
+    statusBadge.className = "badge";
+    statusBadge.dataset.previewStatus = "";
+    statusBadge.textContent = status.label;
+    meta.append(speakerChip, statusBadge);
+
+    const copy = document.createElement("p");
+    copy.className = "inspector-copy";
+    copy.textContent = line.text;
+
+    const note = document.createElement("div");
+    note.className = "callout";
+    note.textContent = "Preview status reflects successful synthesis in this browser session only.";
+
+    const actions = document.createElement("div");
+    actions.className = "inspector-actions";
+    const listen = document.createElement("button");
+    listen.type = "button";
+    listen.className = "btn btn-ghost preview-btn";
+    listen.dataset.inspectorAction = "listen";
+    listen.dataset.lineId = line.id;
+    listen.disabled = state.isGenerating || state.linesInFlight.has(line.id);
+    listen.textContent = state.linesInFlight.has(line.id) ? "Synthesizing…" : "🔊 Listen";
+    const settings = document.createElement("button");
+    settings.type = "button";
+    settings.className = "btn btn-primary";
+    settings.dataset.inspectorAction = "voice-settings";
+    settings.textContent = "Voice settings";
+    actions.append(listen, settings);
+
+    const audio = document.createElement("audio");
+    audio.id = "inspector-audio";
+    audio.className = "inspector-audio";
+    audio.controls = true;
+    audio.hidden = true;
+
+    container.className = "";
+    container.replaceChildren(title, meta, copy, note, actions, audio);
+  }
+
+  function updateInspectorPreviewState() {
+    const line = selectedLine();
+    if (!line) return;
+    const status = previewState(line.id);
+    const badge = byId("tts-inspector")?.querySelector("[data-preview-status]");
+    if (badge) badge.textContent = status.label;
+    const listen = byId("tts-inspector")?.querySelector('[data-inspector-action="listen"]');
+    if (listen) {
+      listen.disabled = state.isGenerating || state.linesInFlight.has(line.id);
+      listen.textContent = state.linesInFlight.has(line.id) ? "Synthesizing…" : "🔊 Listen";
+    }
+  }
+
+  function selectLine(lineId) {
+    if (!state.lines.some((line) => line.id === lineId)) return;
+    if (state.selectedLineId === lineId) return;
+    state.selectedLineId = lineId;
+    document.querySelectorAll("#line-list .line-card[data-line-id]").forEach((card) => {
+      card.classList.toggle("selected", card.dataset.lineId === lineId);
+    });
+    renderTimeline();
+    renderInspector();
   }
 
   async function previewLine(lineId, button, audio) {
@@ -230,11 +377,15 @@
     const originalText = button.textContent;
     button.textContent = "Synthesizing…";
     clearError();
+    applyLocks();
+    renderTimeline();
+    updateInspectorPreviewState();
     try {
       await Api.previewTtsLine(state.projectId, lineId);
       audio.src = `${Api.ttsCacheUrl(state.projectId, lineId)}?t=${Date.now()}`;
       audio.hidden = false;
       await audio.play().catch(() => {});
+      state.previewedLineIds.add(lineId);
     } catch (error) {
       console.error("Failed to synthesize line preview:", error);
       showError("We couldn't synthesize that line. Please try again.");
@@ -242,7 +393,36 @@
       state.linesInFlight.delete(lineId);
       button.disabled = state.isGenerating;
       button.textContent = originalText;
+      applyLocks();
+      renderTimeline();
+      updateInspectorPreviewState();
     }
+  }
+
+  function handleInspectorClick(event) {
+    const action = event.target.closest("[data-inspector-action]");
+    if (!action || action.disabled) return;
+    const line = selectedLine();
+    if (!line) return;
+    if (action.dataset.inspectorAction === "listen") {
+      const audio = byId("inspector-audio");
+      previewLine(line.id, action, audio);
+      return;
+    }
+    if (action.dataset.inspectorAction === "voice-settings") {
+      const card = [...document.querySelectorAll("#speaker-grid [data-speaker-id]")].find(
+        (candidate) => candidate.dataset.speakerId === line.speaker_id
+      );
+      if (card) {
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+        card.focus({ preventScroll: true });
+      }
+    }
+  }
+
+  function handleTimelineClick(event) {
+    const clip = event.target.closest("[data-line-id]");
+    if (clip) selectLine(clip.dataset.lineId);
   }
 
   function renderMusicOptions() {
@@ -271,11 +451,22 @@
     state.isGenerating = true;
     clearError();
     applyLocks();
+    updateInspectorPreviewState();
     const progress = byId("generate-progress");
+    let activeLineId = null;
     try {
       for (let i = 0; i < state.lines.length; i += 1) {
         progress.textContent = `Synthesizing line ${i + 1}/${state.lines.length}…`;
-        await Api.previewTtsLine(state.projectId, state.lines[i].id);
+        activeLineId = state.lines[i].id;
+        state.linesInFlight.add(activeLineId);
+        renderTimeline();
+        updateInspectorPreviewState();
+        await Api.previewTtsLine(state.projectId, activeLineId);
+        state.linesInFlight.delete(activeLineId);
+        state.previewedLineIds.add(activeLineId);
+        activeLineId = null;
+        renderTimeline();
+        updateInspectorPreviewState();
       }
       progress.textContent = "Mixing final audio…";
       const job = await Api.generateAudio(state.projectId, state.selectedMusic);
@@ -286,8 +477,11 @@
       showError("We couldn't generate the full episode. Please try again.");
       progress.textContent = "";
     } finally {
+      if (activeLineId) state.linesInFlight.delete(activeLineId);
       state.isGenerating = false;
       applyLocks();
+      renderTimeline();
+      updateInspectorPreviewState();
     }
   }
 
@@ -314,16 +508,21 @@
 
     try {
       state.lines = await Api.getScript(state.projectId);
+      state.selectedLineId = state.lines[0]?.id || null;
     } catch (error) {
       console.error("Failed to load script:", error);
       byId("loading-panel").hidden = true;
       showError("We couldn't load the script for this project.");
+      renderTimeline();
+      renderInspector();
       return;
     }
 
     if (state.lines.length === 0) {
       byId("loading-panel").hidden = true;
       byId("empty-state").hidden = false;
+      renderTimeline();
+      renderInspector();
       return;
     }
 
@@ -346,16 +545,35 @@
     renderSpeakers();
     renderLines();
     renderMusicOptions();
+    renderTimeline();
+    renderInspector();
     applyLocks();
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 4 });
+    StepNav.render("step-nav", {
+      projectId: new URLSearchParams(window.location.search).get("project_id"),
+      currentStep: 4,
+      variant: "workflow",
+    });
     KeyboardShortcuts.init({ primaryButtonId: "generate-btn" });
     byId("theme-toggle").addEventListener("click", Theme.toggle);
+    WorkspaceShell.init({
+      sidebar: byId("pane-sidebar"),
+      resizerLeft: byId("resizer-left"),
+      inspector: byId("pane-inspector"),
+      resizerRight: byId("resizer-right"),
+      timeline: byId("pane-timeline"),
+      resizerTop: byId("resizer-top"),
+      collapseBtn: byId("sidebar-collapse-btn"),
+    });
+    byId("tts-inspector").addEventListener("click", handleInspectorClick);
+    byId("script-timeline").addEventListener("click", handleTimelineClick);
+    byId("voice-timeline").addEventListener("click", handleTimelineClick);
     byId("generate-btn").addEventListener("click", generateAll);
     byId("music-select").addEventListener("change", (event) => {
       state.selectedMusic = event.target.value;
+      renderTimeline();
     });
     const handleSpeakerFieldChange = (event) => {
       const field = event.target.dataset.field;

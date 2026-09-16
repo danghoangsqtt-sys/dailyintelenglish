@@ -4,7 +4,7 @@
 - **ID**: 4.2b (second sub-task of Task 4.2 — UI Redesign Slice 2, split per-page per
   the 2026-09-15 brainstorm session's explicit pacing decision)
 - **Phase**: 4
-- **Status**: in_progress
+- **Status**: done (2026-09-16)
 - **Priority**: medium
 - **Assignee**: Codex (Implementer) — PM (Claude Code) writes/accepts, per the AR-06
   PM-Implementer contract (`docs/CODEX_CODE_PROMPT.md`, `.viepilot/SYSTEM-RULES.md`)
@@ -277,3 +277,77 @@ harden this to a pure state-driven re-render like Script's `handleListen` patter
 needed, everything else is accepted as-is. Re-review will be fast once the fix lands —
 no need to re-plan or re-verify anything beyond the Music-track fix and its new
 assertion.
+
+## Implementer Fix Evidence (Awaiting PM Re-review — 2026-09-16)
+
+- Added `musicLane.replaceChildren();` immediately before the Music clip creation block
+  in `renderTimeline()`; Script, Voice, and Music lanes now all replace their contents
+  before repopulating.
+- Added the requested regression assertion after line-selection and music-selection
+  rerenders: `#music-timeline .timeline-clip` count must remain exactly `1`.
+- Did not change the pre-existing Listen/change-line race disclosed by PM, per the
+  explicit non-blocking/no-change instruction.
+- Did not rerun the full suite because PM explicitly limited re-verification to this
+  Music-track fix and its assertion.
+
+`venv\Scripts\python -m pytest tests/test_tts_shell_browser.py::test_tts_shell_resizes_collapses_and_syncs_three_track_selection -q` (exit code 0):
+
+```text
+.                                                                        [100%]
+1 passed in 5.95s
+```
+
+`venv\Scripts\python -m ruff check tests/test_tts_shell_browser.py` (exit code 0):
+
+```text
+All checks passed!
+```
+
+`node --check frontend/static/js/step4_tts.js` (exit code 0):
+
+```text
+(no stdout or stderr)
+```
+
+`git diff --check` (exit code 0):
+
+```text
+warning: in the working copy of '.viepilot/phases/04-post-beta-polish/tasks/task-4.2b.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/pages/step4_tts.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/step4_tts.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_step_nav_browser.py', LF will be replaced by CRLF the next time Git touches it
+```
+
+The warnings are the same Windows line-ending notices reviewed previously; no
+whitespace error was reported.
+
+## PM Re-review (2026-09-16) — ACCEPTED
+
+Independently re-verified the fix rather than trusting the report, per AR-06:
+
+- Confirmed `musicLane.replaceChildren();` is correctly placed immediately before the
+  Music clip creation block in `renderTimeline()` — exact fix requested.
+- Confirmed the new test assertion (`#music-timeline .timeline-clip` count `== 1`) is
+  present and placed after real prior interactions in the same test (not a fresh-page
+  check that would miss a re-render bug).
+- Re-ran `tests/test_tts_shell_browser.py` independently: **5/5 pass**.
+- **Stress-tested beyond the single assertion**: wrote a disposable script that clicks
+  through 5 consecutive selection/music changes (well past the 1-2 interactions the bug
+  needed to reproduce originally) against a real running instance of the app, then
+  asserted and screenshotted the Music lane. Real result: exactly 1 clip
+  (`"focus-bed.mp3"`), confirmed both by DOM count and by looking at the actual
+  rendered screenshot. Bug is genuinely fixed, not just no-longer-triggered by the one
+  scripted test.
+- Re-ran `node --check`, `ruff check app/ tests/`, and `git diff --check` independently
+  — all clean, matching the Implementer's report exactly.
+- Ran the **full suite** myself (Codex correctly deferred this per PM's explicit
+  scope-limiting instruction): **541 passed, 0 failed, 237.33s** — clean, no flakes this
+  run (the full 541 includes the previously-flaky
+  `test_generate_script_exhausts_one_model_then_falls_back_to_next`, which passed
+  normally here).
+- Confirmed the previously-disclosed non-blocking Listen/change-line race was correctly
+  left untouched, per instruction.
+
+**This closes Task 4.2b.** All of Task 4.2's shell/timeline/inspector conventions now
+apply to Script, Learning, and TTS (3 of 7 pages). Remaining: Video, Thumbnail,
+YouTube, Music Library, Step1-Config.

@@ -33,6 +33,19 @@ Versioning: [SemVer](https://semver.org/)
   and coalesced-trailing-autosave behavior unchanged. New
   `tests/test_learning_shell_browser.py` (3 tests) — first browser coverage this page
   has ever had.
+- Phase 4 Task 4.2b, UI Redesign Slice 2 — TTS Audio Studio page (2026-09-16,
+  implemented by Codex, accepted by Claude Code as PM per the AR-06 contract — the
+  first task fully delegated to Codex since Phase 4 opened): `/step4` wrapped in the
+  same 3-panel shell, this time **with** a real 3-track timeline (Script — read-only
+  reference; Voice — per-line synthesis state; Music — the selected background track).
+  New read-only inspector shows the selected line with an honest session-only
+  preview-state badge (Not previewed/Synthesizing/Preview ready — verified by an actual
+  page-reload test that this never guesses persisted cache state), a real Listen action
+  reusing the existing preview endpoint, and a real scroll-to-speaker-card "Voice
+  settings" affordance — no new write path. Existing per-speaker autosave debounce and
+  the sequential Generate-All request order verified unchanged. New
+  `tests/test_tts_shell_browser.py` (5 tests). Went through 2 real PM review rounds
+  before acceptance (see Fixed, below).
 
 ### Fixed
 - `tests/test_step_nav_browser.py` assumed only the Script page (`/step2`) used the new
@@ -46,6 +59,21 @@ Versioning: [SemVer](https://semver.org/)
   showing stale text until re-selected — fixed, and verified as a real bug via
   revert-and-confirm-failure (Script's equivalent `commit()` already handles this
   correctly, confirming it was a Learning-specific oversight, not a systemic pattern).
+- Task 4.2b PM review round 1: Codex correctly flagged, before writing any other code,
+  that `tests/test_step_nav_browser.py`'s shell-layout branch would also break for
+  `/step4` (`current_step == 4`) — same class of issue Task 4.2a hit — and reported it
+  rather than touching a file outside its assigned scope; PM pre-authorized the exact
+  one-line fix (`(2, 3)` → `(2, 3, 4)`).
+- Task 4.2b PM review round 2: PM's own independent screenshot (not the test suite, not
+  the Implementer's described screenshots) caught a real bug —
+  `step4_tts.js`'s `renderTimeline()` cleared the Script and Voice timeline lanes on
+  every re-render but never the Music lane, so it accumulated a duplicate stale clip on
+  every selection/preview/music-change event. Reproduced live (2 duplicate "No music
+  selected" badges after a single click). Sent back to Codex with the exact fix
+  (`musicLane.replaceChildren()`, matching the pattern already used for the other two
+  lanes) and a regression-test assertion; re-verified independently, including a
+  disposable 5-interaction stress test confirming exactly 1 clip survives repeated
+  re-renders.
 
 ## [1.0.0-beta] - 2026-09-15
 
