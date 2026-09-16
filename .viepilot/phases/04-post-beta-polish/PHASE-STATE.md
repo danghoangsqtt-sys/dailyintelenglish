@@ -13,7 +13,12 @@
   LivePortrait lip-sync remain explicitly deferred, not part of this phase. A new
   Task 4.3 (Vietnamese UI localization) is scoped and queued to start once Task 4.2's
   remaining 5 pages are done — see `docs/brainstorm/session-2026-09-15.md`'s
-  2026-09-15 update.
+  2026-09-15 update. **Task 4.4 inserted 2026-09-16**, ahead of Task 4.2's remaining
+  sub-tasks: a Codex read-only UI audit found 2 real P0 navigation bugs (Dashboard
+  Continue button no-ops for 3 of 5 project statuses; Config page silently creates a
+  duplicate project instead of editing the existing one) — PM independently confirmed
+  both, see `tasks/task-4.4.md`. P1/P2 audit findings logged as backlog, see TRACKER.md
+  Decision Log (2026-09-16).
 - **Test Suite Status:** 544/544 pass (2026-09-16, after Task 4.2c) — see TRACKER.md
 
 ---
@@ -82,3 +87,19 @@
   stress-test screenshot of the Music lane. 544/544 full suite passes. See
   `tasks/task-4.2c.md` for the full record.
 - Remaining after 4.2c: Thumbnail, YouTube, Music Library, Step1-Config — not started.
+  **Paused after 4.2c** to fix Task 4.4's P0 bugs first (see below) before resuming
+  with 4.2d (Thumbnail).
+
+### Task 4.4: P0 navigation bug fixes (Dashboard Continue + Config duplicate-project) — 🔄 IN PROGRESS
+- **Status:** in_progress (2026-09-16)
+- Inserted ahead of Task 4.2d after a Codex read-only UI audit found 2 real P0 bugs,
+  both independently confirmed by PM: (1) Dashboard's "Continue" button silently no-ops
+  for `audio_generated`/`video_generated`/`complete` project statuses — only
+  `draft`/`script_generated` were ever wired up; (2) the Config page (`/step1`) ignores
+  an existing `project_id` in the URL and always creates a brand-new project on submit,
+  even though StepNav makes Config a real, reachable link from every other step —
+  meaning a user revisiting Config on an in-progress project can silently spawn a
+  duplicate. Fix plan uses only existing backend capability (the already-implemented
+  but previously frontend-unused `PUT /api/projects/{id}` update endpoint) — no new
+  endpoints or cascade/regenerate logic invented. See `tasks/task-4.4.md` for the full
+  plan, currently handed to Codex as Implementer per AR-06.

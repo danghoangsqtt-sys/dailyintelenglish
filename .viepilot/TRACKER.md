@@ -31,18 +31,20 @@ scope rather than pull "progress cancellation"/LivePortrait lip-sync into Phase 
 blockers. Phase 3 counts discrete ROADMAP checklist items across 3.1 (4), 3.2 (3), and
 3.3 (4) = 11 total, all 11 done 2026-09-15 — **Phase 3 formally closed** (see Task
 3.1/3.2/3.3 below). Phase 4 (new, scoped in the 2026-09-15 brainstorm session, not part
-of the original plan) has 2 tasks: 4.1 done 2026-09-15 (partial improvement, honestly
+of the original plan) has 3 tasks: 4.1 done 2026-09-15 (partial improvement, honestly
 reported), 4.2 in progress (split per-page — 3/7 pages done: Learning/4.2a 2026-09-15,
 TTS/4.2b and Video/4.2c 2026-09-16, both by Codex; Thumbnail/YouTube/Music
-Library/Step1-Config remain). Task 4.3 (Vietnamese UI localization) scoped and queued
-behind Task 4.2's completion — see `docs/brainstorm/session-2026-09-15.md`.*
+Library/Step1-Config remain), 4.4 in progress (2 real P0 navigation bugs found by a
+2026-09-16 Codex UI audit, inserted ahead of Task 4.2d — see Task 4.4 below). Task 4.3
+(Vietnamese UI localization) scoped and queued behind Task 4.2's completion — see
+`docs/brainstorm/session-2026-09-15.md`.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
 | Phase 1 — Build | ✅ Complete | 28 | 30 |
 | Phase 2 — Testing | ✅ Complete (buildable scope) | 22 | 24 |
 | Phase 3 — Review | ✅ Complete | 11 | 11 |
-| Phase 4 — Post-Beta Polish (new) | 🔄 In Progress | 1 | 2 |
+| Phase 4 — Post-Beta Polish (new) | 🔄 In Progress | 1 | 3 |
 
 ## Phase 1 Task Status
 
@@ -471,6 +473,55 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   lane (exactly 1 clip survived). 544/544 full suite passes (up from 541). See
   `tasks/task-4.2c.md` for the full record.
 
+Task 4.2 **paused after 4.2c** (2026-09-16) to fix Task 4.4's P0 bugs first — see below.
+
+### 4.4 P0 navigation bug fixes (Dashboard Continue + Config duplicate-project) — 🔄 IN PROGRESS
+
+Inserted ahead of Task 4.2d after a Codex read-only UI audit (`vp-auto` audit mode) of
+the whole app found 2 real P0 bugs, both independently re-verified by PM against the
+actual source before accepting the finding (not trusted on the audit report alone):
+
+1. **Dashboard "Continue" button no-ops for 3 of 5 statuses.** The click handler
+   (`dashboard.js:154-159`) only ever wired up `draft`/`script_generated` →
+   `/step2` — added when only those 2 statuses existed (Task 1.4, see above). As the
+   pipeline grew `audio_generated`/`video_generated`/`complete` were added to the status
+   enum and dashboard filter but the Continue handler was never extended, so clicking it
+   on those projects does nothing — no navigation, no error, no console output.
+2. **Config page (`/step1`) always creates a new project, ignoring an existing
+   `project_id` in the URL.** `step1_config.js` reads `project_id` only to render
+   StepNav breadcrumbs; `handleSubmit` unconditionally calls `Api.createProject()`.
+   Since `step_nav.js` makes "Config" a real clickable link from every other step for
+   the current project, a user revisiting Config mid-workflow lands on a blank
+   "new project" form and can silently spawn a duplicate project on submit — a
+   dangerous mental-model mismatch, not a cosmetic issue.
+
+Fix plan (see `tasks/task-4.4.md`) uses only real, already-existing backend capability:
+extend the Continue handler's status→step map (`audio_generated`→`/step4`,
+`video_generated`→`/step5`, `complete`→`/step7`, matching the existing pattern of
+resuming to the step that produced that status); and for Config, fetch+prefill via the
+existing `GET /api/projects/{id}` for `draft` projects and submit via the
+already-implemented-but-previously-frontend-unused `PUT /api/projects/{id}` endpoint
+instead of create — locking the form read-only for any later status rather than
+inventing new cascade/regenerate behavior. Handed to Codex as Implementer per AR-06.
+
+**P1/P2 findings from the same audit — logged as backlog, not actioned in Task 4.4**:
+timeline clip width isn't proportional to real clip duration (Script/TTS/Video all
+affected — a 3s and a 7s line render at nearly the same width); dashboard has no
+pagination/virtualization and was observed rendering 176 project cards / 358 buttons
+in one `innerHTML` pass (~17,000px page height); Learning's card click targets lack a
+semantic role/`tabindex` for keyboard users; the timeline's horizontal resizer has
+`tabindex="0"` but no keydown handler (only the vertical resizer does); Learning's
+inspector starts empty (340px) instead of defaulting to the first item; header/nav
+styling differs between shell-based pages and Config/Thumbnail/YouTube, and Step 6
+still says "Daily Intel English" instead of "Daily Intel English Studio"; UI mixes
+Vietnamese and English copy (Task 4.3 will resolve this); Video's avatar section
+exposes a not-yet-functional feature (LivePortrait lip-sync) without collapsing it.
+None of these are regressions from Task 4.2's own work — they're either pre-existing
+or inherent to the current dashboard's real project volume. Candidates for a future
+Task 4.5 (or folded into remaining Task 4.2 sub-tasks where directly relevant, e.g.
+timeline-duration-proportional width should probably land in whichever page's timeline
+work is still pending) — not decided yet, revisit after Task 4.4 closes.
+
 ## Decision Log
 
 | Date | Decision | Rationale |
@@ -897,6 +948,26 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   accumulated task-card guidance from 4.2a/4.2b's regressions appears to be working —
   the delegation loop is improving with each round rather than repeating the same
   mistakes. | User; PM (Claude Code); Codex (Implementer) |
+| 2026-09-16 | User had Codex run a read-only UI audit (`vp-auto` audit mode) across the
+  whole app after Task 4.2c shipped. It found 2 P0 behavior bugs (Dashboard's Continue
+  button no-ops for `audio_generated`/`video_generated`/`complete` statuses; Config page
+  always creates a new project instead of editing the one named by an existing
+  `project_id` in the URL) plus several P1/P2 polish items (timeline clip width not
+  proportional to real duration, dashboard has no pagination and was observed rendering
+  176 cards/358 buttons in one pass, some accessibility gaps, mixed EN/VI copy, an
+  unused-feature disclosure on Video's avatar section). PM independently re-verified
+  both P0 claims against the actual source (not accepted on the audit report's word
+  alone) — both confirmed real and reachable via normal navigation, not edge cases. PM
+  proposed and user approved inserting a new Task 4.4 ahead of Task 4.2d (Thumbnail) to
+  fix the 2 P0 bugs immediately, on the reasoning that they affect navigation
+  reliability across every already-shipped page and one of them (silent duplicate
+  project creation) carries real data-integrity risk, outweighing the value of staying
+  in page-redesign order. User again chose to delegate the fix to Codex, continuing the
+  same AR-06 PM-Implementer pattern used for 4.2b/4.2c. P1/P2 items logged as backlog
+  above (Task 4.2 section) rather than actioned now — not urgent, no confirmed user
+  impact reported, and P2's mixed-language item is already covered by the planned
+  Task 4.3. See `tasks/task-4.4.md`. | User; PM (Claude Code); Codex (read-only auditor,
+  then Implementer) |
 
 ## Known Issues
 
