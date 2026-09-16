@@ -97,6 +97,37 @@ behavior.
   to confirm exact filename(s) in the pre-code plan.
 - This task card, for plan/evidence updates.
 
+## PM Plan Review (2026-09-16) — APPROVED WITH ONE CLARIFICATION
+
+Codex presented its pre-code plan per AR-06's 3-step process. Plan matches every
+required decision in this task card (client-side only, page size 24, filter/search
+reset, delete-clamp, no-pagination-on-one-page, no storage persistence across reload).
+
+**One clarification requested before coding, not a change to the plan's substance**:
+PM checked `tests/test_dashboard_browser.py` and found the existing `MOCK_PROJECTS`
+constant (3-4 entries) is shared by **6** existing tests (listing, filter, search,
+new-project-button, delete, and one more — confirmed via
+`grep -n "MOCK_PROJECTS" tests/test_dashboard_browser.py`). The plan says "seed over 24
+projects" for the new pagination tests without stating whether that means growing
+`MOCK_PROJECTS` itself or adding a separate, dedicated fixture. Growing the shared
+constant to 24+ entries would silently change what every one of those 6 existing tests
+sees (only page 1's cards would be visible/countable in the DOM), risking a real,
+subtle regression in tests that currently assume the full small set renders at once.
+**Required**: use a separate, dedicated large fixture for the new pagination tests
+(e.g., generated inline, like `[_project(i) for i in range(30)]`) — leave
+`MOCK_PROJECTS` and all 6 of its existing consumers completely untouched. Please
+confirm this explicitly in the evidence (not just imply it).
+
+**Allowed files — confirmed/locked, exactly as Codex named them**:
+- `frontend/static/js/dashboard.js`
+- `frontend/pages/dashboard.html`
+- `frontend/static/css/style.css` (minimal layout only, confirmed)
+- `tests/test_dashboard_browser.py` (extended, not a new file — confirmed no conflict)
+- This task card, for evidence only (Status field remains PM-only)
+
+**Plan approved with the above clarification. No other changes requested.** Codex may
+proceed to implementation.
+
 ## Verification checklist
 - [ ] Manual/automated: seed more than one page's worth of mock projects, confirm only
   the current page's cards render in the DOM (not all of them, just hidden via CSS —
