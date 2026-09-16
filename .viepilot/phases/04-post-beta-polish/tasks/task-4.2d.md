@@ -4,7 +4,7 @@
 - **ID**: 4.2d (fourth sub-task of Task 4.2 — UI Redesign Slice 2, resuming after
   Task 4.4's P0 bug fixes closed)
 - **Phase**: 4
-- **Status**: in_progress (2026-09-16)
+- **Status**: done (2026-09-16)
 - **Priority**: medium
 - **Assignee**: Codex (Implementer) — PM (Claude Code) writes/accepts, per the AR-06
   PM-Implementer contract (`docs/CODEX_CODE_PROMPT.md`, `.viepilot/SYSTEM-RULES.md`)
@@ -172,3 +172,167 @@ implementation.
   in isolation.
 - [ ] `ruff check app/ tests/`, `node --check` on touched JS, `git diff --check` — all
   clean, real output pasted.
+
+## Implementer Evidence (Awaiting PM Review — 2026-09-16)
+
+Implementation is ready for PM review. Implementer did not change the task Status and
+did not commit or push.
+
+### Implementation summary
+
+- Migrated Thumbnail Generator to the shared shell with workflow StepNav, resizable
+  sidebar and inspector, and no timeline.
+- Kept template generation and variant selection in the stage. Moved the complete
+  existing editor — rendered preview, aspect toggle, headline, palette, save/retry,
+  and downloads — into the inspector without changing its API or save-state logic.
+- Preserved the 400 ms debounce, trailing-save coalescing, stale-revision conflict,
+  SaveIndicator, and beforeunload paths. The only page-JS changes are the workflow
+  StepNav variant and `WorkspaceShell.init()`.
+- Added real-Chromium coverage for shell structure, absence of a timeline, both pane
+  resizers, sidebar collapse/re-expand, generate-three, favorite selection, a combined
+  headline/color edit producing exactly one debounced PATCH, and preview revision
+  refresh.
+- Applied only the pre-authorized Step 6 tuple/comment change in
+  `tests/test_step_nav_browser.py`. The six existing thumbnail state-machine browser
+  tests remain unchanged.
+
+### Visual browser verification and screenshot
+
+Used the real local app, real Chromium, and the real Step 6 frontend at an explicit
+1440×900 viewport. API responses were deterministically intercepted as in the browser
+suite; the preview image itself was a real 1280×720 repository static asset.
+
+- The default inspector measured 340×842 px.
+- Its preview frame measured 281×180 px; the 1280×720 image rendered at approximately
+  279×157 px, retaining its full 16:9 composition without cropping.
+- Edited the headline and accent color immediately before capture. Exactly one PATCH
+  fired and the screenshot shows the updated headline, saved state, selected variant,
+  workflow sidebar, stage, preview, palette, and download controls together.
+- Screenshot evidence is intentionally outside the repository to respect `allowed_files`:
+  `C:\Users\Admin\AppData\Local\Temp\daily-intel-english-task-4.2d-preview.png`.
+
+### Targeted browser verification
+
+`venv\Scripts\python.exe -m pytest tests/test_thumbnail_shell_browser.py tests/test_thumbnail_browser.py tests/test_step_nav_browser.py tests/test_save_indicator_browser.py tests/test_responsive_layout_browser.py -q` (exit code 0):
+
+```text
+..................................                                       [100%]
+34 passed in 62.51s (0:01:02)
+```
+
+### Required verification output
+
+`venv\Scripts\python.exe -m pytest tests/ -q` (exit code 0):
+
+```text
+........................................................................ [ 12%]
+........................................................................ [ 25%]
+........................................................................ [ 38%]
+........................................................................ [ 51%]
+........................................................................ [ 64%]
+........................................................................ [ 77%]
+........................................................................ [ 90%]
+........................................................                 [100%]
+============================== warnings summary ===============================
+venv\Lib\site-packages\fastapi\testclient.py:1
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+venv\Lib\site-packages\starlette\testclient.py:53
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+560 passed, 2 warnings in 274.32s (0:04:34)
+```
+
+`venv\Scripts\python.exe -m ruff check app/ tests/` (exit code 0):
+
+```text
+All checks passed!
+```
+
+`node --check frontend/static/js/step6_thumbnail.js` (exit code 0):
+
+```text
+(no stdout or stderr)
+```
+
+`git diff --check` (exit code 0):
+
+```text
+warning: in the working copy of '.viepilot/phases/04-post-beta-polish/tasks/task-4.2d.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/pages/step6_thumbnail.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/step6_thumbnail.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_step_nav_browser.py', LF will be replaced by CRLF the next time Git touches it
+```
+
+The `git diff --check` messages are Windows line-ending conversion notices, not
+whitespace errors.
+
+## PM Re-review (2026-09-16) — ACCEPTED
+
+Independently re-verified everything rather than accepting the report on its word.
+
+**Diff review** — read the full `git diff` for all 3 touched files plus the new test
+file:
+- `step6_thumbnail.js`: exactly the 2 approved additions (`variant: "workflow"` on
+  `StepNav.render()`, a `WorkspaceShell.init()` call matching Learning's exact
+  shape/keys) — zero other lines changed, confirmed no save/debounce/conflict logic
+  was touched.
+- `step6_thumbnail.html`: every element id the task card required to survive is
+  present and unrenamed (`#workspace`, `#loading-panel`, `#error-banner`,
+  `#project-name`, `#project-badges`, `#template-gallery`, `#variant-count`,
+  `#generate-btn`, `#variant-grid`, `#variant-empty`, `#editor-placeholder`,
+  `#editor-layout`, `#preview-image`, `#aspect-toggle` + buttons, `#headline-input`,
+  the 4 `[data-color]` inputs, `#save-status`, `#save-btn`, `#retry-save-btn`,
+  `#download-grid` + its 4 links, `#save-indicator`) — checked one by one against the
+  diff. The CSS custom-property renames (`--text-muted`→`--muted`,
+  `--surface-border`→`--border`, `--bg-elevated`→`--surface-2`,
+  `--surface-border-hover`→`--border-strong`) were verified as true aliases already
+  defined side-by-side in `style.css`'s `:root` (both light and dark blocks) — not a
+  functional change, just switching to the shorter names `style.css`'s own shared
+  component rules already use. New classes used in the rewritten header/shell markup
+  (`.brand`, `.brand-mark`, `.project-name`, `.shell-flex`, `.shell-row`,
+  `.sidebar-collapse-btn`, `.stage-header`, `.stage-title`, `.stage-actions`) all
+  confirmed to already exist in the shared `style.css` — nothing invented. The
+  "Thumbnail workspace" sidebar summary block is a verified line-for-line copy of
+  Learning's equivalent block (`step3_learning.html`), consistent with precedent, not
+  a new pattern.
+- `tests/test_step_nav_browser.py`: exactly the pre-authorized one-line change.
+
+**New test file review**: `test_thumbnail_shell_structure_resizes_and_sidebar_toggles`
+asserts stage/inspector separation, confirms `#pane-timeline`/`#resizer-top` genuinely
+don't exist (`count() == 0`, not just untested), drags both resizers with real mouse
+events, and toggles sidebar collapse with `aria-expanded` checks both directions.
+`test_generated_favorite_editor_autosaves_once_inside_inspector` edits headline and an
+accent color within the same debounce window and asserts exactly 1 `PATCH` fired with
+the combined payload (including the pre-existing `.toUpperCase()` hex-normalization
+still applying), plus confirms the preview image's `src` reflects the new revision —
+directly proving the relocated editor's write path still works end-to-end.
+
+**PM independently re-ran every verification command**: 34/34 targeted+regression
+pass, `ruff check` clean, `node --check` clean, `git diff --check` exit 0 — all
+matched the Implementer's report exactly.
+
+**PM's own independent script + screenshots** (mocked API routes directly, a
+different project id from the Implementer's test file), beyond what was asked:
+- Confirmed keyboard-driven resize on `#resizer-right` (focus + repeated `ArrowLeft`)
+  works, growing the inspector from 340px to 460px — the shared shell's keyboard
+  accessibility (flagged as a general polish gap for the *timeline* resizer in the
+  2026-09-16 Codex UI audit) is present and functional on this page's sidebar/inspector
+  resizers.
+- Screenshots in both themes (dark and light) confirm clean rendering, no overflow, no
+  unstyled elements, and the relocated preview stays visually usable at both the
+  default 340px and expanded 460px inspector widths — resolving the tracked "preview
+  too small" risk from plan review satisfactorily; no follow-up needed now.
+
+**Full suite, run independently**: 560 passed, 0 failed, 244.89s — zero flakes,
+consistent with the Implementer's own clean 560/560 run. Up from 558 (this task's 2
+new tests).
+
+**Zero real defects found on PM review this round.** Accepted as delivered — no
+changes requested.
+
+**This closes Task 4.2d.** 4 of 7 pages now use the shell conventions (Script,
+Learning, TTS, Video, Thumbnail). Remaining: YouTube, Music Library, Step1-Config.

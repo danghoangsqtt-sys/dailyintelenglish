@@ -72,6 +72,20 @@ Versioning: [SemVer](https://semver.org/)
   desynchronize already-generated content. No cascade/regenerate logic was invented.
   New `tests/test_step1_config_edit_browser.py` (5 tests), including a double-submit
   stress test and a status-parametrized read-only-lock check.
+- Phase 4 Task 4.2d, UI Redesign Slice 2 — Thumbnail Generator page (2026-09-16,
+  implemented by Codex, accepted by Claude Code as PM per AR-06 — the third task
+  delegated end-to-end to Codex): `/step6` wrapped in the same 3-panel shell, no
+  timeline (no sequential-items concept, same as Learning). Unlike every prior
+  sub-task, this page already had a real, pre-existing write-path editor for the
+  selected variant (headline + color palette, 400ms debounced autosave, trailing-save
+  coalescing, 409 stale-revision conflict handling, `SaveIndicator`, `beforeunload`
+  guard) — the inspector pane now hosts this real editor as-is rather than a new
+  read-only view, since the write path already existed and wasn't invented. Stage
+  hosts template selection and the variant grid; every existing element id was
+  preserved unrenamed. New `tests/test_thumbnail_shell_browser.py` (2 tests). Zero
+  real defects found on PM review — PM had flagged the relocated live preview's
+  reduced width as an open risk during plan review and confirmed via its own
+  screenshots (both themes) that it stays legible.
 
 ### Fixed
 - Found via a Codex read-only UI audit (2026-09-16), independently confirmed by PM:

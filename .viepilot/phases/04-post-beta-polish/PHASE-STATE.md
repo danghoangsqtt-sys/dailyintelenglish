@@ -8,15 +8,14 @@
 - **Milestone Progress:** 2 / 3 tasks done — 4.1 CEFR `news` prompt tuning done
   2026-09-15 (partial, honestly-reported improvement — see `tasks/task-4.1.md`); 4.4 P0
   navigation bug fixes done 2026-09-16 (see below); 4.2 UI Redesign Slice 2 (7 pages) in
-  progress, 3/7 pages done (Learning, TTS, Video), 4.2d (Thumbnail) now in progress,
-  handed to Codex. New phase,
+  progress, 4/7 pages done (Learning, TTS, Video, Thumbnail). New phase,
   scoped in the 2026-09-15 brainstorm session (`docs/brainstorm/session-2026-09-15.md`),
   not part of the original 21-day/3-phase plan. Progress cancellation and real
   LivePortrait lip-sync remain explicitly deferred, not part of this phase. A new
   Task 4.3 (Vietnamese UI localization) is scoped and queued to start once Task 4.2's
   remaining 5 pages are done — see `docs/brainstorm/session-2026-09-15.md`'s
   2026-09-15 update.
-- **Test Suite Status:** 558/558 pass (2026-09-16, after Task 4.4) — see TRACKER.md
+- **Test Suite Status:** 560/560 pass (2026-09-16, after Task 4.2d) — see TRACKER.md
 
 ---
 
@@ -33,7 +32,7 @@
   probabilistic model. See `tasks/task-4.1.md` for the full evidence.
 
 ### Task 4.2: UI Redesign Slice 2 (7 remaining pages)
-- **Status:** in_progress (3/7 pages done)
+- **Status:** in_progress (4/7 pages done)
 - Split into per-page sub-tasks, written doc-first individually as each is picked up.
 - **4.2a — Learning (`/step3`)**: ✅ DONE (2026-09-15). Wrapped in the same 3-panel
   shell as Script (Task 2.4), no timeline (confirmed decision — Learning has no
@@ -83,14 +82,27 @@
   have worked; PM still independently re-verified everything including a 6-interaction
   stress-test screenshot of the Music lane. 544/544 full suite passes. See
   `tasks/task-4.2c.md` for the full record.
-- **4.2d — Thumbnail Generator (`/step6`)**: 🔄 IN PROGRESS (2026-09-16), handed to
-  Codex as Implementer per AR-06. Shell, no timeline (same as Learning — no
-  sequential-items concept). One important difference from every prior sub-task: this
-  page already has a real, pre-existing write-path editor for the selected item
-  (headline + color palette, debounced autosave, 409 conflict handling) — the
-  inspector pane hosts this real editor as-is, not a new read-only view, since the
-  write path already existed and isn't being invented. See `tasks/task-4.2d.md` for
-  the full plan.
+- **4.2d — Thumbnail Generator (`/step6`)**: ✅ DONE (2026-09-16), implemented by
+  Codex, accepted by PM per AR-06 — third task delegated end-to-end to Codex. Shell, no
+  timeline (same as Learning — no sequential-items concept). One important difference
+  from every prior sub-task: this page already had a real, pre-existing write-path
+  editor for the selected item (headline + color palette, 400ms debounced autosave,
+  trailing-save coalescing, 409 stale-revision conflict handling, SaveIndicator,
+  beforeunload guard) — the inspector pane hosts this real editor as-is, not a new
+  read-only view, since the write path already existed and wasn't invented. Stage
+  hosts template selection + variant grid; every existing element id preserved
+  unrenamed. 2 new browser tests (`test_thumbnail_shell_browser.py`) — real
+  mouse-driven resize of both panes, sidebar collapse/re-expand, and a combined
+  headline+color edit within one debounce window asserting exactly 1 `PATCH` fires.
+  Plus the same pre-authorized `test_step_nav_browser.py` one-line extension
+  (`current_step == 6`). **Zero real defects found on PM review** — PM independently
+  re-ran every verification command, read the full diff (confirmed every required
+  element id survived, and that CSS custom-property renames were true pre-existing
+  aliases in `style.css`, not a functional change), and ran its own disposable script +
+  screenshots in both themes beyond what was asked (confirmed keyboard-driven resize
+  works, and that the relocated preview — flagged as an open risk at plan-review time —
+  stays visually usable in the narrower inspector). 560/560 full suite passes. See
+  `tasks/task-4.2d.md` for the full record.
 - Remaining after 4.2d: YouTube, Music Library, Step1-Config — not started.
 
 ### Task 4.4: P0 navigation bug fixes (Dashboard Continue + Config duplicate-project) — ✅ DONE (2026-09-16)

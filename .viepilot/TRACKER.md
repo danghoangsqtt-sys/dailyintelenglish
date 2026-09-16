@@ -34,10 +34,10 @@ blockers. Phase 3 counts discrete ROADMAP checklist items across 3.1 (4), 3.2 (3
 of the original plan) has 3 tasks: 4.1 done 2026-09-15 (partial improvement, honestly
 reported), 4.4 done 2026-09-16 (2 real P0 navigation bugs found by a Codex UI audit,
 fixed by Codex, accepted by PM — see Task 4.4 below), 4.2 in progress (split per-page —
-3/7 pages done: Learning/4.2a 2026-09-15, TTS/4.2b and Video/4.2c 2026-09-16, both by
-Codex; paused for Task 4.4, now resuming with Thumbnail/4.2d; YouTube/Music
-Library/Step1-Config remain after that). Task 4.3 (Vietnamese UI localization) scoped
-and queued behind Task 4.2's completion — see `docs/brainstorm/session-2026-09-15.md`.*
+4/7 pages done: Learning/4.2a 2026-09-15, TTS/4.2b, Video/4.2c, and Thumbnail/4.2d all
+2026-09-16, all three of 4.2b/c/d by Codex; YouTube/Music Library/Step1-Config remain).
+Task 4.3 (Vietnamese UI localization) scoped and queued behind Task 4.2's completion —
+see `docs/brainstorm/session-2026-09-15.md`.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -393,7 +393,7 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   consistent with tuning a probabilistic model. See `tasks/task-4.1.md` for full
   before/after evidence. Single-file, prompt-only change — no `app/`/`tests/` touched.
 
-### 4.2 UI Redesign Slice 2 — 🔄 IN PROGRESS (3/7 pages done)
+### 4.2 UI Redesign Slice 2 — 🔄 IN PROGRESS (4/7 pages done)
 
 - [x] **4.2a — Learning (`/step3`) — ✅ DONE (2026-09-15)**: wrapped in the same
   3-panel shell Task 2.4 built for Script, deliberately no timeline (Learning has no
@@ -473,13 +473,35 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   lane (exactly 1 clip survived). 544/544 full suite passes (up from 541). See
   `tasks/task-4.2c.md` for the full record.
 
-Task 4.2 **paused after 4.2c** (2026-09-16) to fix Task 4.4's P0 bugs first — closed,
-see below — **now resuming with 4.2d (Thumbnail)**, handed to Codex per AR-06. One
-difference from every prior sub-task: Thumbnail already has a real, pre-existing
-write-path editor for the selected variant (headline + color palette, debounced
-autosave, 409 stale-revision conflict handling) — the new inspector pane hosts this
-real editor as-is, not a new read-only view, since the write path already existed and
-isn't being invented. See `tasks/task-4.2d.md` for the full plan.
+Task 4.2 **paused after 4.2c** (2026-09-16) to fix Task 4.4's P0 bugs first — see below.
+
+- [x] **4.2d — Thumbnail Generator (`/step6`) — ✅ DONE (2026-09-16)**: third task
+  delegated end-to-end to Codex as Implementer, accepted by PM per AR-06. Shell, no
+  timeline (same as Learning). One important difference from every prior sub-task:
+  Thumbnail already had a real, pre-existing write-path editor for the selected variant
+  (headline + color palette, 400ms debounced autosave, trailing-save coalescing, 409
+  stale-revision conflict handling, `SaveIndicator`, `beforeunload` guard) — the new
+  inspector pane hosts this real editor as-is, not a new read-only view, since the
+  write path already existed and wasn't invented. Stage hosts template selection +
+  variant grid; every existing element id preserved unrenamed — verified one by one
+  against the diff. CSS custom-property renames (`--text-muted`→`--muted` etc.) turned
+  out to be true pre-existing aliases already defined in `style.css`, not a functional
+  change. 2 new Playwright tests (`test_thumbnail_shell_browser.py`): real mouse-driven
+  resize of both panes + sidebar collapse/re-expand, and a combined headline+color edit
+  within one debounce window asserting exactly 1 `PATCH` fires with the correct
+  payload. Same pre-authorized `test_step_nav_browser.py` extension
+  (`current_step in (2,3,4,5,6)`). **PM flagged one open risk at plan-review time**
+  (relocating the live preview into a 260-480px inspector, when a thumbnail's whole
+  purpose is visual judgment) and asked for a screenshot in the evidence rather than
+  blocking approval on it — resolved satisfactorily: the relocated preview stays
+  legible, matching the similarly-sized thumbnails already used in the variant-grid
+  browsing UI on the same page. **Zero real defects found on PM review** — PM
+  independently re-ran every verification command and additionally ran its own
+  disposable script + screenshots in both light and dark themes, confirming
+  keyboard-driven resize also works (`ArrowLeft`/`ArrowRight` on the resizer, not just
+  mouse drag). 560/560 full suite passes (up from 558). See `tasks/task-4.2d.md` for
+  the full record. 4/7 Task 4.2 pages now done — remaining: YouTube, Music Library,
+  Step1-Config.
 
 ### 4.4 P0 navigation bug fixes (Dashboard Continue + Config duplicate-project) — ✅ DONE (2026-09-16)
 
@@ -1007,6 +1029,32 @@ work is still pending) — not decided yet, revisit after Task 4.4 closes.
   and the first non-UI-redesign task in the AR-06 pattern — closes Task 4.4; Task 4.2
   resumes with sub-task 4.2d (Thumbnail) next. | User; PM (Claude Code); Codex
   (Implementer) |
+| 2026-09-16 | User confirmed continuing to delegate to Codex for sub-task 4.2d
+  (Thumbnail Generator). PM wrote the doc-first task card citing every prior
+  sub-task's StepNav `variant:"workflow"` regression and flagging the one real
+  difference from prior pages up front: Thumbnail already has a genuine write-path
+  editor (headline+palette, debounced autosave, 409 conflict handling), so its
+  inspector should host that real editor as-is rather than a new read-only view.
+  Codex's pre-code plan correctly identified and cited the exact shared-shell
+  constraints (inspector hidden below 1050px, resizer clamped to 260-480px, no
+  inspector-collapse API) rather than guessing — PM independently verified both
+  claims against `style.css`/`shell.js` before approving. PM also flagged one open
+  risk without blocking approval: relocating the live preview into a 260-480px
+  inspector is a real width reduction for a page whose whole purpose is visual
+  judgment, and asked for a screenshot in the evidence to judge legibility rather
+  than re-litigating the stage/inspector split. Codex delivered exactly per plan —
+  diff review confirmed every required element id survived unrenamed, and confirmed
+  the CSS custom-property renames Codex used were true pre-existing aliases in
+  `style.css`, not a functional change. New `test_thumbnail_shell_browser.py` (2
+  tests) directly proves the relocated editor's write path still works end-to-end
+  (a combined headline+color edit within one debounce window fires exactly 1
+  `PATCH`). PM's own screenshot verification in both themes confirmed the preview
+  stays usable at the default and expanded inspector widths — resolving the tracked
+  risk satisfactorily, no follow-up needed. PM additionally confirmed keyboard-driven
+  resize works on this page's resizers (not just mouse drag), beyond what was asked.
+  **Zero real defects found.** 560/560 full suite passes. This is the third task
+  delegated to Codex end-to-end — closes Task 4.2d; Task 4.2 now at 4/7 pages done.
+  | User; PM (Claude Code); Codex (Implementer) |
 
 ## Known Issues
 

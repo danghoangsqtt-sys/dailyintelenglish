@@ -513,7 +513,7 @@ explicitly deferred, not part of this phase.
     harder than nominal, so this closes at the honest result rather than iterating
     further on a low-priority item.
 
-### 4.2 UI Redesign Slice 2 (7 remaining pages) — 3/7 done
+### 4.2 UI Redesign Slice 2 (7 remaining pages) — 4/7 done
 
 - [x] **Learning** (`/step3`) — ✅ DONE (2026-09-15). Applied the 3-panel shell (no
   timeline, confirmed decision); inspector is a read-only detail view of the selected
@@ -543,11 +543,14 @@ explicitly deferred, not part of this phase.
   PM review — proactively avoided Task 4.2b's Music-lane bug and included the
   pre-authorized `test_step_nav_browser.py` extension. 544/544 full suite passes. See
   `.viepilot/phases/04-post-beta-polish/tasks/task-4.2c.md`.
-- [ ] **Thumbnail Generator** (`/step6`) — shell, no timeline — 🔄 IN PROGRESS
-  (2026-09-16), handed to Codex per AR-06. One difference from prior sub-tasks: this
-  page already has a real write-path editor (headline + palette, debounced autosave,
-  409 conflict handling) for the selected variant — the inspector hosts this real
-  editor as-is, not a new read-only view. See `tasks/task-4.2d.md`.
+- [x] **Thumbnail Generator** (`/step6`) — shell, no timeline — ✅ DONE (2026-09-16),
+  implemented by Codex, accepted by PM per AR-06. One difference from prior sub-tasks:
+  this page already had a real write-path editor (headline + palette, debounced
+  autosave, 409 conflict handling) for the selected variant — the inspector hosts this
+  real editor as-is, not a new read-only view, since it already existed. Every existing
+  element id preserved. 2 new browser tests. Zero real defects found on PM review —
+  independently re-verified including its own screenshots in both themes. 560/560 full
+  suite passes. See `tasks/task-4.2d.md`.
 - [ ] **YouTube Package** (`/step7`) — shell, no timeline
 - [ ] **Music Library** (`/music`) — deliberately NOT shell-based (shared utility page,
   not part of the 7-step pipeline — same decision as the 2026-09-14 session)
