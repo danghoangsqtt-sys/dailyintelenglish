@@ -117,6 +117,43 @@ exactly as the other 4 shell pages do — do not modify `shell.js` itself.
   convention from 4.2a/4.2c/4.2d)
 - This task card, for plan/evidence updates.
 
+## PM Plan Review (2026-09-16) — APPROVED
+
+Codex presented its pre-code plan per AR-06's 3-step process. PM independently
+verified the plan's key technical claim before approving.
+
+**Confirmed**: `frontend/pages/step7_youtube.html:115-160` really does nest the "Full
+Package Export" section (`#export-status-note`/`#export-zip-link`) entirely inside
+`#content-wrap`, and `step7_youtube.js`'s `render()` only calls `renderExportStatus()`
+after the early-return checks for `state.packageLoadFailed`/`!state.package` — meaning
+today, the static HTML text "Checking export readiness…" is never actually shown to a
+user (it's hidden along with the whole `content-wrap` block until a package exists).
+Codex correctly identified that moving Export into the always-visible inspector would
+make this previously-invisible placeholder text visible and misleading whenever no
+package exists yet, and proposed the minimal correct fix: change only the static HTML
+default text to something honest ("Generate the YouTube package to check export
+readiness"), relying on the existing `renderExportStatus()` to overwrite it with the
+real ready/not-ready state once a package exists — no new JS branch, no new state, no
+new API call. This is exactly right and exactly the kind of thing PM asked Codex to
+flag rather than guess past.
+
+Also confirmed the 3 specific test names Codex cited in its verification command
+(`test_step7_no_overflow_at_1024`, `test_step7_ctrl_enter_triggers_generate_when_panel_visible`,
+`test_step7_ctrl_enter_does_nothing_when_panel_hidden`) all exist exactly as named in
+`tests/test_responsive_layout_browser.py`/`tests/test_keyboard_shortcuts_browser.py`.
+
+**Allowed files — confirmed/locked, exactly as Codex named them**:
+- `frontend/pages/step7_youtube.html`
+- `frontend/static/js/step7_youtube.js`
+- `tests/test_step_nav_browser.py`
+- `tests/test_youtube_shell_browser.py` (new)
+- `tests/test_youtube_browser.py` — confirmed **not** touched (Codex's baseline check
+  found all 8 existing tests use stable ids, unaffected by the relocation)
+- This task card, for evidence only (Status field remains PM-only)
+
+**Plan approved as presented — no changes requested.** Codex may proceed to
+implementation.
+
 ## Verification checklist
 - [ ] All 8 existing `tests/test_youtube_browser.py` tests still pass (updated
   selectors if needed, but the same real behaviors — generate/regenerate confirm gate,
