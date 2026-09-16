@@ -4,6 +4,9 @@
   let activeFilter = "all";
   let searchTerm = "";
   let loadFailed = false;
+  let currentPage = 0;
+
+  const PROJECTS_PER_PAGE = 24;
 
   function showError(message) {
     const banner = document.getElementById("error-banner");
@@ -67,6 +70,24 @@
     return div.innerHTML;
   }
 
+  function renderPagination(totalPages) {
+    const pagination = document.getElementById("project-pagination");
+    const previousButton = document.getElementById("previous-page-btn");
+    const nextButton = document.getElementById("next-page-btn");
+    const indicator = document.getElementById("page-indicator");
+
+    if (totalPages <= 1) {
+      pagination.hidden = true;
+      indicator.textContent = "";
+      return;
+    }
+
+    pagination.hidden = false;
+    previousButton.disabled = currentPage === 0;
+    nextButton.disabled = currentPage === totalPages - 1;
+    indicator.textContent = `Page ${currentPage + 1} of ${totalPages}`;
+  }
+
   function render() {
     const grid = document.getElementById("project-grid");
     const emptyState = document.getElementById("empty-state");
@@ -77,6 +98,10 @@
         !searchTerm || (p.name || "").toLowerCase().includes(searchTerm.toLowerCase());
       return matchesFilter && matchesSearch;
     });
+
+    const totalPages = Math.ceil(filtered.length / PROJECTS_PER_PAGE);
+    currentPage = Math.max(0, Math.min(currentPage, Math.max(totalPages - 1, 0)));
+    renderPagination(totalPages);
 
     if (loadFailed) {
       // A failed load must never look identical to a genuinely empty account —
@@ -96,7 +121,9 @@
           : "No projects match your filters.";
     } else {
       emptyState.hidden = true;
-      grid.innerHTML = filtered.map(projectCardHtml).join("");
+      const pageStart = currentPage * PROJECTS_PER_PAGE;
+      const pageProjects = filtered.slice(pageStart, pageStart + PROJECTS_PER_PAGE);
+      grid.innerHTML = pageProjects.map(projectCardHtml).join("");
     }
   }
 
@@ -120,6 +147,7 @@
         document.querySelectorAll("[data-filter]").forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         activeFilter = btn.dataset.filter;
+        currentPage = 0;
         render();
       });
     });
@@ -129,6 +157,20 @@
     const input = document.getElementById("search-input");
     input.addEventListener("input", (e) => {
       searchTerm = e.target.value;
+      currentPage = 0;
+      render();
+    });
+  }
+
+  function setupPagination() {
+    document.getElementById("previous-page-btn").addEventListener("click", () => {
+      if (currentPage === 0) return;
+      currentPage -= 1;
+      render();
+    });
+
+    document.getElementById("next-page-btn").addEventListener("click", () => {
+      currentPage += 1;
       render();
     });
   }
@@ -172,6 +214,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     setupFilters();
     setupSearch();
+    setupPagination();
     setupNewProjectButton();
     setupProjectActions();
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);

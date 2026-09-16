@@ -219,6 +219,8 @@ button { cursor: pointer; }
 .project-card-footer { margin-top: auto; border-top: 1px solid var(--border); padding-top: 10px; }
 .project-date { color: var(--muted); font-size: 12px; }
 .project-thumb { display: grid; height: 104px; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-3); color: var(--muted); font-size: 12px; font-weight: 750; }
+.dashboard-pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 24px; }
+.dashboard-page-indicator { min-width: 96px; color: var(--muted); font-size: 13px; font-weight: 700; text-align: center; }
 .empty-state { padding: 64px 20px; color: var(--muted); text-align: center; }
 .empty-state .empty-icon { margin-bottom: 14px; font-size: 40px; }
 

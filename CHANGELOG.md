@@ -97,6 +97,20 @@ Versioning: [SemVer](https://semver.org/)
   a click-to-inspect interaction for the 3 title-variant cards. New
   `tests/test_youtube_shell_browser.py` (2 tests). Zero real defects found on PM
   review.
+- Phase 5 Task 5.1, Dashboard scale — client-side pagination (2026-09-17, implemented
+  by Codex, accepted by Claude Code as PM per AR-06): the Dashboard's project grid now
+  paginates at 24 cards per page instead of rendering every matching project at once
+  (previously observed rendering 176 real project cards / 358 buttons in a single
+  pass, producing a ~17,000px page). Client-side only — the data fetch already returns
+  every project in one small payload and is unchanged; only DOM rendering is capped.
+  Prev/Next controls with a "Page X of Y" indicator, hidden entirely when everything
+  fits on one page. Filter and search changes reset to page 1. The page-clamp logic
+  that prevents an emptied last page from staying visible lives centrally inside the
+  render function itself, so deleting the last card on the last page correctly falls
+  back a page with no special-case code needed. New
+  `tests/test_dashboard_pagination_*` coverage (4 tests) using an isolated large
+  fixture — the pre-existing shared project-list fixture and its 6 existing consuming
+  tests were left untouched.
 
 ### Fixed
 - Found via a Codex read-only UI audit (2026-09-16), independently confirmed by PM:

@@ -621,12 +621,18 @@ Addresses the real, still-current P1/P2 findings from the 2026-09-16 Codex UI au
 (2 of the original 9 findings turned out to already be fixed as side effects of Task
 4.2d/4.2e's shell redesign — re-verified before scoping, not assumed).
 
-### 5.1 Dashboard scale (pagination) — 🔄 IN PROGRESS
+### 5.1 Dashboard scale (pagination) — ✅ DONE (2026-09-17)
 
-- [ ] Client-side pagination for the Dashboard's project grid — no backend change,
+- [x] Client-side pagination for the Dashboard's project grid — no backend change,
   since the measured problem is unbounded DOM rendering (176 real project cards / 358
   buttons in one `innerHTML` pass, ~17,000px page height), not the data fetch itself.
-  See `.viepilot/phases/05-ui-polish-backlog/tasks/task-5.1.md` for the full plan.
+  Fixed page size of 24; Prev/Next + page indicator; controls hidden for a single
+  page; filter/search resets to page 1; delete clamps back automatically (the clamp
+  logic lives centrally in `render()`, no special-case delete code needed). Implemented
+  by Codex, accepted by PM per AR-06 with zero real defects found. 4 new browser tests
+  using an isolated fixture — the pre-existing shared `MOCK_PROJECTS` and its 6
+  consumers were left untouched. 566/566 full suite passes. See
+  `.viepilot/phases/05-ui-polish-backlog/tasks/task-5.1.md` for the full record.
 
 ### 5.2 Timeline polish (proportional width + keyboard resizer) — not started
 

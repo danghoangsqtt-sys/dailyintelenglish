@@ -47,8 +47,8 @@ touched. **Phase 4 formally closed 2026-09-16** at 3 pursued tasks (4.1/4.2/4.4)
 done. See `docs/brainstorm/session-2026-09-15.md`. **Phase 5** (new, scoped in
 `docs/brainstorm/session-2026-09-16.md` right after Phase 4 closed) addresses the
 real, still-current P1/P2 findings from the 2026-09-16 Codex UI audit — 3 tasks: 5.1
-Dashboard pagination (in progress), 5.2 timeline polish, 5.3 small polish batch, both
-not started.*
+Dashboard pagination done 2026-09-17 (by Codex, accepted by PM), 5.2 timeline polish
+and 5.3 small polish batch both not started.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -56,7 +56,7 @@ not started.*
 | Phase 2 — Testing | ✅ Complete (buildable scope) | 22 | 24 |
 | Phase 3 — Review | ✅ Complete | 11 | 11 |
 | Phase 4 — Post-Beta Polish (new) | ✅ Complete (Task 4.3 dropped) | 3 | 3 |
-| Phase 5 — UI Polish Backlog (new) | 🔄 In Progress | 0 | 3 |
+| Phase 5 — UI Polish Backlog (new) | 🔄 In Progress | 1 | 3 |
 
 ## Phase 1 Task Status
 
@@ -622,16 +622,38 @@ not a pending fix.
 
 ## Phase 5 Task Status
 
-### 5.1 Dashboard scale (pagination) — 🔄 IN PROGRESS (2026-09-16)
+### 5.1 Dashboard scale (pagination) — ✅ DONE (2026-09-17)
 
 Client-side pagination for the Dashboard's project grid — no backend change, since the
 measured problem (176 real project cards / 358 buttons rendered in one `innerHTML`
 pass, ~17,000px page height) is unbounded DOM rendering, not the data fetch (which
-already returns the full list in one small payload, and stays that way). Fixed-size
-pagination (Prev/Next), page size chosen to divide cleanly across the grid's common
-column counts; filter/search changes reset to page 1; deleting the last card on the
-last page clamps back to a valid page rather than showing an empty page with active
-controls. Handed to Codex as Implementer per AR-06. See `tasks/task-5.1.md`.
+already returns the full list in one small payload, and stays that way). Fixed page
+size of 24 (divides cleanly across the grid's common column counts); Prev/Next +
+"Page X of Y" indicator, hidden entirely for a single page; filter/search changes
+reset to page 1. The clamp logic that prevents an emptied last page from staying
+visible lives centrally inside `render()` itself (recomputed fresh on every call,
+before the loadFailed/empty checks) — this meant the delete handler needed **zero**
+changes to satisfy that requirement, since `render()` already re-clamps on every
+invocation including the one delete already triggers. A cleaner design than the
+explicit post-delete clamp call the task card anticipated, confirmed correct by PM on
+diff review, not a shortcut. Implemented by Codex, accepted by PM per AR-06. 4 new
+Playwright tests (`test_dashboard_pagination_caps_dom_navigates_and_resets_on_reload`,
+`test_dashboard_pagination_is_hidden_for_a_single_page`,
+`test_dashboard_filter_and_search_reset_pagination_to_first_page`,
+`test_dashboard_delete_last_card_on_last_page_clamps_to_valid_page`) using an isolated
+`_pagination_projects(count)` factory — confirmed via diff that the pre-existing
+shared `MOCK_PROJECTS` constant and its 6 existing consumers were left completely
+untouched, satisfying PM's explicit plan-review requirement. **Zero real defects found
+on PM review** — PM independently re-ran every verification command, read the full
+diff, and separately investigated (via `git log -S`) an unrelated observation from the
+verification screenshot: the Dashboard's Vietnamese hero text has been present since
+the project's very first commit (2026-09-10), confirmed untouched by this task — it's
+the concrete instance behind the already-accepted "mixed EN/VI copy" P2 finding, not a
+new or in-scope defect. 566/566 full suite passes (up from 562); PM's independent run
+hit 6 known Gemini-retry timing flakes (worse than usual because the run itself ran
+markedly slower than baseline), all confirmed passing instantly in isolation together
+— non-regressive, Task 5.1 touched zero backend code. See `tasks/task-5.1.md` for the
+full record.
 
 ### 5.2 Timeline polish (proportional width + keyboard resizer) — not started
 
@@ -1233,6 +1255,25 @@ defaults to the first item instead of starting empty; Video's avatar section
   rendering. Continuing to delegate to Codex as Implementer per AR-06, same pattern
   used throughout Phase 4. See `docs/brainstorm/session-2026-09-16.md` and
   `tasks/task-5.1.md`. | User; PM (Claude Code) |
+| 2026-09-17 | Codex delivered Task 5.1. PM independently re-verified rather than
+  accepting the report on its word: read the full diff and found the clamp logic lives
+  centrally inside `render()` (recomputed on every call), which meant Codex needed
+  zero changes to the delete handler to satisfy "clamp after delete" — a cleaner
+  design than the explicit post-delete clamp PM's own task card anticipated, confirmed
+  correct rather than assumed. Confirmed the pre-existing shared `MOCK_PROJECTS`
+  fixture and its 6 existing consumers were left completely untouched, satisfying the
+  plan-review requirement PM had explicitly raised. Re-ran every verification command
+  (18/18 dashboard, 1/1 responsive, ruff/node/git-diff-check clean) and reviewed the
+  verification screenshot, which surfaced an unrelated observation: the Dashboard's
+  hero text is in Vietnamese — investigated via `git log -S` and confirmed it's been
+  there since the project's very first commit (2026-09-10), untouched by this task,
+  and is the concrete instance behind the "mixed EN/VI copy" P2 finding already
+  accepted as permanent when Task 4.3 was dropped — not a new or in-scope defect.
+  Full suite run independently hit 6 known Gemini-retry timing flakes (more than the
+  usual 1, because this particular run was slower than baseline) — all 6 confirmed
+  passing instantly together in isolation, non-regressive since Task 5.1 touched zero
+  backend code. **Zero real defects found.** This closes Task 5.1; Phase 5 continues
+  with Task 5.2 (timeline polish) next. | User; PM (Claude Code); Codex (Implementer) |
 
 ## Known Issues
 

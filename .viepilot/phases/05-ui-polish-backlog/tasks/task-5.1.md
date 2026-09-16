@@ -3,7 +3,7 @@
 ## Meta
 - **ID**: 5.1 (first task of Phase 5 — UI Polish Backlog)
 - **Phase**: 5
-- **Status**: in_progress (2026-09-16)
+- **Status**: done (2026-09-17)
 - **Priority**: high (real, measured usability problem, not cosmetic)
 - **Assignee**: Codex (Implementer) — PM (Claude Code) writes/accepts, per the AR-06
   PM-Implementer contract (`docs/CODEX_CODE_PROMPT.md`, `.viepilot/SYSTEM-RULES.md`)
@@ -143,3 +143,223 @@ proceed to implementation.
   a pass in isolation.
 - [ ] `ruff check app/ tests/`, `node --check` on touched JS, `git diff --check` — all
   clean, real output pasted.
+
+## Implementer Evidence (Awaiting PM Review — 2026-09-17)
+
+Implementation is ready for PM review. Implementer did not change the task Status and
+did not commit or push.
+
+### Implementation summary
+
+- Added client-side pagination with a fixed page size of 24. `Api.listProjects()` and
+  the backend/API remain unchanged; `render()` filters the full client-side collection,
+  clamps the current page, slices one page, and creates only those cards in the DOM.
+- Added static Previous/Next controls and a live “Page X of Y” indicator. The controls
+  are hidden for zero or one page, and the boundary button is disabled on the first and
+  last page.
+- Filter and search input changes reset the page index to zero before rendering.
+  Successful deletion uses the same centralized render-time clamp, so deleting the only
+  card on the last page returns to the new last valid page.
+- Added only two minimal shared-style rules for pagination layout; the buttons reuse the
+  existing `.btn`/`.btn-ghost` design system.
+- No async operation, API call, project ordering, filter definition, or project-card
+  behavior was changed.
+
+### PM clarification — isolated pagination fixture
+
+The original `MOCK_PROJECTS` constant was not expanded or otherwise changed, and its
+six pre-existing consumers were left unchanged. Pagination coverage uses the separate
+`_pagination_projects(count)` factory exclusively; its 3/25/50-project data sets are
+local to the new pagination tests and cannot change the DOM seen by the existing tests.
+
+### Browser coverage and visual verification
+
+New real-Chromium coverage verifies:
+
+- A 50-project response creates exactly 24 `.project-card` nodes on pages 1 and 2,
+  two on page 3, correct indicator text, and correct Previous/Next disabled states.
+- Reload resets the session-only page index to page 1.
+- Both status-filter and search changes reset from page 2 to page 1 while the filtered
+  result still spans multiple pages.
+- Deleting the sole card on page 2 of a 25-project result renders the 24-card first page
+  and hides the now-unnecessary controls.
+- A separate 3-project pagination fixture renders three cards and no visible controls.
+
+An additional disposable real-Chromium check at 1440×900 used 50 intercepted projects.
+It measured 24 cards in the DOM, `Page 1 of 3`, Previous disabled, Next enabled, and no
+horizontal document overflow. The full-page screenshot was kept outside the repository:
+`C:\Users\Admin\AppData\Local\Temp\dashboard-pagination-task-5.1.png`.
+
+### Targeted verification
+
+`venv\Scripts\python.exe -m pytest tests/test_dashboard_browser.py -q` (exit code 0):
+
+```text
+..................                                                       [100%]
+18 passed in 26.83s
+```
+
+`venv\Scripts\python.exe -m pytest tests/test_responsive_layout_browser.py::test_dashboard_no_overflow_at_1024 -q` (exit code 0):
+
+```text
+.                                                                        [100%]
+1 passed in 3.06s
+```
+
+### Required verification output
+
+`venv\Scripts\python.exe -m pytest tests/ -q` (exit code 1 — one known Gemini-retry
+timing flake, confirmed passing in isolation below):
+
+```text
+........................................................................ [ 12%]
+........................................................................ [ 25%]
+........................................................................ [ 38%]
+........................................................................ [ 50%]
+..................................................F..................... [ 63%]
+........................................................................ [ 76%]
+........................................................................ [ 89%]
+..............................................................           [100%]
+================================== FAILURES ===================================
+______________ test_generate_script_backoff_sequence_is_1s_2s_4s ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FED88C7A80>
+no_real_sleep = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, ...]
+
+    async def test_generate_script_backoff_sequence_is_1s_2s_4s(monkeypatch, no_real_sleep):
+        queue_responses(
+            monkeypatch,
+            [
+                FakeResponse(429, text="rate limited"),
+                FakeResponse(429, text="rate limited"),
+                FakeResponse(429, text="rate limited"),
+                gemini_ok_response(VALID_LINES),
+            ],
+        )
+
+        await script_service.generate_script("proj-1", SAMPLE_CONFIG)
+
+>       assert no_real_sleep == [1.0, 2.0, 4.0]
+E       assert [0.1, 0.1, 0....0.1, 0.1, ...] == [1.0, 2.0, 4.0]
+E
+E         At index 0 diff: 0.1 != 1.0
+E         Left contains 6898487 more items, first extra item: 0.1
+E         Use -v to get more diff
+
+tests\test_script_service.py:145: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  app.services.script_service:script_service.py:122 gemini_retryable_error model=gemini-3.8-flash prompt_hash=56199050ed00c89c status=429 attempt=1 retry_in_s=1.0
+WARNING  app.services.script_service:script_service.py:122 gemini_retryable_error model=gemini-3.8-flash prompt_hash=56199050ed00c89c status=429 attempt=2 retry_in_s=2.0
+WARNING  app.services.script_service:script_service.py:122 gemini_retryable_error model=gemini-3.8-flash prompt_hash=56199050ed00c89c status=429 attempt=3 retry_in_s=4.0
+============================== warnings summary ===============================
+venv\Lib\site-packages\fastapi\testclient.py:1
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+venv\Lib\site-packages\starlette\testclient.py:53
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_script_service.py::test_generate_script_backoff_sequence_is_1s_2s_4s
+1 failed, 565 passed, 2 warnings in 1146.05s (0:19:06)
+```
+
+The failure is the task card's explicitly accepted pre-existing Gemini-retry timing
+flake class. Task 5.1 touches no Python/backend/Gemini code. The exact failing test was
+immediately rerun in isolation:
+
+`venv\Scripts\python.exe -m pytest tests/test_script_service.py::test_generate_script_backoff_sequence_is_1s_2s_4s -q` (exit code 0):
+
+```text
+.                                                                        [100%]
+1 passed in 0.65s
+```
+
+`venv\Scripts\python.exe -m ruff check app/ tests/` (exit code 0):
+
+```text
+All checks passed!
+```
+
+`node --check frontend/static/js/dashboard.js` (exit code 0):
+
+```text
+(no stdout or stderr)
+```
+
+`git diff --check` (exit code 0):
+
+```text
+warning: in the working copy of '.viepilot/phases/05-ui-polish-backlog/tasks/task-5.1.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/pages/dashboard.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/css/style.css', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/dashboard.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_dashboard_browser.py', LF will be replaced by CRLF the next time Git touches it
+```
+
+These are Windows line-ending conversion notices, not whitespace errors.
+
+## PM Re-review (2026-09-17) — ACCEPTED
+
+Independently re-verified everything rather than accepting the report on its word.
+
+**Diff review** — read the full `git diff` for all 4 touched files:
+- `dashboard.js`: the clamp logic is centralized inside `render()` itself
+  (`currentPage = Math.max(0, Math.min(currentPage, Math.max(totalPages - 1, 0)))`,
+  computed fresh on every call before anything else) — this means the delete handler
+  needed **zero** changes to satisfy the "clamp after delete" requirement, since
+  `render()` already re-clamps on every invocation including the one delete already
+  calls. Confirmed via the diff that `setupProjectActions()`/the delete handler was not
+  touched at all — a cleaner solution than the explicit post-delete clamp call the task
+  card anticipated, not a shortcut.
+  `currentPage = 0` was added to both `setupFilters()`'s and `setupSearch()`'s handlers,
+  satisfying the reset-on-change requirement exactly.
+  Confirmed no `localStorage`/`sessionStorage` calls were added — matches "no
+  persistence across reload."
+- `dashboard.html`: the new `#project-pagination` nav sits as a sibling of
+  `#project-grid`, uses only existing `.btn`/`.btn-ghost` classes, all-English copy
+  (`← Previous`, `Next →`, `Project pages` aria-label).
+- `style.css`: exactly 2 new minimal layout rules, no new button styles, confirmed.
+- `tests/test_dashboard_browser.py`: confirmed the diff never touches `MOCK_PROJECTS`
+  or any of its 6 existing consumers — `_pagination_projects(count)` is a fully
+  separate factory inserted after it.
+
+**New test review**: 4 new tests directly exercise every required decision —
+`test_dashboard_pagination_caps_dom_navigates_and_resets_on_reload` asserts exact card
+counts and first/last ids across all 3 pages of a 50-project set plus reload-resets-to-
+page-1; `test_dashboard_pagination_is_hidden_for_a_single_page`; the filter/search
+reset test navigates to page 2 twice (once per interaction) and confirms both reset to
+page 1 with the right recomputed total pages; the delete-clamp test seeds exactly 25
+projects (so page 2 has precisely 1 card), deletes it, and confirms the clamp back to
+page 1 (24 cards) with pagination now correctly hidden.
+
+**PM independently re-ran every verification command**: 18/18 dashboard tests pass,
+1/1 responsive test passes, `ruff check` clean, `node --check` clean, `git diff --check`
+exit 0 — all matched the Implementer's report exactly.
+
+**Screenshot review**: the disposable 1440×900 screenshot confirms clean rendering, 24
+cards, correct "Page 1 of 3" indicator, correct disabled states, no horizontal
+overflow. Separately noticed the Dashboard's hero text ("Tạo podcast tiếng Anh chuẩn
+với AI") is in Vietnamese — investigated via `git log -S`, confirmed this has been
+present since the very first commit of the project (2026-09-10, Task 1.1) and is
+**not** something this task touched or introduced (the diff never goes near the hero
+section). This is the concrete instance behind the general "UI mixes Vietnamese and
+English copy" P2 finding that was explicitly accepted as a permanent characteristic
+when Task 4.3 was dropped on 2026-09-16 — noted here for completeness, not treated as
+a new or in-scope defect.
+
+**Full suite, run independently**: 560 passed, 6 failed in 601.25s — all 6 in
+`tests/test_script_service.py`/`tests/test_learning_service.py`/
+`tests/test_youtube_service.py`'s Gemini-retry timing tests (the documented
+`no_real_sleep`-fixture flake class, worse than usual this run because the run itself
+ran markedly slower than the ~250-450s baseline). All 6 confirmed passing instantly
+in isolation together (`0.59s` total). Task 5.1 touched zero backend/Gemini code, so
+this is non-regressive by construction, not just by re-run — same known, accepted
+flake class, just a heavier manifestation this particular run.
+
+**Zero real defects found on PM review.** Accepted as delivered — no changes
+requested.
+
+**This closes Task 5.1.** Phase 5 continues with Task 5.2 (timeline polish) next.
