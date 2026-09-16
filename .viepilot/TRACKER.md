@@ -473,8 +473,13 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   lane (exactly 1 clip survived). 544/544 full suite passes (up from 541). See
   `tasks/task-4.2c.md` for the full record.
 
-Task 4.2 **paused after 4.2c** (2026-09-16) to fix Task 4.4's P0 bugs first, **now
-resuming with 4.2d** — Task 4.4 closed, see below.
+Task 4.2 **paused after 4.2c** (2026-09-16) to fix Task 4.4's P0 bugs first — closed,
+see below — **now resuming with 4.2d (Thumbnail)**, handed to Codex per AR-06. One
+difference from every prior sub-task: Thumbnail already has a real, pre-existing
+write-path editor for the selected variant (headline + color palette, debounced
+autosave, 409 stale-revision conflict handling) — the new inspector pane hosts this
+real editor as-is, not a new read-only view, since the write path already existed and
+isn't being invented. See `tasks/task-4.2d.md` for the full plan.
 
 ### 4.4 P0 navigation bug fixes (Dashboard Continue + Config duplicate-project) — ✅ DONE (2026-09-16)
 

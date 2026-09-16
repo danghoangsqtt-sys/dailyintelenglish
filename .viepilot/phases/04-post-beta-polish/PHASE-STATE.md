@@ -8,7 +8,8 @@
 - **Milestone Progress:** 2 / 3 tasks done — 4.1 CEFR `news` prompt tuning done
   2026-09-15 (partial, honestly-reported improvement — see `tasks/task-4.1.md`); 4.4 P0
   navigation bug fixes done 2026-09-16 (see below); 4.2 UI Redesign Slice 2 (7 pages) in
-  progress, 3/7 pages done (Learning, TTS, Video), resuming now with 4.2d. New phase,
+  progress, 3/7 pages done (Learning, TTS, Video), 4.2d (Thumbnail) now in progress,
+  handed to Codex. New phase,
   scoped in the 2026-09-15 brainstorm session (`docs/brainstorm/session-2026-09-15.md`),
   not part of the original 21-day/3-phase plan. Progress cancellation and real
   LivePortrait lip-sync remain explicitly deferred, not part of this phase. A new
@@ -82,9 +83,15 @@
   have worked; PM still independently re-verified everything including a 6-interaction
   stress-test screenshot of the Music lane. 544/544 full suite passes. See
   `tasks/task-4.2c.md` for the full record.
-- Remaining after 4.2c: Thumbnail, YouTube, Music Library, Step1-Config — not started.
-  **Paused after 4.2c** to fix Task 4.4's P0 bugs first (see below) before resuming
-  with 4.2d (Thumbnail).
+- **4.2d — Thumbnail Generator (`/step6`)**: 🔄 IN PROGRESS (2026-09-16), handed to
+  Codex as Implementer per AR-06. Shell, no timeline (same as Learning — no
+  sequential-items concept). One important difference from every prior sub-task: this
+  page already has a real, pre-existing write-path editor for the selected item
+  (headline + color palette, debounced autosave, 409 conflict handling) — the
+  inspector pane hosts this real editor as-is, not a new read-only view, since the
+  write path already existed and isn't being invented. See `tasks/task-4.2d.md` for
+  the full plan.
+- Remaining after 4.2d: YouTube, Music Library, Step1-Config — not started.
 
 ### Task 4.4: P0 navigation bug fixes (Dashboard Continue + Config duplicate-project) — ✅ DONE (2026-09-16)
 - **Status:** done

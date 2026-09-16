@@ -543,8 +543,11 @@ explicitly deferred, not part of this phase.
   PM review — proactively avoided Task 4.2b's Music-lane bug and included the
   pre-authorized `test_step_nav_browser.py` extension. 544/544 full suite passes. See
   `.viepilot/phases/04-post-beta-polish/tasks/task-4.2c.md`.
-- [ ] **Thumbnail Generator** (`/step6`) — shell, no timeline — resuming next, Task 4.4
-  (P0 fixes) closed
+- [ ] **Thumbnail Generator** (`/step6`) — shell, no timeline — 🔄 IN PROGRESS
+  (2026-09-16), handed to Codex per AR-06. One difference from prior sub-tasks: this
+  page already has a real write-path editor (headline + palette, debounced autosave,
+  409 conflict handling) for the selected variant — the inspector hosts this real
+  editor as-is, not a new read-only view. See `tasks/task-4.2d.md`.
 - [ ] **YouTube Package** (`/step7`) — shell, no timeline
 - [ ] **Music Library** (`/music`) — deliberately NOT shell-based (shared utility page,
   not part of the 7-step pipeline — same decision as the 2026-09-14 session)
