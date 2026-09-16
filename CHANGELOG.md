@@ -46,6 +46,22 @@ Versioning: [SemVer](https://semver.org/)
   the sequential Generate-All request order verified unchanged. New
   `tests/test_tts_shell_browser.py` (5 tests). Went through 2 real PM review rounds
   before acceptance (see Fixed, below).
+- Phase 4 Task 4.2c, UI Redesign Slice 2 — Video Studio page (2026-09-16, implemented
+  by Codex, accepted by Claude Code as PM — the second task delegated end-to-end to
+  Codex): `/step5` wrapped in the same 3-panel shell with a real 3-track timeline. This
+  page never fetched the script's lines before, so a new `Api.getScript()` call site
+  was added (an existing endpoint, not a new route), correlated by array index to the
+  audio job's real per-line `timestamps`. Script track is a read-only reference; Voice
+  track is honestly labeled "Synced" (every line's audio already exists by this stage,
+  unlike TTS's in-progress states); Music track shows the real `background_music`
+  filename or "No music selected". Read-only inspector shows real `M:SS – M:SS`
+  measured timing — no playback button, a considered and disclosed scope cut (the
+  seek/race complexity wasn't worth it for an optional feature). A `/script`-fetch
+  failure degrades gracefully (logs, shows a timeline-only message) rather than
+  blocking the core avatar/template/generate workflow. New
+  `tests/test_video_shell_browser.py` (4 tests). Zero real defects found on PM review
+  this round — `renderTimeline()` proactively cleared all 3 timeline lanes from the
+  start, directly informed by Task 4.2b's Music-lane bug.
 
 ### Fixed
 - `tests/test_step_nav_browser.py` assumed only the Script page (`/step2`) used the new

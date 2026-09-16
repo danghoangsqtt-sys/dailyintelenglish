@@ -4,7 +4,7 @@
 - **ID**: 4.2c (third sub-task of Task 4.2 — UI Redesign Slice 2, split per-page per
   the 2026-09-15 brainstorm session's explicit pacing decision)
 - **Phase**: 4
-- **Status**: in_progress
+- **Status**: done (2026-09-16)
 - **Priority**: medium
 - **Assignee**: Codex (Implementer) — PM (Claude Code) writes/accepts, per the AR-06
   PM-Implementer contract (`docs/CODEX_CODE_PROMPT.md`, `.viepilot/SYSTEM-RULES.md`)
@@ -169,3 +169,205 @@ present both options in your plan and PM will confirm which to build.
 _Pending — filled in by PM (Claude Code) after independently re-running every
 verification command above and reading the full diff, per AR-06. Do not mark this task
 `done` — that is PM's decision alone._
+
+## Implementer Evidence (Awaiting PM Review — 2026-09-16)
+
+- Migrated Video Studio to the shared 3-pane shell with workflow StepNav, resizable
+  sidebar/inspector/timeline, and Script/Voice/Music tracks.
+- Added the approved read-only inspector using real script speaker/text and audio-job
+  timestamps by array index. A timestamp mismatch displays "timing unavailable" rather
+  than inferring data.
+- Kept script loading non-fatal: its timeline reports a friendly scoped error while
+  avatar/template/aspect-ratio/generate controls remain available.
+- Preserved the existing avatar upload/remove and whole-episode video generation paths.
+- New browser coverage includes shell resizing/collapse, workflow StepNav, real timing,
+  empty-state script gating, non-fatal script failure, avatar/generate regressions, and
+  Music-lane clip count after repeated selections.
+
+### Manual browser verification
+
+Used a real local server and Chrome at an explicit 1440×900 viewport.
+
+- Populated project `b330d37f-a212-4cf7-a779-7a109098bd6c` rendered the workflow
+  sidebar, Video stage, all 30 Script clips, all 30 Voice clips, exactly one Music
+  placeholder, and the selected-line inspector with measured timing.
+- Selected line 2, then line 5, then line 10 (the third interaction was through the
+  Voice track). Inspector content changed respectively to Maya `0:04 – 0:09`, Alex
+  `0:20 – 0:26`, and Maya `0:50 – 0:55`. After every selection the live DOM result was
+  `musicCount: 1`, text `No music selected`; the final screenshot also showed exactly
+  one Music badge.
+- Empty project `897863a5-03f1-4eb2-9c83-7d75f25802a9` showed the finished-audio
+  guidance in the stage, no script data clips, one Script placeholder, one Voice
+  placeholder, and exactly one Music placeholder. No Video controls were falsely
+  presented as ready.
+
+### Verification output
+
+Targeted regression run before the full suite:
+
+`venv\Scripts\python -m pytest tests/test_video_shell_browser.py tests/test_video_studio_browser.py tests/test_step_nav_browser.py::test_each_page_renders_and_navigates_shared_step_nav tests/test_responsive_layout_browser.py::test_step5_no_overflow_at_1024 -q` (exit code 0):
+
+```text
+......................                                                   [100%]
+22 passed in 35.80s
+```
+
+`venv\Scripts\python -m pytest tests/ -q` (exit code 1):
+
+```text
+........................................................................ [ 13%]
+................................F....................................... [ 26%]
+........................................................................ [ 39%]
+........................................................................ [ 52%]
+........................................................................ [ 66%]
+........................................................................ [ 79%]
+........................................................................ [ 92%]
+.........................................                                [100%]
+
+================================== FAILURES ===================================
+_______ test_generate_learning_pack_exhausts_all_fallback_models_raises _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000268DEA996A0>
+no_real_sleep = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, ...]
+
+    async def test_generate_learning_pack_exhausts_all_fallback_models_raises(monkeypatch, no_real_sleep):
+        """Only once every model in GEMINI_MODEL_FALLBACKS is exhausted does generation fail."""
+        fallbacks = learning_service.GEMINI_MODEL_FALLBACKS
+        calls = queue_responses(monkeypatch, [FakeResponse(429, text="rate limited")] * (4 * len(fallbacks)))
+
+        with pytest.raises(LearningGenerationError, match="exhausting all fallback models") as exc_info:
+            await learning_service.generate_learning_pack("proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES)
+
+        assert calls["n"] == 4 * len(fallbacks)
+        assert calls["models"] == [model for model in fallbacks for _ in range(4)]
+>       assert no_real_sleep == [1.0, 2.0, 4.0] * len(fallbacks)
+E       assert [0.1, 0.1, 0....0.1, 0.1, ...] == [1.0, 2.0, 4....2.0, 4.0, ...]
+E
+E         At index 0 diff: 0.1 != 1.0
+E         Left contains 241602 more items, first extra item: 0.1
+E         Use -v to get more diff
+
+tests\test_learning_service.py:284: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.8-flash prompt_hash=052d035b24b14947 status=429 attempt=1 retry_in_s=1.0
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.8-flash prompt_hash=052d035b24b14947 status=429 attempt=2 retry_in_s=2.0
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.8-flash prompt_hash=052d035b24b14947 status=429 attempt=3 retry_in_s=4.0
+WARNING  app.services.learning_service:learning_service.py:140 gemini_learning_model_exhausted model=gemini-3.8-flash prompt_hash=052d035b24b14947 status=429 � trying next fallback model
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.7-flash prompt_hash=052d035b24b14947 status=429 attempt=1 retry_in_s=1.0
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.7-flash prompt_hash=052d035b24b14947 status=429 attempt=2 retry_in_s=2.0
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.7-flash prompt_hash=052d035b24b14947 status=429 attempt=3 retry_in_s=4.0
+WARNING  app.services.learning_service:learning_service.py:140 gemini_learning_model_exhausted model=gemini-3.7-flash prompt_hash=052d035b24b14947 status=429 � trying next fallback model
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.6-flash prompt_hash=052d035b24b14947 status=429 attempt=1 retry_in_s=1.0
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.6-flash prompt_hash=052d035b24b14947 status=429 attempt=2 retry_in_s=2.0
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.6-flash prompt_hash=052d035b24b14947 status=429 attempt=3 retry_in_s=4.0
+WARNING  app.services.learning_service:learning_service.py:140 gemini_learning_model_exhausted model=gemini-3.6-flash prompt_hash=052d035b24b14947 status=429 � trying next fallback model
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.5-flash prompt_hash=052d035b24b14947 status=429 attempt=1 retry_in_s=1.0
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.5-flash prompt_hash=052d035b24b14947 status=429 attempt=2 retry_in_s=2.0
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.5-flash prompt_hash=052d035b24b14947 status=429 attempt=3 retry_in_s=4.0
+WARNING  app.services.learning_service:learning_service.py:140 gemini_learning_model_exhausted model=gemini-3.5-flash prompt_hash=052d035b24b14947 status=429 � trying next fallback model
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.5-flash-lite prompt_hash=052d035b24b14947 status=429 attempt=1 retry_in_s=1.0
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.5-flash-lite prompt_hash=052d035b24b14947 status=429 attempt=2 retry_in_s=2.0
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.5-flash-lite prompt_hash=052d035b24b14947 status=429 attempt=3 retry_in_s=4.0
+WARNING  app.services.learning_service:learning_service.py:140 gemini_learning_model_exhausted model=gemini-3.5-flash-lite prompt_hash=052d035b24b14947 status=429 � trying next fallback model
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.1-flash-lite prompt_hash=052d035b24b14947 status=429 attempt=1 retry_in_s=1.0
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.1-flash-lite prompt_hash=052d035b24b14947 status=429 attempt=2 retry_in_s=2.0
+WARNING  app.services.learning_service:learning_service.py:103 gemini_learning_retryable_error model=gemini-3.1-flash-lite prompt_hash=052d035b24b14947 status=429 attempt=3 retry_in_s=4.0
+WARNING  app.services.learning_service:learning_service.py:140 gemini_learning_model_exhausted model=gemini-3.1-flash-lite prompt_hash=052d035b24b14947 status=429 � trying next fallback model
+============================== warnings summary ===============================
+venv\Lib\site-packages\fastapi\testclient.py:1
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+venv\Lib\site-packages\starlette\testclient.py:53
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_learning_service.py::test_generate_learning_pack_exhausts_all_fallback_models_raises
+1 failed, 544 passed, 2 warnings in 496.70s (0:08:16)
+```
+
+The failure is the same pre-existing Gemini-retry/background-server sleep timing flake
+documented in Task 4.2b's PM review, outside this task's allowed files. The failed test
+passed immediately in isolation:
+
+`venv\Scripts\python -m pytest tests/test_learning_service.py::test_generate_learning_pack_exhausts_all_fallback_models_raises -q` (exit code 0):
+
+```text
+.                                                                        [100%]
+1 passed in 0.52s
+```
+
+`venv\Scripts\python -m pytest tests/test_video_shell_browser.py -q` (exit code 0):
+
+```text
+....                                                                     [100%]
+4 passed in 9.44s
+```
+
+`venv\Scripts\python -m ruff check app/ tests/` (exit code 0):
+
+```text
+All checks passed!
+```
+
+`node --check frontend/static/js/step5_video.js` (exit code 0):
+
+```text
+(no stdout or stderr)
+```
+
+`git diff --check` (exit code 0):
+
+```text
+warning: in the working copy of '.viepilot/phases/04-post-beta-polish/tasks/task-4.2c.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/pages/step5_video.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/step5_video.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_step_nav_browser.py', LF will be replaced by CRLF the next time Git touches it
+```
+
+These are Git's Windows line-ending conversion notices; no whitespace error was
+reported.
+
+## PM Re-review (2026-09-16) — ACCEPTED
+
+Independently re-verified rather than trusting the report, per AR-06:
+
+- Read the full diff for `frontend/pages/step5_video.html` and
+  `frontend/static/js/step5_video.js`: shell structure, `variant: "workflow"`,
+  `renderTimeline()` clearing all 3 lanes upfront (proactively addressing Task 4.2b's
+  exact bug class before it could recur), the graceful `/script`-failure handling
+  (catches, sets `state.timelineError`, does **not** call `showError()`, execution
+  continues to templates/render — confirmed this does not block the core workflow),
+  and `timingForLine()`'s `Number.isFinite()` guard (never invents timing data) — all
+  match the approved plan exactly, no scope creep.
+- Confirmed `tests/test_step_nav_browser.py`'s change is exactly the pre-authorized
+  one-line branch extension, nothing else touched.
+- Re-ran `tests/test_video_shell_browser.py` independently: **4/4 pass**.
+- Re-ran the pre-existing `tests/test_video_studio_browser.py` (not in Codex's
+  `allowed_files`, the exact file whose real-404-on-`/script` risk was flagged before
+  coding started) together with `test_step_nav_browser.py` and
+  `test_responsive_layout_browser.py`: **34/34 pass** — confirms the graceful-failure
+  design choice was correct and didn't require touching that file.
+- **Independent visual stress test**: wrote a disposable script clicking through 6
+  line selections in a row (double the plan's own "at least 3" ask) against a real
+  running instance, then counted and screenshotted the Music lane. Real result:
+  exactly 1 clip (`"focus-bed.mp3"`) survives all 6 re-renders. Screenshot also
+  confirmed the Script/Voice tracks render real per-line data and the inspector shows
+  correct `M:SS – M:SS` timing (spot-checked the math: `0.4s`/`2.9s` → `0:00 – 0:02`,
+  correct floor-based formatting).
+- Re-ran `node --check`, `ruff check app/ tests/`, and `git diff --check`
+  independently — all clean, matching the Implementer's report exactly.
+- Ran the **full suite** myself: **544 passed, 1 failed** — the failure was
+  `test_script_service.py::test_generate_script_retries_on_429_then_succeeds`, the
+  project's pre-existing Gemini-retry timing flake (unrelated module, 1011.69s run —
+  well above the ~250-450s baseline, consistent with the documented pattern). Confirmed
+  non-regressive: passes instantly (0.65s) in isolation.
+
+**This closes Task 4.2c.** 3 of 7 pages now use the shell/timeline/inspector
+conventions (Script, Learning, TTS, Video). Remaining: Thumbnail, YouTube, Music
+Library, Step1-Config. This is the second task delegated end-to-end to Codex, and the
+review loop again worked as designed — no real defects found this round, unlike 4.2b,
+suggesting the accumulated task-card guidance (explicitly warning about the exact 2
+regressions hit before) is paying off.

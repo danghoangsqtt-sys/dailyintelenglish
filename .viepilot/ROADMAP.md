@@ -513,7 +513,7 @@ explicitly deferred, not part of this phase.
     harder than nominal, so this closes at the honest result rather than iterating
     further on a low-priority item.
 
-### 4.2 UI Redesign Slice 2 (7 remaining pages) — 2/7 done
+### 4.2 UI Redesign Slice 2 (7 remaining pages) — 3/7 done
 
 - [x] **Learning** (`/step3`) — ✅ DONE (2026-09-15). Applied the 3-panel shell (no
   timeline, confirmed decision); inspector is a read-only detail view of the selected
@@ -532,7 +532,17 @@ explicitly deferred, not part of this phase.
   duplicate clips on re-render) that Codex fixed and PM independently re-verified,
   including a 5-interaction stress-test screenshot. 541/541 full suite passes. See
   `.viepilot/phases/04-post-beta-polish/tasks/task-4.2b.md`.
-- [ ] **Video Studio** (`/step5`) — shell + timeline
+- [x] **Video Studio** (`/step5`) — ✅ DONE (2026-09-16), implemented by Codex,
+  accepted by PM per AR-06. Shell + real 3-track timeline (Script read-only reference;
+  Voice honestly labeled "Synced" since audio already exists at this stage; Music shows
+  the real background-music filename) built from a new `Api.getScript()` call
+  correlated to the audio job's real per-line timestamps. Read-only inspector shows
+  real `M:SS – M:SS` measured timing (no playback — a disclosed, considered scope cut).
+  A `/script`-fetch failure degrades gracefully rather than blocking the core
+  avatar/template/generate workflow. 4 new Playwright tests. Zero real defects found on
+  PM review — proactively avoided Task 4.2b's Music-lane bug and included the
+  pre-authorized `test_step_nav_browser.py` extension. 544/544 full suite passes. See
+  `.viepilot/phases/04-post-beta-polish/tasks/task-4.2c.md`.
 - [ ] **Thumbnail Generator** (`/step6`) — shell, no timeline
 - [ ] **YouTube Package** (`/step7`) — shell, no timeline
 - [ ] **Music Library** (`/music`) — deliberately NOT shell-based (shared utility page,

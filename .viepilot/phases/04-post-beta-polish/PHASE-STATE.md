@@ -7,14 +7,14 @@
 - **Started:** 2026-09-15
 - **Milestone Progress:** 1 / 2 tasks done — 4.1 CEFR `news` prompt tuning done
   2026-09-15 (partial, honestly-reported improvement — see `tasks/task-4.1.md`); 4.2 UI
-  Redesign Slice 2 (7 pages) in progress, 2/7 pages done (Learning, TTS). New phase,
+  Redesign Slice 2 (7 pages) in progress, 3/7 pages done (Learning, TTS, Video). New phase,
   scoped in the 2026-09-15 brainstorm session (`docs/brainstorm/session-2026-09-15.md`),
   not part of the original 21-day/3-phase plan. Progress cancellation and real
   LivePortrait lip-sync remain explicitly deferred, not part of this phase. A new
   Task 4.3 (Vietnamese UI localization) is scoped and queued to start once Task 4.2's
   remaining 5 pages are done — see `docs/brainstorm/session-2026-09-15.md`'s
   2026-09-15 update.
-- **Test Suite Status:** 541/541 pass (2026-09-16, after Task 4.2b) — see TRACKER.md
+- **Test Suite Status:** 544/544 pass (2026-09-16, after Task 4.2c) — see TRACKER.md
 
 ---
 
@@ -31,7 +31,7 @@
   probabilistic model. See `tasks/task-4.1.md` for the full evidence.
 
 ### Task 4.2: UI Redesign Slice 2 (7 remaining pages)
-- **Status:** in_progress (2/7 pages done)
+- **Status:** in_progress (3/7 pages done)
 - Split into per-page sub-tasks, written doc-first individually as each is picked up.
 - **4.2a — Learning (`/step3`)**: ✅ DONE (2026-09-15). Wrapped in the same 3-panel
   shell as Script (Task 2.4), no timeline (confirmed decision — Learning has no
@@ -60,7 +60,25 @@
   accumulated duplicate clips — sent back to Codex with the exact fix, which PM then
   re-verified independently (including a 5-interaction stress-test screenshot) before
   accepting. 541/541 full suite passes. See `tasks/task-4.2b.md` for the full record.
-- **4.2c — Video Studio (`/step5`)**: in_progress, assigned to Codex (Implementer),
-  PM (Claude Code) writes/accepts per AR-06. Doc-first task card written 2026-09-16 —
-  see `tasks/task-4.2c.md`. Not yet implemented; awaiting Codex.
+- **4.2c — Video Studio (`/step5`)**: ✅ DONE (2026-09-16), implemented by Codex,
+  accepted by PM per AR-06 — second task delegated end-to-end to Codex. Shell + real
+  3-track timeline built from data this page didn't previously fetch (`Api.getScript()`
+  added, correlated to the audio job's real per-line `timestamps` by array index).
+  Script track is a read-only reference; Voice track honestly shows "Synced" (every
+  line's audio already exists by this stage, unlike TTS's in-progress states); Music
+  track shows the real `background_music` filename or "No music selected". Read-only
+  inspector shows real `M:SS – M:SS` measured timing — no playback button (a considered,
+  disclosed scope cut: added seek/race complexity wasn't worth it for an optional
+  feature). `renderTimeline()` proactively clears all 3 lanes before every re-render,
+  directly avoiding Task 4.2b's exact bug class. A `/script`-fetch failure degrades
+  gracefully (logs, shows a timeline-only message) rather than blocking the core
+  avatar/template/generate workflow — deliberately designed this way because the
+  pre-existing `tests/test_video_studio_browser.py` (out of scope, not touched) uses a
+  fake project ID that would otherwise hit a real 404. 4 new browser tests, plus the
+  same pre-authorized `test_step_nav_browser.py` one-line extension
+  (`current_step == 5`). **Zero real defects found on PM review this round** — the
+  accumulated task-card warnings about Task 4.2a/4.2b's 2 prior regressions appear to
+  have worked; PM still independently re-verified everything including a 6-interaction
+  stress-test screenshot of the Music lane. 544/544 full suite passes. See
+  `tasks/task-4.2c.md` for the full record.
 - Remaining after 4.2c: Thumbnail, YouTube, Music Library, Step1-Config — not started.

@@ -32,10 +32,10 @@ blockers. Phase 3 counts discrete ROADMAP checklist items across 3.1 (4), 3.2 (3
 3.3 (4) = 11 total, all 11 done 2026-09-15 — **Phase 3 formally closed** (see Task
 3.1/3.2/3.3 below). Phase 4 (new, scoped in the 2026-09-15 brainstorm session, not part
 of the original plan) has 2 tasks: 4.1 done 2026-09-15 (partial improvement, honestly
-reported), 4.2 in progress (split per-page — 2/7 pages done: Learning/4.2a 2026-09-15,
-TTS/4.2b 2026-09-16 by Codex; Video/Thumbnail/YouTube/Music Library/Step1-Config
-remain). Task 4.3 (Vietnamese UI localization) scoped and queued behind Task 4.2's
-completion — see `docs/brainstorm/session-2026-09-15.md`.*
+reported), 4.2 in progress (split per-page — 3/7 pages done: Learning/4.2a 2026-09-15,
+TTS/4.2b and Video/4.2c 2026-09-16, both by Codex; Thumbnail/YouTube/Music
+Library/Step1-Config remain). Task 4.3 (Vietnamese UI localization) scoped and queued
+behind Task 4.2's completion — see `docs/brainstorm/session-2026-09-15.md`.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -391,7 +391,7 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   consistent with tuning a probabilistic model. See `tasks/task-4.1.md` for full
   before/after evidence. Single-file, prompt-only change — no `app/`/`tests/` touched.
 
-### 4.2 UI Redesign Slice 2 — 🔄 IN PROGRESS (2/7 pages done)
+### 4.2 UI Redesign Slice 2 — 🔄 IN PROGRESS (3/7 pages done)
 
 - [x] **4.2a — Learning (`/step3`) — ✅ DONE (2026-09-15)**: wrapped in the same
   3-panel shell Task 2.4 built for Script, deliberately no timeline (Learning has no
@@ -441,6 +441,35 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   disposable 5-interaction stress-test script confirming exactly 1 clip survives
   repeated re-renders. 541/541 full suite passes (up from 536), zero flakes on PM's
   final run. See `tasks/task-4.2b.md` for the complete 2-round review record.
+
+- [x] **4.2c — Video Studio (`/step5`) — ✅ DONE (2026-09-16)**: second task delegated
+  end-to-end to Codex as Implementer, PM (Claude Code) accepted per AR-06. Video is one
+  of the 3 pages (with Script/TTS) with a real timeline — but unlike TTS, this page had
+  never fetched the script's lines before, so the plan added a new `Api.getScript()`
+  call site (already-existing endpoint, not a new route) correlated by array index to
+  the audio job's real per-line `timestamps`. Script track: read-only reference. Voice
+  track: honestly labeled "Synced" (every line's audio already exists by the time this
+  page is reachable — unlike TTS's in-progress preview states, that language wouldn't
+  be true here). Music track: the real `background_music` filename or "No music
+  selected". Read-only inspector shows real `M:SS – M:SS` measured timing — Codex
+  proposed and PM confirmed **skipping playback** ("Play this segment") as a considered
+  scope cut, since seek/race-on-reselect complexity wasn't worth it for an optional
+  feature. A `/script`-fetch failure degrades gracefully (logs, shows a timeline-only
+  message) rather than blocking the core avatar/template/generate workflow —
+  deliberately designed this way because the pre-existing `tests/test_video_studio_
+  browser.py` (correctly left out of scope, not touched) uses a fake project ID that
+  would otherwise hit a real 404 from the live test server, not a mock. 4 new
+  Playwright tests, plus the same pre-authorized `test_step_nav_browser.py` one-line
+  extension (now `current_step in (2, 3, 4, 5)`) — the third time this exact regression
+  class was pre-empted rather than rediscovered. **Zero real defects found on PM
+  review this round** (contrast with 4.2b's Music-lane bug) — `renderTimeline()`
+  proactively cleared all 3 lanes on every re-render from the start, directly informed
+  by the prior task's post-mortem. PM still independently re-verified everything,
+  including reading the full diff, re-running the pre-existing
+  `test_video_studio_browser.py` (34/34 pass, confirming the graceful-degradation
+  design choice), and a disposable 6-interaction stress-test screenshot of the Music
+  lane (exactly 1 clip survived). 544/544 full suite passes (up from 541). See
+  `tasks/task-4.2c.md` for the full record.
 
 ## Decision Log
 
@@ -846,6 +875,28 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   Codex since Phase 4 opened, and the delegation contract worked as designed — Codex
   correctly escalated instead of guessing on both real issues it hit. | User; PM
   (Claude Code); Codex (Implementer) |
+| 2026-09-16 | User asked to delegate Task 4.2c (Video Studio) to Codex, same as 4.2b.
+  PM researched the real current-state gap first (Video never fetched the script's
+  lines, unlike TTS) and wrote a doc-first task card explicitly citing both of 4.2a/
+  4.2b's real regressions so they wouldn't recur a third time, plus pre-authorizing the
+  now-well-understood `test_step_nav_browser.py` one-line fix in advance. Codex
+  delivered: shell + real timeline built from a new `Api.getScript()` call site
+  correlated to the audio job's real timestamps; honest "Synced" Voice-track labeling
+  (not TTS's in-progress language, since audio already exists by this stage); a
+  `/script`-fetch failure that degrades gracefully rather than blocking the core
+  workflow (deliberately designed around the pre-existing `test_video_studio_
+  browser.py`'s fake-project-ID real-404 risk, without needing to touch that
+  out-of-scope file); and `renderTimeline()` proactively clearing all 3 lanes from the
+  start, directly informed by 4.2b's post-mortem. Codex and PM also jointly decided to
+  skip an optional "Play this segment" playback button, judging the seek/race
+  complexity not worth it for a non-required feature. **Zero real defects found on PM
+  review this round** — PM still independently re-verified everything (full diff read,
+  re-ran the pre-existing `test_video_studio_browser.py` at 34/34, and a disposable
+  6-interaction stress-test screenshot of the Music lane) before accepting. 544/544
+  full suite passes. This is the second task fully delegated to Codex, and the
+  accumulated task-card guidance from 4.2a/4.2b's regressions appears to be working —
+  the delegation loop is improving with each round rather than repeating the same
+  mistakes. | User; PM (Claude Code); Codex (Implementer) |
 
 ## Known Issues
 

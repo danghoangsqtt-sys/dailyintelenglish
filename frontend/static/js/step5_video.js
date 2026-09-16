@@ -12,6 +12,10 @@
     selectedTemplate: null,
     aspectRatio: "16:9",
     audioReady: false,
+    audioJob: null,
+    lines: [],
+    selectedLineId: null,
+    timelineError: "",
     isGenerating: false,
     avatarBusy: {},
   };
@@ -41,6 +45,154 @@
       badge.textContent = label;
       badges.appendChild(badge);
     });
+  }
+
+  function speakerById(speakerId) {
+    return (state.project?.speakers || []).find((speaker) => speaker.id === speakerId);
+  }
+
+  function selectedLine() {
+    return state.lines.find((line) => line.id === state.selectedLineId) || null;
+  }
+
+  function timingForLine(line) {
+    const index = state.lines.indexOf(line);
+    const timing = state.audioJob?.timestamps?.[index];
+    if (!timing || !Number.isFinite(timing.start_sec) || !Number.isFinite(timing.end_sec)) {
+      return null;
+    }
+    return timing;
+  }
+
+  function formatTime(seconds) {
+    const wholeSeconds = Math.max(0, Math.floor(seconds));
+    const minutes = Math.floor(wholeSeconds / 60);
+    const remainingSeconds = String(wholeSeconds % 60).padStart(2, "0");
+    return `${minutes}:${remainingSeconds}`;
+  }
+
+  function formatTiming(timing) {
+    return `${formatTime(timing.start_sec)} – ${formatTime(timing.end_sec)}`;
+  }
+
+  function renderTimeline() {
+    const scriptLane = byId("script-timeline");
+    const voiceLane = byId("voice-timeline");
+    const musicLane = byId("music-timeline");
+    if (!scriptLane || !voiceLane || !musicLane) return;
+
+    // Every lane is rebuilt from current state. Clearing all three first prevents
+    // passive clips (especially Music) from accumulating across line selections.
+    scriptLane.replaceChildren();
+    voiceLane.replaceChildren();
+    musicLane.replaceChildren();
+
+    state.lines.forEach((line, index) => {
+      const speaker = speakerById(line.speaker_id);
+      const speakerName = speaker?.name || "Unknown speaker";
+      const speakerIndex = Math.max(
+        0,
+        (state.project?.speakers || []).findIndex((candidate) => candidate.id === line.speaker_id)
+      );
+      const activeClass = line.id === state.selectedLineId ? " active" : "";
+      const speakerClass = speakerIndex % 2 === 0 ? " speaker-a" : "";
+      const timing = timingForLine(line);
+
+      const scriptClip = document.createElement("button");
+      scriptClip.type = "button";
+      scriptClip.className = `timeline-clip${speakerClass}${activeClass}`;
+      scriptClip.dataset.lineId = line.id;
+      scriptClip.title = line.text;
+      scriptClip.textContent = `${speakerName} #${index + 1}`;
+      scriptLane.appendChild(scriptClip);
+
+      const voiceClip = document.createElement("button");
+      voiceClip.type = "button";
+      voiceClip.className = `timeline-clip synced${activeClass}`;
+      voiceClip.dataset.lineId = line.id;
+      voiceClip.title = timing
+        ? `${speakerName}: Synced · ${formatTiming(timing)}`
+        : `${speakerName}: Synced · Timing unavailable`;
+      voiceClip.textContent = `#${index + 1} · Synced`;
+      voiceLane.appendChild(voiceClip);
+    });
+
+    if (state.lines.length === 0) {
+      const message = state.timelineError || "No script lines available";
+      [scriptLane, voiceLane].forEach((lane) => {
+        const placeholder = document.createElement("span");
+        placeholder.className = "timeline-clip timeline-placeholder";
+        placeholder.textContent = message;
+        lane.appendChild(placeholder);
+      });
+    }
+
+    const music = state.audioJob?.background_music || "";
+    const musicClip = document.createElement("span");
+    musicClip.className = music
+      ? "timeline-clip music-clip"
+      : "timeline-clip timeline-placeholder";
+    musicClip.textContent = music || "No music selected";
+    musicLane.appendChild(musicClip);
+
+    const timelineStatus = byId("timeline-status");
+    if (timelineStatus) {
+      timelineStatus.textContent = state.timelineError || "Measured audio timing";
+    }
+  }
+
+  function renderInspector() {
+    const container = byId("video-inspector");
+    if (!container) return;
+    const line = selectedLine();
+    if (!line) {
+      container.className = "inspector-empty";
+      container.textContent = state.timelineError || "Select a script or voice clip to inspect its timing.";
+      return;
+    }
+
+    const speaker = speakerById(line.speaker_id);
+    const timing = timingForLine(line);
+    const title = document.createElement("h2");
+    title.className = "inspector-title";
+    title.textContent = `Line ${state.lines.indexOf(line) + 1}`;
+
+    const meta = document.createElement("div");
+    meta.className = "inspector-meta";
+    const speakerChip = document.createElement("span");
+    speakerChip.className = "speaker-chip";
+    speakerChip.textContent = speaker?.name || "Unknown speaker";
+    const statusBadge = document.createElement("span");
+    statusBadge.className = "badge";
+    statusBadge.textContent = "Synced";
+    meta.append(speakerChip, statusBadge);
+
+    const copy = document.createElement("p");
+    copy.className = "inspector-copy";
+    copy.textContent = line.text;
+
+    const timingNote = document.createElement("div");
+    timingNote.className = "callout";
+    timingNote.dataset.timing = "";
+    timingNote.textContent = timing
+      ? `Measured audio timing: ${formatTiming(timing)}`
+      : "Measured audio timing unavailable for this line.";
+
+    container.className = "";
+    container.replaceChildren(title, meta, copy, timingNote);
+  }
+
+  function selectLine(lineId) {
+    if (!state.lines.some((line) => line.id === lineId)) return;
+    if (state.selectedLineId === lineId) return;
+    state.selectedLineId = lineId;
+    renderTimeline();
+    renderInspector();
+  }
+
+  function handleTimelineClick(event) {
+    const clip = event.target.closest("[data-line-id]");
+    if (clip) selectLine(clip.dataset.lineId);
   }
 
   function renderAvatars() {
@@ -92,9 +244,7 @@
       actions.append(uploadLabel, fileInput);
 
       // Not `.hidden` on a `.btn`-classed element: this app's stylesheet has no
-      // `[hidden]` rule, so an unconditional `.btn { display: inline-flex }` (an
-      // author rule, which always beats the UA `[hidden]` rule regardless of
-      // specificity) would keep it visibly showing. Only append it when needed.
+      // `[hidden]` rule, so `.btn { display: inline-flex }` would keep it visible.
       if (speaker.avatar_image_path) {
         const removeButton = document.createElement("button");
         removeButton.type = "button";
@@ -180,7 +330,9 @@
       button.addEventListener("click", () => {
         if (state.isGenerating) return;
         state.aspectRatio = button.dataset.aspectRatio;
-        group.querySelectorAll(".chip").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+        group.querySelectorAll(".chip").forEach((candidate) => {
+          candidate.setAttribute("aria-pressed", String(candidate === button));
+        });
       });
     });
   }
@@ -261,16 +413,29 @@
     }
 
     try {
-      const audioStatus = await Api.getAudioStatus(state.projectId);
-      state.audioReady = audioStatus.status === "complete";
+      state.audioJob = await Api.getAudioStatus(state.projectId);
+      state.audioReady = state.audioJob.status === "complete";
     } catch (error) {
+      state.audioJob = null;
       state.audioReady = false; // 404 (no audio yet) is expected, not an error to surface
     }
 
     if (!state.audioReady) {
       byId("loading-panel").hidden = true;
       byId("empty-state").hidden = false;
+      renderTimeline();
+      renderInspector();
       return;
+    }
+
+    try {
+      state.lines = await Api.getScript(state.projectId);
+      state.selectedLineId = state.lines[0]?.id || null;
+    } catch (error) {
+      console.error("Failed to load script for the video timeline (non-fatal):", error);
+      state.lines = [];
+      state.selectedLineId = null;
+      state.timelineError = "Script unavailable — video tools are still ready";
     }
 
     try {
@@ -294,14 +459,31 @@
     byId("workspace").hidden = false;
     renderAvatars();
     renderTemplates();
+    renderTimeline();
+    renderInspector();
     setupAspectRatioToggle();
     applyLocks();
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 5 });
+    StepNav.render("step-nav", {
+      projectId: new URLSearchParams(window.location.search).get("project_id"),
+      currentStep: 5,
+      variant: "workflow",
+    });
     KeyboardShortcuts.init({ primaryButtonId: "generate-btn" });
     byId("theme-toggle").addEventListener("click", Theme.toggle);
+    WorkspaceShell.init({
+      sidebar: byId("pane-sidebar"),
+      resizerLeft: byId("resizer-left"),
+      inspector: byId("pane-inspector"),
+      resizerRight: byId("resizer-right"),
+      timeline: byId("pane-timeline"),
+      resizerTop: byId("resizer-top"),
+      collapseBtn: byId("sidebar-collapse-btn"),
+    });
+    byId("script-timeline").addEventListener("click", handleTimelineClick);
+    byId("voice-timeline").addEventListener("click", handleTimelineClick);
     byId("generate-btn").addEventListener("click", generateVideo);
     window.addEventListener("beforeunload", (event) => {
       if (state.isGenerating) {

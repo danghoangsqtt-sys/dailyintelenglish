@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,57 +8,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/css/style.css" />
   <style>
-    body { margin: 0; }
-
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      padding: 18px 36px;
-      border-bottom: 1px solid var(--surface-border);
-      background: var(--bg-elevated);
-    }
-
-    .logo { font-size: 20px; font-weight: 800; text-decoration: none; }
-    .topbar-actions { display: flex; align-items: center; gap: 12px; }
-
-    .main {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 34px 36px 80px;
-    }
-
-    .page-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 20px;
-      margin-bottom: 24px;
-    }
-
-    .page-title { margin: 0 0 6px; font-size: 28px; font-weight: 800; }
-    .page-subtitle { margin: 0; color: var(--text-muted); font-size: 14px; }
-    .page-badges { display: flex; gap: 8px; margin-top: 12px; }
-    .back-link { display: inline-block; margin-bottom: 14px; color: var(--text-muted); font-size: 13px; text-decoration: none; }
-    .back-link:hover { color: var(--text); }
-
-    #error-banner {
-      margin-bottom: 20px;
-      padding: 14px 18px;
-      border: 1px solid var(--danger);
-      border-radius: 10px;
-      background: rgba(248, 81, 73, 0.1);
-      color: var(--danger);
-      font-size: 13px;
-      font-weight: 600;
-    }
-
-    .loading-panel, .empty-state { padding: 48px 24px; text-align: center; color: var(--text-muted); }
-    .empty-state a { color: var(--accent); }
+    .loading-panel { padding: 48px 24px; text-align: center; color: var(--muted); }
 
     .section { margin-bottom: 28px; }
     .section-title { margin: 0 0 14px; font-size: 18px; font-weight: 800; }
+    .section-hint { margin: -8px 0 14px; color: var(--muted); font-size: 12.5px; }
 
     .avatar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
     .avatar-card { padding: 14px; text-align: center; }
@@ -66,28 +20,28 @@
       width: 88px;
       height: 88px;
       margin: 0 auto 10px;
+      border: 1px solid var(--border);
       border-radius: 50%;
       object-fit: cover;
-      background: var(--bg-elevated);
-      border: 1px solid var(--surface-border);
+      background: var(--surface-2);
     }
     .avatar-placeholder {
       width: 88px;
       height: 88px;
-      margin: 0 auto 10px;
-      border-radius: 50%;
-      background: var(--bg-elevated);
-      border: 1px dashed var(--surface-border);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--text-muted);
+      margin: 0 auto 10px;
+      border: 1px dashed var(--border);
+      border-radius: 50%;
+      background: var(--surface-2);
+      color: var(--muted);
       font-size: 11px;
     }
-    .avatar-name { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+    .avatar-name { margin-bottom: 10px; font-size: 13px; font-weight: 700; }
     .avatar-actions { display: flex; flex-direction: column; gap: 6px; }
     .avatar-actions input[type="file"] { display: none; }
-    .avatar-status { min-height: 14px; margin-top: 6px; color: var(--text-muted); font-size: 11px; }
+    .avatar-status { min-height: 14px; margin-top: 6px; color: var(--muted); font-size: 11px; }
 
     .template-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
     .aspect-ratio-row { display: flex; gap: 10px; margin-top: 14px; }
@@ -96,8 +50,8 @@
       align-items: center;
       gap: 8px;
       padding: 10px 14px;
+      border: 1px solid var(--border);
       border-radius: 10px;
-      border: 1px solid var(--surface-border);
       background: var(--surface);
       color: var(--text);
       font-size: 13px;
@@ -105,119 +59,122 @@
       cursor: pointer;
       transition: all 0.15s ease;
     }
-    .chip:hover { border-color: var(--surface-border-hover); }
-    .chip[aria-pressed="true"] {
-      background: var(--accent-soft);
-      border-color: var(--accent);
-      color: var(--accent);
-    }
+    .chip:hover { border-color: var(--border-strong); }
+    .chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
     .template-option {
       appearance: none;
-      padding: 0;
       overflow: hidden;
-      text-align: left;
+      padding: 0;
       background: var(--surface);
       color: var(--text);
+      text-align: left;
       cursor: pointer;
     }
-    .template-option:hover { border-color: var(--surface-border-hover); }
+    .template-option:hover { border-color: var(--border-strong); }
     .template-option.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
     .template-option img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #07090d; }
     .template-name { display: block; padding: 9px 12px; font-size: 13px; font-weight: 700; }
 
     .generate-row { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
-    .generate-progress { color: var(--text-muted); font-size: 13px; }
-
+    .generate-progress { color: var(--muted); font-size: 13px; }
     .result-card { padding: 20px; }
     .result-player { width: 100%; margin-bottom: 16px; border-radius: 10px; background: #000; }
     .download-links { display: flex; gap: 10px; }
-    .btn-sm { padding: 7px 11px; font-size: 12px; text-decoration: none; }
 
-    .spinner {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid rgba(255, 255, 255, 0.4);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin-right: 6px;
-      vertical-align: -2px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+    .timeline-clip.synced { border-left-color: var(--success); }
+    .music-clip { border-left-color: var(--info); }
+    .timeline-status { font-size: 11px; }
   </style>
 </head>
 <body>
   <header class="topbar">
-    <a class="logo" href="/">🎙 Daily Intel English</a>
-    <div class="topbar-actions">
-      <a class="btn btn-ghost" href="/">Dashboard</a>
-      <button class="icon-toggle" id="theme-toggle" type="button" aria-label="Toggle theme">☀</button>
+    <a class="brand" href="/" aria-label="Return to dashboard"><span class="brand-mark" aria-hidden="true">D</span><span>Daily Intel English Studio</span></a>
+    <span id="project-name" class="project-name">Loading…</span>
+    <div class="actions">
+      <a href="/" class="btn btn-ghost btn-sm">← Dashboard</a>
+      <button id="theme-toggle" class="icon-toggle" type="button" aria-label="Toggle dark/light mode">☀️</button>
     </div>
   </header>
 
-  <div id="step-nav"></div>
+  <div class="shell-flex">
+    <div class="shell-row">
+      <aside id="pane-sidebar" class="pane-sidebar" aria-label="Project workflow">
+        <button id="sidebar-collapse-btn" type="button" class="btn btn-ghost sidebar-collapse-btn" aria-expanded="true">« Collapse</button>
+        <div id="step-nav"></div>
+        <div class="sidebar-label sidebar-summary card" style="margin-top:16px; padding:12px;"><strong>Video workspace</strong><p class="inspector-empty">Review script timing, choose a background, and render the episode.</p></div>
+      </aside>
+      <div id="resizer-left" class="resizer-v" role="separator" aria-orientation="vertical" aria-label="Resize workflow sidebar" tabindex="0"></div>
 
-  <main class="main">
-    <a class="back-link" id="back-link" href="/step4">← Back to Step 4: TTS Audio Studio</a>
-    <header class="page-header">
-      <div>
-        <h1 class="page-title">Step 5 — Video Studio</h1>
-        <p class="page-subtitle" id="project-name">Loading project…</p>
-        <div class="page-badges" id="project-badges"></div>
-      </div>
-      <span class="badge">ffmpeg + libass</span>
-    </header>
-
-    <div id="error-banner" role="alert" hidden></div>
-    <div class="card loading-panel" id="loading-panel">Loading video workspace…</div>
-    <div class="card empty-state" id="empty-state" hidden>
-      This project has no finished audio yet. <a id="empty-state-link" href="/step4">Go back to Step 4</a> and generate the audio mix first.
-    </div>
-
-    <div id="workspace" hidden>
-      <section class="section">
-        <h2 class="section-title">1. Speaker avatars (optional)</h2>
-        <p class="section-hint" style="margin:-8px 0 14px; color: var(--text-muted); font-size: 12.5px;">
-          Upload a portrait image per speaker for future use. Lip-sync video isn't built yet —
-          these images aren't used by "Generate video" below.
-        </p>
-        <div class="avatar-grid" id="avatar-grid"></div>
-      </section>
-
-      <section class="section">
-        <h2 class="section-title">2. Choose a background</h2>
-        <div class="template-grid" id="template-grid"></div>
-        <div class="aspect-ratio-row" role="group" aria-label="Output format" id="aspect-ratio-group">
-          <button class="chip" type="button" data-aspect-ratio="16:9" aria-pressed="true">16:9 (standard)</button>
-          <button class="chip" type="button" data-aspect-ratio="9:16" aria-pressed="false">9:16 (vertical)</button>
-        </div>
-        <div class="generate-row">
-          <button class="btn btn-primary" id="generate-btn" type="button">🎬 Generate video</button>
-          <span class="generate-progress" id="generate-progress" aria-live="polite"></span>
-        </div>
-      </section>
-
-      <section class="section">
-        <h2 class="section-title">3. Preview and download</h2>
-        <div class="card result-card" id="result-card" hidden>
-          <video class="result-player" id="result-player" controls></video>
-          <div class="download-links">
-            <a class="btn btn-ghost btn-sm" id="download-mp4" download>Download MP4</a>
-            <a class="btn btn-ghost btn-sm" id="download-mp4-vertical" download hidden>Download 9:16 MP4</a>
-            <a class="btn btn-ghost btn-sm" id="download-srt" download>Download SRT</a>
+      <main id="pane-main" class="pane-main">
+        <section class="pane-stage" aria-label="Video studio stage">
+          <div class="stage-header">
+            <div><h1 class="stage-title">Video Studio</h1><div id="project-badges" class="page-badges"></div></div>
+            <div class="stage-actions"><span class="badge">Step 5 of 7</span><a id="back-link" class="btn btn-ghost btn-sm" href="/step4">← TTS Audio</a></div>
           </div>
-        </div>
-        <div class="card empty-state" id="no-result-yet">Generate a video above to preview and download it here.</div>
-      </section>
+
+          <div id="error-banner" role="alert" hidden></div>
+          <div class="card loading-panel" id="loading-panel">Loading video workspace…</div>
+          <div class="card empty-state" id="empty-state" hidden>
+            This project has no finished audio yet. <a id="empty-state-link" href="/step4">Go back to Step 4</a> and generate the audio mix first.
+          </div>
+
+          <div id="workspace" hidden>
+            <section class="section">
+              <h2 class="section-title">1. Speaker avatars (optional)</h2>
+              <p class="section-hint">
+                Upload a portrait image per speaker for future use. Lip-sync video isn't built yet —
+                these images aren't used by "Generate video" below.
+              </p>
+              <div class="avatar-grid" id="avatar-grid"></div>
+            </section>
+
+            <section class="section">
+              <h2 class="section-title">2. Choose a background</h2>
+              <div class="template-grid" id="template-grid"></div>
+              <div class="aspect-ratio-row" role="group" aria-label="Output format" id="aspect-ratio-group">
+                <button class="chip" type="button" data-aspect-ratio="16:9" aria-pressed="true">16:9 (standard)</button>
+                <button class="chip" type="button" data-aspect-ratio="9:16" aria-pressed="false">9:16 (vertical)</button>
+              </div>
+              <div class="generate-row">
+                <button class="btn btn-primary" id="generate-btn" type="button">🎬 Generate video</button>
+                <span class="generate-progress" id="generate-progress" aria-live="polite"></span>
+              </div>
+            </section>
+
+            <section class="section">
+              <h2 class="section-title">3. Preview and download</h2>
+              <div class="card result-card" id="result-card" hidden>
+                <video class="result-player" id="result-player" controls></video>
+                <div class="download-links">
+                  <a class="btn btn-ghost btn-sm" id="download-mp4" download>Download MP4</a>
+                  <a class="btn btn-ghost btn-sm" id="download-mp4-vertical" download hidden>Download 9:16 MP4</a>
+                  <a class="btn btn-ghost btn-sm" id="download-srt" download>Download SRT</a>
+                </div>
+              </div>
+              <div class="card empty-state" id="no-result-yet">Generate a video above to preview and download it here.</div>
+            </section>
+          </div>
+        </section>
+
+        <div id="resizer-top" class="resizer-h" role="separator" aria-orientation="horizontal" aria-label="Resize video timeline" tabindex="0"></div>
+        <section id="pane-timeline" class="pane-timeline" aria-label="Video timeline">
+          <div class="timeline-toolbar"><span>Timeline</span><span class="spacer"></span><span id="timeline-status" class="timeline-status">Measured audio timing</span></div>
+          <div class="track-row"><div class="track-label">📝 Script</div><div id="script-timeline" class="track-lane"></div></div>
+          <div class="track-row"><div class="track-label">🔊 Voice</div><div id="voice-timeline" class="track-lane"></div></div>
+          <div class="track-row"><div class="track-label">🎵 Music</div><div id="music-timeline" class="track-lane"></div></div>
+        </section>
+      </main>
+
+      <div id="resizer-right" class="resizer-v" role="separator" aria-orientation="vertical" aria-label="Resize video inspector" tabindex="0"></div>
+      <aside id="pane-inspector" class="pane-inspector" aria-label="Selected video line inspector"><div id="video-inspector" class="inspector-empty">Select a script or voice clip to inspect its timing.</div></aside>
     </div>
-  </main>
+  </div>
 
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/api.js"></script>
   <script src="/static/js/step_nav.js"></script>
   <script src="/static/js/keyboard_shortcuts.js"></script>
+  <script src="/static/js/shell.js"></script>
   <script src="/static/js/step5_video.js"></script>
 </body>
 </html>
