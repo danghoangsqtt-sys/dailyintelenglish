@@ -62,8 +62,29 @@ Versioning: [SemVer](https://semver.org/)
   `tests/test_video_shell_browser.py` (4 tests). Zero real defects found on PM review
   this round — `renderTimeline()` proactively cleared all 3 timeline lanes from the
   start, directly informed by Task 4.2b's Music-lane bug.
+- Phase 4 Task 4.4, P0 navigation bug fixes (2026-09-16, implemented by Codex, accepted
+  by Claude Code as PM per AR-06): the Config page (`/step1`) now fetches and prefills
+  from an existing `project_id` in the URL and, for a `draft` project, saves via a new
+  `Api.updateProject()` (`PUT /api/projects/{id}` — an endpoint that already existed
+  but had no frontend caller until now) instead of always creating a new project; for
+  any later status, every form control renders disabled with a clear
+  configuration-is-locked banner rather than exposing a write path that would
+  desynchronize already-generated content. No cascade/regenerate logic was invented.
+  New `tests/test_step1_config_edit_browser.py` (5 tests), including a double-submit
+  stress test and a status-parametrized read-only-lock check.
 
 ### Fixed
+- Found via a Codex read-only UI audit (2026-09-16), independently confirmed by PM:
+  Dashboard's "Continue" button silently did nothing for `audio_generated`/
+  `video_generated`/`complete` project statuses — only `draft`/`script_generated` had
+  ever been wired up (`frontend/static/js/dashboard.js`). Fixed with a single
+  `STATUS_TO_STEP` map covering all 5 statuses, resuming each to the step that produced
+  it (`audio_generated`→`/step4`, `video_generated`→`/step5`, `complete`→`/step7`). See
+  Task 4.4, above.
+- Same audit: the Config page (`/step1`) ignored an existing `project_id` in the URL
+  and always created a brand-new project on submit — since Config is a real, reachable
+  StepNav link from every other step, a user revisiting it mid-workflow could silently
+  spawn a duplicate project. See Task 4.4, above, for the fix.
 - `tests/test_step_nav_browser.py` assumed only the Script page (`/step2`) used the new
   3-panel shell layout; fixed its branching to also cover Learning (`/step3`), and fixed
   the real root cause on the implementation side — `step3_learning.js`'s

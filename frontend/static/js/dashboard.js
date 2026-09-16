@@ -26,6 +26,14 @@
     complete: "Complete",
   };
 
+  const STATUS_TO_STEP = {
+    draft: 2,
+    script_generated: 2,
+    audio_generated: 4,
+    video_generated: 5,
+    complete: 7,
+  };
+
   function statusLabel(status) {
     return STATUS_LABELS[status] || status;
   }
@@ -153,8 +161,9 @@
 
       if (button.dataset.action === "continue") {
         const project = allProjects.find((p) => p.id === id);
-        if (project && (project.status === "draft" || project.status === "script_generated")) {
-          window.location.href = `/step2?project_id=${encodeURIComponent(id)}`;
+        const step = project ? STATUS_TO_STEP[project.status] : undefined;
+        if (step !== undefined) {
+          window.location.href = `/step${step}?project_id=${encodeURIComponent(id)}`;
         }
       }
     });

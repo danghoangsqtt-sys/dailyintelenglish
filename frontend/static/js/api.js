@@ -33,6 +33,8 @@ const Api = (() => {
     createProject: (config) =>
       request("/api/projects", { method: "POST", body: JSON.stringify(config) }),
     getProject: (id) => request(`/api/projects/${id}`),
+    updateProject: (id, patch) =>
+      request(`/api/projects/${id}`, { method: "PUT", body: JSON.stringify(patch) }),
     deleteProject: (id) => request(`/api/projects/${id}`, { method: "DELETE" }),
     getScript: (projectId) => request(`/api/projects/${projectId}/script`),
     generateScript: (projectId) =>

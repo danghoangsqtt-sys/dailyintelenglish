@@ -32,19 +32,19 @@ blockers. Phase 3 counts discrete ROADMAP checklist items across 3.1 (4), 3.2 (3
 3.3 (4) = 11 total, all 11 done 2026-09-15 — **Phase 3 formally closed** (see Task
 3.1/3.2/3.3 below). Phase 4 (new, scoped in the 2026-09-15 brainstorm session, not part
 of the original plan) has 3 tasks: 4.1 done 2026-09-15 (partial improvement, honestly
-reported), 4.2 in progress (split per-page — 3/7 pages done: Learning/4.2a 2026-09-15,
-TTS/4.2b and Video/4.2c 2026-09-16, both by Codex; Thumbnail/YouTube/Music
-Library/Step1-Config remain), 4.4 in progress (2 real P0 navigation bugs found by a
-2026-09-16 Codex UI audit, inserted ahead of Task 4.2d — see Task 4.4 below). Task 4.3
-(Vietnamese UI localization) scoped and queued behind Task 4.2's completion — see
-`docs/brainstorm/session-2026-09-15.md`.*
+reported), 4.4 done 2026-09-16 (2 real P0 navigation bugs found by a Codex UI audit,
+fixed by Codex, accepted by PM — see Task 4.4 below), 4.2 in progress (split per-page —
+3/7 pages done: Learning/4.2a 2026-09-15, TTS/4.2b and Video/4.2c 2026-09-16, both by
+Codex; paused for Task 4.4, now resuming with Thumbnail/4.2d; YouTube/Music
+Library/Step1-Config remain after that). Task 4.3 (Vietnamese UI localization) scoped
+and queued behind Task 4.2's completion — see `docs/brainstorm/session-2026-09-15.md`.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
 | Phase 1 — Build | ✅ Complete | 28 | 30 |
 | Phase 2 — Testing | ✅ Complete (buildable scope) | 22 | 24 |
 | Phase 3 — Review | ✅ Complete | 11 | 11 |
-| Phase 4 — Post-Beta Polish (new) | 🔄 In Progress | 1 | 3 |
+| Phase 4 — Post-Beta Polish (new) | 🔄 In Progress | 2 | 3 |
 
 ## Phase 1 Task Status
 
@@ -473,9 +473,10 @@ Task 2.6's audit, fixed here) and `die-vp-p2-complete` applied.
   lane (exactly 1 clip survived). 544/544 full suite passes (up from 541). See
   `tasks/task-4.2c.md` for the full record.
 
-Task 4.2 **paused after 4.2c** (2026-09-16) to fix Task 4.4's P0 bugs first — see below.
+Task 4.2 **paused after 4.2c** (2026-09-16) to fix Task 4.4's P0 bugs first, **now
+resuming with 4.2d** — Task 4.4 closed, see below.
 
-### 4.4 P0 navigation bug fixes (Dashboard Continue + Config duplicate-project) — 🔄 IN PROGRESS
+### 4.4 P0 navigation bug fixes (Dashboard Continue + Config duplicate-project) — ✅ DONE (2026-09-16)
 
 Inserted ahead of Task 4.2d after a Codex read-only UI audit (`vp-auto` audit mode) of
 the whole app found 2 real P0 bugs, both independently re-verified by PM against the
@@ -495,14 +496,27 @@ actual source before accepting the finding (not trusted on the audit report alon
    "new project" form and can silently spawn a duplicate project on submit — a
    dangerous mental-model mismatch, not a cosmetic issue.
 
-Fix plan (see `tasks/task-4.4.md`) uses only real, already-existing backend capability:
-extend the Continue handler's status→step map (`audio_generated`→`/step4`,
-`video_generated`→`/step5`, `complete`→`/step7`, matching the existing pattern of
-resuming to the step that produced that status); and for Config, fetch+prefill via the
-existing `GET /api/projects/{id}` for `draft` projects and submit via the
-already-implemented-but-previously-frontend-unused `PUT /api/projects/{id}` endpoint
-instead of create — locking the form read-only for any later status rather than
-inventing new cascade/regenerate behavior. Handed to Codex as Implementer per AR-06.
+Fix (implemented by Codex, accepted by PM per AR-06) uses only real, already-existing
+backend capability: extended the Continue handler to a single `STATUS_TO_STEP` map
+covering all 5 statuses (`audio_generated`→`/step4`, `video_generated`→`/step5`,
+`complete`→`/step7`, matching the existing pattern of resuming to the step that
+produced that status); and for Config, fetch+prefill via the existing
+`GET /api/projects/{id}` for `draft` projects and submit via a new `Api.updateProject()`
+(the already-implemented-but-previously-frontend-unused `PUT /api/projects/{id}`
+endpoint) instead of create — locking every control read-only with a clear banner for
+any later status rather than inventing new cascade/regenerate behavior. 5 new
+Playwright tests (`test_step1_config_edit_browser.py`), including a double-submit
+stress test asserting exactly 1 `PUT` and 0 `POST`, and a payload assertion confirming
+a speaker's hidden TTS fields (engine/description/speed/pitch/volume) survive an edit
+unchanged; 2 extended (`test_dashboard_browser.py`, now parametrized across all 5
+statuses plus a defensive unknown-status no-op case). **Zero real defects found on PM
+review** — PM independently re-ran every verification command, read the full diff, and
+additionally ran its own disposable script + screenshot beyond what was asked
+(confirmed a disabled genre chip truly can't be activated via a forced DOM click, not
+just via Playwright's own actionability convenience check; confirmed the pre-existing
+"Cancel" link — a plain `<a>`, untouched by the lock logic — correctly stays
+functional). 558/558 full suite passes (up from 555). See `tasks/task-4.4.md` for the
+full record. Resuming Task 4.2 with sub-task 4.2d (Thumbnail) next.
 
 **P1/P2 findings from the same audit — logged as backlog, not actioned in Task 4.4**:
 timeline clip width isn't proportional to real clip duration (Script/TTS/Video all
@@ -968,6 +982,26 @@ work is still pending) — not decided yet, revisit after Task 4.4 closes.
   impact reported, and P2's mixed-language item is already covered by the planned
   Task 4.3. See `tasks/task-4.4.md`. | User; PM (Claude Code); Codex (read-only auditor,
   then Implementer) |
+| 2026-09-16 | Codex delivered Task 4.4. PM independently re-verified rather than
+  accepting the report on its word: read the full diff for all 4 touched files
+  (confirmed the `STATUS_TO_STEP` map, the new `Api.updateProject()`, and — most
+  importantly — that the Config load-error path never unhides the form, closing the
+  exact bug this task exists to fix), reviewed the new test file
+  (`test_step1_config_edit_browser.py` — a double-submit stress test asserting exactly
+  1 `PUT`/0 `POST` plus exact hidden-TTS-field preservation, and a 4-status-parametrized
+  test asserting 0 enabled controls in locked mode), re-ran every verification command
+  independently (22/22 targeted, 25/25 regression, ruff/node/git-diff-check clean), and
+  additionally ran its own disposable script + screenshot beyond what was asked —
+  confirmed a disabled genre chip truly can't be activated via a forced DOM click (not
+  just Playwright's own convenience check) and that the pre-existing "Cancel" link (a
+  plain `<a>`, untouched by the lock logic) correctly stays functional. Full suite run
+  independently: 558/558 passed, 263s, zero flakes — faster and cleaner than the
+  Implementer's own 1375s run (which hit the known Gemini-retry flake 3 times, all
+  confirmed passing in isolation), confirming that slow run was system load, not a code
+  issue. **Zero real defects found.** This is the third task delegated to Codex overall
+  and the first non-UI-redesign task in the AR-06 pattern — closes Task 4.4; Task 4.2
+  resumes with sub-task 4.2d (Thumbnail) next. | User; PM (Claude Code); Codex
+  (Implementer) |
 
 ## Known Issues
 

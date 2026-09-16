@@ -6,7 +6,7 @@ Tests:
 3. Search: search box narrows cards by name.
 4. Empty state: shown when there are no projects.
 5. New Project button navigates to /step1.
-6. Continue button navigates to /step2?project_id=... for a draft project.
+6. Continue button navigates to the workflow step mapped from project status.
 7. Delete button (after confirming the browser dialog) removes the card without reload.
 """
 
@@ -178,17 +178,64 @@ async def test_dashboard_new_project_button_navigates_to_step1(browser_instance:
     await page.close()
 
 
+@pytest.mark.parametrize(
+    ("status", "expected_step"),
+    [
+        ("draft", 2),
+        ("script_generated", 2),
+        ("audio_generated", 4),
+        ("video_generated", 5),
+        ("complete", 7),
+    ],
+)
 @pytest.mark.asyncio
-async def test_dashboard_continue_button_navigates_to_step2_for_draft(browser_instance: Browser, live_server_url: str):
+async def test_dashboard_continue_button_navigates_to_status_step(
+    browser_instance: Browser, live_server_url: str, status: str, expected_step: int
+):
+    project_id = f"proj-{status}"
+    projects = [
+        {
+            "id": project_id,
+            "name": f"Project {status}",
+            "status": status,
+            "cefr_level": "B1",
+            "genre": "news",
+            "created_at": "2026-09-11T00:00:00Z",
+        }
+    ]
     page = await browser_instance.new_page()
-    await _mock_list_projects(page, MOCK_PROJECTS)
+    await _mock_list_projects(page, projects)
     await page.goto(f"{live_server_url}/")
 
-    await page.wait_for_selector("[data-id='proj-draft-1']")
-    await page.click("[data-id='proj-draft-1'] [data-action='continue']")
-    await page.wait_for_url("**/step2?project_id=proj-draft-1*")
-    assert "/step2" in page.url
-    assert "project_id=proj-draft-1" in page.url
+    await page.wait_for_selector(f"[data-id='{project_id}']")
+    await page.click(f"[data-id='{project_id}'] [data-action='continue']")
+    await page.wait_for_url(f"**/step{expected_step}?project_id={project_id}*")
+    assert f"/step{expected_step}" in page.url
+    assert f"project_id={project_id}" in page.url
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_dashboard_continue_unknown_status_is_noop(browser_instance: Browser, live_server_url: str):
+    projects = [
+        {
+            "id": "proj-unknown",
+            "name": "Unknown Status Project",
+            "status": "future_status",
+            "cefr_level": "B1",
+            "genre": "news",
+            "created_at": "2026-09-11T00:00:00Z",
+        }
+    ]
+    page = await browser_instance.new_page()
+    await _mock_list_projects(page, projects)
+    await page.goto(f"{live_server_url}/")
+
+    await page.wait_for_selector("[data-id='proj-unknown']")
+    original_url = page.url
+    await page.click("[data-id='proj-unknown'] [data-action='continue']")
+    await page.wait_for_timeout(100)
+    assert page.url == original_url
     await page.close()
 
 

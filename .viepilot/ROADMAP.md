@@ -543,7 +543,8 @@ explicitly deferred, not part of this phase.
   PM review — proactively avoided Task 4.2b's Music-lane bug and included the
   pre-authorized `test_step_nav_browser.py` extension. 544/544 full suite passes. See
   `.viepilot/phases/04-post-beta-polish/tasks/task-4.2c.md`.
-- [ ] **Thumbnail Generator** (`/step6`) — shell, no timeline — **paused**, see Task 4.4
+- [ ] **Thumbnail Generator** (`/step6`) — shell, no timeline — resuming next, Task 4.4
+  (P0 fixes) closed
 - [ ] **YouTube Package** (`/step7`) — shell, no timeline
 - [ ] **Music Library** (`/music`) — deliberately NOT shell-based (shared utility page,
   not part of the 7-step pipeline — same decision as the 2026-09-14 session)
@@ -554,20 +555,27 @@ Each page is its own sub-task (task cards written individually, doc-first, per t
 2026-09-15 brainstorm session's explicit pacing decision) — not one large task, per
 Task 2.4's precedent (2 pages needed 49 new/updated tests).
 
-### 4.4 P0 navigation bug fixes (inserted 2026-09-16, ahead of 4.2d)
+### 4.4 P0 navigation bug fixes — ✅ DONE (2026-09-16)
 
-- [ ] **Dashboard "Continue" button** — no-ops for `audio_generated`/`video_generated`/
-  `complete` project statuses (only `draft`/`script_generated` were wired up). Fix:
-  extend the existing status→step resume mapping.
-- [ ] **Config page (`/step1`) duplicate-project bug** — ignores an existing
-  `project_id` in the URL and always creates a new project on submit, even though
-  StepNav makes Config a real reachable link from every other step. Fix: fetch +
-  prefill for `draft` projects (using the existing but previously frontend-unused
-  `PUT /api/projects/{id}` endpoint), read-only lock for any later status.
+- [x] **Dashboard "Continue" button** — no-ops for `audio_generated`/`video_generated`/
+  `complete` project statuses (only `draft`/`script_generated` were wired up). Fixed:
+  a single `STATUS_TO_STEP` map now covers all 5 statuses
+  (`draft`/`script_generated`→`/step2`, `audio_generated`→`/step4`,
+  `video_generated`→`/step5`, `complete`→`/step7`).
+- [x] **Config page (`/step1`) duplicate-project bug** — ignored an existing
+  `project_id` in the URL and always created a new project on submit, even though
+  StepNav makes Config a real reachable link from every other step. Fixed: fetches +
+  prefills via `Api.getProject()` and saves via a new `Api.updateProject()`
+  (the existing-but-previously-frontend-unused `PUT /api/projects/{id}` endpoint) for
+  `draft` projects; renders every control disabled with a locked-configuration banner
+  for any later status — no cascade/regenerate logic invented.
 
 Found via a Codex read-only UI audit (`vp-auto` audit mode) on 2026-09-16, both bugs
-independently confirmed by PM before this task was created. See
-`.viepilot/phases/04-post-beta-polish/tasks/task-4.4.md` for the full plan. P1/P2
-findings from the same audit (timeline duration not proportional, dashboard doesn't
-scale past ~150 projects, accessibility gaps, EN/VI mixed copy) logged as backlog —
-see TRACKER.md Decision Log, 2026-09-16.
+independently confirmed by PM before the task was created, implemented by Codex,
+accepted by PM per AR-06 with zero real defects found on review — PM independently
+re-ran every verification command and ran its own disposable script + screenshot
+beyond what was asked. 5 new browser tests, 2 extended. 558/558 full suite passes (up
+from 555). See `.viepilot/phases/04-post-beta-polish/tasks/task-4.4.md` for the full
+record. P1/P2 findings from the same audit (timeline duration not proportional,
+dashboard doesn't scale past ~150 projects, accessibility gaps, EN/VI mixed copy)
+logged as backlog, not part of this task — see TRACKER.md Decision Log, 2026-09-16.

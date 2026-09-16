@@ -1,7 +1,7 @@
 /**
  * Step 1 — Script Config wizard. UI state + validation only; all persistence
- * goes through Api.createProject() (frontend/static/js/api.js), never fetch()
- * directly (CR-05).
+ * goes through the centralized Api client (frontend/static/js/api.js), never
+ * fetch() directly (CR-05).
  */
 (() => {
   const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
@@ -61,6 +61,8 @@
     languageFeatures: Object.fromEntries(LANGUAGE_FEATURES.map((f) => [f.key, f.default])),
   };
 
+  const projectId = new URLSearchParams(window.location.search).get("project_id");
+  let pageMode = projectId ? "loading" : "create";
   let isSubmitting = false;
 
   function clamp(value, min, max) {
@@ -96,12 +98,26 @@
     banner.textContent = "";
   }
 
+  function showStatus(message) {
+    const banner = document.getElementById("status-banner");
+    banner.textContent = message;
+    banner.hidden = false;
+  }
+
+  function clearStatus() {
+    const banner = document.getElementById("status-banner");
+    banner.textContent = "";
+    banner.hidden = true;
+  }
+
   function setLoading(loading) {
     const btn = document.getElementById("submit-btn");
     btn.disabled = loading;
     btn.innerHTML = loading
-      ? '<span class="spinner"></span> Creating…'
-      : "Create Project";
+      ? `<span class="spinner"></span> ${pageMode === "edit" ? "Saving…" : "Creating…"}`
+      : pageMode === "edit"
+        ? "Save Changes"
+        : "Create Project";
   }
 
   // --- CEFR ---
@@ -164,6 +180,11 @@
           name: "",
           gender: GENDERS[i % GENDERS.length],
           accent: state.accent,
+          tts_engine: "omnivoice",
+          voice_description: "",
+          speed: 1.0,
+          pitch: 0.0,
+          volume: 1.0,
         });
       }
     } else if (count < speakers.length) {
@@ -265,6 +286,105 @@
     });
   }
 
+  function loadProjectIntoState(project) {
+    document.getElementById("name").value = project.name || "";
+    document.getElementById("topic").value = project.topic || "";
+
+    state.cefr = project.cefr_level || state.cefr;
+    const duration = Number(project.duration_minutes);
+    if (Number.isFinite(duration) && duration > 0) {
+      state.duration = duration;
+      state.customDurationActive = !DURATION_PRESETS.includes(duration);
+    }
+    state.genre = project.genre || state.genre;
+    state.accent = project.accent || state.accent;
+    state.languageFeatures = Object.fromEntries(
+      LANGUAGE_FEATURES.map((feature) => [
+        feature.key,
+        project.language_features?.[feature.key] ?? feature.default,
+      ])
+    );
+    state.speakers = (project.speakers || []).map((speaker) => ({
+      name: speaker.name ?? "",
+      gender: speaker.gender ?? "neutral",
+      accent: speaker.accent ?? state.accent,
+      tts_engine: speaker.tts_engine ?? "omnivoice",
+      voice_description: speaker.voice_description ?? "",
+      speed: speaker.speed ?? 1.0,
+      pitch: speaker.pitch ?? 0.0,
+      volume: speaker.volume ?? 1.0,
+    }));
+
+    const speakerCount = sanitizeSpeakerCount(project.num_speakers ?? state.speakers.length);
+    document.getElementById("num-speakers").value = speakerCount;
+    syncSpeakersToCount(speakerCount);
+  }
+
+  function renderForm() {
+    renderCefr();
+    renderDurationPresets();
+    setupSpeakers();
+    renderChipGrid("genre-grid", GENRES, state.genre, (value) => {
+      state.genre = value;
+    });
+    renderChipGrid("accent-grid", ACCENTS, state.accent, (value) => {
+      state.accent = value;
+    });
+    renderLanguageFeatures();
+  }
+
+  function activateEditableForm() {
+    const form = document.getElementById("config-form");
+    form.hidden = false;
+    document.getElementById("submit-btn").hidden = false;
+    form.addEventListener("submit", handleSubmit);
+    KeyboardShortcuts.init({ primaryButtonId: "submit-btn" });
+  }
+
+  function lockForm() {
+    const form = document.getElementById("config-form");
+    form.hidden = false;
+    form.querySelectorAll("input, select, textarea, button").forEach((control) => {
+      control.disabled = true;
+    });
+    document.getElementById("submit-btn").hidden = true;
+  }
+
+  function configureCreateMode() {
+    pageMode = "create";
+    document.title = "New Project — Daily Intel English Studio";
+    document.getElementById("page-title").textContent = "Step 1 — Project Configuration";
+    document.getElementById("page-subtitle").textContent =
+      "Set up the topic, level, speakers, and language focus for your new episode.";
+    document.getElementById("submit-btn").textContent = "Create Project";
+    clearStatus();
+    activateEditableForm();
+  }
+
+  function configureEditMode() {
+    pageMode = "edit";
+    document.title = "Edit Project — Daily Intel English Studio";
+    document.getElementById("page-title").textContent = "Step 1 — Edit Project Configuration";
+    document.getElementById("page-subtitle").textContent =
+      "Update this draft project's topic, level, speakers, and language focus.";
+    document.getElementById("submit-btn").textContent = "Save Changes";
+    clearStatus();
+    activateEditableForm();
+  }
+
+  function configureLockedMode() {
+    pageMode = "locked";
+    document.title = "Project Configuration — Daily Intel English Studio";
+    document.getElementById("page-title").textContent = "Step 1 — Project Configuration";
+    document.getElementById("page-subtitle").textContent =
+      "Review the configuration used for this project.";
+    showStatus(
+      "This project has progressed beyond Draft. Configuration is read-only because generated content " +
+        "depends on it; changes here would not regenerate downstream work."
+    );
+    lockForm();
+  }
+
   // --- Validation + submit ---
   function validate() {
     const errors = [];
@@ -301,11 +421,11 @@
         name: speaker.name.trim(),
         gender: speaker.gender,
         accent: speaker.accent,
-        tts_engine: "omnivoice",
-        voice_description: "",
-        speed: 1.0,
-        pitch: 0.0,
-        volume: 1.0,
+        tts_engine: speaker.tts_engine ?? "omnivoice",
+        voice_description: speaker.voice_description ?? "",
+        speed: speaker.speed ?? 1.0,
+        pitch: speaker.pitch ?? 0.0,
+        volume: speaker.volume ?? 1.0,
       })),
     };
   }
@@ -324,32 +444,54 @@
     isSubmitting = true;
     setLoading(true);
     try {
-      const project = await Api.createProject(buildPayload());
+      const project =
+        pageMode === "edit"
+          ? await Api.updateProject(projectId, buildPayload())
+          : await Api.createProject(buildPayload());
       window.location.href = `/step2?project_id=${encodeURIComponent(project.id)}&name=${encodeURIComponent(project.name)}`;
     } catch (err) {
-      console.error("Failed to create project:", err);
-      showError("We couldn't create the project. Please check your input and try again.");
+      console.error(`Failed to ${pageMode === "edit" ? "update" : "create"} project:`, err);
+      showError(
+        pageMode === "edit"
+          ? "We couldn't save the project. Please check your input and try again."
+          : "We couldn't create the project. Please check your input and try again."
+      );
       isSubmitting = false;
       setLoading(false);
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    StepNav.render("step-nav", { projectId: new URLSearchParams(window.location.search).get("project_id"), currentStep: 1 });
-    KeyboardShortcuts.init({ primaryButtonId: "submit-btn" });
+  document.addEventListener("DOMContentLoaded", async () => {
+    StepNav.render("step-nav", { projectId, currentStep: 1 });
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
+    const form = document.getElementById("config-form");
+    form.hidden = true;
 
-    renderCefr();
-    renderDurationPresets();
-    setupSpeakers();
-    renderChipGrid("genre-grid", GENRES, state.genre, (value) => {
-      state.genre = value;
-    });
-    renderChipGrid("accent-grid", ACCENTS, state.accent, (value) => {
-      state.accent = value;
-    });
-    renderLanguageFeatures();
+    if (!projectId) {
+      renderForm();
+      configureCreateMode();
+      return;
+    }
 
-    document.getElementById("config-form").addEventListener("submit", handleSubmit);
+    showStatus("Loading project configuration…");
+    try {
+      const project = await Api.getProject(projectId);
+      loadProjectIntoState(project);
+      renderForm();
+      if (project.status === "draft") {
+        configureEditMode();
+      } else {
+        configureLockedMode();
+      }
+    } catch (err) {
+      console.error("Failed to load project:", err);
+      pageMode = "load_error";
+      clearStatus();
+      document.title = "Project Unavailable — Daily Intel English Studio";
+      document.getElementById("page-title").textContent = "Step 1 — Project Unavailable";
+      document.getElementById("page-subtitle").textContent =
+        "Return to the dashboard and try opening the project again.";
+      showError("We couldn't load this project. Please return to the dashboard and try again.");
+    }
   });
 })();
