@@ -500,8 +500,17 @@ Task 4.2 **paused after 4.2c** (2026-09-16) to fix Task 4.4's P0 bugs first — 
   disposable script + screenshots in both light and dark themes, confirming
   keyboard-driven resize also works (`ArrowLeft`/`ArrowRight` on the resizer, not just
   mouse drag). 560/560 full suite passes (up from 558). See `tasks/task-4.2d.md` for
-  the full record. 4/7 Task 4.2 pages now done — remaining: YouTube, Music Library,
-  Step1-Config.
+  the full record. 4/7 Task 4.2 pages now done.
+
+- [ ] **4.2e — YouTube Package (`/step7`) — 🔄 IN PROGRESS (2026-09-16)**: fourth task
+  handed to Codex as Implementer per AR-06. Shell, no timeline. Real design question
+  unique to this page: no per-item selection concept exists at all (titles/
+  description/chapters/tags are all fully shown at once) — decision: inspector hosts
+  the "Full Package Export" readiness panel (real dynamic state) instead of an item
+  detail view; deliberately not inventing a click-to-inspect interaction for the 3
+  title-variant cards. See `tasks/task-4.2e.md` for the full plan.
+
+Remaining after 4.2e: Music Library, Step1-Config — both deliberately NOT shell-based.
 
 ### 4.4 P0 navigation bug fixes (Dashboard Continue + Config duplicate-project) — ✅ DONE (2026-09-16)
 
@@ -1055,6 +1064,20 @@ work is still pending) — not decided yet, revisit after Task 4.4 closes.
   **Zero real defects found.** 560/560 full suite passes. This is the third task
   delegated to Codex end-to-end — closes Task 4.2d; Task 4.2 now at 4/7 pages done.
   | User; PM (Claude Code); Codex (Implementer) |
+| 2026-09-16 | User confirmed continuing to delegate to Codex for sub-task 4.2e
+  (YouTube Package, /step7) — the next natural step since it uses the same
+  shell-without-timeline pattern, with Learning's and Thumbnail's precedent reducing
+  regression risk. PM wrote the doc-first task card, flagging a real design question
+  unique to this page: unlike every prior sub-task, there is no per-item selection
+  concept at all (titles/description/chapters/tags are all fully shown at once, not
+  click-to-select), so there's no natural "selected item" for an inspector. Decision:
+  the inspector hosts the "Full Package Export" section instead — a real, already
+  dynamic workflow-status panel (ready/not-ready + exactly what's missing, computed
+  from real video/thumbnail readiness state) — rather than inventing a
+  click-to-inspect interaction for the 3 title-variant cards, which would be a new
+  feature outside this structural-only task's scope. Pre-authorized the same
+  `test_step_nav_browser.py` one-line extension. Handed to Codex per AR-06; awaiting
+  its pre-code plan. | User; PM (Claude Code) |
 
 ## Known Issues
 

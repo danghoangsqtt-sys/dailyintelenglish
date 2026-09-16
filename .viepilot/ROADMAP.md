@@ -551,7 +551,11 @@ explicitly deferred, not part of this phase.
   element id preserved. 2 new browser tests. Zero real defects found on PM review —
   independently re-verified including its own screenshots in both themes. 560/560 full
   suite passes. See `tasks/task-4.2d.md`.
-- [ ] **YouTube Package** (`/step7`) — shell, no timeline
+- [ ] **YouTube Package** (`/step7`) — shell, no timeline — 🔄 IN PROGRESS
+  (2026-09-16), handed to Codex per AR-06. Real design question different from prior
+  sub-tasks: this page has no per-item selection concept, so the inspector hosts the
+  "Full Package Export" readiness panel (real dynamic state) rather than an item
+  detail view. See `tasks/task-4.2e.md`.
 - [ ] **Music Library** (`/music`) — deliberately NOT shell-based (shared utility page,
   not part of the 7-step pipeline — same decision as the 2026-09-14 session)
 - [ ] **Step 1 Config** (`/step1`) — deliberately NOT shell-based (pure form, no

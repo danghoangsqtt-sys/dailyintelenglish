@@ -8,7 +8,8 @@
 - **Milestone Progress:** 2 / 3 tasks done — 4.1 CEFR `news` prompt tuning done
   2026-09-15 (partial, honestly-reported improvement — see `tasks/task-4.1.md`); 4.4 P0
   navigation bug fixes done 2026-09-16 (see below); 4.2 UI Redesign Slice 2 (7 pages) in
-  progress, 4/7 pages done (Learning, TTS, Video, Thumbnail). New phase,
+  progress, 4/7 pages done (Learning, TTS, Video, Thumbnail), 4.2e (YouTube) now in
+  progress, handed to Codex. New phase,
   scoped in the 2026-09-15 brainstorm session (`docs/brainstorm/session-2026-09-15.md`),
   not part of the original 21-day/3-phase plan. Progress cancellation and real
   LivePortrait lip-sync remain explicitly deferred, not part of this phase. A new
@@ -103,7 +104,18 @@
   works, and that the relocated preview — flagged as an open risk at plan-review time —
   stays visually usable in the narrower inspector). 560/560 full suite passes. See
   `tasks/task-4.2d.md` for the full record.
-- Remaining after 4.2d: YouTube, Music Library, Step1-Config — not started.
+- **4.2e — YouTube Package (`/step7`)**: 🔄 IN PROGRESS (2026-09-16), handed to Codex
+  as Implementer per AR-06. Shell, no timeline. Real design question different from
+  every prior sub-task: this page has no per-item selection concept at all (titles,
+  description, chapters, tags are all fully shown at once, not click-to-select), so
+  there's no natural "selected item" for the inspector. Decision: inspector hosts the
+  "Full Package Export" section (real dynamic readiness state — video + thumbnail
+  present or not) as a persistent workflow-status panel, not an item detail view; the 3
+  title-variant cards deliberately do NOT get a click-to-inspect interaction invented
+  for them (would be a new feature, not a structural move). See `tasks/task-4.2e.md`
+  for the full plan.
+- Remaining after 4.2e: Music Library, Step1-Config — not started (both deliberately
+  NOT shell-based, per the 2026-09-14 session decision).
 
 ### Task 4.4: P0 navigation bug fixes (Dashboard Continue + Config duplicate-project) — ✅ DONE (2026-09-16)
 - **Status:** done
