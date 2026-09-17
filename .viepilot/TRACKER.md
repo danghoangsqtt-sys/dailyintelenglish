@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch)  
+**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 in progress (new, script edit staleness)  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17, new scope beyond the original 21-day plan)  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, new scope beyond the original 21-day plan)  
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
@@ -57,7 +57,16 @@ Dashboard, and default (non-accent-colored) TTS range sliders. A 4th audit claim
 (YouTube chapters always estimated) was traced and found to be a **false positive**
 — the real-measurement code path already exists and works — so it's explicitly
 excluded. Its one task done 2026-09-17 by Codex, accepted by PM per AR-06 with zero
-real defects found. **Phase 6 formally closed 2026-09-17.***
+real defects found. **Phase 6 formally closed 2026-09-17.** **Phase 7** (new, opened
+right after Phase 6 closed) was scoped after the user ran `/vp-audit` 2026-09-17 for
+deep independent re-verification of the 4 Gemini audit findings left unscoped
+post-Phase-6. `GEMINI_RATE_LIMIT_RPM` turned out not to be unused (used by 2 CLI
+sample scripts, a nuanced correction, not logged). DB single-connection lock (ENH-004)
+and CSS fragmentation (ENH-005) were confirmed real but left in the backlog per user
+decision. BUG-013 — script can be edited/regenerated after audio/video already exist,
+with zero status guard and no staleness signal — was confirmed real and more serious
+than originally described, so the user chose to open this phase to fix it. 1 task
+(7.1), planned, not yet delegated to Codex.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -67,6 +76,7 @@ real defects found. **Phase 6 formally closed 2026-09-17.***
 | Phase 4 — Post-Beta Polish (new) | ✅ Complete (Task 4.3 dropped) | 3 | 3 |
 | Phase 5 — UI Polish Backlog (new) | ✅ Complete | 3 | 3 |
 | Phase 6 — Quick Wins Batch (new) | ✅ Complete | 1 | 1 |
+| Phase 7 — Script Edit Staleness (new) | 🔄 In Progress | 0 | 1 |
 
 ## Phase 1 Task Status
 
@@ -779,6 +789,23 @@ record.
 
 **This closes Task 6.1 — and Phase 6 (Quick Wins Batch) in full**, since it was the
 phase's only task.
+
+## Phase 7 Task Status
+
+### 7.1 Downgrade project status + surface staleness signal on script edit — planned
+
+Origin: `.viepilot/requests/BUG-013.md`, auto-logged by `/vp-audit` (2026-09-17) while
+independently re-verifying a Gemini audit claim. PM's own trace found the gap is worse
+than described: `app/api/projects.py`'s `generate_script`/`regenerate_script_line`
+endpoints have **zero status guard at all** — a project's script can be fully
+regenerated or a single line edited even after audio/video already exist
+(`audio_generated`/`video_generated`/`complete`), with nothing invalidating the now-
+stale downstream artifacts or signaling this anywhere. Decided approach: downgrade the
+project's status back to `script_generated` (non-destructive, no files/records
+deleted) whenever this happens, reusing the existing `STATUS_TO_STEP` Dashboard-resume
+mechanism rather than inventing a new UI concept; the public `PATCH /{project_id}`
+endpoint's forward-only guarantee for caller-supplied input must remain fully intact.
+Doc-first task card written (`tasks/task-7.1.md`), not yet handed to Codex.
 
 ## Decision Log
 
