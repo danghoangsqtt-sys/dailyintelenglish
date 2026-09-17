@@ -5,6 +5,10 @@
  * integration itself is still deferred (see task-1.7.md / task-1.7c.md).
  */
 (() => {
+  const TIMELINE_PIXELS_PER_SECOND = 16;
+  const TIMELINE_MIN_CLIP_WIDTH_PX = 72;
+  const TIMELINE_MAX_CLIP_WIDTH_PX = 240;
+
   const state = {
     projectId: null,
     project: null,
@@ -64,6 +68,21 @@
     return timing;
   }
 
+  function measuredClipWidth(timing) {
+    if (!timing) return null;
+    const duration = timing.end_sec - timing.start_sec;
+    if (!Number.isFinite(duration) || duration <= 0) return null;
+    return Math.min(
+      TIMELINE_MAX_CLIP_WIDTH_PX,
+      Math.max(TIMELINE_MIN_CLIP_WIDTH_PX, duration * TIMELINE_PIXELS_PER_SECOND)
+    );
+  }
+
+  function applyMeasuredClipWidth(clip, timing) {
+    const width = measuredClipWidth(timing);
+    if (width !== null) clip.style.width = `${width}px`;
+  }
+
   function formatTime(seconds) {
     const wholeSeconds = Math.max(0, Math.floor(seconds));
     const minutes = Math.floor(wholeSeconds / 60);
@@ -104,6 +123,7 @@
       scriptClip.dataset.lineId = line.id;
       scriptClip.title = line.text;
       scriptClip.textContent = `${speakerName} #${index + 1}`;
+      applyMeasuredClipWidth(scriptClip, timing);
       scriptLane.appendChild(scriptClip);
 
       const voiceClip = document.createElement("button");
@@ -114,6 +134,7 @@
         ? `${speakerName}: Synced · ${formatTiming(timing)}`
         : `${speakerName}: Synced · Timing unavailable`;
       voiceClip.textContent = `#${index + 1} · Synced`;
+      applyMeasuredClipWidth(voiceClip, timing);
       voiceLane.appendChild(voiceClip);
     });
 

@@ -111,6 +111,21 @@ Versioning: [SemVer](https://semver.org/)
   `tests/test_dashboard_pagination_*` coverage (4 tests) using an isolated large
   fixture — the pre-existing shared project-list fixture and its 6 existing consuming
   tests were left untouched.
+- Phase 5 Task 5.2, Timeline polish — proportional clip width + keyboard resizer
+  (2026-09-17, implemented by Codex, accepted by Claude Code as PM per AR-06): timeline
+  clip width on the Video and TTS pages now reflects real measured duration (16px per
+  second, clamped 72-240px) instead of only auto-sizing to label text — a 3-second line
+  stays at the 72px floor, a 7-second line reaches 112px. Script's timeline is
+  unaffected on purpose: it has no timing data at any point in the pipeline, and this
+  task does not fabricate one. Missing, invalid, zero, or negative durations keep the
+  existing auto-width behavior rather than guessing. TTS also captures the audio job
+  from a first "Generate All" call (not just from revisiting an already-completed
+  project), so widths update immediately without a reload. The shared workspace
+  shell's horizontal timeline resizer now supports keyboard resizing
+  (`ArrowUp`/`ArrowDown`, `Shift` for a bigger step), matching the sidebar/inspector
+  resizers' existing keyboard support — fixed once, applies to every page with a
+  timeline. New/extended browser tests use real measured bounding-box widths rather
+  than checking for a style attribute's presence.
 
 ### Fixed
 - Found via a Codex read-only UI audit (2026-09-16), independently confirmed by PM:

@@ -5,7 +5,7 @@
 - **Slug:** 05-ui-polish-backlog
 - **Status:** in_progress
 - **Started:** 2026-09-16
-- **Milestone Progress:** 1 / 3 tasks done. New phase, scoped in the 2026-09-16
+- **Milestone Progress:** 2 / 3 tasks done. New phase, scoped in the 2026-09-16
   brainstorm session (`docs/brainstorm/session-2026-09-16.md`) after Phase 4 formally
   closed. Addresses the real, still-current P1/P2 findings from the 2026-09-16 Codex
   UI audit — PM re-verified each finding against the current codebase before scoping
@@ -14,7 +14,7 @@
   real LivePortrait lip-sync remain explicitly deferred, not part of this phase; Task
   4.3 (Vietnamese UI localization) was dropped by explicit user decision, not part of
   this phase either.
-- **Test Suite Status:** 566/566 pass (2026-09-17, after Task 5.1) — see TRACKER.md
+- **Test Suite Status:** 569/569 pass (2026-09-17, after Task 5.2) — see TRACKER.md
 
 ---
 
@@ -40,17 +40,30 @@
   independent run, all confirmed passing instantly in isolation — non-regressive,
   Task 5.1 touched zero backend code). See `tasks/task-5.1.md` for the full record.
 
-### Task 5.2: Timeline polish (proportional width + keyboard resizer) — 🔄 IN PROGRESS
-- **Status:** in_progress (2026-09-17)
+### Task 5.2: Timeline polish (proportional width + keyboard resizer) — ✅ DONE (2026-09-17)
+- **Status:** done
 - PM's research corrected the original audit's scope: Script's timeline has **no**
   timing data at all (never will, at that stage of the pipeline) and is explicitly
   excluded from the width change — only Video (already has real per-line timing via
-  `timingForLine()`) and TTS (already calls `Api.getAudioStatus()`, just doesn't store
-  the result — a small state addition, not a new API call) get proportional clip
-  width. The shared shell's horizontal timeline resizer (`shell.js`) gets a keydown
-  handler mirroring the existing vertical-resizer pattern — fixes keyboard access on
-  all 3 timeline pages at once since they share the same component. Handed to Codex
-  as Implementer per AR-06. See `tasks/task-5.2.md` for the full plan.
+  `timingForLine()`) and TTS (already calls `Api.getAudioStatus()`, just needed to
+  store the result — a small state addition, not a new API call) get proportional
+  clip width. Formula: 16px/second, clamped 72-240px, derived from 78 real timing
+  samples (p90 5.97s, max 7.66s) — a 3s clip stays at the 72px floor, a 7s clip
+  reaches 112px. Invalid/zero/negative/missing durations keep today's auto-width,
+  never a guessed value. TTS additionally stores the job from **both**
+  `Api.getAudioStatus()` and `Api.generateAudio()` — an endorsed addition beyond the
+  original plan, so widths update immediately after a first Generate All instead of
+  requiring a reload; PM independently verified both endpoints return the identical
+  job shape with real `timestamps` before endorsing it. The shared shell's horizontal
+  timeline resizer (`shell.js`) gained a keydown handler mirroring the existing
+  vertical-resizer pattern exactly — fixes keyboard access on all 3 timeline pages at
+  once since they share the same component. Implemented by Codex, accepted by PM per
+  AR-06. 3 new/extended browser tests using real bounding-box width assertions (not
+  style-attribute presence checks), including a full 4-step keyboard round-trip test.
+  **Zero real defects found on PM review** — PM independently re-ran every
+  verification command, read the full diff, and confirmed `step2_script.js` and
+  `style.css` were genuinely untouched. 569/569 full suite passes. See
+  `tasks/task-5.2.md` for the full record.
 
 ### Task 5.3: Small polish batch — not started
 - Learning card semantic role/`tabindex`; Learning inspector defaults to the first

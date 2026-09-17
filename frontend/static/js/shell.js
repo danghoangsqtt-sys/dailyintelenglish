@@ -79,6 +79,15 @@ window.WorkspaceShell = (function () {
     handle.addEventListener("pointerup", finishDrag);
     handle.addEventListener("pointercancel", finishDrag);
     handle.addEventListener("lostpointercapture", finishDrag);
+    handle.addEventListener("keydown", (event) => {
+      const step = event.shiftKey ? 40 : 12;
+      const current = pane.getBoundingClientRect().height;
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+      event.preventDefault();
+      const direction = event.key === "ArrowUp" ? 1 : -1;
+      const height = Math.min(max(), Math.max(min, current + direction * step));
+      pane.style.flexBasis = `${height}px`;
+    });
   }
 
   function init(config) {

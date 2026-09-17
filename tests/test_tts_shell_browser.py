@@ -74,9 +74,12 @@ AUDIO_JOB = {
     "status": "complete",
     "mp3_path": f"data/audio/{PROJECT_ID}/mix.mp3",
     "wav_path": f"data/audio/{PROJECT_ID}/mix.wav",
-    "timestamps": [],
+    "timestamps": [
+        {"start_sec": 0.0, "end_sec": 3.0, "label": "line-1", "speaker_id": "speaker-a"},
+        {"start_sec": 3.3, "end_sec": 10.3, "label": "line-2", "speaker_id": "speaker-b"},
+    ],
     "background_music": "focus-bed.mp3",
-    "duration_seconds": 3.0,
+    "duration_seconds": 10.3,
     "loudness_lufs": -16.0,
     "error_message": None,
     "started_at": "2026-09-15T00:00:00Z",
@@ -128,6 +131,7 @@ async def _mock_tts_routes(
     event_log: list[tuple[str, str]] | None = None,
     preview_status: int = 200,
     patch_probe: dict | None = None,
+    audio_job: dict | None = None,
 ) -> None:
     async def handle(route):
         url, method = route.request.url, route.request.method
@@ -157,11 +161,18 @@ async def _mock_tts_routes(
                 status=200, content_type="application/json", body=_envelope(MUSIC_TRACKS)
             )
         elif url.endswith("/audio/status") and method == "GET":
-            await route.fulfill(
-                status=404,
-                content_type="application/json",
-                body=_envelope(None, "No audio job"),
-            )
+            if audio_job is None:
+                await route.fulfill(
+                    status=404,
+                    content_type="application/json",
+                    body=_envelope(None, "No audio job"),
+                )
+            else:
+                await route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=_envelope(audio_job),
+                )
         elif url.endswith("/tts/preview") and method == "POST":
             payload = json.loads(route.request.post_data or "{}")
             if event_log is not None:
@@ -298,6 +309,78 @@ async def test_inspector_listen_calls_preview_and_reload_resets_session_state(
 
 
 @pytest.mark.asyncio
+async def test_existing_audio_uses_measured_widths_and_missing_audio_keeps_auto_width(
+    browser_instance: Browser, live_server_url: str
+):
+    timed_page = await browser_instance.new_page()
+    await _mock_tts_routes(timed_page, audio_job=AUDIO_JOB)
+    await timed_page.goto(f"{live_server_url}/step4?project_id={PROJECT_ID}")
+    await timed_page.wait_for_selector("#workspace:not([hidden])")
+
+    for lane_id in ("script-timeline", "voice-timeline"):
+        short_clip = timed_page.locator(f"#{lane_id} [data-line-id='line-1']")
+        long_clip = timed_page.locator(f"#{lane_id} [data-line-id='line-2']")
+        short_box = await short_clip.bounding_box()
+        long_box = await long_clip.bounding_box()
+        assert short_box and long_box
+        assert long_box["width"] > short_box["width"] + 30
+
+    first_script_width = await timed_page.locator(
+        "#script-timeline [data-line-id='line-1']"
+    ).bounding_box()
+    first_voice_width = await timed_page.locator(
+        "#voice-timeline [data-line-id='line-1']"
+    ).bounding_box()
+    assert first_script_width and first_voice_width
+    assert abs(first_script_width["width"] - first_voice_width["width"]) < 1
+    await timed_page.close()
+
+    untimed_page = await browser_instance.new_page()
+    await _mock_tts_routes(untimed_page)
+    await untimed_page.goto(f"{live_server_url}/step4?project_id={PROJECT_ID}")
+    await untimed_page.wait_for_selector("#workspace:not([hidden])")
+    for lane_id in ("script-timeline", "voice-timeline"):
+        widths = await untimed_page.locator(f"#{lane_id} [data-line-id]").evaluate_all(
+            "clips => clips.map(clip => clip.style.width)"
+        )
+        assert widths == ["", ""]
+    await untimed_page.close()
+
+
+@pytest.mark.asyncio
+async def test_horizontal_timeline_resizer_supports_keyboard_steps(
+    browser_instance: Browser, live_server_url: str
+):
+    page = await browser_instance.new_page(viewport={"width": 1440, "height": 900})
+    await _mock_tts_routes(page)
+    await page.goto(f"{live_server_url}/step4?project_id={PROJECT_ID}")
+    await page.wait_for_selector("#workspace:not([hidden])")
+
+    timeline = page.locator("#pane-timeline")
+    handle = page.locator("#resizer-top")
+    await handle.focus()
+    initial = await timeline.bounding_box()
+    assert initial
+
+    await page.keyboard.press("ArrowUp")
+    after_up = await timeline.bounding_box()
+    assert after_up and after_up["height"] > initial["height"] + 8
+
+    await page.keyboard.press("ArrowDown")
+    after_down = await timeline.bounding_box()
+    assert after_down and abs(after_down["height"] - initial["height"]) < 2
+
+    await page.keyboard.press("Shift+ArrowUp")
+    after_shift_up = await timeline.bounding_box()
+    assert after_shift_up and after_shift_up["height"] > after_down["height"] + 35
+
+    await page.keyboard.press("Shift+ArrowDown")
+    after_shift_down = await timeline.bounding_box()
+    assert after_shift_down and abs(after_shift_down["height"] - initial["height"]) < 2
+    await page.close()
+
+
+@pytest.mark.asyncio
 async def test_inspector_listen_failure_is_friendly_and_unlocks(
     browser_instance: Browser, live_server_url: str
 ):
@@ -371,4 +454,12 @@ async def test_generate_all_keeps_preview_then_mix_order(
     assert await page.locator(
         "#voice-timeline [data-preview-state='preview-ready']"
     ).count() == 2
+    short_box = await page.locator(
+        "#voice-timeline [data-line-id='line-1']"
+    ).bounding_box()
+    long_box = await page.locator(
+        "#voice-timeline [data-line-id='line-2']"
+    ).bounding_box()
+    assert short_box and long_box
+    assert long_box["width"] > short_box["width"] + 30
     await page.close()

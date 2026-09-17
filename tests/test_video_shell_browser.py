@@ -141,8 +141,10 @@ async def _mock_video_routes(
     audio_status: int = 200,
     script_status: int = 200,
     event_log: list[tuple[str, str]] | None = None,
+    audio_job_override: dict | None = None,
 ) -> None:
     project_state = json.loads(json.dumps(PROJECT))
+    audio_job = audio_job_override if audio_job_override is not None else AUDIO_JOB
 
     async def handle(route):
         url, method = route.request.url, route.request.method
@@ -157,7 +159,7 @@ async def _mock_video_routes(
                 await route.fulfill(
                     status=200,
                     content_type="application/json",
-                    body=_envelope(AUDIO_JOB),
+                    body=_envelope(audio_job),
                 )
             else:
                 await route.fulfill(
@@ -321,6 +323,45 @@ async def test_empty_audio_state_does_not_request_script(
     assert ("script", "GET") not in event_log
     assert await page.locator("#workspace").is_hidden()
     assert await page.locator("#music-timeline .timeline-clip").count() == 1
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_video_timeline_widths_follow_measured_duration_and_fall_back_per_line(
+    browser_instance: Browser, live_server_url: str
+):
+    partial_timing_job = {
+        **AUDIO_JOB,
+        "timestamps": [
+            {"start_sec": 0.0, "end_sec": 3.0, "label": "line-1", "speaker_id": "speaker-a"},
+            {"start_sec": 3.3, "end_sec": 10.3, "label": "line-2", "speaker_id": "speaker-b"},
+        ],
+    }
+    page = await browser_instance.new_page()
+    await _mock_video_routes(page, audio_job_override=partial_timing_job)
+    await page.goto(f"{live_server_url}/step5?project_id={PROJECT_ID}")
+    await page.wait_for_selector("#workspace:not([hidden])")
+
+    for lane_id in ("script-timeline", "voice-timeline"):
+        short_clip = page.locator(f"#{lane_id} [data-line-id='line-1']")
+        long_clip = page.locator(f"#{lane_id} [data-line-id='line-2']")
+        short_box = await short_clip.bounding_box()
+        long_box = await long_clip.bounding_box()
+        assert short_box and long_box
+        assert long_box["width"] > short_box["width"] + 30
+        assert await page.locator(
+            f"#{lane_id} [data-line-id='line-3']"
+        ).evaluate("clip => clip.style.width") == ""
+
+    for line_id in ("line-1", "line-2"):
+        script_box = await page.locator(
+            f"#script-timeline [data-line-id='{line_id}']"
+        ).bounding_box()
+        voice_box = await page.locator(
+            f"#voice-timeline [data-line-id='{line_id}']"
+        ).bounding_box()
+        assert script_box and voice_box
+        assert abs(script_box["width"] - voice_box["width"]) < 1
     await page.close()
 
 

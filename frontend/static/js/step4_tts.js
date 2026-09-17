@@ -10,6 +10,9 @@
  */
 (() => {
   const SAVE_DEBOUNCE_MS = 400;
+  const TIMELINE_PIXELS_PER_SECOND = 16;
+  const TIMELINE_MIN_CLIP_WIDTH_PX = 72;
+  const TIMELINE_MAX_CLIP_WIDTH_PX = 240;
 
   const state = {
     projectId: null,
@@ -17,6 +20,7 @@
     lines: [],
     musicTracks: [],
     selectedMusic: "",
+    audioJob: null,
     isGenerating: false,
     linesInFlight: new Set(),
     previewedLineIds: new Set(),
@@ -32,6 +36,30 @@
     if (state.linesInFlight.has(lineId)) return { key: "synthesizing", label: "Synthesizing" };
     if (state.previewedLineIds.has(lineId)) return { key: "preview-ready", label: "Preview ready" };
     return { key: "not-previewed", label: "Not previewed" };
+  }
+
+  function timingForLine(line) {
+    const index = state.lines.indexOf(line);
+    const timing = state.audioJob?.timestamps?.[index];
+    if (!timing || !Number.isFinite(timing.start_sec) || !Number.isFinite(timing.end_sec)) {
+      return null;
+    }
+    return timing;
+  }
+
+  function measuredClipWidth(timing) {
+    if (!timing) return null;
+    const duration = timing.end_sec - timing.start_sec;
+    if (!Number.isFinite(duration) || duration <= 0) return null;
+    return Math.min(
+      TIMELINE_MAX_CLIP_WIDTH_PX,
+      Math.max(TIMELINE_MIN_CLIP_WIDTH_PX, duration * TIMELINE_PIXELS_PER_SECOND)
+    );
+  }
+
+  function applyMeasuredClipWidth(clip, timing) {
+    const width = measuredClipWidth(timing);
+    if (width !== null) clip.style.width = `${width}px`;
   }
 
   function showError(message) {
@@ -256,6 +284,7 @@
       );
       const activeClass = line.id === state.selectedLineId ? " active" : "";
       const speakerClass = speakerIndex % 2 === 0 ? " speaker-a" : "";
+      const timing = timingForLine(line);
 
       const scriptClip = document.createElement("button");
       scriptClip.type = "button";
@@ -263,6 +292,7 @@
       scriptClip.dataset.lineId = line.id;
       scriptClip.title = line.text;
       scriptClip.textContent = `${speakerName} #${index + 1}`;
+      applyMeasuredClipWidth(scriptClip, timing);
       scriptLane.appendChild(scriptClip);
 
       const status = previewState(line.id);
@@ -273,6 +303,7 @@
       voiceClip.dataset.previewState = status.key;
       voiceClip.title = `${speakerName}: ${status.label}`;
       voiceClip.textContent = `#${index + 1} · ${status.label}`;
+      applyMeasuredClipWidth(voiceClip, timing);
       voiceLane.appendChild(voiceClip);
     });
 
@@ -470,6 +501,7 @@
       }
       progress.textContent = "Mixing final audio…";
       const job = await Api.generateAudio(state.projectId, state.selectedMusic);
+      state.audioJob = job;
       renderResult(job);
       progress.textContent = "Done — episode ready below.";
     } catch (error) {
@@ -535,8 +567,10 @@
 
     try {
       const job = await Api.getAudioStatus(state.projectId);
+      state.audioJob = job;
       if (job && job.status === "complete") renderResult(job);
     } catch (error) {
+      state.audioJob = null;
       if (error.status !== 404) console.error("Failed to load existing audio job:", error);
     }
 

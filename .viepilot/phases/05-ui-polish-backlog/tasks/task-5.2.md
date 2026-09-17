@@ -3,7 +3,7 @@
 ## Meta
 - **ID**: 5.2 (second task of Phase 5 — UI Polish Backlog)
 - **Phase**: 5
-- **Status**: in_progress (2026-09-17)
+- **Status**: done (2026-09-17)
 - **Priority**: medium
 - **Assignee**: Codex (Implementer) — PM (Claude Code) writes/accepts, per the AR-06
   PM-Implementer contract (`docs/CODEX_CODE_PROMPT.md`, `.viepilot/SYSTEM-RULES.md`)
@@ -187,3 +187,234 @@ requested.** Codex may proceed to implementation.
   a pass in isolation.
 - [ ] `ruff check app/ tests/`, `node --check` on touched JS, `git diff --check` — all
   clean, real output pasted.
+
+## Implementer Evidence (Awaiting PM Review — 2026-09-17)
+
+### Scope delivered
+
+- `frontend/static/js/step4_tts.js`: uses real audio-job timestamps for matching
+  Script/Voice clip widths. The already-fetched job is retained from both
+  `Api.getAudioStatus()` and `Api.generateAudio()`, so existing jobs and a first
+  Generate All both update widths without an extra API request or reload.
+- `frontend/static/js/step5_video.js`: uses the existing real `timingForLine()` data
+  for matching Script/Voice clip widths.
+- Both pages use the approved formula: `16px/s`, clamped to `72px..240px`. Missing,
+  invalid, zero, or negative timing leaves the clip without an inline width, preserving
+  the existing auto-width behavior instead of estimating data.
+- `frontend/static/js/shell.js`: the horizontal resizer now supports ArrowUp/ArrowDown
+  (12px) and Shift+ArrowUp/Shift+ArrowDown (40px), with a fresh dynamic maximum on
+  every keypress.
+- `frontend/static/css/style.css` was not needed and was not changed.
+- `frontend/static/js/step2_script.js` was not changed; Script keeps its existing
+  non-timed clip sizing.
+
+### Browser coverage and manual visual check
+
+`venv\Scripts\python.exe -m pytest tests/test_tts_shell_browser.py tests/test_video_shell_browser.py -q`
+(exit code 0):
+
+```text
+............                                                             [100%]
+12 passed in 26.16s
+```
+
+`venv\Scripts\python.exe -m pytest tests/test_tts_shell_browser.py tests/test_video_shell_browser.py tests/test_new_shell_resize_browser.py tests/test_tts_audio_browser.py tests/test_video_studio_browser.py tests/test_step_nav_browser.py -q`
+(exit code 0):
+
+```text
+................................................                         [100%]
+48 passed in 80.47s (0:01:20)
+```
+
+A disposable real-Chromium check at 1440×900 measured the approved 3-second and
+7-second clips, exercised the keyboard resizer, checked the untouched Script page,
+and checked document overflow. Raw measurement output:
+
+```json
+{"screenshot":"C:\\Users\\Admin\\AppData\\Local\\Temp\\task-5.2-tts-timeline.png","tts_script_widths":[72,112],"tts_voice_widths":[72,112],"timeline_height_before":210,"timeline_height_after_up":222,"timeline_height_after_shift_up":262,"script_page_inline_widths":["",""],"horizontal_overflow":false}
+```
+
+The screenshot was kept outside the repository at
+`C:\Users\Admin\AppData\Local\Temp\task-5.2-tts-timeline.png`. Visual inspection
+confirmed a clean timeline with the 7-second clip visibly wider than the 3-second
+clip.
+
+### Required verification output
+
+`venv\Scripts\python.exe -m pytest tests/ -q` (exit code 1 — two instances of the
+task card's accepted pre-existing Gemini-retry/shared-sleep timing flake class; both
+pass together in isolation immediately below):
+
+```text
+........................................................................ [ 12%]
+..........................................F............................. [ 25%]
+........................................................................ [ 37%]
+........................................................................ [ 50%]
+........................................................................ [ 63%]
+........................................................................ [ 75%]
+........................................................................ [ 88%]
+..........................................F......................        [100%]
+================================== FAILURES ===================================
+__________ test_generate_learning_pack_non_429_error_does_not_retry ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001E5E47F3E00>
+no_real_sleep = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, ...]
+
+    async def test_generate_learning_pack_non_429_error_does_not_retry(monkeypatch, no_real_sleep):
+        calls = queue_responses(monkeypatch, [FakeResponse(500, text="internal error")])
+
+        with pytest.raises(LearningGenerationError, match="HTTP 500"):
+            await learning_service.generate_learning_pack("proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES)
+
+        assert calls["n"] == 1
+>       assert no_real_sleep == []
+E       assert [0.1, 0.1, 0....0.1, 0.1, ...] == []
+E
+E         Left contains 283926 more items, first extra item: 0.1
+E         Use -v to get more diff
+
+tests\test_learning_service.py:296: AssertionError
+_____________ test_generate_package_retries_on_429_then_succeeds ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001E5E55E4980>
+no_real_sleep = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, ...]
+
+    async def test_generate_package_retries_on_429_then_succeeds(monkeypatch, no_real_sleep):
+        calls = queue_responses(
+            monkeypatch, [FakeResponse(429, text="rate limited"), gemini_ok_response(VALID_PACKAGE)]
+        )
+
+        await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES)
+
+        assert calls["n"] == 2
+>       assert no_real_sleep == [1.0]
+E       assert [0.1, 0.1, 0....0.1, 0.1, ...] == [1.0]
+E
+E         At index 0 diff: 0.1 != 1.0
+E         Left contains 789128 more items, first extra item: 0.1
+E         Use -v to get more diff
+
+tests\test_youtube_service.py:217: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  app.services.youtube_service:youtube_service.py:107 gemini_youtube_retryable_error model=gemini-3.8-flash prompt_hash=7130789c18899117 status=429 attempt=1 retry_in_s=1.0
+============================== warnings summary ===============================
+venv\Lib\site-packages\fastapi\testclient.py:1
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+venv\Lib\site-packages\starlette\testclient.py:53
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_learning_service.py::test_generate_learning_pack_non_429_error_does_not_retry
+FAILED tests/test_youtube_service.py::test_generate_package_retries_on_429_then_succeeds
+2 failed, 567 passed, 2 warnings in 659.35s (0:10:59)
+```
+
+Task 5.2 changes no Python/backend/Gemini code. Both failures received unrelated
+0.1-second background sleeps in the shared `no_real_sleep` fixture (283,926 and
+789,128 extra entries respectively), which is the already documented flake class.
+Immediate isolated rerun together:
+
+`venv\Scripts\python.exe -m pytest tests/test_learning_service.py::test_generate_learning_pack_non_429_error_does_not_retry tests/test_youtube_service.py::test_generate_package_retries_on_429_then_succeeds -q`
+(exit code 0):
+
+```text
+..                                                                       [100%]
+2 passed in 0.56s
+```
+
+`venv\Scripts\ruff.exe check app/ tests/` (exit code 0):
+
+```text
+All checks passed!
+```
+
+`node --check frontend/static/js/shell.js` (exit code 0):
+
+```text
+(no stdout or stderr)
+```
+
+`node --check frontend/static/js/step4_tts.js` (exit code 0):
+
+```text
+(no stdout or stderr)
+```
+
+`node --check frontend/static/js/step5_video.js` (exit code 0):
+
+```text
+(no stdout or stderr)
+```
+
+`git diff --exit-code -- frontend/static/js/step2_script.js` (exit code 0):
+
+```text
+(no stdout or stderr)
+```
+
+`git diff --check` (exit code 0):
+
+```text
+warning: in the working copy of '.viepilot/phases/05-ui-polish-backlog/tasks/task-5.2.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/shell.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/step4_tts.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/step5_video.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_tts_shell_browser.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_video_shell_browser.py', LF will be replaced by CRLF the next time Git touches it
+```
+
+These are Windows line-ending conversion notices, not whitespace errors.
+
+## PM Re-review (2026-09-17) — ACCEPTED
+
+Independently re-verified everything rather than accepting the report on its word.
+
+**Diff review** — read the full `git diff` for all 5 touched files:
+- `shell.js`: exactly the one keydown listener added to `makeHorizontalResizer()`,
+  mirroring `makeVerticalResizer()`'s shape precisely (`ArrowUp`/`ArrowDown`, 12/40px
+  step, `max()` called fresh on every keypress rather than cached).
+- `step5_video.js` / `step4_tts.js`: identical `measuredClipWidth()`/
+  `applyMeasuredClipWidth()` helpers (72/16/240 constants), correctly returning `null`
+  for missing/non-finite/zero/negative durations (no inline `style.width` set in that
+  case, preserving auto-width) and applied consistently to both the Script and Voice
+  clip for a given line. TTS additionally gained `state.audioJob` set from **both**
+  `Api.getAudioStatus()` (with an explicit `state.audioJob = null` reset in the catch
+  branch) and `Api.generateAudio()` — confirmed both call sites updated, delivering
+  the endorsed addition from plan review exactly as agreed.
+- Confirmed via `git diff --exit-code -- frontend/static/js/step2_script.js` (exit 0)
+  and `frontend/static/css/style.css` unlisted in `git status` that neither was
+  touched, matching the plan exactly.
+
+**New/extended test review**: `test_video_shell_browser.py`'s new test cleverly
+reuses the existing `line-3` script fixture with a *truncated* 2-entry `timestamps`
+override to exercise the "missing timing mid-list" case realistically, and asserts
+real bounding-box widths (not style-attribute presence) for the 3s/7s comparison, the
+missing-timing fallback, and Script/Voice width parity. `test_tts_shell_browser.py`
+adds an equivalent measured-vs-auto-width test plus a full 4-step keyboard round-trip
+test for the horizontal resizer (`ArrowUp`/`ArrowDown`/`Shift+ArrowUp`/
+`Shift+ArrowDown`, checking real height changes each step), and extends the
+pre-existing `test_generate_all_keeps_preview_then_mix_order` test with width
+assertions — directly proving the "no reload needed after Generate All" addition
+works, not just asserting it in prose.
+
+**PM independently re-ran every verification command**: 48/48 targeted+regression
+pass, `ruff check` clean, all 3 `node --check` clean, `step2_script.js` confirmed
+unchanged, `git diff --check` exit 0 — all matched the Implementer's report exactly.
+
+**Screenshot review**: confirms the "Alex #1" (short) clip visibly narrower than
+"Sam #2" (long) clip in both the Script and Voice lanes, matching the measured
+72px/112px values in the raw JSON output.
+
+**Full suite, run independently**: 568 passed, 1 failed
+(`test_generate_learning_pack_exhausts_all_fallback_models_raises`) in 655.73s — the
+known Gemini-retry timing flake class, confirmed passing in isolation at 0.54s. Task
+5.2 touched zero backend/Gemini code, so non-regressive by construction.
+
+**Zero real defects found on PM review.** Accepted as delivered — no changes
+requested.
+
+**This closes Task 5.2.** Phase 5 continues with Task 5.3 (small polish batch) next.

@@ -47,8 +47,8 @@ touched. **Phase 4 formally closed 2026-09-16** at 3 pursued tasks (4.1/4.2/4.4)
 done. See `docs/brainstorm/session-2026-09-15.md`. **Phase 5** (new, scoped in
 `docs/brainstorm/session-2026-09-16.md` right after Phase 4 closed) addresses the
 real, still-current P1/P2 findings from the 2026-09-16 Codex UI audit — 3 tasks: 5.1
-Dashboard pagination done 2026-09-17 (by Codex, accepted by PM), 5.2 timeline polish
-and 5.3 small polish batch both not started.*
+Dashboard pagination and 5.2 timeline polish both done 2026-09-17 (by Codex, accepted
+by PM), 5.3 small polish batch not started.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -56,7 +56,7 @@ and 5.3 small polish batch both not started.*
 | Phase 2 — Testing | ✅ Complete (buildable scope) | 22 | 24 |
 | Phase 3 — Review | ✅ Complete | 11 | 11 |
 | Phase 4 — Post-Beta Polish (new) | ✅ Complete (Task 4.3 dropped) | 3 | 3 |
-| Phase 5 — UI Polish Backlog (new) | 🔄 In Progress | 1 | 3 |
+| Phase 5 — UI Polish Backlog (new) | 🔄 In Progress | 2 | 3 |
 
 ## Phase 1 Task Status
 
@@ -655,7 +655,7 @@ markedly slower than baseline), all confirmed passing instantly in isolation tog
 — non-regressive, Task 5.1 touched zero backend code. See `tasks/task-5.1.md` for the
 full record.
 
-### 5.2 Timeline polish (proportional width + keyboard resizer) — 🔄 IN PROGRESS (2026-09-17)
+### 5.2 Timeline polish (proportional width + keyboard resizer) — ✅ DONE (2026-09-17)
 
 PM's research before writing the task card corrected the original audit's scope:
 Script's timeline has no timing data at any point in the pipeline (audio doesn't
@@ -666,11 +666,29 @@ features" precedent. Only Video (already computes real per-line timing via
 `Api.getAudioStatus()` in `init()`, the fetched job just isn't stored to `state` —
 a small state addition, not a new API call) get proportional clip width, only once
 real timing exists; clips without timing keep today's auto-width behavior, never a
-guessed duration. The shared shell's horizontal timeline resizer (`shell.js`'s
-`makeHorizontalResizer()`) gets a keydown handler mirroring the existing
-vertical-resizer pattern exactly — fixes keyboard access on all 3 timeline pages
-(Script/TTS/Video) at once since they share the same component. Handed to Codex as
-Implementer per AR-06. See `tasks/task-5.2.md` for the full plan.
+guessed duration. Formula: 16px/second, clamped 72-240px, derived from 78 real timing
+samples (p90 5.97s, max 7.66s) — a 3s clip stays at the 72px floor, a 7s clip reaches
+112px, giving a real visible difference for the audit's exact complaint case. TTS
+also stores the job from **both** `Api.getAudioStatus()` and `Api.generateAudio()` —
+an addition Codex proposed beyond the original plan and PM independently verified
+before endorsing (`app/api/audio.py` confirmed both endpoints return the identical
+job shape with real `timestamps`), so widths update immediately after a first
+Generate All instead of requiring a reload. The shared shell's horizontal timeline
+resizer (`shell.js`'s `makeHorizontalResizer()`) gained a keydown handler mirroring
+the existing vertical-resizer pattern exactly (`ArrowUp`/`ArrowDown`, 12/40px step,
+`max()` called fresh on every keypress since it's a function not a constant) — fixes
+keyboard access on all 3 timeline pages (Script/TTS/Video) at once since they share
+the same component. Implemented by Codex, accepted by PM per AR-06. 3 new/extended
+Playwright tests, all using real bounding-box width measurements rather than
+style-attribute presence checks — including one that cleverly reuses the existing
+`line-3` script fixture with a truncated timestamps override to exercise the
+"missing timing mid-list" case realistically, and a full 4-step keyboard round-trip
+test (`ArrowUp`/`ArrowDown`/`Shift+ArrowUp`/`Shift+ArrowDown`). **Zero real defects
+found on PM review** — PM independently re-ran every verification command, read the
+full diff, and confirmed via `git diff --exit-code` that `step2_script.js` and
+`style.css` were genuinely untouched. 569/569 full suite passes (up from 566; 1 known
+Gemini-retry timing flake on PM's independent run, confirmed passing in isolation).
+See `tasks/task-5.2.md` for the full record.
 
 ### 5.3 Small polish batch — not started
 
@@ -1284,6 +1302,26 @@ defaults to the first item instead of starting empty; Video's avatar section
   passing instantly together in isolation, non-regressive since Task 5.1 touched zero
   backend code. **Zero real defects found.** This closes Task 5.1; Phase 5 continues
   with Task 5.2 (timeline polish) next. | User; PM (Claude Code); Codex (Implementer) |
+| 2026-09-17 | Codex delivered Task 5.2. PM independently re-verified rather than
+  accepting the report on its word: read the full diff for all 5 touched files,
+  confirming the width-clamp helpers correctly return `null` (no inline style set) for
+  missing/non-finite/zero/negative durations in both TTS and Video, applied
+  consistently to matching Script/Voice clips for the same line, and confirming via
+  `git diff --exit-code` that `step2_script.js` was genuinely untouched. Confirmed the
+  endorsed `Api.generateAudio()`-storage addition was implemented at both call sites
+  exactly as agreed at plan review. Reviewed the new/extended tests and found them
+  unusually rigorous for width-comparison coverage — real bounding-box measurements
+  rather than style-attribute presence checks, one test cleverly reusing the existing
+  `line-3` script fixture with a truncated timestamps override to realistically
+  exercise the missing-timing-mid-list case, and a full 4-step keyboard round-trip
+  test for the horizontal resizer. Re-ran every verification command independently
+  (48/48 targeted+regression, ruff/node/git-diff-check clean) and reviewed the
+  verification screenshot, confirming the measured 72px/112px width difference is
+  visually obvious. Full suite run independently: 568 passed, 1 failed (the known
+  Gemini-retry timing flake class), confirmed passing in isolation at 0.54s —
+  non-regressive since Task 5.2 touched zero backend code. **Zero real defects
+  found.** This closes Task 5.2; Phase 5 now at 2/3 tasks done, continuing with Task
+  5.3 (small polish batch) next. | User; PM (Claude Code); Codex (Implementer) |
 
 ## Known Issues
 

@@ -634,17 +634,21 @@ Addresses the real, still-current P1/P2 findings from the 2026-09-16 Codex UI au
   consumers were left untouched. 566/566 full suite passes. See
   `.viepilot/phases/05-ui-polish-backlog/tasks/task-5.1.md` for the full record.
 
-### 5.2 Timeline polish (proportional width + keyboard resizer) — 🔄 IN PROGRESS (2026-09-17)
+### 5.2 Timeline polish (proportional width + keyboard resizer) — ✅ DONE (2026-09-17)
 
-- [ ] Timeline clip width made proportional to real clip duration — **scope corrected
-  during planning**: only Video (already has real per-line timing) and TTS (already
-  fetches the audio job, just needs to store it) get this; Script has no timing data
-  at any point and is out of scope. Handed to Codex per AR-06.
-- [ ] The shared shell's horizontal timeline resizer (`#resizer-top`) gets a keydown
-  handler — currently has `tabindex="0"` but only the vertical sidebar/inspector
-  resizers in `shell.js` handle keyboard input. Fixing this once in `shell.js` covers
-  all 3 timeline pages (Script/TTS/Video) at once.
-  See `.viepilot/phases/05-ui-polish-backlog/tasks/task-5.2.md` for the full plan.
+- [x] Timeline clip width made proportional to real clip duration — **scope corrected
+  during planning**: only Video (already had real per-line timing) and TTS (already
+  fetched the audio job, just needed to store it — no new API calls for either) got
+  this; Script has no timing data at any point and stayed out of scope. Formula:
+  16px/second, clamped 72-240px, derived from 78 real timing samples. TTS also stores
+  the job from a first `Api.generateAudio()` call, not just `Api.getAudioStatus()`, so
+  widths update immediately after Generate All without a reload.
+- [x] The shared shell's horizontal timeline resizer (`#resizer-top`) gets a keydown
+  handler — previously had `tabindex="0"` but only the vertical sidebar/inspector
+  resizers in `shell.js` handled keyboard input. Fixed once in `shell.js`, covering
+  all 3 timeline pages (Script/TTS/Video) at once. Implemented by Codex, accepted by
+  PM per AR-06 with zero real defects found. 569/569 full suite passes. See
+  `.viepilot/phases/05-ui-polish-backlog/tasks/task-5.2.md` for the full record.
 
 ### 5.3 Small polish batch — not started
 
