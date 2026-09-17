@@ -129,6 +129,50 @@ Three independent, low-risk, verified fixes — no shared code path between them
   pre-code plan.
 - This task card, for plan/evidence updates.
 
+## PM Plan Review (2026-09-17) — APPROVED
+
+Codex presented its pre-code plan per AR-06's 3-step process. Plan matches every
+required decision in this task card exactly.
+
+**Correctly self-identified the key methodological trap**: checking the post-JS DOM
+state for `data-theme` absence would be wrong, since `theme.js` always sets *some*
+value once it runs — the plan explicitly commits to checking the raw served HTML
+(before any script executes), matching the whole point of this fix (what paints
+*before* JS runs). Confirmed this is the right approach without needing to raise it.
+
+**Six near-identical `showMissingProjectError()` helpers, deliberately not
+refactored into a shared utility**: correct call — matches this project's established
+precedent (e.g. Task 5.2 duplicating `measuredClipWidth()` across 2 files rather than
+extracting a shared module) of keeping small per-page helpers local rather than
+introducing new shared infrastructure for a 3-line function.
+
+**Range slider**: exactly `accent-color: var(--accent)`, no JS/fill-percentage state
+— matches the settled scope boundary precisely.
+
+**Test plan**: the new `tests/test_quick_wins_browser.py` bundle is well-designed —
+raw-HTML theme check, default+stored-preference across all 9 pages (a real
+regression net, not just the 4 changed pages), missing-project link + real
+click-through navigation on step2-7, and a control test proving a normal API error
+still renders plain text with no link (directly verifying every other `showError`
+call site's safety is untouched, not just asserted). Extending
+`tests/test_tts_shell_browser.py` with a real *computed*-style check for
+`accent-color` (not just confirming the CSS rule exists in source) is the right level
+of rigor.
+
+**Allowed files — confirmed/locked, exactly as Codex named them**:
+- `frontend/pages/music_library.html`, `step1_config.html`, `step6_thumbnail.html`,
+  `step7_youtube.html` (theme attribute only)
+- `frontend/pages/step4_tts.html` (slider CSS only)
+- `frontend/static/js/step2_script.js`, `step3_learning.js`, `step4_tts.js`,
+  `step5_video.js`, `step6_thumbnail.js`, `step7_youtube.js` (new helper + one call
+  site each)
+- `tests/test_quick_wins_browser.py` (new)
+- `tests/test_tts_shell_browser.py` (extended)
+- This task card, for evidence only (Status field remains PM-only)
+
+**Plan approved as presented. No changes requested.** Codex may proceed to
+implementation.
+
 ## Verification checklist
 - [ ] Each of the 4 affected pages' raw initial HTML (before any JS runs) has no
   `data-theme` attribute on `<html>` — a real check of the served markup, not just
