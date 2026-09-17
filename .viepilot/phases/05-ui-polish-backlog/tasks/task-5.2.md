@@ -131,6 +131,45 @@ fixes keyboard access to the timeline resizer everywhere it exists.
   `tests/test_video_shell_browser.py`, and/or a new shell-level resizer test file).
 - This task card, for plan/evidence updates.
 
+## PM Plan Review (2026-09-17) — APPROVED (plus one endorsed addition)
+
+Codex presented its pre-code plan per AR-06's 3-step process. Plan matches every
+required decision in this task card.
+
+**Width formula confirmed well-reasoned**: 16px/second, 72px minimum (matches the
+existing CSS floor exactly), 240px maximum (= 15s). Derived from real read-only data
+(78 real timing samples, p90 5.97s, max 7.66s observed) — not guessed. A 3s clip stays
+at the 72px floor, a 7s clip reaches 112px, giving a real, visible difference for the
+audit's exact complaint case. Invalid/zero/negative/missing durations correctly get no
+inline width at all (auto-width preserved) rather than a guessed value.
+
+**Endorsed addition beyond the original task card**: storing the job returned by
+`Api.generateAudio()` into `state.audioJob` too (not just the one from `init()`'s
+`Api.getAudioStatus()` call). PM independently verified this is sound before approving
+— `app/api/audio.py:30-71` (`POST .../audio/generate`) and `:74-83`
+(`GET .../audio/status`) both return the identical `job` shape via `ok(job, ...)`,
+including real `timestamps` (confirmed: `save_audio_job(..., timestamps=result
+["timestamps"], ...)` at generate-time is the same field `get_audio_job()` returns).
+This is genuinely the same already-fetched data, not a new call, and closes a real gap
+the task card's original plan would have left: without it, a user generating audio for
+the first time wouldn't see proportional widths until reloading the page. Good catch —
+approved.
+
+**Allowed files — confirmed/locked, exactly as Codex named them**:
+- `frontend/static/js/shell.js`
+- `frontend/static/js/step4_tts.js`
+- `frontend/static/js/step5_video.js`
+- `tests/test_tts_shell_browser.py` (extended)
+- `tests/test_video_shell_browser.py` (extended)
+- `frontend/static/css/style.css` — confirmed **not** needed, existing rules suffice
+- `step2_script.js` — confirmed **not** touched; Codex's own verification plan
+  (`git diff --exit-code` + Script regression run) is a good extra safety check PM
+  will also independently confirm on review
+- This task card, for evidence only (Status field remains PM-only)
+
+**Plan approved as presented, including the endorsed addition. No changes
+requested.** Codex may proceed to implementation.
+
 ## Verification checklist
 - [ ] A real measured-width comparison: a longer-duration clip is visibly/measurably
   wider than a shorter one on Video (and on TTS once audio exists) — bounding-box
