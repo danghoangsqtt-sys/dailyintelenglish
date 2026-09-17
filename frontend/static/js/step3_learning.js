@@ -109,7 +109,7 @@
 
   function vocabItemHtml(item, index) {
     return `
-      <div class="card item-card${itemSelectedClass("vocabulary", index)}" data-section="vocabulary" data-index="${index}">
+      <div class="card item-card${itemSelectedClass("vocabulary", index)}" role="button" tabindex="0" data-section="vocabulary" data-index="${index}">
         <div class="item-head">
           ${fieldSpan("vocabulary", index, "word", item.word, "item-title")}
           ${fieldSpan("vocabulary", index, "part_of_speech", item.part_of_speech, "badge")}
@@ -123,7 +123,7 @@
 
   function idiomItemHtml(item, index) {
     return `
-      <div class="card item-card${itemSelectedClass("idioms", index)}" data-section="idioms" data-index="${index}">
+      <div class="card item-card${itemSelectedClass("idioms", index)}" role="button" tabindex="0" data-section="idioms" data-index="${index}">
         <div class="item-head">
           ${fieldSpan("idioms", index, "phrase", item.phrase, "item-title")}
         </div>
@@ -136,7 +136,7 @@
   function grammarItemHtml(item, index) {
     const examples = (item.examples || []).map((ex) => `<li>${escapeHtml(ex)}</li>`).join("");
     return `
-      <div class="card item-card${itemSelectedClass("grammar", index)}" data-section="grammar" data-index="${index}">
+      <div class="card item-card${itemSelectedClass("grammar", index)}" role="button" tabindex="0" data-section="grammar" data-index="${index}">
         <div class="item-head">
           ${fieldSpan("grammar", index, "point", item.point, "item-title")}
         </div>
@@ -154,7 +154,7 @@
       .join("");
     const revealed = state.revealedQuiz.has(index);
     return `
-      <div class="card item-card${itemSelectedClass("questions", index)}" data-section="questions" data-index="${index}">
+      <div class="card item-card${itemSelectedClass("questions", index)}" role="button" tabindex="0" data-section="questions" data-index="${index}">
         <div class="item-head">
           ${fieldSpan("questions", index, "question", item.question, "item-title")}
         </div>
@@ -199,6 +199,15 @@
     const tab = Object.keys(TAB_SECTION).find((key) => TAB_SECTION[key] === section);
     if (tab) renderTab(tab);
     renderInspector();
+  }
+
+  function selectFirstActiveItem() {
+    if (state.selectedItem || !state.pack) return false;
+    const section = TAB_SECTION[state.activeTab];
+    const items = state.pack[section];
+    if (!Array.isArray(items) || items.length === 0) return false;
+    selectItem(section, 0);
+    return true;
   }
 
   function renderInspector() {
@@ -248,6 +257,14 @@
     if (section && index !== undefined) selectItem(section, Number(index));
   }
 
+  function handleItemCardKeydown(e) {
+    const card = e.target.closest(".item-card");
+    if (!card || e.target !== card || (e.key !== "Enter" && e.key !== " ")) return;
+    if (e.key === " ") e.preventDefault();
+    const { section, index } = card.dataset;
+    if (section && index !== undefined) selectItem(section, Number(index));
+  }
+
   function render() {
     const generatePanel = document.getElementById("generate-panel");
     const contentWrap = document.getElementById("content-wrap");
@@ -269,6 +286,7 @@
     generatePanel.hidden = true;
     contentWrap.hidden = false;
     renderAllTabs();
+    if (!selectFirstActiveItem()) renderInspector();
   }
 
   // --- Tabs ---
@@ -286,8 +304,8 @@
     // than show stale/wrong data in the inspector.
     if (state.selectedItem && state.selectedItem.section !== TAB_SECTION[tab]) {
       state.selectedItem = null;
-      renderInspector();
     }
+    if (!selectFirstActiveItem()) renderInspector();
   }
 
   function handleTabsClick(e) {
@@ -498,6 +516,7 @@
     contentWrap.addEventListener("click", handleContentClick);
     contentWrap.addEventListener("click", handleTabPanelClick);
     contentWrap.addEventListener("focusout", handleContentFocusOut);
+    contentWrap.addEventListener("keydown", handleItemCardKeydown);
     contentWrap.addEventListener("keydown", handleContentKeydown);
 
     try {

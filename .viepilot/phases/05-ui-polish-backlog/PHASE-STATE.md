@@ -3,9 +3,10 @@
 ## Metadata
 - **Phase:** 5
 - **Slug:** 05-ui-polish-backlog
-- **Status:** in_progress
+- **Status:** complete
 - **Started:** 2026-09-16
-- **Milestone Progress:** 2 / 3 tasks done. New phase, scoped in the 2026-09-16
+- **Closed:** 2026-09-17
+- **Milestone Progress:** 3 / 3 tasks done. New phase, scoped in the 2026-09-16
   brainstorm session (`docs/brainstorm/session-2026-09-16.md`) after Phase 4 formally
   closed. Addresses the real, still-current P1/P2 findings from the 2026-09-16 Codex
   UI audit — PM re-verified each finding against the current codebase before scoping
@@ -14,7 +15,7 @@
   real LivePortrait lip-sync remain explicitly deferred, not part of this phase; Task
   4.3 (Vietnamese UI localization) was dropped by explicit user decision, not part of
   this phase either.
-- **Test Suite Status:** 569/569 pass (2026-09-17, after Task 5.2) — see TRACKER.md
+- **Test Suite Status:** 571/571 pass (2026-09-17, after Task 5.3) — see TRACKER.md
 
 ---
 
@@ -65,17 +66,33 @@
   `style.css` were genuinely untouched. 569/569 full suite passes. See
   `tasks/task-5.2.md` for the full record.
 
-### Task 5.3: Small polish batch — 🔄 IN PROGRESS
-- **Status:** in_progress (2026-09-17)
+### Task 5.3: Small polish batch — ✅ DONE (2026-09-17)
+- **Status:** done
 - Three independent, low-risk fixes, bundled per the brainstorm session's decision:
   (1) Learning's item cards gain `role="button"`/`tabindex="0"` + a keydown handler
   for `Enter`/`Space`, so a keyboard-only user can select them — they stay `<div>`s
   (not real `<button>`s) since they contain other interactive inline-edit children,
-  which cannot legally nest inside a native button. (2) Learning's inspector
-  auto-selects the first item of the active tab whenever nothing is selected (first
-  load, first generate, or after switching tabs) — never overriding an existing
-  selection. (3) Video's "Speaker avatars (optional)" section (not-yet-functional
-  LivePortrait feature) moves into a native `<details>`/`<summary>`, collapsed by
-  default, reusing the exact pattern already established for Script's language notes
-  — no custom JS collapse widget needed. Handed to Codex as Implementer per AR-06.
-  See `tasks/task-5.3.md` for the full plan.
+  which cannot legally nest inside a native button. A strict `event.target === card`
+  guard isolates this from the inline-edit fields' own keydown handling and the real
+  "Show Answer" button. (2) Learning's inspector auto-selects the first item of the
+  active tab whenever nothing is selected (first load, first generate, or after
+  switching tabs) via a single well-guarded `selectFirstActiveItem()` helper — never
+  overriding an existing selection, including the specific edge case of re-activating
+  the same tab. (3) Video's "Speaker avatars (optional)" section moves into a native
+  `<details>`/`<summary>`, collapsed by default, reusing the exact pattern already
+  established for Script's language notes — no custom JS collapse widget needed.
+  Implemented by Codex, accepted by PM per AR-06. Mid-implementation, Codex correctly
+  stopped and reported (per AR-06) that a pre-existing test outside the locked file
+  list (`tests/test_video_shell_browser.py`) broke because it waited for
+  `.avatar-preview` to become visible while now hidden inside the collapsed
+  `<details>` — PM authorized a narrow one-line fix. 3 new/renamed browser tests
+  including a real keyboard walkthrough (Tab order, Enter, and an actual
+  `event.defaultPrevented` capture for Space) and a direct assertion of the
+  `<details>` open/closed state. **Zero real defects found on PM review** — PM
+  independently re-ran every verification command, read the full diff, and confirmed
+  `style.css` was genuinely untouched. 571/571 full suite passes, 0 flakes. See
+  `tasks/task-5.3.md` for the full record.
+
+**This closes Phase 5 (UI Polish Backlog) in full.** All 3 tasks done: 5.1 Dashboard
+pagination, 5.2 Timeline polish, 5.3 Small polish batch — all implemented by Codex,
+accepted by PM per AR-06, zero real defects found on any of the 3 PM reviews.

@@ -109,13 +109,27 @@ def _envelope(data, error=None) -> str:
     return json.dumps({"success": error is None, "data": data, "error": error, "meta": {}})
 
 
-async def _mock_learning_routes(page: Page, save_calls: list[str] | None = None) -> None:
+async def _mock_learning_routes(
+    page: Page,
+    save_calls: list[str] | None = None,
+    existing_pack: dict | None = PACK,
+) -> None:
     async def handle(route):
         url, method = route.request.url, route.request.method
         if url.endswith(f"/api/projects/{PROJECT_ID}") and method == "GET":
             await route.fulfill(status=200, content_type="application/json", body=_envelope(PROJECT))
         elif url.endswith(f"/api/projects/{PROJECT_ID}/learning") and method == "GET":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope(PACK))
+            await route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=_envelope(existing_pack),
+            )
+        elif url.endswith(f"/api/projects/{PROJECT_ID}/learning/generate") and method == "POST":
+            await route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=_envelope(PACK),
+            )
         elif url.endswith(f"/api/projects/{PROJECT_ID}/learning") and method == "PUT":
             if save_calls is not None:
                 save_calls.append(route.request.post_data or "")
@@ -166,7 +180,7 @@ async def test_learning_shell_resizes_collapses_and_keeps_tabs_working(
 
 
 @pytest.mark.asyncio
-async def test_learning_item_selection_shows_detail_and_clears_on_tab_switch(
+async def test_learning_inspector_defaults_by_tab_and_keeps_existing_selection(
     browser_instance: Browser, live_server_url: str
 ):
     page = await browser_instance.new_page()
@@ -174,7 +188,10 @@ async def test_learning_item_selection_shows_detail_and_clears_on_tab_switch(
     await page.goto(f"{live_server_url}/step3?project_id={PROJECT_ID}")
     await page.wait_for_selector("#content-wrap:not([hidden])")
 
-    assert "Select an item" in await page.locator("#learning-inspector").text_content()
+    assert "thorough" in await page.locator("#learning-inspector").text_content()
+    assert await page.locator(
+        ".item-card[data-section='vocabulary'][data-index='0']"
+    ).evaluate("element => element.classList.contains('selected')")
 
     await page.click(".item-card[data-section='vocabulary'][data-index='1']")
     inspector_text = await page.locator("#learning-inspector").text_content()
@@ -184,18 +201,85 @@ async def test_learning_item_selection_shows_detail_and_clears_on_tab_switch(
         "element => element.classList.contains('selected')"
     )
 
-    # Switching tabs clears a selection that belongs to a different section.
+    # Re-activating the current tab must not replace a real selection with item 0.
+    await page.click("[data-tab='vocabulary']")
+    assert "deliberate" in await page.locator("#learning-inspector").text_content()
+
+    # Switching tabs selects the first real item instead of leaving the inspector empty.
     await page.click("[data-tab='grammar']")
-    assert "Select an item" in await page.locator("#learning-inspector").text_content()
+    assert "Present perfect" in await page.locator("#learning-inspector").text_content()
 
     # Quiz inspector always shows the answer, independent of the main list's toggle.
     await page.click("[data-tab='quiz']")
-    await page.click(".item-card[data-section='questions'][data-index='0']")
     quiz_inspector_text = await page.locator("#learning-inspector").text_content()
     assert "Planning" in quiz_inspector_text
     assert "explicitly mentions planning" in quiz_inspector_text
     # The main list's own answer stays hidden (untouched by inspecting it).
     assert await page.locator(".quiz-answer").is_hidden()
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_learning_generate_defaults_inspector_to_first_active_item(
+    browser_instance: Browser, live_server_url: str
+):
+    page = await browser_instance.new_page()
+    await _mock_learning_routes(page, existing_pack=None)
+    await page.goto(f"{live_server_url}/step3?project_id={PROJECT_ID}")
+    await page.wait_for_selector("#generate-panel:not([hidden])")
+
+    await page.click("#generate-btn")
+    await page.wait_for_selector("#content-wrap:not([hidden])")
+
+    assert "thorough" in await page.locator("#learning-inspector").text_content()
+    assert await page.locator(
+        ".item-card[data-section='vocabulary'][data-index='0']"
+    ).evaluate("element => element.classList.contains('selected')")
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_learning_cards_support_tab_enter_and_space_selection(
+    browser_instance: Browser, live_server_url: str
+):
+    page = await browser_instance.new_page()
+    await _mock_learning_routes(page)
+    await page.goto(f"{live_server_url}/step3?project_id={PROJECT_ID}")
+    await page.wait_for_selector("#content-wrap:not([hidden])")
+
+    card_semantics = await page.locator(".item-card").evaluate_all(
+        "cards => cards.map(card => [card.getAttribute('role'), card.getAttribute('tabindex')])"
+    )
+    assert card_semantics == [["button", "0"]] * 5
+
+    # The last editable field in item 0 is immediately before item 1 in keyboard order.
+    await page.locator(
+        ".item-card[data-section='vocabulary'][data-index='0'] .example-sentence .field"
+    ).focus()
+    await page.keyboard.press("Tab")
+    assert await page.evaluate(
+        "document.activeElement.matches(\".item-card[data-section='vocabulary'][data-index='1']\")"
+    )
+    await page.keyboard.press("Enter")
+    assert "deliberate" in await page.locator("#learning-inspector").text_content()
+
+    # Tabbing forward from the last tab control reaches the first card.
+    await page.locator("[data-tab='quiz']").focus()
+    await page.keyboard.press("Tab")
+    assert await page.evaluate(
+        "document.activeElement.matches(\".item-card[data-section='vocabulary'][data-index='0']\")"
+    )
+    await page.evaluate(
+        """() => {
+          window.__learningSpacePrevented = false;
+          document.addEventListener("keydown", (event) => {
+            if (event.key === " ") window.__learningSpacePrevented = event.defaultPrevented;
+          }, { once: true });
+        }"""
+    )
+    await page.keyboard.press("Space")
+    assert "thorough" in await page.locator("#learning-inspector").text_content()
+    assert await page.evaluate("window.__learningSpacePrevented") is True
     await page.close()
 
 

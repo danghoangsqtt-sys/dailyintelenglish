@@ -126,6 +126,19 @@ Versioning: [SemVer](https://semver.org/)
   resizers' existing keyboard support — fixed once, applies to every page with a
   timeline. New/extended browser tests use real measured bounding-box widths rather
   than checking for a style attribute's presence.
+- Phase 5 Task 5.3, Small polish batch (2026-09-17, implemented by Codex, accepted by
+  Claude Code as PM per AR-06 — the final Phase 5 task): Learning's vocabulary/idiom/
+  grammar/quiz cards are now keyboard-accessible (`role="button"`, `tabindex="0"`,
+  `Enter`/`Space` activation isolated from nested inline-edit controls) instead of
+  click-only. Learning's inspector now defaults to the active tab's first item
+  whenever nothing is selected — on first load, first generate, and after switching
+  tabs — rather than starting empty, while never overriding a real existing
+  selection. Video's "Speaker avatars (optional)" section (a disclosed, not-yet-
+  functional preview of a future feature) now collapses by default using a native
+  `<details>`/`<summary>` element, reusing the same pattern already used for Script's
+  language notes — no custom JS toggle needed. New/extended browser tests include a
+  real keyboard walkthrough and a direct assertion that `Space`'s page-scroll default
+  is actually prevented.
 
 ### Fixed
 - Found via a Codex read-only UI audit (2026-09-16), independently confirmed by PM:

@@ -357,6 +357,14 @@ async def test_avatar_upload_shows_preview_then_remove_reverts_to_placeholder(
     await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
     await page.wait_for_selector("#workspace:not([hidden])")
 
+    avatar_details = page.locator("#avatar-details")
+    assert await avatar_details.evaluate("element => element.open") is False
+    assert await page.locator("#avatar-grid").is_hidden()
+    await avatar_details.locator("summary").focus()
+    await page.keyboard.press("Enter")
+    assert await avatar_details.evaluate("element => element.open") is True
+    assert await page.locator("#avatar-grid").is_visible()
+
     assert await page.locator(".avatar-placeholder").count() == 1
     assert await page.locator(".avatar-preview").count() == 0
 

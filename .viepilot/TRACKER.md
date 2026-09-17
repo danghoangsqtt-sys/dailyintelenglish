@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 started (new, UI polish backlog)  
+**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done (new, UI polish backlog)  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, new scope beyond the original 21-day plan)  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17, new scope beyond the original 21-day plan)  
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
@@ -45,10 +45,11 @@ decision at the first real planning question (loanword-handling style for terms 
 Video/Thumbnail/Podcast) rather than answered — no task card written, no code
 touched. **Phase 4 formally closed 2026-09-16** at 3 pursued tasks (4.1/4.2/4.4), all
 done. See `docs/brainstorm/session-2026-09-15.md`. **Phase 5** (new, scoped in
-`docs/brainstorm/session-2026-09-16.md` right after Phase 4 closed) addresses the
-real, still-current P1/P2 findings from the 2026-09-16 Codex UI audit — 3 tasks: 5.1
-Dashboard pagination and 5.2 timeline polish both done 2026-09-17 (by Codex, accepted
-by PM), 5.3 small polish batch not started.*
+`docs/brainstorm/session-2026-09-16.md` right after Phase 4 closed) addressed the
+real, still-current P1/P2 findings from the 2026-09-16 Codex UI audit — 3 tasks, all
+done 2026-09-17 by Codex, accepted by PM per AR-06 with zero real defects found
+across any review: 5.1 Dashboard pagination, 5.2 timeline polish, 5.3 small polish
+batch. **Phase 5 formally closed 2026-09-17.***
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -56,7 +57,7 @@ by PM), 5.3 small polish batch not started.*
 | Phase 2 — Testing | ✅ Complete (buildable scope) | 22 | 24 |
 | Phase 3 — Review | ✅ Complete | 11 | 11 |
 | Phase 4 — Post-Beta Polish (new) | ✅ Complete (Task 4.3 dropped) | 3 | 3 |
-| Phase 5 — UI Polish Backlog (new) | 🔄 In Progress | 2 | 3 |
+| Phase 5 — UI Polish Backlog (new) | ✅ Complete | 3 | 3 |
 
 ## Phase 1 Task Status
 
@@ -690,23 +691,46 @@ full diff, and confirmed via `git diff --exit-code` that `step2_script.js` and
 Gemini-retry timing flake on PM's independent run, confirmed passing in isolation).
 See `tasks/task-5.2.md` for the full record.
 
-### 5.3 Small polish batch — 🔄 IN PROGRESS (2026-09-17)
+### 5.3 Small polish batch — ✅ DONE (2026-09-17)
 
 Three independent, low-risk fixes bundled per the brainstorm session's decision
 (mirrors Task 2.3's and Task 4.4's precedent of bundling related small items): (1)
 Learning's item cards gain `role="button"`/`tabindex="0"` plus a `keydown` handler
 for `Enter`/`Space` — they stay `<div>`s, not real `<button>`s, since they contain
 other interactive inline-edit children (`commitField()`'s `.field` elements), which
-cannot legally nest inside a native button per HTML content-model rules. (2)
-Learning's inspector auto-selects the first item of the active tab whenever nothing
-is selected (first load, first generate, or after `switchTab()`'s existing
-clear-on-switch), without ever overriding an existing user selection. (3) Video's
-"Speaker avatars (optional)" section (the already-honestly-disclosed, not-yet-
-functional LivePortrait feature) moves into a native `<details>`/`<summary>`,
-collapsed by default — reusing the exact pattern already established for Script's
-per-line language notes (`step2_script.js:134-141`), no custom JS collapse widget
-needed. Handed to Codex as Implementer per AR-06. See `tasks/task-5.3.md` for the
-full plan.
+cannot legally nest inside a native button per HTML content-model rules. A strict
+`event.target === card` guard isolates the new handler from those nested elements'
+own keyboard handling. (2) Learning's inspector auto-selects the first item of the
+active tab whenever nothing is selected (first load, first generate, or after
+`switchTab()`'s existing clear-on-switch), via a single well-guarded
+`selectFirstActiveItem()` helper reused by both `render()` and `switchTab()` — never
+overriding an existing user selection, including the specific edge case of
+re-activating the tab that already owns the current selection. (3) Video's "Speaker
+avatars (optional)" section (the already-honestly-disclosed, not-yet-functional
+LivePortrait feature) moves into a native `<details>`/`<summary>`, collapsed by
+default — reusing the exact pattern already established for Script's per-line
+language notes (`step2_script.js:134-141`), no custom JS collapse widget needed.
+Implemented by Codex, accepted by PM per AR-06. Mid-implementation, Codex correctly
+stopped and reported per AR-06 rather than silently patching out of scope: a
+pre-existing test in `tests/test_video_shell_browser.py` (from Task 4.2c, not in this
+task's locked file list) broke because it waited for `.avatar-preview` to become
+visible while now hidden inside the collapsed `<details>` — PM authorized a narrow
+one-line fix (open the details before the existing flow), no assertion changed. 3
+new/renamed Playwright tests, including a real keyboard walkthrough (natural Tab
+order from an inline-edit field into the next card and from the last tab button into
+the first card, Enter selecting a card, and an actual `event.defaultPrevented`
+capture proving Space's `preventDefault()` really fired) and a direct
+`element.open`/`#avatar-grid` visibility assertion for the collapse behavior itself
+(added to the pre-existing avatar upload/remove test, not just a new file). **Zero
+real defects found on PM review** — PM independently re-ran every verification
+command, read the full diff for all 5 touched files, and confirmed `style.css` was
+genuinely untouched. 571/571 full suite passes, 0 flakes — a fully clean run. See
+`tasks/task-5.3.md` for the full record.
+
+**This closes Task 5.3 — and Phase 5 (UI Polish Backlog) in full.** All 3 tasks done
+(5.1 Dashboard pagination, 5.2 Timeline polish, 5.3 Small polish batch), all
+implemented by Codex and accepted by PM per AR-06 with zero real defects found across
+any of the 3 reviews.
 
 ## Decision Log
 
@@ -1334,6 +1358,32 @@ full plan.
   non-regressive since Task 5.2 touched zero backend code. **Zero real defects
   found.** This closes Task 5.2; Phase 5 now at 2/3 tasks done, continuing with Task
   5.3 (small polish batch) next. | User; PM (Claude Code); Codex (Implementer) |
+| 2026-09-17 | Codex delivered Task 5.3, the final Phase 5 task. Mid-implementation,
+  Codex correctly stopped and reported per AR-06 rather than silently patching out of
+  scope: a pre-existing test in `test_video_shell_browser.py` (from Task 4.2c, not in
+  this task's locked file list) broke because it waited for `.avatar-preview` to
+  become visible while now hidden inside the newly-collapsed `<details>` — PM
+  independently confirmed the diagnosis (`.avatar-preview` genuinely lives inside
+  `#avatar-grid`, inside the now-collapsed section) before authorizing a narrow
+  one-line fix (open the details before the existing flow continues), no assertion
+  changed. PM then independently re-verified the full delivery rather than accepting
+  the report on its word: read the full diff for all 5 touched files, traced the
+  `selectFirstActiveItem()`/`render()`/`switchTab()` refactor by hand through every
+  case (different-tab switch, same-tab reactivation, empty section) and confirmed
+  each behaves correctly, confirmed the `event.target === card` keydown guard
+  correctly isolates the new handler from nested interactive children, and confirmed
+  `style.css` was genuinely untouched. Reviewed the new/renamed tests and found them
+  unusually rigorous — a real keyboard walkthrough tracing natural Tab order through
+  the DOM, and an actual `event.defaultPrevented` capture proving Space's
+  `preventDefault()` really fired rather than just inferring it from the visible
+  outcome. Re-ran every verification command independently (20/20 targeted, 29/29
+  regression, ruff/node/git-diff-check clean) and reviewed the verification
+  screenshot. Full suite run independently: 571 passed, 0 failed, 324.96s — a fully
+  clean run with zero flakes, faster than the Implementer's own 1217.99s run (which
+  hit the known Gemini-retry flake twice, both confirmed passing in isolation).
+  **Zero real defects found.** This closes Task 5.3 and Phase 5 in full — all 3 tasks
+  done (5.1/5.2/5.3), all delegated to Codex per AR-06, zero real defects found on any
+  of the 3 PM reviews. | User; PM (Claude Code); Codex (Implementer) |
 
 ## Known Issues
 

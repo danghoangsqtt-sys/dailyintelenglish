@@ -389,6 +389,7 @@ async def test_avatar_and_generate_flows_remain_wired(
     await _mock_video_routes(page, event_log=event_log)
     await page.goto(f"{live_server_url}/step5?project_id={PROJECT_ID}")
     await page.wait_for_selector("#workspace:not([hidden])")
+    await page.locator("#avatar-details summary").click()
 
     fixture = tmp_path / "avatar.png"
     fixture.write_bytes(b"\x89PNG\r\n\x1a\nfake-png-bytes")
