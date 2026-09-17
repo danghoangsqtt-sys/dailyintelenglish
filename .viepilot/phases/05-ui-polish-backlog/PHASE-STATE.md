@@ -40,10 +40,17 @@
   independent run, all confirmed passing instantly in isolation — non-regressive,
   Task 5.1 touched zero backend code). See `tasks/task-5.1.md` for the full record.
 
-### Task 5.2: Timeline polish (proportional width + keyboard resizer) — not started
-- Timeline clip width made proportional to real clip duration (Script/TTS/Video); the
-  shared shell's horizontal timeline resizer gets a keydown handler (currently only
-  the vertical resizers do).
+### Task 5.2: Timeline polish (proportional width + keyboard resizer) — 🔄 IN PROGRESS
+- **Status:** in_progress (2026-09-17)
+- PM's research corrected the original audit's scope: Script's timeline has **no**
+  timing data at all (never will, at that stage of the pipeline) and is explicitly
+  excluded from the width change — only Video (already has real per-line timing via
+  `timingForLine()`) and TTS (already calls `Api.getAudioStatus()`, just doesn't store
+  the result — a small state addition, not a new API call) get proportional clip
+  width. The shared shell's horizontal timeline resizer (`shell.js`) gets a keydown
+  handler mirroring the existing vertical-resizer pattern — fixes keyboard access on
+  all 3 timeline pages at once since they share the same component. Handed to Codex
+  as Implementer per AR-06. See `tasks/task-5.2.md` for the full plan.
 
 ### Task 5.3: Small polish batch — not started
 - Learning card semantic role/`tabindex`; Learning inspector defaults to the first

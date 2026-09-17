@@ -655,12 +655,22 @@ markedly slower than baseline), all confirmed passing instantly in isolation tog
 — non-regressive, Task 5.1 touched zero backend code. See `tasks/task-5.1.md` for the
 full record.
 
-### 5.2 Timeline polish (proportional width + keyboard resizer) — not started
+### 5.2 Timeline polish (proportional width + keyboard resizer) — 🔄 IN PROGRESS (2026-09-17)
 
-Timeline clip width made proportional to real clip duration (Script/TTS/Video); the
-shared shell's horizontal timeline resizer (`#resizer-top`) gets a keydown handler
-(currently only the vertical sidebar/inspector resizers in `shell.js` handle keyboard
-input).
+PM's research before writing the task card corrected the original audit's scope:
+Script's timeline has no timing data at any point in the pipeline (audio doesn't
+exist yet when Script is on-screen) and is genuinely out of scope for proportional
+width — forcing a fake/estimated duration there would violate the project's "no fake
+features" precedent. Only Video (already computes real per-line timing via
+`timingForLine()`, just never applies it to width) and TTS (already calls
+`Api.getAudioStatus()` in `init()`, the fetched job just isn't stored to `state` —
+a small state addition, not a new API call) get proportional clip width, only once
+real timing exists; clips without timing keep today's auto-width behavior, never a
+guessed duration. The shared shell's horizontal timeline resizer (`shell.js`'s
+`makeHorizontalResizer()`) gets a keydown handler mirroring the existing
+vertical-resizer pattern exactly — fixes keyboard access on all 3 timeline pages
+(Script/TTS/Video) at once since they share the same component. Handed to Codex as
+Implementer per AR-06. See `tasks/task-5.2.md` for the full plan.
 
 ### 5.3 Small polish batch — not started
 
