@@ -113,6 +113,46 @@ and verify as one batch but each individually simple to reason about.
   `tests/test_video_shell_browser.py`).
 - This task card, for plan/evidence updates.
 
+## PM Plan Review (2026-09-17) — APPROVED
+
+Codex presented its pre-code plan per AR-06's 3-step process. Plan matches every
+required decision in this task card, with two well-reasoned refinements PM verified
+before accepting.
+
+**Refinement 1 — event-target guard on the new keydown handler**: the plan gates the
+new Enter/Space handler on `event.target === card` (not just `.closest(".item-card")`
+like the existing click handler), specifically to avoid hijacking Enter/Space already
+handled by nested interactive children — the inline-edit `.field`s' own
+`handleContentKeydown` and the real `<button>` "Show Answer" toggle. Correct and
+necessary: without this guard, pressing Enter while editing a field or pressing Space
+on the toggle button would incorrectly also trigger card selection.
+
+**Refinement 2 — did not reuse `.notes-details` for the avatar section**: PM
+independently checked `frontend/static/css/style.css:175-178` and confirmed Codex's
+reasoning is accurate — `.notes-details` is styled at `font-size: 13px` with a muted
+`summary` color, clearly designed for small inline per-line content (Script's
+language notes), not a page-level section heading. Keeping `.section-title` on the
+`<summary>` with new minimal page-local CSS in `step5_video.html` is the right call,
+not corner-cutting.
+
+**Test file choice confirmed reasonable**: extending `tests/test_video_studio_
+browser.py` (which already owns the real avatar upload/preview/remove flow tests)
+rather than `test_video_shell_browser.py` makes sense — those existing tests need to
+open the now-collapsed `<details>` before continuing their existing interactions, so
+the natural home for that fix is alongside the tests it fixes forward-compatibility
+for. Explicitly disclosed which old assertions need updating (previously-open avatar
+controls, previously-empty inspector) rather than silently changing them.
+
+**Allowed files — confirmed/locked, exactly as Codex named them**:
+- `frontend/static/js/step3_learning.js`
+- `frontend/pages/step5_video.html`
+- `tests/test_learning_shell_browser.py`
+- `tests/test_video_studio_browser.py`
+- This task card, for evidence only (Status field remains PM-only)
+
+**Plan approved as presented. No changes requested.** Codex may proceed to
+implementation.
+
 ## Verification checklist
 - [ ] A Learning card can be reached via `Tab` and activated via `Enter` and via
   `Space`, updating the inspector each time — a real keyboard-driven test, not just
