@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done (new, UI polish backlog)  
+**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 started (new, quick wins batch)  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17, new scope beyond the original 21-day plan)  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened 2026-09-17, new scope beyond the original 21-day plan)  
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
@@ -49,7 +49,14 @@ done. See `docs/brainstorm/session-2026-09-15.md`. **Phase 5** (new, scoped in
 real, still-current P1/P2 findings from the 2026-09-16 Codex UI audit — 3 tasks, all
 done 2026-09-17 by Codex, accepted by PM per AR-06 with zero real defects found
 across any review: 5.1 Dashboard pagination, 5.2 timeline polish, 5.3 small polish
-batch. **Phase 5 formally closed 2026-09-17.***
+batch. **Phase 5 formally closed 2026-09-17.** **Phase 6** (new, scoped in
+`docs/brainstorm/session-2026-09-17.md` right after Phase 5 closed) addresses 3 real,
+independently-verified findings from a user-commissioned deep-dive Gemini audit —
+theme flash on 4 pages, a dead-end "Missing project" error with no link back to the
+Dashboard, and default (non-accent-colored) TTS range sliders. A 4th audit claim
+(YouTube chapters always estimated) was traced and found to be a **false positive**
+— the real-measurement code path already exists and works — so it's explicitly
+excluded. In progress.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -58,6 +65,7 @@ batch. **Phase 5 formally closed 2026-09-17.***
 | Phase 3 — Review | ✅ Complete | 11 | 11 |
 | Phase 4 — Post-Beta Polish (new) | ✅ Complete (Task 4.3 dropped) | 3 | 3 |
 | Phase 5 — UI Polish Backlog (new) | ✅ Complete | 3 | 3 |
+| Phase 6 — Quick Wins Batch (new) | 🔄 In Progress | 0 | 1 |
 
 ## Phase 1 Task Status
 
@@ -732,6 +740,32 @@ genuinely untouched. 571/571 full suite passes, 0 flakes — a fully clean run. 
 implemented by Codex and accepted by PM per AR-06 with zero real defects found across
 any of the 3 reviews.
 
+## Phase 6 Task Status
+
+### 6.1 Theme flash + dead-end error link + range slider styling — 🔄 IN PROGRESS (2026-09-17)
+
+Three real, PM-verified findings from a user-commissioned deep-dive Gemini audit
+(`C:\Users\Admin\Documents\audit_chuyensau_dailyintelenglish`), bundled per the
+precedent set by Task 2.3/4.4/5.3: (1) 4 pages (`music_library`, `step1_config`,
+`step6_thumbnail`, `step7_youtube`) hardcode `<html data-theme="dark">`, causing a
+real dark→light flash for any user without a stored preference, since `theme.js`'s
+already-correct light-default logic only runs on `DOMContentLoaded`, after the
+browser already painted the hardcoded state — fix removes the hardcoded attribute,
+no JS change. (2) All 6 pipeline pages' (step2-7) "Missing project" error state is
+plain text with no way back to the Dashboard — fix adds a narrowly-scoped
+`showMissingProjectError()`-style function per page rendering a real link, without
+touching the existing `showError()` contract for any other message (every other call
+site passes only static strings, confirmed via grep, so this is the one safe place to
+use `innerHTML`). (3) TTS's speed/pitch/volume range sliders have zero color styling
+and render each browser's own default — fix is CSS-only (`accent-color`), no new JS
+state. **A 4th audit claim was independently traced and found to be a false
+positive, not included**: "YouTube chapters always use an estimated timestamp" —
+`youtube_service.py::generate_package()` already branches correctly and uses real
+measured `start_sec` values whenever a completed audio job exists
+(`real_chapters_from_timestamps()`, wired up via `app/api/youtube.py`); only a stale
+docstring comment inside the fallback function is out of date, not a functional bug.
+Handed to Codex as Implementer per AR-06. See `tasks/task-6.1.md` for the full plan.
+
 ## Decision Log
 
 | Date | Decision | Rationale |
@@ -1384,6 +1418,31 @@ any of the 3 reviews.
   **Zero real defects found.** This closes Task 5.3 and Phase 5 in full — all 3 tasks
   done (5.1/5.2/5.3), all delegated to Codex per AR-06, zero real defects found on any
   of the 3 PM reviews. | User; PM (Claude Code); Codex (Implementer) |
+| 2026-09-17 | User separately commissioned an independent deep-dive UI/architecture
+  audit from Gemini (`C:\Users\Admin\Documents\audit_chuyensau_dailyintelenglish`),
+  covering 8 findings beyond the original Codex audit's scope. PM read the full
+  report and independently verified 4 of the most concrete claims against the actual
+  source before presenting anything — 3 confirmed real (theme flash on 4 pages via
+  hardcoded `data-theme="dark"` racing `theme.js`'s correct-but-late light default; a
+  dead-end plain-text "Missing project" error on 6 pages with no link back to the
+  Dashboard; TTS range sliders with zero accent-color styling), and 1 confirmed a
+  **false positive**: the report claimed YouTube chapters always use a fixed-WPM
+  estimate, but tracing `youtube_service.py::generate_package()` and
+  `app/api/youtube.py` showed the real-measurement path (`real_chapters_from_
+  timestamps()`) already exists and is already correctly wired up whenever a
+  completed audio job exists — only a stale docstring comment inside the fallback
+  function is out of date, not a functional gap. This is a concrete example of the
+  project's "trust but verify" discipline catching a plausible-sounding but
+  ultimately incorrect audit finding before any work was scoped around it. User chose
+  to proceed with Phase 6, addressing the 3 verified real findings bundled into one
+  task per the Task 2.3/4.4/5.3 precedent; the 4 remaining unverified findings (DB
+  connection lock, unused rate-limiter constant, forward-only status machine, CSS
+  fragmentation) were not scoped in, consistent with this project's standing
+  preference to defer large architectural changes for a solo local-use app (same
+  reasoning as Progress cancellation/LivePortrait). PM scaffolded Phase 6 directly
+  (`.viepilot/phases/06-quick-wins-batch/`) and wrote the doc-first task card for
+  Task 6.1, handed to Codex per AR-06. See `docs/brainstorm/session-2026-09-17.md`
+  and `tasks/task-6.1.md`. | User; PM (Claude Code) |
 
 ## Known Issues
 

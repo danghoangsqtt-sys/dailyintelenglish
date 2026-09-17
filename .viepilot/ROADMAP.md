@@ -672,3 +672,31 @@ defects found across any of the 3 PM reviews.
 Task order: 5.1 (highest measured value) → 5.2 → 5.3, per the risk/value review in
 `docs/brainstorm/session-2026-09-16.md`. Continuing to delegate to Codex as
 Implementer per AR-06, same pattern as Phase 4.
+
+---
+
+## Phase 6 — Quick Wins Batch
+
+**Status:** 🔄 In Progress | **Started:** 2026-09-17
+
+New phase, scoped in `docs/brainstorm/session-2026-09-17.md` after Phase 5 closed and
+a user-commissioned deep-dive Gemini audit
+(`C:\Users\Admin\Documents\audit_chuyensau_dailyintelenglish`) surfaced 8 findings
+beyond the original Codex audit. PM independently verified 4 of them before scoping —
+3 real, bundled here; 1 (YouTube chapters "always estimated") confirmed a **false
+positive** and explicitly excluded (the real-measurement code path already exists and
+is already correctly wired up). Deeper architectural findings from the same audit
+(single-connection DB lock, unused rate-limiter constant, forward-only status
+machine, inline CSS fragmentation) remain deferred, consistent with this project's
+Progress-cancellation/LivePortrait precedent.
+
+### 6.1 Theme flash + dead-end error link + range slider styling — 🔄 IN PROGRESS
+
+- [ ] Remove hardcoded `data-theme="dark"` from 4 pages (`music_library`,
+  `step1_config`, `step6_thumbnail`, `step7_youtube`) — `theme.js` already applies
+  the correct default, this just stops the pre-JS flash.
+- [ ] Add a real "Go to Dashboard" link to the "Missing project" error state on all 6
+  pipeline pages (step2-7) — currently plain text with no way back.
+- [ ] Style the TTS speed/pitch/volume range sliders with the app's accent color
+  instead of each browser's default appearance.
+  See `.viepilot/phases/06-quick-wins-batch/tasks/task-6.1.md` for the full plan.
