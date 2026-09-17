@@ -690,11 +690,23 @@ full diff, and confirmed via `git diff --exit-code` that `step2_script.js` and
 Gemini-retry timing flake on PM's independent run, confirmed passing in isolation).
 See `tasks/task-5.2.md` for the full record.
 
-### 5.3 Small polish batch — not started
+### 5.3 Small polish batch — 🔄 IN PROGRESS (2026-09-17)
 
-Learning's card click targets get a semantic role/`tabindex`; Learning's inspector
-defaults to the first item instead of starting empty; Video's avatar section
-(not-yet-functional LivePortrait feature) gets collapsed/hidden by default.
+Three independent, low-risk fixes bundled per the brainstorm session's decision
+(mirrors Task 2.3's and Task 4.4's precedent of bundling related small items): (1)
+Learning's item cards gain `role="button"`/`tabindex="0"` plus a `keydown` handler
+for `Enter`/`Space` — they stay `<div>`s, not real `<button>`s, since they contain
+other interactive inline-edit children (`commitField()`'s `.field` elements), which
+cannot legally nest inside a native button per HTML content-model rules. (2)
+Learning's inspector auto-selects the first item of the active tab whenever nothing
+is selected (first load, first generate, or after `switchTab()`'s existing
+clear-on-switch), without ever overriding an existing user selection. (3) Video's
+"Speaker avatars (optional)" section (the already-honestly-disclosed, not-yet-
+functional LivePortrait feature) moves into a native `<details>`/`<summary>`,
+collapsed by default — reusing the exact pattern already established for Script's
+per-line language notes (`step2_script.js:134-141`), no custom JS collapse widget
+needed. Handed to Codex as Implementer per AR-06. See `tasks/task-5.3.md` for the
+full plan.
 
 ## Decision Log
 

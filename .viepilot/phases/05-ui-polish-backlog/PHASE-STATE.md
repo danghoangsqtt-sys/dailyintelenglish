@@ -65,7 +65,17 @@
   `style.css` were genuinely untouched. 569/569 full suite passes. See
   `tasks/task-5.2.md` for the full record.
 
-### Task 5.3: Small polish batch — not started
-- Learning card semantic role/`tabindex`; Learning inspector defaults to the first
-  item; Video's avatar section (not-yet-functional LivePortrait feature) collapsed by
-  default.
+### Task 5.3: Small polish batch — 🔄 IN PROGRESS
+- **Status:** in_progress (2026-09-17)
+- Three independent, low-risk fixes, bundled per the brainstorm session's decision:
+  (1) Learning's item cards gain `role="button"`/`tabindex="0"` + a keydown handler
+  for `Enter`/`Space`, so a keyboard-only user can select them — they stay `<div>`s
+  (not real `<button>`s) since they contain other interactive inline-edit children,
+  which cannot legally nest inside a native button. (2) Learning's inspector
+  auto-selects the first item of the active tab whenever nothing is selected (first
+  load, first generate, or after switching tabs) — never overriding an existing
+  selection. (3) Video's "Speaker avatars (optional)" section (not-yet-functional
+  LivePortrait feature) moves into a native `<details>`/`<summary>`, collapsed by
+  default, reusing the exact pattern already established for Script's language notes
+  — no custom JS collapse widget needed. Handed to Codex as Implementer per AR-06.
+  See `tasks/task-5.3.md` for the full plan.

@@ -650,12 +650,17 @@ Addresses the real, still-current P1/P2 findings from the 2026-09-16 Codex UI au
   PM per AR-06 with zero real defects found. 569/569 full suite passes. See
   `.viepilot/phases/05-ui-polish-backlog/tasks/task-5.2.md` for the full record.
 
-### 5.3 Small polish batch — not started
+### 5.3 Small polish batch — 🔄 IN PROGRESS (2026-09-17)
 
-- [ ] Learning's card click targets get a semantic role/`tabindex` for keyboard users.
-- [ ] Learning's inspector defaults to the first item instead of starting empty.
-- [ ] Video's avatar section (not-yet-functional LivePortrait feature) gets
-  collapsed/hidden by default instead of always showing.
+- [ ] Learning's card click targets get a semantic role/`tabindex` for keyboard users
+  (stay `<div>`s with `role="button"`, not real `<button>`s, since they contain other
+  interactive inline-edit children).
+- [ ] Learning's inspector defaults to the first item of the active tab instead of
+  starting empty — never overriding an existing selection.
+- [ ] Video's avatar section (not-yet-functional LivePortrait feature) moves into a
+  native `<details>`/`<summary>`, collapsed by default — reusing the same pattern
+  already used for Script's language notes.
+  See `.viepilot/phases/05-ui-polish-backlog/tasks/task-5.3.md` for the full plan.
 
 Task order: 5.1 (highest measured value) → 5.2 → 5.3, per the risk/value review in
 `docs/brainstorm/session-2026-09-16.md`. Continuing to delegate to Codex as
