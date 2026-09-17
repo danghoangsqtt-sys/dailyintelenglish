@@ -153,6 +153,23 @@ controls, previously-empty inspector) rather than silently changing them.
 **Plan approved as presented. No changes requested.** Codex may proceed to
 implementation.
 
+## PM Scope Extension (2026-09-17) — `tests/test_video_shell_browser.py` authorized
+
+Mid-implementation, Codex correctly stopped and reported rather than silently
+patching a file outside `allowed_files`: the pre-existing
+`test_avatar_and_generate_flows_remain_wired` test in
+`tests/test_video_shell_browser.py` (from Task 4.2c, not originally in this task's
+locked file list) uploads an avatar and waits for `.avatar-preview` to become
+*visible* — now failing because that element lives inside the newly-collapsed
+`#avatar-details` and stays hidden until expanded. This is a real, correctly-diagnosed
+consequence of Task 5.3's own intentional behavior change, not an unrelated issue.
+
+**Authorized**: a minimal, narrow fix to `tests/test_video_shell_browser.py` —
+open `#avatar-details` right after the workspace loads, before the existing
+upload/remove flow continues. No assertion, production logic, or scope beyond that
+one narrow fix is authorized. `tests/test_video_shell_browser.py` is added to
+`allowed_files` for this specific change only.
+
 ## Verification checklist
 - [ ] A Learning card can be reached via `Tab` and activated via `Enter` and via
   `Space`, updating the inspector each time — a real keyboard-driven test, not just
