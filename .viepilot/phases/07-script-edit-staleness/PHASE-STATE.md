@@ -23,6 +23,10 @@
 
 ## Tasks Status & Acceptance Evidence
 
-### Task 7.1: Downgrade project status + surface staleness signal on script edit — planned
-- **Status:** planned
-- See `tasks/task-7.1.md` for the doc-first plan.
+### Task 7.1: Downgrade project status + surface staleness signal on script edit — in progress
+- **Status:** in_progress
+- Codex presented its pre-code plan per AR-06; PM approved 2026-09-17 (with one
+  correction: the public route is `PUT /{project_id}`, not `PATCH`, caught by Codex
+  during plan review) and one approved addition (the manual script-save route
+  `PUT /{project_id}/script` shares the same bug and is now in scope). See
+  `tasks/task-7.1.md` for the full plan and PM Plan Review.

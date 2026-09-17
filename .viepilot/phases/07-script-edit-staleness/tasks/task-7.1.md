@@ -120,9 +120,11 @@ longer guaranteed to match.
   or `complete` downgrades status to `script_generated`.
 - [ ] No audio/video files, job records, or other project data are deleted or mutated
   by this change — downgrade is status-field-only.
-- [ ] The public `PATCH /{project_id}` endpoint still rejects an arbitrary
-  caller-supplied backward status transition (e.g. `complete -> draft` via direct
-  PATCH) — the existing forward-only guarantee for user-facing input is unchanged.
+- [ ] The public `PUT /{project_id}` endpoint (correction from PM's original
+  `PATCH /{project_id}` — the real route is `PUT`, caught by Codex during plan review;
+  `PATCH` only exists for nested speaker/thumbnail resources) still rejects an
+  arbitrary caller-supplied backward status transition (e.g. `complete -> draft`) —
+  the existing forward-only guarantee for user-facing input is unchanged.
 - [ ] Full suite passes with 0 unexpected failures — the known Gemini-retry flake
   class is the only acceptable non-deterministic failure, and only if it reproduces as
   a pass in isolation.
@@ -130,4 +132,129 @@ longer guaranteed to match.
 
 ## PM Plan Review
 
-(Pending — Codex to present pre-code plan per AR-06 before any implementation.)
+### Implementer Pre-Code Plan (Awaiting PM Confirmation)
+
+**Target behavior**
+
+- Add a dedicated internal service operation with no caller-supplied target status
+  (proposed name: `mark_script_changed`). It will read the project's current status
+  inside the existing connection-wide write transaction and apply only these rules:
+  `draft -> script_generated`, `script_generated -> script_generated` (no-op), and
+  `audio_generated|video_generated|complete -> script_generated`.
+- The internal operation will issue a narrow `projects` update for `status` and
+  `updated_at` only. It will not call artifact cleanup, delete or overwrite files, or
+  update audio/video job rows.
+- Leave `_validate_status_transition` and `update_project` unchanged. Therefore the
+  public project-update endpoint continues to enforce the existing forward-only,
+  exactly-one-step transition rule. The internal operation cannot be repurposed for an
+  arbitrary downgrade because it accepts no requested status value.
+- Replace/rename `_advance_to_script_generated` with a helper whose name reflects both
+  advance and downgrade behavior, and call it in the same `_write_transaction` as the
+  successful script persistence. Full generation and manual script save already share
+  `_save_script_and_advance`; line regeneration will call the same status helper after
+  `update_script_line`, before that transaction commits. Reading current status in the
+  write transaction avoids acting on the pre-Gemini snapshot if another request changed
+  status while the network call was in flight.
+
+**Allowed files to modify**
+
+- `app/services/project_service.py`
+- `app/api/projects.py`
+- `tests/test_project_service.py`
+- `tests/test_script_api.py`
+- `tests/test_projects_api.py`
+- `.viepilot/phases/07-script-edit-staleness/tasks/task-7.1.md` (plan/evidence only;
+  do not change `Status`)
+
+**Test coverage**
+
+1. Preserve the existing draft behavior: generating/saving a script still advances
+   `draft -> script_generated`; the internal service operation is also covered for this
+   forward case and for the `script_generated` idempotent case.
+2. Parameterize the downstream states `audio_generated`, `video_generated`, and
+   `complete`; after a successful full generation, per-line regeneration, or manual
+   script save, assert the project status is `script_generated`. Assert the change is
+   status-only: sentinel downstream job data and on-disk artifact files remain present
+   and unchanged.
+3. Preserve the public boundary: advance a project to `complete` through legal public
+   steps, then assert a client-supplied `complete -> draft` project update still returns
+   422. The task text says `PATCH /{project_id}`, but the actual route in
+   `app/api/projects.py` and `ARCHITECTURE.md` is `PUT /api/projects/{project_id}`;
+   `PATCH` exists only for nested speaker/thumbnail resources. The regression test will
+   target the real `PUT` endpoint; no new project-level PATCH route will be invented.
+4. Keep/adjust the existing transaction rollback regression so a failure in the new
+   internal status operation rolls back the script mutation and status change together.
+
+**Known risks and limits**
+
+- The initial project snapshot is intentionally released before the Gemini call. The
+  status helper must therefore re-read current status under `_write_transaction`, not
+  trust that snapshot.
+- This is backend-only. No dashboard or step-page UI change, no schema/API signature
+  change, and no audio/video/job invalidation beyond the project status signal.
+- Gemini remains monkeypatched in API tests; Task 7.1 does not require network,
+  ffmpeg, GPU, or model weights. No special system-dependency preflight is needed.
+
+**Verification commands**
+
+```powershell
+venv\Scripts\python -m pytest tests/test_project_service.py tests/test_projects_api.py tests/test_script_api.py -q
+venv\Scripts\python -m pytest tests/ -q
+venv\Scripts\python -m ruff check app/ tests/
+git diff --check
+git status --short
+```
+
+Implementation is paused pending PM approval per AR-06.
+
+### PM Plan Review (2026-09-17) — APPROVED
+
+Independently re-verified rather than accepting the plan on its word.
+
+**Route correction confirmed real, and correctly caught rather than silently worked
+around**: grepped `app/api/projects.py` for every `@router.` decorator — confirmed
+the project-level update route is genuinely `PUT /{project_id}` (line 129), and the
+only `PATCH` route in this file is the unrelated nested
+`PATCH /{project_id}/speakers/{speaker_id}` (line 140). This task card's original
+"PATCH /{project_id}" wording was a PM error — Codex's correction is accepted; the
+task card's Verification checklist has been fixed to say `PUT` above. Read
+`update_project`'s handler directly (lines 129-137): confirmed it calls
+`project_service.update_project`, which still calls `_validate_status_transition`
+unconditionally — Codex's plan to leave both of those functions untouched correctly
+preserves the public forward-only guarantee.
+
+**Third call site (`PUT /{project_id}/script`, manual script save) — approved
+addition, not scope creep.** PM's own original File-Level Plan only named
+`generate_script`/`regenerate_script_line` explicitly, but independently read
+`save_script`'s handler (lines 246-262): it already routes through the exact same
+`_save_script_and_advance` → `_advance_to_script_generated` path as the two AI-driven
+endpoints, carrying the identical bug. This is arguably the *most* important call site
+to fix, since it's the Step 2 UI's normal autosave path — hit far more often in real
+use than explicit "Generate"/"Regenerate" actions. Squarely within this task's
+Objective ("when a script is generated or a line regenerated... or edited") and both
+files were already in the locked Allowed files list — approved without needing a
+scope amendment.
+
+**Re-reading current status inside the write transaction (not the pre-Gemini
+snapshot)** — a real correctness detail PM had not explicitly required but is the
+right call: `generate_script`/`regenerate_script_line` release the initial project
+read before the (potentially slow) Gemini network call per the existing `# no lock
+held — Gemini call` comments; re-reading status under `_write_transaction` avoids
+acting on stale status if another request changed it during that window. Approved.
+
+**Test plan**: covers exactly the 3 scenarios required (draft no-regression,
+downstream-state downgrade parametrized across all 3 real statuses with an explicit
+assertion that job/artifact data is untouched, and the public-endpoint boundary using
+the real `PUT` route) plus a 4th transaction-rollback regression check beyond what was
+asked — approved.
+
+**Allowed files — confirmed/locked, exactly as Codex named them**:
+- `app/services/project_service.py`
+- `app/api/projects.py`
+- `tests/test_project_service.py`
+- `tests/test_projects_api.py`
+- `tests/test_script_api.py`
+- This task card, for evidence only (`Status` field remains PM-only)
+
+**Plan approved as presented, with the PATCH→PUT correction folded into this task
+card's checklist. No changes requested.** Codex may proceed to implementation.
