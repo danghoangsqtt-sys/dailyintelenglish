@@ -139,8 +139,22 @@ Versioning: [SemVer](https://semver.org/)
   language notes — no custom JS toggle needed. New/extended browser tests include a
   real keyboard walkthrough and a direct assertion that `Space`'s page-scroll default
   is actually prevented.
+- Phase 6 Task 6.1, Quick wins batch (2026-09-17, implemented by Codex, accepted by
+  Claude Code as PM per AR-06): the Music Library, Config, Thumbnail, and YouTube
+  Package pages no longer flash from dark to light on load — they previously
+  hardcoded a dark theme in the page markup itself, which the theme script would
+  briefly paint before correcting to the user's actual (light-by-default)
+  preference. TTS's speed/pitch/volume sliders now use the app's accent color
+  instead of each browser's own default appearance. Found via a user-commissioned
+  independent audit; one additional claim from that audit (YouTube chapters always
+  using an estimated timestamp) was checked and found to already be handled
+  correctly by existing code, so no change was needed there.
 
 ### Fixed
+- Found via a user-commissioned independent audit (2026-09-17), independently
+  confirmed by PM: opening Script, Learning, Audio, Video, Thumbnail, or YouTube
+  Package with a missing or invalid project link showed a dead-end error message
+  with no way to continue. It now includes a real link back to the Dashboard.
 - Found via a Codex read-only UI audit (2026-09-16), independently confirmed by PM:
   Dashboard's "Continue" button silently did nothing for `audio_generated`/
   `video_generated`/`complete` project statuses — only `draft`/`script_generated` had

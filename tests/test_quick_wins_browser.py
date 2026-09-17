@@ -1,0 +1,149 @@
+"""Browser coverage for Task 6.1's theme and missing-project quick wins."""
+
+import re
+import socket
+import threading
+import time
+from typing import AsyncGenerator
+
+import pytest
+import uvicorn
+from playwright.async_api import Browser, Page, async_playwright
+
+from app.main import app
+
+THEME_ROUTES = ("/", "/step1", "/step2", "/step3", "/step4", "/step5", "/step6", "/step7", "/music")
+RAW_THEME_ROUTES = ("/step1", "/step6", "/step7", "/music")
+WORKFLOW_ROUTES = ("/step2", "/step3", "/step4", "/step5", "/step6", "/step7")
+
+
+def _find_free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+        listener.bind(("127.0.0.1", 0))
+        return listener.getsockname()[1]
+
+
+@pytest.fixture(scope="module")
+def live_server_url():
+    port = _find_free_port()
+    server = uvicorn.Server(
+        uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
+    )
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    started_at = time.time()
+    while time.time() - started_at < 10.0:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.5):
+                break
+        except OSError:
+            time.sleep(0.1)
+    else:
+        raise RuntimeError("Live test server failed to start within 10 seconds")
+    yield f"http://127.0.0.1:{port}"
+
+
+@pytest.fixture
+async def browser_instance() -> AsyncGenerator[Browser, None]:
+    async with async_playwright() as playwright:
+        browser = await playwright.chromium.launch(headless=True)
+        yield browser
+        await browser.close()
+
+
+async def _mock_empty_api(page: Page) -> None:
+    async def handle(route):
+        await route.fulfill(
+            status=200,
+            content_type="application/json",
+            body='{"success":true,"data":[],"error":null,"meta":{}}',
+        )
+
+    await page.route("**/api/**", handle)
+
+
+@pytest.mark.asyncio
+async def test_pages_do_not_ship_a_hardcoded_theme(
+    browser_instance: Browser, live_server_url: str
+):
+    page = await browser_instance.new_page()
+    for route in RAW_THEME_ROUTES:
+        response = await page.request.get(f"{live_server_url}{route}")
+        assert response.ok
+        markup = await response.text()
+        opening_html = re.search(r"<html\b[^>]*>", markup, re.IGNORECASE)
+        assert opening_html is not None
+        assert "data-theme" not in opening_html.group(0)
+    await page.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("stored_theme", [None, "dark"])
+async def test_theme_script_applies_default_or_stored_theme_on_every_page(
+    browser_instance: Browser, live_server_url: str, stored_theme: str | None
+):
+    page = await browser_instance.new_page()
+    await _mock_empty_api(page)
+    if stored_theme is None:
+        await page.add_init_script("localStorage.removeItem('die-theme')")
+        expected_theme = "light"
+    else:
+        await page.add_init_script("localStorage.setItem('die-theme', 'dark')")
+        expected_theme = stored_theme
+
+    for route in THEME_ROUTES:
+        await page.goto(f"{live_server_url}{route}", wait_until="domcontentloaded")
+        assert await page.locator("html").get_attribute("data-theme") == expected_theme
+    await page.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("route", WORKFLOW_ROUTES)
+async def test_missing_project_error_has_a_real_dashboard_link(
+    browser_instance: Browser, live_server_url: str, route: str
+):
+    page = await browser_instance.new_page()
+    await page.goto(f"{live_server_url}{route}")
+
+    banner = page.locator("#error-banner")
+    await banner.wait_for(state="visible")
+    assert "Missing project" in (await banner.text_content())
+    link = banner.get_by_role("link", name="Go to Dashboard")
+    assert await link.get_attribute("href") == "/"
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_missing_project_dashboard_link_navigates_home(
+    browser_instance: Browser, live_server_url: str
+):
+    page = await browser_instance.new_page()
+    await page.goto(f"{live_server_url}/step2")
+    await page.locator("#error-banner").get_by_role(
+        "link", name="Go to Dashboard"
+    ).click()
+    await page.wait_for_url(f"{live_server_url}/")
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_regular_error_remains_plain_text_without_a_link(
+    browser_instance: Browser, live_server_url: str
+):
+    page = await browser_instance.new_page()
+
+    async def fail_project_load(route):
+        await route.fulfill(
+            status=500,
+            content_type="application/json",
+            body='{"success":false,"data":null,"error":"failure","meta":{}}',
+        )
+
+    await page.route("**/api/projects/project-with-error", fail_project_load)
+    await page.goto(f"{live_server_url}/step2?project_id=project-with-error")
+
+    banner = page.locator("#error-banner")
+    await banner.wait_for(state="visible")
+    assert "couldn't load this project" in (await banner.text_content())
+    assert await banner.locator("a").count() == 0
+    await page.close()

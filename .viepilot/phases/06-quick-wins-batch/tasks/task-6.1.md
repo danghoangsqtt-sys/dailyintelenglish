@@ -3,7 +3,7 @@
 ## Meta
 - **ID**: 6.1 (first task of Phase 6 — Quick Wins Batch)
 - **Phase**: 6
-- **Status**: in_progress (2026-09-17)
+- **Status**: done (2026-09-17)
 - **Priority**: medium (real, verified, low-risk fixes — bundled per precedent)
 - **Assignee**: Codex (Implementer) — PM (Claude Code) writes/accepts, per the AR-06
   PM-Implementer contract (`docs/CODEX_CODE_PROMPT.md`, `.viepilot/SYSTEM-RULES.md`)
@@ -190,3 +190,192 @@ implementation.
   a pass in isolation.
 - [ ] `ruff check app/ tests/`, `node --check` on touched JS, `git diff --check` — all
   clean, real output pasted.
+
+## Implementer Evidence (Codex, 2026-09-17)
+
+### Implementation summary
+
+- Removed the hardcoded `data-theme="dark"` attribute from the four approved HTML
+  pages. No change was made to `theme.js`.
+- Added one local `showMissingProjectError()` helper to each Step 2–7 script and
+  routed only the missing-`project_id` branch through it. Each helper contains a
+  fixed, non-interpolated Dashboard link; the existing `showError(message)`
+  implementations and all their other call sites remain unchanged.
+- Added `accent-color: var(--accent)` to the existing TTS range-input selector. No
+  slider JavaScript or fill-percentage state was introduced.
+- Added `tests/test_quick_wins_browser.py` with raw-response theme assertions,
+  default/stored-theme coverage across all nine UI routes, missing-project coverage
+  across Step 2–7, real Dashboard navigation, and a normal-error plain-text control.
+- Extended `tests/test_tts_shell_browser.py` with a Chromium computed-style assertion
+  comparing a real TTS slider's `accentColor` with the resolved `--accent` token.
+
+### Targeted and regression browser tests
+
+Command:
+
+```text
+venv\Scripts\python.exe -m pytest tests/test_quick_wins_browser.py tests/test_tts_shell_browser.py -q
+```
+
+Output:
+
+```text
+...................                                                      [100%]
+19 passed in 27.82s
+```
+
+Command:
+
+```text
+venv\Scripts\python.exe -m pytest tests/test_step_nav_browser.py tests/test_responsive_layout_browser.py tests/test_keyboard_shortcuts_browser.py tests/test_new_shell_resize_browser.py tests/test_learning_shell_browser.py tests/test_video_shell_browser.py tests/test_thumbnail_shell_browser.py tests/test_youtube_shell_browser.py -q
+```
+
+Output:
+
+```text
+...............................................                          [100%]
+47 passed in 72.15s (0:01:12)
+```
+
+### Full suite
+
+Command:
+
+```text
+venv\Scripts\python.exe -m pytest tests/ -q
+```
+
+Output:
+
+```text
+........................................................................ [ 12%]
+........................................................................ [ 24%]
+........................................................................ [ 37%]
+........................................................................ [ 49%]
+........................................................................ [ 61%]
+........................................................................ [ 74%]
+........................................................................ [ 86%]
+........................................................................ [ 98%]
+.......                                                                  [100%]
+============================== warnings summary ===============================
+venv\Lib\site-packages\fastapi\testclient.py:1
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+venv\Lib\site-packages\starlette\testclient.py:53
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+583 passed, 2 warnings in 417.85s (0:06:57)
+```
+
+### Ruff
+
+Command:
+
+```text
+venv\Scripts\ruff.exe check app/ tests/
+```
+
+Output:
+
+```text
+All checks passed!
+```
+
+### JavaScript syntax
+
+Commands:
+
+```text
+node --check frontend/static/js/step2_script.js
+node --check frontend/static/js/step3_learning.js
+node --check frontend/static/js/step4_tts.js
+node --check frontend/static/js/step5_video.js
+node --check frontend/static/js/step6_thumbnail.js
+node --check frontend/static/js/step7_youtube.js
+```
+
+Output: no output; all six commands exited with code 0.
+
+### Diff whitespace check
+
+Command:
+
+```text
+git diff --check
+```
+
+Output (exit code 0; notices only, no whitespace errors):
+
+```text
+warning: in the working copy of '.viepilot/phases/06-quick-wins-batch/tasks/task-6.1.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/pages/music_library.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/pages/step1_config.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/pages/step4_tts.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/pages/step6_thumbnail.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/pages/step7_youtube.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/step2_script.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/step3_learning.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/step4_tts.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/step5_video.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/step6_thumbnail.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'frontend/static/js/step7_youtube.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_tts_shell_browser.py', LF will be replaced by CRLF the next time Git touches it
+```
+
+### Scope confirmation
+
+- Only the production files and two browser-test files locked in PM Plan Review were
+  changed, plus this evidence section.
+- No backend/API/schema, shared theme/shell code, project status, commit, or push was
+  changed by the Implementer.
+
+## PM Re-review (2026-09-17) — ACCEPTED
+
+Independently re-verified everything rather than accepting the report on its word.
+
+**Diff review** — read the full `git diff` for all 13 touched files:
+- The 4 theme-flash HTML files: each changed by exactly one line
+  (`<html lang="en" data-theme="dark">` → `<html lang="en">`), byte-for-byte
+  identical across all 4, nothing else touched.
+- `step4_tts.html`: exactly `accent-color: var(--accent);` added to the existing
+  `.slider-row input[type="range"]` rule, no other CSS changed.
+- All 6 JS files: identical pattern confirmed across every one —
+  `showMissingProjectError()` sets `banner.innerHTML` to a single-quoted, fully
+  static string literal (`'Missing project. <a href="/">← Go to Dashboard</a>'`, no
+  template interpolation anywhere), only the one "no project_id" call site replaced,
+  the existing `showError(message)` function and every other call site confirmed
+  untouched via direct diff read.
+- Confirmed via `git diff --exit-code -- app/ frontend/static/js/theme.js
+  frontend/static/css/style.css` (exit 0) that no backend, `theme.js`, or shared
+  `style.css` was touched.
+
+**New/extended test review**: `test_pages_do_not_ship_a_hardcoded_theme` correctly
+uses `page.request.get()` — a real, direct HTTP fetch, not a browser navigation —
+avoiding the exact methodological trap both the plan and PM had flagged (post-JS DOM
+state always has *some* `data-theme` value once `theme.js` runs). The
+default/stored-theme test parametrizes across all 9 routes and both preference
+states, giving genuine regression coverage beyond just the 4 changed pages. The
+missing-project tests use semantic `get_by_role("link", name=...)` locators and
+include a real click-through to `/`. The negative-control test
+(`test_regular_error_remains_plain_text_without_a_link`) mocks a real 500 error and
+asserts zero `<a>` tags in the resulting banner — directly, empirically proving every
+other `showError` call site's safety rather than just asserting it from the diff.
+The TTS slider test uses a clever dynamic probe element to resolve `var(--accent)`
+to its actual computed color in the current theme context, rather than hardcoding an
+expected hex value that would break if the token's value ever changed.
+
+**PM independently re-ran every verification command**: 19/19 targeted, 47/47
+regression, `ruff check` clean, all 6 `node --check` clean, `git diff --check` exit
+0 — all matched the Implementer's report exactly.
+
+**Full suite, run independently**: 583 passed, 0 failed, 345.53s — a fully clean run
+with zero flakes at all.
+
+**Zero real defects found on PM review.** Accepted as delivered — no changes
+requested.
+
+**This closes Task 6.1 — and Phase 6 (Quick Wins Batch) in full**, since it was the
+phase's only task.

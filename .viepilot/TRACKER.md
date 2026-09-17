@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 started (new, quick wins batch)  
+**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch)  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened 2026-09-17, new scope beyond the original 21-day plan)  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17, new scope beyond the original 21-day plan)  
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
@@ -56,7 +56,8 @@ theme flash on 4 pages, a dead-end "Missing project" error with no link back to 
 Dashboard, and default (non-accent-colored) TTS range sliders. A 4th audit claim
 (YouTube chapters always estimated) was traced and found to be a **false positive**
 — the real-measurement code path already exists and works — so it's explicitly
-excluded. In progress.*
+excluded. Its one task done 2026-09-17 by Codex, accepted by PM per AR-06 with zero
+real defects found. **Phase 6 formally closed 2026-09-17.***
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -65,7 +66,7 @@ excluded. In progress.*
 | Phase 3 — Review | ✅ Complete | 11 | 11 |
 | Phase 4 — Post-Beta Polish (new) | ✅ Complete (Task 4.3 dropped) | 3 | 3 |
 | Phase 5 — UI Polish Backlog (new) | ✅ Complete | 3 | 3 |
-| Phase 6 — Quick Wins Batch (new) | 🔄 In Progress | 0 | 1 |
+| Phase 6 — Quick Wins Batch (new) | ✅ Complete | 1 | 1 |
 
 ## Phase 1 Task Status
 
@@ -742,29 +743,42 @@ any of the 3 reviews.
 
 ## Phase 6 Task Status
 
-### 6.1 Theme flash + dead-end error link + range slider styling — 🔄 IN PROGRESS (2026-09-17)
+### 6.1 Theme flash + dead-end error link + range slider styling — ✅ DONE (2026-09-17)
 
 Three real, PM-verified findings from a user-commissioned deep-dive Gemini audit
 (`C:\Users\Admin\Documents\audit_chuyensau_dailyintelenglish`), bundled per the
 precedent set by Task 2.3/4.4/5.3: (1) 4 pages (`music_library`, `step1_config`,
-`step6_thumbnail`, `step7_youtube`) hardcode `<html data-theme="dark">`, causing a
+`step6_thumbnail`, `step7_youtube`) hardcoded `<html data-theme="dark">`, causing a
 real dark→light flash for any user without a stored preference, since `theme.js`'s
 already-correct light-default logic only runs on `DOMContentLoaded`, after the
-browser already painted the hardcoded state — fix removes the hardcoded attribute,
-no JS change. (2) All 6 pipeline pages' (step2-7) "Missing project" error state is
-plain text with no way back to the Dashboard — fix adds a narrowly-scoped
-`showMissingProjectError()`-style function per page rendering a real link, without
-touching the existing `showError()` contract for any other message (every other call
-site passes only static strings, confirmed via grep, so this is the one safe place to
-use `innerHTML`). (3) TTS's speed/pitch/volume range sliders have zero color styling
-and render each browser's own default — fix is CSS-only (`accent-color`), no new JS
-state. **A 4th audit claim was independently traced and found to be a false
-positive, not included**: "YouTube chapters always use an estimated timestamp" —
+browser already painted the hardcoded state — fix removed the hardcoded attribute,
+no JS change, verified via a real HTTP fetch of the raw response (not the post-JS
+DOM state, which always has some `data-theme` value once `theme.js` runs). (2) All 6
+pipeline pages' (step2-7) "Missing project" error state was plain text with no way
+back to the Dashboard — fix added an identical, narrowly-scoped
+`showMissingProjectError()` function per page rendering a real, fully-static
+(non-interpolated) link via `innerHTML`, without touching the existing `showError()`
+contract for any other message — verified by a real negative-control test proving
+every other error path still renders plain text with zero links. (3) TTS's
+speed/pitch/volume range sliders had zero color styling and rendered each browser's
+own default — fix is CSS-only (`accent-color: var(--accent)`), no new JS state,
+verified via a dynamic color-probe test rather than a hardcoded expected hex value.
+**A 4th audit claim was independently traced and found to be a false positive, not
+included**: "YouTube chapters always use an estimated timestamp" —
 `youtube_service.py::generate_package()` already branches correctly and uses real
 measured `start_sec` values whenever a completed audio job exists
 (`real_chapters_from_timestamps()`, wired up via `app/api/youtube.py`); only a stale
 docstring comment inside the fallback function is out of date, not a functional bug.
-Handed to Codex as Implementer per AR-06. See `tasks/task-6.1.md` for the full plan.
+Implemented by Codex, accepted by PM per AR-06. **Zero real defects found on PM
+review** — PM independently re-ran every verification command and read the full
+diff for all 13 touched files, confirming each of the 4 theme-flash HTML files
+changed by exactly one line, all 6 JS files following an identical pattern with no
+scope creep, and `app/`/`theme.js`/`style.css` genuinely untouched. 583/583 full
+suite passes, 0 flakes — a fully clean run. See `tasks/task-6.1.md` for the full
+record.
+
+**This closes Task 6.1 — and Phase 6 (Quick Wins Batch) in full**, since it was the
+phase's only task.
 
 ## Decision Log
 
@@ -1443,6 +1457,28 @@ Handed to Codex as Implementer per AR-06. See `tasks/task-6.1.md` for the full p
   (`.viepilot/phases/06-quick-wins-batch/`) and wrote the doc-first task card for
   Task 6.1, handed to Codex per AR-06. See `docs/brainstorm/session-2026-09-17.md`
   and `tasks/task-6.1.md`. | User; PM (Claude Code) |
+| 2026-09-17 | Codex delivered Task 6.1, the only Phase 6 task. PM independently
+  re-verified rather than accepting the report on its word: read the full diff for
+  all 13 touched files, confirming each of the 4 theme-flash HTML files changed by
+  exactly one line, byte-for-byte identical across all 4; all 6 JS files following
+  an identical `showMissingProjectError()` pattern (a single-quoted, fully static
+  string literal with no template interpolation, only the one "no project_id" call
+  site replaced, every other `showError` call site confirmed untouched); the TTS
+  slider CSS change limited to exactly the one `accent-color` line; and confirmed via
+  `git diff --exit-code` that `app/`, `theme.js`, and `style.css` were genuinely
+  untouched. Reviewed the new `test_quick_wins_browser.py` and found it correctly
+  uses `page.request.get()` — a real HTTP fetch, not a browser navigation — to check
+  the raw served HTML for the theme fix, avoiding the exact methodological trap both
+  the plan and PM had flagged at review time; its negative-control test mocks a real
+  500 error and asserts zero `<a>` tags in the resulting banner, empirically proving
+  every other `showError` call site's safety rather than just asserting it. The
+  extended TTS slider test uses a dynamic color-probe element to resolve
+  `var(--accent)` at runtime instead of hardcoding an expected hex value that would
+  break if the token ever changed. Re-ran every verification command independently
+  (19/19 targeted, 47/47 regression, ruff/node/git-diff-check clean). Full suite run
+  independently: 583 passed, 0 failed, 345.53s — a fully clean run with zero flakes
+  at all. **Zero real defects found.** This closes Task 6.1 and Phase 6 in full,
+  since it was the phase's only task. | User; PM (Claude Code); Codex (Implementer) |
 
 ## Known Issues
 

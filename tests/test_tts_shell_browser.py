@@ -433,6 +433,33 @@ async def test_speaker_autosave_remains_serialized_with_one_trailing_patch(
 
 
 @pytest.mark.asyncio
+async def test_speaker_range_sliders_use_the_accent_color(
+    browser_instance: Browser, live_server_url: str
+):
+    page = await browser_instance.new_page()
+    await _mock_tts_routes(page)
+    await page.goto(f"{live_server_url}/step4?project_id={PROJECT_ID}")
+    slider = page.locator(".slider-row input[type='range']").first
+    await slider.wait_for(state="visible")
+
+    colors = await slider.evaluate(
+        """element => {
+          const probe = document.createElement("span");
+          probe.style.color = "var(--accent)";
+          document.body.append(probe);
+          const result = {
+            accent: getComputedStyle(element).accentColor,
+            expected: getComputedStyle(probe).color,
+          };
+          probe.remove();
+          return result;
+        }"""
+    )
+    assert colors["accent"] == colors["expected"]
+    await page.close()
+
+
+@pytest.mark.asyncio
 async def test_generate_all_keeps_preview_then_mix_order(
     browser_instance: Browser, live_server_url: str
 ):

@@ -35,6 +35,13 @@
     banner.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function showMissingProjectError() {
+    const banner = document.getElementById("error-banner");
+    banner.innerHTML = 'Missing project. <a href="/">← Go to Dashboard</a>';
+    banner.hidden = false;
+    banner.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   function clearError() {
     const banner = document.getElementById("error-banner");
     banner.hidden = true;
@@ -495,7 +502,7 @@
     const params = new URLSearchParams(window.location.search);
     state.projectId = params.get("project_id");
     if (!state.projectId) {
-      showError("Missing project. Please start from the Dashboard.");
+      showMissingProjectError();
       return;
     }
 

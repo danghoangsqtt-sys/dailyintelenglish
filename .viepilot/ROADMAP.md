@@ -677,7 +677,7 @@ Implementer per AR-06, same pattern as Phase 4.
 
 ## Phase 6 — Quick Wins Batch
 
-**Status:** 🔄 In Progress | **Started:** 2026-09-17
+**Status:** ✅ Complete | **Started:** 2026-09-17 | **Closed:** 2026-09-17
 
 New phase, scoped in `docs/brainstorm/session-2026-09-17.md` after Phase 5 closed and
 a user-commissioned deep-dive Gemini audit
@@ -690,13 +690,19 @@ is already correctly wired up). Deeper architectural findings from the same audi
 machine, inline CSS fragmentation) remain deferred, consistent with this project's
 Progress-cancellation/LivePortrait precedent.
 
-### 6.1 Theme flash + dead-end error link + range slider styling — 🔄 IN PROGRESS
+### 6.1 Theme flash + dead-end error link + range slider styling — ✅ DONE (2026-09-17)
 
-- [ ] Remove hardcoded `data-theme="dark"` from 4 pages (`music_library`,
-  `step1_config`, `step6_thumbnail`, `step7_youtube`) — `theme.js` already applies
+- [x] Removed hardcoded `data-theme="dark"` from 4 pages (`music_library`,
+  `step1_config`, `step6_thumbnail`, `step7_youtube`) — `theme.js` already applied
   the correct default, this just stops the pre-JS flash.
-- [ ] Add a real "Go to Dashboard" link to the "Missing project" error state on all 6
-  pipeline pages (step2-7) — currently plain text with no way back.
-- [ ] Style the TTS speed/pitch/volume range sliders with the app's accent color
-  instead of each browser's default appearance.
-  See `.viepilot/phases/06-quick-wins-batch/tasks/task-6.1.md` for the full plan.
+- [x] Added a real "Go to Dashboard" link to the "Missing project" error state on all
+  6 pipeline pages (step2-7) via a narrowly-scoped `showMissingProjectError()`
+  function per page — every other `showError()` call site verified unchanged.
+- [x] Styled the TTS speed/pitch/volume range sliders with the app's accent color
+  (`accent-color: var(--accent)`) instead of each browser's default appearance —
+  CSS-only, no new JS state. Implemented by Codex, accepted by PM per AR-06 with
+  zero real defects found. 583/583 full suite passes, 0 flakes. See
+  `.viepilot/phases/06-quick-wins-batch/tasks/task-6.1.md` for the full record.
+
+**Phase 6 fully closed 2026-09-17** — its one task (6.1) done, delegated to Codex per
+AR-06, zero real defects found on PM review.

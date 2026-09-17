@@ -69,6 +69,13 @@
     banner.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function showMissingProjectError() {
+    const banner = byId("error-banner");
+    banner.innerHTML = 'Missing project. <a href="/">← Go to Dashboard</a>';
+    banner.hidden = false;
+    banner.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   function clearError() {
     const banner = byId("error-banner");
     banner.textContent = "";
@@ -522,7 +529,7 @@
     state.projectId = params.get("project_id");
     if (!state.projectId) {
       byId("loading-panel").hidden = true;
-      showError("Missing project. Please start from the Dashboard.");
+      showMissingProjectError();
       return;
     }
     byId("back-link").href = `/step3?project_id=${encodeURIComponent(state.projectId)}`;
