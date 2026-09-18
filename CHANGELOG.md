@@ -151,6 +151,11 @@ Versioning: [SemVer](https://semver.org/)
   correctly by existing code, so no change was needed there.
 
 ### Fixed
+- Found via a 4th `/vp-audit` pass (2026-09-18, final confirmation after Phase 11
+  closed), fixed immediately by PM: the project's own README was missing its most
+  recent round of bug fixes (Phase 11) from its summary table, and its architecture
+  notes had one leftover line describing a real-time streaming feature the app has
+  never actually had (documentation only — no application behavior changed).
 - Found via a third independent Codex `/vp-audit` pass (2026-09-18), fixed under
   Phase 11 (self-implemented by PM): deleting a speaker's avatar image had the same
   data-integrity issue as an earlier fix to uploading/replacing one -- the file

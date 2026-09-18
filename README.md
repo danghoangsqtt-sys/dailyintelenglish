@@ -76,9 +76,9 @@ Task 4.3 (Vietnamese UI localization) was scoped but **dropped by explicit user
 decision** before any code was written — see `.viepilot/TRACKER.md`. Progress
 cancellation and real LivePortrait lip-sync remain deliberately deferred.
 
-#### Post-Beta Bug Fixes & Polish (Phases 5-10) — ✅ Done 2026-09-18
+#### Post-Beta Bug Fixes & Polish (Phases 5-11) — ✅ Done 2026-09-18
 
-6 more phases of real, verified fixes beyond the original plan — each scoped from a
+7 more phases of real, verified fixes beyond the original plan — each scoped from a
 brainstorm session or an independent audit (including multiple separate AI-assisted
 read-only `/vp-audit` passes), each closed with zero real defects found on PM
 review. Full evidence trail in `.viepilot/ROADMAP.md` and `.viepilot/TRACKER.md`.
@@ -91,6 +91,7 @@ review. Full evidence trail in `.viepilot/ROADMAP.md` and `.viepilot/TRACKER.md`
 | **Phase 8** | 🎨 **CSS Consolidation** — reconciled a disabled-button styling drift across 3 pages back to one shared rule | ✅ Done |
 | **Phase 9** | 🔁 **Regeneration Integrity** — a failed audio/video regeneration attempt used to wipe the database's record of a still-valid previous success; changing a speaker's voice settings now also correctly signals stale downstream audio/video | ✅ Done |
 | **Phase 10** | 🧹 **Backlog Cleanup** — the same regeneration-integrity fix as Phase 9 also applied to deleting an avatar; stale per-line TTS cache clearing; an honest `/api/tts/engines` contract (removed 3 engine choices that were accepted but never actually implemented); no more holding the app's shared database lock across a live TTS network call; documentation cleanup | ✅ Done |
+| **Phase 11** | 🔍 **Third Audit Fixes** — the same avatar-file bug found in Phase 10 was still present in avatar *delete* (not just upload); root-caused and fixed the project's long-standing "Gemini-retry" test flake class (a shared fixture was patching a process-wide `asyncio.sleep` instead of a module-local one); TTS preview no longer holds the app's write lock across a live synthesis call; corrected a self-introduced documentation inaccuracy about OmniVoice from Phase 10 | ✅ Done |
 
 ## Quick Start
 

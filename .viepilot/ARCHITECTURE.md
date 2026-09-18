@@ -43,7 +43,7 @@ profile_id: none / not configured
 |---|---|---|---|
 | system-overview | required | Kiến trúc local web app multi-module | .viepilot/architecture/system-overview.mermaid |
 | data-flow | required | Pipeline 7 bước Script→Audio→Video | .viepilot/architecture/data-flow.mermaid |
-| event-flows | optional | WebSocket streaming TTS | — |
+| event-flows | N/A | No event-driven flows anywhere in the app — all routes are synchronous REST, and status polling is a plain polling GET, not real WebSocket/SSE (corrected 2026-09-18; this row previously said "optional / WebSocket streaming TTS", which was never true and contradicted the System Overview diagram above) | — |
 | module-dependencies | required | Services graph | .viepilot/architecture/module-dependencies.mermaid |
 | deployment | N/A | Local only, no cloud deployment | — |
 | user-use-case | optional | Single user, use cases straightforward | — |
