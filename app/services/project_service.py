@@ -302,6 +302,53 @@ async def update_project(
     return await get_project(db, project_id)
 
 
+async def mark_script_changed(
+    db: aiosqlite.Connection, project_id: str, commit: bool = True
+) -> None:
+    """Set the lifecycle status that truthfully follows a script change.
+
+    This is a narrow internal transition path for script persistence only. It accepts
+    no caller-selected target status: a draft advances to ``script_generated``, that
+    status is idempotent, and any later pipeline status is downgraded to
+    ``script_generated`` because its downstream artifacts may now be stale. Public
+    project updates continue to use :func:`update_project` and its forward-only
+    validator.
+
+    Args:
+        db: Open aiosqlite connection.
+        project_id: UUID of the project whose script changed.
+        commit: If False, the caller owns the surrounding transaction.
+
+    Raises:
+        NotFoundError: If no project with this id exists.
+        ValidationError: If the stored status is unknown.
+    """
+    cursor = await db.execute("SELECT status FROM projects WHERE id = ?", (project_id,))
+    row = await cursor.fetchone()
+    if row is None:
+        raise NotFoundError(f"Project {project_id} not found")
+
+    current_status = row["status"]
+    if current_status not in PROJECT_STATUSES:
+        raise ValidationError(f"unknown status: {current_status!r}")
+    if current_status == "script_generated":
+        return
+    if current_status == "draft":
+        # Preserve the existing validated forward-transition path. The direct update
+        # below is reserved for the three intentional internal downgrades only.
+        await update_project(
+            db, project_id, ProjectUpdate(status="script_generated"), commit=commit
+        )
+        return
+
+    await db.execute(
+        "UPDATE projects SET status = 'script_generated', updated_at = ? WHERE id = ?",
+        (_now(), project_id),
+    )
+    if commit:
+        await db.commit()
+
+
 async def delete_project(db: aiosqlite.Connection, project_id: str, commit: bool = True) -> None:
     """Delete a project and its cascade-linked rows (speakers, script lines, jobs).
 

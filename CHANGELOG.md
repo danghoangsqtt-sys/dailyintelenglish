@@ -151,6 +151,17 @@ Versioning: [SemVer](https://semver.org/)
   correctly by existing code, so no change was needed there.
 
 ### Fixed
+- Found via `/vp-audit` (2026-09-17), independently re-verifying a user-commissioned
+  Gemini audit finding, confirmed by PM and fixed under Phase 7 Task 7.1 (2026-09-18):
+  a project's script could be regenerated (in full, per-line, or via the normal manual
+  Step 2 autosave) at any time, even after its audio/video had already been
+  generated, with nothing invalidating the now-stale downstream artifacts or
+  signaling this anywhere. Project status now correctly downgrades back to
+  `script_generated` whenever this happens (non-destructive — no audio/video files or
+  job records are touched), so the Dashboard's existing status badge and "Continue"
+  routing honestly reflect that downstream steps need to be regenerated. The public
+  project-update endpoint's forward-only status guarantee for caller-supplied input is
+  unchanged.
 - Found via a user-commissioned independent audit (2026-09-17), independently
   confirmed by PM: opening Script, Learning, Audio, Video, Thumbnail, or YouTube
   Package with a missing or invalid project link showed a dead-end error message

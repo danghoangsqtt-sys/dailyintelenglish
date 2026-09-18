@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 in progress (new, script edit staleness)  
+**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness)  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, new scope beyond the original 21-day plan)  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18, new scope beyond the original 21-day plan)  
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
@@ -65,8 +65,9 @@ sample scripts, a nuanced correction, not logged). DB single-connection lock (EN
 and CSS fragmentation (ENH-005) were confirmed real but left in the backlog per user
 decision. BUG-013 — script can be edited/regenerated after audio/video already exist,
 with zero status guard and no staleness signal — was confirmed real and more serious
-than originally described, so the user chose to open this phase to fix it. 1 task
-(7.1), planned, not yet delegated to Codex.*
+than originally described, so the user chose to open this phase to fix it. Its one
+task (7.1) done 2026-09-18 by Codex, accepted by PM per AR-06 with zero real defects
+found. **Phase 7 formally closed 2026-09-18.***
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -76,7 +77,7 @@ than originally described, so the user chose to open this phase to fix it. 1 tas
 | Phase 4 — Post-Beta Polish (new) | ✅ Complete (Task 4.3 dropped) | 3 | 3 |
 | Phase 5 — UI Polish Backlog (new) | ✅ Complete | 3 | 3 |
 | Phase 6 — Quick Wins Batch (new) | ✅ Complete | 1 | 1 |
-| Phase 7 — Script Edit Staleness (new) | 🔄 In Progress | 0 | 1 |
+| Phase 7 — Script Edit Staleness (new) | ✅ Complete | 1 | 1 |
 
 ## Phase 1 Task Status
 
@@ -792,20 +793,42 @@ phase's only task.
 
 ## Phase 7 Task Status
 
-### 7.1 Downgrade project status + surface staleness signal on script edit — planned
+### 7.1 Downgrade project status + surface staleness signal on script edit — ✅ DONE (2026-09-18)
 
 Origin: `.viepilot/requests/BUG-013.md`, auto-logged by `/vp-audit` (2026-09-17) while
-independently re-verifying a Gemini audit claim. PM's own trace found the gap is worse
-than described: `app/api/projects.py`'s `generate_script`/`regenerate_script_line`
-endpoints have **zero status guard at all** — a project's script can be fully
-regenerated or a single line edited even after audio/video already exist
-(`audio_generated`/`video_generated`/`complete`), with nothing invalidating the now-
-stale downstream artifacts or signaling this anywhere. Decided approach: downgrade the
-project's status back to `script_generated` (non-destructive, no files/records
-deleted) whenever this happens, reusing the existing `STATUS_TO_STEP` Dashboard-resume
-mechanism rather than inventing a new UI concept; the public `PATCH /{project_id}`
-endpoint's forward-only guarantee for caller-supplied input must remain fully intact.
-Doc-first task card written (`tasks/task-7.1.md`), not yet handed to Codex.
+independently re-verifying a Gemini audit claim. PM's own trace found the gap was
+worse than described: `app/api/projects.py`'s `generate_script`/`regenerate_script_line`/
+manual-save endpoints had **zero status guard at all** — a project's script could be
+fully regenerated, a single line edited, or manually saved even after audio/video
+already existed, with nothing invalidating the now-stale downstream artifacts. Fix: a
+new `project_service.mark_script_changed()` internal operation, accepting no
+caller-supplied target status, downgrades project status back to `script_generated`
+(non-destructive — no files/records deleted) whenever this happens, wired into all 3
+real script-mutation call sites. During plan review, Codex correctly caught a real
+error in PM's own task card (the public route is `PUT /{project_id}`, not `PATCH` as
+originally written) and correctly identified that the manual-save route
+(`PUT /{project_id}/script`, the Step 2 UI's normal autosave path) shares the exact
+same bug as the two AI-driven endpoints — both approved as in-scope corrections, not
+scope creep, since both files were already in the locked `allowed_files`. Mid-
+implementation, Codex's own first full-suite run surfaced 3 failures in the
+pre-existing `tests/test_projects_write_lock.py` suite (which calls the renamed
+internal helper by name); rather than touching that out-of-scope test file, Codex
+preserved the legacy private helper's name/signature and re-verified — reported
+honestly in the evidence rather than hidden. Implemented by Codex, accepted by PM per
+AR-06. **Zero real defects found on PM review** — PM independently re-ran every
+verification command and read the full diff for all 5 production/test files,
+confirming `config_json` never embeds `status` (so the narrow raw status update can't
+desync it), a real disk-and-DB test proves audio/video files and job rows survive the
+downgrade byte-for-byte unchanged, and the public `PUT /{project_id}` endpoint's
+forward-only guarantee is fully intact (a new end-to-end test drives a project through
+all 4 real forward transitions before proving `complete -> draft` still returns 422).
+596/598 full suite passes — the 2 failures are the project's long-documented
+Gemini-retry/backoff timing flake class (`tests/test_script_service.py`, unrelated to
+this task's 6 touched files), confirmed passing instantly in isolation. See
+`tasks/task-7.1.md` for the full record.
+
+**This closes Task 7.1 — and Phase 7 (Script Edit Staleness) in full**, since it was
+the phase's only task.
 
 ## Decision Log
 
@@ -1507,10 +1530,11 @@ Doc-first task card written (`tasks/task-7.1.md`), not yet handed to Codex.
   at all. **Zero real defects found.** This closes Task 6.1 and Phase 6 in full,
   since it was the phase's only task. | User; PM (Claude Code); Codex (Implementer) |
 | 2026-09-17 | User asked PM to run `/vp-audit` for a deep independent re-verification of the 4 Gemini audit findings left unverified after Phase 6 (DB single-connection lock, unused rate-limiter constant, forward-only status machine, CSS fragmentation). PM read the actual source for each rather than trusting the original report: (1) `GEMINI_RATE_LIMIT_RPM` is NOT unused — it's referenced by 2 standalone CLI sample-generation scripts (`scripts/generate_sample_episodes.py`, `scripts/generate_cefr_review_samples.py`) for proactive client-side throttling; the production FastAPI runtime instead relies on reactive retry/backoff on HTTP 429/503 (`GEMINI_MAX_RETRIES`/`GEMINI_RETRY_BASE_DELAY` in `script_service.py`) — a nuanced correction, not a clean false positive. (2) DB single-connection write lock CONFIRMED REAL: `Database` is a true singleton around one shared `aiosqlite.Connection`, no pool, no WAL mode — logged as ENH-004. (3) Forward-only status machine CONFIRMED REAL and worse than the original claim suggested: `POST /{id}/script/generate` and `/script/regenerate` have zero status guard at all, so a user can edit the script after audio/video are already generated with no downgrade or staleness warning — logged as BUG-013 (high priority, a real data-integrity gap, not just a missing feature). (4) CSS fragmentation CONFIRMED REAL with concrete new evidence beyond the original claim: 992 lines of per-page inline CSS vs 227 in the shared stylesheet, and 3 different disabled-button selector strategies with 2 different opacity values (0.55 vs 0.58) plus a `.btn-sm` padding mismatch on `step6_thumbnail.html` — logged as ENH-005. All 3 real findings auto-logged as request files per vp-audit's ENH-070 default behavior; none auto-fixed (per AR-06/routing guard, report-only — routes to `/vp-evolve` on user request). | User; PM (Claude Code) |
+| 2026-09-17/18 | User chose to open Phase 7 to fix BUG-013 now (ENH-004/ENH-005 stay in the backlog). PM scaffolded Phase 7 and wrote the doc-first task card for Task 7.1, handed to Codex per AR-06. Codex's pre-code plan caught a real error in the task card (public route is `PUT /{project_id}`, not `PATCH`) and correctly identified a 3rd affected call site (`PUT /{project_id}/script`, manual script save) sharing the same bug — both approved by PM as in-scope corrections. Task 7.1 delivered 2026-09-18: new `project_service.mark_script_changed()` (no caller-supplied target status) downgrades a project's status back to `script_generated` whenever script is generated/regenerated/manually saved on a project already past that status, non-destructively (no files/records touched); `_validate_status_transition` and the public `PUT /{project_id}` endpoint's forward-only guarantee left fully intact. Mid-implementation, Codex's own full-suite run surfaced a real coupling with the pre-existing `tests/test_projects_write_lock.py` suite (calls the renamed helper by name) — resolved by preserving the legacy private helper's name/signature rather than touching the out-of-scope test, reported honestly. Zero real defects found on PM's independent review (full diff read, all commands re-run, a disk-and-DB test confirmed real audio/video files and job rows survive byte-for-byte unchanged). 596/598 full suite passes (2 known Gemini-retry flakes, confirmed non-regressive in isolation). **This closes Task 7.1 and Phase 7 in full.** | User; PM (Claude Code); Codex (Implementer) |
 
 ## Known Issues
 
-- **BUG-013 (open, high)**: editing/regenerating the script after audio/video are already generated does not invalidate the stale downstream artifacts or downgrade project status — confirmed real via `/vp-audit` 2026-09-17, independently verifying a Gemini audit claim. See `.viepilot/requests/BUG-013.md`.
+- ~~BUG-013~~ **RESOLVED 2026-09-18** under Task 7.1 — see Phase 7 Task Status above and `.viepilot/requests/BUG-013.md`.
 - **ENH-004 (open, medium)**: single shared `aiosqlite` connection serializes all DB operations across concurrent requests (no pool, no WAL) — low risk for this solo local-use app, confirmed real via `/vp-audit` 2026-09-17. See `.viepilot/requests/ENH-004.md`.
 - **ENH-005 (open, medium)**: per-page inline CSS fragmentation (992 lines across 7 pages vs 227 in the shared stylesheet) causes verified visual drift (disabled-button opacity 0.55 vs 0.58, `.btn-sm` padding mismatch) — confirmed real via `/vp-audit` 2026-09-17. See `.viepilot/requests/ENH-005.md`.
 
@@ -1739,6 +1763,6 @@ Doc-first task card written (`tasks/task-7.1.md`), not yet handed to Codex.
 | ENH-001 | Enhancement | Phân quyền AI Agents (PM vs Dev) | high | done |
 | ENH-002 | Enhancement | Restore architecture diagram sidecars | low | done |
 | ENH-003 | Enhancement | Establish strict PM-GEMINI delivery contract | medium | done |
-| BUG-013 | Bug | Editing an earlier pipeline step after later steps are generated does not invalidate downstream audio/video | high | open |
+| BUG-013 | Bug | Editing an earlier pipeline step after later steps are generated does not invalidate downstream audio/video | high | done |
 | ENH-004 | Enhancement | Single shared aiosqlite connection serializes all DB operations across concurrent requests | medium | open |
 | ENH-005 | Enhancement | Per-page inline CSS fragmentation causes verified visual drift from the shared stylesheet | medium | open |

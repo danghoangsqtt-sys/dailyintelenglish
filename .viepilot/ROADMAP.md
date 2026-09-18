@@ -709,24 +709,32 @@ AR-06, zero real defects found on PM review.
 
 ## Phase 7 — Script Edit Staleness
 
-**Status:** 🔄 In Progress | **Started:** 2026-09-17
+**Status:** ✅ Complete | **Started:** 2026-09-17 | **Closed:** 2026-09-18
 
 Opened after user ran `/vp-audit` (2026-09-17) for deep independent re-verification of
 the 4 Gemini audit findings left unscoped after Phase 6. Result: `GEMINI_RATE_LIMIT_RPM`
 is not actually unused (used by 2 CLI sample scripts, not the runtime — nuanced
 correction, not logged as a defect); DB single-connection lock (ENH-004) and CSS
 fragmentation (ENH-005) confirmed real but left in the backlog per user decision — low
-risk for a solo local-use app. BUG-013 — a project's script can be edited/regenerated
-after audio/video are already generated with **zero** status guard and no invalidation
+risk for a solo local-use app. BUG-013 — a project's script could be edited/regenerated
+after audio/video were already generated with **zero** status guard and no invalidation
 signal — confirmed real and more serious than originally described, so the user chose
 to open this phase to fix it now rather than defer it.
 
-### 7.1 Downgrade project status + surface staleness signal on script edit — planned
+### 7.1 Downgrade project status + surface staleness signal on script edit — ✅ DONE (2026-09-18)
 
-- [ ] Generating/regenerating a script on a project already at `audio_generated`,
-  `video_generated`, or `complete` downgrades its status back to `script_generated`
-  (non-destructive — no files/records deleted), so the Dashboard's existing
-  status badge and "Continue" routing honestly reflect that downstream steps are
-  stale. Public `PATCH /{project_id}` must still reject any arbitrary caller-supplied
-  backward transition exactly as before. See
-  `.viepilot/phases/07-script-edit-staleness/tasks/task-7.1.md` for the full plan.
+- [x] Generating/regenerating a script, or manually saving edits, on a project
+  already at `audio_generated`, `video_generated`, or `complete` downgrades its
+  status back to `script_generated` (non-destructive — no files/records deleted) via
+  a new `mark_script_changed()` internal operation that accepts no caller-supplied
+  target status, so the Dashboard's existing status badge and "Continue" routing
+  honestly reflect that downstream steps are stale. The public `PUT /{project_id}`
+  endpoint (corrected from the task card's original "PATCH" during plan review)
+  still rejects any arbitrary caller-supplied backward transition exactly as before.
+  Implemented by Codex, accepted by PM per AR-06 with zero real defects found.
+  596/598 full suite passes (2 known Gemini-retry flakes, confirmed non-regressive).
+  See `.viepilot/phases/07-script-edit-staleness/tasks/task-7.1.md` for the full
+  record.
+
+**Phase 7 fully closed 2026-09-18** — its one task (7.1) done, delegated to Codex per
+AR-06, zero real defects found on PM review.

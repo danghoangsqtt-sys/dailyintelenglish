@@ -153,6 +153,19 @@ def test_update_project_status_one_step_forward_succeeds(client):
     assert body["data"]["status"] == "script_generated"
 
 
+def test_update_project_status_backward_from_complete_returns_422(client):
+    project_id = client.post("/api/projects", json=VALID_PAYLOAD).json()["data"]["id"]
+    for status in ("script_generated", "audio_generated", "video_generated", "complete"):
+        response = client.put(f"/api/projects/{project_id}", json={"status": status})
+        assert response.status_code == 200
+
+    response = client.put(f"/api/projects/{project_id}", json={"status": "draft"})
+
+    assert response.status_code == 422
+    _envelope_error(response.json())
+    assert client.get(f"/api/projects/{project_id}").json()["data"]["status"] == "complete"
+
+
 def test_update_project_config_json_stays_in_sync(client):
     create_response = client.post("/api/projects", json=VALID_PAYLOAD)
     project_id = create_response.json()["data"]["id"]

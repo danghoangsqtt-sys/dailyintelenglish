@@ -72,28 +72,34 @@ async def _write_transaction(db: aiosqlite.Connection):
             raise
 
 
-async def _advance_to_script_generated(
-    db: aiosqlite.Connection, project_id: str, project: dict
+async def _sync_status_after_script_change(
+    db: aiosqlite.Connection, project_id: str
 ) -> None:
-    """Move a draft project to script_generated once it has a persisted script.
+    """Set the truthful project status after a script mutation.
 
     Always called from inside a `_write_transaction` block, so it never commits itself.
     """
-    if project["status"] == "draft":
-        await project_service.update_project(
-            db, project_id, ProjectUpdate(status="script_generated"), commit=False
-        )
+    await project_service.mark_script_changed(db, project_id, commit=False)
 
 
 async def _save_script_and_advance(
-    db: aiosqlite.Connection, project_id: str, project: dict, lines: list[dict], known_speaker_ids=None
+    db: aiosqlite.Connection,
+    project_id: str,
+    project: dict,
+    lines: list[dict],
+    known_speaker_ids=None,
 ) -> list[dict]:
-    """Persist script lines and advance status in one write transaction."""
+    """Persist script lines and synchronize status in one write transaction.
+
+    The legacy name and `project` argument remain because the write-lock regression
+    suite exercises this transaction helper directly. Status synchronization itself
+    always re-reads the live row; it never trusts the pre-Gemini project snapshot.
+    """
     async with _write_transaction(db):
         saved = await script_service.save_script(
             db, project_id, lines, known_speaker_ids, commit=False
         )
-        await _advance_to_script_generated(db, project_id, project)
+        await _sync_status_after_script_change(db, project_id)
     return saved
 
 
@@ -240,6 +246,7 @@ async def regenerate_script_line(
             db, project_id, payload.line_id, new_line.text, new_line.language_notes.model_dump(),
             commit=False,
         )
+        await _sync_status_after_script_change(db, project_id)
     return ok(updated, started_at=started_at)
 
 

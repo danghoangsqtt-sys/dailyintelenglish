@@ -335,6 +335,53 @@ def test_generate_script_does_not_touch_status_if_already_past_draft(client, mon
     assert client.get(f"/api/projects/{project['id']}").json()["data"]["status"] == "script_generated"
 
 
+@pytest.mark.parametrize("downstream_status", ["audio_generated", "video_generated", "complete"])
+@pytest.mark.parametrize("mutation", ["generate", "regenerate", "save"])
+def test_script_change_downgrades_downstream_status(
+    client, monkeypatch, downstream_status, mutation
+):
+    project = create_project(client)
+    speaker_id = project["speakers"][0]["id"]
+
+    async def fake_generate_script(project_id, config):
+        return [ScriptLineOut(id="line_001", speaker_id=speaker_id, text="Initial line.")]
+
+    monkeypatch.setattr(script_service, "generate_script", fake_generate_script)
+    generated = client.post(f"/api/projects/{project['id']}/script/generate")
+    assert generated.status_code == 200
+    line_id = generated.json()["data"][0]["id"]
+
+    status_path = ["audio_generated", "video_generated", "complete"]
+    for status in status_path[: status_path.index(downstream_status) + 1]:
+        response = client.put(f"/api/projects/{project['id']}", json={"status": status})
+        assert response.status_code == 200
+
+    if mutation == "generate":
+        response = client.post(f"/api/projects/{project['id']}/script/generate")
+    elif mutation == "regenerate":
+
+        async def fake_regenerate_line(project_id, config, line_id_arg, current_text, speaker_id_arg):
+            return ScriptLineOut(
+                id=line_id_arg,
+                speaker_id=speaker_id_arg,
+                text="Regenerated line.",
+            )
+
+        monkeypatch.setattr(script_service, "regenerate_line", fake_regenerate_line)
+        response = client.post(
+            f"/api/projects/{project['id']}/script/regenerate", json={"line_id": line_id}
+        )
+    else:
+        response = client.put(
+            f"/api/projects/{project['id']}/script",
+            json={"lines": [{"speaker_id": speaker_id, "text": "Manually edited line."}]},
+        )
+
+    assert response.status_code == 200
+    current = client.get(f"/api/projects/{project['id']}").json()["data"]
+    assert current["status"] == "script_generated"
+
+
 # --- FIX2 regression: line ids must be resynced from the save response ---
 
 
@@ -400,11 +447,11 @@ async def test_concurrent_script_saves_do_not_interleave(client):
     assert texts == [f"A-{i}" for i in range(5)] or texts == [f"B-{i}" for i in range(5)]
 
 
-# --- FIX2 regression: script save + status advance roll back together ---
+# --- FIX2 regression: script save + status synchronization roll back together ---
 
 
-def test_generate_script_rolls_back_script_save_if_status_advance_fails(client, monkeypatch):
-    """If advancing the project status fails after the script was written but not yet
+def test_generate_script_rolls_back_script_save_if_status_sync_fails(client, monkeypatch):
+    """If synchronizing project status fails after the script was written but not yet
     committed, the whole transaction must roll back — never a persisted script left
     behind with the project still stuck on `draft`.
     """
@@ -416,12 +463,12 @@ def test_generate_script_rolls_back_script_save_if_status_advance_fails(client, 
 
     monkeypatch.setattr(script_service, "generate_script", fake_generate_script)
 
-    async def failing_update_project(db, project_id, patch, commit=True):
-        raise RuntimeError("simulated failure advancing status")
+    async def failing_mark_script_changed(db, project_id, commit=True):
+        raise RuntimeError("simulated failure synchronizing status")
 
-    monkeypatch.setattr(project_service, "update_project", failing_update_project)
+    monkeypatch.setattr(project_service, "mark_script_changed", failing_mark_script_changed)
 
-    with pytest.raises(RuntimeError, match="simulated failure"):
+    with pytest.raises(RuntimeError, match="simulated failure synchronizing status"):
         client.post(f"/api/projects/{project['id']}/script/generate")
 
     assert client.get(f"/api/projects/{project['id']}/script").json()["data"] == []

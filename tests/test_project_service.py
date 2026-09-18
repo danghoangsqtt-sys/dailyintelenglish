@@ -5,6 +5,7 @@ import json
 import pytest
 from pydantic import ValidationError as PydanticValidationError
 
+from app.core.config import settings
 from app.core.exceptions import NotFoundError
 from app.core.exceptions import ValidationError as AppValidationError
 from app.models.project import ProjectUpdate, ScriptConfig, SpeakerConfig
@@ -200,6 +201,80 @@ async def test_status_transition_same_status_is_idempotent(db):
     updated = await project_service.update_project(db, project["id"], ProjectUpdate(status="draft"))
 
     assert updated["status"] == "draft"
+
+
+async def test_mark_script_changed_advances_draft_and_is_idempotent(db):
+    project = await project_service.create_project(db, make_config())
+
+    await project_service.mark_script_changed(db, project["id"])
+    advanced = await project_service.get_project(db, project["id"])
+    assert advanced["status"] == "script_generated"
+
+    await project_service.mark_script_changed(db, project["id"])
+    unchanged = await project_service.get_project(db, project["id"])
+    assert unchanged["status"] == "script_generated"
+    assert unchanged["updated_at"] == advanced["updated_at"]
+
+
+@pytest.mark.parametrize("status", ["audio_generated", "video_generated", "complete"])
+async def test_mark_script_changed_downgrades_later_statuses(db, status):
+    project = await project_service.create_project(db, make_config())
+    await db.execute("UPDATE projects SET status = ? WHERE id = ?", (status, project["id"]))
+    await db.commit()
+
+    await project_service.mark_script_changed(db, project["id"])
+
+    updated = await project_service.get_project(db, project["id"])
+    assert updated["status"] == "script_generated"
+
+
+async def test_mark_script_changed_preserves_downstream_jobs_and_files(db, monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    project = await project_service.create_project(db, make_config())
+    audio_path = tmp_path / "audio" / project["id"] / "final.mp3"
+    video_path = tmp_path / "video" / project["id"] / "final.mp4"
+    audio_path.parent.mkdir(parents=True)
+    video_path.parent.mkdir(parents=True)
+    audio_path.write_bytes(b"existing-audio")
+    video_path.write_bytes(b"existing-video")
+
+    await db.execute("UPDATE projects SET status = 'complete' WHERE id = ?", (project["id"],))
+    await db.execute(
+        "INSERT INTO audio_jobs (id, project_id, status, mp3_path, duration_seconds) "
+        "VALUES (?, ?, 'complete', ?, ?)",
+        ("audio-job", project["id"], str(audio_path), 12.5),
+    )
+    await db.execute(
+        "INSERT INTO video_jobs (id, project_id, status, mp4_path, background_image) "
+        "VALUES (?, ?, 'complete', ?, ?)",
+        ("video-job", project["id"], str(video_path), "midnight"),
+    )
+    await db.commit()
+
+    audio_cursor = await db.execute(
+        "SELECT * FROM audio_jobs WHERE project_id = ?", (project["id"],)
+    )
+    video_cursor = await db.execute(
+        "SELECT * FROM video_jobs WHERE project_id = ?", (project["id"],)
+    )
+    audio_before = dict(await audio_cursor.fetchone())
+    video_before = dict(await video_cursor.fetchone())
+
+    await project_service.mark_script_changed(db, project["id"])
+
+    audio_cursor = await db.execute(
+        "SELECT * FROM audio_jobs WHERE project_id = ?", (project["id"],)
+    )
+    video_cursor = await db.execute(
+        "SELECT * FROM video_jobs WHERE project_id = ?", (project["id"],)
+    )
+    audio_after = dict(await audio_cursor.fetchone())
+    video_after = dict(await video_cursor.fetchone())
+    assert (await project_service.get_project(db, project["id"]))["status"] == "script_generated"
+    assert audio_after == audio_before
+    assert video_after == video_before
+    assert audio_path.read_bytes() == b"existing-audio"
+    assert video_path.read_bytes() == b"existing-video"
 
 
 

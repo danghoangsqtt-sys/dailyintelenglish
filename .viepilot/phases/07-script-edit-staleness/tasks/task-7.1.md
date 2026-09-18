@@ -3,7 +3,7 @@
 ## Meta
 - **ID**: 7.1 (first task of Phase 7 — Script Edit Staleness)
 - **Phase**: 7
-- **Status**: planned
+- **Status**: done (2026-09-18)
 - **Priority**: high (real data-integrity gap, confirmed via independent code trace)
 - **Assignee**: Codex (Implementer) — PM (Claude Code) writes/accepts, per the AR-06
   PM-Implementer contract (`docs/CODEX_CODE_PROMPT.md`, `.viepilot/SYSTEM-RULES.md`)
@@ -258,3 +258,227 @@ asked — approved.
 
 **Plan approved as presented, with the PATCH→PUT correction folded into this task
 card's checklist. No changes requested.** Codex may proceed to implementation.
+
+## Implementer Evidence (Awaiting PM Acceptance)
+
+### Implementation summary
+
+- Added `project_service.mark_script_changed()`, an internal operation with no
+  caller-selected target status. It re-reads the live status inside the existing write
+  transaction, keeps `script_generated` idempotent, preserves the existing validated
+  `draft -> script_generated` path, and performs only the three intentional downstream
+  downgrades to `script_generated`.
+- Left `_validate_status_transition`, `project_service.update_project`, and the public
+  `PUT /api/projects/{project_id}` handler unchanged. A new API regression test proves
+  `complete -> draft` still returns 422 and leaves the stored status at `complete`.
+- Wired status synchronization into full generation, per-line regeneration, and manual
+  script save. Each script mutation and its status update share one
+  `_write_transaction`, so either both commit or both roll back.
+- Kept the private `_save_script_and_advance` name/signature because the existing
+  write-lock regression suite calls it directly. Its implementation no longer trusts
+  the pre-Gemini project snapshot; the live status is re-read by
+  `mark_script_changed()`.
+- Added 15 effective test cases: draft/idempotent service behavior; all three downstream
+  statuses; preservation of audio/video job rows and real sentinel files; all 3 statuses
+  x all 3 mutation routes; and the public backward-transition rejection. Updated the
+  existing rollback test to fail the new internal status operation.
+
+### Files changed
+
+- `app/services/project_service.py`
+- `app/api/projects.py`
+- `tests/test_project_service.py`
+- `tests/test_projects_api.py`
+- `tests/test_script_api.py`
+- `.viepilot/phases/07-script-edit-staleness/tasks/task-7.1.md` (evidence only; `Status`
+  unchanged)
+
+### Verification evidence
+
+Targeted final command:
+
+```text
+> venv\Scripts\python -m pytest tests/test_project_service.py tests/test_projects_api.py tests/test_script_api.py -q
+........................................................................ [ 93%]
+.....                                                                    [100%]
+============================== warnings summary ===============================
+venv\Lib\site-packages\fastapi\testclient.py:1
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+venv\Lib\site-packages\starlette\testclient.py:53
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+77 passed, 2 warnings in 20.63s
+```
+
+Existing write-lock regression suite, rerun after retaining the private helper
+compatibility contract:
+
+```text
+> venv\Scripts\python -m pytest tests/test_project_service.py tests/test_projects_api.py tests/test_script_api.py tests/test_projects_write_lock.py -q
+........................................................................ [ 90%]
+........                                                                 [100%]
+============================== warnings summary ===============================
+venv\Lib\site-packages\fastapi\testclient.py:1
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+venv\Lib\site-packages\starlette\testclient.py:53
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+80 passed, 2 warnings in 20.39s
+```
+
+Full suite, final run:
+
+```text
+> venv\Scripts\python -m pytest tests/ -q
+........................................................................ [ 12%]
+........................................................................ [ 24%]
+........................................................................ [ 36%]
+........................................................................ [ 48%]
+........................................................................ [ 60%]
+........................................................................ [ 72%]
+........................................................................ [ 84%]
+........................................................................ [ 96%]
+......................                                                   [100%]
+============================== warnings summary ===============================
+venv\Lib\site-packages\fastapi\testclient.py:1
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+venv\Lib\site-packages\starlette\testclient.py:53
+  D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+598 passed, 2 warnings in 757.28s (0:12:37)
+```
+
+Lint:
+
+```text
+> venv\Scripts\python -m ruff check app/ tests/
+All checks passed!
+```
+
+The first full-suite attempt exposed three pre-existing tests that directly referenced
+the renamed private helper. This was not a product defect or an accepted flaky failure;
+it was corrected within the allowed production file by retaining the old private
+name/signature and then rerunning the affected regression suite and full suite above.
+Exact first-run summary:
+
+```text
+FAILED tests/test_projects_write_lock.py::test_write_lock_prevents_cross_project_transaction_interleaving
+FAILED tests/test_projects_write_lock.py::test_read_transaction_waits_for_write_and_sees_no_phantom_rows
+FAILED tests/test_projects_write_lock.py::test_write_transaction_rolls_back_on_commit_failure
+3 failed, 595 passed, 2 warnings in 451.72s (0:07:31)
+```
+
+Final whitespace check (exit code 0; Git emitted only its Windows line-ending notices):
+
+```text
+> git diff --check
+warning: in the working copy of '.viepilot/phases/07-script-edit-staleness/tasks/task-7.1.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/api/projects.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/services/project_service.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_project_service.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_projects_api.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/test_script_api.py', LF will be replaced by CRLF the next time Git touches it
+```
+
+Final worktree scope:
+
+```text
+> git status --short
+ M .viepilot/phases/07-script-edit-staleness/tasks/task-7.1.md
+ M app/api/projects.py
+ M app/services/project_service.py
+ M tests/test_project_service.py
+ M tests/test_projects_api.py
+ M tests/test_script_api.py
+```
+
+### Limits / residual risks
+
+- No audio/video files or job rows are invalidated; they intentionally remain available
+  and may be stale. The project-level status is the approved signal.
+- No UI warning was added. Dashboard badge and Continue routing reuse the corrected
+  project status as approved.
+- The two warnings are dependency deprecations in FastAPI/Starlette test infrastructure,
+  unrelated to Task 7.1. There were zero test failures and zero Gemini retry flakes in
+  the final full-suite run.
+
+## PM Re-review (2026-09-18) — ACCEPTED
+
+Independently re-verified everything rather than accepting the report on its word.
+
+**Diff review** — read the full `git diff` for all 5 production/test files:
+- `app/services/project_service.py`: `mark_script_changed()` reads the live `status`
+  column directly via `db.execute("SELECT status FROM projects WHERE id = ?", ...)`
+  inside the caller's transaction (never trusts a pre-Gemini snapshot), is a true
+  no-caller-input operation (takes no `status` parameter at all), keeps
+  `script_generated` idempotent, routes the `draft` case through the existing
+  `update_project`/`_validate_status_transition` path unchanged, and for the 3
+  downstream statuses issues a direct, narrowly-scoped
+  `UPDATE projects SET status = 'script_generated', updated_at = ?` — confirmed via
+  reading `_build_config_snapshot` that `config_json` never embeds `status`, so this
+  narrow raw update cannot desync any cached snapshot field.
+- `app/api/projects.py`: `_advance_to_script_generated` was renamed to
+  `_sync_status_after_script_change` and now unconditionally calls
+  `mark_script_changed`; `_save_script_and_advance` (used by both full generation and
+  manual save) calls it inside the existing `_write_transaction`; `regenerate_script_line`
+  now also calls it inside its own `_write_transaction`, alongside `update_script_line`
+  — confirmed both operations commit or roll back together.
+- Confirmed via direct read of `update_project`/`_validate_status_transition`: both are
+  byte-for-byte unchanged. The public `PUT /{project_id}` endpoint's forward-only
+  guarantee for caller-supplied input is fully intact — `mark_script_changed` cannot be
+  reached from any public request body since it accepts no target status.
+- Test diffs read in full: `test_project_service.py`'s 3 new tests include a real
+  disk-and-DB check (`test_mark_script_changed_preserves_downstream_jobs_and_files`)
+  that writes real audio/video files and real `audio_jobs`/`video_jobs` rows, then
+  asserts both the DB rows and the file bytes are byte-identical after the downgrade —
+  not just "no exception was raised." `test_projects_api.py`'s new test drives a
+  project through all 4 real forward transitions via the actual `PUT` endpoint before
+  proving `complete -> draft` still returns 422 and the stored status is unchanged.
+  `test_script_api.py`'s new test is fully parametrized (3 downstream statuses × 3
+  real mutation routes = 9 real end-to-end HTTP scenarios), and the pre-existing
+  rollback regression was correctly updated to monkeypatch the new
+  `mark_script_changed` call boundary rather than the old `update_project` one.
+
+**Mid-implementation self-correction, reported honestly rather than hidden**: Codex's
+first full-suite run surfaced 3 failures in `tests/test_projects_write_lock.py` because
+that pre-existing regression suite calls `_save_script_and_advance` directly by name.
+Rather than silently renaming that suite's calls (out of its `allowed_files`) or
+quietly leaving the coupling unresolved, Codex kept the legacy private helper name/
+signature intact specifically for that compatibility contract, documented why in the
+function's own docstring, and re-ran the affected suite plus the full suite to confirm
+the fix. This is exactly the "not a defect, not a hidden workaround" standard the
+project's own contract requires — verified via `git diff` that
+`tests/test_projects_write_lock.py` itself has zero changes (not in `git status
+--short`'s output at all), confirming the compatibility was preserved by adapting the
+production helper, not by touching the out-of-scope test file.
+
+**PM independently re-ran every verification command**: 80/80 targeted + write-lock
+regression pass, `ruff check app/ tests/` clean, `git diff --check` exit 0 — all
+matched the Implementer's report exactly. Confirmed via `git status --short` that
+exactly the 6 allowed files were touched, nothing else.
+
+**Full suite, run independently**: 596 passed, 2 failed
+(`test_generate_script_retries_on_429_then_succeeds`,
+`test_generate_script_backoff_sequence_is_1s_2s_4s`) in 1353.31s (22:33) — both are
+the project's long-documented Gemini-retry/backoff timing flake class (unrelated to
+this task's files: `tests/test_script_service.py`, not among the 6 touched files),
+and both confirmed passing instantly in isolation (0.71s for both together) on
+re-run. Non-regressive.
+
+**Zero real defects found on PM review.** Accepted as delivered — no changes
+requested.
+
+**This closes Task 7.1 — and Phase 7 (Script Edit Staleness) in full**, since it was
+the phase's only task.
