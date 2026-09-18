@@ -772,3 +772,29 @@ one shared rule.
 **Phase 8 fully closed 2026-09-18** — its one task (8.1) done, self-implemented by
 PM per explicit user request, zero real defects found on PM's own independent
 re-review.
+
+## Phase 9 — Regeneration Integrity
+
+**Status:** 🔄 In Progress | **Started:** 2026-09-18
+
+Opened after the user had Codex run its own independent, parallel read-only
+`/vp-audit` pass alongside PM's own audit. Codex found 10 issues (0 critical, 1 high,
+4 medium, 5 low); PM independently re-verified all 5 "important" ones by reading the
+source directly — all 5 confirmed real, no false positives, an excellent scan. User
+chose to fix the 2 most serious now: a failed audio/video regeneration attempt
+destroys the DB record of a still-valid previous success (BUG-017, real data loss),
+and changing a speaker's voice settings doesn't invalidate downstream project status
+(BUG-016, the same bug class as BUG-013, reached via a mutation path Task 7.1's
+scoping missed). 3 other findings (stale per-line audio cache, avatar filesystem/DB
+rollback mismatch, ARCHITECTURE.md diagram staleness) are logged but out of scope
+for this phase.
+
+### 9.1 Preserve prior job data on regeneration failure; downgrade status on voice-settings change — planned
+
+- [ ] A failed audio/video regeneration attempt no longer wipes a prior successful
+  job's file paths/metadata — only status/error/completed_at change, the previous
+  file stays downloadable. Editing a speaker's voice settings when the project is
+  already at audio_generated/video_generated/complete downgrades status back to
+  script_generated (non-destructive), reusing Task 7.1's design pattern without
+  affecting draft/script_generated projects. See
+  `.viepilot/phases/09-regeneration-integrity/tasks/task-9.1.md` for the full plan.
