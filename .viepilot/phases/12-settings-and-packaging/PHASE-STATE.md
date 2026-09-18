@@ -28,6 +28,6 @@
   dashboard topbar. Manually driven end-to-end against the real running server with
   Playwright, not just unit-tested. See `tasks/task-12.1.md` for full evidence.
 
-### Task 12.2: Package as a standalone Windows `.exe` (PyInstaller) — not started
-- **Status:** not started
-- See `tasks/task-12.2.md` (written once planned).
+### Task 12.2: Package as a standalone Windows `.exe` (PyInstaller) — in_progress
+- **Status:** in_progress
+- See `tasks/task-12.2.md`.
