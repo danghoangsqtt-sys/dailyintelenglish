@@ -61,3 +61,8 @@
 - 2026-09-18: Task 13.0 completed. Offline verifier and ruff passed. SQLite Online
   Backup verified byte count/hash/integrity/foreign keys and equal source/backup counts;
   evidence is in `tasks/task-13.0.md`. Task 13.1 moved to `in_progress`.
+- 2026-09-19: recovery audit after an abrupt quota stop found Ollama 0.34.2 installed
+  and healthy on loopback with cloud disabled and the required user environment saved.
+  No model is installed, so Gate A has not run. The WIP qualification runner is lint-
+  clean but unexecuted. Detailed Claude handoff saved at
+  `docs/handoff/claude-phase13-continuation-prompt.md`; Task 13.1 remains in progress.
