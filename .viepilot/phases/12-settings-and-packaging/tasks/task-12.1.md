@@ -3,7 +3,7 @@
 ## Meta
 - **ID**: 12.1 (first task of Phase 12 — Settings & Packaging)
 - **Phase**: 12
-- **Status**: in_progress
+- **Status**: done (2026-09-18)
 - **Priority**: medium (usability — removes the need to hand-edit `.env` for the
   single most common first-run blocker)
 - **Assignee**: PM (Claude Code), self-implemented per the standing policy
@@ -117,15 +117,75 @@ lighter "just edit `.env` through the UI" or "no UI, better docs" options.
 - `tests/test_settings_api.py`
 
 ## Acceptance criteria
-- [ ] `app_settings` migration applies cleanly on a fresh DB and on an
+- [x] `app_settings` migration applies cleanly on a fresh DB and on an
       already-migrated one (idempotent per the existing migration-tracking system).
-- [ ] Saving a key through `PUT /api/settings` takes effect immediately (no restart)
+- [x] Saving a key through `PUT /api/settings` takes effect immediately (no restart)
       — proven by a test that saves a key and then calls a function that reads
       `settings.GEMINI_API_KEY` directly.
-- [ ] `GET /api/settings` never returns the raw key in any response body.
-- [ ] Clearing the stored key correctly reverts to the original `.env`-sourced
+- [x] `GET /api/settings` never returns the raw key in any response body.
+- [x] Clearing the stored key correctly reverts to the original `.env`-sourced
       value, not an empty string (when `.env` had a value).
-- [ ] Full test suite still green; new tests independently confirmed meaningful via
+- [x] Full test suite still green; new tests independently confirmed meaningful via
       a real revert-and-confirm-failure check.
-- [ ] Settings page reachable from the dashboard, visually consistent with the rest
+- [x] Settings page reachable from the dashboard, visually consistent with the rest
       of the app (reuses existing CSS classes, no new stylesheet).
+
+## Implementer Evidence
+
+All 10 files from the plan created/edited exactly as scoped (`git status --short`
+confirmed no out-of-scope files touched). Key implementation notes:
+
+- `config.ENV_GEMINI_API_KEY` is captured once at import time, before any DB
+  override can run — `settings_service.clear_gemini_api_key` reverts to it.
+- `settings_service.set_gemini_api_key`/`clear_gemini_api_key` mutate
+  `config.settings.GEMINI_API_KEY` in place (a plain mutable pydantic
+  `BaseSettings` instance, not frozen) — the 4 existing Gemini-calling services
+  needed zero changes.
+- `_mask()` shows first 6 + last 4 chars for keys longer than 10 chars, otherwise
+  fully masks — the raw key is never sent to the browser in any response.
+- Settings entry point scoped to the dashboard topbar only (documented in the task
+  card's "Current state" section) — not all 9 pages, to keep the diff proportional
+  to the request.
+
+**Real bug caught by the tests themselves, not just written to pass**: the first
+version of `test_delete_reverts_to_env_source` failed for real — its fixture only
+monkeypatched `settings.GEMINI_API_KEY`, not `config.ENV_GEMINI_API_KEY` (a separate
+constant captured once at process import time), so `clear_gemini_api_key` correctly
+reverted to *this machine's real, live `.env` Gemini key* instead of the test's fake
+value — and the assertion failure printed that real key (masked) into the test
+output. This was a test-isolation bug, not a service bug: the service's "revert to
+the true original `.env` value" behavior is exactly the intended design. Fixed by
+also monkeypatching `config.ENV_GEMINI_API_KEY` in the API test fixture (the
+service-level test file already did this correctly the first time). Documented here
+because it's a real, reusable lesson for this codebase: any test touching
+`config.ENV_GEMINI_API_KEY`-dependent behavior must isolate both module attributes,
+not just `settings.GEMINI_API_KEY`.
+
+Full test suite: 640/640 passed (621 + 19 new), 293.22s, zero flakes. Both new test
+files independently confirmed meaningful via a real revert-and-confirm-failure check
+(`git stash` the entire implementation, all 19 new tests failed with `AttributeError`
+as predicted since the module/router don't exist yet, `git stash pop` restored).
+
+**Manually run and driven end-to-end** (not just unit-tested) against the real dev
+server on a throwaway port (8123), per this project's "actually launch and interact"
+discipline: started `uvicorn`, used Playwright to open `/settings`, confirmed the
+real `.env`-sourced key showed masked and correctly labeled `"From .env file"`,
+saved a fake test key, confirmed the UI updated immediately and the change survived
+a full page reload (proving real DB persistence, not just an in-memory mutation),
+toggled the show/hide button, cleared the stored key, and confirmed it reverted
+back to the real `.env` value — screenshot reviewed, layout consistent with the
+rest of the app. Also clicked the new ⚙️ Settings link from the dashboard topbar
+and confirmed it navigates to `/settings`. Afterward, directly queried the real
+`data/app.db`'s `app_settings` table and confirmed it was left empty (no test
+pollution of the user's real database) and `GET /api/settings` on the real server
+still reports the user's real key, unaffected.
+
+## PM Acceptance
+Self-implemented and self-reviewed (per the standing policy —
+[[feedback_self_implement_no_codex]]). Verified 2026-09-18: full diff read against
+the plan (all 10 files in scope, nothing extra), both new test files independently
+confirmed meaningful via a real revert-and-confirm-failure check, ruff clean on all
+new/modified files, full suite 640/640 green, and the feature manually driven
+end-to-end against the real running server with Playwright (not just unit tests) —
+including confirming no pollution was left in the real local database afterward.
+**Accepted.**

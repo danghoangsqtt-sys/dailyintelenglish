@@ -118,5 +118,9 @@ const Api = (() => {
     deleteSpeakerAvatar: (projectId, speakerId) =>
       request(`/api/projects/${projectId}/speakers/${speakerId}/avatar`, { method: "DELETE" }),
     health: () => request("/health"),
+    getSettings: () => request("/api/settings"),
+    updateGeminiApiKey: (geminiApiKey) =>
+      request("/api/settings", { method: "PUT", body: JSON.stringify({ gemini_api_key: geminiApiKey }) }),
+    clearGeminiApiKey: () => request("/api/settings/gemini-api-key", { method: "DELETE" }),
   };
 })();

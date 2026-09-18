@@ -8,6 +8,13 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added
+- New Settings page (2026-09-18, Phase 12 Task 12.1, self-implemented by PM):
+  enter the Gemini API key directly in the app instead of hand-editing `.env`.
+  Saved keys take effect immediately (no restart), are never displayed in full
+  once saved (only a masked preview), and can be cleared to revert back to
+  whatever `.env` had configured. Reachable from the dashboard via a new ⚙️ icon.
+
 ### Changed
 - Phase 4 Task 4.1, CEFR `news`-genre prompt tuning (2026-09-15, by Claude Code as PM +
   Implementer): added register-vs-complexity guidance to `prompts/script/news.txt`,

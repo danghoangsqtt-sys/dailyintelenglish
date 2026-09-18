@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness); Phase 8 done (new, CSS consolidation); Phase 9 done (new, regeneration integrity); Phase 10 done (new, backlog cleanup); Phase 11 done (new, third audit fixes)  
+**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness); Phase 8 done (new, CSS consolidation); Phase 9 done (new, regeneration integrity); Phase 10 done (new, backlog cleanup); Phase 11 done (new, third audit fixes); Phase 12 in_progress (new, settings & packaging — Task 12.1 done, Task 12.2 not started)  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18; Phase 8 opened and closed 2026-09-18; Phase 9 opened and closed 2026-09-18; Phase 10 opened and closed 2026-09-18; Phase 11 opened and closed 2026-09-18, new scope beyond the original 21-day plan)  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18; Phase 8 opened and closed 2026-09-18; Phase 9 opened and closed 2026-09-18; Phase 10 opened and closed 2026-09-18; Phase 11 opened and closed 2026-09-18; Phase 12 opened 2026-09-18, in progress, new scope beyond the original 21-day plan)  
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
@@ -1131,6 +1131,46 @@ PM's own review of this task.**
 finding from all 3 independent audits this session (PM's own 2026-09-18 read-only
 pass, Codex's 2026-09-18 parallel scan, and this third Codex pass) is now resolved.
 
+## Phase 12 Task Status
+
+### 12.1 Settings page — Gemini API key stored in DB with `.env` fallback — ✅ DONE (2026-09-18)
+
+Origin: new scope, requested directly by the user (not audit-derived) right after
+being told the project was ready for trial — "sao không tạo một ô nhập API key
+trong phần cài đặt". Scoped via `AskUserQuestion`: user chose a dedicated Settings
+page saving to the database (over lighter alternatives).
+
+New `app_settings` key/value DB table (migration `004_app_settings.sql`) and
+`app/services/settings_service.py`: a DB-stored key always takes priority over
+`.env`, applied immediately (no restart) by mutating the shared
+`config.settings.GEMINI_API_KEY` singleton in place — the 4 existing Gemini-calling
+services needed zero changes. `config.ENV_GEMINI_API_KEY` captures the original
+`.env`-sourced value once at import time so "clear the stored key" correctly
+reverts to it instead of going blank. New `/api/settings` router (`GET`/`PUT`/
+`DELETE`) reusing `app/api/projects.py`'s existing `_write_transaction` lock
+pattern, and never returning the raw key — only a masked preview (first 6 + last 4
+chars). New Settings page linked from the dashboard topbar.
+
+19 new tests (service + full HTTP round-trip), independently confirmed meaningful
+via a real revert-and-confirm-failure check (`git stash` the whole implementation,
+all 19 failed with `AttributeError` as predicted, restored). One real bug was
+caught by the tests themselves during development: the first draft of a "clear
+reverts to env" API test only isolated `settings.GEMINI_API_KEY`, not the separate
+`config.ENV_GEMINI_API_KEY` constant — so it accidentally reverted to, and printed
+into the test failure output, this machine's real live `.env` Gemini key. This was
+a test-isolation bug, not a service bug (the service's real-revert behavior is
+exactly correct); fixed by isolating both attributes in the test fixture.
+
+Full suite: 640/640 passed (621 + 19 new), 293.22s, zero flakes. **Manually driven
+end-to-end against the real running dev server with Playwright** (not just
+unit-tested): opened `/settings`, confirmed the real key showed masked and
+correctly labeled, saved a fake key, confirmed it took effect immediately and
+survived a page reload (real DB persistence), toggled show/hide, cleared it back to
+the real `.env` value, and confirmed the dashboard's new ⚙️ link navigates
+correctly — then confirmed directly in `data/app.db` that no test data was left
+behind and the user's real key was unaffected. **Zero real defects found on PM's
+own review.**
+
 ## Decision Log
 
 | Date | Decision | Rationale |
@@ -1840,6 +1880,7 @@ pass, Codex's 2026-09-18 parallel scan, and this third Codex pass) is now resolv
 | 2026-09-18 | Mid-Phase-10, user invoked `/vp-auto` with a standing policy change: PM self-implements directly from now on instead of delegating to Codex, to avoid errors from mixing 2 different models. PM self-implemented Task 10.1 (BUG-018/BUG-019 fixes, including a revert-and-confirm-failure check on the new avatar regression test) and Task 10.2 (4 documentation fixes, plus finding and fixing the same LivePortrait inaccuracy in the Module Dependencies diagram along the way). 617/619 full suite passes (2 known Gemini-retry flakes, confirmed non-regressive). This closes Task 10.1, Task 10.2, and Phase 10 in full -- every finding from both 2026-09-18 audits now resolved. | User; PM (Claude Code) |
 | 2026-09-18 | User shared a third independent Codex `/vp-audit` pass, run after Phase 10 closed (7 findings: 0 critical/1 high/4 medium/2 low). PM independently re-verified all 7 -- all confirmed real. Opened Phase 11, self-implemented Task 11.1: fixed `delete_avatar()`'s BUG-019-class bug (a real miss in PM's own Task 10.1 scoping, incorrectly excluded at the time); narrowed `TTS_ENGINES` to only real engines, removing 3 that were accepted but never implemented; stopped `preview_line` from holding the app's shared DB lock across a live Edge TTS network call; fixed 4 test files' `no_real_sleep` fixtures to patch their own module's local `sleep` name instead of the shared `asyncio` module (a plausible root cause of this project's long-documented Gemini-retry flake class); synced the previously-missed `data-flow.mermaid` sidecar and corrected a new self-contradiction PM's own Task 10.2 had introduced about OmniVoice; updated stale `PROJECT-META.md` and README. Acknowledged (not fixed) that Phase 8's doc-first history lives in one commit, not git-provably sequenced -- adopted committing plan-then-implementation separately going forward. Both new regression tests independently confirmed meaningful via real revert-and-confirm-failure checks. Full suite independently: 620 passed, 1 failed (a newly-observed, unrelated Playwright flake, confirmed non-regressive in isolation) in 330.31s -- zero Gemini-retry flakes this run, the first fully clean run on that front in a long time, and notably the fastest recent full-suite run, a strong signal the sleep-patching fix addressed the flake class's actual root cause. This closes Task 11.1 and Phase 11 in full -- every finding from all 3 independent audits this session is now resolved. | User; PM (Claude Code); Codex (parallel auditor) |
 | 2026-09-18 | User asked PM to run `/vp-audit` a 4th time as final confirmation after Phase 11 closed. Tier 1 (state consistency): all 11 phases' PHASE-STATE.md status, TRACKER.md, HANDOFF.json, and all 12 `die-vp-p{N}-complete`/`-t*` git tags cross-checked and fully consistent -- zero drift found. Tier 2 (docs drift): found 2 real, low-severity gaps -- (1) `README.md`'s "Post-Beta Bug Fixes & Polish" section header and phase table still said "Phases 5-10", entirely omitting Phase 11 (logged BUG-020); (2) `.viepilot/ARCHITECTURE.md`'s Diagram Applicability Matrix still had an `event-flows | optional | WebSocket streaming TTS` row that directly contradicted the corrected System Overview text 35 lines above it in the same file ("no WebSocket/SSE anywhere in the app") -- confirmed via direct grep that the codebase has zero WebSocket usage and that even the polling `/status` routes explicitly disclaim real SSE in their own docstrings; the ENH-007 fix that corrected the System Overview text never updated this row to match (logged BUG-021). Verified all 3 architecture diagram sidecars still byte-for-byte match their embedded Mermaid blocks (programmatic extraction + diff, zero drift). Tier 3 spot-check on Phase 11's touched files (`avatar_service.py`, `tts_service.py`, `tts.py`, `projects.py`, plus the 4 sleep-patched service files): no bare `except:`/`print()`, zero dead references to the removed `piper`/`google`/`azure` engines anywhere in `app/` or `frontend/`, all 4 sleep-patched files confirmed consistently using `from asyncio import sleep` with no leftover `asyncio.sleep(...)` calls. Both findings fixed immediately given their triviality (self-implemented, doc-only, no runtime behavior change) rather than opening a new phase -- proportionate to their size, unlike Phase 11's substantive code fixes. Full suite independently re-run one more time: **621/621 passed, zero failures, 294.35s** -- faster than Phase 11's already-clean run, zero Gemini-retry-class flakes, and neither of the two previously-observed one-off Playwright flakes (Task 9.1's waveform test, Task 11.1's dashboard-delete test) recurred either, further supporting that both were genuine one-off infrastructure flakes rather than real regressions. **This is the cleanest full-suite run recorded all session.** All findings from all 4 independent audit passes this session (Codex x3, PM x1) are now resolved. | User; PM (Claude Code) |
+| 2026-09-18 | User asked directly (not audit-derived) why the app has no Settings UI for the Gemini API key, and to package the app "professionally". Scoped via `AskUserQuestion`: Settings page saving to the DB (over lighter alternatives), and a standalone `.exe` via PyInstaller (over a simple install script or Docker). Opened Phase 12, wrote and committed the doc-first plan for Task 12.1 before touching any implementation file. Self-implemented Task 12.1: new `app_settings` DB table, `settings_service.py` resolving a DB-stored key over `.env` at runtime (reverting cleanly to the original `.env` value on clear), new `/api/settings` router, new Settings page linked from the dashboard topbar. 19 new tests, independently confirmed meaningful via a real revert-and-confirm-failure check -- one of which caught a real test-isolation bug during development (an early draft accidentally reverted to, and printed, this machine's real `.env` Gemini key instead of the test's fake one; fixed by isolating `config.ENV_GEMINI_API_KEY` too, not a service defect). Full suite 640/640 passed, zero flakes. Manually driven end-to-end against the real running dev server with Playwright (not just unit-tested), then confirmed no test data was left in the real local database afterward. **This closes Task 12.1** -- Task 12.2 (packaging) planned next. | User; PM (Claude Code) |
 
 ## Known Issues
 

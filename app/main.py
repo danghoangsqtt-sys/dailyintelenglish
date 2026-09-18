@@ -10,12 +10,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import audio, learning, music, projects, thumbnail, tts, video, youtube
+from app.api import audio, learning, music, projects, settings as settings_api, thumbnail, tts, video, youtube
 from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.responses import ok
 from app.core.system_checks import check_ffmpeg, get_gpu_info
 from app.db.database import Database, close_db, init_db
+from app.services import settings_service
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
@@ -41,6 +42,7 @@ async def lifespan(app: FastAPI):
         (settings.DATA_DIR / subdir).mkdir(parents=True, exist_ok=True)
 
     await init_db()
+    await settings_service.load_gemini_api_key_from_db(Database.instance().connection)
     app_state["ffmpeg_ok"] = await check_ffmpeg()
     app_state["gpu_info"] = await get_gpu_info()
 
@@ -94,6 +96,7 @@ app.include_router(video.templates_router)
 app.include_router(music.router)
 app.include_router(thumbnail.router)
 app.include_router(youtube.router)
+app.include_router(settings_api.router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
 
@@ -150,6 +153,12 @@ async def step7_youtube() -> FileResponse:
 async def music_library() -> FileResponse:
     """Serve the background Music Library management page."""
     return FileResponse(FRONTEND_DIR / "pages" / "music_library.html")
+
+
+@app.get("/settings")
+async def settings_page() -> FileResponse:
+    """Serve the app-level Settings page (Task 12.1 — Gemini API key)."""
+    return FileResponse(FRONTEND_DIR / "pages" / "settings.html")
 
 
 

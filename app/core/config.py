@@ -40,3 +40,8 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Captured once, before Task 12.1's settings_service.py can ever overwrite
+# settings.GEMINI_API_KEY with a database-stored value at runtime -- lets "clear the
+# stored key" revert to the original .env/environment value instead of going blank.
+ENV_GEMINI_API_KEY = settings.GEMINI_API_KEY
