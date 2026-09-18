@@ -152,6 +152,14 @@ Versioning: [SemVer](https://semver.org/)
 
 ### Fixed
 - Found via `/vp-audit` (2026-09-17), independently re-verifying a user-commissioned
+  Gemini audit finding, fixed under Phase 8 Task 8.1 (2026-09-18): the shared
+  disabled-button style had no `aria-disabled` variant, so `music_library.html`,
+  `step7_youtube.html`, and `step6_thumbnail.html` each independently invented their
+  own local fix for disabled buttons/links and drifted to different, inconsistent
+  opacity values. The shared stylesheet now covers both cases consistently, and
+  `step6_thumbnail.html`'s drifted small-button padding was also reconciled to the
+  shared value.
+- Found via `/vp-audit` (2026-09-17), independently re-verifying a user-commissioned
   Gemini audit finding, confirmed by PM and fixed under Phase 7 Task 7.1 (2026-09-18):
   a project's script could be regenerated (in full, per-line, or via the normal manual
   Step 2 autosave) at any time, even after its audio/video had already been

@@ -127,6 +127,73 @@ async def test_missing_project_dashboard_link_navigates_home(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("route", ["/music", "/step6", "/step7"])
+async def test_disabled_and_aria_disabled_buttons_share_the_same_opacity(
+    browser_instance: Browser, live_server_url: str, route: str
+):
+    """Task 8.1 (ENH-005): a real `disabled` button and an `aria-disabled="true"`
+    link-styled-as-button must render identically, on every page that has one —
+    previously each page invented its own, inconsistent local override.
+    """
+    page = await browser_instance.new_page()
+    await _mock_empty_api(page)
+    await page.goto(f"{live_server_url}{route}", wait_until="domcontentloaded")
+
+    opacities = await page.evaluate(
+        """() => {
+            const btn = document.createElement('button');
+            btn.className = 'btn';
+            btn.disabled = true;
+            document.body.appendChild(btn);
+            const btnOpacity = getComputedStyle(btn).opacity;
+            btn.remove();
+
+            const link = document.createElement('a');
+            link.className = 'btn';
+            link.setAttribute('aria-disabled', 'true');
+            document.body.appendChild(link);
+            const linkOpacity = getComputedStyle(link).opacity;
+            link.remove();
+
+            return [btnOpacity, linkOpacity];
+        }"""
+    )
+    button_opacity, link_opacity = opacities
+    assert button_opacity == link_opacity
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_thumbnail_btn_sm_padding_matches_the_shared_rule(
+    browser_instance: Browser, live_server_url: str
+):
+    """Task 8.1 (ENH-005): step6_thumbnail.html no longer overrides `.btn-sm`'s
+    padding locally — it must now match the shared stylesheet's value, the same as
+    any other page.
+    """
+    page = await browser_instance.new_page()
+    await _mock_empty_api(page)
+
+    async def probe_padding(route: str) -> str:
+        await page.goto(f"{live_server_url}{route}", wait_until="domcontentloaded")
+        return await page.evaluate(
+            """() => {
+                const el = document.createElement('button');
+                el.className = 'btn btn-sm';
+                document.body.appendChild(el);
+                const padding = getComputedStyle(el).padding;
+                el.remove();
+                return padding;
+            }"""
+        )
+
+    thumbnail_padding = await probe_padding("/step6")
+    reference_padding = await probe_padding("/step7")
+    assert thumbnail_padding == reference_padding
+    await page.close()
+
+
+@pytest.mark.asyncio
 async def test_regular_error_remains_plain_text_without_a_link(
     browser_instance: Browser, live_server_url: str
 ):

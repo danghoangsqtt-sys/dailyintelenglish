@@ -738,3 +738,37 @@ to open this phase to fix it now rather than defer it.
 
 **Phase 7 fully closed 2026-09-18** — its one task (7.1) done, delegated to Codex per
 AR-06, zero real defects found on PM review.
+
+## Phase 8 — CSS Consolidation
+
+**Status:** ✅ Complete | **Started:** 2026-09-18 | **Closed:** 2026-09-18
+
+Opened at the user's explicit request to continue processing ENH-004/ENH-005 and to
+save time by having PM self-implement rather than delegate to Codex, a one-time
+deviation from the AR-06 split for this task only. Re-investigation found ENH-004 (DB
+single-connection lock) already has a deliberate, well-reasoned fix in place — a
+connection-wide `asyncio.Lock` (`app/api/projects.py`) already serializes every route
+precisely because there is one shared connection — so `PRAGMA journal_mode=WAL` alone
+would be purely cosmetic; a real fix would need a full connection-pool redesign,
+deferred per the project's standing precedent. Marked `wontfix` with reasoning
+recorded, no code changed. ENH-005 (CSS fragmentation) had a real, minimal fix: the
+shared stylesheet was missing a `.btn[aria-disabled="true"]` disabled-link variant,
+so 3 pages had each invented their own inconsistent local override — reconciled to
+one shared rule.
+
+### 8.1 Reconcile disabled-button CSS drift (ENH-005); ENH-004 re-scoped — ✅ DONE (2026-09-18)
+
+- [x] Extended the shared `.btn[disabled]` rule to also match
+  `.btn[aria-disabled="true"]`; removed the resulting redundant local overrides in
+  `music_library.html`, `step7_youtube.html`, and (partially) `step6_thumbnail.html`
+  (which kept only its genuinely page-specific `button[disabled]` selector, corrected
+  to the shared value); removed `step6_thumbnail.html`'s drifted `.btn-sm` padding
+  override. CSS-only, no JS changed. Self-implemented and self-verified by PM
+  (including a revert-and-confirm-failure check proving the new tests are
+  meaningful). 601/602 full suite passes (1 known Gemini-retry flake, confirmed
+  non-regressive). See
+  `.viepilot/phases/08-css-consolidation/tasks/task-8.1.md` for the full record.
+
+**Phase 8 fully closed 2026-09-18** — its one task (8.1) done, self-implemented by
+PM per explicit user request, zero real defects found on PM's own independent
+re-review.

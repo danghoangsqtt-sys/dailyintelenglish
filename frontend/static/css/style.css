@@ -99,7 +99,7 @@ button { cursor: pointer; }
 .btn-sm { min-height: 30px; padding: 5px 10px; font-size: 12px; }
 .btn-xs { min-height: 24px; padding: 3px 7px; font-size: 11px; }
 .btn.large { min-height: 42px; padding-inline: 18px; }
-.btn[disabled] { cursor: not-allowed; opacity: .58; pointer-events: none; }
+.btn[disabled], .btn[aria-disabled="true"] { cursor: not-allowed; opacity: .58; pointer-events: none; }
 
 .icon-toggle, .icon-btn { width: 34px; height: 34px; display: inline-grid; place-items: center; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--muted); transition: border-color .15s ease, transform .15s ease; }
 .icon-toggle:hover { border-color: var(--accent); transform: rotate(15deg); }

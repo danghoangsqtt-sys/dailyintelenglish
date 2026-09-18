@@ -115,10 +115,8 @@
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
-    .btn[disabled],
-    button[disabled],
-    a[aria-disabled="true"] {
-      opacity: 0.55;
+    button[disabled] {
+      opacity: .58;
       cursor: not-allowed;
       pointer-events: none;
     }
@@ -223,7 +221,6 @@
     .download-group { padding: 12px; border: 1px solid var(--border); border-radius: 10px; }
     .download-group strong { display: block; margin-bottom: 9px; font-size: 12px; }
     .download-links { display: flex; gap: 8px; }
-    .btn-sm { padding: 7px 11px; font-size: 12px; text-decoration: none; }
     .editor-placeholder { padding: 42px 20px; text-align: center; color: var(--muted); }
 
     @media (max-width: 720px) {
