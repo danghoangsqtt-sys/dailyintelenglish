@@ -366,3 +366,36 @@ async def test_generate_with_retry_never_downgrades_to_schema_less(monkeypatch):
 
     assert len(calls) == 1
     assert calls[0] == schema
+
+
+async def test_update_script_line_clears_stale_cached_audio(db):
+    """Task 10.1 (BUG-018): a line's cached TTS audio was synthesized from the text
+    being replaced here, so it must not survive the text change."""
+    await db.execute(
+        "INSERT INTO projects (id, name, status, created_at, updated_at) "
+        "VALUES ('p1', 'Test', 'script_generated', 't', 't')"
+    )
+    await db.execute(
+        "INSERT INTO speakers (id, project_id, speaker_index, name) "
+        "VALUES ('sp1', 'p1', 0, 'Alex')"
+    )
+    await db.execute(
+        "INSERT INTO script_lines "
+        "(id, project_id, line_index, speaker_id, text, language_notes, "
+        "audio_cache_path, duration_seconds) "
+        "VALUES ('line_001', 'p1', 0, 'sp1', 'Old text.', '{}', 'old-cache.mp3', 3.5)"
+    )
+    await db.commit()
+
+    updated = await script_service.update_script_line(
+        db, "p1", "line_001", "New text.", {"collocations": [], "idioms": [], "grammar_point": None}
+    )
+
+    assert updated["text"] == "New text."
+    assert updated["duration_seconds"] is None
+    cursor = await db.execute(
+        "SELECT audio_cache_path, duration_seconds FROM script_lines WHERE id = 'line_001'"
+    )
+    row = await cursor.fetchone()
+    assert row["audio_cache_path"] is None
+    assert row["duration_seconds"] is None

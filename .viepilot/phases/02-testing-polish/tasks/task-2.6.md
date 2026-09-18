@@ -3,7 +3,7 @@
 ## Meta
 - **ID**: 2.6 (new scope, born from a `/vp-audit` pass requested before Phase 3)
 - **Phase**: 2
-- **Status**: in_progress
+- **Status**: done
 - **Priority**: medium (1 real data-consistency bug, 1 real unsafe-escaping bug, 1 docs fix)
 - **Assignee**: PM (Claude Code)
 

@@ -8,16 +8,24 @@ Daily Intel English Studio là một **local web application** chạy trên `htt
 
 ```
 Browser (localhost:8000)
-        ↕ REST API / WebSocket (streaming)
+        ↕ REST API (synchronous, polling — no WebSocket/SSE anywhere in the app)
 FastAPI Backend (Python 3.11+)
         ├── Gemini API (script + learning content + thumbnail fill)
-        ├── OmniVoice (local GPU TTS — RTX 3060 12GB)
-        ├── Edge TTS (backup TTS — free, online)
-        ├── Piper TTS (offline fallback TTS)
+        ├── Edge TTS (sole official TTS engine, decided 2026-09-13 — see TRACKER.md Decision Log)
+        ├── Piper TTS (offline fallback, availability-checked, not actively used)
         ├── pydub + ffmpeg (audio mix + video export)
         ├── Pillow (thumbnail generation)
         └── SQLite (project storage)
 ```
+
+Real OmniVoice GPU inference (local TTS on the RTX 3060) was built and verified
+working in Phase 1, but decided against 2026-09-13 in favor of Edge TTS as the sole
+official engine. `tts_service.py::synthesize_line` still contains a working
+OmniVoice branch (with an automatic Edge TTS fallback), but it's unreachable through
+the app: every speaker's `tts_engine` defaults to `"edge_tts"`
+(`SpeakerConfig.tts_engine`), and the Step 4 TTS Studio UI never exposes
+`"omnivoice"` as a selectable option. See `.viepilot/TRACKER.md`'s Decision Log and
+Known Issues for the full history.
 
 ## ViePilot Organization Context
 
@@ -82,8 +90,8 @@ graph TB
 
     UI --> AR
     WZ --> AR
-    AR --> SS & TS & AS & VS & THS & PS & YTS
-    SS --> GEM
+    AR --> SS & LCS & TS & AS & VS & THS & PS & YTS
+    SS & LCS --> GEM
     TS --> OV & ETSS & PTTS
     AS --> FFMP & PDY & ML
     VS --> FFMP & PIL
@@ -123,7 +131,7 @@ flowchart LR
 
     subgraph E["Step 4: TTS Audio Studio"]
         E1[Voice Assignment\nper speaker]
-        E2[OmniVoice GPU\ngenerate per line]
+        E2[Edge TTS\ngenerate per line]
         E3[Preview + Mix\npydub + ffmpeg]
         E4[Export\nMP3 + WAV]
     end
@@ -131,7 +139,7 @@ flowchart LR
     subgraph F["Step 5: Video Studio"]
         F1[Background\nTemplate / Image]
         F2[Subtitle Overlay\nburned-in + SRT]
-        F3[Lips-sync Avatar\nLivePortrait]
+        F3[Lips-sync Avatar\nLivePortrait — NOT implemented, deferred]
         F4[Export MP4]
     end
 
@@ -180,14 +188,13 @@ graph LR
         FF[ffmpeg]
         PD[pydub]
         PI[Pillow]
-        LP[LivePortrait]
     end
 
     SS --> GEM
     LCS --> GEM
     TS --> OV & ET & PT
     AS --> FF & PD
-    VS --> FF & LP
+    VS --> FF
     THS --> GEM & PI
     YTS --> GEM
     PS --> SS & LCS & TS & AS & VS & THS & YTS
@@ -402,6 +409,17 @@ DELETE /api/music/{filename}      # Remove track
   "id": "uuid",
   "name": "My Podcast Episode",
   "status": "draft|script_generated|audio_generated|video_generated|complete",
+  // Forward-only: normally advances one step at a time (project_service.py::
+  // _validate_status_transition), enforced on the public PUT /api/projects/{id}
+  // endpoint. Two internal-only exceptions downgrade status back to
+  // script_generated when a later step's output may no longer match: (1) editing
+  // the script (generate/regenerate/manual save) while status is already past
+  // script_generated (Task 7.1, mark_script_changed()); (2) editing a speaker's
+  // voice settings (engine/description/speed/pitch/volume) while status is
+  // audio_generated/video_generated/complete (Task 9.1, mark_speaker_voice_changed()).
+  // Both are non-destructive -- no audio/video files or job records are deleted,
+  // only the status signal changes. Neither downgrade fires at draft or
+  // script_generated, so the normal Step 1/2 editing flow is unaffected.
   "config": {
     "topic": "string",
     "cefr_level": "A1|A2|B1|B2|C1|C2",
@@ -424,7 +442,7 @@ DELETE /api/music/{filename}      # Remove track
       "name": "Alex",
       "gender": "male",
       "accent": "american",
-      "tts_engine": "omnivoice",
+      "tts_engine": "edge_tts",
       "voice_description": "Young male, American accent, friendly tone",
       "speed": 1.0,
       "pitch": 0,

@@ -167,10 +167,17 @@ async def upload_speaker_avatar(
     file: UploadFile = File(...),
     db: aiosqlite.Connection = Depends(get_db),
 ) -> dict:
-    """Upload (or replace) one speaker's avatar image (Task 1.7c — upload only, no lip-sync)."""
+    """Upload (or replace) one speaker's avatar image (Task 1.7c — upload only, no lip-sync).
+
+    The previous avatar file (if any) is only deleted after this block's commit has
+    durably succeeded — see `avatar_service.cleanup_previous_avatar_file` for why.
+    """
     started_at = time.perf_counter()
     async with _write_transaction(db):
-        project = await avatar_service.upload_avatar(db, project_id, speaker_id, file, commit=False)
+        project, previous_avatar_path = await avatar_service.upload_avatar(
+            db, project_id, speaker_id, file, commit=False
+        )
+    await avatar_service.cleanup_previous_avatar_file(previous_avatar_path)
     return ok(project, started_at=started_at)
 
 

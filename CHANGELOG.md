@@ -151,6 +151,16 @@ Versioning: [SemVer](https://semver.org/)
   correctly by existing code, so no change was needed there.
 
 ### Fixed
+- Found via both 2026-09-18 audits (Codex's independent parallel `/vp-audit` pass
+  and PM's own read-only pass), fixed under Phase 10 (self-implemented by PM):
+  regenerating a single script line left its old cached TTS audio reference in
+  place in the database (mitigated in practice — both "Listen" and "Generate All"
+  already re-synthesize fresh audio before use — but now corrected at the data
+  level too). Uploading a new avatar image used to delete the previous image file
+  immediately, before the database change referencing it was confirmed saved; if
+  that save later failed for any reason, the database would end up pointing at a
+  file that no longer existed. Avatar uploads now use a safe ordering that
+  guarantees this can't happen.
 - Found via an independent parallel `/vp-audit` pass run by Codex (2026-09-18),
   independently re-verified and re-scored by PM, fixed under Phase 9 Task 9.1: a
   failed audio or video regeneration attempt used to destroy the database's record

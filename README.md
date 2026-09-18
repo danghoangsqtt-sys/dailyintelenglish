@@ -60,7 +60,7 @@ isolation). See `.viepilot/TRACKER.md` for the full evidence trail.
 All 3 planned phases (Full Feature Build, Testing & Polish, Review & Documentation) are
 complete as of Day 6 of a 21-day target. Tagged `v1.0.0-beta`.
 
-#### Post-v1.0.0-beta Polish (Phase 4) — 🔄 In Progress
+#### Post-v1.0.0-beta Polish (Phase 4) — ✅ Done 2026-09-16
 
 New scope beyond the original 3-phase plan, scoped in the
 [2026-09-15 brainstorm session](docs/brainstorm/session-2026-09-15.md) after v1.0.0-beta
@@ -69,10 +69,27 @@ shipped.
 | Task | Feature | Status |
 |------|---------|--------|
 | **Task 4.1** | 🎯 **CEFR `news`-genre prompt tuning** — targeted the 3 patterns Task 2.1b flagged as BORDERLINE; honest result was a partial, mixed improvement, not a full fix | ✅ Done |
-| **Task 4.2** | 🎨 **UI Redesign Slice 2** — shell for the 7 pages not covered by Slice 1, split per-page (4.2a Learning done; TTS/Video/Thumbnail/YouTube/Music Library/Step1-Config remain) | 🔄 In Progress (1/7) |
+| **Task 4.2** | 🎨 **UI Redesign Slice 2** — CapCut-style shell for the 7 remaining pages; 5/7 redesigned (Learning, TTS, Video, Thumbnail, YouTube Package), 2/7 (Music Library, Step1-Config) confirmed and closed as deliberately not shell-based | ✅ Done (5/7 redesigned, 2/7 closed as out of scope) |
+| **Task 4.4** | 🐛 **P0 navigation bug fixes** — Dashboard "Continue" silently no-op'd for 3 of 5 project statuses; Config page silently duplicated a project instead of resuming it — both found by a Codex UI audit, fixed and verified | ✅ Done |
 
-Progress cancellation and real LivePortrait lip-sync remain deliberately deferred — see
-`.viepilot/TRACKER.md` Known Issues.
+Task 4.3 (Vietnamese UI localization) was scoped but **dropped by explicit user
+decision** before any code was written — see `.viepilot/TRACKER.md`. Progress
+cancellation and real LivePortrait lip-sync remain deliberately deferred.
+
+#### Post-Beta Bug Fixes & Polish (Phases 5-9) — ✅ Done 2026-09-18
+
+5 more phases of real, verified fixes beyond the original plan — each scoped from a
+brainstorm session or an independent audit (including two separate AI-assisted
+read-only `/vp-audit` passes), each closed with zero real defects found on PM
+review. Full evidence trail in `.viepilot/ROADMAP.md` and `.viepilot/TRACKER.md`.
+
+| Phase | Feature | Status |
+|-------|---------|--------|
+| **Phase 5** | 📊 **UI Polish Backlog** — client-side Dashboard pagination (176 project cards were rendering unbounded), proportional TTS/Video timeline clip widths, small accessibility/UX fixes | ✅ Done |
+| **Phase 6** | ✨ **Quick Wins Batch** — fixed a pre-JS-paint dark-theme flash on 4 pages, added a real "Go to Dashboard" link to a dead-end error state on 6 pages, styled TTS range sliders with the app's accent color | ✅ Done |
+| **Phase 7** | 🔒 **Script Edit Staleness** — editing a script after its audio/video were already generated silently left the project marked "complete"; now correctly downgrades status to signal the downstream steps need regenerating | ✅ Done |
+| **Phase 8** | 🎨 **CSS Consolidation** — reconciled a disabled-button styling drift across 3 pages back to one shared rule | ✅ Done |
+| **Phase 9** | 🔁 **Regeneration Integrity** — a failed audio/video regeneration attempt used to wipe the database's record of a still-valid previous success; changing a speaker's voice settings now also correctly signals stale downstream audio/video | ✅ Done |
 
 ## Quick Start
 

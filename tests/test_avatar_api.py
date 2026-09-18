@@ -54,8 +54,11 @@ def test_upload_accepts_valid_png_and_jpeg(client: TestClient, project: dict):
     assert response.status_code == 200
     updated = next(s for s in response.json()["data"]["speakers"] if s["id"] == speaker_id)
     assert updated["avatar_image_path"] == f"/api/projects/{project['id']}/speakers/{speaker_id}/avatar"
-    stored = settings.DATA_DIR / "avatars" / project["id"] / f"{speaker_id}.png"
-    assert stored.read_bytes() == VALID_PNG
+    avatar_dir = settings.DATA_DIR / "avatars" / project["id"]
+    stored_files = list(avatar_dir.glob(f"{speaker_id}.*"))
+    assert len(stored_files) == 1
+    assert stored_files[0].suffix == ".png"
+    assert stored_files[0].read_bytes() == VALID_PNG
 
 
 def test_upload_never_leaks_raw_filesystem_path(client: TestClient, project: dict):
@@ -78,6 +81,42 @@ def test_reupload_replaces_previous_avatar_file(client: TestClient, project: dic
     stored_files = list(avatar_dir.glob(f"{speaker_id}.*"))
     assert len(stored_files) == 1
     assert stored_files[0].suffix == ".jpg"
+
+
+def test_upload_commit_failure_preserves_the_original_avatar(
+    client: TestClient, project: dict, monkeypatch: pytest.MonkeyPatch
+):
+    """Task 10.1 (BUG-019): if the database transaction's commit fails after a
+    re-upload, the previous avatar file and the DB's reference to it must both
+    survive untouched — not a deleted file with a dangling DB pointer."""
+    from app.db.database import Database
+
+    speaker_id = project["speakers"][0]["id"]
+    first = upload(client, project["id"], speaker_id, "face.png", VALID_PNG)
+    assert first.status_code == 200
+    avatar_dir = settings.DATA_DIR / "avatars" / project["id"]
+    original_file = next(avatar_dir.glob(f"{speaker_id}.*"))
+    original_bytes = original_file.read_bytes()
+
+    connection = Database.instance().connection
+    real_commit = connection.commit
+
+    async def failing_commit():
+        raise RuntimeError("simulated commit failure")
+
+    monkeypatch.setattr(connection, "commit", failing_commit)
+    try:
+        with pytest.raises(RuntimeError, match="simulated commit failure"):
+            upload(client, project["id"], speaker_id, "face.jpg", VALID_JPEG)
+    finally:
+        monkeypatch.setattr(connection, "commit", real_commit)
+
+    assert original_file.exists()
+    assert original_file.read_bytes() == original_bytes
+
+    served = client.get(f"/api/projects/{project['id']}/speakers/{speaker_id}/avatar")
+    assert served.status_code == 200
+    assert served.content == original_bytes
 
 
 def test_other_speaker_avatar_is_untouched(client: TestClient, project: dict):

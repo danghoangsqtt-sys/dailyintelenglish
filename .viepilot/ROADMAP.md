@@ -807,26 +807,35 @@ AR-06, zero real defects found on PM review.
 
 ## Phase 10 — Backlog Cleanup
 
-**Status:** 🔄 In Progress | **Started:** 2026-09-18
+**Status:** ✅ Complete | **Started:** 2026-09-18 | **Closed:** 2026-09-18
 
 Opened via `/vp-debug` at the user's request to continue fixing the remaining
 backlog findings from the 2026-09-18 audits — all 6 already fully diagnosed, no new
-investigation needed. Task 10.1 fixes the 2 remaining real code bugs (BUG-018, BUG-019).
-Task 10.2 fixes the 4 pure documentation/metadata findings (BUG-014, BUG-015,
-ENH-006, ENH-007).
+investigation needed. Mid-phase, the user made a standing policy change: PM
+self-implements directly from now on instead of delegating to Codex. Task 10.1
+fixed the 2 remaining real code bugs (BUG-018, BUG-019). Task 10.2 fixed the 4 pure
+documentation/metadata findings (BUG-014, BUG-015, ENH-006, ENH-007).
 
-### 10.1 Clear stale per-line audio cache on line regenerate; stop deleting avatar files before commit is confirmed — planned
+### 10.1 Clear stale per-line audio cache on line regenerate; stop deleting avatar files before commit is confirmed — ✅ DONE (2026-09-18)
 
-- [ ] Regenerating a single script line clears its stale `audio_cache_path`/
+- [x] Regenerating a single script line clears its stale `audio_cache_path`/
   `duration_seconds`. Avatar re-uploads no longer delete the previous file before
   the surrounding DB transaction's commit is confirmed to succeed — a forced commit
-  failure now leaves the original avatar intact instead of orphaning it. See
-  `.viepilot/phases/10-backlog-cleanup/tasks/task-10.1.md` for the full plan.
+  failure now leaves the original avatar intact instead of orphaning it, verified
+  by a real regression test (and a revert-and-confirm-failure check on it).
+  Self-implemented by PM, zero real defects found on PM's own independent review.
+  See `.viepilot/phases/10-backlog-cleanup/tasks/task-10.1.md` for the full record.
 
-### 10.2 Documentation cleanup — stale task-card status fields, README, ARCHITECTURE.md — planned
+### 10.2 Documentation cleanup — stale task-card status fields, README, ARCHITECTURE.md — ✅ DONE (2026-09-18)
 
-- [ ] 4 Phase 2 task cards' stale `Status` fields corrected; README.md's Phase 4
+- [x] 4 Phase 2 task cards' stale `Status` fields corrected; README.md's Phase 4
   section and Phases 5-9 brought up to date; ARCHITECTURE.md's status-downgrade
   behavior documented and its WebSocket/OmniVoice/LivePortrait/Mermaid-sidecar
-  inaccuracies corrected. See
-  `.viepilot/phases/10-backlog-cleanup/tasks/task-10.2.md` for the full plan.
+  inaccuracies corrected (plus the same LivePortrait inaccuracy found and fixed in
+  the separate Module Dependencies diagram). Self-implemented by PM. See
+  `.viepilot/phases/10-backlog-cleanup/tasks/task-10.2.md` for the full record.
+
+**Phase 10 fully closed 2026-09-18** — both tasks done, self-implemented by PM per
+the user's standing policy change, zero real defects found on PM's own review.
+Every finding from both 2026-09-18 audits (Codex's parallel scan and PM's own
+read-only pass) is now resolved.

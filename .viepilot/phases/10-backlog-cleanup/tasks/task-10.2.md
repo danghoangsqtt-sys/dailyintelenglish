@@ -3,10 +3,10 @@
 ## Meta
 - **ID**: 10.2 (second task of Phase 10 — Backlog Cleanup)
 - **Phase**: 10
-- **Status**: planned
+- **Status**: done (2026-09-18)
 - **Priority**: low (4 real but purely cosmetic/documentation findings)
-- **Assignee**: Codex (Implementer) — PM (Claude Code) writes/accepts, per the AR-06
-  PM-Implementer contract (`docs/CODEX_CODE_PROMPT.md`, `.viepilot/SYSTEM-RULES.md`)
+- **Assignee**: PM (Claude Code), self-implemented per the same standing policy
+  change noted in Task 10.1.
 
 ## Doc-First Gate
 
@@ -86,6 +86,14 @@ how `.viepilot/*.md`/`README.md`/`ARCHITECTURE.md` have always been maintained).
 - `.viepilot/phases/02-testing-polish/tasks/task-2.6.md`
 - `README.md`
 - `.viepilot/ARCHITECTURE.md`
+- `.viepilot/architecture/module-dependencies.mermaid` (added during implementation
+  — while fixing the OmniVoice/LivePortrait "shown as active" inaccuracy, found the
+  Module Dependencies diagram also had a `VS --> FF & LP` edge claiming
+  VideoService depends on LivePortrait, which is false — confirmed via a repo-wide
+  grep that no `app/` code references LivePortrait at all except docstrings
+  explaining it's *not* implemented. Same root cause as the already-scoped
+  data-flow diagram fix, in an adjacent diagram; both the embedded copy and this
+  sidecar needed the same correction to stay in sync with each other.)
 - This task card, for plan/evidence updates.
 
 ## Verification checklist
@@ -101,6 +109,96 @@ how `.viepilot/*.md`/`README.md`/`ARCHITECTURE.md` have always been maintained).
   no Python/JS files touched; confirm via `git status --short` that only the files
   above changed.)
 
+## Implementer Evidence (PM, self-implemented)
+
+### Implementation summary
+
+- **BUG-014**: `**Status**: in_progress` → `**Status**: done` in all 4 Phase 2 task
+  cards, via `sed`, then confirmed via grep the substitution matched exactly the
+  intended 4 lines.
+- **BUG-015**: README.md's Phase 4 section updated to "✅ Done 2026-09-16" with its
+  real final task list (4.1, 4.2 at 5/7+2/7-closed, 4.4 — Task 4.3's drop noted
+  explicitly). Added a new consolidated "Post-Beta Bug Fixes & Polish (Phases 5-9)"
+  section summarizing each phase in one table row, sourced from
+  `.viepilot/ROADMAP.md`'s already-accurate records per the task card's decision.
+- **ENH-006**: added a note directly under the `status` field in ARCHITECTURE.md's
+  Project data model JSON example, describing the forward-only rule and both
+  downgrade exceptions (Task 7.1 script edits, Task 9.1 speaker voice-settings
+  edits), naming the exact functions responsible. Also fixed the adjacent
+  `"tts_engine": "omnivoice"` example value to `"edge_tts"`, matching the real
+  default — noticed while editing the same block, same root cause as ENH-007.
+- **ENH-007**: (a) System Overview text diagram — removed the WebSocket claim,
+  reordered the engine list to show Edge TTS as the sole official engine, added a
+  note explaining OmniVoice's code path still exists but is unreachable through the
+  app (verified: `SpeakerConfig.tts_engine` defaults to `"edge_tts"`, and grepped
+  the Step 4 frontend — `"omnivoice"` is never referenced there at all). (b) Mermaid
+  data-flow diagram — renamed `E2` from "OmniVoice GPU" to "Edge TTS"; marked `F3`
+  "Lips-sync Avatar / LivePortrait" as "NOT implemented, deferred" rather than
+  presenting it as a real pipeline step. (c) Also found and fixed the same
+  LivePortrait inaccuracy in the separate Module Dependencies diagram (`VS --> FF &
+  LP`) in both its embedded copy and its sidecar file — confirmed via grep that no
+  `app/` code references LivePortrait except docstrings explaining it's not built.
+  (d) Synced the embedded system-overview Mermaid block with its sidecar file by
+  adding the 2 missing `LCS` edges — confirmed via a byte-for-byte diff of the
+  extracted embedded block against the sidecar that they now match exactly.
+
+### Verification
+
+Command:
+
+```text
+git diff --check
+```
+
+Output: exit code 0, only Windows line-ending notices (no real whitespace errors).
+
+Command:
+
+```text
+diff <(extracted embedded system-overview mermaid block) .viepilot/architecture/system-overview.mermaid
+```
+
+Output: no differences (confirmed byte-for-byte match).
+
+No `ruff`/pytest run required for this task — no Python/JS files touched (confirmed
+via `git status --short`: only the `.md`/`.mermaid` files listed in Allowed Files
+above changed).
+
+### Scope confirmation
+
+`git status --short` confirmed exactly the files listed in this task's Allowed
+Files section changed — no application code touched.
+
 ## PM Plan Review
 
-(Pending — Codex to present pre-code plan per AR-06 before any implementation.)
+Self-implemented — no separate Implementer plan review step; the design decisions
+above were settled by PM in this task card's "Current state"/"Required decisions"
+sections before any edit was made, per the doc-first gate.
+
+## PM Re-review (Self) (2026-09-18) — ACCEPTED
+
+**Diff re-read in full**: confirmed all 4 task-card `Status` fields, the README.md
+Phase 4/5-9 sections, and every ARCHITECTURE.md edit (text diagram, data-flow
+Mermaid, status note, `tts_engine` example fix, system-overview Mermaid sync,
+Module Dependencies fix in both embedded and sidecar copies) match exactly what
+was planned, with the one legitimate addition (Module Dependencies) explicitly
+recorded in this task card's Allowed Files section with its own justification.
+
+**Verified the Mermaid sync claim rather than trusting a visual read**: extracted
+the embedded system-overview block programmatically and diffed it byte-for-byte
+against its sidecar file — confirmed identical.
+
+**Verified the "no LivePortrait code" claim rather than assuming**: repo-wide grep
+of `app/` for `LivePortrait`/`liveportrait` — the only 3 matches are docstrings/
+exception messages explicitly stating it is *not* implemented; zero actual
+integration code.
+
+**`git diff --check`**: exit 0. `git status --short`: confirmed only the files in
+this task's Allowed Files list changed — no `app/`, `frontend/`, or `tests/` files
+touched.
+
+**Zero real defects found.** Accepted as delivered.
+
+**This closes Task 10.2 — and Phase 10 (Backlog Cleanup) in full**, since it was
+the second of Phase 10's 2 tasks. Every finding from both 2026-09-18 audits is now
+resolved.

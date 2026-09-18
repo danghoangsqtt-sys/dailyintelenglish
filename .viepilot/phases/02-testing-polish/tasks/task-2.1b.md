@@ -3,7 +3,7 @@
 ## Meta
 - **ID**: 2.1b (second slice of ROADMAP.md Phase 2 "Quality Testing", CEFR accuracy item)
 - **Phase**: 2
-- **Status**: in_progress
+- **Status**: done
 - **Priority**: medium
 - **Assignee**: PM (Claude Code)
 

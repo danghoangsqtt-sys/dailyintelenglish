@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness); Phase 8 done (new, CSS consolidation); Phase 9 done (new, regeneration integrity); Phase 10 in progress (new, backlog cleanup)  
+**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness); Phase 8 done (new, CSS consolidation); Phase 9 done (new, regeneration integrity); Phase 10 done (new, backlog cleanup)  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18; Phase 8 opened and closed 2026-09-18; Phase 9 opened and closed 2026-09-18; Phase 10 opened 2026-09-18, new scope beyond the original 21-day plan)  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18; Phase 8 opened and closed 2026-09-18; Phase 9 opened and closed 2026-09-18; Phase 10 opened and closed 2026-09-18, new scope beyond the original 21-day plan)  
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
@@ -83,7 +83,17 @@ video regeneration attempt wiped a prior successful job's DB data — real data 
 up to high after tracing the exact UPSERT bug. Its one task (9.1) fixed both BUG-017
 and BUG-016 (voice-settings changes not invalidating downstream status, the same bug
 class as BUG-013), done 2026-09-18 by Codex, accepted by PM per AR-06 with zero real
-defects found. **Phase 9 formally closed 2026-09-18.***
+defects found. **Phase 9 formally closed 2026-09-18.** **Phase 10** (new, opened via
+`/vp-debug` right after Phase 9 closed) fixed the 6 remaining backlog findings from
+both 2026-09-18 audits (BUG-014, BUG-015, BUG-018, BUG-019, ENH-006, ENH-007) —
+mid-phase the user made a standing policy change (PM self-implements directly
+instead of delegating to Codex). Task 10.1 fixed BUG-018 (stale per-line audio
+cache) and BUG-019 (avatar filesystem mutation not rolled back on a later
+transaction failure, fixed via unique per-upload filenames + commit-then-cleanup
+ordering). Task 10.2 fixed the 4 pure documentation findings. Both done 2026-09-18,
+self-implemented and self-verified by PM with zero real defects found. **Phase 10
+formally closed 2026-09-18.** Every finding from both 2026-09-18 audits is now
+resolved.*
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -96,7 +106,7 @@ defects found. **Phase 9 formally closed 2026-09-18.***
 | Phase 7 — Script Edit Staleness (new) | ✅ Complete | 1 | 1 |
 | Phase 8 — CSS Consolidation (new) | ✅ Complete | 1 | 1 |
 | Phase 9 — Regeneration Integrity (new) | ✅ Complete | 1 | 1 |
-| Phase 10 — Backlog Cleanup (new) | 🔄 In Progress | 0 | 2 |
+| Phase 10 — Backlog Cleanup (new) | ✅ Complete | 2 | 2 |
 
 ## Phase 1 Task Status
 
@@ -945,7 +955,7 @@ BUG-017 are now resolved.
 
 ## Phase 10 Task Status
 
-### 10.1 Clear stale per-line audio cache on line regenerate; stop deleting avatar files before commit is confirmed — planned
+### 10.1 Clear stale per-line audio cache on line regenerate; stop deleting avatar files before commit is confirmed — ✅ DONE (2026-09-18)
 
 Origin: `.viepilot/requests/BUG-018.md`/`BUG-019.md`, both confirmed real during the
 2026-09-18 audits but left out of Phase 9's scope. Opened via `/vp-debug` at the
@@ -960,9 +970,22 @@ race (confirmed `resolve_avatar_path` always resolves whatever path is currently
 the DB, never a glob/fixed-name lookup). Noted explicitly that this legitimately
 changes the existing `test_finalize_avatar_file_replaces_old_extension` test's
 expectations, since that test currently locks in the exact buggy behavior. Doc-first
-task card written (`tasks/task-10.1.md`), handed to Codex per AR-06.
+task card written (`tasks/task-10.1.md`). Mid-task, the user made a standing policy
+change — PM self-implements from now on instead of delegating to Codex. PM
+implemented both fixes directly: `update_script_line` now clears
+`audio_cache_path`/`duration_seconds`; `_finalize_avatar_file` writes unique
+filenames and never touches the old file, with a new
+`cleanup_previous_avatar_file()` doing the actual deletion only after the route's
+`_write_transaction` block confirms success. Updated 2 existing tests whose
+assertions encoded the old buggy behavior. Added a core regression test forcing a
+real `db.commit()` failure (reusing the exact pattern already established in
+`tests/test_projects_write_lock.py`) and independently confirmed it meaningful via
+a revert-and-confirm-failure check (reverting the fix made the test fail exactly as
+predicted, before restoring it). 101/101 targeted tests pass, ruff clean,
+`git diff --check` exit 0. **Zero real defects found on PM's own independent
+review.**
 
-### 10.2 Documentation cleanup — stale task-card status fields, README, ARCHITECTURE.md — planned
+### 10.2 Documentation cleanup — stale task-card status fields, README, ARCHITECTURE.md — ✅ DONE (2026-09-18)
 
 Origin: `.viepilot/requests/BUG-014.md`, `BUG-015.md`, `ENH-006.md`, `ENH-007.md` —
 4 pure documentation/metadata findings, bundled per the Task 2.3/4.4/5.3/6.1
@@ -971,7 +994,25 @@ claim by confirming `learning_service` (LCS) is genuinely wired into
 `app/api/learning.py` with a real Gemini call, validating that the sidecar file
 (which includes LCS) is the correct version and the embedded ARCHITECTURE.md block
 (which omits it) is the one to fix. Doc-first task card written
-(`tasks/task-10.2.md`), handed to Codex per AR-06.
+(`tasks/task-10.2.md`). Self-implemented by PM per the same standing policy change:
+fixed all 4 Phase 2 task cards' `Status` fields; rewrote README.md's Phase 4 section
+to its real final state and added a new Phases 5-9 summary section; added a
+status-downgrade note to ARCHITECTURE.md's Project data model (covering both Task
+7.1's and Task 9.1's downgrade exceptions) and fixed a stale `tts_engine: omnivoice`
+example value found in the same block; corrected the System Overview text diagram
+(removed the WebSocket claim, Edge TTS shown as the real primary engine) and the
+data-flow Mermaid diagram (renamed the OmniVoice node, marked LivePortrait lip-sync
+"NOT implemented, deferred"); synced the embedded system-overview Mermaid block with
+its sidecar byte-for-byte (confirmed via direct diff); and found + fixed the same
+LivePortrait inaccuracy in the separate Module Dependencies diagram (both embedded
+and sidecar copies), after confirming via a repo-wide grep that no `app/` code
+references LivePortrait except docstrings explaining it's not built. No application
+code touched — `git diff --check` clean. **Zero real defects found.**
+
+**This closes Task 10.1 and Task 10.2 — and Phase 10 (Backlog Cleanup) in full.**
+Every finding from both 2026-09-18 audits (Codex's parallel scan and PM's own
+read-only pass) is now resolved: BUG-013 through BUG-019 all fixed; ENH-004
+correctly `wontfix` with reasoning recorded; ENH-005 through ENH-007 all fixed.
 
 ## Decision Log
 
@@ -1685,14 +1726,14 @@ claim by confirming `learning_service` (LCS) is genuinely wired into
 - ~~BUG-013~~ **RESOLVED 2026-09-18** under Task 7.1 — see Phase 7 Task Status above and `.viepilot/requests/BUG-013.md`.
 - ~~ENH-004~~ **WONTFIX 2026-09-18** under Task 8.1 — the single shared connection is already protected by an existing, well-reasoned connection-wide lock (`app/api/projects.py`'s `_write_lock`); WAL mode alone would be a no-op given that lock, and a real fix requires a connection-pool redesign this project defers per its standing precedent. See `.viepilot/requests/ENH-004.md`.
 - ~~ENH-005~~ **RESOLVED 2026-09-18** under Task 8.1 (concrete drift only — the broader 992-line inline-CSS-volume observation was not fully audited, see the request file) — see Phase 8 Task Status above and `.viepilot/requests/ENH-005.md`.
-- **BUG-014 (open, low)**: 4 Phase 2 task cards (2.1b, 2.1c, 2.5, 2.6) carry a stale `Status: in_progress` Meta field despite each having its own PM Acceptance section confirming completion — metadata-only, PHASE-STATE.md/TRACKER.md are correct. Found via a read-only `/vp-audit` pass 2026-09-18. See `.viepilot/requests/BUG-014.md`.
-- **BUG-015 (open, low)**: README.md's Phase 4 section still says "In Progress" (stale since early Phase 4), and Phases 4(remainder)/5/6/7/8 are entirely undocumented in README.md. Found via a read-only `/vp-audit` pass 2026-09-18. See `.viepilot/requests/BUG-015.md`.
-- **ENH-006 (open, low)**: ARCHITECTURE.md's Project data model doesn't document Task 7.1's script-edit status-downgrade behavior. Found via a read-only `/vp-audit` pass 2026-09-18. See `.viepilot/requests/ENH-006.md`.
+- ~~BUG-014~~ **RESOLVED 2026-09-18** under Task 10.2 — see Phase 10 Task Status above and `.viepilot/requests/BUG-014.md`.
+- ~~BUG-015~~ **RESOLVED 2026-09-18** under Task 10.2 — see Phase 10 Task Status above and `.viepilot/requests/BUG-015.md`.
+- ~~ENH-006~~ **RESOLVED 2026-09-18** under Task 10.2 — see Phase 10 Task Status above and `.viepilot/requests/ENH-006.md`.
 - ~~BUG-016~~ **RESOLVED 2026-09-18** under Task 9.1 — see Phase 9 Task Status above and `.viepilot/requests/BUG-016.md`.
 - ~~BUG-017~~ **RESOLVED 2026-09-18** under Task 9.1 — see Phase 9 Task Status above and `.viepilot/requests/BUG-017.md`.
-- **BUG-018 (open, medium)**: regenerating a single script line leaves its old `audio_cache_path`/`duration_seconds` in place — mitigated in practice since both Listen and Generate All always re-synthesize fresh audio before use, but a real DB-level inconsistency. Found by Codex's parallel `/vp-audit` pass 2026-09-18, confirmed real by PM. Not scoped into Phase 9. See `.viepilot/requests/BUG-018.md`.
-- **BUG-019 (open, medium)**: avatar upload's filesystem mutation isn't rolled back if the surrounding DB transaction later fails — low real-world likelihood for this solo local-use app. Found by Codex's parallel `/vp-audit` pass 2026-09-18, confirmed real by PM. Not scoped into Phase 9. See `.viepilot/requests/BUG-019.md`.
-- **ENH-007 (open, medium)**: ARCHITECTURE.md still describes WebSocket streaming and active OmniVoice GPU/LivePortrait lip-sync, both never true/no longer accurate, and its embedded system-overview Mermaid diagram diverges from its own sidecar file by 2 edges. Found by Codex's parallel `/vp-audit` pass 2026-09-18, confirmed real by PM. Not scoped into Phase 9. See `.viepilot/requests/ENH-007.md`.
+- ~~BUG-018~~ **RESOLVED 2026-09-18** under Task 10.1 — see Phase 10 Task Status above and `.viepilot/requests/BUG-018.md`.
+- ~~BUG-019~~ **RESOLVED 2026-09-18** under Task 10.1 — see Phase 10 Task Status above and `.viepilot/requests/BUG-019.md`.
+- ~~ENH-007~~ **RESOLVED 2026-09-18** under Task 10.2 — see Phase 10 Task Status above and `.viepilot/requests/ENH-007.md`.
 - **Newly-observed flake (2026-09-18, first occurrence)**: `tests/test_music_library_waveform_browser.py::test_waveform_renders_real_pixels_for_a_real_audio_file` failed once during Task 9.1's independent full-suite verification, alongside the known Gemini-retry flake. Confirmed passing instantly in isolation; touches no file Task 9.1 modified (real-audio Web Audio API decode + canvas pixel read in a headless browser — a timing/resource-sensitive shape, similar in kind to the Gemini-retry class but a distinct cause). Not the known documented flake class — tracked separately here for honesty. Not investigated further; watch for recurrence before deciding whether it needs its own fix.
 
 - ~~`ffmpeg` not found in PATH~~ **RESOLVED 2026-09-12**: installed via `winget install Gyan.FFmpeg` (9.0.1, full build). Note: Windows PATH updates only apply to newly-started processes — any shell open before the install won't see it. `.env`'s `DIE_FFMPEG_PATH` now points at the absolute exe path so the app itself doesn't depend on shell PATH freshness. Unblocks Task 1.6 Sub-task 1.6b (AudioService) and Task 1.7 (Video Studio) — see the `pydub`/`audioop` item below for a second, separate blocker on 1.6b.
@@ -1923,11 +1964,11 @@ claim by confirming `learning_service` (LCS) is genuinely wired into
 | BUG-013 | Bug | Editing an earlier pipeline step after later steps are generated does not invalidate downstream audio/video | high | done |
 | ENH-004 | Enhancement | Single shared aiosqlite connection serializes all DB operations across concurrent requests | medium | wontfix |
 | ENH-005 | Enhancement | Per-page inline CSS fragmentation causes verified visual drift from the shared stylesheet | medium | done |
-| BUG-014 | Bug | 4 Phase 2 task cards carry a stale in_progress Status field despite being accepted/done | low | open |
-| BUG-015 | Bug | README.md's Phase 4 section is stale and Phases 4(remainder)/5/6/7/8 are entirely undocumented | low | open |
-| ENH-006 | Enhancement | ARCHITECTURE.md doesn't document the script-edit status-downgrade behavior (Task 7.1) | low | open |
+| BUG-014 | Bug | 4 Phase 2 task cards carry a stale in_progress Status field despite being accepted/done | low | done |
+| BUG-015 | Bug | README.md's Phase 4 section is stale and Phases 4(remainder)/5/6/7/8 are entirely undocumented | low | done |
+| ENH-006 | Enhancement | ARCHITECTURE.md doesn't document the script-edit status-downgrade behavior (Task 7.1) | low | done |
 | BUG-016 | Bug | Changing a speaker's voice settings doesn't invalidate already-generated audio/video status | high | done |
 | BUG-017 | Bug | A failed audio/video regeneration attempt destroys the DB record of a still-valid previous success | high | done |
-| BUG-018 | Bug | Regenerating a single script line leaves its old audio_cache_path/duration_seconds in place | medium | open |
-| BUG-019 | Bug | Avatar upload's filesystem mutation isn't rolled back if the surrounding DB transaction later fails | medium | open |
-| ENH-007 | Enhancement | ARCHITECTURE.md describes dropped/deferred features as active and diverges from its own Mermaid sidecar | medium | open |
+| BUG-018 | Bug | Regenerating a single script line leaves its old audio_cache_path/duration_seconds in place | medium | done |
+| BUG-019 | Bug | Avatar upload's filesystem mutation isn't rolled back if the surrounding DB transaction later fails | medium | done |
+| ENH-007 | Enhancement | ARCHITECTURE.md describes dropped/deferred features as active and diverges from its own Mermaid sidecar | medium | done |

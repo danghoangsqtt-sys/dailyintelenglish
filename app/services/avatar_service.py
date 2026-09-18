@@ -5,6 +5,7 @@ LivePortrait/lip-sync inference happens here or anywhere yet — see the task ca
 """
 
 import asyncio
+import logging
 from pathlib import Path
 from uuid import uuid4
 
@@ -21,6 +22,8 @@ from app.core.constants import (
 )
 from app.core.exceptions import AvatarUploadTooLargeError, NotFoundError, ValidationError
 from app.services import project_service
+
+logger = logging.getLogger(__name__)
 
 AVATAR_MEDIA_TYPES = {
     ".png": "image/png",
@@ -76,11 +79,37 @@ def _unlink_if_exists(path: Path) -> None:
 
 
 def _finalize_avatar_file(project_id: str, speaker_id: str, suffix: str, temporary_path: Path) -> Path:
-    """Replace any previous avatar file for this speaker with the newly uploaded one."""
-    _remove_existing_avatar_files(project_id, speaker_id)
-    final_path = _avatar_dir(project_id) / f"{speaker_id}{suffix}"
+    """Move the newly uploaded file into its own uniquely-named final location.
+
+    Deliberately does not touch any previous avatar file for this speaker. A fixed,
+    predictable filename would force "delete the old file, then place the new one"
+    into a single step that isn't actually atomic with the database transaction that
+    references it (BUG-019) -- if that transaction's commit later failed, the DB
+    would still reference the now-deleted old path. A unique filename lets the new
+    file exist alongside the old one until the caller has confirmed the database
+    change durably committed; see `cleanup_previous_avatar_file`.
+    """
+    final_path = _avatar_dir(project_id) / f"{speaker_id}.{uuid4().hex}{suffix}"
     temporary_path.replace(final_path)
     return final_path
+
+
+async def cleanup_previous_avatar_file(previous_path: str | None) -> None:
+    """Best-effort delete of a speaker's just-superseded avatar file.
+
+    Must only be called after the caller has confirmed the database transaction
+    that switched `avatar_image_path` to the new file has durably committed --
+    calling it any earlier would reintroduce BUG-019. Failure here is deliberately
+    swallowed (logged, not raised): by the time this runs, the database already
+    correctly references the new file, so a leftover orphan is a harmless,
+    low-consequence outcome, never a dangling reference.
+    """
+    if not previous_path:
+        return
+    try:
+        await asyncio.to_thread(Path(previous_path).unlink)
+    except OSError:
+        logger.warning("Failed to clean up superseded avatar file %s", previous_path, exc_info=True)
 
 
 async def _require_speaker(db: aiosqlite.Connection, project_id: str, speaker_id: str) -> dict:
@@ -92,10 +121,24 @@ async def _require_speaker(db: aiosqlite.Connection, project_id: str, speaker_id
 
 async def upload_avatar(
     db: aiosqlite.Connection, project_id: str, speaker_id: str, file: UploadFile, commit: bool = True
-) -> dict:
-    """Validate and store one speaker's avatar image, replacing any previous one."""
+) -> tuple[dict, str | None]:
+    """Validate and store one speaker's avatar image, replacing any previous one.
+
+    Returns:
+        A ``(project, previous_avatar_path)`` pair. ``previous_avatar_path`` is the
+        raw on-disk path the speaker's avatar pointed at *before* this upload, or
+        `None` if the speaker had none -- the caller must pass it to
+        `cleanup_previous_avatar_file` only after confirming this call's database
+        change has durably committed (see that function's docstring for why).
+    """
     await _require_speaker(db, project_id, speaker_id)
     suffix = _validate_extension(file.filename or "")
+    cursor = await db.execute(
+        "SELECT avatar_image_path FROM speakers WHERE id = ? AND project_id = ?",
+        (speaker_id, project_id),
+    )
+    row = await cursor.fetchone()
+    previous_path = row["avatar_image_path"] if row else None
 
     avatar_dir = _avatar_dir(project_id)
     await asyncio.to_thread(avatar_dir.mkdir, parents=True, exist_ok=True)
@@ -134,7 +177,8 @@ async def upload_avatar(
     )
     if commit:
         await db.commit()
-    return await project_service.get_project(db, project_id)
+    project = await project_service.get_project(db, project_id)
+    return project, previous_path
 
 
 def _resolve_avatar_sync(project_id: str, stored_path: str) -> Path:

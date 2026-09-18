@@ -18,14 +18,13 @@ graph LR
         FF[ffmpeg]
         PD[pydub]
         PI[Pillow]
-        LP[LivePortrait]
     end
 
     SS --> GEM
     LCS --> GEM
     TS --> OV & ET & PT
     AS --> FF & PD
-    VS --> FF & LP
+    VS --> FF
     THS --> GEM & PI
     YTS --> GEM
     PS --> SS & LCS & TS & AS & VS & THS & YTS

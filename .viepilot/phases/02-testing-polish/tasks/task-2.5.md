@@ -4,7 +4,7 @@
 - **ID**: 2.5 (new scope, born directly from Task 2.1c's real QA findings — same
   pattern as Task 2.4 being new scope born from a UI-direction brainstorm)
 - **Phase**: 2
-- **Status**: in_progress
+- **Status**: done
 - **Priority**: medium (finding #2 is a real bug; #3 is a missing feature; #1 is
   informational/UX only)
 - **Assignee**: PM (Claude Code)

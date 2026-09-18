@@ -4,7 +4,7 @@
 - **ID**: 2.1c (third slice of ROADMAP.md Phase 2 "Quality Testing" — the remaining 3
   items: multi-accent TTS, audio quality, video testing)
 - **Phase**: 2
-- **Status**: in_progress
+- **Status**: done
 - **Priority**: medium
 - **Assignee**: PM (Claude Code)
 

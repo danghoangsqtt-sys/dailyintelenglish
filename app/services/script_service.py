@@ -389,6 +389,9 @@ async def update_script_line(
 ) -> dict:
     """Update one script line's text/language_notes in place, preserving its position.
 
+    Clears any cached TTS audio for this line, since it was synthesized from the
+    text being replaced here and no longer matches.
+
     Args:
         commit: If False, skip the commit — the caller is responsible for
             committing (or rolling back) as part of a larger transaction.
@@ -397,7 +400,9 @@ async def update_script_line(
         NotFoundError: If no such line exists for this project.
     """
     cursor = await db.execute(
-        "UPDATE script_lines SET text = ?, language_notes = ? WHERE id = ? AND project_id = ?",
+        "UPDATE script_lines SET text = ?, language_notes = ?, "
+        "audio_cache_path = NULL, duration_seconds = NULL "
+        "WHERE id = ? AND project_id = ?",
         (text, json.dumps(language_notes), line_id, project_id),
     )
     if commit:

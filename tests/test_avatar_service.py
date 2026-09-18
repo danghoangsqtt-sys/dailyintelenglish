@@ -36,7 +36,10 @@ def test_avatar_dir_is_scoped_per_project(tmp_path, monkeypatch):
     assert avatar_service._avatar_dir("proj-1") == tmp_path / "avatars" / "proj-1"
 
 
-def test_finalize_avatar_file_replaces_old_extension(tmp_path, monkeypatch):
+def test_finalize_avatar_file_does_not_touch_the_old_file(tmp_path, monkeypatch):
+    """Task 10.1 (BUG-019): finalize must place the new upload under its own unique
+    path without deleting the previous file -- that's the caller's job, only after
+    the surrounding DB transaction has durably committed."""
     from app.core.config import settings
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
@@ -49,10 +52,28 @@ def test_finalize_avatar_file_replaces_old_extension(tmp_path, monkeypatch):
 
     final_path = avatar_service._finalize_avatar_file("proj-1", "sp1", ".jpg", temp_file)
 
-    assert final_path == avatar_dir / "sp1.jpg"
+    assert final_path.parent == avatar_dir
+    assert final_path.name.startswith("sp1.")
+    assert final_path.suffix == ".jpg"
+    assert final_path != old_file
     assert final_path.read_bytes() == b"new"
-    assert not old_file.exists()
     assert not temp_file.exists()
+    assert old_file.exists()
+    assert old_file.read_bytes() == b"old"
+
+
+async def test_cleanup_previous_avatar_file_deletes_the_given_path(tmp_path):
+    old_file = tmp_path / "sp1.abc123.png"
+    old_file.write_bytes(b"old")
+
+    await avatar_service.cleanup_previous_avatar_file(str(old_file))
+
+    assert not old_file.exists()
+
+
+async def test_cleanup_previous_avatar_file_is_a_noop_for_none_or_missing_path(tmp_path):
+    await avatar_service.cleanup_previous_avatar_file(None)
+    await avatar_service.cleanup_previous_avatar_file(str(tmp_path / "does-not-exist.png"))
 
 
 def test_resolve_avatar_sync_rejects_path_outside_project_dir(tmp_path, monkeypatch):
