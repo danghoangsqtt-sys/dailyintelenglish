@@ -20,7 +20,6 @@ graph TB
         GEM[Gemini API\ngemini-3.8-flash]
         OV[OmniVoice\nLocal GPU RTX 3060]
         ETSS[Edge TTS\nOnline Free]
-        PTTS[Piper TTS\nOffline]
     end
 
     subgraph Media["🎬 Media Processing"]
@@ -39,7 +38,7 @@ graph TB
     WZ --> AR
     AR --> SS & LCS & TS & AS & VS & THS & PS & YTS
     SS & LCS --> GEM
-    TS --> OV & ETSS & PTTS
+    TS --> OV & ETSS
     AS --> FFMP & PDY & ML
     VS --> FFMP & PIL
     THS --> GEM & PIL

@@ -61,7 +61,16 @@ MAX_CONCURRENT_TTS = 2
 TTS_SPEED_MIN = 0.75
 TTS_SPEED_MAX = 1.5
 TTS_SPEED_DEFAULT = 1.0
-TTS_ENGINES = ["omnivoice", "edge_tts", "piper", "google", "azure"]
+# Only engines tts_service.py can actually dispatch to. "piper"/"google"/"azure" were
+# removed 2026-09-18 (found by an independent audit): they were accepted as valid
+# speaker.tts_engine values with real-looking validation, but tts_service.py has zero
+# synthesis code for any of them -- selecting one silently fell through to Edge TTS
+# with no error, no warning, and no honest fallback signal, unlike "omnivoice" (which
+# does have a real, documented, honestly-failing code path -- see tts_service.py's
+# module docstring). Advertising an engine choice that quietly does something
+# different than requested is exactly the "fake capability" this project's own rules
+# forbid.
+TTS_ENGINES = ["omnivoice", "edge_tts"]
 
 # Edge TTS voice map: accent -> gender -> ShortName, verified live against
 # edge_tts.list_voices() on 2026-09-11. "scottish" has no distinct Edge TTS locale,

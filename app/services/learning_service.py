@@ -6,12 +6,12 @@ control for 429 backoff, trivially mockable in tests), with exponential
 backoff on rate limiting and strict Pydantic schema validation of the response.
 """
 
-import asyncio
 import hashlib
 import json
 import logging
 import time
 import uuid
+from asyncio import sleep
 from datetime import datetime, timezone
 
 import aiosqlite
@@ -108,7 +108,7 @@ async def _attempt_model(
                 attempt,
                 delay,
             )
-            await asyncio.sleep(delay)
+            await sleep(delay)
             delay *= 2
             continue
 

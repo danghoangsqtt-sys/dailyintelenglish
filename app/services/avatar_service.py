@@ -63,14 +63,6 @@ def _existing_avatar_files(project_id: str, speaker_id: str) -> list[Path]:
     return [path for path in avatar_dir.glob(f"{speaker_id}.*") if path.is_file()]
 
 
-def _remove_existing_avatar_files(project_id: str, speaker_id: str) -> None:
-    for path in _existing_avatar_files(project_id, speaker_id):
-        try:
-            path.unlink()
-        except FileNotFoundError:
-            pass
-
-
 def _unlink_if_exists(path: Path) -> None:
     try:
         path.unlink()
@@ -203,14 +195,24 @@ async def resolve_avatar_path(db: aiosqlite.Connection, project_id: str, speaker
 
 async def delete_avatar(
     db: aiosqlite.Connection, project_id: str, speaker_id: str, commit: bool = True
-) -> dict:
-    """Remove a speaker's stored avatar file (if any) and clear the DB column."""
+) -> tuple[dict, list[Path]]:
+    """Clear a speaker's avatar reference in the database.
+
+    Deliberately does not delete any file here -- the same BUG-019 root cause
+    (a filesystem mutation happening before the surrounding transaction's commit is
+    confirmed) applies to a plain delete just as much as to an upload/replace: if
+    the commit later failed, the database would roll back to referencing a file
+    that no longer exists. Returns the file(s) that should be removed instead, for
+    the caller to pass to `cleanup_previous_avatar_file` only after confirming this
+    call's database change has durably committed.
+    """
     await _require_speaker(db, project_id, speaker_id)
-    await asyncio.to_thread(_remove_existing_avatar_files, project_id, speaker_id)
+    files_to_remove = await asyncio.to_thread(_existing_avatar_files, project_id, speaker_id)
     await db.execute(
         "UPDATE speakers SET avatar_image_path = NULL WHERE id = ? AND project_id = ?",
         (speaker_id, project_id),
     )
     if commit:
         await db.commit()
-    return await project_service.get_project(db, project_id)
+    project = await project_service.get_project(db, project_id)
+    return project, files_to_remove

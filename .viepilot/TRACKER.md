@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness); Phase 8 done (new, CSS consolidation); Phase 9 done (new, regeneration integrity); Phase 10 done (new, backlog cleanup)  
+**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness); Phase 8 done (new, CSS consolidation); Phase 9 done (new, regeneration integrity); Phase 10 done (new, backlog cleanup); Phase 11 done (new, third audit fixes)  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18; Phase 8 opened and closed 2026-09-18; Phase 9 opened and closed 2026-09-18; Phase 10 opened and closed 2026-09-18, new scope beyond the original 21-day plan)  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18; Phase 8 opened and closed 2026-09-18; Phase 9 opened and closed 2026-09-18; Phase 10 opened and closed 2026-09-18; Phase 11 opened and closed 2026-09-18, new scope beyond the original 21-day plan)  
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
@@ -93,7 +93,14 @@ transaction failure, fixed via unique per-upload filenames + commit-then-cleanup
 ordering). Task 10.2 fixed the 4 pure documentation findings. Both done 2026-09-18,
 self-implemented and self-verified by PM with zero real defects found. **Phase 10
 formally closed 2026-09-18.** Every finding from both 2026-09-18 audits is now
-resolved.*
+resolved. **Phase 11** (new, opened after a third independent Codex `/vp-audit`
+pass run once Phase 10 closed) fixed 7 more findings — including a real miss in
+PM's own Phase 10 work (`delete_avatar()` had BUG-019's exact root cause but was
+incorrectly excluded) and a plausible root cause of this project's long-documented
+Gemini-retry flake class (a shared test fixture that monkeypatched the
+process-wide `asyncio.sleep` instead of a module-scoped one). Its one task (11.1)
+done 2026-09-18, self-implemented and self-verified by PM with zero real defects
+found. **Phase 11 formally closed 2026-09-18.***
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -107,6 +114,7 @@ resolved.*
 | Phase 8 — CSS Consolidation (new) | ✅ Complete | 1 | 1 |
 | Phase 9 — Regeneration Integrity (new) | ✅ Complete | 1 | 1 |
 | Phase 10 — Backlog Cleanup (new) | ✅ Complete | 2 | 2 |
+| Phase 11 — Third Audit Fixes (new) | ✅ Complete | 1 | 1 |
 
 ## Phase 1 Task Status
 
@@ -1014,6 +1022,115 @@ Every finding from both 2026-09-18 audits (Codex's parallel scan and PM's own
 read-only pass) is now resolved: BUG-013 through BUG-019 all fixed; ENH-004
 correctly `wontfix` with reasoning recorded; ENH-005 through ENH-007 all fixed.
 
+## Phase 11 Task Status
+
+### 11.1 Third-audit fixes — avatar delete, TTS engine contract, TTS lock-holding, global sleep-patch, docs — ✅ DONE (2026-09-18)
+
+Origin: a third independent Codex `/vp-audit` pass, run at the user's request right
+after Phase 10 closed. 7 findings (0 critical, 1 high, 4 medium, 2 low). PM
+independently re-verified every one before acting — all 7 confirmed real, no false
+positives across 3 separate Codex audits this session now.
+
+**Finding 1 (high)**: `avatar_service.delete_avatar()` deleted the file before the
+DB reference change was confirmed committed — the exact same root cause as BUG-019,
+which Task 10.1 fixed for upload/replace but explicitly excluded from `delete_avatar`
+with reasoning PM now recognizes was wrong ("no new file involved" doesn't matter —
+the bug is about filesystem-mutation-before-commit-confirmation, which applies to a
+plain delete too). Fixed the same way: `delete_avatar` now only clears the DB
+reference and returns the file(s) to remove; the route deletes them via
+`cleanup_previous_avatar_file` only after `_write_transaction` confirms success.
+Removed the now-dead `_remove_existing_avatar_files` helper. New regression test
+independently confirmed meaningful via a real revert-and-confirm-failure check.
+
+**Finding 2 (medium)**: `TTS_ENGINES` accepted `piper`/`google`/`azure` as legal
+speaker voice-engine values with zero actual synthesis implementation anywhere —
+confirmed via grep. Selecting any of them silently used Edge TTS instead, no error.
+Also confirmed `_synthesize_omnivoice()` is a hardcoded, unconditional-fail stub
+(not a real check), yet `/api/tts/engines` reported it `available=true` from a mere
+directory-existence check. Narrowed `TTS_ENGINES` to `["omnivoice", "edge_tts"]`;
+`omnivoice` kept because it has a real, honestly-failing code path matching this
+project's established fallback-pattern precedent. `/api/tts/engines` now
+unconditionally reports `omnivoice: available=false` and drops `piper` entirely.
+
+**Finding 3 (medium)**: `preview_line` (TTS preview) held the app's single
+connection-wide write lock across the actual Edge TTS network call — directly
+violating this project's own documented rule (already correctly followed for
+Gemini calls and audio/video generation) that slow network/GPU work must never run
+while holding that lock. Split `tts_service.synthesize_line` into
+`synthesize_line_audio` (slow, no DB access) and `save_line_audio_cache` (fast DB
+write); the route now calls them with no lock held in between, matching the
+established pattern exactly. New concurrency regression test (a real
+`asyncio.Event`-gated fake Edge TTS call plus a concurrent `_read_transaction`
+under a timeout) independently confirmed meaningful via a real
+revert-and-confirm-failure check — the old code genuinely timed out.
+
+**Finding 4 (medium) — a plausible root cause for this project's long-documented
+Gemini-retry flake class**: 4 test files' `no_real_sleep` fixtures
+(`test_script_service.py`, `test_learning_service.py`, `test_tts_service.py`,
+`test_youtube_service.py`) all did `monkeypatch.setattr(X.asyncio, "sleep",
+fake_sleep)` — since each service module does a plain `import asyncio`, this patches
+the *shared, process-wide* `asyncio.sleep`, not just that module's own retry calls.
+Codex's audit observed ~5.5 million unexpected calls during a full run — plausibly
+another library's internal poll-sleep loop (e.g. Playwright's) having its sleep
+silently replaced by a no-op mid-poll, turning it into a tight busy-spin, during the
+exact window one of these fixtures was active. All 4 service files now do
+`from asyncio import sleep` and call the bare name; all 4 fixtures now patch that
+module's own local `sleep` binding instead of the shared `asyncio` module. This may
+well explain — and eliminate, or at least reduce — the "known Gemini-retry timing
+flake" that has appeared in dozens of full-suite runs throughout this entire
+session; the next several full-suite runs will show whether it recurs.
+
+**Finding 5 (medium) — ENH-007 wasn't actually fully fixed in Task 10.2**: PM had
+synced the system-overview and module-dependencies sidecars, and corrected the
+embedded data-flow diagram, but never checked whether `data-flow.mermaid` had its
+own sidecar file — it did, and still had the original OmniVoice/LivePortrait-as-active
+content, fully diverged from the corrected embedded version. Separately, PM's own
+Task 10.2 edit introduced a *new* inaccuracy: claiming OmniVoice "was built and
+verified working in Phase 1" — false, confirmed by direct code read
+(`_synthesize_omnivoice()` is an unconditional stub) and by this document's own
+pre-existing, more accurate explanation elsewhere (OmniVoice's real API turned out
+to be voice cloning, not the voice design originally envisioned — PM should have
+found and deferred to that section before writing new, wrong content). Regenerated
+`data-flow.mermaid` directly from the corrected embedded block (byte-for-byte
+diffed). Rewrote the System Overview note to state facts accurately and point to
+the correct existing explanation instead of duplicating a wrong one. Also found and
+removed a now-fictional `Piper TTS` node from both diagrams (embedded + sidecars,
+consequence of Finding 2), regenerating both sidecars directly from their corrected
+embedded blocks.
+
+**Finding 6 (low)**: `.viepilot/PROJECT-META.md`, never touched this entire
+session, still said `Version: 0.1.0` (crystallize-time placeholder) and described
+"TTS (OmniVoice + Edge TTS)" as if both were real. Corrected to `1.0.0-beta` and an
+accurate one-line engine description.
+
+**Finding 7 (low)**: README's Phases 5-9 summary section, written mid-Task-10.2
+before Phase 10 itself was accepted, now omitted the completed Phase 10. Retitled
+"Phases 5-10" with a new row.
+
+**Tier 1 Low, acknowledged but not fixed**: Phase 8's entire doc-first plan +
+implementation live in one commit (`f21bd60`), so git history alone can't prove the
+plan predated the code (even though the task card's own content genuinely was
+written first). Rewriting already-pushed shared history is out of scope for a
+documentation finding — not done. Adopted going forward: self-implemented tasks
+should commit a plan-only step before implementation when the design is knowable in
+advance, so git history itself becomes the proof, matching the existing pattern for
+every Codex-delegated task.
+
+PM independently re-verified rather than accepting its own draft work as final:
+re-ran every targeted test (207/207 across 11 files), ruff clean, `git diff --check`
+clean, both new regression tests confirmed meaningful via real
+revert-and-confirm-failure checks. Full suite run independently: 620 passed, 1
+failed (`test_dashboard_delete_removes_card_after_confirm`, a newly-observed,
+unrelated Playwright timing flake, confirmed passing instantly in isolation) in
+330.31s — notably, **zero** occurrences of the long-documented Gemini-retry flake
+class this run, and the fastest full-suite run in recent memory, a strong positive
+signal that fix #4 addressed its actual root cause. **Zero real defects found on
+PM's own review of this task.**
+
+**This closes Task 11.1 — and Phase 11 (Third Audit Fixes) in full.** Every
+finding from all 3 independent audits this session (PM's own 2026-09-18 read-only
+pass, Codex's 2026-09-18 parallel scan, and this third Codex pass) is now resolved.
+
 ## Decision Log
 
 | Date | Decision | Rationale |
@@ -1720,6 +1837,8 @@ correctly `wontfix` with reasoning recorded; ENH-005 through ENH-007 all fixed.
 | 2026-09-18 | User shared Codex's own independent, parallel read-only `/vp-audit` results (10 findings, 0 critical/1 high/4 medium/5 low, no source changes, no auto-log). PM independently re-verified all 5 "important" findings by reading the actual source directly rather than trusting the report -- all 5 confirmed real, an excellent, false-positive-free scan. Re-scored 2: BUG-016 (voice settings not invalidating downstream status) confirmed real but found a genuine mitigating factor (Listen and Generate All both force fresh re-synthesis, so actual audio output is never wrong -- only the status signal is missing, same family as BUG-013); BUG-017 (failed regeneration wipes prior job data) re-scored from medium to high after tracing the exact UPSERT behavior and confirming it's unconditional real data loss, not just metadata drift. Logged all 5 as BUG-016 through BUG-019 and ENH-007. User chose to open Phase 9 to fix BUG-016 and BUG-017 now; the other 3 logged but out of scope. PM scaffolded Phase 9 and wrote the doc-first task card for Task 9.1, explicitly designing around the trap of naively reusing Task 7.1's `mark_script_changed()` for the speaker-settings case (its draft-advance branch would wrongly fire from a Step-1 voice edit). Handed to Codex per AR-06. | User; PM (Claude Code); Codex (parallel auditor) |
 | 2026-09-18 | Task 9.1 delivered by Codex and accepted by PM per AR-06 with zero real defects found on independent review -- `mark_audio_job_failed`/`mark_video_job_failed` preserve prior job data on failure; download endpoints widened to keep a preserved success downloadable; a shared downstream-downgrade helper lets `mark_script_changed()` (Task 7.1, unchanged externally) and a new `mark_speaker_voice_changed()` cooperate without the naive-reuse trap. Real end-to-end tests verify actual MP3/MP4 byte identity before/after a forced failure. 613/615 full suite passes -- 1 known Gemini-retry flake plus 1 newly-observed, unrelated browser-timing flake in the music library waveform test (first occurrence this session, confirmed non-regressive in isolation, tracked honestly rather than folded into the known class). This closes Task 9.1 and Phase 9 in full -- BUG-016 and BUG-017 resolved. | User; PM (Claude Code); Codex (Implementer) |
 | 2026-09-18 | User invoked `/vp-debug` asking to continue fixing bugs. All 6 remaining backlog items (BUG-014, BUG-015, BUG-018, BUG-019, ENH-006, ENH-007) were already fully diagnosed from the 2026-09-18 audits, so PM skipped a new debug-session investigation and went straight to scoping fixes. Opened Phase 10 with 2 tasks: 10.1 bundles the 2 remaining real code bugs (BUG-018: stale per-line audio cache after single-line regenerate; BUG-019: avatar filesystem mutation not rolled back if the DB transaction later fails -- PM designed a unique-filename + commit-then-cleanup fix before writing the task card, avoiding a new read-serving race). 10.2 bundles the 4 pure documentation findings (BUG-014, BUG-015, ENH-006, ENH-007) per the established small-fixes-bundling precedent. Both doc-first task cards written and handed to Codex per AR-06. | User; PM (Claude Code) |
+| 2026-09-18 | Mid-Phase-10, user invoked `/vp-auto` with a standing policy change: PM self-implements directly from now on instead of delegating to Codex, to avoid errors from mixing 2 different models. PM self-implemented Task 10.1 (BUG-018/BUG-019 fixes, including a revert-and-confirm-failure check on the new avatar regression test) and Task 10.2 (4 documentation fixes, plus finding and fixing the same LivePortrait inaccuracy in the Module Dependencies diagram along the way). 617/619 full suite passes (2 known Gemini-retry flakes, confirmed non-regressive). This closes Task 10.1, Task 10.2, and Phase 10 in full -- every finding from both 2026-09-18 audits now resolved. | User; PM (Claude Code) |
+| 2026-09-18 | User shared a third independent Codex `/vp-audit` pass, run after Phase 10 closed (7 findings: 0 critical/1 high/4 medium/2 low). PM independently re-verified all 7 -- all confirmed real. Opened Phase 11, self-implemented Task 11.1: fixed `delete_avatar()`'s BUG-019-class bug (a real miss in PM's own Task 10.1 scoping, incorrectly excluded at the time); narrowed `TTS_ENGINES` to only real engines, removing 3 that were accepted but never implemented; stopped `preview_line` from holding the app's shared DB lock across a live Edge TTS network call; fixed 4 test files' `no_real_sleep` fixtures to patch their own module's local `sleep` name instead of the shared `asyncio` module (a plausible root cause of this project's long-documented Gemini-retry flake class); synced the previously-missed `data-flow.mermaid` sidecar and corrected a new self-contradiction PM's own Task 10.2 had introduced about OmniVoice; updated stale `PROJECT-META.md` and README. Acknowledged (not fixed) that Phase 8's doc-first history lives in one commit, not git-provably sequenced -- adopted committing plan-then-implementation separately going forward. Both new regression tests independently confirmed meaningful via real revert-and-confirm-failure checks. Full suite independently: 620 passed, 1 failed (a newly-observed, unrelated Playwright flake, confirmed non-regressive in isolation) in 330.31s -- zero Gemini-retry flakes this run, the first fully clean run on that front in a long time, and notably the fastest recent full-suite run, a strong signal the sleep-patching fix addressed the flake class's actual root cause. This closes Task 11.1 and Phase 11 in full -- every finding from all 3 independent audits this session is now resolved. | User; PM (Claude Code); Codex (parallel auditor) |
 
 ## Known Issues
 
@@ -1732,9 +1851,12 @@ correctly `wontfix` with reasoning recorded; ENH-005 through ENH-007 all fixed.
 - ~~BUG-016~~ **RESOLVED 2026-09-18** under Task 9.1 — see Phase 9 Task Status above and `.viepilot/requests/BUG-016.md`.
 - ~~BUG-017~~ **RESOLVED 2026-09-18** under Task 9.1 — see Phase 9 Task Status above and `.viepilot/requests/BUG-017.md`.
 - ~~BUG-018~~ **RESOLVED 2026-09-18** under Task 10.1 — see Phase 10 Task Status above and `.viepilot/requests/BUG-018.md`.
-- ~~BUG-019~~ **RESOLVED 2026-09-18** under Task 10.1 — see Phase 10 Task Status above and `.viepilot/requests/BUG-019.md`.
-- ~~ENH-007~~ **RESOLVED 2026-09-18** under Task 10.2 — see Phase 10 Task Status above and `.viepilot/requests/ENH-007.md`.
+- ~~BUG-019~~ **RESOLVED 2026-09-18** under Task 10.1 for upload/replace — **a real miss found by a third audit**: the same root cause also applied to `delete_avatar()`, incorrectly excluded from the original fix ("no new file involved" reasoning was wrong — the bug is about filesystem-mutation-before-commit-confirmation, which applies to a plain delete too). Fixed under Task 11.1. See `.viepilot/requests/BUG-019.md`.
+- ~~ENH-007~~ **RESOLVED 2026-09-18** under Task 10.2 — **found still incomplete by a third audit**: the `data-flow.mermaid` sidecar was never checked/synced (only system-overview and module-dependencies were), and PM's own Task 10.2 edit introduced a new inaccuracy claiming OmniVoice was "built and verified working." Both fully fixed under Task 11.1. See `.viepilot/requests/ENH-007.md`.
 - **Newly-observed flake (2026-09-18, first occurrence)**: `tests/test_music_library_waveform_browser.py::test_waveform_renders_real_pixels_for_a_real_audio_file` failed once during Task 9.1's independent full-suite verification, alongside the known Gemini-retry flake. Confirmed passing instantly in isolation; touches no file Task 9.1 modified (real-audio Web Audio API decode + canvas pixel read in a headless browser — a timing/resource-sensitive shape, similar in kind to the Gemini-retry class but a distinct cause). Not the known documented flake class — tracked separately here for honesty. Not investigated further; watch for recurrence before deciding whether it needs its own fix.
+- **Task 11.1 (2026-09-18) fixes not previously logged as their own findings** (surfaced directly by a third Codex `/vp-audit` pass, no separate request files created since they were fixed same-day): (1) `avatar_service.delete_avatar()` had BUG-019's exact bug, see above; (2) `TTS_ENGINES` accepted `piper`/`google`/`azure` with zero synthesis implementation — narrowed to `["omnivoice", "edge_tts"]`, `/api/tts/engines` now honestly reports `omnivoice: available=false`; (3) `preview_line` held the app's shared write lock across a live Edge TTS network call — fixed to match the established "no lock across slow work" pattern; (4) 4 test files' `no_real_sleep` fixtures patched the shared `asyncio.sleep` globally instead of their own module's local binding — a plausible root cause of the long-documented Gemini-retry flake class below, now fixed; watch upcoming full-suite runs for whether that flake class recurs. All 4 independently verified fixed by PM, 2 with real revert-and-confirm-failure checks. See `.viepilot/phases/11-third-audit-fixes/tasks/task-11.1.md` for the full record.
+- **Process note (2026-09-18, acknowledged, not retroactively fixed)**: Phase 8's entire doc-first plan + implementation live in a single commit (`f21bd60`), so git history alone can't prove the plan was recorded before the code (found by a third audit; the task card's own content genuinely was written first, but that isn't git-provable). Rewriting already-pushed shared history is out of scope for a documentation finding. Adopted going forward: self-implemented tasks commit a plan-only step before implementation when the design is knowable in advance, matching the existing pattern for Codex-delegated tasks (a `docs(review):`-style commit before `fix(...)`).
+- **Newly-observed flake (2026-09-18, first occurrence)**: `tests/test_dashboard_browser.py::test_dashboard_delete_removes_card_after_confirm` failed once during Task 11.1's independent full-suite verification (a Playwright selector-wait timeout). Confirmed passing instantly in isolation; touches no file Task 11.1 modified. Notably, this run had **zero** occurrences of the long-documented Gemini-retry flake class (see Task 11.1 finding #4's sleep-patching fix) — the first fully clean run on that front in a long time, suggesting that class may finally be resolved, while occasional unrelated Playwright timing flakes (this one, plus the Task 9.1 waveform one) remain a separate, lower-frequency phenomenon of browser-test infrastructure under system load. Not investigated further; watch for recurrence.
 
 - ~~`ffmpeg` not found in PATH~~ **RESOLVED 2026-09-12**: installed via `winget install Gyan.FFmpeg` (9.0.1, full build). Note: Windows PATH updates only apply to newly-started processes — any shell open before the install won't see it. `.env`'s `DIE_FFMPEG_PATH` now points at the absolute exe path so the app itself doesn't depend on shell PATH freshness. Unblocks Task 1.6 Sub-task 1.6b (AudioService) and Task 1.7 (Video Studio) — see the `pydub`/`audioop` item below for a second, separate blocker on 1.6b.
 - ~~`DIE_GEMINI_API_KEY` empty~~ **RESOLVED 2026-09-13**: user filled in their real key. Verified with one real live call to `gemini-3.8-flash` (not just presence/length) — HTTP 200, model replied as instructed, real token usage reported. Key value itself was never printed/logged anywhere, including this file. All Gemini-backed services (script/learning/thumbnail/youtube) were already fully implemented and tested against mocks; this confirms the real integration also works end-to-end.

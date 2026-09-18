@@ -20,12 +20,21 @@ FAKE_MP3_BYTES = b"ID3-fake-mp3-bytes-for-tests"
 
 @pytest.fixture(autouse=True)
 def no_real_sleep(monkeypatch):
-    """Edge TTS retry-on-empty-audio must not actually wait in tests."""
+    """Edge TTS retry-on-empty-audio must not actually wait in tests.
+
+    Found by an independent audit: this used to patch `tts_service.asyncio.sleep`
+    -- since `tts_service.asyncio` is the *same* process-wide `asyncio` module
+    object every other file imports, that patched `asyncio.sleep` globally for the
+    whole process during this fixture's scope. `tts_service.py` now does
+    `from asyncio import sleep` (alongside `import asyncio`, still used for
+    `asyncio.Semaphore`/`asyncio.to_thread`), so patching `tts_service.sleep` only
+    affects this module's own local binding.
+    """
 
     async def fake_sleep(seconds: float) -> None:
         pass
 
-    monkeypatch.setattr(tts_service.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(tts_service, "sleep", fake_sleep)
 
 
 def make_config(**overrides) -> ScriptConfig:
@@ -158,3 +167,46 @@ def test_rate_percent_conversion(speed, expected):
 @pytest.mark.parametrize("pitch,expected", [(0.0, "+0Hz"), (1.0, "+50Hz"), (-1.0, "-50Hz"), (0.5, "+25Hz")])
 def test_pitch_hz_conversion(pitch, expected):
     assert tts_service._pitch_hz(pitch) == expected
+
+
+async def test_preview_line_does_not_hold_the_write_lock_during_synthesis(db, monkeypatch):
+    """Found by an independent audit: preview_line used to run the entire Edge TTS
+    network call inside the app's single connection-wide write lock, stalling every
+    other request (even an unrelated dashboard GET) for the duration. Same "no lock
+    across slow work" rule already applied to Gemini calls and audio/video
+    generation elsewhere (see app/api/projects.py's module docstring) must also
+    apply here."""
+    import asyncio
+
+    from app.api import projects as projects_api
+    from app.api import tts as tts_api
+    from app.models.tts import PreviewLineRequest
+
+    project = await project_service.create_project(db, make_config())
+    speaker = project["speakers"][0]
+    line = await _insert_line(db, project["id"], speaker["id"])
+
+    synthesis_started = asyncio.Event()
+    release_synthesis = asyncio.Event()
+
+    async def slow_edge_tts(text: str, spk: dict) -> bytes:
+        synthesis_started.set()
+        await release_synthesis.wait()
+        return FAKE_MP3_BYTES
+
+    monkeypatch.setattr(tts_service, "_synthesize_edge_tts", slow_edge_tts)
+
+    preview_task = asyncio.create_task(
+        tts_api.preview_line(project["id"], PreviewLineRequest(line_id=line["id"]), db)
+    )
+    await asyncio.wait_for(synthesis_started.wait(), timeout=1.0)
+
+    # While synthesis is in flight, the write lock must be free -- if preview_line
+    # still held it here (the bug), this would hang until the timeout and fail.
+    async with asyncio.timeout(1.0):
+        async with projects_api._read_transaction():
+            pass
+
+    release_synthesis.set()
+    result = await asyncio.wait_for(preview_task, timeout=1.0)
+    assert result["data"]["engine_used"] == "edge_tts"

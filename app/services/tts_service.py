@@ -13,6 +13,7 @@ it is what Sub-task 1.6a actually delivers and tests.
 
 import asyncio
 import logging
+from asyncio import sleep
 from pathlib import Path
 
 import aiosqlite
@@ -106,7 +107,7 @@ async def _synthesize_edge_tts(text: str, speaker: dict) -> bytes:
 
         if attempt < EDGE_TTS_MAX_ATTEMPTS:
             logger.warning("Edge TTS attempt %d/%d failed (%s), retrying", attempt, EDGE_TTS_MAX_ATTEMPTS, last_error)
-            await asyncio.sleep(EDGE_TTS_RETRY_DELAY_SECONDS)
+            await sleep(EDGE_TTS_RETRY_DELAY_SECONDS)
 
     raise TTSError(f"Edge TTS synthesis failed after {EDGE_TTS_MAX_ATTEMPTS} attempts: {last_error}") from last_error
 
@@ -125,10 +126,18 @@ def _write_audio_cache_sync(cache_dir: Path, audio_path: Path, audio_bytes: byte
     audio_path.write_bytes(audio_bytes)
 
 
-async def synthesize_line(
-    db: aiosqlite.Connection, project: dict, line: dict, *, commit: bool = True
-) -> dict:
-    """Synthesize one script line to an audio file, caching it and recording the path.
+async def synthesize_line_audio(project: dict, line: dict) -> dict:
+    """Synthesize one script line's audio and cache it to disk. Touches no database.
+
+    This is the slow half (network call to Edge TTS, or GPU inference once OmniVoice
+    is real) of what `synthesize_line` used to do as one step. Callers that hold a
+    `_write_transaction` lock (see `app/api/projects.py`'s module docstring on why
+    that lock must never wrap slow network/GPU work) must call this function
+    *outside* that lock, then a separate, short `save_line_audio_cache` call inside
+    it — see `app/api/tts.py::preview_line` for the intended shape. Found by an
+    independent audit: `preview_line` previously ran this entire synthesis inside
+    the app's single connection-wide write lock, stalling every other request
+    (even an unrelated dashboard GET) for the duration of a live Edge TTS call.
 
     Returns:
         {"audio_path": str, "engine_used": "omnivoice" | "edge_tts"}
@@ -160,14 +169,39 @@ async def synthesize_line(
     audio_path = cache_dir / f"{line['id']}.mp3"
     await asyncio.to_thread(_write_audio_cache_sync, cache_dir, audio_path, audio_bytes)
 
+    return {"audio_path": str(audio_path), "engine_used": engine_used}
+
+
+async def save_line_audio_cache(
+    db: aiosqlite.Connection, project_id: str, line_id: str, audio_path: str, *, commit: bool = True
+) -> None:
+    """Record a script line's freshly synthesized audio path.
+
+    Always call this only after `synthesize_line_audio` has already produced the
+    file — this function does no synthesis itself, just the fast DB write.
+    """
     await db.execute(
         "UPDATE script_lines SET audio_cache_path = ? WHERE id = ? AND project_id = ?",
-        (str(audio_path), line["id"], project["id"]),
+        (audio_path, line_id, project_id),
     )
     if commit:
         await db.commit()
 
-    return {"audio_path": str(audio_path), "engine_used": engine_used}
+
+async def synthesize_line(
+    db: aiosqlite.Connection, project: dict, line: dict, *, commit: bool = True
+) -> dict:
+    """Synthesize one script line and cache it, in one call.
+
+    Convenience wrapper around `synthesize_line_audio` + `save_line_audio_cache` for
+    callers with no lock to release in between (tests, or any future caller outside
+    a `_write_transaction`). `app/api/tts.py::preview_line` calls the two phases
+    directly instead, so the slow network/GPU work never runs while holding the
+    app's connection-wide write lock.
+    """
+    result = await synthesize_line_audio(project, line)
+    await save_line_audio_cache(db, project["id"], line["id"], result["audio_path"], commit=commit)
+    return result
 
 
 def _resolve_cached_audio_sync(project_id: str, stored_path: str) -> str:

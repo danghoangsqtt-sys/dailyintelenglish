@@ -195,10 +195,16 @@ async def get_speaker_avatar(
 async def delete_speaker_avatar(
     project_id: str, speaker_id: str, db: aiosqlite.Connection = Depends(get_db)
 ) -> dict:
-    """Remove one speaker's avatar image."""
+    """Remove one speaker's avatar image.
+
+    The file itself is only deleted after this block's commit has durably
+    succeeded — see `avatar_service.delete_avatar`'s docstring for why.
+    """
     started_at = time.perf_counter()
     async with _write_transaction(db):
-        project = await avatar_service.delete_avatar(db, project_id, speaker_id, commit=False)
+        project, files_to_remove = await avatar_service.delete_avatar(db, project_id, speaker_id, commit=False)
+    for path in files_to_remove:
+        await avatar_service.cleanup_previous_avatar_file(str(path))
     return ok(project, started_at=started_at)
 
 

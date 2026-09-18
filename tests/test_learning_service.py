@@ -87,13 +87,21 @@ def gemini_ok_response(pack: dict, tokens_used: int = 500) -> FakeResponse:
 
 @pytest.fixture(autouse=True)
 def no_real_sleep(monkeypatch):
-    """Retry tests must not actually wait — patch asyncio.sleep to a no-op."""
+    """Retry tests must not actually wait — patch learning_service's own `sleep` name.
+
+    Found by an independent audit: this used to patch `learning_service.asyncio.sleep`
+    -- since `learning_service.asyncio` is the *same* process-wide `asyncio` module
+    object every other file imports, that patched `asyncio.sleep` globally for the
+    whole process during this fixture's scope. `learning_service.py` now does
+    `from asyncio import sleep`, so patching `learning_service.sleep` only affects
+    this module's own local binding.
+    """
     sleeps: list[float] = []
 
     async def fake_sleep(seconds: float) -> None:
         sleeps.append(seconds)
 
-    monkeypatch.setattr(learning_service.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(learning_service, "sleep", fake_sleep)
     return sleeps
 
 

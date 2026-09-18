@@ -11,21 +11,25 @@ Browser (localhost:8000)
         ↕ REST API (synchronous, polling — no WebSocket/SSE anywhere in the app)
 FastAPI Backend (Python 3.11+)
         ├── Gemini API (script + learning content + thumbnail fill)
-        ├── Edge TTS (sole official TTS engine, decided 2026-09-13 — see TRACKER.md Decision Log)
-        ├── Piper TTS (offline fallback, availability-checked, not actively used)
+        ├── Edge TTS (sole real TTS engine — see note below)
         ├── pydub + ffmpeg (audio mix + video export)
         ├── Pillow (thumbnail generation)
         └── SQLite (project storage)
 ```
 
-Real OmniVoice GPU inference (local TTS on the RTX 3060) was built and verified
-working in Phase 1, but decided against 2026-09-13 in favor of Edge TTS as the sole
-official engine. `tts_service.py::synthesize_line` still contains a working
-OmniVoice branch (with an automatic Edge TTS fallback), but it's unreachable through
-the app: every speaker's `tts_engine` defaults to `"edge_tts"`
-(`SpeakerConfig.tts_engine`), and the Step 4 TTS Studio UI never exposes
-`"omnivoice"` as a selectable option. See `.viepilot/TRACKER.md`'s Decision Log and
-Known Issues for the full history.
+`_synthesize_omnivoice()` is a hardcoded stub that unconditionally raises
+`_OmniVoiceUnavailableError` — no real GPU inference code exists anywhere in this
+codebase, only the honest fallback-to-Edge-TTS branch around that stub. Edge TTS is
+therefore the *only* engine that can ever actually produce audio today. See the
+"TTSService" section below for the real reason OmniVoice was never pursued (it was
+never simply "decided against" a *working* implementation — its real API turned out
+to be a different feature than originally planned). `TTS_ENGINES`
+(`app/core/constants.py`) lists only `["omnivoice", "edge_tts"]` as legal
+`speaker.tts_engine` values as of 2026-09-18 — `"piper"`/`"google"`/`"azure"` were
+removed that day (found by an independent audit): they were accepted as valid input
+with zero synthesis implementation anywhere, silently falling through to Edge TTS
+with no error. `GET /api/tts/engines` correspondingly always reports `omnivoice` as
+unavailable, not a filesystem check that could misleadingly say otherwise.
 
 ## ViePilot Organization Context
 
@@ -73,7 +77,6 @@ graph TB
         GEM[Gemini API\ngemini-3.8-flash]
         OV[OmniVoice\nLocal GPU RTX 3060]
         ETSS[Edge TTS\nOnline Free]
-        PTTS[Piper TTS\nOffline]
     end
 
     subgraph Media["🎬 Media Processing"]
@@ -92,7 +95,7 @@ graph TB
     WZ --> AR
     AR --> SS & LCS & TS & AS & VS & THS & PS & YTS
     SS & LCS --> GEM
-    TS --> OV & ETSS & PTTS
+    TS --> OV & ETSS
     AS --> FFMP & PDY & ML
     VS --> FFMP & PIL
     THS --> GEM & PIL
@@ -184,7 +187,6 @@ graph LR
         GEM[Gemini API]
         OV[OmniVoice]
         ET[Edge TTS]
-        PT[Piper TTS]
         FF[ffmpeg]
         PD[pydub]
         PI[Pillow]
@@ -192,7 +194,7 @@ graph LR
 
     SS --> GEM
     LCS --> GEM
-    TS --> OV & ET & PT
+    TS --> OV & ET
     AS --> FF & PD
     VS --> FF
     THS --> GEM & PI
@@ -230,8 +232,12 @@ graph LR
     branch (`_synthesize_omnivoice()` → honest "model not loaded" → Edge TTS) stays in
     the code as a harmless, tested example of the fallback pattern, but is not a live
     engine choice in the UI.
-  - Piper TTS / Google Cloud TTS / Azure TTS were never implemented — `TTS_ENGINES` keeps
-    them as valid enum values for schema flexibility only.
+  - Piper TTS / Google Cloud TTS / Azure TTS were never implemented. They used to be
+    kept as valid `TTS_ENGINES` enum values "for schema flexibility," but an
+    independent audit (2026-09-18) correctly flagged that as a real problem, not
+    harmless flexibility: accepting them as legal input silently fell through to
+    Edge TTS with no error, an advertised capability that didn't actually run. All
+    3 were removed from `TTS_ENGINES` that day.
 - **Outputs:** Per-line WAV/MP3 files in `data/tts_cache/`
 - **Voice mapping:** Each speaker → accent + gender → a concrete Edge TTS neural voice
   (`EDGE_TTS_VOICE_MAP`), plus speed/pitch/volume settings

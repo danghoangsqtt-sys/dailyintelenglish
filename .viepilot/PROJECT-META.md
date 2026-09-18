@@ -6,7 +6,7 @@
 |-------|-------|
 | **Project Name** | Daily Intel English Studio |
 | **Slug** | DailyIntelEnglish |
-| **Version** | 0.1.0 |
+| **Version** | 1.0.0-beta |
 | **Inception Year** | 2026 |
 | **License** | MIT |
 | **Type** | AI-powered Local Web Application |
@@ -14,7 +14,7 @@
 
 ## Description
 
-Daily Intel English Studio là một ứng dụng web local (chạy trên máy tính cá nhân) dành cho content creator muốn sản xuất video podcast tiếng Anh cho YouTube. Ứng dụng kết hợp AI (Gemini API) để tạo kịch bản, TTS (OmniVoice + Edge TTS) để tạo giọng đọc, và công cụ chỉnh sửa audio/video để xuất bản lên YouTube — tất cả trong một quy trình 7 bước liền mạch.
+Daily Intel English Studio là một ứng dụng web local (chạy trên máy tính cá nhân) dành cho content creator muốn sản xuất video podcast tiếng Anh cho YouTube. Ứng dụng kết hợp AI (Gemini API) để tạo kịch bản, TTS (Edge TTS — kỹ sư duy nhất thực sự chạy được; OmniVoice từng dự tính làm engine chính nhưng API thật của nó là voice cloning chứ không phải voice design như hình dung ban đầu, nên không được triển khai) để tạo giọng đọc, và công cụ chỉnh sửa audio/video để xuất bản lên YouTube — tất cả trong một quy trình 7 bước liền mạch.
 
 ## Organization
 

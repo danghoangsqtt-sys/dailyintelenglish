@@ -12,12 +12,12 @@ thumbnail + SRT + metadata + transcript/Learning Content) once the existing medi
 prerequisites exist.
 """
 
-import asyncio
 import hashlib
 import io
 import json
 import logging
 import time
+from asyncio import sleep
 import uuid
 import zipfile
 from datetime import datetime, timezone
@@ -112,7 +112,7 @@ async def _attempt_model(
                 attempt,
                 delay,
             )
-            await asyncio.sleep(delay)
+            await sleep(delay)
             delay *= 2
             continue
 

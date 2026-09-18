@@ -1,7 +1,5 @@
 """TTS engine discovery + per-line preview routes (Task 1.6)."""
 
-import asyncio
-import shutil
 import time
 
 import aiosqlite
@@ -9,7 +7,6 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
 from app.api.projects import _read_transaction, _write_transaction
-from app.core.config import settings
 from app.core.exceptions import NotFoundError
 from app.core.responses import ok
 from app.db.database import get_db
@@ -20,25 +17,24 @@ router = APIRouter(prefix="/api/tts", tags=["tts"])
 preview_router = APIRouter(prefix="/api/projects/{project_id}/tts", tags=["tts"])
 
 
-def _detect_engine_availability_sync() -> tuple[bool, bool]:
-    """Blocking filesystem/PATH checks — must run in a thread, never on the event loop."""
-    return settings.OMNIVOICE_MODEL_PATH.exists(), shutil.which("piper") is not None
-
-
 @router.get("/engines")
 async def list_engines() -> dict:
     """Report which TTS engines are currently usable on this machine.
 
-    OmniVoice availability is based on the model directory existing —
-    actual model loading and GPU checks happen at startup / in
-    scripts/check_dependencies.py, not on every request here.
+    Only lists engines `tts_service.py` can actually dispatch to (matches
+    `TTS_ENGINES`). `omnivoice` is unconditionally reported unavailable: its
+    synthesis function is a hardcoded, always-failing stub today (see
+    `tts_service.py`'s module docstring) — no filesystem check could make that
+    claim honestly `true`, model directory or not. "piper"/"google"/"azure" were
+    removed entirely 2026-09-18 (found by an independent audit): they were
+    accepted as valid `tts_engine` values but had zero synthesis implementation,
+    silently falling through to Edge TTS with no error — an advertised capability
+    that didn't actually run.
     """
     started_at = time.perf_counter()
-    omnivoice_available, piper_available = await asyncio.to_thread(_detect_engine_availability_sync)
     engines = [
-        {"id": "omnivoice", "available": omnivoice_available, "kind": "local_gpu"},
+        {"id": "omnivoice", "available": False, "kind": "local_gpu"},
         {"id": "edge_tts", "available": True, "kind": "online_free"},
-        {"id": "piper", "available": piper_available, "kind": "local_offline"},
     ]
     return ok(engines, started_at=started_at)
 
@@ -47,13 +43,23 @@ async def list_engines() -> dict:
 async def preview_line(
     project_id: str, payload: PreviewLineRequest, db: aiosqlite.Connection = Depends(get_db)
 ) -> dict:
-    """Synthesize one script line to audio (OmniVoice if configured, else Edge TTS) and cache it."""
+    """Synthesize one script line to audio (OmniVoice if configured, else Edge TTS) and cache it.
+
+    No lock is held across the synthesis call itself (network round-trip to Edge
+    TTS, potentially slow) — same "no lock across slow work" rule already applied
+    to Gemini calls and audio/video generation elsewhere in this codebase. A short
+    `_read_transaction` snapshots what's needed, then a separate, short
+    `_write_transaction` persists the result.
+    """
     started_at = time.perf_counter()
     async with _read_transaction():
         project = await project_service.get_project(db, project_id)
         line = await script_service.get_script_line(db, project_id, payload.line_id)
+    result = await tts_service.synthesize_line_audio(project, line)  # no lock held — network call
     async with _write_transaction(db):
-        result = await tts_service.synthesize_line(db, project, line, commit=False)
+        await tts_service.save_line_audio_cache(
+            db, project_id, payload.line_id, result["audio_path"], commit=False
+        )
     return ok(result, started_at=started_at)
 
 

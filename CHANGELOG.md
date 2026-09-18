@@ -151,6 +151,16 @@ Versioning: [SemVer](https://semver.org/)
   correctly by existing code, so no change was needed there.
 
 ### Fixed
+- Found via a third independent Codex `/vp-audit` pass (2026-09-18), fixed under
+  Phase 11 (self-implemented by PM): deleting a speaker's avatar image had the same
+  data-integrity issue as an earlier fix to uploading/replacing one -- the file
+  could be deleted before the database change referencing it was confirmed saved.
+  Speaker voice-engine choice now honestly reflects what's actually supported:
+  3 engine options that were accepted as valid but silently did nothing different
+  than the default were removed. Generating a TTS preview no longer blocks every
+  other page in the app for the duration of the network call to the speech
+  service. Also fixed a test-suite issue that was very likely the cause of
+  occasional unrelated test failures during full test runs.
 - Found via both 2026-09-18 audits (Codex's independent parallel `/vp-audit` pass
   and PM's own read-only pass), fixed under Phase 10 (self-implemented by PM):
   regenerating a single script line left its old cached TTS audio reference in

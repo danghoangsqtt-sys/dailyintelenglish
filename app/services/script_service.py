@@ -1,11 +1,11 @@
 """Generates podcast scripts via the Gemini API, with retry and schema validation."""
 
-import asyncio
 import hashlib
 import json
 import logging
 import time
 import uuid
+from asyncio import sleep
 
 import aiosqlite
 import httpx
@@ -127,7 +127,7 @@ async def _attempt_model(
                 attempt,
                 delay,
             )
-            await asyncio.sleep(delay)
+            await sleep(delay)
             delay *= 2
             continue
 

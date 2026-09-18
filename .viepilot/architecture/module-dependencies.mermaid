@@ -14,7 +14,6 @@ graph LR
         GEM[Gemini API]
         OV[OmniVoice]
         ET[Edge TTS]
-        PT[Piper TTS]
         FF[ffmpeg]
         PD[pydub]
         PI[Pillow]
@@ -22,7 +21,7 @@ graph LR
 
     SS --> GEM
     LCS --> GEM
-    TS --> OV & ET & PT
+    TS --> OV & ET
     AS --> FF & PD
     VS --> FF
     THS --> GEM & PI

@@ -102,9 +102,16 @@ def test_get_cached_audio_returns_audio_after_preview(client: TestClient):
     assert response.content == FAKE_MP3_BYTES
 
 
-def test_engines_endpoint_still_works(client: TestClient):
+def test_engines_endpoint_only_reports_real_dispatchable_engines(client: TestClient):
+    """Task 10.x follow-up: /engines must never claim an engine is available if
+    tts_service.py can't actually dispatch to it (found by an independent audit —
+    omnivoice used to report available=true from a directory-existence check even
+    though its synthesis function always fails, and piper/google/azure were listed/
+    accepted despite having zero synthesis implementation)."""
     response = client.get("/api/tts/engines")
     assert response.status_code == 200
-    ids = [engine["id"] for engine in response.json()["data"]]
-    assert "omnivoice" in ids
-    assert "edge_tts" in ids
+    engines = {engine["id"]: engine for engine in response.json()["data"]}
+
+    assert set(engines) == {"omnivoice", "edge_tts"}
+    assert engines["omnivoice"]["available"] is False
+    assert engines["edge_tts"]["available"] is True

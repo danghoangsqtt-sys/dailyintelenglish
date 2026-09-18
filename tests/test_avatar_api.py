@@ -206,6 +206,43 @@ def test_delete_removes_avatar_and_clears_reference(client: TestClient, project:
     assert list(avatar_dir.glob(f"{speaker_id}.*")) == []
 
 
+def test_delete_commit_failure_preserves_the_file_and_db_reference(
+    client: TestClient, project: dict, monkeypatch: pytest.MonkeyPatch
+):
+    """The same BUG-019 root cause also applied to DELETE (found by a later
+    independent audit, PM had incorrectly excluded this route when first fixing
+    BUG-019): if the commit fails, the file and its DB reference must both survive
+    — not a deleted file with a DB row already cleared and then rolled back to
+    referencing it."""
+    from app.db.database import Database
+
+    speaker_id = project["speakers"][0]["id"]
+    uploaded = upload(client, project["id"], speaker_id, "face.png", VALID_PNG)
+    assert uploaded.status_code == 200
+    avatar_dir = settings.DATA_DIR / "avatars" / project["id"]
+    original_file = next(avatar_dir.glob(f"{speaker_id}.*"))
+    original_bytes = original_file.read_bytes()
+
+    connection = Database.instance().connection
+    real_commit = connection.commit
+
+    async def failing_commit():
+        raise RuntimeError("simulated commit failure")
+
+    monkeypatch.setattr(connection, "commit", failing_commit)
+    try:
+        with pytest.raises(RuntimeError, match="simulated commit failure"):
+            client.delete(f"/api/projects/{project['id']}/speakers/{speaker_id}/avatar")
+    finally:
+        monkeypatch.setattr(connection, "commit", real_commit)
+
+    assert original_file.exists()
+    assert original_file.read_bytes() == original_bytes
+    served = client.get(f"/api/projects/{project['id']}/speakers/{speaker_id}/avatar")
+    assert served.status_code == 200
+    assert served.content == original_bytes
+
+
 def test_delete_unknown_speaker_or_project_returns_404(client: TestClient, project: dict):
     unknown_speaker = client.delete(f"/api/projects/{project['id']}/speakers/does-not-exist/avatar")
     unknown_project = client.delete(

@@ -839,3 +839,34 @@ documentation/metadata findings (BUG-014, BUG-015, ENH-006, ENH-007).
 the user's standing policy change, zero real defects found on PM's own review.
 Every finding from both 2026-09-18 audits (Codex's parallel scan and PM's own
 read-only pass) is now resolved.
+
+## Phase 11 — Third Audit Fixes
+
+**Status:** ✅ Complete | **Started:** 2026-09-18 | **Closed:** 2026-09-18
+
+Opened after the user shared a third independent Codex `/vp-audit` pass (run after
+Phase 10 closed). 7 findings, all independently re-verified and confirmed real by
+PM — including a real miss in PM's own Phase 10 work (`delete_avatar()` had the
+same root cause as BUG-019 but was incorrectly excluded from that fix) and a
+plausible root cause for this project's long-documented Gemini-retry timing flake
+class (a shared test fixture pattern that monkeypatched `asyncio.sleep`
+process-wide instead of module-scoped).
+
+### 11.1 Third-audit fixes — avatar delete, TTS engine contract, TTS lock-holding, global sleep-patch, docs — ✅ DONE (2026-09-18)
+
+- [x] `delete_avatar()` no longer deletes a file before its DB reference change is
+  confirmed committed (same fix pattern as BUG-019). `TTS_ENGINES` narrowed to only
+  engines that actually work (`omnivoice`, `edge_tts`) — `piper`/`google`/`azure`
+  removed, they were accepted as valid input but had zero synthesis
+  implementation. TTS preview no longer holds the app's shared database lock
+  across a live network call. 4 test files' `no_real_sleep` fixtures now patch
+  their own module's local `sleep` name instead of the shared `asyncio` module —
+  a plausible fix for the project's long-standing Gemini-retry flake class.
+  Architecture diagram sidecars fully synced; `PROJECT-META.md` and README
+  brought up to date. Self-implemented by PM, zero real defects found on PM's own
+  review (including 2 revert-and-confirm-failure checks). See
+  `.viepilot/phases/11-third-audit-fixes/tasks/task-11.1.md` for the full record.
+
+**Phase 11 fully closed 2026-09-18** — its one task done, self-implemented by PM,
+zero real defects found on PM's own review. Every finding from all 3 independent
+audits this session (2 on 2026-09-18, this being the 3rd) is now resolved.

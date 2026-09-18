@@ -21,7 +21,7 @@ flowchart LR
 
     subgraph E["Step 4: TTS Audio Studio"]
         E1[Voice Assignment\nper speaker]
-        E2[OmniVoice GPU\ngenerate per line]
+        E2[Edge TTS\ngenerate per line]
         E3[Preview + Mix\npydub + ffmpeg]
         E4[Export\nMP3 + WAV]
     end
@@ -29,7 +29,7 @@ flowchart LR
     subgraph F["Step 5: Video Studio"]
         F1[Background\nTemplate / Image]
         F2[Subtitle Overlay\nburned-in + SRT]
-        F3[Lips-sync Avatar\nLivePortrait]
+        F3[Lips-sync Avatar\nLivePortrait — NOT implemented, deferred]
         F4[Export MP4]
     end
 
