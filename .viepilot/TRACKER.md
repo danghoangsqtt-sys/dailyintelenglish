@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness); Phase 8 done (new, CSS consolidation); Phase 9 done (new, regeneration integrity); Phase 10 done (new, backlog cleanup); Phase 11 done (new, third audit fixes); Phase 12 done (new, settings & packaging)  
+**Phase:** 1–12 done; Phase 13 in progress (local-first AI reliability)
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18; Phase 8 opened and closed 2026-09-18; Phase 9 opened and closed 2026-09-18; Phase 10 opened and closed 2026-09-18; Phase 11 opened and closed 2026-09-18; Phase 12 opened and closed 2026-09-18, new scope beyond the original 21-day plan)  
+**Started:** 2026-09-10 (Phases 1–12 complete; Phase 13 opened 2026-09-18 as user-approved reliability scope beyond the original plan)
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
@@ -1222,6 +1222,34 @@ PM's own review.**
 
 **This closes Task 12.2 -- and Phase 12 (Settings & Packaging) in full.** Both
 tasks were new scope requested directly by the user, not audit-derived.
+
+## Phase 13 Task Status
+
+Phase 13 replaces the fragile long synchronous script/learning production path with
+durable provider-neutral jobs, qualifies Qwen locally on the RTX 3060, retains one
+visible stable Gemini fallback, and requires a real eight-minute Edge TTS/audio/video
+trial before local-primary promotion. The controlling contract is
+`docs/implementation/phase-13-local-first-ai-reliability.md`.
+
+### 13.0 Baseline, ADR, backup, rollback contract — ✅ DONE (2026-09-18)
+
+- Doc-first plan: 595 lines, 11 strict task contracts, independently reviewed for
+  backend and operations risks before implementation.
+- ADR and sanitized A2/B1/C1 golden inputs plus frozen legacy API/output fixtures added.
+- Offline baseline verifier: 3 project fixtures and 4 endpoint contracts pass; ruff
+  clean.
+- Live `data/app.db` backed up with SQLite Online Backup API to ignored local storage,
+  not raw file copy. Source and backup both report `integrity_check=ok`, zero foreign-
+  key violations, 6 migrations, 293 projects, 573 script lines, and 157 learning packs.
+  Backup is 1,290,240 bytes; SHA-256 is recorded in the Task 13.0 evidence card. It may
+  contain the DB-stored Gemini key and must never be staged/uploaded.
+
+### 13.1 Provision and qualify Ollama/Qwen (Gate A) — ⏳ IN PROGRESS
+
+Gate A requires loopback-only Ollama, three valid nested-schema probes, full GPU
+offload, ≥1.5 GiB free VRAM and ≥4 GiB free RAM at 16K, no OOM/TDR, and measured
+cancel/down/model-missing behavior. A failure selects Gemini-primary/local-experimental;
+it does not weaken the gate.
 
 ## Decision Log
 

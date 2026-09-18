@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "response_envelope": {
+    "required_keys": ["success", "data", "error", "meta"],
+    "success_value": true,
+    "error_value": null,
+    "processing_time_meta_key": "processing_time_ms"
+  },
+  "endpoints": {
+    "POST /api/projects/{project_id}/script/generate": {
+      "status": 200,
+      "data_type": "array",
+      "item_required_keys": ["id", "speaker_id", "text", "language_notes"]
+    },
+    "GET /api/projects/{project_id}/script": {
+      "status": 200,
+      "data_type": "array",
+      "item_required_keys": ["id", "speaker_id", "text", "language_notes"]
+    },
+    "POST /api/projects/{project_id}/learning/generate": {
+      "status": 200,
+      "data_type": "object",
+      "data_required_keys": ["vocabulary", "idioms", "grammar", "questions"]
+    },
+    "GET /api/projects/{project_id}/learning": {
+      "status": 200,
+      "data_type": "object_or_null",
+      "data_required_keys_when_present": ["vocabulary", "idioms", "grammar", "questions"]
+    }
+  },
+  "representative_script": [
+    {
+      "id": "00000000-0000-4000-8000-000000000101",
+      "speaker_id": "00000000-0000-4000-8000-000000000001",
+      "text": "Welcome. Today we are discussing how remote work changes city life.",
+      "language_notes": {
+        "collocations": ["remote work", "city life"],
+        "idioms": [],
+        "grammar_point": "Present continuous for ongoing change"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000102",
+      "speaker_id": "00000000-0000-4000-8000-000000000002",
+      "text": "It affects commuting, local businesses, and the way people choose homes.",
+      "language_notes": {
+        "collocations": ["local businesses"],
+        "idioms": [],
+        "grammar_point": "Present simple for general effects"
+      }
+    }
+  ],
+  "representative_learning_pack": {
+    "vocabulary": [
+      {
+        "word": "commuting",
+        "part_of_speech": "noun",
+        "ipa": "/kəˈmjuːtɪŋ/",
+        "definition_en": "regular travel between home and work",
+        "definition_vi": "việc đi lại thường xuyên giữa nhà và nơi làm việc",
+        "example_sentence": "It affects commuting, local businesses, and the way people choose homes."
+      }
+    ],
+    "idioms": [],
+    "grammar": [
+      {
+        "point": "Present simple",
+        "structure": "subject + base verb",
+        "explanation_en": "Use it for general facts and repeated situations.",
+        "explanation_vi": "Dùng để diễn tả sự thật chung và tình huống lặp lại.",
+        "examples": ["It affects commuting."]
+      }
+    ],
+    "questions": [
+      {
+        "question": "What does remote work affect?",
+        "options": ["Commuting", "Only the weather", "Nothing in cities"],
+        "correct_answer": "Commuting",
+        "explanation": "The conversation explicitly mentions commuting."
+      }
+    ]
+  }
+}

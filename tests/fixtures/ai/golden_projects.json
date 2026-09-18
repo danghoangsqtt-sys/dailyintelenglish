@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "projects": [
+    {
+      "fixture_id": "a2_5min_daily_routine",
+      "name": "Gate B A2 5min",
+      "topic": "Building a simple healthy morning routine",
+      "cefr_level": "A2",
+      "duration_minutes": 5,
+      "num_speakers": 2,
+      "genre": "small_talk",
+      "accent": "american",
+      "language_features": {
+        "collocation": true,
+        "idiom": false,
+        "slang": false,
+        "local_expressions": false,
+        "phrasal_verbs": true,
+        "business_register": false
+      },
+      "speakers": [
+        {
+          "name": "Alex",
+          "gender": "male",
+          "accent": "american",
+          "tts_engine": "edge_tts"
+        },
+        {
+          "name": "Maya",
+          "gender": "female",
+          "accent": "american",
+          "tts_engine": "edge_tts"
+        }
+      ]
+    },
+    {
+      "fixture_id": "b1_8min_remote_work",
+      "name": "Trial Run 8min",
+      "topic": "The rise of remote work and its effect on city life",
+      "cefr_level": "B1",
+      "duration_minutes": 8,
+      "num_speakers": 2,
+      "genre": "interview",
+      "accent": "american",
+      "language_features": {
+        "collocation": true,
+        "idiom": true,
+        "slang": false,
+        "local_expressions": false,
+        "phrasal_verbs": true,
+        "business_register": false
+      },
+      "speakers": [
+        {
+          "name": "Alex",
+          "gender": "male",
+          "accent": "american",
+          "tts_engine": "edge_tts"
+        },
+        {
+          "name": "Maya",
+          "gender": "female",
+          "accent": "american",
+          "tts_engine": "edge_tts"
+        }
+      ]
+    },
+    {
+      "fixture_id": "c1_10min_urban_policy",
+      "name": "Gate B C1 10min",
+      "topic": "How remote work is reshaping transport, housing, and urban policy",
+      "cefr_level": "C1",
+      "duration_minutes": 10,
+      "num_speakers": 2,
+      "genre": "interview",
+      "accent": "american",
+      "language_features": {
+        "collocation": true,
+        "idiom": true,
+        "slang": false,
+        "local_expressions": true,
+        "phrasal_verbs": true,
+        "business_register": true
+      },
+      "speakers": [
+        {
+          "name": "Jordan",
+          "gender": "neutral",
+          "accent": "american",
+          "tts_engine": "edge_tts"
+        },
+        {
+          "name": "Elena",
+          "gender": "female",
+          "accent": "american",
+          "tts_engine": "edge_tts"
+        }
+      ]
+    }
+  ]
+}

@@ -870,3 +870,19 @@ process-wide instead of module-scoped).
 **Phase 11 fully closed 2026-09-18** — its one task done, self-implemented by PM,
 zero real defects found on PM's own review. Every finding from all 3 independent
 audits this session (2 on 2026-09-18, this being the 3rd) is now resolved.
+
+## Phase 13 — Local-First AI Reliability
+
+**Status:** In progress | **Started:** 2026-09-18 | **Scope:** user-approved post-beta
+
+Replace synchronous long-running script/learning requests with durable SQLite jobs;
+centralize Ollama/Gemini provider policy; generate long scripts through validated,
+resumable sections; expose refresh/cancel/fallback state in Step 2/3; and promote local
+Qwen only after RTX 3060 qualification plus five real eight-minute runs and a complete
+real Edge TTS → audio → ffmpeg video trial.
+
+Execution is split into Tasks 13.0–13.10 with two immutable evidence gates. Gate A
+qualifies local runtime/security/memory. Gate B decides local-primary versus
+Gemini-primary/local-experimental; either decision retains durable jobs and a
+configuration-only Gemini rollback path. See
+`docs/implementation/phase-13-local-first-ai-reliability.md`.
