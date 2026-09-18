@@ -804,3 +804,29 @@ for this phase.
 
 **Phase 9 fully closed 2026-09-18** — its one task (9.1) done, delegated to Codex per
 AR-06, zero real defects found on PM review.
+
+## Phase 10 — Backlog Cleanup
+
+**Status:** 🔄 In Progress | **Started:** 2026-09-18
+
+Opened via `/vp-debug` at the user's request to continue fixing the remaining
+backlog findings from the 2026-09-18 audits — all 6 already fully diagnosed, no new
+investigation needed. Task 10.1 fixes the 2 remaining real code bugs (BUG-018, BUG-019).
+Task 10.2 fixes the 4 pure documentation/metadata findings (BUG-014, BUG-015,
+ENH-006, ENH-007).
+
+### 10.1 Clear stale per-line audio cache on line regenerate; stop deleting avatar files before commit is confirmed — planned
+
+- [ ] Regenerating a single script line clears its stale `audio_cache_path`/
+  `duration_seconds`. Avatar re-uploads no longer delete the previous file before
+  the surrounding DB transaction's commit is confirmed to succeed — a forced commit
+  failure now leaves the original avatar intact instead of orphaning it. See
+  `.viepilot/phases/10-backlog-cleanup/tasks/task-10.1.md` for the full plan.
+
+### 10.2 Documentation cleanup — stale task-card status fields, README, ARCHITECTURE.md — planned
+
+- [ ] 4 Phase 2 task cards' stale `Status` fields corrected; README.md's Phase 4
+  section and Phases 5-9 brought up to date; ARCHITECTURE.md's status-downgrade
+  behavior documented and its WebSocket/OmniVoice/LivePortrait/Mermaid-sidecar
+  inaccuracies corrected. See
+  `.viepilot/phases/10-backlog-cleanup/tasks/task-10.2.md` for the full plan.

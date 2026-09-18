@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness); Phase 8 done (new, CSS consolidation); Phase 9 done (new, regeneration integrity)  
+**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness); Phase 8 done (new, CSS consolidation); Phase 9 done (new, regeneration integrity); Phase 10 in progress (new, backlog cleanup)  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18; Phase 8 opened and closed 2026-09-18; Phase 9 opened and closed 2026-09-18, new scope beyond the original 21-day plan)  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18; Phase 8 opened and closed 2026-09-18; Phase 9 opened and closed 2026-09-18; Phase 10 opened 2026-09-18, new scope beyond the original 21-day plan)  
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
@@ -96,6 +96,7 @@ defects found. **Phase 9 formally closed 2026-09-18.***
 | Phase 7 — Script Edit Staleness (new) | ✅ Complete | 1 | 1 |
 | Phase 8 — CSS Consolidation (new) | ✅ Complete | 1 | 1 |
 | Phase 9 — Regeneration Integrity (new) | ✅ Complete | 1 | 1 |
+| Phase 10 — Backlog Cleanup (new) | 🔄 In Progress | 0 | 2 |
 
 ## Phase 1 Task Status
 
@@ -942,6 +943,36 @@ class. **Zero real defects found on PM review.** This closes Task 9.1 — and Ph
 (Regeneration Integrity) in full, since it was the phase's only task. BUG-016 and
 BUG-017 are now resolved.
 
+## Phase 10 Task Status
+
+### 10.1 Clear stale per-line audio cache on line regenerate; stop deleting avatar files before commit is confirmed — planned
+
+Origin: `.viepilot/requests/BUG-018.md`/`BUG-019.md`, both confirmed real during the
+2026-09-18 audits but left out of Phase 9's scope. Opened via `/vp-debug` at the
+user's request to continue fixing the backlog. For BUG-019, PM researched a real,
+low-risk fix design before writing the task card: switch avatar uploads to unique
+per-file filenames (instead of a fixed `{speaker_id}{suffix}` name), update the DB
+to reference the new file inside the existing transaction, and only delete the
+*previous* file as a best-effort step in the API route strictly after the
+transaction's commit is confirmed to succeed — removing the forced "delete-old,
+then-commit" coupling that causes the bug, without introducing a new read-serving
+race (confirmed `resolve_avatar_path` always resolves whatever path is currently in
+the DB, never a glob/fixed-name lookup). Noted explicitly that this legitimately
+changes the existing `test_finalize_avatar_file_replaces_old_extension` test's
+expectations, since that test currently locks in the exact buggy behavior. Doc-first
+task card written (`tasks/task-10.1.md`), handed to Codex per AR-06.
+
+### 10.2 Documentation cleanup — stale task-card status fields, README, ARCHITECTURE.md — planned
+
+Origin: `.viepilot/requests/BUG-014.md`, `BUG-015.md`, `ENH-006.md`, `ENH-007.md` —
+4 pure documentation/metadata findings, bundled per the Task 2.3/4.4/5.3/6.1
+precedent. Before writing the task card, PM re-verified ENH-007's Mermaid-sidecar
+claim by confirming `learning_service` (LCS) is genuinely wired into
+`app/api/learning.py` with a real Gemini call, validating that the sidecar file
+(which includes LCS) is the correct version and the embedded ARCHITECTURE.md block
+(which omits it) is the one to fix. Doc-first task card written
+(`tasks/task-10.2.md`), handed to Codex per AR-06.
+
 ## Decision Log
 
 | Date | Decision | Rationale |
@@ -1647,6 +1678,7 @@ BUG-017 are now resolved.
 | 2026-09-18 | User asked PM to run a read-only `/vp-audit` pass (no source-code changes), noting Codex would scan the codebase in parallel. PM ran Tier 1 (state consistency), Tier 2 (docs drift), and a Tier 3 spot-check sweep. Tier 1: all 8 phases' PHASE-STATE.md status, ROADMAP.md status, and `die-vp-p{N}-complete` git tags cross-checked and consistent; found 1 real drift — 4 Phase 2 task cards (2.1b/2.1c/2.5/2.6) still show `Status: in_progress` despite each having its own PM Acceptance section confirming they were done (task-2.1a.md's distinct `code_complete_pending_real_run` status was checked and confirmed intentional, not drift) — logged BUG-014 (low). Tier 2: found README.md's Phase 4 section stale since early Phase 4 ("In Progress", 1/7 pages), with Phases 4(remainder)/5/6/7/8 entirely undocumented in README.md despite the project's own workflow requiring README updates on milestone complete — logged BUG-015 (low); and ARCHITECTURE.md's Project data model documents the status enum but not Task 7.1's new script-edit downgrade behavior — logged ENH-006 (low). Confirmed the 3 required architecture diagram sidecars (system-overview, data-flow, module-dependencies) all exist, and that ARCHITECTURE.md's Projects API section already correctly documents `PUT /api/projects/{id}` (not PATCH) — this doc could have caught PM's own Task 7.1 task-card error earlier had it been checked first. Tier 3 spot-check: no `TODO`/`FIXME`/`print()`/bare `except:` found in `app/`; spot-checked `lineCardHtml()` in step2_script.js confirms Gemini-generated text is consistently passed through `escapeHtml()` before `innerHTML` interpolation (matching the established CR-05 discipline from Phase 2's BUG-005/Task 2.6c work — not re-audited exhaustively); the 2 f-string-built SQL statements in `project_service.py` build only column names from a fixed, code-defined schema (never user input) with all values still parameterized, confirmed not an injection risk; `requirements.txt`'s 19 real dependency lines are all version-pinned. 3 new findings auto-logged as request files; none auto-fixed (report-only per the routing guard). No source code was touched by this audit. | User; PM (Claude Code) |
 | 2026-09-18 | User shared Codex's own independent, parallel read-only `/vp-audit` results (10 findings, 0 critical/1 high/4 medium/5 low, no source changes, no auto-log). PM independently re-verified all 5 "important" findings by reading the actual source directly rather than trusting the report -- all 5 confirmed real, an excellent, false-positive-free scan. Re-scored 2: BUG-016 (voice settings not invalidating downstream status) confirmed real but found a genuine mitigating factor (Listen and Generate All both force fresh re-synthesis, so actual audio output is never wrong -- only the status signal is missing, same family as BUG-013); BUG-017 (failed regeneration wipes prior job data) re-scored from medium to high after tracing the exact UPSERT behavior and confirming it's unconditional real data loss, not just metadata drift. Logged all 5 as BUG-016 through BUG-019 and ENH-007. User chose to open Phase 9 to fix BUG-016 and BUG-017 now; the other 3 logged but out of scope. PM scaffolded Phase 9 and wrote the doc-first task card for Task 9.1, explicitly designing around the trap of naively reusing Task 7.1's `mark_script_changed()` for the speaker-settings case (its draft-advance branch would wrongly fire from a Step-1 voice edit). Handed to Codex per AR-06. | User; PM (Claude Code); Codex (parallel auditor) |
 | 2026-09-18 | Task 9.1 delivered by Codex and accepted by PM per AR-06 with zero real defects found on independent review -- `mark_audio_job_failed`/`mark_video_job_failed` preserve prior job data on failure; download endpoints widened to keep a preserved success downloadable; a shared downstream-downgrade helper lets `mark_script_changed()` (Task 7.1, unchanged externally) and a new `mark_speaker_voice_changed()` cooperate without the naive-reuse trap. Real end-to-end tests verify actual MP3/MP4 byte identity before/after a forced failure. 613/615 full suite passes -- 1 known Gemini-retry flake plus 1 newly-observed, unrelated browser-timing flake in the music library waveform test (first occurrence this session, confirmed non-regressive in isolation, tracked honestly rather than folded into the known class). This closes Task 9.1 and Phase 9 in full -- BUG-016 and BUG-017 resolved. | User; PM (Claude Code); Codex (Implementer) |
+| 2026-09-18 | User invoked `/vp-debug` asking to continue fixing bugs. All 6 remaining backlog items (BUG-014, BUG-015, BUG-018, BUG-019, ENH-006, ENH-007) were already fully diagnosed from the 2026-09-18 audits, so PM skipped a new debug-session investigation and went straight to scoping fixes. Opened Phase 10 with 2 tasks: 10.1 bundles the 2 remaining real code bugs (BUG-018: stale per-line audio cache after single-line regenerate; BUG-019: avatar filesystem mutation not rolled back if the DB transaction later fails -- PM designed a unique-filename + commit-then-cleanup fix before writing the task card, avoiding a new read-serving race). 10.2 bundles the 4 pure documentation findings (BUG-014, BUG-015, ENH-006, ENH-007) per the established small-fixes-bundling precedent. Both doc-first task cards written and handed to Codex per AR-06. | User; PM (Claude Code) |
 
 ## Known Issues
 
