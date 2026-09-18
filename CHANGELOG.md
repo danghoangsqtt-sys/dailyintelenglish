@@ -151,6 +151,18 @@ Versioning: [SemVer](https://semver.org/)
   correctly by existing code, so no change was needed there.
 
 ### Fixed
+- Found via an independent parallel `/vp-audit` pass run by Codex (2026-09-18),
+  independently re-verified and re-scored by PM, fixed under Phase 9 Task 9.1: a
+  failed audio or video regeneration attempt used to destroy the database's record
+  of a still-valid previous successful generation (the file paths, duration, and
+  timestamps were wiped to null, even though the actual MP3/MP4 files were
+  untouched on disk) -- a subsequent regeneration failure now only records the
+  failure itself, and the previous successful output remains downloadable. Also
+  fixed: changing a speaker's voice settings (engine, description, speed, pitch,
+  volume) after audio or video had already been generated didn't signal that the
+  generated output might now be stale -- it now correctly downgrades the project
+  back to the script-generated step, the same signal already in place for script
+  edits, without affecting projects still at the draft or script-generated stage.
 - Found via `/vp-audit` (2026-09-17), independently re-verifying a user-commissioned
   Gemini audit finding, fixed under Phase 8 Task 8.1 (2026-09-18): the shared
   disabled-button style had no `aria-disabled` variant, so `music_library.html`,

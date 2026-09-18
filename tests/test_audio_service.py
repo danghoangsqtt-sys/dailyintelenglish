@@ -203,3 +203,66 @@ async def test_save_and_get_audio_job_roundtrip(db):
 async def test_get_audio_job_returns_none_when_never_generated(db):
     result = await audio_service.get_audio_job(db, "no-such-project")
     assert result is None
+
+
+async def test_mark_audio_job_failed_preserves_every_existing_non_failure_column(db, monkeypatch):
+    await db.execute(
+        "INSERT INTO projects (id, name, status, created_at, updated_at) "
+        "VALUES ('p1', 'Test', 'audio_generated', 't', 't')"
+    )
+    timestamps = [{"start_sec": 0.0, "end_sec": 1.0, "label": "Alex", "speaker_id": "sp1"}]
+    times = iter(["successful-at", "failed-at"])
+    monkeypatch.setattr(audio_service, "_now", lambda: next(times))
+    await audio_service.save_audio_job(
+        db,
+        "p1",
+        status="complete",
+        mp3_path="prior.mp3",
+        wav_path="prior.wav",
+        timestamps=timestamps,
+        background_music="music.mp3",
+        duration_seconds=12.5,
+        loudness_lufs=-16.0,
+    )
+    cursor = await db.execute("SELECT * FROM audio_jobs WHERE project_id = 'p1'")
+    before = dict(await cursor.fetchone())
+
+    failed = await audio_service.mark_audio_job_failed(db, "p1", "regeneration failed")
+
+    cursor = await db.execute("SELECT * FROM audio_jobs WHERE project_id = 'p1'")
+    after = dict(await cursor.fetchone())
+    preserved_columns = set(before) - {"status", "error_message", "completed_at"}
+    assert {column: after[column] for column in preserved_columns} == {
+        column: before[column] for column in preserved_columns
+    }
+    assert after["status"] == "error"
+    assert after["error_message"] == "regeneration failed"
+    assert after["completed_at"] == "failed-at"
+    assert failed["mp3_path"] == "prior.mp3"
+    assert failed["wav_path"] == "prior.wav"
+    assert failed["timestamps"] == timestamps
+
+
+async def test_mark_audio_job_failed_inserts_error_only_row_on_first_attempt(db, monkeypatch):
+    await db.execute(
+        "INSERT INTO projects (id, name, status, created_at, updated_at) "
+        "VALUES ('p1', 'Test', 'script_generated', 't', 't')"
+    )
+    await db.commit()
+    monkeypatch.setattr(audio_service, "_now", lambda: "failed-at")
+
+    failed = await audio_service.mark_audio_job_failed(db, "p1", "first attempt failed")
+
+    assert failed["status"] == "error"
+    assert failed["error_message"] == "first attempt failed"
+    assert failed["started_at"] == "failed-at"
+    assert failed["completed_at"] == "failed-at"
+    for column in (
+        "mp3_path",
+        "wav_path",
+        "background_music",
+        "duration_seconds",
+        "loudness_lufs",
+    ):
+        assert failed[column] is None
+    assert failed["timestamps"] == []

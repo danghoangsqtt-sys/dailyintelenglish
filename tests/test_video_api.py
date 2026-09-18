@@ -13,7 +13,7 @@ from pydub.generators import Sine
 
 from app.core.config import settings
 from app.main import app
-from app.services import tts_service
+from app.services import tts_service, video_service
 
 PROJECT_PAYLOAD = {
     "name": "Video API Test Episode",
@@ -122,6 +122,29 @@ def test_generate_video_unknown_template_returns_422(client: TestClient):
     )
 
     assert response.status_code == 422
+
+
+def test_first_video_render_failure_records_error_only_job(client: TestClient, monkeypatch):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+
+    async def fail_render(*args, **kwargs):
+        raise video_service.VideoRenderError("forced first render failure")
+
+    monkeypatch.setattr(video_service, "generate_video", fail_render)
+    response = client.post(
+        f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"}
+    )
+
+    assert response.status_code == 500
+    job = client.get(f"/api/projects/{project['id']}/video/status").json()["data"]
+    assert job["status"] == "error"
+    assert job["error_message"] == "forced first render failure"
+    assert job["mode"] == "background"
+    assert job["mp4_path"] is None
+    assert job["mp4_path_vertical"] is None
+    assert job["srt_path"] is None
 
 
 def test_generate_video_missing_project_returns_404(client: TestClient):
@@ -246,3 +269,46 @@ def test_download_mp4_vertical_returns_404_when_not_generated(client: TestClient
     response = client.get(f"/api/projects/{project['id']}/video/download?format=mp4_vertical")
 
     assert response.status_code == 404
+
+
+def test_failed_video_regeneration_keeps_prior_outputs_downloadable(client: TestClient, monkeypatch):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+    generated = client.post(
+        f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"}
+    )
+    assert generated.status_code == 200
+    prior_job = generated.json()["data"]
+    prior_mp4 = client.get(f"/api/projects/{project['id']}/video/download?format=mp4").content
+    prior_srt = client.get(f"/api/projects/{project['id']}/video/download?format=srt").content
+
+    async def fail_render(*args, **kwargs):
+        raise video_service.VideoRenderError("forced regeneration failure")
+
+    monkeypatch.setattr(video_service, "generate_video", fail_render)
+    failed = client.post(
+        f"/api/projects/{project['id']}/video/generate", json={"template_id": "deep_purple"}
+    )
+
+    assert failed.status_code == 500
+    job = client.get(f"/api/projects/{project['id']}/video/status").json()["data"]
+    assert job["status"] == "error"
+    assert job["error_message"] == "forced regeneration failure"
+    for column in (
+        "id",
+        "mode",
+        "mp4_path",
+        "mp4_path_vertical",
+        "srt_path",
+        "background_image",
+        "subtitle_style_json",
+        "started_at",
+    ):
+        assert job[column] == prior_job[column]
+    mp4 = client.get(f"/api/projects/{project['id']}/video/download?format=mp4")
+    srt = client.get(f"/api/projects/{project['id']}/video/download?format=srt")
+    assert mp4.status_code == 200
+    assert mp4.content == prior_mp4
+    assert srt.status_code == 200
+    assert srt.content == prior_srt

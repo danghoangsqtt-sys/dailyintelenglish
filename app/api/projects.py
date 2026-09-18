@@ -154,6 +154,8 @@ async def update_speaker(
     """
     started_at = time.perf_counter()
     async with _write_transaction(db):
+        if patch.model_dump(exclude_unset=True):
+            await project_service.mark_speaker_voice_changed(db, project_id, commit=False)
         project = await project_service.update_speaker(db, project_id, speaker_id, patch, commit=False)
     return ok(project, started_at=started_at)
 

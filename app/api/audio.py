@@ -46,9 +46,7 @@ async def generate_audio(
         result = await audio_service.mix_project(project, lines, payload.background_music)
     except Exception as exc:
         async with _write_transaction(db):
-            await audio_service.save_audio_job(
-                db, project_id, status="error", error_message=str(exc), commit=False
-            )
+            await audio_service.mark_audio_job_failed(db, project_id, str(exc), commit=False)
         raise
 
     async with _write_transaction(db):
@@ -94,7 +92,9 @@ async def download_audio(
     async with _read_transaction():
         await project_service.get_project(db, project_id)
         job = await audio_service.get_audio_job(db, project_id)
-    if job is None or job["status"] != "complete":
+    if job is None or job["status"] not in ("complete", "error"):
         raise NotFoundError(f"No completed audio mix for project {project_id}")
     path = job["mp3_path"] if format == "mp3" else job["wav_path"]
+    if path is None:
+        raise NotFoundError(f"No completed {format!r} audio mix for project {project_id}")
     return FileResponse(path, media_type=media_type, filename=f"{project_id}.{format}")

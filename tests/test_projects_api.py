@@ -319,3 +319,46 @@ def test_update_speaker_after_script_exists_does_not_delete_script_lines(client)
         s["id"] for s in response.json()["data"]["speakers"] if s["speed"] == 1.4
     )
     assert updated_speaker_id == speaker_id
+
+
+@pytest.mark.parametrize(
+    ("initial_status", "expected_status"),
+    [
+        ("draft", "draft"),
+        ("script_generated", "script_generated"),
+        ("audio_generated", "script_generated"),
+        ("video_generated", "script_generated"),
+        ("complete", "script_generated"),
+    ],
+)
+def test_update_speaker_downgrades_only_downstream_statuses(
+    client, initial_status, expected_status
+):
+    project = client.post("/api/projects", json=VALID_PAYLOAD).json()["data"]
+    status_chain = ["draft", "script_generated", "audio_generated", "video_generated", "complete"]
+    for status in status_chain[1 : status_chain.index(initial_status) + 1]:
+        response = client.put(f"/api/projects/{project['id']}", json={"status": status})
+        assert response.status_code == 200
+
+    speaker_id = project["speakers"][0]["id"]
+    response = client.patch(
+        f"/api/projects/{project['id']}/speakers/{speaker_id}", json={"speed": 1.1}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"]["status"] == expected_status
+    persisted = client.get(f"/api/projects/{project['id']}").json()["data"]
+    assert persisted["status"] == expected_status
+
+
+def test_empty_speaker_patch_does_not_downgrade_status(client):
+    project = client.post("/api/projects", json=VALID_PAYLOAD).json()["data"]
+    for status in ("script_generated", "audio_generated", "video_generated", "complete"):
+        response = client.put(f"/api/projects/{project['id']}", json={"status": status})
+        assert response.status_code == 200
+
+    speaker_id = project["speakers"][0]["id"]
+    response = client.patch(f"/api/projects/{project['id']}/speakers/{speaker_id}", json={})
+
+    assert response.status_code == 200
+    assert response.json()["data"]["status"] == "complete"

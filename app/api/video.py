@@ -51,9 +51,7 @@ async def generate_video(
         )
     except Exception as exc:
         async with _write_transaction(db):
-            await video_service.save_video_job(
-                db, project_id, status="error", error_message=str(exc), commit=False
-            )
+            await video_service.mark_video_job_failed(db, project_id, str(exc), commit=False)
         raise
 
     async with _write_transaction(db):
@@ -98,7 +96,7 @@ async def download_video(
     async with _read_transaction():
         await project_service.get_project(db, project_id)
         job = await video_service.get_video_job(db, project_id)
-    if job is None or job["status"] != "complete":
+    if job is None or job["status"] not in ("complete", "error"):
         raise NotFoundError(f"No completed video for project {project_id}")
     path_by_format = {"mp4": job["mp4_path"], "mp4_vertical": job["mp4_path_vertical"], "srt": job["srt_path"]}
     path = path_by_format[format]

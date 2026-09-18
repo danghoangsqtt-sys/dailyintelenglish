@@ -230,3 +230,69 @@ async def test_save_and_get_video_job_roundtrip(db):
 
 async def test_get_video_job_returns_none_when_never_generated(db):
     assert await video_service.get_video_job(db, "no-such-project") is None
+
+
+async def test_mark_video_job_failed_preserves_every_existing_non_failure_column(db, monkeypatch):
+    await db.execute(
+        "INSERT INTO projects (id, name, status, created_at, updated_at) "
+        "VALUES ('p1', 'Test', 'video_generated', 't', 't')"
+    )
+    times = iter(["successful-at", "failed-at"])
+    monkeypatch.setattr(video_service, "_now", lambda: next(times))
+    await video_service.save_video_job(
+        db,
+        "p1",
+        status="complete",
+        mode="avatar_lipssync",
+        mp4_path="prior.mp4",
+        mp4_path_vertical="prior_vertical.mp4",
+        srt_path="prior.srt",
+        background_image="midnight",
+    )
+    await db.execute(
+        "UPDATE video_jobs SET subtitle_style_json = ? WHERE project_id = 'p1'",
+        ('{"font":"Inter","size":48}',),
+    )
+    await db.commit()
+    cursor = await db.execute("SELECT * FROM video_jobs WHERE project_id = 'p1'")
+    before = dict(await cursor.fetchone())
+
+    failed = await video_service.mark_video_job_failed(db, "p1", "regeneration failed")
+
+    cursor = await db.execute("SELECT * FROM video_jobs WHERE project_id = 'p1'")
+    after = dict(await cursor.fetchone())
+    preserved_columns = set(before) - {"status", "error_message", "completed_at"}
+    assert {column: after[column] for column in preserved_columns} == {
+        column: before[column] for column in preserved_columns
+    }
+    assert after["status"] == "error"
+    assert after["error_message"] == "regeneration failed"
+    assert after["completed_at"] == "failed-at"
+    assert failed["mp4_path"] == "prior.mp4"
+    assert failed["mp4_path_vertical"] == "prior_vertical.mp4"
+    assert failed["srt_path"] == "prior.srt"
+
+
+async def test_mark_video_job_failed_inserts_error_only_row_on_first_attempt(db, monkeypatch):
+    await db.execute(
+        "INSERT INTO projects (id, name, status, created_at, updated_at) "
+        "VALUES ('p1', 'Test', 'audio_generated', 't', 't')"
+    )
+    await db.commit()
+    monkeypatch.setattr(video_service, "_now", lambda: "failed-at")
+
+    failed = await video_service.mark_video_job_failed(db, "p1", "first attempt failed")
+
+    assert failed["status"] == "error"
+    assert failed["error_message"] == "first attempt failed"
+    assert failed["started_at"] == "failed-at"
+    assert failed["completed_at"] == "failed-at"
+    assert failed["mode"] == "background"
+    for column in (
+        "mp4_path",
+        "mp4_path_vertical",
+        "srt_path",
+        "background_image",
+        "subtitle_style_json",
+    ):
+        assert failed[column] is None

@@ -226,6 +226,31 @@ async def get_video_job(db: aiosqlite.Connection, project_id: str) -> dict | Non
     return None if row is None else _row_to_video_job(row)
 
 
+async def mark_video_job_failed(
+    db: aiosqlite.Connection,
+    project_id: str,
+    error_message: str,
+    commit: bool = True,
+) -> dict:
+    """Record a failed render without discarding a prior successful video."""
+    now = _now()
+    cursor = await db.execute(
+        "UPDATE video_jobs SET status = 'error', error_message = ?, completed_at = ? "
+        "WHERE project_id = ?",
+        (error_message, now, project_id),
+    )
+    if cursor.rowcount == 0:
+        await db.execute(
+            "INSERT INTO video_jobs "
+            "(id, project_id, status, error_message, started_at, completed_at) "
+            "VALUES (?, ?, 'error', ?, ?, ?)",
+            (str(uuid.uuid4()), project_id, error_message, now, now),
+        )
+    if commit:
+        await db.commit()
+    return await get_video_job(db, project_id)
+
+
 async def save_video_job(
     db: aiosqlite.Connection,
     project_id: str,

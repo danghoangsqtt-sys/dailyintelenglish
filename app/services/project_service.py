@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 # sync with the "<category>/<project_id>" convention used by avatar_service, tts_service,
 # audio_service, video_service, and thumbnail_service).
 _PROJECT_ARTIFACT_CATEGORIES = ("avatars", "audio", "video", "thumbnails", "tts_cache")
+_DOWNSTREAM_STATUSES = frozenset({"audio_generated", "video_generated", "complete"})
 
 _LIST_COLUMNS = "id, name, status, cefr_level, genre, accent, created_at, updated_at"
 _DETAIL_COLUMNS = (
@@ -302,6 +303,19 @@ async def update_project(
     return await get_project(db, project_id)
 
 
+async def _downgrade_downstream_to_script_generated(
+    db: aiosqlite.Connection, project_id: str, current_status: str
+) -> bool:
+    """Downgrade stale downstream artifacts without handling early workflow states."""
+    if current_status not in _DOWNSTREAM_STATUSES:
+        return False
+    await db.execute(
+        "UPDATE projects SET status = 'script_generated', updated_at = ? WHERE id = ?",
+        (_now(), project_id),
+    )
+    return True
+
+
 async def mark_script_changed(
     db: aiosqlite.Connection, project_id: str, commit: bool = True
 ) -> None:
@@ -341,11 +355,30 @@ async def mark_script_changed(
         )
         return
 
-    await db.execute(
-        "UPDATE projects SET status = 'script_generated', updated_at = ? WHERE id = ?",
-        (_now(), project_id),
-    )
+    await _downgrade_downstream_to_script_generated(db, project_id, current_status)
     if commit:
+        await db.commit()
+
+
+async def mark_speaker_voice_changed(
+    db: aiosqlite.Connection, project_id: str, commit: bool = True
+) -> None:
+    """Downgrade only projects whose generated audio may now be stale.
+
+    Voice settings are valid to edit before a script or audio exists, so ``draft``
+    and ``script_generated`` deliberately remain unchanged. This differs from
+    :func:`mark_script_changed`, whose draft advance represents first script creation.
+    """
+    cursor = await db.execute("SELECT status FROM projects WHERE id = ?", (project_id,))
+    row = await cursor.fetchone()
+    if row is None:
+        raise NotFoundError(f"Project {project_id} not found")
+
+    current_status = row["status"]
+    if current_status not in PROJECT_STATUSES:
+        raise ValidationError(f"unknown status: {current_status!r}")
+    changed = await _downgrade_downstream_to_script_generated(db, project_id, current_status)
+    if changed and commit:
         await db.commit()
 
 

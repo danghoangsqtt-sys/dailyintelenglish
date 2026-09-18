@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness); Phase 8 done (new, CSS consolidation); Phase 9 in progress (new, regeneration integrity)  
+**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness); Phase 8 done (new, CSS consolidation); Phase 9 done (new, regeneration integrity)  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18; Phase 8 opened and closed 2026-09-18; Phase 9 opened 2026-09-18, new scope beyond the original 21-day plan)  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18; Phase 8 opened and closed 2026-09-18; Phase 9 opened and closed 2026-09-18, new scope beyond the original 21-day plan)  
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
@@ -74,7 +74,16 @@ deliberate, well-reasoned fix in place (a connection-wide lock already serialize
 every route) — marked `wontfix`, no code changed. ENH-005 had a real, minimal fix:
 reconciled a missing shared `.btn[aria-disabled="true"]` rule, removing 3 pages'
 resulting inconsistent local overrides. Its one task (8.1) done 2026-09-18,
-self-implemented and self-verified by PM. **Phase 8 formally closed 2026-09-18.***
+self-implemented and self-verified by PM. **Phase 8 formally closed 2026-09-18.**
+**Phase 9** (new, opened 2026-09-18 right after Phase 8 closed) was scoped after the
+user had Codex run its own independent, parallel read-only `/vp-audit` alongside
+PM's own audit — Codex found 10 issues, PM independently re-verified all 5
+"important" ones with zero false positives, and re-scored BUG-017 (a failed audio/
+video regeneration attempt wiped a prior successful job's DB data — real data loss)
+up to high after tracing the exact UPSERT bug. Its one task (9.1) fixed both BUG-017
+and BUG-016 (voice-settings changes not invalidating downstream status, the same bug
+class as BUG-013), done 2026-09-18 by Codex, accepted by PM per AR-06 with zero real
+defects found. **Phase 9 formally closed 2026-09-18.***
 
 | Phase | Status | Tasks Done | Tasks Total |
 |-------|--------|-----------|-------------|
@@ -86,7 +95,7 @@ self-implemented and self-verified by PM. **Phase 8 formally closed 2026-09-18.*
 | Phase 6 — Quick Wins Batch (new) | ✅ Complete | 1 | 1 |
 | Phase 7 — Script Edit Staleness (new) | ✅ Complete | 1 | 1 |
 | Phase 8 — CSS Consolidation (new) | ✅ Complete | 1 | 1 |
-| Phase 9 — Regeneration Integrity (new) | 🔄 In Progress | 0 | 1 |
+| Phase 9 — Regeneration Integrity (new) | ✅ Complete | 1 | 1 |
 
 ## Phase 1 Task Status
 
@@ -884,7 +893,7 @@ is correctly `wontfix` with reasoning recorded, and 2 (BUG-013, ENH-005) are fix
 
 ## Phase 9 Task Status
 
-### 9.1 Preserve prior job data on regeneration failure; downgrade status on voice-settings change — planned
+### 9.1 Preserve prior job data on regeneration failure; downgrade status on voice-settings change — ✅ DONE (2026-09-18)
 
 Origin: the user had Codex run its own independent, parallel read-only `/vp-audit`
 pass alongside PM's own audit. Codex found 10 issues (0 critical, 1 high, 4 medium, 5
@@ -908,6 +917,30 @@ task's design explicitly guards against a fix that would naively reuse Task 7.1'
 `draft -> script_generated` advance branch is specific to a script being generated
 for the first time, and would incorrectly advance a project's status just from
 editing a speaker's voice at Step 1, before any script exists.
+
+Codex's delivered plan matched every locked decision exactly: `mark_audio_job_failed`/
+`mark_video_job_failed` narrowly update only `status`/`error_message`/`completed_at`,
+falling back to an error-only `INSERT` only when no job row exists; `download_audio`/
+`download_video`'s status gate correctly widened to `("complete", "error")` with a
+non-null path check (a necessary consequence of the acceptance criteria, not scope
+creep); a shared `_downgrade_downstream_to_script_generated()` helper lets
+`mark_script_changed()` (unchanged externally) and a new, separate
+`mark_speaker_voice_changed()` share logic without the naive-reuse trap. Real
+end-to-end tests generate actual audio/video, save the real response bytes, force a
+second attempt to fail, and confirm the download endpoint returns the identical bytes
+afterward. A fully-parametrized 5-status regression guard confirms the speaker case.
+PM independently re-verified rather than accepting the report on its word: read the
+full diff for all 6 production files, re-ran every verification command (120/120
+targeted including Task 7.1's unmodified `test_project_service.py`, ruff clean,
+`git diff --check` exit 0), and ran the full suite independently: 613 passed, 2
+failed. One is the known Gemini-retry flake class; the other
+(`test_music_library_waveform_browser.py::test_waveform_renders_real_pixels_for_a_real_audio_file`)
+is a newly-observed flake, never seen before this session, touching code Task 9.1
+never modified (music library waveform rendering) — both confirmed passing instantly
+in isolation, noted honestly as a distinct flake rather than folded into the known
+class. **Zero real defects found on PM review.** This closes Task 9.1 — and Phase 9
+(Regeneration Integrity) in full, since it was the phase's only task. BUG-016 and
+BUG-017 are now resolved.
 
 ## Decision Log
 
@@ -1613,6 +1646,7 @@ editing a speaker's voice at Step 1, before any script exists.
 | 2026-09-18 | User asked PM to continue processing ENH-004/ENH-005 and to self-implement to save time — a one-time deviation from the AR-06 PM/Codex split, held to the same doc-first/verification/git-persistence standard. PM re-investigated ENH-004 before writing any plan: found `app/api/projects.py`'s existing `_write_lock` (a connection-wide `asyncio.Lock`, already documented in a code comment PM had not read closely enough the first time) already serializes every route because there's one shared connection — meaning `PRAGMA journal_mode=WAL` alone would be purely cosmetic, and a real fix needs a full connection-pool redesign, out of proportion to a quick win. Marked `wontfix` in ENH-004.md with full reasoning, no code changed. ENH-005 traced to a real root cause: the shared `.btn[disabled]` rule had no `aria-disabled` variant, so 3 pages each invented an inconsistent local fix. Extended the shared rule, removed the resulting redundant local overrides, kept only step6_thumbnail.html's genuinely non-redundant `button[disabled]` selector (verified needed for its bare `.template-option`/`.variant-card` buttons). Self-verified via a real revert-and-confirm-failure check on the new tests. 601/602 full suite passes (1 known Gemini-retry flake, confirmed non-regressive). **This closes Task 8.1 and Phase 8 in full.** All 4 Gemini-audit-derived findings left open after Phase 6 are now resolved. | User; PM (Claude Code) |
 | 2026-09-18 | User asked PM to run a read-only `/vp-audit` pass (no source-code changes), noting Codex would scan the codebase in parallel. PM ran Tier 1 (state consistency), Tier 2 (docs drift), and a Tier 3 spot-check sweep. Tier 1: all 8 phases' PHASE-STATE.md status, ROADMAP.md status, and `die-vp-p{N}-complete` git tags cross-checked and consistent; found 1 real drift — 4 Phase 2 task cards (2.1b/2.1c/2.5/2.6) still show `Status: in_progress` despite each having its own PM Acceptance section confirming they were done (task-2.1a.md's distinct `code_complete_pending_real_run` status was checked and confirmed intentional, not drift) — logged BUG-014 (low). Tier 2: found README.md's Phase 4 section stale since early Phase 4 ("In Progress", 1/7 pages), with Phases 4(remainder)/5/6/7/8 entirely undocumented in README.md despite the project's own workflow requiring README updates on milestone complete — logged BUG-015 (low); and ARCHITECTURE.md's Project data model documents the status enum but not Task 7.1's new script-edit downgrade behavior — logged ENH-006 (low). Confirmed the 3 required architecture diagram sidecars (system-overview, data-flow, module-dependencies) all exist, and that ARCHITECTURE.md's Projects API section already correctly documents `PUT /api/projects/{id}` (not PATCH) — this doc could have caught PM's own Task 7.1 task-card error earlier had it been checked first. Tier 3 spot-check: no `TODO`/`FIXME`/`print()`/bare `except:` found in `app/`; spot-checked `lineCardHtml()` in step2_script.js confirms Gemini-generated text is consistently passed through `escapeHtml()` before `innerHTML` interpolation (matching the established CR-05 discipline from Phase 2's BUG-005/Task 2.6c work — not re-audited exhaustively); the 2 f-string-built SQL statements in `project_service.py` build only column names from a fixed, code-defined schema (never user input) with all values still parameterized, confirmed not an injection risk; `requirements.txt`'s 19 real dependency lines are all version-pinned. 3 new findings auto-logged as request files; none auto-fixed (report-only per the routing guard). No source code was touched by this audit. | User; PM (Claude Code) |
 | 2026-09-18 | User shared Codex's own independent, parallel read-only `/vp-audit` results (10 findings, 0 critical/1 high/4 medium/5 low, no source changes, no auto-log). PM independently re-verified all 5 "important" findings by reading the actual source directly rather than trusting the report -- all 5 confirmed real, an excellent, false-positive-free scan. Re-scored 2: BUG-016 (voice settings not invalidating downstream status) confirmed real but found a genuine mitigating factor (Listen and Generate All both force fresh re-synthesis, so actual audio output is never wrong -- only the status signal is missing, same family as BUG-013); BUG-017 (failed regeneration wipes prior job data) re-scored from medium to high after tracing the exact UPSERT behavior and confirming it's unconditional real data loss, not just metadata drift. Logged all 5 as BUG-016 through BUG-019 and ENH-007. User chose to open Phase 9 to fix BUG-016 and BUG-017 now; the other 3 logged but out of scope. PM scaffolded Phase 9 and wrote the doc-first task card for Task 9.1, explicitly designing around the trap of naively reusing Task 7.1's `mark_script_changed()` for the speaker-settings case (its draft-advance branch would wrongly fire from a Step-1 voice edit). Handed to Codex per AR-06. | User; PM (Claude Code); Codex (parallel auditor) |
+| 2026-09-18 | Task 9.1 delivered by Codex and accepted by PM per AR-06 with zero real defects found on independent review -- `mark_audio_job_failed`/`mark_video_job_failed` preserve prior job data on failure; download endpoints widened to keep a preserved success downloadable; a shared downstream-downgrade helper lets `mark_script_changed()` (Task 7.1, unchanged externally) and a new `mark_speaker_voice_changed()` cooperate without the naive-reuse trap. Real end-to-end tests verify actual MP3/MP4 byte identity before/after a forced failure. 613/615 full suite passes -- 1 known Gemini-retry flake plus 1 newly-observed, unrelated browser-timing flake in the music library waveform test (first occurrence this session, confirmed non-regressive in isolation, tracked honestly rather than folded into the known class). This closes Task 9.1 and Phase 9 in full -- BUG-016 and BUG-017 resolved. | User; PM (Claude Code); Codex (Implementer) |
 
 ## Known Issues
 
@@ -1622,11 +1656,12 @@ editing a speaker's voice at Step 1, before any script exists.
 - **BUG-014 (open, low)**: 4 Phase 2 task cards (2.1b, 2.1c, 2.5, 2.6) carry a stale `Status: in_progress` Meta field despite each having its own PM Acceptance section confirming completion — metadata-only, PHASE-STATE.md/TRACKER.md are correct. Found via a read-only `/vp-audit` pass 2026-09-18. See `.viepilot/requests/BUG-014.md`.
 - **BUG-015 (open, low)**: README.md's Phase 4 section still says "In Progress" (stale since early Phase 4), and Phases 4(remainder)/5/6/7/8 are entirely undocumented in README.md. Found via a read-only `/vp-audit` pass 2026-09-18. See `.viepilot/requests/BUG-015.md`.
 - **ENH-006 (open, low)**: ARCHITECTURE.md's Project data model doesn't document Task 7.1's script-edit status-downgrade behavior. Found via a read-only `/vp-audit` pass 2026-09-18. See `.viepilot/requests/ENH-006.md`.
-- **BUG-016 (in_progress, high)**: changing a speaker's voice settings doesn't invalidate already-generated audio/video status — the same bug class as BUG-013, reached via a mutation path Task 7.1's scoping missed. Found by Codex's independent parallel `/vp-audit` pass 2026-09-18, confirmed real by PM. Being fixed under Phase 9 Task 9.1. See `.viepilot/requests/BUG-016.md`.
-- **BUG-017 (in_progress, high)**: a failed audio/video regeneration attempt destroys the DB record of a still-valid previous success (real data loss from the DB's perspective — the files remain on disk but become unreachable via the API). Found by Codex's independent parallel `/vp-audit` pass 2026-09-18, confirmed real and re-scored from medium to high by PM. Being fixed under Phase 9 Task 9.1. See `.viepilot/requests/BUG-017.md`.
+- ~~BUG-016~~ **RESOLVED 2026-09-18** under Task 9.1 — see Phase 9 Task Status above and `.viepilot/requests/BUG-016.md`.
+- ~~BUG-017~~ **RESOLVED 2026-09-18** under Task 9.1 — see Phase 9 Task Status above and `.viepilot/requests/BUG-017.md`.
 - **BUG-018 (open, medium)**: regenerating a single script line leaves its old `audio_cache_path`/`duration_seconds` in place — mitigated in practice since both Listen and Generate All always re-synthesize fresh audio before use, but a real DB-level inconsistency. Found by Codex's parallel `/vp-audit` pass 2026-09-18, confirmed real by PM. Not scoped into Phase 9. See `.viepilot/requests/BUG-018.md`.
 - **BUG-019 (open, medium)**: avatar upload's filesystem mutation isn't rolled back if the surrounding DB transaction later fails — low real-world likelihood for this solo local-use app. Found by Codex's parallel `/vp-audit` pass 2026-09-18, confirmed real by PM. Not scoped into Phase 9. See `.viepilot/requests/BUG-019.md`.
 - **ENH-007 (open, medium)**: ARCHITECTURE.md still describes WebSocket streaming and active OmniVoice GPU/LivePortrait lip-sync, both never true/no longer accurate, and its embedded system-overview Mermaid diagram diverges from its own sidecar file by 2 edges. Found by Codex's parallel `/vp-audit` pass 2026-09-18, confirmed real by PM. Not scoped into Phase 9. See `.viepilot/requests/ENH-007.md`.
+- **Newly-observed flake (2026-09-18, first occurrence)**: `tests/test_music_library_waveform_browser.py::test_waveform_renders_real_pixels_for_a_real_audio_file` failed once during Task 9.1's independent full-suite verification, alongside the known Gemini-retry flake. Confirmed passing instantly in isolation; touches no file Task 9.1 modified (real-audio Web Audio API decode + canvas pixel read in a headless browser — a timing/resource-sensitive shape, similar in kind to the Gemini-retry class but a distinct cause). Not the known documented flake class — tracked separately here for honesty. Not investigated further; watch for recurrence before deciding whether it needs its own fix.
 
 - ~~`ffmpeg` not found in PATH~~ **RESOLVED 2026-09-12**: installed via `winget install Gyan.FFmpeg` (9.0.1, full build). Note: Windows PATH updates only apply to newly-started processes — any shell open before the install won't see it. `.env`'s `DIE_FFMPEG_PATH` now points at the absolute exe path so the app itself doesn't depend on shell PATH freshness. Unblocks Task 1.6 Sub-task 1.6b (AudioService) and Task 1.7 (Video Studio) — see the `pydub`/`audioop` item below for a second, separate blocker on 1.6b.
 - ~~`DIE_GEMINI_API_KEY` empty~~ **RESOLVED 2026-09-13**: user filled in their real key. Verified with one real live call to `gemini-3.8-flash` (not just presence/length) — HTTP 200, model replied as instructed, real token usage reported. Key value itself was never printed/logged anywhere, including this file. All Gemini-backed services (script/learning/thumbnail/youtube) were already fully implemented and tested against mocks; this confirms the real integration also works end-to-end.
@@ -1859,8 +1894,8 @@ editing a speaker's voice at Step 1, before any script exists.
 | BUG-014 | Bug | 4 Phase 2 task cards carry a stale in_progress Status field despite being accepted/done | low | open |
 | BUG-015 | Bug | README.md's Phase 4 section is stale and Phases 4(remainder)/5/6/7/8 are entirely undocumented | low | open |
 | ENH-006 | Enhancement | ARCHITECTURE.md doesn't document the script-edit status-downgrade behavior (Task 7.1) | low | open |
-| BUG-016 | Bug | Changing a speaker's voice settings doesn't invalidate already-generated audio/video status | high | in_progress |
-| BUG-017 | Bug | A failed audio/video regeneration attempt destroys the DB record of a still-valid previous success | high | in_progress |
+| BUG-016 | Bug | Changing a speaker's voice settings doesn't invalidate already-generated audio/video status | high | done |
+| BUG-017 | Bug | A failed audio/video regeneration attempt destroys the DB record of a still-valid previous success | high | done |
 | BUG-018 | Bug | Regenerating a single script line leaves its old audio_cache_path/duration_seconds in place | medium | open |
 | BUG-019 | Bug | Avatar upload's filesystem mutation isn't rolled back if the surrounding DB transaction later fails | medium | open |
 | ENH-007 | Enhancement | ARCHITECTURE.md describes dropped/deferred features as active and diverges from its own Mermaid sidecar | medium | open |

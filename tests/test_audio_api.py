@@ -14,7 +14,7 @@ from pydub.generators import Sine
 
 from app.core.config import settings
 from app.main import app
-from app.services import tts_service
+from app.services import audio_service, tts_service
 
 PROJECT_PAYLOAD = {
     "name": "Audio API Test Episode",
@@ -200,3 +200,42 @@ def test_generate_audio_with_unknown_background_music_returns_500(client: TestCl
     )
 
     assert response.status_code == 500
+
+
+def test_failed_audio_regeneration_keeps_prior_mix_downloadable(client: TestClient, monkeypatch):
+    project = create_project(client)
+    lines = save_script(client, project)
+    synthesize_all(client, project, lines)
+    generated = client.post(f"/api/projects/{project['id']}/audio/generate", json={})
+    assert generated.status_code == 200
+    prior_job = generated.json()["data"]
+    prior_mp3 = client.get(f"/api/projects/{project['id']}/audio/download?format=mp3").content
+    prior_wav = client.get(f"/api/projects/{project['id']}/audio/download?format=wav").content
+
+    async def fail_mix(*args, **kwargs):
+        raise audio_service.AudioMixError("forced regeneration failure")
+
+    monkeypatch.setattr(audio_service, "mix_project", fail_mix)
+    failed = client.post(f"/api/projects/{project['id']}/audio/generate", json={})
+
+    assert failed.status_code == 500
+    job = client.get(f"/api/projects/{project['id']}/audio/status").json()["data"]
+    assert job["status"] == "error"
+    assert job["error_message"] == "forced regeneration failure"
+    for column in (
+        "id",
+        "mp3_path",
+        "wav_path",
+        "timestamps",
+        "background_music",
+        "duration_seconds",
+        "loudness_lufs",
+        "started_at",
+    ):
+        assert job[column] == prior_job[column]
+    mp3 = client.get(f"/api/projects/{project['id']}/audio/download?format=mp3")
+    wav = client.get(f"/api/projects/{project['id']}/audio/download?format=wav")
+    assert mp3.status_code == 200
+    assert mp3.content == prior_mp3
+    assert wav.status_code == 200
+    assert wav.content == prior_wav
