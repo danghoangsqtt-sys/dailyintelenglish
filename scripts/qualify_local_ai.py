@@ -18,6 +18,7 @@ import hashlib
 import json
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import time
@@ -106,6 +107,50 @@ def run_command(command: list[str], timeout: float = 30.0) -> str:
         errors="replace",
     )
     return completed.stdout.strip()
+
+
+def resolve_ollama_binary() -> str:
+    """Resolve the real Ollama executable even if this process's PATH predates install.
+
+    A freshly-installed winget package updates the User PATH registry value, but an
+    already-running shell (including this one) keeps its original process environment
+    block and will not see it until restarted. Falling back to the documented official
+    install location avoids a false "not installed" read.
+    """
+    found = shutil.which("ollama")
+    if found:
+        return found
+    candidates: list[Path] = []
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        candidates.append(Path(local_app_data) / "Programs" / "Ollama" / "ollama.exe")
+    candidates.append(Path.home() / "AppData" / "Local" / "Programs" / "Ollama" / "ollama.exe")
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate)
+    raise RuntimeError(
+        "Could not resolve the Ollama executable via PATH or the known official "
+        "install location; confirm installation before running Gate A qualification."
+    )
+
+
+def persisted_user_env(name: str) -> str | None:
+    """Read a Windows User-scope environment variable set via ``setx``.
+
+    Bypasses this process's stale environment block, which never sees a variable set
+    by ``setx``/System Properties until the process is restarted after it was saved.
+    """
+    script = f"[Environment]::GetEnvironmentVariable('{name}', 'User')"
+    try:
+        output = run_command(["powershell", "-NoProfile", "-Command", script], timeout=10.0)
+    except (subprocess.SubprocessError, OSError):
+        return None
+    return output or None
+
+
+def resolved_env(name: str) -> str | None:
+    """Prefer this process's live environment, falling back to the persisted User value."""
+    return os.environ.get(name) or persisted_user_env(name)
 
 
 def gpu_sample() -> dict[str, Any]:
@@ -302,7 +347,9 @@ async def probe_stream_close(
     }
 
 
-async def unload_model(client: httpx.AsyncClient, model: str) -> dict[str, Any]:
+async def unload_model(
+    client: httpx.AsyncClient, model: str, ollama_binary: str
+) -> dict[str, Any]:
     """Ask Ollama to unload the model immediately and capture the resulting ps output."""
     response = await client.post(
         "/api/generate",
@@ -310,12 +357,13 @@ async def unload_model(client: httpx.AsyncClient, model: str) -> dict[str, Any]:
     )
     response.raise_for_status()
     await asyncio.sleep(1.0)
-    ps_output = await asyncio.to_thread(run_command, ["ollama", "ps"])
+    ps_output = await asyncio.to_thread(run_command, [ollama_binary, "ps"])
     return {"requested": True, "ollama_ps": ps_output}
 
 
 async def qualify(args: argparse.Namespace) -> dict[str, Any]:
     """Execute the full real Gate A qualification sequence."""
+    ollama_binary = resolve_ollama_binary()
     base_url = validate_loopback_url(args.base_url)
     parsed = urlparse(base_url)
     listeners = listener_rows(parsed.port or 11434)
@@ -338,16 +386,16 @@ async def qualify(args: argparse.Namespace) -> dict[str, Any]:
             tags_response = await client.get("/api/tags")
             tags_response.raise_for_status()
             local_model = find_model(tags_response.json(), args.model)
-            await unload_model(client, args.model)
+            await unload_model(client, args.model, ollama_binary)
             runs = [
                 await structured_run(client, args.model, args.num_ctx, run_number)
                 for run_number in range(1, EXPECTED_SCHEMA_RUNS + 1)
             ]
-            ps_loaded = await asyncio.to_thread(run_command, ["ollama", "ps"])
+            ps_loaded = await asyncio.to_thread(run_command, [ollama_binary, "ps"])
             missing_model = await probe_missing_model(client, args.num_ctx)
             stream_close = await probe_stream_close(client, args.model, args.num_ctx)
             closed_port = await probe_closed_port()
-            unload = await unload_model(client, args.model)
+            unload = await unload_model(client, args.model, ollama_binary)
     finally:
         stop_sampling.set()
         await sampler
@@ -380,16 +428,22 @@ async def qualify(args: argparse.Namespace) -> dict[str, Any]:
             "base_url": base_url,
             "model": args.model,
             "num_ctx": args.num_ctx,
-            "max_loaded_models": os.environ.get("OLLAMA_MAX_LOADED_MODELS"),
-            "num_parallel": os.environ.get("OLLAMA_NUM_PARALLEL"),
-            "max_queue": os.environ.get("OLLAMA_MAX_QUEUE"),
-            "no_cloud": os.environ.get("OLLAMA_NO_CLOUD"),
+            "ollama_binary": ollama_binary,
+            "host": resolved_env("OLLAMA_HOST"),
+            "models_dir": resolved_env("OLLAMA_MODELS"),
+            "max_loaded_models": resolved_env("OLLAMA_MAX_LOADED_MODELS"),
+            "num_parallel": resolved_env("OLLAMA_NUM_PARALLEL"),
+            "max_queue": resolved_env("OLLAMA_MAX_QUEUE"),
+            "no_cloud": resolved_env("OLLAMA_NO_CLOUD"),
+            "flash_attention": resolved_env("OLLAMA_FLASH_ATTENTION"),
+            "kv_cache_type": resolved_env("OLLAMA_KV_CACHE_TYPE"),
         },
         "runtime": {
             "ollama_api_version": version,
             "model_name": local_model.get("name") or local_model.get("model"),
             "model_digest": local_model.get("digest"),
             "model_size_bytes": local_model.get("size"),
+            "model_quantization": local_model.get("details", {}).get("quantization_level"),
             "model_details": local_model.get("details", {}),
             "listeners": listeners,
         },

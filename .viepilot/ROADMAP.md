@@ -886,3 +886,23 @@ qualifies local runtime/security/memory. Gate B decides local-primary versus
 Gemini-primary/local-experimental; either decision retains durable jobs and a
 configuration-only Gemini rollback path. See
 `docs/implementation/phase-13-local-first-ai-reliability.md`.
+
+### 13.1 Provision and qualify Ollama/Qwen — ✅ DONE (2026-09-18T23:31Z), Gate A PASS
+
+- [x] Official Ollama 0.34.2 installed (winget), loopback-only (`127.0.0.1:11434`),
+  cloud disabled, `qwen3.5:9b` pulled for real (digest `6488c96fa5fa`, `Q4_K_M`, 6.6 GB —
+  matching the plan's expected tag exactly). Real Gate A qualification run: **PASS, all
+  9 checks true** — 100% GPU offload at the plan's default 16K context, minimum free
+  VRAM 4,370 MiB and minimum free RAM 17,504 MiB (both comfortably above the
+  1,536 MiB/4,096 MiB floors), ~48.2 tokens/sec steady state, 3/3 nested-schema probes
+  valid, and correct detection of model-missing/server-down/early-stream-close/unload.
+  No memory-headroom mitigation was needed. A prior session stopped abruptly on quota
+  after installing Ollama but before pulling the model; this session reviewed the WIP
+  qualification runner and fixed two real gaps first (`ollama` CLI PATH resolution;
+  evidence env-var collection reading a stale process environment instead of the real
+  persisted values) before running the real gate. New `docs/operations/local-ai.md`
+  covers install/config/lifecycle/troubleshooting/privacy/evidence. This PASS qualifies
+  the model for Task 13.2+ integration only — Gate B (Task 13.9) still decides
+  local-primary versus Gemini-primary/local-experimental. See
+  `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.1.md` for the full
+  record.

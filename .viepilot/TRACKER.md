@@ -1244,12 +1244,41 @@ trial before local-primary promotion. The controlling contract is
   Backup is 1,290,240 bytes; SHA-256 is recorded in the Task 13.0 evidence card. It may
   contain the DB-stored Gemini key and must never be staged/uploaded.
 
-### 13.1 Provision and qualify Ollama/Qwen (Gate A) — ⏳ IN PROGRESS
+### 13.1 Provision and qualify Ollama/Qwen (Gate A) — ✅ DONE (2026-09-18T23:31Z), PASS
 
-Gate A requires loopback-only Ollama, three valid nested-schema probes, full GPU
+Gate A required loopback-only Ollama, three valid nested-schema probes, full GPU
 offload, ≥1.5 GiB free VRAM and ≥4 GiB free RAM at 16K, no OOM/TDR, and measured
-cancel/down/model-missing behavior. A failure selects Gemini-primary/local-experimental;
-it does not weaken the gate.
+cancel/down/model-missing behavior. **Result: PASS, all 9 gate checks true.** Before
+the real run, reviewed the WIP `scripts/qualify_local_ai.py` (left over from a session
+that stopped abruptly on quota) and fixed two real gaps rather than trusting
+`ruff`/`--help` alone: the `ollama` CLI was resolved by bare command name, which fails
+in a shell whose `PATH` predates a fresh winget install even though the binary is
+genuinely present (`resolve_ollama_binary()`, prefers `PATH`, falls back to the
+documented official install location via `Path.home()`); and evidence env vars were
+read via `os.environ.get()`, which is empty in a process started before `setx`
+persisted them, even though the real User-scope values were correctly set
+(`resolved_env()`/`persisted_user_env()`, a controlled read-only PowerShell query).
+Pulled `qwen3.5:9b` for real (digest `6488c96fa5faab64...`, prefix `6488c96fa5fa`
+matching the plan's expected tag; `Q4_K_M`, 6.6 GB, 9.7B params). Real qualification run
+against the live loopback server: 100% GPU offload at 16K context, minimum free VRAM
+4,370 MiB (≥1,536 MiB required), minimum free RAM 17,504 MiB (≥4,096 MiB required),
+peak VRAM used 7,741 MiB of 12,288 MiB, ~48.2 tokens/sec steady state, cold load
+33.41s/warm ~6.3s, 3/3 nested-schema probes valid, model-missing (HTTP 404),
+server-down (bounded `ConnectTimeout`), early-stream-close (server confirmed healthy
+after), and unload (`keep_alive: 0`, confirmed empty `ollama ps`) all correctly
+detected. No memory-headroom mitigation was needed. Evidence:
+`data/quality_reviews/phase13/gate-a/ollama-20260918T233107Z.json` (gitignored, no
+secrets — only prompt hashes and metrics). New `docs/operations/local-ai.md` covers
+install/version/digest/location, loopback/cloud-disabled/concurrency config, all
+lifecycle operations, an auto-update/digest-change requalification warning,
+troubleshooting, and the local-vs-cloud privacy distinction. This PASS qualifies
+`qwen3.5:9b` for Task 13.2+ integration; it does not by itself authorize local-primary
+rollout — Gate B (Task 13.9) still decides local-primary versus
+Gemini-primary/local-experimental. A second interactive Claude Code session was found
+active on this same working directory mid-task and briefly wrote a duplicate summary
+into `tasks/task-13.1.md`, de-duplicated by this session; no competing commit had
+landed on `main` first. See `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.1.md`
+for the full record.
 
 ## Decision Log
 
@@ -1962,6 +1991,7 @@ it does not weaken the gate.
 | 2026-09-18 | User asked PM to run `/vp-audit` a 4th time as final confirmation after Phase 11 closed. Tier 1 (state consistency): all 11 phases' PHASE-STATE.md status, TRACKER.md, HANDOFF.json, and all 12 `die-vp-p{N}-complete`/`-t*` git tags cross-checked and fully consistent -- zero drift found. Tier 2 (docs drift): found 2 real, low-severity gaps -- (1) `README.md`'s "Post-Beta Bug Fixes & Polish" section header and phase table still said "Phases 5-10", entirely omitting Phase 11 (logged BUG-020); (2) `.viepilot/ARCHITECTURE.md`'s Diagram Applicability Matrix still had an `event-flows | optional | WebSocket streaming TTS` row that directly contradicted the corrected System Overview text 35 lines above it in the same file ("no WebSocket/SSE anywhere in the app") -- confirmed via direct grep that the codebase has zero WebSocket usage and that even the polling `/status` routes explicitly disclaim real SSE in their own docstrings; the ENH-007 fix that corrected the System Overview text never updated this row to match (logged BUG-021). Verified all 3 architecture diagram sidecars still byte-for-byte match their embedded Mermaid blocks (programmatic extraction + diff, zero drift). Tier 3 spot-check on Phase 11's touched files (`avatar_service.py`, `tts_service.py`, `tts.py`, `projects.py`, plus the 4 sleep-patched service files): no bare `except:`/`print()`, zero dead references to the removed `piper`/`google`/`azure` engines anywhere in `app/` or `frontend/`, all 4 sleep-patched files confirmed consistently using `from asyncio import sleep` with no leftover `asyncio.sleep(...)` calls. Both findings fixed immediately given their triviality (self-implemented, doc-only, no runtime behavior change) rather than opening a new phase -- proportionate to their size, unlike Phase 11's substantive code fixes. Full suite independently re-run one more time: **621/621 passed, zero failures, 294.35s** -- faster than Phase 11's already-clean run, zero Gemini-retry-class flakes, and neither of the two previously-observed one-off Playwright flakes (Task 9.1's waveform test, Task 11.1's dashboard-delete test) recurred either, further supporting that both were genuine one-off infrastructure flakes rather than real regressions. **This is the cleanest full-suite run recorded all session.** All findings from all 4 independent audit passes this session (Codex x3, PM x1) are now resolved. | User; PM (Claude Code) |
 | 2026-09-18 | User asked directly (not audit-derived) why the app has no Settings UI for the Gemini API key, and to package the app "professionally". Scoped via `AskUserQuestion`: Settings page saving to the DB (over lighter alternatives), and a standalone `.exe` via PyInstaller (over a simple install script or Docker). Opened Phase 12, wrote and committed the doc-first plan for Task 12.1 before touching any implementation file. Self-implemented Task 12.1: new `app_settings` DB table, `settings_service.py` resolving a DB-stored key over `.env` at runtime (reverting cleanly to the original `.env` value on clear), new `/api/settings` router, new Settings page linked from the dashboard topbar. 19 new tests, independently confirmed meaningful via a real revert-and-confirm-failure check -- one of which caught a real test-isolation bug during development (an early draft accidentally reverted to, and printed, this machine's real `.env` Gemini key instead of the test's fake one; fixed by isolating `config.ENV_GEMINI_API_KEY` too, not a service defect). Full suite 640/640 passed, zero flakes. Manually driven end-to-end against the real running dev server with Playwright (not just unit-tested), then confirmed no test data was left in the real local database afterward. **This closes Task 12.1** -- Task 12.2 (packaging) planned next. | User; PM (Claude Code) |
 | 2026-09-18 | Self-implemented Task 12.2: centralized 5 independent `Path(__file__)`-walking path constants into `app/core/paths.get_project_root()`, a frozen-aware `DATA_DIR` default, and a new `app/desktop_launcher.py` entrypoint. Two real problems found and fixed during the actual build+run: (1) the first PyInstaller build came out at 4.5GB from leftover OmniVoice-experimentation ML packages (torch/tensorflow/sklearn/librosa/transformers) with zero real usage anywhere in `app/` -- excluded, rebuilt to 169MB; (2) testing `DATA_DIR` from the project root picked up the real dev `.env`'s explicit `DIE_DATA_DIR=data` (correct precedence, unrealistic test) -- re-tested properly from the exe's own dist folder, confirmed it resolves to `%LOCALAPPDATA%` as intended. Actually built and ran the real `.exe` twice, driven end-to-end with Playwright (dashboard/`/step1`/`/settings` all working on a fresh install with no `.env`), confirmed a second launch reuses the running instance instead of crashing. Full suite 639/640 passed (1 confirmed one-off Playwright-class flake, non-regressive in isolation). **This closes Task 12.2 -- and Phase 12 (Settings & Packaging) in full.** | User; PM (Claude Code) |
+| 2026-09-18/19 | Phase 13 opened (user-approved post-beta scope: replace the fragile long synchronous script/learning request path with durable local-first jobs). Task 13.0 (doc-first plan, ADR, baseline verifier, real SQLite Online Backup) done 2026-09-18. A session pursuing Task 13.1 (install/qualify Ollama+Qwen, Gate A) stopped abruptly on quota mid-task, after installing Ollama 0.34.2 and persisting its User-scope env config, but before pulling the model or running the real gate; a handoff checkpoint committed the WIP runner and a continuation prompt rather than losing the work. This session resumed per that checkpoint: reviewed the WIP `scripts/qualify_local_ai.py` line-by-line rather than trusting `ruff`/`--help` alone, and fixed two real gaps -- `ollama` CLI PATH resolution (a shell open before a fresh winget install never sees the updated `PATH`; added `resolve_ollama_binary()`) and evidence env vars read from a stale `os.environ` instead of the real persisted User-scope values (added a controlled, read-only PowerShell `resolved_env()`/`persisted_user_env()`). Pulled `qwen3.5:9b` for real (digest `6488c96fa5fa`, `Q4_K_M`, 6.6 GB, matching the plan's expected tag) and ran the real qualification: **Gate A PASS, all 9 checks true** -- 100% GPU offload at the plan's default 16K context, minimum free VRAM 4,370 MiB and minimum free RAM 17,504 MiB (both comfortably above the 1,536 MiB/4,096 MiB floors), ~48.2 tokens/sec steady state, 3/3 nested-schema probes valid, and correct detection of model-missing/server-down/early-stream-close/unload. No memory-headroom mitigation was needed. Wrote `docs/operations/local-ai.md` (install/config/lifecycle/troubleshooting/privacy/evidence). **This closes Task 13.1.** This PASS qualifies the model for Task 13.2+ integration only -- Gate B (Task 13.9) still decides local-primary versus Gemini-primary/local-experimental. A second interactive Claude Code session was found active on the same working directory mid-task and briefly wrote a duplicate Gate A summary into the task card before this session de-duplicated it; no competing commit had landed first. See `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.1.md` and `docs/operations/local-ai.md` for the full record. | User; PM (Claude Code) |
 
 ## Known Issues
 

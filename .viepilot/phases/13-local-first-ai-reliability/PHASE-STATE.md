@@ -30,7 +30,7 @@
 | Task | Description | Status | Blocking gate |
 |---|---|---|---|
 | 13.0 | Baseline, ADR, backup, rollback contract | done | Doc-first passed |
-| 13.1 | Install and qualify Ollama/Qwen | in_progress | Gate A |
+| 13.1 | Install and qualify Ollama/Qwen | done | Gate A passed |
 | 13.2 | Provider-neutral AI gateway | pending | Contract tests |
 | 13.3 | Shared transactions and durable jobs | pending | State-machine review |
 | 13.4 | Checkpointed script generation | pending | Content validators |
@@ -66,3 +66,19 @@
   No model is installed, so Gate A has not run. The WIP qualification runner is lint-
   clean but unexecuted. Detailed Claude handoff saved at
   `docs/handoff/claude-phase13-continuation-prompt.md`; Task 13.1 remains in progress.
+- 2026-09-18T23:31Z (session continuation): reviewed the WIP runner and fixed two real
+  gaps before the real run — `ollama` CLI PATH resolution (this shell's `PATH` predates
+  the winget install; added `resolve_ollama_binary()`), and evidence env vars read via
+  a controlled PowerShell User-scope query instead of a stale `os.environ` (added
+  `resolved_env()`/`persisted_user_env()`). `ruff` clean. Pulled `qwen3.5:9b` for real
+  (digest `6488c96fa5fa`, Q4_K_M, 6.6 GB, matches the plan's expected tag). Ran the real
+  qualification: **Gate A PASS, all 9 checks true** (100% GPU offload at 16K context,
+  minimum free VRAM 4,370 MiB, minimum free RAM 17,504 MiB, 3/3 schema probes valid,
+  cold/warm/model-missing/server-down/stream-close/unload all correct). No memory
+  mitigation needed. Evidence:
+  `data/quality_reviews/phase13/gate-a/ollama-20260918T233107Z.json` (gitignored). Wrote
+  `docs/operations/local-ai.md`. **Task 13.1 moved to `done`.** A second interactive
+  Claude Code session was found active on this same working directory mid-task; briefly
+  wrote a duplicate near-identical Gate A summary into `tasks/task-13.1.md` before this
+  session de-duplicated it — see that file's "Note on concurrent session." No competing
+  commit landed on `main` before this session's commit.
