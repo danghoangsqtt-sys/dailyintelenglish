@@ -36,6 +36,7 @@ from app.core.constants import (
     THUMBNAIL_WIDTH_9X16,
 )
 from app.core.exceptions import ConflictError, NotFoundError, ThumbnailGenerationError
+from app.core.paths import get_project_root
 from app.core.prompt_loader import render_thumbnail_prompt
 from app.models.thumbnail import (
     TextZone,
@@ -49,7 +50,7 @@ from app.models.thumbnail import (
 
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+PROJECT_ROOT = get_project_root()
 TEMPLATE_DIR = PROJECT_ROOT / "frontend" / "static" / "thumbnail_templates"
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 ASPECT_SIZES: dict[ThumbnailAspect, tuple[int, int]] = {

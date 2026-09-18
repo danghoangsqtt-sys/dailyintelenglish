@@ -14,6 +14,14 @@ Versioning: [SemVer](https://semver.org/)
   Saved keys take effect immediately (no restart), are never displayed in full
   once saved (only a masked preview), and can be cleared to revert back to
   whatever `.env` had configured. Reachable from the dashboard via a new ⚙️ icon.
+- Standalone Windows `.exe` packaging (2026-09-18, Phase 12 Task 12.2,
+  self-implemented by PM): `scripts\build_exe.ps1` builds a self-contained
+  `dist\DailyIntelEnglishStudio\` folder via PyInstaller — double-click the exe
+  inside to run the app with no manual Python/`venv` setup. Auto-opens your
+  browser once ready; launching it again while it's already running just
+  reopens the browser instead of starting a second instance. ffmpeg and the
+  OmniVoice model still need to be present on the machine separately (not
+  bundled — see README for why).
 
 ### Changed
 - Phase 4 Task 4.1, CEFR `news`-genre prompt tuning (2026-09-15, by Claude Code as PM +

@@ -2,7 +2,6 @@
 
 import time
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -13,12 +12,13 @@ from fastapi.staticfiles import StaticFiles
 from app.api import audio, learning, music, projects, settings as settings_api, thumbnail, tts, video, youtube
 from app.core.config import settings
 from app.core.exceptions import AppError
+from app.core.paths import get_project_root
 from app.core.responses import ok
 from app.core.system_checks import check_ffmpeg, get_gpu_info
 from app.db.database import Database, close_db, init_db
 from app.services import settings_service
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = get_project_root()
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 
 app_state: dict = {"ffmpeg_ok": False, "gpu_info": None}

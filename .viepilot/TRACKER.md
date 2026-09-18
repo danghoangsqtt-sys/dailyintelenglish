@@ -2,9 +2,9 @@
 
 ## Current Status
 
-**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness); Phase 8 done (new, CSS consolidation); Phase 9 done (new, regeneration integrity); Phase 10 done (new, backlog cleanup); Phase 11 done (new, third audit fixes); Phase 12 in_progress (new, settings & packaging — Task 12.1 done, Task 12.2 not started)  
+**Phase:** 1 done; Phase 2 done; Phase 3 done; Phase 4 done; Phase 5 done; Phase 6 done (new, quick wins batch); Phase 7 done (new, script edit staleness); Phase 8 done (new, CSS consolidation); Phase 9 done (new, regeneration integrity); Phase 10 done (new, backlog cleanup); Phase 11 done (new, third audit fixes); Phase 12 done (new, settings & packaging)  
 **Day:** 6 / 21  
-**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18; Phase 8 opened and closed 2026-09-18; Phase 9 opened and closed 2026-09-18; Phase 10 opened and closed 2026-09-18; Phase 11 opened and closed 2026-09-18; Phase 12 opened 2026-09-18, in progress, new scope beyond the original 21-day plan)  
+**Started:** 2026-09-10 (Phase 2 opened 2026-09-13, closed 2026-09-15; Phase 3 opened and closed 2026-09-15; Phase 4 opened 2026-09-15, closed 2026-09-16; Phase 5 opened 2026-09-16, closed 2026-09-17; Phase 6 opened and closed 2026-09-17; Phase 7 opened 2026-09-17, closed 2026-09-18; Phase 8 opened and closed 2026-09-18; Phase 9 opened and closed 2026-09-18; Phase 10 opened and closed 2026-09-18; Phase 11 opened and closed 2026-09-18; Phase 12 opened and closed 2026-09-18, new scope beyond the original 21-day plan)  
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
 
 ## Progress Overview
@@ -1171,6 +1171,58 @@ correctly — then confirmed directly in `data/app.db` that no test data was lef
 behind and the user's real key was unaffected. **Zero real defects found on PM's
 own review.**
 
+### 12.2 Package as a standalone Windows `.exe` (PyInstaller) — ✅ DONE (2026-09-18)
+
+New `app/core/paths.get_project_root()` centralizes what used to be 5 independent
+`Path(__file__)`-walking constants across `app/main.py`,
+`thumbnail_service.py`/`video_service.py`/`prompt_loader.py`/`database.py` — none
+of that was guaranteed to survive being frozen into a PyInstaller build.
+`Settings.DATA_DIR` switched to a frozen-aware `default_factory`
+(`%LOCALAPPDATA%\DailyIntelEnglishStudio\data` when packaged, unchanged
+otherwise, still fully overridable by `DIE_DATA_DIR`). New
+`app/desktop_launcher.py`: programmatic `uvicorn.run(reload=False)` (the dev
+`--reload` flag doesn't survive freezing), auto-opens the browser once the port
+actually accepts connections (polled via a plain socket connect, not a fixed
+sleep), and reuses an already-running instance instead of crashing if the exe is
+launched a second time.
+
+**Two real problems found and fixed during the actual build+run, not just
+written to compile.** First: the initial build came out at **4.5GB** --
+PyInstaller pulled in `torch` (2.11.0+cu128, ~4GB with bundled CUDA kernels),
+`torchaudio`, `transformers`, `tensorflow`, `sklearn`, `librosa`, `numba` --
+confirmed via a repo-wide grep that zero files under `app/` import any of them;
+they're leftover packages from the long-abandoned OmniVoice GPU experimentation
+(Phase 1), not real dependencies. Excluded them explicitly in the spec, rebuilt
+to **169MB** (~27x smaller). Second: testing `DATA_DIR`'s frozen-aware default
+by launching the exe from the project root picked up the real dev `.env`
+(`DIE_DATA_DIR=data` explicitly set there) -- correct pydantic-settings
+precedence, but an unrealistic test scenario that wrote a test project into the
+shared dev database. Deleted it immediately, then correctly re-tested by
+launching the exe from its own dist folder (no `.env` present, matching a real
+user) -- confirmed `DATA_DIR` resolved to `%LOCALAPPDATA%` with a fresh, empty
+database as intended.
+
+Full suite: 639/640 passed, 322.79s -- 1 failure
+(`test_youtube_browser.py::test_existing_package_loads_directly_without_generate_click`),
+confirmed passing instantly in isolation, the third distinct one-off
+Playwright-class flake observed this session (after Task 9.1's waveform test and
+Task 11.1's dashboard-delete test), not a regression -- touches no file this task
+modified.
+
+**Actually built and run, twice** (per this project's "run it for real"
+discipline, not just "verify it compiles"): ran `pyinstaller` directly, launched
+the real `.exe` (not `python -m uvicorn`) from its own dist folder, confirmed
+real startup logs and that the browser-auto-open thread fired for real, drove
+the running packaged exe with Playwright across the dashboard/`/step1`/`/settings`
+(all three loading and functioning correctly, including a real DB-backed
+settings save on a fresh install with no `.env`), and confirmed a second launch
+while the first was still running exits cleanly instead of crashing. Cleaned up
+the accidental dev-database test project afterward. **Zero real defects found on
+PM's own review.**
+
+**This closes Task 12.2 -- and Phase 12 (Settings & Packaging) in full.** Both
+tasks were new scope requested directly by the user, not audit-derived.
+
 ## Decision Log
 
 | Date | Decision | Rationale |
@@ -1881,6 +1933,7 @@ own review.**
 | 2026-09-18 | User shared a third independent Codex `/vp-audit` pass, run after Phase 10 closed (7 findings: 0 critical/1 high/4 medium/2 low). PM independently re-verified all 7 -- all confirmed real. Opened Phase 11, self-implemented Task 11.1: fixed `delete_avatar()`'s BUG-019-class bug (a real miss in PM's own Task 10.1 scoping, incorrectly excluded at the time); narrowed `TTS_ENGINES` to only real engines, removing 3 that were accepted but never implemented; stopped `preview_line` from holding the app's shared DB lock across a live Edge TTS network call; fixed 4 test files' `no_real_sleep` fixtures to patch their own module's local `sleep` name instead of the shared `asyncio` module (a plausible root cause of this project's long-documented Gemini-retry flake class); synced the previously-missed `data-flow.mermaid` sidecar and corrected a new self-contradiction PM's own Task 10.2 had introduced about OmniVoice; updated stale `PROJECT-META.md` and README. Acknowledged (not fixed) that Phase 8's doc-first history lives in one commit, not git-provably sequenced -- adopted committing plan-then-implementation separately going forward. Both new regression tests independently confirmed meaningful via real revert-and-confirm-failure checks. Full suite independently: 620 passed, 1 failed (a newly-observed, unrelated Playwright flake, confirmed non-regressive in isolation) in 330.31s -- zero Gemini-retry flakes this run, the first fully clean run on that front in a long time, and notably the fastest recent full-suite run, a strong signal the sleep-patching fix addressed the flake class's actual root cause. This closes Task 11.1 and Phase 11 in full -- every finding from all 3 independent audits this session is now resolved. | User; PM (Claude Code); Codex (parallel auditor) |
 | 2026-09-18 | User asked PM to run `/vp-audit` a 4th time as final confirmation after Phase 11 closed. Tier 1 (state consistency): all 11 phases' PHASE-STATE.md status, TRACKER.md, HANDOFF.json, and all 12 `die-vp-p{N}-complete`/`-t*` git tags cross-checked and fully consistent -- zero drift found. Tier 2 (docs drift): found 2 real, low-severity gaps -- (1) `README.md`'s "Post-Beta Bug Fixes & Polish" section header and phase table still said "Phases 5-10", entirely omitting Phase 11 (logged BUG-020); (2) `.viepilot/ARCHITECTURE.md`'s Diagram Applicability Matrix still had an `event-flows | optional | WebSocket streaming TTS` row that directly contradicted the corrected System Overview text 35 lines above it in the same file ("no WebSocket/SSE anywhere in the app") -- confirmed via direct grep that the codebase has zero WebSocket usage and that even the polling `/status` routes explicitly disclaim real SSE in their own docstrings; the ENH-007 fix that corrected the System Overview text never updated this row to match (logged BUG-021). Verified all 3 architecture diagram sidecars still byte-for-byte match their embedded Mermaid blocks (programmatic extraction + diff, zero drift). Tier 3 spot-check on Phase 11's touched files (`avatar_service.py`, `tts_service.py`, `tts.py`, `projects.py`, plus the 4 sleep-patched service files): no bare `except:`/`print()`, zero dead references to the removed `piper`/`google`/`azure` engines anywhere in `app/` or `frontend/`, all 4 sleep-patched files confirmed consistently using `from asyncio import sleep` with no leftover `asyncio.sleep(...)` calls. Both findings fixed immediately given their triviality (self-implemented, doc-only, no runtime behavior change) rather than opening a new phase -- proportionate to their size, unlike Phase 11's substantive code fixes. Full suite independently re-run one more time: **621/621 passed, zero failures, 294.35s** -- faster than Phase 11's already-clean run, zero Gemini-retry-class flakes, and neither of the two previously-observed one-off Playwright flakes (Task 9.1's waveform test, Task 11.1's dashboard-delete test) recurred either, further supporting that both were genuine one-off infrastructure flakes rather than real regressions. **This is the cleanest full-suite run recorded all session.** All findings from all 4 independent audit passes this session (Codex x3, PM x1) are now resolved. | User; PM (Claude Code) |
 | 2026-09-18 | User asked directly (not audit-derived) why the app has no Settings UI for the Gemini API key, and to package the app "professionally". Scoped via `AskUserQuestion`: Settings page saving to the DB (over lighter alternatives), and a standalone `.exe` via PyInstaller (over a simple install script or Docker). Opened Phase 12, wrote and committed the doc-first plan for Task 12.1 before touching any implementation file. Self-implemented Task 12.1: new `app_settings` DB table, `settings_service.py` resolving a DB-stored key over `.env` at runtime (reverting cleanly to the original `.env` value on clear), new `/api/settings` router, new Settings page linked from the dashboard topbar. 19 new tests, independently confirmed meaningful via a real revert-and-confirm-failure check -- one of which caught a real test-isolation bug during development (an early draft accidentally reverted to, and printed, this machine's real `.env` Gemini key instead of the test's fake one; fixed by isolating `config.ENV_GEMINI_API_KEY` too, not a service defect). Full suite 640/640 passed, zero flakes. Manually driven end-to-end against the real running dev server with Playwright (not just unit-tested), then confirmed no test data was left in the real local database afterward. **This closes Task 12.1** -- Task 12.2 (packaging) planned next. | User; PM (Claude Code) |
+| 2026-09-18 | Self-implemented Task 12.2: centralized 5 independent `Path(__file__)`-walking path constants into `app/core/paths.get_project_root()`, a frozen-aware `DATA_DIR` default, and a new `app/desktop_launcher.py` entrypoint. Two real problems found and fixed during the actual build+run: (1) the first PyInstaller build came out at 4.5GB from leftover OmniVoice-experimentation ML packages (torch/tensorflow/sklearn/librosa/transformers) with zero real usage anywhere in `app/` -- excluded, rebuilt to 169MB; (2) testing `DATA_DIR` from the project root picked up the real dev `.env`'s explicit `DIE_DATA_DIR=data` (correct precedence, unrealistic test) -- re-tested properly from the exe's own dist folder, confirmed it resolves to `%LOCALAPPDATA%` as intended. Actually built and ran the real `.exe` twice, driven end-to-end with Playwright (dashboard/`/step1`/`/settings` all working on a fresh install with no `.env`), confirmed a second launch reuses the running instance instead of crashing. Full suite 639/640 passed (1 confirmed one-off Playwright-class flake, non-regressive in isolation). **This closes Task 12.2 -- and Phase 12 (Settings & Packaging) in full.** | User; PM (Claude Code) |
 
 ## Known Issues
 
@@ -2101,6 +2154,8 @@ own review.**
   new one. Not exploitable today — logged so a future migration author keeps each
   migration file to one non-idempotent statement, or the fallback gets upgraded to
   per-statement tracking if that stops being true.
+- **Newly-observed flake (2026-09-18, first occurrence)**: `tests/test_youtube_browser.py::test_existing_package_loads_directly_without_generate_click` failed once during Task 12.2's full-suite verification run. Confirmed passing instantly in isolation (3.25s); touches no file Task 12.2 modified. The third distinct one-off Playwright-class flake observed this session (after Task 9.1's waveform test and Task 11.1's dashboard-delete test) — consistent with the already-documented pattern of occasional unrelated browser-test infrastructure timing flakes, not a regression. Not investigated further; watch for recurrence.
+- **Packaging limitation (2026-09-18, Task 12.2, documented not fixed)**: the standalone `.exe` build does not bundle ffmpeg or the OmniVoice model directory — both still need to be present on the machine exactly as for a source install. Deliberate scope decision (ffmpeg bundling has real licensing considerations and adds ~80MB+; OmniVoice has no real GPU inference implementation to bundle regardless). `scripts/check_dependencies.py` and the in-app `/health` endpoint report ffmpeg's presence honestly either way. See README's "Packaging as a standalone .exe" section.
 
 ## Version
 

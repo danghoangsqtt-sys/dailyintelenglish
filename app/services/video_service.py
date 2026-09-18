@@ -26,8 +26,9 @@ from app.core.constants import (
     VIDEO_WIDTH_SHORTS,
 )
 from app.core.exceptions import VideoRenderError
+from app.core.paths import get_project_root
 
-TEMPLATE_DIR = Path(__file__).resolve().parent.parent.parent / "frontend" / "static" / "video_backgrounds"
+TEMPLATE_DIR = get_project_root() / "frontend" / "static" / "video_backgrounds"
 
 
 def _now() -> str:

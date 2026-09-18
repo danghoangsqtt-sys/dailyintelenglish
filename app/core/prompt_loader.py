@@ -13,7 +13,6 @@ that a future async ScriptService could accidentally call directly.
 """
 
 import asyncio
-from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateNotFound
 
@@ -25,8 +24,9 @@ from app.core.constants import (
     THUMBNAIL_TEMPLATE_IDS,
 )
 from app.core.exceptions import ValidationError
+from app.core.paths import get_project_root
 
-PROMPTS_DIR = Path(__file__).resolve().parent.parent.parent / "prompts"
+PROMPTS_DIR = get_project_root() / "prompts"
 SCRIPT_PROMPTS_DIR = PROMPTS_DIR / "script"
 LEARNING_PROMPTS_DIR = PROMPTS_DIR / "learning"
 THUMBNAIL_PROMPTS_DIR = PROMPTS_DIR / "thumbnail"

@@ -76,12 +76,13 @@ Task 4.3 (Vietnamese UI localization) was scoped but **dropped by explicit user
 decision** before any code was written — see `.viepilot/TRACKER.md`. Progress
 cancellation and real LivePortrait lip-sync remain deliberately deferred.
 
-#### Post-Beta Bug Fixes & Polish (Phases 5-11) — ✅ Done 2026-09-18
+#### Post-Beta Bug Fixes, Polish & New Features (Phases 5-12) — ✅ Done 2026-09-18
 
-7 more phases of real, verified fixes beyond the original plan — each scoped from a
-brainstorm session or an independent audit (including multiple separate AI-assisted
-read-only `/vp-audit` passes), each closed with zero real defects found on PM
-review. Full evidence trail in `.viepilot/ROADMAP.md` and `.viepilot/TRACKER.md`.
+8 more phases beyond the original plan — most scoped from an independent audit
+(including multiple separate AI-assisted read-only `/vp-audit` passes), the last
+two (Phase 12) from a direct user feature request. Each closed with zero real
+defects found on PM review. Full evidence trail in `.viepilot/ROADMAP.md` and
+`.viepilot/TRACKER.md`.
 
 | Phase | Feature | Status |
 |-------|---------|--------|
@@ -92,6 +93,7 @@ review. Full evidence trail in `.viepilot/ROADMAP.md` and `.viepilot/TRACKER.md`
 | **Phase 9** | 🔁 **Regeneration Integrity** — a failed audio/video regeneration attempt used to wipe the database's record of a still-valid previous success; changing a speaker's voice settings now also correctly signals stale downstream audio/video | ✅ Done |
 | **Phase 10** | 🧹 **Backlog Cleanup** — the same regeneration-integrity fix as Phase 9 also applied to deleting an avatar; stale per-line TTS cache clearing; an honest `/api/tts/engines` contract (removed 3 engine choices that were accepted but never actually implemented); no more holding the app's shared database lock across a live TTS network call; documentation cleanup | ✅ Done |
 | **Phase 11** | 🔍 **Third Audit Fixes** — the same avatar-file bug found in Phase 10 was still present in avatar *delete* (not just upload); root-caused and fixed the project's long-standing "Gemini-retry" test flake class (a shared fixture was patching a process-wide `asyncio.sleep` instead of a module-local one); TTS preview no longer holds the app's write lock across a live synthesis call; corrected a self-introduced documentation inaccuracy about OmniVoice from Phase 10 | ✅ Done |
+| **Phase 12** | ⚙️ **Settings & Packaging** — a Settings page to enter the Gemini API key in-app instead of hand-editing `.env` (database-backed, live-applied, never displays the full key once saved); a standalone Windows `.exe` build via PyInstaller so trying the app doesn't need a manual `venv` setup | ✅ Done |
 
 ## Quick Start
 
@@ -132,6 +134,29 @@ uvicorn app.main:app --reload --port 8000
 ```
 http://localhost:8000
 ```
+
+### Packaging as a standalone `.exe` (Windows)
+
+For trying the app without a manual `venv`/`pip install` setup, it can be built
+into a self-contained folder with `PowerShell -File scripts\build_exe.ps1` (installs
+`pyinstaller` if missing, then builds `daily_intel_english_studio.spec`). The result
+lands in `dist\DailyIntelEnglishStudio\` — double-click `DailyIntelEnglishStudio.exe`
+there; it opens your browser to the app automatically once the server is ready, and
+launching it again while it's already running just reopens the browser instead of
+starting a second instance.
+
+The packaged app stores its database and generated files under
+`%LOCALAPPDATA%\DailyIntelEnglishStudio\data` (not next to the exe — that folder
+isn't guaranteed writable depending on where it's installed), and reads the Gemini
+API key from the in-app **Settings** page (⚙️ on the dashboard) instead of a `.env`
+file, since a packaged build doesn't ship one.
+
+**Not bundled**: ffmpeg and the OmniVoice model directory still need to be present
+on the machine exactly as for the source install (see Requirements above) —
+bundling a real ffmpeg binary was left out of scope (licensing + ~80MB size), and
+OmniVoice has no real GPU inference implementation to bundle in the first place
+(see the TTSService note further down). `scripts/check_dependencies.py` and the
+in-app `/health` status still report ffmpeg's presence honestly either way.
 
 ## Production Pipeline Workflow
 

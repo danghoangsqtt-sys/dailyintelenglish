@@ -19,3 +19,7 @@ pytest-asyncio==1.4.0
 ruff==0.7.4
 playwright==1.62.0  # browser tests use playwright.async_api directly, not the pytest-playwright
                     # plugin; after installing, also run: playwright install chromium
+
+# Packaging (Task 12.2) -- only needed to build the standalone .exe, not to run/test
+# the app itself. See scripts/build_exe.ps1 and daily_intel_english_studio.spec.
+pyinstaller==6.22.3

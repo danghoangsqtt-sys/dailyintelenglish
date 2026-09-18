@@ -2,13 +2,13 @@
 
 import sqlite3
 from datetime import datetime, timezone
-from pathlib import Path
 
 import aiosqlite
 
 from app.core.config import settings
+from app.core.paths import get_project_root
 
-MIGRATIONS_DIR = Path(__file__).parent / "migrations"
+MIGRATIONS_DIR = get_project_root() / "app" / "db" / "migrations"
 
 
 class Database:
