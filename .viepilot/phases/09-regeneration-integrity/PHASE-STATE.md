@@ -26,6 +26,14 @@
 
 ## Tasks Status & Acceptance Evidence
 
-### Task 9.1: Preserve prior job data on regeneration failure; downgrade status on voice-settings change — planned
-- **Status:** planned
-- See `tasks/task-9.1.md` for the doc-first plan.
+### Task 9.1: Preserve prior job data on regeneration failure; downgrade status on voice-settings change — in progress
+- **Status:** in_progress
+- Codex presented its pre-code plan per AR-06; PM approved 2026-09-18. Key points:
+  narrow `mark_audio_job_failed`/`mark_video_job_failed` functions preserve prior
+  job data on failure; `download_audio`/`download_video`'s status gate correctly
+  widened to `("complete", "error")` with a non-null path check, a necessary
+  consequence of the acceptance criteria; a shared
+  `_downgrade_downstream_to_script_generated` helper lets `mark_script_changed`
+  (unchanged externally) and a new, separate `mark_speaker_voice_changed()` share
+  logic without the naive-reuse trap flagged in the task card. See
+  `tasks/task-9.1.md` for the full plan and PM Plan Review.

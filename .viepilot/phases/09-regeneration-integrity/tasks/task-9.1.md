@@ -174,4 +174,67 @@ required for either).
 
 ## PM Plan Review
 
-(Pending — Codex to present pre-code plan per AR-06 before any implementation.)
+### Implementer Pre-Code Plan (Awaiting PM Confirmation)
+
+Codex presented a plan covering both items with the following key design points:
+
+**Item A (BUG-017)**: `mark_audio_job_failed`/`mark_video_job_failed` — narrow
+`UPDATE ... SET status='error', error_message=?, completed_at=? WHERE project_id=?`,
+touching nothing else; falls back to an error-only `INSERT` when `cursor.rowcount ==
+0` (no prior row). Existing `save_audio_job`/`save_video_job` success paths left
+fully untouched. The two API `except` blocks call the new functions with
+`commit=False` inside the existing `_write_transaction`.
+
+**Consequential change correctly identified and justified**: `download_audio`/
+`download_video` currently gate on `job["status"] != "complete"`. Codex proposes
+widening this to accept `status in ("complete", "error")` as long as the requested
+format's path is non-null — otherwise a preserved-but-now-"error"-status job's still
+valid old file would remain unreachable, defeating the whole point of the fix. This
+is a correct, necessary consequence of Acceptance Criteria #3 ("the previously-
+successful file remains downloadable"), not scope creep — both files are already in
+the locked `allowed_files`.
+
+**Item B (BUG-016)**: extracts a private helper
+`_downgrade_downstream_to_script_generated(db, project_id, current_status)` in
+`project_service.py`, handling only the 3 downstream statuses -> `script_generated`
+downgrade (no commit, no draft handling). `mark_script_changed` calls it for its
+existing 3-downstream-status branch, unchanged behavior otherwise (draft-advance and
+script_generated no-op untouched). A new `mark_speaker_voice_changed()` is a no-op at
+`draft`/`script_generated`, and calls the same shared helper otherwise — correctly
+avoiding the naive-reuse trap flagged in this task card's "Required decisions" #4.
+The `PATCH /speakers/{id}` route calls it only when the request body has at least one
+field actually set (`exclude_unset` check), inside the same `_write_transaction` as
+`update_speaker`, so both roll back together on any failure.
+
+**Test plan**: reuses existing test files throughout
+(`test_audio_service.py`/`test_video_service.py`/`test_audio_api.py`/
+`test_video_api.py`/`test_projects_api.py`), covers all 5 required scenarios
+including raw-row before/after diffing for the preservation checks, and — critically
+— explicitly runs `tests/test_project_service.py` **unmodified** as a regression
+guard proving Task 7.1's `mark_script_changed` behavior is untouched by the refactor.
+
+### PM Review (2026-09-18) — APPROVED
+
+Independently re-verified rather than approving on the plan's word alone.
+
+**Confirmed the download-gate change is real and necessary**: read
+`download_audio`/`download_video` directly — both currently gate on
+`job["status"] != "complete"` with an identical `path is None` follow-up check.
+Codex's proposed widening is exactly what Acceptance Criteria #3 requires and is
+scoped to files already in `allowed_files`.
+
+**Confirmed the shared-helper refactor is safe**: read `mark_script_changed`'s
+current implementation directly (single `SELECT status`, branch on
+`script_generated`/`draft`/downstream, final downstream branch does a plain `UPDATE`
++ optional commit). Extracting that final branch into a shared helper taking
+`current_status` as an explicit parameter changes nothing about
+`mark_script_changed`'s external behavior — its `draft` branch still goes through the
+existing validated `update_project`/`_validate_status_transition` path unchanged.
+
+**Confirmed the naive-reuse trap is correctly avoided**: `mark_speaker_voice_changed()`
+is a genuinely separate function with its own no-op branches for `draft`/
+`script_generated` — it does not call `mark_script_changed()` directly, so there is
+no risk of the draft-advance branch firing from a Step 1 voice-settings edit.
+
+**Plan approved as presented. No changes requested.** Codex may proceed to
+implementation.
