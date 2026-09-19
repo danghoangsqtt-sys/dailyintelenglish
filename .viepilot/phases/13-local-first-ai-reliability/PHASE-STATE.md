@@ -32,7 +32,7 @@
 | 13.0 | Baseline, ADR, backup, rollback contract | done | Doc-first passed |
 | 13.1 | Install and qualify Ollama/Qwen | done | Gate A passed |
 | 13.2 | Provider-neutral AI gateway | done | Contract tests passed |
-| 13.3 | Shared transactions and durable jobs | pending | State-machine review |
+| 13.3 | Shared transactions and durable jobs | in_progress | State-machine review |
 | 13.4 | Checkpointed script generation | pending | Content validators |
 | 13.5 | Grounded learning generation | pending | Learning quality |
 | 13.6 | Settings, health, and Step 2/3 job UX | pending | Browser recovery |
@@ -104,3 +104,10 @@
   after reverting). Full suite: **683/683 pass**, 0 flakes. `ruff check .` clean,
   `git diff --check` clean. No legacy route/service touched -- nothing outside this
   package's own tests calls the gateway yet. Task 13.2 moved to `done`.
+- 2026-09-19: Found the single DB write-lock is currently a private detail of
+  `app/api/projects.py` that 7 other routers + 2 tests import cross-router (43 call
+  sites total). Wrote the concrete plan for Task 13.3 (move it to
+  `app/db/transactions.py`, add the `ai_generation_jobs`/`ai_generation_checkpoints`
+  migration, `ai_job_service.py`'s transition matrix/atomic-claim/lease/recovery/
+  cancel design, `ai_worker.py`, `app/api/ai_jobs.py`) into `tasks/task-13.3.md`
+  before any code; Task 13.3 moved to `in_progress`.
