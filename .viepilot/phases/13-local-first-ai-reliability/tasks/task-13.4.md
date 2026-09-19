@@ -1,6 +1,6 @@
 # Task 13.4 — Checkpointed Script Pipeline
 
-- **Status:** in_progress
+- **Status:** done
 - **Dependency:** 13.2–13.3
 - **Controlling detail:** implementation plan §6 and §8, Task 13.4
 
@@ -233,3 +233,85 @@ git diff --check
 Expected: all new/updated tests pass; existing `regenerate_line`/script-API tests
 pass unmodified; full suite has no new failures beyond the documented Gemini-retry
 flake class; ruff clean.
+
+## Implementation evidence — 2026-09-19
+
+- Built `app/services/script_pipeline.py` implementing the controlling plan's
+  exact 8-step sequence: fresh project re-fetch + hash/cancel check, target-word
+  computation (`CEFR_WORDS_PER_MINUTE`), outline generation/resume, per-section
+  generate → validate → (one repair on failure) → checkpoint → heartbeat, global
+  validation, a second hash/cancel re-check immediately before the final save,
+  and one atomic `write_transaction` for `save_script` + `mark_script_changed` +
+  `transition_status(..., "complete")`.
+- New prompts `outline.txt`/`section.txt`/`repair.txt` reuse the existing genre/
+  CEFR instruction blocks (`load_genre_block`/`load_cefr_block`) and the
+  language-feature precedence rules already proven in `script_base.txt`; line
+  IDs are never requested from the model (`SectionLineOut` has no `id` field) —
+  the merge step assigns them server-side via the existing
+  `script_service.save_script()`.
+- `compute_config_hash()` duplicates `ai_job_service`'s private hashing
+  algorithm (3 lines) rather than importing it, since `ai_job_service.py` is not
+  in this task's allowed files — verified this matches exactly by using the same
+  `{"project": ..., "operation": ...}` shape the real `POST .../ai-jobs` route
+  builds, so a job created through the real API and processed by this handler
+  compute identical hashes.
+- `regenerate_line()` (`script_service.py`) migrated onto the Task 13.2
+  `AIRouter` via a new `_build_ai_router()` factory and an injectable `router`
+  parameter (defaults to the real one in production). Prompt, schema, and the
+  "model must not change speaker_id" check are byte-for-byte unchanged.
+  `generate_script()` (the legacy bulk path) was **not** touched, per plan —
+  it stays the synchronous compatibility route's implementation until Task 13.7.
+- `app/services/ai_worker.py` gained one small public accessor, `get_db()`
+  (returns `self._db_getter()`), so a handler function (which only receives
+  `(job, worker)`) can reach the shared connection.
+- **Scope note, not a gap**: `app/main.py` is not in this task's allowed files,
+  so `ai_worker.register_handler("script", script_pipeline.make_handler(router))`
+  is not wired into the app's shared worker singleton yet — every pipeline test
+  constructs its own `AIWorker`/`AIRouter`/in-memory DB directly (same pattern as
+  `tests/test_ai_worker.py`). Recorded in `HANDOFF.json`'s NEXT UP for Task 13.6
+  so it isn't silently lost.
+- 30 new/updated tests: 16 pure-function tests in `tests/test_script_pipeline.py`
+  (target-word computation against all 3 real golden fixtures — A2 5min=450,
+  B1 8min=800 exactly matching the plan's own worked example, C1 10min=1300;
+  section-count planning; word-tolerance/unknown-speaker/consecutive-line/
+  speaker-balance/duplicate/8-gram/topic-warning validators, each with a
+  positive and negative case), 6 full end-to-end handler tests against a real
+  in-memory DB with a `FakeProvider`-backed `AIRouter` (happy path → `complete`
+  with server-assigned UUIDs and `script_generated` status; one-repair-then-
+  succeed; repair-also-fails → `error` with the prior — empty — script
+  provably unchanged; **interrupted-then-resumed**: a scripted `RuntimeError`
+  simulating an abrupt stop after section 1 is checkpointed, then a second,
+  independent `FakeProvider` with only section 2 scripted proves resumption
+  skips regenerating the outline and section 1; cancel-requested-before-start;
+  project-changed-since-creation → `stale`), plus 8 new/updated tests in
+  `tests/test_script_service.py` for the `regenerate_line` gateway migration
+  (injected-router success, wrapped `ProviderError`, speaker-id-change
+  rejection still enforced through the new transport).
+- **Revert-and-confirm-failure**: temporarily disabled the checkpoint-skip
+  condition in the section loop (forcing every resume to regenerate from
+  scratch). Re-ran `test_pipeline_resumes_from_checkpoint_after_interruption` —
+  failed with the same `RuntimeError` the first run hit (the second, smaller
+  `FakeProvider` ran out of scripted outcomes trying to regenerate section 1).
+  Reverted; re-ran — 22/22 pipeline tests pass again. Confirms the resume
+  test is real, not vacuous.
+- All 18 pre-existing `tests/test_script_service.py` tests and all 30
+  `tests/test_script_api.py` tests pass **unmodified** — proves
+  `regenerate_line`'s transport swap is invisible to every existing caller,
+  including the one wire-payload test
+  (`test_regenerate_line_wire_payload_includes_response_json_schema`), which
+  still passes because `script_service.py` and `app/services/ai/gemini_provider.py`
+  both do a plain `import httpx`, so monkeypatching `script_service.httpx.AsyncClient`
+  patches the one shared `httpx` module object both modules reference.
+- Verification commands re-run independently:
+  - `venv\Scripts\python.exe -m ruff check .` (whole repo) — clean.
+  - `venv\Scripts\python.exe -m pytest tests\test_script_pipeline.py
+    tests\test_script_service.py tests\test_script_api.py -v` — 68/68 pass.
+  - `venv\Scripts\python.exe -m pytest tests\ -q` (full suite) — **778/778 pass**,
+    0 failures, 0 flakes (320.73s).
+  - `git diff --check` — clean.
+
+**Decision: Task 13.4 done.** The checkpointed script pipeline is implemented,
+independently verified, and its resume/repair/cancel/stale guarantees are
+proven by real tests (including one confirmed via revert-and-confirm-failure).
+It is not yet reachable through the running app (`app/main.py` wiring deferred
+to Task 13.6). Task 13.5 (grounded learning pipeline) is next.

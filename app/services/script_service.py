@@ -19,8 +19,19 @@ from app.core.constants import (
     GEMINI_MODEL_FALLBACKS,
     GEMINI_RETRY_BASE_DELAY,
 )
-from app.core.exceptions import NotFoundError, ScriptGenerationError, ValidationError
+from app.core.exceptions import (
+    NotFoundError,
+    ProviderError,
+    SchemaValidationError,
+    ScriptGenerationError,
+    ValidationError,
+)
 from app.core.prompt_loader import render_regenerate_line_prompt, render_script_prompt
+from app.services.ai.contracts import AIMode, GenerationRequest
+from app.services.ai.gemini_provider import GeminiProvider
+from app.services.ai.ollama_provider import OllamaProvider
+from app.services.ai.router import AIRouter
+from app.services.ai.validation import parse_and_validate
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +66,21 @@ class ScriptLineOut(BaseModel):
 
 
 _SCRIPT_LINES_ADAPTER = TypeAdapter(list[ScriptLineOut])
+_SINGLE_LINE_ADAPTER = TypeAdapter(ScriptLineOut)
+
+
+def _build_ai_router() -> AIRouter:
+    """Construct the Task 13.2 provider gateway from current settings.
+
+    A fresh instance per call is fine here (matches the existing `_call_gemini`'s
+    own per-call `httpx.AsyncClient` lifetime) -- there is no shared-lifespan
+    client for this single ad hoc call the way a lifespan-managed worker would want.
+    """
+    local = OllamaProvider(
+        base_url=settings.OLLAMA_BASE_URL, model=settings.OLLAMA_MODEL, num_ctx=settings.OLLAMA_NUM_CTX
+    )
+    gemini = GeminiProvider(api_key=settings.GEMINI_API_KEY, model=GEMINI_MODEL)
+    return AIRouter(local=local, gemini=gemini, mode=AIMode(settings.AI_MODE))
 
 
 _RETRYABLE_STATUS_CODES = (429, 503)  # 429 = rate/quota limit, 503 = model temporarily overloaded
@@ -230,28 +256,38 @@ async def generate_script(project_id: str, config: dict) -> list[ScriptLineOut]:
 
 
 async def regenerate_line(
-    project_id: str, config: dict, line_id: str, current_text: str, speaker_id: str
+    project_id: str,
+    config: dict,
+    line_id: str,
+    current_text: str,
+    speaker_id: str,
+    router: AIRouter | None = None,
 ) -> ScriptLineOut:
-    """Regenerate a single script line via Gemini, keeping its speaker and position.
+    """Regenerate a single script line through the Task 13.2 provider gateway.
+
+    Migrated from this module's own `_generate_with_retry`/`_call_gemini` to
+    `AIRouter` (Phase 13, Task 13.4) so single-line regeneration participates in
+    local/hybrid routing like every other new AI call in this app — the prompt,
+    schema, and every validation rule below are unchanged from before the
+    migration; only the HTTP transport underneath changed.
 
     Args:
         project_id: UUID of the project (used for error context/logging only).
         config: Project-shaped dict — see generate_script.
         line_id: The line's existing id (echoed back, not reassigned).
-        current_text: The line's current text, given to Gemini as context to rewrite.
+        current_text: The line's current text, given as context to rewrite.
         speaker_id: The UUID of the speaker who must still deliver this line.
+        router: Injected `AIRouter` (tests pass a `FakeProvider`-backed one with
+            zero network calls); defaults to `_build_ai_router()` in production.
 
     Returns:
         The validated, re-generated line.
 
     Raises:
-        ScriptGenerationError: If the API key is unset, Gemini fails after
-            retries, returns malformed JSON, the response fails schema
-            validation, or changes the speaker away from `speaker_id`.
+        ScriptGenerationError: If the provider gateway fails, returns malformed
+            JSON, the response fails schema validation, or changes the speaker
+            away from `speaker_id`.
     """
-    if not settings.GEMINI_API_KEY:
-        raise ScriptGenerationError("DIE_GEMINI_API_KEY is not configured")
-
     speaker = next((s for s in config["speakers"] if s["id"] == speaker_id), None)
     if speaker is None:
         raise ScriptGenerationError(f"speaker_id {speaker_id!r} not found in project {project_id}")
@@ -266,21 +302,26 @@ async def regenerate_line(
         speaker_id=speaker_id,
     )
 
-    raw_text = await _generate_with_retry(prompt, schema=ScriptLineOut.model_json_schema())
+    router = router or _build_ai_router()
+    request = GenerationRequest(
+        prompt=prompt,
+        json_schema=ScriptLineOut.model_json_schema(),
+        deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
+        purpose="script_regenerate_line",
+    )
+    try:
+        result = await router.generate(request)
+    except ProviderError as exc:
+        raise ScriptGenerationError(f"Line regeneration failed: {exc}") from exc
 
     try:
-        parsed = json.loads(raw_text)
-    except json.JSONDecodeError as exc:
-        raise ScriptGenerationError(f"Gemini did not return valid JSON: {exc}") from exc
-
-    try:
-        line = ScriptLineOut.model_validate(parsed)
-    except PydanticValidationError as exc:
-        raise ScriptGenerationError(f"Gemini response failed schema validation: {exc}") from exc
+        line = parse_and_validate(result.text, _SINGLE_LINE_ADAPTER)
+    except SchemaValidationError as exc:
+        raise ScriptGenerationError(str(exc)) from exc
 
     if line.speaker_id != speaker_id:
         raise ScriptGenerationError(
-            f"Gemini changed speaker_id from {speaker_id} to {line.speaker_id}"
+            f"Model changed speaker_id from {speaker_id} to {line.speaker_id}"
         )
 
     return line

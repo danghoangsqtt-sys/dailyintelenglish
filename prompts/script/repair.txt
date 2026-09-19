@@ -1,0 +1,28 @@
+Your previous answer for this section did not pass validation. Fix EVERY issue
+listed below and return a corrected version — do not explain the fix, just
+return the corrected JSON.
+
+## Section Being Repaired
+- Objective: {{ objective }}
+- Target length: about {{ target_words }} spoken words (stay within ±15%)
+
+## Speakers (use only these `id` values)
+{% for speaker in speakers %}
+- id: {{ speaker.id }} | name: {{ speaker.name }}
+{% endfor %}
+
+## Validation Errors To Fix
+{% for error in errors %}
+- {{ error }}
+{% endfor %}
+
+## Your Previous (Invalid) Answer
+```json
+{{ previous_output }}
+```
+
+## Output Format
+Return ONLY a corrected JSON array (no markdown fences, no commentary), same
+shape as before: each element is `{"speaker_id": "...", "text": "...",
+"language_notes": {"collocations": [...], "idioms": [...], "grammar_point": "..."}}`.
+Do not include an `id` field.

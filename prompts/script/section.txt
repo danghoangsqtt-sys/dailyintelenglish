@@ -1,0 +1,71 @@
+You are writing ONE section of a {{ genre }} podcast episode at CEFR
+{{ cefr_level }} about "{{ topic }}" for Daily Intel English Studio.
+
+## Episode Title
+{{ outline_title }}
+
+## This Section
+- Section {{ section_index }} of {{ section_count }}
+- Objective: {{ objective }}
+- Target length: about {{ target_words }} spoken words (stay within ±15%)
+{% if prior_summary %}
+- What happened just before this section: {{ prior_summary }}
+  Continue naturally from this — do not repeat it, do not restart the topic.
+{% else %}
+- This is the FIRST section of the episode — open naturally (a brief intro is
+  fine here, but do not pad with unrelated small talk).
+{% endif %}
+{% if is_last_section %}
+- This is the LAST section of the episode — close it out naturally (a brief
+  outro/wrap-up is appropriate here).
+{% endif %}
+
+## Speakers
+Each speaker is identified by a unique `id`. Two speakers may share a display
+name — always tell them apart by `id`, never by name alone.
+{% for speaker in speakers %}
+- id: {{ speaker.id }} | name: {{ speaker.name }} | {{ speaker.gender }}, {{ speaker.accent }} accent
+{% endfor %}
+{% if num_speakers == 1 %}
+
+**Solo format:** only one speaker — write this section as continuous monologue
+from {{ speakers[0].name }}, not a dialogue.
+{% else %}
+
+**Turn-taking:** no single speaker may deliver more than
+{{ max_consecutive_lines }} consecutive lines before another speaker responds.
+{% endif %}
+
+## CEFR {{ cefr_level }} Constraints
+{{ cefr_constraints }}
+
+## Precedence: CEFR Constraints vs. Language Feature Toggles
+The CEFR constraints above define a CEILING, not a requirement. Whether you may
+use a category at all is controlled ONLY by the list below:
+{% for key, enabled in language_features.items() if enabled %}
+- {{ key.replace('_', ' ') }} — allowed, never above the CEFR ceiling
+{% endfor %}
+{% if not (language_features.values() | select | list) %}
+- None requested — use plain, level-appropriate language only.
+{% endif %}
+
+## Rules
+1. Stay on topic: every line must relate to "{{ topic }}".
+2. Do not invent a speaker — use only the `id` values listed above.
+3. Do not number or label lines with an `id` field — the app assigns line IDs.
+
+## Output Format
+Return ONLY a JSON array (no markdown fences, no commentary) where each element
+has this shape:
+
+```json
+{
+  "speaker_id": "the exact `id` (UUID) of the speaker from the Speakers list above",
+  "text": "The line of dialogue.",
+  "language_notes": {
+    "collocations": ["..."],
+    "idioms": ["..."],
+    "grammar_point": "short label, e.g. Present Simple — greeting"
+  }
+}
+```

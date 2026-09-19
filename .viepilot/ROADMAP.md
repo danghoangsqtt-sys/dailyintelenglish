@@ -943,3 +943,23 @@ configuration-only Gemini rollback path. See
   content pipeline registered yet. See
   `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.3.md` for the full
   record.
+
+### 13.4 Checkpointed script pipeline — ✅ DONE (2026-09-19)
+
+- [x] `app/services/script_pipeline.py` implements the controlling plan's 8-step
+  script pipeline: outline generation (resumable) → per-section generate/
+  validate/one-repair/checkpoint/heartbeat → global merge validation (±10% word
+  budget, 35-65% two-speaker balance, duplicate/8-gram checks, topic-relevance as
+  a warning only) → a second hash/cancel re-check → one atomic transaction for
+  the final script save + status transitions. New prompts `outline.txt`/
+  `section.txt`/`repair.txt`. `regenerate_line()` migrated onto the Task 13.2
+  `AIRouter` with behavior fully preserved — all 18 pre-existing
+  `test_script_service.py` tests and all 30 `test_script_api.py` tests pass
+  unmodified. 30 new/updated tests including 6 full end-to-end handler tests
+  (happy path, repair, repair-fails, **interrupted-then-resumed-from-
+  checkpoint**, cancel, stale) — the resume behavior confirmed via
+  revert-and-confirm-failure. Full suite **778/778 pass**, 0 flakes,
+  `ruff`/`git diff --check` clean. `app/main.py` wiring of the new handler onto
+  the app's shared worker is deferred to Task 13.6. See
+  `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.4.md` for the
+  full record.

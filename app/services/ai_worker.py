@@ -139,6 +139,11 @@ class AIWorker:
         async with write_transaction(db):
             await ai_job_service.heartbeat(db, job_id, self._worker_id, commit=False)
 
+    def get_db(self) -> "aiosqlite.Connection":
+        """Return the shared connection. Lets a handler (which only receives
+        `(job, worker)`) reach the DB without importing `app.db.database` itself."""
+        return self._db_getter()
+
     @property
     def worker_id(self) -> str:
         return self._worker_id

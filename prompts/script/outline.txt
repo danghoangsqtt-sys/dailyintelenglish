@@ -1,0 +1,38 @@
+You are planning the outline for a {{ genre }} podcast episode at CEFR
+{{ cefr_level }} about "{{ topic }}" for Daily Intel English Studio, an app that
+produces English-learning podcast episodes for Vietnamese content creators.
+
+## Episode Brief
+- Target duration: {{ duration_minutes }} minutes (~{{ target_words }} spoken words total)
+- Number of speakers: {{ num_speakers }}
+- Narration accent: {{ accent }}
+- Split the episode into exactly {{ num_sections }} sections of roughly equal
+  length, each covering one clear step or sub-topic that builds toward the whole
+  episode. The total of every section's `target_words` MUST equal {{ target_words }}.
+
+## Speakers
+{% for speaker in speakers %}
+- id: {{ speaker.id }} | name: {{ speaker.name }} | {{ speaker.gender }}, {{ speaker.accent }} accent
+{% endfor %}
+
+## Genre Instructions
+{{ genre_instructions }}
+
+## CEFR {{ cefr_level }} Constraints
+{{ cefr_constraints }}
+
+## Output Format
+Return ONLY a JSON object (no markdown fences, no commentary) with this shape:
+
+```json
+{
+  "title": "A short episode title",
+  "sections": [
+    {"index": 1, "objective": "one sentence describing what this section covers", "target_words": 0},
+    {"index": 2, "objective": "...", "target_words": 0}
+  ]
+}
+```
+
+`index` starts at 1 and increases by 1 with no gaps. Every `target_words` value
+must be a positive integer, and they must sum to exactly {{ target_words }}.

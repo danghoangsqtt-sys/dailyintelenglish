@@ -33,7 +33,7 @@
 | 13.1 | Install and qualify Ollama/Qwen | done | Gate A passed |
 | 13.2 | Provider-neutral AI gateway | done | Contract tests passed |
 | 13.3 | Shared transactions and durable jobs | done | State-machine review passed |
-| 13.4 | Checkpointed script generation | in_progress | Content validators |
+| 13.4 | Checkpointed script generation | done | Content validators passed |
 | 13.5 | Grounded learning generation | pending | Learning quality |
 | 13.6 | Settings, health, and Step 2/3 job UX | pending | Browser recovery |
 | 13.7 | Gemini fallback and compatibility | pending | Forced fallback |
@@ -136,3 +136,18 @@
   tasks/task-13.4.md before any code. Noted explicitly that app/main.py wiring of
   the new handler is out of this task's allowed files and is deferred to Task
   13.6, not silently dropped. Task 13.4 moved to `in_progress`.
+- 2026-09-19: Task 13.4 implemented -- script_pipeline.py's 8-step handler
+  (outline -> per-section generate/validate/one-repair/checkpoint -> global
+  validate -> re-check hash/cancel -> atomic save+status-complete in one
+  transaction), 3 new prompts (outline/section/repair), regenerate_line migrated
+  onto the Task 13.2 AIRouter (behavior preserved -- all 18 pre-existing
+  test_script_service.py tests and all 30 test_script_api.py tests pass
+  unmodified), and a small ai_worker.get_db() accessor. 30 new/updated tests
+  including 6 full end-to-end handler tests against a FakeProvider-backed router
+  (happy path, one-repair-then-succeed, repair-fails-transparently,
+  interrupted-then-resumed-from-checkpoint, cancel-before-start,
+  stale-on-project-change). Revert-and-confirm-failure on the checkpoint-resume
+  logic confirmed that test is real. Full suite: **778/778 pass**, 0 flakes,
+  `ruff check .` clean, `git diff --check` clean. app/main.py wiring of the new
+  handler deferred to Task 13.6 (not in this task's allowed files) -- recorded,
+  not dropped. Task 13.4 moved to `done`.

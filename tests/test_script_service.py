@@ -358,6 +358,90 @@ async def test_regenerate_line_wire_payload_includes_response_json_schema(monkey
     assert gen_config["responseJsonSchema"]["type"] == "object"
 
 
+async def test_regenerate_line_via_injected_gateway_router_returns_validated_line():
+    """regenerate_line accepts an injected AIRouter (Task 13.4) -- proves the
+    gateway migration actually routes through AIRouter.generate(), not just that
+    the legacy httpx path still happens to work."""
+    from app.services.ai.contracts import AIMode, GenerationResult
+    from app.services.ai.fake_provider import FakeProvider
+    from app.services.ai.router import AIRouter
+
+    scripted = GenerationResult(
+        text=json.dumps(VALID_LINES[0]),
+        provider="fake-gemini",
+        model="fake-model",
+        latency_ms=1.0,
+        attempt=1,
+        prompt_hash="abc123",
+    )
+    gemini = FakeProvider("fake-gemini", [scripted])
+    local = FakeProvider("fake-ollama", [])
+    router = AIRouter(local=local, gemini=gemini, mode=AIMode.GEMINI)
+
+    line = await script_service.regenerate_line(
+        "proj-1",
+        SAMPLE_CONFIG,
+        "line_001",
+        "old text",
+        "11111111-1111-1111-1111-111111111111",
+        router=router,
+    )
+    assert line.id == "line_001"
+    assert gemini.call_count == 1
+    assert local.call_count == 0
+
+
+async def test_regenerate_line_wraps_provider_error_as_script_generation_error():
+    from app.core.exceptions import ProviderUnavailableError
+    from app.services.ai.contracts import AIMode
+    from app.services.ai.fake_provider import FakeProvider
+    from app.services.ai.router import AIRouter
+
+    gemini = FakeProvider("fake-gemini", [ProviderUnavailableError("down"), ProviderUnavailableError("still down")])
+    local = FakeProvider("fake-ollama", [])
+    router = AIRouter(local=local, gemini=gemini, mode=AIMode.GEMINI)
+
+    with pytest.raises(ScriptGenerationError, match="Line regeneration failed"):
+        await script_service.regenerate_line(
+            "proj-1",
+            SAMPLE_CONFIG,
+            "line_001",
+            "old text",
+            "11111111-1111-1111-1111-111111111111",
+            router=router,
+        )
+
+
+async def test_regenerate_line_still_rejects_speaker_id_change_via_gateway():
+    from app.services.ai.contracts import AIMode, GenerationResult
+    from app.services.ai.fake_provider import FakeProvider
+    from app.services.ai.router import AIRouter
+
+    wrong_speaker_line = dict(VALID_LINES[0])
+    wrong_speaker_line["speaker_id"] = "22222222-2222-2222-2222-222222222222"
+    scripted = GenerationResult(
+        text=json.dumps(wrong_speaker_line),
+        provider="fake-gemini",
+        model="fake-model",
+        latency_ms=1.0,
+        attempt=1,
+        prompt_hash="abc123",
+    )
+    gemini = FakeProvider("fake-gemini", [scripted])
+    local = FakeProvider("fake-ollama", [])
+    router = AIRouter(local=local, gemini=gemini, mode=AIMode.GEMINI)
+
+    with pytest.raises(ScriptGenerationError, match="changed speaker_id"):
+        await script_service.regenerate_line(
+            "proj-1",
+            SAMPLE_CONFIG,
+            "line_001",
+            "old text",
+            "11111111-1111-1111-1111-111111111111",
+            router=router,
+        )
+
+
 async def test_generate_with_retry_never_downgrades_to_schema_less(monkeypatch):
     """If Gemini returns a fatal error or network fails, _generate_with_retry must not retry schema-less."""
     calls = []

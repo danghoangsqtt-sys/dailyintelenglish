@@ -199,3 +199,20 @@ AI_WORKER_SHUTDOWN_GRACE_SECONDS = 10.0
 # Bumped whenever the job/checkpoint schema or worker resume semantics change, so a
 # job created under an older pipeline can be told apart from a current one.
 AI_PIPELINE_VERSION = "13.3"
+
+# Phase 13 -- checkpointed script pipeline (app/services/script_pipeline.py).
+# Copied from the already-live "Pace: target about N words per minute" line in each
+# prompts/script/cefr_*.txt file -- a single source of truth the pipeline computes
+# target word counts from, instead of parsing prompt prose at runtime.
+CEFR_WORDS_PER_MINUTE = {"A1": 80, "A2": 90, "B1": 100, "B2": 115, "C1": 130, "C2": 150}
+# Midpoint of the plan's "1-2 minute" section spec.
+SCRIPT_SECTION_TARGET_MINUTES = 1.5
+SCRIPT_SECTION_WORD_TOLERANCE = 0.15
+SCRIPT_GLOBAL_WORD_TOLERANCE = 0.10
+SCRIPT_SPEAKER_BALANCE_MIN_SHARE = 0.35
+SCRIPT_SPEAKER_BALANCE_MAX_SHARE = 0.65
+# Same value already hardcoded in script_base.txt's prose "no monologues" rule --
+# now also a named constant the new pipeline enforces programmatically.
+SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER = 5
+SCRIPT_MAX_REPEATED_8GRAM_RATIO = 0.01
+SCRIPT_PIPELINE_MAX_REPAIR_ATTEMPTS = 1

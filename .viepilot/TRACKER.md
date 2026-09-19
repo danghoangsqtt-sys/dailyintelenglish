@@ -1358,6 +1358,52 @@ system until Task 13.4/13.5 land. See
 `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.3.md` for the full
 plan and evidence record.
 
+### 13.4 Checkpointed script pipeline — ✅ DONE (2026-09-19)
+
+Built `app/services/script_pipeline.py` implementing the controlling plan's exact
+8-step script pipeline: a fresh project re-fetch (never trusting the job's
+creation-time snapshot) with a hash/cancel check before any generation work;
+`compute_target_words()`/`plan_sections()` (CEFR-WPM-based, matching the plan's
+own worked example — B1 × 8 minutes = 800 words exactly); outline generation
+(resumable from a `section_index=0` checkpoint); per-section generate → validate
+→ one repair attempt on failure → checkpoint → progress/heartbeat; global merge
+validation (±10% word budget, 35-65% two-speaker word-share balance, exact-
+duplicate-line rejection, repeated normalized 8-gram ratio <1% — plus a topic-
+relevance keyword-overlap **warning**, deliberately never a hard reject per the
+plan); a second hash/cancel re-check immediately before the final save (closing
+the race where inputs change or a cancel arrives during the last section); and
+one atomic `write_transaction` covering the script save, `project_service.
+mark_script_changed()` (reused unmodified — not in this task's allowed files, and
+didn't need to be, since it already handles both the forward and downgrade status
+transitions), and the job's `complete` transition together. New prompts
+`outline.txt`/`section.txt`/`repair.txt` reuse the existing genre/CEFR
+instruction-block loaders and the language-feature precedence rules already
+proven in `script_base.txt`; line IDs are never requested from the model — the
+merge step assigns them server-side via the existing `script_service.save_script()`.
+`regenerate_line()` migrated onto the Task 13.2 `AIRouter` via a new
+`_build_ai_router()` factory and an injectable `router` parameter — prompt,
+schema, and the speaker-id-change check are byte-for-byte unchanged, and all 18
+pre-existing `test_script_service.py` tests plus all 30 `test_script_api.py`
+tests pass **unmodified**, proving the transport swap is invisible to every
+existing caller. `generate_script()` (the legacy bulk path) was deliberately not
+touched — it remains the synchronous compatibility route's implementation until
+Task 13.7. 30 new/updated tests, including 6 full end-to-end handler tests
+against a real in-memory DB with a `FakeProvider`-backed router: happy path
+(→ `complete`, server-assigned UUIDs, `script_generated` status), one-repair-
+then-succeed, repair-also-fails (→ `error`, prior — empty — script provably
+unchanged), **interrupted-then-resumed** (a scripted exception simulates an
+abrupt stop after section 1 checkpoints; a second, independent `FakeProvider`
+scripted with only section 2 proves resumption skips regenerating the outline
+and section 1), cancel-requested-before-start, and stale-on-project-change.
+**Revert-and-confirm-failure**: disabled the checkpoint-skip condition —
+the resume test failed with the same exception the interrupted run hit;
+restored — 22/22 pipeline tests pass again. Full suite: **778/778 pass**, 0
+flakes, `ruff check .`/`git diff --check` clean. `app/main.py` wiring of the new
+handler onto the app's shared worker is deferred to Task 13.6 (not in this
+task's allowed files) — recorded in `HANDOFF.json`, not dropped. See
+`.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.4.md` for the full
+plan and evidence record.
+
 ## Decision Log
 
 | Date | Decision | Rationale |
