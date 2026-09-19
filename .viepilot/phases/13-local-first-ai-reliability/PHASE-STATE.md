@@ -35,7 +35,7 @@
 | 13.3 | Shared transactions and durable jobs | done | State-machine review passed |
 | 13.4 | Checkpointed script generation | done | Content validators passed |
 | 13.5 | Grounded learning generation | done | Learning quality passed |
-| 13.6 | Settings, health, and Step 2/3 job UX | pending | Browser recovery |
+| 13.6 | Settings, health, and Step 2/3 job UX | in_progress | Browser recovery |
 | 13.7 | Gemini fallback and compatibility | pending | Forced fallback |
 | 13.8 | Automated regression/packaging gate | pending | Full suite/build |
 | 13.9 | Real no-mock bake-off and operational trial | pending | Gate B |
@@ -172,3 +172,13 @@
   **794/794 pass**, 0 flakes, `ruff check .`/`git diff --check` clean. Every
   content pipeline Phase 13 planned (script + learning) now exists; neither is
   wired into app/main.py yet (deferred to Task 13.6). Task 13.5 moved to `done`.
+- 2026-09-19: Found two real deviations before designing Task 13.6: (1) the
+  controlling plan lists a new app/api/ai_health.py, but GET /api/ai/health
+  already exists in app/api/ai_jobs.py (built in Task 13.3, before this task's
+  file list existed) -- neither creating a duplicate route nor editing
+  ai_jobs.py (not in this task's allowed files) is an option, so the existing
+  route stays as its implementation; (2) Step 2/3 need near-identical job-
+  polling logic, so a new shared frontend/static/js/ai_job.js module is added
+  (matches this codebase's existing shared-module precedent) rather than
+  duplicating the state machine twice. Both recorded in tasks/task-13.6.md
+  before any code. Task 13.6 moved to `in_progress`.
