@@ -216,3 +216,16 @@ SCRIPT_SPEAKER_BALANCE_MAX_SHARE = 0.65
 SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER = 5
 SCRIPT_MAX_REPEATED_8GRAM_RATIO = 0.01
 SCRIPT_PIPELINE_MAX_REPAIR_ATTEMPTS = 1
+
+# Phase 13 -- grounded learning pipeline (app/services/learning_pipeline.py).
+# The prompt gives no explicit target count for vocabulary/idioms -- "at least
+# one" is the only honest floor to enforce without inventing an undocumented
+# target. Grammar/question ranges are copied from the prompt's own stated
+# "1-2 grammar points"/"3-5 questions".
+LEARNING_MIN_VOCABULARY = 1
+LEARNING_MIN_IDIOMS = 1
+LEARNING_MIN_GRAMMAR_POINTS = 1
+LEARNING_MAX_GRAMMAR_POINTS = 2
+LEARNING_MIN_QUESTIONS = 3
+LEARNING_MAX_QUESTIONS = 5
+LEARNING_GENERATION_TEMPERATURE = 0.2

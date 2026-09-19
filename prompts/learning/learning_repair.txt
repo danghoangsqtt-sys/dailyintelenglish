@@ -1,0 +1,29 @@
+Your previous learning-content pack did not pass validation. Fix EVERY issue
+listed below and return a corrected full pack — do not explain the fix, just
+return the corrected JSON.
+
+## Original Transcript
+{{ transcript_text }}
+
+## Validation Errors To Fix
+{% for error in errors %}
+- {{ error }}
+{% endfor %}
+
+## Your Previous (Invalid) Pack
+```json
+{{ previous_output }}
+```
+
+## Rules (same as before)
+- Every vocabulary/idiom `example_sentence`, and every idiom `phrase`, must be
+  taken directly from the transcript above — quote it exactly, do not paraphrase.
+- No duplicate vocabulary word, idiom phrase, or question.
+- For a multiple-choice question, `correct_answer` must exactly match one of
+  its own `options`. For an open-ended question, leave `options` and
+  `correct_answer` empty.
+
+## Output Format
+Return ONLY a corrected JSON object (no markdown fences, no commentary), the
+same shape as before: `{"vocabulary": [...], "idioms": [...], "grammar": [...],
+"questions": [...]}`.

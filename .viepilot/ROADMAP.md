@@ -963,3 +963,22 @@ configuration-only Gemini rollback path. See
   the app's shared worker is deferred to Task 13.6. See
   `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.4.md` for the
   full record.
+
+### 13.5 Grounded learning pipeline — ✅ DONE (2026-09-19)
+
+- [x] `app/services/learning_pipeline.py` — grounding/count/duplicate/answer-
+  consistency validators (thresholds sourced from the existing
+  `learning_pack.txt` prompt's own stated ranges) and a handler mirroring
+  `script_pipeline.py`'s stale/cancel/atomic-save structure. Real gap found:
+  `ai_generation_jobs.script_hash_at_start` is never populated by job creation
+  (out of this task's allowed files) — substituted the pipeline's own
+  start-vs-final-save script-hash comparison, confirmed real via
+  revert-and-confirm-failure. New `prompts/learning/learning_repair.txt` for
+  one repair pass. 26 new tests including 7 full end-to-end handler tests; all
+  20 pre-existing `test_learning_service.py` tests and all 22
+  `test_learning_api.py` tests pass unmodified. Full suite **794/794 pass**, 0
+  flakes, `ruff`/`git diff --check` clean. Every content pipeline Phase 13
+  planned (script + learning) now exists; neither is wired into the running
+  app yet (`app/main.py` deferred to Task 13.6). See
+  `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.5.md` for the
+  full record.

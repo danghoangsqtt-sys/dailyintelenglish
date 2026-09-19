@@ -39,6 +39,21 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def compute_script_hash(script_lines: list[dict]) -> str:
+    """Stable hash over a script's speaker/text content only (Phase 13, Task 13.5).
+
+    Used by `learning_pipeline.py` to detect a script edit landing while a
+    learning-generation job is mid-flight -- deliberately ignores line ids and
+    timestamps, since only the actual spoken content affects what a learning
+    pack should be grounded in.
+    """
+    canonical = json.dumps(
+        [{"speaker_id": line["speaker_id"], "text": line["text"]} for line in script_lines],
+        sort_keys=True,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 _RETRYABLE_STATUS_CODES = (429, 503)  # 429 = rate/quota limit, 503 = model temporarily overloaded
 
 

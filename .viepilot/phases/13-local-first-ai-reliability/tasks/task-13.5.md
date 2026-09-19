@@ -1,6 +1,6 @@
 # Task 13.5 — Grounded Learning Pipeline
 
-- **Status:** in_progress
+- **Status:** done
 - **Dependency:** 13.2–13.4
 - **Controlling detail:** implementation plan §6 and §8, Task 13.5
 
@@ -146,3 +146,58 @@ venv\Scripts\python.exe -m pytest tests\test_learning_pipeline.py tests\test_lea
 venv\Scripts\python.exe -m pytest tests\ -x -q
 git diff --check
 ```
+
+## Implementation evidence — 2026-09-19
+
+- Built `app/services/learning_pipeline.py`: `validate_counts`/`validate_grounding`/
+  `validate_duplicates`/`validate_answers`/`validate_pack` (pure functions), and
+  a `make_handler(router)` orchestration implementing the plan's grounded
+  learning pipeline: initial project-hash + cancel check, script-empty guard,
+  one generation call at `LEARNING_GENERATION_TEMPERATURE`, validation, one
+  repair pass via the new `prompts/learning/learning_repair.txt` on failure,
+  a second project-hash/script-hash/cancel re-check immediately before saving,
+  and one atomic `write_transaction` for the final save + `complete` transition.
+- Added `learning_service.compute_script_hash(script_lines)` (hashes only
+  `speaker_id`/`text`, ignoring ids/timestamps) — used both by the pipeline's
+  own start-vs-final-save staleness check (substituting for
+  `ai_generation_jobs.script_hash_at_start`, which nothing populates yet — see
+  the plan section above) and available for a later task to wire into
+  `create_job()`'s snapshot once `app/api/ai_jobs.py` is back in scope.
+- Reused `script_pipeline.normalize_text`/`compute_config_hash` via import
+  rather than duplicating a third copy of either.
+- 26 new/updated tests in `tests/test_learning_pipeline.py`: 5 labeled
+  "fixture" tests covering the deterministic pack-validation cases the task
+  card asks for (valid pack passes everything; ungrounded example sentence;
+  duplicate question; MCQ answer not in its own options; too few questions),
+  4 additional targeted validator tests (ungrounded idiom phrase, too many
+  grammar points, duplicate vocabulary word, open-ended questions exempted from
+  the answer check), and 7 full end-to-end handler tests against a real
+  in-memory DB with a `FakeProvider`-backed router: happy path, one-repair-
+  then-succeed, repair-also-fails (prior — none — pack provably unchanged),
+  script-empty guard, cancel-before-start, stale-on-project-change, and
+  **stale-on-script-change-during-generation** (a monkeypatched `get_script`
+  simulates a concurrent edit landing between the pipeline's first read and its
+  final-save re-check).
+- **Revert-and-confirm-failure**: disabled the script-hash-at-final-save
+  comparison. Re-ran `test_pipeline_marks_stale_when_script_changed_during_generation`
+  — failed (`'complete' == 'stale'`), confirming the job would otherwise have
+  completed on stale content. Restored; re-ran — 16/16 pipeline tests pass
+  again. Confirms this specific check (the one substituting for the
+  unpopulated `script_hash_at_start` column) is real, not vacuous.
+- All 20 pre-existing `tests/test_learning_service.py` tests and all 22
+  `tests/test_learning_api.py` tests pass **unmodified** — `compute_script_hash`
+  is purely additive, no existing behavior touched.
+- Verification commands re-run independently:
+  - `venv\Scripts\python.exe -m ruff check .` (whole repo) — clean.
+  - `venv\Scripts\python.exe -m pytest tests\test_learning_pipeline.py
+    tests\test_learning_service.py tests\test_learning_api.py -v` — 58/58 pass.
+  - `venv\Scripts\python.exe -m pytest tests\ -q` (full suite) — **794/794 pass**,
+    0 failures, 0 flakes (322.96s).
+  - `git diff --check` — clean.
+
+**Decision: Task 13.5 done.** The grounded learning pipeline is implemented and
+independently verified, including the substitute staleness check confirmed via
+revert-and-confirm-failure. Not yet reachable through the running app
+(`app/main.py` wiring deferred to Task 13.6, same as the script pipeline).
+Every content pipeline Phase 13 planned (script + learning) now exists; Task
+13.6 (Settings, health, and Step 2/3 job UX) is next.

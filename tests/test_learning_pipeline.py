@@ -1,0 +1,321 @@
+"""Tests for the grounded learning-content pipeline (Task 13.5)."""
+
+from app.models.learning import LearningPackOut
+from app.models.project import ScriptConfig, SpeakerConfig
+from app.services import ai_job_service, learning_pipeline, learning_service, project_service, script_service
+from app.services.ai.contracts import AIMode, GenerationResult
+from app.services.ai.fake_provider import FakeProvider
+from app.services.ai.router import AIRouter
+from app.services.ai_worker import AIWorker
+
+TRANSCRIPT = (
+    "Alex: I have been working remotely from home for five years now. "
+    "Maya: That is great, you really hit the ground running when the pandemic started."
+)
+
+
+def _pack(**overrides) -> LearningPackOut:
+    base = {
+        "vocabulary": [
+            {
+                "word": "remotely",
+                "part_of_speech": "adverb",
+                "ipa": "/r/",
+                "definition_en": "from a distance",
+                "definition_vi": "tu xa",
+                "example_sentence": "I have been working remotely from home for five years now.",
+            }
+        ],
+        "idioms": [
+            {
+                "phrase": "hit the ground running",
+                "meaning_en": "start fast and effectively",
+                "meaning_vi": "bat dau nhanh chong va hieu qua",
+                "example_sentence": "you really hit the ground running when the pandemic started.",
+            }
+        ],
+        "grammar": [
+            {
+                "point": "Present Perfect Continuous",
+                "structure": "have/has + been + verb-ing",
+                "explanation_en": "for an action continuing up to now",
+                "explanation_vi": "hanh dong tiep dien den hien tai",
+                "examples": ["I have been working remotely from home for five years now."],
+            }
+        ],
+        "questions": [
+            {"question": "Q1?", "options": ["A", "B"], "correct_answer": "A", "explanation": "e"},
+            {"question": "Q2?", "options": ["A", "B"], "correct_answer": "B", "explanation": "e"},
+            {"question": "Q3 (open-ended)?", "options": [], "correct_answer": "", "explanation": "e"},
+        ],
+    }
+    base.update(overrides)
+    return LearningPackOut.model_validate(base)
+
+
+def _result(pack: LearningPackOut) -> GenerationResult:
+    return GenerationResult(
+        text=pack.model_dump_json(), provider="fake-gemini", model="fake-model",
+        latency_ms=1.0, attempt=1, prompt_hash="abc123",
+    )
+
+
+def _build_router(gemini_outcomes: list) -> tuple[AIRouter, FakeProvider, FakeProvider]:
+    gemini = FakeProvider("gemini", gemini_outcomes)
+    local = FakeProvider("ollama", [])
+    return AIRouter(local=local, gemini=gemini, mode=AIMode.GEMINI), gemini, local
+
+
+def make_config() -> ScriptConfig:
+    return ScriptConfig(
+        name="Learning pipeline test",
+        topic="remote work",
+        cefr_level="B1",
+        duration_minutes=2.0,
+        num_speakers=2,
+        genre="interview",
+        accent="american",
+        speakers=[
+            SpeakerConfig(name="Alex", gender="male", accent="american"),
+            SpeakerConfig(name="Maya", gender="female", accent="american"),
+        ],
+    )
+
+
+async def _project_with_script(db) -> dict:
+    project = await project_service.create_project(db, make_config())
+    speaker_ids = [speaker["id"] for speaker in project["speakers"]]
+    lines = [
+        {"speaker_id": speaker_ids[0], "text": "I have been working remotely from home for five years now."},
+        {"speaker_id": speaker_ids[1], "text": "That is great, you really hit the ground running when the pandemic started."},
+    ]
+    await script_service.save_script(db, project["id"], lines, set(speaker_ids))
+    return await project_service.get_project(db, project["id"])
+
+
+# --- pure validators: five deterministic fixture packs -------------------------------
+
+
+def test_fixture_1_valid_pack_passes_all_checks():
+    assert learning_pipeline.validate_pack(_pack(), TRANSCRIPT) == []
+
+
+def test_fixture_2_ungrounded_example_sentence_fails():
+    pack = _pack(vocabulary=[{**_pack().vocabulary[0].model_dump(), "example_sentence": "This sentence is invented."}])
+    errors = learning_pipeline.validate_pack(pack, TRANSCRIPT)
+    assert any("not found in transcript" in error for error in errors)
+
+
+def test_fixture_3_duplicate_question_fails():
+    q = _pack().questions[0].model_dump()
+    pack = _pack(questions=[q, q, _pack().questions[2].model_dump()])
+    errors = learning_pipeline.validate_pack(pack, TRANSCRIPT)
+    assert any("duplicate question" in error for error in errors)
+
+
+def test_fixture_4_mcq_answer_not_in_options_fails():
+    pack = _pack(
+        questions=[
+            {"question": "Q1?", "options": ["A", "B"], "correct_answer": "C", "explanation": "e"},
+            {"question": "Q2?", "options": ["A", "B"], "correct_answer": "B", "explanation": "e"},
+            {"question": "Q3?", "options": [], "correct_answer": "", "explanation": "e"},
+        ]
+    )
+    errors = learning_pipeline.validate_pack(pack, TRANSCRIPT)
+    assert any("correct_answer not among its options" in error for error in errors)
+
+
+def test_fixture_5_too_few_questions_fails_count_check():
+    pack = _pack(questions=[{"question": "Only one?", "options": [], "correct_answer": "", "explanation": "e"}])
+    errors = learning_pipeline.validate_pack(pack, TRANSCRIPT)
+    assert any("questions has 1 item" in error for error in errors)
+
+
+# --- pure validators: additional targeted cases ---------------------------------------
+
+
+def test_validate_grounding_rejects_ungrounded_idiom_phrase():
+    pack = _pack(idioms=[{**_pack().idioms[0].model_dump(), "phrase": "a completely made up idiom"}])
+    errors = learning_pipeline.validate_grounding(pack, TRANSCRIPT)
+    assert any("phrase not found in transcript" in error for error in errors)
+
+
+def test_validate_counts_rejects_too_many_grammar_points():
+    pack = _pack(grammar=[_pack().grammar[0].model_dump()] * 3)
+    # 3 distinct grammar points needed to avoid tripping duplicate detection instead
+    for i, item in enumerate(pack.grammar):
+        item.point = f"Point {i}"
+    errors = learning_pipeline.validate_counts(pack)
+    assert any("grammar has 3 point" in error for error in errors)
+
+
+def test_validate_duplicates_rejects_duplicate_vocabulary_word():
+    entry = _pack().vocabulary[0].model_dump()
+    pack = _pack(vocabulary=[entry, dict(entry)])
+    errors = learning_pipeline.validate_duplicates(pack)
+    assert any("duplicate vocabulary word" in error for error in errors)
+
+
+def test_validate_answers_allows_open_ended_with_no_options():
+    pack = _pack(questions=[{"question": "Discuss.", "options": [], "correct_answer": "", "explanation": "e"}] * 1
+                 + [_pack().questions[0].model_dump(), _pack().questions[1].model_dump()])
+    assert learning_pipeline.validate_answers(pack) == []
+
+
+# --- handler: end-to-end with a FakeProvider-backed router --------------------------
+
+
+async def test_pipeline_happy_path_completes_and_saves_pack(db):
+    project = await _project_with_script(db)
+    router, gemini, local = _build_router([_result(_pack())])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "learning", {"project": project, "operation": "learning"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await learning_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete"
+    assert local.call_count == 0
+
+    saved = await learning_service.get_learning_content(db, project["id"])
+    assert saved is not None
+    assert len(saved["vocabulary"]) == 1
+
+
+async def test_pipeline_repairs_an_invalid_pack_once_then_completes(db):
+    project = await _project_with_script(db)
+    invalid_pack = _pack(vocabulary=[{**_pack().vocabulary[0].model_dump(), "example_sentence": "Invented sentence."}])
+    router, gemini, _local = _build_router([_result(invalid_pack), _result(_pack())])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "learning", {"project": project, "operation": "learning"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await learning_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete"
+    assert gemini.call_count == 2  # one invalid attempt + one repair
+    saved = await learning_service.get_learning_content(db, project["id"])
+    assert saved is not None
+
+
+async def test_pipeline_fails_transparently_when_repair_also_fails(db):
+    project = await _project_with_script(db)
+    invalid_pack = _pack(vocabulary=[{**_pack().vocabulary[0].model_dump(), "example_sentence": "Invented."}])
+    still_invalid_pack = _pack(idioms=[{**_pack().idioms[0].model_dump(), "phrase": "still made up"}])
+    router, gemini, _local = _build_router([_result(invalid_pack), _result(still_invalid_pack)])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "learning", {"project": project, "operation": "learning"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await learning_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "error"
+    assert final_job["error_code"] == "pack_validation_failed"
+    # prior state (none, for a fresh project) is provably unchanged.
+    assert await learning_service.get_learning_content(db, project["id"]) is None
+
+
+async def test_pipeline_fails_when_script_is_empty(db):
+    project = await project_service.create_project(db, make_config())  # no script saved
+    router, gemini, _local = _build_router([])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "learning", {"project": project, "operation": "learning"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await learning_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "error"
+    assert final_job["error_code"] == "script_empty"
+    assert gemini.call_count == 0
+
+
+async def test_pipeline_cancels_when_already_requested_before_processing(db):
+    project = await _project_with_script(db)
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "learning", {"project": project, "operation": "learning"}
+    )
+    await ai_job_service.claim_job(db, job["id"], "worker-1")
+    await ai_job_service.request_cancel(db, job["id"], project["id"])
+    fresh_claimed = await ai_job_service.get_job(db, job["id"], project["id"])
+
+    router, gemini, _local = _build_router([])
+    worker = AIWorker(db_getter=lambda: db)
+    await learning_pipeline.make_handler(router)(fresh_claimed, worker)
+
+    result = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert result["status"] == "cancelled"
+    assert gemini.call_count == 0
+
+
+async def test_pipeline_marks_stale_when_project_changed_since_job_creation(db):
+    project = await _project_with_script(db)
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "learning", {"project": project, "operation": "learning"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+
+    from app.models.project import ProjectUpdate
+
+    await project_service.update_project(db, project["id"], ProjectUpdate(topic="A totally different topic now"))
+
+    router, gemini, _local = _build_router([])
+    worker = AIWorker(db_getter=lambda: db)
+    await learning_pipeline.make_handler(router)(claimed, worker)
+
+    result = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert result["status"] == "stale"
+    assert gemini.call_count == 0
+
+
+async def test_pipeline_marks_stale_when_script_changed_during_generation(db, monkeypatch):
+    """The pipeline's own start-vs-final-save script-hash check (see
+    task-13.5.md's 'real gap' note) catches a script edit landing mid-flight,
+    since ai_generation_jobs.script_hash_at_start is never populated yet."""
+    project = await _project_with_script(db)
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "learning", {"project": project, "operation": "learning"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+
+    real_get_script = script_service.get_script
+    call_count = {"n": 0}
+
+    async def get_script_then_mutate(db_arg, project_id):
+        call_count["n"] += 1
+        lines = await real_get_script(db_arg, project_id)
+        if call_count["n"] == 1:
+            # Simulate a concurrent script edit landing right after the pipeline's
+            # first read, before its final-save re-check.
+            speaker_ids = [s["id"] for s in project["speakers"]]
+            await script_service.save_script(
+                db_arg, project_id,
+                [{"speaker_id": speaker_ids[0], "text": "This script was edited during generation."}],
+                set(speaker_ids),
+            )
+        return lines
+
+    monkeypatch.setattr(learning_pipeline.script_service, "get_script", get_script_then_mutate)
+
+    router, gemini, _local = _build_router([_result(_pack())])
+    worker = AIWorker(db_getter=lambda: db)
+    await learning_pipeline.make_handler(router)(claimed, worker)
+
+    result = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert result["status"] == "stale"
+    assert await learning_service.get_learning_content(db, project["id"]) is None

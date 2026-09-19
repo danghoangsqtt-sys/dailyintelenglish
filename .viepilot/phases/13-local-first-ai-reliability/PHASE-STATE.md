@@ -34,7 +34,7 @@
 | 13.2 | Provider-neutral AI gateway | done | Contract tests passed |
 | 13.3 | Shared transactions and durable jobs | done | State-machine review passed |
 | 13.4 | Checkpointed script generation | done | Content validators passed |
-| 13.5 | Grounded learning generation | in_progress | Learning quality |
+| 13.5 | Grounded learning generation | done | Learning quality passed |
 | 13.6 | Settings, health, and Step 2/3 job UX | pending | Browser recovery |
 | 13.7 | Gemini fallback and compatibility | pending | Forced fallback |
 | 13.8 | Automated regression/packaging gate | pending | Full suite/build |
@@ -160,3 +160,15 @@
   answer validators; one repair pass via a new learning_repair.txt) into
   tasks/task-13.5.md before any code, recording the gap honestly. Task 13.5
   moved to `in_progress`.
+- 2026-09-19: Task 13.5 implemented -- learning_pipeline.py's validators
+  (grounding/counts/duplicates/answer-consistency), one repair pass via a new
+  learning_repair.txt, and a handler mirroring script_pipeline.py's stale/
+  cancel/atomic-save structure. Since ai_generation_jobs.script_hash_at_start
+  is never populated (job creation is outside this task's allowed files too),
+  the pipeline substitutes its own start-vs-final-save script-hash comparison,
+  confirmed real via revert-and-confirm-failure. 26 new tests including 7 full
+  end-to-end handler tests; all 20 pre-existing test_learning_service.py tests
+  and all 22 test_learning_api.py tests pass unmodified. Full suite:
+  **794/794 pass**, 0 flakes, `ruff check .`/`git diff --check` clean. Every
+  content pipeline Phase 13 planned (script + learning) now exists; neither is
+  wired into app/main.py yet (deferred to Task 13.6). Task 13.5 moved to `done`.

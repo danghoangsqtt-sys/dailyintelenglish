@@ -1404,6 +1404,43 @@ task's allowed files) — recorded in `HANDOFF.json`, not dropped. See
 `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.4.md` for the full
 plan and evidence record.
 
+### 13.5 Grounded learning pipeline — ✅ DONE (2026-09-19)
+
+Built `app/services/learning_pipeline.py`: `validate_counts`/`validate_grounding`/
+`validate_duplicates`/`validate_answers` (pure functions, sourced from the
+existing `learning_pack.txt` prompt's own stated ranges — 1-2 grammar points,
+3-5 questions — never invented thresholds) and a `make_handler(router)`
+orchestration mirroring `script_pipeline.py`'s structure: initial project-hash
++ cancel check, a script-empty guard, one generation call at a low
+(`LEARNING_GENERATION_TEMPERATURE = 0.2`) temperature per the plan, validation,
+one repair pass through a new `prompts/learning/learning_repair.txt` on
+failure, a second re-check immediately before saving, and one atomic
+transaction for the final save + `complete` transition. **Real gap found and
+honestly worked around**: `ai_generation_jobs.script_hash_at_start` (added in
+Task 13.3's migration) is never populated by `create_job()`/`app/api/ai_jobs.py`
+— neither file is in this task's allowed list either — so the pipeline
+substitutes its own start-vs-final-save script-hash comparison
+(`learning_service.compute_script_hash`, new, hashes only speaker_id/text) to
+close the same race window functionally; recorded in the task card rather than
+silently skipped, the same way Task 13.4 recorded the `app/main.py` wiring gap.
+26 new tests: 5 labeled "fixture" tests for the deterministic pack-validation
+cases the task card names (valid pack, ungrounded example, duplicate question,
+MCQ answer not in options, too-few-questions), 4 more targeted validator
+tests, and 7 full end-to-end handler tests against a real in-memory DB with a
+`FakeProvider`-backed router (happy path, repair, repair-fails, script-empty,
+cancel, stale-on-project-change, and **stale-on-script-change-during-
+generation** — a monkeypatched `get_script` simulates a concurrent edit
+landing mid-flight). **Revert-and-confirm-failure** on that last check:
+disabling the script-hash-at-final-save comparison made the job complete on
+now-stale content instead of failing; restoring it brought all 16 pipeline
+tests back to green. All 20 pre-existing `test_learning_service.py` tests and
+all 22 `test_learning_api.py` tests pass **unmodified**. Full suite:
+**794/794 pass**, 0 flakes, `ruff check .`/`git diff --check` clean. Every
+content pipeline Phase 13 planned (script + learning) now exists; neither is
+wired into the running app yet (`app/main.py` deferred to Task 13.6). See
+`.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.5.md` for the
+full plan and evidence record.
+
 ## Decision Log
 
 | Date | Decision | Rationale |
