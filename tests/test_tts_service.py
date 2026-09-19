@@ -174,12 +174,12 @@ async def test_preview_line_does_not_hold_the_write_lock_during_synthesis(db, mo
     network call inside the app's single connection-wide write lock, stalling every
     other request (even an unrelated dashboard GET) for the duration. Same "no lock
     across slow work" rule already applied to Gemini calls and audio/video
-    generation elsewhere (see app/api/projects.py's module docstring) must also
+    generation elsewhere (see app/db/transactions.py's module docstring) must also
     apply here."""
     import asyncio
 
-    from app.api import projects as projects_api
     from app.api import tts as tts_api
+    from app.db import transactions
     from app.models.tts import PreviewLineRequest
 
     project = await project_service.create_project(db, make_config())
@@ -204,7 +204,7 @@ async def test_preview_line_does_not_hold_the_write_lock_during_synthesis(db, mo
     # While synthesis is in flight, the write lock must be free -- if preview_line
     # still held it here (the bug), this would hang until the timeout and fail.
     async with asyncio.timeout(1.0):
-        async with projects_api._read_transaction():
+        async with transactions.read_transaction():
             pass
 
     release_synthesis.set()

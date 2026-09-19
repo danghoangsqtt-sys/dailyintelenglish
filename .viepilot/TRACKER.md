@@ -1313,6 +1313,51 @@ pass" constraint. See
 `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.2.md` for the full
 plan and evidence record.
 
+### 13.3 Shared transactions and durable AI jobs — ✅ DONE (2026-09-19)
+
+Moved the app's single connection-wide `_write_lock`/`_read_transaction`/
+`_write_transaction` out of `app/api/projects.py` (a router that 7 other routers
+and 2 tests imported cross-router — the wrong shape) into a real shared home,
+`app/db/transactions.py` (public names, no leading underscore). All 43 call
+sites across `settings.py`/`tts.py`/`audio.py`/`video.py`/`youtube.py`/
+`thumbnail.py`/`learning.py` plus `tests/conftest.py`'s reset fixture and 2
+regression test files moved together in the same change — confirmed zero
+dual-lock state at any point via a whole-repo grep. Added the durable job
+schema (`006_ai_generation_jobs.sql`): `ai_generation_jobs` (full column set per
+the controlling plan, CHECK constraints, cascade delete) and
+`ai_generation_checkpoints`, with two indexes doing real work — a **partial**
+unique index enforces one active job per project+operation at the DB level, and
+a full unique index on `(project_id, operation, idempotency_key)` makes a
+client's idempotent retry durable even after the job goes terminal. Built
+`app/services/ai_job_service.py` (explicit legal-transition table; atomic
+single-`UPDATE` claim, never SELECT-then-UPDATE; owner-checked heartbeat;
+idempotent cancel; bounded abandoned-job recovery that forces `error` after
+`AI_JOB_MAX_RECOVERY_ATTEMPTS` instead of retrying forever) and
+`app/services/ai_worker.py` (claim/process loop that stays idle — touching no
+DB row — until Task 13.4/13.5 register a "script"/"learning" handler; bounded
+graceful shutdown that cancels rather than waits forever for a stuck handler).
+New `app/api/ai_jobs.py`: `POST .../ai-jobs` (202 new / 200 existing, both
+contract-legal), `GET .../ai-jobs/active` (`null` for "nothing yet", matching
+this app's established style, never a bogus 404), `GET .../ai-jobs/{id}`/
+`POST .../ai-jobs/{id}/cancel` (404 on cross-project access), and
+`GET /api/ai/health` (mode/reachability/model/fallback-configured, confirmed to
+never leak the Gemini key even under a forced-unreachable-Ollama test, and
+never fails app startup). **Real bug found via API-level testing that
+service/worker unit tests missed**: `AIWorker._stop_event` was constructed once
+in `__init__` and reused across `start()`/`stop()` cycles — invisible to tests
+using one raw `db` fixture and one event loop, but `TestClient(app)`'s real
+FastAPI lifespan runs under a fresh loop per test, so the second test's
+shutdown raised `RuntimeError: ... bound to a different event loop` (12/19 API
+tests failed). Fixed by constructing a fresh `asyncio.Event()` inside `start()`
+itself. Revert-and-confirm-failure: reverted, re-ran — the same 12 tests failed
+identically; restored, re-ran — 19/19 pass. 90 new tests total (7 migration, 44
+service, 6 worker, 19 API/health). Full suite: **753/753 pass**, 0 flakes,
+`ruff check .` clean, `git diff --check` clean. No content pipeline registered
+yet — nothing in production creates a real script/learning job through this
+system until Task 13.4/13.5 land. See
+`.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.3.md` for the full
+plan and evidence record.
+
 ## Decision Log
 
 | Date | Decision | Rationale |

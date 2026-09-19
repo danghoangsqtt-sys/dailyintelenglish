@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import audio, learning, music, projects, settings as settings_api, thumbnail, tts, video, youtube
+from app.api import ai_jobs, audio, learning, music, projects, settings as settings_api, thumbnail, tts, video, youtube
 from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.paths import get_project_root
@@ -17,11 +17,16 @@ from app.core.responses import ok
 from app.core.system_checks import check_ffmpeg, get_gpu_info
 from app.db.database import Database, close_db, init_db
 from app.services import settings_service
+from app.services.ai_worker import AIWorker
 
 PROJECT_ROOT = get_project_root()
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 
 app_state: dict = {"ffmpeg_ok": False, "gpu_info": None}
+# No handler is registered yet -- Task 13.4/13.5 call ai_worker.register_handler(...)
+# for "script"/"learning". Until then the worker's poll loop stays idle (see
+# AIWorker._claim_next), never claiming a job it has nothing to do with.
+ai_worker = AIWorker(db_getter=lambda: Database.instance().connection)
 
 
 @asynccontextmanager
@@ -45,9 +50,11 @@ async def lifespan(app: FastAPI):
     await settings_service.load_gemini_api_key_from_db(Database.instance().connection)
     app_state["ffmpeg_ok"] = await check_ffmpeg()
     app_state["gpu_info"] = await get_gpu_info()
+    await ai_worker.start()
 
     yield
 
+    await ai_worker.stop()
     await close_db()
 
 
@@ -97,6 +104,8 @@ app.include_router(music.router)
 app.include_router(thumbnail.router)
 app.include_router(youtube.router)
 app.include_router(settings_api.router)
+app.include_router(ai_jobs.router)
+app.include_router(ai_jobs.health_router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
 

@@ -131,7 +131,7 @@ async def synthesize_line_audio(project: dict, line: dict) -> dict:
 
     This is the slow half (network call to Edge TTS, or GPU inference once OmniVoice
     is real) of what `synthesize_line` used to do as one step. Callers that hold a
-    `_write_transaction` lock (see `app/api/projects.py`'s module docstring on why
+    `write_transaction` lock (see `app/db/transactions.py`'s module docstring on why
     that lock must never wrap slow network/GPU work) must call this function
     *outside* that lock, then a separate, short `save_line_audio_cache` call inside
     it — see `app/api/tts.py::preview_line` for the intended shape. Found by an
@@ -195,7 +195,7 @@ async def synthesize_line(
 
     Convenience wrapper around `synthesize_line_audio` + `save_line_audio_cache` for
     callers with no lock to release in between (tests, or any future caller outside
-    a `_write_transaction`). `app/api/tts.py::preview_line` calls the two phases
+    a `write_transaction`). `app/api/tts.py::preview_line` calls the two phases
     directly instead, so the slow network/GPU work never runs while holding the
     app's connection-wide write lock.
     """

@@ -6,7 +6,7 @@ import aiosqlite
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
-from app.api.projects import _read_transaction, _write_transaction
+from app.db.transactions import read_transaction, write_transaction
 from app.core.responses import ok
 from app.db.database import get_db
 from app.models.thumbnail import (
@@ -36,7 +36,7 @@ async def generate_thumbnails(
 ) -> dict:
     """Generate and persist exactly N variants for one project and selected template."""
     started_at = time.perf_counter()
-    async with _read_transaction():
+    async with read_transaction():
         project = await project_service.get_project(db, project_id)
 
     template = await thumbnail_service.load_template(payload.template_name)
@@ -47,7 +47,7 @@ async def generate_thumbnails(
     )
     rendered = await thumbnail_service.render_batch(project_id, template, suggestions.variants)
     try:
-        async with _write_transaction(db):
+        async with write_transaction(db):
             old_rows = await thumbnail_service.replace_thumbnail_rows(
                 db,
                 project_id,
@@ -59,7 +59,7 @@ async def generate_thumbnails(
         raise
 
     await thumbnail_service.cleanup_rows(old_rows)
-    async with _read_transaction():
+    async with read_transaction():
         rows = await thumbnail_service.get_thumbnail_rows(db, project_id)
     result = await thumbnail_service.public_records(rows)
     return ok(result, started_at=started_at)
@@ -72,7 +72,7 @@ async def list_project_thumbnails(
 ) -> dict:
     """List the current persisted thumbnail generation batch for a project."""
     started_at = time.perf_counter()
-    async with _read_transaction():
+    async with read_transaction():
         await project_service.get_project(db, project_id)
         rows = await thumbnail_service.get_thumbnail_rows(db, project_id)
     result = await thumbnail_service.public_records(rows)
@@ -87,7 +87,7 @@ async def select_thumbnail_favorite(
 ) -> dict:
     """Idempotently select one project thumbnail as its exclusive favorite."""
     started_at = time.perf_counter()
-    async with _write_transaction(db):
+    async with write_transaction(db):
         await project_service.get_project(db, project_id)
         await thumbnail_service.select_favorite(
             db,
@@ -95,7 +95,7 @@ async def select_thumbnail_favorite(
             thumbnail_id,
             commit=False,
         )
-    async with _read_transaction():
+    async with read_transaction():
         selected = await thumbnail_service.get_thumbnail_row(db, project_id, thumbnail_id)
         result = (await thumbnail_service.public_records([selected]))[0]
     return ok(result, started_at=started_at)
@@ -110,13 +110,13 @@ async def edit_thumbnail(
 ) -> dict:
     """Persist one optimistic headline/palette edit and its fresh image revision."""
     started_at = time.perf_counter()
-    async with _read_transaction():
+    async with read_transaction():
         await project_service.get_project(db, project_id)
         current = await thumbnail_service.get_thumbnail_row(db, project_id, thumbnail_id)
 
     rendered = await thumbnail_service.render_edited_thumbnail(current, payload)
     try:
-        async with _write_transaction(db):
+        async with write_transaction(db):
             old_row = await thumbnail_service.update_thumbnail_revision(
                 db,
                 project_id,
@@ -130,7 +130,7 @@ async def edit_thumbnail(
         raise
 
     await thumbnail_service.cleanup_rows([old_row])
-    async with _read_transaction():
+    async with read_transaction():
         updated = await thumbnail_service.get_thumbnail_row(db, project_id, thumbnail_id)
         result = (await thumbnail_service.public_records([updated]))[0]
     return ok(result, started_at=started_at)
@@ -147,7 +147,7 @@ async def get_thumbnail_content(
     db: aiosqlite.Connection = Depends(get_db),
 ) -> FileResponse:
     """Serve one validated thumbnail derivative without exposing the runtime data tree."""
-    async with _read_transaction():
+    async with read_transaction():
         await project_service.get_project(db, project_id)
         path = await thumbnail_service.resolve_content_path(
             db,

@@ -923,3 +923,23 @@ configuration-only Gemini rollback path. See
   route/service touched. See
   `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.2.md` for the full
   record.
+
+### 13.3 Shared transactions and durable AI jobs — ✅ DONE (2026-09-19)
+
+- [x] Moved the app's single connection-wide write-lock out of `app/api/projects.py`
+  (a router 7 other routers + 2 tests imported cross-router) into
+  `app/db/transactions.py` — all 43 call sites moved together, zero dual-lock state
+  confirmed. Added the `ai_generation_jobs`/`ai_generation_checkpoints` migration
+  (partial unique index for one active job per project+operation, full unique index
+  for durable idempotency-key replay), `ai_job_service.py` (explicit transition
+  matrix, atomic single-`UPDATE` claim, owner-checked heartbeat, idempotent cancel,
+  bounded recovery), `ai_worker.py` (claim/process loop, idle until Task 13.4/13.5
+  register a handler, bounded graceful shutdown), and `app/api/ai_jobs.py`
+  (202/200 create, null-not-404 active-job contract, safe response projection,
+  `GET /api/ai/health` that never leaks the Gemini key or fails startup). A real
+  event-loop-binding bug in `AIWorker._stop_event` was found via API-level
+  `TestClient` tests and fixed; confirmed via revert-and-confirm-failure. 90 new
+  tests. Full suite **753/753 pass**, 0 flakes, `ruff`/`git diff --check` clean. No
+  content pipeline registered yet. See
+  `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.3.md` for the full
+  record.

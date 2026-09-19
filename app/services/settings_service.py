@@ -52,7 +52,7 @@ async def get_gemini_api_key_status(db: aiosqlite.Connection) -> dict:
 async def set_gemini_api_key(db: aiosqlite.Connection, raw_key: str) -> dict:
     """Validate, persist, and immediately apply a new Gemini API key.
 
-    Caller must run this inside a `_write_transaction` block (see app/api/settings.py)
+    Caller must run this inside a `write_transaction` block (see app/api/settings.py)
     so the upsert is committed the same way every other write in this app is.
     """
     cleaned = raw_key.strip()
@@ -72,7 +72,7 @@ async def set_gemini_api_key(db: aiosqlite.Connection, raw_key: str) -> dict:
 async def clear_gemini_api_key(db: aiosqlite.Connection) -> dict:
     """Remove the DB-stored key and revert to the original .env/environment value.
 
-    Caller must run this inside a `_write_transaction` block, same as `set_gemini_api_key`.
+    Caller must run this inside a `write_transaction` block, same as `set_gemini_api_key`.
     """
     await db.execute(
         "DELETE FROM app_settings WHERE key = ?", (GEMINI_API_KEY_SETTING,)

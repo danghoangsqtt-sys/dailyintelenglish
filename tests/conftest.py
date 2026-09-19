@@ -24,7 +24,7 @@ async def db() -> aiosqlite.Connection:
 
 @pytest.fixture(autouse=True)
 def _reset_write_lock():
-    """Give every test a fresh app.api.projects._write_lock.
+    """Give every test a fresh app.db.transactions.write_lock.
 
     asyncio.Lock binds to whichever event loop first calls acquire() on it,
     and pytest-asyncio hands each test function its own loop (function-scoped
@@ -33,16 +33,16 @@ def _reset_write_lock():
     artifact of the test runner, never reachable in production where the app
     has exactly one event loop for its entire lifetime.
     """
-    from app.api import projects as projects_api
+    from app.db import transactions
 
-    projects_api._write_lock = Lock()
+    transactions.write_lock = Lock()
     yield
 
 
 @pytest.fixture(autouse=True)
 def _reset_omnivoice_semaphore():
     """Give every test a fresh tts_service._omnivoice_semaphore — same event-loop-binding
-    hazard as `_write_lock` above (module-level asyncio primitive constructed once at
+    hazard as `write_lock` above (module-level asyncio primitive constructed once at
     import time, reused across pytest-asyncio's per-test event loops)."""
     from app.core.constants import MAX_CONCURRENT_TTS
     from app.services import tts_service

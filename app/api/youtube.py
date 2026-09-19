@@ -6,7 +6,7 @@ import time
 import aiosqlite
 from fastapi import APIRouter, Depends, Response
 
-from app.api.projects import _read_transaction, _write_transaction
+from app.db.transactions import read_transaction, write_transaction
 from app.core.exceptions import ValidationError
 from app.core.responses import ok
 from app.db.database import get_db
@@ -33,7 +33,7 @@ async def generate_youtube_package(
     otherwise estimated from script word count (Sub-task 1.9a's original behavior).
     """
     started_at = time.perf_counter()
-    async with _read_transaction():
+    async with read_transaction():
         project = await project_service.get_project(db, project_id)
         script_lines = await script_service.get_script(db, project_id)
         audio_job = await audio_service.get_audio_job(db, project_id)
@@ -41,7 +41,7 @@ async def generate_youtube_package(
         raise ValidationError("Cannot generate a YouTube package: script is empty")
     timestamps = audio_job["timestamps"] if audio_job and audio_job["status"] == "complete" else None
     package = await youtube_service.generate_package(project, script_lines, timestamps)  # no lock — Gemini call
-    async with _write_transaction(db):
+    async with write_transaction(db):
         saved = await youtube_service.save_package(db, project_id, package, commit=False)
     return ok(saved, started_at=started_at)
 
@@ -50,7 +50,7 @@ async def generate_youtube_package(
 async def get_youtube_package(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Fetch the current YouTube package for a project (null if not generated yet)."""
     started_at = time.perf_counter()
-    async with _read_transaction():
+    async with read_transaction():
         await project_service.get_project(db, project_id)
         package = await youtube_service.get_package(db, project_id)
     return ok(package, started_at=started_at)
@@ -63,7 +63,7 @@ async def export_youtube_package(project_id: str, db: aiosqlite.Connection = Dep
     Requires a generated YouTube package, a completed video, and a selected favorite
     thumbnail — a ValidationError names exactly which piece is missing.
     """
-    async with _read_transaction():
+    async with read_transaction():
         project = await project_service.get_project(db, project_id)
         package = await youtube_service.get_package(db, project_id)
         video_job = await video_service.get_video_job(db, project_id)

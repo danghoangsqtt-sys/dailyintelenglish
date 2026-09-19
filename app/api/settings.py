@@ -5,7 +5,7 @@ import time
 import aiosqlite
 from fastapi import APIRouter, Depends
 
-from app.api.projects import _write_transaction
+from app.db.transactions import write_transaction
 from app.core.responses import ok
 from app.db.database import get_db
 from app.models.settings import GeminiApiKeyUpdate
@@ -31,7 +31,7 @@ async def update_gemini_api_key(
 ) -> dict:
     """Save a new Gemini API key -- takes effect immediately, no restart needed."""
     started_at = time.perf_counter()
-    async with _write_transaction(db):
+    async with write_transaction(db):
         status = await settings_service.set_gemini_api_key(db, payload.gemini_api_key)
     return ok(status, started_at=started_at)
 
@@ -40,6 +40,6 @@ async def update_gemini_api_key(
 async def clear_gemini_api_key(db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Remove the stored key and revert to the original .env/environment value."""
     started_at = time.perf_counter()
-    async with _write_transaction(db):
+    async with write_transaction(db):
         status = await settings_service.clear_gemini_api_key(db)
     return ok(status, started_at=started_at)

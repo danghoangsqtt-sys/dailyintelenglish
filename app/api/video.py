@@ -10,7 +10,7 @@ import aiosqlite
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
-from app.api.projects import _read_transaction, _write_transaction
+from app.db.transactions import read_transaction, write_transaction
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.responses import ok
 from app.db.database import get_db
@@ -37,7 +37,7 @@ async def generate_video(
 ) -> dict:
     """Render the project's completed audio mix into an MP4 with burned-in subtitles."""
     started_at = time.perf_counter()
-    async with _read_transaction():
+    async with read_transaction():
         project = await project_service.get_project(db, project_id)
         audio_job = await audio_service.get_audio_job(db, project_id)
     if audio_job is None or audio_job["status"] != "complete":
@@ -50,11 +50,11 @@ async def generate_video(
             project_id, audio_job, payload.template_id, payload.aspect_ratio
         )
     except Exception as exc:
-        async with _write_transaction(db):
+        async with write_transaction(db):
             await video_service.mark_video_job_failed(db, project_id, str(exc), commit=False)
         raise
 
-    async with _write_transaction(db):
+    async with write_transaction(db):
         job = await video_service.save_video_job(
             db,
             project_id,
@@ -76,7 +76,7 @@ async def generate_video(
 async def get_video_status(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Return the current video job for a project (404 if video was never generated)."""
     started_at = time.perf_counter()
-    async with _read_transaction():
+    async with read_transaction():
         await project_service.get_project(db, project_id)
         job = await video_service.get_video_job(db, project_id)
     if job is None:
@@ -93,7 +93,7 @@ async def download_video(
     media_type = _DOWNLOAD_FORMATS.get(format)
     if media_type is None:
         raise ValidationError(f"Unsupported format {format!r}: expected 'mp4', 'mp4_vertical', or 'srt'")
-    async with _read_transaction():
+    async with read_transaction():
         await project_service.get_project(db, project_id)
         job = await video_service.get_video_job(db, project_id)
     if job is None or job["status"] not in ("complete", "error"):

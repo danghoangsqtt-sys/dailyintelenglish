@@ -6,7 +6,7 @@ import aiosqlite
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
-from app.api.projects import _read_transaction, _write_transaction
+from app.db.transactions import read_transaction, write_transaction
 from app.core.exceptions import NotFoundError
 from app.core.responses import ok
 from app.db.database import get_db
@@ -48,15 +48,15 @@ async def preview_line(
     No lock is held across the synthesis call itself (network round-trip to Edge
     TTS, potentially slow) — same "no lock across slow work" rule already applied
     to Gemini calls and audio/video generation elsewhere in this codebase. A short
-    `_read_transaction` snapshots what's needed, then a separate, short
-    `_write_transaction` persists the result.
+    `read_transaction` snapshots what's needed, then a separate, short
+    `write_transaction` persists the result.
     """
     started_at = time.perf_counter()
-    async with _read_transaction():
+    async with read_transaction():
         project = await project_service.get_project(db, project_id)
         line = await script_service.get_script_line(db, project_id, payload.line_id)
     result = await tts_service.synthesize_line_audio(project, line)  # no lock held — network call
-    async with _write_transaction(db):
+    async with write_transaction(db):
         await tts_service.save_line_audio_cache(
             db, project_id, payload.line_id, result["audio_path"], commit=False
         )
@@ -66,7 +66,7 @@ async def preview_line(
 @preview_router.get("/cache/{line_id}.mp3")
 async def get_cached_audio(project_id: str, line_id: str, db: aiosqlite.Connection = Depends(get_db)) -> FileResponse:
     """Serve a previously synthesized line's cached audio file."""
-    async with _read_transaction():
+    async with read_transaction():
         audio_path = await tts_service.get_cached_audio_path(db, project_id, line_id)
     if not audio_path:
         raise NotFoundError(f"No cached audio for line {line_id}")

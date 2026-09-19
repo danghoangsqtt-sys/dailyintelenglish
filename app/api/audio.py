@@ -14,7 +14,7 @@ import aiosqlite
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
-from app.api.projects import _read_transaction, _write_transaction
+from app.db.transactions import read_transaction, write_transaction
 from app.core.exceptions import NotFoundError, ValidationError
 from app.core.responses import ok
 from app.db.database import get_db
@@ -33,7 +33,7 @@ async def generate_audio(
 ) -> dict:
     """Mix all of a project's synthesized lines into one podcast track."""
     started_at = time.perf_counter()
-    async with _read_transaction():
+    async with read_transaction():
         project = await project_service.get_project(db, project_id)
         lines = await audio_service.get_lines_for_mixing(db, project_id)
     if not lines:
@@ -45,11 +45,11 @@ async def generate_audio(
     try:
         result = await audio_service.mix_project(project, lines, payload.background_music)
     except Exception as exc:
-        async with _write_transaction(db):
+        async with write_transaction(db):
             await audio_service.mark_audio_job_failed(db, project_id, str(exc), commit=False)
         raise
 
-    async with _write_transaction(db):
+    async with write_transaction(db):
         job = await audio_service.save_audio_job(
             db,
             project_id,
@@ -73,7 +73,7 @@ async def generate_audio(
 async def get_audio_status(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Return the current audio job for a project (404 if audio was never generated)."""
     started_at = time.perf_counter()
-    async with _read_transaction():
+    async with read_transaction():
         await project_service.get_project(db, project_id)
         job = await audio_service.get_audio_job(db, project_id)
     if job is None:
@@ -89,7 +89,7 @@ async def download_audio(
     media_type = _DOWNLOAD_FORMATS.get(format)
     if media_type is None:
         raise ValidationError(f"Unsupported format {format!r}: expected 'mp3' or 'wav'")
-    async with _read_transaction():
+    async with read_transaction():
         await project_service.get_project(db, project_id)
         job = await audio_service.get_audio_job(db, project_id)
     if job is None or job["status"] not in ("complete", "error"):

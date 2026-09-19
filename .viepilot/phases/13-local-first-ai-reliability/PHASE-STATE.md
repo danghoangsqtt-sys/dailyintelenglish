@@ -32,7 +32,7 @@
 | 13.0 | Baseline, ADR, backup, rollback contract | done | Doc-first passed |
 | 13.1 | Install and qualify Ollama/Qwen | done | Gate A passed |
 | 13.2 | Provider-neutral AI gateway | done | Contract tests passed |
-| 13.3 | Shared transactions and durable jobs | in_progress | State-machine review |
+| 13.3 | Shared transactions and durable jobs | done | State-machine review passed |
 | 13.4 | Checkpointed script generation | pending | Content validators |
 | 13.5 | Grounded learning generation | pending | Learning quality |
 | 13.6 | Settings, health, and Step 2/3 job UX | pending | Browser recovery |
@@ -111,3 +111,21 @@
   migration, `ai_job_service.py`'s transition matrix/atomic-claim/lease/recovery/
   cancel design, `ai_worker.py`, `app/api/ai_jobs.py`) into `tasks/task-13.3.md`
   before any code; Task 13.3 moved to `in_progress`.
+- 2026-09-19: Task 13.3 implemented -- moved the shared DB write-lock out of
+  app/api/projects.py into app/db/transactions.py (7 routers + 2 tests updated,
+  zero dual-lock state at any point); added the ai_generation_jobs/
+  ai_generation_checkpoints migration (partial unique index for one active job per
+  project+operation, full unique index for durable idempotency-key replay);
+  ai_job_service.py (explicit transition matrix, atomic conditional-UPDATE claim,
+  owner-checked heartbeat, idempotent cancel, bounded recovery); ai_worker.py
+  (claim/process lifecycle, idle until Task 13.4/13.5 register a handler, bounded
+  graceful shutdown); app/api/ai_jobs.py (202/200 create, null-not-404 for no
+  active job, safe AIJobOut projection, GET /api/ai/health that never exposes the
+  Gemini key and never fails on Ollama being down). A real event-loop-binding bug
+  in AIWorker._stop_event was found via API-level TestClient tests (not caught by
+  service/worker unit tests using a single event loop) and fixed by constructing a
+  fresh asyncio.Event() in start(); confirmed via revert-and-confirm-failure (the
+  same 12 API tests failed identically when reverted, passed again once restored).
+  90 new tests across 4 files. Full suite: **753/753 pass**, 0 flakes. `ruff check .`
+  clean, `git diff --check` clean, zero stale `_write_lock`/`_write_transaction`/
+  `_read_transaction` references anywhere. Task 13.3 moved to `done`.

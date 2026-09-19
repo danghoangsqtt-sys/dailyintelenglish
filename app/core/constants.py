@@ -181,3 +181,21 @@ AI_MODES = ("gemini", "local", "hybrid")
 # opens and hybrid mode skips straight to the Gemini fallback for a cooldown window.
 AI_CIRCUIT_FAILURE_THRESHOLD = 3
 AI_CIRCUIT_COOLDOWN_SECONDS = 60.0
+
+# Phase 13 -- durable AI generation jobs (app/services/ai_job_service.py, ai_worker.py).
+AI_JOB_OPERATIONS = ("script", "learning")
+AI_JOB_STATUSES = ("pending", "running", "validating", "complete", "error", "cancelled", "stale")
+# How long a worker's claim on a job is valid without a heartbeat before another
+# worker (or a restarted app) may treat it as abandoned and reclaim it.
+AI_JOB_LEASE_SECONDS = 90
+# How often the worker refreshes its lease while actively processing a job.
+AI_JOB_HEARTBEAT_SECONDS = 30
+# A job reclaimed this many times without reaching a terminal state is forced to
+# `error` instead of being retried forever across repeated crash/restart cycles.
+AI_JOB_MAX_RECOVERY_ATTEMPTS = 3
+# Bounded grace period for an in-flight job to reach a safe checkpoint boundary
+# during app shutdown, before the worker stops waiting and returns anyway.
+AI_WORKER_SHUTDOWN_GRACE_SECONDS = 10.0
+# Bumped whenever the job/checkpoint schema or worker resume semantics change, so a
+# job created under an older pipeline can be told apart from a current one.
+AI_PIPELINE_VERSION = "13.3"

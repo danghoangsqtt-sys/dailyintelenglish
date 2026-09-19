@@ -3,7 +3,7 @@ serialize ALL access to the shared connection — writes *and* reads, not just
 same-project script writes — so one request's rollback can never touch another
 request's uncommitted work, and a read can never see a write's data before it
 commits (a dirty read) or after it rolls back (a phantom read). See
-app/api/projects.py::_write_transaction / _read_transaction / _write_lock.
+app/db/transactions.py::write_transaction / read_transaction / write_lock.
 
 Calls `app.api.projects` internals directly (not through TestClient) against the
 `db` fixture (raw aiosqlite connection, migrations applied — see conftest.py) so
@@ -16,6 +16,7 @@ import asyncio
 import pytest
 
 from app.api import projects as projects_api
+from app.db import transactions
 from app.models.project import ScriptConfig, SpeakerConfig
 from app.services import project_service, script_service
 
@@ -76,7 +77,7 @@ async def test_write_lock_prevents_cross_project_transaction_interleaving(db, mo
         projects_api._save_script_and_advance(db, project_a["id"], project_a, lines_a)
     )
     await asyncio.wait_for(a_paused.wait(), timeout=2)
-    assert projects_api._write_lock.locked()  # A is holding the connection-wide lock, uncommitted
+    assert transactions.write_lock.locked()  # A is holding the connection-wide lock, uncommitted
 
     # B is created only now, while A provably still holds the lock — B cannot possibly
     # acquire it (and therefore cannot write) before A releases, regardless of exactly
@@ -112,7 +113,7 @@ async def test_read_transaction_waits_for_write_and_sees_no_phantom_rows(db, mon
     Ordering is forced with asyncio.Event (no sleep): the read task is only ever
     created after the write is confirmed paused and holding the lock, and
     asyncio.Lock's own FIFO waiter queue guarantees the read cannot acquire it
-    until the write's `_write_transaction` block fully exits (here, via rollback).
+    until the write's `write_transaction` block fully exits (here, via rollback).
     """
     project = await project_service.create_project(db, make_config("Read Lock Project"))
     speaker_id = project["speakers"][0]["id"]
@@ -133,10 +134,10 @@ async def test_read_transaction_waits_for_write_and_sees_no_phantom_rows(db, mon
         projects_api._save_script_and_advance(db, project["id"], project, lines)
     )
     await asyncio.wait_for(write_paused.wait(), timeout=2)
-    assert projects_api._write_lock.locked()  # write holds the lock, script rows uncommitted
+    assert transactions.write_lock.locked()  # write holds the lock, script rows uncommitted
 
     async def do_read() -> list[dict]:
-        async with projects_api._read_transaction():
+        async with transactions.read_transaction():
             return await script_service.get_script(db, project["id"])
 
     read_task = asyncio.create_task(do_read())

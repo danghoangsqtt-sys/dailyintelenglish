@@ -1,6 +1,6 @@
 # Task 13.3 — Shared Transactions and Durable AI Jobs
 
-- **Status:** in_progress
+- **Status:** done
 - **Dependency:** 13.2
 - **Controlling detail:** implementation plan §5 and §8, Task 13.3
 
@@ -178,3 +178,98 @@ git diff --check
 ```
 
 Expected: no dual-lock state anywhere (`grep -rn "_write_lock\|_write_transaction\|_read_transaction" app/ tests/` returns zero matches once the rename is complete); all new/updated tests pass; full suite has no new failures beyond the documented Gemini-retry flake class; ruff clean.
+
+## Implementation evidence — 2026-09-19
+
+- **Lock migration**: moved `_write_lock`/`_read_transaction`/`_write_transaction` out
+  of `app/api/projects.py` into `app/db/transactions.py` (public names, no leading
+  underscore). All 7 reverse-importing routers (`settings.py`, `tts.py`, `audio.py`,
+  `video.py`, `youtube.py`, `thumbnail.py`, `learning.py`, 43 call sites) and 2 test
+  files (`tests/test_projects_write_lock.py`, `tests/test_tts_service.py`) updated in
+  the same change -- confirmed zero leftover references anywhere:
+  `grep -rn "_write_lock\b|_write_transaction\b|_read_transaction\b" app/ tests/`
+  returns only the `_reset_write_lock` fixture's own name. No dual-lock state existed
+  at any point in this commit's history.
+- **Migration**: `006_ai_generation_jobs.sql` -- `ai_generation_jobs` (full column set
+  per plan section 5, CHECK constraints on operation/status/progress/booleans, FK
+  `ON DELETE CASCADE`) and `ai_generation_checkpoints` (`UNIQUE(job_id, stage,
+  section_index)`, cascade delete). Two indexes double as the concurrency contract:
+  a **partial** unique index enforces one active (pending/running/validating) job per
+  project+operation at the DB level, and a full unique index on
+  `(project_id, operation, idempotency_key)` makes idempotent replay durable even
+  after a job goes terminal (standard idempotency-key semantics, not just
+  while-active dedup).
+- **`ai_job_service.py`**: explicit `_LEGAL_TRANSITIONS` table
+  (`pending→{running,cancelled,stale}`, `running→{validating,error,cancelled,stale}`,
+  `validating→{complete,error,cancelled,stale}`, all 4 terminal states →∅);
+  `create_job()` pre-checks for an active job, inserts, and on a real
+  `IntegrityError` race re-queries by whichever index actually fired rather than
+  raising back an opaque constraint error; `claim_job()` is one conditional
+  `UPDATE ... WHERE status='pending'`, never SELECT-then-UPDATE; `heartbeat()` only
+  refreshes a lease still owned by the calling worker; `request_cancel()` is a true
+  no-op on an already-terminal job; `recover_abandoned_jobs()` requeues an abandoned
+  job to `pending` with `recovery_count += 1`, or forces `error`
+  (`recovery_exhausted`) once `AI_JOB_MAX_RECOVERY_ATTEMPTS` (3) is reached --
+  verified bounded, not an infinite retry loop.
+- **`ai_worker.py`**: `AIWorker` claims only operations with a registered handler
+  (`_claim_next` returns immediately, touching no DB row, when `_handlers` is
+  empty -- Task 13.4/13.5 haven't registered "script"/"learning" yet, so the worker
+  is real infrastructure but currently idle in production); processing happens
+  strictly outside any transaction (verified by a test asserting `read_transaction()`
+  succeeds within 1s while a handler is deliberately held open); `stop()` is bounded
+  by `AI_WORKER_SHUTDOWN_GRACE_SECONDS`, cancelling a stuck handler's task rather than
+  waiting forever.
+- **Real bug found and fixed via API-level testing, not just unit tests**: the
+  worker's `_stop_event` was constructed once in `__init__` and reused across
+  `start()`/`stop()` cycles -- `tests/test_ai_job_service.py`/`test_ai_worker.py`
+  (raw `db` fixture, one event loop per test) never exercised this, but
+  `tests/test_ai_jobs_api.py`'s `TestClient(app)` fixture runs the real FastAPI
+  lifespan under a fresh event loop per test, and reusing the same
+  `asyncio.Event` across loops raised `RuntimeError: ... bound to a different event
+  loop` on the second test's shutdown -- 12/19 API tests failed. Fixed by creating a
+  fresh `asyncio.Event()` inside `start()` itself (mirrors this project's existing
+  `_reset_write_lock`/`_reset_omnivoice_semaphore` pattern, but fixed at the source
+  instead of needing a test-only reset fixture, since production restarts are the
+  same class of event). **Revert-and-confirm-failure**: reverted the fix, re-ran
+  `tests/test_ai_jobs_api.py` -- the same 12 tests failed with the identical
+  `RuntimeError`; restored the fix, re-ran -- 19/19 pass. Confirms the API-level
+  tests are what actually caught this, not a coincidence.
+- **`app/api/ai_jobs.py`**: `POST .../ai-jobs` returns 202 for a genuinely new job,
+  200 for an existing active/idempotent one (both explicitly allowed by the
+  contract); `GET .../ai-jobs/active` returns `data: null` for "nothing yet" (this
+  app's established style, same as `GET .../script`), never a 404; `GET
+  .../ai-jobs/{id}` and `POST .../ai-jobs/{id}/cancel` both 404 when the job belongs
+  to a different project; `AIJobOut` declares only safe fields, so
+  `input_snapshot_json`/`remote_interaction_id`/`lease_owner`/`lease_expires_at`/
+  `heartbeat_at` are silently dropped by Pydantic validation, confirmed by a
+  dedicated test rather than trusted by inspection. `GET /api/ai/health` never
+  exposes the Gemini key (confirmed by asserting the key string is absent from the
+  response body, not just checking a field name) and returns HTTP 200 with
+  `ollama_reachable: false` when Ollama is unreachable, never a 500.
+- **`app/main.py`**: mounts `ai_jobs.router` + `ai_jobs.health_router`; starts
+  `AIWorker` after `init_db()`, stops it before `close_db()` (shutdown order matches
+  the plan: stop accepting jobs → request worker stop → close DB last).
+- 90 new tests total across 4 files (7 database/migration, 44 service, 6 worker,
+  19 API+health) -- migration idempotency (real `init_db()` called twice), partial
+  unique index concurrency (real `IntegrityError` on a second active job), the full
+  transition matrix (11 legal edges verified to succeed, 12 illegal edges verified
+  to raise), atomic claim under real `asyncio.gather` concurrency, lease/heartbeat
+  ownership, idempotent cancel, bounded recovery, cascade delete (a real `DELETE FROM
+  projects`, not just DDL inspection), and unrelated-project access all covered by
+  a real test each, not asserted in prose.
+- Verification commands re-run independently:
+  - `venv\Scripts\python.exe -m ruff check .` (whole repo) — clean.
+  - `venv\Scripts\python.exe -m pytest tests\test_ai_job_database.py
+    tests\test_ai_job_service.py tests\test_ai_jobs_api.py tests\test_ai_worker.py -v`
+    — 76/76 pass.
+  - `venv\Scripts\python.exe -m pytest tests\ -q` (full suite) — **753/753 pass**,
+    0 failures, 0 flakes (391.14s).
+  - `git diff --check` — clean.
+  - `grep -rn "_write_lock\b|_write_transaction\b|_read_transaction\b" app/ tests/`
+    — zero stale references confirmed.
+
+**Decision: Task 13.3 done.** The durable job infrastructure (schema, state
+machine, atomic claim/lease/recovery, cancel, worker lifecycle, safe API surface)
+is in place and independently verified, including a real bug found and fixed via
+API-level testing. No content pipeline is registered yet — Task 13.4 (checkpointed
+script pipeline) is next and will call `ai_worker.register_handler("script", ...)`.

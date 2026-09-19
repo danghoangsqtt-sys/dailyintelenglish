@@ -5,7 +5,7 @@ import time
 import aiosqlite
 from fastapi import APIRouter, Depends
 
-from app.api.projects import _read_transaction, _write_transaction
+from app.db.transactions import read_transaction, write_transaction
 from app.core.exceptions import ValidationError
 from app.core.responses import ok
 from app.db.database import get_db
@@ -21,7 +21,7 @@ async def generate_learning_content(
 ) -> dict:
     """Generate a Learning Content pack via Gemini from the project's script and persist it."""
     started_at = time.perf_counter()
-    async with _read_transaction():
+    async with read_transaction():
         project = await project_service.get_project(db, project_id)
         script_lines = await script_service.get_script(db, project_id)
     if not script_lines:
@@ -29,7 +29,7 @@ async def generate_learning_content(
     pack = await learning_service.generate_learning_pack(  # no lock held — Gemini call
         project_id, project, script_lines
     )
-    async with _write_transaction(db):
+    async with write_transaction(db):
         saved = await learning_service.save_learning_content(
             db, project_id, pack.model_dump(), commit=False
         )
@@ -40,7 +40,7 @@ async def generate_learning_content(
 async def get_learning_content(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Fetch the current Learning Content pack for a project (null if not generated yet)."""
     started_at = time.perf_counter()
-    async with _read_transaction():
+    async with read_transaction():
         await project_service.get_project(db, project_id)
         pack = await learning_service.get_learning_content(db, project_id)
     return ok(pack, started_at=started_at)
@@ -52,9 +52,9 @@ async def update_learning_content(
 ) -> dict:
     """Apply a partial user-edit to an existing Learning Content pack."""
     started_at = time.perf_counter()
-    async with _read_transaction():
+    async with read_transaction():
         await project_service.get_project(db, project_id)
-    async with _write_transaction(db):
+    async with write_transaction(db):
         updated = await learning_service.update_learning_content(
             db, project_id, payload.model_dump(exclude_unset=True), commit=False
         )
