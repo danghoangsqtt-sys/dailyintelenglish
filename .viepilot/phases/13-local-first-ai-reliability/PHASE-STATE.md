@@ -31,7 +31,7 @@
 |---|---|---|---|
 | 13.0 | Baseline, ADR, backup, rollback contract | done | Doc-first passed |
 | 13.1 | Install and qualify Ollama/Qwen | done | Gate A passed |
-| 13.2 | Provider-neutral AI gateway | pending | Contract tests |
+| 13.2 | Provider-neutral AI gateway | in_progress | Contract tests |
 | 13.3 | Shared transactions and durable jobs | pending | State-machine review |
 | 13.4 | Checkpointed script generation | pending | Content validators |
 | 13.5 | Grounded learning generation | pending | Learning quality |
@@ -82,3 +82,10 @@
   wrote a duplicate near-identical Gate A summary into `tasks/task-13.1.md` before this
   session de-duplicated it — see that file's "Note on concurrent session." No competing
   commit landed on `main` before this session's commit.
+- 2026-09-19: user confirmed (after a concurrent-session collision was surfaced and the
+  other session's Task 13.1 commit was independently verified and accepted) that this
+  session continues Phase 13 alone from Task 13.2 onward; the other session was asked
+  to stand down. Live-reverified `gemini-3.8-flash` (real `models.list` call + official
+  docs fetch) is still the current stable, non-preview Flash model before locking the
+  gateway's Gemini adapter to it. Wrote the concrete file-level plan for Task 13.2 into
+  `tasks/task-13.2.md` before any product code; Task 13.2 moved to `in_progress`.
