@@ -34,7 +34,7 @@
 | 13.2 | Provider-neutral AI gateway | done | Contract tests passed |
 | 13.3 | Shared transactions and durable jobs | done | State-machine review passed |
 | 13.4 | Checkpointed script generation | done | Content validators passed |
-| 13.5 | Grounded learning generation | pending | Learning quality |
+| 13.5 | Grounded learning generation | in_progress | Learning quality |
 | 13.6 | Settings, health, and Step 2/3 job UX | pending | Browser recovery |
 | 13.7 | Gemini fallback and compatibility | pending | Forced fallback |
 | 13.8 | Automated regression/packaging gate | pending | Full suite/build |
@@ -151,3 +151,12 @@
   `ruff check .` clean, `git diff --check` clean. app/main.py wiring of the new
   handler deferred to Task 13.6 (not in this task's allowed files) -- recorded,
   not dropped. Task 13.4 moved to `done`.
+- 2026-09-19: Found ai_generation_jobs.script_hash_at_start is never populated
+  by Task 13.3's create_job()/ai_jobs.py route (neither file is in Task 13.5's
+  allowed files either). Wrote the concrete plan for Task 13.5 (learning_pipeline.py
+  reuses script_pipeline's normalize_text/compute_config_hash; its own
+  start-vs-final-save script-hash comparison substitutes for the unpopulated DB
+  column, closing the same race window functionally; grounding/count/duplicate/
+  answer validators; one repair pass via a new learning_repair.txt) into
+  tasks/task-13.5.md before any code, recording the gap honestly. Task 13.5
+  moved to `in_progress`.
