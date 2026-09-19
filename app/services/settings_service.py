@@ -14,9 +14,11 @@ from datetime import datetime, timezone
 import aiosqlite
 
 from app.core import config
+from app.core.constants import AI_MODES
 from app.core.exceptions import ValidationError
 
 GEMINI_API_KEY_SETTING = "gemini_api_key"
+AI_MODE_SETTING = "ai_mode"
 
 
 def _mask(raw_key: str) -> str:
@@ -94,3 +96,56 @@ async def load_gemini_api_key_from_db(db: aiosqlite.Connection) -> None:
         return
     if stored:
         config.settings.GEMINI_API_KEY = stored
+
+
+# --- AI mode (Phase 13, ADR-001) -- same non-secret app_settings table, same
+# DB-overrides-env precedence pattern as the Gemini key above, but never masked
+# since it carries no secret. ------------------------------------------------
+
+
+async def get_ai_mode_status(db: aiosqlite.Connection) -> dict:
+    """Report the current effective AI_MODE and whether it's DB-stored or env-default.
+
+    Uses `ai_mode_source` (not the bare `source` the Gemini-key status above
+    uses) so the two can be merged into one `GET /api/settings` payload without
+    one silently overwriting the other's `source` field.
+    """
+    cursor = await db.execute("SELECT value FROM app_settings WHERE key = ?", (AI_MODE_SETTING,))
+    row = await cursor.fetchone()
+    if row is not None:
+        return {"ai_mode": row["value"], "ai_mode_source": "database"}
+    return {"ai_mode": config.settings.AI_MODE, "ai_mode_source": "env"}
+
+
+async def set_ai_mode(db: aiosqlite.Connection, ai_mode: str) -> dict:
+    """Validate, persist, and immediately apply a new AI_MODE.
+
+    Caller must run this inside a `write_transaction` block, same as
+    `set_gemini_api_key`.
+    """
+    if ai_mode not in AI_MODES:
+        raise ValidationError(f"ai_mode must be one of {AI_MODES}, got {ai_mode!r}")
+    await db.execute(
+        """
+        INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+        """,
+        (AI_MODE_SETTING, ai_mode, datetime.now(timezone.utc).isoformat()),
+    )
+    config.settings.AI_MODE = ai_mode
+    return {"ai_mode": ai_mode, "ai_mode_source": "database"}
+
+
+async def load_ai_mode_from_db(db: aiosqlite.Connection) -> None:
+    """Startup-time loader: apply a DB-stored AI_MODE over the env/.env default.
+
+    Same missing-table tolerance as `load_gemini_api_key_from_db` -- called
+    from the same place in app.main's lifespan, right after it.
+    """
+    try:
+        cursor = await db.execute("SELECT value FROM app_settings WHERE key = ?", (AI_MODE_SETTING,))
+        row = await cursor.fetchone()
+    except aiosqlite.OperationalError:
+        return
+    if row is not None:
+        config.settings.AI_MODE = row["value"]

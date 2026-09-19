@@ -83,18 +83,38 @@ STEP2_PROJECT = {
 
 
 async def _mock_step2_routes(page, *, script_lines):
+    """Also mocks the Phase 13 durable-job endpoints Generate now uses (Task
+    13.6) instead of the old synchronous `POST .../script/generate` -- that
+    legacy route still exists server-side (kept as the compatibility path) but
+    the Step 2 UI no longer calls it, so a test asserting on Generate's real
+    network effect must mock the job endpoints instead."""
+
     async def handle(route):
         url, method = route.request.url, route.request.method
         if url.endswith(f"/api/projects/{PROJECT_ID}/script") and method == "GET":
             await route.fulfill(status=200, content_type="application/json", body=_envelope(script_lines))
-        elif url.endswith(f"/api/projects/{PROJECT_ID}/script/generate") and method == "POST":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope(script_lines))
+        elif "/ai-jobs/active" in url and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(None))
         elif url.endswith(f"/api/projects/{PROJECT_ID}") and method == "GET":
             await route.fulfill(status=200, content_type="application/json", body=_envelope(STEP2_PROJECT))
         else:
             await route.continue_()
 
     await page.route("**/api/**", handle)
+
+
+def _complete_job_envelope(job_id: str) -> str:
+    return _envelope(
+        {
+            "id": job_id, "project_id": PROJECT_ID, "operation": "script", "status": "complete",
+            "stage": "done", "progress": 100, "requested_provider": "gemini", "actual_provider": "gemini",
+            "model": "gemini-3.8-flash", "fallback_used": False, "fallback_reason": None,
+            "cancel_requested": False, "attempt": 1, "repair_count": 0, "fallback_count": 0,
+            "recovery_count": 0, "error_code": None, "error_message": None,
+            "created_at": "2026-01-01T00:00:00Z", "started_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-01T00:00:00Z", "finished_at": "2026-01-01T00:00:00Z",
+        }
+    )
 
 
 @pytest.mark.asyncio
@@ -104,14 +124,14 @@ async def test_step2_ctrl_enter_triggers_generate_when_panel_visible(browser_ins
 
     async def count_generate(route):
         generate_calls.append(1)
-        await route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=_envelope([{"id": "l1", "line_index": 0, "speaker_id": "sp1", "text": "Hi!", "language_notes": None}]),
-        )
+        await route.fulfill(status=202, content_type="application/json", body=_complete_job_envelope("job-1"))
 
     await _mock_step2_routes(page, script_lines=[])
-    await page.route(f"**/api/projects/{PROJECT_ID}/script/generate", count_generate)
+    await page.route(f"**/api/projects/{PROJECT_ID}/ai-jobs", count_generate)
+    await page.route(
+        f"**/api/projects/{PROJECT_ID}/ai-jobs/job-1",
+        lambda route: route.fulfill(status=200, content_type="application/json", body=_complete_job_envelope("job-1")),
+    )
     await page.goto(f"{live_server_url}/step2?project_id={PROJECT_ID}")
     await page.wait_for_selector("#generate-panel:not([hidden])")
 
@@ -130,11 +150,11 @@ async def test_step2_ctrl_enter_does_nothing_when_panel_hidden(browser_instance:
 
     async def count_generate(route):
         generate_calls.append(1)
-        await route.fulfill(status=200, content_type="application/json", body=_envelope([]))
+        await route.fulfill(status=202, content_type="application/json", body=_complete_job_envelope("job-1"))
 
     existing_lines = [{"id": "l1", "line_index": 0, "speaker_id": "sp1", "text": "Hi!", "language_notes": None}]
     await _mock_step2_routes(page, script_lines=existing_lines)
-    await page.route(f"**/api/projects/{PROJECT_ID}/script/generate", count_generate)
+    await page.route(f"**/api/projects/{PROJECT_ID}/ai-jobs", count_generate)
     await page.goto(f"{live_server_url}/step2?project_id={PROJECT_ID}")
     await page.wait_for_selector("#generate-panel[hidden]", state="attached")
 

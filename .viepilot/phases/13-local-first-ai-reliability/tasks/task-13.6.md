@@ -1,6 +1,6 @@
 # Task 13.6 — Settings, Health, and Step 2/3 Job UX
 
-- **Status:** in_progress
+- **Status:** done
 - **Dependency:** 13.2–13.3
 - **Controlling detail:** implementation plan §7 and §8, Task 13.6
 
@@ -44,7 +44,32 @@ and settings validation/redaction.
    regardless of which file implements it — the controlling plan cares about
    the route's behavior, not its filename. No route path, response shape, or
    security property changes.
-2. **New shared frontend module, not in the original file list:
+2. **`tests/test_keyboard_shortcuts_browser.py` needed, not in the original file
+   list.** Confirmed by actually running the full pre-existing browser suite
+   after wiring Step 2's Generate button through the new job flow (not assumed):
+   `test_step2_ctrl_enter_triggers_generate_when_panel_visible` mocks
+   `POST .../script/generate` directly and asserts it was called exactly once
+   when Ctrl+Enter fires — since Generate now creates a durable job
+   (`POST .../ai-jobs`) instead, that mock is never hit and the test fails for
+   exactly the intended reason (the implementation genuinely changed which
+   endpoint the button calls). Every other reference to "generate-btn"/
+   "script/generate" across the browser test suite was checked directly (a
+   real `grep` + a real run of `tests/test_ui_async_browser.py` and
+   `tests/test_script_api.py`, not assumed) and confirmed unrelated — they
+   exercise other pages' own unrelated Generate buttons, or the still-intact
+   legacy `POST .../script/generate` backend route directly (untouched by this
+   task; it stays available as the synchronous compatibility path per the
+   controlling plan). Only this one file needs its mock updated to point at
+   the new job-creation/polling endpoints instead — the test's actual intent
+   (Ctrl+Enter still triggers Generate) is preserved, only its transport-level
+   mock target changes, mirroring Task 13.4's `regenerate_line` migration
+   precedent. `tests/test_learning_shell_browser.py` needed the identical fix
+   for the identical reason on the Step 3 side
+   (`test_learning_generate_defaults_inspector_to_first_active_item` mocked
+   `POST .../learning/generate` and timed out waiting for `#content-wrap` to
+   appear once Generate started creating a durable job instead) — confirmed
+   by actually running it, not assumed from the Step 2 case.
+3. **New shared frontend module, not in the original file list:
    `frontend/static/js/ai_job.js`.** Step 2 and Step 3 need near-identical
    job-lifecycle logic (create-or-resume, poll every ~2s with hidden-tab
    backoff, render queued/running/validating/fallback/terminal states, keyboard-
@@ -56,6 +81,36 @@ and settings validation/redaction.
    would be the actual "wrong shape" here, not adding one small new shared
    file. Recorded here per the doc-first rule for a file outside the original
    allowed list, before writing any of it.
+
+4. **`tests/test_script_jobs_browser.py`/`tests/test_learning_jobs_browser.py`
+   (both in the original list) needed a teardown their shared fixture pattern
+   was missing.** Found by actually running the **full** suite after adding
+   both files, not assumed safe from the file-level suite passing alone:
+   `tests/test_settings_api.py::test_get_reports_env_source_before_anything_is_saved`
+   failed with `source == "database"` instead of the expected `"env"` only in
+   the full run (isolated `pytest tests/test_settings_api.py` — 12/12 pass;
+   isolated `pytest tests/test_script_jobs_browser.py
+   tests/test_learning_jobs_browser.py` — 12/12 pass). Root cause: both files'
+   `live_server_url` fixture (copied from the pre-existing
+   `tests/test_keyboard_shortcuts_browser.py` pattern) starts a background
+   `uvicorn.Server` thread against the real, unmocked `app` object and never
+   stops it — the module-scoped fixture's `yield` has no teardown after it, so
+   the thread (and the process-wide `Database`/`AIWorker` singletons its
+   lifespan opened against the real `DATA_DIR`) keeps running for the rest of
+   the pytest session. A later `TestClient(app)`-based test's own lifespan
+   startup finds `Database._instance._connection` already set and silently
+   reuses it instead of opening its own isolated `tmp_path` database.
+   Confirmed by bisection: full suite **minus** these two files — 807/807
+   pass; full suite with them present — the one failure above. Fix: added
+   `server.should_exit = True; thread.join(timeout=10.0)` after each fixture's
+   `yield`, so each module's server (and the ASGI lifespan shutdown it
+   triggers — closing the shared connection) is torn down before the next
+   test module runs. Re-ran full suite after the fix: **819/819 pass**. The
+   pre-existing `tests/test_keyboard_shortcuts_browser.py` has the identical
+   latent gap but is outside this task's file list and was not observed to
+   cause a failure on its own (single leaked connection, no write into it);
+   left unmodified — flagging it here for whichever future task next touches
+   that file.
 
 ### Paths
 
@@ -166,3 +221,84 @@ venv\Scripts\python.exe -m pytest tests\test_settings_service.py tests\test_sett
 venv\Scripts\python.exe -m pytest tests\ -x -q
 git diff --check
 ```
+
+## Implementation evidence — 2026-09-19
+
+- `app/models/settings.py`: added `AIModeUpdate` (pattern-validated
+  `ai_mode: Literal["gemini", "local", "hybrid"]`-equivalent field).
+- `app/services/settings_service.py`: added `AI_MODE_SETTING`,
+  `get_ai_mode_status()` (returns `ai_mode`/`ai_mode_source` — deliberately
+  not `source`, to avoid colliding with the existing Gemini-key status dict
+  when merged), `set_ai_mode()`, `load_ai_mode_from_db()` — mirroring the
+  existing Gemini-key functions' shape.
+- `app/api/settings.py`: `GET /api/settings` now returns
+  `{**gemini_status, **ai_mode_status}`; added `PUT /api/settings/ai-mode`.
+  **Real regression caught by running existing tests, not assumed safe**: the
+  first merge used `"source"` as the AI-mode status key, silently
+  overwriting the Gemini-key status's own `"source"` field and breaking
+  `test_put_then_get_reflects_the_saved_key_without_restart` (expected
+  `'database'`, got `'env'`). Fixed by renaming to `"ai_mode_source"`.
+- `app/main.py`: added `_build_ai_router()` factory; lifespan now calls
+  `settings_service.load_ai_mode_from_db()`, builds one real `AIRouter`, and
+  registers `script_pipeline.make_handler(router)` /
+  `learning_pipeline.make_handler(router)` on the `AIWorker` **before**
+  `ai_worker.start()` — the first time either content pipeline is reachable
+  through the running app rather than only through direct unit tests.
+- `frontend/static/js/ai_job.js` (new shared module, deviation #3):
+  `AiJob.run({ createFn, activeFn, getFn, cancelFn, onStateChange })` — resume-
+  on-load via `activeFn()`, visible-tab 2s / hidden-tab 8s polling backoff,
+  keyboard-accessible cancel, terminal-state promise settlement.
+  **Non-obvious bug found by reasoning before it could ship, not by a failing
+  test**: JavaScript auto-flattens a Promise an `async function` returns —
+  `start()`/`resume()` originally ended with `return promise;`, which would
+  have made `await currentAiJob.start()` at the call site block for the
+  *entire* job lifecycle instead of just job creation, hanging
+  `handleGenerate()` until generation finished. Fixed by having `start()`/
+  `resume()` return `undefined`/`boolean` instead, with `.promise` awaited
+  separately via a fire-and-forget `.then()/.catch()/.finally()` chain
+  (`watchScriptAiJob()`/`watchLearningAiJob()`). Indirectly confirmed once
+  fixed: the browser tests that exercise `start()` complete in ~2s per test
+  rather than hanging, which is what the bug would have caused.
+- `frontend/static/js/step2_script.js` / `step3_learning.js`: `handleGenerate()`
+  now creates-or-resumes a job via `ai_job.js` instead of one blocking
+  `Api.generateScript()`/learning call; `init()` calls `resumeActive*Job()`
+  before the first render so a page refresh mid-generation reattaches to the
+  running job instead of showing a false empty state.
+- `frontend/pages/settings.html` / `settings.js`: AI Provider Mode selector
+  (gemini/local/hybrid) wired to the new endpoint.
+- `frontend/pages/step2_script.html` / `step3_learning.html` /
+  `style.css`: `#ai-job-status` banner (`aria-live="polite"`), reusing
+  existing `.spinner`/`.btn-xs` classes rather than inventing new ones.
+- **Two real regressions in pre-existing browser tests, found by actually
+  running the full pre-existing browser suite (not assumed), documented as
+  deviation #2 before fixing**: `tests/test_keyboard_shortcuts_browser.py`
+  and `tests/test_learning_shell_browser.py` both mocked the old synchronous
+  generate endpoints directly; fixed to mock the job-creation/polling
+  endpoints instead, preserving each test's actual intent. All 6 + 5 tests in
+  those files pass after the fix.
+- **A third real regression, found only in a full-suite run, documented as
+  deviation #4 above**: the two new job browser test files' `live_server_url`
+  fixture leaked a background server/DB-singleton connection into
+  `tests/test_settings_api.py`. Fixed with an explicit
+  `server.should_exit = True` + `thread.join()` teardown.
+- 6 new tests in `tests/test_script_jobs_browser.py`, 6 in
+  `tests/test_learning_jobs_browser.py` (refresh-resumes-active-job,
+  duplicate-click-prevention, keyboard-accessible cancel, fallback banner
+  visible, terminal error shows retry and never a raw exception/error code,
+  `aria-live` present), 3 in `tests/test_ai_health_api.py`, 5 new in
+  `tests/test_settings_service.py`, 5 new in `tests/test_settings_api.py`
+  (including a regression guard for the `"source"` key collision above).
+- Verification commands re-run independently:
+  - `node --check` on all 5 modified/new JS files — clean.
+  - `venv\Scripts\python.exe -m ruff check .` (whole repo) — clean.
+  - `venv\Scripts\python.exe -m pytest tests\ -q` (full suite) — **819/819
+    pass**, 0 failures, 0 flakes (345.22s), after the teardown fix above.
+  - `git diff --check` — clean.
+
+**Decision: Task 13.6 done.** Settings now exposes and validates AI mode;
+`/api/ai/health` was already live from Task 13.3; Step 2 and Step 3 both
+generate through durable jobs with resume-on-load, visible provider/fallback,
+keyboard-accessible cancel/retry, and `aria-live` status — verified against a
+real browser, not mocked JS-only assertions. Both content pipelines
+(script + learning) are reachable through the running app for the first time.
+Next: Task 13.7 (cloud fallback and compatibility).

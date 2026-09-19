@@ -103,3 +103,44 @@ def test_mask_shows_prefix_and_suffix_for_longer_keys():
     from app.services.settings_service import _mask
 
     assert _mask("AIzaSyABCDEFGHIJKLMNOP1234") == "AIzaSy••••1234"
+
+
+# --- AI mode (Task 13.6) --------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _isolated_ai_mode(monkeypatch):
+    monkeypatch.setattr(config.settings, "AI_MODE", "gemini")
+
+
+async def test_ai_mode_status_reports_env_default_when_nothing_stored(db):
+    status = await settings_service.get_ai_mode_status(db)
+    assert status == {"ai_mode": "gemini", "ai_mode_source": "env"}
+
+
+async def test_set_ai_mode_persists_and_applies_immediately(db):
+    status = await settings_service.set_ai_mode(db, "hybrid")
+    assert status == {"ai_mode": "hybrid", "ai_mode_source": "database"}
+    assert config.settings.AI_MODE == "hybrid"
+
+    reloaded = await settings_service.get_ai_mode_status(db)
+    assert reloaded == {"ai_mode": "hybrid", "ai_mode_source": "database"}
+
+
+async def test_set_ai_mode_rejects_an_unknown_value(db):
+    with pytest.raises(ValidationError, match="ai_mode must be one of"):
+        await settings_service.set_ai_mode(db, "not_a_real_mode")
+
+
+async def test_load_ai_mode_from_db_applies_a_stored_value(db):
+    await settings_service.set_ai_mode(db, "local")
+    config.settings.AI_MODE = "gemini"  # simulate a fresh process before the loader runs
+
+    await settings_service.load_ai_mode_from_db(db)
+
+    assert config.settings.AI_MODE == "local"
+
+
+async def test_load_ai_mode_from_db_leaves_env_value_untouched_when_nothing_stored(db):
+    await settings_service.load_ai_mode_from_db(db)
+    assert config.settings.AI_MODE == "gemini"

@@ -20,6 +20,71 @@
   };
 
   let saveIndicator = null;
+  let currentAiJob = null;
+
+  const AI_JOB_TERMINAL_MESSAGES = {
+    error: "Generation failed",
+    cancelled: "Generation cancelled.",
+    stale: "The project changed since this job started — please try again.",
+  };
+
+  /** Render the durable-job status banner (Phase 13, Task 13.6). `job === null` hides it. */
+  function renderJobStatus(job) {
+    const el = document.getElementById("ai-job-status");
+    if (!el) return;
+    if (!job) {
+      el.hidden = true;
+      el.innerHTML = "";
+      return;
+    }
+    el.hidden = false;
+
+    if (job.status in AI_JOB_TERMINAL_MESSAGES) {
+      const detail = job.status === "error" && job.error_message ? `: ${escapeHtml(job.error_message)}` : "";
+      el.innerHTML =
+        `${AI_JOB_TERMINAL_MESSAGES[job.status]}${detail} ` +
+        '<button type="button" class="btn btn-primary btn-xs" id="ai-job-retry-btn">Retry</button>';
+      const retryBtn = document.getElementById("ai-job-retry-btn");
+      if (retryBtn) retryBtn.addEventListener("click", handleGenerate);
+      return;
+    }
+
+    const fallbackNote = job.fallback_used ? " · using Gemini fallback" : "";
+    el.innerHTML =
+      `<span class="spinner spinner-dark" aria-hidden="true"></span> Generating script — ${escapeHtml(job.stage)} ` +
+      `(${job.progress}%)${fallbackNote} ` +
+      '<button type="button" class="btn btn-ghost btn-xs" id="ai-job-cancel-btn">Cancel</button>';
+    const cancelBtn = document.getElementById("ai-job-cancel-btn");
+    if (cancelBtn) cancelBtn.addEventListener("click", () => currentAiJob && currentAiJob.cancel());
+  }
+
+  function makeScriptAiJob() {
+    return AiJob.run({
+      createFn: () => Api.createScriptJob(state.projectId),
+      activeFn: () => Api.getActiveAiJob(state.projectId, "script"),
+      getFn: (jobId) => Api.getAiJob(state.projectId, jobId),
+      cancelFn: (jobId) => Api.cancelAiJob(state.projectId, jobId),
+      onStateChange: renderJobStatus,
+    });
+  }
+
+  /** Fire-and-forget: reload the script once the job settles, without blocking the caller. */
+  function watchScriptAiJob() {
+    currentAiJob.promise
+      .then(async () => {
+        state.lines = await Api.getScript(state.projectId);
+        renderJobStatus(null);
+        renderScript();
+      })
+      .catch((err) => {
+        console.error("Script generation job did not complete:", err);
+        if (!err.job) showError("We couldn't generate the script. Please try again.");
+      })
+      .finally(() => {
+        state.isGenerating = false;
+        setGenerateLoading(false);
+      });
+  }
 
   function escapeHtml(str) {
     const div = document.createElement("div");
@@ -224,7 +289,11 @@
     }
 
     if (state.lines.length === 0) {
-      generatePanel.hidden = false;
+      // Keep the generate-panel hidden while a durable job is actively running
+      // (Task 13.6) -- the ai-job-status banner is showing progress instead;
+      // re-showing "No script yet, Generate one" underneath it would be
+      // confusing and would let a second click fire during an active job.
+      generatePanel.hidden = state.isGenerating;
       actions.hidden = true;
       list.innerHTML = "";
       state.selectedLineId = null;
@@ -415,17 +484,23 @@
     state.isGenerating = true;
     setGenerateLoading(true);
     clearError();
+    document.getElementById("generate-panel").hidden = true;
 
-    try {
-      state.lines = await Api.generateScript(state.projectId);
-      renderScript();
-    } catch (err) {
-      console.error("Failed to generate script:", err);
-      showError("We couldn't generate the script. Please try again.");
-    } finally {
-      state.isGenerating = false;
-      setGenerateLoading(false);
-    }
+    currentAiJob = makeScriptAiJob();
+    await currentAiJob.start();
+    watchScriptAiJob();
+  }
+
+  /** Resume-on-load (Task 13.6): reattach to an already-active job instead of
+   * showing a false empty/idle state after a refresh or navigation. */
+  async function resumeActiveScriptJob() {
+    currentAiJob = makeScriptAiJob();
+    const hasActive = await currentAiJob.resume();
+    if (!hasActive) return;
+    state.isGenerating = true;
+    setGenerateLoading(true);
+    document.getElementById("generate-panel").hidden = true;
+    watchScriptAiJob();
   }
 
   function handleRegenerateAll() {
@@ -529,6 +604,7 @@
       state.scriptLoadFailed = true;
       showError("We couldn't load the existing script. Please try refreshing.");
     }
+    await resumeActiveScriptJob();
     renderScript();
   }
 

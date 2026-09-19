@@ -59,7 +59,19 @@
       font-family: var(--font);
     }
 
-    input:focus {
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--surface-border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 14px;
+      font-family: var(--font);
+    }
+
+    input:focus,
+    select:focus {
       outline: none;
       border-color: var(--surface-border-hover);
     }
@@ -120,6 +132,31 @@
       </div>
 
       <div id="message" class="message" hidden></div>
+    </section>
+
+    <section class="card settings-card" style="margin-top: 20px;">
+      <h2>AI Provider Mode</h2>
+      <p class="section-hint">
+        Controls where script and learning content generation runs (Phase 13).
+        <strong>Gemini</strong> is cloud-only. <strong>Local</strong> uses only the
+        on-device Ollama model, with no cloud fallback. <strong>Hybrid</strong> tries
+        local first and falls back to Gemini if it fails.
+      </p>
+
+      <div id="ai-mode-status" class="current-status" aria-live="polite">Loading…</div>
+
+      <label class="field-label" for="ai-mode-select">Mode</label>
+      <select id="ai-mode-select">
+        <option value="gemini">Gemini (cloud)</option>
+        <option value="local">Local (Ollama only)</option>
+        <option value="hybrid">Hybrid (local, Gemini fallback)</option>
+      </select>
+
+      <div class="form-actions">
+        <button id="ai-mode-save-btn" type="button" class="btn btn-primary">Save</button>
+      </div>
+
+      <div id="ai-mode-message" class="message" hidden></div>
     </section>
   </main>
 

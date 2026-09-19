@@ -21,6 +21,74 @@
   };
 
   let saveIndicator = null;
+  let currentAiJob = null;
+
+  const AI_JOB_TERMINAL_MESSAGES = {
+    error: "Generation failed",
+    cancelled: "Generation cancelled.",
+    stale: "The script changed since this job started — please try again.",
+  };
+
+  /** Render the durable-job status banner (Phase 13, Task 13.6). `job === null` hides it. */
+  function renderJobStatus(job) {
+    const el = document.getElementById("ai-job-status");
+    if (!el) return;
+    if (!job) {
+      el.hidden = true;
+      el.innerHTML = "";
+      return;
+    }
+    el.hidden = false;
+
+    if (job.status in AI_JOB_TERMINAL_MESSAGES) {
+      const detail = job.status === "error" && job.error_message ? `: ${escapeHtml(job.error_message)}` : "";
+      el.innerHTML =
+        `${AI_JOB_TERMINAL_MESSAGES[job.status]}${detail} ` +
+        '<button type="button" class="btn btn-primary btn-xs" id="ai-job-retry-btn">Retry</button>';
+      const retryBtn = document.getElementById("ai-job-retry-btn");
+      if (retryBtn) retryBtn.addEventListener("click", handleGenerate);
+      return;
+    }
+
+    const fallbackNote = job.fallback_used ? " · using Gemini fallback" : "";
+    el.innerHTML =
+      `<span class="spinner spinner-dark" aria-hidden="true"></span> Generating learning pack — ${escapeHtml(job.stage)} ` +
+      `(${job.progress}%)${fallbackNote} ` +
+      '<button type="button" class="btn btn-ghost btn-xs" id="ai-job-cancel-btn">Cancel</button>';
+    const cancelBtn = document.getElementById("ai-job-cancel-btn");
+    if (cancelBtn) cancelBtn.addEventListener("click", () => currentAiJob && currentAiJob.cancel());
+  }
+
+  function makeLearningAiJob() {
+    return AiJob.run({
+      createFn: () => Api.createLearningJob(state.projectId),
+      activeFn: () => Api.getActiveAiJob(state.projectId, "learning"),
+      getFn: (jobId) => Api.getAiJob(state.projectId, jobId),
+      cancelFn: (jobId) => Api.cancelAiJob(state.projectId, jobId),
+      onStateChange: renderJobStatus,
+    });
+  }
+
+  /** Fire-and-forget: reload the pack once the job settles, without blocking the caller. */
+  function watchLearningAiJob() {
+    currentAiJob.promise
+      .then(async () => {
+        state.pack = await Api.getLearningPack(state.projectId);
+        state.revealedQuiz.clear();
+        state.selectedItem = null;
+        renderJobStatus(null);
+        render();
+        renderInspector();
+      })
+      .catch((err) => {
+        console.error("Learning content generation job did not complete:", err);
+        if (!err.job) showError("We couldn't generate the learning pack. Please try again.");
+      })
+      .finally(() => {
+        state.isGenerating = false;
+        setGenerateLoading(false);
+      });
+  }
 
   function escapeHtml(str) {
     const div = document.createElement("div");
@@ -285,7 +353,9 @@
     }
 
     if (!state.pack) {
-      generatePanel.hidden = false;
+      // Keep the generate-panel hidden while a durable job is actively
+      // running (Task 13.6) -- the ai-job-status banner shows progress instead.
+      generatePanel.hidden = state.isGenerating;
       contentWrap.hidden = true;
       return;
     }
@@ -445,20 +515,23 @@
     state.isGenerating = true;
     setGenerateLoading(true);
     clearError();
+    document.getElementById("generate-panel").hidden = true;
 
-    try {
-      state.pack = await Api.generateLearningPack(state.projectId);
-      state.revealedQuiz.clear();
-      state.selectedItem = null;
-      render();
-      renderInspector();
-    } catch (err) {
-      console.error("Failed to generate learning content:", err);
-      showError("We couldn't generate the learning pack. Please try again.");
-    } finally {
-      state.isGenerating = false;
-      setGenerateLoading(false);
-    }
+    currentAiJob = makeLearningAiJob();
+    await currentAiJob.start();
+    watchLearningAiJob();
+  }
+
+  /** Resume-on-load (Task 13.6): reattach to an already-active job instead of
+   * showing a false empty/idle state after a refresh or navigation. */
+  async function resumeActiveLearningJob() {
+    currentAiJob = makeLearningAiJob();
+    const hasActive = await currentAiJob.resume();
+    if (!hasActive) return;
+    state.isGenerating = true;
+    setGenerateLoading(true);
+    document.getElementById("generate-panel").hidden = true;
+    watchLearningAiJob();
   }
 
   function handleRegenerate() {
@@ -534,6 +607,7 @@
       state.packLoadFailed = true;
       showError("We couldn't load the existing learning content. Please try refreshing.");
     }
+    await resumeActiveLearningJob();
     render();
   }
 

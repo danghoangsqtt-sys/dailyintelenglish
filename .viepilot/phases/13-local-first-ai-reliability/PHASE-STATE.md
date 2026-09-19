@@ -35,7 +35,7 @@
 | 13.3 | Shared transactions and durable jobs | done | State-machine review passed |
 | 13.4 | Checkpointed script generation | done | Content validators passed |
 | 13.5 | Grounded learning generation | done | Learning quality passed |
-| 13.6 | Settings, health, and Step 2/3 job UX | in_progress | Browser recovery |
+| 13.6 | Settings, health, and Step 2/3 job UX | done | Browser recovery passed |
 | 13.7 | Gemini fallback and compatibility | pending | Forced fallback |
 | 13.8 | Automated regression/packaging gate | pending | Full suite/build |
 | 13.9 | Real no-mock bake-off and operational trial | pending | Gate B |
@@ -182,3 +182,27 @@
   (matches this codebase's existing shared-module precedent) rather than
   duplicating the state machine twice. Both recorded in tasks/task-13.6.md
   before any code. Task 13.6 moved to `in_progress`.
+- 2026-09-19: Task 13.6 implemented -- AI mode exposed/validated via
+  settings_service.get_ai_mode_status/set_ai_mode/load_ai_mode_from_db and
+  PUT /api/settings/ai-mode; app/main.py's lifespan now builds one real
+  AIRouter and registers script_pipeline/learning_pipeline handlers on the
+  AIWorker before starting it -- both content pipelines are reachable through
+  the running app for the first time; Step 2/3 handleGenerate migrated onto a
+  new shared frontend/static/js/ai_job.js module (create-or-resume, visible/
+  hidden-tab polling backoff, keyboard-accessible cancel) with resume-on-load
+  wired into each page's init(). Two real regressions were found and fixed by
+  actually running the pre-existing browser suite (not assumed):
+  tests/test_keyboard_shortcuts_browser.py and
+  tests/test_learning_shell_browser.py both mocked the old synchronous
+  generate endpoints. A third real regression was found only in a full-suite
+  run: the two new job browser test files' live_server_url fixture leaked a
+  background server/DB-singleton connection into
+  tests/test_settings_api.py::test_get_reports_env_source_before_anything_is_saved
+  (source read "database" instead of "env"); fixed with an explicit
+  server.should_exit + thread.join() teardown, confirmed by bisection (807/807
+  pass without the two new files present, 819/819 pass with them once the
+  teardown was added). A non-obvious JS Promise-auto-flattening bug in
+  ai_job.js was found and fixed by reasoning before it could ship (would have
+  hung handleGenerate() for the full job duration). Full suite: **819/819
+  pass**, 0 flakes (345.22s), `ruff check .`/`git diff --check` clean. Task
+  13.6 moved to `done`.

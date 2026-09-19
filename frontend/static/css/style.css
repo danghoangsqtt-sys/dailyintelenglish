@@ -162,6 +162,9 @@ button { cursor: pointer; }
 .stage-title { margin: 0 0 5px; color: var(--text); font-size: 22px; }
 .page-badges, .stage-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 #error-banner { margin-bottom: 16px; border: 1px solid var(--danger); border-radius: 10px; padding: 14px 18px; background: var(--danger-bg); color: var(--danger); font-size: 13px; font-weight: 700; }
+.ai-job-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; border: 1px solid var(--info); border-radius: 10px; padding: 12px 16px; background: var(--info-bg); color: var(--text-2); font-size: 13px; }
+.ai-job-status:has(#ai-job-retry-btn) { border-color: var(--danger); background: var(--danger-bg); }
+.ai-job-fallback { color: var(--warning); font-weight: 700; }
 .generate-panel { margin-bottom: 24px; padding: 40px; text-align: center; }
 .generate-panel p { margin: 0 0 20px; color: var(--muted); }
 #script-list { display: flex; flex-direction: column; gap: 14px; }

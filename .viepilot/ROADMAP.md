@@ -982,3 +982,34 @@ configuration-only Gemini rollback path. See
   app yet (`app/main.py` deferred to Task 13.6). See
   `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.5.md` for the
   full record.
+
+### 13.6 Settings, health, and Step 2/3 job UX — ✅ DONE (2026-09-19)
+
+- [x] `app/services/settings_service.py` — `get_ai_mode_status`/`set_ai_mode`/
+  `load_ai_mode_from_db` (mirroring the existing Gemini-key functions' shape);
+  `PUT /api/settings/ai-mode` and an extended `GET /api/settings`. `app/main.py`
+  now builds one real `AIRouter` and registers `script_pipeline`/
+  `learning_pipeline` handlers on the `AIWorker` before starting it — **both
+  content pipelines built in Tasks 13.4/13.5 are reachable through the running
+  app for the first time**. Step 2/3's `handleGenerate` migrated onto a new
+  shared `frontend/static/js/ai_job.js` module (create-or-resume, visible/
+  hidden-tab polling backoff, keyboard-accessible cancel) with resume-on-load
+  wired into each page's `init()`. **Three real regressions found by actually
+  running tests, not assumed safe**: a `GET /api/settings` key-collision
+  (`"source"` silently overwritten by the AI-mode merge, fixed by renaming to
+  `"ai_mode_source"`); two pre-existing browser tests
+  (`test_keyboard_shortcuts_browser.py`, `test_learning_shell_browser.py`)
+  mocking the now-replaced synchronous generate endpoints, fixed to mock the
+  job endpoints instead; and a full-suite-only test-isolation leak — the two
+  new job browser tests' `live_server_url` fixture never stopped its
+  background server, leaking the process-wide `Database`/`AIWorker`
+  singletons into `test_settings_api.py` (confirmed by bisection: 807/807
+  pass without the two new files, 819/819 pass once an explicit
+  `server.should_exit`+`thread.join()` teardown was added). A non-obvious JS
+  Promise-auto-flattening bug in `ai_job.js` was found and fixed by reasoning
+  before it could ship. 12 new browser tests, 3 new in
+  `test_ai_health_api.py`, 5 new each in `test_settings_service.py`/
+  `test_settings_api.py`. Full suite **819/819 pass**, 0 flakes,
+  `ruff`/`git diff --check` clean. See
+  `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.6.md` for the
+  full record.

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 from app.db.transactions import write_transaction
 from app.core.responses import ok
 from app.db.database import get_db
-from app.models.settings import GeminiApiKeyUpdate
+from app.models.settings import AIModeUpdate, GeminiApiKeyUpdate
 from app.services import settings_service
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -16,12 +16,22 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 @router.get("")
 async def get_settings(db: aiosqlite.Connection = Depends(get_db)) -> dict:
-    """Report the Gemini API key's current source and a masked preview.
+    """Report the Gemini API key's status and the current AI_MODE.
 
     Never returns the raw key -- see settings_service.get_gemini_api_key_status.
     """
     started_at = time.perf_counter()
-    status = await settings_service.get_gemini_api_key_status(db)
+    gemini_status = await settings_service.get_gemini_api_key_status(db)
+    ai_mode_status = await settings_service.get_ai_mode_status(db)
+    return ok({**gemini_status, **ai_mode_status}, started_at=started_at)
+
+
+@router.put("/ai-mode")
+async def update_ai_mode(payload: AIModeUpdate, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Save a new AI_MODE (ADR-001 kill switch) -- takes effect immediately, no restart needed."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.set_ai_mode(db, payload.ai_mode)
     return ok(status, started_at=started_at)
 
 

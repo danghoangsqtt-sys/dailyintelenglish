@@ -1441,6 +1441,49 @@ wired into the running app yet (`app/main.py` deferred to Task 13.6). See
 `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.5.md` for the
 full plan and evidence record.
 
+### 13.6 Settings, health, and Step 2/3 job UX — ✅ DONE (2026-09-19)
+
+Exposed and validated the AI provider mode: `settings_service.get_ai_mode_status`/
+`set_ai_mode`/`load_ai_mode_from_db` (mirroring the existing Gemini-key
+functions' shape) and `PUT /api/settings/ai-mode`, merged into the existing
+`GET /api/settings` payload. `app/main.py`'s lifespan now builds one real
+`AIRouter` from settings and registers `script_pipeline.make_handler(router)`/
+`learning_pipeline.make_handler(router)` on the `AIWorker` before starting it —
+**both content pipelines built in Tasks 13.4/13.5 are reachable through the
+running app for the first time**. Step 2 and Step 3's `handleGenerate` migrated
+from one blocking `Api.generateScript()`/learning call onto a new shared
+`frontend/static/js/ai_job.js` module (create-or-resume, 2s visible / 8s
+hidden-tab polling backoff, keyboard-accessible cancel, terminal-state promise
+settlement) with resume-on-load wired into each page's `init()` so a refresh
+mid-generation reattaches instead of showing a false empty state. **Real
+regression caught by running existing tests, not assumed safe**: the first
+`GET /api/settings` merge used `"source"` as the AI-mode status key, silently
+overwriting the Gemini-key status's own `"source"` — fixed by renaming to
+`"ai_mode_source"`. **Two more real regressions found by actually running the
+full pre-existing browser suite**: `tests/test_keyboard_shortcuts_browser.py`
+and `tests/test_learning_shell_browser.py` both mocked the old synchronous
+generate endpoints directly; fixed to mock the job-creation/polling endpoints
+instead, preserving each test's actual intent. **A third regression found only
+in a full-suite run**: the two new job browser test files'
+`live_server_url` fixture (copied from the pre-existing keyboard-shortcuts
+pattern) never stopped its background `uvicorn.Server` thread, leaking the
+process-wide `Database`/`AIWorker` singletons into
+`tests/test_settings_api.py` — confirmed by bisection (807/807 pass without
+the two new files, the one failure with them) and fixed with an explicit
+`server.should_exit = True` + `thread.join()` teardown. A non-obvious
+JS Promise-auto-flattening bug in `ai_job.js` (`start()`/`resume()` returning
+their internal promise would have made `await currentAiJob.start()` block for
+the entire job lifecycle instead of just job creation) was found and fixed by
+reasoning before it could ship, not by a failing test. 12 new browser tests
+(`test_script_jobs_browser.py`/`test_learning_jobs_browser.py`: refresh-
+resumes-active-job, duplicate-click-prevention, keyboard-accessible cancel,
+fallback banner, terminal error shows retry and never a raw exception/error
+code, `aria-live` present), 3 new in `test_ai_health_api.py`, 5 new each in
+`test_settings_service.py`/`test_settings_api.py`. Full suite: **819/819
+pass**, 0 flakes (345.22s), `ruff check .`/`git diff --check` clean. See
+`.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.6.md` for the
+full plan and evidence record.
+
 ## Decision Log
 
 | Date | Decision | Rationale |

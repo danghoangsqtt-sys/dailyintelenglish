@@ -11,22 +11,38 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api import ai_jobs, audio, learning, music, projects, settings as settings_api, thumbnail, tts, video, youtube
 from app.core.config import settings
+from app.core.constants import GEMINI_MODEL
 from app.core.exceptions import AppError
 from app.core.paths import get_project_root
 from app.core.responses import ok
 from app.core.system_checks import check_ffmpeg, get_gpu_info
 from app.db.database import Database, close_db, init_db
-from app.services import settings_service
+from app.services import learning_pipeline, script_pipeline, settings_service
+from app.services.ai.gemini_provider import GeminiProvider
+from app.services.ai.ollama_provider import OllamaProvider
+from app.services.ai.router import AIRouter
+from app.services.ai.contracts import AIMode
 from app.services.ai_worker import AIWorker
 
 PROJECT_ROOT = get_project_root()
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 
 app_state: dict = {"ffmpeg_ok": False, "gpu_info": None}
-# No handler is registered yet -- Task 13.4/13.5 call ai_worker.register_handler(...)
-# for "script"/"learning". Until then the worker's poll loop stays idle (see
-# AIWorker._claim_next), never claiming a job it has nothing to do with.
 ai_worker = AIWorker(db_getter=lambda: Database.instance().connection)
+
+
+def _build_ai_router() -> AIRouter:
+    """One shared AIRouter for the app's durable job worker (Phase 13, Task 13.6).
+
+    Reads `settings.AI_MODE` live at call time (called once at startup, after
+    `settings_service.load_ai_mode_from_db()` has applied any DB override) --
+    mirrors `script_service._build_ai_router()`'s construction exactly.
+    """
+    local = OllamaProvider(
+        base_url=settings.OLLAMA_BASE_URL, model=settings.OLLAMA_MODEL, num_ctx=settings.OLLAMA_NUM_CTX
+    )
+    gemini = GeminiProvider(api_key=settings.GEMINI_API_KEY, model=GEMINI_MODEL)
+    return AIRouter(local=local, gemini=gemini, mode=AIMode(settings.AI_MODE))
 
 
 @asynccontextmanager
@@ -48,8 +64,13 @@ async def lifespan(app: FastAPI):
 
     await init_db()
     await settings_service.load_gemini_api_key_from_db(Database.instance().connection)
+    await settings_service.load_ai_mode_from_db(Database.instance().connection)
     app_state["ffmpeg_ok"] = await check_ffmpeg()
     app_state["gpu_info"] = await get_gpu_info()
+
+    ai_router = _build_ai_router()
+    ai_worker.register_handler("script", script_pipeline.make_handler(ai_router))
+    ai_worker.register_handler("learning", learning_pipeline.make_handler(ai_router))
     await ai_worker.start()
 
     yield

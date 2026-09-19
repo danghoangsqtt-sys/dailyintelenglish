@@ -109,27 +109,46 @@ def _envelope(data, error=None) -> str:
     return json.dumps({"success": error is None, "data": data, "error": error, "meta": {}})
 
 
+def _complete_learning_job_envelope() -> str:
+    return _envelope(
+        {
+            "id": "job-1", "project_id": PROJECT_ID, "operation": "learning", "status": "complete",
+            "stage": "done", "progress": 100, "requested_provider": "gemini", "actual_provider": "gemini",
+            "model": "gemini-3.8-flash", "fallback_used": False, "fallback_reason": None,
+            "cancel_requested": False, "attempt": 1, "repair_count": 0, "fallback_count": 0,
+            "recovery_count": 0, "error_code": None, "error_message": None,
+            "created_at": "2026-01-01T00:00:00Z", "started_at": "2026-01-01T00:00:00Z",
+            "updated_at": "2026-01-01T00:00:00Z", "finished_at": "2026-01-01T00:00:00Z",
+        }
+    )
+
+
 async def _mock_learning_routes(
     page: Page,
     save_calls: list[str] | None = None,
     existing_pack: dict | None = PACK,
 ) -> None:
+    """Also mocks the Phase 13 durable-job endpoints Generate/Regenerate now
+    use (Task 13.6) instead of the old synchronous `POST .../learning/generate`
+    -- that legacy route still exists server-side (kept as the compatibility
+    path) but the Step 3 UI no longer calls it. Once a job is created, the
+    mocked `GET .../learning` starts returning the finished PACK, mirroring
+    the real backend's "job completes, then a fresh GET sees the saved pack"
+    sequence, since a static mock can't otherwise tell "before" from "after"."""
+    state = {"job_created": False}
+
     async def handle(route):
         url, method = route.request.url, route.request.method
         if url.endswith(f"/api/projects/{PROJECT_ID}") and method == "GET":
             await route.fulfill(status=200, content_type="application/json", body=_envelope(PROJECT))
         elif url.endswith(f"/api/projects/{PROJECT_ID}/learning") and method == "GET":
-            await route.fulfill(
-                status=200,
-                content_type="application/json",
-                body=_envelope(existing_pack),
-            )
-        elif url.endswith(f"/api/projects/{PROJECT_ID}/learning/generate") and method == "POST":
-            await route.fulfill(
-                status=200,
-                content_type="application/json",
-                body=_envelope(PACK),
-            )
+            pack = PACK if state["job_created"] else existing_pack
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(pack))
+        elif "/ai-jobs/active" in url and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(None))
+        elif url.endswith(f"/api/projects/{PROJECT_ID}/ai-jobs") and method == "POST":
+            state["job_created"] = True
+            await route.fulfill(status=202, content_type="application/json", body=_complete_learning_job_envelope())
         elif url.endswith(f"/api/projects/{PROJECT_ID}/learning") and method == "PUT":
             if save_calls is not None:
                 save_calls.append(route.request.post_data or "")
