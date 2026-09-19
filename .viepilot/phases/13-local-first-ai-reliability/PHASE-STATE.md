@@ -33,7 +33,7 @@
 | 13.1 | Install and qualify Ollama/Qwen | done | Gate A passed |
 | 13.2 | Provider-neutral AI gateway | done | Contract tests passed |
 | 13.3 | Shared transactions and durable jobs | done | State-machine review passed |
-| 13.4 | Checkpointed script generation | pending | Content validators |
+| 13.4 | Checkpointed script generation | in_progress | Content validators |
 | 13.5 | Grounded learning generation | pending | Learning quality |
 | 13.6 | Settings, health, and Step 2/3 job UX | pending | Browser recovery |
 | 13.7 | Gemini fallback and compatibility | pending | Forced fallback |
@@ -129,3 +129,10 @@
   90 new tests across 4 files. Full suite: **753/753 pass**, 0 flakes. `ruff check .`
   clean, `git diff --check` clean, zero stale `_write_lock`/`_write_transaction`/
   `_read_transaction` references anywhere. Task 13.3 moved to `done`.
+- 2026-09-19: Wrote the concrete plan for Task 13.4 (checkpointed script pipeline:
+  outline/section/repair prompts, script_pipeline.py's pure validators + handler
+  orchestration per plan section 6's 8-step sequence, regenerate_line's migration
+  onto the Task 13.2 gateway, a small ai_worker.get_db() accessor) into
+  tasks/task-13.4.md before any code. Noted explicitly that app/main.py wiring of
+  the new handler is out of this task's allowed files and is deferred to Task
+  13.6, not silently dropped. Task 13.4 moved to `in_progress`.
