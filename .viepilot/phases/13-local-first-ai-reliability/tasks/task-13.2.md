@@ -1,6 +1,6 @@
 # Task 13.2 — Provider-Neutral AI Gateway
 
-- **Status:** pending
+- **Status:** done
 - **Dependency:** 13.0; Gate A may run in parallel conceptually
 - **Controlling detail:** implementation plan §8, Task 13.2
 
@@ -110,14 +110,21 @@ credentials/query/fragment/path, explicit port) — re-implemented here as a sma
 local function rather than importing from `scripts/` (a diagnostic script, not
 product code; Task 13.1's allowed files did not include `app/`). One
 `httpx.AsyncClient.post("/api/generate", json={..., "stream": False, "think": False,
-"format": request.schema, "options": {"num_ctx": ...}, "keep_alive": "5m"})` call —
+"format": request.json_schema, "options": {"num_ctx": ...}, "keep_alive": "5m"})` call
+(field renamed to `json_schema` during implementation — a bare `schema` field name
+triggers a Pydantic v2 "shadows a parent attribute" warning, confirmed live) —
 **exactly one attempt, no internal loop** (the router owns retry policy, per this
 task's "no nested retries" verification requirement). Maps: `httpx.ConnectError`/
 `httpx.ConnectTimeout` → `ProviderUnavailableError`; `httpx.TimeoutException` →
 `ProviderTimeoutError`; HTTP 404 → `ProviderUnavailableError` (model missing, matches
 the real 404 behavior confirmed live in Task 13.1's Gate A evidence); other
-non-2xx → `ProviderInvalidResponseError`; successful response routed through
-`validation.parse_and_validate` when `request.schema` is set.
+non-2xx → `ProviderInvalidResponseError`. **Correction made during implementation:**
+the provider returns raw `text` on `GenerationResult` rather than calling
+`validation.parse_and_validate` itself — that primitive needs a concrete
+`TypeAdapter` for the caller's own shape, which the provider/router layer never
+has (only the raw `json_schema` dict is forwarded to the provider API call, to
+constrain generation). Callers (Task 13.4/13.5) validate `result.text` with their
+own `TypeAdapter` via `validation.parse_and_validate` instead.
 
 **`app/services/ai/gemini_provider.py`** — `GeminiProvider(api_key, model=
 constants.GEMINI_MODEL, timeout)`. Same one-call shape as
@@ -206,3 +213,44 @@ already-documented Gemini-retry timing flake class (rerun any flake in isolation
 record it, per standing project discipline); ruff clean; no legacy route/service
 behavior changed (this task adds files and two config/constants/exceptions edits
 only — no route wiring yet).
+
+## Implementation evidence — 2026-09-19
+
+- Built exactly the files listed under Paths above. `app/services/ai/router.py`'s
+  `_attempt_with_one_retry` bounds every provider to at most 1 attempt + 1 retry;
+  hybrid mode adds at most 1 further Gemini attempt + 1 Gemini retry on top — never
+  more than 4 total provider calls for one `generate()`, and never more than 2 for
+  `local`/`gemini`-only modes.
+- `httpx.MockTransport` (already part of the pinned `httpx==0.28.1` — no new
+  dependency) covers `OllamaProvider`/`GeminiProvider` tests; `FakeProvider` (no
+  network) covers `AIRouter` tests, per the plan's "ordinary tests don't call
+  network/model real" invariant.
+- **Revert-and-confirm-failure check**: temporarily changed
+  `_attempt_with_one_retry` to add a 3rd nested retry attempt on top of the
+  existing 2. Re-ran `tests/test_ai_router.py`: 4 of 10 tests failed for the
+  right reason (`test_hybrid_mode_falls_back_to_gemini_after_local_exhausts_its_retry`,
+  `test_hybrid_mode_bounded_total_attempts_even_when_gemini_also_fails`,
+  `test_circuit_opens_after_threshold_and_skips_local`,
+  `test_circuit_closes_again_after_a_local_success` — each asserts an exact
+  `call_count`/final-provider that the extra nested attempt broke). Reverted the
+  change and re-ran: 10/10 pass again. This confirms the "no nested retries"
+  test coverage is real, not vacuous.
+- Verification commands re-run independently:
+  - `venv\Scripts\python.exe -m ruff check app\services\ai tests\test_ai_contracts.py
+    tests\test_ai_providers.py tests\test_ai_router.py tests\test_ai_validation.py
+    app\core\config.py app\core\constants.py app\core\exceptions.py` — clean.
+  - `venv\Scripts\python.exe -m ruff check .` (whole repo) — clean.
+  - `venv\Scripts\python.exe -m pytest tests\test_ai_contracts.py
+    tests\test_ai_providers.py tests\test_ai_router.py tests\test_ai_validation.py -v`
+    — 43/43 pass.
+  - `venv\Scripts\python.exe -m pytest tests\ -q` (full suite) — **683/683 pass**,
+    0 failures, 0 flakes this run (401.81s).
+  - `git diff --check` — clean.
+- No legacy route or service (`script_service.py`, `learning_service.py`, any
+  `app/api/*.py`) was touched — this task adds the gateway skeleton only; nothing
+  outside `app/services/ai/**`'s own tests exercises it yet. `AI_MODE` defaults to
+  `"gemini"` (packaged-safe default, per ADR-001) but is not read by any route yet.
+
+**Decision: Task 13.2 done.** Contract/provider/router/validation layer is in place
+and independently verified. Task 13.3 (durable jobs) and 13.4/13.5 (actual script/
+learning migration onto this gateway) are next.

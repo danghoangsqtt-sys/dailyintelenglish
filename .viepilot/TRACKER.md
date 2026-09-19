@@ -1280,6 +1280,39 @@ into `tasks/task-13.1.md`, de-duplicated by this session; no competing commit ha
 landed on `main` first. See `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.1.md`
 for the full record.
 
+### 13.2 Provider-neutral AI gateway — ✅ DONE (2026-09-19)
+
+Built the typed provider contract layer product code will route through starting
+Task 13.4/13.5: `app/services/ai/contracts.py` (`AIMode` enum, `GenerationRequest`/
+`GenerationResult` Pydantic models, a `Provider` structural protocol),
+`ollama_provider.py`/`gemini_provider.py` (each makes exactly **one** HTTP attempt,
+no internal retry loop — the router owns all retry/fallback policy so it can't
+multiply with a provider-internal one), `router.py` (`AIRouter`: routes by
+`AI_MODE`, one same-provider retry on a retryable error class, one visible Gemini
+fallback in hybrid mode, an in-process circuit breaker over the local provider,
+and an overall `deadline_seconds` budget via `asyncio.wait_for`), `validation.py`
+(`parse_and_validate`, the one shared JSON-parse-plus-Pydantic-validate primitive
+Task 13.4/13.5 will reuse instead of each service's own ad hoc pair), and
+`fake_provider.py` (a network-free double so router/provider tests never call a
+real model). Live-reverified `gemini-3.8-flash` (real `models.list` call + the
+official docs page) is still the current stable, non-preview Flash model before
+locking the gateway's single Gemini adapter to it — no new model name introduced,
+reuses the existing `constants.GEMINI_MODEL`. New settings: `AI_MODE` (kill switch,
+default `"gemini"` — packaged-safe per ADR-001), `OLLAMA_BASE_URL`, `OLLAMA_MODEL`,
+`OLLAMA_NUM_CTX`, `AI_REQUEST_DEADLINE_SECONDS`. New typed exceptions:
+`ProviderError` and 6 subclasses plus `SchemaValidationError`, all logged with
+model/purpose/prompt_hash/latency/tokens only — never the prompt or API key. 43 new
+tests; a deliberate revert-and-confirm-failure check (temporarily added a 3rd
+nested retry to the router) confirmed the "no nested retries" test coverage is
+real — 4 tests failed for the right reason, then passed again after reverting.
+Full suite: **683/683 pass**, 0 flakes, `ruff check .` clean, `git diff --check`
+clean. Nothing outside this package's own tests calls the gateway yet — no legacy
+route or service (`script_service.py`, `learning_service.py`, any `app/api/*.py`)
+was touched, per this task's "no legacy service is switched before contract tests
+pass" constraint. See
+`.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.2.md` for the full
+plan and evidence record.
+
 ## Decision Log
 
 | Date | Decision | Rationale |

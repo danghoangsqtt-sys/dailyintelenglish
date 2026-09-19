@@ -81,3 +81,36 @@ class AvatarUploadTooLargeError(AppError):
     """Raised when a speaker avatar upload exceeds the configured size limit."""
 
     status_code = 413
+
+
+class ProviderError(AppError):
+    """Base class for all AI provider gateway errors (Phase 13)."""
+
+    status_code = 502
+
+
+class ProviderTimeoutError(ProviderError):
+    """Raised when a provider call exceeds its request or router deadline."""
+
+
+class ProviderAuthError(ProviderError):
+    """Raised on a provider auth failure. Message never includes the key itself."""
+
+
+class ProviderRateLimitError(ProviderError):
+    """Raised when a provider reports rate/quota exhaustion (retryable)."""
+
+
+class ProviderUnavailableError(ProviderError):
+    """Raised when a provider is unreachable, down, or the model is missing."""
+
+
+class ProviderInvalidResponseError(ProviderError):
+    """Raised when a provider returns an unexpected shape or non-2xx status
+    that isn't one of the more specific categories above."""
+
+
+class SchemaValidationError(ProviderError):
+    """Raised when a provider's response is structurally valid but fails JSON
+    parsing or the caller's Pydantic schema. Message never echoes prompt/response
+    content -- only error counts/field paths."""

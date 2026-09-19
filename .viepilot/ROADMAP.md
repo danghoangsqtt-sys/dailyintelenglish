@@ -906,3 +906,20 @@ configuration-only Gemini rollback path. See
   local-primary versus Gemini-primary/local-experimental. See
   `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.1.md` for the full
   record.
+
+### 13.2 Provider-neutral AI gateway — ✅ DONE (2026-09-19)
+
+- [x] Typed provider contract (`AIMode`, `GenerationRequest`/`GenerationResult`,
+  `Provider` protocol), one-attempt-only `OllamaProvider`/`GeminiProvider` adapters,
+  a central `AIRouter` (mode routing, one same-provider retry, one visible Gemini
+  fallback in hybrid mode, an in-process circuit breaker, an overall deadline
+  budget), a shared `parse_and_validate` schema-validation primitive, and a
+  network-free `FakeProvider` for tests — `app/services/ai/**`. Live-reverified
+  `gemini-3.8-flash` is still the current stable, non-preview Flash model before
+  locking the gateway's single Gemini adapter to it. 43 new tests; a
+  revert-and-confirm-failure check confirmed the "no nested retries" coverage is
+  real. Full suite **683/683 pass**, 0 flakes, `ruff`/`git diff --check` clean.
+  Nothing outside this package's own tests calls the gateway yet — no legacy
+  route/service touched. See
+  `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.2.md` for the full
+  record.

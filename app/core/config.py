@@ -42,6 +42,19 @@ class Settings(BaseSettings):
 
     FFMPEG_PATH: str = "ffmpeg"
 
+    # Phase 13 -- local-first AI reliability (docs/architecture/adr-001-local-first-ai.md).
+    # AI_MODE is the kill switch: "gemini" (packaged default until local-runtime
+    # onboarding is proven), "local" (Ollama only, no cloud fallback -- used for the
+    # Gate B operational trial), or "hybrid" (local first, one visible Gemini fallback).
+    AI_MODE: str = "gemini"
+    OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
+    OLLAMA_MODEL: str = "qwen3.5:9b"
+    OLLAMA_NUM_CTX: int = 16384
+    # Generous enough to cover Task 13.1's measured 33.4s cold-load plus real
+    # generation time; per-section checkpoint deadlines (Task 13.4) are a separate,
+    # smaller-grained concern layered on top of this.
+    AI_REQUEST_DEADLINE_SECONDS: float = 120.0
+
     model_config = SettingsConfigDict(
         env_prefix="DIE_",
         env_file=".env",

@@ -31,7 +31,7 @@
 |---|---|---|---|
 | 13.0 | Baseline, ADR, backup, rollback contract | done | Doc-first passed |
 | 13.1 | Install and qualify Ollama/Qwen | done | Gate A passed |
-| 13.2 | Provider-neutral AI gateway | in_progress | Contract tests |
+| 13.2 | Provider-neutral AI gateway | done | Contract tests passed |
 | 13.3 | Shared transactions and durable jobs | pending | State-machine review |
 | 13.4 | Checkpointed script generation | pending | Content validators |
 | 13.5 | Grounded learning generation | pending | Learning quality |
@@ -89,3 +89,18 @@
   docs fetch) is still the current stable, non-preview Flash model before locking the
   gateway's Gemini adapter to it. Wrote the concrete file-level plan for Task 13.2 into
   `tasks/task-13.2.md` before any product code; Task 13.2 moved to `in_progress`.
+- 2026-09-19: Task 13.2 implemented -- typed contracts (`AIMode`, `GenerationRequest`,
+  `GenerationResult`, `Provider` protocol), `OllamaProvider`/`GeminiProvider` (one
+  attempt each, no internal retry), `AIRouter` (mode routing, one same-provider
+  retry, one Gemini fallback in hybrid mode, an in-process circuit breaker, an
+  overall `deadline_seconds` budget via `asyncio.wait_for`), `parse_and_validate`
+  shared schema-validation primitive, and a network-free `FakeProvider` for tests.
+  New settings (`AI_MODE` default `"gemini"`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`,
+  `OLLAMA_NUM_CTX`, `AI_REQUEST_DEADLINE_SECONDS`) and 7 new typed `Provider*`/
+  `SchemaValidationError` exceptions. 43 new tests (contracts/providers/router/
+  validation) pass; a revert-and-confirm-failure check on the router's retry bound
+  confirmed the "no nested retries" tests are real (4 tests failed for the right
+  reason when a 3rd nested retry was intentionally introduced, then passed again
+  after reverting). Full suite: **683/683 pass**, 0 flakes. `ruff check .` clean,
+  `git diff --check` clean. No legacy route/service touched -- nothing outside this
+  package's own tests calls the gateway yet. Task 13.2 moved to `done`.

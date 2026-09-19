@@ -174,3 +174,10 @@ YOUTUBE_TITLE_VARIANTS = ["click_worthy", "educational", "seo"]
 # timestamps are estimated from a fixed reading speed, never measured.
 YOUTUBE_CHAPTER_WORDS_PER_MINUTE = 150
 YOUTUBE_CHAPTER_MIN_LINES = 4  # start a new chapter every N script lines (topic-shift heuristic)
+
+# Phase 13 -- local-first AI provider gateway (app/services/ai/**).
+AI_MODES = ("gemini", "local", "hybrid")
+# Consecutive local-provider failures before the router's in-process circuit breaker
+# opens and hybrid mode skips straight to the Gemini fallback for a cooldown window.
+AI_CIRCUIT_FAILURE_THRESHOLD = 3
+AI_CIRCUIT_COOLDOWN_SECONDS = 60.0
