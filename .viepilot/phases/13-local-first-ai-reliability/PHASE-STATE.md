@@ -37,7 +37,7 @@
 | 13.5 | Grounded learning generation | done | Learning quality passed |
 | 13.6 | Settings, health, and Step 2/3 job UX | done | Browser recovery passed |
 | 13.7 | Gemini fallback and compatibility | done | Forced fallback |
-| 13.8 | Automated regression/packaging gate | pending | Full suite/build |
+| 13.8 | Automated regression/packaging gate | in_progress | Full suite/build |
 | 13.9 | Real no-mock bake-off and operational trial | pending | Gate B |
 | 13.10 | Rollout, docs, and rollback drill | pending | Release gate |
 
@@ -262,3 +262,8 @@
   are historical docstring mentions, not code). Full suite: **801/801 pass**, 0
   flakes, `ruff check app tests scripts` clean, `git diff --check` clean. Task
   13.7 moved to `done`.
+- 2026-09-20: Audited every logger call site across the AI gateway/durable-job layer
+  before writing Task 13.8's plan: only `app/services/ai/router.py` (4 sites) and one
+  line in `ai_worker.py` log anything at all in this layer today; all already use
+  only safe fields, never a raw prompt/response/key. Recorded in `tasks/task-13.8.md`
+  before any code. Task 13.8 moved to `in_progress`.
