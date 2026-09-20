@@ -36,7 +36,7 @@
 | 13.4 | Checkpointed script generation | done | Content validators passed |
 | 13.5 | Grounded learning generation | done | Learning quality passed |
 | 13.6 | Settings, health, and Step 2/3 job UX | done | Browser recovery passed |
-| 13.7 | Gemini fallback and compatibility | pending | Forced fallback |
+| 13.7 | Gemini fallback and compatibility | in_progress | Forced fallback |
 | 13.8 | Automated regression/packaging gate | pending | Full suite/build |
 | 13.9 | Real no-mock bake-off and operational trial | pending | Gate B |
 | 13.10 | Rollout, docs, and rollback drill | pending | Release gate |
@@ -206,3 +206,32 @@
   hung handleGenerate() for the full job duration). Full suite: **819/819
   pass**, 0 flakes (345.22s), `ruff check .`/`git diff --check` clean. Task
   13.6 moved to `done`.
+- 2026-09-20 (session continuation after a Codex-quota interruption and handoff):
+  re-verified real state before acting -- `git log`/`PHASE-STATE.md` both confirmed
+  Tasks 13.0-13.6 already `done` (through commit `336a587`), contradicting the stale
+  handoff prompt's description of Task 13.1 as still `in_progress`. Read every
+  required doc (AI-GUIDE/SYSTEM-RULES/ARCHITECTURE/TRACKER/ROADMAP/HANDOFF/brainstorm/
+  controlling plan/SPEC/ADR-001) plus the actual current `app/services/ai/**`,
+  `script_service.py`, `learning_service.py`, `thumbnail_service.py`,
+  `youtube_service.py`, `app/api/projects.py`, `app/api/learning.py`, and all four
+  services' existing test files before writing Task 13.7's plan. Found two real gaps,
+  both recorded in `tasks/task-13.7.md` before any code: (1) migrating the 4 Gemini
+  consumers onto the gateway will change/remove the duplicated `_call_gemini`/
+  `_generate_with_retry`/`GEMINI_MODEL_FALLBACKS` machinery each of
+  `tests/test_script_service.py`, `tests/test_learning_service.py`,
+  `tests/test_thumbnail_service.py`, `tests/test_youtube_service.py` currently tests
+  directly -- none of those 4 files were in 13.7's original allowed-file list, so the
+  list was expanded with reasoning recorded, matching the precedent set in 13.5/13.6;
+  (2) live-checked `ai.google.dev/gemini-api/docs/background-execution` (plus a real
+  `models.list`/model-metadata call against the configured key) and confirmed Gemini's
+  Interactions API background execution is real and lists `gemini-3.8-flash` as
+  supported, distinct from `generateContent` -- but wiring it needs
+  `app/services/ai_worker.py`/`ai_job_service.py` (to persist/poll
+  `ai_generation_jobs.remote_interaction_id`, a column Task 13.3 already added but
+  nothing yet reads/writes), neither file in 13.7's allowed list; per ADR-001 point 7
+  the existing synchronous foreground call remains valid either way, so this is
+  deliberately deferred to a future task rather than expanding scope into worker/job
+  files -- the real "architecture change outside allowed files" boundary the user
+  asked this session to stop at, resolved by *not* crossing it. Live re-verification
+  also reconfirmed `gemini-3.8-flash` is still Google's current non-preview stable
+  Flash model one day after Task 13.2's own check. Task 13.7 moved to `in_progress`.
