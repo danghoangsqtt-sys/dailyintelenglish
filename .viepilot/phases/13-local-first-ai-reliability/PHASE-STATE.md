@@ -38,7 +38,7 @@
 | 13.6 | Settings, health, and Step 2/3 job UX | done | Browser recovery passed |
 | 13.7 | Gemini fallback and compatibility | done | Forced fallback |
 | 13.8 | Automated regression/packaging gate | done | Full suite/build |
-| 13.9 | Real no-mock bake-off and operational trial | pending | Gate B |
+| 13.9 | Real no-mock bake-off and operational trial | in_progress | Gate B |
 | 13.10 | Rollout, docs, and rollback drill | pending | Release gate |
 
 ## Decisions
@@ -285,3 +285,18 @@
   no spec edit needed). Restored the environment afterward (real Ollama server
   restarted, test exe stopped, stray local log/pid files deleted); the existing
   dev server on port 8000 was never touched. Task 13.8 moved to `done`.
+- 2026-09-20: Wrote the concrete plan for Task 13.9 (Gate B) before any code -- read
+  every route the runner will call (`ai-jobs`, `script`, `learning`, `audio/generate`,
+  `video/generate`, downloads), confirmed `audio/generate` already synthesizes every
+  line via real Edge TTS internally (no separate per-line call needed), and confirmed
+  `CEFR_WORDS_PER_MINUTE["B1"]=100` matches the plan's ~800-word B1-eight-minute
+  figure. Recorded a deviation from the plan's literal `artifacts/phase13/gate-b/`
+  evidence path to `data/quality_reviews/phase13/gate-b/`, following the identical
+  precedent Task 13.1 already set for Gate A (`artifacts/` is not gitignored and
+  `.gitignore` is not in this task's allowed files either). Task 13.9 moved to
+  `in_progress`. Given Gate B's real scope -- 5 consecutive real local-only 8-minute
+  script jobs plus samples, real learning generation, and a full real Edge TTS/audio/
+  video pipeline, run against a live uvicorn server with no mocks -- this is a
+  multi-hour real-execution task, not a quick verification step; the runner itself
+  (`scripts/run_ai_operational_trial.py`) is still to be written and the trial not yet
+  executed.
