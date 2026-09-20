@@ -1544,6 +1544,46 @@ same check. Full suite: **801/801 pass**, 0 flakes,
 `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.7.md` for the
 full plan and evidence record.
 
+### 13.8 Automated regression and packaging gate — ✅ DONE (2026-09-20)
+
+Audited every logger call site across the whole AI gateway/durable-job layer
+before writing any test: only `app/services/ai/router.py` (4 sites) and one
+line in `ai_worker.py` log anything today, all already using only safe
+fields (provider/model/purpose/prompt_hash/latency/tokens/attempt/exception
+class name) -- never a raw prompt, response, or API key. New
+`tests/test_ai_logging.py` (7 tests) locks this down with `caplog`-captured
+assertions across success, retry, hybrid-fallback, circuit-breaker-open,
+total-failure, and auth-error paths through a real `AIRouter` -- broader
+than the one pre-existing per-provider check
+(`test_ai_providers.py::test_ollama_provider_never_logs_prompt_body`), which
+covered only one provider's own output, not the router's, and not a
+retry/fallback sequence. Ran the full verification matrix for real: `ruff
+check app tests scripts` clean; `node --check` clean on every
+`frontend/static/js/*.js` file; `scripts/check_dependencies.py` all 6 checks
+GREEN; full suite **808/808 pass**, 0 flakes -- no pre-existing browser flake
+occurred this run, so no isolated/group rerun was needed. Built the real
+`.exe` via `scripts/build_exe.ps1` (clean, 169 MB dist, matching Task 12.2's
+own confirmed size -- the `torch`/`tensorflow`/etc. exclusion list still
+effective) and confirmed via the `.spec` file that Ollama/model are not
+bundled. **Actually launched the packaged exe twice**, not just built it:
+from its own `dist/` directory with no `.env` present, on an isolated port
+so the existing dev server on 8000 was never touched -- once with Ollama
+running (`ollama_reachable: true`) and once with Ollama genuinely stopped.
+A real timing lesson surfaced and is recorded honestly: stopping only the
+Ollama server process wasn't enough, since its tray watchdog
+(`ollama app.exe`) auto-relaunched it within seconds (matching a Docker-
+Desktop-style resilience pattern) -- both the server and the watchdog had to
+be killed, confirmed via a real failed `curl` to `127.0.0.1:11434`, before
+`GET /api/ai/health` genuinely reported `ollama_reachable: false`. Both
+launches returned `GET /health` 200 immediately and `GET /api/ai/health`
+degraded safely (no crash, no key leak) rather than blocking startup,
+confirming the "app must still start when either is absent" invariant
+against the real packaged build, not just the dev server. Environment
+restored afterward (real Ollama server restarted, test exe stopped, stray
+local log/pid files deleted). See
+`.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.8.md` for the
+full plan and evidence record.
+
 ## Decision Log
 
 | Date | Decision | Rationale |

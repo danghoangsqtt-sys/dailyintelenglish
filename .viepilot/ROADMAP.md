@@ -1077,3 +1077,41 @@ configuration-only Gemini rollback path. See
   clean, `git diff --check` clean. See
   `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.7.md` for the
   full record.
+
+### 13.8 Automated regression and packaging gate — ✅ DONE (2026-09-20)
+
+- [x] Audited every logger call site across the whole AI gateway/durable-job
+  layer before writing any test: only `app/services/ai/router.py` (4 sites)
+  and one line in `ai_worker.py` log anything today, and all already use only
+  safe fields — confirmed by reading, not assumed. New
+  `tests/test_ai_logging.py` (7 tests) locks that behavior down with
+  `caplog`, across success/retry/hybrid-fallback/circuit-breaker/total-
+  failure/auth-error paths — broader than the one pre-existing per-provider
+  check, and a positive test confirms the suite genuinely observes the
+  router's real log records rather than silently matching zero.
+- [x] Full verification matrix run for real: `ruff check app tests scripts`
+  clean; `node --check` clean on every `frontend/static/js/*.js`;
+  `scripts/check_dependencies.py` all 6 checks GREEN; full suite
+  **808/808 pass**, 0 flakes (no pre-existing browser flake occurred this
+  run, so no isolated/group rerun was needed); `git diff --check` clean.
+- [x] Clean PyInstaller build via `scripts/build_exe.ps1` (169 MB dist,
+  matching Task 12.2's own confirmed size — the `torch`/`tensorflow`/etc.
+  exclusion list still effective). Confirmed via `daily_intel_english_studio.spec`
+  that Ollama/model are not bundled — only `frontend/`, `prompts/`, and
+  migrations are staged as data.
+- [x] **Actually launched the real packaged exe** (not just built it) from its
+  own `dist/` directory with no `.env` present, on an isolated port so the
+  existing dev server on 8000 was never touched — twice: once with Ollama
+  running (`GET /api/ai/health` → `ollama_reachable: true`) and once with
+  Ollama genuinely stopped (its tray watchdog auto-relaunches the server
+  within seconds, so both the server *and* the watchdog had to be killed,
+  confirmed via a real failed `curl` to `127.0.0.1:11434` — a real timing
+  lesson recorded, not hidden). Both times `GET /health` returned 200
+  immediately and `GET /api/ai/health` degraded safely
+  (`ollama_reachable: false`, `model_present: false`, no crash, no key leak)
+  instead of blocking startup — proving the "app must still start when
+  either is absent" invariant against the actual packaged build, not just
+  the dev server. Environment restored afterward (real Ollama restarted,
+  test exe and stray local log/pid files cleaned up). See
+  `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.8.md` for the
+  full record.

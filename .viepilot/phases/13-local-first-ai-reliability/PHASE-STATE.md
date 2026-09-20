@@ -37,7 +37,7 @@
 | 13.5 | Grounded learning generation | done | Learning quality passed |
 | 13.6 | Settings, health, and Step 2/3 job UX | done | Browser recovery passed |
 | 13.7 | Gemini fallback and compatibility | done | Forced fallback |
-| 13.8 | Automated regression/packaging gate | in_progress | Full suite/build |
+| 13.8 | Automated regression/packaging gate | done | Full suite/build |
 | 13.9 | Real no-mock bake-off and operational trial | pending | Gate B |
 | 13.10 | Rollout, docs, and rollback drill | pending | Release gate |
 
@@ -267,3 +267,21 @@
   line in `ai_worker.py` log anything at all in this layer today; all already use
   only safe fields, never a raw prompt/response/key. Recorded in `tasks/task-13.8.md`
   before any code. Task 13.8 moved to `in_progress`.
+- 2026-09-20: Task 13.8 implemented -- new `tests/test_ai_logging.py` (7 tests)
+  locks down the router's no-secret-leakage behavior with `caplog` across
+  success/retry/fallback/circuit-breaker/total-failure/auth-error paths. Ran the
+  full verification matrix: ruff clean, JS syntax clean on every file, dependency
+  check all-GREEN, full suite **808/808 pass** (0 flakes, no rerun needed), clean
+  PyInstaller build (169 MB dist, matching Task 12.2's confirmed size -- exclusion
+  list still effective). Actually launched the real packaged exe from a directory
+  with no `.env`, on an isolated port, twice: once with Ollama present
+  (`ollama_reachable: true`) and once with Ollama genuinely absent (killed both
+  the server and its auto-restarting tray watchdog, confirmed via a real failed
+  curl to 11434) -- both times `GET /health` returned 200 immediately and `GET
+  /api/ai/health` degraded safely (`ollama_reachable: false`, no crash, no key
+  leak) rather than blocking startup, confirming the "app must still start when
+  either is absent" invariant against the actual packaged build. Confirmed via
+  the `.spec` file that Ollama/model are not bundled (unchanged from Task 12.2 --
+  no spec edit needed). Restored the environment afterward (real Ollama server
+  restarted, test exe stopped, stray local log/pid files deleted); the existing
+  dev server on port 8000 was never touched. Task 13.8 moved to `done`.
