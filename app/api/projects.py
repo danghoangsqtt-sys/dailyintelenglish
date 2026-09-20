@@ -181,13 +181,20 @@ async def get_script(project_id: str, db: aiosqlite.Connection = Depends(get_db)
     return ok(lines, started_at=started_at)
 
 
-@router.post("/{project_id}/script/generate")
+@router.post("/{project_id}/script/generate", deprecated=True)
 async def generate_script(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
-    """Generate a full script for a project via Gemini and persist it."""
+    """Generate a full script for a project and persist it (synchronous, one request).
+
+    Deprecated (Phase 13, Task 13.7): kept for one compatibility release with an
+    unchanged response contract. The durable-job path (`POST
+    /api/projects/{project_id}/ai-jobs` with `operation: "script"`, Task 13.3+) is the
+    production route -- it survives browser navigation/restart and does not hold one
+    HTTP request open for the whole generation.
+    """
     started_at = time.perf_counter()
     async with read_transaction():
         project = await project_service.get_project(db, project_id)
-    lines = await script_service.generate_script(project_id, project)  # no lock held — Gemini call
+    lines = await script_service.generate_script(project_id, project)  # no lock held — provider gateway call
     saved = await _save_script_and_advance(
         db, project_id, project, [line.model_dump() for line in lines]
     )
@@ -203,7 +210,7 @@ async def regenerate_script_line(
     async with read_transaction():
         project = await project_service.get_project(db, project_id)
         current_line = await script_service.get_script_line(db, project_id, payload.line_id)
-    new_line = await script_service.regenerate_line(  # no lock held — Gemini call
+    new_line = await script_service.regenerate_line(  # no lock held — provider gateway call
         project_id, project, payload.line_id, current_line["text"], current_line["speaker_id"]
     )
     async with write_transaction(db):

@@ -54,6 +54,23 @@ async def test_gemini_mode_never_calls_local():
     assert gemini.call_count == 1
 
 
+async def test_local_mode_raises_without_any_gemini_fallback_when_local_fails():
+    """Task 13.7 verification: 'disabled fallback yields a clear local error' --
+    AI_MODE=local is the disabled-fallback configuration (see ADR-001/config.py),
+    so a local failure must surface directly, never silently reach Gemini."""
+    local = FakeProvider(
+        "ollama", [ProviderUnavailableError("down"), ProviderUnavailableError("still down")]
+    )
+    gemini = FakeProvider("gemini", [])
+    router = AIRouter(local=local, gemini=gemini, mode=AIMode.LOCAL)
+
+    with pytest.raises(ProviderUnavailableError):
+        await router.generate(_request())
+
+    assert local.call_count == 2  # one attempt + one same-provider retry, no more
+    assert gemini.call_count == 0
+
+
 # --- hybrid: happy path, retry, fallback ----------------------------------------------
 
 

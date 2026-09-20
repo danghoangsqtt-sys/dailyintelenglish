@@ -15,18 +15,25 @@ from app.services import learning_service, project_service, script_service
 router = APIRouter(prefix="/api/projects/{project_id}/learning", tags=["learning"])
 
 
-@router.post("/generate")
+@router.post("/generate", deprecated=True)
 async def generate_learning_content(
     project_id: str, db: aiosqlite.Connection = Depends(get_db)
 ) -> dict:
-    """Generate a Learning Content pack via Gemini from the project's script and persist it."""
+    """Generate a Learning Content pack from the project's script and persist it
+    (synchronous, one request).
+
+    Deprecated (Phase 13, Task 13.7): kept for one compatibility release with an
+    unchanged response contract. The durable-job path (`POST
+    /api/projects/{project_id}/ai-jobs` with `operation: "learning"`, Task 13.3+) is
+    the production route.
+    """
     started_at = time.perf_counter()
     async with read_transaction():
         project = await project_service.get_project(db, project_id)
         script_lines = await script_service.get_script(db, project_id)
     if not script_lines:
         raise ValidationError("Cannot generate learning content: script is empty")
-    pack = await learning_service.generate_learning_pack(  # no lock held — Gemini call
+    pack = await learning_service.generate_learning_pack(  # no lock held — provider gateway call
         project_id, project, script_lines
     )
     async with write_transaction(db):

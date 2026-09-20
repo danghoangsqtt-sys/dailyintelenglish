@@ -16,6 +16,8 @@ from pydub.generators import Sine
 
 from app.core.config import settings
 from app.main import app
+from app.models.learning import LearningPackOut
+from app.models.thumbnail import ThumbnailSuggestionPack
 from app.services import learning_service, thumbnail_service, tts_service, youtube_service
 
 PROJECT_PAYLOAD = {
@@ -109,16 +111,16 @@ def client(tmp_path, monkeypatch):
     async def fake_generate_package(project_dict, script_lines, timestamps=None):
         return {**VALID_YOUTUBE_PACKAGE, "chapters_text": "00:00 Introduction", "chapters_estimated": timestamps is None}
 
-    async def fake_thumbnail_generate(prompt: str, schema: dict) -> str:
-        return _thumbnail_suggestion_json()
+    async def fake_generate_suggestions(project, template, variant_count, router=None):
+        return ThumbnailSuggestionPack.model_validate_json(_thumbnail_suggestion_json())
 
-    async def fake_learning_generate(prompt: str, schema: dict | None = None) -> str:
-        return json.dumps(VALID_LEARNING_PACK, ensure_ascii=False)
+    async def fake_generate_learning_pack(project_id, config, script_lines, router=None):
+        return LearningPackOut.model_validate(VALID_LEARNING_PACK)
 
     monkeypatch.setattr(tts_service, "_synthesize_edge_tts", fake_edge_tts)
     monkeypatch.setattr(youtube_service, "generate_package", fake_generate_package)
-    monkeypatch.setattr(thumbnail_service, "_generate_with_retry", fake_thumbnail_generate)
-    monkeypatch.setattr(learning_service, "_generate_with_retry", fake_learning_generate)
+    monkeypatch.setattr(thumbnail_service, "generate_suggestions", fake_generate_suggestions)
+    monkeypatch.setattr(learning_service, "generate_learning_pack", fake_generate_learning_pack)
 
     with TestClient(app) as test_client:
         yield test_client

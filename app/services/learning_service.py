@@ -1,37 +1,30 @@
-"""Generates and persists Learning Content packs via the Gemini API (Task 1.5).
+"""Generates and persists Learning Content packs via the AI provider gateway (Task 1.5).
 
-Mirrors app/services/script_service.py's approach: Gemini is called directly
-over its REST endpoint via httpx.AsyncClient (native async, direct HTTP status
-control for 429 backoff, trivially mockable in tests), with exponential
-backoff on rate limiting and strict Pydantic schema validation of the response.
+Migrated from a duplicated direct-Gemini transport onto the shared `AIRouter`
+gateway in Phase 13, Task 13.7 -- see `app/services/script_service.py::generate_script`
+for the identical reasoning (ADR-001 rejects the old multi-model fallback cascade).
 """
 
 import hashlib
 import json
 import logging
-import time
 import uuid
-from asyncio import sleep
 from datetime import datetime, timezone
 
 import aiosqlite
-import httpx
-from pydantic import ValidationError as PydanticValidationError
+from pydantic import TypeAdapter
 
 from app.core.config import settings
-from app.core.constants import (
-    GEMINI_MAX_RETRIES,
-    GEMINI_MODEL,
-    GEMINI_MODEL_FALLBACKS,
-    GEMINI_RETRY_BASE_DELAY,
-)
-from app.core.exceptions import LearningGenerationError, NotFoundError
+from app.core.exceptions import LearningGenerationError, NotFoundError, ProviderError, SchemaValidationError
 from app.core.prompt_loader import render_learning_prompt
 from app.models.learning import LearningPackOut
+from app.services.ai.contracts import AIMode, GenerationRequest
+from app.services.ai.router import AIRouter, build_ai_router_from_settings
+from app.services.ai.validation import parse_and_validate
 
 logger = logging.getLogger(__name__)
 
-GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+_PACK_ADAPTER = TypeAdapter(LearningPackOut)
 
 
 def _now() -> str:
@@ -54,121 +47,14 @@ def compute_script_hash(script_lines: list[dict]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-_RETRYABLE_STATUS_CODES = (429, 503)  # 429 = rate/quota limit, 503 = model temporarily overloaded
-
-
-async def _call_gemini(
-    prompt: str, schema: dict | None = None, model: str = GEMINI_MODEL
-) -> tuple[httpx.Response, float]:
-    """Make one HTTP call to Gemini generateContent. Returns (response, latency_ms)."""
-    url = GEMINI_ENDPOINT.format(model=model)
-    generation_config: dict[str, object] = {"responseMimeType": "application/json"}
-    if schema is not None:
-        generation_config["responseJsonSchema"] = schema
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": generation_config,
-    }
-    started_at = time.perf_counter()
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(url, params={"key": settings.GEMINI_API_KEY}, json=payload)
-    latency_ms = (time.perf_counter() - started_at) * 1000
-    return response, latency_ms
-
-
-async def _attempt_model(
-    model: str, prompt: str, schema: dict | None, prompt_hash: str
-) -> tuple[str | None, int | None, str]:
-    """Try one model with exponential backoff on 429/503.
-
-    Returns (text, None, "") on success. Returns (None, last_status, last_body) once this
-    model's retries are exhausted on a retryable error — the caller then falls back to the
-    next model in GEMINI_MODEL_FALLBACKS.
-    """
-    delay = GEMINI_RETRY_BASE_DELAY
-    last_status: int | None = None
-    last_body = ""
-
-    for attempt in range(1, GEMINI_MAX_RETRIES + 1):
-        try:
-            response, latency_ms = await _call_gemini(prompt, schema=schema, model=model)
-        except httpx.RequestError as exc:
-            raise LearningGenerationError(f"Gemini API request failed: {exc}") from exc
-
-        if response.status_code == 200:
-            data = response.json()
-            tokens_used = data.get("usageMetadata", {}).get("totalTokenCount")
-            logger.info(
-                "gemini_learning_call model=%s prompt_hash=%s latency_ms=%.1f tokens_used=%s attempt=%d",
-                model,
-                prompt_hash,
-                latency_ms,
-                tokens_used,
-                attempt,
-            )
-            try:
-                return data["candidates"][0]["content"]["parts"][0]["text"], None, ""
-            except (KeyError, IndexError) as exc:
-                raise LearningGenerationError(f"Unexpected Gemini response shape: {exc}") from exc
-
-        last_status = response.status_code
-        last_body = response.text[:200]
-
-        if response.status_code in _RETRYABLE_STATUS_CODES and attempt < GEMINI_MAX_RETRIES:
-            logger.warning(
-                "gemini_learning_retryable_error model=%s prompt_hash=%s status=%d attempt=%d retry_in_s=%.1f",
-                model,
-                prompt_hash,
-                response.status_code,
-                attempt,
-                delay,
-            )
-            await sleep(delay)
-            delay *= 2
-            continue
-
-        if response.status_code not in _RETRYABLE_STATUS_CODES:
-            raise LearningGenerationError(
-                f"Gemini API returned HTTP {response.status_code} after {attempt} attempt(s): "
-                f"{last_body}"
-            )
-
-    return None, last_status, last_body
-
-
-async def _generate_with_retry(prompt: str, schema: dict | None = None) -> str:
-    """Call Gemini with per-model exponential backoff on 429/503.
-
-    Falls back through GEMINI_MODEL_FALLBACKS (each a separate quota bucket, confirmed via
-    live Google AI Studio usage data 2026-09-14) once a model's own retries are exhausted.
-    Never logs the raw prompt or API key — only a hash of the prompt.
-    """
-    prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16]
-    last_status: int | None = None
-    last_body = ""
-
-    for model in GEMINI_MODEL_FALLBACKS:
-        text, status, body = await _attempt_model(model, prompt, schema, prompt_hash)
-        if text is not None:
-            return text
-        last_status, last_body = status, body
-        logger.warning(
-            "gemini_learning_model_exhausted model=%s prompt_hash=%s status=%s — trying next fallback model",
-            model,
-            prompt_hash,
-            last_status,
-        )
-
-    raise LearningGenerationError(
-        f"Gemini API returned HTTP {last_status} after exhausting all fallback models "
-        f"({', '.join(GEMINI_MODEL_FALLBACKS)}): {last_body}"
-    )
-
-
 async def generate_learning_pack(
-    project_id: str, config: dict, script_lines: list[dict]
+    project_id: str, config: dict, script_lines: list[dict], router: AIRouter | None = None
 ) -> LearningPackOut:
-    """Generate a full Learning Content pack for a project via Gemini.
+    """Generate a full Learning Content pack for a project via the AI provider gateway.
+
+    Migrated from a duplicated direct-Gemini retry/fallback-model transport to
+    `AIRouter` (Phase 13, Task 13.7) -- see `script_service.generate_script` for the
+    identical reasoning.
 
     Args:
         project_id: UUID of the project (used for error context/logging only).
@@ -178,16 +64,18 @@ async def generate_learning_pack(
             script_service.get_script), in order. Must be non-empty — their
             `text` is joined into the transcript Gemini extracts the pack
             from.
+        router: Injected `AIRouter` (tests pass a `FakeProvider`-backed one with
+            zero network calls); defaults to `build_ai_router_from_settings()`.
 
     Returns:
         The validated Learning Content pack.
 
     Raises:
-        LearningGenerationError: If the API key is unset, the script is
-            empty, Gemini fails after retries, returns malformed JSON, or
-            the response fails schema validation.
+        LearningGenerationError: If `AI_MODE=gemini` and no API key is configured,
+            the script is empty, every provider attempt this mode allows fails, or
+            the response is malformed/fails schema validation.
     """
-    if not settings.GEMINI_API_KEY:
+    if AIMode(settings.AI_MODE) is AIMode.GEMINI and not settings.GEMINI_API_KEY:
         raise LearningGenerationError("DIE_GEMINI_API_KEY is not configured")
 
     if not script_lines:
@@ -204,19 +92,22 @@ async def generate_learning_pack(
         transcript_text=transcript_text,
     )
 
-    raw_text = await _generate_with_retry(prompt, schema=LearningPackOut.model_json_schema())
+    router = router or build_ai_router_from_settings()
+    request = GenerationRequest(
+        prompt=prompt,
+        json_schema=LearningPackOut.model_json_schema(),
+        deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
+        purpose="learning_generate_full",
+    )
+    try:
+        result = await router.generate(request)
+    except ProviderError as exc:
+        raise LearningGenerationError(f"Learning content generation failed: {exc}") from exc
 
     try:
-        parsed = json.loads(raw_text)
-    except json.JSONDecodeError as exc:
-        raise LearningGenerationError(f"Gemini did not return valid JSON: {exc}") from exc
-
-    try:
-        pack = LearningPackOut.model_validate(parsed)
-    except PydanticValidationError as exc:
-        raise LearningGenerationError(f"Gemini response failed schema validation: {exc}") from exc
-
-    return pack
+        return parse_and_validate(result.text, _PACK_ADAPTER)
+    except SchemaValidationError as exc:
+        raise LearningGenerationError(str(exc)) from exc
 
 
 def _row_to_pack(row: aiosqlite.Row) -> dict:

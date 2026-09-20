@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.core.config import settings
 from app.main import app
+from app.models.thumbnail import ThumbnailSuggestionPack
 from app.services import thumbnail_service
 
 PROJECT_PAYLOAD = {
@@ -53,10 +54,10 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
 
-    async def fake_generate(prompt: str, schema: dict) -> str:
-        return suggestion_json()
+    async def fake_generate_suggestions(project, template, variant_count, router=None):
+        return ThumbnailSuggestionPack.model_validate_json(suggestion_json())
 
-    monkeypatch.setattr(thumbnail_service, "_generate_with_retry", fake_generate)
+    monkeypatch.setattr(thumbnail_service, "generate_suggestions", fake_generate_suggestions)
     with TestClient(app) as test_client:
         yield test_client
 
@@ -322,10 +323,10 @@ def test_regeneration_replaces_rows_and_removes_superseded_files(
         settings.DATA_DIR / "thumbnails" / project["id"] / variant["id"] for variant in first
     ]
 
-    async def second_generate(prompt: str, schema: dict) -> str:
-        return suggestion_json("Replacement")
+    async def second_generate_suggestions(project, template, variant_count, router=None):
+        return ThumbnailSuggestionPack.model_validate_json(suggestion_json("Replacement"))
 
-    monkeypatch.setattr(thumbnail_service, "_generate_with_retry", second_generate)
+    monkeypatch.setattr(thumbnail_service, "generate_suggestions", second_generate_suggestions)
     second_response = client.post(
         endpoint,
         json={"template_name": "podcast_classic", "variant_count": 3},

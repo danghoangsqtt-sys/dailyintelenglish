@@ -229,3 +229,28 @@ async def test_gemini_provider_malformed_shape_is_invalid_response(monkeypatch):
     provider = GeminiProvider(api_key="test-key", model="gemini-3.8-flash")
     with pytest.raises(ProviderInvalidResponseError):
         await provider.generate(_request())
+
+
+@pytest.mark.asyncio
+async def test_gemini_provider_wire_payload_uses_response_json_schema_not_response_schema(monkeypatch):
+    """Regression test for BUG-011: Gemini's structured-output field is
+    `responseJsonSchema`, not `responseSchema` -- every one of Task 13.7's four
+    migrated consumers (script/learning/thumbnail/youtube) now shares this one
+    wire-payload code path, so this single test protects all of them."""
+    import json as json_module
+
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["json"] = json_module.loads(request.content)
+        body = {"candidates": [{"content": {"parts": [{"text": "{}"}]}}]}
+        return httpx.Response(200, json=body)
+
+    _install_mock_transport(monkeypatch, gemini_provider_module, handler)
+    provider = GeminiProvider(api_key="test-key", model="gemini-3.8-flash")
+    schema = {"type": "object"}
+    await provider.generate(_request(json_schema=schema))
+
+    gen_config = captured["json"]["generationConfig"]
+    assert gen_config["responseJsonSchema"] == schema
+    assert "responseSchema" not in gen_config

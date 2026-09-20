@@ -3,27 +3,21 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json
 import logging
 import shutil
-import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote
 
 import aiosqlite
-import httpx
 from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageOps
+from pydantic import TypeAdapter
 from pydantic import ValidationError as PydanticValidationError
 
 from app.core.config import settings
 from app.core.constants import (
-    GEMINI_MAX_RETRIES,
-    GEMINI_MODEL,
-    GEMINI_MODEL_FALLBACKS,
-    GEMINI_RETRY_BASE_DELAY,
     THUMBNAIL_ACCENT_HEIGHT_RATIO,
     THUMBNAIL_FONT_SIZE_STEP,
     THUMBNAIL_HEIGHT_16X9,
@@ -35,7 +29,13 @@ from app.core.constants import (
     THUMBNAIL_WIDTH_16X9,
     THUMBNAIL_WIDTH_9X16,
 )
-from app.core.exceptions import ConflictError, NotFoundError, ThumbnailGenerationError
+from app.core.exceptions import (
+    ConflictError,
+    NotFoundError,
+    ProviderError,
+    SchemaValidationError,
+    ThumbnailGenerationError,
+)
 from app.core.paths import get_project_root
 from app.core.prompt_loader import render_thumbnail_prompt
 from app.models.thumbnail import (
@@ -47,12 +47,14 @@ from app.models.thumbnail import (
     ThumbnailSuggestionPack,
     ThumbnailTemplateConfig,
 )
+from app.services.ai.contracts import AIMode, GenerationRequest
+from app.services.ai.router import AIRouter, build_ai_router_from_settings
+from app.services.ai.validation import parse_and_validate
 
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = get_project_root()
 TEMPLATE_DIR = PROJECT_ROOT / "frontend" / "static" / "thumbnail_templates"
-GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 ASPECT_SIZES: dict[ThumbnailAspect, tuple[int, int]] = {
     "16x9": (THUMBNAIL_WIDTH_16X9, THUMBNAIL_HEIGHT_16X9),
     "9x16": (THUMBNAIL_WIDTH_9X16, THUMBNAIL_HEIGHT_9X16),
@@ -61,106 +63,6 @@ ASPECT_SIZES: dict[ThumbnailAspect, tuple[int, int]] = {
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-_RETRYABLE_STATUS_CODES = (429, 503)  # 429 = rate/quota limit, 503 = model temporarily overloaded
-
-
-async def _call_gemini(prompt: str, schema: dict, model: str = GEMINI_MODEL) -> tuple[httpx.Response, float]:
-    """Make one async Gemini request with JSON Schema enforced at the network layer."""
-    url = GEMINI_ENDPOINT.format(model=model)
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "responseMimeType": "application/json",
-            "responseJsonSchema": schema,
-        },
-    }
-    started_at = time.perf_counter()
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(url, params={"key": settings.GEMINI_API_KEY}, json=payload)
-    return response, (time.perf_counter() - started_at) * 1000
-
-
-async def _attempt_model(
-    model: str, prompt: str, schema: dict, prompt_hash: str
-) -> tuple[str | None, int | None, str]:
-    """Try one model with exponential backoff on 429/503; see script_service._attempt_model."""
-    delay = GEMINI_RETRY_BASE_DELAY
-    last_status: int | None = None
-    last_body = ""
-
-    for attempt in range(1, GEMINI_MAX_RETRIES + 1):
-        try:
-            response, latency_ms = await _call_gemini(prompt, schema, model=model)
-        except httpx.RequestError as exc:
-            raise ThumbnailGenerationError(f"Gemini API request failed: {exc}") from exc
-
-        if response.status_code == 200:
-            data = response.json()
-            logger.info(
-                "gemini_thumbnail_call model=%s prompt_hash=%s latency_ms=%.1f "
-                "tokens_used=%s attempt=%d",
-                model,
-                prompt_hash,
-                latency_ms,
-                data.get("usageMetadata", {}).get("totalTokenCount"),
-                attempt,
-            )
-            try:
-                return data["candidates"][0]["content"]["parts"][0]["text"], None, ""
-            except (KeyError, IndexError) as exc:
-                raise ThumbnailGenerationError(
-                    f"Unexpected Gemini response shape: {exc}"
-                ) from exc
-
-        last_status = response.status_code
-        last_body = response.text[:200]
-
-        if response.status_code in _RETRYABLE_STATUS_CODES and attempt < GEMINI_MAX_RETRIES:
-            logger.warning(
-                "gemini_thumbnail_retryable_error model=%s prompt_hash=%s status=%d attempt=%d retry_in_s=%.1f",
-                model,
-                prompt_hash,
-                response.status_code,
-                attempt,
-                delay,
-            )
-            await asyncio.sleep(delay)
-            delay *= 2
-            continue
-
-        if response.status_code not in _RETRYABLE_STATUS_CODES:
-            raise ThumbnailGenerationError(
-                f"Gemini API returned HTTP {response.status_code} after {attempt} attempt(s): "
-                f"{last_body}"
-            )
-
-    return None, last_status, last_body
-
-
-async def _generate_with_retry(prompt: str, schema: dict) -> str:
-    """Return Gemini text, falling back through GEMINI_MODEL_FALLBACKS on 429/503 exhaustion."""
-    prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16]
-    last_status: int | None = None
-    last_body = ""
-
-    for model in GEMINI_MODEL_FALLBACKS:
-        text, status, body = await _attempt_model(model, prompt, schema, prompt_hash)
-        if text is not None:
-            return text
-        last_status, last_body = status, body
-        logger.warning(
-            "gemini_thumbnail_model_exhausted model=%s prompt_hash=%s status=%s — trying next fallback model",
-            model,
-            prompt_hash,
-            last_status,
-        )
-
-    raise ThumbnailGenerationError(
-        f"Gemini API returned HTTP {last_status} after exhausting all fallback models "
-        f"({', '.join(GEMINI_MODEL_FALLBACKS)}): {last_body}"
-    )
 
 
 def _load_template_sync(template_name: str) -> ThumbnailTemplateConfig:
@@ -201,13 +103,26 @@ async def list_templates() -> list[dict]:
     return await asyncio.to_thread(_list_templates_sync)
 
 
+_SUGGESTION_PACK_ADAPTER = TypeAdapter(ThumbnailSuggestionPack)
+
+
 async def generate_suggestions(
     project: dict,
     template: ThumbnailTemplateConfig,
     variant_count: int,
+    router: AIRouter | None = None,
 ) -> ThumbnailSuggestionPack:
-    """Generate and semantically validate one Gemini text/palette suggestion pack."""
-    if not settings.GEMINI_API_KEY:
+    """Generate and semantically validate one text/palette suggestion pack.
+
+    Migrated from a duplicated direct-Gemini retry/fallback-model transport to
+    `AIRouter` (Phase 13, Task 13.7) -- see `script_service.generate_script` for the
+    identical reasoning.
+
+    Args:
+        router: Injected `AIRouter` (tests pass a `FakeProvider`-backed one with
+            zero network calls); defaults to `build_ai_router_from_settings()`.
+    """
+    if AIMode(settings.AI_MODE) is AIMode.GEMINI and not settings.GEMINI_API_KEY:
         raise ThumbnailGenerationError("DIE_GEMINI_API_KEY is not configured")
     prompt = await render_thumbnail_prompt(
         project_name=project["name"],
@@ -218,13 +133,22 @@ async def generate_suggestions(
         template_description=template.description,
         variant_count=variant_count,
     )
-    raw_text = await _generate_with_retry(prompt, ThumbnailSuggestionPack.model_json_schema())
+    router = router or build_ai_router_from_settings()
+    request = GenerationRequest(
+        prompt=prompt,
+        json_schema=ThumbnailSuggestionPack.model_json_schema(),
+        deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
+        purpose="thumbnail_suggestions",
+    )
     try:
-        pack = ThumbnailSuggestionPack.model_validate_json(raw_text)
-    except PydanticValidationError as exc:
-        raise ThumbnailGenerationError(
-            f"Gemini response failed thumbnail schema validation: {exc}"
-        ) from exc
+        result = await router.generate(request)
+    except ProviderError as exc:
+        raise ThumbnailGenerationError(f"Thumbnail suggestion generation failed: {exc}") from exc
+
+    try:
+        pack = parse_and_validate(result.text, _SUGGESTION_PACK_ADAPTER)
+    except SchemaValidationError as exc:
+        raise ThumbnailGenerationError(str(exc)) from exc
     if len(pack.variants) != variant_count:
         raise ThumbnailGenerationError(
             f"Gemini returned {len(pack.variants)} variants; expected exactly {variant_count}"

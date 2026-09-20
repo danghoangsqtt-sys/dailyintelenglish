@@ -1,7 +1,9 @@
 """Tests for YouTubeService (Task 1.9, Sub-task 1.9a).
 
-No real network calls: `youtube_service._call_gemini` is monkeypatched, mirroring
-tests/test_learning_service.py's approach for LearningService.
+No real network calls: since Task 13.7, `generate_package` is exercised through an
+injected `FakeProvider`-backed `AIRouter`, mirroring tests/test_script_service.py's
+approach for ScriptService. The router/provider layer's own retry/fallback/timeout
+policy is covered by tests/test_ai_router.py and tests/test_ai_providers.py.
 """
 
 import io
@@ -10,10 +12,13 @@ import zipfile
 
 import pytest
 
-from app.core.exceptions import ValidationError, YouTubePackageGenerationError
 from app.core.constants import YOUTUBE_CHAPTER_MIN_LINES, YOUTUBE_CHAPTER_WORDS_PER_MINUTE
+from app.core.exceptions import ProviderUnavailableError, ValidationError, YouTubePackageGenerationError
 from app.models.project import ScriptConfig, SpeakerConfig
 from app.services import project_service, youtube_service
+from app.services.ai.contracts import AIMode, GenerationResult
+from app.services.ai.fake_provider import FakeProvider
+from app.services.ai.router import AIRouter
 
 SAMPLE_PROJECT = {
     "name": "Future English",
@@ -38,63 +43,35 @@ VALID_PACKAGE = {
 }
 
 
-class FakeResponse:
-    """Stand-in for httpx.Response — carries only what youtube_service reads."""
-
-    def __init__(self, status_code: int, json_data: dict | None = None, text: str = ""):
-        self.status_code = status_code
-        self._json_data = json_data
-        self.text = text or json.dumps(json_data or {})
-
-    def json(self) -> dict:
-        return self._json_data
-
-
-def gemini_ok_response(package: dict, tokens_used: int = 400) -> FakeResponse:
-    body = {
-        "candidates": [{"content": {"parts": [{"text": json.dumps(package)}]}, "finishReason": "STOP"}],
-        "usageMetadata": {"totalTokenCount": tokens_used},
-    }
-    return FakeResponse(200, body)
-
-
-@pytest.fixture(autouse=True)
-def no_real_sleep(monkeypatch):
-    """Retry tests must not actually wait — patch youtube_service's own `sleep` name.
-
-    Found by an independent audit: this used to patch `youtube_service.asyncio.sleep`
-    -- since `youtube_service.asyncio` is the *same* process-wide `asyncio` module
-    object every other file imports, that patched `asyncio.sleep` globally for the
-    whole process during this fixture's scope. `youtube_service.py` now does
-    `from asyncio import sleep`, so patching `youtube_service.sleep` only affects
-    this module's own local binding.
-    """
-    sleeps: list[float] = []
-
-    async def fake_sleep(seconds: float) -> None:
-        sleeps.append(seconds)
-
-    monkeypatch.setattr(youtube_service, "sleep", fake_sleep)
-    return sleeps
-
-
 @pytest.fixture(autouse=True)
 def api_key(monkeypatch):
+    """Every test gets a deterministic fake key by default, regardless of the real
+    ambient .env -- the explicit missing-key test overrides this to "" itself."""
     monkeypatch.setattr(youtube_service.settings, "GEMINI_API_KEY", "test-key-not-real")
 
 
-def queue_responses(monkeypatch, responses: list[FakeResponse]):
-    """Monkeypatch _call_gemini to return `responses` in order, recording each `model` used."""
-    calls = {"n": 0, "models": []}
+def _package_result(package: dict) -> GenerationResult:
+    """A scripted successful `AIRouter.generate()` result carrying `package` as JSON text."""
+    return _package_result_from_text(json.dumps(package))
 
-    async def fake_call_gemini(prompt: str, schema: dict, model: str | None = None):
-        index = calls["n"]
-        calls["n"] += 1
-        calls["models"].append(model)
-        return responses[index], 12.3
 
-    monkeypatch.setattr(youtube_service, "_call_gemini", fake_call_gemini)
-    return calls
+def _package_result_from_text(text: str) -> GenerationResult:
+    """A scripted `AIRouter.generate()` result carrying raw `text` (e.g. invalid JSON)."""
+    return GenerationResult(
+        text=text,
+        provider="fake-provider",
+        model="fake-model",
+        latency_ms=1.0,
+        attempt=1,
+        prompt_hash="abc123",
+    )
+
+
+def _gateway_router(mode: AIMode, gemini_outcomes: list, local_outcomes: list | None = None) -> AIRouter:
+    """Build an `AIRouter` over two `FakeProvider`s -- no network, deterministic."""
+    gemini = FakeProvider("fake-gemini", gemini_outcomes)
+    local = FakeProvider("fake-ollama", local_outcomes or [])
+    return AIRouter(local=local, gemini=gemini, mode=mode)
 
 
 def make_project_config(**overrides) -> ScriptConfig:
@@ -179,12 +156,11 @@ def test_real_chapters_uses_real_seconds_not_word_count():
 # --- generate_package ---
 
 
-async def test_generate_package_success_on_http_200(monkeypatch):
-    calls = queue_responses(monkeypatch, [gemini_ok_response(VALID_PACKAGE)])
+async def test_generate_package_success_via_gateway():
+    router = _gateway_router(AIMode.GEMINI, [_package_result(VALID_PACKAGE)])
 
-    package = await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES)
+    package = await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
 
-    assert calls["n"] == 1
     assert len(package["titles"]) == 3
     assert {title["variant"] for title in package["titles"]} == {"click_worthy", "educational", "seo"}
     assert package["description"] == VALID_PACKAGE["description"]
@@ -193,108 +169,59 @@ async def test_generate_package_success_on_http_200(monkeypatch):
     assert package["chapters_estimated"] is True
 
 
-async def test_generate_package_without_timestamps_falls_back_to_estimate(monkeypatch):
-    queue_responses(monkeypatch, [gemini_ok_response(VALID_PACKAGE)])
+async def test_generate_package_without_timestamps_falls_back_to_estimate():
+    router = _gateway_router(AIMode.GEMINI, [_package_result(VALID_PACKAGE)])
 
-    package = await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, timestamps=None)
+    package = await youtube_service.generate_package(
+        SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, timestamps=None, router=router
+    )
 
     assert package["chapters_estimated"] is True
     assert package["chapters_text"] == youtube_service.estimate_chapters(SAMPLE_SCRIPT_LINES)
 
 
-async def test_generate_package_with_timestamps_uses_measured_chapters(monkeypatch):
-    queue_responses(monkeypatch, [gemini_ok_response(VALID_PACKAGE)])
+async def test_generate_package_with_timestamps_uses_measured_chapters():
+    router = _gateway_router(AIMode.GEMINI, [_package_result(VALID_PACKAGE)])
     timestamps = [
         {"start_sec": 0.0, "end_sec": 1.0, "text": SAMPLE_SCRIPT_LINES[0]["text"]},
         {"start_sec": 5.0, "end_sec": 6.0, "text": SAMPLE_SCRIPT_LINES[1]["text"]},
     ]
 
-    package = await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, timestamps=timestamps)
+    package = await youtube_service.generate_package(
+        SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, timestamps=timestamps, router=router
+    )
 
     assert package["chapters_estimated"] is False
     assert package["chapters_text"] == youtube_service.real_chapters_from_timestamps(timestamps)
 
 
-async def test_generate_package_retries_on_429_then_succeeds(monkeypatch, no_real_sleep):
-    calls = queue_responses(
-        monkeypatch, [FakeResponse(429, text="rate limited"), gemini_ok_response(VALID_PACKAGE)]
+async def test_generate_package_wraps_provider_error():
+    """Once the router (its own retry/fallback policy -- see test_ai_router.py) exhausts
+    every attempt, generate_package wraps the failure."""
+    router = _gateway_router(
+        AIMode.GEMINI, [ProviderUnavailableError("down"), ProviderUnavailableError("still down")]
     )
 
-    await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES)
-
-    assert calls["n"] == 2
-    assert no_real_sleep == [1.0]
+    with pytest.raises(YouTubePackageGenerationError, match="YouTube package generation failed"):
+        await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
 
 
-async def test_generate_package_exhausts_one_model_then_falls_back(monkeypatch, no_real_sleep):
-    """After 4 failed attempts on the primary model, the next fallback model is tried."""
-    calls = queue_responses(
-        monkeypatch,
-        [FakeResponse(429, text="rate limited")] * 4 + [gemini_ok_response(VALID_PACKAGE)],
-    )
+async def test_generate_package_invalid_json_raises():
+    router = _gateway_router(AIMode.GEMINI, [_package_result_from_text("not valid json")])
 
-    package = await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES)
-
-    assert len(package["titles"]) == 3
-    assert calls["n"] == 5
-    assert calls["models"] == [youtube_service.GEMINI_MODEL_FALLBACKS[0]] * 4 + [
-        youtube_service.GEMINI_MODEL_FALLBACKS[1]
-    ]
+    with pytest.raises(YouTubePackageGenerationError, match="not valid JSON"):
+        await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
 
 
-async def test_generate_package_retries_on_503_then_succeeds(monkeypatch, no_real_sleep):
-    """503 (model temporarily overloaded) is retried just like 429, not treated as fatal."""
-    calls = queue_responses(
-        monkeypatch, [FakeResponse(503, text="model overloaded"), gemini_ok_response(VALID_PACKAGE)]
-    )
-
-    await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES)
-
-    assert calls["n"] == 2
-    assert no_real_sleep == [1.0]
-
-
-async def test_generate_package_exhausts_all_fallback_models_raises(monkeypatch, no_real_sleep):
-    """Only once every model in GEMINI_MODEL_FALLBACKS is exhausted does generation fail."""
-    fallbacks = youtube_service.GEMINI_MODEL_FALLBACKS
-    calls = queue_responses(monkeypatch, [FakeResponse(429, text="rate limited")] * (4 * len(fallbacks)))
-
-    with pytest.raises(YouTubePackageGenerationError, match="exhausting all fallback models") as exc_info:
-        await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES)
-
-    assert calls["n"] == 4 * len(fallbacks)
-    assert calls["models"] == [model for model in fallbacks for _ in range(4)]
-    for model in fallbacks:
-        assert model in str(exc_info.value)
-
-
-async def test_generate_package_non_429_error_does_not_retry(monkeypatch, no_real_sleep):
-    calls = queue_responses(monkeypatch, [FakeResponse(500, text="internal error")])
-
-    with pytest.raises(YouTubePackageGenerationError, match="HTTP 500"):
-        await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES)
-
-    assert calls["n"] == 1
-    assert no_real_sleep == []
-
-
-async def test_generate_package_invalid_json_raises(monkeypatch):
-    body = {"candidates": [{"content": {"parts": [{"text": "not valid json"}]}}]}
-    queue_responses(monkeypatch, [FakeResponse(200, body)])
-
-    with pytest.raises(YouTubePackageGenerationError, match="valid JSON"):
-        await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES)
-
-
-async def test_generate_package_schema_validation_failure_raises(monkeypatch):
+async def test_generate_package_schema_validation_failure_raises():
     bad_package = {"titles": [{"variant": "click_worthy", "text": "x"}], "description": "", "tags": []}
-    queue_responses(monkeypatch, [gemini_ok_response(bad_package)])
+    router = _gateway_router(AIMode.GEMINI, [_package_result(bad_package)])
 
     with pytest.raises(YouTubePackageGenerationError, match="schema validation"):
-        await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES)
+        await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
 
 
-async def test_generate_package_duplicate_title_variants_rejected(monkeypatch):
+async def test_generate_package_duplicate_title_variants_rejected():
     bad_package = {
         "titles": [
             {"variant": "click_worthy", "text": "One"},
@@ -304,70 +231,43 @@ async def test_generate_package_duplicate_title_variants_rejected(monkeypatch):
         "description": "desc",
         "tags": ["tag"],
     }
-    queue_responses(monkeypatch, [gemini_ok_response(bad_package)])
+    router = _gateway_router(AIMode.GEMINI, [_package_result(bad_package)])
 
     with pytest.raises(YouTubePackageGenerationError, match="schema validation"):
-        await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES)
+        await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
 
 
-async def test_generate_package_empty_script_raises_without_calling_gemini(monkeypatch):
-    calls = {"n": 0}
-
-    async def fake_call_gemini(prompt: str, schema: dict, model: str | None = None):
-        calls["n"] += 1
-        raise AssertionError("Gemini should never be called for an empty script")
-
-    monkeypatch.setattr(youtube_service, "_call_gemini", fake_call_gemini)
+async def test_generate_package_empty_script_raises_without_calling_router():
+    router = _gateway_router(AIMode.GEMINI, [])
 
     with pytest.raises(ValidationError, match="script is empty"):
-        await youtube_service.generate_package(SAMPLE_PROJECT, [])
-
-    assert calls["n"] == 0
+        await youtube_service.generate_package(SAMPLE_PROJECT, [], router=router)
 
 
-async def test_generate_package_missing_api_key_raises_without_calling_gemini(monkeypatch):
+async def test_generate_package_missing_api_key_raises_without_calling_router(monkeypatch):
+    """AI_MODE=gemini (the packaged default) still hard-requires a Gemini key
+    upfront -- byte-identical behavior to before Task 13.7's migration."""
+    monkeypatch.setattr(youtube_service.settings, "AI_MODE", "gemini")
     monkeypatch.setattr(youtube_service.settings, "GEMINI_API_KEY", "")
-    calls = {"n": 0}
-
-    async def fake_call_gemini(prompt: str, schema: dict, model: str | None = None):
-        calls["n"] += 1
-        raise AssertionError("Gemini should never be called without an API key")
-
-    monkeypatch.setattr(youtube_service, "_call_gemini", fake_call_gemini)
+    router = _gateway_router(AIMode.GEMINI, [])
 
     with pytest.raises(YouTubePackageGenerationError, match="not configured"):
-        await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES)
-
-    assert calls["n"] == 0
+        await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
 
 
-async def test_call_gemini_includes_response_json_schema(monkeypatch):
-    captured = {}
+async def test_generate_package_local_mode_needs_no_gemini_key():
+    """Task 13.7: the upfront key guard is mode-aware -- AI_MODE=local/hybrid must not
+    be blocked by a missing Gemini key, since local generation never needs one."""
+    router = _gateway_router(AIMode.LOCAL, gemini_outcomes=[], local_outcomes=[_package_result(VALID_PACKAGE)])
 
-    class FakeAsyncClient:
-        def __init__(self, *args, **kwargs):
-            pass
+    package = await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
 
-        async def __aenter__(self):
-            return self
+    assert len(package["titles"]) == 3
 
-        async def __aexit__(self, *args):
-            pass
 
-        async def post(self, url, params=None, json=None):
-            captured["url"] = url
-            captured["json"] = json
-            return FakeResponse(200, json_data={"candidates": [{"content": {"parts": [{"text": "{}"}]}}]})
-
-    monkeypatch.setattr(youtube_service.httpx, "AsyncClient", FakeAsyncClient)
-
-    schema = {"type": "object"}
-    await youtube_service._call_gemini("test prompt", schema)
-
-    gen_config = captured["json"]["generationConfig"]
-    assert gen_config["responseMimeType"] == "application/json"
-    assert gen_config["responseJsonSchema"] == schema
-    assert "responseSchema" not in gen_config
+# Note: the responseJsonSchema-not-responseSchema wire-payload regression (BUG-011)
+# is now covered once, at the shared gateway layer (Task 13.7), by
+# tests/test_ai_providers.py::test_gemini_provider_wire_payload_uses_response_json_schema_not_response_schema.
 
 
 # --- DB persistence ---

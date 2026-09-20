@@ -4,6 +4,61 @@ Auto-generated from `Daily Intel English Studio`'s real FastAPI OpenAPI schema b
 
 OpenAPI version: `3.1.0`
 
+## ai-jobs
+
+### `GET /api/ai/health`
+
+Ai Health
+
+Report AI runtime health. Never exposes the Gemini key; a failed local probe
+degrades this payload, it never fails or delays app startup.
+
+- **Response body:** `object`
+
+### `POST /api/projects/{project_id}/ai-jobs`
+
+Create Ai Job
+
+Create a durable AI job, or return the project's existing active one for
+this operation (matches the app's established idempotent-create pattern).
+
+HTTP 202 for a genuinely new job, HTTP 200 when an existing active/idempotent
+job was returned instead -- both are explicitly allowed by the API contract.
+
+- **Request body:** `CreateAIJobRequest`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `GET /api/projects/{project_id}/ai-jobs/active`
+
+Get Active Ai Job
+
+Return the project's active job for `operation`, or `null` if none.
+
+Matches this app's established "empty means null/empty payload, not a 404"
+style for a "nothing yet" state (e.g. `GET .../script` before generation).
+
+- **Response body:** `object`
+- **Parameters:** `project_id`, `operation`
+
+### `GET /api/projects/{project_id}/ai-jobs/{job_id}`
+
+Get Ai Job
+
+Fetch one job's safe status view. 404s if it doesn't belong to `project_id`.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`, `job_id`
+
+### `POST /api/projects/{project_id}/ai-jobs/{job_id}/cancel`
+
+Cancel Ai Job
+
+Idempotently request cancellation. A terminal job is returned unchanged.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`, `job_id`
+
 ## audio
 
 ### `GET /api/projects/{project_id}/audio/download`
@@ -59,7 +114,13 @@ Apply a partial user-edit to an existing Learning Content pack.
 
 Generate Learning Content
 
-Generate a Learning Content pack via Gemini from the project's script and persist it.
+Generate a Learning Content pack from the project's script and persist it
+(synchronous, one request).
+
+Deprecated (Phase 13, Task 13.7): kept for one compatibility release with an
+unchanged response contract. The durable-job path (`POST
+/api/projects/{project_id}/ai-jobs` with `operation: "learning"`, Task 13.3+) is
+the production route.
 
 - **Response body:** `object`
 - **Parameters:** `project_id`
@@ -170,7 +231,13 @@ Save a user-edited script, replacing the project's current lines.
 
 Generate Script
 
-Generate a full script for a project via Gemini and persist it.
+Generate a full script for a project and persist it (synchronous, one request).
+
+Deprecated (Phase 13, Task 13.7): kept for one compatibility release with an
+unchanged response contract. The durable-job path (`POST
+/api/projects/{project_id}/ai-jobs` with `operation: "script"`, Task 13.3+) is the
+production route -- it survives browser navigation/restart and does not hold one
+HTTP request open for the whole generation.
 
 - **Response body:** `object`
 - **Parameters:** `project_id`
@@ -213,6 +280,9 @@ Upload Speaker Avatar
 
 Upload (or replace) one speaker's avatar image (Task 1.7c — upload only, no lip-sync).
 
+The previous avatar file (if any) is only deleted after this block's commit has
+durably succeeded — see `avatar_service.cleanup_previous_avatar_file` for why.
+
 - **Response body:** `object`
 - **Parameters:** `project_id`, `speaker_id`
 
@@ -222,8 +292,49 @@ Delete Speaker Avatar
 
 Remove one speaker's avatar image.
 
+The file itself is only deleted after this block's commit has durably
+succeeded — see `avatar_service.delete_avatar`'s docstring for why.
+
 - **Response body:** `object`
 - **Parameters:** `project_id`, `speaker_id`
+
+## settings
+
+### `GET /api/settings`
+
+Get Settings
+
+Report the Gemini API key's status and the current AI_MODE.
+
+Never returns the raw key -- see settings_service.get_gemini_api_key_status.
+
+- **Response body:** `object`
+
+### `PUT /api/settings`
+
+Update Gemini Api Key
+
+Save a new Gemini API key -- takes effect immediately, no restart needed.
+
+- **Request body:** `GeminiApiKeyUpdate`
+- **Response body:** `object`
+
+### `PUT /api/settings/ai-mode`
+
+Update Ai Mode
+
+Save a new AI_MODE (ADR-001 kill switch) -- takes effect immediately, no restart needed.
+
+- **Request body:** `AIModeUpdate`
+- **Response body:** `object`
+
+### `DELETE /api/settings/gemini-api-key`
+
+Clear Gemini Api Key
+
+Remove the stored key and revert to the original .env/environment value.
+
+- **Response body:** `object`
 
 ## thumbnails
 
@@ -299,6 +410,12 @@ Preview Line
 
 Synthesize one script line to audio (OmniVoice if configured, else Edge TTS) and cache it.
 
+No lock is held across the synthesis call itself (network round-trip to Edge
+TTS, potentially slow) — same "no lock across slow work" rule already applied
+to Gemini calls and audio/video generation elsewhere in this codebase. A short
+`read_transaction` snapshots what's needed, then a separate, short
+`write_transaction` persists the result.
+
 - **Request body:** `PreviewLineRequest`
 - **Response body:** `object`
 - **Parameters:** `project_id`
@@ -309,9 +426,15 @@ List Engines
 
 Report which TTS engines are currently usable on this machine.
 
-OmniVoice availability is based on the model directory existing —
-actual model loading and GPU checks happen at startup / in
-scripts/check_dependencies.py, not on every request here.
+Only lists engines `tts_service.py` can actually dispatch to (matches
+`TTS_ENGINES`). `omnivoice` is unconditionally reported unavailable: its
+synthesis function is a hardcoded, always-failing stub today (see
+`tts_service.py`'s module docstring) — no filesystem check could make that
+claim honestly `true`, model directory or not. "piper"/"google"/"azure" were
+removed entirely 2026-09-18 (found by an independent audit): they were
+accepted as valid `tts_engine` values but had zero synthesis implementation,
+silently falling through to Edge TTS with no error — an advertised capability
+that didn't actually run.
 
 - **Response body:** `object`
 
@@ -338,6 +461,14 @@ Report readiness of the database, ffmpeg, and GPU for the check_dependencies scr
 Music Library
 
 Serve the background Music Library management page.
+
+- **Response body:** `object`
+
+### `GET /settings`
+
+Settings Page
+
+Serve the app-level Settings page (Task 12.1 — Gemini API key).
 
 - **Response body:** `object`
 

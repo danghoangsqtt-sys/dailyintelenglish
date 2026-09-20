@@ -1,18 +1,22 @@
 """Tests for LearningService (ROADMAP Task 1.5 — Sprint 1.5A).
 
-No real network calls: `learning_service._call_gemini` is monkeypatched with a
-fake async function that returns canned (FakeResponse, latency_ms) pairs, and
-`asyncio.sleep` is monkeypatched to a no-op so retry tests run instantly —
-mirrors tests/test_script_service.py's approach for ScriptService.
+No real network calls: since Task 13.7, `generate_learning_pack` is exercised
+through an injected `FakeProvider`-backed `AIRouter` -- mirrors
+tests/test_script_service.py's approach for ScriptService. The router/provider
+layer's own retry/fallback/timeout policy is covered by tests/test_ai_router.py
+and tests/test_ai_providers.py.
 """
 
 import json
 
 import pytest
 
-from app.core.exceptions import LearningGenerationError, NotFoundError
+from app.core.exceptions import LearningGenerationError, NotFoundError, ProviderUnavailableError
 from app.models.project import ScriptConfig, SpeakerConfig
 from app.services import learning_service, project_service
+from app.services.ai.contracts import AIMode, GenerationResult
+from app.services.ai.fake_provider import FakeProvider
+from app.services.ai.router import AIRouter
 
 SAMPLE_CONFIG = {
     "topic": "Remote work culture",
@@ -64,67 +68,35 @@ VALID_PACK = {
 }
 
 
-class FakeResponse:
-    """Stand-in for httpx.Response — carries only what learning_service reads."""
-
-    def __init__(self, status_code: int, json_data: dict | None = None, text: str = ""):
-        self.status_code = status_code
-        self._json_data = json_data
-        self.text = text or json.dumps(json_data or {})
-
-    def json(self) -> dict:
-        return self._json_data
-
-
-def gemini_ok_response(pack: dict, tokens_used: int = 500) -> FakeResponse:
-    """A fake HTTP 200 Gemini response wrapping `pack` as the JSON-object text payload."""
-    body = {
-        "candidates": [{"content": {"parts": [{"text": json.dumps(pack)}]}, "finishReason": "STOP"}],
-        "usageMetadata": {"totalTokenCount": tokens_used},
-    }
-    return FakeResponse(200, body)
-
-
-@pytest.fixture(autouse=True)
-def no_real_sleep(monkeypatch):
-    """Retry tests must not actually wait — patch learning_service's own `sleep` name.
-
-    Found by an independent audit: this used to patch `learning_service.asyncio.sleep`
-    -- since `learning_service.asyncio` is the *same* process-wide `asyncio` module
-    object every other file imports, that patched `asyncio.sleep` globally for the
-    whole process during this fixture's scope. `learning_service.py` now does
-    `from asyncio import sleep`, so patching `learning_service.sleep` only affects
-    this module's own local binding.
-    """
-    sleeps: list[float] = []
-
-    async def fake_sleep(seconds: float) -> None:
-        sleeps.append(seconds)
-
-    monkeypatch.setattr(learning_service, "sleep", fake_sleep)
-    return sleeps
-
-
 @pytest.fixture(autouse=True)
 def api_key(monkeypatch):
+    """Every test gets a deterministic fake key by default, regardless of the real
+    ambient .env -- the explicit missing-key test overrides this to "" itself."""
     monkeypatch.setattr(learning_service.settings, "GEMINI_API_KEY", "test-key-not-real")
 
 
-def queue_responses(monkeypatch, responses: list[FakeResponse]):
-    """Monkeypatch _call_gemini to return `responses` in order, one per call.
+def _pack_result(pack: dict) -> GenerationResult:
+    """A scripted successful `AIRouter.generate()` result carrying `pack` as JSON text."""
+    return _pack_result_from_text(json.dumps(pack))
 
-    Also records which `model` each call used, so fallback-chain tests can assert on it.
-    """
-    calls = {"n": 0, "models": []}
 
-    async def fake_call_gemini(prompt: str, schema: dict | None = None, model: str | None = None):
-        index = calls["n"]
-        calls["n"] += 1
-        calls["models"].append(model)
-        return responses[index], 12.3
+def _pack_result_from_text(text: str) -> GenerationResult:
+    """A scripted `AIRouter.generate()` result carrying raw `text` (e.g. invalid JSON)."""
+    return GenerationResult(
+        text=text,
+        provider="fake-provider",
+        model="fake-model",
+        latency_ms=1.0,
+        attempt=1,
+        prompt_hash="abc123",
+    )
 
-    monkeypatch.setattr(learning_service, "_call_gemini", fake_call_gemini)
-    return calls
+
+def _gateway_router(mode: AIMode, gemini_outcomes: list, local_outcomes: list | None = None) -> AIRouter:
+    """Build an `AIRouter` over two `FakeProvider`s -- no network, deterministic."""
+    gemini = FakeProvider("fake-gemini", gemini_outcomes)
+    local = FakeProvider("fake-ollama", local_outcomes or [])
+    return AIRouter(local=local, gemini=gemini, mode=mode)
 
 
 def make_project_config(**overrides) -> ScriptConfig:
@@ -197,14 +169,13 @@ async def test_render_learning_prompt_rejects_unknown_genre():
 # --- generate_learning_pack ---
 
 
-async def test_generate_learning_pack_success_on_http_200(monkeypatch):
-    calls = queue_responses(monkeypatch, [gemini_ok_response(VALID_PACK)])
+async def test_generate_learning_pack_success_via_gateway():
+    router = _gateway_router(AIMode.GEMINI, [_pack_result(VALID_PACK)])
 
     pack = await learning_service.generate_learning_pack(
-        "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES
+        "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES, router=router
     )
 
-    assert calls["n"] == 1
     assert len(pack.vocabulary) == 1
     assert pack.vocabulary[0].word == "remote"
     assert len(pack.idioms) == 1
@@ -213,156 +184,85 @@ async def test_generate_learning_pack_success_on_http_200(monkeypatch):
     assert pack.questions[0].correct_answer == "5 years"
 
 
-async def test_generate_learning_pack_retries_on_429_then_succeeds(monkeypatch, no_real_sleep):
-    calls = queue_responses(
-        monkeypatch,
-        [FakeResponse(429, text="rate limited"), gemini_ok_response(VALID_PACK)],
+async def test_generate_learning_pack_wraps_provider_error():
+    """Once the router (its own retry/fallback policy -- see test_ai_router.py) exhausts
+    every attempt, generate_learning_pack wraps the failure."""
+    router = _gateway_router(
+        AIMode.GEMINI, [ProviderUnavailableError("down"), ProviderUnavailableError("still down")]
     )
 
-    pack = await learning_service.generate_learning_pack(
-        "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES
-    )
-
-    assert calls["n"] == 2
-    assert len(pack.vocabulary) == 1
-    assert no_real_sleep == [1.0]  # GEMINI_RETRY_BASE_DELAY, exactly one backoff step
+    with pytest.raises(LearningGenerationError, match="Learning content generation failed"):
+        await learning_service.generate_learning_pack(
+            "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES, router=router
+        )
 
 
-async def test_generate_learning_pack_backoff_sequence_is_1s_2s_4s(monkeypatch, no_real_sleep):
-    queue_responses(
-        monkeypatch,
-        [
-            FakeResponse(429, text="rate limited"),
-            FakeResponse(429, text="rate limited"),
-            FakeResponse(429, text="rate limited"),
-            gemini_ok_response(VALID_PACK),
-        ],
-    )
+async def test_generate_learning_pack_invalid_json_raises():
+    router = _gateway_router(AIMode.GEMINI, [_pack_result_from_text("not valid json")])
 
-    await learning_service.generate_learning_pack("proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES)
-
-    assert no_real_sleep == [1.0, 2.0, 4.0]
+    with pytest.raises(LearningGenerationError, match="not valid JSON"):
+        await learning_service.generate_learning_pack(
+            "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES, router=router
+        )
 
 
-async def test_generate_learning_pack_exhausts_one_model_then_falls_back(monkeypatch, no_real_sleep):
-    """After 4 failed attempts on the primary model, the next fallback model is tried."""
-    calls = queue_responses(
-        monkeypatch,
-        [FakeResponse(429, text="rate limited")] * 4 + [gemini_ok_response(VALID_PACK)],
-    )
-
-    pack = await learning_service.generate_learning_pack(
-        "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES
-    )
-
-    assert len(pack.vocabulary) == 1
-    assert calls["n"] == 5
-    assert calls["models"] == [learning_service.GEMINI_MODEL_FALLBACKS[0]] * 4 + [
-        learning_service.GEMINI_MODEL_FALLBACKS[1]
-    ]
-    assert no_real_sleep == [1.0, 2.0, 4.0]
-
-
-async def test_generate_learning_pack_retries_on_503_then_succeeds(monkeypatch, no_real_sleep):
-    """503 (model temporarily overloaded) is retried just like 429, not treated as fatal."""
-    calls = queue_responses(
-        monkeypatch,
-        [FakeResponse(503, text="model overloaded"), gemini_ok_response(VALID_PACK)],
-    )
-
-    pack = await learning_service.generate_learning_pack(
-        "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES
-    )
-
-    assert calls["n"] == 2
-    assert len(pack.vocabulary) == 1
-    assert no_real_sleep == [1.0]
-
-
-async def test_generate_learning_pack_exhausts_all_fallback_models_raises(monkeypatch, no_real_sleep):
-    """Only once every model in GEMINI_MODEL_FALLBACKS is exhausted does generation fail."""
-    fallbacks = learning_service.GEMINI_MODEL_FALLBACKS
-    calls = queue_responses(monkeypatch, [FakeResponse(429, text="rate limited")] * (4 * len(fallbacks)))
-
-    with pytest.raises(LearningGenerationError, match="exhausting all fallback models") as exc_info:
-        await learning_service.generate_learning_pack("proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES)
-
-    assert calls["n"] == 4 * len(fallbacks)
-    assert calls["models"] == [model for model in fallbacks for _ in range(4)]
-    assert no_real_sleep == [1.0, 2.0, 4.0] * len(fallbacks)
-    for model in fallbacks:
-        assert model in str(exc_info.value)
-
-
-async def test_generate_learning_pack_non_429_error_does_not_retry(monkeypatch, no_real_sleep):
-    calls = queue_responses(monkeypatch, [FakeResponse(500, text="internal error")])
-
-    with pytest.raises(LearningGenerationError, match="HTTP 500"):
-        await learning_service.generate_learning_pack("proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES)
-
-    assert calls["n"] == 1
-    assert no_real_sleep == []
-
-
-async def test_generate_learning_pack_invalid_json_raises(monkeypatch):
-    body = {"candidates": [{"content": {"parts": [{"text": "not valid json"}]}}]}
-    queue_responses(monkeypatch, [FakeResponse(200, body)])
-
-    with pytest.raises(LearningGenerationError, match="valid JSON"):
-        await learning_service.generate_learning_pack("proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES)
-
-
-async def test_generate_learning_pack_schema_validation_failure_raises(monkeypatch):
+async def test_generate_learning_pack_schema_validation_failure_raises():
     bad_pack = {"vocabulary": [{"word": "remote"}]}  # missing required fields
-    queue_responses(monkeypatch, [gemini_ok_response(bad_pack)])
+    router = _gateway_router(AIMode.GEMINI, [_pack_result(bad_pack)])
 
     with pytest.raises(LearningGenerationError, match="schema validation"):
-        await learning_service.generate_learning_pack("proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES)
+        await learning_service.generate_learning_pack(
+            "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES, router=router
+        )
 
 
-async def test_generate_learning_pack_empty_script_raises_without_calling_gemini(monkeypatch):
-    calls = {"n": 0}
-
-    async def fake_call_gemini(prompt: str, schema: dict | None = None, model: str | None = None):
-        calls["n"] += 1
-        raise AssertionError("Gemini should never be called for an empty script")
-
-    monkeypatch.setattr(learning_service, "_call_gemini", fake_call_gemini)
+async def test_generate_learning_pack_empty_script_raises_without_calling_router():
+    router = _gateway_router(AIMode.GEMINI, [])
 
     with pytest.raises(LearningGenerationError, match="script is empty"):
-        await learning_service.generate_learning_pack("proj-1", SAMPLE_CONFIG, [])
-
-    assert calls["n"] == 0
+        await learning_service.generate_learning_pack("proj-1", SAMPLE_CONFIG, [], router=router)
 
 
-async def test_generate_learning_pack_missing_api_key_raises_without_calling_gemini(monkeypatch):
+async def test_generate_learning_pack_missing_api_key_raises_without_calling_router(monkeypatch):
+    """AI_MODE=gemini (the packaged default) still hard-requires a Gemini key
+    upfront -- byte-identical behavior to before Task 13.7's migration."""
+    monkeypatch.setattr(learning_service.settings, "AI_MODE", "gemini")
     monkeypatch.setattr(learning_service.settings, "GEMINI_API_KEY", "")
-    calls = {"n": 0}
-
-    async def fake_call_gemini(prompt: str, schema: dict | None = None, model: str | None = None):
-        calls["n"] += 1
-        raise AssertionError("Gemini should never be called without an API key")
-
-    monkeypatch.setattr(learning_service, "_call_gemini", fake_call_gemini)
+    router = _gateway_router(AIMode.GEMINI, [])
 
     with pytest.raises(LearningGenerationError, match="not configured"):
-        await learning_service.generate_learning_pack("proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES)
+        await learning_service.generate_learning_pack(
+            "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES, router=router
+        )
 
-    assert calls["n"] == 0
+
+async def test_generate_learning_pack_local_mode_needs_no_gemini_key():
+    """Task 13.7: the upfront key guard is mode-aware -- AI_MODE=local/hybrid must not
+    be blocked by a missing Gemini key, since local generation never needs one."""
+    router = _gateway_router(AIMode.LOCAL, gemini_outcomes=[], local_outcomes=[_pack_result(VALID_PACK)])
+
+    pack = await learning_service.generate_learning_pack(
+        "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES, router=router
+    )
+
+    assert len(pack.vocabulary) == 1
 
 
 async def test_generate_learning_pack_preserves_cefr_level_in_prompt(monkeypatch):
-    """The rendered prompt actually carries the project's CEFR level through to Gemini."""
+    """The rendered prompt actually carries the project's CEFR level through to the provider."""
     captured = {}
 
-    async def fake_call_gemini(prompt: str, schema: dict | None = None, model: str | None = None):
-        captured["prompt"] = prompt
-        return gemini_ok_response(VALID_PACK), 5.0
+    class _CapturingProvider:
+        name = "fake-gemini"
 
-    monkeypatch.setattr(learning_service, "_call_gemini", fake_call_gemini)
+        async def generate(self, request):
+            captured["prompt"] = request.prompt
+            return _pack_result(VALID_PACK)
+
+    router = AIRouter(local=FakeProvider("fake-ollama", []), gemini=_CapturingProvider(), mode=AIMode.GEMINI)
 
     await learning_service.generate_learning_pack(
-        "proj-1", {**SAMPLE_CONFIG, "cefr_level": "C2"}, SAMPLE_SCRIPT_LINES
+        "proj-1", {**SAMPLE_CONFIG, "cefr_level": "C2"}, SAMPLE_SCRIPT_LINES, router=router
     )
 
     assert "C2" in captured["prompt"]
@@ -437,80 +337,8 @@ async def test_deleting_project_cascades_to_learning_content(db):
     assert await learning_service.get_learning_content(db, project["id"]) is None
 
 
-async def test_call_gemini_includes_response_json_schema(monkeypatch):
-    """_call_gemini includes responseJsonSchema (and not responseSchema) in generationConfig."""
-    captured = {}
-
-    class FakeAsyncClient:
-        def __init__(self, *args, **kwargs):
-            pass
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *args):
-            pass
-
-        async def post(self, url, params=None, json=None):
-            captured["url"] = url
-            captured["json"] = json
-            return FakeResponse(200, json_data={"candidates": [{"content": {"parts": [{"text": "{}"}]}}]})
-
-    monkeypatch.setattr(learning_service.httpx, "AsyncClient", FakeAsyncClient)
-
-    schema = {"type": "object"}
-    await learning_service._call_gemini("test prompt", schema=schema)
-
-    assert "generationConfig" in captured["json"]
-    assert captured["json"]["generationConfig"]["responseMimeType"] == "application/json"
-    assert captured["json"]["generationConfig"]["responseJsonSchema"] == schema
-    assert "responseSchema" not in captured["json"]["generationConfig"]
-
-
-async def test_generate_learning_pack_wire_payload_includes_response_json_schema(monkeypatch):
-    """generate_learning_pack transmits responseJsonSchema in generationConfig over the wire."""
-    captured = {}
-
-    class FakeAsyncClient:
-        def __init__(self, *args, **kwargs):
-            pass
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *args):
-            pass
-
-        async def post(self, url, params=None, json=None):
-            captured["json"] = json
-            return FakeResponse(200, json_data={"candidates": [{"content": {"parts": [{"text": json_module.dumps(VALID_PACK)}]}}]})
-
-    import json as json_module
-    monkeypatch.setattr(learning_service.httpx, "AsyncClient", FakeAsyncClient)
-
-    pack = await learning_service.generate_learning_pack(
-        "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES
-    )
-    assert len(pack.vocabulary) == 1
-    gen_config = captured["json"]["generationConfig"]
-    assert "responseJsonSchema" in gen_config
-    assert "responseSchema" not in gen_config
-    assert gen_config["responseJsonSchema"]["type"] == "object"
-
-
-async def test_generate_learning_with_retry_never_downgrades_to_schema_less(monkeypatch):
-    """If Gemini returns a fatal error or network fails, _generate_with_retry must not retry schema-less."""
-    calls = []
-
-    async def fake_call_gemini(prompt: str, schema: dict | None = None, model: str | None = None):
-        calls.append(schema)
-        raise learning_service.httpx.RequestError("Network error")
-
-    monkeypatch.setattr(learning_service, "_call_gemini", fake_call_gemini)
-
-    schema = {"type": "object"}
-    with pytest.raises(LearningGenerationError, match="Gemini API request failed"):
-        await learning_service._generate_with_retry("prompt", schema=schema)
-
-    assert len(calls) == 1
-    assert calls[0] == schema
+# Note: the responseJsonSchema-not-responseSchema wire-payload regression (BUG-011)
+# is now covered once, at the shared gateway layer, by
+# tests/test_ai_providers.py::test_gemini_provider_wire_payload_uses_response_json_schema_not_response_schema
+# -- every Task 13.7-migrated consumer (script/learning/thumbnail/youtube) shares
+# that one code path, so per-service duplication of this test is no longer needed.

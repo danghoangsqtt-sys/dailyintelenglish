@@ -1,16 +1,23 @@
 """Tests for ScriptService (ROADMAP Task 1.4 — Sprint 1.4B).
 
-No real network calls: `script_service._call_gemini` is monkeypatched with a
-fake async function that returns canned (FakeResponse, latency_ms) pairs, and
-`asyncio.sleep` is monkeypatched to a no-op so retry tests run instantly.
+No real network calls: since Task 13.7, `generate_script`/`regenerate_line` are
+exercised through an injected `FakeProvider`-backed `AIRouter` (see
+`app/services/ai/fake_provider.py`, `tests/test_ai_router.py`) instead of
+monkeypatching a per-service HTTP transport -- the router/provider layer's own
+retry/fallback/timeout policy is already covered by `tests/test_ai_router.py` and
+`tests/test_ai_providers.py`, so these tests only prove `script_service` calls the
+gateway correctly and applies its own script-specific validation on top.
 """
 
 import json
 
 import pytest
 
-from app.core.exceptions import ScriptGenerationError
+from app.core.exceptions import ProviderUnavailableError, ScriptGenerationError
 from app.services import script_service
+from app.services.ai.contracts import AIMode, GenerationResult
+from app.services.ai.fake_provider import FakeProvider
+from app.services.ai.router import AIRouter
 
 SAMPLE_CONFIG = {
     "topic": "Remote work culture",
@@ -49,313 +56,117 @@ VALID_LINES = [
 ]
 
 
-class FakeResponse:
-    """Stand-in for httpx.Response — carries only what script_service reads."""
-
-    def __init__(self, status_code: int, json_data: dict | None = None, text: str = ""):
-        self.status_code = status_code
-        self._json_data = json_data
-        self.text = text or json.dumps(json_data or {})
-
-    def json(self) -> dict:
-        return self._json_data
-
-
-def gemini_ok_response(lines: list[dict], tokens_used: int = 500) -> FakeResponse:
-    """A fake HTTP 200 Gemini response wrapping `lines` as the JSON-array text payload."""
-    body = {
-        "candidates": [{"content": {"parts": [{"text": json.dumps(lines)}]}, "finishReason": "STOP"}],
-        "usageMetadata": {"totalTokenCount": tokens_used},
-    }
-    return FakeResponse(200, body)
-
-
-@pytest.fixture(autouse=True)
-def no_real_sleep(monkeypatch):
-    """Retry tests must not actually wait — patch script_service's own `sleep` name.
-
-    Found by an independent audit: this used to patch `script_service.asyncio.sleep`
-    -- since `script_service.asyncio` is the *same* process-wide `asyncio` module
-    object every other file imports, that patched `asyncio.sleep` globally for the
-    whole process during this fixture's scope, not just this module's own retry
-    calls. `script_service.py` now does `from asyncio import sleep`, so patching
-    `script_service.sleep` only affects this module's own local binding.
-    """
-    sleeps: list[float] = []
-
-    async def fake_sleep(seconds: float) -> None:
-        sleeps.append(seconds)
-
-    monkeypatch.setattr(script_service, "sleep", fake_sleep)
-    return sleeps
-
-
 @pytest.fixture(autouse=True)
 def api_key(monkeypatch):
+    """Every test gets a deterministic fake key by default, regardless of the real
+    ambient .env -- the explicit missing-key test overrides this to "" itself."""
     monkeypatch.setattr(script_service.settings, "GEMINI_API_KEY", "test-key-not-real")
 
 
-def queue_responses(monkeypatch, responses: list[FakeResponse]):
-    """Monkeypatch _call_gemini to return `responses` in order, one per call.
-
-    Also records which `model` each call used, so fallback-chain tests can assert on it.
-    """
-    calls = {"n": 0, "models": []}
-
-    async def fake_call_gemini(prompt: str, schema: dict | None = None, model: str | None = None):
-        index = calls["n"]
-        calls["n"] += 1
-        calls["models"].append(model)
-        return responses[index], 12.3
-
-    monkeypatch.setattr(script_service, "_call_gemini", fake_call_gemini)
-    return calls
+def _script_result(lines: list[dict]) -> GenerationResult:
+    """A scripted successful `AIRouter.generate()` result carrying `lines` as JSON text."""
+    return _script_result_from_text(json.dumps(lines))
 
 
-async def test_generate_script_success_on_http_200(monkeypatch):
-    calls = queue_responses(monkeypatch, [gemini_ok_response(VALID_LINES)])
+def _script_result_from_text(text: str) -> GenerationResult:
+    """A scripted `AIRouter.generate()` result carrying raw `text` (e.g. invalid JSON)."""
+    return GenerationResult(
+        text=text,
+        provider="fake-provider",
+        model="fake-model",
+        latency_ms=1.0,
+        attempt=1,
+        prompt_hash="abc123",
+    )
 
-    lines = await script_service.generate_script("proj-1", SAMPLE_CONFIG)
 
-    assert calls["n"] == 1
+def _gateway_router(mode: AIMode, gemini_outcomes: list, local_outcomes: list | None = None) -> AIRouter:
+    """Build an `AIRouter` over two `FakeProvider`s -- no network, deterministic."""
+    gemini = FakeProvider("fake-gemini", gemini_outcomes)
+    local = FakeProvider("fake-ollama", local_outcomes or [])
+    return AIRouter(local=local, gemini=gemini, mode=mode)
+
+
+async def test_generate_script_success_via_gateway():
+    router = _gateway_router(AIMode.GEMINI, [_script_result(VALID_LINES)])
+
+    lines = await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
+
     assert len(lines) == 2
     assert lines[0].speaker_id == "11111111-1111-1111-1111-111111111111"
     assert lines[0].text == "Welcome to the show!"
     assert lines[1].speaker_id == "22222222-2222-2222-2222-222222222222"
 
 
-async def test_generate_script_retries_on_429_then_succeeds(monkeypatch, no_real_sleep):
-    calls = queue_responses(
-        monkeypatch,
-        [FakeResponse(429, text="rate limited"), gemini_ok_response(VALID_LINES)],
+async def test_generate_script_wraps_provider_error_as_script_generation_error():
+    """Once the router (its own retry/fallback policy -- see test_ai_router.py) exhausts
+    every attempt, generate_script wraps the failure, matching regenerate_line's contract."""
+    router = _gateway_router(
+        AIMode.GEMINI, [ProviderUnavailableError("down"), ProviderUnavailableError("still down")]
     )
 
-    lines = await script_service.generate_script("proj-1", SAMPLE_CONFIG)
-
-    assert calls["n"] == 2
-    assert len(lines) == 2
-    assert no_real_sleep == [1.0]  # GEMINI_RETRY_BASE_DELAY, exactly one backoff step
+    with pytest.raises(ScriptGenerationError, match="Script generation failed"):
+        await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
 
 
-async def test_generate_script_backoff_sequence_is_1s_2s_4s(monkeypatch, no_real_sleep):
-    queue_responses(
-        monkeypatch,
-        [
-            FakeResponse(429, text="rate limited"),
-            FakeResponse(429, text="rate limited"),
-            FakeResponse(429, text="rate limited"),
-            gemini_ok_response(VALID_LINES),
-        ],
-    )
+async def test_generate_script_invalid_json_raises():
+    router = _gateway_router(AIMode.GEMINI, [_script_result_from_text("not valid json")])
 
-    await script_service.generate_script("proj-1", SAMPLE_CONFIG)
-
-    assert no_real_sleep == [1.0, 2.0, 4.0]
+    with pytest.raises(ScriptGenerationError, match="not valid JSON"):
+        await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
 
 
-async def test_generate_script_exhausts_one_model_then_falls_back_to_next(monkeypatch, no_real_sleep):
-    """After 4 failed attempts on the primary model, the next fallback model is tried."""
-    calls = queue_responses(
-        monkeypatch,
-        [FakeResponse(429, text="rate limited")] * 4 + [gemini_ok_response(VALID_LINES)],
-    )
-
-    lines = await script_service.generate_script("proj-1", SAMPLE_CONFIG)
-
-    assert len(lines) == 2
-    assert calls["n"] == 5
-    assert calls["models"] == [script_service.GEMINI_MODEL_FALLBACKS[0]] * 4 + [
-        script_service.GEMINI_MODEL_FALLBACKS[1]
-    ]
-    assert no_real_sleep == [1.0, 2.0, 4.0]  # backoff resets per model, but only 1 model exhausted here
-
-
-async def test_generate_script_retries_on_503_then_succeeds(monkeypatch, no_real_sleep):
-    """503 (model temporarily overloaded) is retried just like 429, not treated as fatal."""
-    calls = queue_responses(
-        monkeypatch,
-        [FakeResponse(503, text="model overloaded"), gemini_ok_response(VALID_LINES)],
-    )
-
-    lines = await script_service.generate_script("proj-1", SAMPLE_CONFIG)
-
-    assert calls["n"] == 2
-    assert len(lines) == 2
-    assert no_real_sleep == [1.0]
-
-
-async def test_generate_script_exhausts_all_fallback_models_raises(monkeypatch, no_real_sleep):
-    """Only once every model in GEMINI_MODEL_FALLBACKS is exhausted does generation fail."""
-    fallbacks = script_service.GEMINI_MODEL_FALLBACKS
-    responses = [FakeResponse(429, text="rate limited")] * (4 * len(fallbacks))
-    calls = queue_responses(monkeypatch, responses)
-
-    with pytest.raises(ScriptGenerationError, match="exhausting all fallback models") as exc_info:
-        await script_service.generate_script("proj-1", SAMPLE_CONFIG)
-
-    assert calls["n"] == 4 * len(fallbacks)
-    assert calls["models"] == [model for model in fallbacks for _ in range(4)]
-    assert no_real_sleep == [1.0, 2.0, 4.0] * len(fallbacks)
-    # the final error names every exhausted model, not just the last one
-    for model in fallbacks:
-        assert model in str(exc_info.value)
-
-
-async def test_generate_script_non_429_error_does_not_retry(monkeypatch, no_real_sleep):
-    calls = queue_responses(monkeypatch, [FakeResponse(500, text="internal error")])
-
-    with pytest.raises(ScriptGenerationError, match="HTTP 500"):
-        await script_service.generate_script("proj-1", SAMPLE_CONFIG)
-
-    assert calls["n"] == 1
-    assert no_real_sleep == []
-
-
-async def test_generate_script_invalid_json_raises(monkeypatch):
-    body = {"candidates": [{"content": {"parts": [{"text": "not valid json"}]}}]}
-    queue_responses(monkeypatch, [FakeResponse(200, body)])
-
-    with pytest.raises(ScriptGenerationError, match="valid JSON"):
-        await script_service.generate_script("proj-1", SAMPLE_CONFIG)
-
-
-async def test_generate_script_schema_validation_failure_raises(monkeypatch):
+async def test_generate_script_schema_validation_failure_raises():
     bad_lines = [{"id": "line_001", "speaker_id": "11111111-1111-1111-1111-111111111111"}]  # missing "text"
-    queue_responses(monkeypatch, [gemini_ok_response(bad_lines)])
+    router = _gateway_router(AIMode.GEMINI, [_script_result(bad_lines)])
 
     with pytest.raises(ScriptGenerationError, match="schema validation"):
-        await script_service.generate_script("proj-1", SAMPLE_CONFIG)
+        await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
 
 
-async def test_generate_script_rejects_name_as_speaker_id(monkeypatch):
+async def test_generate_script_rejects_name_as_speaker_id():
     """Regression test for Sprint 1.4A fix #1: speaker_id must be a UUID, not a name."""
     lines_with_name_id = [{**VALID_LINES[0], "speaker_id": "Alex"}]
-    queue_responses(monkeypatch, [gemini_ok_response(lines_with_name_id)])
+    router = _gateway_router(AIMode.GEMINI, [_script_result(lines_with_name_id)])
 
     with pytest.raises(ScriptGenerationError, match="schema validation"):
-        await script_service.generate_script("proj-1", SAMPLE_CONFIG)
+        await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
 
 
-async def test_generate_script_rejects_unknown_speaker_uuid(monkeypatch):
+async def test_generate_script_rejects_unknown_speaker_uuid():
     hallucinated = [{**VALID_LINES[0], "speaker_id": "99999999-9999-9999-9999-999999999999"}]
-    queue_responses(monkeypatch, [gemini_ok_response(hallucinated)])
+    router = _gateway_router(AIMode.GEMINI, [_script_result(hallucinated)])
 
     with pytest.raises(ScriptGenerationError, match="not in project"):
-        await script_service.generate_script("proj-1", SAMPLE_CONFIG)
+        await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
 
 
-async def test_generate_script_empty_script_raises(monkeypatch):
-    queue_responses(monkeypatch, [gemini_ok_response([])])
+async def test_generate_script_empty_script_raises():
+    router = _gateway_router(AIMode.GEMINI, [_script_result([])])
 
     with pytest.raises(ScriptGenerationError, match="empty script"):
-        await script_service.generate_script("proj-1", SAMPLE_CONFIG)
+        await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
 
 
-async def test_generate_script_missing_api_key_raises_without_calling_gemini(monkeypatch):
+async def test_generate_script_missing_api_key_raises_without_calling_router(monkeypatch):
+    """AI_MODE=gemini (the packaged default) still hard-requires a Gemini key
+    upfront -- byte-identical behavior to before Task 13.7's migration."""
+    monkeypatch.setattr(script_service.settings, "AI_MODE", "gemini")
     monkeypatch.setattr(script_service.settings, "GEMINI_API_KEY", "")
-    calls = {"n": 0}
-
-    async def fake_call_gemini(prompt: str, schema: dict | None = None, model: str | None = None):
-        calls["n"] += 1
-        raise AssertionError("Gemini should never be called without an API key")
-
-    monkeypatch.setattr(script_service, "_call_gemini", fake_call_gemini)
+    router = _gateway_router(AIMode.GEMINI, [])
 
     with pytest.raises(ScriptGenerationError, match="not configured"):
-        await script_service.generate_script("proj-1", SAMPLE_CONFIG)
-
-    assert calls["n"] == 0
+        await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
 
 
-async def test_call_gemini_includes_response_json_schema(monkeypatch):
-    """_call_gemini includes responseJsonSchema (and not responseSchema) in generationConfig (BUG-011)."""
-    captured = {}
+async def test_generate_script_local_mode_needs_no_gemini_key():
+    """Task 13.7: the upfront key guard is mode-aware -- AI_MODE=local/hybrid must not
+    be blocked by a missing Gemini key, since local generation never needs one."""
+    router = _gateway_router(AIMode.LOCAL, gemini_outcomes=[], local_outcomes=[_script_result(VALID_LINES)])
 
-    class FakeAsyncClient:
-        def __init__(self, *args, **kwargs):
-            pass
+    lines = await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
 
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *args):
-            pass
-
-        async def post(self, url, params=None, json=None):
-            captured["url"] = url
-            captured["json"] = json
-            return FakeResponse(200, json_data={"candidates": [{"content": {"parts": [{"text": "[]"}]}}]})
-
-    monkeypatch.setattr(script_service.httpx, "AsyncClient", FakeAsyncClient)
-
-    schema = {"type": "array"}
-    await script_service._call_gemini("test prompt", schema=schema)
-
-    assert "generationConfig" in captured["json"]
-    assert captured["json"]["generationConfig"]["responseMimeType"] == "application/json"
-    assert captured["json"]["generationConfig"]["responseJsonSchema"] == schema
-    assert "responseSchema" not in captured["json"]["generationConfig"]
-
-
-async def test_generate_script_wire_payload_includes_response_json_schema(monkeypatch):
-    """generate_script transmits responseJsonSchema in generationConfig over the wire."""
-    captured = {}
-
-    class FakeAsyncClient:
-        def __init__(self, *args, **kwargs):
-            pass
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *args):
-            pass
-
-        async def post(self, url, params=None, json=None):
-            captured["json"] = json
-            return FakeResponse(200, json_data={"candidates": [{"content": {"parts": [{"text": json_module.dumps(VALID_LINES)}]}}]})
-
-    import json as json_module
-    monkeypatch.setattr(script_service.httpx, "AsyncClient", FakeAsyncClient)
-
-    lines = await script_service.generate_script("proj-1", SAMPLE_CONFIG)
     assert len(lines) == 2
-    assert "generationConfig" in captured["json"]
-    gen_config = captured["json"]["generationConfig"]
-    assert "responseJsonSchema" in gen_config
-    assert "responseSchema" not in gen_config
-    assert gen_config["responseJsonSchema"]["type"] == "array"
-
-
-async def test_regenerate_line_wire_payload_includes_response_json_schema(monkeypatch):
-    """regenerate_line transmits responseJsonSchema in generationConfig over the wire."""
-    captured = {}
-
-    class FakeAsyncClient:
-        def __init__(self, *args, **kwargs):
-            pass
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *args):
-            pass
-
-        async def post(self, url, params=None, json=None):
-            captured["json"] = json
-            return FakeResponse(200, json_data={"candidates": [{"content": {"parts": [{"text": json_module.dumps(VALID_LINES[0])}]}}]})
-
-    import json as json_module
-    monkeypatch.setattr(script_service.httpx, "AsyncClient", FakeAsyncClient)
-
-    line = await script_service.regenerate_line(
-        "proj-1", SAMPLE_CONFIG, "line_001", "old text", "11111111-1111-1111-1111-111111111111"
-    )
-    assert line.id == "line_001"
-    gen_config = captured["json"]["generationConfig"]
-    assert "responseJsonSchema" in gen_config
-    assert "responseSchema" not in gen_config
-    assert gen_config["responseJsonSchema"]["type"] == "object"
 
 
 async def test_regenerate_line_via_injected_gateway_router_returns_validated_line():
@@ -440,24 +251,6 @@ async def test_regenerate_line_still_rejects_speaker_id_change_via_gateway():
             "11111111-1111-1111-1111-111111111111",
             router=router,
         )
-
-
-async def test_generate_with_retry_never_downgrades_to_schema_less(monkeypatch):
-    """If Gemini returns a fatal error or network fails, _generate_with_retry must not retry schema-less."""
-    calls = []
-
-    async def fake_call_gemini(prompt: str, schema: dict | None = None, model: str | None = None):
-        calls.append(schema)
-        raise script_service.httpx.RequestError("Network error")
-
-    monkeypatch.setattr(script_service, "_call_gemini", fake_call_gemini)
-
-    schema = {"type": "array"}
-    with pytest.raises(ScriptGenerationError, match="Gemini API request failed"):
-        await script_service._generate_with_retry("prompt", schema=schema)
-
-    assert len(calls) == 1
-    assert calls[0] == schema
 
 
 async def test_update_script_line_clears_stale_cached_audio(db):

@@ -1,8 +1,8 @@
-"""Generates and persists YouTube Package metadata via the Gemini API (Task 1.9).
+"""Generates and persists YouTube Package metadata via the AI provider gateway (Task 1.9).
 
-Mirrors app/services/learning_service.py's approach: Gemini is called directly over
-its REST endpoint via httpx.AsyncClient, with 429-only exponential backoff and strict
-Pydantic schema validation of the response.
+Migrated from a duplicated direct-Gemini transport onto the shared `AIRouter` gateway
+in Phase 13, Task 13.7 -- see `app/services/script_service.py::generate_script` for the
+identical reasoning.
 
 Chapter timestamps are ESTIMATED from a fixed reading speed when no audio mix exists yet
 (Sub-task 1.9a's original behavior), or MEASURED from AudioService's real per-line
@@ -12,144 +12,38 @@ thumbnail + SRT + metadata + transcript/Learning Content) once the existing medi
 prerequisites exist.
 """
 
-import hashlib
 import io
 import json
 import logging
-import time
-from asyncio import sleep
 import uuid
 import zipfile
 from datetime import datetime, timezone
 
 import aiosqlite
-import httpx
-from pydantic import ValidationError as PydanticValidationError
+from pydantic import TypeAdapter
 
 from app.core.config import settings
-from app.core.constants import (
-    GEMINI_MAX_RETRIES,
-    GEMINI_MODEL,
-    GEMINI_MODEL_FALLBACKS,
-    GEMINI_RETRY_BASE_DELAY,
-    YOUTUBE_CHAPTER_MIN_LINES,
-    YOUTUBE_CHAPTER_WORDS_PER_MINUTE,
+from app.core.constants import YOUTUBE_CHAPTER_MIN_LINES, YOUTUBE_CHAPTER_WORDS_PER_MINUTE
+from app.core.exceptions import (
+    ProviderError,
+    SchemaValidationError,
+    ValidationError,
+    YouTubePackageGenerationError,
 )
-from app.core.exceptions import ValidationError, YouTubePackageGenerationError
 from app.core.prompt_loader import render_youtube_prompt
 from app.models.youtube import YouTubePackageOut
+from app.services.ai.contracts import AIMode, GenerationRequest
+from app.services.ai.router import AIRouter, build_ai_router_from_settings
+from app.services.ai.validation import parse_and_validate
 
 logger = logging.getLogger(__name__)
 
-GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+_PACKAGE_ADAPTER = TypeAdapter(YouTubePackageOut)
 
 
 def _now() -> str:
     """Current UTC timestamp in ISO8601, used for created_at/updated_at."""
     return datetime.now(timezone.utc).isoformat()
-
-
-_RETRYABLE_STATUS_CODES = (429, 503)  # 429 = rate/quota limit, 503 = model temporarily overloaded
-
-
-async def _call_gemini(prompt: str, schema: dict, model: str = GEMINI_MODEL) -> tuple[httpx.Response, float]:
-    """Make one HTTP call to Gemini generateContent. Returns (response, latency_ms)."""
-    url = GEMINI_ENDPOINT.format(model=model)
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "responseMimeType": "application/json",
-            "responseJsonSchema": schema,
-        },
-    }
-    started_at = time.perf_counter()
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.post(url, params={"key": settings.GEMINI_API_KEY}, json=payload)
-    return response, (time.perf_counter() - started_at) * 1000
-
-
-async def _attempt_model(
-    model: str, prompt: str, schema: dict, prompt_hash: str
-) -> tuple[str | None, int | None, str]:
-    """Try one model with exponential backoff on 429/503; see script_service._attempt_model."""
-    delay = GEMINI_RETRY_BASE_DELAY
-    last_status: int | None = None
-    last_body = ""
-
-    for attempt in range(1, GEMINI_MAX_RETRIES + 1):
-        try:
-            response, latency_ms = await _call_gemini(prompt, schema, model=model)
-        except httpx.RequestError as exc:
-            raise YouTubePackageGenerationError(f"Gemini API request failed: {exc}") from exc
-
-        if response.status_code == 200:
-            data = response.json()
-            logger.info(
-                "gemini_youtube_call model=%s prompt_hash=%s latency_ms=%.1f "
-                "tokens_used=%s attempt=%d",
-                model,
-                prompt_hash,
-                latency_ms,
-                data.get("usageMetadata", {}).get("totalTokenCount"),
-                attempt,
-            )
-            try:
-                return data["candidates"][0]["content"]["parts"][0]["text"], None, ""
-            except (KeyError, IndexError) as exc:
-                raise YouTubePackageGenerationError(
-                    f"Unexpected Gemini response shape: {exc}"
-                ) from exc
-
-        last_status = response.status_code
-        last_body = response.text[:200]
-
-        if response.status_code in _RETRYABLE_STATUS_CODES and attempt < GEMINI_MAX_RETRIES:
-            logger.warning(
-                "gemini_youtube_retryable_error model=%s prompt_hash=%s status=%d attempt=%d retry_in_s=%.1f",
-                model,
-                prompt_hash,
-                response.status_code,
-                attempt,
-                delay,
-            )
-            await sleep(delay)
-            delay *= 2
-            continue
-
-        if response.status_code not in _RETRYABLE_STATUS_CODES:
-            raise YouTubePackageGenerationError(
-                f"Gemini API returned HTTP {response.status_code} after {attempt} attempt(s): "
-                f"{last_body}"
-            )
-
-    return None, last_status, last_body
-
-
-async def _generate_with_retry(prompt: str, schema: dict) -> str:
-    """Call Gemini, falling back through GEMINI_MODEL_FALLBACKS on 429/503 exhaustion.
-
-    Never logs the raw prompt or API key — only a hash of the prompt.
-    """
-    prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16]
-    last_status: int | None = None
-    last_body = ""
-
-    for model in GEMINI_MODEL_FALLBACKS:
-        text, status, body = await _attempt_model(model, prompt, schema, prompt_hash)
-        if text is not None:
-            return text
-        last_status, last_body = status, body
-        logger.warning(
-            "gemini_youtube_model_exhausted model=%s prompt_hash=%s status=%s — trying next fallback model",
-            model,
-            prompt_hash,
-            last_status,
-        )
-
-    raise YouTubePackageGenerationError(
-        f"Gemini API returned HTTP {last_status} after exhausting all fallback models "
-        f"({', '.join(GEMINI_MODEL_FALLBACKS)}): {last_body}"
-    )
 
 
 def _chapter_label(text: str, max_words: int = 6) -> str:
@@ -211,8 +105,17 @@ def real_chapters_from_timestamps(timestamps: list[dict]) -> str:
     return "\n".join(chapters)
 
 
-async def generate_package(project: dict, script_lines: list[dict], timestamps: list[dict] | None = None) -> dict:
-    """Generate a full YouTube package (titles/description/tags/chapters) via Gemini.
+async def generate_package(
+    project: dict,
+    script_lines: list[dict],
+    timestamps: list[dict] | None = None,
+    router: AIRouter | None = None,
+) -> dict:
+    """Generate a full YouTube package (titles/description/tags/chapters).
+
+    Migrated from a duplicated direct-Gemini retry/fallback-model transport to
+    `AIRouter` (Phase 13, Task 13.7) -- see `script_service.generate_script` for the
+    identical reasoning.
 
     `timestamps` is the project's completed `audio_jobs.timestamps` (Task 1.6), when one
     exists. When present, chapters are measured from real audio; otherwise they fall back
@@ -225,6 +128,8 @@ async def generate_package(project: dict, script_lines: list[dict], timestamps: 
         script_lines: The project's persisted script lines, in order. Must be
             non-empty — their text is joined into the transcript Gemini uses,
             and is also used to estimate chapter timestamps.
+        router: Injected `AIRouter` (tests pass a `FakeProvider`-backed one with
+            zero network calls); defaults to `build_ai_router_from_settings()`.
 
     Returns:
         A dict shaped like a persisted package row's public form: titles,
@@ -232,10 +137,11 @@ async def generate_package(project: dict, script_lines: list[dict], timestamps: 
 
     Raises:
         ValidationError: If the script is empty.
-        YouTubePackageGenerationError: If the API key is unset, Gemini fails
-            after retries, returns malformed JSON, or fails schema validation.
+        YouTubePackageGenerationError: If `AI_MODE=gemini` and no API key is
+            configured, every provider attempt this mode allows fails, or the
+            response is malformed/fails schema validation.
     """
-    if not settings.GEMINI_API_KEY:
+    if AIMode(settings.AI_MODE) is AIMode.GEMINI and not settings.GEMINI_API_KEY:
         raise YouTubePackageGenerationError("DIE_GEMINI_API_KEY is not configured")
     if not script_lines:
         raise ValidationError("Cannot generate a YouTube package: script is empty")
@@ -248,18 +154,22 @@ async def generate_package(project: dict, script_lines: list[dict], timestamps: 
         cefr_level=project["cefr_level"],
         transcript_text=transcript_text,
     )
-    raw_text = await _generate_with_retry(prompt, schema=YouTubePackageOut.model_json_schema())
+    router = router or build_ai_router_from_settings()
+    request = GenerationRequest(
+        prompt=prompt,
+        json_schema=YouTubePackageOut.model_json_schema(),
+        deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
+        purpose="youtube_package",
+    )
+    try:
+        result = await router.generate(request)
+    except ProviderError as exc:
+        raise YouTubePackageGenerationError(f"YouTube package generation failed: {exc}") from exc
 
     try:
-        parsed = json.loads(raw_text)
-    except json.JSONDecodeError as exc:
-        raise YouTubePackageGenerationError(f"Gemini did not return valid JSON: {exc}") from exc
-    try:
-        package = YouTubePackageOut.model_validate(parsed)
-    except PydanticValidationError as exc:
-        raise YouTubePackageGenerationError(
-            f"Gemini response failed schema validation: {exc}"
-        ) from exc
+        package = parse_and_validate(result.text, _PACKAGE_ADAPTER)
+    except SchemaValidationError as exc:
+        raise YouTubePackageGenerationError(str(exc)) from exc
 
     if timestamps:
         chapters_text = real_chapters_from_timestamps(timestamps)

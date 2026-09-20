@@ -1484,6 +1484,66 @@ pass**, 0 flakes (345.22s), `ruff check .`/`git diff --check` clean. See
 `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.6.md` for the
 full plan and evidence record.
 
+### 13.7 Cloud fallback and compatibility — ✅ DONE (2026-09-20)
+
+Session continuation after a Codex-quota interruption/handoff. The handoff prompt
+described Task 13.1 as still `in_progress`, which was stale -- `git log` and
+`PHASE-STATE.md` both confirmed Tasks 13.0-13.6 were already `done` (through
+commit `336a587`) before any action was taken; the real WIP was Task 13.7, not
+13.1. Read every required doc plus the actual current `app/services/ai/**`,
+all four Gemini-consumer service files, both legacy API routes, and all four
+services' existing test files before writing the doc-first plan.
+Live-reverified `gemini-3.8-flash` (real `models.list` call + official docs)
+is still Google's current stable, non-preview Flash model, one day after Task
+13.2's own check. Found Gemini's real Interactions-API background execution
+(`ai.google.dev/gemini-api/docs/background-execution`) supports
+`gemini-3.8-flash` -- but deliberately left it unwired: persisting/polling
+`ai_generation_jobs.remote_interaction_id` (a column Task 13.3 added but
+nothing reads/writes yet) needs `app/services/ai_worker.py`/
+`ai_job_service.py`, neither in this task's allowed files; ADR-001 explicitly
+permits the existing synchronous foreground call as valid whether or not
+background is available, so this is a deliberate, documented deferral to a
+future task, not a dropped requirement. Migrated all 4 direct Gemini
+consumers (`script_service.generate_script`, `learning_service.
+generate_learning_pack`, `thumbnail_service.generate_suggestions`,
+`youtube_service.generate_package`) off their own duplicated
+`_call_gemini`/`_attempt_model`/`_generate_with_retry`/`GEMINI_MODEL_FALLBACKS`
+transport onto the shared `AIRouter` gateway via one new shared
+`app/services/ai/router.py::build_ai_router_from_settings()` factory
+(replacing 4 near-identical private copies). ADR-001's explicit rejection of
+"multiple automatic fallback models" means the old 6-model quota-spreading
+cascade is deliberately not preserved -- only response *shape* was promised
+unchanged, not internal retry behavior. Each consumer's upfront
+`GEMINI_API_KEY`-required guard became mode-aware (`AI_MODE=local`/`hybrid`
+no longer needs a Gemini key), and each gained an injectable `router`
+parameter mirroring `regenerate_line`'s existing Task 13.4 pattern. Both
+legacy synchronous generate routes marked `deprecated=True` with a docstring
+pointing at the durable-jobs API, response contract byte-for-byte unchanged;
+`docs/api.md` regenerated (also closed a pre-existing drift gap from Tasks
+13.3/13.6 never having triggered a regeneration). **Doc-first gate found two
+real scope gaps, both recorded in `tasks/task-13.7.md` before code, matching
+the precedent from 13.5/13.6**: (1) the migration meant
+`tests/test_script_service.py`/`test_learning_service.py`/
+`test_thumbnail_service.py`/`test_youtube_service.py` (none in the original
+task-card test-file list) needed rewriting onto injected
+`FakeProvider`-backed routers; (2) a **full**-suite run -- not just those four
+files -- surfaced a second gap the doc-first review had missed:
+`tests/test_thumbnail_api.py` and `tests/test_youtube_export_api.py`
+independently monkeypatched the now-removed `_generate_with_retry` in their
+own API-level `client` fixtures, fixed by mocking the public
+`generate_suggestions`/`generate_learning_pack` functions instead (the same
+pattern `test_script_api.py`/`test_learning_api.py` already use). One new
+`tests/test_ai_router.py` test closes a real coverage gap against the
+"disabled fallback yields a clear local error" verification criterion
+(`AI_MODE=local` failing without ever touching Gemini); one new shared
+`tests/test_ai_providers.py` wire-payload test protects the BUG-011
+regression (`responseJsonSchema` not `responseSchema`) once, for all 4
+migrated consumers, replacing 4 near-duplicate per-service versions of the
+same check. Full suite: **801/801 pass**, 0 flakes,
+`ruff check app tests scripts`/`git diff --check` clean. See
+`.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.7.md` for the
+full plan and evidence record.
+
 ## Decision Log
 
 | Date | Decision | Rationale |

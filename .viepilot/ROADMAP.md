@@ -1013,3 +1013,67 @@ configuration-only Gemini rollback path. See
   `ruff`/`git diff --check` clean. See
   `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.6.md` for the
   full record.
+
+### 13.7 Cloud fallback and compatibility — ✅ DONE (2026-09-20)
+
+- [x] Session continuation after a Codex-quota interruption/handoff — the handoff
+  prompt was stale (described Task 13.1 as still `in_progress`); real state
+  (`git log`, `PHASE-STATE.md`) confirmed Tasks 13.0–13.6 were already `done`
+  before any action was taken. Live-reverified `gemini-3.8-flash` is still
+  Google's current stable, non-preview Flash model (real `models.list` call +
+  `ai.google.dev/gemini-api/docs/models`), one day after Task 13.2's own check.
+  Found Gemini's real Interactions-API background execution
+  (`ai.google.dev/gemini-api/docs/background-execution`) supports
+  `gemini-3.8-flash`, but deliberately left it unwired — persisting/polling
+  `ai_generation_jobs.remote_interaction_id` (a column Task 13.3 added but
+  nothing reads/writes yet) needs `app/services/ai_worker.py`/
+  `ai_job_service.py`, outside this task's allowed files; ADR-001 explicitly
+  allows the existing synchronous foreground call as valid either way, so this
+  is deferred to a future task, not silently dropped.
+- [x] All 4 direct Gemini consumers (`script_service.generate_script`,
+  `learning_service.generate_learning_pack`, `thumbnail_service.generate_suggestions`,
+  `youtube_service.generate_package`) migrated off their own duplicated
+  `_call_gemini`/`_attempt_model`/`_generate_with_retry`/`GEMINI_MODEL_FALLBACKS`
+  transport onto the shared `AIRouter` gateway, via one new shared
+  `app/services/ai/router.py::build_ai_router_from_settings()` factory
+  (replacing 4 near-identical private copies, one already in
+  `script_service.py`). ADR-001's explicit rejection of "multiple automatic
+  fallback models" means the old 6-model quota-spreading cascade is
+  deliberately not preserved — only response *shape*, not internal retry
+  behavior, was promised unchanged. Each consumer's upfront
+  `GEMINI_API_KEY`-required guard became mode-aware
+  (`AI_MODE=local`/`hybrid` no longer needs a Gemini key at all) and gained an
+  injectable `router` parameter for tests, mirroring `regenerate_line`'s
+  existing Task 13.4 pattern.
+- [x] Both legacy synchronous generate routes (`POST .../script/generate`,
+  `POST .../learning/generate`) marked `deprecated=True` with a docstring
+  pointing at the durable-jobs API — response contract byte-for-byte
+  unchanged. `docs/api.md` regenerated via the existing
+  `scripts/generate_api_docs.py` (also picked up several routes documented
+  since Task 13.3/13.6 that a prior task never regenerated for — a
+  pre-existing drift gap, not caused by this task).
+- [x] **Doc-first gate found two real scope gaps, both recorded in
+  `tasks/task-13.7.md` before code, matching the precedent set in
+  13.5/13.6:** (1) migrating the 4 consumers' internals meant
+  `tests/test_script_service.py`/`test_learning_service.py`/
+  `test_thumbnail_service.py`/`test_youtube_service.py` (none in the task
+  card's original test-file list) needed rewriting onto injected
+  `FakeProvider`-backed routers instead of monkeypatching the deleted
+  transport internals; (2) a **full**-suite run (not just the four service
+  test files) surfaced a second gap the doc-first review missed —
+  `tests/test_thumbnail_api.py` and `tests/test_youtube_export_api.py`
+  independently monkeypatched the now-removed `_generate_with_retry` in
+  their own API-level `client` fixtures — fixed by mocking the public
+  `generate_suggestions`/`generate_learning_pack` functions instead, the same
+  pattern `test_script_api.py`/`test_learning_api.py` already use.
+- [x] One new `tests/test_ai_router.py` test closes a real coverage gap
+  against the "disabled fallback yields a clear local error" verification
+  criterion (`AI_MODE=local` failing without ever touching Gemini). One new
+  shared `tests/test_ai_providers.py` wire-payload test protects the BUG-011
+  regression (`responseJsonSchema` not `responseSchema`) once, for all 4
+  migrated consumers at once, replacing 4 near-duplicate per-service versions
+  of the same check.
+- [x] Full suite **801/801 pass**, 0 flakes, `ruff check app tests scripts`
+  clean, `git diff --check` clean. See
+  `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.7.md` for the
+  full record.

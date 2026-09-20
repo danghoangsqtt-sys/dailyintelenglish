@@ -4,7 +4,6 @@ import hashlib
 import json
 from pathlib import Path
 
-import httpx
 import pytest
 from PIL import Image
 
@@ -17,8 +16,11 @@ from app.core.constants import (
     THUMBNAIL_WIDTH_9X16,
 )
 from app.core.exceptions import ConflictError, ThumbnailGenerationError
-from app.models.thumbnail import ThumbnailEditRequest, ThumbnailSuggestion, ThumbnailSuggestionPack
+from app.models.thumbnail import ThumbnailEditRequest, ThumbnailSuggestion
 from app.services import thumbnail_service
+from app.services.ai.contracts import AIMode, GenerationResult
+from app.services.ai.fake_provider import FakeProvider
+from app.services.ai.router import AIRouter
 
 PROJECT = {
     "id": "project-1",
@@ -218,36 +220,26 @@ async def test_edit_render_rejects_stale_revision_before_creating_files(
     assert [path.name for path in project_dir.iterdir()] == [original["revision"]]
 
 
-@pytest.mark.asyncio
-async def test_gemini_network_payload_uses_response_json_schema(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    captured: dict = {}
+# Note: the responseJsonSchema-not-responseSchema wire-payload regression (BUG-011)
+# is now covered once, at the shared gateway layer (Task 13.7), by
+# tests/test_ai_providers.py::test_gemini_provider_wire_payload_uses_response_json_schema_not_response_schema.
 
-    class FakeClient:
-        def __init__(self, **kwargs: object) -> None:
-            captured["client_kwargs"] = kwargs
 
-        async def __aenter__(self) -> "FakeClient":
-            return self
+def _suggestion_result(pack_json: str) -> GenerationResult:
+    return GenerationResult(
+        text=pack_json,
+        provider="fake-provider",
+        model="fake-model",
+        latency_ms=1.0,
+        attempt=1,
+        prompt_hash="abc123",
+    )
 
-        async def __aexit__(self, *args: object) -> None:
-            return None
 
-        async def post(self, url: str, **kwargs: object) -> httpx.Response:
-            captured["url"] = url
-            captured.update(kwargs)
-            return httpx.Response(200, json={})
-
-    monkeypatch.setattr(thumbnail_service.httpx, "AsyncClient", FakeClient)
-    schema = ThumbnailSuggestionPack.model_json_schema()
-
-    await thumbnail_service._call_gemini("safe prompt", schema)
-
-    generation_config = captured["json"]["generationConfig"]
-    assert generation_config["responseJsonSchema"] == schema
-    assert "responseSchema" not in generation_config
-    assert generation_config["responseMimeType"] == "application/json"
+def _gateway_router(mode: AIMode, gemini_outcomes: list, local_outcomes: list | None = None) -> AIRouter:
+    gemini = FakeProvider("fake-gemini", gemini_outcomes)
+    local = FakeProvider("fake-ollama", local_outcomes or [])
+    return AIRouter(local=local, gemini=gemini, mode=mode)
 
 
 @pytest.mark.asyncio
@@ -256,15 +248,9 @@ async def test_generate_suggestions_applies_pydantic_validation_and_exact_count(
 ) -> None:
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
     template = await thumbnail_service.load_template("modern_split")
+    router = _gateway_router(AIMode.GEMINI, [_suggestion_result(suggestion_json(3))])
 
-    async def fake_generate(prompt: str, schema: dict) -> str:
-        assert "exactly 3 distinct variants" in prompt
-        assert schema == ThumbnailSuggestionPack.model_json_schema()
-        return suggestion_json(3)
-
-    monkeypatch.setattr(thumbnail_service, "_generate_with_retry", fake_generate)
-
-    pack = await thumbnail_service.generate_suggestions(PROJECT, template, 3)
+    pack = await thumbnail_service.generate_suggestions(PROJECT, template, 3, router=router)
 
     assert len(pack.variants) == 3
 
@@ -276,18 +262,12 @@ async def test_generate_suggestions_rejects_wrong_count_and_invalid_schema(
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
     template = await thumbnail_service.load_template("modern_split")
 
-    async def wrong_count(prompt: str, schema: dict) -> str:
-        return suggestion_json(3)
-
-    monkeypatch.setattr(thumbnail_service, "_generate_with_retry", wrong_count)
+    router = _gateway_router(AIMode.GEMINI, [_suggestion_result(suggestion_json(3))])
     with pytest.raises(ThumbnailGenerationError, match="expected exactly 4"):
-        await thumbnail_service.generate_suggestions(PROJECT, template, 4)
+        await thumbnail_service.generate_suggestions(PROJECT, template, 4, router=router)
 
-    async def invalid_schema(prompt: str, schema: dict) -> str:
-        payload = json.loads(suggestion_json(3))
-        payload["variants"][0]["palette"]["primary"] = "not-a-color"
-        return json.dumps(payload)
-
-    monkeypatch.setattr(thumbnail_service, "_generate_with_retry", invalid_schema)
+    payload = json.loads(suggestion_json(3))
+    payload["variants"][0]["palette"]["primary"] = "not-a-color"
+    router = _gateway_router(AIMode.GEMINI, [_suggestion_result(json.dumps(payload))])
     with pytest.raises(ThumbnailGenerationError, match="schema validation"):
-        await thumbnail_service.generate_suggestions(PROJECT, template, 3)
+        await thumbnail_service.generate_suggestions(PROJECT, template, 3, router=router)

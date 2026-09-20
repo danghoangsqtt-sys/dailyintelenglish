@@ -12,7 +12,7 @@ import logging
 import time
 from dataclasses import dataclass
 
-from app.core.constants import AI_CIRCUIT_COOLDOWN_SECONDS, AI_CIRCUIT_FAILURE_THRESHOLD
+from app.core.constants import AI_CIRCUIT_COOLDOWN_SECONDS, AI_CIRCUIT_FAILURE_THRESHOLD, GEMINI_MODEL
 from app.core.exceptions import (
     ProviderError,
     ProviderInvalidResponseError,
@@ -22,8 +22,28 @@ from app.core.exceptions import (
     SchemaValidationError,
 )
 from app.services.ai.contracts import AIMode, GenerationRequest, GenerationResult, Provider
+from app.services.ai.gemini_provider import GeminiProvider
+from app.services.ai.ollama_provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
+
+
+def build_ai_router_from_settings() -> "AIRouter":
+    """Construct the Task 13.2 provider gateway from current app settings.
+
+    The one shared factory for every Gemini consumer (Phase 13, Task 13.7) --
+    previously duplicated per-service (`script_service._build_ai_router`). A fresh
+    instance per call is fine: there is no shared-lifespan client the way a
+    lifespan-managed worker would want, matching each provider's own per-call
+    `httpx.AsyncClient` lifetime.
+    """
+    from app.core.config import settings  # local import: avoids a config<->ai import cycle
+
+    local = OllamaProvider(
+        base_url=settings.OLLAMA_BASE_URL, model=settings.OLLAMA_MODEL, num_ctx=settings.OLLAMA_NUM_CTX
+    )
+    gemini = GeminiProvider(api_key=settings.GEMINI_API_KEY, model=GEMINI_MODEL)
+    return AIRouter(local=local, gemini=gemini, mode=AIMode(settings.AI_MODE))
 
 # Infrastructure/transient errors worth one same-provider retry. ProviderAuthError is
 # deliberately excluded -- a bad key/config will not fix itself on a second attempt.

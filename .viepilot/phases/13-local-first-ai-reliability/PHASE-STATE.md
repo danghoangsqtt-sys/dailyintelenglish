@@ -36,7 +36,7 @@
 | 13.4 | Checkpointed script generation | done | Content validators passed |
 | 13.5 | Grounded learning generation | done | Learning quality passed |
 | 13.6 | Settings, health, and Step 2/3 job UX | done | Browser recovery passed |
-| 13.7 | Gemini fallback and compatibility | in_progress | Forced fallback |
+| 13.7 | Gemini fallback and compatibility | done | Forced fallback |
 | 13.8 | Automated regression/packaging gate | pending | Full suite/build |
 | 13.9 | Real no-mock bake-off and operational trial | pending | Gate B |
 | 13.10 | Rollout, docs, and rollback drill | pending | Release gate |
@@ -235,3 +235,30 @@
   asked this session to stop at, resolved by *not* crossing it. Live re-verification
   also reconfirmed `gemini-3.8-flash` is still Google's current non-preview stable
   Flash model one day after Task 13.2's own check. Task 13.7 moved to `in_progress`.
+- 2026-09-20: Task 13.7 implemented -- one shared `app/services/ai/router.py::
+  build_ai_router_from_settings()` factory (replacing 4 near-identical private
+  copies); all 4 direct Gemini consumers (`script_service.generate_script`,
+  `learning_service.generate_learning_pack`, `thumbnail_service.generate_suggestions`,
+  `youtube_service.generate_package`) migrated off their own duplicated
+  `_call_gemini`/`_attempt_model`/`_generate_with_retry`/`GEMINI_MODEL_FALLBACKS`
+  transport onto the shared `AIRouter`, each gaining a mode-aware
+  `GEMINI_API_KEY`-required guard (only enforced when `AI_MODE=gemini`) and an
+  injectable `router` parameter mirroring `regenerate_line`'s Task 13.4 pattern.
+  Both legacy synchronous generate routes marked `deprecated=True` (response
+  contract unchanged); `docs/api.md` regenerated. A second real gap was found only
+  by running the **full** suite after the four service test files were already
+  rewritten and green: `tests/test_thumbnail_api.py` and
+  `tests/test_youtube_export_api.py` (not in the doc-first plan's expanded
+  test-file list either) independently monkeypatched the removed
+  `_generate_with_retry` in their own API-level `client` fixtures -- fixed by
+  mocking the public `generate_suggestions`/`generate_learning_pack` functions
+  instead, recorded in `tasks/task-13.7.md`. Added one `test_ai_router.py` test
+  closing a real gap against the "disabled fallback yields a clear local error"
+  criterion, and one shared `test_ai_providers.py` wire-payload test protecting
+  BUG-011 (`responseJsonSchema` not `responseSchema`) once for all 4 consumers,
+  replacing what would have been 4 duplicated per-service versions. `git grep`
+  for `_generate_with_retry|_call_gemini|GEMINI_MODEL_FALLBACKS` across
+  `tests/`, `app/`, `scripts/` confirmed zero remaining call sites (2 hits left
+  are historical docstring mentions, not code). Full suite: **801/801 pass**, 0
+  flakes, `ruff check app tests scripts` clean, `git diff --check` clean. Task
+  13.7 moved to `done`.

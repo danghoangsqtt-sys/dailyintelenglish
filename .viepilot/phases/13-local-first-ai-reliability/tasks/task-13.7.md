@@ -1,6 +1,6 @@
 # Task 13.7 — Gemini Fallback and Compatibility Migration
 
-- **Status:** in_progress
+- **Status:** done
 - **Dependency:** 13.2–13.6 (all done)
 - **Controlling detail:** implementation plan §8, Task 13.7
 
@@ -41,6 +41,22 @@ until the plan and allowed-file list are updated"):**
   this is the plan's documented architecture, not a new one — only the task card's
   test-file list was incomplete, matching the same class of gap self-resolved in
   13.5/13.6 (see PHASE-STATE evidence log).
+- `tests/test_thumbnail_api.py`, `tests/test_youtube_export_api.py` — found only
+  after running the **full** suite post-migration (not just the four service test
+  files above): both API-level test files independently monkeypatch
+  `thumbnail_service._generate_with_retry` (now removed) in their own `client`
+  fixtures to fake thumbnail-suggestion generation for HTTP-level tests, and
+  `test_youtube_export_api.py` does the same for
+  `learning_service._generate_with_retry`. Fixed by monkeypatching the public
+  `generate_suggestions`/`generate_learning_pack` functions directly instead (the
+  same full-function-mock pattern `test_script_api.py`/`test_learning_api.py` already
+  use for `script_service.generate_script`) — these are API-contract tests, not unit
+  tests of the generation internals, so mocking at the public boundary is the more
+  correct fix, not merely a workaround. `git grep` for
+  `_generate_with_retry|_call_gemini|GEMINI_MODEL_FALLBACKS` across `tests/`, `app/`,
+  `scripts/` after this second fix confirms no further call sites remain (2 hits left
+  are historical/explanatory docstring mentions in `gemini_provider.py`/
+  `script_service.py`, not code).
 
 ## Constraints
 
@@ -129,3 +145,49 @@ settings/UI/job metadata. No preview model enters automatic routing.
 Forced Ollama-down produces exactly one visible cloud fallback; disabled fallback is a
 safe local-only error; retry deadline is bounded; all four consumers use the gateway;
 legacy endpoint response shapes and tests remain green; full suite/ruff clean.
+
+## Verification results (2026-09-20)
+
+- `venv\Scripts\python.exe -m ruff check app tests scripts` — clean.
+- `venv\Scripts\python.exe -m pytest -q` — **801 passed**, 0 failures, 0 flakes
+  (368.55s).
+- `git diff --check` — clean (only line-ending-normalization warnings, no real
+  whitespace errors).
+- Forced local failure with no fallback path (`AI_MODE=local`): new
+  `tests/test_ai_router.py::test_local_mode_raises_without_any_gemini_fallback_when_local_fails`
+  confirms the router raises directly, `gemini.call_count == 0`.
+- Forced local exhaustion with hybrid mode: existing
+  `test_hybrid_mode_falls_back_to_gemini_after_local_exhausts_its_retry` confirms
+  exactly one visible Gemini fallback (`fallback_used=True`), unchanged by this task.
+- Deadline bound: existing `test_generate_raises_timeout_when_deadline_elapses`
+  unchanged and still passing — one total `deadline_seconds` budget per
+  `AIRouter.generate()` call, independent of provider-internal timeouts.
+- Auth errors never retry: existing `test_hybrid_mode_does_not_retry_on_auth_error_and_falls_back_immediately`
+  unchanged and still passing.
+- Legacy contracts remain green: `tests/test_script_api.py` (all pre-existing
+  tests, unmodified) and `tests/test_learning_api.py` (all pre-existing tests,
+  unmodified) pass against the migrated `script_service.generate_script`/
+  `learning_service.generate_learning_pack` — both fully mock at the public
+  function boundary, so their assertions on response shape/status codes are
+  unaffected by the internal transport swap.
+- Live Gemini model re-verification: real `models.list` call against the
+  configured key (2026-09-20) lists `models/gemini-3.8-flash` with
+  `supportedGenerationMethods` including `generateContent`, no `-preview`
+  suffix; `ai.google.dev/gemini-api/docs/models` confirms it as the current
+  recommended stable Flash model. No constant change needed —
+  `GEMINI_MODEL`/`GEMINI_MODEL_FALLBACKS[0]` (`app/core/constants.py`,
+  unchanged file) already pinned to it since Task 13.2.
+- Shared BUG-011 regression coverage: new
+  `tests/test_ai_providers.py::test_gemini_provider_wire_payload_uses_response_json_schema_not_response_schema`
+  passes, protecting all 4 migrated consumers via one shared code path instead
+  of 4 near-duplicate per-service tests (which were removed as part of this
+  migration, with a comment pointing to the replacement).
+- Deviations found and resolved (see "Expanded during doc-first review" and
+  the second full-suite-only gap above): allowed test-file list expanded twice,
+  both recorded before/immediately after the relevant code; Gemini
+  Interactions-API background execution confirmed real via live docs but
+  deliberately deferred as outside this task's allowed files (see
+  "Pre-implementation findings" item 2). No control point was raised to the
+  user — both were self-resolved scope clarifications consistent with the
+  13.5/13.6 precedent, not architecture changes beyond what the controlling
+  plan's own §4 already specified.
