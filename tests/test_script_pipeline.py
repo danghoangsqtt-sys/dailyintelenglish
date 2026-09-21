@@ -362,6 +362,43 @@ async def test_pipeline_happy_path_completes_and_saves_script(db):
     assert final_project["status"] == "script_generated"
 
 
+async def test_pipeline_section_prompt_word_range_matches_the_tolerance_constant(db):
+    """Task 14.8-b (CR-02): the word-count range shown in the section prompt is
+    computed from SCRIPT_SECTION_WORD_TOLERANCE at render time, not a second,
+    hard-coded copy of it in the template -- pins the two from silently
+    drifting apart."""
+    from app.core.constants import SCRIPT_SECTION_WORD_TOLERANCE
+
+    project = await _project(db)
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {"title": "T", "sections": [{"index": 1, "objective": "cover the topic fully here", "target_words": 100}]}
+    )
+    section_json = json.dumps(
+        [
+            {"speaker_id": alex_id, "text": _words(25, 0)},
+            {"speaker_id": maya_id, "text": _words(25, 25)},
+            {"speaker_id": alex_id, "text": _words(25, 50)},
+            {"speaker_id": maya_id, "text": _words(25, 75)},
+        ]
+    )
+    router, gemini, _local = _build_router([_result(outline_json), _result(section_json)])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    section_prompt = gemini.calls[1].prompt  # calls[0] is the outline
+    min_words = round(100 * (1 - SCRIPT_SECTION_WORD_TOLERANCE))
+    max_words = round(100 * (1 + SCRIPT_SECTION_WORD_TOLERANCE))
+    assert f"between {min_words} and {max_words} spoken words" in section_prompt
+
+
 async def test_pipeline_repairs_an_invalid_section_once_then_completes(db):
     project = await _project(db)
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])

@@ -203,11 +203,25 @@ restoring Task 14.3's exact repair behavior.
 - Deviations: none. Every required-behaviour item and every verification item
   implemented and tested as planned above; no file outside the allowed list was
   needed.
+  - **14.8-b (PM review fix, 2026-09-21):** PM's independent review of `ac61cf8`
+    accepted the design and tests but flagged CR-02 ("no magic numbers"):
+    `prompts/script/section.txt` hard-coded `target_words * 0.85` / `* 1.15` --
+    its own copy of `SCRIPT_SECTION_WORD_TOLERANCE`, which could silently drift
+    from the real constant. Fixed: `_generate_section` now computes
+    `min_words`/`max_words` from `SCRIPT_SECTION_WORD_TOLERANCE` once, in
+    Python, and passes both to the template; the template just displays them,
+    no arithmetic or tolerance literal left in it. Added
+    `test_pipeline_section_prompt_word_range_matches_the_tolerance_constant`,
+    which inspects the actual rendered prompt text sent to the (fake) provider
+    and asserts it matches values computed from the real constant -- a direct
+    regression guard against exactly the drift PM flagged.
+    `ruff check` clean; `pytest tests/test_script_pipeline.py -q` → **52
+    passed** (51 + 1 new).
 - Revert-and-confirm-failure evidence:
   - Temporarily changed `SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER` from `5` to
     `6` (`# REVERT-AND-CONFIRM-FAILURE`) and ran
     `pytest tests/test_script_pipeline.py::test_constants_pin_word_tolerances_are_unchanged_by_task_14_3 -q`:
     **1 failed** (`AssertionError: assert 6 == 5`). Restored the real value and
     re-ran the full `tests/test_script_pipeline.py` file: **51 passed**.
-- Commit(s): (pending -- next step)
-- Commit(s):
+- Commit(s): `824cc67` (plan), `ac61cf8` (implementation), plus this commit
+  (14.8-b CR-02 fix).

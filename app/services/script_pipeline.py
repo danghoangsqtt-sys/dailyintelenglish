@@ -371,6 +371,11 @@ async def _generate_section(
     the orchestrator passes a `model_copy`'d spec with `target_words` already
     overridden (Task 14.3), so this function itself needs no separate parameter."""
     cefr_constraints = await load_cefr_block(project["cefr_level"])
+    # Task 14.8-b (CR-02): the ±tolerance range shown in the prompt is computed
+    # here, from the one real constant, instead of the template hard-coding its
+    # own copy of SCRIPT_SECTION_WORD_TOLERANCE as 0.85/1.15 literals.
+    min_words = round(section_spec.target_words * (1 - SCRIPT_SECTION_WORD_TOLERANCE))
+    max_words = round(section_spec.target_words * (1 + SCRIPT_SECTION_WORD_TOLERANCE))
     prompt = await _render(
         "section.txt",
         topic=project["topic"],
@@ -380,7 +385,8 @@ async def _generate_section(
         section_index=section_spec.index,
         section_count=len(outline.sections),
         objective=section_spec.objective,
-        target_words=section_spec.target_words,
+        min_words=min_words,
+        max_words=max_words,
         prior_summary=prior_summary,
         is_last_section=is_last_section,
         speakers=project["speakers"],
