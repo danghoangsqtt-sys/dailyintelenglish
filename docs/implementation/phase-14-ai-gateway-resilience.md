@@ -577,3 +577,128 @@ migration. Backoff and the running budget each have constant-level neutralisatio
 This plan is the controlling implementation contract for Phase 14. The brainstorm
 remains the design record; task cards and PHASE-STATE record execution evidence and any
 approved amendments.
+
+## 12. Amendment D (2026-09-21, after Gate B-2) — local-only release path
+
+Authority: owner decisions D9–D12 (`docs/brainstorm/session-2026-09-21.md` §Addendum);
+ADR-001 amendment A2. Gate B-2 evidence: `docs/operations/phase14-gate-b2.md`.
+
+**What changes in this plan:** Task 14.1-b (Gemini backoff redesign) is dropped (D12).
+Task 14.6's rollout table row "FAIL / FAIL-INFRA → stop" is superseded by D11: the release
+path is **local-only**, with local hardening and a third local Gate B run before 13.10
+resumes. Invariants 13–19 stay. Phase 13 invariant 9 ("No model bundled in the EXE … the
+application must still start when either is absent") stays — *start* is required,
+*generate* is not (D10). Phase 13 invariant 10 ("Rollback stays live: `DIE_AI_MODE`
+preserves a Gemini-only recovery path") is amended to: the Gemini path is dormant and
+re-enabled only by explicit configuration plus a key; it is no longer a supported
+recovery path for releases.
+
+### 14.7 — Local-only mode, config-first (Coder)
+
+**Allowed files:** `app/core/config.py`, `app/core/constants.py`, `.env.example`,
+`app/api/ai_jobs.py` (health payload only), `app/services/settings_service.py`,
+`app/api/settings.py`, `app/models/settings.py`, `frontend/pages/settings.html`,
+`frontend/static/js/settings.js`, `frontend/static/js/api.js` (only if a call is removed),
+`frontend/static/js/step2_script.js`, `frontend/static/js/step3_learning.js` (only to
+replace the "using Gemini fallback" copy with the Ollama-missing guidance),
+`frontend/static/css/style.css`, `scripts/check_dependencies.py`,
+`daily_intel_english_studio.spec` (only if imports/data change), `README.md`,
+`CHANGELOG.md`, `tests/test_settings_service.py`, `tests/test_settings_api.py`,
+`tests/test_ai_health_api.py`, `tests/test_ui_async_browser.py`,
+`tests/test_script_jobs_browser.py`, `tests/test_learning_jobs_browser.py`,
+`tests/test_ai_router.py` (default-mode assertions only), `tests/conftest.py` (only if the
+default mode change requires a fixture change). PM documents `docs/operations/local-ai.md`
+and `docs/api.md`.
+
+**Actions:**
+1. `AI_MODE` default `"local"` in `config.py` and `.env.example`; remove the stale, unused
+   `DIE_AI_CLOUD_FALLBACK` line from `.env.example` (grep confirms nothing reads it).
+2. Settings page: remove the Gemini API-key section and the `gemini`/`hybrid` options from
+   the mode selector (the selector may remain showing `local` only, or become a read-only
+   status line). The settings API keeps accepting the key for dormancy/rollback but the UI
+   no longer exposes it; `set_ai_mode` rejects `gemini`/`hybrid` unless
+   `DIE_AI_ALLOW_CLOUD=true` (new env, default false — the only new switch; it exists so
+   re-enabling is explicit, never accidental).
+3. Health: `GET /api/ai/health` reports `cloud_enabled: false` and drops
+   `gemini_fallback_configured` (or reports it always false — pick one, document it in the
+   card, keep the frontend consistent).
+4. Step 2/3: when health says Ollama is unreachable or the model is missing, the generate
+   button is disabled and the panel shows install/pull guidance with the exact model tag
+   and digest (copy from `docs/operations/local-ai.md`). No "Gemini fallback" copy remains.
+5. `check_dependencies.py`: Ollama reachability and model presence become a hard
+   requirement with a clear message; the Gemini key check becomes informational or is
+   removed.
+6. README / CHANGELOG: local-only statement, Ollama prerequisite, rollback note ("Gemini
+   is dormant; re-enable via `DIE_AI_ALLOW_CLOUD=true`, `DIE_AI_MODE`, and a key —
+   unsupported").
+7. Thumbnail and YouTube generators already route through the gateway; in local mode they
+   hit Ollama. Add one FakeProvider test each proving they run under `AI_MODE=local`; real
+   structured-output behaviour on Ollama for those two schemas is measured by the PM in
+   14.9 (one real thumbnail and one real YouTube package on the winning project).
+
+**Verification:** settings/health/UI tests updated; browser tests show the Ollama-missing
+state (mocked health) and no Gemini copy anywhere in the DOM; a case-insensitive grep for
+"gemini fallback" across `frontend/` returns nothing; packaged smoke build starts with
+Ollama stopped and shows guidance; full suite green; `ruff` clean; JS syntax check clean.
+
+**Rollback:** `DIE_AI_ALLOW_CLOUD=true` + `DIE_AI_MODE=hybrid` + key restores the Phase 13
+behaviour without a code revert.
+
+### 14.8 — Local hardening: over-length sections and the consecutive-lines rule (Coder)
+
+**Allowed files:** `prompts/script/section.txt`, `prompts/script/repair.txt`,
+`app/services/script_pipeline.py`, `app/core/constants.py`, `tests/test_script_pipeline.py`,
+`tests/fixtures/ai/*`.
+
+**Evidence to design against (Gate B-2 local):** sections of 417, 426 (after a 340-word
+first draft) and 404 words against effective targets of 214, 173 and 208; a 43-word
+closing section; run 3 dead on "more than 5 consecutive lines from one speaker" after
+repair; repair success 44% (8/18).
+
+**Actions:**
+1. Section prompt: state the budget as a hard range ("between A and B words; count them")
+   and the consecutive-lines rule with its number; require alternating speakers by default.
+2. Repair prompt: pass the measured word count, the target and the signed delta; for
+   over-length, instruct to remove or shorten specific lines to reach the target rather
+   than rewrite; for the consecutive-lines error, name the offending run of lines.
+3. Pipeline: when a section is still over `effective × (1 + SCRIPT_SECTION_CARRY_CAP)`
+   **after** the one repair, allow **one additional length-only repair**, bounded by a new
+   `SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS = 1` (ADR-001 A1's "one semantic repair" stays; this
+   is a second, narrower pass with its own constant so the budget is visible). Over-length
+   is the only trigger; under-length keeps carrying.
+4. `SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER = 5` and both tolerances stay unchanged; the
+   constants-pin test is extended to cover the consecutive-lines constant.
+
+**Verification:** FakeProvider e2e tests for each new path; revert-and-confirm-failure on
+the length-only repair; the repair bound per job is now ≤ `2 × num_sections + 1` and
+asserted; full suite green; `ruff` clean.
+
+### 14.9 — Gate B-3, local only (PM)
+
+Same protocol as Task 13.9 / plan §4.4 local matrix, same thresholds, plus one real
+thumbnail-text and one real YouTube-package generation on the winning project (schema
+validity, human-read). Media gate: run the pipeline and record durations; the duration and
+A/V thresholds are evaluated **as declared** — if the owner has not decided the pace
+question before the run, the media gate is reported FAIL with the measured pace and the
+decision recorded as still open. Evidence `data/quality_reviews/phase14/gate-b3/`; report
+`docs/operations/phase14-gate-b3.md`.
+
+**Pass:** the unchanged Phase 13 Gate B rule. A pass makes D11 an evidence-backed
+promotion rather than an override; a fail leaves D11 as an owner override, recorded as
+such, and 13.10 still resumes (D11), with the report stating plainly what the local path
+does and does not achieve.
+
+### 14.6 (revised) — Resume Task 13.10, local-only
+
+Dependency: 14.7, 14.8, 14.9 done. Allowed files and pass criteria as before, with the
+rollout mode fixed by D9–D11: development and packaged default `local`; Ollama is a
+documented prerequisite; the rollback drill becomes "Ollama stopped → app starts, AI
+screens show guidance, non-AI features work → Ollama started → generation resumes",
+replacing the Gemini rollback drill.
+
+### Execution order and partition
+
+14.7 → 14.8 (Coder, sequential; PM reviews each diff) → 14.9 (PM runs; Coder idle) → 14.6.
+The Coder mirrors this amendment into task cards 14.7–14.9 and a revised 14.6 in
+`.viepilot/phases/14-ai-gateway-resilience/tasks/` **before** any code (the folder is
+Coder-owned; the PM reviews the cards against this section).

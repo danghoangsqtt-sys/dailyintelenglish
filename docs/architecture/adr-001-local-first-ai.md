@@ -101,3 +101,26 @@ transient HTTP 503 and killing the job — strictly worse 503 handling than the 
 replaced, and the exact failure that motivated this ADR. Evidence and decision D3:
 `docs/brainstorm/session-2026-09-21.md`; controlling plan:
 `docs/implementation/phase-14-ai-gateway-resilience.md` §4.1.
+
+### A2 — 2026-09-21 (Phase 14, after Gate B-2): local-only; Gemini dormant
+
+**Amended clauses:** Decision 3 ("one visible stable Gemini fallback"), Decision 6
+("packaged builds remain Gemini-default until local-runtime onboarding … pass"), and the
+Promotion rule ("Gate B failure … release uses Gemini primary and labels local experimental").
+
+**New wording:**
+- Development and packaged default is `AI_MODE=local`. Cloud fallback is off. The Gemini
+  provider, its settings, and its tests **remain in the codebase, dormant**; re-enabling it
+  is a configuration change (`DIE_AI_MODE=hybrid|gemini` plus a key), never a migration.
+- The packaged application **requires Ollama and the qualified model**. It must still start
+  without them and show actionable guidance on every AI screen; it has no cloud path.
+- Local is the primary path by **owner decision D11**, which overrides the Gate B promotion
+  rule for this release. The rule is not changed; a local-hardening task still targets 5/5.
+
+**Unchanged:** no multi-model cascade; no preview models; single deadline and retry policy
+in the router (A1); durable jobs, checkpoints, and atomic persistence.
+
+**Why:** Gate B-2 (`docs/operations/phase14-gate-b2.md`): Gemini 0/5 (503 storms beyond the
+backoff window; free-tier 20 requests/day exhausted by retries), local 3/5 with every
+completed script passing all content checks and zero infrastructure failures. Decisions
+D9–D12 in `docs/brainstorm/session-2026-09-21.md` §Addendum.
