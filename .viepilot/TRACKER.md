@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Phase:** 1–12 done; Phase 13 in progress — Task 13.10 **blocked** (Gate B post-mortem, decision D1); Phase 14 in progress (AI gateway resilience and section budget rebalancing, corrective, two parallel sessions: PM = Opus 5, Coder = Sonnet 5)
+**Phase:** 1–12 done; Phase 13 in progress — Task 13.10 **blocked** (Gate B post-mortem, decision D1); Phase 14 in progress — **local-only release path after owner decision D9–D12** (Gemini dormant); 14.7 → 14.8 → 14.9 → 14.6 remain (two parallel sessions: PM = Opus 5, Coder = Sonnet 5)
 **Day:** 6 / 21  
 **Started:** 2026-09-10 (Phases 1–12 complete; Phase 13 opened 2026-09-18 as user-approved reliability scope beyond the original plan)
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
@@ -1796,12 +1796,28 @@ constraint recorded in the plan: **no tolerance value changes** (`SCRIPT_GLOBAL_
   `> Superseded` annotations on §Root cause and §Recommendation; threshold table untouched; the
   781-vs-785 word-count discrepancy between checkpoints and runner disclosed rather than hidden.
 
-### 14.6 Resume Task 13.10 with evidence-selected rollout mode — pending (blocked on 14.4b + 14.5)
+### Amendment D (2026-09-21) — owner drops Gemini; local-only release path
+
+The owner decided after Gate B-2 (D9–D12, brainstorm §Addendum; ADR-001 A2; plan §12): Gemini is
+switched off everywhere (config-first, code retained dormant, re-enable only via the new
+`DIE_AI_ALLOW_CLOUD=true`); the packaged EXE requires Ollama + `qwen3.5:9b` and shows guidance
+when absent; local is the primary path **by owner override of the Gate B promotion rule**
+(recorded as an override, not a threshold change); 14.1-b (Gemini backoff redesign) dropped.
+PM assessed the owner's alternatives on evidence: an API-key pool does not help (quota is
+per Google project; multiple projects break the API terms; 503s killed 3/5 before quota ran
+out); finer chunking already exists and burns the per-request quota faster; the UI costs no
+quota; local text quality was never the failing factor.
+
+### 14.7 Local-only mode, config-first — pending (Coder; doc-first cards to be PM-reviewed first)
+### 14.8 Local hardening: over-length sections + consecutive-lines rule — pending (Coder, after 14.7)
+### 14.9 Gate B-3, local only — pending (PM, after 14.8)
+### 14.6 Resume Task 13.10, local-only (revised) — pending (after 14.9)
 
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-21 | **Owner: drop Gemini** — `AI_MODE=local` default, cloud fallback OFF, key UI hidden, code dormant behind `DIE_AI_ALLOW_CLOUD`; EXE requires Ollama; local primary by explicit owner override of the Gate B promotion rule (D9–D12, ADR-001 A2) | Gate B-2: Gemini 0/5 (503 storms + free-tier 20 requests/day exhausted by retries) vs local 3/5 with every completed script passing all content checks and zero infra failures; key pools violate the API terms and do not address 503s |
 | 2026-09-21 | Gate B-2 verdicts recorded without threshold changes: local FAIL (3/5), Gemini FAIL-INFRA (0/5). Stop condition: Task 13.10 stays blocked; 14.1 reopened (14.1-b) | Declared rules applied to real evidence; the Gemini failure has two independent causes (503 window too short inside an under-used 120 s deadline; free-tier 20 requests/day exhausted by retries) — the second is an account decision, not code |
 | 2026-09-21 | Task 13.10 rollout **blocked**; Phase 14 opened as a corrective phase (D1/D2) | Gate B post-mortem: Gemini (primary) 0/2 on transient 503 with no backoff anywhere in the gateway — shipping would regress 503 handling below the pre-Phase-13 baseline; the local failure is a compounding per-section gate, not only model precision |
 | 2026-09-21 | ADR-001 amendment A1: transient errors retried against the same model up to 4 attempts with 1s→2s→4s backoff inside the single deadline; cascade ban, single fallback, no-preview rules unchanged (D3) | ADR Decision 3 literally capped infrastructure retry at one; amended explicitly rather than violated silently. Task 13.7 had removed backoff together with the cascade; only the cascade was intended |

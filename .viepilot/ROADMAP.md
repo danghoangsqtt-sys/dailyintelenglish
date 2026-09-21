@@ -1199,5 +1199,10 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
 ### 14.5 Correct the Phase 13 acceptance report — ✅ DONE (2026-09-21)
 - [x] Additive correction with findings A/B/C; original text preserved.
 
-### 14.6 Resume Task 13.10 with evidence-selected rollout mode — pending
-- [ ] Mode chosen from the 14.4b matrix per the plan's declared table; 13.10's own pass criteria.
+### Amendment D — owner drops Gemini (2026-09-21): local-only release path
+- [ ] 14.7 Local-only mode, config-first (AI_MODE=local default, key UI hidden, `DIE_AI_ALLOW_CLOUD`
+  gate, Ollama-missing guidance, check_dependencies hard requirement) — Coder
+- [ ] 14.8 Local hardening (prompt budget as hard range, delta-aware repair, one length-only
+  repair; tolerances and consecutive-lines constant unchanged) — Coder
+- [ ] 14.9 Gate B-3 local (13.9 protocol + real thumbnail/YouTube on the winner; media as declared) — PM
+- [ ] 14.6 (revised) Resume Task 13.10 local-only; Ollama-stopped rollback drill replaces the Gemini drill
