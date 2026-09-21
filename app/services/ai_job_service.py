@@ -29,6 +29,7 @@ from app.core.exceptions import (
     ProviderRateLimitError,
     ProviderTimeoutError,
     ProviderUnavailableError,
+    SchemaValidationError,
     ValidationError,
 )
 
@@ -48,18 +49,25 @@ _TERMINAL_STATUSES = frozenset(status for status, targets in _LEGAL_TRANSITIONS.
 
 # Phase 14 Task 14.2 -- maps a router-raised ProviderError to the job's error_code,
 # so an infrastructure failure is distinguishable from a content failure (never
-# `handler_exception`) on the job row and in Gate B evidence. `SchemaValidationError`
-# is a `ProviderError` subclass but deliberately not listed: the plan's own error-code
-# enumeration excludes it, and in practice it is raised only by
+# `handler_exception`) on the job row and in Gate B evidence.
+#
+# `SchemaValidationError` IS listed (Amendment B, 2026-09-21): it is a `ProviderError`
+# subclass structurally, but a *content* failure -- raised by
 # `app/services/ai/validation.py:parse_and_validate` after a successful
-# `router.generate()`, never by the router/provider layer itself -- so it is not
-# expected to reach this function, but falls back to "provider_error" if it ever does.
+# `router.generate()`, never by the router/provider layer itself. A pipeline's
+# `except ProviderError` around a router call (e.g. script_pipeline's outline step)
+# also catches it, since Python's exception matching is by class, not by "was this
+# raised by the router". Leaving it unmapped fell through to the generic
+# "provider_error" fallback below, which Gate B-2's failure classification (plan §4.4)
+# reads as `infra` purely from the `provider_` prefix -- mapping it here instead keeps
+# infra/content failures distinguishable exactly as the plan requires.
 _PROVIDER_ERROR_CODES: dict[type[ProviderError], str] = {
     ProviderUnavailableError: "provider_unavailable",
     ProviderTimeoutError: "provider_timeout",
     ProviderRateLimitError: "provider_rate_limited",
     ProviderAuthError: "provider_auth",
     ProviderInvalidResponseError: "provider_invalid_response",
+    SchemaValidationError: "schema_validation_failed",
 }
 
 

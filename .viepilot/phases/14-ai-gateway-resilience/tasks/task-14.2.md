@@ -196,7 +196,59 @@ Additive. Nothing to reverse; the frontend already renders `job.fallback_used`.
     logic) is what the test actually depends on. Restored the clause and re-ran
     the same three tests: **3 passed**.
 - Commit(s):
-  - (pending) -- feat(ai): Task 14.2 job telemetry (record_generation_call,
+  - `cde8e79` -- feat(ai): Task 14.2 job telemetry (record_generation_call,
     provider_error_code, AIJobOut.metrics, section checkpoint metrics_json, both
     pipelines' error-code mapping) + this task card's execution record and
     PHASE-STATE update.
+  - `c93d152` -- PM's Amendment B to the plan (not a Coder commit; listed for the
+    chain of custody).
+  - (next) -- fix(ai): Task 14.2-b per Amendment B.
+
+## Amendment B follow-up (14.2-b) -- SchemaValidationError misclassified as infra
+
+**PM finding (2026-09-21, reviewing `cde8e79`):** `SchemaValidationError` is a
+`ProviderError` subclass structurally, but a *content* failure -- raised by
+`app/services/ai/validation.py:parse_and_validate` after a successful
+`router.generate()`, or by `_render` on a missing template; never by the
+router/provider layer. The script pipeline's outline path
+(`_run_script_job`'s `except ProviderError as exc: await _fail_provider(...)`)
+also catches it, since Python matches by class, not by "did the router raise
+this". With the 14.2 table as originally landed, `provider_error_code` had no
+entry for it, so it fell through to the generic `"provider_error"` fallback --
+which Gate B-2's failure classification (plan §4.4) reads as `infra` purely
+from the `provider_` prefix. A content failure (a model returning malformed
+JSON for the outline) would therefore have been counted as an infrastructure
+failure in Gate B-2 evidence, which is exactly the kind of misclassification
+Phase 14 exists to fix (invariant 18).
+
+**Fix:** `_PROVIDER_ERROR_CODES` in `app/services/ai_job_service.py` gains
+`SchemaValidationError: "schema_validation_failed"` -- a specific, `content`-class
+code (plan §4.4/§6 updated by Amendment B to classify it alongside
+`section_validation_failed`/`global_validation_failed`, never `infra`). No change
+to `_call_router`, `_fail_provider`, or either pipeline's exception handling was
+needed -- the one-line table addition is sufficient because every call site
+already routes through the shared `provider_error_code` lookup.
+
+**Tests added:**
+- `tests/test_ai_job_service.py::test_provider_error_code_maps_known_subclasses`
+  gains a `SchemaValidationError -> "schema_validation_failed"` case; the old
+  `test_provider_error_code_falls_back_to_provider_error_for_schema_validation_error`
+  (which asserted the *old, wrong* `"provider_error"` fallback) is replaced by
+  `test_provider_error_code_maps_schema_validation_error_to_content_not_infra`,
+  which asserts the code is `"schema_validation_failed"` and explicitly
+  `not code.startswith("provider_")`.
+- `tests/test_script_pipeline.py::test_pipeline_maps_unparseable_outline_to_schema_validation_failed_not_provider_error`
+  -- e2e: outline call returns unparseable text → `error_code ==
+  "schema_validation_failed"`, never a `provider_*` code, never
+  `handler_exception`.
+
+**Commands and results:**
+- `venv\Scripts\python.exe -m ruff check app/services/ai_job_service.py tests/test_ai_job_service.py tests/test_script_pipeline.py` → All checks passed.
+- `venv\Scripts\python.exe -m pytest tests/test_ai_job_service.py tests/test_script_pipeline.py -q` → 93 passed.
+- `venv\Scripts\python.exe -m ruff check app tests scripts` (full) → All checks passed.
+- `venv\Scripts\python.exe -m pytest -q` (full suite) → **850 passed**, 0 failed, in 356.99s
+  (848 baseline after the main 14.2 commit + 2 new tests).
+
+**Deviations:** none -- stayed within Task 14.2's original allowed files
+(`app/services/ai_job_service.py`, `tests/test_ai_job_service.py`,
+`tests/test_script_pipeline.py`); no new file needed.

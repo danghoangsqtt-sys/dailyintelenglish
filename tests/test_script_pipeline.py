@@ -579,3 +579,26 @@ async def test_pipeline_maps_provider_errors_to_specific_error_codes(db, monkeyp
     assert calls[-1]["purpose"] == "script_outline"
     lines = await script_service.get_script(db, project["id"])
     assert lines == []  # no partial script from a job that never got past the outline
+
+
+async def test_pipeline_maps_unparseable_outline_to_schema_validation_failed_not_provider_error(db):
+    """Amendment B (Task 14.2-b): SchemaValidationError is a ProviderError subclass
+    structurally but a content failure -- the outline path's `except ProviderError`
+    must still land on `schema_validation_failed`, never the generic `provider_error`
+    that Gate B-2's classification would read as infrastructure (plan §4.4)."""
+    project = await _project(db)
+    router, gemini, _local = _build_router([_result("not valid json")])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "error"
+    assert final_job["error_code"] == "schema_validation_failed"
+    assert not final_job["error_code"].startswith("provider_")
+    assert final_job["error_code"] != "handler_exception"

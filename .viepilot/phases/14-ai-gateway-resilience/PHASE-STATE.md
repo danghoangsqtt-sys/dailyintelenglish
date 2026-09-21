@@ -104,3 +104,20 @@ Execution order: 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 runs
   failed for the right reason with it disabled, passed once restored. Full
   suite: **848 passed**, 0 failed (net +34 over the 814 baseline after 14.1).
   `ruff check app tests scripts` clean. Task 14.2 status: done.
+- 2026-09-21: PM reviewed commit `cde8e79` and found a real misclassification:
+  `SchemaValidationError` is a `ProviderError` subclass but a content failure
+  (raised by `parse_and_validate` after a successful router call); the script
+  outline path's `except ProviderError` caught it and `provider_error_code`
+  had no entry for it, so it fell through to the generic `"provider_error"`
+  fallback -- which Gate B-2's classification (plan §4.4) reads as `infra`
+  purely from the `provider_` prefix, misclassifying a content failure as
+  infrastructure. PM issued Amendment B (commit `c93d152`) requiring
+  `provider_error_code(SchemaValidationError) == "schema_validation_failed"`
+  (a `content`-class code) plus one service test and one e2e pipeline test.
+  Coder implemented 14.2-b: one line added to `_PROVIDER_ERROR_CODES` in
+  `ai_job_service.py` (no change needed to `_call_router`/`_fail_provider`/
+  either pipeline, since every call site already routes through the shared
+  lookup); updated/added tests in `tests/test_ai_job_service.py` and
+  `tests/test_script_pipeline.py`. Full suite: **850 passed**, 0 failed.
+  `ruff check app tests scripts` clean. Task 14.2 (incl. Amendment B) status:
+  done.

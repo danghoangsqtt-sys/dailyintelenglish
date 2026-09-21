@@ -473,6 +473,7 @@ async def test_record_generation_call_raises_not_found_for_unknown_job(db):
         (ProviderRateLimitError("429"), "provider_rate_limited"),
         (ProviderAuthError("bad key"), "provider_auth"),
         (ProviderInvalidResponseError("bad shape"), "provider_invalid_response"),
+        (SchemaValidationError("bad json"), "schema_validation_failed"),
     ],
 )
 def test_provider_error_code_maps_known_subclasses(exc, expected_code):
@@ -483,6 +484,11 @@ def test_provider_error_code_falls_back_to_provider_error_for_the_base_class():
     assert ai_job_service.provider_error_code(ProviderError("generic")) == "provider_error"
 
 
-def test_provider_error_code_falls_back_to_provider_error_for_schema_validation_error():
-    """Excluded from the plan's five specific codes -- see task-14.2.md."""
-    assert ai_job_service.provider_error_code(SchemaValidationError("bad json")) == "provider_error"
+def test_provider_error_code_maps_schema_validation_error_to_content_not_infra():
+    """Amendment B (2026-09-21): SchemaValidationError is a ProviderError subclass
+    structurally but a *content* failure -- it must map to its own code, never fall
+    through to the generic "provider_error" (which Gate B-2's classification reads
+    as `infra` purely from the "provider_" prefix -- plan §4.4)."""
+    code = ai_job_service.provider_error_code(SchemaValidationError("bad json"))
+    assert code == "schema_validation_failed"
+    assert not code.startswith("provider_")
