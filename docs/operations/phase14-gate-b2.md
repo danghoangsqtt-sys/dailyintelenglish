@@ -7,10 +7,9 @@
 - **Runner:** `scripts/run_ai_operational_trial.py --matrix local|gemini` at code HEAD
   `153aa16` (real in-process `uvicorn` on an isolated port, real HTTP, no mocks, isolated
   `DIE_DATA_DIR`). Every number below is traceable to the evidence files at the end.
-- **Status of this report:** script and learning gates are final for both providers. The
-  **media pipeline step is pending** — the runner crashed on a runner-side defect (§2.4)
-  and will be re-run with `--media-only` once the Coder's 14.4a-c fix lands; this file is
-  then updated.
+- **Status of this report:** final. The media step crashed in the first pass on a
+  runner-side defect (§2.4), was re-run with the Coder's fix (`--media-only`, runner
+  commit `dec4913`) and is now recorded.
 
 ## 1. Preflight (recorded before run 1)
 
@@ -90,19 +89,46 @@ not gate items; the evidence field is misleading and the Coder is fixing it (14.
 Learning: **2/3** complete (one `pack_validation_failed`: a vocabulary example sentence and
 an idiom not found in the transcript — grounding check working as designed).
 
-### 2.4 Media pipeline — not executed (runner defect 1)
+### 2.4 Media pipeline — executed on the second pass; **media gate FAIL** on duration
 
-`POST /api/projects/99de9ef7…/audio/generate` returned 500; the trial DB's `audio_jobs`
-row says `Line(s) not yet synthesized: …`. The runner never calls the per-line TTS
-endpoint (`POST /api/projects/{id}/tts/preview`) before mixing — a latent defect since
-Task 13.9, invisible then because Phase 13 never reached the media step. The Coder is
-adding the TTS step and a `--media-only PROJECT_ID` flag; the PM will run it against the
-completed 817-word project and update §2.4 and §4.
+First pass (`gate-b2-20260921T080706Z`): `POST /api/projects/99de9ef7…/audio/generate`
+returned 500; `audio_jobs.error_message = "Line(s) not yet synthesized: …"`. **Runner
+defect 1:** the runner never called the per-line TTS endpoint (`POST
+/api/projects/{id}/tts/preview`) before mixing — latent since Task 13.9, invisible then
+because Phase 13 never reached the media step. Fixed by the Coder (14.4a-c, `dec4913`).
+
+Second pass (`--media-only 99de9ef7…`, evidence `gate-b2-media-20260921T085129Z.json`,
+against the completed 817-word / 59-line run-1 script):
+
+| Step | Result |
+|---|---|
+| Per-line real Edge TTS (`/tts/preview` × 59) | 59/59 synthesized, no error |
+| `/audio/generate` (mix) | HTTP 200; `audio_jobs.status = complete`; **361.88 s**, loudness −16.01 LUFS |
+| `/video/generate` (ffmpeg) | HTTP 200; `status = complete` |
+| MP3 download | 7,239,404 bytes; ffprobe 361.88 s; codec `mp3`; SHA-256 `ccd9b0c6…ada1b18b` |
+| MP4 download | 5,277,141 bytes; ffprobe **364.40 s**; `h264` / `aac`; SHA-256 `f51b2f55…b5e6d85` |
+| Checks | codec H.264 ✔, audio codec ✔, **audio duration 361.9 s ∉ [432, 528] ✘**, **video duration 364.4 s ∉ [432, 528] ✘**, **A/V diff 2.52 s > 1.0 s ✘** |
+
+So the whole real pipeline — durable script job → every line through Edge TTS → mix →
+ffmpeg render → download → hash → ffprobe — **works end to end with zero server
+errors**, which Phase 13 never demonstrated. It fails the *declared* Gate B thresholds
+for two reasons, both pre-existing and measured here for the first time:
+
+- **Pace calibration.** 817 words rendered to 361.9 s of audio = **≈ 135 spoken words per
+  minute**, while `CEFR_WORDS_PER_MINUTE["B1"] = 100` is what the pipeline plans by. An
+  "eight-minute" B1 script therefore plays in six minutes. Reaching 432–528 s at the real
+  Edge TTS pace needs ≈ 1,000–1,150 words, or a slower TTS rate / longer inter-line
+  silences. This is a product-level calibration question, not a Phase 14 change, and it
+  is not resolved by relaxing the threshold.
+- **A/V duration difference 2.52 s.** The MP4 is 2.5 s longer than the MP3 (renderer
+  padding/end frame). Threshold is 1.0 s. Needs a look at the video renderer, outside
+  Phase 14's scope.
 
 ### 2.5 Local decision (Phase 13 rule verbatim, unchanged)
 
-**FAIL** — 3/5 complete (needs 5/5), 3/5 content-pass (needs ≥ 4/5), media not yet run.
-No threshold was weakened. Local stays experimental.
+**FAIL** — 3/5 complete (needs 5/5), 3/5 content-pass (needs ≥ 4/5), learning 2/3,
+media gate failed on duration/A-V (codecs pass). No threshold was weakened. Local stays
+experimental. `--reaggregate … --media-evidence …` reproduces this verdict.
 
 ## 3. Gemini matrix (`--matrix gemini`, `AI_MODE=gemini`)
 
@@ -162,7 +188,7 @@ Gemini output could not be measured at all (0 completed jobs).
 
 | Provider | Verdict | Rule | Consequence |
 |---|---|---|---|
-| Local (`qwen3.5:9b`) | **FAIL** (3/5 complete, 3/5 pass; media pending) | Phase 13 §8 13.9, unchanged | stays experimental; clear improvement over Phase 13 (1/5 → 3/5) and the first measured repair/backoff telemetry |
+| Local (`qwen3.5:9b`) | **FAIL** (3/5 complete, 3/5 pass; media duration/A-V fail) | Phase 13 §8 13.9, unchanged | stays experimental; clear improvement over Phase 13 (1/5 → 3/5), first measured repair/backoff telemetry, and the first end-to-end real media run (zero server errors) |
 | Gemini (`gemini-3.8-flash`) | **FAIL-INFRA** (0/5, 5 infra deaths) | Amendment C | reopens 14.1; 14.6 stays blocked |
 
 Per plan §6 (14.6 table) row "FAIL / FAIL-INFRA": **stop condition — Task 13.10 stays
@@ -193,6 +219,11 @@ matrix even split across two days" (20 requests/day cannot hold five jobs that e
    now +4.0%, so **no** systematic undershoot compensation is warranted — the problem is
    variance, not bias. Open question closed on evidence.
 4. **Attempts (open question "3 vs 4"):** 4 is not enough for Gemini; see 1(c).
+5. **Pace calibration (new, product):** the WPM table under-predicts Edge TTS by ≈ 35%
+   at B1 (100 planned vs ≈ 135 measured). Either the word targets, the TTS rate, or the
+   silence gaps must change for "eight minutes" to mean eight minutes; and the renderer's
+   2.5 s A/V padding needs a decision (fix or re-declare the 1.0 s threshold with a
+   reason). Both are outside Phase 14 and were unmeasurable before this run.
 
 ## 6. Evidence
 
@@ -200,7 +231,9 @@ matrix even split across two days" (20 requests/day cannot hold five jobs that e
 |---|---|
 | `data/quality_reviews/phase14/gate-b2/gate-b2-20260921T080706Z.json` (local) | `1396833c823b994424cd57fa0d67d10da04ae31e2c4b7b85b10b4459b8a758e7` |
 | `data/quality_reviews/phase14/gate-b2/gate-b2-20260921T084153Z.json` (Gemini) | `bc2f74aa25120789cf23243a7c58ba9dce30867d248af5223003f19066421964` |
-| `data/quality_reviews/phase14/gate-b2/local-matrix-console.log`, `gemini-matrix-console.log` | server + runner console (contain no key; prompts never logged) |
+| `data/quality_reviews/phase14/gate-b2/gate-b2-media-20260921T085129Z.json` (media, second pass) | `3149341aa9c5500fb2757a71eb639500c5d685b6f2a0992ac25eaca6efcb45a6` |
+| `…/99de9ef7-…-audio.mp3`, `…-video.mp4` | `ccd9b0c661b861cf3136456b3ec0bb99ea992beb3784ec4782b64141ada1b18b`, `f51b2f55b116bb68f1f23f9cd85a8728a69d732bf66ba17af9c5cd6e6b5e6d85` |
+| `data/quality_reviews/phase14/gate-b2/local-matrix-console.log`, `gemini-matrix-console.log`, `media-only-console.log` | server + runner console (contain no key; prompts never logged) |
 | `data/quality_reviews/phase14/gate-b2/trial-data/app.db` | trial DB with all jobs/checkpoints (kept for review; gitignored) |
 
 All evidence is gitignored and kept locally, per the Gate A/Gate B precedent.
