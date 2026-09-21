@@ -40,7 +40,7 @@
 | 14.1 | Bounded exponential backoff for transient errors in `AIRouter` | Coder | done | Backoff proven to wait; deadline honoured |
 | 14.2 | Job telemetry: repair/fallback/provider/attempts/error codes | Coder | done | Row fields written; `provider_*` codes |
 | 14.3 | Running section budget; hard gate only at global ±10% | Coder | done | Constants pinned; carry/resume tests |
-| 14.4a | Runner preparation (classification, per-section stats, aggregates) | Coder | pending | Reaggregate dry run |
+| 14.4a | Runner preparation (classification, per-section stats, aggregates) | Coder | done | Reaggregate dry run |
 | 14.4b | Gate B second run, both providers, declared protocol | PM | pending | Decision rules in plan §4.4 |
 | 14.5 | Correct `docs/operations/phase13-acceptance.md` | PM | pending | Original text preserved |
 | 14.6 | Resume Task 13.10 with evidence-selected rollout mode | Both | pending | 14.4b decision + 14.5 |
@@ -148,3 +148,31 @@ Execution order: 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 runs
   accept-vs-hard-fail behavior change). Full suite: **865 passed**, 0 failed
   (850 baseline after 14.2-b + 15 net new). `ruff check app tests scripts`
   clean. Task 14.3 status: done.
+- 2026-09-21: PM accepted Task 14.3 (`039bc8d`) with one harmless observation
+  (resume loop's carry math adds the last section's delta too, unlike the
+  live loop -- confirmed inert, recorded in task-14.3.md, no code change).
+  Coder implemented Task 14.4a (`scripts/run_ai_operational_trial.py`
+  only): `classify_failure` (infra/content/other from Task 14.2's
+  `error_code`, `schema_validation_failed` included as content per Amendment
+  B); per-run `call_stats` derived from `metrics.calls[]`; direct-`sqlite3`
+  per-section/outline reads (`AIJobOut` never exposes checkpoint data by
+  design); `has_outro` false-negative fix (widened markers + an
+  outline-objective fallback matching "conclu" as a substring -- verified
+  against the real disclosed case from the Phase 13 trial DB, still present
+  locally); `--matrix {local,gemini}` (selects `DIE_AI_MODE`, the decision
+  rule, and default sample/media behaviour; `--mode` still overrides for raw
+  diagnostics); `--with-samples`/`--with-media` for the Gemini matrix;
+  `--resume-evidence` for a two-day quota-split matrix; `--reaggregate` (no
+  server, no live trial). Evidence/trial-data moved to
+  `data/quality_reviews/phase14/gate-b2/` for fresh runs;
+  `--reaggregate` still reads an old file's own `data_dir` so the two named
+  Phase 13 evidence files keep working from their original location.
+  Verification (Coder never runs a live trial, per task-14.4.md):
+  `ruff`/`py_compile` clean; `--reaggregate` against both named Phase 13
+  files reproduces the exact documented outcomes (local 1/5 complete;
+  Gemini 0/2, both `failure_class=other` with the `ProviderUnavailableError`
+  message, since `handler_exception` predates 14.2's `error_code` scheme);
+  full suite re-run as an extra sanity check (not required, no `app`/`tests`
+  files touched): **865 passed**, unchanged from the Task 14.3 baseline.
+  Task 14.4a status: done. Task 14.4b (Gate B-2 execution and report) is
+  PM's, not started.

@@ -1,6 +1,6 @@
 # Task 14.4 — Gate B Second Run, Both Providers
 
-- **Status:** in_progress (14.4a only -- 14.4b is PM's)
+- **Status:** 14.4a done (Coder); 14.4b pending (PM)
 - **Owner:** 14.4a Coder (runner preparation); 14.4b PM (execution and report)
 - **Priority:** P1
 - **Dependency:** 14.1, 14.2, 14.3 merged and PM-reviewed; 14.4a before 14.4b
@@ -176,4 +176,57 @@ names and SHA-256.
       re-attempts a per-section DB read (works if the trial DB is still on
       disk, degrades to empty otherwise), and prints everything -- no server,
       no network, no live trial.
+    - Evidence directory moved to `data/quality_reviews/phase14/gate-b2/`
+      (file prefix `gate-b2-...`) for a fresh run; the two named Phase 13
+      files stay exactly where they are, and `_trial_db_path()` reads a
+      file's own recorded `data_dir` when reaggregating so it always opens
+      the *right* trial DB regardless of which phase it came from. Already
+      covered by the existing `data/quality_reviews/` `.gitignore` entry --
+      no `.gitignore` change needed (that file isn't in this task's allowed
+      list anyway).
+  - **Commands and results:**
+    - `venv\Scripts\python.exe -m ruff check scripts/run_ai_operational_trial.py` → All checks passed.
+    - `venv\Scripts\python.exe -m py_compile scripts/run_ai_operational_trial.py` → exits 0, no output.
+    - `venv\Scripts\python.exe scripts/run_ai_operational_trial.py --reaggregate "data/quality_reviews/phase13/gate-b/gate-b-20260921T000903Z.json"` →
+      `ai_mode=local matrix=local b1_runs_requested=5 diagnostic_only=False`;
+      4/5 runs `failure_class=content` (`error_code=section_validation_failed`),
+      1/5 `status=complete`; `DECISION: FAIL` — `"B1 8-minute script gate: 0/5
+      passed content checks (1/5 completed) -- needed 4/5."` — **matches "local
+      1/5 complete" exactly.**
+    - `venv\Scripts\python.exe scripts/run_ai_operational_trial.py --reaggregate "data/quality_reviews/phase13/gate-b/gate-b-20260921T010451Z.json"` →
+      `ai_mode=gemini matrix=gemini b1_runs_requested=2 diagnostic_only=True`;
+      2/2 runs `error_code=handler_exception`, `failure_class=other` (correctly
+      **not** `infra` -- `handler_exception` doesn't start with `provider_`),
+      message `"ProviderUnavailableError: Gemini is temporarily overloaded
+      (HTTP 503)"`; `DECISION: DIAGNOSTIC_ONLY` (2 of 5 requested) with the
+      underlying Gemini-rule reasons still surfaced (`2 handler_exception(s)
+      -- defect triage required...`, `0/0 passed content checks (0/2
+      completed)`) — **matches "Gemini 0/2, both classify as other" exactly,
+      per the task card's own stated expectation for these pre-14.2 files.**
+    - `venv\Scripts\python.exe -m ruff check app tests scripts` (full) → All checks passed.
+    - `venv\Scripts\python.exe -m pytest -q` (full suite, sanity check --
+      14.4a's own allowed files are `scripts/run_ai_operational_trial.py`
+      only, no `app`/`tests` changes; not a required part of 14.4a's own
+      verification list, run anyway per the project's standing quality bar)
+      → **865 passed**, 0 failed, in 509.22s -- unchanged from the Task 14.3
+      baseline, as expected for a scripts-only change.
+    - `git diff --check -- scripts/run_ai_operational_trial.py` → clean (no
+      whitespace errors).
+    - Investigated directly with `sqlite3` against
+      `data/quality_reviews/phase13/gate-b/trial-data/app.db` (still present
+      locally, gitignored): confirmed every checkpoint from that trial has
+      `metrics_json = '{}'` (predates 14.2/14.3, explaining why
+      `per_section_*` aggregates above are `null`/`0` for these two files --
+      correctly absent, not a bug), and reproduced the disclosed `has_outro`
+      false negative exactly (see "Investigation before code" above).
+  - **Deviations:** `EVIDENCE_DIR`/`TRIAL_DATA_DIR` moved from
+    `data/quality_reviews/phase13/gate-b/...` to
+    `data/quality_reviews/phase14/gate-b2/...` -- not explicitly required by
+    item 8 (which only names the evidence path), but a fresh Phase 14 trial
+    writing into the closed Phase 13 directory would be confusing and risk
+    an accidental overwrite; `--reaggregate` still works against the old
+    Phase 13 files via their own recorded `data_dir` (see above), so nothing
+    about the required verification depends on the old path staying the
+    live default. No other deviations -- edited only
+    `scripts/run_ai_operational_trial.py`, this task's sole allowed file.
 - 14.4b (PM):
