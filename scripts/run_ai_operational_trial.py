@@ -772,14 +772,39 @@ def local_matrix_decision(runs: list[dict[str, Any]], n_requested: int, smoke_te
 
 
 def gemini_matrix_decision(runs: list[dict[str, Any]]) -> tuple[str, list[str]]:
-    """Plan §4.4's Gemini decision rule: `PASS-cloud` = 5/5 complete AND >=4/5
-    content pass AND <=1 infra job death. Absorbed transient errors (retries
-    that ended `ok`, Task 14.1's own success signal) are never counted as
-    failures here -- only a job that actually *died* with an `infra`-classified
-    `error_code` counts. >=2 infra deaths -> `FAIL-INFRA` (reopens Task 14.1,
-    blocks 14.6 again). Content failures alone -> `FAIL-CONTENT`. Any
+    """Plan §4.4's Gemini decision rule (**Amendment C**, 2026-09-21, plan commit
+    `92baabf`): the rule as first declared ("5/5 complete AND >=4/5 content pass
+    AND <=1 infra job death") was self-contradictory -- a job that died from an
+    infra failure is, by definition, not "complete", so "5/5 complete" and "<=1
+    infra death" can only both hold when infra deaths == 0, silently collapsing
+    "<=1" to "== 0" and making the one-death-absorbed branch below unreachable
+    (a real bug the original code had, caught before any Gate B-2 result
+    existed). Corrected formula, with `infra` = count of `failure_class ==
+    "infra"` runs, `content_pass` = count of completed runs whose content
+    checks all passed, `n` = total runs in this matrix (already the post-merge
+    total when called after `--resume-evidence`, since `runs` is the full,
+    already-merged list by the time this function sees it):
+
+        PASS-cloud   <=> infra <= 1 AND content_pass >= 4 AND completed + infra == n
+        FAIL-INFRA   <=> infra >= 2
+        FAIL-CONTENT <=> otherwise
+
+    `completed + infra == n` is the piece the original wording was missing --
+    it requires *every* non-completed run to be an infra death specifically, so
+    a content- or other-classified failure can never hide behind a low infra
+    count. Worked examples (n=5): 5/5 complete, all pass -> PASS-cloud. 1 infra
+    death + 4/4 remaining pass content -> PASS-cloud (completed=4, infra=1,
+    4+1==5). 2 infra deaths -> FAIL-INFRA regardless of content. 1
+    content-validation death + 4/4 remaining pass content -> FAIL-CONTENT
+    (completed=4, infra=0, 4+0=4 != 5 -- the one failure isn't infra, so it
+    can't be absorbed).
+
+    Absorbed transient errors (retries that ended `ok`, Task 14.1's own success
+    signal) are never counted as failures here -- only a job that actually
+    *died* with an `infra`-classified `error_code` counts toward `infra`. Any
     `handler_exception` is flagged as a defect requiring triage regardless of
-    which decision the numbers alone would produce."""
+    which decision the numbers alone produce -- it is a flag layered on top of
+    the verdict, never part of the verdict logic itself."""
     n = len(runs)
     completed = [r for r in runs if r.get("job_status") == "complete"]
     content_pass = [r for r in completed if (r.get("content") or {}).get("all_checks_pass")]
@@ -793,7 +818,7 @@ def gemini_matrix_decision(runs: list[dict[str, Any]]) -> tuple[str, list[str]]:
             "quoting this matrix (plan §4.4)."
         )
 
-    if len(completed) == 5 and len(content_pass) >= 4 and len(infra_deaths) <= 1:
+    if len(infra_deaths) <= 1 and len(content_pass) >= 4 and len(completed) + len(infra_deaths) == n:
         decision = "PASS-cloud"
         if infra_deaths:
             reasons.append(

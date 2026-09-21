@@ -229,4 +229,43 @@ names and SHA-256.
     about the required verification depends on the old path staying the
     live default. No other deviations -- edited only
     `scripts/run_ai_operational_trial.py`, this task's sole allowed file.
+
+  ## Amendment C follow-up -- gemini_matrix_decision's unreachable absorbed-death branch
+
+  **PM finding (2026-09-21, reviewing `377f140`):** the rule as first declared
+  ("5/5 complete AND >=4/5 content pass AND <=1 infra job death") is
+  self-contradictory -- a job that died from an infra failure is, by
+  definition, not `"complete"`, so `len(completed) == 5` and `infra_deaths <=
+  1` can only both hold when `infra_deaths == 0`. This silently collapsed
+  "<=1" to "== 0": the "absorbed within the <=1 allowance" branch my own code
+  printed a message for was **dead code**, and a real 1-infra-death +
+  4/4-remaining-pass scenario would have fallen through to `FAIL-CONTENT`
+  (wrong label, and a materially different Task 13.10 rollout outcome per the
+  plan's decision table). PM issued Amendment C (plan commit `92baabf`, plan
+  §4.4) *before any Gate B-2 result exists* with the corrected formula:
+  `PASS-cloud <=> infra <= 1 AND content_pass >= 4 AND completed + infra ==
+  n`; `FAIL-INFRA <=> infra >= 2`; else `FAIL-CONTENT`. The `completed + infra
+  == n` clause is what was missing -- it requires every non-completed run to
+  be an infra death specifically, so a content- or other-classified failure
+  can never hide behind a low infra count.
+
+  **Fix:** `gemini_matrix_decision`'s condition changed from `len(completed)
+  == 5 and len(content_pass) >= 4 and len(infra_deaths) <= 1` to
+  `len(infra_deaths) <= 1 and len(content_pass) >= 4 and len(completed) +
+  len(infra_deaths) == n`. `n = len(runs)` unchanged (already the correct
+  post-`--resume-evidence`-merge total, since `runs` is the full merged list
+  by the time this function runs). Four worked examples (5/5 pass; 1 infra
+  death + 4/4 pass -> PASS-cloud; 2 infra deaths -> FAIL-INFRA; 1
+  content-validation death + 4/4 pass -> FAIL-CONTENT) added to the
+  function's own docstring per the task card's request, since the runner has
+  no dedicated test file to assert them in.
+
+  **Commands and results:**
+  - `venv\Scripts\python.exe -m ruff check scripts/run_ai_operational_trial.py` → All checks passed.
+  - `venv\Scripts\python.exe -m py_compile scripts/run_ai_operational_trial.py` → exits 0.
+  - `venv\Scripts\python.exe scripts/run_ai_operational_trial.py --reaggregate "data/quality_reviews/phase13/gate-b/gate-b-20260921T000903Z.json"` → unchanged: `DECISION: FAIL`, same reason text (local matrix uses `local_matrix_decision`, not touched by this fix).
+  - `venv\Scripts\python.exe scripts/run_ai_operational_trial.py --reaggregate "data/quality_reviews/phase13/gate-b/gate-b-20260921T010451Z.json"` → unchanged: `DECISION: DIAGNOSTIC_ONLY` (2/5 requested), underlying reasons still `FAIL-CONTENT`-shaped (`0/0 passed content checks`) since this file's `n=2` never reaches the `infra<=1 and content_pass>=4` branch either way -- this specific old file doesn't exercise the fixed 1-infra-death scenario (neither named Phase 13 file does; the bug was only reachable with a hypothetical 5-run matrix containing exactly one infra death), so "unchanged" here confirms no regression, not that the fix was exercised by real data.
+  - `venv\Scripts\python.exe -m ruff check app tests scripts` (full) → All checks passed.
+  - **Deviations:** none -- change confined to `gemini_matrix_decision`'s
+    condition and docstring, the same single allowed file.
 - 14.4b (PM):

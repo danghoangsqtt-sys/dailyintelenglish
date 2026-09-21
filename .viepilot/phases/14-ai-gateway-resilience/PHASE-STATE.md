@@ -176,3 +176,17 @@ Execution order: 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 runs
   files touched): **865 passed**, unchanged from the Task 14.3 baseline.
   Task 14.4a status: done. Task 14.4b (Gate B-2 execution and report) is
   PM's, not started.
+- 2026-09-21: PM reviewed `377f140` and found a real logic bug: the Gemini
+  decision's original wording ("5/5 complete AND <=1 infra death") is
+  self-contradictory (a dead job isn't complete), making the one-death-
+  absorbed branch unreachable and mis-labeling a real 1-infra-death+4-pass
+  matrix as `FAIL-CONTENT`. PM issued Amendment C (`92baabf`, plan §4.4,
+  before any Gate B-2 result existed) with the corrected formula (`infra <=
+  1 AND content_pass >= 4 AND completed + infra == n`). Coder fixed
+  `gemini_matrix_decision` accordingly, added four worked examples to its
+  docstring (no dedicated test file exists for this script), and re-verified
+  `--reaggregate` against both named Phase 13 files still prints identical
+  decisions (neither file's data happens to exercise the fixed branch, since
+  neither has exactly one infra death among 5 runs -- confirms no
+  regression, not that the fix was exercised by real data). `ruff` clean.
+  Task 14.4a (incl. Amendment C) status: done.
