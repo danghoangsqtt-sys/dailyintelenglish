@@ -17,10 +17,20 @@ import aiosqlite
 
 from app.core.constants import (
     AI_JOB_LEASE_SECONDS,
+    AI_JOB_MAX_RECORDED_CALLS,
     AI_JOB_MAX_RECOVERY_ATTEMPTS,
     AI_PIPELINE_VERSION,
 )
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.exceptions import (
+    NotFoundError,
+    ProviderAuthError,
+    ProviderError,
+    ProviderInvalidResponseError,
+    ProviderRateLimitError,
+    ProviderTimeoutError,
+    ProviderUnavailableError,
+    ValidationError,
+)
 
 # Legal forward transitions. Terminal states map to an empty set -- immutable except
 # for non-semantic diagnostic metadata (e.g. appending to metrics_json), which never
@@ -35,6 +45,33 @@ _LEGAL_TRANSITIONS: dict[str, set[str]] = {
     "stale": set(),
 }
 _TERMINAL_STATUSES = frozenset(status for status, targets in _LEGAL_TRANSITIONS.items() if not targets)
+
+# Phase 14 Task 14.2 -- maps a router-raised ProviderError to the job's error_code,
+# so an infrastructure failure is distinguishable from a content failure (never
+# `handler_exception`) on the job row and in Gate B evidence. `SchemaValidationError`
+# is a `ProviderError` subclass but deliberately not listed: the plan's own error-code
+# enumeration excludes it, and in practice it is raised only by
+# `app/services/ai/validation.py:parse_and_validate` after a successful
+# `router.generate()`, never by the router/provider layer itself -- so it is not
+# expected to reach this function, but falls back to "provider_error" if it ever does.
+_PROVIDER_ERROR_CODES: dict[type[ProviderError], str] = {
+    ProviderUnavailableError: "provider_unavailable",
+    ProviderTimeoutError: "provider_timeout",
+    ProviderRateLimitError: "provider_rate_limited",
+    ProviderAuthError: "provider_auth",
+    ProviderInvalidResponseError: "provider_invalid_response",
+}
+
+
+def provider_error_code(exc: ProviderError) -> str:
+    """Map one `ProviderError` (sub)class to its Task 14.2 job `error_code`.
+
+    Falls back to `"provider_error"` for the base class or any subclass not in
+    `_PROVIDER_ERROR_CODES`, so a future provider exception type never crashes
+    job-failure handling -- it just loses some specificity until this table is
+    updated.
+    """
+    return _PROVIDER_ERROR_CODES.get(type(exc), "provider_error")
 
 
 def _now_iso() -> str:
@@ -296,6 +333,83 @@ async def transition_status(
         fields["fallback_reason"] = fallback_reason
         set_clauses.append("fallback_reason = :fallback_reason")
     fields["id"] = job_id
+
+    await db.execute(f"UPDATE ai_generation_jobs SET {', '.join(set_clauses)} WHERE id = :id", fields)
+    if commit:
+        await db.commit()
+    updated = await _fetch_row(db, job_id)
+    return dict(updated)
+
+
+async def record_generation_call(
+    db: aiosqlite.Connection, job_id: str, call: dict[str, Any], commit: bool = True
+) -> dict:
+    """Append one Task 14.2 telemetry `call` record to a job's `metrics_json`.
+
+    Always called *after* the router call it describes has already returned or
+    raised -- never wraps or is called from within an in-flight `router.generate()`
+    (see `script_pipeline._call_router`/`learning_pipeline._call_router`). One
+    UPDATE inside the caller's own transaction; this function never commits its
+    own separate transaction beyond the `commit` flag callers already use
+    elsewhere in this module.
+
+    `call` fields (see task-14.2.md for the full safe-field shape): `provider`/
+    `model` update the job row via `COALESCE` (a `None` here -- e.g. an
+    `outcome="error"` call -- never overwrites a value a prior successful call
+    already set). `fallback_used` (+ optional `fallback_reason`) and `is_repair`
+    drive `fallback_used`/`fallback_count`/`repair_count` only when truthy.
+
+    Raises:
+        NotFoundError: If the job doesn't exist.
+        ValidationError: If the job is already in a terminal status -- a
+            terminal job's row is otherwise immutable, and this is diagnostic
+            metadata, not a status transition, so it never goes through
+            `_assert_legal_transition`.
+    """
+    row = await _fetch_row(db, job_id)
+    if row is None:
+        raise NotFoundError(f"AI job {job_id} not found")
+    if row["status"] not in ("running", "validating"):
+        raise ValidationError(
+            f"Cannot record a generation call on job {job_id}: status {row['status']!r} is terminal"
+        )
+
+    try:
+        metrics = json.loads(row["metrics_json"]) if row["metrics_json"] else {}
+    except (TypeError, ValueError):
+        metrics = {}
+    if not isinstance(metrics, dict):
+        metrics = {}
+    calls = metrics.get("calls")
+    if not isinstance(calls, list):
+        calls = []
+    calls.append(call)
+    if len(calls) > AI_JOB_MAX_RECORDED_CALLS:
+        calls = calls[-AI_JOB_MAX_RECORDED_CALLS:]
+    metrics["calls"] = calls
+
+    fields: dict[str, Any] = {
+        "id": job_id,
+        "metrics_json": json.dumps(metrics),
+        "actual_provider": call.get("provider"),
+        "model": call.get("model"),
+        "updated_at": _now_iso(),
+    }
+    set_clauses = [
+        "metrics_json = :metrics_json",
+        "actual_provider = COALESCE(:actual_provider, actual_provider)",
+        "model = COALESCE(:model, model)",
+        "updated_at = :updated_at",
+    ]
+    if call.get("fallback_used"):
+        set_clauses.append("fallback_used = 1")
+        set_clauses.append("fallback_count = fallback_count + 1")
+        fallback_reason = call.get("fallback_reason")
+        if fallback_reason is not None:
+            fields["fallback_reason"] = fallback_reason
+            set_clauses.append("fallback_reason = :fallback_reason")
+    if call.get("is_repair"):
+        set_clauses.append("repair_count = repair_count + 1")
 
     await db.execute(f"UPDATE ai_generation_jobs SET {', '.join(set_clauses)} WHERE id = :id", fields)
     if commit:

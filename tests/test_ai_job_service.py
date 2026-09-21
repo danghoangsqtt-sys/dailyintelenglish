@@ -1,12 +1,23 @@
 """Tests for ai_job_service's state machine, claim/lease, cancel, and recovery."""
 
 import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.core.constants import AI_JOB_MAX_RECOVERY_ATTEMPTS
-from app.core.exceptions import NotFoundError, ValidationError
+from app.core.constants import AI_JOB_MAX_RECORDED_CALLS, AI_JOB_MAX_RECOVERY_ATTEMPTS
+from app.core.exceptions import (
+    NotFoundError,
+    ProviderAuthError,
+    ProviderError,
+    ProviderInvalidResponseError,
+    ProviderRateLimitError,
+    ProviderTimeoutError,
+    ProviderUnavailableError,
+    SchemaValidationError,
+    ValidationError,
+)
 from app.models.project import ScriptConfig, SpeakerConfig
 from app.services import ai_job_service, project_service
 
@@ -339,3 +350,139 @@ async def test_get_active_job_is_scoped_to_its_own_project(db):
 
     assert (await ai_job_service.get_active_job(db, project_a["id"], "script"))["id"] == job["id"]
     assert await ai_job_service.get_active_job(db, project_b["id"], "script") is None
+
+
+# --- Task 14.2: record_generation_call ------------------------------------------------
+
+
+def _call(**overrides) -> dict:
+    base = {
+        "purpose": "script_section",
+        "section_index": 1,
+        "provider": "ollama",
+        "model": "qwen3.5:9b",
+        "attempt": 1,
+        "attempts": 1,
+        "backoff_seconds": 0.0,
+        "latency_ms": 1.0,
+        "fallback_used": False,
+        "circuit_open": False,
+        "is_repair": False,
+        "outcome": "ok",
+        "error_type": None,
+        "at": "2026-09-21T00:00:00+00:00",
+    }
+    base.update(overrides)
+    return base
+
+
+async def _running_job(db) -> dict:
+    project = await _project(db)
+    job, _ = await ai_job_service.create_job(db, project["id"], "script", {})
+    return await ai_job_service.transition_status(db, job["id"], "running")
+
+
+async def test_record_generation_call_appends_to_metrics_json(db):
+    job = await _running_job(db)
+    updated = await ai_job_service.record_generation_call(db, job["id"], _call())
+    assert json.loads(updated["metrics_json"])["calls"] == [_call()]
+
+
+async def test_record_generation_call_bounds_calls_and_drops_oldest(db):
+    job = await _running_job(db)
+    for i in range(AI_JOB_MAX_RECORDED_CALLS + 5):
+        updated = await ai_job_service.record_generation_call(db, job["id"], _call(attempt=i))
+    calls = json.loads(updated["metrics_json"])["calls"]
+    assert len(calls) == AI_JOB_MAX_RECORDED_CALLS
+    # the oldest 5 (attempt=0..4) were dropped -- the list keeps the most recent.
+    assert calls[0]["attempt"] == 5
+    assert calls[-1]["attempt"] == AI_JOB_MAX_RECORDED_CALLS + 4
+
+
+async def test_record_generation_call_sets_actual_provider_and_model(db):
+    job = await _running_job(db)
+    updated = await ai_job_service.record_generation_call(
+        db, job["id"], _call(provider="gemini", model="gemini-3.8-flash")
+    )
+    assert updated["actual_provider"] == "gemini"
+    assert updated["model"] == "gemini-3.8-flash"
+
+
+async def test_record_generation_call_never_overwrites_actual_provider_with_none(db):
+    """An outcome="error" call has provider=None/model=None -- it must never null
+    out a value a prior successful call on the same job already set."""
+    job = await _running_job(db)
+    await ai_job_service.record_generation_call(db, job["id"], _call(provider="gemini", model="gemini-3.8-flash"))
+    updated = await ai_job_service.record_generation_call(
+        db, job["id"], _call(provider=None, model=None, outcome="error", error_type="ProviderUnavailableError")
+    )
+    assert updated["actual_provider"] == "gemini"
+    assert updated["model"] == "gemini-3.8-flash"
+
+
+async def test_record_generation_call_increments_fallback_count_only_when_reported(db):
+    job = await _running_job(db)
+    after_no_fallback = await ai_job_service.record_generation_call(db, job["id"], _call(fallback_used=False))
+    assert after_no_fallback["fallback_used"] == 0
+    assert after_no_fallback["fallback_count"] == 0
+
+    after_fallback = await ai_job_service.record_generation_call(
+        db, job["id"], _call(provider="gemini", fallback_used=True)
+    )
+    assert after_fallback["fallback_used"] == 1
+    assert after_fallback["fallback_count"] == 1
+
+
+async def test_record_generation_call_sets_fallback_reason_only_when_provided(db):
+    job = await _running_job(db)
+    updated = await ai_job_service.record_generation_call(
+        db, job["id"], _call(fallback_used=True, fallback_reason="ProviderUnavailableError")
+    )
+    assert updated["fallback_reason"] == "ProviderUnavailableError"
+
+
+async def test_record_generation_call_increments_repair_count_only_for_is_repair(db):
+    job = await _running_job(db)
+    after_non_repair = await ai_job_service.record_generation_call(db, job["id"], _call(is_repair=False))
+    assert after_non_repair["repair_count"] == 0
+
+    after_repair = await ai_job_service.record_generation_call(db, job["id"], _call(is_repair=True))
+    assert after_repair["repair_count"] == 1
+
+
+async def test_record_generation_call_refuses_a_terminal_job(db):
+    job = await _running_job(db)
+    await ai_job_service.transition_status(db, job["id"], "error", error_code="boom")
+    with pytest.raises(ValidationError):
+        await ai_job_service.record_generation_call(db, job["id"], _call())
+
+
+async def test_record_generation_call_raises_not_found_for_unknown_job(db):
+    with pytest.raises(NotFoundError):
+        await ai_job_service.record_generation_call(db, "does-not-exist", _call())
+
+
+# --- Task 14.2: provider_error_code ----------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "exc,expected_code",
+    [
+        (ProviderUnavailableError("down"), "provider_unavailable"),
+        (ProviderTimeoutError("slow"), "provider_timeout"),
+        (ProviderRateLimitError("429"), "provider_rate_limited"),
+        (ProviderAuthError("bad key"), "provider_auth"),
+        (ProviderInvalidResponseError("bad shape"), "provider_invalid_response"),
+    ],
+)
+def test_provider_error_code_maps_known_subclasses(exc, expected_code):
+    assert ai_job_service.provider_error_code(exc) == expected_code
+
+
+def test_provider_error_code_falls_back_to_provider_error_for_the_base_class():
+    assert ai_job_service.provider_error_code(ProviderError("generic")) == "provider_error"
+
+
+def test_provider_error_code_falls_back_to_provider_error_for_schema_validation_error():
+    """Excluded from the plan's five specific codes -- see task-14.2.md."""
+    assert ai_job_service.provider_error_code(SchemaValidationError("bad json")) == "provider_error"

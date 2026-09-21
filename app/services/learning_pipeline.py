@@ -11,6 +11,7 @@ script pipeline (see task-13.4.md/task-13.5.md).
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateNotFound
@@ -26,12 +27,12 @@ from app.core.constants import (
     LEARNING_MIN_QUESTIONS,
     LEARNING_MIN_VOCABULARY,
 )
-from app.core.exceptions import SchemaValidationError
+from app.core.exceptions import ProviderError, SchemaValidationError
 from app.core.prompt_loader import LEARNING_PROMPTS_DIR, render_learning_prompt
 from app.db.transactions import read_transaction, write_transaction
 from app.models.learning import LearningPackOut
 from app.services import ai_job_service, learning_service, project_service, script_service
-from app.services.ai.contracts import GenerationRequest
+from app.services.ai.contracts import GenerationRequest, GenerationResult
 from app.services.ai.validation import parse_and_validate
 from app.services.script_pipeline import compute_config_hash, normalize_text
 
@@ -150,38 +151,42 @@ async def _render_repair_prompt(**context: object) -> str:
 # --- provider calls --------------------------------------------------------------------
 
 
-async def _generate_pack(router: "AIRouter", project: dict, transcript: str) -> LearningPackOut:
+async def _generate_pack(router: "AIRouter", project: dict, transcript: str, db, job_id: str) -> LearningPackOut:
     prompt = await render_learning_prompt(
         topic=project["topic"], cefr_level=project["cefr_level"], genre=project["genre"], transcript_text=transcript
     )
-    result = await router.generate(
+    result = await _call_router(
+        db, job_id, router,
         GenerationRequest(
             prompt=prompt,
             json_schema=LearningPackOut.model_json_schema(),
             temperature=LEARNING_GENERATION_TEMPERATURE,
             deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
             purpose="learning_pack",
-        )
+        ),
+        is_repair=False,
     )
     return parse_and_validate(result.text, _PACK_ADAPTER)
 
 
 async def _repair_pack(
-    router: "AIRouter", transcript: str, previous_pack: LearningPackOut, errors: list[str]
+    router: "AIRouter", transcript: str, previous_pack: LearningPackOut, errors: list[str], db, job_id: str
 ) -> LearningPackOut:
     prompt = await _render_repair_prompt(
         transcript_text=transcript,
         errors=errors,
         previous_output=previous_pack.model_dump_json(),
     )
-    result = await router.generate(
+    result = await _call_router(
+        db, job_id, router,
         GenerationRequest(
             prompt=prompt,
             json_schema=LearningPackOut.model_json_schema(),
             temperature=LEARNING_GENERATION_TEMPERATURE,
             deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
             purpose="learning_pack_repair",
-        )
+        ),
+        is_repair=True,
     )
     return parse_and_validate(result.text, _PACK_ADAPTER)
 
@@ -189,10 +194,95 @@ async def _repair_pack(
 # --- orchestration -----------------------------------------------------------------------
 
 
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _call_record(
+    request: GenerationRequest,
+    *,
+    is_repair: bool,
+    result: GenerationResult | None = None,
+    exc: ProviderError | None = None,
+) -> dict:
+    """Build one Task 14.2 telemetry call record -- safe fields only, never
+    prompt/response text or a key (plan §4.2's call record shape). The learning
+    pipeline has no section concept, so `section_index` is always `None`."""
+    if result is not None:
+        return {
+            "purpose": request.purpose,
+            "section_index": None,
+            "provider": result.provider,
+            "model": result.model,
+            "attempt": result.attempt,
+            "attempts": result.attempts,
+            "backoff_seconds": result.backoff_seconds,
+            "latency_ms": result.latency_ms,
+            "fallback_used": result.fallback_used,
+            "circuit_open": result.circuit_open,
+            "is_repair": is_repair,
+            "outcome": "ok",
+            "error_type": None,
+            "at": _now_iso(),
+        }
+    return {
+        "purpose": request.purpose,
+        "section_index": None,
+        "provider": None,
+        "model": None,
+        "attempt": None,
+        "attempts": None,
+        "backoff_seconds": None,
+        "latency_ms": None,
+        "fallback_used": False,
+        "circuit_open": False,
+        "is_repair": is_repair,
+        "outcome": "error",
+        "error_type": type(exc).__name__ if exc is not None else None,
+        "at": _now_iso(),
+    }
+
+
+async def _call_router(
+    db, job_id: str, router: "AIRouter", request: GenerationRequest, *, is_repair: bool,
+) -> GenerationResult:
+    """Call `router.generate`, then record Task 14.2 telemetry for it inside a
+    short `write_transaction` of its own -- the transaction never spans the
+    actual inference call itself (task-14.2.md: "Holding any transaction across a
+    router call" is explicitly forbidden). On a `ProviderError`, the call is
+    still recorded (`outcome="error"`) before re-raising, so the orchestrator's
+    `except ProviderError` handler can fail the job with a specific error_code."""
+    try:
+        result = await router.generate(request)
+    except ProviderError as exc:
+        async with write_transaction(db):
+            await ai_job_service.record_generation_call(
+                db, job_id, _call_record(request, is_repair=is_repair, exc=exc), commit=False
+            )
+        raise
+    async with write_transaction(db):
+        await ai_job_service.record_generation_call(
+            db, job_id, _call_record(request, is_repair=is_repair, result=result), commit=False
+        )
+    return result
+
+
 async def _fail(db, job_id: str, error_code: str, errors: list[str]) -> None:
     async with write_transaction(db):
         await ai_job_service.transition_status(
             db, job_id, "error", error_code=error_code, error_message="; ".join(errors)[:200], commit=False
+        )
+
+
+async def _fail_provider(db, job_id: str, exc: ProviderError) -> None:
+    """Fail the job with a specific `provider_*` error_code (Task 14.2) instead of
+    letting a `ProviderError` propagate to the worker's blanket `except` and land
+    as an indistinguishable `handler_exception`."""
+    error_code = ai_job_service.provider_error_code(exc)
+    message = f"{type(exc).__name__}: {exc}"[:200]
+    async with write_transaction(db):
+        await ai_job_service.transition_status(
+            db, job_id, "error", error_code=error_code, error_message=message, commit=False
         )
 
 
@@ -245,17 +335,23 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
     transcript = "\n".join(line["text"] for line in script_lines)
 
     try:
-        pack = await _generate_pack(router, project, transcript)
+        pack = await _generate_pack(router, project, transcript, db, job_id)
     except SchemaValidationError as exc:
         await _fail(db, job_id, "pack_invalid_schema", [str(exc)])
+        return
+    except ProviderError as exc:
+        await _fail_provider(db, job_id, exc)
         return
 
     errors = validate_pack(pack, transcript)
     if errors:
         try:
-            repaired_pack = await _repair_pack(router, transcript, pack, errors)
+            repaired_pack = await _repair_pack(router, transcript, pack, errors, db, job_id)
         except SchemaValidationError as exc:
             await _fail(db, job_id, "pack_invalid_schema", [str(exc)])
+            return
+        except ProviderError as exc:
+            await _fail_provider(db, job_id, exc)
             return
         repaired_errors = validate_pack(repaired_pack, transcript)
         if repaired_errors:

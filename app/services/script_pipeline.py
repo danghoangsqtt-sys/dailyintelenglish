@@ -14,6 +14,7 @@ import hashlib
 import json
 import re
 from collections import Counter
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateNotFound
@@ -30,11 +31,11 @@ from app.core.constants import (
     SCRIPT_SPEAKER_BALANCE_MAX_SHARE,
     SCRIPT_SPEAKER_BALANCE_MIN_SHARE,
 )
-from app.core.exceptions import SchemaValidationError
+from app.core.exceptions import ProviderError, SchemaValidationError
 from app.core.prompt_loader import SCRIPT_PROMPTS_DIR, load_cefr_block, load_genre_block
 from app.db.transactions import read_transaction, write_transaction
 from app.services import ai_job_service, project_service, script_service
-from app.services.ai.contracts import GenerationRequest
+from app.services.ai.contracts import GenerationRequest, GenerationResult
 from app.services.ai.validation import parse_and_validate
 from app.services.script_service import LanguageNotesOut
 
@@ -111,6 +112,11 @@ def plan_sections(target_words: int, cefr_level: str) -> list[int]:
 def normalize_text(text: str) -> str:
     """Casefold + collapse whitespace, for duplicate/repetition comparisons."""
     return re.sub(r"\s+", " ", text.strip().casefold())
+
+
+def section_word_count(lines: list[SectionLineOut]) -> int:
+    """Total spoken-word count across `lines` (Task 14.2 checkpoint telemetry)."""
+    return sum(len(_WORD_RE.findall(line.text)) for line in lines)
 
 
 def repeated_8gram_ratio(words: list[str]) -> float:
@@ -258,7 +264,9 @@ async def _render(template_name: str, **context: object) -> str:
 # --- provider calls --------------------------------------------------------------------
 
 
-async def _generate_outline(router: "AIRouter", project: dict, target_words: int, num_sections: int) -> ScriptOutline:
+async def _generate_outline(
+    router: "AIRouter", project: dict, target_words: int, num_sections: int, db, job_id: str
+) -> ScriptOutline:
     genre_instructions = await load_genre_block(project["genre"])
     cefr_constraints = await load_cefr_block(project["cefr_level"])
     prompt = await _render(
@@ -275,13 +283,15 @@ async def _generate_outline(router: "AIRouter", project: dict, target_words: int
         genre_instructions=genre_instructions,
         cefr_constraints=cefr_constraints,
     )
-    result = await router.generate(
+    result = await _call_router(
+        db, job_id, router,
         GenerationRequest(
             prompt=prompt,
             json_schema=ScriptOutline.model_json_schema(),
             deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
             purpose="script_outline",
-        )
+        ),
+        section_index=None, is_repair=False,
     )
     return parse_and_validate(result.text, _OUTLINE_ADAPTER)
 
@@ -294,6 +304,8 @@ async def _generate_section(
     prior_summary: str,
     known_speaker_ids: set[str],
     is_last_section: bool,
+    db,
+    job_id: str,
 ) -> tuple[list[SectionLineOut], list[str]]:
     cefr_constraints = await load_cefr_block(project["cefr_level"])
     prompt = await _render(
@@ -314,13 +326,15 @@ async def _generate_section(
         cefr_constraints=cefr_constraints,
         language_features=project["language_features"],
     )
-    result = await router.generate(
+    result = await _call_router(
+        db, job_id, router,
         GenerationRequest(
             prompt=prompt,
             json_schema=_SECTION_LINES_ADAPTER.json_schema(),
             deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
             purpose="script_section",
-        )
+        ),
+        section_index=section_spec.index, is_repair=False,
     )
     try:
         lines = parse_and_validate(result.text, _SECTION_LINES_ADAPTER)
@@ -336,6 +350,8 @@ async def _repair_section(
     previous_lines: list[SectionLineOut],
     errors: list[str],
     known_speaker_ids: set[str],
+    db,
+    job_id: str,
 ) -> tuple[list[SectionLineOut], list[str]]:
     previous_output = (
         _SECTION_LINES_ADAPTER.dump_json(previous_lines).decode("utf-8") if previous_lines else "[]"
@@ -348,13 +364,15 @@ async def _repair_section(
         errors=errors,
         previous_output=previous_output,
     )
-    result = await router.generate(
+    result = await _call_router(
+        db, job_id, router,
         GenerationRequest(
             prompt=prompt,
             json_schema=_SECTION_LINES_ADAPTER.json_schema(),
             deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
             purpose="script_section_repair",
-        )
+        ),
+        section_index=section_spec.index, is_repair=True,
     )
     try:
         lines = parse_and_validate(result.text, _SECTION_LINES_ADAPTER)
@@ -366,6 +384,89 @@ async def _repair_section(
 # --- orchestration -----------------------------------------------------------------------
 
 
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _call_record(
+    request: GenerationRequest,
+    *,
+    section_index: int | None,
+    is_repair: bool,
+    result: GenerationResult | None = None,
+    exc: ProviderError | None = None,
+) -> dict:
+    """Build one Task 14.2 telemetry call record -- safe fields only, never
+    prompt/response text or a key (plan §4.2's call record shape)."""
+    if result is not None:
+        return {
+            "purpose": request.purpose,
+            "section_index": section_index,
+            "provider": result.provider,
+            "model": result.model,
+            "attempt": result.attempt,
+            "attempts": result.attempts,
+            "backoff_seconds": result.backoff_seconds,
+            "latency_ms": result.latency_ms,
+            "fallback_used": result.fallback_used,
+            "circuit_open": result.circuit_open,
+            "is_repair": is_repair,
+            "outcome": "ok",
+            "error_type": None,
+            "at": _now_iso(),
+        }
+    return {
+        "purpose": request.purpose,
+        "section_index": section_index,
+        "provider": None,
+        "model": None,
+        "attempt": None,
+        "attempts": None,
+        "backoff_seconds": None,
+        "latency_ms": None,
+        "fallback_used": False,
+        "circuit_open": False,
+        "is_repair": is_repair,
+        "outcome": "error",
+        "error_type": type(exc).__name__ if exc is not None else None,
+        "at": _now_iso(),
+    }
+
+
+async def _call_router(
+    db,
+    job_id: str,
+    router: "AIRouter",
+    request: GenerationRequest,
+    *,
+    section_index: int | None,
+    is_repair: bool,
+) -> GenerationResult:
+    """Call `router.generate`, then record Task 14.2 telemetry for it inside a
+    short `write_transaction` of its own -- the transaction never spans the
+    actual inference call itself (task-14.2.md: "Holding any transaction across a
+    router call" is explicitly forbidden). On a `ProviderError`, the call is
+    still recorded (`outcome="error"`) before re-raising, so the orchestrator's
+    `except ProviderError` handler can fail the job with a specific error_code."""
+    try:
+        result = await router.generate(request)
+    except ProviderError as exc:
+        async with write_transaction(db):
+            await ai_job_service.record_generation_call(
+                db, job_id,
+                _call_record(request, section_index=section_index, is_repair=is_repair, exc=exc),
+                commit=False,
+            )
+        raise
+    async with write_transaction(db):
+        await ai_job_service.record_generation_call(
+            db, job_id,
+            _call_record(request, section_index=section_index, is_repair=is_repair, result=result),
+            commit=False,
+        )
+    return result
+
+
 async def _update_progress(db, job_id: str, stage: str, progress: int) -> None:
     async with write_transaction(db):
         await ai_job_service.update_progress(db, job_id, stage, progress, commit=False)
@@ -375,6 +476,18 @@ async def _fail(db, job_id: str, error_code: str, errors: list[str]) -> None:
     async with write_transaction(db):
         await ai_job_service.transition_status(
             db, job_id, "error", error_code=error_code, error_message="; ".join(errors)[:200], commit=False
+        )
+
+
+async def _fail_provider(db, job_id: str, exc: ProviderError) -> None:
+    """Fail the job with a specific `provider_*` error_code (Task 14.2) instead of
+    letting a `ProviderError` propagate to the worker's blanket `except` and land
+    as an indistinguishable `handler_exception`."""
+    error_code = ai_job_service.provider_error_code(exc)
+    message = f"{type(exc).__name__}: {exc}"[:200]
+    async with write_transaction(db):
+        await ai_job_service.transition_status(
+            db, job_id, "error", error_code=error_code, error_message=message, commit=False
         )
 
 
@@ -428,7 +541,11 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
     if 0 in checkpoints_by_index:
         outline = ScriptOutline.model_validate_json(checkpoints_by_index[0]["result_json"])
     else:
-        outline = await _generate_outline(router, project, target_words, len(section_budgets))
+        try:
+            outline = await _generate_outline(router, project, target_words, len(section_budgets), db, job_id)
+        except ProviderError as exc:
+            await _fail_provider(db, job_id, exc)
+            return
         async with write_transaction(db):
             await ai_job_service.save_checkpoint(
                 db, job_id, 0, "outline", "valid",
@@ -452,23 +569,50 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
             await _cancel(db, job_id)
             return
 
-        section_lines, errors = await _generate_section(
-            router, project, outline, section_spec, prior_summary, known_speaker_ids,
-            position == total_sections,
-        )
-        if errors:
-            section_lines, errors = await _repair_section(
-                router, project, section_spec, section_lines, errors, known_speaker_ids
+        try:
+            section_lines, errors = await _generate_section(
+                router, project, outline, section_spec, prior_summary, known_speaker_ids,
+                position == total_sections, db, job_id,
             )
+        except ProviderError as exc:
+            await _fail_provider(db, job_id, exc)
+            return
+
+        repaired = False
+        words_before_repair: int | None = None
+        errors_before_repair = 0
+        if errors:
+            errors_before_repair = len(errors)
+            words_before_repair = section_word_count(section_lines)
+            try:
+                section_lines, errors = await _repair_section(
+                    router, project, section_spec, section_lines, errors, known_speaker_ids, db, job_id,
+                )
+            except ProviderError as exc:
+                await _fail_provider(db, job_id, exc)
+                return
+            repaired = True
         if errors:
             await _fail(db, job_id, "section_validation_failed", errors)
             return
 
+        words = section_word_count(section_lines)
+        target_nominal = section_spec.target_words
+        checkpoint_metrics = {
+            "target_nominal": target_nominal,
+            "target_effective": target_nominal,  # unchanged until Task 14.3
+            "words": words,
+            "deviation_pct": round((words - target_nominal) / target_nominal, 4),
+            "repaired": repaired,
+            "words_before_repair": words_before_repair,
+            "errors_before_repair": errors_before_repair,
+        }
         async with write_transaction(db):
             await ai_job_service.save_checkpoint(
                 db, job_id, idx, "section", "valid",
                 compute_config_hash({"section": section_spec.model_dump()}, "section"),
                 result_json=_SECTION_LINES_ADAPTER.dump_json(section_lines).decode("utf-8"),
+                metrics_json=json.dumps(checkpoint_metrics),
                 commit=False,
             )
         all_lines.extend(section_lines)

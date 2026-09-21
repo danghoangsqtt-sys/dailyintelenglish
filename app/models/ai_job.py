@@ -1,6 +1,9 @@
 """Pydantic models for the durable AI generation job API (Phase 13, Task 13.3)."""
 
-from pydantic import BaseModel, Field
+import json
+from typing import Any
+
+from pydantic import BaseModel, Field, model_validator
 
 from app.core.constants import AI_JOB_OPERATIONS
 
@@ -40,7 +43,25 @@ class AIJobOut(BaseModel):
     recovery_count: int
     error_code: str | None = None
     error_message: str | None = None
+    metrics: dict = Field(default_factory=dict)
     created_at: str
     started_at: str | None = None
     updated_at: str
     finished_at: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _derive_metrics_from_metrics_json(cls, data: Any) -> Any:
+        """Task 14.2: the job row stores `metrics_json` (a TEXT column), never a
+        `metrics` key -- every route does `AIJobOut.model_validate(job)` on the raw
+        row dict, so this is where `metrics_json` becomes the safe `metrics` field
+        (`{}` on any parse failure) instead of every call site re-parsing it."""
+        if isinstance(data, dict) and "metrics" not in data:
+            raw = data.get("metrics_json")
+            if raw:
+                try:
+                    parsed = json.loads(raw)
+                except (TypeError, ValueError):
+                    parsed = {}
+                data = {**data, "metrics": parsed if isinstance(parsed, dict) else {}}
+        return data

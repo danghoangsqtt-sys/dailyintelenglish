@@ -38,7 +38,7 @@
 | Task | Description | Owner | Status | Blocking gate |
 |---|---|---|---|---|
 | 14.1 | Bounded exponential backoff for transient errors in `AIRouter` | Coder | done | Backoff proven to wait; deadline honoured |
-| 14.2 | Job telemetry: repair/fallback/provider/attempts/error codes | Coder | pending | Row fields written; `provider_*` codes |
+| 14.2 | Job telemetry: repair/fallback/provider/attempts/error codes | Coder | done | Row fields written; `provider_*` codes |
 | 14.3 | Running section budget; hard gate only at global ±10% | Coder | pending | Constants pinned; carry/resume tests |
 | 14.4a | Runner preparation (classification, per-section stats, aggregates) | Coder | pending | Reaggregate dry run |
 | 14.4b | Gate B second run, both providers, declared protocol | PM | pending | Decision rules in plan §4.4 |
@@ -84,3 +84,23 @@ Execution order: 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 runs
   verification tests -- not +4 as first estimated; see task-14.1.md "Commands and
   results" for the count reconciliation). `ruff check app tests scripts` clean.
   Task 14.1 status: done.
+- 2026-09-21: Coder implemented Task 14.2 (`app/services/ai_job_service.py`
+  gains `record_generation_call`/`provider_error_code`; `app/models/ai_job.py`
+  gains `AIJobOut.metrics` via a `model_validator` that parses `metrics_json`
+  (no `app/api/ai_jobs.py` change needed); both `script_pipeline.py` and
+  `learning_pipeline.py` route every router call through a small
+  `_call_router` wrapper that records telemetry in its own short
+  `write_transaction` -- never spanning the actual inference call -- and map
+  `ProviderError` subclasses to `provider_*` job `error_code`s instead of
+  letting them fall through to `handler_exception`; script checkpoints gain
+  `target_nominal`/`target_effective`/`words`/`deviation_pct`/`repaired`/
+  `words_before_repair`/`errors_before_repair` in `metrics_json`,
+  `target_effective == target_nominal` until Task 14.3). `fallback_reason` is
+  accepted by `record_generation_call` but not populated by either pipeline in
+  this task -- the router doesn't yet surface the local failure's error class
+  on `GenerationResult` (out of 14.1's closed file set); flagged in
+  task-14.2.md rather than silently skipped or scope-creeping into 14.1.
+  Revert-and-confirm-failure on the `repair_count` increment: 3 targeted tests
+  failed for the right reason with it disabled, passed once restored. Full
+  suite: **848 passed**, 0 failed (net +34 over the 814 baseline after 14.1).
+  `ruff check app tests scripts` clean. Task 14.2 status: done.

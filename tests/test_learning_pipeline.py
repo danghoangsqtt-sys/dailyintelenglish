@@ -1,5 +1,16 @@
 """Tests for the grounded learning-content pipeline (Task 13.5)."""
 
+import json
+
+import pytest
+
+from app.core.exceptions import (
+    ProviderAuthError,
+    ProviderInvalidResponseError,
+    ProviderRateLimitError,
+    ProviderTimeoutError,
+    ProviderUnavailableError,
+)
 from app.models.learning import LearningPackOut
 from app.models.project import ScriptConfig, SpeakerConfig
 from app.services import ai_job_service, learning_pipeline, learning_service, project_service, script_service
@@ -7,6 +18,14 @@ from app.services.ai.contracts import AIMode, GenerationResult
 from app.services.ai.fake_provider import FakeProvider
 from app.services.ai.router import AIRouter
 from app.services.ai_worker import AIWorker
+
+
+async def _no_op_sleep(delay: float) -> None:
+    """Task 14.2 error-code tests exercise the router's real transient-error
+    exhaustion path (4 attempts) -- patched onto `app.services.ai.router.sleep`
+    so nothing actually waits out the backoff. See tests/test_ai_router.py's
+    `sleep_calls` fixture for the same pattern."""
+    return None
 
 TRANSCRIPT = (
     "Alex: I have been working remotely from home for five years now. "
@@ -318,4 +337,107 @@ async def test_pipeline_marks_stale_when_script_changed_during_generation(db, mo
 
     result = await ai_job_service.get_job(db, job["id"], project["id"])
     assert result["status"] == "stale"
+    assert await learning_service.get_learning_content(db, project["id"]) is None
+
+
+# --- Task 14.2: job telemetry -----------------------------------------------------------
+
+
+async def test_pipeline_happy_path_records_zero_repairs_and_one_ok_call(db):
+    project = await _project_with_script(db)
+    router, gemini, _local = _build_router([_result(_pack())])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "learning", {"project": project, "operation": "learning"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await learning_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete"
+    assert final_job["repair_count"] == 0
+    calls = json.loads(final_job["metrics_json"])["calls"]
+    assert len(calls) == 1
+    assert calls[0]["purpose"] == "learning_pack"
+    assert calls[0]["outcome"] == "ok"
+    assert calls[0]["is_repair"] is False
+    assert calls[0]["section_index"] is None
+
+
+async def test_pipeline_repair_sets_repair_count(db):
+    project = await _project_with_script(db)
+    invalid_pack = _pack(vocabulary=[{**_pack().vocabulary[0].model_dump(), "example_sentence": "Invented sentence."}])
+    router, gemini, _local = _build_router([_result(invalid_pack), _result(_pack())])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "learning", {"project": project, "operation": "learning"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await learning_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete"
+    assert final_job["repair_count"] == 1
+    calls = json.loads(final_job["metrics_json"])["calls"]
+    assert [call["purpose"] for call in calls] == ["learning_pack", "learning_pack_repair"]
+    assert calls[1]["is_repair"] is True
+
+
+async def test_pipeline_hybrid_fallback_records_fallback_telemetry(db, monkeypatch):
+    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    project = await _project_with_script(db)
+
+    local = FakeProvider("ollama", [ProviderUnavailableError("down")] * 4)
+    gemini = FakeProvider("gemini", [_result(_pack())])
+    router = AIRouter(local=local, gemini=gemini, mode=AIMode.HYBRID, failure_threshold=1, cooldown_seconds=60.0)
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "learning", {"project": project, "operation": "learning"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await learning_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete"
+    assert final_job["fallback_used"] == 1
+    assert final_job["fallback_count"] >= 1
+    assert final_job["actual_provider"] == "fake-gemini"  # this file's `_result()` helper's hardcoded value
+
+
+@pytest.mark.parametrize(
+    "outcomes,expected_error_code",
+    [
+        ([ProviderUnavailableError("down")] * 4, "provider_unavailable"),
+        ([ProviderTimeoutError("slow")] * 4, "provider_timeout"),
+        ([ProviderRateLimitError("429")] * 4, "provider_rate_limited"),
+        ([ProviderAuthError("bad key")] * 1, "provider_auth"),
+        ([ProviderInvalidResponseError("bad shape")] * 2, "provider_invalid_response"),
+    ],
+)
+async def test_pipeline_maps_provider_errors_to_specific_error_codes(db, monkeypatch, outcomes, expected_error_code):
+    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    project = await _project_with_script(db)
+    router, gemini, _local = _build_router(list(outcomes))
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "learning", {"project": project, "operation": "learning"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await learning_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "error"
+    assert final_job["error_code"] == expected_error_code
+    assert final_job["error_code"] != "handler_exception"
+    calls = json.loads(final_job["metrics_json"])["calls"]
+    assert calls[-1]["outcome"] == "error"
+    assert calls[-1]["purpose"] == "learning_pack"
     assert await learning_service.get_learning_content(db, project["id"]) is None

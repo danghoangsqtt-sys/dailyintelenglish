@@ -207,6 +207,10 @@ AI_WORKER_SHUTDOWN_GRACE_SECONDS = 10.0
 # Bumped whenever the job/checkpoint schema or worker resume semantics change, so a
 # job created under an older pipeline can be told apart from a current one.
 AI_PIPELINE_VERSION = "13.3"
+# Phase 14 Task 14.2 -- job telemetry (ai_job_service.record_generation_call). Caps
+# metrics_json["calls"] so a long-running/repaired job's row never grows unbounded;
+# oldest entries are dropped once this is exceeded.
+AI_JOB_MAX_RECORDED_CALLS = 64
 
 # Phase 13 -- checkpointed script pipeline (app/services/script_pipeline.py).
 # Copied from the already-live "Pace: target about N words per minute" line in each

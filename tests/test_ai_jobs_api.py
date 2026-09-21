@@ -105,8 +105,26 @@ def test_ai_job_response_never_exposes_internal_fields(client):
         "lease_owner",
         "lease_expires_at",
         "heartbeat_at",
+        "metrics_json",  # Task 14.2: the raw TEXT column never leaks -- only the
+        # parsed `metrics` dict (see test_ai_job_service.py for a populated one).
     ):
         assert forbidden_field not in data
+
+
+def test_ai_job_response_has_an_empty_metrics_dict_before_any_generation_call(client):
+    """Task 14.2: `metrics` is always present, derived from `metrics_json`
+    (`'{}'` for a freshly created job that hasn't run through a pipeline yet) --
+    the deep `metrics.calls[]`-populated case is covered in
+    tests/test_ai_job_service.py, which can drive `record_generation_call`
+    directly against the same async db this app uses (see task-14.2.md's
+    execution record for why that test lives there and not here)."""
+    project_id = _create_project(client)
+    created = client.post(f"/api/projects/{project_id}/ai-jobs", json={"operation": "script"})
+    data = created.json()["data"]
+    assert data["metrics"] == {}
+
+    fetched = client.get(f"/api/projects/{project_id}/ai-jobs/{data['id']}")
+    assert fetched.json()["data"]["metrics"] == {}
 
 
 def test_cancel_ai_job_is_idempotent(client):

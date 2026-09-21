@@ -5,12 +5,27 @@ from pathlib import Path
 
 import pytest
 
+from app.core.exceptions import (
+    ProviderAuthError,
+    ProviderInvalidResponseError,
+    ProviderRateLimitError,
+    ProviderTimeoutError,
+    ProviderUnavailableError,
+)
 from app.models.project import ProjectUpdate, ScriptConfig, SpeakerConfig
 from app.services import ai_job_service, project_service, script_pipeline, script_service
 from app.services.ai.contracts import AIMode, GenerationResult
 from app.services.ai.fake_provider import FakeProvider
 from app.services.ai.router import AIRouter
 from app.services.ai_worker import AIWorker
+
+
+async def _no_op_sleep(delay: float) -> None:
+    """Task 14.2 error-code tests exercise the router's real transient-error
+    exhaustion path (4 attempts) -- patched onto `app.services.ai.router.sleep`
+    so nothing actually waits out the backoff. See tests/test_ai_router.py's
+    `sleep_calls` fixture for the same pattern."""
+    return None
 
 GOLDEN_FIXTURES_PATH = Path(__file__).resolve().parent / "fixtures" / "ai" / "golden_projects.json"
 
@@ -365,3 +380,202 @@ async def test_pipeline_marks_stale_when_project_changed_since_job_creation(db):
     result = await ai_job_service.get_job(db, job["id"], project["id"])
     assert result["status"] == "stale"
     assert gemini.call_count == 0
+
+
+# --- Task 14.2: job/checkpoint telemetry -----------------------------------------------
+
+
+async def test_pipeline_happy_path_records_zero_repairs_and_ok_calls(db):
+    project = await _project(db)
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {
+            "title": "Morning Routines",
+            "sections": [{"index": 1, "objective": "discuss a simple healthy morning routine", "target_words": 100}],
+        }
+    )
+    section_json = json.dumps(
+        [
+            {"speaker_id": alex_id, "text": _words(25, 0)},
+            {"speaker_id": maya_id, "text": _words(25, 25)},
+            {"speaker_id": alex_id, "text": _words(25, 50)},
+            {"speaker_id": maya_id, "text": _words(25, 75)},
+        ]
+    )
+    router, gemini, _local = _build_router([_result(outline_json), _result(section_json)])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete"
+    assert final_job["repair_count"] == 0
+    calls = json.loads(final_job["metrics_json"])["calls"]
+    assert len(calls) == 2  # outline + 1 section
+    assert [call["purpose"] for call in calls] == ["script_outline", "script_section"]
+    assert all(call["outcome"] == "ok" for call in calls)
+    assert all(call["is_repair"] is False for call in calls)
+    assert calls[0]["section_index"] is None
+    assert calls[1]["section_index"] == 1
+
+
+async def test_pipeline_repair_sets_repair_count_and_checkpoint_metrics(db):
+    project = await _project(db)
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {"title": "T", "sections": [{"index": 1, "objective": "cover the full topic here", "target_words": 100}]}
+    )
+    invalid_section_json = json.dumps([{"speaker_id": alex_id, "text": _words(5, 0)}])  # way too short
+    repaired_section_json = json.dumps(
+        [
+            {"speaker_id": alex_id, "text": _words(25, 0)},
+            {"speaker_id": maya_id, "text": _words(25, 25)},
+            {"speaker_id": alex_id, "text": _words(25, 50)},
+            {"speaker_id": maya_id, "text": _words(25, 75)},
+        ]
+    )
+    router, gemini, _local = _build_router(
+        [_result(outline_json), _result(invalid_section_json), _result(repaired_section_json)]
+    )
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete"
+    assert final_job["repair_count"] == 1
+
+    calls = json.loads(final_job["metrics_json"])["calls"]
+    assert [call["purpose"] for call in calls] == ["script_outline", "script_section", "script_section_repair"]
+    assert calls[2]["is_repair"] is True
+
+    checkpoints = await ai_job_service.get_valid_checkpoints(db, job["id"])
+    section_checkpoint = next(c for c in checkpoints if c["section_index"] == 1)
+    metrics = json.loads(section_checkpoint["metrics_json"])
+    assert metrics["repaired"] is True
+    assert metrics["words_before_repair"] == 5
+    assert metrics["errors_before_repair"] > 0
+    assert metrics["target_nominal"] == 100
+    assert metrics["target_effective"] == 100  # unchanged until Task 14.3
+    assert metrics["words"] == 100
+
+
+async def test_pipeline_happy_path_section_checkpoint_has_unrepaired_metrics(db):
+    project = await _project(db)
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {"title": "T", "sections": [{"index": 1, "objective": "cover the full topic here", "target_words": 100}]}
+    )
+    section_json = json.dumps(
+        [
+            {"speaker_id": alex_id, "text": _words(25, 0)},
+            {"speaker_id": maya_id, "text": _words(25, 25)},
+            {"speaker_id": alex_id, "text": _words(25, 50)},
+            {"speaker_id": maya_id, "text": _words(25, 75)},
+        ]
+    )
+    router, gemini, _local = _build_router([_result(outline_json), _result(section_json)])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    checkpoints = await ai_job_service.get_valid_checkpoints(db, job["id"])
+    section_checkpoint = next(c for c in checkpoints if c["section_index"] == 1)
+    metrics = json.loads(section_checkpoint["metrics_json"])
+    assert metrics["repaired"] is False
+    assert metrics["words_before_repair"] is None
+    assert metrics["errors_before_repair"] == 0
+
+
+async def test_pipeline_hybrid_fallback_records_fallback_telemetry(db, monkeypatch):
+    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    project = await _project(db)
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {"title": "T", "sections": [{"index": 1, "objective": "cover the full topic here", "target_words": 100}]}
+    )
+    section_json = json.dumps(
+        [
+            {"speaker_id": alex_id, "text": _words(25, 0)},
+            {"speaker_id": maya_id, "text": _words(25, 25)},
+            {"speaker_id": alex_id, "text": _words(25, 50)},
+            {"speaker_id": maya_id, "text": _words(25, 75)},
+        ]
+    )
+    # AI_TRANSIENT_MAX_ATTEMPTS=4: local exhausts on the outline call; failure_threshold=1
+    # opens the circuit immediately after, so the section call skips straight to gemini
+    # (matches the plan's "no nested retries" / one-fallback-per-route shape).
+    local = FakeProvider("ollama", [ProviderUnavailableError("down")] * 4)
+    gemini = FakeProvider("gemini", [_result(outline_json), _result(section_json)])
+    router = AIRouter(local=local, gemini=gemini, mode=AIMode.HYBRID, failure_threshold=1, cooldown_seconds=60.0)
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete"
+    assert final_job["fallback_used"] == 1
+    assert final_job["fallback_count"] >= 1
+    # "fake-gemini" -- this test file's own `_result()` helper's hardcoded provider
+    # name (the router trusts whatever `GenerationResult.provider` the provider
+    # returns; it never derives it from the FakeProvider's own `name`).
+    assert final_job["actual_provider"] == "fake-gemini"
+
+
+@pytest.mark.parametrize(
+    "outcomes,expected_error_code",
+    [
+        ([ProviderUnavailableError("down")] * 4, "provider_unavailable"),
+        ([ProviderTimeoutError("slow")] * 4, "provider_timeout"),
+        ([ProviderRateLimitError("429")] * 4, "provider_rate_limited"),
+        ([ProviderAuthError("bad key")] * 1, "provider_auth"),
+        ([ProviderInvalidResponseError("bad shape")] * 2, "provider_invalid_response"),
+    ],
+)
+async def test_pipeline_maps_provider_errors_to_specific_error_codes(db, monkeypatch, outcomes, expected_error_code):
+    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    project = await _project(db)
+    router, gemini, _local = _build_router(list(outcomes))
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "error"
+    assert final_job["error_code"] == expected_error_code
+    assert final_job["error_code"] != "handler_exception"
+    # the outline call itself is telemetered even though it failed the job.
+    calls = json.loads(final_job["metrics_json"])["calls"]
+    assert calls[-1]["outcome"] == "error"
+    assert calls[-1]["purpose"] == "script_outline"
+    lines = await script_service.get_script(db, project["id"])
+    assert lines == []  # no partial script from a job that never got past the outline

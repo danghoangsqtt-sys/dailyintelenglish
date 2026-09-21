@@ -1,6 +1,6 @@
 # Task 14.2 — Job Telemetry: Repair, Fallback, Provider, Attempts, Error Codes
 
-- **Status:** in_progress
+- **Status:** done
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** 14.1 (uses `GenerationResult.attempts`/`backoff_seconds`)
@@ -171,6 +171,32 @@ Additive. Nothing to reverse; the frontend already renders `job.fallback_used`.
     job's HTTP response carries `"metrics": {}` and never a raw `metrics_json`
     key, keeping the existing secret-absence/projection tests' own style.
 - Commands and results:
-- Deviations:
+  - `venv\Scripts\python.exe -m ruff check app/services/ai_job_service.py app/core/constants.py app/models/ai_job.py app/services/script_pipeline.py app/services/learning_pipeline.py tests/test_ai_job_service.py tests/test_script_pipeline.py tests/test_learning_pipeline.py tests/test_ai_jobs_api.py` → All checks passed (checked incrementally, file by file, as each was written).
+  - `venv\Scripts\python.exe -m pytest tests/test_ai_job_service.py -q` → 60 passed.
+  - `venv\Scripts\python.exe -m pytest tests/test_script_pipeline.py -q` → 31 passed (22 pre-existing + 9 new).
+  - `venv\Scripts\python.exe -m pytest tests/test_learning_pipeline.py -q` → 24 passed.
+  - `venv\Scripts\python.exe -m pytest tests/test_ai_jobs_api.py -q` → 14 passed (12 pre-existing + 2 new).
+  - `venv\Scripts\python.exe -m ruff check app tests scripts` (full) → All checks passed.
+  - `venv\Scripts\python.exe -m pytest -q` (full suite) → **848 passed**, 0 failed, in 349.07s
+    (baseline after 14.1 was 814; net +34 across the four touched test files).
+- Deviations: none -- all allowed-file edits stayed within `app/services/ai_job_service.py`,
+  `app/services/script_pipeline.py`, `app/services/learning_pipeline.py`,
+  `app/models/ai_job.py`, `app/core/constants.py`, and their four test files.
+  `app/api/ai_jobs.py` was **not** touched (see "Plan/decisions" above: the
+  `AIJobOut` `model_validator` derives `metrics` from `metrics_json` without any
+  route change). `app/core/exceptions.py` was not touched (not needed --
+  `provider_error_code` only imports from it).
 - Revert-and-confirm-failure evidence:
+  - Commented out the `repair_count = repair_count + 1` clause in
+    `ai_job_service.record_generation_call` and re-ran
+    `venv\Scripts\python.exe -m pytest tests/test_ai_job_service.py::test_record_generation_call_increments_repair_count_only_for_is_repair tests/test_script_pipeline.py::test_pipeline_repair_sets_repair_count_and_checkpoint_metrics tests/test_learning_pipeline.py::test_pipeline_repair_sets_repair_count -q`:
+    **3 failed** -- all three `assert final_job["repair_count"] == 1` /
+    `assert after_repair["repair_count"] == 1` became `assert 0 == 1`, confirming
+    the increment (not something else, e.g. the pipeline's own repair-trigger
+    logic) is what the test actually depends on. Restored the clause and re-ran
+    the same three tests: **3 passed**.
 - Commit(s):
+  - (pending) -- feat(ai): Task 14.2 job telemetry (record_generation_call,
+    provider_error_code, AIJobOut.metrics, section checkpoint metrics_json, both
+    pipelines' error-code mapping) + this task card's execution record and
+    PHASE-STATE update.
