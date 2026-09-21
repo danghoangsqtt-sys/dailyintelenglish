@@ -38,6 +38,9 @@ def test_generation_result_defaults():
     assert result.tokens_used is None
     assert result.fallback_used is False
     assert result.circuit_open is False
+    assert result.attempts == 1
+    assert result.backoff_seconds == 0.0
+    assert result.transient_errors == []
 
 
 def test_generation_result_rejects_negative_latency():

@@ -182,6 +182,14 @@ AI_MODES = ("gemini", "local", "hybrid")
 AI_CIRCUIT_FAILURE_THRESHOLD = 3
 AI_CIRCUIT_COOLDOWN_SECONDS = 60.0
 
+# Phase 14 Task 14.1 -- bounded exponential backoff for transient provider errors
+# (HTTP 503/429/timeout) only; content-shaped errors keep the old one-immediate-
+# retry policy (see AIRouter._TRANSIENT_ERRORS / _CONTENT_RETRY_ERRORS).
+AI_TRANSIENT_MAX_ATTEMPTS = 4
+AI_TRANSIENT_BACKOFF_BASE_SECONDS = 1.0
+AI_TRANSIENT_BACKOFF_MAX_SECONDS = 4.0
+AI_BACKOFF_MIN_REMAINING_SECONDS = 5.0
+
 # Phase 13 -- durable AI generation jobs (app/services/ai_job_service.py, ai_worker.py).
 AI_JOB_OPERATIONS = ("script", "learning")
 AI_JOB_STATUSES = ("pending", "running", "validating", "complete", "error", "cancelled", "stale")

@@ -1,5 +1,6 @@
-"""Central AI router: AI_MODE selection, one-retry policy, one Gemini fallback,
-and an in-process circuit breaker over the local provider (Phase 13, ADR-001).
+"""Central AI router: AI_MODE selection, bounded per-provider retry with
+exponential backoff for transient errors, one Gemini fallback, and an
+in-process circuit breaker over the local provider (Phase 13/14, ADR-001).
 
 Retry/fallback/circuit-breaker policy lives here, never inside a provider -- see
 `contracts.Provider`'s docstring for why (no nested retries).
@@ -10,9 +11,18 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from asyncio import sleep
 from dataclasses import dataclass
 
-from app.core.constants import AI_CIRCUIT_COOLDOWN_SECONDS, AI_CIRCUIT_FAILURE_THRESHOLD, GEMINI_MODEL
+from app.core.constants import (
+    AI_BACKOFF_MIN_REMAINING_SECONDS,
+    AI_CIRCUIT_COOLDOWN_SECONDS,
+    AI_CIRCUIT_FAILURE_THRESHOLD,
+    AI_TRANSIENT_BACKOFF_BASE_SECONDS,
+    AI_TRANSIENT_BACKOFF_MAX_SECONDS,
+    AI_TRANSIENT_MAX_ATTEMPTS,
+    GEMINI_MODEL,
+)
 from app.core.exceptions import (
     ProviderError,
     ProviderInvalidResponseError,
@@ -45,15 +55,24 @@ def build_ai_router_from_settings() -> "AIRouter":
     gemini = GeminiProvider(api_key=settings.GEMINI_API_KEY, model=GEMINI_MODEL)
     return AIRouter(local=local, gemini=gemini, mode=AIMode(settings.AI_MODE))
 
-# Infrastructure/transient errors worth one same-provider retry. ProviderAuthError is
-# deliberately excluded -- a bad key/config will not fix itself on a second attempt.
-_RETRYABLE_ERRORS = (
+# Infrastructure/transient errors: ordinary overload/rate-limit/timeout conditions
+# that resolve themselves given a moment -- worth up to AI_TRANSIENT_MAX_ATTEMPTS
+# same-provider attempts with exponential backoff between them (Task 14.1).
+_TRANSIENT_ERRORS = (
     ProviderTimeoutError,
     ProviderUnavailableError,
     ProviderRateLimitError,
+)
+# Content-shaped errors: the provider responded, but the response itself was
+# malformed/unparseable -- not an infrastructure condition, so no backoff. Kept at
+# the pre-14.1 policy of exactly one immediate retry (the semantic-repair budget
+# in script_pipeline.py is what actually recovers from persistent content issues).
+_CONTENT_RETRY_ERRORS = (
     ProviderInvalidResponseError,
     SchemaValidationError,
 )
+# ProviderAuthError (and any other ProviderError not listed above) is deliberately
+# excluded from both tuples -- a bad key/config will not fix itself on a retry.
 
 
 @dataclass
@@ -108,31 +127,34 @@ class AIRouter:
             ProviderError (or a subclass): If every attempt this mode allows fails,
                 or the deadline elapses first.
         """
+        deadline_at = time.monotonic() + request.deadline_seconds
         try:
-            return await asyncio.wait_for(self._route(request), timeout=request.deadline_seconds)
+            return await asyncio.wait_for(
+                self._route(request, deadline_at), timeout=request.deadline_seconds
+            )
         except TimeoutError as exc:
             raise ProviderTimeoutError(
                 f"AI router deadline of {request.deadline_seconds}s exceeded"
             ) from exc
 
-    async def _route(self, request: GenerationRequest) -> GenerationResult:
+    async def _route(self, request: GenerationRequest, deadline_at: float) -> GenerationResult:
         if self._mode is AIMode.GEMINI:
-            return await self._attempt_with_one_retry(self._gemini, request)
+            return await self._attempt(self._gemini, request, deadline_at)
 
         if self._mode is AIMode.LOCAL:
-            return await self._attempt_with_one_retry(self._local, request)
+            return await self._attempt(self._local, request, deadline_at)
 
         # hybrid: local first (unless the circuit is open), one visible Gemini fallback.
         if self._circuit.is_open():
             logger.info(
                 "ai_router_circuit_open provider=%s purpose=%s", self._local.name, request.purpose
             )
-            result = await self._attempt_with_one_retry(self._gemini, request)
+            result = await self._attempt(self._gemini, request, deadline_at)
             result.circuit_open = True
             return result
 
         try:
-            return await self._attempt_with_one_retry(self._local, request)
+            return await self._attempt(self._local, request, deadline_at)
         except ProviderError as exc:
             self._circuit.record_failure()
             logger.warning(
@@ -141,27 +163,74 @@ class AIRouter:
                 request.purpose,
                 type(exc).__name__,
             )
-            result = await self._attempt_with_one_retry(self._gemini, request)
+            result = await self._attempt(self._gemini, request, deadline_at)
             result.fallback_used = True
             return result
 
-    async def _attempt_with_one_retry(
-        self, provider: Provider, request: GenerationRequest
+    async def _attempt(
+        self, provider: Provider, request: GenerationRequest, deadline_at: float
     ) -> GenerationResult:
-        """Call `provider` once; retry exactly once more on a retryable error class."""
-        try:
-            result = await self._call(provider, request, attempt=1)
-        except _RETRYABLE_ERRORS as exc:
-            logger.warning(
-                "ai_router_retry provider=%s purpose=%s error=%s",
-                provider.name,
-                request.purpose,
-                type(exc).__name__,
-            )
-            result = await self._call(provider, request, attempt=2)
-        if provider is self._local:
-            self._circuit.record_success()
-        return result
+        """Call `provider`, absorbing transient errors with capped exponential
+        backoff (up to `AI_TRANSIENT_MAX_ATTEMPTS` attempts total, never sleeping
+        past `deadline_at`) and content errors with exactly one immediate retry."""
+        attempt = 1
+        backoff_seconds = 0.0
+        transient_errors: list[str] = []
+        while True:
+            try:
+                result = await self._call(provider, request, attempt=attempt)
+            except _TRANSIENT_ERRORS as exc:
+                transient_errors.append(type(exc).__name__)
+                if attempt >= AI_TRANSIENT_MAX_ATTEMPTS:
+                    self._log_exhausted(provider, request, attempt, backoff_seconds)
+                    raise
+                delay = min(
+                    AI_TRANSIENT_BACKOFF_BASE_SECONDS * (2 ** (attempt - 1)),
+                    AI_TRANSIENT_BACKOFF_MAX_SECONDS,
+                )
+                remaining = deadline_at - time.monotonic()
+                if remaining < delay + AI_BACKOFF_MIN_REMAINING_SECONDS:
+                    self._log_exhausted(provider, request, attempt, backoff_seconds)
+                    raise
+                logger.warning(
+                    "ai_router_backoff provider=%s purpose=%s attempt=%d delay_seconds=%.1f error=%s",
+                    provider.name,
+                    request.purpose,
+                    attempt,
+                    delay,
+                    type(exc).__name__,
+                )
+                await sleep(delay)
+                backoff_seconds += delay
+                attempt += 1
+            except _CONTENT_RETRY_ERRORS as exc:
+                if attempt >= 2:
+                    raise
+                logger.warning(
+                    "ai_router_retry provider=%s purpose=%s error=%s",
+                    provider.name,
+                    request.purpose,
+                    type(exc).__name__,
+                )
+                attempt += 1
+            else:
+                result.attempts = attempt
+                result.backoff_seconds = backoff_seconds
+                result.transient_errors = transient_errors
+                if provider is self._local:
+                    self._circuit.record_success()
+                return result
+
+    def _log_exhausted(
+        self, provider: Provider, request: GenerationRequest, attempts: int, backoff_seconds: float
+    ) -> None:
+        logger.warning(
+            "ai_router_exhausted provider=%s purpose=%s attempts=%d backoff_seconds=%.1f",
+            provider.name,
+            request.purpose,
+            attempts,
+            backoff_seconds,
+        )
 
     async def _call(
         self, provider: Provider, request: GenerationRequest, attempt: int

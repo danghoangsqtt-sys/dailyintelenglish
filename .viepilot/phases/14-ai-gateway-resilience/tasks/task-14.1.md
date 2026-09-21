@@ -1,6 +1,6 @@
 # Task 14.1 — Bounded Exponential Backoff for Transient Provider Errors
 
-- **Status:** in_progress
+- **Status:** blocked (awaiting PM amendment -- see Deviations)
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** none (first task of the phase)
@@ -129,6 +129,54 @@ Task 13.7 behaviour without a code revert.
     `monkeypatch.setattr("app.services.ai.router.sleep", ...)` no-op/recorder
     so the suite stays fast and deterministic.
 - Commands and results:
+  - `venv\Scripts\python.exe -m ruff check app/services/ai/router.py app/services/ai/contracts.py app/core/constants.py tests/test_ai_router.py tests/test_ai_logging.py tests/test_ai_contracts.py` → All checks passed.
+  - `venv\Scripts\python.exe -m ruff check app tests scripts` (full) → All checks passed.
+  - `venv\Scripts\python.exe -m pytest tests/test_ai_router.py tests/test_ai_logging.py tests/test_ai_contracts.py -q` → 30 passed.
+  - `venv\Scripts\python.exe -m pytest -q` (full suite) → **4 failed, 810 passed** in 451.53s.
+    Failures, all outside this task's allowed files:
+    - `tests/test_learning_service.py::test_generate_learning_pack_wraps_provider_error`
+    - `tests/test_script_service.py::test_generate_script_wraps_provider_error_as_script_generation_error`
+    - `tests/test_script_service.py::test_regenerate_line_wraps_provider_error_as_script_generation_error`
+    - `tests/test_youtube_service.py::test_generate_package_wraps_provider_error`
 - Deviations:
+  - **BLOCKED -- stop condition per plan §6 Task 14.1 ("Anything else → stop and ask
+    the PM to amend the plan") and §"Work packages" ("A newly discovered required
+    file pauses that task ... Coder reports; PM amends; Coder resumes").**
+  - Root cause (not a router bug): all 4 failing tests script exactly 2
+    `ProviderUnavailableError` outcomes to exercise the pre-14.1 "exhausts after 1
+    retry (2 total attempts)" policy -- e.g.
+    `tests/test_script_service.py:104-106`:
+    `router = _gateway_router(AIMode.GEMINI, [ProviderUnavailableError("down"), ProviderUnavailableError("still down")])`.
+    Under 14.1's `AI_TRANSIENT_MAX_ATTEMPTS = 4`, the router now makes a 3rd call,
+    the `FakeProvider` runs out of scripted outcomes, and it raises
+    `RuntimeError("FakeProvider('fake-gemini') has no more scripted outcomes")`
+    instead of the `ProviderUnavailableError` these tests expect to see wrapped
+    into `ScriptGenerationError`/`LearningGenerationError`/`YouTubePackageGenerationError`.
+    This is the exact same mechanical fix already applied in this task's own
+    `tests/test_ai_router.py` and `tests/test_ai_logging.py` (script 4 outcomes
+    instead of 2, and patch `app.services.ai.router.sleep` to a no-op so the test
+    doesn't really wait out 1s+2s+4s=7s of backoff) -- it is not a design question,
+    just a file outside this task's allowed list
+    (`app/services/ai/router.py`, `app/services/ai/contracts.py`,
+    `app/core/constants.py`, `app/core/exceptions.py`, `tests/test_ai_router.py`,
+    `tests/test_ai_contracts.py`, `tests/test_ai_logging.py`,
+    `tests/test_ai_providers.py`).
+  - Requested PM amendment: add `tests/test_learning_service.py`,
+    `tests/test_script_service.py`, `tests/test_youtube_service.py` to Task 14.1's
+    allowed files (or confirm the Coder should wait for a separate PM-authored
+    amendment task), so the Coder can apply the same 2→4-outcome +
+    sleep-patch fix there and get the full suite back to green.
+  - Implementation itself (router.py/contracts.py/constants.py) is complete and
+    its own tests (`test_ai_router.py`, `test_ai_logging.py`, `test_ai_contracts.py`,
+    30 tests) are green; the block is scoped exactly to these 4 pre-existing tests
+    in other services' test files.
 - Revert-and-confirm-failure evidence:
-- Commit(s):
+  - Commented out `await sleep(delay)` in `app/services/ai/router.py` (replaced
+    with a comment, `backoff_seconds` still accumulated) and re-ran
+    `venv\Scripts\python.exe -m pytest tests/test_ai_router.py::test_delay_sequence_is_one_two_four_on_repeated_transient_errors -q`:
+    **1 failed** -- `assert sleep_calls == [1.0, 2.0, 4.0]` became
+    `assert [] == [1.0, 2.0, 4.0]` (captured log still showed the three
+    `ai_router_backoff` lines, confirming the delay computation ran but the
+    actual wait was the thing removed). Restored `await sleep(delay)` and re-ran
+    `venv\Scripts\python.exe -m pytest tests/test_ai_router.py -q`: **17 passed**.
+- Commit(s): (pending -- not committed while blocked; PM amendment needed first)

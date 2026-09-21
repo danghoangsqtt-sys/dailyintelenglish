@@ -30,9 +30,24 @@ SECRET_RESPONSE_MARKER = "SECRET_RESPONSE_MARKER_model_output_67890"
 FAKE_API_KEY = "super-secret-fake-api-key-never-log-me"
 
 
+@pytest.fixture(autouse=True)
+def _patch_router_sleep(monkeypatch):
+    """No-op the router's module-local `sleep` (Task 14.1) so a transient-error
+    exhaustion path in these tests doesn't really wait out 1s+2s+4s of backoff --
+    see tests/test_ai_router.py's `sleep_calls` fixture for the same pattern."""
+
+    async def _fake_sleep(delay: float) -> None:
+        return None
+
+    monkeypatch.setattr("app.services.ai.router.sleep", _fake_sleep)
+
+
 def _request() -> GenerationRequest:
+    # 30s: comfortably above AI_TRANSIENT_MAX_ATTEMPTS=4's backoff-affordability
+    # checks even with `sleep` patched to a no-op -- the deadline check uses real
+    # wall-clock time, not a simulated one (see tests/test_ai_router.py).
     return GenerationRequest(
-        prompt=SECRET_PROMPT_MARKER, deadline_seconds=5, purpose="test_ai_logging"
+        prompt=SECRET_PROMPT_MARKER, deadline_seconds=30, purpose="test_ai_logging"
     )
 
 
@@ -83,9 +98,7 @@ async def test_retry_sequence_never_logs_prompt_or_response(caplog):
 
 @pytest.mark.asyncio
 async def test_hybrid_fallback_never_logs_prompt_or_response(caplog):
-    local = FakeProvider(
-        "ollama", [ProviderUnavailableError("down"), ProviderUnavailableError("still down")]
-    )
+    local = FakeProvider("ollama", [ProviderUnavailableError("down")] * 4)
     gemini = FakeProvider("gemini", [_result("gemini")])
     router = AIRouter(local=local, gemini=gemini, mode=AIMode.HYBRID)
 
@@ -100,7 +113,7 @@ async def test_hybrid_fallback_never_logs_prompt_or_response(caplog):
 async def test_circuit_breaker_open_never_logs_prompt_or_response(caplog):
     local_outcomes = []
     for _ in range(3):
-        local_outcomes.extend([ProviderUnavailableError("down"), ProviderUnavailableError("down")])
+        local_outcomes.extend([ProviderUnavailableError("down")] * 4)
     local = FakeProvider("ollama", local_outcomes)
     gemini = FakeProvider("gemini", [_result("gemini") for _ in range(4)])
     router = AIRouter(local=local, gemini=gemini, mode=AIMode.HYBRID, failure_threshold=3, cooldown_seconds=60.0)
@@ -117,12 +130,8 @@ async def test_total_failure_never_logs_prompt_or_response(caplog):
     """Every attempt failing (both providers exhausted) is the path most likely to
     tempt a future change into logging response/error detail for debugging --
     locked down here so that temptation is caught by a test, not code review alone."""
-    local = FakeProvider(
-        "ollama", [ProviderUnavailableError("down"), ProviderUnavailableError("still down")]
-    )
-    gemini = FakeProvider(
-        "gemini", [ProviderUnavailableError("down too"), ProviderUnavailableError("still down too")]
-    )
+    local = FakeProvider("ollama", [ProviderUnavailableError("down")] * 4)
+    gemini = FakeProvider("gemini", [ProviderUnavailableError("down too")] * 4)
     router = AIRouter(local=local, gemini=gemini, mode=AIMode.HYBRID)
 
     with caplog.at_level(logging.DEBUG):
