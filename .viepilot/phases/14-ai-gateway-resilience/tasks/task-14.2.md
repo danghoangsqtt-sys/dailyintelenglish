@@ -1,6 +1,6 @@
 # Task 14.2 — Job Telemetry: Repair, Fallback, Provider, Attempts, Error Codes
 
-- **Status:** pending
+- **Status:** in_progress
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** 14.1 (uses `GenerationResult.attempts`/`backoff_seconds`)
@@ -92,6 +92,84 @@ Additive. Nothing to reverse; the frontend already renders `job.fallback_used`.
 ## Execution record (Coder fills in)
 
 - Plan/decisions before code:
+  - `ai_job_service.record_generation_call(db, job_id, call, commit=True)`: one
+    SELECT (to check status + read current `metrics_json`) + one UPDATE, inside the
+    caller's transaction. Terminal status → `ValidationError`. `metrics_json.calls`
+    bounded to `AI_JOB_MAX_RECORDED_CALLS` (new constant, `app/core/constants.py`)
+    by slicing to the last N entries (drop oldest). `actual_provider`/`model` set
+    via `COALESCE(:value, existing)` in the UPDATE, **not** a plain overwrite --
+    an `outcome="error"` call has `provider=None`/`model=None` and must never null
+    out a value a prior successful call on the same job already set.
+    `fallback_used`/`fallback_count`/`fallback_reason` update only when
+    `call["fallback_used"]` is truthy; `repair_count` increments only when
+    `call["is_repair"]` is truthy.
+  - `fallback_reason`: the plan says "the safe error class name of the local
+    failure, if provided". The router (14.1, `contracts.py` -- outside this task's
+    allowed files) does not currently surface the local provider's failure type on
+    `GenerationResult` at all (only `fallback_used: bool`), so the pipeline has no
+    such value to give it in this task. `record_generation_call` accepts an
+    optional `call["fallback_reason"]` key and sets it when present ("if
+    provided"); neither pipeline populates it in 14.2. Left as a candidate for a
+    small `contracts.py` addition in a later task if the PM wants it -- flagging
+    here rather than silently doing nothing or scope-creeping into 14.1's closed
+    file set.
+  - `ai_job_service.provider_error_code(exc: ProviderError) -> str`: a lookup
+    table (`ProviderUnavailableError`->`provider_unavailable`,
+    `ProviderTimeoutError`->`provider_timeout`,
+    `ProviderRateLimitError`->`provider_rate_limited`,
+    `ProviderAuthError`->`provider_auth`,
+    `ProviderInvalidResponseError`->`provider_invalid_response`), falling back to
+    `"provider_error"` for the base class or any other subclass (incl.
+    `SchemaValidationError`, which the plan's own enumeration excludes from the
+    five specific codes -- it is a `ProviderError` subclass but is not expected to
+    reach this function in practice: it is raised only by
+    `app/services/ai/validation.py:parse_and_validate` *after* a successful
+    `router.generate()`, never by the router/provider layer itself in the current
+    codebase -- confirmed by `grep -rn SchemaValidationError app/services/ai`).
+  - Per-call recording point: a small `_call_router(db, job_id, router, request,
+    *, section_index, is_repair)` wrapper added to *each* pipeline module (small,
+    intentional duplication -- matches the existing `_fail`/`_cancel`-per-module
+    convention rather than adding cross-module coupling for ~15 lines). It calls
+    `router.generate(request)` with **no transaction open**, then opens its own
+    short `write_transaction` purely to call `record_generation_call` (success or
+    `except ProviderError`, then re-raise). This is what keeps a transaction from
+    ever spanning the actual inference call (explicitly forbidden). Both
+    pipelines' `_generate_*`/`_repair_*` helpers gain `db`/`job_id` parameters to
+    route through this wrapper instead of calling `router.generate` directly.
+  - Orchestration (`_run_script_job`/`_run_learning_job`) wraps each `_generate_*`
+    call in `try/except ProviderError as exc: await _fail_provider(db, job_id,
+    exc); return` (a new small helper mirroring the existing `_fail` shape but
+    keyed off an exception). `SchemaValidationError` is still caught *first* and
+    separately where it already was (raised by `parse_and_validate`, a distinct
+    code path from the router-call try/except) -- `except` order matters since
+    `SchemaValidationError` is itself a `ProviderError` subclass.
+  - Section checkpoint `metrics_json` (script pipeline only -- learning has no
+    section concept): computed in the per-section loop from data already in
+    scope. `target_effective` is set equal to `target_nominal`
+    (`section_spec.target_words`) in this task -- 14.3 is the one that makes them
+    differ. `repaired`/`words_before_repair`/`errors_before_repair` are only
+    meaningful once a repair actually ran; `words_before_repair` is `None` (not
+    `0`) when no repair happened, matching the plan's "(nullable)" annotation.
+  - `AIJobOut.metrics: dict`: added via a Pydantic `model_validator(mode="before")`
+    that derives `metrics` from the raw `metrics_json` string column (parsed,
+    `{}` on any parse failure) when the input dict doesn't already carry a
+    `metrics` key. This means **no change to `app/api/ai_jobs.py`** is needed --
+    every route already does `AIJobOut.model_validate(job)`, so the derivation
+    happens for free at the model layer, and the file's "only if the projection
+    needs it" allowance is exercised by *not* touching it.
+  - Test-file decision for verification item 5 (API returns `metrics.calls[]`):
+    `tests/test_ai_jobs_api.py`'s existing tests are all plain sync `def
+    test_(client):` using `TestClient` -- there is no established pattern in this
+    codebase for driving an async `ai_job_service` call against the same
+    live/shared DB connection from inside that file without event-loop-binding
+    risk (see `conftest.py`'s `_reset_write_lock` docstring for the exact hazard
+    class). Rather than introduce a first-of-its-kind async/TestClient mixing
+    pattern for one field, the deep verification (`metrics.calls[]` actually
+    populated, in the exact shape `AIJobOut` -- the same model the route uses --
+    produces) lands in `tests/test_ai_job_service.py` (direct, async, no HTTP).
+    `tests/test_ai_jobs_api.py` gets one small sync addition confirming a fresh
+    job's HTTP response carries `"metrics": {}` and never a raw `metrics_json`
+    key, keeping the existing secret-absence/projection tests' own style.
 - Commands and results:
 - Deviations:
 - Revert-and-confirm-failure evidence:
