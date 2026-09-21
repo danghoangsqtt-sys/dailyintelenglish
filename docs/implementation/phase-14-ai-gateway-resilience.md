@@ -322,6 +322,18 @@ Existing unrelated changes are never staged. Commits contain explicit paths only
 `tests/test_ai_contracts.py`, `tests/test_ai_logging.py`,
 `tests/test_ai_providers.py` (only if the retry-after hint is implemented).
 
+**Amendment A (PM, 2026-09-21, after Coder commit `2384578` reported the block):**
+`tests/test_learning_service.py`, `tests/test_script_service.py`,
+`tests/test_youtube_service.py` are added — **test-only, exactly the four
+`*_wraps_provider_error*` tests** that script two `ProviderUnavailableError` outcomes to
+model the pre-14.1 "exhaust after one retry" policy. Under four attempts the router makes
+a third call, `FakeProvider` runs out of scripted outcomes, and the test sees
+`RuntimeError` instead of the wrapped provider error (PM reproduced: 4 failed, and the
+run took ~12.8 s because the backoff genuinely slept 1 s + 2 s per test). Required fix
+shape: script four transient outcomes so the router exhausts for real, and patch
+`app.services.ai.router.sleep` to a no-op recorder so no test sleeps. No assertion about
+the wrapping behaviour changes. No production file is added.
+
 **Actions:** implement §4.1 exactly. Import `sleep` as a module-local name
 (`from asyncio import sleep`) so tests patch `app.services.ai.router.sleep`, never the
 global `asyncio.sleep` (see `tests/test_script_service.py` history for why). Keep
