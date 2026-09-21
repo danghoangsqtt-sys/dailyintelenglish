@@ -1808,8 +1808,26 @@ per Google project; multiple projects break the API terms; 503s killed 3/5 befor
 out); finer chunking already exists and burns the per-request quota faster; the UI costs no
 quota; local text quality was never the failing factor.
 
-### 14.7 Local-only mode, config-first — pending (Coder; doc-first cards to be PM-reviewed first)
-### 14.8 Local hardening: over-length sections + consecutive-lines rule — pending (Coder, after 14.7)
+### 14.7 Local-only mode, config-first — ✅ DONE (2026-09-21, Coder; PM-accepted)
+
+- [x] `AI_MODE` default `local`; `set_ai_mode` rejects `gemini`/`hybrid` unless the new
+  `DIE_AI_ALLOW_CLOUD=true` (only new switch); Settings mode selector + API-key form replaced by a
+  read-only status line; `/api/ai/health` drops `gemini_fallback_configured`, adds `cloud_enabled`;
+  Step 2/3 gate the generate button on live health with inline install/pull guidance;
+  `check_dependencies.py` treats Ollama + `qwen3.5:9b` as required (verified live); README/CHANGELOG
+  updated; FakeProvider tests prove thumbnail and YouTube run under `AI_MODE=local`. Commits
+  `1661708` (design), `518dd0a` (code), `d623b29` (Amendment F fix-up). Coder-reported full suite
+  **879 passed**.
+- [x] **Amendments E/F** (PM): E added the thumbnail/YouTube test files omitted from the allowed
+  list and settled the selector (read-only line) and health-field (drop + `cloud_enabled`) choices;
+  F added `tests/test_ai_jobs_api.py` (one stale assertion) and `frontend/pages/step6_thumbnail.html`
+  (stale "Pillow + Gemini text" badge) and required the missing YouTube local-mode test, which the
+  Coder had not flagged.
+- [x] **PM acceptance review (independent):** diff limited to the allowed list; a case-insensitive
+  grep for "gemini" across `frontend/` returns 0 lines; 97 targeted tests pass; `ruff` clean.
+  PM-side docs: `docs/api.md` regenerated (no route-doc change), `docs/operations/local-ai.md`
+  rewritten for the local-only runtime contract, HANDOFF `tech_stack.thumbnail` corrected.
+### 14.8 Local hardening: over-length sections + consecutive-lines rule — ⏳ IN PROGRESS (Coder)
 ### 14.9 Gate B-3, local only — pending (PM, after 14.8)
 ### 14.6 Resume Task 13.10, local-only (revised) — pending (after 14.9)
 

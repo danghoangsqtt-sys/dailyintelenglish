@@ -97,9 +97,13 @@ winget uninstall Ollama.Ollama
 # D:\DataAdmin\OllamaModels manually if reclaiming disk space is required.
 ```
 
-`GET /api/ai/health` (application endpoint, Task 13.6) reports AI mode, Ollama
-reachability, model presence/digest, and fallback configuration to the app itself —
-it never exposes the Gemini key, and its absence never fails application startup.
+`GET /api/ai/health` (application endpoint, Task 13.6; payload revised in Task 14.7)
+reports AI mode, Ollama reachability, model presence/digest, and `cloud_enabled`
+(always `false` unless `DIE_AI_ALLOW_CLOUD=true`) to the app itself — it never exposes
+any key, and its absence never fails application startup. Since Phase 14 (ADR-001 A2)
+**Ollama is the only supported AI runtime**: the app still starts without it, but Step 2
+(script) and Step 3 (learning) disable their generate buttons and show install/pull
+guidance until `ollama_reachable` and `model_present` are both true.
 
 ## 4. Runtime auto-update / digest-change requalification
 
@@ -108,8 +112,8 @@ and one exact model digest, **any observed change to either value invalidates th
 result and requires requalification**, not just noting the change:
 
 - Compare `ollama --version` / `/api/version` against the digest recorded in this
-  document and in the Gate A evidence file before trusting local-primary/hybrid mode
-  after any Windows or Ollama update.
+  document and in the Gate A evidence file before trusting local mode after any
+  Windows or Ollama update.
 - Compare `ollama show qwen3.5:9b`'s digest against
   `6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7`. A different
   digest (including a silent upstream re-tag of `qwen3.5:9b`) means re-run
@@ -126,19 +130,20 @@ result and requires requalification**, not just noting the change:
 | `ollama list` / `ollama show` reports the model missing | Model was never pulled, or `OLLAMA_MODELS` points elsewhere | `& $ollama pull qwen3.5:9b`; confirm `OLLAMA_MODELS` with `[Environment]::GetEnvironmentVariable('OLLAMA_MODELS','User')` |
 | `ollama ps` does not show `100% GPU` | Driver too old, VRAM already consumed by another process, or model too large for free VRAM | Confirm driver ≥ Ollama's documented Windows minimum (551.61; this machine runs 616.56); close other GPU workloads; do not fall back to CPU offload silently — treat as a Gate A regression |
 | Generation succeeds but VRAM/RAM headroom is thin | Concurrent GPU load from another app, or a longer context in use | Re-run `qualify_local_ai.py`; if only headroom fails, apply the plan's ordered mitigations in order and record each: (1) reduce context to 8192, (2) enable Flash Attention if the installed build supports it, (3) switch KV cache to `q8_0`. Never silently drop to `q4` KV cache or a different model. |
-| App starts but shows AI mode degraded | Ollama stopped, or `DIE_AI_MODE=local` with no reachable runtime | Set `DIE_AI_MODE=gemini` (or `hybrid`) and restart; this is the documented rollback path, not a bug |
+| App starts but Step 2/3 show "Ollama not reachable / model missing" guidance | Ollama stopped, model not pulled, or `OLLAMA_MODELS` pointing at an empty directory | Start Ollama with the full environment from §2 and confirm `/api/tags` shows digest `6488c96fa5fa…`; there is no cloud fallback since Phase 14 (ADR-001 A2). Re-enabling the dormant Gemini path requires `DIE_AI_ALLOW_CLOUD=true`, `DIE_AI_MODE=hybrid` or `gemini` and a key, and is unsupported |
 
 ## 6. Privacy
 
 - With `OLLAMA_NO_CLOUD=1` and a loopback-only listener, prompts sent to the local
   `qwen3.5:9b` model never leave this machine and never reach Ollama's own cloud
   relay service.
-- The hybrid/Gemini fallback path is a **cloud** flow: when local mode is disabled, or
-  as a bounded automatic fallback in `hybrid` mode, the prompt and generated content
-  are sent to Google's Gemini API over the network. Phase 13's job records make this
-  visible (`fallback_used`, `fallback_reason`) rather than silent.
-- Only the Gemini API key is a secret; it stays masked in the existing settings API.
-  Ollama requires no API key for local use.
+- Since Phase 14 (owner decision D9, ADR-001 A2) no prompt or generated content leaves
+  this machine: the Gemini cloud path is dormant and cannot be selected unless
+  `DIE_AI_ALLOW_CLOUD=true` is set explicitly. If it ever is, that path is a **cloud**
+  flow (prompt and content sent to Google's Gemini API) and the job records make it
+  visible (`fallback_used`, `fallback_count`) rather than silent.
+- Ollama requires no API key for local use. A Gemini key, if one is still stored from
+  Phase 13, stays masked in the settings API and is no longer exposed in the UI.
 
 ## 7. Gate A evidence and decision
 
