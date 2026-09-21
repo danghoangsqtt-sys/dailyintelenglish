@@ -619,6 +619,17 @@ payload **drops** `gemini_fallback_configured` and adds `cloud_enabled: false` �
 always-false field would be misleading; update every frontend reader of the old field in
 the same change.
 
+**Amendment F (PM, 2026-09-21, after reviewing commit `518dd0a`):** two more files are
+added to 14.7's allowed list, both narrowly: `tests/test_ai_jobs_api.py` (test-only — the
+pre-existing `test_ai_health_never_exposes_the_gemini_key` asserts the removed
+`gemini_fallback_configured` field; swap the assertion to `cloud_enabled is False`, keep
+the secret-absence assertion untouched) and `frontend/pages/step6_thumbnail.html`
+(copy-only — the "Pillow + Gemini text" badge is stale under D9; replace with a
+provider-neutral label such as "Pillow + local AI text"). Also recorded: action 7 was
+delivered for thumbnail only; the YouTube FakeProvider test under `AI_MODE=local` in
+`tests/test_youtube_service.py` (already allowed by Amendment E) is still required before
+14.7 is accepted.
+
 **Actions:**
 1. `AI_MODE` default `"local"` in `config.py` and `.env.example`; remove the stale, unused
    `DIE_AI_CLOUD_FALLBACK` line from `.env.example` (grep confirms nothing reads it).
