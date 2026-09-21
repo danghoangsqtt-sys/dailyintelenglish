@@ -21,6 +21,61 @@ section 8, Task 13.9's own decision rule): **local stays experimental; the packa
 production default remains Gemini-primary** (already the case — `AI_MODE` default is
 `"gemini"`, per ADR-001 point 6). No threshold was weakened to reach this decision.
 
+## Correction (2026-09-21, PM/Tester independent review — Task 14.5)
+
+**The FAIL decision above stands.** No threshold was weakened then and none is weakened
+now. What this correction retracts is the *diagnosis*: the statements below that the
+failure "is not a system/infrastructure defect" and that the pipeline was "behaving
+exactly as designed" were falsified by evidence gathered after this report was written.
+The original text is preserved unchanged beneath this section so the record shows what
+was concluded, when, and why it changed. Full evidence and decisions D1–D8:
+`docs/brainstorm/session-2026-09-21.md`; corrective plan:
+`docs/implementation/phase-14-ai-gateway-resilience.md`; ADR-001 amendment A1.
+
+**Finding A — the ±15%-per-section hard stop is an architecture defect, not a model
+limitation.** Measured directly from the trial database's `ai_generation_checkpoints`
+table (re-verified by the PM): 18 of 27 generated sections were accepted — a
+**66.7% per-section pass rate**. Because the pipeline fails the whole job on the first
+off-target section, five consecutive passes are required: 0.667⁵ = 13.2%, which matches
+the observed 11% (1/9) job pass rate. The one completed job's sections were
+`[137, 152, 163, 164, 165]` = 781/800 words (−2.4%; the runner below reports 785 for the
+same script — a 4-word counting difference between the runner and the pipeline's `\S+`
+counter, not investigated further because both are inside 720–880): individual section errors cancelled
+at the total, which is exactly where the **product requirement** is defined (±10% of the
+total, 720–880 words, `SCRIPT_GLOBAL_WORD_TOLERANCE = 0.10`). The internal per-section
+gate was therefore enforcing a *stricter* effective standard than the product demands.
+Accepted sections also show a systematic undershoot (mean 145.9 words vs target 160,
+−9%, σ = 19.5). Task 14.3 replaces the per-section hard stop with a running budget and
+keeps the ±10% global gate as the only hard word-count gate — a governance-reviewed
+change, explicitly not a relaxation.
+
+**Finding B — the provider this report recommended shipping had never been tested, and
+fails for a worse reason.** Gemini was not run through Gate B. A diagnostic run
+(`--mode gemini --runs 2 --skip-samples`, evidence
+`data/quality_reviews/phase13/gate-b/gate-b-20260921T010451Z.json`) completed **0/2
+jobs**; both died on HTTP 503 (`ProviderUnavailableError: Gemini is temporarily
+overloaded`) after 9 s and 24 s, surfacing as `handler_exception`. Three direct probes
+returned `200 → 503 → 200` — Gemini was healthy; the 503 was the ordinary transient
+overload every production client is expected to absorb. `grep -rn "sleep"
+app/services/ai/` returned nothing: the Task 13.7 gateway re-fires immediately on a 503
+and then gives up, whereas the pre-13.7 code had 4 attempts with 1s→2s→4s backoff. Task
+13.7 removed the multi-model cascade (correct per ADR-001) and the backoff (a
+regression). This is a system defect in the primary path, introduced by Phase 13
+itself. Task 14.1 restores bounded backoff.
+
+**Finding C — "the single allowed repair pass did not correct it" had no telemetry
+behind it.** `repair_count`, `fallback_used`, `fallback_count`, `actual_provider`, and
+`model` on `ai_generation_jobs` are never written by any pipeline (every trial row:
+`repair_count=0, fallback_used=0, actual_provider=NULL, model=NULL`). Whether the repair
+ran, how often, and what it produced was not measurable when this report was written.
+Task 14.2 adds that telemetry before any further tuning.
+
+**Consequences:** Task 13.10 (rollout) is **blocked** (decision D1) — shipping
+Gemini-primary durable jobs now would deliver a primary path that dies on the first
+transient 503, the very failure Phase 13 was opened to fix. Phase 14 fixes both root
+causes, re-runs Gate B for **both** providers under a declared protocol, and only then
+resumes Task 13.10 with an evidence-selected mode.
+
 ## What was run
 
 | Set | Count | Completed | Passed content checks |
@@ -34,6 +89,9 @@ production default remains Gemini-primary** (already the case — `AI_MODE` defa
 | Real Edge TTS → audio → video pipeline | — | not run | no passing project to run it against |
 
 ## Root cause
+
+> **Superseded — see Correction (2026-09-21) above.** The word-count table and
+> per-run numbers below are accurate; the diagnosis that follows them is not.
 
 **8 of the 9 real script-generation attempts failed the exact same validator, for the
 exact same reason: a single generated section's word count fell outside the
@@ -106,6 +164,9 @@ content checks, far below the required 5/5 complete and ≥4/5 passing.
   on the first attempt.
 
 ## Recommendation
+
+> **Superseded — see Correction (2026-09-21) above.** Task 13.10 is blocked until
+> Phase 14 Task 14.4 produces a real decision for both providers.
 
 Ship Task 13.10 (rollout/docs/rollback) with the **Gemini-primary, local-experimental**
 path the controlling plan already designates for a Gate B failure — this is not a

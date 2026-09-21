@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Phase:** 1–12 done; Phase 13 in progress (local-first AI reliability)
+**Phase:** 1–12 done; Phase 13 in progress — Task 13.10 **blocked** (Gate B post-mortem, decision D1); Phase 14 in progress (AI gateway resilience and section budget rebalancing, corrective, two parallel sessions: PM = Opus 5, Coder = Sonnet 5)
 **Day:** 6 / 21  
 **Started:** 2026-09-10 (Phases 1–12 complete; Phase 13 opened 2026-09-18 as user-approved reliability scope beyond the original plan)
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
@@ -1586,6 +1586,11 @@ full plan and evidence record.
 
 ### 13.9 Real no-mock bake-off and operational trial (Gate B) — ✅ DONE (2026-09-21), **Gate B: FAIL**
 
+> **Diagnosis superseded (2026-09-21, PM/Tester review):** the FAIL decision stands, but the
+> "not an infrastructure defect / behaves exactly as designed" conclusion below was falsified
+> — see `docs/operations/phase13-acceptance.md` §Correction, `docs/brainstorm/session-2026-09-21.md`,
+> and Phase 14 below. Task 13.10 is blocked, not "next".
+
 New `scripts/run_ai_operational_trial.py` drives a real in-process `uvicorn` server
 (isolated port, `AI_MODE=local`, fallback genuinely OFF) over real HTTP only -- no
 `TestClient`, no mocked provider, matching the controlling plan's explicit "live
@@ -1638,10 +1643,75 @@ remain in production use regardless of which provider is primary. See
 `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.9.md` for the full plan
 and evidence record.
 
+## Phase 14 Task Status
+
+**Status:** In progress | **Started:** 2026-09-21 | **Scope:** corrective (Gate B post-mortem)
+**Controlling plan:** `docs/implementation/phase-14-ai-gateway-resilience.md` |
+**Design record:** `docs/brainstorm/session-2026-09-21.md` (D1–D8) | **ADR:** ADR-001 amendment A1
+
+Opened after the PM/Tester's independent review of Gate B found two independent root causes the
+Coder's report missed: (A) the ±15%-per-section hard stop compounds a measured 66.7% per-section
+pass rate into 13.2% predicted / 11% observed job success while the product gate is ±10% on the
+total; (B) Task 13.7 removed the transient-error backoff with the cascade — Gemini (the primary
+provider) died 0/2 on ordinary HTTP 503 with zero backoff anywhere in the gateway; plus (C)
+`repair_count`/`fallback_used`/`actual_provider`/`model` are never written to the job row. Governance
+constraint recorded in the plan: **no tolerance value changes** (`SCRIPT_GLOBAL_WORD_TOLERANCE`
+0.10, `SCRIPT_SECTION_WORD_TOLERANCE` 0.15 pinned by test). Task 13.10 blocked until 14.4.
+
+### 14.0 Doc-first gate — ✅ DONE (2026-09-21, PM)
+
+- [x] Controlling plan (543 lines: invariants 13–19, designs §4.1–4.4, explicit allowed files per
+  task, declared Gate B-2 decision rules PASS / FAIL-CONTENT / FAIL-INFRA, stop conditions,
+  two-session partition), SPEC, PHASE-STATE, task cards 14.1–14.6, ADR-001 amendment A1 (Decision 3
+  capped infrastructure retry at one — amended explicitly, not silently violated). Commit `ed02eb5`.
+- [x] PM re-verified the checkpoint statistics from the trial DB before writing (18 sections,
+  mean 145.9, σ 19.5; all job-row telemetry columns empty).
+
+### 14.1 Bounded exponential backoff for transient errors — ✅ DONE (2026-09-21, Coder; PM-accepted)
+
+- [x] `AIRouter._attempt`: transient class (`ProviderUnavailableError`/`RateLimit`/`Timeout`) →
+  up to `AI_TRANSIENT_MAX_ATTEMPTS = 4` attempts, sleeps 1 s → 2 s → 4 s (capped 4.0) via
+  module-local `sleep`, each sleep gated by `remaining < delay + AI_BACKOFF_MIN_REMAINING_SECONDS`
+  against a `deadline_at` computed once in `generate()`; content class keeps one immediate retry;
+  auth never retried; hybrid shape and circuit-breaker accounting unchanged; no second model.
+  `GenerationResult` gains `attempts`, `backoff_seconds`, `transient_errors` (class names only).
+  Commits `2bd203c` (design), `2384578` (code), `990a6b7` (Amendment A tests).
+- [x] **Amendment A** (PM, `378bf4d`): four pre-existing `*_wraps_provider_error*` tests in
+  `test_learning_service.py`/`test_script_service.py`/`test_youtube_service.py` scripted two
+  transient outcomes for the old policy and ran `FakeProvider` dry under four attempts. PM reproduced
+  the 4 failures (12.8 s runtime = real 1 s + 2 s sleeps per test — incidental proof the backoff
+  waits), then added the three files test-only; fix = four scripted outcomes + patched `router.sleep`.
+- [x] **PM acceptance review (independent):** production diff limited to `router.py`,
+  `contracts.py`, `constants.py` (all in the allowed list); 6 new router tests cover the six
+  declared verifications (`[1.0, 2.0, 4.0]` delay sequence, exhaustion + `ai_router_exhausted`
+  log, deadline stop at `[1.0]`, content-class no-sleep, auth no-retry, hybrid exhaustion → Gemini);
+  Coder's revert-and-confirm-failure recorded in the task card; PM ran the 88 targeted tests in
+  1.13 s (no real sleeps) and `ruff` clean. Coder-reported full suite **814 passed** (808 + 6 new);
+  PM will re-run the full suite itself before 14.4b.
+
+### 14.2 Job telemetry (repair/fallback/provider/attempts/error codes) — ⏳ IN PROGRESS (Coder)
+
+### 14.3 Running section budget; hard gate only at global ±10% — pending (Coder, after 14.2)
+
+### 14.4 Gate B second run, both providers — pending (14.4a runner prep: Coder; 14.4b execution: PM)
+
+### 14.5 Correct the Phase 13 acceptance report — ✅ DONE (2026-09-21, PM)
+
+- [x] Additive-only correction (61 lines added, 0 removed; script-verified every original line
+  survives in order): dated §Correction after §Decision with findings A/B/C and consequences;
+  `> Superseded` annotations on §Root cause and §Recommendation; threshold table untouched; the
+  781-vs-785 word-count discrepancy between checkpoints and runner disclosed rather than hidden.
+
+### 14.6 Resume Task 13.10 with evidence-selected rollout mode — pending (blocked on 14.4b + 14.5)
+
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-21 | Task 13.10 rollout **blocked**; Phase 14 opened as a corrective phase (D1/D2) | Gate B post-mortem: Gemini (primary) 0/2 on transient 503 with no backoff anywhere in the gateway — shipping would regress 503 handling below the pre-Phase-13 baseline; the local failure is a compounding per-section gate, not only model precision |
+| 2026-09-21 | ADR-001 amendment A1: transient errors retried against the same model up to 4 attempts with 1s→2s→4s backoff inside the single deadline; cascade ban, single fallback, no-preview rules unchanged (D3) | ADR Decision 3 literally capped infrastructure retry at one; amended explicitly rather than violated silently. Task 13.7 had removed backoff together with the cascade; only the cascade was intended |
+| 2026-09-21 | Per-section ±15% becomes the repair trigger + drift signal; the only hard word-count gate is the global ±10% (D4). **Neither tolerance value changes** — both pinned by test | 66.7% per-section pass rate compounds to 13.2% predicted / 11% observed job success; the completed job passed the product gate at −2.4% while sections were individually off-target. Removing an internal stop that was stricter than the product requirement is not a relaxation |
+| 2026-09-21 | Gate B-2 decision rules declared before any run: local = Phase 13 rule verbatim; Gemini = PASS-cloud / FAIL-CONTENT / FAIL-INFRA with infra and content failures reported separately (D6) | The original Gate B never tested the provider it recommended shipping; declaring rules first prevents post-hoc threshold movement |
 | 2026-09-10 | Tech stack: Python FastAPI + Vanilla HTML/JS | Fastest development, lightest footprint |
 | 2026-09-10 | Primary TTS: OmniVoice (local GPU) | RTX 3060 12GB — RTF 0.025, voice design support |
 | 2026-09-10 | Subtitle: Both burned-in + SRT | Maximum flexibility for YouTube upload |

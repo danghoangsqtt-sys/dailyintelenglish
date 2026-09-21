@@ -1118,6 +1118,10 @@ configuration-only Gemini rollback path. See
 
 ### 13.9 Real no-mock bake-off and operational trial — ✅ DONE (2026-09-21), **Gate B: FAIL**
 
+> **Diagnosis superseded (2026-09-21):** FAIL stands; the "not an infrastructure defect"
+> conclusion was falsified — see `docs/operations/phase13-acceptance.md` §Correction. Task
+> 13.10 is blocked pending Phase 14.
+
 - [x] New `scripts/run_ai_operational_trial.py` drives a real in-process `uvicorn`
   server (isolated port, `AI_MODE=local`, fallback OFF) over real HTTP only — no
   `TestClient`, no mocked provider. Smoke-tested first (`--smoke-test`) before the
@@ -1150,3 +1154,44 @@ configuration-only Gemini rollback path. See
   the Gemini-primary/local-experimental rollout path this outcome designates.
   See `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.9.md` for
   the full record.
+
+## Phase 14 — AI Gateway Resilience and Section Budget Rebalancing
+
+**Status:** In progress | **Started:** 2026-09-21 | **Scope:** corrective, opened by the Gate B
+post-mortem (`docs/brainstorm/session-2026-09-21.md`, D1–D8). Controlling plan:
+`docs/implementation/phase-14-ai-gateway-resilience.md`. Two parallel sessions (PM/Tester +
+Coder) under a strict file partition; only the PM runs the operational trial.
+
+Both providers failed Gate B for two independent reasons: the local run compounds a 66.7%
+per-section pass rate through a ±15%-per-section hard stop into 11% job success, while the
+product gate is ±10% on the total; the Gemini run died 0/2 on ordinary transient 503 because
+Task 13.7 removed the backoff together with the cascade. Repair/fallback telemetry was never
+written. Governance: **no tolerance value changes**; the cascade ban stands; ADR-001 amendment A1.
+
+### 14.1 Bounded exponential backoff for transient errors — ✅ DONE (2026-09-21)
+
+- [x] `AIRouter`: 4 attempts, 1 s → 2 s → 4 s, transient class only, inside the single 120 s
+  deadline; content class keeps one immediate retry; auth never retried; same model, one fallback.
+  Proven to wait (patched module-local `sleep`, asserted `[1.0, 2.0, 4.0]`); PM-accepted after
+  independent diff review and targeted re-run. Amendment A added three test-only files.
+
+### 14.2 Job telemetry — ⏳ IN PROGRESS
+- [ ] `repair_count`, `fallback_used`/`fallback_count`, `actual_provider`, `model`, `metrics_json`
+  written per router call; `provider_*` error codes replace `handler_exception` for provider
+  failures; `AIJobOut.metrics`.
+
+### 14.3 Running section budget; hard gate only at global ±10% — pending
+- [ ] Effective targets carry drift (cap 0.35, last section 0.5); ±15% triggers repair, never
+  kills the job; one final-section budget repair; deterministic resume; constants-pin test.
+
+### 14.4 Gate B second run, both providers — pending
+- [ ] 14.4a runner prep (Coder): infra/content classification, per-section stats, aggregates,
+  `--matrix`, `--reaggregate`, `has_outro` fix.
+- [ ] 14.4b execution (PM): local matrix → Gemini matrix, sequential; declared rules; report
+  `docs/operations/phase14-gate-b2.md`.
+
+### 14.5 Correct the Phase 13 acceptance report — ✅ DONE (2026-09-21)
+- [x] Additive correction with findings A/B/C; original text preserved.
+
+### 14.6 Resume Task 13.10 with evidence-selected rollout mode — pending
+- [ ] Mode chosen from the 14.4b matrix per the plan's declared table; 13.10's own pass criteria.
