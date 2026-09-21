@@ -1,6 +1,6 @@
 # Task 14.4 — Gate B Second Run, Both Providers
 
-- **Status:** pending
+- **Status:** in_progress (14.4a only -- 14.4b is PM's)
 - **Owner:** 14.4a Coder (runner preparation); 14.4b PM (execution and report)
 - **Priority:** P1
 - **Dependency:** 14.1, 14.2, 14.3 merged and PM-reviewed; 14.4a before 14.4b
@@ -98,4 +98,82 @@ names and SHA-256.
 ## Execution record
 
 - 14.4a (Coder):
+  - **Investigation before code:** inspected the two named Phase 13 evidence
+    files directly. `gate-b-20260921T000903Z.json` (local): 5 B1-8min runs, 4
+    `error_code == "section_validation_failed"`, 1 `job_status == "complete"`
+    (785 words) -- confirms "local 1/5 complete". `gate-b-20260921T010451Z.json`
+    (gemini): 2 runs, both `error_code == "handler_exception"`,
+    `error_message` starting `"ProviderUnavailableError: Gemini is temporarily
+    overloaded (HTTP 503)"` -- confirms both classify as `other` under the new
+    rule (not `infra`, since `handler_exception` doesn't start with
+    `provider_`; the plan's own expectation for these specific pre-14.2
+    files). Also inspected the still-present trial DB
+    (`data/quality_reviews/phase13/gate-b/trial-data/app.db`, gitignored but
+    left on disk locally) directly with `sqlite3`: every `ai_generation_checkpoints`
+    row from that trial has `metrics_json = '{}'` (predates 14.2/14.3), and the
+    one completed run's checkpoints let me reproduce the disclosed `has_outro`
+    false negative exactly: last line "Good luck with your journey to better
+    health and longer life ahead." matches none of the old marker list, while
+    the outline's own last-section objective ("The interviewer concludes the
+    show by summarizing key takeaways...") clearly signals a close -- confirms
+    the fix design (objective-based fallback, matching "conclu" as a substring,
+    not just literal "closing/outro/farewell").
+  - **Design decisions:**
+    - `classify_failure(error_code, error_message) -> "infra"|"content"|"other"`:
+      `infra` iff `error_code` starts with `"provider_"`; `content` iff
+      `error_code` in `{"section_validation_failed", "global_validation_failed",
+      "schema_validation_failed"}` (Amendment B's code included); `other`
+      otherwise (covers `handler_exception`, `None`, and every pre-14.2 file).
+      A completed job always gets `failure_class = None` (not applicable).
+    - Per-run call stats (`_call_stats`) are derived only from `ok`-outcome
+      calls in `job["metrics"]["calls"]` (an `error`-outcome call has no
+      `attempts`/`backoff_seconds` recorded on it -- the exception is raised
+      before a `GenerationResult` exists to read those from, see 14.2's
+      `_call_record`): `total_attempts`, `total_backoff_seconds`,
+      `max_attempts_on_one_call`, `absorbed_transient_errors = Σ(attempts-1)`,
+      `error_calls` count. Both the raw `metrics` dict and the derived
+      `call_stats` summary are stored on each run record -- raw for full
+      fidelity/future reaggregation, summary for the report table.
+    - Per-section data (`_read_section_checkpoints`) is read directly from the
+      trial's own `app.db` via a short-lived `sqlite3` connection (busy
+      timeout 5s) -- `AIJobOut` deliberately never exposes checkpoint-level
+      data (see `app/models/ai_job.py`'s own docstring), and this is a
+      diagnostic runner, not the running app. Returns `[]` on any DB error or
+      missing file rather than raising, so `--reaggregate` against an old
+      evidence file whose trial DB is gone still works (its per-section table
+      is just empty, not a crash).
+    - `has_outro` fix: widened the last-line marker list (a handful more
+      common closing phrases) **and** added a fallback that reads the
+      outline's own last-section `objective` (via the same direct-DB read) and
+      treats it as an outro signal when the objective text contains
+      "closing"/"outro"/"farewell"/"conclu"/"wrap up"/"sign off" -- "conclu" as
+      a substring specifically because the real disclosed case's objective
+      said "concludes", not "closing". Documented in the function's own
+      docstring per the task card's requirement.
+    - `--matrix {local,gemini}` sets `DIE_AI_MODE` the same way `--mode`
+      already does (read from `sys.argv` before the `app.*` import, since
+      `Settings()` is a module-level singleton) *and* selects which
+      decision-rule-set and default sample/media behavior applies. `--mode`,
+      if also given, still wins for `DIE_AI_MODE` (raw-diagnostic override,
+      per the task card); omitting `--matrix` entirely keeps every existing
+      flag's old behavior byte-for-byte (a bare rerun of the script is
+      unaffected by this task).
+    - Local matrix keeps the exact 13.9 protocol: samples and media run
+      unconditionally (`--skip-samples` still available to opt out for a
+      diagnostic). Gemini matrix defaults samples/media OFF, turned on via the
+      new `--with-samples`/`--with-media` flags, per item 5.
+    - `--resume-evidence <path>` seeds `b1_eight_minute_runs`/`sample_runs`/
+      `learning_runs` from a prior evidence file and only runs however many
+      more B1-eight-minute runs are needed to reach the requested count, so a
+      quota-split Gemini matrix (e.g. 3 runs one day, 2 the next) merges into
+      one evidence file/one matrix decision. Structurally verified (seeding
+      logic, remaining-count math); the live two-day run itself is 14.4b's
+      (PM's), not something the Coder can verify without a live trial.
+    - `--reaggregate <path>`: loads an existing evidence JSON, recomputes
+      `failure_class` fresh for every run (the whole point -- old files never
+      had it), recomputes aggregates and the matrix decision from
+      `ai_mode`/`b1_runs_requested`/`diagnostic_only` already in the file,
+      re-attempts a per-section DB read (works if the trial DB is still on
+      disk, degrades to empty otherwise), and prints everything -- no server,
+      no network, no live trial.
 - 14.4b (PM):
