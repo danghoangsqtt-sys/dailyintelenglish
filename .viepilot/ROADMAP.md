@@ -1191,7 +1191,9 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
   `--matrix`, `--reaggregate`, `has_outro` fix; Amendment C decision-rule fix; PM-accepted.
 - [x] 14.4b execution (PM, 2026-09-21): local **FAIL** 3/5 complete (0 infra; running budget landed
   817/780/722); Gemini **FAIL-INFRA** 0/5 (503 window too short + free-tier 20 RPD exhausted by
-  retries). Media step pending on runner fix. Report `docs/operations/phase14-gate-b2.md`.
+  retries). Media step re-run after the runner fix: real TTS→MP3→MP4 end to end with zero server
+  errors, but 361.9 s ∉ [432, 528] (pace ≈ 135 wpm vs planned 100) and A/V diff 2.52 s.
+  Report `docs/operations/phase14-gate-b2.md`.
   **Stop condition: 13.10 stays blocked; 14.1 reopened (14.1-b).**
 
 ### 14.5 Correct the Phase 13 acceptance report — ✅ DONE (2026-09-21)

@@ -1735,7 +1735,7 @@ constraint recorded in the plan: **no tolerance value changes** (`SCRIPT_GLOBAL_
   fixture from a pure word-count miss to an unknown-speaker error, with justification — correct,
   since a pure word miss no longer reaches `section_validation_failed` by design.
 
-### 14.4 Gate B second run, both providers — ✅ 14.4a DONE; 14.4b EXECUTED (2026-09-21, PM) — **local FAIL 3/5, Gemini FAIL-INFRA 0/5**; media step pending on runner fix
+### 14.4 Gate B second run, both providers — ✅ 14.4a DONE; 14.4b EXECUTED (2026-09-21, PM) — **local FAIL 3/5 (media duration/A-V fail), Gemini FAIL-INFRA 0/5**
 
 - [x] 14.4a runner prep (`scripts/run_ai_operational_trial.py` only; commits `377f140`, `153aa16`):
   `classify_failure` (infra/content/other; `schema_validation_failed` = content), `call_stats`
@@ -1772,10 +1772,17 @@ constraint recorded in the plan: **no tolerance value changes** (`SCRIPT_GLOBAL_
     100 s of the 120 s deadline went unused. Post-run probe: **free tier, 20 requests/day/model**
     (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`, `retryDelay 21s`); every attempt
     counts, so the matrix (~30 requests) exhausted the day's quota during run 3.
-  - **Two runner defects found** (not pipeline defects): the media step calls `/audio/generate`
-    without first synthesizing lines via `/tts/preview` (latent since 13.9; media pending on
-    the Coder's 14.4a-c fix + `--media-only`); `word_count_in_range` uses 720–880 for every
-    sample instead of each run's own ±10% range (samples are informational).
+  - **Two runner defects found and fixed** (Coder 14.4a-c, `dec4913`; not pipeline defects): the
+    media step called `/audio/generate` without first synthesizing lines via `/tts/preview`
+    (latent since 13.9); `word_count_in_range` used 720–880 for every sample instead of each
+    run's own ±10% range (samples are informational; re-aggregated: B1-10min and C1 now pass).
+  - **Media step (second pass, `--media-only` on the 817-word run-1 script): the real pipeline
+    ran end to end with zero server errors** — 59/59 lines through Edge TTS, mix 200 (361.88 s,
+    −16.01 LUFS), ffmpeg render 200, MP3 7.24 MB / MP4 5.28 MB, h264/aac, hashed and ffprobed.
+    **Media gate FAIL** on the declared thresholds: audio 361.9 s and video 364.4 s ∉ [432, 528]
+    (817 words play at ≈ 135 wpm vs the planned `CEFR_WORDS_PER_MINUTE["B1"] = 100` — a
+    product pace-calibration finding, not a Phase 14 change), and A/V diff 2.52 s > 1.0 s
+    (renderer padding). First time these were measurable at all.
   - **Stop conditions fired (plan §8):** "Gate B-cloud returns FAIL-INFRA after 14.1" and "the
     Gemini account's live quota cannot accommodate the declared matrix even split across two
     days". Per the 14.6 table (FAIL / FAIL-INFRA): **Task 13.10 stays blocked.** PM stopped and
