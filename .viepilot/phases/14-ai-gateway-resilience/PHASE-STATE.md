@@ -41,12 +41,21 @@
 | 14.2 | Job telemetry: repair/fallback/provider/attempts/error codes | Coder | done | Row fields written; `provider_*` codes |
 | 14.3 | Running section budget; hard gate only at global ±10% | Coder | done | Constants pinned; carry/resume tests |
 | 14.4a | Runner preparation (classification, per-section stats, aggregates) | Coder | done | Reaggregate dry run |
-| 14.4b | Gate B second run, both providers, declared protocol | PM | pending | Decision rules in plan §4.4 |
-| 14.5 | Correct `docs/operations/phase13-acceptance.md` | PM | pending | Original text preserved |
-| 14.6 | Resume Task 13.10 with evidence-selected rollout mode | Both | pending | 14.4b decision + 14.5 |
+| 14.4a-c | Runner fixes from the real local Gate B-2 run (media 500, word-count scoring) | Coder | done | `--reaggregate` matches PM's reported numbers |
+| 14.4b | Gate B second run, both providers, declared protocol | PM | done | Decision rules in plan §4.4 — result: local FAIL 3/5, Gemini FAIL-INFRA 0/5, stop condition |
+| 14.5 | Correct `docs/operations/phase13-acceptance.md` | PM | done | Original text preserved |
+| 14.1-b | Gemini backoff redesign (retryDelay, daily-429 no-retry, wider 503 window) | — | **dropped (D12)** | Superseded by the owner's decision to drop Gemini (Amendment D) — never started, no task card was ever created |
+| 14.7 | Local-only mode, config-first (Amendment D) | Coder | pending | `--matrix`-style flags n/a; see task-14.7.md verification |
+| 14.8 | Local hardening: over-length sections, consecutive-lines rule (Amendment D) | Coder | pending | Depends on 14.7 accepted; constants-pin extended |
+| 14.9 | Gate B-3, local only (Amendment D) | PM | pending | Depends on 14.7 + 14.8 done; Coder idle during the run |
+| 14.6 (revised) | Resume Task 13.10, local-only rollout (Amendment D) | Both | pending | Depends on 14.7 + 14.8 + 14.9 |
 
-Execution order: 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 runs in parallel
-(PM). 14.4b starts only after 14.1–14.4a are merged and the PM has reviewed the diffs.
+Execution order (original): 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 ran in
+parallel (PM). 14.4b started after 14.1–14.4a were merged and the PM reviewed the diffs.
+
+**Execution order (Amendment D, current):** 14.7 → 14.8 (Coder, sequential; PM reviews
+each diff before the next starts) → 14.9 (PM runs; Coder idle) → 14.6 (revised). Task
+14.1-b is dropped (D12) and does not appear in this order.
 14.6 last.
 
 ## Decisions
@@ -215,5 +224,46 @@ Execution order: 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 runs
   `word_count_in_range`/`all_checks_pass` flipping to the corrected values
   while the 3 B1-eight-minute runs and the overall `FAIL` decision stay
   byte-for-byte unchanged; both named Phase 13 files also unchanged. `ruff`
-  clean. Task 14.4a-c status: done; commit pending push, then Coder reports
-  to PM and stands down again.
+  clean. Task 14.4a-c status: done, pushed (`dec4913`).
+- 2026-09-21: PM ran `--media-only` on the real local Gate B-2 winning
+  project (99de9ef7): the media pipeline ran end to end with no server
+  error for the first time (59/59 lines synthesized via Edge TTS, mix 200,
+  render 200, MP3 361.9s / MP4 364.4s h264/aac) — confirms Task 14.4a-c's
+  Bug 1 fix works against a real trial. Media gate still `FAIL` against the
+  declared duration/A-V thresholds: 361.9s is outside `[432, 528]` (817
+  words spoken at ~135 wpm against the `CEFR_WORDS_PER_MINUTE["B1"]=100`
+  planning figure — a pace-calibration question, explicitly out of Phase 14
+  scope) and A/V diff 2.52s exceeds the 1.0s threshold (renderer padding).
+  `--reaggregate --media-evidence` correctly produced `DECISION: FAIL`.
+  Final Gate B-2 result: local FAIL 3/5 (zero infra failures, every
+  completed script passed every content check), Gemini FAIL-INFRA 0/5 (503
+  storms wider than the 14.1 backoff window; free-tier 20 requests/day
+  exhausted by retries, confirmed via a live probe showing `quotaId`
+  containing `PerDay`/`FreeTier`, `retryDelay` 21s). This is a stop
+  condition under plan §8 -- Task 13.10 stays blocked. PM wrote the full
+  report (`docs/operations/phase14-gate-b2.md`, commit `92ca433`) and
+  recorded the verdict (commit `ad17925`, then the media addendum in
+  `86fa9b3`).
+- 2026-09-21: the owner decided to drop Gemini entirely rather than debug
+  cloud quota/billing (decisions D9-D12,
+  `docs/brainstorm/session-2026-09-21.md` §Addendum) -- local-only for both
+  development and packaged builds; Gemini's provider/settings/tests stay in
+  the codebase, dormant, re-enabled only via the new `DIE_AI_ALLOW_CLOUD`
+  switch plus config; the packaged app requires Ollama to *generate*, not
+  to *start*. PM wrote Amendment D (plan §12) and ADR-001 amendment A2
+  (commit `94f5e7b`) and instructed the Coder to mirror it into task cards
+  **before any code**, per the doc-first gate. Coder wrote
+  `task-14.7.md` (local-only config-first UI/settings/health/docs),
+  `task-14.8.md` (local hardening: over-length-section length-only repair
+  pass bounded by a new `SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS=1`, sharpened
+  section/repair prompts, consecutive-lines-constant added to the existing
+  constants-pin test -- both word tolerances and the consecutive-lines
+  limit itself stay unchanged), and `task-14.9.md` (description only --
+  Gate B-3, local-only, PM's to run); revised `task-14.6.md` to the
+  local-only rollout (Amendment D superseded the original
+  evidence-selection table). Updated this file's task table: Task 14.1-b
+  marked **dropped (D12)** (never started, no card was ever created), new
+  execution order 14.7 → 14.8 (Coder, sequential, PM reviews each) → 14.9
+  (PM) → 14.6 (revised). No product code touched -- pure doc-first mirroring,
+  awaiting PM's review of the three new/revised cards before Task 14.7
+  implementation starts.
