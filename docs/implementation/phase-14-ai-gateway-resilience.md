@@ -288,12 +288,20 @@ seconds, max attempts observed.
 **Decision rules (declared now, not after results):**
 
 - Local: the Phase 13 Gate B rule verbatim — PASS promotes local in development.
-- Gemini: PASS-cloud = 5/5 complete **and** ≥ 4/5 pass content checks **and** ≤ 1 infra
-  failure counted against the run (an infra failure that the backoff absorbed is not a
-  failure — it is the success case for 14.1 and is reported as "absorbed transient
-  errors: N"). Two or more infra-class job deaths → **FAIL-INFRA**, which reopens 14.1
-  (insufficient attempts/backoff or quota) and blocks 14.6 again. Content failures alone
-  → FAIL-CONTENT, reported separately.
+- Gemini (**Amendment C, PM, 2026-09-21 — clarified before any Gate B-2 run, no
+  results seen**; the first wording "5/5 complete ∧ … ∧ ≤ 1 infra death" made the
+  allowance unreachable, and a single infra death would have been mislabelled
+  FAIL-CONTENT). Let `infra` = jobs dead with a `provider_*` code, `content_pass` =
+  completed jobs passing every content check, `n` = 5:
+  - **PASS-cloud** ⇔ `infra ≤ 1` ∧ `content_pass ≥ 4` ∧ `completed + infra == n`
+    (every job either completed or died to one tolerated transient death; no
+    content-class or `other` death);
+  - **FAIL-INFRA** ⇔ `infra ≥ 2` — reopens 14.1 (insufficient attempts/backoff or quota)
+    and blocks 14.6 again;
+  - **FAIL-CONTENT** ⇔ otherwise.
+  An infra error the backoff absorbed is not a failure — it is the success case for
+  14.1 and is reported as "absorbed transient errors: N". Any `handler_exception` is a
+  defect flag on top of the verdict.
 - Any `handler_exception` on either provider is a defect to be triaged before the
   matrix result is quoted.
 - Thresholds are not weakened after seeing results. A partial matrix is
