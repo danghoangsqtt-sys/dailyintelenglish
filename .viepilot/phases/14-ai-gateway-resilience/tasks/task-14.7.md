@@ -38,10 +38,21 @@ removed), `frontend/static/js/step2_script.js`, `frontend/static/js/step3_learni
 `tests/test_ai_health_api.py`, `tests/test_ui_async_browser.py`,
 `tests/test_script_jobs_browser.py`, `tests/test_learning_jobs_browser.py`,
 `tests/test_ai_router.py` (default-mode assertions only), `tests/conftest.py` (only if
-the default-mode change requires a fixture change).
+the default-mode change requires a fixture change), and — **Amendment E (PM, 2026-09-21,
+plan commit `26dae03`, before any 14.7 code)** — `tests/test_thumbnail_service.py`,
+`tests/test_youtube_service.py` (test-only, for action 7's two `FakeProvider` tests;
+omitted from the original list by mistake).
 
 `docs/operations/local-ai.md` and `docs/api.md` are PM-owned — report what changed, PM
 documents it.
+
+**Amendment E also settles the two choices action 2/3 originally left open:**
+(a) the Settings mode selector is **replaced by a read-only status line** — no dead
+`gemini`/`hybrid` options shown; the settings API still accepts `local` and, behind
+`DIE_AI_ALLOW_CLOUD=true`, `gemini`/`hybrid`. (b) the health payload **drops**
+`gemini_fallback_configured` entirely and adds `cloud_enabled: false` — an always-false
+field would be misleading. Every frontend reader of the old `gemini_fallback_configured`
+field must be updated in the same commit as the API change (no stale reads left behind).
 
 Anything else → stop and ask the PM to amend the plan.
 
@@ -51,17 +62,16 @@ Anything else → stop and ask the PM to amend the plan.
    stale, unused `DIE_AI_CLOUD_FALLBACK` line from `.env.example` — grep first to confirm
    nothing reads it before deleting.
 2. Settings page: remove the Gemini API-key section and the `gemini`/`hybrid` options
-   from the mode selector (the selector may keep showing `local` only, or become a
-   read-only status line — Coder's choice, record which in this card). The settings
-   *API* keeps accepting/storing the key (dormancy/rollback path), but the UI no longer
-   exposes it. `set_ai_mode` (in `app/services/settings_service.py`) rejects
-   `gemini`/`hybrid` unless the new `DIE_AI_ALLOW_CLOUD` env var (default `false`) is
-   `true` — this is the **only** new switch; it exists so re-enabling cloud is always an
-   explicit act, never an accident.
-3. `GET /api/ai/health` reports `cloud_enabled: false`. `gemini_fallback_configured`
-   either drops from the payload or always reports `false` — pick one, document the
-   choice in this card's execution record, and keep the frontend consistent with
-   whichever is chosen.
+   from the mode selector, **replacing the selector with a read-only status line**
+   (Amendment E — no dead options shown). The settings *API* keeps accepting/storing the
+   key (dormancy/rollback path), but the UI no longer exposes it. `set_ai_mode` (in
+   `app/services/settings_service.py`) rejects `gemini`/`hybrid` unless the new
+   `DIE_AI_ALLOW_CLOUD` env var (default `false`) is `true` — this is the **only** new
+   switch; it exists so re-enabling cloud is always an explicit act, never an accident.
+3. `GET /api/ai/health` reports `cloud_enabled: false` and **drops**
+   `gemini_fallback_configured` entirely (Amendment E — an always-false field would be
+   misleading). Every frontend reader of the old `gemini_fallback_configured` field is
+   updated to the new field in the same commit — no stale read left behind.
 4. Step 2 (`step2_script.js`) / Step 3 (`step3_learning.js`): when `/api/ai/health` says
    Ollama is unreachable or the model is missing, the generate button is disabled and the
    panel shows install/pull guidance naming the exact model tag and digest (copy from
@@ -96,8 +106,11 @@ Anything else → stop and ask the PM to amend the plan.
 1. `tests/test_settings_service.py` / `tests/test_settings_api.py`: `set_ai_mode` rejects
    `gemini`/`hybrid` when `DIE_AI_ALLOW_CLOUD` is unset/false; accepts them when it's
    `true`; default `AI_MODE` is `local`.
-2. `tests/test_ai_health_api.py`: `cloud_enabled: false` present; existing secret-absence
-   assertions still pass.
+2. `tests/test_ai_health_api.py`: `cloud_enabled: false` present; `gemini_fallback_configured`
+   no longer in the payload (grep confirms exactly 2 current references to update:
+   `app/api/ai_jobs.py:119` and this test file's own assertion at line 47 — record the
+   actual line numbers found at implementation time, these may drift); existing
+   secret-absence assertions still pass.
 3. `tests/test_ai_router.py`: default-mode assertion(s) updated only if the router's own
    default construction path changed (it should not need behavior changes, only whatever
    default-value assertions reference the old default).
