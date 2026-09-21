@@ -1735,7 +1735,7 @@ constraint recorded in the plan: **no tolerance value changes** (`SCRIPT_GLOBAL_
   fixture from a pure word-count miss to an unknown-speaker error, with justification — correct,
   since a pure word miss no longer reaches `section_validation_failed` by design.
 
-### 14.4 Gate B second run, both providers — ✅ 14.4a DONE (2026-09-21, Coder; PM-accepted); ⏳ 14.4b pending (PM)
+### 14.4 Gate B second run, both providers — ✅ 14.4a DONE; 14.4b EXECUTED (2026-09-21, PM) — **local FAIL 3/5, Gemini FAIL-INFRA 0/5**; media step pending on runner fix
 
 - [x] 14.4a runner prep (`scripts/run_ai_operational_trial.py` only; commits `377f140`, `153aa16`):
   `classify_failure` (infra/content/other; `schema_validation_failed` = content), `call_stats`
@@ -1755,10 +1755,32 @@ constraint recorded in the plan: **no tolerance value changes** (`SCRIPT_GLOBAL_
   complete; 1 infra + 4 pass → PASS-cloud; 1 infra + 3 pass + 1 bad → FAIL-CONTENT; 2 infra →
   FAIL-INFRA; 1 content death + 4 pass → FAIL-CONTENT; 1 handler_exception → flagged) — all match
   Amendment C; `ruff` clean.
-- [ ] 14.4b (PM): read-only preflight done at HEAD `153aa16` — Ollama serving `qwen3.5:9b`
-  digest `6488c96fa5fa` (env correct, no restart needed), GPU 1,844/12,288 MiB used, port 8000
-  currently not answering (nothing to protect, nothing touched). Waiting on the user for: Coder
-  idle confirmation (full suite + trial), live Gemini RPM/RPD reading (two-day split decision).
+- [x] 14.4b executed by the PM on 2026-09-21 (user confirmed Coder idle; full suite 865/865 at
+  HEAD `64bab3b`; Gemini preflight `200 → 503 → 200`). Report:
+  `docs/operations/phase14-gate-b2.md`; evidence `data/quality_reviews/phase14/gate-b2/` (gitignored).
+  - **Local: FAIL** by the unchanged Phase 13 rule — **3/5 complete** (817/780/722 words, all 3
+    pass every content check), run 3 `section_validation_failed` (>5 consecutive lines,
+    structural), run 4 `global_validation_failed` (1053/800 — the ±10% hard gate caught a final
+    section that came back at 426 words for an effective 173, twice). 0 infra, 0
+    `handler_exception`; one Ollama timeout absorbed by backoff. First measured telemetry: 21
+    repairs, repair success 44% (8/18); per-section σ 55.7% (outliers), mean +4.0% vs nominal
+    → the −9% undershoot question is closed on evidence (variance, not bias). Learning 2/3.
+    Samples B1-5/10-min and C1 complete and inside ±10% of their own targets.
+  - **Gemini: FAIL-INFRA** — **0/5**, 5 infra deaths (3 × 503 exhaustion after 4 attempts / 7 s
+    backoff, 2 × 429). Two outlines survived on attempt 4; three section calls did not — the
+    1+2+4 s window (≈ 20 s incl. response times) is shorter than the real 503 storms while ≈
+    100 s of the 120 s deadline went unused. Post-run probe: **free tier, 20 requests/day/model**
+    (`GenerateRequestsPerDayPerProjectPerModel-FreeTier`, `retryDelay 21s`); every attempt
+    counts, so the matrix (~30 requests) exhausted the day's quota during run 3.
+  - **Two runner defects found** (not pipeline defects): the media step calls `/audio/generate`
+    without first synthesizing lines via `/tts/preview` (latent since 13.9; media pending on
+    the Coder's 14.4a-c fix + `--media-only`); `word_count_in_range` uses 720–880 for every
+    sample instead of each run's own ±10% range (samples are informational).
+  - **Stop conditions fired (plan §8):** "Gate B-cloud returns FAIL-INFRA after 14.1" and "the
+    Gemini account's live quota cannot accommodate the declared matrix even split across two
+    days". Per the 14.6 table (FAIL / FAIL-INFRA): **Task 13.10 stays blocked.** PM stopped and
+    reported; the next decisions (14.1-b backoff redesign incl. `retryDelay` and per-day-quota
+    non-retry; Gemini billing tier) are the user's.
 
 ### 14.5 Correct the Phase 13 acceptance report — ✅ DONE (2026-09-21, PM)
 
@@ -1773,6 +1795,7 @@ constraint recorded in the plan: **no tolerance value changes** (`SCRIPT_GLOBAL_
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-21 | Gate B-2 verdicts recorded without threshold changes: local FAIL (3/5), Gemini FAIL-INFRA (0/5). Stop condition: Task 13.10 stays blocked; 14.1 reopened (14.1-b) | Declared rules applied to real evidence; the Gemini failure has two independent causes (503 window too short inside an under-used 120 s deadline; free-tier 20 requests/day exhausted by retries) — the second is an account decision, not code |
 | 2026-09-21 | Task 13.10 rollout **blocked**; Phase 14 opened as a corrective phase (D1/D2) | Gate B post-mortem: Gemini (primary) 0/2 on transient 503 with no backoff anywhere in the gateway — shipping would regress 503 handling below the pre-Phase-13 baseline; the local failure is a compounding per-section gate, not only model precision |
 | 2026-09-21 | ADR-001 amendment A1: transient errors retried against the same model up to 4 attempts with 1s→2s→4s backoff inside the single deadline; cascade ban, single fallback, no-preview rules unchanged (D3) | ADR Decision 3 literally capped infrastructure retry at one; amended explicitly rather than violated silently. Task 13.7 had removed backoff together with the cascade; only the cascade was intended |
 | 2026-09-21 | Per-section ±15% becomes the repair trigger + drift signal; the only hard word-count gate is the global ±10% (D4). **Neither tolerance value changes** — both pinned by test | 66.7% per-section pass rate compounds to 13.2% predicted / 11% observed job success; the completed job passed the product gate at −2.4% while sections were individually off-target. Removing an internal stop that was stricter than the product requirement is not a relaxation |
