@@ -182,6 +182,21 @@ class) and a safe message (`type(exc).__name__` plus the provider's own safe tex
 truncated to 200 chars as today). `handler_exception` remains reserved for genuine
 handler bugs. Both pipelines (script, learning) apply this.
 
+**Amendment B (PM, 2026-09-21, after reviewing commit `cde8e79`):**
+`SchemaValidationError` is a `ProviderError` subclass but is a *content* failure (raised
+by `parse_and_validate` after a successful provider call, or by `_render` on a missing
+template). The script pipeline's outline path catches it through `except ProviderError`
+and, with the 14.2 table as landed, records `provider_error` — which §4.4 would count as
+an infrastructure failure. Required follow-up **14.2-b** (Coder, within 14.2's allowed
+files, before 14.4a): `provider_error_code(SchemaValidationError)` returns
+`schema_validation_failed`; §4.4's failure classification treats
+`schema_validation_failed` as `content`; one service test and one script-pipeline test
+(outline returns unparseable JSON → `error_code == "schema_validation_failed"`,
+never `provider_*`). `fallback_reason` staying unpopulated in 14.2 is accepted: the
+router does not expose the local failure class on `GenerationResult` (14.1 is closed),
+and neither Gate B-2 matrix exercises fallback (local matrix has it OFF; Gemini mode
+has none). Candidate for a later task, not a Phase 14 gate.
+
 `AIJobOut` gains `metrics: dict` (parsed `metrics_json`, `{}` on parse failure) so the
 trial runner and future diagnostics read telemetry over the same safe API. `docs/api.md`
 is updated by the PM (docs domain) after the Coder lands the field.
@@ -260,7 +275,7 @@ produces no winner, run media once against the best Gemini script instead).
 
 **Measured per run:** job status; `error_code`; failure class (`infra` if `error_code`
 starts with `provider_`, `content` if `section_validation_failed`/
-`global_validation_failed`, `other` otherwise); total seconds; first-progress seconds;
+`global_validation_failed`/`schema_validation_failed` (Amendment B), `other` otherwise); total seconds; first-progress seconds;
 longest stage gap; `repair_count`; `fallback_count`; every `metrics.calls[]` entry
 (attempts, backoff seconds, latency); the content checks from 13.9. **Per section** (from
 `ai_generation_checkpoints.metrics_json`): nominal target, effective target, actual
@@ -428,7 +443,8 @@ reverted by git if required.
 **14.4a Runner preparation (Coder). Allowed files:**
 `scripts/run_ai_operational_trial.py` only.
 
-**Actions:** classify each run's failure as `infra`/`content`/`other` from `error_code`;
+**Actions:** classify each run's failure as `infra`/`content`/`other` from `error_code`
+(`schema_validation_failed` is `content` — Amendment B);
 read `metrics.calls[]` from the job API and report attempts/backoff/absorbed transient
 errors per run; dump per-section nominal/effective/actual/deviation/repaired from the
 trial DB's `ai_generation_checkpoints.metrics_json`; compute the aggregates in §4.4;
