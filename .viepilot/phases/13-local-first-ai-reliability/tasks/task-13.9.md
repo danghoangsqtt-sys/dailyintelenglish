@@ -1,6 +1,8 @@
 # Task 13.9 — Real No-Mock Bake-Off and Operational Trial (Gate B)
 
-- **Status:** in_progress
+- **Status:** done
+- **Gate B decision:** FAIL (local stays experimental; Gemini remains primary) — see
+  `docs/operations/phase13-acceptance.md` for the full report.
 - **Dependency:** 13.1–13.8 (all done)
 - **Controlling detail:** implementation plan §8, Task 13.9
 
@@ -109,3 +111,48 @@ Real `httpx` calls to a real live `uvicorn` process only; the runner never impor
 mechanically and recorded, never eyeballed. `docs/operations/phase13-acceptance.md`
 states an explicit PASS/FAIL decision citing the exact failing criterion if not PASS.
 Do not delete the trial's projects; keep the review server's data reachable afterward.
+
+## Results (2026-09-21)
+
+`scripts/run_ai_operational_trial.py` was smoke-tested first (`--smoke-test`, 1
+abbreviated run) to validate the mechanics before committing to the full multi-hour
+trial -- this caught one real infrastructure regression before it could taint results:
+an earlier ad hoc Ollama restart (during Task 13.8's packaged-exe verification) had
+started `ollama.exe serve` without the persisted `OLLAMA_MODELS` user environment
+variable, silently pointing it at an empty model directory (`qwen3.5:9b` reported
+"missing" even though it was never uninstalled). Fixed by restarting Ollama with every
+persisted env var (`OLLAMA_HOST`/`OLLAMA_MODELS`/`OLLAMA_MAX_LOADED_MODELS`/
+`OLLAMA_NUM_PARALLEL`/`OLLAMA_MAX_QUEUE`/`OLLAMA_NO_CLOUD`) explicitly set before
+`serve`, then reconfirmed via `/api/tags` that the digest matched Task 13.1's Gate A
+evidence exactly before running the real trial.
+
+The full trial ran `AI_MODE=local` (fallback OFF) against a real in-process `uvicorn`
+server on an isolated port -- 5 B1-eight-minute runs, 4 samples (B1 5-min, B1 10-min,
+A2 8-min, C1 8-min), and 1 learning generation, all via real HTTP, no mocks. **Result:
+8 of 9 script-generation attempts failed the same validator** --
+`script_pipeline.py::validate_section`'s ±15% section word-count tolerance -- with
+misses in both directions (from −74% to +56% of the section's target word count) and
+across every CEFR level and duration tested, not isolated to one configuration. The
+single allowed repair pass did not correct any of the 8 failures. This is a genuine
+local-model instruction-following limitation, not an infrastructure defect: every
+failed job transitioned to a clean `error` status with a safe `error_code`
+(`section_validation_failed`) within 3 minutes, zero hangs, zero partial/corrupt
+writes, zero unhandled 5xx responses -- the durable-job architecture from Tasks
+13.2-13.6 behaved exactly as designed under real repeated failure. The one script that
+did complete (785 words, within the 720-880 global range) failed only one runner-side
+heuristic check (`has_outro`, a narrow keyword list that missed a genuine but
+differently-phrased closing line -- disclosed as a runner limitation, not a real
+content defect) and passed every other check. Since the primary B1-eight-minute set
+never reached even 1 of the required 5 completions with all content checks passing (4
+needed), the real Edge TTS/audio/video pipeline was correctly never run (no "winning
+configuration" existed to run it against) -- honestly recorded as not-executed, not
+fabricated.
+
+**Gate B decision: FAIL.** Per the controlling plan's own decision rule, local stays
+experimental and Gemini remains the primary/default path (already the packaged
+default). No threshold was weakened to reach this decision; the full evidence,
+root-cause analysis, and threshold-by-threshold table are in
+`docs/operations/phase13-acceptance.md`. Raw machine-readable evidence:
+`data/quality_reviews/phase13/gate-b/gate-b-20260921T000903Z.json` (gitignored, not
+committed). Task 13.10 proceeds with the Gemini-primary/local-experimental rollout
+path the controlling plan already designates for this outcome.

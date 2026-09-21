@@ -38,7 +38,7 @@
 | 13.6 | Settings, health, and Step 2/3 job UX | done | Browser recovery passed |
 | 13.7 | Gemini fallback and compatibility | done | Forced fallback |
 | 13.8 | Automated regression/packaging gate | done | Full suite/build |
-| 13.9 | Real no-mock bake-off and operational trial | in_progress | Gate B |
+| 13.9 | Real no-mock bake-off and operational trial | done | Gate B FAIL -- Gemini-primary/local-experimental |
 | 13.10 | Rollout, docs, and rollback drill | pending | Release gate |
 
 ## Decisions
@@ -300,3 +300,21 @@
   multi-hour real-execution task, not a quick verification step; the runner itself
   (`scripts/run_ai_operational_trial.py`) is still to be written and the trial not yet
   executed.
+- 2026-09-21: Wrote and smoke-tested `scripts/run_ai_operational_trial.py`, which
+  caught a real infrastructure regression before the real trial: an earlier Ollama
+  restart (during Task 13.8) had silently dropped the persisted `OLLAMA_MODELS`
+  variable, pointing the server at an empty model directory -- fixed before proceeding.
+  Ran the real Gate B trial (`AI_MODE=local`, fallback OFF, real in-process `uvicorn`,
+  no mocks): 5 B1-eight-minute runs, 4 samples, 1 learning generation. **8 of 9 script
+  attempts failed `script_pipeline.py`'s ±15% section word-count validator** (misses
+  from -74% to +56% of target, both directions, across every CEFR level/duration
+  tested) -- a real local-model instruction-following limitation, not a system defect;
+  every failed job transitioned cleanly to `error` with a safe code, zero hangs, zero
+  partial writes. The one completed script (785 words, in-range) failed only a
+  runner-side heuristic (`has_outro` keyword list missed a genuinely different-but-real
+  closing line) -- disclosed as a runner limitation, not a real content defect. Since
+  the primary set never reached the required completions, the real TTS/audio/video
+  pipeline was correctly never run (no winning configuration) -- honestly recorded as
+  not-executed. **Gate B decision: FAIL** -- local stays experimental, Gemini remains
+  primary, per the controlling plan's own decision rule; no threshold weakened. Full
+  report: `docs/operations/phase13-acceptance.md`. Task 13.9 moved to `done`.

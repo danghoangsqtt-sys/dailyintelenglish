@@ -1584,6 +1584,60 @@ local log/pid files deleted). See
 `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.8.md` for the
 full plan and evidence record.
 
+### 13.9 Real no-mock bake-off and operational trial (Gate B) — ✅ DONE (2026-09-21), **Gate B: FAIL**
+
+New `scripts/run_ai_operational_trial.py` drives a real in-process `uvicorn` server
+(isolated port, `AI_MODE=local`, fallback genuinely OFF) over real HTTP only -- no
+`TestClient`, no mocked provider, matching the controlling plan's explicit "live
+uvicorn HTTP, no TestClient/mock/pytest" requirement for this one gate. Smoke-tested
+first (`--smoke-test`, one abbreviated run) before committing to the real multi-hour
+trial -- this caught a real infrastructure regression before it could taint results:
+an earlier ad hoc Ollama restart during Task 13.8's packaged-exe verification had
+started `ollama.exe serve` without the persisted `OLLAMA_MODELS` user environment
+variable, silently pointing the server at an empty model directory (`qwen3.5:9b`
+reported "missing" even though never uninstalled). Fixed by restarting Ollama with
+every persisted env var explicitly set, then reconfirmed via a real `/api/tags` call
+that the digest matched Task 13.1's Gate A evidence exactly (`6488c96fa5fa...`) before
+running the real trial.
+
+The full trial ran 5 consecutive B1-eight-minute script jobs, 4 samples (B1 5-min, B1
+10-min, A2 8-min, C1 8-min), and 1 learning generation, all real local Qwen generation.
+**Result: 8 of 9 script-generation attempts failed the exact same validator** --
+`script_pipeline.py::validate_section`'s ±15% section word-count tolerance -- with
+misses in both directions (from -74% to +56% of the section's target word count) and
+across every CEFR level and duration tested, not isolated to one configuration; the
+single allowed repair pass did not correct any of the 8 failures. This is a genuine
+local-model instruction-following limitation, not an infrastructure defect: every
+failed job transitioned to a clean `error` status with a safe `error_code`
+(`section_validation_failed`) within 3 minutes, zero hangs, zero partial/corrupt
+script writes, zero unhandled 5xx responses -- proving the durable-job architecture
+built across Tasks 13.2-13.6 behaves exactly as designed under real, repeated failure,
+not just under passing conditions. The one script that did complete (785 words, within
+the 720-880-word global range) passed every content check except one -- disclosed
+honestly as a false negative in the *trial runner's own* narrow keyword heuristic
+(`has_outro` looked for a fixed phrase list; the actual last line, "Good luck with your
+journey to better health and longer life ahead.", is a genuine but differently-phrased
+closing line), not a real content defect in the generated script itself. Since the
+primary B1-eight-minute set never reached even 1 of the 4 required content-passing
+completions, the real Edge TTS -> audio -> video pipeline was correctly never run (no
+"winning configuration" existed to run it against) -- honestly recorded in the report
+as not-executed, not fabricated or assumed.
+
+**Gate B decision: FAIL.** Per the controlling plan's own decision rule (section 8),
+local stays experimental and Gemini remains the primary/default path -- already the
+packaged default (`AI_MODE=gemini`), unchanged by this outcome. No threshold was
+weakened to reach this decision. Full root-cause analysis and a threshold-by-threshold
+table are in the new `docs/operations/phase13-acceptance.md`; raw machine-readable
+evidence is at `data/quality_reviews/phase13/gate-b/gate-b-20260921T000903Z.json`
+(gitignored, not committed, per the same evidence-handling precedent as Gate A). Task
+13.10 proceeds with the Gemini-primary/local-experimental rollout path this outcome
+designates -- this is not a setback for Phase 13 overall: the durable-job
+architecture, provider gateway, and cloud-fallback compatibility work (Tasks 13.2-13.8)
+all passed their own gates independently of this local-model-quality question and
+remain in production use regardless of which provider is primary. See
+`.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.9.md` for the full plan
+and evidence record.
+
 ## Decision Log
 
 | Date | Decision | Rationale |

@@ -1115,3 +1115,38 @@ configuration-only Gemini rollback path. See
   test exe and stray local log/pid files cleaned up). See
   `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.8.md` for the
   full record.
+
+### 13.9 Real no-mock bake-off and operational trial — ✅ DONE (2026-09-21), **Gate B: FAIL**
+
+- [x] New `scripts/run_ai_operational_trial.py` drives a real in-process `uvicorn`
+  server (isolated port, `AI_MODE=local`, fallback OFF) over real HTTP only — no
+  `TestClient`, no mocked provider. Smoke-tested first (`--smoke-test`) before the
+  real multi-hour run, which caught a real infrastructure regression: an earlier
+  Ollama restart (Task 13.8) had silently dropped the persisted `OLLAMA_MODELS`
+  variable, pointing the server at an empty model directory — fixed and
+  reconfirmed against Task 13.1's exact Gate A digest before proceeding.
+- [x] Ran the real trial: 5 B1-eight-minute script jobs, 4 samples (B1 5-min,
+  B1 10-min, A2 8-min, C1 8-min), 1 learning generation — all real local Qwen
+  generation, zero mocks. **8 of 9 script attempts failed the pipeline's own
+  ±15% section word-count validator** (misses from −74% to +56% of target, in
+  both directions, across every CEFR level and duration tested) — a genuine
+  local-model instruction-following limitation, not an infrastructure defect:
+  every failed job transitioned cleanly to `error` with a safe code within 3
+  minutes, zero hangs, zero partial/corrupt writes, proving the durable-job
+  architecture from Tasks 13.2–13.6 behaves exactly as designed under real
+  repeated failure.
+- [x] The one script that completed (785 words, in the 720–880 range) passed
+  every content check except one — disclosed honestly as a false negative in
+  the *trial runner's own* narrow keyword heuristic (`has_outro`), not a real
+  content defect, since the actual last line was a genuine, differently-
+  phrased closing line. Since the primary set never reached the required
+  completions, the real Edge TTS/audio/video pipeline was correctly never run
+  (no "winning configuration" existed) — recorded honestly as not-executed.
+- [x] **Gate B decision: FAIL.** Per the controlling plan's own decision rule,
+  local stays experimental and Gemini remains the primary/default path
+  (already the packaged default, unchanged). No threshold was weakened to
+  reach this decision. Full root-cause analysis and threshold-by-threshold
+  table: `docs/operations/phase13-acceptance.md`. Task 13.10 proceeds with
+  the Gemini-primary/local-experimental rollout path this outcome designates.
+  See `.viepilot/phases/13-local-first-ai-reliability/tasks/task-13.9.md` for
+  the full record.
