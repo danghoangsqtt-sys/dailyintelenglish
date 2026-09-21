@@ -46,7 +46,7 @@
 | 14.5 | Correct `docs/operations/phase13-acceptance.md` | PM | done | Original text preserved |
 | 14.1-b | Gemini backoff redesign (retryDelay, daily-429 no-retry, wider 503 window) | — | **dropped (D12)** | Superseded by the owner's decision to drop Gemini (Amendment D) — never started, no task card was ever created |
 | 14.7 | Local-only mode, config-first (Amendment D) | Coder | **done** (Amendment F applied; 879 passed, 0 failed) | see task-14.7.md verification |
-| 14.8 | Local hardening: over-length sections, consecutive-lines rule (Amendment D) | Coder | pending | Depends on 14.7 accepted; constants-pin extended |
+| 14.8 | Local hardening: over-length sections, consecutive-lines rule (Amendment D) | Coder | **done** (883 passed, 0 failed) | see task-14.8.md verification |
 | 14.9 | Gate B-3, local only (Amendment D) | PM | pending | Depends on 14.7 + 14.8 done; Coder idle during the run |
 | 14.6 (revised) | Resume Task 13.10, local-only rollout (Amendment D) | Both | pending | Depends on 14.7 + 14.8 + 14.9 |
 
@@ -308,3 +308,31 @@ each diff before the next starts) → 14.9 (PM runs; Coder idle) → 14.6 (revis
   `data["cloud_enabled"] is False`; the badge now reads "Pillow + local AI
   text"; the new YouTube test added. Full suite re-run: **879 passed, 0
   failed**. Task 14.7 status: **done**.
+- 2026-09-21: PM accepted Task 14.7 (`d623b29`), pushed `docs/api.md`
+  regeneration (no route-doc change) and a rewritten
+  `docs/operations/local-ai.md` for the local-only contract (`d5c817e`,
+  `48695ba`), and directed the Coder to start Task 14.8 per task-14.8.md.
+  Coder implemented it: `SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS = 1` (new
+  constant) gives an over-length section one additional, length-only repair
+  pass when it is still over `effective_target * (1 + SCRIPT_SECTION_CARRY_CAP)`
+  after its one existing semantic repair -- narrower trigger than the ±15%
+  budget check, so under-length misses are provably untouched (14.3's
+  accept-and-carry for them is unchanged). `prompts/script/section.txt` now
+  states the word budget as a hard, pre-computed range and adds an
+  "alternate speakers by default" instruction; `prompts/script/repair.txt`
+  now shows the measured word count and signed delta and, for an over-length
+  miss, instructs trimming specific lines rather than a full rewrite; the
+  consecutive-lines structural error now names the offending speaker id and
+  approximate line range. Checkpoint `metrics_json` gains two keys
+  (`length_repaired`, `words_before_length_repair`) alongside the existing
+  `repaired`/`words_before_repair` pair. `SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER`
+  and both word tolerances stay byte-for-byte unchanged (constants-pin test
+  extended, revert-and-confirm-failure done). Four new FakeProvider e2e
+  tests cover: the length-only pass firing and fixing an over-length
+  section; the length-only pass still missing and being accepted off-target
+  anyway; a structural error surviving the one semantic repair never
+  triggering the length-only pass; and the total repair-call bound
+  (`2 * num_sections + 1`) hit exactly and asserted directly against the
+  formula. No deviations -- every required-behaviour and verification item
+  implemented within the allowed files. Full suite: **883 passed, 0
+  failed**. Task 14.8 status: **done**.

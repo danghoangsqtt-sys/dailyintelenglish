@@ -29,6 +29,7 @@ from app.core.constants import (
     SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER,
     SCRIPT_MAX_REPEATED_8GRAM_RATIO,
     SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS,
+    SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS,
     SCRIPT_SECTION_CARRY_CAP,
     SCRIPT_SECTION_TARGET_MINUTES,
     SCRIPT_SECTION_WORD_TOLERANCE,
@@ -179,17 +180,19 @@ def validate_section_structure(lines: list[SectionLineOut], known_speaker_ids: s
 
     if len(known_speaker_ids) > 1:
         consecutive = 1
-        for previous, current in zip(lines, lines[1:], strict=False):
+        run_start = 0
+        for index, (previous, current) in enumerate(zip(lines, lines[1:], strict=False), start=1):
             if previous.speaker_id == current.speaker_id:
                 consecutive += 1
                 if consecutive > SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER:
                     errors.append(
-                        f"more than {SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER} "
-                        "consecutive lines from one speaker"
+                        f"more than {SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER} consecutive lines "
+                        f"from speaker {previous.speaker_id} (lines {run_start + 1}-{index + 1})"
                     )
                     break
             else:
                 consecutive = 1
+                run_start = index
 
     return errors
 
@@ -416,16 +419,27 @@ async def _repair_section(
     known_speaker_ids: set[str],
     db,
     job_id: str,
+    *,
+    purpose: str = "script_section_repair",
 ) -> tuple[list[SectionLineOut], list[str], list[str]]:
     """Returns `(lines, structural_errors, budget_errors)` -- see `_generate_section`
-    for why `section_spec.target_words` is already the effective target."""
+    for why `section_spec.target_words` is already the effective target.
+
+    `purpose` (Task 14.8) distinguishes the one semantic repair
+    (`script_section_repair`, the default) from the length-only pass
+    (`script_section_length_repair`) in telemetry -- both call this same
+    function, since the length-only pass is a second, narrower repair, not a
+    different code path."""
     previous_output = (
         _SECTION_LINES_ADAPTER.dump_json(previous_lines).decode("utf-8") if previous_lines else "[]"
     )
+    measured_words = section_word_count(previous_lines)
     prompt = await _render(
         "repair.txt",
         objective=section_spec.objective,
         target_words=section_spec.target_words,
+        measured_words=measured_words,
+        delta=measured_words - section_spec.target_words,
         speakers=project["speakers"],
         errors=errors,
         previous_output=previous_output,
@@ -436,7 +450,7 @@ async def _repair_section(
             prompt=prompt,
             json_schema=_SECTION_LINES_ADAPTER.json_schema(),
             deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
-            purpose="script_section_repair",
+            purpose=purpose,
         ),
         section_index=section_spec.index, is_repair=True,
     )
@@ -705,7 +719,37 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
             return
 
         words = section_word_count(section_lines)
-        if repaired and budget_errors:
+
+        # Task 14.8: a section still far over budget after its one semantic
+        # repair gets one more, length-only pass -- narrower than the semantic
+        # repair (SCRIPT_SECTION_CARRY_CAP, not the ±15% tolerance, is the
+        # trigger) and never fires for an under-length miss, which keeps
+        # 14.3's accept-and-carry for those exactly as it was.
+        length_repaired = False
+        words_before_length_repair: int | None = None
+        if (
+            repaired
+            and budget_errors
+            and words > effective_target * (1 + SCRIPT_SECTION_CARRY_CAP)
+            and SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS > 0
+        ):
+            words_before_length_repair = words
+            try:
+                section_lines, structural_errors, budget_errors = await _repair_section(
+                    router, project, effective_spec, section_lines,
+                    budget_errors, known_speaker_ids, db, job_id,
+                    purpose="script_section_length_repair",
+                )
+            except ProviderError as exc:
+                await _fail_provider(db, job_id, exc)
+                return
+            length_repaired = True
+            if structural_errors:
+                await _fail(db, job_id, "section_validation_failed", structural_errors)
+                return
+            words = section_word_count(section_lines)
+
+        if (repaired or length_repaired) and budget_errors:
             # Task 14.3 item 4: a word-deviation-only failure survives the one
             # repair pass -- accept and carry the drift instead of failing the
             # job (the ±15% check is now a repair trigger/drift signal, not a
@@ -724,6 +768,8 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
             "repaired": repaired,
             "words_before_repair": words_before_repair,
             "errors_before_repair": errors_before_repair,
+            "length_repaired": length_repaired,
+            "words_before_length_repair": words_before_length_repair,
         }
         async with write_transaction(db):
             await ai_job_service.save_checkpoint(

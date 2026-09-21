@@ -308,13 +308,15 @@ def test_validate_global_topic_relevance_is_a_warning_not_a_hard_error():
 
 
 def test_constants_pin_word_tolerances_are_unchanged_by_task_14_3():
-    """Task 14.3 governance note: SCRIPT_GLOBAL_WORD_TOLERANCE and
-    SCRIPT_SECTION_WORD_TOLERANCE are a stop condition, not an implementation
-    choice -- this pins both values so a silent edit fails CI."""
+    """Task 14.3/14.8 governance note: SCRIPT_GLOBAL_WORD_TOLERANCE,
+    SCRIPT_SECTION_WORD_TOLERANCE, and SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER
+    are a stop condition, not an implementation choice -- this pins all three
+    values so a silent edit fails CI."""
     from app.core import constants
 
     assert constants.SCRIPT_GLOBAL_WORD_TOLERANCE == 0.10
     assert constants.SCRIPT_SECTION_WORD_TOLERANCE == 0.15
+    assert constants.SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER == 5
 
 
 # --- handler: end-to-end with a FakeProvider-backed router --------------------------
@@ -808,7 +810,9 @@ async def test_pipeline_accepts_off_target_sections_when_total_lands_inside_tole
         assert set(metrics) == {
             "target_nominal", "target_effective", "words", "deviation_pct",
             "repaired", "words_before_repair", "errors_before_repair",
+            "length_repaired", "words_before_length_repair",
         }
+        assert metrics["length_repaired"] is False  # 130 never exceeds any clamped ceiling here
         assert metrics["target_nominal"] == 160
 
     lines = await script_service.get_script(db, project["id"])
@@ -997,3 +1001,210 @@ async def test_pipeline_interrupted_with_drift_then_resumed_reaches_the_same_tot
     total_r = sum(len(line["text"].split()) for line in lines_r)
 
     assert total_r == total_u
+
+
+# --- Task 14.8: length-only repair pass ----------------------------------------------
+
+
+async def test_pipeline_length_only_repair_fires_and_fixes_an_over_length_section(db):
+    """Verification item 1: a section is still over
+    effective_target * (1 + SCRIPT_SECTION_CARRY_CAP) after its one semantic
+    repair -- the length-only pass fires and trims it inside tolerance; the
+    checkpoint's metrics_json records both repair attempts."""
+    project = await _project(db)  # duration_minutes=1.0 -> target_words=100, 1 section
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {"title": "T", "sections": [{"index": 1, "objective": "cover the topic fully here", "target_words": 100}]}
+    )
+    attempt_json = _section_json((alex_id, 20, 0))  # way short -> triggers the one semantic repair
+    # Repair output is itself way OVER effective_target(100) * 1.35 = 135 -> triggers the length-only pass.
+    repair_json = _section_json((alex_id, 100, 1000), (maya_id, 100, 1500))  # 200 words
+    length_repair_json = _section_json((alex_id, 50, 2000), (maya_id, 50, 2500))  # 100 words -- inside tolerance
+
+    router, gemini, _local = _build_router(
+        [_result(outline_json), _result(attempt_json), _result(repair_json), _result(length_repair_json)]
+    )
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete", final_job.get("error_message")
+    assert final_job["repair_count"] == 2  # one semantic + one length-only
+    assert gemini.call_count == 4
+
+    calls = json.loads(final_job["metrics_json"])["calls"]
+    assert [call["purpose"] for call in calls] == [
+        "script_outline", "script_section", "script_section_repair", "script_section_length_repair",
+    ]
+
+    checkpoints = await ai_job_service.get_valid_checkpoints(db, job["id"])
+    section_checkpoint = next(c for c in checkpoints if c["section_index"] == 1)
+    metrics = json.loads(section_checkpoint["metrics_json"])
+    assert metrics["repaired"] is True
+    assert metrics["words_before_repair"] == 20
+    assert metrics["length_repaired"] is True
+    assert metrics["words_before_length_repair"] == 200
+    assert metrics["words"] == 100
+
+    lines = await script_service.get_script(db, project["id"])
+    assert sum(len(line["text"].split()) for line in lines) == 100
+
+
+async def test_pipeline_length_only_repair_still_over_length_is_accepted_off_target(db):
+    """Verification item 2: the length-only repair itself still misses (stays
+    over-length) -- the section is accepted via 14.3's accept-and-carry rather
+    than hard-failing the job; this is a best-effort extra attempt, not a new
+    gate."""
+    project = await _project(db, duration_minutes=8.0)  # target_words = 800
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {
+            "title": "T",
+            "sections": [
+                {"index": 1, "objective": "cover the first part here", "target_words": 300},
+                {"index": 2, "objective": "cover the second part here", "target_words": 350},
+            ],
+        }
+    )
+    # Section 1 (not last, effective target 300): short attempt -> semantic repair
+    # -> repair output (500) is over 300*1.35=405 -> length-only pass -> its
+    # output (450) STILL misses 300's ±15% band ([255, 345]) -- accepted anyway.
+    s1_attempt = _section_json((alex_id, 50, 0))
+    s1_repair = _section_json((alex_id, 250, 1000), (maya_id, 250, 1500))
+    s1_length_repair = _section_json((alex_id, 225, 2000), (maya_id, 225, 2500))  # kept -- 450 words
+    # Section 2 (last, nominal 350): true remaining need is 800-450=350, clamped
+    # target lands exactly at 350 -- no repair needed.
+    s2_attempt = _section_json((alex_id, 175, 3000), (maya_id, 175, 3500))  # 350 words
+
+    router, gemini, _local = _build_router(
+        [
+            _result(outline_json),
+            _result(s1_attempt), _result(s1_repair), _result(s1_length_repair),
+            _result(s2_attempt),
+        ]
+    )
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete", final_job.get("error_message")
+    assert final_job["repair_count"] == 2  # section 1's semantic + length-only; section 2 needed neither
+    assert gemini.call_count == 5
+
+    checkpoints = await ai_job_service.get_valid_checkpoints(db, job["id"])
+    section1_checkpoint = next(c for c in checkpoints if c["section_index"] == 1)
+    metrics = json.loads(section1_checkpoint["metrics_json"])
+    assert metrics["length_repaired"] is True
+    assert metrics["words_before_length_repair"] == 500
+    assert metrics["words"] == 450  # still outside section 1's own ±15% band -- accepted anyway
+
+    lines = await script_service.get_script(db, project["id"])
+    assert sum(len(line["text"].split()) for line in lines) == 800  # 450 + 350, inside the global ±10% band
+
+
+async def test_pipeline_structural_error_after_repair_never_triggers_length_only_pass(db):
+    """Verification item 3: a structural error (consecutive-lines/unknown-speaker)
+    survives the one semantic repair -> section_validation_failed, unchanged --
+    the length-only pass never fires for a structural error even when the
+    surviving output is also wildly over length."""
+    project = await _project(db)
+    ghost_id = "00000000-0000-0000-0000-000000000000"  # not one of this project's speakers
+
+    outline_json = json.dumps(
+        {"title": "T", "sections": [{"index": 1, "objective": "cover the full topic here", "target_words": 100}]}
+    )
+    invalid_json = json.dumps([{"speaker_id": ghost_id, "text": _words(400, 0)}])  # structural AND over-length
+    still_invalid_json = json.dumps([{"speaker_id": ghost_id, "text": _words(500, 1000)}])  # structural persists
+    router, gemini, _local = _build_router(
+        [_result(outline_json), _result(invalid_json), _result(still_invalid_json)]
+    )
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "error"
+    assert final_job["error_code"] == "section_validation_failed"
+    assert gemini.call_count == 3  # outline + attempt + one repair -- no third, length-only call
+    lines = await script_service.get_script(db, project["id"])
+    assert lines == []
+
+
+async def test_pipeline_repair_count_hits_the_2n_plus_1_ceiling(db):
+    """Verification item 5: the total repair-call bound per job is
+    2 * num_sections + 1 (each section: one semantic + one length-only repair;
+    plus the one final-section global-budget repair). Both sections here need
+    both repairs, and the resulting total still misses the global ±10% band,
+    so the final-section budget repair also fires -- hitting the ceiling
+    exactly, asserted directly against the formula."""
+    project = await _project(db, duration_minutes=8.0)  # target_words = 800
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {
+            "title": "T",
+            "sections": [
+                {"index": 1, "objective": "cover the first part here", "target_words": 300},
+                {"index": 2, "objective": "cover the second part here", "target_words": 400},
+            ],
+        }
+    )
+    # Section 1 (not last, effective target 300): semantic + length-only repair,
+    # final content still over-length (450) -- accepted off-target, carry -150.
+    s1_attempt = _section_json((alex_id, 50, 0))
+    s1_repair = _section_json((alex_id, 250, 1000), (maya_id, 250, 1500))
+    s1_length_repair = _section_json((alex_id, 225, 2000), (maya_id, 225, 2500))  # 450 words
+    # Section 2 (last, nominal 400, effective clamped to 350 given words_so_far=450):
+    # semantic + length-only repair, final content (450) still over-length.
+    s2_attempt = _section_json((maya_id, 50, 3000))
+    s2_repair = _section_json((alex_id, 250, 4000), (maya_id, 250, 4500))
+    s2_length_repair = _section_json((alex_id, 225, 5000), (maya_id, 225, 5500))  # 450 words
+    # Merged total (450 + 450 = 900) misses the global ±10% band ([720, 880]) ->
+    # the one final-section global-budget repair fires and lands inside it.
+    s2_global_budget_repair = _section_json((alex_id, 190, 6000), (maya_id, 190, 6500))  # 380 words
+
+    router, gemini, _local = _build_router(
+        [
+            _result(outline_json),
+            _result(s1_attempt), _result(s1_repair), _result(s1_length_repair),
+            _result(s2_attempt), _result(s2_repair), _result(s2_length_repair),
+            _result(s2_global_budget_repair),
+        ]
+    )
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete", final_job.get("error_message")
+    num_sections = 2
+    assert final_job["repair_count"] == 2 * num_sections + 1
+    assert gemini.call_count == 8
+
+    lines = await script_service.get_script(db, project["id"])
+    total_words = sum(len(line["text"].split()) for line in lines)
+    assert 720 <= total_words <= 880  # 450 + 380 = 830

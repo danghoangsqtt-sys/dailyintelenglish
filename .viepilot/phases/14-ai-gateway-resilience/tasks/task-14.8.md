@@ -1,6 +1,6 @@
 # Task 14.8 — Local Hardening: Over-Length Sections and the Consecutive-Lines Rule
 
-- **Status:** in progress
+- **Status:** done (full suite 883 passed, 0 failed)
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** Task 14.7 done and accepted by the PM
@@ -192,6 +192,22 @@ restoring Task 14.3's exact repair behavior.
      named `test_pipeline_length_only_repair_*`), plus the constants-pin extension
      (item 4) and its revert-and-confirm-failure.
 - Commands and results:
-- Deviations:
+  - `venv\Scripts\python.exe -m ruff check tests/test_script_pipeline.py
+    app/services/script_pipeline.py app/core/constants.py` → All checks passed.
+  - `venv\Scripts\python.exe -m pytest tests/test_script_pipeline.py -q` → **51
+    passed** (47 pre-existing + 4 new), first try -- all four new e2e fixtures'
+    hand-computed word counts/effective targets matched the pipeline's actual
+    arithmetic with no debugging round-trip needed.
+  - `venv\Scripts\python.exe -m pytest -q` (full suite) → **883 passed, 0
+    failed** (383.69s) -- 879 (Task 14.7 baseline) + 4 new Task 14.8 tests.
+- Deviations: none. Every required-behaviour item and every verification item
+  implemented and tested as planned above; no file outside the allowed list was
+  needed.
 - Revert-and-confirm-failure evidence:
+  - Temporarily changed `SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER` from `5` to
+    `6` (`# REVERT-AND-CONFIRM-FAILURE`) and ran
+    `pytest tests/test_script_pipeline.py::test_constants_pin_word_tolerances_are_unchanged_by_task_14_3 -q`:
+    **1 failed** (`AssertionError: assert 6 == 5`). Restored the real value and
+    re-ran the full `tests/test_script_pipeline.py` file: **51 passed**.
+- Commit(s): (pending -- next step)
 - Commit(s):

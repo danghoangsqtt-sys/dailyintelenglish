@@ -238,6 +238,13 @@ SCRIPT_SECTION_CARRY_CAP = 0.35
 SCRIPT_LAST_SECTION_CARRY_CAP = 0.5
 SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS = 1
 
+# Phase 14 Task 14.8 -- local hardening. A section still over
+# effective_target * (1 + SCRIPT_SECTION_CARRY_CAP) after its one semantic
+# repair (SCRIPT_PIPELINE_MAX_REPAIR_ATTEMPTS above, unchanged) gets one more,
+# length-only repair pass -- a second, narrower attempt with its own budget,
+# not a second semantic repair. 0 disables the pass without a code revert.
+SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS = 1
+
 # Phase 13 -- grounded learning pipeline (app/services/learning_pipeline.py).
 # The prompt gives no explicit target count for vocabulary/idioms -- "at least
 # one" is the only honest floor to enforce without inventing an undocumented

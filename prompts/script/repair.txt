@@ -5,6 +5,16 @@ return the corrected JSON.
 ## Section Being Repaired
 - Objective: {{ objective }}
 - Target length: about {{ target_words }} spoken words (stay within ±15%)
+- Measured word count of your previous answer: {{ measured_words }}
+  ({{ "+" if delta > 0 else "" }}{{ delta }} vs. target)
+{% if delta > 0 %}
+- Your previous answer was OVER length by {{ delta }} words. Remove or shorten
+  specific existing lines until the total reaches the target — do not rewrite
+  the section from scratch (a full rewrite risks landing over length again).
+{% elif delta < 0 %}
+- Your previous answer was UNDER length by {{ -delta }} words. Add or expand
+  specific lines until the total reaches the target.
+{% endif %}
 
 ## Speakers (use only these `id` values)
 {% for speaker in speakers %}

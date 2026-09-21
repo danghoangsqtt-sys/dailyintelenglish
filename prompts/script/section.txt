@@ -7,7 +7,9 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
 ## This Section
 - Section {{ section_index }} of {{ section_count }}
 - Objective: {{ objective }}
-- Target length: about {{ target_words }} spoken words (stay within ±15%)
+- Target length: between {{ (target_words * 0.85) | round | int }} and
+  {{ (target_words * 1.15) | round | int }} spoken words — count your words
+  before answering and stay inside this range.
 {% if prior_summary %}
 - What happened just before this section: {{ prior_summary }}
   Continue naturally from this — do not repeat it, do not restart the topic.
@@ -32,8 +34,9 @@ name — always tell them apart by `id`, never by name alone.
 from {{ speakers[0].name }}, not a dialogue.
 {% else %}
 
-**Turn-taking:** no single speaker may deliver more than
-{{ max_consecutive_lines }} consecutive lines before another speaker responds.
+**Turn-taking:** alternate speakers by default. No single speaker may ever
+deliver more than {{ max_consecutive_lines }} consecutive lines before another
+speaker responds.
 {% endif %}
 
 ## CEFR {{ cefr_level }} Constraints
