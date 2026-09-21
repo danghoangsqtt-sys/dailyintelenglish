@@ -1,6 +1,6 @@
 # Task 14.7 — Local-Only Mode, Config-First
 
-- **Status:** pending
+- **Status:** in_progress
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** Amendment D (plan §12, commit `94f5e7b`); Gate B-2 (`docs/operations/phase14-gate-b2.md`)
@@ -137,6 +137,148 @@ the Phase 13 hybrid/Gemini behavior without a code revert.
 ## Execution record (Coder fills in)
 
 - Plan/decisions before code:
+  - **`app/core/config.py`:** `AI_MODE: str = "local"` (was `"gemini"`); add
+    `AI_ALLOW_CLOUD: bool = False` (env `DIE_AI_ALLOW_CLOUD` via the existing
+    `DIE_` prefix, no new `SettingsConfigDict` wiring needed). Update the
+    `AI_MODE` field comment to describe the new default and dormant-cloud
+    story instead of the old "gemini is the packaged default" wording.
+  - **`.env.example`:** `DIE_AI_MODE=gemini` → `DIE_AI_MODE=local`; delete the
+    `DIE_AI_CLOUD_FALLBACK=true` line (confirmed zero references anywhere in
+    `app/`, `tests/`, `scripts/`, `frontend/` via grep before deleting); add a
+    comment above `DIE_AI_MODE` documenting `DIE_AI_ALLOW_CLOUD` as the gate
+    for `gemini`/`hybrid`.
+  - **`app/services/settings_service.py` (`set_ai_mode`):** after the existing
+    `AI_MODES` membership check, add: `if ai_mode != "local" and not
+    config.settings.AI_ALLOW_CLOUD: raise ValidationError(...)` — a clear
+    message naming `DIE_AI_ALLOW_CLOUD` and pointing at ADR-001 A2. `local`
+    itself is never gated (always allowed, it's the only supported mode).
+  - **`app/api/ai_jobs.py` (health payload only):** drop
+    `"gemini_fallback_configured": bool(settings.GEMINI_API_KEY)`, add
+    `"cloud_enabled": settings.AI_ALLOW_CLOUD` (Amendment E: report the real
+    switch value, not a hardcoded `False` — `AI_ALLOW_CLOUD` already **is**
+    the true cloud-enabled state, so this is both more honest than a literal
+    `False` and simpler than computing something separate).
+  - **`frontend/pages/settings.html`:** remove the entire "Gemini API Key"
+    `<section>` (heading, hint, status div, input, toggle-visibility button,
+    save/clear buttons, message div) and its inline styles that become
+    unused (`.key-input-row`, the password/text input rule, the
+    toggle-visibility affordance — kept only if still referenced by the
+    remaining markup, checked at implementation time). Replace the "AI
+    Provider Mode" section's `<select>` + hint (which described
+    switching between gemini/local/hybrid) with a short static paragraph
+    ("This app runs entirely on your local Ollama model — no cloud API key
+    needed.") plus the existing `#ai-mode-status` read-only div (kept,
+    still shows the live `ai_mode`/`ai_mode_source`). Page heading `<p>`
+    updated to match (no longer "Configure the Gemini API key...").
+  - **`frontend/static/js/settings.js`:** rewritten down to just
+    `loadStatus()`/`renderAiModeStatus()` reading `Api.getSettings()` into
+    `#ai-mode-status` — no `Api.updateGeminiApiKey`/`clearGeminiApiKey`/
+    `updateAiMode` calls left (those UI affordances are gone), no
+    `toggleVisibilityBtn`/`saveBtn`/`clearBtn`/`aiModeSaveBtn` event
+    listeners (the elements themselves are gone from the HTML).
+  - **`frontend/static/js/api.js`:** remove the now-unused
+    `updateGeminiApiKey`/`clearGeminiApiKey`/`updateAiMode` wrapper functions
+    (grep confirmed `settings.js` was their only caller before this task;
+    after the rewrite above, nothing calls them) — dead code, not kept
+    "just in case" (the settings *API routes* stay live for the dormant
+    rollback path; only the *frontend wrapper* that called them is unused).
+    `Api.getSettings` and `Api.getAiHealth` (already defined, previously
+    uncalled by any frontend file) both stay/are newly used.
+  - **`frontend/static/js/step2_script.js` / `step3_learning.js`:** two
+    changes each:
+    1. Remove the `fallbackNote` (`job.fallback_used ? " · using Gemini
+       fallback" : ""`) from the job-status renderer — dead in local-only
+       mode (`fallback_used` can't become true without cloud enabled) and
+       the last "Gemini fallback" string in either file.
+    2. **New** `checkOllamaHealthAndGate()`, called once from `init()`
+       alongside the existing setup calls: calls `Api.getAiHealth()`
+       (already defined, previously unused by the frontend), and if
+       `!ollama_reachable || !model_present`, disables `#generate-btn` and
+       injects a guidance message into `#generate-panel` (an *existing*
+       container both pages already have — see below for why no `.html`
+       edit is needed) naming the live `model`/`model_digest` from the
+       health response itself (never a hardcoded tag/digest, so it can't
+       drift from `docs/operations/local-ai.md`) and, when Ollama itself is
+       unreachable (not just the model), a link to ollama.com. If healthy,
+       removes any previously-injected guidance and leaves the button as
+       other logic already controls it. A health-check failure (network
+       error hitting the app's own `/api/ai/health`) is swallowed, not
+       surfaced as a blocking error — the page must still be usable if this
+       one auxiliary check fails.
+    - **Why no `frontend/pages/step2_script.html` / `step3_learning.html`
+      edit is needed (neither file is in this task's allowed list):** both
+      pages already have a `#generate-panel` container element (holding the
+      existing `<p>` + `#generate-btn`) that `checkOllamaHealthAndGate()`
+      can `insertBefore`/`.remove()` a dynamically-created guidance `<div>`
+      into via plain DOM APIs — confirmed by reading both HTML files before
+      writing any code. If no such container existed, this would have been
+      a stop-and-ask-the-PM situation (a required file outside the allowed
+      list); it does exist, so it isn't.
+  - **`frontend/static/css/style.css`:** add one small rule for the new
+    guidance message element if the existing `.message`/`.message-error`
+    classes (already used elsewhere, e.g. `settings.js`) aren't a good
+    enough visual fit once seen rendered — decided at implementation time,
+    not assumed here; reusing an existing class needs no CSS change at all.
+  - **`scripts/check_dependencies.py`:** add `check_ollama()` (sync `httpx`
+    client — `httpx` is already a project dependency, used elsewhere, e.g.
+    `scripts/run_ai_operational_trial.py`): GETs `{OLLAMA_BASE_URL}/api/version`
+    then `/api/tags`, checks `settings.OLLAMA_MODEL` is present among the
+    tags (mirrors `app/api/ai_jobs.py`'s own `/api/ai/health` logic, kept
+    independent rather than imported, matching this script's existing
+    "checks the same source of truth, not a shared helper" style for
+    `check_ffmpeg`). Added to the **required** checks list (`all_passed`
+    fails without it). `check_env_file` (the Gemini key check) moves to a
+    separate **informational** checks list, printed with a `YELLOW` status
+    label instead of `RED`, never affecting `all_passed` — informational
+    per action 5's explicit "or is removed" choice (kept, not removed, since
+    it's still useful for anyone actually using the dormant rollback path).
+    `check_gpu`/`check_omnivoice_model` stay exactly as they are now
+    (required) — out of this task's scope, not mentioned by plan §12.
+  - **`daily_intel_english_studio.spec`:** read first; only touched if the
+    `httpx` import added to `check_dependencies.py` isn't already covered by
+    PyInstaller's automatic dependency discovery or an existing hidden-import
+    entry (likely already covered, since `httpx` is already imported
+    elsewhere in the packaged app itself, e.g. every AI provider adapter) --
+    verified at implementation time, not assumed.
+  - **`README.md` / `CHANGELOG.md`:** update only the forward-looking
+    sections (Requirements, Installation/env-setup steps, the packaged-app
+    paragraph about reading the Gemini key from Settings, Tech Stack's AI/
+    Thumbnail lines) to state local-only plainly and add the rollback
+    sentence verbatim from plan §12 action 6. Historical Phase/Task rows
+    (e.g. "Task 1.4 ... Gemini API ... Shipped") are **not** rewritten —
+    they correctly describe what shipped at the time and rewriting them to
+    pretend otherwise would falsify the project's own history. `CHANGELOG.md`
+    gets one new dated entry for this task, appended, not editing old ones.
+  - **Test-file plan:**
+    - `tests/test_settings_service.py` / `tests/test_settings_api.py`:
+      existing tests that switch to `hybrid`/`gemini` and expect success
+      (e.g. `test_settings_service.py:122`, `test_settings_api.py:92`) get
+      `monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", True)` added
+      (the mechanism under test there is "does a mode change take effect
+      live", not "is cloud gated" — unrelated to this task's own new gate,
+      so the fix is to allow it explicitly, not to change what they assert).
+      New tests added: `set_ai_mode`/`PUT .../ai-mode` reject `hybrid`/
+      `gemini` when `AI_ALLOW_CLOUD` is unset (default `False`); accept
+      `local` unconditionally regardless of the flag.
+    - `tests/test_ai_health_api.py`: `test_health_reflects_an_ai_mode_change_without_restart`
+      gets the same `AI_ALLOW_CLOUD=True` monkeypatch (same reasoning).
+      `test_health_response_has_no_extra_undeclared_fields`'s `expected_keys`
+      set: `gemini_fallback_configured` → `cloud_enabled`. New test:
+      `cloud_enabled` reflects `AI_ALLOW_CLOUD` (`False` by default, `True`
+      when the env var is set).
+    - `tests/test_ai_router.py` / `tests/conftest.py`: grepped for `AI_MODE`
+      first — neither file actually asserts against the config *default*
+      value (the router test's only `AI_MODE` mention is prose in a
+      docstring; conftest has none at all) — **no change expected**; will
+      re-check once the default flips, but currently no edit is anticipated
+      for either file.
+    - `tests/test_thumbnail_service.py` / `tests/test_youtube_service.py`
+      (Amendment E): one new `FakeProvider`-backed test each, asserting the
+      existing generator function runs to completion under
+      `AIMode.LOCAL` — a thin wiring check (both already accept an injected
+      router in their existing tests, per the same pattern Task 14.2/14.3
+      used for script/learning), not new functional coverage of Ollama's
+      real output quality (that's Task 14.9's job).
 - Commands and results:
 - Deviations:
 - Revert-and-confirm-failure evidence:
