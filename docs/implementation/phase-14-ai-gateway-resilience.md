@@ -607,8 +607,17 @@ replace the "using Gemini fallback" copy with the Ollama-missing guidance),
 `tests/test_ai_health_api.py`, `tests/test_ui_async_browser.py`,
 `tests/test_script_jobs_browser.py`, `tests/test_learning_jobs_browser.py`,
 `tests/test_ai_router.py` (default-mode assertions only), `tests/conftest.py` (only if the
-default mode change requires a fixture change). PM documents `docs/operations/local-ai.md`
-and `docs/api.md`.
+default mode change requires a fixture change), and — **Amendment E (PM, 2026-09-21, before
+any 14.7 code)** — `tests/test_thumbnail_service.py`, `tests/test_youtube_service.py`
+(test-only, for action 7's two FakeProvider tests; omitted from the first list by
+mistake). PM documents `docs/operations/local-ai.md` and `docs/api.md`.
+
+**Amendment E also fixes the two choices left open in the card:** (a) the Settings mode
+selector is **replaced by a read-only status line** (no dead options; the API still
+accepts `local`, and `gemini`/`hybrid` only behind `DIE_AI_ALLOW_CLOUD`); (b) the health
+payload **drops** `gemini_fallback_configured` and adds `cloud_enabled: false` — an
+always-false field would be misleading; update every frontend reader of the old field in
+the same change.
 
 **Actions:**
 1. `AI_MODE` default `"local"` in `config.py` and `.env.example`; remove the stale, unused
