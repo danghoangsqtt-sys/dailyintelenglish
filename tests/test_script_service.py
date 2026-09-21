@@ -87,6 +87,14 @@ def _gateway_router(mode: AIMode, gemini_outcomes: list, local_outcomes: list | 
     return AIRouter(local=local, gemini=gemini, mode=mode)
 
 
+async def _no_op_sleep(delay: float) -> None:
+    """Task 14.1 amendment A: patched onto `app.services.ai.router.sleep` in the
+    provider-exhaustion tests below so real transient-error backoff (1s+2s+4s)
+    doesn't actually elapse -- see tests/test_ai_router.py's `sleep_calls` fixture
+    for the same pattern."""
+    return None
+
+
 async def test_generate_script_success_via_gateway():
     router = _gateway_router(AIMode.GEMINI, [_script_result(VALID_LINES)])
 
@@ -98,12 +106,17 @@ async def test_generate_script_success_via_gateway():
     assert lines[1].speaker_id == "22222222-2222-2222-2222-222222222222"
 
 
-async def test_generate_script_wraps_provider_error_as_script_generation_error():
+async def test_generate_script_wraps_provider_error_as_script_generation_error(monkeypatch):
     """Once the router (its own retry/fallback policy -- see test_ai_router.py) exhausts
-    every attempt, generate_script wraps the failure, matching regenerate_line's contract."""
-    router = _gateway_router(
-        AIMode.GEMINI, [ProviderUnavailableError("down"), ProviderUnavailableError("still down")]
-    )
+    every attempt, generate_script wraps the failure, matching regenerate_line's contract.
+
+    Task 14.1 amendment A: the router now makes AI_TRANSIENT_MAX_ATTEMPTS=4 attempts
+    with backoff before giving up, so 4 outcomes (not 2) are needed for a real
+    exhaustion, and `app.services.ai.router.sleep` is patched to a no-op so this test
+    doesn't really wait out 1s+2s+4s of backoff.
+    """
+    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    router = _gateway_router(AIMode.GEMINI, [ProviderUnavailableError("down")] * 4)
 
     with pytest.raises(ScriptGenerationError, match="Script generation failed"):
         await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
@@ -202,13 +215,16 @@ async def test_regenerate_line_via_injected_gateway_router_returns_validated_lin
     assert local.call_count == 0
 
 
-async def test_regenerate_line_wraps_provider_error_as_script_generation_error():
+async def test_regenerate_line_wraps_provider_error_as_script_generation_error(monkeypatch):
+    """Task 14.1 amendment A: see test_generate_script_wraps_provider_error_as_script_generation_error
+    above -- 4 outcomes for a real exhaustion, `sleep` patched to a no-op."""
     from app.core.exceptions import ProviderUnavailableError
     from app.services.ai.contracts import AIMode
     from app.services.ai.fake_provider import FakeProvider
     from app.services.ai.router import AIRouter
 
-    gemini = FakeProvider("fake-gemini", [ProviderUnavailableError("down"), ProviderUnavailableError("still down")])
+    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    gemini = FakeProvider("fake-gemini", [ProviderUnavailableError("down")] * 4)
     local = FakeProvider("fake-ollama", [])
     router = AIRouter(local=local, gemini=gemini, mode=AIMode.GEMINI)
 

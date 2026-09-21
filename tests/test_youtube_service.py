@@ -74,6 +74,14 @@ def _gateway_router(mode: AIMode, gemini_outcomes: list, local_outcomes: list | 
     return AIRouter(local=local, gemini=gemini, mode=mode)
 
 
+async def _no_op_sleep(delay: float) -> None:
+    """Task 14.1 amendment A: patched onto `app.services.ai.router.sleep` in the
+    provider-exhaustion test below so real transient-error backoff (1s+2s+4s)
+    doesn't actually elapse -- see tests/test_ai_router.py's `sleep_calls` fixture
+    for the same pattern."""
+    return None
+
+
 def make_project_config(**overrides) -> ScriptConfig:
     defaults = dict(
         name="YouTube Package Test Episode",
@@ -195,12 +203,15 @@ async def test_generate_package_with_timestamps_uses_measured_chapters():
     assert package["chapters_text"] == youtube_service.real_chapters_from_timestamps(timestamps)
 
 
-async def test_generate_package_wraps_provider_error():
+async def test_generate_package_wraps_provider_error(monkeypatch):
     """Once the router (its own retry/fallback policy -- see test_ai_router.py) exhausts
-    every attempt, generate_package wraps the failure."""
-    router = _gateway_router(
-        AIMode.GEMINI, [ProviderUnavailableError("down"), ProviderUnavailableError("still down")]
-    )
+    every attempt, generate_package wraps the failure.
+
+    Task 14.1 amendment A: 4 outcomes (not 2) for a real AI_TRANSIENT_MAX_ATTEMPTS
+    exhaustion, `app.services.ai.router.sleep` patched to a no-op.
+    """
+    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    router = _gateway_router(AIMode.GEMINI, [ProviderUnavailableError("down")] * 4)
 
     with pytest.raises(YouTubePackageGenerationError, match="YouTube package generation failed"):
         await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)

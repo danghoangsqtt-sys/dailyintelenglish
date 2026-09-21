@@ -37,7 +37,7 @@
 
 | Task | Description | Owner | Status | Blocking gate |
 |---|---|---|---|---|
-| 14.1 | Bounded exponential backoff for transient errors in `AIRouter` | Coder | pending | Backoff proven to wait; deadline honoured |
+| 14.1 | Bounded exponential backoff for transient errors in `AIRouter` | Coder | done | Backoff proven to wait; deadline honoured |
 | 14.2 | Job telemetry: repair/fallback/provider/attempts/error codes | Coder | pending | Row fields written; `provider_*` codes |
 | 14.3 | Running section budget; hard gate only at global ±10% | Coder | pending | Constants pinned; carry/resume tests |
 | 14.4a | Runner preparation (classification, per-section stats, aggregates) | Coder | pending | Reaggregate dry run |
@@ -69,3 +69,18 @@ Execution order: 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 runs
   writing the plan; re-verified the checkpoint statistics from the trial DB.
 - 2026-09-21: controlling plan, SPEC, PHASE-STATE, task cards 14.1–14.6, and ADR-001
   amendment A1 written. No product code modified. Handover to Coder at this commit.
+- 2026-09-21: Coder implemented Task 14.1 (`app/services/ai/router.py`,
+  `contracts.py`, `app/core/constants.py`; commit `2384578`), then reported a block:
+  4 pre-existing tests outside the task's allowed files
+  (`tests/test_learning_service.py`, `tests/test_script_service.py`,
+  `tests/test_youtube_service.py`) scripted 2 transient outcomes for the old
+  1-retry exhaustion policy and failed under the new 4-attempt policy. PM
+  independently reproduced the 4 failures and issued Amendment A (commit
+  `378bf4d`, plan §6 Task 14.1) adding those 3 files to the allowed list,
+  test-only, scoped to the 4 `*_wraps_provider_error*` tests. Coder mirrored the
+  amendment into task-14.1.md and applied the fix (4 scripted outcomes + patched
+  `app.services.ai.router.sleep`). Full suite: **814 passed**, 0 failed (net +6
+  over the 808 baseline, all in `tests/test_ai_router.py`'s own required
+  verification tests -- not +4 as first estimated; see task-14.1.md "Commands and
+  results" for the count reconciliation). `ruff check app tests scripts` clean.
+  Task 14.1 status: done.

@@ -1,6 +1,6 @@
 # Task 14.1 — Bounded Exponential Backoff for Transient Provider Errors
 
-- **Status:** blocked (awaiting PM amendment -- see Deviations)
+- **Status:** done
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** none (first task of the phase)
@@ -29,6 +29,11 @@ diagnostic: 0/2 jobs, dead after 9 s and 24 s; direct probe `200 → 503 → 200
 `tests/test_ai_providers.py` (only if the retry-after hint is implemented).
 
 Anything else → stop and ask the PM to amend the plan.
+
+**Amendment A (PM, 2026-09-21, commit `378bf4d`, mirrored here by Coder):**
+`tests/test_learning_service.py`, `tests/test_script_service.py`,
+`tests/test_youtube_service.py` added — **test-only, exactly the four
+`*_wraps_provider_error*` tests**. See plan §6 Task 14.1 for the full amendment text.
 
 ## Required behaviour
 
@@ -138,10 +143,34 @@ Task 13.7 behaviour without a code revert.
     - `tests/test_script_service.py::test_generate_script_wraps_provider_error_as_script_generation_error`
     - `tests/test_script_service.py::test_regenerate_line_wraps_provider_error_as_script_generation_error`
     - `tests/test_youtube_service.py::test_generate_package_wraps_provider_error`
+  - **After PM Amendment A (commit `378bf4d`):** pulled --rebase, mirrored the
+    amendment into this task card, then applied the identical fix to all 4 tests
+    (4 scripted transient outcomes + `monkeypatch.setattr(
+    "app.services.ai.router.sleep", <local async no-op>)` in
+    `tests/test_learning_service.py`, `tests/test_script_service.py` (2 tests),
+    `tests/test_youtube_service.py`; assertions about the wrapping behaviour
+    unchanged, no production file touched).
+    - `venv\Scripts\python.exe -m ruff check tests/test_learning_service.py tests/test_script_service.py tests/test_youtube_service.py` → All checks passed.
+    - `venv\Scripts\python.exe -m pytest tests/test_learning_service.py tests/test_script_service.py tests/test_youtube_service.py -q` → 58 passed in 1.12s (fast -- confirms `sleep` is genuinely patched, not really waiting out backoff).
+    - `venv\Scripts\python.exe -m ruff check app tests scripts` (full, post-amendment) → All checks passed.
+    - `venv\Scripts\python.exe -m pytest -q` (full suite, post-amendment) → **814 passed** in 362.40s, 0 failed.
+      Note for PM: this is 814, not the 812 estimated in your unblock message --
+      net +6 tests, not +4. The 4 `*_wraps_provider_error*` fixes added 0 new test
+      *functions* (existing tests edited in place); the +6 comes from
+      `tests/test_ai_router.py`, which already needed 6 new tests under this
+      task's own allowed files for the required verification list (delay
+      sequence, exhaustion+log, deadline-stop, content-class, auth-class, hybrid
+      exhaustion -- task-14.1.md's own "Verification" section items 1-6).
+      `tests/test_ai_contracts.py`/`tests/test_ai_logging.py` only gained
+      assertions inside existing tests, 0 new functions. Reported exactly as run,
+      not adjusted to match the estimate.
 - Deviations:
-  - **BLOCKED -- stop condition per plan §6 Task 14.1 ("Anything else → stop and ask
-    the PM to amend the plan") and §"Work packages" ("A newly discovered required
-    file pauses that task ... Coder reports; PM amends; Coder resumes").**
+  - **RESOLVED (was BLOCKED) -- stop condition per plan §6 Task 14.1 ("Anything else
+    → stop and ask the PM to amend the plan") and §"Work packages" ("A newly
+    discovered required file pauses that task ... Coder reports; PM amends; Coder
+    resumes"). PM issued Amendment A (commit `378bf4d`) after independently
+    reproducing the 4 failures; Coder mirrored the amendment into this card and
+    applied the fix -- see "Commands and results" above for the post-amendment run.**
   - Root cause (not a router bug): all 4 failing tests script exactly 2
     `ProviderUnavailableError` outcomes to exercise the pre-14.1 "exhausts after 1
     retry (2 total attempts)" policy -- e.g.
@@ -179,4 +208,12 @@ Task 13.7 behaviour without a code revert.
     `ai_router_backoff` lines, confirming the delay computation ran but the
     actual wait was the thing removed). Restored `await sleep(delay)` and re-ran
     `venv\Scripts\python.exe -m pytest tests/test_ai_router.py -q`: **17 passed**.
-- Commit(s): (pending -- not committed while blocked; PM amendment needed first)
+- Commit(s):
+  - `2384578` -- feat(ai): Task 14.1 implementation (router/contracts/constants +
+    this task's own allowed-file tests), pushed while reporting the block.
+  - `378bf4d` -- PM's Amendment A to the plan (not a Coder commit; listed for the
+    chain of custody).
+  - (next) -- fix(ai): apply Amendment A's 2→4-outcome + sleep-patch fix to
+    `tests/test_learning_service.py`, `tests/test_script_service.py`,
+    `tests/test_youtube_service.py`, plus this task card's own status/Amendment-A
+    mirror and PHASE-STATE update.
