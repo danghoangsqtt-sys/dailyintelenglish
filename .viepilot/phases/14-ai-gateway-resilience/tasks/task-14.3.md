@@ -1,6 +1,6 @@
 # Task 14.3 — Running Section Budget; Hard Gate Only at the Global ±10%
 
-- **Status:** in_progress
+- **Status:** done
 - **Owner:** Coder
 - **Priority:** P1
 - **Dependency:** 14.2 done (repair telemetry must exist first so this change is
@@ -266,6 +266,48 @@ restore fixed targets; the accept-and-carry behaviour itself is reverted by git 
     and item 8's "a short sentence... is allowed" is optional, not required;
     adding one would be an unrequested wording change for no functional gain.
 - Commands and results:
+  - `venv\Scripts\python.exe -m ruff check app/core/constants.py app/services/script_pipeline.py tests/test_script_pipeline.py` → All checks passed (checked incrementally while writing).
+  - `venv\Scripts\python.exe -m pytest tests/test_script_pipeline.py -q` → 47 passed
+    (32 pre-existing, including the 1 updated assertion, + 15 new: 7
+    effective-target/carry pure-function tests, 3 validate_section-split
+    pure-function tests, 1 constants-pin test, 4 e2e scenarios covering
+    verification items 3/4/5/7).
+  - `venv\Scripts\python.exe -m pytest tests/test_learning_pipeline.py tests/test_ai_job_service.py tests/test_ai_jobs_api.py tests/test_ai_router.py tests/test_ai_logging.py tests/test_ai_contracts.py -q` → 129 passed (no regressions in adjacent AI-layer tests).
+  - `venv\Scripts\python.exe -m ruff check app tests scripts` (full) → All checks passed.
+  - `venv\Scripts\python.exe -m pytest -q` (full suite) → **865 passed**, 0 failed,
+    in 383.82s (850 baseline after Task 14.2-b + 15 net new in `test_script_pipeline.py`).
 - Deviations:
+  - **Existing 13.4 assertion changed (verification item 8):**
+    `test_pipeline_fails_transparently_when_repair_also_fails` previously used
+    two word-count-only failures (5 then 6 words against a 100-word target) to
+    reach `section_validation_failed`. Under 14.3, a word-deviation-only
+    failure surviving repair is now *accepted* (the whole point of this task),
+    so that fixture no longer reaches `section_validation_failed` at all.
+    Switched the fixture to an unknown-speaker id (a structural error, which
+    still unconditionally hard-fails after repair) -- one-line justification
+    recorded in the test's own docstring and here.
+  - Resume/carry recomputation reads `target_effective` from checkpoints
+    rather than literally replaying nominal targets -- see the "Resume/carry"
+    decision above (PM-reviewed and agreed before implementation, not a
+    post-hoc deviation).
+  - No other deviations -- all edits stayed within
+    `app/services/script_pipeline.py`, `app/core/constants.py`,
+    `tests/test_script_pipeline.py`. `prompts/script/section.txt` and
+    `prompts/script/repair.txt` were read but not edited (see "Prompts"
+    decision above). No `tests/fixtures/ai/*` changes were needed.
 - Revert-and-confirm-failure evidence:
-- Commit(s):
+  - Constants-pin: temporarily changed `SCRIPT_SECTION_WORD_TOLERANCE` from
+    `0.15` to `0.25` and re-ran
+    `venv\Scripts\python.exe -m pytest tests/test_script_pipeline.py::test_constants_pin_word_tolerances_are_unchanged_by_task_14_3 -q`:
+    **1 failed** (`assert 0.25 == 0.15`). Restored `0.15` and re-ran: **1 passed**.
+  - Core behavior change: temporarily changed the post-repair check from
+    `if structural_errors:` to `if structural_errors or budget_errors:`
+    (reverting to the pre-14.3 hard-fail-on-any-remaining-error rule) and
+    re-ran
+    `venv\Scripts\python.exe -m pytest tests/test_script_pipeline.py::test_pipeline_accepts_off_target_sections_when_total_lands_inside_tolerance -q`:
+    **1 failed** (`final_job["status"]` was `"error"`, not `"complete"`),
+    confirming the test actually depends on the accept-and-carry behavior, not
+    something else. Restored `if structural_errors:` and re-ran the full file:
+    **47 passed**.
+- Commit(s): (next) -- feat(ai): Task 14.3 running section budget + this task
+  card's execution record and PHASE-STATE update.

@@ -39,7 +39,7 @@
 |---|---|---|---|---|
 | 14.1 | Bounded exponential backoff for transient errors in `AIRouter` | Coder | done | Backoff proven to wait; deadline honoured |
 | 14.2 | Job telemetry: repair/fallback/provider/attempts/error codes | Coder | done | Row fields written; `provider_*` codes |
-| 14.3 | Running section budget; hard gate only at global ±10% | Coder | pending | Constants pinned; carry/resume tests |
+| 14.3 | Running section budget; hard gate only at global ±10% | Coder | done | Constants pinned; carry/resume tests |
 | 14.4a | Runner preparation (classification, per-section stats, aggregates) | Coder | pending | Reaggregate dry run |
 | 14.4b | Gate B second run, both providers, declared protocol | PM | pending | Decision rules in plan §4.4 |
 | 14.5 | Correct `docs/operations/phase13-acceptance.md` | PM | pending | Original text preserved |
@@ -121,3 +121,30 @@ Execution order: 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 runs
   `tests/test_script_pipeline.py`. Full suite: **850 passed**, 0 failed.
   `ruff check app tests scripts` clean. Task 14.2 (incl. Amendment B) status:
   done.
+- 2026-09-21: Coder implemented Task 14.3 (`app/services/script_pipeline.py`,
+  `app/core/constants.py`: `SCRIPT_SECTION_CARRY_CAP=0.35`,
+  `SCRIPT_LAST_SECTION_CARRY_CAP=0.5`,
+  `SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS=1`; `SCRIPT_GLOBAL_WORD_TOLERANCE`/
+  `SCRIPT_SECTION_WORD_TOLERANCE` unchanged and now pinned by a test).
+  `validate_section` split into `validate_section_structure` +
+  `validate_section_word_budget`; a section's one repair pass now targets its
+  *effective* target (nominal adjusted by carried-forward drift, clamped);
+  after repair a remaining structural error still hard-fails
+  (`section_validation_failed`), but a remaining word-deviation-only error is
+  now accepted and the drift carried forward -- the product's only hard
+  word-count gate stays `validate_global`'s ±10% total, unchanged. One bounded
+  final-section budget repair (`SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS=1`)
+  fires only when the global total (not any hard error) is the problem.
+  Resume recomputes `carry` from checkpoints' stored `target_effective`
+  (PM-reviewed design, agreed with two conditions: fallback to nominal for
+  checkpoints missing it, and a pure-function test proving this equals a pure
+  nominal-only replay) -- both implemented. One existing 13.4 test's fixture
+  changed (word-count-only failure -> unknown-speaker structural failure) since
+  the old fixture no longer reaches `section_validation_failed` under the new
+  accept-and-carry rule; justified in the test's own docstring and in
+  task-14.3.md. The -9% systematic undershoot is explicitly **not**
+  compensated (per the plan's own instruction) -- left for 14.4b's data.
+  Two revert-and-confirm-failure checks done (constants-pin; the core
+  accept-vs-hard-fail behavior change). Full suite: **865 passed**, 0 failed
+  (850 baseline after 14.2-b + 15 net new). `ruff check app tests scripts`
+  clean. Task 14.3 status: done.

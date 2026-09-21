@@ -47,6 +47,15 @@ def _result(text: str) -> GenerationResult:
     )
 
 
+def _section_json(*speaker_words_start: tuple[str, int, int]) -> str:
+    """Build a `SectionLineOut[]` JSON body from `(speaker_id, word_count,
+    start_offset)` tuples -- one line per tuple. `start_offset` keeps every
+    line's tokens globally unique across a test (see `_words`)."""
+    return json.dumps(
+        [{"speaker_id": speaker_id, "text": _words(count, start)} for speaker_id, count, start in speaker_words_start]
+    )
+
+
 def make_config(duration_minutes: float = 1.0, topic: str = "healthy morning habits") -> ScriptConfig:
     return ScriptConfig(
         name="Pipeline test",
@@ -103,6 +112,94 @@ def test_plan_sections_splits_into_roughly_90_second_chunks():
     assert len(budgets) == 5
 
 
+# --- pure functions: Task 14.3 effective-target/clamp/carry math --------------------
+
+
+def test_clamp_bounds_a_value_into_range():
+    assert script_pipeline.clamp(5, 0, 10) == 5
+    assert script_pipeline.clamp(-5, 0, 10) == 0
+    assert script_pipeline.clamp(15, 0, 10) == 10
+
+
+def test_compute_section_effective_target_applies_carry_within_the_cap():
+    # nominal=160, carry=+20 -> 180, within [160*0.65, 160*1.35] = [104, 216].
+    assert script_pipeline.compute_section_effective_target(160, 20.0) == 180
+    # nominal=160, carry=-20 -> 140, still within bounds.
+    assert script_pipeline.compute_section_effective_target(160, -20.0) == 140
+
+
+def test_compute_section_effective_target_clamps_large_carry():
+    assert script_pipeline.compute_section_effective_target(100, 1000.0) == 135  # 100*1.35
+    assert script_pipeline.compute_section_effective_target(100, -1000.0) == 65  # 100*0.65
+
+
+def test_compute_last_section_effective_target_aims_at_the_remaining_budget():
+    # nominal_last=150, episode target=800, 650 words already written -> exactly
+    # the 150 words remaining, well within [150*0.5, 150*1.5] = [75, 225].
+    assert script_pipeline.compute_last_section_effective_target(150, 800, 650) == 150
+
+
+def test_compute_last_section_effective_target_clamps_a_large_remaining_budget():
+    # Only 200 words written so far -> 600 words remain, clamped down to 150*1.5=225.
+    assert script_pipeline.compute_last_section_effective_target(150, 800, 200) == 225
+    # 790 words already written -> only 10 remain, clamped up to 150*0.5=75.
+    assert script_pipeline.compute_last_section_effective_target(150, 800, 790) == 75
+
+
+def test_carry_update_preserves_the_clamp_residual_for_the_next_section():
+    """Plan §4.3 item 2's "residual beyond the clamp stays in carry": the
+    formula `carry = carry + (effective_i - actual_i)` never resets `carry` to
+    just the clamped delta, so whatever the clamp couldn't apply to section i
+    is still available to section i+1 (and beyond)."""
+    carry = 0.0
+    effective_1 = script_pipeline.compute_section_effective_target(100, carry)
+    assert effective_1 == 100
+    carry += effective_1 - 0  # section 1 undershoots completely (actual=0)
+    assert carry == 100.0
+
+    # nominal(100) + carry(100) = 200, clamped down to 100*1.35=135 -- 65 words
+    # of the requested 200 could not be applied this section.
+    effective_2 = script_pipeline.compute_section_effective_target(100, carry)
+    assert effective_2 == 135
+    carry += effective_2 - 135  # section 2 lands exactly on its clamped target
+    # carry is unchanged by section 2's clamp -- the 65-word residual survives.
+    assert carry == 100.0
+
+
+def test_resume_carry_recomputation_from_stored_target_effective_matches_live_replay():
+    """PM's Amendment (task-14.3.md "Resume/carry" decision, condition 2): proves
+    that reading `target_effective` off checkpoints and replaying the same
+    formula purely from nominal targets + actual words produce an identical
+    final `carry` -- not two independent sources of truth that could diverge."""
+    nominal_sequence = [160, 145, 170]
+    actual_sequence = [120, 200, 150]
+
+    # (a) "live" sequential computation -- what an uninterrupted run does.
+    live_carry = 0.0
+    live_effectives: list[int] = []
+    for nominal, actual in zip(nominal_sequence, actual_sequence, strict=True):
+        effective = script_pipeline.compute_section_effective_target(nominal, live_carry)
+        live_effectives.append(effective)
+        live_carry += effective - actual
+
+    # (b) resume-style recomputation reading each checkpoint's stored
+    # `target_effective` (exactly what `_run_script_job`'s upfront resume pass does).
+    resumed_carry = 0.0
+    for effective, actual in zip(live_effectives, actual_sequence, strict=True):
+        resumed_carry += effective - actual
+
+    # (c) "replay from nominal" -- recompute effective_i from scratch using only
+    # nominal targets + actual words, never trusting a stored value (the plan
+    # prose's literal "against the outline's nominal targets" reading).
+    replayed_carry = 0.0
+    for nominal, actual in zip(nominal_sequence, actual_sequence, strict=True):
+        effective = script_pipeline.compute_section_effective_target(nominal, replayed_carry)
+        replayed_carry += effective - actual
+
+    assert resumed_carry == live_carry
+    assert replayed_carry == live_carry
+
+
 # --- pure functions: validators -----------------------------------------------------
 
 
@@ -136,6 +233,35 @@ def test_validate_section_skips_consecutive_check_for_a_single_speaker():
     lines = [script_pipeline.SectionLineOut(speaker_id="a", text=_words(15, i * 15)) for i in range(6)]
     errors = script_pipeline.validate_section(lines, 90, {"a"})
     assert not any("consecutive lines" in error for error in errors)
+
+
+# --- pure functions: Task 14.3's structural/word-budget split -----------------------
+
+
+def test_validate_section_structure_and_word_budget_together_equal_validate_section():
+    """Task 14.3 split `validate_section` into two functions; `validate_section`
+    itself is kept as their concatenation for existing callers -- this pins that
+    equivalence directly rather than relying only on the individual tests above."""
+    lines = [script_pipeline.SectionLineOut(speaker_id="ghost", text=_words(10))]
+    combined = script_pipeline.validate_section(lines, 100, {"a", "b"})
+    split = script_pipeline.validate_section_structure(
+        lines, {"a", "b"}
+    ) + script_pipeline.validate_section_word_budget(lines, 100)
+    assert sorted(combined) == sorted(split)
+
+
+def test_validate_section_word_budget_returns_empty_for_no_lines():
+    """The "no lines" case is `validate_section_structure`'s job -- the budget
+    check must not also report it (would double-report the same root cause)."""
+    assert script_pipeline.validate_section_word_budget([], 100) == []
+
+
+def test_validate_section_structure_passes_a_word_deviation_that_word_budget_rejects():
+    """The whole point of the 14.3 split: a section can be structurally clean
+    while still failing its word budget -- the two must be independently checkable."""
+    lines = [script_pipeline.SectionLineOut(speaker_id="a", text=_words(10))]
+    assert script_pipeline.validate_section_structure(lines, {"a"}) == []
+    assert script_pipeline.validate_section_word_budget(lines, 100) != []
 
 
 def test_validate_global_rejects_speaker_imbalance_for_two_speakers():
@@ -179,6 +305,16 @@ def test_validate_global_topic_relevance_is_a_warning_not_a_hard_error():
     )
     assert hard_errors == []
     assert any("topic keyword" in warning for warning in warnings)
+
+
+def test_constants_pin_word_tolerances_are_unchanged_by_task_14_3():
+    """Task 14.3 governance note: SCRIPT_GLOBAL_WORD_TOLERANCE and
+    SCRIPT_SECTION_WORD_TOLERANCE are a stop condition, not an implementation
+    choice -- this pins both values so a silent edit fails CI."""
+    from app.core import constants
+
+    assert constants.SCRIPT_GLOBAL_WORD_TOLERANCE == 0.10
+    assert constants.SCRIPT_SECTION_WORD_TOLERANCE == 0.15
 
 
 # --- handler: end-to-end with a FakeProvider-backed router --------------------------
@@ -260,14 +396,22 @@ async def test_pipeline_repairs_an_invalid_section_once_then_completes(db):
 
 
 async def test_pipeline_fails_transparently_when_repair_also_fails(db):
+    """Task 14.3 changed assertion: this test previously used two word-count-only
+    failures (5 then 6 words against a 100-word target) to exercise "repair also
+    fails". Under Task 14.3, a word-deviation-only failure that survives repair is
+    now *accepted* (accept-and-carry -- the whole point of this task), so that
+    fixture would no longer reach `section_validation_failed` here at all. Switched
+    to an unknown-speaker id, a *structural* error, which still unconditionally
+    hard-fails after repair (task-14.3.md required behaviour item 4/verification
+    item 6) -- this test now exercises exactly that unchanged path."""
     project = await _project(db)
-    alex_id = project["speakers"][0]["id"]
+    ghost_id = "00000000-0000-0000-0000-000000000000"  # not one of this project's speakers
 
     outline_json = json.dumps(
         {"title": "T", "sections": [{"index": 1, "objective": "cover the full topic here", "target_words": 100}]}
     )
-    invalid_json = json.dumps([{"speaker_id": alex_id, "text": _words(5, 0)}])
-    still_invalid_json = json.dumps([{"speaker_id": alex_id, "text": _words(6, 100)}])
+    invalid_json = json.dumps([{"speaker_id": ghost_id, "text": _words(100, 0)}])
+    still_invalid_json = json.dumps([{"speaker_id": ghost_id, "text": _words(100, 100)}])
     router, gemini, _local = _build_router(
         [_result(outline_json), _result(invalid_json), _result(still_invalid_json)]
     )
@@ -602,3 +746,254 @@ async def test_pipeline_maps_unparseable_outline_to_schema_validation_failed_not
     assert final_job["error_code"] == "schema_validation_failed"
     assert not final_job["error_code"].startswith("provider_")
     assert final_job["error_code"] != "handler_exception"
+
+
+# --- Task 14.3: running section budget, hard gate only at the global total ---------
+
+
+async def test_pipeline_accepts_off_target_sections_when_total_lands_inside_tolerance(db):
+    """Verification item 3: five sections each land far outside ±15% of their own
+    NOMINAL target even after their one repair pass, but the pipeline accepts
+    every one of them (accept-and-carry, no job-killing per-section gate) and the
+    episode completes because the TOTAL lands inside the product's only hard
+    gate, ±10% of the whole-episode target -- mirroring the plan's own measured
+    evidence (the one Phase 13 job that passed had per-section deviations from
+    -14% to +3% while the total was -2.4%)."""
+    project = await _project(db, duration_minutes=8.0)  # B1 100wpm*8 = 800 target_words
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {
+            "title": "T",
+            "sections": [
+                {"index": i, "objective": "cover part of the topic here", "target_words": 160}
+                for i in range(1, 6)
+            ],
+        }
+    )
+
+    outcomes = [_result(outline_json)]
+    # Sections 1-4 (non-last): a deliberately bad first attempt (100 words)
+    # triggers the one repair pass; the repair's output (130 words) is STILL
+    # outside ±15% of that section's (carry-shifted) effective target --
+    # accepted off-target rather than failing the job.
+    for i in range(4):
+        speaker = alex_id if i % 2 == 0 else maya_id
+        outcomes.append(_result(_section_json((speaker, 100, i * 1000))))
+        outcomes.append(_result(_section_json((speaker, 130, i * 1000 + 500))))
+    # Section 5 (last): lands exactly on its own clamped effective target (240)
+    # -- no repair needed -- split 50/50 across both speakers for global balance.
+    outcomes.append(_result(_section_json((alex_id, 120, 9000), (maya_id, 120, 9200))))
+
+    router, gemini, _local = _build_router(outcomes)
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete", final_job.get("error_message")
+    assert final_job["repair_count"] == 4  # one repair per non-last section
+    assert gemini.call_count == len(outcomes)  # nothing left un-consumed or over-called
+
+    checkpoints = await ai_job_service.get_valid_checkpoints(db, job["id"])
+    section_checkpoints = [c for c in checkpoints if c["stage"] == "section"]
+    assert len(section_checkpoints) == 5
+    for checkpoint in section_checkpoints:
+        metrics = json.loads(checkpoint["metrics_json"])
+        assert set(metrics) == {
+            "target_nominal", "target_effective", "words", "deviation_pct",
+            "repaired", "words_before_repair", "errors_before_repair",
+        }
+        assert metrics["target_nominal"] == 160
+
+    lines = await script_service.get_script(db, project["id"])
+    assert len(lines) == 4 + 2  # sections 1-4's one line each + section 5's two lines
+
+
+async def test_pipeline_final_section_budget_repair_brings_the_total_inside_tolerance(db):
+    """Verification item 4: the last section lands exactly on its own (clamped)
+    effective target -- passing its own ±15% check -- but because that target
+    was clamped well short of the true remaining need, the merged total still
+    misses the global ±10% gate. The one final-section budget repair (item 6)
+    regenerates just the last section against the *real* remaining word count
+    and the job completes; `repair_count` reflects exactly that one extra
+    repair, and the last section's checkpoint is overwritten with the new text."""
+    project = await _project(db, duration_minutes=8.0)  # target_words = 800
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {
+            "title": "T",
+            "sections": [
+                {"index": 1, "objective": "cover the first part here", "target_words": 300},
+                {"index": 2, "objective": "cover the second part here", "target_words": 100},
+            ],
+        }
+    )
+    # Section 1: lands exactly on its effective target (300, carry=0) -- no repair.
+    section1_json = _section_json((alex_id, 300, 0))
+    # Section 2 (last, nominal=100): true remaining need is 800-300=500, but
+    # clamped to 100*1.5=150 (SCRIPT_LAST_SECTION_CARRY_CAP=0.5) -- landing
+    # exactly on that clamped 150 passes the section's own ±15% check, yet the
+    # total (300+150=450) is nowhere near the global ±10% band [720, 880].
+    section2_first_json = _section_json((maya_id, 150, 1000))
+    # Final-section budget repair targets the real deficit (800-300=500) --
+    # scripted to land close enough (470) to bring the total inside tolerance.
+    section2_repaired_json = _section_json((maya_id, 470, 2000))
+
+    router, gemini, _local = _build_router(
+        [_result(outline_json), _result(section1_json), _result(section2_first_json), _result(section2_repaired_json)]
+    )
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete", final_job.get("error_message")
+    assert final_job["repair_count"] == 1  # exactly the one final-section budget repair
+    assert gemini.call_count == 4
+
+    lines = await script_service.get_script(db, project["id"])
+    total_words = sum(len(text.split()) for text in (line["text"] for line in lines))
+    assert 720 <= total_words <= 880
+
+    checkpoints = await ai_job_service.get_valid_checkpoints(db, job["id"])
+    last_checkpoint = next(c for c in checkpoints if c["section_index"] == 2)
+    metrics = json.loads(last_checkpoint["metrics_json"])
+    assert metrics["repaired"] is True
+    assert metrics["words"] == 470  # overwritten by the final-section repair, not the original 150
+
+
+async def test_pipeline_global_validation_still_fails_after_one_final_section_repair(db):
+    """Verification item 5: the one final-section budget repair is bounded
+    (`SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS=1`) -- if its output still
+    misses the global ±10% band, the job fails with `global_validation_failed`,
+    no second attempt is made, and no partial script is saved."""
+    project = await _project(db, duration_minutes=8.0)  # target_words = 800
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {
+            "title": "T",
+            "sections": [
+                {"index": 1, "objective": "cover the first part here", "target_words": 300},
+                {"index": 2, "objective": "cover the second part here", "target_words": 100},
+            ],
+        }
+    )
+    section1_json = _section_json((alex_id, 300, 0))
+    section2_first_json = _section_json((maya_id, 150, 1000))
+    # The final-section budget repair's own output is STILL far short -- the
+    # merged total (300+80=380) stays well outside [720, 880].
+    section2_still_short_json = _section_json((maya_id, 80, 2000))
+
+    router, gemini, _local = _build_router(
+        [_result(outline_json), _result(section1_json), _result(section2_first_json), _result(section2_still_short_json)]
+    )
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "error"
+    assert final_job["error_code"] == "global_validation_failed"
+    # bounded: outline + section1 + section2 + exactly one final-section repair,
+    # never a second attempt at the final-section budget repair.
+    assert gemini.call_count == 4
+    num_sections = 2
+    assert final_job["repair_count"] <= num_sections + 1
+    lines = await script_service.get_script(db, project["id"])
+    assert lines == []  # no partial script from a job that never completed
+
+
+async def test_pipeline_interrupted_with_drift_then_resumed_reaches_the_same_total_as_uninterrupted(db):
+    """Verification item 7: a job interrupted after section 2 (with genuine
+    per-section drift already recorded) and then resumed must recompute `carry`
+    from the checkpoints and land on the same total an uninterrupted run of the
+    identical scenario would reach."""
+    outline_json = json.dumps(
+        {
+            "title": "T",
+            "sections": [
+                {"index": 1, "objective": "part one", "target_words": 300},
+                {"index": 2, "objective": "part two", "target_words": 300},
+                {"index": 3, "objective": "part three", "target_words": 200},
+            ],
+        }
+    )
+
+    def _scenario_outcomes(alex_id: str, maya_id: str) -> list[GenerationResult]:
+        # Section 1: effective=300 (carry=0), lands at 270 (within its own
+        # ±15%, no repair) -- undershoots by 30, carry becomes 30.
+        # Section 2: effective=clamp(300+30, ...)=330, lands at 310 (within
+        # ±15% of 330, no repair) -- undershoots by 20 more, carry becomes 50.
+        # Section 3 (last): words_so_far=580, remaining=800-580=220
+        # (unclamped, within [100,300]) -- lands exactly on it.
+        return [
+            _result(_section_json((alex_id, 270, 0))),
+            _result(_section_json((maya_id, 310, 1000))),
+            _result(_section_json((alex_id, 110, 2000), (maya_id, 110, 2500))),
+        ]
+
+    # --- uninterrupted run: fresh project, all three outcomes scripted up front.
+    uninterrupted_project = await _project(db, duration_minutes=8.0)
+    u_alex_id, u_maya_id = (speaker["id"] for speaker in uninterrupted_project["speakers"])
+    router_u, _gemini_u, _local_u = _build_router(
+        [_result(outline_json), *_scenario_outcomes(u_alex_id, u_maya_id)]
+    )
+    job_u, _ = await ai_job_service.create_job(
+        db, uninterrupted_project["id"], "script", {"project": uninterrupted_project, "operation": "script"}
+    )
+    claimed_u = await ai_job_service.claim_job(db, job_u["id"], "worker-1")
+    worker_u = AIWorker(db_getter=lambda: db)
+    await script_pipeline.make_handler(router_u)(claimed_u, worker_u)
+    final_u = await ai_job_service.get_job(db, job_u["id"], uninterrupted_project["id"])
+    assert final_u["status"] == "complete", final_u.get("error_message")
+    lines_u = await script_service.get_script(db, uninterrupted_project["id"])
+    total_u = sum(len(line["text"].split()) for line in lines_u)
+
+    # --- interrupted-then-resumed run: identical scenario, a separate project
+    # (each project mints its own speaker UUIDs, so the JSON bodies are built
+    # fresh per-project via `_scenario_outcomes`, not reused from the run above).
+    resumed_project = await _project(db, duration_minutes=8.0)
+    r_alex_id, r_maya_id = (speaker["id"] for speaker in resumed_project["speakers"])
+    resumed_outcomes = _scenario_outcomes(r_alex_id, r_maya_id)
+    outcomes_first_run = [_result(outline_json), *resumed_outcomes[:2]]  # interrupted after section 2
+    router_first, _gemini_first, _local_first = _build_router(outcomes_first_run)
+    job_r, _ = await ai_job_service.create_job(
+        db, resumed_project["id"], "script", {"project": resumed_project, "operation": "script"}
+    )
+    claimed_r = await ai_job_service.claim_job(db, job_r["id"], "worker-1")
+    worker_r = AIWorker(db_getter=lambda: db)
+    with pytest.raises(RuntimeError, match="no more scripted outcomes"):
+        await script_pipeline.make_handler(router_first)(claimed_r, worker_r)
+
+    mid_job = await ai_job_service.get_job(db, job_r["id"], resumed_project["id"])
+    assert mid_job["status"] == "running"
+    checkpoints = await ai_job_service.get_valid_checkpoints(db, job_r["id"])
+    assert {c["section_index"] for c in checkpoints} == {0, 1, 2}
+
+    router_second, _gemini_second, _local_second = _build_router(resumed_outcomes[2:])
+    await script_pipeline.make_handler(router_second)(mid_job, worker_r)
+
+    final_r = await ai_job_service.get_job(db, job_r["id"], resumed_project["id"])
+    assert final_r["status"] == "complete", final_r.get("error_message")
+    lines_r = await script_service.get_script(db, resumed_project["id"])
+    total_r = sum(len(line["text"].split()) for line in lines_r)
+
+    assert total_r == total_u

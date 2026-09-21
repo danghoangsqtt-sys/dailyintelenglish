@@ -229,6 +229,15 @@ SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER = 5
 SCRIPT_MAX_REPEATED_8GRAM_RATIO = 0.01
 SCRIPT_PIPELINE_MAX_REPAIR_ATTEMPTS = 1
 
+# Phase 14 Task 14.3 -- running section budget. SCRIPT_SECTION_WORD_TOLERANCE and
+# SCRIPT_GLOBAL_WORD_TOLERANCE above are UNCHANGED (governance: neither may be
+# edited in this task -- see task-14.3.md's constants-pin test); a per-section miss
+# now carries forward into later sections' effective targets and is a hard gate only
+# at the ±10% global total, instead of killing the job at the ±15% per-section check.
+SCRIPT_SECTION_CARRY_CAP = 0.35
+SCRIPT_LAST_SECTION_CARRY_CAP = 0.5
+SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS = 1
+
 # Phase 13 -- grounded learning pipeline (app/services/learning_pipeline.py).
 # The prompt gives no explicit target count for vocabulary/idioms -- "at least
 # one" is the only honest floor to enforce without inventing an undocumented

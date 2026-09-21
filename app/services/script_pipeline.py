@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import re
 from collections import Counter
 from datetime import datetime, timezone
@@ -24,8 +25,11 @@ from app.core.config import settings
 from app.core.constants import (
     CEFR_WORDS_PER_MINUTE,
     SCRIPT_GLOBAL_WORD_TOLERANCE,
+    SCRIPT_LAST_SECTION_CARRY_CAP,
     SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER,
     SCRIPT_MAX_REPEATED_8GRAM_RATIO,
+    SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS,
+    SCRIPT_SECTION_CARRY_CAP,
     SCRIPT_SECTION_TARGET_MINUTES,
     SCRIPT_SECTION_WORD_TOLERANCE,
     SCRIPT_SPEAKER_BALANCE_MAX_SHARE,
@@ -42,6 +46,8 @@ from app.services.script_service import LanguageNotesOut
 if TYPE_CHECKING:
     from app.services.ai.router import AIRouter
     from app.services.ai_worker import AIWorker, JobHandler
+
+logger = logging.getLogger(__name__)
 
 _env = Environment(
     loader=FileSystemLoader(str(SCRIPT_PROMPTS_DIR)),
@@ -119,6 +125,35 @@ def section_word_count(lines: list[SectionLineOut]) -> int:
     return sum(len(_WORD_RE.findall(line.text)) for line in lines)
 
 
+def clamp(value: float, low: float, high: float) -> float:
+    """Bound `value` to `[low, high]`."""
+    return max(low, min(high, value))
+
+
+def compute_section_effective_target(nominal: int, carry: float) -> int:
+    """Effective word target for a non-last section (Task 14.3, plan §4.3 item 2).
+
+    `carry` is the running surplus/deficit from prior sections (positive =
+    prior sections undershot and owe words to this one). Clamped to
+    `nominal * (1 ± SCRIPT_SECTION_CARRY_CAP)` -- any part of `nominal + carry`
+    outside that band is not applied *this* section, but `carry` itself is never
+    reset by the clamp (see `carry` update below), so it is not lost either.
+    """
+    low = nominal * (1 - SCRIPT_SECTION_CARRY_CAP)
+    high = nominal * (1 + SCRIPT_SECTION_CARRY_CAP)
+    return round(clamp(nominal + carry, low, high))
+
+
+def compute_last_section_effective_target(nominal_last: int, target_words: int, words_so_far: int) -> int:
+    """Effective target for the episode's final section (Task 14.3, plan §4.3
+    item 3) -- aims directly at landing the whole-episode total instead of
+    accumulating carry further, clamped to `nominal_last * (1 ±
+    SCRIPT_LAST_SECTION_CARRY_CAP)`."""
+    low = nominal_last * (1 - SCRIPT_LAST_SECTION_CARRY_CAP)
+    high = nominal_last * (1 + SCRIPT_LAST_SECTION_CARRY_CAP)
+    return round(clamp(target_words - words_so_far, low, high))
+
+
 def repeated_8gram_ratio(words: list[str]) -> float:
     """Fraction of 8-word sliding windows that repeat elsewhere in `words`."""
     if len(words) < 8:
@@ -129,22 +164,15 @@ def repeated_8gram_ratio(words: list[str]) -> float:
     return repeated / len(grams)
 
 
-def validate_section(
-    lines: list[SectionLineOut], target_words: int, known_speaker_ids: set[str]
-) -> list[str]:
-    """Hard checks for one generated section. Empty list means valid."""
-    errors: list[str] = []
+def validate_section_structure(lines: list[SectionLineOut], known_speaker_ids: set[str]) -> list[str]:
+    """Structural hard checks for one generated section (Task 14.3 split --
+    these always hard-fail the job even after a repair; see
+    `validate_section_word_budget` for the check that now instead triggers
+    accept-and-carry). Empty list means structurally valid."""
     if not lines:
         return ["section has no lines"]
 
-    total_words = sum(len(_WORD_RE.findall(line.text)) for line in lines)
-    tolerance = target_words * SCRIPT_SECTION_WORD_TOLERANCE
-    if not (target_words - tolerance <= total_words <= target_words + tolerance):
-        errors.append(
-            f"section word count {total_words} is outside "
-            f"±{int(SCRIPT_SECTION_WORD_TOLERANCE * 100)}% of target {target_words}"
-        )
-
+    errors: list[str] = []
     unknown = {line.speaker_id for line in lines} - known_speaker_ids
     if unknown:
         errors.append(f"unknown speaker_id(s): {sorted(unknown)}")
@@ -164,6 +192,34 @@ def validate_section(
                 consecutive = 1
 
     return errors
+
+
+def validate_section_word_budget(lines: list[SectionLineOut], target_words: int) -> list[str]:
+    """Word-deviation check against `target_words` (Task 14.3: the caller passes
+    the *effective*, not nominal, target). Empty `lines` returns no error here --
+    that case is `validate_section_structure`'s "section has no lines", not a
+    budget miss, so it is never double-reported."""
+    if not lines:
+        return []
+    total_words = section_word_count(lines)
+    tolerance = target_words * SCRIPT_SECTION_WORD_TOLERANCE
+    if not (target_words - tolerance <= total_words <= target_words + tolerance):
+        return [
+            f"section word count {total_words} is outside "
+            f"±{int(SCRIPT_SECTION_WORD_TOLERANCE * 100)}% of target {target_words}"
+        ]
+    return []
+
+
+def validate_section(
+    lines: list[SectionLineOut], target_words: int, known_speaker_ids: set[str]
+) -> list[str]:
+    """Combined structural + word-budget checks -- kept for existing pure-function
+    callers; the pipeline itself (Task 14.3) calls the two split functions above
+    separately, since a word-budget-only failure and a structural failure are no
+    longer treated the same way after a repair. Semantically identical to the
+    pre-14.3 combined function (same errors, different internal composition)."""
+    return validate_section_structure(lines, known_speaker_ids) + validate_section_word_budget(lines, target_words)
 
 
 def validate_global(
@@ -306,7 +362,11 @@ async def _generate_section(
     is_last_section: bool,
     db,
     job_id: str,
-) -> tuple[list[SectionLineOut], list[str]]:
+) -> tuple[list[SectionLineOut], list[str], list[str]]:
+    """Returns `(lines, structural_errors, budget_errors)`. `section_spec.target_words`
+    is the *effective* target the caller wants this section validated against --
+    the orchestrator passes a `model_copy`'d spec with `target_words` already
+    overridden (Task 14.3), so this function itself needs no separate parameter."""
     cefr_constraints = await load_cefr_block(project["cefr_level"])
     prompt = await _render(
         "section.txt",
@@ -339,8 +399,12 @@ async def _generate_section(
     try:
         lines = parse_and_validate(result.text, _SECTION_LINES_ADAPTER)
     except SchemaValidationError as exc:
-        return [], [str(exc)]
-    return lines, validate_section(lines, section_spec.target_words, known_speaker_ids)
+        return [], [str(exc)], []
+    return (
+        lines,
+        validate_section_structure(lines, known_speaker_ids),
+        validate_section_word_budget(lines, section_spec.target_words),
+    )
 
 
 async def _repair_section(
@@ -352,7 +416,9 @@ async def _repair_section(
     known_speaker_ids: set[str],
     db,
     job_id: str,
-) -> tuple[list[SectionLineOut], list[str]]:
+) -> tuple[list[SectionLineOut], list[str], list[str]]:
+    """Returns `(lines, structural_errors, budget_errors)` -- see `_generate_section`
+    for why `section_spec.target_words` is already the effective target."""
     previous_output = (
         _SECTION_LINES_ADAPTER.dump_json(previous_lines).decode("utf-8") if previous_lines else "[]"
     )
@@ -377,8 +443,12 @@ async def _repair_section(
     try:
         lines = parse_and_validate(result.text, _SECTION_LINES_ADAPTER)
     except SchemaValidationError as exc:
-        return [], [str(exc)]
-    return lines, validate_section(lines, section_spec.target_words, known_speaker_ids)
+        return [], [str(exc)], []
+    return (
+        lines,
+        validate_section_structure(lines, known_speaker_ids),
+        validate_section_word_budget(lines, section_spec.target_words),
+    )
 
 
 # --- orchestration -----------------------------------------------------------------------
@@ -557,8 +627,37 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
     prior_summary = ""
     total_sections = len(outline.sections)
 
+    # Task 14.3 item 7 (resume): recompute carry/words_so_far from already-
+    # checkpointed sections -- a no-op loop for a fresh job. Reads each
+    # checkpoint's stored `target_effective` rather than replaying nominal
+    # targets, so a resumed run reaches the exact same carry (and therefore the
+    # same total) an uninterrupted run would have -- see task-14.3.md's
+    # "Resume/carry" decision for the equivalence argument (PM-reviewed).
+    carry = 0.0
+    words_so_far = 0
+    last_section_spec: OutlineSectionSpec | None = None
+    last_section_lines: list[SectionLineOut] = []
     for position, section_spec in enumerate(outline.sections, start=1):
         idx = section_spec.index
+        if idx == 0 or idx not in checkpoints_by_index:
+            continue
+        checkpoint = checkpoints_by_index[idx]
+        cp_lines = _SECTION_LINES_ADAPTER.validate_json(checkpoint["result_json"])
+        cp_words = section_word_count(cp_lines)
+        try:
+            cp_metrics = json.loads(checkpoint["metrics_json"])
+        except (TypeError, ValueError):
+            cp_metrics = {}
+        cp_effective = cp_metrics.get("target_effective", section_spec.target_words)
+        carry += cp_effective - cp_words
+        words_so_far += cp_words
+        if position == total_sections:
+            last_section_spec = section_spec
+            last_section_lines = cp_lines
+
+    for position, section_spec in enumerate(outline.sections, start=1):
+        idx = section_spec.index
+        is_last = position == total_sections
         if idx != 0 and idx in checkpoints_by_index:
             section_lines = _SECTION_LINES_ADAPTER.validate_json(checkpoints_by_index[idx]["result_json"])
             all_lines.extend(section_lines)
@@ -569,10 +668,18 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
             await _cancel(db, job_id)
             return
 
+        nominal = section_spec.target_words
+        effective_target = (
+            compute_last_section_effective_target(nominal, target_words, words_so_far)
+            if is_last
+            else compute_section_effective_target(nominal, carry)
+        )
+        effective_spec = section_spec.model_copy(update={"target_words": effective_target})
+
         try:
-            section_lines, errors = await _generate_section(
-                router, project, outline, section_spec, prior_summary, known_speaker_ids,
-                position == total_sections, db, job_id,
+            section_lines, structural_errors, budget_errors = await _generate_section(
+                router, project, outline, effective_spec, prior_summary, known_speaker_ids,
+                is_last, db, job_id,
             )
         except ProviderError as exc:
             await _fail_provider(db, job_id, exc)
@@ -581,28 +688,39 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
         repaired = False
         words_before_repair: int | None = None
         errors_before_repair = 0
-        if errors:
-            errors_before_repair = len(errors)
+        if structural_errors or budget_errors:
+            errors_before_repair = len(structural_errors) + len(budget_errors)
             words_before_repair = section_word_count(section_lines)
             try:
-                section_lines, errors = await _repair_section(
-                    router, project, section_spec, section_lines, errors, known_speaker_ids, db, job_id,
+                section_lines, structural_errors, budget_errors = await _repair_section(
+                    router, project, effective_spec, section_lines,
+                    structural_errors + budget_errors, known_speaker_ids, db, job_id,
                 )
             except ProviderError as exc:
                 await _fail_provider(db, job_id, exc)
                 return
             repaired = True
-        if errors:
-            await _fail(db, job_id, "section_validation_failed", errors)
+        if structural_errors:
+            await _fail(db, job_id, "section_validation_failed", structural_errors)
             return
 
         words = section_word_count(section_lines)
-        target_nominal = section_spec.target_words
+        if repaired and budget_errors:
+            # Task 14.3 item 4: a word-deviation-only failure survives the one
+            # repair pass -- accept and carry the drift instead of failing the
+            # job (the ±15% check is now a repair trigger/drift signal, not a
+            # job-killing gate; the product's only hard word-count gate stays
+            # the ±10% total, checked below via validate_global).
+            logger.info(
+                "script_section_accepted_off_target job_id=%s section=%d effective=%d actual=%d",
+                job_id, idx, effective_target, words,
+            )
+
         checkpoint_metrics = {
-            "target_nominal": target_nominal,
-            "target_effective": target_nominal,  # unchanged until Task 14.3
+            "target_nominal": nominal,
+            "target_effective": effective_target,
             "words": words,
-            "deviation_pct": round((words - target_nominal) / target_nominal, 4),
+            "deviation_pct": round((words - effective_target) / effective_target, 4) if effective_target else 0.0,
             "repaired": repaired,
             "words_before_repair": words_before_repair,
             "errors_before_repair": errors_before_repair,
@@ -617,6 +735,12 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
             )
         all_lines.extend(section_lines)
         prior_summary = summarize_section(section_lines)
+        if not is_last:
+            carry += effective_target - words
+        words_so_far += words
+        if is_last:
+            last_section_spec = section_spec
+            last_section_lines = section_lines
         await _update_progress(db, job_id, f"section_{idx}", 10 + round(80 * position / total_sections))
         await worker.heartbeat(job_id)
 
@@ -626,6 +750,59 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
     hard_errors, _warnings = validate_global(
         all_lines, target_words, known_speaker_ids, num_speakers, project["topic"]
     )
+
+    if hard_errors and last_section_spec is not None and SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS > 0:
+        # Task 14.3 item 6: one extra repair, but only when the total *word
+        # count* is the problem -- gated on that specific condition (not "any
+        # hard error") so a speaker-balance/duplicate/8-gram failure the
+        # word-budget repair can't fix isn't wasted on a pointless attempt; the
+        # comprehensive re-check below still catches it if it persists.
+        total_words = section_word_count(all_lines)
+        tolerance = target_words * SCRIPT_GLOBAL_WORD_TOLERANCE
+        total_outside = not (target_words - tolerance <= total_words <= target_words + tolerance)
+        if total_outside:
+            words_before_last_section = total_words - section_word_count(last_section_lines)
+            new_target = max(1, target_words - words_before_last_section)
+            adjusted_spec = last_section_spec.model_copy(update={"target_words": new_target})
+            try:
+                new_last_lines, structural_errors, _budget_errors = await _repair_section(
+                    router, project, adjusted_spec, last_section_lines,
+                    [
+                        f"total episode word count {total_words} is outside "
+                        f"±{int(SCRIPT_GLOBAL_WORD_TOLERANCE * 100)}% of target {target_words} words "
+                        "-- this is a final-section budget repair"
+                    ],
+                    known_speaker_ids, db, job_id,
+                )
+            except ProviderError as exc:
+                await _fail_provider(db, job_id, exc)
+                return
+            if structural_errors:
+                await _fail(db, job_id, "section_validation_failed", structural_errors)
+                return
+
+            all_lines = all_lines[: len(all_lines) - len(last_section_lines)] + new_last_lines
+            new_words = section_word_count(new_last_lines)
+            async with write_transaction(db):
+                await ai_job_service.save_checkpoint(
+                    db, job_id, last_section_spec.index, "section", "valid",
+                    compute_config_hash({"section": last_section_spec.model_dump()}, "section"),
+                    result_json=_SECTION_LINES_ADAPTER.dump_json(new_last_lines).decode("utf-8"),
+                    metrics_json=json.dumps({
+                        "target_nominal": last_section_spec.target_words,
+                        "target_effective": new_target,
+                        "words": new_words,
+                        "deviation_pct": round((new_words - new_target) / new_target, 4) if new_target else 0.0,
+                        "repaired": True,
+                        "words_before_repair": section_word_count(last_section_lines),
+                        "errors_before_repair": 1,
+                    }),
+                    commit=False,
+                )
+            hard_errors, _warnings = validate_global(
+                all_lines, target_words, known_speaker_ids, num_speakers, project["topic"]
+            )
+
     if hard_errors:
         await _fail(db, job_id, "global_validation_failed", hard_errors)
         return
