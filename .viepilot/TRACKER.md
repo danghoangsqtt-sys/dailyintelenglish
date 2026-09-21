@@ -1735,7 +1735,30 @@ constraint recorded in the plan: **no tolerance value changes** (`SCRIPT_GLOBAL_
   fixture from a pure word-count miss to an unknown-speaker error, with justification — correct,
   since a pure word miss no longer reaches `section_validation_failed` by design.
 
-### 14.4 Gate B second run, both providers — ⏳ 14.4a IN PROGRESS (Coder: runner prep); 14.4b pending (PM)
+### 14.4 Gate B second run, both providers — ✅ 14.4a DONE (2026-09-21, Coder; PM-accepted); ⏳ 14.4b pending (PM)
+
+- [x] 14.4a runner prep (`scripts/run_ai_operational_trial.py` only; commits `377f140`, `153aa16`):
+  `classify_failure` (infra/content/other; `schema_validation_failed` = content), `call_stats`
+  from `metrics.calls[]`, per-section checkpoint table read from the trial DB, §4.4 aggregates,
+  `--matrix local|gemini`, `--with-samples/--with-media`, `--resume-evidence` (two-day split),
+  `--reaggregate` (offline), `has_outro` fix verified against the real Phase 13 false negative
+  (outline objective "concludes the show" now counts); evidence/trial-data moved to
+  `data/quality_reviews/phase14/gate-b2/` so Phase 13 data is never overwritten.
+- [x] **Amendment C** (PM, plan `92baabf`, before any Gate B-2 run): the declared Gemini rule
+  "5/5 complete ∧ ≤1 infra death" was self-contradictory and would have mislabelled one transient
+  death as FAIL-CONTENT. Clarified: PASS-cloud ⇔ infra ≤ 1 ∧ content_pass ≥ 4 ∧ completed + infra
+  == 5; FAIL-INFRA ⇔ infra ≥ 2; else FAIL-CONTENT. Coder fixed `gemini_matrix_decision` (`153aa16`)
+  and honestly noted the old evidence files do not exercise the fixed branch.
+- [x] **PM acceptance review (independent):** re-ran `--reaggregate` on both Phase 13 files
+  (local FAIL 0/5 content, Gemini DIAGNOSTIC_ONLY + 2 `handler_exception` flags — unchanged);
+  exercised the fixed branch directly with 7 synthetic run sets (5 pass; 4 pass + 1 content-fail
+  complete; 1 infra + 4 pass → PASS-cloud; 1 infra + 3 pass + 1 bad → FAIL-CONTENT; 2 infra →
+  FAIL-INFRA; 1 content death + 4 pass → FAIL-CONTENT; 1 handler_exception → flagged) — all match
+  Amendment C; `ruff` clean.
+- [ ] 14.4b (PM): read-only preflight done at HEAD `153aa16` — Ollama serving `qwen3.5:9b`
+  digest `6488c96fa5fa` (env correct, no restart needed), GPU 1,844/12,288 MiB used, port 8000
+  currently not answering (nothing to protect, nothing touched). Waiting on the user for: Coder
+  idle confirmation (full suite + trial), live Gemini RPM/RPD reading (two-day split decision).
 
 ### 14.5 Correct the Phase 13 acceptance report — ✅ DONE (2026-09-21, PM)
 

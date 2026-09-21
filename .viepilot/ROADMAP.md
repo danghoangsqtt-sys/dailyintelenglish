@@ -1186,9 +1186,9 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
   kills the job; one final-section budget repair; deterministic resume; constants-pin test —
   tolerance values byte-unchanged, PM-verified.
 
-### 14.4 Gate B second run, both providers — ⏳ 14.4a IN PROGRESS
-- [ ] 14.4a runner prep (Coder): infra/content classification, per-section stats, aggregates,
-  `--matrix`, `--reaggregate`, `has_outro` fix.
+### 14.4 Gate B second run, both providers — ✅ 14.4a DONE (2026-09-21); ⏳ 14.4b pending (PM)
+- [x] 14.4a runner prep (Coder): infra/content classification, per-section stats, aggregates,
+  `--matrix`, `--reaggregate`, `has_outro` fix; Amendment C decision-rule fix; PM-accepted.
 - [ ] 14.4b execution (PM): local matrix → Gemini matrix, sequential; declared rules; report
   `docs/operations/phase14-gate-b2.md`.
 
