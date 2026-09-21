@@ -45,7 +45,7 @@
 | 14.4b | Gate B second run, both providers, declared protocol | PM | done | Decision rules in plan §4.4 — result: local FAIL 3/5, Gemini FAIL-INFRA 0/5, stop condition |
 | 14.5 | Correct `docs/operations/phase13-acceptance.md` | PM | done | Original text preserved |
 | 14.1-b | Gemini backoff redesign (retryDelay, daily-429 no-retry, wider 503 window) | — | **dropped (D12)** | Superseded by the owner's decision to drop Gemini (Amendment D) — never started, no task card was ever created |
-| 14.7 | Local-only mode, config-first (Amendment D) | Coder | **blocked** (implementation done, 1 file outside allowed list) | see task-14.7.md verification |
+| 14.7 | Local-only mode, config-first (Amendment D) | Coder | **done** (Amendment F applied; 879 passed, 0 failed) | see task-14.7.md verification |
 | 14.8 | Local hardening: over-length sections, consecutive-lines rule (Amendment D) | Coder | pending | Depends on 14.7 accepted; constants-pin extended |
 | 14.9 | Gate B-3, local only (Amendment D) | PM | pending | Depends on 14.7 + 14.8 done; Coder idle during the run |
 | 14.6 (revised) | Resume Task 13.10, local-only rollout (Amendment D) | Both | pending | Depends on 14.7 + 14.8 + 14.9 |
@@ -296,3 +296,15 @@ each diff before the next starts) → 14.9 (PM runs; Coder idle) → 14.6 (revis
   Gemini text" badge in `frontend/pages/step6_thumbnail.html`. Task 14.7
   status: **blocked**, requesting a PM amendment for
   `tests/test_ai_jobs_api.py` (one assertion) before it can go to `done`.
+- 2026-09-21: PM issued Amendment F (plan commit `ff99679`), reproducing the
+  reported 877/1 result and amending Task 14.7's allowed files to add
+  `tests/test_ai_jobs_api.py` (test-only) and `frontend/pages/
+  step6_thumbnail.html` (copy-only), plus asking for a dedicated
+  `test_generate_package_runs_end_to_end_under_ai_mode_local` in
+  `tests/test_youtube_service.py` (naming parity with
+  `test_thumbnail_service.py`'s new test, even though the pre-existing
+  `test_generate_package_local_mode_needs_no_gemini_key` already covered the
+  same scenario). Coder applied all three: the stale assertion now checks
+  `data["cloud_enabled"] is False`; the badge now reads "Pillow + local AI
+  text"; the new YouTube test added. Full suite re-run: **879 passed, 0
+  failed**. Task 14.7 status: **done**.

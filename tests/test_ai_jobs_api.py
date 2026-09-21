@@ -159,7 +159,7 @@ def test_ai_health_never_exposes_the_gemini_key(client, monkeypatch):
     assert response.status_code == 200
     assert "super-secret-key-value" not in response.text
     data = response.json()["data"]
-    assert data["gemini_fallback_configured"] is True
+    assert data["cloud_enabled"] is False
     assert "mode" in data
     assert "ollama_reachable" in data
 

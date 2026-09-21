@@ -276,6 +276,17 @@ async def test_generate_package_local_mode_needs_no_gemini_key():
     assert len(package["titles"]) == 3
 
 
+async def test_generate_package_runs_end_to_end_under_ai_mode_local():
+    """Task 14.7 (Amendment E/F): same scenario as the local-mode test above,
+    named to match the equivalent thumbnail/script/learning coverage now that
+    local is the default mode rather than an opt-in one."""
+    router = _gateway_router(AIMode.LOCAL, gemini_outcomes=[], local_outcomes=[_package_result(VALID_PACKAGE)])
+
+    package = await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
+
+    assert len(package["titles"]) == 3
+
+
 # Note: the responseJsonSchema-not-responseSchema wire-payload regression (BUG-011)
 # is now covered once, at the shared gateway layer (Task 13.7), by
 # tests/test_ai_providers.py::test_gemini_provider_wire_payload_uses_response_json_schema_not_response_schema.

@@ -1,6 +1,6 @@
 # Task 14.7 — Local-Only Mode, Config-First
 
-- **Status:** blocked (awaiting PM amendment -- see Deviations; implementation otherwise complete, 877/878 full-suite pass)
+- **Status:** done (Amendment F applied; full suite 879 passed, 0 failed)
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** Amendment D (plan §12, commit `94f5e7b`); Gate B-2 (`docs/operations/phase14-gate-b2.md`)
@@ -41,7 +41,11 @@ removed), `frontend/static/js/step2_script.js`, `frontend/static/js/step3_learni
 the default-mode change requires a fixture change), and — **Amendment E (PM, 2026-09-21,
 plan commit `26dae03`, before any 14.7 code)** — `tests/test_thumbnail_service.py`,
 `tests/test_youtube_service.py` (test-only, for action 7's two `FakeProvider` tests;
-omitted from the original list by mistake).
+omitted from the original list by mistake) — and **Amendment F (PM, 2026-09-21, commit
+`ff99679`, after diff `518dd0a`)** — `tests/test_ai_jobs_api.py` (test-only: fix the
+stale `gemini_fallback_configured` assertion at line 162) and
+`frontend/pages/step6_thumbnail.html` (copy-only: replace the "Pillow + Gemini text"
+badge with a neutral label).
 
 `docs/operations/local-ai.md` and `docs/api.md` are PM-owned — report what changed, PM
 documents it.
@@ -352,6 +356,25 @@ the Phase 13 hybrid/Gemini behavior without a code revert.
     existing `#ai-mode-status` div is kept as-is, only the interactive
     `<select>`/save button and their handlers were removed.
   - Otherwise no deviations from the plan recorded above.
+  - **Amendment F (PM, 2026-09-21, commit `ff99679`) resolution:** PM reviewed
+    diff `518dd0a`, confirmed both findings above and reproduced the 1
+    failed / 877 passed result, amended the allowed-files list to add
+    `tests/test_ai_jobs_api.py` (test-only) and
+    `frontend/pages/step6_thumbnail.html` (copy-only), and additionally
+    asked for a dedicated `test_generate_package_runs_end_to_end_under_ai_mode_local`
+    in `tests/test_youtube_service.py` — named to match
+    `test_thumbnail_service.py`'s new test — even though the pre-existing
+    `test_generate_package_local_mode_needs_no_gemini_key` already covers the
+    same scenario (documented above as already-satisfied before Amendment F).
+    Added the extra test for naming parity across the four AI-calling
+    services rather than re-litigating the point. All three items applied:
+    `tests/test_ai_jobs_api.py:162` now asserts `data["cloud_enabled"] is
+    False`; `step6_thumbnail.html`'s badge now reads "Pillow + local AI
+    text"; `test_youtube_service.py` gained the new test. `ruff check` on
+    both edited `.py` files clean;
+    `pytest tests/test_ai_jobs_api.py tests/test_youtube_service.py -q` →
+    **42 passed**. Full suite re-run after all three fixes:
+    `venv\Scripts\python.exe -m pytest -q` → **879 passed, 0 failed** (364.28s).
 - Revert-and-confirm-failure evidence:
   - Temporarily replaced `set_ai_mode`'s cloud-gate condition with `if False
     and ai_mode != "local" and not config.settings.AI_ALLOW_CLOUD:` and
@@ -361,6 +384,5 @@ the Phase 13 hybrid/Gemini behavior without a code revert.
     `assert 200 == 422`). Restored the real condition and re-ran
     `tests/test_settings_service.py tests/test_settings_api.py`: **37
     passed**.
-- Commit(s): (pending -- reporting the block to the PM before committing,
-  per the established Task 14.1/14.2/14.4a pattern of pushing the
-  in-progress work while flagging the block, not holding it back.)
+- Commit(s): `518dd0a` (implementation, blocked), plus this commit (Amendment F
+  fix-up: test_ai_jobs_api.py, step6_thumbnail.html, test_youtube_service.py).
