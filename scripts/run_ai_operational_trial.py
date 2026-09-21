@@ -87,6 +87,7 @@ os.environ["DIE_DATA_DIR"] = str(TRIAL_DATA_DIR)
 import httpx  # noqa: E402
 import uvicorn  # noqa: E402
 
+from app.core.constants import CEFR_WORDS_PER_MINUTE, SCRIPT_GLOBAL_WORD_TOLERANCE  # noqa: E402
 from app.main import app  # noqa: E402
 
 # --- Gate B thresholds (controlling plan section 8, Task 13.9 / section 3) ----------
@@ -274,8 +275,29 @@ def _has_outro(last_text_lower: str, outline_last_objective: str | None) -> bool
     return False
 
 
+def _script_word_range(cefr_level: str, duration_minutes: float) -> tuple[int, int]:
+    """Task 14.4a-c (PM finding from the first real local Gate B-2 matrix run):
+    `analyze_script` was scoring *every* run's word count against the fixed
+    `WORD_COUNT_MIN`/`WORD_COUNT_MAX` (720-880, the B1-eight-minute target),
+    including the B1 5/10-minute and A2/C1 sample runs -- so a sample that hit
+    its *own* target exactly (e.g. b1-5min at 453/500, -9.4%) was scored
+    `word_count_in_range=False` against the wrong range, a runner bug, not a
+    real content failure. This computes each run's *own* target range from its
+    own `cefr_level`/`duration_minutes`, using the same formula the pipeline
+    itself uses (`CEFR_WORDS_PER_MINUTE` and the product's own
+    `SCRIPT_GLOBAL_WORD_TOLERANCE`, ±10%). For B1 eight-minute specifically
+    this reproduces exactly `(720, 880)` -- the primary matrix's own scoring is
+    unchanged; only the samples' scoring is corrected."""
+    target = round(CEFR_WORDS_PER_MINUTE[cefr_level.upper()] * duration_minutes)
+    tolerance = target * SCRIPT_GLOBAL_WORD_TOLERANCE
+    return round(target - tolerance), round(target + tolerance)
+
+
 def analyze_script(
-    lines: list[dict], known_speaker_ids: set[str], outline_last_objective: str | None = None
+    lines: list[dict],
+    known_speaker_ids: set[str],
+    outline_last_objective: str | None = None,
+    word_count_range: tuple[int, int] = (WORD_COUNT_MIN, WORD_COUNT_MAX),
 ) -> dict[str, Any]:
     """Independent, runner-side content check -- deliberately does not reuse
     script_pipeline.py's own validators, since Gate B measures the outcome, not
@@ -284,6 +306,11 @@ def analyze_script(
     `outline_last_objective` (Task 14.4a): the outline's own last-section
     `objective` text, when available (read from the trial DB), used only to
     widen the `has_outro` false-negative fix below -- see `_has_outro`.
+
+    `word_count_range` (Task 14.4a-c): this run's *own* target range, from
+    `_script_word_range` -- defaults to the fixed B1-eight-minute figure only
+    for a caller that doesn't know better; `run_script_trial` always passes
+    the real one.
     """
     total_words = 0
     words_by_speaker: Counter[str] = Counter()
@@ -319,8 +346,9 @@ def analyze_script(
     has_intro = any(marker in first_text for marker in intro_markers)
     has_outro = _has_outro(last_text, outline_last_objective)
 
+    word_min, word_max = word_count_range
     checks = {
-        "word_count_in_range": WORD_COUNT_MIN <= total_words <= WORD_COUNT_MAX,
+        "word_count_in_range": word_min <= total_words <= word_max,
         "speaker_balance_ok": balance_ok,
         "no_exact_duplicate_lines": exact_duplicates == 0,
         "repeated_8gram_ratio_ok": repeated_ratio < REPEATED_8GRAM_MAX_RATIO,
@@ -330,6 +358,7 @@ def analyze_script(
     }
     return {
         "total_words": total_words,
+        "word_count_range": [word_min, word_max],
         "speaker_shares": speaker_shares,
         "exact_duplicates": exact_duplicates,
         "repeated_8gram_ratio": round(repeated_ratio, 4),
@@ -527,7 +556,10 @@ async def run_script_trial(client: httpx.AsyncClient, cefr_level: str, duration_
         lines = script_response.json()["data"]
         record["line_count"] = len(lines)
         outline_last_objective = read_outline_last_objective(result["job_id"], db_path)
-        record["content"] = analyze_script(lines, known_speaker_ids, outline_last_objective)
+        record["content"] = analyze_script(
+            lines, known_speaker_ids, outline_last_objective,
+            word_count_range=_script_word_range(cefr_level, duration_minutes),
+        )
     else:
         record["content"] = None
 
@@ -592,8 +624,34 @@ def ffprobe_info(path: Path) -> dict[str, Any]:
     }
 
 
+async def synthesize_all_lines(client: httpx.AsyncClient, project_id: str) -> list[dict[str, Any]]:
+    """Task 14.4a-c (PM finding from the first real local Gate B-2 media run):
+    `POST .../audio/generate` requires every `script_lines` row to already have
+    `audio_cache_path` set (see `app/services/audio_service.py`'s "Line(s) not
+    yet synthesized" check) -- the UI drives that one line at a time via
+    `POST .../tts/preview` (see `frontend/static/js/api.js`'s
+    `previewTtsLine`), which this runner never called before, so
+    `/audio/generate` always 500'd on a real (non-mocked) trial. Sequential,
+    not concurrent -- matches how the UI itself drives it and avoids
+    hammering the local Edge TTS/OmniVoice backend with a burst of calls."""
+    script_response = await client.get(f"/api/projects/{project_id}/script")
+    script_response.raise_for_status()
+    lines = script_response.json()["data"]
+    previews: list[dict[str, Any]] = []
+    for line in lines:
+        preview_response = await client.post(
+            f"/api/projects/{project_id}/tts/preview", json={"line_id": line["id"]}
+        )
+        preview_response.raise_for_status()
+        previews.append({"line_id": line["id"], **preview_response.json()["data"]})
+    return previews
+
+
 async def run_media_pipeline(client: httpx.AsyncClient, project_id: str, evidence_dir: Path) -> dict:
     record: dict[str, Any] = {"project_id": project_id}
+
+    tts_previews = await synthesize_all_lines(client, project_id)
+    record["lines_synthesized"] = len(tts_previews)
 
     audio_response = await client.post(f"/api/projects/{project_id}/audio/generate", json={})
     record["audio_generate_status_code"] = audio_response.status_code
@@ -771,6 +829,51 @@ def local_matrix_decision(runs: list[dict[str, Any]], n_requested: int, smoke_te
     return ("PASS" if script_gate_pass else "FAIL"), reasons
 
 
+def local_full_decision(
+    runs: list[dict[str, Any]],
+    learning_runs: list[dict[str, Any]],
+    media_pipeline_result: dict[str, Any] | None,
+    n_requested: int,
+    smoke_test: bool,
+    diagnostic_only: bool,
+    crashed: bool = False,
+    crash_error: str | None = None,
+) -> tuple[str, list[str]]:
+    """The full Task 13.9 local-matrix decision: the script completion/content
+    gate (`local_matrix_decision`) AND the learning gate AND the media gate,
+    combined exactly as Task 13.9 always has. Shared by `main()`'s live local
+    matrix run and `reaggregate()`'s `--media-evidence`-merged local matrix
+    (Task 14.4a-c), so the two paths can never silently drift apart."""
+    reasons: list[str] = []
+    if crashed:
+        reasons.append(f"Runner crashed before completing: {crash_error}")
+
+    script_decision, script_gate_reasons = local_matrix_decision(runs, n_requested, smoke_test)
+    script_gate_pass = script_decision == "PASS"
+    if not script_gate_pass:
+        reasons.extend(script_gate_reasons)
+
+    learning_pass_count = sum(
+        1 for r in learning_runs if r.get("job_status") == "complete" and r.get("spot_check_pass")
+    )
+    learning_gate_pass = len(learning_runs) > 0 and learning_pass_count == len(learning_runs)
+    if not learning_gate_pass:
+        reasons.append(f"Learning gate: {learning_pass_count}/{len(learning_runs)} passed.")
+
+    media_gate_pass = bool(media_pipeline_result and media_pipeline_result.get("all_checks_pass"))
+    if not media_gate_pass:
+        reasons.append("Media pipeline: not run or failed one of the duration/A-V/codec checks.")
+
+    overall_pass = (
+        script_gate_pass and learning_gate_pass and media_gate_pass and not diagnostic_only and not crashed
+    )
+    if diagnostic_only and not crashed:
+        decision = "DIAGNOSTIC_ONLY"
+    else:
+        decision = "PASS" if overall_pass else "FAIL"
+    return decision, (reasons if reasons else ["all declared thresholds met"])
+
+
 def gemini_matrix_decision(runs: list[dict[str, Any]]) -> tuple[str, list[str]]:
     """Plan §4.4's Gemini decision rule (**Amendment C**, 2026-09-21, plan commit
     `92baabf`): the rule as first declared ("5/5 complete AND >=4/5 content pass
@@ -842,6 +945,53 @@ def _write_evidence(evidence: dict[str, Any], run_id: str) -> Path:
     evidence_path = EVIDENCE_DIR / f"gate-b2-{run_id}.json"
     evidence_path.write_text(json.dumps(evidence, indent=2, default=str), encoding="utf-8")
     return evidence_path
+
+
+async def run_media_only(project_id: str) -> int:
+    """`--media-only PROJECT_ID` (Task 14.4a-c): start an isolated live server
+    against the *current* `TRIAL_DATA_DIR` (already populated by a completed
+    matrix run whose media step crashed) and run just the fixed media
+    pipeline for one project, without regenerating any script -- so re-running
+    the ~30-40 minute script matrix isn't needed to re-test media alone.
+    Writes its own `gate-b2-media-<run_id>.json` evidence file; merge it into
+    a matrix's own decision via `--reaggregate <matrix.json> --media-evidence
+    <this file>`."""
+    TRIAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    evidence: dict[str, Any] = {
+        "run_id": run_id,
+        "started_at": _utc_now_iso(),
+        "project_id": project_id,
+        "data_dir": str(TRIAL_DATA_DIR),
+        "crashed": False,
+    }
+
+    print(f"[gate-b] --media-only starting isolated trial server (data_dir={TRIAL_DATA_DIR})", flush=True)
+    server, base_url, port = _start_live_server()
+    evidence["server_base_url"] = base_url
+    print(f"[gate-b] server up at {base_url}", flush=True)
+
+    try:
+        async with httpx.AsyncClient(base_url=base_url, timeout=httpx.Timeout(30.0, read=1500.0)) as client:
+            await wait_for_health(client)
+            print(f"[gate-b] running real media pipeline for project {project_id}...", flush=True)
+            media_pipeline = await run_media_pipeline(client, project_id, EVIDENCE_DIR)
+            evidence["media_pipeline"] = media_pipeline
+            print(f"[gate-b] media pipeline checks: {media_pipeline['checks']}", flush=True)
+    except Exception as exc:  # noqa: BLE001 -- never lose evidence to an unhandled crash
+        evidence["crashed"] = True
+        evidence["crash_error"] = f"{type(exc).__name__}: {exc}"
+        print(f"[gate-b] --media-only CRASHED: {evidence['crash_error']}", flush=True)
+    finally:
+        _stop_live_server(server)
+        print("[gate-b] server stopped", flush=True)
+
+    evidence["finished_at"] = _utc_now_iso()
+    evidence_path = EVIDENCE_DIR / f"gate-b2-media-{run_id}.json"
+    evidence_path.write_text(json.dumps(evidence, indent=2, default=str), encoding="utf-8")
+    print(f"[gate-b] media evidence written to {evidence_path}", flush=True)
+    return 1 if evidence["crashed"] else 0
 
 
 async def main(
@@ -1010,40 +1160,20 @@ async def main(
             print(f"[gate-b]   - {reason}", flush=True)
         return 0
 
-    learning_runs_list = evidence.get("learning_runs", [])
-    learning_pass_count = evidence.get("learning_pass_count", 0)
-    media_pipeline_result = evidence.get("media_pipeline")
-
-    decision_reasons: list[str] = []
-    if evidence["crashed"]:
-        decision_reasons.append(f"Runner crashed before completing: {evidence['crash_error']}")
-
-    # Task 14.4a: this now calls the shared `local_matrix_decision` (plan §4.4's
-    # "Phase 13 Gate B rule verbatim") instead of duplicating the formula inline;
-    # same thresholds, same message text -- b1_pass_count/b1_complete_count above
-    # stay only for the per-run print lines already emitted during the loop.
-    script_decision, script_gate_reasons = local_matrix_decision(
-        evidence.get("b1_eight_minute_runs", []), n_b1_runs, smoke_test
+    # Task 14.4a-c: this now calls the shared `local_full_decision` (script +
+    # learning + media gates, exactly Task 13.9's original combined logic)
+    # instead of duplicating it inline -- the same function `reaggregate()`
+    # uses with `--media-evidence`, so the two paths can't silently drift.
+    evidence["decision"], evidence["decision_reasons"] = local_full_decision(
+        evidence.get("b1_eight_minute_runs", []),
+        evidence.get("learning_runs", []),
+        evidence.get("media_pipeline"),
+        n_b1_runs,
+        smoke_test,
+        diagnostic_only,
+        crashed=evidence["crashed"],
+        crash_error=evidence.get("crash_error"),
     )
-    script_gate_pass = script_decision == "PASS"
-    if not script_gate_pass:
-        decision_reasons.extend(script_gate_reasons)
-    learning_gate_pass = len(learning_runs_list) > 0 and learning_pass_count == len(learning_runs_list)
-    if not learning_gate_pass:
-        decision_reasons.append(f"Learning gate: {learning_pass_count}/{len(learning_runs_list)} passed.")
-    media_gate_pass = bool(media_pipeline_result and media_pipeline_result.get("all_checks_pass"))
-    if not media_gate_pass:
-        decision_reasons.append("Media pipeline: not run or failed one of the duration/A-V/codec checks.")
-
-    overall_pass = (
-        script_gate_pass and learning_gate_pass and media_gate_pass
-        and not diagnostic_only and not evidence["crashed"]
-    )
-    if diagnostic_only and not evidence["crashed"]:
-        evidence["decision"] = "DIAGNOSTIC_ONLY"
-    else:
-        evidence["decision"] = "PASS" if overall_pass else "FAIL"
-    evidence["decision_reasons"] = decision_reasons if decision_reasons else ["all declared thresholds met"]
 
     # Per-section outcome summary: the Gate B post-mortem showed a job-level pass rate
     # alone hides *why* -- one section missing its word budget hard-fails the whole job,
@@ -1074,17 +1204,58 @@ async def main(
 # --- Task 14.4a: --reaggregate (no server, no network, no live trial) ---------------
 
 
-def reaggregate(evidence_path: Path) -> int:
+def _reaggregate_word_count_check(run: dict[str, Any]) -> dict[str, Any] | None:
+    """Task 14.4a-c bug 2: recompute `content.checks.word_count_in_range` /
+    `content.all_checks_pass` from the run's own already-recorded `total_words`
+    against *this run's own* `cefr_level`/`duration_minutes` target range
+    (`_script_word_range`), instead of trusting whatever was computed at
+    record time -- before this fix, every run (including the B1 5/10-minute
+    and A2/C1 samples) was scored against the fixed B1-eight-minute 720-880
+    figure regardless of its own declared level/duration. Mutates
+    `run["content"]` in place. Returns the *previous*
+    `(word_count_in_range, all_checks_pass)` pair for a before/after report,
+    or `None` if there was no content to reaggregate (an errored run, or a
+    run missing `cefr_level`/`duration_minutes`)."""
+    content = run.get("content")
+    cefr_level = run.get("cefr_level")
+    duration_minutes = run.get("duration_minutes")
+    if not content or not cefr_level or not duration_minutes:
+        return None
+    checks = content.setdefault("checks", {})
+    before = (checks.get("word_count_in_range"), content.get("all_checks_pass"))
+    word_min, word_max = _script_word_range(cefr_level, duration_minutes)
+    content["word_count_range"] = [word_min, word_max]
+    checks["word_count_in_range"] = word_min <= content.get("total_words", 0) <= word_max
+    content["all_checks_pass"] = all(checks.values())
+    return before
+
+
+def reaggregate(evidence_path: Path, media_evidence_path: Path | None = None) -> int:
     """Recompute failure classification, matrix aggregates, and the matrix
     decision from an existing evidence file -- never starts a server or makes
     a network call. This is the Coder's own verification mechanism for this
     task (task-14.4.md: "Coder never runs a live trial") and is also how a
     quota-split Gemini matrix's two evidence files get checked individually
     before `--resume-evidence` merges them into one live run's decision.
+
+    `media_evidence_path` (Task 14.4a-c): a `--media-only` evidence file's
+    `media_pipeline` result, merged in to complete the local matrix's media
+    gate when the matrix's own live run crashed before reaching it (e.g. the
+    now-fixed `/audio/generate` 500 -- see `synthesize_all_lines`) -- without
+    this, `media_pipeline` falls back to whatever `evidence_path` itself
+    already recorded ("not run" if the crash happened before media).
     """
     data = json.loads(evidence_path.read_text(encoding="utf-8"))
     runs = list(data.get("b1_eight_minute_runs", []))
+    sample_runs = list(data.get("sample_runs", []))
+    learning_runs = list(data.get("learning_runs", []))
+    media_pipeline = data.get("media_pipeline")
     db_path = _trial_db_path(data)
+
+    if media_evidence_path is not None:
+        media_data = json.loads(media_evidence_path.read_text(encoding="utf-8"))
+        media_pipeline = media_data.get("media_pipeline")
+        print(f"[reaggregate] merged media evidence from {media_evidence_path}")
 
     for run in runs:
         run["failure_class"] = (
@@ -1096,6 +1267,24 @@ def reaggregate(evidence_path: Path) -> int:
             run["sections"] = read_section_checkpoints(run.get("job_id") or "", db_path)
         if not run.get("call_stats"):
             run["call_stats"] = call_stats((run.get("metrics") or {}).get("calls") or [])
+
+    # Task 14.4a-c bug 2: recompute the word-count check for every run (B1-eight-
+    # minute AND samples) against its own target range, printing a before/after
+    # for anything that changed -- the B1-eight-minute runs never change (their
+    # own range is always exactly 720-880), only samples can.
+    print("[reaggregate] word-count-range re-check (bug 2 fix):")
+    for run in runs + sample_runs:
+        before = _reaggregate_word_count_check(run)
+        if before is None:
+            continue
+        after = (run["content"]["checks"]["word_count_in_range"], run["content"]["all_checks_pass"])
+        changed = before != after
+        print(
+            f"[reaggregate]   {run.get('label')}: words={run['content'].get('total_words')} "
+            f"range={run['content'].get('word_count_range')} "
+            f"word_count_in_range {before[0]} -> {after[0]}, all_checks_pass {before[1]} -> {after[1]}"
+            f"{'  *** CHANGED ***' if changed else ''}"
+        )
 
     aggregates = compute_matrix_aggregates(runs)
     ai_mode = data.get("ai_mode", "local")
@@ -1110,9 +1299,10 @@ def reaggregate(evidence_path: Path) -> int:
             reasons = [f"partial matrix ({n_requested} B1 runs requested, need 5)", *reasons]
             decision = "DIAGNOSTIC_ONLY"
     else:
-        decision, reasons = local_matrix_decision(runs, n_requested, smoke_test)
-        if diagnostic_only:
-            decision = "DIAGNOSTIC_ONLY"
+        decision, reasons = local_full_decision(
+            runs, learning_runs, media_pipeline, n_requested, smoke_test, diagnostic_only,
+            crashed=bool(data.get("crashed")), crash_error=data.get("crash_error"),
+        )
 
     print(f"[reaggregate] source: {evidence_path}")
     print(
@@ -1127,6 +1317,12 @@ def reaggregate(evidence_path: Path) -> int:
             f"message={(run.get('error_message') or '')[:120]!r}"
         )
     print(f"[reaggregate] aggregates: {json.dumps(aggregates, indent=2)}")
+    if matrix != "gemini":
+        print(
+            f"[reaggregate] media gate: "
+            f"{bool(media_pipeline and media_pipeline.get('all_checks_pass'))} "
+            f"(media_pipeline {'present' if media_pipeline else 'absent'})"
+        )
     print(f"[reaggregate] DECISION: {decision}")
     for reason in reasons:
         print(f"[reaggregate]   - {reason}")
@@ -1180,12 +1376,30 @@ if __name__ == "__main__":
     parser.add_argument(
         "--reaggregate", default=None, metavar="EVIDENCE_JSON",
         help="Recompute failure classification, aggregates, and the matrix decision from an "
-             "existing evidence file. No server, no network, no live trial.",
+             "existing evidence file. No server, no network, no live trial. Combine with "
+             "--media-evidence to fold a separately-run media gate into a local matrix's decision.",
+    )
+    parser.add_argument(
+        "--media-evidence", default=None, metavar="EVIDENCE_JSON",
+        help="Task 14.4a-c: with --reaggregate on a local-matrix evidence file, merge this "
+             "--media-only evidence file's media_pipeline result into the decision (e.g. when the "
+             "matrix's own live run crashed before reaching media). Ignored without --reaggregate.",
+    )
+    parser.add_argument(
+        "--media-only", default=None, metavar="PROJECT_ID",
+        help="Task 14.4a-c: run just the (fixed) media pipeline for one already-completed "
+             "project against the current TRIAL_DATA_DIR, without regenerating any script -- "
+             "avoids re-running the whole script matrix just to re-test media. Writes its own "
+             "gate-b2-media-<run_id>.json; merge it in via --reaggregate --media-evidence.",
     )
     args = parser.parse_args()
 
+    if args.media_only:
+        sys.exit(asyncio.run(run_media_only(args.media_only)))
+
     if args.reaggregate:
-        sys.exit(reaggregate(Path(args.reaggregate)))
+        media_evidence_path = Path(args.media_evidence) if args.media_evidence else None
+        sys.exit(reaggregate(Path(args.reaggregate), media_evidence_path=media_evidence_path))
 
     sys.exit(asyncio.run(main(
         args.smoke_test,

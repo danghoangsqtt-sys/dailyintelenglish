@@ -190,3 +190,30 @@ Execution order: 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 runs
   neither has exactly one infra death among 5 runs -- confirms no
   regression, not that the fix was exercised by real data). `ruff` clean.
   Task 14.4a (incl. Amendment C) status: done.
+- 2026-09-21: PM ran the real local Gate B-2 matrix (`gate-b2-20260921T080706Z.json`):
+  3/5 complete (all 3 pass content), 0 infra, repair_success_rate 44%,
+  `FAIL` under 13.9 (needs 5/5) but a real improvement over Phase 13's 1/5 --
+  media crashed the run. Found two runner bugs and requested fixes (14.4a-c,
+  scripts/run_ai_operational_trial.py only) while running the Gemini matrix
+  in parallel (Gemini doesn't touch Ollama, so no `NUM_PARALLEL` conflict;
+  the running Python process had already loaded the old file, so editing it
+  concurrently was safe). Bug 1: `/audio/generate` requires every line to
+  already have `audio_cache_path` (the UI sets this per-line via
+  `POST .../tts/preview`, which the runner never called) -- fixed with a new
+  `synthesize_all_lines()` called before `/audio/generate`. Bug 2:
+  `analyze_script`'s word-count check used the fixed B1-eight-minute 720-880
+  range for every run, including the 5/10-min and A2/C1 samples -- fixed
+  with `_script_word_range(cefr_level, duration_minutes)`; B1-eight-minute
+  scoring is unchanged (reproduces exactly 720-880). Added `--media-only
+  PROJECT_ID` and `--reaggregate --media-evidence` so PM can re-test media
+  alone without re-running the ~35-40 min script matrix -- required
+  extracting the full script+learning+media decision into a shared
+  `local_full_decision()` so `main()` and `reaggregate()` can't drift.
+  Verified per PM's explicit hold (ruff/py_compile/--reaggregate only, no
+  pytest, nothing touching Ollama/Gemini): `--reaggregate` on PM's new local
+  file reproduces PM's reported numbers exactly and shows the 3 samples'
+  `word_count_in_range`/`all_checks_pass` flipping to the corrected values
+  while the 3 B1-eight-minute runs and the overall `FAIL` decision stay
+  byte-for-byte unchanged; both named Phase 13 files also unchanged. `ruff`
+  clean. Task 14.4a-c status: done; commit pending push, then Coder reports
+  to PM and stands down again.

@@ -268,4 +268,94 @@ names and SHA-256.
   - `venv\Scripts\python.exe -m ruff check app tests scripts` (full) → All checks passed.
   - **Deviations:** none -- change confined to `gemini_matrix_decision`'s
     condition and docstring, the same single allowed file.
+
+  ## 14.4a-c -- fixes from the first real local Gate B-2 matrix run
+
+  **PM's local matrix run (evidence `gate-b2-20260921T080706Z.json`, 2026-09-21):**
+  3/5 B1-eight-minute jobs completed (817/780/722 words, all 3 passed content),
+  run3 `section_validation_failed` (>5 consecutive lines from one speaker --
+  structural, content class), run4 `global_validation_failed` (1053/800, its
+  last section landed 426 words against an effective target of 173 -- the
+  ±10% global hard gate caught it correctly), 0 infra failures, 0
+  `handler_exception`, one Ollama timeout absorbed by 14.1's backoff (2
+  attempts, 1.0s), `repair_success_rate` 44% (8/18), 21 total repairs. Learning
+  2/3 (1 `pack_validation_failed` grounding miss). Local matrix decision:
+  `FAIL` under the Task 13.9 rule (needs 5/5) but a real improvement over
+  Phase 13's 1/5. Media crashed the run before it could be scored.
+
+  **Bug 1 (blocked the media gate):** `POST .../audio/generate` requires
+  every `script_lines` row to already have `audio_cache_path` set (see
+  `app/services/audio_service.py`'s "Line(s) not yet synthesized" check,
+  `app/services/audio_service.py:241-243`). The UI drives that one line at a
+  time via `POST .../tts/preview` (`frontend/static/js/api.js`'s
+  `previewTtsLine`, backed by `app/api/tts.py:42` `preview_line`, real Edge
+  TTS/OmniVoice synthesis) -- this runner never called it, so
+  `/audio/generate` always 500'd on a real (non-mocked, non-Playwright)
+  trial. **Fix:** new `synthesize_all_lines()` fetches the script and calls
+  `tts/preview` sequentially (matches how the UI itself drives it, avoids
+  hammering the local TTS backend with a burst) for every line before
+  `run_media_pipeline` calls `/audio/generate`.
+
+  **Bug 2 (mis-scored samples):** `analyze_script`'s `word_count_in_range`
+  check used the fixed `WORD_COUNT_MIN`/`WORD_COUNT_MAX` (720-880, the B1-
+  eight-minute figure) for *every* run, including the B1 5/10-minute and
+  A2/C1 samples -- so b1-5min (453/500, -9.4%), b1-10min (1084/1000, +8.4%),
+  and c1-8min (980/1040, -5.8%) were all scored `word_count_in_range=False`
+  despite being within ±10% of their *own* target. **Fix:** new
+  `_script_word_range(cefr_level, duration_minutes)` computes each run's own
+  target range from `CEFR_WORDS_PER_MINUTE` and the product's own
+  `SCRIPT_GLOBAL_WORD_TOLERANCE` (±10%) -- for B1 eight-minute this
+  reproduces exactly `(720, 880)`, so the primary matrix's own scoring is
+  byte-for-byte unchanged; only samples are corrected. `run_script_trial`
+  passes it to `analyze_script` for live runs; `reaggregate()` gained
+  `_reaggregate_word_count_check()`, which re-derives
+  `checks.word_count_in_range`/`all_checks_pass` from a run's *already-
+  recorded* `total_words` (no re-fetch, no live server needed) so old
+  evidence can be re-scored too.
+
+  **New flags (so PM doesn't have to re-run the ~35-40 minute script matrix
+  just to re-test media):**
+  - `--media-only PROJECT_ID`: starts an isolated server against the
+    *current* `TRIAL_DATA_DIR` (already populated) and runs just the fixed
+    media pipeline for one already-scripted project, writing its own
+    `gate-b2-media-<run_id>.json`.
+  - `--reaggregate <matrix.json> --media-evidence <media.json>`: merges that
+    media evidence's `media_pipeline` result into the matrix's own decision.
+    Required extracting the full Task 13.9 combined decision (script AND
+    learning AND media gates) out of `main()`'s inline logic into a new
+    shared `local_full_decision()`, so `main()`'s live local matrix and
+    `reaggregate()`'s `--media-evidence` path can never silently drift apart
+    -- `reaggregate()` previously only reproduced the script-gate-only
+    `local_matrix_decision()`, not the full combined decision, which is why
+    this needed a small refactor rather than an additive-only change.
+
+  **Commands and results (per PM's explicit hold -- ruff/py_compile/
+  --reaggregate only, no pytest, nothing touching Ollama/Gemini):**
+  - `venv\Scripts\python.exe -m ruff check scripts/run_ai_operational_trial.py` → All checks passed.
+  - `venv\Scripts\python.exe -m py_compile scripts/run_ai_operational_trial.py` → exits 0.
+  - `venv\Scripts\python.exe scripts/run_ai_operational_trial.py --reaggregate "data/quality_reviews/phase14/gate-b2/gate-b2-20260921T080706Z.json"` (PM's new local matrix file) →
+    word-count re-check: b1-8min-run1/2/5 `word_count_in_range` **True -> True**
+    (range `[720, 880]`, unchanged); `b1-5min` **False -> True** (453 words,
+    range now `[450, 550]`); `b1-10min` **False -> True**, `all_checks_pass`
+    **False -> True** (1084 words, range `[900, 1100]`); `c1-8min` **False ->
+    True**, `all_checks_pass` **False -> True** (980 words, range
+    `[936, 1144]`) -- all three samples changed exactly as PM's report
+    predicted, zero change to the three B1-eight-minute runs. Aggregates
+    (`repair_success_rate=0.4444`, `total_repair_count=21`,
+    `max_attempts_observed=2`, `total_backoff_seconds=1.0`) match PM's summary
+    exactly. `DECISION: FAIL` unchanged, same reasons (`3/5 completed`,
+    `Learning gate: 2/3`, media absent) plus the original crash message
+    (`HTTPStatusError: ... /audio/generate`), confirming Bug 1 reproduced
+    exactly as PM described.
+  - `venv\Scripts\python.exe scripts/run_ai_operational_trial.py --reaggregate "data/quality_reviews/phase13/gate-b/gate-b-20260921T000903Z.json"` → word-count re-check: the one completed run **True -> True** (unchanged, still `[720, 880]`); its 4 sample runs never reached `content` (all `job_status=error`), so nothing to re-score. `DECISION: FAIL` unchanged, same script-gate reason; the local decision now additionally evaluates the (previously-unreachable-from-reaggregate) learning/media gates via `local_full_decision` -- no "Learning gate" line appears (this file's 1/1 learning run passed), one new "Media pipeline: not run" line appears (additive completeness, not a change to the documented decision).
+  - `venv\Scripts\python.exe scripts/run_ai_operational_trial.py --reaggregate "data/quality_reviews/phase13/gate-b/gate-b-20260921T010451Z.json"` → unchanged: `DECISION: DIAGNOSTIC_ONLY`, same reasons (Gemini path is untouched by any of these fixes).
+  - `venv\Scripts\python.exe -m ruff check app tests scripts` (full) → All checks passed.
+  - `venv\Scripts\python.exe scripts/run_ai_operational_trial.py --help` → all new flags (`--media-only`, `--media-evidence`) print correctly, no crash.
+  - **Deviations:** none beyond the refactor already explained above
+    (extracting `local_full_decision` was necessary, not optional, to satisfy
+    PM's "gộp media gate vào quyết định ma trận local" request correctly
+    rather than duplicating the combined-decision formula a third time).
+    Edited only `scripts/run_ai_operational_trial.py`, this task's sole
+    allowed file. **Not run, per PM's explicit instruction:** `pytest`,
+    `--media-only` (needs the live server + real TTS), any live matrix run.
 - 14.4b (PM):
