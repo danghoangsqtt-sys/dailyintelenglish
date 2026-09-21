@@ -44,8 +44,17 @@ TRIAL_DATA_DIR = PROJECT_ROOT / "data" / "quality_reviews" / "phase13" / "gate-b
 EVIDENCE_DIR = PROJECT_ROOT / "data" / "quality_reviews" / "phase13" / "gate-b"
 
 # Must be set before any `app.*` import -- Settings() is a module-level singleton
-# read from the environment once, at import time.
-os.environ["DIE_AI_MODE"] = "local"  # Gate B requirement: fallback OFF, local-only.
+# read from the environment once, at import time. argparse runs too late for that,
+# so the mode is read straight off sys.argv here.
+#
+# `local` is Gate B's own requirement (fallback OFF) and stays the default. `--mode
+# gemini` exists only for the provider-comparison diagnostic that the 2026-09-21 Gate B
+# post-mortem asked for: the ±15%-per-section validator applies to *every* provider, so
+# "does the primary provider clear the same bar?" had to be measurable, not assumed.
+_MODE = "local"
+if "--mode" in sys.argv:
+    _MODE = sys.argv[sys.argv.index("--mode") + 1]
+os.environ["DIE_AI_MODE"] = _MODE
 os.environ["DIE_DATA_DIR"] = str(TRIAL_DATA_DIR)
 
 import httpx  # noqa: E402
@@ -463,19 +472,26 @@ def _write_evidence(evidence: dict[str, Any], run_id: str) -> Path:
     return evidence_path
 
 
-async def main(smoke_test: bool) -> int:
+async def main(smoke_test: bool, runs: int | None = None, skip_samples: bool = False) -> int:
     TRIAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    n_b1_runs = runs if runs is not None else (1 if smoke_test else 5)
+    # A trial that did not run the full declared matrix can never produce a real Gate B
+    # PASS -- it is reported as DIAGNOSTIC_ONLY so a partial run can never be mistaken
+    # for (or quoted as) a gate result.
+    diagnostic_only = smoke_test or n_b1_runs < 5 or skip_samples
     evidence: dict[str, Any] = {
         "run_id": run_id,
         "started_at": _utc_now_iso(),
         "smoke_test": smoke_test,
+        "diagnostic_only": diagnostic_only,
+        "b1_runs_requested": n_b1_runs,
+        "samples_skipped": skip_samples,
         "ai_mode": os.environ["DIE_AI_MODE"],
         "data_dir": str(TRIAL_DATA_DIR),
         "crashed": False,
     }
-    n_b1_runs = 1 if smoke_test else 5
 
     print(f"[gate-b] starting trial server (AI_MODE={os.environ['DIE_AI_MODE']}, data_dir={TRIAL_DATA_DIR})", flush=True)
     server, base_url, port = _start_live_server()
@@ -512,7 +528,7 @@ async def main(smoke_test: bool) -> int:
             evidence["b1_eight_minute_complete_count"] = sum(1 for r in b1_eight_min_runs if r["job_status"] == "complete")
 
             sample_runs: list[dict] = []
-            if not smoke_test:
+            if not smoke_test and not skip_samples:
                 for cefr, minutes, label in (("B1", 5.0, "b1-5min"), ("B1", 10.0, "b1-10min"), ("A2", 8.0, "a2-8min"), ("C1", 8.0, "c1-8min")):
                     print(f"[gate-b] sample run {label} starting...", flush=True)
                     record = await run_script_trial(client, cefr, minutes, label)
@@ -578,9 +594,32 @@ async def main(smoke_test: bool) -> int:
     if not media_gate_pass:
         decision_reasons.append("Media pipeline: not run or failed one of the duration/A-V/codec checks.")
 
-    overall_pass = script_gate_pass and learning_gate_pass and media_gate_pass and not smoke_test and not evidence["crashed"]
-    evidence["decision"] = "PASS" if overall_pass else ("SMOKE_TEST_ONLY" if smoke_test and not evidence["crashed"] else "FAIL")
+    overall_pass = (
+        script_gate_pass and learning_gate_pass and media_gate_pass
+        and not diagnostic_only and not evidence["crashed"]
+    )
+    if diagnostic_only and not evidence["crashed"]:
+        evidence["decision"] = "DIAGNOSTIC_ONLY"
+    else:
+        evidence["decision"] = "PASS" if overall_pass else "FAIL"
     evidence["decision_reasons"] = decision_reasons if decision_reasons else ["all declared thresholds met"]
+
+    # Per-section outcome summary: the Gate B post-mortem showed a job-level pass rate
+    # alone hides *why* -- one section missing its word budget hard-fails the whole job,
+    # so the per-job number understates per-section reliability.
+    section_failures = [
+        r for r in evidence.get("b1_eight_minute_runs", []) + evidence.get("sample_runs", [])
+        if r["job_status"] == "error" and "word count" in (r.get("error_message") or "")
+    ]
+    other_failures = [
+        r for r in evidence.get("b1_eight_minute_runs", []) + evidence.get("sample_runs", [])
+        if r["job_status"] == "error" and "word count" not in (r.get("error_message") or "")
+    ]
+    evidence["failure_breakdown"] = {
+        "section_word_count_failures": len(section_failures),
+        "other_failures": len(other_failures),
+        "other_failure_messages": [r.get("error_message") for r in other_failures],
+    }
 
     evidence_path = _write_evidence(evidence, run_id)
     print(f"[gate-b] evidence written to {evidence_path}", flush=True)
@@ -594,5 +633,20 @@ async def main(smoke_test: bool) -> int:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--smoke-test", action="store_true", help="Run a fast abbreviated sanity check, not full Gate B.")
+    parser.add_argument(
+        "--mode", default="local",
+        help="AI_MODE for the trial. 'local' (default) is Gate B's own fallback-OFF requirement; "
+             "'gemini' runs the provider-comparison diagnostic.",
+    )
+    parser.add_argument(
+        "--runs", type=int, default=None,
+        help="Override the number of primary B1-eight-minute runs (default 5). Use a smaller "
+             "number for a quota-bounded diagnostic; a run count below 5 can never produce a "
+             "real Gate B PASS and is reported as DIAGNOSTIC_ONLY.",
+    )
+    parser.add_argument(
+        "--skip-samples", action="store_true",
+        help="Skip the B1 5/10-minute and A2/C1 sample runs (diagnostic use, saves quota).",
+    )
     args = parser.parse_args()
-    sys.exit(asyncio.run(main(args.smoke_test)))
+    sys.exit(asyncio.run(main(args.smoke_test, runs=args.runs, skip_samples=args.skip_samples)))
