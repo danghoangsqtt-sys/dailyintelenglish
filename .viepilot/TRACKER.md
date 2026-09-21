@@ -1713,14 +1713,29 @@ constraint recorded in the plan: **no tolerance value changes** (`SCRIPT_GLOBAL_
   populated (router does not expose the local failure class; neither Gate B-2 matrix uses
   fallback) — candidate for a later task, not a Phase 14 gate.
 
-### 14.3 Running section budget; hard gate only at global ±10% — ⏳ IN PROGRESS (Coder)
+### 14.3 Running section budget; hard gate only at global ±10% — ✅ DONE (2026-09-21, Coder; PM-accepted)
 
-- [ ] PM ruling on the resume-carry interpretation: reading `target_effective` from checkpoint
-  `metrics_json` is accepted (mathematically identical to replaying from nominal targets),
-  with two conditions — fallback to replay-from-nominal when a checkpoint lacks
-  `target_effective`, and a pure-function test asserting both methods agree.
+- [x] `validate_section` split into `validate_section_structure` + `validate_section_word_budget`;
+  non-last sections target `clamp(nominal + carry, nominal × [0.65, 1.35])`, the last section
+  targets the real remaining budget clamped to `nominal_last × [0.5, 1.5]`; after the one repair,
+  a surviving structural error still fails (`section_validation_failed`), a surviving word-budget
+  miss is accepted and its drift carried (`script_section_accepted_off_target`); `validate_global`
+  ±10% unchanged as the only hard word-count gate; one final-section budget repair gated on the
+  total word count specifically (`SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS = 1`); resume recomputes
+  carry from checkpoint `target_effective` with a nominal fallback. Prompts untouched. Commits
+  `a530be3` (design), `039bc8d` (code). Coder-reported full suite 865.
+- [x] **Governance verified by the PM:** `SCRIPT_SECTION_WORD_TOLERANCE = 0.15` and
+  `SCRIPT_GLOBAL_WORD_TOLERANCE = 0.10` byte-unchanged; constants-pin test present; Coder's
+  revert-and-confirm-failure on both the pin (0.15→0.25) and the accept-and-carry behaviour recorded.
+- [x] **PM acceptance review (independent):** diff limited to `script_pipeline.py`, `constants.py`,
+  `test_script_pipeline.py`; the `n + 1` repair bound is asserted (`call_count == 4`,
+  `repair_count <= num_sections + 1`); resume-equivalence pure-function test present; 121 targeted
+  tests pass in 1.27 s, `ruff` clean. One harmless observation recorded (resume loop also adds the
+  last section's delta to `carry`, which is unused after the last section). One 13.4 test changed
+  fixture from a pure word-count miss to an unknown-speaker error, with justification — correct,
+  since a pure word miss no longer reaches `section_validation_failed` by design.
 
-### 14.4 Gate B second run, both providers — pending (14.4a runner prep: Coder; 14.4b execution: PM)
+### 14.4 Gate B second run, both providers — ⏳ 14.4a IN PROGRESS (Coder: runner prep); 14.4b pending (PM)
 
 ### 14.5 Correct the Phase 13 acceptance report — ✅ DONE (2026-09-21, PM)
 

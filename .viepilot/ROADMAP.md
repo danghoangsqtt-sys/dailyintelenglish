@@ -1181,11 +1181,12 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
   replace `handler_exception` for provider failures; `AIJobOut.metrics`; Amendment B maps
   `SchemaValidationError` → `schema_validation_failed` (content class). PM-accepted.
 
-### 14.3 Running section budget; hard gate only at global ±10% — ⏳ IN PROGRESS
-- [ ] Effective targets carry drift (cap 0.35, last section 0.5); ±15% triggers repair, never
-  kills the job; one final-section budget repair; deterministic resume; constants-pin test.
+### 14.3 Running section budget; hard gate only at global ±10% — ✅ DONE (2026-09-21)
+- [x] Effective targets carry drift (cap 0.35, last section 0.5); ±15% triggers repair, never
+  kills the job; one final-section budget repair; deterministic resume; constants-pin test —
+  tolerance values byte-unchanged, PM-verified.
 
-### 14.4 Gate B second run, both providers — pending
+### 14.4 Gate B second run, both providers — ⏳ 14.4a IN PROGRESS
 - [ ] 14.4a runner prep (Coder): infra/content classification, per-section stats, aggregates,
   `--matrix`, `--reaggregate`, `has_outro` fix.
 - [ ] 14.4b execution (PM): local matrix → Gemini matrix, sequential; declared rules; report
