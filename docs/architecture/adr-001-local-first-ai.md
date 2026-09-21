@@ -80,3 +80,24 @@ eight-minute jobs and one complete real TTS/audio/video pipeline at predeclared
 thresholds. Gate B failure does not discard durable jobs: release uses Gemini primary
 and labels local experimental. Rollback changes mode to Gemini, stops Ollama, restarts,
 and verifies script/learning without reversing database migrations.
+
+## Amendments
+
+### A1 — 2026-09-21 (Phase 14): bounded exponential backoff for transient errors
+
+**Amended clause:** Decision 3, "at most one semantic repair or infrastructure retry".
+
+**New wording:** at most one semantic repair per section; transient infrastructure
+errors (`provider_unavailable`, `rate_limited`, `timeout`) may be retried against the
+**same** model up to `AI_TRANSIENT_MAX_ATTEMPTS` (4) total attempts with exponential
+backoff (1 s → 2 s → 4 s), all inside the single request deadline; content-class errors
+keep exactly one immediate retry; authentication errors are never retried.
+
+**Unchanged:** one visible stable Gemini fallback; no multi-model cascade; preview
+models never enter automatic routing; retry policy lives only in the router.
+
+**Why:** Gate B (2026-09-21) showed the Task 13.7 gateway re-firing immediately on a
+transient HTTP 503 and killing the job — strictly worse 503 handling than the code it
+replaced, and the exact failure that motivated this ADR. Evidence and decision D3:
+`docs/brainstorm/session-2026-09-21.md`; controlling plan:
+`docs/implementation/phase-14-ai-gateway-resilience.md` §4.1.
