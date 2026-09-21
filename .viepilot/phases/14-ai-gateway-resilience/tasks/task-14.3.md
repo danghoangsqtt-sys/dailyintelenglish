@@ -290,6 +290,19 @@ restore fixed targets; the accept-and-carry behaviour itself is reverted by git 
     rather than literally replaying nominal targets -- see the "Resume/carry"
     decision above (PM-reviewed and agreed before implementation, not a
     post-hoc deviation).
+  - **PM observation (2026-09-21, accepted as harmless, no fix required):** the
+    resume upfront-recompute loop adds *every* checkpointed section's delta to
+    `carry`, including the last section's (`carry += cp_effective - cp_words`
+    unconditionally), whereas the live per-section loop skips the last section
+    (`if not is_last: carry += ...`). This is a real asymmetry, but inert: no
+    code path reads `carry` after the last section is processed on the live
+    path either (the final-section budget repair computes its target from
+    `target_words - words_before_last_section`, never from `carry`), so the
+    extra term the resume path computes is simply never consumed. Left as-is
+    rather than special-cased, since "compute a value nothing reads" is lower
+    risk than adding an `if not is_last` branch to the resume loop that would
+    then diverge from -- and need to stay in sync with -- the live loop's own
+    condition for no behavioural benefit.
   - No other deviations -- all edits stayed within
     `app/services/script_pipeline.py`, `app/core/constants.py`,
     `tests/test_script_pipeline.py`. `prompts/script/section.txt` and
