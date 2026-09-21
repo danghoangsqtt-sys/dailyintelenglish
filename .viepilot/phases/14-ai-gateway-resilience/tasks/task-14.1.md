@@ -1,6 +1,6 @@
 # Task 14.1 — Bounded Exponential Backoff for Transient Provider Errors
 
-- **Status:** pending
+- **Status:** in_progress
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** none (first task of the phase)
@@ -94,6 +94,40 @@ Task 13.7 behaviour without a code revert.
 ## Execution record (Coder fills in)
 
 - Plan/decisions before code:
+  - Implement §4.1's two-tier retry directly in `AIRouter`: a single internal
+    retry-loop method handles both error classes by checking, per caught
+    exception, which tuple it belongs to (`_TRANSIENT_ERRORS` vs
+    `_CONTENT_RETRY_ERRORS`) against a shared `attempt` counter — transient
+    errors may continue while `attempt < AI_TRANSIENT_MAX_ATTEMPTS` (sleeping
+    the capped exponential delay first, subject to the deadline check);
+    content errors may continue only while `attempt < 2` (no sleep);
+    anything else (incl. `ProviderAuthError`) is not caught and propagates
+    immediately. This reproduces the plan's table exactly for pure sequences
+    and degrades safely for a mixed sequence (no test requires a specific
+    mixed-sequence behaviour, so the simplest rule consistent with both rows
+    is used, documented here rather than silently decided in code).
+  - `deadline_at = time.monotonic() + request.deadline_seconds` is computed
+    once in `generate()` and threaded through `_route`/the retry method, so
+    the existing outer `asyncio.wait_for` stays the last-resort guard and the
+    inner deadline check (`remaining < delay + AI_BACKOFF_MIN_REMAINING_SECONDS`)
+    is what actually prevents starting a sleep the deadline can't afford.
+  - `_attempt_with_one_retry` is renamed to `_attempt` (private, no external
+    caller/test references it by name) since "one retry" no longer describes
+    its behaviour for the transient class.
+  - Optional `retry_after_seconds` hint on `ProviderRateLimitError` is **not**
+    implemented — the plan marks it optional/not required for acceptance, and
+    skipping it keeps `app/core/exceptions.py` and `tests/test_ai_providers.py`
+    untouched, which is the smaller diff for the same required behaviour.
+  - Existing tests in `test_ai_router.py`, `test_ai_logging.py`, and
+    `test_ai_providers.py` (the "no nested retries" ones) that script exactly
+    2 `ProviderUnavailableError` outcomes to exhaust the old 1-retry policy
+    need updating: either 4 scripted outcomes to reach real exhaustion under
+    the new policy, or an assertion change if only 2 outcomes are still
+    correct for the scenario being tested (e.g. circuit-breaker streak
+    accounting, which cares about failure/success shape, not the literal
+    retry count). Any test that would now really sleep gets a local
+    `monkeypatch.setattr("app.services.ai.router.sleep", ...)` no-op/recorder
+    so the suite stays fast and deterministic.
 - Commands and results:
 - Deviations:
 - Revert-and-confirm-failure evidence:
