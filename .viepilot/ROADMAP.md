@@ -1202,7 +1202,7 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
 ### Amendment D — owner drops Gemini (2026-09-21): local-only release path
 - [x] 14.7 Local-only mode, config-first (AI_MODE=local default, key UI hidden, `DIE_AI_ALLOW_CLOUD`
   gate, Ollama-missing guidance, check_dependencies hard requirement) — ✅ DONE 2026-09-21, PM-accepted
-- [ ] 14.8 Local hardening (prompt budget as hard range, delta-aware repair, one length-only
-  repair; tolerances and consecutive-lines constant unchanged) — Coder
+- [x] 14.8 Local hardening (prompt budget as hard range from the constant, delta-aware repair, one
+  length-only repair; tolerances and consecutive-lines constant unchanged) — ✅ DONE 2026-09-21, PM-accepted
 - [ ] 14.9 Gate B-3 local (13.9 protocol + real thumbnail/YouTube on the winner; media as declared) — PM
 - [ ] 14.6 (revised) Resume Task 13.10 local-only; Ollama-stopped rollback drill replaces the Gemini drill

@@ -1827,8 +1827,26 @@ quota; local text quality was never the failing factor.
   grep for "gemini" across `frontend/` returns 0 lines; 97 targeted tests pass; `ruff` clean.
   PM-side docs: `docs/api.md` regenerated (no route-doc change), `docs/operations/local-ai.md`
   rewritten for the local-only runtime contract, HANDOFF `tech_stack.thumbnail` corrected.
-### 14.8 Local hardening: over-length sections + consecutive-lines rule — ⏳ IN PROGRESS (Coder)
-### 14.9 Gate B-3, local only — pending (PM, after 14.8)
+### 14.8 Local hardening: over-length sections + consecutive-lines rule — ✅ DONE (2026-09-21, Coder; PM-accepted)
+
+- [x] Section prompt states the budget as a hard range computed in Python from
+  `SCRIPT_SECTION_WORD_TOLERANCE` (14.8-b removed the 0.85/1.15 literals the first cut had put in
+  the template — CR-02) and requires alternating speakers; repair prompt receives measured
+  words + signed delta and, for over-length, instructs trimming specific lines (the Gate B-2 340→426
+  rewrite finding); consecutive-lines errors name the offending speaker/line range. One
+  **length-only** repair pass gated by the new `SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS = 1`, triggered
+  only when a section is still over `effective × 1.35` after the semantic repair (under-length keeps
+  14.3's accept-and-carry). Checkpoint `metrics_json` gains `length_repaired`/
+  `words_before_length_repair`. Commits `824cc67` (design), `ac61cf8` (code), `4542b58` (14.8-b).
+- [x] **Governance verified by the PM:** `SCRIPT_SECTION_WORD_TOLERANCE = 0.15`,
+  `SCRIPT_GLOBAL_WORD_TOLERANCE = 0.10`, `SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER = 5` byte-unchanged;
+  pin test extended to all three with revert-and-confirm-failure recorded.
+- [x] **PM acceptance review (independent):** diff limited to the allowed files; trigger/bound read
+  in code (`repair_count ≤ 2n + 1` asserted, hit exactly 5 in the e2e test); 52 pipeline tests pass;
+  `ruff` clean; template contains no tolerance literal; a rendered-prompt test guards the range
+  against constant drift. Coder-reported full suite 883 (before 14.8-b; 14.8-b adds 1 test).
+
+### 14.9 Gate B-3, local only — ⏳ NEXT (PM; awaiting the user's Coder-idle confirmation)
 ### 14.6 Resume Task 13.10, local-only (revised) — pending (after 14.9)
 
 ## Decision Log
