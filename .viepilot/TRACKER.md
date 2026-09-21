@@ -1689,9 +1689,36 @@ constraint recorded in the plan: **no tolerance value changes** (`SCRIPT_GLOBAL_
   1.13 s (no real sleeps) and `ruff` clean. Coder-reported full suite **814 passed** (808 + 6 new);
   PM will re-run the full suite itself before 14.4b.
 
-### 14.2 Job telemetry (repair/fallback/provider/attempts/error codes) — ⏳ IN PROGRESS (Coder)
+### 14.2 Job telemetry (repair/fallback/provider/attempts/error codes) — ✅ DONE (2026-09-21, Coder; PM-accepted)
 
-### 14.3 Running section budget; hard gate only at global ±10% — pending (Coder, after 14.2)
+- [x] `ai_job_service.record_generation_call` (one UPDATE, `COALESCE` so an error-outcome call
+  never nulls a prior provider/model, bounded `metrics_json.calls` at 64, refuses terminal jobs)
+  and `provider_error_code` (`provider_unavailable|timeout|rate_limited|auth|invalid_response`,
+  base → `provider_error`). Both pipelines route every router call through a `_call_router`
+  wrapper that calls the router with **no transaction open** and records telemetry in its own
+  short `write_transaction` afterwards; `ProviderError` → `_fail_provider` with a specific code
+  instead of the worker's blanket `handler_exception`. Section checkpoints carry
+  `target_nominal/target_effective/words/deviation_pct/repaired/words_before_repair/
+  errors_before_repair`. `AIJobOut.metrics` via `model_validator` (no route change). Commits
+  `73e5e6b` (design), `cde8e79` (code). Coder-reported full suite 848.
+- [x] **Amendment B / 14.2-b** (PM review finding, plan commit `c93d152`; fix `ba086d5`):
+  `SchemaValidationError` is a `ProviderError` subclass but a *content* failure; the outline
+  path's `except ProviderError` recorded it as `provider_error`, which the Gate B-2 rule would
+  count as infrastructure. Now maps to `schema_validation_failed` (classified `content` in
+  §4.4); one service test + one e2e test (unparseable outline → `schema_validation_failed`,
+  never `provider_*`/`handler_exception`). Coder-reported full suite 850.
+- [x] **PM acceptance review (independent):** diff limited to the allowed files; wrapper
+  verified to never hold a transaction across inference; call record contains only safe fields;
+  129 + 9 targeted tests pass, `ruff` clean. Accepted as documented: `fallback_reason` is not
+  populated (router does not expose the local failure class; neither Gate B-2 matrix uses
+  fallback) — candidate for a later task, not a Phase 14 gate.
+
+### 14.3 Running section budget; hard gate only at global ±10% — ⏳ IN PROGRESS (Coder)
+
+- [ ] PM ruling on the resume-carry interpretation: reading `target_effective` from checkpoint
+  `metrics_json` is accepted (mathematically identical to replaying from nominal targets),
+  with two conditions — fallback to replay-from-nominal when a checkpoint lacks
+  `target_effective`, and a pure-function test asserting both methods agree.
 
 ### 14.4 Gate B second run, both providers — pending (14.4a runner prep: Coder; 14.4b execution: PM)
 

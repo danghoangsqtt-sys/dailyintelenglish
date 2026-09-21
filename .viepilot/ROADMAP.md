@@ -1175,12 +1175,13 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
   Proven to wait (patched module-local `sleep`, asserted `[1.0, 2.0, 4.0]`); PM-accepted after
   independent diff review and targeted re-run. Amendment A added three test-only files.
 
-### 14.2 Job telemetry — ⏳ IN PROGRESS
-- [ ] `repair_count`, `fallback_used`/`fallback_count`, `actual_provider`, `model`, `metrics_json`
-  written per router call; `provider_*` error codes replace `handler_exception` for provider
-  failures; `AIJobOut.metrics`.
+### 14.2 Job telemetry — ✅ DONE (2026-09-21)
+- [x] `repair_count`, `fallback_used`/`fallback_count`, `actual_provider`, `model`, `metrics_json`
+  written per router call (no transaction held across inference); `provider_*` error codes
+  replace `handler_exception` for provider failures; `AIJobOut.metrics`; Amendment B maps
+  `SchemaValidationError` → `schema_validation_failed` (content class). PM-accepted.
 
-### 14.3 Running section budget; hard gate only at global ±10% — pending
+### 14.3 Running section budget; hard gate only at global ±10% — ⏳ IN PROGRESS
 - [ ] Effective targets carry drift (cap 0.35, last section 0.5); ±15% triggers repair, never
   kills the job; one final-section budget repair; deterministic resume; constants-pin test.
 
