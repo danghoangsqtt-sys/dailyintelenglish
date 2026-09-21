@@ -36,67 +36,14 @@
     .settings-card h2 { margin: 0 0 4px; font-size: 16px; font-weight: 700; }
     .settings-card .section-hint { margin: 0 0 18px; font-size: 13px; color: var(--text-muted); }
 
-    label.field-label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: var(--text-muted);
-    }
-
-    .key-input-row { display: flex; gap: 8px; }
-
-    input[type="password"],
-    input[type="text"] {
-      flex: 1;
-      min-width: 0;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid var(--surface-border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 14px;
-      font-family: var(--font);
-    }
-
-    select {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid var(--surface-border);
-      background: var(--surface);
-      color: var(--text);
-      font-size: 14px;
-      font-family: var(--font);
-    }
-
-    input:focus,
-    select:focus {
-      outline: none;
-      border-color: var(--surface-border-hover);
-    }
-
     .current-status {
-      margin: 14px 0 20px;
+      margin: 14px 0 4px;
       padding: 11px 14px;
       border-radius: 10px;
       font-size: 13px;
       background: var(--surface-2);
       color: var(--text-2);
     }
-
-    .form-actions { display: flex; gap: 10px; margin-top: 18px; }
-
-    .message {
-      margin-top: 14px;
-      padding: 11px 14px;
-      border-radius: 10px;
-      font-size: 13px;
-    }
-
-    .message-success { color: var(--success); background: rgba(63, 185, 80, 0.1); }
-    .message-error { color: var(--danger); background: rgba(248, 81, 73, 0.1); }
-    .message[hidden] { display: none; }
   </style>
 </head>
 <body>
@@ -111,52 +58,17 @@
   <main class="main">
     <section class="page-heading">
       <h1>Settings</h1>
-      <p>Configure the Gemini API key used for script, learning content, thumbnail, and YouTube package generation.</p>
+      <p>Daily Intel English Studio runs entirely on your local Ollama model — no cloud API key needed.</p>
     </section>
 
     <section class="card settings-card">
-      <h2>Gemini API Key</h2>
-      <p class="section-hint">Saved here takes effect immediately — no restart needed. Stored keys always take priority over the <code>.env</code> file.</p>
-
-      <div id="current-status" class="current-status" aria-live="polite">Loading…</div>
-
-      <label class="field-label" for="api-key-input">API Key</label>
-      <div class="key-input-row">
-        <input type="password" id="api-key-input" placeholder="Enter your Gemini API key" autocomplete="off" />
-        <button id="toggle-visibility-btn" type="button" class="icon-toggle" aria-label="Show/hide API key">👁️</button>
-      </div>
-
-      <div class="form-actions">
-        <button id="save-btn" type="button" class="btn btn-primary">Save</button>
-        <button id="clear-btn" type="button" class="btn btn-ghost">Clear stored key</button>
-      </div>
-
-      <div id="message" class="message" hidden></div>
-    </section>
-
-    <section class="card settings-card" style="margin-top: 20px;">
-      <h2>AI Provider Mode</h2>
+      <h2>AI Provider</h2>
       <p class="section-hint">
-        Controls where script and learning content generation runs (Phase 13).
-        <strong>Gemini</strong> is cloud-only. <strong>Local</strong> uses only the
-        on-device Ollama model, with no cloud fallback. <strong>Hybrid</strong> tries
-        local first and falls back to Gemini if it fails.
+        Script, learning content, thumbnail, and YouTube package generation all run
+        locally via Ollama — no cloud fallback.
       </p>
 
       <div id="ai-mode-status" class="current-status" aria-live="polite">Loading…</div>
-
-      <label class="field-label" for="ai-mode-select">Mode</label>
-      <select id="ai-mode-select">
-        <option value="gemini">Gemini (cloud)</option>
-        <option value="local">Local (Ollama only)</option>
-        <option value="hybrid">Hybrid (local, Gemini fallback)</option>
-      </select>
-
-      <div class="form-actions">
-        <button id="ai-mode-save-btn" type="button" class="btn btn-primary">Save</button>
-      </div>
-
-      <div id="ai-mode-message" class="message" hidden></div>
     </section>
   </main>
 

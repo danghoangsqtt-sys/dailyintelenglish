@@ -113,12 +113,20 @@ def _isolated_ai_mode(monkeypatch):
     monkeypatch.setattr(config.settings, "AI_MODE", "gemini")
 
 
+@pytest.fixture(autouse=True)
+def _isolated_ai_allow_cloud(monkeypatch):
+    """Task 14.7: matches the real default (`False`) unless a test explicitly
+    opts in -- `set_ai_mode` now rejects `gemini`/`hybrid` without this."""
+    monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", False)
+
+
 async def test_ai_mode_status_reports_env_default_when_nothing_stored(db):
     status = await settings_service.get_ai_mode_status(db)
     assert status == {"ai_mode": "gemini", "ai_mode_source": "env"}
 
 
-async def test_set_ai_mode_persists_and_applies_immediately(db):
+async def test_set_ai_mode_persists_and_applies_immediately(db, monkeypatch):
+    monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", True)
     status = await settings_service.set_ai_mode(db, "hybrid")
     assert status == {"ai_mode": "hybrid", "ai_mode_source": "database"}
     assert config.settings.AI_MODE == "hybrid"
@@ -130,6 +138,32 @@ async def test_set_ai_mode_persists_and_applies_immediately(db):
 async def test_set_ai_mode_rejects_an_unknown_value(db):
     with pytest.raises(ValidationError, match="ai_mode must be one of"):
         await settings_service.set_ai_mode(db, "not_a_real_mode")
+
+
+# --- Task 14.7: cloud gate (ADR-001 A2) -------------------------------------------------
+
+
+async def test_set_ai_mode_rejects_gemini_without_allow_cloud(db):
+    with pytest.raises(ValidationError, match="DIE_AI_ALLOW_CLOUD"):
+        await settings_service.set_ai_mode(db, "gemini")
+
+
+async def test_set_ai_mode_rejects_hybrid_without_allow_cloud(db):
+    with pytest.raises(ValidationError, match="DIE_AI_ALLOW_CLOUD"):
+        await settings_service.set_ai_mode(db, "hybrid")
+
+
+async def test_set_ai_mode_accepts_gemini_when_allow_cloud_is_true(db, monkeypatch):
+    monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", True)
+    status = await settings_service.set_ai_mode(db, "gemini")
+    assert status["ai_mode"] == "gemini"
+
+
+async def test_set_ai_mode_accepts_local_regardless_of_allow_cloud(db):
+    # AI_ALLOW_CLOUD is False by default (see _isolated_ai_allow_cloud) -- local
+    # is never gated, it's the only supported mode.
+    status = await settings_service.set_ai_mode(db, "local")
+    assert status["ai_mode"] == "local"
 
 
 async def test_load_ai_mode_from_db_applies_a_stored_value(db):

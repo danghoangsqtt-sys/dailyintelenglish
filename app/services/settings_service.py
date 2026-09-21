@@ -122,9 +122,20 @@ async def set_ai_mode(db: aiosqlite.Connection, ai_mode: str) -> dict:
 
     Caller must run this inside a `write_transaction` block, same as
     `set_gemini_api_key`.
+
+    Raises:
+        ValidationError: If `ai_mode` isn't a known mode, or if it's `gemini`/
+            `hybrid` while cloud is disabled -- Task 14.7 (ADR-001 A2): Gemini
+            is dormant, and re-enabling it requires the explicit
+            `DIE_AI_ALLOW_CLOUD=true` env var, never just a mode change.
     """
     if ai_mode not in AI_MODES:
         raise ValidationError(f"ai_mode must be one of {AI_MODES}, got {ai_mode!r}")
+    if ai_mode != "local" and not config.settings.AI_ALLOW_CLOUD:
+        raise ValidationError(
+            f"ai_mode {ai_mode!r} requires DIE_AI_ALLOW_CLOUD=true -- Gemini is dormant "
+            "(ADR-001 amendment A2); local is the only supported mode."
+        )
     await db.execute(
         """
         INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)

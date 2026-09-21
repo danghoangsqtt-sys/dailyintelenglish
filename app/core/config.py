@@ -43,10 +43,16 @@ class Settings(BaseSettings):
     FFMPEG_PATH: str = "ffmpeg"
 
     # Phase 13 -- local-first AI reliability (docs/architecture/adr-001-local-first-ai.md).
-    # AI_MODE is the kill switch: "gemini" (packaged default until local-runtime
-    # onboarding is proven), "local" (Ollama only, no cloud fallback -- used for the
-    # Gate B operational trial), or "hybrid" (local first, one visible Gemini fallback).
-    AI_MODE: str = "gemini"
+    # AI_MODE is the kill switch: "local" (Ollama only, no cloud fallback -- the only
+    # supported mode since Phase 14 Amendment D/ADR-001 A2 dropped Gemini as a release
+    # path), "gemini" (cloud-only), or "hybrid" (local first, one visible Gemini
+    # fallback) -- the latter two are dormant and require AI_ALLOW_CLOUD=true (see
+    # below) to select; `set_ai_mode` (app/services/settings_service.py) enforces this.
+    AI_MODE: str = "local"
+    # Task 14.7: the only switch that re-enables the dormant Gemini path. Default
+    # false so cloud is never re-enabled by accident -- explicit config, not a
+    # migration (ADR-001 A2).
+    AI_ALLOW_CLOUD: bool = False
     OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
     OLLAMA_MODEL: str = "qwen3.5:9b"
     OLLAMA_NUM_CTX: int = 16384

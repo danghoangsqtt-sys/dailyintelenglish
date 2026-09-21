@@ -19,6 +19,8 @@ from app.main import app
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     monkeypatch.setattr(settings, "AI_MODE", "gemini")
+    # Task 14.7: matches the real default (False) unless a test explicitly opts in.
+    monkeypatch.setattr(settings, "AI_ALLOW_CLOUD", False)
     with TestClient(app) as test_client:
         yield test_client
 
@@ -29,10 +31,22 @@ def test_health_reports_the_current_ai_mode(client):
     assert response.json()["data"]["mode"] == "gemini"
 
 
-def test_health_reflects_an_ai_mode_change_without_restart(client):
+def test_health_reflects_an_ai_mode_change_without_restart(client, monkeypatch):
+    monkeypatch.setattr(settings, "AI_ALLOW_CLOUD", True)
     client.put("/api/settings/ai-mode", json={"ai_mode": "hybrid"})
     response = client.get("/api/ai/health")
     assert response.json()["data"]["mode"] == "hybrid"
+
+
+def test_health_reports_cloud_enabled_false_by_default(client):
+    response = client.get("/api/ai/health")
+    assert response.json()["data"]["cloud_enabled"] is False
+
+
+def test_health_reports_cloud_enabled_true_when_allow_cloud_is_set(client, monkeypatch):
+    monkeypatch.setattr(settings, "AI_ALLOW_CLOUD", True)
+    response = client.get("/api/ai/health")
+    assert response.json()["data"]["cloud_enabled"] is True
 
 
 def test_health_response_has_no_extra_undeclared_fields():
@@ -44,7 +58,7 @@ def test_health_response_has_no_extra_undeclared_fields():
         "model",
         "model_present",
         "model_digest",
-        "gemini_fallback_configured",
+        "cloud_enabled",
     }
     with TestClient(app) as client:
         response = client.get("/api/ai/health")

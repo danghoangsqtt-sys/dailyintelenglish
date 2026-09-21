@@ -1,6 +1,6 @@
 # Task 14.7 — Local-Only Mode, Config-First
 
-- **Status:** in_progress
+- **Status:** blocked (awaiting PM amendment -- see Deviations; implementation otherwise complete, 877/878 full-suite pass)
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** Amendment D (plan §12, commit `94f5e7b`); Gate B-2 (`docs/operations/phase14-gate-b2.md`)
@@ -280,6 +280,87 @@ the Phase 13 hybrid/Gemini behavior without a code revert.
       used for script/learning), not new functional coverage of Ollama's
       real output quality (that's Task 14.9's job).
 - Commands and results:
+  - `venv\Scripts\python.exe -m ruff check app tests scripts` → All checks passed.
+  - `node --check` on every edited `.js` file (`settings.js`, `api.js`,
+    `step2_script.js`, `step3_learning.js`) → clean.
+  - `venv\Scripts\python.exe scripts\check_dependencies.py` → all GREEN on this
+    machine, including the new `Ollama + model` check (`qwen3.5:9b present
+    (digest 6488c96fa5fa)`), `.env / GEMINI_API_KEY` now printed as an
+    informational `[GREEN]` line (not counted toward pass/fail).
+  - `venv\Scripts\python.exe -m pytest tests/test_settings_service.py
+    tests/test_settings_api.py tests/test_ai_health_api.py
+    tests/test_thumbnail_service.py tests/test_youtube_service.py
+    tests/test_script_jobs_browser.py tests/test_learning_jobs_browser.py -q`
+    → all green individually while iterating.
+  - `venv\Scripts\python.exe -m pytest -q` (full suite) → **877 passed, 1
+    failed** — the one failure is `tests/test_ai_jobs_api.py::
+    test_ai_health_never_exposes_the_gemini_key` (`KeyError:
+    'gemini_fallback_configured'`), a file **outside this task's allowed
+    list**. See Deviations below — not fixed here per the doc-first
+    "stop and ask the PM" rule.
+  - `grep -rin "gemini fallback" frontend/` → no matches (exit 1).
+  - `grep -rin "gemini" frontend/` (broader sweep, not the literal
+    verification wording but done as due diligence) → one hit outside this
+    task's scope: see Deviations.
 - Deviations:
+  - **BLOCKED on one file outside the allowed list — stop condition per plan
+    §12/task-14.7.md's own instruction, mirroring the pattern already used
+    for Tasks 14.1/14.2/14.4a.** `tests/test_ai_jobs_api.py:162` (not in
+    this task's allowed-files list) asserts
+    `data["gemini_fallback_configured"] is True` inside
+    `test_ai_health_never_exposes_the_gemini_key` — a direct, mechanical
+    consequence of Amendment E's explicit instruction to drop
+    `gemini_fallback_configured` from the health payload (confirmed: grep
+    before starting code found only 2 references, `app/api/ai_jobs.py` and
+    `tests/test_ai_health_api.py`, both already fixed; this third reference
+    was missed by that earlier grep because it's in a file this task never
+    listed as allowed, so it wasn't in the search scope considered "this
+    task's files"). Fix is mechanical and small: change the assertion to
+    check `cloud_enabled` (the field's replacement) instead, matching
+    exactly what `tests/test_ai_health_api.py`'s own
+    `test_health_response_has_no_extra_undeclared_fields` already does.
+    Requesting PM add `tests/test_ai_jobs_api.py` to this task's allowed
+    files (test-only, this one assertion).
+  - **Separate, smaller finding, not fixed (also outside the allowed
+    list):** `frontend/pages/step6_thumbnail.html:257` has a badge reading
+    "Pillow + Gemini text" — stale now that thumbnail generation defaults to
+    Ollama. Not "Gemini fallback" copy (the task's literal verification
+    target, confirmed clean), and `step6_thumbnail.html` / its JS are not in
+    this task's allowed list, so not touched. Flagging for the PM to decide
+    whether it's in scope for this task (a one-line amendment) or a
+    follow-up.
+  - `daily_intel_english_studio.spec`: read, no change needed —
+    `scripts/check_dependencies.py` (where the new `httpx` usage lives) is
+    not bundled into the packaged app at all (confirmed: no reference to it
+    anywhere in the spec or `app/main.py`'s startup path), and `httpx` is
+    already a normal dependency of the packaged app itself (every AI
+    provider adapter uses it) — nothing to add.
+  - `tests/test_ai_router.py` / `tests/conftest.py`: confirmed via grep
+    (done before writing any code) that neither file asserts against the
+    config *default* `AI_MODE` value — no edit made, matching the plan.
+  - `tests/test_youtube_service.py`: Amendment E asked for one new
+    `FakeProvider` test proving local-mode wiring, but
+    `test_generate_package_local_mode_needs_no_gemini_key` (pre-existing,
+    from Task 13.7) already does exactly this — `_gateway_router(AIMode.LOCAL,
+    ...)` end-to-end. Rather than add a near-duplicate test to satisfy the
+    letter of the instruction, this is recorded here as already-satisfied;
+    only `tests/test_thumbnail_service.py` needed a genuinely new test
+    (`test_generate_suggestions_runs_end_to_end_under_ai_mode_local`), since
+    it had no equivalent.
+  - Settings mode selector choice (Amendment E, already settled): the
+    selector became a read-only status line, not hidden entirely — the
+    existing `#ai-mode-status` div is kept as-is, only the interactive
+    `<select>`/save button and their handlers were removed.
+  - Otherwise no deviations from the plan recorded above.
 - Revert-and-confirm-failure evidence:
-- Commit(s):
+  - Temporarily replaced `set_ai_mode`'s cloud-gate condition with `if False
+    and ai_mode != "local" and not config.settings.AI_ALLOW_CLOUD:` and
+    re-ran
+    `venv\Scripts\python.exe -m pytest tests/test_settings_service.py::test_set_ai_mode_rejects_gemini_without_allow_cloud tests/test_settings_api.py::test_put_ai_mode_rejects_gemini_without_allow_cloud -q`:
+    **2 failed** (`Failed: DID NOT RAISE ValidationError`;
+    `assert 200 == 422`). Restored the real condition and re-ran
+    `tests/test_settings_service.py tests/test_settings_api.py`: **37
+    passed**.
+- Commit(s): (pending -- reporting the block to the PM before committing,
+  per the established Task 14.1/14.2/14.4a pattern of pushing the
+  in-progress work while flagging the block, not holding it back.)

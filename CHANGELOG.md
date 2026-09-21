@@ -24,6 +24,21 @@ Versioning: [SemVer](https://semver.org/)
   bundled — see README for why).
 
 ### Changed
+- Phase 14 Task 14.7, local-only mode, config-first (2026-09-21, Amendment D — the
+  owner dropped Gemini as a supported path after Gate B-2 showed 0/5 completions from
+  503 storms and free-tier quota exhaustion, while local completed 3/5 with zero
+  infrastructure failures): `AI_MODE` now defaults to `local`; the Settings page no
+  longer has a Gemini API-key section or a mode selector (replaced by a read-only
+  status line); `GET /api/ai/health` reports `cloud_enabled` instead of
+  `gemini_fallback_configured`; Step 2/3 disable the generate button and show
+  install/pull guidance (live model tag + digest) when Ollama is unreachable or the
+  model isn't pulled; `scripts/check_dependencies.py` now requires Ollama + the
+  configured model (the Gemini key check became informational). Gemini's provider,
+  settings plumbing, and tests all remain in the codebase, dormant — re-enabling cloud
+  is an explicit `DIE_AI_ALLOW_CLOUD=true` + `DIE_AI_MODE` + key configuration change,
+  never a migration, and is **unsupported**. See
+  `docs/architecture/adr-001-local-first-ai.md` amendment A2 and
+  `docs/implementation/phase-14-ai-gateway-resilience.md` §12.
 - Phase 4 Task 4.1, CEFR `news`-genre prompt tuning (2026-09-15, by Claude Code as PM +
   Implementer): added register-vs-complexity guidance to `prompts/script/news.txt`,
   targeting the exact 3 patterns Task 2.1b's real 18-sample review flagged as BORDERLINE

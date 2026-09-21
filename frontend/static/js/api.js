@@ -119,11 +119,6 @@ const Api = (() => {
       request(`/api/projects/${projectId}/speakers/${speakerId}/avatar`, { method: "DELETE" }),
     health: () => request("/health"),
     getSettings: () => request("/api/settings"),
-    updateGeminiApiKey: (geminiApiKey) =>
-      request("/api/settings", { method: "PUT", body: JSON.stringify({ gemini_api_key: geminiApiKey }) }),
-    clearGeminiApiKey: () => request("/api/settings/gemini-api-key", { method: "DELETE" }),
-    updateAiMode: (aiMode) =>
-      request("/api/settings/ai-mode", { method: "PUT", body: JSON.stringify({ ai_mode: aiMode }) }),
     // Durable AI jobs (Phase 13, Task 13.6) -- see frontend/static/js/ai_job.js
     // for the create/poll/resume lifecycle built on top of these.
     createScriptJob: (projectId) =>

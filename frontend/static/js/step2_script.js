@@ -49,10 +49,9 @@
       return;
     }
 
-    const fallbackNote = job.fallback_used ? " · using Gemini fallback" : "";
     el.innerHTML =
       `<span class="spinner spinner-dark" aria-hidden="true"></span> Generating script — ${escapeHtml(job.stage)} ` +
-      `(${job.progress}%)${fallbackNote} ` +
+      `(${job.progress}%) ` +
       '<button type="button" class="btn btn-ghost btn-xs" id="ai-job-cancel-btn">Cancel</button>';
     const cancelBtn = document.getElementById("ai-job-cancel-btn");
     if (cancelBtn) cancelBtn.addEventListener("click", () => currentAiJob && currentAiJob.cancel());
@@ -90,6 +89,47 @@
     const div = document.createElement("div");
     div.textContent = str == null ? "" : str;
     return div.innerHTML;
+  }
+
+  /** Task 14.7 (local-only mode): disable the generate button and show
+   * install/pull guidance when /api/ai/health reports Ollama unreachable or
+   * the model missing. #generate-panel already exists in the page markup
+   * (holding the intro paragraph + #generate-btn); the guidance banner is
+   * injected into it via plain DOM APIs rather than a template change. A
+   * failed health check itself is swallowed -- the page must stay usable
+   * even if this one auxiliary check fails. */
+  async function checkOllamaHealthAndGate() {
+    const generatePanel = document.getElementById("generate-panel");
+    const generateBtn = document.getElementById("generate-btn");
+    if (!generatePanel || !generateBtn) return;
+
+    let health;
+    try {
+      health = await Api.getAiHealth();
+    } catch (error) {
+      console.error("Could not check Ollama health:", error);
+      return;
+    }
+
+    const existing = document.getElementById("ollama-guidance");
+    const ready = health.ollama_reachable && health.model_present;
+    generateBtn.disabled = !ready;
+    if (ready) {
+      if (existing) existing.remove();
+      return;
+    }
+
+    const guidance = existing || document.createElement("div");
+    guidance.id = "ollama-guidance";
+    guidance.className = "ollama-guidance";
+    guidance.setAttribute("role", "alert");
+    guidance.innerHTML = health.ollama_reachable
+      ? `Model <code>${escapeHtml(health.model)}</code> is not installed. Run ` +
+        `<code>ollama pull ${escapeHtml(health.model)}</code>, then reload this page.`
+      : `Ollama is not running. Install it from ` +
+        `<a href="https://ollama.com/download" target="_blank" rel="noopener">ollama.com</a>, start it, ` +
+        `run <code>ollama pull ${escapeHtml(health.model)}</code>, then reload this page.`;
+    if (!existing) generatePanel.insertBefore(guidance, generateBtn);
   }
 
   function hexToRgba(hex, alpha) {
@@ -591,6 +631,7 @@
     }
 
     renderHeader();
+    checkOllamaHealthAndGate();
     document.getElementById("generate-btn").addEventListener("click", handleGenerate);
     document.getElementById("regenerate-all-btn").addEventListener("click", handleRegenerateAll);
     document.getElementById("next-step-btn").addEventListener("click", handleNextStep);

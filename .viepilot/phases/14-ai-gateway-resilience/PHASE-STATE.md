@@ -45,7 +45,7 @@
 | 14.4b | Gate B second run, both providers, declared protocol | PM | done | Decision rules in plan §4.4 — result: local FAIL 3/5, Gemini FAIL-INFRA 0/5, stop condition |
 | 14.5 | Correct `docs/operations/phase13-acceptance.md` | PM | done | Original text preserved |
 | 14.1-b | Gemini backoff redesign (retryDelay, daily-429 no-retry, wider 503 window) | — | **dropped (D12)** | Superseded by the owner's decision to drop Gemini (Amendment D) — never started, no task card was ever created |
-| 14.7 | Local-only mode, config-first (Amendment D) | Coder | pending | `--matrix`-style flags n/a; see task-14.7.md verification |
+| 14.7 | Local-only mode, config-first (Amendment D) | Coder | **blocked** (implementation done, 1 file outside allowed list) | see task-14.7.md verification |
 | 14.8 | Local hardening: over-length sections, consecutive-lines rule (Amendment D) | Coder | pending | Depends on 14.7 accepted; constants-pin extended |
 | 14.9 | Gate B-3, local only (Amendment D) | PM | pending | Depends on 14.7 + 14.8 done; Coder idle during the run |
 | 14.6 (revised) | Resume Task 13.10, local-only rollout (Amendment D) | Both | pending | Depends on 14.7 + 14.8 + 14.9 |
@@ -267,3 +267,32 @@ each diff before the next starts) → 14.9 (PM runs; Coder idle) → 14.6 (revis
   (PM) → 14.6 (revised). No product code touched -- pure doc-first mirroring,
   awaiting PM's review of the three new/revised cards before Task 14.7
   implementation starts.
+- 2026-09-21: PM accepted the 14.7-14.9/revised-14.6 task cards and issued
+  Amendment E (plan commit `26dae03`, mirrored into task-14.7.md): allowed
+  files add `tests/test_thumbnail_service.py`/`tests/test_youtube_service.py`;
+  settled the mode-selector (read-only status line) and health-field
+  (`cloud_enabled`, drop `gemini_fallback_configured`) choices the card left
+  open. Coder implemented Task 14.7: `AI_MODE` defaults `local`, new
+  `AI_ALLOW_CLOUD` gate on `set_ai_mode`; Settings page loses the API-key
+  section and interactive mode selector; `/api/ai/health` reports
+  `cloud_enabled`; Step 2/3 gain a live Ollama-health check that disables
+  Generate and shows install/pull guidance (model tag + digest from the
+  health response itself, never hardcoded) when Ollama is unreachable or
+  the model isn't pulled, injected via plain DOM APIs into the
+  `#generate-panel` container both pages already have (no `.html` edit
+  needed); `scripts/check_dependencies.py` gains a required `Ollama + model`
+  check, the Gemini-key check becomes informational; README/CHANGELOG
+  updated (forward-looking sections only); one new local-mode
+  `FakeProvider` test for `thumbnail_service` (`youtube_service` already
+  had an equivalent from Task 13.7, recorded rather than duplicated). Full
+  suite: **877 passed, 1 failed** — the failure is
+  `tests/test_ai_jobs_api.py::test_ai_health_never_exposes_the_gemini_key`,
+  a file **outside Task 14.7's allowed list**, asserting the now-removed
+  `gemini_fallback_configured` field (a mechanical, expected consequence of
+  Amendment E's own instruction, missed by the pre-code grep because that
+  grep was scoped to files the task already listed). Revert-and-confirm-
+  failure done on the `AI_ALLOW_CLOUD` gate. `ruff`/`node --check` clean.
+  Also flagged, not fixed (also outside the allowed list): a stale "Pillow +
+  Gemini text" badge in `frontend/pages/step6_thumbnail.html`. Task 14.7
+  status: **blocked**, requesting a PM amendment for
+  `tests/test_ai_jobs_api.py` (one assertion) before it can go to `done`.

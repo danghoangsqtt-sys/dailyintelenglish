@@ -102,7 +102,12 @@ defects found on PM review. Full evidence trail in `.viepilot/ROADMAP.md` and
 - Python 3.11+
 - NVIDIA GPU (recommended: RTX 3060+ with 8GB+ VRAM)
 - ffmpeg (in PATH, or set `DIE_FFMPEG_PATH` to its absolute exe path — e.g. on Windows if it was installed via `winget` and the shell's PATH hasn't picked it up yet)
-- Google Gemini API key
+- **[Ollama](https://ollama.com/download)**, running, with the `qwen3.5:9b` model pulled
+  (`ollama pull qwen3.5:9b`) — the app is **local-only** as of Phase 14 (see
+  [docs/operations/local-ai.md](docs/operations/local-ai.md)); it still *starts*
+  without Ollama, but AI generation needs it running
+- ~~Google Gemini API key~~ not needed for normal use — Gemini is dormant (unsupported
+  rollback path, see [Tech Stack](#tech-stack) below)
 
 ### Installation
 
@@ -119,10 +124,10 @@ pip install -r requirements.txt
 
 # 4. Setup environment
 copy .env.example .env
-# Edit .env — set your DIE_GEMINI_API_KEY
-# (All application settings use the DIE_ prefix, e.g. DIE_GEMINI_API_KEY)
+# Defaults are already local-only (DIE_AI_MODE=local) -- no key needed for normal use.
+# (All application settings use the DIE_ prefix, e.g. DIE_OLLAMA_MODEL)
 
-# 5. Check dependencies
+# 5. Check dependencies (verifies Ollama is running and the model is pulled)
 python scripts/check_dependencies.py
 
 # 6. Run the app
@@ -147,9 +152,15 @@ starting a second instance.
 
 The packaged app stores its database and generated files under
 `%LOCALAPPDATA%\DailyIntelEnglishStudio\data` (not next to the exe — that folder
-isn't guaranteed writable depending on where it's installed), and reads the Gemini
-API key from the in-app **Settings** page (⚙️ on the dashboard) instead of a `.env`
-file, since a packaged build doesn't ship one.
+isn't guaranteed writable depending on where it's installed). It is local-only
+(Ollama, `qwen3.5:9b`) by default — see Requirements above; it still starts and lets
+you use every non-AI feature without Ollama running, showing install/pull guidance on
+the AI screens instead.
+
+**Rollback (unsupported):** Gemini stays in the codebase, dormant. Re-enabling it is
+an explicit configuration change, never a migration: set `DIE_AI_ALLOW_CLOUD=true` and
+`DIE_AI_MODE=hybrid` (or `gemini`) in `.env`, and provide a key via the in-app
+**Settings** page (⚙️ on the dashboard) or `DIE_GEMINI_API_KEY`.
 
 **Not bundled**: ffmpeg and the OmniVoice model directory still need to be present
 on the machine exactly as for the source install (see Requirements above) —
@@ -175,18 +186,22 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
 
 - **Backend**: Python 3.11+ / FastAPI / Uvicorn / aiosqlite
 - **Frontend**: Vanilla HTML5 / CSS3 / JavaScript
-- **AI**: Google Gemini API (`gemini-3.8-flash`) with strict structured JSON schema
+- **AI**: Local Ollama (`qwen3.5:9b`) with strict structured JSON schema — the only
+  supported path as of Phase 14 (see
+  [docs/architecture/adr-001-local-first-ai.md](docs/architecture/adr-001-local-first-ai.md)).
+  Google Gemini API (`gemini-3.8-flash`) remains in the codebase, dormant, as an
+  unsupported rollback (`DIE_AI_ALLOW_CLOUD=true`) — never re-enabled by default.
 - **TTS**: Edge TTS (sole engine — OmniVoice GPU cloning considered, dropped 2026-09-13; see [docs/tts-setup.md](docs/tts-setup.md))
 - **Audio**: pydub + ffmpeg (real ITU-R BS.1770 loudness normalization via `pyloudnorm`)
 - **Video**: ffmpeg (background templates + burned-in subtitles, 16:9 and 9:16 export). LivePortrait lip-sync avatar remains a deferred, not-yet-started research effort
-- **Thumbnail**: Pillow + Gemini text/palette suggestions
+- **Thumbnail**: Pillow + AI (local Ollama by default) text/palette suggestions
 - **Database**: SQLite (aiosqlite async transactions)
 
 ## Documentation
 
 | Doc | Purpose |
 |-----|---------|
-| [docs/prompt-guide.md](docs/prompt-guide.md) | How to customize the Gemini prompt templates (script genres, CEFR blocks, learning content, thumbnails, YouTube package) |
+| [docs/prompt-guide.md](docs/prompt-guide.md) | How to customize the AI prompt templates (script genres, CEFR blocks, learning content, thumbnails, YouTube package) — shared by Ollama (default) and the dormant Gemini path |
 | [docs/tts-setup.md](docs/tts-setup.md) | Edge TTS voice map and known limitations; why OmniVoice was investigated but not integrated |
 | [docs/api.md](docs/api.md) | Full API reference, auto-generated from the app's real FastAPI OpenAPI schema (`scripts/generate_api_docs.py`) — also live at `/docs` while the app is running |
 | [.viepilot/ARCHITECTURE.md](.viepilot/ARCHITECTURE.md) | System design, services, data models |
@@ -200,7 +215,7 @@ Daily_Intel_English/
 ├── app/                    # FastAPI backend
 ├── frontend/               # HTML/CSS/JS pages
 ├── data/                   # Runtime data (gitignored)
-├── prompts/                # Gemini prompt templates
+├── prompts/                # AI prompt templates (Ollama default, Gemini dormant)
 ├── models/                 # Local AI models
 ├── scripts/                # Setup utilities
 ├── tests/                  # Automated test suite (pytest)

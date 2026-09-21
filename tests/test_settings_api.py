@@ -20,6 +20,9 @@ def client(tmp_path, monkeypatch):
     # AI_MODE (Task 13.6) is the same kind of mutable-singleton setting -- reset to
     # its documented packaged default so a PUT in one test can't leak into another.
     monkeypatch.setattr(settings, "AI_MODE", "gemini")
+    # Task 14.7: matches the real default (False) unless a test explicitly opts in --
+    # PUT .../ai-mode now rejects gemini/hybrid without this.
+    monkeypatch.setattr(settings, "AI_ALLOW_CLOUD", False)
     with TestClient(app) as test_client:
         yield test_client
 
@@ -88,7 +91,8 @@ def test_get_settings_reports_ai_mode_env_default(client):
     assert data["ai_mode_source"] == "env"
 
 
-def test_put_ai_mode_saves_and_applies_immediately(client):
+def test_put_ai_mode_saves_and_applies_immediately(client, monkeypatch):
+    monkeypatch.setattr(settings, "AI_ALLOW_CLOUD", True)
     response = client.put("/api/settings/ai-mode", json={"ai_mode": "hybrid"})
     assert response.status_code == 200
     data = response.json()["data"]
@@ -110,12 +114,41 @@ def test_put_ai_mode_rejects_an_unknown_value(client):
     assert response.status_code == 422
 
 
-def test_ai_mode_change_does_not_disturb_the_gemini_key_status(client):
+def test_ai_mode_change_does_not_disturb_the_gemini_key_status(client, monkeypatch):
     """Regression guard for the field-name collision this task's own get_settings
     merge could have introduced ('source' vs 'ai_mode_source')."""
+    monkeypatch.setattr(settings, "AI_ALLOW_CLOUD", True)
     client.put("/api/settings", json={"gemini_api_key": "AIzaSyBrandNewRealKey0001"})
     client.put("/api/settings/ai-mode", json={"ai_mode": "hybrid"})
     response = client.get("/api/settings")
     data = response.json()["data"]
     assert data["source"] == "database"  # gemini key status, unaffected by ai_mode
     assert data["ai_mode_source"] == "database"
+
+
+# --- Task 14.7: cloud gate (ADR-001 A2) -------------------------------------------------
+
+
+def test_put_ai_mode_rejects_gemini_without_allow_cloud(client):
+    response = client.put("/api/settings/ai-mode", json={"ai_mode": "gemini"})
+    assert response.status_code == 422
+
+
+def test_put_ai_mode_rejects_hybrid_without_allow_cloud(client):
+    response = client.put("/api/settings/ai-mode", json={"ai_mode": "hybrid"})
+    assert response.status_code == 422
+
+
+def test_put_ai_mode_accepts_gemini_when_allow_cloud_is_true(client, monkeypatch):
+    monkeypatch.setattr(settings, "AI_ALLOW_CLOUD", True)
+    response = client.put("/api/settings/ai-mode", json={"ai_mode": "gemini"})
+    assert response.status_code == 200
+    assert response.json()["data"]["ai_mode"] == "gemini"
+
+
+def test_put_ai_mode_accepts_local_regardless_of_allow_cloud(client):
+    # AI_ALLOW_CLOUD is False by default (see the client fixture) -- local is
+    # never gated, it's the only supported mode.
+    response = client.put("/api/settings/ai-mode", json={"ai_mode": "local"})
+    assert response.status_code == 200
+    assert response.json()["data"]["ai_mode"] == "local"

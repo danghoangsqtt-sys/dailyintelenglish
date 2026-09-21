@@ -116,7 +116,7 @@ async def ai_health() -> dict:
             "model": settings.OLLAMA_MODEL,
             "model_present": model_present,
             "model_digest": model_digest,
-            "gemini_fallback_configured": bool(settings.GEMINI_API_KEY),
+            "cloud_enabled": settings.AI_ALLOW_CLOUD,
         },
         started_at=started_at,
     )

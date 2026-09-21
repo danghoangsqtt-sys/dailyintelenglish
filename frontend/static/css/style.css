@@ -164,9 +164,14 @@ button { cursor: pointer; }
 #error-banner { margin-bottom: 16px; border: 1px solid var(--danger); border-radius: 10px; padding: 14px 18px; background: var(--danger-bg); color: var(--danger); font-size: 13px; font-weight: 700; }
 .ai-job-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; border: 1px solid var(--info); border-radius: 10px; padding: 12px 16px; background: var(--info-bg); color: var(--text-2); font-size: 13px; }
 .ai-job-status:has(#ai-job-retry-btn) { border-color: var(--danger); background: var(--danger-bg); }
-.ai-job-fallback { color: var(--warning); font-weight: 700; }
 .generate-panel { margin-bottom: 24px; padding: 40px; text-align: center; }
 .generate-panel p { margin: 0 0 20px; color: var(--muted); }
+/* Task 14.7 -- Ollama-missing guidance, injected into #generate-panel by
+   step2_script.js / step3_learning.js when /api/ai/health reports the local
+   model unreachable or not pulled (local-only mode, Amendment D). */
+.ollama-guidance { margin-bottom: 20px; border: 1px solid var(--danger); border-radius: 10px; padding: 14px 18px; background: var(--danger-bg); color: var(--danger); font-size: 13px; font-weight: 600; text-align: left; }
+.ollama-guidance code { font-weight: 700; }
+.ollama-guidance a { color: inherit; text-decoration: underline; }
 #script-list { display: flex; flex-direction: column; gap: 14px; }
 .line-card { padding: 16px 18px; }
 .line-card.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }

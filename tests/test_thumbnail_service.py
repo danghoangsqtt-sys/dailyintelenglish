@@ -271,3 +271,19 @@ async def test_generate_suggestions_rejects_wrong_count_and_invalid_schema(
     router = _gateway_router(AIMode.GEMINI, [_suggestion_result(json.dumps(payload))])
     with pytest.raises(ThumbnailGenerationError, match="schema validation"):
         await thumbnail_service.generate_suggestions(PROJECT, template, 3, router=router)
+
+
+@pytest.mark.asyncio
+async def test_generate_suggestions_runs_end_to_end_under_ai_mode_local() -> None:
+    """Task 14.7 (Amendment E): local-only is now the default -- proves
+    generate_suggestions completes via the local (Ollama) route with no
+    Gemini key configured, matching the same
+    _gateway_router(AIMode.LOCAL, ...) pattern already used for script/
+    learning/YouTube generation. Not a claim about real Ollama structured-
+    output quality for this schema (measured for real in Task 14.9)."""
+    template = await thumbnail_service.load_template("modern_split")
+    router = _gateway_router(AIMode.LOCAL, gemini_outcomes=[], local_outcomes=[_suggestion_result(suggestion_json(3))])
+
+    pack = await thumbnail_service.generate_suggestions(PROJECT, template, 3, router=router)
+
+    assert len(pack.variants) == 3

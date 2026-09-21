@@ -49,6 +49,34 @@ def check_ffmpeg() -> tuple[bool, str]:
         return False, f"'{configured}' not found in PATH (DIE_FFMPEG_PATH)"
 
 
+def check_ollama() -> tuple[bool, str]:
+    """Verify Ollama is reachable and the configured model is pulled.
+
+    Task 14.7 (Amendment D): local-only release path -- Ollama is now a hard
+    requirement to *generate* (not to *start*, Phase 13 invariant 9 stays).
+    Mirrors app/api/ai_jobs.py's own /api/ai/health probe rather than
+    importing it, matching this script's existing "checks the same source of
+    truth the app itself uses, independently" style (see check_ffmpeg).
+    """
+    import httpx
+
+    base_url = settings.OLLAMA_BASE_URL
+    try:
+        with httpx.Client(base_url=base_url, timeout=5.0) as client:
+            version_response = client.get("/api/version")
+            if version_response.status_code != 200:
+                return False, f"Ollama not reachable at {base_url} — install: https://ollama.com/download"
+            tags_response = client.get("/api/tags")
+            tags_response.raise_for_status()
+            for model in tags_response.json().get("models", []):
+                if settings.OLLAMA_MODEL in (model.get("name"), model.get("model")):
+                    digest = (model.get("digest") or "")[:12]
+                    return True, f"{settings.OLLAMA_MODEL} present (digest {digest})"
+            return False, f"model not pulled — run: ollama pull {settings.OLLAMA_MODEL}"
+    except (httpx.HTTPError, OSError) as exc:
+        return False, f"Ollama not reachable at {base_url}: {exc} — install: https://ollama.com/download"
+
+
 def check_gpu() -> tuple[bool, str]:
     """Verify an NVIDIA GPU is visible via nvidia-smi and report VRAM size."""
     nvidia_smi = shutil.which("nvidia-smi")
@@ -113,23 +141,38 @@ def check_data_dirs() -> tuple[bool, str]:
 
 
 def main() -> int:
-    """Run all checks and print a GREEN/RED report; exit 1 if any check fails."""
-    checks = [
+    """Run all checks and print a GREEN/RED report; exit 1 if any required check fails.
+
+    Task 14.7 (Amendment D): Ollama + the configured model are now required
+    (local-only release path). The Gemini API key becomes informational only
+    -- still reported, never failing the overall check -- since it's now
+    just the unsupported cloud-rollback path (ADR-001 A2), not something a
+    normal install needs.
+    """
+    required_checks = [
         ("Python >= 3.11", check_python_version),
         ("ffmpeg", check_ffmpeg),
         ("NVIDIA GPU", check_gpu),
-        (".env / GEMINI_API_KEY", check_env_file),
+        ("Ollama + model", check_ollama),
         ("OmniVoice model", check_omnivoice_model),
         ("data/ directories", check_data_dirs),
+    ]
+    informational_checks = [
+        (".env / GEMINI_API_KEY (optional — cloud rollback only, see README)", check_env_file),
     ]
 
     all_passed = True
     print("Daily Intel English Studio - Dependency Check\n" + "-" * 48)
-    for label, check_fn in checks:
+    for label, check_fn in required_checks:
         passed, detail = check_fn()
         status = "GREEN" if passed else "RED"
         print(f"[{status}] {label}: {detail}")
         all_passed = all_passed and passed
+
+    for label, check_fn in informational_checks:
+        passed, detail = check_fn()
+        status = "GREEN" if passed else "YELLOW"
+        print(f"[{status}] {label}: {detail}")
 
     print("-" * 48)
     print("All checks passed." if all_passed else "Some checks failed - see RED lines above.")
