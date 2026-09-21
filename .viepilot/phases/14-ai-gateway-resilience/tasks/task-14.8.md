@@ -1,6 +1,6 @@
 # Task 14.8 — Local Hardening: Over-Length Sections and the Consecutive-Lines Rule
 
-- **Status:** pending
+- **Status:** in progress
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** Task 14.7 done and accepted by the PM
@@ -119,6 +119,78 @@ restoring Task 14.3's exact repair behavior.
 ## Execution record (Coder fills in)
 
 - Plan/decisions before code:
+  1. **Constant:** add `SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS = 1` to
+     `app/core/constants.py`, right after `SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS`,
+     with a Task 14.8 comment. `0` disables the new pass (the card's own rollback).
+  2. **`prompts/script/section.txt`:**
+     - "Target length: about `{{ target_words }}` spoken words (stay within ±15%)"
+       becomes a hard, pre-computed range: "between `{{ (target_words*0.85)|round|int }}`
+       and `{{ (target_words*1.15)|round|int }}` spoken words -- count your words
+       before answering." Computed with plain Jinja arithmetic on the existing
+       `target_words` variable -- no new template variable, matching the card's "no
+       change to how the value gets there" instruction. The ±15% literal already
+       existed in this same line's prose before this task; not a tolerance-constant
+       edit (that stays in Python, untouched).
+     - Multi-speaker turn-taking rule gains "alternate speakers by default" alongside
+       the existing `{{ max_consecutive_lines }}` number.
+  3. **`prompts/script/repair.txt`:** `_repair_section` will compute and pass
+     `measured_words` (word count of the previous answer) and `delta` (signed,
+     `measured_words - target_words`); the template shows both and, for `delta > 0`,
+     instructs the model to remove/shorten specific existing lines rather than
+     rewrite from scratch (the card's explicit over-length instruction); for
+     `delta < 0`, the symmetric add/expand instruction (prompt-only, does not change
+     any gating logic -- under-length misses still resolve via 14.3's unchanged
+     accept-and-carry).
+  4. **Consecutive-lines error message** (`validate_section_structure`): changes from
+     the generic "more than 5 consecutive lines from one speaker" to naming the
+     offending speaker id and approximate 1-based line range, e.g. "more than 5
+     consecutive lines from speaker <id> (lines 3-9)" -- flows into `repair.txt`'s
+     existing `errors` loop with no template change needed there. Still contains the
+     substring `"consecutive lines"`, so the existing substring-matching unit tests
+     (`test_validate_section_rejects_too_many_consecutive_lines` et al.) are
+     unaffected.
+  5. **`_repair_section` signature:** gains `purpose: str = "script_section_repair"`
+     (default preserves every existing caller's telemetry string unchanged), passed
+     through to `GenerationRequest.purpose` -- the new length-only call passes
+     `purpose="script_section_length_repair"` so telemetry can tell the two kinds of
+     repair apart.
+  6. **Pipeline trigger** (`_run_script_job`'s main per-section loop, right after the
+     existing "if structural_errors: fail" check): if `repaired` is `True` (the one
+     semantic repair already fired) AND `budget_errors` is still non-empty AND
+     `words > effective_target * (1 + SCRIPT_SECTION_CARRY_CAP)` AND
+     `SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS > 0`, fire exactly one more `_repair_section`
+     call (`errors=budget_errors`, `purpose="script_section_length_repair"`). A
+     `ProviderError` fails the job the same way as the first repair; a structural
+     error in its output hard-fails with `section_validation_failed` (defensive, same
+     treatment as the first repair, even though the length-only prompt never asks for
+     structural changes). Otherwise `words` is recomputed and the existing
+     accept-and-carry / checkpoint-save flow continues unchanged. The
+     `SCRIPT_SECTION_CARRY_CAP` threshold (not `SCRIPT_SECTION_WORD_TOLERANCE`) is the
+     over-length gate deliberately -- it's already the clamp band's own ceiling, so
+     "still over after repair, by more than the clamp itself allows for" is the
+     narrowest correct trigger, matching Gate B-2's evidence (417/214, 426/173,
+     404/208 -- all far past +35%, not just +15%). Under-length sections can never
+     satisfy `words > effective_target * 1.35`, so 14.3's accept-and-carry for them is
+     provably untouched by this new branch. The last section is eligible the same as
+     any other section (the card does not exclude it); the separate, pre-existing
+     final-section global-budget-repair block later in the function is untouched
+     apart from inheriting `repair.txt`'s new measured/target/delta lines for free
+     (same `_repair_section` function, no call-site logic change there).
+  7. **Checkpoint `metrics_json` shape** (verification item 1's "document the exact
+     shape chosen"): two new keys alongside the existing seven --
+     `length_repaired: bool` and `words_before_length_repair: int | None` -- mirroring
+     the existing `repaired`/`words_before_repair` pair. Additive and backward
+     compatible; both default `False`/`None` when the new pass never fires.
+  8. **Test-file follow-on edits required by this shape change (not a deviation, an
+     expected consequence):**
+     `test_pipeline_accepts_off_target_sections_when_total_lands_inside_tolerance`'s
+     exact-set assertion (`set(metrics) == {...}`) must gain the two new keys or it
+     will fail on an unrelated diff -- that fixture's own deviations (130 vs an
+     effective ceiling of at most 216) never cross the new CARRY_CAP trigger, so only
+     the key-set list changes, not any asserted value.
+  9. New FakeProvider e2e tests for verification items 1/2/3/5 (four new tests,
+     named `test_pipeline_length_only_repair_*`), plus the constants-pin extension
+     (item 4) and its revert-and-confirm-failure.
 - Commands and results:
 - Deviations:
 - Revert-and-confirm-failure evidence:
