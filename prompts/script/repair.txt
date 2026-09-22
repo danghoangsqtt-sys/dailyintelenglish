@@ -16,9 +16,9 @@ return the corrected JSON.
   specific lines until the total reaches the target.
 {% endif %}
 
-## Speakers (use only these `id` values)
+## Speakers (use only these aliases)
 {% for speaker in speakers %}
-- id: {{ speaker.id }} | name: {{ speaker.name }}
+- alias: S{{ loop.index }} | name: {{ speaker.name }}
 {% endfor %}
 
 ## Validation Errors To Fix
@@ -33,6 +33,7 @@ return the corrected JSON.
 
 ## Output Format
 Return ONLY a corrected JSON array (no markdown fences, no commentary), same
-shape as before: each element is `{"speaker_id": "...", "text": "...",
+shape as before: each element is `{"speaker": "...", "text": "...",
 "language_notes": {"collocations": [...], "idioms": [...], "grammar_point": "..."}}`.
-Do not include an `id` field.
+`"speaker"` must be one of the aliases listed above (e.g. `"S1"`). Do not
+include an `id` field.

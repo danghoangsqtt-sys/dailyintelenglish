@@ -10,6 +10,7 @@ see task-13.4.md).
 from __future__ import annotations
 
 import asyncio
+import difflib
 import hashlib
 import json
 import logging
@@ -37,6 +38,7 @@ from app.core.constants import (
     SCRIPT_SECTION_WORD_TOLERANCE,
     SCRIPT_SPEAKER_BALANCE_MAX_SHARE,
     SCRIPT_SPEAKER_BALANCE_MIN_SHARE,
+    SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO,
 )
 from app.core.exceptions import ProviderError, SchemaValidationError
 from app.core.prompt_loader import SCRIPT_PROMPTS_DIR, load_cefr_block, load_genre_block
@@ -89,8 +91,26 @@ class SectionLineOut(BaseModel):
     language_notes: LanguageNotesOut = Field(default_factory=LanguageNotesOut)
 
 
+class SectionLineWire(BaseModel):
+    """Task 15.1: the model's raw response shape -- `speaker` is a short alias
+    (`S1`, `S2`, ...), never assumed to already be a real speaker UUID. Every
+    call that talks to the model parses/schemas against this type; the result
+    is resolved into `SectionLineOut` (`resolve_section_lines`) before any
+    validation runs. `SectionLineOut` itself, and everything downstream of it
+    (validators, checkpoints, `script_service.save_script`), is unaware this
+    type exists."""
+
+    speaker: str
+    text: str = Field(min_length=1)
+    language_notes: LanguageNotesOut = Field(default_factory=LanguageNotesOut)
+
+
 _OUTLINE_ADAPTER = TypeAdapter(ScriptOutline)
 _SECTION_LINES_ADAPTER = TypeAdapter(list[SectionLineOut])
+# Task 15.1: the model-facing schema/parse target -- SectionLineOut/_SECTION_LINES_ADAPTER
+# above stay the checkpoint (resolved-shape) adapter, untouched.
+_SECTION_LINES_WIRE_ADAPTER = TypeAdapter(list[SectionLineWire])
+_UUID_SHAPED_RE = re.compile(r"^[0-9a-f-]{8,}$", re.IGNORECASE)
 
 
 # --- pure functions (no I/O -- unit-testable directly) -------------------------------
@@ -213,6 +233,91 @@ def frequent_repeated_phrases(words: list[str], limit: int = SCRIPT_SECTION_AVOI
     counts = Counter(grams)
     repeated = sorted((gram for gram, count in counts.items() if count > 1), key=lambda gram: -counts[gram])
     return [" ".join(gram) for gram in repeated[:limit]]
+
+
+def resolve_speaker(raw: str, speakers: list[dict]) -> tuple[str, str | None]:
+    """Task 15.1: maps a wire-format `speaker` value (normally an `S{n}` alias)
+    to a real speaker UUID, deterministically. Returns `(resolved_or_original,
+    kind)` -- `kind` names which rule matched (for logging), or `None` if
+    nothing matched, in which case the *original* `raw` value is returned
+    unchanged so the existing unknown-speaker-id validation catches it exactly
+    as it does today (no separate "unresolved" error path).
+
+    Rule order: exact alias -> alias case/whitespace-insensitive -> the
+    speaker's display name (only when unique in the project, case-insensitive
+    -- two same-named speakers means this rule contributes nothing for either)
+    -> an exact known-UUID match -> a UUID-*shaped* value matching exactly one
+    known id at >= SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO similarity (two or more
+    ids tying above the threshold is unresolved, never a guess)."""
+    value = raw.strip()
+    normalized = value.casefold()
+    exact_alias = {f"S{index}": speaker["id"] for index, speaker in enumerate(speakers, start=1)}
+    normalized_alias = {f"s{index}": speaker["id"] for index, speaker in enumerate(speakers, start=1)}
+
+    if value in exact_alias:
+        return exact_alias[value], "alias_exact"
+    if normalized in normalized_alias:
+        return normalized_alias[normalized], "alias_normalized"
+
+    name_counts = Counter(speaker["name"].strip().casefold() for speaker in speakers)
+    for speaker in speakers:
+        speaker_name = speaker["name"].strip().casefold()
+        if speaker_name == normalized and name_counts[speaker_name] == 1:
+            return speaker["id"], "display_name"
+
+    known_ids = {speaker["id"] for speaker in speakers}
+    if value in known_ids:
+        return value, "uuid_exact"
+
+    if _UUID_SHAPED_RE.match(value):
+        matches = [
+            known_id
+            for known_id in known_ids
+            if difflib.SequenceMatcher(None, value.lower(), known_id.lower()).ratio()
+            >= SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO
+        ]
+        if len(matches) == 1:
+            return matches[0], "uuid_near_miss"
+
+    return raw, None
+
+
+def resolve_section_lines(wire_lines: list[SectionLineWire], speakers: list[dict]) -> list[SectionLineOut]:
+    """Task 15.1: resolves every wire line's alias/near-miss `speaker` value to
+    a real speaker id, logging each successful resolution
+    (`script_speaker_resolved`). An unresolved value is *not* logged here --
+    it passes through unchanged into `SectionLineOut.speaker_id`, and the
+    existing unknown-speaker-id validation reports it exactly as today."""
+    resolved_lines = []
+    for wire_line in wire_lines:
+        resolved, kind = resolve_speaker(wire_line.speaker, speakers)
+        if kind is not None:
+            logger.info(
+                "script_speaker_resolved kind=%s original=%r resolved=%s", kind, wire_line.speaker, resolved
+            )
+        resolved_lines.append(
+            SectionLineOut(speaker_id=resolved, text=wire_line.text, language_notes=wire_line.language_notes)
+        )
+    return resolved_lines
+
+
+def _lines_to_wire_json(lines: list[SectionLineOut], speakers: list[dict]) -> str:
+    """Task 15.1: renders already-resolved section lines back into the
+    alias-shaped wire format for the repair prompt's "your previous answer"
+    echo -- keeps that echo self-consistent with the alias contract. A line
+    whose `speaker_id` was never resolved (exactly the case that triggers a
+    repair) falls back to showing the literal original value, which is more
+    useful for a repair prompt than hiding it or fabricating an alias."""
+    id_to_alias = {speaker["id"]: f"S{index}" for index, speaker in enumerate(speakers, start=1)}
+    wire = [
+        {
+            "speaker": id_to_alias.get(line.speaker_id, line.speaker_id),
+            "text": line.text,
+            "language_notes": line.language_notes.model_dump(),
+        }
+        for line in lines
+    ]
+    return json.dumps(wire)
 
 
 def validate_section_structure(lines: list[SectionLineOut], known_speaker_ids: set[str]) -> list[str]:
@@ -454,16 +559,17 @@ async def _generate_section(
         db, job_id, router,
         GenerationRequest(
             prompt=prompt,
-            json_schema=_SECTION_LINES_ADAPTER.json_schema(),
+            json_schema=_SECTION_LINES_WIRE_ADAPTER.json_schema(),
             deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
             purpose="script_section",
         ),
         section_index=section_spec.index, is_repair=False,
     )
     try:
-        lines = parse_and_validate(result.text, _SECTION_LINES_ADAPTER)
+        wire_lines = parse_and_validate(result.text, _SECTION_LINES_WIRE_ADAPTER)
     except SchemaValidationError as exc:
         return [], [str(exc)], []
+    lines = resolve_section_lines(wire_lines, project["speakers"])
     return (
         lines,
         validate_section_structure(lines, known_speaker_ids),
@@ -491,9 +597,7 @@ async def _repair_section(
     (`script_section_length_repair`) in telemetry -- both call this same
     function, since the length-only pass is a second, narrower repair, not a
     different code path."""
-    previous_output = (
-        _SECTION_LINES_ADAPTER.dump_json(previous_lines).decode("utf-8") if previous_lines else "[]"
-    )
+    previous_output = _lines_to_wire_json(previous_lines, project["speakers"]) if previous_lines else "[]"
     measured_words = section_word_count(previous_lines)
     prompt = await _render(
         "repair.txt",
@@ -509,16 +613,17 @@ async def _repair_section(
         db, job_id, router,
         GenerationRequest(
             prompt=prompt,
-            json_schema=_SECTION_LINES_ADAPTER.json_schema(),
+            json_schema=_SECTION_LINES_WIRE_ADAPTER.json_schema(),
             deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
             purpose=purpose,
         ),
         section_index=section_spec.index, is_repair=True,
     )
     try:
-        lines = parse_and_validate(result.text, _SECTION_LINES_ADAPTER)
+        wire_lines = parse_and_validate(result.text, _SECTION_LINES_WIRE_ADAPTER)
     except SchemaValidationError as exc:
         return [], [str(exc)], []
+    lines = resolve_section_lines(wire_lines, project["speakers"])
     return (
         lines,
         validate_section_structure(lines, known_speaker_ids),

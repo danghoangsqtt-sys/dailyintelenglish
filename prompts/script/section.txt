@@ -31,10 +31,10 @@ do not reuse them:
 {% endif %}
 
 ## Speakers
-Each speaker is identified by a unique `id`. Two speakers may share a display
-name — always tell them apart by `id`, never by name alone.
+Each speaker is identified by a short alias. Use ONLY the alias in your
+output — never a name, never an id.
 {% for speaker in speakers %}
-- id: {{ speaker.id }} | name: {{ speaker.name }} | {{ speaker.gender }}, {{ speaker.accent }} accent
+- alias: S{{ loop.index }} | name: {{ speaker.name }} | {{ speaker.gender }}, {{ speaker.accent }} accent
 {% endfor %}
 {% if num_speakers == 1 %}
 
@@ -62,7 +62,7 @@ use a category at all is controlled ONLY by the list below:
 
 ## Rules
 1. Stay on topic: every line must relate to "{{ topic }}".
-2. Do not invent a speaker — use only the `id` values listed above.
+2. Do not invent a speaker — use only the alias values listed above.
 3. Do not number or label lines with an `id` field — the app assigns line IDs.
 
 ## Output Format
@@ -71,7 +71,7 @@ has this shape:
 
 ```json
 {
-  "speaker_id": "the exact `id` (UUID) of the speaker from the Speakers list above",
+  "speaker": "the exact alias (e.g. S1) of the speaker from the Speakers list above",
   "text": "The line of dialogue.",
   "language_notes": {
     "collocations": ["..."],

@@ -1,6 +1,6 @@
 # Task 15.1 — Speaker Aliases in the Section Contract
 
-- **Status:** in progress
+- **Status:** done (full suite 915 passed, 0 failed)
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** none (first task of Phase 15)
@@ -180,6 +180,61 @@ shape) is reverted by git only, same as any other prompt/pipeline change.
      the card's verification list; constants pin extension +
      revert-and-confirm-failure on the safety net.
 - Commands and results:
-- Deviations:
+  - `venv\Scripts\python.exe -m ruff check app/services/script_pipeline.py
+    app/core/constants.py` -> All checks passed (checked after every edit).
+  - Sanity-checked `resolve_speaker` directly (ad-hoc script, not committed)
+    against the real trigger case before wiring it into the pipeline: the
+    truncated id resolves to Alex's real id via `uuid_near_miss`; a
+    hand-constructed value equidistant between two ids (both difflib ratio
+    0.944, both >= 0.85) resolves to unknown, not a guess.
+  - Rendered both `section.txt` and `repair.txt` directly (ad-hoc, not
+    committed) under `StrictUndefined` to confirm the alias contract prose/
+    Output Format render correctly before running any test.
+  - `pytest tests/test_script_pipeline.py -q` immediately after wiring
+    `_generate_section`/`_repair_section` onto the wire adapter -> **19
+    failed** (every existing e2e test's `FakeProvider` fixture used the old
+    `"speaker_id": <uuid>"` wire shape, now rejected by schema validation).
+    Root-caused to the two JSON-building test helpers
+    (`_section_json`/`_lines_json`) plus ~40 manually-inlined
+    `{"speaker_id": ...}` literals scattered across the file -- fixed at the
+    helpers (rename the JSON key to `"speaker"`, keep passing each test's
+    real speaker UUID as the value, which resolves via `resolve_speaker`'s
+    own `uuid_exact` rule with zero other changes) and a single
+    file-wide `"speaker_id":` -> `"speaker":` literal replace for the
+    manually-inlined cases -- confirmed via `grep` that the only remaining
+    `speaker_id` references are `SectionLineOut(speaker_id=...)`
+    constructions (the unchanged, still-correct persisted-shape model) and
+    doc comments, not JSON fixtures. **Zero test *bodies* needed editing** --
+    only the two helpers' JSON key and the literal-replace.
+  - `pytest tests/test_script_pipeline.py -q` after the fixture fix -> 64
+    passed (the pre-existing count, unchanged behavior confirmed).
+  - Added 10 pure `resolve_speaker`/`resolve_section_lines` tests + 3 new
+    e2e tests (alias contract explicit, near-miss-resolves-and-completes,
+    unresolvable-still-fails) -> `pytest tests/test_script_pipeline.py -q`
+    -> **77 passed**.
+  - `venv\Scripts\python.exe -m ruff check app tests scripts` (full) -> All
+    checks passed.
+  - `pytest -q` (full suite) -> **915 passed, 0 failed** (382.72s), up from
+    Task 14.13's 902 baseline.
+- Deviations: none from the plan. Every required-behaviour and verification
+  item implemented as designed; the fixture-ripple this task's own wire-format
+  change caused was anticipated in the plan and resolved at the two helper
+  functions plus one literal-replace, not by rewriting any test body.
 - Revert-and-confirm-failure evidence:
-- Commit(s):
+  - **Constants pin:** temporarily changed `SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO`
+    from `0.85` to `0.90` (`# REVERT-AND-CONFIRM-FAILURE`) and ran
+    `pytest tests/test_script_pipeline.py::test_constants_pin_word_tolerances_are_unchanged_by_task_14_3 -q`:
+    **1 failed** (`AssertionError: assert 0.9 == 0.85`).
+  - **Safety net behavior:** separately changed the same constant to `1.0`
+    (the card's own documented rollback value -- exact-match-only) and ran
+    `test_resolve_speaker_real_trigger_case_via_safety_net` and
+    `test_pipeline_model_returning_a_near_miss_uuid_resolves_and_completes`:
+    **2 failed**, both for the right reason (the real trigger case's
+    truncated id no longer resolves; the e2e job dies with
+    `RuntimeError: FakeProvider('gemini') has no more scripted outcomes`
+    because the section now genuinely fails validation and asks for an
+    unscripted extra repair -- exactly the pre-Task-15.1 behavior the
+    rollback restores).
+  - Restored `0.85` after each check; re-ran the full `test_script_pipeline.py`
+    file: 77 passed.
+- Commit(s): `d1efe4f` (plan), plus this commit (implementation).

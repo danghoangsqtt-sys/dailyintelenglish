@@ -36,7 +36,7 @@
 
 | Task | Description | Owner | Status | Blocking gate |
 |---|---|---|---|---|
-| 15.1 | Speaker aliases in the section contract (deterministic id resolution) | Coder | pending | P0 — real owner-run example is a literal test case |
+| 15.1 | Speaker aliases in the section contract (deterministic id resolution) | Coder | **done** (915 passed, 0 failed) | see task-15.1.md verification |
 | 15.2 | Deterministic consecutive-lines fix (merge, never re-attribute) | Coder | pending | Depends on 15.1 done |
 | 15.3 | Trial runner per-gate evidence path + `set_job_metric` layering | Coder | pending | Depends on 15.2 done |
 | 15.4 | Gate B-6, local only (owner's failing config as a 5th sample) | PM | pending | Depends on 15.1–15.3 done; Coder idle during the run |
@@ -70,3 +70,34 @@ explicit word.
   mirroring §3's four Coder tasks (15.1–15.3) plus the two PM-owned description-only
   cards (15.4, 15.5) into this folder, doc-first, before any implementation file is
   touched — awaiting the PM's review of the cards before starting 15.1.
+- 2026-09-22: PM accepted the cards, added two review notes (display-name
+  resolution only when unique; the safety net gated to UUID-shaped values only,
+  requiring an unambiguous single match), and authorized starting 15.1 -- the
+  owner is waiting on this fix to retry their failed run. Coder implemented it,
+  doc-first: a new `SectionLineWire` model (`speaker: str`, the alias) is what
+  the AI actually parses/schemas against; `SectionLineOut` (`speaker_id: str`,
+  UUID) is completely unchanged and stays what every downstream consumer
+  (validators, checkpoints, `script_service.save_script`) uses -- which is also
+  why resume compatibility needed no special-casing: checkpoints have always
+  stored the resolved shape, before and after this task. `resolve_speaker`
+  tries, in order: exact alias, alias case/whitespace-insensitive, unique
+  display name, exact UUID, then a difflib safety net (UUID-shaped values only,
+  `SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO = 0.85`, exactly one match required) --
+  anything else passes through unresolved into the existing unknown-speaker
+  check, unchanged. Verified directly against the real trigger case
+  (`ff5f20e0-417b-8d9f-752e844d46f0` -> the real
+  `ff5f20e0-4082-417b-8d9f-752e844d46f0`, Alex, ratio 0.925) before wiring it
+  into the pipeline. Wiring the new wire adapter into `_generate_section`/
+  `_repair_section` broke all 19 of this file's e2e tests at once (every
+  `FakeProvider` fixture used the old `"speaker_id"` wire shape) -- fixed at
+  the two JSON-building test helpers (rename the key to `"speaker"`, keep
+  passing each test's real UUID as the value, which resolves via the
+  `uuid_exact` rule unchanged) plus one file-wide literal replace, not by
+  editing any test body. `section.txt`/`repair.txt` now present speakers as
+  `S1`/`S2` aliases. `regenerate_line` (`script_service.py`) confirmed
+  untouched, exactly as the card's explicit out-of-scope note requires. 13 new
+  tests (10 pure, 3 e2e, incl. the literal real-world example and an
+  equidistant-tie-is-unknown case). Revert-and-confirm-failure done twice: the
+  constants pin, and separately the safety net's own behavior at the card's
+  documented rollback value (`1.0`, exact-match-only). Full suite: **915
+  passed, 0 failed**. Task 15.1 status: **done**.

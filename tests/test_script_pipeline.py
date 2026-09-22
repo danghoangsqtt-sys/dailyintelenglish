@@ -48,11 +48,15 @@ def _result(text: str) -> GenerationResult:
 
 
 def _section_json(*speaker_words_start: tuple[str, int, int]) -> str:
-    """Build a `SectionLineOut[]` JSON body from `(speaker_id, word_count,
+    """Build a `SectionLineWire[]` JSON body from `(speaker_id, word_count,
     start_offset)` tuples -- one line per tuple. `start_offset` keeps every
-    line's tokens globally unique across a test (see `_words`)."""
+    line's tokens globally unique across a test (see `_words`). Task 15.1: the
+    wire key is `"speaker"`, not `"speaker_id"` -- passing each test's real
+    speaker UUID as the value still resolves correctly (an exact UUID match is
+    one of `resolve_speaker`'s own rules), so no test call site needs to
+    change, only this helper's JSON shape."""
     return json.dumps(
-        [{"speaker_id": speaker_id, "text": _words(count, start)} for speaker_id, count, start in speaker_words_start]
+        [{"speaker": speaker_id, "text": _words(count, start)} for speaker_id, count, start in speaker_words_start]
     )
 
 
@@ -210,6 +214,208 @@ def test_resume_carry_recomputation_from_stored_target_effective_matches_live_re
 
     assert resumed_carry == live_carry
     assert replayed_carry == live_carry
+
+
+# --- Task 15.1: speaker alias resolution ----------------------------------------------
+
+SPEAKERS_2 = [
+    {"id": "ff5f20e0-4082-417b-8d9f-752e844d46f0", "name": "Alex"},
+    {"id": "11111111-2222-3333-4444-555555555555", "name": "Maya"},
+]
+
+
+def test_resolve_speaker_exact_alias():
+    assert script_pipeline.resolve_speaker("S1", SPEAKERS_2) == (SPEAKERS_2[0]["id"], "alias_exact")
+    assert script_pipeline.resolve_speaker("S2", SPEAKERS_2) == (SPEAKERS_2[1]["id"], "alias_exact")
+
+
+def test_resolve_speaker_alias_case_and_whitespace_insensitive():
+    assert script_pipeline.resolve_speaker(" s1 ", SPEAKERS_2) == (SPEAKERS_2[0]["id"], "alias_normalized")
+    assert script_pipeline.resolve_speaker("S2", SPEAKERS_2) == (SPEAKERS_2[1]["id"], "alias_exact")
+
+
+def test_resolve_speaker_display_name_when_unique():
+    assert script_pipeline.resolve_speaker("alex", SPEAKERS_2) == (SPEAKERS_2[0]["id"], "display_name")
+    assert script_pipeline.resolve_speaker(" Maya ", SPEAKERS_2) == (SPEAKERS_2[1]["id"], "display_name")
+
+
+def test_resolve_speaker_display_name_skipped_when_not_unique():
+    """PM review note: two speakers sharing a name means the display-name rule
+    contributes nothing for either -- never a guess between them."""
+    duplicate_name_speakers = [
+        {"id": "aaaaaaaa-0000-0000-0000-000000000001", "name": "Sam"},
+        {"id": "bbbbbbbb-0000-0000-0000-000000000002", "name": "Sam"},
+    ]
+    resolved, kind = script_pipeline.resolve_speaker("sam", duplicate_name_speakers)
+    assert kind is None
+    assert resolved == "sam"
+
+
+def test_resolve_speaker_exact_uuid():
+    assert script_pipeline.resolve_speaker(SPEAKERS_2[1]["id"], SPEAKERS_2) == (SPEAKERS_2[1]["id"], "uuid_exact")
+
+
+def test_resolve_speaker_real_trigger_case_via_safety_net():
+    """The exact real-world failure this phase opened on: the model dropped one
+    UUID group (`ff5f20e0-417b-8d9f-752e844d46f0`) from the real id
+    (`ff5f20e0-4082-417b-8d9f-752e844d46f0`, Alex) -- must resolve via the
+    difflib safety net, not fail."""
+    resolved, kind = script_pipeline.resolve_speaker("ff5f20e0-417b-8d9f-752e844d46f0", SPEAKERS_2)
+    assert resolved == "ff5f20e0-4082-417b-8d9f-752e844d46f0"
+    assert kind == "uuid_near_miss"
+
+
+def test_resolve_speaker_safety_net_never_applies_to_a_non_uuid_shaped_value():
+    """PM review note: the 0.85 safety net is gated to UUID-*shaped* values
+    only (hex digits and dashes) -- an arbitrary string is never scored against
+    known ids, however textually similar it might coincidentally be."""
+    resolved, kind = script_pipeline.resolve_speaker("not at all uuid shaped", SPEAKERS_2)
+    assert kind is None
+    assert resolved == "not at all uuid shaped"
+
+
+def test_resolve_speaker_uuid_shaped_but_no_match_above_threshold_is_unknown():
+    resolved, kind = script_pipeline.resolve_speaker("00000000-0000-0000-0000-000000000000", SPEAKERS_2)
+    assert kind is None
+    assert resolved == "00000000-0000-0000-0000-000000000000"
+
+
+def test_resolve_speaker_equidistant_between_two_ids_is_unknown():
+    """PM review note: two-or-more ids tying at/above the threshold means
+    unknown, never an arbitrary pick between them."""
+    tied_speakers = [
+        {"id": "aaaaaaaa-1111-2222-3333-444444444445", "name": "One"},
+        {"id": "aaaaaaaa-1111-2222-3333-444444444446", "name": "Two"},
+    ]
+    equidistant_value = "aaaaaaaa-1111-2222-3333-4444444444XY"
+    resolved, kind = script_pipeline.resolve_speaker(equidistant_value, tied_speakers)
+    assert kind is None
+    assert resolved == equidistant_value
+
+
+def test_resolve_section_lines_logs_only_actual_resolutions(caplog):
+    import logging
+
+    wire_lines = [
+        script_pipeline.SectionLineWire(speaker="S1", text=_words(5, 0)),
+        script_pipeline.SectionLineWire(speaker="nonsense-unresolvable-value", text=_words(5, 100)),
+    ]
+    with caplog.at_level(logging.INFO, logger="app.services.script_pipeline"):
+        resolved = script_pipeline.resolve_section_lines(wire_lines, SPEAKERS_2)
+
+    assert resolved[0].speaker_id == SPEAKERS_2[0]["id"]
+    assert resolved[1].speaker_id == "nonsense-unresolvable-value"  # unresolved, passed through unchanged
+    resolved_logs = [r for r in caplog.records if "script_speaker_resolved" in r.message]
+    assert len(resolved_logs) == 1  # only the actual resolution, not the pass-through
+    assert "kind=alias_exact" in resolved_logs[0].message
+
+
+async def test_pipeline_model_returning_aliases_completes(db):
+    """Verification item 2: the model returns the actual alias contract
+    (`"speaker": "S1"`/`"S2"`), not a UUID -- the normal, expected case going
+    forward -- and the job completes."""
+    project = await _project(db)
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {"title": "T", "sections": [{"index": 1, "objective": "cover the topic fully here", "target_words": 100}]}
+    )
+    section_json = json.dumps(
+        [
+            {"speaker": "S1", "text": _words(25, 0)},
+            {"speaker": "S2", "text": _words(25, 25)},
+            {"speaker": "S1", "text": _words(25, 50)},
+            {"speaker": "S2", "text": _words(25, 75)},
+        ]
+    )
+    router, gemini, _local = _build_router([_result(outline_json), _result(section_json)])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete", final_job.get("error_message")
+
+    lines = await script_service.get_script(db, project["id"])
+    assert {line["speaker_id"] for line in lines} == {alex_id, maya_id}
+    assert gemini.call_count == 2  # outline + section -- no repair needed
+
+
+async def test_pipeline_model_returning_a_near_miss_uuid_resolves_and_completes(db, caplog):
+    """Verification item 3: the model echoes a garbled/truncated UUID (the real
+    trigger case) instead of the alias -- resolved via the safety net, the job
+    completes, and the resolution is logged."""
+    import logging
+
+    project = await _project(db)
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {"title": "T", "sections": [{"index": 1, "objective": "cover the topic fully here", "target_words": 100}]}
+    )
+    # alex_id with its 5th character dropped -- the exact real-world defect shape.
+    garbled_alex_id = alex_id[:4] + alex_id[5:]
+    section_json = json.dumps(
+        [
+            {"speaker": garbled_alex_id, "text": _words(25, 0)},
+            {"speaker": "S2", "text": _words(25, 25)},
+            {"speaker": garbled_alex_id, "text": _words(25, 50)},
+            {"speaker": "S2", "text": _words(25, 75)},
+        ]
+    )
+    router, gemini, _local = _build_router([_result(outline_json), _result(section_json)])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    with caplog.at_level(logging.INFO, logger="app.services.script_pipeline"):
+        await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete", final_job.get("error_message")
+
+    lines = await script_service.get_script(db, project["id"])
+    assert {line["speaker_id"] for line in lines} == {alex_id, maya_id}
+    assert any(
+        "script_speaker_resolved" in r.message and "kind=uuid_near_miss" in r.message for r in caplog.records
+    )
+
+
+async def test_pipeline_unresolvable_speaker_still_fails_after_repair(db):
+    """Verification item 4: a genuinely unresolvable speaker value (not an
+    alias, not a name, not UUID-shaped enough to trigger the safety net) still
+    fails exactly as today -- the alias contract adds a resolution path, it
+    never widens what counts as a known speaker."""
+    project = await _project(db)
+
+    outline_json = json.dumps(
+        {"title": "T", "sections": [{"index": 1, "objective": "cover the topic fully here", "target_words": 100}]}
+    )
+    invalid_json = json.dumps([{"speaker": "the narrator", "text": _words(100, 0)}])
+    still_invalid_json = json.dumps([{"speaker": "the narrator", "text": _words(100, 200)}])
+    router, gemini, _local = _build_router([_result(outline_json), _result(invalid_json), _result(still_invalid_json)])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "error"
+    assert final_job["error_code"] == "section_validation_failed"
+    assert "unknown speaker_id" in final_job["error_message"]
+    assert await script_service.get_script(db, project["id"]) == []
 
 
 # --- pure functions: validators -----------------------------------------------------
@@ -394,16 +600,18 @@ def test_validate_global_topic_relevance_is_a_warning_not_a_hard_error():
 
 
 def test_constants_pin_word_tolerances_are_unchanged_by_task_14_3():
-    """Task 14.3/14.8/14.13 governance note: SCRIPT_GLOBAL_WORD_TOLERANCE,
-    SCRIPT_SECTION_WORD_TOLERANCE, SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER, and
-    SCRIPT_MAX_REPEATED_8GRAM_RATIO are a stop condition, not an implementation
-    choice -- this pins all four values so a silent edit fails CI."""
+    """Task 14.3/14.8/14.13/15.1 governance note: SCRIPT_GLOBAL_WORD_TOLERANCE,
+    SCRIPT_SECTION_WORD_TOLERANCE, SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER,
+    SCRIPT_MAX_REPEATED_8GRAM_RATIO, and SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO are a
+    stop condition, not an implementation choice -- this pins all five values so
+    a silent edit fails CI."""
     from app.core import constants
 
     assert constants.SCRIPT_GLOBAL_WORD_TOLERANCE == 0.10
     assert constants.SCRIPT_SECTION_WORD_TOLERANCE == 0.15
     assert constants.SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER == 5
     assert constants.SCRIPT_MAX_REPEATED_8GRAM_RATIO == 0.01
+    assert constants.SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO == 0.85
 
 
 def test_constants_pin_pace_calibration_table_matches_the_d13_measurement():
@@ -436,10 +644,10 @@ async def test_pipeline_happy_path_completes_and_saves_script(db):
     )
     section_json = json.dumps(
         [
-            {"speaker_id": alex_id, "text": _words(25, 0)},
-            {"speaker_id": maya_id, "text": _words(25, 25)},
-            {"speaker_id": alex_id, "text": _words(25, 50)},
-            {"speaker_id": maya_id, "text": _words(25, 75)},
+            {"speaker": alex_id, "text": _words(25, 0)},
+            {"speaker": maya_id, "text": _words(25, 25)},
+            {"speaker": alex_id, "text": _words(25, 50)},
+            {"speaker": maya_id, "text": _words(25, 75)},
         ]
     )
     router, gemini, local = _build_router([_result(outline_json), _result(section_json)])
@@ -479,10 +687,10 @@ async def test_pipeline_section_prompt_word_range_matches_the_tolerance_constant
     )
     section_json = json.dumps(
         [
-            {"speaker_id": alex_id, "text": _words(25, 0)},
-            {"speaker_id": maya_id, "text": _words(25, 25)},
-            {"speaker_id": alex_id, "text": _words(25, 50)},
-            {"speaker_id": maya_id, "text": _words(25, 75)},
+            {"speaker": alex_id, "text": _words(25, 0)},
+            {"speaker": maya_id, "text": _words(25, 25)},
+            {"speaker": alex_id, "text": _words(25, 50)},
+            {"speaker": maya_id, "text": _words(25, 75)},
         ]
     )
     router, gemini, _local = _build_router([_result(outline_json), _result(section_json)])
@@ -508,13 +716,13 @@ async def test_pipeline_repairs_an_invalid_section_once_then_completes(db):
     outline_json = json.dumps(
         {"title": "T", "sections": [{"index": 1, "objective": "cover the full topic here", "target_words": 100}]}
     )
-    invalid_section_json = json.dumps([{"speaker_id": alex_id, "text": _words(5, 0)}])  # way too short
+    invalid_section_json = json.dumps([{"speaker": alex_id, "text": _words(5, 0)}])  # way too short
     repaired_section_json = json.dumps(
         [
-            {"speaker_id": alex_id, "text": _words(25, 0)},
-            {"speaker_id": maya_id, "text": _words(25, 25)},
-            {"speaker_id": alex_id, "text": _words(25, 50)},
-            {"speaker_id": maya_id, "text": _words(25, 75)},
+            {"speaker": alex_id, "text": _words(25, 0)},
+            {"speaker": maya_id, "text": _words(25, 25)},
+            {"speaker": alex_id, "text": _words(25, 50)},
+            {"speaker": maya_id, "text": _words(25, 75)},
         ]
     )
     router, gemini, _local = _build_router(
@@ -551,8 +759,8 @@ async def test_pipeline_fails_transparently_when_repair_also_fails(db):
     outline_json = json.dumps(
         {"title": "T", "sections": [{"index": 1, "objective": "cover the full topic here", "target_words": 100}]}
     )
-    invalid_json = json.dumps([{"speaker_id": ghost_id, "text": _words(100, 0)}])
-    still_invalid_json = json.dumps([{"speaker_id": ghost_id, "text": _words(100, 100)}])
+    invalid_json = json.dumps([{"speaker": ghost_id, "text": _words(100, 0)}])
+    still_invalid_json = json.dumps([{"speaker": ghost_id, "text": _words(100, 100)}])
     router, gemini, _local = _build_router(
         [_result(outline_json), _result(invalid_json), _result(still_invalid_json)]
     )
@@ -588,18 +796,18 @@ async def test_pipeline_resumes_from_checkpoint_after_interruption(db):
     )
     section1_json = json.dumps(
         [
-            {"speaker_id": alex_id, "text": _words(25, 0)},
-            {"speaker_id": maya_id, "text": _words(25, 25)},
-            {"speaker_id": alex_id, "text": _words(25, 50)},
-            {"speaker_id": maya_id, "text": _words(25, 75)},
+            {"speaker": alex_id, "text": _words(25, 0)},
+            {"speaker": maya_id, "text": _words(25, 25)},
+            {"speaker": alex_id, "text": _words(25, 50)},
+            {"speaker": maya_id, "text": _words(25, 75)},
         ]
     )
     section2_json = json.dumps(
         [
-            {"speaker_id": alex_id, "text": _words(25, 100)},
-            {"speaker_id": maya_id, "text": _words(25, 125)},
-            {"speaker_id": alex_id, "text": _words(25, 150)},
-            {"speaker_id": maya_id, "text": _words(25, 175)},
+            {"speaker": alex_id, "text": _words(25, 100)},
+            {"speaker": maya_id, "text": _words(25, 125)},
+            {"speaker": alex_id, "text": _words(25, 150)},
+            {"speaker": maya_id, "text": _words(25, 175)},
         ]
     )
 
@@ -682,10 +890,10 @@ async def test_pipeline_happy_path_records_zero_repairs_and_ok_calls(db):
     )
     section_json = json.dumps(
         [
-            {"speaker_id": alex_id, "text": _words(25, 0)},
-            {"speaker_id": maya_id, "text": _words(25, 25)},
-            {"speaker_id": alex_id, "text": _words(25, 50)},
-            {"speaker_id": maya_id, "text": _words(25, 75)},
+            {"speaker": alex_id, "text": _words(25, 0)},
+            {"speaker": maya_id, "text": _words(25, 25)},
+            {"speaker": alex_id, "text": _words(25, 50)},
+            {"speaker": maya_id, "text": _words(25, 75)},
         ]
     )
     router, gemini, _local = _build_router([_result(outline_json), _result(section_json)])
@@ -717,13 +925,13 @@ async def test_pipeline_repair_sets_repair_count_and_checkpoint_metrics(db):
     outline_json = json.dumps(
         {"title": "T", "sections": [{"index": 1, "objective": "cover the full topic here", "target_words": 100}]}
     )
-    invalid_section_json = json.dumps([{"speaker_id": alex_id, "text": _words(5, 0)}])  # way too short
+    invalid_section_json = json.dumps([{"speaker": alex_id, "text": _words(5, 0)}])  # way too short
     repaired_section_json = json.dumps(
         [
-            {"speaker_id": alex_id, "text": _words(25, 0)},
-            {"speaker_id": maya_id, "text": _words(25, 25)},
-            {"speaker_id": alex_id, "text": _words(25, 50)},
-            {"speaker_id": maya_id, "text": _words(25, 75)},
+            {"speaker": alex_id, "text": _words(25, 0)},
+            {"speaker": maya_id, "text": _words(25, 25)},
+            {"speaker": alex_id, "text": _words(25, 50)},
+            {"speaker": maya_id, "text": _words(25, 75)},
         ]
     )
     router, gemini, _local = _build_router(
@@ -766,10 +974,10 @@ async def test_pipeline_happy_path_section_checkpoint_has_unrepaired_metrics(db)
     )
     section_json = json.dumps(
         [
-            {"speaker_id": alex_id, "text": _words(25, 0)},
-            {"speaker_id": maya_id, "text": _words(25, 25)},
-            {"speaker_id": alex_id, "text": _words(25, 50)},
-            {"speaker_id": maya_id, "text": _words(25, 75)},
+            {"speaker": alex_id, "text": _words(25, 0)},
+            {"speaker": maya_id, "text": _words(25, 25)},
+            {"speaker": alex_id, "text": _words(25, 50)},
+            {"speaker": maya_id, "text": _words(25, 75)},
         ]
     )
     router, gemini, _local = _build_router([_result(outline_json), _result(section_json)])
@@ -800,10 +1008,10 @@ async def test_pipeline_hybrid_fallback_records_fallback_telemetry(db, monkeypat
     )
     section_json = json.dumps(
         [
-            {"speaker_id": alex_id, "text": _words(25, 0)},
-            {"speaker_id": maya_id, "text": _words(25, 25)},
-            {"speaker_id": alex_id, "text": _words(25, 50)},
-            {"speaker_id": maya_id, "text": _words(25, 75)},
+            {"speaker": alex_id, "text": _words(25, 0)},
+            {"speaker": maya_id, "text": _words(25, 25)},
+            {"speaker": alex_id, "text": _words(25, 50)},
+            {"speaker": maya_id, "text": _words(25, 75)},
         ]
     )
     # AI_TRANSIENT_MAX_ATTEMPTS=4: local exhausts on the outline call; failure_threshold=1
@@ -1279,8 +1487,8 @@ async def test_pipeline_structural_error_after_repair_never_triggers_length_only
     outline_json = json.dumps(
         {"title": "T", "sections": [{"index": 1, "objective": "cover the full topic here", "target_words": 100}]}
     )
-    invalid_json = json.dumps([{"speaker_id": ghost_id, "text": _words(400, 0)}])  # structural AND over-length
-    still_invalid_json = json.dumps([{"speaker_id": ghost_id, "text": _words(500, 1000)}])  # structural persists
+    invalid_json = json.dumps([{"speaker": ghost_id, "text": _words(400, 0)}])  # structural AND over-length
+    still_invalid_json = json.dumps([{"speaker": ghost_id, "text": _words(500, 1000)}])  # structural persists
     router, gemini, _local = _build_router(
         [_result(outline_json), _result(invalid_json), _result(still_invalid_json)]
     )
@@ -1369,10 +1577,12 @@ async def test_pipeline_repair_count_hits_the_2n_plus_1_ceiling(db):
 
 
 def _lines_json(*speaker_texts: tuple[str, str]) -> str:
-    """Build a `SectionLineOut[]` JSON body from `(speaker_id, literal text)`
+    """Build a `SectionLineWire[]` JSON body from `(speaker_id, literal text)`
     pairs -- unlike `_section_json`, this lets a test control the exact words
-    (e.g. to deliberately plant a repeated 8-gram)."""
-    return json.dumps([{"speaker_id": speaker_id, "text": text} for speaker_id, text in speaker_texts])
+    (e.g. to deliberately plant a repeated 8-gram). Task 15.1: the wire key is
+    `"speaker"` -- see `_section_json`'s docstring for why passing a real UUID
+    still resolves correctly unchanged."""
+    return json.dumps([{"speaker": speaker_id, "text": text} for speaker_id, text in speaker_texts])
 
 
 REPEATED_PHRASE = "the weather today is quite nice actually indeed"  # exactly 8 words

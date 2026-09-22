@@ -269,6 +269,16 @@ SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS = 1
 # limit across a long episode.
 SCRIPT_SECTION_AVOID_PHRASES_MAX = 8
 
+# Phase 15 Task 15.1 -- the section/repair contract asks the model for a short
+# alias (S1, S2, ...) rather than a 36-character speaker UUID; a value that
+# still looks UUID-shaped (e.g. a dropped/garbled group, the exact real
+# trigger case: "ff5f20e0-417b-8d9f-752e844d46f0" vs. the real
+# "ff5f20e0-4082-417b-8d9f-752e844d46f0") resolves only if it matches EXACTLY
+# ONE known speaker id at this difflib.SequenceMatcher ratio or higher; two or
+# more ids tying above this threshold means unknown, never a guess between
+# them. 1.0 (exact match only) disables the safety net without a code revert.
+SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO = 0.85
+
 # Phase 13 -- grounded learning pipeline (app/services/learning_pipeline.py).
 # The prompt gives no explicit target count for vocabulary/idioms -- "at least
 # one" is the only honest floor to enforce without inventing an undocumented
