@@ -358,4 +358,46 @@ names and SHA-256.
     Edited only `scripts/run_ai_operational_trial.py`, this task's sole
     allowed file. **Not run, per PM's explicit instruction:** `pytest`,
     `--media-only` (needs the live server + real TTS), any live matrix run.
+
+  ## 14.4a-d -- runner: apply the level default speed (Amendment H, after Gate B-4)
+
+  **PM's Gate B-4 finding (`docs/operations/phase14-gate-b4.md`):** media duration
+  376.8s failed only because `scripts/run_ai_operational_trial.py`'s
+  `_speaker_payload()` hard-codes `"speed": 1.0` for every test speaker, regardless
+  of CEFR level -- so Task 14.10's `CEFR_DEFAULT_TTS_SPEED["B1"] = 0.85` never
+  actually applied to any Gate B-4 run, even though the real app (via
+  `step1_config.js` sending `null`) would have gotten it automatically. A/V diff
+  itself was 0.00s, confirming Task 14.10's D14 fix is real and correct -- this is
+  purely a runner defect, not a product regression.
+
+  **Plan/decisions before code:**
+  1. Remove the `"speed": 1.0,` line from `_speaker_payload()`
+     (`scripts/run_ai_operational_trial.py:164`) entirely -- omitting the key
+     (rather than sending `null` explicitly) matches exactly what
+     `step1_config.js` now does for a newly-added speaker (Task 14.10: no `speed`
+     key at all, not an explicit `null`), and the server-side model
+     (`SpeakerConfig.speed: float | None = None`) treats a missing key and an
+     explicit `null` identically -- `project_service._resolve_speaker_speeds`
+     applies `CEFR_DEFAULT_TTS_SPEED[cefr_level]` either way. This is the runner
+     finally exercising the exact same code path the real UI already does, not a
+     new code path of its own.
+  2. `run_script_trial()`'s `record` dict gains one new key,
+     `"speaker_speeds": {speaker["name"]: speaker["speed"] for speaker in
+     project["speakers"]}`, read directly off the already-returned `project`
+     object from `create_project()` (the server's own resolved value, not
+     recomputed here) -- so every future evidence file states in plain sight what
+     speed each run's speakers actually used, closing exactly the kind of gap
+     that made this bug take a full Gate B-4 cycle to surface.
+  3. Sole allowed file: `scripts/run_ai_operational_trial.py`. No other file
+     needs a change -- `project_service.py`/`SpeakerConfig` already do the right
+     thing (Task 14.10); this task only stops the runner from overriding it.
+  4. Verification, per the established PM-hold convention for this exact
+     script (ruff/py_compile/`--reaggregate` only -- no pytest, nothing touching
+     Ollama/Gemini): `--reaggregate` against the Gate B-4 evidence file must be
+     byte-for-byte unchanged, since this fix only changes what a *future* live
+     run sends, never how an *existing* evidence file is re-scored.
+  - Commands and results:
+  - Deviations:
+  - Commit(s):
+
 - 14.4b (PM):

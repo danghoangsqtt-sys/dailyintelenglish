@@ -51,7 +51,10 @@
 | 14.6 (revised) | Resume Task 13.10, local-only rollout (Amendment D) | Both | **done** | Coder side `1c89b6a`/`1f723de` (884 passed, 0 failed); PM side `d5c817e`/`48695ba`/`c6c2f35`; Phase 13 Task 13.10 complete under D11 |
 | 14.10 | Pace calibration, measured not assumed (Amendment G) | Coder | **done** (888 passed, 0 failed) | see task-14.10.md verification |
 | 14.11 | Learning repair by removal (Amendment G) | Coder | **done** (891 passed, 0 failed) | see task-14.11.md verification |
-| 14.12 | Gate B-4, local only (Amendment G) | PM | pending | Depends on 14.10 + 14.11 done; Coder idle during the run |
+| 14.12 | Gate B-4, local only (Amendment G) | PM | **done** | script 3/5, both deaths repeated-8-gram (not word count); learning 3/3; media A/V diff 0.00s (D14 confirmed real) but duration FAIL (runner defect, not product); see `docs/operations/phase14-gate-b4.md` |
+| 14.4a-d | Runner: apply the level default speed (Amendment H) | Coder | pending | Depends on 14.11/14.12 done; see task-14.4.md's "14.4a-d" section |
+| 14.13 | Repetition repair (Amendment H) | Coder | pending | Depends on 14.4a-d done; D17, see task-14.13.md |
+| 14.14 | Gate B-5, local only (Amendment H, Phase 14 close-out) | PM | pending | Depends on 14.4a-d + 14.13 done; Coder idle during the run; Phase 14 closes after this run regardless of verdict |
 
 Execution order (original): 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 ran in
 parallel (PM). 14.4b started after 14.1–14.4a were merged and the PM reviewed the diffs.
@@ -59,9 +62,12 @@ parallel (PM). 14.4b started after 14.1–14.4a were merged and the PM reviewed 
 **Execution order (Amendment D, complete):** 14.7 → 14.8 → 14.9 → 14.6 (revised), all
 done. Task 14.1-b is dropped (D12) and does not appear in this order.
 
-**Execution order (Amendment G, current):** README copy fix (14.6, done) → 14.10 → 14.11
-(Coder, doc-first cards reviewed by the PM before code, sequential) → 14.12 (PM; Coder
-idle) → Phase 14 close-out.
+**Execution order (Amendment G, complete):** README copy fix (14.6, done) → 14.10 →
+14.11 → 14.12, all done.
+
+**Execution order (Amendment H, current):** 14.4a-d → 14.13 (Coder, doc-first cards
+reviewed by the PM before code, sequential) → 14.14 (PM; Coder idle) → Phase 14
+close-out regardless of verdict.
 
 ## Decisions
 
@@ -449,3 +455,31 @@ idle) → Phase 14 close-out.
   both new tests fail for the right reason, restored). Full suite: **891
   passed, 0 failed**. Task 14.11 status: **done**. Per the PM's instruction,
   Coder now stops completely (no pytest, no Ollama) pending Gate B-4 (14.12).
+- 2026-09-22: PM accepted Task 14.11 and ran **Gate B-4** (Task 14.12,
+  `docs/operations/phase14-gate-b4.md`, commits `e018359`/`c05e1c1`): at the
+  corrected 1,000-word B1 target, script **3/5** (991/984/915 words, all
+  passing content checks) -- both misses died on `global_validation_failed`
+  with the repeated-8-gram check as the **sole** failing check (1.02% and
+  4.32% against the unchanged 1% threshold); no job died on word count,
+  confirming Task 14.10 solved that failure class. Repair success rate 65%,
+  0 infra failures. Learning 3/3. Media: A/V diff **0.00s**, directly
+  confirming Task 14.10's D14 fix is real and correct; duration still FAILED
+  the threshold, but only because the runner (`scripts/run_ai_operational_trial.py`
+  line ~164) hard-codes speaker `"speed": 1.0` for every test speaker, so
+  the B1 level default (0.85, Task 14.10) never actually applied to any Gate
+  B-4 run even though the real UI already sends no explicit speed and gets
+  it automatically -- a runner defect, not a product regression. PM recorded
+  **Amendment H** (decisions D17-D18) and authorized two more Coder tasks
+  before Gate B-5: **14.4a-d** (runner-only: stop hard-coding speed, record
+  each run's resolved speeds in evidence) and **14.13** (repetition repair --
+  one targeted repair of the single worst section when a global failure is
+  repetition-only, bounded `SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS = 1`,
+  section prompt gains a proactive "avoid these repeated phrases" continuity
+  note, repair bound becomes `2 * num_sections + 2`). Coder mirrored both into
+  a new "14.4a-d" section appended to `task-14.4.md` (matching the existing
+  "14.4a-c" sub-round convention already used there) and a new
+  `task-14.13.md`, plus `task-14.14.md` (Gate B-5, PM-owned description-only,
+  mirroring the `task-14.9.md`/`task-14.12.md` pattern -- **Phase 14 closes
+  after Gate B-5 regardless of verdict**) -- doc-first, before any
+  implementation file is touched, awaiting PM's review of the cards before
+  starting 14.4a-d.
