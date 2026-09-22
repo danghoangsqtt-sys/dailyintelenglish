@@ -1,6 +1,6 @@
 # Task 15.3 — Trial Runner Per-Gate Evidence Path + `_record_dropped_items` Layering
 
-- **Status:** pending
+- **Status:** in progress
 - **Owner:** Coder
 - **Priority:** P2
 - **Dependency:** Task 15.2 done (sequential, per plan §4's execution order)
@@ -81,6 +81,51 @@ JSON either way).
 ## Execution record
 
 - Plan/decisions before code:
+  1. **`ai_job_service.set_job_metric(db, job_id, key, value, commit=True) -> dict`**
+     (new, inserted right after `record_generation_call`): reads the job via the
+     already-private `_fetch_row` (not the public `get_job`, which requires a
+     `project_id` the plan's own signature doesn't take), merges `{key: value}`
+     into the existing `metrics_json` dict (never touching `"calls"` or any other
+     key), writes it back, and returns the refreshed row -- the exact
+     read-modify-write shape `_record_dropped_items` already had, just relocated.
+     Deliberately **no terminal-status check** (unlike `record_generation_call`'s
+     own `ValidationError` guard) -- `_record_dropped_items` never had one either,
+     and this is a pure relocation, not a behavior change.
+  2. **`learning_pipeline._record_dropped_items` deleted**; its one call site
+     becomes `await ai_job_service.set_job_metric(db, job_id, "dropped_items",
+     dropped_items, commit=False)`, called from inside the exact same
+     `write_transaction(db)` block as before (the block also runs
+     `transition_status(..., "validating", ...)` first, in the same transaction,
+     so `set_job_metric`'s own row-read sees that just-applied status change --
+     same read-your-own-writes behavior the old helper already relied on via
+     `ai_job_service.get_job`). `import json` in `learning_pipeline.py` is now
+     unused (the only `json.loads`/`json.dumps` call was inside the deleted
+     helper) -- removed.
+  3. **`scripts/run_ai_operational_trial.py --gate <name>`**: read directly off
+     `sys.argv`, *before* argparse runs and *before* any `app.*` import -- the
+     exact same pattern already used for `--matrix`/`--mode` right above it
+     (`DIE_DATA_DIR` is a module-level `Settings()` singleton read once at
+     import time, so argparse genuinely runs too late for this). When given,
+     `TRIAL_DATA_DIR`/`EVIDENCE_DIR` become
+     `data/quality_reviews/phase15/<name>/{trial-data,}` and every evidence
+     filename's `"gate-b2"` prefix becomes `<name>` too (`<name>-<run_id>.json`,
+     `<name>-media-<run_id>.json`) -- both the JSON body's own recorded
+     `"data_dir"` and the file's *name* stay consistent with each other, unlike
+     today where every gate's evidence silently lands under a literal `gate-b2`
+     name regardless of which gate produced it (the exact bug this task closes,
+     found during Task 14.10's D14 investigation). Omitting `--gate` reproduces
+     today's exact default path and filenames, byte-for-byte -- no behavior
+     change for any existing invocation or already-written evidence file.
+  4. **New tests** (`tests/test_ai_job_service.py`): `set_job_metric` sets a new
+     key; doesn't disturb an existing `"calls"` list; handles a job with no
+     prior `metrics_json` at all; overwrites its own key on a second call;
+     `NotFoundError` for an unknown job; `commit=False` genuinely never commits
+     (a monkeypatched `db.commit` tracker). `tests/test_learning_pipeline.py`
+     needs **no changes** -- every existing Task 14.11 assertion (the
+     `dropped_items` shape, when it fires, when it doesn't) already tests
+     `_run_learning_job`'s observable behavior through the public API, not the
+     removed private helper directly, so they continue to pass unmodified as
+     the proof this refactor changed nothing observable.
 - Commands and results:
 - Deviations:
 - Revert-and-confirm-failure evidence: N/A -- this task is a refactor + an additive
