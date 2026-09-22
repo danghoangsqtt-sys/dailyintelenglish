@@ -1997,8 +1997,21 @@ speaker, no server-invented content, thresholds unchanged).
   `ff5f20e0-417b-8d9f-752e844d46f0 → Alex (uuid_near_miss, ratio 0.925)`; alias/name/UUID rules and the
   unknown fallbacks behave as specified; `script_service.py` diff empty; 90 targeted tests pass; ruff clean.
 
-### 15.2 Deterministic consecutive-lines fix — ⏳ IN PROGRESS (Coder)
-### 15.3 Runner per-gate evidence path; `set_job_metric` layering cleanup — pending (Coder, P2)
+### 15.2 Deterministic consecutive-lines fix — ✅ DONE (2026-09-22, Coder `bf872da`/`3381c21`; PM-accepted)
+
+- [x] `merge_consecutive_lines(lines, limit)` splits an over-limit same-speaker run into exactly `limit`
+  contiguous groups (divmod distribution), joining text with a space; `language_notes` unioned (dedup,
+  first-seen), `grammar_point` from the first line. Fires only when the sole post-repair structural error
+  is the consecutive-lines one; a section with fewer than two distinct speakers is unfixable and still
+  fails. Bounded by `SCRIPT_PIPELINE_MAX_STRUCTURAL_FIXES = 1`; checkpoint metrics gain
+  `structural_fix/lines_before_fix/lines_after_fix`. `SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER = 5`
+  unchanged. 11 new tests; revert-and-confirm-failure on the constant's gating; Coder-reported 926.
+  Reasoned deviation accepted: repair-budget constants are not in the threshold pin test (precedent
+  14.8/14.13) — the pin is for quality thresholds.
+- [x] **PM acceptance:** exercised the merge directly — 8 lines/52 words → 6 lines/52 words, text order
+  identical, no re-attribution, structural check clean; ruff clean; 88 pipeline tests pass.
+
+### 15.3 Runner per-gate evidence path; `set_job_metric` layering cleanup — ⏳ IN PROGRESS (Coder)
 ### 15.4 Gate B-6 local incl. the owner's failing configuration — pending (PM)
 ### 15.5 Multi-script pace calibration — optional, on the owner's word
 
