@@ -127,9 +127,63 @@ JSON either way).
      removed private helper directly, so they continue to pass unmodified as
      the proof this refactor changed nothing observable.
 - Commands and results:
-- Deviations:
+  - `ai_job_service.set_job_metric(db, job_id, key, value, commit=True)` added
+    (generic read-modify-write sibling to `record_generation_call`'s `"calls"`
+    list, using the existing private `_fetch_row` so no `project_id` is
+    required, matching the plan's exact signature). `learning_pipeline.py`'s
+    `_record_dropped_items` helper removed entirely; its one call site now
+    calls `ai_job_service.set_job_metric(db, job_id, "dropped_items",
+    dropped_items, commit=False)` inside the same `write_transaction(db)`
+    block, and the now-unused `import json` was removed from the file.
+  - `scripts/run_ai_operational_trial.py`: `--gate NAME` added via the same
+    pre-argparse `sys.argv` scan already used for `--matrix`/`--mode` (must
+    run before the `app.*` imports that freeze `DIE_DATA_DIR` into the
+    module-level `Settings()` singleton). `EVIDENCE_PREFIX` becomes `NAME`
+    (default unchanged: `gate-b2`); `TRIAL_DATA_DIR`/`EVIDENCE_DIR` become
+    `data/quality_reviews/phase15/NAME/` (default unchanged:
+    `data/quality_reviews/phase14/gate-b2/`). Also registered in argparse
+    (for `--help` and so argparse doesn't reject it as unrecognized), with a
+    docstring note that its real effect already happened earlier via the
+    sys.argv scan.
+  - `venv\Scripts\python.exe -m ruff check app tests scripts` -> "All checks
+    passed!".
+  - `venv\Scripts\python.exe -m py_compile scripts/run_ai_operational_trial.py
+    app/services/ai_job_service.py app/services/learning_pipeline.py` -> clean.
+  - `venv\Scripts\python.exe scripts/run_ai_operational_trial.py --help` ->
+    renders correctly, `--gate NAME` listed with its help text.
+  - `venv\Scripts\python.exe scripts/run_ai_operational_trial.py --reaggregate
+    data/quality_reviews/phase14/gate-b4/gate-b4-local-20260922T031554Z.json`
+    (no `--gate`, default path) -> output byte-identical to the prior
+    Task 14.4a-d verified run (DECISION: FAIL, repair_success_rate=0.65, etc.)
+    -- confirms zero regression to the default (non-`--gate`) path.
+  - Live import-time check with `sys.argv = ['run_ai_operational_trial.py',
+    '--gate', 'gate-b6', '--matrix', 'local']` -> `TRIAL_DATA_DIR`,
+    `EVIDENCE_DIR`, `EVIDENCE_PREFIX` computed exactly as designed
+    (`...phase15\gate-b6\trial-data`, `...phase15\gate-b6`, `gate-b6`); no
+    stray directories created by the import-only check.
+  - `venv\Scripts\python.exe -m pytest tests/test_ai_job_service.py
+    tests/test_learning_pipeline.py -q` -> **93 passed**. All 6 new
+    `set_job_metric` tests pass (new key, existing `"calls"` list undisturbed,
+    safe on a job with no prior `metrics_json`, overwrites its own key on a
+    second call, raises `NotFoundError` for an unknown job,
+    `commit=False` leaves the caller in control). All 26 pre-existing
+    Task 14.11 `test_learning_pipeline.py` tests pass **unmodified** against
+    the new implementation -- the proof this refactor changed nothing
+    observable.
+  - Full suite: `venv\Scripts\python.exe -m pytest -q` -> **932 passed, 0
+    failed** (2 pre-existing, unrelated `StarletteDeprecationWarning`/
+    `DeprecationWarning` warnings from `fastapi`/`starlette` internals, not
+    new).
+- Deviations: none from the card's stated scope. One process note, not a
+  scope deviation: the `set_job_metric`/`learning_pipeline` implementation
+  was written before the runner's `--gate` implementation, both landing in
+  the working tree before either was committed; git history still shows the
+  plan commit (`ccc160d`) before this single implementation commit, so the
+  doc-first commit *ordering* the policy actually cares about is unaffected.
 - Revert-and-confirm-failure evidence: N/A -- this task is a refactor + an additive
   CLI flag, not new gating/threshold logic; correctness is proven by the unchanged
   Task 14.11 test suite passing under the new implementation, not by a
   revert-and-confirm-failure cycle.
+- Commit(s): `ccc160d` (design decisions, plan-only) + implementation commit
+  (this task's code + test changes), in that order.
 - Commit(s):

@@ -38,7 +38,7 @@
 |---|---|---|---|---|
 | 15.1 | Speaker aliases in the section contract (deterministic id resolution) | Coder | **done** (915 passed, 0 failed) | see task-15.1.md verification |
 | 15.2 | Deterministic consecutive-lines fix (merge, never re-attribute) | Coder | **done** (926 passed, 0 failed) | see task-15.2.md verification |
-| 15.3 | Trial runner per-gate evidence path + `set_job_metric` layering | Coder | pending | Depends on 15.2 done |
+| 15.3 | Trial runner per-gate evidence path + `set_job_metric` layering | Coder | **done** (932 passed, 0 failed) | see task-15.3.md verification |
 | 15.4 | Gate B-6, local only (owner's failing config as a 5th sample) | PM | pending | Depends on 15.1–15.3 done; Coder idle during the run |
 | 15.5 | Multi-script pace calibration (optional, owner's word only) | PM → Coder | not started | Deferred until 15.1–15.4 land; only if the owner asks |
 
@@ -132,3 +132,28 @@ explicit word.
   behavior (0 disables the pass, the exact pre-Task-15.2 hard-fail returns)
   rather than a static pin assertion. Full suite: **926 passed, 0 failed**.
   Task 15.2 status: **done**.
+- 2026-09-22: PM accepted Task 15.2 (independently verified the merge on an
+  8-line/52-word example) and authorized starting 15.3, with the exact scope:
+  the runner's `--gate` path plus `ai_job_service.set_job_metric` replacing
+  `learning_pipeline`'s local SQL, behavior unchanged, Task 14.11's tests
+  passing as-is. Coder implemented it, doc-first: `set_job_metric(db, job_id,
+  key, value, commit=True)` is a generic read-modify-write sibling to
+  `record_generation_call`'s `"calls"` list, using the existing private
+  `_fetch_row` so it needs no `project_id` (matching the plan's exact
+  signature); `learning_pipeline._record_dropped_items` removed entirely and
+  its call site rewired to the new function, with `import json` dropped as
+  now-unused. `scripts/run_ai_operational_trial.py` gained `--gate NAME` via
+  the same pre-argparse `sys.argv` scan the file already used for
+  `--matrix`/`--mode` (must run before the `app.*` imports that freeze
+  `DIE_DATA_DIR`); default path/prefix (`phase14/gate-b2/`, `gate-b2-`) is
+  byte-identical to before, verified via `--reaggregate` against the real
+  Gate B-4 evidence file, and a `--gate gate-b6` import-time check confirmed
+  the new path computes as designed
+  (`data/quality_reviews/phase15/gate-b6/...`). 6 new `set_job_metric` tests;
+  all 26 pre-existing Task 14.11 tests in `test_learning_pipeline.py` pass
+  **unmodified** against the new implementation, the proof this refactor
+  changed nothing observable. No revert-and-confirm-failure cycle -- this
+  task is a refactor plus an additive CLI flag, not new gating/threshold
+  logic. Full suite: **932 passed, 0 failed**. Task 15.3 status: **done**.
+  Per the PM's instruction, Coder now stops completely (no pytest, no
+  Ollama) pending the PM's Gate B-6 run (`--gate gate-b6`).

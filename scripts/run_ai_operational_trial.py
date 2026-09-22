@@ -10,18 +10,25 @@ Gate B's own "fallback OFF" requirement for the local matrix. Local inference is
 Ollama/qwen3.5:9b (already qualified in Task 13.1's Gate A); learning generation and
 the final audio/video pipeline are likewise driven only through the real running app.
 
-Evidence for a fresh (Phase 14 / Gate B-2) run lands under
-`data/quality_reviews/phase14/gate-b2/` (gitignored via the existing
-`data/quality_reviews/` entry -- the controlling plan's literal
-`artifacts/phase13/gate-b/`-style path is not gitignored and `.gitignore` is not in
-this task's allowed files, matching the same deviation Task 13.1 already made for Gate
-A). The Phase 13 Gate B evidence this file replaced stays at its own
-`data/quality_reviews/phase13/gate-b/` path -- `--reaggregate` reads a file's own
-recorded `data_dir` to find the right trial DB regardless of which phase it came from.
+Evidence for a fresh run lands under `data/quality_reviews/phase14/gate-b2/` by
+default (gitignored via the existing `data/quality_reviews/` entry -- the controlling
+plan's literal `artifacts/phase13/gate-b/`-style path is not gitignored and
+`.gitignore` is not in this task's allowed files, matching the same deviation Task
+13.1 already made for Gate A) -- pass `--gate NAME` (Task 15.3) to write instead under
+`data/quality_reviews/phase15/NAME/` with every evidence filename prefixed `NAME-`
+(e.g. `--gate gate-b6` writes `phase15/gate-b6/gate-b6-<run_id>.json`, replacing every
+gate's evidence silently sharing the literal `gate-b2` name regardless of which gate
+actually produced it). The Phase 13 Gate B evidence this file replaced stays at its
+own `data/quality_reviews/phase13/gate-b/` path -- `--reaggregate` reads a file's own
+recorded `data_dir` to find the right trial DB regardless of which phase/gate it came
+from.
 
 Usage:
+    venv\\Scripts\\python scripts\\run_ai_operational_trial.py --gate gate-b6 --matrix local
+        # Gate B-6 local matrix, evidence under phase15/gate-b6/
     venv\\Scripts\\python scripts\\run_ai_operational_trial.py --matrix local
-        # Gate B-2 local matrix (13.9 protocol verbatim)
+        # Gate B-2 local matrix (13.9 protocol verbatim; --gate omitted -> today's
+        # default phase14/gate-b2/ path, unchanged)
     venv\\Scripts\\python scripts\\run_ai_operational_trial.py --matrix gemini --with-samples --with-media
         # Gate B-2 Gemini matrix, full protocol
     venv\\Scripts\\python scripts\\run_ai_operational_trial.py --matrix gemini --runs 3
@@ -59,8 +66,22 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-TRIAL_DATA_DIR = PROJECT_ROOT / "data" / "quality_reviews" / "phase14" / "gate-b2" / "trial-data"
-EVIDENCE_DIR = PROJECT_ROOT / "data" / "quality_reviews" / "phase14" / "gate-b2"
+# Task 15.3: `--gate <name>` selects a per-gate evidence/trial-data path and
+# evidence-filename prefix -- read off sys.argv for the same reason `--matrix`/
+# `--mode` are below (argparse runs too late; DIE_DATA_DIR must be set before
+# any `app.*` import). Omitting it reproduces today's exact default
+# (`phase14/gate-b2/`, filenames prefixed `gate-b2-`) byte-for-byte -- every
+# gate before this one silently wrote its evidence under a literal `gate-b2`
+# name regardless of which gate actually produced it (found during Task
+# 14.10's D14 investigation); `--gate` is how a future run avoids repeating
+# that, not a change to any already-written evidence file.
+_GATE = None
+if "--gate" in sys.argv:
+    _GATE = sys.argv[sys.argv.index("--gate") + 1]
+EVIDENCE_PREFIX = _GATE or "gate-b2"
+_GATE_SUBDIR = f"phase15/{_GATE}" if _GATE else "phase14/gate-b2"
+TRIAL_DATA_DIR = PROJECT_ROOT / "data" / "quality_reviews" / _GATE_SUBDIR / "trial-data"
+EVIDENCE_DIR = PROJECT_ROOT / "data" / "quality_reviews" / _GATE_SUBDIR
 
 # Must be set before any `app.*` import -- Settings() is a module-level singleton
 # read from the environment once, at import time. argparse runs too late for that,
@@ -951,7 +972,7 @@ def gemini_matrix_decision(runs: list[dict[str, Any]]) -> tuple[str, list[str]]:
 
 
 def _write_evidence(evidence: dict[str, Any], run_id: str) -> Path:
-    evidence_path = EVIDENCE_DIR / f"gate-b2-{run_id}.json"
+    evidence_path = EVIDENCE_DIR / f"{EVIDENCE_PREFIX}-{run_id}.json"
     evidence_path.write_text(json.dumps(evidence, indent=2, default=str), encoding="utf-8")
     return evidence_path
 
@@ -962,9 +983,10 @@ async def run_media_only(project_id: str) -> int:
     matrix run whose media step crashed) and run just the fixed media
     pipeline for one project, without regenerating any script -- so re-running
     the ~30-40 minute script matrix isn't needed to re-test media alone.
-    Writes its own `gate-b2-media-<run_id>.json` evidence file; merge it into
-    a matrix's own decision via `--reaggregate <matrix.json> --media-evidence
-    <this file>`."""
+    Writes its own `<EVIDENCE_PREFIX>-media-<run_id>.json` evidence file
+    (Task 15.3: `<EVIDENCE_PREFIX>` is `--gate NAME` or the default `gate-b2`);
+    merge it into a matrix's own decision via `--reaggregate <matrix.json>
+    --media-evidence <this file>`."""
     TRIAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
     run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -997,7 +1019,7 @@ async def run_media_only(project_id: str) -> int:
         print("[gate-b] server stopped", flush=True)
 
     evidence["finished_at"] = _utc_now_iso()
-    evidence_path = EVIDENCE_DIR / f"gate-b2-media-{run_id}.json"
+    evidence_path = EVIDENCE_DIR / f"{EVIDENCE_PREFIX}-media-{run_id}.json"
     evidence_path.write_text(json.dumps(evidence, indent=2, default=str), encoding="utf-8")
     print(f"[gate-b] media evidence written to {evidence_path}", flush=True)
     return 1 if evidence["crashed"] else 0
@@ -1399,7 +1421,16 @@ if __name__ == "__main__":
         help="Task 14.4a-c: run just the (fixed) media pipeline for one already-completed "
              "project against the current TRIAL_DATA_DIR, without regenerating any script -- "
              "avoids re-running the whole script matrix just to re-test media. Writes its own "
-             "gate-b2-media-<run_id>.json; merge it in via --reaggregate --media-evidence.",
+             "<EVIDENCE_PREFIX>-media-<run_id>.json; merge it in via --reaggregate --media-evidence.",
+    )
+    parser.add_argument(
+        "--gate", default=None, metavar="NAME",
+        help="Task 15.3: evidence/trial-data path becomes data/quality_reviews/phase15/NAME/, "
+             "and every evidence filename is prefixed NAME- instead of gate-b2- (e.g. "
+             "--gate gate-b6 -> phase15/gate-b6/gate-b6-<run_id>.json). Read off sys.argv before "
+             "this parser runs (see the module-level comment near TRIAL_DATA_DIR) -- registered "
+             "here only for --help and so argparse doesn't reject it as unrecognized. Omit for "
+             "today's exact default (phase14/gate-b2/, gate-b2- prefix), unchanged.",
     )
     args = parser.parse_args()
 

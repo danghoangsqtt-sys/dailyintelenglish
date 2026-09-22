@@ -462,6 +462,64 @@ async def test_record_generation_call_raises_not_found_for_unknown_job(db):
         await ai_job_service.record_generation_call(db, "does-not-exist", _call())
 
 
+# --- Task 15.3: set_job_metric ---------------------------------------------------------
+
+
+async def test_set_job_metric_sets_a_new_key(db):
+    job = await _running_job(db)
+    updated = await ai_job_service.set_job_metric(db, job["id"], "dropped_items", [{"kind": "idiom", "key": "x"}])
+    assert json.loads(updated["metrics_json"])["dropped_items"] == [{"kind": "idiom", "key": "x"}]
+
+
+async def test_set_job_metric_does_not_disturb_the_existing_calls_list(db):
+    job = await _running_job(db)
+    await ai_job_service.record_generation_call(db, job["id"], _call())
+    updated = await ai_job_service.set_job_metric(db, job["id"], "dropped_items", ["x"])
+    metrics = json.loads(updated["metrics_json"])
+    assert metrics["calls"] == [_call()]
+    assert metrics["dropped_items"] == ["x"]
+
+
+async def test_set_job_metric_safe_on_a_job_with_no_prior_metrics_json(db):
+    """A freshly-created job's metrics_json is the default `"{}"` -- confirms
+    the read-modify-write handles that starting point, not just a job that
+    already has a `"calls"` list."""
+    job = await _running_job(db)
+    assert json.loads(job["metrics_json"]) == {}
+    updated = await ai_job_service.set_job_metric(db, job["id"], "dropped_items", ["x"])
+    assert json.loads(updated["metrics_json"]) == {"dropped_items": ["x"]}
+
+
+async def test_set_job_metric_overwrites_its_own_key_on_a_second_call(db):
+    job = await _running_job(db)
+    await ai_job_service.set_job_metric(db, job["id"], "dropped_items", ["first"])
+    updated = await ai_job_service.set_job_metric(db, job["id"], "dropped_items", ["second"])
+    assert json.loads(updated["metrics_json"])["dropped_items"] == ["second"]
+
+
+async def test_set_job_metric_raises_not_found_for_unknown_job(db):
+    with pytest.raises(NotFoundError):
+        await ai_job_service.set_job_metric(db, "does-not-exist", "dropped_items", [])
+
+
+async def test_set_job_metric_commit_false_leaves_the_caller_in_control(db, monkeypatch):
+    """Mirrors `record_generation_call`'s own `commit=False` contract (Task 15.3
+    call site: `learning_pipeline` sets this inside its own `write_transaction`)
+    -- confirms `set_job_metric` itself never calls `db.commit()` when told not
+    to."""
+    job = await _running_job(db)
+    committed = []
+    original_commit = db.commit
+
+    async def _tracking_commit():
+        committed.append(True)
+        await original_commit()
+
+    monkeypatch.setattr(db, "commit", _tracking_commit)
+    await ai_job_service.set_job_metric(db, job["id"], "dropped_items", ["x"], commit=False)
+    assert committed == []
+
+
 # --- Task 14.2: provider_error_code ----------------------------------------------------
 
 

@@ -11,7 +11,6 @@ script pipeline (see task-13.4.md/task-13.5.md).
 from __future__ import annotations
 
 import asyncio
-import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -327,27 +326,6 @@ async def _fail(db, job_id: str, error_code: str, errors: list[str]) -> None:
         )
 
 
-async def _record_dropped_items(db, job_id: str, project_id: str, dropped_items: list[dict]) -> None:
-    """Task 14.11 (D15): records `dropped_items` as a `metrics_json` sibling key
-    next to `record_generation_call`'s own `"calls"` list. `app/services/
-    ai_job_service.py` (where that function and its read-modify-write shape live)
-    is outside this task's allowed files, so this mirrors that exact shape here
-    instead of adding a new function there. Caller wraps this in its own
-    `write_transaction` -- no commit here."""
-    current = await ai_job_service.get_job(db, job_id, project_id)
-    try:
-        metrics = json.loads(current["metrics_json"]) if current["metrics_json"] else {}
-    except (TypeError, ValueError):
-        metrics = {}
-    if not isinstance(metrics, dict):
-        metrics = {}
-    metrics["dropped_items"] = dropped_items
-    await db.execute(
-        "UPDATE ai_generation_jobs SET metrics_json = ? WHERE id = ?",
-        (json.dumps(metrics), job_id),
-    )
-
-
 async def _fail_provider(db, job_id: str, exc: ProviderError) -> None:
     """Fail the job with a specific `provider_*` error_code (Task 14.2) instead of
     letting a `ProviderError` propagate to the worker's blanket `except` and land
@@ -454,7 +432,7 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
     async with write_transaction(db):
         await ai_job_service.transition_status(db, job_id, "validating", commit=False)
         if dropped_items:
-            await _record_dropped_items(db, job_id, project_id, dropped_items)
+            await ai_job_service.set_job_metric(db, job_id, "dropped_items", dropped_items, commit=False)
 
     async with read_transaction():
         current_script_lines = await script_service.get_script(db, project_id)

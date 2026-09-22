@@ -426,6 +426,37 @@ async def record_generation_call(
     return dict(updated)
 
 
+async def set_job_metric(db: aiosqlite.Connection, job_id: str, key: str, value: Any, commit: bool = True) -> dict:
+    """Sets one sibling key in a job's `metrics_json`, next to
+    `record_generation_call`'s own `"calls"` list -- a generic read-modify-write
+    for arbitrary diagnostic metadata (Task 15.3). Used e.g. by
+    `learning_pipeline` for `dropped_items` (Task 14.11), which previously
+    duplicated this exact shape locally because this file was outside that
+    task's allowed files. Never touches `"calls"` or any other existing key.
+
+    Raises:
+        NotFoundError: If the job doesn't exist.
+    """
+    row = await _fetch_row(db, job_id)
+    if row is None:
+        raise NotFoundError(f"AI job {job_id} not found")
+    try:
+        metrics = json.loads(row["metrics_json"]) if row["metrics_json"] else {}
+    except (TypeError, ValueError):
+        metrics = {}
+    if not isinstance(metrics, dict):
+        metrics = {}
+    metrics[key] = value
+    await db.execute(
+        "UPDATE ai_generation_jobs SET metrics_json = ?, updated_at = ? WHERE id = ?",
+        (json.dumps(metrics), _now_iso(), job_id),
+    )
+    if commit:
+        await db.commit()
+    updated = await _fetch_row(db, job_id)
+    return dict(updated)
+
+
 async def request_cancel(db: aiosqlite.Connection, job_id: str, project_id: str, commit: bool = True) -> dict:
     """Idempotently request cancellation.
 
