@@ -4,9 +4,9 @@
 
 - **Phase:** 14
 - **Slug:** `14-ai-gateway-resilience`
-- **Status:** in_progress
+- **Status:** complete
 - **Started:** 2026-09-21
-- **Closed:** —
+- **Closed:** 2026-09-22
 - **Controlling plan:** `docs/implementation/phase-14-ai-gateway-resilience.md`
 - **Source brainstorm:** `docs/brainstorm/session-2026-09-21.md`
 - **Authorization:** user opened Phase 14 after the PM/Tester's independent Gate B
@@ -54,7 +54,7 @@
 | 14.12 | Gate B-4, local only (Amendment G) | PM | **done** | script 3/5, both deaths repeated-8-gram (not word count); learning 3/3; media A/V diff 0.00s (D14 confirmed real) but duration FAIL (runner defect, not product); see `docs/operations/phase14-gate-b4.md` |
 | 14.4a-d | Runner: apply the level default speed (Amendment H) | Coder | **done** | see task-14.4.md's "14.4a-d" section verification |
 | 14.13 | Repetition repair (Amendment H) | Coder | **done** (902 passed, 0 failed) | see task-14.13.md verification |
-| 14.14 | Gate B-5, local only (Amendment H, Phase 14 close-out) | PM | pending | Depends on 14.4a-d + 14.13 done; Coder idle during the run; Phase 14 closes after this run regardless of verdict |
+| 14.14 | Gate B-5, local only (Amendment H, Phase 14 close-out) | PM | **done** | script 5/5 complete + 5/5 pass at 1,000 words (933/969/981/1002/1046); samples 4/4 (first time); learning 5/5; 0 infra; σ 18.9%; repetition repair fired 3x, all 3 completed; media A/V 0.00s, codec pass, duration FAIL (413.3s, -4.3%); verdict FAIL on media duration only; see `docs/operations/phase14-gate-b5.md` |
 
 Execution order (original): 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 ran in
 parallel (PM). 14.4b started after 14.1–14.4a were merged and the PM reviewed the diffs.
@@ -65,9 +65,9 @@ done. Task 14.1-b is dropped (D12) and does not appear in this order.
 **Execution order (Amendment G, complete):** README copy fix (14.6, done) → 14.10 →
 14.11 → 14.12, all done.
 
-**Execution order (Amendment H, current):** 14.4a-d → 14.13 (Coder, doc-first cards
-reviewed by the PM before code, sequential) → 14.14 (PM; Coder idle) → Phase 14
-close-out regardless of verdict.
+**Execution order (Amendment H, complete):** 14.4a-d → 14.13 → 14.14, all done. **Phase
+14 is closed** (`docs/operations/phase14-gate-b5.md`) -- see `SUMMARY.md` for the full
+close-out record.
 
 ## Decisions
 
@@ -520,3 +520,27 @@ close-out regardless of verdict.
   Per the PM's instruction, Coder now stops completely (no pytest, no Ollama)
   pending Gate B-5 (14.14) -- **Phase 14 closes after that run regardless of
   verdict**.
+- 2026-09-22: PM accepted Task 14.4a-d and Task 14.13, then ran **Gate B-5**
+  (Task 14.14, `docs/operations/phase14-gate-b5.md`, commit `e9a013d`): script
+  gate **5/5 complete AND 5/5 passing content checks** at the corrected
+  1,000-word B1 target (933/969/981/1002/1046 words, σ 18.9% -- down from
+  Gate B-2's 55.7%); B1 5/10-minute + A2/C1 samples **4/4** (the first time
+  every sample has passed); learning **5/5**; 0 infrastructure failures.
+  Task 14.13's repetition repair fired 3 times across the matrix (run 5,
+  the B1-10-minute sample, and the C1 sample) and **all 3 of those jobs
+  still completed** -- the exact failure class that killed 2/5 jobs at
+  Gate B-4 is now neutralized. Media, measured for the first time at the
+  real level-default speed (Task 14.4a-d's fix): A/V diff **0.00s** (Task
+  14.10's D14 fix reconfirmed at yet another data point), codec checks
+  passed, but duration still **FAILED** (413.3s, -4.3% short) -- the
+  winning script (933 words) landed at the low end of its own tolerance
+  band while the real spoken pace (~135 wpm) runs modestly faster than the
+  single-script pace-calibration measurement (125 wpm, D13) predicted; both
+  factors compound in the same direction. **Overall Gate B-5 verdict: FAIL,
+  on media duration only** -- script/samples/learning all pass outright for
+  the first time in this phase's history. Per D11, this remains the owner's
+  override regardless: local-only ships either way. **Phase 14 is closed**
+  per plan §14 (closes after Gate B-5 regardless of verdict). Coder's final
+  task: write `SUMMARY.md`, close out this file (status `complete`, closed
+  2026-09-22, full task table), commit, push, and tag both
+  `die-vp-p13-complete` and `die-vp-p14-complete` on that commit.
