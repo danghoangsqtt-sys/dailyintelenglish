@@ -1209,6 +1209,7 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
   `docs/operations/phase14-gate-b3.md`. Overall FAIL; D11 stays an owner override; 13.10 resumes.
 - [x] 14.6 (revised) Resume Task 13.10 local-only — ✅ DONE 2026-09-22: real Ollama-stopped/started
   rollback drill and packaged smoke build; Task 13.10 complete under D11; Phase 13 closed.
-- [ ] 14.10 Pace calibration (D13/D14: measured WPM table + per-level default speed; A/V investigation) — Coder
+- [x] 14.10 Pace calibration — ✅ DONE 2026-09-22: measured WPM table + per-level default speed; D14 root-caused
+  (`-shortest` B-frame flush) and fixed with `-t`, threshold unchanged
 - [ ] 14.11 Learning repair by removal (D15) — Coder
 - [ ] 14.12 Gate B-4 local at the calibrated targets — PM

@@ -1893,8 +1893,24 @@ prompts updated in sync; thresholds unchanged); **D14** A/V padding: investigate
 unintentional, else re-declare ≤ 3.0 s with the reason; **D15** learning repair-by-removal bounded by the
 existing minimums, dropped items recorded; **D16** 13.10 closes under D11.
 
-### 14.10 Pace calibration (D13/D14) — pending (Coder; PM measurement done: `gate-b3/pace-calibration.json`)
-### 14.11 Learning repair by removal (D15) — pending (Coder, after 14.10)
+### 14.10 Pace calibration (D13/D14) — ✅ DONE (2026-09-22, Coder `0db62e9`/`ec26846`; PM-accepted)
+
+- [x] `CEFR_WORDS_PER_MINUTE = {A1 111, A2 111, B1 125, B2 132, C1 145, C2 159}` paired with
+  `CEFR_DEFAULT_TTS_SPEED = {0.75, 0.75, 0.85, 0.90, 1.00, 1.10}` (the PM's measured table); six
+  `prompts/script/cefr_*.txt` "Pace" lines updated in sync; `compute_target_words("B1", 8) == 1000` and
+  `plan_sections == [200]*5` asserted; pin test + revert-and-confirm-failure.
+- [x] Speed default: no UI speed control exists; `SpeakerConfig.speed` is now `Optional` (UI sends `null`),
+  `project_service._resolve_speaker_speeds` fills `None` from the level default once before both the
+  `config_json` snapshot and the DB write; stored speeds are never overwritten (3 new service tests).
+- [x] **D14 resolved by evidence:** root cause reproduced against the real ffmpeg command shape —
+  `-shortest` flushes B-frame-buffered frames after the audio input ends (≈ 2.5 s at ~300 s, 0 at 10 s).
+  Fix: `-t <measured audio_jobs.duration_seconds>` replaces `-shortest` (301.520000 == 301.520000 in the
+  reproduction). `AV_DIFF_MAX_SECONDS` stays 1.0 — the threshold was right, the renderer was wrong.
+- [x] Nine pipeline tests relied on the old B1 wpm via a 1-minute default test project; fixed at one point
+  of control (test config default duration 1.0 → 0.8 min so the same 100-word target is reached) with the
+  reasoning recorded. PM review: diff in the allowed files, 125 targeted tests pass, `ruff` clean;
+  Coder-reported full suite 888.
+### 14.11 Learning repair by removal (D15) — ⏳ IN PROGRESS (Coder)
 ### 14.12 Gate B-4, local only — pending (PM, after 14.11)
 
 ## Decision Log
