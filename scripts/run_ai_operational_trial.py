@@ -155,13 +155,17 @@ def _stop_live_server(server: uvicorn.Server) -> None:
 
 
 def _speaker_payload(name: str, gender: str) -> dict[str, Any]:
+    """Task 14.4a-d: no `speed` key at all -- matches exactly what
+    `step1_config.js` sends for a newly-added speaker (Task 14.10), so the
+    server resolves `CEFR_DEFAULT_TTS_SPEED[cefr_level]` the same way a real
+    UI-driven project would, instead of this runner silently overriding it
+    with a hard-coded 1.0 (Gate B-4's media-duration defect)."""
     return {
         "name": name,
         "gender": gender,
         "accent": ACCENT,
         "tts_engine": "edge_tts",
         "voice_description": "",
-        "speed": 1.0,
         "pitch": 0.0,
         "volume": 1.0,
     }
@@ -523,6 +527,11 @@ async def run_script_trial(client: httpx.AsyncClient, cefr_level: str, duration_
         "label": label,
         "cefr_level": cefr_level,
         "duration_minutes": duration_minutes,
+        # Task 14.4a-d: the server's own resolved speed (CEFR_DEFAULT_TTS_SPEED,
+        # since _speaker_payload sends no speed key), not recomputed here --
+        # closes the gap that let Gate B-4 run a full matrix without anyone
+        # noticing the level default was never actually applied.
+        "speaker_speeds": {speaker["name"]: speaker["speed"] for speaker in project["speakers"]},
         "project_id": project["id"],
         "job_id": result["job_id"],
         "job_status": job["status"],

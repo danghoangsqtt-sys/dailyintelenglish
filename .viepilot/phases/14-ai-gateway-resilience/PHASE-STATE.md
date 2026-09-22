@@ -52,7 +52,7 @@
 | 14.10 | Pace calibration, measured not assumed (Amendment G) | Coder | **done** (888 passed, 0 failed) | see task-14.10.md verification |
 | 14.11 | Learning repair by removal (Amendment G) | Coder | **done** (891 passed, 0 failed) | see task-14.11.md verification |
 | 14.12 | Gate B-4, local only (Amendment G) | PM | **done** | script 3/5, both deaths repeated-8-gram (not word count); learning 3/3; media A/V diff 0.00s (D14 confirmed real) but duration FAIL (runner defect, not product); see `docs/operations/phase14-gate-b4.md` |
-| 14.4a-d | Runner: apply the level default speed (Amendment H) | Coder | pending | Depends on 14.11/14.12 done; see task-14.4.md's "14.4a-d" section |
+| 14.4a-d | Runner: apply the level default speed (Amendment H) | Coder | **done** | see task-14.4.md's "14.4a-d" section verification |
 | 14.13 | Repetition repair (Amendment H) | Coder | pending | Depends on 14.4a-d done; D17, see task-14.13.md |
 | 14.14 | Gate B-5, local only (Amendment H, Phase 14 close-out) | PM | pending | Depends on 14.4a-d + 14.13 done; Coder idle during the run; Phase 14 closes after this run regardless of verdict |
 

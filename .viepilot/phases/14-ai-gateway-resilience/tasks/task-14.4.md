@@ -397,7 +397,26 @@ names and SHA-256.
      byte-for-byte unchanged, since this fix only changes what a *future* live
      run sends, never how an *existing* evidence file is re-scored.
   - Commands and results:
-  - Deviations:
-  - Commit(s):
+    - `venv\Scripts\python.exe -m ruff check scripts/run_ai_operational_trial.py`
+      -> All checks passed.
+    - `venv\Scripts\python.exe -m py_compile scripts/run_ai_operational_trial.py`
+      -> exits 0.
+    - `venv\Scripts\python.exe scripts/run_ai_operational_trial.py --reaggregate
+      "data/quality_reviews/phase14/gate-b4/gate-b4-local-20260922T031554Z.json"`
+      -> byte-for-byte matches the PM's own reported numbers: `DECISION: FAIL`,
+      same two reasons (`3/5 completed`, media not run/failed), aggregates
+      identical (`repair_success_rate=0.65`, `total_repair_count=21`,
+      `max_attempts_observed=2`), both repeated-8-gram failure messages
+      reproduced verbatim (`1.02%`/`4.32%` against the unchanged `1%`
+      threshold) -- confirms this fix changes only what a *future* live run
+      sends, never how this *existing* evidence file is re-scored.
+    - `venv\Scripts\python.exe -m ruff check app tests scripts` (full) -> All
+      checks passed.
+  - Deviations: none. Both changes confined to
+    `scripts/run_ai_operational_trial.py`, this task's sole allowed file.
+    **Not run, per the established convention for this exact script and PM's
+    "dừng hoàn toàn" instruction once both 14.4a-d and 14.13 are done:**
+    `pytest`, any live matrix run, anything touching Ollama.
+  - Commit(s): (pending -- committing now)
 
 - 14.4b (PM):
