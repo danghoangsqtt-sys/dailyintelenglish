@@ -1,6 +1,6 @@
 # Task 14.11 — Learning Repair by Removal
 
-- **Status:** in progress
+- **Status:** done (full suite 891 passed, 0 failed)
 - **Owner:** Coder
 - **Priority:** P1
 - **Dependency:** Task 14.10 done (sequential, per plan §13's execution order)
@@ -162,6 +162,32 @@ JSON, so removing the `dropped_items` key is not a migration either).
      (job status `error` instead of `complete`), for the right reason; restore and
      confirm green again.
 - Commands and results:
-- Deviations:
+  - `venv\Scripts\python.exe -m ruff check app/services/learning_pipeline.py` -> All
+    checks passed.
+  - `pytest tests/test_learning_pipeline.py -q` -> all 24 pre-existing tests passed
+    unchanged on the first run after the core change (confirms
+    `test_pipeline_fails_transparently_when_repair_also_fails`'s existing fixture
+    -- the base pack's only idiom, still ungrounded after repair -- already exactly
+    exercised the "removable, but dropping would breach the minimum" path with no
+    fixture change needed, exactly as planned).
+  - Added the idiom-drop and answer-drop e2e tests plus strengthened the existing
+    "repair also fails" test's assertions: `pytest tests/test_learning_pipeline.py -q`
+    -> **26 passed**.
+  - `venv\Scripts\python.exe -m ruff check app tests scripts` -> All checks passed.
+  - `pytest -q` (full suite) -> **891 passed, 0 failed** (451.27s), up from Task
+    14.10's 888 baseline.
+- Deviations: none. Every required-behaviour and verification item implemented as
+  planned; no file outside the allowed list was needed; no new constant was added
+  (D15 specifies no drop-count cap, only "publish only if counts still meet
+  `LEARNING_MIN_*`", already enforced by re-running the existing, unchanged
+  `validate_counts`).
 - Revert-and-confirm-failure evidence:
-- Commit(s):
+  - Temporarily replaced `removable = find_removable_failures(repaired_pack,
+    transcript)` with `removable = []` (`# REVERT-AND-CONFIRM-FAILURE`) and ran the
+    two new drop-success tests: **2 failed**, both for the right reason (job status
+    `error` instead of `complete`, with the original validation error -- e.g.
+    `"question 'Q3?...': correct_answer not among its options"` -- as the failure
+    reason, proving the removal step is genuinely what makes them pass). Restored
+    the real line and re-ran the full `tests/test_learning_pipeline.py` file:
+    **26 passed**.
+- Commit(s): `3f99f08` (plan), plus this commit (implementation).

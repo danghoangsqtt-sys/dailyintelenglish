@@ -50,7 +50,7 @@
 | 14.9 | Gate B-3, local only (Amendment D) | PM | **done** | script gate PASS 5/5 (first time); learning 4/5; media FAIL as declared (measured pace); see `docs/operations/phase14-gate-b3.md` |
 | 14.6 (revised) | Resume Task 13.10, local-only rollout (Amendment D) | Both | **done** | Coder side `1c89b6a`/`1f723de` (884 passed, 0 failed); PM side `d5c817e`/`48695ba`/`c6c2f35`; Phase 13 Task 13.10 complete under D11 |
 | 14.10 | Pace calibration, measured not assumed (Amendment G) | Coder | **done** (888 passed, 0 failed) | see task-14.10.md verification |
-| 14.11 | Learning repair by removal (Amendment G) | Coder | pending | Depends on 14.10 done; D15, see task-14.11.md |
+| 14.11 | Learning repair by removal (Amendment G) | Coder | **done** (891 passed, 0 failed) | see task-14.11.md verification |
 | 14.12 | Gate B-4, local only (Amendment G) | PM | pending | Depends on 14.10 + 14.11 done; Coder idle during the run |
 
 Execution order (original): 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 ran in
@@ -423,3 +423,29 @@ idle) → Phase 14 close-out.
   rewriting 9 fixtures, documented honestly in task-14.10.md's Deviations.
   Constants-pin test added for both new tables, revert-and-confirm-failure done.
   Full suite: **888 passed, 0 failed**. Task 14.10 status: **done**.
+- 2026-09-22: PM accepted Task 14.10, directed the Coder to continue straight to
+  14.11 (noting a process reminder for next time: wait for accept before starting
+  the next task -- fine this once since 14.10 was clean). Coder implemented
+  Task 14.11, doc-first: `app/services/ai_job_service.py` has no generic
+  "merge a key into metrics_json" entrypoint and is outside this task's allowed
+  files, so `learning_pipeline.py` gained its own small
+  `_record_dropped_items` helper mirroring `record_generation_call`'s own
+  read-modify-write shape (via the already-exported `ai_job_service.get_job`)
+  rather than adding a function to that file. New pure functions
+  `find_removable_failures`/`drop_items` give a structured, per-item view over
+  the same grounding/answer-consistency checks `validate_grounding`/
+  `validate_answers` already do (not string re-parsing), so the post-repair
+  branch can drop exactly the offending vocabulary word / idiom phrase /
+  question, then re-run the full, unchanged `validate_pack` on the reduced pack
+  -- publish with `dropped_items` recorded if counts/duplicates still pass,
+  else fail `pack_validation_failed` exactly as before with the drop summary
+  appended to the message tail. A duplicate or count-only failure (nothing
+  removable) still hard-fails unchanged -- confirmed the *existing*
+  `test_pipeline_fails_transparently_when_repair_also_fails` fixture already
+  exercised exactly that path (its only idiom, dropped, would breach
+  `LEARNING_MIN_IDIOMS`) with zero fixture changes needed, only strengthened
+  assertions. Two new e2e tests (idiom drop, answer-consistency drop) plus
+  revert-and-confirm-failure (temporarily forced `removable = []`, confirmed
+  both new tests fail for the right reason, restored). Full suite: **891
+  passed, 0 failed**. Task 14.11 status: **done**. Per the PM's instruction,
+  Coder now stops completely (no pytest, no Ollama) pending Gate B-4 (14.12).

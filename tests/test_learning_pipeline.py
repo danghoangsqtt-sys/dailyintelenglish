@@ -226,6 +226,12 @@ async def test_pipeline_repairs_an_invalid_pack_once_then_completes(db):
 
 
 async def test_pipeline_fails_transparently_when_repair_also_fails(db):
+    """Task 14.11 (D15): this fixture's surviving failure (the pack's only idiom,
+    still ungrounded after the one repair) *is* removable on its own -- but the
+    base pack has exactly one idiom and LEARNING_MIN_IDIOMS == 1, so dropping it
+    would breach the minimum. Verification item 2: still hard-fails exactly as
+    before, and the failure message now names what would have been dropped and
+    why, proving the removal path was actually exercised (not silently skipped)."""
     project = await _project_with_script(db)
     invalid_pack = _pack(vocabulary=[{**_pack().vocabulary[0].model_dump(), "example_sentence": "Invented."}])
     still_invalid_pack = _pack(idioms=[{**_pack().idioms[0].model_dump(), "phrase": "still made up"}])
@@ -242,8 +248,91 @@ async def test_pipeline_fails_transparently_when_repair_also_fails(db):
     final_job = await ai_job_service.get_job(db, job["id"], project["id"])
     assert final_job["status"] == "error"
     assert final_job["error_code"] == "pack_validation_failed"
+    assert "dropped idiom 'still made up'" in final_job["error_message"]
+    assert "idioms has 0 item" in final_job["error_message"]
     # prior state (none, for a fresh project) is provably unchanged.
     assert await learning_service.get_learning_content(db, project["id"]) is None
+
+
+# --- Task 14.11: learning repair by removal (D15) ------------------------------------
+
+
+async def test_pipeline_drops_a_still_ungrounded_idiom_after_repair_and_completes(db):
+    """Verification item 1: a still-ungrounded idiom survives the one repair, but
+    the pack has a second, genuinely grounded idiom -- dropping just the bad one
+    still meets LEARNING_MIN_IDIOMS, so the job completes rather than failing."""
+    project = await _project_with_script(db)
+    invalid_pack = _pack(vocabulary=[{**_pack().vocabulary[0].model_dump(), "example_sentence": "Invented."}])
+    repaired_pack = _pack(
+        idioms=[
+            _pack().idioms[0].model_dump(),  # "hit the ground running" -- grounded
+            {
+                "phrase": "a bolt from the blue",
+                "meaning_en": "something totally unexpected",
+                "meaning_vi": "chuyen bat ngo",
+                "example_sentence": "It was a bolt from the blue.",
+            },  # never appears in TRANSCRIPT -- survives the repair ungrounded
+        ]
+    )
+    router, gemini, _local = _build_router([_result(invalid_pack), _result(repaired_pack)])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "learning", {"project": project, "operation": "learning"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await learning_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete", final_job.get("error_message")
+    assert gemini.call_count == 2  # one invalid attempt + one repair, no third call
+
+    saved = await learning_service.get_learning_content(db, project["id"])
+    assert [item["phrase"] for item in saved["idioms"]] == ["hit the ground running"]
+
+    dropped = json.loads(final_job["metrics_json"])["dropped_items"]
+    assert dropped == [
+        {
+            "kind": "idiom",
+            "key": "a bolt from the blue",
+            "reason": "phrase or example_sentence not found in transcript",
+        }
+    ]
+
+
+async def test_pipeline_drops_a_still_inconsistent_answer_after_repair_and_completes(db):
+    """Verification item 3: an MCQ whose correct_answer isn't among its own
+    options survives the one repair; the pack has 4 questions, so dropping the
+    bad one still meets LEARNING_MIN_QUESTIONS (3)."""
+    project = await _project_with_script(db)
+    invalid_pack = _pack(vocabulary=[{**_pack().vocabulary[0].model_dump(), "example_sentence": "Invented."}])
+    repaired_pack = _pack(
+        questions=[
+            {"question": "Q1?", "options": ["A", "B"], "correct_answer": "A", "explanation": "e"},
+            {"question": "Q2?", "options": ["A", "B"], "correct_answer": "B", "explanation": "e"},
+            {"question": "Q3?", "options": ["A", "B"], "correct_answer": "C", "explanation": "e"},  # C not an option
+            {"question": "Q4 (open-ended)?", "options": [], "correct_answer": "", "explanation": "e"},
+        ]
+    )
+    router, gemini, _local = _build_router([_result(invalid_pack), _result(repaired_pack)])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "learning", {"project": project, "operation": "learning"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await learning_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete", final_job.get("error_message")
+
+    saved = await learning_service.get_learning_content(db, project["id"])
+    assert [item["question"] for item in saved["questions"]] == ["Q1?", "Q2?", "Q4 (open-ended)?"]
+
+    dropped = json.loads(final_job["metrics_json"])["dropped_items"]
+    assert dropped == [{"kind": "question", "key": "Q3?", "reason": "correct_answer not among its options"}]
 
 
 async def test_pipeline_fails_when_script_is_empty(db):

@@ -11,6 +11,7 @@ script pipeline (see task-13.4.md/task-13.5.md).
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -130,6 +131,58 @@ def validate_pack(pack: LearningPackOut, transcript: str) -> list[str]:
         + validate_grounding(pack, transcript)
         + validate_duplicates(pack)
         + validate_answers(pack)
+    )
+
+
+def find_removable_failures(pack: LearningPackOut, transcript: str) -> list[dict]:
+    """Task 14.11 (D15): a structured view over the same grounding/answer checks
+    `validate_grounding`/`validate_answers` already do, but naming exactly which
+    item fails instead of a prose message -- so the post-repair removal step can
+    drop precisely that item. `validate_counts`/`validate_duplicates` failures have
+    no single item to blame and are never represented here (per D15, only
+    grounding/answer-consistency failures are removable)."""
+    removable: list[dict] = []
+    normalized_transcript = normalize_text(transcript)
+
+    for item in pack.vocabulary:
+        if normalize_text(item.example_sentence) not in normalized_transcript:
+            removable.append(
+                {"kind": "vocabulary", "key": item.word, "reason": "example_sentence not found in transcript"}
+            )
+
+    for item in pack.idioms:
+        if (
+            normalize_text(item.phrase) not in normalized_transcript
+            or normalize_text(item.example_sentence) not in normalized_transcript
+        ):
+            removable.append(
+                {"kind": "idiom", "key": item.phrase, "reason": "phrase or example_sentence not found in transcript"}
+            )
+
+    for item in pack.questions:
+        if item.options and normalize_text(item.correct_answer) not in {
+            normalize_text(option) for option in item.options
+        }:
+            removable.append(
+                {"kind": "question", "key": item.question, "reason": "correct_answer not among its options"}
+            )
+
+    return removable
+
+
+def drop_items(pack: LearningPackOut, removable: list[dict]) -> LearningPackOut:
+    """Task 14.11 (D15): a new pack with every item named in `removable` removed.
+    Grammar is never touched -- no per-item grammar check exists in
+    `find_removable_failures`, so nothing ever names a grammar point here."""
+    dropped_vocab = {item["key"] for item in removable if item["kind"] == "vocabulary"}
+    dropped_idioms = {item["key"] for item in removable if item["kind"] == "idiom"}
+    dropped_questions = {item["key"] for item in removable if item["kind"] == "question"}
+    return pack.model_copy(
+        update={
+            "vocabulary": [item for item in pack.vocabulary if item.word not in dropped_vocab],
+            "idioms": [item for item in pack.idioms if item.phrase not in dropped_idioms],
+            "questions": [item for item in pack.questions if item.question not in dropped_questions],
+        }
     )
 
 
@@ -274,6 +327,27 @@ async def _fail(db, job_id: str, error_code: str, errors: list[str]) -> None:
         )
 
 
+async def _record_dropped_items(db, job_id: str, project_id: str, dropped_items: list[dict]) -> None:
+    """Task 14.11 (D15): records `dropped_items` as a `metrics_json` sibling key
+    next to `record_generation_call`'s own `"calls"` list. `app/services/
+    ai_job_service.py` (where that function and its read-modify-write shape live)
+    is outside this task's allowed files, so this mirrors that exact shape here
+    instead of adding a new function there. Caller wraps this in its own
+    `write_transaction` -- no commit here."""
+    current = await ai_job_service.get_job(db, job_id, project_id)
+    try:
+        metrics = json.loads(current["metrics_json"]) if current["metrics_json"] else {}
+    except (TypeError, ValueError):
+        metrics = {}
+    if not isinstance(metrics, dict):
+        metrics = {}
+    metrics["dropped_items"] = dropped_items
+    await db.execute(
+        "UPDATE ai_generation_jobs SET metrics_json = ? WHERE id = ?",
+        (json.dumps(metrics), job_id),
+    )
+
+
 async def _fail_provider(db, job_id: str, exc: ProviderError) -> None:
     """Fail the job with a specific `provider_*` error_code (Task 14.2) instead of
     letting a `ProviderError` propagate to the worker's blanket `except` and land
@@ -343,6 +417,7 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
         await _fail_provider(db, job_id, exc)
         return
 
+    dropped_items: list[dict] = []
     errors = validate_pack(pack, transcript)
     if errors:
         try:
@@ -355,12 +430,31 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
             return
         repaired_errors = validate_pack(repaired_pack, transcript)
         if repaired_errors:
-            await _fail(db, job_id, "pack_validation_failed", repaired_errors)
-            return
+            # Task 14.11 (D15): drop items that still fail grounding/answer checks
+            # rather than failing the whole pack outright -- but only when dropping
+            # can actually help. A duplicate or a count-only failure has no single
+            # item to blame (find_removable_failures never names one for those), so
+            # it still hard-fails exactly as before.
+            removable = find_removable_failures(repaired_pack, transcript)
+            if not removable:
+                await _fail(db, job_id, "pack_validation_failed", repaired_errors)
+                return
+            reduced_pack = drop_items(repaired_pack, removable)
+            final_errors = validate_pack(reduced_pack, transcript)
+            if final_errors:
+                dropped_summary = [
+                    f"dropped {item['kind']} {item['key']!r}: {item['reason']}" for item in removable
+                ]
+                await _fail(db, job_id, "pack_validation_failed", [*final_errors, *dropped_summary])
+                return
+            repaired_pack = reduced_pack
+            dropped_items = removable
         pack = repaired_pack
 
     async with write_transaction(db):
         await ai_job_service.transition_status(db, job_id, "validating", commit=False)
+        if dropped_items:
+            await _record_dropped_items(db, job_id, project_id, dropped_items)
 
     async with read_transaction():
         current_script_lines = await script_service.get_script(db, project_id)
