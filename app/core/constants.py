@@ -279,6 +279,13 @@ SCRIPT_SECTION_AVOID_PHRASES_MAX = 8
 # them. 1.0 (exact match only) disables the safety net without a code revert.
 SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO = 0.85
 
+# Phase 15 Task 15.2 -- a run of more than SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER
+# consecutive lines from one speaker, still present after the one semantic
+# repair, gets one bounded merge fix (join text with a space, never
+# re-attribute a line to a different speaker) instead of hard-failing the
+# job outright. 0 disables the pass without a code revert.
+SCRIPT_PIPELINE_MAX_STRUCTURAL_FIXES = 1
+
 # Phase 13 -- grounded learning pipeline (app/services/learning_pipeline.py).
 # The prompt gives no explicit target count for vocabulary/idioms -- "at least
 # one" is the only honest floor to enforce without inventing an undocumented

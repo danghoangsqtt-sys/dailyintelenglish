@@ -1,6 +1,6 @@
 # Task 15.2 — Deterministic Consecutive-Lines Fix
 
-- **Status:** in progress
+- **Status:** done (full suite 926 passed, 0 failed)
 - **Owner:** Coder
 - **Priority:** P1
 - **Dependency:** Task 15.1 done (sequential, per plan §4's execution order)
@@ -140,6 +140,52 @@ behavior for a consecutive-lines violation without a code revert.
      merges and completes; single-speaker section still fails); constants pin
      extension + revert-and-confirm-failure.
 - Commands and results:
-- Deviations:
+  - `venv\Scripts\python.exe -m ruff check app/services/script_pipeline.py
+    app/core/constants.py` -> All checks passed (checked after every edit).
+  - `pytest tests/test_script_pipeline.py -q` immediately after wiring the
+    orchestration -> **1 failed** (the pre-existing exact-key-set assertion
+    in `test_pipeline_accepts_off_target_sections_when_total_lands_inside_tolerance`,
+    the same pattern every prior task that added a checkpoint-metrics key hit --
+    extended the expected set with `structural_fix`/`lines_before_fix`/
+    `lines_after_fix`, re-ran clean).
+  - Added 9 pure tests (`merge_consecutive_lines`, `_merge_group`, `_chunk_run`
+    via the public function's behavior) -> all passed first try.
+  - Added the 2 required e2e tests -> the first
+    (`test_pipeline_merges_a_run_of_seven_and_completes`) failed twice before
+    passing: (1) the initial word split (98 alex words / 2 maya words) tripped
+    the *separate* global speaker-balance check (98%/2%, outside 35-65%) --
+    not a bug in the merge fix, a fixture design mistake; rebalanced to 49/51.
+    (2) `checkpoints[0]` was the outline checkpoint, not the section one --
+    fixed to look up by `section_index == 1`, matching the pattern every other
+    checkpoint-metrics test in this file already uses.
+  - `pytest tests/test_script_pipeline.py -q` (full file) -> **88 passed**.
+  - `venv\Scripts\python.exe -m ruff check app tests scripts` (full) -> All
+    checks passed.
+  - `pytest -q` (full suite) -> **926 passed, 0 failed** (371.06s), up from
+    Task 15.1's 915 baseline.
+- Deviations: **`SCRIPT_PIPELINE_MAX_STRUCTURAL_FIXES` is not added to the
+  shared threshold-governance pin test** (`test_constants_pin_word_tolerances_...`),
+  despite this card's own verification list saying "constants pin extended."
+  Checked the precedent first: neither `SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS`
+  (Task 14.8) nor `SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS` (Task 14.13) --
+  the two prior repair-*budget* constants this constant is directly analogous
+  to -- appear in that pin test at all (confirmed via `grep`, zero hits for
+  either name in `tests/test_script_pipeline.py`); that test is specifically
+  for quality-gate *thresholds* (word tolerances, the consecutive-lines limit,
+  the repetition ratio, Task 15.1's match ratio), which this constant is not --
+  it's a repair-attempt budget, and every prior repair-budget constant's
+  correctness is proven by its own e2e bound test instead. Matched that
+  established precedent rather than my own card's slightly-imprecise wording
+  from before I'd checked it; the revert-and-confirm-failure below is a more
+  meaningful proof of the constant's real effect than a static pin assertion
+  would have been anyway.
 - Revert-and-confirm-failure evidence:
-- Commit(s):
+  - Temporarily changed `SCRIPT_PIPELINE_MAX_STRUCTURAL_FIXES` from `1` to `0`
+    (`# REVERT-AND-CONFIRM-FAILURE`) and ran
+    `pytest tests/test_script_pipeline.py::test_pipeline_merges_a_run_of_seven_and_completes -q`:
+    **1 failed**, for the right reason (`AssertionError: more than 5
+    consecutive lines from speaker ... (lines 1-6)` -- the exact pre-Task-15.2
+    hard-fail, confirming the constant genuinely gates the merge pass, not
+    just a documentation claim). Restored `1`, re-ran the full
+    `test_script_pipeline.py` file: 88 passed.
+- Commit(s): `bf872da` (plan), plus this commit (implementation).

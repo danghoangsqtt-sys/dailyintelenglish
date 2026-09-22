@@ -1,5 +1,6 @@
 """Tests for the checkpointed script pipeline (Task 13.4)."""
 
+import itertools
 import json
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from app.services.ai.contracts import AIMode, GenerationResult
 from app.services.ai.fake_provider import FakeProvider
 from app.services.ai.router import AIRouter
 from app.services.ai_worker import AIWorker
+from app.services.script_service import LanguageNotesOut
 
 
 async def _no_op_sleep(delay: float) -> None:
@@ -415,6 +417,166 @@ async def test_pipeline_unresolvable_speaker_still_fails_after_repair(db):
     assert final_job["status"] == "error"
     assert final_job["error_code"] == "section_validation_failed"
     assert "unknown speaker_id" in final_job["error_message"]
+    assert await script_service.get_script(db, project["id"]) == []
+
+
+# --- Task 15.2: deterministic consecutive-lines merge fix -----------------------------
+
+
+def _line(speaker_id: str, text: str, **language_notes) -> script_pipeline.SectionLineOut:
+    return script_pipeline.SectionLineOut(
+        speaker_id=speaker_id, text=text, language_notes=LanguageNotesOut(**language_notes)
+    )
+
+
+def test_merge_consecutive_lines_returns_none_when_the_whole_section_is_one_speaker():
+    lines = [_line("a", f"line{i}") for i in range(7)]
+    assert script_pipeline.merge_consecutive_lines(lines, limit=5) is None
+
+
+def test_merge_consecutive_lines_leaves_an_in_limit_run_untouched():
+    lines = [_line("a", "one"), _line("a", "two"), _line("b", "three")]
+    merged = script_pipeline.merge_consecutive_lines(lines, limit=5)
+    assert merged == lines
+
+
+def test_merge_consecutive_lines_brings_a_run_of_seven_within_the_limit():
+    run = [_line("a", f"w{i}") for i in range(7)]
+    lines = run + [_line("b", "closing")]
+    merged = script_pipeline.merge_consecutive_lines(lines, limit=5)
+    # Run of 7 into 5 groups (divmod distribution): sizes [2, 2, 1, 1, 1].
+    assert [line.speaker_id for line in merged[:-1]] == ["a"] * 5
+    assert merged[-1] == lines[-1]  # the closing "b" line is untouched
+    consecutive = max(len(list(group)) for _, group in itertools.groupby(line.speaker_id for line in merged))
+    assert consecutive <= 5
+
+
+def test_merge_consecutive_lines_preserves_every_word_in_order():
+    run = [_line("a", f"w{i} w{i}b") for i in range(7)]
+    lines = run + [_line("b", "closing words here")]
+    merged = script_pipeline.merge_consecutive_lines(lines, limit=5)
+    original_words = " ".join(line.text for line in lines).split()
+    merged_words = " ".join(line.text for line in merged).split()
+    assert merged_words == original_words  # nothing added, removed, or reordered
+
+
+def test_merge_consecutive_lines_never_re_attributes_a_line():
+    run = [_line("a", f"w{i}") for i in range(7)]
+    lines = run + [_line("b", "closing")]
+    merged = script_pipeline.merge_consecutive_lines(lines, limit=5)
+    assert {line.speaker_id for line in merged} == {"a", "b"}
+    assert merged[-1].speaker_id == "b"  # the one "b" line is still attributed to "b"
+
+
+def test_merge_consecutive_lines_handles_two_separate_over_limit_runs():
+    lines = (
+        [_line("a", f"a{i}") for i in range(6)]
+        + [_line("b", "bridge")]
+        + [_line("a", f"a2-{i}") for i in range(6)]
+    )
+    merged = script_pipeline.merge_consecutive_lines(lines, limit=5)
+    run_lengths = [len(list(group)) for _, group in itertools.groupby(line.speaker_id for line in merged)]
+    assert all(length <= 5 for length in run_lengths)
+    assert " ".join(line.text for line in merged).split() == " ".join(line.text for line in lines).split()
+
+
+def test_merge_group_unions_collocations_and_idioms_deduplicated():
+    group = [
+        _line("a", "one", collocations=["make a decision"], idioms=["hit the ground running"]),
+        _line("a", "two", collocations=["make a decision", "take a break"], idioms=[]),
+    ]
+    merged = script_pipeline._merge_group(group)
+    assert merged.text == "one two"
+    assert merged.language_notes.collocations == ["make a decision", "take a break"]
+    assert merged.language_notes.idioms == ["hit the ground running"]
+
+
+def test_merge_group_grammar_point_keeps_the_first_lines_value():
+    group = [
+        _line("a", "one", grammar_point="Present Simple"),
+        _line("a", "two", grammar_point="Past Simple"),
+    ]
+    merged = script_pipeline._merge_group(group)
+    assert merged.language_notes.grammar_point == "Present Simple"
+
+
+def test_merge_group_single_line_returned_unchanged():
+    line = _line("a", "solo", grammar_point="X")
+    assert script_pipeline._merge_group([line]) is line
+
+
+async def test_pipeline_merges_a_run_of_seven_and_completes(db):
+    """Verification: a run of 7 consecutive lines from one speaker survives
+    the one semantic repair -- merged down to within the limit, job
+    completes."""
+    project = await _project(db)  # duration_minutes=0.8 -> target_words=100 (Task 14.10)
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {"title": "T", "sections": [{"index": 1, "objective": "cover the topic fully here", "target_words": 100}]}
+    )
+    attempt_json = _section_json((alex_id, 1, 0))  # way too short -> triggers the one repair
+    # 7 consecutive alex lines (run > 5) + 1 maya line -- both speakers present,
+    # so merge_consecutive_lines can actually help (not the unfixable case).
+    # Word counts (49/51) keep the global speaker-balance check inside 35-65%.
+    repair_json = _section_json(
+        *[(alex_id, 7, 1000 + i * 20) for i in range(7)],
+        (maya_id, 51, 2000),
+    )
+    router, gemini, _local = _build_router([_result(outline_json), _result(attempt_json), _result(repair_json)])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete", final_job.get("error_message")
+    assert gemini.call_count == 3  # outline + attempt + the one repair (merge itself costs no extra AI call)
+
+    lines = await script_service.get_script(db, project["id"])
+    run_lengths = [len(list(group)) for _, group in itertools.groupby(line["speaker_id"] for line in lines)]
+    assert all(length <= 5 for length in run_lengths)
+    assert sum(len(line["text"].split()) for line in lines) == 100  # merge never changes total word count
+
+    checkpoints = await ai_job_service.get_valid_checkpoints(db, job["id"])
+    section_checkpoint = next(c for c in checkpoints if c["section_index"] == 1)
+    metrics = json.loads(section_checkpoint["metrics_json"])
+    assert metrics["structural_fix"] == "merged_consecutive_lines"
+    assert metrics["lines_before_fix"] == 8
+    assert metrics["lines_after_fix"] == 6  # run of 7 -> 5 groups ([2,2,1,1,1]) + the 1 maya line
+
+
+async def test_pipeline_whole_section_one_speaker_still_fails(db):
+    """Verification: the merge fix's own unfixable case -- the repaired
+    section is entirely one speaker (the plan's own example) -- still fails
+    exactly as today, with no extra AI call attempted."""
+    project = await _project(db)
+    alex_id, _maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {"title": "T", "sections": [{"index": 1, "objective": "cover the topic fully here", "target_words": 100}]}
+    )
+    attempt_json = _section_json((alex_id, 1, 0))
+    still_invalid_json = _section_json(*[(alex_id, 14, 1000 + i * 20) for i in range(7)])  # all alex, no maya
+
+    router, gemini, _local = _build_router([_result(outline_json), _result(attempt_json), _result(still_invalid_json)])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "error"
+    assert final_job["error_code"] == "section_validation_failed"
+    assert gemini.call_count == 3  # outline + attempt + the one repair -- no merge attempt possible
     assert await script_service.get_script(db, project["id"]) == []
 
 
@@ -1160,8 +1322,10 @@ async def test_pipeline_accepts_off_target_sections_when_total_lands_inside_tole
             "target_nominal", "target_effective", "words", "deviation_pct",
             "repaired", "words_before_repair", "errors_before_repair",
             "length_repaired", "words_before_length_repair",
+            "structural_fix", "lines_before_fix", "lines_after_fix",
         }
         assert metrics["length_repaired"] is False  # 130 never exceeds any clamped ceiling here
+        assert metrics["structural_fix"] is None  # no consecutive-lines violation here
         assert metrics["target_nominal"] == 160
 
     lines = await script_service.get_script(db, project["id"])

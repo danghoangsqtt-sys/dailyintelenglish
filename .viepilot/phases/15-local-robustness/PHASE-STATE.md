@@ -37,7 +37,7 @@
 | Task | Description | Owner | Status | Blocking gate |
 |---|---|---|---|---|
 | 15.1 | Speaker aliases in the section contract (deterministic id resolution) | Coder | **done** (915 passed, 0 failed) | see task-15.1.md verification |
-| 15.2 | Deterministic consecutive-lines fix (merge, never re-attribute) | Coder | pending | Depends on 15.1 done |
+| 15.2 | Deterministic consecutive-lines fix (merge, never re-attribute) | Coder | **done** (926 passed, 0 failed) | see task-15.2.md verification |
 | 15.3 | Trial runner per-gate evidence path + `set_job_metric` layering | Coder | pending | Depends on 15.2 done |
 | 15.4 | Gate B-6, local only (owner's failing config as a 5th sample) | PM | pending | Depends on 15.1–15.3 done; Coder idle during the run |
 | 15.5 | Multi-script pace calibration (optional, owner's word only) | PM → Coder | not started | Deferred until 15.1–15.4 land; only if the owner asks |
@@ -101,3 +101,34 @@ explicit word.
   constants pin, and separately the safety net's own behavior at the card's
   documented rollback value (`1.0`, exact-match-only). Full suite: **915
   passed, 0 failed**. Task 15.1 status: **done**.
+- 2026-09-22: PM accepted Task 15.1 (independently called `resolve_speaker`
+  directly on the real trigger case, confirmed `uuid_near_miss`), added a
+  review note for 15.2 (merge's `language_notes` handling; confirmed word
+  count is provably invariant across a merge), and authorized starting 15.2.
+  Coder implemented it, doc-first: `merge_consecutive_lines` splits each
+  over-limit same-speaker run into exactly `SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER`
+  contiguous groups via the same `divmod` distribution `plan_sections` already
+  uses, joining each group's text with a space (word order and content
+  provably unchanged); `_merge_group` unions `collocations`/`idioms`
+  (deduplicated, first-seen order) and keeps the first line's `grammar_point`,
+  per the PM's note. The "whole section is one speaker" unfixable case (the
+  plan's own example) is detected directly (`< 2` distinct speaker ids in the
+  section) rather than left for the merge algorithm to fail on its own, since
+  chunking a single run can always numerically satisfy the raw limit --
+  merging a true monologue into fewer giant paragraphs would still not be a
+  dialogue. Bounded by new `SCRIPT_PIPELINE_MAX_STRUCTURAL_FIXES = 1`; fires
+  only when the post-repair structural error is *exactly* the consecutive-lines
+  one (never mixed with unknown-speaker). Checkpoint metrics gain
+  `structural_fix`/`lines_before_fix`/`lines_after_fix`. 11 new tests (9 pure,
+  2 e2e); found and fixed two fixture mistakes while writing the e2e
+  success case (an imbalanced 98/2 word split tripping the *separate*
+  speaker-balance check; looking up the wrong checkpoint by list index instead
+  of `section_index`) -- neither was a bug in the merge fix itself. Recorded
+  one small, reasoned deviation from the card's own "constants pin extended"
+  wording: checked the precedent first and found neither of the two prior
+  repair-*budget* constants (Task 14.8/14.13) are in that threshold-governance
+  pin test either -- matched that established pattern instead, and did a more
+  meaningful revert-and-confirm-failure on the constant's actual gating
+  behavior (0 disables the pass, the exact pre-Task-15.2 hard-fail returns)
+  rather than a static pin assertion. Full suite: **926 passed, 0 failed**.
+  Task 15.2 status: **done**.

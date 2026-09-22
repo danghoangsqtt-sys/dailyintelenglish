@@ -32,6 +32,7 @@ from app.core.constants import (
     SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS,
     SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS,
     SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS,
+    SCRIPT_PIPELINE_MAX_STRUCTURAL_FIXES,
     SCRIPT_SECTION_AVOID_PHRASES_MAX,
     SCRIPT_SECTION_CARRY_CAP,
     SCRIPT_SECTION_TARGET_MINUTES,
@@ -350,6 +351,68 @@ def validate_section_structure(lines: list[SectionLineOut], known_speaker_ids: s
                 run_start = index
 
     return errors
+
+
+def _merge_group(group: list[SectionLineOut]) -> SectionLineOut:
+    """Task 15.2: joins one group of same-speaker lines into a single line --
+    text concatenated with a space, word order preserved exactly. `language_notes`
+    (PM review note): `collocations`/`idioms` are unioned across the group,
+    deduplicated in first-seen order (nothing any merged line carried is
+    dropped); `grammar_point` keeps the first line's value."""
+    if len(group) == 1:
+        return group[0]
+    collocations = list(dict.fromkeys(item for line in group for item in line.language_notes.collocations))
+    idioms = list(dict.fromkeys(item for line in group for item in line.language_notes.idioms))
+    return SectionLineOut(
+        speaker_id=group[0].speaker_id,
+        text=" ".join(line.text for line in group),
+        language_notes=LanguageNotesOut(
+            collocations=collocations, idioms=idioms, grammar_point=group[0].language_notes.grammar_point
+        ),
+    )
+
+
+def _chunk_run(run: list[SectionLineOut], limit: int) -> list[list[SectionLineOut]]:
+    """Splits one same-speaker `run` into exactly `limit` contiguous groups,
+    sized as evenly as possible (the same `divmod` distribution `plan_sections`
+    already uses elsewhere in this file), preserving line order."""
+    base, remainder = divmod(len(run), limit)
+    groups: list[list[SectionLineOut]] = []
+    index = 0
+    for group_index in range(limit):
+        size = base + 1 if group_index < remainder else base
+        if size == 0:
+            continue
+        groups.append(run[index : index + size])
+        index += size
+    return groups
+
+
+def merge_consecutive_lines(lines: list[SectionLineOut], limit: int) -> list[SectionLineOut] | None:
+    """Task 15.2: merges every run of more than `limit` consecutive same-speaker
+    lines into `limit` (or fewer) lines, splitting the run as evenly as possible
+    and joining each group's text with a space -- words and their order are
+    never changed, and no line is ever re-attributed to a different speaker
+    (invariants 20/21).
+
+    Returns `None`, not a merged list, when the *entire* section is one
+    speaker (zero lines from any other speaker) -- merging that down to
+    `limit` giant paragraphs would still not be a dialogue, just a
+    numerically-passing monologue, which the plan explicitly calls out as
+    unfixable: the caller falls through to the existing hard-fail unchanged."""
+    if len({line.speaker_id for line in lines}) < 2:
+        return None
+
+    merged: list[SectionLineOut] = []
+    run: list[SectionLineOut] = [lines[0]]
+    for line in lines[1:]:
+        if line.speaker_id == run[-1].speaker_id:
+            run.append(line)
+        else:
+            merged.extend([_merge_group(group) for group in _chunk_run(run, limit)] if len(run) > limit else run)
+            run = [line]
+    merged.extend([_merge_group(group) for group in _chunk_run(run, limit)] if len(run) > limit else run)
+    return merged
 
 
 def validate_section_word_budget(lines: list[SectionLineOut], target_words: int) -> list[str]:
@@ -887,6 +950,29 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
                 await _fail_provider(db, job_id, exc)
                 return
             repaired = True
+
+        # Task 15.2: a section still failing structural validation after the one
+        # semantic repair, where that failure is *exactly* the consecutive-lines
+        # one (never mixed with an unknown-speaker error, and never a second
+        # attempt beyond this one), gets one bounded merge fix instead of
+        # hard-failing outright.
+        structural_fix_applied = False
+        lines_before_fix: int | None = None
+        lines_after_fix: int | None = None
+        if (
+            structural_errors
+            and len(structural_errors) == 1
+            and structural_errors[0].startswith("more than ")
+            and SCRIPT_PIPELINE_MAX_STRUCTURAL_FIXES > 0
+        ):
+            merged_lines = merge_consecutive_lines(section_lines, SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER)
+            if merged_lines is not None:
+                lines_before_fix = len(section_lines)
+                section_lines = merged_lines
+                lines_after_fix = len(section_lines)
+                structural_fix_applied = True
+                structural_errors = validate_section_structure(section_lines, known_speaker_ids)
+
         if structural_errors:
             await _fail(db, job_id, "section_validation_failed", structural_errors)
             return
@@ -943,6 +1029,9 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
             "errors_before_repair": errors_before_repair,
             "length_repaired": length_repaired,
             "words_before_length_repair": words_before_length_repair,
+            "structural_fix": "merged_consecutive_lines" if structural_fix_applied else None,
+            "lines_before_fix": lines_before_fix,
+            "lines_after_fix": lines_after_fix,
         }
         async with write_transaction(db):
             await ai_job_service.save_checkpoint(
