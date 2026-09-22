@@ -1846,13 +1846,31 @@ quota; local text quality was never the failing factor.
   `ruff` clean; template contains no tolerance literal; a rendered-prompt test guards the range
   against constant drift. Coder-reported full suite 883 (before 14.8-b; 14.8-b adds 1 test).
 
-### 14.9 Gate B-3, local only — ⏳ NEXT (PM; awaiting the user's Coder-idle confirmation)
-### 14.6 Resume Task 13.10, local-only (revised) — pending (after 14.9)
+### 14.9 Gate B-3, local only — ✅ EXECUTED (2026-09-22, PM) — **script gate PASS 5/5; overall FAIL on learning 4/5 + media**
+
+- [x] Preflight at HEAD `71e1464` (code `4542b58`): full suite **884/884**, ruff clean, Ollama digest
+  `6488c96fa5fa`, health `cloud_enabled: false`. Report `docs/operations/phase14-gate-b3.md`.
+- [x] **Script gate PASS for the first time:** 5/5 complete (733/744/792/782/800 words), 5/5 pass all
+  seven content checks, 148–169 s per job, 0 infra, 0 `handler_exception`, max attempts 1. Per-section
+  σ 22.9% (Gate B-2 55.7%); within ±15% of nominal 52% (34.8%); the 14.8 length-only repair fired 3×
+  and cut every over-length section (217→80, 291→161, 411→151).
+- [x] Learning **4/5** (one `pack_validation_failed`: idiom not in transcript) → learning gate FAIL.
+  Media ran end to end (43 lines TTS, MP3 301.5 s, MP4 304.0 s, h264/aac, −16 LUFS) but **FAIL as
+  declared**: duration ∉ [432, 528] (≈ 146 wpm vs planned 100 — pace question still open with the
+  owner) and A/V diff 2.48 s.
+- [x] Real Ollama probes on the winning script: thumbnail suggestions OK (8.5 s, 3 schema-valid
+  variants), YouTube package OK (7.3 s, 3 titles / 13 tags / description / chapters) — both former
+  Gemini consumers work local-only.
+- [x] Samples: B1-5min and A2 pass; B1-10min structural (consecutive lines); C1 8-gram ratio 1.05%.
+- **Consequence (plan §12 14.9):** D11 stays an owner override, recorded as such; 13.10 resumes under
+  D11 (14.6). Open owner decisions unchanged: pace calibration, A/V padding; new: learning 4/5 bar.
+### 14.6 Resume Task 13.10, local-only (revised) — ⏳ NEXT (Coder: code/config/packaging docs; PM: docs/state)
 
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-22 | Gate B-3 (local-only): script gate PASS 5/5 for the first time; overall FAIL on learning 4/5 and media duration/A-V; D11 remains an owner override; 13.10 resumes under D11 | Unchanged Phase 13 thresholds applied to real evidence; the remaining failures are a learning grounding miss and two undecided product questions (pace, A/V padding), not the script pipeline |
 | 2026-09-21 | **Owner: drop Gemini** — `AI_MODE=local` default, cloud fallback OFF, key UI hidden, code dormant behind `DIE_AI_ALLOW_CLOUD`; EXE requires Ollama; local primary by explicit owner override of the Gate B promotion rule (D9–D12, ADR-001 A2) | Gate B-2: Gemini 0/5 (503 storms + free-tier 20 requests/day exhausted by retries) vs local 3/5 with every completed script passing all content checks and zero infra failures; key pools violate the API terms and do not address 503s |
 | 2026-09-21 | Gate B-2 verdicts recorded without threshold changes: local FAIL (3/5), Gemini FAIL-INFRA (0/5). Stop condition: Task 13.10 stays blocked; 14.1 reopened (14.1-b) | Declared rules applied to real evidence; the Gemini failure has two independent causes (503 window too short inside an under-used 120 s deadline; free-tier 20 requests/day exhausted by retries) — the second is an account decision, not code |
 | 2026-09-21 | Task 13.10 rollout **blocked**; Phase 14 opened as a corrective phase (D1/D2) | Gate B post-mortem: Gemini (primary) 0/2 on transient 503 with no backoff anywhere in the gateway — shipping would regress 503 handling below the pre-Phase-13 baseline; the local failure is a compounding per-section gate, not only model precision |

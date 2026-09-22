@@ -1204,5 +1204,7 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
   gate, Ollama-missing guidance, check_dependencies hard requirement) — ✅ DONE 2026-09-21, PM-accepted
 - [x] 14.8 Local hardening (prompt budget as hard range from the constant, delta-aware repair, one
   length-only repair; tolerances and consecutive-lines constant unchanged) — ✅ DONE 2026-09-21, PM-accepted
-- [ ] 14.9 Gate B-3 local (13.9 protocol + real thumbnail/YouTube on the winner; media as declared) — PM
+- [x] 14.9 Gate B-3 local — EXECUTED 2026-09-22: script gate PASS 5/5 (first time), learning 4/5,
+  media FAIL on duration/A-V as declared; thumbnail + YouTube work on Ollama. Report
+  `docs/operations/phase14-gate-b3.md`. Overall FAIL; D11 stays an owner override; 13.10 resumes.
 - [ ] 14.6 (revised) Resume Task 13.10 local-only; Ollama-stopped rollback drill replaces the Gemini drill
