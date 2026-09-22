@@ -1,6 +1,6 @@
 # Task 15.1 — Speaker Aliases in the Section Contract
 
-- **Status:** pending
+- **Status:** in progress
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** none (first task of Phase 15)
@@ -99,6 +99,86 @@ shape) is reverted by git only, same as any other prompt/pipeline change.
 ## Execution record
 
 - Plan/decisions before code:
+  1. **New wire model, existing model unchanged.** `SectionLineOut` (`speaker_id: str`)
+     stays exactly as-is -- it is the *resolved*, persisted shape every downstream
+     consumer (`validate_section_structure`, checkpoints, `script_service.save_script`)
+     already expects, and none of them change. A new `SectionLineWire` model
+     (`speaker: str`, same `text`/`language_notes`) is what the AI actually returns and
+     is parsed into; a new `_SECTION_LINES_WIRE_ADAPTER = TypeAdapter(list[SectionLineWire])`
+     replaces `_SECTION_LINES_ADAPTER` only at the two call sites that talk to the model
+     (`json_schema=...` and `parse_and_validate(...)` in `_generate_section`/
+     `_repair_section`) -- `_SECTION_LINES_ADAPTER` itself is untouched and keeps
+     serializing/deserializing checkpoints in the resolved `SectionLineOut` shape, which
+     is also why **"resume compatibility" needs no special-casing**: a checkpoint has
+     always stored the resolved shape and still does -- the alias contract is a
+     wire-format concern between the model and the server, never a persisted-data
+     concern, so an old checkpoint and a new one are byte-identically shaped.
+  2. **Resolution function**, pure and unit-testable:
+     `resolve_speaker(raw: str, speakers: list[dict]) -> tuple[str, str | None]`
+     (returns `(resolved_id_or_original_value, kind)`; `kind is None` means
+     unresolved). Tried in this exact order:
+     - exact alias (`S{i}`, 1-indexed in `speakers` order -- the same order the
+       section/repair prompt's own `{% for speaker in speakers %}` loop assigns
+       aliases in, via Jinja's `loop.index`, so the two are consistent by
+       construction with no separate alias list threaded through the render call);
+     - alias case/whitespace-insensitive;
+     - the speaker's display name, `.strip().casefold()` compared, **only when the
+       name is unique across the project** (PM's note 1) -- computed via a
+       `Counter` of casefolded names; two same-named speakers means this rule
+       contributes nothing for either of them, not a guess;
+     - an exact match against a known speaker UUID;
+     - **safety net**: gated first by a loose "UUID-shaped" regex
+       (`^[0-9a-f-]{8,}$`, case-insensitive -- deliberately loose, not the strict
+       8-4-4-4-12 UUID grammar, since the whole point is to catch a near-miss like
+       the real trigger case's *missing dash group*, which a strict pattern would
+       reject outright); among UUID-shaped values, every known id is scored via
+       `difflib.SequenceMatcher(None, raw, known_id).ratio()`, and the value
+       resolves **only if exactly one** id scores ≥ `SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO
+       = 0.85` (PM's note 2 -- two-or-more ties above the threshold is unknown, not
+       a guess between them, mirrored directly by `len(matches) == 1`).
+     - Anything else: `(raw, None)` -- the original, unresolved value passes through
+       unchanged into the existing `SectionLineOut`, so `validate_section_structure`'s
+       existing "unknown speaker_id(s)" check catches it with **zero changes to that
+       function** -- the exact same error shape as today.
+  3. **`resolve_section_lines(wire_lines, speakers) -> list[SectionLineOut]`** applies
+     `resolve_speaker` to every wire line and logs each one:
+     `logger.info("script_speaker_resolved kind=%s original=%r resolved=%s", kind,
+     raw, resolved)` -- only when `kind is not None` (an unresolved value is about to
+     hit the existing unknown-speaker error path, which already reports it; no need
+     to double-log a non-resolution). Called once, right after `parse_and_validate`,
+     in both `_generate_section` and `_repair_section`, before either function's
+     existing `validate_section_structure`/`validate_section_word_budget` calls --
+     both of those stay byte-for-byte unchanged, operating on the now-resolved lines
+     exactly as they operate on today's lines.
+  4. **Repair prompt's "previous answer" echo must speak the same alias contract.**
+     `_repair_section` currently serializes `previous_lines` (already-resolved
+     `SectionLineOut`, UUID-shaped) straight into the repair prompt via
+     `_SECTION_LINES_ADAPTER.dump_json(...)`. Under the new alias contract this would
+     show the model a self-contradictory example (asked for `"speaker": "S1"`, shown
+     its own previous answer in the old `"speaker_id": "<uuid>"` shape). New helper
+     `_lines_to_wire_json(lines, speakers)` reverse-maps each line's `speaker_id` back
+     to its alias for display; a line whose `speaker_id` was never resolved (exactly
+     the case that triggered this repair) falls back to showing the *literal original
+     value* the model produced -- more useful for a repair prompt than either hiding
+     it or showing a fabricated alias for something that was never resolved.
+  5. **Prompt changes**: `section.txt`'s Speakers section changes `id: {{ speaker.id }}`
+     to `alias: S{{ loop.index }}` (Jinja's built-in loop counter, no new render
+     parameter); its Output Format's `"speaker_id": "the exact id (UUID)..."` becomes
+     `"speaker": "the exact alias (e.g. S1)..."`; rule 2 ("use only the id values")
+     becomes "use only the alias values". `repair.txt` gets the identical alias
+     treatment for its own Speakers list and Output Format line.
+  6. **New constant**: `SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO = 0.85` in
+     `app/core/constants.py`, alongside the other `SCRIPT_PIPELINE_*`/`SCRIPT_*`
+     governance constants, with a comment explaining the difflib safety net and
+     citing the real trigger case.
+  7. **New tests** in `tests/test_script_pipeline.py`: pure tests for every
+     `resolve_speaker` branch, including the two literal real-world values
+     (`"ff5f20e0-417b-8d9f-752e844d46f0"` -> the real
+     `"ff5f20e0-4082-417b-8d9f-752e844d46f0"` (Alex) via the safety net; a
+     constructed value equidistant between two known ids -> unresolved); e2e tests
+     for alias-returned/near-miss-returned/unresolvable/old-checkpoint-resume per
+     the card's verification list; constants pin extension +
+     revert-and-confirm-failure on the safety net.
 - Commands and results:
 - Deviations:
 - Revert-and-confirm-failure evidence:
