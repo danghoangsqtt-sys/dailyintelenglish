@@ -4,9 +4,9 @@
 
 - **Phase:** 13
 - **Slug:** `13-local-first-ai-reliability`
-- **Status:** in_progress
+- **Status:** complete (under D11 — see closing decision record below)
 - **Started:** 2026-09-18
-- **Closed:** —
+- **Closed:** 2026-09-22
 - **Controlling plan:** `docs/implementation/phase-13-local-first-ai-reliability.md`
 - **Source brainstorm:** `docs/brainstorm/session-2026-09-18.md`
 - **Authorization:** user explicitly invoked `$vp-auto` and instructed execution after
@@ -39,7 +39,7 @@
 | 13.7 | Gemini fallback and compatibility | done | Forced fallback |
 | 13.8 | Automated regression/packaging gate | done | Full suite/build |
 | 13.9 | Real no-mock bake-off and operational trial | done | Gate B FAIL -- Gemini-primary/local-experimental |
-| 13.10 | Rollout, docs, and rollback drill | pending | Release gate |
+| 13.10 | Rollout, docs, and rollback drill | **complete under D11** | Release gate |
 
 ## Decisions
 
@@ -318,3 +318,25 @@
   not-executed. **Gate B decision: FAIL** -- local stays experimental, Gemini remains
   primary, per the controlling plan's own decision rule; no threshold weakened. Full
   report: `docs/operations/phase13-acceptance.md`. Task 13.9 moved to `done`.
+- 2026-09-21/22 (via Phase 14, Amendment D/D9-D11/D16): the owner overrode Gate B's
+  original FAIL-driven "Gemini-primary, local-experimental" branch and decided to drop
+  Gemini entirely rather than pursue a Gemini fix (D9-D12) -- local becomes the sole
+  supported runtime by explicit owner decision, not because a later Gate B run passed.
+  A third local-only run, **Gate B-3** (Phase 14 Task 14.9,
+  `docs/operations/phase14-gate-b3.md`), then measured the Task 14.7/14.8 local-hardening
+  changes for real: script gate **PASS 5/5 for the first time** (0 infra failures, all
+  content checks, repair budget bounded); learning 4/5; media ran to completion but
+  failed its declared thresholds on measured pace and A/V drift -- both recorded as open
+  product questions (Amendment G, D13/D14), not silently resolved. Task 13.10 (Phase 14
+  Task 14.6 revised) then shipped the local-only rollout, documentation, and a rebuilt
+  rollback drill (`hybrid → gemini` replaced by `Ollama stopped → guidance → Ollama
+  started → generation resumes`, since Gemini is no longer a recovery path under
+  ADR-001 A2) -- commits `4a7383e`/`1c89b6a`/`1f723de`, full suite 884/0. **Decision
+  record (D16): Task 13.10 is complete under D11 -- local is the primary and only
+  runtime by owner decision, not an evidence-backed promotion from Gate B-3 alone**
+  (Gate B-3's own script-gate pass is real and material evidence toward local's
+  viability, but the *decision* to ship local-only was already made under D9-D11 before
+  Gate B-3 ran). The residual learning/media gaps Gate B-3 found are **not** blockers to
+  this phase's closure -- they carry forward as Phase 14 tasks 14.10 (pace calibration)
+  and 14.11 (learning repair by removal), re-measured by Phase 14's own Gate B-4
+  (14.12). **Phase 13 is complete.**

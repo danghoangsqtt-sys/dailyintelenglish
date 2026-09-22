@@ -47,16 +47,21 @@
 | 14.1-b | Gemini backoff redesign (retryDelay, daily-429 no-retry, wider 503 window) | — | **dropped (D12)** | Superseded by the owner's decision to drop Gemini (Amendment D) — never started, no task card was ever created |
 | 14.7 | Local-only mode, config-first (Amendment D) | Coder | **done** (Amendment F applied; 879 passed, 0 failed) | see task-14.7.md verification |
 | 14.8 | Local hardening: over-length sections, consecutive-lines rule (Amendment D) | Coder | **done** (883 passed, 0 failed) | see task-14.8.md verification |
-| 14.9 | Gate B-3, local only (Amendment D) | PM | pending | Depends on 14.7 + 14.8 done; Coder idle during the run |
-| 14.6 (revised) | Resume Task 13.10, local-only rollout (Amendment D) | Both | pending | Depends on 14.7 + 14.8 + 14.9 |
+| 14.9 | Gate B-3, local only (Amendment D) | PM | **done** | script gate PASS 5/5 (first time); learning 4/5; media FAIL as declared (measured pace); see `docs/operations/phase14-gate-b3.md` |
+| 14.6 (revised) | Resume Task 13.10, local-only rollout (Amendment D) | Both | **done** | Coder side `1c89b6a`/`1f723de` (884 passed, 0 failed); PM side `d5c817e`/`48695ba`/`c6c2f35`; Phase 13 Task 13.10 complete under D11 |
+| 14.10 | Pace calibration, measured not assumed (Amendment G) | Coder | pending | Depends on 14.6 done; D13's measured table, see task-14.10.md |
+| 14.11 | Learning repair by removal (Amendment G) | Coder | pending | Depends on 14.10 done; D15, see task-14.11.md |
+| 14.12 | Gate B-4, local only (Amendment G) | PM | pending | Depends on 14.10 + 14.11 done; Coder idle during the run |
 
 Execution order (original): 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 ran in
 parallel (PM). 14.4b started after 14.1–14.4a were merged and the PM reviewed the diffs.
 
-**Execution order (Amendment D, current):** 14.7 → 14.8 (Coder, sequential; PM reviews
-each diff before the next starts) → 14.9 (PM runs; Coder idle) → 14.6 (revised). Task
-14.1-b is dropped (D12) and does not appear in this order.
-14.6 last.
+**Execution order (Amendment D, complete):** 14.7 → 14.8 → 14.9 → 14.6 (revised), all
+done. Task 14.1-b is dropped (D12) and does not appear in this order.
+
+**Execution order (Amendment G, current):** README copy fix (14.6, done) → 14.10 → 14.11
+(Coder, doc-first cards reviewed by the PM before code, sequential) → 14.12 (PM; Coder
+idle) → Phase 14 close-out.
 
 ## Decisions
 
@@ -336,3 +341,59 @@ each diff before the next starts) → 14.9 (PM runs; Coder idle) → 14.6 (revis
   formula. No deviations -- every required-behaviour and verification item
   implemented within the allowed files. Full suite: **883 passed, 0
   failed**. Task 14.8 status: **done**.
+- 2026-09-21/22: PM's independent review of `ac61cf8` accepted 14.8's design and
+  tests but flagged one CR-02 finding (magic numbers): `prompts/script/section.txt`
+  hard-coded its own copy of `SCRIPT_SECTION_WORD_TOLERANCE` as `0.85`/`1.15`
+  literals. Fixed as **14.8-b** (`4542b58`): `_generate_section` now computes
+  `min_words`/`max_words` from the real constant once and passes both to the
+  template; added a regression test asserting the rendered prompt text matches
+  values derived from the constant. `pytest tests/test_script_pipeline.py` → 52
+  passed. PM then ran **Gate B-3** (Task 14.9, `docs/operations/phase14-gate-b3.md`,
+  commit `c6c2f35`): script gate **PASS 5/5 for the first time** (733/744/792/
+  782/800 words, all 7 content checks, 0 infra failures, max repair attempts 1,
+  per-section deviation σ down to 22.9% from 55.7%; the length-only repair pass
+  fired 3 times and trimmed correctly, e.g. 217→80/291→161/411→151 words over
+  target). Learning 4/5 (one idiom not in transcript). Media ran to completion but
+  FAILED the declared thresholds (301.5s at ~146 wpm vs. the ~100 wpm plan
+  assumed; A/V diff 2.48s vs. the 1.0s threshold) -- both now open product
+  questions, not silently resolved. Overall Gate B-3 = FAIL (learning + media);
+  per plan §12, D11 stands as the owner override regardless, so Task 13.10/14.6
+  proceeds.
+- 2026-09-22: Coder implemented Task 14.6 (revised) Coder side -- a live,
+  no-mock rollback drill (real `uvicorn` server, throwaway `DATA_DIR`, a free
+  port, real Ollama stop/start with all 6 documented env vars, real Playwright
+  with no route mocking) proved: Ollama stopped → app starts non-blocking,
+  `/api/ai/health` reflects it, Step 2/3 disable Generate and show install/pull
+  guidance with no Gemini text, non-AI features still work → Ollama started →
+  `/api/ai/health`/`/api/tags` both confirm digest `6488c96fa5fa` → a real
+  script AI job and a real learning AI job both reached `complete` against real
+  Ollama → guidance disappears on reload. Repeated against a freshly-built
+  packaged `.exe` with Ollama stopped: same result. `.viepilot/ARCHITECTURE.md`/
+  `AI-GUIDE.md`/`PROJECT-CONTEXT.md` updated (every direct Gemini/AI-engine
+  mention now states Ollama-local-default/Gemini-dormant; a deliberately bounded
+  fix, not a full rewrite of these pre-Phase-13 documents -- recorded as a scope
+  call, not a deviation). Full suite: **884 passed, 0 failed**. Commits `4a7383e`
+  (plan), `1c89b6a` (implementation). PM accepted (**D16**) with one copy-fix
+  request (README's rollback note still pointed at the in-app Settings key form
+  that Task 14.7 removed) -- fixed and pushed (`1f723de`). **With 14.6 done,
+  Task 13.10 is complete under D11 and Phase 13 closes**: local is the primary
+  and only runtime by owner decision; Gate B-3's script gate passed 5/5 under
+  the unchanged rule; the residual learning/media gaps carry forward as Phase 14
+  tasks 14.10/14.11, re-measured by Gate B-4 (14.12).
+- 2026-09-22: The owner delegated the three product decisions Gate B-3 raised
+  (pace calibration, A/V padding, learning repair) to the PM, who measured pace
+  for real against Edge TTS (5 speeds × the Gate B-3 winning script,
+  `data/quality_reviews/phase14/gate-b3/pace-calibration.json`) and recorded
+  Amendment G (`fd35485`, plan §13): **D13** replaces the never-achieved
+  `CEFR_WORDS_PER_MINUTE`/speed defaults with the measured table (A1/A2 111wpm
+  @0.75, B1 125wpm @0.85, B2 132wpm @0.90, C1 145wpm @1.00, C2 159wpm @1.10);
+  **D14** requires investigating the real ~2.5s A/V tail before any renderer
+  change or threshold re-declaration; **D15** adds learning repair-by-removal
+  (drop still-ungrounded/inconsistent items after the one repair, publish only
+  if every count still meets `LEARNING_MIN_*`, record `dropped_items` in
+  `metrics_json`); **D16** formally closes Phase 13/Task 13.10 as recorded above.
+  Coder wrote `task-14.10.md` (pace calibration), `task-14.11.md` (learning
+  repair by removal), and `task-14.12.md` (Gate B-4, PM-owned description-only,
+  mirroring the task-14.9.md pattern) from plan §13, doc-first and before any
+  implementation file is touched -- awaiting PM's review of the three cards
+  before starting 14.10.
