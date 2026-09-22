@@ -873,7 +873,7 @@ audits this session (2 on 2026-09-18, this being the 3rd) is now resolved.
 
 ## Phase 13 — Local-First AI Reliability
 
-**Status:** In progress | **Started:** 2026-09-18 | **Scope:** user-approved post-beta
+**Status:** ✅ Closed 2026-09-22 under owner decision D11 (local-only; Gate B-3 script gate PASS 5/5; residuals in Phase 14) | formerly In progress | **Started:** 2026-09-18 | **Scope:** user-approved post-beta
 
 Replace synchronous long-running script/learning requests with durable SQLite jobs;
 centralize Ollama/Gemini provider policy; generate long scripts through validated,
@@ -1207,4 +1207,8 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
 - [x] 14.9 Gate B-3 local — EXECUTED 2026-09-22: script gate PASS 5/5 (first time), learning 4/5,
   media FAIL on duration/A-V as declared; thumbnail + YouTube work on Ollama. Report
   `docs/operations/phase14-gate-b3.md`. Overall FAIL; D11 stays an owner override; 13.10 resumes.
-- [ ] 14.6 (revised) Resume Task 13.10 local-only; Ollama-stopped rollback drill replaces the Gemini drill
+- [x] 14.6 (revised) Resume Task 13.10 local-only — ✅ DONE 2026-09-22: real Ollama-stopped/started
+  rollback drill and packaged smoke build; Task 13.10 complete under D11; Phase 13 closed.
+- [ ] 14.10 Pace calibration (D13/D14: measured WPM table + per-level default speed; A/V investigation) — Coder
+- [ ] 14.11 Learning repair by removal (D15) — Coder
+- [ ] 14.12 Gate B-4 local at the calibrated targets — PM

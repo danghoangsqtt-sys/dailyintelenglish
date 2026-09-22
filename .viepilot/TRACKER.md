@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Phase:** 1–12 done; Phase 13 in progress — Task 13.10 **blocked** (Gate B post-mortem, decision D1); Phase 14 in progress — **local-only release path after owner decision D9–D12** (Gemini dormant); 14.7 → 14.8 → 14.9 → 14.6 remain (two parallel sessions: PM = Opus 5, Coder = Sonnet 5)
+**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); Phase 14 in progress — remaining 14.10 (pace calibration), 14.11 (learning repair-by-removal), 14.12 (Gate B-4) (two parallel sessions: PM = Opus 5, Coder = Sonnet 5)
 **Day:** 6 / 21  
 **Started:** 2026-09-10 (Phases 1–12 complete; Phase 13 opened 2026-09-18 as user-approved reliability scope beyond the original plan)
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
@@ -1864,12 +1864,44 @@ quota; local text quality was never the failing factor.
 - [x] Samples: B1-5min and A2 pass; B1-10min structural (consecutive lines); C1 8-gram ratio 1.05%.
 - **Consequence (plan §12 14.9):** D11 stays an owner override, recorded as such; 13.10 resumes under
   D11 (14.6). Open owner decisions unchanged: pace calibration, A/V padding; new: learning 4/5 bar.
-### 14.6 Resume Task 13.10, local-only (revised) — ⏳ NEXT (Coder: code/config/packaging docs; PM: docs/state)
+### 14.6 Resume Task 13.10, local-only (revised) — ✅ DONE (2026-09-22; Coder `4a7383e`/`1c89b6a`, PM-accepted; one README copy nit assigned)
+
+- [x] Live rollback drill (real uvicorn on a throwaway `DIE_DATA_DIR`, free port, real Ollama stop/start
+  with all six env vars, Playwright without route mocks): Ollama stopped → health `ollama_reachable: false`,
+  non-AI project create/list work, Step 2/3 show the disabled button + install guidance with no "Gemini"
+  text; Ollama started → digest `6488c96fa5fa` confirmed via health and `/api/tags`, a real script job and
+  a real learning job complete with `actual_provider: ollama`, guidance gone on reload. No DB repair.
+- [x] Packaged smoke build rebuilt with today's code (pyinstaller invoked directly; `build_exe.ps1` hit the
+  machine's default execution policy — README gained a `-ExecutionPolicy Bypass` note): starts with Ollama
+  stopped, `GET /` 200, health reflects Ollama down, non-AI create works, Step 2 shows guidance.
+- [x] `.viepilot/ARCHITECTURE.md`, `AI-GUIDE.md`, `PROJECT-CONTEXT.md`: every AI-engine mention now says
+  Ollama local by default, Gemini dormant (bounded to those mentions; unrelated pre-Phase-13 staleness
+  recorded, not silently expanded). README/.env.example/check_dependencies/spec re-verified from 14.7.
+- [x] PM: `docs/operations/local-ai.md` (14.7), `docs/api.md` regenerated, state files. Full suite 884.
+- **Task 13.10 is therefore complete under owner decision D11** (plan §13 D16). Phase 13 closes with an
+  explicit decision record: local is the primary and only runtime by owner decision; Gate B-3 script gate
+  passed 5/5 under the unchanged rule; learning/media residuals are Phase 14 tasks 14.10/14.11 and are
+  re-measured in Gate B-4.
+
+### Amendment G (2026-09-22) — owner delegated the open decisions to the PM; D13–D16
+
+PM measured before deciding (real Edge TTS on the Gate B-3 winning script, five speeds): 111 / 125 /
+132 / 145 / 159 wpm incl. silences at speed 0.75 / 0.85 / 0.9 / 1.0 / 1.1 — the 1.0 point reproduces
+the media run exactly; even the floor speed cannot reach 432 s with 730 words. Decisions: **D13** planned
+pace = measured pace (per-level default speed + measured WPM table; B1 8-min target → 1,000 words;
+prompts updated in sync; thresholds unchanged); **D14** A/V padding: investigate first, fix if
+unintentional, else re-declare ≤ 3.0 s with the reason; **D15** learning repair-by-removal bounded by the
+existing minimums, dropped items recorded; **D16** 13.10 closes under D11.
+
+### 14.10 Pace calibration (D13/D14) — pending (Coder; PM measurement done: `gate-b3/pace-calibration.json`)
+### 14.11 Learning repair by removal (D15) — pending (Coder, after 14.10)
+### 14.12 Gate B-4, local only — pending (PM, after 14.11)
 
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-22 | Owner delegated the open decisions to the PM → D13 measured pace calibration (per-level default speed + measured WPM table, B1 8-min = 1,000 words), D14 A/V rule declared before investigation, D15 learning repair-by-removal bounded by existing minimums, D16 Task 13.10 complete under D11 and Phase 13 closed | Real Edge TTS measurement at five speeds; two gates each lost one learning pack to a single ungrounded item; thresholds unchanged throughout |
 | 2026-09-22 | Gate B-3 (local-only): script gate PASS 5/5 for the first time; overall FAIL on learning 4/5 and media duration/A-V; D11 remains an owner override; 13.10 resumes under D11 | Unchanged Phase 13 thresholds applied to real evidence; the remaining failures are a learning grounding miss and two undecided product questions (pace, A/V padding), not the script pipeline |
 | 2026-09-21 | **Owner: drop Gemini** — `AI_MODE=local` default, cloud fallback OFF, key UI hidden, code dormant behind `DIE_AI_ALLOW_CLOUD`; EXE requires Ollama; local primary by explicit owner override of the Gate B promotion rule (D9–D12, ADR-001 A2) | Gate B-2: Gemini 0/5 (503 storms + free-tier 20 requests/day exhausted by retries) vs local 3/5 with every completed script passing all content checks and zero infra failures; key pools violate the API terms and do not address 503s |
 | 2026-09-21 | Gate B-2 verdicts recorded without threshold changes: local FAIL (3/5), Gemini FAIL-INFRA (0/5). Stop condition: Task 13.10 stays blocked; 14.1 reopened (14.1-b) | Declared rules applied to real evidence; the Gemini failure has two independent causes (503 window too short inside an under-used 120 s deadline; free-tier 20 requests/day exhausted by retries) — the second is an account decision, not code |
