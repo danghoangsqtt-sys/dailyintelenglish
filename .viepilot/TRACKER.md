@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); **Phase 14 closed 2026-09-22** (local-only; Gate B-5: script 5/5, samples 4/4, learning 5/5 PASS; media duration −4.3% FAIL; D11 owner override stands). Next phase not yet opened.
+**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); Phase 14 closed 2026-09-22. **Phase 15 opened 2026-09-22 — Local Script Robustness** (owner's first hands-on run died on a truncated speaker UUID; structural checks get deterministic, no-invention fixes). Controlling plan `docs/implementation/phase-15-local-robustness.md`.
 **Day:** 6 / 21  
 **Started:** 2026-09-10 (Phases 1–12 complete; Phase 13 opened 2026-09-18 as user-approved reliability scope beyond the original plan)
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
@@ -1975,10 +1975,26 @@ Gate B-5: B1 8-min completion 1/5 → 5/5 with every content check passing; samp
 Residual, for a future phase (not started): multi-script pace calibration and a declared media-gate
 protocol change; deterministic consecutive-lines fix; `_record_dropped_items` layering cleanup.
 
+## Phase 15 Task Status
+
+**Status:** In progress | **Opened:** 2026-09-22 | **Scope:** structural-failure robustness for the local
+script pipeline. Trigger: the owner's first real run after Phase 14 (A2 / small_talk / 10 min / 2 speakers)
+died at section 3 with `unknown speaker_id(s): ['ff5f20e0-417b-8d9f-752e844d46f0']` — the model dropped
+one group of the real UUID `ff5f20e0-4082-417b-8d9f-752e844d46f0` (Alex). Same class as the Gate B-4
+B1-5min sample. Plan `docs/implementation/phase-15-local-robustness.md` (invariants 20–23: no invented
+speaker, no server-invented content, thresholds unchanged).
+
+### 15.1 Speaker aliases in the section contract + deterministic id resolution — pending (Coder, P0)
+### 15.2 Deterministic consecutive-lines fix (merge same-speaker runs; never re-attribute) — pending (Coder, P1)
+### 15.3 Runner per-gate evidence path; `set_job_metric` layering cleanup — pending (Coder, P2)
+### 15.4 Gate B-6 local incl. the owner's failing configuration — pending (PM)
+### 15.5 Multi-script pace calibration — optional, on the owner's word
+
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-22 | Phase 15 opened (delegated authority): section contract switches to speaker aliases (S1/S2) resolved server-side, with a ≥ 0.85-similarity safety net for echoed UUIDs; consecutive-lines runs merged deterministically (never re-attributed); thresholds unchanged | The owner's first real run lost 3 minutes to a copied-UUID slip the server can resolve without inventing anything; the two structural checks were the only ones without a repair path |
 | 2026-09-22 | Gate B-5: script/samples/learning all PASS at 1,000 words; media duration 413.3 s FAIL (−4.3%). **Phase 14 closed** as declared in plan §14; D11 remains an owner override; multi-script pace calibration and a declared media-gate protocol change are proposed for a future phase | The phase must not chase gates indefinitely; every other gate passes under unchanged thresholds; the remaining miss is a single-script calibration spread, measured and documented |
 | 2026-09-22 | Gate B-4: FAIL 3/5 — both deaths on the repeated-8-gram check at 1,000 words; A/V fixed (0.00 s); media duration blocked by the runner's hard-coded speed. D17 bounded repetition repair (threshold unchanged), D18 runner applies the level default speed, Gate B-5 then closes Phase 14 regardless of verdict | Word count is solved; repetition is the next measurable failure class and has no repair path today; the phase must not chase gates indefinitely |
 | 2026-09-22 | Owner delegated the open decisions to the PM → D13 measured pace calibration (per-level default speed + measured WPM table, B1 8-min = 1,000 words), D14 A/V rule declared before investigation, D15 learning repair-by-removal bounded by existing minimums, D16 Task 13.10 complete under D11 and Phase 13 closed | Real Edge TTS measurement at five speeds; two gates each lost one learning pack to a single ungrounded item; thresholds unchanged throughout |

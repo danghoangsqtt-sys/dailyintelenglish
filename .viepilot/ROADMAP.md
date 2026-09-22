@@ -1218,3 +1218,14 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
 - [x] 14.13 Repetition repair (D17; 1% threshold unchanged) — ✅ DONE 2026-09-22; fired 3× in B-5, all completed
 - [x] 14.14 Gate B-5 — EXECUTED 2026-09-22: script 5/5, samples 4/4, learning 5/5 PASS; media 413.3 s FAIL.
   Report `docs/operations/phase14-gate-b5.md`. **Phase 14 closed.**
+
+## Phase 15 — Local Script Robustness
+
+**Status:** In progress | **Opened:** 2026-09-22 | Plan `docs/implementation/phase-15-local-robustness.md`.
+Trigger: owner's first hands-on run died on a truncated speaker UUID (structural check with no repair path).
+
+- [ ] 15.1 Speaker aliases (S1/S2) in the section contract, server-side resolution, ≥ 0.85 safety net — Coder
+- [ ] 15.2 Deterministic consecutive-lines fix (merge same-speaker runs) — Coder
+- [ ] 15.3 Runner per-gate evidence path; `set_job_metric` cleanup — Coder
+- [ ] 15.4 Gate B-6 local incl. the owner's A2/small_talk/10-min configuration — PM
+- [ ] 15.5 Multi-script pace calibration — optional
