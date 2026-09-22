@@ -20,6 +20,15 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
 - This is the LAST section of the episode — close it out naturally (a brief
   outro/wrap-up is appropriate here).
 {% endif %}
+{% if avoid_phrases %}
+
+## Avoid Repeating These Phrases
+These phrases have already appeared multiple times earlier in this episode —
+do not reuse them:
+{% for phrase in avoid_phrases %}
+- "{{ phrase }}"
+{% endfor %}
+{% endif %}
 
 ## Speakers
 Each speaker is identified by a unique `id`. Two speakers may share a display

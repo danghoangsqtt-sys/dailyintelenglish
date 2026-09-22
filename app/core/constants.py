@@ -257,6 +257,18 @@ SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS = 1
 # not a second semantic repair. 0 disables the pass without a code revert.
 SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS = 1
 
+# Phase 14 Task 14.13 (Amendment H, D17) -- Gate B-4's two script failures both
+# died on the repeated-8-gram check alone (word count already solved by Task
+# 14.10). A global failure that is repetition-only gets one repair of the
+# single worst section (attributed by repeated-window start position), bounded
+# separately from every other repair budget above. 0 disables the pass without
+# a code revert.
+SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS = 1
+# Caps the section prompt's proactive "avoid these repeated phrases" continuity
+# note so it stays bounded as sections accumulate, instead of growing without
+# limit across a long episode.
+SCRIPT_SECTION_AVOID_PHRASES_MAX = 8
+
 # Phase 13 -- grounded learning pipeline (app/services/learning_pipeline.py).
 # The prompt gives no explicit target count for vocabulary/idioms -- "at least
 # one" is the only honest floor to enforce without inventing an undocumented

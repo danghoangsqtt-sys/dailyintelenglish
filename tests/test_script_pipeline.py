@@ -310,6 +310,80 @@ def test_repeated_8gram_ratio_zero_for_unique_text():
     assert script_pipeline.repeated_8gram_ratio(words) == 0.0
 
 
+# --- Task 14.13: repetition-repair pure functions ------------------------------------
+
+
+def _section_lines(*texts: str) -> list:
+    return [script_pipeline.SectionLineOut(speaker_id="a", text=text) for text in texts]
+
+
+def test_find_repeated_8grams_by_section_attributes_repeat_to_its_own_section():
+    repeated = "a b c d e f g h"
+    sections = [
+        (1, _section_lines(repeated, _words(20, 100))),
+        (2, _section_lines(repeated, _words(20, 200))),
+    ]
+    grams, per_section = script_pipeline.find_repeated_8grams_by_section(sections)
+    assert grams == [tuple(repeated.split())]
+    assert per_section == {1: 1, 2: 1}
+
+
+def test_find_repeated_8grams_by_section_attributes_cross_boundary_repeat_to_start_section():
+    """A repeated 8-word window whose first word is in section 1 but whose last
+    words spill into section 2 is attributed to section 1 -- the section it
+    *starts* in, matching the card's worst-section selection rule."""
+    repeated = "a b c d e f g h"
+    sections = [
+        (1, _section_lines(f"{_words(20, 100)} a b c d")),  # ends mid-phrase
+        (2, _section_lines(f"e f g h {_words(20, 200)}")),  # completes it
+        (3, _section_lines(repeated)),  # a second, separate occurrence
+    ]
+    grams, per_section = script_pipeline.find_repeated_8grams_by_section(sections)
+    assert grams == [tuple(repeated.split())]
+    assert per_section == {1: 1, 3: 1}
+    assert 2 not in per_section
+
+
+def test_find_repeated_8grams_by_section_picks_the_worst_by_occurrence_count():
+    repeated = "a b c d e f g h"
+    sections = [
+        (1, _section_lines(repeated, _words(20, 100))),  # 1 occurrence
+        (2, _section_lines(repeated, repeated, _words(20, 200))),  # 2 occurrences
+    ]
+    _grams, per_section = script_pipeline.find_repeated_8grams_by_section(sections)
+    worst_index = max(per_section, key=per_section.get)
+    assert worst_index == 2
+    assert per_section[2] > per_section[1]
+
+
+def test_find_repeated_8grams_by_section_empty_for_no_repeats():
+    sections = [(1, _section_lines(_words(20, 0))), (2, _section_lines(_words(20, 100)))]
+    grams, per_section = script_pipeline.find_repeated_8grams_by_section(sections)
+    assert grams == []
+    assert per_section == {}
+
+
+def test_find_repeated_8grams_by_section_empty_for_fewer_than_8_words():
+    sections = [(1, _section_lines("only three words"))]
+    grams, per_section = script_pipeline.find_repeated_8grams_by_section(sections)
+    assert grams == []
+    assert per_section == {}
+
+
+def test_frequent_repeated_phrases_ranks_by_frequency_and_respects_limit():
+    words = (
+        ("common phrase used many times over " * 3).split()
+        + ("less common phrase seen just twice " * 2).split()
+        + _words(30, 900).split()
+    )
+    phrases = script_pipeline.frequent_repeated_phrases([w.casefold() for w in words], limit=1)
+    assert phrases == ["common phrase used many times over common phrase"]
+
+
+def test_frequent_repeated_phrases_empty_for_no_repeats():
+    assert script_pipeline.frequent_repeated_phrases(_words(20).split()) == []
+
+
 def test_validate_global_topic_relevance_is_a_warning_not_a_hard_error():
     lines = [script_pipeline.SectionLineOut(speaker_id="a", text=_words(100, 0))]
     hard_errors, warnings = script_pipeline.validate_global(
@@ -320,15 +394,16 @@ def test_validate_global_topic_relevance_is_a_warning_not_a_hard_error():
 
 
 def test_constants_pin_word_tolerances_are_unchanged_by_task_14_3():
-    """Task 14.3/14.8 governance note: SCRIPT_GLOBAL_WORD_TOLERANCE,
-    SCRIPT_SECTION_WORD_TOLERANCE, and SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER
-    are a stop condition, not an implementation choice -- this pins all three
-    values so a silent edit fails CI."""
+    """Task 14.3/14.8/14.13 governance note: SCRIPT_GLOBAL_WORD_TOLERANCE,
+    SCRIPT_SECTION_WORD_TOLERANCE, SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER, and
+    SCRIPT_MAX_REPEATED_8GRAM_RATIO are a stop condition, not an implementation
+    choice -- this pins all four values so a silent edit fails CI."""
     from app.core import constants
 
     assert constants.SCRIPT_GLOBAL_WORD_TOLERANCE == 0.10
     assert constants.SCRIPT_SECTION_WORD_TOLERANCE == 0.15
     assert constants.SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER == 5
+    assert constants.SCRIPT_MAX_REPEATED_8GRAM_RATIO == 0.01
 
 
 def test_constants_pin_pace_calibration_table_matches_the_d13_measurement():
@@ -1288,3 +1363,274 @@ async def test_pipeline_repair_count_hits_the_2n_plus_1_ceiling(db):
     lines = await script_service.get_script(db, project["id"])
     total_words = sum(len(line["text"].split()) for line in lines)
     assert 720 <= total_words <= 880  # 450 + 380 = 830
+
+
+# --- Task 14.13: repetition repair (D17) ----------------------------------------------
+
+
+def _lines_json(*speaker_texts: tuple[str, str]) -> str:
+    """Build a `SectionLineOut[]` JSON body from `(speaker_id, literal text)`
+    pairs -- unlike `_section_json`, this lets a test control the exact words
+    (e.g. to deliberately plant a repeated 8-gram)."""
+    return json.dumps([{"speaker_id": speaker_id, "text": text} for speaker_id, text in speaker_texts])
+
+
+REPEATED_PHRASE = "the weather today is quite nice actually indeed"  # exactly 8 words
+
+
+async def test_pipeline_repetition_only_failure_repairs_the_worst_section_and_completes(db):
+    """Verification item 2: a repetition-only global failure -- word count,
+    balance, and duplicates all pass, only the repeated-8-gram check fails --
+    gets one repair of the section attributed as the worst offender, then
+    completes."""
+    project = await _project(db, duration_minutes=1.6)  # 1.6 * 125 wpm (B1) = 200
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {
+            "title": "T",
+            "sections": [
+                {"index": 1, "objective": "cover the first part here", "target_words": 100},
+                {"index": 2, "objective": "cover the second part here", "target_words": 100},
+            ],
+        }
+    )
+    # Section 1: the repeated phrase appears once (100 words total, passes its
+    # own ±15% budget check individually -- no per-section repair triggered).
+    section1_json = _lines_json(
+        (alex_id, f"{REPEATED_PHRASE} {_words(42, 0)}"),
+        (maya_id, _words(50, 100)),
+    )
+    # Section 2 (last): the SAME phrase appears twice -- the worst offender
+    # (2 occurrences starting here vs. section 1's 1).
+    section2_json = _lines_json(
+        (alex_id, f"{REPEATED_PHRASE} {_words(17, 300)}"),
+        (maya_id, f"{REPEATED_PHRASE} {_words(17, 400)}"),
+        (alex_id, _words(25, 500)),
+        (maya_id, _words(25, 600)),
+    )
+    # The repetition repair's fixed replacement for section 2 -- no repeated
+    # phrase, still 100 words, still passes its own ±15% budget.
+    section2_fixed_json = _lines_json(
+        (alex_id, _words(50, 700)),
+        (maya_id, _words(50, 800)),
+    )
+
+    router, gemini, _local = _build_router(
+        [_result(outline_json), _result(section1_json), _result(section2_json), _result(section2_fixed_json)]
+    )
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete", final_job.get("error_message")
+    assert final_job["repair_count"] == 1  # exactly the one repetition repair
+    assert gemini.call_count == 4  # outline + 2 sections (no per-section repair) + 1 repetition repair
+
+    calls = json.loads(final_job["metrics_json"])["calls"]
+    assert calls[-1]["purpose"] == "script_section_repetition_repair"
+
+    lines = await script_service.get_script(db, project["id"])
+    total_words = sum(len(line["text"].split()) for line in lines)
+    assert total_words == 200
+    assert REPEATED_PHRASE not in " ".join(line["text"] for line in lines).replace(REPEATED_PHRASE, "", 1)
+
+    checkpoints = await ai_job_service.get_valid_checkpoints(db, job["id"])
+    section2_checkpoint = next(c for c in checkpoints if c["section_index"] == 2)
+    assert json.loads(section2_checkpoint["metrics_json"])["repetition_repaired"] is True
+    section1_checkpoint = next(c for c in checkpoints if c["section_index"] == 1)
+    assert "repetition_repaired" not in json.loads(section1_checkpoint["metrics_json"])
+
+
+async def test_pipeline_repetition_repair_still_failing_hard_fails(db):
+    """Verification item 3: the repetition repair itself still fails the
+    check -- global_validation_failed, unchanged."""
+    project = await _project(db, duration_minutes=1.6)
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {
+            "title": "T",
+            "sections": [
+                {"index": 1, "objective": "cover the first part here", "target_words": 100},
+                {"index": 2, "objective": "cover the second part here", "target_words": 100},
+            ],
+        }
+    )
+    section1_json = _lines_json(
+        (alex_id, f"{REPEATED_PHRASE} {_words(42, 0)}"),
+        (maya_id, _words(50, 100)),
+    )
+    section2_json = _lines_json(
+        (alex_id, f"{REPEATED_PHRASE} {_words(17, 300)}"),
+        (maya_id, f"{REPEATED_PHRASE} {_words(17, 400)}"),
+        (alex_id, _words(25, 500)),
+        (maya_id, _words(25, 600)),
+    )
+    # The repair's own output STILL reuses the phrase -- still fails.
+    section2_still_repeating_json = _lines_json(
+        (alex_id, f"{REPEATED_PHRASE} {_words(42, 700)}"),
+        (maya_id, _words(50, 800)),
+    )
+
+    router, gemini, _local = _build_router(
+        [
+            _result(outline_json), _result(section1_json), _result(section2_json),
+            _result(section2_still_repeating_json),
+        ]
+    )
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "error"
+    assert final_job["error_code"] == "global_validation_failed"
+    assert "repeated 8-gram ratio" in final_job["error_message"]
+    assert gemini.call_count == 4  # no second repetition-repair attempt
+    assert await script_service.get_script(db, project["id"]) == []
+
+
+async def test_pipeline_mixed_global_failure_never_triggers_repetition_repair(db):
+    """Verification item 4: a global failure that is *not* repetition-only
+    (paired with a word-count miss) never triggers the repetition-repair
+    path -- falls straight through to the existing, unchanged final-section
+    budget-repair machinery (Task 14.3 item 6).
+
+    Single default section (target_words=100): its own per-section tolerance
+    is wider (+-15%, [85, 115]) than the global tolerance (+-10%, [90, 110]),
+    so 88 words passes the section's own budget check (no semantic/length-only
+    repair fires) while still failing the *global* check -- the gap between
+    the two tolerances, not multi-section carry math, is what makes both
+    failures coexist without any per-section repair muddying the call count."""
+    project = await _project(db)  # duration_minutes=0.8 -> target_words=100 (Task 14.10)
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {"title": "T", "sections": [{"index": 1, "objective": "cover the topic fully here", "target_words": 100}]}
+    )
+    # 88 words, repeated phrase twice -- passes its own +-15% band, fails the
+    # global +-10% band, and fails the repetition check. No per-section repair.
+    section_json = _lines_json(
+        (alex_id, f"{REPEATED_PHRASE} {_words(36, 0)}"),
+        (maya_id, f"{REPEATED_PHRASE} {_words(36, 100)}"),
+    )
+    # The existing final-section budget repair's own output -- still short,
+    # still repeats the phrase, so the post-repair hard_errors stay mixed.
+    budget_repair_json = _lines_json(
+        (alex_id, f"{REPEATED_PHRASE} {_words(36, 300)}"),
+        (maya_id, f"{REPEATED_PHRASE} {_words(36, 400)}"),
+    )
+
+    router, gemini, _local = _build_router(
+        [_result(outline_json), _result(section_json), _result(budget_repair_json)]
+    )
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "error"
+    assert final_job["error_code"] == "global_validation_failed"
+    assert "total word count" in final_job["error_message"]
+    assert "repeated 8-gram ratio" in final_job["error_message"]
+    # Exactly the 3 scripted calls consumed (outline + attempt + the existing
+    # final-section budget repair) -- no repetition-repair 4th call attempted
+    # (would have raised "no more scripted outcomes" otherwise).
+    assert gemini.call_count == 3
+
+
+async def test_pipeline_repair_count_hits_the_2n_plus_2_ceiling(db):
+    """Verification item 5: the total repair-call bound per job is
+    2 * num_sections + 2 (Task 14.8's 2n+1 -- two per-section repairs plus the
+    one final-section global-budget repair -- plus one more for this task's
+    repetition repair). Both sections need both per-section repairs; the
+    resulting total misses the global ±10% band, so the final-section budget
+    repair fires; its own output brings the word count back in range but
+    plants a repeated phrase, so the repetition repair fires last -- hitting
+    the ceiling exactly, asserted directly against the formula."""
+    project = await _project(db, duration_minutes=1.6)  # target_words = 200
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {
+            "title": "T",
+            "sections": [
+                {"index": 1, "objective": "cover the first part here", "target_words": 75},
+                {"index": 2, "objective": "cover the second part here", "target_words": 125},
+            ],
+        }
+    )
+    # Section 1 (not last, effective target 75): semantic + length-only
+    # repair, final content still over-length (100) -- accepted off-target.
+    # Plants the repeated phrase once.
+    s1_attempt = _section_json((alex_id, 10, 0))
+    s1_semantic_repair = _section_json((alex_id, 60, 1000), (maya_id, 60, 1500))
+    s1_length_repair = _lines_json(
+        (alex_id, f"{REPEATED_PHRASE} {_words(42, 2000)}"),
+        (maya_id, _words(50, 2500)),
+    )  # 100 words, kept
+    # Section 2 (last, nominal 125, effective clamped to 100 given
+    # words_so_far=100): semantic + length-only repair, final content (130)
+    # still over-length.
+    s2_attempt = _section_json((maya_id, 10, 3000))
+    s2_semantic_repair = _section_json((alex_id, 75, 4000), (maya_id, 75, 4500))
+    s2_length_repair = _section_json((alex_id, 65, 5000), (maya_id, 65, 5500))
+    # Merged total (100 + 130 = 230) misses the global ±10% band ([180, 220])
+    # -> the one final-section global-budget repair fires, landing the total
+    # back at 200 -- but plants the repeated phrase twice more (3 total).
+    s2_budget_repair = _lines_json(
+        (alex_id, f"{REPEATED_PHRASE} {_words(9, 6000)}"),
+        (maya_id, f"{REPEATED_PHRASE} {_words(9, 6500)}"),
+        (alex_id, _words(33, 6100)),
+        (maya_id, _words(33, 6600)),
+    )  # 100 words
+    # Global re-check is now repetition-only (word count/balance/duplicates
+    # all pass) -> the one repetition repair fires on section 2 (2 of the 3
+    # occurrences start there, vs. section 1's 1) and removes the phrase.
+    s2_repetition_repair = _section_json((alex_id, 50, 7000), (maya_id, 50, 7500))
+
+    router, gemini, _local = _build_router(
+        [
+            _result(outline_json),
+            _result(s1_attempt), _result(s1_semantic_repair), _result(s1_length_repair),
+            _result(s2_attempt), _result(s2_semantic_repair), _result(s2_length_repair),
+            _result(s2_budget_repair), _result(s2_repetition_repair),
+        ]
+    )
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete", final_job.get("error_message")
+    num_sections = 2
+    assert final_job["repair_count"] == 2 * num_sections + 2
+    assert gemini.call_count == 9
+
+    lines = await script_service.get_script(db, project["id"])
+    total_words = sum(len(line["text"].split()) for line in lines)
+    assert total_words == 200
+    joined = " ".join(line["text"] for line in lines)
+    assert joined.count(REPEATED_PHRASE) == 1  # section 1's occurrence survives; section 2's is gone

@@ -30,6 +30,8 @@ from app.core.constants import (
     SCRIPT_MAX_REPEATED_8GRAM_RATIO,
     SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS,
     SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS,
+    SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS,
+    SCRIPT_SECTION_AVOID_PHRASES_MAX,
     SCRIPT_SECTION_CARRY_CAP,
     SCRIPT_SECTION_TARGET_MINUTES,
     SCRIPT_SECTION_WORD_TOLERANCE,
@@ -163,6 +165,54 @@ def repeated_8gram_ratio(words: list[str]) -> float:
     counts = Counter(grams)
     repeated = sum(count for count in counts.values() if count > 1)
     return repeated / len(grams)
+
+
+def find_repeated_8grams_by_section(
+    sections: list[tuple[int, list[SectionLineOut]]],
+) -> tuple[list[tuple[str, ...]], dict[int, int]]:
+    """Task 14.13: repeated 8-word windows across the whole episode, attributed
+    to whichever section each occurrence *starts* in -- lets the pipeline pick
+    the single worst section to regenerate rather than a flat re-roll. A repeat
+    spanning a section boundary is still found (the whole episode's words are
+    concatenated in order first) and attributed to the section its first word
+    falls in. Returns `(distinct repeated grams, {section_index: occurrence
+    count starting there})` -- both empty if nothing repeats."""
+    all_words: list[str] = []
+    word_section: list[int] = []
+    for section_index, lines in sections:
+        for line in lines:
+            for word in _WORD_RE.findall(line.text):
+                all_words.append(normalize_text(word))
+                word_section.append(section_index)
+
+    if len(all_words) < 8:
+        return [], {}
+
+    grams = [tuple(all_words[i : i + 8]) for i in range(len(all_words) - 7)]
+    counts = Counter(grams)
+    repeated_gram_set = {gram for gram, count in counts.items() if count > 1}
+    if not repeated_gram_set:
+        return [], {}
+
+    per_section_counts: dict[int, int] = {}
+    for index, gram in enumerate(grams):
+        if gram in repeated_gram_set:
+            section_index = word_section[index]
+            per_section_counts[section_index] = per_section_counts.get(section_index, 0) + 1
+
+    return sorted(repeated_gram_set), per_section_counts
+
+
+def frequent_repeated_phrases(words: list[str], limit: int = SCRIPT_SECTION_AVOID_PHRASES_MAX) -> list[str]:
+    """Task 14.13: the most-repeated 8-word phrases seen so far (already-
+    normalized `words`), for the *next* section's prompt to proactively avoid
+    reusing -- a heads-up before generation, not the reactive repair above."""
+    if len(words) < 8:
+        return []
+    grams = [tuple(words[i : i + 8]) for i in range(len(words) - 7)]
+    counts = Counter(grams)
+    repeated = sorted((gram for gram, count in counts.items() if count > 1), key=lambda gram: -counts[gram])
+    return [" ".join(gram) for gram in repeated[:limit]]
 
 
 def validate_section_structure(lines: list[SectionLineOut], known_speaker_ids: set[str]) -> list[str]:
@@ -365,11 +415,15 @@ async def _generate_section(
     is_last_section: bool,
     db,
     job_id: str,
+    avoid_phrases: list[str] | None = None,
 ) -> tuple[list[SectionLineOut], list[str], list[str]]:
     """Returns `(lines, structural_errors, budget_errors)`. `section_spec.target_words`
     is the *effective* target the caller wants this section validated against --
     the orchestrator passes a `model_copy`'d spec with `target_words` already
-    overridden (Task 14.3), so this function itself needs no separate parameter."""
+    overridden (Task 14.3), so this function itself needs no separate parameter.
+    `avoid_phrases` (Task 14.13) is the episode-so-far's most-repeated 8-grams,
+    a proactive heads-up so this section doesn't reuse them -- optional, empty
+    by default, since the outline call has no prior sections to avoid yet."""
     cefr_constraints = await load_cefr_block(project["cefr_level"])
     # Task 14.8-b (CR-02): the ±tolerance range shown in the prompt is computed
     # here, from the one real constant, instead of the template hard-coding its
@@ -389,6 +443,7 @@ async def _generate_section(
         max_words=max_words,
         prior_summary=prior_summary,
         is_last_section=is_last_section,
+        avoid_phrases=avoid_phrases or [],
         speakers=project["speakers"],
         num_speakers=len(project["speakers"]),
         max_consecutive_lines=SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER,
@@ -696,10 +751,17 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
         )
         effective_spec = section_spec.model_copy(update={"target_words": effective_target})
 
+        # Task 14.13: episode-so-far's most-repeated 8-grams, computed fresh each
+        # iteration from everything generated up to this point, so the model gets
+        # a proactive heads-up before generating -- not just the reactive repair.
+        avoid_phrases = frequent_repeated_phrases(
+            [normalize_text(word) for line in all_lines for word in _WORD_RE.findall(line.text)]
+        )
+
         try:
             section_lines, structural_errors, budget_errors = await _generate_section(
                 router, project, outline, effective_spec, prior_summary, known_speaker_ids,
-                is_last, db, job_id,
+                is_last, db, job_id, avoid_phrases,
             )
         except ProviderError as exc:
             await _fail_provider(db, job_id, exc)
@@ -851,6 +913,80 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
                     }),
                     commit=False,
                 )
+            hard_errors, _warnings = validate_global(
+                all_lines, target_words, known_speaker_ids, num_speakers, project["topic"]
+            )
+
+    if (
+        hard_errors
+        and SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS > 0
+        and all(error.startswith("repeated 8-gram ratio") for error in hard_errors)
+    ):
+        # Task 14.13 (D17): a global failure that is repetition-only (word
+        # count/balance/duplicates all already passing) gets one repair of the
+        # single worst section, rather than failing the job outright -- a
+        # mixed failure (repetition alongside anything else) never reaches
+        # here, `all(...)` above requires every hard error to be the
+        # repeated-8-gram one.
+        async with read_transaction():
+            fresh_checkpoints = await ai_job_service.get_valid_checkpoints(db, job_id)
+        section_checkpoints = {
+            checkpoint["section_index"]: checkpoint
+            for checkpoint in fresh_checkpoints
+            if checkpoint["stage"] == "section"
+        }
+        ordered_sections: list[tuple[int, list[SectionLineOut]]] = []
+        for section_spec in outline.sections:
+            checkpoint = section_checkpoints.get(section_spec.index)
+            if checkpoint is not None:
+                ordered_sections.append(
+                    (section_spec.index, _SECTION_LINES_ADAPTER.validate_json(checkpoint["result_json"]))
+                )
+
+        repeated_grams, per_section_counts = find_repeated_8grams_by_section(ordered_sections)
+        if per_section_counts:
+            worst_index = max(per_section_counts, key=per_section_counts.get)
+            worst_checkpoint = section_checkpoints[worst_index]
+            worst_lines = _SECTION_LINES_ADAPTER.validate_json(worst_checkpoint["result_json"])
+            try:
+                worst_metrics = json.loads(worst_checkpoint["metrics_json"])
+            except (TypeError, ValueError):
+                worst_metrics = {}
+            if not isinstance(worst_metrics, dict):
+                worst_metrics = {}
+            worst_spec = next(spec for spec in outline.sections if spec.index == worst_index)
+            effective_target = worst_metrics.get("target_effective", worst_spec.target_words)
+            worst_effective_spec = worst_spec.model_copy(update={"target_words": effective_target})
+            repeated_phrases = [" ".join(gram) for gram in repeated_grams]
+
+            try:
+                new_worst_lines, structural_errors, _budget_errors = await _repair_section(
+                    router, project, worst_effective_spec, worst_lines,
+                    [f'repeated phrase used elsewhere in the script: "{phrase}"' for phrase in repeated_phrases],
+                    known_speaker_ids, db, job_id,
+                    purpose="script_section_repetition_repair",
+                )
+            except ProviderError as exc:
+                await _fail_provider(db, job_id, exc)
+                return
+            if structural_errors:
+                await _fail(db, job_id, "section_validation_failed", structural_errors)
+                return
+
+            new_words = section_word_count(new_worst_lines)
+            async with write_transaction(db):
+                await ai_job_service.save_checkpoint(
+                    db, job_id, worst_index, "section", "valid",
+                    compute_config_hash({"section": worst_spec.model_dump()}, "section"),
+                    result_json=_SECTION_LINES_ADAPTER.dump_json(new_worst_lines).decode("utf-8"),
+                    metrics_json=json.dumps({**worst_metrics, "words": new_words, "repetition_repaired": True}),
+                    commit=False,
+                )
+
+            all_lines = []
+            for section_index, lines in ordered_sections:
+                all_lines.extend(new_worst_lines if section_index == worst_index else lines)
+
             hard_errors, _warnings = validate_global(
                 all_lines, target_words, known_speaker_ids, num_speakers, project["topic"]
             )

@@ -53,7 +53,7 @@
 | 14.11 | Learning repair by removal (Amendment G) | Coder | **done** (891 passed, 0 failed) | see task-14.11.md verification |
 | 14.12 | Gate B-4, local only (Amendment G) | PM | **done** | script 3/5, both deaths repeated-8-gram (not word count); learning 3/3; media A/V diff 0.00s (D14 confirmed real) but duration FAIL (runner defect, not product); see `docs/operations/phase14-gate-b4.md` |
 | 14.4a-d | Runner: apply the level default speed (Amendment H) | Coder | **done** | see task-14.4.md's "14.4a-d" section verification |
-| 14.13 | Repetition repair (Amendment H) | Coder | pending | Depends on 14.4a-d done; D17, see task-14.13.md |
+| 14.13 | Repetition repair (Amendment H) | Coder | **done** (902 passed, 0 failed) | see task-14.13.md verification |
 | 14.14 | Gate B-5, local only (Amendment H, Phase 14 close-out) | PM | pending | Depends on 14.4a-d + 14.13 done; Coder idle during the run; Phase 14 closes after this run regardless of verdict |
 
 Execution order (original): 14.1 → 14.2 → 14.3 → 14.4a (Coder, sequential). 14.5 ran in
@@ -483,3 +483,40 @@ close-out regardless of verdict.
   after Gate B-5 regardless of verdict**) -- doc-first, before any
   implementation file is touched, awaiting PM's review of the cards before
   starting 14.4a-d.
+- 2026-09-22: PM accepted the three cards, flagged two implementation notes
+  for 14.13 (worst-section attribution by repeated-window *start* position,
+  with the checkpoint overwrite explicit on `section_index`; cap the
+  continuity-note phrase list with a named constant), and authorized starting
+  14.4a-d then 14.13, sequentially, each with its own design/code commit.
+  Coder implemented **14.4a-d**: `_speaker_payload()` no longer sends an
+  explicit `speed` key at all (matches `step1_config.js`'s own behavior for a
+  new speaker); `run_script_trial()`'s evidence record gains
+  `speaker_speeds`, read off the server's already-resolved project response.
+  `--reaggregate` against the Gate B-4 evidence file reproduced every number
+  byte-for-byte (`repair_success_rate=0.65`, both repeated-8-gram messages
+  verbatim). Commit `9b8d0be`. Coder then implemented **14.13**: two new pure
+  functions -- `find_repeated_8grams_by_section` (attributes each repeated
+  8-gram occurrence to the section it *starts* in, so the pipeline can pick
+  the single worst section) and `frequent_repeated_phrases` (the proactive
+  continuity-note list, capped by a new `SCRIPT_SECTION_AVOID_PHRASES_MAX =
+  8`). When a global failure is repetition-only (every hard error starts with
+  `"repeated 8-gram ratio"`), the pipeline re-fetches fresh checkpoints,
+  regenerates only the worst section through the existing `_repair_section`
+  machinery with the actual repeated phrases named, overwrites that exact
+  section's checkpoint (upsert on `section_index`, confirmed via
+  `ai_job_service.save_checkpoint`'s own `ON CONFLICT` clause), and re-checks
+  the global validation once -- bounded by a new
+  `SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS = 1`, new bound `2 * num_sections +
+  2`. `section.txt` gains a proactive "avoid these repeated phrases" note.
+  `SCRIPT_MAX_REPEATED_8GRAM_RATIO` added to the constants-pin test,
+  unchanged value. 11 new tests (7 pure-function, 3 e2e for the
+  success/still-failing/mixed-never-triggers cases, 1 bound test hitting
+  `2n+2` exactly) -- one real bug caught only by running them (the literal
+  `REPEATED_PHRASE` test fixture was 7 words, not 8, silently invalidating
+  every hand-derived word-count/ratio expectation; fixed, re-ran clean).
+  Revert-and-confirm-failure done on both the constants pin and the trigger
+  condition itself. Commit `256ba01` (plan) + implementation commit. Full
+  suite: **902 passed, 0 failed**. Both 14.4a-d and 14.13 status: **done**.
+  Per the PM's instruction, Coder now stops completely (no pytest, no Ollama)
+  pending Gate B-5 (14.14) -- **Phase 14 closes after that run regardless of
+  verdict**.
