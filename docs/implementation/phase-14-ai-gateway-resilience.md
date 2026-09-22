@@ -722,3 +722,125 @@ replacing the Gemini rollback drill.
 The Coder mirrors this amendment into task cards 14.7–14.9 and a revised 14.6 in
 `.viepilot/phases/14-ai-gateway-resilience/tasks/` **before** any code (the folder is
 Coder-owned; the PM reviews the cards against this section).
+
+## 13. Amendment G (2026-09-22, after Gate B-3) — decisions delegated to the PM
+
+Authority: the owner delegated the three open product decisions to the PM on 2026-09-22
+(`/vp-auto` "trao quyền quyết định cho bạn"). Decisions D13–D16 are recorded in
+`docs/brainstorm/session-2026-09-21.md` §Addendum 2 with the evidence they rest on.
+Gate B-3 evidence: `docs/operations/phase14-gate-b3.md`.
+
+### D13 — Pace calibration: measured, not assumed
+
+**Measurement (PM, real Edge TTS, the Gate B-3 winning script, 730 words / 43 lines,
+silences 20.6 s included; `data/quality_reviews/phase14/gate-b3/pace-calibration.json`):**
+
+| Speaker `speed` | Total seconds | Words per minute (incl. silences) |
+|---:|---:|---:|
+| 0.75 (floor `TTS_SPEED_MIN`) | 394.3 | **111** |
+| 0.85 | 350.7 | **125** |
+| 0.90 | 332.5 | **132** |
+| 1.00 (default) | 301.5 | **145** — reproduces the Gate B-3 media run exactly |
+| 1.10 | 276.2 | **159** |
+
+Consequences: `CEFR_WORDS_PER_MINUTE["B1"] = 100` was never achievable — even at the
+floor speed the pipeline's 730–800-word "eight minutes" plays in 6.6 minutes. Slowing
+alone cannot fix it; word targets must follow the measured pace.
+
+**Decision:** planned pace = measured pace. Introduce a per-level default speaker speed and
+set the WPM table to the measured value at that speed, using measured points only:
+
+| Level | Default `speed` | `CEFR_WORDS_PER_MINUTE` | 8-min target |
+|---|---:|---:|---:|
+| A1 | 0.75 | 111 | 888 |
+| A2 | 0.75 | 111 | 888 |
+| B1 | 0.85 | 125 | 1,000 |
+| B2 | 0.90 | 132 | 1,056 |
+| C1 | 1.00 | 145 | 1,160 |
+| C2 | 1.10 | 159 | 1,272 |
+
+This keeps the pedagogical ordering (slower for lower levels) with speech that stays
+natural (no level below the 0.75 floor), and makes "eight minutes" mean eight minutes.
+The media thresholds (432–528 s, A/V ≤ 1.0 s), the ±10% total gate and the ±15% section
+trigger are **unchanged**; what changes is the *target*, from an unmeasured number to a
+measured one. The `prompts/script/cefr_*.txt` "Pace" lines are updated in the same change
+so the prompt and the constant stay one source of truth (the constant's own comment says
+it was copied from those prompts).
+
+### D14 — A/V padding
+
+Rule, declared before the investigation: the renderer is inspected; if the 2.5 s tail is
+unintentional (encoder priming, `-shortest` rounding, trailing silence), it is fixed and
+the 1.0 s threshold stands; if it is a deliberate design element (end frame/fade), the
+threshold is re-declared as ≤ 3.0 s with that reason written in the task card, and the
+runner constant `AV_DIFF_MAX_SECONDS` follows the declaration. No silent change either way.
+
+### D15 — Learning: repair by removal, bounded by the minimum counts
+
+Gate B-2 and B-3 each lost one learning pack to a single ungrounded item after the one
+repair ran (`learning_pack_repair ok` in telemetry, item still not in the transcript).
+**Decision:** after the one repair, items that still fail grounding/answer checks are
+**dropped**, and the pack is published only if every remaining count still meets the
+existing minimums (`LEARNING_MIN_*`, from the prompt's own stated ranges); otherwise the
+job fails as today. Every published item is still grounded; nothing is invented; the
+minimums are unchanged. Dropped items are recorded in the job's `metrics_json`
+(`dropped_items: [{kind, key, reason}]`) so the effect is measurable.
+
+### D16 — Phase 13 close-out and Task 14.6
+
+14.6 (Coder side, `1c89b6a`) is accepted with one copy fix (README rollback note still
+sends the reader to an in-app key form that 14.7 removed). With 14.6 done, **Task 13.10
+is complete under D11** and Phase 13 closes with an explicit decision record: local is the
+primary and only runtime by owner decision; Gate B-3 script gate passed 5/5 under the
+unchanged rule; the residual learning and media gaps are tracked as Phase 14 tasks
+14.10/14.11 and re-measured in Gate B-4.
+
+### 14.10 — Pace calibration (Coder; PM measured)
+
+**Allowed files:** `app/core/constants.py`, `prompts/script/cefr_a1.txt` … `cefr_c2.txt`
+(the "Pace" line only), `app/models/project.py` (default speed derived from level),
+`app/services/project_service.py` (apply the level default at speaker creation when no
+speed is given), `frontend/static/js/step1_config.js` and `frontend/pages/step1_config.html`
+(only if the speed control's default must follow the level), `app/services/video_service.py`
+(D14 investigation/fix only), `scripts/run_ai_operational_trial.py` (only
+`AV_DIFF_MAX_SECONDS` if D14 re-declares), `tests/test_script_pipeline.py`,
+`tests/test_project_service.py`, `tests/test_video_service.py`, `tests/fixtures/ai/*`.
+
+**Actions:** implement D13's two tables as named constants (`CEFR_DEFAULT_TTS_SPEED`,
+`CEFR_WORDS_PER_MINUTE`); a new speaker without an explicit `speed` gets the level
+default; existing projects keep their stored speeds; pin test asserts the table equals the
+measured values above; D14 investigation with the finding written in the card before any
+change. Existing fixtures that assume 800 words for B1 8-min are updated with a one-line
+justification each.
+
+**Verification:** `compute_target_words("B1", 8) == 1000`; speaker default speed per level;
+FakeProvider e2e still green at the new targets (the runner's per-run range already derives
+from the constant); D14 outcome recorded; full suite green; `ruff` clean.
+
+### 14.11 — Learning repair by removal (Coder)
+
+**Allowed files:** `app/services/learning_pipeline.py`, `app/core/constants.py`,
+`prompts/learning/learning_repair.txt` (optional wording), `tests/test_learning_pipeline.py`,
+`tests/fixtures/ai/*`.
+
+**Actions:** implement D15. Order: validate → one repair (unchanged) → drop still-failing
+items → re-validate counts against `LEARNING_MIN_*` → publish or fail
+(`pack_validation_failed` with the dropped list in the message tail). Record
+`dropped_items` in `metrics_json` via the existing `record_generation_call` shape or a
+sibling key (no new column).
+
+**Verification:** e2e tests: one ungrounded idiom → dropped → `complete` with
+`dropped_items` recorded; drop that would breach a minimum → `pack_validation_failed`;
+revert-and-confirm-failure on the drop step; full suite green; `ruff` clean.
+
+### 14.12 — Gate B-4, local only (PM)
+
+Protocol of 14.9 at the new targets (B1 8-min = 1,000 words; the runner's ranges derive
+from the constant), same thresholds, media on the winner, learning on every completed
+script. Report `docs/operations/phase14-gate-b4.md`. **Pass:** the unchanged Phase 13 Gate
+B rule; a pass turns D11 into an evidence-backed promotion.
+
+### Execution order
+
+README copy fix (14.6) → 14.10 → 14.11 (Coder, doc-first cards reviewed by the PM before
+code, sequential) → 14.12 (PM; Coder idle) → Phase 14 close-out.
