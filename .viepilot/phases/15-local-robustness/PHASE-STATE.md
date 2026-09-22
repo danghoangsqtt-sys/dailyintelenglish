@@ -4,9 +4,9 @@
 
 - **Phase:** 15
 - **Slug:** `15-local-robustness`
-- **Status:** in_progress
+- **Status:** complete
 - **Started:** 2026-09-22
-- **Closed:** —
+- **Closed:** 2026-09-22
 - **Controlling plan:** `docs/implementation/phase-15-local-robustness.md`
 - **Authorization:** the owner's first hands-on real run after Phase 14 closed died at
   section 3 (`section_validation_failed: unknown speaker_id(s):
@@ -39,8 +39,8 @@
 | 15.1 | Speaker aliases in the section contract (deterministic id resolution) | Coder | **done** (915 passed, 0 failed) | see task-15.1.md verification |
 | 15.2 | Deterministic consecutive-lines fix (merge, never re-attribute) | Coder | **done** (926 passed, 0 failed) | see task-15.2.md verification |
 | 15.3 | Trial runner per-gate evidence path + `set_job_metric` layering | Coder | **done** (932 passed, 0 failed) | see task-15.3.md verification |
-| 15.4 | Gate B-6, local only (owner's failing config as a 5th sample) | PM | pending | Depends on 15.1–15.3 done; Coder idle during the run |
-| 15.5 | Multi-script pace calibration (optional, owner's word only) | PM → Coder | not started | Deferred until 15.1–15.4 land; only if the owner asks |
+| 15.4 | Gate B-6, local only (owner's failing config as a 5th sample) | PM | **done** — see `docs/operations/phase15-gate-b6.md` | FAIL on script gate (repetition) only; 0 structural failures in 11 jobs |
+| 15.5 | Multi-script pace calibration (optional, owner's word only) | PM → Coder | not started, deferred | No longer needed for media gate at B1 (Gate B-6 confirmed); stays optional |
 
 **Execution order:** 15.1 → 15.2 → 15.3 (Coder, doc-first cards reviewed by the PM
 before code, sequential) → 15.4 (PM; Coder idle) → close-out. 15.5 only on the owner's
@@ -157,3 +157,37 @@ explicit word.
   logic. Full suite: **932 passed, 0 failed**. Task 15.3 status: **done**.
   Per the PM's instruction, Coder now stops completely (no pytest, no
   Ollama) pending the PM's Gate B-6 run (`--gate gate-b6`).
+- 2026-09-22: PM ran Gate B-6 (`docs/operations/phase15-gate-b6.md`, state
+  `d83d18d`) at code HEAD `d2c0d20`, full suite 932/932 before the run,
+  `ruff` clean. Protocol = Gate B-5 verbatim plus the owner's own failing
+  configuration (A2/small_talk/10min/2 speakers) run twice as an extra
+  sample. Result: **zero structural failures across all 11 jobs** (9 matrix
+  + 2 owner-config) -- no unknown speaker, no consecutive-lines death,
+  anywhere in the trial; `structural_fix` (Task 15.2's merge) never needed
+  to fire, since the id-resolution fix (15.1) and the merge fix (15.2)
+  removed the failure class before the repair path could even be exercised.
+  The owner's exact failing configuration completed twice, with learning,
+  on the same model. Script gate: 3/5 complete, 3/3 of those pass -- both
+  deaths are repetition (8-gram ratio 1.00%/1.42% after one bounded
+  repetition repair), within 0.42 points of the 1% threshold; identical
+  code produced 5/5 at Gate B-5, so this is variance in an untouched check,
+  not a regression from 15.1-15.3. Samples 4/4 complete. Learning 3/3
+  matrix + 2/2 owner. Media **PASS for the first time** across Phases
+  14-15: 487.3 s duration in [432, 528], A/V diff 0.00 s -- D13's pace
+  calibration confirmed end to end. Overall Gate B-6 verdict: **FAIL on
+  the script gate (repetition) only**, PASS on every other gate. PM
+  accepted Task 15.3 in the same commit and declared Phase 15 closed: the
+  phase's stated objective (eliminate the structural failure class) was met
+  outright (0/11), and the one remaining FAIL is a pre-existing,
+  separately-scoped residual (repetition), not a regression or an unmet
+  Phase 15 goal. No threshold was changed. Coder wrote `SUMMARY.md`, closed
+  this file (status/Closed date, final task table), and is closing out per
+  the PM's instruction.
+
+## Close-out
+
+Phase 15 status: **complete**, closed 2026-09-22. See `SUMMARY.md` (this
+folder) for the phase-level narrative, the Gate B-6 headline numbers, and
+residuals left for whoever picks up the next phase. Full task-by-task detail
+stays in this file's evidence log above and in `tasks/task-15.{1,2,3}.md`.
+Tag `die-vp-p15-complete` marks the closing commit.
