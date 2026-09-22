@@ -10,7 +10,10 @@ Daily Intel English Studio là một **local web application** chạy trên `htt
 Browser (localhost:8000)
         ↕ REST API (synchronous, polling — no WebSocket/SSE anywhere in the app)
 FastAPI Backend (Python 3.11+)
-        ├── Gemini API (script + learning content + thumbnail fill)
+        ├── AI Gateway (script + learning content + thumbnail fill) —
+        │     Ollama (qwen3.5:9b, local) by default as of Phase 14; Google
+        │     Gemini remains in the codebase, dormant, as an unsupported
+        │     rollback (see ADR-001 amendment A2)
         ├── Edge TTS (sole real TTS engine — see note below)
         ├── pydub + ffmpeg (audio mix + video export)
         ├── Pillow (thumbnail generation)
@@ -74,7 +77,7 @@ graph TB
     end
 
     subgraph AI["🤖 AI Engines"]
-        GEM[Gemini API\ngemini-3.8-flash]
+        GEM[AI Gateway\nOllama qwen3.5:9b local, default\nGemini dormant]
         OV[OmniVoice\nLocal GPU RTX 3060]
         ETSS[Edge TTS\nOnline Free]
     end
@@ -121,7 +124,7 @@ flowchart LR
     end
 
     subgraph C["Step 2: AI Script"]
-        C1[Gemini API\nStrict Prompt]
+        C1[AI Gateway\nOllama local, Strict Prompt]
         C2[Script Preview\n+ Inline Editor]
         C3[Re-generate\nper segment]
     end
@@ -148,13 +151,13 @@ flowchart LR
 
     subgraph G["Step 6: Thumbnail"]
         G1[Template Select]
-        G2[AI Fill\nGemini]
+        G2[AI Fill\nOllama local]
         G3[Manual Editor]
         G4[A/B Export\n16:9 + 9:16]
     end
 
     subgraph H["Step 7: YouTube Package"]
-        H1[AI Description\nGemini]
+        H1[AI Description\nOllama local]
         H2[Auto Timestamps\nfrom audio]
         H3[Tags & Keywords]
         H4[Full Transcript\n+ Vocab + Grammar]
@@ -184,7 +187,7 @@ graph LR
     end
 
     subgraph External
-        GEM[Gemini API]
+        GEM[AI Gateway\nOllama local, Gemini dormant]
         OV[OmniVoice]
         ET[Edge TTS]
         FF[ffmpeg]
@@ -207,14 +210,14 @@ graph LR
 ## Services Definitions
 
 ### 1. ScriptService (`app/services/script_service.py`)
-- **Responsibility:** Generate podcast script via Gemini API with strict prompt control
+- **Responsibility:** Generate podcast script via the AI Gateway (Ollama local by default, Gemini dormant) with strict prompt control
 - **Inputs:** topic, CEFR level, duration, num_speakers, genre, accent, language_features
 - **Outputs:** Structured script JSON (speaker, line, timing_estimate, language_notes)
 - **Key logic:** CEFR-calibrated prompt templates, per-genre prompt, language feature toggles
 - **Re-generate:** per-segment regeneration support
 
 ### 2. LearningContentService (`app/services/learning_service.py`)
-- **Responsibility:** Generate vocabulary, idioms, grammar notes, and comprehension questions via Gemini API with strict structured JSON schema
+- **Responsibility:** Generate vocabulary, idioms, grammar notes, and comprehension questions via the AI Gateway (Ollama local by default, Gemini dormant) with strict structured JSON schema
 - **Inputs:** project script lines, CEFR level, topic
 - **Outputs:** Structured learning pack JSON (`LearningPackOut`: vocabulary with IPA and bilingual definitions, idioms, grammar points, quiz questions with answer keys)
 - **Key logic:** Structured JSON schema validation (`responseSchema`), fallback handling, SQLite persistence with UPSERT
@@ -282,7 +285,7 @@ graph LR
 
 ### 6. ThumbnailService (`app/services/thumbnail_service.py`)
 - **Responsibility:** Generate professional YouTube thumbnails
-- **Pipeline:** Load template PNG → Gemini fills text/color → Pillow renders → export 3-5 A/B variants
+- **Pipeline:** Load template PNG → AI Gateway (Ollama local by default) fills text/color → Pillow renders → export 3-5 A/B variants
 - **Templates:** Stored in `frontend/static/thumbnail_templates/`
 - **Output:** PNG 1280x720 + PNG 720x1280 (Shorts)
 
@@ -290,8 +293,8 @@ graph LR
 - **Responsibility:** Generate YouTube upload metadata and assemble the final downloadable
   package.
 - **Output (`youtube_packages` table, `003_youtube_package.sql` + `004_youtube_chapters_measured.sql`):**
-  - 3 AI-generated title options (Gemini): `click_worthy`, `educational`, `seo` variants
-  - AI-generated video description (Gemini)
+  - 3 AI-generated title options (AI Gateway, Ollama local by default): `click_worthy`, `educational`, `seo` variants
+  - AI-generated video description (AI Gateway, Ollama local by default)
   - Chapters: **measured** from AudioService's real per-line timestamps once a project's
     audio has been mixed (Task 1.6/1.7), otherwise **estimated** from cumulative script
     word count at a fixed reading speed (`YOUTUBE_CHAPTER_WORDS_PER_MINUTE`) for a project
@@ -325,7 +328,7 @@ graph LR
 | Video generation | ffmpeg | Universal, GPU-accelerated |
 | Lips-sync | LivePortrait | Fastest inference, real-time capable, VRAM-efficient |
 | Thumbnail | Pillow + template | Consistent branding, no API cost, user-editable |
-| AI engine | Gemini 3.8 Flash | Fast, cost-effective, high quality, existing API key |
+| AI engine | Ollama (`qwen3.5:9b`), local-only default | Phase 14 (Amendment D): Gemini dropped after Gate B evidence (0/5 cloud completions, quota/503 storms) plus owner decision D9-D12; Gemini remains dormant as an unsupported rollback (`DIE_AI_ALLOW_CLOUD=true`) |
 | Database | SQLite | Zero-config, single-user, sufficient performance |
 | Storage | Local filesystem | Simple, offline-first, no cloud dependency |
 
@@ -345,7 +348,7 @@ DELETE /api/projects/{id}         # Delete project
 ### Script Generation
 ```
 GET    /api/projects/{id}/script             # Get the current script (empty list if not generated yet)
-POST   /api/projects/{id}/script/generate    # Generate script via Gemini
+POST   /api/projects/{id}/script/generate    # Generate script via the AI Gateway (Ollama local by default)
 POST   /api/projects/{id}/script/regenerate  # Regenerate specific segment
 PUT    /api/projects/{id}/script             # Save edited script
 ```

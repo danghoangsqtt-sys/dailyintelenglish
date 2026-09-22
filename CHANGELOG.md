@@ -24,6 +24,27 @@ Versioning: [SemVer](https://semver.org/)
   bundled — see README for why).
 
 ### Changed
+- Phase 14 Task 14.6 (revised), local-only rollout and rollback drill (2026-09-22,
+  resuming Phase 13 Task 13.10 under D9-D11 with the mode fixed to `local` rather than
+  chosen from a Gate B result table, following Gate B-3's pass —
+  `docs/operations/phase14-gate-b3.md`, PM's run): replaced Phase 13's
+  `hybrid → gemini with Ollama stopped →
+  restart → hybrid` rollback drill (Gemini is no longer a recovery path, ADR-001 A2)
+  with a live, no-mock drill against a real Ollama process on a throwaway test port:
+  Ollama stopped → app starts non-blocking, `/api/ai/health` reports it, Step 2/3
+  disable Generate and show install/pull guidance (no Gemini text anywhere), non-AI
+  features (project create/list) work normally → Ollama started with all 6 documented
+  env vars → `/api/ai/health` and `/api/tags` both confirm digest `6488c96fa5fa` →
+  a real script AI job and a real learning AI job both reach `complete` against real
+  Ollama → guidance disappears once the page reloads. Also re-ran the same sequence
+  against a freshly-built packaged `.exe` (Ollama stopped): starts non-blocking, same
+  guidance, non-AI create still works. `.viepilot/ARCHITECTURE.md`, `AI-GUIDE.md`,
+  `PROJECT-CONTEXT.md` updated to state the AI engine is Ollama (local, default),
+  Gemini dormant, wherever they directly named an AI engine (bounded scope — these
+  pre-Phase-13 docs contain other, unrelated staleness left untouched, out of this
+  task's brief). README gains an `-ExecutionPolicy Bypass` note for
+  `scripts\build_exe.ps1` (hit live during this task's own packaged smoke build on a
+  default-restricted PowerShell policy).
 - Phase 14 Task 14.7, local-only mode, config-first (2026-09-21, Amendment D — the
   owner dropped Gemini as a supported path after Gate B-2 showed 0/5 completions from
   503 storms and free-tier quota exhaustion, while local completed 3/5 with zero

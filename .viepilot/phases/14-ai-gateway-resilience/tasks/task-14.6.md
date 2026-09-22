@@ -1,6 +1,7 @@
 # Task 14.6 (revised, Amendment D) — Resume Task 13.10, Local-Only
 
-- **Status:** in progress (14.7, 14.8, 14.9 all done; Coder started)
+- **Status:** Coder side done (884 passed, 0 failed; live rollback drill + packaged
+  smoke build both PASS); awaiting PM's `docs/**`/state side
 - **Owner:** Coder (code/config/packaging/README/CHANGELOG/.viepilot architecture docs);
   PM (`docs/**`, TRACKER, ROADMAP, HANDOFF)
 - **Priority:** P2
@@ -129,9 +130,65 @@ set, zero unpushed commits; TRACKER and PHASE-STATE agree on `done` for both Pha
     5. **CHANGELOG.md:** one new entry recording the local-only rollout/rollback-drill
        result, at the top of `[Unreleased]`, matching the existing 14.7 entry's style.
   - Commands and results:
-  - Deviations:
+    - **Live rollback drill** (ad-hoc script, not committed -- drives a real external
+      Ollama process; see plan item 3): real `uvicorn` server on a throwaway
+      `DIE_DATA_DIR` + a free port (not 8000), real Ollama stop/start, real Playwright
+      (no route mocking). Full transcript:
+      ```
+      === PHASE A: stopping Ollama ===
+        confirmed: real Ollama server not reachable on 11434
+        GET /api/ai/health: {'mode': 'local', 'ollama_reachable': False, 'model': 'qwen3.5:9b',
+          'model_present': False, 'model_digest': None, 'cloud_enabled': False}
+        non-AI feature OK: created project 0effe92e-2d3b-4ee1-b16d-e2e6da5b1fe7
+        non-AI feature OK: project list includes it
+        /step2: generate-btn disabled=True, guidance shown=True
+          guidance text: 'Ollama is not running. Install it from ollama.com, start it,
+            run ollama pull qwen3.5:9b, then reload this page.'
+        /step3: generate-btn disabled=True, guidance shown=True (same text)
+      PHASE A: PASS
+
+      === PHASE B: starting Ollama ===
+        GET /api/ai/health: {'mode': 'local', 'ollama_reachable': True, 'model': 'qwen3.5:9b',
+          'model_present': True, 'model_digest': '6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7',
+          'cloud_enabled': False}
+        /api/tags digests: ['6488c96fa5fa']
+        script job created: e7c37dab-bd36-4c7f-a9e5-623482b3c3b8
+        final script job: {'status': 'complete', 'error_code': None, 'actual_provider': 'ollama'}
+        script generated: 4 lines
+        learning job created: 0c20d157-596a-4dca-ba9e-0f949f632592
+        final learning job: {'status': 'complete', 'error_code': None, 'actual_provider': 'ollama'}
+        /step2 after Ollama back (script already generated): guidance shown=False
+      PHASE B: PASS
+
+      ROLLBACK DRILL: PASS
+      ```
+      No `Gemini` text anywhere in the guidance banner (grepped from the captured
+      text directly, not just eyeballed). No DB repair, no data loss -- the whole
+      drill ran against one throwaway temp `DATA_DIR`, deleted afterward. Ollama and
+      its 6 env vars restored to the qualified baseline afterward (confirmed
+      `/api/tags` digest `6488c96fa5fa` again before moving on).
+    - **Packaged smoke build:** `venv\Scripts\pyinstaller.exe daily_intel_english_studio.spec --noconfirm`
+      (direct pyinstaller invocation -- `scripts\build_exe.ps1` itself hit a
+      `PowerShell` `UnauthorizedAccess` execution-policy error on this machine's
+      default policy; documented as a README addition, not a bug in the script
+      itself, which runs fine under `-ExecutionPolicy Bypass` or an already-permissive
+      policy). Built `DailyIntelEnglishStudio.exe` (today's code, not the Sep-20
+      stale artifact). Launched with `DIE_DATA_DIR`/`DIE_APP_PORT` overridden to a
+      throwaway temp dir + non-8000 port, Ollama stopped: `GET /` → 200,
+      `GET /api/ai/health` → `ollama_reachable: false`; a real non-AI project create
+      succeeded; `/step2` showed the disabled button + guidance banner, no Gemini
+      text. Torn down, temp data removed, Ollama restarted with the 6 env vars.
+    - `venv\Scripts\python.exe -m ruff check app tests scripts` → All checks passed.
+    - `venv\Scripts\python.exe scripts\check_dependencies.py` → all GREEN, including
+      `Ollama + model: qwen3.5:9b present (digest 6488c96fa5fa)`.
+    - `venv\Scripts\python.exe -m pytest -q` (full suite) → **884 passed, 0 failed**
+      (449.78s) -- unchanged from the 14.8-b baseline (this task touched no pipeline
+      code, only docs/config/packaging).
+  - Deviations: none from the plan. One incidental finding outside the original plan
+    (the PowerShell execution-policy error on the packaged build) was fixed with a
+    one-line README addition rather than treated as a blocker.
   - Revert-and-confirm-failure evidence: N/A for this task -- no new gating logic is
     added (13.10 is docs/packaging/rollback verification, not new pipeline code); the
-    rollback drill's own pass/fail *is* the verification, recorded below.
-  - Commit(s):
+    rollback drill's own pass/fail *is* the verification, recorded above.
+  - Commit(s): (pending -- next step)
 - PM:

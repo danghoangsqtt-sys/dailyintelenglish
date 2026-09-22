@@ -144,7 +144,10 @@ http://localhost:8000
 
 For trying the app without a manual `venv`/`pip install` setup, it can be built
 into a self-contained folder with `PowerShell -File scripts\build_exe.ps1` (installs
-`pyinstaller` if missing, then builds `daily_intel_english_studio.spec`). The result
+`pyinstaller` if missing, then builds `daily_intel_english_studio.spec`) — if your
+system's PowerShell execution policy blocks running the script
+(`UnauthorizedAccess`/"running scripts is disabled on this system"), run
+`PowerShell -ExecutionPolicy Bypass -File scripts\build_exe.ps1` instead. The result
 lands in `dist\DailyIntelEnglishStudio\` — double-click `DailyIntelEnglishStudio.exe`
 there; it opens your browser to the app automatically once the server is ready, and
 launching it again while it's already running just reopens the browser instead of

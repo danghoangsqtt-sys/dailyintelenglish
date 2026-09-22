@@ -4,7 +4,7 @@
 
 **Project:** Daily Intel English Studio  
 **Type:** Local web app — AI podcast production tool  
-**Stack:** Python FastAPI + HTML/JS + Gemini API + OmniVoice TTS + ffmpeg  
+**Stack:** Python FastAPI + HTML/JS + Ollama (local AI, default; Gemini dormant) + OmniVoice TTS + ffmpeg  
 **GPU:** RTX 3060 12GB (OmniVoice, LivePortrait)  
 
 ## File Map
@@ -18,7 +18,7 @@
 | `.viepilot/TRACKER.md` | Current progress, decision log |
 | `app/` | FastAPI backend source |
 | `frontend/` | HTML/CSS/JS pages |
-| `prompts/` | Gemini prompt Jinja2 templates |
+| `prompts/` | AI prompt Jinja2 templates (Ollama default, Gemini dormant) |
 | `data/` | Runtime data (audio, video, projects) |
 
 ## Context Loading Strategy

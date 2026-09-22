@@ -149,7 +149,7 @@ Các accent khác nhau ảnh hưởng đến vocabulary choice và expressions:
   "error": null,
   "meta": {
     "processing_time_ms": 1234,
-    "model_used": "gemini-3.8-flash"
+    "model_used": "qwen3.5:9b"
   }
 }
 ```
@@ -171,8 +171,10 @@ Các accent khác nhau ảnh hưởng đến vocabulary choice và expressions:
 - RAM: Pydub loads full audio into memory — max practical audio length ~45 min
 
 ### API Constraints
-- Gemini API: Rate limit 15 RPM (free tier) — must implement retry with backoff
-- Gemini token limit: 1M tokens/request — scripts well within limit
+- Ollama (local, default as of Phase 14): one model resident (`OLLAMA_MAX_LOADED_MODELS=1`),
+  one concurrent generation (`OLLAMA_NUM_PARALLEL=1`) — see docs/operations/local-ai.md
+- Gemini API (dormant, unsupported rollback only): rate limit 15 RPM (free tier),
+  1M token/request limit — not a normal-use constraint since Amendment D
 - Edge TTS: No official rate limit, but respect 1 req/sec to avoid blocks
 
 ### Platform Constraints
