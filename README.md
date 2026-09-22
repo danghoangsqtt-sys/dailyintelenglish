@@ -162,8 +162,9 @@ the AI screens instead.
 
 **Rollback (unsupported):** Gemini stays in the codebase, dormant. Re-enabling it is
 an explicit configuration change, never a migration: set `DIE_AI_ALLOW_CLOUD=true` and
-`DIE_AI_MODE=hybrid` (or `gemini`) in `.env`, and provide a key via the in-app
-**Settings** page (⚙️ on the dashboard) or `DIE_GEMINI_API_KEY`.
+`DIE_AI_MODE=hybrid` (or `gemini`) in `.env`, and provide a key via `DIE_GEMINI_API_KEY`
+(or the settings API) — the in-app **Settings** page is read-only as of Task 14.7 and
+no longer has a key-entry form.
 
 **Not bundled**: ffmpeg and the OmniVoice model directory still need to be present
 on the machine exactly as for the source install (see Requirements above) —
