@@ -1910,13 +1910,39 @@ existing minimums, dropped items recorded; **D16** 13.10 closes under D11.
   of control (test config default duration 1.0 → 0.8 min so the same 100-word target is reached) with the
   reasoning recorded. PM review: diff in the allowed files, 125 targeted tests pass, `ruff` clean;
   Coder-reported full suite 888.
-### 14.11 Learning repair by removal (D15) — ⏳ IN PROGRESS (Coder)
-### 14.12 Gate B-4, local only — pending (PM, after 14.11)
+### 14.11 Learning repair by removal (D15) — ✅ DONE (2026-09-22, Coder `3f99f08`/`394a794`; PM-accepted)
+
+- [x] After the one repair, items still failing grounding/answer checks are dropped (structured per-item
+  view over the same validators); the unchanged `validate_pack` re-runs on the reduced pack; publish only
+  if counts/duplicates still pass, else `pack_validation_failed` with the drop summary; `dropped_items`
+  recorded in `metrics_json`. Minimums 1/1/1/3 unchanged. 2 new e2e tests; revert-and-confirm-failure;
+  44 learning tests pass; Coder-reported full suite 891.
+- Noted for a cleanup task (not blocking): `_record_dropped_items` writes SQL from the pipeline because
+  `ai_job_service.py` was outside the allowed files — belongs in `ai_job_service` as a metrics setter.
+
+### 14.12 Gate B-4, local only — ✅ EXECUTED (2026-09-22, PM) — **FAIL 3/5; word count solved at 1,000 words; repetition is the new failure class; A/V fixed; media duration blocked by a runner defect**
+
+- [x] Preflight at `394a794`: full suite 891/891, ruff clean, targets 1000 = 5×200; two orphaned
+  `llama-server.exe` runners left by the 14.6 drill held 11.7 GB VRAM until the owner cleared them.
+  Report `docs/operations/phase14-gate-b4.md`.
+- [x] Script 3/5 (991/984/915, all content checks); both deaths `global_validation_failed` on the
+  **repeated 8-gram ratio** (1.02%, 4.32%) — no word-count death; 0 infra; repair success 65%.
+  Samples: B1-10min complete (1,245 words); A2/C1 also 8-gram; B1-5min hallucinated speaker id.
+- [x] Learning 3/3. Media: **A/V diff 0.00 s (D14 confirmed)**, codecs pass, duration 376.8 s ✘ —
+  the runner hard-codes speaker `speed: 1.0`, so 14.10's B1 default 0.85 never applied (≈ 438 s
+  predicted at 0.85; not credited until measured).
+- **D17** repetition repair (14.13), **D18** runner speed (14.4a-d), Gate B-5 (14.14); Phase 14 closes
+  after B-5 regardless of verdict (plan §14).
+
+### 14.4a-d Runner applies the level default speed — pending (Coder)
+### 14.13 Repetition repair (D17) — pending (Coder)
+### 14.14 Gate B-5, local only — pending (PM); Phase 14 closes after it
 
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-22 | Gate B-4: FAIL 3/5 — both deaths on the repeated-8-gram check at 1,000 words; A/V fixed (0.00 s); media duration blocked by the runner's hard-coded speed. D17 bounded repetition repair (threshold unchanged), D18 runner applies the level default speed, Gate B-5 then closes Phase 14 regardless of verdict | Word count is solved; repetition is the next measurable failure class and has no repair path today; the phase must not chase gates indefinitely |
 | 2026-09-22 | Owner delegated the open decisions to the PM → D13 measured pace calibration (per-level default speed + measured WPM table, B1 8-min = 1,000 words), D14 A/V rule declared before investigation, D15 learning repair-by-removal bounded by existing minimums, D16 Task 13.10 complete under D11 and Phase 13 closed | Real Edge TTS measurement at five speeds; two gates each lost one learning pack to a single ungrounded item; thresholds unchanged throughout |
 | 2026-09-22 | Gate B-3 (local-only): script gate PASS 5/5 for the first time; overall FAIL on learning 4/5 and media duration/A-V; D11 remains an owner override; 13.10 resumes under D11 | Unchanged Phase 13 thresholds applied to real evidence; the remaining failures are a learning grounding miss and two undecided product questions (pace, A/V padding), not the script pipeline |
 | 2026-09-21 | **Owner: drop Gemini** — `AI_MODE=local` default, cloud fallback OFF, key UI hidden, code dormant behind `DIE_AI_ALLOW_CLOUD`; EXE requires Ollama; local primary by explicit owner override of the Gate B promotion rule (D9–D12, ADR-001 A2) | Gate B-2: Gemini 0/5 (503 storms + free-tier 20 requests/day exhausted by retries) vs local 3/5 with every completed script passing all content checks and zero infra failures; key pools violate the API terms and do not address 503s |

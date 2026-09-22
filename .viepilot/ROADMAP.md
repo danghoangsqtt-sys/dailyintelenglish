@@ -1211,5 +1211,9 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
   rollback drill and packaged smoke build; Task 13.10 complete under D11; Phase 13 closed.
 - [x] 14.10 Pace calibration — ✅ DONE 2026-09-22: measured WPM table + per-level default speed; D14 root-caused
   (`-shortest` B-frame flush) and fixed with `-t`, threshold unchanged
-- [ ] 14.11 Learning repair by removal (D15) — Coder
-- [ ] 14.12 Gate B-4 local at the calibrated targets — PM
+- [x] 14.11 Learning repair by removal (D15) — ✅ DONE 2026-09-22
+- [x] 14.12 Gate B-4 local at 1,000 words — EXECUTED 2026-09-22: FAIL 3/5 (repetition), A/V fixed, media
+  duration blocked by a runner speed defect. Report `docs/operations/phase14-gate-b4.md`.
+- [ ] 14.4a-d Runner applies the level default speed — Coder
+- [ ] 14.13 Repetition repair (D17; 1% threshold unchanged) — Coder
+- [ ] 14.14 Gate B-5 — PM; Phase 14 closes after it regardless of verdict
