@@ -844,3 +844,44 @@ B rule; a pass turns D11 into an evidence-backed promotion.
 
 README copy fix (14.6) → 14.10 → 14.11 (Coder, doc-first cards reviewed by the PM before
 code, sequential) → 14.12 (PM; Coder idle) → Phase 14 close-out.
+
+## 14. Amendment H (2026-09-22, after Gate B-4) — repetition repair and runner speed
+
+Evidence: `docs/operations/phase14-gate-b4.md` (script 3/5 — both deaths on the repeated
+8-gram check at 1.02% and 4.32%; word count solved at 1,000 words; A/V diff 0.00 s after
+D14; media duration failed only because the runner hard-codes speaker speed 1.0).
+Decisions D17–D18 are recorded there under the PM's delegated authority.
+
+### 14.4a-d — Runner: apply the level default speed (Coder)
+
+**Allowed files:** `scripts/run_ai_operational_trial.py` only. Omit `speed` from the test
+speakers so `CEFR_DEFAULT_TTS_SPEED` applies exactly as the UI does; record each project's
+resolved speaker speeds in the run evidence. Verify with `--reaggregate` on the B-4 file
+(unchanged results) and `ruff`.
+
+### 14.13 — Repetition repair (Coder)
+
+**Allowed files:** `app/services/script_pipeline.py`, `app/core/constants.py`,
+`prompts/script/section.txt`, `prompts/script/repair.txt`, `tests/test_script_pipeline.py`,
+`tests/fixtures/ai/*`.
+
+**Actions:** (1) a pure function that, given the merged lines, returns the repeated 8-gram
+windows and, per section, how many of them it contains; (2) when `validate_global` fails
+**only** on the 8-gram check, regenerate the single worst section once through the repair
+prompt with the offending phrases named, bounded by `SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS
+= 1`, overwrite its checkpoint, re-run `validate_global`; still failing →
+`global_validation_failed` as today; (3) the section prompt's continuity note lists the
+most frequent 8-grams already used so the model is told what not to reuse.
+`SCRIPT_MAX_REPEATED_8GRAM_RATIO = 0.01` is **unchanged** and added to the constants-pin
+test. Repair bound per job becomes ≤ `2 × num_sections + 2`, asserted.
+
+**Verification:** pure-function tests; e2e: repetition-only global failure → one repair →
+passes; still failing → `global_validation_failed`; a global failure that is *not*
+repetition-only never triggers it; revert-and-confirm-failure; full suite green; `ruff`.
+
+### 14.14 — Gate B-5, local only (PM)
+
+Protocol of 14.12; media measured at the level default speed. Report
+`docs/operations/phase14-gate-b5.md`. Pass rule unchanged. **Phase 14 closes after Gate
+B-5 regardless of verdict**, with the verdict recorded; any further hardening becomes a
+new phase, so the phase does not chase gates indefinitely.
