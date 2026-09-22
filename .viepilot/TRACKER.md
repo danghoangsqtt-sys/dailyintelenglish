@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); Phase 14 closed 2026-09-22. **Phase 15 opened 2026-09-22 — Local Script Robustness** (owner's first hands-on run died on a truncated speaker UUID; structural checks get deterministic, no-invention fixes). Controlling plan `docs/implementation/phase-15-local-robustness.md`.
+**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); Phases 13–15 closed (15 closed 2026-09-22: structural failures eliminated, media gate PASS for the first time, owner's failing configuration completes 2/2; repetition is the single remaining, variable failure class). No phase open.
 **Day:** 6 / 21  
 **Started:** 2026-09-10 (Phases 1–12 complete; Phase 13 opened 2026-09-18 as user-approved reliability scope beyond the original plan)
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
@@ -2011,14 +2011,39 @@ speaker, no server-invented content, thresholds unchanged).
 - [x] **PM acceptance:** exercised the merge directly — 8 lines/52 words → 6 lines/52 words, text order
   identical, no re-attribution, structural check clean; ruff clean; 88 pipeline tests pass.
 
-### 15.3 Runner per-gate evidence path; `set_job_metric` layering cleanup — ⏳ IN PROGRESS (Coder)
-### 15.4 Gate B-6 local incl. the owner's failing configuration — pending (PM)
-### 15.5 Multi-script pace calibration — optional, on the owner's word
+### 15.3 Runner per-gate evidence path; `set_job_metric` layering cleanup — ✅ DONE (2026-09-22, Coder `ccc160d`/`d2c0d20`; PM-accepted)
+
+- [x] `ai_job_service.set_job_metric(db, job_id, key, value)` replaces `learning_pipeline._record_dropped_items`
+  (behaviour unchanged; all 26 Task 14.11 tests pass unmodified; 6 new tests). Runner `--gate NAME` writes
+  evidence and trial data under `data/quality_reviews/phase15/<name>/` (default path byte-identical via
+  `--reaggregate` on the B-4 file). Coder-reported full suite 932; PM: 93 targeted tests, ruff clean.
+
+### 15.4 Gate B-6, local only, incl. the owner's configuration — ✅ EXECUTED (2026-09-22, PM) — **0 structural failures; media PASS (first time); script 3/5 on repetition**
+
+- [x] Preflight at `d2c0d20`: full suite 932/932, ruff clean, VRAM 1.8 GB, no orphaned runners; fresh trial
+  DB under `phase15/gate-b6/`. Report `docs/operations/phase15-gate-b6.md`.
+- [x] Script 3/5 (1,056/1,079/1,053, all content checks); both deaths `repeated 8-gram ratio` (1.00%,
+  1.42%) after one repetition repair each; **no unknown-speaker or consecutive-lines death in 11 jobs**.
+  Samples 4/4; learning 3/3; 0 infra.
+- [x] **Owner's configuration (A2/small_talk/10 min/2 speakers) — the one that died in real use — completed
+  2/2** (1,100 and 1,073 words vs 1,110 target), learning 2/2.
+- [x] **Media PASS for the first time:** 487.3 s ∈ [432, 528], A/V 0.00 s, codecs — D13 confirmed end to end.
+- Verdict: FAIL on the script gate only (repetition, variable run-to-run: B-5 5/5 vs B-6 3/5 on identical
+  code). Phase 15's objective (structural robustness) achieved; **Phase 15 closes**. 15.5 optional/not needed
+  for B1 media.
+
+### Phase 15 close-out — ✅ CLOSED 2026-09-22
+
+Delivered: speaker aliases + deterministic id resolution (15.1), consecutive-lines merge (15.2),
+`set_job_metric` + runner `--gate` (15.3), Gate B-6 (15.4). Remaining single failure class: repetition
+(options recorded in the report §7 for the owner: second bounded repetition repair; stronger avoid-list;
+or accept 3–5/5 with in-app Retry).
 
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-22 | Gate B-6: 0 structural failures in 11 jobs, owner's configuration 2/2, media PASS (487 s, A/V 0.00); script 3/5 on repetition. **Phase 15 closed**; repetition options recorded for the owner, none started | The phase's objective is met on evidence; the residual is a variable content-quality class with a bounded repair already in place |
 | 2026-09-22 | Phase 15 opened (delegated authority): section contract switches to speaker aliases (S1/S2) resolved server-side, with a ≥ 0.85-similarity safety net for echoed UUIDs; consecutive-lines runs merged deterministically (never re-attributed); thresholds unchanged | The owner's first real run lost 3 minutes to a copied-UUID slip the server can resolve without inventing anything; the two structural checks were the only ones without a repair path |
 | 2026-09-22 | Gate B-5: script/samples/learning all PASS at 1,000 words; media duration 413.3 s FAIL (−4.3%). **Phase 14 closed** as declared in plan §14; D11 remains an owner override; multi-script pace calibration and a declared media-gate protocol change are proposed for a future phase | The phase must not chase gates indefinitely; every other gate passes under unchanged thresholds; the remaining miss is a single-script calibration spread, measured and documented |
 | 2026-09-22 | Gate B-4: FAIL 3/5 — both deaths on the repeated-8-gram check at 1,000 words; A/V fixed (0.00 s); media duration blocked by the runner's hard-coded speed. D17 bounded repetition repair (threshold unchanged), D18 runner applies the level default speed, Gate B-5 then closes Phase 14 regardless of verdict | Word count is solved; repetition is the next measurable failure class and has no repair path today; the phase must not chase gates indefinitely |

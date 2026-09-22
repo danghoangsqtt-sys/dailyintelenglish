@@ -1221,11 +1221,14 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
 
 ## Phase 15 — Local Script Robustness
 
-**Status:** In progress | **Opened:** 2026-09-22 | Plan `docs/implementation/phase-15-local-robustness.md`.
+**Status:** ✅ Closed 2026-09-22 | formerly In progress | **Opened:** 2026-09-22 | Plan `docs/implementation/phase-15-local-robustness.md`.
 Trigger: owner's first hands-on run died on a truncated speaker UUID (structural check with no repair path).
 
 - [x] 15.1 Speaker aliases (S1/S2) in the section contract, server-side resolution, ≥ 0.85 safety net — ✅ DONE 2026-09-22
 - [x] 15.2 Deterministic consecutive-lines fix (merge same-speaker runs) — ✅ DONE 2026-09-22
-- [ ] 15.3 Runner per-gate evidence path; `set_job_metric` cleanup — Coder
-- [ ] 15.4 Gate B-6 local incl. the owner's A2/small_talk/10-min configuration — PM
-- [ ] 15.5 Multi-script pace calibration — optional
+- [x] 15.3 Runner per-gate evidence path; `set_job_metric` cleanup — ✅ DONE 2026-09-22
+- [x] 15.4 Gate B-6 — EXECUTED 2026-09-22: 0 structural failures in 11 jobs; owner's configuration 2/2; media PASS
+  (487 s, A/V 0.00) first time; script 3/5 on repetition. Report `docs/operations/phase15-gate-b6.md`.
+- [ ] 15.5 Multi-script pace calibration — optional, not needed for B1 media; not started
+
+**Status update:** ✅ Phase 15 closed 2026-09-22.

@@ -3,7 +3,7 @@
   "version": "1.0.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_15_in_progress",
+  "status": "phase_15_complete",
   "current_phase": 15,
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
@@ -141,10 +141,10 @@
     "15": {
       "name": "Local Script Robustness",
       "days": "n/a",
-      "status": "in_progress",
-      "tasks_done": 2,
+      "status": "complete",
+      "tasks_done": 4,
       "tasks_total": 5,
-      "note": "Opened 2026-09-22 under the owner's delegated decision authority after the owner's first real run (A2/small_talk/10min/2 speakers) died at section 3 on unknown speaker_id 'ff5f20e0-417b-8d9f-752e844d46f0' -- the model dropped one group of the real UUID ff5f20e0-4082-417b-8d9f-752e844d46f0 (Alex). Plan docs/implementation/phase-15-local-robustness.md: 15.1 speaker aliases S1/S2 in the section contract resolved server-side + >=0.85-similarity safety net for echoed UUIDs (no invented speaker); 15.2 deterministic merge of same-speaker runs (never re-attribute, words unchanged); 15.3 runner --gate path + set_job_metric cleanup; 15.4 Gate B-6 incl. the owner's configuration; 15.5 optional multi-script pace calibration. Thresholds unchanged. 15.1 done and PM-accepted (ebd79e2): the owner's exact failing id resolves to Alex via the near-miss rule; full suite 915. 15.2 in progress. 15.2 done and PM-accepted (3381c21): merge-only consecutive-lines fix, words/order invariant; full suite 926. 15.3 in progress."
+      "note": "Opened 2026-09-22 under the owner's delegated decision authority after the owner's first real run (A2/small_talk/10min/2 speakers) died at section 3 on unknown speaker_id 'ff5f20e0-417b-8d9f-752e844d46f0' -- the model dropped one group of the real UUID ff5f20e0-4082-417b-8d9f-752e844d46f0 (Alex). Plan docs/implementation/phase-15-local-robustness.md: 15.1 speaker aliases S1/S2 in the section contract resolved server-side + >=0.85-similarity safety net for echoed UUIDs (no invented speaker); 15.2 deterministic merge of same-speaker runs (never re-attribute, words unchanged); 15.3 runner --gate path + set_job_metric cleanup; 15.4 Gate B-6 incl. the owner's configuration; 15.5 optional multi-script pace calibration. Thresholds unchanged. 15.1 done and PM-accepted (ebd79e2): the owner's exact failing id resolves to Alex via the near-miss rule; full suite 915. 15.2 in progress. 15.2 done and PM-accepted (3381c21): merge-only consecutive-lines fix, words/order invariant; full suite 926. 15.3 in progress. 15.3 done (d2c0d20). Gate B-6 EXECUTED 2026-09-22 (fresh trial DB under phase15/gate-b6): 0 structural failures in 11 jobs; owner's A2/small_talk/10min configuration 2/2 (1,100/1,073 words) with learning 2/2; samples 4/4; learning 3/3; MEDIA PASS first time (487.3 s, A/V 0.00); script 3/5 on repetition (1.00%/1.42% after one repetition repair). PHASE 15 CLOSED. Remaining single failure class: repetition, variable run-to-run (B-5 5/5 vs B-6 3/5 same code); options recorded in docs/operations/phase15-gate-b6.md section 7."
     }
   },
   "key_decisions": [
@@ -249,7 +249,8 @@
     "2026-09-22: Owner delegated open decisions to the PM after Gate B-3. D13 planned pace = measured pace (per-level default TTS speed A1/A2 0.75, B1 0.85, B2 0.9, C1 1.0, C2 1.1; CEFR_WORDS_PER_MINUTE 111/111/125/132/145/159; B1 8-min target 1,000 words; thresholds unchanged). D14 A/V padding investigated before any change. D15 learning repair-by-removal bounded by existing minimums. D16 Task 13.10 complete under D11; Phase 13 closed.",
     "2026-09-22 (Gate B-4): D17 bounded repetition repair when the only global failure is the 8-gram check (threshold 1% unchanged); D18 runner sends no speed so the level default applies; Phase 14 closes after Gate B-5 regardless of verdict -- further hardening is a new phase.",
     "2026-09-22: Phase 14 closed after Gate B-5 (script 5/5, samples 4/4, learning 5/5 PASS; media duration 413.3 s FAIL). Local-only is the shipped runtime by owner decision D11; every threshold unchanged throughout Phase 14.",
-    "2026-09-22: Phase 15 opened -- speaker aliases in the section contract with deterministic server-side resolution (no invented speaker), deterministic same-speaker run merging (no invented content), thresholds unchanged."
+    "2026-09-22: Phase 15 opened -- speaker aliases in the section contract with deterministic server-side resolution (no invented speaker), deterministic same-speaker run merging (no invented content), thresholds unchanged.",
+    "2026-09-22: Phase 15 closed after Gate B-6 -- structural failure class eliminated (speaker aliases + merge fix), media gate passed for the first time, owner's failing configuration completes; repetition remains the only failure class (options left to the owner)."
   ],
   "open_questions": [
     "RESOLVED 2026-09-14: all 3 real Task 2.1c findings fixed under Task 2.5 (LUFS drift, 9:16 video, Scottish/British disclosure), plus 2 more real bugs found+fixed while verifying (the .hidden-on-.btn CSS trap, an init_db() migration-replay crash).",
@@ -306,7 +307,7 @@
     "RESOLVED 2026-09-21: Task 13.9 (Gate B) done -- see phases.13.note. GATE B DECISION: FAIL (local experimental, Gemini primary). The existing port-8000 dev server was never touched; the trial ran its own isolated server/port and its own isolated DIE_DATA_DIR.",
     "NEXT UP: Task 13.10 -- rollout, packaging, documentation, and rollback drill (implementation plan section 8, Task 13.10). Dependency is the Gate B decision (now known: FAIL), which per the controlling plan means shipping durable jobs with Gemini primary and labeling local experimental -- this is an explicitly valid, non-blocking outcome, not a phase failure. Still required regardless of the Gate B outcome: document install/pull/digest/health/disk/update/uninstall and local security; surface missing runtime/model/VRAM/key guidance; run the rollback drill (Gemini mode, Ollama stopped, restart, script+learning succeed via the compatibility path, restore hybrid, confirm no DB repair/data loss). Read task-13.10.md and the controlling plan's exact allowed-file list before writing the doc-first plan.",
     "NEXT UP (2026-09-21): Coder idle (14.1-14.4a done) (running section budget; NO tolerance value changes), then 14.4a (runner prep; Coder never runs the trial). PM -> independent diff review of each task, then 14.4b Gate B-2 for BOTH providers (local matrix first, then Gemini; never concurrent; check live Gemini RPM/RPD first -- a two-day 3+2 split may be required and must be declared before run 1), then 14.6. Open until 14.4b data: compensate the measured -9% section undershoot or not; 3 vs 4 attempts.",
-    "NEXT UP (2026-09-22): Coder writes cards 15.1-15.4 doc-first (PM reviews), then 15.1 -> 15.2 -> 15.3; PM runs Gate B-6 (15.4) including the owner's failing A2/small_talk/10-min configuration; 15.5 pace calibration only on the owner's word. Owner action still pending: grant the PM session the narrowed permission to stop orphaned llama-server runner processes."
+    "PHASE 15 CLOSED 2026-09-22. No phase open. Owner options for the remaining repetition failures (none started): second bounded repetition repair; stronger avoid-list in the section prompt; or accept 3-5/5 completion with in-app Retry. Optional: 15.5 multi-script pace calibration for non-B1 levels. Owner action still pending: grant the PM session the narrowed permission to stop orphaned llama-server runners."
   ],
   "profile_id": "none",
   "repository": "https://github.com/danghoangsqtt-sys/dailyintelenglish",
