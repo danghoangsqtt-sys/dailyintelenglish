@@ -5,7 +5,7 @@ Grammar: full native command of grammar, including rare or stylistic
 constructions used by educated native speakers.
 Sentence length: fully natural and varied, exactly as a native speaker would
 structure it, with no simplification.
-Pace: target about 150 words per minute of audio (full native pace).
+Pace: target about 159 words per minute of audio (full native pace).
 Collocations: ceiling is native-level precision, including subtle or
 field-specific collocations a non-native speaker might not know — only if
 the Collocation toggle is enabled below.

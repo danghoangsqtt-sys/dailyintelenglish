@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 import aiosqlite
 
 from app.core.config import settings
-from app.core.constants import PROJECT_STATUSES
+from app.core.constants import CEFR_DEFAULT_TTS_SPEED, PROJECT_STATUSES
 from app.core.exceptions import NotFoundError, ValidationError
 from app.models.project import ProjectUpdate, ScriptConfig, SpeakerConfig, SpeakerUpdate
 
@@ -58,6 +58,21 @@ def _validate_status_transition(current_status: str, new_status: str) -> None:
             f"invalid status transition: {current_status} -> {new_status} "
             f"(must advance one step at a time through {' -> '.join(PROJECT_STATUSES)})"
         )
+
+
+def _resolve_speaker_speeds(speakers: list[SpeakerConfig], cefr_level: str) -> list[SpeakerConfig]:
+    """A speaker with no explicit `speed` (Task 14.10) gets the CEFR level's default.
+
+    Called once, before a speaker list is used for both the `config_json` snapshot
+    and `_replace_speakers`, so the two never disagree. A speaker that already has a
+    stored `speed` (round-tripped from an existing project) is returned unchanged --
+    this only ever fills in a `None`, never overwrites a real value.
+    """
+    default_speed = CEFR_DEFAULT_TTS_SPEED[cefr_level]
+    return [
+        speaker if speaker.speed is not None else speaker.model_copy(update={"speed": default_speed})
+        for speaker in speakers
+    ]
 
 
 async def _replace_speakers(
@@ -148,8 +163,9 @@ async def create_project(
         "accent": config.accent,
     }
     language_features = config.language_features.model_dump()
+    resolved_speakers = _resolve_speaker_speeds(config.speakers, config.cefr_level)
     config_json = _build_config_snapshot(
-        scalars, language_features, [speaker.model_dump() for speaker in config.speakers]
+        scalars, language_features, [speaker.model_dump() for speaker in resolved_speakers]
     )
     await db.execute(
         "INSERT INTO projects (id, name, status, topic, cefr_level, duration_minutes, "
@@ -170,7 +186,7 @@ async def create_project(
             now,
         ),
     )
-    await _replace_speakers(db, project_id, config.speakers)
+    await _replace_speakers(db, project_id, resolved_speakers)
     if commit:
         await db.commit()
     return await get_project(db, project_id)
@@ -278,9 +294,14 @@ async def update_project(
         for key in ("name", "topic", "cefr_level", "duration_minutes", "num_speakers", "genre", "accent")
     }
     merged_language_features = patch_fields.get("language_features", current["language_features"])
-    merged_speakers = (
-        [speaker.model_dump() for speaker in patch.speakers]
+    resolved_patch_speakers = (
+        _resolve_speaker_speeds(patch.speakers, merged_scalars["cefr_level"])
         if patch.speakers is not None
+        else None
+    )
+    merged_speakers = (
+        [speaker.model_dump() for speaker in resolved_patch_speakers]
+        if resolved_patch_speakers is not None
         else current["speakers"]
     )
 
@@ -295,8 +316,8 @@ async def update_project(
     values = [*set_fields.values(), _now(), project_id]
     await db.execute(f"UPDATE projects SET {set_clause}, updated_at = ? WHERE id = ?", values)
 
-    if patch.speakers is not None:
-        await _replace_speakers(db, project_id, patch.speakers)
+    if resolved_patch_speakers is not None:
+        await _replace_speakers(db, project_id, resolved_patch_speakers)
 
     if commit:
         await db.commit()

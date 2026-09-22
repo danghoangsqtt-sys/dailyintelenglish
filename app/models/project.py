@@ -35,7 +35,10 @@ class SpeakerConfig(BaseModel):
     accent: str = "american"
     tts_engine: str = "edge_tts"
     voice_description: str = ""
-    speed: float = Field(default=1.0, ge=TTS_SPEED_MIN, le=TTS_SPEED_MAX)
+    # Task 14.10: None means "no explicit speed" -- resolved to
+    # CEFR_DEFAULT_TTS_SPEED[project.cefr_level] by project_service, not defaulted
+    # here, since this model has no access to the project's CEFR level.
+    speed: float | None = Field(default=None, ge=TTS_SPEED_MIN, le=TTS_SPEED_MAX)
     pitch: float = Field(default=0.0, ge=-1.0, le=1.0)
     volume: float = Field(default=1.0, ge=0.0, le=2.0)
 

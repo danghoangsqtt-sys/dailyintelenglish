@@ -5,7 +5,7 @@ Grammar: complex grammar is expected — all conditionals, passive voice,
 reported speech, a full range of relative and subordinate clauses.
 Sentence length: medium to long, with natural variety and some
 subordination within a single sentence.
-Pace: target about 115 words per minute of audio.
+Pace: target about 132 words per minute of audio.
 Collocations: ceiling is a wide range of natural, verifiable collocations,
 including some field-specific ones relevant to the topic — only if the
 Collocation toggle is enabled below.

@@ -77,6 +77,7 @@ async def test_generate_video_produces_a_real_playable_mp4(tmp_path, monkeypatch
     audio_job = {
         "status": "complete",
         "mp3_path": str(audio_path),
+        "duration_seconds": 0.8,
         "timestamps": [{"start_sec": 0.0, "end_sec": 0.8, "label": "Alex", "speaker_id": "sp1", "text": "Hello!"}],
     }
 
@@ -92,6 +93,43 @@ async def test_generate_video_produces_a_real_playable_mp4(tmp_path, monkeypatch
     assert result["background_image"] == "midnight"
 
 
+async def test_generate_video_duration_matches_audio_exactly(tmp_path, monkeypatch):
+    """Task 14.10 (D14): `-t {duration}` replaces `-shortest`, which measurably
+    overshot at real (~300s) durations (Gate B-3 measured a 2.48s tail, root-caused
+    and reproduced directly against this exact command shape -- see task-14.10.md).
+    A short fixture can't reproduce the overshoot itself (it only appeared at real
+    scale), but it can and does prove `-t` -- not `-shortest` -- is what's actually
+    driving the render, since the rendered video's own stream duration now comes
+    from the passed `duration_seconds`, not from wherever the audio input happens
+    to end."""
+    import subprocess
+    from pathlib import Path
+
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    audio_path = tmp_path / "mix.mp3"
+    Sine(440).to_audio_segment(duration=800).apply_gain(-20).export(str(audio_path), format="mp3", bitrate="192k")
+    audio_job = {
+        "status": "complete",
+        "mp3_path": str(audio_path),
+        "duration_seconds": 0.8,
+        "timestamps": [{"start_sec": 0.0, "end_sec": 0.8, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}],
+    }
+
+    result = await video_service.generate_video("proj-av-match", audio_job, "midnight")
+
+    probe = subprocess.run(
+        [
+            "ffprobe", "-v", "error", "-select_streams", "v:0",
+            "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1",
+            str(Path(result["mp4_path"])),
+        ],
+        capture_output=True, text=True, timeout=30,
+    )
+    assert float(probe.stdout.strip()) == pytest.approx(0.8, abs=0.05)
+
+
 async def test_generate_video_default_aspect_ratio_does_not_render_vertical(tmp_path, monkeypatch):
     """Task 2.5b: default (`"16:9"`) must be byte-for-byte the existing behavior --
     no vertical file, no `mp4_path_vertical` key, zero extra ffmpeg calls."""
@@ -103,6 +141,7 @@ async def test_generate_video_default_aspect_ratio_does_not_render_vertical(tmp_
     audio_job = {
         "status": "complete",
         "mp3_path": str(audio_path),
+        "duration_seconds": 0.5,
         "timestamps": [{"start_sec": 0.0, "end_sec": 0.5, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}],
     }
 
@@ -125,6 +164,7 @@ async def test_generate_video_16x9_regenerate_deletes_stale_vertical_file(tmp_pa
     audio_job = {
         "status": "complete",
         "mp3_path": str(audio_path),
+        "duration_seconds": 0.5,
         "timestamps": [{"start_sec": 0.0, "end_sec": 0.5, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}],
     }
 
@@ -154,6 +194,7 @@ async def test_generate_video_9x16_produces_a_real_playable_vertical_mp4(tmp_pat
     audio_job = {
         "status": "complete",
         "mp3_path": str(audio_path),
+        "duration_seconds": 0.8,
         "timestamps": [{"start_sec": 0.0, "end_sec": 0.8, "label": "Alex", "speaker_id": "sp1", "text": "Hello!"}],
     }
 
@@ -188,6 +229,7 @@ async def test_generate_video_invalid_aspect_ratio_does_not_render_vertical(tmp_
     audio_job = {
         "status": "complete",
         "mp3_path": str(audio_path),
+        "duration_seconds": 0.5,
         "timestamps": [{"start_sec": 0.0, "end_sec": 0.5, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}],
     }
 

@@ -4,7 +4,7 @@ lower-frequency words where they are the most precise choice.
 Grammar: full native-level grammar range — inversion, cleft sentences,
 mixed conditionals, and nuanced modal usage are all appropriate.
 Sentence length: long and varied, matching natural native-speaker rhythm.
-Pace: target about 130 words per minute of audio (near-native pace).
+Pace: target about 145 words per minute of audio (near-native pace).
 Collocations: ceiling is advanced, precise, field-specific collocations —
 only if the Collocation toggle is enabled below.
 Idioms: ceiling is advanced, nuanced idioms — only if the Idiom toggle is

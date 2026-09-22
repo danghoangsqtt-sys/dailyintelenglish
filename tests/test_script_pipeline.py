@@ -56,7 +56,12 @@ def _section_json(*speaker_words_start: tuple[str, int, int]) -> str:
     )
 
 
-def make_config(duration_minutes: float = 1.0, topic: str = "healthy morning habits") -> ScriptConfig:
+def make_config(duration_minutes: float = 0.8, topic: str = "healthy morning habits") -> ScriptConfig:
+    # Task 14.10 (D13): the default was 1.0 (-> 100 target_words under the old B1
+    # 100wpm). Changed to 0.8 so 125wpm (new B1) * 0.8 = 100 exactly -- every existing
+    # fixture in this file that hardcodes "100 words" / 4x25-word lines for the
+    # default single-section case stays valid unchanged, matching the same
+    # round-number-preservation approach already used for the "800" fixtures below.
     return ScriptConfig(
         name="Pipeline test",
         topic=topic,
@@ -88,9 +93,11 @@ def _build_router(gemini_outcomes: list) -> tuple[AIRouter, FakeProvider, FakePr
 @pytest.mark.parametrize(
     "fixture_id,expected_words",
     [
-        ("a2_5min_daily_routine", 450),
-        ("b1_8min_remote_work", 800),
-        ("c1_10min_urban_policy", 1300),
+        # Task 14.10 (D13): measured pace, not the old unmeasured 90/100/130 wpm --
+        # A2 111wpm*5=555, B1 125wpm*8=1000, C1 145wpm*10=1450.
+        ("a2_5min_daily_routine", 555),
+        ("b1_8min_remote_work", 1000),
+        ("c1_10min_urban_policy", 1450),
     ],
 )
 def test_compute_target_words_matches_golden_fixtures(fixture_id, expected_words):
@@ -100,16 +107,21 @@ def test_compute_target_words_matches_golden_fixtures(fixture_id, expected_words
 
 
 def test_plan_sections_sums_to_target_words():
-    for target, level in [(450, "A2"), (800, "B1"), (1300, "C1"), (1, "A1")]:
+    # Task 14.10 (D13): updated to the measured table's values -- sum(budgets) == target
+    # holds for any level/target pair by construction (only section *count* depends on
+    # wpm), but these are kept in sync with the real table anyway so no stale pre-14.10
+    # numbers sit next to it elsewhere in this file.
+    for target, level in [(555, "A2"), (1000, "B1"), (1450, "C1"), (1, "A1")]:
         budgets = script_pipeline.plan_sections(target, level)
         assert sum(budgets) == target
         assert all(budget > 0 for budget in budgets)
 
 
 def test_plan_sections_splits_into_roughly_90_second_chunks():
-    # B1 100 wpm * 1.5 min = 150 words/section -> 800 words should split into ~5 sections.
-    budgets = script_pipeline.plan_sections(800, "B1")
-    assert len(budgets) == 5
+    # Task 14.10 (D13): B1 125 wpm * 1.5 min = 187.5 -> round() = 188 words/section;
+    # 1000 words / 188 -> round(5.32) = 5 sections, splitting evenly into 5x200.
+    budgets = script_pipeline.plan_sections(1000, "B1")
+    assert budgets == [200, 200, 200, 200, 200]
 
 
 # --- pure functions: Task 14.3 effective-target/clamp/carry math --------------------
@@ -319,6 +331,21 @@ def test_constants_pin_word_tolerances_are_unchanged_by_task_14_3():
     assert constants.SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER == 5
 
 
+def test_constants_pin_pace_calibration_table_matches_the_d13_measurement():
+    """Task 14.10 (Amendment G, D13): CEFR_WORDS_PER_MINUTE and
+    CEFR_DEFAULT_TTS_SPEED are measured values (real Edge TTS synthesis at 5
+    speeds, data/quality_reviews/phase14/gate-b3/pace-calibration.json), not an
+    implementation choice -- pins both tables so a silent edit fails CI."""
+    from app.core import constants
+
+    assert constants.CEFR_WORDS_PER_MINUTE == {
+        "A1": 111, "A2": 111, "B1": 125, "B2": 132, "C1": 145, "C2": 159,
+    }
+    assert constants.CEFR_DEFAULT_TTS_SPEED == {
+        "A1": 0.75, "A2": 0.75, "B1": 0.85, "B2": 0.90, "C1": 1.00, "C2": 1.10,
+    }
+
+
 # --- handler: end-to-end with a FakeProvider-backed router --------------------------
 
 
@@ -472,7 +499,7 @@ async def test_pipeline_fails_transparently_when_repair_also_fails(db):
 
 
 async def test_pipeline_resumes_from_checkpoint_after_interruption(db):
-    project = await _project(db, duration_minutes=2.0)
+    project = await _project(db, duration_minutes=1.6)  # 1.6 * 125 wpm (B1) = 200 (Task 14.10)
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
 
     outline_json = json.dumps(
@@ -798,7 +825,9 @@ async def test_pipeline_accepts_off_target_sections_when_total_lands_inside_tole
     gate, ±10% of the whole-episode target -- mirroring the plan's own measured
     evidence (the one Phase 13 job that passed had per-section deviations from
     -14% to +3% while the total was -2.4%)."""
-    project = await _project(db, duration_minutes=8.0)  # B1 100wpm*8 = 800 target_words
+    # Task 14.10 (D13): 6.4 min * 125 wpm (B1) = 800 target_words -- preserves this
+    # test's existing carry/clamp/repair arithmetic unchanged.
+    project = await _project(db, duration_minutes=6.4)
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
 
     outline_json = json.dumps(
@@ -864,7 +893,10 @@ async def test_pipeline_final_section_budget_repair_brings_the_total_inside_tole
     regenerates just the last section against the *real* remaining word count
     and the job completes; `repair_count` reflects exactly that one extra
     repair, and the last section's checkpoint is overwritten with the new text."""
-    project = await _project(db, duration_minutes=8.0)  # target_words = 800
+    # Task 14.10 (D13): 6.4 min * 125 wpm (B1) = 800 -- preserves this test's
+    # existing carry/clamp/repair arithmetic unchanged; never actually about "8
+    # minutes", only about the round number 800.
+    project = await _project(db, duration_minutes=6.4)  # target_words = 800
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
 
     outline_json = json.dumps(
@@ -920,7 +952,10 @@ async def test_pipeline_global_validation_still_fails_after_one_final_section_re
     (`SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS=1`) -- if its output still
     misses the global ±10% band, the job fails with `global_validation_failed`,
     no second attempt is made, and no partial script is saved."""
-    project = await _project(db, duration_minutes=8.0)  # target_words = 800
+    # Task 14.10 (D13): 6.4 min * 125 wpm (B1) = 800 -- preserves this test's
+    # existing carry/clamp/repair arithmetic unchanged; never actually about "8
+    # minutes", only about the round number 800.
+    project = await _project(db, duration_minutes=6.4)  # target_words = 800
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
 
     outline_json = json.dumps(
@@ -992,7 +1027,9 @@ async def test_pipeline_interrupted_with_drift_then_resumed_reaches_the_same_tot
         ]
 
     # --- uninterrupted run: fresh project, all three outcomes scripted up front.
-    uninterrupted_project = await _project(db, duration_minutes=8.0)
+    # Task 14.10 (D13): 6.4 min * 125 wpm (B1) = 800 target_words, matching this
+    # test's own hand-computed carry math (see comments in _scenario_outcomes above).
+    uninterrupted_project = await _project(db, duration_minutes=6.4)
     u_alex_id, u_maya_id = (speaker["id"] for speaker in uninterrupted_project["speakers"])
     router_u, _gemini_u, _local_u = _build_router(
         [_result(outline_json), *_scenario_outcomes(u_alex_id, u_maya_id)]
@@ -1011,7 +1048,7 @@ async def test_pipeline_interrupted_with_drift_then_resumed_reaches_the_same_tot
     # --- interrupted-then-resumed run: identical scenario, a separate project
     # (each project mints its own speaker UUIDs, so the JSON bodies are built
     # fresh per-project via `_scenario_outcomes`, not reused from the run above).
-    resumed_project = await _project(db, duration_minutes=8.0)
+    resumed_project = await _project(db, duration_minutes=6.4)  # 6.4 * 125 wpm (B1) = 800
     r_alex_id, r_maya_id = (speaker["id"] for speaker in resumed_project["speakers"])
     resumed_outcomes = _scenario_outcomes(r_alex_id, r_maya_id)
     outcomes_first_run = [_result(outline_json), *resumed_outcomes[:2]]  # interrupted after section 2
@@ -1048,7 +1085,7 @@ async def test_pipeline_length_only_repair_fires_and_fixes_an_over_length_sectio
     effective_target * (1 + SCRIPT_SECTION_CARRY_CAP) after its one semantic
     repair -- the length-only pass fires and trims it inside tolerance; the
     checkpoint's metrics_json records both repair attempts."""
-    project = await _project(db)  # duration_minutes=1.0 -> target_words=100, 1 section
+    project = await _project(db)  # duration_minutes=0.8 -> target_words=100 (Task 14.10), 1 section
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
 
     outline_json = json.dumps(
@@ -1099,7 +1136,10 @@ async def test_pipeline_length_only_repair_still_over_length_is_accepted_off_tar
     over-length) -- the section is accepted via 14.3's accept-and-carry rather
     than hard-failing the job; this is a best-effort extra attempt, not a new
     gate."""
-    project = await _project(db, duration_minutes=8.0)  # target_words = 800
+    # Task 14.10 (D13): 6.4 min * 125 wpm (B1) = 800 -- preserves this test's
+    # existing carry/clamp/repair arithmetic unchanged; never actually about "8
+    # minutes", only about the round number 800.
+    project = await _project(db, duration_minutes=6.4)  # target_words = 800
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
 
     outline_json = json.dumps(
@@ -1193,7 +1233,10 @@ async def test_pipeline_repair_count_hits_the_2n_plus_1_ceiling(db):
     both repairs, and the resulting total still misses the global ±10% band,
     so the final-section budget repair also fires -- hitting the ceiling
     exactly, asserted directly against the formula."""
-    project = await _project(db, duration_minutes=8.0)  # target_words = 800
+    # Task 14.10 (D13): 6.4 min * 125 wpm (B1) = 800 -- preserves this test's
+    # existing carry/clamp/repair arithmetic unchanged; never actually about "8
+    # minutes", only about the round number 800.
+    project = await _project(db, duration_minutes=6.4)  # target_words = 800
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
 
     outline_json = json.dumps(

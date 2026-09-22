@@ -182,7 +182,9 @@
           accent: state.accent,
           tts_engine: "omnivoice",
           voice_description: "",
-          speed: 1.0,
+          // Task 14.10: no explicit speed -- the server resolves this to the
+          // project's CEFR-level default (CEFR_DEFAULT_TTS_SPEED) at creation.
+          speed: null,
           pitch: 0.0,
           volume: 1.0,
         });
@@ -423,7 +425,10 @@
         accent: speaker.accent,
         tts_engine: speaker.tts_engine ?? "omnivoice",
         voice_description: speaker.voice_description ?? "",
-        speed: speaker.speed ?? 1.0,
+        // null (not a hardcoded 1.0) so an unset speed still resolves to the
+        // CEFR-level default server-side; an existing, already-resolved speaker's
+        // real speed passes through unchanged.
+        speed: speaker.speed ?? null,
         pitch: speaker.pitch ?? 0.0,
         volume: speaker.volume ?? 1.0,
       })),

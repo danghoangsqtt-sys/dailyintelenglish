@@ -5,7 +5,7 @@ Grammar: simple compound sentences (joined with "and", "but", "so"); past
 simple tense is allowed alongside present simple. Avoid complex subordinate
 clauses and conditionals beyond the simple first conditional.
 Sentence length: short to medium (roughly 8-14 words per sentence).
-Pace: target about 90 words per minute of audio.
+Pace: target about 111 words per minute of audio.
 Collocations: ceiling is common, everyday collocations (e.g. "take a break",
 "do homework") — only if the Collocation toggle is enabled below.
 Idioms: ceiling is none at this level, regardless of the Idiom toggle below.

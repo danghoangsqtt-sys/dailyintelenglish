@@ -1,6 +1,6 @@
 # Task 14.10 — Pace Calibration (Measured, Not Assumed)
 
-- **Status:** in progress
+- **Status:** done (full suite 888 passed, 0 failed)
 - **Owner:** Coder (measurement itself was done by PM — see below)
 - **Priority:** P1
 - **Dependency:** Task 14.6 done (Phase 13 Task 13.10 complete under D11); Gate B-3
@@ -230,6 +230,44 @@ migration involved (new-speaker-only default, no stored-data change).
      default at creation, and a second proving an existing project's already-stored
      `speed` survives an unrelated update untouched.
 - Commands and results:
-- Deviations:
+  - `venv\Scripts\python.exe -m ruff check app tests scripts` -> All checks passed
+    (run per touched file throughout, then again in full at the end).
+  - `pytest tests/test_video_service.py -q` -> 16 passed (incl. the new
+    `test_generate_video_duration_matches_audio_exactly`).
+  - `pytest tests/test_project_service.py -q` -> 29 passed (incl. the 3 new
+    speed-default tests); `pytest tests/test_projects_api.py
+    tests/test_projects_write_lock.py -q` -> 30 passed, unaffected.
+  - `node --check frontend/static/js/step1_config.js` -> clean.
+  - `pytest tests/test_script_pipeline.py -q` -> 53 passed (see Deviations for the
+    real ripple this surfaced and how it was fixed).
+  - `pytest -q` (full suite) -> **888 passed, 0 failed** (482.18s).
+- Deviations: the plan's item 4 anticipated fixture drift only for the "duration_minutes=8.0
+  -> target_words=800" pattern (7 occurrences, all in the e2e tests already
+  enumerated). Running the full `test_script_pipeline.py` file surfaced a second,
+  larger ripple the plan missed: **every** test using the bare `_project(db)` default
+  (no explicit `duration_minutes`) relies on `make_config`'s own default
+  (`duration_minutes=1.0`) combining with the *old* B1 100wpm to reach exactly 100
+  target_words -- 9 tests hardcode a 100-word single section (4x25-word lines) on
+  this assumption. Under the new B1 125wpm, `_project(db)`'s default 1.0 minute
+  yields 125 target_words instead, so the 100-word fixture content became a
+  budget-validation miss the pipeline tried to repair, and each of those 9 tests'
+  scripted `FakeProvider` outcomes ran out (`RuntimeError: ... no more scripted
+  outcomes`) since none of them scripted an extra repair call. Fixed the same way as
+  the "800" pattern, at the single point of control rather than 9 separate fixture
+  rewrites: changed `make_config`'s own default from `duration_minutes=1.0` to
+  `duration_minutes=0.8` (125 wpm * 0.8 = 100.0 exactly), so every existing
+  100-word/4x25-line fixture in the file stays valid unchanged. One more test
+  (`test_pipeline_resumes_from_checkpoint_after_interruption`) used an explicit
+  `duration_minutes=2.0` with two 100-word sections (200 actual words) -- fixed the
+  same way, `2.0 -> 1.6` (125 * 1.6 = 200.0 exactly). Full file re-run after both
+  fixes: 53/53 passed, no further surprises. This was caught by actually running the
+  full test file rather than assuming the plan's fixture-update list was complete --
+  consistent with this project's standing "run the real thing, don't assume"
+  discipline.
 - Revert-and-confirm-failure evidence:
-- Commit(s):
+  - Temporarily changed `CEFR_WORDS_PER_MINUTE["B1"]` from `125` to `126`
+    (`# REVERT-AND-CONFIRM-FAILURE`) and ran
+    `pytest tests/test_script_pipeline.py::test_constants_pin_pace_calibration_table_matches_the_d13_measurement -q`:
+    **1 failed** (`AssertionError: {'B1': 126} != {'B1': 125}`). Restored the real
+    value and re-ran the full `tests/test_script_pipeline.py` file: **53 passed**.
+- Commit(s): `0db62e9` (plan), plus this commit (implementation).

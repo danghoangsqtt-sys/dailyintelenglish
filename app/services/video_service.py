@@ -86,9 +86,21 @@ def _escape_ffmpeg_filter_path(path: str) -> str:
     return path.replace("\\", "\\\\").replace(":", "\\:")
 
 
-def _render_video_sync(background_path: Path, audio_path: str, srt_path: Path, output_path: Path) -> None:
+def _render_video_sync(
+    background_path: Path, audio_path: str, srt_path: Path, output_path: Path, audio_duration_seconds: float
+) -> None:
     """Blocking ffmpeg subprocess call — must run in a thread (asyncio.to_thread), never
-    on the event loop directly (this task's Forbidden Scope)."""
+    on the event loop directly (this task's Forbidden Scope).
+
+    Task 14.10 (D14): `-t {audio_duration_seconds}` replaces `-shortest`.
+    `-shortest` measurably overshoots on this exact command shape at real durations
+    (confirmed: exactly matched at 10s, ~2.5s tail at ~300s, reproduced directly and
+    root-caused to `-shortest` only stopping further *reads* once the audio input
+    ends while frames already buffered in libx264's B-frame reordering pipeline still
+    get flushed afterward -- Gate B-3 measured this exact 2.48s gap). `-t` is a hard,
+    frame-accurate output cutoff regardless of encoder buffering, using the duration
+    AudioService already measured for real (`audio_jobs.duration_seconds`) rather
+    than a second ffprobe call."""
     vf = f"subtitles='{_escape_ffmpeg_filter_path(str(srt_path))}'"
     command = [
         settings.FFMPEG_PATH,
@@ -102,7 +114,7 @@ def _render_video_sync(background_path: Path, audio_path: str, srt_path: Path, o
         "-c:a", "aac",
         "-b:a", "192k",
         "-pix_fmt", "yuv420p",
-        "-shortest",
+        "-t", str(audio_duration_seconds),
         str(output_path),
     ]
     result = subprocess.run(command, capture_output=True, text=True)
@@ -184,7 +196,10 @@ async def generate_video(
     )
 
     try:
-        await asyncio.to_thread(_render_video_sync, background_path, audio_job["mp3_path"], srt_path, mp4_path)
+        await asyncio.to_thread(
+            _render_video_sync,
+            background_path, audio_job["mp3_path"], srt_path, mp4_path, audio_job["duration_seconds"],
+        )
     except VideoRenderError:
         raise
     except Exception as exc:

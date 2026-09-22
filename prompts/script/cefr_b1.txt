@@ -6,7 +6,7 @@ future with "will"/"going to"), plus simple relative clauses and the first
 and second conditional.
 Sentence length: medium (roughly 10-18 words per sentence), with some
 sentence variety.
-Pace: target about 100 words per minute of audio.
+Pace: target about 125 words per minute of audio.
 Collocations: ceiling is everyday and moderately advanced collocations,
 verifiable in a standard learner's dictionary — only if the Collocation
 toggle is enabled below.

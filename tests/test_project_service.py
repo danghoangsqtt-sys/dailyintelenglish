@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError as PydanticValidationError
 
 from app.core.config import settings
+from app.core.constants import CEFR_DEFAULT_TTS_SPEED
 from app.core.exceptions import NotFoundError
 from app.core.exceptions import ValidationError as AppValidationError
 from app.models.project import ProjectUpdate, ScriptConfig, SpeakerConfig
@@ -38,6 +39,82 @@ async def test_create_project_persists_config_and_speakers(db):
     assert project["cefr_level"] == "B1"
     assert len(project["speakers"]) == 2
     assert project["speakers"][0]["name"] == "Alex"
+
+
+async def test_create_project_speaker_with_no_speed_gets_the_cefr_level_default(db):
+    """Task 14.10 (D13): a speaker submitted with no explicit `speed` (the normal
+    case -- there is no UI control for it) resolves to CEFR_DEFAULT_TTS_SPEED for
+    the project's own level, not a hardcoded 1.0."""
+    project = await project_service.create_project(
+        db,
+        make_config(
+            cefr_level="B2",
+            num_speakers=1,
+            speakers=[SpeakerConfig(name="Alex", gender="male", accent="american")],
+        ),
+    )
+
+    assert project["speakers"][0]["speed"] == CEFR_DEFAULT_TTS_SPEED["B2"]
+
+
+async def test_create_project_speaker_with_explicit_speed_is_not_overridden(db):
+    project = await project_service.create_project(
+        db,
+        make_config(
+            cefr_level="B2",
+            num_speakers=1,
+            speakers=[SpeakerConfig(name="Alex", gender="male", accent="american", speed=1.25)],
+        ),
+    )
+
+    assert project["speakers"][0]["speed"] == 1.25
+
+
+async def test_update_project_leaves_an_existing_stored_speed_untouched(db):
+    """Task 14.10: the default-speed resolution is for new speakers only -- it must
+    never retroactively change an already-stored speaker's speed, whether the patch
+    omits `speakers` entirely or echoes the existing speaker back explicitly."""
+    project = await project_service.create_project(
+        db,
+        make_config(
+            cefr_level="A1",
+            num_speakers=1,
+            speakers=[SpeakerConfig(name="Alex", gender="male", accent="american", speed=1.4)],
+        ),
+    )
+    assert project["speakers"][0]["speed"] == 1.4
+
+    # Patch with no `speakers` field at all -- falls back to the stored row untouched.
+    updated = await project_service.update_project(
+        db, project["id"], ProjectUpdate(name="Renamed Episode")
+    )
+    assert updated["speakers"][0]["speed"] == 1.4
+
+    # Patch that DOES replace `speakers`, echoing the already-resolved speed back
+    # (as a real edit form would) -- still not re-defaulted, since it isn't None.
+    replaced = await project_service.update_project(
+        db, project["id"],
+        ProjectUpdate(
+            num_speakers=1,
+            speakers=[SpeakerConfig(name="Alex", gender="male", accent="american", speed=1.4)],
+        ),
+    )
+    assert replaced["speakers"][0]["speed"] == 1.4
+
+    # A genuinely NEW speaker added during the same edit (no speed given) still
+    # gets the CEFR-level default, using the project's *current* level (A1).
+    with_new_speaker = await project_service.update_project(
+        db, project["id"],
+        ProjectUpdate(
+            num_speakers=2,
+            speakers=[
+                SpeakerConfig(name="Alex", gender="male", accent="american", speed=1.4),
+                SpeakerConfig(name="Maya", gender="female", accent="american"),
+            ],
+        ),
+    )
+    assert with_new_speaker["speakers"][0]["speed"] == 1.4
+    assert with_new_speaker["speakers"][1]["speed"] == CEFR_DEFAULT_TTS_SPEED["A1"]
 
 
 async def test_list_projects_orders_by_most_recently_updated(db):

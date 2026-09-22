@@ -216,7 +216,19 @@ AI_JOB_MAX_RECORDED_CALLS = 64
 # Copied from the already-live "Pace: target about N words per minute" line in each
 # prompts/script/cefr_*.txt file -- a single source of truth the pipeline computes
 # target word counts from, instead of parsing prompt prose at runtime.
-CEFR_WORDS_PER_MINUTE = {"A1": 80, "A2": 90, "B1": 100, "B2": 115, "C1": 130, "C2": 150}
+#
+# Phase 14 Task 14.10 (Amendment G, D13): these values are MEASURED, not assumed --
+# the original table (A1-C2: 80/90/100/115/130/150) was never achievable, even at
+# TTS_SPEED_MIN (0.75x, the slowest supported speed). PM synthesized the Gate B-3
+# winning script via real Edge TTS at 5 speaker speeds and measured actual audio
+# duration (data/quality_reviews/phase14/gate-b3/pace-calibration.json); this table
+# is that measured pace at each level's new CEFR_DEFAULT_TTS_SPEED default below.
+CEFR_WORDS_PER_MINUTE = {"A1": 111, "A2": 111, "B1": 125, "B2": 132, "C1": 145, "C2": 159}
+# Phase 14 Task 14.10 (D13): the speaker speed a new speaker gets by default when none
+# is explicitly given, one per CEFR level -- paired 1:1 with CEFR_WORDS_PER_MINUTE
+# above (that table's values are the measured pace AT this speed, not some other
+# speed). All within [TTS_SPEED_MIN, TTS_SPEED_MAX] = [0.75, 1.5].
+CEFR_DEFAULT_TTS_SPEED = {"A1": 0.75, "A2": 0.75, "B1": 0.85, "B2": 0.90, "C1": 1.00, "C2": 1.10}
 # Midpoint of the plan's "1-2 minute" section spec.
 SCRIPT_SECTION_TARGET_MINUTES = 1.5
 SCRIPT_SECTION_WORD_TOLERANCE = 0.15

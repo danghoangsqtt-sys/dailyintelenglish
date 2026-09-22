@@ -49,7 +49,7 @@
 | 14.8 | Local hardening: over-length sections, consecutive-lines rule (Amendment D) | Coder | **done** (883 passed, 0 failed) | see task-14.8.md verification |
 | 14.9 | Gate B-3, local only (Amendment D) | PM | **done** | script gate PASS 5/5 (first time); learning 4/5; media FAIL as declared (measured pace); see `docs/operations/phase14-gate-b3.md` |
 | 14.6 (revised) | Resume Task 13.10, local-only rollout (Amendment D) | Both | **done** | Coder side `1c89b6a`/`1f723de` (884 passed, 0 failed); PM side `d5c817e`/`48695ba`/`c6c2f35`; Phase 13 Task 13.10 complete under D11 |
-| 14.10 | Pace calibration, measured not assumed (Amendment G) | Coder | pending | Depends on 14.6 done; D13's measured table, see task-14.10.md |
+| 14.10 | Pace calibration, measured not assumed (Amendment G) | Coder | **done** (888 passed, 0 failed) | see task-14.10.md verification |
 | 14.11 | Learning repair by removal (Amendment G) | Coder | pending | Depends on 14.10 done; D15, see task-14.11.md |
 | 14.12 | Gate B-4, local only (Amendment G) | PM | pending | Depends on 14.10 + 14.11 done; Coder idle during the run |
 
@@ -397,3 +397,29 @@ idle) → Phase 14 close-out.
   mirroring the task-14.9.md pattern) from plan §13, doc-first and before any
   implementation file is touched -- awaiting PM's review of the three cards
   before starting 14.10.
+- 2026-09-22: PM accepted the three cards and the README nit fix, directed the
+  Coder to start Task 14.10. Coder implemented it, doc-first: **D14 investigated
+  first**, before any `video_service.py` change -- real Gate B-3 media measured
+  via `ffprobe` (video 304.00s vs. audio 301.52s, diff 2.48s, matching the PM's
+  reported number), directly reproduced against the exact real command shape
+  (zero overshoot at 10s, ~2.5s overshoot at real ~300s scale -- confirmed
+  scale-dependent, root-caused to `-shortest` flushing B-frame-buffered frames
+  after the audio input ends, not a deliberate design element), and the fix
+  verified directly (`-t <known audio duration>` instead of `-shortest` ->
+  exact match). Decision: fix it (one new parameter threading the already-known
+  `audio_jobs.duration_seconds` through); `AV_DIFF_MAX_SECONDS` stays `1.0`,
+  unchanged. `CEFR_WORDS_PER_MINUTE`/new `CEFR_DEFAULT_TTS_SPEED` set to D13's
+  measured table; the 6 `cefr_*.txt` Pace lines updated to match.
+  `SpeakerConfig.speed` becomes an optional `None` sentinel (found: there is no
+  UI control for speed anywhere in the app today -- `step1_config.js` hardcoded
+  `1.0` at speaker-creation and payload-build time, both now send `null` so the
+  server resolves the CEFR-level default; an existing project's stored speed is
+  never touched). Running the full test suite surfaced a real ripple the plan's
+  fixture-update list had missed -- 9 more `test_script_pipeline.py` tests
+  hardcoded a 100-word single section relying on the *old* B1 wpm's arithmetic
+  under the default 1-minute test project; fixed at one point of control
+  (`make_config`'s own default duration changed from 1.0 to 0.8 minutes, so
+  100 target_words is still reached exactly under the new 125 wpm) rather than
+  rewriting 9 fixtures, documented honestly in task-14.10.md's Deviations.
+  Constants-pin test added for both new tables, revert-and-confirm-failure done.
+  Full suite: **888 passed, 0 failed**. Task 14.10 status: **done**.
