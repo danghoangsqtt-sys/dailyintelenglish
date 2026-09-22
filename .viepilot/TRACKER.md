@@ -1984,8 +1984,20 @@ one group of the real UUID `ff5f20e0-4082-417b-8d9f-752e844d46f0` (Alex). Same c
 B1-5min sample. Plan `docs/implementation/phase-15-local-robustness.md` (invariants 20–23: no invented
 speaker, no server-invented content, thresholds unchanged).
 
-### 15.1 Speaker aliases in the section contract + deterministic id resolution — pending (Coder, P0)
-### 15.2 Deterministic consecutive-lines fix (merge same-speaker runs; never re-attribute) — pending (Coder, P1)
+### 15.1 Speaker aliases in the section contract + deterministic id resolution — ✅ DONE (2026-09-22, Coder `d1efe4f`/`ebd79e2`; PM-accepted)
+
+- [x] New `SectionLineWire` (alias `speaker`) is what the model parses against; `resolve_section_lines`
+  converts to the unchanged `SectionLineOut` (UUID) before any validation, so validators/checkpoints/
+  `save_script` and old checkpoints are untouched. Resolution order: exact alias → normalized alias →
+  unique display name → exact UUID → UUID-shaped near-miss with ratio ≥ `SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO
+  = 0.85` matching exactly one id → else unknown (repair → fail as before). Section/repair prompts list
+  `S1`/`S2` aliases. `regenerate_line` untouched. 13 new tests incl. the literal owner-run case;
+  revert-and-confirm-failure on the pin and on the safety net at 1.0. Coder-reported full suite 915.
+- [x] **PM acceptance:** called `resolve_speaker` directly on the real trigger —
+  `ff5f20e0-417b-8d9f-752e844d46f0 → Alex (uuid_near_miss, ratio 0.925)`; alias/name/UUID rules and the
+  unknown fallbacks behave as specified; `script_service.py` diff empty; 90 targeted tests pass; ruff clean.
+
+### 15.2 Deterministic consecutive-lines fix — ⏳ IN PROGRESS (Coder)
 ### 15.3 Runner per-gate evidence path; `set_job_metric` layering cleanup — pending (Coder, P2)
 ### 15.4 Gate B-6 local incl. the owner's failing configuration — pending (PM)
 ### 15.5 Multi-script pace calibration — optional, on the owner's word

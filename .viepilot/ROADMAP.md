@@ -1224,7 +1224,7 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
 **Status:** In progress | **Opened:** 2026-09-22 | Plan `docs/implementation/phase-15-local-robustness.md`.
 Trigger: owner's first hands-on run died on a truncated speaker UUID (structural check with no repair path).
 
-- [ ] 15.1 Speaker aliases (S1/S2) in the section contract, server-side resolution, ≥ 0.85 safety net — Coder
+- [x] 15.1 Speaker aliases (S1/S2) in the section contract, server-side resolution, ≥ 0.85 safety net — ✅ DONE 2026-09-22
 - [ ] 15.2 Deterministic consecutive-lines fix (merge same-speaker runs) — Coder
 - [ ] 15.3 Runner per-gate evidence path; `set_job_metric` cleanup — Coder
 - [ ] 15.4 Gate B-6 local incl. the owner's A2/small_talk/10-min configuration — PM

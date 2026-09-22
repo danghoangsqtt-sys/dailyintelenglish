@@ -142,9 +142,9 @@
       "name": "Local Script Robustness",
       "days": "n/a",
       "status": "in_progress",
-      "tasks_done": 0,
+      "tasks_done": 1,
       "tasks_total": 5,
-      "note": "Opened 2026-09-22 under the owner's delegated decision authority after the owner's first real run (A2/small_talk/10min/2 speakers) died at section 3 on unknown speaker_id 'ff5f20e0-417b-8d9f-752e844d46f0' -- the model dropped one group of the real UUID ff5f20e0-4082-417b-8d9f-752e844d46f0 (Alex). Plan docs/implementation/phase-15-local-robustness.md: 15.1 speaker aliases S1/S2 in the section contract resolved server-side + >=0.85-similarity safety net for echoed UUIDs (no invented speaker); 15.2 deterministic merge of same-speaker runs (never re-attribute, words unchanged); 15.3 runner --gate path + set_job_metric cleanup; 15.4 Gate B-6 incl. the owner's configuration; 15.5 optional multi-script pace calibration. Thresholds unchanged."
+      "note": "Opened 2026-09-22 under the owner's delegated decision authority after the owner's first real run (A2/small_talk/10min/2 speakers) died at section 3 on unknown speaker_id 'ff5f20e0-417b-8d9f-752e844d46f0' -- the model dropped one group of the real UUID ff5f20e0-4082-417b-8d9f-752e844d46f0 (Alex). Plan docs/implementation/phase-15-local-robustness.md: 15.1 speaker aliases S1/S2 in the section contract resolved server-side + >=0.85-similarity safety net for echoed UUIDs (no invented speaker); 15.2 deterministic merge of same-speaker runs (never re-attribute, words unchanged); 15.3 runner --gate path + set_job_metric cleanup; 15.4 Gate B-6 incl. the owner's configuration; 15.5 optional multi-script pace calibration. Thresholds unchanged. 15.1 done and PM-accepted (ebd79e2): the owner's exact failing id resolves to Alex via the near-miss rule; full suite 915. 15.2 in progress."
     }
   },
   "key_decisions": [
