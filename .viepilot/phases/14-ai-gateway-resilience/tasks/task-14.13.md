@@ -1,6 +1,6 @@
 # Task 14.13 — Repetition Repair
 
-- **Status:** pending
+- **Status:** in progress
 - **Owner:** Coder
 - **Priority:** P1
 - **Dependency:** Task 14.4a-d done (sequential, per plan §14's execution order)
@@ -101,6 +101,82 @@ revert, restoring today's immediate-hard-fail behavior for a repetition-only mis
 ## Execution record
 
 - Plan/decisions before code:
+  1. **New constants** (`app/core/constants.py`): `SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS
+     = 1` (this task's own bound, mirroring `SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS`'s
+     comment style); `SCRIPT_SECTION_AVOID_PHRASES_MAX = 8` (PM's note (b) -- caps
+     the proactive continuity-note phrase list so the prompt never grows unbounded
+     as sections accumulate).
+  2. **`find_repeated_8grams_by_section(sections: list[tuple[int, list[SectionLineOut]]])
+     -> tuple[list[tuple[str, ...]], dict[int, int]]`** (new pure function,
+     `script_pipeline.py`): concatenates every section's words in order (tagging
+     each word with its source `section_index`), finds every 8-gram that repeats
+     across the *whole* concatenation (not per-section in isolation -- a repeat
+     spanning a section boundary must still count), and attributes each repeated
+     occurrence to whichever section its *first* word falls in (PM's note (a):
+     "chọn section chứa nhiều điểm BẮT ĐẦU của cửa sổ lặp nhất" -- occurrences
+     starting in that section, exactly as the card already said). Returns
+     `(distinct repeated grams, {section_index: occurrence count starting there})`.
+     The "worst section" is `max(per_section_counts, key=per_section_counts.get)`.
+  3. **`frequent_repeated_phrases(words: list[str], limit=SCRIPT_SECTION_AVOID_PHRASES_MAX)
+     -> list[str]`** (new pure function): the same repeated-8-gram-finding core,
+     but returns joined phrase strings sorted by frequency, capped at `limit` --
+     used only for the proactive continuity note (item 3), not the repair
+     attribution (item 2's function), since these two callers need different
+     shapes (per-section counts vs. a flat ranked list) and are cheap enough not
+     to share one function's return contract.
+  4. **Proactive continuity note** (`_generate_section`/`section.txt`): the main
+     loop computes `avoid_phrases = frequent_repeated_phrases(normalize_text(word)
+     for word in all words accumulated in `all_lines` so far)` immediately before
+     each `_generate_section` call (so it reflects everything generated up to that
+     point, not a stale snapshot) and passes it through as a new parameter.
+     `section.txt` gains an `{% if avoid_phrases %}` block (placed after the
+     existing `is_last_section` block, before `## Speakers`) listing them.
+  5. **Repair orchestration** (`_run_script_job`, inserted between the existing
+     final-section word-budget re-check and the final `if hard_errors: fail`,
+     lines ~854-858 today): if `hard_errors` is non-empty and **every** entry
+     starts with `"repeated 8-gram ratio"` (the exact prefix
+     `validate_global`'s own repetition-error message already uses -- no new
+     error-shape needed) and `SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS > 0`:
+     - Re-fetch **fresh** checkpoints via `ai_job_service.get_valid_checkpoints`
+       (not the in-memory `all_lines`, which has no section boundaries left, and
+       not the resume-time `checkpoints_by_index`, which is stale for sections
+       generated *during this run*) and rebuild `(section_index, lines)` pairs in
+       outline order -- this also means the repetition check sees the
+       *already-repaired* last section if the word-budget repair fired first.
+     - Run `find_repeated_8grams_by_section`; if it found no attributable
+       section (shouldn't happen when `hard_errors` says the ratio is over
+       threshold, but defensively means "nothing to fix," falls through to the
+       existing hard-fail unchanged).
+     - Regenerate **only** the worst section via the existing `_repair_section`
+       (same function already used for semantic/length-only/final-budget
+       repairs -- reused, not duplicated), with `purpose=
+       "script_section_repetition_repair"` (a new, distinct telemetry label,
+       matching the precedent Task 14.8 already set for the length-only pass)
+       and `errors=[f'repeated phrase used elsewhere in the script: "{phrase}"'
+       for phrase in repeated_phrases]` -- the actual offending text, not an
+       abstract "reduce repetition" instruction.
+     - Overwrite **that exact section's** checkpoint via `save_checkpoint(db,
+       job_id, worst_index, "section", ...)` -- PM's note (a): `save_checkpoint`
+       already upserts on `(job_id, stage, section_index)` (confirmed in
+       `ai_job_service.py`), so passing `worst_index` explicitly is sufficient
+       to guarantee the correct checkpoint is the one overwritten, not the last
+       section or any other.
+     - Rebuild `all_lines` from the same `(section_index, lines)` pairs with the
+       worst section's lines swapped in, then re-run `validate_global`. Still
+       failing -> falls through to the existing, unchanged `if hard_errors: fail`.
+     - A structural error surviving this repair hard-fails with
+       `section_validation_failed`, mirroring every other repair path in this
+       file (semantic/length-only/final-budget) -- never silently retried.
+  6. **`_repair_section`'s existing `purpose` kwarg** (added in Task 14.8) is
+     reused as-is, no signature change needed.
+  7. **New tests** (`tests/test_script_pipeline.py`): pure-function tests for
+     `find_repeated_8grams_by_section` (cross-section-boundary repeat correctly
+     attributed to the *starting* section; correct worst-section selection when
+     multiple sections have repeats; empty/no-repeat inputs) and
+     `frequent_repeated_phrases` (ranking, `limit` cap); e2e tests for items 2-5
+     of the card's Verification list; a repair-count-bound test extending Task
+     14.8's `test_pipeline_repair_count_hits_the_2n_plus_1_ceiling` pattern to
+     `2 * num_sections + 2`.
 - Commands and results:
 - Deviations:
 - Revert-and-confirm-failure evidence:
