@@ -1157,7 +1157,7 @@ configuration-only Gemini rollback path. See
 
 ## Phase 14 — AI Gateway Resilience and Section Budget Rebalancing
 
-**Status:** In progress | **Started:** 2026-09-21 | **Scope:** corrective, opened by the Gate B
+**Status:** ✅ Closed 2026-09-22 (local-only; Gate B-5 script/samples/learning PASS, media duration FAIL; D11 owner override stands) | formerly In progress | **Started:** 2026-09-21 | **Scope:** corrective, opened by the Gate B
 post-mortem (`docs/brainstorm/session-2026-09-21.md`, D1–D8). Controlling plan:
 `docs/implementation/phase-14-ai-gateway-resilience.md`. Two parallel sessions (PM/Tester +
 Coder) under a strict file partition; only the PM runs the operational trial.
@@ -1214,6 +1214,7 @@ written. Governance: **no tolerance value changes**; the cascade ban stands; ADR
 - [x] 14.11 Learning repair by removal (D15) — ✅ DONE 2026-09-22
 - [x] 14.12 Gate B-4 local at 1,000 words — EXECUTED 2026-09-22: FAIL 3/5 (repetition), A/V fixed, media
   duration blocked by a runner speed defect. Report `docs/operations/phase14-gate-b4.md`.
-- [ ] 14.4a-d Runner applies the level default speed — Coder
-- [ ] 14.13 Repetition repair (D17; 1% threshold unchanged) — Coder
-- [ ] 14.14 Gate B-5 — PM; Phase 14 closes after it regardless of verdict
+- [x] 14.4a-d Runner applies the level default speed — ✅ DONE 2026-09-22
+- [x] 14.13 Repetition repair (D17; 1% threshold unchanged) — ✅ DONE 2026-09-22; fired 3× in B-5, all completed
+- [x] 14.14 Gate B-5 — EXECUTED 2026-09-22: script 5/5, samples 4/4, learning 5/5 PASS; media 413.3 s FAIL.
+  Report `docs/operations/phase14-gate-b5.md`. **Phase 14 closed.**

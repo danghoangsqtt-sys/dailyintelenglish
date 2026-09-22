@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); Phase 14 in progress — remaining 14.10 (pace calibration), 14.11 (learning repair-by-removal), 14.12 (Gate B-4) (two parallel sessions: PM = Opus 5, Coder = Sonnet 5)
+**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); **Phase 14 closed 2026-09-22** (local-only; Gate B-5: script 5/5, samples 4/4, learning 5/5 PASS; media duration −4.3% FAIL; D11 owner override stands). Next phase not yet opened.
 **Day:** 6 / 21  
 **Started:** 2026-09-10 (Phases 1–12 complete; Phase 13 opened 2026-09-18 as user-approved reliability scope beyond the original plan)
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
@@ -1934,14 +1934,52 @@ existing minimums, dropped items recorded; **D16** 13.10 closes under D11.
 - **D17** repetition repair (14.13), **D18** runner speed (14.4a-d), Gate B-5 (14.14); Phase 14 closes
   after B-5 regardless of verdict (plan §14).
 
-### 14.4a-d Runner applies the level default speed — pending (Coder)
-### 14.13 Repetition repair (D17) — pending (Coder)
-### 14.14 Gate B-5, local only — pending (PM); Phase 14 closes after it
+### 14.4a-d Runner applies the level default speed — ✅ DONE (2026-09-22, Coder `9b8d0be`; PM-accepted)
+
+- [x] `_speaker_payload()` no longer sends `speed`, so the API applies `CEFR_DEFAULT_TTS_SPEED` exactly
+  as the UI does; evidence records `speaker_speeds` from the server's resolved project (B-5 shows
+  0.85/0.75/1.00 for B1/A2/C1). `--reaggregate` on the B-4 file unchanged.
+
+### 14.13 Repetition repair (D17) — ✅ DONE (2026-09-22, Coder `256ba01`/`a6169a6`; PM-accepted)
+
+- [x] `find_repeated_8grams_by_section` attributes each repeated window to the section it starts in;
+  when every remaining global hard error is the repeated-8-gram check, the single worst section is
+  regenerated once through the repair prompt with the phrases named (`SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS
+  = 1`), its checkpoint overwritten by `section_index`, `validate_global` re-run; mixed failures never
+  trigger it. Section prompt gains an "avoid these phrases" note capped by `SCRIPT_SECTION_AVOID_PHRASES_MAX
+  = 8`. `SCRIPT_MAX_REPEATED_8GRAM_RATIO = 0.01` unchanged, pinned. Bound ≤ 2n+2 asserted. 11 new
+  tests; revert-and-confirm-failure on pin and trigger; PM: 64 pipeline tests pass, ruff clean; full
+  suite 902.
+
+### 14.14 Gate B-5, local only — ✅ EXECUTED (2026-09-22, PM) — **script 5/5, samples 4/4, learning 5/5 PASS; media duration FAIL (413.3 s)**
+
+- [x] Preflight at `a6169a6`: full suite 902/902, ruff clean, VRAM 1.2 GB, no orphaned runners.
+  Report `docs/operations/phase14-gate-b5.md`.
+- [x] Script **5/5 complete, 5/5 pass** at 1,000 words (933/969/981/1,002/1,046); samples **4/4**;
+  learning **5/5**; 0 infra; σ 18.9%. The repetition repair fired 3× (run 5, B1-10min, C1) and every
+  one of those jobs completed — the B-4 killer is neutralised.
+- [x] Media at the level default 0.85 (now measured): A/V 0.00 s ✔, codecs ✔, **413.3 s ✘** — the
+  winning script sat at −6.7% of target and its real pace was ≈ 135 wpm vs the single-script
+  calibration of 125 (≈ +8%); runs 4/5 would have played ≈ 445–465 s but are not credited unmeasured.
+- **Overall FAIL on media duration only; Phase 14 closes here per plan §14.** D11 stays an owner
+  override, recorded as such.
+
+### Phase 14 close-out — ✅ CLOSED 2026-09-22
+
+Delivered: bounded backoff (14.1), job telemetry (14.2), running section budget (14.3), Gate B-2
+(14.4), Phase 13 report correction (14.5), local-only release + Task 13.10 (14.6/14.7), local hardening
+(14.8), Gate B-3 (14.9), measured pace calibration + A/V root-cause fix (14.10), learning repair by
+removal (14.11), Gate B-4 (14.12), repetition repair (14.13), Gate B-5 (14.14). Phase 13 Gate B →
+Gate B-5: B1 8-min completion 1/5 → 5/5 with every content check passing; samples 0/4 → 4/4; learning
+1/1 → 5/5; infra failures 0; cloud dependency removed; media pipeline runs end to end with exact A/V.
+Residual, for a future phase (not started): multi-script pace calibration and a declared media-gate
+protocol change; deterministic consecutive-lines fix; `_record_dropped_items` layering cleanup.
 
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-22 | Gate B-5: script/samples/learning all PASS at 1,000 words; media duration 413.3 s FAIL (−4.3%). **Phase 14 closed** as declared in plan §14; D11 remains an owner override; multi-script pace calibration and a declared media-gate protocol change are proposed for a future phase | The phase must not chase gates indefinitely; every other gate passes under unchanged thresholds; the remaining miss is a single-script calibration spread, measured and documented |
 | 2026-09-22 | Gate B-4: FAIL 3/5 — both deaths on the repeated-8-gram check at 1,000 words; A/V fixed (0.00 s); media duration blocked by the runner's hard-coded speed. D17 bounded repetition repair (threshold unchanged), D18 runner applies the level default speed, Gate B-5 then closes Phase 14 regardless of verdict | Word count is solved; repetition is the next measurable failure class and has no repair path today; the phase must not chase gates indefinitely |
 | 2026-09-22 | Owner delegated the open decisions to the PM → D13 measured pace calibration (per-level default speed + measured WPM table, B1 8-min = 1,000 words), D14 A/V rule declared before investigation, D15 learning repair-by-removal bounded by existing minimums, D16 Task 13.10 complete under D11 and Phase 13 closed | Real Edge TTS measurement at five speeds; two gates each lost one learning pack to a single ungrounded item; thresholds unchanged throughout |
 | 2026-09-22 | Gate B-3 (local-only): script gate PASS 5/5 for the first time; overall FAIL on learning 4/5 and media duration/A-V; D11 remains an owner override; 13.10 resumes under D11 | Unchanged Phase 13 thresholds applied to real evidence; the remaining failures are a learning grounding miss and two undecided product questions (pace, A/V padding), not the script pipeline |
