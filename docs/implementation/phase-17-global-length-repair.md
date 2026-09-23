@@ -155,3 +155,22 @@ edited. `avoid_phrases` for the rerun should be computed from the other sections
 existing `frequent_repeated_phrases`, not left empty, so the rerun doesn't introduce a new
 cross-section repeat.
 
+**Amendment C (PM, 2026-09-23, after Gate B-8; owner chose "fix now"):**
+- **Task 17.4 (Coder, P0).** The global budget repair's **"under" direction also reruns the
+  chosen section through the full per-section path** (`_run_section_pipeline`, at the new target,
+  with `avoid_phrases` from the other sections), exactly like "over". The plain-repair branch is
+  removed. **Evidence:** Gate B-8 owner run 2. The total was 963, under range. Section 6 went
+  from 91 words to 505 via a plain repair (target 238), taking the total to 1,377, and the job
+  failed. See `docs/operations/phase17-gate-b8.md` §2. The earlier "under keeps a plain repair"
+  instruction (C4) was the PM's, and is withdrawn.
+  - **Allowed files:** as for 17.1.
+  - **Required test:** reproduce the real B-8 shape (seven sections: 211/124/124/103/99/91/211
+    against nominal 159/158/159/158/159/158/159, a target of 1,110, and a scripted plain-repair
+    style output of 505). The fixed path must take the full-pipeline route, whose in-loop length
+    repair brings the section back inside ±15%, and the job must complete.
+  - Revert-and-confirm-failure on that test. The worst-case call count stays 4.
+- **Task 17.5 (PM, Coder idle): a short re-gate.** 5 × B1 8-min (runner `--skip-samples`, with
+  learning and media as usual), plus **4 ×** the owner configuration. Pass: B1 5/5, owner config
+  ≥ 3/4 with zero budget-repair overshoot deaths, and no regression against B-8 on learning,
+  media and repetition.
+
