@@ -2108,7 +2108,7 @@ Plan `docs/implementation/phase-18-cloud-first-ai.md`; state `.viepilot/phases/1
 
 | Task | Owner | Status |
 |---|---|---|
-| 18.1 `OpenAICompatProvider` | Coder | in progress (design approved) |
+| 18.1 `OpenAICompatProvider` | Coder | ✅ done (`2a6a77c`) |
 | 18.2 Router roles/modes/budgets; Gemini removed | Coder | not started |
 | 18.3 Settings + health + privacy note | Coder | not started |
 | 18.4 Fallback-rate readout + runner | Coder | not started |
@@ -2117,6 +2117,7 @@ Plan `docs/implementation/phase-18-cloud-first-ai.md`; state `.viepilot/phases/1
 PM review log:
 
 - 18.1 design `85ab8ed` — **APPROVED with 2 changes** (PM, 2026-09-23). The shape, the URL validator (https or loopback, path allowed), the payload (no `response_format`, `reasoning.exclude`), `ProviderAuthError` for 401/402/403/404 (confirmed non-transient in the router), and the MockTransport-only tests are all accepted. (C1) 429, and a 200-with-error body whose code is 429, map to the existing transient **`ProviderRateLimitError`**, not `ProviderUnavailableError`. The plan table was too loose; separating them lets 18.4 report "rate-limited" vs "overloaded" for D22. (C2) Exception messages carry status + error code/type + a short provider message only, **never the raw response body**, and any occurrence of the key is redacted as a backstop. The key-safety test adds a 401 whose body echoes the key.
+- 18.1 impl `2a6a77c` — **ACCEPTED** (PM, 2026-09-23). C1 and C2 done. PM re-verification: PM revert check (`_redact` made a no-op → `test_openai_compat_provider_never_leaks_key_when_401_body_echoes_it` FAILS, restored); full suite **993 passed** (29 new, MockTransport only); `ruff` clean. Noted (not fixed, outside the allowed files): the shared test helper `_install_mock_transport` (copied from `tests/test_ai_providers.py`) can't be called twice in one test, because the second patch wraps the first. The Coder split the tests to avoid it.
 
 ## Decision Log
 
