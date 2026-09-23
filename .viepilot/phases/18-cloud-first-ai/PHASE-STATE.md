@@ -4,7 +4,7 @@
 
 - **Phase:** 18
 - **Slug:** `18-cloud-first-ai`
-- **Status:** open (2026-09-23; handover to the Coder in the Phase 17 close-out commit)
+- **Status:** open (2026-09-23; handover to the Coder in the Phase 17 close-out commit, `0197cbd`)
 - **Planned:** 2026-09-23 (`/vp-evolve ENH-011`)
 - **Controlling plan:** `docs/implementation/phase-18-cloud-first-ai.md`
 - **Authorization:** owner decisions D21–D24 (brainstorm `docs/brainstorm/session-2026-09-23.md`).
@@ -21,7 +21,7 @@
 
 | Task | Description | Owner | Status |
 |---|---|---|---|
-| 18.1 | `OpenAICompatProvider` | Coder | not started |
+| 18.1 | `OpenAICompatProvider` | Coder | in_progress (design commit → PM approval) |
 | 18.2 | Router roles/modes, per-provider budgets, circuit breaker; Gemini provider removed | Coder | not started |
 | 18.3 | Settings (key/URL/model, test connection), health fields, privacy note | Coder | not started |
 | 18.4 | Fallback-rate readout + runner `--matrix cloud_first` | Coder | not started |
