@@ -436,6 +436,53 @@ async def test_primary_budget_exhaustion_does_not_starve_the_fallback_budget():
     assert fallback.call_count == 1
 
 
+async def test_fallback_gets_its_own_fresh_budget_not_the_leftover_of_the_primarys():
+    """PM review N1 (test gap found before accepting 18.2): the previous test
+    above used `cloud_deadline_seconds=0.05 < request.deadline_seconds=0.5`,
+    so it can't distinguish truly independent budgets from a *leftover*-based
+    bug (`fallback_budget = max(epsilon, request.deadline_seconds -
+    elapsed_since_generate_start)`) -- with that shape of numbers there's
+    always plenty of leftover either way. Production is the opposite shape
+    (`AI_CLOUD_DEADLINE_SECONDS=150 > AI_REQUEST_DEADLINE_SECONDS=120`), where
+    a leftover-based bug would give the fallback nothing or a negative budget.
+
+    This test uses that same shape: `cloud_deadline_seconds=0.3 >
+    request.deadline_seconds=0.2`. The primary sleeps 0.35s (exceeds its own
+    0.3s budget, so it times out there). The fallback needs 0.15s to answer --
+    less than its own fresh 0.2s budget, but *more* than what a leftover
+    calculation would hand it (`request.deadline_seconds(0.2) -
+    elapsed(~0.3)` is negative, clamped to some tiny epsilon). Correct
+    (independent-budget) code returns the fallback's result; a leftover-style
+    revert raises `ProviderTimeoutError` instead, because 0.15s doesn't fit in
+    an epsilon-sized leftover budget."""
+
+    async def _slow_primary_generate(request):
+        await asyncio.sleep(0.35)
+        return _result("openai_compat")
+
+    class _SlowPrimary:
+        name = "openai_compat"
+        generate = staticmethod(_slow_primary_generate)
+
+    async def _slow_fallback_generate(request):
+        await asyncio.sleep(0.15)
+        return _result("ollama")
+
+    class _SlowFallback:
+        name = "ollama"
+        generate = staticmethod(_slow_fallback_generate)
+
+    router = AIRouter(
+        primary=_SlowPrimary(), fallback=_SlowFallback(), mode=AIMode.CLOUD_FIRST, cloud_deadline_seconds=0.3
+    )
+
+    result = await router.generate(_request(deadline_seconds=0.2))
+
+    assert result.provider == "ollama"
+    assert result.fallback_used is True
+    assert result.fallback_reason == "ProviderTimeoutError"
+
+
 # --- compute_effective_mode (invariant 32/D24) -------------------------------------------
 
 

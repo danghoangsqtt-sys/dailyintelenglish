@@ -441,3 +441,34 @@ and the real DB untouched.
   completed successfully inside the shared 0.5s budget instead of timing out at its own tiny
   0.05s budget and falling back). Restored → the same test and the full file (30 tests) passed
   again; reran the full suite (1002 passed) and `ruff` to confirm no other regression.
+
+## Amendment (PM review N1, before acceptance)
+
+**Gap found:** `test_primary_budget_exhaustion_does_not_starve_the_fallback_budget` used
+`cloud_deadline_seconds=0.05 < request.deadline_seconds=0.5` — a shape that can't distinguish
+truly independent per-phase budgets from a *leftover*-based bug (`fallback_budget = max(epsilon,
+request.deadline_seconds - elapsed_since_generate_start)`), since with those numbers there's
+always plenty of leftover either way. Production's real numbers are the opposite shape
+(`AI_CLOUD_DEADLINE_SECONDS=150 > AI_REQUEST_DEADLINE_SECONDS=120`), where a leftover-based bug
+would starve the fallback almost completely. The PM's own revert (leftover-style fallback
+budget) left all 30 existing `test_ai_router.py` tests passing, confirming the gap.
+
+**Fix:** new test `test_fallback_gets_its_own_fresh_budget_not_the_leftover_of_the_primarys` in
+`tests/test_ai_router.py`, using the production-shaped numbers scaled down:
+`cloud_deadline_seconds=0.3 > request.deadline_seconds=0.2`. Primary sleeps 0.35s (exceeds its
+own 0.3s budget, times out there). Fallback needs 0.15s to answer — less than its own fresh 0.2s
+budget, but more than a leftover calculation would hand it (`0.2 - ~0.3` is negative, clamped to
+an epsilon). Asserts the fallback's result is returned, `fallback_used=True`,
+`fallback_reason="ProviderTimeoutError"`.
+
+**Both revert results, as required:**
+- Correct code: `test_fallback_gets_its_own_fresh_budget_not_the_leftover_of_the_primarys` passes
+  (0.74s wall time, matching the 0.3s primary timeout + 0.15s fallback answer).
+- Leftover-style revert (temporarily added `generate_started_at = time.monotonic()` at the top of
+  `generate()`, and replaced the fallback call's budget with `max(0.01, request.deadline_seconds
+  - (time.monotonic() - generate_started_at))`): the new test **fails** —
+  `ProviderTimeoutError: AI router budget of 0.01s exceeded for ollama` (the leftover clamped to
+  the 0.01s epsilon floor, and the fallback's real 0.15s need didn't fit). Confirmed the other 30
+  tests **still pass** under this same revert, exactly reproducing the PM's own finding (1
+  failed, 30 passed). Restored → `git diff app/services/ai/router.py` empty, full file (31 tests)
+  passed again, `ruff` clean.
