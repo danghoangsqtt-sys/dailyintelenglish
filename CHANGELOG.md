@@ -24,6 +24,22 @@ Versioning: [SemVer](https://semver.org/)
   bundled — see README for why).
 
 ### Changed
+- Phase 16 Task 16.4 (2026-09-23, ENH-009 step A, self-implemented by Coder):
+  Gate B-6 scored script generation 3/5, both failures on the repeated
+  8-gram ratio check just over the 1% threshold. Reconstructing every B-6
+  run's repeated phrases from the gate's own trial database showed all of
+  them were one of two generic rhetorical templates (a fixed
+  agreement-opener, and a "key to X"-style takeaway restatement) — not this
+  episode's own topic vocabulary — reused across sections faster than the
+  existing reactive avoid-list (which only ever flags a phrase after it has
+  already repeated once) can catch. The section prompt now carries 3 fixed,
+  topic-agnostic rules against reusing the same agreement opener, the same
+  takeaway sentence, or restating a point twice within one section — described
+  abstractly, with no quoted example phrase, since a small local model tends
+  to reuse whatever concrete text a prompt shows it. One matching line was
+  added to the repair prompt. No threshold changed, and the existing dynamic
+  avoid-phrases mechanism is unchanged. Real-model effect (does Gate B-7 reach
+  5/5) is measured separately by the PM.
 - Phase 15, local script-generation robustness (2026-09-22, self-implemented by
   Coder, accepted by PM): three fixes found from real local-model runs. Task 15.1
   — the model occasionally drops one speaker UUID group mid-line; speaker

@@ -30,8 +30,8 @@
 |---|---|---|---|---|
 | 16.1 | Worker loop guard + `worker_alive` (BUG-022) | Coder | done | — |
 | 16.2 | ffmpeg timeouts (ENH-008) | Coder | done | — |
-| 16.3 | Test-data leak root cause + guard + cleanup script + CHANGELOG Phase 15 (BUG-023) | Coder → PM | done (code); PM `--apply` pending owner | PM's dry-run done (447 matches, 7 real projects survive) → owner OK → `--apply` |
-| 16.4 | Repetition: evidence-driven avoid list (ENH-009 A) | Coder | in_progress | evidence table → PM approval |
+| 16.3 | Test-data leak root cause + guard + cleanup script + CHANGELOG Phase 15 (BUG-023) | Coder → PM | done | — |
+| 16.4 | Repetition: evidence-driven avoid list (ENH-009 A) | Coder | done (pending PM ACCEPTED) | PM diff review + revert check |
 | 16.5 | Gate B-7, local only | PM | not started | Coder idle |
 | 16.6 | Second bounded repetition repair (ENH-009 B) | Coder | conditional (only if B-7 script < 5/5) | — |
 | 16.7 | Gate B-8 | PM | conditional (only if 16.6 ran) | — |

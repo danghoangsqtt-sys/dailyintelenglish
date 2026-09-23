@@ -871,6 +871,132 @@ async def test_pipeline_section_prompt_word_range_matches_the_tolerance_constant
     assert f"between {min_words} and {max_words} spoken words" in section_prompt
 
 
+async def test_pipeline_section_prompt_always_includes_the_static_anti_repetition_rules(db):
+    """Task 16.4 (ENH-009 step A): 3 fixed rules against the framing patterns Gate
+    B-6's evidence showed (agreement-opener, thesis/takeaway restatement,
+    within-section self-repeat) must be present in every section prompt,
+    unconditionally -- both when the existing dynamic `avoid_phrases` block is
+    empty (section 1, no prior sections yet) and when it's populated (section 2,
+    once section 1 has produced a phrase that's already repeated). N6 (PM
+    review): the rules must describe the observed patterns abstractly, never
+    quote the actual forbidden phrase -- a quoted example risks *priming* reuse
+    on a small local model. Asserts the literal quoted phrase never appears."""
+    # duration_minutes=1.6 -> compute_target_words(B1, 1.6) = 200, matching this
+    # test's 2-section outline (100 words each) -- the pipeline computes its own
+    # overall episode target from duration, independent of the fake outline's
+    # per-section target_words fields, so the two must agree or the second
+    # section's word-budget check fails and triggers an unscripted repair call.
+    project = await _project(db, duration_minutes=1.6)
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {
+            "title": "T",
+            "sections": [
+                {"index": 1, "objective": "cover the full topic here", "target_words": 100},
+                {"index": 2, "objective": "continue the discussion here", "target_words": 100},
+            ],
+        }
+    )
+    # Section 1: an 8-word phrase (word0..word7) appears in two different Alex
+    # lines -- sharing an 8-word run without being byte-identical lines (an
+    # exact duplicate line is a separate, stricter hard error) -- deliberately,
+    # so frequent_repeated_phrases() has something to surface to section 2's
+    # prompt. 28 + 22 + 28 + 22 = 100 words, matching the section's own target;
+    # Alex's 56/100 here plus 50/100 in section 2 keeps the whole-episode
+    # speaker balance (106/200 = 53%) inside the required 35-65% share.
+    section1_json = json.dumps(
+        [
+            {"speaker": alex_id, "text": f"{_words(20, 900)} {_words(8, 0)}"},
+            {"speaker": maya_id, "text": _words(22, 50)},
+            {"speaker": alex_id, "text": f"{_words(8, 0)} {_words(20, 950)}"},
+            {"speaker": maya_id, "text": _words(22, 150)},
+        ]
+    )
+    section2_json = _section_json(
+        (alex_id, 25, 500), (maya_id, 25, 525), (alex_id, 25, 550), (maya_id, 25, 575)
+    )
+    # The deliberate repeat above also trips the whole-episode repeated-8-gram
+    # ratio check (2 occurrences / ~193 windows ~= 1.04%, just over the 1%
+    # threshold) -- expected, and exactly what triggers the existing one-time
+    # repetition repair (Task 14.13) on section 1 (the only section the repeat
+    # is attributed to). Scripts a clean, non-repeating replacement for it.
+    repaired_section1_json = _section_json(
+        (alex_id, 25, 700), (maya_id, 25, 725), (alex_id, 25, 750), (maya_id, 25, 775)
+    )
+    router, gemini, _local = _build_router(
+        [_result(outline_json), _result(section1_json), _result(section2_json), _result(repaired_section1_json)]
+    )
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete"
+
+    section1_prompt = gemini.calls[1].prompt
+    section2_prompt = gemini.calls[2].prompt
+
+    static_rule_fragments = [
+        "Never open more than one turn in the whole episode with the same stock "
+        "agreement phrase",
+        "Never repeat the same summary or takeaway sentence, word-for-word or "
+        "nearly so, in more than one section.",
+        "Do not restate the same sentence or claim twice within this section itself",
+    ]
+    for fragment in static_rule_fragments:
+        assert fragment in section1_prompt, "static rules must be present with no prior sections"
+        assert fragment in section2_prompt, "static rules must still be present once avoid_phrases is populated"
+
+    # Section 2 actually got the dynamic (existing, unchanged) avoid-phrases block too.
+    assert "word0 word1 word2 word3 word4 word5 word6 word7" in section2_prompt
+
+    # N6: the observed forbidden phrase is never quoted verbatim -- a quoted
+    # example risks priming a small local model to reuse it.
+    assert "I truly believe" not in section1_prompt
+    assert "I truly believe" not in section2_prompt
+
+
+async def test_pipeline_repair_prompt_also_avoids_quoting_a_repetition_example(db):
+    """Task 16.4, N6: the repair prompt's new anti-repetition line must be
+    present and, like the section prompt's, must never quote a concrete
+    example phrase."""
+    project = await _project(db)
+    alex_id = project["speakers"][0]["id"]
+
+    outline_json = json.dumps(
+        {"title": "T", "sections": [{"index": 1, "objective": "cover the full topic here", "target_words": 100}]}
+    )
+    invalid_section_json = json.dumps([{"speaker": alex_id, "text": _words(5, 0)}])  # way too short
+    repaired_section_json = _section_json(
+        (alex_id, 25, 0), (project["speakers"][1]["id"], 25, 25),
+        (alex_id, 25, 50), (project["speakers"][1]["id"], 25, 75),
+    )
+    router, gemini, _local = _build_router(
+        [_result(outline_json), _result(invalid_section_json), _result(repaired_section_json)]
+    )
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete"
+
+    repair_prompt = gemini.calls[2].prompt
+    assert "avoid reusing the same stock agreement phrase or the same summary/" in repair_prompt
+    assert "I truly believe" not in repair_prompt
+
+
 async def test_pipeline_repairs_an_invalid_section_once_then_completes(db):
     project = await _project(db)
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])

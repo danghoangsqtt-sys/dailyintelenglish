@@ -26,6 +26,10 @@ return the corrected JSON.
 - {{ error }}
 {% endfor %}
 
+Also avoid reusing the same stock agreement phrase or the same summary/
+takeaway sentence you (or your previous answer above) already used elsewhere
+in this section or episode, even in reworded form.
+
 ## Your Previous (Invalid) Answer
 ```json
 {{ previous_output }}

@@ -1,6 +1,6 @@
 # Task 16.4 — Repetition: Evidence-Driven Avoid List (ENH-009 step A)
 
-- **Status:** in_progress
+- **Status:** done
 - **Owner:** Coder
 - **Priority:** P0 (the core pipeline's remaining variable failure)
 - **Dependency:** 16.3 accepted
@@ -138,18 +138,29 @@ prohibition — so it's rejected despite being a tempting one-line fix.
 Every added rule traces to the evidence table above (invariant 27):
 
 1. *(traces to run5's 3 occurrences, table rows 6-11)* — "Vary how speakers
-   agree with or react to each other. Do not open a turn with the same fixed
-   agreement phrase (for example, always saying something like "That's
-   exactly right, I truly believe that...") more than once across the whole
-   episode."
+   agree or react to each other. Never open more than one turn in the whole
+   episode with the same stock agreement phrase — for example, always
+   praising what the other speaker just said in the same way before adding
+   your own view. React differently each time."
 2. *(traces to run3's 2 occurrences and run2's 2 occurrences, table rows 2
-   and 12-15)* — "State the episode's main point or takeaway freshly in your
-   own words each time it comes up. Never repeat the same summary or "the key
-   to X" claim sentence, word-for-word or nearly so, in more than one
-   section."
+   and 12-15)* — "State the episode's main point or takeaway freshly, in your
+   own words, each time it comes up. Never repeat the same summary or
+   takeaway sentence, word-for-word or nearly so, in more than one section."
 3. *(traces to run2's within-section self-repeat, table rows 1-5)* — "Do not
    restate the same sentence or claim twice within this section itself, even
    reworded in a way that reuses most of the same wording."
+
+**N6 (PM review, folded in pre-implementation — required, no re-approval
+needed).** The rules above originally included a fragment of the actual
+observed phrase (e.g. "...such as 'That's exactly right, I truly believe
+that...'") as an illustrative example. Dropped entirely: with a 9B local
+model, a quoted example in the prompt risks *priming* reuse of that exact
+wording rather than discouraging the pattern. Rules 1 and 2 above are the
+already-abstracted final wording — no quoted phrase, no "the key to X"
+template, just the generic pattern description. The `repair.txt` line
+(below) follows the same rule: no quoted example. A test asserts the literal
+string "I truly believe" (part of run5's actual phrase) never appears in
+either prompt, as a standing regression guard.
 
 **Prompt-size bound.** 3 fixed rule lines added to `section.txt`'s existing
 numbered `## Rules` list (rules 4-6), ~70 words total — a small, **constant**
@@ -205,4 +216,49 @@ the selection test. Full suite. `ruff`. Real-model effect is measured by the PM 
 
 ## Evidence
 
-_pending_
+- Design commit `e5be873` (APPROVED with N6 — described the framing patterns
+  abstractly, no quoted example phrase; folded in pre-implementation, per the
+  PM's "no re-approval needed"). This implementation commit folds in N6's
+  final rule wording (already reflected in the Recommendation section above)
+  and the N6 regression-guard assertion.
+- Files touched, all within the allowed list: `prompts/script/section.txt`
+  (rules 4-6 added, unconditional, after the existing numbered rules 1-3),
+  `prompts/script/repair.txt` (one new line after the `## Validation Errors
+  To Fix` loop), `tests/test_script_pipeline.py` (+2 tests), `CHANGELOG.md`.
+  `app/services/script_pipeline.py`, `app/core/constants.py` and
+  `tests/test_prompt_loader.py` were **not** touched — no code change needed
+  (see "No code change" in Design decisions); `tests/fixtures/ai/*` also not
+  needed.
+- Targeted run: `tests/test_script_pipeline.py` → 90 passed (88 baseline + 2
+  new).
+- Full suite: `./venv/Scripts/python.exe -m pytest -q` → **956 passed** (954
+  baseline after 16.3 + 2 new tests). No baseline test broke. Real DB project
+  count read-only before and after this run: 7 → 7 (the PM's post-`--apply`
+  count), confirming the 16.3 guard is still holding.
+- `ruff check app scripts tests` → all checks passed.
+- Revert-and-confirm-failure: temporarily removed rules 4-6 from
+  `section.txt`, re-ran
+  `test_pipeline_section_prompt_always_includes_the_static_anti_repetition_rules`
+  alone → failed exactly as expected (asserted rule-4 fragment missing from
+  section 1's prompt). Restored the rules → the same test and the full
+  `test_script_pipeline.py` file (90 tests) passed again.
+- Verification bullets from the card, confirmed:
+  - "Unit tests for the selection logic (bound, empty case, dedupe)": N/A,
+    confirmed with the PM — no selection-logic code change in this task, so
+    nothing new to unit-test there; the existing `frequent_repeated_phrases`
+    behavior and its tests are untouched.
+  - Render test of `section.txt` with the new block:
+    `test_pipeline_section_prompt_always_includes_the_static_anti_repetition_rules`
+    — confirms all 3 rules appear in section 1's prompt (no prior sections,
+    `avoid_phrases` empty) *and* section 2's prompt (`avoid_phrases`
+    populated from a deliberate within-section-1 repeat), proving the block
+    is unconditional and constant-sized either way.
+  - `repair.txt`'s new line:
+    `test_pipeline_repair_prompt_also_avoids_quoting_a_repetition_example`.
+  - N6 regression guard: both tests assert the literal string `"I truly
+    believe"` (part of run5's actual observed phrase) never appears in any
+    of the section, avoid-phrases, or repair prompts.
+  - Prompt-contract tests pass: the full `test_script_pipeline.py` file,
+    including `test_pipeline_section_prompt_word_range_matches_the_tolerance_constant`
+    and every other existing render-adjacent test, all still pass unchanged.
+  - Full suite, `ruff`: above.
