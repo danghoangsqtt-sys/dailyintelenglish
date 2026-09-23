@@ -174,3 +174,28 @@ move to paid.
 
 This is a behaviour-level feature, so on Phase 18 close the version moves `1.0.0-beta` →
 `1.1.0-beta` (the first bump since v1.0.0-beta), recorded in the CHANGELOG and TRACKER.
+
+## 6. Amendments
+
+**Amendment A (PM, 2026-09-23, on approving the 18.2 design `6bc25aa`):**
+1. **Router rebuilt per job dispatch.** A thin wrapper in `app/main.py` builds a fresh router for
+   each job from the current settings. **One app-lifetime `CircuitBreaker`** is shared across
+   builds. This is approved, and `app/main.py`'s 18.2 scope widens from "router builder only" to
+   "router builder + per-dispatch wrapper". Rationale: today the worker's handlers capture a
+   router built once at startup, so a Settings change would never reach job processing (a
+   pre-existing gap that 18.3's no-restart requirement exposes).
+2. **`AI_CLOUD_DEADLINE_SECONDS = 150`** (configurable). The default model (Nemotron 3 Super)
+   answered in 8–28 s in the smoke test, and 150 still covers Ultra's observed 136 s. Models
+   slower than that (Nex 296 s, Lightning > 180 s) are not suitable as the primary.
+3. **Lease: no change.** `heartbeat()` renews unconditionally. `lease_expires_at` is read only by
+   `recover_abandoned_jobs` at worker start, and no API or UI reads it. A single call outlasting
+   `AI_JOB_LEASE_SECONDS = 90` is therefore harmless inside a running process; that is already
+   true today (a 120 s deadline plus backoff). Recorded, not acted on.
+4. **`fallback_reason` persistence.** 18.2's allowed files gain `app/services/script_pipeline.py`
+   and `app/services/learning_pipeline.py`, **the per-call `_call_record` construction only**,
+   adding `fallback_used` / `fallback_reason` / `provider` / `model` fields. No other change to
+   either file.
+5. **Test file list approved** as listed in the card, including the HYBRID-mode tests whose
+   primary/fallback expectations **invert semantically** under CLOUD_FIRST (not a rename).
+   `GEMINI_*` constants stay in `constants.py` for the two out-of-scope sample scripts.
+
