@@ -30,8 +30,6 @@
 | 17.3 | Gate B-8, local only | PM | done: runner PASS; owner 1/2 → 17.4 | `docs/operations/phase17-gate-b8.md` |
 | 17.4 | Under via full per-section path | Coder | done (`5008792`) | — |
 | 17.5 | Re-gate B1 ×5 + owner ×4 | PM | **PASS** (5/5, 4/4) | `docs/operations/phase17-gate-b8r.md` |
-| 17.4 | "Under" direction via the full per-section path (Amendment C, Gate B-8 fix) | Coder | done | — |
-| 17.5 | Short re-gate (B1 ×5 + owner config ×4) | PM | not started | Coder idle |
 
 **Execution order:** 17.1 → 17.2 → 17.3 → 17.4 → 17.5 → close-out.
 
