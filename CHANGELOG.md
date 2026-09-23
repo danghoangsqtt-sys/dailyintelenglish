@@ -24,6 +24,18 @@ Versioning: [SemVer](https://semver.org/)
   bundled — see README for why).
 
 ### Changed
+- Phase 17 Task 17.2 (2026-09-23, ENH-010, self-implemented by Coder): Gate
+  B-7 had 2 `has_outro: false` results. One was a genuine ending on a call to
+  action with no goodbye; the other was a runner false negative — the
+  episode's spoken sign-off sat two lines before the very last line, and the
+  outro check only ever looked at that one last line. The last section's
+  prompt now states it must close with a short spoken sign-off to the
+  audience, and a one-sentence recap of the takeaway is allowed there as the
+  sole, last-section-only exemption from the no-repeated-takeaway rule (Task
+  16.4). The trial runner gets a new `has_outro_last3` diagnostic field
+  (checks the same sign-off markers across the last 3 lines instead of just
+  the last one) recorded alongside the existing `has_outro` — the gate
+  decision itself still reads `has_outro` only, unchanged.
 - Phase 17 Task 17.1 (2026-09-23, ENH-010, self-implemented by Coder): Gate
   B-7 (Phase 16) scored 3/5 on script generation, both failures a global
   word-count overshoot. Re-reading the trial checkpoints found the pipeline

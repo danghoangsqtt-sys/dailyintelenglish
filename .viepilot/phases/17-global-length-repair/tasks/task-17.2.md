@@ -1,6 +1,6 @@
 # Task 17.2 — Final-Section Sign-Off + `has_outro_last3` Diagnostic
 
-- **Status:** in_progress
+- **Status:** done
 - **Owner:** Coder
 - **Priority:** P2
 - **Dependency:** 17.1 accepted
@@ -30,6 +30,24 @@ Gate B-7 had 2 `has_outro: false` results (0 at B-6):
    `has_outro`. **The gate decision keeps using `has_outro`.**
 
 ## Design decisions (Coder, doc-first — commit before code, PM approves)
+
+**PM review (`2ea5467`) — C1 and C2 folded in during implementation, no re-approval
+required per PM's explicit instruction:**
+- **C1:** the rule-5 exemption clause is wrapped in `{% if is_last_section %}…{% endif +%}`
+  (inline on rule 5, as designed), not rendered unconditionally for every section. The
+  `+%}` on `endif` disables Jinja2's `trim_blocks` for that one tag — without it, the
+  newline after `{% endif %}` was being stripped from the template source regardless of
+  which branch actually rendered, merging rule 5 and rule 6 onto one line whenever
+  `is_last_section=False`. Verified with a manual render of both branches before writing
+  the automated test. This *replaces* the test-plan text below saying the exemption
+  clause is unconditional/present in every section — it is not; see the corrected test
+  plan and Evidence.
+- **C2:** `tests/test_run_ai_operational_trial.py` loads the script via `importlib`
+  inside a `runner_module` fixture (same pattern as `tests/test_check_dependencies.py`
+  already uses for `scripts/check_dependencies.py`), snapshotting and restoring
+  `os.environ`, `sys.argv`, and the loaded module's `sys.modules` entry around the
+  import/exec — not a bare top-level `import scripts.run_ai_operational_trial`, and not
+  relying on this file's alphabetical position in test collection.
 
 **Runner test file: `tests/test_run_ai_operational_trial.py`** (new — none exists today for
 this script). One thing worth flagging before writing it: `scripts/run_ai_operational_trial.py`
@@ -100,9 +118,9 @@ already-existing `is_last_section` framing sentence structure elsewhere in the f
   `make_handler` + captured-prompt pattern) over a 2-section outline confirms the sign-off
   instruction is present in the LAST section's prompt and absent from the first section's
   prompt — proving it's conditional on `is_last_section`, not unconditional prose. A second
-  assertion confirms rule 5's exemption clause is present in every section's prompt (rule 5
-  itself is unconditional; only its exemption wording changes, but that changed wording is
-  always rendered) — bounded, no new Jinja variable.
+  assertion (C1) confirms rule 5's exemption clause is likewise present ONLY in the LAST
+  section's prompt and absent from the first section's — rule 5 itself is unconditional and
+  renders in every section, but the exemption clause appended to it is not.
 - `tests/test_run_ai_operational_trial.py` (new): a unit test calling
   `_has_outro_in_last_n` (and, for contrast, the existing `_has_outro`) directly against the
   real Gate B-7 run 4 lines above (hardcoded as literal strings in the test, not read from the
@@ -123,4 +141,40 @@ The render test checks that the sign-off instruction appears only for the last s
 
 ## Evidence
 
-_pending_
+**Code:** `prompts/script/section.txt` (sign-off line in the `is_last_section` block;
+rule 5's exemption clause wrapped in `{% if is_last_section %}…{% endif +%}`),
+`scripts/run_ai_operational_trial.py` (`_has_outro_in_last_n`, `has_outro_last3` added
+to `analyze_script`'s returned dict, `checks`/`all_checks_pass`/`outro_present`
+untouched).
+
+**Tests added:**
+- `tests/test_script_pipeline.py::test_pipeline_last_section_sign_off_instruction_is_conditional_on_is_last_section`
+  — 2-section clean run (no repair calls); asserts both the sign-off instruction and
+  rule 5's exemption clause are present in section 2's (last) prompt and absent from
+  section 1's.
+- `tests/test_run_ai_operational_trial.py` (new file, C2 isolation fixture):
+  - `test_has_outro_in_last_n_catches_the_gate_b7_run4_false_negative` — real Gate B-7
+    run 4 last-3-lines text (project `976be88b-eb93-444f-b2f8-664d9e7a0383`); confirms
+    `_has_outro` is `False` (matches the real recorded gate value) and
+    `_has_outro_in_last_n(..., 3, ...)` is `True`.
+  - `test_analyze_script_gate_decision_still_uses_has_outro_only` — same lines through
+    `analyze_script`; confirms `has_outro_last3` is `True` while `has_outro`,
+    `checks["outro_present"]`, and `all_checks_pass` stay driven by `has_outro` (`False`)
+    alone.
+
+**Isolation check (C2):** ran `tests/test_run_ai_operational_trial.py` immediately
+before `tests/test_ai_health_api.py` (a file whose tests read `app.core.config`
+settings) in the same pytest invocation — all 9 tests passed, confirming the runner
+script's import-time `os.environ["DIE_AI_MODE"]`/`["DIE_DATA_DIR"]` writes don't leak
+past the fixture's teardown.
+
+**Revert-and-confirm-failure:** removed the sign-off sentence from `section.txt`'s
+`is_last_section` block, reran the new render test — failed with the expected
+`AssertionError: sign-off instruction must appear for the last section`. Restored the
+line, reran — passed.
+
+**Full suite:** 962 passed, 1 failed (`test_dashboard_browser.py::test_dashboard_filter_and_search_reset_pagination_to_first_page`,
+a Playwright `wait_for_selector` timeout) — confirmed pre-existing/flaky, not caused by
+this task's changes: re-ran that single test in isolation immediately afterward and it
+passed. 963 total = the 960 baseline from Task 17.1 + 3 new tests (1 render test + 2 in
+the new runner test file). `ruff check` clean on all touched Python files.

@@ -18,7 +18,8 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
 {% endif %}
 {% if is_last_section %}
 - This is the LAST section of the episode — close it out naturally (a brief
-  outro/wrap-up is appropriate here).
+  outro/wrap-up is appropriate here), and end it with a short spoken sign-off
+  to the audience, not just a final piece of advice or a call to action alone.
 {% endif %}
 {% if avoid_phrases %}
 
@@ -65,7 +66,7 @@ use a category at all is controlled ONLY by the list below:
 2. Do not invent a speaker — use only the alias values listed above.
 3. Do not number or label lines with an `id` field — the app assigns line IDs.
 4. Vary how speakers agree or react to each other. Never open more than one turn in the whole episode with the same stock agreement phrase — for example, always praising what the other speaker just said in the same way before adding your own view. React differently each time.
-5. State the episode's main point or takeaway freshly, in your own words, each time it comes up. Never repeat the same summary or takeaway sentence, word-for-word or nearly so, in more than one section.
+5. State the episode's main point or takeaway freshly, in your own words, each time it comes up. Never repeat the same summary or takeaway sentence, word-for-word or nearly so, in more than one section.{% if is_last_section %} The one exception is the final section's sign-off (see above): a brief, one-sentence recap of the takeaway is allowed there.{% endif +%}
 6. Do not restate the same sentence or claim twice within this section itself, even reworded in a way that reuses most of the same wording.
 
 ## Output Format

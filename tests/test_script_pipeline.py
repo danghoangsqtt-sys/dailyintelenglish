@@ -962,6 +962,53 @@ async def test_pipeline_section_prompt_always_includes_the_static_anti_repetitio
     assert "I truly believe" not in section2_prompt
 
 
+async def test_pipeline_last_section_sign_off_instruction_is_conditional_on_is_last_section(db):
+    """Task 17.2: `section.txt`'s sign-off instruction (the `is_last_section` block) and
+    rule 5's sign-off exemption clause must both render ONLY for the last section -- not
+    unconditionally for every section (PM review C1: my first draft's `{% if %}` wrapped
+    only the `is_last_section` block, leaving the rule-5 exemption clause rendering for
+    every section regardless). A clean 2-section run (no engineered repetition, so no
+    repair calls) lets `gemini.calls[1]`/`calls[2]` be section 1's and section 2's prompts
+    directly."""
+    project = await _project(db, duration_minutes=1.6)  # target_words=200, matches 2x100
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    outline_json = json.dumps(
+        {
+            "title": "T",
+            "sections": [
+                {"index": 1, "objective": "cover the full topic here", "target_words": 100},
+                {"index": 2, "objective": "continue the discussion here", "target_words": 100},
+            ],
+        }
+    )
+    section1_json = _section_json((alex_id, 25, 0), (maya_id, 25, 25), (alex_id, 25, 50), (maya_id, 25, 75))
+    section2_json = _section_json((alex_id, 25, 500), (maya_id, 25, 525), (alex_id, 25, 550), (maya_id, 25, 575))
+    router, gemini, _local = _build_router([_result(outline_json), _result(section1_json), _result(section2_json)])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete"
+
+    section1_prompt = gemini.calls[1].prompt
+    section2_prompt = gemini.calls[2].prompt
+
+    sign_off_fragment = "end it with a short spoken sign-off"
+    rule5_exemption_fragment = "The one exception is the final section's sign-off"
+
+    assert sign_off_fragment not in section1_prompt, "sign-off instruction must not appear for a non-last section"
+    assert sign_off_fragment in section2_prompt, "sign-off instruction must appear for the last section"
+    assert rule5_exemption_fragment not in section1_prompt, "rule 5 exemption must not appear for a non-last section"
+    assert rule5_exemption_fragment in section2_prompt, "rule 5 exemption must appear for the last section"
+
+
 async def test_pipeline_repair_prompt_also_avoids_quoting_a_repetition_example(db):
     """Task 16.4, N6: the repair prompt's new anti-repetition line must be
     present and, like the section prompt's, must never quote a concrete

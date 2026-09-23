@@ -300,6 +300,21 @@ def _has_outro(last_text_lower: str, outline_last_objective: str | None) -> bool
     return False
 
 
+def _has_outro_in_last_n(texts_lower: list[str], n: int, outline_last_objective: str | None) -> bool:
+    """Task 17.2 diagnostic: `_has_outro` only ever looked at the single last line, which
+    Gate B-7 run 4 showed is a false negative when the sign-off lands a line or two earlier
+    (see task-17.2.md). Widens the same marker check to the last `n` lines; the objective
+    fallback is unchanged since it isn't line-position-dependent."""
+    for text_lower in texts_lower[-n:]:
+        if any(marker in text_lower for marker in _OUTRO_LINE_MARKERS):
+            return True
+    if outline_last_objective:
+        objective_lower = outline_last_objective.lower()
+        if any(marker in objective_lower for marker in _OUTRO_OBJECTIVE_MARKERS):
+            return True
+    return False
+
+
 def _script_word_range(cefr_level: str, duration_minutes: float) -> tuple[int, int]:
     """Task 14.4a-c (PM finding from the first real local Gate B-2 matrix run):
     `analyze_script` was scoring *every* run's word count against the fixed
@@ -367,9 +382,11 @@ def analyze_script(
 
     first_text = texts[0].lower() if texts else ""
     last_text = texts[-1].lower() if texts else ""
+    texts_lower = [t.lower() for t in texts]
     intro_markers = ("welcome", "hello", "hi ", "today we", "let's talk", "glad to", "thanks for joining")
     has_intro = any(marker in first_text for marker in intro_markers)
     has_outro = _has_outro(last_text, outline_last_objective)
+    has_outro_last3 = _has_outro_in_last_n(texts_lower, 3, outline_last_objective)
 
     word_min, word_max = word_count_range
     checks = {
@@ -389,6 +406,7 @@ def analyze_script(
         "repeated_8gram_ratio": round(repeated_ratio, 4),
         "has_intro": has_intro,
         "has_outro": has_outro,
+        "has_outro_last3": has_outro_last3,
         "unknown_speaker_ids": sorted(unknown_speakers),
         "checks": checks,
         "all_checks_pass": all(checks.values()),
