@@ -4,7 +4,8 @@
 
 - **Phase:** 16
 - **Slug:** `16-stability-hardening`
-- **Status:** planned (handover to Coder pending)
+- **Status:** complete
+- **Closed:** 2026-09-23 (owner decision D20)
 - **Opened:** 2026-09-23
 - **Controlling plan:** `docs/implementation/phase-16-stability-hardening.md`
 - **Authorization:** the owner ran `/vp-audit` (2026-09-23) and then `/vp-evolve` for
@@ -32,9 +33,9 @@
 | 16.2 | ffmpeg timeouts (ENH-008) | Coder | done | — |
 | 16.3 | Test-data leak root cause + guard + cleanup script + CHANGELOG Phase 15 (BUG-023) | Coder → PM | done | — |
 | 16.4 | Repetition: evidence-driven avoid list (ENH-009 A) | Coder | done | — |
-| 16.5 | Gate B-7, local only | PM | not started | Coder idle |
-| 16.6 | Second bounded repetition repair (ENH-009 B) | Coder | conditional (only if B-7 script < 5/5) | — |
-| 16.7 | Gate B-8 | PM | conditional (only if 16.6 ran) | — |
+| 16.5 | Gate B-7, local only | PM | **done**: FAIL on word count (2 jobs), repetition 0.00% in 9/9 | see `docs/operations/phase16-gate-b7.md` |
+| 16.6 | Second bounded repetition repair (ENH-009 B) | Coder | not run (D20) | would not address B-7's failures |
+| 16.7 | Gate B-8 | PM | not run (D20) | — |
 
 **Execution order:** 16.1 → 16.2 → 16.3 → 16.4 → 16.5 → (16.6 → 16.7) → close-out.
 
@@ -44,6 +45,8 @@
   repair (16.6) only if needed. The threshold stays at 1%.
 - D19 (owner, 2026-09-23): BUG-023 → delete only the 4 known fixture names, with a
   backup, after a dry-run shown to the owner. The PM runs `--apply`.
+
+- D20 (owner, 2026-09-23): close Phase 16 after Gate B-7; 16.6/16.7 not run; ENH-010 logged.
 
 ## Evidence log
 

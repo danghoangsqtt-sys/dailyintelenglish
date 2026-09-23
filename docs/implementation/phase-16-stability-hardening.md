@@ -1,6 +1,6 @@
 # Phase 16 Implementation Plan — Stability Hardening
 
-**Status:** Controlling plan, PM, 2026-09-23. The owner opened this phase through `/vp-evolve` on
+**Status:** CLOSED 2026-09-23 (D20: after Gate B-7; 16.6/16.7 not run; ENH-010 logged). Controlling plan, PM, 2026-09-23. The owner opened this phase through `/vp-evolve` on
 2026-09-23, after a `/vp-audit` stability pass.
 **Predecessors:** the Phase 13–15 plans (still controlling where not amended), ADR-001 (+A1, A2).
 **Requests closed by this phase:** BUG-022, ENH-008, ENH-009, BUG-023

@@ -1235,14 +1235,16 @@ Trigger: owner's first hands-on run died on a truncated speaker UUID (structural
 
 ## Phase 16 — Stability Hardening
 
-**Status:** 🟡 Planned 2026-09-23 | Plan `docs/implementation/phase-16-stability-hardening.md`.
+**Status:** ✅ Closed 2026-09-23 | Plan `docs/implementation/phase-16-stability-hardening.md`.
 Trigger: `/vp-audit` 2026-09-23 (932/932 green, but four stability gaps). Requests BUG-022, ENH-008, ENH-009, BUG-023.
 Owner decisions: D18 (repetition: prompt first, second repair only if Gate B-7 < 5/5), D19 (delete leaked test projects, with a backup, after a dry-run).
 
-- [ ] 16.1 Worker loop guard + `worker_alive` on `/api/ai/health` (BUG-022, P0, Coder)
-- [ ] 16.2 ffmpeg subprocess timeouts (ENH-008, P1, Coder)
-- [ ] 16.3 Test-data leak root cause + conftest guard + `scripts/cleanup_test_projects.py` + CHANGELOG Phase 15 (BUG-023; PM runs `--apply`)
-- [ ] 16.4 Repetition: evidence-driven avoid list from Gate B-6 checkpoints (ENH-009 A, P0, Coder)
-- [ ] 16.5 Gate B-7, local only (PM) — script 5/5, no regression elsewhere
-- [ ] 16.6 Second bounded repetition repair — conditional on B-7 < 5/5 (ENH-009 B, Coder)
-- [ ] 16.7 Gate B-8 — conditional on 16.6 (PM)
+- [x] 16.1 Worker loop guard + `worker_alive` on `/api/ai/health` (BUG-022, P0, Coder)
+- [x] 16.2 ffmpeg subprocess timeouts (ENH-008, P1, Coder)
+- [x] 16.3 Test-data leak root cause + conftest guard + `scripts/cleanup_test_projects.py` + CHANGELOG Phase 15 (BUG-023; PM runs `--apply`)
+- [x] 16.4 Repetition: evidence-driven avoid list from Gate B-6 checkpoints (ENH-009 A, P0, Coder)
+- [x] 16.5 Gate B-7, local only (PM) — script 5/5, no regression elsewhere
+- [ ] 16.6 Second bounded repetition repair — NOT RUN (D20: would not address B-7's failures)
+- [ ] 16.7 Gate B-8 — NOT RUN (D20)
+
+**Status update:** ✅ Phase 16 closed 2026-09-23. Gate B-7: repetition 0.00% in 9/9 completed scripts; 2 failures on global word-count overshoot → ENH-010. Report `docs/operations/phase16-gate-b7.md`.
