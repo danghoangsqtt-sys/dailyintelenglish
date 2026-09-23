@@ -2109,7 +2109,7 @@ Plan `docs/implementation/phase-18-cloud-first-ai.md`; state `.viepilot/phases/1
 | Task | Owner | Status |
 |---|---|---|
 | 18.1 `OpenAICompatProvider` | Coder | ✅ done (`2a6a77c`) |
-| 18.2 Router roles/modes/budgets; Gemini removed | Coder | in progress (design approved) |
+| 18.2 Router roles/modes/budgets; Gemini removed | Coder | ✅ done (`16209c6`, `28196a4`) |
 | 18.3 Settings + health + privacy note | Coder | not started |
 | 18.4 Fallback-rate readout + runner | Coder | not started |
 | 18.5 Gate B-9 A/B | PM | not started |
@@ -2120,6 +2120,7 @@ PM review log:
 - 18.1 impl `2a6a77c` — **ACCEPTED** (PM, 2026-09-23). C1 and C2 done. PM re-verification: PM revert check (`_redact` made a no-op → `test_openai_compat_provider_never_leaks_key_when_401_body_echoes_it` FAILS, restored); full suite **993 passed** (29 new, MockTransport only); `ruff` clean. Noted (not fixed, outside the allowed files): the shared test helper `_install_mock_transport` (copied from `tests/test_ai_providers.py`) can't be called twice in one test, because the second patch wraps the first. The Coder split the tests to avoid it.
 - 18.2 design `6bc25aa` — **APPROVED** (PM, 2026-09-23; plan Amendment A). Rulings: (1) the router is rebuilt per job dispatch with one shared app-lifetime CircuitBreaker, and the `main.py` scope widens to the per-dispatch wrapper; (2) `AI_CLOUD_DEADLINE_SECONDS = 150`; (3) lease: no change (heartbeat renews unconditionally, the lease is read only at worker start, the UI/API never read it, and 120 s + backoff already exceeds 90 today); (4) `fallback_reason` persistence: `_call_record` in `script_pipeline.py` / `learning_pipeline.py` is added to the allowed files, that construction only; (5) test list approved, including the semantically inverted HYBRID tests. Invariant-32 proof accepted: the LOCAL branch is a verbatim rename, plus the collapse-path vs explicit-LOCAL equivalence test.
 - 18.2 stop report (Coder, mid-implementation): four services' `AIMode.GEMINI` pre-flight guards would raise `AttributeError`, and, rewired, would contradict invariant 32. **Plan Amendment B:** delete the guards (plus their docstring line and unused imports, and tests asserting them) in `script_/learning_/thumbnail_/youtube_service.py`; keep the `settings.GEMINI_API_KEY` field until 18.3. The Coder correctly stopped rather than widening scope.
+- 18.2 impl `16209c6` + N1 `28196a4` — **ACCEPTED** (PM, 2026-09-23). Amendments A and B are implemented. PM re-verification: full suite **1002 passed** on `16209c6`; `ruff` clean; real DB 7. **PM revert check found a test gap (N1):** a "fallback gets only the leftover" revert passed all 30 router tests, because the test used cloud 0.05 s < request 0.5 s, while production is cloud 150 s > request 120 s. N1 adds `test_fallback_gets_its_own_fresh_budget_not_the_leftover_of_the_primarys` (cloud 0.3 > request 0.2); the PM re-ran the same revert and it now FAILS (1 failed / 30 passed), restored → 31 passed. `record_success` is correctly moved to the primary. **Plan Amendment C:** `AI_ALLOW_CLOUD` defaults to true in 18.3; the `AI_MODE` default flips to `cloud_first` only at close-out after a Gate B-9 PASS.
 
 ## Decision Log
 

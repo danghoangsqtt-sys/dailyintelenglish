@@ -213,3 +213,13 @@ asserts that guard. The `settings.GEMINI_API_KEY` config field **stays** until 1
 still read it. 18.3 retires the settings side and `check_dependencies`; the sample script keeps
 reading it (out of scope).
 
+**Amendment C (PM, 2026-09-23, on accepting 18.2): the defaults are staged.**
+- **18.3:** `AI_ALLOW_CLOUD` default becomes **`true`**. `app/core/config.py` and `.env.example`
+  are added to 18.3's allowed files for that one default and its comment. Without this, the
+  Settings page could never enable cloud, because `set_ai_mode` enforces the gate. `AI_MODE`
+  keeps defaulting to **`local`**: the owner opts in from Settings, and a user with no key is
+  unaffected (invariant 32).
+- **Close-out (after Gate B-9 PASS only):** the `AI_MODE` default flips to **`cloud_first`**
+  (D21). If B-9 fails, it stays `local` and the owner decides. This way D21 takes effect only
+  once it's measured, never before.
+
