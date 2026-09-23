@@ -218,3 +218,14 @@ Same as Phase 14 §10, with a live message channel added:
   small commits pushed immediately. Never `git add -A`, never force-push, never stop the
   dev server on port 8000.
 - Baseline: 932/932, `ruff` clean (2026-09-23 audit).
+
+## 7. Amendments
+
+**Amendment A (PM, 2026-09-23, on accepting 16.1 `56bb74b`):** 16.2's allowed files gain
+`tests/test_ai_health_api.py`, **only** to fix nit N3: in
+`test_health_reports_worker_alive_false_when_the_worker_task_is_dead`, the monkeypatched
+`_task = None` is still in place when the `client` fixture's lifespan calls `stop()`, so
+`stop()` returns early and the real loop task is orphaned. Fix: save the real task and restore
+it before the `TestClient` context exits (for example with try/finally inside the test, or a
+dummy already-finished task instead of `None`). No other change to that file.
+
