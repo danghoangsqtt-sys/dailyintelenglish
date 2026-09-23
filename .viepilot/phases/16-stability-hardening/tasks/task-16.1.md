@@ -148,8 +148,9 @@ value (e.g. `0.01`) the same way the existing shutdown-grace test patches
 ## Evidence
 
 - Design commit `f925ea5` (approved by PM, with notes N1/N2 folded in, no
-  re-approval required). Implementation commit: see PHASE-STATE / TRACKER for
-  the sha recorded alongside PM acceptance.
+  re-approval required). Implementation commit `56bb74b`. PM ACCEPTED
+  (TRACKER `7955561`): targeted 19/19, own revert check (loop guard removed →
+  both loop tests fail; restored → 12/12), full suite 940 passed, ruff clean.
 - Files touched, all within the allowed list: `app/services/ai_worker.py`
   (per-iteration loop guard, guarded error-transition, done-callback,
   `is_alive`), `app/core/constants.py` (`AI_WORKER_LOOP_ERROR_BACKOFF_SECONDS

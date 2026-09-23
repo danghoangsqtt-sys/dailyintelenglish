@@ -73,12 +73,24 @@ def test_health_reports_worker_alive_true_during_normal_operation(client):
     assert response.json()["data"]["worker_alive"] is True
 
 
-def test_health_reports_worker_alive_false_when_the_worker_task_is_dead(client, monkeypatch):
+def test_health_reports_worker_alive_false_when_the_worker_task_is_dead(client):
     """Whitebox: forces `AIWorker.is_alive` to `False` by clearing the real
     singleton's task, since stopping it for real would tear down the shared app
-    (app/main.py, which constructs it, is outside this task's allowed files)."""
+    (app/main.py, which constructs it, is outside this task's allowed files).
+
+    Task 16.2 (N3): restores the real task in a `finally` here rather than
+    relying on `monkeypatch`'s own fixture-teardown revert, whose timing
+    relative to the `client` fixture's teardown (lifespan shutdown ->
+    `ai_worker.stop()`) isn't guaranteed -- if `_task` were still `None` when
+    `stop()` runs, its `if self._task is None: return` guard would return
+    immediately and orphan the real loop task instead of awaiting/cancelling
+    it."""
     from app.main import ai_worker
 
-    monkeypatch.setattr(ai_worker, "_task", None)
-    response = client.get("/api/ai/health")
-    assert response.json()["data"]["worker_alive"] is False
+    real_task = ai_worker._task
+    ai_worker._task = None
+    try:
+        response = client.get("/api/ai/health")
+        assert response.json()["data"]["worker_alive"] is False
+    finally:
+        ai_worker._task = real_task
