@@ -3,8 +3,8 @@
   "version": "1.0.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_15_complete",
-  "current_phase": 15,
+  "status": "phase_16_planned",
+  "current_phase": 16,
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
     "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
@@ -145,6 +145,14 @@
       "tasks_done": 4,
       "tasks_total": 5,
       "note": "Opened 2026-09-22 under the owner's delegated decision authority after the owner's first real run (A2/small_talk/10min/2 speakers) died at section 3 on unknown speaker_id 'ff5f20e0-417b-8d9f-752e844d46f0' -- the model dropped one group of the real UUID ff5f20e0-4082-417b-8d9f-752e844d46f0 (Alex). Plan docs/implementation/phase-15-local-robustness.md: 15.1 speaker aliases S1/S2 in the section contract resolved server-side + >=0.85-similarity safety net for echoed UUIDs (no invented speaker); 15.2 deterministic merge of same-speaker runs (never re-attribute, words unchanged); 15.3 runner --gate path + set_job_metric cleanup; 15.4 Gate B-6 incl. the owner's configuration; 15.5 optional multi-script pace calibration. Thresholds unchanged. 15.1 done and PM-accepted (ebd79e2): the owner's exact failing id resolves to Alex via the near-miss rule; full suite 915. 15.2 in progress. 15.2 done and PM-accepted (3381c21): merge-only consecutive-lines fix, words/order invariant; full suite 926. 15.3 in progress. 15.3 done (d2c0d20). Gate B-6 EXECUTED 2026-09-22 (fresh trial DB under phase15/gate-b6): 0 structural failures in 11 jobs; owner's A2/small_talk/10min configuration 2/2 (1,100/1,073 words) with learning 2/2; samples 4/4; learning 3/3; MEDIA PASS first time (487.3 s, A/V 0.00); script 3/5 on repetition (1.00%/1.42% after one repetition repair). PHASE 15 CLOSED. Remaining single failure class: repetition, variable run-to-run (B-5 5/5 vs B-6 3/5 same code); options recorded in docs/operations/phase15-gate-b6.md section 7."
+    },
+    "16": {
+      "name": "Stability Hardening",
+      "days": "n/a",
+      "status": "planned",
+      "tasks_done": 0,
+      "tasks_total": 5,
+      "note": "Opened 2026-09-23 via /vp-audit -> /vp-evolve. Plan docs/implementation/phase-16-stability-hardening.md. 16.1 worker loop guard + worker_alive (BUG-022); 16.2 ffmpeg timeouts (ENH-008); 16.3 test-data leak root cause + guard + cleanup script, PM runs --apply after owner sees dry-run (BUG-023, D19); 16.4 evidence-driven repetition avoid list (ENH-009 A, D18); 16.5 Gate B-7 (PM); 16.6/16.7 conditional second repetition repair + Gate B-8. PM Claude Opus + Coder Claude Sonnet, parallel sessions, SendMessage live channel, git as record. Baseline 932/932."
     }
   },
   "key_decisions": [

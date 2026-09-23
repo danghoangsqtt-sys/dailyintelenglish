@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); Phases 13–15 closed (15 closed 2026-09-22: structural failures eliminated, media gate PASS for the first time, owner's failing configuration completes 2/2; repetition is the single remaining, variable failure class). No phase open.
+**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); Phases 13–15 closed (15 closed 2026-09-22: structural failures eliminated, media gate PASS for the first time, owner's failing configuration completes 2/2; repetition is the single remaining, variable failure class). **Phase 16 (Stability Hardening) planned 2026-09-23** — PM: Claude Opus; Coder: Claude Sonnet; plan `docs/implementation/phase-16-stability-hardening.md`.
 **Day:** 6 / 21  
 **Started:** 2026-09-10 (Phases 1–12 complete; Phase 13 opened 2026-09-18 as user-approved reliability scope beyond the original plan)
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
@@ -2039,10 +2039,30 @@ Delivered: speaker aliases + deterministic id resolution (15.1), consecutive-lin
 (options recorded in the report §7 for the owner: second bounded repetition repair; stronger avoid-list;
 or accept 3–5/5 with in-app Retry).
 
+## Phase 16 Task Status
+
+Plan `docs/implementation/phase-16-stability-hardening.md`; state `.viepilot/phases/16-stability-hardening/PHASE-STATE.md`.
+Opened 2026-09-23 via `/vp-audit` → `/vp-evolve` (BUG-022, ENH-008, ENH-009, BUG-023). Baseline 932/932, `ruff` clean.
+
+| Task | Owner | Status |
+|---|---|---|
+| 16.1 Worker loop guard + `worker_alive` (BUG-022) | Coder | not started |
+| 16.2 ffmpeg timeouts (ENH-008) | Coder | not started |
+| 16.3 Test-data leak + cleanup script + CHANGELOG Phase 15 (BUG-023) | Coder → PM | not started |
+| 16.4 Repetition avoid list, evidence-driven (ENH-009 A) | Coder | not started |
+| 16.5 Gate B-7 | PM | not started |
+| 16.6 Second repetition repair (conditional) | Coder | conditional |
+| 16.7 Gate B-8 (conditional) | PM | conditional |
+
+PM review log (one line per verdict: task, commit, APPROVED/CHANGES/ACCEPTED, suite count):
+
+- (none yet)
+
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-23 | **Phase 16 opened** (`/vp-evolve`) for BUG-022, ENH-008, ENH-009, BUG-023. Owner decisions: **D18** ENH-009 → strengthen the section prompt's avoid list from Gate B-6 evidence first (16.4), measure with Gate B-7 (16.5), build a second bounded repetition repair (16.6) only if the script gate is still < 5/5; threshold stays 1%. **D19** BUG-023 → delete the 4 known leaked fixture names from the real `data/app.db`, backup first, dry-run shown to the owner first, PM runs `--apply`. Execution: two parallel sessions, PM Claude Opus + Coder Claude Sonnet, plan §6 partition with `SendMessage` as the live channel | `/vp-audit` 2026-09-23: 932/932 green, but a silently-dying worker loop, un-timed ffmpeg calls, a 3/5 repetition gate, and 419 leaked test projects stand between "works" and "stable" |
 | 2026-09-22 | Gate B-6: 0 structural failures in 11 jobs, owner's configuration 2/2, media PASS (487 s, A/V 0.00); script 3/5 on repetition. **Phase 15 closed**; repetition options recorded for the owner, none started | The phase's objective is met on evidence; the residual is a variable content-quality class with a bounded repair already in place |
 | 2026-09-22 | Phase 15 opened (delegated authority): section contract switches to speaker aliases (S1/S2) resolved server-side, with a ≥ 0.85-similarity safety net for echoed UUIDs; consecutive-lines runs merged deterministically (never re-attributed); thresholds unchanged | The owner's first real run lost 3 minutes to a copied-UUID slip the server can resolve without inventing anything; the two structural checks were the only ones without a repair path |
 | 2026-09-22 | Gate B-5: script/samples/learning all PASS at 1,000 words; media duration 413.3 s FAIL (−4.3%). **Phase 14 closed** as declared in plan §14; D11 remains an owner override; multi-script pace calibration and a declared media-gate protocol change are proposed for a future phase | The phase must not chase gates indefinitely; every other gate passes under unchanged thresholds; the remaining miss is a single-script calibration spread, measured and documented |
@@ -3023,3 +3043,9 @@ or accept 3–5/5 with in-app Retry).
 | BUG-018 | Bug | Regenerating a single script line leaves its old audio_cache_path/duration_seconds in place | medium | done |
 | BUG-019 | Bug | Avatar upload's filesystem mutation isn't rolled back if the surrounding DB transaction later fails | medium | done |
 | ENH-007 | Enhancement | ARCHITECTURE.md describes dropped/deferred features as active and diverges from its own Mermaid sidecar | medium | done |
+| BUG-020 | Bug | README omits Phase 11 | low | done |
+| BUG-021 | Bug | ARCHITECTURE.md event-flows row contradicts overview | low | done |
+| BUG-022 | Bug | AIWorker poll loop has no top-level guard — silent death | high | planned (Phase 16, 16.1) |
+| ENH-008 | Enhancement | ffmpeg subprocess calls have no timeout | medium | planned (Phase 16, 16.2) |
+| BUG-023 | Bug | Leaked test projects in real app.db; CHANGELOG missing Phase 15 | low | planned (Phase 16, 16.3) |
+| ENH-009 | Enhancement | Script repetition gate variable (B-5 5/5 → B-6 3/5) | medium | planned (Phase 16, 16.4–16.6) |
