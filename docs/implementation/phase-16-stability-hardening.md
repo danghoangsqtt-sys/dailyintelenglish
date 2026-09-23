@@ -229,3 +229,18 @@ Same as Phase 14 §10, with a live message channel added:
 it before the `TestClient` context exits (for example with try/finally inside the test, or a
 dummy already-finished task instead of `None`). No other change to that file.
 
+**Amendment B (PM, 2026-09-23, on reviewing the 16.2 design in `17cb199`):** 16.2 renders to a
+temporary sibling file and swaps it in only on success. Both ffmpeg passes write to
+`video.rendering.mp4` / `video_vertical.rendering.mp4` (the `.mp4` extension is kept so ffmpeg
+still infers the container). On `returncode == 0` the temp file replaces the final path with
+`os.replace`. On timeout **or** any other failure, only the temp file is removed.
+Why: `-y` truncates the final `video.mp4` the moment a re-render starts. A failed or timed-out
+re-render therefore destroys the previous good video, while `mark_video_job_failed`
+(BUG-017) deliberately keeps the DB row pointing at it. Deleting the "partial output" at the
+final path, as drafted, would make that row point at a missing file.
+This changes **only the output path argument**. Every other ffmpeg argument (including the
+Task 14.10 `-t` pacing) stays byte-identical, and the "don't change the command arguments"
+prohibition is amended for this narrow purpose only.
+New required test: an existing `video.mp4` with known content survives a timed-out
+re-render unchanged.
+
