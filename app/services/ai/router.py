@@ -1,6 +1,7 @@
 """Central AI router: AI_MODE selection, bounded per-provider retry with
-exponential backoff for transient errors, one Gemini fallback, and an
-in-process circuit breaker over the local provider (Phase 13/14, ADR-001).
+exponential backoff for transient errors, one visible cloud-to-local fallback,
+and an in-process circuit breaker over the primary provider (Phase 13/14,
+ADR-001; Phase 18/D21 made cloud the default primary, local the fallback).
 
 Retry/fallback/circuit-breaker policy lives here, never inside a provider -- see
 `contracts.Provider`'s docstring for why (no nested retries).
@@ -18,12 +19,13 @@ from app.core.constants import (
     AI_BACKOFF_MIN_REMAINING_SECONDS,
     AI_CIRCUIT_COOLDOWN_SECONDS,
     AI_CIRCUIT_FAILURE_THRESHOLD,
+    AI_CLOUD_DEADLINE_SECONDS,
     AI_TRANSIENT_BACKOFF_BASE_SECONDS,
     AI_TRANSIENT_BACKOFF_MAX_SECONDS,
     AI_TRANSIENT_MAX_ATTEMPTS,
-    GEMINI_MODEL,
 )
 from app.core.exceptions import (
+    ProviderAuthError,
     ProviderError,
     ProviderInvalidResponseError,
     ProviderRateLimitError,
@@ -32,28 +34,62 @@ from app.core.exceptions import (
     SchemaValidationError,
 )
 from app.services.ai.contracts import AIMode, GenerationRequest, GenerationResult, Provider
-from app.services.ai.gemini_provider import GeminiProvider
 from app.services.ai.ollama_provider import OllamaProvider
+from app.services.ai.openai_compat_provider import OpenAICompatProvider
 
 logger = logging.getLogger(__name__)
 
 
-def build_ai_router_from_settings() -> "AIRouter":
+def compute_effective_mode(configured_mode: AIMode, allow_cloud: bool, api_key: str, model: str) -> AIMode:
+    """Phase 18, invariant 32/D24: cloud is only ever effective when the kill
+    switch is on and both a key and a model are configured -- otherwise the
+    app behaves exactly like today's local-only mode, regardless of what
+    `configured_mode` (the stored/env setting) says."""
+    if configured_mode is AIMode.LOCAL:
+        return AIMode.LOCAL
+    if not allow_cloud or not api_key or not model:
+        return AIMode.LOCAL
+    return configured_mode
+
+
+def build_ai_router_from_settings(circuit: "CircuitBreaker | None" = None) -> "AIRouter":
     """Construct the Task 13.2 provider gateway from current app settings.
 
-    The one shared factory for every Gemini consumer (Phase 13, Task 13.7) --
-    previously duplicated per-service (`script_service._build_ai_router`). A fresh
-    instance per call is fine: there is no shared-lifespan client the way a
-    lifespan-managed worker would want, matching each provider's own per-call
-    `httpx.AsyncClient` lifetime.
+    The one shared factory for every cloud-AI consumer -- previously duplicated
+    per-service (`script_service._build_ai_router`). A fresh instance per call is
+    fine: there is no shared-lifespan client the way a lifespan-managed worker
+    would want, matching each provider's own per-call `httpx.AsyncClient`
+    lifetime. `circuit` is `None` by default (a fresh breaker per call, matching
+    today's per-call-fresh router semantics) -- a caller that needs
+    circuit-breaker state to persist across calls (the durable job worker,
+    `app/main.py`) constructs its own `CircuitBreaker` once, for the app's
+    whole lifetime, and passes it here on every call instead.
     """
     from app.core.config import settings  # local import: avoids a config<->ai import cycle
 
-    local = OllamaProvider(
+    fallback = OllamaProvider(
         base_url=settings.OLLAMA_BASE_URL, model=settings.OLLAMA_MODEL, num_ctx=settings.OLLAMA_NUM_CTX
     )
-    gemini = GeminiProvider(api_key=settings.GEMINI_API_KEY, model=GEMINI_MODEL)
-    return AIRouter(local=local, gemini=gemini, mode=AIMode(settings.AI_MODE))
+    effective_mode = compute_effective_mode(
+        AIMode(settings.AI_MODE), settings.AI_ALLOW_CLOUD, settings.OPENAI_COMPAT_API_KEY, settings.OPENAI_COMPAT_MODEL
+    )
+    primary: Provider = fallback  # placeholder; never called when effective_mode is LOCAL
+    if effective_mode is not AIMode.LOCAL:
+        try:
+            primary = OpenAICompatProvider(
+                base_url=settings.OPENAI_COMPAT_BASE_URL,
+                api_key=settings.OPENAI_COMPAT_API_KEY,
+                model=settings.OPENAI_COMPAT_MODEL,
+                timeout=settings.AI_CLOUD_DEADLINE_SECONDS,
+            )
+        except ValueError:
+            logger.warning("ai_router_invalid_cloud_base_url -- falling back to local")
+            effective_mode = AIMode.LOCAL
+    return AIRouter(
+        primary=primary, fallback=fallback, mode=effective_mode,
+        cloud_deadline_seconds=settings.AI_CLOUD_DEADLINE_SECONDS, circuit=circuit,
+    )
+
 
 # Infrastructure/transient errors: ordinary overload/rate-limit/timeout conditions
 # that resolve themselves given a moment -- worth up to AI_TRANSIENT_MAX_ATTEMPTS
@@ -76,8 +112,16 @@ _CONTENT_RETRY_ERRORS = (
 
 
 @dataclass
-class _CircuitBreaker:
-    """Tracks consecutive local-provider failures; opens for a cooldown window."""
+class CircuitBreaker:
+    """Tracks consecutive primary-provider failures; opens for a cooldown window.
+
+    Public (Phase 18, renamed from `_CircuitBreaker`) so `app/main.py` can hold
+    one instance for the app's whole lifetime and thread it through every
+    freshly-built per-job `AIRouter` -- otherwise rebuilding the router per job
+    dispatch (needed so a Settings change reaches the next job without a
+    restart) would also reset breaker state on every job, which the plan does
+    not ask for and would make the breaker far less useful in practice.
+    """
 
     failure_threshold: int
     cooldown_seconds: float
@@ -99,9 +143,15 @@ class _CircuitBreaker:
         if self.consecutive_failures >= self.failure_threshold:
             self.opened_until = time.monotonic() + self.cooldown_seconds
 
+    def open_immediately(self) -> None:
+        """A config error (bad key/model) can't self-resolve on retry -- skip
+        the consecutive-failure threshold and open the cooldown window at once."""
+        self.consecutive_failures = self.failure_threshold
+        self.opened_until = time.monotonic() + self.cooldown_seconds
+
 
 class AIRouter:
-    """Routes one `GenerationRequest` to the local/Gemini providers per `AI_MODE`.
+    """Routes one `GenerationRequest` to the primary/fallback providers per `AI_MODE`.
 
     Circuit-breaker state is in-process only, not persisted -- Task 13.3's durable
     job layer is the real persistence/recovery boundary, not this router.
@@ -109,63 +159,86 @@ class AIRouter:
 
     def __init__(
         self,
-        local: Provider,
-        gemini: Provider,
+        primary: Provider,
+        fallback: Provider,
         mode: AIMode,
+        cloud_deadline_seconds: float = AI_CLOUD_DEADLINE_SECONDS,
         failure_threshold: int = AI_CIRCUIT_FAILURE_THRESHOLD,
         cooldown_seconds: float = AI_CIRCUIT_COOLDOWN_SECONDS,
+        circuit: CircuitBreaker | None = None,
     ) -> None:
-        self._local = local
-        self._gemini = gemini
+        """`failure_threshold`/`cooldown_seconds` are ignored when `circuit` is
+        given (it's already configured) -- they exist only to build this
+        router's own default breaker when the caller doesn't hold a
+        longer-lived one itself. `cloud_deadline_seconds` is read once, here, at
+        construction -- consistent with `primary`/`fallback`/`mode` also being
+        frozen at construction, not re-read from `settings` on every call."""
+        self._primary = primary
+        self._fallback = fallback
         self._mode = mode
-        self._circuit = _CircuitBreaker(failure_threshold, cooldown_seconds)
+        self._cloud_deadline_seconds = cloud_deadline_seconds
+        self._circuit = circuit if circuit is not None else CircuitBreaker(failure_threshold, cooldown_seconds)
 
     async def generate(self, request: GenerationRequest) -> GenerationResult:
-        """Route one request, bounded by `request.deadline_seconds` overall.
+        """Route one request. `local` mode and the fallback phase of `cloud_first`
+        are bounded by `request.deadline_seconds`; the primary phase (`cloud` and
+        `cloud_first`'s first attempt) gets its own, separate
+        `AI_CLOUD_DEADLINE_SECONDS` budget -- the two never share one deadline
+        (Phase 18: a shared deadline is exactly how a slow primary starved the
+        fallback of any time at all).
 
         Raises:
             ProviderError (or a subclass): If every attempt this mode allows fails,
-                or the deadline elapses first.
+                or the relevant budget elapses first.
         """
-        deadline_at = time.monotonic() + request.deadline_seconds
-        try:
-            return await asyncio.wait_for(
-                self._route(request, deadline_at), timeout=request.deadline_seconds
-            )
-        except TimeoutError as exc:
-            raise ProviderTimeoutError(
-                f"AI router deadline of {request.deadline_seconds}s exceeded"
-            ) from exc
-
-    async def _route(self, request: GenerationRequest, deadline_at: float) -> GenerationResult:
-        if self._mode is AIMode.GEMINI:
-            return await self._attempt(self._gemini, request, deadline_at)
-
         if self._mode is AIMode.LOCAL:
-            return await self._attempt(self._local, request, deadline_at)
+            return await self._run_with_budget(self._fallback, request, request.deadline_seconds)
 
-        # hybrid: local first (unless the circuit is open), one visible Gemini fallback.
+        if self._mode is AIMode.CLOUD:
+            return await self._run_with_budget(self._primary, request, self._cloud_deadline_seconds)
+
+        # cloud_first: primary first (unless the circuit is open), one visible fallback.
         if self._circuit.is_open():
             logger.info(
-                "ai_router_circuit_open provider=%s purpose=%s", self._local.name, request.purpose
+                "ai_router_circuit_open provider=%s purpose=%s", self._primary.name, request.purpose
             )
-            result = await self._attempt(self._gemini, request, deadline_at)
+            result = await self._run_with_budget(self._fallback, request, request.deadline_seconds)
             result.circuit_open = True
             return result
 
         try:
-            return await self._attempt(self._local, request, deadline_at)
+            return await self._run_with_budget(self._primary, request, self._cloud_deadline_seconds)
         except ProviderError as exc:
-            self._circuit.record_failure()
+            if isinstance(exc, ProviderAuthError):
+                self._circuit.open_immediately()
+            else:
+                self._circuit.record_failure()
             logger.warning(
-                "ai_router_local_failed provider=%s purpose=%s error=%s -- falling back to gemini",
-                self._local.name,
+                "ai_router_primary_failed provider=%s purpose=%s error=%s -- falling back to %s",
+                self._primary.name,
                 request.purpose,
                 type(exc).__name__,
+                self._fallback.name,
             )
-            result = await self._attempt(self._gemini, request, deadline_at)
+            result = await self._run_with_budget(self._fallback, request, request.deadline_seconds)
             result.fallback_used = True
+            result.fallback_reason = type(exc).__name__
             return result
+
+    async def _run_with_budget(
+        self, provider: Provider, request: GenerationRequest, budget_seconds: float
+    ) -> GenerationResult:
+        """Wraps one phase's attempt(s) in its own `wait_for`, independent of
+        any other phase's budget (Phase 18 -- see `generate`'s docstring)."""
+        deadline_at = time.monotonic() + budget_seconds
+        try:
+            return await asyncio.wait_for(
+                self._attempt(provider, request, deadline_at), timeout=budget_seconds
+            )
+        except TimeoutError as exc:
+            raise ProviderTimeoutError(
+                f"AI router budget of {budget_seconds}s exceeded for {provider.name}"
+            ) from exc
 
     async def _attempt(
         self, provider: Provider, request: GenerationRequest, deadline_at: float
@@ -217,7 +290,7 @@ class AIRouter:
                 result.attempts = attempt
                 result.backoff_seconds = backoff_seconds
                 result.transient_errors = transient_errors
-                if provider is self._local:
+                if provider is self._primary:
                     self._circuit.record_success()
                 return result
 

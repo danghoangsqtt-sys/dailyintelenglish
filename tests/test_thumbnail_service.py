@@ -221,8 +221,10 @@ async def test_edit_render_rejects_stale_revision_before_creating_files(
 
 
 # Note: the responseJsonSchema-not-responseSchema wire-payload regression (BUG-011)
-# is now covered once, at the shared gateway layer (Task 13.7), by
-# tests/test_ai_providers.py::test_gemini_provider_wire_payload_uses_response_json_schema_not_response_schema.
+# was Gemini-specific and no longer applies -- Phase 18/Task 18.2 deleted
+# GeminiProvider (D23) in favour of OpenAICompatProvider, which never sends
+# `response_format`/a JSON schema at all (see tests/test_openai_compat_provider.py,
+# Task 18.1, for that provider's own request-shape coverage).
 
 
 def _suggestion_result(pack_json: str) -> GenerationResult:
@@ -237,9 +239,13 @@ def _suggestion_result(pack_json: str) -> GenerationResult:
 
 
 def _gateway_router(mode: AIMode, gemini_outcomes: list, local_outcomes: list | None = None) -> AIRouter:
+    """`gemini_outcomes`/`local_outcomes` are historical parameter names
+    (predating Phase 18's cloud-first router roles) for what's now
+    `primary`/`fallback` -- every call site here uses `AIMode.CLOUD`
+    (single-provider, mechanical rename from `AIMode.GEMINI`)."""
     gemini = FakeProvider("fake-gemini", gemini_outcomes)
     local = FakeProvider("fake-ollama", local_outcomes or [])
-    return AIRouter(local=local, gemini=gemini, mode=mode)
+    return AIRouter(primary=gemini, fallback=local, mode=mode)
 
 
 @pytest.mark.asyncio
@@ -248,7 +254,7 @@ async def test_generate_suggestions_applies_pydantic_validation_and_exact_count(
 ) -> None:
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
     template = await thumbnail_service.load_template("modern_split")
-    router = _gateway_router(AIMode.GEMINI, [_suggestion_result(suggestion_json(3))])
+    router = _gateway_router(AIMode.CLOUD, [_suggestion_result(suggestion_json(3))])
 
     pack = await thumbnail_service.generate_suggestions(PROJECT, template, 3, router=router)
 
@@ -262,13 +268,13 @@ async def test_generate_suggestions_rejects_wrong_count_and_invalid_schema(
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
     template = await thumbnail_service.load_template("modern_split")
 
-    router = _gateway_router(AIMode.GEMINI, [_suggestion_result(suggestion_json(3))])
+    router = _gateway_router(AIMode.CLOUD, [_suggestion_result(suggestion_json(3))])
     with pytest.raises(ThumbnailGenerationError, match="expected exactly 4"):
         await thumbnail_service.generate_suggestions(PROJECT, template, 4, router=router)
 
     payload = json.loads(suggestion_json(3))
     payload["variants"][0]["palette"]["primary"] = "not-a-color"
-    router = _gateway_router(AIMode.GEMINI, [_suggestion_result(json.dumps(payload))])
+    router = _gateway_router(AIMode.CLOUD, [_suggestion_result(json.dumps(payload))])
     with pytest.raises(ThumbnailGenerationError, match="schema validation"):
         await thumbnail_service.generate_suggestions(PROJECT, template, 3, router=router)
 

@@ -7,7 +7,7 @@ from app.services.ai.contracts import AIMode, GenerationRequest, GenerationResul
 
 
 def test_ai_mode_values():
-    assert {mode.value for mode in AIMode} == {"gemini", "local", "hybrid"}
+    assert {mode.value for mode in AIMode} == {"local", "cloud", "cloud_first"}
 
 
 def test_generation_request_requires_positive_deadline():
@@ -37,6 +37,7 @@ def test_generation_result_defaults():
     )
     assert result.tokens_used is None
     assert result.fallback_used is False
+    assert result.fallback_reason is None
     assert result.circuit_open is False
     assert result.attempts == 1
     assert result.backoff_seconds == 0.0

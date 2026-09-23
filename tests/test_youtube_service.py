@@ -68,10 +68,14 @@ def _package_result_from_text(text: str) -> GenerationResult:
 
 
 def _gateway_router(mode: AIMode, gemini_outcomes: list, local_outcomes: list | None = None) -> AIRouter:
-    """Build an `AIRouter` over two `FakeProvider`s -- no network, deterministic."""
+    """Build an `AIRouter` over two `FakeProvider`s -- no network, deterministic.
+    `gemini_outcomes`/`local_outcomes` are historical parameter names
+    (predating Phase 18's cloud-first router roles) for what's now
+    `primary`/`fallback` -- every call site here uses `AIMode.CLOUD`
+    (single-provider, mechanical rename from `AIMode.GEMINI`)."""
     gemini = FakeProvider("fake-gemini", gemini_outcomes)
     local = FakeProvider("fake-ollama", local_outcomes or [])
-    return AIRouter(local=local, gemini=gemini, mode=mode)
+    return AIRouter(primary=gemini, fallback=local, mode=mode)
 
 
 async def _no_op_sleep(delay: float) -> None:
@@ -165,7 +169,7 @@ def test_real_chapters_uses_real_seconds_not_word_count():
 
 
 async def test_generate_package_success_via_gateway():
-    router = _gateway_router(AIMode.GEMINI, [_package_result(VALID_PACKAGE)])
+    router = _gateway_router(AIMode.CLOUD, [_package_result(VALID_PACKAGE)])
 
     package = await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
 
@@ -178,7 +182,7 @@ async def test_generate_package_success_via_gateway():
 
 
 async def test_generate_package_without_timestamps_falls_back_to_estimate():
-    router = _gateway_router(AIMode.GEMINI, [_package_result(VALID_PACKAGE)])
+    router = _gateway_router(AIMode.CLOUD, [_package_result(VALID_PACKAGE)])
 
     package = await youtube_service.generate_package(
         SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, timestamps=None, router=router
@@ -189,7 +193,7 @@ async def test_generate_package_without_timestamps_falls_back_to_estimate():
 
 
 async def test_generate_package_with_timestamps_uses_measured_chapters():
-    router = _gateway_router(AIMode.GEMINI, [_package_result(VALID_PACKAGE)])
+    router = _gateway_router(AIMode.CLOUD, [_package_result(VALID_PACKAGE)])
     timestamps = [
         {"start_sec": 0.0, "end_sec": 1.0, "text": SAMPLE_SCRIPT_LINES[0]["text"]},
         {"start_sec": 5.0, "end_sec": 6.0, "text": SAMPLE_SCRIPT_LINES[1]["text"]},
@@ -211,14 +215,14 @@ async def test_generate_package_wraps_provider_error(monkeypatch):
     exhaustion, `app.services.ai.router.sleep` patched to a no-op.
     """
     monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
-    router = _gateway_router(AIMode.GEMINI, [ProviderUnavailableError("down")] * 4)
+    router = _gateway_router(AIMode.CLOUD, [ProviderUnavailableError("down")] * 4)
 
     with pytest.raises(YouTubePackageGenerationError, match="YouTube package generation failed"):
         await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
 
 
 async def test_generate_package_invalid_json_raises():
-    router = _gateway_router(AIMode.GEMINI, [_package_result_from_text("not valid json")])
+    router = _gateway_router(AIMode.CLOUD, [_package_result_from_text("not valid json")])
 
     with pytest.raises(YouTubePackageGenerationError, match="not valid JSON"):
         await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
@@ -226,7 +230,7 @@ async def test_generate_package_invalid_json_raises():
 
 async def test_generate_package_schema_validation_failure_raises():
     bad_package = {"titles": [{"variant": "click_worthy", "text": "x"}], "description": "", "tags": []}
-    router = _gateway_router(AIMode.GEMINI, [_package_result(bad_package)])
+    router = _gateway_router(AIMode.CLOUD, [_package_result(bad_package)])
 
     with pytest.raises(YouTubePackageGenerationError, match="schema validation"):
         await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
@@ -242,33 +246,26 @@ async def test_generate_package_duplicate_title_variants_rejected():
         "description": "desc",
         "tags": ["tag"],
     }
-    router = _gateway_router(AIMode.GEMINI, [_package_result(bad_package)])
+    router = _gateway_router(AIMode.CLOUD, [_package_result(bad_package)])
 
     with pytest.raises(YouTubePackageGenerationError, match="schema validation"):
         await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
 
 
 async def test_generate_package_empty_script_raises_without_calling_router():
-    router = _gateway_router(AIMode.GEMINI, [])
+    router = _gateway_router(AIMode.CLOUD, [])
 
     with pytest.raises(ValidationError, match="script is empty"):
         await youtube_service.generate_package(SAMPLE_PROJECT, [], router=router)
 
 
-async def test_generate_package_missing_api_key_raises_without_calling_router(monkeypatch):
-    """AI_MODE=gemini (the packaged default) still hard-requires a Gemini key
-    upfront -- byte-identical behavior to before Task 13.7's migration."""
-    monkeypatch.setattr(youtube_service.settings, "AI_MODE", "gemini")
-    monkeypatch.setattr(youtube_service.settings, "GEMINI_API_KEY", "")
-    router = _gateway_router(AIMode.GEMINI, [])
-
-    with pytest.raises(YouTubePackageGenerationError, match="not configured"):
-        await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
-
-
 async def test_generate_package_local_mode_needs_no_gemini_key():
-    """Task 13.7: the upfront key guard is mode-aware -- AI_MODE=local/hybrid must not
-    be blocked by a missing Gemini key, since local generation never needs one."""
+    """Task 13.7: local generation never needs a Gemini key. (Phase 18/
+    invariant 32's cloud_first-with-no-key end-to-end proof, PM Amendment B,
+    lives once in tests/test_script_service.py rather than duplicated across
+    all four `*_service.py` test files -- the old, now-obsolete
+    `test_generate_package_missing_api_key_raises_without_calling_router`
+    that used to sit here asserted the deleted guard's opposite behaviour.)"""
     router = _gateway_router(AIMode.LOCAL, gemini_outcomes=[], local_outcomes=[_package_result(VALID_PACKAGE)])
 
     package = await youtube_service.generate_package(SAMPLE_PROJECT, SAMPLE_SCRIPT_LINES, router=router)
@@ -288,8 +285,10 @@ async def test_generate_package_runs_end_to_end_under_ai_mode_local():
 
 
 # Note: the responseJsonSchema-not-responseSchema wire-payload regression (BUG-011)
-# is now covered once, at the shared gateway layer (Task 13.7), by
-# tests/test_ai_providers.py::test_gemini_provider_wire_payload_uses_response_json_schema_not_response_schema.
+# was Gemini-specific and no longer applies -- Phase 18/Task 18.2 deleted
+# GeminiProvider (D23) in favour of OpenAICompatProvider, which never sends
+# `response_format`/a JSON schema at all (see tests/test_openai_compat_provider.py,
+# Task 18.1, for that provider's own request-shape coverage).
 
 
 # --- DB persistence ---

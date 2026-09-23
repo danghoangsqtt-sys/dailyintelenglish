@@ -11,17 +11,14 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api import ai_jobs, audio, learning, music, projects, settings as settings_api, thumbnail, tts, video, youtube
 from app.core.config import settings
-from app.core.constants import GEMINI_MODEL
+from app.core.constants import AI_CIRCUIT_COOLDOWN_SECONDS, AI_CIRCUIT_FAILURE_THRESHOLD
 from app.core.exceptions import AppError
 from app.core.paths import get_project_root
 from app.core.responses import ok
 from app.core.system_checks import check_ffmpeg, get_gpu_info
 from app.db.database import Database, close_db, init_db
 from app.services import learning_pipeline, script_pipeline, settings_service
-from app.services.ai.gemini_provider import GeminiProvider
-from app.services.ai.ollama_provider import OllamaProvider
-from app.services.ai.router import AIRouter
-from app.services.ai.contracts import AIMode
+from app.services.ai.router import AIRouter, CircuitBreaker, build_ai_router_from_settings
 from app.services.ai_worker import AIWorker
 
 PROJECT_ROOT = get_project_root()
@@ -30,19 +27,35 @@ FRONTEND_DIR = PROJECT_ROOT / "frontend"
 app_state: dict = {"ffmpeg_ok": False, "gpu_info": None}
 ai_worker = AIWorker(db_getter=lambda: Database.instance().connection)
 
+# Phase 18: one circuit breaker for the app's whole lifetime, threaded through
+# every freshly-built per-job router below -- so breaker state survives across
+# jobs even though the router itself is rebuilt per job dispatch (to pick up a
+# Settings-page change without a restart; see _build_ai_router's docstring).
+_ai_circuit = CircuitBreaker(AI_CIRCUIT_FAILURE_THRESHOLD, AI_CIRCUIT_COOLDOWN_SECONDS)
+
 
 def _build_ai_router() -> AIRouter:
-    """One shared AIRouter for the app's durable job worker (Phase 13, Task 13.6).
+    """One fresh `AIRouter` per call, reading `settings.*` live (Phase 18),
+    sharing this module's one app-lifetime `_ai_circuit`.
 
-    Reads `settings.AI_MODE` live at call time (called once at startup, after
-    `settings_service.load_ai_mode_from_db()` has applied any DB override) --
-    mirrors `script_service._build_ai_router()`'s construction exactly.
+    Called once per job dispatch (not once at startup, and not once per
+    `generate()` call within a job) by the two handler wrappers below --
+    `AIWorker`'s registered handlers used to close over a single router built
+    once in `lifespan`, so a Settings-page change (Task 18.3) would never
+    reach a running job's actual provider calls (both `OllamaProvider` and the
+    old `GeminiProvider` froze their config at construction). Rebuilding here
+    fixes that; `_ai_circuit` keeps the breaker itself from also resetting on
+    every rebuild.
     """
-    local = OllamaProvider(
-        base_url=settings.OLLAMA_BASE_URL, model=settings.OLLAMA_MODEL, num_ctx=settings.OLLAMA_NUM_CTX
-    )
-    gemini = GeminiProvider(api_key=settings.GEMINI_API_KEY, model=GEMINI_MODEL)
-    return AIRouter(local=local, gemini=gemini, mode=AIMode(settings.AI_MODE))
+    return build_ai_router_from_settings(circuit=_ai_circuit)
+
+
+async def _script_job_handler(job: dict, worker: AIWorker) -> None:
+    await script_pipeline.make_handler(_build_ai_router())(job, worker)
+
+
+async def _learning_job_handler(job: dict, worker: AIWorker) -> None:
+    await learning_pipeline.make_handler(_build_ai_router())(job, worker)
 
 
 @asynccontextmanager
@@ -68,9 +81,8 @@ async def lifespan(app: FastAPI):
     app_state["ffmpeg_ok"] = await check_ffmpeg()
     app_state["gpu_info"] = await get_gpu_info()
 
-    ai_router = _build_ai_router()
-    ai_worker.register_handler("script", script_pipeline.make_handler(ai_router))
-    ai_worker.register_handler("learning", learning_pipeline.make_handler(ai_router))
+    ai_worker.register_handler("script", _script_job_handler)
+    ai_worker.register_handler("learning", _learning_job_handler)
     await ai_worker.start()
 
     yield

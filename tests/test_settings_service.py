@@ -110,29 +110,29 @@ def test_mask_shows_prefix_and_suffix_for_longer_keys():
 
 @pytest.fixture(autouse=True)
 def _isolated_ai_mode(monkeypatch):
-    monkeypatch.setattr(config.settings, "AI_MODE", "gemini")
+    monkeypatch.setattr(config.settings, "AI_MODE", "cloud")
 
 
 @pytest.fixture(autouse=True)
 def _isolated_ai_allow_cloud(monkeypatch):
     """Task 14.7: matches the real default (`False`) unless a test explicitly
-    opts in -- `set_ai_mode` now rejects `gemini`/`hybrid` without this."""
+    opts in -- `set_ai_mode` now rejects `cloud`/`cloud_first` without this."""
     monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", False)
 
 
 async def test_ai_mode_status_reports_env_default_when_nothing_stored(db):
     status = await settings_service.get_ai_mode_status(db)
-    assert status == {"ai_mode": "gemini", "ai_mode_source": "env"}
+    assert status == {"ai_mode": "cloud", "ai_mode_source": "env"}
 
 
 async def test_set_ai_mode_persists_and_applies_immediately(db, monkeypatch):
     monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", True)
-    status = await settings_service.set_ai_mode(db, "hybrid")
-    assert status == {"ai_mode": "hybrid", "ai_mode_source": "database"}
-    assert config.settings.AI_MODE == "hybrid"
+    status = await settings_service.set_ai_mode(db, "cloud_first")
+    assert status == {"ai_mode": "cloud_first", "ai_mode_source": "database"}
+    assert config.settings.AI_MODE == "cloud_first"
 
     reloaded = await settings_service.get_ai_mode_status(db)
-    assert reloaded == {"ai_mode": "hybrid", "ai_mode_source": "database"}
+    assert reloaded == {"ai_mode": "cloud_first", "ai_mode_source": "database"}
 
 
 async def test_set_ai_mode_rejects_an_unknown_value(db):
@@ -143,20 +143,20 @@ async def test_set_ai_mode_rejects_an_unknown_value(db):
 # --- Task 14.7: cloud gate (ADR-001 A2) -------------------------------------------------
 
 
-async def test_set_ai_mode_rejects_gemini_without_allow_cloud(db):
+async def test_set_ai_mode_rejects_cloud_without_allow_cloud(db):
     with pytest.raises(ValidationError, match="DIE_AI_ALLOW_CLOUD"):
-        await settings_service.set_ai_mode(db, "gemini")
+        await settings_service.set_ai_mode(db, "cloud")
 
 
-async def test_set_ai_mode_rejects_hybrid_without_allow_cloud(db):
+async def test_set_ai_mode_rejects_cloud_first_without_allow_cloud(db):
     with pytest.raises(ValidationError, match="DIE_AI_ALLOW_CLOUD"):
-        await settings_service.set_ai_mode(db, "hybrid")
+        await settings_service.set_ai_mode(db, "cloud_first")
 
 
-async def test_set_ai_mode_accepts_gemini_when_allow_cloud_is_true(db, monkeypatch):
+async def test_set_ai_mode_accepts_cloud_when_allow_cloud_is_true(db, monkeypatch):
     monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", True)
-    status = await settings_service.set_ai_mode(db, "gemini")
-    assert status["ai_mode"] == "gemini"
+    status = await settings_service.set_ai_mode(db, "cloud")
+    assert status["ai_mode"] == "cloud"
 
 
 async def test_set_ai_mode_accepts_local_regardless_of_allow_cloud(db):
@@ -166,9 +166,23 @@ async def test_set_ai_mode_accepts_local_regardless_of_allow_cloud(db):
     assert status["ai_mode"] == "local"
 
 
+async def test_set_ai_mode_rejects_legacy_gemini_and_hybrid_as_new_input_values(db, monkeypatch):
+    """Phase 18 (was test_set_ai_mode_rejects_gemini_without_allow_cloud/
+    ..._rejects_hybrid_without_allow_cloud): "gemini"/"hybrid" are no longer
+    valid *inputs* to `set_ai_mode` at all -- only a value already stored from
+    before Phase 18 migrates on read (see the migration tests below). Both
+    still raise as before, but now because they're not in AI_MODES, not
+    because of the allow_cloud gate -- asserted with AI_ALLOW_CLOUD=true to
+    prove the gate isn't what's rejecting them."""
+    monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", True)
+    for legacy_mode in ("gemini", "hybrid"):
+        with pytest.raises(ValidationError, match="ai_mode must be one of"):
+            await settings_service.set_ai_mode(db, legacy_mode)
+
+
 async def test_load_ai_mode_from_db_applies_a_stored_value(db):
     await settings_service.set_ai_mode(db, "local")
-    config.settings.AI_MODE = "gemini"  # simulate a fresh process before the loader runs
+    config.settings.AI_MODE = "cloud"  # simulate a fresh process before the loader runs
 
     await settings_service.load_ai_mode_from_db(db)
 
@@ -177,4 +191,70 @@ async def test_load_ai_mode_from_db_applies_a_stored_value(db):
 
 async def test_load_ai_mode_from_db_leaves_env_value_untouched_when_nothing_stored(db):
     await settings_service.load_ai_mode_from_db(db)
-    assert config.settings.AI_MODE == "gemini"
+    assert config.settings.AI_MODE == "cloud"
+
+
+# --- Phase 18: legacy ai_mode migration (gemini->cloud, hybrid->cloud_first) ------------
+
+
+async def _seed_legacy_ai_mode_value(db, value: str) -> None:
+    """Simulates an `app_settings` row persisted before Phase 18's mode
+    migration existed -- bypasses `set_ai_mode`'s own validation (which now
+    rejects "gemini"/"hybrid" as new inputs) by writing directly, matching
+    exactly how a real pre-Phase-18 install's already-stored row looks."""
+    from datetime import datetime, timezone
+
+    await db.execute(
+        """
+        INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+        """,
+        (settings_service.AI_MODE_SETTING, value, datetime.now(timezone.utc).isoformat()),
+    )
+    await db.commit()
+
+
+async def test_get_ai_mode_status_migrates_a_legacy_gemini_value_stored_in_the_db(db):
+    await _seed_legacy_ai_mode_value(db, "gemini")
+
+    status = await settings_service.get_ai_mode_status(db)
+
+    assert status == {"ai_mode": "cloud", "ai_mode_source": "database"}
+
+
+async def test_get_ai_mode_status_migrates_a_legacy_hybrid_value_stored_in_the_db(db):
+    await _seed_legacy_ai_mode_value(db, "hybrid")
+
+    status = await settings_service.get_ai_mode_status(db)
+
+    assert status == {"ai_mode": "cloud_first", "ai_mode_source": "database"}
+
+
+async def test_load_ai_mode_from_db_migrates_a_legacy_stored_value(db):
+    await _seed_legacy_ai_mode_value(db, "hybrid")
+    config.settings.AI_MODE = "local"  # simulate a fresh process before the loader runs
+
+    await settings_service.load_ai_mode_from_db(db)
+
+    assert config.settings.AI_MODE == "cloud_first"
+
+
+async def test_ai_mode_migration_is_logged(db, caplog):
+    """"Log it once, never raise" (plan Amendment A/point 5's ruling on
+    required behaviour 5) -- confirmed here for the DB-stored read path;
+    config.py's mirror-image env-sourced migration (module-level code that
+    runs once at import time) is verified by code review instead of an
+    automated test, since reloading app.core.config to re-exercise it would
+    replace the shared `settings` singleton object mid-test-session for every
+    other already-imported module that did `from app.core.config import
+    settings` -- an unsafe, cross-test-polluting operation in this
+    shared-process suite, not a safe thing to do even in one isolated test."""
+    await _seed_legacy_ai_mode_value(db, "gemini")
+
+    with caplog.at_level("INFO", logger="app.services.settings_service"):
+        await settings_service.get_ai_mode_status(db)
+
+    migration_lines = [r.getMessage() for r in caplog.records if "ai_mode_migrated" in r.getMessage()]
+    assert len(migration_lines) == 1
+    assert "from=gemini" in migration_lines[0]
+    assert "to=cloud" in migration_lines[0]

@@ -81,10 +81,15 @@ def _script_result_from_text(text: str) -> GenerationResult:
 
 
 def _gateway_router(mode: AIMode, gemini_outcomes: list, local_outcomes: list | None = None) -> AIRouter:
-    """Build an `AIRouter` over two `FakeProvider`s -- no network, deterministic."""
+    """Build an `AIRouter` over two `FakeProvider`s -- no network, deterministic.
+    `gemini_outcomes`/`local_outcomes` are historical parameter names (predating
+    Phase 18's cloud-first router roles) for what's now `primary`/`fallback` --
+    every call site here uses `AIMode.CLOUD` (single-provider, mechanical
+    rename from `AIMode.GEMINI`), never `AIMode.CLOUD_FIRST`, so no role
+    inversion applies."""
     gemini = FakeProvider("fake-gemini", gemini_outcomes)
     local = FakeProvider("fake-ollama", local_outcomes or [])
-    return AIRouter(local=local, gemini=gemini, mode=mode)
+    return AIRouter(primary=gemini, fallback=local, mode=mode)
 
 
 async def _no_op_sleep(delay: float) -> None:
@@ -96,7 +101,7 @@ async def _no_op_sleep(delay: float) -> None:
 
 
 async def test_generate_script_success_via_gateway():
-    router = _gateway_router(AIMode.GEMINI, [_script_result(VALID_LINES)])
+    router = _gateway_router(AIMode.CLOUD, [_script_result(VALID_LINES)])
 
     lines = await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
 
@@ -116,14 +121,14 @@ async def test_generate_script_wraps_provider_error_as_script_generation_error(m
     doesn't really wait out 1s+2s+4s of backoff.
     """
     monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
-    router = _gateway_router(AIMode.GEMINI, [ProviderUnavailableError("down")] * 4)
+    router = _gateway_router(AIMode.CLOUD, [ProviderUnavailableError("down")] * 4)
 
     with pytest.raises(ScriptGenerationError, match="Script generation failed"):
         await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
 
 
 async def test_generate_script_invalid_json_raises():
-    router = _gateway_router(AIMode.GEMINI, [_script_result_from_text("not valid json")])
+    router = _gateway_router(AIMode.CLOUD, [_script_result_from_text("not valid json")])
 
     with pytest.raises(ScriptGenerationError, match="not valid JSON"):
         await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
@@ -131,7 +136,7 @@ async def test_generate_script_invalid_json_raises():
 
 async def test_generate_script_schema_validation_failure_raises():
     bad_lines = [{"id": "line_001", "speaker_id": "11111111-1111-1111-1111-111111111111"}]  # missing "text"
-    router = _gateway_router(AIMode.GEMINI, [_script_result(bad_lines)])
+    router = _gateway_router(AIMode.CLOUD, [_script_result(bad_lines)])
 
     with pytest.raises(ScriptGenerationError, match="schema validation"):
         await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
@@ -140,7 +145,7 @@ async def test_generate_script_schema_validation_failure_raises():
 async def test_generate_script_rejects_name_as_speaker_id():
     """Regression test for Sprint 1.4A fix #1: speaker_id must be a UUID, not a name."""
     lines_with_name_id = [{**VALID_LINES[0], "speaker_id": "Alex"}]
-    router = _gateway_router(AIMode.GEMINI, [_script_result(lines_with_name_id)])
+    router = _gateway_router(AIMode.CLOUD, [_script_result(lines_with_name_id)])
 
     with pytest.raises(ScriptGenerationError, match="schema validation"):
         await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
@@ -148,36 +153,62 @@ async def test_generate_script_rejects_name_as_speaker_id():
 
 async def test_generate_script_rejects_unknown_speaker_uuid():
     hallucinated = [{**VALID_LINES[0], "speaker_id": "99999999-9999-9999-9999-999999999999"}]
-    router = _gateway_router(AIMode.GEMINI, [_script_result(hallucinated)])
+    router = _gateway_router(AIMode.CLOUD, [_script_result(hallucinated)])
 
     with pytest.raises(ScriptGenerationError, match="not in project"):
         await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
 
 
 async def test_generate_script_empty_script_raises():
-    router = _gateway_router(AIMode.GEMINI, [_script_result([])])
+    router = _gateway_router(AIMode.CLOUD, [_script_result([])])
 
     with pytest.raises(ScriptGenerationError, match="empty script"):
         await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
 
 
-async def test_generate_script_missing_api_key_raises_without_calling_router(monkeypatch):
-    """AI_MODE=gemini (the packaged default) still hard-requires a Gemini key
-    upfront -- byte-identical behavior to before Task 13.7's migration."""
-    monkeypatch.setattr(script_service.settings, "AI_MODE", "gemini")
-    monkeypatch.setattr(script_service.settings, "GEMINI_API_KEY", "")
-    router = _gateway_router(AIMode.GEMINI, [])
-
-    with pytest.raises(ScriptGenerationError, match="not configured"):
-        await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
-
-
 async def test_generate_script_local_mode_needs_no_gemini_key():
-    """Task 13.7: the upfront key guard is mode-aware -- AI_MODE=local/hybrid must not
-    be blocked by a missing Gemini key, since local generation never needs one."""
+    """Task 13.7: local generation never needs a Gemini key."""
     router = _gateway_router(AIMode.LOCAL, gemini_outcomes=[], local_outcomes=[_script_result(VALID_LINES)])
 
     lines = await script_service.generate_script("proj-1", SAMPLE_CONFIG, router=router)
+
+    assert len(lines) == 2
+
+
+async def test_generate_script_cloud_first_mode_with_no_key_falls_through_to_local_without_raising(monkeypatch):
+    """Phase 18/invariant 32, end to end at the service layer (PM Amendment B,
+    replacing the deleted upfront-key guard's own
+    `test_generate_script_missing_api_key_raises_without_calling_router`,
+    whose entire premise -- a missing cloud key must raise before the router
+    is even built -- is now the wrong behaviour): `AI_MODE=cloud_first` with
+    `AI_ALLOW_CLOUD=true` but no configured `OPENAI_COMPAT_API_KEY` must NOT
+    raise. `compute_effective_mode` collapses it to `local` automatically, and
+    generation proceeds via the *real* `build_ai_router_from_settings()`
+    wiring (no injected `router=`, unlike every other test in this file) --
+    reaching `OllamaProvider`'s own HTTP call, mocked here via
+    `httpx.MockTransport` so this never touches a real network or Ollama
+    process, matching this file's "no real network calls" header."""
+    import httpx
+
+    from app.services.ai import ollama_provider as ollama_provider_module
+
+    monkeypatch.setattr(script_service.settings, "AI_MODE", "cloud_first")
+    monkeypatch.setattr(script_service.settings, "AI_ALLOW_CLOUD", True)
+    monkeypatch.setattr(script_service.settings, "OPENAI_COMPAT_API_KEY", "")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"response": json.dumps(VALID_LINES), "eval_count": 1})
+
+    transport = httpx.MockTransport(handler)
+    real_async_client = httpx.AsyncClient
+
+    def _factory(*args, **kwargs):
+        kwargs["transport"] = transport
+        return real_async_client(*args, **kwargs)
+
+    monkeypatch.setattr(ollama_provider_module.httpx, "AsyncClient", _factory)
+
+    lines = await script_service.generate_script("proj-1", SAMPLE_CONFIG)  # router=None -- real wiring
 
     assert len(lines) == 2
 
@@ -200,7 +231,7 @@ async def test_regenerate_line_via_injected_gateway_router_returns_validated_lin
     )
     gemini = FakeProvider("fake-gemini", [scripted])
     local = FakeProvider("fake-ollama", [])
-    router = AIRouter(local=local, gemini=gemini, mode=AIMode.GEMINI)
+    router = AIRouter(primary=gemini, fallback=local, mode=AIMode.CLOUD)
 
     line = await script_service.regenerate_line(
         "proj-1",
@@ -226,7 +257,7 @@ async def test_regenerate_line_wraps_provider_error_as_script_generation_error(m
     monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
     gemini = FakeProvider("fake-gemini", [ProviderUnavailableError("down")] * 4)
     local = FakeProvider("fake-ollama", [])
-    router = AIRouter(local=local, gemini=gemini, mode=AIMode.GEMINI)
+    router = AIRouter(primary=gemini, fallback=local, mode=AIMode.CLOUD)
 
     with pytest.raises(ScriptGenerationError, match="Line regeneration failed"):
         await script_service.regenerate_line(
@@ -256,7 +287,7 @@ async def test_regenerate_line_still_rejects_speaker_id_change_via_gateway():
     )
     gemini = FakeProvider("fake-gemini", [scripted])
     local = FakeProvider("fake-ollama", [])
-    router = AIRouter(local=local, gemini=gemini, mode=AIMode.GEMINI)
+    router = AIRouter(primary=gemini, fallback=local, mode=AIMode.CLOUD)
 
     with pytest.raises(ScriptGenerationError, match="changed speaker_id"):
         await script_service.regenerate_line(

@@ -71,9 +71,9 @@ def _assert_no_secrets_leaked(log_text: str) -> None:
 
 @pytest.mark.asyncio
 async def test_successful_generate_never_logs_prompt_or_response(caplog):
-    local = FakeProvider("ollama", [_result("ollama")])
-    gemini = FakeProvider("gemini", [_result("gemini")])
-    router = AIRouter(local=local, gemini=gemini, mode=AIMode.LOCAL)
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    primary = FakeProvider("openai_compat", [_result("openai_compat")])
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.LOCAL)
 
     with caplog.at_level(logging.DEBUG):
         result = await router.generate(_request())
@@ -84,11 +84,11 @@ async def test_successful_generate_never_logs_prompt_or_response(caplog):
 
 @pytest.mark.asyncio
 async def test_retry_sequence_never_logs_prompt_or_response(caplog):
-    local = FakeProvider(
+    fallback = FakeProvider(
         "ollama", [ProviderUnavailableError("down"), _result("ollama", attempt=2)]
     )
-    gemini = FakeProvider("gemini", [])
-    router = AIRouter(local=local, gemini=gemini, mode=AIMode.LOCAL)
+    primary = FakeProvider("openai_compat", [])
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.LOCAL)
 
     with caplog.at_level(logging.DEBUG):
         await router.generate(_request())
@@ -97,10 +97,14 @@ async def test_retry_sequence_never_logs_prompt_or_response(caplog):
 
 
 @pytest.mark.asyncio
-async def test_hybrid_fallback_never_logs_prompt_or_response(caplog):
-    local = FakeProvider("ollama", [ProviderUnavailableError("down")] * 4)
-    gemini = FakeProvider("gemini", [_result("gemini")])
-    router = AIRouter(local=local, gemini=gemini, mode=AIMode.HYBRID)
+async def test_cloud_first_fallback_never_logs_prompt_or_response(caplog):
+    """Old (HYBRID): `local=` exhausted, `gemini=` rescued. New (CLOUD_FIRST):
+    the exhausting-first role is `primary=`, the rescuing role is `fallback=`
+    -- see tests/test_ai_router.py's module docstring for why this is an
+    inversion, not a rename."""
+    primary = FakeProvider("openai_compat", [ProviderUnavailableError("down")] * 4)
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST)
 
     with caplog.at_level(logging.DEBUG):
         result = await router.generate(_request())
@@ -111,12 +115,14 @@ async def test_hybrid_fallback_never_logs_prompt_or_response(caplog):
 
 @pytest.mark.asyncio
 async def test_circuit_breaker_open_never_logs_prompt_or_response(caplog):
-    local_outcomes = []
+    primary_outcomes = []
     for _ in range(3):
-        local_outcomes.extend([ProviderUnavailableError("down")] * 4)
-    local = FakeProvider("ollama", local_outcomes)
-    gemini = FakeProvider("gemini", [_result("gemini") for _ in range(4)])
-    router = AIRouter(local=local, gemini=gemini, mode=AIMode.HYBRID, failure_threshold=3, cooldown_seconds=60.0)
+        primary_outcomes.extend([ProviderUnavailableError("down")] * 4)
+    primary = FakeProvider("openai_compat", primary_outcomes)
+    fallback = FakeProvider("ollama", [_result("ollama") for _ in range(4)])
+    router = AIRouter(
+        primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST, failure_threshold=3, cooldown_seconds=60.0
+    )
 
     with caplog.at_level(logging.DEBUG):
         for _ in range(4):
@@ -130,9 +136,9 @@ async def test_total_failure_never_logs_prompt_or_response(caplog):
     """Every attempt failing (both providers exhausted) is the path most likely to
     tempt a future change into logging response/error detail for debugging --
     locked down here so that temptation is caught by a test, not code review alone."""
-    local = FakeProvider("ollama", [ProviderUnavailableError("down")] * 4)
-    gemini = FakeProvider("gemini", [ProviderUnavailableError("down too")] * 4)
-    router = AIRouter(local=local, gemini=gemini, mode=AIMode.HYBRID)
+    primary = FakeProvider("openai_compat", [ProviderUnavailableError("down")] * 4)
+    fallback = FakeProvider("ollama", [ProviderUnavailableError("down too")] * 4)
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST)
 
     with caplog.at_level(logging.DEBUG):
         with pytest.raises(ProviderUnavailableError):
@@ -146,9 +152,9 @@ async def test_auth_error_never_logs_the_api_key(caplog):
     """Router-level companion to test_ai_providers.py's provider-level auth-error
     check -- confirms the *router's own* logging around a non-retryable auth
     failure also never echoes the key, not just the raised exception's message."""
-    local = FakeProvider("ollama", [ProviderAuthError(f"bad key: {FAKE_API_KEY}")])
-    gemini = FakeProvider("gemini", [_result("gemini")])
-    router = AIRouter(local=local, gemini=gemini, mode=AIMode.HYBRID)
+    primary = FakeProvider("openai_compat", [ProviderAuthError(f"bad key: {FAKE_API_KEY}")])
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST)
 
     with caplog.at_level(logging.DEBUG):
         await router.generate(_request())
@@ -167,9 +173,9 @@ async def test_router_logs_only_the_documented_safe_fields(caplog):
     message is built only from the safe-field format strings in router.py --
     confirms this test suite is actually observing router.py's own logger,
     not silently matching zero log records."""
-    local = FakeProvider("ollama", [_result("ollama")])
-    gemini = FakeProvider("gemini", [])
-    router = AIRouter(local=local, gemini=gemini, mode=AIMode.LOCAL)
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    primary = FakeProvider("openai_compat", [])
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.LOCAL)
 
     with caplog.at_level(logging.INFO, logger="app.services.ai.router"):
         await router.generate(_request())

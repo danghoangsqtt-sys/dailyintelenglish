@@ -9,13 +9,16 @@ need no changes. Clearing the stored key reverts to `config.ENV_GEMINI_API_KEY`,
 value captured once at import time before any database override could run.
 """
 
+import logging
 from datetime import datetime, timezone
 
 import aiosqlite
 
 from app.core import config
-from app.core.constants import AI_MODES
+from app.core.constants import AI_LEGACY_MODE_ALIASES, AI_MODES
 from app.core.exceptions import ValidationError
+
+logger = logging.getLogger(__name__)
 
 GEMINI_API_KEY_SETTING = "gemini_api_key"
 AI_MODE_SETTING = "ai_mode"
@@ -103,6 +106,21 @@ async def load_gemini_api_key_from_db(db: aiosqlite.Connection) -> None:
 # since it carries no secret. ------------------------------------------------
 
 
+def _migrate_legacy_mode(raw_mode: str) -> str:
+    """Phase 18/D21: a stored value from before Phase 18 ("gemini"/"hybrid",
+    naming a specific provider) migrates to its role-based successor
+    ("cloud"/"cloud_first"). Logged once per call, never raised -- an old
+    install must never fail to start over this. The DB row itself is left
+    as-is (not rewritten here); `set_ai_mode` already rejects the legacy
+    names as new *inputs*, so this translation only ever applies to a value
+    written before the migration existed."""
+    if raw_mode in AI_LEGACY_MODE_ALIASES:
+        migrated = AI_LEGACY_MODE_ALIASES[raw_mode]
+        logger.info("ai_mode_migrated from=%s to=%s", raw_mode, migrated)
+        return migrated
+    return raw_mode
+
+
 async def get_ai_mode_status(db: aiosqlite.Connection) -> dict:
     """Report the current effective AI_MODE and whether it's DB-stored or env-default.
 
@@ -113,7 +131,7 @@ async def get_ai_mode_status(db: aiosqlite.Connection) -> dict:
     cursor = await db.execute("SELECT value FROM app_settings WHERE key = ?", (AI_MODE_SETTING,))
     row = await cursor.fetchone()
     if row is not None:
-        return {"ai_mode": row["value"], "ai_mode_source": "database"}
+        return {"ai_mode": _migrate_legacy_mode(row["value"]), "ai_mode_source": "database"}
     return {"ai_mode": config.settings.AI_MODE, "ai_mode_source": "env"}
 
 
@@ -124,17 +142,19 @@ async def set_ai_mode(db: aiosqlite.Connection, ai_mode: str) -> dict:
     `set_gemini_api_key`.
 
     Raises:
-        ValidationError: If `ai_mode` isn't a known mode, or if it's `gemini`/
-            `hybrid` while cloud is disabled -- Task 14.7 (ADR-001 A2): Gemini
-            is dormant, and re-enabling it requires the explicit
-            `DIE_AI_ALLOW_CLOUD=true` env var, never just a mode change.
+        ValidationError: If `ai_mode` isn't a known mode (a legacy `gemini`/
+            `hybrid` value is no longer a valid *input* -- only a stored value
+            from before Phase 18 migrates, via `_migrate_legacy_mode`), or if
+            it's `cloud`/`cloud_first` while cloud is disabled -- Task 14.7
+            (ADR-001 A2): cloud requires the explicit `DIE_AI_ALLOW_CLOUD=true`
+            env var, never just a mode change.
     """
     if ai_mode not in AI_MODES:
         raise ValidationError(f"ai_mode must be one of {AI_MODES}, got {ai_mode!r}")
     if ai_mode != "local" and not config.settings.AI_ALLOW_CLOUD:
         raise ValidationError(
-            f"ai_mode {ai_mode!r} requires DIE_AI_ALLOW_CLOUD=true -- Gemini is dormant "
-            "(ADR-001 amendment A2); local is the only supported mode."
+            f"ai_mode {ai_mode!r} requires DIE_AI_ALLOW_CLOUD=true -- cloud is disabled "
+            "by default (ADR-001 amendment A2); local is the default supported mode."
         )
     await db.execute(
         """
@@ -159,4 +179,4 @@ async def load_ai_mode_from_db(db: aiosqlite.Connection) -> None:
     except aiosqlite.OperationalError:
         return
     if row is not None:
-        config.settings.AI_MODE = row["value"]
+        config.settings.AI_MODE = _migrate_legacy_mode(row["value"])

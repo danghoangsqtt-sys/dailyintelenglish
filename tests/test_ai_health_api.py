@@ -18,7 +18,7 @@ from app.main import app
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    monkeypatch.setattr(settings, "AI_MODE", "gemini")
+    monkeypatch.setattr(settings, "AI_MODE", "cloud")
     # Task 14.7: matches the real default (False) unless a test explicitly opts in.
     monkeypatch.setattr(settings, "AI_ALLOW_CLOUD", False)
     with TestClient(app) as test_client:
@@ -28,14 +28,14 @@ def client(tmp_path, monkeypatch):
 def test_health_reports_the_current_ai_mode(client):
     response = client.get("/api/ai/health")
     assert response.status_code == 200
-    assert response.json()["data"]["mode"] == "gemini"
+    assert response.json()["data"]["mode"] == "cloud"
 
 
 def test_health_reflects_an_ai_mode_change_without_restart(client, monkeypatch):
     monkeypatch.setattr(settings, "AI_ALLOW_CLOUD", True)
-    client.put("/api/settings/ai-mode", json={"ai_mode": "hybrid"})
+    client.put("/api/settings/ai-mode", json={"ai_mode": "cloud_first"})
     response = client.get("/api/ai/health")
-    assert response.json()["data"]["mode"] == "hybrid"
+    assert response.json()["data"]["mode"] == "cloud_first"
 
 
 def test_health_reports_cloud_enabled_false_by_default(client):

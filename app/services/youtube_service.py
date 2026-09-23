@@ -32,7 +32,7 @@ from app.core.exceptions import (
 )
 from app.core.prompt_loader import render_youtube_prompt
 from app.models.youtube import YouTubePackageOut
-from app.services.ai.contracts import AIMode, GenerationRequest
+from app.services.ai.contracts import GenerationRequest
 from app.services.ai.router import AIRouter, build_ai_router_from_settings
 from app.services.ai.validation import parse_and_validate
 
@@ -137,12 +137,13 @@ async def generate_package(
 
     Raises:
         ValidationError: If the script is empty.
-        YouTubePackageGenerationError: If `AI_MODE=gemini` and no API key is
-            configured, every provider attempt this mode allows fails, or the
-            response is malformed/fails schema validation.
+        YouTubePackageGenerationError: If every provider attempt this mode
+            allows fails, or the response is malformed/fails schema
+            validation. (Phase 18: an unconfigured cloud key/model no longer
+            raises here -- `build_ai_router_from_settings()`'s
+            `compute_effective_mode` already degrades to local automatically,
+            per invariant 32.)
     """
-    if AIMode(settings.AI_MODE) is AIMode.GEMINI and not settings.GEMINI_API_KEY:
-        raise YouTubePackageGenerationError("DIE_GEMINI_API_KEY is not configured")
     if not script_lines:
         raise ValidationError("Cannot generate a YouTube package: script is empty")
 

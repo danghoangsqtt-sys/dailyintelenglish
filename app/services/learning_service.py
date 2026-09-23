@@ -18,7 +18,7 @@ from app.core.config import settings
 from app.core.exceptions import LearningGenerationError, NotFoundError, ProviderError, SchemaValidationError
 from app.core.prompt_loader import render_learning_prompt
 from app.models.learning import LearningPackOut
-from app.services.ai.contracts import AIMode, GenerationRequest
+from app.services.ai.contracts import GenerationRequest
 from app.services.ai.router import AIRouter, build_ai_router_from_settings
 from app.services.ai.validation import parse_and_validate
 
@@ -71,13 +71,13 @@ async def generate_learning_pack(
         The validated Learning Content pack.
 
     Raises:
-        LearningGenerationError: If `AI_MODE=gemini` and no API key is configured,
-            the script is empty, every provider attempt this mode allows fails, or
-            the response is malformed/fails schema validation.
+        LearningGenerationError: If the script is empty, every provider attempt
+            this mode allows fails, or the response is malformed/fails schema
+            validation. (Phase 18: an unconfigured cloud key/model no longer
+            raises here -- `build_ai_router_from_settings()`'s
+            `compute_effective_mode` already degrades to local automatically,
+            per invariant 32.)
     """
-    if AIMode(settings.AI_MODE) is AIMode.GEMINI and not settings.GEMINI_API_KEY:
-        raise LearningGenerationError("DIE_GEMINI_API_KEY is not configured")
-
     if not script_lines:
         raise LearningGenerationError(
             f"Cannot generate learning content for project {project_id}: script is empty"

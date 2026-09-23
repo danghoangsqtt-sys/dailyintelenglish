@@ -88,9 +88,14 @@ async def _project(db, **overrides) -> dict:
 
 
 def _build_router(gemini_outcomes: list) -> tuple[AIRouter, FakeProvider, FakeProvider]:
-    gemini = FakeProvider("gemini", gemini_outcomes)
+    """`gemini_outcomes` / the returned `gemini` FakeProvider are historical
+    names (predating Phase 18's cloud-first router roles) for what's now the
+    router's `primary` -- kept as-is rather than renamed across this file's
+    ~90 call sites, since this is a pure single-provider `AIMode.CLOUD`
+    (mechanical rename from `AIMode.GEMINI`), not a role/behaviour change."""
+    gemini = FakeProvider("openai_compat", gemini_outcomes)
     local = FakeProvider("ollama", [])
-    return AIRouter(local=local, gemini=gemini, mode=AIMode.GEMINI), gemini, local
+    return AIRouter(primary=gemini, fallback=local, mode=AIMode.CLOUD), gemini, local
 
 
 # --- pure functions: word budgets ---------------------------------------------------
@@ -1333,7 +1338,12 @@ async def test_pipeline_happy_path_section_checkpoint_has_unrepaired_metrics(db)
     assert metrics["errors_before_repair"] == 0
 
 
-async def test_pipeline_hybrid_fallback_records_fallback_telemetry(db, monkeypatch):
+async def test_pipeline_cloud_first_fallback_records_fallback_telemetry(db, monkeypatch):
+    """Phase 18: was `test_pipeline_hybrid_fallback_records_fallback_telemetry`
+    under `AIMode.HYBRID` (local attempted first, gemini rescued). Under
+    `AIMode.CLOUD_FIRST` the roles invert -- the provider attempted first
+    (and that exhausts) is now the primary/cloud one; the rescuing provider
+    is now the fallback/local one."""
     monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
     project = await _project(db)
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
@@ -1349,12 +1359,14 @@ async def test_pipeline_hybrid_fallback_records_fallback_telemetry(db, monkeypat
             {"speaker": maya_id, "text": _words(25, 75)},
         ]
     )
-    # AI_TRANSIENT_MAX_ATTEMPTS=4: local exhausts on the outline call; failure_threshold=1
-    # opens the circuit immediately after, so the section call skips straight to gemini
-    # (matches the plan's "no nested retries" / one-fallback-per-route shape).
-    local = FakeProvider("ollama", [ProviderUnavailableError("down")] * 4)
-    gemini = FakeProvider("gemini", [_result(outline_json), _result(section_json)])
-    router = AIRouter(local=local, gemini=gemini, mode=AIMode.HYBRID, failure_threshold=1, cooldown_seconds=60.0)
+    # AI_TRANSIENT_MAX_ATTEMPTS=4: primary exhausts on the outline call; failure_threshold=1
+    # opens the circuit immediately after, so the section call skips straight to the
+    # fallback (matches the plan's "no nested retries" / one-fallback-per-route shape).
+    primary = FakeProvider("openai_compat", [ProviderUnavailableError("down")] * 4)
+    fallback = FakeProvider("ollama", [_result(outline_json), _result(section_json)])
+    router = AIRouter(
+        primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST, failure_threshold=1, cooldown_seconds=60.0
+    )
 
     job, _ = await ai_job_service.create_job(
         db, project["id"], "script", {"project": project, "operation": "script"}

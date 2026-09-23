@@ -181,11 +181,26 @@ YOUTUBE_CHAPTER_WORDS_PER_MINUTE = 150
 YOUTUBE_CHAPTER_MIN_LINES = 4  # start a new chapter every N script lines (topic-shift heuristic)
 
 # Phase 13 -- local-first AI provider gateway (app/services/ai/**).
-AI_MODES = ("gemini", "local", "hybrid")
-# Consecutive local-provider failures before the router's in-process circuit breaker
-# opens and hybrid mode skips straight to the Gemini fallback for a cooldown window.
+# Phase 18/D21: cloud is now the default primary, local the automatic fallback --
+# "gemini"/"hybrid" (naming a specific provider, not a role) are replaced by
+# "cloud"/"cloud_first". AI_LEGACY_MODE_ALIASES lets an old stored/env value from
+# before Phase 18 migrate once, rather than being rejected outright.
+AI_MODES = ("local", "cloud", "cloud_first")
+AI_LEGACY_MODE_ALIASES = {"gemini": "cloud", "hybrid": "cloud_first"}
+# Consecutive primary-provider failures before the router's in-process circuit
+# breaker opens and cloud_first mode skips straight to the local fallback for a
+# cooldown window. A config error (bad key/model) opens it immediately instead
+# (CircuitBreaker.open_immediately) -- it can't self-resolve on retry.
 AI_CIRCUIT_FAILURE_THRESHOLD = 3
 AI_CIRCUIT_COOLDOWN_SECONDS = 60.0
+# Phase 18: the primary/cloud phase's own time budget, independent of the
+# fallback's AI_REQUEST_DEADLINE_SECONDS (app/core/config.py) -- the two are never
+# shared (see AIRouter.generate's docstring). 150s: the smoke test's default free
+# model (Nemotron 3 Super) answered in 8-28s, and 150 still covers its larger
+# sibling Ultra's observed 136s; anything slower isn't a viable primary. Mirrored
+# as Settings.AI_CLOUD_DEADLINE_SECONDS's default (env-configurable via
+# DIE_AI_CLOUD_DEADLINE_SECONDS), matching this same constant so the two can't drift.
+AI_CLOUD_DEADLINE_SECONDS = 150.0
 
 # Phase 14 Task 14.1 -- bounded exponential backoff for transient provider errors
 # (HTTP 503/429/timeout) only; content-shaped errors keep the old one-immediate-

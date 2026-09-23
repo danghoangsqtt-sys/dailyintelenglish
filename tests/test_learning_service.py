@@ -93,10 +93,15 @@ def _pack_result_from_text(text: str) -> GenerationResult:
 
 
 def _gateway_router(mode: AIMode, gemini_outcomes: list, local_outcomes: list | None = None) -> AIRouter:
-    """Build an `AIRouter` over two `FakeProvider`s -- no network, deterministic."""
+    """Build an `AIRouter` over two `FakeProvider`s -- no network, deterministic.
+    `gemini_outcomes`/`local_outcomes` are historical parameter names (predating
+    Phase 18's cloud-first router roles) for what's now `primary`/`fallback` --
+    every call site here uses `AIMode.CLOUD` (single-provider, mechanical
+    rename from `AIMode.GEMINI`), never `AIMode.CLOUD_FIRST`, so no role
+    inversion applies."""
     gemini = FakeProvider("fake-gemini", gemini_outcomes)
     local = FakeProvider("fake-ollama", local_outcomes or [])
-    return AIRouter(local=local, gemini=gemini, mode=mode)
+    return AIRouter(primary=gemini, fallback=local, mode=mode)
 
 
 async def _no_op_sleep(delay: float) -> None:
@@ -178,7 +183,7 @@ async def test_render_learning_prompt_rejects_unknown_genre():
 
 
 async def test_generate_learning_pack_success_via_gateway():
-    router = _gateway_router(AIMode.GEMINI, [_pack_result(VALID_PACK)])
+    router = _gateway_router(AIMode.CLOUD, [_pack_result(VALID_PACK)])
 
     pack = await learning_service.generate_learning_pack(
         "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES, router=router
@@ -200,7 +205,7 @@ async def test_generate_learning_pack_wraps_provider_error(monkeypatch):
     exhaustion, `app.services.ai.router.sleep` patched to a no-op.
     """
     monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
-    router = _gateway_router(AIMode.GEMINI, [ProviderUnavailableError("down")] * 4)
+    router = _gateway_router(AIMode.CLOUD, [ProviderUnavailableError("down")] * 4)
 
     with pytest.raises(LearningGenerationError, match="Learning content generation failed"):
         await learning_service.generate_learning_pack(
@@ -209,7 +214,7 @@ async def test_generate_learning_pack_wraps_provider_error(monkeypatch):
 
 
 async def test_generate_learning_pack_invalid_json_raises():
-    router = _gateway_router(AIMode.GEMINI, [_pack_result_from_text("not valid json")])
+    router = _gateway_router(AIMode.CLOUD, [_pack_result_from_text("not valid json")])
 
     with pytest.raises(LearningGenerationError, match="not valid JSON"):
         await learning_service.generate_learning_pack(
@@ -219,7 +224,7 @@ async def test_generate_learning_pack_invalid_json_raises():
 
 async def test_generate_learning_pack_schema_validation_failure_raises():
     bad_pack = {"vocabulary": [{"word": "remote"}]}  # missing required fields
-    router = _gateway_router(AIMode.GEMINI, [_pack_result(bad_pack)])
+    router = _gateway_router(AIMode.CLOUD, [_pack_result(bad_pack)])
 
     with pytest.raises(LearningGenerationError, match="schema validation"):
         await learning_service.generate_learning_pack(
@@ -228,28 +233,19 @@ async def test_generate_learning_pack_schema_validation_failure_raises():
 
 
 async def test_generate_learning_pack_empty_script_raises_without_calling_router():
-    router = _gateway_router(AIMode.GEMINI, [])
+    router = _gateway_router(AIMode.CLOUD, [])
 
     with pytest.raises(LearningGenerationError, match="script is empty"):
         await learning_service.generate_learning_pack("proj-1", SAMPLE_CONFIG, [], router=router)
 
 
-async def test_generate_learning_pack_missing_api_key_raises_without_calling_router(monkeypatch):
-    """AI_MODE=gemini (the packaged default) still hard-requires a Gemini key
-    upfront -- byte-identical behavior to before Task 13.7's migration."""
-    monkeypatch.setattr(learning_service.settings, "AI_MODE", "gemini")
-    monkeypatch.setattr(learning_service.settings, "GEMINI_API_KEY", "")
-    router = _gateway_router(AIMode.GEMINI, [])
-
-    with pytest.raises(LearningGenerationError, match="not configured"):
-        await learning_service.generate_learning_pack(
-            "proj-1", SAMPLE_CONFIG, SAMPLE_SCRIPT_LINES, router=router
-        )
-
-
 async def test_generate_learning_pack_local_mode_needs_no_gemini_key():
-    """Task 13.7: the upfront key guard is mode-aware -- AI_MODE=local/hybrid must not
-    be blocked by a missing Gemini key, since local generation never needs one."""
+    """Task 13.7: local generation never needs a Gemini key. (Phase 18/
+    invariant 32's cloud_first-with-no-key end-to-end proof, PM Amendment B,
+    lives once in tests/test_script_service.py rather than duplicated across
+    all four `*_service.py` test files -- the old, now-obsolete
+    `test_generate_learning_pack_missing_api_key_raises_without_calling_router`
+    that used to sit here asserted the deleted guard's opposite behaviour.)"""
     router = _gateway_router(AIMode.LOCAL, gemini_outcomes=[], local_outcomes=[_pack_result(VALID_PACK)])
 
     pack = await learning_service.generate_learning_pack(
@@ -270,7 +266,7 @@ async def test_generate_learning_pack_preserves_cefr_level_in_prompt(monkeypatch
             captured["prompt"] = request.prompt
             return _pack_result(VALID_PACK)
 
-    router = AIRouter(local=FakeProvider("fake-ollama", []), gemini=_CapturingProvider(), mode=AIMode.GEMINI)
+    router = AIRouter(primary=_CapturingProvider(), fallback=FakeProvider("fake-ollama", []), mode=AIMode.CLOUD)
 
     await learning_service.generate_learning_pack(
         "proj-1", {**SAMPLE_CONFIG, "cefr_level": "C2"}, SAMPLE_SCRIPT_LINES, router=router
@@ -349,7 +345,7 @@ async def test_deleting_project_cascades_to_learning_content(db):
 
 
 # Note: the responseJsonSchema-not-responseSchema wire-payload regression (BUG-011)
-# is now covered once, at the shared gateway layer, by
-# tests/test_ai_providers.py::test_gemini_provider_wire_payload_uses_response_json_schema_not_response_schema
-# -- every Task 13.7-migrated consumer (script/learning/thumbnail/youtube) shares
-# that one code path, so per-service duplication of this test is no longer needed.
+# was Gemini-specific and no longer applies -- Phase 18/Task 18.2 deleted
+# GeminiProvider (D23) in favour of OpenAICompatProvider, which never sends
+# `response_format`/a JSON schema at all (see tests/test_openai_compat_provider.py,
+# Task 18.1, for that provider's own request-shape coverage).

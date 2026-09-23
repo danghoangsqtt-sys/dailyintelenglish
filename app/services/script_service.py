@@ -16,7 +16,7 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.core.prompt_loader import render_regenerate_line_prompt, render_script_prompt
-from app.services.ai.contracts import AIMode, GenerationRequest
+from app.services.ai.contracts import GenerationRequest
 from app.services.ai.router import AIRouter, build_ai_router_from_settings
 from app.services.ai.validation import parse_and_validate
 
@@ -81,14 +81,14 @@ async def generate_script(
         a UUID that belongs to one of `config["speakers"]`.
 
     Raises:
-        ScriptGenerationError: If `AI_MODE=gemini` and no API key is configured,
-            every provider attempt this mode allows fails, the response is
-            malformed/fails schema validation, or a line references a
-            speaker_id that isn't one of the project's actual speakers.
+        ScriptGenerationError: If every provider attempt this mode allows fails,
+            the response is malformed/fails schema validation, or a line
+            references a speaker_id that isn't one of the project's actual
+            speakers. (Phase 18: an unconfigured cloud key/model no longer
+            raises here -- `build_ai_router_from_settings()`'s
+            `compute_effective_mode` already degrades to local automatically,
+            per invariant 32.)
     """
-    if AIMode(settings.AI_MODE) is AIMode.GEMINI and not settings.GEMINI_API_KEY:
-        raise ScriptGenerationError("DIE_GEMINI_API_KEY is not configured")
-
     known_speaker_ids = {speaker["id"] for speaker in config["speakers"]}
 
     prompt = await render_script_prompt(

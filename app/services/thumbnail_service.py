@@ -47,7 +47,7 @@ from app.models.thumbnail import (
     ThumbnailSuggestionPack,
     ThumbnailTemplateConfig,
 )
-from app.services.ai.contracts import AIMode, GenerationRequest
+from app.services.ai.contracts import GenerationRequest
 from app.services.ai.router import AIRouter, build_ai_router_from_settings
 from app.services.ai.validation import parse_and_validate
 
@@ -121,9 +121,11 @@ async def generate_suggestions(
     Args:
         router: Injected `AIRouter` (tests pass a `FakeProvider`-backed one with
             zero network calls); defaults to `build_ai_router_from_settings()`.
+
+    Phase 18: an unconfigured cloud key/model no longer raises here --
+    `build_ai_router_from_settings()`'s `compute_effective_mode` already
+    degrades to local automatically, per invariant 32.
     """
-    if AIMode(settings.AI_MODE) is AIMode.GEMINI and not settings.GEMINI_API_KEY:
-        raise ThumbnailGenerationError("DIE_GEMINI_API_KEY is not configured")
     prompt = await render_thumbnail_prompt(
         project_name=project["name"],
         topic=project["topic"],

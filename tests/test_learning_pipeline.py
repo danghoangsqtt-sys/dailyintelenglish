@@ -80,9 +80,14 @@ def _result(pack: LearningPackOut) -> GenerationResult:
 
 
 def _build_router(gemini_outcomes: list) -> tuple[AIRouter, FakeProvider, FakeProvider]:
-    gemini = FakeProvider("gemini", gemini_outcomes)
+    """`gemini_outcomes` / the returned `gemini` FakeProvider are historical
+    names (predating Phase 18's cloud-first router roles) for what's now the
+    router's `primary` -- kept as-is rather than renamed across this file's
+    call sites, since this is a pure single-provider `AIMode.CLOUD`
+    (mechanical rename from `AIMode.GEMINI`), not a role/behaviour change."""
+    gemini = FakeProvider("openai_compat", gemini_outcomes)
     local = FakeProvider("ollama", [])
-    return AIRouter(local=local, gemini=gemini, mode=AIMode.GEMINI), gemini, local
+    return AIRouter(primary=gemini, fallback=local, mode=AIMode.CLOUD), gemini, local
 
 
 def make_config() -> ScriptConfig:
@@ -476,13 +481,19 @@ async def test_pipeline_repair_sets_repair_count(db):
     assert calls[1]["is_repair"] is True
 
 
-async def test_pipeline_hybrid_fallback_records_fallback_telemetry(db, monkeypatch):
+async def test_pipeline_cloud_first_fallback_records_fallback_telemetry(db, monkeypatch):
+    """Phase 18: was `test_pipeline_hybrid_fallback_records_fallback_telemetry`
+    under `AIMode.HYBRID` (local attempted first, gemini rescued). Under
+    `AIMode.CLOUD_FIRST` the roles invert -- the exhausting provider is now
+    the primary/cloud one, the rescuing provider is now the fallback/local one."""
     monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
     project = await _project_with_script(db)
 
-    local = FakeProvider("ollama", [ProviderUnavailableError("down")] * 4)
-    gemini = FakeProvider("gemini", [_result(_pack())])
-    router = AIRouter(local=local, gemini=gemini, mode=AIMode.HYBRID, failure_threshold=1, cooldown_seconds=60.0)
+    primary = FakeProvider("openai_compat", [ProviderUnavailableError("down")] * 4)
+    fallback = FakeProvider("ollama", [_result(_pack())])
+    router = AIRouter(
+        primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST, failure_threshold=1, cooldown_seconds=60.0
+    )
 
     job, _ = await ai_job_service.create_job(
         db, project["id"], "learning", {"project": project, "operation": "learning"}

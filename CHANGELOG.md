@@ -8,6 +8,26 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Changed
+- Cloud-first AI routing (2026-09-23, Phase 18 Task 18.2, ENH-011, self-implemented by Coder):
+  the AI router's roles inverted (D21) — a configured cloud provider (`OpenAICompatProvider`,
+  Task 18.1) is now the primary, local Ollama the automatic fallback, replacing the old
+  local-first/Gemini-fallback `hybrid` mode. Modes are now `local` / `cloud` / `cloud_first`; the
+  *effective* mode silently degrades to `local` whenever the kill switch is off or no cloud
+  key/model is configured, so an unconfigured install behaves exactly as before (invariant 32).
+  The cloud and local legs now get separate time budgets (a new `AI_CLOUD_DEADLINE_SECONDS`,
+  default 150s, for the cloud leg; the existing `AI_REQUEST_DEADLINE_SECONDS` for the fallback)
+  instead of sharing one deadline — a slow primary can no longer starve the fallback of any time
+  at all, which is exactly how two real smoke-test jobs died. The circuit breaker now opens
+  immediately on a configuration error (bad key/model) instead of waiting out the usual
+  failure-count threshold. `GeminiProvider` is deleted (D23); the dedicated Gemini-only cloud
+  path is gone in favor of the one generic OpenAI-compatible provider. A stored `gemini`/`hybrid`
+  mode from before this change migrates automatically (logged once, never rejected). Also found
+  and fixed along the way: `script_service.py`/`learning_service.py`/`thumbnail_service.py`/
+  `youtube_service.py` each had an early guard that would have hard-crashed on every call once
+  the old mode name was removed — deleted, since it's now fully redundant with the router's own
+  automatic no-key-means-local degradation.
+
 ### Added
 - `OpenAICompatProvider` (2026-09-23, Phase 18 Task 18.1, ENH-011, self-implemented by Coder):
   a new provider adapter for any OpenAI-compatible `/chat/completions` endpoint (OpenRouter,

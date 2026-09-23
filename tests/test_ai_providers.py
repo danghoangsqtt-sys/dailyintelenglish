@@ -1,19 +1,16 @@
-"""Tests for the Ollama and Gemini provider adapters (httpx.MockTransport, no network)."""
+"""Tests for the Ollama provider adapter (httpx.MockTransport, no network).
+
+The old Gemini provider adapter tests lived here too until Phase 18/Task 18.2
+deleted `GeminiProvider` (D23 -- replaced by the generic `OpenAICompatProvider`,
+whose own tests are in `tests/test_openai_compat_provider.py`, added in 18.1).
+"""
 
 import httpx
 import pytest
 
-from app.core.exceptions import (
-    ProviderAuthError,
-    ProviderInvalidResponseError,
-    ProviderRateLimitError,
-    ProviderTimeoutError,
-    ProviderUnavailableError,
-)
-from app.services.ai import gemini_provider as gemini_provider_module
+from app.core.exceptions import ProviderInvalidResponseError, ProviderTimeoutError, ProviderUnavailableError
 from app.services.ai import ollama_provider as ollama_provider_module
 from app.services.ai.contracts import GenerationRequest
-from app.services.ai.gemini_provider import GeminiProvider
 from app.services.ai.ollama_provider import OllamaProvider, validate_loopback_url
 
 
@@ -146,111 +143,3 @@ async def test_ollama_provider_never_logs_prompt_body(monkeypatch, caplog):
     with caplog.at_level("DEBUG"):
         await provider.generate(_request(prompt=secret_prompt))
     assert secret_prompt not in caplog.text
-
-
-# --- GeminiProvider -------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_gemini_provider_no_api_key_is_auth_error():
-    provider = GeminiProvider(api_key="", model="gemini-3.8-flash")
-    with pytest.raises(ProviderAuthError):
-        await provider.generate(_request())
-
-
-@pytest.mark.asyncio
-async def test_gemini_provider_success(monkeypatch):
-    def handler(request: httpx.Request) -> httpx.Response:
-        body = {
-            "candidates": [{"content": {"parts": [{"text": '{"ok": true}'}]}}],
-            "usageMetadata": {"totalTokenCount": 99},
-        }
-        return httpx.Response(200, json=body)
-
-    _install_mock_transport(monkeypatch, gemini_provider_module, handler)
-    provider = GeminiProvider(api_key="test-key", model="gemini-3.8-flash")
-    result = await provider.generate(_request())
-    assert result.text == '{"ok": true}'
-    assert result.tokens_used == 99
-    assert result.provider == "gemini"
-
-
-@pytest.mark.asyncio
-async def test_gemini_provider_401_is_auth_error_and_never_leaks_key(monkeypatch):
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(401, json={"error": "invalid key"})
-
-    _install_mock_transport(monkeypatch, gemini_provider_module, handler)
-    provider = GeminiProvider(api_key="super-secret-key", model="gemini-3.8-flash")
-    with pytest.raises(ProviderAuthError) as exc_info:
-        await provider.generate(_request())
-    assert "super-secret-key" not in str(exc_info.value)
-
-
-@pytest.mark.asyncio
-async def test_gemini_provider_429_is_rate_limit(monkeypatch):
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(429, json={"error": "quota exceeded"})
-
-    _install_mock_transport(monkeypatch, gemini_provider_module, handler)
-    provider = GeminiProvider(api_key="test-key", model="gemini-3.8-flash")
-    with pytest.raises(ProviderRateLimitError):
-        await provider.generate(_request())
-
-
-@pytest.mark.asyncio
-async def test_gemini_provider_503_is_unavailable(monkeypatch):
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(503, json={"error": "overloaded"})
-
-    _install_mock_transport(monkeypatch, gemini_provider_module, handler)
-    provider = GeminiProvider(api_key="test-key", model="gemini-3.8-flash")
-    with pytest.raises(ProviderUnavailableError):
-        await provider.generate(_request())
-
-
-@pytest.mark.asyncio
-async def test_gemini_provider_400_is_invalid_response(monkeypatch):
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(400, json={"error": "bad request"})
-
-    _install_mock_transport(monkeypatch, gemini_provider_module, handler)
-    provider = GeminiProvider(api_key="test-key", model="gemini-3.8-flash")
-    with pytest.raises(ProviderInvalidResponseError):
-        await provider.generate(_request())
-
-
-@pytest.mark.asyncio
-async def test_gemini_provider_malformed_shape_is_invalid_response(monkeypatch):
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"unexpected": "shape"})
-
-    _install_mock_transport(monkeypatch, gemini_provider_module, handler)
-    provider = GeminiProvider(api_key="test-key", model="gemini-3.8-flash")
-    with pytest.raises(ProviderInvalidResponseError):
-        await provider.generate(_request())
-
-
-@pytest.mark.asyncio
-async def test_gemini_provider_wire_payload_uses_response_json_schema_not_response_schema(monkeypatch):
-    """Regression test for BUG-011: Gemini's structured-output field is
-    `responseJsonSchema`, not `responseSchema` -- every one of Task 13.7's four
-    migrated consumers (script/learning/thumbnail/youtube) now shares this one
-    wire-payload code path, so this single test protects all of them."""
-    import json as json_module
-
-    captured = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured["json"] = json_module.loads(request.content)
-        body = {"candidates": [{"content": {"parts": [{"text": "{}"}]}}]}
-        return httpx.Response(200, json=body)
-
-    _install_mock_transport(monkeypatch, gemini_provider_module, handler)
-    provider = GeminiProvider(api_key="test-key", model="gemini-3.8-flash")
-    schema = {"type": "object"}
-    await provider.generate(_request(json_schema=schema))
-
-    gen_config = captured["json"]["generationConfig"]
-    assert gen_config["responseJsonSchema"] == schema
-    assert "responseSchema" not in gen_config
