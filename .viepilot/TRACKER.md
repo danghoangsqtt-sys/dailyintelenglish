@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); Phases 13–15 closed (15 closed 2026-09-22: structural failures eliminated, media gate PASS for the first time, owner's failing configuration completes 2/2; repetition is the single remaining, variable failure class). **Phase 16 (Stability Hardening) closed 2026-09-23**: worker loop guard, ffmpeg timeouts + atomic render, test-DB leak fixed + 447 leaked projects cleaned, repetition 0.00% in 9/9 completed scripts at Gate B-7; remaining failure class: global word-count overshoot (ENH-010). No phase open.
+**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); Phases 13–15 closed (15 closed 2026-09-22: structural failures eliminated, media gate PASS for the first time, owner's failing configuration completes 2/2; repetition is the single remaining, variable failure class). **Phase 16 (Stability Hardening) closed 2026-09-23**: worker loop guard, ffmpeg timeouts + atomic render, test-DB leak fixed + 447 leaked projects cleaned, repetition 0.00% in 9/9 completed scripts at Gate B-7; remaining failure class: global word-count overshoot (ENH-010). **Phase 17 (Budget-Aware Global Validation, ENH-010) planned 2026-09-23**; plan `docs/implementation/phase-17-global-length-repair.md`.
 **Day:** 6 / 21  
 **Started:** 2026-09-10 (Phases 1–12 complete; Phase 13 opened 2026-09-18 as user-approved reliability scope beyond the original plan)
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
@@ -2075,10 +2075,25 @@ PM review log (one line per verdict: task, commit, APPROVED/CHANGES/ACCEPTED, su
 
 Delivered: worker loop guard + `worker_alive` (16.1); ffmpeg timeouts + temp-render/atomic replace, which fixes BUG-017's file-level gap (16.2); the test-DB leak root cause (24 copy-pasted live-server fixtures) replaced by one shared helper + a real-DB/stale-reuse guard, with the 447 leaked projects cleaned up after a backup (16.3); evidence-driven anti-repetition rules (16.4); Gate B-7 (16.5). Suite 932 → 956. Open follow-ups: **ENH-010** (global word-count repair) and the outro/rule-5 watch item.
 
+## Phase 17 Task Status
+
+Plan `docs/implementation/phase-17-global-length-repair.md`; state `.viepilot/phases/17-global-length-repair/PHASE-STATE.md`. Baseline 956/956.
+
+| Task | Owner | Status |
+|---|---|---|
+| 17.1 Budget-aware global stage (ENH-010) | Coder | not started |
+| 17.2 Final-section sign-off + `has_outro_last3` | Coder | not started |
+| 17.3 Gate B-8 | PM | not started |
+
+PM review log:
+
+- (none yet)
+
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-23 | **Phase 17 opened** (`/vp-evolve ENH-010`). PM **erratum** to the Gate B-7 report and ENH-010: a global budget repair already exists (Task 14.3 item 6, last section only). The real failure mechanics: run 1 = a length-inflating repetition repair with no re-check; 5-min = the last-section-only repair can't absorb a middle-section overshoot. Plan: targeted budget repair + length-aware repetition repair + mixed-failure path (17.1), final-section sign-off (17.2), Gate B-8 (17.3). Thresholds pinned; no server-side content deletion | Evidence from the B-7 checkpoints (read-only) contradicted the B-7 report's own §3.2; the plan targets the observed mechanism, not the reported one |
 | 2026-09-23 | **D20 (owner): Phase 16 closed after Gate B-7.** ENH-009 resolved on evidence (repetition 0.00% in 9/9 completed scripts). 16.6/16.7 not run, since the second repetition-only repair would not have saved either B-7 failure. New ENH-010 (bounded global word-count repair, incl. the mixed case) plus an outro/rule-5 watch item logged for a future phase; interim is the in-app Retry | Gate B-7 moved the failure class from repetition to global length overshoot, which is a different mechanism; building 16.6 would chase the old class |
 | 2026-09-23 | **Phase 16 opened** (`/vp-evolve`) for BUG-022, ENH-008, ENH-009, BUG-023. Owner decisions: **D18** ENH-009 → strengthen the section prompt's avoid list from Gate B-6 evidence first (16.4), measure with Gate B-7 (16.5), build a second bounded repetition repair (16.6) only if the script gate is still < 5/5; threshold stays 1%. **D19** BUG-023 → delete the 4 known leaked fixture names from the real `data/app.db`, backup first, dry-run shown to the owner first, PM runs `--apply`. Execution: two parallel sessions, PM Claude Opus + Coder Claude Sonnet, plan §6 partition with `SendMessage` as the live channel | `/vp-audit` 2026-09-23: 932/932 green, but a silently-dying worker loop, un-timed ffmpeg calls, a 3/5 repetition gate, and 419 leaked test projects stand between "works" and "stable" |
 | 2026-09-22 | Gate B-6: 0 structural failures in 11 jobs, owner's configuration 2/2, media PASS (487 s, A/V 0.00); script 3/5 on repetition. **Phase 15 closed**; repetition options recorded for the owner, none started | The phase's objective is met on evidence; the residual is a variable content-quality class with a bounded repair already in place |
@@ -3067,4 +3082,4 @@ Delivered: worker loop guard + `worker_alive` (16.1); ffmpeg timeouts + temp-ren
 | ENH-008 | Enhancement | ffmpeg subprocess calls have no timeout | medium | done (Phase 16) |
 | BUG-023 | Bug | Leaked test projects in real app.db; CHANGELOG missing Phase 15 | low | done (Phase 16) |
 | ENH-009 | Enhancement | Script repetition gate variable (B-5 5/5 → B-6 3/5) | medium | done (Phase 16, 16.4; B-7 rep 0.00%) |
-| ENH-010 | Enhancement | No repair for global script word-count overshoot (> +10%), incl. mixed case | medium | open |
+| ENH-010 | Enhancement | Global script word-count repair is not budget-aware (incl. mixed case) | medium | planned (Phase 17) |

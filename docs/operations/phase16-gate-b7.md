@@ -73,3 +73,17 @@ scripts). Do **not** run 16.6 as specified. Log the global word-count overshoot 
 word-count-plus-repetition case) and the outro-heuristic / rule-5 watch item for the next phase.
 Until then, a failed job costs about 2–3 minutes and the in-app Retry recovers it, with no data
 corruption.
+
+## Erratum (PM, 2026-09-23, while planning Phase 17)
+
+§3.2 and §4 say the pipeline has "no repair for a global total overshoot". **That is wrong.**
+Task 14.3 item 6 already runs one last-section budget repair when the total is outside ±10%.
+The checkpoints show the real failure mechanics:
+- **Run 1:** at first validation the total was inside range, so the budget repair was skipped.
+  The repetition repair then inflated section 2, taking the total to 1,124, and repetition was
+  still 1.07%. Nothing re-checks the length afterwards.
+- **5-min sample:** the last-section budget repair *did* fire. It asked for 237 words and got
+  315. The overshoot sat mostly in section 2.
+
+The conclusions stand: 16.6 would not have helped, and the length path needs work. The fix
+direction is now in `docs/implementation/phase-17-global-length-repair.md` §0.

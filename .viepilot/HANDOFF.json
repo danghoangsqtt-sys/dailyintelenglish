@@ -3,8 +3,8 @@
   "version": "1.0.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_16_complete",
-  "current_phase": 16,
+  "status": "phase_17_planned",
+  "current_phase": 17,
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
     "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
@@ -153,6 +153,14 @@
       "tasks_done": 5,
       "tasks_total": 5,
       "note": "Opened 2026-09-23 via /vp-audit -> /vp-evolve. Plan docs/implementation/phase-16-stability-hardening.md. 16.1 worker loop guard + worker_alive (BUG-022); 16.2 ffmpeg timeouts (ENH-008); 16.3 test-data leak root cause + guard + cleanup script, PM runs --apply after owner sees dry-run (BUG-023, D19); 16.4 evidence-driven repetition avoid list (ENH-009 A, D18); 16.5 Gate B-7 (PM); 16.6/16.7 conditional second repetition repair + Gate B-8. PM Claude Opus + Coder Claude Sonnet, parallel sessions, SendMessage live channel, git as record. Baseline 932/932. CLOSED 2026-09-23 (D20): 16.1 56bb74b, 16.2 95d8b29+4baa840, 16.3 22100d0 + PM cleanup (447 deleted, 7 kept, backups in data/backups), 16.4 d6ecbb7, Gate B-7 ce6eff0: repetition 0.00% in 9/9 completed scripts; 2 failures on global word-count overshoot -> ENH-010; learning 4/4+2/2, media PASS 491.1 s, 0 structural. 16.6/16.7 not run. Suite 956/956."
+    },
+    "17": {
+      "name": "Budget-Aware Global Validation (ENH-010)",
+      "days": "n/a",
+      "status": "planned",
+      "tasks_done": 0,
+      "tasks_total": 3,
+      "note": "Opened 2026-09-23 via /vp-evolve ENH-010. Plan docs/implementation/phase-17-global-length-repair.md. PM erratum: the global budget repair already exists (14.3 item 6, last section only); B-7 run 1 died after a length-inflating repetition repair with no re-check; the 5-min sample died because the last-section repair couldn't absorb a middle-section overshoot. 17.1 targeted budget repair + length-aware repetition repair + mixed path; 17.2 final-section sign-off + has_outro_last3 diagnostic; 17.3 Gate B-8 (B1 5/5). Baseline 956/956."
     }
   },
   "key_decisions": [

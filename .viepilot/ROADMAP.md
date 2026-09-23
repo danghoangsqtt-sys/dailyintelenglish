@@ -1248,3 +1248,14 @@ Owner decisions: D18 (repetition: prompt first, second repair only if Gate B-7 <
 - [ ] 16.7 Gate B-8 — NOT RUN (D20)
 
 **Status update:** ✅ Phase 16 closed 2026-09-23. Gate B-7: repetition 0.00% in 9/9 completed scripts; 2 failures on global word-count overshoot → ENH-010. Report `docs/operations/phase16-gate-b7.md`.
+
+## Phase 17 — Budget-Aware Global Validation (ENH-010)
+
+**Status:** 🟡 Planned 2026-09-23 | Plan `docs/implementation/phase-17-global-length-repair.md`.
+Trigger: Gate B-7's two script failures, re-diagnosed (plan §0): a length-inflating repetition
+repair with no re-check, and a last-section-only budget repair that couldn't absorb a
+middle-section overshoot.
+
+- [ ] 17.1 Budget-aware global stage: targeted budget repair, length-aware repetition repair, mixed-failure path (Coder)
+- [ ] 17.2 Final-section sign-off + `has_outro_last3` diagnostic (Coder)
+- [ ] 17.3 Gate B-8, local only: B1 8-min 5/5 complete, no regression (PM)
