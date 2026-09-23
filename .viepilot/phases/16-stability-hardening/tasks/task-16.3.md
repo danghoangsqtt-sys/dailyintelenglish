@@ -254,7 +254,17 @@ exact names only, backup written, dry-run writes nothing, directories removed. `
 
 ## PM run on the real DB (filled by PM)
 
-_pending: dry-run output → owner OK → `--apply` output + backup path + new count_
+Run by the PM on 2026-09-23 (no dev server on :8000 at the time).
+- Dry-run: Learning 133 / YouTube 114 / Export 105 / Script 95 = **447** matches; 7 real projects
+  would survive. It wrote nothing (count stayed 454). Shown to the owner.
+- **Owner OK** (D19, 2026-09-23, in chat).
+- PM safety copy via the SQLite backup API: `data/backups/app-pm-sqlite-backup-20260923T032200Z.db`
+  (`integrity_check` ok, 454 projects). This mitigates N5.
+- `--apply`: the script's own backup is `data/backups/app-before-cleanup-20260923T032201Z.db`;
+  447 deleted.
+- After: **7 projects** (Good morning, Demo Episode ×3, Screenshot Learning Project,
+  Trial Run 8min, Good Morning); `integrity_check` ok; `foreign_key_check` 0; 0 orphaned
+  `speakers` / `script_lines` / `ai_generation_jobs`; a re-run dry-run reports total 0.
 
 ## Evidence
 
