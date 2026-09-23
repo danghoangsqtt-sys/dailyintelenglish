@@ -202,6 +202,20 @@ Versioning: [SemVer](https://semver.org/)
   correctly by existing code, so no change was needed there.
 
 ### Fixed
+- Phase 16 Task 16.2 (2026-09-23, ENH-008, self-implemented by Coder): both
+  ffmpeg render passes (background+subtitle burn-in, and the 9:16 vertical
+  reformat) had no `timeout=`, so a hung encoder (a bad input file, a stuck
+  GPU encoder, a blocked output file on Windows) left a video stuck
+  `rendering` forever with no way to retry. Both now use a bounded timeout
+  that scales with the audio being rendered (4 s per audio second, 300 s
+  floor); a timeout now raises `VideoRenderError` the same way a normal
+  ffmpeg failure already does. Along the way, both passes were also switched
+  to render into a temp sibling file and atomically replace the final output
+  only on success — ffmpeg's `-y` used to truncate the *final* `video.mp4`
+  the instant any re-render (timed out or not) started, which could leave the
+  database's `mp4_path` pointing at a missing or truncated file, since a
+  failed render deliberately keeps that row pointing at the prior successful
+  video (BUG-017).
 - Phase 16 Task 16.1 (2026-09-23, BUG-022, self-implemented by Coder): the AI
   worker's poll loop had no top-level guard, so any transient exception (for
   example `database is locked` while `data/app.db` is open in a DB browser, or

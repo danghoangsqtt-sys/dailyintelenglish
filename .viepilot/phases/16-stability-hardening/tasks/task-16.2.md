@@ -1,6 +1,6 @@
 # Task 16.2 — ffmpeg Timeouts (ENH-008)
 
-- **Status:** in_progress
+- **Status:** done
 - **Owner:** Coder
 - **Priority:** P1
 - **Dependency:** 16.1 accepted
@@ -116,6 +116,63 @@ wait 300s+ for).
   a (generous, real-duration-derived) `timeout=` added that a sub-second
   fixture render never approaches.
 
+**Amendment B (PM CHANGES on 17cb199, plan Amendment B 4f6ba97) — atomic output write**
+The original design's timeout branch did `output_path.unlink(missing_ok=True)`
+where `output_path` is the *final* `video.mp4` / `video_vertical.mp4` — wrong,
+because ffmpeg's `-y` truncates that file the instant a re-render starts, and
+`mark_video_job_failed` (BUG-017) deliberately leaves the DB row pointing at
+the prior successful video on any failure. A timed-out (or otherwise failed)
+re-render would therefore delete the file the DB row still points at, or at
+best leave it truncated — the exact class of bug BUG-017 was written to
+prevent, just reached from a different direction. The pre-existing
+(non-timeout) failure path had this same latent issue; this amendment fixes
+both at once.
+
+Both `_render_video_sync` and `_render_vertical_sync` now render into a temp
+sibling path — `output_path.parent / f"{output_path.stem}.rendering
+{output_path.suffix}"` (e.g. `video.rendering.mp4`, `.mp4` kept so ffmpeg
+still infers the right container from the extension) — never the final path
+directly:
+- The ffmpeg command's output-path argument becomes the temp path; every
+  other argument (including `-t`) stays byte-identical to today. This is the
+  one narrow amendment to the task's "don't change ffmpeg arguments"
+  prohibition — the prohibition's intent (don't touch encoding behavior) is
+  preserved; only *where the bytes land* changes.
+- `returncode == 0` → `os.replace(temp_path, output_path)` (atomic on both
+  POSIX and Windows for same-volume paths, which this always is — both under
+  `settings.DATA_DIR`). The final file only ever changes via this one
+  successful, atomic swap.
+- `TimeoutExpired` **or** `returncode != 0` → `temp_path.unlink(missing_ok=True)`,
+  then raise `VideoRenderError` (timeout message as before for the timeout
+  branch; the existing `f"ffmpeg ... failed: {result.stderr[-500:]}"` message,
+  unchanged, for the non-zero-returncode branch). The final path is never
+  touched on any failure path, for either function.
+- `_render_vertical_sync`'s `source_mp4_path` argument is unaffected by this —
+  it's already required to be the *final*, previously-replaced `video.mp4`
+  from the first pass (its caller, `generate_video`, only calls it after the
+  first `await asyncio.to_thread(_render_video_sync, ...)` has returned
+  successfully), so it necessarily reads a complete file either way.
+
+**Test plan (Amendment B)**
+- `test_render_video_sync_leaves_the_prior_video_untouched_on_timeout`:
+  pre-create `output_path` (`video.mp4`) with known marker bytes, run the
+  same timeout scenario as the original design's timeout test, then assert
+  `output_path.read_bytes()` is still exactly those marker bytes (not
+  truncated, not deleted) and that no `video.rendering.mp4` sibling is left
+  behind.
+- The success-path assertion (no leftover temp file after a real render)
+  rides on the existing real-ffmpeg tests in this file
+  (`test_generate_video_produces_a_real_playable_mp4` etc.) — add one
+  explicit assertion there that `output_path.with_name("video.rendering.mp4")`
+  does not exist after a successful `generate_video()` call, so the
+  temp-then-replace path is verified on the real success path too, not only
+  synthetically.
+- The original two timeout tests
+  (`test_render_video_sync_raises_video_render_error_on_timeout`,
+  `test_render_vertical_sync_raises_video_render_error_on_timeout`) are kept
+  as designed, updated only to assert against the temp path instead of the
+  final path where they check for leftover files.
+
 **N3 (PM nit, folded in via Amendment A, `tests/test_ai_health_api.py`)**
 `test_health_reports_worker_alive_false_when_the_worker_task_is_dead`
 currently does `monkeypatch.setattr(ai_worker, "_task", None)` and leaves the
@@ -146,4 +203,43 @@ Full suite. `ruff`.
 
 ## Evidence
 
-_pending_
+- Design commit `17cb199` (CHANGES on 17cb199 → Amendment B required, everything
+  else approved as drafted). This implementation commit folds in Amendment B's
+  card update, per the PM's "no need to wait for re-approval" instruction.
+- Files touched, all within the allowed list (plus the pre-approved Amendment
+  A allowance for `tests/test_ai_health_api.py`, already committed in
+  `17cb199`): `app/services/video_service.py` (`_render_timeout_seconds`,
+  `_rendering_temp_path`, timeout + temp-then-atomic-replace write in both
+  `_render_video_sync` and `_render_vertical_sync`, duration threaded into
+  `_render_vertical_sync` and its one call site), `app/core/constants.py`
+  (`VIDEO_RENDER_TIMEOUT_MIN_SECONDS = 300`,
+  `VIDEO_RENDER_TIMEOUT_PER_AUDIO_SECOND = 4.0`), `tests/test_video_service.py`
+  (+4 new tests, +1 assertion on an existing success-path test), `CHANGELOG.md`.
+- Targeted run: `tests/test_video_service.py` → 20 passed.
+- Full suite: `./venv/Scripts/python.exe -m pytest -q` → **944 passed** (940
+  baseline after 16.1 + 4 new tests). No baseline test broke.
+- `ruff check app scripts tests` → all checks passed.
+- Revert-and-confirm-failure: temporarily dropped the `timeout=`/`except
+  TimeoutExpired` handling from `_render_video_sync` (calling
+  `subprocess.run` with no timeout) and re-ran
+  `test_render_video_sync_raises_video_render_error_on_timeout` alone → it
+  failed (the sleepy fake command completed normally with no timeout
+  enforced, so the code fell through to `os.replace` on a temp file that was
+  never created, raising `FileNotFoundError` instead of the expected
+  `VideoRenderError` — a different failure mode than anticipated, but
+  confirms the timeout guard is what makes the test pass at all). Restored
+  the guard → the same test and the full `test_video_service.py` file
+  (20 tests) passed again.
+- Verification bullets from the card, confirmed by test:
+  - Fake command sleeps past a tiny patched timeout →
+    `VideoRenderError`, partial (temp) file removed:
+    `test_render_video_sync_raises_video_render_error_on_timeout`,
+    `test_render_vertical_sync_raises_video_render_error_on_timeout`.
+  - Existing render tests unchanged: all pre-existing tests in this file
+    still pass, real ffmpeg still exercised, only with a `timeout=` now
+    present that a sub-second fixture render never approaches.
+  - Amendment B (BUG-017 interaction): the prior final video is never
+    truncated or deleted on a timed-out re-render:
+    `test_render_video_sync_leaves_the_prior_video_untouched_on_timeout`.
+  - No double-wrapped error message through the public entry point:
+    `test_generate_video_timeout_surfaces_as_video_render_error_not_double_wrapped`.

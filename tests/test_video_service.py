@@ -5,6 +5,9 @@ this project cannot function without, so the render test exercises the real ffmp
 subprocess on a real tiny background image + real tiny audio file — not mocked.
 """
 
+import subprocess
+import sys
+
 import pytest
 from pydub.generators import Sine
 
@@ -91,6 +94,9 @@ async def test_generate_video_produces_a_real_playable_mp4(tmp_path, monkeypatch
     assert srt_path.is_file()
     assert "Alex: Hello!" in srt_path.read_text(encoding="utf-8")
     assert result["background_image"] == "midnight"
+    # Task 16.2 (Amendment B): the temp-then-atomic-replace write leaves no
+    # leftover temp file behind on a successful render.
+    assert not video_service._rendering_temp_path(mp4_path).exists()
 
 
 async def test_generate_video_duration_matches_audio_exactly(tmp_path, monkeypatch):
@@ -338,3 +344,105 @@ async def test_mark_video_job_failed_inserts_error_only_row_on_first_attempt(db,
         "subtitle_style_json",
     ):
         assert failed[column] is None
+
+
+# --- Task 16.2 (ENH-008): bounded ffmpeg timeouts -----------------------------------
+
+
+def _install_sleepy_subprocess_run(monkeypatch) -> None:
+    """Replace `video_service.subprocess.run` with a wrapper that ignores the built
+    ffmpeg command and instead really execs a short Python subprocess that sleeps,
+    forwarding only the `timeout=` kwarg -- exercises the real stdlib
+    `subprocess.TimeoutExpired`, not a hand-rolled fake exception, without needing
+    ffmpeg to actually hang for real (impractical at the ~300s default timeout)."""
+    real_run = subprocess.run
+
+    def sleepy_run(command, capture_output=True, text=True, timeout=None):
+        return real_run(
+            [sys.executable, "-c", "import time; time.sleep(5)"],
+            capture_output=capture_output, text=text, timeout=timeout,
+        )
+
+    monkeypatch.setattr(video_service.subprocess, "run", sleepy_run)
+
+
+def _patch_tiny_render_timeout(monkeypatch) -> None:
+    monkeypatch.setattr(video_service, "VIDEO_RENDER_TIMEOUT_MIN_SECONDS", 0.05)
+    monkeypatch.setattr(video_service, "VIDEO_RENDER_TIMEOUT_PER_AUDIO_SECOND", 0.01)
+
+
+def test_render_video_sync_raises_video_render_error_on_timeout(tmp_path, monkeypatch):
+    _patch_tiny_render_timeout(monkeypatch)
+    _install_sleepy_subprocess_run(monkeypatch)
+
+    background_path = tmp_path / "bg.png"
+    background_path.write_bytes(b"fake-bg")
+    srt_path = tmp_path / "subs.srt"
+    srt_path.write_text("", encoding="utf-8")
+    output_path = tmp_path / "video.mp4"
+
+    with pytest.raises(VideoRenderError, match="timed out"):
+        video_service._render_video_sync(background_path, "mix.mp3", srt_path, output_path, 0.5)
+
+    assert not output_path.exists()
+    assert not video_service._rendering_temp_path(output_path).exists()
+
+
+def test_render_vertical_sync_raises_video_render_error_on_timeout(tmp_path, monkeypatch):
+    _patch_tiny_render_timeout(monkeypatch)
+    _install_sleepy_subprocess_run(monkeypatch)
+
+    source_path = tmp_path / "video.mp4"
+    source_path.write_bytes(b"source")
+    output_path = tmp_path / "video_vertical.mp4"
+
+    with pytest.raises(VideoRenderError, match="timed out"):
+        video_service._render_vertical_sync(source_path, output_path, 0.5)
+
+    assert not output_path.exists()
+    assert not video_service._rendering_temp_path(output_path).exists()
+
+
+def test_render_video_sync_leaves_the_prior_video_untouched_on_timeout(tmp_path, monkeypatch):
+    """Task 16.2, Amendment B: a timed-out re-render must never delete or truncate
+    the prior successful video the DB row still points at (BUG-017)."""
+    _patch_tiny_render_timeout(monkeypatch)
+    _install_sleepy_subprocess_run(monkeypatch)
+
+    background_path = tmp_path / "bg.png"
+    background_path.write_bytes(b"fake-bg")
+    srt_path = tmp_path / "subs.srt"
+    srt_path.write_text("", encoding="utf-8")
+    output_path = tmp_path / "video.mp4"
+    marker_bytes = b"prior-good-video-bytes"
+    output_path.write_bytes(marker_bytes)
+
+    with pytest.raises(VideoRenderError, match="timed out"):
+        video_service._render_video_sync(background_path, "mix.mp3", srt_path, output_path, 0.5)
+
+    assert output_path.read_bytes() == marker_bytes
+    assert not video_service._rendering_temp_path(output_path).exists()
+
+
+async def test_generate_video_timeout_surfaces_as_video_render_error_not_double_wrapped(tmp_path, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    _patch_tiny_render_timeout(monkeypatch)
+    _install_sleepy_subprocess_run(monkeypatch)
+
+    audio_path = tmp_path / "mix.mp3"
+    Sine(440).to_audio_segment(duration=500).export(str(audio_path), format="mp3", bitrate="192k")
+    audio_job = {
+        "status": "complete",
+        "mp3_path": str(audio_path),
+        "duration_seconds": 0.5,
+        "timestamps": [],
+    }
+
+    with pytest.raises(VideoRenderError) as exc_info:
+        await video_service.generate_video("proj-timeout", audio_job, "midnight")
+
+    message = str(exc_info.value)
+    assert "timed out" in message
+    assert not message.startswith("Video rendering failed")

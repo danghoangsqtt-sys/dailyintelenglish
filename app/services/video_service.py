@@ -11,6 +11,7 @@ never generates audio itself, mirroring the AudioService/TTSService responsibili
 """
 
 import asyncio
+import os
 import subprocess
 import uuid
 from datetime import datetime, timezone
@@ -21,6 +22,8 @@ import aiosqlite
 from app.core.config import settings
 from app.core.constants import (
     VIDEO_HEIGHT_SHORTS,
+    VIDEO_RENDER_TIMEOUT_MIN_SECONDS,
+    VIDEO_RENDER_TIMEOUT_PER_AUDIO_SECOND,
     VIDEO_TEMPLATE_IDS,
     VIDEO_TEMPLATE_LABELS,
     VIDEO_WIDTH_SHORTS,
@@ -86,6 +89,20 @@ def _escape_ffmpeg_filter_path(path: str) -> str:
     return path.replace("\\", "\\\\").replace(":", "\\:")
 
 
+def _render_timeout_seconds(audio_duration_seconds: float) -> float:
+    """Bounded ffmpeg timeout for one render pass (Task 16.2, ENH-008): scales with
+    the audio it has to encode, with a generous floor for short clips. Both ffmpeg
+    passes render the same underlying audio length, so they share this one formula."""
+    return max(VIDEO_RENDER_TIMEOUT_MIN_SECONDS, VIDEO_RENDER_TIMEOUT_PER_AUDIO_SECOND * audio_duration_seconds)
+
+
+def _rendering_temp_path(output_path: Path) -> Path:
+    """The temp sibling a render writes to before an atomic replace (Task 16.2,
+    Amendment B) -- never the final path directly. Keeps the `.mp4` extension so
+    ffmpeg still infers the right container from it."""
+    return output_path.with_name(f"{output_path.stem}.rendering{output_path.suffix}")
+
+
 def _render_video_sync(
     background_path: Path, audio_path: str, srt_path: Path, output_path: Path, audio_duration_seconds: float
 ) -> None:
@@ -100,7 +117,16 @@ def _render_video_sync(
     get flushed afterward -- Gate B-3 measured this exact 2.48s gap). `-t` is a hard,
     frame-accurate output cutoff regardless of encoder buffering, using the duration
     AudioService already measured for real (`audio_jobs.duration_seconds`) rather
-    than a second ffprobe call."""
+    than a second ffprobe call.
+
+    Task 16.2 (ENH-008, Amendment B): renders into a temp sibling and only atomically
+    replaces `output_path` on success. `-y` truncates whatever it's pointed at the
+    instant a render starts, and `mark_video_job_failed` (BUG-017) deliberately leaves
+    the DB row pointing at the prior successful video on any failure -- rendering
+    straight into the final path would let a timed-out (or otherwise failed) re-render
+    delete or truncate the file that row still points at.
+    """
+    temp_path = _rendering_temp_path(output_path)
     vf = f"subtitles='{_escape_ffmpeg_filter_path(str(srt_path))}'"
     command = [
         settings.FFMPEG_PATH,
@@ -115,14 +141,21 @@ def _render_video_sync(
         "-b:a", "192k",
         "-pix_fmt", "yuv420p",
         "-t", str(audio_duration_seconds),
-        str(output_path),
+        str(temp_path),
     ]
-    result = subprocess.run(command, capture_output=True, text=True)
+    timeout = _render_timeout_seconds(audio_duration_seconds)
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        temp_path.unlink(missing_ok=True)
+        raise VideoRenderError(f"ffmpeg video render timed out after {timeout:g} s") from None
     if result.returncode != 0:
+        temp_path.unlink(missing_ok=True)
         raise VideoRenderError(f"ffmpeg video render failed: {result.stderr[-500:]}")
+    os.replace(temp_path, output_path)
 
 
-def _render_vertical_sync(source_mp4_path: Path, output_path: Path) -> None:
+def _render_vertical_sync(source_mp4_path: Path, output_path: Path, audio_duration_seconds: float) -> None:
     """Second ffmpeg pass: reformat an already-rendered 16:9 MP4 into a 9:16 vertical MP4.
 
     Blurred-background-pad technique (Task 2.5b research — the real convention used by
@@ -130,10 +163,16 @@ def _render_vertical_sync(source_mp4_path: Path, output_path: Path) -> None:
     vertical canvas as a blurred backdrop, then the same source scaled to fit the width
     is overlaid centered on top. Runs over the finished 16:9 render, not a rewrite of the
     tested subtitle-burn path in `_render_video_sync` — audio is copied, not re-encoded,
-    since the audio content itself never changes.
+    since the audio content itself never changes. `source_mp4_path` is always the final,
+    already-replaced `video.mp4` from `_render_video_sync` -- this pass only runs after
+    that one has returned successfully.
 
     Must run in a thread (asyncio.to_thread), never on the event loop directly.
+
+    Task 16.2 (ENH-008, Amendment B): same temp-then-atomic-replace write as
+    `_render_video_sync`, and the same timeout budget (same underlying audio length).
     """
+    temp_path = _rendering_temp_path(output_path)
     filter_complex = (
         f"[0:v]scale={VIDEO_WIDTH_SHORTS}:{VIDEO_HEIGHT_SHORTS}:force_original_aspect_ratio=increase,"
         f"crop={VIDEO_WIDTH_SHORTS}:{VIDEO_HEIGHT_SHORTS},gblur=sigma=20[bg];"
@@ -149,11 +188,18 @@ def _render_vertical_sync(source_mp4_path: Path, output_path: Path) -> None:
         "-map", "0:a",
         "-c:v", "libx264",
         "-c:a", "copy",
-        str(output_path),
+        str(temp_path),
     ]
-    result = subprocess.run(command, capture_output=True, text=True)
+    timeout = _render_timeout_seconds(audio_duration_seconds)
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        temp_path.unlink(missing_ok=True)
+        raise VideoRenderError(f"ffmpeg vertical (9:16) render timed out after {timeout:g} s") from None
     if result.returncode != 0:
+        temp_path.unlink(missing_ok=True)
         raise VideoRenderError(f"ffmpeg vertical (9:16) render failed: {result.stderr[-500:]}")
+    os.replace(temp_path, output_path)
 
 
 def _write_video_outputs_sync(background_path: Path, output_dir: Path, srt_path: Path, srt_content: str) -> None:
@@ -209,7 +255,9 @@ async def generate_video(
 
     if aspect_ratio == "9:16":
         try:
-            await asyncio.to_thread(_render_vertical_sync, mp4_path, mp4_path_vertical)
+            await asyncio.to_thread(
+                _render_vertical_sync, mp4_path, mp4_path_vertical, audio_job["duration_seconds"]
+            )
         except VideoRenderError:
             raise
         except Exception as exc:

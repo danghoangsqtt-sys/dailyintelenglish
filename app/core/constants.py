@@ -55,6 +55,11 @@ VIDEO_TEMPLATE_LABELS = {
     "deep_purple": "Deep Purple",
     "charcoal_wave": "Charcoal Wave",
 }
+# Bounded ffmpeg render timeout (Task 16.2, ENH-008): a hung encoder must not keep a
+# job "rendering" forever. Scales with the audio it has to encode, with a generous floor
+# for short clips.
+VIDEO_RENDER_TIMEOUT_MIN_SECONDS = 300
+VIDEO_RENDER_TIMEOUT_PER_AUDIO_SECOND = 4.0
 
 # TTS
 MAX_CONCURRENT_TTS = 2
