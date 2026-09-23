@@ -195,6 +195,35 @@ deterministically) surface as an "Exception ignored" / "Task was destroyed
 but it is pending" warning on a later test in the same session — the targeted
 `tests/test_ai_health_api.py` run in Evidence will note this stayed clean.
 
+**N4 (PM nit on 95d8b29, folded in pre-acceptance) — `os.replace` itself can fail**
+`os.replace(temp_path, output_path)` can raise `OSError` on its own — most
+realistically a Windows `PermissionError` ([WinError 5]) if `output_path` is
+open elsewhere (e.g. the Video Studio preview streaming it through
+`FileResponse`, which opens the file without `FILE_SHARE_DELETE`). Before
+this fix that left `video.rendering.mp4` behind and surfaced as a generic
+`"Video rendering failed: [WinError 5] ..."` via `generate_video`'s catch-all
+`except Exception`. Both `os.replace` call sites (identical logic, so
+factored into one new helper, `_publish_rendered_output(temp_path,
+output_path, context)`) now wrap the replace in `try/except OSError`: on
+failure, `temp_path.unlink(missing_ok=True)`, then raise a
+`VideoRenderError` with a user-actionable message (names the exception type,
+asks the user to close whatever has the file open and retry) — `from None`,
+same rationale as the timeout branch. `output_path` itself is never at risk
+either way: `os.replace` never partially applies, so a failed replace leaves
+the prior video exactly as it was.
+
+**Test plan (N4)**
+`test_render_video_sync_raises_actionable_error_when_replace_fails`:
+monkeypatches `video_service.subprocess.run` to a fake that reports success
+(`returncode = 0`) and actually writes the temp file (so the real code path
+reaches the replace step), then monkeypatches `video_service.os.replace` to
+raise `PermissionError`. Pre-creates `output_path` with marker bytes.
+Asserts: `VideoRenderError` is raised with "could not replace" in the
+message, `output_path.read_bytes()` is still exactly the marker bytes, and
+the temp file no longer exists. Covers `_render_video_sync`'s call site;
+`_render_vertical_sync` shares the same `_publish_rendered_output` helper, so
+one test covers both call sites' actual replace-failure logic.
+
 ## Verification (required)
 
 A fake command that sleeps past a tiny patched timeout → `VideoRenderError`, job `error`,
@@ -204,32 +233,36 @@ Full suite. `ruff`.
 ## Evidence
 
 - Design commit `17cb199` (CHANGES on 17cb199 → Amendment B required, everything
-  else approved as drafted). This implementation commit folds in Amendment B's
-  card update, per the PM's "no need to wait for re-approval" instruction.
+  else approved as drafted). Implementation commit `95d8b29` (Amendment B).
+  PM's own diff review + revert check confirmed on `95d8b29` (TRACKER
+  `7991541`): diff matches Amendment B, targeted 20/20, own revert check
+  (drop `timeout=` → 4 tests fail; restored → 20/20), tree clean — with one
+  follow-up, N4 (below), folded in before final acceptance.
 - Files touched, all within the allowed list (plus the pre-approved Amendment
   A allowance for `tests/test_ai_health_api.py`, already committed in
   `17cb199`): `app/services/video_service.py` (`_render_timeout_seconds`,
-  `_rendering_temp_path`, timeout + temp-then-atomic-replace write in both
-  `_render_video_sync` and `_render_vertical_sync`, duration threaded into
-  `_render_vertical_sync` and its one call site), `app/core/constants.py`
+  `_rendering_temp_path`, `_publish_rendered_output` (N4), timeout +
+  temp-then-atomic-replace write in both `_render_video_sync` and
+  `_render_vertical_sync`, duration threaded into `_render_vertical_sync` and
+  its one call site), `app/core/constants.py`
   (`VIDEO_RENDER_TIMEOUT_MIN_SECONDS = 300`,
   `VIDEO_RENDER_TIMEOUT_PER_AUDIO_SECOND = 4.0`), `tests/test_video_service.py`
-  (+4 new tests, +1 assertion on an existing success-path test), `CHANGELOG.md`.
-- Targeted run: `tests/test_video_service.py` → 20 passed.
-- Full suite: `./venv/Scripts/python.exe -m pytest -q` → **944 passed** (940
-  baseline after 16.1 + 4 new tests). No baseline test broke.
+  (+5 new tests, +1 assertion on an existing success-path test), `CHANGELOG.md`.
+- Targeted run: `tests/test_video_service.py` → 21 passed (20 + N4's new test).
+- Full suite: `./venv/Scripts/python.exe -m pytest -q` → **945 passed** (944
+  after Amendment B + N4's 1 new test). No baseline test broke.
 - `ruff check app scripts tests` → all checks passed.
 - Revert-and-confirm-failure: temporarily dropped the `timeout=`/`except
   TimeoutExpired` handling from `_render_video_sync` (calling
   `subprocess.run` with no timeout) and re-ran
   `test_render_video_sync_raises_video_render_error_on_timeout` alone → it
   failed (the sleepy fake command completed normally with no timeout
-  enforced, so the code fell through to `os.replace` on a temp file that was
-  never created, raising `FileNotFoundError` instead of the expected
-  `VideoRenderError` — a different failure mode than anticipated, but
-  confirms the timeout guard is what makes the test pass at all). Restored
-  the guard → the same test and the full `test_video_service.py` file
-  (20 tests) passed again.
+  enforced, so the code fell through to `_publish_rendered_output` on a temp
+  file that was never created, raising `FileNotFoundError` instead of the
+  expected `VideoRenderError` — a different failure mode than anticipated,
+  but confirms the timeout guard is what makes the test pass at all).
+  Restored the guard → the same test and the full `test_video_service.py`
+  file (21 tests) passed again.
 - Verification bullets from the card, confirmed by test:
   - Fake command sleeps past a tiny patched timeout →
     `VideoRenderError`, partial (temp) file removed:
@@ -243,3 +276,6 @@ Full suite. `ruff`.
     `test_render_video_sync_leaves_the_prior_video_untouched_on_timeout`.
   - No double-wrapped error message through the public entry point:
     `test_generate_video_timeout_surfaces_as_video_render_error_not_double_wrapped`.
+  - N4 (`os.replace` itself fails) → actionable `VideoRenderError`, temp file
+    cleaned up, prior video untouched:
+    `test_render_video_sync_raises_actionable_error_when_replace_fails`.

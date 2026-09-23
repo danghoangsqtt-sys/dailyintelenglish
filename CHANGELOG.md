@@ -215,7 +215,12 @@ Versioning: [SemVer](https://semver.org/)
   the instant any re-render (timed out or not) started, which could leave the
   database's `mp4_path` pointing at a missing or truncated file, since a
   failed render deliberately keeps that row pointing at the prior successful
-  video (BUG-017).
+  video (BUG-017). The atomic replace step can itself fail on Windows (most
+  realistically a `PermissionError` if the prior video is open in a player or
+  streaming through the Video Studio preview) — that now surfaces as an
+  actionable `VideoRenderError` telling the user to close whatever has the
+  file open and retry, instead of a raw, confusing OS error, and always
+  cleans up its temp file either way.
 - Phase 16 Task 16.1 (2026-09-23, BUG-022, self-implemented by Coder): the AI
   worker's poll loop had no top-level guard, so any transient exception (for
   example `database is locked` while `data/app.db` is open in a DB browser, or

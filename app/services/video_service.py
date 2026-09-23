@@ -103,6 +103,25 @@ def _rendering_temp_path(output_path: Path) -> Path:
     return output_path.with_name(f"{output_path.stem}.rendering{output_path.suffix}")
 
 
+def _publish_rendered_output(temp_path: Path, output_path: Path, context: str) -> None:
+    """Atomically publish a completed render, `temp_path` -> `output_path` (Task 16.2,
+    Amendment B). `os.replace` can itself fail on Windows (N4) -- most realistically a
+    `PermissionError` if the prior `output_path` is open elsewhere (e.g. the Video Studio
+    preview streaming it through `FileResponse`, which opens without `FILE_SHARE_DELETE`).
+    On any such failure the temp file is cleaned up (never left behind) and a
+    user-actionable `VideoRenderError` is raised instead of a raw `OSError` -- the prior
+    video itself is untouched either way, since `os.replace` never partially applies."""
+    try:
+        os.replace(temp_path, output_path)
+    except OSError as exc:
+        temp_path.unlink(missing_ok=True)
+        raise VideoRenderError(
+            f"{context} finished, but could not replace the previous video "
+            f"({type(exc).__name__}) -- is it open in a player or being downloaded "
+            "elsewhere? Close it and try again."
+        ) from None
+
+
 def _render_video_sync(
     background_path: Path, audio_path: str, srt_path: Path, output_path: Path, audio_duration_seconds: float
 ) -> None:
@@ -152,7 +171,7 @@ def _render_video_sync(
     if result.returncode != 0:
         temp_path.unlink(missing_ok=True)
         raise VideoRenderError(f"ffmpeg video render failed: {result.stderr[-500:]}")
-    os.replace(temp_path, output_path)
+    _publish_rendered_output(temp_path, output_path, "ffmpeg video render")
 
 
 def _render_vertical_sync(source_mp4_path: Path, output_path: Path, audio_duration_seconds: float) -> None:
@@ -199,7 +218,7 @@ def _render_vertical_sync(source_mp4_path: Path, output_path: Path, audio_durati
     if result.returncode != 0:
         temp_path.unlink(missing_ok=True)
         raise VideoRenderError(f"ffmpeg vertical (9:16) render failed: {result.stderr[-500:]}")
-    os.replace(temp_path, output_path)
+    _publish_rendered_output(temp_path, output_path, "ffmpeg vertical (9:16) render")
 
 
 def _write_video_outputs_sync(background_path: Path, output_dir: Path, srt_path: Path, srt_content: str) -> None:

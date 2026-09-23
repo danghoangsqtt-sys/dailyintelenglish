@@ -424,6 +424,45 @@ def test_render_video_sync_leaves_the_prior_video_untouched_on_timeout(tmp_path,
     assert not video_service._rendering_temp_path(output_path).exists()
 
 
+def test_render_video_sync_raises_actionable_error_when_replace_fails(tmp_path, monkeypatch):
+    """Task 16.2, N4: `os.replace` can itself fail on Windows -- most realistically a
+    `PermissionError` if the prior video is open elsewhere (e.g. the Video Studio
+    preview streaming it via `FileResponse`, which opens without `FILE_SHARE_DELETE`).
+    Must surface an actionable `VideoRenderError`, clean up the temp file, and leave
+    the prior video byte-for-byte untouched -- `os.replace` never partially applies."""
+    from pathlib import Path
+
+    background_path = tmp_path / "bg.png"
+    background_path.write_bytes(b"fake-bg")
+    srt_path = tmp_path / "subs.srt"
+    srt_path.write_text("", encoding="utf-8")
+    output_path = tmp_path / "video.mp4"
+    marker_bytes = b"prior-good-video-bytes"
+    output_path.write_bytes(marker_bytes)
+
+    class _FakeCompletedProcess:
+        returncode = 0
+        stderr = ""
+
+    def fake_run(command, capture_output=True, text=True, timeout=None):
+        # Simulate a successful ffmpeg run that wrote the temp output file.
+        Path(command[-1]).write_bytes(b"new-render-bytes")
+        return _FakeCompletedProcess()
+
+    monkeypatch.setattr(video_service.subprocess, "run", fake_run)
+
+    def fake_replace(src, dst):
+        raise PermissionError("in use")
+
+    monkeypatch.setattr(video_service.os, "replace", fake_replace)
+
+    with pytest.raises(VideoRenderError, match="could not replace"):
+        video_service._render_video_sync(background_path, "mix.mp3", srt_path, output_path, 0.5)
+
+    assert output_path.read_bytes() == marker_bytes
+    assert not video_service._rendering_temp_path(output_path).exists()
+
+
 async def test_generate_video_timeout_surfaces_as_video_render_error_not_double_wrapped(tmp_path, monkeypatch):
     from app.core.config import settings
 
