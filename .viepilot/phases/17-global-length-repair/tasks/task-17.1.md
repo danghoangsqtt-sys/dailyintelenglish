@@ -475,3 +475,21 @@ repair, per the same evidence) is exactly that.
     `test_pipeline_repetition_repair_disabled_by_its_cap_fails_with_zero_extra_calls`.
   - Revert-and-confirm-failure: above.
   - Full suite, `ruff`: above.
+
+## Amendment (Task 17.4, 2026-09-23)
+
+Gate B-8 found this task's C4 instruction wrong for the "under" direction: a plain
+`_repair_section` call overshot 91→505 words against a 238 target (see `task-17.4.md`). Task
+17.4 replaced that plain-repair branch with the same `_run_section_pipeline` full-pipeline
+rerun "over" already used — see that card for the fix and its own test. Two tests this task
+added/left unmodified needed updating as a direct result, both fixed in the same 17.4 commit,
+not here:
+- `test_pipeline_targeted_budget_repair_under_brings_the_total_inside_tolerance` (line 407-413
+  above, formerly the "test 7" rewrite): the rerun's fresh generation now lands inside tolerance
+  on the first try, so `repair_count` is 0, not 1 — the checkpoint is still marked
+  `global_budget_repaired`/`direction=under`, just via a generate call, not a repair call.
+- `test_pipeline_global_validation_still_fails_after_one_final_section_repair` (line 471-472
+  above, described as "pre-existing, unmodified" under 17.1 — no longer true after 17.4): the
+  rerun's fresh generation is now scripted separately from its follow-up repair (one more
+  scripted call than before), since a fresh generate and a repair are now distinct steps in the
+  "under" direction too.

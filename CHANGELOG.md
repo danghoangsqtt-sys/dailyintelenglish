@@ -24,6 +24,15 @@ Versioning: [SemVer](https://semver.org/)
   bundled — see README for why).
 
 ### Changed
+- Phase 17 Task 17.4 (2026-09-23, ENH-010, self-implemented by Coder): Gate
+  B-8's owner configuration regressed from 2/2 to 1/2 — the global budget
+  repair's "under" direction (Task 17.1) used a single, direct repair call on
+  a section's existing text, which overshot 91 words to 505 (2.1x its 238
+  target) and failed the job. "Under" now reruns the chosen section through
+  the same full generate-then-repair pipeline "over" already used, whose
+  in-loop length-only repair self-corrects exactly this kind of overshoot.
+  The plain-repair branch is removed; both directions now go through one
+  code path.
 - Phase 17 Task 17.2 (2026-09-23, ENH-010, self-implemented by Coder): Gate
   B-7 had 2 `has_outro: false` results. One was a genuine ending on a call to
   action with no goodbye; the other was a runner false negative — the

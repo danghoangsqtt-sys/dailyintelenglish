@@ -1514,9 +1514,14 @@ async def test_pipeline_targeted_budget_repair_under_brings_the_total_inside_tol
     its own nominal to compensate for section 1's shortfall elsewhere, so by
     NOMINAL deviation section 2 is not the worst offender -- section 1 is
     (deviation 0 beats section 2's negative one). The global stage repairs
-    section 1 (the "under" direction, a plain `_repair_section` call, since
-    repairs already tend to grow text); `repair_count` reflects exactly that
-    one extra repair."""
+    section 1 (the "under" direction). Task 17.4 (Gate B-8: "under"'s old plain
+    `_repair_section` call overshot 91->505 words against a 238 target):
+    "under" now reruns the section through the SAME full per-section pipeline
+    `_run_section_pipeline` as "over" -- a fresh generation, not a repair of the
+    existing lines. Scripted to land inside its own ±15% tolerance on that
+    fresh generation, so no further repair call fires at all; `repair_count`
+    stays 0 even though the checkpoint is still marked as a global budget
+    repair."""
     # Task 14.10 (D13): 6.4 min * 125 wpm (B1) = 800.
     project = await _project(db, duration_minutes=6.4)  # target_words = 800
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
@@ -1544,8 +1549,10 @@ async def test_pipeline_targeted_budget_repair_under_brings_the_total_inside_tol
     section2_json = _section_json((alex_id, 75, 1000), (maya_id, 75, 1100))
     # Total: 450, well outside the global ±10% band [720, 880] (under).
     # Targeted budget repair asks section 1 for max(1, 800-(450-300))=650;
-    # scripted to land close enough (620, balanced 310/310) to bring the
-    # total inside tolerance without skewing speaker balance.
+    # Task 17.4: this is now a FRESH generation (via `_run_section_pipeline`),
+    # not a repair of the existing 300-word lines. Scripted to land inside its
+    # own ±15% tolerance of 650 ([552.5, 747.5]) on the first try (620,
+    # balanced 310/310), so no further repair call fires.
     section1_repaired_json = _section_json((alex_id, 310, 2000), (maya_id, 310, 2400))
 
     router, gemini, _local = _build_router(
@@ -1562,7 +1569,7 @@ async def test_pipeline_targeted_budget_repair_under_brings_the_total_inside_tol
 
     final_job = await ai_job_service.get_job(db, job["id"], project["id"])
     assert final_job["status"] == "complete", final_job.get("error_message")
-    assert final_job["repair_count"] == 1  # exactly the one targeted budget repair
+    assert final_job["repair_count"] == 0  # fresh generation already inside tolerance
     assert gemini.call_count == 4
 
     lines = await script_service.get_script(db, project["id"])
@@ -1573,8 +1580,10 @@ async def test_pipeline_targeted_budget_repair_under_brings_the_total_inside_tol
     checkpoints = await ai_job_service.get_valid_checkpoints(db, job["id"])
     repaired_checkpoint = next(c for c in checkpoints if c["section_index"] == 1)
     metrics = json.loads(repaired_checkpoint["metrics_json"])
-    assert metrics["repaired"] is True
-    assert metrics["words"] == 620  # overwritten by the targeted repair, not the original 300
+    assert metrics["repaired"] is False
+    assert metrics["words"] == 620  # overwritten by the targeted rerun, not the original 300
+    assert metrics["target_nominal"] == 300
+    assert metrics["target_effective"] == 650
     assert metrics["global_budget_repaired"] is True
     assert metrics["global_budget_direction"] == "under"
 
@@ -1586,10 +1595,20 @@ async def test_pipeline_targeted_budget_repair_under_brings_the_total_inside_tol
 
 
 async def test_pipeline_global_validation_still_fails_after_one_final_section_repair(db):
-    """Verification item 5: the one final-section budget repair is bounded
+    """Verification item 5: the one global budget repair episode is bounded
     (`SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS=1`) -- if its output still
     misses the global ±10% band, the job fails with `global_validation_failed`,
-    no second attempt is made, and no partial script is saved."""
+    no second episode is attempted, and no partial script is saved.
+
+    Section 1 lands exactly on its nominal target (deviation 0) while section
+    2 overshoots its own nominal (deviation -50) -- by `_worst_budget_section`'s
+    nominal-deviation selection, section 1 is picked (0 > -50), same as
+    `test_pipeline_targeted_budget_repair_under_brings_the_total_inside_tolerance`.
+    Task 17.4: the rerun goes through the full `_run_section_pipeline` (a fresh
+    generation, then one semantic repair since the fresh output is still badly
+    under budget) -- both scripted still far short, so the repaired section is
+    accepted with the drift (Task 14.3 item 4's existing accept-and-carry) and
+    the merged total (300+85=385) stays well outside [720, 880]."""
     # Task 14.10 (D13): 6.4 min * 125 wpm (B1) = 800 -- preserves this test's
     # existing carry/clamp/repair arithmetic unchanged; never actually about "8
     # minutes", only about the round number 800.
@@ -1606,14 +1625,17 @@ async def test_pipeline_global_validation_still_fails_after_one_final_section_re
         }
     )
     section1_json = _section_json((alex_id, 300, 0))
-    section2_first_json = _section_json((maya_id, 150, 1000))
-    # The final-section budget repair's own output is STILL far short -- the
-    # merged total (300+80=380) stays well outside [720, 880].
-    section2_still_short_json = _section_json((maya_id, 80, 2000))
+    section2_json = _section_json((maya_id, 150, 1000))
+    # Section 1's rerun (new_target = 800-(450-300) = 650): a fresh generation
+    # that's still far short, then one semantic repair that's also still far
+    # short -- both scripted well outside 650's ±15% band.
+    section1_rerun_fresh_json = _section_json((alex_id, 80, 2000))
+    section1_rerun_repaired_json = _section_json((alex_id, 85, 2100))
 
-    router, gemini, _local = _build_router(
-        [_result(outline_json), _result(section1_json), _result(section2_first_json), _result(section2_still_short_json)]
-    )
+    router, gemini, _local = _build_router([
+        _result(outline_json), _result(section1_json), _result(section2_json),
+        _result(section1_rerun_fresh_json), _result(section1_rerun_repaired_json),
+    ])
 
     job, _ = await ai_job_service.create_job(
         db, project["id"], "script", {"project": project, "operation": "script"}
@@ -1626,9 +1648,9 @@ async def test_pipeline_global_validation_still_fails_after_one_final_section_re
     final_job = await ai_job_service.get_job(db, job["id"], project["id"])
     assert final_job["status"] == "error"
     assert final_job["error_code"] == "global_validation_failed"
-    # bounded: outline + section1 + section2 + exactly one final-section repair,
-    # never a second attempt at the final-section budget repair.
-    assert gemini.call_count == 4
+    # bounded: outline + section1 + section2 + the rerun's fresh generate + its
+    # one semantic repair -- never a second global-budget-repair episode.
+    assert gemini.call_count == 5
     num_sections = 2
     assert final_job["repair_count"] <= num_sections + 1
     lines = await script_service.get_script(db, project["id"])
@@ -2046,6 +2068,127 @@ async def test_pipeline_over_budget_targets_middle_section_by_nominal_deviation_
     assert "global_budget_repaired" not in section3_metrics
 
 
+async def test_pipeline_under_budget_rerun_self_corrects_an_overshoot_gate_b8_shape(db):
+    """Task 17.4 (ENH-010), Gate B-8 owner run 2: reproduces the real 7-section
+    shape from the trial checkpoints (task-17.4.md) -- words 211/124/124/103/
+    99/91/211 against nominal targets 159/158/159/158/159/158/159 (sum 1,110 =
+    target_words). Total 963 misses the real global ±10% band ([999, 1,221]),
+    "under". By NOMINAL deviation, section 6 is the worst-under section
+    (158-91=+67), beating every other section; new_target = max(1,
+    1110-(963-91)) = 238 -- both numbers match the real gate evidence exactly.
+
+    Sections 1-3 each need their own one semantic repair to reach their final
+    checkpoint values (carry pushes their own effective targets below the
+    ±15% band those final values fall in); sections 4/5/6/7 land inside their
+    own effective-target band on the first attempt, no repair.
+
+    Task 17.4's fix: the "under" direction's rerun for section 6 goes through
+    the SAME full per-section pipeline as "over" (Task 17.1) -- exactly
+    reproducing the real defect's shape (a fresh generation that's still far
+    short, then a semantic repair that overshoots to ~505 -- 2.1x the 238
+    target, the real B-8 defect), but now the in-loop length-only repair (also
+    part of that same pipeline, previously only reached by "over") self-
+    corrects the overshoot back inside ±15% before the checkpoint is saved,
+    so the job completes instead of failing."""
+    target_minutes = 1110 / 125  # B1: 8.88 minutes -> target_words = 1110
+    project = await _project(db, duration_minutes=target_minutes)
+    alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
+
+    nominal = [159, 158, 159, 158, 159, 158, 159]
+    outline_json = json.dumps(
+        {
+            "title": "T",
+            "sections": [
+                {"index": i, "objective": f"cover part {i} here", "target_words": nominal[i - 1]}
+                for i in range(1, 8)
+            ],
+        }
+    )
+
+    # Section 1 (effective target 159, carry=0): one attempt, then one semantic
+    # repair lands at 211 -- over the ±15% band (182.85) but under the
+    # length-repair's 35% carry-cap trigger (214.65), so accepted off-target.
+    s1_attempt = _section_json((alex_id, 5, 0))
+    s1_repair = _section_json((alex_id, 106, 1000), (maya_id, 105, 1200))  # 211 words
+    # Section 2 (effective target 106, carry=-52 from section 1's overshoot):
+    # one semantic repair lands at 124 -- over the ±15% band (121.9) but under
+    # the carry-cap trigger (143.1).
+    s2_attempt = _section_json((maya_id, 10, 2000))
+    s2_repair = _section_json((alex_id, 62, 3000), (maya_id, 62, 3200))  # 124 words
+    # Section 3 (effective target 103, carry=-70): one semantic repair lands
+    # at 124 -- over the ±15% band (118.45) but under the carry-cap trigger
+    # (139.05).
+    s3_attempt = _section_json((alex_id, 8, 4000))
+    s3_repair = _section_json((alex_id, 62, 5000), (maya_id, 62, 5200))  # 124 words
+    # Sections 4-7 each land inside their own effective-target ±15% band on
+    # the first attempt -- no repair.
+    s4_attempt = _section_json((alex_id, 52, 6000), (maya_id, 51, 6200))  # effective 103, band [87.55, 118.45]
+    s5_attempt = _section_json((alex_id, 50, 7000), (maya_id, 49, 7200))  # effective 103, band [87.55, 118.45]
+    s6_attempt = _section_json((alex_id, 46, 8000), (maya_id, 45, 8200))  # effective 103, band [87.55, 118.45]
+    s7_attempt = _section_json((alex_id, 106, 9000), (maya_id, 105, 9200))  # last; effective 238, band [202.3, 273.7]
+
+    # Total after the main loop: 211+124+124+103+99+91+211 = 963, outside
+    # [999, 1221] ("under"). Section 6 is targeted (nominal deviation +67);
+    # new_target=238. Task 17.4: the rerun is a fresh generation (raw and
+    # short, echoing the real defect's starting point), then one semantic
+    # repair that overshoots to 505 (over the ±15% band of 273.7 AND the
+    # carry-cap trigger of 321.3 -- exactly reproducing the real 91->505
+    # overshoot), then one length-only repair that lands back inside the
+    # ±15% band.
+    s6_rerun_fresh = _section_json((alex_id, 43, 10000), (maya_id, 42, 10200))  # 85 words -- still far short
+    s6_rerun_semantic_repair = _section_json((alex_id, 253, 11000), (maya_id, 252, 11300))  # 505 words -- the overshoot
+    s6_rerun_length_repair = _section_json((alex_id, 130, 12000), (maya_id, 130, 12200))  # 260 words -- back in band
+
+    router, gemini, _local = _build_router([
+        _result(outline_json),
+        _result(s1_attempt), _result(s1_repair),
+        _result(s2_attempt), _result(s2_repair),
+        _result(s3_attempt), _result(s3_repair),
+        _result(s4_attempt),
+        _result(s5_attempt),
+        _result(s6_attempt),
+        _result(s7_attempt),
+        _result(s6_rerun_fresh), _result(s6_rerun_semantic_repair), _result(s6_rerun_length_repair),
+    ])
+
+    job, _ = await ai_job_service.create_job(
+        db, project["id"], "script", {"project": project, "operation": "script"}
+    )
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    worker = AIWorker(db_getter=lambda: db)
+
+    await script_pipeline.make_handler(router)(claimed, worker)
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final_job["status"] == "complete", final_job.get("error_message")
+    # outline + 3 sections x 2 calls + 4 sections x 1 call + the rerun's 3 calls.
+    assert gemini.call_count == 1 + (3 * 2) + 4 + 3 == 14
+
+    # The rerun took the full-pipeline route: generate, then semantic repair,
+    # then length-only repair -- not a single plain repair call.
+    calls = json.loads(final_job["metrics_json"])["calls"]
+    assert [c["purpose"] for c in calls[-3:]] == [
+        "script_section", "script_section_repair", "script_section_length_repair",
+    ]
+    assert [c["section_index"] for c in calls[-3:]] == [6, 6, 6]
+
+    lines = await script_service.get_script(db, project["id"])
+    total_words = sum(len(line["text"].split()) for line in lines)
+    assert 999 <= total_words <= 1221
+    assert total_words == 963 - 91 + 260  # 1132
+
+    checkpoints = await ai_job_service.get_valid_checkpoints(db, job["id"])
+    section6_checkpoint = next(c for c in checkpoints if c["section_index"] == 6)
+    section6_metrics = json.loads(section6_checkpoint["metrics_json"])
+    assert section6_metrics["global_budget_repaired"] is True
+    assert section6_metrics["global_budget_direction"] == "under"
+    assert section6_metrics["repaired"] is True
+    assert section6_metrics["length_repaired"] is True
+    assert section6_metrics["words"] == 260
+    assert section6_metrics["target_nominal"] == 158
+    assert section6_metrics["target_effective"] == 238
+
+
 async def test_pipeline_over_budget_global_repair_call_count_hits_the_2n_plus_1_ceiling(db):
     """Task 17.1 (ENH-010): the total *model-call* bound per job is still
     2 * num_sections + 1 (each section: one semantic + one length-only repair;
@@ -2369,7 +2512,13 @@ async def test_pipeline_mixed_global_failure_triggers_budget_then_repetition_rep
     repair fires) while still failing the *global* check and the repetition
     check simultaneously -- the gap between the two tolerances, not
     multi-section carry math, is what makes both failures coexist without any
-    per-section repair muddying the call count."""
+    per-section repair muddying the call count.
+
+    Task 17.4: the budget stage's rerun (direction "under" here, the episode's
+    only section) is a fresh generation via `_run_section_pipeline`, not a
+    repair of the existing lines -- `is_repair=False`, so it doesn't add to
+    `repair_count` on its own. Only the repetition repair that fires next is a
+    true repair; `repair_count` is 1, not 2."""
     project = await _project(db)  # duration_minutes=0.8 -> target_words=100 (Task 14.10)
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
 
@@ -2382,9 +2531,11 @@ async def test_pipeline_mixed_global_failure_triggers_budget_then_repetition_rep
         (alex_id, f"{REPEATED_PHRASE} {_words(36, 0)}"),
         (maya_id, f"{REPEATED_PHRASE} {_words(36, 100)}"),
     )
-    # Budget repair (checked first) fixes the word count (100, inside [90,110])
-    # but still repeats the phrase -- repetition alone remains after this.
-    budget_repair_json = _lines_json(
+    # Budget stage's fresh generation (checked first) fixes the word count
+    # (100, inside [90,110]) and lands inside its own ±15% band too (no
+    # semantic repair needed here) -- but still repeats the phrase, so
+    # repetition alone remains after this.
+    budget_rerun_json = _lines_json(
         (alex_id, f"{REPEATED_PHRASE} {_words(42, 300)}"),
         (maya_id, f"{REPEATED_PHRASE} {_words(42, 400)}"),
     )
@@ -2393,7 +2544,7 @@ async def test_pipeline_mixed_global_failure_triggers_budget_then_repetition_rep
     repetition_repair_json = _section_json((alex_id, 50, 600), (maya_id, 50, 700))
 
     router, gemini, _local = _build_router(
-        [_result(outline_json), _result(section_json), _result(budget_repair_json), _result(repetition_repair_json)]
+        [_result(outline_json), _result(section_json), _result(budget_rerun_json), _result(repetition_repair_json)]
     )
 
     job, _ = await ai_job_service.create_job(
@@ -2406,9 +2557,9 @@ async def test_pipeline_mixed_global_failure_triggers_budget_then_repetition_rep
 
     final_job = await ai_job_service.get_job(db, job["id"], project["id"])
     assert final_job["status"] == "complete", final_job.get("error_message")
-    assert final_job["repair_count"] == 2  # budget repair, then repetition repair
+    assert final_job["repair_count"] == 1  # only the repetition repair; the budget rerun is a fresh generate
     # Exactly the 4 scripted calls consumed, in order: outline, attempt,
-    # budget repair, repetition repair.
+    # budget-stage fresh generate, repetition repair.
     assert gemini.call_count == 4
 
     lines = await script_service.get_script(db, project["id"])

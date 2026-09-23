@@ -1182,9 +1182,9 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
     # budget slot still unused on the next pass, since its condition never
     # matched while the failure was still repetition-only. Worst case: one
     # budget-repair attempt (a generate + in-loop repair(s) via
-    # `_run_section_pipeline` for "over", or a single `_repair_section` call for
-    # "under") plus one repetition-repair attempt -- see task-17.1.md's design
-    # for the exact worst-case model-call accounting.
+    # `_run_section_pipeline`, both directions -- Task 17.4) plus one
+    # repetition-repair attempt -- see task-17.1.md's design for the exact
+    # worst-case model-call accounting (unchanged at 4 by Task 17.4).
     budget_repair_used = False
     repetition_repair_used = False
 
@@ -1200,81 +1200,49 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
             if target is not None:
                 worst_spec = next(spec for spec in outline.sections if spec.index == target.section_index)
 
-                if target.direction == "over":
-                    # Task 17.1, C3/C4: a bare fresh regeneration alone lands at
-                    # a median 0.60x its target (evidence: plan Amendment B);
-                    # rerunning the *full* per-section path (generate -> repair
-                    # -> in-loop length repair) lands at a median 1.02x -- the
-                    # calibrated tool, not a new one, and it's exactly the main
-                    # loop's own per-section pipeline, reused via
-                    # `_run_section_pipeline`.
-                    position = next(
-                        i for i, spec in enumerate(outline.sections, start=1) if spec.index == target.section_index
-                    )
-                    is_last_target = position == total_sections
-                    if position == 1:
-                        prior_summary_for_target = ""
-                    else:
-                        preceding_spec = outline.sections[position - 2]
-                        preceding_checkpoint = section_checkpoints.get(preceding_spec.index)
-                        preceding_lines = (
-                            _SECTION_LINES_ADAPTER.validate_json(preceding_checkpoint["result_json"])
-                            if preceding_checkpoint is not None
-                            else []
-                        )
-                        prior_summary_for_target = summarize_section(preceding_lines)
-                    # Task 17.1, C4: computed from the OTHER sections, never [].
-                    avoid_phrases_for_target = frequent_repeated_phrases([
-                        normalize_text(word)
-                        for other_index, other_checkpoint in section_checkpoints.items()
-                        if other_index != target.section_index
-                        for other_line in _SECTION_LINES_ADAPTER.validate_json(other_checkpoint["result_json"])
-                        for word in _WORD_RE.findall(other_line.text)
-                    ])
-                    rerun = await _run_section_pipeline(
-                        router, project, outline, worst_spec, target.new_target, prior_summary_for_target,
-                        avoid_phrases_for_target, known_speaker_ids, is_last_target, db, job_id,
-                    )
-                    if rerun is None:
-                        return
-                    new_lines, new_metrics = rerun
-                    new_metrics = {**new_metrics, "global_budget_repaired": True, "global_budget_direction": "over"}
+                # Task 17.1, C3/C4, extended to "under" by Task 17.4: a bare
+                # fresh regeneration alone lands at a median 0.60x its target
+                # (evidence: plan Amendment B); rerunning the *full*
+                # per-section path (generate -> repair -> in-loop length
+                # repair) lands at a median 1.02x -- the calibrated tool, not
+                # a new one, and it's exactly the main loop's own per-section
+                # pipeline, reused via `_run_section_pipeline`. Gate B-8 found
+                # "under"'s old plain-repair path overshooting to 2.1x target
+                # (91 -> 505 words against a 238 target, task-17.4.md) --
+                # the in-loop length repair this path already has is exactly
+                # what self-corrects that kind of overshoot for "over", so it
+                # applies unconditionally now, not just when direction == "over".
+                position = next(
+                    i for i, spec in enumerate(outline.sections, start=1) if spec.index == target.section_index
+                )
+                is_last_target = position == total_sections
+                if position == 1:
+                    prior_summary_for_target = ""
                 else:
-                    # "Under" keeps the plain semantic-repair mechanism: repairs
-                    # already tend to grow text (Task 17.1, C3 evidence), which
-                    # is exactly what "under" needs.
-                    error_message = (
-                        f"{_GLOBAL_BUDGET_ERROR_PREFIX} {total_words} is outside "
-                        f"±{int(SCRIPT_GLOBAL_WORD_TOLERANCE * 100)}% of target {target_words} words -- "
-                        f"this section is the most {target.direction}-budget by {target.deviation} words "
-                        f"versus its own nominal target of {target.nominal}"
+                    preceding_spec = outline.sections[position - 2]
+                    preceding_checkpoint = section_checkpoints.get(preceding_spec.index)
+                    preceding_lines = (
+                        _SECTION_LINES_ADAPTER.validate_json(preceding_checkpoint["result_json"])
+                        if preceding_checkpoint is not None
+                        else []
                     )
-                    try:
-                        new_lines, structural_errors, _budget_errors = await _repair_section(
-                            router, project, worst_spec.model_copy(update={"target_words": target.new_target}),
-                            target.lines, [error_message], known_speaker_ids, db, job_id,
-                            purpose="script_global_budget_repair",
-                        )
-                    except ProviderError as exc:
-                        await _fail_provider(db, job_id, exc)
-                        return
-                    if structural_errors:
-                        await _fail(db, job_id, "section_validation_failed", structural_errors)
-                        return
-                    new_words = section_word_count(new_lines)
-                    new_metrics = {
-                        "target_nominal": target.nominal,
-                        "target_effective": target.new_target,
-                        "words": new_words,
-                        "deviation_pct": (
-                            round((new_words - target.new_target) / target.new_target, 4) if target.new_target else 0.0
-                        ),
-                        "repaired": True,
-                        "words_before_repair": section_word_count(target.lines),
-                        "errors_before_repair": 1,
-                        "global_budget_repaired": True,
-                        "global_budget_direction": "under",
-                    }
+                    prior_summary_for_target = summarize_section(preceding_lines)
+                # Task 17.1, C4: computed from the OTHER sections, never [].
+                avoid_phrases_for_target = frequent_repeated_phrases([
+                    normalize_text(word)
+                    for other_index, other_checkpoint in section_checkpoints.items()
+                    if other_index != target.section_index
+                    for other_line in _SECTION_LINES_ADAPTER.validate_json(other_checkpoint["result_json"])
+                    for word in _WORD_RE.findall(other_line.text)
+                ])
+                rerun = await _run_section_pipeline(
+                    router, project, outline, worst_spec, target.new_target, prior_summary_for_target,
+                    avoid_phrases_for_target, known_speaker_ids, is_last_target, db, job_id,
+                )
+                if rerun is None:
+                    return
+                new_lines, new_metrics = rerun
+                new_metrics = {**new_metrics, "global_budget_repaired": True, "global_budget_direction": target.direction}
 
                 async with write_transaction(db):
                     await ai_job_service.save_checkpoint(

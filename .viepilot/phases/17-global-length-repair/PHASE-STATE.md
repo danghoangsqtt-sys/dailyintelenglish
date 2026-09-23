@@ -26,9 +26,11 @@
 |---|---|---|---|---|
 | 17.1 | Budget-aware global stage (targeted budget repair, length-aware repetition repair, mixed-failure path) | Coder | done | — |
 | 17.2 | Final-section sign-off + `has_outro_last3` diagnostic | Coder | done | — |
-| 17.3 | Gate B-8, local only | PM | not started | Coder idle |
+| 17.3 | Gate B-8, local only | PM | done | — |
+| 17.4 | "Under" direction via the full per-section path (Amendment C, Gate B-8 fix) | Coder | done | — |
+| 17.5 | Short re-gate (B1 ×5 + owner config ×4) | PM | not started | Coder idle |
 
-**Execution order:** 17.1 → 17.2 → 17.3 → close-out.
+**Execution order:** 17.1 → 17.2 → 17.3 → 17.4 → 17.5 → close-out.
 
 ## Evidence log
 
