@@ -2081,7 +2081,7 @@ Plan `docs/implementation/phase-17-global-length-repair.md`; state `.viepilot/ph
 
 | Task | Owner | Status |
 |---|---|---|
-| 17.1 Budget-aware global stage (ENH-010) | Coder | not started |
+| 17.1 Budget-aware global stage (ENH-010) | Coder | ✅ done (`5930aaf`) |
 | 17.2 Final-section sign-off + `has_outro_last3` | Coder | not started |
 | 17.3 Gate B-8 | PM | not started |
 
@@ -2089,6 +2089,7 @@ PM review log:
 
 - 17.1 design `caab2e2` — **CHANGES** (PM, 2026-09-23; plan Amendment A). The single ordered two-slot loop is approved (clear, bounded, 2 extra calls max, reuses the existing caps). Required: (C1, **blocking**) the budget-error match uses `"total episode word count"`, which is the repair-message text; `validate_global` emits `"total word count …"` (script_pipeline.py:472), so the budget branch would never fire. Share one prefix constant, and drive the tests through the real `validate_global`. (C2) Choose the section by deviation from its **nominal** target, not the effective one (Amendment A.1); the 5-min test must use the real B-7 numbers and expect section 2. (C3) Evidence-based shrink method (Amendment A.2): 36/103 repaired sections ended more than 15% over and the only global shrink request failed, so the design must say how an over-budget fix actually shrinks. The length item in the repetition repair and the item 4 view are accepted.
 - 17.1 design rev `b265221` — **APPROVED with C4** (PM, 2026-09-23; plan Amendment B). C1 (shared prefix constant) and C2 (nominal selection, real 5-min numbers → section 2) are accepted. C3's bare fresh regeneration is rejected on evidence: first-pass generation has a median of 0.60× target (15/118 within ±15%), so it would overshoot into "too short". C4: rerun the chosen section through the **full per-section path** (generation + in-loop length repair; median 1.02×, 65/118 within ±15%) via a behaviour-preserving helper extraction; worst case is 3 extra calls; `avoid_phrases` comes from the other sections. The "under" direction stays a plain repair.
+- 17.1 impl `5930aaf` — **ACCEPTED** (PM, 2026-09-23). C1–C4 implemented as approved: a shared `_GLOBAL_BUDGET_ERROR_PREFIX`; nominal-deviation selection; "over" reruns the full per-section path via the extracted `_run_section_pipeline` (86 pre-existing per-section tests pass unedited), with `avoid_phrases` from the other sections; "under" uses a plain repair; an ordered 2-slot loop. **Worst case corrected by the Coder from 3 to 4 extra calls**, accepted (the rerun inherits the existing per-section ceiling of 3, plus 1 repetition repair; still bounded). 4 pre-existing tests rewritten: they specified the old last-section-only global stage this task replaces, and are accepted as spec changes, not regressions. PM re-verification: revert check A (budget detection disabled → 7 tests FAIL, including the run 1 and 5-min shapes); revert check B (selection by effective target → the 5-min test FAILS); full suite **960 passed**; `ruff` clean; real DB 7. Watch items for Gate B-8: (1) a rerun middle section may not flow into the next section's opening, since that section's `prior_summary` came from the old text; (2) the "over" rerun doesn't count as a repair in `repair_count`, so B-8 repair counts are not strictly comparable with B-7.
 
 ## Phase 18 Task Status (queued behind Phase 17)
 
