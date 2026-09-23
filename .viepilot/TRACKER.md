@@ -2102,13 +2102,13 @@ PM review log:
 
 Delivered: budget-aware global stage (17.1: nominal-deviation targeting, full per-section rerun, ordered 2-slot loop, length-aware repetition repair); final-section sign-off + `has_outro_last3` (17.2); Gate B-8 (17.3: runner PASS, found the "under" defect); "under" via the full path (17.4); re-gate PASS (17.5). Suite 956 → 964. ENH-010 done.
 
-## Phase 18 Task Status (queued behind Phase 17)
+## Phase 18 Task Status
 
 Plan `docs/implementation/phase-18-cloud-first-ai.md`; state `.viepilot/phases/18-cloud-first-ai/PHASE-STATE.md`.
 
 | Task | Owner | Status |
 |---|---|---|
-| 18.1 `OpenAICompatProvider` | Coder | not started |
+| 18.1 `OpenAICompatProvider` | Coder | in progress (design approved) |
 | 18.2 Router roles/modes/budgets; Gemini removed | Coder | not started |
 | 18.3 Settings + health + privacy note | Coder | not started |
 | 18.4 Fallback-rate readout + runner | Coder | not started |
@@ -2116,7 +2116,7 @@ Plan `docs/implementation/phase-18-cloud-first-ai.md`; state `.viepilot/phases/1
 
 PM review log:
 
-- (none yet)
+- 18.1 design `85ab8ed` — **APPROVED with 2 changes** (PM, 2026-09-23). The shape, the URL validator (https or loopback, path allowed), the payload (no `response_format`, `reasoning.exclude`), `ProviderAuthError` for 401/402/403/404 (confirmed non-transient in the router), and the MockTransport-only tests are all accepted. (C1) 429, and a 200-with-error body whose code is 429, map to the existing transient **`ProviderRateLimitError`**, not `ProviderUnavailableError`. The plan table was too loose; separating them lets 18.4 report "rate-limited" vs "overloaded" for D22. (C2) Exception messages carry status + error code/type + a short provider message only, **never the raw response body**, and any occurrence of the key is redacted as a backstop. The key-safety test adds a 401 whose body echoes the key.
 
 ## Decision Log
 
