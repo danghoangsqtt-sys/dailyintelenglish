@@ -202,6 +202,18 @@ Versioning: [SemVer](https://semver.org/)
   correctly by existing code, so no change was needed there.
 
 ### Fixed
+- Phase 16 Task 16.1 (2026-09-23, BUG-022, self-implemented by Coder): the AI
+  worker's poll loop had no top-level guard, so any transient exception (for
+  example `database is locked` while `data/app.db` is open in a DB browser, or
+  an illegal-transition error if a handler raised right after already
+  committing a terminal status) silently ended the loop's background task --
+  `/api/ai/health` kept reporting OK while every new script/learning job stayed
+  `pending` forever, until the app was restarted. The loop now catches any
+  exception per iteration, logs it, and backs off before continuing (never
+  swallowing cancellation); the error-transition write inside the handler
+  failure path is itself guarded the same way; and `/api/ai/health` gained a
+  `worker_alive` field reporting whether the loop's task is actually still
+  running.
 - Found via a 4th `/vp-audit` pass (2026-09-18, final confirmation after Phase 11
   closed), fixed immediately by PM: the project's own README was missing its most
   recent round of bug fixes (Phase 11) from its summary table, and its architecture

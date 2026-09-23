@@ -1,6 +1,6 @@
 # Task 16.1 — Worker Loop Guard + Liveness (BUG-022)
 
-- **Status:** in_progress
+- **Status:** done
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** none
@@ -120,6 +120,22 @@ dict: `"worker_alive": ai_worker.is_alive`. No existing field changes.
   by temporarily removing the `try/except` around the loop body and confirming
   it fails, then restoring it.
 
+**Known residual (PM note N2, folded in post-approval)**
+If the guarded error-transition (2) itself fails for a transient reason (for
+example `database is locked`), the job stays `running` rather than reaching
+`error`. It's only reclaimed by `recover_abandoned_jobs` at the next
+`start()`, once its lease expires. Acceptable for 16.1 — the loop survives and
+the job id is logged (`ai_worker_error_transition_failed`) — not in scope to
+fix here.
+
+**PM note N1 (folded in post-approval)**
+`AI_WORKER_LOOP_ERROR_BACKOFF_SECONDS` is read as a module attribute
+(`ai_worker_module.AI_WORKER_LOOP_ERROR_BACKOFF_SECONDS`) at the point of use
+inside `_run_loop`, not captured into a default arg or a local at
+`__init__`/import time, so test (a) can `monkeypatch.setattr` it to a small
+value (e.g. `0.01`) the same way the existing shutdown-grace test patches
+`AI_WORKER_SHUTDOWN_GRACE_SECONDS` — no multi-second sleeps in the suite.
+
 ## Verification (required)
 
 - `_claim_next` raises once → the loop survives → a later job still completes.
@@ -131,4 +147,44 @@ dict: `"worker_alive": ai_worker.is_alive`. No existing field changes.
 
 ## Evidence
 
-_pending_
+- Design commit `f925ea5` (approved by PM, with notes N1/N2 folded in, no
+  re-approval required). Implementation commit: see PHASE-STATE / TRACKER for
+  the sha recorded alongside PM acceptance.
+- Files touched, all within the allowed list: `app/services/ai_worker.py`
+  (per-iteration loop guard, guarded error-transition, done-callback,
+  `is_alive`), `app/core/constants.py` (`AI_WORKER_LOOP_ERROR_BACKOFF_SECONDS
+  = 5.0`), `app/api/ai_jobs.py` (`worker_alive` field on `/api/ai/health`, via
+  a lazy `from app.main import ai_worker` inside the route, with a comment
+  explaining why), `tests/test_ai_worker.py` (+6 tests),
+  `tests/test_ai_health_api.py` (+2 tests, plus the locked key-set updated),
+  `CHANGELOG.md`. `tests/test_ai_jobs_api.py` needed no changes (its two
+  `/api/ai/health` tests assert individual keys, not a closed set).
+- Targeted run: `tests/test_ai_worker.py tests/test_ai_health_api.py
+  tests/test_ai_jobs_api.py` → 33 passed.
+- Full suite: `./venv/Scripts/python.exe -m pytest -q` → **940 passed** (932
+  baseline + 8 new tests: 6 in `test_ai_worker.py`, 2 in
+  `test_ai_health_api.py`). No baseline test broke.
+- `ruff check app scripts tests` → all checks passed.
+- Revert-and-confirm-failure: temporarily removed the `try/except Exception`
+  wrapper around `_run_loop`'s body and re-ran
+  `test_loop_survives_a_transient_claim_error_and_processes_a_later_job` alone
+  → failed as expected (the injected `RuntimeError` propagated out of
+  `_claim_next`, ended the task, and the new done-callback correctly logged
+  `ai_worker_task_ended_unexpectedly`, confirming that piece too). Restored
+  the guard → the same test and the full `test_ai_worker.py` file (12 tests)
+  passed again.
+- Verification bullets from the card, confirmed by test:
+  - `_claim_next` raises once → loop survives → later job completes:
+    `test_loop_survives_a_transient_claim_error_and_processes_a_later_job`.
+  - A handler raises after committing `complete` → loop survives, job stays
+    `complete`:
+    `test_process_survives_an_illegal_error_transition_after_handler_already_completed`.
+  - `stop()` still honours the grace period: pre-existing
+    `test_worker_stop_is_bounded_even_if_a_handler_never_returns`, unmodified
+    and still passing.
+  - Cancellation is not swallowed:
+    `test_run_loop_does_not_swallow_cancellation`.
+  - Health reports `worker_alive: false` for a dead task:
+    `test_health_reports_worker_alive_false_when_the_worker_task_is_dead`
+    (whitebox, clears the real singleton's `_task`) plus the unit-level
+    `test_is_alive_reflects_task_lifecycle`.

@@ -109,6 +109,11 @@ async def ai_health() -> dict:
     except (httpx.HTTPError, ValueError):
         ollama_reachable = False
 
+    # Deferred import (Task 16.1, BUG-022): app.main constructs the real AIWorker
+    # singleton after importing this module to build its router, so a top-level
+    # import here would be circular. By request time app.main has finished loading.
+    from app.main import ai_worker
+
     return ok(
         {
             "mode": settings.AI_MODE,
@@ -117,6 +122,7 @@ async def ai_health() -> dict:
             "model_present": model_present,
             "model_digest": model_digest,
             "cloud_enabled": settings.AI_ALLOW_CLOUD,
+            "worker_alive": ai_worker.is_alive,
         },
         started_at=started_at,
     )

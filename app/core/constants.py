@@ -204,6 +204,10 @@ AI_JOB_MAX_RECOVERY_ATTEMPTS = 3
 # Bounded grace period for an in-flight job to reach a safe checkpoint boundary
 # during app shutdown, before the worker stops waiting and returns anyway.
 AI_WORKER_SHUTDOWN_GRACE_SECONDS = 10.0
+# How long the poll loop backs off after an unhandled exception in an iteration
+# (Task 16.1, BUG-022), so a transient failure (e.g. "database is locked")
+# doesn't spin-retry immediately.
+AI_WORKER_LOOP_ERROR_BACKOFF_SECONDS = 5.0
 # Bumped whenever the job/checkpoint schema or worker resume semantics change, so a
 # job created under an older pipeline can be told apart from a current one.
 AI_PIPELINE_VERSION = "13.3"

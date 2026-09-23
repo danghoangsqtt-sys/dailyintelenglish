@@ -59,7 +59,26 @@ def test_health_response_has_no_extra_undeclared_fields():
         "model_present",
         "model_digest",
         "cloud_enabled",
+        "worker_alive",
     }
     with TestClient(app) as client:
         response = client.get("/api/ai/health")
     assert set(response.json()["data"].keys()) == expected_keys
+
+
+def test_health_reports_worker_alive_true_during_normal_operation(client):
+    """Task 16.1 (BUG-022): the app's real AIWorker singleton is running for the
+    whole `TestClient(app)` lifespan."""
+    response = client.get("/api/ai/health")
+    assert response.json()["data"]["worker_alive"] is True
+
+
+def test_health_reports_worker_alive_false_when_the_worker_task_is_dead(client, monkeypatch):
+    """Whitebox: forces `AIWorker.is_alive` to `False` by clearing the real
+    singleton's task, since stopping it for real would tear down the shared app
+    (app/main.py, which constructs it, is outside this task's allowed files)."""
+    from app.main import ai_worker
+
+    monkeypatch.setattr(ai_worker, "_task", None)
+    response = client.get("/api/ai/health")
+    assert response.json()["data"]["worker_alive"] is False

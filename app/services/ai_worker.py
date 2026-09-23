@@ -16,7 +16,7 @@ import uuid
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
 
-from app.core.constants import AI_WORKER_SHUTDOWN_GRACE_SECONDS
+from app.core.constants import AI_WORKER_LOOP_ERROR_BACKOFF_SECONDS, AI_WORKER_SHUTDOWN_GRACE_SECONDS
 from app.db.transactions import write_transaction
 from app.services import ai_job_service
 
@@ -70,6 +70,7 @@ class AIWorker:
             logger.info("ai_worker_recovered_jobs count=%d", len(recovered))
         self._stop_event = asyncio.Event()
         self._task = asyncio.create_task(self._run_loop())
+        self._task.add_done_callback(self._on_loop_done)
 
     async def stop(self) -> None:
         """Signal the loop to stop and wait a bounded grace period for it to finish.
@@ -91,14 +92,35 @@ class AIWorker:
 
     async def _run_loop(self) -> None:
         while not self._stop_event.is_set():
-            job = await self._claim_next()
-            if job is None:
+            try:
+                job = await self._claim_next()
+                if job is None:
+                    try:
+                        await asyncio.wait_for(self._stop_event.wait(), timeout=self._poll_interval_seconds)
+                    except TimeoutError:
+                        pass
+                    continue
+                await self._process(job)
+            except Exception:  # noqa: BLE001 -- one bad iteration must not end the task (BUG-022)
+                logger.exception("ai_worker_loop_error")
                 try:
-                    await asyncio.wait_for(self._stop_event.wait(), timeout=self._poll_interval_seconds)
+                    await asyncio.wait_for(
+                        self._stop_event.wait(), timeout=AI_WORKER_LOOP_ERROR_BACKOFF_SECONDS
+                    )
                 except TimeoutError:
                     pass
-                continue
-            await self._process(job)
+
+    def _on_loop_done(self, task: "asyncio.Task") -> None:
+        """Belt-and-braces: log if the loop task ends without stop() having asked it to.
+
+        With the per-iteration guard above, this should not fire in practice --
+        it exists for whatever this task hasn't foreseen.
+        """
+        if self._stop_event is not None and not self._stop_event.is_set():
+            if task.cancelled():
+                logger.error("ai_worker_task_ended_unexpectedly reason=cancelled")
+            else:
+                logger.error("ai_worker_task_ended_unexpectedly exc=%r", task.exception())
 
     async def _claim_next(self) -> dict | None:
         if not self._handlers:
@@ -123,14 +145,22 @@ class AIWorker:
             await handler(job, self)
         except Exception as exc:  # noqa: BLE001 -- a handler bug must not crash the worker loop
             logger.exception("ai_worker_handler_failed job_id=%s operation=%s", job["id"], job["operation"])
-            async with write_transaction(db):
-                await ai_job_service.transition_status(
-                    db,
-                    job["id"],
-                    "error",
-                    error_code="handler_exception",
-                    error_message=f"{type(exc).__name__}: {exc}"[:200],
-                    commit=False,
+            try:
+                async with write_transaction(db):
+                    await ai_job_service.transition_status(
+                        db,
+                        job["id"],
+                        "error",
+                        error_code="handler_exception",
+                        error_message=f"{type(exc).__name__}: {exc}"[:200],
+                        commit=False,
+                    )
+            except Exception:  # noqa: BLE001 -- e.g. an illegal transition if the handler
+                # already committed a terminal status before raising, or a transient
+                # write failure. The job is left as-is; recover_abandoned_jobs reclaims
+                # it once its lease expires (BUG-022, known residual -- see task-16.1.md).
+                logger.exception(
+                    "ai_worker_error_transition_failed job_id=%s operation=%s", job["id"], job["operation"]
                 )
 
     async def heartbeat(self, job_id: str) -> None:
@@ -147,3 +177,8 @@ class AIWorker:
     @property
     def worker_id(self) -> str:
         return self._worker_id
+
+    @property
+    def is_alive(self) -> bool:
+        """Whether the poll-loop task exists and hasn't finished (BUG-022)."""
+        return self._task is not None and not self._task.done()
