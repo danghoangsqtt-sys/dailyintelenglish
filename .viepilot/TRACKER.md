@@ -2056,7 +2056,7 @@ Opened 2026-09-23 via `/vp-audit` → `/vp-evolve` (BUG-022, ENH-008, ENH-009, B
 
 PM review log (one line per verdict: task, commit, APPROVED/CHANGES/ACCEPTED, suite count):
 
-- (none yet)
+- 16.1 design `f925ea5` — **APPROVED** (PM, 2026-09-23) with two notes: (N1) the backoff constant must be read at call time / monkeypatchable so test (a) doesn't sleep 5 s; (N2) record in the card as a known residual: if the guarded error-transition itself fails for a transient reason (e.g. `database is locked`), the job stays `running` until its lease expires and is only reclaimed by `recover_abandoned_jobs` at the next `start()` — acceptable for this task (the loop survives and logs the job id), not in scope to fix.
 
 ## Decision Log
 
