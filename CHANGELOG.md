@@ -24,6 +24,27 @@ Versioning: [SemVer](https://semver.org/)
   bundled — see README for why).
 
 ### Changed
+- Phase 17 Task 17.1 (2026-09-23, ENH-010, self-implemented by Coder): Gate
+  B-7 (Phase 16) scored 3/5 on script generation, both failures a global
+  word-count overshoot. Re-reading the trial checkpoints found the pipeline
+  already had a budget repair (Task 14.3), but it only ever rewrote the
+  *last* section, and a global re-check after the repetition repair (Task
+  14.13) never existed at all — so a repetition-only failure whose own
+  repair happened to inflate a section's length had nothing to catch the new
+  overshoot afterward. The global validation stage is now one shared,
+  ordered loop: it checks for a budget failure before a repetition failure
+  on every pass, and each repair type fires at most once per job (its own
+  existing cap constant, unchanged defaults). The budget repair now targets
+  whichever section deviates most from its own *nominal* target (not
+  today's already-carry-adjusted effective one, which hides where an
+  overshoot actually originated) and reruns it through the *same* full
+  generate-then-repair path a normal section goes through — a bare fresh
+  generation alone was measured landing at 0.60x its target on the local
+  9B model, this calibrated path at 1.02x. The repetition repair now
+  states an explicit word-count range to stay inside while removing the
+  repeated phrase, not just ambient context. No threshold changed, and
+  no server-side deletion or trimming of content — every length fix is
+  still the model's own generated text.
 - Phase 16 Task 16.4 (2026-09-23, ENH-009 step A, self-implemented by Coder):
   Gate B-6 scored script generation 3/5, both failures on the repeated
   8-gram ratio check just over the 1% threshold. Reconstructing every B-6

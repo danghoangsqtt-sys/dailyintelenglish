@@ -1,6 +1,6 @@
 # Task 17.1 — Budget-Aware Global Stage (ENH-010)
 
-- **Status:** in_progress
+- **Status:** done
 - **Owner:** Coder
 - **Priority:** P0
 - **Controlling detail:** plan §0 (re-diagnosis), §3 "17.1", invariants 28–30
@@ -130,10 +130,19 @@ ratio")` already matches the real message and mirrors the existing `all(error.st
 plan below drives this through the real `validate_global`, never a hand-written error string,
 so this class of mismatch would show up as a failing assertion instead of silently passing.
 
-**Worst-case extra model calls per job: 2** (one targeted budget repair + one length-aware
-repetition repair), a fixed, documented ceiling independent of episode length — up from
-today's de-facto worst case of 1 (the two old blocks could not both deliberately fire in the
-same job). Both remain independently disable-able via their existing constant set to 0.
+**Worst-case extra model calls per job: 4 — corrected post-C4 (see the C4 section below).**
+Originally documented as 2 here, before C4 replaced the "over" direction's bare fresh
+generation with a rerun of the *full* per-section pipeline (generate, then up to two more
+calls if its own semantic/length repairs are needed). The true mechanical ceiling is:
+budget "over" direction, worst case 3 calls (generate + semantic repair + length repair,
+identical to the main loop's own pre-existing per-section ceiling — nothing new, just reused)
+**or** budget "under" direction, exactly 1 call (`_repair_section`) — **plus** repetition
+repair, exactly 1 call if it also fires. Absolute ceiling: 3 + 1 = **4**, when direction is
+"over" and its rerun needs its own full internal chain, and repetition is also still failing
+afterward. Both repair types remain independently disable-able via their existing constant
+set to 0; the *number of calls within the "over" rerun* is bounded by the same existing
+`SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS`/`SCRIPT_PIPELINE_MAX_STRUCTURAL_FIXES` constants the
+main loop's own per-section processing already uses (no new caps needed there either).
 
 **Target section selection (required behaviour #1).**
 
@@ -263,46 +272,106 @@ dict[int, dict]` (section_index → checkpoint row), replaces the ad-hoc
 repetition-repair branch — both the new budget-repair path and the existing repetition-repair
 path call it, removing the duplication rather than adding a second copy.
 
-**Test plan**
-- Every test below drives its assertions off the *real* `validate_global` output and the
-  *real* rendered repair prompts — never a hand-written error string standing in for what the
-  code would actually produce (C1: exactly the class of bug that let the prefix mismatch
-  through undetected).
-- `tests/test_script_pipeline.py`:
+**C4 (PM review on the design update, folded in pre-implementation — required, no
+re-approval needed).** Replaces this design's original "over" direction (a bare fresh
+`_generate_section` call, no internal repair fallback). PM's own read-only check across all
+118 B-6+B-7 section checkpoints: a bare first-pass generation alone lands at a median 0.60x
+its target (only 15/118 within ±15%), but the *full* per-section path (generation, then the
+existing in-loop length repair when it lands outside ±15%) lands at a median 1.02x (65/118
+within ±15%) — the calibrated tool.
+
+**Extraction: `_run_section_pipeline`.** The main per-section loop's own body (generate →
+one semantic repair if structurally/budget invalid → one bounded consecutive-lines merge fix
+if still failing on exactly that → one length-only repair if still far over budget →
+checkpoint-metrics dict) is extracted verbatim into a new function,
+`_run_section_pipeline(router, project, outline, section_spec, effective_target,
+prior_summary, avoid_phrases, known_speaker_ids, is_last, db, job_id) -> tuple[list
+[SectionLineOut], dict] | None`. Behaviour-preserving: the main loop calls it with exactly
+the same arguments it always computed inline; the function's `None` return means "the job
+was already marked failed inside this call (`_fail`/`_fail_provider` already ran) — the
+caller must return immediately," identical to the main loop's own prior control flow, just
+moved one frame deeper. Confirmed behaviour-preserving empirically: all 86 pre-existing
+tests exercising the main loop's per-section mechanics passed unmodified after the
+extraction (only 4 tests broke, all specifically pinned to the *global stage's* old
+"always the last section" targeting — a deliberate behaviour change, not a regression; see
+the Evidence section for how each was updated).
+
+**The "over" direction now calls `_run_section_pipeline`** at the picked section's
+`new_target`, instead of a bare `_generate_section` call:
+- `is_last` = whether the picked section is the last entry in `outline.sections`.
+- `prior_summary` = `summarize_section(...)` of the checkpoint immediately *preceding* the
+  picked section in outline order (empty string if it's the first section) — read from the
+  same `section_checkpoints` dict already fetched for section selection, not a second
+  DB round-trip.
+- `avoid_phrases` (C4, explicit requirement): computed via the existing
+  `frequent_repeated_phrases()` from every *other* section's words — never `[]`, which the
+  original design used. Mirrors exactly what the main loop already does for a normal
+  section, just excluding the section being regenerated instead of "everything so far."
+
+**The "under" direction is unchanged from the prior design** — still a single, plain
+`_repair_section` call. C4 confirms this was already the right call: "under" needs growth,
+and the *existing* repair mechanism's own observed bias (90/103 sections grew during
+repair, per the same evidence) is exactly that.
+
+**Test plan (as implemented — see Evidence for the exact test names)**
+- Every new test drives its assertions off the *real* `validate_global` output and the *real*
+  rendered/recorded call telemetry — never a hand-written error string standing in for what
+  the code would actually produce (C1).
+- `tests/test_script_pipeline.py`, new tests:
   1. **Run 1 shape**: a repetition-only failure at first validation (one section's checkpoint
-     deliberately contains a within-section repeated 8-gram, total in range) whose scripted
-     repetition-repair response is *longer* than the target, pushing the total over ±10%.
-     Asserts: the repetition repair fires (its prompt contains the new length-checklist entry),
-     then a targeted budget repair fires on whichever section is now worst, the job completes,
-     and exactly 2 extra repair calls happened (repetition + budget, in that order).
-  2. **5-min shape, real B-7 numbers (C2)**: a 3-section outline whose scripted section
-     responses reproduce the actual evidence — words 43 / 345 / 315 against nominal targets
-     208 / 216 / 201 (total 703 > 687, the real ±10% bound) — so effective vs. nominal
-     selection would disagree (effective picks section 3, the same section today's code
-     already fails on; nominal correctly picks section 2). Asserts the budget repair's prompt
-     targets **section 2** specifically (by objective/target_words in the captured prompt), not
-     section 3 (the last), and that it's a *fresh generation* call (no "Your Previous (Invalid)
-     Answer" JSON echo in the prompt — confirms C3's "over" direction doesn't hand the model
-     its own over-length text), and the job completes.
-  3. **Mixed-from-the-start**: first validation has both a budget error and a repetition error.
-     Asserts budget repairs first, then repetition, in that order (2 calls), and completes.
-  4. **Each cap at 0 disables its step**: `SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS = 0` on
-     the 5-min shape → job fails with the budget error still present, zero extra repair calls.
-     `SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS = 0` on the run 1 shape → job fails with the
-     repetition error still present, zero extra repair calls.
-  5. **Worst-case call count**: the mixed-from-the-start test (3) doubles as this — asserts
-     `gemini.call_count` equals exactly `outline + sections + 2` (never more).
-  6. A repair failing to fully fix its error (e.g. the budget repair's own response is still
-     out of range) → the loop's slot is already spent → falls through to final validation →
-     fails cleanly with `global_validation_failed`, not a crash or a silent pass.
-  7. **"Under" direction (C3)**: total under budget at first validation, concentrated in one
-     section. Asserts the budget repair call *is* a repair (carries the "Your Previous
-     (Invalid) Answer" echo of that section's own prior text, per `_repair_section`'s existing
-     shape), not a fresh generation — the opposite assertion from test 2 — and the job
-     completes.
-- Revert-and-confirm-failure target: test 1 (the run 1 shape) — temporarily restore the old
-  "only the last section, no re-check" behavior, confirm it fails (job ends
-  `global_validation_failed` instead of `complete`, or repairs the wrong section), then restore.
+     deliberately contains a within-section repeated 8-gram, total exactly on target) whose
+     scripted repetition-repair response is *longer* than it went in, pushing the total over
+     ±10%. Asserts: the repetition repair fires first (the budget branch's condition never
+     matched while the failure was repetition-only), then a targeted budget repair (the "over"
+     direction, a fresh `_run_section_pipeline` call) fires on the now-worst section and
+     completes — call order asserted directly from the job's own recorded telemetry
+     (`metrics_json["calls"]`), not inferred.
+  2. **5-min shape, real B-7 numbers (C2)**: a 3-section outline reproducing the actual
+     evidence — words 43 / 345 / 315 against nominal targets 208 / 216 / 201 (sum 625 =
+     target_words; total 703 outside the real [562.5, 687.5] band) — each section needing its
+     own one semantic repair to reach those exact final values. Asserts the budget repair
+     targets **section 2** (nominal deviation +129), not section 3 (the last, +114 by nominal,
+     what effective-target selection — and pre-17.1 code — would have picked instead), and
+     that section 3's checkpoint is untouched.
+  3. **Mixed-from-the-start** (repurposed from the pre-17.1
+     `test_pipeline_mixed_global_failure_never_triggers_repetition_repair`, whose entire
+     premise — a mixed failure *never* triggers repetition repair — is exactly what 17.1
+     replaces): asserts budget repairs first, then repetition, in that order, and completes.
+  4. **Each cap at 0 disables its step**, two tests: `SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS
+     = 0` on a pure budget failure → fails with the budget error still present, zero extra
+     calls beyond the per-section ones. `SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS = 0` on a pure
+     repetition failure → fails with the repetition error still present, zero extra calls.
+  5. **"Under" direction**: covered by the rewritten
+     `test_pipeline_targeted_budget_repair_under_brings_the_total_inside_tolerance` (below) —
+     asserts the checkpoint's `global_budget_direction == "under"` and that the repair is a
+     real `_repair_section` call (not a fresh generation).
+  6. **A repair whose own output still fails**: already covered by the pre-existing, unmodified
+     `test_pipeline_global_validation_still_fails_after_one_final_section_repair` — the budget
+     slot is spent after one attempt, falls through to final validation, fails cleanly with
+     `global_validation_failed`, no partial script saved. No new test needed; confirmed this
+     one still passes unmodified under the new selection logic (its assertions don't depend on
+     *which* section gets picked).
+- 4 pre-existing tests, previously spec-testing the *old* global-stage mechanism this task
+  deliberately replaces, were rewritten (not just patched) — each failure was a real, expected
+  consequence of the intentional behaviour change, confirmed by tracing through the exact new
+  mechanics before rewriting (see Evidence for the reasoning that produced each one):
+  `test_pipeline_final_section_budget_repair_brings_the_total_inside_tolerance` →
+  `test_pipeline_targeted_budget_repair_under_brings_the_total_inside_tolerance` (nominal, not
+  effective, selection — under direction);
+  `test_pipeline_mixed_global_failure_never_triggers_repetition_repair` →
+  `test_pipeline_mixed_global_failure_triggers_budget_then_repetition_repair` (the behaviour
+  changed on purpose);
+  `test_pipeline_repair_count_hits_the_2n_plus_1_ceiling` →
+  `test_pipeline_over_budget_global_repair_call_count_hits_the_2n_plus_1_ceiling` (nominal
+  selection now targets section 1, not section 2; `repair_count` reads 2n, not 2n+1, since a
+  clean fresh regeneration isn't a "repair" in the telemetry sense);
+  `test_pipeline_repair_count_hits_the_2n_plus_2_ceiling` →
+  `test_pipeline_over_budget_then_repetition_call_count_hits_the_2n_plus_2_ceiling` (same
+  reasoning, plus the repetition repair afterward).
+- Revert-and-confirm-failure target: the run 1 shape test — temporarily changed the shared
+  loop's `for _ in range(2):` to `range(1)` (simulating "no re-check after one pass," i.e.
+  today's pre-17.1 gap), confirmed it fails (`global_validation_failed`, total 240 outside
+  [180, 220] — the repetition repair fired but nothing re-checked length afterward), restored.
 - Full suite, `ruff`.
 
 ## Verification (required)
@@ -317,4 +386,92 @@ path call it, removing the duplication rather than adding a second copy.
 
 ## Evidence
 
-_pending_
+- Design commits `caab2e2` (APPROVED with C1/C2/C3), `b265221` (C1/C2/C3
+  addressed, re-APPROVED with C4), and this implementation commit folds in
+  C4 per "no re-approval needed."
+- Files touched, all within the allowed list: `app/services/script_pipeline.py`
+  (the global-stage rewrite; `_run_section_pipeline` extraction; new helpers
+  `_has_budget_error`, `_has_repetition_error`, `_load_section_checkpoints`,
+  `_worst_budget_section`; `_GLOBAL_BUDGET_ERROR_PREFIX` constant;
+  `validate_global`'s f-string updated to use it), `tests/test_script_pipeline.py`
+  (+4 new tests, 4 pre-existing tests rewritten — see below — net 94 tests
+  in the file, up from 90). `app/core/constants.py`, `prompts/script/repair.txt`
+  and `tests/fixtures/ai/*` were **not** touched — no new cap constants needed
+  (both existing ones are reused as-is), and the repetition repair's new
+  length constraint is data passed into the existing `errors` list, not a
+  template change.
+- **The 4 pre-existing test failures, traced precisely before rewriting them**
+  (all in `tests/test_script_pipeline.py`, all failing with "FakeProvider has
+  no more scripted outcomes" once the new logic diverged from what each
+  test's fixed sequence of mock responses assumed):
+  - `test_pipeline_final_section_budget_repair_brings_the_total_inside_tolerance`:
+    picked section 2 by nominal deviation as -50 (150 words vs nominal 100,
+    i.e. *already over* its own nominal) versus section 1's 0 — section 1
+    (0 > -50) won, not section 2. Rewritten so section 1 legitimately is the
+    worst-under-nominal section, with the narrative and assertions updated
+    to match (renamed to
+    `test_pipeline_targeted_budget_repair_under_brings_the_total_inside_tolerance`).
+  - `test_pipeline_mixed_global_failure_never_triggers_repetition_repair`:
+    its entire premise (mixed failures never get a repetition repair) is the
+    exact pre-17.1 gap this task closes. Rewritten to assert the new,
+    intended behaviour (renamed to
+    `test_pipeline_mixed_global_failure_triggers_budget_then_repetition_repair`).
+  - `test_pipeline_repair_count_hits_the_2n_plus_1_ceiling` and
+    `test_pipeline_repair_count_hits_the_2n_plus_2_ceiling`: both scripted a
+    "final section" repair response for section 2, but nominal deviation
+    correctly picks section 1 in both fixtures (150 vs 50, and 25 vs 5
+    respectively) — and since direction is "over," section 1 now reruns via
+    `_run_section_pipeline` (C4), which only increments `repair_count` if its
+    own internal chain needs a repair (it doesn't in either fixture, both
+    land within tolerance on the first fresh-generation try). Both renamed
+    and rewritten to target section 1, with `repair_count` corrected to 2n
+    (not 2n+1) and 2n+1 (not 2n+2) respectively, while `gemini.call_count`
+    keeps demonstrating the same real ceiling.
+  - In every case the fix was to trace the *actual* new mechanics for that
+    exact fixture (not just patch a number), confirm the new expected
+    section/values by hand, then verify empirically — each rewritten test
+    passed on the first or second attempt.
+- Targeted run: `tests/test_script_pipeline.py` → **94 passed** (90 baseline,
+  4 pre-existing tests rewritten in place, 4 new tests added net).
+- Full suite: `./venv/Scripts/python.exe -m pytest -q` → **960 passed** (956
+  baseline after 16.4 + 4 new tests). No baseline test broke outside the 4
+  deliberately-rewritten ones. Real DB project count read-only: 7 (unchanged,
+  confirms the 16.3 guard still holds).
+- `ruff check app scripts tests` → all checks passed.
+- Revert-and-confirm-failure: temporarily changed the shared loop's `for _ in
+  range(2):` to `range(1)` (simulating "no re-check after one pass," i.e. the
+  actual pre-17.1 gap), re-ran
+  `test_pipeline_repetition_repair_that_inflates_length_triggers_a_followup_budget_repair`
+  alone → failed exactly as expected (`global_validation_failed`, "total word
+  count 240 is outside ±10% of target 200" — the repetition repair fired but
+  nothing re-checked length afterward, reproducing Gate B-7 run 1's exact
+  bug). Restored → the same test and the full file (94 tests) passed again.
+- **Worst-case call count, corrected (see the design's C4 section for the
+  reconciliation against the PM's originally-stated "3"):** the true
+  mechanical ceiling is **4** (budget "over" direction's full rerun chain —
+  generate + semantic repair + length repair, identical to the main loop's
+  own pre-existing per-section ceiling, nothing new — plus repetition
+  repair). Not separately asserted by a dedicated test (would require
+  contriving a fixture where the "over" rerun itself needs both of its own
+  internal repairs *and* repetition still fails afterward); each individual
+  mechanism this ceiling is built from is already proven correct by the
+  tests above, and the ceiling itself is a direct, mechanical consequence of
+  composing two already-bounded, already-tested pieces (the per-section
+  pipeline's own pre-existing 3-call ceiling, reused unchanged, and the
+  loop's two-slot bound). Flagged to the PM in the completion report rather
+  than silently asserting "3."
+- Verification bullets from the card, confirmed:
+  - Run 1 shape completes via repetition-then-budget:
+    `test_pipeline_repetition_repair_that_inflates_length_triggers_a_followup_budget_repair`.
+  - 5-min shape targets the middle section, not the last:
+    `test_pipeline_over_budget_targets_middle_section_by_nominal_deviation_gate_b7_5min_shape`.
+  - Mixed-failure path completes when both repairs succeed:
+    `test_pipeline_mixed_global_failure_triggers_budget_then_repetition_repair`;
+    fails cleanly when a repair doesn't fix it:
+    `test_pipeline_global_validation_still_fails_after_one_final_section_repair`
+    (pre-existing, unmodified, still passes under the new selection logic).
+  - Each cap at 0 disables its step:
+    `test_pipeline_global_budget_repair_disabled_by_its_cap_fails_with_zero_extra_calls`,
+    `test_pipeline_repetition_repair_disabled_by_its_cap_fails_with_zero_extra_calls`.
+  - Revert-and-confirm-failure: above.
+  - Full suite, `ruff`: above.

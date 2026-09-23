@@ -17,7 +17,7 @@ import logging
 import re
 from collections import Counter
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import NamedTuple, TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateNotFound
 from pydantic import BaseModel, Field, TypeAdapter
@@ -62,6 +62,10 @@ _env = Environment(
     lstrip_blocks=True,
 )
 _WORD_RE = re.compile(r"\S+")
+# Task 17.1: the exact prefix validate_global() emits for a whole-episode word-count
+# failure, shared with the global stage's own error-type check so the two can never
+# silently drift apart again (found drifted once already during design review).
+_GLOBAL_BUDGET_ERROR_PREFIX = "total word count"
 
 
 class OutlineSectionSpec(BaseModel):
@@ -469,7 +473,7 @@ def validate_global(
     tolerance = target_words * SCRIPT_GLOBAL_WORD_TOLERANCE
     if not (target_words - tolerance <= total_words <= target_words + tolerance):
         hard_errors.append(
-            f"total word count {total_words} is outside "
+            f"{_GLOBAL_BUDGET_ERROR_PREFIX} {total_words} is outside "
             f"±{int(SCRIPT_GLOBAL_WORD_TOLERANCE * 100)}% of target {target_words}"
         )
 
@@ -501,6 +505,76 @@ def validate_global(
         warnings.append("no topic keyword found anywhere in the script (heuristic, may be a false positive)")
 
     return hard_errors, warnings
+
+
+def _has_budget_error(errors: list[str]) -> bool:
+    return any(error.startswith(_GLOBAL_BUDGET_ERROR_PREFIX) for error in errors)
+
+
+def _has_repetition_error(errors: list[str]) -> bool:
+    return any(error.startswith("repeated 8-gram ratio") for error in errors)
+
+
+class _BudgetRepairTarget(NamedTuple):
+    """One global-stage budget repair's chosen section and computed target
+    (Task 17.1)."""
+
+    section_index: int
+    lines: list[SectionLineOut]
+    new_target: int
+    direction: str  # "over" or "under"
+    deviation: int  # always >= 0, in the `direction` sense
+    nominal: int
+
+
+async def _load_section_checkpoints(db, job_id: str) -> dict[int, dict]:
+    """Fresh `stage == "section"` checkpoints for a job, keyed by section_index --
+    shared by the global stage's budget and repetition repair paths (Task 17.1) so
+    each sees whatever the other one just changed."""
+    async with read_transaction():
+        fresh_checkpoints = await ai_job_service.get_valid_checkpoints(db, job_id)
+    return {
+        checkpoint["section_index"]: checkpoint
+        for checkpoint in fresh_checkpoints
+        if checkpoint["stage"] == "section"
+    }
+
+
+def _worst_budget_section(
+    section_checkpoints: dict[int, dict],
+    outline: ScriptOutline,
+    total_words: int,
+    target_words: int,
+) -> _BudgetRepairTarget | None:
+    """Picks the section whose actual words deviate most from its own NOMINAL
+    target -- never its effective one (Task 17.1, C2). Effective targets already
+    have carry baked in from earlier sections' own undershoot/overshoot, which
+    hides where an overshoot or undershoot actually originated; nominal targets
+    are what the whole-episode `target_words` is the sum of. Direction follows
+    whichever way the episode total is wrong. Ties broken by lowest
+    `section_index` (sections are scanned in outline order; only a *strictly*
+    larger deviation replaces the current pick).
+
+    Returns `None` if no section has a checkpoint yet (defensive -- should not
+    happen once every section is checkpointed, mirrors the repetition-repair
+    path's own `if per_section_counts:` guard)."""
+    direction = "over" if total_words > target_words else "under"
+    worst: _BudgetRepairTarget | None = None
+    for section_spec in outline.sections:
+        checkpoint = section_checkpoints.get(section_spec.index)
+        if checkpoint is None:
+            continue
+        lines = _SECTION_LINES_ADAPTER.validate_json(checkpoint["result_json"])
+        words = section_word_count(lines)
+        nominal = section_spec.target_words
+        deviation = (words - nominal) if direction == "over" else (nominal - words)
+        if worst is None or deviation > worst.deviation:
+            # Lands the whole-episode total exactly on target_words, given every
+            # other section's words stay as they are (generalizes the single
+            # last-section formula this replaces).
+            new_target = max(1, target_words - (total_words - words))
+            worst = _BudgetRepairTarget(section_spec.index, lines, new_target, direction, deviation, nominal)
+    return worst
 
 
 def summarize_section(lines: list[SectionLineOut]) -> str:
@@ -694,6 +768,154 @@ async def _repair_section(
     )
 
 
+async def _run_section_pipeline(
+    router: "AIRouter",
+    project: dict,
+    outline: ScriptOutline,
+    section_spec: OutlineSectionSpec,
+    effective_target: int,
+    prior_summary: str,
+    avoid_phrases: list[str],
+    known_speaker_ids: set[str],
+    is_last: bool,
+    db,
+    job_id: str,
+) -> tuple[list[SectionLineOut], dict] | None:
+    """One section's full generate-and-repair path: generate -> one semantic
+    repair if structurally/budget invalid -> one bounded consecutive-lines merge
+    fix if still failing on exactly that -> one length-only repair if still far
+    over budget -> the checkpoint-metrics dict for whichever result survives.
+
+    Extracted from the main per-section loop (Task 17.1, C4) so the global
+    stage's targeted budget repair (the "over" direction) can rerun a section
+    through this *exact same, calibrated* path at a new target, instead of a
+    bare fresh generation alone. Evidence across 118 B-6+B-7 section checkpoints
+    (plan Amendment B, read-only): a bare first-pass generation alone lands at a
+    median 0.60x its target (only 15/118 within +/-15%), while this full path
+    (generation through the in-loop length repair) lands at a median 1.02x
+    (65/118 within +/-15%) -- the calibrated tool, not a new one.
+
+    Returns `(lines, checkpoint_metrics)` on success, matching exactly the
+    `metrics_json` shape the main loop has always saved. Returns `None` if the
+    job has already been marked failed (`_fail`/`_fail_provider` already ran
+    inside this function) -- the caller must return immediately and do nothing
+    else, identical to how the main loop already behaves today (behaviour-
+    preserving: this function's body is the main loop's own per-section body,
+    moved, not rewritten).
+    """
+    effective_spec = section_spec.model_copy(update={"target_words": effective_target})
+    idx = section_spec.index
+
+    try:
+        section_lines, structural_errors, budget_errors = await _generate_section(
+            router, project, outline, effective_spec, prior_summary, known_speaker_ids,
+            is_last, db, job_id, avoid_phrases,
+        )
+    except ProviderError as exc:
+        await _fail_provider(db, job_id, exc)
+        return None
+
+    repaired = False
+    words_before_repair: int | None = None
+    errors_before_repair = 0
+    if structural_errors or budget_errors:
+        errors_before_repair = len(structural_errors) + len(budget_errors)
+        words_before_repair = section_word_count(section_lines)
+        try:
+            section_lines, structural_errors, budget_errors = await _repair_section(
+                router, project, effective_spec, section_lines,
+                structural_errors + budget_errors, known_speaker_ids, db, job_id,
+            )
+        except ProviderError as exc:
+            await _fail_provider(db, job_id, exc)
+            return None
+        repaired = True
+
+    # Task 15.2: a section still failing structural validation after the one
+    # semantic repair, where that failure is *exactly* the consecutive-lines
+    # one (never mixed with an unknown-speaker error, and never a second
+    # attempt beyond this one), gets one bounded merge fix instead of
+    # hard-failing outright.
+    structural_fix_applied = False
+    lines_before_fix: int | None = None
+    lines_after_fix: int | None = None
+    if (
+        structural_errors
+        and len(structural_errors) == 1
+        and structural_errors[0].startswith("more than ")
+        and SCRIPT_PIPELINE_MAX_STRUCTURAL_FIXES > 0
+    ):
+        merged_lines = merge_consecutive_lines(section_lines, SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER)
+        if merged_lines is not None:
+            lines_before_fix = len(section_lines)
+            section_lines = merged_lines
+            lines_after_fix = len(section_lines)
+            structural_fix_applied = True
+            structural_errors = validate_section_structure(section_lines, known_speaker_ids)
+
+    if structural_errors:
+        await _fail(db, job_id, "section_validation_failed", structural_errors)
+        return None
+
+    words = section_word_count(section_lines)
+
+    # Task 14.8: a section still far over budget after its one semantic
+    # repair gets one more, length-only pass -- narrower than the semantic
+    # repair (SCRIPT_SECTION_CARRY_CAP, not the ±15% tolerance, is the
+    # trigger) and never fires for an under-length miss, which keeps
+    # 14.3's accept-and-carry for those exactly as it was.
+    length_repaired = False
+    words_before_length_repair: int | None = None
+    if (
+        repaired
+        and budget_errors
+        and words > effective_target * (1 + SCRIPT_SECTION_CARRY_CAP)
+        and SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS > 0
+    ):
+        words_before_length_repair = words
+        try:
+            section_lines, structural_errors, budget_errors = await _repair_section(
+                router, project, effective_spec, section_lines,
+                budget_errors, known_speaker_ids, db, job_id,
+                purpose="script_section_length_repair",
+            )
+        except ProviderError as exc:
+            await _fail_provider(db, job_id, exc)
+            return None
+        length_repaired = True
+        if structural_errors:
+            await _fail(db, job_id, "section_validation_failed", structural_errors)
+            return None
+        words = section_word_count(section_lines)
+
+    if (repaired or length_repaired) and budget_errors:
+        # Task 14.3 item 4: a word-deviation-only failure survives the one
+        # repair pass -- accept and carry the drift instead of failing the
+        # job (the ±15% check is now a repair trigger/drift signal, not a
+        # job-killing gate; the product's only hard word-count gate stays
+        # the ±10% total, checked below via validate_global).
+        logger.info(
+            "script_section_accepted_off_target job_id=%s section=%d effective=%d actual=%d",
+            job_id, idx, effective_target, words,
+        )
+
+    checkpoint_metrics = {
+        "target_nominal": section_spec.target_words,
+        "target_effective": effective_target,
+        "words": words,
+        "deviation_pct": round((words - effective_target) / effective_target, 4) if effective_target else 0.0,
+        "repaired": repaired,
+        "words_before_repair": words_before_repair,
+        "errors_before_repair": errors_before_repair,
+        "length_repaired": length_repaired,
+        "words_before_length_repair": words_before_length_repair,
+        "structural_fix": "merged_consecutive_lines" if structural_fix_applied else None,
+        "lines_before_fix": lines_before_fix,
+        "lines_after_fix": lines_after_fix,
+    }
+    return section_lines, checkpoint_metrics
+
+
 # --- orchestration -----------------------------------------------------------------------
 
 
@@ -878,8 +1100,6 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
     # "Resume/carry" decision for the equivalence argument (PM-reviewed).
     carry = 0.0
     words_so_far = 0
-    last_section_spec: OutlineSectionSpec | None = None
-    last_section_lines: list[SectionLineOut] = []
     for position, section_spec in enumerate(outline.sections, start=1):
         idx = section_spec.index
         if idx == 0 or idx not in checkpoints_by_index:
@@ -894,9 +1114,6 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
         cp_effective = cp_metrics.get("target_effective", section_spec.target_words)
         carry += cp_effective - cp_words
         words_so_far += cp_words
-        if position == total_sections:
-            last_section_spec = section_spec
-            last_section_lines = cp_lines
 
     for position, section_spec in enumerate(outline.sections, start=1):
         idx = section_spec.index
@@ -917,7 +1134,6 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
             if is_last
             else compute_section_effective_target(nominal, carry)
         )
-        effective_spec = section_spec.model_copy(update={"target_words": effective_target})
 
         # Task 14.13: episode-so-far's most-repeated 8-grams, computed fresh each
         # iteration from everything generated up to this point, so the model gets
@@ -926,113 +1142,14 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
             [normalize_text(word) for line in all_lines for word in _WORD_RE.findall(line.text)]
         )
 
-        try:
-            section_lines, structural_errors, budget_errors = await _generate_section(
-                router, project, outline, effective_spec, prior_summary, known_speaker_ids,
-                is_last, db, job_id, avoid_phrases,
-            )
-        except ProviderError as exc:
-            await _fail_provider(db, job_id, exc)
+        result = await _run_section_pipeline(
+            router, project, outline, section_spec, effective_target, prior_summary,
+            avoid_phrases, known_speaker_ids, is_last, db, job_id,
+        )
+        if result is None:
             return
+        section_lines, checkpoint_metrics = result
 
-        repaired = False
-        words_before_repair: int | None = None
-        errors_before_repair = 0
-        if structural_errors or budget_errors:
-            errors_before_repair = len(structural_errors) + len(budget_errors)
-            words_before_repair = section_word_count(section_lines)
-            try:
-                section_lines, structural_errors, budget_errors = await _repair_section(
-                    router, project, effective_spec, section_lines,
-                    structural_errors + budget_errors, known_speaker_ids, db, job_id,
-                )
-            except ProviderError as exc:
-                await _fail_provider(db, job_id, exc)
-                return
-            repaired = True
-
-        # Task 15.2: a section still failing structural validation after the one
-        # semantic repair, where that failure is *exactly* the consecutive-lines
-        # one (never mixed with an unknown-speaker error, and never a second
-        # attempt beyond this one), gets one bounded merge fix instead of
-        # hard-failing outright.
-        structural_fix_applied = False
-        lines_before_fix: int | None = None
-        lines_after_fix: int | None = None
-        if (
-            structural_errors
-            and len(structural_errors) == 1
-            and structural_errors[0].startswith("more than ")
-            and SCRIPT_PIPELINE_MAX_STRUCTURAL_FIXES > 0
-        ):
-            merged_lines = merge_consecutive_lines(section_lines, SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER)
-            if merged_lines is not None:
-                lines_before_fix = len(section_lines)
-                section_lines = merged_lines
-                lines_after_fix = len(section_lines)
-                structural_fix_applied = True
-                structural_errors = validate_section_structure(section_lines, known_speaker_ids)
-
-        if structural_errors:
-            await _fail(db, job_id, "section_validation_failed", structural_errors)
-            return
-
-        words = section_word_count(section_lines)
-
-        # Task 14.8: a section still far over budget after its one semantic
-        # repair gets one more, length-only pass -- narrower than the semantic
-        # repair (SCRIPT_SECTION_CARRY_CAP, not the ±15% tolerance, is the
-        # trigger) and never fires for an under-length miss, which keeps
-        # 14.3's accept-and-carry for those exactly as it was.
-        length_repaired = False
-        words_before_length_repair: int | None = None
-        if (
-            repaired
-            and budget_errors
-            and words > effective_target * (1 + SCRIPT_SECTION_CARRY_CAP)
-            and SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS > 0
-        ):
-            words_before_length_repair = words
-            try:
-                section_lines, structural_errors, budget_errors = await _repair_section(
-                    router, project, effective_spec, section_lines,
-                    budget_errors, known_speaker_ids, db, job_id,
-                    purpose="script_section_length_repair",
-                )
-            except ProviderError as exc:
-                await _fail_provider(db, job_id, exc)
-                return
-            length_repaired = True
-            if structural_errors:
-                await _fail(db, job_id, "section_validation_failed", structural_errors)
-                return
-            words = section_word_count(section_lines)
-
-        if (repaired or length_repaired) and budget_errors:
-            # Task 14.3 item 4: a word-deviation-only failure survives the one
-            # repair pass -- accept and carry the drift instead of failing the
-            # job (the ±15% check is now a repair trigger/drift signal, not a
-            # job-killing gate; the product's only hard word-count gate stays
-            # the ±10% total, checked below via validate_global).
-            logger.info(
-                "script_section_accepted_off_target job_id=%s section=%d effective=%d actual=%d",
-                job_id, idx, effective_target, words,
-            )
-
-        checkpoint_metrics = {
-            "target_nominal": nominal,
-            "target_effective": effective_target,
-            "words": words,
-            "deviation_pct": round((words - effective_target) / effective_target, 4) if effective_target else 0.0,
-            "repaired": repaired,
-            "words_before_repair": words_before_repair,
-            "errors_before_repair": errors_before_repair,
-            "length_repaired": length_repaired,
-            "words_before_length_repair": words_before_length_repair,
-            "structural_fix": "merged_consecutive_lines" if structural_fix_applied else None,
-            "lines_before_fix": lines_before_fix,
-            "lines_after_fix": lines_after_fix,
-        }
         async with write_transaction(db):
             await ai_job_service.save_checkpoint(
                 db, job_id, idx, "section", "valid",
@@ -1044,11 +1161,8 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
         all_lines.extend(section_lines)
         prior_summary = summarize_section(section_lines)
         if not is_last:
-            carry += effective_target - words
-        words_so_far += words
-        if is_last:
-            last_section_spec = section_spec
-            last_section_lines = section_lines
+            carry += effective_target - checkpoint_metrics["words"]
+        words_so_far += checkpoint_metrics["words"]
         await _update_progress(db, job_id, f"section_{idx}", 10 + round(80 * position / total_sections))
         await worker.heartbeat(job_id)
 
@@ -1059,131 +1173,210 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
         all_lines, target_words, known_speaker_ids, num_speakers, project["topic"]
     )
 
-    if hard_errors and last_section_spec is not None and SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS > 0:
-        # Task 14.3 item 6: one extra repair, but only when the total *word
-        # count* is the problem -- gated on that specific condition (not "any
-        # hard error") so a speaker-balance/duplicate/8-gram failure the
-        # word-budget repair can't fix isn't wasted on a pointless attempt; the
-        # comprehensive re-check below still catches it if it persists.
-        total_words = section_word_count(all_lines)
-        tolerance = target_words * SCRIPT_GLOBAL_WORD_TOLERANCE
-        total_outside = not (target_words - tolerance <= total_words <= target_words + tolerance)
-        if total_outside:
-            words_before_last_section = total_words - section_word_count(last_section_lines)
-            new_target = max(1, target_words - words_before_last_section)
-            adjusted_spec = last_section_spec.model_copy(update={"target_words": new_target})
-            try:
-                new_last_lines, structural_errors, _budget_errors = await _repair_section(
-                    router, project, adjusted_spec, last_section_lines,
-                    [
-                        f"total episode word count {total_words} is outside "
-                        f"±{int(SCRIPT_GLOBAL_WORD_TOLERANCE * 100)}% of target {target_words} words "
-                        "-- this is a final-section budget repair"
-                    ],
-                    known_speaker_ids, db, job_id,
-                )
-            except ProviderError as exc:
-                await _fail_provider(db, job_id, exc)
-                return
-            if structural_errors:
-                await _fail(db, job_id, "section_validation_failed", structural_errors)
-                return
+    # Task 17.1 (ENH-010): one shared, ordered, two-slot loop. Budget is checked
+    # before repetition on every pass, but each repair type can only ever fire
+    # once (its own existing cap constant) -- this reproduces both Gate B-7
+    # failure shapes from one mechanism: a mixed-from-the-start failure gets
+    # budget-then-repetition (in that order); a repetition-only failure whose
+    # own repair inflates length afterward (the actual B-7 run-1 bug) finds the
+    # budget slot still unused on the next pass, since its condition never
+    # matched while the failure was still repetition-only. Worst case: one
+    # budget-repair attempt (a generate + in-loop repair(s) via
+    # `_run_section_pipeline` for "over", or a single `_repair_section` call for
+    # "under") plus one repetition-repair attempt -- see task-17.1.md's design
+    # for the exact worst-case model-call accounting.
+    budget_repair_used = False
+    repetition_repair_used = False
 
-            all_lines = all_lines[: len(all_lines) - len(last_section_lines)] + new_last_lines
-            new_words = section_word_count(new_last_lines)
-            async with write_transaction(db):
-                await ai_job_service.save_checkpoint(
-                    db, job_id, last_section_spec.index, "section", "valid",
-                    compute_config_hash({"section": last_section_spec.model_dump()}, "section"),
-                    result_json=_SECTION_LINES_ADAPTER.dump_json(new_last_lines).decode("utf-8"),
-                    metrics_json=json.dumps({
-                        "target_nominal": last_section_spec.target_words,
-                        "target_effective": new_target,
+    for _ in range(2):
+        if not hard_errors:
+            break
+
+        if _has_budget_error(hard_errors) and not budget_repair_used and SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS > 0:
+            budget_repair_used = True
+            total_words = section_word_count(all_lines)
+            section_checkpoints = await _load_section_checkpoints(db, job_id)
+            target = _worst_budget_section(section_checkpoints, outline, total_words, target_words)
+            if target is not None:
+                worst_spec = next(spec for spec in outline.sections if spec.index == target.section_index)
+
+                if target.direction == "over":
+                    # Task 17.1, C3/C4: a bare fresh regeneration alone lands at
+                    # a median 0.60x its target (evidence: plan Amendment B);
+                    # rerunning the *full* per-section path (generate -> repair
+                    # -> in-loop length repair) lands at a median 1.02x -- the
+                    # calibrated tool, not a new one, and it's exactly the main
+                    # loop's own per-section pipeline, reused via
+                    # `_run_section_pipeline`.
+                    position = next(
+                        i for i, spec in enumerate(outline.sections, start=1) if spec.index == target.section_index
+                    )
+                    is_last_target = position == total_sections
+                    if position == 1:
+                        prior_summary_for_target = ""
+                    else:
+                        preceding_spec = outline.sections[position - 2]
+                        preceding_checkpoint = section_checkpoints.get(preceding_spec.index)
+                        preceding_lines = (
+                            _SECTION_LINES_ADAPTER.validate_json(preceding_checkpoint["result_json"])
+                            if preceding_checkpoint is not None
+                            else []
+                        )
+                        prior_summary_for_target = summarize_section(preceding_lines)
+                    # Task 17.1, C4: computed from the OTHER sections, never [].
+                    avoid_phrases_for_target = frequent_repeated_phrases([
+                        normalize_text(word)
+                        for other_index, other_checkpoint in section_checkpoints.items()
+                        if other_index != target.section_index
+                        for other_line in _SECTION_LINES_ADAPTER.validate_json(other_checkpoint["result_json"])
+                        for word in _WORD_RE.findall(other_line.text)
+                    ])
+                    rerun = await _run_section_pipeline(
+                        router, project, outline, worst_spec, target.new_target, prior_summary_for_target,
+                        avoid_phrases_for_target, known_speaker_ids, is_last_target, db, job_id,
+                    )
+                    if rerun is None:
+                        return
+                    new_lines, new_metrics = rerun
+                    new_metrics = {**new_metrics, "global_budget_repaired": True, "global_budget_direction": "over"}
+                else:
+                    # "Under" keeps the plain semantic-repair mechanism: repairs
+                    # already tend to grow text (Task 17.1, C3 evidence), which
+                    # is exactly what "under" needs.
+                    error_message = (
+                        f"{_GLOBAL_BUDGET_ERROR_PREFIX} {total_words} is outside "
+                        f"±{int(SCRIPT_GLOBAL_WORD_TOLERANCE * 100)}% of target {target_words} words -- "
+                        f"this section is the most {target.direction}-budget by {target.deviation} words "
+                        f"versus its own nominal target of {target.nominal}"
+                    )
+                    try:
+                        new_lines, structural_errors, _budget_errors = await _repair_section(
+                            router, project, worst_spec.model_copy(update={"target_words": target.new_target}),
+                            target.lines, [error_message], known_speaker_ids, db, job_id,
+                            purpose="script_global_budget_repair",
+                        )
+                    except ProviderError as exc:
+                        await _fail_provider(db, job_id, exc)
+                        return
+                    if structural_errors:
+                        await _fail(db, job_id, "section_validation_failed", structural_errors)
+                        return
+                    new_words = section_word_count(new_lines)
+                    new_metrics = {
+                        "target_nominal": target.nominal,
+                        "target_effective": target.new_target,
                         "words": new_words,
-                        "deviation_pct": round((new_words - new_target) / new_target, 4) if new_target else 0.0,
+                        "deviation_pct": (
+                            round((new_words - target.new_target) / target.new_target, 4) if target.new_target else 0.0
+                        ),
                         "repaired": True,
-                        "words_before_repair": section_word_count(last_section_lines),
+                        "words_before_repair": section_word_count(target.lines),
                         "errors_before_repair": 1,
-                    }),
-                    commit=False,
+                        "global_budget_repaired": True,
+                        "global_budget_direction": "under",
+                    }
+
+                async with write_transaction(db):
+                    await ai_job_service.save_checkpoint(
+                        db, job_id, target.section_index, "section", "valid",
+                        compute_config_hash({"section": worst_spec.model_dump()}, "section"),
+                        result_json=_SECTION_LINES_ADAPTER.dump_json(new_lines).decode("utf-8"),
+                        metrics_json=json.dumps(new_metrics),
+                        commit=False,
+                    )
+                all_lines = []
+                for section_spec in outline.sections:
+                    if section_spec.index == target.section_index:
+                        all_lines.extend(new_lines)
+                        continue
+                    checkpoint = section_checkpoints.get(section_spec.index)
+                    if checkpoint is not None:
+                        all_lines.extend(_SECTION_LINES_ADAPTER.validate_json(checkpoint["result_json"]))
+                hard_errors, _warnings = validate_global(
+                    all_lines, target_words, known_speaker_ids, num_speakers, project["topic"]
                 )
-            hard_errors, _warnings = validate_global(
-                all_lines, target_words, known_speaker_ids, num_speakers, project["topic"]
-            )
+            continue
 
-    if (
-        hard_errors
-        and SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS > 0
-        and all(error.startswith("repeated 8-gram ratio") for error in hard_errors)
-    ):
-        # Task 14.13 (D17): a global failure that is repetition-only (word
-        # count/balance/duplicates all already passing) gets one repair of the
-        # single worst section, rather than failing the job outright -- a
-        # mixed failure (repetition alongside anything else) never reaches
-        # here, `all(...)` above requires every hard error to be the
-        # repeated-8-gram one.
-        async with read_transaction():
-            fresh_checkpoints = await ai_job_service.get_valid_checkpoints(db, job_id)
-        section_checkpoints = {
-            checkpoint["section_index"]: checkpoint
-            for checkpoint in fresh_checkpoints
-            if checkpoint["stage"] == "section"
-        }
-        ordered_sections: list[tuple[int, list[SectionLineOut]]] = []
-        for section_spec in outline.sections:
-            checkpoint = section_checkpoints.get(section_spec.index)
-            if checkpoint is not None:
-                ordered_sections.append(
-                    (section_spec.index, _SECTION_LINES_ADAPTER.validate_json(checkpoint["result_json"]))
-                )
+        if (
+            _has_repetition_error(hard_errors)
+            and not repetition_repair_used
+            and SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS > 0
+        ):
+            # Task 14.13 (D17), now length-aware (Task 17.1, required behaviour
+            # #2): one repair of the single worst section by repeated-gram
+            # occurrence count.
+            repetition_repair_used = True
+            section_checkpoints = await _load_section_checkpoints(db, job_id)
+            ordered_sections: list[tuple[int, list[SectionLineOut]]] = []
+            for section_spec in outline.sections:
+                checkpoint = section_checkpoints.get(section_spec.index)
+                if checkpoint is not None:
+                    ordered_sections.append(
+                        (section_spec.index, _SECTION_LINES_ADAPTER.validate_json(checkpoint["result_json"]))
+                    )
 
-        repeated_grams, per_section_counts = find_repeated_8grams_by_section(ordered_sections)
-        if per_section_counts:
-            worst_index = max(per_section_counts, key=per_section_counts.get)
-            worst_checkpoint = section_checkpoints[worst_index]
-            worst_lines = _SECTION_LINES_ADAPTER.validate_json(worst_checkpoint["result_json"])
-            try:
-                worst_metrics = json.loads(worst_checkpoint["metrics_json"])
-            except (TypeError, ValueError):
-                worst_metrics = {}
-            if not isinstance(worst_metrics, dict):
-                worst_metrics = {}
-            worst_spec = next(spec for spec in outline.sections if spec.index == worst_index)
-            effective_target = worst_metrics.get("target_effective", worst_spec.target_words)
-            worst_effective_spec = worst_spec.model_copy(update={"target_words": effective_target})
-            repeated_phrases = [" ".join(gram) for gram in repeated_grams]
-
-            try:
-                new_worst_lines, structural_errors, _budget_errors = await _repair_section(
-                    router, project, worst_effective_spec, worst_lines,
-                    [f'repeated phrase used elsewhere in the script: "{phrase}"' for phrase in repeated_phrases],
-                    known_speaker_ids, db, job_id,
-                    purpose="script_section_repetition_repair",
-                )
-            except ProviderError as exc:
-                await _fail_provider(db, job_id, exc)
-                return
-            if structural_errors:
-                await _fail(db, job_id, "section_validation_failed", structural_errors)
-                return
-
-            new_words = section_word_count(new_worst_lines)
-            async with write_transaction(db):
-                await ai_job_service.save_checkpoint(
-                    db, job_id, worst_index, "section", "valid",
-                    compute_config_hash({"section": worst_spec.model_dump()}, "section"),
-                    result_json=_SECTION_LINES_ADAPTER.dump_json(new_worst_lines).decode("utf-8"),
-                    metrics_json=json.dumps({**worst_metrics, "words": new_words, "repetition_repaired": True}),
-                    commit=False,
+            repeated_grams, per_section_counts = find_repeated_8grams_by_section(ordered_sections)
+            if per_section_counts:
+                worst_index = max(per_section_counts, key=per_section_counts.get)
+                worst_checkpoint = section_checkpoints[worst_index]
+                worst_lines = _SECTION_LINES_ADAPTER.validate_json(worst_checkpoint["result_json"])
+                try:
+                    worst_metrics = json.loads(worst_checkpoint["metrics_json"])
+                except (TypeError, ValueError):
+                    worst_metrics = {}
+                if not isinstance(worst_metrics, dict):
+                    worst_metrics = {}
+                worst_spec = next(spec for spec in outline.sections if spec.index == worst_index)
+                effective_target = worst_metrics.get("target_effective", worst_spec.target_words)
+                worst_effective_spec = worst_spec.model_copy(update={"target_words": effective_target})
+                repeated_phrases = [" ".join(gram) for gram in repeated_grams]
+                # Task 17.1, required behaviour #2: an explicit checklist entry,
+                # not just the ambient target/delta context repair.txt already
+                # renders unconditionally -- Gate B-7 run 1's evidence is that a
+                # repetition repair silently inflated length past this same range.
+                min_words = round(effective_target * (1 - SCRIPT_SECTION_WORD_TOLERANCE))
+                max_words = round(effective_target * (1 + SCRIPT_SECTION_WORD_TOLERANCE))
+                length_note = (
+                    f"keep this section's length between {min_words} and {max_words} words "
+                    f"(target {effective_target}) while removing the repetition -- do not let fixing "
+                    "the repetition push the length outside this range"
                 )
 
-            all_lines = []
-            for section_index, lines in ordered_sections:
-                all_lines.extend(new_worst_lines if section_index == worst_index else lines)
+                try:
+                    new_worst_lines, structural_errors, _budget_errors = await _repair_section(
+                        router, project, worst_effective_spec, worst_lines,
+                        [f'repeated phrase used elsewhere in the script: "{phrase}"' for phrase in repeated_phrases]
+                        + [length_note],
+                        known_speaker_ids, db, job_id,
+                        purpose="script_section_repetition_repair",
+                    )
+                except ProviderError as exc:
+                    await _fail_provider(db, job_id, exc)
+                    return
+                if structural_errors:
+                    await _fail(db, job_id, "section_validation_failed", structural_errors)
+                    return
 
-            hard_errors, _warnings = validate_global(
-                all_lines, target_words, known_speaker_ids, num_speakers, project["topic"]
-            )
+                new_words = section_word_count(new_worst_lines)
+                async with write_transaction(db):
+                    await ai_job_service.save_checkpoint(
+                        db, job_id, worst_index, "section", "valid",
+                        compute_config_hash({"section": worst_spec.model_dump()}, "section"),
+                        result_json=_SECTION_LINES_ADAPTER.dump_json(new_worst_lines).decode("utf-8"),
+                        metrics_json=json.dumps({**worst_metrics, "words": new_words, "repetition_repaired": True}),
+                        commit=False,
+                    )
+
+                all_lines = []
+                for section_index, lines in ordered_sections:
+                    all_lines.extend(new_worst_lines if section_index == worst_index else lines)
+
+                hard_errors, _warnings = validate_global(
+                    all_lines, target_words, known_speaker_ids, num_speakers, project["topic"]
+                )
+            continue
+
+        break
 
     if hard_errors:
         await _fail(db, job_id, "global_validation_failed", hard_errors)
