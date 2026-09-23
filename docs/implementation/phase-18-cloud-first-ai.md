@@ -199,3 +199,17 @@ This is a behaviour-level feature, so on Phase 18 close the version moves `1.0.0
    primary/fallback expectations **invert semantically** under CLOUD_FIRST (not a rename).
    `GEMINI_*` constants stay in `constants.py` for the two out-of-scope sample scripts.
 
+**Amendment B (PM, 2026-09-23, on the Coder's stop report during 18.2):** four services
+(`app/services/script_service.py:89`, `learning_service.py:78`, `thumbnail_service.py:125`,
+`youtube_service.py:144`) carry the pre-flight guard
+`if AIMode(settings.AI_MODE) is AIMode.GEMINI and not settings.GEMINI_API_KEY: raise …`.
+With `AIMode.GEMINI` removed it raises `AttributeError` on every call. Fixed with the new names,
+it would also contradict invariant 32: "cloud + no key" must silently degrade to local, which
+`compute_effective_mode()` inside `build_ai_router_from_settings()` already does one line later.
+**Ruling:** 18.2's allowed files gain these four services, **only** to delete that guard, its
+`Raises:` docstring line, and any import it leaves unused, plus their test files where a test
+asserts that guard. The `settings.GEMINI_API_KEY` config field **stays** until 18.3, because
+`settings_service.py`, `scripts/check_dependencies.py` and `scripts/generate_cefr_review_samples.py`
+still read it. 18.3 retires the settings side and `check_dependencies`; the sample script keeps
+reading it (out of scope).
+
