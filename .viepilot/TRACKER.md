@@ -2084,7 +2084,7 @@ Plan `docs/implementation/phase-17-global-length-repair.md`; state `.viepilot/ph
 | 17.1 Budget-aware global stage (ENH-010) | Coder | ✅ done (`5930aaf`) |
 | 17.2 Final-section sign-off + `has_outro_last3` | Coder | ✅ done (`80f04b6`) |
 | 17.3 Gate B-8 | PM | ✅ executed: runner PASS; owner config 1/2 → 17.4 |
-| 17.4 "Under" direction via the full per-section path (Amendment C) | Coder | not started |
+| 17.4 "Under" direction via the full per-section path (Amendment C) | Coder | ✅ done (`5008792`) |
 | 17.5 Short re-gate (B1 ×5 + owner ×4) | PM | not started |
 
 PM review log:
@@ -2095,6 +2095,7 @@ PM review log:
 - 17.2 design `4950f25` — **APPROVED with 2 changes** (PM, 2026-09-23). The has_outro_last3 design is verified against the real B-7 run 4 ending (last line has no marker; the second-to-last has "take care"). (C1) The rule-5 sign-off exemption must render **only for the last section** (`{% if is_last_section %}`); otherwise sections 1–4 read an exemption that doesn't apply and a 9B model may add mid-episode goodbyes. Add a test asserting it's absent from non-last section prompts. (C2) The new `tests/test_run_ai_operational_trial.py` must not rely on sort order: importing the runner mutates `os.environ` (`DIE_AI_MODE`, `DIE_DATA_DIR`) and reads `sys.argv`, so the import happens in a fixture that saves and restores `os.environ`, `sys.argv` and the module's `sys.modules` entry, with an assertion that the environment is unchanged afterwards.
 - 17.2 impl `80f04b6` — **ACCEPTED** (PM, 2026-09-23). C1 (exemption wrapped in `{% if is_last_section %}`, with the `+%}` trim fix) and C2 (importlib fixture restores environ/argv/modules) are both done. PM re-verification: PM revert check (exemption removed → `test_pipeline_last_section_sign_off_instruction_is_conditional_on_is_last_section` FAILS, restored); full single-process suite **963 passed** (the Coder's one-off dashboard pagination flake did not recur); `ruff` clean; no `DIE_*` leak. Next: **17.3 Gate B-8** (PM, Coder idle).
 - 17.3 Gate B-8 — **EXECUTED** (PM, 2026-09-23), report `docs/operations/phase17-gate-b8.md` (`09b8f1e`). Runner **PASS**: B1 5/5, samples 4/4, learning 5/5, media PASS 456.3 s, 0 repetition deaths. **Owner config 1/2 (B-7: 2/2):** the "under" plain repair overshot (section 6: 91 → 505 against a target of 238; total 1,377/1,110). This is a 17.1 defect traced to the PM's own C4 instruction. Owner chose **fix now** → plan Amendment C: **17.4** ("under" also uses the full per-section path) + **17.5** short re-gate (B1 ×5 + owner config ×4).
+- 17.4 impl `5008792` — **ACCEPTED** (PM, 2026-09-23). Both directions now rerun `_run_section_pipeline`, and the plain-repair branch is removed. The new test reproduces the real B-8 owner run 2 shape (section 6 selected, target 238; the rerun goes 85 → 505 → length repair 260 → complete). PM re-verification: PM revert check (script_pipeline.py restored to the pre-17.4 `80f04b6` → the new test FAILS with "total word count 957 … outside ±10% of target 1110", the B-8 defect); full suite **964 passed**; `ruff` clean. Two 17.1 tests updated, with an amendment note in task-17.1.md (accepted). Next: **17.5** re-gate.
 
 ## Phase 18 Task Status (queued behind Phase 17)
 
