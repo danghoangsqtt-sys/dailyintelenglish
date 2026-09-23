@@ -2087,7 +2087,7 @@ Plan `docs/implementation/phase-17-global-length-repair.md`; state `.viepilot/ph
 
 PM review log:
 
-- (none yet)
+- 17.1 design `caab2e2` — **CHANGES** (PM, 2026-09-23; plan Amendment A). The single ordered two-slot loop is approved (clear, bounded, 2 extra calls max, reuses the existing caps). Required: (C1, **blocking**) the budget-error match uses `"total episode word count"`, which is the repair-message text; `validate_global` emits `"total word count …"` (script_pipeline.py:472), so the budget branch would never fire. Share one prefix constant, and drive the tests through the real `validate_global`. (C2) Choose the section by deviation from its **nominal** target, not the effective one (Amendment A.1); the 5-min test must use the real B-7 numbers and expect section 2. (C3) Evidence-based shrink method (Amendment A.2): 36/103 repaired sections ended more than 15% over and the only global shrink request failed, so the design must say how an over-budget fix actually shrinks. The length item in the repetition repair and the item 4 view are accepted.
 
 ## Decision Log
 

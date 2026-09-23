@@ -112,3 +112,28 @@ Unchanged from Phase 16 §6: the PM is Claude Opus (session "Phân tích mã ngu
 Coder is Claude Sonnet; `SendMessage` is the live channel; git is the record. The Coder owns
 `.viepilot/phases/17-global-length-repair/**` after the handover commit. Baseline: **956/956**,
 `ruff` clean, real DB 7 projects.
+
+## 6. Amendments
+
+**Amendment A (PM, 2026-09-23, on reviewing the 17.1 design `caab2e2`):**
+1. **Correction to §0.** "The overshoot sat mostly in section 2" is only true against **nominal**
+   targets (5-min job: section 2 is 345 vs 216 = +129; section 3 is 318 vs 201 = +117). Against
+   **effective** (carry-inflated) targets, section 3 deviates more (+81 vs +53). The global total
+   is the sum of each section's deviation from its *nominal* target, because the nominal targets
+   sum to the episode target. So **the section that contributes most to a global miss is chosen
+   against its nominal target.** Effective targets include carry from earlier undershoot and hide
+   where the overshoot came from.
+2. **Repair compliance evidence** (PM, read-only over the B-6 and B-7 trial DBs):
+
+   | Gate | Repaired sections | Started more than 15% under | Grew during repair | Ended more than 15% over |
+   |---|---|---|---|---|
+   | B-6 | 52 | 48 | 48 | 16 |
+   | B-7 | 51 | 45 | 42 | 20 |
+
+   The only observed global shrink request (asked 237, got 315) failed. A *repair of the existing
+   text* is the least reliable way to shrink a section. 17.1 must state, with evidence, how an
+   over-budget global fix actually shrinks the chosen section. Candidates are a fresh regeneration
+   at the new target (first-pass generation mostly undershoots), or a repair phrased as removing
+   whole lines, done by the model. Invariant 29 still applies either way: the model changes the
+   text, never the server.
+
