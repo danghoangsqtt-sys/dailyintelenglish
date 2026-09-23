@@ -1,6 +1,6 @@
 # Task 17.2 — Final-Section Sign-Off + `has_outro_last3` Diagnostic
 
-- **Status:** not started
+- **Status:** in_progress
 - **Owner:** Coder
 - **Priority:** P2
 - **Dependency:** 17.1 accepted
@@ -31,7 +31,90 @@ Gate B-7 had 2 `has_outro: false` results (0 at B-6):
 
 ## Design decisions (Coder, doc-first — commit before code, PM approves)
 
-_pending_
+**Runner test file: `tests/test_run_ai_operational_trial.py`** (new — none exists today for
+this script). One thing worth flagging before writing it: `scripts/run_ai_operational_trial.py`
+does real work at *module import time* — it reads `sys.argv` for `--gate`/`--matrix`/`--mode`,
+unconditionally sets `os.environ["DIE_AI_MODE"]`/`os.environ["DIE_DATA_DIR"]`, then imports
+`app.main` (constructing the real FastAPI `app` and `AIWorker` singletons, though not starting
+a server). None of that is new — it's how the script has always worked, driven by its own
+docstring ("`DIE_AI_MODE` ... set before any `app.*` import"). In a pytest session,
+`app.core.config.Settings()` is a module-level singleton read from the environment once, at
+whichever test file's import first triggers `app.core.config` — since this new test file sorts
+alphabetically after the vast majority of the suite's other `test_*.py` files (nearly all start
+`a`-`q`), that happens well before this file is ever collected, so `os.environ["DIE_DATA_DIR"]`
+being set here has no practical effect on `settings.DATA_DIR` (already fixed by the time this
+runs). Confirmed by running the full suite (see Evidence) with no change in outcome or in the
+real DB's project count. Not a new risk introduced by this task, and out of this task's allowed
+files to restructure (`scripts/run_ai_operational_trial.py`'s "diagnostic field only" scope) —
+noting it here so it's a documented, deliberate observation, not a silent assumption.
+
+**1. `has_outro_last3` (required behaviour #2).** A new function,
+`_has_outro_in_last_n(texts_lower: list[str], n: int, outline_last_objective: str | None) ->
+bool`, generalizing the existing `_has_outro(last_text_lower, outline_last_objective)`: checks
+the same `_OUTRO_LINE_MARKERS` against each of the last `n` lines (not only the very last one),
+falling back to the same `_OUTRO_OBJECTIVE_MARKERS`-against-the-outline-objective check `_has_outro`
+already has. `_has_outro` itself is **not** refactored to call it (its own single-string
+signature has no other caller/test depending on it today, but changing it isn't necessary for
+this task and keeping it as-is minimizes the diff in a file where "diagnostic field only" is
+the allowed scope). `analyze_script` computes `has_outro_last3 =
+_has_outro_in_last_n([t.lower() for t in texts], 3, outline_last_objective)` and adds it to the
+returned dict, alongside (not replacing) the existing `has_outro` key. **The `checks`/
+`all_checks_pass` dict is unchanged** — `outro_present` still reads from `has_outro` only, so
+the gate decision is unaffected (required behaviour #2's explicit instruction).
+
+Verified directly against the real Gate B-7 run 4 ending (read-only, `trial-data/app.db`,
+project `976be88b-eb93-444f-b2f8-664d9e7a0383`), the exact case this task exists to fix — the
+episode's last 3 lines:
+1. (3rd-to-last) "Thank you so much for joining us on this final last section of our show about
+   healthy living and daily wellness tips."
+2. (2nd-to-last) "It was a genuine pleasure talking to you both. Please remember always to
+   **take care** of yourself today and throughout the rest of your week."
+3. (last) "Until then, try adopting one small new habit. Your future health and happiness
+   depends entirely on the choices you make right now."
+
+Line 3 (the true last line) matches none of `_OUTRO_LINE_MARKERS` — `has_outro` is correctly
+`False`, matching the real gate's own recorded value. Line 2 contains "take care" — one of the
+existing markers — so `has_outro_last3` over the last 3 lines is `True`: the exact false
+negative the task names, reproduced and fixed with real data, not a synthetic approximation.
+
+**2. `section.txt`'s sign-off instruction (required behaviour #1), N6-compliant.** The
+`is_last_section` block (in the `## This Section` area, unconditional prose, not a numbered
+rule) gains one line stating the last section must end with a short spoken sign-off to the
+audience — described abstractly, no quoted example goodbye, matching the exact N6 principle
+already applied in Task 16.4. The *exemption from rule 5* (16.4's "never repeat the same
+takeaway sentence in more than one section") is phrased as a clause added to rule 5 itself, in
+the `## Rules` list — not a forward-reference from the earlier `is_last_section` block, since
+in the rendered template `## Rules` comes *after* `## This Section`, so a forward reference
+from there would point at content not yet read. Exact wording:
+- `is_last_section` block: "This is the LAST section of the episode — end it with a short
+  spoken sign-off to the audience, not just a final piece of advice or a call to action alone."
+- Rule 5, amended: "...Never repeat the same summary or takeaway sentence, word-for-word or
+  nearly so, in more than one section — except once, briefly, as part of the final section's
+  sign-off."
+
+No topic-specific content, no quoted phrase, no change to any other rule or to the
+already-existing `is_last_section` framing sentence structure elsewhere in the file.
+
+**Test plan**
+- `tests/test_script_pipeline.py`: a render test (following this file's established
+  `make_handler` + captured-prompt pattern) over a 2-section outline confirms the sign-off
+  instruction is present in the LAST section's prompt and absent from the first section's
+  prompt — proving it's conditional on `is_last_section`, not unconditional prose. A second
+  assertion confirms rule 5's exemption clause is present in every section's prompt (rule 5
+  itself is unconditional; only its exemption wording changes, but that changed wording is
+  always rendered) — bounded, no new Jinja variable.
+- `tests/test_run_ai_operational_trial.py` (new): a unit test calling
+  `_has_outro_in_last_n` (and, for contrast, the existing `_has_outro`) directly against the
+  real Gate B-7 run 4 lines above (hardcoded as literal strings in the test, not read from the
+  trial DB at test time — the DB read above was investigation only, per invariant 26 read-only)
+  confirms `has_outro is False` and `has_outro_last3 is True` — the exact false-negative/fix
+  pair. A second test confirms `analyze_script`'s returned `checks`/`all_checks_pass` and
+  `outro_present` are computed from `has_outro` only, unaffected by `has_outro_last3`'s value
+  (required behaviour #2's explicit "gate decision keeps using `has_outro`").
+- Revert-and-confirm-failure target: the render test asserting the sign-off instruction is
+  present in the last section's prompt — remove the line from `section.txt`, confirm it fails,
+  restore.
+- Full suite, `ruff`.
 
 ## Verification (required)
 
