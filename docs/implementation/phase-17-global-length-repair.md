@@ -137,3 +137,21 @@ Coder is Claude Sonnet; `SendMessage` is the live channel; git is the record. Th
    whole lines, done by the model. Invariant 29 still applies either way: the model changes the
    text, never the server.
 
+**Amendment B (PM, 2026-09-23, on re-reviewing the 17.1 design `b265221`):** C1 and C2 are fixed.
+For C3, **a bare fresh regeneration is rejected on evidence.** Across B-6 + B-7 (118 section
+checkpoints, read-only), first-pass generation lands at a median **0.60×** its target (quartiles
+0.42 / 0.60 / 0.81); only 15/118 land within ±15%. Regenerating the 5-min job's section 2 at 267
+would typically return about 160 words, a total of about 518, far below the 562 minimum, with the
+budget slot already spent. The **full per-section path** (first-pass generation plus the existing
+in-loop length repair when it falls outside ±15%) lands at a median **1.02×** (quartiles
+0.90 / 1.02 / 1.18), with 65/118 within ±15%. Required: the "over" direction reruns the chosen
+section through that full path, at the new target, with the same structural validation. So the
+budget step can cost up to 2 calls, and the **worst case is 3 extra calls per job**, which is
+documented and still bounded (invariant 30). To avoid duplicating logic, 17.1's allowed scope in
+`script_pipeline.py` is widened to a **behaviour-preserving extraction** of the per-section
+generate → validate → repair body into a helper that both the main loop and the global budget
+step call. The main loop's behaviour must be unchanged, with the existing tests green and not
+edited. `avoid_phrases` for the rerun should be computed from the other sections with the
+existing `frequent_repeated_phrases`, not left empty, so the rerun doesn't introduce a new
+cross-section repeat.
+
