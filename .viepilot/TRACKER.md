@@ -2090,10 +2090,27 @@ PM review log:
 - 17.1 design `caab2e2` — **CHANGES** (PM, 2026-09-23; plan Amendment A). The single ordered two-slot loop is approved (clear, bounded, 2 extra calls max, reuses the existing caps). Required: (C1, **blocking**) the budget-error match uses `"total episode word count"`, which is the repair-message text; `validate_global` emits `"total word count …"` (script_pipeline.py:472), so the budget branch would never fire. Share one prefix constant, and drive the tests through the real `validate_global`. (C2) Choose the section by deviation from its **nominal** target, not the effective one (Amendment A.1); the 5-min test must use the real B-7 numbers and expect section 2. (C3) Evidence-based shrink method (Amendment A.2): 36/103 repaired sections ended more than 15% over and the only global shrink request failed, so the design must say how an over-budget fix actually shrinks. The length item in the repetition repair and the item 4 view are accepted.
 - 17.1 design rev `b265221` — **APPROVED with C4** (PM, 2026-09-23; plan Amendment B). C1 (shared prefix constant) and C2 (nominal selection, real 5-min numbers → section 2) are accepted. C3's bare fresh regeneration is rejected on evidence: first-pass generation has a median of 0.60× target (15/118 within ±15%), so it would overshoot into "too short". C4: rerun the chosen section through the **full per-section path** (generation + in-loop length repair; median 1.02×, 65/118 within ±15%) via a behaviour-preserving helper extraction; worst case is 3 extra calls; `avoid_phrases` comes from the other sections. The "under" direction stays a plain repair.
 
+## Phase 18 Task Status (queued behind Phase 17)
+
+Plan `docs/implementation/phase-18-cloud-first-ai.md`; state `.viepilot/phases/18-cloud-first-ai/PHASE-STATE.md`.
+
+| Task | Owner | Status |
+|---|---|---|
+| 18.1 `OpenAICompatProvider` | Coder | not started |
+| 18.2 Router roles/modes/budgets; Gemini removed | Coder | not started |
+| 18.3 Settings + health + privacy note | Coder | not started |
+| 18.4 Fallback-rate readout + runner | Coder | not started |
+| 18.5 Gate B-9 A/B | PM | not started |
+
+PM review log:
+
+- (none yet)
+
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-23 | **Phase 18 planned** (`/vp-evolve ENH-011`) from D21–D24: generic OpenAI-compatible provider, router primary/fallback roles with **separate per-provider time budgets** and a circuit breaker, modes `local`/`cloud`/`cloud_first`, Gemini provider removed (comment sweep out of scope), Settings key/URL/model, fallback-rate readout, Gate B-9 A/B against B-8. Queued behind Phase 17 so B-8 records the local baseline; version → 1.1.0-beta at close | Smoke evidence: cloud quality far better, free tier flaky; both smoke jobs died on the shared router deadline, so separate budgets are a hard requirement |
 | 2026-09-23 | **D21–D24 (owner, brainstorm `docs/brainstorm/session-2026-09-23.md`):** D21 cloud first with local qwen as automatic fallback, superseding D9/D11 as the default (the `DIE_AI_ALLOW_CLOUD` kill switch stays); D22 start on the free tier (Nemotron 3 Super), measure the fallback rate, consider paid later; D23 replace the dedicated Gemini provider with one generic OpenAI-compatible provider; D24 key/base URL/model in the Settings page (DB, write-only) with `.env` defaults. Planned as Phase 18 after Phase 17 closes | ENH-011 smoke test: cloud models hit word targets ~0.99× vs qwen's 0.60× first pass, but the free tier is unreliable, so a fallback is mandatory; the router already has hybrid + circuit breaker, needing role generalisation and separate per-provider time budgets |
 | 2026-09-23 | **Phase 17 opened** (`/vp-evolve ENH-010`). PM **erratum** to the Gate B-7 report and ENH-010: a global budget repair already exists (Task 14.3 item 6, last section only). The real failure mechanics: run 1 = a length-inflating repetition repair with no re-check; 5-min = the last-section-only repair can't absorb a middle-section overshoot. Plan: targeted budget repair + length-aware repetition repair + mixed-failure path (17.1), final-section sign-off (17.2), Gate B-8 (17.3). Thresholds pinned; no server-side content deletion | Evidence from the B-7 checkpoints (read-only) contradicted the B-7 report's own §3.2; the plan targets the observed mechanism, not the reported one |
 | 2026-09-23 | **D20 (owner): Phase 16 closed after Gate B-7.** ENH-009 resolved on evidence (repetition 0.00% in 9/9 completed scripts). 16.6/16.7 not run, since the second repetition-only repair would not have saved either B-7 failure. New ENH-010 (bounded global word-count repair, incl. the mixed case) plus an outro/rule-5 watch item logged for a future phase; interim is the in-app Retry | Gate B-7 moved the failure class from repetition to global length overshoot, which is a different mechanism; building 16.6 would chase the old class |
@@ -3085,4 +3102,4 @@ PM review log:
 | BUG-023 | Bug | Leaked test projects in real app.db; CHANGELOG missing Phase 15 | low | done (Phase 16) |
 | ENH-009 | Enhancement | Script repetition gate variable (B-5 5/5 → B-6 3/5) | medium | done (Phase 16, 16.4; B-7 rep 0.00%) |
 | ENH-010 | Enhancement | Global script word-count repair is not budget-aware (incl. mixed case) | medium | planned (Phase 17) |
-| ENH-011 | Enhancement | OpenAI-compatible cloud provider (Nemotron via OpenRouter), local qwen fallback | medium | scoped (D21–D24; Phase 18 after Phase 17) |
+| ENH-011 | Enhancement | OpenAI-compatible cloud provider (Nemotron via OpenRouter), local qwen fallback | medium | planned (Phase 18, queued after Phase 17) |

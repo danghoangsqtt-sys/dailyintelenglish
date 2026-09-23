@@ -1259,3 +1259,14 @@ middle-section overshoot.
 - [ ] 17.1 Budget-aware global stage: targeted budget repair, length-aware repetition repair, mixed-failure path (Coder)
 - [ ] 17.2 Final-section sign-off + `has_outro_last3` diagnostic (Coder)
 - [ ] 17.3 Gate B-8, local only: B1 8-min 5/5 complete, no regression (PM)
+
+## Phase 18 — Cloud-First AI with Local Fallback (ENH-011)
+
+**Status:** 🟡 Planned 2026-09-23, **queued behind Phase 17** | Plan `docs/implementation/phase-18-cloud-first-ai.md`.
+Authority: owner decisions D21–D24 (brainstorm `docs/brainstorm/session-2026-09-23.md`).
+
+- [ ] 18.1 `OpenAICompatProvider` (plain JSON, 200-with-error transient, config errors fail fast) (Coder)
+- [ ] 18.2 Router primary/fallback roles, `local|cloud|cloud_first`, separate per-provider budgets, circuit breaker; Gemini provider removed (Coder)
+- [ ] 18.3 Settings: key/URL/model (write-only key), test connection, health fields, privacy note (Coder)
+- [ ] 18.4 Fallback-rate readout + runner `--matrix cloud_first` (Coder)
+- [ ] 18.5 Gate B-9 A/B cloud_first (free Nemotron 3 Super) vs local B-8 (PM)
