@@ -24,7 +24,7 @@
 
 | Task | Description | Owner | Status | Blocking gate |
 |---|---|---|---|---|
-| 17.1 | Budget-aware global stage (targeted budget repair, length-aware repetition repair, mixed-failure path) | Coder | not started | card design → PM approval |
+| 17.1 | Budget-aware global stage (targeted budget repair, length-aware repetition repair, mixed-failure path) | Coder | in_progress | card design → PM approval |
 | 17.2 | Final-section sign-off + `has_outro_last3` diagnostic | Coder | not started | card design → PM approval |
 | 17.3 | Gate B-8, local only | PM | not started | Coder idle |
 
