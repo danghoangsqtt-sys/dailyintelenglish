@@ -3,8 +3,8 @@
   "version": "1.0.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_17_planned",
-  "current_phase": 17,
+  "status": "phase_18_open",
+  "current_phase": 18,
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
     "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
@@ -157,15 +157,15 @@
     "17": {
       "name": "Budget-Aware Global Validation (ENH-010)",
       "days": "n/a",
-      "status": "planned",
-      "tasks_done": 0,
-      "tasks_total": 3,
-      "note": "Opened 2026-09-23 via /vp-evolve ENH-010. Plan docs/implementation/phase-17-global-length-repair.md. PM erratum: the global budget repair already exists (14.3 item 6, last section only); B-7 run 1 died after a length-inflating repetition repair with no re-check; the 5-min sample died because the last-section repair couldn't absorb a middle-section overshoot. 17.1 targeted budget repair + length-aware repetition repair + mixed path; 17.2 final-section sign-off + has_outro_last3 diagnostic; 17.3 Gate B-8 (B1 5/5). Baseline 956/956."
+      "status": "complete",
+      "tasks_done": 5,
+      "tasks_total": 5,
+      "note": "Opened 2026-09-23 via /vp-evolve ENH-010. Plan docs/implementation/phase-17-global-length-repair.md. PM erratum: the global budget repair already exists (14.3 item 6, last section only); B-7 run 1 died after a length-inflating repetition repair with no re-check; the 5-min sample died because the last-section repair couldn't absorb a middle-section overshoot. 17.1 targeted budget repair + length-aware repetition repair + mixed path; 17.2 final-section sign-off + has_outro_last3 diagnostic; 17.3 Gate B-8 (B1 5/5). Baseline 956/956. CLOSED 2026-09-23: 17.1 5930aaf, 17.2 80f04b6, Gate B-8 (runner PASS; owner 1/2 exposed the 'under' plain-repair overshoot), 17.4 5008792 (under via full path), re-gate 17.5 PASS: B1 5/5, owner 4/4, media 478 s. Suite 964/964. ENH-010 done."
     },
     "18": {
       "name": "Cloud-First AI with Local Fallback (ENH-011)",
       "days": "n/a",
-      "status": "planned (queued behind Phase 17)",
+      "status": "open",
       "tasks_done": 0,
       "tasks_total": 5,
       "note": "Planned 2026-09-23 via /vp-evolve ENH-011 from owner decisions D21-D24 (brainstorm docs/brainstorm/session-2026-09-23.md). Plan docs/implementation/phase-18-cloud-first-ai.md: 18.1 OpenAICompatProvider; 18.2 router primary/fallback + separate per-provider budgets + circuit breaker, modes local/cloud/cloud_first, Gemini provider removed; 18.3 Settings key/URL/model + health + privacy note; 18.4 fallback-rate readout + runner; 18.5 Gate B-9 A/B vs B-8. Owner's OpenRouter key is in .env (DIE_OPENAI_COMPAT_API_KEY, free tier, never printed)."

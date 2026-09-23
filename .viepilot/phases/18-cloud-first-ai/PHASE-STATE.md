@@ -4,7 +4,7 @@
 
 - **Phase:** 18
 - **Slug:** `18-cloud-first-ai`
-- **Status:** planned; **queued behind Phase 17** (starts after Phase 17 closes)
+- **Status:** open (2026-09-23; handover to the Coder in the Phase 17 close-out commit)
 - **Planned:** 2026-09-23 (`/vp-evolve ENH-011`)
 - **Controlling plan:** `docs/implementation/phase-18-cloud-first-ai.md`
 - **Authorization:** owner decisions D21–D24 (brainstorm `docs/brainstorm/session-2026-09-23.md`).
@@ -12,8 +12,8 @@
 
 ## Preflight (to be completed when the phase starts)
 
-- Phase 17 closed, with Gate B-8 recorded as the local baseline.
-- Full suite count and `ruff` clean, taken at the start.
+- Phase 17 closed 2026-09-23. The local baseline for Gate B-9's comparison is the Phase 17 re-gate `docs/operations/phase17-gate-b8r.md` (B1 5/5, owner 4/4) plus Gate B-8 for the samples.
+- Full suite **964/964**, `ruff` clean (start of Phase 18).
 - The owner's OpenRouter key is present in `.env` as `DIE_OPENAI_COMPAT_API_KEY`, on the free
   tier (checked 2026-09-23, never printed).
 

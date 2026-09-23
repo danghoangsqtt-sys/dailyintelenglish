@@ -1251,18 +1251,20 @@ Owner decisions: D18 (repetition: prompt first, second repair only if Gate B-7 <
 
 ## Phase 17 — Budget-Aware Global Validation (ENH-010)
 
-**Status:** 🟡 Planned 2026-09-23 | Plan `docs/implementation/phase-17-global-length-repair.md`.
+**Status:** ✅ Closed 2026-09-23 | Plan `docs/implementation/phase-17-global-length-repair.md`.
 Trigger: Gate B-7's two script failures, re-diagnosed (plan §0): a length-inflating repetition
 repair with no re-check, and a last-section-only budget repair that couldn't absorb a
 middle-section overshoot.
 
-- [ ] 17.1 Budget-aware global stage: targeted budget repair, length-aware repetition repair, mixed-failure path (Coder)
-- [ ] 17.2 Final-section sign-off + `has_outro_last3` diagnostic (Coder)
-- [ ] 17.3 Gate B-8, local only: B1 8-min 5/5 complete, no regression (PM)
+- [x] 17.1 Budget-aware global stage: targeted budget repair, length-aware repetition repair, mixed-failure path (Coder)
+- [x] 17.2 Final-section sign-off + `has_outro_last3` diagnostic (Coder)
+- [x] 17.3 Gate B-8, local only: runner PASS; owner config 1/2 found the "under" defect (PM)
+- [x] 17.4 "Under" direction via the full per-section path (Coder)
+- [x] 17.5 Re-gate: B1 5/5, owner config 4/4 (PM)
 
 ## Phase 18 — Cloud-First AI with Local Fallback (ENH-011)
 
-**Status:** 🟡 Planned 2026-09-23, **queued behind Phase 17** | Plan `docs/implementation/phase-18-cloud-first-ai.md`.
+**Status:** 🟢 Open 2026-09-23 | Plan `docs/implementation/phase-18-cloud-first-ai.md`.
 Authority: owner decisions D21–D24 (brainstorm `docs/brainstorm/session-2026-09-23.md`).
 
 - [ ] 18.1 `OpenAICompatProvider` (plain JSON, 200-with-error transient, config errors fail fast) (Coder)

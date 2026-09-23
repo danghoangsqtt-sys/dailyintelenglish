@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); Phases 13–15 closed (15 closed 2026-09-22: structural failures eliminated, media gate PASS for the first time, owner's failing configuration completes 2/2; repetition is the single remaining, variable failure class). **Phase 16 (Stability Hardening) closed 2026-09-23**: worker loop guard, ffmpeg timeouts + atomic render, test-DB leak fixed + 447 leaked projects cleaned, repetition 0.00% in 9/9 completed scripts at Gate B-7; remaining failure class: global word-count overshoot (ENH-010). **Phase 17 (Budget-Aware Global Validation, ENH-010) planned 2026-09-23**; plan `docs/implementation/phase-17-global-length-repair.md`.
+**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); Phases 13–15 closed (15 closed 2026-09-22: structural failures eliminated, media gate PASS for the first time, owner's failing configuration completes 2/2; repetition is the single remaining, variable failure class). **Phase 16 (Stability Hardening) closed 2026-09-23**: worker loop guard, ffmpeg timeouts + atomic render, test-DB leak fixed + 447 leaked projects cleaned, repetition 0.00% in 9/9 completed scripts at Gate B-7; remaining failure class: global word-count overshoot (ENH-010). **Phase 17 (Budget-Aware Global Validation, ENH-010) closed 2026-09-23**: re-gate B1 5/5 + owner config 4/4, every global-stage repair recovered its job. **Phase 18 (Cloud-First AI, ENH-011) open.**
 **Day:** 6 / 21  
 **Started:** 2026-09-10 (Phases 1–12 complete; Phase 13 opened 2026-09-18 as user-approved reliability scope beyond the original plan)
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
@@ -2085,7 +2085,7 @@ Plan `docs/implementation/phase-17-global-length-repair.md`; state `.viepilot/ph
 | 17.2 Final-section sign-off + `has_outro_last3` | Coder | ✅ done (`80f04b6`) |
 | 17.3 Gate B-8 | PM | ✅ executed: runner PASS; owner config 1/2 → 17.4 |
 | 17.4 "Under" direction via the full per-section path (Amendment C) | Coder | ✅ done (`5008792`) |
-| 17.5 Short re-gate (B1 ×5 + owner ×4) | PM | not started |
+| 17.5 Short re-gate (B1 ×5 + owner ×4) | PM | ✅ PASS (B1 5/5, owner 4/4) |
 
 PM review log:
 
@@ -2096,6 +2096,11 @@ PM review log:
 - 17.2 impl `80f04b6` — **ACCEPTED** (PM, 2026-09-23). C1 (exemption wrapped in `{% if is_last_section %}`, with the `+%}` trim fix) and C2 (importlib fixture restores environ/argv/modules) are both done. PM re-verification: PM revert check (exemption removed → `test_pipeline_last_section_sign_off_instruction_is_conditional_on_is_last_section` FAILS, restored); full single-process suite **963 passed** (the Coder's one-off dashboard pagination flake did not recur); `ruff` clean; no `DIE_*` leak. Next: **17.3 Gate B-8** (PM, Coder idle).
 - 17.3 Gate B-8 — **EXECUTED** (PM, 2026-09-23), report `docs/operations/phase17-gate-b8.md` (`09b8f1e`). Runner **PASS**: B1 5/5, samples 4/4, learning 5/5, media PASS 456.3 s, 0 repetition deaths. **Owner config 1/2 (B-7: 2/2):** the "under" plain repair overshot (section 6: 91 → 505 against a target of 238; total 1,377/1,110). This is a 17.1 defect traced to the PM's own C4 instruction. Owner chose **fix now** → plan Amendment C: **17.4** ("under" also uses the full per-section path) + **17.5** short re-gate (B1 ×5 + owner config ×4).
 - 17.4 impl `5008792` — **ACCEPTED** (PM, 2026-09-23). Both directions now rerun `_run_section_pipeline`, and the plain-repair branch is removed. The new test reproduces the real B-8 owner run 2 shape (section 6 selected, target 238; the rerun goes 85 → 505 → length repair 260 → complete). PM re-verification: PM revert check (script_pipeline.py restored to the pre-17.4 `80f04b6` → the new test FAILS with "total word count 957 … outside ±10% of target 1110", the B-8 defect); full suite **964 passed**; `ruff` clean. Two 17.1 tests updated, with an amendment note in task-17.1.md (accepted). Next: **17.5** re-gate.
+- 17.5 re-gate — **PASS** (PM, 2026-09-23), report `docs/operations/phase17-gate-b8r.md`. B1 8-min **5/5**, owner config **4/4** (B-8: 1/2), learning 9/9, media 478.2 s. Global-stage repairs that fired: 2 over, 1 under (the exact B-8 defect path), 4 repetition, all recovered. Watch item carried to Phase 18: the A2 small_talk sign-off is missing in 1 of 4 runs (2nd occurrence).
+
+### Phase 17 close-out — ✅ CLOSED 2026-09-23
+
+Delivered: budget-aware global stage (17.1: nominal-deviation targeting, full per-section rerun, ordered 2-slot loop, length-aware repetition repair); final-section sign-off + `has_outro_last3` (17.2); Gate B-8 (17.3: runner PASS, found the "under" defect); "under" via the full path (17.4); re-gate PASS (17.5). Suite 956 → 964. ENH-010 done.
 
 ## Phase 18 Task Status (queued behind Phase 17)
 
@@ -2117,6 +2122,7 @@ PM review log:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-23 | **Phase 17 closed** after re-gate 17.5 PASS (B1 5/5, owner config 4/4). **Phase 18 opened** (queued plan `e5661a1`, D21–D24) | Local qwen now completes reliably with repairs; Phase 18 adds the cloud primary with qwen as the proven fallback |
 | 2026-09-23 | **Gate B-8 → owner: fix now.** 17.4 ("under" budget direction reruns the full per-section path; the plain-repair branch is removed) + 17.5 short re-gate, before Phase 17 closes | B-8 passed its criterion, but the owner's own configuration regressed 2/2 → 1/2 on a defect the PM introduced in C4; the fix reuses existing code |
 | 2026-09-23 | **Phase 18 planned** (`/vp-evolve ENH-011`) from D21–D24: generic OpenAI-compatible provider, router primary/fallback roles with **separate per-provider time budgets** and a circuit breaker, modes `local`/`cloud`/`cloud_first`, Gemini provider removed (comment sweep out of scope), Settings key/URL/model, fallback-rate readout, Gate B-9 A/B against B-8. Queued behind Phase 17 so B-8 records the local baseline; version → 1.1.0-beta at close | Smoke evidence: cloud quality far better, free tier flaky; both smoke jobs died on the shared router deadline, so separate budgets are a hard requirement |
 | 2026-09-23 | **D21–D24 (owner, brainstorm `docs/brainstorm/session-2026-09-23.md`):** D21 cloud first with local qwen as automatic fallback, superseding D9/D11 as the default (the `DIE_AI_ALLOW_CLOUD` kill switch stays); D22 start on the free tier (Nemotron 3 Super), measure the fallback rate, consider paid later; D23 replace the dedicated Gemini provider with one generic OpenAI-compatible provider; D24 key/base URL/model in the Settings page (DB, write-only) with `.env` defaults. Planned as Phase 18 after Phase 17 closes | ENH-011 smoke test: cloud models hit word targets ~0.99× vs qwen's 0.60× first pass, but the free tier is unreliable, so a fallback is mandatory; the router already has hybrid + circuit breaker, needing role generalisation and separate per-provider time budgets |
@@ -3109,5 +3115,5 @@ PM review log:
 | ENH-008 | Enhancement | ffmpeg subprocess calls have no timeout | medium | done (Phase 16) |
 | BUG-023 | Bug | Leaked test projects in real app.db; CHANGELOG missing Phase 15 | low | done (Phase 16) |
 | ENH-009 | Enhancement | Script repetition gate variable (B-5 5/5 → B-6 3/5) | medium | done (Phase 16, 16.4; B-7 rep 0.00%) |
-| ENH-010 | Enhancement | Global script word-count repair is not budget-aware (incl. mixed case) | medium | planned (Phase 17) |
+| ENH-010 | Enhancement | Global script word-count repair is not budget-aware (incl. mixed case) | medium | done (Phase 17) |
 | ENH-011 | Enhancement | OpenAI-compatible cloud provider (Nemotron via OpenRouter), local qwen fallback | medium | planned (Phase 18, queued after Phase 17) |
