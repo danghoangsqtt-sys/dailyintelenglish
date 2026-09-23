@@ -3084,3 +3084,4 @@ PM review log:
 | BUG-023 | Bug | Leaked test projects in real app.db; CHANGELOG missing Phase 15 | low | done (Phase 16) |
 | ENH-009 | Enhancement | Script repetition gate variable (B-5 5/5 → B-6 3/5) | medium | done (Phase 16, 16.4; B-7 rep 0.00%) |
 | ENH-010 | Enhancement | Global script word-count repair is not budget-aware (incl. mixed case) | medium | planned (Phase 17) |
+| ENH-011 | Enhancement | OpenAI-compatible cloud provider (Nemotron via OpenCode Zen), local qwen fallback | medium | open (smoke test 2026-09-23; after Phase 17) |
