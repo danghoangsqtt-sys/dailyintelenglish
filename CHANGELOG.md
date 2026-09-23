@@ -9,6 +9,15 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Added
+- `OpenAICompatProvider` (2026-09-23, Phase 18 Task 18.1, ENH-011, self-implemented by Coder):
+  a new provider adapter for any OpenAI-compatible `/chat/completions` endpoint (OpenRouter,
+  first), not yet wired into the router or Settings (Tasks 18.2/18.3). Behaviour is dictated by
+  a real smoke test against OpenRouter's free Nemotron models: plain prompt-only JSON (never
+  `response_format`, which returned malformed JSON), `reasoning: {"exclude": true}`, a markdown
+  fence strip, and error mapping for every shape seen live — HTTP 200 with an `error` body, 429,
+  5xx, 401/402/403/404 (a config error, fails fast with no retry), timeouts, and malformed
+  responses. The API key is never in the URL, and every exception message is redacted of the key
+  as a backstop against an upstream that echoes it back.
 - New Settings page (2026-09-18, Phase 12 Task 12.1, self-implemented by PM):
   enter the Gemini API key directly in the app instead of hand-editing `.env`.
   Saved keys take effect immediately (no restart), are never displayed in full

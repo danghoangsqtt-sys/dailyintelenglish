@@ -21,7 +21,7 @@
 
 | Task | Description | Owner | Status |
 |---|---|---|---|
-| 18.1 | `OpenAICompatProvider` | Coder | in_progress (design commit → PM approval) |
+| 18.1 | `OpenAICompatProvider` | Coder | done (pending PM ACCEPTED) |
 | 18.2 | Router roles/modes, per-provider budgets, circuit breaker; Gemini provider removed | Coder | not started |
 | 18.3 | Settings (key/URL/model, test connection), health fields, privacy note | Coder | not started |
 | 18.4 | Fallback-rate readout + runner `--matrix cloud_first` | Coder | not started |
