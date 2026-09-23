@@ -271,3 +271,12 @@ re-render unchanged.
 - Revert check: remove the isolation step from the shared helper; the guard must fail the
   run immediately.
 
+**Amendment D (PM, 2026-09-23, on the Coder's stop report during 16.3):** the new guard caught
+a pre-existing isolation gap. `tests/test_ai_health_api.py::test_health_response_has_no_extra_undeclared_fields`
+uses a bare `TestClient(app)` with no `DATA_DIR` override, so since Task 13.6 its lifespan has
+opened the real `data/app.db`. It was never visible because the test is GET-only. 16.3's allowed
+files gain `tests/test_ai_health_api.py`, **only** to isolate that one test (use the file's
+existing `client` fixture, or `tmp_path` + `monkeypatch.setattr(settings, "DATA_DIR", ...)`).
+No other change to that file. Any further guard trip found in the final run follows the same
+rule: stop and report; don't widen scope unilaterally.
+
