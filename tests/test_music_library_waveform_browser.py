@@ -8,18 +8,14 @@ path, not the feature itself.
 """
 
 import io
-import socket
-import threading
-import time
 from typing import AsyncGenerator, Generator
 
 import pytest
-import uvicorn
 from playwright.async_api import Browser, async_playwright
 from pydub.generators import Sine
 
 from app.core.config import settings
-from app.main import app
+from tests.conftest import live_server
 
 
 def _real_mp3_bytes(duration_ms: int = 3000, freq: int = 440) -> bytes:
@@ -28,35 +24,10 @@ def _real_mp3_bytes(duration_ms: int = 3000, freq: int = 440) -> bytes:
     return buffer.getvalue()
 
 
-def _find_free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
-        listener.bind(("127.0.0.1", 0))
-        return listener.getsockname()[1]
-
-
 @pytest.fixture(scope="module")
 def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Generator[str, None, None]:
-    original_data_dir = settings.DATA_DIR
-    settings.DATA_DIR = tmp_path_factory.mktemp("waveform-browser-data")
-    port = _find_free_port()
-    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-
-    started_at = time.time()
-    while time.time() - started_at < 10.0:
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.5):
-                break
-        except OSError:
-            time.sleep(0.1)
-    else:
-        raise RuntimeError("Live test server failed to start within 10 seconds")
-
-    yield f"http://127.0.0.1:{port}"
-    server.should_exit = True
-    thread.join(timeout=10)
-    settings.DATA_DIR = original_data_dir
+    with live_server(tmp_path_factory, "waveform-browser") as url:
+        yield url
 
 
 @pytest.fixture(autouse=True)

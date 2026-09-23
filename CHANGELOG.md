@@ -24,6 +24,18 @@ Versioning: [SemVer](https://semver.org/)
   bundled — see README for why).
 
 ### Changed
+- Phase 15, local script-generation robustness (2026-09-22, self-implemented by
+  Coder, accepted by PM): three fixes found from real local-model runs. Task 15.1
+  — the model occasionally drops one speaker UUID group mid-line; speaker
+  references now resolve through a deterministic alias table instead of failing
+  the structural check outright. Task 15.2 — a run of more than
+  `SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER` consecutive lines from one speaker,
+  still present after the existing semantic repair, now gets one bounded
+  deterministic merge fix instead of a hard failure. Task 15.3 —
+  `ai_job_service.set_job_metric` (a generic read-modify-write for a
+  `metrics_json` sibling key, alongside `record_generation_call`'s calls list)
+  plus a `--gate` path on the operational trial runner, both laying the
+  groundwork for Gate B-6's evidence collection.
 - Phase 14 Task 14.6 (revised), local-only rollout and rollback drill (2026-09-22,
   resuming Phase 13 Task 13.10 under D9-D11 with the mode fixed to `local` rather than
   chosen from a Gate B result table, following Gate B-3's pass —
@@ -202,6 +214,28 @@ Versioning: [SemVer](https://semver.org/)
   correctly by existing code, so no change was needed there.
 
 ### Fixed
+- Phase 16 Task 16.3 (2026-09-23, BUG-023, self-implemented by Coder): 419+
+  leftover test-fixture projects (`Learning`/`YouTube`/`Export`/`Script API Test
+  Episode`) had accumulated in the real `data/app.db`, burying real projects on
+  the Dashboard. Root cause: 21 of the 24 Playwright `*_browser.py` test files'
+  `live_server_url` fixtures started a real uvicorn server hosting the actual
+  app without isolating `settings.DATA_DIR` first, so the app's process-wide
+  `Database` singleton opened its connection against the literal real database.
+  Since `Database.connect()` only opens a new connection when none is already
+  open, it silently kept reusing that stale, real-path connection for whichever
+  API test ran next — ignoring that test's own correct `DATA_DIR` override —
+  and if that test's first action created a project, it landed in the real
+  database. All 24 fixtures now delegate to one shared `live_server` helper
+  (`tests/conftest.py`) that isolates `DATA_DIR` to a tmp directory and fails
+  the test loudly if the server or its database connection are still alive
+  after teardown, instead of leaving either to linger silently. A second,
+  independent guard also now makes it impossible for any test to open the real
+  database at all, or to reuse an already-open connection against a different
+  `DATA_DIR` than it was opened with — the exact stale-reuse mechanism above,
+  now caught immediately with a clear error rather than a silent data leak.
+  `scripts/cleanup_test_projects.py` (new) finds and removes the leaked rows
+  (backup first, exact name match only, via the same delete path the API uses)
+  — the PM runs it against the real database after a dry-run the owner reviews.
 - Phase 16 Task 16.2 (2026-09-23, ENH-008, self-implemented by Coder): both
   ffmpeg render passes (background+subtitle burn-in, and the 9:16 vertical
   reformat) had no `timeout=`, so a hung encoder (a bad input file, a stuck

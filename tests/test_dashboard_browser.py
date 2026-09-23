@@ -12,16 +12,12 @@ Tests:
 """
 
 import json
-import socket
-import threading
-import time
 from typing import AsyncGenerator
 
 import pytest
-import uvicorn
 from playwright.async_api import async_playwright, Browser
 
-from app.main import app
+from tests.conftest import live_server
 
 MOCK_PROJECTS = [
     {
@@ -66,31 +62,10 @@ def _pagination_projects(count: int) -> list[dict]:
     ]
 
 
-def _find_free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
-
-
 @pytest.fixture(scope="module")
-def live_server_url():
-    port = _find_free_port()
-    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
-    server = uvicorn.Server(config)
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-
-    start_time = time.time()
-    while time.time() - start_time < 10.0:
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.5):
-                break
-        except OSError:
-            time.sleep(0.1)
-    else:
-        raise RuntimeError("Live test server failed to start within 10 seconds")
-
-    yield f"http://127.0.0.1:{port}"
+def live_server_url(tmp_path_factory: pytest.TempPathFactory):
+    with live_server(tmp_path_factory, "dashboard") as url:
+        yield url
 
 
 @pytest.fixture

@@ -30,7 +30,7 @@
 |---|---|---|---|---|
 | 16.1 | Worker loop guard + `worker_alive` (BUG-022) | Coder | done | — |
 | 16.2 | ffmpeg timeouts (ENH-008) | Coder | done | — |
-| 16.3 | Test-data leak root cause + guard + cleanup script + CHANGELOG Phase 15 (BUG-023) | Coder → PM | in_progress | card design → PM approval |
+| 16.3 | Test-data leak root cause + guard + cleanup script + CHANGELOG Phase 15 (BUG-023) | Coder → PM | Coder side done (pending PM ACCEPTED) | PM diff review + revert check, then PM runs dry-run → owner → `--apply` |
 | 16.4 | Repetition: evidence-driven avoid list (ENH-009 A) | Coder | not started | evidence table → PM approval |
 | 16.5 | Gate B-7, local only | PM | not started | Coder idle |
 | 16.6 | Second bounded repetition repair (ENH-009 B) | Coder | conditional (only if B-7 script < 5/5) | — |

@@ -3,40 +3,18 @@ currently uses the same Edge TTS voice as "British" (no distinct Scottish voice 
 upstream — see tasks/task-2.1c.md and tasks/task-2.5.md).
 """
 
-import socket
-import threading
-import time
 from typing import AsyncGenerator
 
 import pytest
-import uvicorn
 from playwright.async_api import Browser, async_playwright
 
-from app.main import app
-
-
-def _find_free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
-        listener.bind(("127.0.0.1", 0))
-        return listener.getsockname()[1]
+from tests.conftest import live_server
 
 
 @pytest.fixture(scope="module")
-def live_server_url():
-    port = _find_free_port()
-    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    started_at = time.time()
-    while time.time() - started_at < 10.0:
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.5):
-                break
-        except OSError:
-            time.sleep(0.1)
-    else:
-        raise RuntimeError("Live test server failed to start within 10 seconds")
-    yield f"http://127.0.0.1:{port}"
+def live_server_url(tmp_path_factory: pytest.TempPathFactory):
+    with live_server(tmp_path_factory, "step1-accent-disclosure") as url:
+        yield url
 
 
 @pytest.fixture

@@ -2,19 +2,13 @@
 
 import asyncio
 import json
-import socket
-import threading
-import time
-from pathlib import Path
 from typing import AsyncGenerator, Generator
 from urllib.parse import urlparse
 
 import pytest
-import uvicorn
 from playwright.async_api import Browser, Route, async_playwright
 
-from app.core.config import settings
-from app.main import app
+from tests.conftest import live_server
 
 PROJECT = {
     "id": "thumbnail-ui-project",
@@ -94,37 +88,11 @@ def variant(
     }
 
 
-def _find_free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
-        listener.bind(("127.0.0.1", 0))
-        return listener.getsockname()[1]
-
-
 @pytest.fixture(scope="module")
 def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Generator[str, None, None]:
     """Serve the real Step 6 page and static assets with isolated runtime storage."""
-    original_data_dir = settings.DATA_DIR
-    settings.DATA_DIR = Path(tmp_path_factory.mktemp("thumbnail-browser-data"))
-    port = _find_free_port()
-    server = uvicorn.Server(
-        uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
-    )
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    started_at = time.time()
-    while time.time() - started_at < 10:
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=0.5):
-                break
-        except OSError:
-            time.sleep(0.1)
-    else:
-        raise RuntimeError("Live test server failed to start within 10 seconds")
-
-    yield f"http://127.0.0.1:{port}"
-    server.should_exit = True
-    thread.join(timeout=10)
-    settings.DATA_DIR = original_data_dir
+    with live_server(tmp_path_factory, "thumbnail-browser") as url:
+        yield url
 
 
 @pytest.fixture

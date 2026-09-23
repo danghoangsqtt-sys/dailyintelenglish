@@ -1,6 +1,6 @@
 # Task 16.3 — Test-Data Leak: Root Cause, Guard, Cleanup Tool, CHANGELOG (BUG-023)
 
-- **Status:** in_progress
+- **Status:** done
 - **Owner:** Coder (investigation, guard, script); PM (dry-run → owner → `--apply` on the real DB)
 - **Priority:** P1
 - **Dependency:** 16.2 accepted
@@ -26,7 +26,8 @@ CHANGELOG `[Unreleased]` has no Phase 15 entry (15.1–15.3 changed code).
 
 `tests/conftest.py`; the leak-source test files **named in the design section before
 editing**; new `scripts/cleanup_test_projects.py`; new `tests/test_cleanup_test_projects.py`;
-`CHANGELOG.md`.
+`CHANGELOG.md`. Plan Amendment D (PM, folded in after the full-suite run below):
+`tests/test_ai_health_api.py`, for the one fix described under "Amendment D" only.
 
 **Named per the design section below** (21 files, all `*_browser.py`, each getting the
 identical mechanical fix described in Design decision 2): `tests/test_ui_async_browser.py`,
@@ -228,6 +229,23 @@ both under `[Unreleased]`.
   `--db`/`--data-dir` when running in the test process (no accidental real-path
   fallback).
 
+**Amendment D (PM ruling after the guard caught a real case, folded in pre-acceptance)**
+The first full single-process run with the guard installed failed loudly on
+`tests/test_ai_health_api.py::test_health_response_has_no_extra_undeclared_fields`
+— pre-existing (Task 13.6, untouched by 16.1/16.2/16.3 until now), it built its
+own bare `TestClient(app)` inline instead of using this file's own `client`
+fixture, so it never overrode `settings.DATA_DIR` and was silently opening a
+lifespan connection against the real `data/app.db` on every run. Never visibly
+leaked a project row (it only ever `GET`s), which is exactly why nothing had
+caught it before. Reported to the PM per the plan's stop-condition rule (file
+outside this task's allowed list); ruled fix-in-place, allowed files amended
+for this one line. Fix: the test now takes `client` as a parameter instead of
+opening its own `TestClient(app)`, matching every other test in the file — no
+other change. This is independent, real-world proof the guard works exactly as
+designed: it caught an actual instance of BUG-023's mechanism, in a file the
+investigation never looked at, on the very first full run after the guard
+went live.
+
 ## Verification (required)
 
 The guard fails when the leak is reintroduced (revert-and-confirm-failure). A full
@@ -240,4 +258,77 @@ _pending: dry-run output → owner OK → `--apply` output + backup path + new c
 
 ## Evidence
 
-_pending_
+- Design commit `48e52b6` (APPROVED with CHANGES → plan Amendment C: shared
+  `live_server` helper instead of 21 more copies, plus the stale-reuse-mismatch
+  guard check). This implementation commit folds in Amendment C and Amendment D
+  (the `test_ai_health_api.py` fix), per the PM's "no need to wait for
+  re-approval" instructions on both.
+- Files touched: `tests/conftest.py` (the `_install_real_db_guard()` patch on
+  `Database.connect` — both checks; the `live_server` context manager +
+  `_find_free_port` helper), all 24 `*_browser.py` files migrated to thin
+  `live_server_url` fixtures delegating to it (the 21 named in Allowed Files,
+  plus the 3 already-correct ones per Amendment C: `test_music_library_browser.py`,
+  `test_music_library_waveform_browser.py`, `test_thumbnail_browser.py`),
+  `tests/test_ai_health_api.py` (Amendment D, one test fixed), new
+  `scripts/cleanup_test_projects.py`, new `tests/test_cleanup_test_projects.py`
+  (9 tests: 7 for the cleanup script, 2 committed tests for the guard's two
+  checks — Amendment C's explicit ask, not left as a manual-only check),
+  `CHANGELOG.md` (the missing Phase 15 entry + this task's entry).
+- Targeted runs along the way: `tests/test_dashboard_browser.py` +
+  `tests/test_music_library_browser.py` + `tests/test_learning_jobs_browser.py`
+  (29 passed, first smoke check after migrating a representative sample);
+  every `*_browser.py` file (`pytest -k browser`) → **161 passed**, zero guard
+  trips; `tests/test_cleanup_test_projects.py` → **9 passed**;
+  `tests/test_ai_health_api.py` → **7 passed** (post-Amendment-D).
+- Full suite: `./venv/Scripts/python.exe -m pytest -q` → **954 passed** (945
+  baseline after 16.2's N4 + 9 new tests in `test_cleanup_test_projects.py`).
+  No baseline test broke. (One intermediate run, before Amendment D's fix, was
+  951 passed / 1 failed — that failure *was* the Amendment D finding, not a
+  regression; see below.)
+- `ruff check app scripts tests` → all checks passed.
+- Real DB project count, read-only (`sqlite3` `mode=ro`), around the final full
+  suite run: **454 before → 454 after**, identical per-name breakdown both
+  times (`Export API Test Episode`: 105, `Learning API Test Episode`: 133,
+  `Script API Test Episode`: 95, `YouTube API Test Episode`: 114). Zero leak
+  across a full single-process run — the actual, real-world proof the fix
+  works, not just the guard trapping a synthetic case. (The count is higher
+  than the plan's original 426/419 baseline because three earlier full-suite
+  runs — the PM's own reproductions plus mine during 16.1/16.2 development,
+  before this task's fix existed — each leaked their own +4; those extra rows
+  are exact-name matches too and will be removed by the PM's eventual
+  `--apply`, same as the original 419.)
+- Revert-and-confirm-failure (check a, the literal-real-path block): commented
+  out the `settings.DATA_DIR = tmp_path_factory.mktemp(...)` line inside the
+  shared `live_server` helper, ran `tests/test_dashboard_browser.py` → all 18
+  tests in the file failed immediately (~2 s total, not the full 10 s timeout
+  — the helper's `thread.is_alive()` fast-fail path caught the daemon thread
+  dying from the guard's `RuntimeError` inside uvicorn's own lifespan
+  startup). Restored the line → 18/18 passed again.
+- Check (b), the stale-reuse-mismatch guard, is now a committed test
+  (`test_database_connect_guard_rejects_stale_reuse_against_a_different_data_dir`
+  in `tests/test_cleanup_test_projects.py`), not only a manual check — connects
+  a fresh `Database()` instance against tmp dir A, changes `settings.DATA_DIR`
+  to tmp dir B, and asserts the second `connect()` call raises immediately.
+  Check (a) also has its own committed test now
+  (`test_database_connect_guard_rejects_the_real_db_path`), independent of the
+  browser-file revert-check above. Both use a fresh `Database()` instance, not
+  the process-wide singleton every other test's `client` fixture relies on, so
+  they can't leave that shared state in a bad condition for later tests.
+- Amendment D, real-world proof the guard works: caught
+  `tests/test_ai_health_api.py::test_health_response_has_no_extra_undeclared_fields`
+  silently opening a connection against the real `data/app.db` — a
+  pre-existing bug since Task 13.6, entirely outside the investigation's scope
+  (not one of the 24 browser files), on the very first full-suite run after
+  the guard went live. Fixed under Amendment D (see Design decisions).
+- Verification bullets from the card, confirmed:
+  - Guard fails when the leak is reintroduced: the revert-and-confirm-failure
+    above, plus the two committed guard tests.
+  - Full single-process `pytest -q` leaves the real project count unchanged:
+    454 → 454, confirmed read-only before and after.
+  - Cleanup script tests on a tmp DB: exact names only
+    (`test_find_matches_is_exact_name_only`), backup written
+    (`test_apply_deletes_only_exact_name_matches_backs_up_and_cascades`,
+    `test_apply_backup_is_a_snapshot_of_the_pre_deletion_database`), dry-run
+    writes nothing (`test_dry_run_reports_counts_and_ids_and_writes_nothing`),
+    directories + cascaded speaker rows removed (same test as backup).
+  - `ruff` clean.

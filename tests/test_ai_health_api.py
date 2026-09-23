@@ -49,9 +49,17 @@ def test_health_reports_cloud_enabled_true_when_allow_cloud_is_set(client, monke
     assert response.json()["data"]["cloud_enabled"] is True
 
 
-def test_health_response_has_no_extra_undeclared_fields():
+def test_health_response_has_no_extra_undeclared_fields(client):
     """Locks the safe-field allowlist so a future change can't accidentally
-    widen the payload with something sensitive (remote path, raw error, etc.)."""
+    widen the payload with something sensitive (remote path, raw error, etc.).
+
+    Task 16.3 (BUG-023, Amendment D): previously built its own bare
+    `TestClient(app)` here instead of using this file's `client` fixture, so it
+    never overrode `settings.DATA_DIR` -- silently opening a lifespan connection
+    against the real `data/app.db` on every run (never visibly leaked a project
+    row, since this test only ever GETs). Caught by the new real-DB guard in
+    `tests/conftest.py`; fixed by using the same isolated `client` fixture every
+    other test in this file already uses."""
     expected_keys = {
         "mode",
         "ollama_reachable",
@@ -61,8 +69,7 @@ def test_health_response_has_no_extra_undeclared_fields():
         "cloud_enabled",
         "worker_alive",
     }
-    with TestClient(app) as client:
-        response = client.get("/api/ai/health")
+    response = client.get("/api/ai/health")
     assert set(response.json()["data"].keys()) == expected_keys
 
 
