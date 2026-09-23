@@ -244,3 +244,30 @@ prohibition is amended for this narrow purpose only.
 New required test: an existing `video.mp4` with known content survives a timed-out
 re-render unchanged.
 
+**Amendment C (PM, 2026-09-23, on approving the 16.3 design in `48e52b6`):**
+- Root cause accepted as diagnosed. 24 `*_browser.py` files each carry a copy-pasted,
+  module-scoped `live_server_url` fixture that starts a real uvicorn server running the real
+  lifespan. 21 of them never isolate `settings.DATA_DIR`, so `init_db()` opens the process
+  singleton against the real `data/app.db`. `Database.connect()` then reuses that stale
+  connection for the next `TestClient(app)`, even though that test monkeypatched `DATA_DIR`.
+- **One shared helper, not 21 more copies.** The drift between copies (3 correct, 21 not) *is*
+  the root cause. The fix is a single live-server helper in `tests/conftest.py` that:
+  1. isolates `settings.DATA_DIR` to `tmp_path_factory`;
+  2. starts uvicorn and waits for the port;
+  3. on teardown sets `should_exit`, joins the thread with a bounded timeout, and **fails
+     loudly** if the thread is still alive or the `Database` singleton is still connected;
+  4. restores `DATA_DIR`.
+
+  All 24 browser files' `live_server_url` fixtures become thin calls to it. The 3 already-correct
+  files are added to 16.3's allowed files, for this migration only.
+- **Guard, strengthened.** The conftest `Database.connect` wrapper fails if:
+  - (a) the resolved `settings.db_path` is the real `<project root>/data/app.db`, computed
+    independently of `settings`; or
+  - (b) an already-open connection is about to be reused while `settings.db_path` differs from
+    the path it was opened with. This is the exact stale-reuse mechanism, and it catches it
+    for tmp paths too.
+
+  `app/db/database.py` itself is still not modified.
+- Revert check: remove the isolation step from the shared helper; the guard must fail the
+  run immediately.
+
