@@ -37,14 +37,25 @@ def test_cloud_settings_are_neutralized_for_the_whole_session():
     """A fresh test with no fixtures at all -- confirms conftest.py's
     `_neutralize_cloud_config()` (called once at import time, before any
     test or fixture runs) actually holds, not just that some earlier
-    fixture happened to leave it looking that way."""
+    fixture happened to leave it looking that way.
+
+    PM review N2: the three key fields are compared by *length*, not value.
+    A plain `== ""` assertion is safe when it passes, but pytest's assertion
+    rewriting prints the actual left-hand value into the failure output when
+    it doesn't -- exactly the mechanism that put the real key into this very
+    test's own output while diagnosing N1. Comparing lengths means a failure
+    can never render the secret, on this path or any future one like it."""
     from app.core import config
 
-    assert config.settings.OPENAI_COMPAT_API_KEY == ""
-    assert config.ENV_OPENAI_COMPAT_API_KEY == ""
+    key_len = len(config.settings.OPENAI_COMPAT_API_KEY)
+    assert key_len == 0, f"cloud API key not neutralised (length {key_len}; value hidden)"
+    env_key_len = len(config.ENV_OPENAI_COMPAT_API_KEY)
+    assert env_key_len == 0, f"ENV_OPENAI_COMPAT_API_KEY not neutralised (length {env_key_len}; value hidden)"
+    gemini_key_len = len(config.settings.GEMINI_API_KEY)
+    assert gemini_key_len == 0, f"legacy GEMINI_API_KEY not neutralised (length {gemini_key_len}; value hidden)"
+
     assert config.settings.OPENAI_COMPAT_BASE_URL == "https://openrouter.invalid/api/v1"
     assert config.settings.AI_ALLOW_CLOUD is False
-    assert config.settings.GEMINI_API_KEY == ""
 
 
 def test_no_test_file_reads_the_env_cloud_key_directly():

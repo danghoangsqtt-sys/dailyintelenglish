@@ -364,3 +364,26 @@ tests) — **no other test broke**. Every existing test in the suite already set
 key/base_url/`AI_ALLOW_CLOUD` via `monkeypatch` wherever cloud behaviour mattered (the pattern
 established throughout 18.1-18.3), so the session-wide neutralization closed the gap without
 needing any test-file fixes beyond the new guard file itself. `ruff check .` → all checks passed.
+
+## Amendment (PM review N2, before acceptance)
+
+**The N1 revert-and-confirm-failure step above (deliberately) demonstrated a second leak path,
+in my own test's assertion, not the production code:** `assert config.settings.
+OPENAI_COMPAT_API_KEY == ""` is safe when it *passes*, but pytest's assertion rewriting prints
+the real left-hand value into the failure output when it doesn't — exactly the mechanism that
+put the real key into that revert check's own output (a leak path of its own: CI logs, pasted
+tracebacks).
+
+**Fix:** the three key-holding assertions in `test_cloud_settings_are_neutralized_for_the_whole_session`
+(`OPENAI_COMPAT_API_KEY`, `ENV_OPENAI_COMPAT_API_KEY`, `GEMINI_API_KEY`) now compare `len(...)
+== 0` with an explicit `"...; value hidden"` message, instead of `== ""` — a failure can now only
+ever render a length, never the value, on this path or any future one shaped like it. The
+`OPENAI_COMPAT_BASE_URL`/`AI_ALLOW_CLOUD` assertions are unchanged (not secrets).
+
+**Revert-and-confirm-failure, redone with this in mind:** commented out
+`_neutralize_cloud_config()` again, ran only `tests/test_cloud_config_isolation.py` with output
+redirected straight to a file (never printed to my own terminal/tool output), then `grep -c
+"sk-or"` on that file → **0 matches**; `grep -o "length [0-9]*; value hidden"` → matched
+(`length 73; value hidden`); the pass/fail summary line confirmed `1 failed, 1 passed`. Deleted
+the output file, restored the neutralization, reran → `2 passed`. No full suite rerun (not
+required for this one-file, assertion-only change, per instruction).
