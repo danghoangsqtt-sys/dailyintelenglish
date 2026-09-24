@@ -9,6 +9,19 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Changed
+- Fallback-rate readout + trial runner `--matrix cloud_first` (2026-09-24, Phase 18 Task 18.4,
+  ENH-011, self-implemented by Coder): `GET /api/ai/health` gained a `fallback_rate` field — over
+  the last 50 terminal AI jobs (`complete` or `error`, PM review C1: excluding `error` jobs would
+  hide exactly the cases where the cloud call failed *and* the fallback didn't save it either),
+  the share of calls served by the fallback, the share of jobs with any fallback, a per-status
+  job count, and a breakdown by `fallback_reason` (the `ProviderError` subclass that triggered
+  it — RateLimit/Unavailable/Timeout/Auth). Read-only over data Task 14.2/18.2 already persist,
+  no new table/column. The Settings page shows one new summary line reading the same endpoint.
+  Per owner decision D22, this is a decision input only — nothing in this task adds it to any
+  pass/fail gate. `scripts/run_ai_operational_trial.py` gained `--matrix cloud_first` (sets
+  `DIE_AI_MODE=cloud_first` and `DIE_AI_ALLOW_CLOUD=true` for the trial server; reuses the
+  local-matrix's 13.9-verbatim decision thresholds unchanged) and reports the same fallback-rate
+  breakdown in its evidence aggregates, for Gate B-9.
 - Interactive cloud provider Settings (2026-09-24, Phase 18 Task 18.3, ENH-011, self-implemented
   by Coder): the Settings page — reduced to a read-only status line by Task 14.7's local-only
   release path — is interactive again: base URL, model, a write-only API key (status shows only

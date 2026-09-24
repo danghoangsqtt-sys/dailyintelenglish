@@ -103,6 +103,13 @@ if "--matrix" in sys.argv:
 if "--mode" in sys.argv:
     _MODE = sys.argv[sys.argv.index("--mode") + 1]
 os.environ["DIE_AI_MODE"] = _MODE
+# Task 18.4: `--matrix cloud_first` must not depend on `.env`'s own AI_ALLOW_CLOUD
+# default (now `true` since Task 18.3's Amendment C, but an install could still
+# override it to `false`) -- a "cloud_first" trial that silently ran local-only
+# would produce misleading Gate B-9 evidence. The key itself is never set here;
+# it's read the normal way from the process env/.env, same as any other run.
+if _MODE == "cloud_first":
+    os.environ["DIE_AI_ALLOW_CLOUD"] = "true"
 os.environ["DIE_DATA_DIR"] = str(TRIAL_DATA_DIR)
 
 import httpx  # noqa: E402
@@ -829,6 +836,19 @@ def compute_matrix_aggregates(runs: list[dict[str, Any]]) -> dict[str, Any]:
         ((r.get("call_stats") or {}).get("max_attempts_on_one_call", 0) for r in runs), default=0
     )
 
+    # Task 18.4 (D22): fallback-rate readout over this matrix's own runs -- an
+    # information-only decision input, never referenced by local_matrix_decision/
+    # gemini_matrix_decision/local_full_decision below. Same three-key shape as
+    # ai_job_service.get_fallback_rate_stats, computed over already-fetched HTTP
+    # response dicts here instead of a DB query.
+    all_calls = [c for r in runs for c in ((r.get("metrics") or {}).get("calls") or []) if isinstance(c, dict)]
+    fallback_calls = [c for c in all_calls if c.get("fallback_used")]
+    jobs_with_fallback = sum(1 for r in runs if r.get("fallback_used"))
+    fallback_reason_counts: dict[str, int] = {}
+    for call in fallback_calls:
+        reason = call.get("fallback_reason") or "unknown"
+        fallback_reason_counts[reason] = fallback_reason_counts.get(reason, 0) + 1
+
     return {
         "n_runs": n,
         "completion_rate": round(len(completed) / n, 4) if n else None,
@@ -855,6 +875,9 @@ def compute_matrix_aggregates(runs: list[dict[str, Any]]) -> dict[str, Any]:
         "total_fallback_count": sum(r.get("fallback_count") or 0 for r in runs),
         "total_backoff_seconds": round(total_backoff, 2),
         "max_attempts_observed": max_attempts,
+        "call_fallback_rate": round(len(fallback_calls) / len(all_calls), 4) if all_calls else None,
+        "job_fallback_rate": round(jobs_with_fallback / n, 4) if n else None,
+        "fallback_reason_counts": fallback_reason_counts,
     }
 
 
@@ -1246,6 +1269,8 @@ async def main(
     print(f"[gate-b] DECISION: {evidence['decision']}", flush=True)
     for reason in evidence["decision_reasons"]:
         print(f"[gate-b]   - {reason}", flush=True)
+    # Task 18.4 (D22): informational only -- never affects evidence["decision"] above.
+    print(f"[gate-b] fallback_rate (calls): {evidence['aggregates'].get('call_fallback_rate')}", flush=True)
 
     return 0
 
@@ -1388,11 +1413,13 @@ if __name__ == "__main__":
              "'keep --mode for raw diagnostics' instruction.",
     )
     parser.add_argument(
-        "--matrix", choices=("local", "gemini"), default=None,
-        help="Gate B-2 matrix (Task 14.4): selects DIE_AI_MODE (unless --mode overrides it), "
-             "which decision rule applies (13.9-verbatim for local, PASS-cloud/FAIL-INFRA/"
-             "FAIL-CONTENT for gemini), and the default sample/media behaviour. Omit for the "
-             "old ad-hoc --mode-only raw-diagnostic path (unchanged).",
+        "--matrix", choices=("local", "gemini", "cloud_first"), default=None,
+        help="Gate B-2/B-9 matrix (Task 14.4/18.4): selects DIE_AI_MODE (unless --mode overrides "
+             "it), which decision rule applies (13.9-verbatim thresholds for local AND "
+             "cloud_first, PASS-cloud/FAIL-INFRA/FAIL-CONTENT for gemini), and the default "
+             "sample/media behaviour. 'cloud_first' also sets DIE_AI_ALLOW_CLOUD=true and "
+             "reports fallback_rate in the evidence aggregates as information only (D22), never "
+             "gated. Omit for the old ad-hoc --mode-only raw-diagnostic path (unchanged).",
     )
     parser.add_argument(
         "--runs", type=int, default=None,

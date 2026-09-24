@@ -76,6 +76,7 @@ def test_health_response_has_no_extra_undeclared_fields(client):
         "cloud_model",
         "effective_mode",
         "circuit_open",
+        "fallback_rate",
     }
     response = client.get("/api/ai/health")
     assert set(response.json()["data"].keys()) == expected_keys
@@ -161,3 +162,41 @@ def test_health_reports_worker_alive_false_when_the_worker_task_is_dead(client):
         assert response.json()["data"]["worker_alive"] is False
     finally:
         ai_worker._task = real_task
+
+
+# --- Task 18.4: fallback_rate (D22 decision input, shown but never gated) --------------
+
+
+def test_health_reports_fallback_rate_shape_when_no_jobs_yet(client):
+    response = client.get("/api/ai/health")
+    rate = response.json()["data"]["fallback_rate"]
+    assert rate == {
+        "window": 0,
+        "by_status": {},
+        "call_fallback_rate": None,
+        "job_fallback_rate": None,
+        "fallback_reason_counts": {},
+    }
+
+
+def test_health_fallback_rate_passes_through_the_service_aggregate(client, monkeypatch):
+    """Whitebox: the health route is a thin pass-through of
+    `ai_job_service.get_fallback_rate_stats` -- the aggregation itself (window
+    composition, rate math, reason breakdown) is covered by
+    tests/test_ai_job_service.py's direct seeded-row tests, not re-derived here."""
+    from app.services import ai_job_service
+
+    fake_stats = {
+        "window": 5,
+        "by_status": {"complete": 4, "error": 1},
+        "call_fallback_rate": 0.25,
+        "job_fallback_rate": 0.4,
+        "fallback_reason_counts": {"ProviderRateLimitError": 2},
+    }
+
+    async def fake_get_fallback_rate_stats(db, limit=50):
+        return fake_stats
+
+    monkeypatch.setattr(ai_job_service, "get_fallback_rate_stats", fake_get_fallback_rate_stats)
+    response = client.get("/api/ai/health")
+    assert response.json()["data"]["fallback_rate"] == fake_stats

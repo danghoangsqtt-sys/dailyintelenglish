@@ -581,3 +581,71 @@ async def recover_abandoned_jobs(db: aiosqlite.Connection, commit: bool = True) 
     if commit:
         await db.commit()
     return results
+
+
+# Task 18.4 (D22): window size for the fallback-rate readout -- a decision INPUT for
+# cloud-vs-local trade-offs, never a pass/fail gate. Kept local to this module rather
+# than app/core/constants.py (not in this task's allowed files, and the constant is
+# meaningful only to this one aggregate).
+FALLBACK_RATE_WINDOW = 50
+
+
+async def get_fallback_rate_stats(db: aiosqlite.Connection, limit: int = FALLBACK_RATE_WINDOW) -> dict:
+    """Task 18.4 (D22): fallback-rate readout over the last `limit` terminal AI jobs.
+
+    Read-only over data Task 14.2/18.2 already persist -- `fallback_used` per job
+    (`record_generation_call`) and `provider`/`model`/`fallback_used`/`fallback_reason`
+    per call (`metrics_json.calls`, safe fields only, no prompt/response/key). No new
+    table, column, or migration.
+
+    PM review C1: the window is `status IN ('complete', 'error')`, not `'complete'`
+    alone -- excluding `error` jobs would hide exactly the case D22 most needs to see:
+    a job where the cloud call failed AND the fallback didn't save it either. `stale`/
+    `cancelled` jobs are excluded (never reached a real outcome).
+
+    Returns `{"window": int, "by_status": {status: count}, "call_fallback_rate":
+    float | None, "job_fallback_rate": float | None, "fallback_reason_counts": {reason:
+    count}}`. Both rates are `None` (not 0.0) when their denominator is zero -- an
+    install with no terminal jobs yet has no fallback rate, not a 0% one.
+    """
+    cursor = await db.execute(
+        "SELECT status, fallback_used, metrics_json FROM ai_generation_jobs "
+        "WHERE status IN ('complete', 'error') ORDER BY finished_at DESC LIMIT ?",
+        (limit,),
+    )
+    rows = await cursor.fetchall()
+
+    by_status: dict[str, int] = {}
+    n_jobs_with_fallback = 0
+    total_calls = 0
+    fallback_calls = 0
+    reason_counts: dict[str, int] = {}
+
+    for row in rows:
+        by_status[row["status"]] = by_status.get(row["status"], 0) + 1
+        if row["fallback_used"]:
+            n_jobs_with_fallback += 1
+        try:
+            metrics = json.loads(row["metrics_json"]) if row["metrics_json"] else {}
+        except (TypeError, ValueError):
+            metrics = {}
+        calls = metrics.get("calls") if isinstance(metrics, dict) else None
+        if not isinstance(calls, list):
+            continue
+        for call in calls:
+            if not isinstance(call, dict):
+                continue
+            total_calls += 1
+            if call.get("fallback_used"):
+                fallback_calls += 1
+                reason = call.get("fallback_reason") or "unknown"
+                reason_counts[reason] = reason_counts.get(reason, 0) + 1
+
+    n_jobs = len(rows)
+    return {
+        "window": n_jobs,
+        "by_status": by_status,
+        "call_fallback_rate": round(fallback_calls / total_calls, 4) if total_calls else None,
+        "job_fallback_rate": round(n_jobs_with_fallback / n_jobs, 4) if n_jobs else None,
+        "fallback_reason_counts": reason_counts,
+    }

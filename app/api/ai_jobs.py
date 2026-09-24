@@ -86,7 +86,7 @@ async def cancel_ai_job(
 
 
 @health_router.get("/health")
-async def ai_health() -> dict:
+async def ai_health(db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Report AI runtime health. Never exposes the Gemini key; a failed local probe
     degrades this payload, it never fails or delays app startup."""
     started_at = time.perf_counter()
@@ -121,6 +121,9 @@ async def ai_health() -> dict:
         AIMode(settings.AI_MODE), settings.AI_ALLOW_CLOUD, settings.OPENAI_COMPAT_API_KEY, settings.OPENAI_COMPAT_MODEL
     )
 
+    async with read_transaction():
+        fallback_rate = await ai_job_service.get_fallback_rate_stats(db)
+
     return ok(
         {
             "mode": settings.AI_MODE,
@@ -134,6 +137,7 @@ async def ai_health() -> dict:
             "cloud_model": settings.OPENAI_COMPAT_MODEL,
             "effective_mode": effective_mode.value,
             "circuit_open": _ai_circuit.is_open(),
+            "fallback_rate": fallback_rate,
         },
         started_at=started_at,
     )

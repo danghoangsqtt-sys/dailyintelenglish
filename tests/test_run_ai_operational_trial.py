@@ -17,6 +17,7 @@ those env-var writes into every test collected afterwards.
 import importlib.util
 import os
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -31,6 +32,29 @@ def runner_module():
     module_name = "run_ai_operational_trial_under_test"
     try:
         sys.argv = [argv_snapshot[0]]  # strip pytest's own args -- no --gate/--matrix/--mode
+        spec = importlib.util.spec_from_file_location(module_name, SCRIPT_PATH)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        yield module
+    finally:
+        sys.modules.pop(module_name, None)
+        os.environ.clear()
+        os.environ.update(env_snapshot)
+        sys.argv = argv_snapshot
+
+
+@contextmanager
+def _runner_module_with_argv(extra_argv):
+    """Task 18.4: same snapshot/restore pattern as `runner_module` above, but with
+    caller-supplied argv (e.g. `--matrix cloud_first`) instead of the bare stripped
+    argv the shared fixture always uses -- needed to exercise the module's
+    argv-before-import env-setting logic for a specific `--matrix` value."""
+    env_snapshot = dict(os.environ)
+    argv_snapshot = list(sys.argv)
+    module_name = "run_ai_operational_trial_under_test_argv"
+    try:
+        sys.argv = [argv_snapshot[0], *extra_argv]
         spec = importlib.util.spec_from_file_location(module_name, SCRIPT_PATH)
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_name] = module
@@ -82,3 +106,72 @@ def test_analyze_script_gate_decision_still_uses_has_outro_only(runner_module):
     assert result["has_outro_last3"] is True
     assert result["checks"]["outro_present"] is False
     assert result["all_checks_pass"] is False
+
+
+# --- Task 18.4: --matrix cloud_first ------------------------------------------------
+
+
+def test_matrix_cloud_first_sets_ai_mode_and_allow_cloud_env_vars():
+    pre_ai_mode = os.environ.get("DIE_AI_MODE")
+    pre_allow_cloud = os.environ.get("DIE_AI_ALLOW_CLOUD")
+
+    with _runner_module_with_argv(["--matrix", "cloud_first"]):
+        assert os.environ["DIE_AI_MODE"] == "cloud_first"
+        assert os.environ["DIE_AI_ALLOW_CLOUD"] == "true"
+
+    # PM review C2: must not leak into the rest of the pytest session --
+    # tests/conftest.py's N1 fix (_neutralize_cloud_config) depends on
+    # AI_ALLOW_CLOUD=False holding for the whole session.
+    assert os.environ.get("DIE_AI_MODE") == pre_ai_mode
+    assert os.environ.get("DIE_AI_ALLOW_CLOUD") == pre_allow_cloud
+
+
+def test_matrix_local_does_not_set_allow_cloud_env_var():
+    with _runner_module_with_argv(["--matrix", "local"]):
+        assert os.environ["DIE_AI_MODE"] == "local"
+        assert "DIE_AI_ALLOW_CLOUD" not in os.environ
+
+
+# --- Task 18.4: compute_matrix_aggregates fallback-rate fields (D22, informational) --
+
+
+def _run(job_status="complete", fallback_used=False, fallback_count=0, calls=None):
+    return {
+        "job_status": job_status,
+        "content": None,
+        "failure_class": None,
+        "error_code": None,
+        "sections": [],
+        "repair_count": 0,
+        "fallback_count": fallback_count,
+        "fallback_used": fallback_used,
+        "call_stats": {"total_backoff_seconds": 0.0, "max_attempts_on_one_call": 0},
+        "metrics": {"calls": calls or []},
+    }
+
+
+def test_compute_matrix_aggregates_fallback_rate_none_when_no_calls(runner_module):
+    aggregates = runner_module.compute_matrix_aggregates([_run()])
+    assert aggregates["call_fallback_rate"] is None
+    assert aggregates["job_fallback_rate"] == 0.0
+    assert aggregates["fallback_reason_counts"] == {}
+
+
+def test_compute_matrix_aggregates_fallback_rate_mixed_reasons(runner_module):
+    calls_job1 = [
+        {"fallback_used": False},
+        {"fallback_used": True, "fallback_reason": "ProviderRateLimitError"},
+    ]
+    calls_job2 = [{"fallback_used": True, "fallback_reason": "ProviderTimeoutError"}]
+    calls_job3 = [{"fallback_used": False}]
+    runs = [
+        _run(fallback_used=True, fallback_count=1, calls=calls_job1),
+        _run(fallback_used=True, fallback_count=1, calls=calls_job2),
+        _run(fallback_used=False, calls=calls_job3),
+    ]
+
+    aggregates = runner_module.compute_matrix_aggregates(runs)
+
+    assert aggregates["call_fallback_rate"] == round(2 / 4, 4)
+    assert aggregates["job_fallback_rate"] == round(2 / 3, 4)
+    assert aggregates["fallback_reason_counts"] == {"ProviderRateLimitError": 1, "ProviderTimeoutError": 1}

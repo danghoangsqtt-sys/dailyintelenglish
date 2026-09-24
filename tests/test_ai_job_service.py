@@ -550,3 +550,101 @@ def test_provider_error_code_maps_schema_validation_error_to_content_not_infra()
     code = ai_job_service.provider_error_code(SchemaValidationError("bad json"))
     assert code == "schema_validation_failed"
     assert not code.startswith("provider_")
+
+
+# --- Task 18.4: fallback-rate readout (D22 decision input, never a gate) -----------
+
+
+async def _job_with_calls(db, status: str, calls: list[dict] | None = None) -> dict:
+    """Create one job, record each of `calls` while it's running (record_generation_call
+    requires running/validating), then move it to the terminal `status`."""
+    project = await _project(db)
+    job, _ = await ai_job_service.create_job(db, project["id"], "script", {})
+    job = await ai_job_service.transition_status(db, job["id"], "running")
+    for call in calls or []:
+        job = await ai_job_service.record_generation_call(db, job["id"], call)
+    if status == "complete":
+        await ai_job_service.transition_status(db, job["id"], "validating")
+    job = await ai_job_service.transition_status(db, job["id"], status)
+    return job
+
+
+async def test_get_fallback_rate_stats_empty_when_no_jobs(db):
+    stats = await ai_job_service.get_fallback_rate_stats(db)
+    assert stats == {
+        "window": 0,
+        "by_status": {},
+        "call_fallback_rate": None,
+        "job_fallback_rate": None,
+        "fallback_reason_counts": {},
+    }
+
+
+async def test_get_fallback_rate_stats_all_local_is_zero_not_none(db):
+    """Zero fallback is a real 0%, not 'no data' -- only an empty window is None."""
+    await _job_with_calls(db, "complete", [_call(), _call(attempt=2)])
+    stats = await ai_job_service.get_fallback_rate_stats(db)
+    assert stats["window"] == 1
+    assert stats["call_fallback_rate"] == 0.0
+    assert stats["job_fallback_rate"] == 0.0
+    assert stats["fallback_reason_counts"] == {}
+
+
+async def test_get_fallback_rate_stats_mixed_reasons_and_rates(db):
+    await _job_with_calls(
+        db, "complete",
+        [
+            _call(provider="ollama", fallback_used=False),
+            _call(provider="ollama", fallback_used=True, fallback_reason="ProviderRateLimitError"),
+        ],
+    )
+    await _job_with_calls(db, "complete", [_call(provider="ollama", fallback_used=False)])
+    await _job_with_calls(
+        db, "complete",
+        [_call(provider="ollama", fallback_used=True, fallback_reason="ProviderTimeoutError")],
+    )
+
+    stats = await ai_job_service.get_fallback_rate_stats(db)
+    assert stats["window"] == 3
+    assert stats["call_fallback_rate"] == round(2 / 4, 4)
+    assert stats["job_fallback_rate"] == round(2 / 3, 4)
+    assert stats["fallback_reason_counts"] == {"ProviderRateLimitError": 1, "ProviderTimeoutError": 1}
+
+
+async def test_get_fallback_rate_stats_includes_error_jobs_with_fallback_calls(db):
+    """PM review C1: a job where the cloud call failed AND the fallback didn't save it
+    (status='error') must still be counted in the window -- 'complete' alone would
+    hide exactly the case D22 most needs visibility into."""
+    await _job_with_calls(
+        db, "error",
+        [_call(provider="ollama", fallback_used=True, fallback_reason="ProviderAuthError", outcome="error")],
+    )
+    stats = await ai_job_service.get_fallback_rate_stats(db)
+    assert stats["window"] == 1
+    assert stats["by_status"] == {"error": 1}
+    assert stats["job_fallback_rate"] == 1.0
+    assert stats["fallback_reason_counts"] == {"ProviderAuthError": 1}
+
+
+async def test_get_fallback_rate_stats_excludes_cancelled_and_stale(db):
+    await _job_with_calls(db, "cancelled")
+    await _job_with_calls(db, "stale")
+    stats = await ai_job_service.get_fallback_rate_stats(db)
+    assert stats["window"] == 0
+    assert stats["by_status"] == {}
+
+
+async def test_get_fallback_rate_stats_limit_bounds_the_window(db):
+    for _ in range(3):
+        await _job_with_calls(db, "complete", [_call()])
+    stats = await ai_job_service.get_fallback_rate_stats(db, limit=2)
+    assert stats["window"] == 2
+
+
+async def test_get_fallback_rate_stats_survives_malformed_metrics_json(db):
+    job = await _job_with_calls(db, "complete")
+    await db.execute("UPDATE ai_generation_jobs SET metrics_json = ? WHERE id = ?", ("not json", job["id"]))
+    await db.commit()
+    stats = await ai_job_service.get_fallback_rate_stats(db)
+    assert stats["window"] == 1
+    assert stats["call_fallback_rate"] is None

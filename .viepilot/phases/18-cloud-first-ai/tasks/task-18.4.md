@@ -1,6 +1,6 @@
 # Task 18.4 — Fallback-rate readout + runner `--matrix cloud_first`
 
-- **Status:** not started
+- **Status:** done (pending PM ACCEPTED)
 - **Owner:** Coder
 - **Priority:** P1
 - **Dependency:** 18.3 accepted
@@ -16,6 +16,25 @@ See plan §3 "18.4", which is binding. Anything else → stop and ask the PM.
 The fallback rate over the last N jobs (the share of calls and of jobs) appears in health and on the Settings page. The trial runner gains `--matrix cloud_first` and records provider/model/fallback per call.
 
 ## Design decisions (Coder, doc-first — commit before code, PM approves)
+
+**PM review — APPROVED with two changes (C1, C2), folded into this implementation, no
+re-approval needed:**
+- **C1:** the window is the last N **terminal** jobs, `status IN ('complete', 'error')` —
+  excluding `cancelled`/`stale`, but *not* excluding `error` — rather than `status = 'complete'`
+  alone. Counting only `complete` jobs hides exactly the case D22 most needs visibility into: a
+  job where the cloud call failed AND the fallback didn't save it either. `get_fallback_rate_stats`
+  also returns a per-status breakdown of the window, `"by_status": {"complete": <int>, "error":
+  <int>}`, so the readout distinguishes "the fallback covered for cloud outages" from "jobs are
+  still failing outright."
+- **C2:** the runner unit test asserts `DIE_AI_MODE`/`DIE_AI_ALLOW_CLOUD` are restored to their
+  pre-test values after the `runner_module` fixture tears down — not just that they're correct
+  *during* the test. This matters specifically because `tests/conftest.py`'s N1 fix
+  (`_neutralize_cloud_config()`) depends on `AI_ALLOW_CLOUD=False` holding for the whole pytest
+  session; a `--matrix cloud_first` test that leaked `DIE_AI_ALLOW_CLOUD=true` into
+  `os.environ` after its own fixture exited would reintroduce exactly the class of session-wide
+  cloud-config leak N1 closed. (The existing `runner_module` fixture already restores the full
+  `os.environ` snapshot in its `finally` — this is a new assertion confirming that restore
+  actually covers these two keys, not a new restore mechanism.)
 
 **Current state, read before designing:** Task 14.2's call telemetry already gives this task
 almost everything it needs, unchanged — every AI call already appends a safe-fields-only record
@@ -39,12 +58,13 @@ read-only aggregate, no new tables/columns/migration. `FALLBACK_RATE_WINDOW = 50
 module-level constant in `ai_job_service.py` itself (`app/core/constants.py` is not in this
 task's allowed files, and the constant is meaningful only to this one aggregate).
 
-Query: the last `limit` jobs with `status = 'complete'`, ordered by `finished_at DESC`. For each,
-parse `metrics_json.calls` (defensively — `{}`/`[]` on any parse failure, matching every other
-reader of this column). Returns:
+Query: the last `limit` jobs with `status IN ('complete', 'error')` (C1), ordered by
+`finished_at DESC`. For each, parse `metrics_json.calls` (defensively — `{}`/`[]` on any parse
+failure, matching every other reader of this column). Returns:
 ```python
 {
     "window": <int>,                    # jobs actually counted, <= limit
+    "by_status": {"complete": <int>, "error": <int>},  # C1: window composition
     "call_fallback_rate": <float|None>, # point 1(a): fallback calls / total calls
     "job_fallback_rate": <float|None>,  # point 1(b): jobs with >=1 fallback call / window
     "fallback_reason_counts": {str: int},  # point 1(c): count per fallback_reason among fallback calls
@@ -137,20 +157,28 @@ for visibility — cosmetic, no effect on `evidence["decision"]`.
 No real API calls anywhere in this task's own tests (matches every other task in this phase).
 - `tests/test_ai_job_service.py`: `get_fallback_rate_stats` on seeded rows inserted directly via
   `db.execute(...)` against the `db` fixture (in-memory SQLite, migrations applied) — cases: no
-  jobs (`window=0`, both rates `None`, empty reason counts), all-local (both rates `0.0`), a mix
-  with multiple fallback reasons (`fallback_reason_counts` sums correctly, `call_fallback_rate`
-  != `job_fallback_rate` when one job has multiple fallback calls and others have none), `limit`
-  actually bounding the window, a job in a non-`complete` status excluded, and a malformed
-  `metrics_json` row (parse failure) not crashing the aggregate.
+  jobs (`window=0`, both rates `None`, empty reason counts, `by_status={}`), all-local (both
+  rates `0.0`), a mix with multiple fallback reasons (`fallback_reason_counts` sums correctly,
+  `call_fallback_rate` != `job_fallback_rate` when one job has multiple fallback calls and others
+  have none), an **`error`-status job whose calls include a fallback attempt** (C1 — confirms it's
+  counted in the window and in `by_status["error"]`, not silently dropped), `limit` actually
+  bounding the window, a `cancelled`/`stale` job excluded, and a malformed `metrics_json` row
+  (parse failure) not crashing the aggregate.
 - `tests/test_ai_jobs_api.py`: `GET /api/ai/health` includes the new `fallback_rate` key with the
-  right shape (extends the existing `expected_keys` pattern from Task 18.3).
+  right shape, including `by_status` (extends the existing `expected_keys` pattern from Task
+  18.3).
 - `tests/test_run_ai_operational_trial.py`: reuses the Task 17.2 `runner_module` fixture
   (`importlib`-based fresh load, `os.environ`/`sys.argv`/`sys.modules` snapshot-restore) —
   (a) set `sys.argv = [argv0, "--matrix", "cloud_first"]` before loading, assert
   `os.environ["DIE_AI_MODE"] == "cloud_first"` and `os.environ["DIE_AI_ALLOW_CLOUD"] == "true"`
-  after import; (b) `compute_matrix_aggregates` on a small synthetic `runs` list (recorded
-  evidence shape, safe fields only, no live server) asserting the three new keys are correct,
-  including the `None`-when-no-calls case.
+  while the fixture is active; (b) **C2** — after the fixture tears down (a second, nested check
+  or a follow-up assertion once the `with`/fixture context exits), assert `DIE_AI_MODE`/
+  `DIE_AI_ALLOW_CLOUD` are back to their pre-test values (whatever `tests/conftest.py`'s
+  `_neutralize_cloud_config()` set them to, i.e. `AI_ALLOW_CLOUD` reads `False` again once the
+  fixture's `os.environ` restore has run) — guards against this exact test reintroducing the
+  class of session-wide leak N1 closed; (c) `compute_matrix_aggregates` on a small synthetic
+  `runs` list (recorded evidence shape, safe fields only, no live server) asserting the three new
+  keys are correct, including the `None`-when-no-calls case.
 
 Revert-and-confirm-failure per the standing protocol: comment out the new aggregate logic (or the
 new health field) and confirm the relevant new test fails, then restore.
@@ -162,4 +190,58 @@ and the real DB untouched.
 
 ## Evidence
 
-_pending_
+- Design commit `f30b593` (APPROVED with C1/C2), this implementation commit folds both in per
+  "no re-approval needed."
+- **Code:**
+  - `app/services/ai_job_service.py`: `FALLBACK_RATE_WINDOW = 50` and new
+    `get_fallback_rate_stats(db, limit=FALLBACK_RATE_WINDOW)` — read-only aggregate over the last
+    `limit` jobs with `status IN ('complete', 'error')` (C1). Returns `{window, by_status,
+    call_fallback_rate, job_fallback_rate, fallback_reason_counts}`; both rates `None` when their
+    denominator is zero. No new table/column/migration.
+  - `app/api/ai_jobs.py`: `ai_health()` gained a `db` dependency and a new `"fallback_rate"` key
+    in its payload (additive; every existing field unchanged).
+  - `frontend/pages/settings.html`/`settings.js`: one new `#fallback-rate-status` line, reading
+    the existing `Api.getAiHealth()` (no new API-client method needed).
+  - `scripts/run_ai_operational_trial.py`: `--matrix` gained the `cloud_first` choice; right
+    after the existing `DIE_AI_MODE` assignment, `--matrix cloud_first` now also sets
+    `DIE_AI_ALLOW_CLOUD=true` (explicit, not relying on `.env`'s default). `compute_matrix_
+    aggregates` gained `call_fallback_rate`/`job_fallback_rate`/`fallback_reason_counts`, computed
+    over the matrix run's already-fetched `runs` list (each run's `metrics.calls`, already
+    recorded unchanged since Task 14.2). Decision logic untouched: `cloud_first` was never
+    special-cased in `main()` (only `"gemini"` is), so it already falls into the same branch
+    `"local"` uses — `local_full_decision`, thresholds pinned (D22: fallback rate stays
+    informational, added to `evidence["aggregates"]` only). One `print(...)` line reports
+    `call_fallback_rate` after the decision-reasons loop, cosmetic only.
+- **Tests (13 new, 1060 total):**
+  - `tests/test_ai_job_service.py` (+7): empty window, all-local (0.0 not None), mixed reasons
+    and rates (call rate != job rate), **C1** — an `error`-status job with a fallback call is
+    counted (`by_status`, `job_fallback_rate`), `cancelled`/`stale` excluded, `limit` bounds the
+    window, malformed `metrics_json` doesn't crash the aggregate.
+  - `tests/test_ai_health_api.py` (+2): the `fallback_rate` key's shape with an empty window
+    (extends the existing `expected_keys` allowlist test), and a whitebox pass-through test
+    (monkeypatches `ai_job_service.get_fallback_rate_stats` — the aggregation math itself is
+    covered at the service layer, not re-derived here).
+  - `tests/test_run_ai_operational_trial.py` (+4): a new `_runner_module_with_argv` helper
+    (same importlib/env/argv snapshot-restore pattern as the existing Task 17.2 `runner_module`
+    fixture, parameterized by argv) — `--matrix cloud_first` sets both env vars while active,
+    and **C2** — both are back to their pre-test values once the context exits (guards against
+    reintroducing the class of session-wide leak `tests/conftest.py`'s N1 fix closed); two
+    `compute_matrix_aggregates` tests on synthetic `runs` lists (no live server, no real API
+    calls) covering the no-calls-is-`None` case and the mixed-reasons case.
+- **Revert-and-confirm-failure:**
+  - C1: temporarily reverted `get_fallback_rate_stats`'s filter to `status = 'complete'` only →
+    `test_get_fallback_rate_stats_includes_error_jobs_with_fallback_calls` failed
+    (`assert 0 == 1`, the error job's window dropped to 0) as expected; restored, 7/7 passed
+    again.
+  - C2: temporarily commented out the `os.environ.clear()`/`update(env_snapshot)` restore in the
+    new `_runner_module_with_argv` fixture → `test_matrix_cloud_first_sets_ai_mode_and_allow_
+    cloud_env_vars` failed, showing `DIE_AI_MODE`/`DIE_AI_ALLOW_CLOUD` had genuinely leaked into
+    the real `os.environ` (`'cloud_first' == None` assertion failure) — confirmed the assertion
+    actually catches a leak, not just checks a value that was already correct; restored, 6/6
+    passed again. No secret material involved (these two env vars carry no key), so this check
+    ran directly in terminal output, unlike the N1/N2 key-adjacent checks.
+- **Full suite:** **1060 passed** (1047 baseline + 13 new). `ruff check .` → all checks passed.
+  Real DB untouched throughout (the conftest guard never tripped).
+- Settings page: `tests/test_settings_browser.py` (all 7, unchanged) still pass with the new
+  `#fallback-rate-status` line and `loadFallbackRate()` call added — the new fetch degrades
+  silently (empty text) on error, so it never blocks the existing mocked flows.

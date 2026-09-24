@@ -11,6 +11,7 @@
   const cloudFirstRadio = document.getElementById("ai-mode-cloud-first");
   const disabledNoteEl = document.getElementById("ai-mode-disabled-note");
   const effectiveStatusEl = document.getElementById("effective-mode-status");
+  const fallbackRateEl = document.getElementById("fallback-rate-status");
 
   const baseUrlInput = document.getElementById("cloud-base-url");
   const modelInput = document.getElementById("cloud-model");
@@ -68,6 +69,28 @@
         ? `Key ending in ${status.cloud_last4} (${sourceLabel}).`
         : `No key configured (${sourceLabel}).`;
       keyStatusEl.classList.remove("is-error", "is-success");
+    }
+  }
+
+  function renderFallbackRate(health) {
+    if (!fallbackRateEl) return;
+    const rate = health && health.fallback_rate;
+    if (!rate || !rate.window) {
+      fallbackRateEl.textContent = "Fallback rate: no completed AI jobs yet.";
+      return;
+    }
+    const pct = (value) => (value == null ? "n/a" : `${Math.round(value * 100)}%`);
+    fallbackRateEl.textContent =
+      `Fallback rate (last ${rate.window} jobs): ${pct(rate.call_fallback_rate)} of calls, ` +
+      `${pct(rate.job_fallback_rate)} of jobs.`;
+  }
+
+  async function loadFallbackRate() {
+    try {
+      const health = await Api.getAiHealth();
+      renderFallbackRate(health);
+    } catch (error) {
+      if (fallbackRateEl) fallbackRateEl.textContent = "";
     }
   }
 
@@ -161,4 +184,5 @@
   testConnectionBtn?.addEventListener("click", handleTestConnection);
 
   loadStatus();
+  loadFallbackRate();
 })();
