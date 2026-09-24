@@ -284,3 +284,48 @@ matching tests and `CHANGELOG.md`.
   (B-8/17.5), with the fallback reasons reported. Only on a PASS does the `AI_MODE` default flip
   to `cloud_first` (Amendment C).
 
+**Amendment E (PM, 2026-09-24; owner decision D28): a multi-provider free chain.**
+
+Evidence (PM, with the OpenRouter quota at 0):
+- Each other `:free` model called alone (Gemma 4, Dots3, Laguna, Ling Fin, Qwen 3.8) returned
+  429 `limit_source=openrouter_free_tier_daily`. The counter stayed `used 52 / limit 50`. So
+  **model switching inside one provider cannot extend the daily free volume; separate providers
+  can.**
+- Google's official pricing lists **Gemini text models as "Free of charge"** on the free tier
+  (2.5 Flash, 2.5 Flash-Lite, 3 Flash Preview, 3.1 Flash-Lite). Limits are per project, the RPD
+  resets at midnight Pacific, and the content is "used to improve our products".
+- The existing `DIE_GEMINI_API_KEY` is **valid**: `GET /v1beta/models` → 200, 44 text models.
+- OpenCode Zen's free limits are unpublished and will be measured.
+
+### 18.8 — Multi-provider cloud chain (Coder, P0; after 18.6)
+
+1. **An ordered provider list.** Each entry has a name, base URL, key source, model list, a
+   `models`-array capability flag, and **its own circuit**. Defaults:
+   - (a) `openrouter`: `https://openrouter.ai/api/v1`, key `DIE_OPENAI_COMPAT_API_KEY`, models
+     Nemotron 3 Super → Gemma 4 26B → Dots3-Note (sent as the `models` array, per 18.6);
+   - (b) `opencode-zen`: `https://opencode.ai/zen/v1`, key `DIE_OPENCODE_ZEN_API_KEY` (new), model
+     chosen by the PM probe;
+   - (c) `gemini`: `https://generativelanguage.googleapis.com/v1beta/openai`, key
+     `DIE_GEMINI_API_KEY` (the existing field), model `gemini-2.5-flash` (the PM probe may pick
+     flash-lite / 3-flash), no `models` array;
+   - then the local qwen fallback.
+
+   A provider with no key is skipped silently (invariant 32 extended).
+2. **Quota-aware circuits per provider.** The OpenRouter daily cap works as in 18.6. A Gemini
+   daily `RESOURCE_EXHAUSTED` 429 opens that provider's circuit until the next midnight
+   Pacific. Anything else uses the threshold/cooldown path. All are capped at 26 h (18.6 C3).
+3. **Bounded total cloud time:** one overall cloud budget across the whole chain (≈ 120 s; the
+   exact value goes in the card), after which local gets its own fresh budget. The worst-case
+   extra time must be stated.
+4. **Settings:** per-provider enable, key (write-only, last4), models and order. Health shows each
+   provider's circuit state and paused-until time.
+5. **Record provider + model per call**, and extend the fallback-rate breakdown by provider.
+6. **Tests:** MockTransport only. N1 neutralisation is extended to `DIE_OPENCODE_ZEN_API_KEY` and
+   the per-provider URLs (`.invalid`). Chain order, per-provider circuits, the Gemini
+   `RESOURCE_EXHAUSTED` shape (build the fixture from Google's documented error format), skipping
+   when a key is missing, and the total budget bound. Revert checks on the chain order and the
+   budget bound.
+
+**Gate B-10 (18.7)** moves after 18.8. Beforehand, the PM probes Zen's and Gemini's text quality
+and limits on the real section task. The pass criteria are unchanged (Amendment D).
+
