@@ -324,3 +324,43 @@ and the real DB untouched.
   failed exactly as expected, showing the marker key in the assertion diff. Restored (`git diff`
   on the file returned empty relative to the pre-revert state) → both tests, the full file(s),
   and the full suite passed again.
+
+## Amendment (PM review N1, before acceptance)
+
+**Root cause the PM traced:** `app.core.config` loads the real `.env` at import time, so in the
+pytest process `settings.OPENAI_COMPAT_API_KEY`/`OPENAI_COMPAT_BASE_URL` held the owner's real
+OpenRouter key and the real `openrouter.ai` host for the whole session — nothing session-wide
+neutralised them. The debug script I wrote (and deleted) while chasing the browser test's
+route-glob bug (see the Evidence bullet above) made exactly this mistake: its mock slipped and
+the unmocked request reached the real OpenRouter API with the owner's real key. With
+`AI_ALLOW_CLOUD` now defaulting to `true` (Amendment C), any future test with the same kind of
+gap could spend the owner's free-tier quota or send real data out — invariant 31/33, not just
+test hygiene.
+
+**Fix:** `tests/conftest.py` gains `_neutralize_cloud_config()`, called once at import time (same
+place and pattern as the existing real-DB guard, right above it) — `settings.OPENAI_COMPAT_API_KEY
+= ""`, `config.ENV_OPENAI_COMPAT_API_KEY = ""`, `settings.OPENAI_COMPAT_BASE_URL =
+"https://openrouter.invalid/api/v1"` (`.invalid` is RFC 2606-reserved to never resolve, so an
+accidental unmocked request fails fast offline instead of silently reaching a real host),
+`settings.AI_ALLOW_CLOUD = False`, and `settings.GEMINI_API_KEY = ""` for good measure. Never
+restored, for the same reason the real-DB guard isn't either. New `tests/test_cloud_config_isolation.py`
+(2 tests, no fixtures of its own by design): `test_cloud_settings_are_neutralized_for_the_whole_session`
+(a bare test function asserting all 5 values, so nothing else could have set them first) and
+`test_no_test_file_reads_the_env_cloud_key_directly` (a static source scan of every `tests/*.py`
+file for patterns — raw `os.environ`/`os.getenv` reads of the cloud key, or opening `.env`
+directly — that would bypass the neutralization; `conftest.py` and the guard test file itself are
+excluded, the former because it's what performs the assignment, not a forbidden read, the latter
+because it contains the forbidden strings as literal comparison targets).
+
+**Revert-and-confirm-failure:** temporarily commented out the `_neutralize_cloud_config()` call
+site — `test_cloud_settings_are_neutralized_for_the_whole_session` failed exactly as expected,
+`OPENAI_COMPAT_API_KEY` holding the real ~73-char `sk-or-v1-...` key (confirming the exact danger
+this guard exists to prevent — the real key appeared in the assertion diff, which I'm
+deliberately not quoting here). Restored immediately, `git diff` on `conftest.py` confirmed clean,
+both guard tests passed again.
+
+**Full suite re-run (required step 4):** **1047 passed** (1045 baseline + this task's 2 new guard
+tests) — **no other test broke**. Every existing test in the suite already set its own fake
+key/base_url/`AI_ALLOW_CLOUD` via `monkeypatch` wherever cloud behaviour mattered (the pattern
+established throughout 18.1-18.3), so the session-wide neutralization closed the gap without
+needing any test-file fixes beyond the new guard file itself. `ruff check .` → all checks passed.

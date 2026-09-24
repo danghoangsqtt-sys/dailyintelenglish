@@ -76,6 +76,40 @@ def _install_real_db_guard() -> None:
 _install_real_db_guard()
 
 
+def _neutralize_cloud_config() -> None:
+    """Task 18.3 (PM review N1): `app.core.config` loads the real `.env` at
+    import time, so without this, `settings.OPENAI_COMPAT_*` holds the
+    owner's real OpenRouter key and base URL for this whole pytest process.
+    Investigating the browser test's route-glob bug during 18.3, a debug
+    script's mock slipped and an unmocked request reached the real
+    OpenRouter API with the owner's real key. Now that `AI_ALLOW_CLOUD`
+    defaults to true (plan Amendment C), any test whose mock slips the same
+    way can spend the owner's free-tier quota or send real project data to a
+    third party -- invariant 31/33 territory, not just test hygiene.
+
+    Neutralised once here, before any test or fixture runs, same as the
+    real-DB guard above -- and never restored, for the same reason. Tests
+    that need cloud behaviour set their own fake key/URL via `monkeypatch`,
+    which every cloud-related test in this suite already does.
+    """
+    from app.core import config
+
+    config.settings.OPENAI_COMPAT_API_KEY = ""
+    config.ENV_OPENAI_COMPAT_API_KEY = ""
+    # .invalid is reserved (RFC 2606) to never resolve -- an accidental,
+    # unmocked request fails fast and offline instead of silently reaching a
+    # real host.
+    config.settings.OPENAI_COMPAT_BASE_URL = "https://openrouter.invalid/api/v1"
+    config.settings.AI_ALLOW_CLOUD = False
+    # The legacy Gemini key, for good measure -- nothing in the active app
+    # reads it anymore (Task 18.3 retired that surface), but the field itself
+    # still exists and a test could still read it directly.
+    config.settings.GEMINI_API_KEY = ""
+
+
+_neutralize_cloud_config()
+
+
 def _find_free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
         listener.bind(("127.0.0.1", 0))
