@@ -223,3 +223,64 @@ reading it (out of scope).
   (D21). If B-9 fails, it stays `local` and the owner decides. This way D21 takes effect only
   once it's measured, never before.
 
+**Amendment D (PM, 2026-09-24, after Gate B-9; owner decision D27):**
+
+Evidence: `docs/operations/phase18-gate-b9.md`. The free daily cap is **one account-wide counter
+for all `:free` models**: `GET /api/v1/key` → `free_model_daily_requests: {used: 52, limit: 50}`.
+So switching models cannot help once the cap is hit. It does help against per-model overload or
+slowness (7 timeouts + 1 unavailable at B-9).
+
+A real daily-cap 429, captured by the PM with the quota already at 0 (secrets and user id
+omitted):
+- HTTP 429;
+- `error.message`: "Rate limit exceeded: free-models-per-day. …";
+- `error.metadata.limit_source`: `"openrouter_free_tier_daily"`;
+- headers `X-RateLimit-Limit: 50`, `X-RateLimit-Remaining: 0`,
+  `X-RateLimit-Reset: <epoch ms of the next 00:00 UTC>`.
+
+The same request sent with a `models: [...]` array was accepted and carried `previous_errors`.
+
+### 18.6 — Cloud model chain + speed tuning (Coder, P0)
+
+**Allowed files:** `app/services/ai/openai_compat_provider.py`, `app/services/ai/router.py`,
+`app/core/config.py`, `app/core/constants.py`, `.env.example`, `app/services/settings_service.py`,
+`app/api/settings.py`, `app/models/settings.py`, `frontend/pages/settings.html`,
+`frontend/static/js/settings.js`, and `app/services/script_pipeline.py` /
+`app/services/learning_pipeline.py` for the malformed-JSON local retry **only** (item 4), plus the
+matching tests and `CHANGELOG.md`.
+
+1. **Model chain (D27):** a new setting `OPENAI_COMPAT_FALLBACK_MODELS`, a comma list, default
+   `google/gemma-4-26b-a4b-it:free,dots-studio/dots-3-note-preview:free`. When non-empty, the
+   provider sends OpenRouter's `models: [primary, …fallbacks]` array instead of `model`.
+   OpenRouter itself falls back on rate limit or downtime. The **model that actually answered**
+   (response `model`) is recorded per call. The chain is editable in Settings (D24 pattern,
+   validated: non-empty ids, ≤ 5 entries, ≤ 200 chars each).
+2. **Cloud per-call budget 150 → 75 s** (`AI_CLOUD_DEADLINE_SECONDS`). Super answered in 8–28 s;
+   Dots3 took 70 s in the smoke probe; B-9 lost up to 150 s on each of its 7 timeouts.
+3. **Daily-cap circuit:** a 429 whose body has `metadata.limit_source ==
+   "openrouter_free_tier_daily"` (or whose message contains `free-models-per-day`) raises a
+   distinguishable error (e.g. a `ProviderDailyQuotaError` subclass of `ProviderRateLimitError`,
+   carrying the reset epoch from `X-RateLimit-Reset`). The router then **opens the primary
+   circuit until that reset time**. Until then every call goes straight to local, with no 429
+   round-trip. If the reset header is missing, it falls back to the next 00:00 UTC.
+4. **Malformed cloud JSON → one local retry:** when the pipeline's JSON parse or validation of a
+   **cloud-served** result fails, the same request is re-issued **once** on the local fallback
+   (a router method such as `generate_on_fallback(request)`) before the normal repair path. The
+   per-call record shows `fallback_reason = "SchemaValidationError"`. B-9's sample B1 5-min died
+   on exactly this.
+5. **Tests:** MockTransport only, including a recorded daily-cap 429 body shaped like the one above
+   (a synthetic user id); the chain is sent as `models`; the answering model is recorded; the
+   circuit stays open until the reset; malformed cloud JSON → a local retry that completes. Revert
+   checks on items 3 and 4.
+
+### 18.7 — Gate B-10 (PM, Coder idle)
+
+- **Before the gate:** a PM quality probe of Gemma 4 and Dots3 on the real section task (JSON
+  validity, word count, dialogue quality). A model that fails is dropped from the default chain
+  before the gate.
+- **The gate:** the B-9 protocol, run **after the daily quota reset**, with no other free-model
+  calls that day.
+- **Pass:** B1 5/5, samples ≥ B-8 (4/4), and a B1 median wall time ≤ 1.5× the local median
+  (B-8/17.5), with the fallback reasons reported. Only on a PASS does the `AI_MODE` default flip
+  to `cloud_first` (Amendment C).
+

@@ -2113,6 +2113,8 @@ Plan `docs/implementation/phase-18-cloud-first-ai.md`; state `.viepilot/phases/1
 | 18.3 Settings + health + privacy note | Coder | ✅ done (`3e7c09f`, N1 `5301536`, N2 `4342bf3`) |
 | 18.4 Fallback-rate readout + runner | Coder | ✅ done (`4e21554`) |
 | 18.5 Gate B-9 A/B | PM | ✅ executed: B1 5/5 but regression (samples 3/4, slower); default stays local |
+| 18.6 Cloud model chain + speed tuning (D27) | Coder | not started |
+| 18.7 Gate B-10 | PM | not started (after the quota reset) |
 
 PM review log:
 
@@ -2131,6 +2133,7 @@ PM review log:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-24 | **D27 (owner):** after Gate B-9, add a **cloud model chain Nemotron 3 Super → Gemma 4 26B → Dots3-Note → local qwen**, plus speed tuning (cloud budget 150 → 75 s, the daily-cap 429 opens the circuit until the quota reset, malformed cloud JSON → one local retry). Laguna S 2.1 (a coding model) and Ling 3.0 Flash Fin (a finance model) were left out as unsuited to podcast dialogue. Plan Amendment D: 18.6 + Gate B-10 | The free cap is one account-wide counter (`free_model_daily_requests` used 52/50), so the chain helps with per-model overload and timeouts (8 of 23 B-9 fallbacks), not the cap; the circuit fix stops wasting 429 round-trips |
 | 2026-09-24 | **D26 (owner): no paid image generation; thumbnails generated locally on the RTX 3060; cartoon or modern 3D characters invented per lesson topic.** Supersedes D25's image source and the interim flat-illustration answer. `kadevin/ilab-conjure` was evaluated: a WebUI over paid cloud APIs, AGPLv3, inspiration only | No free cloud image model exists (Google's official pricing: free tier not available; OpenRouter: 0 free image models); free Apache-2.0 local models fit 12 GB |
 | 2026-09-24 | **D25 (owner, brainstorm `docs/brainstorm/session-2026-09-24.md`): thumbnail = A then B.** A: once Phase 18 is enabled, the cloud model writes the thumbnail text (no extra work). B: after Phase 18, a spike phase for per-episode backgrounds from a local image model on the RTX 3060, with Pillow text overlay and the 5 templates kept as fallback (ENH-012). The owner was also told that script speed/accuracy gains are not yet in production: Gate B-9 is the measured answer | The cloud primary frees the GPU (qwen loads only as fallback), making a local image model feasible on 12 GB; free and private |
 | 2026-09-23 | **Phase 17 closed** after re-gate 17.5 PASS (B1 5/5, owner config 4/4). **Phase 18 opened** (queued plan `e5661a1`, D21–D24) | Local qwen now completes reliably with repairs; Phase 18 adds the cloud primary with qwen as the proven fallback |
