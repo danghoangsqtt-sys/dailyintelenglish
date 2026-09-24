@@ -28,7 +28,7 @@
 | 18.5 | Gate B-9 A/B, cloud_first vs local | PM | done (`docs/operations/phase18-gate-b9.md`, `4828f10`) -- PASS on the runner criterion, regression on samples/speed; `AI_MODE` default stays `local` (Amendment C) |
 | 18.6 | Cloud model chain + speed tuning (D27, plan Amendment D) | Coder | done (ACCEPTED, `a17ca11`) |
 | 18.7 | Gate B-10 | PM | not started -- moves after 18.8 (Amendment E) |
-| 18.8 | Multi-provider cloud chain (D28, plan Amendment E) | Coder | design submitted, pending PM review |
+| 18.8 | Multi-provider cloud chain (D28, plan Amendment E; defaults revised by Amendment F) | Coder | done (pending PM ACCEPTED) |
 
 ## Evidence log
 

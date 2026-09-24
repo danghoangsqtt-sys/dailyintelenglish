@@ -38,6 +38,14 @@ DEFAULT_STATUS = {
     "cloud_base_url": "https://openrouter.ai/api/v1",
     "cloud_model": "nvidia/nemotron-3-super-120b-a12b:free",
     "cloud_fallback_models": ["a/one:free", "b/two:free"],
+    "cloud_provider_order": ["openrouter", "gemini"],
+    "opencode_zen": {"configured": False, "base_url": "https://opencode.ai/zen/v1", "model": "", "key_last4": None},
+    "gemini": {
+        "configured": True,
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "models": ["gemini-3.1-flash-lite", "gemini-flash-lite-latest"],
+        "key_last4": "1234",
+    },
     "ai_mode": "local",
     "ai_mode_source": "env",
     "allow_cloud": True,
@@ -65,7 +73,16 @@ async def _mock_ai_health(page, circuit_open_until: str | None = None) -> None:
     await page.route("**/api/ai/health", handle)
 
 
-async def _mock_settings(page, get_status: dict, *, on_put_ai_mode=None, on_put_cloud=None, on_test_connection=None) -> None:
+async def _mock_settings(
+    page,
+    get_status: dict,
+    *,
+    on_put_ai_mode=None,
+    on_put_cloud=None,
+    on_test_connection=None,
+    on_put_gemini=None,
+    on_put_order=None,
+) -> None:
     async def handle(route):
         url = route.request.url
         method = route.request.method
@@ -84,6 +101,14 @@ async def _mock_settings(page, get_status: dict, *, on_put_ai_mode=None, on_put_
             await route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True, "data": data}))
         elif url.endswith("/api/settings/cloud/test-connection") and method == "POST":
             data = on_test_connection() if on_test_connection else {"ok": True}
+            await route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True, "data": data}))
+        elif url.endswith("/api/settings/cloud/gemini") and method == "PUT":
+            body = json.loads(route.request.post_data or "{}")
+            data = on_put_gemini(body) if on_put_gemini else get_status["gemini"]
+            await route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True, "data": data}))
+        elif url.endswith("/api/settings/cloud/order") and method == "PUT":
+            body = json.loads(route.request.post_data or "{}")
+            data = on_put_order(body) if on_put_order else {"cloud_provider_order": body.get("order")}
             await route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True, "data": data}))
         else:
             await route.continue_()
@@ -277,4 +302,56 @@ async def test_settings_circuit_status_shows_paused_until_when_set(browser_insta
     text = await page.locator("#circuit-status").text_content()
     assert "Cloud paused until" in text
     assert "free daily limit reached" in text
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_settings_gemini_form_loads_and_saves(browser_instance: Browser, live_server_url: str):
+    """Task 18.8 (D28)."""
+    page = await browser_instance.new_page()
+    saved_gemini = {**DEFAULT_STATUS["gemini"], "models": ["new-model-a", "new-model-b"], "key_last4": "abcd"}
+
+    def on_put_gemini(_body):
+        return saved_gemini
+
+    await _mock_settings(page, DEFAULT_STATUS, on_put_gemini=on_put_gemini)
+    await page.goto(f"{live_server_url}/settings")
+    await page.wait_for_selector("#effective-mode-status")
+
+    assert await page.locator("#gemini-models").input_value() == "gemini-3.1-flash-lite, gemini-flash-lite-latest"
+
+    await page.fill("#gemini-models", "new-model-a, new-model-b")
+    await page.fill("#gemini-api-key", "a-new-real-gemini-key")
+    await _mock_settings(page, {**DEFAULT_STATUS, "gemini": saved_gemini}, on_put_gemini=on_put_gemini)
+    await page.click("#save-gemini-settings-btn")
+
+    await page.wait_for_function("document.getElementById('gemini-save-status').textContent.includes('Saved')")
+    assert "abcd" in (await page.locator("#gemini-key-status").text_content())
+    assert await page.locator("#gemini-api-key").input_value() == ""
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_settings_provider_order_field_loads_and_saves(browser_instance: Browser, live_server_url: str):
+    """Task 18.8 (D28)."""
+    page = await browser_instance.new_page()
+
+    def on_put_order(body):
+        return {"cloud_provider_order": body.get("order")}
+
+    await _mock_settings(page, DEFAULT_STATUS, on_put_order=on_put_order)
+    await page.goto(f"{live_server_url}/settings")
+    await page.wait_for_selector("#effective-mode-status")
+
+    assert await page.locator("#cloud-provider-order").input_value() == "openrouter, gemini"
+
+    await page.fill("#cloud-provider-order", "gemini, openrouter")
+    await _mock_settings(
+        page, {**DEFAULT_STATUS, "cloud_provider_order": ["gemini", "openrouter"]}, on_put_order=on_put_order
+    )
+    await page.locator("#cloud-provider-order").dispatch_event("change")
+
+    await page.wait_for_function(
+        "document.getElementById('cloud-provider-order-status').textContent.includes('Saved')"
+    )
     await page.close()

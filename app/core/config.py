@@ -89,6 +89,29 @@ class Settings(BaseSettings):
     # Parsed via app.services.ai.openai_compat_provider.parse_fallback_models.
     OPENAI_COMPAT_FALLBACK_MODELS: str = "google/gemma-4-26b-a4b-it:free,dots-studio/dots-3-note-preview:free"
 
+    # Task 18.8 (D28, Amendment E; defaults revised by Amendment F, the PM's real
+    # provider probe -- enh011-nemotron-smoke.md §5): a multi-provider free chain --
+    # OpenRouter (above) -> Gemini -> local qwen. OPENAI_COMPAT_*/GEMINI_API_KEY above
+    # are reused as-is (not renamed/moved -- see task-18.8.md's migration note).
+    # OpenCode Zen: kept as a generic, addable provider (its free tier returned 403
+    # "can only be used from within OpenCode" for 6/7 real probed models -- its terms
+    # restrict it to the OpenCode client) -- NOT in the default order, not enabled by
+    # default. No header/user-agent is ever added to mimic that client.
+    OPENCODE_ZEN_BASE_URL: str = "https://opencode.ai/zen/v1"
+    OPENCODE_ZEN_API_KEY: str = ""
+    OPENCODE_ZEN_MODEL: str = ""
+    GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai"
+    # Amendment F: Gemini's free limits are per MODEL per project, so it dispatches as
+    # multiple chain entries sharing this one key, each with its own circuit -- comma
+    # list, same shape as OPENAI_COMPAT_FALLBACK_MODELS, tried client-side in order
+    # (Gemini has no OpenRouter-style server-side models[] array). Real probe results:
+    # gemini-3.1-flash-lite (201/200 words, 4s) then gemini-flash-lite-latest (182/200,
+    # 2.3s); gemini-2.5-flash is 404 "no longer available", never the default now.
+    GEMINI_MODELS: str = "gemini-3.1-flash-lite,gemini-flash-lite-latest"
+    # Comma-separated, dispatch order -- an entry with no key configured is skipped
+    # silently (point 1). Parsed the same way as OPENAI_COMPAT_FALLBACK_MODELS above.
+    CLOUD_PROVIDER_ORDER: str = "openrouter,gemini"
+
     model_config = SettingsConfigDict(
         env_prefix="DIE_",
         env_file=".env",
@@ -116,3 +139,6 @@ ENV_GEMINI_API_KEY = settings.GEMINI_API_KEY
 # Same pattern for the Phase 18 cloud key (settings_service.py's future clear-key
 # handler for it needs this, matching ENV_GEMINI_API_KEY above).
 ENV_OPENAI_COMPAT_API_KEY = settings.OPENAI_COMPAT_API_KEY
+# Task 18.8 (D28): same pattern for OpenCode Zen's key -- Gemini's clear-key already
+# has ENV_GEMINI_API_KEY above, reused as-is.
+ENV_OPENCODE_ZEN_API_KEY = settings.OPENCODE_ZEN_API_KEY

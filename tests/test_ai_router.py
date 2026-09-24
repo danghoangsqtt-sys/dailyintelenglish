@@ -21,13 +21,20 @@ import pytest
 from app.core.exceptions import (
     ProviderAuthError,
     ProviderDailyQuotaError,
+    ProviderRateLimitError,
     ProviderTimeoutError,
     ProviderUnavailableError,
     SchemaValidationError,
 )
 from app.services.ai.contracts import AIMode, GenerationRequest, GenerationResult
 from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter, CircuitBreaker, build_ai_router_from_settings, compute_effective_mode
+from app.services.ai.router import (
+    AIRouter,
+    ChainEntry,
+    CircuitBreaker,
+    build_ai_router_from_settings,
+    compute_effective_mode,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -489,29 +496,29 @@ async def test_fallback_gets_its_own_fresh_budget_not_the_leftover_of_the_primar
 
 
 @pytest.mark.parametrize(
-    "configured_mode,allow_cloud,api_key,model,expected",
+    "configured_mode,allow_cloud,any_provider_configured,expected",
     [
-        (AIMode.LOCAL, True, "key", "model", AIMode.LOCAL),  # local stays local regardless
-        (AIMode.CLOUD, False, "key", "model", AIMode.LOCAL),  # kill switch off
-        (AIMode.CLOUD_FIRST, False, "key", "model", AIMode.LOCAL),  # kill switch off
-        (AIMode.CLOUD, True, "", "model", AIMode.LOCAL),  # no key
-        (AIMode.CLOUD, True, "key", "", AIMode.LOCAL),  # no model
-        (AIMode.CLOUD, True, "key", "model", AIMode.CLOUD),  # fully enabled -- passes through
-        (AIMode.CLOUD_FIRST, True, "key", "model", AIMode.CLOUD_FIRST),  # fully enabled -- passes through
+        (AIMode.LOCAL, True, True, AIMode.LOCAL),  # local stays local regardless
+        (AIMode.CLOUD, False, True, AIMode.LOCAL),  # kill switch off
+        (AIMode.CLOUD_FIRST, False, True, AIMode.LOCAL),  # kill switch off
+        (AIMode.CLOUD, True, False, AIMode.LOCAL),  # nothing configured
+        (AIMode.CLOUD, True, True, AIMode.CLOUD),  # fully enabled -- passes through
+        (AIMode.CLOUD_FIRST, True, True, AIMode.CLOUD_FIRST),  # fully enabled -- passes through
     ],
 )
-def test_compute_effective_mode(configured_mode, allow_cloud, api_key, model, expected):
-    assert compute_effective_mode(configured_mode, allow_cloud, api_key, model) == expected
+def test_compute_effective_mode(configured_mode, allow_cloud, any_provider_configured, expected):
+    assert compute_effective_mode(configured_mode, allow_cloud, any_provider_configured) == expected
 
 
 async def test_router_local_mode_matches_the_effective_local_collapse():
     """Invariant 32's second proof (the first is `LOCAL`'s branch being a
     verbatim copy of the pre-Phase-18 code, in the router itself): a router
-    built from a *collapsed* effective mode (configured cloud_first, no key)
-    behaves identically to one built directly with `mode=AIMode.LOCAL` --
-    same result fields, same zero primary calls -- proving the collapse path
-    and the explicit-local path are observably indistinguishable."""
-    collapsed_mode = compute_effective_mode(AIMode.CLOUD_FIRST, allow_cloud=True, api_key="", model="")
+    built from a *collapsed* effective mode (configured cloud_first, nothing
+    configured) behaves identically to one built directly with
+    `mode=AIMode.LOCAL` -- same result fields, same zero primary calls --
+    proving the collapse path and the explicit-local path are observably
+    indistinguishable."""
+    collapsed_mode = compute_effective_mode(AIMode.CLOUD_FIRST, allow_cloud=True, any_provider_configured=False)
     assert collapsed_mode is AIMode.LOCAL
 
     fallback_a = FakeProvider("ollama", [_result("ollama")])
@@ -551,34 +558,50 @@ def test_build_ai_router_from_settings_reads_current_settings_each_call(monkeypa
     assert router2._fallback._model == "a-different-model:latest"
 
 
-def test_build_ai_router_from_settings_threads_the_same_circuit_breaker_through_every_call():
+def _configure_openrouter(monkeypatch):
+    from app.core import config
+
+    monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", True)
+    monkeypatch.setattr(config.settings, "AI_MODE", "cloud_first")
+    monkeypatch.setattr(config.settings, "OPENAI_COMPAT_API_KEY", "test-key")
+    monkeypatch.setattr(config.settings, "OPENAI_COMPAT_MODEL", "test/model")
+    monkeypatch.setattr(config.settings, "CLOUD_PROVIDER_ORDER", "openrouter")
+
+
+def test_build_ai_router_from_settings_threads_the_same_circuit_breaker_through_every_call(monkeypatch):
     """Point 1's 'breaker state survives across two jobs': `app/main.py` holds
-    ONE `CircuitBreaker` for the app's whole lifetime and passes it to every
-    per-job router it builds -- simulated here by building two routers
-    ("job 1", "job 2") with the same breaker and confirming both hold the
-    exact same object, not a fresh one each time (the default, used when no
-    `circuit` is passed, as every other caller of this function still gets)."""
-    shared_circuit = CircuitBreaker(failure_threshold=1, cooldown_seconds=60.0)
+    ONE `dict[str, CircuitBreaker]` for the app's whole lifetime and passes it
+    to every per-job router it builds -- simulated here by building two
+    routers ("job 1", "job 2") with the same dict and confirming both hold the
+    exact same breaker object for "openrouter", not a fresh one each time (the
+    default, used when no `circuits` is passed, as every other caller of this
+    function still gets)."""
+    _configure_openrouter(monkeypatch)
+    shared_circuits: dict[str, CircuitBreaker] = {}
 
-    router1 = build_ai_router_from_settings(circuit=shared_circuit)
-    router2 = build_ai_router_from_settings(circuit=shared_circuit)
+    router1 = build_ai_router_from_settings(circuits=shared_circuits)
+    router2 = build_ai_router_from_settings(circuits=shared_circuits)
 
-    assert router1._circuit is shared_circuit
-    assert router2._circuit is shared_circuit
+    assert router1._chain[0].circuit is shared_circuits["openrouter"]
+    assert router2._chain[0].circuit is shared_circuits["openrouter"]
 
-    router1._circuit.record_failure()
-    assert router2._circuit.is_open() is True  # job 2 sees job 1's breaker state
+    router1._chain[0].circuit.record_failure()
+    assert router2._chain[0].circuit.is_open() is False  # threshold=3 default, one failure isn't enough
+    for _ in range(3):
+        router1._chain[0].circuit.record_failure()
+    assert router2._chain[0].circuit.is_open() is True  # job 2 sees job 1's breaker state
 
 
-def test_build_ai_router_from_settings_default_circuit_is_fresh_per_call():
+def test_build_ai_router_from_settings_default_circuit_is_fresh_per_call(monkeypatch):
     """Every other caller of `build_ai_router_from_settings` (the 4
-    `*_service.py` files) doesn't pass `circuit`, and must keep getting a
+    `*_service.py` files) doesn't pass `circuits`, and must keep getting a
     fresh breaker per call -- matching today's per-call-fresh router
     semantics, not `app/main.py`'s special app-lifetime sharing."""
+    _configure_openrouter(monkeypatch)
     router1 = build_ai_router_from_settings()
     router2 = build_ai_router_from_settings()
 
-    assert router1._circuit is not router2._circuit
+    assert router1._chain[0].circuit is not router2._chain[0].circuit
 
 
 def test_build_ai_router_from_settings_reads_fallback_models(monkeypatch):
@@ -591,10 +614,11 @@ def test_build_ai_router_from_settings_reads_fallback_models(monkeypatch):
     monkeypatch.setattr(config.settings, "OPENAI_COMPAT_API_KEY", "test-key")
     monkeypatch.setattr(config.settings, "OPENAI_COMPAT_MODEL", "primary/model:free")
     monkeypatch.setattr(config.settings, "OPENAI_COMPAT_FALLBACK_MODELS", "a/one:free, b/two:free")
+    monkeypatch.setattr(config.settings, "CLOUD_PROVIDER_ORDER", "openrouter")
 
     router = build_ai_router_from_settings()
 
-    assert router._primary._fallback_models == ["a/one:free", "b/two:free"]
+    assert router._chain[0].provider._fallback_models == ["a/one:free", "b/two:free"]
 
 
 # --- Task 18.6 (D27): CircuitBreaker.open_until / opened_until_epoch_seconds --------------
@@ -676,7 +700,7 @@ async def test_cloud_first_daily_quota_error_opens_circuit_until_reset_with_no_b
     assert result.fallback_used is True
     assert result.fallback_reason == "ProviderDailyQuotaError"
     assert primary.call_count == 1
-    assert router._circuit.is_open() is True
+    assert router._chain[0].circuit.is_open() is True
 
 
 async def test_cloud_first_daily_quota_error_skips_primary_on_next_call_until_reset():
@@ -715,40 +739,40 @@ async def test_plain_rate_limit_error_still_gets_backoff_retry_unlike_daily_quot
     assert len(sleep_calls) == 1
 
 
-# --- Task 18.6 C2: AIRouter.is_primary_result ---------------------------------------------
+# --- Task 18.6 C2: AIRouter.is_cloud_result ---------------------------------------------
 
 
-async def test_is_primary_result_true_for_a_genuine_primary_served_result():
+async def test_is_cloud_result_true_for_a_genuine_primary_served_result():
     primary = FakeProvider("openai_compat", [_result("openai_compat")])
     fallback = FakeProvider("ollama", [])
     router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST)
 
     result = await router.generate(_request())
 
-    assert router.is_primary_result(result) is True
+    assert router.is_cloud_result(result) is True
 
 
-async def test_is_primary_result_false_for_a_fallback_served_result():
+async def test_is_cloud_result_false_for_a_fallback_served_result():
     primary = FakeProvider("openai_compat", [ProviderUnavailableError("down")] * 4)
     fallback = FakeProvider("ollama", [_result("ollama")])
     router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST, failure_threshold=3, cooldown_seconds=60.0)
 
     result = await router.generate(_request())
 
-    assert router.is_primary_result(result) is False
+    assert router.is_cloud_result(result) is False
 
 
-async def test_is_primary_result_false_in_local_mode_even_though_primary_is_the_fallback_placeholder():
+async def test_is_cloud_result_false_in_local_mode_even_though_primary_is_the_fallback_placeholder():
     """The exact edge case C2 called out: build_ai_router_from_settings sets
     `primary = fallback` as a LOCAL-mode placeholder, so a bare name
-    comparison would wrongly return True here -- is_primary_result must
+    comparison would wrongly return True here -- is_cloud_result must
     check the mode too."""
     fallback = FakeProvider("ollama", [_result("ollama")])
     router = AIRouter(primary=fallback, fallback=fallback, mode=AIMode.LOCAL)
 
     result = await router.generate(_request())
 
-    assert router.is_primary_result(result) is False
+    assert router.is_cloud_result(result) is False
 
 
 # --- Task 18.6 item 4: AIRouter.generate_on_fallback ---------------------------------------
@@ -790,3 +814,179 @@ async def test_generate_on_fallback_never_touches_the_circuit():
 
     assert circuit.consecutive_failures == 0
     assert circuit.is_open() is False
+
+
+# --- Task 18.8 (D28): multi-provider chain dispatch ----------------------------------------
+
+
+def _entry(name: str, outcomes: list, failure_threshold: int = 3, cooldown_seconds: float = 60.0) -> ChainEntry:
+    return ChainEntry(
+        name=name, provider=FakeProvider(name, outcomes), circuit=CircuitBreaker(failure_threshold, cooldown_seconds)
+    )
+
+
+async def test_chain_tries_entries_in_order_and_stops_at_the_first_success():
+    e1 = _entry("e1", [ProviderUnavailableError("down")] * 4)
+    e2 = _entry("e2", [_result("e2")])
+    e3_provider = FakeProvider("e3", [_result("e3")])
+    e3 = ChainEntry(name="e3", provider=e3_provider, circuit=CircuitBreaker(3, 60.0))
+    fallback = FakeProvider("ollama", [])
+    router = AIRouter(chain=[e1, e2, e3], fallback=fallback, mode=AIMode.CLOUD_FIRST)
+
+    result = await router.generate(_request())
+
+    assert result.provider == "e2"
+    assert result.providers_tried == ["e1", "e2"]
+    assert e3_provider.call_count == 0  # never reached -- e2 already succeeded
+
+
+async def test_chain_skips_an_entry_whose_circuit_is_already_open():
+    e1 = _entry("e1", [])
+    e1.circuit.open_immediately()
+    e2 = _entry("e2", [_result("e2")])
+    fallback = FakeProvider("ollama", [])
+    router = AIRouter(chain=[e1, e2], fallback=fallback, mode=AIMode.CLOUD_FIRST)
+
+    result = await router.generate(_request())
+
+    assert result.provider == "e2"
+    assert result.providers_tried == ["e2"]  # e1 was skipped, never even dialed
+    assert e1.provider.call_count == 0
+
+
+async def test_chain_entries_have_independent_circuits():
+    e1 = _entry("e1", [ProviderUnavailableError("down")] * 4, failure_threshold=1, cooldown_seconds=60.0)
+    e2 = _entry("e2", [_result("e2")], failure_threshold=1, cooldown_seconds=60.0)
+    fallback = FakeProvider("ollama", [])
+    router = AIRouter(chain=[e1, e2], fallback=fallback, mode=AIMode.CLOUD_FIRST)
+
+    await router.generate(_request())
+
+    assert e1.circuit.is_open() is True  # e1 failed -- its own circuit trips
+    assert e2.circuit.is_open() is False  # e2 succeeded -- untouched by e1's failure
+
+
+async def test_chain_falls_back_to_local_when_every_entry_fails():
+    e1 = _entry("e1", [ProviderUnavailableError("down")] * 4)
+    e2 = _entry("e2", [ProviderRateLimitError("429")] * 4)
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(chain=[e1, e2], fallback=fallback, mode=AIMode.CLOUD_FIRST)
+
+    result = await router.generate(_request())
+
+    assert result.provider == "ollama"
+    assert result.fallback_used is True
+    assert result.fallback_reason == "ProviderRateLimitError"  # the LAST error, not the first
+    assert result.providers_tried == ["e1", "e2"]
+
+
+async def test_chain_circuit_open_true_only_when_nothing_was_attempted():
+    """Generalizes the old single-primary "we skipped it entirely" meaning:
+    True only when every configured entry was paused, never attempted."""
+    e1 = _entry("e1", [])
+    e1.circuit.open_immediately()
+    e2 = _entry("e2", [])
+    e2.circuit.open_immediately()
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(chain=[e1, e2], fallback=fallback, mode=AIMode.CLOUD_FIRST)
+
+    result = await router.generate(_request())
+
+    assert result.provider == "ollama"
+    assert result.circuit_open is True
+    assert result.providers_tried == []
+
+
+async def test_chain_circuit_open_false_when_at_least_one_entry_was_attempted():
+    e1 = _entry("e1", [ProviderUnavailableError("down")] * 4)
+    e2 = _entry("e2", [])
+    e2.circuit.open_immediately()
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(chain=[e1, e2], fallback=fallback, mode=AIMode.CLOUD_FIRST)
+
+    result = await router.generate(_request())
+
+    assert result.circuit_open is False  # e1 was genuinely attempted (and failed)
+
+
+async def test_cloud_mode_chain_raises_the_last_error_instead_of_falling_back():
+    e1 = _entry("e1", [ProviderUnavailableError("down")] * 4)
+    e2 = _entry("e2", [ProviderRateLimitError("429")] * 4)
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(chain=[e1, e2], fallback=fallback, mode=AIMode.CLOUD)
+
+    with pytest.raises(ProviderRateLimitError):
+        await router.generate(_request())
+
+    assert fallback.call_count == 0  # AIMode.CLOUD never falls back
+
+
+async def test_cloud_mode_empty_chain_raises_a_generic_error():
+    fallback = FakeProvider("ollama", [])
+    router = AIRouter(chain=[], fallback=fallback, mode=AIMode.CLOUD)
+
+    with pytest.raises(ProviderUnavailableError):
+        await router.generate(_request())
+
+
+async def test_total_cloud_budget_caps_a_later_entrys_per_call_budget():
+    """The total cloud budget, not each entry's own (generous) per-entry cap,
+    is what actually bounds a later entry's time when an earlier one already
+    spent some of it."""
+    e1 = _entry("e1", [ProviderUnavailableError("down")] * 4)  # fails ~instantly
+
+    async def _slow_generate(request):
+        await asyncio.sleep(0.2)
+        return _result("e2")
+
+    class _SlowEntry2:
+        name = "e2"
+        generate = staticmethod(_slow_generate)
+
+    e2 = ChainEntry(name="e2", provider=_SlowEntry2(), circuit=CircuitBreaker(3, 60.0))
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(
+        chain=[e1, e2], fallback=fallback, mode=AIMode.CLOUD_FIRST,
+        cloud_deadline_seconds=1.0,  # e2's own cap alone would easily cover 0.2s
+        total_cloud_budget_seconds=0.1,  # but the whole chain only gets 0.1s
+    )
+
+    result = await router.generate(_request(deadline_seconds=1.0))
+
+    assert result.provider == "ollama"
+    assert result.fallback_reason == "ProviderTimeoutError"  # e2 timed out under the shrunk budget
+    assert result.providers_tried == ["e1", "e2"]
+
+
+async def test_total_cloud_budget_exhausted_skips_remaining_entries_entirely():
+    async def _slow_generate(request):
+        await asyncio.sleep(0.1)
+        raise ProviderUnavailableError("down")
+
+    class _SlowFailingEntry:
+        name = "e1"
+        generate = staticmethod(_slow_generate)
+
+    e1 = ChainEntry(name="e1", provider=_SlowFailingEntry(), circuit=CircuitBreaker(3, 60.0))
+    e2_provider = FakeProvider("e2", [_result("e2")])
+    e2 = ChainEntry(name="e2", provider=e2_provider, circuit=CircuitBreaker(3, 60.0))
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(
+        chain=[e1, e2], fallback=fallback, mode=AIMode.CLOUD_FIRST,
+        cloud_deadline_seconds=1.0,
+        total_cloud_budget_seconds=0.05,  # smaller than e1's own 0.1s attempt
+    )
+
+    result = await router.generate(_request(deadline_seconds=1.0))
+
+    assert result.provider == "ollama"
+    assert e2_provider.call_count == 0  # never even attempted -- total budget ran out after e1
+
+
+async def test_providers_tried_is_empty_in_local_mode():
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(primary=fallback, fallback=fallback, mode=AIMode.LOCAL)
+
+    result = await router.generate(_request())
+
+    assert result.providers_tried == []

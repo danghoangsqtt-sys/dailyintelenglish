@@ -20,6 +20,7 @@ from app.core.constants import (
     AI_CIRCUIT_COOLDOWN_SECONDS,
     AI_CIRCUIT_FAILURE_THRESHOLD,
     AI_CLOUD_DEADLINE_SECONDS,
+    AI_TOTAL_CLOUD_BUDGET_SECONDS,
     AI_TRANSIENT_BACKOFF_BASE_SECONDS,
     AI_TRANSIENT_BACKOFF_MAX_SECONDS,
     AI_TRANSIENT_MAX_ATTEMPTS,
@@ -41,55 +42,160 @@ from app.services.ai.openai_compat_provider import OpenAICompatProvider, parse_f
 logger = logging.getLogger(__name__)
 
 
-def compute_effective_mode(configured_mode: AIMode, allow_cloud: bool, api_key: str, model: str) -> AIMode:
+def compute_effective_mode(configured_mode: AIMode, allow_cloud: bool, any_provider_configured: bool) -> AIMode:
     """Phase 18, invariant 32/D24: cloud is only ever effective when the kill
-    switch is on and both a key and a model are configured -- otherwise the
-    app behaves exactly like today's local-only mode, regardless of what
-    `configured_mode` (the stored/env setting) says."""
+    switch is on and at least one cloud provider is configured -- otherwise
+    the app behaves exactly like today's local-only mode, regardless of what
+    `configured_mode` (the stored/env setting) says.
+
+    Task 18.8 (D28): generalized from "a single key+model pair" to "at least
+    one provider in the chain has a key" -- `any_provider_configured` is the
+    caller's own OR across however many providers it knows about (today:
+    openrouter/opencode-zen/gemini), computed once by the caller rather than
+    this function re-reading `settings.*` itself, matching how it never did
+    before either."""
     if configured_mode is AIMode.LOCAL:
         return AIMode.LOCAL
-    if not allow_cloud or not api_key or not model:
+    if not allow_cloud or not any_provider_configured:
         return AIMode.LOCAL
     return configured_mode
 
 
-def build_ai_router_from_settings(circuit: "CircuitBreaker | None" = None) -> "AIRouter":
+def _configured_cloud_provider_names(settings) -> list[str]:
+    """Task 18.8: `settings.CLOUD_PROVIDER_ORDER` (comma-separated, same
+    parse/shape as 18.6's `OPENAI_COMPAT_FALLBACK_MODELS`) filtered to only the
+    providers that actually have a key configured -- an unconfigured entry is
+    skipped silently (point 1's "a provider with no key is skipped silently",
+    invariant 32 extended)."""
+    order = parse_fallback_models(settings.CLOUD_PROVIDER_ORDER)
+    configured = []
+    for name in order:
+        if name == "openrouter" and settings.OPENAI_COMPAT_API_KEY:
+            configured.append(name)
+        elif name == "opencode-zen" and settings.OPENCODE_ZEN_API_KEY:
+            configured.append(name)
+        elif name == "gemini" and settings.GEMINI_API_KEY:
+            configured.append(name)
+    return configured
+
+
+def _chain_entry(name: str, provider: Provider, circuits: "dict[str, CircuitBreaker] | None") -> "ChainEntry":
+    """`circuits.setdefault(...)` (when `circuits` is given) is what makes a
+    provider's breaker survive across the many routers `build_ai_router_from_
+    settings` builds over the app's lifetime -- the same per-name identity
+    `app/main.py`'s `_ai_circuits` dict relies on."""
+    if circuits is not None:
+        circuit = circuits.setdefault(name, CircuitBreaker(AI_CIRCUIT_FAILURE_THRESHOLD, AI_CIRCUIT_COOLDOWN_SECONDS))
+    else:
+        circuit = CircuitBreaker(AI_CIRCUIT_FAILURE_THRESHOLD, AI_CIRCUIT_COOLDOWN_SECONDS)
+    return ChainEntry(name=name, provider=provider, circuit=circuit)
+
+
+def _configured_chain_entry_names(settings) -> list[str]:
+    """Task 18.8: the full expanded list of dispatch-chain entry names the live
+    chain would use right now, accounting for Gemini's multi-model expansion --
+    e.g. `["openrouter", "gemini-3.1-flash-lite", "gemini-flash-lite-latest"]`.
+    Read-only, builds no `Provider` instances (never raises on a bad base URL),
+    safe for a cheap health-check read (`app/api/ai_jobs.py`) as well as
+    `build_ai_router_from_settings`'s own real construction."""
+    names: list[str] = []
+    for provider_name in _configured_cloud_provider_names(settings):
+        if provider_name == "gemini":
+            names.extend(parse_fallback_models(settings.GEMINI_MODELS))
+        else:
+            names.append(provider_name)
+    return names
+
+
+def _build_chain_entries(name: str, settings, circuits: "dict[str, CircuitBreaker] | None") -> list["ChainEntry"]:
+    """Task 18.8: one named provider's real construction -- a *list*, not one
+    entry, because Gemini (Amendment F) expands into several: its free limits
+    are per MODEL per project, so each configured model in `GEMINI_MODELS`
+    dispatches as its own chain position with its own circuit, all sharing the
+    one `GEMINI_API_KEY`/`GEMINI_BASE_URL` (Gemini has no OpenRouter-style
+    server-side `models:[]` array to try them within one HTTP call). Only three
+    top-level names are known (the plan's fixed provider set, not a
+    user-extensible list) -- explicit branches, not a generic table, matching
+    how little there is to generalize over just three."""
+    if name == "openrouter":
+        provider: Provider = OpenAICompatProvider(
+            base_url=settings.OPENAI_COMPAT_BASE_URL,
+            api_key=settings.OPENAI_COMPAT_API_KEY,
+            model=settings.OPENAI_COMPAT_MODEL,
+            timeout=settings.AI_CLOUD_DEADLINE_SECONDS,
+            fallback_models=parse_fallback_models(settings.OPENAI_COMPAT_FALLBACK_MODELS),
+            name="openrouter",
+            vendor="openrouter",
+        )
+        return [_chain_entry("openrouter", provider, circuits)]
+    if name == "opencode-zen":
+        # Amendment F: kept generic/addable, but its free tier returned 403 "can
+        # only be used from within OpenCode" for 6/7 real probed models -- never
+        # in the default CLOUD_PROVIDER_ORDER, and no header/user-agent here ever
+        # mimics that client.
+        provider = OpenAICompatProvider(
+            base_url=settings.OPENCODE_ZEN_BASE_URL,
+            api_key=settings.OPENCODE_ZEN_API_KEY,
+            model=settings.OPENCODE_ZEN_MODEL,
+            timeout=settings.AI_CLOUD_DEADLINE_SECONDS,
+            name="opencode-zen",
+            vendor="generic",
+        )
+        return [_chain_entry("opencode-zen", provider, circuits)]
+    if name == "gemini":
+        entries = []
+        for model in parse_fallback_models(settings.GEMINI_MODELS):
+            provider = OpenAICompatProvider(
+                base_url=settings.GEMINI_BASE_URL,
+                api_key=settings.GEMINI_API_KEY,
+                model=model,
+                timeout=settings.AI_CLOUD_DEADLINE_SECONDS,
+                name=model,
+                vendor="gemini",
+            )
+            entries.append(_chain_entry(model, provider, circuits))
+        return entries
+    raise ValueError(f"unknown cloud provider name {name!r}")
+
+
+def build_ai_router_from_settings(circuits: "dict[str, CircuitBreaker] | None" = None) -> "AIRouter":
     """Construct the Task 13.2 provider gateway from current app settings.
 
     The one shared factory for every cloud-AI consumer -- previously duplicated
     per-service (`script_service._build_ai_router`). A fresh instance per call is
     fine: there is no shared-lifespan client the way a lifespan-managed worker
     would want, matching each provider's own per-call `httpx.AsyncClient`
-    lifetime. `circuit` is `None` by default (a fresh breaker per call, matching
-    today's per-call-fresh router semantics) -- a caller that needs
-    circuit-breaker state to persist across calls (the durable job worker,
-    `app/main.py`) constructs its own `CircuitBreaker` once, for the app's
-    whole lifetime, and passes it here on every call instead.
+    lifetime. `circuits` is `None` by default (a fresh breaker per configured
+    provider per call, matching today's per-call-fresh router semantics) -- a
+    caller that needs circuit-breaker state to persist across calls (the
+    durable job worker, `app/main.py`) holds its own `dict[str, CircuitBreaker]`
+    for the app's whole lifetime and passes it here on every call instead
+    (Task 18.8: generalizes the single `circuit=` param 18.2/18.6 had, one
+    breaker per provider name instead of one breaker total).
     """
     from app.core.config import settings  # local import: avoids a config<->ai import cycle
 
     fallback = OllamaProvider(
         base_url=settings.OLLAMA_BASE_URL, model=settings.OLLAMA_MODEL, num_ctx=settings.OLLAMA_NUM_CTX
     )
-    effective_mode = compute_effective_mode(
-        AIMode(settings.AI_MODE), settings.AI_ALLOW_CLOUD, settings.OPENAI_COMPAT_API_KEY, settings.OPENAI_COMPAT_MODEL
-    )
-    primary: Provider = fallback  # placeholder; never called when effective_mode is LOCAL
+    configured_names = _configured_cloud_provider_names(settings)
+    effective_mode = compute_effective_mode(AIMode(settings.AI_MODE), settings.AI_ALLOW_CLOUD, bool(configured_names))
+
+    chain: list[ChainEntry] = []
     if effective_mode is not AIMode.LOCAL:
-        try:
-            primary = OpenAICompatProvider(
-                base_url=settings.OPENAI_COMPAT_BASE_URL,
-                api_key=settings.OPENAI_COMPAT_API_KEY,
-                model=settings.OPENAI_COMPAT_MODEL,
-                timeout=settings.AI_CLOUD_DEADLINE_SECONDS,
-                fallback_models=parse_fallback_models(settings.OPENAI_COMPAT_FALLBACK_MODELS),
-            )
-        except ValueError:
-            logger.warning("ai_router_invalid_cloud_base_url -- falling back to local")
+        for name in configured_names:
+            try:
+                chain.extend(_build_chain_entries(name, settings, circuits))
+            except ValueError:
+                logger.warning("ai_router_invalid_cloud_base_url provider=%s -- skipping", name)
+        if not chain:
+            logger.warning("ai_router_no_valid_cloud_providers -- falling back to local")
             effective_mode = AIMode.LOCAL
+
     return AIRouter(
-        primary=primary, fallback=fallback, mode=effective_mode,
-        cloud_deadline_seconds=settings.AI_CLOUD_DEADLINE_SECONDS, circuit=circuit,
+        chain=chain, fallback=fallback, mode=effective_mode,
+        cloud_deadline_seconds=settings.AI_CLOUD_DEADLINE_SECONDS,
+        total_cloud_budget_seconds=AI_TOTAL_CLOUD_BUDGET_SECONDS,
     )
 
 
@@ -188,8 +294,25 @@ class CircuitBreaker:
         return time.time() + (self.opened_until - time.monotonic())
 
 
+@dataclass
+class ChainEntry:
+    """Task 18.8 (D28): one cloud provider's slot in the dispatch chain --
+    bundles its `Provider` instance with its OWN `CircuitBreaker` (generalizes
+    18.6's single primary/circuit pair to N independently healthy-or-paused
+    providers). `name` is kept in sync, by construction, with three other
+    things that must always agree: the circuits-dict key
+    (`app/main.py`'s `_ai_circuits`), the provider's own `.name` (its
+    per-instance name, `openai_compat_provider.py`), and the Settings-page row
+    identifier."""
+
+    name: str
+    provider: Provider
+    circuit: CircuitBreaker
+
+
 class AIRouter:
-    """Routes one `GenerationRequest` to the primary/fallback providers per `AI_MODE`.
+    """Routes one `GenerationRequest` through a chain of cloud providers, then
+    the local fallback, per `AI_MODE`.
 
     Circuit-breaker state is in-process only, not persisted -- Task 13.3's durable
     job layer is the real persistence/recovery boundary, not this router.
@@ -197,109 +320,158 @@ class AIRouter:
 
     def __init__(
         self,
-        primary: Provider,
+        *,
+        chain: list[ChainEntry] | None = None,
+        primary: Provider | None = None,
         fallback: Provider,
         mode: AIMode,
         cloud_deadline_seconds: float = AI_CLOUD_DEADLINE_SECONDS,
+        total_cloud_budget_seconds: float = AI_TOTAL_CLOUD_BUDGET_SECONDS,
         failure_threshold: int = AI_CIRCUIT_FAILURE_THRESHOLD,
         cooldown_seconds: float = AI_CIRCUIT_COOLDOWN_SECONDS,
         circuit: CircuitBreaker | None = None,
     ) -> None:
-        """`failure_threshold`/`cooldown_seconds` are ignored when `circuit` is
-        given (it's already configured) -- they exist only to build this
-        router's own default breaker when the caller doesn't hold a
-        longer-lived one itself. `cloud_deadline_seconds` is read once, here, at
-        construction -- consistent with `primary`/`fallback`/`mode` also being
+        """Two ways to build the chain:
+        - `chain=`: Task 18.8's real shape -- an already-built `list[ChainEntry]`.
+          `build_ai_router_from_settings` always uses this.
+        - `primary=` (or neither): a single-entry convenience, kept because it's
+          a genuinely valid chain of one, not a compatibility shim over dead
+          code -- every router-mechanics test (retry/backoff/budget) that
+          constructs a router directly, whitebox, doesn't care how many
+          providers are configured. `failure_threshold`/`cooldown_seconds`/
+          `circuit` only apply on this path (a `chain=` caller already built
+          each entry's own breaker). Neither given defaults `primary` to
+          `fallback` -- the historical `AIMode.LOCAL` placeholder ("never
+          called when effective_mode is LOCAL").
+        `cloud_deadline_seconds`/`total_cloud_budget_seconds` are read once,
+        here, at construction -- consistent with everything else here being
         frozen at construction, not re-read from `settings` on every call."""
-        self._primary = primary
+        if chain is not None:
+            self._chain = chain
+        else:
+            single = primary if primary is not None else fallback
+            single_circuit = circuit if circuit is not None else CircuitBreaker(failure_threshold, cooldown_seconds)
+            self._chain = [ChainEntry(name=single.name, provider=single, circuit=single_circuit)]
         self._fallback = fallback
         self._mode = mode
         self._cloud_deadline_seconds = cloud_deadline_seconds
-        self._circuit = circuit if circuit is not None else CircuitBreaker(failure_threshold, cooldown_seconds)
+        self._total_cloud_budget_seconds = total_cloud_budget_seconds
 
     async def generate(self, request: GenerationRequest) -> GenerationResult:
-        """Route one request. `local` mode and the fallback phase of `cloud_first`
-        are bounded by `request.deadline_seconds`; the primary phase (`cloud` and
-        `cloud_first`'s first attempt) gets its own, separate
-        `AI_CLOUD_DEADLINE_SECONDS` budget -- the two never share one deadline
-        (Phase 18: a shared deadline is exactly how a slow primary starved the
-        fallback of any time at all).
+        """Route one request. `local` mode and the fallback phase of `cloud`/
+        `cloud_first` are bounded by `request.deadline_seconds`; the whole cloud
+        chain (every entry attempted before falling back) shares one
+        `total_cloud_budget_seconds` budget, each entry capped at
+        `cloud_deadline_seconds` within it -- never shared with the fallback's
+        own budget (Phase 18: a shared deadline is exactly how a slow primary
+        once starved the fallback of any time at all; Task 18.8: the same
+        principle, now at the chain level -- worst case `total_cloud_budget_
+        seconds` on cloud, then a full fresh `request.deadline_seconds` on
+        local).
+
+        `AIMode.CLOUD` (a diagnostic escape hatch) walks the same chain but
+        never falls back to local -- it raises the chain's own last error (or
+        a generic one if nothing was even configured) once the chain is
+        exhausted.
 
         Raises:
-            ProviderError (or a subclass): If every attempt this mode allows fails,
-                or the relevant budget elapses first.
+            ProviderError (or a subclass): If every attempt fails and this is
+                `AIMode.CLOUD` (no fallback in that mode), or the relevant
+                budget elapses first.
         """
         if self._mode is AIMode.LOCAL:
             return await self._run_with_budget(self._fallback, request, request.deadline_seconds)
 
+        total_deadline_at = time.monotonic() + self._total_cloud_budget_seconds
+        tried: list[str] = []
+        last_error: ProviderError | None = None
+
+        for entry in self._chain:
+            if entry.circuit.is_open():
+                logger.info("ai_router_circuit_open provider=%s purpose=%s", entry.name, request.purpose)
+                continue
+            remaining_total = total_deadline_at - time.monotonic()
+            if remaining_total <= 0:
+                logger.warning("ai_router_total_cloud_budget_exhausted purpose=%s", request.purpose)
+                break
+            entry_budget = min(self._cloud_deadline_seconds, remaining_total)
+            try:
+                result = await self._run_with_budget(entry.provider, request, entry_budget, circuit=entry.circuit)
+            except ProviderError as exc:
+                tried.append(entry.name)
+                last_error = exc
+                if isinstance(exc, ProviderDailyQuotaError):
+                    entry.circuit.open_until(exc.reset_at_epoch_seconds)
+                elif isinstance(exc, ProviderAuthError):
+                    entry.circuit.open_immediately()
+                else:
+                    entry.circuit.record_failure()
+                logger.warning(
+                    "ai_router_chain_entry_failed provider=%s purpose=%s error=%s",
+                    entry.name, request.purpose, type(exc).__name__,
+                )
+                continue
+            tried.append(entry.name)
+            result.providers_tried = list(tried)
+            return result
+
+        # Chain exhausted (every entry failed, was paused, or the total budget ran out).
         if self._mode is AIMode.CLOUD:
-            return await self._run_with_budget(self._primary, request, self._cloud_deadline_seconds)
+            if last_error is not None:
+                raise last_error
+            raise ProviderUnavailableError("no cloud provider configured or all circuits open")
 
-        # cloud_first: primary first (unless the circuit is open), one visible fallback.
-        if self._circuit.is_open():
-            logger.info(
-                "ai_router_circuit_open provider=%s purpose=%s", self._primary.name, request.purpose
-            )
-            result = await self._run_with_budget(self._fallback, request, request.deadline_seconds)
-            result.circuit_open = True
-            return result
+        result = await self._run_with_budget(self._fallback, request, request.deadline_seconds)
+        result.fallback_used = True
+        result.fallback_reason = type(last_error).__name__ if last_error is not None else "no_cloud_provider_configured"
+        result.providers_tried = list(tried)
+        # True only when nothing was even attempted (every configured entry was
+        # skipped for being paused) -- matches 18.1-18.6's single-provider
+        # meaning ("we skipped the primary entirely"), generalized to N entries.
+        result.circuit_open = bool(self._chain) and not tried
+        return result
 
-        try:
-            return await self._run_with_budget(self._primary, request, self._cloud_deadline_seconds)
-        except ProviderError as exc:
-            if isinstance(exc, ProviderDailyQuotaError):
-                self._circuit.open_until(exc.reset_at_epoch_seconds)
-            elif isinstance(exc, ProviderAuthError):
-                self._circuit.open_immediately()
-            else:
-                self._circuit.record_failure()
-            logger.warning(
-                "ai_router_primary_failed provider=%s purpose=%s error=%s -- falling back to %s",
-                self._primary.name,
-                request.purpose,
-                type(exc).__name__,
-                self._fallback.name,
-            )
-            result = await self._run_with_budget(self._fallback, request, request.deadline_seconds)
-            result.fallback_used = True
-            result.fallback_reason = type(exc).__name__
-            return result
-
-    def is_primary_result(self, result: GenerationResult) -> bool:
-        """Task 18.6 C2: True only when `result` was genuinely served by a
-        distinct primary provider (cloud), not a hardcoded provider-name
-        comparison -- lets a caller (a pipeline's `_call_router`) ask "was
-        this cloud-served" without hardcoding a name, and survives a future
-        provider rename. Excludes `AIMode.LOCAL`, where
-        `build_ai_router_from_settings` sets `primary` to the same object as
-        `fallback` as a placeholder ("never called when effective_mode is
-        LOCAL") -- a bare name comparison would otherwise wrongly return
-        `True` for an ordinary local-mode result."""
-        return self._mode is not AIMode.LOCAL and result.provider == self._primary.name
+    def is_cloud_result(self, result: GenerationResult) -> bool:
+        """Task 18.8 (generalizes 18.6 C2's `is_primary_result`): True only when
+        `result` was genuinely served by one of the chain's real providers --
+        not a hardcoded provider name, survives a future provider
+        rename/addition. Excludes `AIMode.LOCAL`, where the single-entry
+        placeholder chain's provider is the same object as `fallback` -- a bare
+        name-membership check would otherwise wrongly return `True` for an
+        ordinary local-mode result."""
+        return self._mode is not AIMode.LOCAL and result.provider in {entry.name for entry in self._chain}
 
     async def generate_on_fallback(self, request: GenerationRequest) -> GenerationResult:
         """Task 18.6 item 4: force exactly one call on the local fallback,
-        bypassing the primary/circuit entirely -- used by a pipeline's call
-        wrapper for the one-shot local retry after a cloud-served result fails
-        JSON parse/validation, before the pipeline's own normal repair path.
-        Reuses `_run_with_budget`/`_attempt` unchanged, so it gets the same
-        per-call retry/backoff policy any other fallback-phase call gets.
-        Deliberately never touches `self._circuit`: a malformed-JSON content
-        failure says nothing about the primary provider's health (it
+        bypassing the whole chain/circuits entirely -- used by a pipeline's
+        call wrapper for the one-shot local retry after a cloud-served result
+        fails JSON parse/validation, before the pipeline's own normal repair
+        path. Reuses `_run_with_budget`/`_attempt` unchanged, so it gets the
+        same per-call retry/backoff policy any other fallback-phase call gets.
+        Deliberately never touches any entry's circuit: a malformed-JSON
+        content failure says nothing about that provider's health (it
         answered, on time, just with unparseable content), so it must never
-        count toward the circuit's failure threshold the way an infra error
+        count toward a circuit's failure threshold the way an infra error
         does."""
         return await self._run_with_budget(self._fallback, request, request.deadline_seconds)
 
     async def _run_with_budget(
-        self, provider: Provider, request: GenerationRequest, budget_seconds: float
+        self,
+        provider: Provider,
+        request: GenerationRequest,
+        budget_seconds: float,
+        circuit: CircuitBreaker | None = None,
     ) -> GenerationResult:
         """Wraps one phase's attempt(s) in its own `wait_for`, independent of
-        any other phase's budget (Phase 18 -- see `generate`'s docstring)."""
+        any other phase's budget (Phase 18 -- see `generate`'s docstring).
+        `circuit` (Task 18.8: explicit now, not `self._circuit`/`is self._
+        primary` -- there can be several) records a success on `provider`'s own
+        breaker; `None` (the fallback/`generate_on_fallback` case) means no
+        breaker is touched at all."""
         deadline_at = time.monotonic() + budget_seconds
         try:
             return await asyncio.wait_for(
-                self._attempt(provider, request, deadline_at), timeout=budget_seconds
+                self._attempt(provider, request, deadline_at, circuit=circuit), timeout=budget_seconds
             )
         except TimeoutError as exc:
             raise ProviderTimeoutError(
@@ -307,7 +479,11 @@ class AIRouter:
             ) from exc
 
     async def _attempt(
-        self, provider: Provider, request: GenerationRequest, deadline_at: float
+        self,
+        provider: Provider,
+        request: GenerationRequest,
+        deadline_at: float,
+        circuit: CircuitBreaker | None = None,
     ) -> GenerationResult:
         """Call `provider`, absorbing transient errors with capped exponential
         backoff (up to `AI_TRANSIENT_MAX_ATTEMPTS` attempts total, never sleeping
@@ -363,8 +539,8 @@ class AIRouter:
                 result.attempts = attempt
                 result.backoff_seconds = backoff_seconds
                 result.transient_errors = transient_errors
-                if provider is self._primary:
-                    self._circuit.record_success()
+                if circuit is not None:
+                    circuit.record_success()
                 return result
 
     def _log_exhausted(

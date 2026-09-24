@@ -137,6 +137,21 @@ const Api = (() => {
         method: "POST",
         body: JSON.stringify({ base_url: baseUrl || null, model: model || null, api_key: apiKey || null }),
       }),
+    // Task 18.8: OpenCode Zen / Gemini / dispatch order.
+    updateOpenCodeZenSettings: (baseUrl, model, apiKey) =>
+      request("/api/settings/cloud/opencode-zen", {
+        method: "PUT",
+        body: JSON.stringify({ base_url: baseUrl, model, api_key: apiKey || null }),
+      }),
+    clearOpenCodeZenApiKey: () => request("/api/settings/cloud/opencode-zen/api-key", { method: "DELETE" }),
+    updateGeminiSettings: (baseUrl, models, apiKey) =>
+      request("/api/settings/cloud/gemini", {
+        method: "PUT",
+        body: JSON.stringify({ base_url: baseUrl, models: models || null, api_key: apiKey || null }),
+      }),
+    clearGeminiCloudApiKey: () => request("/api/settings/cloud/gemini/api-key", { method: "DELETE" }),
+    updateCloudProviderOrder: (order) =>
+      request("/api/settings/cloud/order", { method: "PUT", body: JSON.stringify({ order }) }),
     // Durable AI jobs (Phase 13, Task 13.6) -- see frontend/static/js/ai_job.js
     // for the create/poll/resume lifecycle built on top of these.
     createScriptJob: (projectId) =>

@@ -77,6 +77,7 @@ def test_health_response_has_no_extra_undeclared_fields(client):
         "effective_mode",
         "circuit_open",
         "circuit_open_until",
+        "providers",
         "fallback_rate",
     }
     response = client.get("/api/ai/health")
@@ -120,19 +121,35 @@ def test_health_reports_circuit_open_false_by_default(client):
     assert response.json()["data"]["circuit_open"] is False
 
 
-def test_health_reports_circuit_open_true_when_the_breaker_is_open(client):
-    """Whitebox: forces `app.main`'s app-lifetime `_ai_circuit` open directly,
-    matching this file's existing pattern of reaching into `app.main`'s real
-    singletons (see `test_health_reports_worker_alive_false_...` below) rather
-    than trying to actually exhaust the primary provider through a live job."""
-    from app.main import _ai_circuit
+def _open_circuit(name: str):
+    """Task 18.8: whitebox helper -- `app.main`'s app-lifetime `_ai_circuits`
+    dict is keyed by provider name now, and a provider gets no entry at all
+    until it's actually dispatched to, so a test that wants one open must
+    create it first (matches `app/services/ai/router.py`'s own
+    `circuits.setdefault(...)`). Returns the breaker so the caller can
+    `record_success()` it back closed in a `finally`, same discipline the old
+    single-`_ai_circuit` tests already used."""
+    from app.core.constants import AI_CIRCUIT_COOLDOWN_SECONDS, AI_CIRCUIT_FAILURE_THRESHOLD
+    from app.main import _ai_circuits
+    from app.services.ai.router import CircuitBreaker
 
-    _ai_circuit.open_immediately()
+    circuit = _ai_circuits.setdefault(name, CircuitBreaker(AI_CIRCUIT_FAILURE_THRESHOLD, AI_CIRCUIT_COOLDOWN_SECONDS))
+    circuit.open_immediately()
+    return circuit
+
+
+def test_health_reports_circuit_open_true_when_the_only_configured_provider_is_paused(client):
+    """Task 18.8 (D28) Q4: circuit_open is true only when EVERY configured
+    provider is paused -- here there's exactly one (openrouter, per the
+    `client` fixture), so pausing it alone is enough."""
+    circuit = _open_circuit("openrouter")
     try:
         response = client.get("/api/ai/health")
-        assert response.json()["data"]["circuit_open"] is True
+        data = response.json()["data"]
+        assert data["circuit_open"] is True
+        assert data["providers"]["openrouter"]["circuit_open"] is True
     finally:
-        _ai_circuit.record_success()
+        circuit.record_success()
 
 
 def test_health_reports_circuit_open_until_null_by_default(client):
@@ -140,19 +157,38 @@ def test_health_reports_circuit_open_until_null_by_default(client):
     assert response.json()["data"]["circuit_open_until"] is None
 
 
-def test_health_reports_circuit_open_until_as_iso_when_the_breaker_is_open(client):
-    """Task 18.6 C4: whitebox, same open_immediately()/record_success() pattern
-    as test_health_reports_circuit_open_true_when_the_breaker_is_open above."""
-    from app.main import _ai_circuit
-
-    _ai_circuit.open_immediately()
+def test_health_reports_circuit_open_until_as_iso_when_all_are_paused(client):
+    """Task 18.6 C4 / 18.8 Q4: whitebox, same open/record_success() pattern as
+    the test above."""
+    circuit = _open_circuit("openrouter")
     try:
         response = client.get("/api/ai/health")
         open_until = response.json()["data"]["circuit_open_until"]
         assert open_until is not None
         assert open_until.endswith("+00:00") or open_until.endswith("Z")
     finally:
-        _ai_circuit.record_success()
+        circuit.record_success()
+
+
+def test_health_circuit_open_stays_false_when_only_some_configured_providers_are_paused(client, monkeypatch):
+    """Task 18.8 (D28) Q4's central case: two providers configured, only one
+    paused -- circuit_open must stay False (the app is NOT running local-only;
+    Gemini still covers it), and the per-provider breakdown shows each one's
+    own state."""
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-gemini-key")
+    monkeypatch.setattr(settings, "GEMINI_MODELS", "gemini-3.1-flash-lite")
+    monkeypatch.setattr(settings, "CLOUD_PROVIDER_ORDER", "openrouter,gemini")
+    circuit = _open_circuit("openrouter")
+    try:
+        response = client.get("/api/ai/health")
+        data = response.json()["data"]
+        assert data["circuit_open"] is False
+        assert data["circuit_open_until"] is None
+        assert data["providers"]["openrouter"]["circuit_open"] is True
+        assert data["providers"]["gemini-3.1-flash-lite"]["circuit_open"] is False
+        assert data["providers"]["gemini-3.1-flash-lite"]["configured"] is True
+    finally:
+        circuit.record_success()
 
 
 def test_health_reports_worker_alive_true_during_normal_operation(client):

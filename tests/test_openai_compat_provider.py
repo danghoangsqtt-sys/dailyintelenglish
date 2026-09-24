@@ -5,6 +5,7 @@ development or tests.
 
 import json as json_module
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import httpx
 import pytest
@@ -516,4 +517,134 @@ async def test_openai_compat_provider_daily_cap_429_detected_by_message_substrin
     _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
     provider = _provider()
     with pytest.raises(ProviderDailyQuotaError):
+        await provider.generate(_request())
+
+
+# --- Task 18.8 (D28, Amendment F): Gemini vendor + array-wrapped error bodies -----------
+
+
+_GEMINI_RESOURCE_EXHAUSTED_DICT = {
+    "error": {"code": 429, "message": "Resource has been exhausted (e.g. check quota).", "status": "RESOURCE_EXHAUSTED"}
+}
+# Amendment F: some real Gemini error bodies wrap the error object in a JSON array.
+_GEMINI_RESOURCE_EXHAUSTED_ARRAY = [_GEMINI_RESOURCE_EXHAUSTED_DICT]
+
+
+@pytest.mark.asyncio
+async def test_gemini_vendor_resource_exhausted_dict_shape_is_daily_quota_error(monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, json=_GEMINI_RESOURCE_EXHAUSTED_DICT)
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(vendor="gemini")
+    before = datetime.now(timezone.utc)
+    with pytest.raises(ProviderDailyQuotaError) as exc_info:
+        await provider.generate(_request())
+    # No X-RateLimit-Reset header on Gemini -- always the next midnight
+    # America/Los_Angeles (Amendment F), which is always in the future.
+    reset_at = datetime.fromtimestamp(exc_info.value.reset_at_epoch_seconds, tz=timezone.utc)
+    assert reset_at > before
+
+
+@pytest.mark.asyncio
+async def test_gemini_vendor_resource_exhausted_array_wrapped_shape_is_daily_quota_error(monkeypatch):
+    """The exact real-world shape Amendment F called out: `[{"error": {...}}]`
+    instead of `{"error": {...}}`."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, json=_GEMINI_RESOURCE_EXHAUSTED_ARRAY)
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(vendor="gemini")
+    with pytest.raises(ProviderDailyQuotaError):
+        await provider.generate(_request())
+
+
+@pytest.mark.asyncio
+async def test_gemini_vendor_resets_at_next_midnight_los_angeles(monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, json=_GEMINI_RESOURCE_EXHAUSTED_DICT)
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(vendor="gemini")
+    with pytest.raises(ProviderDailyQuotaError) as exc_info:
+        await provider.generate(_request())
+    reset_at_la = datetime.fromtimestamp(exc_info.value.reset_at_epoch_seconds, tz=ZoneInfo("America/Los_Angeles"))
+    assert reset_at_la.hour == 0 and reset_at_la.minute == 0 and reset_at_la.second == 0
+
+
+@pytest.mark.asyncio
+async def test_gemini_vendor_404_not_found_is_auth_error_config_error(monkeypatch):
+    """Amendment F: NOT_FOUND/404 (a real observed Gemini response, e.g.
+    gemini-2.5-flash being retired) -> a config error, fail fast -- already
+    handled by the existing generic 401/402/403/404 branch, unchanged by the
+    Gemini vendor addition."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = {"error": {"code": 404, "message": "models/gemini-2.5-flash is not found", "status": "NOT_FOUND"}}
+        return httpx.Response(404, json=body)
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(vendor="gemini")
+    with pytest.raises(ProviderAuthError):
+        await provider.generate(_request())
+
+
+@pytest.mark.asyncio
+async def test_gemini_vendor_503_unavailable_is_transient(monkeypatch):
+    """Amendment F: UNAVAILABLE/503 -> transient -- already handled by the
+    existing generic 5xx branch, unchanged by the Gemini vendor addition."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = {"error": {"code": 503, "message": "The model is overloaded.", "status": "UNAVAILABLE"}}
+        return httpx.Response(503, json=body)
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(vendor="gemini")
+    with pytest.raises(ProviderUnavailableError):
+        await provider.generate(_request())
+
+
+@pytest.mark.asyncio
+async def test_generic_vendor_never_detects_daily_quota_even_with_an_openrouter_shaped_body(monkeypatch):
+    """OpenCode Zen (vendor="generic") -- even a 429 body that looks exactly
+    like OpenRouter's daily-cap shape must NOT be classified as a daily quota
+    for a generic-vendor provider; it stays an ordinary ProviderRateLimitError,
+    handled by the router's normal threshold/cooldown circuit path."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = {"error": {"message": "Rate limit exceeded: free-models-per-day.", "code": 429}}
+        return httpx.Response(429, json=body, headers={"X-RateLimit-Reset": "1900000000000"})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(vendor="generic")
+    with pytest.raises(ProviderRateLimitError) as exc_info:
+        await provider.generate(_request())
+    assert not isinstance(exc_info.value, ProviderDailyQuotaError)
+
+
+@pytest.mark.asyncio
+async def test_array_wrapped_error_body_is_parsed_on_a_plain_5xx_too(monkeypatch):
+    """The array-wrap fix applies to every error-parsing path, not just the
+    daily-quota one -- _error_message must also handle it (affects the
+    exception's message text, exercised here via a 5xx)."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, json=[{"error": {"code": 503, "message": "overloaded"}}])
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(vendor="gemini")
+    with pytest.raises(ProviderUnavailableError) as exc_info:
+        await provider.generate(_request())
+    assert "overloaded" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_array_wrapped_error_body_on_a_200_response_is_parsed(monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=[{"error": {"code": 429, "message": "rate limited"}}])
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider()
+    with pytest.raises(ProviderRateLimitError):
         await provider.generate(_request())

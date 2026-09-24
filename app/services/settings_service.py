@@ -31,8 +31,25 @@ CLOUD_MODEL_SETTING = "openai_compat_model"
 CLOUD_API_KEY_SETTING = "openai_compat_api_key"
 CLOUD_FALLBACK_MODELS_SETTING = "openai_compat_fallback_models"
 
+# Task 18.8 (D28): new `app_settings` keys, deliberately prefixed `cloud_provider_`
+# -- distinct from any pre-18.3 legacy `gemini_api_key` row a very old install might
+# still carry (18.3 explicitly left that stale row "ignored and never migrated");
+# reusing that exact key name here would have made a years-old, forgotten key spring
+# back to life on upgrade, which nothing about this task asks for.
+ZEN_BASE_URL_SETTING = "cloud_provider_opencode_zen_base_url"
+ZEN_MODEL_SETTING = "cloud_provider_opencode_zen_model"
+ZEN_API_KEY_SETTING = "cloud_provider_opencode_zen_api_key"
+GEMINI_BASE_URL_SETTING = "cloud_provider_gemini_base_url"
+GEMINI_MODELS_SETTING = "cloud_provider_gemini_models"
+# Named GEMINI_CLOUD_API_KEY_SETTING, not GEMINI_API_KEY_SETTING -- the latter name
+# was deleted by Task 18.3 (test_old_gemini_key_functions_are_gone asserts it's
+# absent); reusing it here would silently break that regression guard.
+GEMINI_CLOUD_API_KEY_SETTING = "cloud_provider_gemini_api_key"
+CLOUD_PROVIDER_ORDER_SETTING = "cloud_provider_order"
+
 _CLOUD_MODEL_MAX_LENGTH = 200
 _CLOUD_FALLBACK_MODELS_MAX_ENTRIES = 5
+_KNOWN_CLOUD_PROVIDER_NAMES = ("openrouter", "opencode-zen", "gemini")
 _TEST_CONNECTION_TIMEOUT_SECONDS = 15.0
 
 
@@ -197,6 +214,185 @@ async def load_cloud_settings_from_db(db: aiosqlite.Connection) -> None:
         config.settings.OPENAI_COMPAT_FALLBACK_MODELS = stored_fallback_models
 
 
+# --- Task 18.8 (D28): the multi-provider chain -- OpenCode Zen + Gemini + order ---------
+
+
+def _last4_or_none(key: str) -> str | None:
+    return _last4(key) if key else None
+
+
+async def get_provider_chain_status(db: aiosqlite.Connection) -> dict:
+    """Report OpenCode Zen's and Gemini's current configuration (never a raw
+    key) plus the stored dispatch order -- the sibling of `get_cloud_settings_
+    status` above, which already covers openrouter. Kept separate rather than
+    merged into one payload since the two were built in different tasks and
+    the API layer merges them into one `GET /api/settings` response anyway."""
+    zen_key = config.settings.OPENCODE_ZEN_API_KEY
+    gemini_key = config.settings.GEMINI_API_KEY
+    return {
+        "cloud_provider_order": parse_fallback_models(config.settings.CLOUD_PROVIDER_ORDER),
+        "opencode_zen": {
+            "configured": bool(zen_key and config.settings.OPENCODE_ZEN_MODEL),
+            "base_url": config.settings.OPENCODE_ZEN_BASE_URL,
+            "model": config.settings.OPENCODE_ZEN_MODEL,
+            "key_last4": _last4_or_none(zen_key),
+        },
+        "gemini": {
+            "configured": bool(gemini_key and config.settings.GEMINI_MODELS),
+            "base_url": config.settings.GEMINI_BASE_URL,
+            "models": parse_fallback_models(config.settings.GEMINI_MODELS),
+            "key_last4": _last4_or_none(gemini_key),
+        },
+    }
+
+
+async def set_opencode_zen_settings(
+    db: aiosqlite.Connection, base_url: str, model: str, api_key: str | None = None
+) -> dict:
+    """Validate, persist, and immediately apply OpenCode Zen's base URL, model,
+    and (optionally) API key -- same shape/validation as `set_cloud_settings`
+    (openrouter), reused via the same helpers.
+
+    Caller must run this inside a `write_transaction` block.
+    """
+    cleaned_model = model.strip()
+    if not cleaned_model:
+        raise ValidationError("OpenCode Zen model cannot be empty.")
+    if len(cleaned_model) > _CLOUD_MODEL_MAX_LENGTH:
+        raise ValidationError(f"OpenCode Zen model must be at most {_CLOUD_MODEL_MAX_LENGTH} characters.")
+    try:
+        cleaned_base_url = validate_openai_compat_base_url(base_url)
+    except ValueError as exc:
+        raise ValidationError(str(exc)) from exc
+    cleaned_key: str | None = None
+    if api_key is not None:
+        cleaned_key = api_key.strip()
+        if not cleaned_key:
+            raise ValidationError("OpenCode Zen API key cannot be empty.")
+
+    await _upsert_value(db, ZEN_BASE_URL_SETTING, cleaned_base_url)
+    await _upsert_value(db, ZEN_MODEL_SETTING, cleaned_model)
+    config.settings.OPENCODE_ZEN_BASE_URL = cleaned_base_url
+    config.settings.OPENCODE_ZEN_MODEL = cleaned_model
+    if cleaned_key is not None:
+        await _upsert_value(db, ZEN_API_KEY_SETTING, cleaned_key)
+        config.settings.OPENCODE_ZEN_API_KEY = cleaned_key
+
+    return (await get_provider_chain_status(db))["opencode_zen"]
+
+
+async def clear_opencode_zen_api_key(db: aiosqlite.Connection) -> dict:
+    """Remove the DB-stored Zen key and revert to the original .env/environment value."""
+    await db.execute("DELETE FROM app_settings WHERE key = ?", (ZEN_API_KEY_SETTING,))
+    config.settings.OPENCODE_ZEN_API_KEY = config.ENV_OPENCODE_ZEN_API_KEY
+    return (await get_provider_chain_status(db))["opencode_zen"]
+
+
+async def set_gemini_settings(
+    db: aiosqlite.Connection, base_url: str, models: list[str] | None, api_key: str | None = None
+) -> dict:
+    """Validate, persist, and immediately apply Gemini's base URL, model chain,
+    and (optionally) API key. `models` follows the exact same `None`-means-
+    unchanged / `[]`-means-explicitly-cleared / validated-≤5-entries-≤200-chars
+    convention as `set_cloud_settings`'s `fallback_models` (Task 18.6) -- Gemini
+    dispatches each configured model as its own chain entry with its own
+    circuit (Amendment F), so an empty list here means "no Gemini entries at
+    all," not "use some default."
+
+    Caller must run this inside a `write_transaction` block.
+    """
+    try:
+        cleaned_base_url = validate_openai_compat_base_url(base_url)
+    except ValueError as exc:
+        raise ValidationError(str(exc)) from exc
+    cleaned_key: str | None = None
+    if api_key is not None:
+        cleaned_key = api_key.strip()
+        if not cleaned_key:
+            raise ValidationError("Gemini API key cannot be empty.")
+    cleaned_models: list[str] | None = None
+    if models is not None:
+        cleaned_models = [entry.strip() for entry in models]
+        if len(cleaned_models) > _CLOUD_FALLBACK_MODELS_MAX_ENTRIES:
+            raise ValidationError(f"Gemini model list must have at most {_CLOUD_FALLBACK_MODELS_MAX_ENTRIES} entries.")
+        for entry in cleaned_models:
+            if not entry:
+                raise ValidationError("Gemini model entries cannot be empty.")
+            if len(entry) > _CLOUD_MODEL_MAX_LENGTH:
+                raise ValidationError(f"Each Gemini model must be at most {_CLOUD_MODEL_MAX_LENGTH} characters.")
+
+    await _upsert_value(db, GEMINI_BASE_URL_SETTING, cleaned_base_url)
+    config.settings.GEMINI_BASE_URL = cleaned_base_url
+    if cleaned_key is not None:
+        await _upsert_value(db, GEMINI_CLOUD_API_KEY_SETTING, cleaned_key)
+        config.settings.GEMINI_API_KEY = cleaned_key
+    if cleaned_models is not None:
+        await _upsert_value(db, GEMINI_MODELS_SETTING, ",".join(cleaned_models))
+        config.settings.GEMINI_MODELS = ",".join(cleaned_models)
+
+    return (await get_provider_chain_status(db))["gemini"]
+
+
+async def clear_gemini_cloud_api_key(db: aiosqlite.Connection) -> dict:
+    """Remove the DB-stored Gemini key and revert to the original .env/environment
+    value. Named `..._cloud_...` (not `clear_gemini_api_key`) -- that name is
+    the one Task 18.3 deleted."""
+    await db.execute("DELETE FROM app_settings WHERE key = ?", (GEMINI_CLOUD_API_KEY_SETTING,))
+    config.settings.GEMINI_API_KEY = config.ENV_GEMINI_API_KEY
+    return (await get_provider_chain_status(db))["gemini"]
+
+
+async def set_cloud_provider_order(db: aiosqlite.Connection, order: list[str]) -> dict:
+    """Validate, persist, and immediately apply the cloud dispatch order.
+
+    Raises:
+        ValidationError: If `order` contains an unknown provider name, or a
+            duplicate. An empty list is allowed (every provider effectively
+            disabled, cloud collapses to local via `compute_effective_mode`).
+    """
+    cleaned = [entry.strip() for entry in order]
+    for entry in cleaned:
+        if entry not in _KNOWN_CLOUD_PROVIDER_NAMES:
+            raise ValidationError(f"Unknown cloud provider {entry!r}; must be one of {_KNOWN_CLOUD_PROVIDER_NAMES}.")
+    if len(set(cleaned)) != len(cleaned):
+        raise ValidationError("cloud_provider_order cannot contain duplicates.")
+
+    await _upsert_value(db, CLOUD_PROVIDER_ORDER_SETTING, ",".join(cleaned))
+    config.settings.CLOUD_PROVIDER_ORDER = ",".join(cleaned)
+    return {"cloud_provider_order": cleaned}
+
+
+async def load_provider_chain_from_db(db: aiosqlite.Connection) -> None:
+    """Startup-time loader: apply any DB-stored Zen/Gemini/order settings over
+    the .env-sourced defaults. Same missing-table tolerance and `is not None`
+    (not truthiness, for the two comma-list fields that can be legitimately
+    empty) pattern as `load_cloud_settings_from_db`."""
+    try:
+        stored_zen_base_url = await _stored_value(db, ZEN_BASE_URL_SETTING)
+        stored_zen_model = await _stored_value(db, ZEN_MODEL_SETTING)
+        stored_zen_key = await _stored_value(db, ZEN_API_KEY_SETTING)
+        stored_gemini_base_url = await _stored_value(db, GEMINI_BASE_URL_SETTING)
+        stored_gemini_models = await _stored_value(db, GEMINI_MODELS_SETTING)
+        stored_gemini_key = await _stored_value(db, GEMINI_CLOUD_API_KEY_SETTING)
+        stored_order = await _stored_value(db, CLOUD_PROVIDER_ORDER_SETTING)
+    except aiosqlite.OperationalError:
+        return
+    if stored_zen_base_url:
+        config.settings.OPENCODE_ZEN_BASE_URL = stored_zen_base_url
+    if stored_zen_model:
+        config.settings.OPENCODE_ZEN_MODEL = stored_zen_model
+    if stored_zen_key:
+        config.settings.OPENCODE_ZEN_API_KEY = stored_zen_key
+    if stored_gemini_base_url:
+        config.settings.GEMINI_BASE_URL = stored_gemini_base_url
+    if stored_gemini_models is not None:
+        config.settings.GEMINI_MODELS = stored_gemini_models
+    if stored_gemini_key:
+        config.settings.GEMINI_API_KEY = stored_gemini_key
+    if stored_order is not None:
+        config.settings.CLOUD_PROVIDER_ORDER = stored_order
+
+
 async def test_cloud_connection(
     base_url: str | None, model: str | None, api_key: str | None
 ) -> dict:
@@ -244,15 +440,11 @@ def compute_effective_mode_and_reason(ai_mode: str) -> tuple[str, str | None]:
     server-side only) -- returns just the resulting mode name and a
     human-readable reason string, never any key material."""
     from app.services.ai.contracts import AIMode
-    from app.services.ai.router import compute_effective_mode
+    from app.services.ai.router import _configured_chain_entry_names, compute_effective_mode
 
     configured = AIMode(ai_mode)
-    effective = compute_effective_mode(
-        configured,
-        config.settings.AI_ALLOW_CLOUD,
-        config.settings.OPENAI_COMPAT_API_KEY,
-        config.settings.OPENAI_COMPAT_MODEL,
-    )
+    any_provider_configured = bool(_configured_chain_entry_names(config.settings))
+    effective = compute_effective_mode(configured, config.settings.AI_ALLOW_CLOUD, any_provider_configured)
     if effective is configured:
         return effective.value, None
     if not config.settings.AI_ALLOW_CLOUD:

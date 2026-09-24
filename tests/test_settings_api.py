@@ -20,6 +20,16 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "OPENAI_COMPAT_BASE_URL", "https://openrouter.ai/api/v1")
     monkeypatch.setattr(settings, "OPENAI_COMPAT_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
     monkeypatch.setattr(settings, "OPENAI_COMPAT_FALLBACK_MODELS", "env/fallback-a:free,env/fallback-b:free")
+    # Task 18.8 (D28): same isolation pattern for the new provider chain fields.
+    monkeypatch.setattr(settings, "OPENCODE_ZEN_API_KEY", "")
+    monkeypatch.setattr(config, "ENV_OPENCODE_ZEN_API_KEY", "")
+    monkeypatch.setattr(settings, "OPENCODE_ZEN_BASE_URL", "https://opencode.ai/zen/v1")
+    monkeypatch.setattr(settings, "OPENCODE_ZEN_MODEL", "")
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(config, "ENV_GEMINI_API_KEY", "")
+    monkeypatch.setattr(settings, "GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai")
+    monkeypatch.setattr(settings, "GEMINI_MODELS", "gemini-3.1-flash-lite,gemini-flash-lite-latest")
+    monkeypatch.setattr(settings, "CLOUD_PROVIDER_ORDER", "openrouter,gemini")
     # AI_MODE (Task 13.6) is the same kind of mutable-singleton setting -- reset to
     # a deterministic value so a PUT in one test can't leak into another.
     monkeypatch.setattr(settings, "AI_MODE", "cloud")
@@ -42,6 +52,10 @@ def test_get_reports_env_source_before_anything_is_saved(client):
     assert data["cloud_model"] == "nvidia/nemotron-3-super-120b-a12b:free"
     assert data["cloud_fallback_models"] == ["env/fallback-a:free", "env/fallback-b:free"]
     assert data["allow_cloud"] is False
+    assert data["cloud_provider_order"] == ["openrouter", "gemini"]
+    assert data["opencode_zen"]["configured"] is False
+    assert data["gemini"]["configured"] is False
+    assert data["gemini"]["models"] == ["gemini-3.1-flash-lite", "gemini-flash-lite-latest"]
 
 
 def test_put_cloud_saves_and_never_echoes_the_raw_key(client):
@@ -388,3 +402,98 @@ def test_get_settings_effective_reason_is_cloud_disabled_when_allow_cloud_false(
     assert data["ai_mode"] == "cloud_first"
     assert data["effective_mode"] == "local"
     assert data["effective_reason"] == "cloud disabled by DIE_AI_ALLOW_CLOUD"
+
+
+def test_get_settings_effective_mode_matches_when_only_gemini_is_configured(client, monkeypatch):
+    """Task 18.8 (D28): effective_mode is no longer OpenRouter-specific --
+    cloud is effective as soon as ANY configured provider has a key, even
+    with OpenRouter itself unconfigured."""
+    monkeypatch.setattr(settings, "OPENAI_COMPAT_API_KEY", "")
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "gemini-key")
+    monkeypatch.setattr(settings, "AI_ALLOW_CLOUD", True)
+    monkeypatch.setattr(settings, "AI_MODE", "cloud_first")
+
+    response = client.get("/api/settings")
+    assert response.json()["data"]["effective_mode"] == "cloud_first"
+
+
+# --- Task 18.8 (D28): OpenCode Zen / Gemini / dispatch order -------------------------
+
+
+def test_put_opencode_zen_saves_and_never_echoes_the_raw_key(client):
+    response = client.put(
+        "/api/settings/cloud/opencode-zen",
+        json={"base_url": "https://opencode.ai/zen/v1", "model": "some/zen-model", "api_key": "ZenRealKey0001"},
+    )
+    assert response.status_code == 200
+    assert "ZenRealKey0001" not in response.text
+    data = response.json()["data"]
+    assert data["configured"] is True
+    assert data["key_last4"].endswith("0001")
+
+
+def test_put_opencode_zen_rejects_empty_model(client):
+    response = client.put(
+        "/api/settings/cloud/opencode-zen",
+        json={"base_url": "https://opencode.ai/zen/v1", "model": "   "},
+    )
+    assert response.status_code == 422
+
+
+def test_delete_opencode_zen_api_key_reverts_to_env_source(client):
+    client.put(
+        "/api/settings/cloud/opencode-zen",
+        json={"base_url": "https://opencode.ai/zen/v1", "model": "m", "api_key": "ZenRealKey0001"},
+    )
+    response = client.delete("/api/settings/cloud/opencode-zen/api-key")
+    assert response.status_code == 200
+    assert response.json()["data"]["configured"] is False
+
+
+def test_put_gemini_saves_multiple_models_and_never_echoes_the_raw_key(client):
+    response = client.put(
+        "/api/settings/cloud/gemini",
+        json={
+            "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+            "models": ["model-a", "model-b"],
+            "api_key": "GeminiRealKey0001",
+        },
+    )
+    assert response.status_code == 200
+    assert "GeminiRealKey0001" not in response.text
+    data = response.json()["data"]
+    assert data["configured"] is True
+    assert data["models"] == ["model-a", "model-b"]
+    assert data["key_last4"].endswith("0001")
+
+
+def test_put_gemini_rejects_too_many_models(client):
+    response = client.put(
+        "/api/settings/cloud/gemini",
+        json={"base_url": "https://a.example/v1", "models": [f"m{i}" for i in range(6)], "api_key": "k"},
+    )
+    assert response.status_code == 422
+
+
+def test_delete_gemini_cloud_api_key_reverts_to_env_source(client):
+    client.put(
+        "/api/settings/cloud/gemini",
+        json={"base_url": "https://a.example/v1", "models": ["m"], "api_key": "GeminiRealKey0001"},
+    )
+    response = client.delete("/api/settings/cloud/gemini/api-key")
+    assert response.status_code == 200
+    assert response.json()["data"]["configured"] is False
+
+
+def test_put_cloud_provider_order_saves_and_applies(client):
+    response = client.put("/api/settings/cloud/order", json={"order": ["gemini", "openrouter"]})
+    assert response.status_code == 200
+    assert response.json()["data"]["cloud_provider_order"] == ["gemini", "openrouter"]
+
+    follow_up = client.get("/api/settings")
+    assert follow_up.json()["data"]["cloud_provider_order"] == ["gemini", "openrouter"]
+
+
+def test_put_cloud_provider_order_rejects_an_unknown_name(client):
+    response = client.put("/api/settings/cloud/order", json={"order": ["openrouter", "not-a-real-provider"]})
+    assert response.status_code == 422

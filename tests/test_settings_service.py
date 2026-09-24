@@ -42,6 +42,16 @@ def _isolated_cloud_settings(monkeypatch):
     monkeypatch.setattr(config.settings, "OPENAI_COMPAT_BASE_URL", "https://openrouter.ai/api/v1")
     monkeypatch.setattr(config.settings, "OPENAI_COMPAT_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
     monkeypatch.setattr(config.settings, "OPENAI_COMPAT_FALLBACK_MODELS", "env/fallback-a:free,env/fallback-b:free")
+    # Task 18.8 (D28): same isolation pattern for the new provider chain fields.
+    monkeypatch.setattr(config.settings, "OPENCODE_ZEN_API_KEY", "")
+    monkeypatch.setattr(config, "ENV_OPENCODE_ZEN_API_KEY", "")
+    monkeypatch.setattr(config.settings, "OPENCODE_ZEN_BASE_URL", "https://opencode.ai/zen/v1")
+    monkeypatch.setattr(config.settings, "OPENCODE_ZEN_MODEL", "")
+    monkeypatch.setattr(config.settings, "GEMINI_API_KEY", "")
+    monkeypatch.setattr(config, "ENV_GEMINI_API_KEY", "")
+    monkeypatch.setattr(config.settings, "GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai")
+    monkeypatch.setattr(config.settings, "GEMINI_MODELS", "gemini-3.1-flash-lite,gemini-flash-lite-latest")
+    monkeypatch.setattr(config.settings, "CLOUD_PROVIDER_ORDER", "openrouter,gemini")
 
 
 def test_old_gemini_key_functions_are_gone():
@@ -560,3 +570,153 @@ async def test_ai_mode_migration_is_logged(db, caplog):
     assert len(migration_lines) == 1
     assert "from=gemini" in migration_lines[0]
     assert "to=cloud" in migration_lines[0]
+
+
+# --- Task 18.8 (D28): OpenCode Zen ---------------------------------------------------
+
+
+async def test_provider_chain_status_reports_zen_and_gemini_from_env_defaults(db):
+    status = await settings_service.get_provider_chain_status(db)
+    assert status["cloud_provider_order"] == ["openrouter", "gemini"]
+    assert status["opencode_zen"]["configured"] is False
+    assert status["opencode_zen"]["key_last4"] is None
+    assert status["gemini"]["configured"] is False
+    assert status["gemini"]["models"] == ["gemini-3.1-flash-lite", "gemini-flash-lite-latest"]
+
+
+async def test_set_opencode_zen_settings_persists_and_applies_immediately(db):
+    status = await settings_service.set_opencode_zen_settings(
+        db, "https://opencode.ai/zen/v1", "some/zen-model", "zen-key-0001"
+    )
+    assert status["configured"] is True
+    assert status["key_last4"] == settings_service._last4("zen-key-0001")
+    assert config.settings.OPENCODE_ZEN_BASE_URL == "https://opencode.ai/zen/v1"
+    assert config.settings.OPENCODE_ZEN_MODEL == "some/zen-model"
+    assert config.settings.OPENCODE_ZEN_API_KEY == "zen-key-0001"
+
+
+async def test_set_opencode_zen_settings_rejects_empty_model(db):
+    with pytest.raises(ValidationError):
+        await settings_service.set_opencode_zen_settings(db, "https://opencode.ai/zen/v1", "   ", "a-key")
+
+
+async def test_clear_opencode_zen_api_key_reverts_to_env_value(db):
+    await settings_service.set_opencode_zen_settings(db, "https://opencode.ai/zen/v1", "m", "temp-zen-key")
+    assert config.settings.OPENCODE_ZEN_API_KEY == "temp-zen-key"
+
+    await settings_service.clear_opencode_zen_api_key(db)
+
+    assert config.settings.OPENCODE_ZEN_API_KEY == ""  # ENV_OPENCODE_ZEN_API_KEY, isolated to "" above
+
+
+async def test_old_gemini_key_clear_function_stays_gone_new_one_is_distinct():
+    """Task 18.3 deleted `clear_gemini_api_key`; Task 18.8's new
+    `clear_gemini_cloud_api_key` is deliberately a different name so it can
+    never be confused with (or silently resurrect) that deleted surface."""
+    assert not hasattr(settings_service, "clear_gemini_api_key")
+    assert hasattr(settings_service, "clear_gemini_cloud_api_key")
+
+
+# --- Task 18.8 (D28, Amendment F): Gemini's multi-model chain ------------------------
+
+
+async def test_set_gemini_settings_persists_and_applies_immediately(db):
+    status = await settings_service.set_gemini_settings(
+        db, "https://generativelanguage.googleapis.com/v1beta/openai", ["model-a", "model-b"], "gemini-key-0001"
+    )
+    assert status["configured"] is True
+    assert status["models"] == ["model-a", "model-b"]
+    assert status["key_last4"] == settings_service._last4("gemini-key-0001")
+    assert config.settings.GEMINI_MODELS == "model-a,model-b"
+    assert config.settings.GEMINI_API_KEY == "gemini-key-0001"
+
+
+async def test_set_gemini_settings_none_models_leaves_it_unchanged(db):
+    await settings_service.set_gemini_settings(db, "https://a.example/v1", ["model-a"], "key")
+    status = await settings_service.set_gemini_settings(db, "https://b.example/v1", None, None)
+    assert status["models"] == ["model-a"]
+    assert config.settings.GEMINI_BASE_URL == "https://b.example/v1"
+
+
+async def test_set_gemini_settings_empty_list_clears_the_models(db):
+    await settings_service.set_gemini_settings(db, "https://a.example/v1", ["model-a"], "key")
+    status = await settings_service.set_gemini_settings(db, "https://a.example/v1", [], None)
+    assert status["models"] == []
+    assert config.settings.GEMINI_MODELS == ""
+
+
+async def test_set_gemini_settings_rejects_too_many_models(db):
+    with pytest.raises(ValidationError):
+        await settings_service.set_gemini_settings(
+            db, "https://a.example/v1", [f"m{i}" for i in range(6)], "key"
+        )
+
+
+async def test_set_gemini_settings_rejects_an_invalid_base_url(db):
+    with pytest.raises(ValidationError):
+        await settings_service.set_gemini_settings(db, "http://not-loopback.example.com", ["m"], "key")
+
+
+async def test_clear_gemini_cloud_api_key_reverts_to_env_value(db):
+    await settings_service.set_gemini_settings(db, "https://a.example/v1", ["m"], "temp-gemini-key")
+    assert config.settings.GEMINI_API_KEY == "temp-gemini-key"
+
+    await settings_service.clear_gemini_cloud_api_key(db)
+
+    assert config.settings.GEMINI_API_KEY == ""
+
+
+# --- Task 18.8 (D28): dispatch order --------------------------------------------------
+
+
+async def test_set_cloud_provider_order_persists_and_applies_immediately(db):
+    status = await settings_service.set_cloud_provider_order(db, ["gemini", "openrouter"])
+    assert status["cloud_provider_order"] == ["gemini", "openrouter"]
+    assert config.settings.CLOUD_PROVIDER_ORDER == "gemini,openrouter"
+
+
+async def test_set_cloud_provider_order_rejects_an_unknown_name(db):
+    with pytest.raises(ValidationError):
+        await settings_service.set_cloud_provider_order(db, ["openrouter", "not-a-real-provider"])
+
+
+async def test_set_cloud_provider_order_rejects_duplicates(db):
+    with pytest.raises(ValidationError):
+        await settings_service.set_cloud_provider_order(db, ["openrouter", "openrouter"])
+
+
+async def test_set_cloud_provider_order_allows_an_empty_list(db):
+    status = await settings_service.set_cloud_provider_order(db, [])
+    assert status["cloud_provider_order"] == []
+    assert config.settings.CLOUD_PROVIDER_ORDER == ""
+
+
+async def test_load_provider_chain_from_db_applies_stored_values(db):
+    await settings_service.set_opencode_zen_settings(db, "https://a.example/v1", "m", "zen-key")
+    await settings_service.set_gemini_settings(db, "https://b.example/v1", ["model-x"], "gemini-key")
+    await settings_service.set_cloud_provider_order(db, ["gemini"])
+
+    config.settings.OPENCODE_ZEN_BASE_URL = "https://opencode.ai/zen/v1"
+    config.settings.OPENCODE_ZEN_MODEL = ""
+    config.settings.OPENCODE_ZEN_API_KEY = ""
+    config.settings.GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
+    config.settings.GEMINI_MODELS = "gemini-3.1-flash-lite,gemini-flash-lite-latest"
+    config.settings.GEMINI_API_KEY = ""
+    config.settings.CLOUD_PROVIDER_ORDER = "openrouter,gemini"
+
+    await settings_service.load_provider_chain_from_db(db)
+
+    assert config.settings.OPENCODE_ZEN_BASE_URL == "https://a.example/v1"
+    assert config.settings.OPENCODE_ZEN_MODEL == "m"
+    assert config.settings.OPENCODE_ZEN_API_KEY == "zen-key"
+    assert config.settings.GEMINI_BASE_URL == "https://b.example/v1"
+    assert config.settings.GEMINI_MODELS == "model-x"
+    assert config.settings.GEMINI_API_KEY == "gemini-key"
+    assert config.settings.CLOUD_PROVIDER_ORDER == "gemini"
+
+
+async def test_load_provider_chain_from_db_leaves_env_values_untouched_when_nothing_stored(db):
+    await settings_service.load_provider_chain_from_db(db)
+    assert config.settings.OPENCODE_ZEN_BASE_URL == "https://opencode.ai/zen/v1"
+    assert config.settings.GEMINI_MODELS == "gemini-3.1-flash-lite,gemini-flash-lite-latest"
+    assert config.settings.CLOUD_PROVIDER_ORDER == "openrouter,gemini"

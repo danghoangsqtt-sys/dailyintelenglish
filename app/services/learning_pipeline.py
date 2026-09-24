@@ -273,6 +273,7 @@ def _call_record(
             "fallback_used": result.fallback_used,
             "fallback_reason": result.fallback_reason,
             "circuit_open": result.circuit_open,
+            "providers_tried": result.providers_tried,
             "is_repair": is_repair,
             "outcome": "ok",
             "error_type": None,
@@ -290,6 +291,7 @@ def _call_record(
         "fallback_used": False,
         "fallback_reason": None,
         "circuit_open": False,
+        "providers_tried": [],
         "is_repair": is_repair,
         "outcome": "error",
         "error_type": type(exc).__name__ if exc is not None else None,
@@ -313,9 +315,10 @@ async def _call_router(
     still recorded (`outcome="error"`) before re-raising, so the orchestrator's
     `except ProviderError` handler can fail the job with a specific error_code.
 
-    Task 18.6 item 4: when `adapter` is given, a cloud-served result
-    (`router.is_primary_result(result)`) that fails validation against it gets
-    one local retry (`router.generate_on_fallback`) before being recorded --
+    Task 18.6 item 4 (rename to `is_cloud_result` in 18.8): when `adapter` is
+    given, a cloud-served result (`router.is_cloud_result(result)`) that fails
+    validation against it gets one local retry (`router.generate_on_fallback`)
+    before being recorded --
     marked `fallback_used=True, fallback_reason="SchemaValidationError"`, the
     same shape the router's own internal primary-failure fallback already
     produces. Look-ahead pre-check only: the caller's own existing post-call
@@ -330,7 +333,7 @@ async def _call_router(
             )
         raise
 
-    if adapter is not None and router.is_primary_result(result):
+    if adapter is not None and router.is_cloud_result(result):
         try:
             parse_and_validate(result.text, adapter)
         except SchemaValidationError:

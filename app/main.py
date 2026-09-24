@@ -11,7 +11,6 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api import ai_jobs, audio, learning, music, projects, settings as settings_api, thumbnail, tts, video, youtube
 from app.core.config import settings
-from app.core.constants import AI_CIRCUIT_COOLDOWN_SECONDS, AI_CIRCUIT_FAILURE_THRESHOLD
 from app.core.exceptions import AppError
 from app.core.paths import get_project_root
 from app.core.responses import ok
@@ -27,16 +26,21 @@ FRONTEND_DIR = PROJECT_ROOT / "frontend"
 app_state: dict = {"ffmpeg_ok": False, "gpu_info": None}
 ai_worker = AIWorker(db_getter=lambda: Database.instance().connection)
 
-# Phase 18: one circuit breaker for the app's whole lifetime, threaded through
-# every freshly-built per-job router below -- so breaker state survives across
-# jobs even though the router itself is rebuilt per job dispatch (to pick up a
-# Settings-page change without a restart; see _build_ai_router's docstring).
-_ai_circuit = CircuitBreaker(AI_CIRCUIT_FAILURE_THRESHOLD, AI_CIRCUIT_COOLDOWN_SECONDS)
+# Phase 18/Task 18.8: one circuit breaker PER cloud provider name, for the app's
+# whole lifetime, threaded through every freshly-built per-job router below -- so
+# breaker state survives across jobs even though the router itself is rebuilt per
+# job dispatch (to pick up a Settings-page change without a restart; see
+# _build_ai_router's docstring). Starts empty and grows on demand (a breaker is
+# created the first time a given provider name is actually dispatched to,
+# app/services/ai/router.py's `_chain_entry`) -- never hardcodes which provider
+# names exist, so adding/removing/reordering providers in Settings needs no
+# change here.
+_ai_circuits: dict[str, CircuitBreaker] = {}
 
 
 def _build_ai_router() -> AIRouter:
     """One fresh `AIRouter` per call, reading `settings.*` live (Phase 18),
-    sharing this module's one app-lifetime `_ai_circuit`.
+    sharing this module's one app-lifetime `_ai_circuits` dict.
 
     Called once per job dispatch (not once at startup, and not once per
     `generate()` call within a job) by the two handler wrappers below --
@@ -44,10 +48,10 @@ def _build_ai_router() -> AIRouter:
     once in `lifespan`, so a Settings-page change (Task 18.3) would never
     reach a running job's actual provider calls (both `OllamaProvider` and the
     old `GeminiProvider` froze their config at construction). Rebuilding here
-    fixes that; `_ai_circuit` keeps the breaker itself from also resetting on
+    fixes that; `_ai_circuits` keeps each breaker itself from also resetting on
     every rebuild.
     """
-    return build_ai_router_from_settings(circuit=_ai_circuit)
+    return build_ai_router_from_settings(circuits=_ai_circuits)
 
 
 async def _script_job_handler(job: dict, worker: AIWorker) -> None:
@@ -77,6 +81,7 @@ async def lifespan(app: FastAPI):
 
     await init_db()
     await settings_service.load_cloud_settings_from_db(Database.instance().connection)
+    await settings_service.load_provider_chain_from_db(Database.instance().connection)
     await settings_service.load_ai_mode_from_db(Database.instance().connection)
     app_state["ffmpeg_ok"] = await check_ffmpeg()
     app_state["gpu_info"] = await get_gpu_info()

@@ -16,6 +16,7 @@ import re
 import time
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -75,6 +76,21 @@ def _extract_error_info(error_value: object) -> tuple[object, str]:
     return None, str(error_value)[:200]
 
 
+def _unwrap_error_body(data: object) -> dict | None:
+    """Task 18.8 (Amendment F): some upstreams (seen from real Gemini error
+    responses) wrap the error object in a JSON array -- `[{"error": {...}}]`
+    -- instead of returning it directly (`{"error": {...}}`, every other
+    upstream's shape, including every existing OpenRouter test/fixture).
+    Normalizes both to the bare dict (still containing the `"error"` key)
+    every other helper here already expects; `None` if neither shape
+    matches."""
+    if isinstance(data, dict) and "error" in data:
+        return data
+    if isinstance(data, list) and data and isinstance(data[0], dict) and "error" in data[0]:
+        return data[0]
+    return None
+
+
 class OpenAICompatProvider:
     """Provider adapter for an OpenAI-compatible `/chat/completions` endpoint."""
 
@@ -87,6 +103,8 @@ class OpenAICompatProvider:
         model: str,
         timeout: float = 180.0,
         fallback_models: list[str] | None = None,
+        name: str = "openai_compat",
+        vendor: str = "openrouter",
     ) -> None:
         """Args:
         base_url: Must pass `validate_openai_compat_base_url`.
@@ -100,12 +118,29 @@ class OpenAICompatProvider:
             OpenRouter's native `models: [model, *fallback_models]` array
             instead of `model` -- OpenRouter itself tries each one server-side,
             within the one HTTP call, on rate-limit/downtime.
+        name: Task 18.8 (D28). Overrides the class-level default -- multiple
+            instances of this same class now coexist in one router's chain
+            (openrouter/opencode-zen/gemini), and each needs to report its own
+            name on every `GenerationResult` for per-provider telemetry/circuit
+            identity, not the one shared class attribute every instance used to
+            report before this task.
+        vendor: Task 18.8. `"openrouter" | "gemini" | "generic"` (default
+            `"openrouter"`, matching every 18.1-18.6 caller's one and only real
+            target) -- selects which daily-quota-429 shape
+            `_daily_quota_reset_epoch_seconds` checks for. `"generic"` (e.g.
+            OpenCode Zen, whose free limits are unpublished) never detects a
+            daily-quota condition; every 429 stays a plain
+            `ProviderRateLimitError`, handled by the router's ordinary
+            threshold/cooldown circuit path exactly as OpenRouter itself was
+            before Task 18.6.
         """
         self._base_url = validate_openai_compat_base_url(base_url)
         self._api_key = api_key
         self._model = model
         self._timeout = timeout
         self._fallback_models = fallback_models or []
+        self.name = name
+        self._vendor = vendor
 
     def _raise(
         self, exc: ProviderError, upstream_status: int | None, cause: BaseException | None = None
@@ -156,28 +191,40 @@ class OpenAICompatProvider:
         except ValueError:
             data = None
         code, message = (None, "")
-        if isinstance(data, dict) and "error" in data:
-            code, message = _extract_error_info(data["error"])
+        error_body = _unwrap_error_body(data)
+        if error_body is not None:
+            code, message = _extract_error_info(error_body["error"])
         return self._format_error(prefix, response.status_code, code, message)
 
     def _daily_quota_reset_epoch_seconds(self, response: httpx.Response) -> float | None:
-        """Task 18.6 (D27, Amendment D): detects OpenRouter's account-wide free-model
-        daily cap (distinct from an ordinary per-minute rate limit) from a 429's real
-        captured shape -- `error.metadata.limit_source == "openrouter_free_tier_daily"`,
-        or the message containing `"free-models-per-day"` as a backstop in case a
-        future response omits `metadata`. Returns `None` when this 429 is NOT a
-        daily-quota error (caller then raises the plain `ProviderRateLimitError` as
-        before). When it IS one, always returns a valid epoch in seconds -- never
-        `None` -- so the caller/circuit side never has to handle a missing reset:
-        `X-RateLimit-Reset` (epoch milliseconds) when present and parseable, else the
-        next UTC midnight."""
+        """Task 18.6/18.8: detects a provider's account-wide daily-cap 429 (distinct
+        from an ordinary per-minute rate limit) and, if found, returns the epoch
+        seconds it resets at -- never `None` once detected, so the caller/circuit
+        side never has to handle a missing reset. Returns `None` when this 429 is
+        NOT a daily-quota error (caller then raises the plain
+        `ProviderRateLimitError` as before) -- including always, for `vendor=
+        "generic"` (Task 18.8, e.g. OpenCode Zen), which has no known shape to
+        detect. The actual shape checked depends on `self._vendor`."""
         try:
             data = response.json()
         except ValueError:
             data = None
-        error = data.get("error") if isinstance(data, dict) else None
+        error_body = _unwrap_error_body(data)
+        error = error_body["error"] if error_body is not None else None
         if not isinstance(error, dict):
             return None
+        if self._vendor == "openrouter":
+            return self._openrouter_daily_quota_reset(error, response)
+        if self._vendor == "gemini":
+            return self._gemini_daily_quota_reset(error)
+        return None  # "generic" vendor: no vendor-specific detection at all
+
+    def _openrouter_daily_quota_reset(self, error: dict, response: httpx.Response) -> float | None:
+        """Task 18.6 (D27, Amendment D): OpenRouter's real captured shape --
+        `error.metadata.limit_source == "openrouter_free_tier_daily"`, or the
+        message containing `"free-models-per-day"` as a backstop in case a future
+        response omits `metadata`. Reset from `X-RateLimit-Reset` (epoch
+        milliseconds) when present and parseable, else the next UTC midnight."""
         metadata = error.get("metadata")
         limit_source = metadata.get("limit_source") if isinstance(metadata, dict) else None
         is_daily_quota = limit_source == "openrouter_free_tier_daily" or "free-models-per-day" in str(
@@ -189,10 +236,32 @@ class OpenAICompatProvider:
         try:
             return float(reset_header) / 1000.0
         except (TypeError, ValueError):
-            next_midnight = (datetime.now(timezone.utc) + timedelta(days=1)).replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
-            return next_midnight.timestamp()
+            return self._next_utc_midnight_epoch_seconds()
+
+    def _gemini_daily_quota_reset(self, error: dict) -> float | None:
+        """Task 18.8 (D28, Amendment E, Q1): Google's standard `google.rpc.Status`
+        error shape -- `error.status == "RESOURCE_EXHAUSTED"` -- with a message
+        substring backstop. Best-effort: unlike 18.6's OpenRouter detector, there is
+        no real captured body yet, only the documented convention; the PM's
+        pre-Gate-B-10 probe verifies the real shape, and a mismatch is a
+        one-function fix here, not a redesign. Resets at the next midnight
+        America/Los_Angeles (Google's documented Pacific-time quota reset) -- still
+        passed through `CircuitBreaker.open_until`'s existing 26h cap (18.6 C3) as
+        a backstop against a DST-transition edge case or a bad detection."""
+        status = error.get("status")
+        message = str(error.get("message", ""))
+        is_daily_quota = status == "RESOURCE_EXHAUSTED" or "RESOURCE_EXHAUSTED" in message or "exhausted" in message.lower()
+        if not is_daily_quota:
+            return None
+        now_la = datetime.now(ZoneInfo("America/Los_Angeles"))
+        next_midnight_la = (now_la + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        return next_midnight_la.timestamp()
+
+    def _next_utc_midnight_epoch_seconds(self) -> float:
+        next_midnight = (datetime.now(timezone.utc) + timedelta(days=1)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        return next_midnight.timestamp()
 
     async def generate(self, request: GenerationRequest) -> GenerationResult:
         """Make exactly one `/chat/completions` call. No internal retry loop."""
@@ -244,8 +313,9 @@ class OpenAICompatProvider:
                     ProviderInvalidResponseError(self._redact(f"Unexpected response body: {exc}")), status, cause=exc
                 )
 
-            if isinstance(data, dict) and "error" in data:
-                code, message = _extract_error_info(data["error"])
+            error_body = _unwrap_error_body(data)
+            if error_body is not None:
+                code, message = _extract_error_info(error_body["error"])
                 text = self._format_error("OpenAI-compatible endpoint returned an error body", status, code, message)
                 error_status = code if isinstance(code, int) else None
                 if code == 429:

@@ -101,10 +101,16 @@ def _neutralize_cloud_config() -> None:
     # real host.
     config.settings.OPENAI_COMPAT_BASE_URL = "https://openrouter.invalid/api/v1"
     config.settings.AI_ALLOW_CLOUD = False
-    # The legacy Gemini key, for good measure -- nothing in the active app
-    # reads it anymore (Task 18.3 retired that surface), but the field itself
-    # still exists and a test could still read it directly.
+    # Task 18.8 (D28): GEMINI_API_KEY is no longer just "the legacy key nothing
+    # reads" (that was true post-18.3, pre-18.8) -- it's the real key the new
+    # Gemini chain entries dispatch against, so this neutralization now matters
+    # exactly as much as OPENAI_COMPAT_API_KEY above.
     config.settings.GEMINI_API_KEY = ""
+    config.settings.GEMINI_BASE_URL = "https://gemini.invalid/v1beta/openai"
+    # Task 18.8: OpenCode Zen, same pattern.
+    config.settings.OPENCODE_ZEN_API_KEY = ""
+    config.ENV_OPENCODE_ZEN_API_KEY = ""
+    config.settings.OPENCODE_ZEN_BASE_URL = "https://opencode-zen.invalid/v1"
 
 
 _neutralize_cloud_config()

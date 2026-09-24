@@ -204,6 +204,19 @@ AI_CIRCUIT_COOLDOWN_SECONDS = 60.0
 # same constant so the two can't drift.
 AI_CLOUD_DEADLINE_SECONDS = 75.0
 
+# Task 18.8 (D28, Amendment E): the WHOLE cloud chain's shared budget, across
+# however many providers get attempted, before local gets its own separate
+# fresh budget -- each entry within the chain is still capped at
+# AI_CLOUD_DEADLINE_SECONDS (75s) individually, but the chain as a whole can
+# never spend more than this before falling back. ~120s covers one full-budget
+# entry (75s) plus a partial second one (~45s); a third entry would see 0s
+# remaining and be skipped. Worst-case total latency for one call: 120s (cloud)
+# + AI_REQUEST_DEADLINE_SECONDS (120s, local) = 240s, up from the single-primary
+# 75s + 120s = 195s -- a real, accepted worst-case increase (see task-18.8.md),
+# traded for the typical case improving (an unhealthy provider's circuit skips
+# it on every later call).
+AI_TOTAL_CLOUD_BUDGET_SECONDS = 120.0
+
 # Phase 14 Task 14.1 -- bounded exponential backoff for transient provider errors
 # (HTTP 503/429/timeout) only; content-shaped errors keep the old one-immediate-
 # retry policy (see AIRouter._TRANSIENT_ERRORS / _CONTENT_RETRY_ERRORS).

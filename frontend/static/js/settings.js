@@ -26,6 +26,26 @@
   const testConnectionResultEl = document.getElementById("test-connection-result");
   const saveStatusEl = document.getElementById("save-status");
 
+  // Task 18.8: provider order, Gemini, OpenCode Zen.
+  const providerOrderInput = document.getElementById("cloud-provider-order");
+  const providerOrderStatusEl = document.getElementById("cloud-provider-order-status");
+
+  const geminiBaseUrlInput = document.getElementById("gemini-base-url");
+  const geminiModelsInput = document.getElementById("gemini-models");
+  const geminiApiKeyInput = document.getElementById("gemini-api-key");
+  const geminiKeyStatusEl = document.getElementById("gemini-key-status");
+  const saveGeminiBtn = document.getElementById("save-gemini-settings-btn");
+  const clearGeminiKeyBtn = document.getElementById("clear-gemini-key-btn");
+  const geminiSaveStatusEl = document.getElementById("gemini-save-status");
+
+  const zenBaseUrlInput = document.getElementById("zen-base-url");
+  const zenModelInput = document.getElementById("zen-model");
+  const zenApiKeyInput = document.getElementById("zen-api-key");
+  const zenKeyStatusEl = document.getElementById("zen-key-status");
+  const saveZenBtn = document.getElementById("save-zen-settings-btn");
+  const clearZenKeyBtn = document.getElementById("clear-zen-key-btn");
+  const zenSaveStatusEl = document.getElementById("zen-save-status");
+
   const EFFECTIVE_MODE_LABELS = { local: "Local", cloud: "Cloud", cloud_first: "Cloud-first" };
 
   function renderAiModeRadios(status) {
@@ -90,16 +110,65 @@
       `${pct(rate.job_fallback_rate)} of jobs.`;
   }
 
+  function _hhmm(iso) {
+    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
   function renderCircuitStatus(health) {
+    // Task 18.8 (D28) Q4: circuit_open/circuit_open_until now mean "every
+    // configured provider is paused" -- the old single-provider "Cloud
+    // paused until HH:MM" line is shown only in that all-paused case.
+    // Otherwise, if some (but not all) configured providers are paused, a
+    // smaller per-provider note names them and says what's covering.
     if (!circuitStatusEl) return;
-    const openUntil = health && health.circuit_open_until;
-    if (!openUntil) {
+    if (health && health.circuit_open && health.circuit_open_until) {
+      circuitStatusEl.hidden = false;
+      circuitStatusEl.textContent = `Cloud paused until ${_hhmm(health.circuit_open_until)} (free daily limit reached)`;
+      return;
+    }
+    const providers = (health && health.providers) || {};
+    const names = Object.keys(providers);
+    const paused = names.filter((name) => providers[name].circuit_open);
+    if (paused.length === 0) {
       circuitStatusEl.hidden = true;
       return;
     }
-    const hhmm = new Date(openUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const active = names.filter((name) => !providers[name].circuit_open);
+    const pausedLabel = paused
+      .map((name) => `${name} paused until ${providers[name].circuit_open_until ? _hhmm(providers[name].circuit_open_until) : "?"}`)
+      .join(", ");
     circuitStatusEl.hidden = false;
-    circuitStatusEl.textContent = `Cloud paused until ${hhmm} (free daily limit reached)`;
+    circuitStatusEl.textContent = active.length ? `${pausedLabel}; using ${active.join("/")}` : pausedLabel;
+  }
+
+  function renderProviderOrder(status) {
+    if (providerOrderInput && document.activeElement !== providerOrderInput) {
+      providerOrderInput.value = (status.cloud_provider_order || []).join(", ");
+    }
+  }
+
+  function renderGeminiForm(status) {
+    const gemini = status.gemini || {};
+    if (geminiBaseUrlInput && document.activeElement !== geminiBaseUrlInput) geminiBaseUrlInput.value = gemini.base_url || "";
+    if (geminiModelsInput && document.activeElement !== geminiModelsInput) {
+      geminiModelsInput.value = (gemini.models || []).join(", ");
+    }
+    if (geminiKeyStatusEl) {
+      geminiKeyStatusEl.textContent = gemini.configured
+        ? `Key ending in ${gemini.key_last4}.`
+        : "No key configured.";
+      geminiKeyStatusEl.classList.remove("is-error", "is-success");
+    }
+  }
+
+  function renderZenForm(status) {
+    const zen = status.opencode_zen || {};
+    if (zenBaseUrlInput && document.activeElement !== zenBaseUrlInput) zenBaseUrlInput.value = zen.base_url || "";
+    if (zenModelInput && document.activeElement !== zenModelInput) zenModelInput.value = zen.model || "";
+    if (zenKeyStatusEl) {
+      zenKeyStatusEl.textContent = zen.configured ? `Key ending in ${zen.key_last4}.` : "No key configured.";
+      zenKeyStatusEl.classList.remove("is-error", "is-success");
+    }
   }
 
   async function loadFallbackRate() {
@@ -118,6 +187,9 @@
       renderAiModeRadios(status);
       renderEffectiveModeStatus(status);
       renderCloudForm(status);
+      renderProviderOrder(status);
+      renderGeminiForm(status);
+      renderZenForm(status);
       return status;
     } catch (error) {
       if (effectiveStatusEl) effectiveStatusEl.textContent = error.message || "Could not load current status.";
@@ -195,6 +267,93 @@
     }
   }
 
+  async function handleSaveProviderOrder() {
+    if (!providerOrderStatusEl) return;
+    providerOrderStatusEl.classList.remove("is-error", "is-success");
+    providerOrderStatusEl.textContent = "Saving…";
+    try {
+      const order = providerOrderInput.value
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+      await Api.updateCloudProviderOrder(order);
+      providerOrderStatusEl.textContent = "Saved.";
+      providerOrderStatusEl.classList.add("is-success");
+      await loadStatus();
+    } catch (error) {
+      providerOrderStatusEl.textContent = error.message || "Could not save.";
+      providerOrderStatusEl.classList.add("is-error");
+    }
+  }
+
+  async function handleSaveGemini() {
+    if (!geminiSaveStatusEl) return;
+    geminiSaveStatusEl.classList.remove("is-error", "is-success");
+    geminiSaveStatusEl.textContent = "Saving…";
+    try {
+      const models = geminiModelsInput.value
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+      await Api.updateGeminiSettings(geminiBaseUrlInput.value, models, geminiApiKeyInput.value);
+      geminiApiKeyInput.value = "";
+      geminiSaveStatusEl.textContent = "Saved.";
+      geminiSaveStatusEl.classList.add("is-success");
+      await loadStatus();
+    } catch (error) {
+      geminiSaveStatusEl.textContent = error.message || "Could not save.";
+      geminiSaveStatusEl.classList.add("is-error");
+    }
+  }
+
+  async function handleClearGeminiKey() {
+    if (!geminiSaveStatusEl) return;
+    try {
+      await Api.clearGeminiCloudApiKey();
+      geminiApiKeyInput.value = "";
+      geminiSaveStatusEl.textContent = "Key cleared.";
+      geminiSaveStatusEl.classList.remove("is-error");
+      geminiSaveStatusEl.classList.add("is-success");
+      await loadStatus();
+    } catch (error) {
+      geminiSaveStatusEl.textContent = error.message || "Could not clear the key.";
+      geminiSaveStatusEl.classList.remove("is-success");
+      geminiSaveStatusEl.classList.add("is-error");
+    }
+  }
+
+  async function handleSaveZen() {
+    if (!zenSaveStatusEl) return;
+    zenSaveStatusEl.classList.remove("is-error", "is-success");
+    zenSaveStatusEl.textContent = "Saving…";
+    try {
+      await Api.updateOpenCodeZenSettings(zenBaseUrlInput.value, zenModelInput.value, zenApiKeyInput.value);
+      zenApiKeyInput.value = "";
+      zenSaveStatusEl.textContent = "Saved.";
+      zenSaveStatusEl.classList.add("is-success");
+      await loadStatus();
+    } catch (error) {
+      zenSaveStatusEl.textContent = error.message || "Could not save.";
+      zenSaveStatusEl.classList.add("is-error");
+    }
+  }
+
+  async function handleClearZenKey() {
+    if (!zenSaveStatusEl) return;
+    try {
+      await Api.clearOpenCodeZenApiKey();
+      zenApiKeyInput.value = "";
+      zenSaveStatusEl.textContent = "Key cleared.";
+      zenSaveStatusEl.classList.remove("is-error");
+      zenSaveStatusEl.classList.add("is-success");
+      await loadStatus();
+    } catch (error) {
+      zenSaveStatusEl.textContent = error.message || "Could not clear the key.";
+      zenSaveStatusEl.classList.remove("is-success");
+      zenSaveStatusEl.classList.add("is-error");
+    }
+  }
+
   localRadio?.addEventListener("change", () => {
     if (localRadio.checked) handleModeChange("local");
   });
@@ -204,6 +363,11 @@
   saveBtn?.addEventListener("click", handleSave);
   clearKeyBtn?.addEventListener("click", handleClearKey);
   testConnectionBtn?.addEventListener("click", handleTestConnection);
+  providerOrderInput?.addEventListener("change", handleSaveProviderOrder);
+  saveGeminiBtn?.addEventListener("click", handleSaveGemini);
+  clearGeminiKeyBtn?.addEventListener("click", handleClearGeminiKey);
+  saveZenBtn?.addEventListener("click", handleSaveZen);
+  clearZenKeyBtn?.addEventListener("click", handleClearZenKey);
 
   loadStatus();
   loadFallbackRate();

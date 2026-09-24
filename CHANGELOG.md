@@ -9,6 +9,32 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Changed
+- Multi-provider cloud chain (2026-09-24, Phase 18 Task 18.8, ENH-011, D28/Amendment E, real
+  provider probe/Amendment F, self-implemented by Coder): the AI router now dispatches through an
+  ordered chain of cloud providers, each with its own circuit breaker, instead of one primary --
+  default order `openrouter → gemini-3.1-flash-lite → gemini-flash-lite-latest → local qwen`
+  (OpenRouter's own model chain from Task 18.6 unchanged inside its one entry). Gemini free
+  limits are per model per project, so it dispatches as multiple entries sharing one key, each
+  independently healthy or paused; a `RESOURCE_EXHAUSTED`/429 opens that entry's circuit until
+  the next midnight America/Los_Angeles, `NOT_FOUND`/404 fails fast as a config error, and
+  `UNAVAILABLE`/503 is treated as transient -- all via the existing generic status-code handling,
+  plus a new Gemini-shaped daily-quota detector that also parses the array-wrapped error bodies
+  real Gemini responses sometimes use (`[{"error": {...}}]`, not just `{"error": {...}}`).
+  OpenCode Zen is supported (same generic provider machinery) but **not enabled by default** --
+  its free tier returned 403 "can only be used from within OpenCode" for most probed models in
+  the owner's real probe, so its terms restrict it to that client; nothing here ever sends a
+  header/user-agent to mimic it. The whole chain shares one new ~120s total cloud budget (each
+  entry still capped at 75s individually) before local gets its own separate, fresh budget --
+  worst case 240s end-to-end, up from 195s, traded for a failing provider's circuit skipping it
+  on every later call. `GET /api/ai/health` gained a per-provider `providers` breakdown;
+  `circuit_open`/`circuit_open_until` (Task 18.6) now mean "every configured provider is paused"
+  (the app is genuinely local-only) with the earliest reopen time, not "any one is" -- a
+  deliberate redefinition of a field that shipped one task earlier, called out explicitly since
+  nothing external depended on the old meaning yet. Settings gained OpenCode Zen and Gemini
+  provider cards (base URL, model(s), write-only key) and a provider-order field. The existing
+  `OPENAI_COMPAT_*`/`GEMINI_API_KEY` settings are reused as-is for the openrouter/gemini entries,
+  not renamed or migrated; `GEMINI_MODEL`/`GEMINI_MODELS` reactivates a `.env.example` line that
+  had been dead (never declared on `Settings`) since before Phase 18.
 - Cloud model chain + speed tuning (2026-09-24, Phase 18 Task 18.6, ENH-011, D27/Amendment D,
   self-implemented by Coder): after Gate B-9 showed cloud_first 2-5x slower than local (7 cloud
   timeouts burning the full 150s budget each) and the free daily cap ending the trial mid-run,

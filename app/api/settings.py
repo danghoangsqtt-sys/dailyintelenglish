@@ -9,7 +9,14 @@ from app.core.config import settings
 from app.db.transactions import write_transaction
 from app.core.responses import ok
 from app.db.database import get_db
-from app.models.settings import AIModeUpdate, CloudSettingsUpdate, CloudTestConnectionRequest
+from app.models.settings import (
+    AIModeUpdate,
+    CloudProviderOrderUpdate,
+    CloudSettingsUpdate,
+    CloudTestConnectionRequest,
+    GeminiSettingsUpdate,
+    OpenCodeZenSettingsUpdate,
+)
 from app.services import settings_service
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -26,6 +33,7 @@ async def get_settings(db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """
     started_at = time.perf_counter()
     cloud_status = await settings_service.get_cloud_settings_status(db)
+    provider_chain_status = await settings_service.get_provider_chain_status(db)
     ai_mode_status = await settings_service.get_ai_mode_status(db)
     effective_mode, effective_reason = settings_service.compute_effective_mode_and_reason(
         ai_mode_status["ai_mode"]
@@ -33,6 +41,7 @@ async def get_settings(db: aiosqlite.Connection = Depends(get_db)) -> dict:
     return ok(
         {
             **cloud_status,
+            **provider_chain_status,
             **ai_mode_status,
             "allow_cloud": settings.AI_ALLOW_CLOUD,
             "effective_mode": effective_mode,
@@ -80,3 +89,60 @@ async def test_cloud_connection(payload: CloudTestConnectionRequest) -> dict:
     started_at = time.perf_counter()
     result = await settings_service.test_cloud_connection(payload.base_url, payload.model, payload.api_key)
     return ok(result, started_at=started_at)
+
+
+@router.put("/cloud/opencode-zen")
+async def update_opencode_zen_settings(
+    payload: OpenCodeZenSettingsUpdate, db: aiosqlite.Connection = Depends(get_db)
+) -> dict:
+    """Task 18.8: save OpenCode Zen's base URL/model, and (optionally) its API
+    key -- takes effect immediately, no restart needed."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.set_opencode_zen_settings(
+            db, payload.base_url, payload.model, payload.api_key
+        )
+    return ok(status, started_at=started_at)
+
+
+@router.delete("/cloud/opencode-zen/api-key")
+async def clear_opencode_zen_api_key(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Task 18.8: remove the stored OpenCode Zen API key, reverting to the
+    original .env/environment value."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.clear_opencode_zen_api_key(db)
+    return ok(status, started_at=started_at)
+
+
+@router.put("/cloud/gemini")
+async def update_gemini_settings(
+    payload: GeminiSettingsUpdate, db: aiosqlite.Connection = Depends(get_db)
+) -> dict:
+    """Task 18.8: save Gemini's base URL/model chain, and (optionally) its API
+    key -- takes effect immediately, no restart needed."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.set_gemini_settings(db, payload.base_url, payload.models, payload.api_key)
+    return ok(status, started_at=started_at)
+
+
+@router.delete("/cloud/gemini/api-key")
+async def clear_gemini_cloud_api_key(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Task 18.8: remove the stored Gemini API key, reverting to the original
+    .env/environment value."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.clear_gemini_cloud_api_key(db)
+    return ok(status, started_at=started_at)
+
+
+@router.put("/cloud/order")
+async def update_cloud_provider_order(
+    payload: CloudProviderOrderUpdate, db: aiosqlite.Connection = Depends(get_db)
+) -> dict:
+    """Task 18.8: save the cloud dispatch order -- takes effect immediately."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.set_cloud_provider_order(db, payload.order)
+    return ok(status, started_at=started_at)

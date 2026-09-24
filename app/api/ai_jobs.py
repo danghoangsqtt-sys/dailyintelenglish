@@ -112,27 +112,42 @@ async def ai_health(db: aiosqlite.Connection = Depends(get_db)) -> dict:
 
     # Deferred import (Task 16.1, BUG-022): app.main constructs the real AIWorker
     # singleton after importing this module to build its router, so a top-level
-    # import here would be circular. By request time app.main has finished loading.
-    # _ai_circuit (Task 18.3) is imported the same way, for the same reason.
-    from app.main import _ai_circuit, ai_worker
+    # import here would be circular. _ai_circuits (Task 18.3/18.8) is imported the
+    # same way, for the same reason.
+    from app.main import _ai_circuits, ai_worker
     from app.services.ai.contracts import AIMode
-    from app.services.ai.router import compute_effective_mode
+    from app.services.ai.router import _configured_chain_entry_names, compute_effective_mode
 
-    effective_mode = compute_effective_mode(
-        AIMode(settings.AI_MODE), settings.AI_ALLOW_CLOUD, settings.OPENAI_COMPAT_API_KEY, settings.OPENAI_COMPAT_MODEL
-    )
+    entry_names = _configured_chain_entry_names(settings)
+    effective_mode = compute_effective_mode(AIMode(settings.AI_MODE), settings.AI_ALLOW_CLOUD, bool(entry_names))
 
     async with read_transaction():
         fallback_rate = await ai_job_service.get_fallback_rate_stats(db)
 
-    # Task 18.6 C4: an ISO 8601 UTC timestamp whenever the circuit is open (any
-    # reason -- daily quota, ordinary failure threshold, or an open_immediately()
-    # auth-error trip), null otherwise. General "when does this reopen" readout,
-    # same as circuit_open (Task 18.3) already is a general "is it open" one.
-    circuit_open_until_epoch = _ai_circuit.opened_until_epoch_seconds()
+    # Task 18.8 (D28) Q4 ruling: circuit_open/circuit_open_until (18.6) are
+    # re-derived from a per-provider breakdown, not "any circuit" -- true only
+    # when EVERY configured provider is currently paused (the app is genuinely
+    # running local-only right now), with the EARLIEST reopen time among them.
+    # An entry never yet dispatched to has no breaker in _ai_circuits at all --
+    # treated as not open (nothing has ever failed for it).
+    providers: dict[str, dict] = {}
+    provider_epochs: dict[str, float | None] = {}
+    for entry_name in entry_names:
+        circuit = _ai_circuits.get(entry_name)
+        open_epoch = circuit.opened_until_epoch_seconds() if circuit is not None else None
+        provider_epochs[entry_name] = open_epoch
+        providers[entry_name] = {
+            "configured": True,
+            "circuit_open": circuit.is_open() if circuit is not None else False,
+            "circuit_open_until": (
+                datetime.fromtimestamp(open_epoch, tz=timezone.utc).isoformat() if open_epoch is not None else None
+            ),
+        }
+    all_paused = bool(providers) and all(p["circuit_open"] for p in providers.values())
+    known_epochs = [epoch for epoch in provider_epochs.values() if epoch is not None]
     circuit_open_until = (
-        datetime.fromtimestamp(circuit_open_until_epoch, tz=timezone.utc).isoformat()
-        if circuit_open_until_epoch is not None
+        datetime.fromtimestamp(min(known_epochs), tz=timezone.utc).isoformat()
+        if all_paused and known_epochs
         else None
     )
 
@@ -148,8 +163,9 @@ async def ai_health(db: aiosqlite.Connection = Depends(get_db)) -> dict:
             "cloud_configured": bool(settings.OPENAI_COMPAT_API_KEY and settings.OPENAI_COMPAT_MODEL),
             "cloud_model": settings.OPENAI_COMPAT_MODEL,
             "effective_mode": effective_mode.value,
-            "circuit_open": _ai_circuit.is_open(),
+            "circuit_open": all_paused,
             "circuit_open_until": circuit_open_until,
+            "providers": providers,
             "fallback_rate": fallback_rate,
         },
         started_at=started_at,

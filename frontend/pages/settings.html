@@ -103,13 +103,19 @@
       <div id="effective-mode-status" class="current-status" aria-live="polite">Loading…</div>
       <div id="fallback-rate-status" class="current-status" aria-live="polite"></div>
       <div id="circuit-status" class="current-status" aria-live="polite" hidden></div>
+
+      <div class="settings-form-row">
+        <label class="settings-field-label" for="cloud-provider-order">Provider order (comma-separated)</label>
+        <input type="text" id="cloud-provider-order" class="settings-input" placeholder="openrouter, gemini" />
+        <div id="cloud-provider-order-status" class="settings-inline-note" aria-live="polite"></div>
+      </div>
     </section>
 
     <section class="card settings-card">
-      <h2>Cloud Provider</h2>
+      <h2>Cloud Provider — OpenRouter</h2>
       <p class="section-hint">
-        An OpenAI-compatible endpoint (OpenRouter by default). The key is write-only — it is
-        never shown again after saving, only its last 4 characters.
+        An OpenAI-compatible endpoint. The key is write-only — it is never shown again after
+        saving, only its last 4 characters.
       </p>
 
       <div class="settings-form-row">
@@ -143,6 +149,62 @@
         Topics and generated content are sent to your configured cloud provider. Don't
         include personal data in a project's topic when cloud mode is on.
       </p>
+    </section>
+
+    <section class="card settings-card">
+      <h2>Cloud Provider — Gemini</h2>
+      <p class="section-hint">
+        Dispatches each model below as its own chain entry with its own free-tier quota — the
+        list order is the try order. The key is write-only.
+      </p>
+
+      <div class="settings-form-row">
+        <label class="settings-field-label" for="gemini-base-url">Base URL</label>
+        <input type="text" id="gemini-base-url" class="settings-input" placeholder="https://generativelanguage.googleapis.com/v1beta/openai" />
+      </div>
+      <div class="settings-form-row">
+        <label class="settings-field-label" for="gemini-models">Models (comma-separated)</label>
+        <input type="text" id="gemini-models" class="settings-input" placeholder="gemini-3.1-flash-lite, gemini-flash-lite-latest" />
+      </div>
+      <div class="settings-form-row">
+        <label class="settings-field-label" for="gemini-api-key">API key</label>
+        <input type="password" id="gemini-api-key" class="settings-input" placeholder="Leave blank to keep the current key" autocomplete="off" />
+        <div id="gemini-key-status" class="settings-inline-note" aria-live="polite"></div>
+      </div>
+
+      <div class="settings-form-actions">
+        <button id="save-gemini-settings-btn" class="btn btn-primary" type="button">Save</button>
+        <button id="clear-gemini-key-btn" class="btn btn-ghost" type="button">Clear key</button>
+      </div>
+      <div id="gemini-save-status" class="settings-inline-note" aria-live="polite"></div>
+    </section>
+
+    <section class="card settings-card">
+      <h2>Cloud Provider — OpenCode Zen (advanced)</h2>
+      <p class="section-hint">
+        Not enabled by default — its free tier is restricted to the OpenCode client for most
+        models. Add "opencode-zen" to the provider order above to use it.
+      </p>
+
+      <div class="settings-form-row">
+        <label class="settings-field-label" for="zen-base-url">Base URL</label>
+        <input type="text" id="zen-base-url" class="settings-input" placeholder="https://opencode.ai/zen/v1" />
+      </div>
+      <div class="settings-form-row">
+        <label class="settings-field-label" for="zen-model">Model</label>
+        <input type="text" id="zen-model" class="settings-input" placeholder="" />
+      </div>
+      <div class="settings-form-row">
+        <label class="settings-field-label" for="zen-api-key">API key</label>
+        <input type="password" id="zen-api-key" class="settings-input" placeholder="Leave blank to keep the current key" autocomplete="off" />
+        <div id="zen-key-status" class="settings-inline-note" aria-live="polite"></div>
+      </div>
+
+      <div class="settings-form-actions">
+        <button id="save-zen-settings-btn" class="btn btn-primary" type="button">Save</button>
+        <button id="clear-zen-key-btn" class="btn btn-ghost" type="button">Clear key</button>
+      </div>
+      <div id="zen-save-status" class="settings-inline-note" aria-live="polite"></div>
     </section>
   </main>
 

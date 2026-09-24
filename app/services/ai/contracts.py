@@ -63,6 +63,10 @@ class GenerationResult(BaseModel):
             when `fallback_used` is true -- never the exception message, same
             policy as `transient_errors`, so a key an upstream echoed back can
             never ride along into a persisted job-metrics record via this field.
+        providers_tried: Task 18.8 -- every cloud provider *name* attempted for
+            this call, in order, including the eventual winner (empty when
+            nothing was tried, e.g. `AIMode.LOCAL`). Names only, matching
+            `fallback_reason`'s never-the-message policy.
     """
 
     text: str
@@ -78,6 +82,7 @@ class GenerationResult(BaseModel):
     attempts: int = Field(default=1, ge=1)
     backoff_seconds: float = Field(default=0.0, ge=0)
     transient_errors: list[str] = Field(default_factory=list)
+    providers_tried: list[str] = Field(default_factory=list)
 
 
 class Provider(Protocol):

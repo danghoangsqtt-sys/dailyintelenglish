@@ -40,3 +40,35 @@ class CloudTestConnectionRequest(BaseModel):
     base_url: str | None = None
     model: str | None = None
     api_key: str | None = None
+
+
+class OpenCodeZenSettingsUpdate(BaseModel):
+    """Request body for PUT /api/settings/cloud/opencode-zen (Task 18.8).
+
+    Same deliberately-unconstrained-at-the-Pydantic-level rationale as
+    `CloudSettingsUpdate` -- real validation in `settings_service.
+    set_opencode_zen_settings`.
+    """
+
+    base_url: str
+    model: str
+    api_key: str | None = None
+
+
+class GeminiSettingsUpdate(BaseModel):
+    """Request body for PUT /api/settings/cloud/gemini (Task 18.8, Amendment F).
+
+    `models` (not a single `model`): Gemini dispatches each configured model as
+    its own chain entry with its own circuit. Same `None`-unchanged/`[]`-cleared
+    convention as `CloudSettingsUpdate.fallback_models`.
+    """
+
+    base_url: str
+    models: list[str] | None = None
+    api_key: str | None = None
+
+
+class CloudProviderOrderUpdate(BaseModel):
+    """Request body for PUT /api/settings/cloud/order (Task 18.8)."""
+
+    order: list[str]
