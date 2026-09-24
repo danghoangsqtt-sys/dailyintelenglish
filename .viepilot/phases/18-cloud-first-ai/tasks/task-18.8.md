@@ -30,6 +30,25 @@ tests, `tests/conftest.py` (N1 extension only), and `CHANGELOG.md`.
 
 ## Design decisions (Coder, doc-first — commit before code, PM approves)
 
+**PM review — APPROVED, Q1–Q3 accepted as proposed, Q4 ruled with explicit semantics, folded
+into this implementation, no re-approval needed:**
+- **Q4 ruling:** `circuit_open` = `true` **only** when *every* configured cloud provider is
+  currently paused (i.e. the app is really running local-only right now) — not "any provider."
+  `circuit_open_until` = the **earliest** reopen time among the paused providers, and **only**
+  set in that all-paused case; `null` otherwise (even if some individual providers are paused,
+  as long as at least one isn't). Per-provider detail always available under the new
+  `"providers": {name: {"configured": bool, "circuit_open": bool, "circuit_open_until":
+  iso|null}}`. Settings shows the existing "Cloud paused until HH:MM (free daily limit reached)"
+  line only in the all-paused case; otherwise a smaller per-provider note naming which one(s) are
+  paused and that the others are covering (e.g. "OpenRouter paused until 07:00; using Zen/
+  Gemini"). 18.6's own tests for `circuit_open`/`circuit_open_until` are updated to this new
+  meaning (a deliberate, called-out change to a field that shipped one task ago, not a silent
+  behavior drift).
+- Also accepted as proposed: the instance-level `name`; a 240s worst case; reusing
+  `OPENAI_COMPAT_*`/`GEMINI_API_KEY` as-is; `GEMINI_MODEL` defaulting to `gemini-2.5-flash`;
+  `cloud_provider_order` as a comma list; deferring `get_fallback_rate_stats`'s per-provider
+  breakdown (the PM computes it from Gate B-10's own per-call evidence instead).
+
 **Four questions/flags before I write code (none block the rest of the design below, but I want
 these confirmed — three are file-scope additions the plan doesn't explicitly grant, the fourth
 is a genuine unknown the plan itself calls out as "will be measured"/PM-probed):**
@@ -228,16 +247,32 @@ this Settings page's existing minimal-text-input style, no drag-and-drop): base 
 last-4 status, one set per provider. A single `#cloud-provider-order` text input (comma-separated
 names, same UI pattern) controls enable+order together.
 
-### 8. Health: per-provider circuit state (point 4, Q4)
+### 8. Health: per-provider circuit state (point 4, Q4 ruling)
 
 `GET /api/ai/health` gains `"providers": {"openrouter": {"configured": bool, "circuit_open":
-bool, "circuit_open_until": iso|null}, "opencode-zen": {...}, "gemini": {...}}`. The existing
-`circuit_open`/`circuit_open_until` (18.6) become an **aggregate** over this same data (`circuit_
-open` = any provider's is `True`; `circuit_open_until` = the soonest non-null reopen time among
-open providers, or `null`) rather than one circuit's own state — same field names, re-derived
-meaning (Q4). Settings page: extends 18.6's "Cloud paused until HH:MM" line to name which
-provider(s), e.g. "OpenRouter paused until 14:00, Gemini paused until 09:00 (free daily limit
-reached)" when more than one is open; the single-provider wording is unchanged when only one is.
+bool, "circuit_open_until": iso|null}, "opencode-zen": {...}, "gemini": {...}}` — always present,
+per configured-or-not provider (an unconfigured provider still gets an entry, `configured:
+false`, `circuit_open: false`, `circuit_open_until: null` — never silently omitted).
+
+**Q4 ruling — `circuit_open`/`circuit_open_until` (18.6) are re-derived, not "any provider":**
+- `circuit_open` = `true` only when **every configured** provider's circuit is currently open
+  (the app is genuinely running local-only right now). An unconfigured provider doesn't count
+  either way — if the only configured provider is paused, that's "all paused," `true`.
+- `circuit_open_until` = the **earliest** `circuit_open_until` among the paused providers, set
+  **only** in that all-paused case; `null` whenever at least one configured provider is still
+  available (even if others are individually paused).
+
+This is a genuine, deliberate change to what these two field names mean, not an additive
+extension — 18.6's own health/browser tests for them are updated in this task to the new
+semantics (their old assertions, e.g. "any open circuit makes `circuit_open` true," are wrong
+under the new meaning and are rewritten, not left stale).
+
+Settings page: the existing "Cloud paused until HH:MM (free daily limit reached)" line is shown
+only in the all-paused case (reading the same aggregate `circuit_open_until`). Otherwise, when at
+least one provider is up but one or more individually aren't, a smaller per-provider note names
+them, e.g. "OpenRouter paused until 07:00; using Zen/Gemini" — built client-side from the
+`providers` breakdown (which providers are both configured and paused, versus configured and
+not).
 
 ### 9. Telemetry: `providers_tried` (point 5, Q2)
 
