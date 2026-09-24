@@ -24,6 +24,7 @@ from app.core.constants import (
 from app.core.exceptions import (
     NotFoundError,
     ProviderAuthError,
+    ProviderDailyQuotaError,
     ProviderError,
     ProviderInvalidResponseError,
     ProviderRateLimitError,
@@ -65,6 +66,7 @@ _PROVIDER_ERROR_CODES: dict[type[ProviderError], str] = {
     ProviderUnavailableError: "provider_unavailable",
     ProviderTimeoutError: "provider_timeout",
     ProviderRateLimitError: "provider_rate_limited",
+    ProviderDailyQuotaError: "provider_daily_quota",
     ProviderAuthError: "provider_auth",
     ProviderInvalidResponseError: "provider_invalid_response",
     SchemaValidationError: "schema_validation_failed",

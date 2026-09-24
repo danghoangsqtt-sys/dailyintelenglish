@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from pydantic import TypeAdapter
+
 from app.core.exceptions import (
     ProviderAuthError,
     ProviderInvalidResponseError,
@@ -15,7 +17,7 @@ from app.core.exceptions import (
 )
 from app.models.project import ProjectUpdate, ScriptConfig, SpeakerConfig
 from app.services import ai_job_service, project_service, script_pipeline, script_service
-from app.services.ai.contracts import AIMode, GenerationResult
+from app.services.ai.contracts import AIMode, GenerationRequest, GenerationResult
 from app.services.ai.fake_provider import FakeProvider
 from app.services.ai.router import AIRouter
 from app.services.ai_worker import AIWorker
@@ -2666,3 +2668,96 @@ async def test_pipeline_over_budget_then_repetition_call_count_hits_the_2n_plus_
     assert total_words == 195  # 65 + 130
     joined = " ".join(line["text"] for line in lines)
     assert joined.count(REPEATED_PHRASE) == 1  # section 2's occurrence survives; section 1's is gone
+
+
+# --- Task 18.6 item 4: malformed cloud JSON -> one local retry via _call_router -----------
+
+
+def _real_result(provider: str, text: str) -> GenerationResult:
+    """Unlike this file's shared `_result()` (hardcoded `provider="fake-gemini"`,
+    a pre-Phase-18 naming quirk that never mattered until now), `is_primary_result`
+    genuinely compares `result.provider` against the router's primary provider
+    name -- these tests need that comparison to be real."""
+    return GenerationResult(text=text, provider=provider, model="fake-model", latency_ms=1.0, attempt=1, prompt_hash="abc123")
+
+
+async def _running_job(db) -> tuple[dict, dict]:
+    project = await _project(db)
+    job, _ = await ai_job_service.create_job(db, project["id"], "script", {"project": project, "operation": "script"})
+    job = await ai_job_service.transition_status(db, job["id"], "running")
+    return project, job
+
+
+async def test_call_router_retries_malformed_cloud_json_on_the_local_fallback_once(db):
+    adapter = TypeAdapter(str)
+    project, job = await _running_job(db)
+    primary = FakeProvider("openai_compat", [_real_result("openai_compat", "not valid json")])
+    fallback = FakeProvider("ollama", [_real_result("ollama", '"ok"')])
+    router = AIRouter(
+        primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST, failure_threshold=3, cooldown_seconds=60.0
+    )
+    request = GenerationRequest(prompt="hi", deadline_seconds=30, purpose="test")
+
+    result = await script_pipeline._call_router(
+        db, job["id"], router, request, section_index=None, is_repair=False, adapter=adapter
+    )
+
+    assert result.provider == "ollama"
+    assert result.text == '"ok"'
+    assert result.fallback_used is True
+    assert result.fallback_reason == "SchemaValidationError"
+    assert primary.call_count == 1
+    assert fallback.call_count == 1
+
+    updated_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    calls = json.loads(updated_job["metrics_json"])["calls"]
+    assert len(calls) == 1  # exactly one telemetry call, not two
+    assert calls[0]["fallback_used"] is True
+    assert calls[0]["fallback_reason"] == "SchemaValidationError"
+    assert calls[0]["provider"] == "ollama"
+
+
+async def test_call_router_malformed_json_retry_also_failing_records_the_retrys_own_error(db, monkeypatch):
+    """When the local retry itself raises a ProviderError, the job fails with
+    that error's specific code, and telemetry shows one outcome="error" record
+    for the retry attempt (not the original malformed-but-technically-successful
+    primary call)."""
+    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    adapter = TypeAdapter(str)
+    project, job = await _running_job(db)
+    primary = FakeProvider("openai_compat", [_real_result("openai_compat", "not valid json")])
+    fallback = FakeProvider("ollama", [ProviderUnavailableError("local is down too")] * 4)
+    router = AIRouter(
+        primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST, failure_threshold=3, cooldown_seconds=60.0
+    )
+    request = GenerationRequest(prompt="hi", deadline_seconds=30, purpose="test")
+
+    with pytest.raises(ProviderUnavailableError):
+        await script_pipeline._call_router(
+            db, job["id"], router, request, section_index=None, is_repair=False, adapter=adapter
+        )
+
+    updated_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    calls = json.loads(updated_job["metrics_json"])["calls"]
+    assert len(calls) == 1
+    assert calls[0]["outcome"] == "error"
+    assert calls[0]["error_type"] == "ProviderUnavailableError"
+
+
+async def test_call_router_local_mode_never_retries_since_nothing_is_primary_served(db):
+    """is_primary_result is False for every result in LOCAL mode (build_ai_router_
+    from_settings's `primary is fallback` placeholder) -- confirms _call_router
+    never attempts a pointless retry-against-itself there."""
+    adapter = TypeAdapter(str)
+    project, job = await _running_job(db)
+    fallback = FakeProvider("ollama", [_real_result("ollama", "not valid json")])
+    router = AIRouter(primary=fallback, fallback=fallback, mode=AIMode.LOCAL)
+    request = GenerationRequest(prompt="hi", deadline_seconds=30, purpose="test")
+
+    result = await script_pipeline._call_router(
+        db, job["id"], router, request, section_index=None, is_repair=False, adapter=adapter
+    )
+
+    assert result.text == "not valid json"  # returned as-is -- no retry attempted
+    assert result.fallback_used is False
+    assert fallback.call_count == 1  # only the one original call, no retry

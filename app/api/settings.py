@@ -60,7 +60,7 @@ async def update_cloud_settings(
     started_at = time.perf_counter()
     async with write_transaction(db):
         status = await settings_service.set_cloud_settings(
-            db, payload.base_url, payload.model, payload.api_key
+            db, payload.base_url, payload.model, payload.api_key, payload.fallback_models
         )
     return ok(status, started_at=started_at)
 

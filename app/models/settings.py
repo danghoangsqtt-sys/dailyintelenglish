@@ -25,6 +25,7 @@ class CloudSettingsUpdate(BaseModel):
     base_url: str
     model: str
     api_key: str | None = None
+    fallback_models: list[str] | None = None
 
 
 class CloudTestConnectionRequest(BaseModel):

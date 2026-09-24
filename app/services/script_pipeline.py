@@ -642,7 +642,7 @@ async def _generate_outline(
             deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
             purpose="script_outline",
         ),
-        section_index=None, is_repair=False,
+        section_index=None, is_repair=False, adapter=_OUTLINE_ADAPTER,
     )
     return parse_and_validate(result.text, _OUTLINE_ADAPTER)
 
@@ -700,7 +700,7 @@ async def _generate_section(
             deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
             purpose="script_section",
         ),
-        section_index=section_spec.index, is_repair=False,
+        section_index=section_spec.index, is_repair=False, adapter=_SECTION_LINES_WIRE_ADAPTER,
     )
     try:
         wire_lines = parse_and_validate(result.text, _SECTION_LINES_WIRE_ADAPTER)
@@ -754,7 +754,7 @@ async def _repair_section(
             deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
             purpose=purpose,
         ),
-        section_index=section_spec.index, is_repair=True,
+        section_index=section_spec.index, is_repair=True, adapter=_SECTION_LINES_WIRE_ADAPTER,
     )
     try:
         wire_lines = parse_and_validate(result.text, _SECTION_LINES_WIRE_ADAPTER)
@@ -978,13 +978,23 @@ async def _call_router(
     *,
     section_index: int | None,
     is_repair: bool,
+    adapter: TypeAdapter | None = None,
 ) -> GenerationResult:
     """Call `router.generate`, then record Task 14.2 telemetry for it inside a
     short `write_transaction` of its own -- the transaction never spans the
     actual inference call itself (task-14.2.md: "Holding any transaction across a
     router call" is explicitly forbidden). On a `ProviderError`, the call is
     still recorded (`outcome="error"`) before re-raising, so the orchestrator's
-    `except ProviderError` handler can fail the job with a specific error_code."""
+    `except ProviderError` handler can fail the job with a specific error_code.
+
+    Task 18.6 item 4: when `adapter` is given, a cloud-served result
+    (`router.is_primary_result(result)`) that fails validation against it gets
+    one local retry (`router.generate_on_fallback`) before being recorded --
+    marked `fallback_used=True, fallback_reason="SchemaValidationError"`, the
+    same shape the router's own internal primary-failure fallback already
+    produces. This is a look-ahead pre-check only: the caller's own existing
+    post-call `parse_and_validate(result.text, adapter)` is unchanged and
+    still runs afterward to get the actual parsed value."""
     try:
         result = await router.generate(request)
     except ProviderError as exc:
@@ -995,6 +1005,24 @@ async def _call_router(
                 commit=False,
             )
         raise
+
+    if adapter is not None and router.is_primary_result(result):
+        try:
+            parse_and_validate(result.text, adapter)
+        except SchemaValidationError:
+            try:
+                result = await router.generate_on_fallback(request)
+            except ProviderError as exc:
+                async with write_transaction(db):
+                    await ai_job_service.record_generation_call(
+                        db, job_id,
+                        _call_record(request, section_index=section_index, is_repair=is_repair, exc=exc),
+                        commit=False,
+                    )
+                raise
+            result.fallback_used = True
+            result.fallback_reason = "SchemaValidationError"
+
     async with write_transaction(db):
         await ai_job_service.record_generation_call(
             db, job_id,

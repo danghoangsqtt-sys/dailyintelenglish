@@ -121,10 +121,15 @@ const Api = (() => {
     getSettings: () => request("/api/settings"),
     updateAiMode: (aiMode) =>
       request("/api/settings/ai-mode", { method: "PUT", body: JSON.stringify({ ai_mode: aiMode }) }),
-    updateCloudSettings: (baseUrl, model, apiKey) =>
+    updateCloudSettings: (baseUrl, model, apiKey, fallbackModels) =>
       request("/api/settings/cloud", {
         method: "PUT",
-        body: JSON.stringify({ base_url: baseUrl, model, api_key: apiKey || null }),
+        body: JSON.stringify({
+          base_url: baseUrl,
+          model,
+          api_key: apiKey || null,
+          fallback_models: fallbackModels || null,
+        }),
       }),
     clearCloudApiKey: () => request("/api/settings/cloud/api-key", { method: "DELETE" }),
     testCloudConnection: (baseUrl, model, apiKey) =>

@@ -9,6 +9,24 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Changed
+- Cloud model chain + speed tuning (2026-09-24, Phase 18 Task 18.6, ENH-011, D27/Amendment D,
+  self-implemented by Coder): after Gate B-9 showed cloud_first 2-5x slower than local (7 cloud
+  timeouts burning the full 150s budget each) and the free daily cap ending the trial mid-run,
+  `OpenAICompatProvider` now sends OpenRouter's native `models: [primary, ...fallbacks]` array
+  (new `OPENAI_COMPAT_FALLBACK_MODELS` setting, default Gemma 4 → Dots3, editable on the Settings
+  page) instead of a single `model`, and records whichever model actually answered. The cloud
+  budget (`AI_CLOUD_DEADLINE_SECONDS`) is cut 150 → 75s. A daily-cap 429 (OpenRouter's
+  account-wide free-tier counter, distinguished from an ordinary rate limit by its real captured
+  shape) now raises `ProviderDailyQuotaError` and opens the router's circuit breaker until
+  `X-RateLimit-Reset` (capped at 26h against a garbled header) instead of retrying with backoff
+  and burning further requests against the same exhausted counter — `GET /api/ai/health` and the
+  Settings page now show `circuit_open_until`/"Cloud paused until HH:MM" whenever the circuit is
+  open, for any reason. Malformed JSON from a cloud-served result now gets one local retry
+  (`AIRouter.generate_on_fallback`, decided by a name-safe `AIRouter.is_primary_result` — not a
+  hardcoded provider-name check) before the pipeline's own existing repair path, centralized in
+  each pipeline's `_call_router` wrapper so every call site changes by exactly one kwarg. None of
+  this changes the decision logic that keeps `AI_MODE` defaulting to `local` (Amendment C) — Gate
+  B-10 (a future task) re-measures before any default flips.
 - Fallback-rate readout + trial runner `--matrix cloud_first` (2026-09-24, Phase 18 Task 18.4,
   ENH-011, self-implemented by Coder): `GET /api/ai/health` gained a `fallback_rate` field — over
   the last 50 terminal AI jobs (`complete` or `error`, PM review C1: excluding `error` jobs would

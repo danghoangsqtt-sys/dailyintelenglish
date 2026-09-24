@@ -76,6 +76,7 @@ def test_health_response_has_no_extra_undeclared_fields(client):
         "cloud_model",
         "effective_mode",
         "circuit_open",
+        "circuit_open_until",
         "fallback_rate",
     }
     response = client.get("/api/ai/health")
@@ -130,6 +131,26 @@ def test_health_reports_circuit_open_true_when_the_breaker_is_open(client):
     try:
         response = client.get("/api/ai/health")
         assert response.json()["data"]["circuit_open"] is True
+    finally:
+        _ai_circuit.record_success()
+
+
+def test_health_reports_circuit_open_until_null_by_default(client):
+    response = client.get("/api/ai/health")
+    assert response.json()["data"]["circuit_open_until"] is None
+
+
+def test_health_reports_circuit_open_until_as_iso_when_the_breaker_is_open(client):
+    """Task 18.6 C4: whitebox, same open_immediately()/record_success() pattern
+    as test_health_reports_circuit_open_true_when_the_breaker_is_open above."""
+    from app.main import _ai_circuit
+
+    _ai_circuit.open_immediately()
+    try:
+        response = client.get("/api/ai/health")
+        open_until = response.json()["data"]["circuit_open_until"]
+        assert open_until is not None
+        assert open_until.endswith("+00:00") or open_until.endswith("Z")
     finally:
         _ai_circuit.record_success()
 

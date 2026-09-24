@@ -14,12 +14,14 @@ from __future__ import annotations
 import hashlib
 import re
 import time
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 import httpx
 
 from app.core.exceptions import (
     ProviderAuthError,
+    ProviderDailyQuotaError,
     ProviderError,
     ProviderInvalidResponseError,
     ProviderRateLimitError,
@@ -31,6 +33,15 @@ from app.services.ai.contracts import GenerationRequest, GenerationResult
 _LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 _FENCE_RE = re.compile(r"^```(?:json)?\s*\n?(.*?)\n?```\s*$", re.DOTALL)
+
+
+def parse_fallback_models(raw: str) -> list[str]:
+    """Splits `OPENAI_COMPAT_FALLBACK_MODELS`'s raw comma-separated string
+    (Task 18.6, D27) into a list -- stored as a plain string, matching every
+    other `OPENAI_COMPAT_*` setting's type, rather than a pydantic-settings
+    `list[str]` (which would need a JSON-encoded env value, not a plain CSV).
+    Strips whitespace, drops empty entries."""
+    return [entry.strip() for entry in raw.split(",") if entry.strip()]
 
 
 def validate_openai_compat_base_url(base_url: str) -> str:
@@ -69,7 +80,14 @@ class OpenAICompatProvider:
 
     name = "openai_compat"
 
-    def __init__(self, base_url: str, api_key: str, model: str, timeout: float = 180.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        model: str,
+        timeout: float = 180.0,
+        fallback_models: list[str] | None = None,
+    ) -> None:
         """Args:
         base_url: Must pass `validate_openai_compat_base_url`.
         api_key: Sent as `Authorization: Bearer <api_key>` -- never in the URL.
@@ -78,11 +96,16 @@ class OpenAICompatProvider:
             router's own `deadline_seconds` budget) -- 180s default reflects
             the smoke test's observed 8-296s latency spread; callers building
             from settings should pass the real configured value.
+        fallback_models: Task 18.6 (D27). When non-empty, `generate()` sends
+            OpenRouter's native `models: [model, *fallback_models]` array
+            instead of `model` -- OpenRouter itself tries each one server-side,
+            within the one HTTP call, on rate-limit/downtime.
         """
         self._base_url = validate_openai_compat_base_url(base_url)
         self._api_key = api_key
         self._model = model
         self._timeout = timeout
+        self._fallback_models = fallback_models or []
 
     def _raise(
         self, exc: ProviderError, upstream_status: int | None, cause: BaseException | None = None
@@ -137,6 +160,40 @@ class OpenAICompatProvider:
             code, message = _extract_error_info(data["error"])
         return self._format_error(prefix, response.status_code, code, message)
 
+    def _daily_quota_reset_epoch_seconds(self, response: httpx.Response) -> float | None:
+        """Task 18.6 (D27, Amendment D): detects OpenRouter's account-wide free-model
+        daily cap (distinct from an ordinary per-minute rate limit) from a 429's real
+        captured shape -- `error.metadata.limit_source == "openrouter_free_tier_daily"`,
+        or the message containing `"free-models-per-day"` as a backstop in case a
+        future response omits `metadata`. Returns `None` when this 429 is NOT a
+        daily-quota error (caller then raises the plain `ProviderRateLimitError` as
+        before). When it IS one, always returns a valid epoch in seconds -- never
+        `None` -- so the caller/circuit side never has to handle a missing reset:
+        `X-RateLimit-Reset` (epoch milliseconds) when present and parseable, else the
+        next UTC midnight."""
+        try:
+            data = response.json()
+        except ValueError:
+            data = None
+        error = data.get("error") if isinstance(data, dict) else None
+        if not isinstance(error, dict):
+            return None
+        metadata = error.get("metadata")
+        limit_source = metadata.get("limit_source") if isinstance(metadata, dict) else None
+        is_daily_quota = limit_source == "openrouter_free_tier_daily" or "free-models-per-day" in str(
+            error.get("message", "")
+        )
+        if not is_daily_quota:
+            return None
+        reset_header = response.headers.get("X-RateLimit-Reset")
+        try:
+            return float(reset_header) / 1000.0
+        except (TypeError, ValueError):
+            next_midnight = (datetime.now(timezone.utc) + timedelta(days=1)).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            return next_midnight.timestamp()
+
     async def generate(self, request: GenerationRequest) -> GenerationResult:
         """Make exactly one `/chat/completions` call. No internal retry loop."""
         if not self._api_key:
@@ -144,10 +201,13 @@ class OpenAICompatProvider:
 
         prompt_hash = hashlib.sha256(request.prompt.encode("utf-8")).hexdigest()[:16]
         payload: dict[str, object] = {
-            "model": self._model,
             "messages": [{"role": "user", "content": request.prompt}],
             "reasoning": {"exclude": True},
         }
+        if self._fallback_models:
+            payload["models"] = [self._model, *self._fallback_models]
+        else:
+            payload["model"] = self._model
         if request.temperature is not None:
             payload["temperature"] = request.temperature
         headers = {"Authorization": f"Bearer {self._api_key}"}
@@ -208,10 +268,11 @@ class OpenAICompatProvider:
             usage = data.get("usage")
             if isinstance(usage, dict):
                 tokens_used = usage.get("total_tokens")
+            response_model = data.get("model")
             return GenerationResult(
                 text=text,
                 provider=self.name,
-                model=self._model,
+                model=response_model if isinstance(response_model, str) and response_model else self._model,
                 tokens_used=tokens_used,
                 latency_ms=latency_ms,
                 attempt=1,
@@ -219,10 +280,13 @@ class OpenAICompatProvider:
             )
 
         if status == 429:
-            self._raise(
-                ProviderRateLimitError(self._error_message(response, "OpenAI-compatible endpoint rate-limited")),
-                status,
-            )
+            text = self._error_message(response, "OpenAI-compatible endpoint rate-limited")
+            reset_at = self._daily_quota_reset_epoch_seconds(response)
+            if reset_at is not None:
+                daily_quota_exc = ProviderDailyQuotaError(text)
+                daily_quota_exc.reset_at_epoch_seconds = reset_at
+                self._raise(daily_quota_exc, status)
+            self._raise(ProviderRateLimitError(text), status)
 
         if 500 <= status < 600:
             self._raise(

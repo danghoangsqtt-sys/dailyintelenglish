@@ -4,12 +4,14 @@ development or tests.
 """
 
 import json as json_module
+from datetime import datetime, timedelta, timezone
 
 import httpx
 import pytest
 
 from app.core.exceptions import (
     ProviderAuthError,
+    ProviderDailyQuotaError,
     ProviderInvalidResponseError,
     ProviderRateLimitError,
     ProviderTimeoutError,
@@ -17,7 +19,11 @@ from app.core.exceptions import (
 )
 from app.services.ai import openai_compat_provider as openai_compat_provider_module
 from app.services.ai.contracts import GenerationRequest
-from app.services.ai.openai_compat_provider import OpenAICompatProvider, validate_openai_compat_base_url
+from app.services.ai.openai_compat_provider import (
+    OpenAICompatProvider,
+    parse_fallback_models,
+    validate_openai_compat_base_url,
+)
 
 
 def _request(**overrides) -> GenerationRequest:
@@ -354,3 +360,160 @@ async def test_openai_compat_provider_never_logs_prompt_body(monkeypatch, caplog
     with caplog.at_level("DEBUG"):
         await provider.generate(_request(prompt=secret_prompt))
     assert secret_prompt not in caplog.text
+
+
+# --- Task 18.6 (D27): model chain ------------------------------------------------------
+
+
+def test_parse_fallback_models_splits_strips_and_drops_empties():
+    assert parse_fallback_models("a/b:free, c/d:free ,, e/f:free") == ["a/b:free", "c/d:free", "e/f:free"]
+
+
+def test_parse_fallback_models_empty_string_is_empty_list():
+    assert parse_fallback_models("") == []
+
+
+@pytest.mark.asyncio
+async def test_openai_compat_provider_sends_models_array_when_fallback_models_set(monkeypatch):
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["json"] = json_module.loads(request.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(fallback_models=["fallback/one:free", "fallback/two:free"])
+    await provider.generate(_request())
+
+    assert captured["json"]["models"] == ["test/model", "fallback/one:free", "fallback/two:free"]
+    assert "model" not in captured["json"]
+
+
+@pytest.mark.asyncio
+async def test_openai_compat_provider_sends_plain_model_when_no_fallback_models(monkeypatch):
+    """Regression: the default (empty fallback_models) request shape is unchanged."""
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["json"] = json_module.loads(request.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider()
+    await provider.generate(_request())
+
+    assert captured["json"]["model"] == "test/model"
+    assert "models" not in captured["json"]
+
+
+@pytest.mark.asyncio
+async def test_openai_compat_provider_records_the_model_that_actually_answered(monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = {"choices": [{"message": {"content": "ok"}}], "model": "fallback/two:free"}
+        return httpx.Response(200, json=body)
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(fallback_models=["fallback/one:free", "fallback/two:free"])
+    result = await provider.generate(_request())
+
+    assert result.model == "fallback/two:free"
+
+
+@pytest.mark.asyncio
+async def test_openai_compat_provider_falls_back_to_configured_model_when_response_omits_it(monkeypatch):
+    """Backward compatibility: every existing mock response (including all the
+    tests above this section) has no top-level "model" key at all."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider()
+    result = await provider.generate(_request())
+
+    assert result.model == "test/model"
+
+
+# --- Task 18.6 (D27): daily-cap 429 -> ProviderDailyQuotaError -------------------------
+
+
+_REAL_DAILY_QUOTA_BODY_SHAPE = {
+    "error": {
+        "message": "Rate limit exceeded: free-models-per-day. Please wait before retrying, or add "
+        "credits to increase your rate limit.",
+        "code": 429,
+        "metadata": {"limit_source": "openrouter_free_tier_daily", "user_id": "synthetic-test-user"},
+    }
+}
+
+
+@pytest.mark.asyncio
+async def test_openai_compat_provider_daily_cap_429_is_provider_daily_quota_error(monkeypatch):
+    reset_epoch_ms = 1_900_000_000_000  # synthetic, far future -- never a real timestamp
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            429,
+            json=_REAL_DAILY_QUOTA_BODY_SHAPE,
+            headers={
+                "X-RateLimit-Limit": "50",
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(reset_epoch_ms),
+            },
+        )
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider()
+    with pytest.raises(ProviderDailyQuotaError) as exc_info:
+        await provider.generate(_request())
+    assert exc_info.value.reset_at_epoch_seconds == reset_epoch_ms / 1000.0
+    assert isinstance(exc_info.value, ProviderRateLimitError)  # still a rate-limit subtype
+    assert exc_info.value.upstream_status == 429
+
+
+@pytest.mark.asyncio
+async def test_openai_compat_provider_daily_cap_429_falls_back_to_next_utc_midnight_when_reset_header_missing(
+    monkeypatch,
+):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, json=_REAL_DAILY_QUOTA_BODY_SHAPE)  # no X-RateLimit-Reset header
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider()
+    before = datetime.now(timezone.utc)
+    with pytest.raises(ProviderDailyQuotaError) as exc_info:
+        await provider.generate(_request())
+    reset_at = datetime.fromtimestamp(exc_info.value.reset_at_epoch_seconds, tz=timezone.utc)
+    assert reset_at > before
+    assert reset_at.hour == 0 and reset_at.minute == 0 and reset_at.second == 0
+    assert (reset_at - before) <= timedelta(days=1)
+
+
+@pytest.mark.asyncio
+async def test_openai_compat_provider_plain_429_is_not_daily_quota_error(monkeypatch):
+    """Regression guard: an ordinary 429 (no daily-quota signal) still raises
+    the plain ProviderRateLimitError, not the new subtype."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, json={"error": {"message": "rate limited", "code": 429}})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider()
+    with pytest.raises(ProviderRateLimitError) as exc_info:
+        await provider.generate(_request())
+    assert not isinstance(exc_info.value, ProviderDailyQuotaError)
+
+
+@pytest.mark.asyncio
+async def test_openai_compat_provider_daily_cap_429_detected_by_message_substring_without_metadata(monkeypatch):
+    """Backstop path: metadata.limit_source absent, but the message still names
+    free-models-per-day."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = {"error": {"message": "Rate limit exceeded: free-models-per-day.", "code": 429}}
+        return httpx.Response(429, json=body, headers={"X-RateLimit-Reset": "1900000000000"})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider()
+    with pytest.raises(ProviderDailyQuotaError):
+        await provider.generate(_request())

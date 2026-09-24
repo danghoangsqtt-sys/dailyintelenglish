@@ -41,6 +41,7 @@ def _isolated_cloud_settings(monkeypatch):
     monkeypatch.setattr(config, "ENV_OPENAI_COMPAT_API_KEY", "env-fallback-key-0000")
     monkeypatch.setattr(config.settings, "OPENAI_COMPAT_BASE_URL", "https://openrouter.ai/api/v1")
     monkeypatch.setattr(config.settings, "OPENAI_COMPAT_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
+    monkeypatch.setattr(config.settings, "OPENAI_COMPAT_FALLBACK_MODELS", "env/fallback-a:free,env/fallback-b:free")
 
 
 def test_old_gemini_key_functions_are_gone():
@@ -205,6 +206,108 @@ async def test_load_cloud_settings_from_db_leaves_env_values_untouched_when_noth
     assert config.settings.OPENAI_COMPAT_BASE_URL == "https://openrouter.ai/api/v1"
     assert config.settings.OPENAI_COMPAT_MODEL == "nvidia/nemotron-3-super-120b-a12b:free"
     assert config.settings.OPENAI_COMPAT_API_KEY == "env-fallback-key-0000"
+
+
+# --- Task 18.6 (D27): fallback model chain ------------------------------------------
+
+
+async def test_cloud_status_reports_fallback_models_from_env_default(db):
+    status = await settings_service.get_cloud_settings_status(db)
+    assert status["cloud_fallback_models"] == ["env/fallback-a:free", "env/fallback-b:free"]
+
+
+async def test_set_cloud_settings_persists_and_applies_fallback_models(db):
+    status = await settings_service.set_cloud_settings(
+        db, "https://openrouter.ai/api/v1", "model", "a-key", ["one/a:free", "two/b:free"]
+    )
+    assert status["cloud_fallback_models"] == ["one/a:free", "two/b:free"]
+    assert config.settings.OPENAI_COMPAT_FALLBACK_MODELS == "one/a:free,two/b:free"
+
+
+async def test_set_cloud_settings_strips_whitespace_from_fallback_model_entries(db):
+    status = await settings_service.set_cloud_settings(
+        db, "https://openrouter.ai/api/v1", "model", "a-key", ["  spaced/one:free  ", "two:free"]
+    )
+    assert status["cloud_fallback_models"] == ["spaced/one:free", "two:free"]
+
+
+async def test_set_cloud_settings_none_fallback_models_leaves_stored_chain_unchanged(db):
+    await settings_service.set_cloud_settings(
+        db, "https://openrouter.ai/api/v1", "model-a", "a-key", ["one/a:free"]
+    )
+    status = await settings_service.set_cloud_settings(db, "https://openrouter.ai/api/v1", "model-b", None, None)
+    assert status["cloud_model"] == "model-b"
+    assert status["cloud_fallback_models"] == ["one/a:free"]
+
+
+async def test_set_cloud_settings_empty_list_explicitly_clears_the_fallback_chain(db):
+    await settings_service.set_cloud_settings(
+        db, "https://openrouter.ai/api/v1", "model", "a-key", ["one/a:free"]
+    )
+    status = await settings_service.set_cloud_settings(db, "https://openrouter.ai/api/v1", "model", None, [])
+    assert status["cloud_fallback_models"] == []
+    assert config.settings.OPENAI_COMPAT_FALLBACK_MODELS == ""
+
+
+async def test_set_cloud_settings_rejects_too_many_fallback_models(db):
+    with pytest.raises(ValidationError):
+        await settings_service.set_cloud_settings(
+            db, "https://openrouter.ai/api/v1", "model", "a-key", [f"m{i}/x:free" for i in range(6)]
+        )
+
+
+async def test_set_cloud_settings_rejects_an_empty_fallback_model_entry(db):
+    with pytest.raises(ValidationError):
+        await settings_service.set_cloud_settings(
+            db, "https://openrouter.ai/api/v1", "model", "a-key", ["good/model:free", "   "]
+        )
+
+
+async def test_set_cloud_settings_rejects_a_fallback_model_over_200_chars(db):
+    with pytest.raises(ValidationError):
+        await settings_service.set_cloud_settings(
+            db, "https://openrouter.ai/api/v1", "model", "a-key", ["m" * 201]
+        )
+
+
+async def test_set_cloud_settings_invalid_fallback_models_stores_nothing(db):
+    await settings_service.set_cloud_settings(
+        db, "https://openrouter.ai/api/v1", "good-model", "good-key", ["good/model:free"]
+    )
+    with pytest.raises(ValidationError):
+        await settings_service.set_cloud_settings(
+            db, "https://openrouter.ai/api/v1", "good-model", "good-key", ["m" * 201]
+        )
+    status = await settings_service.get_cloud_settings_status(db)
+    assert status["cloud_fallback_models"] == ["good/model:free"]
+
+
+async def test_load_cloud_settings_from_db_applies_stored_fallback_models(db):
+    await settings_service.set_cloud_settings(
+        db, "https://openrouter.ai/api/v1", "model", "a-key", ["stored/one:free"]
+    )
+    config.settings.OPENAI_COMPAT_FALLBACK_MODELS = "env/fallback-a:free,env/fallback-b:free"
+
+    await settings_service.load_cloud_settings_from_db(db)
+
+    assert config.settings.OPENAI_COMPAT_FALLBACK_MODELS == "stored/one:free"
+
+
+async def test_load_cloud_settings_from_db_applies_an_explicitly_cleared_fallback_chain(db):
+    """The exact case set_cloud_settings([]) stores as "" -- `is not None`
+    (row exists), not truthiness, must still apply it, or a restart would
+    silently revert an intentional clear back to the .env default."""
+    await settings_service.set_cloud_settings(db, "https://openrouter.ai/api/v1", "model", "a-key", [])
+    config.settings.OPENAI_COMPAT_FALLBACK_MODELS = "env/fallback-a:free,env/fallback-b:free"
+
+    await settings_service.load_cloud_settings_from_db(db)
+
+    assert config.settings.OPENAI_COMPAT_FALLBACK_MODELS == ""
+
+
+async def test_load_cloud_settings_from_db_leaves_fallback_models_untouched_when_nothing_stored(db):
+    await settings_service.load_cloud_settings_from_db(db)
+    assert config.settings.OPENAI_COMPAT_FALLBACK_MODELS == "env/fallback-a:free,env/fallback-b:free"
 
 
 def test_last4_fully_masks_short_keys():

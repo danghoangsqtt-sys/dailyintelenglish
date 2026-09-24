@@ -3,6 +3,7 @@
 import json
 
 import pytest
+from pydantic import TypeAdapter
 
 from app.core.exceptions import (
     ProviderAuthError,
@@ -14,7 +15,7 @@ from app.core.exceptions import (
 from app.models.learning import LearningPackOut
 from app.models.project import ScriptConfig, SpeakerConfig
 from app.services import ai_job_service, learning_pipeline, learning_service, project_service, script_service
-from app.services.ai.contracts import AIMode, GenerationResult
+from app.services.ai.contracts import AIMode, GenerationRequest, GenerationResult
 from app.services.ai.fake_provider import FakeProvider
 from app.services.ai.router import AIRouter
 from app.services.ai_worker import AIWorker
@@ -541,3 +542,63 @@ async def test_pipeline_maps_provider_errors_to_specific_error_codes(db, monkeyp
     assert calls[-1]["outcome"] == "error"
     assert calls[-1]["purpose"] == "learning_pack"
     assert await learning_service.get_learning_content(db, project["id"]) is None
+
+
+# --- Task 18.6 item 4: malformed cloud JSON -> one local retry via _call_router -----------
+
+
+def _real_result(provider: str, text: str) -> GenerationResult:
+    """Unlike this file's shared `_result()` (hardcoded `provider="fake-gemini"`),
+    is_primary_result genuinely compares `result.provider` against the router's
+    primary provider name -- these tests need that comparison to be real."""
+    return GenerationResult(text=text, provider=provider, model="fake-model", latency_ms=1.0, attempt=1, prompt_hash="abc123")
+
+
+async def _running_learning_job(db) -> tuple[dict, dict]:
+    project = await _project_with_script(db)
+    job, _ = await ai_job_service.create_job(db, project["id"], "learning", {"project": project, "operation": "learning"})
+    job = await ai_job_service.transition_status(db, job["id"], "running")
+    return project, job
+
+
+async def test_call_router_retries_malformed_cloud_json_on_the_local_fallback_once(db):
+    adapter = TypeAdapter(str)
+    project, job = await _running_learning_job(db)
+    primary = FakeProvider("openai_compat", [_real_result("openai_compat", "not valid json")])
+    fallback = FakeProvider("ollama", [_real_result("ollama", '"ok"')])
+    router = AIRouter(
+        primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST, failure_threshold=3, cooldown_seconds=60.0
+    )
+    request = GenerationRequest(prompt="hi", deadline_seconds=30, purpose="test")
+
+    result = await learning_pipeline._call_router(
+        db, job["id"], router, request, is_repair=False, adapter=adapter
+    )
+
+    assert result.provider == "ollama"
+    assert result.fallback_used is True
+    assert result.fallback_reason == "SchemaValidationError"
+    assert primary.call_count == 1
+    assert fallback.call_count == 1
+
+    updated_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    calls = json.loads(updated_job["metrics_json"])["calls"]
+    assert len(calls) == 1
+    assert calls[0]["fallback_used"] is True
+    assert calls[0]["fallback_reason"] == "SchemaValidationError"
+
+
+async def test_call_router_local_mode_never_retries_since_nothing_is_primary_served(db):
+    adapter = TypeAdapter(str)
+    project, job = await _running_learning_job(db)
+    fallback = FakeProvider("ollama", [_real_result("ollama", "not valid json")])
+    router = AIRouter(primary=fallback, fallback=fallback, mode=AIMode.LOCAL)
+    request = GenerationRequest(prompt="hi", deadline_seconds=30, purpose="test")
+
+    result = await learning_pipeline._call_router(
+        db, job["id"], router, request, is_repair=False, adapter=adapter
+    )
+
+    assert result.text == "not valid json"
+    assert result.fallback_used is False
+    assert fallback.call_count == 1

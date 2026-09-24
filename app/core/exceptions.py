@@ -101,6 +101,15 @@ class ProviderRateLimitError(ProviderError):
     """Raised when a provider reports rate/quota exhaustion (retryable)."""
 
 
+class ProviderDailyQuotaError(ProviderRateLimitError):
+    """Raised when a provider's account-wide daily free-tier cap is hit (Task
+    18.6, D27) -- a `ProviderRateLimitError` subtype, but never worth
+    retrying with backoff, since the quota will not refill within any retry
+    window. Callers set a `reset_at_epoch_seconds` attribute (not a
+    constructor field, same pattern as `OpenAICompatProvider`'s
+    `upstream_status`)."""
+
+
 class ProviderUnavailableError(ProviderError):
     """Raised when a provider is unreachable, down, or the model is missing."""
 

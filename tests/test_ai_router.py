@@ -14,11 +14,13 @@ outcome inverts too (see each test's docstring for the old-vs-new mapping).
 
 import asyncio
 import logging
+import time
 
 import pytest
 
 from app.core.exceptions import (
     ProviderAuthError,
+    ProviderDailyQuotaError,
     ProviderTimeoutError,
     ProviderUnavailableError,
     SchemaValidationError,
@@ -577,3 +579,214 @@ def test_build_ai_router_from_settings_default_circuit_is_fresh_per_call():
     router2 = build_ai_router_from_settings()
 
     assert router1._circuit is not router2._circuit
+
+
+def test_build_ai_router_from_settings_reads_fallback_models(monkeypatch):
+    """Task 18.6 (D27): the model chain is parsed from live settings, same
+    live-settings pattern as every other OPENAI_COMPAT_* field."""
+    from app.core import config
+
+    monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", True)
+    monkeypatch.setattr(config.settings, "AI_MODE", "cloud_first")
+    monkeypatch.setattr(config.settings, "OPENAI_COMPAT_API_KEY", "test-key")
+    monkeypatch.setattr(config.settings, "OPENAI_COMPAT_MODEL", "primary/model:free")
+    monkeypatch.setattr(config.settings, "OPENAI_COMPAT_FALLBACK_MODELS", "a/one:free, b/two:free")
+
+    router = build_ai_router_from_settings()
+
+    assert router._primary._fallback_models == ["a/one:free", "b/two:free"]
+
+
+# --- Task 18.6 (D27): CircuitBreaker.open_until / opened_until_epoch_seconds --------------
+
+
+def test_circuit_breaker_open_until_sets_opened_until_from_wall_clock_reset(monkeypatch):
+    fake_now_monotonic = 1000.0
+    fake_now_wall = 5_000_000.0
+    monkeypatch.setattr(time, "monotonic", lambda: fake_now_monotonic)
+    monkeypatch.setattr(time, "time", lambda: fake_now_wall)
+
+    breaker = CircuitBreaker(failure_threshold=3, cooldown_seconds=60.0)
+    breaker.open_until(reset_at_epoch_seconds=fake_now_wall + 100.0)
+
+    assert breaker.opened_until == fake_now_monotonic + 100.0
+    assert breaker.consecutive_failures == breaker.failure_threshold
+
+
+def test_circuit_breaker_open_until_caps_at_26_hours(monkeypatch):
+    """PM review C3: guards a garbled/far-future X-RateLimit-Reset."""
+    fake_now_monotonic = 1000.0
+    fake_now_wall = 5_000_000.0
+    monkeypatch.setattr(time, "monotonic", lambda: fake_now_monotonic)
+    monkeypatch.setattr(time, "time", lambda: fake_now_wall)
+
+    breaker = CircuitBreaker(failure_threshold=3, cooldown_seconds=60.0)
+    breaker.open_until(reset_at_epoch_seconds=fake_now_wall + 1e9)  # absurdly far future
+
+    assert breaker.opened_until == fake_now_monotonic + 26 * 3600.0
+
+
+def test_circuit_breaker_open_until_past_reset_closes_essentially_immediately(monkeypatch):
+    fake_now_monotonic = 1000.0
+    fake_now_wall = 5_000_000.0
+    monkeypatch.setattr(time, "monotonic", lambda: fake_now_monotonic)
+    monkeypatch.setattr(time, "time", lambda: fake_now_wall)
+
+    breaker = CircuitBreaker(failure_threshold=3, cooldown_seconds=60.0)
+    breaker.open_until(reset_at_epoch_seconds=fake_now_wall - 500.0)  # already in the past
+
+    assert breaker.opened_until == fake_now_monotonic  # max(0.0, ...) == 0 seconds added
+    assert breaker.is_open() is False
+
+
+def test_circuit_breaker_opened_until_epoch_seconds_none_when_not_open():
+    breaker = CircuitBreaker(failure_threshold=3, cooldown_seconds=60.0)
+    assert breaker.opened_until_epoch_seconds() is None
+
+
+def test_circuit_breaker_opened_until_epoch_seconds_reflects_wall_clock(monkeypatch):
+    fake_now_monotonic = 1000.0
+    fake_now_wall = 5_000_000.0
+    monkeypatch.setattr(time, "monotonic", lambda: fake_now_monotonic)
+    monkeypatch.setattr(time, "time", lambda: fake_now_wall)
+
+    breaker = CircuitBreaker(failure_threshold=3, cooldown_seconds=60.0)
+    breaker.open_until(reset_at_epoch_seconds=fake_now_wall + 100.0)
+
+    assert breaker.opened_until_epoch_seconds() == fake_now_wall + 100.0
+
+
+# --- Task 18.6 (D27): daily-cap 429 at the router level -----------------------------------
+
+
+async def test_cloud_first_daily_quota_error_opens_circuit_until_reset_with_no_backoff_retry():
+    """No backoff/retry: exactly one scripted primary outcome is consumed --
+    if the transient-backoff loop caught this instead, it would try to pop up
+    to 4 outcomes from `primary` and FakeProvider would raise RuntimeError."""
+    reset_at = time.time() + 3600.0
+    quota_error = ProviderDailyQuotaError("daily cap hit")
+    quota_error.reset_at_epoch_seconds = reset_at
+    primary = FakeProvider("openai_compat", [quota_error])
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST, failure_threshold=3, cooldown_seconds=60.0)
+
+    result = await router.generate(_request())
+
+    assert result.provider == "ollama"
+    assert result.fallback_used is True
+    assert result.fallback_reason == "ProviderDailyQuotaError"
+    assert primary.call_count == 1
+    assert router._circuit.is_open() is True
+
+
+async def test_cloud_first_daily_quota_error_skips_primary_on_next_call_until_reset():
+    reset_at = time.time() + 3600.0
+    quota_error = ProviderDailyQuotaError("daily cap hit")
+    quota_error.reset_at_epoch_seconds = reset_at
+    primary = FakeProvider("openai_compat", [quota_error])
+    fallback = FakeProvider("ollama", [_result("ollama"), _result("ollama")])
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST, failure_threshold=3, cooldown_seconds=60.0)
+
+    await router.generate(_request())
+    second = await router.generate(_request())
+
+    assert second.provider == "ollama"
+    assert second.circuit_open is True
+    assert primary.call_count == 1  # the second call never touched the primary
+
+
+async def test_plain_rate_limit_error_still_gets_backoff_retry_unlike_daily_quota(sleep_calls):
+    """Regression guard distinguishing ProviderDailyQuotaError's new
+    no-retry path from an ordinary ProviderRateLimitError, which must keep
+    its existing backoff/retry behaviour unchanged."""
+    from app.core.exceptions import ProviderRateLimitError
+
+    primary = FakeProvider(
+        "openai_compat",
+        [ProviderRateLimitError("try again"), _result("openai_compat")],
+    )
+    fallback = FakeProvider("ollama", [])
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST, failure_threshold=3, cooldown_seconds=60.0)
+
+    result = await router.generate(_request())
+
+    assert result.provider == "openai_compat"
+    assert primary.call_count == 2  # retried once, unlike the daily-quota case above
+    assert len(sleep_calls) == 1
+
+
+# --- Task 18.6 C2: AIRouter.is_primary_result ---------------------------------------------
+
+
+async def test_is_primary_result_true_for_a_genuine_primary_served_result():
+    primary = FakeProvider("openai_compat", [_result("openai_compat")])
+    fallback = FakeProvider("ollama", [])
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST)
+
+    result = await router.generate(_request())
+
+    assert router.is_primary_result(result) is True
+
+
+async def test_is_primary_result_false_for_a_fallback_served_result():
+    primary = FakeProvider("openai_compat", [ProviderUnavailableError("down")] * 4)
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST, failure_threshold=3, cooldown_seconds=60.0)
+
+    result = await router.generate(_request())
+
+    assert router.is_primary_result(result) is False
+
+
+async def test_is_primary_result_false_in_local_mode_even_though_primary_is_the_fallback_placeholder():
+    """The exact edge case C2 called out: build_ai_router_from_settings sets
+    `primary = fallback` as a LOCAL-mode placeholder, so a bare name
+    comparison would wrongly return True here -- is_primary_result must
+    check the mode too."""
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(primary=fallback, fallback=fallback, mode=AIMode.LOCAL)
+
+    result = await router.generate(_request())
+
+    assert router.is_primary_result(result) is False
+
+
+# --- Task 18.6 item 4: AIRouter.generate_on_fallback ---------------------------------------
+
+
+async def test_generate_on_fallback_calls_the_fallback_directly():
+    primary = FakeProvider("openai_compat", [])
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST)
+
+    result = await router.generate_on_fallback(_request())
+
+    assert result.provider == "ollama"
+    assert primary.call_count == 0
+
+
+async def test_generate_on_fallback_ignores_the_open_circuit():
+    primary = FakeProvider("openai_compat", [])
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    circuit = CircuitBreaker(failure_threshold=1, cooldown_seconds=60.0)
+    circuit.open_immediately()
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST, circuit=circuit)
+
+    result = await router.generate_on_fallback(_request())
+
+    assert result.provider == "ollama"
+
+
+async def test_generate_on_fallback_never_touches_the_circuit():
+    """A malformed-JSON content failure says nothing about primary health --
+    generate_on_fallback must never record a success/failure on the circuit
+    the way the primary phase does."""
+    primary = FakeProvider("openai_compat", [])
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    circuit = CircuitBreaker(failure_threshold=3, cooldown_seconds=60.0)
+    router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.CLOUD_FIRST, circuit=circuit)
+
+    await router.generate_on_fallback(_request())
+
+    assert circuit.consecutive_failures == 0
+    assert circuit.is_open() is False

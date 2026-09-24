@@ -195,12 +195,14 @@ AI_CIRCUIT_FAILURE_THRESHOLD = 3
 AI_CIRCUIT_COOLDOWN_SECONDS = 60.0
 # Phase 18: the primary/cloud phase's own time budget, independent of the
 # fallback's AI_REQUEST_DEADLINE_SECONDS (app/core/config.py) -- the two are never
-# shared (see AIRouter.generate's docstring). 150s: the smoke test's default free
-# model (Nemotron 3 Super) answered in 8-28s, and 150 still covers its larger
-# sibling Ultra's observed 136s; anything slower isn't a viable primary. Mirrored
-# as Settings.AI_CLOUD_DEADLINE_SECONDS's default (env-configurable via
-# DIE_AI_CLOUD_DEADLINE_SECONDS), matching this same constant so the two can't drift.
-AI_CLOUD_DEADLINE_SECONDS = 150.0
+# shared (see AIRouter.generate's docstring). Task 18.6 (D27, Amendment D): cut
+# 150 -> 75s after Gate B-9 (docs/operations/phase18-gate-b9.md) showed 7 cloud
+# timeouts each burning the full 150s before the fallback ran -- Nemotron 3 Super
+# answered in 8-28s, and Dots3 (now a default chain fallback) took 70s in the
+# smoke probe, still under 75. Mirrored as Settings.AI_CLOUD_DEADLINE_SECONDS's
+# default (env-configurable via DIE_AI_CLOUD_DEADLINE_SECONDS), matching this
+# same constant so the two can't drift.
+AI_CLOUD_DEADLINE_SECONDS = 75.0
 
 # Phase 14 Task 14.1 -- bounded exponential backoff for transient provider errors
 # (HTTP 503/429/timeout) only; content-shaped errors keep the old one-immediate-

@@ -83,6 +83,11 @@ class Settings(BaseSettings):
     OPENAI_COMPAT_MODEL: str = "nvidia/nemotron-3-super-120b-a12b:free"
     OPENAI_COMPAT_API_KEY: str = ""
     AI_CLOUD_DEADLINE_SECONDS: float = _AI_CLOUD_DEADLINE_SECONDS_DEFAULT
+    # Task 18.6 (D27): OpenRouter's native `models: [primary, ...fallbacks]` array --
+    # comma-separated (not a pydantic-settings list[str], which needs a JSON-encoded
+    # env value) so it matches every other OPENAI_COMPAT_* field's plain-string type.
+    # Parsed via app.services.ai.openai_compat_provider.parse_fallback_models.
+    OPENAI_COMPAT_FALLBACK_MODELS: str = "google/gemma-4-26b-a4b-it:free,dots-studio/dots-3-note-preview:free"
 
     model_config = SettingsConfigDict(
         env_prefix="DIE_",

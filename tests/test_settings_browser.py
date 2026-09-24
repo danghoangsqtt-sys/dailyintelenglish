@@ -37,12 +37,32 @@ DEFAULT_STATUS = {
     "cloud_source": "env",
     "cloud_base_url": "https://openrouter.ai/api/v1",
     "cloud_model": "nvidia/nemotron-3-super-120b-a12b:free",
+    "cloud_fallback_models": ["a/one:free", "b/two:free"],
     "ai_mode": "local",
     "ai_mode_source": "env",
     "allow_cloud": True,
     "effective_mode": "local",
     "effective_reason": None,
 }
+
+
+async def _mock_ai_health(page, circuit_open_until: str | None = None) -> None:
+    """Task 18.6 C4: /api/ai/health is separate from /api/settings and isn't
+    mocked by `_mock_settings` -- an unmocked call reaches the real (N1-neutralized,
+    in-process) live_server app, whose circuit is always closed, so this is only
+    needed for a test that specifically wants circuit_open_until set."""
+
+    async def handle(route):
+        body = {
+            "mode": "local", "ollama_reachable": True, "model": "qwen3.5:9b", "model_present": True,
+            "model_digest": None, "cloud_enabled": True, "worker_alive": True, "cloud_configured": True,
+            "cloud_model": "nvidia/nemotron-3-super-120b-a12b:free", "effective_mode": "local",
+            "circuit_open": circuit_open_until is not None, "circuit_open_until": circuit_open_until,
+            "fallback_rate": {"window": 0, "by_status": {}, "call_fallback_rate": None, "job_fallback_rate": None, "fallback_reason_counts": {}},
+        }
+        await route.fulfill(status=200, content_type="application/json", body=json.dumps({"success": True, "data": body}))
+
+    await page.route("**/api/ai/health", handle)
 
 
 async def _mock_settings(page, get_status: dict, *, on_put_ai_mode=None, on_put_cloud=None, on_test_connection=None) -> None:
@@ -205,4 +225,56 @@ async def test_settings_selecting_cloud_first_with_no_key_shows_effective_local_
     )
     status_text = await page.locator("#effective-mode-status").text_content()
     assert "Local" in status_text
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_settings_fallback_models_field_loads_and_round_trips(browser_instance: Browser, live_server_url: str):
+    page = await browser_instance.new_page()
+    saved_status = {**DEFAULT_STATUS, "cloud_fallback_models": ["new/one:free", "new/two:free"]}
+
+    def on_put_cloud(_body):
+        return saved_status
+
+    await _mock_settings(page, DEFAULT_STATUS, on_put_cloud=on_put_cloud)
+    await page.goto(f"{live_server_url}/settings")
+    await page.wait_for_selector("#effective-mode-status")
+
+    assert await page.locator("#cloud-fallback-models").input_value() == "a/one:free, b/two:free"
+
+    await page.fill("#cloud-fallback-models", "new/one:free, new/two:free")
+    await _mock_settings(page, saved_status, on_put_cloud=on_put_cloud)  # GET refresh after save
+    await page.click("#save-cloud-settings-btn")
+
+    await page.wait_for_function("document.getElementById('save-status').textContent.includes('Saved')")
+    assert await page.locator("#cloud-fallback-models").input_value() == "new/one:free, new/two:free"
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_settings_circuit_status_hidden_by_default(browser_instance: Browser, live_server_url: str):
+    page = await browser_instance.new_page()
+    await _mock_settings(page, DEFAULT_STATUS)
+    await _mock_ai_health(page, circuit_open_until=None)
+    await page.goto(f"{live_server_url}/settings")
+    await page.wait_for_selector("#effective-mode-status")
+
+    await page.wait_for_timeout(200)  # let the health fetch resolve
+    assert await page.locator("#circuit-status").is_hidden()
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_settings_circuit_status_shows_paused_until_when_set(browser_instance: Browser, live_server_url: str):
+    """Task 18.6 C4."""
+    page = await browser_instance.new_page()
+    await _mock_settings(page, DEFAULT_STATUS)
+    await _mock_ai_health(page, circuit_open_until="2026-09-25T03:30:00+00:00")
+    await page.goto(f"{live_server_url}/settings")
+    await page.wait_for_selector("#effective-mode-status")
+
+    await page.wait_for_function("!document.getElementById('circuit-status').hidden")
+    text = await page.locator("#circuit-status").text_content()
+    assert "Cloud paused until" in text
+    assert "free daily limit reached" in text
     await page.close()

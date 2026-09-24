@@ -1,6 +1,6 @@
 # Task 18.6 — Cloud model chain + speed tuning (D27, Amendment D)
 
-- **Status:** not started
+- **Status:** done (pending PM ACCEPTED)
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** Gate B-9 done (`docs/operations/phase18-gate-b9.md`); owner decision D27
@@ -366,4 +366,83 @@ Full suite, `ruff`, revert-and-confirm-failure on items 3 and 4 as above, real D
 
 ## Evidence
 
-_pending_
+- Design commits `e72aec3` (initial) + `d1a81b1`/`b50e3a5` (APPROVED with C1/C2/C3/C4), this
+  implementation commit folds all four in per "no re-approval needed."
+- **Code:**
+  - `app/core/exceptions.py` (C1): new `ProviderDailyQuotaError(ProviderRateLimitError)`,
+    alongside every other `Provider*Error`.
+  - `app/services/ai_job_service.py` (C1): `_PROVIDER_ERROR_CODES` gains
+    `ProviderDailyQuotaError: "provider_daily_quota"`.
+  - `app/services/ai/openai_compat_provider.py`: `parse_fallback_models(raw)` helper;
+    `__init__` gains `fallback_models`; `generate()` sends `models: [model, *fallback_models]`
+    instead of `model` when non-empty; `GenerationResult.model` reads the response's own
+    `"model"` field, falling back to the configured primary when absent; new
+    `_daily_quota_reset_epoch_seconds(response)` detects OpenRouter's real captured daily-cap
+    shape (`error.metadata.limit_source == "openrouter_free_tier_daily"` or a message substring
+    backstop) and raises `ProviderDailyQuotaError` with `reset_at_epoch_seconds` (from
+    `X-RateLimit-Reset`, or the next UTC midnight if the header is missing/unparseable).
+  - `app/services/ai/router.py`: `CircuitBreaker.open_until(reset_at_epoch_seconds)` (C3: capped
+    at 26h) and `opened_until_epoch_seconds()` (C4, wall-clock readout) -- same `opened_until`
+    field `is_open()` already uses. `_attempt` gains a `ProviderDailyQuotaError` except-clause
+    ahead of `_TRANSIENT_ERRORS` (no backoff retry). `generate()`'s cloud_first branch opens the
+    circuit via `open_until` on a daily-quota error. New `AIRouter.is_primary_result(result)`
+    (C2: excludes `AIMode.LOCAL`'s `primary is fallback` placeholder) and
+    `AIRouter.generate_on_fallback(request)` (forces local, never touches the circuit).
+    `build_ai_router_from_settings` parses and passes `OPENAI_COMPAT_FALLBACK_MODELS`.
+  - `app/core/constants.py`: `AI_CLOUD_DEADLINE_SECONDS` 150.0 → 75.0, comment updated.
+  - `app/core/config.py`/`.env.example`: new `OPENAI_COMPAT_FALLBACK_MODELS` setting (default
+    Gemma 4 → Dots3), `.env.example`'s `AI_CLOUD_DEADLINE_SECONDS` matches the new default.
+  - `app/services/settings_service.py`: `CLOUD_FALLBACK_MODELS_SETTING`; `get_cloud_settings_
+    status` gains `cloud_fallback_models`; `set_cloud_settings` gains a `fallback_models`
+    parameter (`None` = unchanged, `[]` = explicit clear, validated ≤5 entries/≤200 chars each,
+    nothing written on rejection); `load_cloud_settings_from_db` uses `is not None` (not
+    truthiness) for this one field so an explicitly-cleared empty chain survives a restart.
+  - `app/models/settings.py`: `CloudSettingsUpdate.fallback_models` (unconstrained at the
+    Pydantic level, real validation in the service).
+  - `app/api/settings.py`: `PUT /api/settings/cloud` passes `fallback_models` through.
+  - `app/api/ai_jobs.py` (C4): `ai_health()` adds `circuit_open_until` (ISO 8601 UTC or `null`),
+    additive, every existing field unchanged.
+  - `frontend/pages/settings.html`/`settings.js`: new `#cloud-fallback-models` input (comma
+    round-trip) on the existing Cloud Provider form; new `#circuit-status` line reusing the
+    already-fetched health object from Task 18.4's `loadFallbackRate`/`renderFallbackRate` --
+    "Cloud paused until HH:MM (free daily limit reached)" whenever `circuit_open_until` is set.
+  - `app/services/script_pipeline.py`/`learning_pipeline.py` (item 4 only): `_call_router` gains
+    an optional `adapter` parameter -- a cloud-served result (`router.is_primary_result`) that
+    fails validation gets one local retry (`router.generate_on_fallback`) before being recorded,
+    marked `fallback_used=True, fallback_reason="SchemaValidationError"`. Every call site
+    (`_generate_outline`, `_generate_section`, `_repair_section`, `_generate_pack`,
+    `_repair_pack`) changed by exactly one added kwarg; nothing else in either file touched.
+- **Tests (52 new, 1112 total):**
+  - `tests/test_openai_compat_provider.py` (+15): model chain request shape (`models` array vs.
+    plain `model`, backward-compat default), the answering model recorded vs. falling back to
+    configured, daily-cap detection (real captured shape with a synthetic reset/user id, header
+    parsing, next-midnight fallback, message-substring backstop, and a plain-429 regression
+    guard), `parse_fallback_models`.
+  - `tests/test_ai_router.py` (+18): `build_ai_router_from_settings` reads the fallback chain;
+    `CircuitBreaker.open_until`/`opened_until_epoch_seconds` (wall-clock conversion, the 26h cap,
+    past-reset immediate close); router-level daily-quota handling (no backoff, circuit opens and
+    is respected on the next call, a plain `ProviderRateLimitError` regression guard still
+    retries); `is_primary_result` (true/false/LOCAL-placeholder edge case); `generate_on_fallback`
+    (calls fallback directly, ignores an open circuit, never touches the circuit).
+  - `tests/test_settings_service.py` (+11) / `tests/test_settings_api.py` (+4): fallback-models
+    CRUD, validation, `None`-unchanged/`[]`-clears semantics, the load-from-db `is not None` fix.
+  - `tests/test_ai_health_api.py` (+2) / allowlist test extended: `circuit_open_until` null by
+    default and as ISO when the circuit is forced open.
+  - `tests/test_settings_browser.py` (+3): fallback-models field round-trip, circuit-status
+    hidden by default, circuit-status shown with the exact wording when set.
+  - `tests/test_ai_job_service.py` (+1 parametrize case): `ProviderDailyQuotaError` maps to
+    `"provider_daily_quota"`.
+  - `tests/test_script_pipeline.py` (+3) / `tests/test_learning_pipeline.py` (+2): the malformed-
+    JSON local retry (one telemetry call, correct `fallback_used`/`fallback_reason`), the retry's
+    own failure propagating with its own error record, and the LOCAL-mode no-retry case.
+- **Revert-and-confirm-failure:**
+  - Item 3: commented out the `except ProviderDailyQuotaError: raise` clause in `_attempt` →
+    both daily-quota router tests failed (`RuntimeError: FakeProvider('openai_compat') has no
+    more scripted outcomes` -- proving it fell into the backoff-retry loop instead); restored,
+    46/46 router tests passed again.
+  - Item 4: disabled the `adapter`/`is_primary_result` branch in `script_pipeline._call_router` →
+    both malformed-JSON-retry tests failed (`assert 'openai_compat' == 'ollama'` and "DID NOT
+    RAISE ProviderUnavailableError" -- proving no retry was attempted); restored, 99/99 script
+    pipeline tests passed again.
+- **Full suite:** **1112 passed** (1060 baseline + 52 new). `ruff check .` → all checks passed.
+  Real DB untouched throughout (the conftest guard never tripped).

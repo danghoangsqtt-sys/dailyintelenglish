@@ -15,8 +15,10 @@
 
   const baseUrlInput = document.getElementById("cloud-base-url");
   const modelInput = document.getElementById("cloud-model");
+  const fallbackModelsInput = document.getElementById("cloud-fallback-models");
   const apiKeyInput = document.getElementById("cloud-api-key");
   const keyStatusEl = document.getElementById("cloud-key-status");
+  const circuitStatusEl = document.getElementById("circuit-status");
 
   const saveBtn = document.getElementById("save-cloud-settings-btn");
   const clearKeyBtn = document.getElementById("clear-cloud-key-btn");
@@ -61,6 +63,9 @@
   function renderCloudForm(status) {
     if (baseUrlInput && document.activeElement !== baseUrlInput) baseUrlInput.value = status.cloud_base_url || "";
     if (modelInput && document.activeElement !== modelInput) modelInput.value = status.cloud_model || "";
+    if (fallbackModelsInput && document.activeElement !== fallbackModelsInput) {
+      fallbackModelsInput.value = (status.cloud_fallback_models || []).join(", ");
+    }
     if (keyStatusEl) {
       const sourceLabel = { database: "saved in Settings", env: "from environment", none: "not configured" }[
         status.cloud_source
@@ -85,10 +90,23 @@
       `${pct(rate.job_fallback_rate)} of jobs.`;
   }
 
+  function renderCircuitStatus(health) {
+    if (!circuitStatusEl) return;
+    const openUntil = health && health.circuit_open_until;
+    if (!openUntil) {
+      circuitStatusEl.hidden = true;
+      return;
+    }
+    const hhmm = new Date(openUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    circuitStatusEl.hidden = false;
+    circuitStatusEl.textContent = `Cloud paused until ${hhmm} (free daily limit reached)`;
+  }
+
   async function loadFallbackRate() {
     try {
       const health = await Api.getAiHealth();
       renderFallbackRate(health);
+      renderCircuitStatus(health);
     } catch (error) {
       if (fallbackRateEl) fallbackRateEl.textContent = "";
     }
@@ -126,7 +144,11 @@
     saveStatusEl.classList.remove("is-error", "is-success");
     saveStatusEl.textContent = "Saving…";
     try {
-      await Api.updateCloudSettings(baseUrlInput.value, modelInput.value, apiKeyInput.value);
+      const fallbackModels = fallbackModelsInput.value
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+      await Api.updateCloudSettings(baseUrlInput.value, modelInput.value, apiKeyInput.value, fallbackModels);
       apiKeyInput.value = "";
       saveStatusEl.textContent = "Saved.";
       saveStatusEl.classList.add("is-success");

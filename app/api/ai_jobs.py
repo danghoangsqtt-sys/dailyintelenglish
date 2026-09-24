@@ -1,6 +1,7 @@
 """Durable AI generation job routes, and the AI runtime health check (Phase 13, Task 13.3)."""
 
 import time
+from datetime import datetime, timezone
 
 import aiosqlite
 import httpx
@@ -124,6 +125,17 @@ async def ai_health(db: aiosqlite.Connection = Depends(get_db)) -> dict:
     async with read_transaction():
         fallback_rate = await ai_job_service.get_fallback_rate_stats(db)
 
+    # Task 18.6 C4: an ISO 8601 UTC timestamp whenever the circuit is open (any
+    # reason -- daily quota, ordinary failure threshold, or an open_immediately()
+    # auth-error trip), null otherwise. General "when does this reopen" readout,
+    # same as circuit_open (Task 18.3) already is a general "is it open" one.
+    circuit_open_until_epoch = _ai_circuit.opened_until_epoch_seconds()
+    circuit_open_until = (
+        datetime.fromtimestamp(circuit_open_until_epoch, tz=timezone.utc).isoformat()
+        if circuit_open_until_epoch is not None
+        else None
+    )
+
     return ok(
         {
             "mode": settings.AI_MODE,
@@ -137,6 +149,7 @@ async def ai_health(db: aiosqlite.Connection = Depends(get_db)) -> dict:
             "cloud_model": settings.OPENAI_COMPAT_MODEL,
             "effective_mode": effective_mode.value,
             "circuit_open": _ai_circuit.is_open(),
+            "circuit_open_until": circuit_open_until,
             "fallback_rate": fallback_rate,
         },
         started_at=started_at,

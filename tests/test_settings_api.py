@@ -19,6 +19,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "ENV_OPENAI_COMPAT_API_KEY", "env-default-key-9999")
     monkeypatch.setattr(settings, "OPENAI_COMPAT_BASE_URL", "https://openrouter.ai/api/v1")
     monkeypatch.setattr(settings, "OPENAI_COMPAT_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
+    monkeypatch.setattr(settings, "OPENAI_COMPAT_FALLBACK_MODELS", "env/fallback-a:free,env/fallback-b:free")
     # AI_MODE (Task 13.6) is the same kind of mutable-singleton setting -- reset to
     # a deterministic value so a PUT in one test can't leak into another.
     monkeypatch.setattr(settings, "AI_MODE", "cloud")
@@ -39,6 +40,7 @@ def test_get_reports_env_source_before_anything_is_saved(client):
     assert data["cloud_last4"].endswith("9999")
     assert data["cloud_base_url"] == "https://openrouter.ai/api/v1"
     assert data["cloud_model"] == "nvidia/nemotron-3-super-120b-a12b:free"
+    assert data["cloud_fallback_models"] == ["env/fallback-a:free", "env/fallback-b:free"]
     assert data["allow_cloud"] is False
 
 
@@ -122,6 +124,55 @@ def test_put_cloud_invalid_input_stores_nothing(client):
     assert data["cloud_base_url"] == "https://openrouter.ai/api/v1"
     assert data["cloud_model"] == "good-model"
     assert data["cloud_last4"].endswith("-key")
+
+
+# --- Task 18.6 (D27): fallback model chain ------------------------------------------
+
+
+def test_put_cloud_saves_fallback_models(client):
+    response = client.put(
+        "/api/settings/cloud",
+        json={
+            "base_url": "https://openrouter.ai/api/v1",
+            "model": "some/model",
+            "fallback_models": ["one/a:free", "two/b:free"],
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["cloud_fallback_models"] == ["one/a:free", "two/b:free"]
+
+
+def test_put_cloud_omitted_fallback_models_leaves_it_unchanged(client):
+    client.put(
+        "/api/settings/cloud",
+        json={"base_url": "https://openrouter.ai/api/v1", "model": "m", "fallback_models": ["one/a:free"]},
+    )
+    response = client.put("/api/settings/cloud", json={"base_url": "https://openrouter.ai/api/v1", "model": "m2"})
+    assert response.json()["data"]["cloud_fallback_models"] == ["one/a:free"]
+
+
+def test_put_cloud_empty_fallback_models_list_clears_it(client):
+    client.put(
+        "/api/settings/cloud",
+        json={"base_url": "https://openrouter.ai/api/v1", "model": "m", "fallback_models": ["one/a:free"]},
+    )
+    response = client.put(
+        "/api/settings/cloud",
+        json={"base_url": "https://openrouter.ai/api/v1", "model": "m", "fallback_models": []},
+    )
+    assert response.json()["data"]["cloud_fallback_models"] == []
+
+
+def test_put_cloud_rejects_too_many_fallback_models(client):
+    response = client.put(
+        "/api/settings/cloud",
+        json={
+            "base_url": "https://openrouter.ai/api/v1",
+            "model": "m",
+            "fallback_models": [f"m{i}/x:free" for i in range(6)],
+        },
+    )
+    assert response.status_code == 422
 
 
 def test_delete_cloud_api_key_reverts_to_env_source(client):

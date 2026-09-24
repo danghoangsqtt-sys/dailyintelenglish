@@ -17,7 +17,11 @@ from app.core import config
 from app.core.constants import AI_LEGACY_MODE_ALIASES, AI_MODES
 from app.core.exceptions import ProviderError, ValidationError
 from app.services.ai.contracts import GenerationRequest
-from app.services.ai.openai_compat_provider import OpenAICompatProvider, validate_openai_compat_base_url
+from app.services.ai.openai_compat_provider import (
+    OpenAICompatProvider,
+    parse_fallback_models,
+    validate_openai_compat_base_url,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +29,10 @@ AI_MODE_SETTING = "ai_mode"
 CLOUD_BASE_URL_SETTING = "openai_compat_base_url"
 CLOUD_MODEL_SETTING = "openai_compat_model"
 CLOUD_API_KEY_SETTING = "openai_compat_api_key"
+CLOUD_FALLBACK_MODELS_SETTING = "openai_compat_fallback_models"
 
 _CLOUD_MODEL_MAX_LENGTH = 200
+_CLOUD_FALLBACK_MODELS_MAX_ENTRIES = 5
 _TEST_CONNECTION_TIMEOUT_SECONDS = 15.0
 
 
@@ -80,14 +86,19 @@ async def get_cloud_settings_status(db: aiosqlite.Connection) -> dict:
         "cloud_source": cloud_source,
         "cloud_base_url": config.settings.OPENAI_COMPAT_BASE_URL,
         "cloud_model": config.settings.OPENAI_COMPAT_MODEL,
+        "cloud_fallback_models": parse_fallback_models(config.settings.OPENAI_COMPAT_FALLBACK_MODELS),
     }
 
 
 async def set_cloud_settings(
-    db: aiosqlite.Connection, base_url: str, model: str, api_key: str | None = None
+    db: aiosqlite.Connection,
+    base_url: str,
+    model: str,
+    api_key: str | None = None,
+    fallback_models: list[str] | None = None,
 ) -> dict:
     """Validate, persist, and immediately apply the cloud provider's base URL,
-    model, and (optionally) API key.
+    model, (optionally) API key, and (optionally) fallback model chain.
 
     Caller must run this inside a `write_transaction` block, same as `set_ai_mode`.
 
@@ -96,13 +107,19 @@ async def set_cloud_settings(
             update just the base URL or model without re-entering a write-only
             key. An empty/whitespace-only string is rejected (distinct from
             `None`), same as a missing base_url/model.
+        fallback_models: Task 18.6 (D27). `None` means "leave the stored chain
+            unchanged" (same convention as `api_key`); `[]` explicitly clears
+            it to "primary model only" -- a legitimate value, distinct from
+            `None`.
 
     Raises:
         ValidationError: If `base_url` fails `validate_openai_compat_base_url`
             (PM review C2: https-or-loopback, no credentials), `model` is empty
-            after stripping or over 200 characters, or a provided `api_key` is
-            empty after stripping. Nothing is written on any of these --
-            validation runs fully before the first database write.
+            after stripping or over 200 characters, a provided `api_key` is
+            empty after stripping, or a provided `fallback_models` has more
+            than 5 entries or any entry that's empty after stripping or over
+            200 characters. Nothing is written on any of these -- validation
+            runs fully before the first database write.
     """
     cleaned_model = model.strip()
     if not cleaned_model:
@@ -118,6 +135,18 @@ async def set_cloud_settings(
         cleaned_key = api_key.strip()
         if not cleaned_key:
             raise ValidationError("Cloud API key cannot be empty.")
+    cleaned_fallback_models: list[str] | None = None
+    if fallback_models is not None:
+        cleaned_fallback_models = [entry.strip() for entry in fallback_models]
+        if len(cleaned_fallback_models) > _CLOUD_FALLBACK_MODELS_MAX_ENTRIES:
+            raise ValidationError(
+                f"Cloud fallback chain must have at most {_CLOUD_FALLBACK_MODELS_MAX_ENTRIES} entries."
+            )
+        for entry in cleaned_fallback_models:
+            if not entry:
+                raise ValidationError("Cloud fallback model entries cannot be empty.")
+            if len(entry) > _CLOUD_MODEL_MAX_LENGTH:
+                raise ValidationError(f"Each cloud fallback model must be at most {_CLOUD_MODEL_MAX_LENGTH} characters.")
 
     await _upsert_value(db, CLOUD_BASE_URL_SETTING, cleaned_base_url)
     await _upsert_value(db, CLOUD_MODEL_SETTING, cleaned_model)
@@ -126,6 +155,9 @@ async def set_cloud_settings(
     if cleaned_key is not None:
         await _upsert_value(db, CLOUD_API_KEY_SETTING, cleaned_key)
         config.settings.OPENAI_COMPAT_API_KEY = cleaned_key
+    if cleaned_fallback_models is not None:
+        await _upsert_value(db, CLOUD_FALLBACK_MODELS_SETTING, ",".join(cleaned_fallback_models))
+        config.settings.OPENAI_COMPAT_FALLBACK_MODELS = ",".join(cleaned_fallback_models)
 
     return await get_cloud_settings_status(db)
 
@@ -148,6 +180,7 @@ async def load_cloud_settings_from_db(db: aiosqlite.Connection) -> None:
         stored_base_url = await _stored_value(db, CLOUD_BASE_URL_SETTING)
         stored_model = await _stored_value(db, CLOUD_MODEL_SETTING)
         stored_key = await _stored_value(db, CLOUD_API_KEY_SETTING)
+        stored_fallback_models = await _stored_value(db, CLOUD_FALLBACK_MODELS_SETTING)
     except aiosqlite.OperationalError:
         return
     if stored_base_url:
@@ -156,6 +189,12 @@ async def load_cloud_settings_from_db(db: aiosqlite.Connection) -> None:
         config.settings.OPENAI_COMPAT_MODEL = stored_model
     if stored_key:
         config.settings.OPENAI_COMPAT_API_KEY = stored_key
+    # Unlike base_url/model/key above, an explicitly-cleared fallback chain is
+    # legitimately stored as "" (set_cloud_settings([]) -- "primary only") --
+    # `is not None` (row exists at all) rather than truthiness, so that clear
+    # survives a restart instead of silently reverting to the .env default.
+    if stored_fallback_models is not None:
+        config.settings.OPENAI_COMPAT_FALLBACK_MODELS = stored_fallback_models
 
 
 async def test_cloud_connection(

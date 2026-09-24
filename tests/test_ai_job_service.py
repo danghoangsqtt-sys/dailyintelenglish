@@ -10,6 +10,7 @@ from app.core.constants import AI_JOB_MAX_RECORDED_CALLS, AI_JOB_MAX_RECOVERY_AT
 from app.core.exceptions import (
     NotFoundError,
     ProviderAuthError,
+    ProviderDailyQuotaError,
     ProviderError,
     ProviderInvalidResponseError,
     ProviderRateLimitError,
@@ -529,6 +530,7 @@ async def test_set_job_metric_commit_false_leaves_the_caller_in_control(db, monk
         (ProviderUnavailableError("down"), "provider_unavailable"),
         (ProviderTimeoutError("slow"), "provider_timeout"),
         (ProviderRateLimitError("429"), "provider_rate_limited"),
+        (ProviderDailyQuotaError("daily cap"), "provider_daily_quota"),
         (ProviderAuthError("bad key"), "provider_auth"),
         (ProviderInvalidResponseError("bad shape"), "provider_invalid_response"),
         (SchemaValidationError("bad json"), "schema_validation_failed"),

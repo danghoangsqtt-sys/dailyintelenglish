@@ -26,6 +26,7 @@ from app.core.constants import (
 )
 from app.core.exceptions import (
     ProviderAuthError,
+    ProviderDailyQuotaError,
     ProviderError,
     ProviderInvalidResponseError,
     ProviderRateLimitError,
@@ -35,7 +36,7 @@ from app.core.exceptions import (
 )
 from app.services.ai.contracts import AIMode, GenerationRequest, GenerationResult, Provider
 from app.services.ai.ollama_provider import OllamaProvider
-from app.services.ai.openai_compat_provider import OpenAICompatProvider
+from app.services.ai.openai_compat_provider import OpenAICompatProvider, parse_fallback_models
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,7 @@ def build_ai_router_from_settings(circuit: "CircuitBreaker | None" = None) -> "A
                 api_key=settings.OPENAI_COMPAT_API_KEY,
                 model=settings.OPENAI_COMPAT_MODEL,
                 timeout=settings.AI_CLOUD_DEADLINE_SECONDS,
+                fallback_models=parse_fallback_models(settings.OPENAI_COMPAT_FALLBACK_MODELS),
             )
         except ValueError:
             logger.warning("ai_router_invalid_cloud_base_url -- falling back to local")
@@ -109,6 +111,12 @@ _CONTENT_RETRY_ERRORS = (
 )
 # ProviderAuthError (and any other ProviderError not listed above) is deliberately
 # excluded from both tuples -- a bad key/config will not fix itself on a retry.
+
+# Task 18.6 (D27), PM review C3: caps CircuitBreaker.open_until's computed open
+# duration against a garbled or far-future X-RateLimit-Reset. 26h (not 24h) covers
+# a reset that's correctly the next UTC midnight but read shortly after the
+# *previous* one, plus slack for clock skew/latency.
+_MAX_OPEN_UNTIL_SECONDS = 26 * 3600.0
 
 
 @dataclass
@@ -148,6 +156,36 @@ class CircuitBreaker:
         the consecutive-failure threshold and open the cooldown window at once."""
         self.consecutive_failures = self.failure_threshold
         self.opened_until = time.monotonic() + self.cooldown_seconds
+
+    def open_until(self, reset_at_epoch_seconds: float) -> None:
+        """Task 18.6 (D27): open the circuit until a wall-clock deadline
+        (OpenRouter's `X-RateLimit-Reset`, a daily-quota reset) instead of a
+        fixed cooldown -- the *same* `opened_until` field `is_open()` already
+        checks, not a parallel circuit; this is a third way to set it,
+        alongside `record_failure()`'s threshold path and `open_immediately()`'s
+        fixed-cooldown path. Converts the wall-clock deadline to a
+        monotonic-clock offset once, here, since `opened_until`/`is_open()`
+        compare against `time.monotonic()` everywhere else in this class.
+
+        PM review C3: the computed open duration is capped at 26 hours,
+        guarding against a garbled or far-future `X-RateLimit-Reset` opening
+        the circuit for months. A reset already in the past (clock skew, a
+        stale header) opens for `max(0.0, ...)` = 0 seconds -- effectively an
+        immediate close on the next check, never negative/stuck-open.
+        """
+        self.consecutive_failures = self.failure_threshold
+        remaining = max(0.0, reset_at_epoch_seconds - time.time())
+        remaining = min(remaining, _MAX_OPEN_UNTIL_SECONDS)
+        self.opened_until = time.monotonic() + remaining
+
+    def opened_until_epoch_seconds(self) -> float | None:
+        """Wall-clock equivalent of `opened_until` (for external reporting
+        only -- health payload -- never used by `is_open()` itself). `None`
+        when the circuit isn't currently open. Both clocks are read "now"
+        together at call time, so the delta between them is accurate then."""
+        if not self.is_open():
+            return None
+        return time.time() + (self.opened_until - time.monotonic())
 
 
 class AIRouter:
@@ -209,7 +247,9 @@ class AIRouter:
         try:
             return await self._run_with_budget(self._primary, request, self._cloud_deadline_seconds)
         except ProviderError as exc:
-            if isinstance(exc, ProviderAuthError):
+            if isinstance(exc, ProviderDailyQuotaError):
+                self._circuit.open_until(exc.reset_at_epoch_seconds)
+            elif isinstance(exc, ProviderAuthError):
                 self._circuit.open_immediately()
             else:
                 self._circuit.record_failure()
@@ -224,6 +264,32 @@ class AIRouter:
             result.fallback_used = True
             result.fallback_reason = type(exc).__name__
             return result
+
+    def is_primary_result(self, result: GenerationResult) -> bool:
+        """Task 18.6 C2: True only when `result` was genuinely served by a
+        distinct primary provider (cloud), not a hardcoded provider-name
+        comparison -- lets a caller (a pipeline's `_call_router`) ask "was
+        this cloud-served" without hardcoding a name, and survives a future
+        provider rename. Excludes `AIMode.LOCAL`, where
+        `build_ai_router_from_settings` sets `primary` to the same object as
+        `fallback` as a placeholder ("never called when effective_mode is
+        LOCAL") -- a bare name comparison would otherwise wrongly return
+        `True` for an ordinary local-mode result."""
+        return self._mode is not AIMode.LOCAL and result.provider == self._primary.name
+
+    async def generate_on_fallback(self, request: GenerationRequest) -> GenerationResult:
+        """Task 18.6 item 4: force exactly one call on the local fallback,
+        bypassing the primary/circuit entirely -- used by a pipeline's call
+        wrapper for the one-shot local retry after a cloud-served result fails
+        JSON parse/validation, before the pipeline's own normal repair path.
+        Reuses `_run_with_budget`/`_attempt` unchanged, so it gets the same
+        per-call retry/backoff policy any other fallback-phase call gets.
+        Deliberately never touches `self._circuit`: a malformed-JSON content
+        failure says nothing about the primary provider's health (it
+        answered, on time, just with unparseable content), so it must never
+        count toward the circuit's failure threshold the way an infra error
+        does."""
+        return await self._run_with_budget(self._fallback, request, request.deadline_seconds)
 
     async def _run_with_budget(
         self, provider: Provider, request: GenerationRequest, budget_seconds: float
@@ -252,6 +318,13 @@ class AIRouter:
         while True:
             try:
                 result = await self._call(provider, request, attempt=attempt)
+            except ProviderDailyQuotaError:
+                # Task 18.6 (D27): no backoff -- a daily-cap 429 won't refill within
+                # any retry window, and each retry still costs a request against the
+                # same exhausted counter. `ProviderDailyQuotaError` IS a
+                # `ProviderRateLimitError` subtype (in `_TRANSIENT_ERRORS` below), so
+                # this clause must come first or it would silently get backoff-retried.
+                raise
             except _TRANSIENT_ERRORS as exc:
                 transient_errors.append(type(exc).__name__)
                 if attempt >= AI_TRANSIENT_MAX_ATTEMPTS:
