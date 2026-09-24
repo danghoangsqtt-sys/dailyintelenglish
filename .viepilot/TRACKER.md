@@ -2127,6 +2127,7 @@ PM review log:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-24 | **D26 (owner): no paid image generation; thumbnails generated locally on the RTX 3060; cartoon or modern 3D characters invented per lesson topic.** Supersedes D25's image source and the interim flat-illustration answer. `kadevin/ilab-conjure` was evaluated: a WebUI over paid cloud APIs, AGPLv3, inspiration only | No free cloud image model exists (Google's official pricing: free tier not available; OpenRouter: 0 free image models); free Apache-2.0 local models fit 12 GB |
 | 2026-09-24 | **D25 (owner, brainstorm `docs/brainstorm/session-2026-09-24.md`): thumbnail = A then B.** A: once Phase 18 is enabled, the cloud model writes the thumbnail text (no extra work). B: after Phase 18, a spike phase for per-episode backgrounds from a local image model on the RTX 3060, with Pillow text overlay and the 5 templates kept as fallback (ENH-012). The owner was also told that script speed/accuracy gains are not yet in production: Gate B-9 is the measured answer | The cloud primary frees the GPU (qwen loads only as fallback), making a local image model feasible on 12 GB; free and private |
 | 2026-09-23 | **Phase 17 closed** after re-gate 17.5 PASS (B1 5/5, owner config 4/4). **Phase 18 opened** (queued plan `e5661a1`, D21–D24) | Local qwen now completes reliably with repairs; Phase 18 adds the cloud primary with qwen as the proven fallback |
 | 2026-09-23 | **Gate B-8 → owner: fix now.** 17.4 ("under" budget direction reruns the full per-section path; the plain-repair branch is removed) + 17.5 short re-gate, before Phase 17 closes | B-8 passed its criterion, but the owner's own configuration regressed 2/2 → 1/2 on a defect the PM introduced in C4; the fix reuses existing code |
@@ -3123,4 +3124,4 @@ PM review log:
 | ENH-009 | Enhancement | Script repetition gate variable (B-5 5/5 → B-6 3/5) | medium | done (Phase 16, 16.4; B-7 rep 0.00%) |
 | ENH-010 | Enhancement | Global script word-count repair is not budget-aware (incl. mixed case) | medium | done (Phase 17) |
 | ENH-011 | Enhancement | OpenAI-compatible cloud provider (Nemotron via OpenRouter), local qwen fallback | medium | planned (Phase 18, queued after Phase 17) |
-| ENH-012 | Enhancement | Per-episode AI thumbnail backgrounds, local image model, templates as fallback | low | open (D25; after Phase 18) |
+| ENH-012 | Enhancement | Local AI thumbnails (cartoon/3D characters per topic), templates as fallback | low | open (D25+D26; after Phase 18) |
