@@ -1,6 +1,6 @@
 # Task 18.3 — Settings (key/URL/model, test connection), health fields, privacy note
 
-- **Status:** in_progress
+- **Status:** done
 - **Owner:** Coder
 - **Priority:** P1
 - **Dependency:** 18.2 accepted
@@ -16,6 +16,28 @@ See plan §3 "18.3", which is binding. Anything else → stop and ask the PM.
 The Settings API and page hold base URL, model and a write-only key (status: set + last 4 characters; clearable), a mode selector, a Test-connection button, and the privacy note. DB values override the `.env` defaults and take effect without a restart. The old `gemini_api_key` row is ignored. `/api/ai/health` adds `cloud_configured`, `cloud_model`, `effective_mode` and `circuit_open`, with no key material.
 
 ## Design decisions (Coder, doc-first — commit before code, PM approves)
+
+**PM review — APPROVED with three changes (C1, C2, C3), folded into this implementation, no
+re-approval needed:**
+- **C1:** dropped the regex-based HTTP-status extraction from `OpenAICompatProvider`'s exception
+  *message* text; instead `OpenAICompatProvider` (Task 18.1's own file, added to this task's
+  allowed files for this one attribute) now sets a structured `upstream_status: int | None`
+  instance attribute directly on every exception it raises (its own `_raise()` helper, extended
+  with a `cause` param along the way to keep `raise ... from exc` chaining clean). Deliberately
+  not `ProviderError.status_code` (that field already means the HTTP status *this app's own API*
+  returns, a different thing). `test_cloud_connection` reads `getattr(exc, "upstream_status",
+  None)`. One assertion per existing 18.1 error-mapping test now checks `upstream_status` too.
+- **C2:** `set_cloud_settings` validates fully before any write — `base_url` through
+  `validate_openai_compat_base_url` (https-or-loopback, no credentials), `model` non-empty after
+  `.strip()` and ≤ 200 chars, a provided `api_key` non-empty after `.strip()`. Invalid input
+  raises `ValidationError` (422 via the existing envelope) with nothing stored; tested explicitly
+  (prior values unchanged after a rejected update, both at the service and API layers).
+- **C3:** `GET /api/settings` gained `effective_mode`/`effective_reason` (reusing `router.
+  compute_effective_mode` via a new `settings_service.compute_effective_mode_and_reason`, never
+  touching key material) — the page shows the effective mode next to the selected one, with a
+  reason ("no API key configured" / "cloud disabled by DIE_AI_ALLOW_CLOUD") whenever they
+  differ. Browser test covers the PM's exact scenario: select cloud_first with no key → shows
+  effective Local with the "no API key" reason.
 
 **Amendment C folded in:** `app/core/config.py`/`.env.example` gain the one `AI_ALLOW_CLOUD`
 default flip (`False` → `True`) and its comment, nothing else in those files. `AI_MODE` stays
@@ -223,4 +245,82 @@ and the real DB untouched.
 
 ## Evidence
 
-_pending_
+- Design commit `d40e9c3` (APPROVED with C1/C2/C3), this implementation commit folds all three
+  in per "no re-approval needed."
+- **Code:**
+  - `app/core/config.py`: `AI_ALLOW_CLOUD` default `False` → `True` (plan Amendment C) and its
+    comment. `.env.example`: matching comment/default update.
+  - `app/services/ai/openai_compat_provider.py` (C1): `_raise()` helper gains `upstream_status`
+    (set on every raised exception) and a `cause` param (keeps `raise ... from exc` chaining
+    clean without a nested try/except). The `200`-with-error-body branch uses the body's own
+    numeric `code` as `upstream_status`, not the literal `200`.
+  - `app/services/settings_service.py`: rewritten — the old Gemini-key section (`get_/set_/
+    clear_gemini_api_key`, `load_gemini_api_key_from_db`, `_mask`, `GEMINI_API_KEY_SETTING`)
+    deleted; new cloud-settings section (`get_cloud_settings_status`, `set_cloud_settings` (C2
+    validation), `clear_cloud_api_key`, `load_cloud_settings_from_db`, `test_cloud_connection`,
+    `_last4`, `compute_effective_mode_and_reason` (C3)). The AI-mode section is unchanged from
+    18.2 except its docstrings' `set_cloud_settings` cross-references.
+  - `app/models/settings.py`: `GeminiApiKeyUpdate` deleted; `CloudSettingsUpdate`,
+    `CloudTestConnectionRequest` added (both deliberately unconstrained at the Pydantic level —
+    C2's real validation lives in the service).
+  - `app/api/settings.py`: rewritten — `PUT /api/settings` and `DELETE /api/settings/gemini-api-key`
+    removed; `PUT /api/settings/cloud`, `DELETE /api/settings/cloud/api-key`,
+    `POST /api/settings/cloud/test-connection` added; `GET /api/settings` merges cloud status +
+    ai-mode status + `allow_cloud` + `effective_mode`/`effective_reason` (C3).
+  - `app/api/ai_jobs.py` (health payload only): `cloud_configured`, `cloud_model`,
+    `effective_mode`, `circuit_open` added, reading `app.main._ai_circuit`/`compute_effective_mode`
+    via the same deferred-import pattern already used for `ai_worker`. No existing field changed.
+  - `app/main.py` (startup loading only): `load_gemini_api_key_from_db` → `load_cloud_settings_from_db`.
+  - `scripts/check_dependencies.py`: `check_env_file`/`PLACEHOLDER_API_KEY` removed;
+    `check_cloud_provider()` (informational) added; the `informational_checks` entry replaced.
+  - `frontend/pages/settings.html`: rebuilt from Task 14.7's read-only status line into the full
+    interactive form (mode radios, cloud fields, test-connection button, privacy note).
+  - `frontend/static/js/settings.js`: rewritten — load/render status, mode-change handler, save/
+    clear/test-connection handlers, effective-mode-with-reason rendering (C3).
+  - `frontend/static/js/api.js` (settings calls only): `updateAiMode`, `updateCloudSettings`,
+    `clearCloudApiKey`, `testCloudConnection` added.
+  - `frontend/static/css/style.css` (settings block only): one new `/* Settings (Task 18.3) */`
+    block — `.settings-field-label`, `.settings-input`, `.settings-radio-row`/`-option`,
+    `.settings-inline-note` (+ `.is-success`/`.is-error`). Page-specific layout stays in
+    `settings.html`'s own inline `<style>`, as designed.
+- **A real bug found and fixed during testing, not by the PM:** my first draft of
+  `tests/test_settings_browser.py` registered `page.route("**/api/settings*", handle)` — a
+  single trailing `*` only matches within one path segment (no `/`), so it silently missed nested
+  paths like `.../cloud/test-connection`. A debug script (`page.on("requestfailed"/"console")`,
+  read-only, no data written) showed the mock never intercepting that endpoint and the
+  unmocked request reaching the **real** OpenRouter API (a real `503` came back) — exactly what
+  "tests use MockTransport only, never the real API" forbids. Fixed to `"**/api/settings**"`
+  (trailing `**` matches across `/`), reverified with the same debug script showing both routes
+  intercepted, then confirmed no other test in the file had the same gap. Documented inline in
+  the test file's comment at the fixed line so this doesn't quietly regress.
+- **Amendment C ripple effect, found by the full suite, not anticipated in the design:**
+  flipping `AI_ALLOW_CLOUD`'s default broke `tests/test_ai_jobs_api.py::
+  test_ai_health_never_exposes_the_gemini_key`, which asserted `cloud_enabled is False` without
+  pinning the setting itself (implicitly relying on the old global default). Fixed within this
+  test file's explicitly-allowed "health assertions only" scope: pinned `AI_ALLOW_CLOUD=False`
+  explicitly (matching the fix already applied to every other settings-adjacent test file), and
+  extended the same test to also assert the new cloud key is never leaked (it's the key this
+  endpoint could plausibly expose now, not the retired Gemini one).
+- **Tests touched/added:** `tests/test_settings_service.py` (43 tests — old Gemini-key tests
+  replaced by cloud-settings/test-connection/effective-mode-and-reason coverage, plus
+  `test_old_gemini_key_functions_are_gone` as a real regression guard), `tests/test_settings_api.py`
+  (27 — cloud PUT/DELETE/test-connection routes, old routes now 404/405, C2's
+  "nothing stored on invalid input" at the API layer, C3's effective-mode/reason fields),
+  `tests/test_ai_health_api.py` (14 — 4 new health fields including a whitebox `circuit_open`
+  test via `app.main._ai_circuit`), `tests/test_check_dependencies.py` (5 — `check_cloud_provider`
+  replaces the deleted Gemini check's coverage), `tests/test_settings_browser.py` (7, new — page
+  load, save round-trip, clear, disabled-mode note, test-connection OK/error, and C3's exact
+  required scenario), `tests/test_openai_compat_provider.py` (29 — `upstream_status` assertion
+  added to every existing error-mapping test, C1), `tests/test_ai_jobs_api.py` (14 — one test
+  fixed per the ripple-effect note above).
+- **Full suite:** `./venv/Scripts/python.exe -m pytest -q` → **1045 passed** (1002 baseline after
+  Task 18.2 + N1). `ruff check .` → all checks passed. Real DB untouched — every test in this
+  task's scope uses the `db`/`client`/`live_server` fixtures (temp SQLite, isolated `DATA_DIR`),
+  never `data/app.db`.
+- **Revert-and-confirm-failure** (the key-safety test on `test_cloud_connection`, as specified):
+  temporarily added `"key": effective_key` to the returned error dict — both
+  `tests/test_settings_service.py::test_cloud_connection_never_includes_the_key_in_its_result`
+  and `tests/test_settings_api.py::test_post_test_connection_reports_error_class_and_status_never_the_key`
+  failed exactly as expected, showing the marker key in the assertion diff. Restored (`git diff`
+  on the file returned empty relative to the pre-revert state) → both tests, the full file(s),
+  and the full suite passed again.

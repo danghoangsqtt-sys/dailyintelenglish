@@ -76,7 +76,7 @@ async def lifespan(app: FastAPI):
         (settings.DATA_DIR / subdir).mkdir(parents=True, exist_ok=True)
 
     await init_db()
-    await settings_service.load_gemini_api_key_from_db(Database.instance().connection)
+    await settings_service.load_cloud_settings_from_db(Database.instance().connection)
     await settings_service.load_ai_mode_from_db(Database.instance().connection)
     app_state["ffmpeg_ok"] = await check_ffmpeg()
     app_state["gpu_info"] = await get_gpu_info()

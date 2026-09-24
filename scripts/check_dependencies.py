@@ -97,22 +97,21 @@ def check_gpu() -> tuple[bool, str]:
         return False, f"nvidia-smi found but failed to run: {exc}"
 
 
-PLACEHOLDER_API_KEY = "your_gemini_api_key_here"
+def check_cloud_provider() -> tuple[bool, str]:
+    """Report whether the OpenAI-compatible cloud provider (Task 18.3, ENH-011)
+    is configured -- informational only, same as the Gemini check it replaces:
+    a fresh install runs local-only by default (AI_MODE=local), so this is
+    never required, only useful to know before switching Settings to cloud_first.
 
-
-def check_env_file() -> tuple[bool, str]:
-    """Verify DIE_GEMINI_API_KEY resolves to a real value via settings.
-
-    settings.GEMINI_API_KEY already reflects the process environment first,
-    falling back to `.env` (see app.core.config.Settings), so this checks the
-    same source of truth the app itself uses instead of re-parsing `.env`.
+    settings.OPENAI_COMPAT_API_KEY/_MODEL already reflect the process
+    environment first, falling back to `.env` then any DB-stored Settings-page
+    value (see app.core.config.Settings / app.services.settings_service), so
+    this checks the same source of truth the app itself uses instead of
+    re-parsing `.env`.
     """
-    api_key = settings.GEMINI_API_KEY
-    if api_key and api_key != PLACEHOLDER_API_KEY:
-        return True, "DIE_GEMINI_API_KEY is set"
-    if not (PROJECT_ROOT / ".env").exists():
-        return False, "DIE_GEMINI_API_KEY not set (no env var, and .env not found — copy .env.example to .env)"
-    return False, "DIE_GEMINI_API_KEY is empty or still a placeholder"
+    if settings.OPENAI_COMPAT_API_KEY and settings.OPENAI_COMPAT_MODEL:
+        return True, f"configured (model: {settings.OPENAI_COMPAT_MODEL})"
+    return False, "not configured -- set via the Settings page, or DIE_OPENAI_COMPAT_API_KEY/_MODEL in .env"
 
 
 def check_omnivoice_model() -> tuple[bool, str]:
@@ -143,11 +142,11 @@ def check_data_dirs() -> tuple[bool, str]:
 def main() -> int:
     """Run all checks and print a GREEN/RED report; exit 1 if any required check fails.
 
-    Task 14.7 (Amendment D): Ollama + the configured model are now required
-    (local-only release path). The Gemini API key becomes informational only
-    -- still reported, never failing the overall check -- since it's now
-    just the unsupported cloud-rollback path (ADR-001 A2), not something a
-    normal install needs.
+    Task 14.7 (Amendment D): Ollama + the configured model are required
+    (local-only is always the fallback and default AI_MODE). The cloud
+    provider (Task 18.3, ENH-011) is informational only -- still reported,
+    never failing the overall check -- since AI_MODE defaults to "local"
+    regardless of whether it's configured.
     """
     required_checks = [
         ("Python >= 3.11", check_python_version),
@@ -158,7 +157,7 @@ def main() -> int:
         ("data/ directories", check_data_dirs),
     ]
     informational_checks = [
-        (".env / GEMINI_API_KEY (optional — cloud rollback only, see README)", check_env_file),
+        ("Cloud provider (optional — see Settings page)", check_cloud_provider),
     ]
 
     all_passed = True

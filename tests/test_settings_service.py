@@ -1,108 +1,307 @@
-"""Unit tests for settings_service.py (Task 12.1).
+"""Unit tests for settings_service.py (Task 12.1; Task 18.3 cloud settings).
 
-config.settings.GEMINI_API_KEY / config.ENV_GEMINI_API_KEY are a shared,
-process-wide singleton mutated in place by this service -- each test uses
-monkeypatch.setattr to seed a known starting value, which pytest's monkeypatch
-correctly restores at teardown even though the service reassigns the attribute
-directly afterward (monkeypatch restores whatever value it originally recorded,
-regardless of how the attribute changed in between).
+config.settings.OPENAI_COMPAT_API_KEY / config.ENV_OPENAI_COMPAT_API_KEY are a
+shared, process-wide singleton mutated in place by this service -- each test
+uses monkeypatch.setattr to seed a known starting value, which pytest's
+monkeypatch correctly restores at teardown even though the service reassigns
+the attribute directly afterward (monkeypatch restores whatever value it
+originally recorded, regardless of how the attribute changed in between).
+
+The old Gemini-key settings surface (`get_gemini_api_key_status`,
+`set_gemini_api_key`, `clear_gemini_api_key`, `load_gemini_api_key_from_db`,
+`_mask`) was retired by Task 18.3, not just left untested -- see
+`test_old_gemini_key_functions_are_gone` below.
 """
 
+import httpx
 import pytest
 
 from app.core import config
 from app.core.exceptions import ValidationError
 from app.services import settings_service
+from app.services.ai import openai_compat_provider as openai_compat_provider_module
+
+
+def _install_mock_transport(monkeypatch, module, handler) -> None:
+    """Same pattern as tests/test_openai_compat_provider.py -- routes
+    `module.httpx.AsyncClient` through a MockTransport, never the real network."""
+    transport = httpx.MockTransport(handler)
+    real_async_client = httpx.AsyncClient
+
+    def _factory(*args, **kwargs):
+        kwargs["transport"] = transport
+        return real_async_client(*args, **kwargs)
+
+    monkeypatch.setattr(module.httpx, "AsyncClient", _factory)
 
 
 @pytest.fixture(autouse=True)
-def _isolated_gemini_key(monkeypatch):
-    monkeypatch.setattr(config.settings, "GEMINI_API_KEY", "env-fallback-key-0000")
-    monkeypatch.setattr(config, "ENV_GEMINI_API_KEY", "env-fallback-key-0000")
+def _isolated_cloud_settings(monkeypatch):
+    monkeypatch.setattr(config.settings, "OPENAI_COMPAT_API_KEY", "env-fallback-key-0000")
+    monkeypatch.setattr(config, "ENV_OPENAI_COMPAT_API_KEY", "env-fallback-key-0000")
+    monkeypatch.setattr(config.settings, "OPENAI_COMPAT_BASE_URL", "https://openrouter.ai/api/v1")
+    monkeypatch.setattr(config.settings, "OPENAI_COMPAT_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
 
 
-async def test_status_reports_env_source_when_nothing_stored(db):
-    status = await settings_service.get_gemini_api_key_status(db)
-    assert status["source"] == "env"
-    assert status["masked_key"] == "env-fa••••0000"
+def test_old_gemini_key_functions_are_gone():
+    """Task 18.3 retires the old Gemini-key settings surface entirely (plan:
+    "removed from the UI and API"), not just stops calling it -- a real
+    regression guard, not "no longer tested"."""
+    for name in (
+        "get_gemini_api_key_status",
+        "set_gemini_api_key",
+        "clear_gemini_api_key",
+        "load_gemini_api_key_from_db",
+        "_mask",
+        "GEMINI_API_KEY_SETTING",
+    ):
+        assert not hasattr(settings_service, name), name
 
 
-async def test_status_reports_none_when_no_env_and_nothing_stored(db, monkeypatch):
-    monkeypatch.setattr(config.settings, "GEMINI_API_KEY", "")
-    status = await settings_service.get_gemini_api_key_status(db)
-    assert status == {"source": "none", "masked_key": None}
+async def test_cloud_status_reports_env_source_when_nothing_stored(db):
+    status = await settings_service.get_cloud_settings_status(db)
+    assert status["cloud_source"] == "env"
+    assert status["cloud_configured"] is True
+    assert status["cloud_last4"] == settings_service._last4("env-fallback-key-0000")
+    assert status["cloud_base_url"] == "https://openrouter.ai/api/v1"
+    assert status["cloud_model"] == "nvidia/nemotron-3-super-120b-a12b:free"
 
 
-async def test_set_key_persists_and_applies_immediately(db):
-    status = await settings_service.set_gemini_api_key(db, "AIzaSyRealLookingTestKey123")
-    assert status["source"] == "database"
-    assert status["masked_key"] == "AIzaSy••••y123"
-    # Applied immediately -- no restart needed, exactly what services import and read.
-    assert config.settings.GEMINI_API_KEY == "AIzaSyRealLookingTestKey123"
+async def test_cloud_status_reports_none_when_no_env_and_nothing_stored(db, monkeypatch):
+    monkeypatch.setattr(config.settings, "OPENAI_COMPAT_API_KEY", "")
+    status = await settings_service.get_cloud_settings_status(db)
+    assert status["cloud_source"] == "none"
+    assert status["cloud_configured"] is False
+    assert status["cloud_last4"] is None
 
 
-async def test_set_key_strips_surrounding_whitespace(db):
-    status = await settings_service.set_gemini_api_key(db, "  spaced-key-value  ")
-    assert config.settings.GEMINI_API_KEY == "spaced-key-value"
-    assert status["masked_key"] == "spaced••••alue"
+async def test_set_cloud_settings_persists_and_applies_immediately(db):
+    status = await settings_service.set_cloud_settings(
+        db, "https://custom.example.com/v1", "some/model:free", "AIzaSyRealLookingTestKey123"
+    )
+    assert status["cloud_source"] == "database"
+    assert status["cloud_last4"] == settings_service._last4("AIzaSyRealLookingTestKey123")
+    assert status["cloud_base_url"] == "https://custom.example.com/v1"
+    assert status["cloud_model"] == "some/model:free"
+    # Applied immediately -- no restart needed, exactly what the router builder reads.
+    assert config.settings.OPENAI_COMPAT_BASE_URL == "https://custom.example.com/v1"
+    assert config.settings.OPENAI_COMPAT_MODEL == "some/model:free"
+    assert config.settings.OPENAI_COMPAT_API_KEY == "AIzaSyRealLookingTestKey123"
 
 
-async def test_set_key_rejects_empty_or_whitespace_only(db):
+async def test_set_cloud_settings_strips_surrounding_whitespace_from_model(db):
+    status = await settings_service.set_cloud_settings(
+        db, "https://openrouter.ai/api/v1", "  spaced/model  ", "a-key"
+    )
+    assert status["cloud_model"] == "spaced/model"
+    assert config.settings.OPENAI_COMPAT_MODEL == "spaced/model"
+
+
+async def test_set_cloud_settings_none_api_key_leaves_the_stored_key_unchanged(db):
+    await settings_service.set_cloud_settings(db, "https://openrouter.ai/api/v1", "model-a", "first-key")
+    status = await settings_service.set_cloud_settings(db, "https://openrouter.ai/api/v1", "model-b", None)
+    assert status["cloud_model"] == "model-b"
+    assert status["cloud_last4"] == settings_service._last4("first-key")
+    assert config.settings.OPENAI_COMPAT_API_KEY == "first-key"
+
+
+async def test_set_cloud_settings_rejects_empty_model(db):
     with pytest.raises(ValidationError):
-        await settings_service.set_gemini_api_key(db, "   ")
+        await settings_service.set_cloud_settings(db, "https://openrouter.ai/api/v1", "   ", "a-key")
 
 
-async def test_set_key_overwrites_a_previously_stored_key(db):
-    await settings_service.set_gemini_api_key(db, "first-stored-key-111")
-    status = await settings_service.set_gemini_api_key(db, "second-stored-key-222")
-    assert status["masked_key"] == "second••••-222"
-    assert config.settings.GEMINI_API_KEY == "second-stored-key-222"
+async def test_set_cloud_settings_rejects_model_over_200_chars(db):
+    with pytest.raises(ValidationError):
+        await settings_service.set_cloud_settings(db, "https://openrouter.ai/api/v1", "m" * 201, "a-key")
 
 
-async def test_clear_reverts_to_original_env_value(db):
-    await settings_service.set_gemini_api_key(db, "temporary-stored-key")
-    assert config.settings.GEMINI_API_KEY == "temporary-stored-key"
-
-    status = await settings_service.clear_gemini_api_key(db)
-
-    assert config.settings.GEMINI_API_KEY == "env-fallback-key-0000"
-    assert status["source"] == "env"
-    assert status["masked_key"] == "env-fa••••0000"
+async def test_set_cloud_settings_rejects_whitespace_only_api_key(db):
+    with pytest.raises(ValidationError):
+        await settings_service.set_cloud_settings(db, "https://openrouter.ai/api/v1", "model", "   ")
 
 
-async def test_clear_when_nothing_was_ever_stored_is_a_noop(db):
-    status = await settings_service.clear_gemini_api_key(db)
-    assert config.settings.GEMINI_API_KEY == "env-fallback-key-0000"
-    assert status["source"] == "env"
+@pytest.mark.parametrize(
+    "bad_base_url",
+    [
+        "http://example.com/v1",  # http, not loopback
+        "http://user:pass@openrouter.ai/api/v1",  # credentials
+    ],
+)
+async def test_set_cloud_settings_rejects_an_invalid_base_url(db, bad_base_url):
+    """PM review C2: goes through validate_openai_compat_base_url."""
+    with pytest.raises(ValidationError):
+        await settings_service.set_cloud_settings(db, bad_base_url, "model", "a-key")
 
 
-async def test_load_from_db_applies_a_stored_key_over_the_env_default(db):
-    await settings_service.set_gemini_api_key(db, "stored-before-restart")
-    # Simulate a fresh process: reset the in-memory singleton back to the env value,
+async def test_set_cloud_settings_invalid_input_stores_nothing(db):
+    """PM review C2: "nothing is stored" -- the prior values are unchanged
+    after a rejected update, not partially applied."""
+    await settings_service.set_cloud_settings(db, "https://openrouter.ai/api/v1", "good-model", "good-key")
+
+    with pytest.raises(ValidationError):
+        await settings_service.set_cloud_settings(db, "http://not-loopback.example.com/v1", "new-model", "new-key")
+
+    status = await settings_service.get_cloud_settings_status(db)
+    assert status["cloud_base_url"] == "https://openrouter.ai/api/v1"
+    assert status["cloud_model"] == "good-model"
+    assert status["cloud_last4"] == settings_service._last4("good-key")
+    assert config.settings.OPENAI_COMPAT_BASE_URL == "https://openrouter.ai/api/v1"
+    assert config.settings.OPENAI_COMPAT_MODEL == "good-model"
+    assert config.settings.OPENAI_COMPAT_API_KEY == "good-key"
+
+
+async def test_set_cloud_settings_overwrites_a_previously_stored_key(db):
+    await settings_service.set_cloud_settings(db, "https://openrouter.ai/api/v1", "model", "first-stored-key-111")
+    status = await settings_service.set_cloud_settings(
+        db, "https://openrouter.ai/api/v1", "model", "second-stored-key-222"
+    )
+    assert status["cloud_last4"] == settings_service._last4("second-stored-key-222")
+    assert config.settings.OPENAI_COMPAT_API_KEY == "second-stored-key-222"
+
+
+async def test_clear_cloud_api_key_reverts_to_original_env_value(db):
+    await settings_service.set_cloud_settings(db, "https://openrouter.ai/api/v1", "model", "temporary-stored-key")
+    assert config.settings.OPENAI_COMPAT_API_KEY == "temporary-stored-key"
+
+    status = await settings_service.clear_cloud_api_key(db)
+
+    assert config.settings.OPENAI_COMPAT_API_KEY == "env-fallback-key-0000"
+    assert status["cloud_source"] == "env"
+    assert status["cloud_last4"] == settings_service._last4("env-fallback-key-0000")
+
+
+async def test_clear_cloud_api_key_when_nothing_was_ever_stored_is_a_noop(db):
+    status = await settings_service.clear_cloud_api_key(db)
+    assert config.settings.OPENAI_COMPAT_API_KEY == "env-fallback-key-0000"
+    assert status["cloud_source"] == "env"
+
+
+async def test_clear_cloud_api_key_leaves_base_url_and_model_untouched(db):
+    await settings_service.set_cloud_settings(db, "https://custom.example.com/v1", "custom-model", "a-key")
+    await settings_service.clear_cloud_api_key(db)
+    assert config.settings.OPENAI_COMPAT_BASE_URL == "https://custom.example.com/v1"
+    assert config.settings.OPENAI_COMPAT_MODEL == "custom-model"
+
+
+async def test_load_cloud_settings_from_db_applies_stored_values_over_the_env_default(db):
+    await settings_service.set_cloud_settings(
+        db, "https://custom.example.com/v1", "custom-model", "stored-before-restart"
+    )
+    # Simulate a fresh process: reset the in-memory singleton back to the env values,
     # as it would be right after Settings() is constructed at import time.
-    config.settings.GEMINI_API_KEY = "env-fallback-key-0000"
+    config.settings.OPENAI_COMPAT_BASE_URL = "https://openrouter.ai/api/v1"
+    config.settings.OPENAI_COMPAT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+    config.settings.OPENAI_COMPAT_API_KEY = "env-fallback-key-0000"
 
-    await settings_service.load_gemini_api_key_from_db(db)
+    await settings_service.load_cloud_settings_from_db(db)
 
-    assert config.settings.GEMINI_API_KEY == "stored-before-restart"
-
-
-async def test_load_from_db_leaves_env_value_untouched_when_nothing_stored(db):
-    await settings_service.load_gemini_api_key_from_db(db)
-    assert config.settings.GEMINI_API_KEY == "env-fallback-key-0000"
-
-
-def test_mask_fully_masks_short_keys():
-    from app.services.settings_service import _mask
-
-    assert _mask("short") == "•••••"
-    assert _mask("1234567890") == "•" * 10
+    assert config.settings.OPENAI_COMPAT_BASE_URL == "https://custom.example.com/v1"
+    assert config.settings.OPENAI_COMPAT_MODEL == "custom-model"
+    assert config.settings.OPENAI_COMPAT_API_KEY == "stored-before-restart"
 
 
-def test_mask_shows_prefix_and_suffix_for_longer_keys():
-    from app.services.settings_service import _mask
+async def test_load_cloud_settings_from_db_leaves_env_values_untouched_when_nothing_stored(db):
+    await settings_service.load_cloud_settings_from_db(db)
+    assert config.settings.OPENAI_COMPAT_BASE_URL == "https://openrouter.ai/api/v1"
+    assert config.settings.OPENAI_COMPAT_MODEL == "nvidia/nemotron-3-super-120b-a12b:free"
+    assert config.settings.OPENAI_COMPAT_API_KEY == "env-fallback-key-0000"
 
-    assert _mask("AIzaSyABCDEFGHIJKLMNOP1234") == "AIzaSy••••1234"
+
+def test_last4_fully_masks_short_keys():
+    assert settings_service._last4("abcd") == "••••"
+    assert settings_service._last4("ab") == "••"
+
+
+def test_last4_shows_only_the_last_4_characters_for_longer_keys():
+    key = "AIzaSyABCDEFGHIJKLMNOP1234"
+    assert settings_service._last4(key) == "•" * (len(key) - 4) + "1234"
+
+
+# --- test_cloud_connection (Task 18.3, PM review C1) ------------------------------------
+
+
+async def test_cloud_connection_success(monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    result = await settings_service.test_cloud_connection("https://openrouter.ai/api/v1", "a-model", "a-key")
+    assert result == {"ok": True}
+
+
+async def test_cloud_connection_failure_reports_error_class_and_status(monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"error": {"message": "invalid key", "code": 401}})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    result = await settings_service.test_cloud_connection("https://openrouter.ai/api/v1", "a-model", "bad-key")
+    assert result == {"ok": False, "error": "ProviderAuthError", "status": 401}
+
+
+async def test_cloud_connection_never_includes_the_key_in_its_result(monkeypatch):
+    marker = "SECRET_TEST_CONNECTION_KEY_MARKER"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"error": {"message": f"invalid key: {marker}", "code": 401}})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    result = await settings_service.test_cloud_connection("https://openrouter.ai/api/v1", "a-model", marker)
+    assert marker not in str(result)
+
+
+async def test_cloud_connection_falls_back_to_currently_effective_values_when_omitted(monkeypatch):
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json as json_module
+
+        captured["json"] = json_module.loads(request.content)
+        captured["authorization"] = request.headers["authorization"]
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    result = await settings_service.test_cloud_connection(None, None, None)
+    assert result == {"ok": True}
+    assert captured["json"]["model"] == "nvidia/nemotron-3-super-120b-a12b:free"
+    assert captured["authorization"] == "Bearer env-fallback-key-0000"
+
+
+async def test_cloud_connection_invalid_base_url_returns_ok_false_not_an_exception():
+    result = await settings_service.test_cloud_connection("http://not-loopback.example.com", "model", "key")
+    assert result["ok"] is False
+    assert result["error"] == "ValueError"
+    assert result["status"] is None
+
+
+# --- compute_effective_mode_and_reason (Task 18.3, PM review C3) ------------------------
+
+
+def test_effective_mode_matches_when_local():
+    mode, reason = settings_service.compute_effective_mode_and_reason("local")
+    assert mode == "local"
+    assert reason is None
+
+
+def test_effective_mode_matches_when_cloud_first_fully_configured(monkeypatch):
+    monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", True)
+    mode, reason = settings_service.compute_effective_mode_and_reason("cloud_first")
+    assert mode == "cloud_first"
+    assert reason is None
+
+
+def test_effective_mode_reason_is_no_api_key_configured(monkeypatch):
+    monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", True)
+    monkeypatch.setattr(config.settings, "OPENAI_COMPAT_API_KEY", "")
+    mode, reason = settings_service.compute_effective_mode_and_reason("cloud_first")
+    assert mode == "local"
+    assert reason == "no API key configured"
+
+
+def test_effective_mode_reason_is_cloud_disabled_by_allow_cloud(monkeypatch):
+    monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", False)
+    mode, reason = settings_service.compute_effective_mode_and_reason("cloud_first")
+    assert mode == "local"
+    assert reason == "cloud disabled by DIE_AI_ALLOW_CLOUD"
 
 
 # --- AI mode (Task 13.6) --------------------------------------------------------------

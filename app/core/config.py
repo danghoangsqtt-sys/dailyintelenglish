@@ -59,10 +59,14 @@ class Settings(BaseSettings):
     # ("gemini"/"hybrid", from before Phase 18) is migrated once, below.
     # `set_ai_mode` (app/services/settings_service.py) enforces the AI_ALLOW_CLOUD gate.
     AI_MODE: str = "local"
-    # Task 14.7: the only switch that re-enables the dormant cloud path. Default
-    # false so cloud is never re-enabled by accident -- explicit config, not a
-    # migration (ADR-001 A2).
-    AI_ALLOW_CLOUD: bool = False
+    # Task 14.7 introduced this as the only switch that re-enables cloud, default
+    # false. Phase 18/Task 18.3, plan Amendment C: default flips to true -- without
+    # it, the Settings page could never enable cloud, since `set_ai_mode` enforces
+    # this gate. AI_MODE still defaults to "local" (unchanged, above): the owner
+    # opts into cloud_first from Settings, so a user with no key configured is
+    # unaffected either way (invariant 32). Explicit `DIE_AI_ALLOW_CLOUD=false`
+    # still fully disables cloud for anyone who wants the old default back.
+    AI_ALLOW_CLOUD: bool = True
     OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
     OLLAMA_MODEL: str = "qwen3.5:9b"
     OLLAMA_NUM_CTX: int = 16384

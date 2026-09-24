@@ -21,6 +21,10 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "AI_MODE", "cloud")
     # Task 14.7: matches the real default (False) unless a test explicitly opts in.
     monkeypatch.setattr(settings, "AI_ALLOW_CLOUD", False)
+    # Task 18.3: isolate the cloud settings this health payload now also reads,
+    # so these tests don't depend on (or leak) this machine's real .env values.
+    monkeypatch.setattr(settings, "OPENAI_COMPAT_API_KEY", "test-cloud-key")
+    monkeypatch.setattr(settings, "OPENAI_COMPAT_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
     with TestClient(app) as test_client:
         yield test_client
 
@@ -68,9 +72,65 @@ def test_health_response_has_no_extra_undeclared_fields(client):
         "model_digest",
         "cloud_enabled",
         "worker_alive",
+        "cloud_configured",
+        "cloud_model",
+        "effective_mode",
+        "circuit_open",
     }
     response = client.get("/api/ai/health")
     assert set(response.json()["data"].keys()) == expected_keys
+
+
+# --- Task 18.3: cloud_configured, cloud_model, effective_mode, circuit_open ------------
+
+
+def test_health_reports_cloud_configured_true_when_key_and_model_present(client):
+    response = client.get("/api/ai/health")
+    assert response.json()["data"]["cloud_configured"] is True
+
+
+def test_health_reports_cloud_configured_false_when_no_key(client, monkeypatch):
+    monkeypatch.setattr(settings, "OPENAI_COMPAT_API_KEY", "")
+    response = client.get("/api/ai/health")
+    assert response.json()["data"]["cloud_configured"] is False
+
+
+def test_health_reports_cloud_model(client):
+    response = client.get("/api/ai/health")
+    assert response.json()["data"]["cloud_model"] == "nvidia/nemotron-3-super-120b-a12b:free"
+
+
+def test_health_effective_mode_collapses_to_local_without_allow_cloud(client):
+    # AI_ALLOW_CLOUD is False (the client fixture's default), AI_MODE is "cloud".
+    response = client.get("/api/ai/health")
+    assert response.json()["data"]["effective_mode"] == "local"
+
+
+def test_health_effective_mode_matches_when_fully_configured(client, monkeypatch):
+    monkeypatch.setattr(settings, "AI_ALLOW_CLOUD", True)
+    monkeypatch.setattr(settings, "AI_MODE", "cloud_first")
+    response = client.get("/api/ai/health")
+    assert response.json()["data"]["effective_mode"] == "cloud_first"
+
+
+def test_health_reports_circuit_open_false_by_default(client):
+    response = client.get("/api/ai/health")
+    assert response.json()["data"]["circuit_open"] is False
+
+
+def test_health_reports_circuit_open_true_when_the_breaker_is_open(client):
+    """Whitebox: forces `app.main`'s app-lifetime `_ai_circuit` open directly,
+    matching this file's existing pattern of reaching into `app.main`'s real
+    singletons (see `test_health_reports_worker_alive_false_...` below) rather
+    than trying to actually exhaust the primary provider through a live job."""
+    from app.main import _ai_circuit
+
+    _ai_circuit.open_immediately()
+    try:
+        response = client.get("/api/ai/health")
+        assert response.json()["data"]["circuit_open"] is True
+    finally:
+        _ai_circuit.record_success()
 
 
 def test_health_reports_worker_alive_true_during_normal_operation(client):

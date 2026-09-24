@@ -112,7 +112,14 @@ async def ai_health() -> dict:
     # Deferred import (Task 16.1, BUG-022): app.main constructs the real AIWorker
     # singleton after importing this module to build its router, so a top-level
     # import here would be circular. By request time app.main has finished loading.
-    from app.main import ai_worker
+    # _ai_circuit (Task 18.3) is imported the same way, for the same reason.
+    from app.main import _ai_circuit, ai_worker
+    from app.services.ai.contracts import AIMode
+    from app.services.ai.router import compute_effective_mode
+
+    effective_mode = compute_effective_mode(
+        AIMode(settings.AI_MODE), settings.AI_ALLOW_CLOUD, settings.OPENAI_COMPAT_API_KEY, settings.OPENAI_COMPAT_MODEL
+    )
 
     return ok(
         {
@@ -123,6 +130,10 @@ async def ai_health() -> dict:
             "model_digest": model_digest,
             "cloud_enabled": settings.AI_ALLOW_CLOUD,
             "worker_alive": ai_worker.is_alive,
+            "cloud_configured": bool(settings.OPENAI_COMPAT_API_KEY and settings.OPENAI_COMPAT_MODEL),
+            "cloud_model": settings.OPENAI_COMPAT_MODEL,
+            "effective_mode": effective_mode.value,
+            "circuit_open": _ai_circuit.is_open(),
         },
         started_at=started_at,
     )

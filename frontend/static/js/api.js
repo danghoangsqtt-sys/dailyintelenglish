@@ -119,6 +119,19 @@ const Api = (() => {
       request(`/api/projects/${projectId}/speakers/${speakerId}/avatar`, { method: "DELETE" }),
     health: () => request("/health"),
     getSettings: () => request("/api/settings"),
+    updateAiMode: (aiMode) =>
+      request("/api/settings/ai-mode", { method: "PUT", body: JSON.stringify({ ai_mode: aiMode }) }),
+    updateCloudSettings: (baseUrl, model, apiKey) =>
+      request("/api/settings/cloud", {
+        method: "PUT",
+        body: JSON.stringify({ base_url: baseUrl, model, api_key: apiKey || null }),
+      }),
+    clearCloudApiKey: () => request("/api/settings/cloud/api-key", { method: "DELETE" }),
+    testCloudConnection: (baseUrl, model, apiKey) =>
+      request("/api/settings/cloud/test-connection", {
+        method: "POST",
+        body: JSON.stringify({ base_url: baseUrl || null, model: model || null, api_key: apiKey || null }),
+      }),
     // Durable AI jobs (Phase 13, Task 13.6) -- see frontend/static/js/ai_job.js
     // for the create/poll/resume lifecycle built on top of these.
     createScriptJob: (projectId) =>

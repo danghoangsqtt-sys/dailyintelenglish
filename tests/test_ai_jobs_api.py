@@ -155,9 +155,16 @@ def test_ai_health_never_exposes_the_gemini_key(client, monkeypatch):
     # regardless of whether a real Ollama server happens to be running on this machine.
     monkeypatch.setattr(settings, "OLLAMA_BASE_URL", "http://127.0.0.1:1")
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "super-secret-key-value")
+    # Task 18.3, plan Amendment C flipped the real AI_ALLOW_CLOUD default to
+    # true -- pinned false here so this assertion stays deterministic rather
+    # than silently depending on that default.
+    monkeypatch.setattr(settings, "AI_ALLOW_CLOUD", False)
+    # Task 18.3: the cloud key is the key this endpoint could plausibly leak now.
+    monkeypatch.setattr(settings, "OPENAI_COMPAT_API_KEY", "super-secret-cloud-key-value")
     response = client.get("/api/ai/health")
     assert response.status_code == 200
     assert "super-secret-key-value" not in response.text
+    assert "super-secret-cloud-key-value" not in response.text
     data = response.json()["data"]
     assert data["cloud_enabled"] is False
     assert "mode" in data

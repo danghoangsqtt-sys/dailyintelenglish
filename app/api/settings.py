@@ -1,14 +1,15 @@
-"""App-level settings routes (Task 12.1) -- currently just the Gemini API key."""
+"""App-level settings routes (Task 12.1; Task 18.3 cloud provider settings)."""
 
 import time
 
 import aiosqlite
 from fastapi import APIRouter, Depends
 
+from app.core.config import settings
 from app.db.transactions import write_transaction
 from app.core.responses import ok
 from app.db.database import get_db
-from app.models.settings import AIModeUpdate, GeminiApiKeyUpdate
+from app.models.settings import AIModeUpdate, CloudSettingsUpdate, CloudTestConnectionRequest
 from app.services import settings_service
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
@@ -16,14 +17,29 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 @router.get("")
 async def get_settings(db: aiosqlite.Connection = Depends(get_db)) -> dict:
-    """Report the Gemini API key's status and the current AI_MODE.
+    """Report the cloud provider's status and the current AI_MODE.
 
-    Never returns the raw key -- see settings_service.get_gemini_api_key_status.
+    Never returns the raw cloud key -- see settings_service.get_cloud_settings_status.
+    `allow_cloud` (Task 18.3, PM review C3) and `effective_mode`/`effective_reason`
+    let the Settings page show, and explain, when the selected mode differs from
+    what actually runs.
     """
     started_at = time.perf_counter()
-    gemini_status = await settings_service.get_gemini_api_key_status(db)
+    cloud_status = await settings_service.get_cloud_settings_status(db)
     ai_mode_status = await settings_service.get_ai_mode_status(db)
-    return ok({**gemini_status, **ai_mode_status}, started_at=started_at)
+    effective_mode, effective_reason = settings_service.compute_effective_mode_and_reason(
+        ai_mode_status["ai_mode"]
+    )
+    return ok(
+        {
+            **cloud_status,
+            **ai_mode_status,
+            "allow_cloud": settings.AI_ALLOW_CLOUD,
+            "effective_mode": effective_mode,
+            "effective_reason": effective_reason,
+        },
+        started_at=started_at,
+    )
 
 
 @router.put("/ai-mode")
@@ -35,21 +51,32 @@ async def update_ai_mode(payload: AIModeUpdate, db: aiosqlite.Connection = Depen
     return ok(status, started_at=started_at)
 
 
-@router.put("")
-async def update_gemini_api_key(
-    payload: GeminiApiKeyUpdate, db: aiosqlite.Connection = Depends(get_db)
+@router.put("/cloud")
+async def update_cloud_settings(
+    payload: CloudSettingsUpdate, db: aiosqlite.Connection = Depends(get_db)
 ) -> dict:
-    """Save a new Gemini API key -- takes effect immediately, no restart needed."""
+    """Save the cloud provider's base URL/model, and (optionally) its API key --
+    takes effect immediately, no restart needed."""
     started_at = time.perf_counter()
     async with write_transaction(db):
-        status = await settings_service.set_gemini_api_key(db, payload.gemini_api_key)
+        status = await settings_service.set_cloud_settings(
+            db, payload.base_url, payload.model, payload.api_key
+        )
     return ok(status, started_at=started_at)
 
 
-@router.delete("/gemini-api-key")
-async def clear_gemini_api_key(db: aiosqlite.Connection = Depends(get_db)) -> dict:
-    """Remove the stored key and revert to the original .env/environment value."""
+@router.delete("/cloud/api-key")
+async def clear_cloud_api_key(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Remove the stored cloud API key and revert to the original .env/environment value."""
     started_at = time.perf_counter()
     async with write_transaction(db):
-        status = await settings_service.clear_gemini_api_key(db)
+        status = await settings_service.clear_cloud_api_key(db)
     return ok(status, started_at=started_at)
+
+
+@router.post("/cloud/test-connection")
+async def test_cloud_connection(payload: CloudTestConnectionRequest) -> dict:
+    """One real, tiny probe call to the cloud provider -- never persists anything."""
+    started_at = time.perf_counter()
+    result = await settings_service.test_cloud_connection(payload.base_url, payload.model, payload.api_key)
+    return ok(result, started_at=started_at)

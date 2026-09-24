@@ -148,8 +148,11 @@ async def test_openai_compat_provider_200_with_error_body_is_unavailable(monkeyp
 
     _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
     provider = _provider()
-    with pytest.raises(ProviderUnavailableError):
+    with pytest.raises(ProviderUnavailableError) as exc_info:
         await provider.generate(_request())
+    # PM review C1: for a 200-with-error body, upstream_status is the body's own
+    # numeric code (503), not the literal transport-level 200.
+    assert exc_info.value.upstream_status == 503
 
 
 @pytest.mark.asyncio
@@ -163,8 +166,9 @@ async def test_openai_compat_provider_200_with_error_body_code_429_is_rate_limit
 
     _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
     provider = _provider()
-    with pytest.raises(ProviderRateLimitError):
+    with pytest.raises(ProviderRateLimitError) as exc_info:
         await provider.generate(_request())
+    assert exc_info.value.upstream_status == 429
 
 
 @pytest.mark.asyncio
@@ -174,8 +178,9 @@ async def test_openai_compat_provider_http_429_is_rate_limit(monkeypatch):
 
     _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
     provider = _provider()
-    with pytest.raises(ProviderRateLimitError):
+    with pytest.raises(ProviderRateLimitError) as exc_info:
         await provider.generate(_request())
+    assert exc_info.value.upstream_status == 429
 
 
 @pytest.mark.parametrize("status", [500, 502, 503])
@@ -186,8 +191,9 @@ async def test_openai_compat_provider_5xx_is_unavailable(monkeypatch, status):
 
     _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
     provider = _provider()
-    with pytest.raises(ProviderUnavailableError):
+    with pytest.raises(ProviderUnavailableError) as exc_info:
         await provider.generate(_request())
+    assert exc_info.value.upstream_status == status
 
 
 @pytest.mark.parametrize("status", [401, 402, 403, 404])
@@ -198,8 +204,9 @@ async def test_openai_compat_provider_config_error_statuses_are_auth_error(monke
 
     _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
     provider = _provider()
-    with pytest.raises(ProviderAuthError):
+    with pytest.raises(ProviderAuthError) as exc_info:
         await provider.generate(_request())
+    assert exc_info.value.upstream_status == status
 
 
 @pytest.mark.asyncio
@@ -209,8 +216,9 @@ async def test_openai_compat_provider_uncategorized_status_is_invalid_response(m
 
     _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
     provider = _provider()
-    with pytest.raises(ProviderInvalidResponseError):
+    with pytest.raises(ProviderInvalidResponseError) as exc_info:
         await provider.generate(_request())
+    assert exc_info.value.upstream_status == 400
 
 
 @pytest.mark.asyncio
@@ -220,8 +228,9 @@ async def test_openai_compat_provider_missing_choices_is_invalid_response(monkey
 
     _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
     provider = _provider()
-    with pytest.raises(ProviderInvalidResponseError):
+    with pytest.raises(ProviderInvalidResponseError) as exc_info:
         await provider.generate(_request())
+    assert exc_info.value.upstream_status == 200
 
 
 @pytest.mark.asyncio
@@ -231,8 +240,9 @@ async def test_openai_compat_provider_empty_content_is_invalid_response(monkeypa
 
     _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
     provider = _provider()
-    with pytest.raises(ProviderInvalidResponseError):
+    with pytest.raises(ProviderInvalidResponseError) as exc_info:
         await provider.generate(_request())
+    assert exc_info.value.upstream_status == 200
 
 
 @pytest.mark.asyncio
@@ -242,8 +252,9 @@ async def test_openai_compat_provider_connect_timeout_is_timeout_error(monkeypat
 
     _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
     provider = _provider()
-    with pytest.raises(ProviderTimeoutError):
+    with pytest.raises(ProviderTimeoutError) as exc_info:
         await provider.generate(_request())
+    assert exc_info.value.upstream_status is None
 
 
 @pytest.mark.asyncio
@@ -253,8 +264,9 @@ async def test_openai_compat_provider_connect_error_is_unavailable(monkeypatch):
 
     _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
     provider = _provider()
-    with pytest.raises(ProviderUnavailableError):
+    with pytest.raises(ProviderUnavailableError) as exc_info:
         await provider.generate(_request())
+    assert exc_info.value.upstream_status is None
 
 
 @pytest.mark.asyncio
@@ -267,9 +279,10 @@ async def test_openai_compat_provider_no_api_key_is_auth_error_and_makes_no_call
 
     _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
     provider = _provider(api_key="")
-    with pytest.raises(ProviderAuthError):
+    with pytest.raises(ProviderAuthError) as exc_info:
         await provider.generate(_request())
     assert called["count"] == 0
+    assert exc_info.value.upstream_status is None
 
 
 # --- key safety (required by the plan, PM review C2) ------------------------------------

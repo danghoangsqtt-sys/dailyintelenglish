@@ -32,7 +32,7 @@
     .page-heading h1 { margin: 0 0 10px; font-size: 32px; }
     .page-heading p { margin: 0; color: var(--text-muted); line-height: 1.6; }
 
-    .settings-card { padding: 24px; }
+    .settings-card { padding: 24px; margin-bottom: 20px; }
     .settings-card h2 { margin: 0 0 4px; font-size: 16px; font-weight: 700; }
     .settings-card .section-hint { margin: 0 0 18px; font-size: 13px; color: var(--text-muted); }
 
@@ -43,6 +43,24 @@
       font-size: 13px;
       background: var(--surface-2);
       color: var(--text-2);
+    }
+
+    .settings-form-row { margin-bottom: 16px; }
+    .settings-form-row:last-child { margin-bottom: 0; }
+
+    .settings-form-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+
+    .settings-privacy-note {
+      margin-top: 16px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-muted);
     }
   </style>
 </head>
@@ -58,17 +76,66 @@
   <main class="main">
     <section class="page-heading">
       <h1>Settings</h1>
-      <p>Daily Intel English Studio runs entirely on your local Ollama model — no cloud API key needed.</p>
+      <p>Choose whether script, learning content, thumbnail, and YouTube package generation
+        run on your local Ollama model, or on a cloud provider first (with local as an
+        automatic fallback).</p>
     </section>
 
     <section class="card settings-card">
       <h2>AI Provider</h2>
       <p class="section-hint">
-        Script, learning content, thumbnail, and YouTube package generation all run
-        locally via Ollama — no cloud fallback.
+        "Cloud-first" tries your configured cloud provider first, and falls back to local
+        automatically if it's unreachable or misconfigured.
       </p>
 
-      <div id="ai-mode-status" class="current-status" aria-live="polite">Loading…</div>
+      <div class="settings-form-row settings-radio-row">
+        <label class="settings-radio-option">
+          <input type="radio" name="ai-mode" value="local" id="ai-mode-local" />
+          Local only
+        </label>
+        <label class="settings-radio-option">
+          <input type="radio" name="ai-mode" value="cloud_first" id="ai-mode-cloud-first" />
+          Cloud-first (recommended)
+        </label>
+      </div>
+      <div id="ai-mode-disabled-note" class="settings-inline-note" hidden></div>
+
+      <div id="effective-mode-status" class="current-status" aria-live="polite">Loading…</div>
+    </section>
+
+    <section class="card settings-card">
+      <h2>Cloud Provider</h2>
+      <p class="section-hint">
+        An OpenAI-compatible endpoint (OpenRouter by default). The key is write-only — it is
+        never shown again after saving, only its last 4 characters.
+      </p>
+
+      <div class="settings-form-row">
+        <label class="settings-field-label" for="cloud-base-url">Base URL</label>
+        <input type="text" id="cloud-base-url" class="settings-input" placeholder="https://openrouter.ai/api/v1" />
+      </div>
+      <div class="settings-form-row">
+        <label class="settings-field-label" for="cloud-model">Model</label>
+        <input type="text" id="cloud-model" class="settings-input" placeholder="nvidia/nemotron-3-super-120b-a12b:free" />
+      </div>
+      <div class="settings-form-row">
+        <label class="settings-field-label" for="cloud-api-key">API key</label>
+        <input type="password" id="cloud-api-key" class="settings-input" placeholder="Leave blank to keep the current key" autocomplete="off" />
+        <div id="cloud-key-status" class="settings-inline-note" aria-live="polite"></div>
+      </div>
+
+      <div class="settings-form-actions">
+        <button id="save-cloud-settings-btn" class="btn btn-primary" type="button">Save</button>
+        <button id="clear-cloud-key-btn" class="btn btn-ghost" type="button">Clear key</button>
+        <button id="test-connection-btn" class="btn btn-ghost" type="button">Test connection</button>
+        <span id="test-connection-result" class="settings-inline-note" aria-live="polite"></span>
+      </div>
+      <div id="save-status" class="settings-inline-note" aria-live="polite"></div>
+
+      <p class="settings-privacy-note">
+        Topics and generated content are sent to your configured cloud provider. Don't
+        include personal data in a project's topic when cloud mode is on.
+      </p>
     </section>
   </main>
 

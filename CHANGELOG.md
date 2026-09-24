@@ -9,6 +9,23 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Changed
+- Interactive cloud provider Settings (2026-09-24, Phase 18 Task 18.3, ENH-011, self-implemented
+  by Coder): the Settings page — reduced to a read-only status line by Task 14.7's local-only
+  release path — is interactive again: base URL, model, a write-only API key (status shows only
+  whether it's set and its last 4 characters), a Local/Cloud-first mode selector, a "Test
+  connection" button (one real, tiny probe call, reporting the error class and upstream HTTP
+  status, never the key or a response body), and the privacy note that topics/content are sent
+  to a third-party provider in cloud mode. The page now also shows the *effective* mode next to
+  the selected one, with a reason, whenever they differ ("no API key configured" / "cloud
+  disabled by DIE_AI_ALLOW_CLOUD"). `/api/ai/health` gained `cloud_configured`, `cloud_model`,
+  `effective_mode`, and `circuit_open` (reading the app-lifetime circuit breaker directly). The
+  old Gemini-key settings surface (routes, service functions, and the startup loader) is deleted,
+  not just unused — a stored `gemini_api_key` row is ignored and never migrated into the new
+  cloud key. `AI_ALLOW_CLOUD` now defaults to `true` (plan Amendment C) so the Settings page can
+  actually enable cloud mode; `AI_MODE` still defaults to `local`, so an install that never
+  touches Settings is unaffected. `OpenAICompatProvider`'s exceptions gained a structured
+  `upstream_status` attribute (the real HTTP status, or an error body's own numeric code) instead
+  of parsing it back out of a message string.
 - Cloud-first AI routing (2026-09-23, Phase 18 Task 18.2, ENH-011, self-implemented by Coder):
   the AI router's roles inverted (D21) — a configured cloud provider (`OpenAICompatProvider`,
   Task 18.1) is now the primary, local Ollama the automatic fallback, replacing the old

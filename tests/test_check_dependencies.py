@@ -1,4 +1,4 @@
-"""Unit tests for scripts/check_dependencies.py — env-var source and configurable ffmpeg path."""
+"""Unit tests for scripts/check_dependencies.py — cloud provider status and configurable ffmpeg path."""
 
 import importlib.util
 from pathlib import Path
@@ -21,19 +21,29 @@ def check_deps():
     return _load_script_module()
 
 
-def test_check_env_file_accepts_key_from_environment(check_deps, monkeypatch):
-    monkeypatch.setattr(check_deps.settings, "GEMINI_API_KEY", "a-real-looking-key")
+def test_check_cloud_provider_reports_configured_with_model(check_deps, monkeypatch):
+    monkeypatch.setattr(check_deps.settings, "OPENAI_COMPAT_API_KEY", "a-real-looking-key")
+    monkeypatch.setattr(check_deps.settings, "OPENAI_COMPAT_MODEL", "nvidia/nemotron-3-super-120b-a12b:free")
 
-    passed, detail = check_deps.check_env_file()
+    passed, detail = check_deps.check_cloud_provider()
 
     assert passed is True
-    assert "DIE_GEMINI_API_KEY" in detail
+    assert "nvidia/nemotron-3-super-120b-a12b:free" in detail
 
 
-def test_check_env_file_rejects_placeholder(check_deps, monkeypatch):
-    monkeypatch.setattr(check_deps.settings, "GEMINI_API_KEY", check_deps.PLACEHOLDER_API_KEY)
+def test_check_cloud_provider_reports_not_configured_without_a_key(check_deps, monkeypatch):
+    monkeypatch.setattr(check_deps.settings, "OPENAI_COMPAT_API_KEY", "")
 
-    passed, _detail = check_deps.check_env_file()
+    passed, _detail = check_deps.check_cloud_provider()
+
+    assert passed is False
+
+
+def test_check_cloud_provider_reports_not_configured_without_a_model(check_deps, monkeypatch):
+    monkeypatch.setattr(check_deps.settings, "OPENAI_COMPAT_API_KEY", "a-real-looking-key")
+    monkeypatch.setattr(check_deps.settings, "OPENAI_COMPAT_MODEL", "")
+
+    passed, _detail = check_deps.check_cloud_provider()
 
     assert passed is False
 
