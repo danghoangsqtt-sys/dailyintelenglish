@@ -23,9 +23,11 @@
 |---|---|---|---|
 | 18.1 | `OpenAICompatProvider` | Coder | done (ACCEPTED, `2a6a77c`) |
 | 18.2 | Router roles/modes, per-provider budgets, circuit breaker; Gemini provider removed | Coder | done (ACCEPTED, `16209c6` + N1 `28196a4`) |
-| 18.3 | Settings (key/URL/model, test connection), health fields, privacy note | Coder | done (pending PM ACCEPTED) |
-| 18.4 | Fallback-rate readout + runner `--matrix cloud_first` | Coder | done (pending PM ACCEPTED) |
-| 18.5 | Gate B-9 A/B, cloud_first vs local | PM | not started |
+| 18.3 | Settings (key/URL/model, test connection), health fields, privacy note | Coder | done (ACCEPTED, `3e7c09f` + N1 `5301536` + N2 `4342bf3`) |
+| 18.4 | Fallback-rate readout + runner `--matrix cloud_first` | Coder | done (ACCEPTED, `4e21554`) |
+| 18.5 | Gate B-9 A/B, cloud_first vs local | PM | done (`docs/operations/phase18-gate-b9.md`, `4828f10`) -- PASS on the runner criterion, regression on samples/speed; `AI_MODE` default stays `local` (Amendment C) |
+| 18.6 | Cloud model chain + speed tuning (D27, plan Amendment D) | Coder | not started |
+| 18.7 | Gate B-10 | PM | not started |
 
 ## Evidence log
 
