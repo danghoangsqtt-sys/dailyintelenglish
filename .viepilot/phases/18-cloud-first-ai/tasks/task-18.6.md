@@ -14,8 +14,11 @@
 `app/api/settings.py`, `app/models/settings.py`, `frontend/pages/settings.html`,
 `frontend/static/js/settings.js`, and `app/services/script_pipeline.py` /
 `app/services/learning_pipeline.py` **for the malformed-JSON local retry only (item 4)**, plus
-the matching tests and `CHANGELOG.md`. See plan §3 "18.6", which is binding. Anything else →
-stop and ask the PM.
+the matching tests and `CHANGELOG.md`. **PM review C1/C4:** `app/core/exceptions.py` (one new
+class, `ProviderDailyQuotaError`) and `app/services/ai_job_service.py` (one new
+`_PROVIDER_ERROR_CODES` mapping entry) are added, for exactly that; `app/api/ai_jobs.py` (health
+payload only) is added for `circuit_open_until`. See plan §3 "18.6", which is binding otherwise.
+Anything else → stop and ask the PM.
 
 ## Required behaviour (summary; the plan is binding)
 
@@ -29,8 +32,22 @@ stop and ask the PM.
 
 ## Design decisions (Coder, doc-first — commit before code, PM approves)
 
-**Two file-location questions, flagged for explicit sign-off (not blocking the rest of the
-design, but I want these confirmed before I write code):**
+**PM review — APPROVED with four changes (C1, C2, C3, C4), folded into this implementation, no
+re-approval needed:**
+- **C1:** both file questions resolved by adding the files, not working around them.
+  `ProviderDailyQuotaError(ProviderRateLimitError)` is defined in `app/core/exceptions.py`
+  (no local definition in the provider), and `ai_job_service._PROVIDER_ERROR_CODES` gains
+  `ProviderDailyQuotaError: "provider_daily_quota"`.
+- **C2:** "cloud-served" is decided by the router, not a hardcoded `"ollama"` string comparison —
+  new `AIRouter.is_primary_result(result) -> bool`. See point 4 below for the edge case this
+  needed to handle (the LOCAL-mode placeholder where `primary is fallback`).
+- **C3:** `CircuitBreaker.open_until` caps the computed remaining-open duration at 26 hours from
+  now, guarding against a garbled/far-future `X-RateLimit-Reset`. Tested with a reset far in the
+  future.
+- **C4:** `/api/ai/health` gains `circuit_open_until` (ISO 8601 UTC timestamp, or `null`); the
+  Settings page shows "Cloud paused until HH:MM (free daily limit reached)" whenever it's set.
+
+**Original two file-location questions (resolved by C1 above; kept for context):**
 
 - **Q1 — where `ProviderDailyQuotaError` lives.** It needs to be raised by
   `openai_compat_provider.py` and `isinstance`-checked by `router.py`, both allowed files.
@@ -116,10 +133,15 @@ it for visibility, not proposing a change.
 
 ### 3. Daily-cap circuit (point 3)
 
-**New exception** (see Q1): `class ProviderDailyQuotaError(ProviderRateLimitError):` in
-`openai_compat_provider.py`, carrying a `reset_at_epoch_seconds: float` instance attribute (set
-the same way `upstream_status` is — a plain attribute, not a constructor field, consistent with
-`_raise`'s existing pattern).
+**New exception (C1):** `class ProviderDailyQuotaError(ProviderRateLimitError):` in
+`app/core/exceptions.py`, alongside every other `Provider*Error`, keeping that hierarchy flat as
+it's always been. `openai_compat_provider.py` imports it from there, same as its siblings.
+Carries a `reset_at_epoch_seconds: float` instance attribute (set the same way `upstream_status`
+is — a plain attribute, not a constructor field, consistent with `_raise`'s existing pattern).
+`ai_job_service._PROVIDER_ERROR_CODES` gains `ProviderDailyQuotaError: "provider_daily_quota"` —
+one dict entry, right after the existing `ProviderRateLimitError` one for readability; Gate B
+evidence and job `error_code` can now distinguish a daily-cap failure from an ordinary rate
+limit, instead of both falling through to the generic `"provider_error"`.
 
 **Detection**, inside `OpenAICompatProvider.generate()`'s existing `if status == 429:` branch
 (the real captured shape is a plain HTTP 429, not the 200-wrapped-error case a few lines above):
@@ -150,13 +172,22 @@ except _TRANSIENT_ERRORS as exc:
 `CircuitBreaker`** (the PM's explicit question): it's the exact **same** `CircuitBreaker`
 instance and the exact same `opened_until` field `is_open()` already checks — a third way to set
 it, alongside `record_failure()`'s threshold-based open and `open_immediately()`'s fixed-cooldown
-open, not a parallel circuit. New method:
+open, not a parallel circuit. New method (C3 cap included):
 ```python
+_MAX_OPEN_UNTIL_SECONDS = 26 * 3600.0  # C3: guards a garbled/far-future X-RateLimit-Reset
+
 def open_until(self, reset_at_epoch_seconds: float) -> None:
     self.consecutive_failures = self.failure_threshold
     remaining = max(0.0, reset_at_epoch_seconds - time.time())
+    remaining = min(remaining, self._MAX_OPEN_UNTIL_SECONDS)
     self.opened_until = time.monotonic() + remaining
 ```
+26h (not 24h) covers a `reset_at_epoch_seconds` that's correctly the next UTC midnight but read
+close to just-past the *previous* midnight (up to ~24h out) plus slack for clock skew/latency,
+while still capping a badly garbled header (e.g. a stray extra digit) from opening the circuit
+for months. Tested with a reset epoch far in the future (e.g. +1e9 seconds) asserting the
+resulting open duration is capped at exactly 26h, not the uncapped value.
+
 `opened_until`/`is_open()` compare against `time.monotonic()` (a monotonic clock unrelated to
 wall-clock epoch) everywhere else in this class — `open_until` is the one place that converts a
 wall-clock deadline (`X-RateLimit-Reset`, `time.time()`) into a monotonic-clock offset, computed
@@ -205,7 +236,7 @@ async def _call_router(db, job_id, router, request, *, section_index, is_repair,
         # unchanged: record outcome="error", re-raise
         ...
 
-    if adapter is not None and result.provider != "ollama":
+    if adapter is not None and router.is_primary_result(result):
         try:
             parse_and_validate(result.text, adapter)
         except SchemaValidationError:
@@ -222,10 +253,23 @@ async def _call_router(db, job_id, router, request, *, section_index, is_repair,
     # unchanged: record outcome="ok" for `result`, return it
     ...
 ```
-`result.provider != "ollama"` is the "cloud-served" check (the only two providers are
-`"openai_compat"` and `"ollama"`) — a local-mode result never gets this treatment (nothing to
-retry against). Exactly **one** telemetry call is recorded either way (never two): if the retry
-fires, the recorded call is the retried (local) result, pre-marked `fallback_used=True,
+**C2:** "cloud-served" is decided by a new `AIRouter.is_primary_result(result)`, not a hardcoded
+`result.provider != "ollama"` string comparison — survives a future provider rename. It's not
+just `result.provider == self._primary.name` though: `build_ai_router_from_settings()` sets
+`primary: Provider = fallback` as a placeholder in `AIMode.LOCAL` mode ("never called when
+effective_mode is LOCAL", per its own comment) — so in that mode `self._primary` and
+`self._fallback` are literally the same object, and a bare name comparison would wrongly return
+`True` for an ordinary local-mode result (nothing to retry against, and `self._mode` is already
+known and cheap to check):
+```python
+def is_primary_result(self, result: GenerationResult) -> bool:
+    """True only when `result` was genuinely served by a distinct primary
+    provider -- excludes AIMode.LOCAL, where `primary` is a placeholder equal
+    to `fallback` (Task 18.6 C2)."""
+    return self._mode is not AIMode.LOCAL and result.provider == self._primary.name
+```
+Exactly **one** telemetry call is recorded either way (never two): if the retry fires, the
+recorded call is the retried (local) result, pre-marked `fallback_used=True,
 fallback_reason="SchemaValidationError"` — the same shape the router's own internal
 primary-failure fallback already produces, so nothing downstream (Task 18.4's aggregates, Gate
 evidence) needs a new code path to recognize it. The pre-check re-parses `result.text` with the
@@ -245,6 +289,30 @@ Deliberately does **not** touch `self._circuit` — a malformed-JSON content fai
 about the primary provider's *health* (it answered, on time, just with unparseable content), so
 it must never count toward the circuit's failure threshold the way an infra error does.
 
+### 6. Health + Settings: `circuit_open_until` (C4)
+
+`CircuitBreaker` gains `opened_until_epoch_seconds(self) -> float | None` — `None` when not
+currently open, else the wall-clock equivalent of the monotonic `opened_until` field, computed at
+call time: `time.time() + (self.opened_until - time.monotonic())` (both clocks read "now"
+together at the moment of the call, so the delta is accurate then; this is for external
+reporting only — `is_open()` itself is untouched and never uses this). Applies whenever the
+circuit is open for *any* reason (daily quota, ordinary failure threshold, or an
+`open_immediately()` auth-error trip), not only the daily-quota case — `circuit_open_until` is a
+general "when does this reopen" readout, same as `circuit_open` (Task 18.3) already is a general
+"is it open" one.
+
+`app/api/ai_jobs.py`'s `ai_health()` (added to allowed files for this) formats it to ISO 8601 UTC
+via `datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()` and adds `"circuit_open_until"`
+to the payload (`None` stays `null`). Additive; every existing health field unchanged.
+
+Settings page: `settings.js`'s existing `renderFallbackRate`/`loadFallbackRate` (Task 18.4,
+already fetches `/api/ai/health`) gains a sibling render using the same already-fetched `health`
+object — no second fetch. New `#circuit-status` line: when `circuit_open_until` is set, shows
+"Cloud paused until HH:MM (free daily limit reached)" (local time, parsed from the ISO string);
+empty/hidden otherwise. Matches the PM's literal wording — shown whenever the field is set,
+without trying to disambiguate the open reason in the UI text (that would need a separate reason
+field, not requested).
+
 ### 5. Tests (point 5)
 
 MockTransport only throughout (matches Task 18.1's existing pattern in
@@ -260,19 +328,32 @@ MockTransport only throughout (matches Task 18.1's existing pattern in
   (429, `error.message` containing `"free-models-per-day"`, `error.metadata.limit_source ==
   "openrouter_free_tier_daily"`, `X-RateLimit-Reset` header) with a synthetic reset epoch and a
   synthetic user id (never the real captured body verbatim) — asserts `ProviderDailyQuotaError`
-  with the right `reset_at_epoch_seconds`, no backoff/retry (exactly one HTTP call observed by
-  the mock handler), and — at the router level — `CircuitBreaker.is_open()` true immediately
-  after, `is_open()` false once `time.monotonic()` is advanced past the equivalent offset
-  (monkeypatching `time.monotonic`/`time.time` together, keeping their relative offset
-  consistent). A plain 429 with no daily-quota signal still raises ordinary
-  `ProviderRateLimitError` and still gets the existing backoff/retry treatment, unchanged
-  (regression guard).
+  with the right `reset_at_epoch_seconds`, and a dedicated test proving it is **not**
+  backoff-retried (exactly one HTTP call observed by the mock handler, where an ordinary
+  `ProviderRateLimitError` in the same harness would retry up to `AI_TRANSIENT_MAX_ATTEMPTS`).
+  At the router level: `CircuitBreaker.is_open()` true immediately after, `is_open()` false once
+  `time.monotonic()` is advanced past the equivalent offset (monkeypatching `time.monotonic`/
+  `time.time` together, keeping their relative offset consistent). A plain 429 with no
+  daily-quota signal still raises ordinary `ProviderRateLimitError` and still gets the existing
+  backoff/retry treatment, unchanged (regression guard). `ai_job_service.provider_error_code`
+  maps `ProviderDailyQuotaError` to `"provider_daily_quota"` (C1).
+- **C3:** `open_until` with a reset epoch far in the future (e.g. `time.time() + 1e9`) asserts the
+  resulting `opened_until` reflects the capped 26h, not the uncapped multi-year value (compare
+  against `time.monotonic() + 26 * 3600`, with a small tolerance for test execution time).
+- **C2:** `is_primary_result` returns `True` for a genuine primary-served result in `cloud`/
+  `cloud_first` mode, and `False` for a fallback-served result *and* for any result when the
+  router's mode is `local` (the `primary is fallback` placeholder case) — the exact edge case
+  that ruled out a bare name comparison.
 - **Malformed JSON local retry:** a router with a primary mock that returns malformed JSON and a
   fallback (local) mock that returns valid JSON — `_call_router(..., adapter=...)` returns the
   retried, `fallback_used=True`/`fallback_reason="SchemaValidationError"` result, with exactly
   one telemetry call recorded (not two). A second case where the retry's own local call also
   fails (`ProviderError`) — the job fails with that error's specific code, telemetry shows one
-  `outcome="error"` record for the retry attempt.
+  `outcome="error"` record for the retry attempt. A `local`-mode case confirms no retry is
+  attempted at all (`is_primary_result` false, nothing to retry against).
+- **C4:** `/api/ai/health` includes `circuit_open_until` as `null` by default, and as an ISO
+  string once the circuit is forced open (whitebox, same `_ai_circuit.open_immediately()`
+  pattern Task 18.3's health tests already use).
 - **Revert checks (required on items 3 and 4):** comment out the
   `except ProviderDailyQuotaError: raise` clause → confirm the daily-cap test starts retrying
   with backoff (or a timing/call-count assertion fails); restore. Comment out the `adapter`
