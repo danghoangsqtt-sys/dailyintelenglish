@@ -2127,6 +2127,7 @@ PM review log:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-24 | **D25 (owner, brainstorm `docs/brainstorm/session-2026-09-24.md`): thumbnail = A then B.** A: once Phase 18 is enabled, the cloud model writes the thumbnail text (no extra work). B: after Phase 18, a spike phase for per-episode backgrounds from a local image model on the RTX 3060, with Pillow text overlay and the 5 templates kept as fallback (ENH-012). The owner was also told that script speed/accuracy gains are not yet in production: Gate B-9 is the measured answer | The cloud primary frees the GPU (qwen loads only as fallback), making a local image model feasible on 12 GB; free and private |
 | 2026-09-23 | **Phase 17 closed** after re-gate 17.5 PASS (B1 5/5, owner config 4/4). **Phase 18 opened** (queued plan `e5661a1`, D21–D24) | Local qwen now completes reliably with repairs; Phase 18 adds the cloud primary with qwen as the proven fallback |
 | 2026-09-23 | **Gate B-8 → owner: fix now.** 17.4 ("under" budget direction reruns the full per-section path; the plain-repair branch is removed) + 17.5 short re-gate, before Phase 17 closes | B-8 passed its criterion, but the owner's own configuration regressed 2/2 → 1/2 on a defect the PM introduced in C4; the fix reuses existing code |
 | 2026-09-23 | **Phase 18 planned** (`/vp-evolve ENH-011`) from D21–D24: generic OpenAI-compatible provider, router primary/fallback roles with **separate per-provider time budgets** and a circuit breaker, modes `local`/`cloud`/`cloud_first`, Gemini provider removed (comment sweep out of scope), Settings key/URL/model, fallback-rate readout, Gate B-9 A/B against B-8. Queued behind Phase 17 so B-8 records the local baseline; version → 1.1.0-beta at close | Smoke evidence: cloud quality far better, free tier flaky; both smoke jobs died on the shared router deadline, so separate budgets are a hard requirement |
@@ -3122,3 +3123,4 @@ PM review log:
 | ENH-009 | Enhancement | Script repetition gate variable (B-5 5/5 → B-6 3/5) | medium | done (Phase 16, 16.4; B-7 rep 0.00%) |
 | ENH-010 | Enhancement | Global script word-count repair is not budget-aware (incl. mixed case) | medium | done (Phase 17) |
 | ENH-011 | Enhancement | OpenAI-compatible cloud provider (Nemotron via OpenRouter), local qwen fallback | medium | planned (Phase 18, queued after Phase 17) |
+| ENH-012 | Enhancement | Per-episode AI thumbnail backgrounds, local image model, templates as fallback | low | open (D25; after Phase 18) |
