@@ -329,3 +329,18 @@ Evidence (PM, with the OpenRouter quota at 0):
 **Gate B-10 (18.7)** moves after 18.8. Beforehand, the PM probes Zen's and Gemini's text quality
 and limits on the real section task. The pass criteria are unchanged (Amendment D).
 
+**Amendment F (PM, 2026-09-24, provider probe; revises the D28 defaults):**
+- **OpenCode Zen is removed from the default chain.** Its free tier returns 403 "can only be used
+  from within OpenCode" (6 of 7 models), so its terms restrict it to the OpenCode client. The
+  generic provider list keeps the ability to add Zen (e.g. with paid models), but no Zen entry is
+  enabled by default, and nothing may try to look like the OpenCode client.
+- **Gemini defaults:** two chain entries sharing `DIE_GEMINI_API_KEY`:
+  `gemini-3.1-flash-lite` (201/200 words, 4 s), then `gemini-flash-lite-latest` (182/200, 2.3 s).
+  Free-tier limits are per model per project, so separate entries and circuits are correct.
+  `gemini-2.5-flash` is 404 "no longer available" and is **not** the default.
+- **Gemini error handling:** `NOT_FOUND` / 404 → a config error (fail fast, open that entry's
+  circuit). `UNAVAILABLE` / 503 → transient. `RESOURCE_EXHAUSTED` / 429 → daily quota until the
+  next midnight PT. The error body may be a JSON **array** wrapping the error object; accept both.
+- **Default chain:** OpenRouter (Nemotron 3 Super → Gemma 4 → Dots3, via the `models` array) →
+  Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → local qwen.
+

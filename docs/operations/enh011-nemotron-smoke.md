@@ -62,3 +62,35 @@ single sample per model, so treat it as indicative, not measured.
    - bounded retry on 503/429/200-with-error;
    - **local qwen as automatic fallback**, so a free-tier outage degrades instead of failing;
    - then an A/B gate. Phase 17 still matters because qwen stays the fallback.
+
+## 5. Provider probe for D28 (2026-09-24, PM): OpenCode Zen and Google Gemini
+
+The same single-section B1 task (target 200 words, JSON array), one call per model. OpenRouter
+was not used, because its daily quota was already exhausted.
+
+**OpenCode Zen** (owner's key, `GET /zen/v1/models` → 200, 9 free models):
+- 6 of 7 free models tried returned **403 "OpenCode's free tier can only be used from within
+  OpenCode"**: nemotron-3-ultra, nemotron-3.5-lightning, mimo-v2.6-flash, mimo-v2.5, jev-1.13,
+  muse-spark-1.3.
+- `space-bunny-free` answered: 207 words (1.03×), 59 s.
+- **Conclusion:** Zen's free tier is restricted by its own terms to the OpenCode client. It is
+  **not used** by this app, and the one model that currently answers is not relied on, because
+  the stated policy covers the free tier. This explains the owner's experience: the free models
+  work inside OpenCode-based coding tools.
+
+**Google Gemini** (owner's existing `DIE_GEMINI_API_KEY`, OpenAI-compatible endpoint
+`/v1beta/openai/chat/completions`):
+
+| Model | Result | Latency | Words (target 200) |
+|---|---|---|---|
+| **gemini-3.1-flash-lite** | OK | 4.0 s | **201 (1.00×)** |
+| gemini-3.1-flash-lite-preview | OK | 4.0 s | 192 (0.96×) |
+| gemini-flash-lite-latest | OK | 2.3 s | 182 (0.91×) |
+| gemini-3.5-flash-lite | OK | 2.1 s | 168 (0.84×) |
+| gemini-2.5-flash / 2.5-flash-lite | 404 NOT_FOUND "no longer available" | — | — |
+| gemini-3-flash-preview / flash-latest / 3.8-flash | 503 UNAVAILABLE "high demand" | — | — |
+
+Error shapes seen: `status` `NOT_FOUND` (a config error, fail fast) and `UNAVAILABLE`
+(transient). Some error responses are a **JSON array wrapping the error object**, so the provider
+must accept both an object and a `[ {error:…} ]` body.
+
