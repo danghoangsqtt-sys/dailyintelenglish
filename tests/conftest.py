@@ -106,6 +106,13 @@ def _neutralize_cloud_config() -> None:
     # Gemini chain entries dispatch against, so this neutralization now matters
     # exactly as much as OPENAI_COMPAT_API_KEY above.
     config.settings.GEMINI_API_KEY = ""
+    # PM review N1 (18.8): ENV_GEMINI_API_KEY (app/core/config.py) was never
+    # blanked here, unlike ENV_OPENAI_COMPAT_API_KEY/ENV_OPENCODE_ZEN_API_KEY
+    # below -- a "clear the Gemini key" code path reverts to this value, which
+    # would have put the owner's real key back into the test process (the
+    # .invalid base URL stops any actual call, but the rule is that tests
+    # never hold a real key at all, not just that calls with it fail).
+    config.ENV_GEMINI_API_KEY = ""
     config.settings.GEMINI_BASE_URL = "https://gemini.invalid/v1beta/openai"
     # Task 18.8: OpenCode Zen, same pattern.
     config.settings.OPENCODE_ZEN_API_KEY = ""

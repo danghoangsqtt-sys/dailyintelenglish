@@ -523,15 +523,25 @@ async def test_openai_compat_provider_daily_cap_429_detected_by_message_substrin
 # --- Task 18.8 (D28, Amendment F): Gemini vendor + array-wrapped error bodies -----------
 
 
+# NOT a real captured body (PM correction, post-18.8-review): the PM's probe captured
+# real NOT_FOUND/404 and UNAVAILABLE/503 Gemini responses, but never a real 429 -- this
+# shape is doc-based only, built from Google's documented `google.rpc.Status` error
+# convention (Q1, still unverified). Gate B-10's own evidence is the real check.
 _GEMINI_RESOURCE_EXHAUSTED_DICT = {
     "error": {"code": 429, "message": "Resource has been exhausted (e.g. check quota).", "status": "RESOURCE_EXHAUSTED"}
 }
-# Amendment F: some real Gemini error bodies wrap the error object in a JSON array.
+# The array-wrap itself IS real (observed in the PM's captured 404/503 Gemini bodies,
+# Amendment F) -- only its combination with the (unverified) 429/RESOURCE_EXHAUSTED
+# shape above is synthetic, since no real 429 body of either shape exists yet.
 _GEMINI_RESOURCE_EXHAUSTED_ARRAY = [_GEMINI_RESOURCE_EXHAUSTED_DICT]
 
 
 @pytest.mark.asyncio
 async def test_gemini_vendor_resource_exhausted_dict_shape_is_daily_quota_error(monkeypatch):
+    """Doc-based fixture, not a real captured body -- see the module-level
+    comment on `_GEMINI_RESOURCE_EXHAUSTED_DICT` above (Q1, unverified until
+    Gate B-10)."""
+
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(429, json=_GEMINI_RESOURCE_EXHAUSTED_DICT)
 
@@ -548,8 +558,10 @@ async def test_gemini_vendor_resource_exhausted_dict_shape_is_daily_quota_error(
 
 @pytest.mark.asyncio
 async def test_gemini_vendor_resource_exhausted_array_wrapped_shape_is_daily_quota_error(monkeypatch):
-    """The exact real-world shape Amendment F called out: `[{"error": {...}}]`
-    instead of `{"error": {...}}`."""
+    """The array-wrap itself is the real shape Amendment F's probe captured
+    (in 404/503 bodies); pairing it with RESOURCE_EXHAUSTED here is a
+    synthetic combination, not a real captured 429 -- see the module-level
+    comments above."""
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(429, json=_GEMINI_RESOURCE_EXHAUSTED_ARRAY)

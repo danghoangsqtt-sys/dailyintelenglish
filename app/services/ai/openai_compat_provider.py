@@ -241,13 +241,16 @@ class OpenAICompatProvider:
     def _gemini_daily_quota_reset(self, error: dict) -> float | None:
         """Task 18.8 (D28, Amendment E, Q1): Google's standard `google.rpc.Status`
         error shape -- `error.status == "RESOURCE_EXHAUSTED"` -- with a message
-        substring backstop. Best-effort: unlike 18.6's OpenRouter detector, there is
-        no real captured body yet, only the documented convention; the PM's
-        pre-Gate-B-10 probe verifies the real shape, and a mismatch is a
-        one-function fix here, not a redesign. Resets at the next midnight
-        America/Los_Angeles (Google's documented Pacific-time quota reset) -- still
-        passed through `CircuitBreaker.open_until`'s existing 26h cap (18.6 C3) as
-        a backstop against a DST-transition edge case or a bad detection."""
+        substring backstop. Best-effort and still UNVERIFIED: unlike 18.6's
+        OpenRouter detector, there is no real captured 429 body -- the PM's real
+        provider probe (Amendment F) captured NOT_FOUND/404 and UNAVAILABLE/503
+        only, never a real daily-cap 429, so this shape is doc-based only. Gate
+        B-10's own evidence is what actually confirms (or corrects) it; a
+        mismatch is a one-function fix here, not a redesign. Resets at the next
+        midnight America/Los_Angeles (Google's documented Pacific-time quota
+        reset) -- still passed through `CircuitBreaker.open_until`'s existing
+        26h cap (18.6 C3) as a backstop against a DST-transition edge case or a
+        bad detection."""
         status = error.get("status")
         message = str(error.get("message", ""))
         is_daily_quota = status == "RESOURCE_EXHAUSTED" or "RESOURCE_EXHAUSTED" in message or "exhausted" in message.lower()

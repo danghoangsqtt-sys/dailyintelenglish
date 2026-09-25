@@ -339,15 +339,21 @@ the Q4 health semantics -- was unaffected; only defaults and Gemini's error hand
    new `GEMINI_MODELS` (comma list, replacing a planned singular `GEMINI_MODEL`) expands into one
    `ChainEntry` per model, named after the model id itself (so telemetry/circuits are addressed
    by e.g. `"gemini-3.1-flash-lite"`, not a generic `"gemini"`).
-3. **Gemini error handling, from real responses:** `NOT_FOUND`/404 -> config error (already
-   handled by the existing generic 401/402/403/404 branch, unchanged); `UNAVAILABLE`/503 ->
-   transient (already handled by the existing generic 5xx branch, unchanged);
-   `RESOURCE_EXHAUSTED`/429 -> daily quota until the next midnight PT (the Gemini vendor detector
-   already built for this). New: some real Gemini error bodies wrap the error object in a JSON
-   array (`[{"error": {...}}]`) instead of the plain `{"error": {...}}` every other upstream
-   uses -- a new `_unwrap_error_body` helper normalizes both shapes, applied everywhere an error
-   body is parsed (`_error_message`, the 200-with-error-body branch, the daily-quota detector),
-   not just the Gemini path, since nothing about the fix is Gemini-specific.
+3. **Gemini error handling.** The PM's probe captured two of the three cases as **real**
+   responses: `NOT_FOUND`/404 -> config error, and `UNAVAILABLE`/503 -> transient -- both already
+   handled correctly by the existing generic 401/402/403/404 and 5xx branches, unchanged, no new
+   code needed. **Correction (PM, post-review):** the probe did **not** capture a real
+   `RESOURCE_EXHAUSTED`/429 body -- the Gemini daily-quota detector (`_gemini_daily_quota_reset`,
+   `error.status == "RESOURCE_EXHAUSTED"`, reset at the next midnight America/Los_Angeles) is
+   still doc-based only, built from Google's documented `google.rpc.Status` error convention, the
+   same status as Q1 originally flagged it -- **not** confirmed by this probe. Whether it fires
+   correctly against a real daily-cap response is unverified until Gate B-10's own evidence shows
+   it (or doesn't). New regardless of that: some real Gemini error bodies (seen in the 404/503
+   captures) wrap the error object in a JSON array (`[{"error": {...}}]`) instead of the plain
+   `{"error": {...}}` every other upstream uses -- a new `_unwrap_error_body` helper normalizes
+   both shapes, applied everywhere an error body is parsed (`_error_message`, the
+   200-with-error-body branch, the daily-quota detector), not just the Gemini path, since nothing
+   about the fix is Gemini-specific.
 4. **Default chain:** `openrouter → gemini-3.1-flash-lite → gemini-flash-lite-latest → local
    qwen`.
 
@@ -440,4 +446,35 @@ the Q4 health semantics -- was unaffected; only defaults and Gemini's error hand
 - **Full suite:** **1159 passed** (1112 baseline + 47 new). `ruff check .` -> all checks passed.
   Real DB untouched throughout (the conftest guard never tripped).
 
-_pending_
+## Amendment (PM review N1, before acceptance)
+
+**Finding:** `tests/conftest.py`'s `_neutralize_cloud_config()` blanked `settings.GEMINI_API_KEY`
+but never `config.ENV_GEMINI_API_KEY` (`app/core/config.py:138`) -- the value a "clear the
+Gemini key" code path reverts to. The `.invalid` base URL stops any actual call, but the rule is
+that a test process never holds a real key at all, not just that calls with it fail. A sweep of
+every `ENV_*` module-level variable in `config.py` confirmed exactly three secret snapshots
+(`ENV_GEMINI_API_KEY`, `ENV_OPENAI_COMPAT_API_KEY`, `ENV_OPENCODE_ZEN_API_KEY`) -- the latter two
+were already neutralized (18.3's original N1, 18.8's own Zen addition); `ENV_GEMINI_API_KEY` was
+the one gap, present since before Phase 18 but never actually exercised as a real risk until
+Gemini became a live, dispatched-against key in this task.
+
+**Fix:** `tests/conftest.py` now blanks `config.ENV_GEMINI_API_KEY = ""` alongside `settings.
+GEMINI_API_KEY`. `tests/test_cloud_config_isolation.py`'s guard test gained the matching
+length-only assertion (PM review N2's discipline from 18.3, reused verbatim -- compares `len(...)
+== 0`, never the raw value, so a failure can only ever reveal a length).
+
+**Revert-and-confirm-failure**, output redirected to a file only (never printed to the terminal/
+tool-output stream, same as 18.3 N2): commented out the new `config.ENV_GEMINI_API_KEY = ""`
+line, ran only `tests/test_cloud_config_isolation.py` with output piped straight to a file, then
+`grep -c "sk-or\|AIzaSy"` on that file -> **0 matches**; `grep -o "length [0-9]*; value hidden"`
+-> matched (`length 53; value hidden`); the summary line confirmed `1 failed, 1 passed`. Deleted
+the output file, restored the fix, reran -> `2 passed`. Full suite rerun: **1159 passed**, `ruff
+check .` clean.
+
+**Also corrected in this same commit** (PM's own correction, not a Coder-found issue): task-
+18.8.md's Amendment F section and this provider's `_gemini_daily_quota_reset` docstring both
+overstated the probe's coverage -- the PM's real probe captured `NOT_FOUND`/404 and
+`UNAVAILABLE`/503 only, never a real `RESOURCE_EXHAUSTED`/429 body. Both now say plainly that the
+daily-quota shape is doc-based and unverified until Gate B-10's own evidence; the two Gemini
+`RESOURCE_EXHAUSTED` MockTransport tests gained docstrings/comments making the same distinction
+(the array-wrap itself is real, pairing it with `RESOURCE_EXHAUSTED` is a synthetic combination).

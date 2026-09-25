@@ -67,6 +67,11 @@ def test_cloud_settings_are_neutralized_for_the_whole_session():
     assert env_key_len == 0, f"ENV_OPENAI_COMPAT_API_KEY not neutralised (length {env_key_len}; value hidden)"
     gemini_key_len = len(config.settings.GEMINI_API_KEY)
     assert gemini_key_len == 0, f"GEMINI_API_KEY not neutralised (length {gemini_key_len}; value hidden)"
+    # PM review N1 (18.8): ENV_GEMINI_API_KEY was missing here entirely -- a
+    # "clear the Gemini key" code path reverts to it, so it needs the same
+    # guard as ENV_OPENAI_COMPAT_API_KEY/ENV_OPENCODE_ZEN_API_KEY below.
+    gemini_env_key_len = len(config.ENV_GEMINI_API_KEY)
+    assert gemini_env_key_len == 0, f"ENV_GEMINI_API_KEY not neutralised (length {gemini_env_key_len}; value hidden)"
     # Task 18.8 (D28): OpenCode Zen, same length-only comparison (PM review N2).
     zen_key_len = len(config.settings.OPENCODE_ZEN_API_KEY)
     assert zen_key_len == 0, f"OPENCODE_ZEN_API_KEY not neutralised (length {zen_key_len}; value hidden)"
