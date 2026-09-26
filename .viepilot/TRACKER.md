@@ -2116,6 +2116,8 @@ Plan `docs/implementation/phase-18-cloud-first-ai.md`; state `.viepilot/phases/1
 | 18.6 Cloud model chain + speed tuning (D27) | Coder | ✅ done (`a17ca11`) |
 | 18.7 Gate B-10 | PM | ✅ executed: FAIL (Gemini 0 calls: `reasoning` param rejected; 2.7× slower) |
 | 18.8 Multi-provider cloud chain (D28) | Coder | ✅ done (`7f8676d`, N1 `889cddf`) |
+| 18.9 Vendor-aware requests + Gemini-first order (D30) | Coder | not started |
+| 18.10 Gate B-11 | PM | not started |
 
 PM review log:
 
@@ -2139,6 +2141,7 @@ PM review log:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-26 | **D30 (owner): Gemini first.** The chain becomes Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter (Nemotron → Gemma 4 → Dots3) → local. Plan Amendment G: 18.9 (vendor-aware body, 400 → non-transient, label fix, order, an opt-in live contract check) + 18.10 Gate B-11 | Gemini answers in ~4 s at ~1.00× the word target; Nemotron free timed out 16 × 75 s at B-10 |
 | 2026-09-24 | **D29 (owner): adopt Remotion** (React programmatic video) for word-level karaoke captions, a speaker indicator, timed vocabulary pop-ups, and intro/outro + chapters + a Remotion thumbnail still, keeping the ffmpeg path as fallback. Phase 19 = Remotion (ENH-013, spike first: render time on the owner's machine); Phase 20 = AI thumbnails (ENH-012) | The licence is free for individuals and companies of up to 3 employees (the owner is solo); word-level captions are the highest learner value; Edge TTS can supply per-word timing |
 | 2026-09-24 | **D28 revised by evidence (plan Amendment F):** OpenCode Zen dropped from the default chain (its free tier returns 403 "can only be used from within OpenCode", 6/7 models); Gemini defaults are `gemini-3.1-flash-lite` (201/200 words, 4 s) → `gemini-flash-lite-latest`, since `gemini-2.5-flash` is 404 "no longer available". Chain: OpenRouter (Nemotron → Gemma 4 → Dots3) → Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → qwen | Probe `docs/operations/enh011-nemotron-smoke.md` §5; a provider's own terms are not worked around |
 | 2026-09-24 | **D28 (owner): a multi-provider free chain OpenRouter (Nemotron → Gemma 4 → Dots3) → OpenCode Zen → Google Gemini (text free tier) → local qwen.** Plan Amendment E: Task 18.8 after 18.6; Gate B-10 moves after 18.8 | PM evidence: the OpenRouter free cap is account-wide (every other `:free` model returned 429 `openrouter_free_tier_daily` with the counter at 52/50), so only separate providers add daily volume. Gemini text is officially free (per project, reset midnight PT); the existing Gemini key is valid |

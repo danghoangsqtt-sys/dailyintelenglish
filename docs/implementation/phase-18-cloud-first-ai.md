@@ -344,3 +344,45 @@ and limits on the real section task. The pass criteria are unchanged (Amendment 
 - **Default chain:** OpenRouter (Nemotron 3 Super → Gemma 4 → Dots3, via the `models` array) →
   Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → local qwen.
 
+**Amendment G (PM, after the Gate B-10 FAIL; owner decision D30).** Evidence:
+`docs/operations/phase18-gate-b10.md`.
+
+### 18.9 — Vendor-aware requests + chain order (Coder, P0)
+
+**Allowed files:** `app/services/ai/openai_compat_provider.py`, `app/services/ai/router.py`,
+`app/core/exceptions.py`, `app/core/config.py`, `app/core/constants.py`, `.env.example`,
+`app/services/ai_job_service.py` (error-code mapping only), the matching tests,
+a **new opt-in** `scripts/live_provider_contract_check.py`, and `CHANGELOG.md`.
+
+1. **Vendor-aware body.** `reasoning: {"exclude": true}` and the `models` array are sent **only**
+   to OpenRouter-type entries. Gemini (and generic) entries receive plain OpenAI-compatible
+   fields only: `model`, `messages`, and optional `temperature` / `max_tokens`. Add a per-vendor
+   request-body contract test that asserts the exact key set sent to each vendor.
+2. **HTTP 400 / `INVALID_ARGUMENT` → a new non-transient `ProviderRequestRejectedError`.** No
+   content retry. That entry's circuit opens immediately (cooldown path). Its error code is
+   mapped in `ai_job_service`.
+3. **Fallback-reason label.** It is `all_cloud_circuits_open` when every configured entry is open;
+   `no_cloud_provider_configured` only when none is configured.
+4. **Default order (D30): Gemini first.**
+   `CLOUD_PROVIDER_ORDER = gemini,openrouter`, i.e. `gemini-3.1-flash-lite` →
+   `gemini-flash-lite-latest` → OpenRouter (Nemotron 3 Super → Gemma 4 → Dots3) → local.
+5. **An opt-in live contract check** (`scripts/live_provider_contract_check.py`, never collected by
+   pytest):
+   - It sends the app's **exact** request body, built by the real provider class, with a tiny
+     prompt to each configured vendor, and prints only the vendor, the HTTP status and pass/fail.
+   - It never prints keys or bodies.
+   - It is run by the PM before any gate; each run costs one request per vendor.
+   - The Coder writes it and tests its offline parts with MockTransport. The Coder never runs it
+     against real endpoints.
+
+**Revert checks:**
+- Send `reasoning` to Gemini → the contract test FAILS.
+- Map 400 back to InvalidResponse → the no-retry test FAILS.
+
+### 18.10 — Gate B-11 (PM, Coder idle)
+
+The B-10 protocol with the new default order. The PM first runs the live contract check, which
+must pass for every vendor. The pass criteria are unchanged (Amendment D): B1 5/5, samples ≥ 4/4,
+and a B1 median wall time ≤ 1.5× local. Only on a PASS does the `AI_MODE` default flip to
+`cloud_first`.
+
