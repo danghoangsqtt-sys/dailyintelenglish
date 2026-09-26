@@ -1264,11 +1264,19 @@ middle-section overshoot.
 
 ## Phase 18 — Cloud-First AI with Local Fallback (ENH-011)
 
-**Status:** 🟢 Open 2026-09-23 | Plan `docs/implementation/phase-18-cloud-first-ai.md`.
+**Status:** ✅ Closed 2026-09-26 (v1.1.0-beta) | Plan `docs/implementation/phase-18-cloud-first-ai.md`.
 Authority: owner decisions D21–D24 (brainstorm `docs/brainstorm/session-2026-09-23.md`).
 
-- [ ] 18.1 `OpenAICompatProvider` (plain JSON, 200-with-error transient, config errors fail fast) (Coder)
-- [ ] 18.2 Router primary/fallback roles, `local|cloud|cloud_first`, separate per-provider budgets, circuit breaker; Gemini provider removed (Coder)
-- [ ] 18.3 Settings: key/URL/model (write-only key), test connection, health fields, privacy note (Coder)
-- [ ] 18.4 Fallback-rate readout + runner `--matrix cloud_first` (Coder)
-- [ ] 18.5 Gate B-9 A/B cloud_first (free Nemotron 3 Super) vs local B-8 (PM)
+- [x] 18.1 `OpenAICompatProvider` (plain JSON, 200-with-error transient, config errors fail fast) (Coder)
+- [x] 18.2 Router primary/fallback roles, `local|cloud|cloud_first`, separate per-provider budgets, circuit breaker; Gemini provider removed (Coder)
+- [x] 18.3 Settings: key/URL/model (write-only key), test connection, health fields, privacy note (Coder)
+- [x] 18.4 Fallback-rate readout + runner `--matrix cloud_first` (Coder)
+- [x] 18.5 Gate B-9 A/B cloud_first (free Nemotron 3 Super) vs local B-8 (PM)
+- [x] 18.6 Cloud model chain + speed tuning (D27)
+- [x] 18.7 Gate B-10 (FAIL: Gemini rejected the `reasoning` param)
+- [x] 18.8 Multi-provider chain (D28)
+- [x] 18.9 Vendor-aware requests + Gemini-first order (D30)
+- [x] 18.10 Gate B-11: 11/11, B1 median 45 s; accepted as PASS (D31)
+- [x] 18.11 Default flip to `cloud_first`, v1.1.0-beta
+
+**Status update:** ✅ Phase 18 closed 2026-09-26. Next: Phase 19, Remotion (ENH-013), then Phase 20, AI thumbnails (ENH-012).

@@ -1,6 +1,6 @@
 # Phase 18 Implementation Plan — Cloud-First AI with Local Fallback (ENH-011)
 
-**Status:** Controlling plan, PM, 2026-09-23. **Starts after Phase 17 closes.** Gate B-8 must first
+**Status:** CLOSED 2026-09-26 (D31, v1.1.0-beta). Controlling plan, PM, 2026-09-23. **Starts after Phase 17 closes.** Gate B-8 must first
 record the local-qwen baseline that 18.5 compares against.
 **Authority:** owner decisions D21–D24 (`docs/brainstorm/session-2026-09-23.md`). D21 supersedes
 D9/D11 as the default.

@@ -4,7 +4,8 @@
 
 - **Phase:** 18
 - **Slug:** `18-cloud-first-ai`
-- **Status:** open (2026-09-23; handover to the Coder in the Phase 17 close-out commit, `0197cbd`)
+- **Status:** complete
+- **Closed:** 2026-09-26 (D31; v1.1.0-beta)
 - **Planned:** 2026-09-23 (`/vp-evolve ENH-011`)
 - **Controlling plan:** `docs/implementation/phase-18-cloud-first-ai.md`
 - **Authorization:** owner decisions D21–D24 (brainstorm `docs/brainstorm/session-2026-09-23.md`).

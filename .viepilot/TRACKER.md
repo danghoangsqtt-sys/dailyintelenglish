@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); Phases 13–15 closed (15 closed 2026-09-22: structural failures eliminated, media gate PASS for the first time, owner's failing configuration completes 2/2; repetition is the single remaining, variable failure class). **Phase 16 (Stability Hardening) closed 2026-09-23**: worker loop guard, ffmpeg timeouts + atomic render, test-DB leak fixed + 447 leaked projects cleaned, repetition 0.00% in 9/9 completed scripts at Gate B-7; remaining failure class: global word-count overshoot (ENH-010). **Phase 17 (Budget-Aware Global Validation, ENH-010) closed 2026-09-23**: re-gate B1 5/5 + owner config 4/4, every global-stage repair recovered its job. **Phase 18 (Cloud-First AI, ENH-011) open.**
+**Phase:** 1–13 done (Phase 13 closed 2026-09-22 under owner decision D11 — local-only, Gate B-3 script gate PASS 5/5); Phases 13–15 closed (15 closed 2026-09-22: structural failures eliminated, media gate PASS for the first time, owner's failing configuration completes 2/2; repetition is the single remaining, variable failure class). **Phase 16 (Stability Hardening) closed 2026-09-23**: worker loop guard, ffmpeg timeouts + atomic render, test-DB leak fixed + 447 leaked projects cleaned, repetition 0.00% in 9/9 completed scripts at Gate B-7; remaining failure class: global word-count overshoot (ENH-010). **Phase 17 (Budget-Aware Global Validation, ENH-010) closed 2026-09-23**: re-gate B1 5/5 + owner config 4/4, every global-stage repair recovered its job. **Phase 18 (Cloud-First AI, ENH-011) closed 2026-09-26: default `AI_MODE=cloud_first`, chain Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter (Nemotron → Gemma 4 → Dots3) → local qwen; B1 median 45 s (Gate B-11). Version 1.1.0-beta.** No phase open; next planned is Phase 19 (Remotion, ENH-013).
 **Day:** 6 / 21  
 **Started:** 2026-09-10 (Phases 1–12 complete; Phase 13 opened 2026-09-18 as user-approved reliability scope beyond the original plan)
 **Target:** 2026-09-30 (all 3 originally-planned phases complete Day 6 — well ahead of schedule; Phase 4 is additional post-beta scope)  
@@ -2118,7 +2118,7 @@ Plan `docs/implementation/phase-18-cloud-first-ai.md`; state `.viepilot/phases/1
 | 18.8 Multi-provider cloud chain (D28) | Coder | ✅ done (`7f8676d`, N1 `889cddf`) |
 | 18.9 Vendor-aware requests + Gemini-first order (D30) | Coder | ✅ done (`f3a0de3`) |
 | 18.10 Gate B-11 | PM | ✅ executed, accepted as PASS by the owner (D31) |
-| 18.11 Default flip `AI_MODE=cloud_first` + version 1.1.0-beta | Coder | not started |
+| 18.11 Default flip `AI_MODE=cloud_first` + version 1.1.0-beta | Coder | ✅ done (`6468ac7`) |
 
 PM review log:
 
@@ -2140,11 +2140,30 @@ PM review log:
 - 18.9 design `43232fb` — **APPROVED** (PM, 2026-09-26), with one condition. Accepted: a `_vendor`-gated body with an exact-key-set contract test; `ProviderRequestRejectedError(ProviderError)` (outside both retry tuples by construction) on any-vendor 400, mapped to `provider_request_rejected`; the label derived from the existing chain check; the order default `gemini,openrouter`; the opt-in live check building real provider instances and printing only name/status/class. **Condition:** a 400 opens that entry's circuit on the **normal cooldown** (`AI_CIRCUIT_COOLDOWN_SECONDS`), never a long or open-until pause. A 400 can be request-specific, so one bad request must not take a healthy provider out for long. Test that the entry is retried after the cooldown.
 - 18.9 impl `f3a0de3` — **ACCEPTED** (PM, 2026-09-26). A `_vendor`-gated body, `ProviderRequestRejectedError` on 400 (normal cooldown, with a cooldown-recovery test), the label fix, order `gemini,openrouter`, and the opt-in live check. PM re-verification: PM revert check (`reasoning` sent to every vendor, i.e. the B-10 bug) → 3 payload contract tests FAIL, restored; full suite **1173 passed**; `ruff` clean. PM read the live check in full before running it: it prints only name/status/class, never message, body or key. Nit (non-blocking): it exits 0 even when a vendor fails.
 - 18.10 Gate B-11 — **EXECUTED** (PM, 2026-09-26), report `docs/operations/phase18-gate-b11.md`. The live contract check passed 3/3 vendors. **All 11 jobs completed**, served almost entirely by Gemini 3.1 Flash-Lite (115 calls; FL-latest 13; local 1). **B1 median 45 s vs ~150 s local (~3× faster)**; repetition 0; learning 7/7; media PASS 504 s. The runner decision is FAIL (content 3/5) solely on `has_outro`. The PM read the endings: both are real sign-offs the marker list misses (measurement false negatives). All Amendment D criteria are met, so the **PM recommends PASS**; the owner decides the default flip. Follow-ups: the outro heuristic (decide before the next gate), Gemini first-pass length at 0.61× (every section repaired once), and checking the Gemini quota headroom.
+- 18.11 impl `6468ac7` — **ACCEPTED** (PM, 2026-09-26). The `AI_MODE` default is `cloud_first` (config.py, .env.example); CHANGELOG `[1.1.0-beta] - 2026-09-26`; two new default/collapse tests that avoid constructing a real `Settings()` (so the real `.env` keys are never read). PM re-verification: full suite **1175 passed**, `ruff` clean. In the owner's real environment, `AI_MODE=cloud_first`, the configured providers are `gemini, openrouter`, and the effective mode is `cloud_first`. The Coder noted two one-off flakes (DB-concurrency timing, a mocked-health browser test) that didn't recur.
+
+### Phase 18 close-out — ✅ CLOSED 2026-09-26
+
+Delivered, in order:
+- the OpenAI-compatible provider (18.1);
+- the router with primary/fallback roles, separate per-provider budgets and a circuit breaker, with Gemini-specific code removed (18.2);
+- Settings with a write-only key and the test-session secret neutralisation, N1/N2 (18.3);
+- the fallback-rate readout and runner support (18.4);
+- Gate B-9 (18.5);
+- the model chain, the daily-quota circuit and the malformed-JSON local retry (18.6);
+- the multi-provider chain (18.8);
+- the vendor-aware requests with the opt-in live contract check (18.9);
+- Gate B-10 FAIL, where the `reasoning` param was rejected by Gemini (18.7);
+- Gate B-11, accepted by the owner (18.10, D31);
+- the default flip (18.11).
+
+Suite 964 → 1175. **Version 1.1.0-beta.** Follow-ups: ENH-014 (outro heuristic, decide before the next gate) and ENH-015 (Gemini first-pass length).
 
 ## Decision Log
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-26 | **Phase 18 closed**, version **1.1.0-beta**. The default is cloud-first (Gemini → OpenRouter → local) | Gate B-11 was accepted (D31), and the default flip was verified in the owner's real environment |
 | 2026-09-26 | **D31 (owner): Gate B-11 accepted as PASS.** The runner's content FAIL is outro-heuristic false negatives, verified as real sign-offs. **The `AI_MODE` default flips to `cloud_first`** (Gemini → OpenRouter → local), and Phase 18 closes after the flip (Task 18.11, Coder). ENH-014 (outro heuristic) and ENH-015 (Gemini first-pass length) logged | 11/11 jobs complete, B1 median 45 s vs ~150 s local, repetition 0, media PASS; every Amendment D criterion met |
 | 2026-09-26 | **D30 (owner): Gemini first.** The chain becomes Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter (Nemotron → Gemma 4 → Dots3) → local. Plan Amendment G: 18.9 (vendor-aware body, 400 → non-transient, label fix, order, an opt-in live contract check) + 18.10 Gate B-11 | Gemini answers in ~4 s at ~1.00× the word target; Nemotron free timed out 16 × 75 s at B-10 |
 | 2026-09-24 | **D29 (owner): adopt Remotion** (React programmatic video) for word-level karaoke captions, a speaker indicator, timed vocabulary pop-ups, and intro/outro + chapters + a Remotion thumbnail still, keeping the ffmpeg path as fallback. Phase 19 = Remotion (ENH-013, spike first: render time on the owner's machine); Phase 20 = AI thumbnails (ENH-012) | The licence is free for individuals and companies of up to 3 employees (the owner is solo); word-level captions are the highest learner value; Edge TTS can supply per-word timing |
@@ -3105,7 +3124,7 @@ PM review log:
 
 ## Version
 
-- App version: 0.1.0
+- App version: 1.1.0-beta (Phase 18 close, 2026-09-26; v1.0.0-beta at Phase 3)
 - crystallize_version: 0.8.0
 - crystallized_at: 2026-09-10T07:55:00+07:00
 
@@ -3147,7 +3166,7 @@ PM review log:
 | BUG-023 | Bug | Leaked test projects in real app.db; CHANGELOG missing Phase 15 | low | done (Phase 16) |
 | ENH-009 | Enhancement | Script repetition gate variable (B-5 5/5 → B-6 3/5) | medium | done (Phase 16, 16.4; B-7 rep 0.00%) |
 | ENH-010 | Enhancement | Global script word-count repair is not budget-aware (incl. mixed case) | medium | done (Phase 17) |
-| ENH-011 | Enhancement | OpenAI-compatible cloud provider (Nemotron via OpenRouter), local qwen fallback | medium | planned (Phase 18, queued after Phase 17) |
+| ENH-011 | Enhancement | Cloud-first AI (Gemini → OpenRouter → local qwen) | medium | done (Phase 18) |
 | ENH-012 | Enhancement | Local AI thumbnails (cartoon/3D characters per topic), templates as fallback | low | open (D25+D26; Phase 20) |
 | ENH-013 | Enhancement | Remotion animated learning videos (karaoke captions, speaker, vocab pop-ups, intro/outro/chapters, thumbnail still), ffmpeg fallback | medium | open (D29; Phase 19) |
 | ENH-014 | Enhancement | Runner outro heuristic misses real sign-offs (gate false negatives) | medium | open |

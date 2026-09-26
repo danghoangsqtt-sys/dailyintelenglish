@@ -1,14 +1,14 @@
 {
   "project": "DailyIntelEnglish",
-  "version": "1.0.0-beta",
+  "version": "1.1.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_18_open",
+  "status": "phase_18_complete",
   "current_phase": 18,
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
     "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
-    "ai": "Ollama qwen3.5:9b local-only (owner decision D9, 2026-09-21); Gemini code retained dormant behind DIE_AI_ALLOW_CLOUD",
+    "ai": "Cloud-first (D21/D31): Gemini 3.1 Flash-Lite -> Gemini Flash-Lite latest -> OpenRouter free (Nemotron 3 Super -> Gemma 4 -> Dots3) -> local Ollama qwen3.5:9b fallback; kill switch DIE_AI_ALLOW_CLOUD / mode local",
     "tts_primary": "Edge TTS (sole official engine, decided 2026-09-13 -- see key_decisions)",
     "tts_backup": "n/a -- Edge TTS is the only official engine now",
     "tts_offline": "Piper TTS (availability-checked, not actively used)",
@@ -165,10 +165,10 @@
     "18": {
       "name": "Cloud-First AI with Local Fallback (ENH-011)",
       "days": "n/a",
-      "status": "open",
-      "tasks_done": 0,
-      "tasks_total": 5,
-      "note": "Planned 2026-09-23 via /vp-evolve ENH-011 from owner decisions D21-D24 (brainstorm docs/brainstorm/session-2026-09-23.md). Plan docs/implementation/phase-18-cloud-first-ai.md: 18.1 OpenAICompatProvider; 18.2 router primary/fallback + separate per-provider budgets + circuit breaker, modes local/cloud/cloud_first, Gemini provider removed; 18.3 Settings key/URL/model + health + privacy note; 18.4 fallback-rate readout + runner; 18.5 Gate B-9 A/B vs B-8. Owner's OpenRouter key is in .env (DIE_OPENAI_COMPAT_API_KEY, free tier, never printed)."
+      "status": "complete",
+      "tasks_done": 11,
+      "tasks_total": 11,
+      "note": "Planned 2026-09-23 via /vp-evolve ENH-011 from owner decisions D21-D24 (brainstorm docs/brainstorm/session-2026-09-23.md). Plan docs/implementation/phase-18-cloud-first-ai.md: 18.1 OpenAICompatProvider; 18.2 router primary/fallback + separate per-provider budgets + circuit breaker, modes local/cloud/cloud_first, Gemini provider removed; 18.3 Settings key/URL/model + health + privacy note; 18.4 fallback-rate readout + runner; 18.5 Gate B-9 A/B vs B-8. Owner's OpenRouter key is in .env (DIE_OPENAI_COMPAT_API_KEY, free tier, never printed). CLOSED 2026-09-26 (D31): chain Gemini 3.1 Flash-Lite -> Gemini Flash-Lite latest -> OpenRouter (Nemotron -> Gemma 4 -> Dots3) -> local qwen; Gate B-9 (regression), B-10 FAIL (Gemini rejected OpenRouter-only 'reasoning' param), B-11 accepted as PASS (11/11, B1 median 45 s vs ~150 s local); default AI_MODE=cloud_first (6468ac7); version 1.1.0-beta; suite 1175/1175. Follow-ups ENH-014, ENH-015."
     }
   },
   "key_decisions": [
