@@ -110,7 +110,9 @@ class Settings(BaseSettings):
     GEMINI_MODELS: str = "gemini-3.1-flash-lite,gemini-flash-lite-latest"
     # Comma-separated, dispatch order -- an entry with no key configured is skipped
     # silently (point 1). Parsed the same way as OPENAI_COMPAT_FALLBACK_MODELS above.
-    CLOUD_PROVIDER_ORDER: str = "openrouter,gemini"
+    # Task 18.9 (D30): Gemini first -- Gate B-10 found Gemini answered in ~4s at ~1.00x
+    # word target, while OpenRouter's free Nemotron timed out 16 times at 75s.
+    CLOUD_PROVIDER_ORDER: str = "gemini,openrouter"
 
     model_config = SettingsConfigDict(
         env_prefix="DIE_",

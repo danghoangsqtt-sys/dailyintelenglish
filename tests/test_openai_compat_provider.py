@@ -15,6 +15,7 @@ from app.core.exceptions import (
     ProviderDailyQuotaError,
     ProviderInvalidResponseError,
     ProviderRateLimitError,
+    ProviderRequestRejectedError,
     ProviderTimeoutError,
     ProviderUnavailableError,
 )
@@ -218,14 +219,17 @@ async def test_openai_compat_provider_config_error_statuses_are_auth_error(monke
 
 @pytest.mark.asyncio
 async def test_openai_compat_provider_uncategorized_status_is_invalid_response(monkeypatch):
+    """418 is genuinely uncategorized -- 400 moved to its own
+    `ProviderRequestRejectedError` category in Task 18.9 (D30), see below."""
+
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(400, json={"error": {"message": "bad request"}})
+        return httpx.Response(418, json={"error": {"message": "teapot"}})
 
     _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
     provider = _provider()
     with pytest.raises(ProviderInvalidResponseError) as exc_info:
         await provider.generate(_request())
-    assert exc_info.value.upstream_status == 400
+    assert exc_info.value.upstream_status == 418
 
 
 @pytest.mark.asyncio
@@ -660,3 +664,106 @@ async def test_array_wrapped_error_body_on_a_200_response_is_parsed(monkeypatch)
     provider = _provider()
     with pytest.raises(ProviderRateLimitError):
         await provider.generate(_request())
+
+
+# --- Task 18.9 (D30, Amendment G): vendor-aware payload + HTTP 400 ---------------------
+
+
+@pytest.mark.asyncio
+async def test_http_400_is_provider_request_rejected_not_invalid_response(monkeypatch):
+    """The real Gate B-10 cause, reproduced: any vendor's HTTP 400 is a
+    distinct, non-transient error -- never ProviderInvalidResponseError (a
+    *content* error the router retries once)."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = {"error": {"message": 'Invalid JSON payload received. Unknown name "reasoning": Cannot find field.'}}
+        return httpx.Response(400, json=body)
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(vendor="gemini")
+    with pytest.raises(ProviderRequestRejectedError) as exc_info:
+        await provider.generate(_request())
+    assert exc_info.value.upstream_status == 400
+    assert not isinstance(exc_info.value, ProviderInvalidResponseError)
+
+
+@pytest.mark.asyncio
+async def test_openrouter_vendor_payload_key_set(monkeypatch):
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["json"] = json_module.loads(request.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(vendor="openrouter")
+    await provider.generate(_request())
+
+    assert set(captured["json"].keys()) == {"messages", "reasoning", "model"}
+
+
+@pytest.mark.asyncio
+async def test_openrouter_vendor_payload_key_set_with_fallback_models(monkeypatch):
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["json"] = json_module.loads(request.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(vendor="openrouter", fallback_models=["fallback/one:free"])
+    await provider.generate(_request())
+
+    assert set(captured["json"].keys()) == {"messages", "reasoning", "models"}
+    assert "model" not in captured["json"]
+
+
+@pytest.mark.asyncio
+async def test_gemini_vendor_payload_key_set_never_includes_reasoning_or_models(monkeypatch):
+    """The PM's named revert check target: if `reasoning` (or `models`) were
+    ever sent to a Gemini-vendor provider again, this assertion fails."""
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["json"] = json_module.loads(request.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    # Deliberately also passing fallback_models, to prove the gate is on vendor,
+    # not on whether a fallback chain happens to be configured.
+    provider = _provider(vendor="gemini", fallback_models=["should-never-be-sent"])
+    await provider.generate(_request())
+
+    assert set(captured["json"].keys()) == {"messages", "model"}
+    assert "reasoning" not in captured["json"]
+    assert "models" not in captured["json"]
+
+
+@pytest.mark.asyncio
+async def test_generic_vendor_payload_key_set_never_includes_reasoning_or_models(monkeypatch):
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["json"] = json_module.loads(request.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(vendor="generic")
+    await provider.generate(_request())
+
+    assert set(captured["json"].keys()) == {"messages", "model"}
+
+
+@pytest.mark.asyncio
+async def test_gemini_vendor_payload_includes_temperature_when_set(monkeypatch):
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["json"] = json_module.loads(request.content)
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    _install_mock_transport(monkeypatch, openai_compat_provider_module, handler)
+    provider = _provider(vendor="gemini")
+    await provider.generate(_request(temperature=0.5))
+
+    assert set(captured["json"].keys()) == {"messages", "model", "temperature"}

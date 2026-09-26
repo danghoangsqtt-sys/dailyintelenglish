@@ -31,6 +31,7 @@ from app.core.exceptions import (
     ProviderError,
     ProviderInvalidResponseError,
     ProviderRateLimitError,
+    ProviderRequestRejectedError,
     ProviderTimeoutError,
     ProviderUnavailableError,
     SchemaValidationError,
@@ -402,7 +403,13 @@ class AIRouter:
                 last_error = exc
                 if isinstance(exc, ProviderDailyQuotaError):
                     entry.circuit.open_until(exc.reset_at_epoch_seconds)
-                elif isinstance(exc, ProviderAuthError):
+                elif isinstance(exc, (ProviderAuthError, ProviderRequestRejectedError)):
+                    # Task 18.9 (D30): open_immediately() -- the NORMAL cooldown path
+                    # (AI_CIRCUIT_COOLDOWN_SECONDS), never open_until. A 400 can be
+                    # request-specific (one malformed/too-large request), so it must
+                    # not take a healthy provider out for long; a systematic 400 (like
+                    # the real Gate B-10 `reasoning` bug) just re-opens it again on the
+                    # next attempt after the cooldown elapses.
                     entry.circuit.open_immediately()
                 else:
                     entry.circuit.record_failure()
@@ -423,7 +430,16 @@ class AIRouter:
 
         result = await self._run_with_budget(self._fallback, request, request.deadline_seconds)
         result.fallback_used = True
-        result.fallback_reason = type(last_error).__name__ if last_error is not None else "no_cloud_provider_configured"
+        # Task 18.9 (D30): distinguishes "every configured entry is currently paused"
+        # from "nothing was ever configured" -- Gate B-10 found these were previously
+        # indistinguishable (both left last_error None), mislabelling 58 real calls
+        # "no_cloud_provider_configured" when every entry was actually circuit-open.
+        if last_error is not None:
+            result.fallback_reason = type(last_error).__name__
+        elif self._chain:
+            result.fallback_reason = "all_cloud_circuits_open"
+        else:
+            result.fallback_reason = "no_cloud_provider_configured"
         result.providers_tried = list(tried)
         # True only when nothing was even attempted (every configured entry was
         # skipped for being paused) -- matches 18.1-18.6's single-provider

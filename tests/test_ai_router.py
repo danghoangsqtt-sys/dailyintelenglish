@@ -22,6 +22,7 @@ from app.core.exceptions import (
     ProviderAuthError,
     ProviderDailyQuotaError,
     ProviderRateLimitError,
+    ProviderRequestRejectedError,
     ProviderTimeoutError,
     ProviderUnavailableError,
     SchemaValidationError,
@@ -990,3 +991,75 @@ async def test_providers_tried_is_empty_in_local_mode():
     result = await router.generate(_request())
 
     assert result.providers_tried == []
+
+
+# --- Task 18.9 (D30, Amendment G): ProviderRequestRejectedError (HTTP 400) -----------------
+
+
+async def test_provider_request_rejected_opens_circuit_immediately_with_no_retry():
+    e1 = _entry("e1", [ProviderRequestRejectedError("bad request")])  # exactly ONE outcome
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(chain=[e1], fallback=fallback, mode=AIMode.CLOUD_FIRST)
+
+    result = await router.generate(_request())
+
+    assert result.provider == "ollama"
+    assert result.fallback_reason == "ProviderRequestRejectedError"
+    assert e1.provider.call_count == 1  # no content-retry -- a second scripted outcome
+    # would have raised RuntimeError("no more scripted outcomes") if it retried
+    assert e1.circuit.is_open() is True
+
+
+async def test_provider_request_rejected_circuit_recovers_after_the_normal_cooldown(monkeypatch):
+    """PM's explicit condition: a 400 opens the entry on the NORMAL cooldown
+    path (open_immediately -> AI_CIRCUIT_COOLDOWN_SECONDS), never open_until --
+    it's request-specific, not a long-lived provider outage, so a healthy
+    provider must not be taken out for long. After the cooldown elapses, the
+    entry is tried again (a systematic 400, like the real Gate B-10 bug,
+    simply re-opens it on that next attempt)."""
+    e1 = _entry("e1", [ProviderRequestRejectedError("bad request"), _result("e1")], cooldown_seconds=60.0)
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(chain=[e1], fallback=fallback, mode=AIMode.CLOUD_FIRST)
+
+    first = await router.generate(_request())
+    assert first.provider == "ollama"
+    assert e1.circuit.is_open() is True
+
+    fake_now = time.monotonic() + 61.0  # past the 60s cooldown
+    monkeypatch.setattr(time, "monotonic", lambda: fake_now)
+    assert e1.circuit.is_open() is False
+
+    second = await router.generate(_request())
+
+    assert second.provider == "e1"  # the entry was tried again, and this time it succeeds
+
+
+async def test_fallback_reason_is_all_cloud_circuits_open_when_every_entry_is_paused():
+    e1 = _entry("e1", [])
+    e1.circuit.open_immediately()
+    e2 = _entry("e2", [])
+    e2.circuit.open_immediately()
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(chain=[e1, e2], fallback=fallback, mode=AIMode.CLOUD_FIRST)
+
+    result = await router.generate(_request())
+
+    assert result.fallback_reason == "all_cloud_circuits_open"
+    assert result.circuit_open is True
+
+
+async def test_fallback_reason_is_no_cloud_provider_configured_when_chain_is_empty():
+    fallback = FakeProvider("ollama", [_result("ollama")])
+    router = AIRouter(chain=[], fallback=fallback, mode=AIMode.CLOUD_FIRST)
+
+    result = await router.generate(_request())
+
+    assert result.fallback_reason == "no_cloud_provider_configured"
+    assert result.circuit_open is False  # regression guard: an empty chain is NOT "all paused"
+
+
+def test_default_cloud_provider_order_is_gemini_first():
+    """D30: locks in the flipped default (was 'openrouter,gemini')."""
+    from app.core.config import Settings
+
+    assert Settings.model_fields["CLOUD_PROVIDER_ORDER"].default == "gemini,openrouter"

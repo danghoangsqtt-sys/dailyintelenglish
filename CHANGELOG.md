@@ -9,6 +9,26 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Changed
+- Vendor-aware provider requests + Gemini-first order (2026-09-26, Phase 18 Task 18.9, ENH-011,
+  D30/Amendment G, self-implemented by Coder): fixes the real Gate B-10 FAIL
+  (`docs/operations/phase18-gate-b10.md`) -- `OpenAICompatProvider` sent OpenRouter's own
+  `reasoning`/`models`-array fields unconditionally, and Gemini's OpenAI-compat endpoint rejects
+  any unknown field with HTTP 400, so Gemini served 0 of 118 real calls in that gate. The request
+  body is now gated on the provider's vendor: `reasoning`/`models` only for OpenRouter entries,
+  plain OpenAI-compatible fields (`model`/`messages`/optional `temperature`) for Gemini and
+  generic entries, with a contract test locking in the exact key set per vendor. HTTP 400 is now
+  a distinct, non-transient `ProviderRequestRejectedError` (mapped to `"provider_request_rejected"`
+  job error code) instead of the content-retryable `ProviderInvalidResponseError` it fell into
+  before — no retry, and that provider's circuit opens immediately on the router's normal
+  cooldown path (never the longer `open_until`, since a 400 can be one bad request, not a
+  long-lived outage). The fallback-reason label now distinguishes `all_cloud_circuits_open`
+  (every configured entry is currently paused) from `no_cloud_provider_configured` (nothing is
+  configured at all) — previously indistinguishable, which mislabelled 58 real Gate B-10 calls.
+  `CLOUD_PROVIDER_ORDER`'s default flips to `gemini,openrouter` (Gemini answered in ~4s at
+  ~1.00x word target in the gate; OpenRouter's free Nemotron timed out 16 times at 75s). New
+  opt-in `scripts/live_provider_contract_check.py` sends the app's exact real request to each
+  configured provider and prints only vendor/HTTP-status/pass-fail — never keys or bodies, never
+  collected by pytest, run only by the PM before a gate.
 - Multi-provider cloud chain (2026-09-24, Phase 18 Task 18.8, ENH-011, D28/Amendment E, real
   provider probe/Amendment F, self-implemented by Coder): the AI router now dispatches through an
   ordered chain of cloud providers, each with its own circuit breaker, instead of one primary --

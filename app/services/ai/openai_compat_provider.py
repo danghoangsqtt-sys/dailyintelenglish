@@ -1,12 +1,14 @@
 """OpenAI-compatible adapter (OpenRouter, or any /chat/completions-shaped
 endpoint): one HTTP call per `generate()`, no internal retry.
 
-Every behaviour here is dictated by the real OpenRouter smoke test
-(`docs/operations/enh011-nemotron-smoke.md`), not guessed: plain prompt-only
-JSON (never `response_format` -- `json_schema` returned malformed JSON,
-`json_object` breaks the array contract), `reasoning: {"exclude": true}`
-(Nemotron reasons before answering; excluding it keeps that out of `content`),
-and upstream errors that arrive as HTTP 200 with an `error` body.
+Every behaviour here is dictated by real provider probes, not guessed: plain
+prompt-only JSON (never `response_format` -- `json_schema` returned malformed
+JSON, `json_object` breaks the array contract); `reasoning: {"exclude": true}`
+(Nemotron reasons before answering; excluding it keeps that out of `content`)
+and OpenRouter's `models` fallback array are OpenRouter-vendor-only (Task
+18.9, D30 -- Gate B-10 found Gemini's endpoint rejects `reasoning` as an
+unknown field with HTTP 400; other vendors get plain OpenAI-compatible
+fields); and upstream errors that arrive as HTTP 200 with an `error` body.
 """
 
 from __future__ import annotations
@@ -26,6 +28,7 @@ from app.core.exceptions import (
     ProviderError,
     ProviderInvalidResponseError,
     ProviderRateLimitError,
+    ProviderRequestRejectedError,
     ProviderTimeoutError,
     ProviderUnavailableError,
 )
@@ -272,12 +275,19 @@ class OpenAICompatProvider:
             self._raise(ProviderAuthError("OpenAI-compatible API key is not configured"), None)
 
         prompt_hash = hashlib.sha256(request.prompt.encode("utf-8")).hexdigest()[:16]
-        payload: dict[str, object] = {
-            "messages": [{"role": "user", "content": request.prompt}],
-            "reasoning": {"exclude": True},
-        }
-        if self._fallback_models:
-            payload["models"] = [self._model, *self._fallback_models]
+        payload: dict[str, object] = {"messages": [{"role": "user", "content": request.prompt}]}
+        # Task 18.9 (D30, Amendment G): the real Gate B-10 cause -- `reasoning` and the
+        # `models` array are OpenRouter-specific (Nemotron reasons before answering;
+        # OpenRouter's own server-side chain-fallback). Gemini's OpenAI-compat endpoint
+        # rejects any unknown field with HTTP 400. Gated on `self._vendor`, not on
+        # whether `fallback_models` happens to be empty, so a non-OpenRouter entry never
+        # gets either field even if a future caller mistakenly passed one.
+        if self._vendor == "openrouter":
+            payload["reasoning"] = {"exclude": True}
+            if self._fallback_models:
+                payload["models"] = [self._model, *self._fallback_models]
+            else:
+                payload["model"] = self._model
         else:
             payload["model"] = self._model
         if request.temperature is not None:
@@ -305,6 +315,19 @@ class OpenAICompatProvider:
         if status in (401, 402, 403, 404):
             self._raise(
                 ProviderAuthError(self._error_message(response, "OpenAI-compatible endpoint rejected the request")),
+                status,
+            )
+
+        if status == 400:
+            # Task 18.9 (D30): the real Gate B-10 cause -- an unconditional OpenRouter-only
+            # field sent to Gemini got HTTP 400. Any vendor's 400 means the same thing (the
+            # request itself was malformed), not a Gemini-specific body shape -- never worth
+            # retrying, so this is a distinct, non-transient error, not ProviderInvalidResponseError
+            # (a *content* error the router retries once).
+            self._raise(
+                ProviderRequestRejectedError(
+                    self._error_message(response, "OpenAI-compatible endpoint rejected the request body")
+                ),
                 status,
             )
 

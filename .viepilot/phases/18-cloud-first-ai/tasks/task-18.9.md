@@ -1,6 +1,6 @@
 # Task 18.9 — Vendor-aware requests + chain order (D30, Amendment G)
 
-- **Status:** not started
+- **Status:** done (pending PM ACCEPTED)
 - **Owner:** Coder
 - **Priority:** P0
 - **Dependency:** Gate B-10 FAIL (`docs/operations/phase18-gate-b10.md`); owner decision D30
@@ -191,4 +191,55 @@ DB untouched.
 
 ## Evidence
 
-_pending_
+- Design commit `43232fb` (APPROVED, one condition confirmed already-matched: `open_immediately()`
+  is the normal cooldown path, never `open_until`), this implementation commit adds only the
+  cooldown-recovery test the PM asked for.
+- **Code:**
+  - `app/core/exceptions.py`: new `ProviderRequestRejectedError(ProviderError)` (direct subclass,
+    deliberately not `ProviderInvalidResponseError`/`ProviderRateLimitError`).
+  - `app/services/ai_job_service.py`: `_PROVIDER_ERROR_CODES` gains
+    `ProviderRequestRejectedError: "provider_request_rejected"`.
+  - `app/services/ai/openai_compat_provider.py`: payload construction gated on `self._vendor`
+    (`reasoning`/`models` array OpenRouter-only; plain `model` for every other vendor,
+    unconditionally, even if `fallback_models` were passed to a non-OpenRouter entry); new
+    `if status == 400:` branch raising `ProviderRequestRejectedError` (any vendor, not tied to
+    Gemini's specific body wording); module docstring updated to describe the vendor split
+    instead of an unconditional `reasoning`.
+  - `app/services/ai/router.py`: the per-entry exception handler's `ProviderAuthError` branch
+    becomes `(ProviderAuthError, ProviderRequestRejectedError)`, both using `open_immediately()`
+    (the normal cooldown, per the PM's explicit condition); the fallback-reason label now checks
+    `elif self._chain: "all_cloud_circuits_open"` before falling to
+    `"no_cloud_provider_configured"`, reusing the same `bool(self._chain)` check
+    `result.circuit_open` already computes.
+  - `app/core/config.py`/`.env.example`: `CLOUD_PROVIDER_ORDER` default `"openrouter,gemini"` ->
+    `"gemini,openrouter"` (D30).
+  - `scripts/live_provider_contract_check.py` (new, opt-in): reuses `router.py`'s
+    `_configured_cloud_provider_names`/`_build_chain_entries` to build the exact real provider
+    instances, calls `.generate()` directly per entry (bypassing `AIRouter`/circuits), prints only
+    `<name>: OK` or `<name>: FAIL (HTTP <status>, <ExceptionClass>)`. `if __name__ ==
+    "__main__":` guard; filename matches neither of pytest's default collection patterns and
+    `pytest.ini` has no override, so it's safe from accidental collection by construction.
+- **Tests (14 new, 1173 total):**
+  - `tests/test_openai_compat_provider.py` (+9): HTTP 400 -> `ProviderRequestRejectedError` (not
+    `ProviderInvalidResponseError`); per-vendor payload key-set contract tests (OpenRouter with/
+    without a fallback chain, Gemini, generic, Gemini+temperature); the pre-existing "uncategorized
+    status" test moved from 400 (now categorized) to 418.
+  - `tests/test_ai_router.py` (+6): `ProviderRequestRejectedError` opens the entry's circuit with
+    zero retries (exactly one call observed); **the PM's requested cooldown-recovery test** --
+    after the normal cooldown elapses (`time.monotonic` patched forward), the same entry is tried
+    again and succeeds; `all_cloud_circuits_open` vs `no_cloud_provider_configured` (the exact
+    Gate B-10 mislabelling, now a regression guard); the flipped default `CLOUD_PROVIDER_ORDER`.
+  - `tests/test_ai_job_service.py` (+1 parametrize case): the new error-code mapping.
+  - `tests/test_live_provider_contract_check.py` (new, +2): the script's one pure helper
+    (`_build_probe_request`) and its main-guard (importing it makes no real call).
+- **Revert-and-confirm-failure:**
+  - Vendor gate: temporarily sent `reasoning`/plain `model` unconditionally (reproducing the
+    exact Gate B-10 bug) -> both the Gemini and generic payload contract tests failed (`'reasoning'`
+    present when it must be absent); restored, 53/53 provider tests passed again.
+  - 400 mapping: temporarily mapped HTTP 400 back to `ProviderInvalidResponseError` ->
+    `test_http_400_is_provider_request_rejected_not_invalid_response` failed (wrong exception
+    type raised) -- this is exactly the class the router's `_CONTENT_RETRY_ERRORS` tuple already
+    retries once, so reverting this one line reintroduces the real wasted-retry bug; restored,
+    53/53 passed again.
+- **Full suite:** **1173 passed** (1159 baseline + 14 new). `ruff check .` -> all checks passed.
+  Real DB untouched throughout (the conftest guard never tripped).

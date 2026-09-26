@@ -97,6 +97,18 @@ class ProviderAuthError(ProviderError):
     """Raised on a provider auth failure. Message never includes the key itself."""
 
 
+class ProviderRequestRejectedError(ProviderError):
+    """Raised on HTTP 400 (Task 18.9, D30, Amendment G) -- the request itself
+    was malformed (e.g. an unknown field the upstream doesn't accept, the
+    real Gate B-10 cause: an OpenRouter-only param sent to Gemini). Never
+    worth retrying (the same bad request would just be rejected again) and
+    never resolved by backoff -- it's a code/config bug on this app's side,
+    not a transient upstream condition. Deliberately a direct `ProviderError`
+    subclass, not `ProviderInvalidResponseError`/`ProviderRateLimitError`, so
+    it falls outside both the router's content-retry and transient-backoff
+    tuples by construction."""
+
+
 class ProviderRateLimitError(ProviderError):
     """Raised when a provider reports rate/quota exhaustion (retryable)."""
 

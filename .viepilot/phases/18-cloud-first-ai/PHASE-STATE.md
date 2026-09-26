@@ -29,7 +29,7 @@
 | 18.6 | Cloud model chain + speed tuning (D27, plan Amendment D) | Coder | done (ACCEPTED, `a17ca11`) |
 | 18.7 | Gate B-10 | PM | done (`docs/operations/phase18-gate-b10.md`, `a62333b`) -- FAIL: Gemini served 0/118 calls (OpenRouter-only `reasoning` param rejected 400), 2.7x slower; fix in 18.9, `AI_MODE` stays `local` |
 | 18.8 | Multi-provider cloud chain (D28, plan Amendment E; defaults revised by Amendment F) | Coder | done (ACCEPTED, `7f8676d` + N1 `889cddf`) |
-| 18.9 | Vendor-aware requests + chain order (D30, plan Amendment G) | Coder | design submitted, pending PM review |
+| 18.9 | Vendor-aware requests + chain order (D30, plan Amendment G) | Coder | done (pending PM ACCEPTED) |
 | 18.10 | Gate B-11 | PM | not started -- moves after 18.9 |
 
 ## Evidence log
