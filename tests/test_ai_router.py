@@ -1063,3 +1063,26 @@ def test_default_cloud_provider_order_is_gemini_first():
     from app.core.config import Settings
 
     assert Settings.model_fields["CLOUD_PROVIDER_ORDER"].default == "gemini,openrouter"
+
+
+def test_default_ai_mode_is_cloud_first():
+    """Task 18.11 (D31, after Gate B-11's real PASS): locks in the flipped
+    class-level default (was "local"). Reads `Settings.model_fields` (pure
+    metadata) rather than constructing a real `Settings()` -- a fresh
+    instantiation would re-read the real `.env` file (pydantic-settings does
+    this on every construction, not just the one shared `config.settings`
+    singleton conftest.py neutralizes), which could pull the owner's real
+    keys into this test process. Nothing here ever constructs `Settings()`."""
+    from app.core.config import Settings
+
+    assert Settings.model_fields["AI_MODE"].default == "cloud_first"
+
+
+def test_ai_mode_default_still_collapses_to_local_with_no_provider_configured():
+    """Invariant 32/D24, restated for the new default: an install with no
+    cloud key configured is fully unaffected by the "cloud_first" default --
+    `compute_effective_mode` collapses it to "local" exactly as it always
+    has. Uses the pure function directly (explicit args), not a real
+    `Settings()` instance, for the same secret-safety reason as the test
+    above."""
+    assert compute_effective_mode(AIMode.CLOUD_FIRST, allow_cloud=True, any_provider_configured=False) is AIMode.LOCAL

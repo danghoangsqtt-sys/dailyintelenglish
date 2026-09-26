@@ -52,20 +52,26 @@ class Settings(BaseSettings):
     # Phase 18/D21 made cloud the default primary, local the automatic fallback,
     # superseding D9/D11 as the default. AI_MODE is the kill switch: "local" (Ollama
     # only, no cloud), "cloud" (cloud only, no fallback -- a diagnostic escape hatch),
-    # or "cloud_first" (cloud first, automatic local fallback -- the default once
-    # AI_ALLOW_CLOUD is true and a key/model are configured; otherwise the *effective*
+    # or "cloud_first" (cloud first, automatic local fallback -- the default now that
+    # Gate B-11 passed (D31) and AI_ALLOW_CLOUD is true; otherwise the *effective*
     # mode is always "local" regardless of this value, per invariant 32/D24 -- see
     # `app.services.ai.router.compute_effective_mode`). A legacy stored/env value
     # ("gemini"/"hybrid", from before Phase 18) is migrated once, below.
     # `set_ai_mode` (app/services/settings_service.py) enforces the AI_ALLOW_CLOUD gate.
-    AI_MODE: str = "local"
+    #
+    # Task 18.11 (D31, plan Amendment C's close-out step): flipped from "local" to
+    # "cloud_first" after Gate B-11's real PASS (docs/operations/phase18-gate-b11.md --
+    # 11/11 complete, B1 median 45s vs ~150s local, ~3x faster, served almost entirely
+    # by Gemini 3.1 Flash-Lite) and the owner's acceptance. An install with no cloud
+    # key/model configured is still fully unaffected -- invariant 32/D24 collapses the
+    # *effective* mode to "local" regardless of this default whenever nothing is
+    # configured, so this flip only changes behavior for an install that already has
+    # (or later adds) a working key.
+    AI_MODE: str = "cloud_first"
     # Task 14.7 introduced this as the only switch that re-enables cloud, default
     # false. Phase 18/Task 18.3, plan Amendment C: default flips to true -- without
     # it, the Settings page could never enable cloud, since `set_ai_mode` enforces
-    # this gate. AI_MODE still defaults to "local" (unchanged, above): the owner
-    # opts into cloud_first from Settings, so a user with no key configured is
-    # unaffected either way (invariant 32). Explicit `DIE_AI_ALLOW_CLOUD=false`
-    # still fully disables cloud for anyone who wants the old default back.
+    # this gate.
     AI_ALLOW_CLOUD: bool = True
     OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
     OLLAMA_MODEL: str = "qwen3.5:9b"

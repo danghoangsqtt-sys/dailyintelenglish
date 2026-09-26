@@ -8,7 +8,23 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+## [1.1.0-beta] - 2026-09-26
+
+Phase 18: cloud-first AI with a Gemini → OpenRouter → local automatic-fallback chain (owner
+decisions D21–D31; `AI_MODE` now defaults to `cloud_first` after Gate B-11's real PASS,
+`docs/operations/phase18-gate-b11.md` — 11/11 jobs complete, B1 median 45s vs ~150s local, ~3x
+faster). Also includes Phase 16 (BUG-022/023, ENH-008/009) and Phase 17 (ENH-010, Gate B
+re-verification) work accumulated since 1.0.0-beta. See `.viepilot/TRACKER.md` for the full
+evidence trail.
+
 ### Changed
+- `AI_MODE` default (2026-09-26, Phase 18 Task 18.11, ENH-011, D31, self-implemented by Coder):
+  flips from `"local"` to `"cloud_first"` (`app/core/config.py`, `.env.example`) -- the close-out
+  step plan Amendment C reserved for after Gate B-11 passed and the owner accepted it. An install
+  with no cloud provider key configured is fully unaffected: invariant 32/D24's
+  `compute_effective_mode` collapses the effective mode to `"local"` regardless of this default
+  whenever nothing is configured, exactly as before. This flip only changes behavior for an
+  install that already has (or later adds) a working key.
 - Vendor-aware provider requests + Gemini-first order (2026-09-26, Phase 18 Task 18.9, ENH-011,
   D30/Amendment G, self-implemented by Coder): fixes the real Gate B-10 FAIL
   (`docs/operations/phase18-gate-b10.md`) -- `OpenAICompatProvider` sent OpenRouter's own
