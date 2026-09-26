@@ -2117,7 +2117,8 @@ Plan `docs/implementation/phase-18-cloud-first-ai.md`; state `.viepilot/phases/1
 | 18.7 Gate B-10 | PM | ✅ executed: FAIL (Gemini 0 calls: `reasoning` param rejected; 2.7× slower) |
 | 18.8 Multi-provider cloud chain (D28) | Coder | ✅ done (`7f8676d`, N1 `889cddf`) |
 | 18.9 Vendor-aware requests + Gemini-first order (D30) | Coder | ✅ done (`f3a0de3`) |
-| 18.10 Gate B-11 | PM | ✅ executed: all criteria met (45 s median); runner FAIL only on the outro heuristic (false negatives) |
+| 18.10 Gate B-11 | PM | ✅ executed, accepted as PASS by the owner (D31) |
+| 18.11 Default flip `AI_MODE=cloud_first` + version 1.1.0-beta | Coder | not started |
 
 PM review log:
 
@@ -2144,6 +2145,7 @@ PM review log:
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-26 | **D31 (owner): Gate B-11 accepted as PASS.** The runner's content FAIL is outro-heuristic false negatives, verified as real sign-offs. **The `AI_MODE` default flips to `cloud_first`** (Gemini → OpenRouter → local), and Phase 18 closes after the flip (Task 18.11, Coder). ENH-014 (outro heuristic) and ENH-015 (Gemini first-pass length) logged | 11/11 jobs complete, B1 median 45 s vs ~150 s local, repetition 0, media PASS; every Amendment D criterion met |
 | 2026-09-26 | **D30 (owner): Gemini first.** The chain becomes Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter (Nemotron → Gemma 4 → Dots3) → local. Plan Amendment G: 18.9 (vendor-aware body, 400 → non-transient, label fix, order, an opt-in live contract check) + 18.10 Gate B-11 | Gemini answers in ~4 s at ~1.00× the word target; Nemotron free timed out 16 × 75 s at B-10 |
 | 2026-09-24 | **D29 (owner): adopt Remotion** (React programmatic video) for word-level karaoke captions, a speaker indicator, timed vocabulary pop-ups, and intro/outro + chapters + a Remotion thumbnail still, keeping the ffmpeg path as fallback. Phase 19 = Remotion (ENH-013, spike first: render time on the owner's machine); Phase 20 = AI thumbnails (ENH-012) | The licence is free for individuals and companies of up to 3 employees (the owner is solo); word-level captions are the highest learner value; Edge TTS can supply per-word timing |
 | 2026-09-24 | **D28 revised by evidence (plan Amendment F):** OpenCode Zen dropped from the default chain (its free tier returns 403 "can only be used from within OpenCode", 6/7 models); Gemini defaults are `gemini-3.1-flash-lite` (201/200 words, 4 s) → `gemini-flash-lite-latest`, since `gemini-2.5-flash` is 404 "no longer available". Chain: OpenRouter (Nemotron → Gemma 4 → Dots3) → Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → qwen | Probe `docs/operations/enh011-nemotron-smoke.md` §5; a provider's own terms are not worked around |
@@ -3148,3 +3150,5 @@ PM review log:
 | ENH-011 | Enhancement | OpenAI-compatible cloud provider (Nemotron via OpenRouter), local qwen fallback | medium | planned (Phase 18, queued after Phase 17) |
 | ENH-012 | Enhancement | Local AI thumbnails (cartoon/3D characters per topic), templates as fallback | low | open (D25+D26; Phase 20) |
 | ENH-013 | Enhancement | Remotion animated learning videos (karaoke captions, speaker, vocab pop-ups, intro/outro/chapters, thumbnail still), ffmpeg fallback | medium | open (D29; Phase 19) |
+| ENH-014 | Enhancement | Runner outro heuristic misses real sign-offs (gate false negatives) | medium | open |
+| ENH-015 | Enhancement | Gemini first-pass section length at 0.61× (one repair per section) | medium | open |
