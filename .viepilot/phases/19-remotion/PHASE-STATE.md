@@ -4,7 +4,7 @@
 
 - **Phase:** 19
 - **Slug:** `19-remotion`
-- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 + 19.4 + **Report-UX-1 (all PM task-level, clean deliveries)** all accepted. **Deep-pivot for T6 2026-10-02 report deadline** (owner priority = AI-speed story for judging panel): 19.5 vocab / 19.6 intro-outro / 19.7 full packaging / 19.8 gate / 19.9 close-out all **PARKED** for post-report continuation. Report-UX-1 delivered elapsed counter + ETA + Step 4/5 progress parity, live-verified on dev server. PM report deliverables ready (`docs/report/`: slide outline, benchmark chart PNG showing 2.80× median speedup from Gate B-8 vs B-11 evidence, samples zip pre-share). **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted).
+- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 + 19.4 + Report-UX-1 + **ENH-014 (all PM task-level, clean deliveries)** all accepted. **Deep-pivot for T6 2026-10-02 report deadline** (owner priority = AI-speed story for judging panel): 19.5 vocab / 19.6 intro-outro / 19.7 full packaging / 19.8 gate / 19.9 close-out all **PARKED** for post-report continuation. Report-UX-1 delivered elapsed counter + ETA + Step 4/5 progress parity, live-verified on dev server. ENH-014 widened outro markers + wired `has_outro_last3_rate` to gate signal (closes a Phase 18 followup ahead of any future gate). PM report deliverables ready in `docs/report/` (slide outline, benchmark chart PNG showing 2.80× median speedup from Gate B-8 vs B-11 evidence, samples zip pre-share, backup demo video 3:20, dry-run checklist) and `README.md` refreshed for cloud-first + Phases 13-19. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted).
 - **Planned:** 2026-09-28 (`/vp-evolve ENH-013`)
 - **Controlling plan:** `docs/implementation/phase-19-remotion.md`
 - **Authorization:** owner decision **D29** (2026-09-24, brainstorm
@@ -186,7 +186,8 @@
   untouched (git diff empty).
 
 - **ENH-014** (2026-09-29, Coder, optional filler task -- not part of Phase 19 numbering):
-  design `4482344` (PM APPROVED) → implementation (see handover message for sha). Verified
+  design `4482344` (PM APPROVED) → implementation `5475e3e` (PM task-level ACCEPTED — no
+  owner decision needed, clean delivery, no incident, no gate, unit-tests-only). Verified
   per-case (not per-phrase) which of the 4 known outro-heuristic false negatives (Gate B-7
   run 4, B-8 run 5, B-11 run 1, B-11 run 2) actually needed new markers, using each gate's
   real evidence JSON and (for B-7/B-8) the real per-line script text fetched read-only from
