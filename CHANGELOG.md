@@ -9,6 +9,18 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Added (Phase 19, planning-track — not yet wired to the app)
+- **Task 19.3 (2026-09-28, PM task-level, sha `c48037d`, by Coder):** word-level karaoke
+  captions composition in `video-renderer/` — active word highlights `#FFD54A` inside the
+  same font/size/position band the 19.1 spike used. Uses `@remotion/captions@4.0.529` for
+  per-line grouping only (real finding: package is pure data/grouping, zero rendering
+  components); rendering is custom. Fallback to line-level rendering when word list is
+  empty/absent (older projects, omnivoice lines). Re-render wall time ~95 s vs. 19.1's
+  ~61 s (~1.55×, inside ≤2× threshold, added time dominated by 30 real Edge TTS
+  re-synthesis calls the runner needed because `b330d37f...` had zero captured word data
+  from Task 19.2 — a real-DB write would have been needed to re-mix that episode, which
+  the incident policy forbids). vitest 6/6 (`video-renderer/src/karaoke.test.ts`) with
+  revert-and-confirm-failure. Python full suite 1178/1178 unchanged. Vitest added as a
+  devDependency-only (+37 MB `node_modules`, packaged-app estimate unchanged).
 - **Task 19.2 (2026-09-28, D34, sha `20a1d32`, by Coder):** Edge TTS `WordBoundary` capture
   + per-word timestamps + additive migration `007_word_timestamps.sql`. New
   `audio_jobs.word_timestamps_json` column (nullable) populated on every future
@@ -40,10 +52,12 @@ Versioning: [SemVer](https://semver.org/)
   opt-in via the spike runner, not wired to `VideoService` -- that's Task 19.7).
 
 ### Planning
-- Task 19.3 (word-level karaoke composition via `@remotion/captions`, D19.3-a..f) doc-first
-  card written by PM at `.viepilot/phases/19-remotion/tasks/task-19.3.md`, awaiting Coder
-  pickup. Consumes 19.2's per-word timings; falls back to line-level rendering for empty/
-  absent word lists (older projects, omnivoice lines).
+- Task 19.4 (active-speaker indicator: name chip + optional avatar highlight, D19.4-a..f)
+  doc-first card written by PM at `.viepilot/phases/19-remotion/tasks/task-19.4.md`,
+  awaiting Coder pickup. Uses the existing `speakers.avatar_image_path` column (Task 1.7c);
+  falls back to name-only chip when a speaker has no avatar uploaded (which is the demo
+  episode's case for both Alex and Maya, verified read-only). Vitest coverage for the
+  active-speaker selection helper.
 - Task 19.1 (Remotion spike) **accepted PASS by owner (D33, 2026-09-28)**, commit `4dd325b`
   by Coder, independently re-verified by PM (full suite 1175/1175 re-run in 401.33 s, ruff
   clean, git-log-scoped confirmation `app/services/video_service.py` untouched across the

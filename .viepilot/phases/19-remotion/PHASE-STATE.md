@@ -4,7 +4,7 @@
 
 - **Phase:** 19
 - **Slug:** `19-remotion`
-- **Status:** 19.1 + 19.2 accepted (owner **D33**/**D34**, 2026-09-28); 19.3 implemented, awaiting PM acceptance. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted by owner as current state).
+- **Status:** 19.1 (D33) + 19.2 (D34) + **19.3 (PM task-level 2026-09-28, clean delivery)** all accepted; 19.4 doc-first card ready, awaiting Coder pickup. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted by owner as current state).
 - **Planned:** 2026-09-28 (`/vp-evolve ENH-013`)
 - **Controlling plan:** `docs/implementation/phase-19-remotion.md`
 - **Authorization:** owner decision **D29** (2026-09-24, brainstorm
@@ -39,8 +39,8 @@
 |---|---|---|---|
 | 19.1 | Spike: `video-renderer/` scaffold + minimal Remotion composition (background + line-level captions, matching today's ffmpeg output) rendered for one real B1 episode (2:56 actual — see preflight caveat). Measure render time / packaging footprint / output correctness. Report `docs/operations/phase19-spike-remotion.md`. | Coder | **accepted** -- PM + owner D33 2026-09-28, PASS, sha `4dd325b`, full suite 1175/1175 re-verified by PM |
 | 19.2 | Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration | Coder | **accepted** -- PM + owner **D34** 2026-09-28, sha `20a1d32`, full suite 1178/1178 re-verified by PM (423.81 s); real-DB migration-write incident logged in TRACKER Known Issues, accepted as-is |
-| 19.3 | Word-level karaoke captions composition (`@remotion/captions`) | Coder | **done** -- PM-approved design + implementation, full suite 1178/1178, tsc + vitest clean, awaiting PM acceptance |
-| 19.4 | Active-speaker indicator | Coder | provisional |
+| 19.3 | Word-level karaoke captions composition (`@remotion/captions`) | Coder | **accepted** -- PM task-level 2026-09-28, sha `c48037d`, wall time 96 s / 94 s (~1.55× 19.1 baseline, dominated by 30 real Edge TTS re-synth calls, not karaoke); vitest 6/6, 3/3 frame spot checks correct, `@remotion/captions` package inspection revealed pure data lib (no default visual); ffmpeg-fallback hash mismatch fully investigated and traced to a 2026-09-15 file predating Task 14.10's `-shortest` fix (unrelated to Phase 19) |
+| 19.4 | Active-speaker indicator (name chip + optional avatar highlight) | Coder | **ready** (doc-first card `tasks/task-19.4.md`, awaiting Coder pickup) |
 | 19.5 | Vocab/idiom pop-up cards | Coder | provisional |
 | 19.6 | Intro/outro + chapter/progress bar + Remotion thumbnail still | Coder | provisional |
 | 19.7 | `VideoService` wire-up, toggle, kill switch, packaging, `check_dependencies.py` | Coder | provisional |
@@ -104,8 +104,9 @@
   APPROVED message: real-DB is `mode=ro` from Coder side; owner + backup are still required
   before any Coder-side write, even a "safe" one.
 
-- **19.3** (2026-09-28, Coder): design `38d10f6` (PM APPROVED) → implementation (see handover
-  message for sha). Real finding: `@remotion/captions` ships zero rendering components (pure
+- **19.3** (2026-09-28, Coder): design `38d10f6` (PM APPROVED) → implementation `c48037d`
+  (PM task-level ACCEPTED, no owner decision needed — clean delivery, no incident, no gate
+  crossed). Real finding: `@remotion/captions` ships zero rendering components (pure
   data/grouping library, confirmed by listing every file in the package) -- the card's
   "helper-default visual" framing didn't match reality; `createTikTokStyleCaptions` used
   per-line with a combine-threshold larger than the line's own duration so it can't
