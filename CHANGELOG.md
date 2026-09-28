@@ -8,7 +8,27 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Phase 19, planning-track — not yet wired to the app)
+- **Task 19.2 (2026-09-28, D34, sha `20a1d32`, by Coder):** Edge TTS `WordBoundary` capture
+  + per-word timestamps + additive migration `007_word_timestamps.sql`. New
+  `audio_jobs.word_timestamps_json` column (nullable) populated on every future
+  `mix_project` run; existing rows stay `NULL`. Per-line sidecar `<line_id>.words.json`
+  next to the cached MP3 for TTS↔AudioService handoff. Full suite 1178/1178, PM
+  re-verified in 423.81 s. Coder root-discovery: `edge_tts.Communicate()` defaults to
+  `boundary="SentenceBoundary"` -- `boundary="WordBoundary"` must be passed explicitly. Two
+  of the design card's own assertions were disproved by real measurement (46% sum-vs-
+  duration gap; ~0.1s real leading silence) and replaced with evidence-based tolerance
+  checks. No user-visible behaviour change on the app yet (composition consumer arrives in
+  Task 19.3). **Incident (accepted as-is, logged in Known Issues, no reversal):** Coder's
+  own verification run inadvertently applied migration `007` to the real `data/app.db`
+  instead of a `mode=ro` connection; damage nil (additive/nullable/no-default; identical
+  outcome to next-startup migration).
+
 ### Planning
+- Task 19.3 (word-level karaoke composition via `@remotion/captions`, D19.3-a..f) doc-first
+  card written by PM at `.viepilot/phases/19-remotion/tasks/task-19.3.md`, awaiting Coder
+  pickup. Consumes 19.2's per-word timings; falls back to line-level rendering for empty/
+  absent word lists (older projects, omnivoice lines).
 - Task 19.1 (Remotion spike) **accepted PASS by owner (D33, 2026-09-28)**, commit `4dd325b`
   by Coder, independently re-verified by PM (full suite 1175/1175 re-run in 401.33 s, ruff
   clean, git-log-scoped confirmation `app/services/video_service.py` untouched across the

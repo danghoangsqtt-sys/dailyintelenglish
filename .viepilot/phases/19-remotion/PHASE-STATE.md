@@ -4,7 +4,7 @@
 
 - **Phase:** 19
 - **Slug:** `19-remotion`
-- **Status:** 19.1 accepted (PM + owner **D33**, 2026-09-28, spike PASS); 19.2 implemented, awaiting PM acceptance
+- **Status:** 19.1 + 19.2 accepted (owner **D33**/**D34**, 2026-09-28); 19.3 doc-first card ready, awaiting Coder pickup. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted by owner as current state).
 - **Planned:** 2026-09-28 (`/vp-evolve ENH-013`)
 - **Controlling plan:** `docs/implementation/phase-19-remotion.md`
 - **Authorization:** owner decision **D29** (2026-09-24, brainstorm
@@ -38,8 +38,8 @@
 | Task | Description | Owner | Status |
 |---|---|---|---|
 | 19.1 | Spike: `video-renderer/` scaffold + minimal Remotion composition (background + line-level captions, matching today's ffmpeg output) rendered for one real B1 episode (2:56 actual — see preflight caveat). Measure render time / packaging footprint / output correctness. Report `docs/operations/phase19-spike-remotion.md`. | Coder | **accepted** -- PM + owner D33 2026-09-28, PASS, sha `4dd325b`, full suite 1175/1175 re-verified by PM |
-| 19.2 | Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration | Coder | **done** -- PM-approved design + implementation, full suite 1178/1178 (see Evidence log for shas), awaiting PM acceptance |
-| 19.3 | Word-level karaoke captions composition | Coder | provisional |
+| 19.2 | Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration | Coder | **accepted** -- PM + owner **D34** 2026-09-28, sha `20a1d32`, full suite 1178/1178 re-verified by PM (423.81 s); real-DB migration-write incident logged in TRACKER Known Issues, accepted as-is |
+| 19.3 | Word-level karaoke captions composition (`@remotion/captions`) | Coder | **ready** (doc-first card `tasks/task-19.3.md`, awaiting Coder pickup) |
 | 19.4 | Active-speaker indicator | Coder | provisional |
 | 19.5 | Vocab/idiom pop-up cards | Coder | provisional |
 | 19.6 | Intro/outro + chapter/progress bar + Remotion thumbnail still | Coder | provisional |
@@ -92,3 +92,14 @@
   manual reversal was attempted (would itself be another unauthorized real-DB write and
   isn't needed given the migration's safety-by-design). Flagged to PM/owner for awareness;
   no action taken pending their read.
+
+  **PM + owner resolution (D34, 2026-09-28):** accept as-is, no reversal, no additional
+  guardrail beyond the existing brief. PM re-verified the incident description read-only
+  (`PRAGMA table_info(audio_jobs)` shows `word_timestamps_json TEXT` nullable no-default;
+  `schema_migrations` row for `007` at `2026-09-28T02:03:45.699437+00:00`, matches Coder's
+  disclosure exactly). Logged as a durable Known Issues entry (`.viepilot/TRACKER.md`,
+  2026-09-28). The disclosure-quality-over-punishment call is deliberate: chilling honest
+  incident reporting would trade a small provenance loss for a much larger loss of trust in
+  the co-session channel. Reminder restated in Task 19.3's card and in every future
+  APPROVED message: real-DB is `mode=ro` from Coder side; owner + backup are still required
+  before any Coder-side write, even a "safe" one.
