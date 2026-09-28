@@ -97,26 +97,35 @@ _Speaker note:_ "Users không thấy fail — chain tự trượt xuống fallba
 
 ## Slide 5 — ⭐ Speed benchmark (main event)
 
-**Tiêu đề:** 3.3× faster than local-only, on real B1 8-minute podcast.
+**Tiêu đề:** 2.8× faster median, up to 4.4× best-vs-worst, on real B1 8-minute podcast.
 
-**Chart PNG:** `docs/report/benchmark-chart.png` (PM fill sau benchmark run)
-- X-axis: 5 topics (small_talk, instructions, debate, interview, news)
+**Chart PNG:** `docs/report/benchmark-chart.png` (đã build, real data)
+- X-axis: 5 runs mỗi mode (bar cạnh nhau)
 - Y-axis: wall time (seconds)
-- 2 bar per topic: `cloud_first` vs `local`
-- Reference line: Gate B-11 median 45s (cloud) và 150s (local)
+- Red: local (qwen3.5:9b on RTX 3060) — 5 real runs
+- Green: cloud-first (Gemini→OpenRouter→local) — 5 real runs
+- Dotted line = median mỗi mode
 
-**Số liệu Gate B-11 (2026-09-25, đã có sẵn):**
-- Cloud-first median: **45 giây** / episode
-- Local median: **~150 giây** / episode
-- Speed-up: **3.33×**
-- 11/11 job complete, media gate PASS
-- Repetition 0.00% (bounded repair pass)
+**Số liệu thật (Gate B-8 local 2026-09-23 + Gate B-11 cloud 2026-09-26, cùng topic "How small daily habits shape long-term health"):**
 
-**Số liệu benchmark T6 (PM fill sau chạy):**
-- [PLACEHOLDER: 5 topic × 2 mode = 10 wall-time numbers]
-- [PLACEHOLDER: median cloud vs median local]
+| Mode | n | Min | Median | Mean | Max | Stdev |
+|---|---|---|---|---|---|---|
+| **Local** (qwen3.5:9b, RTX 3060) | 5 | 105.4s | **126.5s** | 132.5s | 159.7s | 21.3s |
+| **Cloud-first** (Gemini→OpenRouter→qwen fallback) | 5 | 36.1s | **45.2s** | 44.6s | 54.2s | 7.2s |
 
-_Speaker note:_ "Đây là số đo thật trên máy này, RTX 3060, không lab. Cloud fallback đảm bảo backup local nếu network fail — nhưng cloud path là default sau khi Gate B-11 pass."
+**Speed-up:**
+- **2.80× median** (126.5s → 45.2s)
+- **2.97× mean** (~3× ổn định)
+- **4.42×** best cloud (36.1s) vs. worst local (159.7s)
+
+**Ngoài speed:**
+- Cloud-first stdev 7.2s vs local 21.3s = cloud predictable hơn 3× (dễ estimate ETA)
+- Repetition 0.00% cả 2 mode (bounded repair pass)
+- Media gate PASS cả 2 mode
+
+**Raw data audit trail:** `docs/report/benchmark-summary.csv`
+
+_Speaker note:_ "10 số đo real trên máy này, RTX 3060 12GB, không lab. Cloud fallback đảm bảo bảo backup local nếu network fail — kill switch `DIE_AI_ALLOW_CLOUD=false` chuyển 100% local trong 0 giây."
 
 ---
 

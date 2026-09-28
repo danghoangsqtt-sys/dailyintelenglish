@@ -1,0 +1,11 @@
+mode,run_index,total_seconds,source_evidence
+local,1,147.59,gate-b8-20260923T105330Z.json
+local,2,105.42,gate-b8-20260923T105330Z.json
+local,3,126.48,gate-b8-20260923T105330Z.json
+local,4,159.65,gate-b8-20260923T105330Z.json
+local,5,123.47,gate-b8-20260923T105330Z.json
+cloud_first,1,39.16,gate-b11-20260926T042435Z.json
+cloud_first,2,36.15,gate-b11-20260926T042435Z.json
+cloud_first,3,45.18,gate-b11-20260926T042435Z.json
+cloud_first,4,48.16,gate-b11-20260926T042435Z.json
+cloud_first,5,54.21,gate-b11-20260926T042435Z.json
