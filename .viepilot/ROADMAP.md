@@ -1280,3 +1280,44 @@ Authority: owner decisions D21–D24 (brainstorm `docs/brainstorm/session-2026-0
 - [x] 18.11 Default flip to `cloud_first`, v1.1.0-beta
 
 **Status update:** ✅ Phase 18 closed 2026-09-26. Next: Phase 19, Remotion (ENH-013), then Phase 20, AI thumbnails (ENH-012).
+
+## Phase 19 — Animated Learning Videos with Remotion (ENH-013)
+
+**Status:** 🟡 Open (planning, task 19.1 doc-first ready) | **Opened:** 2026-09-28
+(`/vp-evolve ENH-013`) | Plan `docs/implementation/phase-19-remotion.md`.
+Authority: owner **D29** (2026-09-24, `docs/brainstorm/session-2026-09-24.md`) +
+planning-shape **D32** (2026-09-28, this phase: spike-first + `video-renderer/` subdir).
+
+Replaces today's static-background + burned-in line-level subtitles (ffmpeg, "Level 2") with a
+Remotion-rendered composition adding word-level karaoke captions, an active-speaker indicator,
+timed vocabulary/idiom pop-up cards, and intro/outro + a chapter/progress bar + a
+Remotion-rendered thumbnail still. The ffmpeg path stays as the tested fallback; Remotion is
+opt-in behind a request flag, settings toggle, and `DIE_VIDEO_RENDERER` kill switch
+(invariant 36, this phase). Node.js + headless Chromium run **locally only** in an isolated
+`video-renderer/` workspace invoked from FastAPI as a subprocess — no per-episode data leaves
+the machine (invariant 37).
+
+- [ ] 19.1 Spike: `video-renderer/` scaffold + minimal composition (background + line-level
+  captions matching today's ffmpeg output, no word-timing yet) rendered for one real B1 8-min
+  episode from `data/app.db`. Measure render wall time, install/packaging footprint, output
+  correctness. Report `docs/operations/phase19-spike-remotion.md`. Doc-first card
+  `.viepilot/phases/19-remotion/tasks/task-19.1.md`. **PASS / SCOPE-CUT / STOP decision here
+  gates every later task.**
+- [ ] 19.2 Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration
+  (provisional — opens only on 19.1 PASS)
+- [ ] 19.3 Word-level karaoke captions composition (`@remotion/captions`, provisional)
+- [ ] 19.4 Active-speaker indicator (provisional)
+- [ ] 19.5 Vocabulary/idiom pop-up cards timed to the containing line (provisional)
+- [ ] 19.6 Intro/outro + chapter/progress bar + Remotion-rendered thumbnail still — feeds
+  ENH-012/Phase 20 (provisional)
+- [ ] 19.7 Wire the renderer into `VideoService` behind request flag + settings toggle +
+  `DIE_VIDEO_RENDERER` kill switch; fallback-rate readout; packaging +
+  `check_dependencies.py` updates (provisional)
+- [ ] 19.8 Gate B-12: media gate + owner visual sign-off on real episodes, PM
+  (provisional)
+- [ ] 19.9 Close-out: flip default to `remotion` **only if** Gate B-12 accepted; version
+  bump to `1.2.0-beta`; tag `die-vp-p19-complete` (provisional)
+
+**Follow-ups already logged for later phases:** ENH-014 (outro heuristic — decide before the
+next gate) and ENH-015 (Gemini first-pass length ~0.61× target, prompt tuning) remain in the
+backlog from Phase 18 and are not part of Phase 19.

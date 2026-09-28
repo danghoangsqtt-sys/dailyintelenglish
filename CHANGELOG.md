@@ -8,6 +8,21 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Planning
+- Phase 19 opened 2026-09-28 (`/vp-evolve ENH-013`, owner D29 + planning-shape D32):
+  Remotion-rendered videos (word-level karaoke captions, active-speaker indicator, timed
+  vocabulary/idiom pop-up cards, intro/outro + chapter/progress bar + Remotion thumbnail
+  still). Spike-first — only Task 19.1 (`video-renderer/` subdir scaffold, measure render
+  time + packaging footprint on the owner's real machine against one real B1 8-min episode)
+  is a doc-first task card; 19.2–19.9 provisional in the plan until the spike proposes
+  PASS / SCOPE-CUT / STOP. `video-renderer/` runs Node/TypeScript/React/Remotion in an
+  isolated workspace, invoked from FastAPI as a subprocess (matches ENH-013's own
+  suggestion). ffmpeg path stays as the tested fallback; Remotion is opt-in behind a
+  request flag + settings toggle + `DIE_VIDEO_RENDERER` kill switch (new invariant 36).
+  New invariants 36–40. No user-visible behaviour changes yet — planning-only commit set.
+  Controlling plan: `docs/implementation/phase-19-remotion.md`. Phase folder:
+  `.viepilot/phases/19-remotion/` (SPEC, PHASE-STATE, SUMMARY skeleton, `tasks/task-19.1.md`).
+
 ## [1.1.0-beta] - 2026-09-26
 
 Phase 18: cloud-first AI with a Gemini → OpenRouter → local automatic-fallback chain (owner

@@ -3,8 +3,8 @@
   "version": "1.1.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_18_complete",
-  "current_phase": 18,
+  "status": "phase_19_planning",
+  "current_phase": 19,
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
     "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
@@ -169,6 +169,14 @@
       "tasks_done": 11,
       "tasks_total": 11,
       "note": "Planned 2026-09-23 via /vp-evolve ENH-011 from owner decisions D21-D24 (brainstorm docs/brainstorm/session-2026-09-23.md). Plan docs/implementation/phase-18-cloud-first-ai.md: 18.1 OpenAICompatProvider; 18.2 router primary/fallback + separate per-provider budgets + circuit breaker, modes local/cloud/cloud_first, Gemini provider removed; 18.3 Settings key/URL/model + health + privacy note; 18.4 fallback-rate readout + runner; 18.5 Gate B-9 A/B vs B-8. Owner's OpenRouter key is in .env (DIE_OPENAI_COMPAT_API_KEY, free tier, never printed). CLOSED 2026-09-26 (D31): chain Gemini 3.1 Flash-Lite -> Gemini Flash-Lite latest -> OpenRouter (Nemotron -> Gemma 4 -> Dots3) -> local qwen; Gate B-9 (regression), B-10 FAIL (Gemini rejected OpenRouter-only 'reasoning' param), B-11 accepted as PASS (11/11, B1 median 45 s vs ~150 s local); default AI_MODE=cloud_first (6468ac7); version 1.1.0-beta; suite 1175/1175. Follow-ups ENH-014, ENH-015."
+    },
+    "19": {
+      "name": "Animated Learning Videos with Remotion (ENH-013)",
+      "days": "n/a (new scope, not in the original 21-day plan)",
+      "status": "planning",
+      "tasks_done": 0,
+      "tasks_total": 9,
+      "note": "New phase opened 2026-09-28 via /vp-evolve ENH-013 right after Phase 18 closed (v1.1.0-beta, 2026-09-26). Authority: owner D29 (2026-09-24, docs/brainstorm/session-2026-09-24.md) + planning-shape D32 (2026-09-28, this session): spike-first, only Task 19.1 is a real doc-first task card; 19.2-19.9 stay provisional in the plan until Task 19.1's report proposes PASS / SCOPE-CUT / STOP. Workspace layout D32: video-renderer/ subdir inside the repo, invoked from FastAPI as a subprocess (Node/TS/React stack isolated from Python, matches ENH-013's own suggestion). Goal: replace today's static-background + burned-in line-level subtitles (ffmpeg, Level 2) with a Remotion composition adding word-level karaoke captions (needs Edge TTS WordBoundary capture, not stored today), active-speaker indicator, timed vocab/idiom pop-up cards from the existing Learning pack, and intro/outro + chapter/progress bar + a Remotion-rendered thumbnail still (feeds ENH-012/Phase 20). ffmpeg path stays as tested fallback; Remotion is opt-in behind request flag + settings toggle + DIE_VIDEO_RENDERER kill switch (invariant 36). New invariants 36-40 (opt-in and reversible, local-only, no secret in workspace, licence re-checked per gate, media thresholds unchanged). Task 19.1 (Coder, P0, not started): new video-renderer/ workspace (package.json/tsconfig/src), scripts/run_remotion_spike.py, real render of one owner-selected B1 8-min episode from data/app.db (read-only), report docs/operations/phase19-spike-remotion.md with real measured wall time, install footprint, packaging estimate, A/V correctness spot checks, and a PASS / SCOPE-CUT / STOP proposal. data/app.db read-only for the whole task; app/services/video_service.py never touched; existing 1175/1175 suite must stay green. Provisional 19.2-19.9: word-boundary capture + migration, karaoke composition, speaker indicator, vocab cards, intro/outro/chapter/thumbnail, VideoService wire-up + toggle + kill switch + packaging, Gate B-12 (PM, media gate + owner visual sign-off), close-out (default flip to remotion only on Gate B-12 PASS, version 1.2.0-beta MINOR, tag die-vp-p19-complete). Controlling plan docs/implementation/phase-19-remotion.md; phase folder .viepilot/phases/19-remotion/ (SPEC, PHASE-STATE, SUMMARY skeleton, tasks/task-19.1.md)."
     }
   },
   "key_decisions": [
@@ -274,7 +282,8 @@
     "2026-09-22 (Gate B-4): D17 bounded repetition repair when the only global failure is the 8-gram check (threshold 1% unchanged); D18 runner sends no speed so the level default applies; Phase 14 closes after Gate B-5 regardless of verdict -- further hardening is a new phase.",
     "2026-09-22: Phase 14 closed after Gate B-5 (script 5/5, samples 4/4, learning 5/5 PASS; media duration 413.3 s FAIL). Local-only is the shipped runtime by owner decision D11; every threshold unchanged throughout Phase 14.",
     "2026-09-22: Phase 15 opened -- speaker aliases in the section contract with deterministic server-side resolution (no invented speaker), deterministic same-speaker run merging (no invented content), thresholds unchanged.",
-    "2026-09-22: Phase 15 closed after Gate B-6 -- structural failure class eliminated (speaker aliases + merge fix), media gate passed for the first time, owner's failing configuration completes; repetition remains the only failure class (options left to the owner)."
+    "2026-09-22: Phase 15 closed after Gate B-6 -- structural failure class eliminated (speaker aliases + merge fix), media gate passed for the first time, owner's failing configuration completes; repetition remains the only failure class (options left to the owner).",
+    "PLANNED 2026-09-28: Phase 19 opened (/vp-evolve ENH-013) with D32 planning-shape decisions -- spike-first (only Task 19.1 is a doc-first card; 19.2-19.9 provisional) and video-renderer/ subdir workspace layout invoked as subprocess from FastAPI. Controlling plan docs/implementation/phase-19-remotion.md, phase folder .viepilot/phases/19-remotion/. Awaiting Coder pickup on Task 19.1."
   ],
   "open_questions": [
     "RESOLVED 2026-09-14: all 3 real Task 2.1c findings fixed under Task 2.5 (LUFS drift, 9:16 video, Scottish/British disclosure), plus 2 more real bugs found+fixed while verifying (the .hidden-on-.btn CSS trap, an init_db() migration-replay crash).",
