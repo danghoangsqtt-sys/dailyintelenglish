@@ -141,6 +141,135 @@ code lands in a separate commit. Same pattern as 19.1/19.2.
   the same episode, MP4 hash unchanged).
 - `test_video_studio_browser.py` still 10/10.
 
+## Design decisions — Coder answers (2026-09-28)
+
+### D19.3-a: `@remotion/captions` API pick + version
+
+Installed and inspected the real package (`node_modules/@remotion/captions/dist/*.d.ts`),
+not just its README:
+
+- **Version:** `@remotion/captions@4.0.529` -- npm's `latest` today, and exactly the same
+  version number as `remotion`/`@remotion/cli` (this package follows Remotion's own monorepo
+  lockstep versioning). `dependencies: {}` in its own `package.json` -- zero runtime
+  dependencies, not even React.
+- **Real API signatures:**
+  ```ts
+  type Caption = { text: string; startMs: number; endMs: number; timestampMs: number | null; confidence: number | null; pageBreakAfter?: boolean };
+  type TikTokToken = { text: string; fromMs: number; toMs: number; pageBreakAfter?: boolean };
+  type TikTokPage = { text: string; startMs: number; tokens: TikTokToken[]; durationMs: number };
+  createTikTokStyleCaptions(input: { captions: Caption[]; combineTokensWithinMilliseconds: number; breakOnSilenceAfterMilliseconds?: number }): { pages: TikTokPage[] }
+  ```
+- **Unit mismatch, confirmed real:** `Caption`/`TikTokToken` are **milliseconds**
+  (`startMs`/`endMs`/`fromMs`/`toMs`), but our whole pipeline (D19.2-a onward) is **seconds**
+  (`start_sec`/`end_sec`). `types.ts`'s new `words` field stays in seconds (matching
+  `audio_jobs.word_timestamps_json`'s shape exactly, per the card) -- the `*1000`/`/1000`
+  conversion happens only at the `createTikTokStyleCaptions` call site inside `Episode.tsx`,
+  never in the props schema.
+
+### D19.3-b: Rendering approach -- the card's "(i) vs (ii)" framing doesn't match reality
+
+**Real finding, confirmed by listing every file in the installed package:**
+`@remotion/captions`'s `dist/` contains exactly 5 `.js`/`.d.ts` pairs (`caption`,
+`create-tiktok-style-captions`, `ensure-max-characters-per-line`, `parse-srt`,
+`serialize-srt`) plus an `index` -- **zero `.tsx`/`.jsx` files, zero React import anywhere,
+zero runtime dependencies.** This is a pure data/grouping library; it renders nothing. There
+is no "(i) accept the helper's default visual" option to choose between -- **rendering is
+always custom**, regardless of which option is picked. Recommending what the card called
+"(ii)" is therefore not a judgment call between two real alternatives, it's the only
+alternative that exists; flagging the correction rather than silently picking.
+
+**How `createTikTokStyleCaptions` is still genuinely used, not bypassed:** called **once per
+line** (not once for the whole episode) with that line's own `words` array converted to
+`Caption`s and a `combineTokensWithinMilliseconds` set to the line's own duration in ms + 1
+(`(line.endSec - line.startSec) * 1000 + 1`). Scoping the call to one line's words, with a
+combine-threshold larger than the line itself, guarantees exactly one `TikTokPage` per line
+regardless of internal word-gap sizes -- matching our existing per-line grouping exactly,
+rather than letting the helper's own auto-pagination (designed for a continuous whole-episode
+word stream) split or merge across our line boundaries in ways today's SRT-style model
+doesn't have. `breakOnSilenceAfterMilliseconds` is left unset (not needed at this scope).
+
+**Visual:** the active token's `<span>` gets one added style vs. today's plain span -- highlight
+colour `#FFD54A` (warm yellow, standard karaoke convention) replacing `#FFFFFF` -- every other
+style property (`fontFamily`, `fontSize`, `fontWeight`, `textShadow`, band position, layout)
+stays byte-identical to the 19.1 spike's plain span. No font/size/colour/position regression,
+confirmed by construction (same style object, one conditional colour override).
+
+### D19.3-c: Fallback path
+
+- Per-line: `if (!line.words || line.words.length === 0)` renders the exact, unmodified 19.1
+  plain-span JSX (`{line.speaker}: {line.text}`, same style object) -- literally the same
+  branch that exists today, untouched; the karaoke branch is a new `else`, not a replacement.
+- Episode-level: `audio_jobs.word_timestamps_json = NULL` is not a separate code path --
+  the runner script (D19.3-d) builds every line's `words` field from that same column, so a
+  `NULL` episode naturally produces `words: []` for every line, hitting the identical
+  per-line fallback branch above. No second conditional needed; confirmed by how the runner
+  populates props (single code path, not two).
+
+### D19.3-d: Verification frames -- and a real data-availability finding
+
+**Real finding, checked read-only before writing any code:** the only real episode with
+completed audio (`b330d37f...`, used by 19.1/19.2) currently has **`word_timestamps_json =
+NULL`** in `audio_jobs`, and **zero `.words.json` sidecar files exist** anywhere under
+`data/tts_cache/b330d37f.../` (only `.mp3` files) -- confirmed by a read-only query and a
+directory listing. This is expected, not a bug: this project's lines were synthesized and
+mixed on 2026-09-15, before Task 19.2's capture code existed, and it hasn't been re-mixed
+since (re-mixing would need a real DB write to `audio_jobs`, which this task cannot do). So
+today, there is genuinely no real per-word data anywhere for this episode.
+
+**Resolution: the runner re-synthesizes each line fresh via a real Edge TTS call, in-memory
+only.** For each of the episode's lines (fetched read-only: text, speaker, and the line's
+existing mix-timeline offset from `timestamps_json`), the runner calls
+`tts_service._synthesize_edge_tts(text, speaker)` directly -- a genuine network call to the
+real Edge TTS endpoint, using the exact same text and speaker config the project already has
+-- and aggregates the returned `WordBoundary` list onto that line's existing `start_ms` offset
+(same formula as `audio_service._aggregate_word_boundaries`, reimplemented in the runner since
+it's a small, pure function). **Nothing is written to `data/app.db` or to
+`data/tts_cache/b330d37f.../`** -- the freshly synthesized audio bytes are discarded (the
+existing cached mix's audio is what actually plays; only the *word timing* from the fresh
+synthesis is used), so the real project's cached files are never overwritten. This costs ~30
+real Edge TTS calls (one per line) for this specific episode -- a bounded, one-time cost,
+and every word timestamp in the resulting render is **real, not fabricated** captured data,
+just captured transiently for this task's demo rather than persisted.
+
+- **Frame timestamps** (chosen after the re-synthesis runs and real per-word times are known
+  -- recorded with real values in the report, not guessed in advance): one frame inside a
+  multi-word line's middle word, one at a line's first word, one at a line's last word. Exact
+  values, extracted frames, and expected-vs-observed words go in
+  `docs/operations/phase19-t3-karaoke.md`.
+- **Empty-words fallback spot check:** since every line gets real re-synthesized words, this
+  episode has **no naturally-occurring empty-words line** to screenshot. Per the card's own
+  "if the chosen episode has any such line" conditional, none exists here -- the fallback
+  branch is instead verified by a real Vitest unit test (D19.3-e) that renders the karaoke
+  logic against a hand-crafted `words: []` line directly, which is a stronger regression
+  guard than one manual frame would have been anyway.
+- **Wall-time comparison:** the full episode is re-rendered end-to-end and its wall time
+  compared to 19.1's ~61 s baseline in the report, per the card's ≤~2× threshold.
+
+### D19.3-e: Test story -- (i), with a measured real cost
+
+Chosen: **(i) add Vitest.** Justification against real, measured cost, not principle:
+installed `vitest@^5.0.2` (compatible with Node `>=24.0.0`, matching the workspace's own
+`engines` pin) and measured `node_modules` before/after: **688 MB → 725 MB, +37 MB** for
+vitest plus its 26 transitive packages -- small relative to the workspace's existing ~660 MB
+(dominated by the Chrome Headless Shell, unrelated to this dependency), and it's a
+**devDependency only**, so it does not affect 19.1's packaged-app estimate (which already
+assumed devDependencies like `typescript` are excluded from shipping). One real unit test
+exercises: (a) the active-token-selection logic for a given `currentFrame`/`fps` +
+`line.words`, and (b) the fallback branch on a line with `words: []`. Revert-and-confirm-
+failure done on both before implementation is called complete.
+
+### D19.3-f: Re-verify Task 19.1 invariants
+
+- `git log <phase19-open-sha>..HEAD -- app/services/video_service.py` must stay empty --
+  checked at implementation time, reported in the handover.
+- Real ffmpeg-fallback comparison: `data/video/b330d37f.../video.mp4` already exists on disk
+  (a real prior render, 2,517,473 bytes, dated 2026-09-15) -- this task re-renders the same
+  episode through `VideoService.generate_video` (pure function, no DB parameter; fed with
+  data fetched read-only) into a **scratch output path** (never overwriting the real
+  `data/video/b330d37f.../` files) and compares the fresh render's hash against the existing
+  real file's hash, confirming the ffmpeg path is genuinely untouched.
+- `tests/test_video_studio_browser.py` re-run, expect 10/10 unchanged.
+
 ## Verification
 
 - Real re-render of `b330d37f...` (or whichever B1 episode with completed audio + captured
