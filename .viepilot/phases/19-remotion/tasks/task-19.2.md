@@ -340,6 +340,28 @@ since the actual API response is an unvalidated dict and doesn't need this model
 2. **Chrome ~270 MB hard floor:** out of scope for 19.2 (no `video-renderer/` change in this
    task at all). Acknowledged as carried into 19.7, not forgotten.
 
+## PM review — APPROVED with scope extensions (2026-09-28, session a01f96)
+
+Both explicit scope questions **greenlit**, added to this task's effective "Allowed files":
+1. `app/api/audio.py::generate_audio` — the one-line `word_timestamps=result["word_timestamps"]`
+   addition to the `save_audio_job(...)` call.
+2. `tests/test_audio_api.py`, `tests/test_video_api.py`, `tests/test_youtube_export_api.py`,
+   `tests/test_tts_api.py` — one-line mechanical fix each to `fake_edge_tts`'s return value
+   (`return (<bytes>, [])`), a direct consequence of the D19.2-b contract change.
+
+Explicitly **not** extended: `app/models/audio.py::AudioJobOut` stays untouched (dead code,
+not a `response_model` anywhere) — agreed, leave for whenever it's actually wired up.
+
+Both real-data corrections (sum-vs-duration → last-word absolute tolerance; first-word
+offset → `>=` + tolerance, not exact equality) accepted verbatim as designed above.
+
+One clarification (not a change request): confirmed at implementation time (see note above
+this section) that `tts_cache/<project_id>/<line_id>.mp3` is genuinely one file per line —
+the sidecar path derivation is safe.
+
+Implementation proceeds as designed. Fold this approval into the implementation commit (no
+separate re-commit of the design card needed).
+
 ## Verification
 
 - New tests pass (`tests/test_tts_word_boundary.py`, the new `test_audio_service.py` case).

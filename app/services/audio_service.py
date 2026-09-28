@@ -121,6 +121,31 @@ def _duck_music(music: AudioSegment, ceiling_dbfs: float) -> AudioSegment:
     return music
 
 
+def _aggregate_word_boundaries(audio_cache_path: str, start_ms: int) -> list[dict]:
+    """Task 19.2 (D19.2-c): read a line's raw per-word sidecar (written by
+    `tts_service.synthesize_line_audio`, one MP3 per line so the derived path is safe) and
+    aggregate onto the mixed timeline using `start_ms` -- the exact same offset already used
+    for this line's `timestamps_json` entry above, not a second computation.
+
+    Returns an empty list, never `None`, when there's no sidecar (omnivoice lines, or any
+    line synthesized before this task existed) -- both cases mean "no words available for
+    this line" and are indistinguishable at aggregation time, which is fine (see design doc).
+    """
+    sidecar_path = Path(audio_cache_path).with_suffix(".words.json")
+    if not sidecar_path.is_file():
+        return []
+    raw_words = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    start_sec = start_ms / 1000
+    return [
+        {
+            "text": word["text"],
+            "start_sec": round(start_sec + word["offset_sec"], 3),
+            "end_sec": round(start_sec + word["offset_sec"] + word["duration_sec"], 3),
+        }
+        for word in raw_words
+    ]
+
+
 def _mix_project_sync(
     speaker_names_by_id: dict[str, str],
     lines: list[dict],
@@ -130,6 +155,7 @@ def _mix_project_sync(
     """Pure, blocking pydub/pyloudnorm work — must run off the event loop (asyncio.to_thread)."""
     segments: list[AudioSegment] = []
     timestamps: list[dict] = []
+    word_timestamps: list[dict] = []
     cursor_ms = 0
     previous_speaker_id: str | None = None
 
@@ -155,6 +181,9 @@ def _mix_project_sync(
                 "speaker_id": line["speaker_id"],
                 "text": line.get("text", ""),
             }
+        )
+        word_timestamps.append(
+            {"line_id": line["id"], "words": _aggregate_word_boundaries(line["audio_cache_path"], start_ms)}
         )
         previous_speaker_id = line["speaker_id"]
 
@@ -189,6 +218,7 @@ def _mix_project_sync(
         "mp3_path": str(mp3_path),
         "wav_path": str(wav_path),
         "timestamps": timestamps,
+        "word_timestamps": word_timestamps,
         "duration_seconds": round(len(mixed) / 1000, 3),
         "loudness_lufs": None if math.isinf(final_loudness) else round(float(final_loudness), 2),
     }
@@ -278,6 +308,10 @@ def _row_to_job(row: aiosqlite.Row) -> dict:
     job = dict(row)
     job["timestamps"] = json.loads(job["timestamps_json"]) if job["timestamps_json"] else []
     del job["timestamps_json"]
+    # Task 19.2: additive column, NULL for every row created before this task -- reads back
+    # as an empty list, same fallback pattern as timestamps_json above, never a crash.
+    job["word_timestamps"] = json.loads(job["word_timestamps_json"]) if job["word_timestamps_json"] else []
+    del job["word_timestamps_json"]
     return job
 
 
@@ -285,8 +319,8 @@ async def get_audio_job(db: aiosqlite.Connection, project_id: str) -> dict | Non
     """Fetch a project's audio job row, or None if audio has never been generated."""
     cursor = await db.execute(
         "SELECT id, project_id, status, mp3_path, wav_path, timestamps_json, "
-        "background_music, duration_seconds, loudness_lufs, error_message, "
-        "started_at, completed_at FROM audio_jobs WHERE project_id = ?",
+        "word_timestamps_json, background_music, duration_seconds, loudness_lufs, "
+        "error_message, started_at, completed_at FROM audio_jobs WHERE project_id = ?",
         (project_id,),
     )
     row = await cursor.fetchone()
@@ -331,6 +365,7 @@ async def save_audio_job(
     mp3_path: str | None = None,
     wav_path: str | None = None,
     timestamps: list[dict] | None = None,
+    word_timestamps: list[dict] | None = None,
     background_music: str | None = None,
     duration_seconds: float | None = None,
     loudness_lufs: float | None = None,
@@ -342,12 +377,13 @@ async def save_audio_job(
     completed_at = now if status in ("complete", "error") else None
     await db.execute(
         "INSERT INTO audio_jobs "
-        "(id, project_id, status, mp3_path, wav_path, timestamps_json, background_music, "
-        "duration_seconds, loudness_lufs, error_message, started_at, completed_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+        "(id, project_id, status, mp3_path, wav_path, timestamps_json, word_timestamps_json, "
+        "background_music, duration_seconds, loudness_lufs, error_message, started_at, completed_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
         "ON CONFLICT(project_id) DO UPDATE SET "
         "status = excluded.status, mp3_path = excluded.mp3_path, wav_path = excluded.wav_path, "
-        "timestamps_json = excluded.timestamps_json, background_music = excluded.background_music, "
+        "timestamps_json = excluded.timestamps_json, word_timestamps_json = excluded.word_timestamps_json, "
+        "background_music = excluded.background_music, "
         "duration_seconds = excluded.duration_seconds, loudness_lufs = excluded.loudness_lufs, "
         "error_message = excluded.error_message, started_at = excluded.started_at, "
         "completed_at = excluded.completed_at",
@@ -358,6 +394,7 @@ async def save_audio_job(
             mp3_path,
             wav_path,
             json.dumps(timestamps) if timestamps is not None else None,
+            json.dumps(word_timestamps) if word_timestamps is not None else None,
             background_music,
             duration_seconds,
             loudness_lufs,

@@ -57,6 +57,7 @@ async def generate_audio(
             mp3_path=result["mp3_path"],
             wav_path=result["wav_path"],
             timestamps=result["timestamps"],
+            word_timestamps=result["word_timestamps"],
             background_music=payload.background_music,
             duration_seconds=result["duration_seconds"],
             loudness_lufs=result["loudness_lufs"],

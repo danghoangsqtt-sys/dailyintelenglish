@@ -103,10 +103,10 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
 
-    async def fake_edge_tts(text: str, speaker: dict) -> bytes:
+    async def fake_edge_tts(text: str, speaker: dict) -> tuple[bytes, list]:
         buffer = io.BytesIO()
         Sine(440).to_audio_segment(duration=500).apply_gain(-20).export(buffer, format="mp3", bitrate="192k")
-        return buffer.getvalue()
+        return buffer.getvalue(), []
 
     async def fake_generate_package(project_dict, script_lines, timestamps=None):
         return {**VALID_YOUTUBE_PACKAGE, "chapters_text": "00:00 Introduction", "chapters_estimated": timestamps is None}

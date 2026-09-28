@@ -12,9 +12,11 @@ it is what Sub-task 1.6a actually delivers and tests.
 """
 
 import asyncio
+import json
 import logging
 from asyncio import sleep
 from pathlib import Path
+from typing import NamedTuple
 
 import aiosqlite
 import edge_tts
@@ -26,6 +28,18 @@ from app.core.exceptions import NotFoundError, TTSError
 logger = logging.getLogger(__name__)
 
 _omnivoice_semaphore = asyncio.Semaphore(MAX_CONCURRENT_TTS)
+
+
+class WordBoundary(NamedTuple):
+    """One word's timing within its own line's audio (local time, not mix-aggregated).
+
+    Edge TTS reports `offset`/`duration` as 100-ns ticks (.NET convention) -- converted to
+    float seconds once here so ticks never leave this module (Task 19.2, D19.2-a).
+    """
+
+    text: str
+    offset_sec: float
+    duration_sec: float
 
 
 class _OmniVoiceUnavailableError(Exception):
@@ -74,14 +88,23 @@ async def _synthesize_omnivoice(text: str, speaker: dict) -> bytes:
 EDGE_TTS_MAX_ATTEMPTS = 2
 EDGE_TTS_RETRY_DELAY_SECONDS = 0.5
 
+# Edge TTS reports offset/duration in 100-nanosecond ticks (.NET convention) --
+# confirmed against a real WordBoundary chunk (Task 19.2, D19.2-a probe).
+_TICKS_PER_SECOND = 10_000_000
 
-async def _synthesize_edge_tts(text: str, speaker: dict) -> bytes:
-    """Synthesize speech via the Edge TTS online engine.
+
+async def _synthesize_edge_tts(text: str, speaker: dict) -> tuple[bytes, list[WordBoundary]]:
+    """Synthesize speech via the Edge TTS online engine, capturing per-word timestamps.
 
     Edge TTS's free endpoint occasionally returns an empty stream under rapid-fire
     requests (observed live: "No audio was received" on an otherwise-valid call that
     succeeds on immediate retry) — treat an empty/failed result as a failed cue and
     allow one retry before raising, rather than failing the whole line permanently.
+
+    Task 19.2 (D19.2-a): `edge_tts.Communicate` defaults to `boundary="SentenceBoundary"`
+    -- confirmed live that no `WordBoundary` chunks appear at all without explicitly
+    passing `boundary="WordBoundary"`. Word boundaries are returned alongside the audio
+    bytes rather than via a separate call, so there's exactly one Edge TTS request per line.
     """
     voice = _edge_tts_voice_for(speaker["accent"], speaker["gender"])
     last_error: Exception | None = None
@@ -92,17 +115,27 @@ async def _synthesize_edge_tts(text: str, speaker: dict) -> bytes:
             rate=_rate_percent(speaker["speed"]),
             volume=_volume_percent(speaker["volume"]),
             pitch=_pitch_hz(speaker["pitch"]),
+            boundary="WordBoundary",
         )
         chunks = bytearray()
+        word_boundaries: list[WordBoundary] = []
         try:
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
                     chunks.extend(chunk["data"])
+                elif chunk["type"] == "WordBoundary":
+                    word_boundaries.append(
+                        WordBoundary(
+                            text=chunk["text"],
+                            offset_sec=chunk["offset"] / _TICKS_PER_SECOND,
+                            duration_sec=chunk["duration"] / _TICKS_PER_SECOND,
+                        )
+                    )
         except Exception as exc:
             last_error = exc
         else:
             if chunks:
-                return bytes(chunks)
+                return bytes(chunks), word_boundaries
             last_error = RuntimeError("Edge TTS returned no audio data")
 
         if attempt < EDGE_TTS_MAX_ATTEMPTS:
@@ -126,6 +159,22 @@ def _write_audio_cache_sync(cache_dir: Path, audio_path: Path, audio_bytes: byte
     audio_path.write_bytes(audio_bytes)
 
 
+def _word_timestamps_path(audio_path: Path) -> Path:
+    """Sidecar path for a line's raw per-word capture (Task 19.2, D19.2-c) -- derived
+    deterministically from the cached MP3's own path so `AudioService` can find it at mix
+    time without a new `script_lines` column. One MP3 per line (`<line_id>.mp3`), confirmed
+    against this module's own cache-path convention above, so this is a safe 1:1 rename."""
+    return audio_path.with_suffix(".words.json")
+
+
+def _write_word_boundaries_sync(path: Path, word_boundaries: list[WordBoundary]) -> None:
+    """Blocking sidecar write — must run in a thread, same rule as `_write_audio_cache_sync`."""
+    path.write_text(
+        json.dumps([wb._asdict() for wb in word_boundaries]),
+        encoding="utf-8",
+    )
+
+
 async def synthesize_line_audio(project: dict, line: dict) -> dict:
     """Synthesize one script line's audio and cache it to disk. Touches no database.
 
@@ -146,11 +195,17 @@ async def synthesize_line_audio(project: dict, line: dict) -> dict:
         NotFoundError: If the line's speaker_id doesn't match any project speaker.
         TTSError: If Edge TTS also fails after an OmniVoice fallback (or is the only
             configured engine and fails).
+
+    Task 19.2: when Edge TTS is used, its captured per-word timestamps are written to a
+    sidecar file next to the cached MP3 (`_word_timestamps_path`) rather than returned here
+    -- `AudioService.mix_project` derives the same path independently at mix time (D19.2-c).
+    OmniVoice lines get no sidecar (no word-boundary support for local synthesis today).
     """
     speaker = _find_speaker(project, line["speaker_id"])
 
     audio_bytes: bytes
     engine_used: str
+    word_boundaries: list[WordBoundary] = []
     omnivoice_model_present = await asyncio.to_thread(settings.OMNIVOICE_MODEL_PATH.exists)
     if speaker["tts_engine"] == "omnivoice" and omnivoice_model_present:
         async with _omnivoice_semaphore:
@@ -159,15 +214,17 @@ async def synthesize_line_audio(project: dict, line: dict) -> dict:
                 engine_used = "omnivoice"
             except _OmniVoiceUnavailableError as exc:
                 logger.warning("OmniVoice unavailable for line %s, falling back to Edge TTS: %s", line["id"], exc)
-                audio_bytes = await _synthesize_edge_tts(line["text"], speaker)
+                audio_bytes, word_boundaries = await _synthesize_edge_tts(line["text"], speaker)
                 engine_used = "edge_tts"
     else:
-        audio_bytes = await _synthesize_edge_tts(line["text"], speaker)
+        audio_bytes, word_boundaries = await _synthesize_edge_tts(line["text"], speaker)
         engine_used = "edge_tts"
 
     cache_dir = settings.DATA_DIR / "tts_cache" / project["id"]
     audio_path = cache_dir / f"{line['id']}.mp3"
     await asyncio.to_thread(_write_audio_cache_sync, cache_dir, audio_path, audio_bytes)
+    if engine_used == "edge_tts":
+        await asyncio.to_thread(_write_word_boundaries_sync, _word_timestamps_path(audio_path), word_boundaries)
 
     return {"audio_path": str(audio_path), "engine_used": engine_used}
 

@@ -46,8 +46,8 @@ def client(tmp_path, monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _fake_edge_tts(monkeypatch):
-    async def fake_edge_tts(text: str, speaker: dict) -> bytes:
-        return _real_tone_mp3_bytes(freq=440 if speaker["gender"] == "male" else 550)
+    async def fake_edge_tts(text: str, speaker: dict) -> tuple[bytes, list]:
+        return _real_tone_mp3_bytes(freq=440 if speaker["gender"] == "male" else 550), []
 
     monkeypatch.setattr(tts_service, "_synthesize_edge_tts", fake_edge_tts)
 

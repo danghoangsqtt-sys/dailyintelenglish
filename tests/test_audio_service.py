@@ -7,6 +7,8 @@ same "exercise the real local library" philosophy already used for Pillow render
 tests/test_thumbnail_service.py. No fake byte strings stand in for audio anywhere here.
 """
 
+import json
+
 import pytest
 from pydub import AudioSegment
 from pydub.generators import Sine
@@ -79,6 +81,53 @@ async def test_mix_project_timestamps_are_monotonic_and_match_duration(tmp_path)
     for earlier, later in zip(timestamps, timestamps[1:]):
         assert later["start_sec"] >= earlier["end_sec"]
     assert timestamps[-1]["end_sec"] == pytest.approx(result["duration_seconds"])
+
+
+def _write_word_sidecar(audio_cache_path: str, words: list[dict]) -> None:
+    from pathlib import Path
+
+    Path(audio_cache_path).with_suffix(".words.json").write_text(json.dumps(words), encoding="utf-8")
+
+
+async def test_mix_project_aggregates_word_boundaries_onto_mixed_timeline(tmp_path):
+    """Task 19.2 (D19.2-c): word boundaries are read from each line's sidecar file and
+    aggregated using the exact same `start_ms` offset already used for `timestamps_json`
+    (not a second computation) -- and a missing sidecar (no edge_tts capture for that line)
+    produces an empty word list, never `null`."""
+    lines = _lines_for(tmp_path, [("sp1", 440), ("sp2", 550)])  # both default to a 600ms tone
+
+    # Line 0's sidecar deliberately has a nonzero leading offset (0.05s) -- real Edge TTS
+    # output has leading silence before the first word (D19.2-a probe), so the aggregation
+    # must add this onto start_ms rather than assuming the first word starts at 0.
+    _write_word_sidecar(lines[0]["audio_cache_path"], [{"text": "Hi", "offset_sec": 0.05, "duration_sec": 0.3}])
+    # Line 1 (the last line) has one word spanning its whole 0.6s clip, so its aggregated
+    # end lands exactly on the line's own end_sec.
+    _write_word_sidecar(lines[1]["audio_cache_path"], [{"text": "Bye", "offset_sec": 0.0, "duration_sec": 0.6}])
+
+    result = await audio_service.mix_project(PROJECT, lines)
+
+    word_timestamps = result["word_timestamps"]
+    assert len(word_timestamps) == 2
+    assert word_timestamps[0]["line_id"] == lines[0]["id"]
+    assert word_timestamps[1]["line_id"] == lines[1]["id"]
+
+    first_word = word_timestamps[0]["words"][0]
+    assert first_word["text"] == "Hi"
+    assert first_word["start_sec"] == pytest.approx(result["timestamps"][0]["start_sec"] + 0.05, abs=0.001)
+
+    last_word = word_timestamps[1]["words"][-1]
+    assert last_word["text"] == "Bye"
+    assert last_word["end_sec"] == pytest.approx(result["timestamps"][1]["end_sec"], abs=0.02)
+
+
+async def test_mix_project_word_timestamps_empty_for_line_with_no_sidecar(tmp_path):
+    """No `.words.json` sidecar (omnivoice line, or a line synthesized before Task 19.2)
+    produces an empty `words` array for that line -- never `null`, never a crash."""
+    lines = _lines_for(tmp_path, [("sp1", 440)])
+
+    result = await audio_service.mix_project(PROJECT, lines)
+
+    assert result["word_timestamps"] == [{"line_id": lines[0]["id"], "words": []}]
 
 
 async def test_mix_project_normalizes_loudness_near_target(tmp_path):

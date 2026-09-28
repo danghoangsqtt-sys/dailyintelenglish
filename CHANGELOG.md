@@ -42,6 +42,16 @@ Versioning: [SemVer](https://semver.org/)
   (A/V sync, resolution, per-line timing), ~660MB Node workspace / ~575-840MB estimated
   packaged-app growth. `docs/operations/phase19-spike-remotion.md`. No user-visible behaviour
   changes — `app/services/video_service.py` and the ffmpeg path are untouched.
+- Task 19.2: Edge TTS `WordBoundary` capture + per-line word timestamps, additive migration
+  `007_word_timestamps.sql` (`audio_jobs.word_timestamps_json`, nullable, no back-fill).
+  `_synthesize_edge_tts` now passes `boundary="WordBoundary"` (its own default is
+  `SentenceBoundary` -- confirmed live that no per-word events appear without this) and
+  returns per-word timings alongside the audio bytes; a sidecar JSON file next to each
+  cached line MP3 carries the raw per-word data forward to mix time, where
+  `AudioService` aggregates it onto the mixed timeline using the same offset math as
+  `timestamps_json` (never calls a TTS engine itself, unchanged). No `video-renderer/`
+  change; nothing yet consumes the new column (Task 19.3 will). Real 8-min B1 episode with
+  completed audio still does not exist in `data/app.db` -- not invented for this task.
 
 ## [1.1.0-beta] - 2026-09-26
 

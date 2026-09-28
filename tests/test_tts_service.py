@@ -67,9 +67,9 @@ async def test_synthesize_line_uses_edge_tts_when_engine_is_edge_tts(db, monkeyp
     speaker = project["speakers"][0]
     line = await _insert_line(db, project["id"], speaker["id"])
 
-    async def fake_edge_tts(text: str, spk: dict) -> bytes:
+    async def fake_edge_tts(text: str, spk: dict) -> tuple[bytes, list]:
         assert text == "Hello there."
-        return FAKE_MP3_BYTES
+        return FAKE_MP3_BYTES, []
 
     monkeypatch.setattr(tts_service, "_synthesize_edge_tts", fake_edge_tts)
 
@@ -81,6 +81,7 @@ async def test_synthesize_line_uses_edge_tts_when_engine_is_edge_tts(db, monkeyp
     audio_path = Path(result["audio_path"])
     assert audio_path.exists()
     assert audio_path.read_bytes() == FAKE_MP3_BYTES
+    audio_path.with_suffix(".words.json").unlink()  # Task 19.2 sidecar, written alongside the mp3
     audio_path.unlink()
 
     cursor = await db.execute("SELECT audio_cache_path FROM script_lines WHERE id = ?", (line["id"],))
@@ -103,9 +104,9 @@ async def test_synthesize_line_falls_back_to_edge_tts_when_omnivoice_configured_
 
     calls = {"omnivoice": 0, "edge_tts": 0}
 
-    async def fake_edge_tts(text: str, spk: dict) -> bytes:
+    async def fake_edge_tts(text: str, spk: dict) -> tuple[bytes, list]:
         calls["edge_tts"] += 1
-        return FAKE_MP3_BYTES
+        return FAKE_MP3_BYTES, []
 
     monkeypatch.setattr(tts_service, "_synthesize_edge_tts", fake_edge_tts)
 
@@ -115,7 +116,9 @@ async def test_synthesize_line_falls_back_to_edge_tts_when_omnivoice_configured_
     assert calls["edge_tts"] == 1
     from pathlib import Path
 
-    Path(result["audio_path"]).unlink()
+    audio_path = Path(result["audio_path"])
+    audio_path.with_suffix(".words.json").unlink()  # Task 19.2 sidecar, written alongside the mp3
+    audio_path.unlink()
 
 
 async def test_omnivoice_synthesis_always_raises_unavailable_for_now():
@@ -189,10 +192,10 @@ async def test_preview_line_does_not_hold_the_write_lock_during_synthesis(db, mo
     synthesis_started = asyncio.Event()
     release_synthesis = asyncio.Event()
 
-    async def slow_edge_tts(text: str, spk: dict) -> bytes:
+    async def slow_edge_tts(text: str, spk: dict) -> tuple[bytes, list]:
         synthesis_started.set()
         await release_synthesis.wait()
-        return FAKE_MP3_BYTES
+        return FAKE_MP3_BYTES, []
 
     monkeypatch.setattr(tts_service, "_synthesize_edge_tts", slow_edge_tts)
 
@@ -210,3 +213,9 @@ async def test_preview_line_does_not_hold_the_write_lock_during_synthesis(db, mo
     release_synthesis.set()
     result = await asyncio.wait_for(preview_task, timeout=1.0)
     assert result["data"]["engine_used"] == "edge_tts"
+
+    from pathlib import Path
+
+    audio_path = Path(result["data"]["audio_path"])
+    audio_path.with_suffix(".words.json").unlink()  # Task 19.2 sidecar, written alongside the mp3
+    audio_path.unlink()
