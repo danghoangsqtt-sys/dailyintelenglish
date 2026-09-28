@@ -22,6 +22,13 @@ Versioning: [SemVer](https://semver.org/)
   New invariants 36–40. No user-visible behaviour changes yet — planning-only commit set.
   Controlling plan: `docs/implementation/phase-19-remotion.md`. Phase folder:
   `.viepilot/phases/19-remotion/` (SPEC, PHASE-STATE, SUMMARY skeleton, `tasks/task-19.1.md`).
+- Phase 19 spike (planning-only): Task 19.1 rendered one real completed episode through a new
+  `video-renderer/` Remotion workspace (background + line-level subtitle band, 1280x720@30fps)
+  invoked as a subprocess (`scripts/run_remotion_spike.py`). Measured ~61s wall time for a
+  2:56 episode (~166s extrapolated for a full 8-min B1 episode), output correctness confirmed
+  (A/V sync, resolution, per-line timing), ~660MB Node workspace / ~575-840MB estimated
+  packaged-app growth. `docs/operations/phase19-spike-remotion.md`. No user-visible behaviour
+  changes — `app/services/video_service.py` and the ffmpeg path are untouched.
 
 ## [1.1.0-beta] - 2026-09-26
 

@@ -307,6 +307,24 @@ The report is the deliverable. It must include, in this order:
 7. **Decision proposal.** One paragraph: PASS / SCOPE-CUT (which of 19.3–19.6 to drop) /
    STOP. This is a Coder proposal — PM decides.
 
+### Evidence — filled (2026-09-28)
+
+Report: `docs/operations/phase19-spike-remotion.md`. Headline numbers: **~61 s** wall time
+(3 consecutive real renders, 61.268 s / 61.249 s / 60.432 s) for a 2:56 / 30-line B1 episode
+at 1280×720@30fps; **~166 s extrapolated** for a full 8-minute episode; output correctness
+confirmed (A/V sync within 0.01–0.04 s, exact per-line timing spot-checked at 3 points,
+1280×720 exact match, no upscale); **~660 MB** `video-renderer/node_modules/` (~270 MB of
+which is the Chrome Headless Shell); packaged-app growth estimated at **+575–840 MB**.
+Full suite **1175/1175 passed**, `ruff check .` clean, `tsc --noEmit` clean,
+`tests/test_video_studio_browser.py` 10/10 unchanged. **Decision proposal: PASS** (see
+report §7 for the two conditions carried into 19.2's card).
+
+A real gap was found and documented in the report rather than worked around silently: no
+project in `data/app.db` currently has both `duration_minutes = 8` and a completed audio
+mix (the phase's own preflight note was stale). The spike instead used the only project
+anywhere in the DB with a completed audio job (`b330d37f...`, B1, 2:56 actual) and
+extrapolates linearly to 8 minutes for the render-time conclusion.
+
 ## Definition of done
 
 - All allowed files exist, all disallowed files unchanged.
