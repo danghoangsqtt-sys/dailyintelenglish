@@ -247,6 +247,19 @@ no server, no network, no GPU, no `--reaggregate` needed (additive field, old ev
 unaffected). `ruff check .` + full suite (1182 baseline + N new) confirmed at implementation
 time.
 
+## PM review — APPROVED (2026-09-28, session a01f96)
+
+All four findings accepted verbatim: per-case verification via the trial DBs (safe territory,
+distinct from the real `data/app.db`) confirmed as the right discipline over assuming the
+card's switch-alone-fixes-all narrative; trusting Task 17.2's DB-verified quote over the
+ENH-014 request's own paraphrase confirmed correct (not adding "next episode" without a
+surviving real instance); `outro_present_last3_rate` naming approved (matches existing
+aggregate `_rate` convention); Gate B-11 line-boundary inference from the committed,
+owner-accepted report text confirmed as grounding-in-evidence, not fabrication -- call it out
+openly in the test docstring, not just the design doc. No changes requested.
+
+Proceed to implementation.
+
 ## PM note
 
 This is a nice-to-close item, not a must-close. If it's more work than it looks, or if

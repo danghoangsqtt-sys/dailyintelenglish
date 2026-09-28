@@ -292,6 +292,15 @@ _OUTRO_LINE_MARKERS = (
     "thanks for", "thank you for", "see you", "that's all", "goodbye", "bye",
     "until next", "take care", "good luck", "all the best", "wrap up",
     "wrapping up", "before we go", "that wraps",
+    # ENH-014 (Gate B-11 §2, docs/operations/phase18-gate-b11.md): widened after two real
+    # B1 sign-offs scored `has_outro=False` despite being genuine goodbyes. Every marker
+    # below is grounded in one of those two real endings (cited per-marker in
+    # tests/test_run_ai_operational_trial_outro.py); "next episode" was deliberately NOT
+    # added -- the ENH-014 request's own paraphrase of a different run's ending doesn't
+    # match that run's DB-verified real text (Task 17.2's card), so no real instance of it
+    # survives verification.
+    "tuning in", "look forward", "next session", "appreciate you",
+    "joining us", "welcoming you back", "next week",
 )
 _OUTRO_OBJECTIVE_MARKERS = ("closing", "outro", "farewell", "conclu", "wrap up", "sign off", "signing off")
 
@@ -402,7 +411,11 @@ def analyze_script(
         "no_exact_duplicate_lines": exact_duplicates == 0,
         "repeated_8gram_ratio_ok": repeated_ratio < REPEATED_8GRAM_MAX_RATIO,
         "intro_present": has_intro,
-        "outro_present": has_outro,
+        # ENH-014 (D19.ENH14-b): the gate signal is has_outro_last3, not has_outro -- a
+        # single-last-line check is a real measurement false negative when a genuine sign-off
+        # lands a line or two before the end (Task 17.2, Gate B-7/B-8/B-11). has_outro is
+        # still recorded below, unchanged, for backward-compat with older evidence readers.
+        "outro_present": has_outro_last3,
         "no_unknown_speaker_ids": not unknown_speakers,
     }
     return {
@@ -805,6 +818,8 @@ def compute_matrix_aggregates(runs: list[dict[str, Any]]) -> dict[str, Any]:
     content_pass = [r for r in completed if (r.get("content") or {}).get("all_checks_pass")]
     infra_failures = [r for r in runs if r.get("failure_class") == "infra"]
     handler_exceptions = [r for r in runs if r.get("error_code") == "handler_exception"]
+    # ENH-014: no outro-related aggregate existed before this -- added, not switched.
+    outro_last3_true = [r for r in completed if (r.get("content") or {}).get("has_outro_last3")]
 
     all_sections = [s for r in runs for s in (r.get("sections") or [])]
     sections_with_data = [s for s in all_sections if "target_nominal" in s and "words" in s]
@@ -853,6 +868,13 @@ def compute_matrix_aggregates(runs: list[dict[str, Any]]) -> dict[str, Any]:
         "n_runs": n,
         "completion_rate": round(len(completed) / n, 4) if n else None,
         "content_pass_rate": round(len(content_pass) / len(completed), 4) if completed else None,
+        # ENH-014: slide-worthy summary of the gate signal now driving `outro_present`
+        # (D19.ENH14-b) -- new field, not a rename, so `--reaggregate` on older evidence
+        # files (which never had this key) still works via the same `.get(...)` discipline
+        # every other field in this function already follows.
+        "outro_present_last3_rate": (
+            round(len(outro_last3_true) / len(completed), 4) if completed else None
+        ),
         "infra_failure_count": len(infra_failures),
         "handler_exception_count": len(handler_exceptions),
         "per_section_sample_size": len(sections_with_data),

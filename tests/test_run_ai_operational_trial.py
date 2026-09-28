@@ -87,12 +87,13 @@ def test_has_outro_in_last_n_catches_the_gate_b7_run4_false_negative(runner_modu
     assert runner_module._has_outro_in_last_n(texts_lower, 3, None) is True
 
 
-def test_analyze_script_gate_decision_still_uses_has_outro_only(runner_module):
-    """Required behaviour #2: `has_outro_last3` is recorded next to `has_outro`, but
-    `checks`/`all_checks_pass`/`outro_present` keep reading from `has_outro` alone --
-    this run's own has_outro is False even though has_outro_last3 is True, so if
-    outro_present ever flipped to True the gate decision would have silently started
-    trusting the new field instead."""
+def test_analyze_script_gate_decision_now_uses_has_outro_last3(runner_module):
+    """ENH-014 (D19.ENH14-b, superseding this test's original Task 17.2 assertion): the
+    gate decision was deliberately switched from `has_outro` (single last line) to
+    `has_outro_last3` (last 3 lines) -- this is exactly the real Gate B-7 run 4 false
+    negative the switch exists to fix, so `outro_present` must now read True even though
+    the raw single-line `has_outro` (still recorded, unchanged, for backward-compat)
+    stays False."""
     lines = [
         {"speaker_id": "S1", "text": _RUN4_LAST_3_LINES[0]},
         {"speaker_id": "S2", "text": _RUN4_LAST_3_LINES[1]},
@@ -104,8 +105,7 @@ def test_analyze_script_gate_decision_still_uses_has_outro_only(runner_module):
 
     assert result["has_outro"] is False
     assert result["has_outro_last3"] is True
-    assert result["checks"]["outro_present"] is False
-    assert result["all_checks_pass"] is False
+    assert result["checks"]["outro_present"] is True
 
 
 # --- Task 18.4: --matrix cloud_first ------------------------------------------------

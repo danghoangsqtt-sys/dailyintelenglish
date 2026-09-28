@@ -184,3 +184,25 @@
   reveal design; Step 3 learning-pack gen screenshotted mid-run showing the real banner:
   `Generating learning pack — queued (0%) · 0:02 · ~28s left [Cancel]`). `app/` genuinely
   untouched (git diff empty).
+
+- **ENH-014** (2026-09-29, Coder, optional filler task -- not part of Phase 19 numbering):
+  design `4482344` (PM APPROVED) → implementation (see handover message for sha). Verified
+  per-case (not per-phrase) which of the 4 known outro-heuristic false negatives (Gate B-7
+  run 4, B-8 run 5, B-11 run 1, B-11 run 2) actually needed new markers, using each gate's
+  real evidence JSON and (for B-7/B-8) the real per-line script text fetched read-only from
+  their own `trial-data/app.db` snapshots -- only B-11 run 1 genuinely needed new markers
+  (both `has_outro` and `has_outro_last3` are False for it in the real evidence); the other
+  3 were already fixed by the `has_outro_last3` gate-signal switch alone via existing
+  markers. Card-vs-reality discrepancy found: the ENH-014 request's own paraphrase of B-7
+  run 4's ending doesn't match Task 17.2's DB-verified real quote for the same run --
+  trusted the DB-verified version, did not add "next episode" as a marker since no real
+  instance survives verification. New aggregate field `outro_present_last3_rate` added
+  (there was no outro-related aggregate before this task -- nothing to rename, only
+  something to add). Mid-implementation gap found and fixed: an existing test
+  (`tests/test_run_ai_operational_trial.py`) explicitly asserted the *old* gate behaviour
+  this task intentionally overturns -- updated its assertion and docstring to match, rather
+  than leaving a contradictory, soon-to-fail test in the suite. Revert-and-confirm-failure
+  done (reverted all 7 new markers at once; 3 real-ending tests failed with genuine
+  assertion mismatches, not crashes; restored, 13/13 green). Full suite 1189/1189 (1182
+  baseline + 7 new), ruff clean. `app/`/`frontend/`/`video-renderer/` untouched. No live
+  trial rerun -- pure Python + unit tests only.

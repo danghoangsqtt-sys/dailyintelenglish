@@ -8,6 +8,25 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Fixed
+- **ENH-014 (2026-09-29, by Coder):** `scripts/run_ai_operational_trial.py`'s outro-heuristic
+  false negatives (Gate B-11 §2: 2/5 B1 scripts scored "no outro" despite real sign-off
+  endings). Widened `_OUTRO_LINE_MARKERS` with 7 new markers, each grounded in a real
+  observed ending (Gate B-11 report) -- "tuning in", "look forward", "next session",
+  "appreciate you", "joining us", "welcoming you back", "next week". The gate signal
+  (`checks["outro_present"]`, feeding `all_checks_pass`) now reads `has_outro_last3`
+  (last 3 lines) instead of `has_outro` (single last line) -- infrastructure added in Task
+  17.2 but never wired to the actual gate decision until now. `has_outro`/`has_outro_last3`
+  both keep being recorded per-run (backward-compatible with `--reaggregate` on older
+  evidence). New aggregate field `outro_present_last3_rate` in `compute_matrix_aggregates`
+  (there was no outro-related aggregate before this). Verified per-case against real gate
+  evidence that only 1 of 4 known false negatives (Gate B-11 run 1) genuinely needed new
+  markers -- the other 3 were already fixed by the `has_outro_last3` switch alone via
+  existing markers. Pure Python, unit-tests-only, no live trial rerun. 7 new tests
+  (`tests/test_run_ai_operational_trial_outro.py`) plus 1 existing test updated to match the
+  intentional gate-signal change; full suite 1189/1189 (1182 baseline + 7 new), ruff clean.
+  `app/` untouched.
+
 ### Added (Report-readiness for T6 2026-10-02)
 - **Task Report-UX-1 (2026-09-28, PM task-level, sha `bb8f864`, by Coder):** elapsed
   counter + ETA + Step 4 real % + Step 5 elapsed on all 4 AI-generation Step pages.
