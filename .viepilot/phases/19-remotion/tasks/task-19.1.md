@@ -76,7 +76,7 @@ code lands in a separate commit. This mirrors the Phase 18 doc-first pattern.
 - Explicit non-goals for the spike, called out here so scope stays honest: no karaoke, no
   active-speaker highlight, no vocab cards, no intro/outro, no chapter bar, no thumbnail
   still. Those are 19.3–19.6.
-- Resolution 1920×1080, 30 fps, matching today's ffmpeg output exactly.
+- Resolution 1280×720, 30 fps, matching today's ffmpeg output exactly.
 
 ### D19.1-d: Subprocess contract
 
@@ -156,10 +156,12 @@ Field-by-field justification, and why nothing here opens a new DB read path:
   `{start_sec, end_sec, label, speaker_id, text}` — the same shape `video_service.generate_srt`
   consumes today. The spike renames `label` → `speaker` in the TS type only for naming
   clarity; no new field, no new query.
-- `audioPath` ← `audio_job["mp3_path"]`, i.e. whatever path `AudioService` actually wrote
-  (`data/audio/<project_id>/mix.mp3` in the current code — note the phase `SPEC.md` text says
-  `final.mp3`, which doesn't match the real filename; using the service's own returned path
-  sidesteps that and any future rename).
+- `audioPath` ← derived from `audio_job["mp3_path"]`, i.e. whatever path `AudioService`
+  actually wrote (`data/audio/<project_id>/mix.mp3` in the current code — note the phase
+  `SPEC.md` text says `final.mp3`, which doesn't match the real filename). **Updated during
+  implementation** (see D19.1-d addendum below): Remotion can't read an absolute filesystem
+  path directly, so the runner copies this file into `video-renderer/public/spike-audio/` and
+  `audioPath` actually carries the path *relative to `public/`* for `staticFile()`.
 - `outputPath` ← a spike-only scratch path the runner script picks
   (`data/tmp/phase19_spike/<project_id>.mp4`), never `data/video/<project_id>/video.mp4` —
   that path belongs to the ffmpeg fallback's `video_jobs` row and must not be raced or
@@ -183,19 +185,21 @@ upscale). PM will correct the card's resolution text as part of the post-spike p
 ### D19.1-c: Composition shape
 
 Resolution resolved to **1280×720 @ 30 fps** (see PM review above); everything else proceeds
-as specified in the card.
+as specified in the card. PM coordination (2026-09-28, session a01f96) additionally clarified:
+a **plain solid-color** background matching one template's dominant/average color is enough
+for the spike — no need to render the actual template PNG (that's a 19.3+ concern). This
+simplifies the composition and removes one asset-serving path (see D19.1-d addendum below).
 
-- Plain-colored background: the spike reuses one of the three existing PNGs
-  (`frontend/static/video_backgrounds/{midnight,deep_purple,charcoal_wave}.png`) as a static
-  `<Img>` — no new artwork.
+- Plain-colored background: solid fill at `rgb(14, 15, 21)` (`#0E0F15`), measured as the
+  1×1-resized average pixel of `frontend/static/video_backgrounds/midnight.png` — a faithful
+  stand-in for that template's dominant tone without bundling the PNG itself.
 - Bottom-third subtitle band: a `<div>` positioned at the same relative screen position
   libass's ffmpeg `subtitles=` burn-in defaults to, showing `${line.speaker}: ${line.text}`
   for whichever `line` has `startSec <= currentFrame/fps < endSec`. Font/size/color chosen to
   visually approximate (not pixel-match) today's libass default styling — exact match isn't
   gate-worthy for a spike, called out explicitly in the report's §5 spot-check instead.
-- Audio: Remotion's `<Audio src={staticFile(...) or absolute path}>` pointed at
-  `audioPath`, i.e. the same normalized mix `AudioService` already produced. No re-encoding
-  of the source audio before Remotion touches it.
+- Audio: Remotion's `<Audio src={staticFile(...)}>` — see D19.1-d addendum for why this is
+  `staticFile()` and not an absolute filesystem path.
 - Confirmed non-goals for this task, unchanged from the card: no karaoke, no active-speaker
   highlight, no vocab cards, no intro/outro, no chapter bar, no thumbnail still.
 
@@ -222,6 +226,20 @@ as specified in the card.
 - Wall time: `time.monotonic()` immediately before and after the `subprocess.run(...)` call,
   not Remotion's own self-reported render time (both are captured and both appear in the
   report, labeled separately, so the Chromium spin-up delta is visible).
+
+**Addendum, found during implementation (2026-09-28):** Remotion does not support absolute
+local filesystem paths as an asset `src` — confirmed against Remotion's own docs
+("Importing assets" / "why does Remotion not support absolute paths"): every asset must live
+under `video-renderer/public/` and be referenced via `staticFile()`, because rendering bundles
+the project with Webpack first and only bundled/public assets are servable afterward. This
+doesn't change scope or the input-props shape, but it does change `audioPath`'s contract: the
+runner script copies `audio_job["mp3_path"]` to
+`video-renderer/public/spike-audio/<episodeId>.mp3` **before** invoking `npx remotion render`
+(copying before the CLI's own fresh bundle step satisfies Remotion's ordering requirement),
+and `audioPath` in the input props is the path *relative to `public/`*
+(`spike-audio/<episodeId>.mp3`), which `Episode.tsx` passes straight to `staticFile()`. The
+copied file is written under `video-renderer/public/`, which is `.gitignore`d in its entirety
+for this spike (real project audio must never be committed).
 
 ### D19.1-e: Real-episode selection
 
