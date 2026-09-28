@@ -180,3 +180,95 @@ app itself yet — still opt-in via the spike runner.
 - Report on disk (`docs/operations/phase19-t5-vocab.md`).
 - All checks green, `app/services/video_service.py` genuinely untouched.
 - Handover per Evidence checklist.
+
+## Design decisions — Coder answers (2026-09-29)
+
+**Real finding that changes the function signature (read before D19.5-a):** the card's
+proposed `attachItemsToLines(...) -> Array<{line_id, items}>` assumes lines carry a
+`line_id`, but `episodeLineSchema` (`video-renderer/src/types.ts`, unchanged since 19.1) has
+no id field at all -- `startSec`/`endSec`/`speaker`/`speakerId`/`text`/`words`, nothing else.
+`speakerId` is the *speaker's* id, not the line's. **Using the line's own array index
+instead** -- stable and always unique within one episode's ordered `lines` array (the same
+array every other composition function, `activeLine`/`activeSpeakerId`/`buildKaraokeTokens`,
+already indexes into positionally). `attachItemsToLines` returns
+`Array<{lineIndex: number, items: LearningItem[]}>`.
+
+**Field-name casing:** vocab/idiom DB fields are snake_case
+(`part_of_speech`/`definition_en`/`definition_vi`/`example_sentence`,
+`meaning_en`/`meaning_vi`/`example_sentence`) -- converted to camelCase in the zod schema
+(`partOfSpeech`/`definitionEn`/`definitionVi`/`exampleSentence`,
+`meaningEn`/`meaningVi`/`exampleSentence`), matching the same convention already applied to
+`avatar_image_path` -> `avatarUrl` in Task 19.4. `word`/`phrase` stay as-is (already single
+camelCase-compatible words).
+
+### D19.5-a/b: Matching strategy -- real numbers from the demo (verified before writing composition code)
+
+Ran both recommended strategies against the real 5-vocab + 4-idiom pack and the real 30-line
+script for `b330d37f...` (read-only, `data/app.db`):
+
+**Vocab (case-insensitive substring, option (i)): 5/5 matched.**
+
+| Word | Matches line(s) |
+|---|---|
+| struggle | 1 |
+| avoid | 4 |
+| routine | 2 |
+| clever | 17 |
+| skip | 19 |
+
+**Idioms (normalized substring -- lowercase + collapsed whitespace, option (ii)): 4/4 matched.**
+
+| Phrase | Matches line(s) |
+|---|---|
+| early bird | 0 |
+| night owl | 0, 1 |
+| piece of cake | 22, 23 |
+| wake up on the right side of the bed | 24 |
+
+**100% match rate on both -- no design-finding-level failure (the card's own escalation
+trigger, "if the number is 0 or 1," does not apply here).** Two idioms ("night owl", "piece
+of cake") each match 2 real lines -- the **first-matching-line tie-break rule** (stated,
+not just implied) resolves both to their earlier line (0 and 22 respectively); their later
+occurrence (line 1, line 23) gets no card from that phrase, which is exactly why line 1 ends
+up with only "struggle" attached rather than "struggle" + a second "night owl" card.
+
+**Real multi-item line found by this same real check:** line 0 ("Hey Maya, are you an early
+bird or a night owl?") matches *both* "early bird" and "night owl" -- the demo genuinely
+exercises D19.5-c's time-slicing math, not just a hypothetical.
+
+### D19.5-c: Time-slicing -- option (i), plus the vocab+idiom combined-order rule the card didn't specify
+
+Chosen (i), as recommended: a line with N items divides `[line.startSec, line.endSec)` into N
+equal slots, one item per slot. For line 0 (0.0-3.6s, 2 items): "early bird" shows 0.0-1.8s,
+"night owl" shows 1.8-3.6s.
+
+**Combined ordering when a line has both a vocab item and an idiom item** (not exercised by
+this demo -- no real line here has both -- but the function must still behave deterministically
+for a future episode that does): vocab items first, in the vocab array's own order, then idiom
+items, in the idioms array's own order. Simple, deterministic, matches the same "source array
+order" principle the card already specifies for same-type items.
+
+### D19.5-d: Card visual -- as specified, one addition
+
+Implemented exactly as the card's D19.5-d describes (position top-right, `rgba(14,15,21,0.85)`
+background, `CAPTION_TEXT_STYLE`'s font family at smaller sizes, ~200ms fade). One addition:
+**vertical stacking order top-to-bottom is `word/phrase -> part-of-speech + IPA (vocab only,
+same line) -> definition_en -> definition_vi -> example_sentence`**, matching the card's own
+listed content order read as a top-to-bottom layout, stated explicitly since the card
+described the fields but not their exact stacking.
+
+### D19.5-e: Verification
+
+Real match numbers already captured above (5/5 vocab, 4/4 idioms) -- both **before** writing
+the composition code, per the card's own instruction. Frame spot checks and wall-time
+comparison happen at implementation time once the real render exists; recorded in
+`docs/operations/phase19-t5-vocab.md`, not guessed here.
+
+### D19.5-f: Re-verify 19.1/19.3/19.4 invariants
+
+- `git log fe06405..HEAD -- app/services/video_service.py` checked at implementation time --
+  expect empty (untouched); this is explicitly the last task before 19.7 touches it.
+- Python full suite unchanged (no Python files in this task's allowed scope).
+- The combined-features frame (karaoke + chip + vocab card, all three at once) is the direct
+  proof 19.3/19.4 don't regress -- `<VocabCard>` is a new sibling in `<AbsoluteFill>`, not a
+  modification of `<CaptionBand>` or `<SpeakerChips>`'s own JSX.
