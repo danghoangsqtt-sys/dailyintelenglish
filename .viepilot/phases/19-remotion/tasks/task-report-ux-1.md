@@ -143,6 +143,121 @@ from the Coder side (backend not touched at all is even stronger — trivially s
   populate as expected. Include one screenshot of the real running-state banner in the
   handover.
 
+## Design decisions — Coder answers (2026-09-28)
+
+**Real finding that changes the implementation shape (read this before DRUX-a):**
+`step2_script.js`/`step3_learning.js`'s `renderJobStatus(job)` currently does
+`el.innerHTML = "...full banner string..."` **on every poll tick** (every 2s, via
+`AiJob.run`'s `onStateChange`, confirmed in `ai_job.js:57`). If `GenerationStatus`'s markup
+is inserted into that same string (the card's literal "insert between % and Cancel"), the
+counter's DOM node gets destroyed and recreated every 2 seconds -- an elapsed timer built on
+a `setInterval` closure tied to that node would either leak (orphaned intervals) or, if
+correctly cleaned up, **visibly reset to `0:00` every 2 seconds** in front of the judging
+panel. `GenerationStatus.mount()` is therefore called **once**, the first time a job becomes
+active/non-terminal (not on every `onStateChange`); after that, only
+`GenerationStatus.setProgress({stageLabel, progressPercent, done})` is called on each poll,
+which updates existing DOM nodes' `textContent` directly -- no `innerHTML` replacement, no
+timer disruption. `renderJobStatus` is restructured accordingly (still the same function,
+same call sites, same `AiJob` integration -- just an `if (!generationStatus)` guard around
+the one-time markup build). Step 4/5 don't have this problem (no poll loop, no repeated
+`innerHTML` replacement of the same container), so `mount()` there is a plain one-time call
+at the start of `generateAll()`/`generateVideo()`.
+
+### DRUX-a: Elapsed counter contract
+
+- Ticks every 1s (`setInterval`, matches the card's recommendation).
+- Format `M:SS` (`0:14`, `1:23`).
+- **Starts from `job.started_at` when available, not always `Date.now()` at mount time.**
+  Real finding: `ai_generation_jobs.started_at` (`app/db/migrations/006_ai_generation_jobs.sql`)
+  is a real column already returned by the job-status endpoint (confirmed in the existing
+  browser test's own job fixture, `test_script_jobs_browser.py`'s `_job()`:
+  `"started_at": "2026-01-01T00:00:00Z"`). If `GenerationStatus.mount()` always started from
+  "now," a page refresh mid-generation (`AiJob.resume()`, already-tested behaviour --
+  `test_refresh_resumes_an_active_job_instead_of_showing_empty_state`) would incorrectly
+  reset the visible elapsed time to `0:00` even though the job has genuinely been running for
+  a while. `mount({element, baselineSec, startedAtIso})` accepts an optional real timestamp;
+  `startedAtIso ?? Date.now()` -- Step 2/3 pass `job.started_at` (present on both fresh-create
+  and resumed jobs), Step 4/5 have no durable job or resume case, so they omit it (defaults
+  to `Date.now()`, correct for their single-page-load lifecycle).
+- **Stops when `done: true`, but the freeze-then-hide duration differs by page, and this is
+  a deliberate asymmetry, not an oversight:**
+  - **Step 4/5:** freeze the final elapsed value, matching `SaveIndicator`'s own
+    "show final state, no artificial extra hide timer needed" shape -- these pages already
+    leave `#generate-progress`'s final text ("Done — episode ready below.", "Done.") visibly
+    on screen after completion (confirmed in `step4_tts.js:513`, `step5_video.js:410`), so
+    the frozen elapsed counter sits right next to that existing, permanent "Done" text with
+    no extra hide logic needed at all.
+  - **Step 2/3: no artificial 2s freeze-then-hide.** Real tension worth flagging explicitly
+    rather than silently applying the card's generic recommendation: today, completion
+    (`currentAiJob.promise` resolving) immediately calls `renderJobStatus(null)` and reveals
+    the finished script (`watchScriptAiJob`'s `.then()`, `step2_script.js:73-76`) -- snappy,
+    no pause. Inserting an artificial "freeze the counter for 2s before hiding" delay would
+    directly fight this task's own purpose: the report's message is "the backend is fast,"
+    and adding a manufactured 2-second pause right before the fastest, most satisfying moment
+    (finished script appearing) undercuts that in front of the exact audience this task
+    exists for. **Recommendation: keep today's immediate reveal for Step 2/3** --
+    `generationStatus.destroy()` + `renderJobStatus(null)` fire together, no delay. The
+    elapsed counter's job was to reassure the user *during* the wait; once the wait is over
+    and the result is already on screen, there's nothing left for it to reassure about.
+
+### DRUX-b: ETA formula + honest-late behaviour
+
+- `remaining = Math.max(0, baselineSec - elapsedSec)`, displayed `~Xs left` while
+  `elapsed < baseline`.
+- **Chosen: (ii) "wrapping up…" label when running over** -- matches the card's own
+  recommendation and reasoning (reassures progress is real without projecting a false
+  negative number).
+- **Language: English throughout, not the card's Vietnamese phrase suggestions
+  ("còn lại"/"sắp xong").** Real finding: every existing piece of UI copy in this app is
+  English (`Generating script`, `Cancel`, `Mixing final audio…`, `Rendering with ffmpeg…`,
+  the terminal messages) -- confirmed by reading every string touched in this task's own
+  allowed files. Phase 4.3 UI localization was dropped 2026-09-16 (cited by the card's own
+  "not in scope" section); introducing Vietnamese strings in exactly one new component would
+  contradict that standing decision, not follow it. `~14s left` / `wrapping up…` in English.
+- Baseline constants exactly as the card specifies (script 45s, learning 30s, TTS `N*5+15`,
+  video 1s) -- not re-derived from any backend field, per the card's own instruction.
+
+### DRUX-c: Where the counter sits visually
+
+- Step 2/3: `Generating script — outline (5%) · 0:14 · ~30s left [Cancel]` -- exactly the
+  card's recommended position (after `%`, before `Cancel`), using `·` as the same visual
+  separator style already implied by the existing banner's spacing. Implemented via the
+  one-time-mount restructuring above, not a literal string splice on every render.
+- Step 4: `Synthesizing line 3/12… (25%) · 0:08 · ~52s left` -- same shape, replacing the
+  current bare `Synthesizing line ${i+1}/${N}…` text. During the `"Mixing final audio…"` and
+  `"Done…"` phases, `progressPercent` is `95` then `100` per the card's spec.
+- Step 5: `Rendering with ffmpeg… · 0:01` -- elapsed only, no `%`/ETA suffix at all (not even
+  a `~1s left` -- with a 1-second baseline, an ETA string would flicker between "left" and
+  "wrapping up" within the same second and add visual noise for zero information value).
+
+### DRUX-d: Test-mock strategy
+
+- Same `page.route("**/api/**", handle)` dispatcher pattern as
+  `tests/test_script_jobs_browser.py`/`tests/test_tts_audio_browser.py` -- no new mocking
+  style introduced.
+- Step 2/3: mock the `ai-jobs` GET-poll endpoint to return `status: "running"` for the first
+  ~2 real seconds (the natural 2000ms `AiJob` poll interval already provides this real-time
+  gap for free -- no artificial delay needed in the route handler), then `"complete"`.
+- Step 4/5 (no poll loop -- a single `await Api.previewTtsLine(...)` /
+  `await Api.generateVideo(...)` per step): the mocked route handler itself
+  `await asyncio.sleep(2.5)` before fulfilling, so the elapsed counter has real wall-clock
+  time to tick past `0:02` before the operation "completes" client-side. This is the one
+  place this task's tests hold a mocked response open on purpose, and it's called out here
+  so it doesn't look like an accidental slow test.
+- The counter-increment assertion itself uses Playwright's real clock (`page.wait_for_timeout`
+  then a text-content regex `/0:0[2-3]/`), never Playwright's clock-mocking API -- the whole
+  point is proving the counter advances against real wall time (matches the card's own
+  instruction).
+
+### DRUX-e: Fallback if a field is missing
+
+- `job.stage == null`: `setProgress` renders no stage label, elapsed + ETA only.
+- `job.progress == null`: same -- stage label (if present) + elapsed + ETA, no `(NaN%)`.
+- Neither case throws -- `setProgress` checks each field independently, never assumes both
+  arrive together.
+- Backend contract will be confirmed live against the running dev server (port 8000) once
+  implementation lands, per the card's own instruction; screenshot included in the handover.
+
 ## Verification
 
 - 4 new Playwright tests pass (one per Step page).
