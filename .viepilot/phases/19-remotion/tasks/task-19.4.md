@@ -154,6 +154,116 @@ code lands in a separate commit. Same pattern as 19.1–19.3.
   both the karaoke band and the speaker chip rendering simultaneously (one frame, one
   timestamp — covers both features at once).
 
+## Design decisions — Coder answers (2026-09-28)
+
+**Card correction:** `frontend/static/css/step4_tts.css` (cited in D19.4-a) does not exist --
+Step 4's styles are inline in `frontend/pages/step4_tts.html`, and the actual per-speaker
+color variables live in the shared `frontend/static/css/style.css`.
+
+### D19.4-a: Chip design + on-screen position
+
+- **Real palette found, not guessed:** `frontend/static/css/style.css` defines
+  `--speaker-a`/`--speaker-b` custom properties, already used app-wide (`.timeline-clip`,
+  and a `speakerIndex % 2 === 0 ? "speaker-a" : ""` class pattern repeated identically in
+  `step2_script.js:267`, `step4_tts.js:293`, `step5_video.js:124`) -- i.e. the app already
+  has an established **alternate-by-index, two-color** convention for any number of
+  speakers, not a unique color per speaker. Two theme variants exist:
+  light (`--speaker-a: #9a4a00`, `--speaker-b: #0757a8`) and dark
+  (`--speaker-a: #f59e0b`, `--speaker-b: #58a6ff`). **Chosen: the dark-theme pair**
+  (`#F59E0B` amber / `#58A6FF` blue) -- the composition's background is the fixed near-black
+  `#0E0F15` (19.1's `MIDNIGHT_BACKGROUND`), and the light-theme hex values were contrast-
+  calibrated for a white surface; using them against a near-black background would read
+  muddy. The dark-theme pair is the app's own calibration for exactly this kind of surface.
+- **Position:** top-left, horizontal row, `top: 5%, left: 5%`. Justified against the three
+  criteria: (a) doesn't compete with `<CaptionBand>` (bottom 10%) -- opposite corner,
+  spatially separated; (b) reads as a caption-adjacent UI element, not floating app chrome,
+  because it's small and corner-anchored like a real broadcast "lower/upper third" convention
+  viewers already recognize; (c) legible at a glance -- top-left is the first place Western
+  -language viewers' eyes land (F-pattern reading), so the "who's talking" cue is seen before
+  the caption text itself, which is the right priority order for this feature's purpose.
+- **Active state:** the active speaker's chip gets its `--speaker-a`/`--speaker-b` color as a
+  solid background (text switches to `#0E0F15`, the same near-black as the base background,
+  for contrast against the now-bright chip) plus `transform: scale(1.08)`. Inactive chips
+  stay a neutral dark surface (`rgba(255,255,255,0.08)`) with white text at reduced opacity
+  (`0.6`) -- present but visually receded, not gone. Combination (color fill + subtle scale),
+  not a single cue alone, so the change reads clearly even to someone glancing mid-scene.
+- **Persistence:** all speaker chips stay on screen for the whole episode (not just the
+  demo's 2 speakers) -- confirmed as the right call for continuity ("these are the people in
+  this episode"), matching the card's own recommendation. No fade-out for inactive chips
+  (fading would remove the "who else is in this scene" context the chips exist to provide).
+
+### D19.4-b: Avatar rendering
+
+- **Real finding, not a guess:** `frontend/static/js/step5_video.js:239-242` (Task 1.7c's own
+  avatar upload UI) shows the app's actual placeholder for a missing avatar is a **plain text
+  box reading "No image"** -- there is no initials-in-a-colored-circle pattern anywhere in
+  this codebase to mirror. The card's speculative "if Step 4 uses initials-in-a-circle, mirror
+  that" doesn't apply; the real, simpler precedent is: no avatar → no image element at all,
+  just text. This directly informs the chip's absent-avatar design below.
+- **When `avatar_url` present:** circular avatar, `56px` diameter (`border-radius: 50%`,
+  `object-fit: cover`) to the left of the name label. 56px chosen against the chosen position
+  (top-left, ~5% margins on a 1280×720 canvas) -- large enough to read a face at video
+  resolution, small enough that even 6 stacked/wrapped chips (D19.4-c) stay well clear of the
+  caption band's bottom 10%.
+- **When `avatar_url` absent (the demo case, both speakers):** **name-only chip, no circle, no
+  initials** -- matching the real app's own "just text, no fake-avatar substitute" precedent
+  found above, not inventing a fancier pattern the app doesn't actually use anywhere.
+- **Avatar file handling confirmed:** the runner **copies** (never symlinks, never passes an
+  absolute path) any non-null `avatar_image_path` file into
+  `video-renderer/public/avatars/<speaker_id><ext>` before render, exactly the same pattern
+  already used for the mixed audio file (D19.1-d addendum) -- copy-into-`public/`-then-
+  `staticFile()`, because Remotion has no other way to read a real filesystem asset.
+  `video-renderer/.gitignore`'s existing `public/` blanket-ignore already covers this new
+  subfolder -- confirmed by reading the `.gitignore` (single `public/` line, not scoped to
+  `spike-audio/`), no additional gitignore edit needed.
+
+### D19.4-c: Multi-speaker layout scaling
+
+One paragraph, as asked: the chip row uses CSS flexbox (`display: flex, flexWrap: wrap, gap:
+8px`) inside a fixed-width container anchored top-left. At 2 speakers (the demo) it's one
+short row. At 3–4, still one row (each chip is compact -- name-only chips are ~120-160px
+wide at 32px font, avatar chips ~180-220px; four avatar chips fit within a 1280px-wide canvas
+with margin to spare). At 5–6, `flexWrap: wrap` lets the row become two rows rather than
+overflowing off-screen or shrinking chips illegibly -- this is the "fail cleanly, don't
+silently look wrong" requirement: wrapping is a real, visible, correct degradation, not a
+silent bug. Colors continue the app's existing alternate-by-index convention (`speaker_index
+% 2`) rather than needing N unique colors -- consistent with the real app's own 2-color
+convention at any speaker count. Not built/rendered in this task beyond the demo's 2 speakers
+(per the card), but the layout mechanism (flexbox wrap, index-parity coloring) requires no
+different code path at higher counts -- it degrades by CSS alone, not a conditional.
+
+### D19.4-d: `activeSpeakerId` semantics
+
+- **Tie rule: `startSec` inclusive, `endSec` exclusive** -- identical convention to 19.3's
+  `activeTokenIndex` (`karaoke.ts`) and to the existing SRT export format, so a viewer never
+  sees two different Phase-19 systems disagree about which instant a boundary belongs to.
+- **Gaps return `null`:** between-line silence (300ms/500ms padding, Task 1.6b), before line
+  0, and after the last line all produce `null` -- confirmed as correct, not a compromise:
+  the padding exists precisely because no one is speaking during it, so "no speaker
+  highlighted" is the honest visual state, matching the actual audio. Keeping the previous
+  speaker highlighted through a silence gap would visually claim someone is still talking
+  when the audio says otherwise -- worse than a brief neutral flicker.
+
+### D19.4-e: Verification frames + wall-time comparison
+
+Frames chosen after the render (same run-coherence discipline as 19.3 -- timestamps come from
+this task's own render, not guessed in advance): at least one Alex→Maya transition, one
+Maya→Alex transition, and one frame mid-line (proving the chip *stays* highlighted for a
+whole line, not just at its boundary instant) -- plus one frame that captures both the
+karaoke band and the speaker chip simultaneously (D19.4-f). Wall time compared to 19.3's
+~95s/~97s: expected to land within ~±10%, since this task adds no network calls and chip
+rendering is a handful of `<div>`s, not a per-frame-expensive operation.
+
+### D19.4-f: Re-verify 19.1/19.3 invariants
+
+- `git log fe06405..HEAD -- app/services/video_service.py` checked at implementation time,
+  reported in the handover -- expect empty (untouched).
+- Python full suite 1178/1178 unchanged (no Python files touched by this task), `ruff check
+  .` clean.
+- 19.3's karaoke band is additive-only: `<SpeakerChips>` is a new sibling element inside
+  `<AbsoluteFill>`, not a change to `<CaptionBand>`'s own JSX or styles. One spot-check frame
+  shows both features rendering together in the same frame as direct proof.
+
 ## Verification
 
 - Real re-render of `b330d37f...` succeeds end-to-end.
