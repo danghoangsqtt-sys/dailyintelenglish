@@ -146,4 +146,42 @@ partial Remotion path still shipped, but default stays `ffmpeg` and version stay
 
 ## 6. Amendments
 
-_(None yet. Amendments land here as the spike / gates measure reality.)_
+### Amendment A — 2026-09-28: Task 19.1 spike PASS (owner D33) + 19.7 shape correction
+
+Task 19.1's real spike report (`docs/operations/phase19-spike-remotion.md`, commit
+`4dd325b`) landed with three material findings, all folded here rather than lost:
+
+- **Render time is not the phase blocker.** Measured ~61 s wall time for a 2:56 B1 episode
+  (3 real runs, stable within 1 s); linearly extrapolated ~166 s (~2.8 min) for a full 8-min
+  episode. Far under ENH-013's "several to 10+ min" feared risk. **Phase 19 proceeds** —
+  owner D33 accepts PASS.
+- **Real-DB preflight was stale.** The phase's own PHASE-STATE preflight asserted an
+  existing 8-min B1 episode with completed audio in `data/app.db`; the spike found this
+  false — only one project (`b330d37f...`, "Demo Episode", B1, 2:56) has a completed audio
+  job at all. The spike rendered that project and extrapolated. Carry-over condition #1 into
+  Task 19.2: **opportunistic 8-min re-confirm** once the owner generates a real 8-min
+  episode, non-blocking (frame-driven render — no scaling cliff expected).
+- **Packaging weight is heavier than ENH-013's early guess.** ENH-013 predicted "~150–300
+  MB". Measured `video-renderer/node_modules/`: **~660 MB total, ~270 MB Chrome Headless
+  Shell alone.** Packaged-app estimate: **169 MB → 740–840 MB (4–5× increase)**, of which
+  ~270 MB (the Chrome binary) is a hard floor — Chrome Headless Shell *is* the render
+  engine, not a trimmable dependency.
+
+**19.7 shape correction:** Task 19.7's card, when it is written, **must** plan explicitly
+for one of:
+
+1. **Ship the ~270 MB Chrome binary bundled**, accepting the 740–840 MB packaged size.
+2. **Download Chrome Headless Shell on first use** post-install (Remotion's own CLI supports
+   this pattern), keeping the base installer near today's 169 MB and adding the ~270 MB on
+   first render, once. Requires a real network-connected first render; must degrade to the
+   ffmpeg fallback (I36) if that first-run download fails.
+3. **Drop Remotion entirely** if the packaging cost is not acceptable to the owner at 19.7
+   review time — the ffmpeg fallback remains default, and the phase closes with the
+   composition work Remotion did in 19.2–19.6 available only in the dev tree.
+
+The choice is deferred to 19.7's design commit (with real numbers from a probe of option
+#2's real first-run download behaviour) — not decided here. What is decided here: **19.7 may
+not treat ~270 MB as an optimization target.**
+
+19.2's card is written and on disk (`.viepilot/phases/19-remotion/tasks/task-19.2.md`);
+19.3–19.6 remain provisional pending 19.2 close.

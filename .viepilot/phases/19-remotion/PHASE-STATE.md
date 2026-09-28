@@ -4,7 +4,7 @@
 
 - **Phase:** 19
 - **Slug:** `19-remotion`
-- **Status:** 19.1 spike complete, report on disk, Coder proposes PASS -- awaiting PM decision
+- **Status:** 19.1 accepted (PM + owner **D33**, 2026-09-28, spike PASS); 19.2 doc-first card ready, awaiting Coder pickup
 - **Planned:** 2026-09-28 (`/vp-evolve ENH-013`)
 - **Controlling plan:** `docs/implementation/phase-19-remotion.md`
 - **Authorization:** owner decision **D29** (2026-09-24, brainstorm
@@ -37,8 +37,8 @@
 
 | Task | Description | Owner | Status |
 |---|---|---|---|
-| 19.1 | Spike: `video-renderer/` scaffold + minimal Remotion composition (background + line-level captions, matching today's ffmpeg output) rendered for one real B1 8-min episode. Measure render time / packaging footprint / output correctness. Report `docs/operations/phase19-spike-remotion.md`. | Coder | **complete** -- report on disk, Coder proposes PASS, awaiting PM decision (`tasks/task-19.1.md`) |
-| 19.2 | Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration | Coder | provisional (opens only after 19.1 PASS) |
+| 19.1 | Spike: `video-renderer/` scaffold + minimal Remotion composition (background + line-level captions, matching today's ffmpeg output) rendered for one real B1 episode (2:56 actual — see preflight caveat). Measure render time / packaging footprint / output correctness. Report `docs/operations/phase19-spike-remotion.md`. | Coder | **accepted** -- PM + owner D33 2026-09-28, PASS, sha `4dd325b`, full suite 1175/1175 re-verified by PM |
+| 19.2 | Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration | Coder | **ready** (doc-first card `tasks/task-19.2.md`, awaiting Coder pickup) |
 | 19.3 | Word-level karaoke captions composition | Coder | provisional |
 | 19.4 | Active-speaker indicator | Coder | provisional |
 | 19.5 | Vocab/idiom pop-up cards | Coder | provisional |
@@ -51,7 +51,13 @@
 
 - **19.1** (2026-09-28, Coder): `docs/operations/phase19-spike-remotion.md`. ~61 s wall time
   (3 real renders) for a 2:56 B1 episode, ~166 s extrapolated for 8 min. Output correctness
-  confirmed (A/V sync, per-line timing, resolution). ~660 MB Node workspace, +575-840 MB
-  estimated packaged-app growth. Full suite 1175/1175, ruff clean, `tsc --noEmit` clean,
-  `test_video_studio_browser.py` 10/10 unchanged. Coder proposes **PASS**. Real-DB gap found
-  (no 8-min B1 project with completed audio currently exists) -- documented, not hidden.
+  confirmed (A/V sync 0.01-0.04s, per-line timing exact, 1280x720 no-upscale). ~660 MB Node
+  workspace, +575-840 MB estimated packaged-app growth. Full suite 1175/1175, ruff clean,
+  `tsc --noEmit` clean, `test_video_studio_browser.py` 10/10 unchanged. Coder proposed
+  **PASS**; PM independently re-verified full suite (1175 passed, 401.33s) + ruff clean +
+  git-log-scoped confirmation that `app/services/video_service.py` was untouched across the
+  entire Phase 19 commit range. Real-DB gap found (no 8-min B1 project with completed audio
+  currently exists) -- documented, not hidden. **PM + owner (D33, 2026-09-28) accept PASS**
+  with the two carry-over conditions: (1) opportunistic 8-min re-confirm once the owner
+  generates one, non-blocking; (2) 19.7 must treat the Chrome Headless Shell ~270 MB as a
+  hard floor. Commit sha `4dd325b`.

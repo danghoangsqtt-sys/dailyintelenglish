@@ -337,3 +337,34 @@ extrapolates linearly to 8 minutes for the render-time conclusion.
   git history proves the doc-first gate (per the standing self-implementation feedback rule).
 - Handover message to PM includes: the spike report path, the wall-time number, the disk
   footprint number, and the PASS / SCOPE-CUT / STOP proposal.
+
+## PM Acceptance (2026-09-28)
+
+**ACCEPTED** by PM (task-level, session `a01f96`) and by owner (phase-level, D33) —
+Coder's PASS proposal upheld.
+
+**Independent verification (PM re-ran everything, did not trust Coder's report on its word):**
+- `git show --stat 4dd325b` → 15 files, all inside allowed scope. Zero `app/`, `frontend/`,
+  `tests/` changes.
+- `git log fe06405..HEAD -- app/services/video_service.py` → empty. The ffmpeg fallback path
+  is genuinely untouched across the entire Phase 19 commit range, not just in the visible
+  diff.
+- `./venv/Scripts/python.exe -m pytest -q -p no:cacheprovider --tb=no` → **1175 passed** in
+  401.33s. Matches Coder's number exactly.
+- `./venv/Scripts/python.exe -m ruff check .` → "All checks passed!".
+- Spike report §1–§7 read in full. Every field filled with real measurement. Honest caveat
+  about the missing 8-min episode disclosed at §opening and §7, not hidden. Extrapolation
+  reasoning (frame-driven render, no cliff expected at 8 vs. 3 min) is sound; owner can
+  close the residual by generating one 8-min episode later, non-blocking.
+
+**Owner decision (D33):** PASS. Two carry-over conditions accepted:
+
+1. Opportunistic 8-min re-confirm once a real 8-min episode exists in the DB — non-blocking
+   for 19.2, folded into 19.2's handover checklist.
+2. Task 19.7 (packaging + wire-up) must treat the Chrome Headless Shell ~270 MB as a hard
+   floor: **plan for download-on-first-use or drop Remotion** — not "optimize away". This
+   materially changes 19.7's shape from the placeholder in the plan and is captured as
+   Amendment A in `docs/implementation/phase-19-remotion.md` §6.
+
+Task 19.2 doc-first card is on disk at `.viepilot/phases/19-remotion/tasks/task-19.2.md`.
+The Coder is unblocked to begin 19.2's design commit.

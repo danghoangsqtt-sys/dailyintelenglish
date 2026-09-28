@@ -9,6 +9,19 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Planning
+- Task 19.1 (Remotion spike) **accepted PASS by owner (D33, 2026-09-28)**, commit `4dd325b`
+  by Coder, independently re-verified by PM (full suite 1175/1175 re-run in 401.33 s, ruff
+  clean, git-log-scoped confirmation `app/services/video_service.py` untouched across the
+  entire Phase 19 commit range). Real numbers: 61 s wall time for a 2:56 B1 episode → ~166
+  s extrapolated for 8-min (well under ENH-013's "10+ min" feared risk); 1280×720 exact
+  (Coder caught PM's mistaken "1920×1080" in the task card first, fixed before
+  implementation); A/V sync 0.01–0.04 s (inside media gate tolerance); `video-renderer/
+  node_modules` ~660 MB, packaged-app estimate 740–840 MB (Chrome Headless Shell ~270 MB is
+  a hard floor). Two carry-over conditions folded into plan Amendment A: opportunistic
+  8-min scaling re-confirm (non-blocking) and 19.7 packaging must plan for
+  download-on-first-use / drop-Remotion / accept-bundle, not optimize the ~270 MB away.
+  Task 19.2 (Edge TTS `WordBoundary` capture + per-word timestamps + additive migration
+  `007_word_timestamps.sql`) doc-first card written, awaiting Coder pickup.
 - Phase 19 opened 2026-09-28 (`/vp-evolve ENH-013`, owner D29 + planning-shape D32):
   Remotion-rendered videos (word-level karaoke captions, active-speaker indicator, timed
   vocabulary/idiom pop-up cards, intro/outro + chapter/progress bar + Remotion thumbnail
