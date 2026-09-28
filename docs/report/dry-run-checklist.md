@@ -137,16 +137,37 @@ the demo portion (steps 1-8 below), leaving room for narration in between.
 
 ---
 
-## Backup video (optional but recommended)
+## Backup video — ✅ recorded
 
-If PM asks Coder for the assist: Playwright-driven walkthrough of steps 1-8 above, sped
-up to ~2-4 min real time (each stage recorded live at full speed, then post-edited or
-`ffmpeg`-sped-up). Store at `docs/report/backup-demo-walkthrough.mp4`. Play as slide 7's
-main content if live demo has already failed once during the meeting.
+**File:** `docs/report/backup-demo-walkthrough.webm` (3:20, 10.6 MB, real full-pipeline
+recording via `scripts/record_demo_video.py`)
 
-Alternative: just do 2-3 shorter clips (30s each) showing key moments (the Step 2 banner
-counting down, the final Play in Step 4, the download in Step 7). Less production
-effort, still covers the demo story.
+**Contents:** Steps 1-5 end-to-end (Config → Script → Learning → Audio → Video) with real
+Gemini + real Edge TTS + real ffmpeg. Report-UX-1 counter visible for the first time in a
+recorded demo.
+
+**Real disclosure (do not hide this if asked during Q&A):** during the recording,
+`gemini-3.1-flash-lite` returned `ProviderUnavailableError` on the first call and the chain
+fell back to `gemini-flash-lite-latest`. This is exactly the resilience story slide 4
+describes — the app recovered without user visible failure. Not a defect. If a judge asks
+"why did that take slightly longer than 45s?", the honest answer is "cloud transient
+failure, chain fallback worked as designed" — which is stronger than "clean run" for a
+technical audience.
+
+**Steps 6-7 (Thumbnail + YouTube Package) not in backup video** — Gemini transient outage
+persisted through step 6 and timed out. Not shipped. For live demo T6, if this happens:
+skip step 6/7 verbally ("thumbnail + YouTube package would be next; those are Gemini text
+calls with similar timing to script/learning").
+
+**Also included:** `docs/report/backup-demo-step2-frame.png` — single frame extract at
+t=8s showing the Step 2 banner with real counter. Use as slide 6's static fallback image
+if the full video can't be embedded (large webm may not play cleanly in some slide apps).
+
+**Playback recommendations:**
+- Full video for slide 7 main content if live demo fails
+- Or 5-10s clip of Step 2 (t=0:03 to t=0:12) showing counter counting down + banner text
+  changing stage — highest single-visual impact
+- Or the still frame `.png` as a slide 6 visual proof if no video option works
 
 ---
 
