@@ -166,29 +166,24 @@ Field-by-field justification, and why nothing here opens a new DB read path:
   overwritten by an unrelated spike render.
 - `fps` ← `30`, matching `VIDEO_FPS` (app/core/constants.py) so Remotion's frame count for an
   8-minute episode is the same ~14,400 frames the phase spec estimates.
-- `width`/`height` — see **open question** below; today's actual ffmpeg background PNGs
-  (`frontend/static/video_backgrounds/*.png`) are all **1280×720**
-  (`VIDEO_WIDTH_STANDARD`/`VIDEO_HEIGHT_STANDARD`), not 1920×1080.
+- `width`/`height` ← **1280×720**, PM-confirmed (see D19.1-c below) — matches today's actual
+  ffmpeg background PNGs (`frontend/static/video_backgrounds/*.png`) and
+  `VIDEO_WIDTH_STANDARD`/`VIDEO_HEIGHT_STANDARD` exactly.
 
 No per-word timing field is included, per D19.1-b's explicit non-goal — `lines[]` is
 line-level only, mirroring today's SRT exactly.
 
-**Open question for PM (blocks D19.1-c until answered):** Task 19.1's own §D19.1-c says the
-spike composition should be "1920×1080, 30 fps, matching today's ffmpeg output exactly" — but
-today's actual ffmpeg output is **1280×720** (the background templates are 1280×720 PNGs, and
-`VIDEO_WIDTH_STANDARD`/`VIDEO_HEIGHT_STANDARD` in `app/core/constants.py` are 1280/720; 1920×1080
-is not used anywhere in the current video path). These two instructions conflict. I'd default
-to **1280×720** since "matching today's ffmpeg output exactly" is the more specific, testable
-constraint (it's what the correctness spot-check in "Evidence" §5 will compare against), and
-1920×1080 reads like a generic placeholder resolution rather than a deliberate upscale
-decision. Flagging rather than silently picking, since render time/output size at 1080p vs
-720p differ enough to change the Task 19.1 measurement PM is deciding PASS/SCOPE-CUT/STOP
-from. Please confirm 1280×720, or say explicitly that the spike should render at 1920×1080
-(a genuine upscale from source assets) instead.
+**PM review — APPROVED with changes (2026-09-28):** confirmed **1280×720** — the card's
+"1920×1080" line was a PM error, not a deliberate upscale (verified against
+`app/core/constants.py:45-46`, `VIDEO_WIDTH_STANDARD=1280`/`VIDEO_HEIGHT_STANDARD=720`). The
+composition renders at 1280×720 @ 30 fps. The spike report's §5 correctness spot-check adds
+one sentence noting the rendered resolution matches the source background assets exactly (no
+upscale). PM will correct the card's resolution text as part of the post-spike plan Amendment.
 
 ### D19.1-c: Composition shape
 
-(Pending the resolution answer above; everything else proceeds as specified in the card.)
+Resolution resolved to **1280×720 @ 30 fps** (see PM review above); everything else proceeds
+as specified in the card.
 
 - Plain-colored background: the spike reuses one of the three existing PNGs
   (`frontend/static/video_backgrounds/{midnight,deep_purple,charcoal_wave}.png`) as a static

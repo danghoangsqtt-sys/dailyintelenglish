@@ -21,6 +21,7 @@ data/video/
 data/thumbnails/
 data/tts_cache/
 data/quality_reviews/
+data/tmp/
 
 # Keep music library structure but not files
 data/music_library/*

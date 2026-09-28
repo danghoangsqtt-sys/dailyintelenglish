@@ -20,9 +20,10 @@
 - The current video pipeline (ffmpeg, `VideoService.generate_video`) is the fallback the
   spike must not touch — every `app/services/video_service.py` behaviour under the default
   `DIE_VIDEO_RENDERER` value must survive byte-for-byte.
-- Node.js runtime is **not** currently installed with the app. The spike verifies availability
-  (owner's machine) and documents the pinned version and install path in
-  `docs/operations/phase19-spike-remotion.md` before rendering.
+- Node.js **v24.20.0** is already installed on the owner's machine (verified 2026-09-28;
+  npm v11.19.0) — corrects this note's earlier assumption that Node was not installed. Node
+  24 has been the active LTS line since October 2025. The spike still documents the pinned
+  version and install path in `docs/operations/phase19-spike-remotion.md` before rendering.
 - Owner has one real B1 8-min episode already in `data/app.db` with completed audio (Task
   1.6b measured timestamps) — the spike renders against that episode only. PM authorises the
   read-only DB access; Coder never mutates the real DB (write invariant, TRACKER §Bảo mật).
