@@ -8,6 +8,28 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Report-readiness for T6 2026-10-02)
+- **Task Report-UX-1 (2026-09-28, PM task-level, sha `bb8f864`, by Coder):** elapsed
+  counter + ETA + Step 4 real % + Step 5 elapsed on all 4 AI-generation Step pages.
+  New shared `frontend/static/js/generation_status.js` component (`GenerationStatus.mount`
+  once, `setProgress` per poll — DOM node kept stable to avoid a would-have-been-visible
+  reset-to-0:00 bug on every 2-second poll tick). Counter anchored to
+  `ai_generation_jobs.started_at` (server-authoritative), not client mount time, so a
+  page refresh mid-generation shows real elapsed. Baselines: script 45 s, learning 30 s,
+  TTS `N*5+15`, video 1 s (from Gate B-11 real medians). Honest-late behaviour when
+  elapsed > baseline: shows "wrapping up…" instead of a negative ETA. Step 2/3 keep the
+  immediate-reveal-on-done behaviour (no manufactured pause), Step 4/5 freeze final
+  elapsed briefly before hiding. Playwright tests 4/4 + 32 existing browser tests
+  unchanged, full suite 1182/1182, ruff clean, live-verified on running dev server with
+  real Step 2 and Step 3 generations. `app/` genuinely untouched (frontend-only task).
+- **Report benchmark chart + samples package (2026-09-28, PM):** built
+  `docs/report/benchmark-chart.png` from real Gate B-8 (local, 2026-09-23) + Gate B-11
+  (cloud-first, 2026-09-26) evidence: cloud median **45.2s** vs local median **126.5s**
+  = **2.80× faster**; mean **2.97×**; best cloud vs worst local **4.42×**. Also packaged
+  the 3 existing sample episodes (A1/B1/C1, Task 3.2) into
+  `docs/report/samples-A1-B1-C1.zip` (3.94 MB) with a README for pre-share. Slide outline
+  at `docs/report/slide-outline.md`.
+
 ### Planning (report-readiness for T6 2026-10-02)
 - **Deep-pivot 2026-09-28** (owner + PM): Phase 19 stops at 4/9 for the T6 judging-panel
   report (spike + word-boundary + karaoke + speaker chip, all accepted). Tasks 19.5 vocab

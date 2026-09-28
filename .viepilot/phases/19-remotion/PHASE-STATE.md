@@ -4,7 +4,7 @@
 
 - **Phase:** 19
 - **Slug:** `19-remotion`
-- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 + **19.4 (all PM task-level 2026-09-28, clean deliveries)** all accepted. **Deep-pivot for T6 2026-10-02 report deadline** (owner priority = AI-speed story for judging panel who "rất quan tâm tới tốc độ xử lý dữ liệu"): 19.5 vocab / 19.6 intro-outro / 19.7 full packaging / 19.8 gate / 19.9 close-out all **PARKED** for post-report continuation. Report-readiness Task **Report-UX-1** (elapsed counter + ETA + Step 4/5 progress parity — frontend-only, no `app/` touch) opened as doc-first card in this same folder for admin convenience. Owner live-verified 2026-09-28 that Step 2/3 already show real stage + % from Task 13.6 (screenshot confirmed). **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted).
+- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 + 19.4 + **Report-UX-1 (all PM task-level, clean deliveries)** all accepted. **Deep-pivot for T6 2026-10-02 report deadline** (owner priority = AI-speed story for judging panel): 19.5 vocab / 19.6 intro-outro / 19.7 full packaging / 19.8 gate / 19.9 close-out all **PARKED** for post-report continuation. Report-UX-1 delivered elapsed counter + ETA + Step 4/5 progress parity, live-verified on dev server. PM report deliverables ready (`docs/report/`: slide outline, benchmark chart PNG showing 2.80× median speedup from Gate B-8 vs B-11 evidence, samples zip pre-share). **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted).
 - **Planned:** 2026-09-28 (`/vp-evolve ENH-013`)
 - **Controlling plan:** `docs/implementation/phase-19-remotion.md`
 - **Authorization:** owner decision **D29** (2026-09-24, brainstorm
@@ -46,7 +46,7 @@
 | 19.7 | `VideoService` wire-up, toggle, kill switch, packaging, `check_dependencies.py` | Coder | **parked** (post-report) |
 | 19.8 | Gate B-12 (visual sign-off + media gate) | PM | **parked** (post-report) |
 | 19.9 | Close-out: flip default to `remotion` (only on Gate B-12 PASS); version bump | Coder | **parked** (post-report) |
-| Report-UX-1 | Elapsed counter + ETA + Step 4/5 progress parity (frontend-only, no `app/` touch) | Coder | **done** -- PM-approved design + implementation, full suite 1182/1182, ruff clean, live-verified on dev server, awaiting PM acceptance |
+| Report-UX-1 | Elapsed counter + ETA + Step 4/5 progress parity (frontend-only, no `app/` touch) | Coder | **accepted** -- PM task-level 2026-09-28, sha `bb8f864`, full suite 1182/1182 (1178 baseline + 4 new) re-verified by PM in 440.85 s; ruff clean (PM auto-fixed 4 pre-existing F541 errors in own chart script Coder flagged); 4/4 Playwright tests + 32 existing browser tests pass unchanged; DRUX-b chose "wrapping up…" honest-late label; revert-and-confirm-failure done properly (Coder honestly disclosed that mount-once-guard-only revert didn't fail because `started_at` fix masks the reset symptom -- redid the revert by disabling full integration, got genuine TimeoutError); live-verified on running dev server with real Step 2/3 generation, real banner `"Generating learning pack — queued (0%) · 0:02 · ~28s left [Cancel]"` |
 
 ## Evidence log
 

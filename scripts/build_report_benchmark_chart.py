@@ -111,10 +111,10 @@ def main() -> None:
     ax.legend(loc="upper right", frameon=True, fontsize=9)
     ax.grid(axis="y", alpha=0.25)
 
-    footer = (f"Source: Gate B-8 local baseline (2026-09-23) + Gate B-11 cloud-first (2026-09-26). "
-              f"Topic: 'How small daily habits shape long-term health'. "
-              f"Local: Ollama qwen3.5:9b on RTX 3060. "
-              f"Cloud chain: Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter (Nemotron/Gemma/Dots3) → local qwen fallback.")
+    footer = ("Source: Gate B-8 local baseline (2026-09-23) + Gate B-11 cloud-first (2026-09-26). "
+              "Topic: 'How small daily habits shape long-term health'. "
+              "Local: Ollama qwen3.5:9b on RTX 3060. "
+              "Cloud chain: Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter (Nemotron/Gemma/Dots3) → local qwen fallback.")
     fig.text(0.5, -0.02, footer, ha="center", va="top", fontsize=7, color="#666")
 
     png_path = OUTPUT_DIR / "benchmark-chart.png"
