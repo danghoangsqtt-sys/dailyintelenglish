@@ -4,7 +4,7 @@
 
 - **Phase:** 19
 - **Slug:** `19-remotion`
-- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 + 19.4 + Report-UX-1 + **ENH-014 (all PM task-level, clean deliveries)** all accepted. **Deep-pivot for T6 2026-10-02 report deadline** (owner priority = AI-speed story for judging panel): 19.5 vocab / 19.6 intro-outro / 19.7 full packaging / 19.8 gate / 19.9 close-out all **PARKED** for post-report continuation. Report-UX-1 delivered elapsed counter + ETA + Step 4/5 progress parity, live-verified on dev server. ENH-014 widened outro markers + wired `has_outro_last3_rate` to gate signal (closes a Phase 18 followup ahead of any future gate). PM report deliverables ready in `docs/report/` (slide outline, benchmark chart PNG showing 2.80× median speedup from Gate B-8 vs B-11 evidence, samples zip pre-share, backup demo video 3:20, dry-run checklist) and `README.md` refreshed for cloud-first + Phases 13-19. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted).
+- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 + 19.4 + Report-UX-1 + ENH-014 (all PM task-level, clean deliveries) all accepted. **Deep-pivot un-parked 2026-09-29**: owner reports slide deck done ("tôi đã tạo slide xong rồi"), asks PM to resume feature-code work. 19.5 vocab is next (doc-first card already on disk from earlier planning); 19.6/19.7/19.8/19.9 follow in order. PM report deliverables remain in `docs/report/` for T6 owner rehearsal use. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted).
 - **Planned:** 2026-09-28 (`/vp-evolve ENH-013`)
 - **Controlling plan:** `docs/implementation/phase-19-remotion.md`
 - **Authorization:** owner decision **D29** (2026-09-24, brainstorm
@@ -41,11 +41,11 @@
 | 19.2 | Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration | Coder | **accepted** -- PM + owner **D34** 2026-09-28, sha `20a1d32`, full suite 1178/1178 re-verified by PM (423.81 s); real-DB migration-write incident logged in TRACKER Known Issues, accepted as-is |
 | 19.3 | Word-level karaoke captions composition (`@remotion/captions`) | Coder | **accepted** -- PM task-level 2026-09-28, sha `c48037d`, wall time 96 s / 94 s (~1.55× 19.1 baseline, dominated by 30 real Edge TTS re-synth calls, not karaoke); vitest 6/6, 3/3 frame spot checks correct, `@remotion/captions` package inspection revealed pure data lib (no default visual); ffmpeg-fallback hash mismatch fully investigated and traced to a 2026-09-15 file predating Task 14.10's `-shortest` fix (unrelated to Phase 19) |
 | 19.4 | Active-speaker indicator (name chip + optional avatar highlight) | Coder | **accepted** -- PM task-level 2026-09-28, sha `693fba7`, 3/3 frame spot checks (Alex/Maya alternation + combined-features frame proving 19.3 karaoke didn't regress), vitest 10/10 (6 karaoke + 4 speaker), inactive-chip opacity 0.6, wall-time anomaly A/B-isolated to real +7.9% chip cost |
-| 19.5 | Vocab/idiom pop-up cards | Coder | **parked** (doc-first card `tasks/task-19.5.md` on disk, deferred to post-report per T6 deep-pivot) |
-| 19.6 | Intro/outro + chapter/progress bar + Remotion thumbnail still | Coder | **parked** (post-report) |
-| 19.7 | `VideoService` wire-up, toggle, kill switch, packaging, `check_dependencies.py` | Coder | **parked** (post-report) |
-| 19.8 | Gate B-12 (visual sign-off + media gate) | PM | **parked** (post-report) |
-| 19.9 | Close-out: flip default to `remotion` (only on Gate B-12 PASS); version bump | Coder | **parked** (post-report) |
+| 19.5 | Vocab/idiom pop-up cards | Coder | **ready** (doc-first card `tasks/task-19.5.md` on disk since 2026-09-28, un-parked 2026-09-29 after owner slide-deck done, awaiting Coder pickup) |
+| 19.6 | Intro/outro + chapter/progress bar + Remotion thumbnail still | Coder | queued (opens after 19.5 accepted) |
+| 19.7 | `VideoService` wire-up, toggle, kill switch, packaging, `check_dependencies.py` | Coder | queued (opens after 19.6 accepted; Amendment A carry-over: Chrome ~270MB hard floor decision here) |
+| 19.8 | Gate B-12 (visual sign-off + media gate) | PM | queued (opens after 19.7 accepted) |
+| 19.9 | Close-out: flip default to `remotion` (only on Gate B-12 PASS); version bump to 1.2.0-beta | Coder | queued (opens after 19.8 PASS) |
 | Report-UX-1 | Elapsed counter + ETA + Step 4/5 progress parity (frontend-only, no `app/` touch) | Coder | **accepted** -- PM task-level 2026-09-28, sha `bb8f864`, full suite 1182/1182 (1178 baseline + 4 new) re-verified by PM in 440.85 s; ruff clean (PM auto-fixed 4 pre-existing F541 errors in own chart script Coder flagged); 4/4 Playwright tests + 32 existing browser tests pass unchanged; DRUX-b chose "wrapping up…" honest-late label; revert-and-confirm-failure done properly (Coder honestly disclosed that mount-once-guard-only revert didn't fail because `started_at` fix masks the reset symptom -- redid the revert by disabling full integration, got genuine TimeoutError); live-verified on running dev server with real Step 2/3 generation, real banner `"Generating learning pack — queued (0%) · 0:02 · ~28s left [Cancel]"` |
 
 ## Evidence log
