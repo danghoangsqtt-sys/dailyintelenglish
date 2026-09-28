@@ -78,11 +78,18 @@ cancellation and real LivePortrait lip-sync remain deliberately deferred.
 
 #### Post-Beta Bug Fixes, Polish & New Features (Phases 5-12) — ✅ Done 2026-09-18
 
-8 more phases beyond the original plan — most scoped from an independent audit
-(including multiple separate AI-assisted read-only `/vp-audit` passes), the last
-two (Phase 12) from a direct user feature request. Each closed with zero real
-defects found on PM review. Full evidence trail in `.viepilot/ROADMAP.md` and
-`.viepilot/TRACKER.md`.
+15 more phases beyond the original plan — most scoped from independent audits (including
+multiple separate AI-assisted read-only `/vp-audit` passes), with major AI-architecture
+work in Phases 13–18. Each closed with zero real defects found on PM review. Full evidence
+trail in `.viepilot/ROADMAP.md` and `.viepilot/TRACKER.md`.
+
+**Current version:** `1.1.0-beta` (2026-09-26, Phase 18 close-out). AI writes are
+**cloud-first with local fallback** — Gemini 3.1 Flash-Lite is the primary, with an
+automatic chain through OpenRouter free models and finally local `qwen3.5:9b` on the
+RTX 3060. Real Gate B-11 measurement: **~45s B1 8-min script generation median, vs. ~127s
+local — 2.8× faster** (`docs/operations/phase18-gate-b11.md`,
+`docs/report/benchmark-chart.png`). Kill switch `DIE_AI_ALLOW_CLOUD=false` (or `DIE_AI_MODE=
+local`) reverts to 100% offline immediately.
 
 | Phase | Feature | Status |
 |-------|---------|--------|
@@ -94,20 +101,33 @@ defects found on PM review. Full evidence trail in `.viepilot/ROADMAP.md` and
 | **Phase 10** | 🧹 **Backlog Cleanup** — the same regeneration-integrity fix as Phase 9 also applied to deleting an avatar; stale per-line TTS cache clearing; an honest `/api/tts/engines` contract (removed 3 engine choices that were accepted but never actually implemented); no more holding the app's shared database lock across a live TTS network call; documentation cleanup | ✅ Done |
 | **Phase 11** | 🔍 **Third Audit Fixes** — the same avatar-file bug found in Phase 10 was still present in avatar *delete* (not just upload); root-caused and fixed the project's long-standing "Gemini-retry" test flake class (a shared fixture was patching a process-wide `asyncio.sleep` instead of a module-local one); TTS preview no longer holds the app's write lock across a live synthesis call; corrected a self-introduced documentation inaccuracy about OmniVoice from Phase 10 | ✅ Done |
 | **Phase 12** | ⚙️ **Settings & Packaging** — a Settings page to enter the Gemini API key in-app instead of hand-editing `.env` (database-backed, live-applied, never displays the full key once saved); a standalone Windows `.exe` build via PyInstaller so trying the app doesn't need a manual `venv` setup | ✅ Done |
+| **Phase 13** | 🏠 **Local-First AI Reliability** — real qualified Ollama + `qwen3.5:9b` install as an offline AI option; durable job system (`ai_generation_jobs`) with per-project checkpoints so a crash mid-generation resumes cleanly instead of losing work; provider-neutral AI gateway | ✅ Done |
+| **Phase 14** | 🛠️ **AI Gateway Resilience** — real Gate B-2 comparison of Ollama vs. Gemini, then owner decision to ship local-only after Gemini free tier proved too flaky (superseded by Phase 18); per-section script generation with bounded budget/repetition repairs; measured WPM calibration per CEFR level | ✅ Done |
+| **Phase 15** | 🔧 **Local Script Robustness** — speaker aliases (S1/S2) in the section contract instead of raw UUIDs; deterministic same-speaker line merging; per-gate evidence path organization | ✅ Done |
+| **Phase 16** | 🩹 **Stability Hardening** — worker loop guard + `worker_alive` health signal; ffmpeg subprocess timeouts + atomic render; test-data leak fix + `conftest` guard; evidence-driven repetition avoid list | ✅ Done |
+| **Phase 17** | 📏 **Budget-Aware Global Validation** — global word-count repair covering the mixed section-over/section-under case with a length-aware repetition repair path | ✅ Done |
+| **Phase 18** | ☁️ **Cloud-First AI with Local Fallback** — the current default. Generic `OpenAICompatProvider`; multi-provider cloud chain (Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter Nemotron/Gemma/Dots3 → local qwen); per-provider circuit breaker and time budget; kill switch `DIE_AI_ALLOW_CLOUD=false`. Gate B-11 real measurement: **~45s median vs. ~127s local (2.8× faster)**. **v1.1.0-beta** shipped at close | ✅ Done |
+| **Phase 19** | 🎬 **Animated Learning Videos (Remotion)** — in-flight partial: word-level karaoke captions with per-word Edge TTS timing capture; active-speaker chip indicator; report-readiness elapsed counter + ETA + Step 4/5 progress parity across the 4 AI-generation pages. Remaining sub-tasks (vocab pop-up cards, intro/outro/chapters, packaging + toggle wire-up, Gate B-12, close-out) deferred to post-report continuation | 🟡 In progress |
 
 ## Quick Start
 
 ### Requirements
 
 - Python 3.11+
-- NVIDIA GPU (recommended: RTX 3060+ with 8GB+ VRAM)
+- NVIDIA GPU (recommended: RTX 3060+ with 8GB+ VRAM — needed only for the local fallback
+  path; the cloud-first default runs on any machine that can reach the internet)
 - ffmpeg (in PATH, or set `DIE_FFMPEG_PATH` to its absolute exe path — e.g. on Windows if it was installed via `winget` and the shell's PATH hasn't picked it up yet)
-- **[Ollama](https://ollama.com/download)**, running, with the `qwen3.5:9b` model pulled
-  (`ollama pull qwen3.5:9b`) — the app is **local-only** as of Phase 14 (see
-  [docs/operations/local-ai.md](docs/operations/local-ai.md)); it still *starts*
-  without Ollama, but AI generation needs it running
-- ~~Google Gemini API key~~ not needed for normal use — Gemini is dormant (unsupported
-  rollback path, see [Tech Stack](#tech-stack) below)
+- **Cloud AI keys** (recommended, this is the default since Phase 18): a
+  [Google AI Studio](https://aistudio.google.com/) API key (`DIE_GEMINI_API_KEY`) and/or an
+  [OpenRouter](https://openrouter.ai) key (`DIE_OPENAI_COMPAT_API_KEY`). Both providers
+  have free tiers that are enough to try the app end-to-end. Enter either through the
+  in-app Settings page (Phase 12) or the `.env` file.
+- **[Ollama](https://ollama.com/download)** with the `qwen3.5:9b` model — the local
+  fallback when cloud is unreachable, rate-limited, or explicitly disabled
+  (`DIE_AI_ALLOW_CLOUD=false`). See
+  [docs/operations/local-ai.md](docs/operations/local-ai.md). Not strictly required if you
+  always have working cloud keys, but it's what makes the app resilient — a Gemini outage
+  degrades a generation instead of failing it.
 
 ### Installation
 
@@ -124,8 +144,9 @@ pip install -r requirements.txt
 
 # 4. Setup environment
 copy .env.example .env
-# Defaults are already local-only (DIE_AI_MODE=local) -- no key needed for normal use.
-# (All application settings use the DIE_ prefix, e.g. DIE_OLLAMA_MODEL)
+# Fill in DIE_GEMINI_API_KEY and/or DIE_OPENAI_COMPAT_API_KEY for the cloud-first default.
+# Leave them empty to run local-only (Ollama + qwen3.5:9b required).
+# (All application settings use the DIE_ prefix, e.g. DIE_AI_MODE, DIE_OLLAMA_MODEL)
 
 # 5. Check dependencies (verifies Ollama is running and the model is pulled)
 python scripts/check_dependencies.py
@@ -155,16 +176,15 @@ starting a second instance.
 
 The packaged app stores its database and generated files under
 `%LOCALAPPDATA%\DailyIntelEnglishStudio\data` (not next to the exe — that folder
-isn't guaranteed writable depending on where it's installed). It is local-only
-(Ollama, `qwen3.5:9b`) by default — see Requirements above; it still starts and lets
-you use every non-AI feature without Ollama running, showing install/pull guidance on
-the AI screens instead.
+isn't guaranteed writable depending on where it's installed). It runs
+**cloud-first** by default since Phase 18 (`DIE_AI_MODE=cloud_first`), with local
+Ollama as automatic fallback — see Requirements above. A no-key install collapses
+transparently to local-only (invariant I32 from Phase 18); every non-AI feature
+works either way.
 
-**Rollback (unsupported):** Gemini stays in the codebase, dormant. Re-enabling it is
-an explicit configuration change, never a migration: set `DIE_AI_ALLOW_CLOUD=true` and
-`DIE_AI_MODE=hybrid` (or `gemini`) in `.env`, and provide a key via `DIE_GEMINI_API_KEY`
-(or the settings API) — the in-app **Settings** page is read-only as of Task 14.7 and
-no longer has a key-entry form.
+**Full offline / kill switch:** set `DIE_AI_ALLOW_CLOUD=false` (or `DIE_AI_MODE=local`)
+to force 100% local. No cloud calls are made at all, verified by a real test in
+`tests/test_ai_router.py`. Requires Ollama + `qwen3.5:9b`.
 
 **Not bundled**: ffmpeg and the OmniVoice model directory still need to be present
 on the machine exactly as for the source install (see Requirements above) —
@@ -190,11 +210,14 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
 
 - **Backend**: Python 3.11+ / FastAPI / Uvicorn / aiosqlite
 - **Frontend**: Vanilla HTML5 / CSS3 / JavaScript
-- **AI**: Local Ollama (`qwen3.5:9b`) with strict structured JSON schema — the only
-  supported path as of Phase 14 (see
-  [docs/architecture/adr-001-local-first-ai.md](docs/architecture/adr-001-local-first-ai.md)).
-  Google Gemini API (`gemini-3.8-flash`) remains in the codebase, dormant, as an
-  unsupported rollback (`DIE_AI_ALLOW_CLOUD=true`) — never re-enabled by default.
+- **AI**: **Cloud-first with local fallback** since Phase 18 (v1.1.0-beta). Chain:
+  Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter free (Nemotron 3 Super
+  → Gemma 4 26B → Dots3-Note) → local Ollama `qwen3.5:9b` on the RTX 3060. Per-provider
+  circuit breaker + separate time budgets. Kill switch `DIE_AI_ALLOW_CLOUD=false` reverts
+  to 100% local. Structured JSON output enforced across all providers via a generic
+  `OpenAICompatProvider`. See
+  [docs/operations/phase18-gate-b11.md](docs/operations/phase18-gate-b11.md) for real
+  measurement (median 45s cloud vs. 127s local, 2.8× faster).
 - **TTS**: Edge TTS (sole engine — OmniVoice GPU cloning considered, dropped 2026-09-13; see [docs/tts-setup.md](docs/tts-setup.md))
 - **Audio**: pydub + ffmpeg (real ITU-R BS.1770 loudness normalization via `pyloudnorm`)
 - **Video**: ffmpeg (background templates + burned-in subtitles, 16:9 and 9:16 export). LivePortrait lip-sync avatar remains a deferred, not-yet-started research effort
@@ -205,7 +228,7 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
 
 | Doc | Purpose |
 |-----|---------|
-| [docs/prompt-guide.md](docs/prompt-guide.md) | How to customize the AI prompt templates (script genres, CEFR blocks, learning content, thumbnails, YouTube package) — shared by Ollama (default) and the dormant Gemini path |
+| [docs/prompt-guide.md](docs/prompt-guide.md) | How to customize the AI prompt templates (script genres, CEFR blocks, learning content, thumbnails, YouTube package) — shared by every provider in the cloud-first chain (Gemini, OpenRouter models, local qwen) |
 | [docs/tts-setup.md](docs/tts-setup.md) | Edge TTS voice map and known limitations; why OmniVoice was investigated but not integrated |
 | [docs/api.md](docs/api.md) | Full API reference, auto-generated from the app's real FastAPI OpenAPI schema (`scripts/generate_api_docs.py`) — also live at `/docs` while the app is running |
 | [.viepilot/ARCHITECTURE.md](.viepilot/ARCHITECTURE.md) | System design, services, data models |
@@ -219,7 +242,7 @@ Daily_Intel_English/
 ├── app/                    # FastAPI backend
 ├── frontend/               # HTML/CSS/JS pages
 ├── data/                   # Runtime data (gitignored)
-├── prompts/                # AI prompt templates (Ollama default, Gemini dormant)
+├── prompts/                # AI prompt templates (shared across cloud + local providers)
 ├── models/                 # Local AI models
 ├── scripts/                # Setup utilities
 ├── tests/                  # Automated test suite (pytest)
