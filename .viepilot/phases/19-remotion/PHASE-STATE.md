@@ -4,7 +4,7 @@
 
 - **Phase:** 19
 - **Slug:** `19-remotion`
-- **Status:** 19.1 + 19.2 accepted (owner **D33**/**D34**, 2026-09-28); 19.3 doc-first card ready, awaiting Coder pickup. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted by owner as current state).
+- **Status:** 19.1 + 19.2 accepted (owner **D33**/**D34**, 2026-09-28); 19.3 implemented, awaiting PM acceptance. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted by owner as current state).
 - **Planned:** 2026-09-28 (`/vp-evolve ENH-013`)
 - **Controlling plan:** `docs/implementation/phase-19-remotion.md`
 - **Authorization:** owner decision **D29** (2026-09-24, brainstorm
@@ -39,7 +39,7 @@
 |---|---|---|---|
 | 19.1 | Spike: `video-renderer/` scaffold + minimal Remotion composition (background + line-level captions, matching today's ffmpeg output) rendered for one real B1 episode (2:56 actual — see preflight caveat). Measure render time / packaging footprint / output correctness. Report `docs/operations/phase19-spike-remotion.md`. | Coder | **accepted** -- PM + owner D33 2026-09-28, PASS, sha `4dd325b`, full suite 1175/1175 re-verified by PM |
 | 19.2 | Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration | Coder | **accepted** -- PM + owner **D34** 2026-09-28, sha `20a1d32`, full suite 1178/1178 re-verified by PM (423.81 s); real-DB migration-write incident logged in TRACKER Known Issues, accepted as-is |
-| 19.3 | Word-level karaoke captions composition (`@remotion/captions`) | Coder | **ready** (doc-first card `tasks/task-19.3.md`, awaiting Coder pickup) |
+| 19.3 | Word-level karaoke captions composition (`@remotion/captions`) | Coder | **done** -- PM-approved design + implementation, full suite 1178/1178, tsc + vitest clean, awaiting PM acceptance |
 | 19.4 | Active-speaker indicator | Coder | provisional |
 | 19.5 | Vocab/idiom pop-up cards | Coder | provisional |
 | 19.6 | Intro/outro + chapter/progress bar + Remotion thumbnail still | Coder | provisional |
@@ -103,3 +103,23 @@
   the co-session channel. Reminder restated in Task 19.3's card and in every future
   APPROVED message: real-DB is `mode=ro` from Coder side; owner + backup are still required
   before any Coder-side write, even a "safe" one.
+
+- **19.3** (2026-09-28, Coder): design `38d10f6` (PM APPROVED) → implementation (see handover
+  message for sha). Real finding: `@remotion/captions` ships zero rendering components (pure
+  data/grouping library, confirmed by listing every file in the package) -- the card's
+  "helper-default visual" framing didn't match reality; `createTikTokStyleCaptions` used
+  per-line with a combine-threshold larger than the line's own duration so it can't
+  split/merge across existing line boundaries. Real finding: the only completed-audio episode
+  (`b330d37f...`) has no captured word data anywhere (predates Task 19.2, never re-mixed) --
+  the demo runner re-synthesizes each line's timing fresh via a real Edge TTS call (30 calls
+  for this episode), in memory only, never touching `data/app.db` or the real cached audio
+  files. All 3 frame-level spot checks correct (t=1.75s "bird", t=29.0s "usually", t=174.9s
+  "luck" -- last word of last line). ffmpeg-fallback hash comparison mismatched at first,
+  investigated rather than dismissed: the on-disk real file (2026-09-15) predates Task
+  14.10's `-shortest` overshoot fix (`ec26846`, 2026-09-22) by a week -- a fresh render's
+  duration matches the audio exactly, confirming today's untouched `video_service.py` works
+  correctly; `git log fe06405..HEAD -- app/services/video_service.py` empty is the
+  authoritative confirmation. Re-render wall time ~95-97s vs. 19.1's ~61s baseline (~1.55-1.59x,
+  inside the ≤2x threshold). vitest chosen for D19.3-e, measured cost +37MB devDependency-only
+  (688MB->725MB->727MB final). Full suite 1178/1178 unchanged, ruff clean, tsc clean, vitest
+  6/6, `test_video_studio_browser.py` 10/10. Report: `docs/operations/phase19-t3-karaoke.md`.

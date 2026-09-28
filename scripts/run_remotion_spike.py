@@ -37,7 +37,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.core.config import settings  # noqa: E402
-from app.services import audio_service, project_service  # noqa: E402
+from app.services import audio_service, project_service, tts_service  # noqa: E402
 
 VIDEO_RENDERER_DIR = PROJECT_ROOT / "video-renderer"
 SPIKE_AUDIO_DIR = VIDEO_RENDERER_DIR / "public" / "spike-audio"
@@ -88,17 +88,63 @@ async def _select_project(db: aiosqlite.Connection) -> tuple[dict, dict]:
     return best_project, best_audio_job
 
 
-def _build_input_props(project: dict, audio_job: dict) -> dict[str, Any]:
-    """D19.1-b: strict passthrough of AudioService's already-measured per-line timestamps.
-    No new DB read paths, no per-word timing."""
+def _find_speaker(project: dict, speaker_id: str) -> dict:
+    for speaker in project["speakers"]:
+        if speaker["id"] == speaker_id:
+            return speaker
+    raise SpikeError(f"Speaker {speaker_id} not found on project {project['id']}")
+
+
+def _words_to_props(words: list[dict]) -> list[dict]:
+    """`audio_jobs.word_timestamps_json`'s per-word shape (`start_sec`/`end_sec`) to the
+    video-renderer props shape (`startSec`/`endSec`, D19.2-d vs. types.ts's `episodeWordSchema`)."""
+    return [{"text": word["text"], "startSec": word["start_sec"], "endSec": word["end_sec"]} for word in words]
+
+
+async def _resynthesize_word_timestamps(project: dict, audio_job: dict) -> list[list[dict]]:
+    """Task 19.3 (D19.3-d): the real DB currently has no captured word data for any
+    completed-audio episode -- `word_timestamps_json` is NULL and no `.words.json` sidecar
+    exists for this project (it predates Task 19.2's capture code and hasn't been re-mixed,
+    which would need a forbidden real-DB write). Re-synthesizes each line fresh via a real
+    Edge TTS call, **in memory only**: the freshly synthesized audio bytes are discarded (the
+    existing cached mix is what actually plays), only the real per-word timing is kept,
+    aggregated onto the line's *existing* mix-timeline offset using the exact same formula as
+    `audio_service._aggregate_word_boundaries`. Nothing is written to `data/app.db` or to
+    `data/tts_cache/` -- the real project's cached files are never touched.
+
+    Returns a list (one entry per `audio_job["timestamps"]` line, same order) of
+    already-props-shaped word lists (`{text, startSec, endSec}`).
+    """
+    per_line_words: list[list[dict]] = []
+    for entry in audio_job["timestamps"]:
+        speaker = _find_speaker(project, entry["speaker_id"])
+        _audio_bytes, word_boundaries = await tts_service._synthesize_edge_tts(entry["text"], speaker)
+        start_sec = entry["start_sec"]
+        per_line_words.append(
+            [
+                {
+                    "text": wb.text,
+                    "startSec": round(start_sec + wb.offset_sec, 3),
+                    "endSec": round(start_sec + wb.offset_sec + wb.duration_sec, 3),
+                }
+                for wb in word_boundaries
+            ]
+        )
+    return per_line_words
+
+
+def _build_input_props(project: dict, audio_job: dict, word_timestamps: list[list[dict]]) -> dict[str, Any]:
+    """D19.1-b + D19.3: per-line timestamps from AudioService's measured mix, plus (Task
+    19.3) each line's word list, positionally aligned with `audio_job["timestamps"]`."""
     lines = [
         {
             "startSec": entry["start_sec"],
             "endSec": entry["end_sec"],
             "speaker": entry["label"],
             "text": entry["text"],
+            "words": words,
         }
-        for entry in audio_job["timestamps"]
+        for entry, words in zip(audio_job["timestamps"], word_timestamps, strict=True)
     ]
     return {
         "episodeId": project["id"],
@@ -202,7 +248,17 @@ async def _main() -> dict[str, Any]:
         await db.close()
 
     project_id = project["id"]
-    input_props = _build_input_props(project, audio_job)
+
+    if audio_job["word_timestamps"]:
+        # A future episode actually re-mixed since Task 19.2 landed -- use its real captured
+        # data directly, no re-synthesis needed.
+        word_timestamps = [_words_to_props(entry["words"]) for entry in audio_job["word_timestamps"]]
+        resynthesized_word_count = 0
+    else:
+        word_timestamps = await _resynthesize_word_timestamps(project, audio_job)
+        resynthesized_word_count = len(audio_job["timestamps"])
+
+    input_props = _build_input_props(project, audio_job, word_timestamps)
     _copy_audio_into_public(project_id, audio_job["mp3_path"])
 
     # Resolved to absolute: the render subprocess runs with cwd=video-renderer/, and a
@@ -210,14 +266,22 @@ async def _main() -> dict[str, Any]:
     # data/tmp/phase19_spike/ (found by running the spike for real -- exit 0 but the file
     # silently landed in the wrong directory relative to the subprocess's own cwd).
     output_path = (SPIKE_OUTPUT_DIR / f"{project_id}.mp4").resolve()
+    # Task 19.3 (D19.3-d PM caveat): Edge TTS word timings drift slightly run-to-run, so a
+    # frame-level spot check must compare against the props actually used for *this* render,
+    # not a fixed prior baseline -- dumped alongside the output for exactly that purpose.
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.with_suffix(".props.json").write_text(json.dumps(input_props, indent=2), encoding="utf-8")
     timeout_seconds = _render_timeout_seconds(audio_job["duration_seconds"])
     render_result = _run_render(input_props, output_path, timeout_seconds)
 
+    empty_words_line_count = sum(1 for line in input_props["lines"] if not line["words"])
     measurements: dict[str, Any] = {
         "project_id": project_id,
         "script_line_count": len(input_props["lines"]),
         "audio_duration_seconds": audio_job["duration_seconds"],
         "audio_file_size_bytes": Path(audio_job["mp3_path"]).stat().st_size,
+        "resynthesized_line_count": resynthesized_word_count,
+        "empty_words_line_count": empty_words_line_count,
         "render": render_result,
         "node_modules_size_bytes": _dir_size_bytes(VIDEO_RENDERER_DIR / "node_modules"),
     }

@@ -270,6 +270,38 @@ failure done on both before implementation is called complete.
   real file's hash, confirming the ffmpeg path is genuinely untouched.
 - `tests/test_video_studio_browser.py` re-run, expect 10/10 unchanged.
 
+## PM review — APPROVED (2026-09-28, session a01f96)
+
+All three real findings accepted as-is:
+- D19.3-b reframing (no default visual exists; per-line-scoped `createTikTokStyleCaptions` +
+  custom render, `#FFFFFF → #FFD54A` for the active word only) confirmed exactly right. If
+  the color turns out to visually clash in the real render, that's a fold-in during
+  implementation, not a re-approval.
+- D19.3-d in-memory re-synthesis approach confirmed the right shape (ranked against re-mixing
+  on the real DB [forbidden] and building a fresh scratch-DB episode [larger scope than
+  warranted]). **Caveat to record in the report:** Edge TTS `WordBoundary` values aren't
+  guaranteed byte-identical across runs of the same line -- the ≥3 spot-check timestamps and
+  expected words must come from the same run whose frames are extracted, not a fixed prior
+  baseline. The spot-check proves "the correct word lights up at the right instant in this
+  render," not "timings match a golden file."
+- D19.3-e vitest choice confirmed fine (devDep-only, measured +37MB, packaging estimate
+  unchanged). Record which packages the +37MB actually pulls in (one-line `du` breakdown).
+- **Fallback verification via vitest instead of a screenshot: approved as sufficient.**
+  Reasoning to record in the report: the fallback branch is a pure conditional
+  (`words.length === 0` → the unmodified 19.1 line-level path); the 19.1 spike is already the
+  visual proof that path renders correctly; 19.3 doesn't change that code, only conditionally
+  invokes it; and an automated unit test catches regressions without human intervention,
+  unlike a screenshot. No fallback screenshot needed.
+
+Additional asks for the handover (no design change):
+- Note the ~30 real Edge TTS network calls the demo runner makes per run (one-time demo cost,
+  not a production concern).
+- One line on visual quality: does the word-highlight flip look crisp at 30fps or laggy? --
+  a spike-adjacent signal useful for 19.7 planning, not a gate item.
+- Record the exact resolved `@remotion/captions` version for a future upgrade review.
+
+Proceed to implementation.
+
 ## Verification
 
 - Real re-render of `b330d37f...` (or whichever B1 episode with completed audio + captured

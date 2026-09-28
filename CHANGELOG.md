@@ -23,6 +23,21 @@ Versioning: [SemVer](https://semver.org/)
   own verification run inadvertently applied migration `007` to the real `data/app.db`
   instead of a `mode=ro` connection; damage nil (additive/nullable/no-default; identical
   outcome to next-startup migration).
+- **Task 19.3 (2026-09-28, by Coder):** word-level karaoke captions composition via
+  `@remotion/captions@4.0.529`, called per-line with a combine-threshold larger than the
+  line's own duration so its auto-pagination can't split/merge across existing line
+  boundaries. Active word highlighted `#FFFFFF → #FFD54A`, all other styling byte-identical
+  to the 19.1 spike's plain band. Falls back to the exact unmodified plain-line render when a
+  line's captured word list is empty/absent (`src/karaoke.ts`, unit-tested with `vitest`, +37
+  MB devDependency-only). Real finding: `@remotion/captions` ships zero rendering components
+  (pure data/grouping library) -- the task card's "helper-default visual" framing didn't
+  match reality. Real finding: the only completed-audio episode has no captured word data at
+  all (predates Task 19.2, never re-mixed) -- the demo runner now re-synthesizes each line's
+  timing fresh via a real Edge TTS call, in memory only, never touching `data/app.db` or the
+  real cached audio files. Re-render wall time ~95 s vs. the 19.1 baseline's ~61 s (well
+  inside the ≤2x threshold). `app/services/video_service.py` still untouched; Python full
+  suite 1178/1178, `ruff` clean. No user-visible behaviour change on the app yet (still
+  opt-in via the spike runner, not wired to `VideoService` -- that's Task 19.7).
 
 ### Planning
 - Task 19.3 (word-level karaoke composition via `@remotion/captions`, D19.3-a..f) doc-first

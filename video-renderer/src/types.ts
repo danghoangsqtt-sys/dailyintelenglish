@@ -8,12 +8,25 @@ import { z } from "zod";
  * no new DB read paths, no per-word timing (that is Task 19.2). See task card D19.1-b for the
  * field-by-field justification: .viepilot/phases/19-remotion/tasks/task-19.1.md
  */
+/**
+ * Task 19.3: one captured word, in mix-absolute seconds -- matches
+ * `audio_jobs.word_timestamps_json`'s per-word shape exactly (D19.2-d). Empty array or
+ * absent on `episodeLineSchema.words` means "no captured words for this line" -- render the
+ * plain line-level fallback (older projects, omnivoice lines, Edge-TTS-empty edge case).
+ */
+export const episodeWordSchema = z.object({
+  text: z.string(),
+  startSec: z.number(),
+  endSec: z.number(),
+});
+
 export const episodeLineSchema = z.object({
   startSec: z.number(),
   endSec: z.number(),
   /** Display label (e.g. "Alex") -- audio_jobs.timestamps_json's `label`, not the speaker UUID. */
   speaker: z.string(),
   text: z.string(),
+  words: z.array(episodeWordSchema).optional().default([]),
 });
 
 export const episodeInputPropsSchema = z.object({
@@ -32,5 +45,6 @@ export const episodeInputPropsSchema = z.object({
   height: z.number(),
 });
 
+export type EpisodeWord = z.infer<typeof episodeWordSchema>;
 export type EpisodeLine = z.infer<typeof episodeLineSchema>;
 export type EpisodeInputProps = z.infer<typeof episodeInputPropsSchema>;
