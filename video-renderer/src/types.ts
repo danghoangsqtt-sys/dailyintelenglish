@@ -47,11 +47,46 @@ export const episodeSpeakerSchema = z.object({
   avatarUrl: z.string().optional(),
 });
 
+/**
+ * Task 19.5: one vocabulary item from `learning_contents.vocabulary_json`. DB field names
+ * are snake_case (`part_of_speech`/`definition_en`/`definition_vi`/`example_sentence`) --
+ * converted to camelCase here, matching the same convention already applied to
+ * `avatar_image_path` -> `avatarUrl` in Task 19.4.
+ */
+export const vocabItemSchema = z.object({
+  word: z.string(),
+  partOfSpeech: z.string(),
+  ipa: z.string(),
+  definitionEn: z.string(),
+  definitionVi: z.string(),
+  exampleSentence: z.string(),
+});
+
+/** Task 19.5: one idiom item from `learning_contents.idioms_json`, same camelCase convention. */
+export const idiomItemSchema = z.object({
+  phrase: z.string(),
+  meaningEn: z.string(),
+  meaningVi: z.string(),
+  exampleSentence: z.string(),
+});
+
+/**
+ * Task 19.5: optional top-level learning content for the vocab/idiom pop-up cards. Absent
+ * entirely when the project has no `learning_contents` row; both arrays may independently be
+ * empty. No line-level anchor exists on either item shape -- attachment is derived from item
+ * text vs. line text at composition time (see `vocab.ts`).
+ */
+export const episodeLearningSchema = z.object({
+  vocab: z.array(vocabItemSchema).default([]),
+  idioms: z.array(idiomItemSchema).default([]),
+});
+
 export const episodeInputPropsSchema = z.object({
   /** projects.id */
   episodeId: z.string(),
   lines: z.array(episodeLineSchema),
   speakers: z.array(episodeSpeakerSchema).default([]),
+  learning: episodeLearningSchema.optional(),
   /**
    * Path to the mixed episode audio, relative to video-renderer/public/ (Remotion requires
    * every asset to live under public/ and be loaded via staticFile() -- absolute filesystem
@@ -67,4 +102,7 @@ export const episodeInputPropsSchema = z.object({
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;
 export type EpisodeLine = z.infer<typeof episodeLineSchema>;
 export type EpisodeSpeaker = z.infer<typeof episodeSpeakerSchema>;
+export type VocabItem = z.infer<typeof vocabItemSchema>;
+export type IdiomItem = z.infer<typeof idiomItemSchema>;
+export type EpisodeLearning = z.infer<typeof episodeLearningSchema>;
 export type EpisodeInputProps = z.infer<typeof episodeInputPropsSchema>;

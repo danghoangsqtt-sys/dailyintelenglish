@@ -46,6 +46,16 @@ SPIKE_OUTPUT_DIR = settings.DATA_DIR / "tmp" / "phase19_spike"
 
 TARGET_CEFR_LEVEL = "B1"
 TARGET_DURATION_SECONDS = 8 * 60
+# Task 19.5: pinned to the same episode every prior Phase 19 task (19.1-19.4) rendered and
+# measured against, for wall-time comparability -- a new real project
+# (c08ce057-792a-44db-be5d-2585e6600f4b, "Demo Episode", 5:00) appeared in the real DB during
+# the T6 report-prep window (closer to the 8-min target than this one's 2:56), and the
+# "closest to target" selection logic below would otherwise silently switch to it, making
+# every wall-time comparison against 19.3/19.4's baseline meaningless (a longer episode
+# renders slower for reasons that have nothing to do with this task's own composition cost).
+# Falls back to the general "closest to 8 minutes" logic if this specific project is ever
+# gone (e.g. a fresh checkout with no prior state).
+PINNED_PROJECT_ID = "b330d37f-a212-4cf7-a779-7a109098bd6c"
 RENDER_FPS = 30
 RENDER_WIDTH = 1280
 RENDER_HEIGHT = 720
@@ -63,7 +73,15 @@ async def _select_project(db: aiosqlite.Connection) -> tuple[dict, dict]:
     yet (that status is never reached by any project currently in the DB, and the only
     project with a completed `audio_jobs` row is `status = 'video_generated'`) -- so
     selection is driven by `audio_jobs.status = 'complete'` directly rather than
-    `projects.status`, which turned out not to be a reliable "has audio" signal."""
+    `projects.status`, which turned out not to be a reliable "has audio" signal.
+
+    Task 19.5: checks `PINNED_PROJECT_ID` first (see its own comment) before falling back to
+    the general "closest to target" search below.
+    """
+    pinned_audio_job = await audio_service.get_audio_job(db, PINNED_PROJECT_ID)
+    if pinned_audio_job is not None and pinned_audio_job.get("status") == "complete":
+        return await project_service.get_project(db, PINNED_PROJECT_ID), pinned_audio_job
+
     cursor = await db.execute(
         "SELECT id, created_at FROM projects WHERE cefr_level = ? ORDER BY created_at DESC",
         (TARGET_CEFR_LEVEL,),
@@ -165,10 +183,50 @@ def _build_speakers_props(project: dict) -> list[dict[str, Any]]:
     return speakers_props
 
 
-def _build_input_props(project: dict, audio_job: dict, word_timestamps: list[list[dict]]) -> dict[str, Any]:
-    """D19.1-b + D19.3 + D19.4: per-line timestamps from AudioService's measured mix, each
-    line's word list (Task 19.3, positionally aligned with `audio_job["timestamps"]`), each
-    line's real `speaker_id` and the project-level `speakers` array (Task 19.4)."""
+async def _fetch_learning_props(db: aiosqlite.Connection, project_id: str) -> dict[str, Any] | None:
+    """Task 19.5: `learning_contents` is optional (a project may have none yet) -- returns
+    `None` when the row is absent, which the composition treats as "no learning content at
+    all" (D19.5, same opportunistic pattern as 19.2's word timings and 19.4's avatars).
+    DB field names are snake_case; converted to the same camelCase convention already used
+    for `avatarUrl` (D19.4-b) and this task's own vocab/idiom item schemas."""
+    cursor = await db.execute(
+        "SELECT vocabulary_json, idioms_json FROM learning_contents WHERE project_id = ?",
+        (project_id,),
+    )
+    row = await cursor.fetchone()
+    if row is None:
+        return None
+
+    vocab = [
+        {
+            "word": item["word"],
+            "partOfSpeech": item["part_of_speech"],
+            "ipa": item["ipa"],
+            "definitionEn": item["definition_en"],
+            "definitionVi": item["definition_vi"],
+            "exampleSentence": item["example_sentence"],
+        }
+        for item in json.loads(row["vocabulary_json"])
+    ]
+    idioms = [
+        {
+            "phrase": item["phrase"],
+            "meaningEn": item["meaning_en"],
+            "meaningVi": item["meaning_vi"],
+            "exampleSentence": item["example_sentence"],
+        }
+        for item in json.loads(row["idioms_json"])
+    ]
+    return {"vocab": vocab, "idioms": idioms}
+
+
+def _build_input_props(
+    project: dict, audio_job: dict, word_timestamps: list[list[dict]], learning: dict[str, Any] | None
+) -> dict[str, Any]:
+    """D19.1-b + D19.3 + D19.4 + D19.5: per-line timestamps from AudioService's measured mix,
+    each line's word list (Task 19.3, positionally aligned with `audio_job["timestamps"]`),
+    each line's real `speaker_id` and the project-level `speakers` array (Task 19.4), and the
+    project's optional learning content (Task 19.5)."""
     lines = [
         {
             "startSec": entry["start_sec"],
@@ -180,7 +238,7 @@ def _build_input_props(project: dict, audio_job: dict, word_timestamps: list[lis
         }
         for entry, words in zip(audio_job["timestamps"], word_timestamps, strict=True)
     ]
-    return {
+    props: dict[str, Any] = {
         "episodeId": project["id"],
         "lines": lines,
         "speakers": _build_speakers_props(project),
@@ -189,6 +247,9 @@ def _build_input_props(project: dict, audio_job: dict, word_timestamps: list[lis
         "width": RENDER_WIDTH,
         "height": RENDER_HEIGHT,
     }
+    if learning is not None:
+        props["learning"] = learning
+    return props
 
 
 def _copy_audio_into_public(project_id: str, mp3_path: str) -> Path:
@@ -279,6 +340,7 @@ async def _main() -> dict[str, Any]:
     db.row_factory = aiosqlite.Row
     try:
         project, audio_job = await _select_project(db)
+        learning = await _fetch_learning_props(db, project["id"])
     finally:
         await db.close()
 
@@ -293,7 +355,7 @@ async def _main() -> dict[str, Any]:
         word_timestamps = await _resynthesize_word_timestamps(project, audio_job)
         resynthesized_word_count = len(audio_job["timestamps"])
 
-    input_props = _build_input_props(project, audio_job, word_timestamps)
+    input_props = _build_input_props(project, audio_job, word_timestamps, learning)
     _copy_audio_into_public(project_id, audio_job["mp3_path"])
 
     # Resolved to absolute: the render subprocess runs with cwd=video-renderer/, and a
@@ -317,6 +379,8 @@ async def _main() -> dict[str, Any]:
         "audio_file_size_bytes": Path(audio_job["mp3_path"]).stat().st_size,
         "resynthesized_line_count": resynthesized_word_count,
         "empty_words_line_count": empty_words_line_count,
+        "learning_vocab_count": len(learning["vocab"]) if learning else 0,
+        "learning_idiom_count": len(learning["idioms"]) if learning else 0,
         "render": render_result,
         "node_modules_size_bytes": _dir_size_bytes(VIDEO_RENDERER_DIR / "node_modules"),
     }

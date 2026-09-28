@@ -272,3 +272,13 @@ comparison happen at implementation time once the real render exists; recorded i
 - The combined-features frame (karaoke + chip + vocab card, all three at once) is the direct
   proof 19.3/19.4 don't regress -- `<VocabCard>` is a new sibling in `<AbsoluteFill>`, not a
   modification of `<CaptionBand>` or `<SpeakerChips>`'s own JSX.
+
+## PM review — APPROVED (2026-09-29, session a01f96)
+
+All four findings accepted verbatim. One naming change requested: rename `line_id` to
+`line_index` in every function signature and return shape (a card-writing artifact from
+thinking in DB terms; the composition side has always been positional). Combined vocab+idiom
+ordering rule to be documented with a one-line code comment at implementation time, so a
+future reader knows it's a deliberate default, not accidental. No other changes requested.
+
+Proceed to implementation.

@@ -84,6 +84,27 @@ Versioning: [SemVer](https://semver.org/)
   only -- `app/` untouched.
 
 ### Added (Phase 19, planning-track — not yet wired to the app)
+- **Task 19.5 (2026-09-29, by Coder):** vocabulary/idiom pop-up cards in `video-renderer/`,
+  timed to the line containing the item, from the project's existing `learning_contents`
+  (no new learning content generated). Top-right corner (opposite the speaker chips and the
+  caption band), ~200ms fade in/out relative to the active item's own time slot. Real finding:
+  the card's proposed `attachItemsToLines` signature assumed a `line_id` field that doesn't
+  exist on `episodeLineSchema` -- uses the line's array index instead, matching every other
+  composition function's own positional convention. Real match check before writing any
+  composition code: 5/5 vocab words and 4/4 idiom phrases match the real 30-line demo script
+  (case-insensitive substring for vocab, normalized substring for idioms); two idioms match 2
+  lines each, resolved by a first-matching-line tie-break; line 0 genuinely exercises the
+  multi-item time-slicing math for real (matches both "early bird" and "night owl"
+  simultaneously). Real mid-implementation finding: the runner's "closest to 8 minutes"
+  project-selection logic picked a *different*, newer real project than every prior Phase 19
+  task's episode (a 5-minute sample that appeared during the T6 report-prep window) --
+  pinned back to the same episode for wall-time comparability, with a fallback if that project
+  is ever gone. 3/3 frame spot checks correct, one of which also proves karaoke (19.3) +
+  speaker chip (19.4) + vocab card all render together correctly. Wall time at/below 19.4's
+  baseline (~61s vs ~90-97s) -- the card overlay adds no measurable cost. vitest 21/21 (6
+  karaoke + 4 speaker + 11 vocab), revert-and-confirm-failure done. `app/services/video_service.py`
+  still untouched -- last task before 19.7 touches it. No user-visible behaviour change on the
+  app yet.
 - **Task 19.4 (2026-09-28, PM task-level, sha `693fba7`, by Coder):** active-speaker chip + optional avatar highlight in
   `video-renderer/`. Persistent top-left chip row (opposite the bottom-anchored caption
   band), one per project speaker; the currently-active speaker's chip fills with the app's

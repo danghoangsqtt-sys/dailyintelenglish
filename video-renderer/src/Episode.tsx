@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
-import { AbsoluteFill, Audio, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Audio, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { activeTokenIndex, buildKaraokeTokens } from "./karaoke";
 import { activeSpeakerId } from "./speakers";
+import { activeItemForFrame, attachItemsToLines, type LearningItem } from "./vocab";
 import type { EpisodeInputProps, EpisodeLine, EpisodeSpeaker } from "./types";
 
 /** Average pixel color of frontend/static/video_backgrounds/midnight.png (measured 2026-09-28
@@ -136,16 +137,88 @@ function CaptionBand({ line, currentTimeSec }: { line: EpisodeLine; currentTimeS
   );
 }
 
-export const Episode: React.FC<EpisodeInputProps> = ({ lines, speakers, audioPath, fps }) => {
+/** Task 19.5 (D19.5-d): ~200ms fade in/out rather than a pop cut, relative to the active
+ * item's own time slot (not the whole line's duration) -- so a 2-item line's cards each get
+ * their own fade in/out at the mid-line handoff, not just at the line's outer edges. */
+const VOCAB_CARD_FADE_SECONDS = 0.2;
+
+function vocabCardOpacity(currentTimeSec: number, slotStartSec: number, slotEndSec: number): number {
+  const fadeIn = interpolate(currentTimeSec, [slotStartSec, slotStartSec + VOCAB_CARD_FADE_SECONDS], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const fadeOut = interpolate(currentTimeSec, [slotEndSec - VOCAB_CARD_FADE_SECONDS, slotEndSec], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  return Math.min(fadeIn, fadeOut);
+}
+
+/**
+ * Task 19.5: pop-up card for the active vocab word / idiom phrase, top-right corner --
+ * opposite the speaker chips (top-left, 19.4) and the caption band (bottom, 19.1/19.3), so it
+ * can never collide with either even when speaker chips wrap to a second row at 5-6 speakers.
+ */
+function VocabCard({ item, opacity }: { item: LearningItem; opacity: number }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: "5%",
+        right: "5%",
+        maxWidth: "32%",
+        opacity,
+        backgroundColor: "rgba(14, 15, 21, 0.85)",
+        borderRadius: 12,
+        padding: "14px 18px",
+        fontFamily: CAPTION_TEXT_STYLE.fontFamily,
+        color: "#FFFFFF",
+      }}
+    >
+      {item.kind === "vocab" ? (
+        <>
+          <div style={{ fontSize: 24, fontWeight: 700 }}>
+            {item.word} <span style={{ fontSize: 18, fontWeight: 400, fontStyle: "italic" }}>({item.partOfSpeech})</span>
+          </div>
+          <div style={{ fontSize: 18, fontStyle: "italic", opacity: 0.8 }}>/{item.ipa}/</div>
+          <div style={{ fontSize: 18, marginTop: 6 }}>{item.definitionEn}</div>
+          <div style={{ fontSize: 18, opacity: 0.85 }}>{item.definitionVi}</div>
+          <div style={{ fontSize: 18, fontStyle: "italic", marginTop: 6, opacity: 0.9 }}>{item.exampleSentence}</div>
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize: 24, fontWeight: 700 }}>{item.phrase}</div>
+          <div style={{ fontSize: 18, marginTop: 6 }}>{item.meaningEn}</div>
+          <div style={{ fontSize: 18, opacity: 0.85 }}>{item.meaningVi}</div>
+          <div style={{ fontSize: 18, fontStyle: "italic", marginTop: 6, opacity: 0.9 }}>{item.exampleSentence}</div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export const Episode: React.FC<EpisodeInputProps> = ({ lines, speakers, learning, audioPath, fps }) => {
   const frame = useCurrentFrame();
   const currentTimeSec = frame / fps;
   const line = activeLine(lines, currentTimeSec);
   const activeId = activeSpeakerId(currentTimeSec, lines);
 
+  const attachedLearning = useMemo(
+    () => attachItemsToLines(learning?.vocab ?? [], learning?.idioms ?? [], lines),
+    [learning, lines]
+  );
+  const activeLearningItem = activeItemForFrame(currentTimeSec, lines, attachedLearning);
+
   return (
     <AbsoluteFill style={{ backgroundColor: MIDNIGHT_BACKGROUND }}>
       <Audio src={staticFile(audioPath)} />
       <SpeakerChips speakers={speakers} activeId={activeId} />
+      {activeLearningItem ? (
+        <VocabCard
+          item={activeLearningItem.item}
+          opacity={vocabCardOpacity(currentTimeSec, activeLearningItem.slotStartSec, activeLearningItem.slotEndSec)}
+        />
+      ) : null}
       {line ? (
         <div
           style={{

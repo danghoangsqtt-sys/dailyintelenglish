@@ -41,7 +41,7 @@
 | 19.2 | Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration | Coder | **accepted** -- PM + owner **D34** 2026-09-28, sha `20a1d32`, full suite 1178/1178 re-verified by PM (423.81 s); real-DB migration-write incident logged in TRACKER Known Issues, accepted as-is |
 | 19.3 | Word-level karaoke captions composition (`@remotion/captions`) | Coder | **accepted** -- PM task-level 2026-09-28, sha `c48037d`, wall time 96 s / 94 s (~1.55× 19.1 baseline, dominated by 30 real Edge TTS re-synth calls, not karaoke); vitest 6/6, 3/3 frame spot checks correct, `@remotion/captions` package inspection revealed pure data lib (no default visual); ffmpeg-fallback hash mismatch fully investigated and traced to a 2026-09-15 file predating Task 14.10's `-shortest` fix (unrelated to Phase 19) |
 | 19.4 | Active-speaker indicator (name chip + optional avatar highlight) | Coder | **accepted** -- PM task-level 2026-09-28, sha `693fba7`, 3/3 frame spot checks (Alex/Maya alternation + combined-features frame proving 19.3 karaoke didn't regress), vitest 10/10 (6 karaoke + 4 speaker), inactive-chip opacity 0.6, wall-time anomaly A/B-isolated to real +7.9% chip cost |
-| 19.5 | Vocab/idiom pop-up cards | Coder | **ready** (doc-first card `tasks/task-19.5.md` on disk since 2026-09-28, un-parked 2026-09-29 after owner slide-deck done, awaiting Coder pickup) |
+| 19.5 | Vocab/idiom pop-up cards | Coder | **done** -- PM-approved design + implementation, full suite 1189/1189, tsc + vitest 21/21 clean, awaiting PM acceptance |
 | 19.6 | Intro/outro + chapter/progress bar + Remotion thumbnail still | Coder | queued (opens after 19.5 accepted) |
 | 19.7 | `VideoService` wire-up, toggle, kill switch, packaging, `check_dependencies.py` | Coder | queued (opens after 19.6 accepted; Amendment A carry-over: Chrome ~270MB hard floor decision here) |
 | 19.8 | Gate B-12 (visual sign-off + media gate) | PM | queued (opens after 19.7 accepted) |
@@ -207,3 +207,25 @@
   assertion mismatches, not crashes; restored, 13/13 green). Full suite 1189/1189 (1182
   baseline + 7 new), ruff clean. `app/`/`frontend/`/`video-renderer/` untouched. No live
   trial rerun -- pure Python + unit tests only.
+
+- **19.5** (2026-09-29, Coder): design `d624fed` (PM APPROVED) → implementation (see handover
+  message for sha). Real finding: the card's proposed `attachItemsToLines` signature assumed
+  a `line_id` field that doesn't exist on `episodeLineSchema` -- used the line's own array
+  index instead, matching every other composition function's positional convention (PM
+  requested renaming to `lineIndex` explicitly, already used). Real match check before
+  writing composition code: 5/5 vocab + 4/4 idioms matched the real 30-line demo script --
+  100%, no design-finding-level failure. Line 0 genuinely exercises the multi-item
+  time-slicing math for real (both "early bird" and "night owl" match it simultaneously).
+  Real mid-implementation finding, investigated rather than accepted silently: the runner's
+  "closest to 8 minutes" selection logic picked a *different*, newer real project (a 5-minute
+  "Demo Episode" that appeared in the real DB during the T6 report-prep window) instead of
+  the same `b330d37f...` every prior Phase 19 task rendered -- the logic worked exactly as
+  designed, but would have made wall-time comparisons meaningless; pinned the runner back to
+  `b330d37f...` with a documented fallback. 3/3 frame spot checks correct (2 idiom cards
+  proving the time-slice switch, 1 combined-features frame proving karaoke + speaker chip +
+  vocab card all render together). Wall time 61.6s/60.6s -- at or below 19.4's ~90-97s
+  baseline, not just "near-flat" as predicted. vitest 21/21 (6 karaoke + 4 speaker + 11
+  vocab), revert-and-confirm-failure done. Full suite 1189/1189 unchanged, ruff clean, tsc
+  clean, `test_video_studio_browser.py` 10/10, `video_service.py` git-log-confirmed
+  untouched -- last task before 19.7 touches it. Report:
+  `docs/operations/phase19-t5-vocab.md`.
