@@ -4,7 +4,7 @@
 
 - **Phase:** 19
 - **Slug:** `19-remotion`
-- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 (PM task-level) all accepted; 19.4 implemented, awaiting PM acceptance. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted by owner as current state). **Report-deadline scope change (2026-09-28, owner+PM):** Friday 2026-10-02 deadline. New order: 19.4 (in flight) → 19.5 (vocab/idiom cards) → 19.7-partial (env-only DIE_VIDEO_RENDERER toggle wire-up, no packaging/Chrome/check_dependencies work). 19.6, 19.7 full packaging, 19.8, 19.9 deferred to post-report Phase 19 close-out, not cancelled.
+- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 + **19.4 (all PM task-level 2026-09-28, clean deliveries)** all accepted. **Deep-pivot for T6 2026-10-02 report deadline** (owner priority = AI-speed story for judging panel who "rất quan tâm tới tốc độ xử lý dữ liệu"): 19.5 vocab / 19.6 intro-outro / 19.7 full packaging / 19.8 gate / 19.9 close-out all **PARKED** for post-report continuation. Report-readiness Task **Report-UX-1** (elapsed counter + ETA + Step 4/5 progress parity — frontend-only, no `app/` touch) opened as doc-first card in this same folder for admin convenience. Owner live-verified 2026-09-28 that Step 2/3 already show real stage + % from Task 13.6 (screenshot confirmed). **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted).
 - **Planned:** 2026-09-28 (`/vp-evolve ENH-013`)
 - **Controlling plan:** `docs/implementation/phase-19-remotion.md`
 - **Authorization:** owner decision **D29** (2026-09-24, brainstorm
@@ -40,12 +40,13 @@
 | 19.1 | Spike: `video-renderer/` scaffold + minimal Remotion composition (background + line-level captions, matching today's ffmpeg output) rendered for one real B1 episode (2:56 actual — see preflight caveat). Measure render time / packaging footprint / output correctness. Report `docs/operations/phase19-spike-remotion.md`. | Coder | **accepted** -- PM + owner D33 2026-09-28, PASS, sha `4dd325b`, full suite 1175/1175 re-verified by PM |
 | 19.2 | Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration | Coder | **accepted** -- PM + owner **D34** 2026-09-28, sha `20a1d32`, full suite 1178/1178 re-verified by PM (423.81 s); real-DB migration-write incident logged in TRACKER Known Issues, accepted as-is |
 | 19.3 | Word-level karaoke captions composition (`@remotion/captions`) | Coder | **accepted** -- PM task-level 2026-09-28, sha `c48037d`, wall time 96 s / 94 s (~1.55× 19.1 baseline, dominated by 30 real Edge TTS re-synth calls, not karaoke); vitest 6/6, 3/3 frame spot checks correct, `@remotion/captions` package inspection revealed pure data lib (no default visual); ffmpeg-fallback hash mismatch fully investigated and traced to a 2026-09-15 file predating Task 14.10's `-shortest` fix (unrelated to Phase 19) |
-| 19.4 | Active-speaker indicator (name chip + optional avatar highlight) | Coder | **done** -- PM-approved design + implementation, full suite 1178/1178, tsc + vitest clean, awaiting PM acceptance |
-| 19.5 | Vocab/idiom pop-up cards | Coder | provisional |
-| 19.6 | Intro/outro + chapter/progress bar + Remotion thumbnail still | Coder | provisional |
-| 19.7 | `VideoService` wire-up, toggle, kill switch, packaging, `check_dependencies.py` | Coder | provisional |
-| 19.8 | Gate B-12 (visual sign-off + media gate) | PM | provisional |
-| 19.9 | Close-out: flip default to `remotion` (only on Gate B-12 PASS); version bump | Coder | provisional |
+| 19.4 | Active-speaker indicator (name chip + optional avatar highlight) | Coder | **accepted** -- PM task-level 2026-09-28, sha `693fba7`, 3/3 frame spot checks (Alex/Maya alternation + combined-features frame proving 19.3 karaoke didn't regress), vitest 10/10 (6 karaoke + 4 speaker), inactive-chip opacity 0.6, wall-time anomaly A/B-isolated to real +7.9% chip cost |
+| 19.5 | Vocab/idiom pop-up cards | Coder | **parked** (doc-first card `tasks/task-19.5.md` on disk, deferred to post-report per T6 deep-pivot) |
+| 19.6 | Intro/outro + chapter/progress bar + Remotion thumbnail still | Coder | **parked** (post-report) |
+| 19.7 | `VideoService` wire-up, toggle, kill switch, packaging, `check_dependencies.py` | Coder | **parked** (post-report) |
+| 19.8 | Gate B-12 (visual sign-off + media gate) | PM | **parked** (post-report) |
+| 19.9 | Close-out: flip default to `remotion` (only on Gate B-12 PASS); version bump | Coder | **parked** (post-report) |
+| Report-UX-1 | Elapsed counter + ETA + Step 4/5 progress parity (frontend-only, no `app/` touch) | Coder | **ready** (doc-first card `tasks/task-report-ux-1.md`, next up after 19.4 accepted) |
 
 ## Evidence log
 
@@ -125,8 +126,8 @@
   (688MB->725MB->727MB final). Full suite 1178/1178 unchanged, ruff clean, tsc clean, vitest
   6/6, `test_video_studio_browser.py` 10/10. Report: `docs/operations/phase19-t3-karaoke.md`.
 
-- **19.4** (2026-09-28, Coder): design `e49d14c` (PM APPROVED) → implementation (see handover
-  message for sha). Real finding: the app's own real per-speaker palette
+- **19.4** (2026-09-28, Coder): design `e49d14c` (PM APPROVED) → implementation `693fba7`
+  (PM task-level ACCEPTED, no owner decision needed — clean delivery, no incident, no gate). Real finding: the app's own real per-speaker palette
   (`--speaker-a`/`--speaker-b`, `style.css`) already exists app-wide via an identical
   `speakerIndex % 2` alternating pattern in step2/4/5's JS -- dark-theme pair (`#F59E0B`/
   `#58A6FF`) chosen over light-theme for contrast against the near-black composition
@@ -143,3 +144,17 @@
   revert-and-confirm-failure done. Full suite 1178/1178 unchanged, ruff clean, tsc clean,
   `test_video_studio_browser.py` 10/10, `video_service.py` git-log-confirmed untouched.
   Report: `docs/operations/phase19-t4-speaker.md`.
+
+- **Deep-pivot 2026-09-28** (owner + PM, in response to report deadline T6 2026-10-02 +
+  owner signal "ban giám khảo rất quan tâm tới tốc độ xử lý dữ liệu của AI"): Phase 19
+  stops at 4/9 for the report; 19.5/19.6/19.7 full/19.8/19.9 all parked for post-report
+  continuation. Karaoke (19.3) + speaker chip (19.4) already give the visual polish needed
+  for slide screenshots and demo clips. New task Report-UX-1 opened as doc-first card in
+  this same folder (elapsed counter + ETA + Step 4/5 progress parity, frontend-only, no
+  `app/` touch). Owner live-verified 2026-09-28 that Step 2/3 already have real stage + %
+  from Task 13.6 (`Generating script — outline (5%) [Cancel]` visible in the dev-server
+  screenshot); Step 4 has "line X/N" text but no % / elapsed / ETA; Step 5 has only
+  "Rendering with ffmpeg…" (render is <1s, elapsed is the honest signal). Report-UX-1 fills
+  those gaps + adds elapsed + ETA to Step 2/3 alongside the existing stage/%. PM focus for
+  the 4 report days = fresh Gate B benchmark runs + speed comparison chart + slide deck +
+  live-demo dry-run. Coder queued for Report-UX-1 as next work after 19.4 acceptance.

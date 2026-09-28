@@ -8,8 +8,21 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Planning (report-readiness for T6 2026-10-02)
+- **Deep-pivot 2026-09-28** (owner + PM): Phase 19 stops at 4/9 for the T6 judging-panel
+  report (spike + word-boundary + karaoke + speaker chip, all accepted). Tasks 19.5 vocab
+  / 19.6 intro-outro / 19.7 full packaging / 19.8 gate B-12 / 19.9 close-out all **parked**
+  for post-report continuation. Rationale: judging panel's primary interest is AI processing
+  speed; UI polish that makes speed *feel* fast is higher ROI for the demo than the last
+  4 Remotion features.
+- New **Report-UX-1** task doc-first card written by PM at
+  `.viepilot/phases/19-remotion/tasks/task-report-ux-1.md` — elapsed counter + ETA
+  (baseline from Gate B-11 median) + Step 4 real % (TTS `line_index/total_lines`) + Step 5
+  elapsed. Frontend-only, no `app/` touch. Awaiting Coder pickup after 19.4 acceptance.
+  Owner live-verified 2026-09-28 that Step 2/3 already show real stage + % from Task 13.6.
+
 ### Added (Phase 19, planning-track — not yet wired to the app)
-- **Task 19.4 (2026-09-28, by Coder):** active-speaker chip + optional avatar highlight in
+- **Task 19.4 (2026-09-28, PM task-level, sha `693fba7`, by Coder):** active-speaker chip + optional avatar highlight in
   `video-renderer/`. Persistent top-left chip row (opposite the bottom-anchored caption
   band), one per project speaker; the currently-active speaker's chip fills with the app's
   own real per-speaker palette (`--speaker-a`/`--speaker-b` from `style.css`, dark-theme
@@ -51,29 +64,6 @@ Versioning: [SemVer](https://semver.org/)
   own verification run inadvertently applied migration `007` to the real `data/app.db`
   instead of a `mode=ro` connection; damage nil (additive/nullable/no-default; identical
   outcome to next-startup migration).
-- **Task 19.3 (2026-09-28, by Coder):** word-level karaoke captions composition via
-  `@remotion/captions@4.0.529`, called per-line with a combine-threshold larger than the
-  line's own duration so its auto-pagination can't split/merge across existing line
-  boundaries. Active word highlighted `#FFFFFF → #FFD54A`, all other styling byte-identical
-  to the 19.1 spike's plain band. Falls back to the exact unmodified plain-line render when a
-  line's captured word list is empty/absent (`src/karaoke.ts`, unit-tested with `vitest`, +37
-  MB devDependency-only). Real finding: `@remotion/captions` ships zero rendering components
-  (pure data/grouping library) -- the task card's "helper-default visual" framing didn't
-  match reality. Real finding: the only completed-audio episode has no captured word data at
-  all (predates Task 19.2, never re-mixed) -- the demo runner now re-synthesizes each line's
-  timing fresh via a real Edge TTS call, in memory only, never touching `data/app.db` or the
-  real cached audio files. Re-render wall time ~95 s vs. the 19.1 baseline's ~61 s (well
-  inside the ≤2x threshold). `app/services/video_service.py` still untouched; Python full
-  suite 1178/1178, `ruff` clean. No user-visible behaviour change on the app yet (still
-  opt-in via the spike runner, not wired to `VideoService` -- that's Task 19.7).
-
-### Planning
-- Task 19.4 (active-speaker indicator: name chip + optional avatar highlight, D19.4-a..f)
-  doc-first card written by PM at `.viepilot/phases/19-remotion/tasks/task-19.4.md`,
-  awaiting Coder pickup. Uses the existing `speakers.avatar_image_path` column (Task 1.7c);
-  falls back to name-only chip when a speaker has no avatar uploaded (which is the demo
-  episode's case for both Alex and Maya, verified read-only). Vitest coverage for the
-  active-speaker selection helper.
 - Task 19.1 (Remotion spike) **accepted PASS by owner (D33, 2026-09-28)**, commit `4dd325b`
   by Coder, independently re-verified by PM (full suite 1175/1175 re-run in 401.33 s, ruff
   clean, git-log-scoped confirmation `app/services/video_service.py` untouched across the
