@@ -4,7 +4,7 @@
 
 - **Phase:** 19
 - **Slug:** `19-remotion`
-- **Status:** 19.1 (D33) + 19.2 (D34) + **19.3 (PM task-level 2026-09-28, clean delivery)** all accepted; 19.4 doc-first card ready, awaiting Coder pickup. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted by owner as current state).
+- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 (PM task-level) all accepted; 19.4 implemented, awaiting PM acceptance. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted by owner as current state). **Report-deadline scope change (2026-09-28, owner+PM):** Friday 2026-10-02 deadline. New order: 19.4 (in flight) → 19.5 (vocab/idiom cards) → 19.7-partial (env-only DIE_VIDEO_RENDERER toggle wire-up, no packaging/Chrome/check_dependencies work). 19.6, 19.7 full packaging, 19.8, 19.9 deferred to post-report Phase 19 close-out, not cancelled.
 - **Planned:** 2026-09-28 (`/vp-evolve ENH-013`)
 - **Controlling plan:** `docs/implementation/phase-19-remotion.md`
 - **Authorization:** owner decision **D29** (2026-09-24, brainstorm
@@ -40,7 +40,7 @@
 | 19.1 | Spike: `video-renderer/` scaffold + minimal Remotion composition (background + line-level captions, matching today's ffmpeg output) rendered for one real B1 episode (2:56 actual — see preflight caveat). Measure render time / packaging footprint / output correctness. Report `docs/operations/phase19-spike-remotion.md`. | Coder | **accepted** -- PM + owner D33 2026-09-28, PASS, sha `4dd325b`, full suite 1175/1175 re-verified by PM |
 | 19.2 | Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration | Coder | **accepted** -- PM + owner **D34** 2026-09-28, sha `20a1d32`, full suite 1178/1178 re-verified by PM (423.81 s); real-DB migration-write incident logged in TRACKER Known Issues, accepted as-is |
 | 19.3 | Word-level karaoke captions composition (`@remotion/captions`) | Coder | **accepted** -- PM task-level 2026-09-28, sha `c48037d`, wall time 96 s / 94 s (~1.55× 19.1 baseline, dominated by 30 real Edge TTS re-synth calls, not karaoke); vitest 6/6, 3/3 frame spot checks correct, `@remotion/captions` package inspection revealed pure data lib (no default visual); ffmpeg-fallback hash mismatch fully investigated and traced to a 2026-09-15 file predating Task 14.10's `-shortest` fix (unrelated to Phase 19) |
-| 19.4 | Active-speaker indicator (name chip + optional avatar highlight) | Coder | **ready** (doc-first card `tasks/task-19.4.md`, awaiting Coder pickup) |
+| 19.4 | Active-speaker indicator (name chip + optional avatar highlight) | Coder | **done** -- PM-approved design + implementation, full suite 1178/1178, tsc + vitest clean, awaiting PM acceptance |
 | 19.5 | Vocab/idiom pop-up cards | Coder | provisional |
 | 19.6 | Intro/outro + chapter/progress bar + Remotion thumbnail still | Coder | provisional |
 | 19.7 | `VideoService` wire-up, toggle, kill switch, packaging, `check_dependencies.py` | Coder | provisional |
@@ -124,3 +124,22 @@
   inside the ≤2x threshold). vitest chosen for D19.3-e, measured cost +37MB devDependency-only
   (688MB->725MB->727MB final). Full suite 1178/1178 unchanged, ruff clean, tsc clean, vitest
   6/6, `test_video_studio_browser.py` 10/10. Report: `docs/operations/phase19-t3-karaoke.md`.
+
+- **19.4** (2026-09-28, Coder): design `e49d14c` (PM APPROVED) → implementation (see handover
+  message for sha). Real finding: the app's own real per-speaker palette
+  (`--speaker-a`/`--speaker-b`, `style.css`) already exists app-wide via an identical
+  `speakerIndex % 2` alternating pattern in step2/4/5's JS -- dark-theme pair (`#F59E0B`/
+  `#58A6FF`) chosen over light-theme for contrast against the near-black composition
+  background. Real finding: the app's actual missing-avatar precedent (`step5_video.js`) is
+  plain "No image" text, not initials-in-a-circle as the card speculated -- chip design
+  follows the real, simpler pattern. 3/3 frame spot checks correct (Alex/Maya alternation),
+  one frame also proving 19.3's karaoke still renders correctly alongside the new chip.
+  Render-time anomaly investigated, not shrugged off: two full-pipeline runs read 131-142s vs
+  19.3's ~95s baseline; a controlled same-props A/B isolated the real chip-rendering cost at
+  +7.9% (97.4s->105.1s), attributing the larger readings to shared-machine load. Inactive-chip
+  opacity landed at 0.6 (within PM's 0.5-0.65 range). Avatar path (both demo speakers have
+  `avatar_image_path = NULL`) exercised only in the runner's own code, not by an automated
+  test -- disclosed plainly, not implied covered. vitest 10/10 (6 karaoke + 4 speaker),
+  revert-and-confirm-failure done. Full suite 1178/1178 unchanged, ruff clean, tsc clean,
+  `test_video_studio_browser.py` 10/10, `video_service.py` git-log-confirmed untouched.
+  Report: `docs/operations/phase19-t4-speaker.md`.

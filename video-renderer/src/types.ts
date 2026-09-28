@@ -25,14 +25,33 @@ export const episodeLineSchema = z.object({
   endSec: z.number(),
   /** Display label (e.g. "Alex") -- audio_jobs.timestamps_json's `label`, not the speaker UUID. */
   speaker: z.string(),
+  /**
+   * Task 19.4: the real `speakers.id` (DB UUID), kept separate from `speaker` (the display
+   * name) because a project could have two speakers who happen to share a display name --
+   * `activeSpeakerId` must always match by id, never by name.
+   */
+  speakerId: z.string(),
   text: z.string(),
   words: z.array(episodeWordSchema).optional().default([]),
+});
+
+/**
+ * Task 19.4: one project speaker, for the persistent speaker-chip overlay. `avatarUrl` is a
+ * path relative to video-renderer/public/ (same staticFile() convention as audioPath) --
+ * absent when `speakers.avatar_image_path` is NULL in the real DB.
+ */
+export const episodeSpeakerSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  gender: z.string(),
+  avatarUrl: z.string().optional(),
 });
 
 export const episodeInputPropsSchema = z.object({
   /** projects.id */
   episodeId: z.string(),
   lines: z.array(episodeLineSchema),
+  speakers: z.array(episodeSpeakerSchema).default([]),
   /**
    * Path to the mixed episode audio, relative to video-renderer/public/ (Remotion requires
    * every asset to live under public/ and be loaded via staticFile() -- absolute filesystem
@@ -47,4 +66,5 @@ export const episodeInputPropsSchema = z.object({
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;
 export type EpisodeLine = z.infer<typeof episodeLineSchema>;
+export type EpisodeSpeaker = z.infer<typeof episodeSpeakerSchema>;
 export type EpisodeInputProps = z.infer<typeof episodeInputPropsSchema>;

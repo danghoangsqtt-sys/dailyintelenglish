@@ -9,6 +9,22 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Added (Phase 19, planning-track — not yet wired to the app)
+- **Task 19.4 (2026-09-28, by Coder):** active-speaker chip + optional avatar highlight in
+  `video-renderer/`. Persistent top-left chip row (opposite the bottom-anchored caption
+  band), one per project speaker; the currently-active speaker's chip fills with the app's
+  own real per-speaker palette (`--speaker-a`/`--speaker-b` from `style.css`, dark-theme
+  variant `#F59E0B`/`#58A6FF` chosen for the near-black composition background) + a subtle
+  `scale(1.08)`; inactive chips recede to 0.6 opacity, never fade out. Avatar image (56px
+  circle) when `speakers.avatar_image_path` is set; name-only chip when absent (matches the
+  app's real "No image" placeholder precedent, not an invented initials pattern). `null` in
+  inter-line silence gaps (honest, matches the audio). `src/speakers.ts`'s `activeSpeakerId`
+  unit-tested with vitest (10/10 total incl. 19.3's karaoke tests), revert-and-confirm-failure
+  done. 3/3 frame spot checks correct, one of which also proves 19.3's karaoke still renders
+  correctly alongside the new chip. Render-time anomaly investigated: two full-pipeline runs
+  read 131-142s vs. 19.3's ~95s baseline; a controlled same-props A/B isolated the actual
+  chip-rendering cost at +7.9% (97.4s → 105.1s), attributing the larger readings to shared-
+  machine load, not the code change. `app/services/video_service.py` still untouched; Python
+  full suite 1178/1178, `ruff` clean. No user-visible behaviour change on the app yet.
 - **Task 19.3 (2026-09-28, PM task-level, sha `c48037d`, by Coder):** word-level karaoke
   captions composition in `video-renderer/` — active word highlights `#FFD54A` inside the
   same font/size/position band the 19.1 spike used. Uses `@remotion/captions@4.0.529` for

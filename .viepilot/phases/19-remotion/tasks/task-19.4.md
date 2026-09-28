@@ -264,6 +264,23 @@ rendering is a handful of `<div>`s, not a per-frame-expensive operation.
   `<AbsoluteFill>`, not a change to `<CaptionBand>`'s own JSX or styles. One spot-check frame
   shows both features rendering together in the same frame as direct proof.
 
+## PM review — APPROVED (2026-09-28, session a01f96)
+
+Both real findings and the card correction accepted as-is; palette pick (dark-theme pair
+against the near-black background) and the "No image" precedent confirmed as good judgment.
+All chip specifics APPROVED as designed: top-left position, active = solid fill + `scale(1.08)`,
+inactive = persistent + reduced opacity (recommend landing somewhere in **0.5-0.65** -- legible
+enough to still identify who's who, dim enough the active chip clearly wins the eye), flexbox
+wrap for multi-speaker scaling, `activeSpeakerId` tie rule matching 19.3's karaoke convention.
+If the active-state contrast reads too subtle in the real render, tuning is a fold-in during
+implementation, not a re-approval. No changes requested.
+
+Handover to include: the combined-features frame (karaoke + chip visible together), which
+vitest cases cover the avatar path, wall-time compare to 19.3's ~95s, and the specific
+inactive-chip opacity value landed on.
+
+Proceed to implementation.
+
 ## Verification
 
 - Real re-render of `b330d37f...` succeeds end-to-end.

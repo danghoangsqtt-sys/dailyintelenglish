@@ -5,7 +5,8 @@ import { episodeInputPropsSchema, type EpisodeInputProps } from "./types";
 
 const defaultProps: EpisodeInputProps = {
   episodeId: "preview",
-  lines: [{ startSec: 0, endSec: 3, speaker: "Alex", text: "Preview line.", words: [] }],
+  lines: [{ startSec: 0, endSec: 3, speaker: "Alex", speakerId: "alex-id", text: "Preview line.", words: [] }],
+  speakers: [{ id: "alex-id", name: "Alex", gender: "male" }],
   audioPath: "spike-audio/preview.mp3",
   fps: 30,
   width: 1280,

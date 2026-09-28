@@ -6,6 +6,7 @@ const LINE_WITH_WORDS: EpisodeLine = {
   startSec: 10,
   endSec: 12,
   speaker: "Alex",
+  speakerId: "alex-id",
   text: "Hi there friend",
   words: [
     { text: "Hi", startSec: 10.0, endSec: 10.4 },
@@ -18,6 +19,7 @@ const LINE_WITHOUT_WORDS: EpisodeLine = {
   startSec: 20,
   endSec: 21,
   speaker: "Sam",
+  speakerId: "sam-id",
   text: "No captured words here",
   words: [],
 };

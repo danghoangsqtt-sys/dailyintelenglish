@@ -41,6 +41,7 @@ from app.services import audio_service, project_service, tts_service  # noqa: E4
 
 VIDEO_RENDERER_DIR = PROJECT_ROOT / "video-renderer"
 SPIKE_AUDIO_DIR = VIDEO_RENDERER_DIR / "public" / "spike-audio"
+SPIKE_AVATARS_DIR = VIDEO_RENDERER_DIR / "public" / "avatars"
 SPIKE_OUTPUT_DIR = settings.DATA_DIR / "tmp" / "phase19_spike"
 
 TARGET_CEFR_LEVEL = "B1"
@@ -133,14 +134,47 @@ async def _resynthesize_word_timestamps(project: dict, audio_job: dict) -> list[
     return per_line_words
 
 
+def _copy_avatar_into_public(speaker_id: str, avatar_image_path: str) -> str:
+    """Task 19.4 (D19.4-b): one-way copy from the real, read-only-accessed
+    `speakers.avatar_image_path` into `video-renderer/public/avatars/` -- never a symlink,
+    never an absolute path passed to Remotion (staticFile() requires a public/-relative
+    asset, same pattern as `_copy_audio_into_public`). The real `data/avatars/` directory is
+    never written to; this only reads from it and writes to the video-renderer scratch dir."""
+    SPIKE_AVATARS_DIR.mkdir(parents=True, exist_ok=True)
+    suffix = Path(avatar_image_path).suffix or ".png"
+    destination = SPIKE_AVATARS_DIR / f"{speaker_id}{suffix}"
+    shutil.copyfile(avatar_image_path, destination)
+    return f"avatars/{destination.name}"
+
+
+def _build_speakers_props(project: dict) -> list[dict[str, Any]]:
+    """Task 19.4: project-level speaker list for the persistent chip overlay. Copies any
+    non-null `avatar_image_path` into public/avatars/ (D19.4-b); skips the copy silently for
+    NULL avatars (the demo project's real speakers, Alex and Maya, both have none -- the
+    name-only chip path is what this task's real render actually exercises)."""
+    speakers_props = []
+    for speaker in project["speakers"]:
+        speaker_props: dict[str, Any] = {
+            "id": speaker["id"],
+            "name": speaker["name"],
+            "gender": speaker["gender"],
+        }
+        if speaker.get("avatar_image_path"):
+            speaker_props["avatarUrl"] = _copy_avatar_into_public(speaker["id"], speaker["avatar_image_path"])
+        speakers_props.append(speaker_props)
+    return speakers_props
+
+
 def _build_input_props(project: dict, audio_job: dict, word_timestamps: list[list[dict]]) -> dict[str, Any]:
-    """D19.1-b + D19.3: per-line timestamps from AudioService's measured mix, plus (Task
-    19.3) each line's word list, positionally aligned with `audio_job["timestamps"]`."""
+    """D19.1-b + D19.3 + D19.4: per-line timestamps from AudioService's measured mix, each
+    line's word list (Task 19.3, positionally aligned with `audio_job["timestamps"]`), each
+    line's real `speaker_id` and the project-level `speakers` array (Task 19.4)."""
     lines = [
         {
             "startSec": entry["start_sec"],
             "endSec": entry["end_sec"],
             "speaker": entry["label"],
+            "speakerId": entry["speaker_id"],
             "text": entry["text"],
             "words": words,
         }
@@ -149,6 +183,7 @@ def _build_input_props(project: dict, audio_job: dict, word_timestamps: list[lis
     return {
         "episodeId": project["id"],
         "lines": lines,
+        "speakers": _build_speakers_props(project),
         "audioPath": f"spike-audio/{project['id']}.mp3",
         "fps": RENDER_FPS,
         "width": RENDER_WIDTH,
