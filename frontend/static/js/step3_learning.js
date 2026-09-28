@@ -22,6 +22,10 @@
 
   let saveIndicator = null;
   let currentAiJob = null;
+  let generationStatus = null;
+
+  // Report-UX-1: Gate B-11 learning-stage estimate.
+  const LEARNING_BASELINE_SECONDS = 30;
 
   const AI_JOB_TERMINAL_MESSAGES = {
     error: "Generation failed",
@@ -29,18 +33,30 @@
     stale: "The script changed since this job started — please try again.",
   };
 
-  /** Render the durable-job status banner (Phase 13, Task 13.6). `job === null` hides it. */
+  /** Render the durable-job status banner (Phase 13, Task 13.6). `job === null` hides it.
+   *
+   * Report-UX-1: same one-time-mount discipline as step2_script.js's `renderJobStatus` --
+   * see that file's comment for the full reasoning (naive re-mount on every poll would reset
+   * the elapsed counter to 0:00 every ~2s). */
   function renderJobStatus(job) {
     const el = document.getElementById("ai-job-status");
     if (!el) return;
     if (!job) {
       el.hidden = true;
       el.innerHTML = "";
+      if (generationStatus) {
+        generationStatus.destroy();
+        generationStatus = null;
+      }
       return;
     }
     el.hidden = false;
 
     if (job.status in AI_JOB_TERMINAL_MESSAGES) {
+      if (generationStatus) {
+        generationStatus.destroy();
+        generationStatus = null;
+      }
       const detail = job.status === "error" && job.error_message ? `: ${escapeHtml(job.error_message)}` : "";
       el.innerHTML =
         `${AI_JOB_TERMINAL_MESSAGES[job.status]}${detail} ` +
@@ -50,12 +66,20 @@
       return;
     }
 
-    el.innerHTML =
-      `<span class="spinner spinner-dark" aria-hidden="true"></span> Generating learning pack — ${escapeHtml(job.stage)} ` +
-      `(${job.progress}%) ` +
-      '<button type="button" class="btn btn-ghost btn-xs" id="ai-job-cancel-btn">Cancel</button>';
-    const cancelBtn = document.getElementById("ai-job-cancel-btn");
-    if (cancelBtn) cancelBtn.addEventListener("click", () => currentAiJob && currentAiJob.cancel());
+    if (!generationStatus) {
+      el.innerHTML =
+        '<span class="spinner spinner-dark" aria-hidden="true"></span> Generating learning pack — ' +
+        '<span id="generation-status-mount"></span>' +
+        '<button type="button" class="btn btn-ghost btn-xs" id="ai-job-cancel-btn">Cancel</button>';
+      const cancelBtn = document.getElementById("ai-job-cancel-btn");
+      if (cancelBtn) cancelBtn.addEventListener("click", () => currentAiJob && currentAiJob.cancel());
+      generationStatus = GenerationStatus.mount({
+        element: document.getElementById("generation-status-mount"),
+        baselineSec: LEARNING_BASELINE_SECONDS,
+        startedAtIso: job.started_at,
+      });
+    }
+    generationStatus.setProgress({ stageLabel: job.stage, progressPercent: job.progress, done: false });
   }
 
   function makeLearningAiJob() {

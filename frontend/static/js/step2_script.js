@@ -21,6 +21,10 @@
 
   let saveIndicator = null;
   let currentAiJob = null;
+  let generationStatus = null;
+
+  // Report-UX-1: Gate B-11 real B1-median wall time for script generation.
+  const SCRIPT_BASELINE_SECONDS = 45;
 
   const AI_JOB_TERMINAL_MESSAGES = {
     error: "Generation failed",
@@ -28,18 +32,33 @@
     stale: "The project changed since this job started — please try again.",
   };
 
-  /** Render the durable-job status banner (Phase 13, Task 13.6). `job === null` hides it. */
+  /** Render the durable-job status banner (Phase 13, Task 13.6). `job === null` hides it.
+   *
+   * Report-UX-1: `GenerationStatus.mount()` is called exactly once per job lifecycle (guarded
+   * by `generationStatus`), never on every poll tick -- this function's `el.innerHTML`
+   * replacement below only runs on that first call. Every subsequent poll calls
+   * `generationStatus.setProgress(...)` instead, which updates existing DOM nodes directly.
+   * Mounting fresh markup on every poll (the naive approach) would destroy and recreate the
+   * elapsed-counter node every ~2s, visibly resetting it to 0:00. */
   function renderJobStatus(job) {
     const el = document.getElementById("ai-job-status");
     if (!el) return;
     if (!job) {
       el.hidden = true;
       el.innerHTML = "";
+      if (generationStatus) {
+        generationStatus.destroy();
+        generationStatus = null;
+      }
       return;
     }
     el.hidden = false;
 
     if (job.status in AI_JOB_TERMINAL_MESSAGES) {
+      if (generationStatus) {
+        generationStatus.destroy();
+        generationStatus = null;
+      }
       const detail = job.status === "error" && job.error_message ? `: ${escapeHtml(job.error_message)}` : "";
       el.innerHTML =
         `${AI_JOB_TERMINAL_MESSAGES[job.status]}${detail} ` +
@@ -49,12 +68,20 @@
       return;
     }
 
-    el.innerHTML =
-      `<span class="spinner spinner-dark" aria-hidden="true"></span> Generating script — ${escapeHtml(job.stage)} ` +
-      `(${job.progress}%) ` +
-      '<button type="button" class="btn btn-ghost btn-xs" id="ai-job-cancel-btn">Cancel</button>';
-    const cancelBtn = document.getElementById("ai-job-cancel-btn");
-    if (cancelBtn) cancelBtn.addEventListener("click", () => currentAiJob && currentAiJob.cancel());
+    if (!generationStatus) {
+      el.innerHTML =
+        '<span class="spinner spinner-dark" aria-hidden="true"></span> Generating script — ' +
+        '<span id="generation-status-mount"></span>' +
+        '<button type="button" class="btn btn-ghost btn-xs" id="ai-job-cancel-btn">Cancel</button>';
+      const cancelBtn = document.getElementById("ai-job-cancel-btn");
+      if (cancelBtn) cancelBtn.addEventListener("click", () => currentAiJob && currentAiJob.cancel());
+      generationStatus = GenerationStatus.mount({
+        element: document.getElementById("generation-status-mount"),
+        baselineSec: SCRIPT_BASELINE_SECONDS,
+        startedAtIso: job.started_at,
+      });
+    }
+    generationStatus.setProgress({ stageLabel: job.stage, progressPercent: job.progress, done: false });
   }
 
   function makeScriptAiJob() {

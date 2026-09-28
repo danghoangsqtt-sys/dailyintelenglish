@@ -9,6 +9,12 @@
   const TIMELINE_MIN_CLIP_WIDTH_PX = 72;
   const TIMELINE_MAX_CLIP_WIDTH_PX = 240;
 
+  // Report-UX-1: real ffmpeg render measurement (docs/operations/phase19-spike-remotion.md
+  // and AudioService timing history) -- render is well under a second, so no ETA string
+  // (showEta: false below) is shown, only the elapsed counter as the honest "something is
+  // happening" signal.
+  const VIDEO_BASELINE_SECONDS = 1;
+
   const state = {
     projectId: null,
     project: null,
@@ -403,14 +409,20 @@
     state.isGenerating = true;
     clearError();
     setGenerateLoading(true);
-    byId("generate-progress").textContent = "Rendering with ffmpeg…";
+    const generationStatus = GenerationStatus.mount({
+      element: byId("generate-progress"),
+      baselineSec: VIDEO_BASELINE_SECONDS,
+      showEta: false,
+    });
+    generationStatus.setProgress({ stageLabel: "Rendering with ffmpeg…" });
     try {
       const job = await Api.generateVideo(state.projectId, state.selectedTemplate, state.aspectRatio);
       renderResult(job);
-      byId("generate-progress").textContent = "Done.";
+      generationStatus.setProgress({ stageLabel: "Done.", done: true });
     } catch (error) {
       console.error("Failed to generate video:", error);
       showError("We couldn't generate the video. Please try again.");
+      generationStatus.destroy();
       byId("generate-progress").textContent = "";
     } finally {
       state.isGenerating = false;

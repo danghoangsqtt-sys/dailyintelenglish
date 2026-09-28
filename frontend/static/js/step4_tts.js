@@ -14,6 +14,11 @@
   const TIMELINE_MIN_CLIP_WIDTH_PX = 72;
   const TIMELINE_MAX_CLIP_WIDTH_PX = 240;
 
+  // Report-UX-1: empirical per-line synth + fixed mix estimate (refine if better data
+  // exists in audio_jobs.duration_seconds history).
+  const TTS_SECONDS_PER_LINE = 5;
+  const TTS_MIX_SECONDS = 15;
+
   const state = {
     projectId: null,
     project: null,
@@ -491,10 +496,21 @@
     applyLocks();
     updateInspectorPreviewState();
     const progress = byId("generate-progress");
+    const totalLines = state.lines.length;
+    // Report-UX-1: no poll loop here (a plain sequential await-per-line), so a single
+    // mount() at the top is safe -- unlike Step 2/3's durable-job banner, nothing rebuilds
+    // this container's innerHTML mid-generation.
+    const generationStatus = GenerationStatus.mount({
+      element: progress,
+      baselineSec: totalLines * TTS_SECONDS_PER_LINE + TTS_MIX_SECONDS,
+    });
     let activeLineId = null;
     try {
-      for (let i = 0; i < state.lines.length; i += 1) {
-        progress.textContent = `Synthesizing line ${i + 1}/${state.lines.length}…`;
+      for (let i = 0; i < totalLines; i += 1) {
+        generationStatus.setProgress({
+          stageLabel: `Synthesizing line ${i + 1}/${totalLines}…`,
+          progressPercent: Math.round((100 * (i + 1)) / totalLines),
+        });
         activeLineId = state.lines[i].id;
         state.linesInFlight.add(activeLineId);
         renderTimeline();
@@ -506,14 +522,17 @@
         renderTimeline();
         updateInspectorPreviewState();
       }
-      progress.textContent = "Mixing final audio…";
+      // Mixing is a small, fixed remainder of total time (empirical) -- 95% leaves room to
+      // land on 100% only once the mix genuinely finishes, never claiming done early.
+      generationStatus.setProgress({ stageLabel: "Mixing final audio…", progressPercent: 95 });
       const job = await Api.generateAudio(state.projectId, state.selectedMusic);
       state.audioJob = job;
       renderResult(job);
-      progress.textContent = "Done — episode ready below.";
+      generationStatus.setProgress({ stageLabel: "Done — episode ready below.", progressPercent: 100, done: true });
     } catch (error) {
       console.error("Failed to generate audio:", error);
       showError("We couldn't generate the full episode. Please try again.");
+      generationStatus.destroy();
       progress.textContent = "";
     } finally {
       if (activeLineId) state.linesInFlight.delete(activeLineId);

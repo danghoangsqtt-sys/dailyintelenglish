@@ -46,7 +46,7 @@
 | 19.7 | `VideoService` wire-up, toggle, kill switch, packaging, `check_dependencies.py` | Coder | **parked** (post-report) |
 | 19.8 | Gate B-12 (visual sign-off + media gate) | PM | **parked** (post-report) |
 | 19.9 | Close-out: flip default to `remotion` (only on Gate B-12 PASS); version bump | Coder | **parked** (post-report) |
-| Report-UX-1 | Elapsed counter + ETA + Step 4/5 progress parity (frontend-only, no `app/` touch) | Coder | **ready** (doc-first card `tasks/task-report-ux-1.md`, next up after 19.4 accepted) |
+| Report-UX-1 | Elapsed counter + ETA + Step 4/5 progress parity (frontend-only, no `app/` touch) | Coder | **done** -- PM-approved design + implementation, full suite 1182/1182, ruff clean, live-verified on dev server, awaiting PM acceptance |
 
 ## Evidence log
 
@@ -158,3 +158,29 @@
   those gaps + adds elapsed + ETA to Step 2/3 alongside the existing stage/%. PM focus for
   the 4 report days = fresh Gate B benchmark runs + speed comparison chart + slide deck +
   live-demo dry-run. Coder queued for Report-UX-1 as next work after 19.4 acceptance.
+
+- **Report-UX-1** (2026-09-28, Coder): design `5223bd5` (PM APPROVED, all 4 findings
+  accepted verbatim) → implementation (see handover message for sha). Real finding: Step
+  2/3's status banner rebuilds via `innerHTML` on every ~2s poll tick -- the card's literal
+  "insert counter markup into that string" would have visibly reset the elapsed counter to
+  `0:00` every poll in front of the judging panel; fixed by mounting `GenerationStatus` once
+  per job lifecycle, updating in place afterward. Real finding: `ai_generation_jobs.started_at`
+  is a real ISO-8601 string already returned by the job endpoint -- the counter anchors to it
+  so a page refresh mid-generation shows true elapsed, not a reset. Deliberate asymmetry
+  (PM-approved): Step 2/3 keep today's immediate reveal on completion, no artificial
+  freeze-then-hide (would undercut the "backend is fast" demo message); Step 4/5 freeze the
+  final elapsed value next to their existing persistent "Done" text. Mid-implementation gap
+  found and disclosed: none of the 4 Step HTML pages were in "Allowed files" but all 4 need
+  a `<script src="generation_status.js">` tag to load the component at all -- PM
+  pre-approved the one-line-per-file addition as the same mechanical class as 19.2's
+  test-file fixes. Revert-and-confirm-failure surfaced a real, honestly-recorded nuance:
+  removing only the mount-once guard didn't fail the test (the `started_at` anchor
+  incidentally also prevents the visible 0:00-reset symptom once both fixes are in place
+  together) -- redone by reverting the whole `GenerationStatus` integration, which failed as
+  expected. Full suite 1182/1182 (1178 baseline + 4 new), ruff clean (4 pre-existing errors
+  in the PM's own in-flight `scripts/build_report_benchmark_chart.py` are unrelated, not
+  touched by this task). Live-verified against two real generations on the running dev
+  server (Step 2 script gen completed for real mid-verification, confirming the immediate-
+  reveal design; Step 3 learning-pack gen screenshotted mid-run showing the real banner:
+  `Generating learning pack — queued (0%) · 0:02 · ~28s left [Cancel]`). `app/` genuinely
+  untouched (git diff empty).

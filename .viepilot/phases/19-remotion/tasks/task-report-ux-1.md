@@ -258,6 +258,23 @@ at the start of `generateAll()`/`generateVideo()`.
 - Backend contract will be confirmed live against the running dev server (port 8000) once
   implementation lands, per the card's own instruction; screenshot included in the handover.
 
+## PM review — APPROVED (2026-09-28, session a01f96)
+
+All four findings accepted verbatim: the DOM-lifecycle catch (finding 1) is recorded as a
+real demo-blocker avoided; `started_at`-anchored elapsed (finding 2) confirmed as the honest
+choice for the resume case; the asymmetric completion behaviour (finding 3) confirmed as the
+right read of intent -- Step 2/3 get no artificial delay, Step 4/5 keep the freeze (their
+"Done." text already persists, no reveal-swap moment to protect); English throughout
+(finding 4) confirmed, Vietnamese phrasing in the card was PM error re Phase 4.3. No changes
+requested.
+
+One pre-implementation check requested and completed: confirmed `started_at` is a real
+ISO-8601 string with UTC offset (`app/services/ai_job_service.py::_now_iso`, ==
+`datetime.now(timezone.utc).isoformat()`), matching `AIJobOut.started_at: str | None` --
+`new Date(job.started_at)` needs no adjustment. No design pivot.
+
+Proceed to implementation.
+
 ## Verification
 
 - 4 new Playwright tests pass (one per Step page).
@@ -270,6 +287,34 @@ at the start of `generateAll()`/`generateVideo()`.
   port 8000) showing the full banner: `Generating script — outline (5%) · 0:14 · ~30s
   còn lại [Cancel]`.
 - `git diff` shows zero changes under `app/` (frontend-only task).
+
+## Implementation notes (2026-09-28)
+
+**HTML script-tag gap, found and disclosed mid-implementation:** the design doc didn't
+account for `generation_status.js` needing a `<script src="...">` tag on each of the 4 Step
+pages to actually load -- none of the 4 `.html` files were in "Allowed files." Flagged to PM
+immediately on discovery; PM pre-approved the one-line-per-file addition as the same
+mechanical scope-extension class as 19.2's test-file fixes (no design change, load-order
+plumbing only). Touched: `frontend/pages/step2_script.html`, `step3_learning.html`,
+`step4_tts.html`, `step5_video.html` -- each gained exactly one
+`<script src="/static/js/generation_status.js"></script>` line, positioned immediately before
+that page's own script tag (matching every other shared component's existing convention).
+
+**A real discovery from the revert-and-confirm-failure exercise itself, worth recording
+honestly:** the first revert attempt removed only the `if (!generationStatus)` one-time-mount
+guard (Finding 1's specific fix) while leaving the `startedAtIso: job.started_at` anchor
+(Finding 2) in place -- and the test **still passed**. Investigated rather than declared
+"good enough": because the elapsed calculation anchors to the job's real, fixed
+`started_at` timestamp rather than `Date.now()` at mount time, re-mounting on every poll
+recomputes the *same* correct growing elapsed value each time (redundant work + an
+un-cleared `setInterval` leak, but not a visibly wrong counter) -- Finding 2's fix
+incidentally also masks Finding 1's specific "resets to 0:00" symptom once both are
+implemented together. The mount-once guard is still correct practice (avoids the interval
+leak and unnecessary DOM churn), but the original design narrative overstated it as the sole
+fix for the visible symptom. The revert test was redone properly -- reverting the *entire*
+`GenerationStatus` integration for Step 2 (matching the card's literal instruction) -- and
+that failed as expected (`TimeoutError` waiting for `.generation-status-elapsed`, i.e. the
+"counter absent" case the card names). Restored and re-confirmed green.
 
 ## Evidence (Coder handover)
 

@@ -21,6 +21,27 @@ Versioning: [SemVer](https://semver.org/)
   elapsed. Frontend-only, no `app/` touch. Awaiting Coder pickup after 19.4 acceptance.
   Owner live-verified 2026-09-28 that Step 2/3 already show real stage + % from Task 13.6.
 
+### Added (Report-readiness UX)
+- **Report-UX-1 (2026-09-28, by Coder):** shared `GenerationStatus` component
+  (`frontend/static/js/generation_status.js`) adds a real-wall-clock elapsed counter (`M:SS`,
+  ticks every 1s) + ETA (`~Xs left`, "wrapping up…" past baseline, never a negative number) to
+  Step 2 Script and Step 3 Learning's existing real stage/% banner, and gives Step 4 TTS a
+  real % (was `line i/N` text only) alongside the same elapsed + ETA; Step 5 Video gets
+  elapsed only (render is ~1s, an ETA string there is pure noise). Baselines are hardcoded
+  Gate B-11 constants (script 45s, learning 30s, TTS `N*5+15`s, video 1s), not read from the
+  backend. Elapsed anchors to the job's real `started_at` when available (Step 2/3's durable
+  jobs) so a page refresh mid-generation shows true elapsed, not a reset to `0:00`. English
+  throughout (Phase 4.3 localization stays dropped). Real finding caught before shipping:
+  Step 2/3's status banner rebuilds via `innerHTML` on every ~2s poll tick -- naively
+  inserting the counter's markup into that string would have visibly reset it to `0:00` every
+  poll in front of the judging panel; fixed by mounting the component once per job lifecycle
+  and updating in place afterward. Deliberate asymmetry: Step 2/3 keep today's immediate
+  reveal on completion (no artificial freeze-then-hide delay, which would undercut the
+  "backend is fast" demo message); Step 4/5 freeze the final elapsed value next to their
+  existing persistent "Done" text. 4 new Playwright tests (1178→1182), revert-and-confirm-
+  failure done, live-verified against real generations on the running dev server. Frontend
+  only -- `app/` untouched.
+
 ### Added (Phase 19, planning-track — not yet wired to the app)
 - **Task 19.4 (2026-09-28, PM task-level, sha `693fba7`, by Coder):** active-speaker chip + optional avatar highlight in
   `video-renderer/`. Persistent top-left chip row (opposite the bottom-anchored caption
