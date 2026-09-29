@@ -4,7 +4,7 @@
 
 - **Phase:** 19
 - **Slug:** `19-remotion`
-- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 + 19.4 + Report-UX-1 + ENH-014 + **19.5 (all PM task-level, clean deliveries)** all accepted. **Deep-pivot un-parked 2026-09-29**: owner reports slide deck done, asks PM to resume feature-code work. 19.6 intro/outro + chapter/progress bar + Remotion thumbnail still is next; 19.7/19.8/19.9 queue after. PM report deliverables remain in `docs/report/` for T6 owner rehearsal use. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted).
+- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 + 19.4 + Report-UX-1 + ENH-014 + **19.5 (all PM task-level, clean deliveries)** all accepted. **Deep-pivot un-parked 2026-09-29**: owner reports slide deck done, asks PM to resume feature-code work. **19.6 intro/outro + chapter/progress bar + Remotion thumbnail still: design approved, implementation complete, handover pending PM review.** 19.7/19.8/19.9 queue after. PM report deliverables remain in `docs/report/` for T6 owner rehearsal use. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted).
 - **Planned:** 2026-09-28 (`/vp-evolve ENH-013`)
 - **Controlling plan:** `docs/implementation/phase-19-remotion.md`
 - **Authorization:** owner decision **D29** (2026-09-24, brainstorm
@@ -42,7 +42,7 @@
 | 19.3 | Word-level karaoke captions composition (`@remotion/captions`) | Coder | **accepted** -- PM task-level 2026-09-28, sha `c48037d`, wall time 96 s / 94 s (~1.55× 19.1 baseline, dominated by 30 real Edge TTS re-synth calls, not karaoke); vitest 6/6, 3/3 frame spot checks correct, `@remotion/captions` package inspection revealed pure data lib (no default visual); ffmpeg-fallback hash mismatch fully investigated and traced to a 2026-09-15 file predating Task 14.10's `-shortest` fix (unrelated to Phase 19) |
 | 19.4 | Active-speaker indicator (name chip + optional avatar highlight) | Coder | **accepted** -- PM task-level 2026-09-28, sha `693fba7`, 3/3 frame spot checks (Alex/Maya alternation + combined-features frame proving 19.3 karaoke didn't regress), vitest 10/10 (6 karaoke + 4 speaker), inactive-chip opacity 0.6, wall-time anomaly A/B-isolated to real +7.9% chip cost |
 | 19.5 | Vocab/idiom pop-up cards | Coder | **accepted** -- PM task-level 2026-09-29, sha `4548653`, wall time 61.6s / 60.6s (~35s faster than 19.4 baseline, attributed to lower machine load — 19.4's baseline had 90-142s spread across variance, 19.5 landed in the low end); vitest 21/21 (6 karaoke + 4 speaker + 11 vocab), 100% match rate on real demo (5/5 vocab + 4/4 idioms), 3/3 frame spot checks (2 idiom time-slice + 1 all-three-features combined); Coder proactively pinned runner back to `b330d37f...` when a newly-appeared 5-min project would have confounded wall-time comparison |
-| 19.6 | Intro/outro + chapter/progress bar + Remotion thumbnail still | Coder | queued (opens after 19.5 accepted) |
+| 19.6 | Intro/outro + chapter/progress bar + Remotion thumbnail still | Coder | **implementation complete, awaiting PM/handover review** -- design `b120cbd` (PM APPROVED), implementation in this task's own commit (see handover message for sha) |
 | 19.7 | `VideoService` wire-up, toggle, kill switch, packaging, `check_dependencies.py` | Coder | queued (opens after 19.6 accepted; Amendment A carry-over: Chrome ~270MB hard floor decision here) |
 | 19.8 | Gate B-12 (visual sign-off + media gate) | PM | queued (opens after 19.7 accepted) |
 | 19.9 | Close-out: flip default to `remotion` (only on Gate B-12 PASS); version bump to 1.2.0-beta | Coder | queued (opens after 19.8 PASS) |
@@ -231,3 +231,47 @@
   clean, `test_video_studio_browser.py` 10/10, `video_service.py` git-log-confirmed
   untouched -- last task before 19.7 touches it. Report:
   `docs/operations/phase19-t5-vocab.md`.
+
+- **19.6** (2026-09-29, Coder): design `b120cbd` (PM APPROVED, all 3 real corrections accepted
+  verbatim) → implementation in this task's own commit (see handover message for sha). Real
+  finding confirmed against Remotion's own source (`Sequence.js`'s `frameInParent - from`): a
+  `<Sequence from={introFrames}>` already remaps `useCurrentFrame()` for its children, so
+  wrapping the existing karaoke/chip/vocab-card content needs zero manual frame-offset math --
+  their `currentTimeSec = frame / fps` already lines up with `line.startSec`/`endSec` once
+  nested. Total video = intro + audio + outro (D19.6-a, Option B); `<Audio startFrom={0}>`
+  moved inside the audio-window `<Sequence>`. Real finding:
+  `youtube_service.real_chapters_from_timestamps` returns a plain-text "MM:SS Label" block, not
+  the structured array `types.ts` needs -- resolved with a small runner-side text parser
+  (`_parse_chapters_text`), not a re-implementation of the grouping heuristic (stays 100% in
+  the Python function, single source of truth intact). Real finding: `remotion still`'s frame
+  selection is a `--frame` CLI override (confirmed via `npx remotion still --help`), not
+  something `StillFrame`'s own `calculateMetadata` can express -- runner computes the
+  50%-of-audio-duration midpoint frame (owner decision) and passes it directly;
+  `StillFrame.tsx` shares the exact same `AudioWindowContent` component `Episode.tsx` uses for
+  its own audio window, so the still's visuals are guaranteed identical to the video at that
+  instant. Real end-to-end run against the pinned demo episode: 8 real chapters computed,
+  183.53s total video (176.02s audio + 2.5s intro + 5.0s outro -- ffprobe's 5506 output frames
+  exactly matches `ceil(183.533*30)`), 9,958,283-byte MP4, 60,570-byte 1280x720 still PNG at
+  frame 2640 (= round(0.5 × 176.02 × 30), exact). 5/5 frame spot checks correct: intro title
+  slide (project name + "Alex & Maya" + "[B1] topic" tag), outro CTA (exact owner string),
+  combined-features frame (karaoke + active speaker chip + vocab card + chapter bar all
+  visible together, shifted by `introSec` from 19.5's own combined-frame timestamp -- proves
+  19.3/19.4/19.5 didn't regress), and 2 chapter-bar-progression frames showing the played
+  portion visibly widening with tick marks in the correct positions. Disclosed rather than
+  smoothed over: the owner's fixed 50%-of-real-audio-duration still timestamp happens to land
+  on a moment with no vocab card active (real content coincidence, not a bug) -- the required
+  "all features in one frame" proof is satisfied by the separate video frame instead, not the
+  still, since the still's timestamp is an owner decision this task must not override.
+  Wall-time anomaly investigated, not shrugged off (same discipline as 19.4/19.5): the first
+  full run read 85.07s render wall time, well above the ~63-70s expected from the card's
+  +8-15% guidance; two repeat renders against the exact same saved `.props.json` (bypassing
+  the DB/TTS resynthesis cost) landed at 63s and 63s back-to-back, and 17 concurrent Chrome
+  processes were observed on the shared machine at the time of the first run -- isolating that
+  reading as transient shared-machine load, not a real per-frame cost from the new Sequences/
+  intro/outro/chapter-bar code; 63s matches the proportional expectation from
+  61s × (183.53/176.02) ≈ 63.6s almost exactly. vitest 28/28 total (21 baseline + 7 new
+  `chapters.test.ts`), revert-and-confirm-failure done (broke `computeProgressForFrame` to
+  return a constant, 4/7 new tests failed with real assertion mismatches, restored). Full
+  Python suite 1189/1189 unchanged, `ruff check .` clean, `tsc --noEmit` clean,
+  `video_service.py` git-log-confirmed untouched. Report:
+  `docs/operations/phase19-t6-intro-outro.md`.

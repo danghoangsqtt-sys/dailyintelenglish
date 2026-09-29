@@ -37,7 +37,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.core.config import settings  # noqa: E402
-from app.services import audio_service, project_service, tts_service  # noqa: E402
+from app.services import audio_service, project_service, tts_service, youtube_service  # noqa: E402
 
 VIDEO_RENDERER_DIR = PROJECT_ROOT / "video-renderer"
 SPIKE_AUDIO_DIR = VIDEO_RENDERER_DIR / "public" / "spike-audio"
@@ -61,6 +61,11 @@ RENDER_WIDTH = 1280
 RENDER_HEIGHT = 720
 RENDER_TIMEOUT_FLOOR_SECONDS = 600.0
 RENDER_TIMEOUT_PER_AUDIO_SECOND = 8.0
+# Task 19.6: owner-signed content decisions (task-19.6.md, 2026-09-29).
+INTRO_SECONDS = 2.5
+OUTRO_SECONDS = 5.0
+OUTRO_TEXT = "Thanks for watching · Subscribe for more · See you next episode!"
+STILL_TIMEOUT_SECONDS = 120.0
 
 
 class SpikeError(RuntimeError):
@@ -220,13 +225,42 @@ async def _fetch_learning_props(db: aiosqlite.Connection, project_id: str) -> di
     return {"vocab": vocab, "idioms": idioms}
 
 
+def _parse_chapters_text(chapters_text: str) -> list[dict[str, Any]]:
+    """Task 19.6 (D19.6-e): `youtube_service.real_chapters_from_timestamps` returns a
+    plain-text "MM:SS Label" block (one chapter per line), not the structured
+    `Array<{title, startSec}>` the video-renderer props schema needs -- confirmed by reading
+    the function's own docstring and return type (`app/services/youtube_service.py:85-105`).
+
+    This only reformats that string back into structured fields the function already
+    computed (`cue["start_sec"]` rounded into "MM:SS", `cue["text"]` truncated via
+    `_chapter_label`) -- it does NOT decide which lines become chapters or how labels are
+    built. That heuristic (`YOUTUBE_CHAPTER_MIN_LINES`, `_chapter_label`) stays entirely
+    inside `real_chapters_from_timestamps`, per D19.6-e's single-source-of-truth rule.
+    """
+    chapters: list[dict[str, Any]] = []
+    for line in chapters_text.splitlines():
+        if not line.strip():
+            continue
+        timestamp, _, title = line.partition(" ")
+        minutes_str, _, seconds_str = timestamp.partition(":")
+        start_sec = int(minutes_str) * 60 + int(seconds_str)
+        chapters.append({"title": title, "startSec": start_sec})
+    return chapters
+
+
 def _build_input_props(
-    project: dict, audio_job: dict, word_timestamps: list[list[dict]], learning: dict[str, Any] | None
+    project: dict,
+    audio_job: dict,
+    word_timestamps: list[list[dict]],
+    learning: dict[str, Any] | None,
+    chapters: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    """D19.1-b + D19.3 + D19.4 + D19.5: per-line timestamps from AudioService's measured mix,
-    each line's word list (Task 19.3, positionally aligned with `audio_job["timestamps"]`),
-    each line's real `speaker_id` and the project-level `speakers` array (Task 19.4), and the
-    project's optional learning content (Task 19.5)."""
+    """D19.1-b + D19.3 + D19.4 + D19.5 + D19.6: per-line timestamps from AudioService's
+    measured mix, each line's word list (Task 19.3, positionally aligned with
+    `audio_job["timestamps"]`), each line's real `speaker_id` and the project-level
+    `speakers` array (Task 19.4), the project's optional learning content (Task 19.5), and
+    the project's title/topic/CEFR level + real chapter markers + owner-signed intro/outro
+    timings and CTA text (Task 19.6)."""
     lines = [
         {
             "startSec": entry["start_sec"],
@@ -246,6 +280,13 @@ def _build_input_props(
         "fps": RENDER_FPS,
         "width": RENDER_WIDTH,
         "height": RENDER_HEIGHT,
+        "title": project["name"],
+        "topic": project["topic"],
+        "cefrLevel": project["cefr_level"],
+        "chapters": chapters,
+        "introSec": INTRO_SECONDS,
+        "outroSec": OUTRO_SECONDS,
+        "outroText": OUTRO_TEXT,
     }
     if learning is not None:
         props["learning"] = learning
@@ -286,6 +327,54 @@ def _run_render(input_props: dict[str, Any], output_path: Path, timeout_seconds:
             "Episode",
             str(output_path),
             f"--props={props_file.name}",
+        ]
+
+        start = time.monotonic()
+        result = subprocess.run(
+            command,
+            cwd=VIDEO_RENDERER_DIR,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+        wall_time_seconds = time.monotonic() - start
+    finally:
+        Path(props_file.name).unlink(missing_ok=True)
+
+    return {
+        "wall_time_seconds": round(wall_time_seconds, 3),
+        "exit_code": result.returncode,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+    }
+
+
+def _run_still(input_props: dict[str, Any], output_path: Path, frame: int, timeout_seconds: float) -> dict[str, Any]:
+    """Task 19.6 (D19.6-f): mirrors `_run_render`'s invocation shape exactly (props via a
+    temp JSON file, `cwd=VIDEO_RENDERER_DIR`, wall time via `time.monotonic()`), but calls
+    `remotion still` on the `StillFrame` composition with a real `--frame` override -- the
+    50%-of-audio-duration midpoint (owner decision) is a runner-computed frame number, not
+    something `StillFrame`'s own `calculateMetadata` can express (confirmed via
+    `npx remotion still --help`: `--frame <value>` is the CLI's own override option)."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    props_file = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", delete=False, encoding="utf-8"
+    )
+    try:
+        json.dump(input_props, props_file)
+        props_file.close()
+
+        npx = shutil.which("npx.cmd") or shutil.which("npx") or "npx"
+        command = [
+            npx,
+            "remotion",
+            "still",
+            "src/index.ts",
+            "StillFrame",
+            str(output_path),
+            f"--props={props_file.name}",
+            f"--frame={frame}",
         ]
 
         start = time.monotonic()
@@ -355,7 +444,15 @@ async def _main() -> dict[str, Any]:
         word_timestamps = await _resynthesize_word_timestamps(project, audio_job)
         resynthesized_word_count = len(audio_job["timestamps"])
 
-    input_props = _build_input_props(project, audio_job, word_timestamps, learning)
+    # Task 19.6 (D19.6-e): real chapter markers, single source of truth in
+    # youtube_service.real_chapters_from_timestamps -- this only parses its plain-text return
+    # value into the structured shape types.ts's `chapters` prop needs (see
+    # _parse_chapters_text's own docstring). Empty timestamps -> "" -> [] is not an error
+    # (D19.6-e: the progress bar just renders with no chapter ticks).
+    chapters_text = youtube_service.real_chapters_from_timestamps(audio_job["timestamps"])
+    chapters = _parse_chapters_text(chapters_text)
+
+    input_props = _build_input_props(project, audio_job, word_timestamps, learning, chapters)
     _copy_audio_into_public(project_id, audio_job["mp3_path"])
 
     # Resolved to absolute: the render subprocess runs with cwd=video-renderer/, and a
@@ -371,6 +468,12 @@ async def _main() -> dict[str, Any]:
     timeout_seconds = _render_timeout_seconds(audio_job["duration_seconds"])
     render_result = _run_render(input_props, output_path, timeout_seconds)
 
+    # Task 19.6 (D19.6-f): still frame at 50% of audio duration (owner decision), selected via
+    # remotion still's real --frame CLI override, run after the main render.
+    still_frame = round(0.5 * audio_job["duration_seconds"] * RENDER_FPS)
+    still_output_path = (SPIKE_OUTPUT_DIR / f"{project_id}.png").resolve()
+    still_result = _run_still(input_props, still_output_path, still_frame, STILL_TIMEOUT_SECONDS)
+
     empty_words_line_count = sum(1 for line in input_props["lines"] if not line["words"])
     measurements: dict[str, Any] = {
         "project_id": project_id,
@@ -381,13 +484,19 @@ async def _main() -> dict[str, Any]:
         "empty_words_line_count": empty_words_line_count,
         "learning_vocab_count": len(learning["vocab"]) if learning else 0,
         "learning_idiom_count": len(learning["idioms"]) if learning else 0,
+        "chapter_count": len(chapters),
         "render": render_result,
+        "still": still_result,
+        "still_frame": still_frame,
         "node_modules_size_bytes": _dir_size_bytes(VIDEO_RENDERER_DIR / "node_modules"),
     }
 
     if render_result["exit_code"] == 0 and output_path.is_file():
         measurements["output_file_size_bytes"] = output_path.stat().st_size
         measurements["output_ffprobe"] = _ffprobe_json(output_path)
+
+    if still_result["exit_code"] == 0 and still_output_path.is_file():
+        measurements["still_file_size_bytes"] = still_output_path.stat().st_size
 
     return measurements
 

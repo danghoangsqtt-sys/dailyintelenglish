@@ -1,14 +1,16 @@
 import React, { useMemo } from "react";
-import { AbsoluteFill, Audio, interpolate, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Audio, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
+import { computeProgressForFrame } from "./chapters";
 import { activeTokenIndex, buildKaraokeTokens } from "./karaoke";
 import { activeSpeakerId } from "./speakers";
 import { activeItemForFrame, attachItemsToLines, type LearningItem } from "./vocab";
-import type { EpisodeInputProps, EpisodeLine, EpisodeSpeaker } from "./types";
+import type { Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker } from "./types";
 
 /** Average pixel color of frontend/static/video_backgrounds/midnight.png (measured 2026-09-28
  * via PIL: Image.open(...).convert("RGB").resize((1,1)).getpixel((0,0)) == (14, 15, 21)).
- * Per PM clarification (D19.1-c), the spike uses this flat color instead of the real PNG. */
-const MIDNIGHT_BACKGROUND = "#0E0F15";
+ * Per PM clarification (D19.1-c), the spike uses this flat color instead of the real PNG.
+ * Exported (Task 19.6) so `StillFrame.tsx` shares the exact same background. */
+export const MIDNIGHT_BACKGROUND = "#0E0F15";
 
 /** Byte-identical to the 19.1 spike's plain-band text style -- Task 19.3 must not regress
  * font/size/shadow/position from the spike look (D19.3-b). Only the active karaoke word's
@@ -197,7 +199,90 @@ function VocabCard({ item, opacity }: { item: LearningItem; opacity: number }) {
   );
 }
 
-export const Episode: React.FC<EpisodeInputProps> = ({ lines, speakers, learning, audioPath, fps }) => {
+/** Task 19.6 (D19.6-d): thin full-width strip at the very top edge -- opposite the
+ * bottom-anchored caption band, and above the speaker chips' own `top: "5%"` origin so the
+ * two overlays never collide. */
+const CHAPTER_BAR_HEIGHT = 6;
+
+function ChapterProgressBar({
+  frame,
+  fps,
+  audioDurationSec,
+  chapters,
+}: {
+  frame: number;
+  fps: number;
+  audioDurationSec: number;
+  chapters: Chapter[];
+}) {
+  const progress = computeProgressForFrame(frame, fps, audioDurationSec, chapters);
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: CHAPTER_BAR_HEIGHT,
+        backgroundColor: "rgba(255,255,255,0.15)",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: 0,
+          width: `${progress.overallPct * 100}%`,
+          backgroundColor: "rgba(255,255,255,0.85)",
+        }}
+      />
+      {progress.chapters.map((chapter, index) => (
+        <div
+          key={`${chapter.startSec}-${index}`}
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: `${chapter.pct * 100}%`,
+            width: 2,
+            backgroundColor: "rgba(14,15,21,0.9)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Task 19.6: the audio-window's full content (karaoke caption band, speaker chips, vocab
+ * card, chapter progress bar) -- exactly what `Episode.tsx` rendered before this task, now
+ * extracted so `StillFrame.tsx` can render the identical visuals at a single frame (D19.6-f).
+ * Reads `useCurrentFrame()` itself rather than receiving a frame prop: when mounted inside
+ * `<Sequence from={introFrames}>`, Remotion remaps that call to already be relative to the
+ * Sequence's own start (confirmed against `remotion/dist/cjs/Sequence.js`'s
+ * `frameInParent - from`), so this component's `currentTimeSec = frame / fps` lines up with
+ * `line.startSec`/`endSec` with no manual offset math -- and when mounted directly as
+ * `StillFrame`'s top-level composition (no wrapping Sequence), frame 0 is already the audio
+ * window's own start, so the exact same code path applies unchanged.
+ */
+export function AudioWindowContent({
+  lines,
+  speakers,
+  learning,
+  audioPath,
+  fps,
+  audioDurationSec,
+  chapters,
+}: {
+  lines: EpisodeLine[];
+  speakers: EpisodeSpeaker[];
+  learning: EpisodeLearning | undefined;
+  audioPath: string;
+  fps: number;
+  audioDurationSec: number;
+  chapters: Chapter[];
+}) {
   const frame = useCurrentFrame();
   const currentTimeSec = frame / fps;
   const line = activeLine(lines, currentTimeSec);
@@ -210,8 +295,9 @@ export const Episode: React.FC<EpisodeInputProps> = ({ lines, speakers, learning
   const activeLearningItem = activeItemForFrame(currentTimeSec, lines, attachedLearning);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: MIDNIGHT_BACKGROUND }}>
-      <Audio src={staticFile(audioPath)} />
+    <>
+      <Audio src={staticFile(audioPath)} startFrom={0} />
+      <ChapterProgressBar frame={frame} fps={fps} audioDurationSec={audioDurationSec} chapters={chapters} />
       <SpeakerChips speakers={speakers} activeId={activeId} />
       {activeLearningItem ? (
         <VocabCard
@@ -234,6 +320,157 @@ export const Episode: React.FC<EpisodeInputProps> = ({ lines, speakers, learning
           <CaptionBand line={line} currentTimeSec={currentTimeSec} />
         </div>
       ) : null}
+    </>
+  );
+}
+
+/** Task 19.6 (D19.6-b/c): opacity envelope in frame units (no fps conversion needed by
+ * callers) -- fades in over `fadeInFrames`, holds, fades out over the last `fadeOutFrames`
+ * of `totalFrames`. */
+function fadeOpacity(frame: number, totalFrames: number, fadeInFrames: number, fadeOutFrames: number): number {
+  const fadeIn = interpolate(frame, [0, fadeInFrames], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const fadeOut = interpolate(frame, [totalFrames - fadeOutFrames, totalFrames], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  return Math.min(fadeIn, fadeOut);
+}
+
+/** Task 19.6 (D19.6-b): "{a} & {b}" for two speakers, comma-separated for 3+, just the name
+ * for a solo project, "" when the project has no speakers at all. */
+function speakerNamesLabel(speakers: EpisodeSpeaker[]): string {
+  if (speakers.length === 0) {
+    return "";
+  }
+  if (speakers.length === 1) {
+    return speakers[0].name;
+  }
+  if (speakers.length === 2) {
+    return `${speakers[0].name} & ${speakers[1].name}`;
+  }
+  return speakers.map((speaker) => speaker.name).join(", ");
+}
+
+const INTRO_FADE_IN_SECONDS = 0.5;
+const INTRO_FADE_OUT_SECONDS = 0.5;
+
+/** Task 19.6 (D19.6-b): title slide -- project title, speaker names, `[CEFR] topic` tag. */
+function Intro({
+  title,
+  topic,
+  cefrLevel,
+  speakers,
+  fps,
+  durationInFrames,
+}: {
+  title: string;
+  topic: string;
+  cefrLevel: string;
+  speakers: EpisodeSpeaker[];
+  fps: number;
+  durationInFrames: number;
+}) {
+  const frame = useCurrentFrame();
+  const opacity = fadeOpacity(
+    frame,
+    durationInFrames,
+    Math.round(INTRO_FADE_IN_SECONDS * fps),
+    Math.round(INTRO_FADE_OUT_SECONDS * fps)
+  );
+  const names = speakerNamesLabel(speakers);
+  const tag = [cefrLevel ? `[${cefrLevel}]` : "", topic].filter(Boolean).join(" ");
+
+  return (
+    <AbsoluteFill
+      style={{
+        backgroundColor: MIDNIGHT_BACKGROUND,
+        alignItems: "center",
+        justifyContent: "center",
+        opacity,
+      }}
+    >
+      <div style={{ fontFamily: CAPTION_TEXT_STYLE.fontFamily, color: "#FFFFFF", textAlign: "center" }}>
+        <div style={{ fontSize: 56, fontWeight: 700 }}>{title}</div>
+        {names ? (
+          <div style={{ fontSize: 32, fontWeight: 700, marginTop: 16, color: SPEAKER_COLORS[0] }}>{names}</div>
+        ) : null}
+        {tag ? <div style={{ fontSize: 22, marginTop: 12, opacity: 0.85 }}>{tag}</div> : null}
+      </div>
+    </AbsoluteFill>
+  );
+}
+
+const OUTRO_FADE_IN_SECONDS = 0.5;
+const OUTRO_FADE_OUT_SECONDS = 1.0;
+
+/** Task 19.6 (D19.6-c): owner-approved CTA text, centered, same background as the intro. */
+function Outro({ text, fps, durationInFrames }: { text: string; fps: number; durationInFrames: number }) {
+  const frame = useCurrentFrame();
+  const opacity = fadeOpacity(
+    frame,
+    durationInFrames,
+    Math.round(OUTRO_FADE_IN_SECONDS * fps),
+    Math.round(OUTRO_FADE_OUT_SECONDS * fps)
+  );
+
+  return (
+    <AbsoluteFill
+      style={{
+        backgroundColor: MIDNIGHT_BACKGROUND,
+        alignItems: "center",
+        justifyContent: "center",
+        opacity,
+      }}
+    >
+      <div style={{ ...CAPTION_TEXT_STYLE, fontSize: 36, maxWidth: "80%" }}>{text}</div>
+    </AbsoluteFill>
+  );
+}
+
+export const Episode: React.FC<EpisodeInputProps> = ({
+  lines,
+  speakers,
+  learning,
+  audioPath,
+  fps,
+  title,
+  topic,
+  cefrLevel,
+  chapters,
+  introSec,
+  outroSec,
+  outroText,
+}) => {
+  // D19.6-a: total video = intro + audio + outro (Option B, extend). `audioDurationSec` is
+  // the same "last line's endSec" measure Root.tsx's calculateMetadata already uses for the
+  // pre-19.6 audio-only duration -- kept as a single source of truth between the two files.
+  const audioDurationSec = lines.length > 0 ? lines[lines.length - 1].endSec : 0;
+  const introFrames = Math.round(introSec * fps);
+  const audioFrames = Math.round(audioDurationSec * fps);
+  const outroFrames = Math.round(outroSec * fps);
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: MIDNIGHT_BACKGROUND }}>
+      <Sequence from={0} durationInFrames={introFrames} name="Intro">
+        <Intro title={title} topic={topic} cefrLevel={cefrLevel} speakers={speakers} fps={fps} durationInFrames={introFrames} />
+      </Sequence>
+      <Sequence from={introFrames} durationInFrames={audioFrames} name="Audio">
+        <AudioWindowContent
+          lines={lines}
+          speakers={speakers}
+          learning={learning}
+          audioPath={audioPath}
+          fps={fps}
+          audioDurationSec={audioDurationSec}
+          chapters={chapters}
+        />
+      </Sequence>
+      <Sequence from={introFrames + audioFrames} durationInFrames={outroFrames} name="Outro">
+        <Outro text={outroText} fps={fps} durationInFrames={outroFrames} />
+      </Sequence>
     </AbsoluteFill>
   );
 };

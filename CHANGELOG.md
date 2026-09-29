@@ -84,6 +84,32 @@ Versioning: [SemVer](https://semver.org/)
   only -- `app/` untouched.
 
 ### Added (Phase 19, planning-track — not yet wired to the app)
+- **Task 19.6 (2026-09-29, by Coder):** intro title slide, outro CTA, chapter/progress bar
+  overlay, and a `StillFrame` Remotion composition for a thumbnail PNG, in `video-renderer/`.
+  Total video now = intro + audio + outro (Option B, extend, per D19.6-a) via
+  `<Sequence>`-based time-slicing; confirmed against Remotion's own source
+  (`Sequence.js`'s `frameInParent - from`) that the existing karaoke/chip/vocab-card content
+  needs zero manual frame-offset math once wrapped. Intro shows project title, speaker names
+  (`&`-joined for 2, comma-separated for 3+), and `[CEFR] topic`; outro shows the owner-
+  approved exact CTA string (`outroText` prop, defaulted but overridable). Chapter bar: thin
+  strip at the very top edge (opposite the caption band and above the speaker chips), tick
+  marks per real chapter boundary, pure `computeProgressForFrame` helper (vitest, 7/7, revert-
+  and-confirm-failure done). Real finding: `youtube_service.real_chapters_from_timestamps`
+  returns a plain-text "MM:SS Label" block, not the structured array the schema needs --
+  resolved with a small runner-side text parser, not a re-implementation of the grouping
+  heuristic (which stays 100% in the Python function). Real finding:
+  `npx remotion still`'s frame selection is a `--frame` CLI override, not something
+  `calculateMetadata` can express -- runner computes the 50%-of-audio-duration midpoint frame
+  (owner decision) and passes it directly. Real end-to-end run against the pinned demo episode:
+  8 real chapters, 183.53s total video (176.02s audio + 2.5s intro + 5.0s outro, exact frame-
+  count match), 60570-byte 1280x720 still PNG. Wall-time investigated: first run read 85.07s
+  (well above the ~63-70s expected); two repeat renders against the same saved props landed at
+  63s/63s, isolating the first reading as transient shared-machine load (17 concurrent Chrome
+  processes observed at the time) rather than a real per-frame cost from the new composition --
+  63s matches the proportional expectation from the added intro/outro frames almost exactly.
+  vitest 28/28 total, `tsc --noEmit` clean, Python full suite still 1189/1189, `ruff` clean.
+  `app/services/video_service.py` still untouched -- last task before 19.7 touches it. No
+  user-visible behaviour change on the app yet.
 - **Task 19.5 (2026-09-29, by Coder):** vocabulary/idiom pop-up cards in `video-renderer/`,
   timed to the line containing the item, from the project's existing `learning_contents`
   (no new learning content generated). Top-right corner (opposite the speaker chips and the

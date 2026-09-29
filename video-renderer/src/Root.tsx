@@ -1,6 +1,7 @@
 import React from "react";
 import { Composition } from "remotion";
 import { Episode } from "./Episode";
+import { StillFrame } from "./StillFrame";
 import { episodeInputPropsSchema, type EpisodeInputProps } from "./types";
 
 const defaultProps: EpisodeInputProps = {
@@ -11,29 +12,65 @@ const defaultProps: EpisodeInputProps = {
   fps: 30,
   width: 1280,
   height: 720,
+  title: "Preview Episode",
+  topic: "Preview topic",
+  cefrLevel: "B1",
+  chapters: [],
+  introSec: 2.5,
+  outroSec: 5.0,
+  outroText: "Thanks for watching · Subscribe for more · See you next episode!",
 };
 
 export const RemotionRoot: React.FC = () => {
   return (
-    <Composition
-      id="Episode"
-      component={Episode}
-      schema={episodeInputPropsSchema}
-      durationInFrames={90}
-      fps={30}
-      width={1280}
-      height={720}
-      defaultProps={defaultProps}
-      calculateMetadata={async ({ props }) => {
-        const lastLine = props.lines[props.lines.length - 1];
-        const durationSec = lastLine ? lastLine.endSec : 3;
-        return {
-          durationInFrames: Math.max(1, Math.ceil(durationSec * props.fps)),
-          fps: props.fps,
-          width: props.width,
-          height: props.height,
-        };
-      }}
-    />
+    <>
+      <Composition
+        id="Episode"
+        component={Episode}
+        schema={episodeInputPropsSchema}
+        durationInFrames={90}
+        fps={30}
+        width={1280}
+        height={720}
+        defaultProps={defaultProps}
+        calculateMetadata={async ({ props }) => {
+          const lastLine = props.lines[props.lines.length - 1];
+          const audioDurationSec = lastLine ? lastLine.endSec : 3;
+          // D19.6-a: total video = intro + audio + outro (Option B, extend) -- the same
+          // per-props addition Episode.tsx itself uses for its <Sequence> boundaries.
+          const totalDurationSec = props.introSec + audioDurationSec + props.outroSec;
+          return {
+            durationInFrames: Math.max(1, Math.ceil(totalDurationSec * props.fps)),
+            fps: props.fps,
+            width: props.width,
+            height: props.height,
+          };
+        }}
+      />
+      {/* Task 19.6 (D19.6-f): a second composition sharing the same props shape, registered
+          via the same `registerRoot` (src/index.ts) -- rendered with `npx remotion still`,
+          not `render`. Its own duration covers just the audio window (no intro/outro slices
+          to choose a still from); the runner selects the exact frame via `--frame`. */}
+      <Composition
+        id="StillFrame"
+        component={StillFrame}
+        schema={episodeInputPropsSchema}
+        durationInFrames={90}
+        fps={30}
+        width={1280}
+        height={720}
+        defaultProps={defaultProps}
+        calculateMetadata={async ({ props }) => {
+          const lastLine = props.lines[props.lines.length - 1];
+          const audioDurationSec = lastLine ? lastLine.endSec : 3;
+          return {
+            durationInFrames: Math.max(1, Math.ceil(audioDurationSec * props.fps)),
+            fps: props.fps,
+            width: props.width,
+            height: props.height,
+          };
+        }}
+      />
+    </>
   );
 };

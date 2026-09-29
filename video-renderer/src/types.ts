@@ -81,6 +81,19 @@ export const episodeLearningSchema = z.object({
   idioms: z.array(idiomItemSchema).default([]),
 });
 
+/**
+ * Task 19.6: one YouTube-style chapter marker, structured for the progress-bar overlay.
+ * Produced by parsing `youtube_service.real_chapters_from_timestamps`'s plain-text
+ * "MM:SS Label" output back into `{title, startSec}` pairs in the Python runner --
+ * `real_chapters_from_timestamps` itself stays the single source of truth for *which* lines
+ * become chapters and how labels are built (D19.6-e); this schema only describes the
+ * already-decided result.
+ */
+export const chapterSchema = z.object({
+  title: z.string(),
+  startSec: z.number(),
+});
+
 export const episodeInputPropsSchema = z.object({
   /** projects.id */
   episodeId: z.string(),
@@ -97,6 +110,19 @@ export const episodeInputPropsSchema = z.object({
   fps: z.number(),
   width: z.number(),
   height: z.number(),
+  /**
+   * Task 19.6: intro/outro + chapter-bar fields. All optional with defaults so an older
+   * runner invocation (or a hand-crafted props file) that omits them still renders --
+   * `introSec`/`outroSec` default to the owner-signed timings, `outroText` to the
+   * owner-approved exact string (task-19.6.md).
+   */
+  title: z.string().default(""),
+  topic: z.string().default(""),
+  cefrLevel: z.string().default(""),
+  chapters: z.array(chapterSchema).default([]),
+  introSec: z.number().default(2.5),
+  outroSec: z.number().default(5.0),
+  outroText: z.string().default("Thanks for watching · Subscribe for more · See you next episode!"),
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;
@@ -105,4 +131,5 @@ export type EpisodeSpeaker = z.infer<typeof episodeSpeakerSchema>;
 export type VocabItem = z.infer<typeof vocabItemSchema>;
 export type IdiomItem = z.infer<typeof idiomItemSchema>;
 export type EpisodeLearning = z.infer<typeof episodeLearningSchema>;
+export type Chapter = z.infer<typeof chapterSchema>;
 export type EpisodeInputProps = z.infer<typeof episodeInputPropsSchema>;
