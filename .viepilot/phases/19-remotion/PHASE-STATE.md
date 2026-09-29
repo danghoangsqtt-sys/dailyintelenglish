@@ -4,7 +4,7 @@
 
 - **Phase:** 19
 - **Slug:** `19-remotion`
-- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 + 19.4 + Report-UX-1 + ENH-014 (all PM task-level, clean deliveries) all accepted. **Deep-pivot un-parked 2026-09-29**: owner reports slide deck done ("tôi đã tạo slide xong rồi"), asks PM to resume feature-code work. 19.5 vocab is next (doc-first card already on disk from earlier planning); 19.6/19.7/19.8/19.9 follow in order. PM report deliverables remain in `docs/report/` for T6 owner rehearsal use. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted).
+- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 + 19.4 + Report-UX-1 + ENH-014 + **19.5 (all PM task-level, clean deliveries)** all accepted. **Deep-pivot un-parked 2026-09-29**: owner reports slide deck done, asks PM to resume feature-code work. 19.6 intro/outro + chapter/progress bar + Remotion thumbnail still is next; 19.7/19.8/19.9 queue after. PM report deliverables remain in `docs/report/` for T6 owner rehearsal use. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted).
 - **Planned:** 2026-09-28 (`/vp-evolve ENH-013`)
 - **Controlling plan:** `docs/implementation/phase-19-remotion.md`
 - **Authorization:** owner decision **D29** (2026-09-24, brainstorm
@@ -41,7 +41,7 @@
 | 19.2 | Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration | Coder | **accepted** -- PM + owner **D34** 2026-09-28, sha `20a1d32`, full suite 1178/1178 re-verified by PM (423.81 s); real-DB migration-write incident logged in TRACKER Known Issues, accepted as-is |
 | 19.3 | Word-level karaoke captions composition (`@remotion/captions`) | Coder | **accepted** -- PM task-level 2026-09-28, sha `c48037d`, wall time 96 s / 94 s (~1.55× 19.1 baseline, dominated by 30 real Edge TTS re-synth calls, not karaoke); vitest 6/6, 3/3 frame spot checks correct, `@remotion/captions` package inspection revealed pure data lib (no default visual); ffmpeg-fallback hash mismatch fully investigated and traced to a 2026-09-15 file predating Task 14.10's `-shortest` fix (unrelated to Phase 19) |
 | 19.4 | Active-speaker indicator (name chip + optional avatar highlight) | Coder | **accepted** -- PM task-level 2026-09-28, sha `693fba7`, 3/3 frame spot checks (Alex/Maya alternation + combined-features frame proving 19.3 karaoke didn't regress), vitest 10/10 (6 karaoke + 4 speaker), inactive-chip opacity 0.6, wall-time anomaly A/B-isolated to real +7.9% chip cost |
-| 19.5 | Vocab/idiom pop-up cards | Coder | **done** -- PM-approved design + implementation, full suite 1189/1189, tsc + vitest 21/21 clean, awaiting PM acceptance |
+| 19.5 | Vocab/idiom pop-up cards | Coder | **accepted** -- PM task-level 2026-09-29, sha `4548653`, wall time 61.6s / 60.6s (~35s faster than 19.4 baseline, attributed to lower machine load — 19.4's baseline had 90-142s spread across variance, 19.5 landed in the low end); vitest 21/21 (6 karaoke + 4 speaker + 11 vocab), 100% match rate on real demo (5/5 vocab + 4/4 idioms), 3/3 frame spot checks (2 idiom time-slice + 1 all-three-features combined); Coder proactively pinned runner back to `b330d37f...` when a newly-appeared 5-min project would have confounded wall-time comparison |
 | 19.6 | Intro/outro + chapter/progress bar + Remotion thumbnail still | Coder | queued (opens after 19.5 accepted) |
 | 19.7 | `VideoService` wire-up, toggle, kill switch, packaging, `check_dependencies.py` | Coder | queued (opens after 19.6 accepted; Amendment A carry-over: Chrome ~270MB hard floor decision here) |
 | 19.8 | Gate B-12 (visual sign-off + media gate) | PM | queued (opens after 19.7 accepted) |
@@ -208,7 +208,9 @@
   baseline + 7 new), ruff clean. `app/`/`frontend/`/`video-renderer/` untouched. No live
   trial rerun -- pure Python + unit tests only.
 
-- **19.5** (2026-09-29, Coder): design `d624fed` (PM APPROVED) → implementation (see handover
+- **19.5** (2026-09-29, Coder): design `d624fed` (PM APPROVED) → implementation `4548653`
+  (PM task-level ACCEPTED — no owner decision needed, clean delivery, no incident, no gate).
+  See handover
   message for sha). Real finding: the card's proposed `attachItemsToLines` signature assumed
   a `line_id` field that doesn't exist on `episodeLineSchema` -- used the line's own array
   index instead, matching every other composition function's positional convention (PM
