@@ -160,6 +160,98 @@ prior reports (all immutable). `data/app.db` is `mode=ro` from Coder side, alway
 - One combined frame proves karaoke + chip + vocab card + progress bar all render
   simultaneously during audio window; one intro frame; one outro frame; one still PNG.
 
+## Design decisions — Coder answers (2026-09-29)
+
+Investigated real code/APIs before answering (no code written yet). All 8 of the card's own
+D19.6-a..h points above are **confirmed as the plan**, with two real corrections/findings
+below that change *how* two of them get implemented.
+
+### Confirmed as-is
+
+- **D19.6-a (extend, Option B):** confirmed by reading the installed Remotion source
+  (`video-renderer/node_modules/remotion/dist/cjs/Sequence.js:379`,
+  `const content = frameInParent - from < -boundaryTolerance`) — a `<Sequence from={N}>`
+  genuinely remaps `useCurrentFrame()` for its children to `frameInParent - from`, i.e. frame
+  0 *inside* the Sequence is already the Sequence's own start. **Practical consequence:**
+  wrapping the existing `<CaptionBand>`/`<SpeakerChips>`/`<VocabCard>` tree in
+  `<Sequence from={introFrames}>` requires zero changes to their internal
+  `currentTimeSec = frame / fps` math — it already lines up with `line.startSec`/`endSec`
+  (both audio-relative) with no manual offset subtraction anywhere in `Episode.tsx`. This was
+  the one real risk in Option B (that every existing time-based component would need an
+  `introSec` correction term threaded through); it isn't needed. `<Audio startFrom={0}>` goes
+  inside the same audio-window Sequence.
+- **D19.6-b, D19.6-c (intro/outro visuals), D19.6-d (progress bar position/collision):**
+  confirmed against the real `SPEAKER_COLORS`/`CAPTION_TEXT_STYLE` constants already in
+  `Episode.tsx` and 19.4's top-left chip placement — no changes to the card's plan.
+- **D19.6-g (wall-time budget):** no objection; will report real before/after numbers same as
+  every prior task, investigated (not shrugged off) if the delta is outside the card's ~8-15%
+  expectation, per the standing discipline since 19.4.
+
+### D19.6-e — real finding: `real_chapters_from_timestamps` returns text, not structured data
+
+Read `app/services/youtube_service.py:85-105` directly. Its real signature and return
+contract:
+```python
+def real_chapters_from_timestamps(timestamps: list[dict]) -> str:
+    """... Returns: Plain-text "MM:SS Label" lines, or "" if there are no timestamps."""
+```
+It returns a **single newline-joined string** (`"00:00 Introduction\n00:20 Label\n..."`), not
+an `Array<{title, startSec}>`. Called it for real (read-only) against the pinned episode's
+actual `timestamps_json` (`b330d37f...`, 30 lines) and got a real 8-line block:
+```
+00:00 Introduction
+00:20 Well, the first thing I do…
+00:45 I drink a big glass of…
+01:09 Just ten minutes of fresh air…
+01:33 If you put your alarm clock…
+01:56 If you don't eat anything, you…
+02:20 Exactly. Small changes can help you…
+02:47 Anytime! Let me know if you…
+```
+The card's proposed `types.ts` schema (`chapters: Array<{title: string; startSec: number}>`)
+needs structured data, so `run_remotion_spike.py` needs one small **format-conversion** step
+between this string and the props JSON — not a re-implementation of the grouping heuristic.
+Plan: a `_parse_chapters_text(text: str) -> list[dict]` helper in the runner that splits on
+`"\n"`, and per non-empty line splits on the first space into `"MM:SS"` and the rest as
+`title`, converting `"MM:SS"` to `startSec = minutes * 60 + seconds`. This only re-parses the
+function's own output format back into structured fields it was given in the first place
+(`cue["start_sec"]`, rounded, and `cue["text"]`, truncated via `_chapter_label`) — it does not
+decide which lines become chapters or how labels are built (`YOUTUBE_CHAPTER_MIN_LINES`,
+`_chapter_label`'s 6-word truncation) — that stays 100% inside `real_chapters_from_timestamps`
+per D19.6-e's single-source-of-truth rule. Flagging this now because the card's "Pass the
+result as `chapters` prop" line reads as if the function's return value were already
+structured; it isn't, so this parsing step is a necessary (small) addition to the runner's
+"Allowed files" scope, not a scope creep.
+
+### D19.6-f — real finding: `remotion still`'s frame selection is a CLI flag, not `calculateMetadata`
+
+Ran `npx remotion still --help` for real. Confirmed usage:
+`remotion still <serve-url|entry-point>? [<composition-id>] [<output-location>]`, and,
+critically, a real `--frame <value>` override flag exists alongside `--props`. This means the
+50%-of-audio-duration frame selection (owner decision) is more naturally a **runner-side
+computation passed via `--frame`**, not something `StillFrame`'s own `calculateMetadata` can
+express — `calculateMetadata` controls the composition's `durationInFrames`/`fps`/dimensions,
+not which single frame `remotion still` captures. Corrected plan (small refinement to the
+card's D19.6-f wording, same "flag card inaccuracies, don't silently reinterpret" discipline
+as every prior task):
+- `StillFrame.tsx`'s `calculateMetadata` computes `durationInFrames` the same way `Episode`'s
+  audio-window section does (from `audioSec * fps`) so the composition is valid across the
+  full audio length — it does **not** need to encode "50%" anywhere.
+- The runner computes `midpointFrame = round(0.5 * audio_job["duration_seconds"] * RENDER_FPS)`
+  and invokes `npx remotion still src/index.ts StillFrame <output.png> --props=<file>
+  --frame=<midpointFrame>` — mirroring the existing `_run_render` invocation shape exactly
+  (`shutil.which("npx.cmd")`, temp props file, `cwd=VIDEO_RENDERER_DIR`).
+- `StillFrame` reuses `<CaptionBand>`/`<SpeakerChips>`/`<VocabCard>` directly (no Sequence
+  wrapping needed — it's a single flat composition covering just the audio window, no
+  intro/outro slices to time-slice between).
+
+### D19.6-h — re-verify plan
+
+Will re-run the exact same invariant checks as every prior task before handover: `git log
+fe06405..HEAD -- app/services/video_service.py` empty, full Python suite (currently
+1189/1189) unchanged, `tests/test_video_studio_browser.py` unchanged, vitest 21/21 (19.5
+baseline) plus new `chapters.test.ts` cases, `tsc --noEmit` clean, `ruff check .` clean.
+
 ## Verification
 
 - Real re-render of `b330d37f...` (pinned per 19.5) succeeds end-to-end.
