@@ -186,6 +186,239 @@ binary than expected), fall back to Option 3 for the T6 shipping window and docu
 Option 1 as a future upgrade path. **Do not just Option 1 by default without probing 2
 first** — the 5× size cost is real.
 
+## Design decisions — Coder answers (2026-09-29)
+
+Investigated real code before answering (no code written yet). All 8 of the card's own
+D19.7-a..h points are **confirmed as the plan**, with real findings/corrections below —
+most significantly on D19.7-b (scope clarification) and D19.7-h (the packaging probe, which
+turned up a materially different real mechanism than Amendment A assumed).
+
+### D19.7-a: Default preservation
+
+Read `app/services/video_service.py:233-293` in full: `generate_video()` currently has **no
+`renderer` concept at all** — its only branch is `aspect_ratio == "9:16"`. Plan: extract the
+existing body's ffmpeg-calling section unchanged (the `_write_video_outputs_sync` call
+through the `_render_video_sync`/`_render_vertical_sync`/`result` construction) so it remains
+reachable as the exact same code, then add `renderer: Literal["ffmpeg", "remotion"] = "ffmpeg"`
+as a new trailing parameter. With no argument passed (positional call sites in
+`app/api/video.py` don't pass it) and no env override, `renderer` resolves to `"ffmpeg"` and
+the function takes the literal branch that calls the unchanged ffmpeg path — same object
+code, not a re-implementation. The dispatch looks like:
+
+```python
+async def generate_video(project_id, audio_job, template_id, aspect_ratio="16:9", renderer="ffmpeg") -> dict:
+    ...same validation as today...
+    effective_renderer = _resolve_renderer(renderer)  # D19.7-b
+    if effective_renderer == "remotion":
+        try:
+            return await _render_via_remotion(...)
+        except RemotionRenderFailedError as exc:
+            logger.warning("remotion_render_failed_fallback_to_ffmpeg reason=%s", exc)
+            # falls through to the exact same ffmpeg path below, result["fallback_used"] = True
+    ...existing ffmpeg body, byte-for-byte, result["fallback_used"] = False...
+```
+
+Test plan: `tests/test_video_service.py`'s existing 12 tests must all pass with zero edits
+(confirmed current count: 12 test functions in that file, none touch a `renderer` concept).
+New `default_renderer_still_ffmpeg` test in that same file asserts calling
+`generate_video(...)` with no `renderer` arg produces `result.get("fallback_used") in (None,
+False)` and no Remotion subprocess is invoked (monkeypatch `_render_via_remotion` to raise if
+called at all — the strongest possible signal that the default path never touches it).
+Revert-and-confirm-failure: temporarily make the default resolve to `"remotion"`, confirm the
+new guard test fails for real (an actual subprocess-invoked assertion, not a mock miss).
+
+### D19.7-b: Resolution order — scope clarification (real finding)
+
+The card's own text says "request-time `renderer` field > **settings toggle** > env var
+default" (three tiers), but the "Allowed files" list has no `app/services/settings_service.py`
+entry, no DB column, and no Settings-page UI — and D19.7-f explicitly says the Step 5 toggle
+is "persisted via localStorage... **Not saved to DB**." Read `settings_service.py` to confirm
+what a real DB-backed "settings toggle" looks like in this app (`set_ai_mode`,
+`set_cloud_settings`, etc., all `async def set_*(db, ...)` writing to a `settings` table) —
+none of that machinery is in this task's scope. **Resolved:** this task implements exactly
+**two** real resolution tiers, not three. The "settings toggle" in the card's prose refers to
+the localStorage-persisted Step 5 UI preference, which is not a server-side tier at all — it's
+simply where the request's own `renderer` field value comes from before the request is sent.
+A genuine DB-backed per-installation default (a real third tier, Settings-page-controlled)
+is not in this task's Allowed files and is not implemented here; flagging so it isn't silently
+assumed to exist. Decision tree (two real tiers):
+
+```
+DIE_VIDEO_RENDERER env var (default "ffmpeg")
+        │
+        ▼
+  is env value "remotion"?
+   ├─ no (unset / "ffmpeg" / anything else) ──► ffmpeg, ALWAYS (kill switch, ignores request)
+   └─ yes ──► does the request specify renderer?
+                ├─ no  ──► "remotion" (env default applies)
+                ├─ "remotion" ──► "remotion"
+                └─ "ffmpeg" ──► "ffmpeg" (request may always downgrade to the safe path)
+```
+
+`_resolve_renderer(requested: str | None) -> Literal["ffmpeg", "remotion"]` in
+`video_renderer_remotion.py`, pure and unit-tested directly (no request/DB needed to test it).
+
+### D19.7-c: Remotion subprocess contract
+
+Extracting `scripts/run_remotion_spike.py`'s `_run_render`/`_run_still` pattern (temp props
+file, `time.monotonic()` wall time, `cwd=video-renderer/`) into
+`app/services/video_renderer_remotion.py::_render_via_remotion(project_id, audio_job, ...,
+output_path)`. Timeout: **600s (10 min)**, per the card's own recommendation — cross-checked
+against every real Phase 19 measurement so far: the highest real wall time observed across
+19.1-19.6 was 19.6's own transient-load outlier at **85.07s** (task-19.6 report §7); 19.1's
+linear extrapolation to a genuine 8-minute episode was **~166s**. 600s is a ~3.6x margin over
+the extrapolated 8-min case and a ~7x margin over the worst real measurement seen so far —
+matches the card's own justification, confirmed against real numbers rather than assumed.
+`RemotionRenderFailedError(AppError)` added to `app/core/exceptions.py` (same base class as
+`VideoRenderError`, `TTSError`, etc. — `app/core/exceptions.py:4-62`). Raised on timeout,
+non-zero exit, or missing output file after exit 0 (defensive: D19.7-h's probe below showed
+Remotion itself always produces a real non-zero exit on failure, but checking the file too
+costs nothing and matches `_render_video_sync`'s own belt-and-suspenders style). Fallback
+reason (`"timeout"` / `"non_zero_exit"` / `"missing_output"`) logged structurally and fed to
+the D19.7-d counters.
+
+### D19.7-d: Fallback rate readout
+
+Read `app/api/ai_jobs.py`'s `/api/ai/health` (`health_router`, `app/main.py`'s
+`_ai_circuits: dict[str, CircuitBreaker] = {}` at line 38) as the real in-memory-counter
+precedent the card's "D22 spirit" note refers to — confirmed it's a genuine module-level
+dict pattern already used for exactly this class of "process-lifetime, no DB" runtime state.
+New `_remotion_stats` module-level dict in `video_renderer_remotion.py`:
+```python
+_remotion_stats = {"total_calls": 0, "fallback_count": 0, "last_fallback_reason": None}
+```
+`GET /api/video/health` (new route on `templates_router`'s existing `/api/video` prefix in
+`app/api/video.py`, alongside `/templates`) returns `{remotion_configured: bool,
+remotion_total_calls, remotion_fallback_count, fallback_rate, last_fallback_reason}`.
+`remotion_configured` reports whether `check_dependencies`'s 3 new Remotion checks (D19.7-e)
+currently pass — computed live, not cached, since Node/Chromium availability can change
+between calls (e.g. mid-first-download). Resets on server restart, same as `_ai_circuits` —
+owner-acceptable per the Phase 18 precedent the card cites.
+
+### D19.7-e: `check_dependencies.py` extension — real correction (Node version)
+
+The card says "Node.js version (≥ 20 per Remotion 4.0.x requirements)", but
+`video-renderer/package.json:7-9` already declares `"engines": {"node": ">=24.0.0"}` for this
+project's own actual pinned Remotion version (`4.0.529`), and the owner's real installed
+Node is **v24.20.0** (confirmed 2026-09-28, PHASE-STATE.md preflight). Using this project's
+own real stated requirement (`>=24`) rather than a generic "Remotion 4.0.x" figure from the
+card avoids a check that could pass at a version this specific pinned release doesn't
+actually support. Three new checks in `check_dependencies.py`, following the file's existing
+`check_*() -> tuple[bool, str]` convention exactly (`check_ffmpeg`, `check_ollama`, etc.):
+- `check_node_version()`: `node --version` (or `shutil.which`), parse major version, GREEN
+  if `>= 24`.
+- `check_video_renderer_deps()`: `video-renderer/node_modules/` exists AND its mtime is
+  `>=` `video-renderer/package-lock.json`'s mtime (a stale/pre-lockfile-change install would
+  otherwise silently report GREEN).
+- `check_remotion_browser()`: GREEN if `video-renderer/node_modules/.remotion/` already has a
+  downloaded browser (real path confirmed by probe, D19.7-h below) OR
+  `settings.REMOTION_ALLOW_DOWNLOAD` is true (download-on-first-use will handle it) —
+  otherwise YELLOW with the "Standard (ffmpeg) still works" guidance line, matching the
+  file's existing `check_ollama`/`check_gpu` non-fatal style exactly. **Real edge case found
+  during the packaging probe (not in the card):** Chrome Headless Shell has no Windows arm64
+  build at all (`BrowserFetcher.js`'s `downloadBrowser`, source-confirmed) — on Windows
+  arm64, this check reports YELLOW regardless of `REMOTION_ALLOW_DOWNLOAD`, since no
+  download would ever succeed there.
+- All three added to `informational_checks` (YELLOW, non-fatal), never `required_checks` —
+  same discipline as the existing Ollama-missing precedent this file already follows.
+
+### D19.7-f: Step 5 UI toggle — real correction (no existing localStorage precedent in Step 5)
+
+The card says the toggle should persist "via the existing localStorage pattern used
+elsewhere in Step 5 (subtitle-style picker etc.)" — grepped `frontend/static/js/step5_video.js`
+directly: **no `localStorage` call exists anywhere in that file.** The only real
+`localStorage` precedent in the whole frontend is `theme.js`'s dark/light toggle
+(`STORAGE_KEY = "die-theme"`, kebab-case, `"die-"`-prefixed). No subtitle-style picker with
+localStorage exists in Step 5 today either — flagging this as a card inaccuracy rather than
+silently inventing a citation. Plan: follow `theme.js`'s real, confirmed convention instead —
+new key `"die-video-renderer"`, values `"ffmpeg"` (default) / `"remotion"`. Toggle pill
+disabled (with a tooltip, `title` attribute, matching this app's existing disabled-control
+style) when `GET /api/video/health`'s `remotion_configured` is false. Toggle's chosen value
+is read at Generate-click time and passed as the request body's `renderer` field (this is the
+literal mechanism referenced by D19.7-b's "settings toggle" language, per that finding).
+
+### D19.7-g: Test story
+
+New `tests/test_video_service_remotion.py`: subprocess mocked via `monkeypatch.setattr` on
+`video_renderer_remotion.subprocess.run` (matching `test_video_service.py`'s own
+`_install_sleepy_subprocess_run` convention for the ffmpeg side) — 4 branches (success,
+timeout, non-zero exit, missing output file), kill-switch test (env forces ffmpeg regardless
+of request), default-preservation guard test (D19.7-a), fallback-rate-counter test (2 calls,
+1 forced failure, asserts `fallback_rate == 0.5`). `tests/test_video_service.py` gets exactly
+one new test (D19.7-a's guard); its existing 12 pass unmodified — reconfirmed as part of this
+design pass, not just claimed.
+
+### D19.7-h: Packaging decision — real probe, real correction to Amendment A's assumed mechanism
+
+**Probed Option 2 directly, as the card requires, before recommending anything.** Real
+findings, in order of how they were found:
+
+1. **Real cache location (corrects the card's assumption):** Amendment A / this card's D19.7-b
+   area assumed a bespoke `%LOCALAPPDATA%\DailyIntelEnglishStudio\video-renderer-cache\` path.
+   Read `@remotion/renderer`'s real source
+   (`node_modules/@remotion/renderer/dist/browser/get-download-destination.js`): the download
+   cache is `getDownloadsCacheDir()`, which walks **up from `process.cwd()`** to the nearest
+   directory containing a `package.json`, then uses `<that dir>/node_modules/.remotion/`.
+   There is no env var to override this path — only an explicit `--browser-executable=<path>`
+   CLI flag that bypasses the whole mechanism to point at an already-downloaded binary
+   elsewhere. Confirmed for real: `video-renderer/node_modules/.remotion/` already exists on
+   this dev machine at exactly **270 MB** (`chrome-headless-shell/win64/chrome-headless-shell-win64/`),
+   matching Amendment A's on-disk estimate exactly, VERSION file reads `149.0.7790.0`.
+
+2. **The CLI downloads automatically — zero custom orchestration code needed.** Real probe:
+   renamed `video-renderer/node_modules/.remotion` out of the way, ran
+   `npx remotion still src/index.ts StillFrame out.png --frame=0` with **no special flags**.
+   Real terminal output: `Getting Headless Shell - 19.1 Mb/113.3 Mb` progressing to
+   `Got Headless Shell`, then a normal successful render (exit 0, real PNG produced).
+   `remotion render`/`remotion still` call `ensureBrowser()` internally before rendering —
+   the existing `_run_render`/`_run_still`-style subprocess call already gets this behavior
+   for free; no `browser ensure` pre-step or custom download orchestration is needed in
+   `_render_via_remotion`.
+3. **Real size correction:** the **network download is ~113.3 MB** (compressed zip); the
+   **on-disk extracted footprint is ~270 MB** (Amendment A's number). These are two different
+   numbers for two different things — worth stating precisely rather than conflating them.
+4. **Degrade-on-failure confirmed, and it needs zero new code:** probed a real failure by
+   passing a deliberately invalid `--browser-executable=/definitely/not/a/real/path`. Real
+   result: exit code **1**, no output file produced, stderr:
+   `Error: "browserExecutable" was specified as '...' but the path doesn't exist.` This is
+   the *exact same shape* (non-zero exit, no output file) as every other Remotion failure
+   D19.7-c's fallback contract already catches — a real network-download failure would
+   surface the same way (an uncaught rejection inside the CLI process → non-zero exit), so
+   **no special-case "download failed" branch is needed** in `_render_via_remotion`; the
+   existing generic non-zero-exit → `RemotionRenderFailedError` → ffmpeg-fallback path
+   already covers it. No elevated-permissions requirement was observed (ran as a normal,
+   non-elevated shell on this dev machine).
+5. **Real platform gap found (not in the card):** `BrowserFetcher.js`'s `downloadBrowser`
+   explicitly throws `"Chrome Headless Shell is not available for Windows for arm64
+   architecture"` — Windows-on-arm64 has no working download target at all. Handled by
+   D19.7-e's `check_remotion_browser` reporting YELLOW unconditionally on that platform.
+
+**Recommendation: Option 2 (download-on-first-use), confirmed — no hidden gotchas found.**
+Packaging implementation plan, matching an existing precedent in this exact codebase for the
+identical underlying problem: `app/core/config.py`'s `_default_data_dir()` already redirects
+`DATA_DIR` to `%LOCALAPPDATA%\DailyIntelEnglishStudio\data` when `sys.frozen` is true, because
+a frozen `.exe`'s own install directory (e.g. under `Program Files`) may not be user-writable.
+The exact same problem applies here, since Remotion's cache path is relative to `cwd`: bundle
+`video-renderer/`'s source + **production-only** `node_modules` (the 5 real `dependencies` in
+`package.json` — `@remotion/captions`, `@remotion/cli`, `react`, `react-dom`, `remotion` —
+excluding the 4 `devDependencies` — `typescript`, `vitest`, `@types/react`,
+`@types/react-dom` — Task 19.3 measured these at +37 MB) as a read-only reference inside the
+frozen bundle; on first real Remotion use, copy that reference once into
+`%LOCALAPPDATA%\DailyIntelEnglishStudio\video-renderer\` (writable, same directory family as
+`DATA_DIR`), and always invoke the render/still subprocess with `cwd` pointed at that copy —
+Remotion's own cache-dir walk then naturally lands in a writable, per-user location, and the
+270 MB browser downloads there automatically on first real use, exactly as Option 2 intends.
+**Expected footprint (estimate, not yet freshly measured — flagging honestly):** derived from
+existing measurements, not a fresh `npm install --omit=dev` probe: Task 19.1's full workspace
+was ~660 MB including the 270 MB browser; Task 19.3 measured devDependencies at +37 MB. A
+production-only install (dependencies only, no browser) is therefore estimated at roughly
+**~350 MB** added to the packaged `.exe` (660 − 270 browser − 37 devDeps ≈ 353 MB) — a real
+measured number from an actual `npm install --omit=dev && du -sh` will replace this estimate
+in the implementation-phase report, per the Evidence checklist's "expected footprint" line.
+This is still far below Option 1's 740-840 MB bundle-everything cost, and every user who never
+touches the Remotion toggle pays 0 MB extra beyond the ~350 MB base-app growth (no 270 MB
+browser download ever triggers for them).
+
 ## Verification
 
 - Full suite still passes; new `tests/test_video_service_remotion.py` tests all pass
