@@ -84,6 +84,18 @@ Versioning: [SemVer](https://semver.org/)
   only -- `app/` untouched.
 
 ### Added (Phase 19)
+- **Task 19.7.n1 (2026-09-29, by Coder):** Step 5 "Enhanced" toggle tooltip clarity (nit,
+  owner Gate B-12 feedback: the old one-line tooltip didn't say what "Enhanced" actually
+  adds). New tooltip lists the real features (karaoke highlight, speaker chip, vocab cards,
+  intro/outro, chapter bar) and an honest wall-time expectation. Real correction to the
+  card's own drafted copy: "about 3× wall time" was wrong against real measured data (Task
+  19.7's own live verification: 70.6s Remotion vs 7.76s ffmpeg, ~9.1×; Gate B-12's cited 62s
+  vs 7s is ~8.9×) — used "about 9×" instead. Disabled-state tooltip explains why and confirms
+  Standard still works. Both tooltip states verified against the real running dev server
+  (GET-only page loads, never restarted) via a real headless-browser check: the exact live
+  DOM `title` attribute text was extracted and matches the new copy in both the
+  Remotion-available and Remotion-unavailable (mocked `/api/video/health`) cases. Pure
+  frontend copy fix — no `app/`/backend files touched.
 - **Task 19.7 (2026-09-29, by Coder):** wires the completed Remotion composition into
   `VideoService.generate_video` behind a strict opt-in path — the first task in Phase 19 to
   touch `app/services/video_service.py`. Default stays `ffmpeg`: with `DIE_VIDEO_RENDERER`

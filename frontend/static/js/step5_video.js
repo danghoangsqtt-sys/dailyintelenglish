@@ -20,6 +20,20 @@
   // theme.js's real, confirmed "die-<name>" convention instead.
   const RENDERER_STORAGE_KEY = "die-video-renderer";
 
+  // Task 19.7.n1: owner feedback (Gate B-12 live test, 2026-09-29) -- the old one-line
+  // tooltip didn't say what "Enhanced" actually adds. Single source of truth for both
+  // strings, per the card's own recommendation. "About 9x" (not the card draft's "about
+  // 3x" -- corrected against real measured data: Task 19.7's own live verification was
+  // 70.6s Remotion vs 7.76s ffmpeg on the same b330d37f... episode, ~9.1x; Gate B-12's
+  // cited 62s vs 7s is ~8.9x -- both real data points land near 9x, not 3x).
+  const RENDERER_ENABLED_TOOLTIP =
+    "Enhanced (Remotion): word-by-word karaoke highlight, speaker name chip, vocabulary " +
+    "pop-up cards, intro title + outro CTA, chapter progress bar. Higher-quality YouTube " +
+    "output. Slower render than Standard (about 9× wall time).";
+  const RENDERER_DISABLED_TOOLTIP =
+    "Enhanced rendering requires Node.js and Chrome Headless Shell. Not installed on this " +
+    "machine — see scripts/check_dependencies.py. Standard (ffmpeg) rendering still works.";
+
   const state = {
     projectId: null,
     project: null,
@@ -403,9 +417,7 @@
       button.setAttribute("aria-pressed", String(button.dataset.renderer === state.renderer));
       if (isRemotion) {
         button.disabled = !state.remotionConfigured || state.isGenerating;
-        button.title = state.remotionConfigured
-          ? "Adds karaoke captions, speaker chips, vocab cards, intro/outro, and a chapter bar"
-          : "Remotion not available on this install — Standard (ffmpeg) still works";
+        button.title = state.remotionConfigured ? RENDERER_ENABLED_TOOLTIP : RENDERER_DISABLED_TOOLTIP;
       } else {
         button.disabled = state.isGenerating;
         button.title = "";
