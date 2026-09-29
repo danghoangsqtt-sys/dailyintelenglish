@@ -6,6 +6,9 @@ __pycache__/
 *.pyo
 venv/
 .venv/
+# Task 21.1: isolated Python 3.11 environment for Kokoro (kokoro has no Python 3.14
+# support yet -- see task-21.1.md D21.1-a). Set up via `requirements-kokoro.txt`.
+venv-kokoro/
 *.egg-info/
 dist/
 build/

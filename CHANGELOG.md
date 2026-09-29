@@ -8,6 +8,39 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Phase 21, spike-track — not yet wired to the app)
+- **Task 21.1 (2026-09-29, by Coder):** Kokoro TTS spike -- real install, synthesis, and
+  Edge TTS comparison, `docs/operations/phase21-spike-kokoro.md`. Real, hard finding: no
+  published Kokoro version supports this project's own Python 3.14 (`kokoro==0.9.4`
+  declares `Requires-Python <3.13,>=3.10`; the newest 3.14-visible release, `0.7.16`,
+  needs `numpy==1.26.4` exactly and drags `misaki[en] -> spacy -> thinc -> blis`, and
+  `blis` fails to build from source on 3.14 -- no prebuilt wheel, real Cython/GIL compile
+  error, reproduced in two independent isolated 3.14 venvs). Resolved via a new
+  subprocess-isolated Python 3.11 environment (`venv-kokoro/`, gitignored,
+  `requirements-kokoro.txt`), mirroring `video-renderer/`'s existing Phase 19 precedent
+  for an external-runtime component -- new `scripts/kokoro_worker.py` (persistent
+  process, line-delimited JSON over stdin/stdout, file-based audio I/O) +
+  `scripts/spike_kokoro.py` (main-venv driver). Real bug found and fixed during
+  implementation: `huggingface_hub` and `misaki`'s on-demand `en_core_web_sm` install
+  both write raw text straight to stdout (not via `logging`), corrupting the JSON
+  protocol -- fixed by redirecting the worker's own `sys.stdout` to `stderr` before any
+  imports and writing protocol responses through a saved real-stdout handle. All 12 real
+  clips (3 lines x 2 Kokoro voices + 3 lines x 2 Edge TTS voices) synthesized
+  successfully; real per-word timing confirmed via Kokoro's own `Result.tokens`
+  (model-derived `start_ts`/`end_ts`, not estimated) mapping cleanly onto this project's
+  existing `WordBoundary` shape. Real measured footprint: `venv-kokoro/` 1.2 GB +
+  `models/kokoro/` 314 MB (~1.51 GB total, ~5.6x Phase 19.7's Chrome Headless Shell
+  cost) -- stated explicitly as a real trade-off in the decision proposal, alongside the
+  quality finding, not buried. Mean Kokoro RTF ~0.28 (real-time-capable, CPU-only,
+  confirmed zero VRAM use since the resolved torch build has no CUDA support at all).
+  One real wall-time anomaly investigated: a voice's first-ever use in a worker's
+  lifetime pays a one-time lazy-load cost (RTF 1.03 vs. ~0.28 for every other clip) --
+  flagged as a pre-warm recommendation for 21.2, not a red flag. Decision proposal
+  (PASS/SCOPE-CUT/STOP) deferred to the owner's real listening judgment on
+  `spike_comparison.mp3`, per the card's own "owner-side subjective listening is the
+  gate signal" framing. Full Python suite 1205/1205 unchanged (no `app/`/`tests/`
+  touched), `ruff check .` clean on this task's own files.
+
 ### Fixed
 - **ENH-014 (2026-09-29, by Coder):** `scripts/run_ai_operational_trial.py`'s outro-heuristic
   false negatives (Gate B-11 §2: 2/5 B1 scripts scored "no outro" despite real sign-off
