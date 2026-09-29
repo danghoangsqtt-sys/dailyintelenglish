@@ -15,12 +15,19 @@
   // happening" signal.
   const VIDEO_BASELINE_SECONDS = 1;
 
+  // Task 19.7 (D19.7-f): real finding -- no existing localStorage precedent lives in this
+  // file (the card's claimed "subtitle-style picker etc." doesn't exist); following
+  // theme.js's real, confirmed "die-<name>" convention instead.
+  const RENDERER_STORAGE_KEY = "die-video-renderer";
+
   const state = {
     projectId: null,
     project: null,
     templates: [],
     selectedTemplate: null,
     aspectRatio: "16:9",
+    renderer: "ffmpeg",
+    remotionConfigured: false,
     audioReady: false,
     audioJob: null,
     lines: [],
@@ -371,6 +378,54 @@
     });
   }
 
+  function readStoredRenderer() {
+    try {
+      return localStorage.getItem(RENDERER_STORAGE_KEY) || "ffmpeg";
+    } catch {
+      return "ffmpeg"; // localStorage unavailable — default to Standard
+    }
+  }
+
+  function storeRenderer(renderer) {
+    try {
+      localStorage.setItem(RENDERER_STORAGE_KEY, renderer);
+    } catch {
+      /* localStorage unavailable — the choice just won't persist across reloads */
+    }
+  }
+
+  function renderRendererToggle() {
+    const group = byId("renderer-group");
+    if (!group) return;
+    const buttons = group.querySelectorAll(".chip");
+    buttons.forEach((button) => {
+      const isRemotion = button.dataset.renderer === "remotion";
+      button.setAttribute("aria-pressed", String(button.dataset.renderer === state.renderer));
+      if (isRemotion) {
+        button.disabled = !state.remotionConfigured || state.isGenerating;
+        button.title = state.remotionConfigured
+          ? "Adds karaoke captions, speaker chips, vocab cards, intro/outro, and a chapter bar"
+          : "Remotion not available on this install — Standard (ffmpeg) still works";
+      } else {
+        button.disabled = state.isGenerating;
+        button.title = "";
+      }
+    });
+  }
+
+  function setupRendererToggle() {
+    const group = byId("renderer-group");
+    if (!group) return;
+    group.querySelectorAll(".chip").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (state.isGenerating || button.disabled) return;
+        state.renderer = button.dataset.renderer;
+        storeRenderer(state.renderer);
+        renderRendererToggle();
+      });
+    });
+  }
+
   function setGenerateLoading(loading) {
     const button = byId("generate-btn");
     button.textContent = "";
@@ -409,16 +464,26 @@
     state.isGenerating = true;
     clearError();
     setGenerateLoading(true);
+    renderRendererToggle();
     const generationStatus = GenerationStatus.mount({
       element: byId("generate-progress"),
       baselineSec: VIDEO_BASELINE_SECONDS,
       showEta: false,
     });
-    generationStatus.setProgress({ stageLabel: "Rendering with ffmpeg…" });
+    const attemptedRenderer = state.renderer;
+    generationStatus.setProgress({
+      stageLabel: attemptedRenderer === "remotion" ? "Rendering with Remotion (Enhanced)…" : "Rendering with ffmpeg…",
+    });
     try {
-      const job = await Api.generateVideo(state.projectId, state.selectedTemplate, state.aspectRatio);
+      const job = await Api.generateVideo(state.projectId, state.selectedTemplate, state.aspectRatio, attemptedRenderer);
       renderResult(job);
-      generationStatus.setProgress({ stageLabel: "Done.", done: true });
+      // Task 19.7 (I36-a): a Remotion failure always falls back to ffmpeg rather than
+      // failing the request -- surface that honestly instead of silently claiming Enhanced.
+      const doneLabel =
+        attemptedRenderer === "remotion" && job.fallback_used
+          ? "Done (Remotion unavailable this time — used Standard instead)."
+          : "Done.";
+      generationStatus.setProgress({ stageLabel: doneLabel, done: true });
     } catch (error) {
       console.error("Failed to generate video:", error);
       showError("We couldn't generate the video. Please try again.");
@@ -489,6 +554,17 @@
     }
 
     try {
+      const health = await Api.getVideoHealth();
+      state.remotionConfigured = Boolean(health.remotion_configured);
+    } catch (error) {
+      console.error("Failed to load video renderer health (non-fatal, Standard still works):", error);
+      state.remotionConfigured = false;
+    }
+    // Only honor a stored "remotion" preference when it's actually usable right now --
+    // otherwise the toggle would render as checked-but-disabled, a confusing combination.
+    state.renderer = state.remotionConfigured ? readStoredRenderer() : "ffmpeg";
+
+    try {
       const job = await Api.getVideoStatus(state.projectId);
       if (job && job.status === "complete") renderResult(job);
     } catch (error) {
@@ -502,6 +578,8 @@
     renderTimeline();
     renderInspector();
     setupAspectRatioToggle();
+    setupRendererToggle();
+    renderRendererToggle();
     applyLocks();
   }
 

@@ -384,7 +384,7 @@ async def test_avatar_and_generate_flows_remain_wired(
     assert ("avatar", "POST") in event_log
     assert ("avatar", "DELETE") in event_log
     expected_payload = json.dumps(
-        {"template_id": "deep_purple", "aspect_ratio": "9:16"}, sort_keys=True
+        {"template_id": "deep_purple", "aspect_ratio": "9:16", "renderer": "ffmpeg"}, sort_keys=True
     )
     assert ("generate", expected_payload) in event_log
     assert await page.locator("#download-mp4-vertical").is_visible()

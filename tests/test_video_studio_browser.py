@@ -192,7 +192,7 @@ async def test_aspect_ratio_defaults_to_16x9_and_hides_vertical_download(
     await page.click("#generate-btn")
     await page.wait_for_selector("#result-card:not([hidden])", timeout=5000)
 
-    assert captured_bodies == [{"template_id": "midnight", "aspect_ratio": "16:9"}]
+    assert captured_bodies == [{"template_id": "midnight", "aspect_ratio": "16:9", "renderer": "ffmpeg"}]
     assert await page.locator("#download-mp4-vertical").is_hidden()
     await page.close()
 
@@ -232,7 +232,7 @@ async def test_selecting_9x16_sends_it_and_shows_vertical_download(browser_insta
     await page.click("#generate-btn")
     await page.wait_for_selector("#result-card:not([hidden])", timeout=5000)
 
-    assert captured_bodies == [{"template_id": "midnight", "aspect_ratio": "9:16"}]
+    assert captured_bodies == [{"template_id": "midnight", "aspect_ratio": "9:16", "renderer": "ffmpeg"}]
     vertical_href = await page.locator("#download-mp4-vertical").get_attribute("href")
     assert "format=mp4_vertical" in vertical_href
     assert await page.locator("#download-mp4-vertical").is_visible()

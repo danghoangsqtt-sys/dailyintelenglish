@@ -11,6 +11,7 @@ never generates audio itself, mirroring the AudioService/TTSService responsibili
 """
 
 import asyncio
+import logging
 import os
 import subprocess
 import uuid
@@ -28,8 +29,11 @@ from app.core.constants import (
     VIDEO_TEMPLATE_LABELS,
     VIDEO_WIDTH_SHORTS,
 )
-from app.core.exceptions import VideoRenderError
+from app.core.exceptions import RemotionRenderFailedError, VideoRenderError
 from app.core.paths import get_project_root
+from app.services import video_renderer_remotion
+
+logger = logging.getLogger(__name__)
 
 TEMPLATE_DIR = get_project_root() / "frontend" / "static" / "video_backgrounds"
 
@@ -231,24 +235,61 @@ def _write_video_outputs_sync(background_path: Path, output_dir: Path, srt_path:
 
 
 async def generate_video(
-    project_id: str, audio_job: dict | None, template_id: str, aspect_ratio: str = "16:9"
+    project_id: str,
+    audio_job: dict | None,
+    template_id: str,
+    aspect_ratio: str = "16:9",
+    renderer: str = "ffmpeg",
+    db: aiosqlite.Connection | None = None,
+    project: dict | None = None,
+    learning: dict | None = None,
 ) -> dict:
-    """Render a project's completed audio mix into an MP4 with a background + burned-in subtitles.
+    """Render a project's completed audio mix into an MP4.
 
     Args:
         project_id: Project UUID.
         audio_job: The project's `audio_jobs` row (from `audio_service.get_audio_job`).
-        template_id: One of `VIDEO_TEMPLATE_IDS`.
+        template_id: One of `VIDEO_TEMPLATE_IDS`. Ignored by the Remotion path (D19.7-a) --
+            Remotion's own composition supplies its background, not a template PNG.
         aspect_ratio: One of `VIDEO_ASPECT_RATIOS`. `"16:9"` (default) renders only the
             existing background+subtitle path, unchanged. `"9:16"` additionally renders a
             second, vertical MP4 via `_render_vertical_sync` (Task 2.5b) — a real gap
             found by Task 2.1c's QA pass (no 9:16 output existed anywhere before this).
+            Ignored by the Remotion path for now (out of this task's scope).
+        renderer: Task 19.7 (D19.7-a/b). `"ffmpeg"` (default) takes the exact same code
+            path this function has always taken -- `db`/`project`/`learning` are never
+            read on that path. `"remotion"` only actually renders via Remotion when
+            `_resolve_renderer` (the kill-switch + request resolution, D19.7-b) agrees;
+            otherwise it silently resolves back to `"ffmpeg"`. A Remotion failure of any
+            kind (timeout, non-zero exit, missing output) is caught here and falls back to
+            the ffmpeg path below (I36-a) -- `result["fallback_used"]` records this.
+        db: Required only for the Remotion path (avatar resolution via
+            `avatar_service.resolve_avatar_path`). Unused on the ffmpeg path.
+        project: Required only for the Remotion path (speakers, title, topic, CEFR level).
+            Unused on the ffmpeg path.
+        learning: Optional, Remotion path only (vocab/idiom pop-up cards, Task 19.5).
+            Unused on the ffmpeg path.
 
     Raises:
         VideoRenderError: If no completed audio mix exists yet, or ffmpeg fails.
     """
     if audio_job is None or audio_job.get("status") != "complete":
         raise VideoRenderError("Cannot generate video: the audio mix hasn't been generated yet.")
+
+    effective_renderer = video_renderer_remotion._resolve_renderer(renderer)
+    fallback_used = False
+    if effective_renderer == "remotion" and db is not None and project is not None:
+        remotion_output_path = settings.DATA_DIR / "video" / project_id / "video_remotion.mp4"
+        try:
+            return await video_renderer_remotion.render_via_remotion(
+                db, project, audio_job, learning, remotion_output_path
+            )
+        except RemotionRenderFailedError as exc:
+            logger.warning("remotion_render_failed_fallback_to_ffmpeg project_id=%s reason=%s", project_id, exc)
+            fallback_used = True
+    elif effective_renderer == "remotion":
+        logger.warning("remotion_selected_without_db_or_project project_id=%s -- falling back to ffmpeg", project_id)
+        fallback_used = True
 
     background_path = TEMPLATE_DIR / f"{template_id}.png"
     output_dir = settings.DATA_DIR / "video" / project_id
@@ -270,7 +311,13 @@ async def generate_video(
     except Exception as exc:
         raise VideoRenderError(f"Video rendering failed: {exc}") from exc
 
-    result = {"mp4_path": str(mp4_path), "srt_path": str(srt_path), "background_image": template_id}
+    result = {
+        "mp4_path": str(mp4_path),
+        "srt_path": str(srt_path),
+        "background_image": template_id,
+        "mode": "background",
+        "fallback_used": fallback_used,
+    }
 
     if aspect_ratio == "9:16":
         try:

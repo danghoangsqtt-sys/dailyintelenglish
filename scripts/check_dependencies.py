@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.core.config import settings  # noqa: E402
+from app.services import video_renderer_remotion  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MIN_PYTHON = (3, 11)
@@ -126,6 +127,23 @@ def check_omnivoice_model() -> tuple[bool, str]:
     return True, f"model files present at {model_path}"
 
 
+def check_node_version() -> tuple[bool, str]:
+    """Task 19.7 (D19.7-e): delegates to `video_renderer_remotion` so the app's own
+    `/api/video/health` and this CLI script agree on the exact same real check, same
+    "checks the same source of truth" style as `check_ffmpeg`/`check_ollama` above."""
+    return video_renderer_remotion.check_node_version()
+
+
+def check_video_renderer_deps() -> tuple[bool, str]:
+    """Task 19.7 (D19.7-e): see `check_node_version`'s docstring."""
+    return video_renderer_remotion.check_video_renderer_deps()
+
+
+def check_remotion_browser() -> tuple[bool, str]:
+    """Task 19.7 (D19.7-e): see `check_node_version`'s docstring."""
+    return video_renderer_remotion.check_remotion_browser()
+
+
 def check_data_dirs() -> tuple[bool, str]:
     """Verify (and create) the runtime data directories."""
     missing = []
@@ -158,6 +176,11 @@ def main() -> int:
     ]
     informational_checks = [
         ("Cloud provider (optional — see Settings page)", check_cloud_provider),
+        # Task 19.7 (D19.7-e): Remotion is an opt-in alternative to ffmpeg (Task 19.7) --
+        # never required, "Standard (ffmpeg)" always works regardless of these 3.
+        ("Node.js (optional — Remotion video renderer)", check_node_version),
+        ("video-renderer/ dependencies (optional — Remotion video renderer)", check_video_renderer_deps),
+        ("Chrome Headless Shell (optional — Remotion video renderer)", check_remotion_browser),
     ]
 
     all_passed = True

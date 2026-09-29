@@ -223,6 +223,39 @@ async def test_generate_video_9x16_produces_a_real_playable_vertical_mp4(tmp_pat
     assert probe.stdout.strip() == f"{VIDEO_WIDTH_SHORTS}x{VIDEO_HEIGHT_SHORTS}"
 
 
+async def test_default_renderer_still_ffmpeg_never_touches_remotion(tmp_path, monkeypatch):
+    """Task 19.7 (D19.7-a): the strongest possible signal that the default (no `renderer`
+    arg passed, no DIE_VIDEO_RENDERER set) never touches the Remotion path at all --
+    monkeypatches `render_via_remotion` to raise if it's ever called. Revert-and-confirm-
+    failure (done manually during implementation, D19.7-a): temporarily changing
+    `_resolve_renderer`'s default to "remotion" makes this test fail for real, with the
+    injected exception surfacing, not a silent pass."""
+    from app.core.config import settings
+    from app.services import video_renderer_remotion
+
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(settings, "VIDEO_RENDERER", "ffmpeg")
+
+    def _fail_if_called(*args, **kwargs):
+        raise AssertionError("render_via_remotion must never be called on the default path")
+
+    monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", _fail_if_called)
+
+    audio_path = tmp_path / "mix.mp3"
+    Sine(440).to_audio_segment(duration=500).apply_gain(-20).export(str(audio_path), format="mp3", bitrate="192k")
+    audio_job = {
+        "status": "complete",
+        "mp3_path": str(audio_path),
+        "duration_seconds": 0.5,
+        "timestamps": [{"start_sec": 0.0, "end_sec": 0.5, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}],
+    }
+
+    result = await video_service.generate_video("proj-default-renderer", audio_job, "midnight")
+
+    assert result.get("fallback_used") in (None, False)
+    assert result.get("mode") in (None, "background")
+
+
 async def test_generate_video_invalid_aspect_ratio_does_not_render_vertical(tmp_path, monkeypatch):
     """`generate_video` itself doesn't validate aspect_ratio (the API layer's Pydantic
     validator does) -- confirms only the exact `"9:16"` string triggers the second pass,

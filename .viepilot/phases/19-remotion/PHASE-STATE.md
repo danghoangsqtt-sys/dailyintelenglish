@@ -4,7 +4,7 @@
 
 - **Phase:** 19
 - **Slug:** `19-remotion`
-- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 + 19.4 + Report-UX-1 + ENH-014 + 19.5 + **19.6 (all PM task-level, clean deliveries)** all accepted. **Deep-pivot un-parked 2026-09-29**: owner reports slide deck done, asks PM to resume feature-code work. **19.7 (VideoService wire-up + toggle + kill switch + packaging + check_dependencies)** is next — biggest task in Phase 19 and first task that touches `app/services/video_service.py`. 19.8/19.9 queue after. PM report deliverables remain in `docs/report/` for T6 owner rehearsal use. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted).
+- **Status:** 19.1 (D33) + 19.2 (D34) + 19.3 + 19.4 + Report-UX-1 + ENH-014 + 19.5 + 19.6 (all PM task-level, clean deliveries) all accepted. **Deep-pivot un-parked 2026-09-29**: owner reports slide deck done, asks PM to resume feature-code work. **19.7 (VideoService wire-up + toggle + kill switch + packaging + check_dependencies): design approved, implementation complete, handover pending PM review** — biggest task in Phase 19, first task that touches `app/services/video_service.py` (now non-empty in that file's Phase 19 git-log range for the first time). 19.8/19.9 queue after. PM report deliverables remain in `docs/report/` for T6 owner rehearsal use. **19.2 real-DB write incident logged in TRACKER Known Issues** (damage nil, no reversal, formally accepted).
 - **Planned:** 2026-09-28 (`/vp-evolve ENH-013`)
 - **Controlling plan:** `docs/implementation/phase-19-remotion.md`
 - **Authorization:** owner decision **D29** (2026-09-24, brainstorm
@@ -43,7 +43,7 @@
 | 19.4 | Active-speaker indicator (name chip + optional avatar highlight) | Coder | **accepted** -- PM task-level 2026-09-28, sha `693fba7`, 3/3 frame spot checks (Alex/Maya alternation + combined-features frame proving 19.3 karaoke didn't regress), vitest 10/10 (6 karaoke + 4 speaker), inactive-chip opacity 0.6, wall-time anomaly A/B-isolated to real +7.9% chip cost |
 | 19.5 | Vocab/idiom pop-up cards | Coder | **accepted** -- PM task-level 2026-09-29, sha `4548653`, wall time 61.6s / 60.6s (~35s faster than 19.4 baseline, attributed to lower machine load — 19.4's baseline had 90-142s spread across variance, 19.5 landed in the low end); vitest 21/21 (6 karaoke + 4 speaker + 11 vocab), 100% match rate on real demo (5/5 vocab + 4/4 idioms), 3/3 frame spot checks (2 idiom time-slice + 1 all-three-features combined); Coder proactively pinned runner back to `b330d37f...` when a newly-appeared 5-min project would have confounded wall-time comparison |
 | 19.6 | Intro/outro + chapter/progress bar + Remotion thumbnail still | Coder | **accepted** -- PM task-level 2026-09-29, sha `e3d92d6`, real e2e total 183.53s (intro 2.5+audio 176.02+outro 5.0, ffprobe nb_frames=5506 exact), 8 real chapters via existing `youtube_service.real_chapters_from_timestamps` parsed, still PNG 1280×720 at exact frame 2640 (=50% audio), 5/5 frame spot checks; wall-time anomaly (85s first run) investigated to shared-machine load, isolated repeat runs 63s×2 match `61s×(183.53/176.02)≈63.6s` exactly — zero per-frame overhead from Sequences/Intro/Outro/chapter-bar code; vitest 28/28 (21 + 7 new chapters) with revert-and-confirm-failure; honest disclosure that 50% still timestamp doesn't happen to have vocab card active (real coincidence, not cherry-picked) — "all features" proof satisfied by separate t=15.0s combined frame |
-| 19.7 | `VideoService` wire-up, toggle, kill switch, packaging, `check_dependencies.py` | Coder | **ready** (doc-first card `tasks/task-19.7.md` to be written by PM this round; Amendment A carry-over: Chrome ~270MB hard floor decision here — **first task in Phase 19 that touches `app/services/video_service.py`**) |
+| 19.7 | `VideoService` wire-up, toggle, kill switch, packaging, `check_dependencies.py` | Coder | **implementation complete, awaiting PM/handover review** -- design `906c5e5` (PM APPROVED), implementation in this task's own commit (see handover message for sha); first task in Phase 19 to touch `app/services/video_service.py` |
 | 19.8 | Gate B-12 (visual sign-off + media gate) | PM | queued (opens after 19.7 accepted) |
 | 19.9 | Close-out: flip default to `remotion` (only on Gate B-12 PASS); version bump to 1.2.0-beta | Coder | queued (opens after 19.8 PASS) |
 | Report-UX-1 | Elapsed counter + ETA + Step 4/5 progress parity (frontend-only, no `app/` touch) | Coder | **accepted** -- PM task-level 2026-09-28, sha `bb8f864`, full suite 1182/1182 (1178 baseline + 4 new) re-verified by PM in 440.85 s; ruff clean (PM auto-fixed 4 pre-existing F541 errors in own chart script Coder flagged); 4/4 Playwright tests + 32 existing browser tests pass unchanged; DRUX-b chose "wrapping up…" honest-late label; revert-and-confirm-failure done properly (Coder honestly disclosed that mount-once-guard-only revert didn't fail because `started_at` fix masks the reset symptom -- redid the revert by disabling full integration, got genuine TimeoutError); live-verified on running dev server with real Step 2/3 generation, real banner `"Generating learning pack — queued (0%) · 0:02 · ~28s left [Cancel]"` |
@@ -275,3 +275,44 @@
   Python suite 1189/1189 unchanged, `ruff check .` clean, `tsc --noEmit` clean,
   `video_service.py` git-log-confirmed untouched. Report:
   `docs/operations/phase19-t6-intro-outro.md`.
+
+- **19.7** (2026-09-29, Coder): design `906c5e5` (PM APPROVED, all 4 real findings accepted
+  verbatim) → implementation in this task's own commit (see handover message for sha). First
+  task in Phase 19 to touch `app/services/video_service.py` -- `git log fe06405..HEAD` for
+  that file is non-empty for the first time, exactly as expected. Default preservation
+  (D19.7-a) confirmed by revert-and-confirm-failure on two independent guard tests (not
+  optional this round, per the card): temporarily hardcoding `_resolve_renderer` to always
+  return `"remotion"` made both `test_default_renderer_still_ffmpeg_never_touches_remotion`
+  and `test_kill_switch_forces_ffmpeg_even_when_request_wants_remotion` fail with genuine
+  `AssertionError`s, restored to green. Real correction to the design doc's own count: it
+  claimed 12 existing tests in `tests/test_video_service.py`; the real count is 21 (now 22
+  with the new guard test), all passing unmodified. Real finding while building
+  `video_renderer_remotion.py`'s prop-building: `project_service.get_project` rewrites
+  `speaker["avatar_image_path"]` into a served URL, not a filesystem path -- real avatar
+  copying reuses `avatar_service.resolve_avatar_path` instead. Real live verification (not
+  just mocked tests): the card's own verification checklist asked to test against "the
+  running dev server on port 8000" and to test the kill switch via a server restart -- both
+  blocked by this project's standing "never restart port 8000" rule, and confirmed for real
+  that the already-running process can't pick up a new `DIE_VIDEO_RENDERER` value without an
+  actual restart (`GET :8000/api/video/health` returned a real 404 -- pre-19.7 code, no
+  `--reload`). Resolved by running the real, unmodified app on a separate port (8091)
+  against an isolated **copy** of `data/app.db` in a temp directory, never touching the
+  owner's live instance or database: 2 real end-to-end Remotion renders via the actual API
+  route (70.609s and 72.457s wall time, `mode: "remotion"`, `fallback_used: false`, real
+  ffprobe-confirmed output -- 1280x720 h264/aac, 183.533s video / 183.573s audio, 0.04s
+  apart, well inside I40's ±0.5s tolerance); 1 real kill-switch test (env unset, request
+  asked for `"remotion"`, got `mode: "background"` / real ffmpeg output in 7.76s, and
+  `/api/video/health` on that instance showed `remotion_total_calls: 0` -- Remotion was
+  never even attempted). Both temp servers shut down immediately after; port 8000
+  re-confirmed live and untouched. Real production-only packaging footprint measured (an
+  isolated `npm install --omit=dev`, never touching the real dev `node_modules/`): **257 MB**
+  (251 packages, zero browser bytes) -- smaller than the design doc's own ~350 MB estimate.
+  Scope clarification found while re-reading the card: Option 2's "no bundle change"
+  instruction means this task does NOT add `video-renderer/` to the PyInstaller `.spec` --
+  a packaged `.exe` still has no working Remotion path until a future task does that; this
+  task's `check_dependencies.py` correctly reports that as missing there. 3 pre-existing
+  browser tests (`tests/test_video_shell_browser.py` x1, `tests/test_video_studio_browser.py`
+  x2) asserted the exact JSON body sent to `/video/generate` -- the new `renderer` field
+  broke these real assertions; fixed by adding the real new default value, not by weakening
+  them. Full Python suite **1205/1205** (1189 baseline + 16 new), `ruff check .` clean.
+  Report: `docs/operations/phase19-t7-wireup.md`.

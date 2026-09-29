@@ -16,7 +16,7 @@ from app.core.responses import ok
 from app.db.database import get_db
 from app.models.project import ProjectUpdate
 from app.models.video import GenerateVideoRequest
-from app.services import audio_service, project_service, video_service
+from app.services import audio_service, learning_service, project_service, video_service, video_renderer_remotion
 
 router = APIRouter(prefix="/api/projects/{project_id}/video", tags=["video"])
 templates_router = APIRouter(prefix="/api/video", tags=["video"])
@@ -31,15 +31,37 @@ async def list_templates() -> dict:
     return ok(video_service.list_video_templates(), started_at=started_at)
 
 
+@templates_router.get("/health")
+async def video_health() -> dict:
+    """Task 19.7 (D19.7-d): Remotion availability + the in-memory fallback-rate counters
+    (process-lifetime only, reset on restart -- same precedent as app/main.py's
+    `_ai_circuits`, Phase 18)."""
+    started_at = time.perf_counter()
+    payload = {
+        "remotion_configured": video_renderer_remotion.is_remotion_configured(),
+        **video_renderer_remotion.get_remotion_stats(),
+    }
+    return ok(payload, started_at=started_at)
+
+
 @router.post("/generate")
 async def generate_video(
     project_id: str, payload: GenerateVideoRequest, db: aiosqlite.Connection = Depends(get_db)
 ) -> dict:
-    """Render the project's completed audio mix into an MP4 with burned-in subtitles."""
+    """Render the project's completed audio mix into an MP4.
+
+    Task 19.7: `payload.renderer` ("ffmpeg" default) is only ever actually honored as
+    "remotion" when `video_service._resolve_renderer`'s kill-switch check agrees (D19.7-b)
+    -- passing "remotion" here is always safe, it just silently resolves to ffmpeg when the
+    deployment hasn't opted in via `DIE_VIDEO_RENDERER=remotion`.
+    """
     started_at = time.perf_counter()
     async with read_transaction():
         project = await project_service.get_project(db, project_id)
         audio_job = await audio_service.get_audio_job(db, project_id)
+        # Fetched unconditionally (cheap, single row) -- only actually used by the
+        # Remotion path; the ffmpeg path never reads it (D19.7-a).
+        learning = await learning_service.get_learning_content(db, project_id)
     if audio_job is None or audio_job["status"] != "complete":
         raise ValidationError("Cannot generate video: generate the audio mix first.")
 
@@ -47,7 +69,14 @@ async def generate_video(
     # video_service.generate_video).
     try:
         result = await video_service.generate_video(
-            project_id, audio_job, payload.template_id, payload.aspect_ratio
+            project_id,
+            audio_job,
+            payload.template_id,
+            payload.aspect_ratio,
+            renderer=payload.renderer,
+            db=db,
+            project=project,
+            learning=learning,
         )
     except Exception as exc:
         async with write_transaction(db):
@@ -59,6 +88,7 @@ async def generate_video(
             db,
             project_id,
             status="complete",
+            mode=result.get("mode", "background"),
             mp4_path=result["mp4_path"],
             mp4_path_vertical=result.get("mp4_path_vertical"),
             srt_path=result["srt_path"],
@@ -69,7 +99,10 @@ async def generate_video(
             await project_service.update_project(
                 db, project_id, ProjectUpdate(status="video_generated"), commit=False
             )
-    return ok(job, started_at=started_at)
+    # fallback_used/wall_time_seconds are per-call context, not persisted columns (no
+    # migration in this task's scope) -- surfaced only in this response.
+    response = {**job, "fallback_used": result.get("fallback_used", False)}
+    return ok(response, started_at=started_at)
 
 
 @router.get("/status")

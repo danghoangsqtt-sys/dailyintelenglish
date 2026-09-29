@@ -65,6 +65,16 @@ class VideoRenderError(AppError):
     status_code = 500
 
 
+class RemotionRenderFailedError(AppError):
+    """Raised by `video_renderer_remotion._render_via_remotion` on timeout, non-zero
+    exit, or a missing output file (Task 19.7, D19.7-c). Always caught internally by
+    `video_service.generate_video` and turned into an ffmpeg fallback (I36-a) -- never
+    surfaces past that boundary, so its `status_code` is never actually returned to a
+    client, but it still needs one since it subclasses `AppError`."""
+
+    status_code = 500
+
+
 class ThumbnailGenerationError(AppError):
     """Raised when thumbnail suggestion, rendering, or persistence fails."""
 

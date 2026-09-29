@@ -83,7 +83,37 @@ Versioning: [SemVer](https://semver.org/)
   failure done, live-verified against real generations on the running dev server. Frontend
   only -- `app/` untouched.
 
-### Added (Phase 19, planning-track — not yet wired to the app)
+### Added (Phase 19)
+- **Task 19.7 (2026-09-29, by Coder):** wires the completed Remotion composition into
+  `VideoService.generate_video` behind a strict opt-in path — the first task in Phase 19 to
+  touch `app/services/video_service.py`. Default stays `ffmpeg`: with `DIE_VIDEO_RENDERER`
+  unset and no `renderer` field in the request, every existing code path is byte-for-byte
+  unchanged (confirmed via revert-and-confirm-failure on two independent guard tests, not
+  just claimed). New `app/services/video_renderer_remotion.py`: real prop-building (real
+  avatar resolution via `avatar_service.resolve_avatar_path`, not the served-URL field
+  `project_service.get_project` already rewrites), a 600s-timeout subprocess contract
+  (`RemotionRenderFailedError` on timeout/non-zero-exit/missing-output, always caught and
+  falling back to ffmpeg — I36-a), and in-memory fallback-rate counters exposed via new
+  `GET /api/video/health`. Resolution order: exactly two real backend tiers — the
+  `DIE_VIDEO_RENDERER` kill switch (any value but exactly `"remotion"` forces ffmpeg
+  regardless of the request) and a request-level downgrade to ffmpeg (always allowed).
+  New Step 5 UI toggle ("Standard"/"Enhanced (Remotion, opt-in)"), localStorage-persisted,
+  disabled with a tooltip when Remotion isn't available on this install.
+  `scripts/check_dependencies.py` gained 3 new informational checks (Node >=24, video-renderer
+  deps, Chrome Headless Shell present-or-downloadable) sharing one real source of truth with
+  the health endpoint. Real live verification (docs/operations/phase19-t7-wireup.md): a real
+  end-to-end Remotion render via the actual API route (not the spike script) completed in
+  70.6s, real ffprobe-confirmed output (1280x720, 183.53s video/audio within 0.04s of each
+  other); a real kill-switch test confirmed a `renderer: "remotion"` request still renders
+  via ffmpeg when the env var is unset (7.76s, real ffmpeg output). Packaging (Amendment A):
+  recommends download-on-first-use, confirmed via a live probe that Remotion's own CLI
+  downloads Chrome Headless Shell fully automatically (~113 MB compressed, ~270 MB on disk,
+  zero custom code needed) and degrades cleanly on a bad browser path (real exit 1, no
+  special-case handling needed); real production-only dependency footprint measured at
+  257 MB (251 packages, smaller than the design's own ~350 MB estimate). Full Python suite
+  1205/1205 (1189 baseline + 16 new), ruff clean; 3 pre-existing browser tests' JSON-body
+  assertions updated for the new `renderer` field (a necessary, disclosed consequence, not a
+  behavior change).
 - **Task 19.6 (2026-09-29, by Coder):** intro title slide, outro CTA, chapter/progress bar
   overlay, and a `StillFrame` Remotion composition for a thumbnail PNG, in `video-renderer/`.
   Total video now = intro + audio + outro (Option B, extend, per D19.6-a) via

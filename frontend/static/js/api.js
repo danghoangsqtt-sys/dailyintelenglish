@@ -104,12 +104,16 @@ const Api = (() => {
     youtubeExportUrl: (projectId) => `/api/projects/${projectId}/youtube/export`,
     getVideoStatus: (projectId) => request(`/api/projects/${projectId}/video/status`),
     listVideoTemplates: () => request("/api/video/templates"),
-    generateVideo: (projectId, templateId, aspectRatio = "16:9") =>
+    // Task 19.7: renderer defaults to "ffmpeg" -- every pre-Phase-19 caller that omits it
+    // behaves exactly as before. "remotion" only actually takes effect when the backend's
+    // DIE_VIDEO_RENDERER kill switch already allows it (video_service._resolve_renderer).
+    generateVideo: (projectId, templateId, aspectRatio = "16:9", renderer = "ffmpeg") =>
       request(`/api/projects/${projectId}/video/generate`, {
         method: "POST",
-        body: JSON.stringify({ template_id: templateId, aspect_ratio: aspectRatio }),
+        body: JSON.stringify({ template_id: templateId, aspect_ratio: aspectRatio, renderer }),
       }),
     videoDownloadUrl: (projectId, format) => `/api/projects/${projectId}/video/download?format=${format}`,
+    getVideoHealth: () => request("/api/video/health"),
     uploadSpeakerAvatar: (projectId, speakerId, file) => {
       const body = new FormData();
       body.append("file", file);

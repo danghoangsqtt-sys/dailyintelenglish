@@ -137,6 +137,10 @@
                 <button class="chip" type="button" data-aspect-ratio="16:9" aria-pressed="true">16:9 (standard)</button>
                 <button class="chip" type="button" data-aspect-ratio="9:16" aria-pressed="false">9:16 (vertical)</button>
               </div>
+              <div class="aspect-ratio-row" role="group" aria-label="Video renderer" id="renderer-group">
+                <button class="chip" type="button" data-renderer="ffmpeg" aria-pressed="true">Standard (ffmpeg)</button>
+                <button class="chip" type="button" data-renderer="remotion" aria-pressed="false">Enhanced (Remotion, opt-in)</button>
+              </div>
               <div class="generate-row">
                 <button class="btn btn-primary" id="generate-btn" type="button">🎬 Generate video</button>
                 <span class="generate-progress" id="generate-progress" aria-live="polite"></span>

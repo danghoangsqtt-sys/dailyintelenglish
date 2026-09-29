@@ -1,5 +1,7 @@
 """Pydantic models for video generation requests/responses (Task 1.7, Sub-task 1.7a)."""
 
+from typing import Literal
+
 from pydantic import BaseModel, field_validator
 
 from app.core.constants import VIDEO_ASPECT_RATIOS
@@ -11,6 +13,10 @@ class GenerateVideoRequest(BaseModel):
 
     template_id: str
     aspect_ratio: str = "16:9"
+    # Task 19.7 (D19.7-b): optional -- omitting it (every pre-Phase-19 client) resolves to
+    # "ffmpeg" in video_service._resolve_renderer regardless. "remotion" only actually takes
+    # effect when the DIE_VIDEO_RENDERER kill switch already allows it.
+    renderer: Literal["ffmpeg", "remotion"] = "ffmpeg"
 
     @field_validator("template_id")
     @classmethod

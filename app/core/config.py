@@ -5,6 +5,8 @@ import os
 import sys
 from pathlib import Path
 
+from typing import Literal
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -47,6 +49,22 @@ class Settings(BaseSettings):
     OMNIVOICE_MODEL_PATH: Path = Path("models/omnivoice")
 
     FFMPEG_PATH: str = "ffmpeg"
+
+    # Task 19.7 (D19.7-b): the renderer kill switch. Any value other than the exact
+    # string "remotion" (unset, "ffmpeg", or anything else) forces the ffmpeg path
+    # regardless of what a request asks for -- deliberately the stronger veto, so a
+    # fresh install with this unset renders exactly like every pre-Phase-19 release
+    # (I36). A request may always downgrade "remotion" -> "ffmpeg" (the safer path is
+    # always allowed), but can only ever reach "remotion" when this is already set to
+    # it -- two independent opt-ins (deployment env + per-request) both have to agree.
+    VIDEO_RENDERER: Literal["ffmpeg", "remotion"] = "ffmpeg"
+    # Task 19.7 (D19.7-h): allows video_renderer_remotion's subprocess calls to let
+    # Remotion's own CLI download Chrome Headless Shell on first use (confirmed via a
+    # real probe: `remotion render`/`remotion still` call `ensureBrowser()`
+    # internally, no extra code needed). False pins the install to whatever browser
+    # is already present (or bundled) and lets a missing browser fail fast instead of
+    # reaching out to the network -- e.g. for an offline/locked-down deployment.
+    REMOTION_ALLOW_DOWNLOAD: bool = True
 
     # Phase 13 -- local-first AI reliability (docs/architecture/adr-001-local-first-ai.md).
     # Phase 18/D21 made cloud the default primary, local the automatic fallback,
