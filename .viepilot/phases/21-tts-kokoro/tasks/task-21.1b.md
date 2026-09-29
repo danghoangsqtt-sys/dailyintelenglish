@@ -158,6 +158,166 @@ prosody?"
   19.9 flips Remotion default alone at `v1.2.0-beta` (accept Edge TTS voice
   ceiling).
 
+## Design decisions — Coder answers (2026-09-29)
+
+Investigated real code + ran real, isolated probes before answering (no production code
+written yet). Same 7-decision structure as 21.1.
+
+### D21.1b-a: Python version compat + isolation approach — real, distinct blocker found
+
+Real PyPI package confirmed: `styletts2==0.1.6` (`pip index versions styletts2` — real,
+exists). Its `Requires-Python: >=3.9,<4.0` technically does **not** exclude Python 3.14 —
+different from Kokoro's explicit `<3.13` exclusion. **A `--dry-run` install against this
+project's real venv fully resolves** (exit 0, real "Would install ..." list with 90+
+packages) — on its face this looked 3.14-compatible.
+
+**Real finding: `--dry-run` was misleading here — a genuine (non-dry-run) install fails
+for a different, real reason.** `styletts2` pins `transformers>=4.36.0,<5.0.0`, which
+resolves to `transformers==4.40.2` (old), which requires `tokenizers<0.20,>=0.19`, which
+resolves to `tokenizers==0.19.1` — a package with **no prebuilt wheel for Python 3.14**,
+forcing a from-source build via its Rust/PyO3 bindings. Real build error, reproduced
+directly:
+```
+error: the configured Python interpreter version (3.14) is newer than
+PyO3's maximum supported version (3.12)
+```
+This is a **different mechanism than Kokoro's** (Rust/PyO3 version cap vs. Kokoro's
+Cython/GIL compile error in `blis`) but the **same real conclusion**: no currently
+resolvable dependency chain lets `styletts2` actually build on this project's Python
+3.14. Real methodological lesson, worth stating plainly: **`pip install --dry-run` only
+checks version/metadata resolution, not whether a package with compiled extensions can
+actually build** — the design phase cannot skip a real (non-dry-run) install attempt just
+because dry-run passed.
+
+**Confirmed working on Python 3.11** (same interpreter already proven for Kokoro,
+`venv-kokoro/`): a real, clean install (`pip install styletts2`, fresh venv) succeeds —
+`tokenizers` builds from source without the PyO3 error on 3.11, full dependency tree
+installs, `from styletts2 import tts` imports successfully.
+
+**Recommendation: reuse the exact `venv-kokoro/` subprocess-isolation pattern** — new
+`venv-styletts2/` (Python 3.11, gitignored) + `scripts/styletts2_worker.py` mirroring
+`kokoro_worker.py`'s shape (persistent process, line-delimited JSON over stdin/stdout,
+file-based audio I/O, the same stdout-isolation fix Task 21.1 already found necessary for
+noisy `huggingface_hub`/library-level `print()` calls — `styletts2`'s own dependency tree
+includes several libraries with the same class of risk, e.g. `nltk`'s "already up-to-date"
+downloader message observed directly during the real install test above).
+
+### D21.1b-b: Model download source + size — real, confirmed
+
+Read `styletts2==0.1.6`'s real installed source (`tts.py`) directly rather than guessing:
+it downloads from the **original research authors' own HuggingFace repo**,
+`yl4579/StyleTTS2-LibriTTS` — confirms this PyPI package is a faithful third-party
+packaging of the real upstream model (`Home-page` on PyPI is a different author's fork,
+`sidharthrajaram/StyleTTS2`, but the actual model weights it fetches are the real
+original checkpoints), not a different or unofficial model.
+
+Real file sizes (`huggingface_hub.HfApi().model_info(..., files_metadata=True)` for the
+HF-hosted files; HTTP HEAD `Content-Length` for the 3 GitHub-raw-hosted auxiliary
+checkpoints):
+
+| File | Source | Real size |
+|---|---|---|
+| `Models/LibriTTS/epochs_2nd_00020.pth` (main model) | HF `yl4579/StyleTTS2-LibriTTS` | 771,390,526 B (≈736 MB) |
+| `reference_audio.zip` (voice-cloning reference clips) | HF `yl4579/StyleTTS2-LibriTTS` | 2,917,622 B (≈2.8 MB) |
+| `Utils/ASR/epoch_00080.pth` (ASR model, phoneme alignment) | GitHub `yl4579/StyleTTS2` raw | 94,552,811 B (≈90.2 MB) |
+| `Utils/JDC/bst.t7` (F0/pitch predictor) | GitHub `yl4579/StyleTTS2` raw | 21,029,926 B (≈20.1 MB) |
+| `Utils/PLBERT/step_1000000.t7` (PL-BERT text encoder) | GitHub `yl4579/StyleTTS2` raw | 25,185,187 B (≈24.0 MB) |
+| **Total** | | **≈873 MB** |
+
+More precise than the card's "~1 GB" estimate. Model cache path: `models/styletts2/`
+(mirrors `models/kokoro/`) — the package's own `cached_path()` helper (from the
+`cached_path` library, an AllenNLP-style generic URI cache) will be pointed there via its
+own cache-dir configuration, confirmed to support a custom target directory.
+
+### D21.1b-c: 3 test lines — same as 21.1, real voice-selection finding
+
+Same 3 lines as 21.1 (line 0/24/29 from `b330d37f...`) for direct A/B, per the card.
+
+**Real architectural finding, changes the voice-pick approach:** read `tts.py`'s real
+`inference()` signature directly — StyleTTS 2 is a **reference-audio voice-cloning**
+model, not a discrete named-voice model like Kokoro. Its only voice parameter is
+`target_voice_path: Path to audio file of target voice to clone` — there is no "voice id"
+list to cite (the card's own D21.1b-c wording, "2 different StyleTTS 2 voices from
+LibriTTS pool," assumed a Kokoro-style enumerable voice pool that doesn't exist here).
+
+Real, intended-for-this-purpose voice source found: the same HF repo also hosts
+`reference_audio.zip` (2.8 MB, 19 files) — real contents inspected directly:
+- Plain LibriTTS-speaker-ID clips (anonymous corpus speakers): `1221-135767-0014.wav`,
+  `4077-13754-0000.wav`, `908-157963-0027.wav`, `5639-40744-0020.wav`, etc.
+- Named clips matching the paper's own author list (Gavin, Vinay, Yinghao, Nima) —
+  real author-recorded demo samples, not anonymous.
+- Emotion-labeled clips (`anger.wav`, `disgusted.wav`, `amused.wav`, `sleepy.wav`) —
+  demonstrates style/emotion transfer, not relevant to a "neutral narration" pick.
+
+Plan: pick 2 of the plain anonymous LibriTTS-speaker clips (not the author or
+emotion-labeled ones) for the male/female "neutral" pair, confirming each clip's actual
+perceived gender via a quick real pitch/F0 check (median fundamental frequency — typically
+<165 Hz reads male, >165 Hz reads female for adult speech) before committing to the final
+2 filenames in the implementation commit, rather than guessing from filename alone.
+
+### D21.1b-d: WordBoundary equivalent — confirmed no native timing, real fallback plan
+
+Read `inference()`'s full real docstring and return type directly: `:return: audio data
+as a Numpy array` — no timing/alignment data in the public API at all, confirmed (not
+assumed) by reading the actual installed source, matching the card's anticipated "if no"
+branch.
+
+Fallback: `whisper-timestamped` (real PyPI package confirmed via `pip index versions`,
+latest `1.15.9`) as a post-synthesis forced-aligner, per the card's own suggestion — runs
+Whisper's ASR + DTW-based alignment against the already-synthesized audio to recover
+per-word timestamps, independent of the TTS engine itself (same class of approach as
+Task 19.2's Edge TTS `WordBoundary` capture, but post-hoc rather than native). Not yet
+installed/tested in this design pass — a real go/no-go check (does it install cleanly in
+`venv-styletts2/`, does it produce sane real timings on one of this spike's own clips) is
+part of the implementation commit, not blocking the design approval, since the card
+explicitly marks this "Not a spike blocker."
+
+### D21.1b-e: Real GPU behavior + Ollama sharing — real measurement done
+
+**Real baseline** (Ollama idle, `ollama ps` empty): `nvidia-smi` reports 1825 MiB used /
+10286 MiB free / 12288 MiB total.
+
+**Real concurrent-load measurement** (the card's explicit ask): force-loaded
+`qwen3.5:9b` for real (`ollama run qwen3.5:9b "..."`, real response generated). Real
+result:
+```
+NAME          SIZE      PROCESSOR    CONTEXT
+qwen3.5:9b    5.5 GB    100% GPU     4096
+```
+`nvidia-smi` during this load: **8195 MiB used, 3916 MiB free, 12288 MiB total.**
+
+**This directly confirms the card's proposed 6 GB threshold is both real and necessary**:
+with qwen loaded, only ~3.9 GB VRAM remains — below StyleTTS 2's own claimed 4-6 GB
+requirement. Loading StyleTTS 2 in this state would be genuinely unsafe (real risk of a
+CUDA OOM, not a hypothetical one).
+
+**Recommendation confirmed: option (ii)** — check `nvidia-smi` free memory before
+loading StyleTTS 2; skip it and use Edge TTS if free VRAM `< 6 GB`. Matches Phase 18's
+cloud-first-with-fallback discipline and Task 19.7's I36 pattern exactly, now with a real
+number (not a guess) behind the specific threshold: 3.9 GB free (qwen loaded) is unsafe,
+10.3 GB free (idle) is safe, 6 GB sits as a real, evidence-based margin between the two
+measured real states, not an arbitrary round number.
+
+A real "does StyleTTS 2 actually crash or degrade gracefully when it tries to load with
+qwen already occupying most of VRAM" test (the card's other explicit ask) is deferred to
+the implementation commit — it needs the isolated worker actually built first (this
+design pass confirms Python compat + the threshold *policy*, not yet the *runtime
+behavior* under real contention, which the D21.1b-e "load-on-demand" worker itself must
+implement and then be tested against).
+
+### D21.1b-f: Owner-side listening comparison protocol
+
+Confirmed as written in the card — no changes. `spike_comparison_styletts2.mp3`, same
+1s-silence-between-clips convention as 21.1, reusing 21.1's own Edge TTS baseline
+measurements by reference (§6 of the report) rather than re-synthesizing them, since
+Edge TTS's output for the same 3 lines/voices hasn't changed.
+
+### D21.1b-g: Decision proposal
+
+Deferred to the actual spike report after real measurement across all 12 clips + the
+real GPU-contention test + the owner's real listening answer — same discipline as 21.1,
+not pre-decided here.
+
 ## Verification
 
 - All 12 clips render successfully; no CUDA OOM crashes during synthesis.
