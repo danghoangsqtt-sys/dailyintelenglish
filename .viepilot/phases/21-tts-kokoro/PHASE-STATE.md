@@ -4,10 +4,7 @@
 
 - **Phase:** 21
 - **Slug:** `21-tts-kokoro`
-- **Status:** Task 21.1 spike implementation complete, report on disk, awaiting owner
-  listening decision (PASS/SCOPE-CUT/STOP gate). Design `be94496` (PM APPROVED,
-  subprocess-isolation direction), implementation in this task's own commit (see
-  handover message for sha).
+- **Status:** Task 21.1 Kokoro spike accepted + **owner STOP decision 2026-09-29** ("chất lượng cực kỳ tệ ... nghe như robot trong Star Wars"). Coder diagnostic confirmed genuine ISTFT-vocoder character, not pipeline bug. **Amendment A landed**: pivot to StyleTTS 2 (owner decision). New Task 21.1b spike doc-first card ready. `venv-kokoro/` + `models/kokoro/` kept on disk as historical reference (not deleted).
 - **Planned:** 2026-09-29 (owner Gate B-12 feedback: "giọng nghe không tự nhiên, thiếu
   cảm xúc" — real usability blocker for shipping Remotion default in Phase 19.9)
 - **Controlling plan:** `docs/implementation/phase-21-tts-kokoro.md`
@@ -34,8 +31,9 @@
 
 | Task | Description | Owner | Status |
 |---|---|---|---|
-| 21.1 | Spike: install Kokoro + real synth 3 test lines + measure quality/time/RAM + honest Kokoro-vs-EdgeTTS listening comparison. Report `docs/operations/phase21-spike-kokoro.md`. | Coder | **implementation complete, awaiting owner listening decision** -- design `be94496` (PM APPROVED), all 12 real clips synthesized successfully, real hard Python 3.14 incompatibility found + resolved via subprocess isolation |
-| 21.2 | `KokoroProvider` mirroring `_synthesize_edge_tts` tuple contract | Coder | provisional |
+| 21.1 | Spike: Kokoro + 12-clip listening test | Coder | **accepted + STOP** -- PM task-level 2026-09-29, sha `8441f5b`; technical viability confirmed (RTF 0.28, CPU-only, real tokens for WordBoundary, 1.51 GB footprint), owner listening STOP ("chất lượng cực kỳ tệ ... robot Star Wars"); Coder diagnostic (autocorrelation vs Kokoro's own published `af_heart_0.wav` reference: 0.198 @ 5ms vs 0.1977 @ 11ms, essentially identical) confirms genuine ISTFT-vocoder character, not pipeline bug |
+| 21.1b | Spike: StyleTTS 2 + 12-clip listening test (Amendment A pivot after Kokoro STOP) | Coder | **ready** (doc-first card `tasks/task-21.1b.md`, new spike after owner pivot decision 2026-09-29) |
+| 21.2 | `TTSProvider` mirroring `_synthesize_edge_tts` tuple contract (engine determined by 21.1b PASS) | Coder | provisional |
 | 21.3 | TTS router refactor (engine-agnostic) | Coder | provisional |
 | 21.4 | Step 4 UI per-speaker engine toggle | Coder | provisional |
 | 21.5 | Gate B-13 (PM: media gate + owner listening sign-off) | PM | provisional |

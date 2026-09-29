@@ -124,4 +124,39 @@ flips default. Any FAIL closes each phase separately at accepted subset.
 
 ## 6. Amendments
 
-_(None yet. Amendments land here as the spike / gates measure reality.)_
+### Amendment A — 2026-09-29: Kokoro STOP → pivot to StyleTTS 2
+
+Task 21.1 spike report (`docs/operations/phase21-spike-kokoro.md`, sha `8441f5b`)
+established technical viability for Kokoro (12 real clips + full measurement) but
+owner's listening decision (2026-09-29) was **STOP**:
+
+> *"chất lượng cực kỳ tệ, và có rất nhiều echo tiếng vang trong giọng nói nghe như robot
+> đang nói chuyện trong phim star war vậy"*
+
+Coder diagnostic proved genuine Kokoro character (autocorrelation 0.198 @ 5ms reference
+vs. 0.1977 @ 11ms our output — essentially identical to Kokoro's own published sample;
+Kokoro's ISTFT vocoder `istftnet.py` has known metallic/buzzy tendency). No code fix
+possible. Kokoro path closed as STOP; `venv-kokoro/` + `models/kokoro/` left on disk as
+historical reference.
+
+**Pivot direction (owner decision 2026-09-29): StyleTTS 2** (research-grade, MIT
+license, ~1 GB model, GPU 4-6 GB VRAM). Documented in §1 of this plan as fallback
+alternative — now the primary.
+
+**Key new design question this pivot surfaces (vs. Kokoro's CPU-only):** GPU sharing
+with Ollama qwen (7-8 GB VRAM when cloud fallback fires). RTX 3060 12 GB total leaves
+4-5 GB free with qwen loaded. StyleTTS 2 needs 4-6 GB — tight. Task 21.1b design must
+propose a load-on-demand or free-memory-check strategy (see D21.1b-e).
+
+**Task shape:**
+- New `.viepilot/phases/21-tts-kokoro/tasks/task-21.1b.md` doc-first card written.
+- Same 12-clip spike + comparison MP3 pattern (Line 0, Line 24 idiom, Line 29 — same
+  as 21.1 for direct A/B).
+- Same PASS/SCOPE-CUT/STOP owner-listening gate.
+- If PASS: Task 21.2 re-opens with StyleTTS 2 provider instead of Kokoro.
+- If STOP again: Phase 21 closes wontfix; Phase 19.9 flips Remotion default alone at
+  `v1.2.0-beta` (accept Edge TTS voice ceiling as-is).
+
+**Phase name stays `21-tts-kokoro`** for git-history continuity even though scope has
+pivoted. Anyone reading the SPEC.md/PHASE-STATE.md sees the STOP + pivot recorded
+explicitly.
