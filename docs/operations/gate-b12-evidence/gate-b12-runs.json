@@ -1,0 +1,345 @@
+[
+  {
+    "project_id": "b330d37f-a212-4cf7-a779-7a109098bd6c",
+    "label": "B1 2:56 baseline",
+    "ffmpeg": {
+      "http_status": 200,
+      "wall_seconds": 7.297976300003938,
+      "body": {
+        "success": true,
+        "data": {
+          "id": "6bc183e2-5fb8-4009-b7f4-2a55d2d514a4",
+          "project_id": "b330d37f-a212-4cf7-a779-7a109098bd6c",
+          "status": "complete",
+          "mode": "background",
+          "mp4_path": "C:\\Users\\Admin\\AppData\\Local\\Temp\\gate_b12_k_mtv8l2\\data\\video\\b330d37f-a212-4cf7-a779-7a109098bd6c\\video.mp4",
+          "mp4_path_vertical": null,
+          "srt_path": "C:\\Users\\Admin\\AppData\\Local\\Temp\\gate_b12_k_mtv8l2\\data\\video\\b330d37f-a212-4cf7-a779-7a109098bd6c\\subtitles.srt",
+          "background_image": "midnight",
+          "subtitle_style_json": null,
+          "error_message": null,
+          "started_at": "2026-09-29T06:55:44.466655+00:00",
+          "completed_at": "2026-09-29T06:55:44.466655+00:00",
+          "fallback_used": false
+        },
+        "error": null,
+        "meta": {
+          "processing_time_ms": 7277.09
+        }
+      },
+      "output_path": "docs\\operations\\gate-b12-evidence\\b330d37f_ffmpeg.mp4",
+      "output_bytes": 2514050,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1280,
+            "height": 720,
+            "duration": "176.040000"
+          },
+          {
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "duration": "176.020000"
+          }
+        ],
+        "format": {
+          "duration": "176.040000",
+          "size": "2514050"
+        }
+      },
+      "ok": true
+    },
+    "remotion": {
+      "http_status": 200,
+      "wall_seconds": 62.708797200000845,
+      "body": {
+        "success": true,
+        "data": {
+          "id": "6bc183e2-5fb8-4009-b7f4-2a55d2d514a4",
+          "project_id": "b330d37f-a212-4cf7-a779-7a109098bd6c",
+          "status": "complete",
+          "mode": "remotion",
+          "mp4_path": "C:\\Users\\Admin\\AppData\\Local\\Temp\\gate_b12_k_mtv8l2\\data\\video\\b330d37f-a212-4cf7-a779-7a109098bd6c\\video_remotion.mp4",
+          "mp4_path_vertical": null,
+          "srt_path": null,
+          "background_image": null,
+          "subtitle_style_json": null,
+          "error_message": null,
+          "started_at": "2026-09-29T06:56:47.263495+00:00",
+          "completed_at": "2026-09-29T06:56:47.263495+00:00",
+          "fallback_used": false
+        },
+        "error": null,
+        "meta": {
+          "processing_time_ms": 62675.46
+        }
+      },
+      "output_path": "docs\\operations\\gate-b12-evidence\\b330d37f_remotion.mp4",
+      "output_bytes": 9218500,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1280,
+            "height": 720,
+            "duration": "183.533333",
+            "side_data_list": [
+              {}
+            ]
+          },
+          {
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "duration": "183.573333"
+          }
+        ],
+        "format": {
+          "duration": "183.573333",
+          "size": "9218500"
+        }
+      },
+      "ok": true
+    }
+  },
+  {
+    "project_id": "c08ce057-792a-44db-be5d-2585e6600f4b",
+    "label": "B1 5:00 mid",
+    "ffmpeg": {
+      "http_status": 200,
+      "wall_seconds": 21.22162660001777,
+      "body": {
+        "success": true,
+        "data": {
+          "id": "9469cb5d-76c5-48de-b5f7-c481f075f5c7",
+          "project_id": "c08ce057-792a-44db-be5d-2585e6600f4b",
+          "status": "complete",
+          "mode": "background",
+          "mp4_path": "C:\\Users\\Admin\\AppData\\Local\\Temp\\gate_b12_k_mtv8l2\\data\\video\\c08ce057-792a-44db-be5d-2585e6600f4b\\video.mp4",
+          "mp4_path_vertical": null,
+          "srt_path": "C:\\Users\\Admin\\AppData\\Local\\Temp\\gate_b12_k_mtv8l2\\data\\video\\c08ce057-792a-44db-be5d-2585e6600f4b\\subtitles.srt",
+          "background_image": "midnight",
+          "subtitle_style_json": null,
+          "error_message": null,
+          "started_at": "2026-09-29T06:57:08.598074+00:00",
+          "completed_at": "2026-09-29T06:57:08.598074+00:00",
+          "fallback_used": false
+        },
+        "error": null,
+        "meta": {
+          "processing_time_ms": 21191.94
+        }
+      },
+      "output_path": "docs\\operations\\gate-b12-evidence\\c08ce057_ffmpeg.mp4",
+      "output_bytes": 5295927,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1280,
+            "height": 720,
+            "duration": "300.080000"
+          },
+          {
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "duration": "300.064000"
+          }
+        ],
+        "format": {
+          "duration": "300.080000",
+          "size": "5295927"
+        }
+      },
+      "ok": true
+    },
+    "remotion": {
+      "http_status": 200,
+      "wall_seconds": 112.19933600001968,
+      "body": {
+        "success": true,
+        "data": {
+          "id": "9469cb5d-76c5-48de-b5f7-c481f075f5c7",
+          "project_id": "c08ce057-792a-44db-be5d-2585e6600f4b",
+          "status": "complete",
+          "mode": "remotion",
+          "mp4_path": "C:\\Users\\Admin\\AppData\\Local\\Temp\\gate_b12_k_mtv8l2\\data\\video\\c08ce057-792a-44db-be5d-2585e6600f4b\\video_remotion.mp4",
+          "mp4_path_vertical": null,
+          "srt_path": null,
+          "background_image": null,
+          "subtitle_style_json": null,
+          "error_message": null,
+          "started_at": "2026-09-29T06:59:00.879650+00:00",
+          "completed_at": "2026-09-29T06:59:00.879650+00:00",
+          "fallback_used": false
+        },
+        "error": null,
+        "meta": {
+          "processing_time_ms": 112171.25
+        }
+      },
+      "output_path": "docs\\operations\\gate-b12-evidence\\c08ce057_remotion.mp4",
+      "output_bytes": 18541540,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1280,
+            "height": 720,
+            "duration": "307.566667",
+            "side_data_list": [
+              {}
+            ]
+          },
+          {
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "duration": "307.626667"
+          }
+        ],
+        "format": {
+          "duration": "307.626667",
+          "size": "18541540"
+        }
+      },
+      "ok": true
+    }
+  },
+  {
+    "project_id": "22484f26-f944-40db-8064-44088ccdb507",
+    "label": "A2 9:26 longest",
+    "ffmpeg": {
+      "http_status": 200,
+      "wall_seconds": 41.470864000031725,
+      "body": {
+        "success": true,
+        "data": {
+          "id": "cf15af2d-8f0b-4538-a4f4-23ed76cef832",
+          "project_id": "22484f26-f944-40db-8064-44088ccdb507",
+          "status": "complete",
+          "mode": "background",
+          "mp4_path": "C:\\Users\\Admin\\AppData\\Local\\Temp\\gate_b12_k_mtv8l2\\data\\video\\22484f26-f944-40db-8064-44088ccdb507\\video.mp4",
+          "mp4_path_vertical": null,
+          "srt_path": "C:\\Users\\Admin\\AppData\\Local\\Temp\\gate_b12_k_mtv8l2\\data\\video\\22484f26-f944-40db-8064-44088ccdb507\\subtitles.srt",
+          "background_image": "midnight",
+          "subtitle_style_json": null,
+          "error_message": null,
+          "started_at": "2026-09-29T06:59:42.482446+00:00",
+          "completed_at": "2026-09-29T06:59:42.482446+00:00",
+          "fallback_used": false
+        },
+        "error": null,
+        "meta": {
+          "processing_time_ms": 41463.28
+        }
+      },
+      "output_path": "docs\\operations\\gate-b12-evidence\\22484f26_ffmpeg.mp4",
+      "output_bytes": 9445963,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1280,
+            "height": 720,
+            "duration": "566.400000"
+          },
+          {
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "duration": "566.384000"
+          }
+        ],
+        "format": {
+          "duration": "566.400000",
+          "size": "9445963"
+        }
+      },
+      "ok": true
+    },
+    "remotion": {
+      "http_status": 200,
+      "wall_seconds": 224.1528734000167,
+      "body": {
+        "success": true,
+        "data": {
+          "id": "cf15af2d-8f0b-4538-a4f4-23ed76cef832",
+          "project_id": "22484f26-f944-40db-8064-44088ccdb507",
+          "status": "complete",
+          "mode": "remotion",
+          "mp4_path": "C:\\Users\\Admin\\AppData\\Local\\Temp\\gate_b12_k_mtv8l2\\data\\video\\22484f26-f944-40db-8064-44088ccdb507\\video_remotion.mp4",
+          "mp4_path_vertical": null,
+          "srt_path": null,
+          "background_image": null,
+          "subtitle_style_json": null,
+          "error_message": null,
+          "started_at": "2026-09-29T07:03:26.735493+00:00",
+          "completed_at": "2026-09-29T07:03:26.735493+00:00",
+          "fallback_used": false
+        },
+        "error": null,
+        "meta": {
+          "processing_time_ms": 224123.05
+        }
+      },
+      "output_path": "docs\\operations\\gate-b12-evidence\\22484f26_remotion.mp4",
+      "output_bytes": 31296014,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1280,
+            "height": 720,
+            "duration": "573.900000",
+            "side_data_list": [
+              {}
+            ]
+          },
+          {
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "duration": "573.930667"
+          }
+        ],
+        "format": {
+          "duration": "573.930667",
+          "size": "31296014"
+        }
+      },
+      "ok": true
+    }
+  },
+  {
+    "health_final": {
+      "success": true,
+      "data": {
+        "remotion_configured": true,
+        "remotion_total_calls": 3,
+        "remotion_fallback_count": 0,
+        "fallback_rate": 0.0,
+        "last_fallback_reason": null
+      },
+      "error": null,
+      "meta": {
+        "processing_time_ms": 27.65
+      }
+    }
+  }
+]
