@@ -167,6 +167,37 @@ def _ensure_punkt_tab() -> None:
     nltk.data.find("tokenizers/punkt_tab/english/")
 
 
+def _allow_legacy_checkpoints() -> None:
+    """Restore torch.load's pre-2.6 default (`weights_only=False`) inside this worker only.
+
+    Real blocker, found live on the owner's machine by the earlier local 21.1b session
+    (backup branch `owner-local/backup-20260930`, commit `eeaf444`). It was then
+    reproduced on the real ASR checkpoint `Utils/ASR/epoch_00080.pth`, fetched from the
+    authors' GitHub: torch>=2.6 defaults to `weights_only=True`, and the load fails with
+    `UnpicklingError: ... Unsupported global: GLOBAL getattr`, followed on the owner's
+    machine by `torch.optim.lr_scheduler.OneCycleLR`. `styletts2==0.1.6` calls
+    `torch.load` without the flag, on legacy full-training-state checkpoints.
+    Allow-listing globals one at a time chases an upstream file we don't control.
+
+    The checkpoint sources are the original authors' own repos (D21.1b-b), and this runs
+    only in the isolated subprocess venv. So restoring the old default, which is the first
+    option torch's own error message offers, is the honest fix. A caller that passes
+    `weights_only` explicitly keeps its choice.
+    """
+    import torch
+
+    if getattr(torch.load, "_die_legacy_default", False):
+        return
+    real_load = torch.load
+
+    def load_with_legacy_default(*args, **kwargs):
+        kwargs.setdefault("weights_only", False)
+        return real_load(*args, **kwargs)
+
+    load_with_legacy_default._die_legacy_default = True  # type: ignore[attr-defined]
+    torch.load = load_with_legacy_default
+
+
 def _rss_mb() -> float | None:
     try:
         import psutil
@@ -207,6 +238,7 @@ class StyleTTS2Worker:
         self.import_seconds = round(time.monotonic() - import_start, 3)
         _log(f"styletts2_worker: import done in {self.import_seconds:.2f}s")
         _ensure_punkt_tab()
+        _allow_legacy_checkpoints()
 
         _log("styletts2_worker: loading model (downloads ~873 MB on first ever run)...")
         load_start = time.monotonic()

@@ -6,6 +6,11 @@ runbook.** The code was written and tested in another session (Claude Code, clou
 job is to run it on the real GPU, collect the evidence, and hand it back in the exact shape
 described in step D, so the two sessions never diverge.
 
+**Revision note:** revised after the first attempt stopped correctly at preflight. The
+owner's machine held unpushed PM commit `9b5c8f9` and uncommitted 21.1b WIP; both are now
+backed up on `owner-local/backup-20260930` and reconciled into this branch. The 6 Gate
+B-12 MP4s are allowed as known untracked files, and a VRAM probe step was added (C1b).
+
 ---
 
 ## 0. Hard rules (read all of them before running anything)
@@ -61,8 +66,17 @@ git status --porcelain
 - `git rev-parse HEAD` must equal `PINNED_SHA` **exactly**. If HEAD is newer, the other
   session pushed after the prompt was written: **STOP** and ask the owner for the new
   prompt. If HEAD is older, the pull failed: STOP.
-- `git status --porcelain` must print **nothing**. If it prints anything, STOP and report
-  it verbatim. Do not stash or discard.
+- `git status --porcelain` may print **only** these 6 known lines. They are untracked
+  Gate B-12 evidence videos, deliberately kept out of git; leave them exactly as they are:
+  ```
+  ?? docs/operations/gate-b12-evidence/22484f26_ffmpeg.mp4
+  ?? docs/operations/gate-b12-evidence/22484f26_remotion.mp4
+  ?? docs/operations/gate-b12-evidence/b330d37f_ffmpeg.mp4
+  ?? docs/operations/gate-b12-evidence/b330d37f_remotion.mp4
+  ?? docs/operations/gate-b12-evidence/c08ce057_ffmpeg.mp4
+  ?? docs/operations/gate-b12-evidence/c08ce057_remotion.mp4
+  ```
+  Any other line: STOP and report it verbatim. Do not stash or discard.
 
 Then check the machine:
 
@@ -195,6 +209,31 @@ cmd /c "venv-image\Scripts\pip freeze >> data\tmp\owner_runs_20260930\C_env.txt 
 `C_env.txt`'s first line must show a CUDA version and `True`. If it doesn't, record it and
 **skip the rest of step C**.
 
+### C1b. Three-way VRAM probe (Task 20.1, PM card D20.1-a)
+
+`nvidia-ml-py` goes into `venv-image` only, for this probe:
+
+```powershell
+venv-image\Scripts\pip install nvidia-ml-py==13.615.71
+```
+
+First the idle probe. Stop any resident model exactly as in B2 (`ollama ps`, then
+`ollama stop <NAME>` for each, then `ollama ps` shows none). Then:
+
+```powershell
+cmd /c "venv-image\Scripts\python scripts\probe_vram.py --label idle > data\tmp\owner_runs_20260930\C_probe_idle.json 2> data\tmp\owner_runs_20260930\C_probe_idle.err"
+```
+
+Then the probe with qwen loaded:
+
+```powershell
+ollama run qwen3.5:9b "hi"
+cmd /c "venv-image\Scripts\python scripts\probe_vram.py --label qwen_loaded > data\tmp\owner_runs_20260930\C_probe_qwen.json 2> data\tmp\owner_runs_20260930\C_probe_qwen.err"
+```
+
+Both files must be valid JSON. An `"error"` inside one method's block is a valid result:
+record it, do not fix it.
+
 ### C2. Run "idle" (Ollama idle)
 
 Stop any resident model exactly as in B2 (`ollama ps`, then `ollama stop <NAME>` for each,
@@ -252,7 +291,7 @@ owner-runs\20260930\
   B\B_run1_idle.json  B\B_run1_idle.err  B\B_run2_qwen.json  B\B_run2_qwen.err
   B\B_run1_worker.log  B\B_run2_worker.log   (run2 = data\tmp\phase21_styletts2_spike\styletts2_worker_stderr.log)
   B\spike_comparison_styletts2.mp3        (from data\tmp\phase21_styletts2_spike\)
-  C\C_env.txt
+  C\C_env.txt  C\C_probe_idle.json  C\C_probe_idle.err  C\C_probe_qwen.json  C\C_probe_qwen.err
   C\C_idle.json  C\C_idle.err  C\C_warm_qwen.json  C\C_warm_qwen.err
   C\C_idle_vaetiling.json  C\C_idle_vaetiling.err    (only if the OOM rerun happened)
   C\sheet_ep1.png ... C\sheet_ep5.png  C\sheet_ip_adapter.png   (from data\tmp\phase20_image_spike\run_idle\ -- or run_idle_vaetiling\ if that rerun happened)
@@ -289,6 +328,7 @@ foreach ($d in "venv-styletts2","venv-image","models\styletts2","models\image") 
 - errors: <verbatim first error message per failed item, or "none">
 ## C. Task 20.2 images (+ 20.1 evidence)
 - env: <first line of C_env.txt>
+- VRAM probe (idle | qwen_loaded): nvidia_smi.free_mib, pynvml.free_mib, torch.free_mib (or each method's error), copied verbatim
 - OOM rerun needed: <yes/no>
 - base: load_sec, watermark_active, per-image wall_time_sec, peak_vram_allocated_mb, peak_vram_reserved_mb, rss_mb
 - lightning: same fields
@@ -311,8 +351,9 @@ git add owner-runs/20260930
 git status --porcelain
 ```
 
-`git status --porcelain` must show **only** paths under `owner-runs/20260930/`. If any
-other path shows, do **not** add it. Leave it as it is and list it in your final report.
+`git status --porcelain` must show **only** paths under `owner-runs/20260930/`, plus the
+same 6 untracked Gate B-12 MP4 lines allowed in section 1 (never add those). If any other
+path shows, do **not** add it. Leave it as it is and list it in your final report.
 
 ```powershell
 git commit -m "owner-runs: 2026-09-30 evidence for 21.1b, 20.2, 20.1 (pinned <PINNED_SHA>)"

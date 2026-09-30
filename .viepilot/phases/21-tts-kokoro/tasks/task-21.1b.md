@@ -413,6 +413,28 @@ came out of it.
     `compute_style` runs once per reference clip, not once per line. This addresses
     21.1's first-use-of-a-voice cost (RTF 1.03 vs ~0.28).
 
+11. **Latent blocker #2, found live on the owner's machine by the earlier local session
+    and fixed here.** torch>=2.6 defaults `torch.load(weights_only=True)`. Loading
+    `styletts2`'s legacy full-training-state checkpoints then fails:
+    - found by the earlier local 21.1b session, whose uncommitted WIP was recovered through
+      the backup branch `owner-local/backup-20260930` @ `eeaf444`;
+    - that session reported `GLOBAL getattr`, then `OneCycleLR`, live on the owner's
+      machine;
+    - **reproduced here** on the real ASR checkpoint `Utils/ASR/epoch_00080.pth` fetched
+      from the authors' GitHub: `UnpicklingError: ... Unsupported global: GLOBAL getattr`.
+
+    Fix: `_allow_legacy_checkpoints()` restores `weights_only=False` as the *default*
+    inside the isolated worker only. The source is the authors' own repos (D21.1b-b), and
+    an explicit `weights_only=True` is still honoured.
+
+    Verified with `styletts2.models.load_ASR_models` on the real checkpoint: it fails
+    before the fix and loads an `ASRCNN` after. The two other auxiliary checkpoints
+    (`bst.t7`, `step_1000000.t7`) load either way.
+
+    The earlier WIP also added `whisper-timestamped` for word timing. That is
+    deliberately **not** carried over: finding 6 recommends the model's own `pred_dur`
+    for 21.2, and the listening test does not need timings.
+
 ### What was validated here
 
 | Check | Result |
