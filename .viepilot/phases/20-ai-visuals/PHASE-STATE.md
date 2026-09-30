@@ -7,8 +7,8 @@
 - **Status:** *(Coder update 2026-09-30.)*
   - 20.1 is implemented and awaiting owner-machine verification and PM acceptance.
   - 20.2 is done (owner PASS, SDXL-Lightning).
-  - 20.2b (character-library spike) is implemented; the real run is pending on the
-    owner's GPU via `docs/operations/owner-runbook-2026-09-30-r3.md`.
+  - 20.2b (character-library spike): owner-machine run r3 complete, 7/7 phases ok; report
+    `docs/operations/phase20-spike-character-library.md`, awaiting the owner's verdict.
   - Both started before the Phase 21 gate on the owner's instruction (see "Owner
     decisions 2026-09-30").
   - PM original: "planning (task 20.1 doc-first card ready; starts after Phase 21 spike
@@ -43,7 +43,7 @@
 |---|---|---|---|
 | 20.1 | Shared GPU model manager (load / free-VRAM check / unload, used by TTS + images + music) | Coder | **implemented; awaiting owner-machine verification + PM acceptance.** Design `b328fd3`, implementation `6b1e7f7`. 30 new tests, 0 new failures vs the cloud baseline. **Deviations from the PM card are listed for decision** in `tasks/task-20.1.md` Part 3 (R1–R6), notably opposite master-switch semantics (R4) |
 | 20.2 | Image model spike + IP-Adapter consistency demo | Coder | **done: owner PASS, SDXL-Lightning** (2026-09-30). Report `docs/operations/phase20-spike-images.md` |
-| 20.2b | Spike: character library feasibility (Ghibli-like style preset, 20-asset set, OpenPose actions, anime-seg cut-outs, M1 vs M2) | Coder | **implemented; awaiting owner-machine run r3 + owner verdict.** Card `tasks/task-20.2b.md`; scope = Amendment B §5.4 |
+| 20.2b | Spike: character library feasibility (Ghibli-like style preset, 20-asset set, OpenPose actions, anime-seg cut-outs, M1 vs M2) | Coder | **run r3 complete (7/7 phases ok, `owner-runs/20260930-r3` @ `1116597`); awaiting owner verdict.** Card `tasks/task-20.2b.md`; report `docs/operations/phase20-spike-character-library.md` |
 | 20.3 | Thumbnail AI path behind opt-in toggle, Pillow templates as fallback | Coder | provisional |
 | 20.4 | Character reference management (reuse `speakers.avatar_image_path` from Task 1.7c) | Coder | provisional |
 | 20.5 | In-video character images (populate Task 19.4's existing avatar slot) | Coder | provisional |
