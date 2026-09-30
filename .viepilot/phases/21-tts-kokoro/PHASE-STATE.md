@@ -32,7 +32,7 @@
 | Task | Description | Owner | Status |
 |---|---|---|---|
 | 21.1 | Spike: Kokoro + 12-clip listening test | Coder | **accepted + STOP** -- PM task-level 2026-09-29, sha `8441f5b`; technical viability confirmed (RTF 0.28, CPU-only, real tokens for WordBoundary, 1.51 GB footprint), owner listening STOP ("chất lượng cực kỳ tệ ... robot Star Wars"); Coder diagnostic (autocorrelation vs Kokoro's own published `af_heart_0.wav` reference: 0.198 @ 5ms vs 0.1977 @ 11ms, essentially identical) confirms genuine ISTFT-vocoder character, not pipeline bug |
-| 21.1b | Spike: StyleTTS 2 + 12-clip listening test (Amendment A pivot after Kokoro STOP) | Coder | **in progress**. Design `a1727d3`. Worker, runner and requirements landed 2026-09-30 and were validated off-machine (cloud session: no GPU, huggingface.co blocked). 1 latent blocker fixed on the way (nltk `punkt_tab`). **Next step, on the owner's machine:** the 2-run spike (Ollama idle, then qwen loaded), then the report, then owner listening. Steps are in the card's "Owner-machine run" section. |
+| 21.1b | Spike: StyleTTS 2 + 12-clip listening test (Amendment A pivot after Kokoro STOP) | Coder | **spike run complete on the owner's GPU** (`owner-runs/20260930-r2` @ `5fd2929`): 12/12 clips; warm RTF 0.05–0.10; **~1.47 GB VRAM** (not 4–6); the fail-safe refused live with qwen loaded (4677 MiB free). Report `docs/operations/phase21-spike-styletts2.md`. **Awaiting the owner's listening verdict** (PASS/STOP) |
 | 21.2 | `TTSProvider` mirroring `_synthesize_edge_tts` tuple contract (engine determined by 21.1b PASS) | Coder | provisional |
 | 21.3 | TTS router refactor (engine-agnostic) | Coder | provisional |
 | 21.4 | Step 4 UI per-speaker engine toggle | Coder | provisional |

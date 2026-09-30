@@ -92,3 +92,11 @@
     1455), which is now fixed and verified;
   - 21.1b's venv step failed (an existing, locked `venv-styletts2`).
   - The retry is `docs/operations/owner-runbook-2026-09-30-r2.md`.
+- **Owner-machine run r2** (`owner-runs/20260930-r2` @ `5fd2929`):
+  - **20.1 live evidence complete.** The lease evicted qwen (4964 → 11836 MiB free);
+    process exit returns VRAM to its baseline to within ±6 MiB; qwen reload takes 12.1 s.
+    Report: `docs/operations/phase20-t1-model-manager.md`.
+  - **20.2 run complete.** 10/10 backgrounds and 12/12 IP scenes, no OOM, no watermark.
+    Base takes 21 s/image and Lightning 2.1 s/image. With the IP-Adapter the peak is 11.1
+    GB. Report: `docs/operations/phase20-spike-images.md`.
+  - Both are **awaiting the owner's visual verdict and PM acceptance.**
