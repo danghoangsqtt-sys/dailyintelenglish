@@ -42,7 +42,7 @@ Coder has one session, so the work runs in sequence:
 | Task | Description | Owner | Status |
 |---|---|---|---|
 | 20.1 | Shared VRAM model manager (foundation) | Coder | **implemented, awaiting owner-machine verification + PM acceptance**. Design `b328fd3`, D20.1-c approved by the owner (Ollama takes the lease too). 30 new tests; 0 new failures vs baseline |
-| 20.2 | Image model spike: SDXL / SDXL-Turbo / FLUX.1-schnell + IP-Adapter trial | Coder | provisional |
+| 20.2 | Image model spike: SDXL / SDXL-Turbo / FLUX.1-schnell + IP-Adapter trial | Coder | **design committed, awaiting approval + owner Q1/Q2** (`tasks/task-20.2.md`). Key finding: both FLUX IP-Adapters are FLUX.1-dev non-commercial, so SDXL + h94 IP-Adapter is the only licence-clean path to consistent characters. The spike run needs the owner's GPU |
 | 20.3 | AI thumbnail background replacing the template background (text/colour layer kept) | Coder | provisional |
 | 20.4 | Per-character reference image management | Coder | provisional |
 | 20.5 | Character image in the video | Coder | provisional |
