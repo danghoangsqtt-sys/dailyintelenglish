@@ -105,7 +105,8 @@ CONTROLNET_OPENPOSE_REPO = "xinsir/controlnet-openpose-sdxl-1.0"
 ANIME_SEG_REPO = "skytnt/anime-seg"
 ANIME_SEG_ONNX = "isnetis.onnx"  # 176,069,933 B
 ANIME_SEG_SIZE = 1024
-PIPELINE_KINDS = ("text2img", "controlnet", "inpaint")
+# Task 20.2c: "controlnet_inpaint" = pose-controlled M2 (a character painted into a scene).
+PIPELINE_KINDS = ("text2img", "controlnet", "inpaint", "controlnet_inpaint")
 
 BASE_DEFAULT_STEPS = 30
 BASE_DEFAULT_GUIDANCE = 6.0
@@ -149,6 +150,7 @@ class ImageWorker:
         self.encoders = True
         self._embeds_cache: dict[str, Any] = {}
         self._anime_seg_session: Any | None = None
+        self._last_size: tuple[int, int] | None = None
 
     # -- sources -----------------------------------------------------------------------
 
@@ -204,6 +206,7 @@ class ImageWorker:
             AutoencoderKL,
             ControlNetModel,
             EulerDiscreteScheduler,
+            StableDiffusionXLControlNetInpaintPipeline,
             StableDiffusionXLControlNetPipeline,
             StableDiffusionXLInpaintPipeline,
             StableDiffusionXLPipeline,
@@ -241,7 +244,7 @@ class ImageWorker:
             unet.load_state_dict(load_file(str(unet_path), device=self.device), assign=True)
             unet = unet.to(self.device, self.dtype)
             components["unet"] = unet
-        if kind == "controlnet":
+        if kind in ("controlnet", "controlnet_inpaint"):
             components["controlnet"] = ControlNetModel.from_pretrained(
                 sources.get("controlnet_dir") or request.get("controlnet_repo", CONTROLNET_OPENPOSE_REPO),
                 torch_dtype=self.dtype,
@@ -252,6 +255,7 @@ class ImageWorker:
             "text2img": StableDiffusionXLPipeline,
             "controlnet": StableDiffusionXLControlNetPipeline,
             "inpaint": StableDiffusionXLInpaintPipeline,
+            "controlnet_inpaint": StableDiffusionXLControlNetInpaintPipeline,
         }[kind]
         pipe = pipeline_cls.from_pretrained(
             base_dir,
@@ -377,16 +381,28 @@ class ImageWorker:
             with Image.open(request["control_image"]) as control:
                 call["image"] = control.convert("RGB")
             call["controlnet_conditioning_scale"] = float(request.get("controlnet_conditioning_scale", 1.0))
-        elif self.kind == "inpaint":
+        elif self.kind in ("inpaint", "controlnet_inpaint"):
             if not (request.get("init_image") and request.get("mask_image")):
-                raise RuntimeError("inpaint pipeline needs init_image and mask_image")
+                raise RuntimeError(f"{self.kind} pipeline needs init_image and mask_image")
             with Image.open(request["init_image"]) as init, Image.open(request["mask_image"]) as mask:
                 call["image"] = init.convert("RGB")
                 call["mask_image"] = mask.convert("L")
             call["strength"] = float(request.get("strength", 0.99))
+            if self.kind == "controlnet_inpaint":
+                if not request.get("control_image"):
+                    raise RuntimeError("controlnet_inpaint pipeline needs control_image")
+                with Image.open(request["control_image"]) as control:
+                    call["control_image"] = control.convert("RGB")
+                call["controlnet_conditioning_scale"] = float(request.get("controlnet_conditioning_scale", 1.0))
 
         if self.device == "cuda":
+            if self._last_size is not None and self._last_size != (width, height):
+                # Task 20.2b finding F1 (owner run r3): a size switch in one worker grew the
+                # allocator's reserve from 11.3 to 13.1 GB on the 12 GB card (Windows spilled
+                # into shared memory, 2-3x slower). Hand the cached blocks back first.
+                torch.cuda.empty_cache()
             torch.cuda.reset_peak_memory_stats()
+        self._last_size = (width, height)
         started = time.monotonic()
         image = pipe(**call).images[0]
         wall_seconds = time.monotonic() - started
@@ -538,7 +554,7 @@ class ImageWorker:
 
         was_loaded = self.pipe is not None
         self.pipe, self.mode, self.lightning_steps, self.ip_adapter_loaded = None, None, None, False
-        self.kind, self.encoders = None, True
+        self.kind, self.encoders, self._last_size = None, True, None
         self._embeds_cache.clear()
         gc.collect()
         if self.device == "cuda":

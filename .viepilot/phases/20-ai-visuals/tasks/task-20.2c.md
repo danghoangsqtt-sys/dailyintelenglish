@@ -1,6 +1,7 @@
 # Task 20.2c — Spike: SDXL base + simple character + pose-controlled M2 → real video frames
 
-- **Status:** design (Coder, doc-first, 2026-09-30). **The real run needs the owner's GPU.**
+- **Status:** implemented (Coder, 2026-09-30). Design commit `099d8bb`; see "Implementation
+  notes" at the end. **The real run needs the owner's GPU.**
   It goes through the runbook `docs/operations/owner-runbook-2026-09-30-r4.md`.
 - **Owner:** Coder
 - **Authorization:** owner said *"okey làm đi"* ("okay, go ahead") to the 20.2c plan,
@@ -119,3 +120,44 @@
 2. Is the simple character recognisable across views, expressions and the 4 actions?
 3. Is M2 with pose control natural, with no seam? Full-frame or crop?
 4. Do the frames, with captions, look like a professional video?
+
+## Implementation notes (Coder, 2026-09-30)
+
+- **D20.2c-f variant B changed, found in verification.**
+  - `padding_mask_crop` cannot upscale a presenter-framed character at 16:9.
+  - diffusers' `get_crop_region` expands the crop to the target aspect ratio. For the
+    real 1344×768 "thinking" silhouette it returns `(0, 41, 1272, 768)`, so the "crop" is
+    almost the whole frame and gains no pixels.
+  - Variant B is therefore **pose strength**: strict (`controlnet_conditioning_scale`
+    1.0) vs loose (0.7). This answers the owner's "not stiff" concern directly.
+  - The worker's `padding_mask_crop` pass-through was removed again, so there is no dead
+    option.
+- **Pose proportions reworked after a visual check** on the real r3 scenes.
+  - The first keypoint set had a tiny head and a long torso. The keypoints are now in
+    head-height units with ordinary adult proportions, using medium close-up presenter
+    framing: head height 0.24 of the frame, head top ≈ 0.17, hips at the bottom edge.
+- **Verification (cloud, tiny random-weight SDXL, CPU).**
+  - The runner end to end with `--allow-cpu --skip-ip`: all 4 phases ok. Counts:
+    - 2 scenes and 3 candidates;
+    - 7 assets and 1 encode with `do_cfg: true`;
+    - 8 M2 renders;
+    - 8 frames;
+    - 4 sheets.
+  - Every M2 render applied the encoded negative prompt.
+  - The scene stays pixel-identical outside the mask in all 4 scene/action pairs.
+  - Strict vs loose renders differ inside the mask. This needed a tiny ControlNet with
+    non-zero output convs: the fixture's ControlNet, built from the UNet, has
+    zero-initialised output convs, so any scale gave identical output.
+  - Clean worker errors: missing `control_image`, missing init/mask, and a prompt
+    without embeds on an encoders-free pipeline.
+  - Broken model sources: every GPU phase records its error, frames report `missing`,
+    and the run exits 0.
+  - Pure-helper checks, all 4 actions:
+    - 14 upper-body joints, knees/ankles omitted;
+    - the mask top is below the chip row;
+    - the mask stays clear of the vocab card;
+    - the mask covers every in-frame joint and 23–27% of the frame;
+    - the torso reaches the bottom edge;
+    - frame geometry: 1280×720, chapter bar, dark vocab card, white outlined caption,
+      yellow active word.
+
