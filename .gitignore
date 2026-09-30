@@ -9,6 +9,10 @@ venv/
 # Task 21.1: isolated Python 3.11 environment for Kokoro (kokoro has no Python 3.14
 # support yet -- see task-21.1.md D21.1-a). Set up via `requirements-kokoro.txt`.
 venv-kokoro/
+# Task 21.1b: isolated Python 3.11 environment for StyleTTS 2 (styletts2's own
+# tokenizers dependency has no Python 3.14 wheel yet -- see task-21.1b.md D21.1b-a). Set
+# up via `requirements-styletts2.txt`.
+venv-styletts2/
 *.egg-info/
 dist/
 build/

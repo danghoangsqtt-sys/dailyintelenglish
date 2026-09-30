@@ -1,0 +1,25 @@
+# Task 21.1b (Phase 21 spike): pinned deps for the ISOLATED venv-styletts2/ environment
+# only. NOT installed into this project's own venv/ or requirements.txt.
+#
+# Real finding (task-21.1b.md D21.1b-a): styletts2==0.1.6's own Requires-Python
+# (">=3.9,<4.0") does not exclude this project's Python 3.14 on paper, and a
+# `pip install --dry-run` against the real project venv fully resolves -- but a REAL
+# (non-dry-run) install fails: it pulls transformers==4.40.2 (old) -> tokenizers==0.19.1,
+# which has no prebuilt wheel for 3.14 and fails to build its Rust/PyO3 bindings ("the
+# configured Python interpreter version (3.14) is newer than PyO3's maximum supported
+# version (3.12)"). Confirmed working on Python 3.11 (same interpreter already proven for
+# Kokoro, venv-kokoro/): a real, clean install succeeds there.
+#
+# Setup (Python 3.11.x required):
+#   py -3.11 -m venv venv-styletts2
+#   venv-styletts2\Scripts\pip install -r requirements-styletts2.txt
+#
+# styletts2's own large transitive dependency tree (torch, transformers, langchain,
+# boto3, google-cloud-storage -- pulled in by the generic `cached_path` URI-caching
+# library it uses for model downloads, not because this project needs cloud storage) is
+# intentionally left unpinned here, same convention as requirements-kokoro.txt.
+styletts2==0.1.6
+# D21.1b-d: StyleTTS 2's own inference() returns only a raw audio array, no native
+# per-word timing (confirmed by reading the installed package's real source) --
+# whisper-timestamped is the forced-alignment fallback.
+whisper-timestamped==1.15.9
