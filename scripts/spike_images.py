@@ -99,11 +99,14 @@ SCENE_PROMPTS = (
 )
 
 # Provisional lease threshold (D20.2-e), stated as provisional in the report. Rough fp16
-# weights: A ≈ 6.9 GB, plus the IP-Adapter and ViT-H encoder ≈ 1.7 GB, so about 8.6 GB
-# before activations. It must also stay under the ~10286 MiB free that the owner's card
-# shows at idle (task-21.1b.md D21.1b-e), otherwise the lease would refuse even an idle
-# machine. The measured peak from this spike replaces it as DIE_GPU_MIN_FREE_MB_IMAGE.
-PROVISIONAL_MIN_FREE_MB = 9216
+# weights: A ≈ 6.9 GB, plus the IP-Adapter and ViT-H encoder ≈ 1.7 GB. It must stay under
+# what the owner's card REALLY has free at idle. The owner's Task Manager screenshot
+# (2026-09-30) showed 2.8 of 12.0 GB dedicated VRAM in use by the desktop, so ~9.2 GB free.
+# The earlier 9216 MiB would therefore have refused the owner's own idle machine. 8192 MiB
+# still guarantees the SDXL weights plus working room, and still forces a real qwen
+# eviction in the warm_qwen run (qwen leaves ~3.9 GB free). The measured peak from this
+# spike replaces it as DIE_GPU_MIN_FREE_MB_IMAGE.
+PROVISIONAL_MIN_FREE_MB = 8192
 
 WORKER_EXIT_TIMEOUT_SECONDS = 120.0
 

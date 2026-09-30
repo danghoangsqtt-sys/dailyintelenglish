@@ -324,8 +324,8 @@ per image, so the report shows it rather than assuming it.
     `_resolve_content_sync`;
   - optional `--warm-qwen`, which makes a real local qwen call with the app's
     `num_ctx=16384` and later times the reload;
-  - takes a **real Task 20.1 lease** per candidate (provisional 9216 MiB, below the 10286
-    MiB free at idle);
+  - takes a **real Task 20.1 lease** per candidate (provisional 8192 MiB; lowered from
+    9216 because the owner's screenshot shows only ~9.2 GB free at idle);
   - one worker lifetime per candidate;
   - writes contact sheets and the IP-Adapter sheet, and prints the JSON report.
 - `requirements-image.txt` (Python 3.14; torch from cu128 first; no invisible-watermark,
