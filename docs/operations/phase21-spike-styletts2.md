@@ -148,3 +148,20 @@ s of silence between clips.
   - if the owner hears a clear improvement over Edge TTS → **PASS**, and 21.2 opens with
     the StyleTTS 2 provider;
   - if not → **STOP**.
+
+## 11. Owner verdict (2026-09-30): **STOP**
+
+> "Chất lượng giọng của Edge TTS tốt hơn nhiều Style TTS, vì vậy tôi nghĩ nên giữ nguyên Edge TTS"
+
+In English: Edge TTS sounds much better than StyleTTS 2, so keep Edge TTS.
+
+StyleTTS 2 passed every technical criterion but failed the only one that mattered: the
+owner hears Edge TTS as **much better**. Per the controlling plan's Amendment A, a 21.1b
+STOP means:
+- Phase 21 closes as `wontfix`;
+- 21.2–21.6 are cancelled;
+- Phase 19.9 flips the Remotion default **on its own**, accepting the Edge TTS voice.
+
+**Cleanup the owner may do at any time** (not done automatically): `venv-styletts2\`
+(5.39 GB) and `models\styletts2\` (1.86 GB) on the owner's machine can be deleted. The
+scripts stay in git as the record.

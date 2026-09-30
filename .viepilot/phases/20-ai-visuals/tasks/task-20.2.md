@@ -1,8 +1,11 @@
 # Task 20.2 — Spike: pick the local image model (SDXL / SDXL-Turbo / FLUX.1-schnell) + IP-Adapter trial
 
-- **Status:** implementation (worker + runner) landed 2026-09-30 and was validated off-machine.
-  Owner confirmed Q2 (drop FLUX). **Pending: the real run on the owner's RTX 3060** (see
-  "Owner-machine run"), then the report and the owner's decision.
+- **Status:** **done: owner verdict PASS, SDXL-Lightning (2026-09-30).**
+  - Run r2 (`owner-runs/20260930-r2` @ `5fd2929`): 10/10 backgrounds, 12/12 IP scenes, no
+    OOM, no watermark.
+  - Report: `docs/operations/phase20-spike-images.md` (§7 has the verdict).
+  - The owner's library direction is proposed as Amendment B
+    (`../proposal-amendment-b-asset-library.md`).
 - **Owner:** Coder
 - **Priority:** P0 for Phase 20. Its PASS gates 20.3–20.5.
 - **Dependency:** Task 20.1 (GPU model manager, `6b1e7f7`). The spike takes its GPU through a

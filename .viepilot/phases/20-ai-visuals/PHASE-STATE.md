@@ -40,7 +40,7 @@
 | Task | Description | Owner | Status |
 |---|---|---|---|
 | 20.1 | Shared GPU model manager (load / free-VRAM check / unload, used by TTS + images + music) | Coder | **implemented; awaiting owner-machine verification + PM acceptance.** Design `b328fd3`, implementation `6b1e7f7`. 30 new tests, 0 new failures vs the cloud baseline. **Deviations from the PM card are listed for decision** in `tasks/task-20.1.md` Part 3 (R1–R6), notably opposite master-switch semantics (R4) |
-| 20.2 | Image model spike + IP-Adapter consistency demo | Coder | **worker + runner landed, validated off-machine** (design `d787325`, Amendment A `fe1584c`, implementation `518fed8`). Candidates narrowed by the owner on 2026-09-30: SDXL base + SDXL-Lightning 4-step UNet; Turbo and FLUX dropped. **Real run pending on the owner's GPU** (`docs/operations/owner-runbook-2026-09-30.md`) |
+| 20.2 | Image model spike + IP-Adapter consistency demo | Coder | **done: owner PASS, SDXL-Lightning** (2026-09-30). Report `docs/operations/phase20-spike-images.md` |
 | 20.3 | Thumbnail AI path behind opt-in toggle, Pillow templates as fallback | Coder | provisional |
 | 20.4 | Character reference management (reuse `speakers.avatar_image_path` from Task 1.7c) | Coder | provisional |
 | 20.5 | In-video character images (populate Task 19.4's existing avatar slot) | Coder | provisional |
@@ -100,3 +100,10 @@
     Base takes 21 s/image and Lightning 2.1 s/image. With the IP-Adapter the peak is 11.1
     GB. Report: `docs/operations/phase20-spike-images.md`.
   - Both are **awaiting the owner's visual verdict and PM acceptance.**
+- **Owner verdicts 2026-09-30:**
+  - **Phase 21: STOP.** Edge TTS stays.
+  - **20.2: PASS, SDXL-Lightning**, plus a new direction: a Character Library + Scene
+    Library composed per episode.
+  - **Proposed Amendment B** (restructures 20.3+ into library backend / UI / composition
+    / in-video, preceded by a 20.2b spike) is in `proposal-amendment-b-asset-library.md`,
+    **awaiting owner answers (§4) and PM approval.**

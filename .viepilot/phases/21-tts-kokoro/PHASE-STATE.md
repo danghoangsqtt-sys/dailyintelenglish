@@ -32,12 +32,12 @@
 | Task | Description | Owner | Status |
 |---|---|---|---|
 | 21.1 | Spike: Kokoro + 12-clip listening test | Coder | **accepted + STOP** -- PM task-level 2026-09-29, sha `8441f5b`; technical viability confirmed (RTF 0.28, CPU-only, real tokens for WordBoundary, 1.51 GB footprint), owner listening STOP ("chất lượng cực kỳ tệ ... robot Star Wars"); Coder diagnostic (autocorrelation vs Kokoro's own published `af_heart_0.wav` reference: 0.198 @ 5ms vs 0.1977 @ 11ms, essentially identical) confirms genuine ISTFT-vocoder character, not pipeline bug |
-| 21.1b | Spike: StyleTTS 2 + 12-clip listening test (Amendment A pivot after Kokoro STOP) | Coder | **spike run complete on the owner's GPU** (`owner-runs/20260930-r2` @ `5fd2929`): 12/12 clips; warm RTF 0.05–0.10; **~1.47 GB VRAM** (not 4–6); the fail-safe refused live with qwen loaded (4677 MiB free). Report `docs/operations/phase21-spike-styletts2.md`. **Awaiting the owner's listening verdict** (PASS/STOP) |
-| 21.2 | `TTSProvider` mirroring `_synthesize_edge_tts` tuple contract (engine determined by 21.1b PASS) | Coder | provisional |
-| 21.3 | TTS router refactor (engine-agnostic) | Coder | provisional |
-| 21.4 | Step 4 UI per-speaker engine toggle | Coder | provisional |
-| 21.5 | Gate B-13 (PM: media gate + owner listening sign-off) | PM | provisional |
-| 21.6 | Close-out: combined `v1.2.0-beta` release with Phase 19.9 default flip | Coder | provisional |
+| 21.1b | Spike: StyleTTS 2 + 12-clip listening test (Amendment A pivot after Kokoro STOP) | Coder | **done: STOP** (owner 2026-09-30: "Chất lượng giọng của Edge TTS tốt hơn nhiều Style TTS, vì vậy tôi nghĩ nên giữ nguyên Edge TTS"). Technical PASS: 12/12 clips, RTF 0.05–0.10, ~1.47 GB VRAM. Report `docs/operations/phase21-spike-styletts2.md` |
+| 21.2 | `TTSProvider` mirroring `_synthesize_edge_tts` tuple contract (engine determined by 21.1b PASS) | Coder | **cancelled** (Phase 21 STOP, Amendment A) |
+| 21.3 | TTS router refactor (engine-agnostic) | Coder | **cancelled** (Phase 21 STOP, Amendment A) |
+| 21.4 | Step 4 UI per-speaker engine toggle | Coder | **cancelled** (Phase 21 STOP, Amendment A) |
+| 21.5 | Gate B-13 (PM: media gate + owner listening sign-off) | PM | **cancelled** (Phase 21 STOP, Amendment A) |
+| 21.6 | Close-out: combined `v1.2.0-beta` release with Phase 19.9 default flip | Coder | **cancelled** (Phase 21 STOP, Amendment A) |
 
 ## Evidence log
 
@@ -67,3 +67,14 @@
   own files. Decision proposal (PASS/SCOPE-CUT/STOP) deferred to the owner's real
   listening judgment per the card's own framing -- not pre-decided. Report:
   `docs/operations/phase21-spike-kokoro.md`.
+
+## Close (2026-09-30)
+
+Owner verdict on 21.1b: **STOP**. "Chất lượng giọng của Edge TTS tốt hơn nhiều Style TTS, vì vậy tôi nghĩ nên giữ nguyên Edge TTS"
+
+- Both TTS candidates were rejected by ear: Kokoro was STOP'd for a metallic, echoing
+  "robot" timbre, and StyleTTS 2 because Edge TTS sounds much better.
+- **Phase 21 closes as `wontfix`.** Edge TTS stays the sole TTS engine.
+- **Phase 19.9 is unblocked**: it flips `DIE_VIDEO_RENDERER=remotion` on its own, accepting
+  the Edge TTS voice (Amendment A).
+- The formal close-out and version bump belong to the PM/19.9 release step.

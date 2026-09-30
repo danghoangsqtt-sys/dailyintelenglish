@@ -112,3 +112,22 @@ The Coder's own look at the sheets (the owner's judgement is what counts):
   1. which look is better for thumbnails: base, lightning, or today's template?
   2. does the character stay recognisable across the IP scenes? If yes, IP-Adapter is
      confirmed for 20.4/20.5.
+
+## 7. Owner verdict (2026-09-30): **PASS, SDXL-Lightning**
+
+> "cả base và lightning đều tốt nhưng lightning cho kết quả nhanh hơn và tôi nghĩ có thể cải thiện bằng cách tối ưu hóa prompt và luồng tạo nhân vật …"
+
+In English: both base and Lightning are good, but Lightning is faster, and prompts and the
+character-creation flow can be improved. The full quote is in
+`.viepilot/phases/20-ai-visuals/proposal-amendment-b-asset-library.md` §1.
+
+- **Model: SDXL-Lightning 4-step** (base + Lightning UNet + fp16-fix VAE, with
+  IP-Adapter plus-face ViT-H for characters).
+- **New direction:** a pre-built **Character Library** (views × expressions,
+  owner-approved) and **Scene Library** (named, reusable), composed per episode. This
+  replaces free per-episode prompting. The design is proposed as **Amendment B** (link
+  above), awaiting owner/PM approval.
+- **Q3** (was the IP-Adapter character recognisably the same?) was not answered as a
+  yes/no. The owner's library direction builds on that approach, and the proposed 20.2b
+  spike re-tests identity across profile, full-body and expression views, which 20.2 did
+  not cover.

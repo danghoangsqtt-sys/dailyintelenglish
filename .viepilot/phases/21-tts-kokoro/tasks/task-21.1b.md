@@ -1,11 +1,11 @@
 # Task 21.1b — Spike: install StyleTTS 2 locally + real quality/GPU/timing measurement
 
-- **Status:** in progress. Design `a1727d3`. Implementation code landed and validated
-  off-machine on 2026-09-30 in a cloud session with no GPU and no access to
-  huggingface.co (see "Implementation pass" below). **Still pending, and only possible
-  on the owner's machine:** the real run (12 clips plus `spike_comparison_styletts2.mp3`),
-  the GPU/Ollama coexistence measurements, the spike report, and the owner's
-  listening decision.
+- **Status:** **done: spike complete, owner verdict STOP (2026-09-30).** Owner: "Chất lượng giọng của Edge TTS tốt hơn nhiều Style TTS, vì vậy tôi nghĩ nên giữ nguyên Edge TTS"
+  ("Edge TTS sounds much better than StyleTTS 2, so keep Edge TTS").
+  - Every technical criterion passed on the owner's GPU (`owner-runs/20260930-r2` @
+    `5fd2929`).
+  - Report: `docs/operations/phase21-spike-styletts2.md`.
+  - Per Amendment A, Phase 21 closes as `wontfix`.
 - **Owner:** Coder
 - **Priority:** P0 (Kokoro path STOP'd by owner listening decision 2026-09-29 — Phase 21
   needs a working alternative or the whole phase fails)
