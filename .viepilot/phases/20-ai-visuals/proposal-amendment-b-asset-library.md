@@ -1,6 +1,9 @@
 # Phase 20 — Proposed Amendment B: Character Library + Scene Library ("asset-based" visuals)
 
-- **Status:** PROPOSAL, awaiting owner and PM approval. Nothing below is implemented.
+- **Status:** PROPOSAL.
+  - The owner answered §4 on 2026-09-30 (§5).
+  - It awaits PM approval and the 20.2b spike.
+  - Nothing is implemented yet.
 - **Written by:** Coder (cloud session), 2026-09-30, right after the owner's Task 20.2
   verdict.
 - **Replaces, if approved:** the provisional tasks 20.3–20.5 of
@@ -120,3 +123,111 @@ the PM decides.
    all characters and scenes visually coherent.
 4. **Default composition mode:** M1 collage (fast, zero GPU, perfectly consistent), with M2
    only on request?
+
+## 5. Owner answers (2026-09-30) and what they change
+
+Verbatim:
+1. *"một thư viện nhân vật dùng chung có thể tạo thêm theo sở thích của người dùng"*
+   (one shared character library; the user can add more characters as they like).
+2. *"đúng rồi tạo nhân vật chuẩn chỉ và chính xác để dùng lâu dài"* (yes: characters built
+   carefully and precisely, for long-term use).
+3. *"có định phong cách vẽ toàn kênh nhé phong cách vẽ giống ghibli ấy vì tôi là fan hâm mộ
+   của ghibli studio"* (fix one art style for the whole channel, a Ghibli-like style,
+   because the owner is a Studio Ghibli fan).
+4. *"OKey M1 và M2 như bạn đề xuất; nhưng tôi muốn nhân vật xuất hiện trong bối cảnh không
+   bị khô cứng và phải có biểu cảm hành động phù hợp nội dung"* (M1 and M2 as proposed,
+   but characters must not look stiff in the scene, and must have expressions and actions
+   that fit the content).
+
+What this decides:
+- **Library:** one **global** library. The owner can add characters at any time.
+- **Assets:** 3 face views + 1 full body × 5 expressions per character as the base set,
+  each owner-approved (extended by §5.2 below).
+- **Composition modes:** M1 by default, M2 on request.
+
+### 5.1 Channel art style: "Ghibli-like", built without naming anyone
+
+The style is fixed channel-wide, but the **prompts never say "Ghibli", "Studio Ghibli" or
+"Miyazaki"**:
+- an art style as such is not protected, but a studio's name is a trademark, and Hayao
+  Miyazaki is a living artist;
+- Amendment A's prompt rule and the owner's own "không dính đến bản quyền" constraint
+  (no copyright entanglement) both point the same way.
+
+Instead, one **channel style preset** describes the look in generic terms. For example:
+*"hand-painted 2D anime illustration, soft watercolor backgrounds, warm natural sunlight,
+gentle pastel palette, lush detailed nature, cozy whimsical atmosphere, clean line art"*,
+with a negative *"3d render, photorealistic, text, logo, watermark"*.
+
+- **No third-party "Ghibli style" LoRAs.** They are typically trained on frames from the
+  films, which is a copyright and licence risk the owner explicitly wants to avoid.
+- If the descriptive preset alone does not reach the look, the fallback is to train our
+  **own** small style LoRA **only on images we generated ourselves** and the owner
+  approved. That would be a separate, later decision.
+- 20.2's images were in a "modern 3D" style, so the 2D painterly look on SDXL-Lightning is
+  **unmeasured**. It is the first thing 20.2b tests.
+
+### 5.2 "Not stiff, with actions and expressions that fit the content": yes, with four mechanisms
+
+A fixed set of 20 standing assets alone *would* look stiff in M1. The plan adds:
+
+1. **An action/pose vocabulary in the library.**
+   - Each character also gets full-body **action assets**: e.g. talking-gesturing,
+     waving, pointing, thinking (hand on chin), reading, writing, sitting, walking,
+     laughing, surprised. That is about 10 actions × 2–3 fitting expressions.
+   - Poses are controlled precisely with **ControlNet OpenPose**:
+     `xinsir/controlnet-openpose-sdxl-1.0` (**Apache-2.0**, checked 2026-09-30) or
+     `xinsir/controlnet-union-sdxl-1.0` (Apache-2.0). Identity comes from **IP-Adapter**.
+   - This happens once per character, at library time. The owner approves each asset.
+2. **Content-driven choice, not random.**
+   - The script LLM tags each section with `{scene}`, and each line with
+     `{speaker, action, expression}`, **chosen only from the library's vocabulary**.
+   - The choice is validated by JSON schema + Pydantic (AR-06's two-layer validation).
+   - An unknown tag falls back to `talking/neutral`.
+3. **Integration so a cut-out does not look pasted (M1):**
+   - per-scene **"stage spots"**: predefined positions with scale and floor line;
+   - a soft **contact shadow**;
+   - **colour/light matching** of the cut-out to the scene palette;
+   - light edge feathering.
+
+   A painted 2D style hides compositing seams far better than 3D.
+4. **Life in video (Remotion):** cheap per-asset variants make characters move between
+   frames:
+   - **blink**;
+   - **mouth open/closed** switched on the **per-word timings Edge TTS already provides**
+     (Task 19.2 `WordBoundary`);
+   - a subtle idle "breathing" motion;
+   - expression and action switching per line.
+
+For hero shots (thumbnail), **M2** renders the character *into* the approved scene: inpaint
+at a stage spot with IP-Adapter (identity) + OpenPose (action), for fully natural lighting.
+
+**Honest limits:**
+- **M1 can only show actions in the library's vocabulary.** A new action is one more
+  library generation, done once and reused afterwards.
+- **VRAM:** SDXL (~9.1 GB) + IP-Adapter (+2.0 GB) + ControlNet (~+2.5 GB fp16) ≈ 13.6 GB,
+  which is **more than the 12 GB card**.
+  - Library generation (done once per asset, where speed doesn't matter) will use
+    diffusers **model CPU offload**. That is slower but fits.
+  - M2 must be measured in 20.2b; it may run without ControlNet, or offloaded.
+
+### 5.3 Background removal (for M1 cut-outs), licences checked 2026-09-30
+
+| Model | Licence | Use |
+|---|---|---|
+| `skytnt/anime-seg` | Apache-2.0 | First choice for the 2D anime-style look |
+| `ZhengPeng7/BiRefNet` | MIT | General fallback |
+| `briaai/RMBG-2.0` | gated, "other" (not commercial-clean) | **excluded** |
+
+### 5.4 Revised 20.2b spike scope (owner machine)
+
+1. The **channel style preset**: is the Ghibli-like look reachable on SDXL-Lightning vs
+   base with descriptive prompts only? The owner judges.
+2. **Identity** across face views, full body, 5 expressions, and 3–4 OpenPose actions
+   (IP-Adapter + ControlNet, with CPU offload as needed). Measure VRAM and time.
+3. **Cut-out quality:** anime-seg vs BiRefNet on those assets.
+4. **One M1 composite** (stage spot + shadow + colour match) and **one M2 inpaint**
+   thumbnail in a library scene. The owner compares them for "not stiff".
+
+After 20.2b the task list in §3.3 stands, with actions and variants folded into 20.3/20.4,
+content-driven tagging into 20.6, and mouth/blink animation into 20.6.
