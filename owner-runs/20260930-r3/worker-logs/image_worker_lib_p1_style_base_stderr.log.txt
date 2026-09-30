@@ -1,0 +1,22 @@
+image_worker: ready on cuda
+[transformers] `CLIPImageProcessor` requires torchvision (not installed); falling back to `CLIPImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `CLIPImageProcessorPil` directly to silence this warning.
+[transformers] `SiglipImageProcessor` requires torchvision (not installed); falling back to `SiglipImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `SiglipImageProcessorPil` directly to silence this warning.
+Fetching 17 files:   0%|          | 0/17 [00:00<?, ?it/s]Fetching 17 files: 100%|##########| 17/17 [00:00<00:00, 3190.01it/s]
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files: 100%|##########| 2/2 [00:00<00:00, 1284.04it/s]
+D:\DataAdmin\Daily_Intel_English\venv-image\Lib\site-packages\diffusers\utils\deprecation_utils.py:23: FutureWarning: `torch_dtype` is deprecated and will be removed in version 1.0.0. Please use `dtype` instead.
+  deprecate("torch_dtype", "1.0.0", _TORCH_DTYPE_DEPRECATION_MESSAGE)
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]Loading pipeline components...:  29%|##8       | 2/7 [00:00<00:00, 17.06it/s]
+Loading weights:   0%|          | 0/517 [00:00<?, ?it/s][A
+Loading weights:   8%|7         | 39/517 [00:00<00:01, 387.11it/s][A
+Loading weights:  15%|#5        | 78/517 [00:00<00:01, 316.02it/s][A
+Loading weights:  23%|##3       | 119/517 [00:00<00:01, 337.70it/s][A
+Loading weights:  30%|##9       | 155/517 [00:00<00:01, 343.16it/s][A
+Loading weights:  38%|###7      | 195/517 [00:00<00:00, 353.16it/s][A
+Loading weights:  45%|####4     | 231/517 [00:00<00:00, 345.90it/s][A
+Loading weights:  53%|#####3    | 276/517 [00:00<00:00, 373.99it/s][A
+Loading weights:  61%|######    | 314/517 [00:00<00:00, 362.34it/s][ALoading weights: 100%|##########| 517/517 [00:00<00:00, 571.49it/s]
+Loading pipeline components...:  57%|#####7    | 4/7 [00:01<00:01,  1.92it/s]
+Loading weights:   0%|          | 0/196 [00:00<?, ?it/s][A
+Loading weights:  54%|#####3    | 105/196 [00:00<00:00, 1001.15it/s][ALoading weights: 100%|##########| 196/196 [00:00<00:00, 1450.68it/s]
+Loading pipeline components...: 100%|##########| 7/7 [00:02<00:00,  3.52it/s]Loading pipeline components...: 100%|##########| 7/7 [00:02<00:00,  3.34it/s]
+image_worker: stdin closed, exiting

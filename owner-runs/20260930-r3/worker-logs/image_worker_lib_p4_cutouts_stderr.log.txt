@@ -1,0 +1,2 @@
+image_worker: ready on cuda
+image_worker: stdin closed, exiting

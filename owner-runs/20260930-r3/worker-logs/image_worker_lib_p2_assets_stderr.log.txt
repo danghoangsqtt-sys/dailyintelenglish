@@ -1,0 +1,58 @@
+image_worker: ready on cuda
+[transformers] `CLIPImageProcessor` requires torchvision (not installed); falling back to `CLIPImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `CLIPImageProcessorPil` directly to silence this warning.
+[transformers] `SiglipImageProcessor` requires torchvision (not installed); falling back to `SiglipImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `SiglipImageProcessorPil` directly to silence this warning.
+Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]Fetching 16 files: 100%|##########| 16/16 [00:00<00:00, 2568.56it/s]
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files: 100%|##########| 2/2 [00:00<00:00, 1338.11it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+D:\DataAdmin\Daily_Intel_English\venv-image\Lib\site-packages\diffusers\configuration_utils.py:281: FutureWarning: It is deprecated to pass a pretrained model name or path to `from_config`.If you were trying to load a model, please use <class 'diffusers.models.unets.unet_2d_condition.UNet2DConditionModel'>.load_config(...) followed by <class 'diffusers.models.unets.unet_2d_condition.UNet2DConditionModel'>.from_config(...) instead. Otherwise, please make sure to pass a configuration dictionary instead. This functionality will be removed in v1.0.0.
+  deprecate("config-passed-as-path", "1.0.0", deprecation_message, standard_warn=False)
+There are modules in UNet2DConditionModel that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+D:\DataAdmin\Daily_Intel_English\venv-image\Lib\site-packages\diffusers\utils\deprecation_utils.py:23: FutureWarning: `torch_dtype` is deprecated and will be removed in version 1.0.0. Please use `dtype` instead.
+  deprecate("torch_dtype", "1.0.0", _TORCH_DTYPE_DEPRECATION_MESSAGE)
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]
+Loading weights:   0%|          | 0/196 [00:00<?, ?it/s][A
+Loading weights:  34%|###3      | 66/196 [00:00<00:00, 592.04it/s][ALoading weights: 100%|##########| 196/196 [00:00<00:00, 1090.82it/s]
+Loading pipeline components...:  29%|##8       | 2/7 [00:00<00:00,  5.61it/s]
+Loading weights:   0%|          | 0/517 [00:00<?, ?it/s][A
+Loading weights:   5%|5         | 27/517 [00:00<00:01, 253.89it/s][A
+Loading weights:  10%|#         | 53/517 [00:00<00:02, 226.37it/s][A
+Loading weights:  16%|#5        | 82/517 [00:00<00:01, 242.10it/s][A
+Loading weights:  21%|##        | 107/517 [00:00<00:01, 213.93it/s][A
+Loading weights:  28%|##8       | 145/517 [00:00<00:01, 264.95it/s][A
+Loading weights:  33%|###3      | 173/517 [00:00<00:01, 254.43it/s][A
+Loading weights:  39%|###8      | 200/517 [00:00<00:01, 214.51it/s][A
+Loading weights:  44%|####3     | 225/517 [00:00<00:01, 220.74it/s][A
+Loading weights:  48%|####8     | 249/517 [00:01<00:01, 218.95it/s][A
+Loading weights:  58%|#####8    | 302/517 [00:01<00:00, 291.15it/s][A
+Loading weights:  64%|######4   | 332/517 [00:01<00:00, 279.43it/s][ALoading weights: 100%|##########| 517/517 [00:01<00:00, 389.59it/s]
+Loading pipeline components...: 100%|##########| 7/7 [00:02<00:00,  3.34it/s]Loading pipeline components...: 100%|##########| 7/7 [00:02<00:00,  3.46it/s]
+Loading weights:   0%|          | 0/520 [00:00<?, ?it/s]Loading weights:   4%|4         | 22/520 [00:00<00:02, 217.25it/s]Loading weights:   8%|8         | 44/520 [00:00<00:02, 205.33it/s]Loading weights:  12%|#2        | 65/520 [00:00<00:02, 200.23it/s]Loading weights:  17%|#6        | 86/520 [00:00<00:02, 150.61it/s]Loading weights:  20%|##        | 105/520 [00:00<00:02, 155.22it/s]Loading weights:  23%|##3       | 122/520 [00:00<00:02, 151.66it/s]Loading weights:  27%|##6       | 138/520 [00:00<00:02, 148.51it/s]Loading weights:  30%|##9       | 154/520 [00:00<00:02, 144.57it/s]Loading weights:  32%|###2      | 169/520 [00:01<00:02, 142.55it/s]Loading weights:  35%|###5      | 184/520 [00:01<00:02, 138.23it/s]Loading weights:  38%|###8      | 198/520 [00:01<00:02, 127.77it/s]Loading weights:  41%|####      | 211/520 [00:01<00:02, 114.49it/s]Loading weights:  44%|####4     | 231/520 [00:01<00:02, 120.47it/s]Loading weights:  47%|####6     | 244/520 [00:01<00:02, 108.64it/s]Loading weights:  49%|####9     | 256/520 [00:01<00:02, 110.35it/s]Loading weights:  53%|#####2    | 275/520 [00:02<00:02, 120.69it/s]Loading weights:  56%|#####5    | 291/520 [00:02<00:01, 122.40it/s]Loading weights:  59%|#####9    | 307/520 [00:02<00:01, 124.49it/s]Loading weights:  62%|######2   | 323/520 [00:02<00:01, 125.94it/s]Loading weights:  66%|######5   | 343/520 [00:02<00:01, 130.80it/s]Loading weights:  69%|######8   | 357/520 [00:02<00:01, 130.24it/s]Loading weights:  71%|#######1  | 371/520 [00:02<00:01, 129.63it/s]Loading weights:  75%|#######4  | 388/520 [00:02<00:00, 134.72it/s]Loading weights:  78%|#######7  | 403/520 [00:02<00:00, 133.60it/s]Loading weights:  81%|########  | 419/520 [00:03<00:00, 131.01it/s]Loading weights:  84%|########4 | 437/520 [00:03<00:00, 138.30it/s]Loading weights:  87%|########6 | 451/520 [00:03<00:00, 128.50it/s]Loading weights:  90%|########9 | 467/520 [00:03<00:00, 133.70it/s]Loading weights:  93%|#########3| 484/520 [00:03<00:00, 132.51it/s]Loading weights:  96%|#########6| 500/520 [00:03<00:00, 135.45it/s]Loading weights: 100%|##########| 520/520 [00:03<00:00, 138.55it/s]
+There are modules in UNet2DConditionModel that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (81 > 77). Running this sequence through the model will result in indexing errors
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer CLIPTokenizer. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', no text , no logo']
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (81 > 77). Running this sequence through the model will result in indexing errors
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['raised eyebrows , open mouth , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['raised eyebrows , open mouth , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['looking up , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['looking up , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['downturned mouth , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['downturned mouth , no text , no logo']
+image_worker: stdin closed, exiting

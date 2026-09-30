@@ -1,0 +1,40 @@
+image_worker: ready on cuda
+[transformers] `CLIPImageProcessor` requires torchvision (not installed); falling back to `CLIPImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `CLIPImageProcessorPil` directly to silence this warning.
+[transformers] `SiglipImageProcessor` requires torchvision (not installed); falling back to `SiglipImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `SiglipImageProcessorPil` directly to silence this warning.
+Fetching 17 files:   0%|          | 0/17 [00:00<?, ?it/s]Fetching 17 files: 100%|##########| 17/17 [00:00<00:00, 2219.97it/s]
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files: 100%|##########| 2/2 [00:00<00:00, 1343.90it/s]
+D:\DataAdmin\Daily_Intel_English\venv-image\Lib\site-packages\diffusers\utils\deprecation_utils.py:23: FutureWarning: `torch_dtype` is deprecated and will be removed in version 1.0.0. Please use `dtype` instead.
+  deprecate("torch_dtype", "1.0.0", _TORCH_DTYPE_DEPRECATION_MESSAGE)
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]
+Loading weights:   0%|          | 0/196 [00:00<?, ?it/s][A
+Loading weights:  28%|##8       | 55/196 [00:00<00:00, 546.88it/s][A
+Loading weights:  56%|#####6    | 110/196 [00:00<00:00, 524.50it/s][ALoading weights: 100%|##########| 196/196 [00:00<00:00, 848.26it/s]
+Loading pipeline components...:  29%|##8       | 2/7 [00:00<00:01,  4.27it/s]
+Loading weights:   0%|          | 0/517 [00:00<?, ?it/s][A
+Loading weights:   7%|6         | 34/517 [00:00<00:02, 206.92it/s][A
+Loading weights:  11%|#         | 55/517 [00:00<00:02, 163.62it/s][A
+Loading weights:  15%|#4        | 76/517 [00:00<00:02, 156.31it/s][A
+Loading weights:  18%|#8        | 95/517 [00:00<00:02, 148.41it/s][A
+Loading weights:  22%|##2       | 115/517 [00:00<00:02, 152.97it/s][A
+Loading weights:  25%|##5       | 131/517 [00:00<00:02, 140.12it/s][A
+Loading weights:  28%|##8       | 147/517 [00:01<00:02, 129.78it/s][A
+Loading weights:  31%|###1      | 161/517 [00:01<00:02, 127.15it/s][A
+Loading weights:  34%|###3      | 174/517 [00:01<00:03, 104.87it/s][A
+Loading weights:  37%|###6      | 191/517 [00:01<00:02, 117.02it/s][A
+Loading weights:  42%|####2     | 218/517 [00:01<00:02, 146.69it/s][A
+Loading weights:  46%|####6     | 239/517 [00:01<00:01, 155.26it/s][A
+Loading weights:  50%|####9     | 256/517 [00:01<00:01, 154.31it/s][A
+Loading weights:  53%|#####2    | 273/517 [00:01<00:01, 157.33it/s][A
+Loading weights:  56%|#####6    | 292/517 [00:01<00:01, 165.55it/s][ALoading weights: 100%|##########| 517/517 [00:02<00:00, 257.72it/s]
+Loading pipeline components...:  43%|####2     | 3/7 [00:02<00:04,  1.12s/it]Loading pipeline components...:  86%|########5 | 6/7 [00:03<00:00,  1.93it/s]Loading pipeline components...: 100%|##########| 7/7 [00:03<00:00,  2.07it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/520 [00:00<?, ?it/s]Loading weights:   4%|4         | 21/520 [00:00<00:03, 141.16it/s]Loading weights:   8%|7         | 39/520 [00:00<00:03, 137.72it/s]Loading weights:  10%|#         | 53/520 [00:00<00:03, 137.79it/s]Loading weights:  14%|#3        | 71/520 [00:00<00:03, 135.31it/s]Loading weights:  16%|#6        | 85/520 [00:00<00:03, 131.71it/s]Loading weights:  19%|#9        | 99/520 [00:00<00:03, 126.52it/s]Loading weights:  22%|##1       | 113/520 [00:00<00:03, 125.78it/s]Loading weights:  25%|##5       | 131/520 [00:00<00:02, 132.14it/s]Loading weights:  28%|##8       | 147/520 [00:01<00:02, 135.70it/s]Loading weights:  31%|###1      | 163/520 [00:01<00:02, 137.61it/s]Loading weights:  35%|###4      | 181/520 [00:01<00:02, 142.99it/s]Loading weights:  38%|###7      | 197/520 [00:01<00:02, 140.20it/s]Loading weights:  41%|####      | 212/520 [00:01<00:02, 136.95it/s]Loading weights:  44%|####4     | 229/520 [00:01<00:02, 138.70it/s]Loading weights:  47%|####6     | 243/520 [00:01<00:02, 130.15it/s]Loading weights:  51%|#####     | 265/520 [00:01<00:01, 144.23it/s]Loading weights:  54%|#####4    | 281/520 [00:02<00:01, 147.49it/s]Loading weights:  57%|#####6    | 296/520 [00:02<00:01, 144.56it/s]Loading weights:  60%|#####9    | 311/520 [00:02<00:01, 135.77it/s]Loading weights:  62%|######2   | 325/520 [00:02<00:01, 130.63it/s]Loading weights:  65%|######5   | 340/520 [00:02<00:01, 134.08it/s]Loading weights:  69%|######9   | 359/520 [00:02<00:01, 135.80it/s]Loading weights:  72%|#######1  | 373/520 [00:02<00:01, 125.16it/s]Loading weights:  76%|#######5  | 394/520 [00:02<00:00, 144.24it/s]Loading weights:  79%|#######8  | 409/520 [00:02<00:00, 141.52it/s]Loading weights:  82%|########1 | 424/520 [00:03<00:00, 143.17it/s]Loading weights:  84%|########4 | 439/520 [00:03<00:00, 132.96it/s]Loading weights:  88%|########7 | 455/520 [00:03<00:00, 137.52it/s]Loading weights:  90%|######### | 470/520 [00:03<00:00, 135.40it/s]Loading weights:  93%|#########3| 484/520 [00:03<00:00, 127.59it/s]Loading weights:  96%|#########5| 497/520 [00:03<00:00, 127.13it/s]Loading weights: 100%|##########| 520/520 [00:03<00:00, 139.82it/s]
+There are modules in UNet2DConditionModel that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (85 > 77). Running this sequence through the model will result in indexing errors
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer CLIPTokenizer. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['with one raised hand , no text , no logo']
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (85 > 77). Running this sequence through the model will result in indexing errors
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['with one raised hand , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['outstretched arm , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: ['outstretched arm , no text , no logo']
+image_worker: stdin closed, exiting

@@ -1,0 +1,30 @@
+image_worker: ready on cuda
+[transformers] `CLIPImageProcessor` requires torchvision (not installed); falling back to `CLIPImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `CLIPImageProcessorPil` directly to silence this warning.
+[transformers] `SiglipImageProcessor` requires torchvision (not installed); falling back to `SiglipImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `SiglipImageProcessorPil` directly to silence this warning.
+Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]Fetching 16 files: 100%|##########| 16/16 [00:00<00:00, 1930.75it/s]
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files: 100%|##########| 2/2 [00:00<00:00, 1200.95it/s]
+D:\DataAdmin\Daily_Intel_English\venv-image\Lib\site-packages\diffusers\configuration_utils.py:281: FutureWarning: It is deprecated to pass a pretrained model name or path to `from_config`.If you were trying to load a model, please use <class 'diffusers.models.unets.unet_2d_condition.UNet2DConditionModel'>.load_config(...) followed by <class 'diffusers.models.unets.unet_2d_condition.UNet2DConditionModel'>.from_config(...) instead. Otherwise, please make sure to pass a configuration dictionary instead. This functionality will be removed in v1.0.0.
+  deprecate("config-passed-as-path", "1.0.0", deprecation_message, standard_warn=False)
+There are modules in UNet2DConditionModel that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+D:\DataAdmin\Daily_Intel_English\venv-image\Lib\site-packages\diffusers\utils\deprecation_utils.py:23: FutureWarning: `torch_dtype` is deprecated and will be removed in version 1.0.0. Please use `dtype` instead.
+  deprecate("torch_dtype", "1.0.0", _TORCH_DTYPE_DEPRECATION_MESSAGE)
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]
+Loading weights:   0%|          | 0/517 [00:00<?, ?it/s][A
+Loading weights:   3%|2         | 13/517 [00:00<00:04, 117.87it/s][A
+Loading weights:   8%|7         | 41/517 [00:00<00:02, 199.79it/s][A
+Loading weights:  12%|#2        | 64/517 [00:00<00:02, 190.62it/s][A
+Loading weights:  16%|#6        | 84/517 [00:00<00:02, 169.29it/s][A
+Loading weights:  20%|#9        | 102/517 [00:00<00:03, 136.74it/s][A
+Loading weights:  24%|##3       | 123/517 [00:00<00:02, 151.75it/s][A
+Loading weights:  28%|##7       | 144/517 [00:00<00:02, 154.96it/s][A
+Loading weights:  31%|###1      | 161/517 [00:01<00:02, 151.59it/s][A
+Loading weights:  36%|###5      | 186/517 [00:01<00:01, 174.42it/s][A
+Loading weights:  40%|###9      | 206/517 [00:01<00:01, 180.12it/s][A
+Loading weights:  46%|####5     | 237/517 [00:01<00:01, 215.93it/s][A
+Loading weights:  50%|#####     | 260/517 [00:01<00:01, 178.55it/s][A
+Loading weights:  69%|######8   | 356/517 [00:01<00:00, 371.54it/s][ALoading weights: 100%|##########| 517/517 [00:01<00:00, 318.36it/s]
+Loading pipeline components...:  71%|#######1  | 5/7 [00:02<00:00,  2.38it/s]
+Loading weights:   0%|          | 0/196 [00:00<?, ?it/s][A
+Loading weights:  27%|##6       | 52/196 [00:00<00:00, 517.92it/s][ALoading weights: 100%|##########| 196/196 [00:00<00:00, 1156.13it/s]
+Loading pipeline components...: 100%|##########| 7/7 [00:02<00:00,  3.01it/s]Loading pipeline components...: 100%|##########| 7/7 [00:02<00:00,  2.85it/s]
+image_worker: stdin closed, exiting

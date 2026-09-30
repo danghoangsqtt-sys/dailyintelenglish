@@ -1,0 +1,1184 @@
+{
+  "run_label": "r3",
+  "style_preset": "hand-painted 2D anime illustration, soft watercolor background, warm natural sunlight, gentle pastel palette, cozy whimsical atmosphere, clean line art",
+  "character": "a young woman English teacher with short wavy chestnut hair, round glasses, green cardigan over a white blouse, brown skirt",
+  "phases": {
+    "p1_style_lightning": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 515.5,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "lightning",
+        "pipeline": "text2img",
+        "encoders": true,
+        "lightning_steps": 4,
+        "download_or_cache_sec": 0.814,
+        "load_sec": 13.614,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerDiscreteScheduler",
+        "timestep_spacing": "trailing",
+        "vram_allocated_mb": 6705.6,
+        "rss_mb": 1064.1
+      },
+      "scenes": [
+        {
+          "status": "ok",
+          "wall_time_sec": 2.803,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\scene_classroom_lightning.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9111.5,
+          "peak_vram_reserved_mb": 11338.0,
+          "rss_mb": 1778.4
+        },
+        {
+          "status": "ok",
+          "wall_time_sec": 2.164,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\scene_kitchen_lightning.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9111.5,
+          "peak_vram_reserved_mb": 11338.0,
+          "rss_mb": 1778.4
+        }
+      ],
+      "portraits": [
+        {
+          "status": "ok",
+          "wall_time_sec": 5.341,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\portrait_lightning_1.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9149.5,
+          "peak_vram_reserved_mb": 13134.0,
+          "rss_mb": 3572.4
+        },
+        {
+          "status": "ok",
+          "wall_time_sec": 6.065,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\portrait_lightning_2.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9149.5,
+          "peak_vram_reserved_mb": 13134.0,
+          "rss_mb": 3572.4
+        },
+        {
+          "status": "ok",
+          "wall_time_sec": 6.045,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\portrait_lightning_3.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9149.5,
+          "peak_vram_reserved_mb": 13134.0,
+          "rss_mb": 3572.4
+        },
+        {
+          "status": "ok",
+          "wall_time_sec": 6.078,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\portrait_lightning_4.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9149.5,
+          "peak_vram_reserved_mb": 13134.0,
+          "rss_mb": 3572.4
+        }
+      ],
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "lightning",
+        "ip_adapter_loaded": false,
+        "device": "cuda",
+        "vram_allocated_mb": 6714.7,
+        "vram_reserved_mb": 13134.0,
+        "rss_mb": 3568.4
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11578,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 50.0
+    },
+    "p1_style_base": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 515.0,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "base",
+        "pipeline": "text2img",
+        "encoders": true,
+        "lightning_steps": null,
+        "download_or_cache_sec": 0.722,
+        "load_sec": 11.665,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerDiscreteScheduler",
+        "timestep_spacing": "leading",
+        "vram_allocated_mb": 6724.7,
+        "rss_mb": 871.0
+      },
+      "scenes": [
+        {
+          "status": "ok",
+          "wall_time_sec": 22.058,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\scene_classroom_base.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9131.6,
+          "peak_vram_reserved_mb": 11524.0,
+          "rss_mb": 1669.8
+        },
+        {
+          "status": "ok",
+          "wall_time_sec": 23.094,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\scene_kitchen_base.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9131.6,
+          "peak_vram_reserved_mb": 11524.0,
+          "rss_mb": 1655.9
+        }
+      ],
+      "portraits": [
+        {
+          "status": "ok",
+          "wall_time_sec": 27.553,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\portrait_base_1.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 13320.0,
+          "rss_mb": 3543.9
+        }
+      ],
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "base",
+        "ip_adapter_loaded": false,
+        "device": "cuda",
+        "vram_allocated_mb": 6733.8,
+        "vram_reserved_mb": 13320.0,
+        "rss_mb": 3539.9
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11641,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 90.7
+    },
+    "p2_assets": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 514.9,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "lightning",
+        "pipeline": "text2img",
+        "encoders": true,
+        "lightning_steps": 4,
+        "download_or_cache_sec": 0.821,
+        "load_sec": 7.387,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerDiscreteScheduler",
+        "timestep_spacing": "trailing",
+        "vram_allocated_mb": 6705.6,
+        "rss_mb": 1062.5
+      },
+      "assets": [
+        {
+          "view": "front",
+          "expression": "neutral",
+          "status": "ok",
+          "wall_time_sec": 9.705,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_front_neutral.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5141.1
+        },
+        {
+          "view": "three_quarter_left",
+          "expression": "neutral",
+          "status": "ok",
+          "wall_time_sec": 9.776,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_three_quarter_left_neutral.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5144.2
+        },
+        {
+          "view": "three_quarter_right",
+          "expression": "neutral",
+          "status": "ok",
+          "wall_time_sec": 9.803,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_three_quarter_right_neutral.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5144.3
+        },
+        {
+          "view": "full_body",
+          "expression": "neutral",
+          "status": "ok",
+          "wall_time_sec": 10.791,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_full_body_neutral.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11077.6,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5145.7
+        },
+        {
+          "view": "front",
+          "expression": "happy",
+          "status": "ok",
+          "wall_time_sec": 9.712,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_front_happy.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.3
+        },
+        {
+          "view": "three_quarter_left",
+          "expression": "happy",
+          "status": "ok",
+          "wall_time_sec": 9.792,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_three_quarter_left_happy.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.3
+        },
+        {
+          "view": "three_quarter_right",
+          "expression": "happy",
+          "status": "ok",
+          "wall_time_sec": 9.752,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_three_quarter_right_happy.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.3
+        },
+        {
+          "view": "full_body",
+          "expression": "happy",
+          "status": "ok",
+          "wall_time_sec": 10.723,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_full_body_happy.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11077.6,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.2
+        },
+        {
+          "view": "front",
+          "expression": "surprised",
+          "status": "ok",
+          "wall_time_sec": 9.77,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_front_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.3
+        },
+        {
+          "view": "three_quarter_left",
+          "expression": "surprised",
+          "status": "ok",
+          "wall_time_sec": 9.761,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_three_quarter_left_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.3
+        },
+        {
+          "view": "three_quarter_right",
+          "expression": "surprised",
+          "status": "ok",
+          "wall_time_sec": 9.78,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_three_quarter_right_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.3
+        },
+        {
+          "view": "full_body",
+          "expression": "surprised",
+          "status": "ok",
+          "wall_time_sec": 10.756,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_full_body_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11077.6,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.2
+        },
+        {
+          "view": "front",
+          "expression": "thinking",
+          "status": "ok",
+          "wall_time_sec": 9.765,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_front_thinking.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.3
+        },
+        {
+          "view": "three_quarter_left",
+          "expression": "thinking",
+          "status": "ok",
+          "wall_time_sec": 9.827,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_three_quarter_left_thinking.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.3
+        },
+        {
+          "view": "three_quarter_right",
+          "expression": "thinking",
+          "status": "ok",
+          "wall_time_sec": 9.803,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_three_quarter_right_thinking.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.3
+        },
+        {
+          "view": "full_body",
+          "expression": "thinking",
+          "status": "ok",
+          "wall_time_sec": 10.727,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_full_body_thinking.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11077.6,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.2
+        },
+        {
+          "view": "front",
+          "expression": "sad",
+          "status": "ok",
+          "wall_time_sec": 9.839,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_front_sad.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.3
+        },
+        {
+          "view": "three_quarter_left",
+          "expression": "sad",
+          "status": "ok",
+          "wall_time_sec": 9.756,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_three_quarter_left_sad.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.3
+        },
+        {
+          "view": "three_quarter_right",
+          "expression": "sad",
+          "status": "ok",
+          "wall_time_sec": 9.775,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_three_quarter_right_sad.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11164.0,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.3
+        },
+        {
+          "view": "full_body",
+          "expression": "sad",
+          "status": "ok",
+          "wall_time_sec": 10.855,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": false,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\asset_full_body_sad.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11077.6,
+          "peak_vram_reserved_mb": 13582.0,
+          "rss_mb": 5148.2
+        }
+      ],
+      "ip_load": {
+        "status": "ok",
+        "load_sec": 7.362,
+        "vram_added_mb": 2013.9,
+        "rss_mb": 2272.3
+      },
+      "encode": {
+        "status": "ok",
+        "items": 4,
+        "do_cfg": false,
+        "with_ip": true,
+        "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\action_embeds.pt",
+        "wall_time_sec": 0.25
+      },
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "lightning",
+        "ip_adapter_loaded": true,
+        "device": "cuda",
+        "vram_allocated_mb": 8728.6,
+        "vram_reserved_mb": 13582.0,
+        "rss_mb": 5137.7
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11706,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 225.4
+    },
+    "p3_actions": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 515.0,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "lightning",
+        "pipeline": "controlnet",
+        "encoders": false,
+        "lightning_steps": 4,
+        "download_or_cache_sec": 0.847,
+        "load_sec": 790.355,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerDiscreteScheduler",
+        "timestep_spacing": "trailing",
+        "vram_allocated_mb": 7564.4,
+        "rss_mb": 1077.3
+      },
+      "actions": [
+        {
+          "action": "waving",
+          "pose_path": "data\\tmp\\phase20b_character_spike\\run_r3\\pose_waving.png",
+          "status": "ok",
+          "wall_time_sec": 9.114,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": false,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\action_waving.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10790.0,
+          "peak_vram_reserved_mb": 12966.0,
+          "rss_mb": 3370.4
+        },
+        {
+          "action": "pointing",
+          "pose_path": "data\\tmp\\phase20b_character_spike\\run_r3\\pose_pointing.png",
+          "status": "ok",
+          "wall_time_sec": 8.072,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": false,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\action_pointing.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10789.2,
+          "peak_vram_reserved_mb": 12966.0,
+          "rss_mb": 3372.7
+        },
+        {
+          "action": "thinking",
+          "pose_path": "data\\tmp\\phase20b_character_spike\\run_r3\\pose_thinking.png",
+          "status": "ok",
+          "wall_time_sec": 8.025,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": false,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\action_thinking.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10789.2,
+          "peak_vram_reserved_mb": 12966.0,
+          "rss_mb": 3372.8
+        },
+        {
+          "action": "cheering",
+          "pose_path": "data\\tmp\\phase20b_character_spike\\run_r3\\pose_cheering.png",
+          "status": "ok",
+          "wall_time_sec": 8.021,
+          "steps": 4,
+          "guidance_scale": 0.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": false,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\action_cheering.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10789.2,
+          "peak_vram_reserved_mb": 12966.0,
+          "rss_mb": 3372.8
+        }
+      ],
+      "ip_load": {
+        "status": "ok",
+        "load_sec": 1.373,
+        "vram_added_mb": 808.2,
+        "rss_mb": 1055.7
+      },
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "lightning",
+        "ip_adapter_loaded": true,
+        "device": "cuda",
+        "vram_allocated_mb": 8381.8,
+        "vram_reserved_mb": 12966.0,
+        "rss_mb": 3361.3
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11697,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 832.7
+    },
+    "p4_cutouts": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 514.8,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "cutouts": [
+        {
+          "input": "asset_full_body_neutral.png",
+          "status": "ok",
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\cut_asset_full_body_neutral.png",
+          "wall_time_sec": 0.899,
+          "foreground_fraction": 0.4843,
+          "soft_edge_fraction": 0.0204
+        },
+        {
+          "input": "asset_full_body_happy.png",
+          "status": "ok",
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\cut_asset_full_body_happy.png",
+          "wall_time_sec": 0.941,
+          "foreground_fraction": 0.476,
+          "soft_edge_fraction": 0.0203
+        },
+        {
+          "input": "asset_full_body_surprised.png",
+          "status": "ok",
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\cut_asset_full_body_surprised.png",
+          "wall_time_sec": 0.859,
+          "foreground_fraction": 0.4865,
+          "soft_edge_fraction": 0.0187
+        },
+        {
+          "input": "asset_full_body_thinking.png",
+          "status": "ok",
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\cut_asset_full_body_thinking.png",
+          "wall_time_sec": 0.827,
+          "foreground_fraction": 0.484,
+          "soft_edge_fraction": 0.0188
+        },
+        {
+          "input": "asset_full_body_sad.png",
+          "status": "ok",
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\cut_asset_full_body_sad.png",
+          "wall_time_sec": 0.809,
+          "foreground_fraction": 0.4827,
+          "soft_edge_fraction": 0.0193
+        },
+        {
+          "input": "action_waving.png",
+          "status": "ok",
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\cut_action_waving.png",
+          "wall_time_sec": 0.873,
+          "foreground_fraction": 0.1918,
+          "soft_edge_fraction": 0.0259
+        },
+        {
+          "input": "action_pointing.png",
+          "status": "ok",
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\cut_action_pointing.png",
+          "wall_time_sec": 0.877,
+          "foreground_fraction": 0.2061,
+          "soft_edge_fraction": 0.0221
+        },
+        {
+          "input": "action_thinking.png",
+          "status": "ok",
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\cut_action_thinking.png",
+          "wall_time_sec": 0.875,
+          "foreground_fraction": 0.1895,
+          "soft_edge_fraction": 0.0537
+        },
+        {
+          "input": "action_cheering.png",
+          "status": "ok",
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\cut_action_cheering.png",
+          "wall_time_sec": 0.852,
+          "foreground_fraction": 0.2606,
+          "soft_edge_fraction": 0.0192
+        }
+      ],
+      "stats": {
+        "status": "ok",
+        "loaded": false,
+        "mode": null,
+        "ip_adapter_loaded": false,
+        "device": "cuda",
+        "vram_allocated_mb": 0.0,
+        "vram_reserved_mb": 0.0,
+        "rss_mb": 2038.7
+      },
+      "worker_exit_code": 0,
+      "wall_sec": 51.5
+    },
+    "p5_m1": {
+      "composites": [
+        {
+          "scene": "classroom",
+          "integrated": false,
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\m1_classroom_naive.png",
+          "wall_time_sec": 0.166
+        },
+        {
+          "scene": "classroom",
+          "integrated": true,
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\m1_classroom_integrated.png",
+          "wall_time_sec": 0.165
+        },
+        {
+          "scene": "kitchen",
+          "integrated": false,
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\m1_kitchen_naive.png",
+          "wall_time_sec": 0.195
+        },
+        {
+          "scene": "kitchen",
+          "integrated": true,
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\m1_kitchen_integrated.png",
+          "wall_time_sec": 0.185
+        }
+      ]
+    },
+    "p6_m2": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 515.4,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "base",
+        "pipeline": "inpaint",
+        "encoders": true,
+        "lightning_steps": null,
+        "download_or_cache_sec": 0.851,
+        "load_sec": 13.103,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerDiscreteScheduler",
+        "timestep_spacing": "leading",
+        "vram_allocated_mb": 6724.7,
+        "rss_mb": 876.8
+      },
+      "renders": [
+        {
+          "scene": "classroom",
+          "final_path": "data\\tmp\\phase20b_character_spike\\run_r3\\m2_classroom.png",
+          "status": "ok",
+          "wall_time_sec": 26.491,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\m2_classroom_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11147.8,
+          "peak_vram_reserved_mb": 12476.0,
+          "rss_mb": 3970.2
+        },
+        {
+          "scene": "kitchen",
+          "final_path": "data\\tmp\\phase20b_character_spike\\run_r3\\m2_kitchen.png",
+          "status": "ok",
+          "wall_time_sec": 27.208,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20b_character_spike\\run_r3\\m2_kitchen_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11147.8,
+          "peak_vram_reserved_mb": 12476.0,
+          "rss_mb": 3998.2
+        }
+      ],
+      "ip_load": {
+        "status": "ok",
+        "load_sec": 6.165,
+        "vram_added_mb": 2014.1,
+        "rss_mb": 2107.4
+      },
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "base",
+        "ip_adapter_loaded": true,
+        "device": "cuda",
+        "vram_allocated_mb": 8747.9,
+        "vram_reserved_mb": 12476.0,
+        "rss_mb": 3978.3
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11598,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 80.0
+    }
+  },
+  "gpu_snapshots": [
+    {
+      "label": "start",
+      "at_monotonic_sec": 654115.386,
+      "vram_used_mb": 533,
+      "vram_free_mb": 11578,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p1_style_lightning_lease_acquired",
+      "at_monotonic_sec": 654115.524,
+      "vram_used_mb": 533,
+      "vram_free_mb": 11578,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p1_style_lightning_worker_exited",
+      "at_monotonic_sec": 654165.434,
+      "vram_used_mb": 470,
+      "vram_free_mb": 11641,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p1_style_base_lease_acquired",
+      "at_monotonic_sec": 654165.563,
+      "vram_used_mb": 470,
+      "vram_free_mb": 11641,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p1_style_base_worker_exited",
+      "at_monotonic_sec": 654256.162,
+      "vram_used_mb": 405,
+      "vram_free_mb": 11706,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p2_assets_lease_acquired",
+      "at_monotonic_sec": 654256.297,
+      "vram_used_mb": 405,
+      "vram_free_mb": 11706,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p2_assets_worker_exited",
+      "at_monotonic_sec": 654481.549,
+      "vram_used_mb": 414,
+      "vram_free_mb": 11697,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p3_actions_lease_acquired",
+      "at_monotonic_sec": 654481.696,
+      "vram_used_mb": 414,
+      "vram_free_mb": 11697,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p3_actions_worker_exited",
+      "at_monotonic_sec": 655314.237,
+      "vram_used_mb": 514,
+      "vram_free_mb": 11597,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p6_m2_lease_acquired",
+      "at_monotonic_sec": 655366.558,
+      "vram_used_mb": 513,
+      "vram_free_mb": 11598,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p6_m2_worker_exited",
+      "at_monotonic_sec": 655446.385,
+      "vram_used_mb": 457,
+      "vram_free_mb": 11654,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "end",
+      "at_monotonic_sec": 655446.476,
+      "vram_used_mb": 457,
+      "vram_free_mb": 11654,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    }
+  ],
+  "sheets": {
+    "style": "data\\tmp\\phase20b_character_spike\\run_r3\\sheet_style.png",
+    "character": "data\\tmp\\phase20b_character_spike\\run_r3\\sheet_character.png",
+    "actions": "data\\tmp\\phase20b_character_spike\\run_r3\\sheet_actions.png",
+    "composites": "data\\tmp\\phase20b_character_spike\\run_r3\\sheet_composites.png"
+  },
+  "output_dir": "data\\tmp\\phase20b_character_spike\\run_r3"
+}
