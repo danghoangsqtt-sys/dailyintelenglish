@@ -1,0 +1,29 @@
+Traceback (most recent call last):
+  File "D:\DataAdmin\Daily_Intel_English\scripts\spike_images.py", line 439, in <module>
+    print(json.dumps(asyncio.run(_main(_parse_args())), indent=2))
+                     ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\asyncio\runners.py", line 205, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Python314\Lib\asyncio\runners.py", line 128, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Python314\Lib\asyncio\base_events.py", line 720, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "D:\DataAdmin\Daily_Intel_English\scripts\spike_images.py", line 391, in _main
+    candidate = await asyncio.to_thread(_run_candidate, mode, episodes, output_dir, args)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\asyncio\threads.py", line 26, in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\concurrent\futures\thread.py", line 86, in run
+    result = ctx.run(self.task)
+  File "C:\Python314\Lib\concurrent\futures\thread.py", line 73, in run
+    return fn(*args, **kwargs)
+  File "D:\DataAdmin\Daily_Intel_English\scripts\spike_images.py", line 229, in _run_candidate
+    result["load"] = _checked(worker.request(load_request), f"{mode} load")
+                     ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\DataAdmin\Daily_Intel_English\scripts\spike_images.py", line 211, in _checked
+    raise SpikeError(f"{what} failed: {response.get('message', response)}")
+SpikeError: lightning load failed: OSError: The paging file is too small for this operation to complete. (os error 1455)

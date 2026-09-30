@@ -1,0 +1,84 @@
+# Section 1 preflight, pinned 20086495df7500f1769a532ba6e3c5e585a7a4ee
+> git fetch origin
+From https://github.com/danghoangsqtt-sys/dailyintelenglish
+   fb830cf..2008649  claude/admiring-knuth-r1d8vc -> origin/claude/admiring-knuth-r1d8vc
+> git switch claude/admiring-knuth-r1d8vc
+Already on 'claude/admiring-knuth-r1d8vc'
+Your branch is behind 'origin/claude/admiring-knuth-r1d8vc' by 1 commit, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+> git pull --ff-only origin claude/admiring-knuth-r1d8vc
+From https://github.com/danghoangsqtt-sys/dailyintelenglish
+ * branch            claude/admiring-knuth-r1d8vc -> FETCH_HEAD
+Updating fb830cf..2008649
+Fast-forward
+ docs/operations/owner-runbook-2026-09-30.md | 30 +++++++++++++++++++++--------
+ 1 file changed, 22 insertions(+), 8 deletions(-)
+> git rev-parse HEAD
+20086495df7500f1769a532ba6e3c5e585a7a4ee
+> git status --porcelain
+?? docs/operations/gate-b12-evidence/22484f26_ffmpeg.mp4
+?? docs/operations/gate-b12-evidence/22484f26_remotion.mp4
+?? docs/operations/gate-b12-evidence/b330d37f_ffmpeg.mp4
+?? docs/operations/gate-b12-evidence/b330d37f_remotion.mp4
+?? docs/operations/gate-b12-evidence/c08ce057_ffmpeg.mp4
+?? docs/operations/gate-b12-evidence/c08ce057_remotion.mp4
+
+> py -3.11 --version
+Python 3.11.9
+> py -3.14 --version
+Python 3.14.7
+> venv\Scripts\python --version
+Python 3.14.7
+> nvidia-smi --query-gpu=name,memory.used,memory.free,memory.total,driver_version --format=csv
+name, memory.used [MiB], memory.free [MiB], memory.total [MiB], driver_version
+NVIDIA GeForce RTX 3060, 2100 MiB, 10011 MiB, 12288 MiB, 616.56
+> ollama list
+NAME          ID              SIZE      MODIFIED    
+qwen3.5:9b    6488c96fa5fa    6.6 GB    11 days ago    
+> ffmpeg -version
+ffmpeg version 9.0.1-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers
+built with gcc 16.1.0 (Rev2, Built by MSYS2 project)
+configuration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-cairo --enable-fontconfig --enable-iconv --enable-gnutls --enable-lcms2 --enable-libxml2 --enable-gmp --enable-bzlib --enable-lzma --enable-libsnappy --enable-zlib --enable-librist --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-libbluray --enable-libcaca --enable-libdvdnav --enable-libdvdread --enable-sdl2 --enable-libaribb24 --enable-libaribcaption --enable-libdav1d --enable-libdavs2 --enable-libopenjpeg --enable-libquirc --enable-libuavs3d --enable-libxevd --enable-libzvbi --enable-liboapv --enable-libqrencode --enable-librav1e --enable-libsvtav1 --enable-libvvenc --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxavs2 --enable-libxeve --enable-libxvid --enable-libaom --enable-libjxl --enable-libsvtjpegxs --enable-libvpx --enable-mediafoundation --enable-libass --enable-frei0r --enable-libfreetype --enable-libfribidi --enable-libharfbuzz --enable-liblensfun --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-dxva2 --enable-d3d11va --enable-d3d12va --enable-ffnvcodec --enable-libvpl --enable-nvdec --enable-nvenc --enable-vaapi --enable-vulkan --enable-libplacebo --enable-opencl --enable-libcdio --enable-openal --enable-libgme --enable-libmodplug --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libshine --enable-libtheora --enable-libtwolame --enable-libvo-amrwbenc --enable-libcodec2 --enable-libilbc --enable-libgsm --enable-liblc3 --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-ladspa --enable-libbs2b --enable-libflite --enable-libmysofa --enable-librubberband --enable-libsoxr --enable-chromaprint --enable-whisper
+libavutil      61.  1.101 / 61.  1.101
+libavcodec     63.  1.101 / 63.  1.101
+libavformat    63.  1.101 / 63.  1.101
+libavdevice    63.  1.101 / 63.  1.101
+libavfilter    12.  1.101 / 12.  1.101
+libswscale     10.  1.101 / 10.  1.101
+libswresample   7.  1.101 /  7.  1.101
+
+Exiting with exit code 0
+> Test-Path data\app.db
+True
+> (Get-Location).Path
+D:\DataAdmin\Daily_Intel_English
+> Get-PSDrive (Get-Location).Drive.Name | Select-Object Name,Used,Free
+
+Name        Used         Free
+----        ----         ----
+D    59872030720 233728196608
+
+
+> Get-PSDrive C | Select-Object Name,Used,Free
+
+Name         Used        Free
+----         ----        ----
+C    205040893952 11775258624
+
+
+> netstat -ano | findstr ":8000" | findstr "LISTENING"
+  TCP    127.0.0.1:8000         0.0.0.0:0              LISTENING       54940
+
+# Owner-authorized app stop
+> Get-CimInstance Win32_Process -Filter "ProcessId=54940" | Select-Object ProcessId,Name,CommandLine
+
+ProcessId Name       CommandLine
+--------- ----       -----------
+    54940 python.exe D:\DataAdmin\Daily_Intel_English\venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0...
+
+> netstat -ano | findstr ":8000" | findstr "LISTENING"
+  TCP    127.0.0.1:8000         0.0.0.0:0              LISTENING       54940
+> Stop-Process -Id 54940
+> Start-Sleep -Seconds 5
+> netstat -ano | findstr ":8000" | findstr "LISTENING"
+(no output)

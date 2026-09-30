@@ -1,0 +1,13 @@
+scripts\run_gate_b12.py:28:8: F401 [*] `threading` imported but unused
+   |
+26 | import sys
+27 | import tempfile
+28 | import threading
+   |        ^^^^^^^^^ F401
+29 | import time
+30 | from pathlib import Path
+   |
+   = help: Remove unused import: `threading`
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.

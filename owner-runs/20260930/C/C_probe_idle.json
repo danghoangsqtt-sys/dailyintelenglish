@@ -1,0 +1,142 @@
+{
+  "label": "idle",
+  "nvidia_smi": {
+    "used_mib": 2363,
+    "free_mib": 9748,
+    "total_mib": 12288
+  },
+  "pynvml": {
+    "used_mib": 2540,
+    "free_mib": 9747,
+    "total_mib": 12288,
+    "compute_processes": [
+      {
+        "pid": 2004,
+        "used_mib": null
+      },
+      {
+        "pid": 8328,
+        "used_mib": null
+      },
+      {
+        "pid": 10712,
+        "used_mib": null
+      },
+      {
+        "pid": 10448,
+        "used_mib": null
+      },
+      {
+        "pid": 11988,
+        "used_mib": null
+      },
+      {
+        "pid": 13196,
+        "used_mib": null
+      },
+      {
+        "pid": 13220,
+        "used_mib": null
+      },
+      {
+        "pid": 14176,
+        "used_mib": null
+      },
+      {
+        "pid": 14308,
+        "used_mib": null
+      },
+      {
+        "pid": 12636,
+        "used_mib": null
+      },
+      {
+        "pid": 15404,
+        "used_mib": null
+      },
+      {
+        "pid": 16448,
+        "used_mib": null
+      },
+      {
+        "pid": 19696,
+        "used_mib": null
+      },
+      {
+        "pid": 11856,
+        "used_mib": null
+      },
+      {
+        "pid": 28628,
+        "used_mib": null
+      },
+      {
+        "pid": 26664,
+        "used_mib": null
+      },
+      {
+        "pid": 5128,
+        "used_mib": null
+      },
+      {
+        "pid": 29300,
+        "used_mib": null
+      },
+      {
+        "pid": 45988,
+        "used_mib": null
+      },
+      {
+        "pid": 48996,
+        "used_mib": null
+      },
+      {
+        "pid": 2024,
+        "used_mib": null
+      },
+      {
+        "pid": 59384,
+        "used_mib": null
+      },
+      {
+        "pid": 52052,
+        "used_mib": null
+      },
+      {
+        "pid": 56788,
+        "used_mib": null
+      },
+      {
+        "pid": 66316,
+        "used_mib": null
+      },
+      {
+        "pid": 58816,
+        "used_mib": null
+      },
+      {
+        "pid": 53020,
+        "used_mib": null
+      },
+      {
+        "pid": 24012,
+        "used_mib": null
+      },
+      {
+        "pid": 50916,
+        "used_mib": null
+      }
+    ]
+  },
+  "torch": {
+    "free_mib": 11250,
+    "total_mib": 12287,
+    "torch": "2.11.0+cu128",
+    "this_process_reserved_mib": 0
+  },
+  "nvidia_smi_after_torch_context": {
+    "used_mib": 2456,
+    "free_mib": 9655,
+    "total_mib": 12288
+  }
+}
