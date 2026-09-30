@@ -107,11 +107,16 @@ const Api = (() => {
     // Task 19.7: renderer defaults to "ffmpeg" -- every pre-Phase-19 caller that omits it
     // behaves exactly as before. "remotion" only actually takes effect when the backend's
     // DIE_VIDEO_RENDERER kill switch already allows it (video_service._resolve_renderer).
-    generateVideo: (projectId, templateId, aspectRatio = "16:9", renderer = "ffmpeg") =>
-      request(`/api/projects/${projectId}/video/generate`, {
+    // Task 20.2d: `captionStyle` is only sent when given (Enhanced renders) -- Standard
+    // request bodies stay exactly as before.
+    generateVideo: (projectId, templateId, aspectRatio = "16:9", renderer = "ffmpeg", captionStyle = null) => {
+      const body = { template_id: templateId, aspect_ratio: aspectRatio, renderer };
+      if (captionStyle) body.caption_style = captionStyle;
+      return request(`/api/projects/${projectId}/video/generate`, {
         method: "POST",
-        body: JSON.stringify({ template_id: templateId, aspect_ratio: aspectRatio, renderer }),
-      }),
+        body: JSON.stringify(body),
+      });
+    },
     videoDownloadUrl: (projectId, format) => `/api/projects/${projectId}/video/download?format=${format}`,
     getVideoHealth: () => request("/api/video/health"),
     uploadSpeakerAvatar: (projectId, speakerId, file) => {

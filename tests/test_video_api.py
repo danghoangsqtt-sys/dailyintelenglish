@@ -312,3 +312,45 @@ def test_failed_video_regeneration_keeps_prior_outputs_downloadable(client: Test
     assert mp4.content == prior_mp4
     assert srt.status_code == 200
     assert srt.content == prior_srt
+
+
+# --- Task 20.2d: caption_style request field ------------------------------------------
+
+
+def test_generate_video_invalid_caption_style_returns_422(client: TestClient):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+
+    response = client.post(
+        f"/api/projects/{project['id']}/video/generate",
+        json={"template_id": "midnight", "renderer": "remotion", "caption_style": "neon"},
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("body_extra", "expected"),
+    [({}, "outline"), ({"caption_style": "box"}, "box"), ({"caption_style": "shade"}, "shade")],
+)
+def test_generate_video_forwards_caption_style_with_outline_default(
+    client: TestClient, monkeypatch, body_extra, expected
+):
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+    seen = {}
+    real_generate = video_service.generate_video
+
+    async def spy(*args, **kwargs):
+        seen["caption_style"] = kwargs.get("caption_style")
+        return await real_generate(*args, **kwargs)
+
+    monkeypatch.setattr(video_service, "generate_video", spy)
+    response = client.post(
+        f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight", **body_extra}
+    )
+
+    assert response.status_code == 200
+    assert seen["caption_style"] == expected

@@ -141,6 +141,11 @@
                 <button class="chip" type="button" data-renderer="ffmpeg" aria-pressed="true">Standard (ffmpeg)</button>
                 <button class="chip" type="button" data-renderer="remotion" aria-pressed="false">Enhanced (Remotion, opt-in)</button>
               </div>
+              <div class="aspect-ratio-row" role="group" aria-label="Caption style" id="caption-style-group">
+                <button class="chip" type="button" data-caption-style="outline" aria-pressed="true">Captions: film style (outline)</button>
+                <button class="chip" type="button" data-caption-style="box" aria-pressed="false">Caption box</button>
+                <button class="chip" type="button" data-caption-style="shade" aria-pressed="false">Outline + bottom shade</button>
+              </div>
               <div class="generate-row">
                 <button class="btn btn-primary" id="generate-btn" type="button">🎬 Generate video</button>
                 <span class="generate-progress" id="generate-progress" aria-live="polite"></span>

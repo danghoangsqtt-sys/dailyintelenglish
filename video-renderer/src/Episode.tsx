@@ -4,6 +4,7 @@ import { computeProgressForFrame } from "./chapters";
 import { activeTokenIndex, buildKaraokeTokens } from "./karaoke";
 import { activeSpeakerId } from "./speakers";
 import { activeItemForFrame, attachItemsToLines, type LearningItem } from "./vocab";
+import { BOTTOM_SHADE_STYLE, captionStyleSpec, type CaptionStyle } from "./captionStyle";
 import type { Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker } from "./types";
 
 /** Average pixel color of frontend/static/video_backgrounds/midnight.png (measured 2026-09-28
@@ -113,13 +114,25 @@ function SpeakerChips({ speakers, activeId }: { speakers: EpisodeSpeaker[]; acti
   );
 }
 
-function CaptionBand({ line, currentTimeSec }: { line: EpisodeLine; currentTimeSec: number }) {
+function CaptionBand({
+  line,
+  currentTimeSec,
+  captionStyle,
+}: {
+  line: EpisodeLine;
+  currentTimeSec: number;
+  captionStyle: CaptionStyle;
+}) {
   const tokens = useMemo(() => buildKaraokeTokens(line), [line]);
+  // Task 20.2d: the selected treatment only overrides textShadow (and optionally wraps the
+  // span in a box) -- font/size/color/alignment stay the D19.3-b base style.
+  const spec = captionStyleSpec(captionStyle);
+  const textStyle = { ...CAPTION_TEXT_STYLE, ...spec.text, ...(spec.box ?? {}) };
 
   if (tokens.length === 0) {
-    // D19.3-c fallback: the exact, unmodified 19.1 plain-span render -- untouched by this task.
+    // D19.3-c fallback: the plain line-level span (only the 20.2d style layer is added).
     return (
-      <span style={CAPTION_TEXT_STYLE}>
+      <span style={textStyle}>
         {line.speaker}: {line.text}
       </span>
     );
@@ -127,7 +140,7 @@ function CaptionBand({ line, currentTimeSec }: { line: EpisodeLine; currentTimeS
 
   const activeIndex = activeTokenIndex(tokens, currentTimeSec * 1000);
   return (
-    <span style={CAPTION_TEXT_STYLE}>
+    <span style={textStyle}>
       {line.speaker}:{" "}
       {tokens.map((token, index) => (
         <span key={`${token.fromMs}-${token.text}`} style={index === activeIndex ? { color: ACTIVE_WORD_COLOR } : undefined}>
@@ -274,6 +287,7 @@ export function AudioWindowContent({
   fps,
   audioDurationSec,
   chapters,
+  captionStyle,
 }: {
   lines: EpisodeLine[];
   speakers: EpisodeSpeaker[];
@@ -282,6 +296,7 @@ export function AudioWindowContent({
   fps: number;
   audioDurationSec: number;
   chapters: Chapter[];
+  captionStyle: CaptionStyle;
 }) {
   const frame = useCurrentFrame();
   const currentTimeSec = frame / fps;
@@ -297,6 +312,7 @@ export function AudioWindowContent({
   return (
     <>
       <Audio src={staticFile(audioPath)} startFrom={0} />
+      {captionStyleSpec(captionStyle).bottomShade ? <div style={BOTTOM_SHADE_STYLE} /> : null}
       <ChapterProgressBar frame={frame} fps={fps} audioDurationSec={audioDurationSec} chapters={chapters} />
       <SpeakerChips speakers={speakers} activeId={activeId} />
       {activeLearningItem ? (
@@ -317,7 +333,7 @@ export function AudioWindowContent({
             padding: "0 5%",
           }}
         >
-          <CaptionBand line={line} currentTimeSec={currentTimeSec} />
+          <CaptionBand line={line} currentTimeSec={currentTimeSec} captionStyle={captionStyle} />
         </div>
       ) : null}
     </>
@@ -443,6 +459,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
   introSec,
   outroSec,
   outroText,
+  captionStyle,
 }) => {
   // D19.6-a: total video = intro + audio + outro (Option B, extend). `audioDurationSec` is
   // the same "last line's endSec" measure Root.tsx's calculateMetadata already uses for the
@@ -466,6 +483,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
           fps={fps}
           audioDurationSec={audioDurationSec}
           chapters={chapters}
+          captionStyle={captionStyle}
         />
       </Sequence>
       <Sequence from={introFrames + audioFrames} durationInFrames={outroFrames} name="Outro">

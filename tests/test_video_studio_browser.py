@@ -356,3 +356,65 @@ async def test_avatar_upload_shows_preview_then_remove_reverts_to_placeholder(
     await page.wait_for_selector(".avatar-placeholder")
     assert await page.locator(".avatar-preview").count() == 0
     await page.close()
+
+
+@pytest.mark.asyncio
+async def test_caption_style_chips_follow_renderer_and_are_sent_only_for_enhanced(
+    browser_instance: Browser, live_server_url: str
+):
+    """Task 20.2d: the caption-style chips are disabled on Standard and enabled on Enhanced;
+    `caption_style` is sent only for an Enhanced render (Standard bodies stay unchanged)."""
+    page = await browser_instance.new_page()
+    captured_bodies = []
+
+    async def handle_routes(route):
+        url, method = route.request.url, route.request.method
+        if url.endswith(f"/api/projects/{PROJECT['id']}") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(PROJECT))
+        elif url.endswith("/audio/status") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope({"status": "complete"}))
+        elif url.endswith("/api/video/templates") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(TEMPLATES))
+        elif url.endswith("/api/video/health") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json", body=_envelope({"remotion_configured": True}))
+        elif url.endswith("/video/status") and method == "GET":
+            await route.fulfill(status=404, content_type="application/json", body=_envelope(None, "no video"))
+        elif url.endswith("/video/generate") and method == "POST":
+            captured_bodies.append(json.loads(route.request.post_data))
+            await route.fulfill(status=200, content_type="application/json", body=_envelope(VIDEO_JOB))
+        else:
+            await route.continue_()
+
+    await page.route("**/api/**", handle_routes)
+    await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
+    await page.wait_for_selector("#workspace:not([hidden])")
+    await page.evaluate("localStorage.removeItem('die-video-renderer'); localStorage.removeItem('die-caption-style')")
+    await page.reload()
+    await page.wait_for_selector("#workspace:not([hidden])")
+
+    # Standard (default): chips disabled, outline shown as the default, nothing extra sent.
+    assert await page.locator("[data-renderer='ffmpeg']").get_attribute("aria-pressed") == "true"
+    assert await page.locator("[data-caption-style='outline']").get_attribute("aria-pressed") == "true"
+    assert await page.locator("[data-caption-style='box']").is_disabled()
+    await page.click("#generate-btn")
+    await page.wait_for_selector("#result-card:not([hidden])", timeout=5000)
+
+    # Enhanced: chips enabled; picking "box" sends it and is remembered across a reload.
+    await page.click("[data-renderer='remotion']")
+    assert await page.locator("[data-caption-style='box']").is_enabled()
+    await page.click("[data-caption-style='box']")
+    assert await page.locator("[data-caption-style='box']").get_attribute("aria-pressed") == "true"
+    assert await page.locator("[data-caption-style='outline']").get_attribute("aria-pressed") == "false"
+    await page.wait_for_function("!document.getElementById('generate-btn').disabled")
+    await page.click("#generate-btn")
+    await page.wait_for_function("document.getElementById('generate-btn').textContent.includes('Generate video')")
+
+    assert captured_bodies == [
+        {"template_id": "midnight", "aspect_ratio": "16:9", "renderer": "ffmpeg"},
+        {"template_id": "midnight", "aspect_ratio": "16:9", "renderer": "remotion", "caption_style": "box"},
+    ]
+
+    await page.reload()
+    await page.wait_for_selector("#workspace:not([hidden])")
+    assert await page.locator("[data-caption-style='box']").get_attribute("aria-pressed") == "true"
+    await page.close()

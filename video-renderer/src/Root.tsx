@@ -19,6 +19,7 @@ const defaultProps: EpisodeInputProps = {
   introSec: 2.5,
   outroSec: 5.0,
   outroText: "Thanks for watching · Subscribe for more · See you next episode!",
+  captionStyle: "outline",
 };
 
 export const RemotionRoot: React.FC = () => {

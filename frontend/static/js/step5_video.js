@@ -34,6 +34,17 @@
     "Enhanced rendering requires Node.js and Chrome Headless Shell. Not installed on this " +
     "machine — see scripts/check_dependencies.py. Standard (ffmpeg) rendering still works.";
 
+  // Task 20.2d: caption treatment for Enhanced renders, remembered like the renderer choice.
+  const CAPTION_STYLE_STORAGE_KEY = "die-caption-style";
+  const CAPTION_STYLES = ["outline", "box", "shade"];
+  const CAPTION_STYLE_TOOLTIPS = {
+    outline: "White text with a black outline, like film and streaming subtitles. Readable on any background.",
+    box: "Text on a semi-transparent dark box, like YouTube captions. The most readable on very busy images.",
+    shade: "Outlined text plus a soft dark shade over the bottom of the picture.",
+  };
+  const CAPTION_STYLE_DISABLED_TOOLTIP =
+    "Caption styles apply to Enhanced (Remotion) renders. Standard (ffmpeg) keeps its own subtitles.";
+
   const state = {
     projectId: null,
     project: null,
@@ -41,6 +52,7 @@
     selectedTemplate: null,
     aspectRatio: "16:9",
     renderer: "ffmpeg",
+    captionStyle: "outline",
     remotionConfigured: false,
     audioReady: false,
     audioJob: null,
@@ -408,7 +420,49 @@
     }
   }
 
+  function readStoredCaptionStyle() {
+    try {
+      const stored = localStorage.getItem(CAPTION_STYLE_STORAGE_KEY);
+      return CAPTION_STYLES.includes(stored) ? stored : "outline";
+    } catch {
+      return "outline"; // localStorage unavailable — default to the film-style outline
+    }
+  }
+
+  function storeCaptionStyle(captionStyle) {
+    try {
+      localStorage.setItem(CAPTION_STYLE_STORAGE_KEY, captionStyle);
+    } catch {
+      /* localStorage unavailable — the choice just won't persist across reloads */
+    }
+  }
+
+  function renderCaptionStyleToggle() {
+    const group = byId("caption-style-group");
+    if (!group) return;
+    const enabled = state.renderer === "remotion" && !state.isGenerating;
+    group.querySelectorAll(".chip").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.captionStyle === state.captionStyle));
+      button.disabled = !enabled;
+      button.title = state.renderer === "remotion" ? CAPTION_STYLE_TOOLTIPS[button.dataset.captionStyle] : CAPTION_STYLE_DISABLED_TOOLTIP;
+    });
+  }
+
+  function setupCaptionStyleToggle() {
+    const group = byId("caption-style-group");
+    if (!group) return;
+    group.querySelectorAll(".chip").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (state.isGenerating || button.disabled) return;
+        state.captionStyle = button.dataset.captionStyle;
+        storeCaptionStyle(state.captionStyle);
+        renderCaptionStyleToggle();
+      });
+    });
+  }
+
   function renderRendererToggle() {
+    renderCaptionStyleToggle();
     const group = byId("renderer-group");
     if (!group) return;
     const buttons = group.querySelectorAll(".chip");
@@ -487,7 +541,13 @@
       stageLabel: attemptedRenderer === "remotion" ? "Rendering with Remotion (Enhanced)…" : "Rendering with ffmpeg…",
     });
     try {
-      const job = await Api.generateVideo(state.projectId, state.selectedTemplate, state.aspectRatio, attemptedRenderer);
+      const job = await Api.generateVideo(
+        state.projectId,
+        state.selectedTemplate,
+        state.aspectRatio,
+        attemptedRenderer,
+        attemptedRenderer === "remotion" ? state.captionStyle : null
+      );
       renderResult(job);
       // Task 19.7 (I36-a): a Remotion failure always falls back to ffmpeg rather than
       // failing the request -- surface that honestly instead of silently claiming Enhanced.
@@ -504,6 +564,9 @@
     } finally {
       state.isGenerating = false;
       setGenerateLoading(false);
+      // Task 20.2d: re-enable the renderer + caption-style chips once the render ends (they
+      // were locked by the renderRendererToggle() call at the start and never unlocked).
+      renderRendererToggle();
     }
   }
 
@@ -575,6 +638,7 @@
     // Only honor a stored "remotion" preference when it's actually usable right now --
     // otherwise the toggle would render as checked-but-disabled, a confusing combination.
     state.renderer = state.remotionConfigured ? readStoredRenderer() : "ffmpeg";
+    state.captionStyle = readStoredCaptionStyle();
 
     try {
       const job = await Api.getVideoStatus(state.projectId);
@@ -591,6 +655,7 @@
     renderInspector();
     setupAspectRatioToggle();
     setupRendererToggle();
+    setupCaptionStyleToggle();
     renderRendererToggle();
     applyLocks();
   }

@@ -243,6 +243,7 @@ async def generate_video(
     db: aiosqlite.Connection | None = None,
     project: dict | None = None,
     learning: dict | None = None,
+    caption_style: str = "outline",
 ) -> dict:
     """Render a project's completed audio mix into an MP4.
 
@@ -269,6 +270,8 @@ async def generate_video(
             Unused on the ffmpeg path.
         learning: Optional, Remotion path only (vocab/idiom pop-up cards, Task 19.5).
             Unused on the ffmpeg path.
+        caption_style: Task 20.2d. Remotion path only (`"outline"` / `"box"` / `"shade"`);
+            the ffmpeg path's libass subtitles are unchanged.
 
     Raises:
         VideoRenderError: If no completed audio mix exists yet, or ffmpeg fails.
@@ -282,7 +285,7 @@ async def generate_video(
         remotion_output_path = settings.DATA_DIR / "video" / project_id / "video_remotion.mp4"
         try:
             return await video_renderer_remotion.render_via_remotion(
-                db, project, audio_job, learning, remotion_output_path
+                db, project, audio_job, learning, remotion_output_path, caption_style=caption_style
             )
         except RemotionRenderFailedError as exc:
             logger.warning("remotion_render_failed_fallback_to_ffmpeg project_id=%s reason=%s", project_id, exc)

@@ -247,7 +247,7 @@ async def test_remotion_success_returns_remotion_result_without_touching_ffmpeg(
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     monkeypatch.setattr(settings, "VIDEO_RENDERER", "remotion")
 
-    async def _fake_success(db_, project_, audio_job_, learning_, output_path):
+    async def _fake_success(db_, project_, audio_job_, learning_, output_path, caption_style="outline"):
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(b"fake-remotion-mp4")
         return {
@@ -274,3 +274,41 @@ async def test_remotion_success_returns_remotion_result_without_touching_ffmpeg(
     assert result["mode"] == "remotion"
     assert result["fallback_used"] is False
     assert Path(result["mp4_path"]).read_bytes() == b"fake-remotion-mp4"
+
+
+# --- Task 20.2d: caption style reaches the Remotion props --------------------------------
+
+
+@pytest.mark.parametrize("caption_style", ["outline", "box", "shade"])
+async def test_generate_video_forwards_caption_style_to_remotion(tmp_path, monkeypatch, db, caption_style):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(settings, "VIDEO_RENDERER", "remotion")
+    seen = {}
+
+    async def _fake_success(db_, project_, audio_job_, learning_, output_path, caption_style="outline"):
+        seen["caption_style"] = caption_style
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(b"fake")
+        return {"mp4_path": str(output_path), "srt_path": None, "background_image": None, "mode": "remotion",
+                "fallback_used": False, "wall_time_seconds": 0.1}
+
+    monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", _fake_success)
+    audio_job = await _real_audio_job(tmp_path)
+    await video_service.generate_video(
+        "proj-caption", audio_job, "midnight", renderer="remotion", db=db, project=_real_project(),
+        caption_style=caption_style,
+    )
+
+    assert seen["caption_style"] == caption_style
+
+
+async def test_build_input_props_carries_caption_style_with_outline_default(tmp_path, db):
+    audio_job = await _real_audio_job(tmp_path)
+
+    default_props = await video_renderer_remotion._build_input_props(db, _real_project(), audio_job, None)
+    box_props = await video_renderer_remotion._build_input_props(db, _real_project(), audio_job, None, "box")
+
+    assert default_props["captionStyle"] == "outline"
+    assert box_props["captionStyle"] == "box"

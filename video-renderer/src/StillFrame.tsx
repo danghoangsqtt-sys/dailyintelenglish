@@ -20,6 +20,7 @@ export const StillFrame: React.FC<EpisodeInputProps> = ({
   audioPath,
   fps,
   chapters,
+  captionStyle,
 }) => {
   const audioDurationSec = lines.length > 0 ? lines[lines.length - 1].endSec : 0;
 
@@ -33,6 +34,7 @@ export const StillFrame: React.FC<EpisodeInputProps> = ({
         fps={fps}
         audioDurationSec={audioDurationSec}
         chapters={chapters}
+        captionStyle={captionStyle}
       />
     </AbsoluteFill>
   );

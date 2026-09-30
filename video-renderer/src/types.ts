@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CAPTION_STYLES } from "./captionStyle";
 
 /**
  * Phase 19 spike (Task 19.1) input-props shape, as a zod schema (Remotion's own recommended
@@ -123,6 +124,9 @@ export const episodeInputPropsSchema = z.object({
   introSec: z.number().default(2.5),
   outroSec: z.number().default(5.0),
   outroText: z.string().default("Thanks for watching · Subscribe for more · See you next episode!"),
+  /** Task 20.2d: user-selected caption treatment (see `captionStyle.ts`). Optional with the
+   * owner-preferred default so older runner invocations / props files still render. */
+  captionStyle: z.enum(CAPTION_STYLES).default("outline"),
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;

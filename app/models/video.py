@@ -17,6 +17,9 @@ class GenerateVideoRequest(BaseModel):
     # "ffmpeg" in video_service._resolve_renderer regardless. "remotion" only actually takes
     # effect when the DIE_VIDEO_RENDERER kill switch already allows it.
     renderer: Literal["ffmpeg", "remotion"] = "ffmpeg"
+    # Task 20.2d (D20.2d-a/b): caption treatment for the Remotion path only -- the ffmpeg
+    # path ignores it. "outline" (film-subtitle style) is the owner-preferred default.
+    caption_style: Literal["outline", "box", "shade"] = "outline"
 
     @field_validator("template_id")
     @classmethod

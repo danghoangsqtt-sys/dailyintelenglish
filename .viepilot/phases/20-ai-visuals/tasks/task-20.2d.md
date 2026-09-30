@@ -1,7 +1,7 @@
 # Task 20.2d — Caption style option (outline / box / bottom shade), user-selectable
 
-- **Status:** design (Coder, doc-first, 2026-09-30). Implementation follows in a separate
-  commit.
+- **Status:** implemented (Coder, 2026-09-30). Design commit `1642a14`; the implementation
+  commit follows it. See "Implementation notes" at the end.
 - **Owner:** Coder
 - **Priority:** P1. This is the prerequisite for image backgrounds behind the Remotion
   captions (Phase 20 in-video scenes).
@@ -113,3 +113,31 @@ the picture.
 4. Real Remotion stills of all 3 styles, rendered in the cloud with the preinstalled
    Chromium, attached to the report. The owner confirms on their machine with the next
    runbook.
+
+## Implementation notes (Coder, 2026-09-30)
+
+- **Deviations from "Not touched", both one-line prop plumbing.**
+  - `StillFrame.tsx` passes `captionStyle` to `AudioWindowContent`, which receives
+    explicit props rather than spreading them. Without it, the thumbnail still would
+    silently use the default style.
+  - `Root.tsx`'s typed preview `defaultProps` gains `captionStyle: "outline"`, which
+    `tsc` requires.
+- **Pre-existing bug found by the new browser test, fixed here** (`step5_video.js`).
+  - After a render finished, the Standard/Enhanced chips stayed disabled until a page
+    reload: `generateVideo()` locked them via `renderRendererToggle()` and the `finally`
+    block never re-rendered them. This was introduced with 19.7.
+  - The caption chips share that function, so the fix (re-render in `finally`) was
+    required anyway.
+- **Test fold-in:** `tests/test_video_service_remotion.py::_fake_success` gains the
+  `caption_style` keyword.
+- **Verification.**
+  - vitest: 34/34 (28 existing + 6 new). `tsc --noEmit` clean. ruff clean.
+  - New pytest tests: API 422 on an unknown style; API forwarding, with outline as the
+    default ×3; service forwarding to Remotion ×3; props carry `captionStyle`.
+  - New Playwright test covering the chip states, the request bodies and persistence.
+  - Revert-and-confirm-failure: the API forwarding tests and the browser test fail with
+    the forwarding lines removed.
+- **Real Remotion stills** of all three styles, rendered in the cloud with the
+  preinstalled headless Chromium (scratch copy of `StillFrame` over the r3 M2 kitchen
+  image): `docs/operations/phase20-caption-styles-remotion.png`.
+

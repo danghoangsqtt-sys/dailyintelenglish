@@ -198,7 +198,11 @@ def _copy_audio_into_public(project_id: str, mp3_path: str) -> None:
 
 
 async def _build_input_props(
-    db: aiosqlite.Connection, project: dict, audio_job: dict, learning: dict | None
+    db: aiosqlite.Connection,
+    project: dict,
+    audio_job: dict,
+    learning: dict | None,
+    caption_style: str = "outline",
 ) -> dict[str, Any]:
     """Real per-project props for the `Episode`/`StillFrame` compositions -- mirrors
     `scripts/run_remotion_spike.py::_build_input_props`, extended with real avatar
@@ -244,6 +248,7 @@ async def _build_input_props(
         "topic": project["topic"],
         "cefrLevel": project["cefr_level"],
         "chapters": _parse_chapters_text(chapters_text),
+        "captionStyle": caption_style,
     }
     if learning is not None:
         props["learning"] = {
@@ -326,6 +331,7 @@ async def render_via_remotion(
     audio_job: dict,
     learning: dict | None,
     output_path: Path,
+    caption_style: str = "outline",
 ) -> dict[str, Any]:
     """D19.7-c: builds real props (async -- resolves avatars via the DB), then hands off to
     `_render_via_remotion_sync` in a thread for the actual blocking subprocess call. Raises
@@ -334,6 +340,6 @@ async def render_via_remotion(
     (I36-a); this function itself never falls back to anything.
     """
     project_id = project["id"]
-    input_props = await _build_input_props(db, project, audio_job, learning)
+    input_props = await _build_input_props(db, project, audio_job, learning, caption_style)
     await asyncio.to_thread(_copy_audio_into_public, project_id, audio_job["mp3_path"])
     return await asyncio.to_thread(_render_via_remotion_sync, input_props, output_path)

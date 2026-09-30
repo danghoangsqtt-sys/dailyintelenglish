@@ -25,6 +25,16 @@ Versioning: [SemVer](https://semver.org/)
   - No consumer other than Ollama is wired in yet (21.2, 20.3, Phase 22).
   - Real finding behind it: qwen is called with `keep_alive: "5m"` at `num_ctx=16384`,
     so the 3916 MiB free measured at context 4096 overstates the real headroom.
+- **Task 20.2d (2026-09-30, by Coder):** user-selectable caption style for Enhanced
+  (Remotion) renders, so captions stay readable over detailed image backgrounds.
+  - Styles: `outline` (film-subtitle style, the owner-preferred default), `box`
+    (semi-transparent caption box) and `shade` (outline plus a soft dark shade over the
+    bottom 30%).
+  - Chosen in Step 5 and remembered per browser. Sent as the optional request field
+    `caption_style`.
+  - The Standard (ffmpeg) path is unchanged.
+  - Fixed along the way: after a render finished, the Standard/Enhanced chips stayed
+    disabled until a page reload.
 
 ### Added (Phase 21, spike-track — not yet wired to the app)
 - **Task 21.1 (2026-09-29, by Coder):** Kokoro TTS spike -- real install, synthesis, and
