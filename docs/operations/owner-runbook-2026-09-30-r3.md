@@ -121,8 +121,12 @@ owner-runs\20260930-r3\
              cut_action_waving.png  cut_action_pointing.png
              m1_classroom_naive.png  m1_classroom_integrated.png  m2_classroom.png
              m1_kitchen_naive.png  m1_kitchen_integrated.png  m2_kitchen.png
-  logs\      every image_worker_lib_*_stderr.log from the run folder, renamed to .log.txt
+  worker-logs\  every image_worker_lib_*_stderr.log from the run folder, renamed to .log.txt
 ```
+
+- **Erratum (after run r3):** the first version of this runbook said `logs\`. The
+  repo `.gitignore` ignores every `logs/` folder, so `git add` silently skipped the logs
+  and the executor correctly stopped. The folder is `worker-logs\`.
 
 - A missing file: leave it out and name it in RESULTS.md.
 - Never add a file larger than 25 MB.
