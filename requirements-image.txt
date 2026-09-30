@@ -32,3 +32,7 @@ safetensors==0.8.0
 huggingface-hub==1.33.0
 pillow==12.3.0
 psutil==7.2.2
+# Task 20.2b: skytnt/anime-seg background removal runs as ONNX on CPU (Apache-2.0 model).
+# No downloaded code executes, unlike BiRefNet's trust_remote_code loader. Verified to
+# install + import on Python 3.14 (2026-09-30).
+onnxruntime==1.30.0
