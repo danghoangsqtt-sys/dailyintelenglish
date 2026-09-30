@@ -1,0 +1,34 @@
+# Task 20.2 (Phase 20 spike): pinned deps for the ISOLATED venv-image/ environment only.
+#
+# Python 3.14 works here, unlike venv-kokoro/ and venv-styletts2/ (3.11). A real, non-dry-run
+# install into a fresh Python 3.14.7 venv succeeded on 2026-09-30, and the diffusers SDXL and
+# IP-Adapter imports were verified (task-20.2.md F3). It still gets its own venv and
+# subprocess:
+#   - torch is not in requirements.txt;
+#   - this venv is ~5.5 GB and must stay out of the packaged .exe;
+#   - a worker that exits returns all of its VRAM, which the Task 20.1 lease relies on.
+#
+# Setup (owner's machine, Python 3.14):
+#   py -3.14 -m venv venv-image
+#   venv-image\Scripts\pip install torch --index-url https://download.pytorch.org/whl/cu128
+#   venv-image\Scripts\pip install -r requirements-image.txt
+#   venv-image\Scripts\python -c "import torch; print(torch.version.cuda, torch.cuda.is_available())"
+#   -> must print a CUDA version and True. Plain PyPI gives Windows a CPU-only torch (Task
+#      21.1 evidence). The worker's handshake refuses with `cpu_only_torch_build` rather than
+#      measure CPU as GPU.
+#
+# Deliberately NOT installed (task-20.2.md Amendment A):
+#   - invisible-watermark: diffusers' SDXL pipeline would add an invisible watermark
+#     whenever it is present. The worker also passes add_watermarker=False.
+#   - peft: only diffusers' LoRA path needs it. SDXL-Lightning is loaded as its full UNet
+#     checkpoint, which its README recommends for an SDXL base.
+#   - sentencepiece / gguf: only FLUX needed them, and FLUX was dropped.
+#
+# Versions are the ones that resolved in the verified install (Python 3.14.7, 2026-09-30).
+diffusers==0.40.0
+transformers==5.17.0
+accelerate==1.15.0
+safetensors==0.8.0
+huggingface-hub==1.33.0
+pillow==12.3.0
+psutil==7.2.2

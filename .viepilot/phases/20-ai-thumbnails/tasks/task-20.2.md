@@ -1,9 +1,8 @@
 # Task 20.2 — Spike: pick the local image model (SDXL / SDXL-Turbo / FLUX.1-schnell) + IP-Adapter trial
 
-- **Status:** design committed (`d787325`). **Owner answered Q1 on 2026-09-30.** Amendment A
-  below replaces SDXL-Turbo with SDXL-Lightning and recommends dropping FLUX. **Awaiting the
-  owner's confirmation of the Q2 recommendation**, then PM approval of the amended design.
-  The spike run itself needs the owner's RTX 3060.
+- **Status:** implementation (worker + runner) landed 2026-09-30 and was validated off-machine.
+  Owner confirmed Q2 (drop FLUX). **Pending: the real run on the owner's RTX 3060** (see
+  "Owner-machine run"), then the report and the owner's decision.
 - **Owner:** Coder
 - **Priority:** P0 for Phase 20. Its PASS gates 20.3–20.5.
 - **Dependency:** Task 20.1 (GPU model manager, `6b1e7f7`). The spike takes its GPU through a
@@ -261,10 +260,10 @@ eye at Gate B-14, FLUX can come back as a background-only plan B with its own ca
 | # | Candidate | Download | Role |
 |---|---|---|---|
 | A | SDXL base 1.0 fp16 + `sdxl-vae-fp16-fix` (MIT), full steps | ≈ 7.2 GB | Quality reference, and the base for everything below |
-| A-fast | A + SDXL-Lightning 4-step or 8-step LoRA | +0.39 GB | Speed option. The spike picks 4 or 8 by owner-judged quality |
+| A-fast | A + SDXL-Lightning **4-step UNet** (corrected from "LoRA": see the implementation pass) | +5.14 GB | Speed option |
 | IP | `ip-adapter-plus-face_sdxl_vit-h` + ViT-H encoder, on A and on A-fast | +3.4 GB | Consistent-character trial (D20.2-d) |
 
-The total download is **about 11 GB**, against about 35 GB in the original matrix. The
+The total download is **about 15.6 GB** (corrected from about 11 GB: see the implementation pass), against about 35 GB in the original matrix. The
 IP-Adapter sheet runs on both A and A-fast, because a speed LoRA can weaken the adapter's
 effect, and that is exactly what the owner needs to see before 20.4.
 
@@ -279,6 +278,106 @@ infringing, whatever the licence. So:
   third-party marks.
 
 This is a design rule, not legal advice.
+
+**Q2, owner confirmed 2026-09-30 ("okey"): FLUX.1-schnell is dropped.**
+
+## Implementation pass (2026-09-30, Coder, cloud session: no GPU, huggingface.co blocked)
+
+### Correction to Amendment A: Lightning is used as its UNet, not the LoRA
+
+SDXL-Lightning's own README (read in full via the HF connector) says: *"Use LoRA only if you
+are using non-SDXL base models. Otherwise use our UNet checkpoint for better quality."*
+Our base *is* SDXL. So the worker loads `sdxl_lightning_4step_unet.safetensors`
+(5,135,149,736 B), not the 394 MB LoRA. It also follows the README's two requirements:
+the "trailing" scheduler, and exactly N steps at CFG 0. This also removes a dependency: the
+diffusers LoRA path requires `peft>=0.17.0` (`diffusers/utils/constants.py`
+`MIN_PEFT_VERSION`), and the UNet path does not.
+
+Download totals, from exact Hub sizes:
+- **Spike:** base 6,770,676,088 + VAE fix 334,643,238 + Lightning UNet 5,135,149,736 +
+  IP-Adapter 3,375,890,960 = **15.6 GB**.
+- **Production after the decision:** whichever UNet wins, plus the shared text encoders,
+  VAE and IP-Adapter ≈ **10.5 GB**. The losing UNet is never shipped. The worker's
+  Lightning mode already skips the base UNet weights.
+
+### Real finding: with Lightning, the negative prompt does nothing
+
+Lightning runs at CFG 0, and diffusers only uses `negative_prompt` when
+`guidance_scale > 1`. So the "no text / logo / watermark" rule **must also live in the
+positive prompt**. The runner does this, and the worker reports `negative_prompt_applied`
+per image, so the report shows it rather than assuming it.
+
+### Files
+
+- `scripts/image_worker.py`:
+  - handshake that refuses a CPU-only torch build;
+  - `load` with base or lightning mode, exact fp16 `allow_patterns` so the base repo's
+    10+ GB flax/onnx/openvino copies are never fetched, `add_watermarker=False`, and an
+    optional `vae_tiling`;
+  - `load_ip_adapter` (plus-face ViT-H; the encoder comes from the repo root's
+    `models/image_encoder`, per `loaders/ip_adapter.py:203-206`);
+  - `generate` (CPU-seeded generator; Lightning forced to 4 steps and CFG 0; "cover" fit to
+    1280×720; peak VRAM and RSS reported);
+  - `stats` and `unload`.
+- `scripts/spike_images.py`:
+  - reads 5 episodes `mode=ro`, taking today's thumbnail through the app's own
+    `_resolve_content_sync`;
+  - optional `--warm-qwen`, which makes a real local qwen call with the app's
+    `num_ctx=16384` and later times the reload;
+  - takes a **real Task 20.1 lease** per candidate (provisional 9216 MiB, below the 10286
+    MiB free at idle);
+  - one worker lifetime per candidate;
+  - writes contact sheets and the IP-Adapter sheet, and prints the JSON report.
+- `requirements-image.txt` (Python 3.14; torch from cu128 first; no invisible-watermark,
+  no peft, no FLUX dependencies) and `.gitignore` (`venv-image/`).
+
+### Validation done here
+
+The real SDXL weights cannot be fetched from this container, so a tiny SDXL pipeline with
+random weights was built with the **real architecture** instead: a UNet with `text_time`
+added embeddings, two CLIP text encoders, a VAE and a tokenizer. The real code paths were
+run against it.
+
+| Check | Result |
+|---|---|
+| Worker protocol: stats, generate before load, bad mode, load, 2 same-seed generates, IP without adapter, double load, unload | 11/11 lines valid JSON; every error returned cleanly, and the worker kept running |
+| Same seed twice | **identical pixels** |
+| Cover fit | 120×68 exactly as requested |
+| Lightning mode | all **428/428** UNet tensors equal the Lightning file; scheduler `timestep_spacing = trailing`; a request for 30 steps / CFG 7 was forced to **4 / 0**; `negative_prompt_applied: false` |
+| Watermark | `watermark_active: false`; the pipeline's `watermark` attribute is `None` |
+| Lightning steps other than 2/4/8 | rejected |
+| Runner end-to-end (scratch DB built with the app's real migrations, 2 episodes, tiny pipeline, both modes, `--warm-qwen` with no Ollama) | exit 0. The episode with a real template thumbnail comes first; the Ollama error is recorded as data; both workers exit 0; contact sheets are written with the right layout |
+| Runner with no GPU (lease path) | the lease refuses `no_nvidia_gpu`, recorded as data; exit 0 |
+| IP-Adapter trial sequencing (stub worker, since real adapter weights are not reachable) | reference generated **before** the adapter loads, then `load_ip_adapter`, then 6 scenes (3 prompts × 0.5/0.8), each carrying the reference; the sheet renders |
+| `pip install -r requirements-image.txt` into a **fresh** Python 3.14.7 venv (torch first) | exit 0; diffusers 0.40.0 / transformers 5.17.0; `invisible-watermark` and `peft` both absent; SDXL imports |
+| `ruff check` on both scripts | clean |
+
+**Not validated here (needs the owner's machine):**
+- real weights, image quality, and the real IP-Adapter load;
+- VRAM and RAM peaks and timings;
+- the qwen eviction.
+
+### Owner-machine run
+
+Close the app first (the lease is process-local, D20.1-g), then:
+
+```
+git pull
+py -3.14 -m venv venv-image
+venv-image\Scripts\pip install torch --index-url https://download.pytorch.org/whl/cu128
+venv-image\Scripts\pip install -r requirements-image.txt
+venv-image\Scripts\python -c "import torch; print(torch.version.cuda, torch.cuda.is_available())"
+venv\Scripts\python scripts\spike_images.py --run-label idle > idle.json
+venv\Scripts\python scripts\spike_images.py --run-label warm_qwen --warm-qwen --skip-ip > warm_qwen.json
+```
+
+- The torch check must print a CUDA version and `True`.
+- The first run downloads about 15.6 GB.
+- The second run makes qwen resident with the app's own settings first. Its first lease
+  therefore has to evict qwen, which also produces Task 20.1's owed numbers.
+- If a run reports an OOM, re-run it with `--vae-tiling`.
+- Outputs go to `data\tmp\phase20_image_spike\run_*\`. The owner looks at
+  `sheet_ep1..5.png` (today's template | base | lightning) and `sheet_ip_adapter.png`.
 
 ## Proposed allowed files (for PM approval)
 

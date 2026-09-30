@@ -13,6 +13,9 @@ venv-kokoro/
 # cannot build on Python 3.14 -- see task-21.1b.md D21.1b-a). Set up via
 # `requirements-styletts2.txt`.
 venv-styletts2/
+# Task 20.2: isolated Python 3.14 environment for the SDXL image worker (keeps torch and
+# diffusers, ~5.5 GB, out of the main venv and the .exe). Set up via `requirements-image.txt`.
+venv-image/
 *.egg-info/
 dist/
 build/
