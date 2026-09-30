@@ -127,9 +127,29 @@
    - M2 kept as the "hero image" option **only if** the seam is fixed (larger feathered
      mask, and ControlNet pose added so the action is honoured).
 
-## Owner verdicts (to be filled from the owner's answers)
+## Owner verdicts 2026-09-30 (verbatim, with translation)
 
-- Style: Ghibli-like enough? Lightning vs base?:
-- Same character across views / expressions / actions?:
-- Cut-out quality OK?:
-- M1 naive vs M1 integrated vs M2: which looks natural (not stiff)?:
+1. **Style / model:** *"phong cách chưa giống ghibli lắm nhưng ảnh của base tạo đẹp hơn
+   nhiều và có linh hồn hơn, của lightning tạo nhiều hơn nhưng nhiều ảnh lỗi quá"*.
+   - The style is not very Ghibli-like yet.
+   - **Base is much prettier and has more soul.** Lightning is faster but produces too
+     many defective images.
+   - This **reverses the 20.2 model choice: SDXL base (≈22–27 s/image), not Lightning.**
+2. **Character:** *"biểu cảm trang phục quá phức tạp nên dễ lỗi tôi nghĩ cần đơn giản hóa
+   nhiều hơn"*. The expressions and outfit are too complex and error-prone, so **simplify
+   the character design.**
+3. **Backgrounds vs on-screen text:** the video has dialogue captions at the bottom and
+   the vocabulary card top-right.
+   - A highly detailed background will hurt text legibility, compared with the current
+     solid or black background.
+   - The owner wants this **thought through further (open question).**
+   - Layout options mocked up with the real r3 M2 image on the real 1280×720 layout:
+     `docs/operations/phase20-layout-mockups.png`.
+     - A: full-bleed as-is;
+     - B: full-bleed, dimmed, softly blurred, with a dark gradient under the captions;
+     - C: the scene in a rounded "window" frame, with the text zones kept on the dark
+       background.
+4. **Composition:** *"M2 tự nhiên hơn rất nhiều còn m1 chỉ tạo ra rác"*. **M2 (inpaint
+   into the scene) is far more natural; M1 (cut-out collage) is rejected.**
+   - Consequence: anime-seg cut-outs are no longer needed for scene composition.
+- Cut-out quality was not separately judged; it is moot for scenes after verdict 4.
