@@ -101,6 +101,18 @@ class Settings(BaseSettings):
     # own, separate AI_CLOUD_DEADLINE_SECONDS below) -- see AIRouter.generate.
     AI_REQUEST_DEADLINE_SECONDS: float = 120.0
 
+    # Task 20.1 -- shared GPU model manager (app/services/gpu_model_manager.py).
+    # GPU_MANAGER_ENABLED is the kill switch: false turns every lease into a
+    # pass-through (no lock, no eviction), i.e. exactly the pre-20.1 behaviour.
+    # GPU_EVICT_OLLAMA=false keeps qwen resident and makes a short lease fall back
+    # instead. Thresholds are measured numbers only (D20.1-e): 6144 MiB for StyleTTS 2
+    # sits in the gap between 10286 MiB free at idle and 3916 MiB free with qwen loaded
+    # (real nvidia-smi, task-21.1b.md D21.1b-e). The image and music thresholds are added
+    # by their own spikes (20.2, Phase 22), not guessed here.
+    GPU_MANAGER_ENABLED: bool = True
+    GPU_EVICT_OLLAMA: bool = True
+    GPU_MIN_FREE_MB_STYLETTS2: int = 6144
+
     # Phase 18/D22-D24 -- the generic OpenAI-compatible cloud provider (OpenRouter,
     # first). Empty key/model collapses the effective mode to "local" (invariant 32).
     OPENAI_COMPAT_BASE_URL: str = "https://openrouter.ai/api/v1"

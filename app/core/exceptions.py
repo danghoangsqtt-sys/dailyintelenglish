@@ -81,6 +81,26 @@ class ThumbnailGenerationError(AppError):
     status_code = 502
 
 
+class GpuUnavailableError(AppError):
+    """Raised by `GpuModelManager.lease` when a consumer cannot get the GPU with the
+    free VRAM it needs (Task 20.1). The caller is expected to catch it and take its
+    existing fallback (Edge TTS, template thumbnail) -- the same "fallback always
+    available" shape as Task 19.7's I36. `reason` is one of `no_nvidia_gpu`,
+    `no_measured_threshold`, `insufficient_vram`, `insufficient_vram_after_eviction`."""
+
+    status_code = 503
+
+    def __init__(
+        self, consumer: str, reason: str, free_mb: int | None = None, min_free_mb: int | None = None
+    ) -> None:
+        detail = f" ({free_mb} MiB free, {min_free_mb} MiB needed)" if free_mb is not None else ""
+        super().__init__(f"GPU unavailable for {consumer}: {reason}{detail}")
+        self.consumer = consumer
+        self.reason = reason
+        self.free_mb = free_mb
+        self.min_free_mb = min_free_mb
+
+
 class MusicUploadTooLargeError(AppError):
     """Raised when a music upload exceeds the configured size limit."""
 

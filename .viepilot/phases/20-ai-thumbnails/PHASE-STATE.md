@@ -4,8 +4,8 @@
 
 - **Phase:** 20
 - **Slug:** `20-ai-thumbnails`
-- **Status:** opened 2026-09-30. Task 20.1 is in the design phase (doc-first, awaiting PM
-  approval).
+- **Status:** opened 2026-09-30. Task 20.1 is implemented and awaiting owner-machine
+  verification and PM acceptance.
 - **Source of this file:** the owner's Phase 20 summary, given to Coder on 2026-09-30.
   The 7-task breakdown, the reuse list and the run order below come from that summary.
   **No controlling plan (`docs/implementation/phase-20-*.md`) is in the repo yet.** If a
@@ -41,7 +41,7 @@ Coder has one session, so the work runs in sequence:
 
 | Task | Description | Owner | Status |
 |---|---|---|---|
-| 20.1 | Shared VRAM model manager (foundation) | Coder | **design committed, awaiting PM approval** (`tasks/task-20.1.md`) |
+| 20.1 | Shared VRAM model manager (foundation) | Coder | **implemented, awaiting owner-machine verification + PM acceptance**. Design `b328fd3`, D20.1-c approved by the owner (Ollama takes the lease too). 30 new tests; 0 new failures vs baseline |
 | 20.2 | Image model spike: SDXL / SDXL-Turbo / FLUX.1-schnell + IP-Adapter trial | Coder | provisional |
 | 20.3 | AI thumbnail background replacing the template background (text/colour layer kept) | Coder | provisional |
 | 20.4 | Per-character reference image management | Coder | provisional |
@@ -51,4 +51,4 @@ Coder has one session, so the work runs in sequence:
 
 ## Evidence log
 
-- **20.1** (2026-09-30, Coder): design only. See the card.
+- **20.1** (2026-09-30, Coder): design `b328fd3`, then the implementation commit. Evidence is in the card's "Implementation" section.

@@ -14,7 +14,7 @@ from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.paths import get_project_root
 from app.core.responses import ok
-from app.core.system_checks import check_ffmpeg, get_gpu_info
+from app.core.system_checks import check_ffmpeg, get_gpu_info, get_gpu_memory
 from app.db.database import Database, close_db, init_db
 from app.services import learning_pipeline, script_pipeline, settings_service
 from app.services.ai.router import AIRouter, CircuitBreaker, build_ai_router_from_settings
@@ -224,6 +224,10 @@ async def health() -> dict:
             "database": db_ok,
             "ffmpeg": app_state["ffmpeg_ok"],
             "gpu": app_state["gpu_info"],
+            # Task 20.1 (D20.1-f): live VRAM (measured per call, not cached at startup
+            # like `gpu`), so a gate report can cite the app's own numbers.
+            "gpu_memory": await get_gpu_memory(),
+            "gpu_manager_enabled": settings.GPU_MANAGER_ENABLED,
         },
         started_at=started_at,
     )

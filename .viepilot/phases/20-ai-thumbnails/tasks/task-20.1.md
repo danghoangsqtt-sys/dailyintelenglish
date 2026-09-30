@@ -1,7 +1,6 @@
 # Task 20.1 — Shared VRAM model manager (foundation for Phases 20, 21, 22)
 
-- **Status:** design committed (Coder, doc-first), **awaiting PM approval before any code**
-  (AR-06). No `app/` or `tests/` file has been changed.
+- **Status:** implemented 2026-09-30 after owner approval of D20.1-c. **Awaiting owner-machine verification and PM acceptance** (see "Implementation").
 - **Owner:** Coder
 - **Priority:** P0 for Phase 20. It is also used by 21.2 if 21.1b passes, and by Phase 22.
 - **Dependency:** none. It is useful whatever Phase 21 decides (owner, 2026-09-30).
@@ -227,3 +226,79 @@ router):
 - The PM approves this design (or amends D20.1-c).
 - Implementation stays inside the allowed files, and all tests pass.
 - Owner-machine verification numbers are recorded in this card's evidence section.
+
+## Implementation (2026-09-30, Coder)
+
+**PM/owner approval:** the owner replied "có" (yes) to D20.1-c on 2026-09-30, meaning
+Ollama calls take the lease too, per option (i). Implemented inside the approved allowed
+files, with one deviation noted below.
+
+### What landed
+
+- `app/services/gpu_model_manager.py`:
+  - `GpuModelManager.lease(consumer, min_free_mb)`: exclusive, FIFO.
+  - `min_free_mb=0` waits its turn only. `>0` measures free VRAM, evicts Ollama if short,
+    polls up to 10 × 0.5 s while the driver releases memory, and otherwise raises
+    `GpuUnavailableError`. `None` is refused (`no_measured_threshold`).
+  - Not re-entrant: nesting raises `GpuLeaseNestingError`.
+  - The lock is rebuilt per event loop.
+  - Kill switch = pass-through.
+  - Process-wide `get_gpu_manager()` / `set_gpu_manager()`.
+- `app/core/system_checks.py`: `get_gpu_memory()` (`nvidia-smi` used/free/total MiB, or
+  None).
+- `app/services/ai/ollama_provider.py`:
+  - `generate` runs inside `lease("ollama", min_free_mb=0)`. `latency_ms` is still the
+    HTTP time only; the lease wait is logged by the manager.
+  - New `list_resident_models()` (`GET /api/ps`, defensive parsing), `unload(model)`
+    (`keep_alive: 0`, no prompt, no lease), and `unload_all_resident()`, which never
+    raises.
+- `app/core/exceptions.py`: `GpuUnavailableError` (503, with `reason`, `free_mb`,
+  `min_free_mb`).
+- `app/core/config.py` + `.env.example`: `GPU_MANAGER_ENABLED`, `GPU_EVICT_OLLAMA`,
+  `GPU_MIN_FREE_MB_STYLETTS2=6144`.
+- `app/main.py`: `/health` adds live `gpu_memory` and `gpu_manager_enabled`.
+- Tests:
+  - new `tests/test_gpu_model_manager.py` (24 tests);
+  - `tests/test_ai_providers.py` +6 tests, including one where the router's own budget
+    bounds a qwen call queued behind another consumer: `ProviderTimeoutError`, and the
+    HTTP call never starts.
+- `CHANGELOG.md`: one bullet.
+
+**Deviation from the allowed list:** the `/health` test went into the new
+`tests/test_gpu_model_manager.py`, not `tests/test_ai_health_api.py`. That file tests
+`/api/ai/health`, not `/health`. The existing `/health` test lives in
+`tests/test_projects_api.py`, which was left untouched.
+
+### Verification in this session (cloud container: Python 3.13, no GPU, no Ollama)
+
+| Check | Result |
+|---|---|
+| New and extended tests | 30 new, all pass |
+| Mutation check: rebuild the lock once only / remove the lease from `generate` / remove the post-eviction poll | each one makes the matching test(s) fail (1, 1, 2), so the tests do guard the behaviour |
+| Full suite, excluding the 26 `*browser*` files (no Playwright here) | **1056 passed, 2 failed**. Clean-tree baseline in the same environment: **1026 passed, the same 2 failed**. **0 new failures** |
+| The 2 pre-existing failures | `test_word_boundaries_match_real_edge_tts_output`: the cloud proxy breaks TLS to `speech.platform.bing.com` (environment). `test_concurrent_script_saves_do_not_interleave`: `Lock ... is bound to a different event loop` from the existing module-level `write_lock` in `app/db/transactions.py`, on Python 3.13 here. This is the same class of bug the manager's per-loop lock avoids. Not touched (out of scope) |
+| `ruff check` on every changed file | clean. `ruff check .` shows 1 pre-existing F401 in `scripts/run_gate_b12.py`, also present on the clean tree; not touched |
+
+The full suite with browser tests (owner-machine baseline 1205) was not run here.
+
+### Still owed: owner-machine verification (before PM acceptance)
+
+1. With qwen loaded by the app itself (a local-mode script job, `num_ctx=16384`), record
+   `/health` `gpu_memory.free_mb`. This measures finding 2 (is it below 3916 MiB?).
+2. Run one real lease with room needed, with qwen still resident (within 5 min of step 1).
+   Save these lines as `verify_lease.py` in the project root and run
+   `venv\Scripts\python verify_lease.py`:
+   ```python
+   import asyncio, logging, time
+   from app.services.gpu_model_manager import get_gpu_manager
+   logging.basicConfig(level=logging.INFO)
+   async def main():
+       t = time.monotonic()
+       async with get_gpu_manager().lease("verify", min_free_mb=6144) as lease:
+           print(lease, f"{time.monotonic() - t:.2f}s")
+   asyncio.run(main())
+   ```
+   Record the printed free VRAM before and after eviction, the evicted model list, and
+   the time. Then delete the file.
+3. Record qwen's reload time on the next script call after an eviction.
+4. Run the full suite including browser tests (baseline 1205).

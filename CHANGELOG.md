@@ -8,6 +8,24 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Phase 20)
+- **Task 20.1 (2026-09-30, by Coder):** shared GPU model manager,
+  `app/services/gpu_model_manager.py`. One process-wide, first-come-first-served lease
+  for the single RTX 3060. It arbitrates rather than loads, because the consumers (Ollama,
+  the StyleTTS 2 worker, the future image and music workers) live in different processes.
+  - A lease that needs room measures free VRAM with `nvidia-smi` (new
+    `system_checks.get_gpu_memory()`). If short, it unloads Ollama's resident models
+    (`/api/ps` + `keep_alive: 0`), polls briefly while the driver releases the memory,
+    and otherwise raises `GpuUnavailableError` so the caller takes its existing fallback.
+  - Ollama calls now take the same lease without measuring (owner decision D20.1-c,
+    2026-09-30). qwen can no longer load mid-inference of another model, and the wait
+    is bounded by the router's existing budget.
+  - Kill switch `DIE_GPU_MANAGER_ENABLED`; `DIE_GPU_EVICT_OLLAMA`; measured threshold
+    `DIE_GPU_MIN_FREE_MB_STYLETTS2=6144`. `/health` reports live `gpu_memory`.
+  - No consumer other than Ollama is wired in yet (21.2, 20.3, Phase 22).
+  - Real finding behind it: qwen is called with `keep_alive: "5m"` at `num_ctx=16384`,
+    so the 3916 MiB free measured at context 4096 overstates the real headroom.
+
 ### Added (Phase 21, spike-track — not yet wired to the app)
 - **Task 21.1 (2026-09-29, by Coder):** Kokoro TTS spike -- real install, synthesis, and
   Edge TTS comparison, `docs/operations/phase21-spike-kokoro.md`. Real, hard finding: no
