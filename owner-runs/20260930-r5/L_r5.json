@@ -1,0 +1,843 @@
+{
+  "run_label": "r5",
+  "base_repo": "cagliostrolab/animagine-xl-4.0",
+  "styles": {
+    "action_webtoon": "dramatic lighting, rim lighting, cinematic lighting, high contrast, sharp lineart, cel shading, detailed eyes, cool color palette, blue and purple lighting, year 2024",
+    "bright_anime": "anime screencap, soft lighting, bright colors, clean lineart, detailed eyes, sunlight, vibrant, year 2024"
+  },
+  "character": "mature female, short black hair, bob cut, blunt bangs, blue eyes, white collared shirt, black jacket",
+  "negative": "lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry, logo, nsfw",
+  "ip_scale": 0.4,
+  "pose_scale": 1.0,
+  "phases": {
+    "p1_style": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 514.9,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "base",
+        "base_repo": "cagliostrolab/animagine-xl-4.0",
+        "pipeline": "text2img",
+        "encoders": true,
+        "lightning_steps": null,
+        "download_or_cache_sec": 1256.223,
+        "load_sec": 5.157,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerAncestralDiscreteScheduler",
+        "timestep_spacing": "leading",
+        "vram_allocated_mb": 6724.7,
+        "rss_mb": 955.5
+      },
+      "scenes": [
+        {
+          "style": "action_webtoon",
+          "status": "ok",
+          "wall_time_sec": 19.777,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\action_webtoon_scene_classroom.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9131.6,
+          "peak_vram_reserved_mb": 11524.0,
+          "rss_mb": 1745.3
+        },
+        {
+          "style": "action_webtoon",
+          "status": "ok",
+          "wall_time_sec": 20.027,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\action_webtoon_scene_kitchen.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9131.6,
+          "peak_vram_reserved_mb": 11524.0,
+          "rss_mb": 1745.7
+        },
+        {
+          "style": "bright_anime",
+          "status": "ok",
+          "wall_time_sec": 19.784,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\bright_anime_scene_classroom.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9131.6,
+          "peak_vram_reserved_mb": 11524.0,
+          "rss_mb": 1913.2
+        },
+        {
+          "style": "bright_anime",
+          "status": "ok",
+          "wall_time_sec": 19.792,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\bright_anime_scene_kitchen.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9131.6,
+          "peak_vram_reserved_mb": 11524.0,
+          "rss_mb": 1913.2
+        }
+      ],
+      "candidates": [
+        {
+          "style": "action_webtoon",
+          "status": "ok",
+          "wall_time_sec": 19.86,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\action_webtoon_candidate_1.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 2033.7
+        },
+        {
+          "style": "action_webtoon",
+          "status": "ok",
+          "wall_time_sec": 19.928,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\action_webtoon_candidate_2.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1977.3
+        },
+        {
+          "style": "bright_anime",
+          "status": "ok",
+          "wall_time_sec": 20.039,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\bright_anime_candidate_1.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1977.3
+        },
+        {
+          "style": "bright_anime",
+          "status": "ok",
+          "wall_time_sec": 20.165,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\bright_anime_candidate_2.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1977.4
+        }
+      ],
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "base",
+        "ip_adapter_loaded": false,
+        "device": "cuda",
+        "vram_allocated_mb": 6733.8,
+        "vram_reserved_mb": 11610.0,
+        "rss_mb": 1973.4
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11553,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 1443.5
+    },
+    "p2_assets": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 515.4,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "base",
+        "base_repo": "cagliostrolab/animagine-xl-4.0",
+        "pipeline": "text2img",
+        "encoders": true,
+        "lightning_steps": null,
+        "download_or_cache_sec": 0.834,
+        "load_sec": 4.77,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerAncestralDiscreteScheduler",
+        "timestep_spacing": "leading",
+        "vram_allocated_mb": 6724.7,
+        "rss_mb": 927.4
+      },
+      "assets": [
+        {
+          "style": "action_webtoon",
+          "asset": "front_neutral",
+          "status": "ok",
+          "wall_time_sec": 28.024,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\action_webtoon_asset_front_neutral.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5280.4
+        },
+        {
+          "style": "action_webtoon",
+          "asset": "front_smile",
+          "status": "ok",
+          "wall_time_sec": 28.306,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\action_webtoon_asset_front_smile.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5283.0
+        },
+        {
+          "style": "action_webtoon",
+          "asset": "side_surprised",
+          "status": "ok",
+          "wall_time_sec": 28.312,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\action_webtoon_asset_side_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5283.2
+        },
+        {
+          "style": "action_webtoon",
+          "asset": "outfit",
+          "status": "ok",
+          "wall_time_sec": 25.546,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\action_webtoon_asset_outfit.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11100.6,
+          "peak_vram_reserved_mb": 13600.0,
+          "rss_mb": 5289.2
+        },
+        {
+          "style": "bright_anime",
+          "asset": "front_neutral",
+          "status": "ok",
+          "wall_time_sec": 26.158,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\bright_anime_asset_front_neutral.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5339.2
+        },
+        {
+          "style": "bright_anime",
+          "asset": "front_smile",
+          "status": "ok",
+          "wall_time_sec": 27.781,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\bright_anime_asset_front_smile.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5339.2
+        },
+        {
+          "style": "bright_anime",
+          "asset": "side_surprised",
+          "status": "ok",
+          "wall_time_sec": 27.741,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\bright_anime_asset_side_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5339.2
+        },
+        {
+          "style": "bright_anime",
+          "asset": "outfit",
+          "status": "ok",
+          "wall_time_sec": 27.99,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\bright_anime_asset_outfit.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11100.6,
+          "peak_vram_reserved_mb": 13600.0,
+          "rss_mb": 5175.9
+        }
+      ],
+      "encode": {
+        "action_webtoon": {
+          "status": "ok",
+          "items": 4,
+          "do_cfg": true,
+          "with_ip": true,
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\action_webtoon_m2_embeds.pt",
+          "wall_time_sec": 0.322
+        },
+        "bright_anime": {
+          "status": "ok",
+          "items": 4,
+          "do_cfg": true,
+          "with_ip": true,
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\bright_anime_m2_embeds.pt",
+          "wall_time_sec": 0.313
+        }
+      },
+      "ip_load": {
+        "status": "ok",
+        "load_sec": 6.757,
+        "vram_added_mb": 2014.1,
+        "rss_mb": 2138.0
+      },
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "base",
+        "ip_adapter_loaded": true,
+        "device": "cuda",
+        "vram_allocated_mb": 8747.9,
+        "vram_reserved_mb": 13600.0,
+        "rss_mb": 5167.3
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11669,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 239.8
+    },
+    "p3_m2": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 515.3,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "base",
+        "base_repo": "cagliostrolab/animagine-xl-4.0",
+        "pipeline": "controlnet_inpaint",
+        "encoders": false,
+        "lightning_steps": null,
+        "download_or_cache_sec": 0.821,
+        "load_sec": 8.209,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerAncestralDiscreteScheduler",
+        "timestep_spacing": "leading",
+        "vram_allocated_mb": 7596.1,
+        "rss_mb": 955.0
+      },
+      "renders": [
+        {
+          "style": "action_webtoon",
+          "scene": "classroom",
+          "action": "waving",
+          "status": "ok",
+          "wall_time_sec": 29.537,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "controlnet_inpaint",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_action_webtoon_classroom_waving_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10929.4,
+          "peak_vram_reserved_mb": 11972.0,
+          "rss_mb": 2280.1,
+          "segment": {
+            "status": "ok",
+            "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_action_webtoon_classroom_waving_seg.png",
+            "wall_time_sec": 0.934,
+            "foreground_fraction": 0.2009,
+            "soft_edge_fraction": 0.045
+          },
+          "cut_sec": 0.15
+        },
+        {
+          "style": "action_webtoon",
+          "scene": "classroom",
+          "action": "pointing_up",
+          "status": "ok",
+          "wall_time_sec": 29.344,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "controlnet_inpaint",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_action_webtoon_classroom_pointing_up_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10929.2,
+          "peak_vram_reserved_mb": 11972.0,
+          "rss_mb": 3134.5,
+          "segment": {
+            "status": "ok",
+            "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_action_webtoon_classroom_pointing_up_seg.png",
+            "wall_time_sec": 0.82,
+            "foreground_fraction": 0.2167,
+            "soft_edge_fraction": 0.0186
+          },
+          "cut_sec": 0.148
+        },
+        {
+          "style": "action_webtoon",
+          "scene": "kitchen",
+          "action": "explaining",
+          "status": "ok",
+          "wall_time_sec": 29.662,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "controlnet_inpaint",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_action_webtoon_kitchen_explaining_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10929.2,
+          "peak_vram_reserved_mb": 11972.0,
+          "rss_mb": 3742.4,
+          "segment": {
+            "status": "ok",
+            "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_action_webtoon_kitchen_explaining_seg.png",
+            "wall_time_sec": 0.75,
+            "foreground_fraction": 0.2358,
+            "soft_edge_fraction": 0.0729
+          },
+          "cut_sec": 0.157
+        },
+        {
+          "style": "action_webtoon",
+          "scene": "kitchen",
+          "action": "thinking",
+          "status": "ok",
+          "wall_time_sec": 29.8,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "controlnet_inpaint",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_action_webtoon_kitchen_thinking_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10929.2,
+          "peak_vram_reserved_mb": 11972.0,
+          "rss_mb": 3742.5,
+          "segment": {
+            "status": "ok",
+            "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_action_webtoon_kitchen_thinking_seg.png",
+            "wall_time_sec": 0.776,
+            "foreground_fraction": 0.191,
+            "soft_edge_fraction": 0.0798
+          },
+          "cut_sec": 0.163
+        },
+        {
+          "style": "bright_anime",
+          "scene": "classroom",
+          "action": "waving",
+          "status": "ok",
+          "wall_time_sec": 29.914,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "controlnet_inpaint",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_bright_anime_classroom_waving_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10929.2,
+          "peak_vram_reserved_mb": 11972.0,
+          "rss_mb": 3734.4,
+          "segment": {
+            "status": "ok",
+            "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_bright_anime_classroom_waving_seg.png",
+            "wall_time_sec": 0.776,
+            "foreground_fraction": 0.0441,
+            "soft_edge_fraction": 0.1296
+          },
+          "cut_sec": 0.17
+        },
+        {
+          "style": "bright_anime",
+          "scene": "classroom",
+          "action": "pointing_up",
+          "status": "ok",
+          "wall_time_sec": 30.022,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "controlnet_inpaint",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_bright_anime_classroom_pointing_up_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10929.2,
+          "peak_vram_reserved_mb": 11972.0,
+          "rss_mb": 3734.4,
+          "segment": {
+            "status": "ok",
+            "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_bright_anime_classroom_pointing_up_seg.png",
+            "wall_time_sec": 0.779,
+            "foreground_fraction": 0.2142,
+            "soft_edge_fraction": 0.1054
+          },
+          "cut_sec": 0.167
+        },
+        {
+          "style": "bright_anime",
+          "scene": "kitchen",
+          "action": "explaining",
+          "status": "ok",
+          "wall_time_sec": 30.125,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "controlnet_inpaint",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_bright_anime_kitchen_explaining_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10929.2,
+          "peak_vram_reserved_mb": 11972.0,
+          "rss_mb": 3734.4,
+          "segment": {
+            "status": "ok",
+            "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_bright_anime_kitchen_explaining_seg.png",
+            "wall_time_sec": 0.779,
+            "foreground_fraction": 0.2335,
+            "soft_edge_fraction": 0.1286
+          },
+          "cut_sec": 0.177
+        },
+        {
+          "style": "bright_anime",
+          "scene": "kitchen",
+          "action": "thinking",
+          "status": "ok",
+          "wall_time_sec": 30.131,
+          "steps": 28,
+          "guidance_scale": 5.0,
+          "pipeline": "controlnet_inpaint",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_bright_anime_kitchen_thinking_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10929.2,
+          "peak_vram_reserved_mb": 11972.0,
+          "rss_mb": 3734.4,
+          "segment": {
+            "status": "ok",
+            "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\m2_bright_anime_kitchen_thinking_seg.png",
+            "wall_time_sec": 0.781,
+            "foreground_fraction": 0.2212,
+            "soft_edge_fraction": 0.088
+          },
+          "cut_sec": 0.179
+        }
+      ],
+      "ip_load": {
+        "status": "ok",
+        "load_sec": 1.196,
+        "vram_added_mb": 808.5,
+        "rss_mb": 933.1
+      },
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "base",
+        "ip_adapter_loaded": true,
+        "device": "cuda",
+        "vram_allocated_mb": 8413.8,
+        "vram_reserved_mb": 11972.0,
+        "rss_mb": 3714.7
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11722,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 268.8
+    },
+    "p4_frames": {
+      "frames": [
+        {
+          "source": "m2_action_webtoon_classroom_waving_cut.png",
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\frame_action_webtoon_classroom_waving.png"
+        },
+        {
+          "source": "m2_action_webtoon_classroom_pointing_up_cut.png",
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\frame_action_webtoon_classroom_pointing_up.png"
+        },
+        {
+          "source": "m2_action_webtoon_kitchen_explaining_cut.png",
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\frame_action_webtoon_kitchen_explaining.png"
+        },
+        {
+          "source": "m2_action_webtoon_kitchen_thinking_cut.png",
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\frame_action_webtoon_kitchen_thinking.png"
+        },
+        {
+          "source": "m2_bright_anime_classroom_waving_cut.png",
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\frame_bright_anime_classroom_waving.png"
+        },
+        {
+          "source": "m2_bright_anime_classroom_pointing_up_cut.png",
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\frame_bright_anime_classroom_pointing_up.png"
+        },
+        {
+          "source": "m2_bright_anime_kitchen_explaining_cut.png",
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\frame_bright_anime_kitchen_explaining.png"
+        },
+        {
+          "source": "m2_bright_anime_kitchen_thinking_cut.png",
+          "output_path": "data\\tmp\\phase20e_character_v3\\run_r5\\frame_bright_anime_kitchen_thinking.png"
+        }
+      ]
+    }
+  },
+  "gpu_snapshots": [
+    {
+      "label": "start",
+      "at_monotonic_sec": 686695.397,
+      "vram_used_mb": 558,
+      "vram_free_mb": 11553,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p1_style_lease_acquired",
+      "at_monotonic_sec": 686695.532,
+      "vram_used_mb": 558,
+      "vram_free_mb": 11553,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p1_style_worker_exited",
+      "at_monotonic_sec": 688138.904,
+      "vram_used_mb": 442,
+      "vram_free_mb": 11669,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p2_assets_lease_acquired",
+      "at_monotonic_sec": 688139.037,
+      "vram_used_mb": 442,
+      "vram_free_mb": 11669,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p2_assets_worker_exited",
+      "at_monotonic_sec": 688378.711,
+      "vram_used_mb": 389,
+      "vram_free_mb": 11722,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p3_m2_lease_acquired",
+      "at_monotonic_sec": 688378.851,
+      "vram_used_mb": 389,
+      "vram_free_mb": 11722,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p3_m2_worker_exited",
+      "at_monotonic_sec": 688647.525,
+      "vram_used_mb": 353,
+      "vram_free_mb": 11758,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "end",
+      "at_monotonic_sec": 688648.85,
+      "vram_used_mb": 353,
+      "vram_free_mb": 11758,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    }
+  ],
+  "sheets": {
+    "style": "data\\tmp\\phase20e_character_v3\\run_r5\\sheet_style.png",
+    "character": "data\\tmp\\phase20e_character_v3\\run_r5\\sheet_character.png",
+    "m2": "data\\tmp\\phase20e_character_v3\\run_r5\\sheet_m2.png",
+    "frames": "data\\tmp\\phase20e_character_v3\\run_r5\\sheet_frames.png"
+  },
+  "output_dir": "data\\tmp\\phase20e_character_v3\\run_r5"
+}
