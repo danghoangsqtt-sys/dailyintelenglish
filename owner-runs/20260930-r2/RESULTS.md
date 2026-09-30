@@ -1,0 +1,96 @@
+﻿# Owner-machine results r2 2026-09-30
+- Pinned commit: b67921d02a86d1c658da81d12236a4adcd8358b7
+- Memory (from preflight): TotalVisibleMemorySize 33289648 / FreePhysicalMemory 13567812 / TotalVirtualMemorySize 46549580 / FreeVirtualMemory 8547584
+## B. Task 21.1b StyleTTS 2
+- B0: venv existed yes; leftover processes stopped 49908, 44024; python --version Python 3.11.9
+- env: 2.11.0+cu128 12.8 True
+- run1 handshake: ready / cuda / 11007
+- run1 clips ok: 12/12; mp3 present: yes
+- run1 per clip: engine, voice, line_index, duration_sec, wall_time_sec, rtf (styletts2 clips only)
+  - styletts2, 4077-13754-0000.wav, 0, 4.0479, 2.781, 0.687
+  - styletts2, 1221-135767-0014.wav, 0, 3.9229, 0.219, 0.0558
+  - styletts2, 4077-13754-0000.wav, 24, 5.2479, 0.359, 0.0684
+  - styletts2, 1221-135767-0014.wav, 24, 5.7479, 0.297, 0.0517
+  - styletts2, 4077-13754-0000.wav, 29, 2.1979, 0.218, 0.0992
+  - styletts2, 1221-135767-0014.wav, 29, 2.0229, 0.157, 0.0776
+- voice_picks: male 4077-13754-0000.wav; female 1221-135767-0014.wav
+- voice_measurements median_f0_hz:
+  - 1221-135767-0014.wav: 182.87
+  - 4077-13754-0000.wav: 115.87
+  - 5639-40744-0020.wav: 134.26
+  - 908-157963-0027.wav: 93.93
+- run2 handshake: unavailable / insufficient_vram / 4677
+- errors: none
+## C. Task 20.2 images (+ 20.1 evidence)
+- env: 2.11.0+cu128 12.8 True
+- vae-tiling rerun: no
+### idle2
+- base: load.load_sec 11.912; load.watermark_active false; load.timestep_spacing leading
+  - images: episode 1-5; wall_time_sec / peak_vram_allocated_mb / peak_vram_reserved_mb / rss_mb / error
+    - 1: 22.096 / 9131.6 / 11524.0 / 1712.2 / none
+    - 2: 21.322 / 9131.6 / 11524.0 / 1712.1 / none
+    - 3: 21.429 / 9131.6 / 11524.0 / 1712.2 / none
+    - 4: 21.493 / 9131.6 / 11524.0 / 1694.4 / none
+    - 5: 21.6 / 9131.6 / 11524.0 / 1694.6 / none
+  - ip_adapter load: vram_added_mb 2016.4; load_sec 7.368
+  - ip_adapter scenes: scene / scale / wall_time_sec / peak_vram_allocated_mb
+    - 1 / 0.5 / 26.878 / 11149.3
+    - 1 / 0.8 / 27.18 / 11149.3
+    - 2 / 0.5 / 27.197 / 11149.3
+    - 2 / 0.8 / 27.286 / 11149.3
+    - 3 / 0.5 / 27.227 / 11149.3
+    - 3 / 0.8 / 27.351 / 11149.3
+  - lease: min_free_mb 8192; free_mb_before 11049; free_mb_after_eviction null; evicted_models []; waited_seconds 0.0
+- lightning: load.load_sec 13.285; load.watermark_active false; load.timestep_spacing trailing
+  - images: episode 1-5; wall_time_sec / peak_vram_allocated_mb / peak_vram_reserved_mb / rss_mb / error
+    - 1: 2.537 / 9111.5 / 11338.0 / 1765.5 / none
+    - 2: 2.081 / 9111.5 / 11338.0 / 1765.5 / none
+    - 3: 2.07 / 9111.5 / 11338.0 / 1765.5 / none
+    - 4: 2.073 / 9111.5 / 11338.0 / 1765.5 / none
+    - 5: 2.071 / 9111.5 / 11338.0 / 1765.5 / none
+  - ip_adapter load: vram_added_mb 2015.5; load_sec 7.647
+  - ip_adapter scenes: scene / scale / wall_time_sec / peak_vram_allocated_mb
+    - 1 / 0.5 / 7.304 / 11127.6
+    - 1 / 0.8 / 7.56 / 11127.6
+    - 2 / 0.5 / 7.491 / 11127.6
+    - 2 / 0.8 / 7.465 / 11127.6
+    - 3 / 0.5 / 7.504 / 11127.6
+    - 3 / 0.8 / 7.511 / 11127.6
+  - lease: min_free_mb 8192; free_mb_before 11837; free_mb_after_eviction null; evicted_models []; waited_seconds 0.0
+### warm_qwen2
+- base: load.load_sec 11.645; load.watermark_active false; load.timestep_spacing leading
+  - images: episode 1-5; wall_time_sec / peak_vram_allocated_mb / peak_vram_reserved_mb / rss_mb / error
+    - 1: 21.306 / 9131.6 / 11524.0 / 1573.6 / none
+    - 2: 20.975 / 9131.6 / 11524.0 / 1573.6 / none
+    - 3: 21.105 / 9131.6 / 11524.0 / 1573.6 / none
+    - 4: 21.224 / 9131.6 / 11524.0 / 1573.6 / none
+    - 5: 21.577 / 9131.6 / 11524.0 / 1573.6 / none
+  - ip_adapter: null (--skip-ip)
+  - lease: min_free_mb 8192; free_mb_before 4964; free_mb_after_eviction 11836; evicted_models qwen3.5:9b; waited_seconds 0.0
+- lightning: load.load_sec 12.589; load.watermark_active false; load.timestep_spacing trailing
+  - images: episode 1-5; wall_time_sec / peak_vram_allocated_mb / peak_vram_reserved_mb / rss_mb / error
+    - 1: 2.452 / 9111.5 / 11338.0 / 1794.0 / none
+    - 2: 2.076 / 9111.5 / 11338.0 / 1794.0 / none
+    - 3: 2.078 / 9111.5 / 11338.0 / 1794.0 / none
+    - 4: 2.08 / 9111.5 / 11338.0 / 1794.0 / none
+    - 5: 2.085 / 9111.5 / 11338.0 / 1794.0 / none
+  - ip_adapter: null (--skip-ip)
+  - lease: min_free_mb 8192; free_mb_before 11842; free_mb_after_eviction null; evicted_models []; waited_seconds 0.0
+- qwen (warm_qwen2):
+  - warm wall_sec 12.685
+  - reload_after_eviction wall_sec 12.099
+- gpu_snapshots (warm_qwen2): label -> vram_used_mb / vram_free_mb
+  - start -> 275 / 11836
+  - after_warm_qwen -> 7147 / 4964
+  - base_lease_acquired -> 275 / 11836
+  - base_worker_exited -> 269 / 11842
+  - lightning_lease_acquired -> 269 / 11842
+  - lightning_worker_exited -> 275 / 11836
+  - after_qwen_reload -> 7147 / 4964
+- errors: none
+- missing files: none
+## Owner decisions (LEAVE EMPTY -- the owner fills this in)
+- 21.1b StyleTTS 2 vs Edge TTS (spike_comparison_styletts2.mp3):
+- 20.2 base vs lightning vs today's template (sheet_ep1..5.png):
+- 20.2 same character across scenes? (sheet_ip_adapter.png):
+

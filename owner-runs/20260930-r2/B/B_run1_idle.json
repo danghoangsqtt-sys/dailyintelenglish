@@ -1,0 +1,621 @@
+{
+  "project": {
+    "id": "b330d37f-a212-4cf7-a779-7a109098bd6c",
+    "name": "Demo Episode",
+    "topic": "The best way to start your morning",
+    "cefr_level": "B1"
+  },
+  "lines": [
+    {
+      "index": 0,
+      "text": "Hey Maya, are you an early bird or a night owl?",
+      "speaker": "Alex"
+    },
+    {
+      "index": 24,
+      "text": "Exactly. Small changes can help you wake up on the right side of the bed.",
+      "speaker": "Alex"
+    },
+    {
+      "index": 29,
+      "text": "I will! Wish me luck!",
+      "speaker": "Maya"
+    }
+  ],
+  "worker_handshake": {
+    "status": "ready",
+    "device": "cuda",
+    "free_vram_mb": 11007,
+    "min_free_vram_mb": 6144,
+    "requested_device": "auto",
+    "reason": "sufficient_vram",
+    "rss_mb": 19.9
+  },
+  "voice_picks": {
+    "male": "4077-13754-0000.wav",
+    "female": "1221-135767-0014.wav"
+  },
+  "voice_measurements": [
+    {
+      "status": "ok",
+      "filename": "1221-135767-0014.wav",
+      "sample_rate": 16000,
+      "duration_sec": 3.0,
+      "median_f0_hz": 182.87,
+      "inferred_gender": "female",
+      "voiced_frames": 59,
+      "path": "D:\\DataAdmin\\Daily_Intel_English\\models\\styletts2\\reference_audio\\reference_audio\\1221-135767-0014.wav"
+    },
+    {
+      "status": "ok",
+      "filename": "4077-13754-0000.wav",
+      "sample_rate": 16000,
+      "duration_sec": 3.0,
+      "median_f0_hz": 115.87,
+      "inferred_gender": "male",
+      "voiced_frames": 73,
+      "path": "D:\\DataAdmin\\Daily_Intel_English\\models\\styletts2\\reference_audio\\reference_audio\\4077-13754-0000.wav"
+    },
+    {
+      "status": "ok",
+      "filename": "5639-40744-0020.wav",
+      "sample_rate": 16000,
+      "duration_sec": 3.0,
+      "median_f0_hz": 134.26,
+      "inferred_gender": "male",
+      "voiced_frames": 70,
+      "path": "D:\\DataAdmin\\Daily_Intel_English\\models\\styletts2\\reference_audio\\reference_audio\\5639-40744-0020.wav"
+    },
+    {
+      "status": "ok",
+      "filename": "908-157963-0027.wav",
+      "sample_rate": 16000,
+      "duration_sec": 3.0,
+      "median_f0_hz": 93.93,
+      "inferred_gender": "male",
+      "voiced_frames": 28,
+      "path": "D:\\DataAdmin\\Daily_Intel_English\\models\\styletts2\\reference_audio\\reference_audio\\908-157963-0027.wav"
+    }
+  ],
+  "model_load": {
+    "status": "ok",
+    "already_loaded": false,
+    "import_sec": 7.937,
+    "model_load_sec": 243.375,
+    "device": "cuda"
+  },
+  "clips": [
+    {
+      "engine": "styletts2",
+      "voice": "4077-13754-0000.wav",
+      "gender": "male",
+      "line_index": 0,
+      "filename": "styletts2_male_4077-13754-0000_line0.wav",
+      "status": "ok",
+      "duration_sec": 4.0479,
+      "wall_time_sec": 2.781,
+      "style_compute_sec": 0.86,
+      "rtf": 0.687,
+      "device": "cuda",
+      "rss_mb": 2623.0,
+      "free_vram_mb": 9675,
+      "word_boundaries": []
+    },
+    {
+      "engine": "styletts2",
+      "voice": "1221-135767-0014.wav",
+      "gender": "female",
+      "line_index": 0,
+      "filename": "styletts2_female_1221-135767-0014_line0.wav",
+      "status": "ok",
+      "duration_sec": 3.9229,
+      "wall_time_sec": 0.219,
+      "style_compute_sec": 0.031,
+      "rtf": 0.0558,
+      "device": "cuda",
+      "rss_mb": 2624.5,
+      "free_vram_mb": 9583,
+      "word_boundaries": []
+    },
+    {
+      "engine": "styletts2",
+      "voice": "4077-13754-0000.wav",
+      "gender": "male",
+      "line_index": 24,
+      "filename": "styletts2_male_4077-13754-0000_line24.wav",
+      "status": "ok",
+      "duration_sec": 5.2479,
+      "wall_time_sec": 0.359,
+      "style_compute_sec": 0.0,
+      "rtf": 0.0684,
+      "device": "cuda",
+      "rss_mb": 2618.4,
+      "free_vram_mb": 9581,
+      "word_boundaries": []
+    },
+    {
+      "engine": "styletts2",
+      "voice": "1221-135767-0014.wav",
+      "gender": "female",
+      "line_index": 24,
+      "filename": "styletts2_female_1221-135767-0014_line24.wav",
+      "status": "ok",
+      "duration_sec": 5.7479,
+      "wall_time_sec": 0.297,
+      "style_compute_sec": 0.0,
+      "rtf": 0.0517,
+      "device": "cuda",
+      "rss_mb": 2620.4,
+      "free_vram_mb": 9545,
+      "word_boundaries": []
+    },
+    {
+      "engine": "styletts2",
+      "voice": "4077-13754-0000.wav",
+      "gender": "male",
+      "line_index": 29,
+      "filename": "styletts2_male_4077-13754-0000_line29.wav",
+      "status": "ok",
+      "duration_sec": 2.1979,
+      "wall_time_sec": 0.218,
+      "style_compute_sec": 0.0,
+      "rtf": 0.0992,
+      "device": "cuda",
+      "rss_mb": 2611.2,
+      "free_vram_mb": 9541,
+      "word_boundaries": []
+    },
+    {
+      "engine": "styletts2",
+      "voice": "1221-135767-0014.wav",
+      "gender": "female",
+      "line_index": 29,
+      "filename": "styletts2_female_1221-135767-0014_line29.wav",
+      "status": "ok",
+      "duration_sec": 2.0229,
+      "wall_time_sec": 0.157,
+      "style_compute_sec": 0.0,
+      "rtf": 0.0776,
+      "device": "cuda",
+      "rss_mb": 2613.5,
+      "free_vram_mb": 9541,
+      "word_boundaries": []
+    },
+    {
+      "engine": "edge_tts",
+      "voice": "en-US-JennyNeural",
+      "gender": "female",
+      "line_index": 0,
+      "filename": "edge_female_line0.mp3",
+      "status": "ok",
+      "duration_sec": 3.504,
+      "wall_time_sec": 1.2207,
+      "word_boundaries": [
+        {
+          "text": "Hey",
+          "offset_sec": 0.1,
+          "duration_sec": 0.2
+        },
+        {
+          "text": "Maya",
+          "offset_sec": 0.3125,
+          "duration_sec": 0.4375
+        },
+        {
+          "text": "are",
+          "offset_sec": 0.875,
+          "duration_sec": 0.1375
+        },
+        {
+          "text": "you",
+          "offset_sec": 1.025,
+          "duration_sec": 0.125
+        },
+        {
+          "text": "an",
+          "offset_sec": 1.1625,
+          "duration_sec": 0.1
+        },
+        {
+          "text": "early",
+          "offset_sec": 1.275,
+          "duration_sec": 0.275
+        },
+        {
+          "text": "bird",
+          "offset_sec": 1.5625,
+          "duration_sec": 0.3125
+        },
+        {
+          "text": "or",
+          "offset_sec": 1.8875,
+          "duration_sec": 0.15
+        },
+        {
+          "text": "a",
+          "offset_sec": 2.05,
+          "duration_sec": 0.0375
+        },
+        {
+          "text": "night",
+          "offset_sec": 2.1,
+          "duration_sec": 0.225
+        },
+        {
+          "text": "owl",
+          "offset_sec": 2.3375,
+          "duration_sec": 0.2875
+        }
+      ]
+    },
+    {
+      "engine": "edge_tts",
+      "voice": "en-US-GuyNeural",
+      "gender": "male",
+      "line_index": 0,
+      "filename": "edge_male_line0.mp3",
+      "status": "ok",
+      "duration_sec": 3.6,
+      "wall_time_sec": 1.1273,
+      "word_boundaries": [
+        {
+          "text": "Hey",
+          "offset_sec": 0.1,
+          "duration_sec": 0.1875
+        },
+        {
+          "text": "Maya",
+          "offset_sec": 0.3,
+          "duration_sec": 0.3375
+        },
+        {
+          "text": "are",
+          "offset_sec": 0.875,
+          "duration_sec": 0.1375
+        },
+        {
+          "text": "you",
+          "offset_sec": 1.0375,
+          "duration_sec": 0.125
+        },
+        {
+          "text": "an",
+          "offset_sec": 1.1875,
+          "duration_sec": 0.0875
+        },
+        {
+          "text": "early",
+          "offset_sec": 1.3,
+          "duration_sec": 0.2875
+        },
+        {
+          "text": "bird",
+          "offset_sec": 1.6,
+          "duration_sec": 0.3375
+        },
+        {
+          "text": "or",
+          "offset_sec": 1.9625,
+          "duration_sec": 0.125
+        },
+        {
+          "text": "a",
+          "offset_sec": 2.1125,
+          "duration_sec": 0.0375
+        },
+        {
+          "text": "night",
+          "offset_sec": 2.1625,
+          "duration_sec": 0.225
+        },
+        {
+          "text": "owl",
+          "offset_sec": 2.4125,
+          "duration_sec": 0.3
+        }
+      ]
+    },
+    {
+      "engine": "edge_tts",
+      "voice": "en-US-JennyNeural",
+      "gender": "female",
+      "line_index": 24,
+      "filename": "edge_female_line24.mp3",
+      "status": "ok",
+      "duration_sec": 5.616,
+      "wall_time_sec": 1.2522,
+      "word_boundaries": [
+        {
+          "text": "Exactly",
+          "offset_sec": 0.1,
+          "duration_sec": 0.8
+        },
+        {
+          "text": "Small",
+          "offset_sec": 1.7625,
+          "duration_sec": 0.35
+        },
+        {
+          "text": "changes",
+          "offset_sec": 2.125,
+          "duration_sec": 0.4375
+        },
+        {
+          "text": "can",
+          "offset_sec": 2.575,
+          "duration_sec": 0.1375
+        },
+        {
+          "text": "help",
+          "offset_sec": 2.725,
+          "duration_sec": 0.1875
+        },
+        {
+          "text": "you",
+          "offset_sec": 2.925,
+          "duration_sec": 0.1125
+        },
+        {
+          "text": "wake",
+          "offset_sec": 3.05,
+          "duration_sec": 0.225
+        },
+        {
+          "text": "up",
+          "offset_sec": 3.2875,
+          "duration_sec": 0.125
+        },
+        {
+          "text": "on",
+          "offset_sec": 3.425,
+          "duration_sec": 0.1125
+        },
+        {
+          "text": "the",
+          "offset_sec": 3.55,
+          "duration_sec": 0.075
+        },
+        {
+          "text": "right",
+          "offset_sec": 3.6375,
+          "duration_sec": 0.2625
+        },
+        {
+          "text": "side",
+          "offset_sec": 3.9125,
+          "duration_sec": 0.2375
+        },
+        {
+          "text": "of",
+          "offset_sec": 4.1625,
+          "duration_sec": 0.0625
+        },
+        {
+          "text": "the",
+          "offset_sec": 4.2375,
+          "duration_sec": 0.0875
+        },
+        {
+          "text": "bed",
+          "offset_sec": 4.3375,
+          "duration_sec": 0.4
+        }
+      ]
+    },
+    {
+      "engine": "edge_tts",
+      "voice": "en-US-GuyNeural",
+      "gender": "male",
+      "line_index": 24,
+      "filename": "edge_male_line24.mp3",
+      "status": "ok",
+      "duration_sec": 5.76,
+      "wall_time_sec": 1.2102,
+      "word_boundaries": [
+        {
+          "text": "Exactly",
+          "offset_sec": 0.1,
+          "duration_sec": 0.8625
+        },
+        {
+          "text": "Small",
+          "offset_sec": 1.825,
+          "duration_sec": 0.35
+        },
+        {
+          "text": "changes",
+          "offset_sec": 2.1875,
+          "duration_sec": 0.45
+        },
+        {
+          "text": "can",
+          "offset_sec": 2.6625,
+          "duration_sec": 0.15
+        },
+        {
+          "text": "help",
+          "offset_sec": 2.8375,
+          "duration_sec": 0.2
+        },
+        {
+          "text": "you",
+          "offset_sec": 3.05,
+          "duration_sec": 0.125
+        },
+        {
+          "text": "wake",
+          "offset_sec": 3.2,
+          "duration_sec": 0.2
+        },
+        {
+          "text": "up",
+          "offset_sec": 3.425,
+          "duration_sec": 0.1375
+        },
+        {
+          "text": "on",
+          "offset_sec": 3.5875,
+          "duration_sec": 0.0875
+        },
+        {
+          "text": "the",
+          "offset_sec": 3.7,
+          "duration_sec": 0.0875
+        },
+        {
+          "text": "right",
+          "offset_sec": 3.8125,
+          "duration_sec": 0.2125
+        },
+        {
+          "text": "side",
+          "offset_sec": 4.05,
+          "duration_sec": 0.25
+        },
+        {
+          "text": "of",
+          "offset_sec": 4.3125,
+          "duration_sec": 0.075
+        },
+        {
+          "text": "the",
+          "offset_sec": 4.4125,
+          "duration_sec": 0.1
+        },
+        {
+          "text": "bed",
+          "offset_sec": 4.525,
+          "duration_sec": 0.35
+        }
+      ]
+    },
+    {
+      "engine": "edge_tts",
+      "voice": "en-US-JennyNeural",
+      "gender": "female",
+      "line_index": 29,
+      "filename": "edge_female_line29.mp3",
+      "status": "ok",
+      "duration_sec": 3.336,
+      "wall_time_sec": 1.1391,
+      "word_boundaries": [
+        {
+          "text": "I",
+          "offset_sec": 0.1,
+          "duration_sec": 0.15
+        },
+        {
+          "text": "will",
+          "offset_sec": 0.2625,
+          "duration_sec": 0.4375
+        },
+        {
+          "text": "Wish",
+          "offset_sec": 1.5625,
+          "duration_sec": 0.2625
+        },
+        {
+          "text": "me",
+          "offset_sec": 1.8375,
+          "duration_sec": 0.1375
+        },
+        {
+          "text": "luck",
+          "offset_sec": 1.9875,
+          "duration_sec": 0.4875
+        }
+      ]
+    },
+    {
+      "engine": "edge_tts",
+      "voice": "en-US-GuyNeural",
+      "gender": "male",
+      "line_index": 29,
+      "filename": "edge_male_line29.mp3",
+      "status": "ok",
+      "duration_sec": 3.504,
+      "wall_time_sec": 1.2166,
+      "word_boundaries": [
+        {
+          "text": "I",
+          "offset_sec": 0.1,
+          "duration_sec": 0.2125
+        },
+        {
+          "text": "will",
+          "offset_sec": 0.3375,
+          "duration_sec": 0.5375
+        },
+        {
+          "text": "Wish",
+          "offset_sec": 1.7375,
+          "duration_sec": 0.3
+        },
+        {
+          "text": "me",
+          "offset_sec": 2.05,
+          "duration_sec": 0.125
+        },
+        {
+          "text": "luck",
+          "offset_sec": 2.2,
+          "duration_sec": 0.425
+        }
+      ]
+    }
+  ],
+  "worker_stats": {
+    "status": "ok",
+    "loaded": true,
+    "device": "cuda",
+    "import_sec": 7.937,
+    "model_load_sec": 243.375,
+    "cached_styles": [
+      "1221-135767-0014.wav",
+      "4077-13754-0000.wav"
+    ],
+    "rss_mb": 2613.7,
+    "free_vram_mb": 9541
+  },
+  "unload": {
+    "status": "ok",
+    "was_loaded": true,
+    "free_vram_mb": 10897
+  },
+  "gpu_snapshots": [
+    {
+      "label": "before_worker_start",
+      "at_monotonic_sec": 645533.259,
+      "vram_used_mb": 1104,
+      "vram_free_mb": 11007,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "after_model_load",
+      "at_monotonic_sec": 645808.663,
+      "vram_used_mb": 1936,
+      "vram_free_mb": 10175,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "after_synthesis",
+      "at_monotonic_sec": 645813.944,
+      "vram_used_mb": 2570,
+      "vram_free_mb": 9541,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "after_unload",
+      "at_monotonic_sec": 645814.283,
+      "vram_used_mb": 1214,
+      "vram_free_mb": 10897,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    }
+  ],
+  "comparison_mp3": "data\\tmp\\phase21_styletts2_spike\\spike_comparison_styletts2.mp3",
+  "worker_stderr_log": "data\\tmp\\phase21_styletts2_spike\\styletts2_worker_stderr.log"
+}

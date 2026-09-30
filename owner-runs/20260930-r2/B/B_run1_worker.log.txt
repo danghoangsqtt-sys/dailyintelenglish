@@ -1,0 +1,68 @@
+styletts2_worker: ready, waiting for requests on stdin
+styletts2_worker: importing styletts2 (one-time cost)...
+[nltk_data] Downloading package punkt to
+[nltk_data]     C:\Users\Admin\AppData\Roaming\nltk_data...
+[nltk_data]   Package punkt is already up-to-date!
+W0930 18:24:50.242000 47752 Lib\site-packages\torch\distributed\elastic\multiprocessing\redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+styletts2_worker: import done in 7.94s
+styletts2_worker: fetching nltk 'punkt_tab' (needed by word_tokenize)...
+styletts2_worker: loading model (downloads ~873 MB on first ever run)...
+Invalid or missing model checkpoint path. Loading default model...
+Downloading …/LibriTTS/epochs_2nd_00020.pth ---------- 100% 0:02:53 771.4/771.4
+                                                                    MB         
+Invalid or missing config path. Loading default config...
+Downloading …riTTS/config.yml?download=true ----------- 100% 0:00:00 1.9/1.9 kB
+Invalid ASR config path. Loading default config...
+Downloading …/raw/main/Utils/ASR/config.yml ---------- 100% 0:00:00 481/481    
+                                                                    bytes      
+Invalid ASR model checkpoint path. Loading default model...
+Downloading …main/Utils/ASR/epoch_00080.pth ---------- 100% 0:00:33 94.6/94.6  
+                                                                    MB         
+Invalid F0 model path. Loading default model...
+Downloading …TTS2/raw/main/Utils/JDC/bst.t7 ---------- 100% 0:00:12 21.0/21.0  
+                                                                    MB         
+Downloading …w/main/Utils/PLBERT/config.yml ---------- 100% 0:00:00 915/915    
+                                                                    bytes      
+Downloading …n/Utils/PLBERT/step_1000000.t7 ---------- 100% 0:00:09 25.2/25.2  
+                                                                    MB         
+D:\DataAdmin\Daily_Intel_English\venv-styletts2\Lib\site-packages\torch\nn\utils\weight_norm.py:144: FutureWarning: `torch.nn.utils.weight_norm` is deprecated in favor of `torch.nn.utils.parametrizations.weight_norm`.
+  WeightNorm.apply(module, name, dim)
+D:\DataAdmin\Daily_Intel_English\venv-styletts2\Lib\site-packages\torch\nn\modules\rnn.py:1013: UserWarning: dropout option adds dropout after all but last recurrent layer, so non-zero dropout expects num_layers greater than 1, but got dropout=0.2 and num_layers=1
+  super().__init__("LSTM", *args, **kwargs)
+bert loaded
+bert_encoder loaded
+predictor loaded
+decoder loaded
+text_encoder loaded
+predictor_encoder loaded
+style_encoder loaded
+diffusion loaded
+text_aligner loaded
+pitch_extractor loaded
+mpd loaded
+msd loaded
+wd loaded
+styletts2_worker: model loaded in 243.38s on device=cuda
+177
+h\u02c8e\u026a m\u02c8a\u026a\u0259 | \u02c8\u0251\u0279 j\u02c8u \u0259n \u02c8\u025ali b\u02c8\u025ad \u02c8\u0254\u0279 \u0259 n\u02c8a\u026at \u02c8a\u028al \u2016
+h\u02c8e\u026a m\u02c8a\u026a\u0259 | \u02c8\u0251\u0279 j\u02c8u \u0259n \u02c8\u025ali b\u02c8\u025ad \u02c8\u0254\u0279 \u0259 n\u02c8a\u026at \u02c8a\u028al \u2016
+177
+h\u02c8e\u026a m\u02c8a\u026a\u0259 | \u02c8\u0251\u0279 j\u02c8u \u0259n \u02c8\u025ali b\u02c8\u025ad \u02c8\u0254\u0279 \u0259 n\u02c8a\u026at \u02c8a\u028al \u2016
+h\u02c8e\u026a m\u02c8a\u026a\u0259 | \u02c8\u0251\u0279 j\u02c8u \u0259n \u02c8\u025ali b\u02c8\u025ad \u02c8\u0254\u0279 \u0259 n\u02c8a\u026at \u02c8a\u028al \u2016
+177
+\u026a\u0261z\u02c8æktli \u2016 sm\u02c8\u0254l t\u0361\u0283\u02c8e\u026and\u0361\u0292\u026az k\u0259n h\u02c8\u025blp j\u02c8u w\u02c8e\u026ak \u02c8\u028cp \u02c8\u0254n ð\u0259 \u0279\u02c8a\u026at s\u02c8a\u026ad \u0259v ð\u0259 b\u02c8\u025bd \u2016
+\u026a\u0261z\u02c8æktli \u2016 sm\u02c8\u0254l t\u0361\u0283\u02c8e\u026and\u0361\u0292\u026az k\u0259n h\u02c8\u025blp j\u02c8u w\u02c8e\u026ak \u02c8\u028cp \u02c8\u0254n ð\u0259 \u0279\u02c8a\u026at s\u02c8a\u026ad \u0259v ð\u0259 b\u02c8\u025bd \u2016
+\u026a\u0261z\u02c8æktli \u2016 sm\u02c8\u0254l t\u0361\u0283\u02c8e\u026and\u0361\u0292\u026az k\u0259n h\u02c8\u025blp j\u02c8u w\u02c8e\u026ak \u02c8\u028cp \u02c8\u0254n ð\u0259 \u0279\u02c8a\u026at s\u02c8a\u026ad \u0259v ð\u0259 b\u02c8\u025bd \u2016
+\u026a\u0261z\u02c8æktli \u2016 sm\u02c8\u0254l t\u0361\u0283\u02c8e\u026and\u0361\u0292\u026az k\u0259n h\u02c8\u025blp j\u02c8u w\u02c8e\u026ak \u02c8\u028cp \u02c8\u0254n ð\u0259 \u0279\u02c8a\u026at s\u02c8a\u026ad \u0259v ð\u0259 b\u02c8\u025bd \u2016
+177
+\u026a\u0261z\u02c8æktli \u2016 sm\u02c8\u0254l t\u0361\u0283\u02c8e\u026and\u0361\u0292\u026az k\u0259n h\u02c8\u025blp j\u02c8u w\u02c8e\u026ak \u02c8\u028cp \u02c8\u0254n ð\u0259 \u0279\u02c8a\u026at s\u02c8a\u026ad \u0259v ð\u0259 b\u02c8\u025bd \u2016
+\u026a\u0261z\u02c8æktli \u2016 sm\u02c8\u0254l t\u0361\u0283\u02c8e\u026and\u0361\u0292\u026az k\u0259n h\u02c8\u025blp j\u02c8u w\u02c8e\u026ak \u02c8\u028cp \u02c8\u0254n ð\u0259 \u0279\u02c8a\u026at s\u02c8a\u026ad \u0259v ð\u0259 b\u02c8\u025bd \u2016
+\u026a\u0261z\u02c8æktli \u2016 sm\u02c8\u0254l t\u0361\u0283\u02c8e\u026and\u0361\u0292\u026az k\u0259n h\u02c8\u025blp j\u02c8u w\u02c8e\u026ak \u02c8\u028cp \u02c8\u0254n ð\u0259 \u0279\u02c8a\u026at s\u02c8a\u026ad \u0259v ð\u0259 b\u02c8\u025bd \u2016
+\u026a\u0261z\u02c8æktli \u2016 sm\u02c8\u0254l t\u0361\u0283\u02c8e\u026and\u0361\u0292\u026az k\u0259n h\u02c8\u025blp j\u02c8u w\u02c8e\u026ak \u02c8\u028cp \u02c8\u0254n ð\u0259 \u0279\u02c8a\u026at s\u02c8a\u026ad \u0259v ð\u0259 b\u02c8\u025bd \u2016
+177
+\u02c8a\u026a w\u02c8\u026al \u2016 w\u02c8\u026a\u0283 m\u02c8i l\u02c8\u028ck \u2016
+\u02c8a\u026a w\u02c8\u026al \u2016 w\u02c8\u026a\u0283 m\u02c8i l\u02c8\u028ck \u2016
+177
+\u02c8a\u026a w\u02c8\u026al \u2016 w\u02c8\u026a\u0283 m\u02c8i l\u02c8\u028ck \u2016
+\u02c8a\u026a w\u02c8\u026al \u2016 w\u02c8\u026a\u0283 m\u02c8i l\u02c8\u028ck \u2016
+styletts2_worker: stdin closed, exiting

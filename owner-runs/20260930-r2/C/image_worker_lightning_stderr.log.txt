@@ -1,0 +1,32 @@
+image_worker: ready on cuda
+[transformers] `CLIPImageProcessor` requires torchvision (not installed); falling back to `CLIPImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `CLIPImageProcessorPil` directly to silence this warning.
+[transformers] `SiglipImageProcessor` requires torchvision (not installed); falling back to `SiglipImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `SiglipImageProcessorPil` directly to silence this warning.
+Fetching 16 files:   0%|          | 0/16 [00:00<?, ?it/s]Fetching 16 files: 100%|##########| 16/16 [00:00<00:00, 2313.06it/s]
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files: 100%|##########| 2/2 [00:00<00:00, 1054.77it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+D:\DataAdmin\Daily_Intel_English\venv-image\Lib\site-packages\diffusers\configuration_utils.py:281: FutureWarning: It is deprecated to pass a pretrained model name or path to `from_config`.If you were trying to load a model, please use <class 'diffusers.models.unets.unet_2d_condition.UNet2DConditionModel'>.load_config(...) followed by <class 'diffusers.models.unets.unet_2d_condition.UNet2DConditionModel'>.from_config(...) instead. Otherwise, please make sure to pass a configuration dictionary instead. This functionality will be removed in v1.0.0.
+  deprecate("config-passed-as-path", "1.0.0", deprecation_message, standard_warn=False)
+There are modules in UNet2DConditionModel that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+D:\DataAdmin\Daily_Intel_English\venv-image\Lib\site-packages\diffusers\utils\deprecation_utils.py:23: FutureWarning: `torch_dtype` is deprecated and will be removed in version 1.0.0. Please use `dtype` instead.
+  deprecate("torch_dtype", "1.0.0", _TORCH_DTYPE_DEPRECATION_MESSAGE)
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]
+Loading weights:   0%|          | 0/196 [00:00<?, ?it/s][A
+Loading weights:  28%|##7       | 54/196 [00:00<00:00, 537.07it/s][ALoading weights: 100%|##########| 196/196 [00:00<00:00, 1183.86it/s]
+Loading pipeline components...:  29%|##8       | 2/7 [00:00<00:00,  5.34it/s]
+Loading weights:   0%|          | 0/517 [00:00<?, ?it/s][A
+Loading weights:   4%|4         | 23/517 [00:00<00:02, 219.58it/s][A
+Loading weights:   9%|8         | 45/517 [00:00<00:02, 209.62it/s][A
+Loading weights:  13%|#2        | 66/517 [00:00<00:02, 179.03it/s][A
+Loading weights:  16%|#6        | 85/517 [00:00<00:02, 153.51it/s][A
+Loading weights:  20%|#9        | 101/517 [00:00<00:03, 138.32it/s][A
+Loading weights:  22%|##2       | 116/517 [00:00<00:02, 135.49it/s][A
+Loading weights:  25%|##5       | 130/517 [00:00<00:03, 119.65it/s][A
+Loading weights:  28%|##8       | 146/517 [00:01<00:03, 122.25it/s][A
+Loading weights:  32%|###2      | 166/517 [00:01<00:02, 139.16it/s][A
+Loading weights:  37%|###6      | 190/517 [00:01<00:02, 160.45it/s][A
+Loading weights:  40%|####      | 207/517 [00:01<00:01, 156.11it/s][A
+Loading weights:  44%|####4     | 228/517 [00:01<00:01, 161.48it/s][ALoading weights: 100%|##########| 517/517 [00:01<00:00, 330.18it/s]
+Loading pipeline components...: 100%|##########| 7/7 [00:02<00:00,  2.96it/s]Loading pipeline components...: 100%|##########| 7/7 [00:02<00:00,  3.08it/s]
+Loading weights:   0%|          | 0/520 [00:00<?, ?it/s]Loading weights:   3%|3         | 18/520 [00:00<00:04, 116.83it/s]Loading weights:   7%|6         | 34/520 [00:00<00:03, 130.90it/s]Loading weights:  10%|9         | 51/520 [00:00<00:03, 136.14it/s]Loading weights:  13%|#2        | 67/520 [00:00<00:03, 135.92it/s]Loading weights:  16%|#5        | 81/520 [00:00<00:03, 123.71it/s]Loading weights:  19%|#9        | 100/520 [00:00<00:03, 134.92it/s]Loading weights:  22%|##1       | 114/520 [00:00<00:03, 127.48it/s]Loading weights:  26%|##5       | 133/520 [00:01<00:02, 136.25it/s]Loading weights:  28%|##8       | 147/520 [00:01<00:02, 127.39it/s]Loading weights:  32%|###1      | 166/520 [00:01<00:02, 137.30it/s]Loading weights:  35%|###4      | 180/520 [00:01<00:02, 118.54it/s]Loading weights:  38%|###7      | 197/520 [00:01<00:02, 123.09it/s]Loading weights:  41%|####      | 213/520 [00:01<00:02, 123.62it/s]Loading weights:  44%|####3     | 227/520 [00:01<00:02, 116.47it/s]Loading weights:  47%|####6     | 244/520 [00:01<00:02, 114.75it/s]Loading weights:  49%|####9     | 257/520 [00:02<00:02, 105.73it/s]Loading weights:  53%|#####2    | 275/520 [00:02<00:02, 115.39it/s]Loading weights:  56%|#####5    | 289/520 [00:02<00:02, 109.58it/s]Loading weights:  59%|#####9    | 308/520 [00:02<00:01, 118.31it/s]Loading weights:  63%|######2   | 326/520 [00:02<00:01, 119.88it/s]Loading weights:  65%|######5   | 339/520 [00:02<00:01, 120.10it/s]Loading weights:  68%|######8   | 355/520 [00:02<00:01, 125.24it/s]Loading weights:  71%|#######1  | 371/520 [00:03<00:01, 128.00it/s]Loading weights:  75%|#######5  | 391/520 [00:03<00:00, 135.19it/s]Loading weights:  78%|#######7  | 405/520 [00:03<00:00, 135.93it/s]Loading weights:  81%|########1 | 422/520 [00:03<00:00, 139.93it/s]Loading weights:  84%|########4 | 439/520 [00:03<00:00, 142.37it/s]Loading weights:  87%|########7 | 454/520 [00:03<00:00, 139.07it/s]Loading weights:  90%|######### | 470/520 [00:03<00:00, 141.37it/s]Loading weights:  93%|#########3| 485/520 [00:03<00:00, 142.79it/s]Loading weights:  96%|#########6| 500/520 [00:03<00:00, 137.57it/s]Loading weights: 100%|##########| 520/520 [00:03<00:00, 131.49it/s]
+There are modules in UNet2DConditionModel that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+image_worker: stdin closed, exiting

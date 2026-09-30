@@ -1,0 +1,22 @@
+{
+  "project_id": "b330d37f-a212-4cf7-a779-7a109098bd6c",
+  "worker_handshake": {
+    "status": "unavailable",
+    "free_vram_mb": 4677,
+    "min_free_vram_mb": 6144,
+    "requested_device": "auto",
+    "reason": "insufficient_vram"
+  },
+  "gpu_snapshots": [
+    {
+      "label": "before_worker_start",
+      "at_monotonic_sec": 645876.631,
+      "vram_used_mb": 7434,
+      "vram_free_mb": 4677,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME          ID              SIZE      PROCESSOR    CONTEXT    UNTIL              \nqwen3.5:9b    6488c96fa5fa    5.5 GB    100% GPU     4096       4 minutes from now"
+    }
+  ],
+  "clips": [],
+  "note": "worker refused to load under the free-VRAM policy; no clips synthesized"
+}

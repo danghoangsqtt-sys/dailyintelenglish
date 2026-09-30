@@ -1,0 +1,14 @@
+B2 ollama ps
+NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL
+
+B2 nvidia-smi --query-gpu=memory.used,memory.free,memory.total --format=csv
+memory.used [MiB], memory.free [MiB], memory.total [MiB]
+1094 MiB, 11017 MiB, 12288 MiB
+
+B3 ollama ps
+NAME          ID              SIZE      PROCESSOR    CONTEXT    UNTIL
+qwen3.5:9b    6488c96fa5fa    5.5 GB    100% GPU     4096       4 minutes from now
+
+B3 nvidia-smi --query-gpu=memory.used,memory.free,memory.total --format=csv
+memory.used [MiB], memory.free [MiB], memory.total [MiB]
+7433 MiB, 4678 MiB, 12288 MiB
