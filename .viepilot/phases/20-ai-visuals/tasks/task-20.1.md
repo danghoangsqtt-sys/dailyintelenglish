@@ -569,3 +569,40 @@ purpose.
 **R6. Consumers.** Ollama is wired (Part 2 D20.1-c, owner "có" = yes, 2026-09-30). No GPU
 TTS consumer exists until 21.1b resolves. The 20.2 spike runner is the first real
 non-Ollama lease user.
+
+---
+
+# Part 4 — Owner-machine evidence (run 1: `owner-runs/20260930` @ `f08d59d`, pinned `2008649`)
+
+Executed by an agent on the owner's PC, following `docs/operations/owner-runbook-2026-09-30.md`
+rev 3.
+
+- **Full suite on the owner's machine (Python 3.14.7): `1235 passed, 2 warnings in 418.90s`.**
+  That is the 1205 baseline + the 30 new Task 20.1 tests, with **0 failures**. The two
+  failures seen in the cloud baseline do not occur here: Edge TTS has real network, and
+  `write_lock` is fine on Python 3.14. The 2 warnings are third-party deprecations
+  (starlette/anyio). `ruff`: only the pre-existing F401 in `scripts/run_gate_b12.py`.
+- **PM D20.1-a three-way probe, now measured** (`scripts/probe_vram.py`, RTX 3060, driver
+  616.56):
+
+  | State | `nvidia-smi` free | pynvml free | `torch.cuda.mem_get_info` free |
+  |---|---|---|---|
+  | idle | 9748 MiB | 9747 MiB | **11250 MiB** |
+  | qwen loaded (`ollama run`, ctx 4096) | 3379 MiB | 3378 MiB | **11250 MiB** |
+
+  **R1 is resolved in favour of `nvidia-smi`.** It agrees with pynvml to within 1 MiB in
+  both states. `torch.cuda.mem_get_info` reports the **same 11250 MiB with and without
+  qwen**: on this Windows/WDDM machine it does not see memory held by other processes,
+  including Ollama's. That is exactly the failure mode the PM card warned about, so
+  option (ii) is disqualified by measurement.
+
+  Two more observations:
+  - pynvml's per-process `usedGpuMemory` is `None` for every process (WDDM does not
+    expose it), so pynvml gives no extra per-process insight either.
+  - Today's numbers are about 540 MiB lower than the 21.1b design measurement (10286 idle
+    / 3916 with qwen), because desktop VRAM use varies. That is one more reason the
+    thresholds are checked at runtime, not assumed.
+- **Still owed:** the real Ollama eviction (VRAM before/after + release time) and the
+  qwen reload time. The image run that produces them failed for an unrelated,
+  now-fixed reason (task-20.2.md, run 1). They are re-requested by
+  `docs/operations/owner-runbook-2026-09-30-r2.md` (run `warm_qwen2`).

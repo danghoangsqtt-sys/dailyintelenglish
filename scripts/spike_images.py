@@ -246,6 +246,12 @@ def _run_candidate(
             result["ip_adapter"] = _run_ip_trial(worker, mode, output_dir, args)
         result["stats"] = worker.request({"command": "stats"})
         result["unload"] = worker.request({"command": "unload"})
+    except SpikeError as exc:
+        # Owner-machine run 2026-09-30: an exception here used to escape _main, so the
+        # whole JSON report was lost, including the candidate that had already
+        # succeeded. A failure is now recorded on its own candidate, and the run
+        # continues with the next one.
+        result["error"] = str(exc)
     finally:
         worker.close()
     result["worker_exit_code"] = worker.process.returncode

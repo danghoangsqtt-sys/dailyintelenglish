@@ -466,6 +466,20 @@ Run 2's refusal is the D21.1b-e (ii) policy working as designed. The runner retu
 as data, not a crash. Then fill in `docs/operations/phase21-spike-styletts2.md` from the
 JSON output, and hand the owner `data/tmp/phase21_styletts2_spike/spike_comparison_styletts2.mp3`.
 
+## Owner-machine run 1 (`owner-runs/20260930` @ `f08d59d`): environment step failed, no code ran
+
+`py -3.11 -m venv venv-styletts2` returned
+`[Errno 13] Permission denied: 'D:\\DataAdmin\\Daily_Intel_English\\venv-styletts2\\Scripts\\python.exe'`.
+In the same repository `venv-image` was created without trouble, so the most likely
+cause is this: `venv-styletts2\` already existed from the earlier local 21.1b session, and
+its `python.exe` was held by a leftover process. No StyleTTS 2 code ran.
+
+The retry runbook (`owner-runbook-2026-09-30-r2.md`, step B0):
+- checks for the existing venv and any process running from it;
+- stops only leftover processes whose executable is inside this repo's
+  `venv-styletts2\`;
+- reuses the venv when it is Python 3.11.
+
 ## Verification
 
 - All 12 clips render successfully; no CUDA OOM crashes during synthesis.

@@ -85,3 +85,10 @@
 - **Reconciliation** (2026-09-30, Coder): the PM commit `9b5c8f9` was recovered from the
   owner's unpushed local `main` (through the backup branch `owner-local/backup-20260930`)
   and merged. The cloud session's `20-ai-thumbnails/` folder was folded into this one.
+- **Owner-machine run 1** (`owner-runs/20260930` @ `f08d59d`):
+  - 1235/1235 passed on the owner's machine;
+  - the PM D20.1-a probe settles R1 for `nvidia-smi` (torch can't see Ollama's memory);
+  - the 20.2 image run failed on a Coder bug (fp32 UNet materialisation → os error
+    1455), which is now fixed and verified;
+  - 21.1b's venv step failed (an existing, locked `venv-styletts2`).
+  - The retry is `docs/operations/owner-runbook-2026-09-30-r2.md`.

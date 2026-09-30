@@ -411,3 +411,32 @@ venv\Scripts\python scripts\spike_images.py --run-label warm_qwen --warm-qwen --
 - The owner judges the contact sheets, and the decision is recorded.
 - No disallowed file is touched. The full suite is unchanged, since this task adds no tests
   and touches no `app/`.
+
+## Owner-machine run 1 (`owner-runs/20260930` @ `f08d59d`): failed, root-caused, fixed
+
+- **Environment:** `venv-image` was created on Python 3.14.7. From the cu128 index, pip
+  resolved **torch `2.11.0+cu128`** (CUDA 12.8, `cuda.is_available() == True`), not the
+  2.14 that plain PyPI gave the cloud install.
+- **The `idle` run failed at `lightning load`:** `OSError: The paging file is too small
+  for this operation to complete. (os error 1455)`. The `base` candidate had already
+  run, but the runner raised out of `_main`, so `C_idle.json` was **empty** and base's
+  numbers were lost.
+- **Root cause (a Coder bug):** in Lightning mode the worker ran
+  `UNet2DConditionModel.from_config(...).to(device, dtype)`. That instantiates the whole
+  2.57B-param UNet with random **fp32** weights in CPU RAM (≈10.3 GB, the size of the
+  fp32 UNet file) before any conversion. On a machine with ~9 GB of RAM free, that
+  exhausts the Windows commit limit. Base mode was fine because `from_pretrained` loads
+  with `low_cpu_mem_usage`.
+  - **Fix:** create the UNet under `accelerate.init_empty_weights()` (meta device), then
+    `load_state_dict(..., assign=True)` straight from the safetensors file on the target
+    device.
+  - **Measured here** on a 0.9B-param UNet with the real SDXL channel widths: peak RSS
+    **4186 MB → 745 MB**.
+  - On the tiny pipeline: all 428 tensors are equal to the file, and the output is
+    **pixel-identical** to the pre-fix Lightning image for the same prompt and seed.
+- **Runner fix:** a `SpikeError` inside one candidate is now recorded as that
+  candidate's `"error"`, and the run continues. Tested: with a missing Lightning file,
+  base keeps its images, Lightning records its error, the JSON is printed, and the sheets
+  are built.
+- **Retry:** `docs/operations/owner-runbook-2026-09-30-r2.md` (runs `idle2` and
+  `warm_qwen2`; A and the C1b probe are not repeated).

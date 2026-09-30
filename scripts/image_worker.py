@@ -196,8 +196,21 @@ class ImageWorker:
         components: dict[str, Any] = {"vae": vae}
         if mode == "lightning":
             unet_path = self._resolve_lightning_unet(steps, sources.get("lightning_unet"))
-            unet = UNet2DConditionModel.from_config(base_dir, subfolder="unet").to(self.device, self.dtype)
-            unet.load_state_dict(load_file(str(unet_path), device=self.device))
+            # Owner-machine run 2026-09-30 (owner-runs/20260930): the original
+            # `from_config(...).to(device, dtype)` first built the whole 2.57B-param UNet
+            # with random **fp32** weights in CPU RAM (≈10.3 GB, the size of the fp32
+            # UNet file), and failed with "The paging file is too small for this
+            # operation to complete (os error 1455)". Measured here on a 0.9B-param
+            # SDXL-shaped UNet: peak RSS 4186 MB the old way vs 745 MB this way. The
+            # UNet is created on the meta device (no memory), then the fp16 Lightning
+            # tensors are *assigned* straight from the safetensors file on the target
+            # device.
+            from accelerate import init_empty_weights
+
+            with init_empty_weights():
+                unet = UNet2DConditionModel.from_config(base_dir, subfolder="unet")
+            unet.load_state_dict(load_file(str(unet_path), device=self.device), assign=True)
+            unet = unet.to(self.device, self.dtype)
             components["unet"] = unet
         pipe = StableDiffusionXLPipeline.from_pretrained(
             base_dir,
