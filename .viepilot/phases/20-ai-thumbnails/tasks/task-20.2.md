@@ -1,9 +1,9 @@
 # Task 20.2 — Spike: pick the local image model (SDXL / SDXL-Turbo / FLUX.1-schnell) + IP-Adapter trial
 
-- **Status:** design committed (Coder, doc-first). **Awaiting PM/owner approval, plus 2 owner
-  answers (Q1, Q2 below), before any download or code.** The spike run itself needs the
-  owner's RTX 3060. The design pass ran in a cloud container with no GPU, where huggingface.co
-  downloads are blocked; the Hugging Face connector was used for metadata and file sizes.
+- **Status:** design committed (`d787325`). **Owner answered Q1 on 2026-09-30.** Amendment A
+  below replaces SDXL-Turbo with SDXL-Lightning and recommends dropping FLUX. **Awaiting the
+  owner's confirmation of the Q2 recommendation**, then PM approval of the amended design.
+  The spike run itself needs the owner's RTX 3060.
 - **Owner:** Coder
 - **Priority:** P0 for Phase 20. Its PASS gates 20.3–20.5.
 - **Dependency:** Task 20.1 (GPU model manager, `6b1e7f7`). The spike takes its GPU through a
@@ -199,6 +199,86 @@ That VRAM figure determines whether 20.4/20.5 can run in one lease with the base
   - It costs about 18 GB of downloads (Q5 transformer + T5 + CLIP/VAE), and RAM is tight
     (F2).
   - It can only ever do backgrounds, not consistent characters (F1).
+
+## Owner decisions and Amendment A (2026-09-30)
+
+**Q1, owner's answer (verbatim):** *"có bật kiếm tiền, tôi không muốn đăng ký với stability
+AI vì tôi muốn mọi thứ miễn phí, hợp pháp, nhanh gọn, không dính watermark của bất kỳ hãng
+nào và không dính đến bản quyền"*. In English: the channel **is monetized**, and the owner
+does **not** want to register with Stability AI. Everything must be free, legal and quick,
+with no vendor watermark and no copyright entanglement.
+
+This gives four hard constraints for the whole of Phase 20: free, commercial-safe with no
+registration, no watermark of any vendor, and no licence strings on the output. Checked
+against the real sources:
+
+- **Candidate B (SDXL-Turbo) is dropped.** Commercial use of it requires registering with
+  Stability AI and displaying "Powered by Stability AI" (F1).
+- **Candidate A (SDXL base 1.0) meets all four constraints.** Read from its `LICENSE.md`
+  (CreativeML Open RAIL++-M, 2023-07-26):
+  - no fee;
+  - no registration;
+  - *"Licensor claims no rights in the Output You generate"*;
+  - notice and attribution duties apply only when **redistributing the model weights**.
+    That does not happen here: each install downloads the weights to the owner's own
+    machine, and none are bundled in the .exe (ENH-012).
+  - The Attachment A use-restrictions (unlawful use, harming minors, defamation, and so on)
+    do not touch English-lesson thumbnails.
+- **Watermark, verified in the source.** `diffusers==0.40.0`
+  `pipelines/stable_diffusion_xl/pipeline_stable_diffusion_xl.py:276` defaults
+  `add_watermarker` to `is_invisible_watermark_available()`. It applies an *invisible*
+  (not visible) watermark **only if the optional `invisible-watermark` package is
+  installed**. The worker passes `add_watermarker=False` explicitly, and
+  `requirements-image.txt` never includes that package. The result is no watermark of any
+  kind, and the spike report re-checks this from the worker's pipeline object.
+- **The replacement for B's "fast" role is `ByteDance/SDXL-Lightning`**:
+  - licence `openrail++`, the same terms as SDXL base, so free with no registration;
+  - a 4- or 8-step distillation of SDXL base;
+  - shipped as a **393,854,592-byte LoRA** loaded on top of A's own weights, so "fast mode"
+    costs +394 MB instead of a second 6.9 GB model;
+  - same architecture, so `h94/IP-Adapter` stays usable.
+  - The spike measures its speed and quality against A at full steps.
+  - `latent-consistency/lcm-lora-sdxl` (also `openrail++`) is the fallback if Lightning
+    disappoints. `ByteDance/Hyper-SD` is not considered because its repo declares no
+    licence.
+
+**Q2 (keep FLUX.1-schnell?): Coder recommends DROPPING it.** Awaiting the owner's
+confirmation. Reasons, all from F1/F2:
+1. It **cannot do the phase's main goal** (a consistent character across thumbnails and
+   video): every FLUX IP-Adapter is FLUX.1-dev non-commercial.
+2. **Weight:** about 18 GB of downloads even quantized, against about 11 GB for the whole
+   amended SDXL set.
+3. **The owner's RAM is tight:** about 9.4 GB free, while FLUX needs a separate 9.5 GB T5
+   text encoder.
+4. It is **gated**: it needs an HF token and the owner accepting terms on their account.
+   That is not "nhanh gọn" (quick and simple).
+
+Its licence (Apache-2.0) would have been fine. If SDXL's *backgrounds* fail the owner's
+eye at Gate B-14, FLUX can come back as a background-only plan B with its own card.
+
+**Amended candidate matrix:**
+
+| # | Candidate | Download | Role |
+|---|---|---|---|
+| A | SDXL base 1.0 fp16 + `sdxl-vae-fp16-fix` (MIT), full steps | ≈ 7.2 GB | Quality reference, and the base for everything below |
+| A-fast | A + SDXL-Lightning 4-step or 8-step LoRA | +0.39 GB | Speed option. The spike picks 4 or 8 by owner-judged quality |
+| IP | `ip-adapter-plus-face_sdxl_vit-h` + ViT-H encoder, on A and on A-fast | +3.4 GB | Consistent-character trial (D20.2-d) |
+
+The total download is **about 11 GB**, against about 35 GB in the original matrix. The
+IP-Adapter sheet runs on both A and A-fast, because a speed LoRA can weaken the adapter's
+effect, and that is exactly what the owner needs to see before 20.4.
+
+**Honest limit on "no copyright entanglement".** The model licences above are clean. What
+this spike cannot promise is anything about *what a prompt asks for*. A prompt naming a
+real brand, a known cartoon character or a living artist's style could produce something
+infringing, whatever the licence. So:
+- the style template (D20.2-c) and 20.3's production prompt file will **never name a
+  brand, a franchise character, or a living artist**;
+- they will describe generic "original cartoon / modern 3D character" styles only;
+- a negative prompt excludes text, logos and watermarks, so the image carries no
+  third-party marks.
+
+This is a design rule, not legal advice.
 
 ## Proposed allowed files (for PM approval)
 
