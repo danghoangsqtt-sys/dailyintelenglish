@@ -6,7 +6,11 @@ runbook.** The code was written and tested in another session (Claude Code, clou
 job is to run it on the real GPU, collect the evidence, and hand it back in the exact shape
 described in step D, so the two sessions never diverge.
 
-**Revision note:** revised after the first attempt stopped correctly at preflight. The
+**Revision 3 note:** the disk check now targets the repository's drive (D:) plus 8 GB on C:, and
+pip runs with `--no-cache-dir`. That follows the second attempt, which stopped correctly: C: had
+11.7 GB free, but the repo is on D:.
+
+**Revision 2 note:** revised after the first attempt stopped correctly at preflight. The
 owner's machine held unpushed PM commit `9b5c8f9` and uncommitted 21.1b WIP; both are now
 backed up on `owner-local/backup-20260930` and reconciled into this branch. The 6 Gate
 B-12 MP4s are allowed as known untracked files, and a VRAM probe step was added (C1b).
@@ -88,7 +92,9 @@ nvidia-smi --query-gpu=name,memory.used,memory.free,memory.total,driver_version 
 ollama list
 ffmpeg -version
 Test-Path data\app.db
-Get-PSDrive C | Select-Object Used,Free
+(Get-Location).Path
+Get-PSDrive (Get-Location).Drive.Name | Select-Object Name,Used,Free
+Get-PSDrive C | Select-Object Name,Used,Free
 netstat -ano | findstr ":8000" | findstr "LISTENING"
 ```
 
@@ -100,7 +106,15 @@ Pass criteria:
 - **Ollama:** `ollama list` contains `qwen3.5:9b`.
 - **ffmpeg:** `ffmpeg -version` prints a version line.
 - **Database:** `Test-Path data\app.db` is `True`.
-- **Disk:** C: `Free` is at least **40 GB** (about 40000000000).
+- **Disk, on the drive that holds the repository** (the owner's repo is on `D:`, so this
+  is normally D:): `Free` must be at least **35 GB** (35000000000). Everything large lands
+  inside the repo:
+  - `venv-styletts2` ≈ 6.3 GB and `venv-image` ≈ 5.5 GB;
+  - models in `models\` ≈ 0.9 + 15.6 GB;
+  - outputs in `data\tmp\`.
+- **Disk, C:** `Free` must be at least **8 GB** (8000000000). Only pip's temporary
+  unpacking touches C:. Every `pip install` below uses `--no-cache-dir`, so no multi-GB
+  wheel cache stays on C:. (Revision 3: rev 2 wrongly checked C: for all 40 GB.)
 - **App closed:** the `netstat` line prints **nothing**. If something is listening on 8000,
   the app is running: ask the owner to close it, then re-check. The GPU lease in step C is
   process-local and would not coordinate with a running app.
@@ -140,8 +154,8 @@ torch.
 
 ```powershell
 py -3.11 -m venv venv-styletts2
-venv-styletts2\Scripts\pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
-venv-styletts2\Scripts\pip install -r requirements-styletts2.txt
+venv-styletts2\Scripts\pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cu128
+venv-styletts2\Scripts\pip install --no-cache-dir -r requirements-styletts2.txt
 cmd /c "venv-styletts2\Scripts\python -c ""import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"" > data\tmp\owner_runs_20260930\B_env.txt 2>&1"
 cmd /c "venv-styletts2\Scripts\pip freeze >> data\tmp\owner_runs_20260930\B_env.txt 2>&1"
 ```
@@ -200,8 +214,8 @@ Save the `ollama ps` and `nvidia-smi` outputs of B2 and B3 into `data\tmp\owner_
 
 ```powershell
 py -3.14 -m venv venv-image
-venv-image\Scripts\pip install torch --index-url https://download.pytorch.org/whl/cu128
-venv-image\Scripts\pip install -r requirements-image.txt
+venv-image\Scripts\pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu128
+venv-image\Scripts\pip install --no-cache-dir -r requirements-image.txt
 cmd /c "venv-image\Scripts\python -c ""import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"" > data\tmp\owner_runs_20260930\C_env.txt 2>&1"
 cmd /c "venv-image\Scripts\pip freeze >> data\tmp\owner_runs_20260930\C_env.txt 2>&1"
 ```
@@ -214,7 +228,7 @@ cmd /c "venv-image\Scripts\pip freeze >> data\tmp\owner_runs_20260930\C_env.txt 
 `nvidia-ml-py` goes into `venv-image` only, for this probe:
 
 ```powershell
-venv-image\Scripts\pip install nvidia-ml-py==13.615.71
+venv-image\Scripts\pip install --no-cache-dir nvidia-ml-py==13.615.71
 ```
 
 First the idle probe. Stop any resident model exactly as in B2 (`ollama ps`, then
