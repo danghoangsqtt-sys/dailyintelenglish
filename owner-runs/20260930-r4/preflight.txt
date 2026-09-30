@@ -1,0 +1,93 @@
+git fetch origin
+From https://github.com/danghoangsqtt-sys/dailyintelenglish
+   88b01d4..81f6c67  claude/admiring-knuth-r1d8vc -> origin/claude/admiring-knuth-r1d8vc
+
+git switch claude/admiring-knuth-r1d8vc
+Switched to branch 'claude/admiring-knuth-r1d8vc'
+Your branch is behind 'origin/claude/admiring-knuth-r1d8vc' by 8 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+
+git pull --ff-only origin claude/admiring-knuth-r1d8vc
+From https://github.com/danghoangsqtt-sys/dailyintelenglish
+ * branch            claude/admiring-knuth-r1d8vc -> FETCH_HEAD
+Updating 88b01d4..81f6c67
+Fast-forward
+ .viepilot/phases/20-ai-visuals/PHASE-STATE.md      |  10 +-
+ .viepilot/phases/20-ai-visuals/tasks/task-20.2c.md | 163 ++++++++
+ .viepilot/phases/20-ai-visuals/tasks/task-20.2d.md | 143 +++++++
+ CHANGELOG.md                                       |  10 +
+ app/api/video.py                                   |   1 +
+ app/models/video.py                                |   3 +
+ app/services/video_renderer_remotion.py            |  10 +-
+ app/services/video_service.py                      |   5 +-
+ docs/operations/owner-runbook-2026-09-30-r3.md     |   6 +-
+ docs/operations/owner-runbook-2026-09-30-r4.md     | 167 ++++++++
+ .../operations/phase20-caption-styles-remotion.png | Bin 0 -> 911773 bytes
+ .../phase20-layout-mockups-fullbleed.png           | Bin 0 -> 786607 bytes
+ docs/operations/phase20-layout-mockups.png         | Bin 0 -> 724074 bytes
+ docs/operations/phase20-spike-character-library.md | 166 ++++++++
+ frontend/pages/step5_video.html                    |   5 +
+ frontend/static/js/api.js                          |  13 +-
+ frontend/static/js/step5_video.js                  |  67 +++-
+ scripts/image_worker.py                            |  26 +-
+ scripts/spike_character_v2.py                      | 428 +++++++++++++++++++++
+ tests/test_video_api.py                            |  42 ++
+ tests/test_video_service_remotion.py               |  40 +-
+ tests/test_video_studio_browser.py                 |  62 +++
+ video-renderer/src/Episode.tsx                     |  28 +-
+ video-renderer/src/Root.tsx                        |   1 +
+ video-renderer/src/StillFrame.tsx                  |   2 +
+ video-renderer/src/captionStyle.test.ts            |  48 +++
+ video-renderer/src/captionStyle.ts                 |  72 ++++
+ video-renderer/src/types.ts                        |   4 +
+ 28 files changed, 1499 insertions(+), 23 deletions(-)
+ create mode 100644 .viepilot/phases/20-ai-visuals/tasks/task-20.2c.md
+ create mode 100644 .viepilot/phases/20-ai-visuals/tasks/task-20.2d.md
+ create mode 100644 docs/operations/owner-runbook-2026-09-30-r4.md
+ create mode 100644 docs/operations/phase20-caption-styles-remotion.png
+ create mode 100644 docs/operations/phase20-layout-mockups-fullbleed.png
+ create mode 100644 docs/operations/phase20-layout-mockups.png
+ create mode 100644 docs/operations/phase20-spike-character-library.md
+ create mode 100644 scripts/spike_character_v2.py
+ create mode 100644 video-renderer/src/captionStyle.test.ts
+ create mode 100644 video-renderer/src/captionStyle.ts
+
+git rev-parse HEAD
+81f6c67e67c514355acd462895e68e53dfb7724e
+
+git status --porcelain
+?? docs/operations/gate-b12-evidence/22484f26_ffmpeg.mp4
+?? docs/operations/gate-b12-evidence/22484f26_remotion.mp4
+?? docs/operations/gate-b12-evidence/b330d37f_ffmpeg.mp4
+?? docs/operations/gate-b12-evidence/b330d37f_remotion.mp4
+?? docs/operations/gate-b12-evidence/c08ce057_ffmpeg.mp4
+?? docs/operations/gate-b12-evidence/c08ce057_remotion.mp4
+
+nvidia-smi --query-gpu=name,memory.used,memory.free,memory.total --format=csv
+name, memory.used [MiB], memory.free [MiB], memory.total [MiB]
+NVIDIA GeForce RTX 3060, 519 MiB, 11592 MiB, 12288 MiB
+
+ollama list
+NAME          ID              SIZE      MODIFIED
+qwen3.5:9b    6488c96fa5fa    6.6 GB    11 days ago
+
+Get-PSDrive (Get-Location).Drive.Name | Select-Object Name,Used,Free
+Name        Used         Free
+----        ----         ----
+D    84334387200 209265840128
+
+Get-PSDrive C | Select-Object Name,Used,Free
+Name         Used        Free
+----         ----        ----
+C    190562336768 26253815808
+
+Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize,FreePhysicalMemory,TotalVirtualMemorySize,FreeVirtualMemory
+TotalVisibleMemorySize FreePhysicalMemory TotalVirtualMemorySize FreeVirtualMemory
+---------------------- ------------------ ---------------------- -----------------
+              33289648           16684776               42726832          12834480
+
+netstat -ano | findstr ":8000" | findstr "LISTENING"
+(no output; port 8000 free)
+
+New-Item -ItemType Directory -Force data\tmp\owner_runs_20260930_r4 | Out-Null
+(no output)

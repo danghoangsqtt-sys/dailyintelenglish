@@ -1,0 +1,37 @@
+image_worker: ready on cuda
+[transformers] `CLIPImageProcessor` requires torchvision (not installed); falling back to `CLIPImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `CLIPImageProcessorPil` directly to silence this warning.
+[transformers] `SiglipImageProcessor` requires torchvision (not installed); falling back to `SiglipImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `SiglipImageProcessorPil` directly to silence this warning.
+Fetching 17 files:   0%|          | 0/17 [00:00<?, ?it/s]Fetching 17 files: 100%|##########| 17/17 [00:00<00:00, 2553.75it/s]
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files: 100%|##########| 2/2 [00:00<00:00, 1317.51it/s]
+D:\DataAdmin\Daily_Intel_English\venv-image\Lib\site-packages\diffusers\utils\deprecation_utils.py:23: FutureWarning: `torch_dtype` is deprecated and will be removed in version 1.0.0. Please use `dtype` instead.
+  deprecate("torch_dtype", "1.0.0", _TORCH_DTYPE_DEPRECATION_MESSAGE)
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]Loading pipeline components...:  14%|#4        | 1/7 [00:00<00:02,  2.43it/s]
+Loading weights:   0%|          | 0/196 [00:00<?, ?it/s][A
+Loading weights:  34%|###4      | 67/196 [00:00<00:00, 659.85it/s][ALoading weights: 100%|##########| 196/196 [00:00<00:00, 1499.68it/s]
+Loading pipeline components...:  43%|####2     | 3/7 [00:00<00:00,  4.78it/s]
+Loading weights:   0%|          | 0/517 [00:00<?, ?it/s][A
+Loading weights:  10%|#         | 53/517 [00:00<00:01, 387.08it/s][A
+Loading weights:  18%|#7        | 92/517 [00:00<00:01, 262.59it/s][A
+Loading weights:  23%|##3       | 120/517 [00:00<00:01, 231.33it/s][A
+Loading weights:  28%|##7       | 144/517 [00:00<00:01, 219.26it/s][A
+Loading weights:  32%|###2      | 167/517 [00:00<00:01, 204.18it/s][A
+Loading weights:  36%|###6      | 188/517 [00:00<00:01, 205.72it/s][A
+Loading weights:  41%|####      | 210/517 [00:00<00:01, 195.91it/s][A
+Loading weights:  44%|####4     | 230/517 [00:01<00:01, 183.03it/s][A
+Loading weights:  48%|####8     | 249/517 [00:01<00:01, 155.07it/s][A
+Loading weights:  52%|#####2    | 269/517 [00:01<00:01, 164.41it/s][ALoading weights: 100%|##########| 517/517 [00:01<00:00, 377.62it/s]
+Loading pipeline components...:  71%|#######1  | 5/7 [00:02<00:01,  2.00it/s]Loading pipeline components...: 100%|##########| 7/7 [00:02<00:00,  3.02it/s]
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (87 > 77). Running this sequence through the model will result in indexing errors
+[transformers] Ignoring clean_up_tokenization_spaces=True for BPE tokenizer CLIPTokenizer. The clean_up_tokenization post-processing step is designed for WordPiece tokenizers and is destructive for BPE (it strips spaces before punctuation). Set clean_up_tokenization_spaces=False to suppress this warning, or set clean_up_tokenization_spaces_for_bpe_even_though_it_will_corrupt_output=True to force cleanup anyway.
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', empty scene , no people , no text , no logo']
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (87 > 77). Running this sequence through the model will result in indexing errors
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', empty scene , no people , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', no people , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', no people , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', facing the viewer , relaxed neutral pose , plain light background , calm neutral expression , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', facing the viewer , relaxed neutral pose , plain light background , calm neutral expression , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', facing the viewer , relaxed neutral pose , plain light background , calm neutral expression , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', facing the viewer , relaxed neutral pose , plain light background , calm neutral expression , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', facing the viewer , relaxed neutral pose , plain light background , calm neutral expression , no text , no logo']
+The following part of your input was truncated because CLIP can only handle sequences up to 77 tokens: [', facing the viewer , relaxed neutral pose , plain light background , calm neutral expression , no text , no logo']
+image_worker: stdin closed, exiting
