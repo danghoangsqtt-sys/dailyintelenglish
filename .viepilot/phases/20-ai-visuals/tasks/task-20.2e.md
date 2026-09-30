@@ -1,6 +1,7 @@
 # Task 20.2e — Spike v3: anime-specialised SDXL (Animagine XL 4.0), two styles, render-then-cut M2
 
-- **Status:** design (Coder, doc-first, 2026-09-30). **The real run needs the owner's GPU.**
+- **Status:** implemented (Coder, 2026-09-30). Design commit `d29cfe6`; see "Implementation
+  notes" at the end. **The real run needs the owner's GPU.**
   It goes through the runbook `docs/operations/owner-runbook-2026-09-30-r5.md`.
 - **Owner:** Coder
 - **Authorization:** owner *"okey tôi đồng ý"* ("okay, I agree"), 2026-09-30, to the
@@ -125,3 +126,35 @@ package), and the DB.
 2. Is the character OK now (design + identity across the 4 assets and 4 actions)?
 3. Is the halo gone (blend vs cut)?
 4. Do the frames work?
+
+## Implementation notes (Coder, 2026-09-30)
+
+- **Worker** (`scripts/image_worker.py`).
+  - `load` takes `base_repo`: any non-default repo is fetched with `FINETUNE_PATTERNS`,
+    and only in mode `base`.
+  - `load` takes `scheduler`: `default` | `euler_a`. Lightning refuses anything but its
+    own trailing Euler.
+  - The response now reports `base_repo` (`local:<path>` when a local mirror is used).
+- **Runner** `scripts/spike_character_v3.py`. It reuses:
+  - the 20.2c scene poses, silhouette mask, frame mockup and captions;
+  - the 20.2b lease/worker plumbing.
+- **Verification (cloud, tiny random-weight SDXL on CPU, a fake anime-seg ONNX).**
+  - The runner end to end with `--allow-cpu --skip-ip`: all 4 phases ok.
+    - 4 scenes, 4 candidates and 8 assets.
+    - Both styles encoded with `do_cfg: true`.
+    - 8 M2 renders at CFG 5 with negatives, each followed by anime-seg.
+    - 8 frames and 4 sheets.
+    - The scheduler is `EulerAncestralDiscreteScheduler`.
+  - **Render-then-cut, all 8 renders:**
+    - the scene is untouched beyond the 1 px blur margin of the hard silhouette;
+    - every cut pixel is a scene/render mix;
+    - on pixels the segmenter labels background inside the silhouette, the cut differs
+      from the scene by 15–16 (mean |Δ|), against 84–88 for the 20.2c blend. That is the
+      halo removed.
+  - **Worker repo selection** (a stubbed `snapshot_download`):
+    - the Animagine patterns exclude both 6.9 GB root checkpoints and the repo VAE, and
+      include the UNet, both text encoders, the tokenizers and `model_index.json`;
+    - the default SDXL-base pattern list is unchanged;
+    - Lightning with a custom repo is refused, as are an unknown scheduler and Lightning
+      with `euler_a`.
+

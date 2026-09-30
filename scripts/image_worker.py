@@ -82,6 +82,20 @@ BASE_CONFIG_FILES = [
 ]
 BASE_UNET_WEIGHTS = "unet/diffusion_pytorch_model.fp16.safetensors"
 VAE_FILES = ["config.json", "diffusion_pytorch_model.safetensors"]  # 334,643,238 B
+# Task 20.2e: any other SDXL fine-tune (e.g. cagliostrolab/animagine-xl-4.0) is fetched by
+# folder, never the multi-GB single-file checkpoints such repos also keep at their root.
+# Its VAE weights are skipped too: the fp16-fix VAE replaces them.
+FINETUNE_PATTERNS = [
+    "model_index.json",
+    "scheduler/*",
+    "tokenizer/*",
+    "tokenizer_2/*",
+    "text_encoder/*",
+    "text_encoder_2/*",
+    "unet/*",
+    "vae/config.json",
+]
+SCHEDULERS = ("default", "euler_a")
 
 # SDXL-Lightning's own README: "Use LoRA only if you are using non-SDXL base models.
 # Otherwise use our UNet checkpoint for better quality." So the full UNet
@@ -155,11 +169,15 @@ class ImageWorker:
     # -- sources -----------------------------------------------------------------------
 
     @staticmethod
-    def _resolve_base(mode: str, override: str | None) -> Path:
+    def _resolve_base(mode: str, override: str | None, repo: str = BASE_REPO) -> Path:
         if override:
             return Path(override)
         from huggingface_hub import snapshot_download
 
+        if repo != BASE_REPO:
+            if mode != "base":
+                raise ValueError("a custom base_repo supports mode 'base' only (Lightning is an SDXL-base UNet)")
+            return Path(snapshot_download(repo, allow_patterns=FINETUNE_PATTERNS))
         patterns = list(BASE_CONFIG_FILES)
         if mode == "base":
             patterns.append(BASE_UNET_WEIGHTS)  # lightning brings its own UNet
@@ -201,10 +219,17 @@ class ImageWorker:
         # saved earlier by `encode`, which is how UNet + ControlNet + IP layers fit the 12
         # GB card: SDXL 9.1 + IP 2.0 + ControlNet 2.5 GB would not.
         encoders = bool(request.get("encoders", True))
+        base_repo = request.get("base_repo") or BASE_REPO
+        scheduler_name = request.get("scheduler", "default")
+        if scheduler_name not in SCHEDULERS:
+            raise ValueError(f"scheduler must be one of {SCHEDULERS}")
+        if mode == "lightning" and scheduler_name != "default":
+            raise ValueError("Lightning needs its own trailing Euler scheduler")
 
         from diffusers import (
             AutoencoderKL,
             ControlNetModel,
+            EulerAncestralDiscreteScheduler,
             EulerDiscreteScheduler,
             StableDiffusionXLControlNetInpaintPipeline,
             StableDiffusionXLControlNetPipeline,
@@ -216,7 +241,7 @@ class ImageWorker:
 
         torch = self.torch
         started = time.monotonic()
-        base_dir = self._resolve_base(mode, sources.get("base_dir"))
+        base_dir = self._resolve_base(mode, sources.get("base_dir"), base_repo)
         vae_dir = self._resolve_vae(sources.get("vae_dir"))
         download_seconds = time.monotonic() - started
 
@@ -267,6 +292,9 @@ class ImageWorker:
         ).to(self.device)
         if mode == "lightning":
             pipe.scheduler = EulerDiscreteScheduler.from_config(pipe.scheduler.config, timestep_spacing="trailing")
+        elif scheduler_name == "euler_a":
+            # Task 20.2e: the Animagine XL 4.0 model card's recommended sampler.
+            pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config)
         pipe.set_progress_bar_config(disable=True)
         if request.get("vae_tiling"):
             # Risk-table mitigation (task-20.2.md): the VAE decode at 1344x768 is a VRAM
@@ -279,6 +307,7 @@ class ImageWorker:
         return {
             "status": "ok",
             "mode": mode,
+            "base_repo": base_repo if not sources.get("base_dir") else f"local:{sources['base_dir']}",
             "pipeline": kind,
             "encoders": encoders,
             "lightning_steps": self.lightning_steps,
