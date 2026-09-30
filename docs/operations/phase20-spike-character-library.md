@@ -153,3 +153,14 @@
    into the scene) is far more natural; M1 (cut-out collage) is rejected.**
    - Consequence: anime-seg cut-outs are no longer needed for scene composition.
 - Cut-out quality was not separately judged; it is moot for scenes after verdict 4.
+- **Follow-up (owner, same day):** option C leaves too much empty space and looks
+  unprofessional. The owner asked how subtitled films do it.
+  - Full-bleed variants with the text treatments that film and YouTube captions use:
+    `docs/operations/phase20-layout-mockups-fullbleed.png`.
+    - A1: caption with a black outline;
+    - A2: caption on a semi-transparent box;
+    - A3: outline plus a soft gradient only at the very bottom;
+    - A: today's caption style.
+  - Found while mocking up: on a light scene, today's inactive speaker chip (8% white
+    fill) and the yellow karaoke word nearly disappear.
+
