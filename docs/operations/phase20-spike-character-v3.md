@@ -62,9 +62,29 @@
   - pre-fetch weights outside the lease (F2);
   - widen the silhouette around raised arms.
 
-## Owner verdicts (to be filled from the owner's answers)
+## Owner verdicts 2026-09-30 (verbatim, with translation)
 
-- Style A (action_webtoon) or B (bright_anime)?:
-- Character OK now?:
-- Halo gone?:
-- Frames OK?:
+*"phong cách quá xấu, nhân vật to nhỏ bất thường và kỳ cục, nghĩ cần tập trung vào xây
+dựng nhân vật, thiên hướng người Việt Nam màu sắc tươi sáng trước cần khắc họa nhân vật rõ
+ràng hơn. Nhân vật trong bối cảnh bị chìm hẳn so với kết quả hiện tại thì kết quả ở lần đầu
+tiên thử nghiệm tạo nhân vật và bối cảnh có kết quả tốt hơn nhiều và đẹp hơn rất nhiều"*
+
+1. **Both anime styles are rejected** as ugly.
+2. **The characters' size is abnormal and odd.** The presenter framing was too big.
+3. **Focus on building the characters first:**
+   - Vietnamese-leaning features;
+   - bright colours;
+   - clearer character depiction.
+4. **Characters "sink" into the scene.**
+5. **The first character+scene experiment (Task 20.2, run r2) was "much better and much
+   prettier."**
+
+**Coder reading of what r2 did differently** (`owner-runs/20260930-r2/C/sheet_ip_adapter.png`):
+
+- **Style:** "modern 3D animation style, bright cheerful colors, soft lighting".
+- **Method:** the character and the scene were generated **in one pass** (text2img +
+  IP-Adapter).
+  - From 20.2b on, the character was **inpainted into a pre-made scene** (M2).
+  - One-pass generation gets scale, lighting and "subject-ness" right by construction.
+  - Inpainting fought the scene's own perspective and lighting.
+  - **This is the likeliest cause of verdicts 2 and 4.**
