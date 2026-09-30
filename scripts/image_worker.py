@@ -456,6 +456,7 @@ class ImageWorker:
             "pipeline": self.kind,
             "from_embeds": bool(request.get("embeds_path")),
             "negative_prompt_applied": negative_applied,
+            **self._prompt_tokens(call.get("prompt")),
             "native_size": list(image.size),
             "output_path": str(output_path),
             "fitted_path": str(fitted_path) if fitted_path else None,
@@ -463,6 +464,15 @@ class ImageWorker:
             "peak_vram_reserved_mb": _mb(torch.cuda.max_memory_reserved()) if self.device == "cuda" else None,
             "rss_mb": _rss_mb(),
         }
+
+    def _prompt_tokens(self, prompt: str | None) -> dict[str, Any]:
+        """Task 20.2f finding: CLIP reads 77 tokens and silently drops the rest (20.2c/20.2e
+        prompts ran 87-105 tokens, losing expressions and style tags). Report it."""
+        tokenizer = getattr(self.pipe, "tokenizer", None)
+        if not prompt or tokenizer is None:
+            return {}
+        count = len(tokenizer(prompt, truncation=False).input_ids)
+        return {"prompt_tokens": count, "prompt_truncated": count > tokenizer.model_max_length}
 
     def _embeds(self, path: str) -> dict[str, Any]:
         if path not in self._embeds_cache:
@@ -502,6 +512,7 @@ class ImageWorker:
                 )
                 items.append({
                     "prompt": item["prompt"],
+                    **self._prompt_tokens(item["prompt"]),
                     "prompt_embeds": prompt_embeds.cpu(),
                     "pooled_prompt_embeds": pooled.cpu(),
                     "negative_prompt_embeds": negative_embeds.cpu() if do_cfg and negative_embeds is not None else None,

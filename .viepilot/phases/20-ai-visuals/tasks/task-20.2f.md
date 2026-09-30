@@ -1,6 +1,7 @@
 # Task 20.2f — Spike v4: character-first, Vietnamese students, the r3 watercolor look, one-pass scenes
 
-- **Status:** design (Coder, doc-first, 2026-09-30). **The real run needs the owner's GPU.**
+- **Status:** implemented (Coder, 2026-09-30). Design commit `0fc4459`; see "Implementation
+  notes" at the end. **The real run needs the owner's GPU.**
   It goes through the runbook `docs/operations/owner-runbook-2026-09-30-r6.md`.
 - **Owner:** Coder
 - **Authorization:** the owner's 20.2e verdict and three answers, 2026-09-30.
@@ -67,9 +68,11 @@ The owner judged four spikes. What survived:
 ## Allowed files
 
 - **New** `scripts/spike_character_v4.py` (reuses the 20.2b/20.2c helpers).
+- `scripts/image_worker.py`: `prompt_tokens` / `prompt_truncated` in the generate and
+  encode responses (finding F3 below; added during implementation).
 - **New** `docs/operations/owner-runbook-2026-09-30-r6.md`, this card, and PHASE-STATE.
 
-**Not touched:** `scripts/image_worker.py` (no change needed), `app/`, `tests/`,
+**Not touched:** `app/`, `tests/`,
 `frontend/`, `video-renderer/`, requirements, and the DB.
 
 ## Verification here (cloud, no GPU, no Hub)
@@ -89,3 +92,33 @@ The owner judged four spikes. What survived:
    character.
 3. Does each character stay the same person across the sheet and the scenes?
 4. Scale and presence in the scenes — natural now, and not sinking?
+
+## Implementation notes (Coder, 2026-09-30)
+
+- **Finding F3: CLIP prompt truncation hurt earlier spikes.**
+  - SDXL's CLIP encoders read 77 tokens (75 + BOS/EOS) and **silently drop the rest**.
+  - Counted with OpenAI's CLIP BPE (`openai/CLIP` `simple_tokenizer.py` +
+    `bpe_simple_vocab_16e6.txt.gz`, fetched from GitHub):
+
+    | Run | Asset prompt tokens | What was dropped |
+    |---|---|---|
+    | r3 (20.2b) | 72–80 | mostly only "no text, no logo" |
+    | r4 (20.2c) | 95–105 | **the view/expression tail**; this explains the six near-identical assets |
+    | r5 (20.2e) | 87–99 | **the style and quality tags** at the end of every prompt |
+
+  - The first draft of this spike's prompts ran **81–108**. The prompts were compressed,
+    and "no text, no logo" moved to the negative only (base has CFG 6, so the negative
+    acts). **Every v4 prompt is now 52–65 tokens.**
+  - The worker now reports `prompt_tokens` and `prompt_truncated` per image, so a
+    truncation shows up in `L_*.json` instead of being invisible.
+- **Verification (cloud, tiny random SDXL, CPU, `--allow-cpu --skip-ip`).**
+  - 3/3 phases ok, with the right counts:
+    - 8 candidates;
+    - 16 sheet images;
+    - 8 one-pass `text2img` scenes;
+    - 8 1280×720 frames;
+    - 3 sheets.
+  - Base CFG with the negative prompt applied everywhere.
+  - Token fields present on every image. On the tiny test tokenizer the counts are
+    meaningless; the real counts are above.
+
