@@ -1,6 +1,11 @@
 # Task 21.1b — Spike: install StyleTTS 2 locally + real quality/GPU/timing measurement
 
-- **Status:** not started (doc-first card, awaiting Coder pickup)
+- **Status:** in progress. Design `a1727d3`. Implementation code landed and validated
+  off-machine on 2026-09-30 in a cloud session with no GPU and no access to
+  huggingface.co (see "Implementation pass" below). **Still pending, and only possible
+  on the owner's machine:** the real run (12 clips plus `spike_comparison_styletts2.mp3`),
+  the GPU/Ollama coexistence measurements, the spike report, and the owner's
+  listening decision.
 - **Owner:** Coder
 - **Priority:** P0 (Kokoro path STOP'd by owner listening decision 2026-09-29 — Phase 21
   needs a working alternative or the whole phase fails)
@@ -317,6 +322,127 @@ Edge TTS's output for the same 3 lines/voices hasn't changed.
 Deferred to the actual spike report after real measurement across all 12 clips + the
 real GPU-contention test + the owner's real listening answer — same discipline as 21.1,
 not pre-decided here.
+
+## Implementation pass: cloud session findings (2026-09-30)
+
+This pass was run in a Claude Code cloud container, not on the owner's machine: Linux,
+Python 3.10–3.13 only (no 3.14), **no NVIDIA GPU, no Ollama, no ffmpeg**. Its egress
+policy **denies `huggingface.co` and `download.pytorch.org`** (real `403` on CONNECT)
+but allows PyPI and `raw.githubusercontent.com`. The 736 MB LibriTTS checkpoint and
+`reference_audio.zip` are hosted only on huggingface.co. So **no StyleTTS 2 audio could
+be synthesized here**, and none of the D21.1b-e GPU numbers could be measured. Nothing
+below is presented as a substitute for those numbers. What this pass does provide is the
+implementation code, tested against the real installed package, plus the findings that
+came out of it.
+
+### Files landed
+
+- `scripts/styletts2_worker.py`: persistent subprocess, same line-delimited JSON
+  protocol as `kokoro_worker.py`, with two additions:
+  - a startup handshake (`ready` / `unavailable`) that applies the D21.1b-e (ii) policy
+    before torch is imported;
+  - explicit `load` / `unload` commands for D21.1b-e (i).
+  It also has an `analyze_voice` command (median F0 via `librosa.pyin`) for the D21.1b-c
+  gender check.
+- `scripts/spike_styletts2.py`: the runner. It reuses Task 21.1's own
+  `_fetch_test_lines` / `_edge_tts_request` / `_build_comparison_mp3` by import, so the
+  Edge TTS side of the A/B is produced by the identical method. It takes `nvidia-smi` and
+  `ollama ps` snapshots before load, after load, after synthesis and after unload. The
+  male and female reference clips are picked by measured F0 (closest to 120 Hz / 210 Hz
+  on the correct side of the 165 Hz split), and `--male-voice` / `--female-voice` can
+  override the pick.
+- `requirements-styletts2.txt`, and a `venv-styletts2/` line in `.gitignore`.
+
+### Real findings (each one reproduced, not inferred)
+
+1. **Kokoro's `soundfile` pin cannot be reused.** `styletts2==0.1.6` declares
+   `soundfile<0.13.0,>=0.12.1`. Installing it next to `requirements-kokoro.txt`'s
+   `soundfile==0.13.1` fails with `ResolutionImpossible`. `styletts2` alone installs
+   cleanly on Python 3.11.15, which confirms D21.1b-a. The worker never imports
+   `soundfile`.
+2. **No espeak-ng system dependency.** The phonemizer is `gruut` (pure Python, with the
+   `gruut-lang-en` data package). This matters on Windows, where espeak-ng would be a
+   separate manual install.
+3. **Latent blocker, fixed.** `tts.py` runs `nltk.download('punkt')` at import. But
+   `nltk==3.10.3`, the version it resolves, makes `word_tokenize` look up
+   `tokenizers/punkt_tab/<lang>/` (`nltk/tokenize/punkt.py`). Reproduced: with only
+   `punkt` present, `word_tokenize` raises `LookupError: Resource 'punkt_tab' not found`.
+   So the first `inference()` call would have failed on the owner's machine too,
+   whatever the network. `_ensure_punkt_tab()` fetches it into `models/styletts2/nltk_data/`
+   and re-checks, because `download()` reports failure by printing, not by raising.
+   Both paths were tested:
+   - download refused: a clean `LookupError`;
+   - download allowed: `punkt_tab` lands in the project cache, and Line 0 goes
+     gruut → `word_tokenize` end to end.
+4. **The stdout-corruption risk that D21.1b-a predicted is real.** In a real run,
+   **10 raw `print()` lines** went to stderr: the `[nltk_data]` block and
+   `load_model()`'s "Invalid or missing model checkpoint path. Loading default model...".
+   The protocol stdout carried **9/9 valid JSON lines, 0 corrupted**. The Task 21.1
+   isolation pattern works unchanged.
+5. **There is no device parameter.** `StyleTTS2.__init__` hard-codes
+   `'cuda' if torch.cuda.is_available() else 'cpu'`. CPU is forced with
+   `CUDA_VISIBLE_DEVICES=""`, set before torch is imported. Combined with 21.1's own
+   evidence (plain PyPI resolved `torch==2.14.0+cpu` on the owner's Windows machine), a
+   GPU spike could silently measure CPU. Mitigated in two places:
+   - the setup instructions install torch from the cu128 index first;
+   - the worker raises if `cuda` was chosen but StyleTTS 2 resolved to `cpu`.
+6. **D21.1b-d refinement: native timing is recoverable.** `inference()` computes
+   `pred_dur` internally: per-phoneme-symbol frame counts from the duration predictor, at
+   the 300-sample mel hop (12.5 ms/frame at 24 kHz). It discards them before returning.
+   The gruut output keeps one token per word plus pause markers (`|`, `‖`). Word
+   boundaries could therefore come from the model's own durations, via a small fork of
+   `inference()`. The alternative is `whisper-timestamped`, which adds a whole second ASR
+   model. **Recommendation for 21.2: try the `pred_dur` path first.** Neither path is
+   built yet. The spike worker returns `word_boundaries: []` by design, since the owner's
+   listening test does not need timings.
+7. **Cache redirect confirmed.** `cached_path` reads `CACHED_PATH_CACHE_ROOT`
+   (`cached_path/common.py`), so weights land in `models/styletts2/cached_path/`, and
+   `NLTK_DATA` goes to `models/styletts2/nltk_data/`. Both are covered by the existing
+   `models/*` ignore rule.
+8. **D21.1b-b re-confirmed from a second network.** HTTP HEAD on the 3 GitHub-hosted
+   auxiliary checkpoints returned byte-identical sizes: 94,552,811 / 21,029,926 /
+   25,185,187.
+9. **Footprint warning, to be re-measured on Windows.** `venv-styletts2/` measured
+   **6.3 GB** here. The Linux PyPI torch is a CUDA build (`2.14.0+cu130`) that pulls the
+   `nvidia-*` / `cuda-toolkit` wheels, and the tree also pulls `langchain`, `boto3` and
+   `google-cloud-storage`. That is about 5× Kokoro's 1.2 GB `venv-kokoro/` before the
+   ~873 MB of weights. The Windows cu128 layout will differ, so this number is not
+   evidence for the report. It flags that footprint may weigh in the PASS/SCOPE-CUT
+   call.
+10. **Per-voice style cache.** `inference(ref_s=...)` accepts a pre-computed style, so
+    `compute_style` runs once per reference clip, not once per line. This addresses
+    21.1's first-use-of-a-voice cost (RTF 1.03 vs ~0.28).
+
+### What was validated here
+
+| Check | Result |
+|---|---|
+| `ruff check` on the 2 new scripts | clean |
+| Worker `--device auto` on a machine with no GPU | `unavailable` / `no_nvidia_gpu`, exit 0 |
+| Worker `--allow-cpu` protocol run (stats, 2× analyze, 3 bad requests, 1 real synthesis) | 9/9 valid JSON lines; the worker survived every error, including the blocked model download |
+| `analyze_voice` on synthetic 120 Hz / 220 Hz tones | 119.96 Hz → male, 220.0 Hz → female |
+| Runner via the real worker, fake LibriTTS-named tones (11 checks) | 11/11 pass: blocked download raises cleanly with no `.partial` left; filter drops author, emotion and `__MACOSX` clips; F0 pick + override + bad override; refusal handshake returned as data |
+| `pip install -r requirements-styletts2.txt` into a **fresh** 3.11 venv (a real install, not `--dry-run`) | exit 0; `import styletts2, nltk, librosa, psutil` OK (nltk 3.10.3, librosa 0.10.2.post1); 6.3 GB again, independently |
+
+**Not validated here (needs the owner's machine):** actual synthesis, clip quality,
+RTF/VRAM, the Ollama coexistence behaviour, the Edge TTS clips (the runner's Edge TTS
+path is 21.1's unchanged helper), and the mp3 build (no ffmpeg in this container).
+
+### Owner-machine run (what remains for this task)
+
+```
+py -3.11 -m venv venv-styletts2
+venv-styletts2\Scripts\pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
+venv-styletts2\Scripts\pip install -r requirements-styletts2.txt
+venv-styletts2\Scripts\python -c "import torch; print(torch.version.cuda)"   # must not be None
+venv\Scripts\python scripts\spike_styletts2.py            # run 1: Ollama idle
+ollama run qwen3.5:9b "hi"                                  # load qwen (~5.5 GB)
+venv\Scripts\python scripts\spike_styletts2.py            # run 2: expect "unavailable" (3.9 GB free < 6144 MB)
+```
+
+Run 2's refusal is the D21.1b-e (ii) policy working as designed. The runner returns it
+as data, not a crash. Then fill in `docs/operations/phase21-spike-styletts2.md` from the
+JSON output, and hand the owner `data/tmp/phase21_styletts2_spike/spike_comparison_styletts2.mp3`.
 
 ## Verification
 

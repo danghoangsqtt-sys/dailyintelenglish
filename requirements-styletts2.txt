@@ -1,0 +1,44 @@
+# Task 21.1b (Phase 21 spike, Amendment A): pinned deps for the ISOLATED venv-styletts2/
+# environment only.
+#
+# NOT installed into this project's own venv/ or requirements.txt -- styletts2 cannot be
+# built on this project's Python 3.14 (confirmed real: styletts2==0.1.6 resolves
+# transformers==4.40.2 -> tokenizers==0.19.1, which has no 3.14 wheel and fails its
+# Rust/PyO3 source build, "the configured Python interpreter version (3.14) is newer than
+# PyO3's maximum supported version (3.12)"). A `pip install --dry-run` on 3.14 resolves
+# cleanly and is misleading -- dry-run never attempts the build. See task-21.1b.md D21.1b-a.
+#
+# Setup (Python 3.11.x -- same interpreter already proven for venv-kokoro/):
+#   py -3.11 -m venv venv-styletts2
+#   venv-styletts2\Scripts\pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
+#   venv-styletts2\Scripts\pip install -r requirements-styletts2.txt
+#
+# The torch line MUST come first, from the CUDA index. Real evidence from Task 21.1: on
+# the owner's Windows machine plain PyPI resolved `torch==2.14.0+cpu` for venv-kokoro/
+# (fine for CPU-only Kokoro, fatal here -- StyleTTS 2 picks `'cuda' if
+# torch.cuda.is_available() else 'cpu'` itself and would silently measure CPU while the
+# report claimed GPU). cu128 is the build the main venv already runs on this machine
+# (torch 2.11.0+cu128). The exact 3.11 wheel could not be listed from the cloud session
+# this file was written in (download.pytorch.org not reachable there), so verify after
+# install: `venv-styletts2\Scripts\python -c "import torch; print(torch.version.cuda)"`
+# must print a version, not None. The worker also refuses to report GPU numbers from a
+# CPU build (`--device cuda` raises if StyleTTS 2 resolves to cpu).
+#
+# Pins: styletts2 itself, plus the packages scripts/styletts2_worker.py imports directly
+# whose behaviour the worker depends on -- same convention as requirements-kokoro.txt.
+# Versions are the ones a real clean install resolved (Python 3.11.15, 2026-09-30).
+# Transitive deps stay unpinned (styletts2 already pins the fragile ones:
+# transformers<5, huggingface-hub<0.20, numpy -> 1.26.4 via its chain).
+#
+# Deliberately NOT pinned: soundfile. requirements-kokoro.txt pins soundfile==0.13.1, but
+# styletts2==0.1.6 declares `soundfile<0.13.0,>=0.12.1` -- copying Kokoro's pin makes the
+# install fail with ResolutionImpossible (real, reproduced). The worker writes WAVs
+# through styletts2's own scipy path and never imports soundfile.
+styletts2==0.1.6
+# nltk: the worker's punkt_tab fix is written against this version's lookup path
+# (`tokenizers/punkt_tab/<lang>/`); styletts2 itself only downloads the old `punkt`.
+nltk==3.10.3
+# librosa: `analyze_voice` uses librosa.pyin for the reference-clip F0 measurement.
+librosa==0.10.2.post1
+# psutil: RSS reported in every worker response (peak-RAM evidence, as in 21.1).
+psutil==7.2.2
