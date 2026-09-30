@@ -84,9 +84,33 @@
     near-identical assets;
   - a stronger "hand touching chin" pose/prompt pair, or drop that action.
 
-## Owner verdicts (to be filled from the owner's answers)
+## Owner verdicts 2026-09-30 (verbatim, with translation)
 
-- Style v2 on base: closer to the wanted look?:
-- Simple character recognisable across views / expressions / actions?:
-- M2 natural, no seam? Pose strict or loose?:
-- Frames with captions look professional?:
+1. *"phong cách vẽ quá xấu không đẹp và không giống ghibli hay anime, tôi nghĩ nên vẽ giống
+   solo leveling warrior sẽ đẹp hơn"*.
+   - **Style v2 is rejected:** ugly, and neither Ghibli-like nor anime.
+   - The owner wants a look like the Korean action webtoon/anime *Solo Leveling*.
+   - Coder note:
+     - The franchise name, its characters and any franchise LoRA stay out of every
+       prompt and model (Amendment B §5.1 rule, monetized channel).
+     - The target is described generically: a modern Korean action-webtoon / anime look.
+2. *"không ổn"*: **the character is not OK.**
+3. *"bám tư thế chặt và tôi có thấy quầng mờ quanh ảnh"*.
+   - **Strict pose (1.0).**
+   - **The owner confirms the edge halo:** render-then-cut is needed.
+4. *"phần phụ đề đã ổn rồi"*: **the captions and frame layout are accepted.**
+
+**Consequence (Coder reading):**
+- **SDXL base 1.0 cannot reach a polished anime look by prompting**, in either style
+  attempt (20.2b, 20.2c).
+- The next spike needs an **anime-specialised SDXL fine-tune.** Candidate: Animagine XL
+  4.0, CreativeML Open RAIL++-M, the same licence as SDXL base; to be confirmed by the
+  owner.
+- The already-proven machinery carries over, since a fine-tune keeps the SDXL
+  architecture:
+  - the lease;
+  - the encode→render split;
+  - ControlNet OpenPose;
+  - IP-Adapter;
+  - anime-seg;
+  - the frame layout.
