@@ -309,6 +309,18 @@
       state.progress = GenerationStatus.mount({
         element: container, baselineSec: 120, startedAtIso: job.created_at,
       });
+      const cancel = $("cancel-library-job");
+      cancel.hidden = false;
+      cancel.disabled = false;
+      cancel.onclick = async () => {
+        cancel.disabled = true;
+        try {
+          await Api.cancelImageJob(job.id);
+        } catch (error) {
+          cancel.disabled = false;
+          message(error.message || "Could not cancel the job.", true);
+        }
+      };
       let current = job;
       while (!["complete", "error", "cancelled"].includes(current.status)) {
         state.progress.setProgress({ stageLabel: current.stage || "Queued", progressPercent: current.progress });
@@ -316,12 +328,14 @@
         current = await Api.getImageJob(job.id);
       }
       state.progress.setProgress({ stageLabel: current.stage, progressPercent: current.progress, done: true });
-      if (current.status !== "complete") throw new Error(current.error || `Job ${current.status}.`);
+      if (current.status === "error") throw new Error(current.error || "Image generation failed.");
       await refresh();
-      message("Images are ready for review.");
+      message(current.status === "cancelled" ? "Generation cancelled. Finished images were kept." : "Images are ready for review.");
     } catch (error) {
       message(error.message || "Image generation failed.", true);
     } finally {
+      $("cancel-library-job").hidden = true;
+      $("cancel-library-job").onclick = null;
       state.busy = false;
       renderCharacters();
       renderScenes();

@@ -58,9 +58,13 @@ class _WorkerProcess:
             [str(IMAGE_PYTHON), str(IMAGE_WORKER)], cwd=ROOT, stdin=subprocess.PIPE,
             stdout=subprocess.PIPE, stderr=self.stderr_file, text=True, encoding="utf-8", bufsize=1,
         )
-        self.handshake = self._read_line()
+        try:
+            self.handshake = self._read_line()
+        except Exception:
+            self.close(kill=True)
+            raise
         if self.handshake.get("status") != "ready":
-            self.close()
+            self.close(kill=True)
             raise RuntimeError(f"image worker unavailable: {self.handshake.get('reason', 'unknown')}")
 
     def _read_line(self) -> dict[str, Any]:
@@ -79,11 +83,21 @@ class _WorkerProcess:
             raise RuntimeError(response.get("message", "image worker request failed"))
         return response
 
-    def close(self) -> None:
-        if self.process.stdin and not self.process.stdin.closed:
-            self.process.stdin.close()
+    def close(self, kill: bool = False) -> None:
+        """Let the worker exit on stdin EOF; a worker that hangs (or failed its handshake) is
+        killed, so it can never keep VRAM after its GPU lease ends (review r1 F3)."""
         try:
+            if self.process.stdin and not self.process.stdin.closed:
+                self.process.stdin.close()
+        except OSError:
+            pass
+        try:
+            if kill:
+                self.process.kill()
             self.process.wait(timeout=120)
+        except subprocess.TimeoutExpired:
+            self.process.kill()
+            self.process.wait()
         finally:
             self.stderr_file.close()
 

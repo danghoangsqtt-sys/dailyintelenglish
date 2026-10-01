@@ -18,6 +18,15 @@ Versioning: [SemVer](https://semver.org/)
   complete shot exists. The five existing thumbnail templates and the Standard (ffmpeg)
   path remain available. An isolated fake/real smoke and Gate B-14 owner runbook are added;
   PM review and owner visual sign-off remain pending.
+- **Phase 20 review r1 fixes (2026-10-01, by Claude):**
+  - **Enhanced videos keep the AI shot through the 300/500 ms pauses** between lines instead of
+    flashing the midnight background. The crossfade and the slow zoom now span each run of lines
+    that share a shot, so the picture no longer jumps between those lines.
+  - **Stale shot rows.** Shots left unfinished by a cancel or an app restart show an error
+    instead of staying pending.
+  - **Hung image worker.** A worker that hangs or fails its handshake is now killed.
+  - **Unlock.** It now requires a locked character.
+  - **Cancel.** `/characters` and Step 5 have a Cancel button for running image jobs.
 - **Task 20.1 (2026-09-30, by Coder):** shared GPU model manager,
   `app/services/gpu_model_manager.py`. One process-wide, first-come-first-served lease
   for the single RTX 3060. It arbitrates rather than loads, because the consumers (Ollama,

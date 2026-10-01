@@ -184,6 +184,18 @@ async def _contexts(db, project_id: str, rows: list[dict]) -> list[dict[str, Any
     return contexts
 
 
+async def recover_pending_shots(db) -> int:
+    """Review r1 F2: shot rows become `pending` only inside a running job, so any row still
+    pending at startup belongs to a job the restart interrupted."""
+    async with write_transaction(db):
+        cursor = await db.execute(
+            "UPDATE project_shots SET status = 'error', error = 'interrupted by app restart', updated_at = ? "
+            "WHERE status = 'pending'",
+            (library._now(),),
+        )
+    return cursor.rowcount
+
+
 async def _mark_error(db, rows: list[dict], message: str) -> None:
     async with write_transaction(db):
         for row in rows:
@@ -326,6 +338,7 @@ async def project_shots(job: dict, runner: ImageJobRunner) -> dict:
     try:
         return await _generate_set(job, runner, project_id, rows)
     except JobCancelled:
+        await _mark_error(db, rows, "cancelled")
         raise
     except Exception as exc:
         await _mark_error(db, rows, str(exc))
@@ -342,6 +355,7 @@ async def shot_regenerate(job: dict, runner: ImageJobRunner) -> dict:
     try:
         return await _generate_set(job, runner, project_id, [row])
     except JobCancelled:
+        await _mark_error(db, [row], "cancelled")
         raise
     except Exception as exc:
         await _mark_error(db, [row], str(exc))

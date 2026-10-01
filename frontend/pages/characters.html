@@ -69,7 +69,10 @@
       <button id="new-character" class="btn btn-primary" type="button">New character</button>
     </div>
     <div id="library-message" class="library-message" role="status" hidden></div>
-    <div id="library-progress" class="library-progress" aria-live="polite"></div>
+    <div class="library-actions">
+      <div id="library-progress" class="library-progress" aria-live="polite"></div>
+      <button id="cancel-library-job" class="btn btn-ghost btn-sm" type="button" hidden>Cancel</button>
+    </div>
     <div class="library-tabs" role="tablist" aria-label="Library sections">
       <button id="characters-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="true">Characters</button>
       <button id="scenes-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="false">Scenes</button>

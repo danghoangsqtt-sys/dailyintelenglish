@@ -4,7 +4,7 @@
 
 - **Phase:** 20
 - **Slug:** `20-ai-visuals`
-- **Status:** *(Implementer update 2026-10-01: Tasks 20.3–20.8 implemented; PM review and owner Gate B-14 pending.)*
+- **Status:** *(2026-10-01: Tasks 20.3–20.8 implemented; PM review r1 fixes F1–F5 applied by Claude; verification run + owner Gate B-14 pending.)*
   - 20.1 is implemented and awaiting owner-machine verification and PM acceptance.
   - 20.2 is done (owner PASS, SDXL-Lightning).
   - 20.2b (character-library spike): owner-machine run r3 complete, 7/7 phases ok; report
@@ -59,6 +59,7 @@
 | 20.6 | Project cast, scenes, shots, Step 5 | GPT | **implemented** (`0f08da3`); handover `tasks/task-20.6.md` |
 | 20.7 | Remotion visuals, AI scene thumbnails, Step 6 | GPT | **implemented** (`1f4f5ef`); handover `tasks/task-20.7.md` |
 | 20.8 | End-to-end smoke, Gate B-14 runbook and documentation closeout | GPT | **implemented**; fake and real worker smoke passed; handover `tasks/task-20.8.md`; PM review and owner Gate B-14 remain pending |
+| Review r1 | PM review of 20.3–20.8 (`review-r1-tasks-20.3-20.8.md`): F1 background flash in inter-line pauses (blocking), F2 stale pending shots, F3 hung worker not killed, F4 unlock from any status, F5 no cancel button | Claude (owner moved implementation to Claude, 2026-10-01) | **fixed** on `claude/admiring-knuth-r1d8vc` after merging the implementer branch; verification on the owner's machine via the Codex runbook `docs/operations/owner-runbook-2026-10-01-r9-gate-b14.md`, then Gate B-14 |
 
 ## Owner decisions 2026-09-30 (cloud session; for the PM's decision log)
 

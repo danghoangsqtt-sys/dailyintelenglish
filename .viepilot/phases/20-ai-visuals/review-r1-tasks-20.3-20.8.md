@@ -1,8 +1,15 @@
 # Phase 20 — PM review r1 of Tasks 20.3–20.8 (implementer branch `feature/phase20-ai-visuals` @ `e79e770`)
 
 - **Reviewer:** Claude Code session (PM), 2026-10-01. AR-06: the implementer does not self-approve.
-- **Verdict:** **changes requested**. The fixes F1–F5 below go back to the implementer as one
-  round (`fix(visuals): review r1 …` commits). Gate B-14 starts after they land.
+- **Verdict:** **changes requested**. The fixes F1–F5 below were to go back to the implementer
+  as one round.
+- **Update (2026-10-01):** the owner moved implementation to Claude (*"tôi không tin tưởng gpt
+  sol code dự án này nữa bạn hãy code và chỉnh sửa dự án này"*, "I no longer trust GPT to code
+  this project; you code and fix it"). Claude merged `feature/phase20-ai-visuals` into
+  `claude/admiring-knuth-r1d8vc` and fixed F1–F5 there.
+  - **Verification:** independent. A Codex runbook runs on the owner's machine (tests, fake and
+    real smoke), then the owner's Gate B-14 visual sign-off. It stands in for AR-06 review of
+    Claude's own fixes.
 
 ## What was verified
 

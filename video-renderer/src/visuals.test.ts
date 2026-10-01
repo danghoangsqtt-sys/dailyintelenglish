@@ -35,7 +35,38 @@ describe("AI visual props", () => {
     expect(transition).toMatchObject({ current: "duo.png", previous: "one.png", kind: "duo_wide", opacity: 0.5 });
     expect(transition.scale).toBeGreaterThan(1);
     expect(visualBackgroundForFrame(75, 30, lines, visuals).opacity).toBe(1);
-    expect(visualBackgroundForFrame(125, 30, lines, visuals).current).toBeNull();
+    expect(visualBackgroundForFrame(75, 30, lines, visuals).previous).toBeNull();
     expect(visualBackgroundForFrame(30, 30, lines, { shots: {}, lineShots: [] }).current).toBeNull();
+  });
+
+  // Review r1 F1: real audio has 300/500 ms pauses between lines (Task 1.6b).
+  const paused = [
+    { startSec: 0.5, endSec: 2, speaker: "Nova", speakerId: "a", text: "One.", words: [] },
+    { startSec: 2.5, endSec: 4.5, speaker: "Mira", speakerId: "b", text: "Two.", words: [] },
+    { startSec: 4.8, endSec: 6, speaker: "Nova", speakerId: "a", text: "Three.", words: [] },
+  ];
+  const sameThenDuo = { ...visuals, lineShots: ["one", "one", "duo"] };
+
+  it("holds the shot through inter-line pauses and after the last line, never midnight", () => {
+    for (let frame = 15; frame < 400; frame += 1) {
+      expect(visualBackgroundForFrame(frame, 30, paused, sameThenDuo).current).not.toBeNull();
+    }
+    expect(visualBackgroundForFrame(68, 30, paused, sameThenDuo).current).toBe("one.png");
+    expect(visualBackgroundForFrame(200, 30, paused, sameThenDuo)).toMatchObject({ current: "duo.png", scale: 1.04 });
+    expect(visualBackgroundForFrame(10, 30, paused, sameThenDuo).current).toBeNull();
+  });
+
+  it("zooms continuously across lines sharing a shot and crossfades only at a shot change", () => {
+    let previousScale = 0;
+    for (let frame = 15; frame < 144; frame += 1) {
+      const background = visualBackgroundForFrame(frame, 30, paused, sameThenDuo);
+      expect(background.scale).toBeGreaterThanOrEqual(previousScale);
+      previousScale = background.scale;
+    }
+    const secondLine = visualBackgroundForFrame(76, 30, paused, sameThenDuo);
+    expect(secondLine).toMatchObject({ current: "one.png", previous: null, opacity: 1 });
+    const change = visualBackgroundForFrame(149, 30, paused, sameThenDuo);
+    expect(change).toMatchObject({ current: "duo.png", previous: "one.png", kind: "duo_wide", opacity: 0.5 });
+    expect(change.scale).toBeLessThan(1.01);
   });
 });

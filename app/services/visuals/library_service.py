@@ -179,7 +179,9 @@ async def lock_character(db: aiosqlite.Connection, character_id: str) -> dict:
 
 
 async def unlock_character(db: aiosqlite.Connection, character_id: str) -> dict:
-    await get_character_row(db, character_id)
+    row = await get_character_row(db, character_id)
+    if row["status"] != "locked":
+        raise ConflictError("Character is not locked")
     cursor = await db.execute("SELECT 1 FROM project_cast WHERE character_id = ? LIMIT 1", (character_id,))
     if await cursor.fetchone() is not None:
         raise ConflictError("Remove this character from every project cast before unlocking")

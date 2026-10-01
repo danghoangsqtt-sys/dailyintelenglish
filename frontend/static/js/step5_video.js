@@ -568,6 +568,18 @@
     state.visualProgress = GenerationStatus.mount({
       element: byId("visual-job-progress"), baselineSec: 180, startedAtIso: job.created_at,
     });
+    const cancel = byId("cancel-shots-btn");
+    cancel.hidden = false;
+    cancel.disabled = false;
+    cancel.onclick = async () => {
+      cancel.disabled = true;
+      try {
+        await Api.cancelImageJob(job.id);
+      } catch (error) {
+        cancel.disabled = false;
+        visualWarning(error.message || "Could not cancel the shot job.");
+      }
+    };
     try {
       let current = job;
       while (!["complete", "error", "cancelled"].includes(current.status)) {
@@ -576,12 +588,14 @@
         current = await Api.getImageJob(job.id);
       }
       state.visualProgress.setProgress({ stageLabel: current.stage, progressPercent: current.progress, done: true });
-      if (current.status !== "complete") throw new Error(current.error || `Shot job ${current.status}.`);
+      if (current.status === "error") throw new Error(current.error || "Shot job failed.");
       state.visuals = await Api.getProjectVisuals(state.projectId);
-      state.visualError = "";
+      state.visualError = current.status === "cancelled" ? "Shot generation cancelled. Completed shots were kept." : "";
     } catch (error) {
       visualWarning(error.message || "Could not generate shots.");
     } finally {
+      cancel.hidden = true;
+      cancel.onclick = null;
       state.visualBusy = false;
       renderProjectVisuals();
     }

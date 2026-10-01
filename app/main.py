@@ -97,6 +97,7 @@ async def lifespan(app: FastAPI):
     image_job_runner.register_handler("scene_preview", visuals_pipelines.scene_preview)
     image_job_runner.register_handler("project_shots", visuals_pipelines.project_shots)
     image_job_runner.register_handler("shot_regenerate", visuals_pipelines.shot_regenerate)
+    await visuals_pipelines.recover_pending_shots(Database.instance().connection)
     await image_job_runner.start()
     await ai_worker.start()
 
