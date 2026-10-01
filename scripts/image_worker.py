@@ -395,14 +395,28 @@ class ImageWorker:
             if negative_applied:
                 call["negative_prompt"] = request["negative_prompt"]
 
-        if request.get("ip_adapter_image"):
+        references = self._ip_references(request)
+        if references is not None:
             if not self.ip_adapter_loaded:
-                raise RuntimeError("ip_adapter_image given but no IP-Adapter loaded -- send load_ip_adapter first")
+                raise RuntimeError("ip_adapter_image(s) given but no IP-Adapter loaded -- send load_ip_adapter first")
             pipe.set_ip_adapter_scale(float(request.get("ip_adapter_scale", 0.6)))
-            with Image.open(request["ip_adapter_image"]) as reference:
-                call["ip_adapter_image"] = reference.convert("RGB")
+            call["ip_adapter_image"] = references
         elif self.ip_adapter_loaded and not ip_from_embeds:
             raise RuntimeError("IP-Adapter is loaded; every generate call must pass ip_adapter_image")
+        if request.get("ip_adapter_masks"):
+            # Task 20.2h: one mask per face (white = where that face's identity applies), in
+            # the order of `ip_adapter_images`, preprocessed as diffusers' IP-Adapter masking
+            # expects: one tensor [1, n_faces, h, w] for the single loaded adapter.
+            from diffusers.image_processor import IPAdapterMaskProcessor
+
+            masks = []
+            for mask_path in request["ip_adapter_masks"]:
+                with Image.open(mask_path) as mask_image:
+                    masks.append(mask_image.convert("L"))
+            processed = IPAdapterMaskProcessor().preprocess(masks, height=height, width=width)
+            call["cross_attention_kwargs"] = {
+                "ip_adapter_masks": [processed.reshape(1, processed.shape[0], processed.shape[2], processed.shape[3])]
+            }
 
         if self.kind == "controlnet":
             if not request.get("control_image"):
@@ -465,6 +479,23 @@ class ImageWorker:
             "rss_mb": _rss_mb(),
         }
 
+    @staticmethod
+    def _ip_references(request: dict[str, Any]) -> Any | None:
+        """`ip_adapter_image` (one face, as before) or `ip_adapter_images` (Task 20.2h:
+        several faces for the one loaded adapter -> diffusers' nested [[a, b]] form)."""
+        from PIL import Image
+
+        if request.get("ip_adapter_images"):
+            images = []
+            for path in request["ip_adapter_images"]:
+                with Image.open(path) as image:
+                    images.append(image.convert("RGB"))
+            return [images]
+        if request.get("ip_adapter_image"):
+            with Image.open(request["ip_adapter_image"]) as image:
+                return image.convert("RGB")
+        return None
+
     def _prompt_tokens(self, prompt: str | None) -> dict[str, Any]:
         """Task 20.2f finding: CLIP reads 77 tokens and silently drops the rest (20.2c/20.2e
         prompts ran 87-105 tokens, losing expressions and style tags). Report it."""
@@ -484,8 +515,6 @@ class ImageWorker:
     def encode(self, request: dict[str, Any]) -> dict[str, Any]:
         """Task 20.2b D20.2b-b: text (+ optional IP reference) -> embeddings on disk, so a
         later process can render with UNet + ControlNet only."""
-        from PIL import Image
-
         pipe = self._require_pipe()
         if not self.encoders:
             raise RuntimeError("encode needs a pipeline loaded with encoders=true")
@@ -494,13 +523,14 @@ class ImageWorker:
         started = time.monotonic()
         ip_embeds = None
         with torch.no_grad():
-            if request.get("ip_adapter_image"):
+            references = self._ip_references(request)
+            if references is not None:
                 if not self.ip_adapter_loaded:
-                    raise RuntimeError("ip_adapter_image given but no IP-Adapter loaded")
-                with Image.open(request["ip_adapter_image"]) as reference:
-                    ip_embeds = pipe.prepare_ip_adapter_image_embeds(
-                        reference.convert("RGB"), None, self.device, 1, do_cfg
-                    )
+                    raise RuntimeError("ip_adapter_image(s) given but no IP-Adapter loaded")
+                # Task 20.2h: several faces for ONE adapter ([[a, b]]) -> embeds shaped
+                # (batch, n_faces, tokens, dim); each face is later confined to its own
+                # region by `ip_adapter_masks` at render time.
+                ip_embeds = pipe.prepare_ip_adapter_image_embeds(references, None, self.device, 1, do_cfg)
             items = []
             for item in request["items"]:
                 prompt_embeds, negative_embeds, pooled, negative_pooled = pipe.encode_prompt(
@@ -526,6 +556,7 @@ class ImageWorker:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(payload, output_path)
         return {"status": "ok", "items": len(items), "do_cfg": do_cfg, "with_ip": ip_embeds is not None,
+                "ip_faces": len(request.get("ip_adapter_images") or []) or (1 if request.get("ip_adapter_image") else 0),
                 "output_path": str(output_path), "wall_time_sec": round(time.monotonic() - started, 3)}
 
     def remove_background(self, request: dict[str, Any]) -> dict[str, Any]:

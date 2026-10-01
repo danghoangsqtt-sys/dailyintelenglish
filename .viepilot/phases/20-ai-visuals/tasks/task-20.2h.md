@@ -1,6 +1,7 @@
 # Task 20.2h — Spike v6: two-person conversation shots, close-up framing, clean solid-colour outfits
 
-- **Status:** design (Coder, doc-first, 2026-10-01). **The real run needs the owner's GPU.**
+- **Status:** implemented (Coder, 2026-10-01). Design commit `65ea14a`; see "Implementation
+  notes" at the end. **The real run needs the owner's GPU.**
   It goes through the runbook `docs/operations/owner-runbook-2026-10-01-r8.md`.
 - **Owner:** Coder
 - **Authorization:** the owner's 20.2g verdict, 2026-10-01 (verbatim in
@@ -106,3 +107,41 @@
 2. Is the close-up framing right now?
 3. Is the male now neat and slim-fit, with short hair?
 4. Are the outfits single solid colours, 1 top + 1 bottom, with no colour confusion?
+
+## Implementation notes (Coder, 2026-10-01)
+
+- **Worker** (`scripts/image_worker.py`).
+  - `ip_adapter_images` (several faces for the one loaded adapter, diffusers' `[[a, b]]`
+    form) on `encode` and direct `generate`.
+  - `ip_adapter_masks` on `generate`: `IPAdapterMaskProcessor` → `[1, n_faces, h, w]` in
+    `cross_attention_kwargs`.
+  - `encode` reports `ip_faces`.
+- **Prompts** were compressed after counting with OpenAI's CLIP BPE.
+  - The first duo wording reached 82 tokens.
+  - Now every prompt is ≤ 72 and the negative is 66.
+- **A fake IP-Adapter plus** (scratch `build_fake_ip.py`, not committed). It is built in
+  the real key layout:
+  - `image_proj.latents`, `proj_in`/`proj_out`, `norm_out`;
+  - 4 Resampler layers;
+  - `ip_adapter.{1,3,…}.to_k_ip/to_v_ip` for the tiny UNet's 12 cross-attention
+    processors;
+  - a tiny `CLIPVisionModelWithProjection`.
+  - **This is the first time the IP code paths ran in the cloud.**
+- **Verification (cloud, CPU).**
+  - **Masking works:** swapping the two masks changes the output, in the direct path
+    (mean |Δ| 24.7) and the embeds + ControlNet path (6.3). Masked differs from unmasked
+    (4.1).
+  - **The runner end to end with IP on**, all 4 phases ok:
+    - 4 cards, covering both found-r7 and missing-r7 (the scale-0 fallback);
+    - 10 CFG encodes with IP, with `ip_faces` 2 for duos and 1 for singles;
+    - 20 ControlNet renders from embeds, with IP layers only and no encoders;
+    - 44 hand repairs;
+    - 20 frames;
+    - 3 sheets.
+  - **Pose checks:**
+    - every head top is below the chip row;
+    - in duos, each person stays inside their IP-mask half and the far ear is hidden
+      (they face each other);
+    - the masks are disjoint and cover the frame;
+    - hand crops: 1 per single, 1 for the duo close-up, 4 for each wide duo.
+
