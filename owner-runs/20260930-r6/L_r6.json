@@ -1,0 +1,939 @@
+{
+  "run_label": "r6",
+  "styles": {
+    "r3_watercolor": "hand-painted 2D anime illustration, soft watercolor background, warm natural sunlight, gentle pastel palette, cozy whimsical atmosphere, clean line art",
+    "r3_bright": "hand-painted 2D anime illustration, soft watercolor background, warm natural sunlight, bright cheerful colors, clean line art"
+  },
+  "characters": {
+    "female_student": "young Vietnamese woman student, long straight black hair, brown eyes, bright yellow sweater, blue jeans",
+    "male_student": "young Vietnamese man student, short black hair, brown eyes, bright teal hoodie, dark jeans"
+  },
+  "negative": "3d render, photorealistic, photo, text, letters, logo, watermark, signature, blurry, deformed, extra fingers, deformed hands, bad anatomy",
+  "ip_scale": 0.45,
+  "phases": {
+    "p1_candidates": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 515.7,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "base",
+        "base_repo": "stabilityai/stable-diffusion-xl-base-1.0",
+        "pipeline": "text2img",
+        "encoders": true,
+        "lightning_steps": null,
+        "download_or_cache_sec": 0.862,
+        "load_sec": 12.207,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerDiscreteScheduler",
+        "timestep_spacing": "leading",
+        "vram_allocated_mb": 6724.7,
+        "rss_mb": 890.1
+      },
+      "candidates": [
+        {
+          "style": "r3_watercolor",
+          "character": "female_student",
+          "status": "ok",
+          "wall_time_sec": 22.327,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 66,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_female_student_candidate_1.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1990.2
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "female_student",
+          "status": "ok",
+          "wall_time_sec": 21.922,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 66,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_female_student_candidate_2.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1990.4
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "status": "ok",
+          "wall_time_sec": 22.032,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 65,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_male_student_candidate_1.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1943.4
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "status": "ok",
+          "wall_time_sec": 22.1,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 65,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_male_student_candidate_2.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1943.4
+        },
+        {
+          "style": "r3_bright",
+          "character": "female_student",
+          "status": "ok",
+          "wall_time_sec": 22.179,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 62,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_female_student_candidate_1.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1943.4
+        },
+        {
+          "style": "r3_bright",
+          "character": "female_student",
+          "status": "ok",
+          "wall_time_sec": 22.248,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 62,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_female_student_candidate_2.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1943.4
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "status": "ok",
+          "wall_time_sec": 22.282,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 61,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_male_student_candidate_1.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1943.4
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "status": "ok",
+          "wall_time_sec": 22.264,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 61,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_male_student_candidate_2.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1943.4
+        }
+      ],
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "base",
+        "ip_adapter_loaded": false,
+        "device": "cuda",
+        "vram_allocated_mb": 6733.8,
+        "vram_reserved_mb": 11610.0,
+        "rss_mb": 1939.4
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11697,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 196.4
+    },
+    "p2_sheet_scenes": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 514.9,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "base",
+        "base_repo": "stabilityai/stable-diffusion-xl-base-1.0",
+        "pipeline": "text2img",
+        "encoders": true,
+        "lightning_steps": null,
+        "download_or_cache_sec": 0.943,
+        "load_sec": 5.052,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerDiscreteScheduler",
+        "timestep_spacing": "leading",
+        "vram_allocated_mb": 6724.7,
+        "rss_mb": 926.6
+      },
+      "sheet": [
+        {
+          "style": "r3_watercolor",
+          "character": "female_student",
+          "item": "full_body",
+          "status": "ok",
+          "wall_time_sec": 29.479,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 65,
+          "prompt_truncated": false,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_female_student_sheet_full_body.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11100.6,
+          "peak_vram_reserved_mb": 13600.0,
+          "rss_mb": 5049.2
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "female_student",
+          "item": "neutral",
+          "status": "ok",
+          "wall_time_sec": 28.556,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 59,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_female_student_sheet_neutral.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5587.5
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "female_student",
+          "item": "happy",
+          "status": "ok",
+          "wall_time_sec": 30.747,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 59,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_female_student_sheet_happy.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5589.9
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "female_student",
+          "item": "surprised",
+          "status": "ok",
+          "wall_time_sec": 30.707,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 61,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_female_student_sheet_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5589.9
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "item": "full_body",
+          "status": "ok",
+          "wall_time_sec": 28.55,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 64,
+          "prompt_truncated": false,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_male_student_sheet_full_body.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11100.6,
+          "peak_vram_reserved_mb": 13600.0,
+          "rss_mb": 5468.8
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "item": "neutral",
+          "status": "ok",
+          "wall_time_sec": 28.71,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 58,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_male_student_sheet_neutral.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5612.2
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "item": "happy",
+          "status": "ok",
+          "wall_time_sec": 30.456,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 58,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_male_student_sheet_happy.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5612.2
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "item": "surprised",
+          "status": "ok",
+          "wall_time_sec": 30.435,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 60,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_male_student_sheet_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5460.5
+        },
+        {
+          "style": "r3_bright",
+          "character": "female_student",
+          "item": "full_body",
+          "status": "ok",
+          "wall_time_sec": 29.078,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 61,
+          "prompt_truncated": false,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_female_student_sheet_full_body.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11100.6,
+          "peak_vram_reserved_mb": 13600.0,
+          "rss_mb": 5446.8
+        },
+        {
+          "style": "r3_bright",
+          "character": "female_student",
+          "item": "neutral",
+          "status": "ok",
+          "wall_time_sec": 29.021,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 55,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_female_student_sheet_neutral.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5674.8
+        },
+        {
+          "style": "r3_bright",
+          "character": "female_student",
+          "item": "happy",
+          "status": "ok",
+          "wall_time_sec": 30.8,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 55,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_female_student_sheet_happy.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5600.8
+        },
+        {
+          "style": "r3_bright",
+          "character": "female_student",
+          "item": "surprised",
+          "status": "ok",
+          "wall_time_sec": 30.75,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 57,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_female_student_sheet_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5440.8
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "item": "full_body",
+          "status": "ok",
+          "wall_time_sec": 28.91,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 60,
+          "prompt_truncated": false,
+          "native_size": [
+            832,
+            1216
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_male_student_sheet_full_body.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11100.6,
+          "peak_vram_reserved_mb": 13600.0,
+          "rss_mb": 5118.0
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "item": "neutral",
+          "status": "ok",
+          "wall_time_sec": 28.896,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 54,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_male_student_sheet_neutral.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5384.6
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "item": "happy",
+          "status": "ok",
+          "wall_time_sec": 30.059,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 54,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_male_student_sheet_happy.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5384.6
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "item": "surprised",
+          "status": "ok",
+          "wall_time_sec": 28.692,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 56,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_male_student_sheet_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5312.6
+        }
+      ],
+      "scenes": [
+        {
+          "style": "r3_watercolor",
+          "character": "female_student",
+          "scene": "library",
+          "status": "ok",
+          "wall_time_sec": 28.696,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 65,
+          "prompt_truncated": false,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_female_student_scene_library.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11147.1,
+          "peak_vram_reserved_mb": 13686.0,
+          "rss_mb": 5262.5
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "female_student",
+          "scene": "cafe",
+          "status": "ok",
+          "wall_time_sec": 30.377,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 67,
+          "prompt_truncated": false,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_female_student_scene_cafe.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11147.1,
+          "peak_vram_reserved_mb": 13686.0,
+          "rss_mb": 5263.2
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "scene": "classroom",
+          "status": "ok",
+          "wall_time_sec": 28.777,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 65,
+          "prompt_truncated": false,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_male_student_scene_classroom.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11147.1,
+          "peak_vram_reserved_mb": 13686.0,
+          "rss_mb": 5278.2
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "scene": "cafe",
+          "status": "ok",
+          "wall_time_sec": 30.406,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 67,
+          "prompt_truncated": false,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_watercolor_male_student_scene_cafe.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11147.1,
+          "peak_vram_reserved_mb": 13686.0,
+          "rss_mb": 5278.2
+        },
+        {
+          "style": "r3_bright",
+          "character": "female_student",
+          "scene": "library",
+          "status": "ok",
+          "wall_time_sec": 28.844,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 61,
+          "prompt_truncated": false,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_female_student_scene_library.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11147.1,
+          "peak_vram_reserved_mb": 13686.0,
+          "rss_mb": 5446.8
+        },
+        {
+          "style": "r3_bright",
+          "character": "female_student",
+          "scene": "cafe",
+          "status": "ok",
+          "wall_time_sec": 30.631,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 63,
+          "prompt_truncated": false,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_female_student_scene_cafe.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11147.1,
+          "peak_vram_reserved_mb": 13686.0,
+          "rss_mb": 5388.2
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "scene": "classroom",
+          "status": "ok",
+          "wall_time_sec": 26.949,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 61,
+          "prompt_truncated": false,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_male_student_scene_classroom.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11147.1,
+          "peak_vram_reserved_mb": 13686.0,
+          "rss_mb": 5210.2
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "scene": "cafe",
+          "status": "ok",
+          "wall_time_sec": 28.648,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 63,
+          "prompt_truncated": false,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\r3_bright_male_student_scene_cafe.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11147.1,
+          "peak_vram_reserved_mb": 13686.0,
+          "rss_mb": 5210.2
+        }
+      ],
+      "ip_load": {
+        "status": "ok",
+        "load_sec": 6.256,
+        "vram_added_mb": 2014.1,
+        "rss_mb": 2139.2
+      },
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "base",
+        "ip_adapter_loaded": true,
+        "device": "cuda",
+        "vram_allocated_mb": 8747.9,
+        "vram_reserved_mb": 13686.0,
+        "rss_mb": 5198.3
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11703,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 731.3
+    },
+    "p3_frames": {
+      "frames": [
+        {
+          "source": "r3_watercolor_female_student_scene_library.png",
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\frame_r3_watercolor_female_student_library.png"
+        },
+        {
+          "source": "r3_watercolor_female_student_scene_cafe.png",
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\frame_r3_watercolor_female_student_cafe.png"
+        },
+        {
+          "source": "r3_watercolor_male_student_scene_classroom.png",
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\frame_r3_watercolor_male_student_classroom.png"
+        },
+        {
+          "source": "r3_watercolor_male_student_scene_cafe.png",
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\frame_r3_watercolor_male_student_cafe.png"
+        },
+        {
+          "source": "r3_bright_female_student_scene_library.png",
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\frame_r3_bright_female_student_library.png"
+        },
+        {
+          "source": "r3_bright_female_student_scene_cafe.png",
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\frame_r3_bright_female_student_cafe.png"
+        },
+        {
+          "source": "r3_bright_male_student_scene_classroom.png",
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\frame_r3_bright_male_student_classroom.png"
+        },
+        {
+          "source": "r3_bright_male_student_scene_cafe.png",
+          "output_path": "data\\tmp\\phase20f_character_v4\\run_r6\\frame_r3_bright_male_student_cafe.png"
+        }
+      ]
+    }
+  },
+  "gpu_snapshots": [
+    {
+      "label": "start",
+      "at_monotonic_sec": 690911.531,
+      "vram_used_mb": 414,
+      "vram_free_mb": 11697,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p1_candidates_lease_acquired",
+      "at_monotonic_sec": 690911.663,
+      "vram_used_mb": 414,
+      "vram_free_mb": 11697,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p1_candidates_worker_exited",
+      "at_monotonic_sec": 691107.962,
+      "vram_used_mb": 408,
+      "vram_free_mb": 11703,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p2_sheet_scenes_lease_acquired",
+      "at_monotonic_sec": 691108.097,
+      "vram_used_mb": 408,
+      "vram_free_mb": 11703,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p2_sheet_scenes_worker_exited",
+      "at_monotonic_sec": 691839.234,
+      "vram_used_mb": 371,
+      "vram_free_mb": 11740,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "end",
+      "at_monotonic_sec": 691840.744,
+      "vram_used_mb": 377,
+      "vram_free_mb": 11734,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    }
+  ],
+  "sheets": {
+    "candidates": "data\\tmp\\phase20f_character_v4\\run_r6\\sheet_candidates.png",
+    "character": "data\\tmp\\phase20f_character_v4\\run_r6\\sheet_character.png",
+    "frames": "data\\tmp\\phase20f_character_v4\\run_r6\\sheet_frames.png"
+  },
+  "output_dir": "data\\tmp\\phase20f_character_v4\\run_r6"
+}

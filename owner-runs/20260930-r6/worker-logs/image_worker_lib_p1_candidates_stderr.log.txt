@@ -1,0 +1,27 @@
+image_worker: ready on cuda
+[transformers] `CLIPImageProcessor` requires torchvision (not installed); falling back to `CLIPImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `CLIPImageProcessorPil` directly to silence this warning.
+[transformers] `SiglipImageProcessor` requires torchvision (not installed); falling back to `SiglipImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `SiglipImageProcessorPil` directly to silence this warning.
+Fetching 17 files:   0%|          | 0/17 [00:00<?, ?it/s]Fetching 17 files: 100%|##########| 17/17 [00:00<00:00, 2953.61it/s]
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files: 100%|##########| 2/2 [00:00<00:00, 1138.83it/s]
+D:\DataAdmin\Daily_Intel_English\venv-image\Lib\site-packages\diffusers\utils\deprecation_utils.py:23: FutureWarning: `torch_dtype` is deprecated and will be removed in version 1.0.0. Please use `dtype` instead.
+  deprecate("torch_dtype", "1.0.0", _TORCH_DTYPE_DEPRECATION_MESSAGE)
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]Loading pipeline components...:  14%|#4        | 1/7 [00:00<00:00,  8.90it/s]Loading pipeline components...:  29%|##8       | 2/7 [00:00<00:01,  2.96it/s]
+Loading weights:   0%|          | 0/196 [00:00<?, ?it/s][A
+Loading weights:  43%|####3     | 85/196 [00:00<00:00, 844.66it/s][ALoading weights: 100%|##########| 196/196 [00:00<00:00, 1077.78it/s]
+Loading pipeline components...:  43%|####2     | 3/7 [00:00<00:01,  2.89it/s]
+Loading weights:   0%|          | 0/517 [00:00<?, ?it/s][A
+Loading weights:   4%|4         | 22/517 [00:00<00:02, 181.17it/s][A
+Loading weights:   8%|7         | 41/517 [00:00<00:02, 175.62it/s][A
+Loading weights:  12%|#2        | 64/517 [00:00<00:02, 198.38it/s][A
+Loading weights:  16%|#6        | 85/517 [00:00<00:02, 177.11it/s][A
+Loading weights:  20%|##        | 104/517 [00:00<00:02, 171.55it/s][A
+Loading weights:  24%|##3       | 122/517 [00:00<00:02, 142.95it/s][A
+Loading weights:  28%|##8       | 145/517 [00:00<00:02, 163.79it/s][A
+Loading weights:  32%|###1      | 165/517 [00:00<00:02, 164.44it/s][A
+Loading weights:  35%|###5      | 183/517 [00:01<00:02, 165.81it/s][A
+Loading weights:  39%|###9      | 202/517 [00:01<00:02, 157.22it/s][A
+Loading weights:  45%|####5     | 233/517 [00:01<00:01, 196.93it/s][A
+Loading weights:  52%|#####1    | 268/517 [00:01<00:01, 218.28it/s][A
+Loading weights:  56%|#####6    | 291/517 [00:01<00:01, 197.67it/s][ALoading weights: 100%|##########| 517/517 [00:01<00:00, 318.63it/s]
+Loading pipeline components...:  71%|#######1  | 5/7 [00:03<00:01,  1.36it/s]Loading pipeline components...: 100%|##########| 7/7 [00:03<00:00,  2.30it/s]
+image_worker: stdin closed, exiting
