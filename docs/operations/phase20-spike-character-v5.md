@@ -44,9 +44,25 @@
    - The full-resolution raw/fixed pairs are in the run folder on the owner's machine
      (`data\tmp\phase20g_character_v5\run_r7\`).
 
-## Owner verdicts (to be filled from the owner's answers)
+## Owner verdicts 2026-10-01 (verbatim, with translation)
 
-- Male candidate (1-4)? Attractive and expressive now?:
-- Hands: raw vs repaired -- better?:
-- Actions and left-side placement right?:
-- Outfit stable?:
+*"1. Tôi thích ứng viên nam 1 đầu tóc gọn gàng đừng để tóc dài ẻo lả, 2 tay sau khi sửa đã
+có nhiều cải thiện và chất lượng rất tốt; 3 tôi thích khung hình cận cảnh hơn, nhưng tôi
+chưa thấy các dạng hình ảnh trò chuyện giữa 2 người, trò chuyện cảnh cận người và trò
+chuyện góc rộng có bối cảnh như trường học và quán cafe; tôi thích nhân vật nam mặc quần áo
+gọn gàng và slimfit hơn là áo khoắc hoodie rườm rà; về nhân vật nữ khá tốt rồi không cần
+thay đổi thêm, nhưng màu sác của trang phục cũng cần phải để tâm vì dễ bị rối loạn màu
+trang phục, nói chung về trang phục nam và nữ chỉ cần 1 áo và 1 quần; màu sắc của áo quần
+đơn màu không họa tiết, không cần nhiều màu trên áo với quần"*
+
+1. **Male: candidate 1**, with neat short hair, "not long, effeminate hair".
+2. **The hand repair improved a lot: very good quality.**
+3. **Close-up framing is preferred.**
+   - Two-person conversations are missing: a close-up conversation, and wide
+     conversations in a school and in a café.
+4. **The male should wear neat slim-fit clothes**, not a bulky hoodie.
+5. **The female is good; no change.**
+6. **Outfits:** watch colour confusion. Exactly 1 top + 1 bottom, solid colours, no
+   pattern, not many colours.
+
+**The follow-up is Task 20.2h** (`.viepilot/phases/20-ai-visuals/tasks/task-20.2h.md`).
