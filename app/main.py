@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import ai_jobs, audio, learning, music, projects, settings as settings_api, thumbnail, tts, video, youtube
+from app.api import ai_jobs, audio, learning, music, projects, settings as settings_api, thumbnail, tts, video, visuals, youtube
 from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.paths import get_project_root
@@ -19,12 +19,14 @@ from app.db.database import Database, close_db, init_db
 from app.services import learning_pipeline, script_pipeline, settings_service
 from app.services.ai.router import AIRouter, CircuitBreaker, build_ai_router_from_settings
 from app.services.ai_worker import AIWorker
+from app.services.visuals.runner import ImageJobRunner
 
 PROJECT_ROOT = get_project_root()
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 
 app_state: dict = {"ffmpeg_ok": False, "gpu_info": None}
 ai_worker = AIWorker(db_getter=lambda: Database.instance().connection)
+image_job_runner = ImageJobRunner(db_getter=lambda: Database.instance().connection)
 
 # Phase 18/Task 18.8: one circuit breaker PER cloud provider name, for the app's
 # whole lifetime, threaded through every freshly-built per-job router below -- so
@@ -76,6 +78,7 @@ async def lifespan(app: FastAPI):
         "thumbnails",
         "tts_cache",
         "video",
+        "visuals",
     ):
         (settings.DATA_DIR / subdir).mkdir(parents=True, exist_ok=True)
 
@@ -88,10 +91,12 @@ async def lifespan(app: FastAPI):
 
     ai_worker.register_handler("script", _script_job_handler)
     ai_worker.register_handler("learning", _learning_job_handler)
+    await image_job_runner.start()
     await ai_worker.start()
 
     yield
 
+    await image_job_runner.stop()
     await ai_worker.stop()
     await close_db()
 
@@ -144,6 +149,7 @@ app.include_router(youtube.router)
 app.include_router(settings_api.router)
 app.include_router(ai_jobs.router)
 app.include_router(ai_jobs.health_router)
+app.include_router(visuals.router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
 

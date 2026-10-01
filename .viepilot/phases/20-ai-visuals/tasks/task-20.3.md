@@ -2,29 +2,41 @@
 
 ## Handover
 
-**Status:** stopped before implementation under the Phase 20 stop condition for a required change outside the files listed in spec §3.
+**Status:** implemented under PM Errata E1. The earlier stop question is resolved by the merged spec ruling.
 
 ### Files added/changed
 
+- `app/db/migrations/008_ai_visuals.sql`, `app/db/database.py` — additive tables and idempotent built-in scene seed (§4).
+- `app/services/visuals/__init__.py`, `recipes.py`, `geometry.py` — fixed prompts, estimator and ported pose/mask/hand helpers (§§2.2–2.7).
+- `app/services/visuals/engine.py` — leased subprocess worker and deterministic fake engine (§3).
+- `scripts/image_worker.py` — additive `encode.item_tokens` JSON response, per Errata E1.
+- `app/services/visuals/jobs.py`, `runner.py` — durable FIFO jobs, duplicate guard, progress, image-boundary cancel and restart recovery (§5.3).
+- `app/api/visuals.py`, `app/main.py`, `app/core/config.py` — health route, startup runner, and kill switches (§§3, 6).
+- `tests/test_visuals_foundation.py` — foundation tests (§10).
 - `.viepilot/phases/20-ai-visuals/tasks/task-20.3.md` — this handover.
 
-### Implementation mapped to spec
+### Tests added
 
-- None. The blocker was found while reading the source of truth and reference implementations, before writing application code.
+- `test_migration_008_and_builtin_seed_once` (fresh and 007 databases)
+- `test_recipe_strings_and_worst_case_budget`
+- `test_geometry_heads_halves_ears_hands_and_refine_mask`
+- `test_fake_engine_and_worker_token_response`
+- `test_jobs_fifo_duplicate_cancel_recovery`
+- `test_runner_cancels_at_boundary_and_gpu_error`
 
-### Tests added and verification
+### Verification
 
-- Tests added: none.
-- Base commit full suite, before any change: `1244 passed, 2 warnings in 427.71s (0:07:07)`.
-- Ruff baseline (`ruff check app tests`): `All checks passed!`
-- TypeScript baseline (`npx tsc --noEmit`): clean (no output, exit 0).
-- Vitest baseline (`npx vitest run`): `Test Files  5 passed (5)` and `Tests  34 passed (34)`.
-- The task-specific test commands were not run because no implementation files were changed.
+- Base commit full suite: `1244 passed, 2 warnings in 427.71s (0:07:07)`.
+- Focused tests: `7 passed in 1.98s`.
+- Existing cross-loop script-save regression plus foundation tests, after fixing idle runner wake behavior: `8 passed, 2 warnings in 3.36s`.
+- Ruff (`ruff check` on touched Python paths): `All checks passed!`
+- Full suite (`python -m pytest -q`): `1251 passed, 2 warnings in 446.28s (0:07:26)`.
+- TypeScript and Vitest are not required for this task because `video-renderer/` was unchanged.
 
-### Deviation from spec
+### Deviations from spec
 
-- Task 20.3 has not been implemented. The stop condition requires a PM ruling before changing `scripts/image_worker.py`, which is outside the spec §3 file list.
+- None. The worker protocol addition is expressly authorized by Errata E1.
 
-### Open question for the PM
+### Open questions for the PM
 
-Spec §2.2 requires storing and surfacing the worker's `prompt_tokens` and `prompt_truncated` for every image; §10 says the worker is the ground truth because the estimator can miss rare-word token splits. Project shots use `encode` followed by `generate` with `embeds_path` (§§2.4, 5.2). In `scripts/image_worker.py`, `encode` computes the real token metadata but writes it only into a PyTorch `.pt` file and returns no per-item metadata in its JSON response (lines 541–559). The later `generate` response has no token metadata for an embeddings render because `call.get("prompt")` is absent (line 473). The app cannot read that `.pt` file without importing torch, which §12 forbids, or send another worker command, which does not exist. May the implementer make an additive change to `scripts/image_worker.py` so `encode` returns each item's `prompt_tokens` and `prompt_truncated` in its JSON response? If that file must remain untouched, what approved way should the app obtain the worker's actual token metadata for shots?
+- None.

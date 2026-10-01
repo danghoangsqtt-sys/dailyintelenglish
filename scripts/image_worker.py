@@ -555,7 +555,9 @@ class ImageWorker:
         output_path = Path(request["output_path"])
         output_path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(payload, output_path)
-        return {"status": "ok", "items": len(items), "do_cfg": do_cfg, "with_ip": ip_embeds is not None,
+        return {"status": "ok", "items": len(items),
+                "item_tokens": [self._prompt_tokens(item["prompt"]) for item in request["items"]],
+                "do_cfg": do_cfg, "with_ip": ip_embeds is not None,
                 "ip_faces": len(request.get("ip_adapter_images") or []) or (1 if request.get("ip_adapter_image") else 0),
                 "output_path": str(output_path), "wall_time_sec": round(time.monotonic() - started, 3)}
 
