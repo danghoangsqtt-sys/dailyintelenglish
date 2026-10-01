@@ -95,6 +95,13 @@ export const chapterSchema = z.object({
   startSec: z.number(),
 });
 
+export const episodeVisualsSchema = z.object({
+  shots: z.record(z.string(), z.object({
+    url: z.string(), kind: z.enum(["single", "duo_close", "duo_wide"]),
+  })),
+  lineShots: z.array(z.string().nullable()),
+});
+
 export const episodeInputPropsSchema = z.object({
   /** projects.id */
   episodeId: z.string(),
@@ -127,6 +134,7 @@ export const episodeInputPropsSchema = z.object({
   /** Task 20.2d: user-selected caption treatment (see `captionStyle.ts`). Optional with the
    * owner-preferred default so older runner invocations / props files still render. */
   captionStyle: z.enum(CAPTION_STYLES).default("outline"),
+  visuals: episodeVisualsSchema.default({ shots: {}, lineShots: [] }),
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;
@@ -137,3 +145,4 @@ export type IdiomItem = z.infer<typeof idiomItemSchema>;
 export type EpisodeLearning = z.infer<typeof episodeLearningSchema>;
 export type Chapter = z.infer<typeof chapterSchema>;
 export type EpisodeInputProps = z.infer<typeof episodeInputPropsSchema>;
+export type EpisodeVisuals = z.infer<typeof episodeVisualsSchema>;

@@ -34,10 +34,17 @@ from app.core.constants import VIDEO_FPS, VIDEO_HEIGHT_STANDARD, VIDEO_WIDTH_STA
 from app.core.exceptions import RemotionRenderFailedError
 from app.core.paths import get_project_root
 from app.services import avatar_service, youtube_service
+from app.services.visuals import library_service, project_visuals_service
 
 VIDEO_RENDERER_DIR = get_project_root() / "video-renderer"
 REMOTION_AUDIO_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "audio"
 REMOTION_AVATARS_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "avatars"
+REMOTION_VISUALS_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "visuals"
+
+
+def _copy_visual_source(source: Path, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source, destination)
 
 # Task 19.7 (D19.7-c): cross-checked against every real Phase 19 wall-time measurement so
 # far -- the worst real reading across 19.1-19.6 was 19.6's own transient-load outlier at
@@ -225,6 +232,27 @@ async def _build_input_props(
         for entry, words in zip(audio_job["timestamps"], word_timestamps_by_line, strict=True)
     ]
 
+    project_id = project["id"]
+    cast = await project_visuals_service.cast_rows(db, project_id)
+    cast_by_index = {member["speaker_index"]: member for member in cast}
+    scenes = await project_visuals_service.scene_rows(db, project_id)
+    shot_rows = await project_visuals_service.shot_rows(db, project_id)
+    complete_shots = [shot for shot in shot_rows if shot["status"] == "complete" and shot["final_path"]]
+    shot_props: dict[str, dict[str, str]] = {}
+    for shot in complete_shots:
+        try:
+            source = await asyncio.to_thread(project_visuals_service.resolve_shot_content, project_id, shot["final_path"])
+        except Exception:
+            continue
+        destination = REMOTION_VISUALS_DIR / project_id / f"{shot['id']}.png"
+        await asyncio.to_thread(_copy_visual_source, source, destination)
+        shot_props[shot["id"]] = {
+            "url": f"remotion-render/visuals/{project_id}/{shot['id']}.png", "kind": shot["kind"],
+        }
+    speaker_indexes = {speaker["id"]: speaker.get("speaker_index", index)
+                       for index, speaker in enumerate(project["speakers"])}
+    assignment_lines = [{**line, "speaker_index": speaker_indexes.get(line["speakerId"])} for line in lines]
+
     speakers_props: list[dict[str, Any]] = []
     for speaker in project["speakers"]:
         speaker_props: dict[str, Any] = {"id": speaker["id"], "name": speaker["name"], "gender": speaker["gender"]}
@@ -232,10 +260,26 @@ async def _build_input_props(
             avatar_url = await _copy_avatar_into_public(db, project["id"], speaker["id"])
             if avatar_url is not None:
                 speaker_props["avatarUrl"] = avatar_url
+        if "avatarUrl" not in speaker_props and speaker_indexes[speaker["id"]] in cast_by_index:
+            member = cast_by_index[speaker_indexes[speaker["id"]]]
+            assets = await library_service.list_assets(db, member["character_id"])
+            face = next((asset for asset in assets if asset["kind"] == "face"), None)
+            if face:
+                try:
+                    face_path = await asyncio.to_thread(
+                        library_service.resolve_library_content, face["path"], "library/characters",
+                    )
+                except Exception:
+                    face_path = None
+                if face_path:
+                    destination = REMOTION_AVATARS_DIR / f"{speaker['id']}_cast.png"
+                    await asyncio.to_thread(_copy_visual_source, face_path, destination)
+                    speaker_props["avatarUrl"] = f"remotion-render/avatars/{destination.name}"
         speakers_props.append(speaker_props)
 
     chapters_text = youtube_service.real_chapters_from_timestamps(audio_job["timestamps"])
 
+    chapters = _parse_chapters_text(chapters_text)
     props: dict[str, Any] = {
         "episodeId": project["id"],
         "lines": lines,
@@ -247,9 +291,15 @@ async def _build_input_props(
         "title": project["name"],
         "topic": project["topic"],
         "cefrLevel": project["cefr_level"],
-        "chapters": _parse_chapters_text(chapters_text),
+        "chapters": chapters,
         "captionStyle": caption_style,
     }
+    if shot_props:
+        line_shots = project_visuals_service.assign_line_shots(assignment_lines, chapters, scenes, complete_shots)
+        props["visuals"] = {
+            "shots": shot_props,
+            "lineShots": [shot_id if shot_id in shot_props else None for shot_id in line_shots],
+        }
     if learning is not None:
         props["learning"] = {
             "vocab": [

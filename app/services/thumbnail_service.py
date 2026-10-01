@@ -50,6 +50,7 @@ from app.models.thumbnail import (
 from app.services.ai.contracts import GenerationRequest
 from app.services.ai.router import AIRouter, build_ai_router_from_settings
 from app.services.ai.validation import parse_and_validate
+from app.services.visuals import project_visuals_service
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,33 @@ ASPECT_SIZES: dict[ThumbnailAspect, tuple[int, int]] = {
     "16x9": (THUMBNAIL_WIDTH_16X9, THUMBNAIL_HEIGHT_16X9),
     "9x16": (THUMBNAIL_WIDTH_9X16, THUMBNAIL_HEIGHT_9X16),
 }
+
+AI_SCENE_TEMPLATE = ThumbnailTemplateConfig.model_validate({
+    "id": "ai_scene", "display_name": "AI scene", "category": "dark",
+    "description": "Use a generated character scene behind the episode headline.",
+    "base_image": "ai_scene.png",
+    "headline_zone": {"x": 0.05, "y": 0.28, "width": 0.50, "height": 0.32,
+                      "min_font_size": 36, "max_font_size": 92, "align": "left"},
+    "supporting_zone": {"x": 0.05, "y": 0.64, "width": 0.50, "height": 0.16,
+                        "min_font_size": 20, "max_font_size": 36, "align": "left"},
+})
+
+
+async def first_ai_scene_shot(db: aiosqlite.Connection, project_id: str) -> dict | None:
+    """Pick the first safe, complete close duo, single, or other shot."""
+    shots = await project_visuals_service.shot_rows(db, project_id)
+    priority = {"duo_close": 0, "single": 1}
+    for shot in sorted(shots, key=lambda item: priority.get(item["kind"], 2)):
+        if shot["status"] != "complete" or not shot["final_path"]:
+            continue
+        try:
+            source = await asyncio.to_thread(
+                project_visuals_service.resolve_shot_content, project_id, shot["final_path"],
+            )
+        except NotFoundError:
+            continue
+        return {**shot, "source": source}
+    return None
 
 
 def _now() -> str:
@@ -85,6 +113,8 @@ def _load_template_sync(template_name: str) -> ThumbnailTemplateConfig:
 
 async def load_template(template_name: str) -> ThumbnailTemplateConfig:
     """Load and validate one approved thumbnail template without blocking the event loop."""
+    if template_name == "ai_scene":
+        return AI_SCENE_TEMPLATE
     return await asyncio.to_thread(_load_template_sync, template_name)
 
 
@@ -224,12 +254,51 @@ def _draw_fitted_text(
     raise ThumbnailGenerationError("Thumbnail text does not fit within its template zone")
 
 
+def _render_ai_scene(source: Path, suggestion: ThumbnailSuggestion, aspect: ThumbnailAspect) -> Image.Image:
+    size = ASPECT_SIZES[aspect]
+    with Image.open(source) as original:
+        scene = original.convert("RGB")
+    if aspect == "9x16":
+        crop_width = round(scene.height * size[0] / size[1])
+        center_x = round(scene.width * 0.32)
+        left = max(0, min(scene.width - crop_width, center_x - crop_width // 2))
+        scene = scene.crop((left, 0, left + crop_width, scene.height))
+    image = ImageOps.fit(scene, size, method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
+    overlay = Image.new("RGBA", size, (0, 0, 0, 0))
+    shade = ImageDraw.Draw(overlay)
+    for x in range(size[0]):
+        alpha = round(179 * (1 - x / max(1, size[0] - 1)))
+        shade.line((x, 0, x, size[1]), fill=(0, 0, 0, alpha))
+    image = Image.alpha_composite(image.convert("RGBA"), overlay).convert("RGB")
+    draw = ImageDraw.Draw(image)
+    zone = AI_SCENE_TEMPLATE.headline_zone
+    x, y, max_width, max_height = _zone_pixels(zone, size)
+    for font_size in range(zone.max_font_size, zone.min_font_size - 1, -THUMBNAIL_FONT_SIZE_STEP):
+        font = _font(font_size)
+        wrapped = _wrap_text(draw, suggestion.headline, font, max_width)
+        spacing = max(THUMBNAIL_MIN_LINE_SPACING, round(font_size * THUMBNAIL_LINE_SPACING_RATIO))
+        bounds = draw.multiline_textbbox((0, 0), wrapped, font=font, spacing=spacing, stroke_width=3)
+        if bounds[2] - bounds[0] <= max_width and bounds[3] - bounds[1] <= max_height:
+            draw.multiline_text((x, y), wrapped, fill="white", font=font, spacing=spacing,
+                                stroke_width=3, stroke_fill="black")
+            break
+    else:
+        raise ThumbnailGenerationError("Thumbnail text does not fit within its template zone")
+    _draw_fitted_text(draw, suggestion.supporting_text, AI_SCENE_TEMPLATE.supporting_zone, size, "white")
+    return image
+
+
 def _render_image(
     template: ThumbnailTemplateConfig,
     suggestion: ThumbnailSuggestion,
     aspect: ThumbnailAspect,
+    ai_scene_source: Path | None = None,
 ) -> Image.Image:
     """Render one suggestion/template pairing at one target aspect ratio."""
+    if template.id == "ai_scene":
+        if ai_scene_source is None or not ai_scene_source.is_file():
+            raise ThumbnailGenerationError("AI scene shot is unavailable")
+        return _render_ai_scene(ai_scene_source, suggestion, aspect)
     size = ASPECT_SIZES[aspect]
     with Image.open(TEMPLATE_DIR / template.base_image) as source:
         base = ImageOps.fit(source.convert("L"), size, method=Image.Resampling.LANCZOS)
@@ -263,6 +332,7 @@ def _render_record_sync(
     template: ThumbnailTemplateConfig,
     suggestion: ThumbnailSuggestion,
     revision: str,
+    ai_scene_source: Path | None = None,
 ) -> dict:
     """Render and stage one complete four-file thumbnail revision."""
     variant_dir = settings.DATA_DIR / "thumbnails" / project_id / revision
@@ -271,7 +341,7 @@ def _render_record_sync(
     try:
         assets: dict[str, dict[str, str]] = {}
         for aspect in ASPECT_SIZES:
-            image = _render_image(template, suggestion, aspect)
+            image = _render_image(template, suggestion, aspect, ai_scene_source)
             try:
                 png_path = variant_dir / f"{aspect}.png"
                 jpg_path = variant_dir / f"{aspect}.jpg"
@@ -289,6 +359,8 @@ def _render_record_sync(
             "suggestion": suggestion.model_dump(),
             "assets": assets,
         }
+        if ai_scene_source:
+            sidecar["ai_scene_source"] = str(ai_scene_source)
         (variant_dir / "render.json").write_text(
             json.dumps(sidecar, indent=2), encoding="utf-8"
         )
@@ -302,6 +374,7 @@ def _render_batch_sync(
     project_id: str,
     template: ThumbnailTemplateConfig,
     suggestions: list[ThumbnailSuggestion],
+    ai_scene_source: Path | None = None,
 ) -> list[dict]:
     """Render one selected template once per suggestion, producing four derivatives per row."""
     project_dir = settings.DATA_DIR / "thumbnails" / project_id
@@ -318,6 +391,7 @@ def _render_batch_sync(
                     template,
                     suggestion,
                     thumbnail_id,
+                    ai_scene_source,
                 )
             )
     except Exception:
@@ -331,10 +405,11 @@ async def render_batch(
     project_id: str,
     template: ThumbnailTemplateConfig,
     suggestions: list[ThumbnailSuggestion],
+    ai_scene_source: Path | None = None,
 ) -> list[dict]:
     """Render all derivatives in a worker thread and return persistence-ready records."""
     try:
-        return await asyncio.to_thread(_render_batch_sync, project_id, template, suggestions)
+        return await asyncio.to_thread(_render_batch_sync, project_id, template, suggestions, ai_scene_source)
     except ThumbnailGenerationError:
         raise
     except Exception as exc:
@@ -380,6 +455,16 @@ async def render_edited_thumbnail(record: dict, edit: ThumbnailEditRequest) -> d
         }
     )
     revision = str(uuid.uuid4())
+    ai_scene_source = None
+    if template.id == "ai_scene":
+        sidecar_path = Path(record["image_path_16x9"]).parent / "render.json"
+        try:
+            sidecar = await asyncio.to_thread(lambda: json.loads(sidecar_path.read_text("utf-8")))
+            ai_scene_source = await asyncio.to_thread(
+                project_visuals_service.resolve_shot_content, record["project_id"], sidecar["ai_scene_source"],
+            )
+        except (OSError, KeyError, ValueError, NotFoundError) as exc:
+            raise ThumbnailGenerationError("AI scene shot is unavailable") from exc
     try:
         return await asyncio.to_thread(
             _render_record_sync,
@@ -389,6 +474,7 @@ async def render_edited_thumbnail(record: dict, edit: ThumbnailEditRequest) -> d
             template,
             suggestion,
             revision,
+            ai_scene_source,
         )
     except ThumbnailGenerationError:
         raise

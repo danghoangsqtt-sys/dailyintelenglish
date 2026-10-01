@@ -84,7 +84,7 @@ class ThumbnailGenerateRequest(BaseModel):
     @classmethod
     def validate_template_name(cls, value: str) -> str:
         """Reject unknown template identifiers before filesystem access."""
-        if value not in THUMBNAIL_TEMPLATE_IDS:
+        if value not in (*THUMBNAIL_TEMPLATE_IDS, "ai_scene"):
             raise ValueError(f"template_name must be one of: {', '.join(THUMBNAIL_TEMPLATE_IDS)}")
         return value
 
@@ -135,7 +135,7 @@ class ThumbnailTemplateConfig(BaseModel):
     @model_validator(mode="after")
     def validate_asset_identity(self) -> "ThumbnailTemplateConfig":
         """Bind config id to an approved same-directory PNG filename."""
-        if self.id not in THUMBNAIL_TEMPLATE_IDS:
+        if self.id not in (*THUMBNAIL_TEMPLATE_IDS, "ai_scene"):
             raise ValueError(f"unknown thumbnail template id: {self.id}")
         if self.base_image != f"{self.id}.png":
             raise ValueError("base_image must match the template id")

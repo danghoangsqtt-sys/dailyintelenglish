@@ -170,3 +170,33 @@ def resolve_shot_content(project_id: str, path: str) -> Path:
     if not candidate.is_relative_to(root) or not candidate.is_file():
         raise NotFoundError("Shot image not found")
     return candidate
+
+
+def assign_line_shots(lines: list[dict], chapters: list[dict], scenes: list[dict], shots: list[dict]) -> list[str | None]:
+    """Assign a complete scene shot to each audio line using chapter and speaker order."""
+    if not scenes:
+        return [None] * len(lines)
+    complete = [shot for shot in shots if shot.get("status") == "complete" and shot.get("final_path")]
+    positions: dict[int, int] = {}
+    assigned: list[str | None] = []
+    for line in lines:
+        chapter = max((index for index, item in enumerate(chapters)
+                       if item["startSec"] <= line["startSec"]), default=0)
+        position = positions.get(chapter, 0)
+        positions[chapter] = position + 1
+        scene_id = scenes[chapter % len(scenes)]["id"]
+        available = [shot for shot in complete if shot["scene_id"] == scene_id]
+
+        def first(kind: str, speaker: int | None = None) -> dict | None:
+            return next((shot for shot in available if shot["kind"] == kind and
+                         (speaker is None or speaker in (
+                             json.loads(shot["speaker_indexes"])
+                             if isinstance(shot["speaker_indexes"], str) else shot["speaker_indexes"]
+                         ))), None)
+
+        wanted = (first("duo_wide") if position == 0 else
+                  first("duo_close") if position % 4 == 3 else
+                  first("single", line.get("speaker_index")))
+        chosen = wanted or first("single") or first("duo_close") or first("duo_wide")
+        assigned.append((chosen or (available[0] if available else None) or {}).get("id"))
+    return assigned

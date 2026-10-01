@@ -128,7 +128,7 @@ const Api = (() => {
       request(`/api/projects/${projectId}/visuals/shots`, { method: "POST" }),
     regenerateProjectShot: (projectId, shotId) =>
       request(`/api/projects/${projectId}/visuals/shots/${shotId}/regenerate`, { method: "POST" }),
-    listThumbnailTemplates: () => request("/api/thumbnails/templates"),
+    listThumbnailTemplates: (projectId) => request(`/api/thumbnails/templates${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""}`),
     listThumbnails: (projectId) => request(`/api/projects/${projectId}/thumbnails`),
     generateThumbnails: (projectId, templateName, variantCount) =>
       request(`/api/projects/${projectId}/thumbnails/generate`, {

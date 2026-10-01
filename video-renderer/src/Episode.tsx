@@ -1,11 +1,12 @@
 import React, { useMemo } from "react";
-import { AbsoluteFill, Audio, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Audio, Img, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { computeProgressForFrame } from "./chapters";
 import { activeTokenIndex, buildKaraokeTokens } from "./karaoke";
 import { activeSpeakerId } from "./speakers";
 import { activeItemForFrame, attachItemsToLines, type LearningItem } from "./vocab";
 import { BOTTOM_SHADE_STYLE, captionStyleSpec, type CaptionStyle } from "./captionStyle";
-import type { Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker } from "./types";
+import { visualBackgroundForFrame, vocabCardPosition } from "./visuals";
+import type { Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker, EpisodeVisuals } from "./types";
 
 /** Average pixel color of frontend/static/video_backgrounds/midnight.png (measured 2026-09-28
  * via PIL: Image.open(...).convert("RGB").resize((1,1)).getpixel((0,0)) == (14, 15, 21)).
@@ -174,13 +175,13 @@ function vocabCardOpacity(currentTimeSec: number, slotStartSec: number, slotEndS
  * opposite the speaker chips (top-left, 19.4) and the caption band (bottom, 19.1/19.3), so it
  * can never collide with either even when speaker chips wrap to a second row at 5-6 speakers.
  */
-function VocabCard({ item, opacity }: { item: LearningItem; opacity: number }) {
+function VocabCard({ item, opacity, position }: { item: LearningItem; opacity: number; position: "top-right" | "top-center" }) {
   return (
     <div
       style={{
         position: "absolute",
         top: "5%",
-        right: "5%",
+        ...(position === "top-center" ? { left: "50%", transform: "translateX(-50%)" } : { right: "5%" }),
         maxWidth: "32%",
         opacity,
         backgroundColor: "rgba(14, 15, 21, 0.85)",
@@ -288,6 +289,7 @@ export function AudioWindowContent({
   audioDurationSec,
   chapters,
   captionStyle,
+  visuals,
 }: {
   lines: EpisodeLine[];
   speakers: EpisodeSpeaker[];
@@ -297,6 +299,7 @@ export function AudioWindowContent({
   audioDurationSec: number;
   chapters: Chapter[];
   captionStyle: CaptionStyle;
+  visuals: EpisodeVisuals;
 }) {
   const frame = useCurrentFrame();
   const currentTimeSec = frame / fps;
@@ -308,9 +311,18 @@ export function AudioWindowContent({
     [learning, lines]
   );
   const activeLearningItem = activeItemForFrame(currentTimeSec, lines, attachedLearning);
+  const background = visualBackgroundForFrame(frame, fps, lines, visuals);
 
   return (
     <>
+      {background.previous ? (
+        <Img src={staticFile(background.previous)} style={{ position: "absolute", width: "100%", height: "100%",
+          objectFit: "cover", opacity: background.current ? 1 : 1 - background.opacity }} />
+      ) : null}
+      {background.current ? (
+        <Img src={staticFile(background.current)} style={{ position: "absolute", width: "100%", height: "100%",
+          objectFit: "cover", opacity: background.opacity, transform: `scale(${background.scale})` }} />
+      ) : null}
       <Audio src={staticFile(audioPath)} startFrom={0} />
       {captionStyleSpec(captionStyle).bottomShade ? <div style={BOTTOM_SHADE_STYLE} /> : null}
       <ChapterProgressBar frame={frame} fps={fps} audioDurationSec={audioDurationSec} chapters={chapters} />
@@ -319,6 +331,7 @@ export function AudioWindowContent({
         <VocabCard
           item={activeLearningItem.item}
           opacity={vocabCardOpacity(currentTimeSec, activeLearningItem.slotStartSec, activeLearningItem.slotEndSec)}
+          position={vocabCardPosition(background.kind)}
         />
       ) : null}
       {line ? (
@@ -460,6 +473,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
   outroSec,
   outroText,
   captionStyle,
+  visuals,
 }) => {
   // D19.6-a: total video = intro + audio + outro (Option B, extend). `audioDurationSec` is
   // the same "last line's endSec" measure Root.tsx's calculateMetadata already uses for the
@@ -484,6 +498,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
           audioDurationSec={audioDurationSec}
           chapters={chapters}
           captionStyle={captionStyle}
+          visuals={visuals}
         />
       </Sequence>
       <Sequence from={introFrames + audioFrames} durationInFrames={outroFrames} name="Outro">

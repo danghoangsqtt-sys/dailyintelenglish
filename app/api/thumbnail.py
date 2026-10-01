@@ -5,6 +5,7 @@ import time
 import aiosqlite
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
+from app.core.exceptions import ThumbnailGenerationError
 
 from app.db.transactions import read_transaction, write_transaction
 from app.core.responses import ok
@@ -21,10 +22,21 @@ router = APIRouter(tags=["thumbnails"])
 
 
 @router.get("/api/thumbnails/templates")
-async def list_thumbnail_templates() -> dict:
+async def list_thumbnail_templates(
+    project_id: str | None = None, db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
     """List the five validated checked-in thumbnail templates."""
     started_at = time.perf_counter()
     templates = await thumbnail_service.list_templates()
+    if project_id:
+        async with read_transaction():
+            await project_service.get_project(db, project_id)
+            shot = await thumbnail_service.first_ai_scene_shot(db, project_id)
+        if shot:
+            templates.append({
+                **thumbnail_service.AI_SCENE_TEMPLATE.model_dump(),
+                "preview_url": f"/api/projects/{project_id}/visuals/shots/{shot['id']}/content?variant=final",
+            })
     return ok(templates, started_at=started_at)
 
 
@@ -40,12 +52,21 @@ async def generate_thumbnails(
         project = await project_service.get_project(db, project_id)
 
     template = await thumbnail_service.load_template(payload.template_name)
+    ai_scene_source = None
+    if template.id == "ai_scene":
+        async with read_transaction():
+            shot = await thumbnail_service.first_ai_scene_shot(db, project_id)
+        if not shot:
+            raise ThumbnailGenerationError("AI scene shot is unavailable")
+        ai_scene_source = shot["source"]
     suggestions = await thumbnail_service.generate_suggestions(
         project,
         template,
         payload.variant_count,
     )
-    rendered = await thumbnail_service.render_batch(project_id, template, suggestions.variants)
+    rendered = await thumbnail_service.render_batch(
+        project_id, template, suggestions.variants, ai_scene_source,
+    )
     try:
         async with write_transaction(db):
             old_rows = await thumbnail_service.replace_thumbnail_rows(
