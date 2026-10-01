@@ -37,12 +37,17 @@ class ImageJobRunner:
         if self._wake is not None:
             self._wake.set()
 
+    def get_db(self) -> aiosqlite.Connection:
+        return self._db_getter()
+
     async def start(self) -> None:
         async with write_transaction(self._db_getter()):
             await jobs.recover_running(self._db_getter())
+            pending = (await jobs.queue_counts(self._db_getter()))["pending"]
         self._stop = asyncio.Event()
         self._wake = asyncio.Event()
-        self._wake.set()  # drain pending jobs retained across restarts
+        if pending:
+            self._wake.set()  # drain pending jobs retained across restarts
         self._task = asyncio.create_task(self._run())
 
     async def stop(self) -> None:
@@ -74,6 +79,7 @@ class ImageJobRunner:
 
     async def _run(self) -> None:
         assert self._stop is not None
+        await self._wait_for_work()
         while not self._stop.is_set():
             try:
                 if not self._handlers:

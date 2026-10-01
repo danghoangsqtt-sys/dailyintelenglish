@@ -20,6 +20,7 @@ from app.services import learning_pipeline, script_pipeline, settings_service
 from app.services.ai.router import AIRouter, CircuitBreaker, build_ai_router_from_settings
 from app.services.ai_worker import AIWorker
 from app.services.visuals.runner import ImageJobRunner
+from app.services.visuals import pipelines as visuals_pipelines
 
 PROJECT_ROOT = get_project_root()
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
@@ -91,6 +92,9 @@ async def lifespan(app: FastAPI):
 
     ai_worker.register_handler("script", _script_job_handler)
     ai_worker.register_handler("learning", _learning_job_handler)
+    image_job_runner.register_handler("character_candidates", visuals_pipelines.character_candidates)
+    image_job_runner.register_handler("character_sheet", visuals_pipelines.character_sheet)
+    image_job_runner.register_handler("scene_preview", visuals_pipelines.scene_preview)
     await image_job_runner.start()
     await ai_worker.start()
 
