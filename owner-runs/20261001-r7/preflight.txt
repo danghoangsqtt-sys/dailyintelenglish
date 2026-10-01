@@ -1,0 +1,64 @@
+git fetch origin
+From https://github.com/danghoangsqtt-sys/dailyintelenglish
+   a11b755..a6284bc  claude/admiring-knuth-r1d8vc -> origin/claude/admiring-knuth-r1d8vc
+
+git switch claude/admiring-knuth-r1d8vc
+Switched to branch 'claude/admiring-knuth-r1d8vc'
+Your branch is behind 'origin/claude/admiring-knuth-r1d8vc' by 4 commits, and can be fast-forwarded.
+  (use "git pull" to update your local branch)
+
+git pull --ff-only origin claude/admiring-knuth-r1d8vc
+From https://github.com/danghoangsqtt-sys/dailyintelenglish
+ * branch            claude/admiring-knuth-r1d8vc -> FETCH_HEAD
+Updating a11b755..a6284bc
+Fast-forward
+ .viepilot/phases/20-ai-visuals/PHASE-STATE.md      |   3 +-
+ .viepilot/phases/20-ai-visuals/tasks/task-20.2g.md | 136 ++++++++
+ docs/operations/owner-runbook-2026-10-01-r7.md     | 166 ++++++++++
+ docs/operations/phase20-spike-character-v4.md      |  79 +++++
+ scripts/spike_character_v5.py                      | 358 +++++++++++++++++++++
+ 5 files changed, 741 insertions(+), 1 deletion(-)
+ create mode 100644 .viepilot/phases/20-ai-visuals/tasks/task-20.2g.md
+ create mode 100644 docs/operations/owner-runbook-2026-10-01-r7.md
+ create mode 100644 docs/operations/phase20-spike-character-v4.md
+ create mode 100644 scripts/spike_character_v5.py
+
+git rev-parse HEAD
+a6284bcdc1c87e0d7c7b109a1a4dc3a2dc765900
+
+git status --porcelain
+?? docs/operations/gate-b12-evidence/22484f26_ffmpeg.mp4
+?? docs/operations/gate-b12-evidence/22484f26_remotion.mp4
+?? docs/operations/gate-b12-evidence/b330d37f_ffmpeg.mp4
+?? docs/operations/gate-b12-evidence/b330d37f_remotion.mp4
+?? docs/operations/gate-b12-evidence/c08ce057_ffmpeg.mp4
+?? docs/operations/gate-b12-evidence/c08ce057_remotion.mp4
+
+nvidia-smi --query-gpu=name,memory.used,memory.free,memory.total --format=csv
+name, memory.used [MiB], memory.free [MiB], memory.total [MiB]
+NVIDIA GeForce RTX 3060, 450 MiB, 11661 MiB, 12288 MiB
+
+ollama list
+NAME          ID              SIZE      MODIFIED
+qwen3.5:9b    6488c96fa5fa    6.6 GB    12 days ago
+
+Get-PSDrive (Get-Location).Drive.Name | Select-Object Name,Used,Free
+Name        Used         Free
+----        ----         ----
+D    91394637824 202205589504
+
+Get-PSDrive C | Select-Object Name,Used,Free
+Name         Used        Free
+----         ----        ----
+C    190525665280 26290487296
+
+Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize,FreePhysicalMemory,TotalVirtualMemorySize,FreeVirtualMemory
+TotalVisibleMemorySize FreePhysicalMemory TotalVirtualMemorySize FreeVirtualMemory
+---------------------- ------------------ ---------------------- -----------------
+              33289648           16605772               42726832          12036724
+
+netstat -ano | findstr ":8000" | findstr "LISTENING"
+(no output; port 8000 free)
+
+New-Item -ItemType Directory -Force data\tmp\owner_runs_20261001_r7 | Out-Null
+(no output)

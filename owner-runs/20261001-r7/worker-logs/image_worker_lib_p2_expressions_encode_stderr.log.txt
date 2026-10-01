@@ -1,0 +1,23 @@
+image_worker: ready on cuda
+[transformers] `CLIPImageProcessor` requires torchvision (not installed); falling back to `CLIPImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `CLIPImageProcessorPil` directly to silence this warning.
+[transformers] `SiglipImageProcessor` requires torchvision (not installed); falling back to `SiglipImageProcessorPil` for backward compatibility. Install torchvision to use the default backend, or import `SiglipImageProcessorPil` directly to silence this warning.
+Fetching 17 files:   0%|          | 0/17 [00:00<?, ?it/s]Fetching 17 files: 100%|##########| 17/17 [00:00<00:00, 3189.87it/s]
+Fetching 2 files:   0%|          | 0/2 [00:00<?, ?it/s]Fetching 2 files: 100%|##########| 2/2 [00:00<00:00, 835.10it/s]
+D:\DataAdmin\Daily_Intel_English\venv-image\Lib\site-packages\diffusers\utils\deprecation_utils.py:23: FutureWarning: `torch_dtype` is deprecated and will be removed in version 1.0.0. Please use `dtype` instead.
+  deprecate("torch_dtype", "1.0.0", _TORCH_DTYPE_DEPRECATION_MESSAGE)
+Loading pipeline components...:   0%|          | 0/7 [00:00<?, ?it/s]
+Loading weights:   0%|          | 0/517 [00:00<?, ?it/s][A
+Loading weights:   8%|8         | 43/517 [00:00<00:01, 420.79it/s][A
+Loading weights:  17%|#6        | 86/517 [00:00<00:01, 335.30it/s][A
+Loading weights:  23%|##3       | 121/517 [00:00<00:01, 316.39it/s][A
+Loading weights:  32%|###2      | 167/517 [00:00<00:00, 357.53it/s][A
+Loading weights:  39%|###9      | 204/517 [00:00<00:00, 342.76it/s][A
+Loading weights:  49%|####8     | 251/517 [00:00<00:00, 379.13it/s][ALoading weights: 100%|##########| 517/517 [00:00<00:00, 665.17it/s]
+Loading pipeline components...:  43%|####2     | 3/7 [00:01<00:01,  2.77it/s]Loading pipeline components...:  57%|#####7    | 4/7 [00:01<00:00,  3.13it/s]
+Loading weights:   0%|          | 0/196 [00:00<?, ?it/s][A
+Loading weights:  47%|####7     | 93/196 [00:00<00:00, 929.42it/s][ALoading weights: 100%|##########| 196/196 [00:00<00:00, 1869.77it/s]
+Loading pipeline components...:  71%|#######1  | 5/7 [00:01<00:00,  3.60it/s]Loading pipeline components...: 100%|##########| 7/7 [00:01<00:00,  4.53it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/520 [00:00<?, ?it/s]Loading weights:   5%|4         | 25/520 [00:00<00:02, 234.12it/s]Loading weights:  11%|#         | 55/520 [00:00<00:01, 258.64it/s]Loading weights:  16%|#5        | 83/520 [00:00<00:01, 255.36it/s]Loading weights:  21%|##        | 109/520 [00:00<00:01, 243.26it/s]Loading weights:  26%|##5       | 134/520 [00:00<00:01, 237.20it/s]Loading weights:  31%|###1      | 162/520 [00:00<00:01, 250.70it/s]Loading weights:  36%|###6      | 188/520 [00:00<00:01, 228.71it/s]Loading weights:  41%|####      | 212/520 [00:00<00:01, 217.72it/s]Loading weights:  45%|####5     | 235/520 [00:01<00:01, 220.78it/s]Loading weights:  51%|#####     | 263/520 [00:01<00:01, 226.86it/s]Loading weights:  55%|#####5    | 286/520 [00:01<00:01, 227.32it/s]Loading weights:  59%|#####9    | 309/520 [00:01<00:00, 219.47it/s]Loading weights:  65%|######5   | 339/520 [00:01<00:00, 241.90it/s]Loading weights:  70%|#######   | 364/520 [00:01<00:00, 223.50it/s]Loading weights:  74%|#######4  | 387/520 [00:01<00:00, 208.05it/s]Loading weights:  80%|#######9  | 414/520 [00:01<00:00, 222.96it/s]Loading weights:  84%|########4 | 437/520 [00:01<00:00, 216.99it/s]Loading weights:  89%|########9 | 465/520 [00:02<00:00, 207.71it/s]Loading weights:  96%|#########5| 497/520 [00:02<00:00, 217.74it/s]Loading weights: 100%|##########| 520/520 [00:02<00:00, 232.21it/s]
+There are modules in UNet2DConditionModel that should be kept in float32: []. Casting directly with `to()` can lead to inconsistent results; set `torch_dtype` in `from_pretrained()` instead to keep these modules in float32.
+image_worker: stdin closed, exiting

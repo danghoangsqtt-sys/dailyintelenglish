@@ -1,0 +1,2183 @@
+{
+  "run_label": "r7",
+  "styles": {
+    "r3_watercolor": "hand-painted 2D anime illustration, soft watercolor background, warm natural sunlight, gentle pastel palette, cozy whimsical atmosphere, clean line art",
+    "r3_bright": "hand-painted 2D anime illustration, soft watercolor background, warm natural sunlight, bright cheerful colors, clean line art"
+  },
+  "characters": {
+    "female_student": "young Vietnamese woman student, long straight black hair, brown eyes, bright yellow sweater, blue jeans",
+    "male_student": "handsome young Vietnamese man student, short black hair, brown eyes, bright friendly smile, expressive face, bright teal hoodie, dark jeans"
+  },
+  "negative": "3d render, photorealistic, photo, text, letters, logo, watermark, signature, blurry, deformed, bad anatomy, extra fingers, deformed hands, hand on face, hand on cheek, backpack, hat, cap, jacket, coat, scarf",
+  "ip_scale": 0.45,
+  "pose_scale": 1.0,
+  "phases": {
+    "p1_candidates": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 515.7,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "base",
+        "base_repo": "stabilityai/stable-diffusion-xl-base-1.0",
+        "pipeline": "text2img",
+        "encoders": true,
+        "lightning_steps": null,
+        "download_or_cache_sec": 0.893,
+        "load_sec": 5.186,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerDiscreteScheduler",
+        "timestep_spacing": "leading",
+        "vram_allocated_mb": 6724.7,
+        "rss_mb": 955.8
+      },
+      "candidates": [
+        {
+          "style": "r3_watercolor",
+          "character": "female_student",
+          "status": "ok",
+          "wall_time_sec": 21.226,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 65,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_female_student_candidate_1.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1949.8
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "female_student",
+          "status": "ok",
+          "wall_time_sec": 21.587,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 65,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_female_student_candidate_2.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1949.9
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "status": "ok",
+          "wall_time_sec": 21.661,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 72,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_male_student_candidate_1.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1949.9
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "status": "ok",
+          "wall_time_sec": 21.709,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 72,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_male_student_candidate_2.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1950.0
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "status": "ok",
+          "wall_time_sec": 21.773,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 72,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_male_student_candidate_3.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1949.9
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "status": "ok",
+          "wall_time_sec": 21.871,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 72,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_male_student_candidate_4.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1949.9
+        },
+        {
+          "style": "r3_bright",
+          "character": "female_student",
+          "status": "ok",
+          "wall_time_sec": 21.856,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 61,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_female_student_candidate_1.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1949.9
+        },
+        {
+          "style": "r3_bright",
+          "character": "female_student",
+          "status": "ok",
+          "wall_time_sec": 21.785,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 61,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_female_student_candidate_2.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1949.9
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "status": "ok",
+          "wall_time_sec": 21.914,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 68,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_male_student_candidate_1.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1949.9
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "status": "ok",
+          "wall_time_sec": 21.898,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 68,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_male_student_candidate_2.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1949.9
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "status": "ok",
+          "wall_time_sec": 21.901,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 68,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_male_student_candidate_3.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1949.9
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "status": "ok",
+          "wall_time_sec": 21.905,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 68,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_male_student_candidate_4.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 9169.6,
+          "peak_vram_reserved_mb": 11610.0,
+          "rss_mb": 1949.9
+        }
+      ],
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "base",
+        "ip_adapter_loaded": false,
+        "device": "cuda",
+        "vram_allocated_mb": 6733.8,
+        "vram_reserved_mb": 11610.0,
+        "rss_mb": 1945.9
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11688,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 289.5
+    },
+    "p2_expressions_encode": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 515.3,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "base",
+        "base_repo": "stabilityai/stable-diffusion-xl-base-1.0",
+        "pipeline": "text2img",
+        "encoders": true,
+        "lightning_steps": null,
+        "download_or_cache_sec": 0.994,
+        "load_sec": 4.443,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerDiscreteScheduler",
+        "timestep_spacing": "leading",
+        "vram_allocated_mb": 6724.7,
+        "rss_mb": 927.7
+      },
+      "expressions": [
+        {
+          "style": "r3_watercolor",
+          "character": "female_student",
+          "expression": "calm",
+          "status": "ok",
+          "wall_time_sec": 27.523,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 59,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_female_student_expr_calm.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5283.1
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "female_student",
+          "expression": "laughing",
+          "status": "ok",
+          "wall_time_sec": 28.337,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 59,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_female_student_expr_laughing.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5285.4
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "female_student",
+          "expression": "surprised",
+          "status": "ok",
+          "wall_time_sec": 28.36,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 61,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_female_student_expr_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5285.5
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "expression": "calm",
+          "status": "ok",
+          "wall_time_sec": 28.305,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 66,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_male_student_expr_calm.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5285.6
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "expression": "laughing",
+          "status": "ok",
+          "wall_time_sec": 28.328,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 66,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_male_student_expr_laughing.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5285.6
+        },
+        {
+          "style": "r3_watercolor",
+          "character": "male_student",
+          "expression": "surprised",
+          "status": "ok",
+          "wall_time_sec": 28.306,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 68,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_male_student_expr_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5285.6
+        },
+        {
+          "style": "r3_bright",
+          "character": "female_student",
+          "expression": "calm",
+          "status": "ok",
+          "wall_time_sec": 28.305,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 55,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_female_student_expr_calm.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5285.8
+        },
+        {
+          "style": "r3_bright",
+          "character": "female_student",
+          "expression": "laughing",
+          "status": "ok",
+          "wall_time_sec": 28.321,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 55,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_female_student_expr_laughing.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5285.8
+        },
+        {
+          "style": "r3_bright",
+          "character": "female_student",
+          "expression": "surprised",
+          "status": "ok",
+          "wall_time_sec": 28.349,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 57,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_female_student_expr_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5285.8
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "expression": "calm",
+          "status": "ok",
+          "wall_time_sec": 28.348,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 62,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_male_student_expr_calm.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5285.8
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "expression": "laughing",
+          "status": "ok",
+          "wall_time_sec": 28.334,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 62,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_male_student_expr_laughing.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5285.9
+        },
+        {
+          "style": "r3_bright",
+          "character": "male_student",
+          "expression": "surprised",
+          "status": "ok",
+          "wall_time_sec": 28.349,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "text2img",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 64,
+          "prompt_truncated": false,
+          "native_size": [
+            1024,
+            1024
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_male_student_expr_surprised.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 11185.1,
+          "peak_vram_reserved_mb": 13746.0,
+          "rss_mb": 5286.0
+        }
+      ],
+      "encode": {
+        "r3_watercolor/female_student": {
+          "status": "ok",
+          "items": 2,
+          "do_cfg": true,
+          "with_ip": true,
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_female_student_embeds.pt",
+          "wall_time_sec": 0.215
+        },
+        "r3_watercolor/male_student": {
+          "status": "ok",
+          "items": 2,
+          "do_cfg": true,
+          "with_ip": true,
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_watercolor_male_student_embeds.pt",
+          "wall_time_sec": 0.2
+        },
+        "r3_bright/female_student": {
+          "status": "ok",
+          "items": 2,
+          "do_cfg": true,
+          "with_ip": true,
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_female_student_embeds.pt",
+          "wall_time_sec": 0.203
+        },
+        "r3_bright/male_student": {
+          "status": "ok",
+          "items": 2,
+          "do_cfg": true,
+          "with_ip": true,
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\r3_bright_male_student_embeds.pt",
+          "wall_time_sec": 0.207
+        }
+      },
+      "ip_load": {
+        "status": "ok",
+        "load_sec": 4.433,
+        "vram_added_mb": 2014.1,
+        "rss_mb": 2139.3
+      },
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "base",
+        "ip_adapter_loaded": true,
+        "device": "cuda",
+        "vram_allocated_mb": 8747.9,
+        "vram_reserved_mb": 13746.0,
+        "rss_mb": 5275.2
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11698,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 356.7
+    },
+    "p3_scenes": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 515.3,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "base",
+        "base_repo": "stabilityai/stable-diffusion-xl-base-1.0",
+        "pipeline": "controlnet",
+        "encoders": false,
+        "lightning_steps": null,
+        "download_or_cache_sec": 0.86,
+        "load_sec": 8.079,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerDiscreteScheduler",
+        "timestep_spacing": "leading",
+        "vram_allocated_mb": 7596.1,
+        "rss_mb": 926.3
+      },
+      "renders": [
+        {
+          "stem": "r3_watercolor_female_student_library_s1",
+          "action": "waving",
+          "status": "ok",
+          "wall_time_sec": 36.581,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_watercolor_female_student_library_s1_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10929.6,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3526.4
+        },
+        {
+          "stem": "r3_watercolor_female_student_library_s2",
+          "action": "waving",
+          "status": "ok",
+          "wall_time_sec": 37.015,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_watercolor_female_student_library_s2_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3528.7
+        },
+        {
+          "stem": "r3_watercolor_female_student_cafe_s1",
+          "action": "reading",
+          "status": "ok",
+          "wall_time_sec": 37.07,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_watercolor_female_student_cafe_s1_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3528.8
+        },
+        {
+          "stem": "r3_watercolor_female_student_cafe_s2",
+          "action": "reading",
+          "status": "ok",
+          "wall_time_sec": 37.1,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_watercolor_female_student_cafe_s2_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3528.8
+        },
+        {
+          "stem": "r3_watercolor_male_student_classroom_s1",
+          "action": "pointing",
+          "status": "ok",
+          "wall_time_sec": 37.144,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_watercolor_male_student_classroom_s1_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3531.4
+        },
+        {
+          "stem": "r3_watercolor_male_student_classroom_s2",
+          "action": "pointing",
+          "status": "ok",
+          "wall_time_sec": 37.207,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_watercolor_male_student_classroom_s2_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3531.4
+        },
+        {
+          "stem": "r3_watercolor_male_student_cafe_s1",
+          "action": "talking",
+          "status": "ok",
+          "wall_time_sec": 37.258,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_watercolor_male_student_cafe_s1_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3531.4
+        },
+        {
+          "stem": "r3_watercolor_male_student_cafe_s2",
+          "action": "talking",
+          "status": "ok",
+          "wall_time_sec": 37.331,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_watercolor_male_student_cafe_s2_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3531.6
+        },
+        {
+          "stem": "r3_bright_female_student_library_s1",
+          "action": "waving",
+          "status": "ok",
+          "wall_time_sec": 37.324,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_bright_female_student_library_s1_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3534.1
+        },
+        {
+          "stem": "r3_bright_female_student_library_s2",
+          "action": "waving",
+          "status": "ok",
+          "wall_time_sec": 37.35,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_bright_female_student_library_s2_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3534.1
+        },
+        {
+          "stem": "r3_bright_female_student_cafe_s1",
+          "action": "reading",
+          "status": "ok",
+          "wall_time_sec": 37.462,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_bright_female_student_cafe_s1_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3534.1
+        },
+        {
+          "stem": "r3_bright_female_student_cafe_s2",
+          "action": "reading",
+          "status": "ok",
+          "wall_time_sec": 37.627,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_bright_female_student_cafe_s2_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3524.1
+        },
+        {
+          "stem": "r3_bright_male_student_classroom_s1",
+          "action": "pointing",
+          "status": "ok",
+          "wall_time_sec": 37.521,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_bright_male_student_classroom_s1_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3470.4
+        },
+        {
+          "stem": "r3_bright_male_student_classroom_s2",
+          "action": "pointing",
+          "status": "ok",
+          "wall_time_sec": 37.613,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_bright_male_student_classroom_s2_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3470.4
+        },
+        {
+          "stem": "r3_bright_male_student_cafe_s1",
+          "action": "talking",
+          "status": "ok",
+          "wall_time_sec": 37.524,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_bright_male_student_cafe_s1_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3470.4
+        },
+        {
+          "stem": "r3_bright_male_student_cafe_s2",
+          "action": "talking",
+          "status": "ok",
+          "wall_time_sec": 37.514,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "controlnet",
+          "from_embeds": true,
+          "negative_prompt_applied": true,
+          "native_size": [
+            1344,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\render_r3_bright_male_student_cafe_s2_raw.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 10928.2,
+          "peak_vram_reserved_mb": 13216.0,
+          "rss_mb": 3470.4
+        }
+      ],
+      "ip_load": {
+        "status": "ok",
+        "load_sec": 1.236,
+        "vram_added_mb": 808.5,
+        "rss_mb": 905.1
+      },
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "base",
+        "ip_adapter_loaded": true,
+        "device": "cuda",
+        "vram_allocated_mb": 8413.8,
+        "vram_reserved_mb": 13216.0,
+        "rss_mb": 3458.6
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11700,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 614.2
+    },
+    "p4_hands": {
+      "handshake": {
+        "status": "ready",
+        "device": "cuda",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "rss_mb": 515.0,
+        "torch": "2.11.0+cu128",
+        "torch_cuda_build": "12.8",
+        "cuda_available": true
+      },
+      "load": {
+        "status": "ok",
+        "mode": "base",
+        "base_repo": "stabilityai/stable-diffusion-xl-base-1.0",
+        "pipeline": "inpaint",
+        "encoders": true,
+        "lightning_steps": null,
+        "download_or_cache_sec": 0.83,
+        "load_sec": 5.706,
+        "device": "cuda",
+        "dtype": "torch.float16",
+        "watermark_active": false,
+        "scheduler": "EulerDiscreteScheduler",
+        "timestep_spacing": "leading",
+        "vram_allocated_mb": 6724.7,
+        "rss_mb": 926.9
+      },
+      "hands": [
+        {
+          "stem": "r3_watercolor_female_student_library_s1",
+          "hand": "r_wrist",
+          "box": [
+            32,
+            0,
+            370,
+            338
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.187,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_female_student_library_s1_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1658.0
+        },
+        {
+          "stem": "r3_watercolor_female_student_library_s1",
+          "hand": "l_wrist",
+          "box": [
+            370,
+            430,
+            708,
+            768
+          ],
+          "status": "ok",
+          "wall_time_sec": 6.874,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_female_student_library_s1_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1683.8
+        },
+        {
+          "stem": "r3_watercolor_female_student_library_s2",
+          "hand": "r_wrist",
+          "box": [
+            32,
+            0,
+            370,
+            338
+          ],
+          "status": "ok",
+          "wall_time_sec": 6.873,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_female_student_library_s2_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1683.8
+        },
+        {
+          "stem": "r3_watercolor_female_student_library_s2",
+          "hand": "l_wrist",
+          "box": [
+            370,
+            430,
+            708,
+            768
+          ],
+          "status": "ok",
+          "wall_time_sec": 6.87,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_female_student_library_s2_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1683.9
+        },
+        {
+          "stem": "r3_watercolor_female_student_cafe_s1",
+          "hand": "r_wrist",
+          "box": [
+            210,
+            301,
+            548,
+            639
+          ],
+          "status": "ok",
+          "wall_time_sec": 6.88,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_female_student_cafe_s1_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1683.9
+        },
+        {
+          "stem": "r3_watercolor_female_student_cafe_s1",
+          "hand": "l_wrist",
+          "box": [
+            258,
+            301,
+            596,
+            639
+          ],
+          "status": "ok",
+          "wall_time_sec": 6.899,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_female_student_cafe_s1_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1683.9
+        },
+        {
+          "stem": "r3_watercolor_female_student_cafe_s2",
+          "hand": "r_wrist",
+          "box": [
+            210,
+            301,
+            548,
+            639
+          ],
+          "status": "ok",
+          "wall_time_sec": 6.902,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_female_student_cafe_s2_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_watercolor_female_student_cafe_s2",
+          "hand": "l_wrist",
+          "box": [
+            258,
+            301,
+            596,
+            639
+          ],
+          "status": "ok",
+          "wall_time_sec": 6.924,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_female_student_cafe_s2_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_watercolor_male_student_classroom_s1",
+          "hand": "r_wrist",
+          "box": [
+            99,
+            430,
+            437,
+            768
+          ],
+          "status": "ok",
+          "wall_time_sec": 6.94,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_male_student_classroom_s1_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_watercolor_male_student_classroom_s1",
+          "hand": "l_wrist",
+          "box": [
+            657,
+            153,
+            995,
+            491
+          ],
+          "status": "ok",
+          "wall_time_sec": 6.985,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_male_student_classroom_s1_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_watercolor_male_student_classroom_s2",
+          "hand": "r_wrist",
+          "box": [
+            99,
+            430,
+            437,
+            768
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.022,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_male_student_classroom_s2_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_watercolor_male_student_classroom_s2",
+          "hand": "l_wrist",
+          "box": [
+            657,
+            153,
+            995,
+            491
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.032,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_male_student_classroom_s2_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_watercolor_male_student_cafe_s1",
+          "hand": "r_wrist",
+          "box": [
+            0,
+            275,
+            338,
+            613
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.033,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_male_student_cafe_s1_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_watercolor_male_student_cafe_s1",
+          "hand": "l_wrist",
+          "box": [
+            489,
+            275,
+            827,
+            613
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.004,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_male_student_cafe_s1_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_watercolor_male_student_cafe_s2",
+          "hand": "r_wrist",
+          "box": [
+            0,
+            275,
+            338,
+            613
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.042,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_male_student_cafe_s2_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_watercolor_male_student_cafe_s2",
+          "hand": "l_wrist",
+          "box": [
+            489,
+            275,
+            827,
+            613
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.073,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 38,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_watercolor_male_student_cafe_s2_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_female_student_library_s1",
+          "hand": "r_wrist",
+          "box": [
+            32,
+            0,
+            370,
+            338
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.04,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_female_student_library_s1_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_female_student_library_s1",
+          "hand": "l_wrist",
+          "box": [
+            370,
+            430,
+            708,
+            768
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.073,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_female_student_library_s1_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_female_student_library_s2",
+          "hand": "r_wrist",
+          "box": [
+            32,
+            0,
+            370,
+            338
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.088,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_female_student_library_s2_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_female_student_library_s2",
+          "hand": "l_wrist",
+          "box": [
+            370,
+            430,
+            708,
+            768
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.071,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_female_student_library_s2_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_female_student_cafe_s1",
+          "hand": "r_wrist",
+          "box": [
+            210,
+            301,
+            548,
+            639
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.102,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_female_student_cafe_s1_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_female_student_cafe_s1",
+          "hand": "l_wrist",
+          "box": [
+            258,
+            301,
+            596,
+            639
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.071,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_female_student_cafe_s1_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_female_student_cafe_s2",
+          "hand": "r_wrist",
+          "box": [
+            210,
+            301,
+            548,
+            639
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.101,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_female_student_cafe_s2_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_female_student_cafe_s2",
+          "hand": "l_wrist",
+          "box": [
+            258,
+            301,
+            596,
+            639
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.077,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_female_student_cafe_s2_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_male_student_classroom_s1",
+          "hand": "r_wrist",
+          "box": [
+            99,
+            430,
+            437,
+            768
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.099,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_male_student_classroom_s1_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_male_student_classroom_s1",
+          "hand": "l_wrist",
+          "box": [
+            657,
+            153,
+            995,
+            491
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.095,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_male_student_classroom_s1_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_male_student_classroom_s2",
+          "hand": "r_wrist",
+          "box": [
+            99,
+            430,
+            437,
+            768
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.091,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_male_student_classroom_s2_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_male_student_classroom_s2",
+          "hand": "l_wrist",
+          "box": [
+            657,
+            153,
+            995,
+            491
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.103,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_male_student_classroom_s2_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_male_student_cafe_s1",
+          "hand": "r_wrist",
+          "box": [
+            0,
+            275,
+            338,
+            613
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.097,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_male_student_cafe_s1_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_male_student_cafe_s1",
+          "hand": "l_wrist",
+          "box": [
+            489,
+            275,
+            827,
+            613
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.102,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_male_student_cafe_s1_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_male_student_cafe_s2",
+          "hand": "r_wrist",
+          "box": [
+            0,
+            275,
+            338,
+            613
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.098,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_male_student_cafe_s2_r_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        },
+        {
+          "stem": "r3_bright_male_student_cafe_s2",
+          "hand": "l_wrist",
+          "box": [
+            489,
+            275,
+            827,
+            613
+          ],
+          "status": "ok",
+          "wall_time_sec": 7.107,
+          "steps": 30,
+          "guidance_scale": 6.0,
+          "pipeline": "inpaint",
+          "from_embeds": false,
+          "negative_prompt_applied": true,
+          "prompt_tokens": 34,
+          "prompt_truncated": false,
+          "native_size": [
+            768,
+            768
+          ],
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\hand_r3_bright_male_student_cafe_s2_l_wrist_fixed.png",
+          "fitted_path": null,
+          "peak_vram_allocated_mb": 8105.6,
+          "peak_vram_reserved_mb": 8910.0,
+          "rss_mb": 1684.0
+        }
+      ],
+      "stats": {
+        "status": "ok",
+        "loaded": true,
+        "mode": "base",
+        "ip_adapter_loaded": false,
+        "device": "cuda",
+        "vram_allocated_mb": 6733.8,
+        "vram_reserved_mb": 8910.0,
+        "rss_mb": 1677.3
+      },
+      "worker_exit_code": 0,
+      "lease": {
+        "free_mb_before": 11725,
+        "free_mb_after_eviction": null,
+        "evicted_models": [],
+        "min_free_mb": 8192
+      },
+      "wall_sec": 245.1
+    },
+    "p5_frames": {
+      "frames": [
+        {
+          "stem": "r3_watercolor_female_student_library_s1",
+          "source": "render_r3_watercolor_female_student_library_s1_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_watercolor_female_student_library_s1.png"
+        },
+        {
+          "stem": "r3_watercolor_female_student_library_s2",
+          "source": "render_r3_watercolor_female_student_library_s2_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_watercolor_female_student_library_s2.png"
+        },
+        {
+          "stem": "r3_watercolor_female_student_cafe_s1",
+          "source": "render_r3_watercolor_female_student_cafe_s1_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_watercolor_female_student_cafe_s1.png"
+        },
+        {
+          "stem": "r3_watercolor_female_student_cafe_s2",
+          "source": "render_r3_watercolor_female_student_cafe_s2_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_watercolor_female_student_cafe_s2.png"
+        },
+        {
+          "stem": "r3_watercolor_male_student_classroom_s1",
+          "source": "render_r3_watercolor_male_student_classroom_s1_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_watercolor_male_student_classroom_s1.png"
+        },
+        {
+          "stem": "r3_watercolor_male_student_classroom_s2",
+          "source": "render_r3_watercolor_male_student_classroom_s2_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_watercolor_male_student_classroom_s2.png"
+        },
+        {
+          "stem": "r3_watercolor_male_student_cafe_s1",
+          "source": "render_r3_watercolor_male_student_cafe_s1_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_watercolor_male_student_cafe_s1.png"
+        },
+        {
+          "stem": "r3_watercolor_male_student_cafe_s2",
+          "source": "render_r3_watercolor_male_student_cafe_s2_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_watercolor_male_student_cafe_s2.png"
+        },
+        {
+          "stem": "r3_bright_female_student_library_s1",
+          "source": "render_r3_bright_female_student_library_s1_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_bright_female_student_library_s1.png"
+        },
+        {
+          "stem": "r3_bright_female_student_library_s2",
+          "source": "render_r3_bright_female_student_library_s2_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_bright_female_student_library_s2.png"
+        },
+        {
+          "stem": "r3_bright_female_student_cafe_s1",
+          "source": "render_r3_bright_female_student_cafe_s1_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_bright_female_student_cafe_s1.png"
+        },
+        {
+          "stem": "r3_bright_female_student_cafe_s2",
+          "source": "render_r3_bright_female_student_cafe_s2_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_bright_female_student_cafe_s2.png"
+        },
+        {
+          "stem": "r3_bright_male_student_classroom_s1",
+          "source": "render_r3_bright_male_student_classroom_s1_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_bright_male_student_classroom_s1.png"
+        },
+        {
+          "stem": "r3_bright_male_student_classroom_s2",
+          "source": "render_r3_bright_male_student_classroom_s2_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_bright_male_student_classroom_s2.png"
+        },
+        {
+          "stem": "r3_bright_male_student_cafe_s1",
+          "source": "render_r3_bright_male_student_cafe_s1_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_bright_male_student_cafe_s1.png"
+        },
+        {
+          "stem": "r3_bright_male_student_cafe_s2",
+          "source": "render_r3_bright_male_student_cafe_s2_fixed.png",
+          "output_path": "data\\tmp\\phase20g_character_v5\\run_r7\\frame_r3_bright_male_student_cafe_s2.png"
+        }
+      ]
+    }
+  },
+  "gpu_snapshots": [
+    {
+      "label": "start",
+      "at_monotonic_sec": 693337.429,
+      "vram_used_mb": 423,
+      "vram_free_mb": 11688,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p1_candidates_lease_acquired",
+      "at_monotonic_sec": 693337.573,
+      "vram_used_mb": 423,
+      "vram_free_mb": 11688,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p1_candidates_worker_exited",
+      "at_monotonic_sec": 693626.88,
+      "vram_used_mb": 413,
+      "vram_free_mb": 11698,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p2_expressions_encode_lease_acquired",
+      "at_monotonic_sec": 693627.006,
+      "vram_used_mb": 413,
+      "vram_free_mb": 11698,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p2_expressions_encode_worker_exited",
+      "at_monotonic_sec": 693983.585,
+      "vram_used_mb": 411,
+      "vram_free_mb": 11700,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p3_scenes_lease_acquired",
+      "at_monotonic_sec": 693983.738,
+      "vram_used_mb": 411,
+      "vram_free_mb": 11700,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p3_scenes_worker_exited",
+      "at_monotonic_sec": 694597.758,
+      "vram_used_mb": 386,
+      "vram_free_mb": 11725,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p4_hands_lease_acquired",
+      "at_monotonic_sec": 694597.901,
+      "vram_used_mb": 385,
+      "vram_free_mb": 11726,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "p4_hands_worker_exited",
+      "at_monotonic_sec": 694842.909,
+      "vram_used_mb": 388,
+      "vram_free_mb": 11723,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    },
+    {
+      "label": "end",
+      "at_monotonic_sec": 694845.534,
+      "vram_used_mb": 387,
+      "vram_free_mb": 11724,
+      "vram_total_mb": 12288,
+      "ollama_ps": "NAME    ID    SIZE    PROCESSOR    CONTEXT    UNTIL"
+    }
+  ],
+  "sheets": {
+    "candidates": "data\\tmp\\phase20g_character_v5\\run_r7\\sheet_candidates.png",
+    "expressions": "data\\tmp\\phase20g_character_v5\\run_r7\\sheet_expressions.png",
+    "hands": "data\\tmp\\phase20g_character_v5\\run_r7\\sheet_hands.png",
+    "frames": "data\\tmp\\phase20g_character_v5\\run_r7\\sheet_frames.png"
+  },
+  "output_dir": "data\\tmp\\phase20g_character_v5\\run_r7"
+}
