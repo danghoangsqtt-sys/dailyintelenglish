@@ -1,6 +1,7 @@
 # Task 20.2g — Spike v5: quality tuning (hand repair, male redesign, pose-placed one-pass scenes, outfit lock)
 
-- **Status:** design (Coder, doc-first, 2026-10-01). **The real run needs the owner's GPU.**
+- **Status:** implemented (Coder, 2026-10-01). Design commit `743a32f`; see "Implementation
+  notes" at the end. **The real run needs the owner's GPU.**
   It goes through the runbook `docs/operations/owner-runbook-2026-10-01-r7.md`.
 - **Owner:** Coder
 - **Authorization:** owner *"okey chốt phương án của bạn"* ("okay, lock in your plan"),
@@ -102,3 +103,34 @@ The owner's remaining points:
 2. Hands: raw vs repaired — better?
 3. Do the actions and the left-side placement now match the intent?
 4. Is the outfit stable?
+
+## Implementation notes (Coder, 2026-10-01)
+
+- **Framing changed after a visual check.**
+  - The design said head height 0.16 (hips ≈ 0.78). Laid over the r6 scenes, that read
+    clearly smaller than the r6 composition the owner praised.
+  - The implementation uses **0.20** (waist-up):
+    - head top ≈ 0.14, below the chip row;
+    - hips ≈ 0.90;
+    - knees below the frame;
+    - every in-frame joint at x ≤ 0.57 of the width, left of the vocab card at 0.64.
+- **CLIP token counts** (OpenAI BPE):
+  - every positive prompt is 32–70 tokens;
+  - the negative is 54 and the hand negative 17;
+  - all ≤ 75.
+- **Verification (cloud, tiny random SDXL, CPU, `--allow-cpu --skip-ip`).** All 5 phases
+  ok:
+  - 12 candidates;
+  - 12 expressions;
+  - 4 CFG encodes;
+  - 16 ControlNet one-pass renders from embeds (no encoders, negatives applied);
+  - 32 hand repairs (inpaint);
+  - 16 frames;
+  - 4 sheets.
+  - Each repaired render differs from its raw in 12–20% of pixels; only the hand discs
+    changed.
+- **Pure-helper checks for all 4 actions:**
+  - head below the chip row; medium framing; joints left of the vocab card;
+  - square hand crops inside the frame, centred past the wrist;
+  - the paste-back changes pixels only around the hands.
+
