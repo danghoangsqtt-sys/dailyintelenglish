@@ -15,6 +15,31 @@
   - the reference implementations in `scripts/spike_character_v5.py` and
     `scripts/spike_character_v6.py`.
 
+### Errata (PM rulings during implementation; they override the sections they name)
+
+- **E1 (2026-10-01, answers the implementer's 20.3 stop): `encode` returns token metadata.**
+  - **Gap:** §2.2 requires `prompt_tokens` / `prompt_truncated` per image. For shots
+    (`encode` → `generate` with `embeds_path`), the worker computes them in `encode`, but it
+    writes them only into the `.pt` file. A `generate` from embeds has no prompt, so it
+    reports nothing. The app cannot read the `.pt` without torch (§12 rule 5).
+  - **Ruling:** `scripts/image_worker.py` joins the §3 file list for exactly one additive
+    change. The `encode` JSON response gains
+    `"item_tokens": [{"prompt_tokens": int, "prompt_truncated": bool}, ...]`.
+    - It has one entry per request item, in request order.
+    - Each entry is exactly `self._prompt_tokens(item["prompt"])`.
+  - **Constraints:**
+    - Every existing response key is unchanged, `items` included (it stays the count).
+    - The `.pt` payload is unchanged, and so is every other command.
+  - **Engine use:**
+    - For a shot rendered from embeds, `WorkerImageEngine` stores the `item_tokens` entry at
+      that shot's `embeds_index`.
+    - For direct `generate` calls, it keeps the response's own `prompt_tokens`.
+    - `FakeImageEngine` returns the same `item_tokens` shape, computed with the §2.3
+      estimator.
+  - **Tests:** no worker unit test is required, because the main venv has no torch; the PM
+    verifies the worker change on a tiny SDXL at review. Engine tests cover parsing
+    `item_tokens`, including that a truncated item sets the shot's `prompt_truncated`.
+
 ---
 
 ## 0. Owner decisions this feature must honour (2026-09-30 → 2026-10-01)
@@ -210,6 +235,7 @@ frontend/static/js/step5_video.js + frontend/pages/step5_video.html   # "Charact
 frontend/static/js/step6_thumbnail.js (+html)                        # ai_scene option
 video-renderer/src/visuals.ts (+ visuals.test.ts), Episode.tsx, types.ts
 app/services/video_renderer_remotion.py, app/services/thumbnail_service.py (extended)
+scripts/image_worker.py (Errata E1 only: `item_tokens` in the `encode` response)
 ```
 
 - **Engine selection:** setting `DIE_IMAGE_ENGINE` = `worker` (default) | `fake`.
