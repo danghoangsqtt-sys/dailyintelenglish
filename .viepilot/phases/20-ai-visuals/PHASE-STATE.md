@@ -4,7 +4,7 @@
 
 - **Phase:** 20
 - **Slug:** `20-ai-visuals`
-- **Status:** *(Coder update 2026-09-30.)*
+- **Status:** *(Implementer update 2026-10-01: Tasks 20.3–20.8 implemented; PM review and owner Gate B-14 pending.)*
   - 20.1 is implemented and awaiting owner-machine verification and PM acceptance.
   - 20.2 is done (owner PASS, SDXL-Lightning).
   - 20.2b (character-library spike): owner-machine run r3 complete, 7/7 phases ok; report
@@ -52,12 +52,13 @@
 | 20.2g | Spike v5: quality tuning -- male redesign (4 candidates), clean refs, outfit lock, ControlNet-placed one-pass scenes (2 seeds), hand-repair inpaint pass | Coder | **owner verdict 2026-10-01:** male candidate 1 (neat hair), hand repair very good, close-ups preferred, wants two-person conversation shots, slim-fit male outfit, 1 top + 1 bottom solid colours -> Task 20.2h. Card `tasks/task-20.2g.md`; report `docs/operations/phase20-spike-character-v5.md` |
 | 20.2h | Spike v6: two-person conversation shots (masked multi-face IP + two-skeleton OpenPose), close-ups, reference cards, solid-colour 1-top-1-bottom outfits | Coder | **owner verdict 2026-10-01:** duo shots fairly good; **watercolor only** (more stable than bright); lock characters + outfits first; close-ups good but many clothing-colour errors; r7 prettier. **Spikes closed; feature build approved** (owner: "thôi cứ chốt xây tính năng thật đi"). Card `tasks/task-20.2h.md`; report `docs/operations/phase20-spike-character-v6.md` (duo works 4/6 watercolor, bleeds in bright) |
 | 20.2d | Caption style option (outline / box / bottom shade), user-selectable, Remotion path | Coder | **implemented** (design `1642a14`; owner-requested 2026-09-30). Card `tasks/task-20.2d.md`; real Remotion stills `docs/operations/phase20-caption-styles-remotion.png` |
-| **Amendment C** | **Feature build (supersedes Amendment B 20.3+): spec `docs/implementation/phase-20-ai-visuals-feature-spec.md`; implemented by the owner's GPT agent per `docs/operations/gpt-prompt-phase20-ai-visuals.md` on branch `feature/phase20-ai-visuals`; Claude reviews (AR-06). Tasks 20.3 foundation, 20.4 library backend, 20.5 library UI, 20.6 project visuals, 20.7 Remotion + thumbnail, 20.8 smoke + docs, then Gate B-14** | GPT (impl) / Claude (PM review) | **spec written 2026-10-01; implementation not started** |
-| 20.3 | Thumbnail AI path behind opt-in toggle, Pillow templates as fallback | Coder | provisional |
-| 20.4 | Character reference management (reuse `speakers.avatar_image_path` from Task 1.7c) | Coder | provisional |
-| 20.5 | In-video character images (populate Task 19.4's existing avatar slot) | Coder | provisional |
-| 20.6 | Gate B-14 (owner visual sign-off on thumbnails + character consistency) | PM | provisional |
-| 20.7 | Close-out | Coder | provisional |
+| **Amendment C** | **Feature build (supersedes Amendment B 20.3+): spec `docs/implementation/phase-20-ai-visuals-feature-spec.md`, including Errata E1; implemented on `feature/phase20-ai-visuals`; PM reviews under AR-06. Gate B-14 owner visual sign-off follows Task 20.8.** | GPT (impl) / Claude (PM review) | **Implementation complete; PM review and Gate B-14 pending.** |
+| 20.3 | Migration, recipes, geometry, worker/fake engine, jobs, settings and health | GPT | **implemented** (`1257ab0`); handover `tasks/task-20.3.md`; Errata E1 merged and applied |
+| 20.4 | Character and scene library backend, image pipelines and API | GPT | **implemented** (`e4c276d`); handover `tasks/task-20.4.md` |
+| 20.5 | Character Library UI and links | GPT | **implemented** (`0e266b5`); handover `tasks/task-20.5.md` |
+| 20.6 | Project cast, scenes, shots, Step 5 | GPT | **implemented** (`0f08da3`); handover `tasks/task-20.6.md` |
+| 20.7 | Remotion visuals, AI scene thumbnails, Step 6 | GPT | **implemented** (`1f4f5ef`); handover `tasks/task-20.7.md` |
+| 20.8 | End-to-end smoke, Gate B-14 runbook and documentation closeout | GPT | **implemented**; fake and real worker smoke passed; handover `tasks/task-20.8.md`; PM review and owner Gate B-14 remain pending |
 
 ## Owner decisions 2026-09-30 (cloud session; for the PM's decision log)
 
@@ -88,6 +89,13 @@
 - **§3 20.1:** see Part 3 of the Task 20.1 card (R1–R6).
 
 ## Evidence log
+
+- **Feature build 20.3–20.8 (2026-10-01, implementer branch):** per-task handovers under
+  `tasks/task-20.3.md` through `tasks/task-20.8.md`; final full suite after 20.8 was
+  1268 passed, with clean TypeScript, Vitest and Ruff. The isolated fake and real smoke
+  each produced eight complete shots and three Remotion stills. The real RTX 3060 shot
+  batch took 598.32 s; its stills took 10.42 s. The real `duo_close` still has an extra
+  person and outfit-color drift; owner visual sign-off is pending under Gate B-14.
 
 - **20.1** (2026-09-30, Coder): design `b328fd3`, implementation `6b1e7f7`, both in the
   cloud session. Evidence is in `tasks/task-20.1.md` Part 2. The owner-machine evidence

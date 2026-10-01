@@ -1,0 +1,214 @@
+r"""Isolated Phase 20 end-to-end smoke through the API and Remotion still renderer.
+
+Usage:
+    venv\Scripts\python scripts\smoke_ai_visuals.py --fake
+    venv\Scripts\python scripts\smoke_ai_visuals.py --output-dir data\tmp\gate-b14
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+import aiosqlite
+from fastapi.testclient import TestClient
+from PIL import Image
+from pydub.generators import Sine
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from app.core.config import settings  # noqa: E402
+from app.main import app  # noqa: E402
+from app.services import video_renderer_remotion  # noqa: E402
+
+
+def api(client: TestClient, method: str, path: str, body: object | None = None):
+    response = client.request(method, path, json=body)
+    if response.status_code != 200:
+        raise RuntimeError(f"{method} {path}: HTTP {response.status_code}: {response.text[:500]}")
+    payload = response.json()
+    if not payload.get("success"):
+        raise RuntimeError(f"{method} {path}: {payload}")
+    return payload["data"]
+
+
+def wait_job(client: TestClient, job: dict, label: str, timeout: float = 7200) -> dict:
+    deadline = time.monotonic() + timeout
+    last_stage = None
+    while time.monotonic() < deadline:
+        current = api(client, "GET", f"/api/visuals/jobs/{job['id']}")
+        stage = (current["status"], current["stage"], current["progress"])
+        if stage != last_stage:
+            print(f"{label}: {stage[0]} — {stage[1]} ({stage[2]}%)", flush=True)
+            last_stage = stage
+        if current["status"] == "complete":
+            return current
+        if current["status"] in ("error", "cancelled"):
+            raise RuntimeError(f"{label}: {current['status']}: {current['error']}")
+        time.sleep(0.5)
+    raise TimeoutError(f"{label} exceeded {timeout:g} seconds")
+
+
+def create_locked_character(client: TestClient, name: str, gender: str, top_color: str) -> str:
+    descriptor = {
+        "name": name, "gender": gender, "age_group": "young", "ethnicity": "Vietnamese",
+        "role": "English teacher" if gender == "female" else "university student",
+        "hair": "long black hair" if gender == "female" else "short black hair",
+        "eyes": "brown eyes", "top_color": top_color,
+        "top_item": "sweater" if gender == "female" else "slim-fit shirt",
+        "bottom_color": "navy blue" if gender == "female" else "black",
+        "bottom_item": "jeans" if gender == "female" else "slim trousers",
+    }
+    character = api(client, "POST", "/api/visuals/characters", descriptor)
+    character_id = character["id"]
+    base = f"/api/visuals/characters/{character_id}"
+    wait_job(client, api(client, "POST", f"{base}/candidates"), f"{name} candidates")
+    character = api(client, "GET", base)
+    candidate = next(asset for asset in character["assets"] if asset["kind"] == "candidate")
+    api(client, "PUT", f"{base}/reference", {"asset_id": candidate["id"]})
+    wait_job(client, api(client, "POST", f"{base}/sheet", []), f"{name} sheet")
+    character = api(client, "GET", base)
+    sheet = [asset for asset in character["assets"] if asset["kind"] in
+             ("full_body", "portrait_calm", "portrait_smile", "portrait_surprised")]
+    if len(sheet) != 4:
+        raise RuntimeError(f"{name}: expected four sheet assets, got {len(sheet)}")
+    for asset in sheet:
+        api(client, "PUT", f"{base}/assets/{asset['id']}/approve", {"approved": True})
+    locked = api(client, "POST", f"{base}/lock")
+    if locked["status"] != "locked":
+        raise RuntimeError(f"{name}: lock did not complete")
+    return character_id
+
+
+async def build_props(project: dict, audio_job: dict) -> dict:
+    async with aiosqlite.connect(settings.db_path) as db:
+        db.row_factory = aiosqlite.Row
+        return await video_renderer_remotion._build_input_props(db, project, audio_job, None)
+
+
+def render_stills(project: dict, shots: list[dict], work_dir: Path, output_dir: Path) -> list[str]:
+    audio_source = work_dir / "smoke.mp3"
+    Sine(440).to_audio_segment(duration=4000).apply_gain(-25).export(
+        str(audio_source), format="mp3", bitrate="128k",
+    )
+    entries = []
+    for index in range(4):
+        speaker = project["speakers"][index % 2]
+        entries.append({"start_sec": float(index), "end_sec": float(index + 1),
+                        "label": speaker["name"], "speaker_id": speaker["id"], "text": "A short lesson line."})
+    audio_job = {"mp3_path": str(audio_source), "timestamps": entries, "word_timestamps": []}
+    props = asyncio.run(build_props(project, audio_job))
+    if len(props.get("visuals", {}).get("shots", {})) != len(shots):
+        raise RuntimeError("Remotion props did not include every complete shot")
+    video_renderer_remotion._copy_audio_into_public(project["id"], str(audio_source))
+    npx = shutil.which("npx.cmd") or shutil.which("npx") or "npx"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stills = []
+    try:
+        for kind in ("single", "duo_close", "duo_wide"):
+            shot = next(shot for shot in shots if shot["kind"] == kind)
+            shot_props = {**props, "visuals": {
+                **props["visuals"], "lineShots": [shot["id"]] * len(entries),
+            }}
+            props_path = work_dir / f"{kind}_props.json"
+            props_path.write_text(json.dumps(shot_props), encoding="utf-8")
+            output = output_dir / f"{kind}.png"
+            command = [npx, "remotion", "still", "src/index.ts", "StillFrame", str(output),
+                       f"--props={props_path}", "--frame=15"]
+            print(f"Remotion still: {kind}", flush=True)
+            result = subprocess.run(command, cwd=video_renderer_remotion.VIDEO_RENDERER_DIR,
+                                    capture_output=True, text=True, timeout=300)
+            if result.returncode != 0:
+                raise RuntimeError(f"Remotion {kind} failed: {result.stderr[-1000:]}")
+            with Image.open(output) as image:
+                if image.size != (1280, 720):
+                    raise RuntimeError(f"Remotion {kind} still has wrong dimensions: {image.size}")
+            stills.append(str(output))
+    finally:
+        public_visuals = video_renderer_remotion.REMOTION_VISUALS_DIR.resolve()
+        project_visuals = (public_visuals / project["id"]).resolve()
+        if project_visuals.is_relative_to(public_visuals) and project_visuals != public_visuals:
+            shutil.rmtree(project_visuals, ignore_errors=True)
+        (video_renderer_remotion.REMOTION_AUDIO_DIR / f"{project['id']}.mp3").unlink(missing_ok=True)
+        for speaker in project["speakers"]:
+            (video_renderer_remotion.REMOTION_AVATARS_DIR / f"{speaker['id']}_cast.png").unlink(missing_ok=True)
+    return stills
+
+
+def smoke(fake: bool, output_root: Path | None) -> dict:
+    with tempfile.TemporaryDirectory(prefix="die-ai-visuals-") as temporary:
+        work_dir = Path(temporary)
+        data_dir = work_dir / "data"
+        os.environ["DIE_DATA_DIR"] = str(data_dir)
+        os.environ["DIE_IMAGE_ENGINE"] = "fake" if fake else "worker"
+        os.environ["DIE_AI_VISUALS_ENABLED"] = "true"
+        settings.DATA_DIR = data_dir
+        settings.IMAGE_ENGINE = "fake" if fake else "worker"
+        settings.AI_VISUALS_ENABLED = True
+        settings.VISUALS_DUO_REFINE = True
+        with TestClient(app) as client:
+            first = create_locked_character(client, "Nova", "female", "yellow")
+            second = create_locked_character(client, "Mira", "male", "green")
+            project = api(client, "POST", "/api/projects", {
+                "name": "Conversation lesson", "topic": "Meeting at a cafe", "cefr_level": "B1",
+                "duration_minutes": 2, "num_speakers": 2, "genre": "small_talk", "accent": "american",
+                "speakers": [{"name": "Nova", "gender": "female", "accent": "american"},
+                             {"name": "Mira", "gender": "male", "accent": "american"}],
+            })
+            project_id = project["id"]
+            base = f"/api/projects/{project_id}/visuals"
+            api(client, "PUT", f"{base}/cast", [
+                {"speaker_index": 0, "character_id": first},
+                {"speaker_index": 1, "character_id": second},
+            ])
+            scenes = api(client, "GET", "/api/visuals/scenes")[:2]
+            api(client, "PUT", f"{base}/scenes", [scene["id"] for scene in scenes])
+            shots_started = time.monotonic()
+            wait_job(client, api(client, "POST", f"{base}/shots"), "project shots")
+            shots_seconds = round(time.monotonic() - shots_started, 2)
+            shots = api(client, "GET", base)["shots"]
+            if len(shots) != 8 or {shot["kind"] for shot in shots} != {"single", "duo_close", "duo_wide"}:
+                raise RuntimeError(f"Expected eight shots of all three kinds, got {shots}")
+            if any(shot["status"] != "complete" or not shot["final_url"] for shot in shots):
+                raise RuntimeError("A project shot is incomplete")
+            if output_root:
+                stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                output_dir = output_root.resolve() / f"{stamp}-{project_id[:8]}"
+            else:
+                output_dir = work_dir / "stills"
+            stills_started = time.monotonic()
+            stills = render_stills(project, shots, work_dir, output_dir)
+            stills_seconds = round(time.monotonic() - stills_started, 2)
+            result = {"engine": settings.IMAGE_ENGINE, "project_id": project_id,
+                      "characters": [first, second], "scenes": [scene["id"] for scene in scenes],
+                      "shot_count": len(shots), "shot_generation_seconds": shots_seconds,
+                      "three_stills_seconds": stills_seconds, "stills": stills}
+            print(json.dumps(result, indent=2), flush=True)
+            return result
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--fake", action="store_true", help="Use deterministic images without GPU")
+    parser.add_argument("--output-dir", type=Path, help="Keep the three Remotion stills in this directory")
+    args = parser.parse_args()
+    try:
+        smoke(args.fake, args.output_dir)
+    except Exception as exc:
+        print(f"AI visuals smoke failed: {exc}", file=sys.stderr, flush=True)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
