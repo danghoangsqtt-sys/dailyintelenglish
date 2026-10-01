@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Character Library — Daily Intel English Studio</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    .library-main { width: min(1160px, calc(100% - 32px)); margin: 32px auto 80px; }
+    .library-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .library-heading h1 { margin: 0; }
+    .library-heading p, .library-hint { color: var(--muted); }
+    .library-tabs { display: flex; gap: 8px; margin: 24px 0; }
+    .library-layout { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 20px; }
+    .library-list { display: grid; gap: 10px; align-content: start; }
+    .library-card { display: flex; width: 100%; align-items: center; gap: 12px; padding: 12px; text-align: left;
+      background: var(--surface); color: var(--text); cursor: pointer; }
+    .library-card[aria-current="true"] { border-color: var(--accent); }
+    .library-face, .library-placeholder { width: 56px; height: 56px; flex: none; border-radius: 50%;
+      object-fit: cover; background: var(--surface-2); }
+    .library-placeholder { display: grid; place-items: center; color: var(--muted); }
+    .library-card-name { font-weight: 700; display: block; }
+    .library-badge { display: inline-block; margin-top: 4px; padding: 3px 8px; border-radius: 999px;
+      background: var(--accent-soft); color: var(--accent); font-size: 12px; }
+    .library-editor { padding: 22px; min-width: 0; }
+    .library-editor h2 { margin: 0 0 18px; }
+    .library-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .library-fields label { display: grid; gap: 5px; font-size: 13px; font-weight: 600; }
+    .library-fields input, .library-fields select { min-width: 0; width: 100%; padding: 9px 10px;
+      border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+    .library-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+    .library-steps { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 18px; padding: 0; list-style: none; }
+    .library-steps li { padding: 6px 10px; border-radius: 99px; background: var(--surface-2); font-size: 12px; }
+    .library-stage { margin: 22px 0; }
+    .library-stage h3 { margin: 0 0 12px; }
+    .library-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .library-asset { padding: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
+    .library-asset img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; }
+    .library-asset.full-body img { aspect-ratio: 832 / 1216; }
+    .library-asset button { margin-top: 8px; }
+    .library-asset .selected { border-color: var(--accent); }
+    .library-truncation { color: var(--danger); font-size: 12px; }
+    .library-progress { min-height: 24px; margin: 16px 0; }
+    .library-scene-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+    .library-scene { padding: 14px; }
+    .library-scene img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 7px; }
+    .library-scene h3 { margin: 10px 0 5px; }
+    .library-scene p { margin: 0; color: var(--muted); }
+    .library-message { margin: 12px 0; padding: 10px 14px; border-radius: 8px; background: var(--surface-2); }
+    .library-message[hidden] { display: none; }
+    .library-message.error { color: var(--danger); }
+    @media (max-width: 720px) {
+      .library-layout { grid-template-columns: 1fr; }
+      .library-fields { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">D</span><span>Daily Intel English Studio</span></a>
+    <div class="actions">
+      <a class="btn btn-ghost btn-sm" href="/">← Dashboard</a>
+      <button id="theme-toggle" class="icon-toggle" type="button" aria-label="Toggle dark/light mode">☀️</button>
+    </div>
+  </header>
+  <main class="library-main">
+    <div class="library-heading">
+      <div><h1>Character Library</h1><p>Build and lock your original characters before using them in project scenes.</p></div>
+      <button id="new-character" class="btn btn-primary" type="button">New character</button>
+    </div>
+    <div id="library-message" class="library-message" role="status" hidden></div>
+    <div id="library-progress" class="library-progress" aria-live="polite"></div>
+    <div class="library-tabs" role="tablist" aria-label="Library sections">
+      <button id="characters-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="true">Characters</button>
+      <button id="scenes-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="false">Scenes</button>
+    </div>
+    <section id="characters-panel" role="tabpanel" aria-labelledby="characters-tab">
+      <div class="library-layout">
+        <div id="character-list" class="library-list" aria-label="Characters"></div>
+        <div class="card library-editor">
+          <h2 id="editor-title">New character</h2>
+          <form id="character-form">
+            <div class="library-fields">
+              <label>Name<input name="name" maxlength="40" required /></label>
+              <label>Gender<select name="gender" required></select></label>
+              <label>Age group<select name="age_group" required></select></label>
+              <label>Ethnicity<input name="ethnicity" maxlength="40" value="Vietnamese" required /></label>
+              <label>Role<input name="role" maxlength="40" placeholder="English teacher" required /></label>
+              <label>Hair<input name="hair" maxlength="40" placeholder="long black hair" required /></label>
+              <label>Eyes<input name="eyes" maxlength="40" placeholder="brown eyes" required /></label>
+              <label>Top colour<select name="top_color" required></select></label>
+              <label>Top item<select name="top_item" required></select></label>
+              <label>Bottom colour<select name="bottom_color" required></select></label>
+              <label>Bottom item<select name="bottom_item" required></select></label>
+            </div>
+            <p class="library-hint">One solid-colour top and one different-colour bottom. No patterns or layers.</p>
+            <div class="library-actions">
+              <button id="save-character" class="btn btn-primary" type="submit">Create character</button>
+              <button id="delete-character" class="btn btn-ghost" type="button" hidden>Delete</button>
+            </div>
+          </form>
+          <div id="character-workflow" hidden>
+            <ol class="library-steps" aria-label="Character steps">
+              <li>1. Candidates</li><li>2. Sheet</li><li>3. Lock</li><li>4. Locked</li>
+            </ol>
+            <section class="library-stage" aria-labelledby="candidates-heading">
+              <h3 id="candidates-heading">Candidates</h3>
+              <button id="generate-candidates" class="btn btn-ghost" type="button">Generate 4</button>
+              <p class="library-hint">Choose the portrait that best represents this character.</p>
+              <div id="candidate-grid" class="library-grid"></div>
+            </section>
+            <section class="library-stage" aria-labelledby="sheet-heading">
+              <h3 id="sheet-heading">Character sheet</h3>
+              <button id="generate-sheet" class="btn btn-ghost" type="button">Generate sheet</button>
+              <div id="sheet-grid" class="library-grid"></div>
+            </section>
+            <section class="library-stage" aria-labelledby="lock-heading">
+              <h3 id="lock-heading">Lock character</h3>
+              <p id="lock-summary" class="library-hint"></p>
+              <div class="library-actions">
+                <button id="lock-character" class="btn btn-primary" type="button">Lock character</button>
+                <button id="unlock-character" class="btn btn-ghost" type="button" hidden>Unlock</button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="scenes-panel" role="tabpanel" aria-labelledby="scenes-tab" hidden>
+      <div class="card library-editor">
+        <h2 id="scene-editor-title">New scene</h2>
+        <form id="scene-form" class="library-fields">
+          <label>Scene name<input name="name" required /></label>
+          <label>Place phrase<input name="place" maxlength="40" placeholder="a bright home kitchen" required /></label>
+          <label>Staging<select name="staging"><option value="standing">Standing</option><option value="seated">Seated</option></select></label>
+          <div class="library-actions"><button id="save-scene" class="btn btn-primary" type="submit">Add scene</button><button id="cancel-scene-edit" class="btn btn-ghost" type="button" hidden>Cancel edit</button></div>
+        </form>
+        <p class="library-hint">The place phrase uses up to five words. Staging controls the wide conversation pose.</p>
+      </div>
+      <div id="scene-grid" class="library-scene-grid" aria-label="Scenes"></div>
+    </section>
+  </main>
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/generation_status.js"></script>
+  <script src="/static/js/characters.js"></script>
+</body>
+</html>

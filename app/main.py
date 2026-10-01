@@ -212,6 +212,12 @@ async def music_library() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "pages" / "music_library.html")
 
 
+@app.get("/characters")
+async def character_library() -> FileResponse:
+    """Serve the global Character Library."""
+    return FileResponse(FRONTEND_DIR / "pages" / "characters.html")
+
+
 @app.get("/settings")
 async def settings_page() -> FileResponse:
     """Serve the app-level Settings page (Task 12.1 — Gemini API key)."""
