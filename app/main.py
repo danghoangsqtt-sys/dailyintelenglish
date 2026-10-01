@@ -95,6 +95,8 @@ async def lifespan(app: FastAPI):
     image_job_runner.register_handler("character_candidates", visuals_pipelines.character_candidates)
     image_job_runner.register_handler("character_sheet", visuals_pipelines.character_sheet)
     image_job_runner.register_handler("scene_preview", visuals_pipelines.scene_preview)
+    image_job_runner.register_handler("project_shots", visuals_pipelines.project_shots)
+    image_job_runner.register_handler("shot_regenerate", visuals_pipelines.shot_regenerate)
     await image_job_runner.start()
     await ai_worker.start()
 
@@ -154,6 +156,7 @@ app.include_router(settings_api.router)
 app.include_router(ai_jobs.router)
 app.include_router(ai_jobs.health_router)
 app.include_router(visuals.router)
+app.include_router(visuals.project_router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
 

@@ -129,3 +129,8 @@ class ApprovalInput(BaseModel):
 
 class SheetItemInput(BaseModel):
     kind: Literal["full_body", "portrait_calm", "portrait_smile", "portrait_surprised"]
+
+
+class CastMemberInput(BaseModel):
+    speaker_index: int = Field(ge=0)
+    character_id: str

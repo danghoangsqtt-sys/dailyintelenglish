@@ -2,25 +2,29 @@
 
 import asyncio
 import time
+from typing import Literal
 
 import aiosqlite
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
-from app.core.exceptions import ConflictError, ValidationError
+from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.core.responses import ok
 from app.db.database import get_db
 from app.db.transactions import read_transaction, write_transaction
 from app.models.visuals import (
     AGE_GROUPS, BOTTOMS, COLORS, GENDERS, TOPS, ApprovalInput, CharacterInput,
-    CharacterPatch, ReferenceInput, SceneInput, ScenePatch, SheetItemInput,
+    CastMemberInput, CharacterPatch, ReferenceInput, SceneInput, ScenePatch, SheetItemInput,
 )
+from app.services import project_service
 from app.services.visuals import jobs
 from app.services.visuals import library_service as library
+from app.services.visuals import project_visuals_service as project_visuals
 from app.services.visuals.engine import IMAGE_PYTHON, require_generation
 
 router = APIRouter(prefix="/api/visuals", tags=["visuals"])
+project_router = APIRouter(prefix="/api/projects/{project_id}/visuals", tags=["visuals"])
 
 
 @router.get("/health")
@@ -195,8 +199,6 @@ async def scene_preview_content(scene_id: str, db: aiosqlite.Connection = Depend
     async with read_transaction():
         scene = await library.get_scene_row(db, scene_id)
     if not scene["preview_path"]:
-        from app.core.exceptions import NotFoundError
-
         raise NotFoundError("Scene preview not found")
     path = await asyncio.to_thread(library.resolve_library_content, scene["preview_path"], "library/scenes")
     return FileResponse(path, media_type="image/png")
@@ -214,3 +216,62 @@ async def cancel_image_job(job_id: str, db: aiosqlite.Connection = Depends(get_d
     async with write_transaction(db):
         job = await jobs.request_cancel(db, job_id)
     return ok(job)
+
+
+@project_router.get("")
+async def get_project_visuals(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with read_transaction():
+        result = await project_visuals.project_visuals(db, project_id)
+    return ok(result)
+
+
+@project_router.put("/cast")
+async def set_project_cast(
+    project_id: str, body: list[CastMemberInput], db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    async with write_transaction(db):
+        result = await project_visuals.set_cast(db, project_id, [member.model_dump() for member in body])
+    return ok(result)
+
+
+@project_router.put("/scenes")
+async def set_project_scenes(
+    project_id: str, body: list[str], db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    async with write_transaction(db):
+        result = await project_visuals.set_scenes(db, project_id, body)
+    return ok(result)
+
+
+@project_router.post("/shots")
+async def generate_project_shots(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with read_transaction():
+        await project_service.get_project(db, project_id)
+        cast = await project_visuals.cast_rows(db, project_id)
+        scenes = await project_visuals.scene_rows(db, project_id)
+    if not cast or not scenes:
+        raise ValidationError("Assign at least one character and one scene before generating shots")
+    return await _enqueue(db, "project_shots", project_id)
+
+
+@project_router.post("/shots/{shot_id}/regenerate")
+async def regenerate_project_shot(
+    project_id: str, shot_id: str, db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    async with read_transaction():
+        await project_visuals.get_shot_row(db, project_id, shot_id)
+    return await _enqueue(db, "shot_regenerate", shot_id, {"project_id": project_id})
+
+
+@project_router.get("/shots/{shot_id}/content")
+async def project_shot_content(
+    project_id: str, shot_id: str, variant: Literal["final", "raw"] = "final",
+    db: aiosqlite.Connection = Depends(get_db),
+) -> FileResponse:
+    async with read_transaction():
+        shot = await project_visuals.get_shot_row(db, project_id, shot_id)
+    stored = shot[f"{variant}_path"]
+    if not stored:
+        raise NotFoundError("Shot image not found")
+    path = await asyncio.to_thread(project_visuals.resolve_shot_content, project_id, stored)
+    return FileResponse(path, media_type="image/png")

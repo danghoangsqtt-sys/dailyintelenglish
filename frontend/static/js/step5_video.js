@@ -61,6 +61,15 @@
     timelineError: "",
     isGenerating: false,
     avatarBusy: {},
+    visuals: null,
+    visualCharacters: [],
+    visualScenes: [],
+    visualHealth: null,
+    visualSceneSelection: [],
+    visualBusy: false,
+    visualProgress: null,
+    visualError: "",
+    shotVariants: {},
   };
 
   const byId = (id) => document.getElementById(id);
@@ -352,6 +361,251 @@
     } finally {
       delete state.avatarBusy[speakerId];
       renderAvatars();
+    }
+  }
+
+  function visualGenerationAllowed() {
+    return Boolean(state.visualHealth?.enabled && state.visualHealth?.venv_image_present);
+  }
+
+  function visualGenerationHint() {
+    if (!state.visualHealth?.enabled) return "AI visuals generation is disabled.";
+    if (!state.visualHealth?.venv_image_present) return "The local image environment is missing.";
+    return "";
+  }
+
+  function visualWarning(text) {
+    state.visualError = text || "";
+    byId("visual-warnings").textContent = state.visualError || state.visuals?.warnings?.join(" ") || "";
+  }
+
+  function renderVisualCast() {
+    const grid = byId("visual-cast-grid");
+    grid.replaceChildren();
+    (state.project?.speakers || []).forEach((speaker) => {
+      const card = document.createElement("div");
+      card.className = "card visual-cast-card";
+      const label = document.createElement("label");
+      const select = document.createElement("select");
+      select.id = `visual-speaker-${speaker.speaker_index}`;
+      label.htmlFor = select.id;
+      label.textContent = speaker.name;
+      const none = document.createElement("option");
+      none.value = "";
+      none.textContent = "— none —";
+      select.append(none);
+      state.visualCharacters.filter((character) => character.status === "locked").forEach((character) => {
+        const option = document.createElement("option");
+        option.value = character.id;
+        option.textContent = character.name;
+        select.append(option);
+      });
+      const castMember = state.visuals?.cast.find((member) => member.speaker_index === speaker.speaker_index);
+      select.value = castMember?.character_id || "";
+      select.disabled = state.visualBusy;
+      select.addEventListener("change", async () => {
+        const members = state.visuals.cast
+          .filter((member) => member.speaker_index !== speaker.speaker_index)
+          .map((member) => ({ speaker_index: member.speaker_index, character_id: member.character_id }));
+        if (select.value) members.push({ speaker_index: speaker.speaker_index, character_id: select.value });
+        members.sort((a, b) => a.speaker_index - b.speaker_index);
+        state.visualBusy = true;
+        grid.querySelectorAll("select").forEach((control) => { control.disabled = true; });
+        try {
+          state.visuals = await Api.setProjectCast(state.projectId, members);
+          state.visualError = "";
+          renderProjectVisuals();
+        } catch (error) {
+          visualWarning(error.message || "Could not save the cast.");
+        } finally {
+          state.visualBusy = false;
+          renderProjectVisuals();
+        }
+      });
+      card.append(label, select);
+      const chosen = state.visualCharacters.find((character) => character.id === select.value);
+      if (chosen?.face_url) {
+        const image = document.createElement("img");
+        image.className = "visual-cast-face";
+        image.src = chosen.face_url;
+        image.alt = `${chosen.name} face`;
+        card.append(image);
+      }
+      grid.append(card);
+    });
+  }
+
+  function renderVisualScenes() {
+    const choices = byId("visual-scene-options");
+    choices.replaceChildren();
+    state.visualScenes.forEach((scene) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn btn-ghost btn-sm";
+      button.textContent = scene.name;
+      button.setAttribute("aria-pressed", String(state.visualSceneSelection.includes(scene.id)));
+      button.disabled = state.visualBusy;
+      button.addEventListener("click", async () => {
+        const selected = [...state.visualSceneSelection];
+        if (selected.includes(scene.id)) {
+          if (selected.length === 1) {
+            visualWarning("Choose at least one scene.");
+            return;
+          }
+          selected.splice(selected.indexOf(scene.id), 1);
+        } else if (selected.length < 3) {
+          selected.push(scene.id);
+        } else {
+          visualWarning("Choose up to three scenes.");
+          return;
+        }
+        state.visualBusy = true;
+        choices.querySelectorAll("button").forEach((control) => { control.disabled = true; });
+        try {
+          state.visuals = await Api.setProjectScenes(state.projectId, selected);
+          state.visualSceneSelection = selected;
+          state.visualError = "";
+        } catch (error) {
+          visualWarning(error.message || "Could not save scenes.");
+        } finally {
+          state.visualBusy = false;
+          renderProjectVisuals();
+        }
+      });
+      choices.append(button);
+    });
+    const order = byId("visual-scene-order");
+    order.replaceChildren();
+    state.visualSceneSelection.forEach((id, index) => {
+      const scene = state.visualScenes.find((item) => item.id === id);
+      if (!scene) return;
+      const chip = document.createElement("span");
+      chip.textContent = `${index + 1}. ${scene.name}`;
+      order.append(chip);
+    });
+  }
+
+  function renderVisualShots() {
+    const root = byId("visual-shot-grid");
+    root.replaceChildren();
+    const shots = state.visuals?.shots || [];
+    if (!shots.length) return;
+    state.visuals.scenes.forEach((scene) => {
+      const group = shots.filter((shot) => shot.scene_id === scene.id);
+      if (!group.length) return;
+      const section = document.createElement("section");
+      section.className = "visual-shot-scene";
+      const heading = document.createElement("h3");
+      heading.textContent = scene.name;
+      const grid = document.createElement("div");
+      grid.className = "visual-shot-grid";
+      group.forEach((shot) => {
+        const card = document.createElement("article");
+        card.className = "card visual-shot-card";
+        const kind = document.createElement("h4");
+        kind.textContent = `${shot.kind.replace("_", " ")} · ${shot.speaker_indexes.map((i) =>
+          state.project.speakers.find((speaker) => speaker.speaker_index === i)?.name || `Speaker ${i + 1}`).join(" & ")}`;
+        card.append(kind);
+        const variant = state.shotVariants[shot.id] || "final";
+        const url = variant === "raw" ? shot.raw_url : shot.final_url;
+        if (url) {
+          const image = document.createElement("img");
+          image.src = `${url}&seed=${shot.seed}`;
+          image.alt = `${scene.name} ${shot.kind} ${variant} shot`;
+          card.append(image);
+        }
+        if (shot.prompt_truncated) {
+          const warning = document.createElement("span");
+          warning.className = "visual-warning";
+          warning.textContent = "⚠ description too long";
+          card.append(warning);
+        }
+        const actions = document.createElement("div");
+        actions.className = "library-actions";
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "btn btn-ghost btn-sm";
+        toggle.textContent = variant === "raw" ? "Show final" : "Show raw";
+        toggle.disabled = !shot.raw_url || !shot.final_url;
+        toggle.addEventListener("click", () => {
+          state.shotVariants[shot.id] = variant === "raw" ? "final" : "raw";
+          renderVisualShots();
+        });
+        const regenerate = document.createElement("button");
+        regenerate.type = "button";
+        regenerate.className = "btn btn-ghost btn-sm";
+        regenerate.textContent = "↻ Regenerate";
+        regenerate.disabled = state.visualBusy || !visualGenerationAllowed();
+        regenerate.title = visualGenerationHint();
+        regenerate.addEventListener("click", () => startVisualJob(
+          () => Api.regenerateProjectShot(state.projectId, shot.id)));
+        actions.append(toggle, regenerate);
+        card.append(actions);
+        grid.append(card);
+      });
+      section.append(heading, grid);
+      root.append(section);
+    });
+  }
+
+  function renderProjectVisuals() {
+    if (!state.visuals) return;
+    renderVisualCast();
+    renderVisualScenes();
+    renderVisualShots();
+    const button = byId("generate-shots-btn");
+    button.disabled = state.visualBusy || !visualGenerationAllowed()
+      || !state.visuals.cast.length || !state.visuals.scenes.length;
+    button.title = visualGenerationHint() || (!state.visuals.cast.length || !state.visuals.scenes.length
+      ? "Assign a cast and at least one scene first." : "");
+    byId("visual-warnings").textContent = state.visualError || state.visuals.warnings.join(" ");
+  }
+
+  async function watchVisualJob(job) {
+    state.visualBusy = true;
+    renderProjectVisuals();
+    state.visualProgress?.destroy();
+    state.visualProgress = GenerationStatus.mount({
+      element: byId("visual-job-progress"), baselineSec: 180, startedAtIso: job.created_at,
+    });
+    try {
+      let current = job;
+      while (!["complete", "error", "cancelled"].includes(current.status)) {
+        state.visualProgress.setProgress({ stageLabel: current.stage || "Queued", progressPercent: current.progress });
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        current = await Api.getImageJob(job.id);
+      }
+      state.visualProgress.setProgress({ stageLabel: current.stage, progressPercent: current.progress, done: true });
+      if (current.status !== "complete") throw new Error(current.error || `Shot job ${current.status}.`);
+      state.visuals = await Api.getProjectVisuals(state.projectId);
+      state.visualError = "";
+    } catch (error) {
+      visualWarning(error.message || "Could not generate shots.");
+    } finally {
+      state.visualBusy = false;
+      renderProjectVisuals();
+    }
+  }
+
+  async function startVisualJob(operation) {
+    if (state.visualBusy || !visualGenerationAllowed()) return;
+    try {
+      await watchVisualJob(await operation());
+    } catch (error) {
+      visualWarning(error.message || "Could not start shot generation.");
+    }
+  }
+
+  async function loadProjectVisuals() {
+    try {
+      [state.visuals, state.visualCharacters, state.visualScenes, state.visualHealth] = await Promise.all([
+        Api.getProjectVisuals(state.projectId), Api.listCharacters(), Api.listScenes(), Api.getVisualsHealth(),
+      ]);
+      state.visualSceneSelection = state.visuals.scenes.map((scene) => scene.id);
+      renderProjectVisuals();
+      if (state.visuals.active_job) watchVisualJob(state.visuals.active_job);
+    } catch (error) {
+      visualWarning(error.message || "Characters and scenes could not load.");
     }
   }
 
@@ -649,6 +903,7 @@
 
     byId("loading-panel").hidden = true;
     byId("workspace").hidden = false;
+    await loadProjectVisuals();
     renderAvatars();
     renderTemplates();
     renderTimeline();
@@ -680,6 +935,8 @@
     byId("script-timeline").addEventListener("click", handleTimelineClick);
     byId("voice-timeline").addEventListener("click", handleTimelineClick);
     byId("generate-btn").addEventListener("click", generateVideo);
+    byId("generate-shots-btn").addEventListener("click", () => startVisualJob(
+      () => Api.generateProjectShots(state.projectId)));
     window.addEventListener("beforeunload", (event) => {
       if (state.isGenerating) {
         event.preventDefault();

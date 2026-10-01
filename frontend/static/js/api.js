@@ -117,6 +117,17 @@ const Api = (() => {
     generateScenePreview: (id) => request(`/api/visuals/scenes/${id}/preview`, { method: "POST" }),
     getImageJob: (id) => request(`/api/visuals/jobs/${id}`),
     cancelImageJob: (id) => request(`/api/visuals/jobs/${id}/cancel`, { method: "POST" }),
+    getProjectVisuals: (projectId) => request(`/api/projects/${projectId}/visuals`),
+    setProjectCast: (projectId, cast) => request(`/api/projects/${projectId}/visuals/cast`, {
+      method: "PUT", body: JSON.stringify(cast),
+    }),
+    setProjectScenes: (projectId, scenes) => request(`/api/projects/${projectId}/visuals/scenes`, {
+      method: "PUT", body: JSON.stringify(scenes),
+    }),
+    generateProjectShots: (projectId) =>
+      request(`/api/projects/${projectId}/visuals/shots`, { method: "POST" }),
+    regenerateProjectShot: (projectId, shotId) =>
+      request(`/api/projects/${projectId}/visuals/shots/${shotId}/regenerate`, { method: "POST" }),
     listThumbnailTemplates: () => request("/api/thumbnails/templates"),
     listThumbnails: (projectId) => request(`/api/projects/${projectId}/thumbnails`),
     generateThumbnails: (projectId, templateName, variantCount) =>

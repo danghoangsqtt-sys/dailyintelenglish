@@ -86,6 +86,21 @@
     .timeline-clip.synced { border-left-color: var(--success); }
     .music-clip { border-left-color: var(--info); }
     .timeline-status { font-size: 11px; }
+    .visual-cast-grid, .visual-shot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+    .visual-cast-card, .visual-shot-card { padding: 12px; }
+    .visual-cast-card label { display: block; margin-bottom: 7px; font-weight: 700; }
+    .visual-cast-card select { width: 100%; padding: 9px; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface); color: var(--text); }
+    .visual-cast-face { display: block; width: 58px; height: 58px; margin: 9px 0; border-radius: 50%; object-fit: cover; }
+    .visual-scene-options, .visual-scene-order { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+    .visual-scene-options button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+    .visual-scene-order { color: var(--muted); font-size: 12px; }
+    .visual-shot-card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; }
+    .visual-shot-card h4 { margin: 8px 0; }
+    .visual-shot-card .library-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .visual-shot-card .visual-warning { color: var(--danger); font-size: 12px; }
+    .visual-shot-scene { margin-top: 24px; }
+    .visual-warning { color: var(--danger); }
   </style>
 </head>
 <body>
@@ -130,6 +145,22 @@
               </p>
               <div class="avatar-grid" id="avatar-grid"></div>
             </details>
+
+            <section class="section" id="project-visuals-section">
+              <h2 class="section-title">Characters &amp; scenes</h2>
+              <p class="section-hint">Map speakers to locked characters and choose up to three scenes. <a href="/characters">Open Character Library</a>. Shots appear in Enhanced (Remotion) renders.</p>
+              <h3>Cast</h3>
+              <div id="visual-cast-grid" class="visual-cast-grid"></div>
+              <h3>Scenes</h3>
+              <div id="visual-scene-options" class="visual-scene-options" role="group" aria-label="Project scenes"></div>
+              <div id="visual-scene-order" class="visual-scene-order" aria-live="polite"></div>
+              <div id="visual-warnings" class="visual-warning" role="status"></div>
+              <div class="generate-row">
+                <button id="generate-shots-btn" class="btn btn-primary" type="button">Generate shots</button>
+                <span id="visual-job-progress" class="generate-progress" aria-live="polite"></span>
+              </div>
+              <div id="visual-shot-grid"></div>
+            </section>
 
             <section class="section">
               <h2 class="section-title">2. Choose a background</h2>
