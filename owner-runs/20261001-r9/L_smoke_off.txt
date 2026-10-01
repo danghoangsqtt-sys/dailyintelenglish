@@ -1,0 +1,145 @@
+D:\DataAdmin\Daily_Intel_English\venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+Lan candidates: running — starting (0%)
+Lan candidates: running — candidate 1/4 (0%)
+Lan candidates: running — candidate 2/4 (25%)
+Lan candidates: running — candidate 3/4 (50%)
+Lan candidates: running — candidate 4/4 (75%)
+Lan candidates: complete — complete (100%)
+Lan sheet: running — starting (0%)
+Lan sheet: running — sheet full_body (0%)
+Lan sheet: running — sheet portrait_calm (25%)
+Lan sheet: running — sheet portrait_smile (50%)
+Lan sheet: running — sheet portrait_surprised (75%)
+Lan sheet: complete — complete (100%)
+Minh candidates: running — starting (0%)
+Minh candidates: running — candidate 1/4 (0%)
+Minh candidates: running — candidate 2/4 (25%)
+Minh candidates: running — candidate 3/4 (50%)
+Minh candidates: running — candidate 4/4 (75%)
+Minh candidates: complete — complete (100%)
+Minh sheet: running — starting (0%)
+Minh sheet: running — sheet full_body (0%)
+Minh sheet: running — sheet portrait_calm (25%)
+Minh sheet: running — sheet portrait_smile (50%)
+Minh sheet: running — sheet portrait_surprised (75%)
+Minh sheet: complete — complete (100%)
+project shots: running — starting (0%)
+project shots: running — encode 1/30 (0%)
+project shots: running — encode 2/30 (3%)
+project shots: running — encode 4/30 (10%)
+project shots: running — encode 7/30 (20%)
+project shots: running — encode 8/30 (23%)
+project shots: running — render 9/30 (27%)
+project shots: running — render 10/30 (30%)
+project shots: running — render 11/30 (33%)
+project shots: running — render 12/30 (37%)
+project shots: running — render 13/30 (40%)
+project shots: running — render 14/30 (43%)
+project shots: running — render 15/30 (47%)
+project shots: running — render 16/30 (50%)
+project shots: running — repair hand 1 (53%)
+project shots: running — repair hand 1 (57%)
+project shots: running — repair hand 1 (60%)
+project shots: running — repair hand 1 (63%)
+project shots: running — repair hand 2 (67%)
+project shots: running — repair hand 3 (70%)
+project shots: running — repair hand 4 (73%)
+project shots: running — repair hand 1 (77%)
+project shots: running — repair hand 1 (80%)
+project shots: running — repair hand 1 (83%)
+project shots: running — repair hand 1 (87%)
+project shots: running — repair hand 2 (90%)
+project shots: running — repair hand 3 (93%)
+project shots: running — repair hand 4 (97%)
+project shots: complete — complete (100%)
+Remotion still: single
+Remotion still: duo_close
+Remotion still: duo_wide
+{
+  "engine": "worker",
+  "duo_refine": false,
+  "seed": 20261001,
+  "project_id": "15df16fd-23eb-404d-ae71-b76cb9e5cbbc",
+  "output_dir": "D:\\DataAdmin\\Daily_Intel_English\\data\\tmp\\gate-b14-r9\\refine_off\\20261001T080929Z-15df16fd",
+  "evidence": {
+    "characters": [
+      {
+        "name": "Lan",
+        "status": "locked",
+        "reference_asset_id": "7004dafe-23f0-47b2-a1bb-e98d57b336a4"
+      },
+      {
+        "name": "Minh",
+        "status": "locked",
+        "reference_asset_id": "c0aa4c9c-9078-4828-a710-68faf6ec868f"
+      }
+    ],
+    "shots": [
+      {
+        "label": "00_Cafe_single_0",
+        "seed": 772789584,
+        "prompt_tokens": 68,
+        "prompt_truncated": false
+      },
+      {
+        "label": "01_Cafe_single_1",
+        "seed": 1806629880,
+        "prompt_tokens": 73,
+        "prompt_truncated": false
+      },
+      {
+        "label": "02_Cafe_duo_close_0-1",
+        "seed": 1136162908,
+        "prompt_tokens": 70,
+        "prompt_truncated": false
+      },
+      {
+        "label": "03_Cafe_duo_wide_0-1",
+        "seed": 1242268655,
+        "prompt_tokens": 70,
+        "prompt_truncated": false
+      },
+      {
+        "label": "04_Classroom_single_0",
+        "seed": 1535284019,
+        "prompt_tokens": 69,
+        "prompt_truncated": false
+      },
+      {
+        "label": "05_Classroom_single_1",
+        "seed": 1357265103,
+        "prompt_tokens": 74,
+        "prompt_truncated": false
+      },
+      {
+        "label": "06_Classroom_duo_close_0-1",
+        "seed": 841650160,
+        "prompt_tokens": 71,
+        "prompt_truncated": false
+      },
+      {
+        "label": "07_Classroom_duo_wide_0-1",
+        "seed": 1912879414,
+        "prompt_tokens": 68,
+        "prompt_truncated": false
+      }
+    ]
+  },
+  "characters": [
+    "4c100f0a-40a0-4c79-9b95-e0bcce018a51",
+    "49b2295c-034d-4042-b1e3-cf6abee92a35"
+  ],
+  "scenes": [
+    "builtin-cafe",
+    "builtin-classroom"
+  ],
+  "shot_count": 8,
+  "shot_generation_seconds": 465.61,
+  "three_stills_seconds": 10.39,
+  "stills": [
+    "D:\\DataAdmin\\Daily_Intel_English\\data\\tmp\\gate-b14-r9\\refine_off\\20261001T080929Z-15df16fd\\single.png",
+    "D:\\DataAdmin\\Daily_Intel_English\\data\\tmp\\gate-b14-r9\\refine_off\\20261001T080929Z-15df16fd\\duo_close.png",
+    "D:\\DataAdmin\\Daily_Intel_English\\data\\tmp\\gate-b14-r9\\refine_off\\20261001T080929Z-15df16fd\\duo_wide.png"
+  ]
+}
