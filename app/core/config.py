@@ -112,6 +112,9 @@ class Settings(BaseSettings):
     GPU_MANAGER_ENABLED: bool = True
     GPU_EVICT_OLLAMA: bool = True
     GPU_MIN_FREE_MB_STYLETTS2: int = 6144
+    AI_VISUALS_ENABLED: bool = True
+    IMAGE_ENGINE: Literal["worker", "fake"] = "worker"
+    VISUALS_DUO_REFINE: bool = True
 
     # Phase 18/D22-D24 -- the generic OpenAI-compatible cloud provider (OpenRouter,
     # first). Empty key/model collapses the effective mode to "local" (invariant 32).

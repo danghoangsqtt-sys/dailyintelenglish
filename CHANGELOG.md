@@ -9,6 +9,15 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Added (Phase 20)
+- **Tasks 20.3–20.8 (2026-10-01, implementer branch):** AI Visuals feature build behind
+  `DIE_AI_VISUALS_ENABLED`: a Character Library with locked reference sheets, a Scene
+  Library, project cast and ordered scenes, generated single and duo shots with pose,
+  identity refinement and hand repair, and per-shot regeneration. Step 5 manages casts,
+  scenes and shots. Enhanced (Remotion) videos use assigned shots as animated backgrounds
+  and character faces in speaker chips. Step 6 offers an `AI scene` thumbnail when a
+  complete shot exists. The five existing thumbnail templates and the Standard (ffmpeg)
+  path remain available. An isolated fake/real smoke and Gate B-14 owner runbook are added;
+  PM review and owner visual sign-off remain pending.
 - **Task 20.1 (2026-09-30, by Coder):** shared GPU model manager,
   `app/services/gpu_model_manager.py`. One process-wide, first-come-first-served lease
   for the single RTX 3060. It arbitrates rather than loads, because the consumers (Ollama,

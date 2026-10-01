@@ -82,7 +82,53 @@ const Api = (() => {
     deleteMusic: (filename) =>
       request(`/api/music/${encodeURIComponent(filename)}`, { method: "DELETE" }),
     musicContentUrl: (filename) => `/api/music/${encodeURIComponent(filename)}`,
-    listThumbnailTemplates: () => request("/api/thumbnails/templates"),
+    getVisualsHealth: () => request("/api/visuals/health"),
+    getVisualsOptions: () => request("/api/visuals/options"),
+    listCharacters: () => request("/api/visuals/characters"),
+    getCharacter: (id) => request(`/api/visuals/characters/${id}`),
+    createCharacter: (character) => request("/api/visuals/characters", {
+      method: "POST", body: JSON.stringify(character),
+    }),
+    updateCharacter: (id, patch) => request(`/api/visuals/characters/${id}`, {
+      method: "PATCH", body: JSON.stringify(patch),
+    }),
+    deleteCharacter: (id, force = false) => request(`/api/visuals/characters/${id}?force=${force}`, {
+      method: "DELETE",
+    }),
+    generateCharacterCandidates: (id) => request(`/api/visuals/characters/${id}/candidates`, { method: "POST" }),
+    pickCharacterReference: (id, assetId) => request(`/api/visuals/characters/${id}/reference`, {
+      method: "PUT", body: JSON.stringify({ asset_id: assetId }),
+    }),
+    generateCharacterSheet: (id, kind = null) => request(`/api/visuals/characters/${id}/sheet`, {
+      method: "POST", body: JSON.stringify(kind ? [{ kind }] : []),
+    }),
+    approveCharacterAsset: (id, assetId, approved) =>
+      request(`/api/visuals/characters/${id}/assets/${assetId}/approve`, {
+        method: "PUT", body: JSON.stringify({ approved }),
+      }),
+    lockCharacter: (id) => request(`/api/visuals/characters/${id}/lock`, { method: "POST" }),
+    unlockCharacter: (id) => request(`/api/visuals/characters/${id}/unlock`, { method: "POST" }),
+    listScenes: () => request("/api/visuals/scenes"),
+    createScene: (scene) => request("/api/visuals/scenes", { method: "POST", body: JSON.stringify(scene) }),
+    updateScene: (id, patch) => request(`/api/visuals/scenes/${id}`, {
+      method: "PATCH", body: JSON.stringify(patch),
+    }),
+    deleteScene: (id) => request(`/api/visuals/scenes/${id}`, { method: "DELETE" }),
+    generateScenePreview: (id) => request(`/api/visuals/scenes/${id}/preview`, { method: "POST" }),
+    getImageJob: (id) => request(`/api/visuals/jobs/${id}`),
+    cancelImageJob: (id) => request(`/api/visuals/jobs/${id}/cancel`, { method: "POST" }),
+    getProjectVisuals: (projectId) => request(`/api/projects/${projectId}/visuals`),
+    setProjectCast: (projectId, cast) => request(`/api/projects/${projectId}/visuals/cast`, {
+      method: "PUT", body: JSON.stringify(cast),
+    }),
+    setProjectScenes: (projectId, scenes) => request(`/api/projects/${projectId}/visuals/scenes`, {
+      method: "PUT", body: JSON.stringify(scenes),
+    }),
+    generateProjectShots: (projectId) =>
+      request(`/api/projects/${projectId}/visuals/shots`, { method: "POST" }),
+    regenerateProjectShot: (projectId, shotId) =>
+      request(`/api/projects/${projectId}/visuals/shots/${shotId}/regenerate`, { method: "POST" }),
+    listThumbnailTemplates: (projectId) => request(`/api/thumbnails/templates${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""}`),
     listThumbnails: (projectId) => request(`/api/projects/${projectId}/thumbnails`),
     generateThumbnails: (projectId, templateName, variantCount) =>
       request(`/api/projects/${projectId}/thumbnails/generate`, {

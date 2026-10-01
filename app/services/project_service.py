@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # (project_service knows none of these services' internals -- this list must stay in
 # sync with the "<category>/<project_id>" convention used by avatar_service, tts_service,
 # audio_service, video_service, and thumbnail_service).
-_PROJECT_ARTIFACT_CATEGORIES = ("avatars", "audio", "video", "thumbnails", "tts_cache")
+_PROJECT_ARTIFACT_CATEGORIES = ("avatars", "audio", "video", "thumbnails", "tts_cache", "visuals")
 _DOWNSTREAM_STATUSES = frozenset({"audio_generated", "video_generated", "complete"})
 
 _LIST_COLUMNS = "id, name, status, cefr_level, genre, accent, created_at, updated_at"

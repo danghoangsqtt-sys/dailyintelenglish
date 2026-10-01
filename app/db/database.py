@@ -84,6 +84,20 @@ async def init_db() -> None:
             "INSERT INTO schema_migrations (filename, applied_at) VALUES (?, ?)",
             (migration_file.name, datetime.now(timezone.utc).isoformat()),
         )
+    now = datetime.now(timezone.utc).isoformat()
+    for slug, name, place, staging in (
+        ("classroom", "Classroom", "a sunny classroom with a whiteboard", "standing"),
+        ("cafe", "Cafe", "a cozy Vietnamese street cafe", "seated"),
+        ("library", "Library", "a bright university library", "standing"),
+        ("kitchen", "Kitchen", "a bright home kitchen", "standing"),
+        ("park", "Park", "a green city park", "standing"),
+        ("office", "Office", "a modern bright office", "seated"),
+    ):
+        await connection.execute(
+            "INSERT OR IGNORE INTO scenes "
+            "(id, name, place, staging, is_builtin, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?)",
+            (f"builtin-{slug}", name, place, staging, now, now),
+        )
     await connection.commit()
 
 

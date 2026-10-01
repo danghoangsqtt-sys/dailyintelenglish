@@ -409,10 +409,12 @@
 
     try {
       [state.templates, state.thumbnails] = await Promise.all([
-        Api.listThumbnailTemplates(),
+        Api.listThumbnailTemplates(state.projectId).catch(() => Api.listThumbnailTemplates()),
         Api.listThumbnails(state.projectId),
       ]);
-      state.selectedTemplate = state.thumbnails[0]?.template_name || state.templates[0]?.id || null;
+      const priorTemplate = state.thumbnails[0]?.template_name;
+      state.selectedTemplate = state.templates.some((template) => template.id === priorTemplate)
+        ? priorTemplate : state.templates[0]?.id || null;
       state.activeId = state.thumbnails.find((thumbnail) => thumbnail.is_selected)?.id || null;
     } catch (error) {
       console.error("Failed to load thumbnail workspace:", error);
