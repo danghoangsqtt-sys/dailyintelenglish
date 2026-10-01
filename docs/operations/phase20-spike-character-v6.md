@@ -48,9 +48,15 @@ No errors and no truncated prompts (max 72).
 4. **Speed:** the duo renders take 38–49 s (VRAM spill at 13.2 GB reserved).
    Production should trim this, e.g. with VAE tiling.
 
-## Owner verdicts (to be filled from the owner's answers)
+## Owner verdicts 2026-10-01 (verbatim, with translation)
 
-- Conversation shots natural, two distinct people keeping identity?:
-- Close-up framing right?:
-- Male neat, slim-fit, short hair?:
-- Outfits solid, 1 top + 1 bottom, no colour confusion?:
+*"cảnh [2] người cũng khá tốt, nhưng tôi nghĩ dùng watercolor cho kết quả ổn định hơn là
+bright và đó là lý do phải xây dựng nhân vật và trang phục nhân vật trước. cận cảnh thì khá
+tốt nhưng quần áo lỗi màu nhiều, kết quả r7 đẹp và tốt hơn nhiều so với r3"*
+
+1. **The two-person shots are fairly good.**
+2. **`r3_watercolor` is more stable than `r3_bright`: use watercolor.** That is exactly
+   why **the characters and their outfits must be built (locked) first.**
+3. **The close-ups are fairly good, but have many clothing-colour errors.**
+4. *"r7 is much prettier and better than r3"*. The run compared is probably this r8 run;
+   to be confirmed with the owner.
