@@ -54,9 +54,26 @@ which the already-proven pieces address:
 - **Outfit lock:** "no backpack, no hat, no jacket" in the negative prompt.
 - **A reference** generated without the hand-to-face pose.
 
-## Owner verdicts (to be filled from the owner's answers)
+## Owner verdicts 2026-10-01 (verbatim, with translation)
 
-- r3_watercolor or r3_bright?:
-- Each student clearly drawn / Vietnamese? Candidate 1 or 2 per character?:
-- Same person across sheet and scenes?:
-- Scale and presence natural (not sinking)?:
+*"cả bright và watercolor đều đẹp, nhân vật nữ rõ nét hơn nhưng nhiều lỗi ở phần tay, nhân
+vật nam không đẹp và ít cảm xúc nhưng ít lỗi hơn với phần cử chỉ. mức độ giữ nhân vật đã
+tốt hơn rất nhiều bố cục cũng đẹp và cân đối hơn. nhân vật rất đẹp và cân bằng màu sắc tốt"*
+
+1. **Both `r3_bright` and `r3_watercolor` are pretty.** The first style both the owner
+   and the Coder accept.
+2. **The female student is clearer, but has many hand errors.**
+3. **The male student is not attractive and shows little emotion, but has fewer gesture
+   errors.**
+4. **Identity holds much better; the composition is prettier and better balanced.**
+5. **The characters are very pretty, with good colour balance.**
+
+**Consequence:** the direction is settled. It is:
+- SDXL base;
+- the r3 watercolor preset family;
+- prompts within 77 tokens;
+- one-pass character+scene with IP-Adapter;
+- the 20.2d captions.
+
+What remains is quality tuning: hands, the male design and expressiveness, action and
+placement control, and outfit lock.
