@@ -7,9 +7,10 @@ from collections.abc import Mapping
 # clean dark ink outlines, flat 2-tone cel shading, saturated natural colours, a lush
 # gouache-painted background in warm sunlight. It replaces the r3 watercolor preset, whose
 # "watercolor / pastel" words produced the washed-out, low-contrast, semi-realistic faces.
-# "Studio Ghibli style" is also the trigger phrase of the optional style LoRA (VISUALS_STYLE_LORA).
+# Task 20.10 (O11): no studio, artist or franchise names -- the look comes from neutral words
+# (A/B against the named wording: docs/operations/phase20-t10-neutral-style-ab.png).
 STYLE_CEL_ANIME = (
-    "Studio Ghibli style, 1990s anime film still, clean ink outlines, flat cel shading, "
+    "hand-drawn 1990s anime film still, clean ink outlines, flat cel shading, "
     "lush painted background, warm sunlight, vivid colors"
 )
 # CLIP reads 77 tokens of the negative too, so the style guards come first and the

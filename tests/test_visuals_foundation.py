@@ -79,7 +79,7 @@ def test_recipe_strings_and_worst_case_budget():
           for staging in ("standing", "seated") for kind in ("duo_close", "duo_wide")),
     ]
     assert all(recipes.token_count(prompt) <= 75 for prompt in prompts)
-    assert recipes.token_count(recipes.single_prompt(CHARACTER, SCENE)) == 74
+    assert recipes.token_count(recipes.single_prompt(CHARACTER, SCENE)) == 73
 
 
 def test_geometry_heads_halves_ears_hands_and_refine_mask():

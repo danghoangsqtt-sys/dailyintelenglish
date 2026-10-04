@@ -1,4 +1,8 @@
-"""Style spike (2026-10-04): owner's Ghibli-like cel-anime references vs the r3 watercolor recipe.
+"""Style spike (2026-10-04) -- historical evidence code, not shipped. Task 20.10 (O11) removed the
+studio-named wording and the franchise-named LoRA from the product; the "lora" variant here only
+reproduces the 20.9 comparison.
+
+Original purpose: owner's Ghibli-like cel-anime references vs the r3 watercolor recipe.
 
 Runs inside venv-image on the GPU, outside the app (no lease; stop Ollama models first).
 Compares, at identical seeds:

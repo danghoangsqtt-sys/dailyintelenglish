@@ -115,10 +115,6 @@ class Settings(BaseSettings):
     AI_VISUALS_ENABLED: bool = True
     IMAGE_ENGINE: Literal["worker", "fake"] = "worker"
     VISUALS_DUO_REFINE: bool = True
-    # Style spike 2026-10-04: the optional cel-anime style LoRA loaded into every image
-    # worker. Off (0) by default: at 2.0 it only aged the colours of the prompt-only result
-    # (owner-runs/style-ghibli-20261004). A weight > 0 needs `peft` in venv-image.
-    VISUALS_STYLE_LORA_WEIGHT: float = 0.0
 
     # Phase 18/D22-D24 -- the generic OpenAI-compatible cloud provider (OpenRouter,
     # first). Empty key/model collapses the effective mode to "local" (invariant 32).
