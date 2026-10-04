@@ -32,3 +32,25 @@ mismatches (Lan yellow, Minh light blue).
 The chosen variant has 0 extra persons on the 4 `duo_close` images and fewer colour mismatches
 than A; then it is wired into `pipelines._generate_set` (+ unit tests on the mask choice and
 prompt token budget), visual tests + ruff green.
+
+## Results (2026-10-05, owner's RTX 3060, real Lan + Minh faces)
+
+Round 1 `docs/operations/phase20-t11-duo-round1-ABC.png`; round 2 (added D = no garment words in
+the duo prompt + "faces visible" + back-view negative, refine 0.65; E = D with refine 0.8)
+`docs/operations/phase20-t11-duo-round2-DE.png`. All prompts ≤ 72 tokens, none truncated.
+
+| Measure (8 shots per variant) | A today | B silhouette IP masks | C B + wording + refine 0.65 | D | E |
+|---|---|---|---|---|---|
+| Third person | 0 | 0 | 0 | 0 | 0 |
+| Male top not light blue | 2 | 2 | 2 | 2 | 1 |
+| Female bottom wrong (wide shots, 4) | ~2 | ~2 | ~2 | ~2 | 3 |
+| Back view (Classroom duo_wide s2) | both | both | both | woman | woman |
+
+- **H1 not confirmed:** the third person did not reproduce with the 20.9 faces at these seeds,
+  so silhouette masks show no measurable gain.
+- **H3 not solved by wording or strength:** the drift is born in the raw render (one prompt for
+  two people); a stronger refine fixes one top and breaks a bottom.
+- **Proposed next step (owner decision):** a deterministic **colour check + bounded retry**:
+  sample the top/bottom regions from the pose skeleton (shoulders→hips, hips→knees) of the
+  final image, compare hue/lightness with the locked colours, and re-refine only the failing
+  region with a new seed (max 2 retries), logging the measured colour per shot.
