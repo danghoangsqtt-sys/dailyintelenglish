@@ -28,3 +28,21 @@ venv-image with model CPU offload (not the product worker, so nothing ships from
 3. **Cost:** seconds per shot, peak VRAM (12 GB card; b adds ~0.85 GB of adapter weights).
 
 **Decision (owner, with PM recommendation):** which variant Phase 23.2 builds on.
+
+## Results (2026-10-05, owner's RTX 3060, real Lan + Minh faces, CPU offload)
+
+Sheet `docs/operations/phase23-t1-scene-consistency.png` (plate | single Lan | single Minh |
+duo_close | duo_wide per row); scores `docs/operations/phase23-t1-scene-consistency-scores.json`.
+~43–51 s per shot with offload; peak allocated VRAM 9.5 GB with both adapters.
+
+| Variant | Cafe bg-sim | Park bg-sim | Eye check |
+|---|---|---|---|
+| a text only | 0.815 | 0.757 | every shot a different place; Park duo_wide had a third person |
+| b3 plate IP 0.3 | 0.834 | 0.859 | recognisably one place (awnings, planters; path + skyline); natural lighting |
+| b5 plate IP 0.5 | 0.827 | 0.866 | as b3, slightly closer in the park |
+| c plate + inpaint | 0.857 | 0.888 | identical background, but pasted-on characters (halo behind a head, colour patches at mask edges), blurry upscaled close-up crops, wrong scale |
+
+**PM recommendation:** variant **b at ~0.4** — consistency gains without the pasted-on look
+the owner rejected in 20.2c/20.2e. Open for 23.2: the product worker runs without CPU offload,
+so L2 (UNet + ControlNet + face IP + scene IP layers) peak VRAM must be measured on the
+12 GB card; the L1 encode adds the plate embedding (no new lifetime).
