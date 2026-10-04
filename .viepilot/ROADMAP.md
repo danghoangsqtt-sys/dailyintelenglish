@@ -1334,8 +1334,8 @@ and still to do. Details: `.viepilot/phases/19-remotion/PHASE-STATE.md`.
 
 - [x] 20.1–20.8 GPU manager, spikes, libraries, shots, Remotion + thumbnail integration
 - [x] 20.9 Cel-anime recipes from the owner's references
-- [ ] 20.10 O11 neutral style wording (no studio name, no franchise LoRA), A/B verified
-- [ ] 20.11 Duo fixes: no third person, top-colour drift
+- [x] 20.10 O11 neutral style wording (no studio name, no franchise LoRA), A/B verified
+- [x] 20.11 Duo fixes: extra-person + garment-colour checks with bounded retries
 - [ ] 20.12 Gate B-14 on a real episode → tag `die-vp-p20-complete`
 
 ## Phase 21 — Better TTS engine — ⛔ closed wontfix (D38, 2026-09-30: Edge TTS stays)
