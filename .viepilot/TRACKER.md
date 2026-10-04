@@ -2165,6 +2165,7 @@ Suite 964 → 1175. **Version 1.1.0-beta.** Follow-ups: ENH-014 (outro heuristic
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-10-05 | **D42 (owner): Gate B-14 deferred ("tôi đang không có thời gian test"); continue with Phase 23. Download of `ip-adapter-plus_sdxl_vit-h.safetensors` (847 MB, Apache-2.0) approved for spike 23.1.** Phase 20 stays open until the owner's visual sign-off | Owner time; 20.10 + 20.11 verified by real GPU smoke without the owner |
 | 2026-10-05 | **D41 (owner): plan order characters → scenes → story → music; storyboard AI-proposed + owner-reviewed; few images by story beats (default cap 12); O11 stands (remove studio name + franchise LoRA, A/B verify).** Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` | Owner: "có thật sự cần tạo nhiều ảnh không? … trong 1 buổi hội thoại cũng đâu cần quá nhiều ảnh" — framing changes carry motion, new images only on place/action change |
 | 2026-10-04 | **D40 (owner): channel style switches from r3 watercolor to cel anime (Task 20.9); Lan + Minh regenerated; old watercolor spike images in data/tmp deleted.** Supersedes spec O2 | Owner references (three Ghibli-like images); 4-way GPU comparison; owner "okey rất tốt" |
 | 2026-10-01 | **(recorded 2026-10-05) Owner: spikes closed, feature build approved ("thôi cứ chốt xây tính năng thật đi"); watercolor only; implementation moved to Claude after review r1.** | From `.viepilot/phases/20-ai-visuals/PHASE-STATE.md`; missing from this log until the 2026-10-05 audit |
