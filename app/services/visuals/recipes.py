@@ -3,14 +3,21 @@
 import re
 from collections.abc import Mapping
 
-STYLE_R3_WATERCOLOR = (
-    "hand-painted 2D anime illustration, soft watercolor background, warm natural sunlight, "
-    "gentle pastel palette, cozy whimsical atmosphere, clean line art"
+# Style spike 2026-10-04 (owner's references): a 1990s hand-drawn cel-anime film look --
+# clean dark ink outlines, flat 2-tone cel shading, saturated natural colours, a lush
+# gouache-painted background in warm sunlight. It replaces the r3 watercolor preset, whose
+# "watercolor / pastel" words produced the washed-out, low-contrast, semi-realistic faces.
+# "Studio Ghibli style" is also the trigger phrase of the optional style LoRA (VISUALS_STYLE_LORA).
+STYLE_CEL_ANIME = (
+    "Studio Ghibli style, 1990s anime film still, clean ink outlines, flat cel shading, "
+    "lush painted background, warm sunlight, vivid colors"
 )
+# CLIP reads 77 tokens of the negative too, so the style guards come first and the
+# outfit-lock words (owner 20.2h: 1 plain top + 1 plain bottom) follow.
 NEGATIVE = (
-    "3d render, photorealistic, photo, text, logo, watermark, blurry, deformed, bad anatomy, "
-    "extra fingers, deformed hands, hand on face, backpack, hat, cap, jacket, coat, hoodie, "
-    "scarf, pattern, stripes, plaid, print, multicolored clothes, layered clothes, crowd"
+    "watercolor, pastel, washed out, faded, overexposed, photorealistic, realistic face, 3d render, "
+    "glossy skin, text, watermark, deformed, bad anatomy, extra fingers, deformed hands, extra person, "
+    "crowd, backpack, hat, jacket, hoodie, scarf, stripes, plaid, print, multicolored clothes"
 )
 HAND_PROMPT = "detailed hand, five fingers, natural hand"
 HAND_NEGATIVE = "extra fingers, missing fingers, fused fingers, deformed hands, bad anatomy, blurry"
@@ -29,7 +36,7 @@ def token_count(prompt: str) -> int:
 
 
 def _styled(*parts: str) -> str:
-    return ", ".join((STYLE_R3_WATERCOLOR, *parts))
+    return ", ".join((STYLE_CEL_ANIME, *parts))
 
 
 def character_phrase(character: Mapping) -> str:

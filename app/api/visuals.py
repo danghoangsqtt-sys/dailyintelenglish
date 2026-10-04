@@ -39,7 +39,7 @@ async def visuals_health(db: aiosqlite.Connection = Depends(get_db)) -> dict:
 @router.get("/options")
 async def visuals_options() -> dict:
     return ok({"colors": COLORS, "tops": TOPS, "bottoms": BOTTOMS,
-               "age_groups": AGE_GROUPS, "genders": GENDERS, "style_id": "r3_watercolor"})
+               "age_groups": AGE_GROUPS, "genders": GENDERS, "style_id": "cel_anime"})
 
 
 @router.get("/characters")

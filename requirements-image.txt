@@ -36,3 +36,6 @@ psutil==7.2.2
 # No downloaded code executes, unlike BiRefNet's trust_remote_code loader. Verified to
 # install + import on Python 3.14 (2026-09-30).
 onnxruntime==1.30.0
+# Style spike 2026-10-04: OPTIONAL, only when VISUALS_STYLE_LORA_WEIGHT > 0 (diffusers' LoRA
+# path). 0.17.x fails to import against transformers 5.x (HybridCache); 0.21.2 verified.
+# peft==0.21.2

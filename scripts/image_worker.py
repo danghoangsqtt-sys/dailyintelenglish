@@ -122,6 +122,13 @@ ANIME_SEG_SIZE = 1024
 # Task 20.2c: "controlnet_inpaint" = pose-controlled M2 (a character painted into a scene).
 PIPELINE_KINDS = ("text2img", "controlnet", "inpaint", "controlnet_inpaint")
 
+# Style spike 2026-10-04: ntc-ai's "Studio Ghibli style" concept-slider LoRA for SDXL base
+# (`mit`, 8,789,076 B, checked on the Hub 2026-10-04). Its trigger phrase opens the recipe
+# style prefix (app/services/visuals/recipes.py).
+STYLE_LORA_REPO = "ntc-ai/SDXL-LoRA-slider.Studio-Ghibli-style"
+STYLE_LORA_WEIGHT_NAME = "Studio Ghibli style.safetensors"
+STYLE_LORA_WEIGHT = 2.0
+
 BASE_DEFAULT_STEPS = 30
 BASE_DEFAULT_GUIDANCE = 6.0
 
@@ -198,6 +205,13 @@ class ImageWorker:
         from huggingface_hub import hf_hub_download
 
         return Path(hf_hub_download(LIGHTNING_REPO, f"sdxl_lightning_{steps}step_unet.safetensors"))
+
+    @staticmethod
+    def _resolve_style_lora(style_lora: dict[str, Any]) -> Path:
+        from huggingface_hub import hf_hub_download
+
+        return Path(hf_hub_download(style_lora.get("repo", STYLE_LORA_REPO),
+                                    style_lora.get("weight_name", STYLE_LORA_WEIGHT_NAME)))
 
     # -- commands ----------------------------------------------------------------------
 
@@ -296,6 +310,14 @@ class ImageWorker:
             # Task 20.2e: the Animagine XL 4.0 model card's recommended sampler.
             pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config)
         pipe.set_progress_bar_config(disable=True)
+        style_lora = request.get("style_lora")
+        if style_lora:
+            # Style spike 2026-10-04: an optional style LoRA (default: ntc-ai's MIT-licensed
+            # "Studio Ghibli style" slider for SDXL base). It needs `peft` in venv-image.
+            # Loaded before any IP-Adapter, so both sets of layers coexist.
+            lora_path = style_lora.get("path") or str(self._resolve_style_lora(style_lora))
+            pipe.load_lora_weights(lora_path, adapter_name="style")
+            pipe.set_adapters(["style"], adapter_weights=[float(style_lora.get("weight", STYLE_LORA_WEIGHT))])
         if request.get("vae_tiling"):
             # Risk-table mitigation (task-20.2.md): the VAE decode at 1344x768 is a VRAM
             # spike; tiling trades a little speed for a much lower peak. Off by default so
@@ -316,6 +338,7 @@ class ImageWorker:
             "device": self.device,
             "dtype": str(self.dtype),
             "watermark_active": getattr(pipe, "watermark", None) is not None,
+            "style_lora": style_lora or None,
             "scheduler": type(pipe.scheduler).__name__,
             "timestep_spacing": pipe.scheduler.config.get("timestep_spacing"),
             "vram_allocated_mb": _mb(torch.cuda.memory_allocated()) if self.device == "cuda" else None,

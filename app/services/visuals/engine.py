@@ -118,7 +118,10 @@ class WorkerImageEngine:
             worker = await asyncio.to_thread(_WorkerProcess)
             self._worker = worker
             try:
-                await self.request({"command": "load", "mode": "base", "pipeline": pipeline, "encoders": encoders})
+                load = {"command": "load", "mode": "base", "pipeline": pipeline, "encoders": encoders}
+                if settings.VISUALS_STYLE_LORA_WEIGHT > 0:
+                    load["style_lora"] = {"weight": settings.VISUALS_STYLE_LORA_WEIGHT}
+                await self.request(load)
                 if ip != "none":
                     adapter = {"command": "load_ip_adapter"}
                     if ip == "layers_only":

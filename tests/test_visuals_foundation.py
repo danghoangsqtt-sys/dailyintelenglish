@@ -63,11 +63,11 @@ def test_recipe_strings_and_worst_case_budget():
     )
     assert recipes.character_phrase(CHARACTER) == phrase
     assert recipes.candidate_prompt(CHARACTER) == (
-        recipes.STYLE_R3_WATERCOLOR + ", " + phrase
+        recipes.STYLE_CEL_ANIME + ", " + phrase
         + ", portrait, facing the viewer, arms down, plain light background"
     )
     assert recipes.single_prompt(CHARACTER, SCENE) == (
-        recipes.STYLE_R3_WATERCOLOR + ", " + phrase
+        recipes.STYLE_CEL_ANIME + ", " + phrase
         + ", close-up, talking with a hand gesture, in a cozy Vietnamese street cafe"
     )
     prompts = [
