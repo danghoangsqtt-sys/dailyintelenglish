@@ -182,6 +182,11 @@ class FakeImageEngine:
                     "negative_prompt_applied": bool(payload.get("negative_prompt")),
                     "native_size": [width, height], "output_path": str(payload["output_path"]),
                     "fitted_path": None, **tokens}
+        if command == "remove_background":
+            # No foreground anywhere: the extra-person check sees an empty gap.
+            await asyncio.to_thread(_transparent_png, Path(payload["input_path"]), Path(payload["output_path"]))
+            return {"status": "ok", "output_path": str(payload["output_path"]), "wall_time_sec": 0.0,
+                    "foreground_fraction": 0.0, "soft_edge_fraction": 0.0}
         raise ValueError(f"unsupported fake image command: {command}")
 
 
@@ -194,6 +199,13 @@ def _solid_png(path: Path, size: tuple[int, int], seed: int) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     color = ((seed * 73) % 256, (seed * 151) % 256, (seed * 199) % 256)
     Image.new("RGB", size, color).save(path, format="PNG")
+
+
+def _transparent_png(source: Path, path: Path) -> None:
+    with Image.open(source) as image:
+        size = image.size
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGBA", size, (0, 0, 0, 0)).save(path, format="PNG")
 
 
 def get_image_engine() -> ImageEngine:

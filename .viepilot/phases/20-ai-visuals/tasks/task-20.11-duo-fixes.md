@@ -54,3 +54,35 @@ the duo prompt + "faces visible" + back-view negative, refine 0.65; E = D with r
   sample the top/bottom regions from the pose skeleton (shoulders→hips, hips→knees) of the
   final image, compare hue/lightness with the locked colours, and re-refine only the failing
   region with a new seed (max 2 retries), logging the measured colour per shot.
+
+## Decision and implementation (owner 2026-10-05: "Tự kiểm tra màu + tạo lại")
+
+Round 3 (`spike_duo_fixes.py --face-dir`, the faces of a smoke run that reproduced the third
+person at seed 1136162908): half masks (A) and silhouette masks (B) **both** produce the third
+person → H1 rejected; the extra person comes from the composition at that seed. Two bounded,
+deterministic checks were built instead:
+
+1. **Extra person (L2, duo shots):** anime-seg cut-out of the raw; foreground share of the band
+   between the two faces (`shot_checks.head_gap_box`, ±1 head-height around the left nose).
+   Calibrated on 50 renders: third person 0.558–0.585, normal ≤ 0.464 (a busy street at s3) →
+   threshold 0.5. A failing raw is re-rendered with `seed + 7919·k` (k ≤
+   `VISUALS_EXTRA_PERSON_RETRIES` = 2); the emptiest render is kept and its seed stored.
+   Report `extra_person_check.json`.
+2. **Garment colour (L3, every shot, before hand repair):** median HSV of the chest strip and
+   the thighs (standing, knees in frame) from the pose skeleton, outlines dropped
+   (`colour_check`), classified per locked colour (calibrated: cel-shaded light blue is a pale
+   cyan, hue 85–185, sat 0.09–0.2). A failing person's region is re-refined with a
+   garment-first prompt (`recipes.garment_refine_prompt`) at strength 0.8, new seed, at most
+   `VISUALS_COLOUR_RETRIES` = 2. Report `colour_check.json`.
+
+## Verification
+
+- Tests: 11 new (`tests/test_visuals_colour_check.py`), full suite **1284 passed**; ruff clean.
+- Real GPU smoke, seed 20261001 (same characters/seeds as the run that showed the third
+  person), contact sheet `docs/operations/phase20-t11-smoke-checks.png`, 898 s for 8 shots
+  (638 s without checks):
+  - third person 0/4 (Cafe duo_close caught, re-rendered once, seed 1136170827);
+  - male top wrong in 4 raws → all 4 finals light blue; female bottom fixed in Classroom duo_wide;
+  - still wrong after 2 retries, and reported FAIL: Cafe duo_close female layered top (yellow
+    jacket over a blue top), Classroom duo_wide male blue jeans (locked black);
+  - known false alarm: a bottom behind a desk (the thigh strip sees the desk) → costs retries only.

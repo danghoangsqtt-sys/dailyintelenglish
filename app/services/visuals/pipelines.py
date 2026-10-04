@@ -14,7 +14,7 @@ from PIL import Image
 from app.core.config import settings
 from app.core.exceptions import ConflictError
 from app.db.transactions import read_transaction, write_transaction
-from app.services.visuals import geometry, library_service as library, project_visuals_service as project_visuals, recipes
+from app.services.visuals import colour_check, geometry, shot_checks, library_service as library, project_visuals_service as project_visuals, recipes
 from app.services.visuals.engine import get_image_engine
 from app.services.visuals.runner import ImageJobRunner, JobCancelled
 
@@ -158,6 +158,93 @@ def _composite_refine(source: Path, rendered: Path, mask: Image.Image, destinati
     _save(output, destination)
 
 
+COLOUR_RETRY_STRENGTH = 0.8
+EXTRA_PERSON_SEED_STEP = 7919
+
+
+async def _gap_score(session, image_path: Path, cutout_path: Path, box: tuple[int, int, int, int]) -> float:
+    await session.request({"command": "remove_background", "input_path": str(image_path),
+                           "output_path": str(cutout_path)})
+
+    def score() -> float:
+        with Image.open(cutout_path) as cutout:
+            return shot_checks.gap_occupancy(cutout, box)
+
+    return await asyncio.to_thread(score)
+
+
+async def _extra_person_pass(session, runner: ImageJobRunner, job: dict, context: dict, payload: dict,
+                             progress: int) -> None:
+    """Task 20.11: a duo raw whose head-level gap is filled (a third person) is re-rendered with
+    a new seed, at most VISUALS_EXTRA_PERSON_RETRIES times; the emptiest render is kept."""
+    folder, raw_path = context["folder"], context["raw"]
+    box = shot_checks.head_gap_box(context["people"], SIZE)
+    if box is None:
+        return
+    seed = context["row"]["seed"]
+    tries = [{"seed": seed, "path": raw_path,
+              "score": await _gap_score(session, raw_path, folder / "cutout_0.png", box)}]
+    while tries[-1]["score"] >= shot_checks.EXTRA_PERSON_THRESHOLD and len(tries) <= settings.VISUALS_EXTRA_PERSON_RETRIES:
+        attempt = len(tries)
+        await runner.boundary(job["id"], f"extra person retry ({attempt})", progress)
+        path = folder / f"raw_retry_{attempt}.png"
+        retry_seed = seed + EXTRA_PERSON_SEED_STEP * attempt
+        await session.request({**payload, "seed": retry_seed, "output_path": str(path)})
+        tries.append({"seed": retry_seed, "path": path,
+                      "score": await _gap_score(session, path, folder / f"cutout_{attempt}.png", box)})
+    best = min(tries, key=lambda item: item["score"])
+    if best["path"] != raw_path:
+        await asyncio.to_thread(shutil.copyfile, best["path"], raw_path)
+        context["row"] = {**context["row"], "seed": best["seed"]}
+    report = {"threshold": shot_checks.EXTRA_PERSON_THRESHOLD, "box": box, "chosen_seed": best["seed"],
+              "tries": [{"seed": item["seed"], "score": item["score"]} for item in tries]}
+    await asyncio.to_thread((folder / "extra_person_check.json").write_text, json.dumps(report, indent=1), "utf-8")
+
+
+def _colour_result(path: Path, person: dict, character: dict, check_bottom: bool) -> dict:
+    with Image.open(path) as image:
+        return colour_check.check_person(image, person, character, check_bottom)
+
+
+async def _colour_pass(session, runner: ImageJobRunner, job: dict, context: dict, current: Path,
+                       progress: int) -> Path:
+    """Task 20.11: measure each person's garments; repaint a failing person's region with a
+    garment-first prompt and a new seed, at most VISUALS_COLOUR_RETRIES times."""
+    folder, row = context["folder"], context["row"]
+    check_bottom = context["scene"]["staging"] == "standing"
+    full = Image.new("L", SIZE, 255)
+    report = []
+    for index, person in enumerate(context["people"]):
+        character = context["characters"][index]
+        half = context["halves"][index] if "halves" in context else full
+        result = await asyncio.to_thread(_colour_result, current, person, character, check_bottom)
+        attempts = 0
+        while not result["ok"] and attempts < settings.VISUALS_COLOUR_RETRIES:
+            attempts += 1
+            await runner.boundary(job["id"], f"colour retry person {index + 1} ({attempts})", progress)
+            mask = await asyncio.to_thread(geometry.refine_mask, person, SIZE, half)
+            mask_path = folder / f"colour_mask_{index}.png"
+            rendered = folder / f"colour_render_{index}_{attempts}.png"
+            destination = folder / f"colour_fixed_{index}_{attempts}.png"
+            await asyncio.to_thread(_save, mask, mask_path)
+            await session.request({
+                "command": "generate", "prompt": recipes.garment_refine_prompt(character, context["scene"]),
+                "negative_prompt": recipes.NEGATIVE, "seed": row["seed"] + 300 + 10 * attempts + index,
+                "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,
+                "output_path": str(rendered), "init_image": str(current), "mask_image": str(mask_path),
+                "strength": COLOUR_RETRY_STRENGTH, "ip_adapter_image": context["faces"][index],
+                "ip_adapter_scale": 0.5,
+            })
+            await asyncio.to_thread(_composite_refine, current, rendered, mask, destination)
+            current = destination
+            result = await asyncio.to_thread(_colour_result, current, person, character, check_bottom)
+        report.append({"person": index, "attempts": attempts, **result})
+    await asyncio.to_thread(
+        (folder / "colour_check.json").write_text, json.dumps(report, indent=1), "utf-8",
+    )
+    return current
+
+
 async def _contexts(db, project_id: str, rows: list[dict]) -> list[dict[str, Any]]:
     async with read_transaction():
         cast = {member["speaker_index"]: member for member in await project_visuals.cast_rows(db, project_id)}
@@ -260,11 +347,14 @@ async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows
                 context["halves"] = (left, right)
             response = await session.request(payload)
             context["raw"] = raw_path
+            if row["kind"] != "single" and settings.VISUALS_EXTRA_PERSON_RETRIES > 0:
+                await _extra_person_pass(session, runner, job, context, payload, progress())
             async with write_transaction(db):
                 await db.execute(
-                    "UPDATE project_shots SET raw_path = ?, prompt_tokens = ?, prompt_truncated = ?, updated_at = ? "
-                    "WHERE id = ?",
-                    (str(raw_path), response.get("prompt_tokens", context["tokens"].get("prompt_tokens")),
+                    "UPDATE project_shots SET raw_path = ?, seed = ?, prompt_tokens = ?, prompt_truncated = ?, "
+                    "updated_at = ? WHERE id = ?",
+                    (str(raw_path), context["row"]["seed"],
+                     response.get("prompt_tokens", context["tokens"].get("prompt_tokens")),
                      int(bool(response.get("prompt_truncated", context["tokens"].get("prompt_truncated")))),
                      library._now(), row["id"]),
                 )
@@ -295,6 +385,8 @@ async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows
                     await asyncio.to_thread(_composite_refine, current, rendered, mask, destination)
                     current = destination
                     completed += 1
+            if settings.VISUALS_COLOUR_RETRIES > 0:
+                current = await _colour_pass(session, runner, job, context, current, progress())
             hand_number = 0
             for person_index, person in enumerate(context["people"]):
                 hands = geometry.hand_boxes(person["points"], SIZE, person["head_h"])

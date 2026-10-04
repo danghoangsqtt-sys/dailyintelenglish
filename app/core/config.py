@@ -115,6 +115,12 @@ class Settings(BaseSettings):
     AI_VISUALS_ENABLED: bool = True
     IMAGE_ENGINE: Literal["worker", "fake"] = "worker"
     VISUALS_DUO_REFINE: bool = True
+    # Task 20.11: re-refine a person whose measured top/bottom colour misses the locked
+    # colour, at most this many times per person per shot (0 disables the check).
+    VISUALS_COLOUR_RETRIES: int = 2
+    # Task 20.11: re-render a duo whose head-level gap holds a third person (anime-seg
+    # occupancy >= 0.5), at most this many times, keeping the emptiest render (0 disables).
+    VISUALS_EXTRA_PERSON_RETRIES: int = 2
 
     # Phase 18/D22-D24 -- the generic OpenAI-compatible cloud provider (OpenRouter,
     # first). Empty key/model collapses the effective mode to "local" (invariant 32).

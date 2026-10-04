@@ -37,13 +37,16 @@ NEGATIVE_D = recipes.NEGATIVE + ", back view, from behind"
 REFINE_STRENGTH = {"A": 0.55, "B": 0.55, "C": 0.65, "D": 0.65, "E": 0.8}
 
 
-def characters() -> tuple[list[dict], list[str]]:
+def characters(face_dir: str | None = None) -> tuple[list[dict], list[str]]:
     db = sqlite3.connect(ROOT / "data" / "app.db")
     db.row_factory = sqlite3.Row
     people, faces = [], []
     for name in ("Lan", "Minh"):
         row = dict(db.execute("SELECT * FROM characters WHERE name = ?", (name,)).fetchone())
         people.append(row)
+        if face_dir:  # round 3: faces kept by a smoke run (`<dir>/<name>/face.png`)
+            faces.append(str(Path(face_dir) / name / "face.png"))
+            continue
         faces.append(str(ROOT / db.execute(
             "SELECT path FROM character_assets WHERE character_id = ? AND kind = 'face'", (row["id"],)
         ).fetchone()[0]))
@@ -71,12 +74,14 @@ def refine_prompt(person: dict, scene: dict, variant: str) -> str:
         f"talking, in {scene['place']}")
 
 
-async def run(out: Path, variants: list[str], seeds: list[int]) -> None:
-    people, faces = characters()
+async def run(out: Path, variants: list[str], seeds: list[int], face_dir: str | None = None,
+              scene_names: list[str] | None = None, kinds: tuple[str, ...] = ("duo_close", "duo_wide")) -> None:
+    people, faces = characters(face_dir)
     scenes = [{"name": "Cafe", "place": "a cozy Vietnamese street cafe", "staging": "seated"},
               {"name": "Classroom", "place": "a sunny classroom with a whiteboard", "staging": "standing"}]
+    scenes = [scene for scene in scenes if not scene_names or scene["name"] in scene_names]
     jobs = [(variant, scene, kind, seed) for variant in variants for scene in scenes
-            for kind in ("duo_close", "duo_wide") for seed in seeds]
+            for kind in kinds for seed in seeds]
     engine = WorkerImageEngine()
     contexts = []
     for variant, scene, kind, seed in jobs:
@@ -163,8 +168,12 @@ def main() -> int:
     parser.add_argument("--out", required=True)
     parser.add_argument("--variants", default="A,B,C")
     parser.add_argument("--seeds", default="1,2")
+    parser.add_argument("--face-dir")
+    parser.add_argument("--scenes")
+    parser.add_argument("--kinds", default="duo_close,duo_wide")
     args = parser.parse_args()
-    asyncio.run(run(Path(args.out), args.variants.split(","), [int(s) for s in args.seeds.split(",")]))
+    asyncio.run(run(Path(args.out), args.variants.split(","), [int(s) for s in args.seeds.split(",")],
+                    args.face_dir, args.scenes.split(",") if args.scenes else None, tuple(args.kinds.split(","))))
     return 0
 
 

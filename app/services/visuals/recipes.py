@@ -86,5 +86,16 @@ def refine_prompt(character: Mapping, scene: Mapping) -> str:
     return _styled(character_phrase(character), f"talking, in {scene['place']}")
 
 
+def garment_refine_prompt(character: Mapping, scene: Mapping) -> str:
+    """Task 20.11 colour retry: the garments lead (right after the style), so the locked
+    colours carry the most weight when one person's region is repainted."""
+    gender_noun = "woman" if character["gender"] == "female" else "man"
+    return _styled(
+        f"plain {character['top_color']} {character['top_item']}, plain {character['bottom_color']} "
+        f"{character['bottom_item']}, {character['age_group']} {character['ethnicity']} {gender_noun}, "
+        f"{character['hair']}, talking, in {scene['place']}"
+    )
+
+
 def hand_prompt() -> str:
     return _styled(HAND_PROMPT)

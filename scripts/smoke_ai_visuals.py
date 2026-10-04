@@ -188,6 +188,12 @@ def keep_evidence(client: TestClient, characters: dict[str, str], project_id: st
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(source, target)
                 pair.append(target)
+        for report in ("colour_check.json", "extra_person_check.json"):  # Task 20.11 retry reports
+            source = folder / report
+            if source.is_file():
+                target = output_dir / "shots" / f"{label}_{report}"
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
         kept["shots"].append({"label": label, "seed": shot["seed"], "prompt_tokens": shot["prompt_tokens"],
                               "prompt_truncated": bool(shot["prompt_truncated"])})
         if len(pair) == 2:
