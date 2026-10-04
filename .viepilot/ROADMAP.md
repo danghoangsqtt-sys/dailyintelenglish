@@ -1321,3 +1321,46 @@ the machine (invariant 37).
 **Follow-ups already logged for later phases:** ENH-014 (outro heuristic — decide before the
 next gate) and ENH-015 (Gemini first-pass length ~0.61× target, prompt tuning) remain in the
 backlog from Phase 18 and are not part of Phase 19.
+
+**Status update (2026-10-05, audit):** 19.1–19.7 accepted; Gate B-12 PARTIAL (media 6/6 PASS,
+visual PASS, audio FAIL). Phase 21 closed wontfix (D38: Edge TTS stays), so 19.9 is unblocked
+and still to do. Details: `.viepilot/phases/19-remotion/PHASE-STATE.md`.
+
+## Phase 20 — AI Visuals: Character Library, Scene Library, shots (ENH-012)
+
+**Status:** 🟡 Open | Spec `docs/implementation/phase-20-ai-visuals-feature-spec.md`.
+20.1–20.8 built; review r1 F1–F5 fixed; 20.9 cel-anime style (2026-10-04). Close-out plan:
+`docs/implementation/phase-23-24-scenes-and-storyboard.md` §2.
+
+- [x] 20.1–20.8 GPU manager, spikes, libraries, shots, Remotion + thumbnail integration
+- [x] 20.9 Cel-anime recipes from the owner's references
+- [ ] 20.10 O11 neutral style wording (no studio name, no franchise LoRA), A/B verified
+- [ ] 20.11 Duo fixes: no third person, top-colour drift
+- [ ] 20.12 Gate B-14 on a real episode → tag `die-vp-p20-complete`
+
+## Phase 21 — Better TTS engine — ⛔ closed wontfix (D38, 2026-09-30: Edge TTS stays)
+
+## Phase 23 — Scene Library v2 (after Phase 20)
+
+Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §3.
+
+- [ ] 23.1 Spike: same-place consistency (text / scene IP reference / plate + inpaint)
+- [ ] 23.2 Scene model v2 (category, time of day, indoor, seed, preview)
+- [ ] 23.3 Built-in pack ≈ 16 places
+- [ ] 23.4 Scene Library UI
+- [ ] 23.5 Gate B-15
+
+## Phase 24 — Story-driven visuals: storyboard (after Phase 23)
+
+Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images follow story beats
+(place/action changes), default cap 12 per episode (owner E4).
+
+- [ ] 24.1 Beat schema + migration
+- [ ] 24.2 AI storyboard (gateway, validated, deterministic fallback)
+- [ ] 24.3 Recipes v3: action + expression slots, pose library
+- [ ] 24.4 Step 5 storyboard review/edit
+- [ ] 24.5 Generation + timeline from beats
+- [ ] 24.6 Remotion polish (crossfade, pan/zoom, inserts)
+- [ ] 24.7 Gate B-16
+
+## Phase 22 — Music from text (queued after Phase 24; owner ref ACE-Step-1.5)

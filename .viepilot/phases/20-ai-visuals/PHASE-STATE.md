@@ -60,6 +60,10 @@
 | 20.7 | Remotion visuals, AI scene thumbnails, Step 6 | GPT | **implemented** (`1f4f5ef`); handover `tasks/task-20.7.md` |
 | 20.8 | End-to-end smoke, Gate B-14 runbook and documentation closeout | GPT | **implemented**; fake and real worker smoke passed; handover `tasks/task-20.8.md`; PM review and owner Gate B-14 remain pending |
 | Review r1 | PM review of 20.3–20.8 (`review-r1-tasks-20.3-20.8.md`): F1 background flash in inter-line pauses (blocking), F2 stale pending shots, F3 hung worker not killed, F4 unlock from any status, F5 no cancel button | Claude (owner moved implementation to Claude, 2026-10-01) | **fixed** on `claude/admiring-knuth-r1d8vc` after merging the implementer branch; verification on the owner's machine via the Codex runbook `docs/operations/owner-runbook-2026-10-01-r9-gate-b14.md`, then Gate B-14 |
+| 20.9 | Cel-anime recipes from the owner's references (replaces r3 watercolor) | Claude | **done 2026-10-04** (`5d9d62e` card, `1ad6f33` code); real smoke 8/8; Lan + Minh regenerated and locked in the real library; owner "okey rất tốt". Card `tasks/task-20.9-style-cel-anime.md` |
+| 20.10 | O11 neutral style wording, remove franchise LoRA support, GPU A/B | Claude | planned (plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §2) |
+| 20.11 | Duo fixes: third person in duo_close, top-colour drift | Claude | planned |
+| 20.12 | Gate B-14 on a real episode | Owner | planned |
 
 ## Owner decisions 2026-09-30 (cloud session; for the PM's decision log)
 
