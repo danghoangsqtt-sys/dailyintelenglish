@@ -685,9 +685,11 @@
 
   function readStoredRenderer() {
     try {
-      return localStorage.getItem(RENDERER_STORAGE_KEY) || "ffmpeg";
+      // Task 19.9: Enhanced is the default once Remotion is installed (the caller only uses
+      // this when remotionConfigured); a choice the owner already stored is kept.
+      return localStorage.getItem(RENDERER_STORAGE_KEY) || "remotion";
     } catch {
-      return "ffmpeg"; // localStorage unavailable — default to Standard
+      return "remotion"; // localStorage unavailable — the default (still gated by remotionConfigured)
     }
   }
 

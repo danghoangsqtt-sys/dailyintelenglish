@@ -51,13 +51,13 @@ class Settings(BaseSettings):
     FFMPEG_PATH: str = "ffmpeg"
 
     # Task 19.7 (D19.7-b): the renderer kill switch. Any value other than the exact
-    # string "remotion" (unset, "ffmpeg", or anything else) forces the ffmpeg path
-    # regardless of what a request asks for -- deliberately the stronger veto, so a
-    # fresh install with this unset renders exactly like every pre-Phase-19 release
+    # string "remotion" forces the ffmpeg path regardless of what a request asks for
     # (I36). A request may always downgrade "remotion" -> "ffmpeg" (the safer path is
-    # always allowed), but can only ever reach "remotion" when this is already set to
-    # it -- two independent opt-ins (deployment env + per-request) both have to agree.
-    VIDEO_RENDERER: Literal["ffmpeg", "remotion"] = "ffmpeg"
+    # always allowed), but can only ever reach "remotion" when this permits it.
+    # Task 19.9 (D38, 2026-10-05): the default is now "remotion", the same pattern as
+    # Task 18.11's AI_MODE flip; DIE_VIDEO_RENDERER=ffmpeg still forces the
+    # pre-Phase-19 path, and a Remotion failure still falls back to ffmpeg per render.
+    VIDEO_RENDERER: Literal["ffmpeg", "remotion"] = "remotion"
     # Task 19.7 (D19.7-h): allows video_renderer_remotion's subprocess calls to let
     # Remotion's own CLI download Chrome Headless Shell on first use (confirmed via a
     # real probe: `remotion render`/`remotion still` call `ensureBrowser()`

@@ -36,3 +36,18 @@ Amendment A, Phase 19.9 flips the Remotion default on its own." Run via `/vp-aut
 
 Full suite green; vitest/tsc unaffected; `GET /api/video/health` unchanged. A fresh Step 5 with
 Remotion installed and nothing stored shows Enhanced selected.
+
+## Result (2026-10-05) — PASS; Phase 19 closed
+
+- `VIDEO_RENDERER` now defaults to `"remotion"`, and Step 5's stored-renderer default is `"remotion"`
+  (still gated by `remotionConfigured`).
+- Five browser tests broke on the new default. Four were renderer-agnostic and had implicitly relied
+  on the live machine's Remotion health (aspect ratio ×2, avatar/generate wiring, the Step 5 elapsed
+  counter). They now store the Standard choice, so they no longer depend on the machine. The
+  caption-style test now asserts Enhanced as the default, then exercises Standard as before.
+- CHANGELOG `[Unreleased]` was closed into `[1.2.0-beta] - 2026-10-05`; README is at 1.2.0-beta.
+- Full suite: 1364 passed, 1 failed. The failure was
+  `test_learning_jobs_browser::test_learning_terminal_error_shows_retry…`, a 30 s Playwright wait
+  timeout under full-suite load on an unrelated page. Run alone it passed 3/3 (7/7 each), so it is
+  logged as load flakiness.
+- No `v1.2.0-beta` release tag; release tagging stays with the owner.

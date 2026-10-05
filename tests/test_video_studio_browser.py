@@ -182,6 +182,9 @@ async def test_aspect_ratio_defaults_to_16x9_and_hides_vertical_download(
         else:
             await route.continue_()
 
+    # Task 19.9 made Enhanced the default wherever Remotion is installed; this test is about the
+    # Standard flow, so it stores the owner's Standard choice (machine-independent).
+    await page.add_init_script("try { localStorage.setItem('die-video-renderer', 'ffmpeg'); } catch (e) {}")
     await page.route("**/api/**", handle_routes)
     await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
     await page.wait_for_selector("#workspace:not([hidden])")
@@ -221,6 +224,9 @@ async def test_selecting_9x16_sends_it_and_shows_vertical_download(browser_insta
         else:
             await route.continue_()
 
+    # Task 19.9 made Enhanced the default wherever Remotion is installed; this test is about the
+    # Standard flow, so it stores the owner's Standard choice (machine-independent).
+    await page.add_init_script("try { localStorage.setItem('die-video-renderer', 'ffmpeg'); } catch (e) {}")
     await page.route("**/api/**", handle_routes)
     await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
     await page.wait_for_selector("#workspace:not([hidden])")
@@ -392,7 +398,11 @@ async def test_caption_style_chips_follow_renderer_and_are_sent_only_for_enhance
     await page.reload()
     await page.wait_for_selector("#workspace:not([hidden])")
 
-    # Standard (default): chips disabled, outline shown as the default, nothing extra sent.
+    # Task 19.9: with Remotion installed and nothing stored, Enhanced is the default.
+    assert await page.locator("[data-renderer='remotion']").get_attribute("aria-pressed") == "true"
+    assert await page.locator("[data-caption-style='box']").is_enabled()
+    # Standard: chips disabled, outline shown as the default, nothing extra sent.
+    await page.click("[data-renderer='ffmpeg']")
     assert await page.locator("[data-renderer='ffmpeg']").get_attribute("aria-pressed") == "true"
     assert await page.locator("[data-caption-style='outline']").get_attribute("aria-pressed") == "true"
     assert await page.locator("[data-caption-style='box']").is_disabled()

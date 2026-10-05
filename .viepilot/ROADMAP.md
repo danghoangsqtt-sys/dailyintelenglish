@@ -1322,9 +1322,10 @@ the machine (invariant 37).
 next gate) and ENH-015 (Gemini first-pass length ~0.61× target, prompt tuning) remain in the
 backlog from Phase 18 and are not part of Phase 19.
 
-**Status update (2026-10-05, audit):** 19.1–19.7 accepted; Gate B-12 PARTIAL (media 6/6 PASS,
-visual PASS, audio FAIL). Phase 21 closed wontfix (D38: Edge TTS stays), so 19.9 is unblocked
-and still to do. Details: `.viepilot/phases/19-remotion/PHASE-STATE.md`.
+**Status update (2026-10-05):** ✅ **Phase 19 closed** (Task 19.9, D38): Enhanced (Remotion) is the
+default renderer; version **1.2.0-beta**; tag `die-vp-p19-complete`. Gate B-12 was PARTIAL (media
+6/6 PASS, visual PASS, audio FAIL on the Edge TTS voice, which is not a renderer issue; D38 kept Edge
+TTS and let 19.9 proceed).
 
 ## Phase 20 — AI Visuals: Character Library, Scene Library, shots (ENH-012)
 

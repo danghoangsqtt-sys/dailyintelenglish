@@ -8,6 +8,21 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+## [1.2.0-beta] - 2026-10-05
+
+**Headline:** Enhanced (Remotion) video is now the default renderer (Task 19.9, D38). Episodes get
+word-level karaoke captions, a speaker indicator, vocabulary cards and intro/outro, with automatic
+fallback to Standard (ffmpeg) and the `DIE_VIDEO_RENDERER=ffmpeg` kill switch. This release also
+carries:
+
+- the AI visuals work: a cel-anime character library, the scene library with plates, and the AI
+  storyboard to shots to timeline;
+- these items still await owner Gates B-14, B-15 and B-16.
+
+### Changed (Phase 19 close-out)
+- **Task 19.9:** `VIDEO_RENDERER` defaults to `remotion`. Step 5 selects Enhanced when Remotion is
+  installed and no choice is stored; a stored choice is kept.
+
 ### Added (Phase 24 — storyboard, 2026-10-05)
 - **Task 24.6:** Enhanced video motion. Each picture moves in its own subtle way (zoom in or out,
   pan left or right; the same picture always moves the same way), never showing an edge. Cuts

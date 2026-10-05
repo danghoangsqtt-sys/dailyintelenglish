@@ -83,7 +83,8 @@ multiple separate AI-assisted read-only `/vp-audit` passes), with major AI-archi
 work in Phases 13–18. Each closed with zero real defects found on PM review. Full evidence
 trail in `.viepilot/ROADMAP.md` and `.viepilot/TRACKER.md`.
 
-**Current version:** `1.1.0-beta` (2026-09-26, Phase 18 close-out). AI writes are
+**Current version:** `1.2.0-beta` (2026-10-05, Phase 19 close-out: Enhanced/Remotion video by
+default; AI visuals and the storyboard are included, with owner gates pending). AI writes are
 **cloud-first with local fallback** — Gemini 3.1 Flash-Lite is the primary, with an
 automatic chain through OpenRouter free models and finally local `qwen3.5:9b` on the
 RTX 3060. Real Gate B-11 measurement: **~45s B1 8-min script generation median, vs. ~127s

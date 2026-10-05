@@ -351,6 +351,9 @@ async def test_step5_elapsed_counter_advances_against_real_wall_clock(
 ):
     page = await browser_instance.new_page()
     await _mock_video_routes(page)
+    # Task 19.9 made Enhanced the default wherever Remotion is installed; this test is about the
+    # Standard flow, so it stores the owner's Standard choice (machine-independent).
+    await page.add_init_script("try { localStorage.setItem('die-video-renderer', 'ffmpeg'); } catch (e) {}")
     await page.goto(f"{video_live_server_url}/step5?project_id={VIDEO_PROJECT['id']}")
     await page.wait_for_selector("#workspace:not([hidden])")
 

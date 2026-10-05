@@ -363,6 +363,9 @@ async def test_avatar_and_generate_flows_remain_wired(
     page = await browser_instance.new_page()
     event_log: list[tuple[str, str]] = []
     await _mock_video_routes(page, event_log=event_log)
+    # Task 19.9 made Enhanced the default wherever Remotion is installed; this test is about the
+    # Standard flow, so it stores the owner's Standard choice (machine-independent).
+    await page.add_init_script("try { localStorage.setItem('die-video-renderer', 'ffmpeg'); } catch (e) {}")
     await page.goto(f"{live_server_url}/step5?project_id={PROJECT_ID}")
     await page.wait_for_selector("#workspace:not([hidden])")
     await page.locator("#avatar-details summary").click()
