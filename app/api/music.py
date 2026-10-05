@@ -22,7 +22,7 @@ from app.models.music import (
 )
 from app.services.music import tracks
 from app.services.music.engine import require_generation, unavailable_reason
-from app.services.music.pipelines import JOB_KIND
+from app.services.music.pipelines import JOB_KIND, JOB_KINDS
 from app.services.visuals import jobs
 
 router = APIRouter(prefix="/api/music", tags=["music"])
@@ -153,7 +153,7 @@ async def generate_music(body: MusicGenerateInput, db: aiosqlite.Connection = De
 
 async def _music_job(db: aiosqlite.Connection, job_id: str) -> dict:
     job = await jobs.get_job(db, job_id)
-    if job["kind"] != JOB_KIND:
+    if job["kind"] not in JOB_KINDS:
         raise NotFoundError("Music job not found")
     return job
 

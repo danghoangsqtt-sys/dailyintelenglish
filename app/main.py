@@ -10,7 +10,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api import (
-    ai_jobs, audio, learning, music, projects, settings as settings_api, storyboard, thumbnail, tts, video, visuals,
+    ai_jobs, audio, learning, music, music_project, projects, settings as settings_api, storyboard, thumbnail, tts,
+    video, visuals,
     youtube,
 )
 from app.core.config import settings
@@ -102,6 +103,7 @@ async def lifespan(app: FastAPI):
     image_job_runner.register_handler("project_shots", visuals_pipelines.project_shots)
     image_job_runner.register_handler("shot_regenerate", visuals_pipelines.shot_regenerate)
     image_job_runner.register_handler(music_pipelines.JOB_KIND, music_pipelines.music_track)  # Task 22.2
+    image_job_runner.register_handler(music_pipelines.PREVIEWS_JOB_KIND, music_pipelines.music_previews)  # 22.3
     await visuals_pipelines.recover_pending_shots(Database.instance().connection)
     await image_job_runner.start()
     await ai_worker.start()
@@ -164,6 +166,7 @@ app.include_router(ai_jobs.health_router)
 app.include_router(visuals.router)
 app.include_router(visuals.project_router)
 app.include_router(storyboard.router)
+app.include_router(music_project.router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
 

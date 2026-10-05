@@ -43,3 +43,38 @@ class MusicGenerateInput(BaseModel):
     @classmethod
     def validate_brief(cls, value: str) -> str:
         return " ".join(value.split())
+
+
+# Task 22.3: the project's music brief (D45). The AI answer and the owner's edit use one model.
+PREVIEW_SECONDS = 30
+PREVIEW_COUNT = 3
+BRIEF_SCRIPT_LINES = 12
+EPISODE_MARGIN_S = 15
+# Rule fallback when the AI is unavailable or wrong: one family per script genre (owner can edit).
+GENRE_STYLE = {
+    "small_talk": "upbeat", "directions": "upbeat", "negotiation": "upbeat",
+    "storytelling": "acoustic", "interview": "acoustic", "news": "acoustic",
+    "opinion": "lofi", "debate": "lofi", "informational": "lofi", "instructions": "lofi",
+}
+GENRE_BRIEF = {
+    "upbeat": "friendly and lively, medium tempo, light and positive",
+    "acoustic": "warm and gentle, calm tempo, soft guitar and piano",
+    "lofi": "relaxed and focused, slow tempo, soft keys",
+}
+
+
+class MusicBriefInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    style: str
+    brief: str = Field(default="", max_length=MAX_BRIEF_CHARS)
+    duration_s: int = Field(ge=MIN_DURATION_S, le=MAX_DURATION_S)
+
+    _validate_style = field_validator("style")(MusicGenerateInput.validate_style.__func__)
+    _validate_brief = field_validator("brief")(MusicGenerateInput.validate_brief.__func__)
+
+
+class MusicFullInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    seed: int = Field(ge=1, le=MAX_SEED)
