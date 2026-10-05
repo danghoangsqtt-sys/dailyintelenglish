@@ -62,6 +62,7 @@
     .generate-card { padding: 22px; }
     .generate-row { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
     .music-select-wrap { flex: 1; min-width: 220px; }
+    .music-auto-note { display: block; min-height: 16px; margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.45; }
     .generate-progress { min-height: 18px; margin-top: 14px; color: var(--muted); font-size: 13px; }
     .result-card { margin-top: 18px; padding: 20px; }
     .result-player { width: 100%; margin-bottom: 16px; }
@@ -129,6 +130,7 @@
                     <select id="music-select">
                       <option value="">None</option>
                     </select>
+                    <span class="music-auto-note" id="music-auto-note" aria-live="polite"></span>
                   </label>
                   <button class="btn btn-primary" id="generate-btn" type="button">🎬 Generate All</button>
                 </div>

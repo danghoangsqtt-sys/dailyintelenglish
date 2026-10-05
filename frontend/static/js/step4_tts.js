@@ -25,6 +25,11 @@
     lines: [],
     musicTracks: [],
     selectedMusic: "",
+    // Task 22.8 (D51): "auto" lets the app pick the track by topic + length; the pick's filename
+    // goes into selectedMusic, so Generate always sends a real file.
+    musicChoice: "",
+    autoPick: null,
+    autoPickPromise: null,
     audioJob: null,
     isGenerating: false,
     linesInFlight: new Set(),
@@ -324,7 +329,10 @@
     musicClip.className = state.selectedMusic
       ? "timeline-clip music-clip"
       : "timeline-clip timeline-placeholder";
-    musicClip.textContent = state.selectedMusic || "No music selected";
+    const musicTrack = state.musicTracks.find((track) => track.filename === state.selectedMusic);
+    musicClip.textContent = state.selectedMusic
+      ? `${state.musicChoice === AUTO_MUSIC ? "✨ " : ""}${(musicTrack && musicTrack.title) || state.selectedMusic}`
+      : "No music selected";
     musicLane.appendChild(musicClip);
   }
 
@@ -468,14 +476,79 @@
     if (clip) selectLine(clip.dataset.lineId);
   }
 
+  const AUTO_MUSIC = "__auto__";
+
+  function formatTrackLength(seconds) {
+    if (seconds == null) return "length unknown";
+    const total = Math.round(seconds);
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+  }
+
+  function trackLabel(track) {
+    const title = track.title || track.filename;
+    if (track.duration_s == null && !track.mood_label) return title;
+    return `${title} (${track.mood_label || "no mood"}, ${formatTrackLength(track.duration_s)})`;
+  }
+
+  function setAutoNote(text) {
+    const note = byId("music-auto-note");
+    if (note) note.textContent = text;
+  }
+
   function renderMusicOptions() {
     const select = byId("music-select");
+    if (state.musicTracks.length > 0) {
+      select.insertBefore(new Option("✨ Auto (best match)", AUTO_MUSIC), select.firstChild);
+    }
     state.musicTracks.forEach((track) => {
       const option = document.createElement("option");
       option.value = track.filename;
-      option.textContent = track.filename;
+      option.textContent = trackLabel(track);
       select.appendChild(option);
     });
+    if (state.musicTracks.length > 0) {
+      select.value = AUTO_MUSIC;
+      chooseMusic(AUTO_MUSIC);
+    } else {
+      setAutoNote("Add tracks in the Music Library to get automatic background music.");
+    }
+  }
+
+  async function suggestMusic() {
+    setAutoNote("Finding the best track for this episode…");
+    try {
+      const pick = await Api.suggestMusic(state.projectId);
+      if (state.musicChoice !== AUTO_MUSIC) return;
+      state.autoPick = pick;
+      state.selectedMusic = pick.filename || "";
+      if (pick.filename) {
+        const track = state.musicTracks.find((item) => item.filename === pick.filename) || {};
+        setAutoNote(`Auto pick: ${trackLabel({ ...track, title: pick.title, filename: pick.filename })} — ${pick.reason}`);
+      } else {
+        setAutoNote(`No automatic music: ${pick.reason}`);
+      }
+    } catch (error) {
+      console.error("Failed to pick music automatically:", error);
+      if (state.musicChoice !== AUTO_MUSIC) return;
+      state.autoPick = null;
+      state.selectedMusic = "";
+      setAutoNote("Automatic music is unavailable right now — choose a track or None.");
+    }
+    renderTimeline();
+  }
+
+  function chooseMusic(value) {
+    state.musicChoice = value;
+    if (value === AUTO_MUSIC) {
+      state.selectedMusic = "";
+      state.autoPickPromise = suggestMusic();
+    } else {
+      state.autoPick = null;
+      state.autoPickPromise = null;
+      state.selectedMusic = value;
+      setAutoNote("");
+    }
+    renderTimeline();
   }
 
   function renderResult(job) {
@@ -525,6 +598,7 @@
       // Mixing is a small, fixed remainder of total time (empirical) -- 95% leaves room to
       // land on 100% only once the mix genuinely finishes, never claiming done early.
       generationStatus.setProgress({ stageLabel: "Mixing final audio…", progressPercent: 95 });
+      if (state.autoPickPromise) await state.autoPickPromise; // Auto: mix with the real pick
       const job = await Api.generateAudio(state.projectId, state.selectedMusic);
       state.audioJob = job;
       renderResult(job);
@@ -632,7 +706,7 @@
     byId("voice-timeline").addEventListener("click", handleTimelineClick);
     byId("generate-btn").addEventListener("click", generateAll);
     byId("music-select").addEventListener("change", (event) => {
-      state.selectedMusic = event.target.value;
+      chooseMusic(event.target.value);
       renderTimeline();
     });
     const handleSpeakerFieldChange = (event) => {
