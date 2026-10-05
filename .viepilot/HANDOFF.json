@@ -204,9 +204,9 @@
     "24": {
       "name": "Story-driven visuals (storyboard)",
       "status": "in_progress",
-      "tasks_done": 0,
+      "tasks_done": 2,
       "tasks_total": 7,
-      "note": "Opened 2026-10-05 via /vp-auto; 24.1 storyboard data model + API in progress."
+      "note": "24.1 storyboard data model + API done; 24.2 AI proposal done (normalize, fit to cap, repair, rule fallback). Next 24.3 recipes v3 (action/expression, pose library)."
     }
   },
   "key_decisions": [

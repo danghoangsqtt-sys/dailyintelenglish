@@ -1357,7 +1357,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 (place/action changes), default cap 12 per episode (owner E4).
 
 - [x] 24.1 Beat schema + migration + storyboard API (estimate + cap)
-- [ ] 24.2 AI storyboard (gateway, validated, deterministic fallback)
+- [x] 24.2 AI storyboard (gateway, validated, one repair, fit to cap, deterministic fallback)
 - [ ] 24.3 Recipes v3: action + expression slots, pose library
 - [ ] 24.4 Step 5 storyboard review/edit
 - [ ] 24.5 Generation + timeline from beats

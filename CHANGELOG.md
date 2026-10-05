@@ -9,6 +9,11 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Added (Phase 24 — storyboard, 2026-10-05)
+- **Task 24.2:** `POST /api/projects/{id}/storyboard/propose`. The AI (cloud-first router) reads the
+  script, the cast and the 55-scene library and proposes beats. Its output is normalized, checked
+  with the owner rules and trimmed to the image cap. One repair call quotes the exact error, and a
+  deterministic rule storyboard is the fallback. The response reports `proposal.path` (ai |
+  ai_repaired | rule) and the reason.
 - **Task 24.1:** project storyboards. Beats tile the script lines and carry a place (library
   scene or proposed new place), who is on screen, an action and an expression. Migration
   `010_storyboard.sql`; `GET/PUT /api/projects/{id}/storyboard`. Validation covers gaps,

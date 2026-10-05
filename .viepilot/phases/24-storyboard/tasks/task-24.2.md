@@ -83,3 +83,33 @@ use `FakeProvider` (zero network).
 - the prompt renders the scene library and line numbers.
 
 Full suite green; ruff clean.
+
+## Result (2026-10-05) — PASS
+
+- Delivered as planned, plus three changes driven by **real-AI runs**. They used Gemini 3.1
+  Flash-Lite through the cloud-first router, on a copy of the owner DB, with the 33-line "Trial
+  Run 8min" script and Lan + Minh cast.
+  1. **Shape normalization (AI path only):**
+     - the model omitted `kind`, so inserts arrived as place-only scene beats;
+     - it sent empty strings for absent places, plus punctuation and long phrases in actions.
+
+     `_normalize_proposal` fixes only the shape: it infers `kind`, maps "" to null, lets the library
+     scene win over free text, cleans actions to ≤ 8 plain words and ≤ 40 chars, and maps an unknown
+     expression to calm. Owner `PUT` stays strict. The AI schema (`proposal_schema`) also makes every
+     beat field required.
+  2. **Budget:** the content was good, but the image arithmetic was not (15 vs a cap of 12, even
+     after the repair). The prompt now states "at most N places" with a worked example. `fit_to_cap`
+     trims the AI's own plan in order of least story value:
+     - collapse a place's later actions (latest first);
+     - then fold inserts into the beat before;
+     - then fold places.
+
+     Line coverage is kept, and the response reason says "trimmed to the image cap in k step(s)".
+  3. The repair error now names each failing field (location + rule, never the raw text).
+- Real runs before the fixes: 1/3 AI, 2/3 rule, then 2/3 AI after repair. After the fixes: **5/5
+  AI** in ~5–13 s, every one at 12/12 images. The best run had office → crowded street (insert) →
+  office → empty coffee shop (insert) → cafe → working alone at home (insert) → cafe, with matching
+  actions and expressions.
+- Tests: `tests/test_storyboard_propose.py` 9 passed (valid, repair, rule after two failures,
+  provider error → project scenes, `rule_beats`, no script, normalization, fit order, trimmed
+  proposal).

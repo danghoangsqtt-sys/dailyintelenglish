@@ -25,3 +25,11 @@ async def put_storyboard(project_id: str, body: StoryboardInput, db: aiosqlite.C
     async with write_transaction(db):
         await project_service.get_project(db, project_id)
         return ok(await storyboard.replace_storyboard(db, project_id, body, "owner"))
+
+
+@router.post("/propose")
+async def propose_storyboard(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Task 24.2: AI proposal (one repair, then the deterministic rule); replaces the draft."""
+    async with read_transaction():
+        await project_service.get_project(db, project_id)
+    return ok(await storyboard.propose_storyboard(db, project_id))
