@@ -109,7 +109,8 @@ async def scene_preview(job: dict, runner: ImageJobRunner) -> dict:
     async with engine.session("text2img", ip="none", consumer="visuals_scene_preview") as session:
         response = await session.request({
             "command": "generate", "prompt": recipes.scene_preview_prompt(scene),
-            "negative_prompt": recipes.NEGATIVE, "seed": scene.get("seed") or random.randint(1, 2**31 - 1),
+            "negative_prompt": recipes.PLATE_NEGATIVE,
+            "seed": scene.get("seed") or random.randint(1, 2**31 - 1),
             "width": 1344, "height": 768, "steps": 30, "guidance_scale": 6.0,
             "output_path": str(path),
         })
@@ -312,7 +313,8 @@ async def _ensure_plates(db, engine, runner: ImageJobRunner, job: dict, contexts
                 path = _plate_path(scene)
                 await session.request({
                     "command": "generate", "prompt": recipes.scene_preview_prompt(scene),
-                    "negative_prompt": recipes.NEGATIVE, "seed": scene.get("seed") or random.randint(1, 2**31 - 1),
+                    "negative_prompt": recipes.PLATE_NEGATIVE,
+                    "seed": scene.get("seed") or random.randint(1, 2**31 - 1),
                     "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,
                     "output_path": str(path),
                 })

@@ -31,3 +31,17 @@ test is tightened to that measured gap (real ≈ estimator + 6).
 
 A script renders the 16 plates into the owner's real library (scene preview jobs through the
 app API) and a contact sheet `docs/operations/phase23-t3-builtin-plates.png` for the owner.
+
+## Results (2026-10-05)
+
+- 16 built-ins (`database.BUILTIN_SCENES`); the 6 originals keep their text, and a user scene
+  with the same name blocks a built-in silently (INSERT OR IGNORE, UNIQUE name).
+- Single suffix → "close-up, talking". Real tokenizer over every recipe × built-in place ×
+  longest character: **max 77** (duo_close, Classroom), at estimate 72 →
+  `test_every_builtin_place_fits_the_real_clip_budget` asserts ≤ 72.
+- Plates rendered into the owner's real library (backup `data/backups/app_before_scenes_v2_20261005.db`).
+  The first run showed people in the Market and Office plates, so plates now use
+  `recipes.PLATE_NEGATIVE` (person/people/man/woman/…). All 16 were re-rendered at the same
+  seeds and are now empty: `docs/operations/phase23-t3-builtin-plates.png` (Gate B-15 input).
+- For the owner: several indoor plates (Library, Living room, Restaurant, Office) lean red/orange.
+- Tests: full suite 1291 passed (+1 plate-negative test, passed on its own); ruff clean.

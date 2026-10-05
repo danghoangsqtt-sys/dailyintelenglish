@@ -49,6 +49,29 @@ class Database:
         return self._connection
 
 
+# (slug, name, place, staging, category); ids are `builtin-<slug>`.
+BUILTIN_SCENES = (
+    ("classroom", "Classroom", "a sunny classroom with a whiteboard", "standing", "school"),
+    ("cafe", "Cafe", "a cozy Vietnamese street cafe", "seated", "food"),
+    ("library", "Library", "a bright university library", "standing", "school"),
+    ("kitchen", "Kitchen", "a bright home kitchen", "standing", "home"),
+    ("park", "Park", "a green city park", "standing", "nature"),
+    ("office", "Office", "a modern bright office", "seated", "work"),
+    # Task 23.3 pack: short on purpose (the plate carries the detail; the place is the
+    # prompt's tail and is cut first past 77 CLIP tokens).
+    ("living-room", "Living room", "a cozy living room", "seated", "home"),
+    ("restaurant", "Restaurant", "a small family restaurant", "seated", "food"),
+    ("market", "Market", "a busy outdoor market", "standing", "food"),
+    ("campus", "Campus", "a green university campus", "standing", "school"),
+    ("meeting-room", "Meeting room", "a bright meeting room", "seated", "work"),
+    ("street", "City street", "a busy city street", "standing", "city"),
+    ("bus-stop", "Bus stop", "a city bus stop", "standing", "travel"),
+    ("station", "Train station", "a train station platform", "standing", "travel"),
+    ("countryside", "Countryside", "a countryside path", "standing", "nature"),
+    ("beach", "Beach", "a sunny beach", "standing", "nature"),
+)
+
+
 async def init_db() -> None:
     """Open the database connection and apply each migration file exactly once, in
     filename order, tracked in `schema_migrations`.
@@ -85,14 +108,7 @@ async def init_db() -> None:
             (migration_file.name, datetime.now(timezone.utc).isoformat()),
         )
     now = datetime.now(timezone.utc).isoformat()
-    for slug, name, place, staging, category in (
-        ("classroom", "Classroom", "a sunny classroom with a whiteboard", "standing", "school"),
-        ("cafe", "Cafe", "a cozy Vietnamese street cafe", "seated", "food"),
-        ("library", "Library", "a bright university library", "standing", "school"),
-        ("kitchen", "Kitchen", "a bright home kitchen", "standing", "home"),
-        ("park", "Park", "a green city park", "standing", "nature"),
-        ("office", "Office", "a modern bright office", "seated", "work"),
-    ):
+    for slug, name, place, staging, category in BUILTIN_SCENES:
         await connection.execute(
             "INSERT OR IGNORE INTO scenes "
             "(id, name, place, staging, is_builtin, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?)",

@@ -46,7 +46,7 @@ async def test_migration_008_and_builtin_seed_once(tmp_path, monkeypatch, preexi
         await init_db()
         db = Database.instance().connection
         cursor = await db.execute("SELECT count(*) FROM scenes WHERE is_builtin = 1")
-        assert (await cursor.fetchone())[0] == 6
+        assert (await cursor.fetchone())[0] == 16
         cursor = await db.execute("SELECT count(*) FROM schema_migrations WHERE filename = '008_ai_visuals.sql'")
         assert (await cursor.fetchone())[0] == 1
         cursor = await db.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'image_jobs'")
@@ -68,7 +68,7 @@ def test_recipe_strings_and_worst_case_budget():
     )
     assert recipes.single_prompt(CHARACTER, SCENE) == (
         recipes.STYLE_CEL_ANIME + ", " + phrase
-        + ", close-up, talking with a hand gesture, in a cozy Vietnamese street cafe"
+        + ", close-up, talking, in a cozy Vietnamese street cafe"
     )
     prompts = [
         recipes.candidate_prompt(CHARACTER), recipes.scene_preview_prompt(SCENE),
@@ -79,7 +79,25 @@ def test_recipe_strings_and_worst_case_budget():
           for staging in ("standing", "seated") for kind in ("duo_close", "duo_wide")),
     ]
     assert all(recipes.token_count(prompt) <= 75 for prompt in prompts)
-    assert recipes.token_count(recipes.single_prompt(CHARACTER, SCENE)) == 73
+    assert recipes.token_count(recipes.single_prompt(CHARACTER, SCENE)) == 69
+
+
+def test_every_builtin_place_fits_the_real_clip_budget():
+    """Task 23.3: `token_count` under-counts the real CLIP tokenizer by 5-6 on these prompts.
+    Measured 2026-10-05 with the real tokenizer over every recipe x built-in place x this
+    (longest) character: max 77 real tokens (duo_close, Classroom) at 72 estimated -- the limit,
+    so the place (the prompt's tail) is never cut. A higher estimate needs a new measurement."""
+    from app.db.database import BUILTIN_SCENES
+
+    assert len(BUILTIN_SCENES) == 16
+    for _, _, place, staging, _ in BUILTIN_SCENES:
+        scene = {"place": place, "staging": staging, "time_of_day": "sunset"}
+        prompts = [
+            recipes.single_prompt(CHARACTER, scene), recipes.refine_prompt(CHARACTER, scene),
+            recipes.garment_refine_prompt(CHARACTER, scene), recipes.scene_preview_prompt(scene),
+            *(recipes.duo_prompt(CHARACTER, CHARACTER, scene, kind) for kind in ("duo_close", "duo_wide")),
+        ]
+        assert max(recipes.token_count(prompt) for prompt in prompts) <= 72, place
 
 
 def test_geometry_heads_halves_ears_hands_and_refine_mask():

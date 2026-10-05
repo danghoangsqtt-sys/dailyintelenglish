@@ -43,7 +43,7 @@ def test_create_validate_and_stale_plate(client):  # noqa: F811
     assert client.post("/api/visuals/scenes", json={**body, "name": "X", "category": "space"}).status_code == 422
     with sqlite3.connect(settings.db_path) as connection:
         connection.execute("UPDATE scenes SET preview_path = 'p.png' WHERE id = ?", (scene["id"],))
-    renamed = data(client.patch(f"/api/visuals/scenes/{scene['id']}", json={"name": "Market"}))
+    renamed = data(client.patch(f"/api/visuals/scenes/{scene['id']}", json={"name": "Evening market"}))
     assert renamed["preview_url"]  # a rename keeps the plate
     moved = data(client.patch(f"/api/visuals/scenes/{scene['id']}", json={"time_of_day": "sunset"}))
     assert moved["preview_url"] is None  # the plate showed night: stale
@@ -92,3 +92,12 @@ def test_scene_reference_off_keeps_the_old_path(client, monkeypatch, requests_lo
     wait_job(client, data(client.post(f"/api/projects/{project['id']}/visuals/shots")))
     assert not [p for p in requests_log if "empty scene" in p.get("prompt", "")]
     assert not [p for p in requests_log if "ip_adapter_scene_image" in p or "ip_adapter_scene_mask" in p]
+
+
+def test_plates_use_the_people_free_negative(client, monkeypatch, requests_log):  # noqa: F811
+    monkeypatch.setattr(settings, "VISUALS_COLOUR_RETRIES", 0)
+    project, _, _ = setup_project(client, 1, 1)
+    wait_job(client, data(client.post(f"/api/projects/{project['id']}/visuals/shots")))
+    plates = [p for p in requests_log if "empty scene" in p.get("prompt", "")]
+    assert plates and all(p["negative_prompt"] == recipes.PLATE_NEGATIVE for p in plates)
+    assert "people" in recipes.PLATE_NEGATIVE and recipes.token_count(recipes.PLATE_NEGATIVE) <= 72

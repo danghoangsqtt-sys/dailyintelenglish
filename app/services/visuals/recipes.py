@@ -20,6 +20,12 @@ NEGATIVE = (
     "glossy skin, text, watermark, deformed, bad anatomy, extra fingers, deformed hands, extra person, "
     "crowd, backpack, hat, jacket, hoodie, scarf, stripes, plaid, print, multicolored clothes"
 )
+# Task 23.3: the scene plate must be empty -- a person in the plate is carried into shots by
+# the scene reference (the Market and Office plates of the first built-in run had people).
+PLATE_NEGATIVE = (
+    "person, people, man, woman, girl, boy, child, crowd, character, figure, watercolor, pastel, "
+    "washed out, faded, overexposed, photorealistic, 3d render, text, watermark, blurry"
+)
 HAND_PROMPT = "detailed hand, five fingers, natural hand"
 HAND_NEGATIVE = "extra fingers, missing fingers, fused fingers, deformed hands, bad anatomy, blurry"
 SHEET_KINDS = ("full_body", "portrait_calm", "portrait_smile", "portrait_surprised")
@@ -74,7 +80,10 @@ def scene_preview_prompt(scene: Mapping) -> str:
 
 
 def single_prompt(character: Mapping, scene: Mapping) -> str:
-    return _styled(character_phrase(character), f"close-up, talking with a hand gesture, in {scene['place']}")
+    # Task 23.3: "close-up, talking" (was "..., talking with a hand gesture"): with the longest
+    # character the real CLIP tokenizer counted 78-79 tokens for the built-in Cafe/Classroom
+    # places, cutting the place's last word (the estimator said 74). The pose sets the hand.
+    return _styled(character_phrase(character), f"close-up, talking, in {scene['place']}")
 
 
 def duo_prompt(left: Mapping, right: Mapping, scene: Mapping, kind: str) -> str:
