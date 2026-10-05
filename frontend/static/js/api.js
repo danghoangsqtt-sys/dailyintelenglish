@@ -82,6 +82,11 @@ const Api = (() => {
     deleteMusic: (filename) =>
       request(`/api/music/${encodeURIComponent(filename)}`, { method: "DELETE" }),
     musicContentUrl: (filename) => `/api/music/${encodeURIComponent(filename)}`,
+    // Task 22.2: AI music generation (ACE-Step 1.5) for the Music Library.
+    getMusicOptions: () => request("/api/music/options"),
+    generateMusic: (body) => request("/api/music/generate", { method: "POST", body: JSON.stringify(body) }),
+    getMusicJob: (id) => request(`/api/music/jobs/${encodeURIComponent(id)}`),
+    cancelMusicJob: (id) => request(`/api/music/jobs/${encodeURIComponent(id)}/cancel`, { method: "POST" }),
     getVisualsHealth: () => request("/api/visuals/health"),
     getVisualsOptions: () => request("/api/visuals/options"),
     listCharacters: () => request("/api/visuals/characters"),
