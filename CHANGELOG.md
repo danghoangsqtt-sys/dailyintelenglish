@@ -9,6 +9,9 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Added (Phase 24 — storyboard, 2026-10-05)
+- **Task 24.6:** Enhanced video motion. Each picture moves in its own subtle way (zoom in or out,
+  pan left or right; the same picture always moves the same way), never showing an edge. Cuts
+  into and out of story illustrations fade more softly.
 - **Task 24.5:** an approved storyboard drives "Generate shots" and the Enhanced video.
   - Each place gets a framing set in the beat's mood and action, plus one picture per extra action
     and one illustration per insert. New places join the scene library.

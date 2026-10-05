@@ -45,3 +45,17 @@ vitest:
 - the transform string is well formed.
 
 `npx tsc --noEmit` clean; Python suite unaffected (props unchanged).
+
+## Result (2026-10-05) — PASS
+
+- Delivered as planned:
+  - `shotMotion` gives each shot a deterministic motion (zoom-in, zoom-out, pan-left or pan-right);
+  - `motionTransform` stays edge-safe (|x| ≤ (scale − 1) / 2);
+  - `crossfadeFrames` is 18 frames around inserts and 10 otherwise;
+  - `visualBackgroundForFrame` adds `progress` and `transform`, and `Episode.tsx` applies the
+    transform.
+- Existing tests now assert `progress` continuity (the motion never restarts within a run of one
+  shot) instead of a monotonic zoom scale.
+- vitest **42 passed** (+3); tsc clean; Python remotion/video tests 92 passed.
+- No real Remotion render in this task, because the props are unchanged. The motion is visible
+  at owner Gate B-16.

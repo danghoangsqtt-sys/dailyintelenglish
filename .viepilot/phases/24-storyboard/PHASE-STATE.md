@@ -12,5 +12,5 @@
 | 24.3 | Recipes v3: action + expression slots, pose library | Claude | **done 2026-10-05**: 8 action poses, beat prompts with expression + budget guard; GPU sheet 7/9 actions read clearly (think/work weak, expressions subtle); 45 tests |
 | 24.4 | Step 5 storyboard review/edit UI | Claude | **done 2026-10-05**: Storyboard section on Step 5 (propose, edit place/people/action/expression, split/merge, live cost, save/approve); Playwright flow test |
 | 24.5 | Generation + timeline from beats (24.5a shots, 24.5b timeline) | Claude | **done 2026-10-05**: shots + timeline from the approved storyboard; real smoke 12/12 shots in 1031 s (AI 4.8 s, 3 content inserts); full suite 1365 passed |
-| 24.6 | Remotion polish (crossfade, pan/zoom, inserts) | Claude | **in_progress** (card `tasks/task-24.6.md`) |
+| 24.6 | Remotion polish (crossfade, pan/zoom, inserts) | Claude | **done 2026-10-05**: per-shot deterministic zoom/pan, edge-safe; 18-frame crossfade around inserts; vitest 42 |
 | 24.7 | Gate B-16 (owner) | Owner | planned |

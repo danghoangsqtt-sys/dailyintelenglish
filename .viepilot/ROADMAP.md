@@ -1361,7 +1361,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 - [x] 24.3 Recipes v3: action + expression slots, pose library
 - [x] 24.4 Step 5 storyboard review/edit
 - [x] 24.5 Generation + timeline from beats
-- [ ] 24.6 Remotion polish (crossfade, pan/zoom, inserts)
+- [x] 24.6 Remotion polish (crossfade, pan/zoom, inserts)
 - [ ] 24.7 Gate B-16
 
 ## Phase 22 — Music from text (queued after Phase 24; owner ref ACE-Step-1.5)

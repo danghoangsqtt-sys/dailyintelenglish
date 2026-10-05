@@ -321,7 +321,7 @@ export function AudioWindowContent({
       ) : null}
       {background.current ? (
         <Img src={staticFile(background.current)} style={{ position: "absolute", width: "100%", height: "100%",
-          objectFit: "cover", opacity: background.opacity, transform: `scale(${background.scale})` }} />
+          objectFit: "cover", opacity: background.opacity, transform: background.transform }} />
       ) : null}
       <Audio src={staticFile(audioPath)} startFrom={0} />
       {captionStyleSpec(captionStyle).bottomShade ? <div style={BOTTOM_SHADE_STYLE} /> : null}
