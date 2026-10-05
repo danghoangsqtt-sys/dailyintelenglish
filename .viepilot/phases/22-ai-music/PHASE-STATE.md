@@ -13,6 +13,6 @@
 | 22.3 | AI music brief + Step 4 previews → pick → full length | Claude | ↩️ built 2026-10-05 (full suite 1396 passed), **reverted** by D50 before push (card `tasks/task-22.3.md`) |
 | 22.7 | Library track details (mood, tags, measured length, licence, credit) + free-source guide | Claude | ✅ done 2026-10-06: details rows + PATCH + Library UI + guide; full suite 1380 passed (card `tasks/task-22.7.md`) |
 | 22.4 | Smart bed: fit to video length (trim / crossfade loop), loudness-normalised, speech-aware ducking, fade-in + fade-out at the video end; full-video soundtrack for both renderers (D51) | Claude | ✅ done 2026-10-06: bed + voice stem + full-video soundtrack on both renderers; real check lengths exact, open ~7 LU under voice, ducked −14 dB, fade to silence; 1399 passed (card `tasks/task-22.4.md`) |
-| 22.8 | Auto-select a track by topic + length ("✨ Auto" in Step 4, AI pick among top candidates, rule fallback, reason shown) (D51) | Claude | **in_progress** 2026-10-06 (card `tasks/task-22.8.md`) |
+| 22.8 | Auto-select a track by topic + length ("✨ Auto" in Step 4, AI pick among top candidates, rule fallback, reason shown) (D51) | Claude | ✅ done 2026-10-06: score + AI pick among top 5 + Step 4 Auto default; real Gemini picks on 3 real projects; 1410 passed (card `tasks/task-22.8.md`) |
 | 22.5 | YouTube description credit line from the episode's music | Claude | planned |
 | 22.6 | Gate B-17 (owner listening test on a real episode) | Owner | planned |

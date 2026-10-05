@@ -21,6 +21,12 @@ Versioning: [SemVer](https://semver.org/)
   - **Volume.** Every track is brought to the same loudness. The music dips well below the voice
     whenever someone speaks and comes back up in the intro, the outro and long pauses.
   - **Fades.** It fades in over 1 s and **fades out to silence on the video's last frame**.
+- **Task 22.8:** Step 4 picks the background music automatically. **"✨ Auto (best match)"** is the
+  default whenever the Music Library has tracks. It chooses by the episode's topic (the mood that
+  suits the script's genre, topic words in the track's tags and title) and by length (a track that
+  covers the whole video beats one that must loop). It avoids the music used by the last
+  episodes, and the AI makes the final choice among the best few. The pick and its reason are shown,
+  and any track or None can still be chosen by hand.
 
 ### Removed (Phase 22, D50, 2026-10-05)
 - The ACE-Step 1.5 music generator was tried (spike report

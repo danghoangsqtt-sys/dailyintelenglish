@@ -85,3 +85,36 @@ library has tracks.
   filename; None and a manual pick still work.
 - The full suite is green.
 - **Real check** on the real project with real Gemini and a few library tracks.
+
+## Results (2026-10-06)
+
+- **Built as planned.**
+  - `music_select_service.score` (pure; mood / topic / length / recent parts) and
+    `suggest` (AI among the top 5, one repair, rule fallback; `single` with one track, `none` for
+    an empty library).
+  - `POST /api/projects/{id}/music/suggest`.
+  - Step 4:
+    - Auto is the default with tracks;
+    - an "Auto pick: Title (mood, m:ss) — reason" line;
+    - track labels show title, mood and length;
+    - the timeline shows "✨ Title";
+    - Generate waits for the pick and sends its filename.
+- **Refactor:** the library listing and details moved from `api/music.py` into
+  `music_library_service` (`list_tracks`), so the selector does not import the API layer. The API
+  keeps thin aliases, and `test_music_api` is unchanged.
+- **Fix found by reading the output:** the rule reason said "suits a interview episode". It now
+  reads "suits interview episodes".
+- **Real check:** real Gemini on 3 real projects (DB copy) with 5 library tracks carrying
+  owner-style details. Each pick took 8.6–11.4 s, including one Gemini backoff.
+  - "The best way to start your morning" (small_talk) → morning_coffee: "acoustic tone and morning
+    theme".
+  - "What do you have in your evening?" (interview) → quiet_night: "calm mood … evening routines
+    at home".
+  - "The rise of remote work…" (interview) → big_dreams: "inspiring tone … work and career".
+    This 150 s track loops ~4× for the 487 s video. The AI weighs topic over length; the owner
+    can override.
+- **Tests:**
+  - `tests/test_music_select.py` (9);
+  - `tests/test_music_auto_browser.py` (2);
+  - the existing Step 4 browser tests (8) still pass.
+- **Full suite: 1410 passed** (2026-10-06).
