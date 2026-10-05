@@ -5,7 +5,7 @@
 
 | Task | Description | Owner | Status |
 |---|---|---|---|
-| 22.1 | Spike: ACE-Step 1.5 install, VRAM, speed, quality (3 families × 2 length strategies), Content ID check | Claude + owner | card written (`tasks/task-22.1.md`) |
+| 22.1 | Spike: ACE-Step 1.5 install, VRAM, speed, quality (3 families × 2 length strategies), Content ID check | Claude + owner | **in_progress** 2026-10-05 (card `tasks/task-22.1.md`) |
 | 22.2 | Music worker, engine, jobs, `music_tracks` provenance, Library UI v2 | Claude | planned |
 | 22.3 | AI music brief + Step 4 previews → pick → full length | Claude | planned |
 | 22.4 | Speech-aware ducking + intro/outro levels | Claude | planned |
