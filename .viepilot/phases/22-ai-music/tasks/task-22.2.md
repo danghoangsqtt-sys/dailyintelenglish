@@ -137,3 +137,34 @@ by looping a segment with 3 s equal-power crossfades, which is the spike's `loop
 - **Real run** (worker engine, isolated `DIE_DATA_DIR`): one 60 s track and one 900 s track,
   where 900 s exercises the loop path. Each lands as an MP3 in the library with a provenance row.
   Record the wall time, VRAM and a "no vocals" spot check.
+
+## Results (done 2026-10-05)
+
+- **Worker driven directly over its protocol** on the RTX 3060. Every branch was checked:
+  - bad command; generate before load;
+  - load, reload of the same LM, switch to the 0.6B LM, unknown LM;
+  - full 20 s; loop 200 s;
+  - stats; unload, which falls back to 8 MB allocated.
+  - No `.raw-*` work folders are left behind.
+- **Real run through the API** (worker engine, isolated temp `DATA_DIR`; `data/app.db` not touched):
+
+  | Request | Job wall time (incl. model load) | Generation | Torch peak | Result |
+  |---|---|---|---|---|
+  | acoustic, 60 s, seed 11 | 27.1 s | 5.4 s | 6.5 GB | MP3 1:00.00, 48 kHz stereo 192k, strategy `full` |
+  | lofi, 900 s, seed 12 | 45.1 s | 13.0 s | 6.5 GB | MP3 15:00.00, strategy `loop` (over the 600 s limit) |
+
+  - Both tracks got provenance rows (`ai`, model `ACE-Step 1.5 acestep-v15-turbo (lm none)`, MIT).
+  - GPU memory was back to ~0.7 GB after each job, so the worker had exited.
+  - The MP3s were copied to `data/tmp/music-spike/app_*.mp3` for the owner to listen to.
+  - The "no vocals" check is the owner's listen (22.1 owner actions). Claude cannot hear the audio.
+- **Tests:**
+  - `tests/test_music_generate.py` (16) and `tests/test_music_generate_browser.py` (3) are new.
+  - In `tests/test_music_api.py`, the list payload now carries `source` + `provenance`.
+  - The full suite collects 1384 tests and reports no failures.
+- **Visual check:** screenshots of the Library at desktop and narrow widths. After the first look
+  the generate panel was left-aligned.
+- **Deviations:**
+  - There is no `app_version` provenance column: the app has no Python version constant. The model
+    id + licence + job id are recorded instead.
+  - `pytest.ini` gained `testpaths = tests`. Without it, a bare `pytest` collected the ACE-Step
+    checkout under `models/music/` and stopped on its missing `loguru`.
