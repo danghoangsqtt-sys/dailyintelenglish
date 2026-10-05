@@ -279,6 +279,19 @@
     $("storyboard-propose").addEventListener("click", () => run("propose", () => Api.proposeStoryboard(state.projectId)));
     $("storyboard-save").addEventListener("click", () => run("save", () => Api.saveStoryboard(state.projectId, payload("draft"))));
     $("storyboard-approve").addEventListener("click", () => run("approve", () => Api.saveStoryboard(state.projectId, payload("approved"))));
-    load();
+    // Step 5 keeps its workspace hidden (and requests no script) until the project has finished
+    // audio; load only once the workspace is shown, so this section never bypasses that gate.
+    const workspace = $("workspace");
+    if (!workspace || !workspace.hidden) {
+      load();
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      if (!workspace.hidden) {
+        observer.disconnect();
+        load();
+      }
+    });
+    observer.observe(workspace, { attributes: true, attributeFilter: ["hidden"] });
   });
 })();

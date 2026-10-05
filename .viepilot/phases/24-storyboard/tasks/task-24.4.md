@@ -85,3 +85,12 @@ Existing Step 5 browser tests stay green. Full suite green; ruff clean.
   - Save, reload → edits persisted, "draft (owner)".
   - Invalid new place → the server's `new_place` message is shown.
   - Approve → "approved".
+
+## Post-commit fix (2026-10-05)
+
+`da534eb` was committed and pushed before the full-suite result was read, and that run had one
+failure: `test_video_shell_browser::test_empty_audio_state_does_not_request_script`. Step 5
+deliberately requests no script until the project has finished audio, and `storyboard.js`
+bypassed that gate. Fix: the section loads only once `#workspace` is shown (MutationObserver).
+Full suite then **1360 passed**. Process note: from now on, read the suite result before
+committing; never chain the commit after the test command.
