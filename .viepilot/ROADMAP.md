@@ -1365,4 +1365,14 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 - [x] 24.6 Remotion polish (crossfade, pan/zoom, inserts)
 - [ ] 24.7 Gate B-16
 
-## Phase 22 — Music from text (queued after Phase 24; owner ref ACE-Step-1.5)
+## Phase 22 — AI background music (ENH-016)
+
+**Status:** 🟡 Planned 2026-10-05 (`/vp-evolve`) | Plan `docs/implementation/phase-22-ai-music.md` |
+Brainstorm `docs/brainstorm/session-2026-10-05.md` (D43–D49: ACE-Step 1.5, MIT, local).
+
+- [ ] 22.1 Spike: ACE-Step 1.5 on the RTX 3060 (VRAM, speed, 3 style families × 2 length strategies, Content ID check)
+- [ ] 22.2 Music worker + engine + jobs + `music_tracks` provenance + Library UI v2
+- [ ] 22.3 AI music brief + Step 4 previews → pick → full length
+- [ ] 22.4 Speech-aware ducking + intro/outro levels
+- [ ] 22.5 YouTube credit line + provenance export
+- [ ] 22.6 Gate B-17 (owner listening test) → 1.3.0-beta

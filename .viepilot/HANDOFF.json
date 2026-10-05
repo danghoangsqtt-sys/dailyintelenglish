@@ -207,6 +207,13 @@
       "tasks_done": 6,
       "tasks_total": 7,
       "note": "24.1-24.6 done (storyboard end to end + motion polish). Only owner Gate B-16 remains (two real episodes)."
+    },
+    "22": {
+      "name": "AI background music (ENH-016)",
+      "status": "planned",
+      "tasks_done": 0,
+      "tasks_total": 6,
+      "note": "Planned 2026-10-05 via /vp-evolve from brainstorm session-2026-10-05 (D43-D49): ACE-Step 1.5 (MIT), isolated venv-music worker under the GPU lease, AI brief + 3 previews, Music Library provenance, speech-aware ducking. Closes at 1.3.0-beta on Gate B-17."
     }
   },
   "key_decisions": [
