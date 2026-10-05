@@ -9,7 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import ai_jobs, audio, learning, music, projects, settings as settings_api, thumbnail, tts, video, visuals, youtube
+from app.api import (
+    ai_jobs, audio, learning, music, projects, settings as settings_api, storyboard, thumbnail, tts, video, visuals,
+    youtube,
+)
 from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.paths import get_project_root
@@ -158,6 +161,7 @@ app.include_router(ai_jobs.router)
 app.include_router(ai_jobs.health_router)
 app.include_router(visuals.router)
 app.include_router(visuals.project_router)
+app.include_router(storyboard.router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
 

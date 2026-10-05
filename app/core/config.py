@@ -125,6 +125,8 @@ class Settings(BaseSettings):
     # masked IP reference in the shot render, so a scene's shots show the same place
     # (0 disables it: text-only places, the pre-23.2 path).
     VISUALS_SCENE_REFERENCE_SCALE: float = 0.4
+    # Task 24.1 (owner E4): a storyboard may need at most this many images per episode.
+    VISUALS_IMAGE_CAP: int = 12
 
     # Phase 18/D22-D24 -- the generic OpenAI-compatible cloud provider (OpenRouter,
     # first). Empty key/model collapses the effective mode to "local" (invariant 32).

@@ -8,6 +8,31 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Phase 24 — storyboard, 2026-10-05)
+- **Task 24.1:** project storyboards. Beats tile the script lines and carry a place (library
+  scene or proposed new place), who is on screen, an action and an expression. Migration
+  `010_storyboard.sql`; `GET/PUT /api/projects/{id}/storyboard`. Validation covers gaps,
+  overlaps, cast and scenes, with an image estimate and cap (`VISUALS_IMAGE_CAP=12`).
+
+### Added (Phase 23 — Scene Library v2, 2026-10-05)
+- **23.2:** scenes gain category, time of day and a plate seed (migration `009_scenes_v2.sql`).
+  The scene plate (an empty view of the place) is a background-masked second IP-Adapter
+  reference in shots, so a scene's shots show the same place (`VISUALS_SCENE_REFERENCE_SCALE=0.4`).
+- **23.3 / 23.3b:** 55 built-in places, grouped city / school / countryside. They include the
+  settings common in IELTS and Cambridge listening tests, plus people-free plates.
+- **23.4:** Scenes tab with category/time fields, category filters, "used in N projects",
+  Duplicate, a stale-plate warning, and cache-busted plate URLs.
+
+### Changed / Fixed (Phase 20 close-out, 2026-10-04 → 05)
+- **20.9:** a cel-anime style replaces the r3 watercolor recipe (owner references).
+- **20.10:** neutral style wording, with no studio names and no franchise LoRA (O11).
+- **20.11:** duo shots get an extra-person check (anime-seg) and a garment-colour check, each with
+  bounded retries and per-shot JSON reports.
+- Every image worker now uses VAE tiling. The 1344×768 decode had pushed the shot render past the
+  12 GB card into shared memory (2.7× slower).
+- Prompts now stay within CLIP's 77 real tokens for every built-in place. Before, the single-shot
+  prompt for the longest character lost the place's last word.
+
 ### Added (Phase 20)
 - **Tasks 20.3–20.8 (2026-10-01, implementer branch):** AI Visuals feature build behind
   `DIE_AI_VISUALS_ENABLED`: a Character Library with locked reference sheets, a Scene

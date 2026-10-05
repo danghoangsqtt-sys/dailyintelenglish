@@ -67,3 +67,11 @@ services; Pydantic v2 validators; no N+1 queries; deterministic pure `estimate_i
   - estimate examples;
   - cascade on project delete.
 - Full suite green; `ruff check app tests` clean.
+
+## Result (2026-10-05) — PASS
+
+- Delivered as planned. `estimate_images`: place framing set (cast singles + 2 duos when cast ≥ 2),
+  +1 per extra distinct action in a place, +1 per insert. Example: 2 places with 2 cast = 8 images.
+- Tests: `tests/test_storyboard_api.py` 9 passed (round trip, line ordering, warnings, gap/overlap/
+  coverage/cast/scene rejections, shape validation, cap message, estimate examples, cascade).
+  Full suite **1305 passed**; ruff clean.

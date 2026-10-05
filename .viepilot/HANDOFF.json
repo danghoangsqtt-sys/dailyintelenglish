@@ -3,8 +3,8 @@
   "version": "1.1.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_20_active_phase_21_closed_stop_phase_19_9_unblocked",
-  "current_phase": 20,
+  "status": "phase_24_active_phase_20_23_await_owner_gates",
+  "current_phase": 24,
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
     "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
@@ -192,7 +192,21 @@
       "status": "in_progress",
       "tasks_done": 2,
       "tasks_total": 7,
-      "note": "2026-09-30: 20.1 GPU model manager implemented + verified on the owner's machine (1235/1235; live qwen eviction; report docs/operations/phase20-t1-model-manager.md; PM acceptance pending, deviations R1-R6 in task card Part 3). 20.2 done, owner PASS SDXL-Lightning (D39; report docs/operations/phase20-spike-images.md). Proposed Amendment B (Character + Scene libraries) awaiting owner/PM: .viepilot/phases/20-ai-visuals/proposal-amendment-b-asset-library.md. Owner-machine execution uses strict runbooks (docs/operations/owner-runbook-2026-09-30*.md) with evidence on owner-runs/* branches. Previous note: Opened 2026-09-29 from owner's priority statement (natural voice -> thumbnail + character images -> music from text). Supersedes/extends ENH-012 + D26 (2026-09-24, local AI thumbnails on RTX 3060, cartoon/3D characters per topic) with owner's newer requirement that the same character stays recognizable across every image in an episode, not just the thumbnail. Owner decisions 2026-09-29: IP-Adapter for character consistency (1 reference image per speaker, same principle as StyleTTS 2 voice cloning from a reference clip); shared VRAM model manager built FIRST as Task 20.1 rather than each phase inventing its own. Real VRAM constraint measured by Coder in Task 21.1b D21.1b-e: only 3916 MiB free of 12288 with Ollama qwen loaded (10286 at idle) -- no two GPU models can coexist, but the production pipeline is already sequential so load-on-demand + unload-after-use is sufficient. Invariants 46-50: local-only (no paid image API, per D26), fallback to existing 5 Pillow templates always available, VRAM shared never assumed, licence permits commercial use, reference images are owner's own (app never fabricates a likeness). Task 20.4 reuses the existing speakers.avatar_image_path column + upload service from Task 1.7c rather than building a parallel path, and Task 20.5 populates the avatar slot Task 19.4's speaker chip already has waiting. Controlling plan docs/implementation/phase-20-ai-visuals.md."
+      "note": "2026-10-05: 20.1-20.11 done (20.9 cel-anime, 20.10 O11 wording, 20.11 extra-person + colour checks). Waiting only on owner Gate B-14 (deferred, D42). 2026-09-30: 20.1 GPU model manager implemented + verified on the owner's machine (1235/1235; live qwen eviction; report docs/operations/phase20-t1-model-manager.md; PM acceptance pending, deviations R1-R6 in task card Part 3). 20.2 done, owner PASS SDXL-Lightning (D39; report docs/operations/phase20-spike-images.md). Proposed Amendment B (Character + Scene libraries) awaiting owner/PM: .viepilot/phases/20-ai-visuals/proposal-amendment-b-asset-library.md. Owner-machine execution uses strict runbooks (docs/operations/owner-runbook-2026-09-30*.md) with evidence on owner-runs/* branches. Previous note: Opened 2026-09-29 from owner's priority statement (natural voice -> thumbnail + character images -> music from text). Supersedes/extends ENH-012 + D26 (2026-09-24, local AI thumbnails on RTX 3060, cartoon/3D characters per topic) with owner's newer requirement that the same character stays recognizable across every image in an episode, not just the thumbnail. Owner decisions 2026-09-29: IP-Adapter for character consistency (1 reference image per speaker, same principle as StyleTTS 2 voice cloning from a reference clip); shared VRAM model manager built FIRST as Task 20.1 rather than each phase inventing its own. Real VRAM constraint measured by Coder in Task 21.1b D21.1b-e: only 3916 MiB free of 12288 with Ollama qwen loaded (10286 at idle) -- no two GPU models can coexist, but the production pipeline is already sequential so load-on-demand + unload-after-use is sufficient. Invariants 46-50: local-only (no paid image API, per D26), fallback to existing 5 Pillow templates always available, VRAM shared never assumed, licence permits commercial use, reference images are owner's own (app never fabricates a likeness). Task 20.4 reuses the existing speakers.avatar_image_path column + upload service from Task 1.7c rather than building a parallel path, and Task 20.5 populates the avatar slot Task 19.4's speaker chip already has waiting. Controlling plan docs/implementation/phase-20-ai-visuals.md."
+    },
+    "23": {
+      "name": "Scene Library v2",
+      "status": "in_progress",
+      "tasks_done": 5,
+      "tasks_total": 6,
+      "note": "23.1-23.4 + 23.3b done 2026-10-05 (plate IP reference 0.4, 55 built-ins, UI v2); waiting on owner Gate B-15."
+    },
+    "24": {
+      "name": "Story-driven visuals (storyboard)",
+      "status": "in_progress",
+      "tasks_done": 0,
+      "tasks_total": 7,
+      "note": "Opened 2026-10-05 via /vp-auto; 24.1 storyboard data model + API in progress."
     }
   },
   "key_decisions": [
