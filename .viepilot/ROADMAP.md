@@ -1365,14 +1365,17 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 - [x] 24.6 Remotion polish (crossfade, pan/zoom, inserts)
 - [ ] 24.7 Gate B-16
 
-## Phase 22 — AI background music (ENH-016)
+## Phase 22 — Background music (ENH-016), re-scoped by D50
 
-**Status:** 🟡 Planned 2026-10-05 (`/vp-evolve`) | Plan `docs/implementation/phase-22-ai-music.md` |
-Brainstorm `docs/brainstorm/session-2026-10-05.md` (D43–D49: ACE-Step 1.5, MIT, local).
+**Status:** 🟡 Re-scoped 2026-10-05. The owner judged the ACE-Step 1.5 output too poor (22.1 FAIL)
+and chose **free music libraries, downloaded by hand, with the licence recorded** (D50). The AI
+generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Plan
+`docs/implementation/phase-22-ai-music.md` (§ Re-scope D50).
 
-- [ ] 22.1 Spike: ACE-Step 1.5 on the RTX 3060 (VRAM, speed, 3 style families × 2 length strategies, Content ID check) — Claude part done, awaiting owner listening + Content ID
-- [x] 22.2 Music worker + engine + jobs + `music_tracks` provenance + Library UI v2 (2026-10-05)
-- [ ] 22.3 AI music brief + Step 4 previews → pick → full length
+- [x] 22.1 Spike: ACE-Step 1.5. **FAIL** (owner: "nhạc quá tệ"), superseded by D50
+- [~] 22.2 AI music worker + Library "Generate". Built, then **reverted** (D50)
+- [~] 22.3 AI brief + Step 4 previews. Built, then **reverted** (D50)
+- [ ] 22.7 Licence metadata for library tracks (source, title, artist, licence, attribution, URL) + free-source guide
+- [ ] 22.5 YouTube description credit line from the episode's music
 - [ ] 22.4 Speech-aware ducking + intro/outro levels
-- [ ] 22.5 YouTube credit line + provenance export
-- [ ] 22.6 Gate B-17 (owner listening test) → 1.3.0-beta
+- [ ] 22.6 Gate B-17 (owner listening test on a real episode) → 1.3.0-beta

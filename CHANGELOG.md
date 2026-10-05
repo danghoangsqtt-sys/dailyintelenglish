@@ -8,14 +8,10 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
-### Added (Phase 22 — AI background music, 2026-10-05)
-- **Task 22.2:** the Music Library can **generate an original instrumental track from a brief**
-  (style Lofi / Acoustic / Upbeat, an optional mood, length 0:10–20:00) with ACE-Step 1.5 (MIT),
-  locally in its own `venv-music` worker under the GPU lease. Tracks over 10 minutes are looped with
-  soft crossfades. Every track shows whether it was AI generated or uploaded; AI tracks record their
-  brief, style, seed, length, model and licence.
-- **Task 22.1:** spike report `docs/operations/phase22-spike-music.md` (8-minute bed in ~34 s on the
-  RTX 3060) and the pinned `requirements-music.txt`.
+### Removed (Phase 22, D50, 2026-10-05)
+- The ACE-Step 1.5 music generator was tried (spike report
+  `docs/operations/phase22-spike-music.md`) and **removed before release**. The owner judged its
+  music too poor. Background music comes from free libraries instead.
 
 ## [1.2.0-beta] - 2026-10-05
 

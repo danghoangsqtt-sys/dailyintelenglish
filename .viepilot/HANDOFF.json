@@ -209,11 +209,11 @@
       "note": "24.1-24.6 done (storyboard end to end + motion polish). Only owner Gate B-16 remains (two real episodes)."
     },
     "22": {
-      "name": "AI background music (ENH-016)",
-      "status": "in_progress",
-      "tasks_done": 1,
-      "tasks_total": 6,
-      "note": "Planned 2026-10-05 via /vp-evolve from brainstorm session-2026-10-05 (D43-D49): ACE-Step 1.5 (MIT), isolated venv-music worker under the GPU lease, AI brief + 3 previews, Music Library provenance, speech-aware ducking. Closes at 1.3.0-beta on Gate B-17. | 2026-10-05: 22.1 spike measured (8-min bed ~34 s DiT-only, report docs/operations/phase22-spike-music.md), awaiting owner listening + Content ID; 22.2 done (worker, engine, music_track jobs on the shared image runner, music_tracks provenance, Library 'Generate from a brief'). Next: 22.3."
+      "name": "Background music (ENH-016), re-scoped by D50",
+      "status": "re-scoped",
+      "tasks_done": 0,
+      "tasks_total": 4,
+      "note": "2026-10-05: ACE-Step 1.5 spike FAIL by owner (nhac qua te); D50 stop AI generation, use free libraries downloaded by hand with licence recorded. 22.2/22.3 reverted (revert commit), venv-music + models/music deleted. Remaining: 22.7 licence metadata + source guide, 22.5 credit line, 22.4 ducking, 22.6 Gate B-17 -> 1.3.0-beta."
     }
   },
   "key_decisions": [

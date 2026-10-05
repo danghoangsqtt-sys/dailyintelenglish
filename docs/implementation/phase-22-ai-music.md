@@ -1,5 +1,28 @@
 # Phase 22 — AI background music (ENH-016) — controlling plan
 
+> **Re-scope D50 (2026-10-05, owner):** the ACE-Step 1.5 output failed the owner's listening test
+> ("nhạc quá tệ": messy, wandering rhythm, worst in upbeat and acoustic). The owner chose free music
+> libraries over spending resources on generation. The quality spike (turbo `shift=3`, LM thinking,
+> SFT 64 steps) was planned but stopped before it ran. Tasks 22.2/22.3 were reverted, and
+> `venv-music` and `models/music` were deleted.
+>
+> **Remaining scope:**
+> - **22.7:** licence metadata on library tracks (source site, title, artist, licence,
+>   attribution text, source URL), plus a short guide to safe free sources:
+>   - YouTube Audio Library;
+>   - Pixabay Music;
+>   - Mixkit;
+>   - Incompetech (CC BY 4.0);
+>   - Free Music Archive CC0/CC-BY.
+>
+>   These sites have no public music API, and their terms forbid automated downloading, so
+>   downloads stay manual.
+> - **22.5:** YouTube description credit line from the episode's music.
+> - **22.4:** speech-aware ducking.
+> - **22.6:** Gate B-17.
+>
+> The sections below are the original D43–D49 plan, kept for history.
+
 **Status:** planned 2026-10-05 (`/vp-evolve`, Add Feature, complexity L) from the brainstorm
 `docs/brainstorm/session-2026-10-05.md` (owner decisions D43–D49).
 **Version:** enters at 1.2.0-beta. It closes at **1.3.0-beta** if Gate B-17 passes (MINOR: a new

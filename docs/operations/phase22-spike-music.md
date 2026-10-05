@@ -1,5 +1,15 @@
 # Phase 22 spike — ACE-Step 1.5 on the RTX 3060 12 GB (Task 22.1)
 
+> **Outcome (2026-10-05): FAIL by the owner's ears ("nhạc quá tệ"); superseded by D50** (free music
+> libraries).
+>
+> - ACE-Step's docs later showed two misconfigurations in these runs:
+>   - turbo needs `shift=3.0`, but these runs used 1.0;
+>   - instrumentals work best at 30–180 s, but these runs were 8-minute single pieces.
+> - The follow-up quality spike was stopped by the owner, so it is unknown whether a correct
+>   configuration would pass.
+> - The environment, the weights and the code were removed.
+
 **Date:** 2026-10-05
 **Script:** `scripts/spike_music.py`, run in `venv-music`, pinned in `requirements-music.txt`
 **Model:** ACE-Step 1.5 at commit `ca1e85f`, DiT `acestep-v15-turbo`, planner LMs `acestep-5Hz-lm-1.7B` and `acestep-5Hz-lm-0.6B`
