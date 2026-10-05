@@ -60,3 +60,31 @@ shot set (backward compatible); budget measured, not guessed.
   estimated, with the place kept where it fits.
 
 GPU sheet reviewed: poses read as the actions. Full suite green; ruff clean.
+
+## Result (2026-10-05) — PASS (with noted weak spots)
+
+- Delivered as planned. Two corrections came from the tests:
+  - a single person's actions now open toward the empty right of the frame, because "point" on
+    the left arm went off-frame;
+  - `fit_budget` order: shorten the action to 4 words, then drop the place (the plate carries it),
+    then shorten to 2. A cut never ends on "at", "a" or "the". Before, the worst duo cut the action
+    to "looking at".
+- Categorization: "screen" moved out of `point`, so "looking at a laptop screen" maps to `work`.
+- GPU sheet `docs/operations/phase24-t3-beat-poses.png` (real worker, Lan + Minh faces, Cafe
+  plate, no repair passes). Every prompt was ≤ 74 real tokens and none was truncated.
+  - **7/9 read as the action:**
+    - drink (cup in hand);
+    - phone (phone in hand);
+    - wave (raised hand, clear);
+    - point (arm reaching out);
+    - talk;
+    - duo close drink (both hold cups);
+    - duo wide work (laptop between them, the woman writing).
+  - **Weak:**
+    - single think: no clear hand at the chin;
+    - single work: laptop present, hands not on it.
+  - **Expressions are subtle:** "surprised" and "laughing" hardly show. A candidate for later is
+    stronger expression words or a dedicated expression pass.
+- Tests: `tests/test_visuals_beat_recipes.py` 45 passed (categories from real AI actions, poses in
+  frame for every kind × staging × category, talk unchanged, duo arms toward the partner, prompts,
+  budget for 55 places × 7 expressions × the longest character, fit order).

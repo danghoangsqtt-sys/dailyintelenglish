@@ -204,3 +204,72 @@ def paste_hand(
     region = out.crop(box)
     out.paste(Image.composite(patch, region, mask.resize(patch.size)), (left, top))
     return out
+
+
+# Task 24.3: a beat's action as a pose. Offsets are in head units from the neck (x) and the nose
+# (y) for the arm on the image-left side of a front-facing person (its right arm); the arm that
+# faces a duo partner on the right is mirrored. Keyword order matters: the first match wins.
+ACTION_CATEGORIES = ("point", "drink", "phone", "think", "wave", "work", "walk", "talk")
+ACTION_KEYWORDS = {
+    "point": ("point", "show", "map", "board", "gesturing to"),
+    "drink": ("coffee", "tea", "drink", "sip", "cup", "juice"),
+    "phone": ("phone", "call", "texting"),
+    "think": ("think", "wonder", "chin", "ponder"),
+    "wave": ("wave", "waving", "greet", "goodbye", "hello"),
+    "work": ("laptop", "computer", "typing", "writing", "notebook", "reading", "book", "plans",
+             "document", "paper", "studying", "desk"),
+    "walk": ("walk", "stroll", "hike", "hiking"),
+}
+ACTION_POSES: dict[str, dict[str, Any]] = {
+    "talk": {"arm": ((-1.0, 1.9), (-0.6, 1.35))},
+    "point": {"arm": ((-1.35, 1.15), (-2.25, 0.85))},
+    "drink": {"arm": ((-0.95, 1.9), (-0.3, 0.95))},
+    "phone": {"arm": ((-0.95, 1.6), (-0.45, 0.3))},
+    "think": {"arm": ((-0.7, 2.2), (-0.1, 0.7))},
+    "wave": {"arm": ((-1.35, 1.0), (-1.5, -0.25))},
+    "work": {"arm": ((-0.8, 2.2), (-0.3, 2.75)), "other": ((0.8, 2.2), (0.3, 2.75))},
+    "walk": {"arm": ((-0.95, 2.05), (-0.75, 3.0)),
+             "legs": {"r_knee": (-0.6, 4.6), "r_ankle": (-0.95, 6.1), "l_knee": (0.45, 4.6), "l_ankle": (0.8, 6.2)}},
+}
+
+
+def action_category(action: str | None) -> str:
+    text = (action or "").lower()
+    for category in ACTION_CATEGORIES[:-1]:
+        if any(word in text for word in ACTION_KEYWORDS[category]):
+            return category
+    return "talk"
+
+
+def beat_people(kind: str, staging: str, size: tuple[int, int], categories: list[str]) -> list[dict[str, Any]]:
+    """`shot_people` with each person's gesturing arm (and, for walking, legs that are already
+    drawn) replaced by their beat action's pose. `talk` keeps the proven r8 geometry unchanged."""
+    people = shot_people(kind, staging, size)
+    height = size[1]
+    for index, (person, category) in enumerate(zip(people, categories, strict=True)):
+        if category == "talk":
+            continue
+        pose = ACTION_POSES[category]
+        named = dict(zip(_KEYS, person["points"], strict=True))
+        unit = person["head_h"] * height
+        anchor_x, anchor_y = named["neck"][0], named["nose"][1]
+        # The left duo person faces their partner on the right; a single person stands in the left
+        # third, so their action opens toward the empty right of the frame (never off-frame).
+        toward_right = kind == "single" or index == 0
+        sign, near, far = (-1, "l", "r") if toward_right else (1, "r", "l")
+
+        def place(key: str, offset: tuple[float, float], mirror: int) -> None:
+            named[key] = (anchor_x + mirror * offset[0] * unit, anchor_y + offset[1] * unit)
+
+        elbow, wrist = pose["arm"]
+        place(f"{near}_elbow", elbow, sign)
+        place(f"{near}_wrist", wrist, sign)
+        if "other" in pose:
+            elbow, wrist = pose["other"]
+            place(f"{far}_elbow", elbow, sign)
+            place(f"{far}_wrist", wrist, sign)
+        if "legs" in pose and named["r_knee"] is not None:
+            for key, offset in pose["legs"].items():
+                place(key, offset, 1)
+        person["points"] = [named[key] for key in _KEYS]
+    return people

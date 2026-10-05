@@ -115,3 +115,78 @@ def garment_refine_prompt(character: Mapping, scene: Mapping) -> str:
 
 def hand_prompt() -> str:
     return _styled(HAND_PROMPT)
+
+
+# Task 24.3: a beat's expression and action in its pictures.
+EXPRESSION_WORDS = {
+    "calm": "calm friendly face", "smile": "warm smile", "laugh": "laughing happily",
+    "surprised": "surprised face", "thinking": "thoughtful look", "worried": "worried look",
+    "serious": "serious expression",
+}
+# Calibrated in Task 23.3: `token_count` <= 72 keeps the real CLIP count <= 77 on these prompts.
+BEAT_TOKEN_BUDGET = 72
+
+
+def compact_phrase(character: Mapping) -> str:
+    """`character_phrase` without the role and eye colour: in beat shots the face IP-Adapter carries
+    identity, and the freed tokens go to the action and the expression."""
+    gender_noun = "woman" if character["gender"] == "female" else "man"
+    return (
+        f"{character['age_group']} {character['ethnicity']} {gender_noun}, {character['hair']}, "
+        f"plain {character['top_color']} {character['top_item']}, plain {character['bottom_color']} "
+        f"{character['bottom_item']}"
+    )
+
+
+_TRAILING = {"a", "an", "the", "at", "in", "on", "to", "with", "of", "and", "for", "from", "by"}
+
+
+def _cut(words: list[str], keep: int) -> list[str]:
+    words = words[:keep]
+    while len(words) > 1 and words[-1].lower() in _TRAILING:
+        words = words[:-1]
+    return words
+
+
+def fit_budget(build, action: str, place: str) -> str:
+    """`build(action, place)` -> prompt within BEAT_TOKEN_BUDGET, so CLIP never cuts the tail
+    itself. The action carries the beat, the place is also carried by the Task 23.2 plate, so:
+    shorten the action to 4 words, then drop the place, then shorten the action to 2 words.
+    A cut never ends on a dangling "at"/"a"/"the"."""
+    words = action.split()
+    prompt = build(" ".join(words), place)
+    while token_count(prompt) > BEAT_TOKEN_BUDGET and len(words) > 4:
+        words = _cut(words, len(words) - 1)
+        prompt = build(" ".join(words), place)
+    if token_count(prompt) > BEAT_TOKEN_BUDGET:
+        place = ""
+        prompt = build(" ".join(words), place)
+    while token_count(prompt) > BEAT_TOKEN_BUDGET and len(words) > 2:
+        words = _cut(words, len(words) - 1)
+        prompt = build(" ".join(words), place)
+    return prompt
+
+
+def beat_single_prompt(character: Mapping, scene: Mapping, action: str, expression: str) -> str:
+    feeling = EXPRESSION_WORDS.get(expression, EXPRESSION_WORDS["calm"])
+
+    def build(act: str, place: str) -> str:
+        return _styled(compact_phrase(character), "close-up", feeling, act or "talking",
+                       *((f"in {place}",) if place else ()))
+
+    return fit_budget(build, action, scene["place"])
+
+
+def beat_duo_prompt(left: Mapping, right: Mapping, scene: Mapping, kind: str, action: str, expression: str) -> str:
+    feeling = EXPRESSION_WORDS.get(expression, EXPRESSION_WORDS["calm"])
+    base = (
+        f"two {left['ethnicity']} people talking face to face, {duo_person(left)} on the left, "
+        f"{duo_person(right)} on the right"
+    )
+    framing = ("close-up" if kind == "duo_close" else
+               "sitting at a table" if scene["staging"] == "seated" else "standing")
+
+    def build(act: str, place: str) -> str:
+        return _styled(base, framing, feeling, *((act,) if act else ()), *((f"in {place}",) if place else ()))
+
+    return fit_budget(build, action, scene["place"])

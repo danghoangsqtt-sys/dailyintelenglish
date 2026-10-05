@@ -9,6 +9,10 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Added (Phase 24 — storyboard, 2026-10-05)
+- **Task 24.3:** beat pictures follow the action and the mood. Actions map to 8 OpenPose poses
+  (talk, point, drink, phone, think, wave, work, walk). Beat prompts carry an expression phrase and
+  the action, held under the calibrated CLIP budget: they trim the action first and drop the place
+  (the plate shows it) only when needed.
 - **Task 24.2:** `POST /api/projects/{id}/storyboard/propose`. The AI (cloud-first router) reads the
   script, the cast and the 55-scene library and proposes beats. Its output is normalized, checked
   with the owner rules and trimmed to the image cap. One repair call quotes the exact error, and a
