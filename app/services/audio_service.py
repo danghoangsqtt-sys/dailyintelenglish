@@ -5,10 +5,11 @@ only processes already-synthesized audio files — it never calls a TTS engine i
 caller (app/api/audio.py) is responsible for making sure every line has a cached audio file
 before calling `mix_project`.
 
-Background music ducking here is a **static-level duck**: the track is capped at a flat
-ceiling (`MUSIC_DUCKING_MAX_DBFS`) for its entire length, not lowered dynamically only during
-speech. True speech-reactive ducking needs per-segment envelope analysis, which is out of
-scope for this sub-task (see task-1.6.md Implementation Notes).
+Background music (Task 22.4, D51) goes through `music_bed`: loudness-normalised, fitted to the
+length with crossfade loops, ducked under each spoken line and faded in/out. The mix also writes a
+voice-only stem (`voice.wav`), so the video render can build a full-length soundtrack that covers
+the Enhanced intro/outro (`build_soundtrack`). The old flat-ceiling helpers (`_duck_music`,
+`_loop_to_length`) are kept for reference tests only.
 """
 
 import asyncio
@@ -27,7 +28,6 @@ from pydub import AudioSegment
 from app.core.config import settings
 from app.core.constants import (
     MP3_BITRATE,
-    MUSIC_DUCKING_MAX_DBFS,
     SILENCE_DIFFERENT_SPEAKER_MS,
     SILENCE_SAME_SPEAKER_MS,
     TARGET_LOUDNESS_LUFS,
@@ -35,6 +35,7 @@ from app.core.constants import (
     WAV_SAMPLE_RATE_HZ,
 )
 from app.core.exceptions import AudioMixError
+from app.services import music_bed
 
 
 def _ensure_ffmpeg_dir_on_path(ffmpeg_path: str) -> None:
@@ -191,23 +192,22 @@ def _mix_project_sync(
     for segment in segments[1:]:
         mixed += segment
 
-    if background_music_path is not None:
-        music = AudioSegment.from_file(background_music_path)
-        music = _loop_to_length(music, len(mixed))
-        music = _duck_music(music, MUSIC_DUCKING_MAX_DBFS)
-        mixed = mixed.overlay(music)
-
-    # Normalize the FINAL mix (voice + any ducked music), not just the voice stem —
-    # EBU R128 measures/targets integrated loudness over the whole program, and ducking
-    # is already an absolute ceiling on the music track's own level (independent of
-    # dialogue), so doing this after the overlay is always correct and never breaks
-    # ducking. Measuring only the voice stem before overlay (the old order) left the
-    # actually-delivered file's loudness unmeasured and unnormalized whenever music was
-    # present — real measured drift up to 1.12dB outside the declared ±1dB tolerance
-    # (Task 2.1c, TRACKER.md Known Issues).
-    mixed, final_loudness = _normalize_to_target(mixed, TARGET_LOUDNESS_LUFS)
-
+    # The voice-only stem, normalised exactly as a music-free mix is; with no music it IS the mix.
+    voice, final_loudness = _normalize_to_target(mixed, TARGET_LOUDNESS_LUFS)
     output_dir.mkdir(parents=True, exist_ok=True)
+    voice.export(output_dir / VOICE_STEM_NAME, format="wav")
+    mixed = voice
+
+    if background_music_path is not None:
+        # Task 22.4: the bed over the speech span (the video adds the intro/outro itself). The
+        # FINAL mix is normalised as a whole (Task 2.1c: measuring only the voice stem left the
+        # delivered file up to 1.12 dB off target).
+        voice_audio = music_bed.from_segment(voice)
+        spans = [(entry["start_sec"], entry["end_sec"]) for entry in timestamps]
+        bed = music_bed.build_bed(music_bed.decode(background_music_path), voice_audio.shape[1], spans)
+        mixed = music_bed.to_segment(music_bed.mix(voice_audio, bed))
+        final_loudness = _measure_lufs(mixed)
+
     mp3_path = output_dir / "mix.mp3"
     wav_path = output_dir / "mix.wav"
     mixed.export(mp3_path, format="mp3", bitrate=MP3_BITRATE)
@@ -222,6 +222,51 @@ def _mix_project_sync(
         "duration_seconds": round(len(mixed) / 1000, 3),
         "loudness_lufs": None if math.isinf(final_loudness) else round(float(final_loudness), 2),
     }
+
+
+VOICE_STEM_NAME = "voice.wav"
+SOUNDTRACK_NAME = "soundtrack.mp3"
+
+
+def voice_stem_path(project_id: str) -> Path:
+    return settings.DATA_DIR / "audio" / project_id / VOICE_STEM_NAME
+
+
+def _build_soundtrack_sync(voice_path: Path, music_path: Path, timestamps: list[dict], lead_in_s: float,
+                           total_s: float, output_path: Path) -> dict:
+    """Blocking: lead-in + voice + tail as one soundtrack exactly `total_s` long, with the music
+    bed over all of it -- open in the lead-in and tail, ducked under every line, faded out to
+    silence on the last sample."""
+    voice = music_bed.from_segment(AudioSegment.from_file(voice_path))
+    total = int(round(total_s * music_bed.SAMPLE_RATE))
+    offset = int(round(lead_in_s * music_bed.SAMPLE_RATE))
+    placed = np.zeros((music_bed.CHANNELS, total), dtype=np.float32)
+    length = max(0, min(voice.shape[1], total - offset))
+    placed[:, offset:offset + length] = voice[:, :length]
+    spans = [(entry["start_sec"] + lead_in_s, entry["end_sec"] + lead_in_s) for entry in timestamps]
+    bed = music_bed.build_bed(music_bed.decode(music_path), total, spans)
+    soundtrack = music_bed.to_segment(music_bed.mix(placed, bed))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    soundtrack.export(output_path, format="mp3", bitrate=MP3_BITRATE)
+    return {"path": str(output_path), "duration_seconds": round(total / music_bed.SAMPLE_RATE, 3),
+            "lead_in_seconds": lead_in_s}
+
+
+async def build_soundtrack(audio_job: dict, lead_in_s: float, total_s: float, output_path: Path) -> dict | None:
+    """Task 22.4 (D51): the full-video soundtrack, or None when the episode has no music or was
+    mixed before voice stems existed (the caller then uses the plain mix, unchanged)."""
+    filename = audio_job.get("background_music")
+    if not filename:
+        return None
+    music_path = settings.DATA_DIR / "music_library" / _validate_music_filename(filename)
+    voice_path = voice_stem_path(audio_job["project_id"])
+    if not await asyncio.to_thread(music_path.is_file) or not await asyncio.to_thread(voice_path.is_file):
+        return None
+    try:
+        return await asyncio.to_thread(_build_soundtrack_sync, voice_path, music_path, audio_job["timestamps"],
+                                       lead_in_s, total_s, output_path)
+    except Exception as exc:
+        raise AudioMixError(f"Building the music soundtrack failed: {exc}") from exc
 
 
 def _validate_music_filename(filename: str) -> str:

@@ -77,7 +77,7 @@ def test_ducking_is_complete_before_the_first_word():
     assert db_at(gain, 4.0) == pytest.approx(0, abs=0.01)
     assert MUSIC_DUCK_DB < db_at(gain, 4.6) < 0  # ramping down
     assert db_at(gain, 5.0) == pytest.approx(MUSIC_DUCK_DB, abs=0.01)  # fully down at the word
-    assert db_at(gain, 8.5) == pytest.approx(MUSIC_DUCK_DB, abs=0.01)  # release after the line
+    assert db_at(gain, 8.15) == pytest.approx(MUSIC_DUCK_DB, abs=0.01)  # held a moment after the line
     assert db_at(gain, 10.0) == pytest.approx(0, abs=0.01)
 
 
