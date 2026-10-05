@@ -9,6 +9,12 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Added (Phase 24 — storyboard, 2026-10-05)
+- **Task 24.5:** an approved storyboard drives "Generate shots" and the Enhanced video.
+  - Each place gets a framing set in the beat's mood and action, plus one picture per extra action
+    and one illustration per insert. New places join the scene library.
+  - The video timeline follows the beats: inserts during their lines, action shots, then speaker
+    close-ups.
+  - Projects without an approved storyboard are unchanged.
 - **Task 24.4:** Step 5 Storyboard section. Propose with AI; review each beat with its script lines;
   edit the place (library by category, or a new place), the people on screen, the action and the
   expression; split or merge beats. The image/GPU cost updates live. Save as a draft, or approve.

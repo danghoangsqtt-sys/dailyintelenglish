@@ -1,6 +1,6 @@
 import type { EpisodeLine, EpisodeVisuals } from "./types";
 
-type ShotKind = "single" | "duo_close" | "duo_wide";
+type ShotKind = "single" | "duo_close" | "duo_wide" | "insert";
 
 const CROSSFADE_FRAMES = 10;
 const ZOOM_GAIN = 0.04;

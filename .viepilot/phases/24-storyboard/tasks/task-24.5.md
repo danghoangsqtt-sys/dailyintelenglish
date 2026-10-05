@@ -107,3 +107,31 @@ Real GPU smoke on the owner's machine for one approved storyboard. Full suite gr
   - an insert can be regenerated.
 - Full suite: the first run had live-server start timeouts under load (each passed when run alone).
   The rerun gave **1363 passed**.
+
+## 24.5b result (2026-10-05) — PASS; Task 24.5 closed
+
+- `assign_beat_shots`:
+  - insert → its illustration;
+  - a beat with its own action shot opens on it and alternates it with the speaker's single;
+  - otherwise the beat opens wide, shows the duo close on every 4th line and the speaker's single
+    in between;
+  - fallbacks as before.
+- `storyboard_timeline_ready` keeps the per-scene rule until every storyboard place has a complete
+  shot. Remotion props use the beat timeline when it is ready.
+- The `insert` shot kind was added to the Remotion schema; the vocab card stays top-right on
+  inserts (vitest).
+- **Real end-to-end smoke** on a copy of the owner DB ("Trial Run 8min", 33 lines, Lan + Minh;
+  sheet `docs/operations/phase24-t5-storyboard-smoke.png`):
+  - Gemini proposed in 4.8 s (path ai, trimmed 1 step, 12/12 images): office → crowded subway at
+    rush hour (insert) → office → empty boutique coffee bar (insert) → office → person working
+    alone at home (insert) → cafe.
+  - Approve → 12/12 shots complete in 1031 s on the RTX 3060.
+  - The inserts illustrate exactly what the lines describe; all four cafe shots show coffee cups
+    (drink pose).
+  - Weak: the "looking at a city skyline chart" action shot shows no chart; Lan's top drifts
+    (navy over-jacket, blue vest) in 2 shots.
+- Tests:
+  - `tests/test_storyboard_shots.py`: +2 (beat timeline with fallbacks/readiness, Remotion props
+    from a generated storyboard);
+  - vitest 39 passed; tsc clean;
+  - full suite **1365 passed**.

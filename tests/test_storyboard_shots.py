@@ -79,3 +79,63 @@ def test_approved_storyboard_generates_beat_shots(client, requests_log):  # noqa
     assert any("warm smile, drinking coffee" in prompt for prompt in encodes)
     assert any("thoughtful look, reading city plans" in prompt for prompt in encodes)
     data(client.post(f"{base}/visuals/shots/{insert['id']}/regenerate"))  # an insert can be regenerated
+
+
+def _shot(shot_id, scene_id, kind, indexes, beat_position=None):
+    return {"id": shot_id, "scene_id": scene_id, "kind": kind, "speaker_indexes": indexes, "status": "complete",
+            "final_path": "x.png", "beat_position": beat_position}
+
+
+def test_assign_beat_shots_inserts_actions_speakers_and_fallbacks():
+    from app.services.visuals.project_visuals_service import assign_beat_shots, storyboard_timeline_ready
+
+    beats = [
+        {"line_from": 0, "line_to": 4, "kind": "scene", "scene_id": "cafe"},
+        {"line_from": 5, "line_to": 7, "kind": "scene", "scene_id": "cafe"},
+        {"line_from": 8, "line_to": 8, "kind": "insert", "scene_id": None},
+        {"line_from": 9, "line_to": 9, "kind": "scene", "scene_id": "park"},
+    ]
+    lines = [{"speaker_index": i % 2} for i in range(10)]
+    shots = [
+        _shot("s0", "cafe", "single", [0]), _shot("s1", "cafe", "single", [1]),
+        _shot("close", "cafe", "duo_close", [0, 1]), _shot("wide", "cafe", "duo_wide", [0, 1]),
+        _shot("act", "cafe", "duo_wide", [0, 1], beat_position=1),
+        _shot("ins", "", "insert", [], beat_position=2),
+    ]
+    assert assign_beat_shots(lines, beats, shots) == [
+        "wide", "s1", "s0", "close", "s0",   # beat 1: opens wide, speakers, 4th line duo close
+        "act", "s0", "act",                  # beat 2: its action shot alternates with the speaker
+        "ins",                               # the insert
+        None,                                # park has no shot yet -> midnight
+    ]
+    assert not storyboard_timeline_ready(beats, shots)       # the park beat has no shot
+    assert storyboard_timeline_ready(beats[:3], shots)
+    assert not storyboard_timeline_ready(None, shots)
+
+
+@pytest.mark.asyncio
+async def test_remotion_uses_the_beat_timeline_once_storyboard_shots_exist(client, tmp_path, monkeypatch, requests_log):  # noqa: F811,E501
+    import aiosqlite
+
+    from app.services import video_renderer_remotion
+
+    project = project_with_script(client)
+    base = f"/api/projects/{project['id']}"
+    data(client.put(f"{base}/storyboard", json={"beats": BEATS, "status": "approved"}))
+    wait_job(client, data(client.post(f"{base}/visuals/shots")))
+    shots = data(client.get(f"{base}/visuals"))["shots"]
+    detail = data(client.get(base))
+    monkeypatch.setattr(video_renderer_remotion, "REMOTION_VISUALS_DIR", tmp_path / "visuals")
+    monkeypatch.setattr(video_renderer_remotion, "REMOTION_AVATARS_DIR", tmp_path / "avatars")
+    speaker_ids = [speaker["id"] for speaker in sorted(detail["speakers"], key=lambda s: s["speaker_index"])]
+    audio_job = {"timestamps": [{"start_sec": float(i), "end_sec": i + 0.9, "label": "x",
+                                 "speaker_id": speaker_ids[i % 2], "text": f"Line {i}"} for i in range(6)],
+                 "word_timestamps": []}
+    async with aiosqlite.connect(settings.db_path) as db:
+        db.row_factory = aiosqlite.Row
+        props = await video_renderer_remotion._build_input_props(db, detail, audio_job, None)
+    by_id = {shot["id"]: shot for shot in shots}
+    kinds = [by_id[shot_id]["kind"] if shot_id else None for shot_id in props["visuals"]["lineShots"]]
+    assert kinds[3] == "insert" and props["visuals"]["shots"][props["visuals"]["lineShots"][3]]["kind"] == "insert"
+    assert by_id[props["visuals"]["lineShots"][2]]["action"] == "reading city plans"  # beat 2's own action shot
+    assert kinds[0] == "duo_wide" and all(kind is not None for kind in kinds)

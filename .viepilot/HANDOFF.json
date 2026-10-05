@@ -204,9 +204,9 @@
     "24": {
       "name": "Story-driven visuals (storyboard)",
       "status": "in_progress",
-      "tasks_done": 4,
+      "tasks_done": 5,
       "tasks_total": 7,
-      "note": "24.1-24.4 done (beats + API, AI proposal, action poses + beat prompts, Step 5 review UI). Next 24.5 generation + timeline from the approved storyboard."
+      "note": "24.1-24.5 done: AI storyboard -> owner review -> beat shots -> beat timeline in Remotion (real smoke 12/12 shots). Next 24.6 Remotion polish, then owner Gate B-16."
     }
   },
   "key_decisions": [

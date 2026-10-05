@@ -27,6 +27,7 @@ describe("AI visual props", () => {
     expect(vocabCardPosition("duo_wide")).toBe("top-center");
     expect(vocabCardPosition("single")).toBe("top-right");
     expect(vocabCardPosition(null)).toBe("top-right");
+    expect(vocabCardPosition("insert")).toBe("top-right");
   });
 
   it("selects shots, crossfades over ten frames, and scales during each line", () => {

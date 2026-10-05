@@ -276,3 +276,59 @@ def assign_line_shots(lines: list[dict], chapters: list[dict], scenes: list[dict
         chosen = wanted or first("single") or first("duo_close") or first("duo_wide")
         assigned.append((chosen or (available[0] if available else None) or {}).get("id"))
     return assigned
+
+
+def assign_beat_shots(lines: list[dict], beats: list[dict], shots: list[dict]) -> list[str | None]:
+    """Task 24.5b: the shot shown during each audio line, from the approved storyboard. An insert
+    beat shows its illustration. A scene beat with its own action shot opens on it and alternates
+    it with the speaker's single; otherwise it opens on the place's duo wide, shows the duo close on
+    every 4th line and the speaker's single in between. Fallbacks: single -> duo close -> duo wide
+    -> any shot of the place -> None (the midnight background)."""
+    complete = [shot for shot in shots if shot.get("status") == "complete" and shot.get("final_path")]
+
+    def speakers_of(shot: dict) -> list[int]:
+        value = shot["speaker_indexes"]
+        return json.loads(value) if isinstance(value, str) else value
+
+    assigned: list[str | None] = []
+    for index, line in enumerate(lines):
+        position = next((number for number, beat in enumerate(beats)
+                         if beat["line_from"] <= index <= beat["line_to"]), None)
+        if position is None:
+            assigned.append(None)
+            continue
+        beat = beats[position]
+        if beat["kind"] == "insert":
+            insert = next((shot for shot in complete
+                           if shot["kind"] == "insert" and shot.get("beat_position") == position), None)
+            assigned.append(insert["id"] if insert else None)
+            continue
+        place = [shot for shot in complete if shot["scene_id"] == beat["scene_id"] and shot["kind"] != "insert"]
+        framing = [shot for shot in place if shot.get("beat_position") is None]
+        action_shot = next((shot for shot in place if shot.get("beat_position") == position), None)
+
+        def first(kind: str, speaker: int | None = None) -> dict | None:
+            return next((shot for shot in framing if shot["kind"] == kind
+                         and (speaker is None or speaker in speakers_of(shot))), None)
+
+        offset = index - beat["line_from"]
+        if action_shot is not None:
+            wanted = action_shot if offset % 2 == 0 else first("single", line.get("speaker_index"))
+        elif offset == 0:
+            wanted = first("duo_wide")
+        elif offset % 4 == 3:
+            wanted = first("duo_close")
+        else:
+            wanted = first("single", line.get("speaker_index"))
+        chosen = wanted or first("single") or first("duo_close") or first("duo_wide") or (place[0] if place else None)
+        assigned.append(chosen["id"] if chosen else None)
+    return assigned
+
+
+def storyboard_timeline_ready(beats: list[dict] | None, shots: list[dict]) -> bool:
+    """The beat timeline applies only when every place of the approved storyboard has a complete
+    shot (i.e. shots were generated from it); otherwise the per-scene rule keeps working."""
+    if not beats:
+        return False
+    complete_places = {shot["scene_id"] for shot in shots if shot.get("status") == "complete" and shot.get("final_path")}
+    return all(beat["scene_id"] in complete_places for beat in beats if beat["kind"] == "scene")

@@ -97,7 +97,7 @@ export const chapterSchema = z.object({
 
 export const episodeVisualsSchema = z.object({
   shots: z.record(z.string(), z.object({
-    url: z.string(), kind: z.enum(["single", "duo_close", "duo_wide"]),
+    url: z.string(), kind: z.enum(["single", "duo_close", "duo_wide", "insert"]),
   })),
   lineShots: z.array(z.string().nullable()),
 });

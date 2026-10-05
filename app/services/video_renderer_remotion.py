@@ -34,7 +34,7 @@ from app.core.constants import VIDEO_FPS, VIDEO_HEIGHT_STANDARD, VIDEO_WIDTH_STA
 from app.core.exceptions import RemotionRenderFailedError
 from app.core.paths import get_project_root
 from app.services import avatar_service, youtube_service
-from app.services.visuals import library_service, project_visuals_service
+from app.services.visuals import library_service, project_visuals_service, storyboard_service
 
 VIDEO_RENDERER_DIR = get_project_root() / "video-renderer"
 REMOTION_AUDIO_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "audio"
@@ -295,7 +295,12 @@ async def _build_input_props(
         "captionStyle": caption_style,
     }
     if shot_props:
-        line_shots = project_visuals_service.assign_line_shots(assignment_lines, chapters, scenes, complete_shots)
+        # Task 24.5b: the approved storyboard drives the pictures when its shots exist.
+        beats = await storyboard_service.approved_beats(db, project_id)
+        if project_visuals_service.storyboard_timeline_ready(beats, complete_shots):
+            line_shots = project_visuals_service.assign_beat_shots(assignment_lines, beats, complete_shots)
+        else:
+            line_shots = project_visuals_service.assign_line_shots(assignment_lines, chapters, scenes, complete_shots)
         props["visuals"] = {
             "shots": shot_props,
             "lineShots": [shot_id if shot_id in shot_props else None for shot_id in line_shots],
