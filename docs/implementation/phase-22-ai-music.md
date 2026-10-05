@@ -23,6 +23,80 @@
 >
 > The sections below are the original D43–D49 plan, kept for history.
 
+## Smart music (D51, owner 2026-10-06)
+
+**Owner request (verbatim intent).** Delete the old AI tracks so the owner can add new ones. The
+system then:
+
+- **auto-selects a track by topic and track length**;
+- **fits the start and end of the music to the video length**;
+- **sets the music volume so it never covers the voice**;
+- **fades the sound out at the end of the video**.
+
+The AI tracks were deleted on 2026-10-06 (`data/tmp/music-spike`, 1.8 GB). `data/music_library` is
+empty and ready.
+
+**What the code does today (read 2026-10-06):**
+
+- **Audio mix.** `audio_service._mix_project_sync` overlays the music on the speech span only. It
+  loops by hard cut (`_loop_to_length`) and caps the music at a flat −18 dBFS ceiling. There is no
+  speech-aware ducking and no fades.
+- **Enhanced video** = intro 2.5 s + speech mix + outro 5 s (`Episode.tsx`, `types.ts`). The intro
+  and outro are **silent**.
+- **Standard video** = the speech mix only (`-t audio_duration`).
+- **The chosen track** is stored per audio job (`audio_jobs.background_music`).
+
+**Design:**
+
+1. **Library metadata (22.7).** Each library file gets a row with the fields below. A short guide
+   to safe free sources goes in `docs/user/free-music-sources.md`. Downloads stay manual: the sites
+   have no public music API, and their terms forbid automated downloading.
+
+   | Field | Notes |
+   |---|---|
+   | title | |
+   | artist | |
+   | source site | |
+   | licence | |
+   | attribution text | |
+   | source URL | |
+   | **mood** | one of `lofi`, `acoustic`, `upbeat`, `calm`, `inspiring` |
+   | **tags** | free words |
+   | **measured duration** | ffprobe |
+
+2. **Smart bed (22.4).** This is one pure numpy module (`music_bed.py`) used in two places.
+   - **Fit.** The bed always starts at the track's own start.
+     - If the track is longer than needed, it is cut and then faded out.
+     - If it is shorter, it is looped with 3 s equal-power crossfades. There is no hard cut.
+   - **Level.** The track is loudness-normalised first (EBU R128), so every file starts from the
+     same level. The bed then has two gain states:
+     - **open** (intro, outro and pauses ≥ 2.5 s);
+     - **under speech** (well below the voice).
+
+     Ramps ease in 0.3 s before a line and release 0.8 s after it. Short gaps between lines stay
+     ducked, so the music does not pump.
+   - **Fades.** 2 s fade-in from the first frame. A 4 s fade-out that ends **exactly at the last
+     frame of the video**.
+   - **Where it is used:**
+     - **Step 4 mix:** the speech span only, as the preview/podcast. Durations and timestamps are
+       unchanged.
+     - **Video render:** a **full-video soundtrack**: intro + voice + outro for Enhanced, and voice
+       + a 4 s music tail for Standard. It is built from a voice-only stem that Step 4 now also
+       writes. Remotion plays the soundtrack from frame 0, and ffmpeg uses it as the audio input.
+   - **No music selected** = exactly today's behaviour on both renderers.
+3. **Auto-select (22.8).** Step 4's music dropdown gains **"✨ Auto (best match)"**.
+   - **Candidates.** The deterministic score uses:
+     - the genre→mood map;
+     - topic words against the tags and title;
+     - the length fit: covering the video beats looping, and the fewest loops is best;
+     - a small penalty for a track used by the last episodes.
+   - **The AI** (cloud-first gateway) picks among the top candidates from the topic. It is
+     validated against the candidate list, with one repair, else the top score.
+   - **The reason is shown.** The pick is resolved at mix time and stored as the job's
+     `background_music`, so the video and the credit line use the real file.
+
+**Task order:** 22.7 → 22.4 → 22.8 → 22.5 (credit line) → 22.6 (Gate B-17).
+
 **Status:** planned 2026-10-05 (`/vp-evolve`, Add Feature, complexity L) from the brainstorm
 `docs/brainstorm/session-2026-10-05.md` (owner decisions D43–D49).
 **Version:** enters at 1.2.0-beta. It closes at **1.3.0-beta** if Gate B-17 passes (MINOR: a new

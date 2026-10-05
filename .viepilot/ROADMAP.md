@@ -1375,7 +1375,8 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 - [x] 22.1 Spike: ACE-Step 1.5. **FAIL** (owner: "nhạc quá tệ"), superseded by D50
 - [~] 22.2 AI music worker + Library "Generate". Built, then **reverted** (D50)
 - [~] 22.3 AI brief + Step 4 previews. Built, then **reverted** (D50)
-- [ ] 22.7 Licence metadata for library tracks (source, title, artist, licence, attribution, URL) + free-source guide
+- [ ] 22.7 Library track details: mood, tags, measured length, licence, credit + free-source guide
+- [ ] 22.4 Smart bed (D51): fit to the video length, volume under the voice, fade out at the video end
+- [ ] 22.8 Auto-select a track by topic + length (D51)
 - [ ] 22.5 YouTube description credit line from the episode's music
-- [ ] 22.4 Speech-aware ducking + intro/outro levels
 - [ ] 22.6 Gate B-17 (owner listening test on a real episode) → 1.3.0-beta
