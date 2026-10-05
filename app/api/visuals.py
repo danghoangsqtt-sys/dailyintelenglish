@@ -188,6 +188,13 @@ async def delete_scene(scene_id: str, db: aiosqlite.Connection = Depends(get_db)
     return ok({"deleted": scene_id})
 
 
+@router.post("/scenes/{scene_id}/duplicate")
+async def duplicate_scene(scene_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        row = await library.duplicate_scene(db, scene_id)
+    return ok(row)
+
+
 @router.post("/scenes/{scene_id}/preview")
 async def generate_scene_preview(scene_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     async with read_transaction():

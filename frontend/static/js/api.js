@@ -115,6 +115,7 @@ const Api = (() => {
     }),
     deleteScene: (id) => request(`/api/visuals/scenes/${id}`, { method: "DELETE" }),
     generateScenePreview: (id) => request(`/api/visuals/scenes/${id}/preview`, { method: "POST" }),
+    duplicateScene: (id) => request(`/api/visuals/scenes/${id}/duplicate`, { method: "POST" }),
     getImageJob: (id) => request(`/api/visuals/jobs/${id}`),
     cancelImageJob: (id) => request(`/api/visuals/jobs/${id}/cancel`, { method: "POST" }),
     getProjectVisuals: (projectId) => request(`/api/projects/${projectId}/visuals`),

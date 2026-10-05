@@ -25,3 +25,17 @@ The Scenes tab of `/characters` already lists, creates, edits, deletes and previ
 API: `used_count`, duplicate (copy naming, fields, no plate). Browser (Playwright, fake engine):
 create with category/time → badge text; filter chip hides other categories; duplicate adds a
 card; the stale-plate warning appears on place edit.
+
+## Results (2026-10-05)
+
+- Backend: `used_count` via one grouped LEFT JOIN; `POST /scenes/{id}/duplicate` ("<name> copy",
+  "copy 2", …); the plate URL carries `?v=<updated_at>` so a regenerated plate is not served from the
+  browser cache.
+- UI: Category + Time of day selects, category chips with counts, plate or "No plate yet" placeholder,
+  `category · time · staging · Used in N projects`, Duplicate, "↻ Plate"/"Make plate", stale-plate
+  warning on place/time edits.
+- Checked live on the owner's real library (16 cards, 16 plates loaded, chips All 16 / city 1 / food 3 /
+  home 2 / nature 3 / school 3 / travel 2 / work 2).
+- Tests: +1 API, +1 browser; `test_visuals_library_browser` follows the button rename. The Step 5 browser
+  test now disables colour retries (fake solid colours always fail the check, and the job outgrew the
+  30 s UI wait). Full suite **1294 passed**.

@@ -79,7 +79,7 @@ async def test_library_health_off_disables_generate_but_keeps_browsing(
     assert "disabled" in (await generate.get_attribute("title")).lower()
     await page.get_by_role("tab", name="Scenes").click()
     assert await page.get_by_text("Built-in").count() >= 6
-    assert await page.get_by_role("button", name="Preview").first.is_disabled()
+    assert await page.get_by_role("button", name="Make plate").first.is_disabled()
     await page.goto(f"{live_server_url}/step5")
     assert await page.get_by_role("link", name="Character Library").count() == 1
     await page.close()

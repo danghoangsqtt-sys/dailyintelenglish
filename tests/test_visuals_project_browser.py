@@ -18,6 +18,10 @@ def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Generator[str, 
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(settings, "IMAGE_ENGINE", "fake")
         patch.setattr(settings, "AI_VISUALS_ENABLED", True)
+        # The fake engine paints solid random colours, so every person fails the Task 20.11
+        # colour check and retries twice: the job outgrew this UI test's 30 s wait. The retry
+        # itself is covered by tests/test_visuals_colour_check.py.
+        patch.setattr(settings, "VISUALS_COLOUR_RETRIES", 0)
         patch.setattr(visuals_api, "IMAGE_PYTHON", pretend_image_python)
         with live_server(tmp_path_factory, "visuals-project-browser") as url:
             yield url

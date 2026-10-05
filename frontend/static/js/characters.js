@@ -8,7 +8,7 @@
   };
   const state = {
     characters: [], scenes: [], options: null, health: null,
-    selectedId: null, editingSceneId: null, busy: false, progress: null,
+    selectedId: null, editingSceneId: null, sceneFilter: "all", busy: false, progress: null,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -58,6 +58,11 @@
     };
     Object.entries(mapping).forEach(([name, values]) => optionList(form.elements[name], values));
     form.elements.bottom_color.value = "navy blue";
+    const sceneForm = $("scene-form");
+    optionList(sceneForm.elements.category, state.options.scene_categories || ["other"]);
+    optionList(sceneForm.elements.time_of_day, state.options.times_of_day || ["day"]);
+    sceneForm.elements.category.value = "other";
+    sceneForm.elements.time_of_day.value = "day";
   }
 
   function selectedCharacter() {
@@ -210,17 +215,52 @@
     renderEditor();
   }
 
+  function renderSceneFilters() {
+    const bar = $("scene-filters");
+    bar.replaceChildren();
+    const present = [...new Set(state.scenes.map((scene) => scene.category || "other"))].sort();
+    if (!present.includes(state.sceneFilter)) state.sceneFilter = "all";
+    ["all", ...present].forEach((category) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "btn btn-ghost btn-sm";
+      chip.dataset.category = category;
+      const count = category === "all" ? state.scenes.length
+        : state.scenes.filter((scene) => (scene.category || "other") === category).length;
+      chip.textContent = `${category === "all" ? "All" : category} (${count})`;
+      chip.setAttribute("aria-pressed", String(state.sceneFilter === category));
+      chip.addEventListener("click", () => { state.sceneFilter = category; renderScenes(); });
+      bar.append(chip);
+    });
+  }
+
+  function updateStaleWarning() {
+    const form = $("scene-form");
+    const original = state.scenes.find((scene) => scene.id === state.editingSceneId);
+    $("scene-stale-warning").hidden = !(original && original.preview_url && (
+      form.elements.place.value.trim() !== original.place || form.elements.time_of_day.value !== original.time_of_day));
+  }
+
   function renderScenes() {
+    renderSceneFilters();
     const grid = $("scene-grid");
     grid.replaceChildren();
-    state.scenes.forEach((scene) => {
+    const visible = state.scenes.filter(
+      (scene) => state.sceneFilter === "all" || (scene.category || "other") === state.sceneFilter);
+    visible.forEach((scene) => {
       const card = document.createElement("article");
       card.className = "card library-scene";
+      card.dataset.sceneId = scene.id;
       if (scene.preview_url) {
         const image = document.createElement("img");
         image.src = scene.preview_url;
-        image.alt = `${scene.name} preview`;
+        image.alt = `${scene.name} plate`;
         card.append(image);
+      } else {
+        const placeholder = document.createElement("div");
+        placeholder.className = "scene-placeholder";
+        placeholder.textContent = "No plate yet \u2014 generated on first use";
+        card.append(placeholder);
       }
       const title = document.createElement("h3");
       title.textContent = scene.name;
@@ -231,7 +271,12 @@
         title.append(" ", badge);
       }
       const place = document.createElement("p");
-      place.textContent = `${scene.place} · ${scene.staging}`;
+      place.textContent = scene.place;
+      const meta = document.createElement("p");
+      meta.className = "scene-meta";
+      const used = scene.used_count || 0;
+      meta.textContent = `${scene.category || "other"} · ${scene.time_of_day || "day"} · ${scene.staging}`
+        + ` · Used in ${used} project${used === 1 ? "" : "s"}`;
       const actions = document.createElement("div");
       actions.className = "library-actions";
       const edit = document.createElement("button");
@@ -245,6 +290,9 @@
         form.elements.name.value = scene.name;
         form.elements.place.value = scene.place;
         form.elements.staging.value = scene.staging;
+        form.elements.category.value = scene.category || "other";
+        form.elements.time_of_day.value = scene.time_of_day || "day";
+        updateStaleWarning();
         $("save-scene").textContent = "Save scene";
         $("cancel-scene-edit").hidden = false;
         form.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -252,10 +300,15 @@
       const preview = document.createElement("button");
       preview.type = "button";
       preview.className = "btn btn-ghost btn-sm";
-      preview.textContent = scene.preview_url ? "↻ Preview" : "Preview";
+      preview.textContent = scene.preview_url ? "↻ Plate" : "Make plate";
       setGenerateButton(preview, true);
       preview.addEventListener("click", () => startJob(() => Api.generateScenePreview(scene.id)));
-      actions.append(edit, preview);
+      const duplicate = document.createElement("button");
+      duplicate.type = "button";
+      duplicate.className = "btn btn-ghost btn-sm";
+      duplicate.textContent = "Duplicate";
+      duplicate.addEventListener("click", () => act(() => Api.duplicateScene(scene.id), "Scene duplicated."));
+      actions.append(edit, preview, duplicate);
       if (!scene.is_builtin) {
         const remove = document.createElement("button");
         remove.type = "button";
@@ -266,7 +319,7 @@
         });
         actions.append(remove);
       }
-      card.append(title, place, actions);
+      card.append(title, place, meta, actions);
       grid.append(card);
     });
   }
@@ -345,6 +398,7 @@
   function resetSceneForm() {
     state.editingSceneId = null;
     $("scene-form").reset();
+    $("scene-stale-warning").hidden = true;
     $("scene-editor-title").textContent = "New scene";
     $("save-scene").textContent = "Add scene";
     $("cancel-scene-edit").hidden = true;
@@ -414,6 +468,8 @@
       resetSceneForm();
     });
     $("cancel-scene-edit").addEventListener("click", resetSceneForm);
+    $("scene-form").elements.place.addEventListener("input", updateStaleWarning);
+    $("scene-form").elements.time_of_day.addEventListener("change", updateStaleWarning);
     $("theme-toggle").addEventListener("click", Theme.toggle);
   }
 

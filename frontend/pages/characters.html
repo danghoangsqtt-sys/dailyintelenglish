@@ -46,6 +46,11 @@
     .library-scene img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 7px; }
     .library-scene h3 { margin: 10px 0 5px; }
     .library-scene p { margin: 0; color: var(--muted); }
+    .library-scene .scene-meta { margin-top: 4px; font-size: 0.86rem; }
+    .scene-placeholder { display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: 7px;
+      border: 1px dashed var(--border, #8884); color: var(--muted); font-size: 0.85rem; padding: 10px; text-align: center; }
+    .library-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
+    .library-chips button[aria-pressed="true"] { outline: 2px solid var(--accent, currentColor); }
     .library-message { margin: 12px 0; padding: 10px 14px; border-radius: 8px; background: var(--surface-2); }
     .library-message[hidden] { display: none; }
     .library-message.error { color: var(--danger); }
@@ -136,10 +141,14 @@
           <label>Scene name<input name="name" required /></label>
           <label>Place phrase<input name="place" maxlength="40" placeholder="a bright home kitchen" required /></label>
           <label>Staging<select name="staging"><option value="standing">Standing</option><option value="seated">Seated</option></select></label>
+          <label>Category<select name="category"></select></label>
+          <label>Time of day<select name="time_of_day"></select></label>
+          <p id="scene-stale-warning" class="library-hint" role="status" hidden>Saving will clear this scene's plate; it is regenerated on next use.</p>
           <div class="library-actions"><button id="save-scene" class="btn btn-primary" type="submit">Add scene</button><button id="cancel-scene-edit" class="btn btn-ghost" type="button" hidden>Cancel edit</button></div>
         </form>
-        <p class="library-hint">The place phrase uses up to five words. Staging controls the wide conversation pose.</p>
+        <p class="library-hint">The place phrase uses up to five words. Staging controls the wide conversation pose. The plate (an empty view of the place) keeps every shot in this scene looking like the same place.</p>
       </div>
+      <div id="scene-filters" class="library-chips" role="group" aria-label="Filter scenes by category"></div>
       <div id="scene-grid" class="library-scene-grid" aria-label="Scenes"></div>
     </section>
   </main>

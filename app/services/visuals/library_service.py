@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import aiosqlite
 from PIL import Image
@@ -205,12 +206,37 @@ async def remove_character_files(character_id: str) -> None:
 
 
 async def list_scenes(db: aiosqlite.Connection) -> list[dict]:
-    cursor = await db.execute("SELECT * FROM scenes ORDER BY is_builtin DESC, name")
+    # Task 23.4: `used_count` = projects whose scene list contains the scene (one grouped query).
+    cursor = await db.execute(
+        "SELECT s.*, COUNT(DISTINCT ps.project_id) AS used_count FROM scenes s "
+        "LEFT JOIN project_scenes ps ON ps.scene_id = s.id GROUP BY s.id ORDER BY s.is_builtin DESC, s.name"
+    )
     return [_scene_view(dict(row)) for row in await cursor.fetchall()]
 
 
+async def duplicate_scene(db: aiosqlite.Connection, scene_id: str) -> dict:
+    """Task 23.4: a user copy with the same place/staging/category/time, a new seed, no plate."""
+    row = await get_scene_row(db, scene_id)
+    cursor = await db.execute("SELECT name FROM scenes")
+    names = {existing[0] for existing in await cursor.fetchall()}
+    base = f"{row['name'][:35]} copy"
+    name, number = base, 2
+    while name in names:
+        name, number = f"{base} {number}", number + 1
+    new_id, now = str(uuid.uuid4()), _now()
+    await db.execute(
+        "INSERT INTO scenes (id, name, place, staging, category, time_of_day, seed, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (new_id, name, row["place"], row["staging"], row["category"], row["time_of_day"],
+         random.randint(1, 2**31 - 2), now, now),
+    )
+    return _scene_view(await get_scene_row(db, new_id))
+
+
 def _scene_view(row: dict) -> dict:
-    row["preview_url"] = f"/api/visuals/scenes/{row['id']}/preview" if row["preview_path"] else None
+    # Task 23.4: the version query makes a regenerated plate bypass the browser cache.
+    version = quote(str(row.get("updated_at", "")), safe="")
+    row["preview_url"] = f"/api/visuals/scenes/{row['id']}/preview?v={version}" if row["preview_path"] else None
     row.pop("preview_path", None)
     return row
 

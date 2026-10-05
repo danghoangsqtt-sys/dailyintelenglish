@@ -101,3 +101,22 @@ def test_plates_use_the_people_free_negative(client, monkeypatch, requests_log):
     plates = [p for p in requests_log if "empty scene" in p.get("prompt", "")]
     assert plates and all(p["negative_prompt"] == recipes.PLATE_NEGATIVE for p in plates)
     assert "people" in recipes.PLATE_NEGATIVE and recipes.token_count(recipes.PLATE_NEGATIVE) <= 72
+
+
+def test_used_count_duplicate_and_versioned_plate_url(client):  # noqa: F811
+    project, _, scenes = setup_project(client, 1, 2)
+    listed = {scene["id"]: scene for scene in data(client.get("/api/visuals/scenes"))}
+    assert all(listed[scene["id"]]["used_count"] == 1 for scene in scenes)
+    unused = next(scene for scene in listed.values() if scene["id"] not in {s["id"] for s in scenes})
+    assert unused["used_count"] == 0
+    first = data(client.post(f"/api/visuals/scenes/{scenes[0]['id']}/duplicate"))
+    second = data(client.post(f"/api/visuals/scenes/{scenes[0]['id']}/duplicate"))
+    assert first["name"] == f"{scenes[0]['name']} copy" and second["name"] == f"{scenes[0]['name']} copy 2"
+    assert not first["is_builtin"] and first["preview_url"] is None and first["seed"] != listed[scenes[0]["id"]]["seed"]
+    assert (first["place"], first["category"]) == (listed[scenes[0]["id"]]["place"], listed[scenes[0]["id"]]["category"])
+    assert client.post("/api/visuals/scenes/missing/duplicate").status_code == 404
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute("UPDATE scenes SET preview_path = 'p.png', updated_at = '2026-10-05T01:02:03+00:00' "
+                           "WHERE id = ?", (first["id"],))
+    copy = next(s for s in data(client.get("/api/visuals/scenes")) if s["id"] == first["id"])
+    assert copy["preview_url"].endswith("/preview?v=2026-10-05T01%3A02%3A03%2B00%3A00")

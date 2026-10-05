@@ -1347,7 +1347,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §3.
 - [x] 23.1 Spike: same-place consistency → owner picked the scene-plate IP reference (~0.4)
 - [x] 23.2 Scene model v2 (category, time of day, seed, plate) + plate as a background IP reference
 - [x] 23.3 Built-in pack: 16 places (plates rendered)
-- [ ] 23.4 Scene Library UI
+- [x] 23.4 Scene Library UI v2
 - [ ] 23.5 Gate B-15
 
 ## Phase 24 — Story-driven visuals: storyboard (after Phase 23)
