@@ -94,7 +94,7 @@ def test_character_lifecycle_and_content(client):
 
 def test_scene_crud_preview_builtin_and_kill_switch(client, monkeypatch):
     scenes = data(client.get("/api/visuals/scenes"))
-    assert len([scene for scene in scenes if scene["is_builtin"]]) == 16
+    assert len([scene for scene in scenes if scene["is_builtin"]]) == 55
     builtin = scenes[0]
     assert client.delete(f"/api/visuals/scenes/{builtin['id']}").status_code == 409
     assert data(client.patch(f"/api/visuals/scenes/{builtin['id']}", json={"name": "New classroom"}))["name"] == "New classroom"

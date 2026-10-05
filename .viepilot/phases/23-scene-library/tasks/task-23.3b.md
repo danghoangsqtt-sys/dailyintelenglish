@@ -41,3 +41,20 @@ and hyphens only, and built-ins follow the same rule).
 - Tests updated for 55 built-ins and the countryside category.
 - All 39 new plates rendered into the owner's library (people-free plate negative), contact sheets
   `docs/operations/phase23-t3b-exam-plates-*.png` for Gate B-15.
+
+## Results (2026-10-05)
+
+- 55 built-ins: city 17 · school 14 · countryside 13 · travel 5 · work 3 · home 2 · nature 1.
+  Category moves follow `PREVIOUS_BUILTIN_CATEGORIES` (a user re-categorisation is kept, tested).
+- Real tokenizer: all 39 new places ≤ 77 tokens with the longest character (worst: airport check-in
+  hall, 77 / estimate 72).
+- 39 plates rendered into the owner's library (backup `data/backups/app_before_scene_pack_23_3b_20261005.db`).
+  Plate review found 4 misses, fixed with new place texts through `PREVIOUS_BUILTIN_PLACES` (only rows
+  still on the old text change; their plate is cleared and re-rendered; tested):
+  - "a city zoo": no animals → "a zoo with elephants";
+  - "a student common room": a bedroom → "a student lounge with sofas";
+  - "a summer camp": an RV → "a summer camp with tents";
+  - "a quiet village road": a European village → "a Vietnamese village road".
+- Gate B-15 sheets: `docs/operations/phase23-builtin-plates-{city,school,countryside,travel,work,home,nature}.png`.
+- Tests: full suite 1295 passed before the place-fix commit, plus 1 new test (scenes v2 + foundation:
+  18 passed).

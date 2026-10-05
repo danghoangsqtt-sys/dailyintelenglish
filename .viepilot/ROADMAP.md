@@ -1347,6 +1347,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §3.
 - [x] 23.1 Spike: same-place consistency → owner picked the scene-plate IP reference (~0.4)
 - [x] 23.2 Scene model v2 (category, time of day, seed, plate) + plate as a background IP reference
 - [x] 23.3 Built-in pack: 16 places (plates rendered)
+- [x] 23.3b Exam-setting pack: 55 built-ins (city / school / countryside, IELTS + Cambridge listening)
 - [x] 23.4 Scene Library UI v2
 - [ ] 23.5 Gate B-15
 

@@ -46,7 +46,7 @@ async def test_migration_008_and_builtin_seed_once(tmp_path, monkeypatch, preexi
         await init_db()
         db = Database.instance().connection
         cursor = await db.execute("SELECT count(*) FROM scenes WHERE is_builtin = 1")
-        assert (await cursor.fetchone())[0] == 16
+        assert (await cursor.fetchone())[0] == 55
         cursor = await db.execute("SELECT count(*) FROM schema_migrations WHERE filename = '008_ai_visuals.sql'")
         assert (await cursor.fetchone())[0] == 1
         cursor = await db.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'image_jobs'")
@@ -89,7 +89,7 @@ def test_every_builtin_place_fits_the_real_clip_budget():
     so the place (the prompt's tail) is never cut. A higher estimate needs a new measurement."""
     from app.db.database import BUILTIN_SCENES
 
-    assert len(BUILTIN_SCENES) == 16
+    assert len(BUILTIN_SCENES) == 55
     for _, _, place, staging, _ in BUILTIN_SCENES:
         scene = {"place": place, "staging": staging, "time_of_day": "sunset"}
         prompts = [

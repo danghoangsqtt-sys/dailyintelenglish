@@ -37,8 +37,8 @@ async def test_scene_fields_filter_duplicate_and_stale_warning(browser_instance:
     await page.locator("#scenes-tab").click()
     grid = page.locator("#scene-grid")
     await grid.locator(".library-scene").first.wait_for()
-    assert await grid.locator(".library-scene").count() == 16
-    assert await grid.locator(".scene-placeholder").count() == 16  # no plates yet
+    assert await grid.locator(".library-scene").count() == 55
+    assert await grid.locator(".scene-placeholder").count() == 55  # no plates yet
 
     form = page.locator("#scene-form")
     await form.locator("[name=name]").fill("Night market")
@@ -52,7 +52,7 @@ async def test_scene_fields_filter_duplicate_and_stale_warning(browser_instance:
 
     await page.locator("#scene-filters button[data-category=travel]").click()
     names = await grid.locator(".library-scene h3").all_inner_texts()
-    assert len(names) == 2 and any("Bus stop" in name for name in names)
+    assert len(names) == 5 and any("Bus stop" in name for name in names)
     await page.locator("#scene-filters button[data-category=all]").click()
 
     await card.get_by_role("button", name="Duplicate").click()

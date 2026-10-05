@@ -13,7 +13,7 @@ TOPS = ("t-shirt", "shirt", "slim-fit shirt", "sweater", "blouse", "polo shirt")
 BOTTOMS = ("jeans", "trousers", "slim trousers", "skirt", "shorts")
 AGE_GROUPS = ("young", "adult", "middle-aged", "senior")
 GENDERS = ("female", "male")
-SCENE_CATEGORIES = ("home", "school", "work", "city", "nature", "food", "travel", "other")
+SCENE_CATEGORIES = ("home", "school", "work", "city", "countryside", "nature", "food", "travel", "other")
 TIMES_OF_DAY = ("morning", "day", "sunset", "night")
 SHEET_KINDS = ("full_body", "portrait_calm", "portrait_smile", "portrait_surprised")
 
@@ -90,7 +90,7 @@ class SceneInput(BaseModel):
     name: str = Field(min_length=1, max_length=40)
     place: str
     staging: Literal["standing", "seated"]
-    category: Literal["home", "school", "work", "city", "nature", "food", "travel", "other"] = "other"
+    category: Literal["home", "school", "work", "city", "countryside", "nature", "food", "travel", "other"] = "other"
     time_of_day: Literal["morning", "day", "sunset", "night"] = "day"
 
     @field_validator("name")
@@ -111,7 +111,7 @@ class ScenePatch(BaseModel):
     name: str | None = None
     place: str | None = None
     staging: Literal["standing", "seated"] | None = None
-    category: Literal["home", "school", "work", "city", "nature", "food", "travel", "other"] | None = None
+    category: Literal["home", "school", "work", "city", "countryside", "nature", "food", "travel", "other"] | None = None
     time_of_day: Literal["morning", "day", "sunset", "night"] | None = None
 
     @field_validator("name")
