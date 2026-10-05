@@ -355,3 +355,47 @@ async def propose_storyboard(db: aiosqlite.Connection, project_id: str,
         view = await replace_storyboard(db, project_id, chosen, "rule" if path == "rule" else "ai")
     view["proposal"] = {"path": path, "reason": reason}
     return view
+
+
+async def approved_beats(db: aiosqlite.Connection, project_id: str) -> list[dict] | None:
+    """Task 24.5: the beats to generate from, only once the owner approved the storyboard."""
+    cursor = await db.execute("SELECT status FROM project_storyboards WHERE project_id = ?", (project_id,))
+    meta = await cursor.fetchone()
+    if meta is None or meta[0] != "approved":
+        return None
+    return (await get_storyboard(db, project_id))["beats"]
+
+
+async def materialize_new_places(db: aiosqlite.Connection, project_id: str) -> int:
+    """Task 24.5a: a scene beat's free-text `new_place` becomes a user library scene, so it gets a
+    plate (Task 23.2) and can be reused; its beats then point at that scene (caller holds the
+    write transaction). Returns how many scenes were created."""
+    cursor = await db.execute(
+        "SELECT id, new_place FROM project_beats WHERE project_id = ? AND kind = 'scene' "
+        "AND scene_id IS NULL AND new_place IS NOT NULL ORDER BY position",
+        (project_id,),
+    )
+    rows = await cursor.fetchall()
+    cursor = await db.execute("SELECT name FROM scenes")
+    names = {row[0] for row in await cursor.fetchall()}
+    created: dict[str, str] = {}
+    now = _now()
+    for beat_id, place in rows:
+        if place not in created:
+            base = place[:1].upper() + place[1:]
+            base = base[2:] if base.lower().startswith("a ") else base
+            base = (base[:1].upper() + base[1:])[:36]
+            name, number = base, 2
+            while name in names:
+                name, number = f"{base} {number}", number + 1
+            names.add(name)
+            scene_id = str(uuid.uuid4())
+            await db.execute(
+                "INSERT INTO scenes (id, name, place, staging, category, time_of_day, seed, created_at, updated_at) "
+                "VALUES (?, ?, ?, 'standing', 'other', 'day', ?, ?, ?)",
+                (scene_id, name, place, int(uuid.uuid4().int % 2147483646) + 1, now, now),
+            )
+            created[place] = scene_id
+        await db.execute("UPDATE project_beats SET scene_id = ?, new_place = NULL, updated_at = ? WHERE id = ?",
+                         (created[place], now, beat_id))
+    return len(created)

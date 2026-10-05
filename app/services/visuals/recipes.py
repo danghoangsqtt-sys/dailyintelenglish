@@ -167,6 +167,11 @@ def fit_budget(build, action: str, place: str) -> str:
     return prompt
 
 
+def insert_prompt(subject: str) -> str:
+    """Task 24.5a: an insert illustrates what a speaker describes (no characters, no plate)."""
+    return _styled(subject, "wide view, detailed scene")
+
+
 def beat_single_prompt(character: Mapping, scene: Mapping, action: str, expression: str) -> str:
     feeling = EXPRESSION_WORDS.get(expression, EXPRESSION_WORDS["calm"])
 

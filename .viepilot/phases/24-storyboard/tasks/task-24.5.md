@@ -89,3 +89,21 @@ timeline are byte-identical); GPU-free tests with the fake engine.
 - Remotion props use the beat timeline only when approved.
 
 Real GPU smoke on the owner's machine for one approved storyboard. Full suite green; ruff clean.
+
+## 24.5a result (2026-10-05) — PASS
+
+- Delivered as planned, plus:
+  - `POST …/visuals/shots` accepts a project with no chosen scenes when its storyboard is approved
+    (draft + no scenes → 422 "…or approve a storyboard…");
+  - shot views carry `scene_name` ("Inserts" for inserts);
+  - Step 5 groups shots by their own place and shows the action and expression.
+- Tests: `tests/test_storyboard_shots.py`, 3 passed:
+  - specs order/kinds/positions;
+  - draft keeps the legacy path;
+  - approved → 10 shots;
+  - new place → library scene "Quiet tea house" with a plate, and its beat re-pointed;
+  - the insert goes through text2img with the people-free negative and no IP keys;
+  - beat prompts carry "warm smile, drinking coffee";
+  - an insert can be regenerated.
+- Full suite: the first run had live-server start timeouts under load (each passed when run alone).
+  The rerun gave **1363 passed**.

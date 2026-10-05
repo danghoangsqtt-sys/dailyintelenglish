@@ -21,6 +21,7 @@ from app.services import project_service
 from app.services.visuals import jobs
 from app.services.visuals import library_service as library
 from app.services.visuals import project_visuals_service as project_visuals
+from app.services.visuals import storyboard_service
 from app.services.visuals.engine import IMAGE_PYTHON, require_generation
 
 router = APIRouter(prefix="/api/visuals", tags=["visuals"])
@@ -257,8 +258,12 @@ async def generate_project_shots(project_id: str, db: aiosqlite.Connection = Dep
         await project_service.get_project(db, project_id)
         cast = await project_visuals.cast_rows(db, project_id)
         scenes = await project_visuals.scene_rows(db, project_id)
-    if not cast or not scenes:
-        raise ValidationError("Assign at least one character and one scene before generating shots")
+        storyboard_beats = await storyboard_service.approved_beats(db, project_id)
+    if not cast:
+        raise ValidationError("Assign at least one character before generating shots")
+    if not scenes and storyboard_beats is None:  # Task 24.5a: an approved storyboard brings its own places
+        raise ValidationError("Assign at least one character and one scene, or approve a storyboard, "
+                              "before generating shots")
     return await _enqueue(db, "project_shots", project_id)
 
 

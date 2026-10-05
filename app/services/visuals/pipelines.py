@@ -249,7 +249,9 @@ async def _colour_pass(session, runner: ImageJobRunner, job: dict, context: dict
 async def _contexts(db, project_id: str, rows: list[dict]) -> list[dict[str, Any]]:
     async with read_transaction():
         cast = {member["speaker_index"]: member for member in await project_visuals.cast_rows(db, project_id)}
-        scenes = {scene["id"]: scene for scene in await project_visuals.scene_rows(db, project_id)}
+        # Task 24.5a: storyboard shots may use any library scene, not only the project's chosen ones.
+        scenes = {scene_id: await library.get_scene_row(db, scene_id)
+                  for scene_id in {row["scene_id"] for row in rows if row["scene_id"]}}
         characters = {index: await library.get_character_row(db, member["character_id"])
                       for index, member in cast.items()}
         faces = {}
@@ -259,17 +261,52 @@ async def _contexts(db, project_id: str, rows: list[dict]) -> list[dict[str, Any
     contexts = []
     for row in rows:
         indexes = json.loads(row["speaker_indexes"])
+        folder = settings.DATA_DIR / "visuals" / project_id / "shots" / row["id"]
+        kind = row["kind"]
+        if kind == "insert":
+            contexts.append({"row": row, "insert": True, "folder": folder, "people": [], "faces": [],
+                             "prompt": recipes.insert_prompt(row.get("subject") or "an illustration"),
+                             "negative": recipes.PLATE_NEGATIVE if not indexes else recipes.NEGATIVE})
+            continue
         people = [characters[index] for index in indexes]
         scene = scenes[row["scene_id"]]
-        kind = row["kind"]
-        prompt = (recipes.single_prompt(people[0], scene) if kind == "single"
-                  else recipes.duo_prompt(people[0], people[1], scene, kind))
-        folder = settings.DATA_DIR / "visuals" / project_id / "shots" / row["id"]
+        action, expression = row.get("action") or "", row.get("expression") or "calm"
+        if action or expression != "calm":  # Task 24.3/24.5a: a storyboard beat's action and mood
+            prompt = (recipes.beat_single_prompt(people[0], scene, action, expression) if kind == "single"
+                      else recipes.beat_duo_prompt(people[0], people[1], scene, kind, action, expression))
+            poses = geometry.beat_people(kind, scene["staging"], SIZE,
+                                         [geometry.action_category(action)] * len(indexes))
+        else:  # legacy shot sets keep their exact prompts and poses
+            prompt = (recipes.single_prompt(people[0], scene) if kind == "single"
+                      else recipes.duo_prompt(people[0], people[1], scene, kind))
+            poses = geometry.shot_people(kind, scene["staging"], SIZE)
         contexts.append({"row": row, "indexes": indexes, "characters": people,
                          "faces": [faces[index] for index in indexes], "scene": scene,
-                         "prompt": prompt, "folder": folder,
-                         "people": geometry.shot_people(kind, scene["staging"], SIZE)})
+                         "prompt": prompt, "folder": folder, "people": poses})
     return contexts
+
+
+async def _render_inserts(db, engine, runner: ImageJobRunner, job: dict, inserts: list[dict]) -> None:
+    """Task 24.5a: insert shots are plain text2img illustrations (no faces, no plate, no pose);
+    their raw image is final."""
+    async with engine.session("text2img", ip="none", consumer="visuals_shots_inserts") as session:
+        for index, context in enumerate(inserts):
+            await runner.boundary(job["id"], f"insert {index + 1}/{len(inserts)}", 0)
+            row, folder = context["row"], context["folder"]
+            raw_path, final_path = folder / "raw.png", folder / "final.png"
+            response = await session.request({
+                "command": "generate", "prompt": context["prompt"], "negative_prompt": context["negative"],
+                "seed": row["seed"], "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,
+                "output_path": str(raw_path),
+            })
+            await asyncio.to_thread(shutil.copyfile, raw_path, final_path)
+            async with write_transaction(db):
+                await db.execute(
+                    "UPDATE project_shots SET raw_path = ?, final_path = ?, prompt_tokens = ?, prompt_truncated = ?, "
+                    "status = 'complete', updated_at = ? WHERE id = ?",
+                    (str(raw_path), str(final_path), response.get("prompt_tokens"),
+                     int(bool(response.get("prompt_truncated"))), library._now(), row["id"]),
+                )
 
 
 async def recover_pending_shots(db) -> int:
@@ -328,6 +365,13 @@ async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows
     db = runner.get_db()
     contexts = await _contexts(db, project_id, rows)
     engine = get_image_engine()
+    inserts = [context for context in contexts if context.get("insert")]
+    contexts = [context for context in contexts if not context.get("insert")]
+    if inserts:
+        await _render_inserts(db, engine, runner, job, inserts)
+    if not contexts:
+        await runner.boundary(job["id"], "shots complete", 99)
+        return {"shot_ids": [context["row"]["id"] for context in inserts]}
     use_scene = settings.VISUALS_SCENE_REFERENCE_SCALE > 0
     if use_scene:
         await _ensure_plates(db, engine, runner, job, contexts)
@@ -460,14 +504,16 @@ async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows
                     (str(final_path), library._now(), row["id"]),
                 )
     await runner.boundary(job["id"], "shots complete", 99)
-    return {"shot_ids": [context["row"]["id"] for context in contexts]}
+    return {"shot_ids": [context["row"]["id"] for context in inserts + contexts]}
 
 
 async def project_shots(job: dict, runner: ImageJobRunner) -> dict:
     db = runner.get_db()
     project_id = job["target_id"]
     async with write_transaction(db):
-        rows = await project_visuals.prepare_shots(db, project_id)
+        # Task 24.5a: an approved storyboard decides the shots; else the per-scene shot set.
+        rows = (await project_visuals.prepare_storyboard_shots(db, project_id)
+                or await project_visuals.prepare_shots(db, project_id))
     directory = settings.DATA_DIR / "visuals" / project_id / "shots"
     await asyncio.to_thread(shutil.rmtree, directory, ignore_errors=True)
     try:

@@ -69,8 +69,12 @@ async def project_visuals(db: aiosqlite.Connection, project_id: str) -> dict:
         scene["preview_url"] = f"/api/visuals/scenes/{scene['id']}/preview" if scene["preview_path"] else None
         scene.pop("preview_path", None)
     shots = await shot_rows(db, project_id)
+    # Task 24.5a: storyboard shots can use any library scene, and inserts have none.
+    cursor = await db.execute("SELECT id, name FROM scenes")
+    scene_names = {row[0]: row[1] for row in await cursor.fetchall()}
     for shot in shots:
         shot["speaker_indexes"] = json.loads(shot["speaker_indexes"])
+        shot["scene_name"] = "Inserts" if shot["kind"] == "insert" else scene_names.get(shot["scene_id"], "Scene")
         shot["raw_url"] = (
             f"/api/projects/{project_id}/visuals/shots/{shot['id']}/content?variant=raw"
             if shot["raw_path"] else None
@@ -147,6 +151,78 @@ async def prepare_shots(db: aiosqlite.Connection, project_id: str) -> list[dict]
             "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)",
             (str(uuid.uuid4()), project_id, scene_id, kind, json.dumps(indexes),
              random.randint(1, 2**31 - 1), now, now),
+        )
+    return await shot_rows(db, project_id)
+
+
+def storyboard_shot_specs(beats: list[dict], cast: list[dict]) -> list[dict]:
+    """Task 24.5a (owner E4): the pictures an approved storyboard needs, in order of first use.
+    Per place: its framing set (one single per cast member, plus duo close + duo wide with two or
+    more) carrying the place's first action and expression; one action shot per later beat there
+    with a different action (a duo wide when two people are on screen, else that person's single);
+    one insert shot per insert. The count equals `storyboard_service.estimate_images`."""
+    indexes = [member["speaker_index"] for member in cast]
+    pair = indexes[:2]
+    specs: list[dict] = []
+    seen_actions: dict[str, set[str]] = {}
+    for position, beat in enumerate(beats):
+        if beat["kind"] == "insert":
+            specs.append({"scene_id": "", "kind": "insert", "speakers": list(beat.get("speakers") or []),
+                          "action": beat.get("action") or "", "expression": beat.get("expression") or "calm",
+                          "subject": beat.get("new_place") or beat.get("action") or "an illustration",
+                          "beat_position": position})
+            continue
+        place = beat["scene_id"]
+        action, expression = beat.get("action") or "", beat.get("expression") or "calm"
+        if place not in seen_actions:
+            seen_actions[place] = {action}
+            for index in indexes:
+                specs.append({"scene_id": place, "kind": "single", "speakers": [index], "action": action,
+                              "expression": expression, "subject": None, "beat_position": None})
+            if len(indexes) >= 2:
+                for kind in ("duo_close", "duo_wide"):
+                    specs.append({"scene_id": place, "kind": kind, "speakers": pair, "action": action,
+                                  "expression": expression, "subject": None, "beat_position": None})
+            continue
+        if action in seen_actions[place]:
+            continue
+        seen_actions[place].add(action)
+        on_screen = [index for index in (beat.get("speakers") or []) if index in indexes]
+        if len(on_screen) >= 2 or (not on_screen and len(indexes) >= 2):
+            kind, speakers = "duo_wide", pair
+        else:
+            kind, speakers = "single", on_screen[:1] or indexes[:1]
+        specs.append({"scene_id": place, "kind": kind, "speakers": speakers, "action": action,
+                      "expression": expression, "subject": None, "beat_position": position})
+    return specs
+
+
+async def prepare_storyboard_shots(db: aiosqlite.Connection, project_id: str) -> list[dict] | None:
+    """Replace the project's shots with the approved storyboard's (caller holds the write
+    transaction). None when there is no approved storyboard -- the caller uses `prepare_shots`."""
+    from app.services.visuals import storyboard_service
+
+    if await storyboard_service.approved_beats(db, project_id) is None:
+        return None
+    cast = await cast_rows(db, project_id)
+    if not cast:
+        raise ValidationError("Assign at least one locked character before generating storyboard shots")
+    await storyboard_service.materialize_new_places(db, project_id)
+    beats = await storyboard_service.approved_beats(db, project_id)
+    specs = storyboard_shot_specs(beats, cast)
+    expected = storyboard_service.estimate_images(beats, len(cast))
+    if len(specs) != expected:  # one definition of "the pictures this storyboard needs"
+        raise ValidationError(f"Storyboard shot plan has {len(specs)} images; the estimate is {expected}")
+    await db.execute("DELETE FROM project_shots WHERE project_id = ?", (project_id,))
+    now = library._now()
+    for spec in specs:
+        await db.execute(
+            "INSERT INTO project_shots (id, project_id, scene_id, kind, speaker_indexes, seed, status, action, "
+            "expression, subject, beat_position, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)",
+            (str(uuid.uuid4()), project_id, spec["scene_id"], spec["kind"], json.dumps(spec["speakers"]),
+             random.randint(1, 2**31 - 1), spec["action"], spec["expression"], spec["subject"],
+             spec["beat_position"], now, now),
         )
     return await shot_rows(db, project_id)
 

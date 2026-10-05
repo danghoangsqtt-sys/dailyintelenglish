@@ -490,7 +490,10 @@
     root.replaceChildren();
     const shots = state.visuals?.shots || [];
     if (!shots.length) return;
-    state.visuals.scenes.forEach((scene) => {
+    // Task 24.5a: group by each shot's own place (storyboard shots may use any library scene;
+    // inserts have none), in the order shots were planned.
+    const groups = [...new Map(shots.map((shot) => [shot.scene_id, { id: shot.scene_id, name: shot.scene_name }])).values()];
+    groups.forEach((scene) => {
       const group = shots.filter((shot) => shot.scene_id === scene.id);
       if (!group.length) return;
       const section = document.createElement("section");
@@ -503,9 +506,17 @@
         const card = document.createElement("article");
         card.className = "card visual-shot-card";
         const kind = document.createElement("h4");
-        kind.textContent = `${shot.kind.replace("_", " ")} · ${shot.speaker_indexes.map((i) =>
-          state.project.speakers.find((speaker) => speaker.speaker_index === i)?.name || `Speaker ${i + 1}`).join(" & ")}`;
+        const who = shot.speaker_indexes.map((i) =>
+          state.project.speakers.find((speaker) => speaker.speaker_index === i)?.name || `Speaker ${i + 1}`).join(" & ");
+        kind.textContent = shot.kind === "insert" ? `insert · ${shot.subject || "illustration"}`
+          : `${shot.kind.replace("_", " ")} · ${who}`;
         card.append(kind);
+        if (shot.kind !== "insert" && (shot.action || (shot.expression && shot.expression !== "calm"))) {
+          const beat = document.createElement("p");
+          beat.className = "visual-shot-beat";
+          beat.textContent = [shot.action, shot.expression].filter(Boolean).join(" · ");
+          card.append(beat);
+        }
         const variant = state.shotVariants[shot.id] || "final";
         const url = variant === "raw" ? shot.raw_url : shot.final_url;
         if (url) {
