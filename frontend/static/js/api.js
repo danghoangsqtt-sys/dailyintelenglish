@@ -82,6 +82,10 @@ const Api = (() => {
     deleteMusic: (filename) =>
       request(`/api/music/${encodeURIComponent(filename)}`, { method: "DELETE" }),
     musicContentUrl: (filename) => `/api/music/${encodeURIComponent(filename)}`,
+    // Task 22.7: track details (mood, tags, licence, credit) for the free-music library.
+    getMusicOptions: () => request("/api/music/options"),
+    updateMusic: (filename, details) =>
+      request(`/api/music/${encodeURIComponent(filename)}`, { method: "PATCH", body: JSON.stringify(details) }),
     getVisualsHealth: () => request("/api/visuals/health"),
     getVisualsOptions: () => request("/api/visuals/options"),
     listCharacters: () => request("/api/visuals/characters"),

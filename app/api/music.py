@@ -1,4 +1,4 @@
-"""Music library routes for listing, uploading, previewing, and deleting tracks."""
+"""Music library routes for listing, uploading, previewing, editing details and deleting tracks."""
 
 import asyncio
 import os
@@ -8,13 +8,18 @@ from urllib.parse import quote
 from uuid import uuid4
 
 import aiofiles
-from fastapi import APIRouter, File, UploadFile
+import aiosqlite
+from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
 from app.core.constants import MAX_MUSIC_UPLOAD_BYTES, MAX_MUSIC_UPLOAD_MB, MUSIC_UPLOAD_CHUNK_BYTES
 from app.core.exceptions import MusicUploadTooLargeError, NotFoundError, ValidationError
 from app.core.responses import ok
+from app.db.database import get_db
+from app.db.transactions import read_transaction, write_transaction
+from app.models.music import LICENCES, MOODS, SOURCES, MusicTrackPatch
+from app.services import music_library_service as library
 
 router = APIRouter(prefix="/api/music", tags=["music"])
 
@@ -125,16 +130,46 @@ def _existing_music_path(filename: str) -> Path:
     return path
 
 
+async def _with_details(db: aiosqlite.Connection, tracks: list[dict]) -> list[dict]:
+    """Task 22.7: give every listed file a details row (guessed title, measured duration)."""
+    async with read_transaction():
+        rows = await library.rows_by_filename(db)
+    missing = [track["filename"] for track in tracks
+               if track["filename"] not in rows or rows[track["filename"]]["duration_s"] is None]
+    if missing:
+        music_dir = _music_dir()
+        durations = {name: await asyncio.to_thread(library.probe_duration, music_dir / name) for name in missing}
+        async with write_transaction(db):
+            for name, duration_s in durations.items():
+                if name in rows:
+                    await library.set_duration(db, name, duration_s)
+                else:
+                    await library.insert_row(db, name, duration_s)
+        async with read_transaction():
+            rows = await library.rows_by_filename(db)
+    return [library.track_view(track, rows.get(track["filename"])) for track in tracks]
+
+
 @router.get("")
-async def list_music() -> dict:
-    """List background music tracks available in the local music library."""
+async def list_music(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """List background music tracks with their details (Task 22.7)."""
     started_at = time.perf_counter()
     tracks = await asyncio.to_thread(_list_music_files)
-    return ok(tracks, started_at=started_at)
+    return ok(await _with_details(db, tracks), started_at=started_at)
+
+
+@router.get("/options")
+async def music_options() -> dict:
+    """Task 22.7: the choices for a track's mood, source and licence."""
+    return ok({
+        "moods": [{"id": key, "label": label} for key, label in MOODS.items()],
+        "sources": [{"id": key, "label": label} for key, label in SOURCES.items()],
+        "licences": [{"id": key, **value} for key, value in LICENCES.items()],
+    })
 
 
 @router.post("")
-async def upload_music(file: UploadFile = File(...)) -> dict:
+async def upload_music(file: UploadFile = File(...), db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Upload a validated MP3/WAV track without overwriting an existing file."""
     started_at = time.perf_counter()
     safe_name = _validate_filename(file.filename or "", UPLOAD_EXTENSIONS)
@@ -167,6 +202,7 @@ async def upload_music(file: UploadFile = File(...)) -> dict:
         await file.close()
 
     track = await asyncio.to_thread(_track_payload, stored_path)
+    [track] = await _with_details(db, [track])
     return ok(track, started_at=started_at)
 
 
@@ -177,8 +213,21 @@ async def get_music(filename: str) -> FileResponse:
     return FileResponse(path, media_type=AUDIO_MEDIA_TYPES[path.suffix.lower()])
 
 
+@router.patch("/{filename}")
+async def edit_music(filename: str, body: MusicTrackPatch, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Task 22.7: edit a track's details; only the fields sent change, an empty value clears."""
+    started_at = time.perf_counter()
+    path = await asyncio.to_thread(_existing_music_path, filename)
+    track = await asyncio.to_thread(_track_payload, path)
+    await _with_details(db, [track])  # make sure the row exists
+    async with write_transaction(db):
+        await library.patch_track(db, path.name, body.model_dump(exclude_unset=True))
+    [track] = await _with_details(db, [track])
+    return ok(track, started_at=started_at)
+
+
 @router.delete("/{filename}")
-async def delete_music(filename: str) -> dict:
+async def delete_music(filename: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Delete one library track without allowing paths outside the library."""
     started_at = time.perf_counter()
     path = await asyncio.to_thread(_existing_music_path, filename)
@@ -186,4 +235,6 @@ async def delete_music(filename: str) -> dict:
         await asyncio.to_thread(path.unlink)
     except FileNotFoundError as exc:
         raise NotFoundError("Music track not found.") from exc
+    async with write_transaction(db):
+        await library.delete_row(db, path.name)
     return ok({"filename": filename}, started_at=started_at)

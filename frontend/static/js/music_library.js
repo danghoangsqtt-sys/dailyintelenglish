@@ -1,4 +1,4 @@
-/** Music Library page: upload, preview, list, and delete local background tracks. */
+/** Music Library page: upload, preview, list, edit details (Task 22.7), and delete background tracks. */
 (() => {
   // Client-side pre-check only — the server enforces the real limit via
   // MAX_MUSIC_UPLOAD_BYTES (app/core/constants.py). Keep this value in sync with
@@ -8,6 +8,82 @@
   let uploadInFlight = false;
   let loadPromise = null;
   const deletesInFlight = new Set();
+  let options = { moods: [], sources: [], licences: [] };
+  const DETAIL_FIELDS = ["title", "artist", "mood", "tags", "source", "licence", "attribution", "source_url"];
+
+  function formatDuration(seconds) {
+    if (seconds == null) return "length unknown";
+    const total = Math.round(seconds);
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+  }
+
+  function badge(text, className = "") {
+    const element = document.createElement("span");
+    element.className = `track-badge ${className}`.trim();
+    element.textContent = text;
+    return element;
+  }
+
+  function selectField(name, label, choices, value, emptyLabel) {
+    const wrap = document.createElement("label");
+    wrap.className = "detail-field";
+    wrap.textContent = label;
+    const select = document.createElement("select");
+    select.name = name;
+    select.append(new Option(emptyLabel, ""));
+    choices.forEach((choice) => select.append(new Option(choice.label, choice.id)));
+    select.value = value || "";
+    wrap.append(select);
+    return wrap;
+  }
+
+  function textField(name, label, value, placeholder, wide = false) {
+    const wrap = document.createElement("label");
+    wrap.className = `detail-field${wide ? " is-wide" : ""}`;
+    wrap.textContent = label;
+    const input = document.createElement("input");
+    input.type = name === "source_url" ? "url" : "text";
+    input.name = name;
+    input.value = value || "";
+    input.placeholder = placeholder;
+    wrap.append(input);
+    return wrap;
+  }
+
+  function buildDetailsForm(track) {
+    const form = document.createElement("form");
+    form.className = "details-form";
+    form.hidden = true;
+    form.noValidate = true;
+    form.append(
+      textField("title", "Title", track.title, "Track title"),
+      textField("artist", "Artist", track.artist, "Composer or artist"),
+      selectField("mood", "Mood", options.moods, track.mood, "Choose a mood"),
+      textField("tags", "Tags", track.tags, "e.g. cafe, morning, study"),
+      selectField("source", "Downloaded from", options.sources, track.source, "Choose a source"),
+      selectField("licence", "Licence", options.licences.map((licence) => ({
+        id: licence.id,
+        label: licence.attribution_required ? `${licence.label} — credit required` : licence.label,
+      })), track.licence, "Choose a licence"),
+      textField("attribution", "Credit text (for the YouTube description)", track.attribution,
+        "e.g. Title by Artist (site), licence", true),
+      textField("source_url", "Download page link", track.source_url, "https://…", true),
+    );
+    const actions = document.createElement("div");
+    actions.className = "details-actions";
+    const save = document.createElement("button");
+    save.type = "submit";
+    save.className = "btn btn-primary btn-sm";
+    save.textContent = "Save details";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "btn btn-ghost btn-sm";
+    cancel.dataset.action = "cancel-details";
+    cancel.textContent = "Cancel";
+    actions.append(save, cancel);
+    form.append(actions);
+    return form;
+  }
 
   function formatBytes(bytes) {
     if (bytes < 1024) return `${bytes} B`;
@@ -40,11 +116,17 @@
       const details = document.createElement("div");
       const name = document.createElement("h3");
       name.className = "track-name";
-      name.textContent = track.filename;
-      const size = document.createElement("span");
-      size.className = "track-size";
-      size.textContent = formatBytes(track.size_bytes);
-      details.append(name, size);
+      name.textContent = track.artist ? `${track.title} — ${track.artist}` : track.title;
+      const file = document.createElement("span");
+      file.className = "track-size";
+      file.textContent = `${track.filename} · ${formatBytes(track.size_bytes)}`;
+      const badges = document.createElement("div");
+      badges.className = "track-badges";
+      badges.append(badge(formatDuration(track.duration_s), "is-length"));
+      badges.append(track.mood_label ? badge(track.mood_label, "is-mood") : badge("No mood yet", "is-missing"));
+      if (track.licence_label) badges.append(badge(track.licence_label));
+      if (track.needs_attribution) badges.append(badge("⚠ Credit needed", "is-warning"));
+      details.append(name, file, badges);
 
       const preview = document.createElement("div");
       preview.className = "track-preview";
@@ -67,7 +149,16 @@
       deleteButton.textContent = "Delete";
       deleteButton.disabled = deletesInFlight.has(track.filename);
 
-      card.append(details, preview, deleteButton);
+      const editButton = document.createElement("button");
+      editButton.type = "button";
+      editButton.className = "btn btn-ghost edit-btn";
+      editButton.dataset.action = "edit-details";
+      editButton.textContent = "Edit details";
+      const buttons = document.createElement("div");
+      buttons.className = "track-buttons";
+      buttons.append(editButton, deleteButton);
+
+      card.append(details, preview, buttons, buildDetailsForm(track));
       list.append(card);
       // Rendered into the DOM first so the canvas has a real clientWidth to size against.
       Waveform.render(waveformCanvas, player.src, player);
@@ -190,17 +281,48 @@
 
   function setupDelete() {
     document.getElementById("track-list").addEventListener("click", (event) => {
-      const button = event.target.closest("[data-action='delete']");
+      const button = event.target.closest("button[data-action]");
       if (!button) return;
       const card = button.closest("[data-filename]");
-      deleteTrack(card.dataset.filename, button);
+      const form = card.querySelector(".details-form");
+      if (button.dataset.action === "delete") deleteTrack(card.dataset.filename, button);
+      if (button.dataset.action === "edit-details") form.hidden = !form.hidden;
+      if (button.dataset.action === "cancel-details") form.hidden = true;
+    });
+    document.getElementById("track-list").addEventListener("submit", async (event) => {
+      const form = event.target.closest(".details-form");
+      if (!form) return;
+      event.preventDefault();
+      const filename = form.closest("[data-filename]").dataset.filename;
+      const body = Object.fromEntries(DETAIL_FIELDS.map((field) => [field, form.elements[field].value]));
+      const save = form.querySelector("[type='submit']");
+      save.disabled = true;
+      setMessage("none");
+      try {
+        await Api.updateMusic(filename, body);
+        setMessage("success", `Details saved for ${filename}.`);
+        await loadTracks();
+      } catch (error) {
+        console.error("Failed to save track details:", error);
+        setMessage("error", `We could not save those details: ${error.message}`);
+        save.disabled = false;
+      }
     });
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  async function loadOptions() {
+    try {
+      options = await Api.getMusicOptions();
+    } catch (error) {
+      console.error("Failed to load music options:", error);
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", async () => {
     setupUpload();
     setupDelete();
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
+    await loadOptions(); // the details form needs the mood / source / licence choices
     loadTracks();
   });
 })();

@@ -51,7 +51,9 @@ async def test_upload_preview_and_reload_persistence(
 
     card = page.locator("[data-filename='calm theme.mp3']")
     await card.wait_for()
-    assert "calm theme.mp3" in await card.locator(".track-name").text_content()
+    # Task 22.7: the card shows the track title (guessed from the file name); the file name moves below it.
+    assert await card.locator(".track-name").text_content() == "Calm theme"
+    assert "calm theme.mp3" in await card.locator(".track-size").text_content()
     assert "/api/music/calm%20theme.mp3" in await card.locator("audio").get_attribute("src")
 
     await page.reload()

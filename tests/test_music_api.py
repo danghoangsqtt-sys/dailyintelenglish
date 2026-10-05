@@ -39,13 +39,14 @@ def test_list_music_returns_only_supported_audio_with_preview_urls(client: TestC
     response = client.get("/api/music")
 
     assert response.status_code == 200
-    assert response.json()["data"] == [
-        {
-            "filename": "theme.mp3",
-            "size_bytes": len(VALID_MP3),
-            "content_url": "/api/music/theme.mp3",
-        }
-    ]
+    [track] = response.json()["data"]
+    assert {key: track[key] for key in ("filename", "size_bytes", "content_url")} == {
+        "filename": "theme.mp3",
+        "size_bytes": len(VALID_MP3),
+        "content_url": "/api/music/theme.mp3",
+    }
+    # Task 22.7: details are added; this fixture is not decodable audio, so no duration.
+    assert track["title"] == "Theme" and track["duration_s"] is None and track["mood"] is None
 
 
 @pytest.mark.parametrize(
