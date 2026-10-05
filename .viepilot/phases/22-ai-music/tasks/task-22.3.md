@@ -123,3 +123,37 @@ In Step 4, a project gets its own background music (D45):
 - **Real run on 1 project** (DB copy, real Gemini brief, real ACE-Step):
   - brief → 3 previews → pick → full length → attached;
   - record the times and copy the MP3s for the owner to listen to.
+
+## Results (2026-10-05)
+
+- **Real run on 1 project** ("Daily live", interview, real mix 578.1 s), on a consistent `sqlite3`
+  backup copy in a temp `DATA_DIR`. `data/app.db` is opened read-only and is never written.
+
+  | Step | Time | Result |
+  |---|---|---|
+  | AI brief (Gemini, cloud-first) | 2.3 s | path `ai`: acoustic, "warm and calm, moderate tempo, gentle acoustic guitar and soft piano." (593 s = 578 + 15) |
+  | 3 previews (30 s each), first run | 108.2 s | generation 4.2 + 2.6 + 2.6 s. The worker log shows ~25 s of worker life, so ~80 s went before the worker started. No lease log was captured, so the cause is not determined; it is likely a cold start. |
+  | 3 previews, repeat on the same copy | 31.7 s | lease `waited_s=0`, 11.4 GB free, nothing evicted |
+  | Full length, preview 1's seed | 71.2 s | 9:53.00 MP3; diffusion 20 s; attached to the project and the file exists |
+
+  - The MP3s were copied to `data/tmp/music-spike/project-daily-live/` for the owner to listen to.
+  - **Same seed ≠ same music.** ACE-Step's output depends on the duration, so the full track uses
+    the preview's style, mood and seed but is a longer take, not the same audio extended. The UI
+    says "use this" (the brief and seed), not "extend this". The owner's listen decides whether
+    that is acceptable.
+- **Tests:**
+  - `tests/test_music_project_api.py` (10), which merges the planned `test_music_brief.py`:
+    - AI / repair / rule paths;
+    - episode length from the real mix and clamped;
+    - edit clears or keeps previews;
+    - a brief changed mid-job means its previews are discarded;
+    - a mid-job failure leaves no files;
+    - the seed guard;
+    - attach;
+    - validation;
+    - project delete cleanup.
+  - `tests/test_music_step4_browser.py` (2): the full suggest → previews → use → attached →
+    reload flow, and the unavailable state.
+  - The existing Step 4 browser tests still pass.
+- **Visual check:** a Step 4 screenshot after a fake run showed the card, 3 previews, "Used ✓",
+  the dropdown and the timeline Music lane showing the attached track.
