@@ -7,19 +7,23 @@ Write functions run inside write_transaction.
 
 from __future__ import annotations
 
+import asyncio
 import os
 import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import aiosqlite
 
 from app.core.config import settings
+from app.db.transactions import read_transaction, write_transaction
 from app.models.music import LICENCES, MOODS, SOURCES
 
 FFPROBE_TIMEOUT_SECONDS = 30
+AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a"}
 DETAIL_FIELDS = ("title", "artist", "mood", "tags", "source", "licence", "attribution", "source_url")
 
 
@@ -113,3 +117,57 @@ def track_view(track: dict[str, Any], row: dict[str, Any] | None) -> dict[str, A
         "attribution_required": required,
         "needs_attribution": bool(required) and not details["attribution"],
     }
+
+
+def music_dir() -> Path:
+    return settings.DATA_DIR / "music_library"
+
+
+def track_payload(path: Path) -> dict[str, Any]:
+    """The public metadata payload for one music file."""
+    return {
+        "filename": path.name,
+        "size_bytes": path.stat().st_size,
+        "content_url": f"/api/music/{quote(path.name, safe='')}",
+    }
+
+
+def list_music_files() -> list[dict[str, Any]]:
+    """Blocking: every audio file in the library, by name."""
+    folder = music_dir()
+    folder.mkdir(parents=True, exist_ok=True)
+    tracks = []
+    for path in sorted(folder.iterdir(), key=lambda item: item.name.lower()):
+        if not path.is_file() or path.suffix.lower() not in AUDIO_EXTENSIONS:
+            continue
+        try:
+            tracks.append(track_payload(path))
+        except FileNotFoundError:
+            # A concurrent delete between directory iteration and stat simply removes the row.
+            continue
+    return tracks
+
+
+async def with_details(db: aiosqlite.Connection, tracks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Give every listed file a details row (guessed title, measured duration) and its view."""
+    async with read_transaction():
+        rows = await rows_by_filename(db)
+    missing = [track["filename"] for track in tracks
+               if track["filename"] not in rows or rows[track["filename"]]["duration_s"] is None]
+    if missing:
+        folder = music_dir()
+        durations = {name: await asyncio.to_thread(probe_duration, folder / name) for name in missing}
+        async with write_transaction(db):
+            for name, duration_s in durations.items():
+                if name in rows:
+                    await set_duration(db, name, duration_s)
+                else:
+                    await insert_row(db, name, duration_s)
+        async with read_transaction():
+            rows = await rows_by_filename(db)
+    return [track_view(track, rows.get(track["filename"])) for track in tracks]
+
+
+async def list_tracks(db: aiosqlite.Connection) -> list[dict[str, Any]]:
+    """Every library track with its details (the Library page and auto-select share this)."""
+    return await with_details(db, await asyncio.to_thread(list_music_files))

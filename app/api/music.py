@@ -4,7 +4,6 @@ import asyncio
 import os
 import time
 from pathlib import Path
-from urllib.parse import quote
 from uuid import uuid4
 
 import aiofiles
@@ -12,16 +11,17 @@ import aiosqlite
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import FileResponse
 
-from app.core.config import settings
 from app.core.constants import MAX_MUSIC_UPLOAD_BYTES, MAX_MUSIC_UPLOAD_MB, MUSIC_UPLOAD_CHUNK_BYTES
 from app.core.exceptions import MusicUploadTooLargeError, NotFoundError, ValidationError
 from app.core.responses import ok
 from app.db.database import get_db
-from app.db.transactions import read_transaction, write_transaction
+from app.db.transactions import write_transaction
 from app.models.music import LICENCES, MOODS, SOURCES, MusicTrackPatch
 from app.services import music_library_service as library
+from app.services import music_select_service
 
 router = APIRouter(prefix="/api/music", tags=["music"])
+project_router = APIRouter(prefix="/api/projects/{project_id}/music", tags=["music"])
 
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a"}
 UPLOAD_EXTENSIONS = {".mp3", ".wav"}
@@ -34,9 +34,7 @@ AUDIO_MEDIA_TYPES = {
 MP3_FRAME_SYNC_BYTES = {0xFB, 0xF3, 0xFA, 0xF2}
 
 
-def _music_dir() -> Path:
-    """Return the configured music-library directory."""
-    return settings.DATA_DIR / "music_library"
+_music_dir = library.music_dir
 
 
 def _validate_filename(filename: str, allowed_extensions: set[str]) -> str:
@@ -89,13 +87,7 @@ def _place_without_overwrite(temporary_path: Path, requested_name: str) -> Path:
         return candidate_path
 
 
-def _track_payload(path: Path) -> dict:
-    """Build the public metadata payload for one music track."""
-    return {
-        "filename": path.name,
-        "size_bytes": path.stat().st_size,
-        "content_url": f"/api/music/{quote(path.name, safe='')}",
-    }
+_track_payload = library.track_payload
 
 
 def _unlink_if_exists(path: Path) -> None:
@@ -106,19 +98,7 @@ def _unlink_if_exists(path: Path) -> None:
         pass
 
 
-def _list_music_files() -> list[dict]:
-    music_dir = _music_dir()
-    music_dir.mkdir(parents=True, exist_ok=True)
-    tracks = []
-    for path in sorted(music_dir.iterdir(), key=lambda item: item.name.lower()):
-        if not path.is_file() or path.suffix.lower() not in AUDIO_EXTENSIONS:
-            continue
-        try:
-            tracks.append(_track_payload(path))
-        except FileNotFoundError:
-            # A concurrent delete between directory iteration and stat simply removes the row.
-            continue
-    return tracks
+_list_music_files = library.list_music_files
 
 
 def _existing_music_path(filename: str) -> Path:
@@ -130,24 +110,7 @@ def _existing_music_path(filename: str) -> Path:
     return path
 
 
-async def _with_details(db: aiosqlite.Connection, tracks: list[dict]) -> list[dict]:
-    """Task 22.7: give every listed file a details row (guessed title, measured duration)."""
-    async with read_transaction():
-        rows = await library.rows_by_filename(db)
-    missing = [track["filename"] for track in tracks
-               if track["filename"] not in rows or rows[track["filename"]]["duration_s"] is None]
-    if missing:
-        music_dir = _music_dir()
-        durations = {name: await asyncio.to_thread(library.probe_duration, music_dir / name) for name in missing}
-        async with write_transaction(db):
-            for name, duration_s in durations.items():
-                if name in rows:
-                    await library.set_duration(db, name, duration_s)
-                else:
-                    await library.insert_row(db, name, duration_s)
-        async with read_transaction():
-            rows = await library.rows_by_filename(db)
-    return [library.track_view(track, rows.get(track["filename"])) for track in tracks]
+_with_details = library.with_details
 
 
 @router.get("")
@@ -238,3 +201,11 @@ async def delete_music(filename: str, db: aiosqlite.Connection = Depends(get_db)
     async with write_transaction(db):
         await library.delete_row(db, path.name)
     return ok({"filename": filename}, started_at=started_at)
+
+
+@project_router.post("/suggest")
+async def suggest_music(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Task 22.8 (D51): the library track that best fits this episode's topic and length, with the
+    reason (AI choice among the top candidates, else the deterministic score)."""
+    started_at = time.perf_counter()
+    return ok(await music_select_service.suggest(db, project_id), started_at=started_at)

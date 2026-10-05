@@ -107,3 +107,17 @@ class MusicTrackPatch(BaseModel):
         if parsed.scheme not in ("http", "https") or not parsed.netloc:
             raise ValueError("source_url must be an http(s) link")
         return value
+
+# Task 22.8 (D51): preferred moods per script genre, best first (auto-select's mood score 3/2/1).
+GENRE_MOODS = {
+    "small_talk": ("upbeat", "acoustic", "lofi"),
+    "directions": ("upbeat", "acoustic", "calm"),
+    "negotiation": ("inspiring", "upbeat", "lofi"),
+    "storytelling": ("acoustic", "calm", "inspiring"),
+    "interview": ("acoustic", "lofi", "calm"),
+    "news": ("calm", "inspiring", "lofi"),
+    "opinion": ("lofi", "calm", "acoustic"),
+    "debate": ("lofi", "inspiring", "calm"),
+    "informational": ("lofi", "calm", "acoustic"),
+    "instructions": ("lofi", "calm", "upbeat"),
+}

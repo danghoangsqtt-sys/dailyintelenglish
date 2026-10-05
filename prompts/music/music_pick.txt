@@ -1,0 +1,19 @@
+You choose the background music for an English-learning video. The music plays quietly under two or
+three people talking. Pick the track whose mood best fits the topic and the tone of the talk.
+
+Topic: {{ topic }}
+Genre: {{ genre }}
+CEFR level: {{ cefr_level }}
+Video length: about {{ target_minutes }} minutes
+
+Candidate tracks (filename | title | mood | tags | length):
+{% for track in candidates %}- {{ track.filename }} | {{ track.title }} | {{ track.mood or "unknown" }} | {{ track.tags or "-" }} | {{ track.length }}
+{% endfor %}
+Rules:
+1. "filename" must be exactly one of the filenames listed above.
+2. "reason" explains the choice in at most 20 plain English words.
+{% if previous_error %}
+Your previous answer was rejected: {{ previous_error }}
+Fix exactly that problem.
+{% endif %}
+Answer with JSON only: {"filename": "...", "reason": "..."}
