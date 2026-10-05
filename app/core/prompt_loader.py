@@ -32,7 +32,6 @@ LEARNING_PROMPTS_DIR = PROMPTS_DIR / "learning"
 THUMBNAIL_PROMPTS_DIR = PROMPTS_DIR / "thumbnail"
 YOUTUBE_PROMPTS_DIR = PROMPTS_DIR / "youtube"
 STORYBOARD_PROMPTS_DIR = PROMPTS_DIR / "storyboard"
-MUSIC_PROMPTS_DIR = PROMPTS_DIR / "music"
 
 _env = Environment(
     loader=FileSystemLoader(str(SCRIPT_PROMPTS_DIR)),
@@ -399,30 +398,4 @@ async def render_storyboard_prompt(
         _render_storyboard_prompt_sync, topic=topic, genre=genre, cefr_level=cefr_level, cast=cast,
         lines=lines, line_count=len(lines), scenes=scenes, framing=framing, image_cap=image_cap,
         max_places=max(1, image_cap // max(1, framing)), previous_error=previous_error,
-    )
-
-
-_music_env = Environment(
-    loader=FileSystemLoader(str(MUSIC_PROMPTS_DIR)),
-    undefined=StrictUndefined,
-    keep_trailing_newline=True,
-)
-
-
-def _render_music_brief_prompt_sync(**fields) -> str:
-    """Blocking: render the Task 22.3 music brief prompt."""
-    try:
-        template = _music_env.get_template("music_brief.txt")
-    except TemplateNotFound as exc:
-        raise ValidationError(f"Prompt template not found: {exc}") from exc
-    return template.render(**fields)
-
-
-async def render_music_brief_prompt(
-    *, topic: str, genre: str, cefr_level: str, lines: list[str], previous_error: str = "",
-) -> str:
-    """Render the music brief prompt (Task 22.3); `previous_error` turns it into the repair."""
-    return await asyncio.to_thread(
-        _render_music_brief_prompt_sync, topic=topic, genre=genre, cefr_level=cefr_level, lines=lines,
-        previous_error=previous_error,
     )

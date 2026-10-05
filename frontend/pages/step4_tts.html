@@ -71,27 +71,6 @@
     .timeline-clip.preview-ready { border-left-color: var(--success); }
     .timeline-clip.synthesizing { border-left-color: var(--warning); background: var(--warning-bg); }
     .music-clip { border-left-color: var(--info); }
-
-    /* Task 22.3: AI background music card. */
-    .music-ai-card { padding: 20px 22px; margin-bottom: 16px; }
-    .music-ai-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .music-ai-head h3 { margin: 0; font-size: 15px; }
-    .music-ai-note { margin: 6px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
-    .music-ai-note.is-error { color: var(--danger); }
-    .music-ai-grid { display: grid; grid-template-columns: 1fr 2fr auto; gap: 14px; align-items: end; margin-top: 4px; }
-    .music-ai-grid input[type="text"], .music-ai-grid input[type="number"] {
-      width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px;
-      background: var(--surface); color: var(--text); font: inherit; }
-    .music-ai-length { display: flex; align-items: center; gap: 6px; }
-    .music-ai-length input[type="number"] { width: 64px; }
-    .music-ai-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
-    .music-ai-status { color: var(--muted); font-size: 13px; }
-    .music-ai-previews { display: grid; gap: 10px; margin-top: 14px; }
-    .music-ai-preview { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
-    .music-ai-preview.is-picked { border-color: var(--accent); background: var(--accent-soft); }
-    .music-ai-preview-label { width: 82px; flex-shrink: 0; font-size: 12.5px; font-weight: 700; }
-    .music-ai-preview audio { flex: 1; min-width: 0; height: 34px; }
-    @media (max-width: 760px) { .music-ai-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -143,33 +122,6 @@
 
             <section class="section">
               <h2 class="section-title">3. Generate full episode</h2>
-              <div class="card music-ai-card" id="music-ai-card">
-                <div class="music-ai-head">
-                  <h3>🎼 AI background music</h3>
-                  <button class="btn btn-ghost btn-sm" id="music-ai-suggest" type="button">✨ Suggest from the script</button>
-                </div>
-                <p class="music-ai-note">An original instrumental bed made on this computer (ACE-Step 1.5, MIT licence).
-                  Suggest or choose a style and mood, listen to 3 short previews, then use one: the full-length
-                  track is added to the Music Library and selected below.</p>
-                <p class="music-ai-note is-error" id="music-ai-unavailable" hidden></p>
-                <div class="music-ai-grid">
-                  <label><span class="field-label">Style</span><select id="music-ai-style"></select></label>
-                  <label><span class="field-label">Mood</span>
-                    <input id="music-ai-brief" type="text" maxlength="200" placeholder="e.g. warm and curious, calm tempo, soft guitar" /></label>
-                  <label><span class="field-label">Length (min : sec)</span>
-                    <span class="music-ai-length">
-                      <input id="music-ai-minutes" type="number" min="0" max="20" aria-label="Music minutes" />
-                      <span aria-hidden="true">:</span>
-                      <input id="music-ai-seconds" type="number" min="0" max="59" aria-label="Music seconds" />
-                    </span></label>
-                </div>
-                <div class="music-ai-actions">
-                  <button class="btn btn-ghost" id="music-ai-make-previews" type="button">🎧 Make 3 previews</button>
-                  <button class="btn btn-ghost btn-sm" id="music-ai-cancel" type="button" hidden>Cancel</button>
-                  <span class="music-ai-status" id="music-ai-status" role="status" aria-live="polite"></span>
-                </div>
-                <div class="music-ai-previews" id="music-ai-previews"></div>
-              </div>
               <div class="card generate-card">
                 <div class="generate-row">
                   <label class="music-select-wrap">
@@ -219,6 +171,5 @@
   <script src="/static/js/generation_status.js"></script>
   <script src="/static/js/shell.js"></script>
   <script src="/static/js/step4_tts.js"></script>
-  <script src="/static/js/step4_music.js"></script>
 </body>
 </html>

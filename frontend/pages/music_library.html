@@ -108,27 +108,6 @@
     }
 
     .empty-state-icon { display: block; margin-bottom: 12px; font-size: 38px; }
-
-    /* Task 22.2: Generate from a brief + track provenance. */
-    .generate-panel { margin-bottom: 28px; padding: 22px; text-align: left; }
-    .generate-panel h2 { margin: 0 0 6px; font-size: 19px; }
-    .generate-panel > p { margin: 0 0 16px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
-    .generate-grid { display: grid; grid-template-columns: 1fr 2fr auto; gap: 14px; align-items: end; }
-    .generate-grid label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
-    .generate-grid select, .generate-grid input { width: 100%; box-sizing: border-box; padding: 9px 10px; border-radius: 8px;
-      border: 1px solid var(--surface-border); background: var(--surface); color: inherit; font: inherit; font-size: 14px; }
-    .length-inputs { display: flex; align-items: center; gap: 6px; }
-    .length-inputs input { width: 64px; }
-    .generate-actions { display: flex; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
-    .generate-progress { color: var(--text-muted); font-size: 13px; }
-    .track-source { display: inline-block; margin-right: 8px; padding: 2px 8px; border-radius: 999px; font-size: 11px;
-      font-weight: 700; background: var(--surface); border: 1px solid var(--surface-border); }
-    .track-source.is-ai { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
-    .track-provenance { margin: 6px 0 0; color: var(--text-muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-    @media (max-width: 720px) {
-      .generate-grid { grid-template-columns: 1fr; }
-      .track-card { grid-template-columns: 1fr; }
-    }
   </style>
 </head>
 <body>
@@ -143,36 +122,7 @@
   <main class="main">
     <section class="page-heading">
       <h1>Music Library</h1>
-      <p>Generate original background music or upload your own royalty-free tracks, preview them, and keep the library tidy.</p>
-    </section>
-
-    <section id="generate-panel" class="generate-panel card" aria-labelledby="generate-title">
-      <h2 id="generate-title">Generate from a brief</h2>
-      <p>Make an original instrumental background track on this computer (ACE-Step 1.5, MIT licence).
-        Pick a style, describe the mood, and choose a length.</p>
-      <p id="generate-unavailable" class="message message-error" hidden></p>
-      <form id="generate-form" novalidate>
-        <div class="generate-grid">
-          <label>Style
-            <select id="music-style" required></select>
-          </label>
-          <label>Mood / brief (optional)
-            <input id="music-brief" type="text" maxlength="200" placeholder="e.g. calm morning study, soft and warm" />
-          </label>
-          <label>Length (min : sec)
-            <span class="length-inputs">
-              <input id="music-minutes" type="number" min="0" max="20" value="8" aria-label="Minutes" />
-              <span aria-hidden="true">:</span>
-              <input id="music-seconds" type="number" min="0" max="59" value="0" aria-label="Seconds" />
-            </span>
-          </label>
-        </div>
-        <div class="generate-actions">
-          <button id="generate-button" class="btn btn-primary" type="submit">Generate</button>
-          <button id="generate-cancel" class="btn btn-ghost" type="button" hidden>Cancel</button>
-          <span id="generate-progress" class="generate-progress" role="status" aria-live="polite"></span>
-        </div>
-      </form>
+      <p>Upload your royalty-free background tracks, preview them, and keep the library tidy.</p>
     </section>
 
     <label id="upload-zone" class="upload-zone" for="music-file-input" tabindex="0">
@@ -196,7 +146,7 @@
       <div id="track-list" class="track-list" aria-live="polite"></div>
       <div id="empty-state" class="empty-state" hidden>
         <span class="empty-state-icon" aria-hidden="true">🎧</span>
-        No music yet. Generate a track or upload a royalty-free one above.
+        No music yet. Upload your first royalty-free track above.
       </div>
     </section>
   </main>

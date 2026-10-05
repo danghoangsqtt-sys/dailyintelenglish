@@ -1,4 +1,4 @@
-/** Music Library page: generate (Task 22.2), upload, preview, list, and delete local background tracks. */
+/** Music Library page: upload, preview, list, and delete local background tracks. */
 (() => {
   // Client-side pre-check only — the server enforces the real limit via
   // MAX_MUSIC_UPLOAD_BYTES (app/core/constants.py). Keep this value in sync with
@@ -8,24 +8,6 @@
   let uploadInFlight = false;
   let loadPromise = null;
   const deletesInFlight = new Set();
-  const JOB_POLL_MS = 1500;
-  let styleLabels = {};
-  let activeJobId = null;
-
-  function formatDuration(totalSeconds) {
-    const seconds = Math.round(totalSeconds);
-    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-  }
-
-  function provenanceText(provenance) {
-    const parts = [
-      styleLabels[provenance.style] || provenance.style,
-      formatDuration(provenance.duration_s),
-      `seed ${provenance.seed}`,
-      `${provenance.model} · ${provenance.licence}`,
-    ];
-    return provenance.brief ? `“${provenance.brief}” · ${parts.join(" · ")}` : parts.join(" · ");
-  }
 
   function formatBytes(bytes) {
     if (bytes < 1024) return `${bytes} B`;
@@ -59,21 +41,10 @@
       const name = document.createElement("h3");
       name.className = "track-name";
       name.textContent = track.filename;
-      const source = document.createElement("span");
-      const isAi = track.source === "ai";
-      source.className = `track-source${isAi ? " is-ai" : ""}`;
-      source.textContent = isAi ? "AI generated" : "Uploaded";
       const size = document.createElement("span");
       size.className = "track-size";
       size.textContent = formatBytes(track.size_bytes);
-      details.append(name, source, size);
-      if (isAi && track.provenance) {
-        const provenance = document.createElement("p");
-        provenance.className = "track-provenance";
-        provenance.textContent = provenanceText(track.provenance);
-        provenance.title = track.provenance.caption;
-        details.append(provenance);
-      }
+      details.append(name, size);
 
       const preview = document.createElement("div");
       preview.className = "track-preview";
@@ -226,120 +197,9 @@
     });
   }
 
-  function setGenerateBusy(busy, text = "") {
-    document.getElementById("generate-button").disabled = busy;
-    document.getElementById("generate-cancel").hidden = !busy;
-    document.getElementById("generate-progress").textContent = text;
-    ["music-style", "music-brief", "music-minutes", "music-seconds"].forEach((id) => {
-      document.getElementById(id).disabled = busy;
-    });
-  }
-
-  function jobText(job) {
-    if (job.status === "pending") return "Queued — waiting for the GPU…";
-    if (job.cancel_requested) return "Cancelling…";
-    return `${job.stage || "Starting"}… ${job.progress || 0}%`;
-  }
-
-  async function pollJob(jobId) {
-    let job;
-    try {
-      job = await Api.getMusicJob(jobId);
-    } catch (error) {
-      console.error("Failed to read music job:", error);
-      setTimeout(() => pollJob(jobId), JOB_POLL_MS * 2);
-      return;
-    }
-    if (job.status === "pending" || job.status === "running") {
-      document.getElementById("generate-progress").textContent = jobText(job);
-      setTimeout(() => pollJob(jobId), JOB_POLL_MS);
-      return;
-    }
-    activeJobId = null;
-    if (job.status === "complete") {
-      const result = JSON.parse(job.result_json || "{}");
-      setGenerateBusy(false, `Done: ${result.filename}`);
-      setMessage("success", `${result.filename} was generated and added to your library.`);
-      await loadTracks();
-    } else if (job.status === "cancelled") {
-      setGenerateBusy(false, "Cancelled.");
-    } else {
-      setGenerateBusy(false, "Failed — see the message below.");
-      setMessage("error", `Music generation failed: ${job.error || "unknown error"}`);
-    }
-  }
-
-  async function generate(event) {
-    event.preventDefault();
-    if (activeJobId) return;
-    setMessage("none");
-    const minutes = Number(document.getElementById("music-minutes").value || 0);
-    const seconds = Number(document.getElementById("music-seconds").value || 0);
-    const duration = Math.round(minutes * 60 + seconds);
-    const form = document.getElementById("generate-form");
-    const { minDuration, maxDuration } = form.dataset;
-    if (!Number.isFinite(duration) || duration < Number(minDuration) || duration > Number(maxDuration)) {
-      setMessage("error", `Choose a length between ${formatDuration(minDuration)} and ${formatDuration(maxDuration)}.`);
-      return;
-    }
-    setGenerateBusy(true, "Queuing…");
-    try {
-      const job = await Api.generateMusic({
-        style: document.getElementById("music-style").value,
-        brief: document.getElementById("music-brief").value,
-        duration_s: duration,
-      });
-      activeJobId = job.id;
-      pollJob(job.id);
-    } catch (error) {
-      console.error("Failed to queue music generation:", error);
-      setGenerateBusy(false);
-      setMessage("error", `We couldn't start music generation: ${error.message}`);
-    }
-  }
-
-  async function cancelGeneration() {
-    if (!activeJobId) return;
-    document.getElementById("generate-cancel").disabled = true;
-    try {
-      await Api.cancelMusicJob(activeJobId);
-    } catch (error) {
-      console.error("Failed to cancel music job:", error);
-    } finally {
-      document.getElementById("generate-cancel").disabled = false;
-    }
-  }
-
-  async function setupGenerate() {
-    const form = document.getElementById("generate-form");
-    const unavailable = document.getElementById("generate-unavailable");
-    form.addEventListener("submit", generate);
-    document.getElementById("generate-cancel").addEventListener("click", cancelGeneration);
-    let options;
-    try {
-      options = await Api.getMusicOptions();
-    } catch (error) {
-      console.error("Failed to load music options:", error);
-      options = { styles: [], available: false, unavailable_reason: "Music generation options could not be loaded." };
-    }
-    const select = document.getElementById("music-style");
-    select.replaceChildren(...options.styles.map((style) => new Option(style.label, style.id)));
-    styleLabels = Object.fromEntries(options.styles.map((style) => [style.id, style.label]));
-    form.dataset.minDuration = options.min_duration_s;
-    form.dataset.maxDuration = options.max_duration_s;
-    if (options.max_brief_chars) document.getElementById("music-brief").maxLength = options.max_brief_chars;
-    if (!options.available) {
-      unavailable.textContent = `AI music is unavailable: ${options.unavailable_reason}`;
-      unavailable.hidden = false;
-      setGenerateBusy(true);
-      document.getElementById("generate-cancel").hidden = true;
-    }
-  }
-
-  document.addEventListener("DOMContentLoaded", async () => {
+  document.addEventListener("DOMContentLoaded", () => {
     setupUpload();
     setupDelete();
-    await setupGenerate(); // style labels first, so AI provenance lines read "Lofi / chill"
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
     loadTracks();
   });
