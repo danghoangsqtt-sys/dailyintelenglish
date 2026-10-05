@@ -5,6 +5,19 @@ SILENCE_SAME_SPEAKER_MS = 300
 SILENCE_DIFFERENT_SPEAKER_MS = 500
 TARGET_LOUDNESS_LUFS = -16
 MUSIC_DUCKING_MAX_DBFS = -18
+# Task 22.4 (D51): the smart music bed (app/services/music_bed.py). Starting values; the owner's
+# ears decide at Gate B-17. Every track is first normalised to MUSIC_BED_LUFS (its "open" level in
+# the intro, outro and long pauses); under speech it drops a further MUSIC_DUCK_DB, ~18 LU under
+# the -16 LUFS voice.
+MUSIC_BED_LUFS = -20.0
+MUSIC_DUCK_DB = -14.0
+MUSIC_ATTACK_S = 0.3
+MUSIC_RELEASE_S = 0.8
+MUSIC_MERGE_GAP_S = 2.5
+MUSIC_FADE_IN_S = 2.0
+MUSIC_FADE_OUT_S = 4.0
+MUSIC_CROSSFADE_S = 3.0
+STANDARD_MUSIC_TAIL_S = 4.0
 MP3_BITRATE = "192k"
 WAV_SAMPLE_RATE_HZ = 44100
 WAV_BIT_DEPTH = 16
