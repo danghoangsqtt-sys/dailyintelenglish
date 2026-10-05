@@ -175,6 +175,12 @@ def keep_evidence(client: TestClient, characters: dict[str, str], project_id: st
         kept["characters"].append({"name": name, "status": character["status"],
                                    "reference_asset_id": character["reference_asset_id"]})
     scene_names = {scene["id"]: scene["name"] for scene in scenes}
+    for scene in scenes:  # Task 23.2: the scene plates the shots used as their scene reference
+        plate = data_dir / "library" / "scenes" / scene["id"] / "preview.png"
+        if plate.is_file():
+            target = output_dir / "scenes" / f"{scene['name']}_plate.png"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(plate, target)
     rows = []
     for index, shot in enumerate(shots):
         folder = data_dir / "visuals" / project_id / "shots" / shot["id"]

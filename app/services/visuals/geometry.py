@@ -150,6 +150,16 @@ def silhouette_mask(
     return mask.filter(ImageFilter.MaxFilter(grow)).filter(ImageFilter.GaussianBlur(max(2, round(0.08 * unit))))
 
 
+def background_mask(people: list[dict[str, Any]], size: tuple[int, int], grow: int = 31) -> Image.Image:
+    """Task 23.2: where the scene-plate reference applies -- everything except the
+    (dilated) person silhouettes, so the plate never paints over a character."""
+    union = Image.new("L", size, 0)
+    for person in people:
+        union = ImageChops.lighter(union, silhouette_mask(person["points"], size, person["head_h"]))
+    union = union.point(lambda value: 255 if value > 20 else 0).filter(ImageFilter.MaxFilter(grow | 1))
+    return ImageChops.invert(union)
+
+
 def refine_mask(person: dict[str, Any], size: tuple[int, int], half: Image.Image) -> Image.Image:
     """Feathered silhouette strictly clipped to its person's half."""
     return ImageChops.multiply(silhouette_mask(person["points"], size, person["head_h"]), half)

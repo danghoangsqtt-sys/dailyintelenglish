@@ -226,8 +226,10 @@ async def create_scene(db: aiosqlite.Connection, body: SceneInput) -> dict:
     scene_id, now = str(uuid.uuid4()), _now()
     try:
         await db.execute(
-            "INSERT INTO scenes (id, name, place, staging, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (scene_id, body.name, body.place, body.staging, now, now),
+            "INSERT INTO scenes (id, name, place, staging, category, time_of_day, seed, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (scene_id, body.name, body.place, body.staging, body.category, body.time_of_day,
+             random.randint(1, 2**31 - 2), now, now),
         )
     except aiosqlite.IntegrityError as exc:
         raise ConflictError("Scene name already exists") from exc
@@ -239,11 +241,15 @@ async def edit_scene(db: aiosqlite.Connection, scene_id: str, patch: ScenePatch)
     fields = patch.model_dump(exclude_unset=True)
     if any(value is None for value in fields.values()):
         raise ValidationError("Scene fields cannot be null")
-    merged = {key: fields.get(key, row[key]) for key in ("name", "place", "staging")}
+    keys = ("name", "place", "staging", "category", "time_of_day")
+    merged = {key: fields.get(key, row[key]) for key in keys}
+    # Task 23.2: the plate shows the place at a time of day; changing either makes it stale.
+    stale = merged["place"] != row["place"] or merged["time_of_day"] != row["time_of_day"]
     try:
         await db.execute(
-            "UPDATE scenes SET name = ?, place = ?, staging = ?, updated_at = ? WHERE id = ?",
-            (merged["name"], merged["place"], merged["staging"], _now(), scene_id),
+            "UPDATE scenes SET name = ?, place = ?, staging = ?, category = ?, time_of_day = ?, "
+            "preview_path = CASE WHEN ? THEN NULL ELSE preview_path END, updated_at = ? WHERE id = ?",
+            (*(merged[key] for key in keys), int(stale), _now(), scene_id),
         )
     except aiosqlite.IntegrityError as exc:
         raise ConflictError("Scene name already exists") from exc

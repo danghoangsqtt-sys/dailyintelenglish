@@ -62,8 +62,15 @@ def sheet_prompt(character: Mapping, kind: str) -> str:
     return _styled(character_phrase(character), SHEET_SUFFIX[kind])
 
 
+TIME_OF_DAY_LIGHT = {
+    "morning": "soft morning light", "day": "", "sunset": "golden sunset light", "night": "night, warm lamps",
+}
+
+
 def scene_preview_prompt(scene: Mapping) -> str:
-    return _styled(scene["place"], "empty scene, no people")
+    """The scene plate (Task 23.2): the place at its time of day, wide and empty."""
+    light = TIME_OF_DAY_LIGHT.get(scene.get("time_of_day", "day"), "")
+    return _styled(scene["place"], *((light,) if light else ()), "wide view, empty scene, no people")
 
 
 def single_prompt(character: Mapping, scene: Mapping) -> str:

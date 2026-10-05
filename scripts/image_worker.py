@@ -111,6 +111,9 @@ IP_ADAPTER_WEIGHT = "ip-adapter-plus-face_sdxl_vit-h.safetensors"  # 847,517,512
 # (2,528,373,448 B), not sdxl_models/image_encoder (the bigG one). diffusers treats a value
 # containing "/" as a repo-root path (loaders/ip_adapter.py:203-206).
 IP_ADAPTER_IMAGE_ENCODER = "models/image_encoder"
+# Task 23.2: the scene plate as a second, background-masked reference (spike 23.1 variant b).
+# Same repo and ViT-H encoder, Apache-2.0; 847,517,512 B.
+SCENE_IP_ADAPTER_WEIGHT = "ip-adapter-plus_sdxl_vit-h.safetensors"
 
 # Task 20.2b (Apache-2.0, checked on the Hub 2026-09-30). 2,502,139,104-byte fp16 weights.
 CONTROLNET_OPENPOSE_REPO = "xinsir/controlnet-openpose-sdxl-1.0"
@@ -160,6 +163,7 @@ class ImageWorker:
         self.mode: str | None = None
         self.lightning_steps: int | None = None
         self.ip_adapter_loaded = False
+        self.ip_adapter_count = 0
         self.kind: str | None = None
         self.encoders = True
         self._embeds_cache: dict[str, Any] = {}
@@ -326,16 +330,25 @@ class ImageWorker:
         pipe = self._require_pipe()
         before = self.torch.cuda.memory_allocated() if self.device == "cuda" else 0
         started = time.monotonic()
+        if request.get("scene"):
+            # Task 23.2: adapter 0 = faces, adapter 1 = the scene plate.
+            repo = [IP_ADAPTER_REPO, IP_ADAPTER_REPO]
+            subfolder = [IP_ADAPTER_SUBFOLDER, IP_ADAPTER_SUBFOLDER]
+            weight_name = [IP_ADAPTER_WEIGHT, SCENE_IP_ADAPTER_WEIGHT]
+        else:
+            repo = request.get("repo", IP_ADAPTER_REPO)
+            subfolder = request.get("subfolder", IP_ADAPTER_SUBFOLDER)
+            weight_name = request.get("weight_name", IP_ADAPTER_WEIGHT)
         pipe.load_ip_adapter(
-            request.get("repo", IP_ADAPTER_REPO),
-            subfolder=request.get("subfolder", IP_ADAPTER_SUBFOLDER),
-            weight_name=request.get("weight_name", IP_ADAPTER_WEIGHT),
+            repo, subfolder=subfolder, weight_name=weight_name,
             image_encoder_folder=request.get("image_encoder_folder", IP_ADAPTER_IMAGE_ENCODER),
         )
         self.ip_adapter_loaded = True
+        self.ip_adapter_count = 2 if request.get("scene") else 1
         after = self.torch.cuda.memory_allocated() if self.device == "cuda" else 0
         return {
             "status": "ok",
+            "ip_adapters": self.ip_adapter_count,
             "load_sec": round(time.monotonic() - started, 3),
             "vram_added_mb": _mb(after - before) if self.device == "cuda" else None,
             "rss_mb": _rss_mb(),
@@ -379,7 +392,7 @@ class ImageWorker:
             if embeds.get("ip_adapter_image_embeds") is not None:
                 if not self.ip_adapter_loaded:
                     raise RuntimeError("embeds carry IP-Adapter image embeds but no IP-Adapter is loaded")
-                pipe.set_ip_adapter_scale(float(request.get("ip_adapter_scale", 0.6)))
+                pipe.set_ip_adapter_scale(self._ip_scale(request))
                 call["ip_adapter_image_embeds"] = [e.to(self.device, self.dtype) for e in embeds["ip_adapter_image_embeds"]]
                 ip_from_embeds = True
             negative_applied = bool(embeds["do_cfg"] and item.get("negative_prompt_embeds") is not None)
@@ -399,11 +412,13 @@ class ImageWorker:
         if references is not None:
             if not self.ip_adapter_loaded:
                 raise RuntimeError("ip_adapter_image(s) given but no IP-Adapter loaded -- send load_ip_adapter first")
-            pipe.set_ip_adapter_scale(float(request.get("ip_adapter_scale", 0.6)))
+            pipe.set_ip_adapter_scale(self._ip_scale(request))
             call["ip_adapter_image"] = references
         elif self.ip_adapter_loaded and not ip_from_embeds:
             raise RuntimeError("IP-Adapter is loaded; every generate call must pass ip_adapter_image")
-        if request.get("ip_adapter_masks"):
+        if self.ip_adapter_count == 2 and (ip_from_embeds or references is not None):
+            call["cross_attention_kwargs"] = {"ip_adapter_masks": self._two_adapter_masks(request, width, height)}
+        elif request.get("ip_adapter_masks"):
             # Task 20.2h: one mask per face (white = where that face's identity applies), in
             # the order of `ip_adapter_images`, preprocessed as diffusers' IP-Adapter masking
             # expects: one tensor [1, n_faces, h, w] for the single loaded adapter.
@@ -479,22 +494,59 @@ class ImageWorker:
             "rss_mb": _rss_mb(),
         }
 
+    def _ip_scale(self, request: dict[str, Any]) -> float | list[float]:
+        face = float(request.get("ip_adapter_scale", 0.6))
+        if self.ip_adapter_count == 2:
+            return [face, float(request.get("ip_adapter_scene_scale", 0.0))]
+        return face
+
     @staticmethod
-    def _ip_references(request: dict[str, Any]) -> Any | None:
-        """`ip_adapter_image` (one face, as before) or `ip_adapter_images` (Task 20.2h:
-        several faces for the one loaded adapter -> diffusers' nested [[a, b]] form)."""
+    def _face_count(request: dict[str, Any]) -> int:
+        return len(request.get("ip_adapter_masks") or request.get("ip_adapter_images") or []) or 1
+
+    def _two_adapter_masks(self, request: dict[str, Any], width: int, height: int) -> list[Any]:
+        """Task 23.2: one mask tensor per adapter -- [1, n_faces, h, w] for the faces (the
+        given per-face masks, or the full frame for a single face) and [1, 1, h, w] for the
+        scene plate (its background mask, or the full frame)."""
+        from diffusers.image_processor import IPAdapterMaskProcessor
         from PIL import Image
 
+        def load(path: str | None) -> Any:
+            if not path:
+                return Image.new("L", (width, height), 255)
+            with Image.open(path) as image:
+                return image.convert("L")
+
+        faces = [load(path) for path in request.get("ip_adapter_masks") or [None] * self._face_count(request)]
+        processor = IPAdapterMaskProcessor()
+        face_tensor = processor.preprocess(faces, height=height, width=width)
+        scene_tensor = processor.preprocess([load(request.get("ip_adapter_scene_mask"))], height=height, width=width)
+        return [face_tensor.reshape(1, face_tensor.shape[0], face_tensor.shape[2], face_tensor.shape[3]),
+                scene_tensor.reshape(1, 1, scene_tensor.shape[2], scene_tensor.shape[3])]
+
+    def _ip_references(self, request: dict[str, Any]) -> Any | None:
+        """`ip_adapter_image` (one face, as before) or `ip_adapter_images` (Task 20.2h:
+        several faces for the one loaded adapter -> diffusers' nested [[a, b]] form).
+        Task 23.2: with the scene adapter loaded, the second element is the scene plate."""
+        from PIL import Image
+
+        faces: Any = None
         if request.get("ip_adapter_images"):
-            images = []
+            faces = []
             for path in request["ip_adapter_images"]:
                 with Image.open(path) as image:
-                    images.append(image.convert("RGB"))
-            return [images]
-        if request.get("ip_adapter_image"):
+                    faces.append(image.convert("RGB"))
+        elif request.get("ip_adapter_image"):
             with Image.open(request["ip_adapter_image"]) as image:
-                return image.convert("RGB")
-        return None
+                faces = image.convert("RGB")
+        if faces is None:
+            return None
+        if self.ip_adapter_count == 2:
+            if not request.get("ip_adapter_scene_image"):
+                raise RuntimeError("the scene adapter is loaded; pass ip_adapter_scene_image")
+            with Image.open(request["ip_adapter_scene_image"]) as image:
+                return [faces, image.convert("RGB")]
+        return [faces] if isinstance(faces, list) else faces
 
     def _prompt_tokens(self, prompt: str | None) -> dict[str, Any]:
         """Task 20.2f finding: CLIP reads 77 tokens and silently drops the rest (20.2c/20.2e
@@ -627,6 +679,7 @@ class ImageWorker:
 
         was_loaded = self.pipe is not None
         self.pipe, self.mode, self.lightning_steps, self.ip_adapter_loaded = None, None, None, False
+        self.ip_adapter_count = 0
         self.kind, self.encoders, self._last_size = None, True, None
         self._embeds_cache.clear()
         gc.collect()

@@ -121,6 +121,10 @@ class Settings(BaseSettings):
     # Task 20.11: re-render a duo whose head-level gap holds a third person (anime-seg
     # occupancy >= 0.5), at most this many times, keeping the emptiest render (0 disables).
     VISUALS_EXTRA_PERSON_RETRIES: int = 2
+    # Task 23.2 (spike 23.1 variant b): weight of the scene plate as a second, background-
+    # masked IP reference in the shot render, so a scene's shots show the same place
+    # (0 disables it: text-only places, the pre-23.2 path).
+    VISUALS_SCENE_REFERENCE_SCALE: float = 0.4
 
     # Phase 18/D22-D24 -- the generic OpenAI-compatible cloud provider (OpenRouter,
     # first). Empty key/model collapses the effective mode to "local" (invariant 32).

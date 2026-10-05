@@ -36,7 +36,9 @@ def data(response):
 
 
 def wait_job(client, job):
-    for _ in range(400):
+    # 30 s: a shot job now also renders missing scene plates (Task 23.2), and the full suite
+    # runs these on a loaded machine (two 8 s timeouts seen in one full run).
+    for _ in range(1500):
         current = data(client.get(f"/api/visuals/jobs/{job['id']}"))
         if current["status"] in ("complete", "error", "cancelled"):
             assert current["status"] == "complete", current["error"]

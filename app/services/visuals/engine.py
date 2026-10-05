@@ -43,7 +43,7 @@ class ImageSession(Protocol):
 class ImageEngine(Protocol):
     def session(
         self, pipeline: str = "text2img", encoders: bool = True,
-        ip: str = "none", consumer: str = "visuals",
+        ip: str = "none", consumer: str = "visuals", scene: bool = False,
     ) -> Any: ...
 
 
@@ -111,16 +111,22 @@ class WorkerImageEngine:
     @asynccontextmanager
     async def session(
         self, pipeline: str = "text2img", encoders: bool = True,
-        ip: str = "none", consumer: str = "visuals",
+        ip: str = "none", consumer: str = "visuals", scene: bool = False,
     ) -> AsyncIterator[WorkerImageEngine]:
         require_generation()
         async with get_gpu_manager().lease(consumer, min_free_mb=8192):
             worker = await asyncio.to_thread(_WorkerProcess)
             self._worker = worker
             try:
-                await self.request({"command": "load", "mode": "base", "pipeline": pipeline, "encoders": encoders})
+                # Task 23.2 probe: the 1344x768 VAE decode is the VRAM peak. Without tiling the L2
+                # render reserved 13.2 GB (14.1 GB with the scene adapter) on the 12 GB card and
+                # spilled into shared memory (2.7x slower shots); tiled: 10.9 GB, same image.
+                await self.request({"command": "load", "mode": "base", "pipeline": pipeline, "encoders": encoders,
+                                    "vae_tiling": True})
                 if ip != "none":
                     adapter = {"command": "load_ip_adapter"}
+                    if scene:  # Task 23.2: + the scene-plate adapter
+                        adapter["scene"] = True
                     if ip == "layers_only":
                         adapter["image_encoder_folder"] = None
                     await self.request(adapter)
@@ -148,7 +154,7 @@ class FakeImageEngine:
     @asynccontextmanager
     async def session(
         self, pipeline: str = "text2img", encoders: bool = True,
-        ip: str = "none", consumer: str = "visuals",
+        ip: str = "none", consumer: str = "visuals", scene: bool = False,
     ) -> AsyncIterator[FakeImageEngine]:
         require_generation()
         yield self

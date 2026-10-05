@@ -14,7 +14,7 @@ from app.core.responses import ok
 from app.db.database import get_db
 from app.db.transactions import read_transaction, write_transaction
 from app.models.visuals import (
-    AGE_GROUPS, BOTTOMS, COLORS, GENDERS, TOPS, ApprovalInput, CharacterInput,
+    AGE_GROUPS, BOTTOMS, COLORS, GENDERS, SCENE_CATEGORIES, TIMES_OF_DAY, TOPS, ApprovalInput, CharacterInput,
     CastMemberInput, CharacterPatch, ReferenceInput, SceneInput, ScenePatch, SheetItemInput,
 )
 from app.services import project_service
@@ -39,7 +39,8 @@ async def visuals_health(db: aiosqlite.Connection = Depends(get_db)) -> dict:
 @router.get("/options")
 async def visuals_options() -> dict:
     return ok({"colors": COLORS, "tops": TOPS, "bottoms": BOTTOMS,
-               "age_groups": AGE_GROUPS, "genders": GENDERS, "style_id": "cel_anime"})
+               "age_groups": AGE_GROUPS, "genders": GENDERS, "style_id": "cel_anime",
+               "scene_categories": SCENE_CATEGORIES, "times_of_day": TIMES_OF_DAY})
 
 
 @router.get("/characters")

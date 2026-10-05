@@ -109,7 +109,7 @@ async def scene_preview(job: dict, runner: ImageJobRunner) -> dict:
     async with engine.session("text2img", ip="none", consumer="visuals_scene_preview") as session:
         response = await session.request({
             "command": "generate", "prompt": recipes.scene_preview_prompt(scene),
-            "negative_prompt": recipes.NEGATIVE, "seed": random.randint(1, 2**31 - 1),
+            "negative_prompt": recipes.NEGATIVE, "seed": scene.get("seed") or random.randint(1, 2**31 - 1),
             "width": 1344, "height": 768, "steps": 30, "guidance_scale": 6.0,
             "output_path": str(path),
         })
@@ -293,10 +293,42 @@ async def _mark_error(db, rows: list[dict], message: str) -> None:
             )
 
 
+def _plate_path(scene: dict) -> Path:
+    return settings.DATA_DIR / "library" / "scenes" / scene["id"] / "preview.png"
+
+
+async def _ensure_plates(db, engine, runner: ImageJobRunner, job: dict, contexts: list[dict]) -> None:
+    """Task 23.2 L0: a project scene without a plate gets one (text2img, no IP, the scene's own
+    seed), stored as its preview, before the shots use it as the scene reference."""
+    missing: dict[str, dict] = {}
+    for context in contexts:
+        scene = context["scene"]
+        if not (scene.get("preview_path") and Path(scene["preview_path"]).is_file()):
+            missing[scene["id"]] = scene
+    if missing:
+        async with engine.session("text2img", ip="none", consumer="visuals_scene_plates") as session:
+            for index, scene in enumerate(missing.values()):
+                await runner.boundary(job["id"], f"scene plate {index + 1}/{len(missing)}", 0)
+                path = _plate_path(scene)
+                await session.request({
+                    "command": "generate", "prompt": recipes.scene_preview_prompt(scene),
+                    "negative_prompt": recipes.NEGATIVE, "seed": scene.get("seed") or random.randint(1, 2**31 - 1),
+                    "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,
+                    "output_path": str(path),
+                })
+                async with write_transaction(db):
+                    await db.execute("UPDATE scenes SET preview_path = ?, updated_at = ? WHERE id = ?",
+                                     (str(path), library._now(), scene["id"]))
+                scene["preview_path"] = str(path)  # contexts share each scene's dict
+
+
 async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows: list[dict]) -> dict:
     db = runner.get_db()
     contexts = await _contexts(db, project_id, rows)
     engine = get_image_engine()
+    use_scene = settings.VISUALS_SCENE_REFERENCE_SCALE > 0
+    if use_scene:
+        await _ensure_plates(db, engine, runner, job, contexts)
     counts = [len(geometry.hand_boxes(person["points"], SIZE, person["head_h"]))
               for context in contexts for person in context["people"]]
     total = len(contexts) * 2 + sum(counts)
@@ -309,7 +341,8 @@ async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows
 
     # L1: text encoder + IP encoder. One embed file per shot permits each shot to carry
     # its own one- or two-face reference while all prompts share one worker lifetime.
-    async with engine.session("text2img", ip="with_encoder", consumer="visuals_shots_encode") as session:
+    async with engine.session("text2img", ip="with_encoder", consumer="visuals_shots_encode",
+                              scene=use_scene) as session:
         for context in contexts:
             await runner.boundary(job["id"], f"encode {completed + 1}/{total}", progress())
             folder = context["folder"]
@@ -321,13 +354,15 @@ async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows
                 payload["ip_adapter_image"] = context["faces"][0]
             else:
                 payload["ip_adapter_images"] = context["faces"]
+            if use_scene:
+                payload["ip_adapter_scene_image"] = context["scene"]["preview_path"]
             response = await session.request(payload)
             context["tokens"] = response["item_tokens"][0]
             completed += 1
 
     # L2: pose-controlled one-pass scenes with only IP layers in GPU memory.
     async with engine.session("controlnet", encoders=False, ip="layers_only",
-                              consumer="visuals_shots_render") as session:
+                              consumer="visuals_shots_render", scene=use_scene) as session:
         for context in contexts:
             await runner.boundary(job["id"], f"render {completed + 1}/{total}", progress())
             folder, row = context["folder"], context["row"]
@@ -345,6 +380,12 @@ async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows
                 await asyncio.to_thread(_save, right, masks[1])
                 payload["ip_adapter_masks"] = [str(path) for path in masks]
                 context["halves"] = (left, right)
+            if use_scene:
+                background = await asyncio.to_thread(geometry.background_mask, context["people"], SIZE)
+                background_path = folder / "scene_mask.png"
+                await asyncio.to_thread(_save, background, background_path)
+                payload["ip_adapter_scene_mask"] = str(background_path)
+                payload["ip_adapter_scene_scale"] = settings.VISUALS_SCENE_REFERENCE_SCALE
             response = await session.request(payload)
             context["raw"] = raw_path
             if row["kind"] != "single" and settings.VISUALS_EXTRA_PERSON_RETRIES > 0:

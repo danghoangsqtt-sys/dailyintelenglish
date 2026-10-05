@@ -85,19 +85,27 @@ async def init_db() -> None:
             (migration_file.name, datetime.now(timezone.utc).isoformat()),
         )
     now = datetime.now(timezone.utc).isoformat()
-    for slug, name, place, staging in (
-        ("classroom", "Classroom", "a sunny classroom with a whiteboard", "standing"),
-        ("cafe", "Cafe", "a cozy Vietnamese street cafe", "seated"),
-        ("library", "Library", "a bright university library", "standing"),
-        ("kitchen", "Kitchen", "a bright home kitchen", "standing"),
-        ("park", "Park", "a green city park", "standing"),
-        ("office", "Office", "a modern bright office", "seated"),
+    for slug, name, place, staging, category in (
+        ("classroom", "Classroom", "a sunny classroom with a whiteboard", "standing", "school"),
+        ("cafe", "Cafe", "a cozy Vietnamese street cafe", "seated", "food"),
+        ("library", "Library", "a bright university library", "standing", "school"),
+        ("kitchen", "Kitchen", "a bright home kitchen", "standing", "home"),
+        ("park", "Park", "a green city park", "standing", "nature"),
+        ("office", "Office", "a modern bright office", "seated", "work"),
     ):
         await connection.execute(
             "INSERT OR IGNORE INTO scenes "
             "(id, name, place, staging, is_builtin, created_at, updated_at) VALUES (?, ?, ?, ?, 1, ?, ?)",
             (f"builtin-{slug}", name, place, staging, now, now),
         )
+        # Task 23.2: a built-in still on the migration default gets its category.
+        await connection.execute(
+            "UPDATE scenes SET category = ? WHERE id = ? AND category = 'other'", (category, f"builtin-{slug}"),
+        )
+    # Task 23.2: every scene has a reproducible plate seed.
+    await connection.execute(
+        "UPDATE scenes SET seed = (abs(random()) % 2147483646) + 1 WHERE seed IS NULL"
+    )
     await connection.commit()
 
 
