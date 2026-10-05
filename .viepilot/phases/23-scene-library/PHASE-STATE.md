@@ -7,7 +7,7 @@
 | Task | Description | Owner | Status |
 |---|---|---|---|
 | 23.1 | Spike: same-place consistency (a text only / b scene IP reference / c plate + character inpaint) | Claude | **done 2026-10-05** (`f62e4cd`): bg-sim a 0.815/0.757, b 0.83–0.87, c 0.86–0.89 but pasted-on; **owner picked b ~0.4** |
-| 23.2 | Scene model v2 + plate IP reference in shots | Claude | card written (`tasks/task-23.2.md`) |
+| 23.2 | Scene model v2 + plate IP reference in shots | Claude | **done 2026-10-05** (`8401d3f` card, `88a55dc` code): migration 009, plates in L0, scene IP 0.4; VAE tiling fixes a pre-existing L2 VRAM spill (2395 s -> 967 s, peak 11.4 GB); bg-sim Cafe 0.791->0.853, Classroom 0.757->0.813; full suite 1290 passed |
 | 23.3 | Built-in pack ≈ 16 places | Claude | planned |
 | 23.4 | Scene Library UI | Claude | planned |
 | 23.5 | Gate B-15 (owner) | Owner | planned |

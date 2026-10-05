@@ -1344,8 +1344,8 @@ and still to do. Details: `.viepilot/phases/19-remotion/PHASE-STATE.md`.
 
 Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §3.
 
-- [ ] 23.1 Spike: same-place consistency (text / scene IP reference / plate + inpaint)
-- [ ] 23.2 Scene model v2 (category, time of day, indoor, seed, preview)
+- [x] 23.1 Spike: same-place consistency → owner picked the scene-plate IP reference (~0.4)
+- [x] 23.2 Scene model v2 (category, time of day, seed, plate) + plate as a background IP reference
 - [ ] 23.3 Built-in pack ≈ 16 places
 - [ ] 23.4 Scene Library UI
 - [ ] 23.5 Gate B-15
