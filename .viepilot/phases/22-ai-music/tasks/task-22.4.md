@@ -104,3 +104,45 @@ When an episode has background music, the music:
   - check the fade reaches silence at the last frame;
   - check video length = intro + speech + outro;
   - the owner listens.
+
+## Results (2026-10-06)
+
+- **Built as planned.**
+  - `app/services/music_bed.py` is the pure signal code.
+  - The Step 4 mix uses the bed over the speech span and writes `voice.wav`.
+  - `audio_service.build_soundtrack` builds the full-video soundtrack.
+  - Standard renders voice + a 4 s tail. Enhanced renders a soundtrack sized to the composition,
+    played from frame 0 (the `soundtrackPath` prop, with `playAudio=false` on the speech window).
+  - `introSec` / `outroSec` are now sent explicitly (2.5 / 5.0).
+- **Deviation (measured, then fixed):** through the real pipeline, a 2 s fade-in with a 2.5 s intro
+  meant the music never reached its open level. The fade-out was 4 s and the release + ramp took
+  1.1 s, which left the outro the same. Retuned to fade-in 1.0 s, release 0.5 s, fade-out 3.0 s:
+  - the intro is open from 1.0 to 1.9 s;
+  - the outro is open for ~1.2 s before the fade.
+- **Test-signal note:** a crossfade of a sine *with itself* can be up to +3 dB (correlated phases).
+  Equal-power is right for real music, so the level test uses a track longer than the video, and
+  the loop is covered by its own unit test.
+- **Real check** on the real project `b330d37f` (30 real cached Edge TTS lines, mix 176.02 s):
+  - on a sqlite backup copy in a temp `DATA_DIR`;
+  - with a synthetic 90 s chord track, so the episode needs a crossfade loop. There are no real
+    downloaded tracks yet.
+
+  | | Video length | Expected | Music open (intro) | Speech section | Music open (outro) | Last 0.5 s |
+  |---|---|---|---|---|---|---|
+  | Step 4 mix | 176.02 s, −16.0 LUFS | — | — | — | — | — |
+  | Standard | 180.04 s | 180.02 | — | −21.5 LUFS (M) | −23.9 | −39.1 |
+  | Enhanced | 183.59 s (92 s render) | 183.52 | −22.7 | −21.0 | −23.1 | −37.9 |
+
+  - Values are ffmpeg `ebur128` momentary loudness.
+  - Neither render fell back.
+  - The open music sits ~7 LU under the −16 LUFS voice, and ~14 dB lower again under speech.
+  - The videos were copied to `data/tmp/music-bed-check/` (synthetic music) to check the timing.
+    The owner judges the real levels at Gate B-17 with real tracks. `MUSIC_BED_LUFS` and
+    `MUSIC_DUCK_DB` are single constants.
+- **Tests:**
+  - `tests/test_music_bed.py` (10);
+  - `tests/test_music_soundtrack.py` (4);
+  - `tests/test_video_soundtrack.py` (5, including a real ffmpeg render: video = audio + 4 s,
+    silent on the last frame).
+  - vitest 42 and `tsc` clean.
+- **Full suite: 1399 passed;** vitest 42 passed (2026-10-06).

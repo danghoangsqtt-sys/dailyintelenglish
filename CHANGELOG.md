@@ -14,6 +14,13 @@ Versioning: [SemVer](https://semver.org/)
   download link. Its **length is measured automatically**. The page warns "Credit needed" when a
   licence requires a credit that is missing, and it shows a short guide to safe free music sources
   (`docs/user/free-music-sources.md`).
+- **Task 22.4:** background music now fits the video.
+  - **Covers the whole video.** It plays over the Enhanced intro and outro, and runs on for 4 s
+    after the last line in Standard videos. It always starts at the track's beginning.
+  - **Length.** A long track is cut; a short one loops with soft crossfades instead of a hard cut.
+  - **Volume.** Every track is brought to the same loudness. The music dips well below the voice
+    whenever someone speaks and comes back up in the intro, the outro and long pauses.
+  - **Fades.** It fades in over 1 s and **fades out to silence on the video's last frame**.
 
 ### Removed (Phase 22, D50, 2026-10-05)
 - The ACE-Step 1.5 music generator was tried (spike report
