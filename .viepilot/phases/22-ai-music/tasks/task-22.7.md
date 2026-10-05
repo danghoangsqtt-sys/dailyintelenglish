@@ -108,3 +108,29 @@ where to download safe free music.
   - browser: edit and save the details, the warning shown and cleared.
 - The full suite is green.
 - **Visual check** with screenshots of the Library page.
+
+## Results (done 2026-10-06)
+
+- **Built as planned.**
+  - Every library file gets a `music_tracks` row lazily, with a guessed title and an ffprobe
+    duration.
+  - `PATCH /api/music/{filename}` edits the details: only the fields sent change, and an empty
+    value clears.
+  - `GET /api/music/options` lists the choices.
+  - Upload and delete keep the rows in step.
+- **Library UI:**
+  - each card shows the title (and artist), the file and size, a length badge, the mood (or "No
+    mood yet"), the licence, and "⚠ Credit needed";
+  - an inline "Edit details" form;
+  - an in-page "Where to find free music safely" summary. A link to GitHub was dropped, since the
+    repo may be private and the doc is not on main yet.
+- The guide is `docs/user/free-music-sources.md` (Vietnamese).
+- **Tests:**
+  - `tests/test_music_meta.py` (13, with real ffprobe on generated MP3s);
+  - `tests/test_music_meta_browser.py` (2);
+  - `test_music_api.py` and `test_music_library_browser.py` updated for the title-first card.
+  - **Full suite: 1380 passed.**
+- **Visual check:** a screenshot of the Library showed two generated tracks, the badges, the
+  warning and the open form.
+- **Known limit:** a file ffprobe cannot read keeps `duration_s` NULL and is re-probed on each
+  listing. This is cheap, since the failure is fast.

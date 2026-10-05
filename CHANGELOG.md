@@ -8,6 +8,13 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Phase 22 — free background music, 2026-10-06)
+- **Task 22.7:** every Music Library track has details: title, artist, **mood** (Lofi / Acoustic /
+  Upbeat / Calm / Inspiring), tags, where it was downloaded, its licence, the credit text and the
+  download link. Its **length is measured automatically**. The page warns "Credit needed" when a
+  licence requires a credit that is missing, and it shows a short guide to safe free music sources
+  (`docs/user/free-music-sources.md`).
+
 ### Removed (Phase 22, D50, 2026-10-05)
 - The ACE-Step 1.5 music generator was tried (spike report
   `docs/operations/phase22-spike-music.md`) and **removed before release**. The owner judged its
