@@ -9,6 +9,9 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Added (Phase 24 — storyboard, 2026-10-05)
+- **Task 24.4:** Step 5 Storyboard section. Propose with AI; review each beat with its script lines;
+  edit the place (library by category, or a new place), the people on screen, the action and the
+  expression; split or merge beats. The image/GPU cost updates live. Save as a draft, or approve.
 - **Task 24.3:** beat pictures follow the action and the mood. Actions map to 8 OpenPose poses
   (talk, point, drink, phone, think, wave, work, walk). Beat prompts carry an expression phrase and
   the action, held under the calibrated CLIP budget: they trim the action first and drop the place

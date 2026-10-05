@@ -204,9 +204,9 @@
     "24": {
       "name": "Story-driven visuals (storyboard)",
       "status": "in_progress",
-      "tasks_done": 3,
+      "tasks_done": 4,
       "tasks_total": 7,
-      "note": "24.1-24.3 done (beats + API, AI proposal, action poses + beat prompts). Next 24.4 Step 5 storyboard review UI, then 24.5 generation + timeline from beats."
+      "note": "24.1-24.4 done (beats + API, AI proposal, action poses + beat prompts, Step 5 review UI). Next 24.5 generation + timeline from the approved storyboard."
     }
   },
   "key_decisions": [

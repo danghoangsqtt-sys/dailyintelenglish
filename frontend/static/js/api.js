@@ -119,6 +119,11 @@ const Api = (() => {
     getImageJob: (id) => request(`/api/visuals/jobs/${id}`),
     cancelImageJob: (id) => request(`/api/visuals/jobs/${id}/cancel`, { method: "POST" }),
     getProjectVisuals: (projectId) => request(`/api/projects/${projectId}/visuals`),
+    getStoryboard: (projectId) => request(`/api/projects/${projectId}/storyboard`),
+    saveStoryboard: (projectId, storyboard) => request(`/api/projects/${projectId}/storyboard`, {
+      method: "PUT", body: JSON.stringify(storyboard),
+    }),
+    proposeStoryboard: (projectId) => request(`/api/projects/${projectId}/storyboard/propose`, { method: "POST" }),
     setProjectCast: (projectId, cast) => request(`/api/projects/${projectId}/visuals/cast`, {
       method: "PUT", body: JSON.stringify(cast),
     }),

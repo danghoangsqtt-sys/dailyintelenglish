@@ -1359,7 +1359,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 - [x] 24.1 Beat schema + migration + storyboard API (estimate + cap)
 - [x] 24.2 AI storyboard (gateway, validated, one repair, fit to cap, deterministic fallback)
 - [x] 24.3 Recipes v3: action + expression slots, pose library
-- [ ] 24.4 Step 5 storyboard review/edit
+- [x] 24.4 Step 5 storyboard review/edit
 - [ ] 24.5 Generation + timeline from beats
 - [ ] 24.6 Remotion polish (crossfade, pan/zoom, inserts)
 - [ ] 24.7 Gate B-16

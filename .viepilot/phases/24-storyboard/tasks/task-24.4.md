@@ -69,3 +69,19 @@ their inputs for accessibility.
 - approving sets the status to approved.
 
 Existing Step 5 browser tests stay green. Full suite green; ruff clean.
+
+## Result (2026-10-05) — PASS
+
+- Delivered as planned: `storyboard.js` (self-contained, DOM built with createElement/textContent),
+  a Storyboard section on Step 5, and Api calls.
+- Live check on the owner's library: on a project with finished audio the section loads in its
+  empty state, with Propose enabled and Save/Approve disabled. On a project without audio, Step 5
+  hides its whole workspace, including this section, the same as the shots. Moving the storyboard
+  earlier (it needs only the script) is a follow-up for 24.5's UI.
+- Test: `tests/test_storyboard_browser.py`, run against the fake AI router and the fake engine.
+  - Propose → 3 beats at 9/12 images.
+  - Edit an action and an expression → "unsaved changes".
+  - Merge → lines 1–4 at 8/12.
+  - Save, reload → edits persisted, "draft (owner)".
+  - Invalid new place → the server's `new_place` message is shown.
+  - Approve → "approved".

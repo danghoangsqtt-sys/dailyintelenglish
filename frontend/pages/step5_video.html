@@ -101,6 +101,19 @@
     .visual-shot-card .visual-warning { color: var(--danger); font-size: 12px; }
     .visual-shot-scene { margin-top: 24px; }
     .visual-warning { color: var(--danger); }
+    .storyboard-summary { margin: 10px 0; color: var(--muted); }
+    .storyboard-summary .over-cap { color: var(--danger); font-weight: 700; }
+    .storyboard-beats { display: grid; gap: 10px; margin-top: 12px; }
+    .storyboard-beat { padding: 12px; }
+    .storyboard-beat h4 { margin: 0 0 6px; }
+    .storyboard-beat details { margin: 6px 0 10px; font-size: 13px; color: var(--muted); }
+    .storyboard-beat details p { margin: 3px 0; }
+    .storyboard-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+    .storyboard-fields label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
+    .storyboard-fields input, .storyboard-fields select { padding: 7px; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface, transparent); color: inherit; }
+    .storyboard-speakers { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13px; }
+    .storyboard-beat .library-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
   </style>
 </head>
 <body>
@@ -163,6 +176,20 @@
               <div id="visual-shot-grid"></div>
             </section>
 
+            <section class="section" id="storyboard-section">
+              <h2 class="section-title">Storyboard</h2>
+              <p class="section-hint">Story beats decide which picture shows during which lines: a place, who is on screen, what they do and how they feel. Let the AI propose, then edit and approve. Pictures follow places and actions, not duration.</p>
+              <div class="generate-row">
+                <button id="storyboard-propose" class="btn btn-primary" type="button">Propose with AI</button>
+                <button id="storyboard-save" class="btn btn-ghost" type="button" disabled>Save draft</button>
+                <button id="storyboard-approve" class="btn btn-ghost" type="button" disabled>Approve</button>
+              </div>
+              <div id="storyboard-summary" class="storyboard-summary" aria-live="polite"></div>
+              <div id="storyboard-error" class="visual-warning" role="alert"></div>
+              <div id="storyboard-warnings" class="visual-warning" role="status"></div>
+              <div id="storyboard-beats" class="storyboard-beats" aria-label="Storyboard beats"></div>
+            </section>
+
             <section class="section">
               <h2 class="section-title">2. Choose a background</h2>
               <div class="template-grid" id="template-grid"></div>
@@ -221,5 +248,6 @@
   <script src="/static/js/generation_status.js"></script>
   <script src="/static/js/shell.js"></script>
   <script src="/static/js/step5_video.js"></script>
+  <script src="/static/js/storyboard.js"></script>
 </body>
 </html>
