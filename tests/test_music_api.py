@@ -44,6 +44,9 @@ def test_list_music_returns_only_supported_audio_with_preview_urls(client: TestC
             "filename": "theme.mp3",
             "size_bytes": len(VALID_MP3),
             "content_url": "/api/music/theme.mp3",
+            # Task 22.2: a file with no provenance row is shown as an upload.
+            "source": "upload",
+            "provenance": None,
         }
     ]
 

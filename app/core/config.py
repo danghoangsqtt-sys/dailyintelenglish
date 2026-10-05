@@ -127,6 +127,16 @@ class Settings(BaseSettings):
     VISUALS_SCENE_REFERENCE_SCALE: float = 0.4
     # Task 24.1 (owner E4): a storyboard may need at most this many images per episode.
     VISUALS_IMAGE_CAP: int = 12
+    # Task 22.2 (Phase 22): ACE-Step 1.5 background music in its own venv-music worker.
+    # Defaults follow the 22.1 spike (docs/operations/phase22-spike-music.md) until the owner's
+    # listening verdict: DiT-only, the whole length in one piece. Requests over ACE-Step's 600 s
+    # limit are always looped with crossfades. 8192 MiB free: the measured whole-card peak was
+    # 7.4-8.4 GB, incl. ~0.5 GB of desktop.
+    AI_MUSIC_ENABLED: bool = True
+    MUSIC_ENGINE: Literal["worker", "fake"] = "worker"
+    MUSIC_LENGTH_STRATEGY: Literal["full", "loop"] = "full"
+    MUSIC_LM: Literal["none", "0.6B", "1.7B"] = "none"
+    GPU_MIN_FREE_MB_MUSIC: int = 8192
 
     # Phase 18/D22-D24 -- the generic OpenAI-compatible cloud provider (OpenRouter,
     # first). Empty key/model collapses the effective mode to "local" (invariant 32).

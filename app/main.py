@@ -22,6 +22,7 @@ from app.db.database import Database, close_db, init_db
 from app.services import learning_pipeline, script_pipeline, settings_service
 from app.services.ai.router import AIRouter, CircuitBreaker, build_ai_router_from_settings
 from app.services.ai_worker import AIWorker
+from app.services.music import pipelines as music_pipelines
 from app.services.visuals.runner import ImageJobRunner
 from app.services.visuals import pipelines as visuals_pipelines
 
@@ -100,6 +101,7 @@ async def lifespan(app: FastAPI):
     image_job_runner.register_handler("scene_preview", visuals_pipelines.scene_preview)
     image_job_runner.register_handler("project_shots", visuals_pipelines.project_shots)
     image_job_runner.register_handler("shot_regenerate", visuals_pipelines.shot_regenerate)
+    image_job_runner.register_handler(music_pipelines.JOB_KIND, music_pipelines.music_track)  # Task 22.2
     await visuals_pipelines.recover_pending_shots(Database.instance().connection)
     await image_job_runner.start()
     await ai_worker.start()
