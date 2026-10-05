@@ -22,6 +22,7 @@ import aiosqlite
 
 from app.core.config import settings
 from app.core.constants import (
+    STANDARD_MUSIC_TAIL_S,
     VIDEO_HEIGHT_SHORTS,
     VIDEO_RENDER_TIMEOUT_MIN_SECONDS,
     VIDEO_RENDER_TIMEOUT_PER_AUDIO_SECOND,
@@ -29,9 +30,9 @@ from app.core.constants import (
     VIDEO_TEMPLATE_LABELS,
     VIDEO_WIDTH_SHORTS,
 )
-from app.core.exceptions import RemotionRenderFailedError, VideoRenderError
+from app.core.exceptions import AudioMixError, RemotionRenderFailedError, VideoRenderError
 from app.core.paths import get_project_root
-from app.services import video_renderer_remotion
+from app.services import audio_service, video_renderer_remotion
 
 logger = logging.getLogger(__name__)
 
@@ -304,10 +305,22 @@ async def generate_video(
         _write_video_outputs_sync, background_path, output_dir, srt_path, generate_srt(audio_job["timestamps"])
     )
 
+    # Task 22.4 (D51): with music, the video's audio is voice + a music bed that runs on for a short
+    # tail after the last line and fades out on the last frame. No lead-in, so the SRT is unchanged.
+    audio_path, audio_seconds = audio_job["mp3_path"], audio_job["duration_seconds"]
+    try:
+        soundtrack = await audio_service.build_soundtrack(
+            audio_job, 0.0, audio_seconds + STANDARD_MUSIC_TAIL_S, output_dir / audio_service.SOUNDTRACK_NAME,
+        )
+    except AudioMixError as exc:
+        raise VideoRenderError(str(exc)) from exc
+    if soundtrack is not None:
+        audio_path, audio_seconds = soundtrack["path"], soundtrack["duration_seconds"]
+
     try:
         await asyncio.to_thread(
             _render_video_sync,
-            background_path, audio_job["mp3_path"], srt_path, mp4_path, audio_job["duration_seconds"],
+            background_path, audio_path, srt_path, mp4_path, audio_seconds,
         )
     except VideoRenderError:
         raise
@@ -320,12 +333,13 @@ async def generate_video(
         "background_image": template_id,
         "mode": "background",
         "fallback_used": fallback_used,
+        "soundtrack": soundtrack is not None,
     }
 
     if aspect_ratio == "9:16":
         try:
             await asyncio.to_thread(
-                _render_vertical_sync, mp4_path, mp4_path_vertical, audio_job["duration_seconds"]
+                _render_vertical_sync, mp4_path, mp4_path_vertical, audio_seconds
             )
         except VideoRenderError:
             raise

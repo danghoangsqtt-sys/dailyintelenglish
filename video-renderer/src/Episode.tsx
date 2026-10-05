@@ -290,6 +290,7 @@ export function AudioWindowContent({
   chapters,
   captionStyle,
   visuals,
+  playAudio = true,
 }: {
   lines: EpisodeLine[];
   speakers: EpisodeSpeaker[];
@@ -300,6 +301,8 @@ export function AudioWindowContent({
   chapters: Chapter[];
   captionStyle: CaptionStyle;
   visuals: EpisodeVisuals;
+  /** Task 22.4: false when the episode's full-video soundtrack already carries the voice. */
+  playAudio?: boolean;
 }) {
   const frame = useCurrentFrame();
   const currentTimeSec = frame / fps;
@@ -323,7 +326,7 @@ export function AudioWindowContent({
         <Img src={staticFile(background.current)} style={{ position: "absolute", width: "100%", height: "100%",
           objectFit: "cover", opacity: background.opacity, transform: background.transform }} />
       ) : null}
-      <Audio src={staticFile(audioPath)} startFrom={0} />
+      {playAudio ? <Audio src={staticFile(audioPath)} startFrom={0} /> : null}
       {captionStyleSpec(captionStyle).bottomShade ? <div style={BOTTOM_SHADE_STYLE} /> : null}
       <ChapterProgressBar frame={frame} fps={fps} audioDurationSec={audioDurationSec} chapters={chapters} />
       <SpeakerChips speakers={speakers} activeId={activeId} />
@@ -474,6 +477,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
   outroText,
   captionStyle,
   visuals,
+  soundtrackPath,
 }) => {
   // D19.6-a: total video = intro + audio + outro (Option B, extend). `audioDurationSec` is
   // the same "last line's endSec" measure Root.tsx's calculateMetadata already uses for the
@@ -485,6 +489,8 @@ export const Episode: React.FC<EpisodeInputProps> = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: MIDNIGHT_BACKGROUND }}>
+      {/* Task 22.4 (D51): the music bed spans intro + speech + outro, so it plays from frame 0. */}
+      {soundtrackPath ? <Audio src={staticFile(soundtrackPath)} startFrom={0} /> : null}
       <Sequence from={0} durationInFrames={introFrames} name="Intro">
         <Intro title={title} topic={topic} cefrLevel={cefrLevel} speakers={speakers} fps={fps} durationInFrames={introFrames} />
       </Sequence>
@@ -499,6 +505,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
           chapters={chapters}
           captionStyle={captionStyle}
           visuals={visuals}
+          playAudio={!soundtrackPath}
         />
       </Sequence>
       <Sequence from={introFrames + audioFrames} durationInFrames={outroFrames} name="Outro">

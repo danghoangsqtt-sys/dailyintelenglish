@@ -135,6 +135,9 @@ export const episodeInputPropsSchema = z.object({
    * owner-preferred default so older runner invocations / props files still render. */
   captionStyle: z.enum(CAPTION_STYLES).default("outline"),
   visuals: episodeVisualsSchema.default({ shots: {}, lineShots: [] }),
+  /** Task 22.4 (D51): when set, one full-video soundtrack (voice + music bed covering the intro,
+   * speech and outro, faded out on the last frame) plays from frame 0 instead of `audioPath`. */
+  soundtrackPath: z.string().optional(),
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;

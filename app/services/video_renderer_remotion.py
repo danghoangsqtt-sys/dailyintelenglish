@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import platform
 import shutil
 import subprocess
@@ -31,13 +32,17 @@ import aiosqlite
 
 from app.core.config import settings
 from app.core.constants import VIDEO_FPS, VIDEO_HEIGHT_STANDARD, VIDEO_WIDTH_STANDARD
-from app.core.exceptions import RemotionRenderFailedError
+from app.core.exceptions import AudioMixError, RemotionRenderFailedError
 from app.core.paths import get_project_root
-from app.services import avatar_service, youtube_service
+from app.services import audio_service, avatar_service, youtube_service
 from app.services.visuals import library_service, project_visuals_service, storyboard_service
 
 VIDEO_RENDERER_DIR = get_project_root() / "video-renderer"
 REMOTION_AUDIO_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "audio"
+# The owner-signed intro/outro timings (types.ts defaults, task-19.6.md), now sent explicitly so the
+# Task 22.4 soundtrack and the composition always agree on the video's length.
+REMOTION_INTRO_SEC = 2.5
+REMOTION_OUTRO_SEC = 5.0
 REMOTION_AVATARS_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "avatars"
 REMOTION_VISUALS_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "visuals"
 
@@ -293,6 +298,8 @@ async def _build_input_props(
         "cefrLevel": project["cefr_level"],
         "chapters": chapters,
         "captionStyle": caption_style,
+        "introSec": REMOTION_INTRO_SEC,
+        "outroSec": REMOTION_OUTRO_SEC,
     }
     if shot_props:
         # Task 24.5b: the approved storyboard drives the pictures when its shots exist.
@@ -397,4 +404,29 @@ async def render_via_remotion(
     project_id = project["id"]
     input_props = await _build_input_props(db, project, audio_job, learning, caption_style)
     await asyncio.to_thread(_copy_audio_into_public, project_id, audio_job["mp3_path"])
-    return await asyncio.to_thread(_render_via_remotion_sync, input_props, output_path)
+    soundtrack = await _build_soundtrack(project_id, audio_job, input_props)
+    if soundtrack is not None:
+        input_props["soundtrackPath"] = soundtrack
+    result = await asyncio.to_thread(_render_via_remotion_sync, input_props, output_path)
+    return {**result, "soundtrack": soundtrack is not None}
+
+
+def composition_seconds(input_props: dict[str, Any]) -> float:
+    """The exact length Root.tsx's calculateMetadata gives the Episode composition."""
+    lines = input_props["lines"]
+    audio_seconds = lines[-1]["endSec"] if lines else 3
+    total = input_props["introSec"] + audio_seconds + input_props["outroSec"]
+    return max(1, math.ceil(total * input_props["fps"])) / input_props["fps"]
+
+
+async def _build_soundtrack(project_id: str, audio_job: dict, input_props: dict[str, Any]) -> str | None:
+    """Task 22.4 (D51): with music, one soundtrack covers intro + speech + outro and fades out on the
+    composition's last frame. Returns its public path, or None (no music / an old audio job)."""
+    output = REMOTION_AUDIO_DIR / f"{project_id}_soundtrack.mp3"
+    try:
+        built = await audio_service.build_soundtrack(
+            audio_job, input_props["introSec"], composition_seconds(input_props), output,
+        )
+    except AudioMixError as exc:
+        raise RemotionRenderFailedError(str(exc)) from exc
+    return f"remotion-render/audio/{output.name}" if built else None
