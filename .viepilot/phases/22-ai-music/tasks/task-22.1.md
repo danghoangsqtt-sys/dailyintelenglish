@@ -51,3 +51,20 @@ Before any product code, measure these on the owner's machine:
 - VRAM stays under 8 GB.
 - The time per 8-minute bed is reported.
 - The owner verdict is recorded in this card and in PHASE-STATE.
+
+## Results (Claude part done 2026-10-05; report `docs/operations/phase22-spike-music.md`)
+
+- **Environment:**
+  - Python 3.11 venv-music, built with uv from ACE-Step's own uv.lock (commit `ca1e85f`) and pinned in `requirements-music.txt`.
+  - The Python 3.12 attempt was skipped: ACE-Step's lock targets 3.11.
+- **All 6 family × strategy outputs exist, plus 4 LM-comparison files.** They are 48 kHz stereo at the exact requested length.
+- **Time:** an 8-minute bed takes **~34 s** DiT-only. The 0.6B LM adds ~4 s and the 1.7B LM adds ~8 s.
+- **VRAM:**
+  - DiT-only peaks at 6.4–6.9 GB in torch and 7.4–8.4 GB on the whole card (incl. ~0.5 GB desktop).
+  - So it is under 8 GB for 150 s, and up to 8.4 GB for a single 480 s piece.
+  - 1.7B LM: 10.3 GB.
+- **Deviations:**
+  - The full-LM ("thinking") mode is not viable on 12 GB: ~6 min, then the VRAM preflight failed. The LM was tested in metadata-only mode instead.
+  - Loudness varies −14.0 to −18.6 LUFS between files, so 22.4 must normalise each bed.
+- The script grew a `--only-lm` option, used to rerun the 0.6B comparison after its separate download (1.3 GB).
+- **Pending owner verdict:** length strategy, LM mode, no-vocals and quality bar, Content ID unlisted upload.

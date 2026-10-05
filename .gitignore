@@ -65,3 +65,4 @@ logs/
 # ViePilot skill mirror for local Antigravity/Gemini CLI use (regenerate with
 # `vp-tools install --target antigravity`) — not project source
 .agents/
+venv-music/
