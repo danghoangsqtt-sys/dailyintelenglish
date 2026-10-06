@@ -31,3 +31,16 @@
 - The dashboard browser tests pass.
 - Before/after screenshots.
 - The full suite is green.
+
+## Results (done 2026-10-06)
+
+- `list_projects` now returns `topic` and `preview_url` (additive). The URL is the selected
+  thumbnail, else the first finished shot, else none.
+- Dashboard:
+  - cards show the real picture, or a brand tile with the topic;
+  - a gradient step-progress bar;
+  - the hero is a branded card in English, aligned to the grid.
+- Checked by eye in light and dark.
+- `test_dashboard_preview.py` (1) is new; the dashboard and project API tests (45) pass.
+- **Full suite: 1435 passed.**
+- `data/brand_voice/` (the cached Jenny audio) is now git-ignored.
