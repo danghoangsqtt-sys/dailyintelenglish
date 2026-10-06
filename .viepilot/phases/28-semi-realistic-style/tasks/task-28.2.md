@@ -176,3 +176,10 @@ The depth ControlNet alone (the silhouette without the skeleton) broke the figur
 together is the only variant that worked (the first image), at about 20 minutes an image because the two
 controls plus the UNet overflow the 12 GB card. The script is back to "both"; two seeds are run in the
 background (seeds 7 and 21). Option 2 (a body-shape LoRA) is not pursued: see the answer to the owner.
+
+### Result of the body map (2026-10-06), awaiting owner approval
+
+Pose + depth, seeds 7 and 21 (about 1000 s each): both show a visibly fuller bust, a narrow waist and
+narrow hips, with the head and shoes in frame; seed 21 is on the woman's sheet (full front). The other five
+woman panels are unchanged. The depth map is used only for the full-front panel: in the close-ups the chest
+is out of frame, and in the back view it is not needed.
