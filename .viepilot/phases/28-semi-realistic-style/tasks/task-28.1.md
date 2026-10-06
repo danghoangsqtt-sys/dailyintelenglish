@@ -60,3 +60,26 @@ No product code changes.
   glasses cost beauty), the male student, and the cafe duo (the man with no glasses).
 - 35 steps, CFG 6.5; the negative adds blur, bokeh, haze, noise, grain and skin flaws.
 - Script: `scripts/spike_style_semireal2.py`.
+
+## Owner feedback on round 2 (2026-10-06): 6 reference photos
+
+- **Female** (3 photos of Vietnamese women, photographic): very long **straight black hair**, fair
+  luminous skin, soft delicate face, a white shirt. No glasses, no brown hair.
+- **Male** (3 manhwa-style illustrations): **messy layered black hair** with bangs over the eyes, pale
+  clear skin, sharp jaw, narrow cool eyes, black clothes.
+- **Outfits are single colour:** the woman all **white**, the man all **black**.
+- The female photos are photographic and the male photos are illustrated, so one frame could mix
+  two styles. Round 3 renders the man **both ways** for the owner to compare.
+- References are used for the look only; no face is copied.
+
+## Round 3 plan (`scripts/spike_style_semireal3.py`)
+
+- The presenter: long straight black hair, fair skin, plain white shirt (E1 bright, E2 warm).
+- The male student: messy layered black hair, pale skin, sharp features, plain black shirt, in the
+  same two editorial recipes, **plus** a semi-realistic illustrated version (manhwa-like) as a third
+  row.
+- The duo: the woman in white and the man in black (a strong contrast, which also helps keep the two
+  outfit colours apart).
+- 3 seeds for portraits, 2 for the duo.
+- **Product consequence to check in Task 28.2:** the library today requires a different top and
+  bottom colour; a single-colour outfit needs that rule relaxed and the colour check adapted.
