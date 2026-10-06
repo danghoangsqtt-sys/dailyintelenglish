@@ -64,3 +64,9 @@ Lan and Minh replace the old characters in the real library (`docs/operations/ph
 Next, Task 28.4b: the app's own shot job on a copy of the data (`scripts/make_smoke_copy.py`, a second app on
 port 8001 with `DIE_DATA_DIR`): the Demo Episode's 12 shots, to check the duo refine, the colour retry and the
 extra-person check on photographs with the real faces.
+
+## Task 28.4 closed (2026-10-06)
+
+Lan and Minh are in the real library; the real shot job was run on a copy (`docs/operations/phase28-shots-real-pipeline.md`)
+and the black rule and the per-outfit negatives were fixed from its findings (full suite: 1498 passed). Two findings
+are carried to Task 28.5 with the owner's approval: counting faces on photographs and a "check this shot" mark.

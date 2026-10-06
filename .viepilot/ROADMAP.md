@@ -1383,7 +1383,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 - [x] 28.1 Spike (GPU): semi-realistic look; RealVisXL V5.0 approved
 - [x] 28.2 Character reference sheets for the woman and the man, with detailed prompts per view
 - [x] 28.3 Recipes + re-tuned colour / extra-person checks
-- [ ] 28.4 Redo the library (two characters, 55 scene plates)
+- [x] 28.4 Redo the library (two characters, 55 scene plates)
 - [ ] 28.5 Shot checks on photographs (face counting) and a "check this shot" mark in Step 5
 - [ ] 28.6 Gate B-20
 

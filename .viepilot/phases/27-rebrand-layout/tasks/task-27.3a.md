@@ -70,3 +70,7 @@ mini-player, and the music auto-selection logic.
   (`tests/test_music_upload_multi_browser.py`); all 12 existing music browser tests pass unchanged.
 - Screenshot on a throw-away instance with three real tracks and one wrong file:
   `docs/operations/ui-audit/music-27-3a.png`. The real library was not touched.
+
+## Task 27.3a closed (2026-10-06)
+
+Full suite: **1498 passed** (1482 + 16 new, including the 28.4b tests in the same run).
