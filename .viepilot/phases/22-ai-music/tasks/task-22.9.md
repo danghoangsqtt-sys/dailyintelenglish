@@ -117,3 +117,35 @@ sees each candidate's pace and BPM.
   - the owner's 6 Pixabay tracks are classified, and the table is recorded;
   - auto-select on 3 real projects of different genres (real Gemini);
   - the owner reviews the pace labels.
+
+## Progress (2026-10-06, paused at the usage limit)
+
+- **Done and committed:** commits `abb6d79`, `8d0d006` and the loop-penalty fix.
+  - Analysis (median of three windows; an absolute onset floor stops steady tones reading as
+    medium).
+  - `POST /api/music/analyse`.
+  - Owner pace/mood override.
+  - Rhythm score.
+  - Library badges, updated in place (no playback reset).
+  - Music tests 45/45, twice.
+- **Real check:** the owner's 6 Pixabay tracks, classified in 4.5 s:
+
+  | Track | Pace | ~BPM | Auto mood |
+  |---|---|---|---|
+  | cinematic | lively | 123 | upbeat |
+  | nastelbom | lively | 117 | inspiring |
+  | motivation | medium | 103 | acoustic |
+  | corporate | medium | 144 | inspiring |
+  | corporate-background | medium | 117 | inspiring |
+  | news-intro | calm | 117 | lofi |
+
+- **Open issues:**
+  1. Real Gemini still picks the 68 s news-intro for a 9.6-min interview (loops 9×), despite the
+     rule ranking it last and the prompt showing "loops 9 times". Proposed fix: drop candidates
+     that need more than ~4 loops when longer ones exist, or let the rule veto the AI pick when it
+     is far below the top score.
+  2. A Gemini reason claimed a wrong length ("4 minutes 19 seconds covers the video" for a 2:19
+     track). Proposed fix: show the rule's own fit text in the UI instead of trusting length
+     claims from the AI.
+- **Not run yet:** the full suite after `8d0d006`, the Library screenshot with the real tracks,
+  and the closing docs (PHASE-STATE / TRACKER / CHANGELOG).
