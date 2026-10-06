@@ -107,3 +107,12 @@ off for both. Changes: "tight short-sleeve white blouse tucked in"; the figure i
 The woman is good (fitted short-sleeve blouse, narrow hips, shoes in frame). The man's head top was cut
 off and one front view was a torn crop top: his full-body framing is now nose 0.085 / unit 0.105, and
 "crop top, torn clothes" are in his negative. Only his two full-body panels are redone.
+
+### Result after the fixes (2026-10-06), awaiting owner approval
+
+Sheets recomposed (`docs/operations/phase28-characters/*_sheet_2000.png`, `prompts.md` regenerated).
+- **Man:** shoulders natural, biceps and chest clearly muscular, head and shoes in the frame, front and
+  back backgrounds match.
+- **Woman:** fitted short-sleeve blouse tucked in, narrow hips, slim straight trousers, shoes in frame.
+- **Not fully achieved, stated to the owner:** the bust reads only moderately full (the model still
+  draws a modest bust under a fitted blouse); her head top is a little tight in the back view.
