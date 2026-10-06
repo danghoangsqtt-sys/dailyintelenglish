@@ -93,3 +93,9 @@ No product code changes.
   picked and locked), plus the duo at 2 seeds.
 - Every prompt is counted with the real CLIP tokenizer first (`--tokens-only`): 55–57 tokens, and the
   negative is 76. Round 2's duo prompt (81) had been truncated.
+
+## Rounds 3 / 3b result (2026-10-06)
+
+- See `docs/operations/phase28-spike-style.md`: 3b is closer to the references, but base SDXL tops out
+  below the "idol" faces.
+- **Waiting for the owner:** approval to download RealVisXL V5.0 (openrail++, ~7 GB) for a side-by-side.

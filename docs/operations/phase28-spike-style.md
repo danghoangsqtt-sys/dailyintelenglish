@@ -62,3 +62,34 @@ for the man). The negative adds blur, bokeh, haze, noise, grain, skin flaws.
   they are written into her single/refine prompts and never into the shared duo prompt; the per-person
   refine then paints her with them and him without. Checked in Task 28.2.
 - Words used for attractiveness describe a polished editorial look; no reference photo's face is copied.
+
+## Round 3 and 3b (owner references: 3 female photos, 4 male photos; white / black single-colour outfits)
+
+**Sheets:** `docs/operations/phase28-spike/r3_sheet_*.png`, `r3b_sheet_*.png` (4 seeds per portrait).
+**Scripts:** `scripts/spike_style_semireal3.py`, `scripts/spike_style_semireal3b.py`. Every prompt and negative
+was counted with the real CLIP tokenizer (all ≤ 77).
+
+- **Round 3** (the round 2 wording + the new hair and colours):
+  - The woman had straight black hair and a white shirt, but a tanned "model" face.
+  - The man had an undercut/pompadour instead of the fringe, an older face, and one white shirt.
+  - The backgrounds were blurred again.
+  - **The duo failed:** swapped colours, extra people, long hair on the man.
+- **Round 3b** (youthful idol-like faces, fair porcelain skin, "deep focus", a two-block fringe, and a
+  negative per character):
+  - **clearly closer to the references:** both are fair and young, she has very long straight black
+    hair and a white shirt, he has a thick fringe covering the forehead;
+  - **the base model's limit:** the faces are pleasant but not "idol" level, and the photos are flat;
+  - **his outfit still drifts** (a jacket, and a grey shirt in 1 of 4).
+  - E1 and E2 now look almost the same.
+- **Duo:** prompt wording alone cannot place two people with locked colours. Task 28.2 must render
+  each person through the existing per-person path (identity reference + regional refine).
+
+## Recommendation: a photoreal SDXL fine-tune (owner approval needed for the download)
+
+- **RealVisXL V5.0** (`SG161222/RealVisXL_V5.0`):
+  - **licence `openrail++`, the same licence as the SDXL base 1.0 already in use**;
+  - diffusers format, drop-in for the current pipeline and IP-Adapter;
+  - about 7 GB (fp16).
+- It is trained for photographic people, the gap seen in round 3b.
+- Plan if approved: the same round 3b prompts, seeds and sheets on RealVisXL, side by side with base.
+- Not recommended: Juggernaut XL (its commercial terms are less clear).
