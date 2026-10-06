@@ -1365,6 +1365,14 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 - [x] 24.6 Remotion polish (crossfade, pan/zoom, inserts)
 - [ ] 24.7 Gate B-16
 
+## Phase 25 — Branded intro and outro (ENH-017)
+
+**Status:** 🟡 Planned 2026-10-06 | Plan `docs/implementation/phase-25-branded-intro-outro.md` (D52–D55).
+
+- [ ] 25.1 Spike: 3 female voice samples + rendered morph intro/outro preview (owner picks the voice, approves the look)
+- [ ] 25.2 Build: greeting/farewell TTS + morph BrandIntro/BrandOutro + soundtrack voices
+- [ ] 25.3 Gate B-18 (owner watches 2 real episodes)
+
 ## Phase 22 — Background music (ENH-016), re-scoped by D50
 
 **Status:** 🟡 Re-scoped 2026-10-05. The owner judged the ACE-Step 1.5 output too poor (22.1 FAIL)
