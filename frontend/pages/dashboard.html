@@ -10,10 +10,16 @@
   <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 <body>
+  <aside id="app-sidebar" class="app-sidebar" aria-label="App navigation">
+    <a class="brand" href="/" aria-label="Daily Beyond English home"><img class="brand-logo" src="/static/brand/logo-64.png" width="36" height="36" alt="" /><span class="brand-word"><b>Daily Beyond</b><small>English</small></span></a>
+    <nav class="side-nav" aria-label="Main"><a class="side-link" href="/" aria-current="page" aria-label="Dashboard" title="Dashboard"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg><span class="side-label">Dashboard</span></a><a class="side-link" href="/characters" aria-label="Character Library" title="Character Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><circle cx="17.2" cy="9.2" r="2.4"/><path d="M16.2 14.3c2.8.3 4.8 2.4 4.8 5.7"/></svg><span class="side-label">Character Library</span></a><a class="side-link" href="/music" aria-label="Music Library" title="Music Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg><span class="side-label">Music Library</span></a><a class="side-link" href="/settings" aria-label="Settings" title="Settings"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span class="side-label">Settings</span></a></nav>
+    <button id="sidebar-toggle" class="side-toggle" type="button" aria-expanded="true" aria-controls="app-sidebar" aria-label="Collapse sidebar" title="Collapse sidebar"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14.5 6-6 6 6 6"/></svg><span class="side-label">Collapse</span></button>
+  </aside>
+  <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+  <script src="/static/js/app_sidebar.js"></script>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="Daily Beyond English dashboard"><img class="brand-logo" src="/static/brand/logo-64.png" width="36" height="36" alt="" /><span class="brand-word"><b>Daily Beyond</b><small>English</small></span></a>
-    <nav class="app-nav" aria-label="Main"><a href="/" aria-current="page">Dashboard</a><a href="/characters">Character Library</a><a href="/music">Music Library</a><a href="/settings">Settings</a></nav>
-    <div class="actions">
+    <button id="sidebar-open" class="sidebar-opener" type="button" aria-controls="app-sidebar" aria-expanded="false" aria-label="Open menu"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <div class="actions">
       <button id="theme-toggle" class="icon-toggle" aria-label="Toggle dark/light mode">☀️</button>
     </div>
   </header>

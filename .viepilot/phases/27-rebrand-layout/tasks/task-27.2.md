@@ -77,3 +77,20 @@ icon rail and remembers its state. The old top-bar links are removed. Behaviour,
 ## Out of scope
 
 The grid libraries (27.3), the studio frame polish (27.4), and the video intro/outro (27.5).
+
+## Implementation notes (2026-10-06)
+
+- Done as planned: `aside#app-sidebar` (brand, 4 links with inline SVG icons, collapse button), the top-bar menu
+  button, `app_sidebar.js`, the CSS; the 11 pages got the same block from one script (a scratch file, not kept).
+  The brand link is named "Daily Beyond English home" (so "dashboard" does not clash with the Dashboard link).
+- **Bugs found by the new tests and the browser, all fixed:**
+  - the opener button had the same class as the body state class (`sidebar-open`), which hid the whole page when
+    the drawer opened: the button class is now `sidebar-opener`;
+  - the script runs right after the sidebar markup, before the top bar exists: the opener is looked up lazily
+    and clicks are delegated;
+  - `body { min-width: 1024px }` (a desktop-only legacy rule) made every page scroll sideways at 700 px: it now
+    applies only from 780 px up, so the drawer and a fluid page are real on narrow screens;
+  - the preview-image rule `.project-thumb img` stretched the small logo in a project card; scoped away;
+  - the project card gradient still used the old indigo colours: now brand greens (tested).
+- Tests: `tests/test_app_sidebar_browser.py` (15), the brand test updated; screenshots in
+  `docs/operations/ui-audit/after-27-2/`.

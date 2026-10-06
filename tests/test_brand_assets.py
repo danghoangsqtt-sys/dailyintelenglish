@@ -57,7 +57,7 @@ def test_every_page_carries_the_new_name_header_and_favicon(page):
     assert "Daily Intel" not in html and ">DI<" not in html and "brand-mark" not in html
     assert html.count('class="brand-logo"') == 1 and 'src="/static/brand/logo-64.png"' in html
     assert "<b>Daily Beyond</b><small>English</small>" in html
-    assert 'aria-label="Daily Beyond English dashboard"' in html
+    assert 'aria-label="Daily Beyond English home"' in html  # "dashboard" would clash with the Dashboard link
     assert '<link rel="icon" href="/static/brand/logo-64.png"' in html
 
 
@@ -74,7 +74,7 @@ def test_the_palette_is_green_and_yellow_and_the_old_violet_is_gone():
                         ("--brand-navy", "#151a5c")):
         assert _token(name, light).lower() == value
     assert "--brand-violet" not in CSS and "--brand-cyan" not in CSS
-    for old in ("124, 58, 237", "#7c3aed", "#6d28d9", "#a78bfa", "34, 211, 238"):
+    for old in ("124, 58, 237", "#7c3aed", "#6d28d9", "#a78bfa", "34, 211, 238", "#1e1b4b", "#312e81", "#0e7490"):
         assert old.lower() not in CSS.lower(), old
     for script in ("step2_script.js", "waveform.js"):
         assert "#7c3aed" not in (FRONTEND / "static" / "js" / script).read_text(encoding="utf-8").lower()
@@ -99,3 +99,9 @@ def test_text_and_buttons_meet_aa_contrast_in_both_themes():
 def test_the_character_form_hint_allows_one_colour_for_both_garments():
     html = (FRONTEND / "pages" / "characters.html").read_text(encoding="utf-8")
     assert "different-colour" not in html and "the same colour for both is fine" in html
+
+
+def test_the_small_logo_in_a_project_card_is_not_stretched_like_a_preview_image():
+    """Found in the browser: `.project-thumb img` (the preview picture rule) also hit the placeholder's logo."""
+    assert ".project-thumb img:not(.thumb-mark)" in CSS
+    assert re.search(r"^\.thumb-mark \{[^}]*width: 30px; height: 30px", CSS, re.M)
