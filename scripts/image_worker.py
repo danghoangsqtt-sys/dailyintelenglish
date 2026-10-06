@@ -28,7 +28,8 @@ registration, no vendor watermark; task-20.2.md Amendment A). Every model fetche
 - `SG161222/RealVisXL_V5.0` (the app's picture model since Phase 28): `openrail++`;
 - `madebyollin/sdxl-vae-fp16-fix`: `mit`;
 - `ByteDance/SDXL-Lightning`: `openrail++`;
-- `h94/IP-Adapter`: `apache-2.0`.
+- `h94/IP-Adapter`: `apache-2.0`;
+- UltraFace face detector (`Linzaer/Ultra-Light-Fast-Generic-Face-Detector-1MB`, Task 28.5): `mit`.
 
 The SDXL pipeline is built with `add_watermarker=False`. diffusers 0.40.0 would otherwise
 add an invisible watermark whenever the optional `invisible-watermark` package happens to be
@@ -138,6 +139,83 @@ CONTROLNET_OPENPOSE_REPO = "xinsir/controlnet-openpose-sdxl-1.0"
 ANIME_SEG_REPO = "skytnt/anime-seg"
 ANIME_SEG_ONNX = "isnetis.onnx"  # 176,069,933 B
 ANIME_SEG_SIZE = 1024
+
+# Task 28.5: counting the people of a shot on photographs. The anime cut-out above cannot (it said 0.0 on a market full
+# of vendors); a small face detector can. UltraFace "version-RFB-320": MIT licence, 1,270,727 bytes, pinned to a commit
+# and checked by SHA-256. Input 320 x 240, (pixel - 127) / 128; outputs `scores` (softmax, column 1 = face) and `boxes`
+# (normalised corners). It runs on the CPU with the onnxruntime that anime-seg already needs.
+FACE_MODEL_COMMIT = "0f9ca4a9fc80170fd505168fd1132b837141f7df"
+FACE_MODEL_URL = (
+    "https://raw.githubusercontent.com/Linzaer/Ultra-Light-Fast-Generic-Face-Detector-1MB/"
+    f"{FACE_MODEL_COMMIT}/models/onnx/version-RFB-320.onnx"
+)
+FACE_MODEL_BYTES = 1_270_727
+FACE_MODEL_SHA256 = "34cd7e60aeff28744c657de7a3dc64e872d506741de66987f3426f2b79f88017"
+FACE_MODEL_PATH = MODEL_CACHE_DIR / "face" / "ultraface-rfb-320.onnx"
+_FACE_SESSION: Any = None
+
+
+def _face_model_ok(path: Path) -> bool:
+    import hashlib
+
+    return (path.is_file() and path.stat().st_size == FACE_MODEL_BYTES
+            and hashlib.sha256(path.read_bytes()).hexdigest() == FACE_MODEL_SHA256)
+
+
+def ensure_face_model(path: Path = FACE_MODEL_PATH) -> Path:
+    """The pinned face model, downloaded once when it is missing (size and SHA-256 checked)."""
+    if _face_model_ok(path):
+        return path
+    import urllib.request
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_suffix(".part")
+    with urllib.request.urlopen(FACE_MODEL_URL, timeout=60) as response:  # noqa: S310  (a pinned https URL)
+        partial.write_bytes(response.read())
+    if not _face_model_ok(partial):
+        partial.unlink(missing_ok=True)
+        raise RuntimeError("the face model download failed its size or SHA-256 check")
+    partial.replace(path)
+    return path
+
+
+def detect_faces(image_path: str | Path, threshold: float = 0.7, iou: float = 0.3) -> list[list[float]]:
+    """Faces of a picture as `[x1, y1, x2, y2, score]` in pixels (confidence cut, then greedy NMS)."""
+    global _FACE_SESSION
+    import numpy as np
+    from PIL import Image
+
+    if _FACE_SESSION is None:
+        import onnxruntime
+
+        options = onnxruntime.SessionOptions()
+        options.log_severity_level = 3  # the model's initialisers trigger harmless warnings
+        _FACE_SESSION = onnxruntime.InferenceSession(str(ensure_face_model()), options,
+                                                     providers=["CPUExecutionProvider"])
+    with Image.open(image_path) as source:
+        rgb = source.convert("RGB")
+    width, height = rgb.size
+    net_input = ((np.asarray(rgb.resize((320, 240)), dtype=np.float32) - 127.0) / 128.0).transpose(2, 0, 1)[None]
+    scores, boxes = _FACE_SESSION.run(None, {_FACE_SESSION.get_inputs()[0].name: net_input})
+    confidence, corners = scores[0][:, 1], boxes[0]
+    keep = confidence > threshold
+    confidence, corners = confidence[keep], corners[keep]
+    kept: list[list[float]] = []
+    for index in np.argsort(-confidence):
+        box = corners[index]
+        overlaps = False
+        for other in kept:
+            x1, y1 = max(box[0], other[0]), max(box[1], other[1])
+            x2, y2 = min(box[2], other[2]), min(box[3], other[3])
+            inter = max(0.0, x2 - x1) * max(0.0, y2 - y1)
+            union = (box[2] - box[0]) * (box[3] - box[1]) + (other[2] - other[0]) * (other[3] - other[1]) - inter
+            if union > 0 and inter / union >= iou:
+                overlaps = True
+                break
+        if not overlaps:
+            kept.append([float(box[0]), float(box[1]), float(box[2]), float(box[3]), float(confidence[index])])
+    return [[round(x1 * width, 1), round(y1 * height, 1), round(x2 * width, 1), round(y2 * height, 1), round(score, 3)]
+            for x1, y1, x2, y2, score in kept]
 # Task 20.2c: "controlnet_inpaint" = pose-controlled M2 (a character painted into a scene).
 PIPELINE_KINDS = ("text2img", "controlnet", "inpaint", "controlnet_inpaint")
 
@@ -680,6 +758,14 @@ class ImageWorker:
                 "foreground_fraction": round(float((alpha_arr > 127).mean()), 4),
                 "soft_edge_fraction": round(float(((alpha_arr > 10) & (alpha_arr < 245)).mean()), 4)}
 
+    def count_faces(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Task 28.5: how many faces a picture shows (the people in a shot)."""
+        started = time.monotonic()
+        boxes = detect_faces(request["input_path"], float(request.get("threshold", 0.7)),
+                             float(request.get("iou", 0.3)))
+        return {"status": "ok", "faces": len(boxes), "boxes": boxes,
+                "wall_time_sec": round(time.monotonic() - started, 3)}
+
     def stats(self) -> dict[str, Any]:
         torch = self.torch
         return {
@@ -722,6 +808,7 @@ def _handle(worker: ImageWorker, request: dict[str, Any]) -> dict[str, Any]:
         "generate": worker.generate,
         "encode": worker.encode,
         "remove_background": worker.remove_background,
+        "count_faces": worker.count_faces,
     }
     if command in handlers:
         return handlers[command](request)

@@ -163,42 +163,56 @@ COLOUR_RETRY_STRENGTH = 0.8
 EXTRA_PERSON_SEED_STEP = 7919
 
 
-async def _gap_score(session, image_path: Path, cutout_path: Path, box: tuple[int, int, int, int]) -> float:
-    await session.request({"command": "remove_background", "input_path": str(image_path),
-                           "output_path": str(cutout_path)})
+async def _count_faces(session, image_path: Path, expected: int) -> int:
+    """Task 28.5: the faces a picture shows (the fake engine answers `expected_faces`)."""
+    response = await session.request({"command": "count_faces", "input_path": str(image_path),
+                                      "expected_faces": expected})
+    return int(response["faces"])
 
-    def score() -> float:
-        with Image.open(cutout_path) as cutout:
-            return shot_checks.gap_occupancy(cutout, box)
 
-    return await asyncio.to_thread(score)
+def face_note(faces: int, people: int) -> str | None:
+    """The review note for a shot that shows more faces than people, or None."""
+    if not shot_checks.extra_faces(faces, people):
+        return None
+    return f"{faces} {'face' if faces == 1 else 'faces'} found for {people} {'person' if people == 1 else 'people'}"
+
+
+def colour_notes(character: dict, result: dict) -> list[str]:
+    """Review notes for the garments of one person that still miss their locked colour."""
+    notes = []
+    for part in ("top", "bottom"):
+        entry = result.get(part)
+        if entry and not entry.get("ok", True):
+            notes.append(f"{character['name']}'s {part} is not {entry['expected']}")
+    return notes
 
 
 async def _extra_person_pass(session, runner: ImageJobRunner, job: dict, context: dict, payload: dict,
                              progress: int) -> None:
-    """Task 20.11: a duo raw whose head-level gap is filled (a third person) is re-rendered with
-    a new seed, at most VISUALS_EXTRA_PERSON_RETRIES times; the emptiest render is kept."""
+    """Task 28.5 (was the anime cut-out of Task 20.11): a raw that shows more faces than the people of the shot is
+    re-rendered with a new seed, at most VISUALS_EXTRA_PERSON_RETRIES times; the render with the fewest extra faces
+    is kept (the earliest on a tie). Singles are checked too."""
     folder, raw_path = context["folder"], context["raw"]
-    box = shot_checks.head_gap_box(context["people"], SIZE)
-    if box is None:
-        return
+    people = len(context["people"])
     seed = context["row"]["seed"]
-    tries = [{"seed": seed, "path": raw_path,
-              "score": await _gap_score(session, raw_path, folder / "cutout_0.png", box)}]
-    while tries[-1]["score"] >= shot_checks.EXTRA_PERSON_THRESHOLD and len(tries) <= settings.VISUALS_EXTRA_PERSON_RETRIES:
+    tries = [{"seed": seed, "path": raw_path, "faces": await _count_faces(session, raw_path, people)}]
+
+    def extra(item: dict) -> int:
+        return shot_checks.extra_faces(item["faces"], people)
+
+    while extra(tries[-1]) and len(tries) <= settings.VISUALS_EXTRA_PERSON_RETRIES:
         attempt = len(tries)
         await runner.boundary(job["id"], f"extra person retry ({attempt})", progress)
         path = folder / f"raw_retry_{attempt}.png"
         retry_seed = seed + EXTRA_PERSON_SEED_STEP * attempt
         await session.request({**payload, "seed": retry_seed, "output_path": str(path)})
-        tries.append({"seed": retry_seed, "path": path,
-                      "score": await _gap_score(session, path, folder / f"cutout_{attempt}.png", box)})
-    best = min(tries, key=lambda item: item["score"])
+        tries.append({"seed": retry_seed, "path": path, "faces": await _count_faces(session, path, people)})
+    best = min(tries, key=extra)
     if best["path"] != raw_path:
         await asyncio.to_thread(shutil.copyfile, best["path"], raw_path)
         context["row"] = {**context["row"], "seed": best["seed"]}
-    report = {"threshold": shot_checks.EXTRA_PERSON_THRESHOLD, "box": box, "chosen_seed": best["seed"],
-              "tries": [{"seed": item["seed"], "score": item["score"]} for item in tries]}
+    report = {"people": people, "chosen_seed": best["seed"],
+              "tries": [{"seed": item["seed"], "faces": item["faces"]} for item in tries]}
     await asyncio.to_thread((folder / "extra_person_check.json").write_text, json.dumps(report, indent=1), "utf-8")
 
 
@@ -240,6 +254,8 @@ async def _colour_pass(session, runner: ImageJobRunner, job: dict, context: dict
             current = destination
             result = await asyncio.to_thread(_colour_result, current, person, character, check_bottom)
         report.append({"person": index, "attempts": attempts, **result})
+        if not result["ok"]:  # still wrong after the retries: the user is told (Task 28.5)
+            context.setdefault("review", []).extend(colour_notes(character, result))
     await asyncio.to_thread(
         (folder / "colour_check.json").write_text, json.dumps(report, indent=1), "utf-8",
     )
@@ -435,7 +451,7 @@ async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows
                 payload["ip_adapter_scene_scale"] = settings.VISUALS_SCENE_REFERENCE_SCALE
             response = await session.request(payload)
             context["raw"] = raw_path
-            if row["kind"] != "single" and settings.VISUALS_EXTRA_PERSON_RETRIES > 0:
+            if settings.VISUALS_EXTRA_PERSON_RETRIES > 0:
                 await _extra_person_pass(session, runner, job, context, payload, progress())
             async with write_transaction(db):
                 await db.execute(
@@ -500,10 +516,16 @@ async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows
                     completed += 1
             final_path = folder / "final.png"
             await asyncio.to_thread(shutil.copyfile, current, final_path)
+            notes = list(context.get("review", []))
+            faces_note = face_note(await _count_faces(session, final_path, len(context["people"])),
+                                   len(context["people"]))
+            if faces_note:
+                notes.append(faces_note)
             async with write_transaction(db):
                 await db.execute(
-                    "UPDATE project_shots SET final_path = ?, status = 'complete', updated_at = ? WHERE id = ?",
-                    (str(final_path), library._now(), row["id"]),
+                    "UPDATE project_shots SET final_path = ?, status = 'complete', review_note = ?, updated_at = ? "
+                    "WHERE id = ?",
+                    (str(final_path), "; ".join(notes) or None, library._now(), row["id"]),
                 )
     await runner.boundary(job["id"], "shots complete", 99)
     return {"shot_ids": [context["row"]["id"] for context in inserts + contexts]}

@@ -196,6 +196,8 @@ class FakeImageEngine:
             await asyncio.to_thread(_transparent_png, Path(payload["input_path"]), Path(payload["output_path"]))
             return {"status": "ok", "output_path": str(payload["output_path"]), "wall_time_sec": 0.0,
                     "foreground_fraction": 0.0, "soft_edge_fraction": 0.0}
+        if command == "count_faces":  # a clean shot: as many faces as people (tests script other answers)
+            return {"status": "ok", "faces": int(payload.get("expected_faces", 0)), "boxes": [], "wall_time_sec": 0.0}
         raise ValueError(f"unsupported fake image command: {command}")
 
 

@@ -531,6 +531,14 @@
           warning.textContent = "⚠ description too long";
           card.append(warning);
         }
+        if (shot.review_note) { // Task 28.5: it still failed a check after the retries: the user decides
+          card.classList.add("needs-review");
+          const review = document.createElement("p");
+          review.className = "visual-review";
+          review.setAttribute("role", "status");
+          review.textContent = `⚠ Check this shot: ${shot.review_note}. Press Regenerate to try again.`;
+          card.append(review);
+        }
         const actions = document.createElement("div");
         actions.className = "library-actions";
         const toggle = document.createElement("button");
@@ -544,7 +552,7 @@
         });
         const regenerate = document.createElement("button");
         regenerate.type = "button";
-        regenerate.className = "btn btn-ghost btn-sm";
+        regenerate.className = shot.review_note ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm";
         regenerate.textContent = "↻ Regenerate";
         regenerate.disabled = state.visualBusy || !visualGenerationAllowed();
         regenerate.title = visualGenerationHint();
