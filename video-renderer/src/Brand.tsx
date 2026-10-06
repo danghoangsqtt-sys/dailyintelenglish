@@ -98,14 +98,17 @@ function Background({ morph }: { morph: number }) {
   );
 }
 
-/** The logo mark + wordmark, morphing between a centred hero layout (0) and a top-left header (1). */
-function Logo({ morph, appear }: { morph: number; appear: number }) {
+/** The logo mark + wordmark, morphing between a centred hero layout (0) and a top-left header (1).
+ * The mark and the wordmark have their own progress: the mark leads into the header and the
+ * wordmark follows (reversed in the outro), so the moving text never slides under the mark. */
+function Logo({ markMorph, wordMorph, appear }: { markMorph: number; wordMorph: number; appear: number }) {
+  const morph = markMorph;
   const markSize = mix(150, 76, morph);
   const markX = mix(640 - 75, 56, morph);
   const markY = mix(190, 36, morph);
-  const wordX = mix(640, 56 + 76 + 20, morph);
-  const wordY = mix(380, 40, morph);
-  const wordSize = mix(64, 34, morph);
+  const wordX = mix(640, 56 + 76 + 26, wordMorph);
+  const wordY = mix(380, 40, wordMorph);
+  const wordSize = mix(64, 34, wordMorph);
   return (
     <>
       <div style={{
@@ -117,9 +120,10 @@ function Logo({ morph, appear }: { morph: number; appear: number }) {
         fontFamily: BRAND_FONT, fontWeight: 800, color: INK, fontSize: markSize * 0.42, letterSpacing: -1,
       }}>DI</div>
       <div style={{
-        position: "absolute", left: wordX, top: wordY, transform: `translateX(${mix(-50, 0, morph)}%)`,
+        // The centring shift finishes early, so the moving wordmark never slides under the mark.
+        position: "absolute", left: wordX, top: wordY, transform: `translateX(${mix(-50, 0, Math.min(1, wordMorph * 1.6))}%)`,
         opacity: appear, fontFamily: BRAND_FONT, color: INK, whiteSpace: "nowrap",
-        textAlign: morph < 0.5 ? "center" : "left",
+        textAlign: wordMorph < 0.5 ? "center" : "left",
       }}>
         <div style={{ fontSize: wordSize, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.05 }}>Daily Intel</div>
         <div style={{ fontSize: Math.max(14, wordSize * 0.42), fontWeight: 700, letterSpacing: wordSize * 0.16,
@@ -150,7 +154,8 @@ export function BrandIntro({ title, topic, cefrLevel, speakers, brand }: {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const appear = useMorph(0.15, 14, 0.9);
-  const morph = useMorph(1.7, 20, 1.1);
+  const markMorph = useMorph(1.55, 20, 0.85);
+  const morph = useMorph(1.75, 20, 1.1);
   const titleIn = useMorph(2.3, 18, 0.9);
   const metaIn = useMorph(2.6, 18, 0.9);
   const wishIn = useMorph(3.4, 18, 0.9);
@@ -160,7 +165,7 @@ export function BrandIntro({ title, topic, cefrLevel, speakers, brand }: {
   return (
     <AbsoluteFill style={{ opacity: exit }}>
       <Background morph={morph} />
-      <Logo morph={morph} appear={appear} />
+      <Logo markMorph={markMorph} wordMorph={morph} appear={appear} />
       <div style={{ position: "absolute", left: 0, right: 0, top: 230, textAlign: "center", fontFamily: BRAND_FONT }}>
         <div style={{ ...rise(titleIn), fontSize: 62, fontWeight: 800, color: INK, letterSpacing: -1, padding: "0 120px" }}>
           {title}
@@ -196,7 +201,9 @@ export function BrandOutro({ brand }: { brand?: EpisodeBrand }) {
   const { fps, durationInFrames } = useVideoConfig();
   const enter = interpolate(frame, [0, Math.round(0.6 * fps)], [0, 1], { extrapolateRight: "clamp" });
   const appear = useMorph(0.2, 14, 0.9);
-  const morph = 1 - useMorph(0.2, 20, 1.1); // the header logo glides back to the centre
+  // The header logo glides back to the centre: the wordmark leaves first, the mark follows.
+  const morph = 1 - useMorph(0.2, 20, 1.1);
+  const markMorph = 1 - useMorph(0.4, 20, 1.0);
   const lift = useMorph(1.5, 20, 1.0);
   const lineIn = useMorph(2.8, 18, 0.9);
   const chips = ["👍  Like", "🔔  Subscribe", "↗  Share"];
@@ -207,7 +214,7 @@ export function BrandOutro({ brand }: { brand?: EpisodeBrand }) {
     <AbsoluteFill style={{ opacity: enter * exit }}>
       <Background morph={1 - morph} />
       <div style={{ position: "absolute", inset: 0, transform: `translateY(${mix(0, -70, lift)}px)` }}>
-        <Logo morph={morph} appear={appear} />
+        <Logo markMorph={markMorph} wordMorph={morph} appear={appear} />
       </div>
       <div style={{ position: "absolute", left: 0, right: 0, top: 440, textAlign: "center", fontFamily: BRAND_FONT }}>
         <div style={{ ...rise(lift), fontSize: 46, fontWeight: 800, color: INK }}>Thanks for watching!</div>
