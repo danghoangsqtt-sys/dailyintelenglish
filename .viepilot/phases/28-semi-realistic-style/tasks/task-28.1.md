@@ -141,3 +141,12 @@ and one face per character** (seeds 7, 21, 42, 99 in the sheets). Task 28.1 clos
 Round 5 overshot (harsh, older, tanned). Round 6 is fair, young and refined: 12 images,
 `docs/operations/phase28-spike/r6_sheet_male_refined.png`. **Waiting for the owner's pick** of one man
 (variant + seed) and one woman (round 4 seed).
+
+## Owner picks (2026-10-06) -- Task 28.1 closed
+
+- **Look:** editorial photograph, crisp, on **RealVisXL V5.0** (replaces SDXL base for pictures).
+- **Woman:** the round 4 face. Reference face: round 4 sheet, E1 bright, seed 21.
+- **Man:** round 6 row 3 (`N3_soft`). Reference face: seed 42 (column 3), the pick recommended in the
+  report; the owner pointed at the row, so any other column is a quick redo.
+- Next: Task 28.2 (character reference sheets). Verified: 12 + 16 + 12 images checked by eye, every
+  prompt within 77 CLIP tokens.

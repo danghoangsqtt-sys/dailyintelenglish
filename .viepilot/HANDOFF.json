@@ -232,9 +232,9 @@
     "28": {
       "name": "Semi-realistic picture style (ENH-019)",
       "status": "planned",
-      "tasks_done": 0,
-      "tasks_total": 4,
-      "note": "Planned 2026-10-06 (D58,D59); spike 28.1 first."
+      "tasks_done": 1,
+      "tasks_total": 5,
+      "note": "28.1 done (RealVisXL V5.0 approved, look + faces picked 2026-10-06); 28.2 character sheets in progress."
     }
   },
   "key_decisions": [
