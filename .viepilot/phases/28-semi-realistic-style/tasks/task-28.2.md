@@ -159,3 +159,12 @@ The owner agreed to option 1 (draw a body map and add the control model it needs
 - Clothed, buttoned blouse; the depth map is a smooth torso shape, not a nude body.
 - Acceptance: the owner approves the bust size on the woman's sheet. The previous sheets stay in git
   history (commit "Task 28.2 sheets after round 4").
+
+### Body map result and a speed fix (2026-10-06)
+
+- The first image with the depth control confirmed the method: a visibly fuller bust, a narrow waist and
+  narrow hips, in the same fitted buttoned blouse.
+- **Problem found:** OpenPose and depth ControlNets together overflowed the 12 GB card: 1173 s for one
+  image (about 20 times slower). **Fix:** one ControlNet at a time. The depth map already holds the
+  silhouette, so the woman's full-front panel uses the depth control alone (scale 0.9) and the other
+  panels keep the skeleton. Her frame is lowered (nose 0.07) so the head is not cut.

@@ -36,7 +36,7 @@ CHARACTERS = {
         "ref": ROOT / "data/tmp/style-realvis/presenter_E1_bright_s21.png",
         "crop": (0.26, 0.10, 0.76, 0.62),
         "bg": "white",
-        "shoulder": 0.80, "hip": 0.55, "full_sh": 0.85, "full_hip": 0.40, "neck_y": 0.65, "sh_y": 0.95, "bust": 1.0, "full": (0.05, 0.115),
+        "shoulder": 0.80, "hip": 0.55, "full_sh": 0.85, "full_hip": 0.40, "neck_y": 0.65, "sh_y": 0.95, "bust": 1.0, "full": (0.07, 0.11),
         "identity": "voluptuous busty young Vietnamese woman, very long straight black hair, fair skin",
         "outfit": "tight white blouse stretched across the chest, slim white trousers, white shoes",
         "negative": "black clothes, colorful clothes, short hair, tan skin, grey clothes, wide hips, flared trousers, small bust, flat chest",
@@ -152,7 +152,7 @@ def pose_map(char: dict, panel: str):
     return geo.draw_pose_pixels(out, size)
 
 
-DEPTH_SCALE = {"full_front": 0.5}  # panels that get the torso depth control (the others use a black map, scale 0)
+DEPTH_SCALE = {"full_front": 0.9}  # panels that get the torso depth control (the others use a black map, scale 0)
 
 
 def depth_map(char: dict, panel: str):
@@ -204,7 +204,8 @@ def tokens_only() -> int:
     return 1 if worst > 77 else 0
 
 
-def build():
+def build(control: str = "pose"):
+    """One ControlNet at a time ("pose" or "depth"): two together overflowed the 12 GB card (19 minutes an image)."""
     import torch
     from diffusers import (AutoencoderKL, ControlNetModel, EulerAncestralDiscreteScheduler,
                            StableDiffusionXLControlNetPipeline)
@@ -213,8 +214,8 @@ def build():
     vae = AutoencoderKL.from_pretrained(snapshot_download("madebyollin/sdxl-vae-fp16-fix",
                                         allow_patterns=["config.json", "diffusion_pytorch_model.safetensors"]),
                                         torch_dtype=torch.float16)
-    controlnet = [ControlNetModel.from_pretrained("xinsir/controlnet-openpose-sdxl-1.0", torch_dtype=torch.float16),
-                  ControlNetModel.from_pretrained("xinsir/controlnet-depth-sdxl-1.0", torch_dtype=torch.float16)]
+    repo = {"pose": "xinsir/controlnet-openpose-sdxl-1.0", "depth": "xinsir/controlnet-depth-sdxl-1.0"}[control]
+    controlnet = ControlNetModel.from_pretrained(repo, torch_dtype=torch.float16)
     pipe = StableDiffusionXLControlNetPipeline.from_pretrained(
         next(REALVIS.iterdir()), vae=vae, controlnet=controlnet, torch_dtype=torch.float16, variant="fp16",
         use_safetensors=True, add_watermarker=False)
@@ -242,7 +243,17 @@ def face_crop(char: dict, key: str):
 def generate(seeds: list[int], only: list[str], panels: list[str]) -> int:
     import torch
     CAND.mkdir(parents=True, exist_ok=True)
-    pipe = build()
+    pipes: dict = {}
+
+    def pipe_for(mode: str):
+        import gc
+        if mode not in pipes:
+            pipes.clear()
+            gc.collect()
+            torch.cuda.empty_cache()
+            pipes[mode] = build(mode)
+        return pipes[mode]
+
     log = []
     for key, char in CHARACTERS.items():
         if only and key not in only:
@@ -252,18 +263,20 @@ def generate(seeds: list[int], only: list[str], panels: list[str]) -> int:
             if panels and panel not in panels:
                 continue
             prompt, negative = prompt_for(char, panel)
+            depth = depth_map(char, panel)
+            use_depth = bool(depth.getbbox())  # the depth map holds the silhouette (and the bust), so it replaces the skeleton
+            pipe = pipe_for("depth" if use_depth else "pose")
             pipe.set_ip_adapter_scale(scale)
             for seed in seeds:
                 started = time.monotonic()
-                control = pose_map(char, panel)
-                control.save(CAND / f"pose_{key}_{panel}.png")
-                depth = depth_map(char, panel)
-                if depth.getbbox():
-                    depth.save(CAND / f"depth_{key}_{panel}.png")
-                depth_scale = DEPTH_SCALE.get(panel, 0.0) if depth.getbbox() else 0.0
-                image = pipe(prompt=prompt, negative_prompt=negative, ip_adapter_image=ref,
-                             image=[control, depth.convert("RGB")],
-                             controlnet_conditioning_scale=[POSE_SCALE[panel], depth_scale], width=width,
+                if use_depth:
+                    control, control_scale = depth.convert("RGB"), DEPTH_SCALE[panel]
+                    control.save(CAND / f"depth_{key}_{panel}.png")
+                else:
+                    control, control_scale = pose_map(char, panel), POSE_SCALE[panel]
+                    control.save(CAND / f"pose_{key}_{panel}.png")
+                image = pipe(prompt=prompt, negative_prompt=negative, ip_adapter_image=ref, image=control,
+                             controlnet_conditioning_scale=control_scale, width=width,
                              height=height, num_inference_steps=35, guidance_scale=6.5,
                              generator=torch.Generator("cpu").manual_seed(seed)).images[0]
                 image.save(CAND / f"{key}_{panel}_s{seed}.png")
