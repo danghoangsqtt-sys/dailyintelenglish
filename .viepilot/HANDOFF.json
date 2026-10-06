@@ -221,6 +221,20 @@
       "tasks_done": 2,
       "tasks_total": 3,
       "note": "25.1 owner PASS (Jenny, look, Montserrat); 25.2 done (real render exact length, 1420 passed); next Gate B-18."
+    },
+    "27": {
+      "name": "Rebrand + Canva/CapCut-style layout (ENH-018)",
+      "status": "planned",
+      "tasks_done": 0,
+      "tasks_total": 6,
+      "note": "Planned 2026-10-06 (D57,D60-D62); prototype in .viepilot/ui-direction/session-2026-10-06."
+    },
+    "28": {
+      "name": "Semi-realistic picture style (ENH-019)",
+      "status": "planned",
+      "tasks_done": 0,
+      "tasks_total": 4,
+      "note": "Planned 2026-10-06 (D58,D59); spike 28.1 first."
     }
   },
   "key_decisions": [

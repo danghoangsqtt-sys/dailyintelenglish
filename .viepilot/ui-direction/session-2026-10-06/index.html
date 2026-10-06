@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Daily Beyond English — layout prototype</title>
+<style>
+  @font-face { font-family: "Montserrat"; src: url("../../../frontend/static/fonts/Montserrat-Variable.ttf"); font-weight: 100 900; }
+  :root {
+    --green: #3a9d3f; --green-dark: #1f6b2a; --lime: #9bd13c; --yellow: #ffd60a; --red: #e5322d; --navy: #151a5c;
+    --rail: #0f2a1a; --rail-2: #173b25; --rail-ink: #cfe8d5;
+    --bg: #f4f6f2; --card: #ffffff; --line: #dfe5dc; --ink: #14201a; --muted: #5b6b61;
+    --radius: 14px; --shadow: 0 8px 24px rgba(15, 42, 26, .10);
+    font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); }
+  h1, h2, h3, .display { font-family: "Montserrat", "Inter", sans-serif; letter-spacing: -.01em; }
+  .app { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; transition: grid-template-columns .2s ease; }
+  .app.collapsed { grid-template-columns: 72px 1fr; }
+
+  /* ---------- sidebar rail ---------- */
+  .rail { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 6px; padding: 14px 12px; background: var(--rail); color: var(--rail-ink); overflow: hidden; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 6px 14px; color: #fff; text-decoration: none; }
+  .brand img { width: 40px; height: 40px; flex: none; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255, 255, 255, .25); }
+  .brand b { font-family: Montserrat, sans-serif; font-size: 15px; line-height: 1.05; font-weight: 800; white-space: nowrap; }
+  .brand small { display: block; color: var(--yellow); font-size: 10px; font-weight: 800; letter-spacing: .18em; }
+  .rail button.nav { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 0; border-radius: 10px; background: transparent; color: inherit; font: 600 14px inherit; font-family: inherit; text-align: left; cursor: pointer; white-space: nowrap; }
+  .rail button.nav:hover { background: var(--rail-2); }
+  .rail button.nav.active { background: linear-gradient(135deg, var(--green), var(--green-dark)); color: #fff; box-shadow: 0 6px 16px rgba(58, 157, 63, .35); }
+  .rail .ico { width: 22px; flex: none; text-align: center; font-size: 17px; }
+  .rail .sep { margin: 10px 8px 4px; font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #7fa68a; white-space: nowrap; }
+  .rail .grow { flex: 1; }
+  .collapsed .label, .collapsed .brand b, .collapsed .sep { display: none; }
+  .collapsed .rail button.nav { justify-content: center; padding-inline: 0; }
+
+  /* ---------- main ---------- */
+  .main { min-width: 0; display: flex; flex-direction: column; }
+  .top { display: flex; align-items: center; gap: 14px; padding: 12px 24px; background: #fff; border-bottom: 1px solid var(--line); }
+  .top .crumb { font-family: Montserrat, sans-serif; font-weight: 800; font-size: 18px; }
+  .search { flex: 1; max-width: 460px; margin-left: 12px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--muted); font-size: 14px; }
+  .btn { padding: 9px 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font: 700 13px inherit; font-family: inherit; cursor: pointer; }
+  .btn.primary { border-color: transparent; background: linear-gradient(135deg, var(--green), var(--green-dark)); color: #fff; box-shadow: 0 6px 16px rgba(58, 157, 63, .3); }
+  .btn.yellow { border-color: transparent; background: var(--yellow); color: #3a2f00; }
+  .view { display: none; }
+  .view.on { display: block; }
+
+  /* ---------- library ---------- */
+  .lib { display: grid; grid-template-columns: 1fr 340px; gap: 0; }
+  .lib-body { padding: 24px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tab { padding: 8px 18px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: 700 14px inherit; font-family: inherit; cursor: pointer; }
+  .tab.on { background: var(--ink); color: #fff; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .chip { padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--muted); font: 600 13px inherit; font-family: inherit; cursor: pointer; }
+  .chip.on { border-color: var(--green); background: #eaf6e8; color: var(--green-dark); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
+  .tile { overflow: hidden; border: 2px solid transparent; border-radius: var(--radius); background: var(--card); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+  .tile:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .tile.sel { border-color: var(--green); box-shadow: 0 0 0 3px rgba(58, 157, 63, .25); }
+  .tile .img { position: relative; aspect-ratio: 16 / 10; background: #dde6da center / cover; }
+  .tile.portrait .img { aspect-ratio: 4 / 5; }
+  .tile .tag { position: absolute; left: 8px; top: 8px; padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, .92); font-size: 11px; font-weight: 800; }
+  .tile .tag.lock { background: var(--yellow); }
+  .tile .meta { padding: 10px 12px 12px; }
+  .tile .meta b { display: block; font-size: 14px; }
+  .tile .meta span { color: var(--muted); font-size: 12px; }
+  .tile.add .img { display: grid; place-items: center; background: #eaf6e8; color: var(--green-dark); font-size: 40px; border-bottom: 0; }
+  .detail { padding: 22px; border-left: 1px solid var(--line); background: #fff; position: sticky; top: 0; align-self: start; min-height: calc(100vh - 62px); }
+  .detail .hero { aspect-ratio: 4 / 3; border-radius: var(--radius); background: #dde6da center / cover; }
+  .detail h2 { margin: 16px 0 4px; font-size: 22px; }
+  .detail .sub { color: var(--muted); font-size: 13px; }
+  .detail dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 18px 0; font-size: 13px; }
+  .detail dt { color: var(--muted); }
+  .detail dd { margin: 0; font-weight: 700; }
+  .detail .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* ---------- studio (CapCut) ---------- */
+  .studio { display: grid; grid-template-columns: 280px 1fr 300px; grid-template-rows: 1fr 190px; height: calc(100vh - 62px); background: #0e1a13; color: #e7f2ea; }
+  .studio > div { min-width: 0; padding: 14px; overflow: hidden; }
+  .st-left { grid-column: 1; grid-row: 1 / 3; background: #12231a; border-right: 1px solid #1d3326; }
+  .st-right { grid-column: 3; grid-row: 1 / 3; background: #12231a; border-left: 1px solid #1d3326; }
+  .st-mid { grid-column: 2; grid-row: 1; display: grid; place-items: center; background: #0a130e; }
+  .st-time { grid-column: 2; grid-row: 2; background: #12231a; border-top: 1px solid #1d3326; }
+  .st-left h3, .st-right h3 { margin: 0 0 10px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: #8fb59a; }
+  .mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mini div { aspect-ratio: 16 / 10; border-radius: 8px; background: #2a4332 center / cover; }
+  .preview { position: relative; width: min(100%, 720px); aspect-ratio: 16 / 9; border-radius: 10px; background: #222 center / cover; box-shadow: 0 20px 50px rgba(0, 0, 0, .5); }
+  .preview .cap { position: absolute; left: 6%; right: 6%; bottom: 7%; padding: 8px 12px; border-radius: 8px; background: rgba(0, 0, 0, .55); font-size: 15px; font-weight: 700; text-align: center; }
+  .lane { display: flex; align-items: center; gap: 6px; height: 30px; margin-bottom: 7px; }
+  .lane label { width: 64px; flex: none; color: #8fb59a; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+  .lane i { height: 24px; border-radius: 6px; background: #2f7d3a; font-size: 0; }
+  .lane.m i { background: #b08900; } .lane.v i { background: #1d6fb8; } .lane.p i { background: #7b4fc9; }
+  .field { margin-bottom: 12px; }
+  .field span { display: block; margin-bottom: 5px; color: #8fb59a; font-size: 12px; font-weight: 700; }
+  .field div { padding: 8px 10px; border: 1px solid #28402f; border-radius: 8px; background: #0e1a13; font-size: 13px; }
+  .note { margin: 18px 24px; padding: 12px 16px; border: 1px dashed #9bd13c; border-radius: 12px; background: #f1f9ea; color: #2b4a1f; font-size: 13px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="rail" aria-label="Main navigation">
+    <a class="brand" href="#"><img src="img/logo.png" alt="Daily Beyond English" /><b>Daily Beyond<small>ENGLISH</small></b></a>
+    <button class="nav" data-view="home"><span class="ico">🏠</span><span class="label">Projects</span></button>
+    <button class="nav" data-view="studio"><span class="ico">🎬</span><span class="label">Studio</span></button>
+    <div class="sep">Libraries</div>
+    <button class="nav active" data-view="library"><span class="ico">🧑‍🏫</span><span class="label">Characters &amp; scenes</span></button>
+    <button class="nav" data-view="home"><span class="ico">🎵</span><span class="label">Music</span></button>
+    <div class="grow"></div>
+    <button class="nav" data-view="home"><span class="ico">⚙️</span><span class="label">Settings</span></button>
+    <button class="nav" id="collapse"><span class="ico">◀</span><span class="label">Collapse</span></button>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <span class="crumb" id="crumb">Characters &amp; scenes</span>
+      <div class="search">🔍 Search characters, places, tracks…</div>
+      <button class="btn">Import</button>
+      <button class="btn primary">＋ New</button>
+    </header>
+
+    <!-- LIBRARY -->
+    <section class="view on" id="library">
+      <div class="lib">
+        <div class="lib-body">
+          <div class="tabs"><button class="tab on" data-tab="chars">Characters</button><button class="tab" data-tab="scenes">Scenes</button></div>
+          <div id="chars">
+            <div class="chips"><button class="chip on">All</button><button class="chip">Presenters</button><button class="chip">Adults</button><button class="chip">Students</button><button class="chip">Locked</button></div>
+            <div class="grid">
+              <div class="tile add portrait"><div class="img">＋</div><div class="meta"><b>New character</b><span>Describe, generate, lock</span></div></div>
+              <div class="tile portrait sel" data-name="Lan" data-sub="Presenter · English teacher" data-img="char-lan.jpg"><div class="img" style="background-image:url(img/char-lan.jpg)"><span class="tag lock">🔒 Locked</span></div><div class="meta"><b>Lan</b><span>Presenter · female</span></div></div>
+              <div class="tile portrait" data-name="Minh" data-sub="Student · male" data-img="char-minh.jpg"><div class="img" style="background-image:url(img/char-minh.jpg)"><span class="tag lock">🔒 Locked</span></div><div class="meta"><b>Minh</b><span>Student · male</span></div></div>
+            </div>
+          </div>
+          <div id="scenes" hidden>
+            <div class="chips"><button class="chip on">All 55</button><button class="chip">City</button><button class="chip">School</button><button class="chip">Countryside</button><button class="chip">Travel</button><button class="chip">Work</button></div>
+            <div class="grid">
+              <div class="tile add"><div class="img">＋</div><div class="meta"><b>New place</b><span>Describe, make a plate</span></div></div>
+              <div class="tile" data-name="Cafe" data-sub="City · morning" data-img="scene-cafe.jpg"><div class="img" style="background-image:url(img/scene-cafe.jpg)"><span class="tag">City</span></div><div class="meta"><b>Cafe</b><span>Built-in</span></div></div>
+              <div class="tile" data-name="Airport" data-sub="Travel · daytime" data-img="scene-airport.jpg"><div class="img" style="background-image:url(img/scene-airport.jpg)"><span class="tag">Travel</span></div><div class="meta"><b>Airport</b><span>Built-in</span></div></div>
+              <div class="tile" data-name="Beach" data-sub="Countryside · afternoon" data-img="scene-beach.jpg"><div class="img" style="background-image:url(img/scene-beach.jpg)"><span class="tag">Nature</span></div><div class="meta"><b>Beach</b><span>Built-in</span></div></div>
+              <div class="tile" data-name="Bookshop" data-sub="City · evening" data-img="scene-bookshop.jpg"><div class="img" style="background-image:url(img/scene-bookshop.jpg)"><span class="tag">City</span></div><div class="meta"><b>Bookshop</b><span>Built-in</span></div></div>
+              <div class="tile" data-name="Campus" data-sub="School · morning" data-img="scene-campus.jpg"><div class="img" style="background-image:url(img/scene-campus.jpg)"><span class="tag">School</span></div><div class="meta"><b>Campus</b><span>Built-in</span></div></div>
+              <div class="tile" data-name="Cinema" data-sub="City · night" data-img="scene-cinema.jpg"><div class="img" style="background-image:url(img/scene-cinema.jpg)"><span class="tag">City</span></div><div class="meta"><b>Cinema</b><span>Built-in</span></div></div>
+              <div class="tile" data-name="Canteen" data-sub="School · noon" data-img="scene-canteen.jpg"><div class="img" style="background-image:url(img/scene-canteen.jpg)"><span class="tag">School</span></div><div class="meta"><b>Canteen</b><span>Built-in</span></div></div>
+              <div class="tile" data-name="Bus stop" data-sub="City · morning" data-img="scene-bus-stop.jpg"><div class="img" style="background-image:url(img/scene-bus-stop.jpg)"><span class="tag">City</span></div><div class="meta"><b>Bus stop</b><span>Built-in</span></div></div>
+              <div class="tile" data-name="Botanical garden" data-sub="Nature · afternoon" data-img="scene-botanical-garden.jpg"><div class="img" style="background-image:url(img/scene-botanical-garden.jpg)"><span class="tag">Nature</span></div><div class="meta"><b>Botanical garden</b><span>Built-in</span></div></div>
+            </div>
+          </div>
+        </div>
+        <aside class="detail" id="detail">
+          <div class="hero" id="d-img" style="background-image:url(img/char-lan.jpg)"></div>
+          <h2 id="d-name">Lan</h2>
+          <div class="sub" id="d-sub">Presenter · English teacher</div>
+          <dl id="d-facts"><dt>Status</dt><dd>Locked</dd><dt>Used in</dt><dd>3 episodes</dd><dt>Outfit</dt><dd>Yellow sweater · navy jeans</dd><dt>Style</dt><dd>Semi-realistic</dd></dl>
+          <div class="actions"><button class="btn primary">Use in project</button><button class="btn">Duplicate</button><button class="btn">Edit</button></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- HOME -->
+    <section class="view" id="home"><div class="note"><b>Projects / Music / Settings</b> keep the same sidebar. The Projects page becomes a Canva-style "recent designs" grid (the dashboard cards from Phase 26), the Music Library becomes a track grid with a detail panel (waveform, mood, pace, licence), and Settings gets a left sub-menu (AI, Cloud, Voices, About).</div></section>
+
+    <!-- STUDIO -->
+    <section class="view" id="studio">
+      <div class="studio">
+        <div class="st-left"><h3>Media</h3><div class="mini">
+          <div style="background-image:url(img/scene-cafe.jpg)"></div><div style="background-image:url(img/scene-campus.jpg)"></div>
+          <div style="background-image:url(img/scene-bookshop.jpg)"></div><div style="background-image:url(img/scene-airport.jpg)"></div>
+          <div style="background-image:url(img/char-lan.jpg)"></div><div style="background-image:url(img/char-minh.jpg)"></div></div></div>
+        <div class="st-mid"><div class="preview" style="background-image:url(img/scene-cafe.jpg)"><div class="cap">Maya: Oh, definitely a night owl! I really struggle to wake up.</div></div></div>
+        <div class="st-right"><h3>Properties</h3>
+          <div class="field"><span>Shot</span><div>Cafe · beat 2 of 9</div></div>
+          <div class="field"><span>Action</span><div>talking earnestly over the table</div></div>
+          <div class="field"><span>Expression</span><div>thinking</div></div>
+          <div class="field"><span>Music</span><div>✨ Auto · Corporate background (2 loops)</div></div></div>
+        <div class="st-time">
+          <div class="lane"><label>Script</label><i style="width:12%"></i><i style="width:9%"></i><i style="width:14%"></i><i style="width:11%"></i><i style="width:10%"></i></div>
+          <div class="lane p"><label>Pictures</label><i style="width:38%"></i><i style="width:20%"></i><i style="width:30%"></i></div>
+          <div class="lane v"><label>Voice</label><i style="width:78%"></i></div>
+          <div class="lane m"><label>Music</label><i style="width:88%"></i></div></div>
+      </div>
+    </section>
+    <div class="note">Prototype only: the real build keeps every existing button, id and flow (the tests guard them). Click the sidebar items, the Characters / Scenes tabs and any card.</div>
+  </div>
+</div>
+<script>
+  const app = document.getElementById("app");
+  document.getElementById("collapse").onclick = () => app.classList.toggle("collapsed");
+  document.querySelectorAll(".rail button[data-view]").forEach((button) => button.onclick = () => {
+    document.querySelectorAll(".rail button.nav").forEach((b) => b.classList.remove("active"));
+    button.classList.add("active");
+    document.querySelectorAll(".view").forEach((v) => v.classList.remove("on"));
+    document.getElementById(button.dataset.view).classList.add("on");
+    document.getElementById("crumb").textContent = button.querySelector(".label").textContent;
+  });
+  document.querySelectorAll(".tab").forEach((tab) => tab.onclick = () => {
+    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("on")); tab.classList.add("on");
+    document.getElementById("chars").hidden = tab.dataset.tab !== "chars";
+    document.getElementById("scenes").hidden = tab.dataset.tab !== "scenes";
+  });
+  document.querySelectorAll(".tile[data-name]").forEach((tile) => tile.onclick = () => {
+    document.querySelectorAll(".tile").forEach((t) => t.classList.remove("sel")); tile.classList.add("sel");
+    document.getElementById("d-name").textContent = tile.dataset.name;
+    document.getElementById("d-sub").textContent = tile.dataset.sub;
+    document.getElementById("d-img").style.backgroundImage = `url(img/${tile.dataset.img})`;
+    const scene = tile.dataset.img.startsWith("scene-");
+    const facts = scene
+      ? [["Plate", "Ready"], ["Used in", "2 episodes"], ["Light", tile.dataset.sub.split("·")[1].trim()], ["Style", "Semi-realistic"]]
+      : [["Status", "Locked"], ["Used in", "3 episodes"], ["Outfit", tile.dataset.name === "Lan" ? "Yellow sweater · navy jeans" : "Light-blue shirt · khaki trousers"], ["Style", "Semi-realistic"]];
+    document.getElementById("d-facts").innerHTML = facts.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+  });
+  document.querySelectorAll(".chip").forEach((chip) => chip.onclick = () => {
+    chip.parentElement.querySelectorAll(".chip").forEach((c) => c.classList.remove("on")); chip.classList.add("on");
+  });
+</script>
+</body>
+</html>

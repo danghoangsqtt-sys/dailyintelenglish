@@ -1365,6 +1365,26 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 - [x] 24.6 Remotion polish (crossfade, pan/zoom, inserts)
 - [ ] 24.7 Gate B-16
 
+## Phase 27 — Rebrand to Daily Beyond English + Canva/CapCut-style layout (ENH-018)
+
+**Status:** 🟡 Planned 2026-10-06 | Plan `docs/implementation/phase-27-rebrand-and-layout.md` (D57, D60–D62).
+
+- [ ] 27.1 Brand pack: logo, palette, name in the app, YouTube prompts and the greeting
+- [ ] 27.2 App shell: collapsible left sidebar
+- [ ] 27.3 Libraries: image grid + detail panel (characters, scenes, music)
+- [ ] 27.4 Studio steps 1–7: one 3-panel frame
+- [ ] 27.5 Video intro/outro with the new logo, name and palette
+- [ ] 27.6 Gate B-19
+
+## Phase 28 — Semi-realistic picture style like the banner (ENH-019)
+
+**Status:** 🟡 Planned 2026-10-06 | Plan `docs/implementation/phase-28-semi-realistic-style.md` (D58, D59).
+
+- [ ] 28.1 Spike (GPU): semi-realistic recipes on SDXL base
+- [ ] 28.2 Recipes + re-tuned colour / extra-person checks
+- [ ] 28.3 Redo the characters and the 55 scene plates
+- [ ] 28.4 Gate B-20
+
 ## Phase 25 — Branded intro and outro (ENH-017)
 
 **Status:** ✅ Complete 2026-10-06 | Plan `docs/implementation/phase-25-branded-intro-outro.md` (D52–D55).
