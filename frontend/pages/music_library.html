@@ -85,6 +85,23 @@
 
     .track-size { color: var(--text-muted); font-size: 12px; }
     .track-preview { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .track-playrow { display: flex; align-items: center; gap: 12px; }
+    .track-playrow .track-waveform { flex: 1 1 auto; min-width: 0; }
+    .track-play { flex: 0 0 auto; width: 46px; height: 46px; border: 0; border-radius: 50%; background: var(--btn-gradient); color: #fff; font-size: 15px; line-height: 1; cursor: pointer; box-shadow: 0 4px 14px rgba(31, 122, 46, .3); }
+    .track-play:hover { filter: brightness(1.12); }
+    .track-play:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .track-play[aria-pressed="true"] { background: var(--cta); box-shadow: 0 4px 14px rgba(201, 42, 37, .3); }
+    .upload-queue { display: grid; gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; }
+    .upload-queue li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 9px 12px; border: 1px solid var(--border); border-left-width: 4px; border-radius: 8px; background: var(--surface); font-size: 13px; }
+    .upload-queue .queue-name { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .upload-queue .queue-state { font-weight: 700; }
+    .upload-queue .queue-note { grid-column: 1 / -1; color: var(--text-muted); }
+    .upload-queue li[data-state="added"] { border-left-color: var(--success); }
+    .upload-queue li[data-state="added"] .queue-state { color: var(--success); }
+    .upload-queue li[data-state="uploading"] { border-left-color: var(--accent); }
+    .upload-queue li[data-state="skipped"], .upload-queue li[data-state="error"] { border-left-color: var(--danger); }
+    .upload-queue li[data-state="skipped"] .queue-state, .upload-queue li[data-state="error"] .queue-state { color: var(--danger); }
+    .upload-queue[hidden] { display: none; }
     .track-waveform { display: block; width: 100%; height: 56px; border-radius: 8px; background: var(--surface); cursor: pointer; }
     .track-card audio { width: 100%; min-width: 0; }
     .delete-btn:hover { border-color: var(--danger); color: var(--danger); }
@@ -164,12 +181,13 @@
     <label id="upload-zone" class="upload-zone" for="music-file-input" tabindex="0">
       <span>
         <span class="upload-icon" aria-hidden="true">🎵</span>
-        <span class="upload-title">Drop an MP3 or WAV file here</span>
-        <span class="upload-help">Maximum 50 MB. Existing tracks are preserved when names match.</span>
-        <span id="upload-button" class="btn btn-primary">Choose Music File</span>
+        <span class="upload-title">Drop MP3, WAV, OGG or M4A files here</span>
+        <span class="upload-help">Choose one file or many at once. Maximum 50 MB each. Existing tracks are preserved when names match.</span>
+        <span id="upload-button" class="btn btn-primary">Choose Music Files</span>
       </span>
-      <input id="music-file-input" type="file" accept=".mp3,.wav,audio/mpeg,audio/wav" />
+      <input id="music-file-input" type="file" multiple accept=".mp3,.wav,.ogg,.m4a,audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a" />
     </label>
+    <ul id="upload-queue" class="upload-queue" aria-label="Upload progress" aria-live="polite" hidden></ul>
 
     <div id="status-message" class="message message-success" role="status" hidden></div>
     <div id="error-message" class="message message-error" role="alert" hidden></div>

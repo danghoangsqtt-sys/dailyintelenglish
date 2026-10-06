@@ -154,3 +154,32 @@ def test_delete_removes_track_and_missing_track_returns_404(client: TestClient):
 def test_filename_validation_rejects_path_traversal(filename: str):
     with pytest.raises(ValidationError, match="safe filename"):
         music_api._validate_filename(filename, music_api.UPLOAD_EXTENSIONS)
+
+
+# ---- Task 27.3a: OGG and M4A uploads ---------------------------------------------------------------------------
+
+VALID_OGG = b"OggS\x00\x02\x00\x00music-data"
+VALID_M4A = b"\x00\x00\x00\x20ftypM4A \x00\x00\x00\x00music-data"
+
+
+@pytest.mark.parametrize(("filename", "content", "media_type"),
+                         [("theme.ogg", VALID_OGG, "audio/ogg"), ("theme.m4a", VALID_M4A, "audio/mp4")])
+def test_upload_accepts_ogg_and_m4a_and_streams_them_back(client: TestClient, filename, content, media_type):
+    response = upload(client, filename, content)
+    assert response.status_code == 200
+    assert (settings.DATA_DIR / "music_library" / filename).read_bytes() == content
+    preview = client.get(f"/api/music/{filename}")
+    assert preview.status_code == 200 and preview.headers["content-type"].startswith(media_type)
+
+
+@pytest.mark.parametrize(("filename", "content"), [("fake.ogg", b"not-an-ogg"), ("fake.m4a", b"\x00\x00\x00\x20moov....")])
+def test_upload_rejects_spoofed_ogg_and_m4a(client: TestClient, filename, content):
+    response = upload(client, filename, content)
+    assert response.status_code == 422 and response.json()["success"] is False
+    assert list((settings.DATA_DIR / "music_library").iterdir()) == []
+
+
+def test_upload_message_names_the_four_formats(client: TestClient):
+    response = upload(client, "track.flac", b"fLaC....")
+    assert response.status_code == 422
+    assert "MP3, WAV, OGG and M4A" in response.text

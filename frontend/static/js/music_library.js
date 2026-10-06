@@ -1,10 +1,10 @@
-/** Music Library page: upload, preview, list, edit details (Task 22.7), and delete background tracks. */
+/** Music Library page: upload (many files at once, Task 27.3a), preview, list, edit details (Task 22.7), and delete background tracks. */
 (() => {
   // Client-side pre-check only — the server enforces the real limit via
   // MAX_MUSIC_UPLOAD_BYTES (app/core/constants.py). Keep this value in sync with
   // MAX_MUSIC_UPLOAD_MB there; there's no shared-config channel between the two yet.
   const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
-  const ALLOWED_EXTENSIONS = [".mp3", ".wav"];
+  const ALLOWED_EXTENSIONS = [".mp3", ".wav", ".ogg", ".m4a"];
   let uploadInFlight = false;
   let loadPromise = null;
   const deletesInFlight = new Set();
@@ -174,7 +174,35 @@
       player.preload = "metadata";
       player.src = track.content_url || Api.musicContentUrl(track.filename);
       player.setAttribute("aria-label", `Preview ${track.filename}`);
-      preview.append(waveformCanvas, player);
+      const playRow = document.createElement("div");
+      playRow.className = "track-playrow";
+      const playButton = document.createElement("button");
+      playButton.type = "button";
+      playButton.className = "track-play";
+      const glyph = document.createElement("span");
+      glyph.setAttribute("aria-hidden", "true");
+      playButton.append(glyph);
+      const syncPlayButton = () => {
+        const playing = !player.paused;
+        playButton.setAttribute("aria-pressed", String(playing));
+        playButton.setAttribute("aria-label", `${playing ? "Pause" : "Play"} ${track.title}`);
+        glyph.textContent = playing ? "❚❚" : "▶";
+      };
+      playButton.addEventListener("click", () => {
+        if (player.paused) player.play().catch((error) => console.error("Could not play the track:", error));
+        else player.pause();
+      });
+      player.addEventListener("play", () => {
+        // One track at a time: starting this one pauses every other.
+        document.querySelectorAll("#track-list audio").forEach((other) => {
+          if (other !== player && !other.paused) other.pause();
+        });
+        syncPlayButton();
+      });
+      ["pause", "ended"].forEach((name) => player.addEventListener(name, syncPlayButton));
+      syncPlayButton();
+      playRow.append(playButton, waveformCanvas);
+      preview.append(playRow, player);
 
       const deleteButton = document.createElement("button");
       deleteButton.type = "button";
@@ -237,7 +265,7 @@
   function validateFile(file) {
     const lowerName = file.name.toLowerCase();
     if (!ALLOWED_EXTENSIONS.some((extension) => lowerName.endsWith(extension))) {
-      return "Choose an MP3 or WAV music file.";
+      return "Choose an MP3, WAV, OGG or M4A music file.";
     }
     if (file.size > MAX_UPLOAD_BYTES) {
       return "Choose a music file that is 50 MB or smaller.";
@@ -253,33 +281,85 @@
     const button = document.getElementById("upload-button");
     zone.classList.toggle("is-uploading", isUploading);
     input.disabled = isUploading;
-    button.textContent = isUploading ? "Uploading…" : "Choose Music File";
+    button.textContent = isUploading ? "Uploading…" : "Choose Music Files";
   }
 
-  async function uploadFile(file) {
-    if (!file || uploadInFlight) return;
+  // Task 27.3a: the zone takes many files; they are uploaded one after another (the API takes one per request).
+  const QUEUE_LABELS = { waiting: "Waiting", uploading: "Uploading…", added: "Added", skipped: "Skipped", error: "Not added" };
+
+  function renderQueue(items) {
+    const list = document.getElementById("upload-queue");
+    list.hidden = items.length < 2; // one file needs no queue: its message says it all
+    list.replaceChildren(...items.map((item) => {
+      const row = document.createElement("li");
+      row.dataset.state = item.state;
+      const name = document.createElement("span");
+      name.className = "queue-name";
+      name.textContent = item.file.name;
+      const state = document.createElement("span");
+      state.className = "queue-state";
+      state.textContent = QUEUE_LABELS[item.state];
+      row.append(name, state);
+      if (item.note) {
+        const note = document.createElement("span");
+        note.className = "queue-note";
+        note.textContent = item.note;
+        row.append(note);
+      }
+      return row;
+    }));
+  }
+
+  function plural(count, word) {
+    return `${count} ${word}${count === 1 ? "" : "s"}`;
+  }
+
+  async function uploadFiles(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length || uploadInFlight) return;
     setMessage("none");
-    const validationMessage = validateFile(file);
-    if (validationMessage) {
-      setMessage("error", validationMessage);
-      return;
-    }
-
     setUploadState(true);
-    let uploadedTrack;
-    try {
-      uploadedTrack = await Api.uploadMusic(file);
-    } catch (error) {
-      console.error("Failed to upload music:", error);
-      setMessage("error", "We couldn't upload that music file. Check the format and try again.");
-      return;
-    } finally {
-      setUploadState(false);
-      document.getElementById("music-file-input").value = "";
+    const items = files.map((file) => ({ file, state: "waiting", note: "", track: null }));
+    renderQueue(items);
+    for (const item of items) {
+      const problem = validateFile(item.file);
+      if (problem) {
+        item.state = "skipped";
+        item.note = problem;
+        renderQueue(items);
+        continue;
+      }
+      item.state = "uploading";
+      renderQueue(items);
+      try {
+        item.track = await Api.uploadMusic(item.file);
+        item.state = "added";
+        if (item.track.filename !== item.file.name) item.note = `saved as ${item.track.filename}`;
+      } catch (error) {
+        console.error("Failed to upload music:", error);
+        item.state = "error";
+        item.note = "The server did not accept this file. Check the format.";
+      }
+      renderQueue(items);
     }
+    setUploadState(false);
+    document.getElementById("music-file-input").value = "";
 
-    setMessage("success", `${uploadedTrack.filename} was added to your library.`);
-    await loadTracks();
+    const added = items.filter((item) => item.state === "added");
+    const notAdded = items.length - added.length;
+    if (items.length === 1) { // the single-file messages are unchanged
+      const [only] = items;
+      if (only.state === "added") setMessage("success", `${only.track.filename} was added to your library.`);
+      else if (only.state === "skipped") setMessage("error", only.note);
+      else setMessage("error", "We couldn't upload that music file. Check the format and try again.");
+    } else if (!added.length) {
+      setMessage("error", `No tracks were added: ${notAdded} skipped.`);
+    } else if (notAdded) {
+      setMessage("success", `${plural(added.length, "track")} added, ${notAdded} skipped.`);
+    } else {
+      setMessage("success", `${plural(added.length, "track")} added to your library.`);
+    }
+    if (added.length) await loadTracks();
   }
 
   async function deleteTrack(filename, button) {
@@ -310,7 +390,7 @@
     const zone = document.getElementById("upload-zone");
     const input = document.getElementById("music-file-input");
 
-    input.addEventListener("change", () => uploadFile(input.files[0]));
+    input.addEventListener("change", () => uploadFiles(input.files));
     zone.addEventListener("keydown", (event) => {
       if ((event.key === "Enter" || event.key === " ") && !uploadInFlight) {
         event.preventDefault();
@@ -329,7 +409,7 @@
         zone.classList.remove("is-dragging");
       });
     });
-    zone.addEventListener("drop", (event) => uploadFile(event.dataTransfer.files[0]));
+    zone.addEventListener("drop", (event) => uploadFiles(event.dataTransfer.files));
   }
 
   function setupDelete() {

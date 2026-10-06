@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api/music", tags=["music"])
 project_router = APIRouter(prefix="/api/projects/{project_id}/music", tags=["music"])
 
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a"}
-UPLOAD_EXTENSIONS = {".mp3", ".wav"}
+UPLOAD_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a"}
 AUDIO_MEDIA_TYPES = {
     ".mp3": "audio/mpeg",
     ".wav": "audio/wav",
@@ -50,7 +50,7 @@ def _validate_filename(filename: str, allowed_extensions: set[str]) -> str:
     ):
         raise ValidationError("Please choose a file with a safe filename.")
     if Path(cleaned).suffix.lower() not in allowed_extensions:
-        raise ValidationError("Only MP3 and WAV music files are supported.")
+        raise ValidationError("Only MP3, WAV, OGG and M4A music files are supported.")
     return cleaned
 
 
@@ -59,6 +59,10 @@ def _validate_magic_bytes(filename: str, header: bytes) -> None:
     suffix = Path(filename).suffix.lower()
     if suffix == ".wav":
         valid = len(header) >= 12 and header[:4] == b"RIFF" and header[8:12] == b"WAVE"
+    elif suffix == ".ogg":
+        valid = header.startswith(b"OggS")
+    elif suffix == ".m4a":
+        valid = len(header) >= 12 and header[4:8] == b"ftyp"
     else:
         valid = header.startswith(b"ID3") or (
             len(header) >= 2 and header[0] == 0xFF and header[1] in MP3_FRAME_SYNC_BYTES

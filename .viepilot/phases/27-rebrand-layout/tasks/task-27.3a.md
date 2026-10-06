@@ -57,3 +57,16 @@
 
 The grid + detail-panel layout of the library (that is Task 27.3b together with characters and scenes), a global
 mini-player, and the music auto-selection logic.
+
+## Implementation notes (2026-10-06)
+
+- Done as planned: `UPLOAD_EXTENSIONS` + OGG/M4A signatures and the new message in `app/api/music.py`; the zone takes
+  many files (`multiple`), a per-file queue (waiting / uploading / added / skipped / not added, with the reason or
+  "saved as <name>" for a renamed duplicate), one summary line; one round, one list reload; a single file keeps its
+  old messages and has no queue.
+- Listening: one round Play/Pause button per track (red while playing), `aria-pressed` and "Play/Pause <title>"
+  labels, and starting a track pauses the others; the `<audio>` element and the waveform are unchanged.
+- Tests: 3 API (ogg and m4a stream back, spoofed ones refused, the message) and 7 browser
+  (`tests/test_music_upload_multi_browser.py`); all 12 existing music browser tests pass unchanged.
+- Screenshot on a throw-away instance with three real tracks and one wrong file:
+  `docs/operations/ui-audit/music-27-3a.png`. The real library was not touched.
