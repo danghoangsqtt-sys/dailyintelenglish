@@ -5,8 +5,8 @@
 
 | Task | Description | Status |
 |---|---|---|
-| 27.1 | Brand pack: logo, palette, name in the app, YouTube prompts and the greeting | **in_progress** 2026-10-06 (card `tasks/task-27.1.md`) |
-| 27.2 | App shell: collapsible left sidebar | planned |
+| 27.1 | Brand pack: logo, palette, name in the app (the YouTube prompts had no name; the greeting is 27.5) | done 2026-10-06 (1466 passed; card `tasks/task-27.1.md`) |
+| 27.2 | App shell: collapsible left sidebar | planned (card `tasks/task-27.2.md` written) |
 | 27.3 | Libraries: image grid + detail panel (characters, scenes, music) | planned |
 | 27.4 | Studio steps 1–7: one 3-panel frame | planned |
 | 27.5 | Video intro/outro with the new logo, name and palette | planned |

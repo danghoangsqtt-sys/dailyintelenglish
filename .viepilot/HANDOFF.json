@@ -224,10 +224,10 @@
     },
     "27": {
       "name": "Rebrand + Canva/CapCut-style layout (ENH-018)",
-      "status": "planned",
-      "tasks_done": 0,
+      "status": "in_progress",
+      "tasks_done": 1,
       "tasks_total": 6,
-      "note": "Planned 2026-10-06 (D57,D60-D62); prototype in .viepilot/ui-direction/session-2026-10-06."
+      "note": "27.1 done (1466 passed). Next 27.2 sidebar (card written), 27.3 libraries."
     },
     "28": {
       "name": "Semi-realistic picture style (ENH-019)",

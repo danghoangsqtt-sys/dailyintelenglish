@@ -1369,7 +1369,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 
 **Status:** 🟡 Planned 2026-10-06 | Plan `docs/implementation/phase-27-rebrand-and-layout.md` (D57, D60–D62).
 
-- [ ] 27.1 Brand pack: logo, palette, name in the app, YouTube prompts and the greeting
+- [x] 27.1 Brand pack: logo, palette, name in the app, YouTube prompts and the greeting
 - [ ] 27.2 App shell: collapsible left sidebar
 - [ ] 27.3 Libraries: image grid + detail panel (characters, scenes, music)
 - [ ] 27.4 Studio steps 1–7: one 3-panel frame

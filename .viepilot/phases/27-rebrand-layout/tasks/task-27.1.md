@@ -98,3 +98,7 @@ The sidebar (27.2), the grid libraries (27.3), the studio frame (27.4), the vide
 - Not done here (by plan): `youtube_service.py` has no product-name text, so there was nothing to rename; the
   video intro/outro and the greeting are Task 27.5.
 - Screenshots: `docs/operations/ui-audit/after-27-1/` (44 images + `overview-light.png`, `overview-dark.png`).
+
+## Task 27.1 closed (2026-10-06)
+
+Full suite: **1466 passed** (1446 + 20 new: 18 brand, 2 cache). Screenshots checked by eye in both themes.

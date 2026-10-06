@@ -59,7 +59,7 @@ def update_scene(scene: dict, seed: int) -> None:
     connection.close()
 
 
-async def render_all(only: list[str]) -> None:
+async def render_all(only: list[str], retries: int) -> None:
     scenes = [s for s in load_scenes() if not only or s["id"] in only]
     WORK.mkdir(parents=True, exist_ok=True)
     BACKUP_PLATES.mkdir(parents=True, exist_ok=True)
@@ -77,7 +77,7 @@ async def render_all(only: list[str]) -> None:
             if old.exists() and not backup.exists():
                 shutil.copy2(old, backup)
             seed, fraction = int(scene["seed"] or random.randint(1, 2**31 - 1)), 1.0
-            for attempt in range(MAX_RETRIES + 1):
+            for attempt in range(retries + 1):
                 out = WORK / f"{scene['id']}.png"
                 started = time.monotonic()
                 await session.request({
@@ -129,9 +129,10 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--only", nargs="*", default=[])
     parser.add_argument("--sheets-only", action="store_true")
+    parser.add_argument("--retries", type=int, default=MAX_RETRIES)
     args = parser.parse_args()
     if not args.sheets_only:
-        asyncio.run(render_all(args.only))
+        asyncio.run(render_all(args.only, args.retries))
     sheets()
     return 0
 
