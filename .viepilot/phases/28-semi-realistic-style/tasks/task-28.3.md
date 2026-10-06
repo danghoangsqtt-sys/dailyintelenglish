@@ -97,3 +97,10 @@ rules; a regression test pins the measured values instead.
   tests were updated where they pinned the cel-anime strings or the "must differ" rule.
 - **Found for Task 28.4:** the character form allows at most 4 hair words, so Lan's hair is written
   "long straight black hair" in the library (not "very long ...").
+
+## Smoke result (2026-10-06)
+
+`docs/operations/phase28-t3-smoke.md`: 8 images through the app's engine, 34 s each. The smoke found a real
+bug (black garments measured on the hand, because the cel outline filter removed the shirt); fixed with
+`include_dark` for black, 2 new tests. The duo's colour swap is a single-pass effect that the app's refine
+and retry repair; it is verified with the real library in Task 28.4.
