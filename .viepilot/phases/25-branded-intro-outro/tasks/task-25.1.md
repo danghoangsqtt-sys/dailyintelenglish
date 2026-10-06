@@ -44,3 +44,12 @@ Before any product code, give the owner two things to decide on:
 - The MP4 renders: intro + outro ≈ 15 s.
 - Stills are checked by eye.
 - **The owner decides:** the voice, the look (changes?) and the font.
+
+## Owner verdict (2026-10-06): PASS
+
+- The owner said: "Giọng của JennyNeural là tốt và cân bằng nhất. Màu logo và bố cục di chuyển rất
+  tốt, đồng ý với font chữ của bạn".
+- **Voice:** Jenny.
+- **Look:** approved as is.
+- **Bundled font:** approved (download OK).
+- Report: `docs/operations/phase25-spike-brand.md`. Next: Task 25.2.

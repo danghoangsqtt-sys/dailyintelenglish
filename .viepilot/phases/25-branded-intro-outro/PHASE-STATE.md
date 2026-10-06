@@ -5,6 +5,6 @@
 
 | Task | Description | Owner | Status |
 |---|---|---|---|
-| 25.1 | Spike: 3 female voice samples + rendered morph intro/outro preview | Claude + owner | **in_progress** 2026-10-06 (card `tasks/task-25.1.md`) |
-| 25.2 | Build: texts, greeting/farewell TTS, variable intro/outro, BrandIntro/BrandOutro morph, soundtrack voices | Claude | planned |
+| 25.1 | Spike: 3 female voice samples + rendered morph intro/outro preview | Claude + owner | ✅ PASS 2026-10-06: owner picks Jenny, approves look + bundled font (card `tasks/task-25.1.md`) |
+| 25.2 | Build: texts, greeting/farewell TTS, variable intro/outro, BrandIntro/BrandOutro morph, soundtrack voices | Claude | **in_progress** 2026-10-06 (card `tasks/task-25.2.md`) |
 | 25.3 | Gate B-18 (owner watches 2 real episodes) | Owner | planned |

@@ -1369,7 +1369,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 
 **Status:** 🟡 Planned 2026-10-06 | Plan `docs/implementation/phase-25-branded-intro-outro.md` (D52–D55).
 
-- [ ] 25.1 Spike: 3 female voice samples + rendered morph intro/outro preview (owner picks the voice, approves the look)
+- [x] 25.1 Spike: owner PASS 2026-10-06 (voice Jenny, look approved, bundled font approved)
 - [ ] 25.2 Build: greeting/farewell TTS + morph BrandIntro/BrandOutro + soundtrack voices
 - [ ] 25.3 Gate B-18 (owner watches 2 real episodes)
 
