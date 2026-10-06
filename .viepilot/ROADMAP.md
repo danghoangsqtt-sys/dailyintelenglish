@@ -1367,11 +1367,11 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 
 ## Phase 25 — Branded intro and outro (ENH-017)
 
-**Status:** 🟡 Planned 2026-10-06 | Plan `docs/implementation/phase-25-branded-intro-outro.md` (D52–D55).
+**Status:** ✅ Complete 2026-10-06 | Plan `docs/implementation/phase-25-branded-intro-outro.md` (D52–D55).
 
 - [x] 25.1 Spike: owner PASS 2026-10-06 (voice Jenny, look approved, bundled font approved)
 - [x] 25.2 Build: greeting/farewell TTS + morph BrandIntro/BrandOutro + soundtrack voices (2026-10-06)
-- [ ] 25.3 Gate B-18 (owner watches 2 real episodes)
+- [x] 25.3 Gate B-18 PASS 2026-10-06 (owner "OKEY" on a real episode)
 
 ## Phase 22 — Background music (ENH-016), re-scoped by D50
 

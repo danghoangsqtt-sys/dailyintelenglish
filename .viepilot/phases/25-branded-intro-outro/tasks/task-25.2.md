@@ -127,3 +127,10 @@ The music bed (22.4) ducks under both voices. The Standard (ffmpeg) videos are u
   - `tsc` clean.
   - **Full suite: 1420 passed** (before the TSX-only morph fix; vitest and `tsc` were rerun after
     it).
+
+## Owner verdict (2026-10-06): OK
+
+- The owner watched `episode_brand.mp4` (real "Demo Episode", 3:12, Jenny + Pixabay music, with
+  the morph fix) and replied "OKEY" to "is it OK, and should we build automatic music
+  classification?".
+- Recorded as **Gate B-18 PASS** (Task 25.3) and a go-ahead for Task 22.9.
