@@ -132,9 +132,30 @@ async def list_projects(db: aiosqlite.Connection) -> list[dict]:
     Returns:
         List of project rows as dicts (empty list if none exist yet).
     """
-    cursor = await db.execute(f"SELECT {_LIST_COLUMNS} FROM projects ORDER BY updated_at DESC")
+    cursor = await db.execute(
+        f"SELECT {_LIST_COLUMNS}, topic, "
+        # Phase 26 (Task 26.3): a real picture for the dashboard card -- the selected thumbnail,
+        # else the first finished shot, else none.
+        "(SELECT t.id || '|' || t.image_path_16x9 FROM thumbnails t WHERE t.project_id = projects.id "
+        " AND t.is_selected = 1 AND t.image_path_16x9 IS NOT NULL LIMIT 1) AS selected_thumb, "
+        "(SELECT s.id FROM project_shots s WHERE s.project_id = projects.id AND s.status = 'complete' "
+        " AND s.final_path IS NOT NULL ORDER BY s.created_at, s.id LIMIT 1) AS first_shot "
+        "FROM projects ORDER BY updated_at DESC"
+    )
     rows = await cursor.fetchall()
-    return [dict(row) for row in rows]
+    return [_with_preview(dict(row)) for row in rows]
+
+
+def _with_preview(project: dict) -> dict:
+    thumb, shot = project.pop("selected_thumb"), project.pop("first_shot")
+    project["preview_url"] = None
+    if thumb:
+        thumbnail_id, path = thumb.split("|", 1)
+        image_format = "jpg" if path.lower().endswith((".jpg", ".jpeg")) else "png"
+        project["preview_url"] = f"/api/projects/{project['id']}/thumbnails/{thumbnail_id}/16x9.{image_format}"
+    elif shot:
+        project["preview_url"] = f"/api/projects/{project['id']}/visuals/shots/{shot}/content?variant=final"
+    return project
 
 
 async def create_project(

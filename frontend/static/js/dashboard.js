@@ -43,9 +43,16 @@
 
   function projectCardHtml(project) {
     const created = new Date(project.created_at || Date.now()).toLocaleDateString();
+    // Task 26.3: a real picture when the episode has one, else a brand tile with the topic.
+    const thumb = project.preview_url
+      ? `<div class="project-thumb has-image" aria-hidden="true"><img src="${escapeHtml(project.preview_url)}" alt="" loading="lazy" /></div>`
+      : `<div class="project-thumb" aria-hidden="true"><span class="thumb-mark">DI</span><span class="thumb-topic">${escapeHtml(project.topic || project.name || "New episode")}</span></div>`;
+    const step = STATUS_TO_STEP[project.status] || 1;
+    const progress = project.status === "draft" ? 1 : project.status === "complete" ? 7 : step;
     return `
       <div class="project-card card" data-id="${project.id}">
-        <div class="project-thumb" aria-hidden="true">🎙️ Project preview</div>
+        ${thumb}
+        <div class="project-progress" aria-label="Step ${progress} of 7"><span style="width:${Math.round((progress / 7) * 100)}%"></span></div>
         <div class="project-card-header">
           <h3>${escapeHtml(project.name || "Untitled Project")}</h3>
           <span class="badge badge-status-${project.status}">${statusLabel(project.status)}</span>
