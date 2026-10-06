@@ -36,11 +36,11 @@ CHARACTERS = {
         "ref": ROOT / "data/tmp/style-realvis/presenter_E1_bright_s21.png",
         "crop": (0.26, 0.10, 0.76, 0.62),
         "bg": "white",
-        "shoulder": 0.80, "hip": 0.55, "full": (0.075, 0.118),
+        "shoulder": 0.80, "hip": 0.55, "full_sh": 0.85, "full_hip": 0.40, "full": (0.07, 0.13),
         "identity": "beautiful young Vietnamese woman, very long straight black hair with side bangs, fair skin",
-        "outfit": "plain white blouse, plain white trousers, white shoes",
-        "negative": "black clothes, colorful clothes, short hair, tan skin, grey clothes",
-        "body": "slim hourglass figure, narrow waist",
+        "outfit": "fitted plain white blouse tucked in, slim straight plain white trousers, white shoes",
+        "negative": "black clothes, colorful clothes, short hair, tan skin, grey clothes, wide hips, flared trousers",
+        "body": "full bust, slim waist, narrow hips, slim legs",
         "summary": ("Lan, a young Vietnamese woman. 160 cm, 50 kg, a slender hourglass figure with a narrow waist "
                     "and gently rounded hips, upright posture. Very long straight black hair with side bangs, fair "
                     "luminous skin, a soft delicate face with large dark eyes. All-white outfit."),
@@ -50,11 +50,11 @@ CHARACTERS = {
         "ref": ROOT / "data/tmp/style-realvis-male2/N3_soft_s42.png",
         "crop": (0.10, 0.02, 0.72, 0.64),
         "bg": "white",
-        "shoulder": 0.97, "hip": 0.50, "full": (0.085, 0.112),  # the taller man is drawn smaller so the shoes fit
+        "shoulder": 0.97, "hip": 0.50, "full_sh": 1.15, "full_hip": 0.45, "full": (0.07, 0.13),
         "identity": "handsome young Vietnamese man, fair skin, tousled black hair, long fringe",
-        "outfit": "black fitted shirt, black trousers, black shoes",
-        "negative": "white clothes, colorful clothes, shirtless, beard, grey clothes, short buzz cut",
-        "body": "lean muscular athletic build, broad shoulders, narrow waist",
+        "outfit": "fitted short-sleeve black shirt, black trousers, black shoes",
+        "negative": "white clothes, colorful clothes, shirtless, beard, grey clothes, rolled sleeves, hunched shoulders",
+        "body": "muscular broad chest, defined biceps, V-taper torso",
         "summary": ("Minh, a young Vietnamese man. 180 cm, 80 kg, a lean muscular athletic build: broad shoulders, "
                     "defined chest and arms, a narrow waist, a V-shaped torso. Fair clear skin, a refined slim "
                     "face with straight eyebrows and almond eyes, tousled black hair with a long side-swept "
@@ -118,9 +118,12 @@ def pose_map(char: dict, panel: str):
     body = {"r_shoulder": (-sh, 0.72), "l_shoulder": (sh, 0.72), "r_hip": (-hip, 3.0), "l_hip": (hip, 3.0)}
     keys = geo._KEYS
     if panel in ("full_front", "full_back"):
-        arms = {**body, "r_elbow": (-sh - 0.2, 2.05), "r_wrist": (-sh - 0.3, 3.15),
-                "l_elbow": (sh + 0.2, 2.05), "l_wrist": (sh + 0.3, 3.15)}
-        legs = {"r_knee": (-0.45, 4.6), "l_knee": (0.45, 4.6), "r_ankle": (-0.5, 6.25), "l_ankle": (0.5, 6.25)}
+        fs, fh = char["full_sh"], char["full_hip"]  # shoulders sit ~0.95 below the nose (not a shrug)
+        arms = {"neck": (0.0, 0.65), "r_shoulder": (-fs, 0.95), "l_shoulder": (fs, 0.95),
+                "r_hip": (-fh, 3.3), "l_hip": (fh, 3.3),
+                "r_elbow": (-fs - 0.15, 2.2), "r_wrist": (-fs - 0.25, 3.4),
+                "l_elbow": (fs + 0.15, 2.2), "l_wrist": (fs + 0.25, 3.4)}
+        legs = {"r_knee": (-fh, 4.9), "l_knee": (fh, 4.9), "r_ankle": (-fh - 0.05, 6.5), "l_ankle": (fh + 0.05, 6.5)}
         points = geo.person_pose(size, 0.5, char["full"][0], char["full"][1], "front", arms, legs)
         if panel == "full_back":
             points = [None if key in _FACE else pt for key, pt in zip(keys, points, strict=True)]
