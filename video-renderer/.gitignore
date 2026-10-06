@@ -2,5 +2,7 @@ node_modules/
 build/
 out/
 .remotion/
-public/
+# Render inputs are generated; only the bundled brand font (Phase 25, SIL OFL) is source.
+public/*
+!public/fonts/
 *.log

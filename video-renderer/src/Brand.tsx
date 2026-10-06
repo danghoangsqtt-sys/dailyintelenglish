@@ -1,35 +1,56 @@
 /**
- * Task 25.1 spike (not shipped): a morph-style branded intro and outro for owner review.
+ * Phase 25 (D52-D55): the branded intro and outro, owner-approved in spike 25.1.
  *
- * "Morph" = PowerPoint-style: the same elements stay on screen and glide between layouts (position,
- * size, colour, radius) with spring easing, instead of cutting between unrelated slides.
+ * "Morph" = PowerPoint-style: the same elements stay on screen and glide between layouts
+ * (position, size, colour, radius) with spring easing instead of cutting between unrelated slides.
+ * The intro opens on the logo, morphs it into a header, then brings in the episode; the outro
+ * mirrors it. Jenny's greeting / farewell play here unless the full-video soundtrack already
+ * carries them (Phase 22.4 + 25.2), so the music can duck under her.
  */
 import React from "react";
-import { AbsoluteFill, Audio, Easing, Sequence, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import {
+  AbsoluteFill,
+  Audio,
+  Easing,
+  Sequence,
+  continueRender,
+  delayRender,
+  interpolate,
+  spring,
+  staticFile,
+  useCurrentFrame,
+  useVideoConfig,
+} from "remotion";
+import type { EpisodeBrand, EpisodeSpeaker } from "./types";
 
-const FONT = "'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
+export const BRAND_FONT = "'Montserrat', 'Segoe UI', Arial, sans-serif";
 const INK = "#F8FAFC";
 const MUTED = "#C7D2FE";
 const VIOLET = "#7C3AED";
 const CYAN = "#22D3EE";
 const AMBER = "#F59E0B";
+const SPEAKER_RING = ["#F59E0B", "#58A6FF"];
+export const DEFAULT_WISH = "Wishing you a wonderful time learning English today!";
 
-export type BrandSpikeProps = {
-  title: string;
-  topic: string;
-  cefrLevel: string;
-  speakers: string[];
-  wish: string;
-  greetingPath: string;
-  farewellPath: string;
-  introSec: number;
-  gapSec: number;
-  outroSec: number;
-};
+// Bundled SIL OFL font (video-renderer/public/fonts/OFL.txt); the render waits until it is loaded.
+if (typeof document !== "undefined" && typeof FontFace !== "undefined") {
+  const handle = delayRender("Loading Montserrat");
+  const font = new FontFace("Montserrat", `url('${staticFile("fonts/Montserrat-Variable.ttf")}') format('truetype')`,
+    { weight: "100 900" });
+  font.load()
+    .then((loaded) => {
+      (document.fonts as unknown as { add: (face: FontFace) => void }).add(loaded);
+      continueRender(handle);
+    })
+    .catch((error) => {
+      console.warn("Montserrat failed to load; using the fallback font", error);
+      continueRender(handle);
+    });
+}
 
-const mix = (from: number, to: number, t: number) => from + (to - from) * t;
+export const mix = (from: number, to: number, t: number): number => from + (to - from) * t;
 
-function mixColor(a: string, b: string, t: number): string {
+export function mixColor(a: string, b: string, t: number): string {
   const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
   const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
   return `rgb(${pa.map((value, i) => Math.round(mix(value, pb[i], t))).join(",")})`;
@@ -79,28 +100,30 @@ function Background({ morph }: { morph: number }) {
 
 /** The logo mark + wordmark, morphing between a centred hero layout (0) and a top-left header (1). */
 function Logo({ morph, appear }: { morph: number; appear: number }) {
-  const markSize = mix(150, 64, morph);
-  const markX = mix(640 - 75 - 0, 72, morph);
-  const markY = mix(190, 44, morph);
-  const wordX = mix(640, 72 + 64 + 18, morph);
-  const wordY = mix(380, 50, morph);
-  const wordSize = mix(64, 28, morph);
+  const markSize = mix(150, 76, morph);
+  const markX = mix(640 - 75, 56, morph);
+  const markY = mix(190, 36, morph);
+  const wordX = mix(640, 56 + 76 + 20, morph);
+  const wordY = mix(380, 40, morph);
+  const wordSize = mix(64, 34, morph);
   return (
     <>
       <div style={{
         position: "absolute", left: markX, top: markY, width: markSize, height: markSize,
-        borderRadius: mix(40, 16, morph), transform: `scale(${appear})`, opacity: appear,
+        borderRadius: mix(40, 20, morph), transform: `scale(${appear})`, opacity: appear,
         background: `linear-gradient(135deg, ${VIOLET}, ${CYAN})`,
-        boxShadow: `0 ${mix(24, 8, morph)}px ${mix(60, 20, morph)}px rgba(124,58,237,0.45)`,
+        boxShadow: `0 ${mix(24, 10, morph)}px ${mix(60, 24, morph)}px rgba(124,58,237,0.45)`,
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: FONT, fontWeight: 800, color: INK, fontSize: markSize * 0.42, letterSpacing: -1,
+        fontFamily: BRAND_FONT, fontWeight: 800, color: INK, fontSize: markSize * 0.42, letterSpacing: -1,
       }}>DI</div>
       <div style={{
         position: "absolute", left: wordX, top: wordY, transform: `translateX(${mix(-50, 0, morph)}%)`,
-        opacity: appear, fontFamily: FONT, color: INK, whiteSpace: "nowrap", textAlign: morph < 0.5 ? "center" : "left",
+        opacity: appear, fontFamily: BRAND_FONT, color: INK, whiteSpace: "nowrap",
+        textAlign: morph < 0.5 ? "center" : "left",
       }}>
         <div style={{ fontSize: wordSize, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.05 }}>Daily Intel</div>
-        <div style={{ fontSize: wordSize * 0.42, fontWeight: 600, letterSpacing: wordSize * 0.18, color: CYAN }}>ENGLISH</div>
+        <div style={{ fontSize: Math.max(14, wordSize * 0.42), fontWeight: 700, letterSpacing: wordSize * 0.16,
+          color: CYAN, marginTop: 2 }}>ENGLISH</div>
       </div>
     </>
   );
@@ -110,7 +133,20 @@ function rise(progress: number) {
   return { opacity: progress, transform: `translateY(${mix(28, 0, progress)}px)` };
 }
 
-function Intro(props: BrandSpikeProps) {
+function BrandVoice({ path, startSec }: { path?: string; startSec?: number }) {
+  const { fps } = useVideoConfig();
+  if (!path) return null;
+  // A Sequence shifts the Audio's own timeline, so the voice starts from its first sample here.
+  return (
+    <Sequence from={Math.round((startSec ?? 0) * fps)} name="BrandVoice">
+      <Audio src={staticFile(path)} />
+    </Sequence>
+  );
+}
+
+export function BrandIntro({ title, topic, cefrLevel, speakers, brand }: {
+  title: string; topic: string; cefrLevel: string; speakers: EpisodeSpeaker[]; brand?: EpisodeBrand;
+}) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const appear = useMorph(0.15, 14, 0.9);
@@ -120,88 +156,78 @@ function Intro(props: BrandSpikeProps) {
   const wishIn = useMorph(3.4, 18, 0.9);
   const exit = interpolate(frame, [durationInFrames - Math.round(0.6 * fps), durationInFrames], [1, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.ease) });
+  const playVoice = brand && !brand.voicesInSoundtrack;
   return (
     <AbsoluteFill style={{ opacity: exit }}>
       <Background morph={morph} />
       <Logo morph={morph} appear={appear} />
-      <div style={{ position: "absolute", left: 0, right: 0, top: 230, textAlign: "center", fontFamily: FONT }}>
-        <div style={{ ...rise(titleIn), fontSize: 64, fontWeight: 800, color: INK, letterSpacing: -1, padding: "0 120px" }}>
-          {props.title}
+      <div style={{ position: "absolute", left: 0, right: 0, top: 230, textAlign: "center", fontFamily: BRAND_FONT }}>
+        <div style={{ ...rise(titleIn), fontSize: 62, fontWeight: 800, color: INK, letterSpacing: -1, padding: "0 120px" }}>
+          {title}
         </div>
         <div style={{ ...rise(metaIn), marginTop: 22, display: "flex", justifyContent: "center", gap: 14, alignItems: "center" }}>
-          <span style={{ padding: "6px 14px", borderRadius: 999, background: AMBER, color: "#1F1300", fontWeight: 800, fontSize: 22 }}>
-            {props.cefrLevel}
-          </span>
-          <span style={{ fontSize: 26, color: MUTED, fontWeight: 600 }}>{props.topic}</span>
+          {cefrLevel ? (
+            <span style={{ padding: "6px 14px", borderRadius: 999, background: AMBER, color: "#1F1300", fontWeight: 800, fontSize: 22 }}>
+              {cefrLevel}
+            </span>
+          ) : null}
+          <span style={{ fontSize: 26, color: MUTED, fontWeight: 600 }}>{topic}</span>
         </div>
         <div style={{ ...rise(metaIn), marginTop: 22, display: "flex", justifyContent: "center", gap: 12 }}>
-          {props.speakers.map((name, index) => (
-            <span key={name} style={{ padding: "8px 18px", borderRadius: 999, fontSize: 22, fontWeight: 700, color: INK,
-              background: "rgba(255,255,255,0.08)", border: `2px solid ${index === 0 ? AMBER : "#58A6FF"}` }}>{name}</span>
+          {speakers.map((speaker, index) => (
+            <span key={speaker.id} style={{ padding: "8px 18px", borderRadius: 999, fontSize: 22, fontWeight: 700, color: INK,
+              background: "rgba(255,255,255,0.08)", border: `2px solid ${SPEAKER_RING[index % SPEAKER_RING.length]}` }}>
+              {speaker.name}
+            </span>
           ))}
         </div>
-        <div style={{ ...rise(wishIn), marginTop: 46, fontSize: 30, fontStyle: "italic", color: INK, opacity: wishIn * 0.92 }}>
-          “{props.wish}”
+        <div style={{ ...rise(wishIn), marginTop: 46, fontSize: 30, fontStyle: "italic", fontWeight: 500, color: INK,
+          opacity: wishIn * 0.92, padding: "0 140px" }}>
+          “{brand?.wish ?? DEFAULT_WISH}”
         </div>
       </div>
-      <Audio src={staticFile(props.greetingPath)} startFrom={0} />
+      {playVoice ? <BrandVoice path={brand.greetingPath} startSec={brand.greetingStartSec} /> : null}
     </AbsoluteFill>
   );
 }
 
-function Outro(props: BrandSpikeProps) {
+export function BrandOutro({ brand }: { brand?: EpisodeBrand }) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const enter = interpolate(frame, [0, Math.round(0.6 * fps)], [0, 1], { extrapolateRight: "clamp" });
   const appear = useMorph(0.2, 14, 0.9);
   const morph = 1 - useMorph(0.2, 20, 1.1); // the header logo glides back to the centre
   const lift = useMorph(1.5, 20, 1.0);
+  const lineIn = useMorph(2.8, 18, 0.9);
   const chips = ["👍  Like", "🔔  Subscribe", "↗  Share"];
   const exit = interpolate(frame, [durationInFrames - Math.round(0.9 * fps), durationInFrames], [1, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const playVoice = brand && !brand.voicesInSoundtrack;
   return (
     <AbsoluteFill style={{ opacity: enter * exit }}>
       <Background morph={1 - morph} />
       <div style={{ position: "absolute", inset: 0, transform: `translateY(${mix(0, -70, lift)}px)` }}>
         <Logo morph={morph} appear={appear} />
       </div>
-      <div style={{ position: "absolute", left: 0, right: 0, top: 440, textAlign: "center", fontFamily: FONT }}>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 440, textAlign: "center", fontFamily: BRAND_FONT }}>
         <div style={{ ...rise(lift), fontSize: 46, fontWeight: 800, color: INK }}>Thanks for watching!</div>
         <div style={{ marginTop: 26, display: "flex", justifyContent: "center", gap: 16 }}>
           {chips.map((chip, index) => {
             const pop = spring({ frame: frame - Math.round((2.0 + index * 0.18) * fps), fps, config: { damping: 12 } });
             return (
               <span key={chip} style={{ transform: `scale(${pop})`, opacity: pop, padding: "12px 26px", borderRadius: 999,
-                fontSize: 26, fontWeight: 800, color: index === 1 ? "#FFFFFF" : INK,
-                background: index === 1 ? "#E11D48" : "rgba(255,255,255,0.1)", border: "2px solid rgba(255,255,255,0.18)" }}>{chip}</span>
+                fontSize: 26, fontWeight: 800, color: INK,
+                background: index === 1 ? "#E11D48" : "rgba(255,255,255,0.1)", border: "2px solid rgba(255,255,255,0.18)" }}>
+                {chip}
+              </span>
             );
           })}
         </div>
-        <div style={{ ...rise(useMorph(2.8, 18, 0.9)), marginTop: 30, fontSize: 26, color: MUTED }}>See you in the next lesson</div>
+        <div style={{ ...rise(lineIn), marginTop: 30, fontSize: 26, fontWeight: 500, color: MUTED, padding: "0 140px" }}>
+          {brand?.farewellLine ?? "See you in the next lesson"}
+        </div>
       </div>
-      <Audio src={staticFile(props.farewellPath)} startFrom={0} />
+      {playVoice ? <BrandVoice path={brand.farewellPath} startSec={brand.farewellStartSec} /> : null}
     </AbsoluteFill>
   );
 }
-
-export const BrandSpike: React.FC<BrandSpikeProps> = (props) => {
-  const { fps } = useVideoConfig();
-  const intro = Math.round(props.introSec * fps);
-  const gap = Math.round(props.gapSec * fps);
-  const outro = Math.round(props.outroSec * fps);
-  return (
-    <AbsoluteFill style={{ backgroundColor: "#0E0F15" }}>
-      <Sequence from={0} durationInFrames={intro} name="BrandIntro">
-        <Intro {...props} />
-      </Sequence>
-      <Sequence from={intro} durationInFrames={gap} name="EpisodePlaceholder">
-        <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", color: "#64748B", fontFamily: FONT, fontSize: 28 }}>
-          … the episode plays here …
-        </AbsoluteFill>
-      </Sequence>
-      <Sequence from={intro + gap} durationInFrames={outro} name="BrandOutro">
-        <Outro {...props} />
-      </Sequence>
-    </AbsoluteFill>
-  );
-};

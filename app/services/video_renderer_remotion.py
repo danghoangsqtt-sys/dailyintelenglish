@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import math
 import platform
 import shutil
@@ -32,15 +33,17 @@ import aiosqlite
 
 from app.core.config import settings
 from app.core.constants import VIDEO_FPS, VIDEO_HEIGHT_STANDARD, VIDEO_WIDTH_STANDARD
-from app.core.exceptions import AudioMixError, RemotionRenderFailedError
+from app.core.exceptions import AudioMixError, RemotionRenderFailedError, TTSError
 from app.core.paths import get_project_root
-from app.services import audio_service, avatar_service, youtube_service
+from app.services import audio_service, avatar_service, brand_service, youtube_service
 from app.services.visuals import library_service, project_visuals_service, storyboard_service
 
 VIDEO_RENDERER_DIR = get_project_root() / "video-renderer"
 REMOTION_AUDIO_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "audio"
+REMOTION_BRAND_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "brand"
 # The owner-signed intro/outro timings (types.ts defaults, task-19.6.md), now sent explicitly so the
 # Task 22.4 soundtrack and the composition always agree on the video's length.
+logger = logging.getLogger(__name__)
 REMOTION_INTRO_SEC = 2.5
 REMOTION_OUTRO_SEC = 5.0
 REMOTION_AVATARS_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "avatars"
@@ -404,11 +407,54 @@ async def render_via_remotion(
     project_id = project["id"]
     input_props = await _build_input_props(db, project, audio_job, learning, caption_style)
     await asyncio.to_thread(_copy_audio_into_public, project_id, audio_job["mp3_path"])
-    soundtrack = await _build_soundtrack(project_id, audio_job, input_props)
+    voices = await _add_brand(project_id, input_props)
+    soundtrack = await _build_soundtrack(project_id, audio_job, input_props, voices)
     if soundtrack is not None:
         input_props["soundtrackPath"] = soundtrack
+        if "brand" in input_props:
+            input_props["brand"]["voicesInSoundtrack"] = bool(voices)
     result = await asyncio.to_thread(_render_via_remotion_sync, input_props, output_path)
-    return {**result, "soundtrack": soundtrack is not None}
+    return {**result, "soundtrack": soundtrack is not None, "brand_voice": bool(voices)}
+
+
+def _copy_brand_voice(source: str) -> str:
+    REMOTION_BRAND_DIR.mkdir(parents=True, exist_ok=True)
+    destination = REMOTION_BRAND_DIR / Path(source).name
+    shutil.copyfile(source, destination)
+    return f"remotion-render/brand/{destination.name}"
+
+
+def outro_start_seconds(input_props: dict[str, Any]) -> float:
+    """Where Episode.tsx starts the outro: intro frames + speech frames, in seconds."""
+    fps = input_props["fps"]
+    lines = input_props["lines"]
+    audio_seconds = lines[-1]["endSec"] if lines else 0
+    return (round(input_props["introSec"] * fps) + round(audio_seconds * fps)) / fps
+
+
+async def _add_brand(project_id: str, input_props: dict[str, Any]) -> list[tuple[str, float]]:
+    """Phase 25 (D52/D53): Jenny's greeting + wish and farewell, and slide lengths that follow
+    them. If Edge TTS is unreachable the branded slides still render, silent, at the minimum
+    length -- a missing voice must never cost the whole video. Returns the voices on the video
+    timeline (path, start seconds) for the soundtrack."""
+    lines = brand_service.brand_lines(project_id)
+    brand: dict[str, Any] = {"wish": lines["wish"], "farewellLine": lines["farewell_line"]}
+    try:
+        audio = await brand_service.brand_audio(project_id)
+    except TTSError as exc:
+        logger.warning("brand_voice_unavailable project_id=%s reason=%s", project_id, exc)
+        timing = brand_service.brand_timing(None, None)
+        input_props.update(introSec=timing["intro_s"], outroSec=timing["outro_s"], brand=brand)
+        return []
+    brand.update(
+        greetingPath=await asyncio.to_thread(_copy_brand_voice, audio["greeting"]["path"]),
+        farewellPath=await asyncio.to_thread(_copy_brand_voice, audio["farewell"]["path"]),
+        greetingStartSec=audio["greeting_start_s"], farewellStartSec=audio["farewell_start_s"],
+        voicesInSoundtrack=False,
+    )
+    input_props.update(introSec=audio["intro_s"], outroSec=audio["outro_s"], brand=brand)
+    return [(audio["greeting"]["path"], audio["greeting_start_s"]),
+            (audio["farewell"]["path"], outro_start_seconds(input_props) + audio["farewell_start_s"])]
 
 
 def composition_seconds(input_props: dict[str, Any]) -> float:
@@ -419,13 +465,14 @@ def composition_seconds(input_props: dict[str, Any]) -> float:
     return max(1, math.ceil(total * input_props["fps"])) / input_props["fps"]
 
 
-async def _build_soundtrack(project_id: str, audio_job: dict, input_props: dict[str, Any]) -> str | None:
+async def _build_soundtrack(project_id: str, audio_job: dict, input_props: dict[str, Any],
+                            voices: list[tuple[str, float]] | None = None) -> str | None:
     """Task 22.4 (D51): with music, one soundtrack covers intro + speech + outro and fades out on the
     composition's last frame. Returns its public path, or None (no music / an old audio job)."""
     output = REMOTION_AUDIO_DIR / f"{project_id}_soundtrack.mp3"
     try:
         built = await audio_service.build_soundtrack(
-            audio_job, input_props["introSec"], composition_seconds(input_props), output,
+            audio_job, input_props["introSec"], composition_seconds(input_props), output, voices,
         )
     except AudioMixError as exc:
         raise RemotionRenderFailedError(str(exc)) from exc

@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill, Audio, Img, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
+import { BrandIntro, BrandOutro } from "./Brand";
 import { computeProgressForFrame } from "./chapters";
 import { activeTokenIndex, buildKaraokeTokens } from "./karaoke";
 import { activeSpeakerId } from "./speakers";
@@ -359,109 +360,6 @@ export function AudioWindowContent({
 /** Task 19.6 (D19.6-b/c): opacity envelope in frame units (no fps conversion needed by
  * callers) -- fades in over `fadeInFrames`, holds, fades out over the last `fadeOutFrames`
  * of `totalFrames`. */
-function fadeOpacity(frame: number, totalFrames: number, fadeInFrames: number, fadeOutFrames: number): number {
-  const fadeIn = interpolate(frame, [0, fadeInFrames], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const fadeOut = interpolate(frame, [totalFrames - fadeOutFrames, totalFrames], [1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  return Math.min(fadeIn, fadeOut);
-}
-
-/** Task 19.6 (D19.6-b): "{a} & {b}" for two speakers, comma-separated for 3+, just the name
- * for a solo project, "" when the project has no speakers at all. */
-function speakerNamesLabel(speakers: EpisodeSpeaker[]): string {
-  if (speakers.length === 0) {
-    return "";
-  }
-  if (speakers.length === 1) {
-    return speakers[0].name;
-  }
-  if (speakers.length === 2) {
-    return `${speakers[0].name} & ${speakers[1].name}`;
-  }
-  return speakers.map((speaker) => speaker.name).join(", ");
-}
-
-const INTRO_FADE_IN_SECONDS = 0.5;
-const INTRO_FADE_OUT_SECONDS = 0.5;
-
-/** Task 19.6 (D19.6-b): title slide -- project title, speaker names, `[CEFR] topic` tag. */
-function Intro({
-  title,
-  topic,
-  cefrLevel,
-  speakers,
-  fps,
-  durationInFrames,
-}: {
-  title: string;
-  topic: string;
-  cefrLevel: string;
-  speakers: EpisodeSpeaker[];
-  fps: number;
-  durationInFrames: number;
-}) {
-  const frame = useCurrentFrame();
-  const opacity = fadeOpacity(
-    frame,
-    durationInFrames,
-    Math.round(INTRO_FADE_IN_SECONDS * fps),
-    Math.round(INTRO_FADE_OUT_SECONDS * fps)
-  );
-  const names = speakerNamesLabel(speakers);
-  const tag = [cefrLevel ? `[${cefrLevel}]` : "", topic].filter(Boolean).join(" ");
-
-  return (
-    <AbsoluteFill
-      style={{
-        backgroundColor: MIDNIGHT_BACKGROUND,
-        alignItems: "center",
-        justifyContent: "center",
-        opacity,
-      }}
-    >
-      <div style={{ fontFamily: CAPTION_TEXT_STYLE.fontFamily, color: "#FFFFFF", textAlign: "center" }}>
-        <div style={{ fontSize: 56, fontWeight: 700 }}>{title}</div>
-        {names ? (
-          <div style={{ fontSize: 32, fontWeight: 700, marginTop: 16, color: SPEAKER_COLORS[0] }}>{names}</div>
-        ) : null}
-        {tag ? <div style={{ fontSize: 22, marginTop: 12, opacity: 0.85 }}>{tag}</div> : null}
-      </div>
-    </AbsoluteFill>
-  );
-}
-
-const OUTRO_FADE_IN_SECONDS = 0.5;
-const OUTRO_FADE_OUT_SECONDS = 1.0;
-
-/** Task 19.6 (D19.6-c): owner-approved CTA text, centered, same background as the intro. */
-function Outro({ text, fps, durationInFrames }: { text: string; fps: number; durationInFrames: number }) {
-  const frame = useCurrentFrame();
-  const opacity = fadeOpacity(
-    frame,
-    durationInFrames,
-    Math.round(OUTRO_FADE_IN_SECONDS * fps),
-    Math.round(OUTRO_FADE_OUT_SECONDS * fps)
-  );
-
-  return (
-    <AbsoluteFill
-      style={{
-        backgroundColor: MIDNIGHT_BACKGROUND,
-        alignItems: "center",
-        justifyContent: "center",
-        opacity,
-      }}
-    >
-      <div style={{ ...CAPTION_TEXT_STYLE, fontSize: 36, maxWidth: "80%" }}>{text}</div>
-    </AbsoluteFill>
-  );
-}
-
 export const Episode: React.FC<EpisodeInputProps> = ({
   lines,
   speakers,
@@ -474,10 +372,10 @@ export const Episode: React.FC<EpisodeInputProps> = ({
   chapters,
   introSec,
   outroSec,
-  outroText,
   captionStyle,
   visuals,
   soundtrackPath,
+  brand,
 }) => {
   // D19.6-a: total video = intro + audio + outro (Option B, extend). `audioDurationSec` is
   // the same "last line's endSec" measure Root.tsx's calculateMetadata already uses for the
@@ -492,7 +390,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
       {/* Task 22.4 (D51): the music bed spans intro + speech + outro, so it plays from frame 0. */}
       {soundtrackPath ? <Audio src={staticFile(soundtrackPath)} startFrom={0} /> : null}
       <Sequence from={0} durationInFrames={introFrames} name="Intro">
-        <Intro title={title} topic={topic} cefrLevel={cefrLevel} speakers={speakers} fps={fps} durationInFrames={introFrames} />
+        <BrandIntro title={title} topic={topic} cefrLevel={cefrLevel} speakers={speakers} brand={brand} />
       </Sequence>
       <Sequence from={introFrames} durationInFrames={audioFrames} name="Audio">
         <AudioWindowContent
@@ -509,7 +407,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
         />
       </Sequence>
       <Sequence from={introFrames + audioFrames} durationInFrames={outroFrames} name="Outro">
-        <Outro text={outroText} fps={fps} durationInFrames={outroFrames} />
+        <BrandOutro brand={brand} />
       </Sequence>
     </AbsoluteFill>
   );

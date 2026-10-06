@@ -102,6 +102,19 @@ export const episodeVisualsSchema = z.object({
   lineShots: z.array(z.string().nullable()),
 });
 
+/** Phase 25 (D52-D55): the branded intro/outro -- Jenny's greeting + wish and farewell. Optional,
+ * so older props files render the branded slides without a voice and with the default wish. */
+export const episodeBrandSchema = z.object({
+  wish: z.string(),
+  farewellLine: z.string().optional(),
+  greetingPath: z.string().optional(),
+  farewellPath: z.string().optional(),
+  greetingStartSec: z.number().optional(),
+  farewellStartSec: z.number().optional(),
+  /** true when the full-video soundtrack already carries the voices (so they are not played twice). */
+  voicesInSoundtrack: z.boolean().default(false),
+});
+
 export const episodeInputPropsSchema = z.object({
   /** projects.id */
   episodeId: z.string(),
@@ -138,6 +151,7 @@ export const episodeInputPropsSchema = z.object({
   /** Task 22.4 (D51): when set, one full-video soundtrack (voice + music bed covering the intro,
    * speech and outro, faded out on the last frame) plays from frame 0 instead of `audioPath`. */
   soundtrackPath: z.string().optional(),
+  brand: episodeBrandSchema.optional(),
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;
@@ -149,3 +163,4 @@ export type EpisodeLearning = z.infer<typeof episodeLearningSchema>;
 export type Chapter = z.infer<typeof chapterSchema>;
 export type EpisodeInputProps = z.infer<typeof episodeInputPropsSchema>;
 export type EpisodeVisuals = z.infer<typeof episodeVisualsSchema>;
+export type EpisodeBrand = z.infer<typeof episodeBrandSchema>;

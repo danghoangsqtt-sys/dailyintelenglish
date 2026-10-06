@@ -232,18 +232,29 @@ def voice_stem_path(project_id: str) -> Path:
     return settings.DATA_DIR / "audio" / project_id / VOICE_STEM_NAME
 
 
+def _place(track: np.ndarray, audio: np.ndarray, start_s: float) -> float:
+    """Add `audio` into `track` at `start_s` (clipped to the track); returns where it ends."""
+    offset = int(round(start_s * music_bed.SAMPLE_RATE))
+    length = max(0, min(audio.shape[1], track.shape[1] - offset))
+    track[:, offset:offset + length] += audio[:, :length]
+    return (offset + length) / music_bed.SAMPLE_RATE
+
+
 def _build_soundtrack_sync(voice_path: Path, music_path: Path, timestamps: list[dict], lead_in_s: float,
-                           total_s: float, output_path: Path) -> dict:
+                           total_s: float, output_path: Path,
+                           extra_voices: list[tuple[str, float]] | None = None) -> dict:
     """Blocking: lead-in + voice + tail as one soundtrack exactly `total_s` long, with the music
     bed over all of it -- open in the lead-in and tail, ducked under every line, faded out to
-    silence on the last sample."""
+    silence on the last sample. Phase 25: `extra_voices` (the branded greeting and farewell) are
+    placed at their start times, at the voice's loudness, and the music ducks under them too."""
     voice = music_bed.from_segment(AudioSegment.from_file(voice_path))
     total = int(round(total_s * music_bed.SAMPLE_RATE))
-    offset = int(round(lead_in_s * music_bed.SAMPLE_RATE))
     placed = np.zeros((music_bed.CHANNELS, total), dtype=np.float32)
-    length = max(0, min(voice.shape[1], total - offset))
-    placed[:, offset:offset + length] = voice[:, :length]
+    _place(placed, voice, lead_in_s)
     spans = [(entry["start_sec"] + lead_in_s, entry["end_sec"] + lead_in_s) for entry in timestamps]
+    for path, start_s in extra_voices or []:
+        extra = music_bed.normalise(music_bed.decode(Path(path)), TARGET_LOUDNESS_LUFS)
+        spans.append((start_s, _place(placed, extra, start_s)))
     bed = music_bed.build_bed(music_bed.decode(music_path), total, spans)
     soundtrack = music_bed.to_segment(music_bed.mix(placed, bed))
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -252,7 +263,8 @@ def _build_soundtrack_sync(voice_path: Path, music_path: Path, timestamps: list[
             "lead_in_seconds": lead_in_s}
 
 
-async def build_soundtrack(audio_job: dict, lead_in_s: float, total_s: float, output_path: Path) -> dict | None:
+async def build_soundtrack(audio_job: dict, lead_in_s: float, total_s: float, output_path: Path,
+                           extra_voices: list[tuple[str, float]] | None = None) -> dict | None:
     """Task 22.4 (D51): the full-video soundtrack, or None when the episode has no music or was
     mixed before voice stems existed (the caller then uses the plain mix, unchanged)."""
     filename = audio_job.get("background_music")
@@ -264,7 +276,7 @@ async def build_soundtrack(audio_job: dict, lead_in_s: float, total_s: float, ou
         return None
     try:
         return await asyncio.to_thread(_build_soundtrack_sync, voice_path, music_path, audio_job["timestamps"],
-                                       lead_in_s, total_s, output_path)
+                                       lead_in_s, total_s, output_path, extra_voices)
     except Exception as exc:
         raise AudioMixError(f"Building the music soundtrack failed: {exc}") from exc
 

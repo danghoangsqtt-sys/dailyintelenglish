@@ -2,7 +2,6 @@ import React from "react";
 import { Composition } from "remotion";
 import { Episode } from "./Episode";
 import { StillFrame } from "./StillFrame";
-import { BrandSpike, type BrandSpikeProps } from "./BrandSpike";
 import { episodeInputPropsSchema, type EpisodeInputProps } from "./types";
 
 const defaultProps: EpisodeInputProps = {
@@ -73,24 +72,6 @@ export const RemotionRoot: React.FC = () => {
             height: props.height,
           };
         }}
-      />
-      {/* Task 25.1 spike (not shipped): morph intro/outro preview for owner review. */}
-      <Composition
-        id="BrandSpike"
-        component={BrandSpike}
-        durationInFrames={90}
-        fps={30}
-        width={1280}
-        height={720}
-        defaultProps={{
-          title: "Good Morning", topic: "How do you start a new day?", cefrLevel: "B1",
-          speakers: ["Lan", "Minh"], wish: "Wishing you a wonderful time learning English today!",
-          greetingPath: "brand-spike/greeting.mp3", farewellPath: "brand-spike/farewell.mp3",
-          introSec: 7.6, gapSec: 1.5, outroSec: 7.5,
-        } satisfies BrandSpikeProps}
-        calculateMetadata={async ({ props }) => ({
-          durationInFrames: Math.ceil((props.introSec + props.gapSec + props.outroSec) * 30),
-        })}
       />
     </>
   );
