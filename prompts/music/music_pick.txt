@@ -6,11 +6,12 @@ Genre: {{ genre }}
 CEFR level: {{ cefr_level }}
 Video length: about {{ target_minutes }} minutes
 
-Candidate tracks (filename | title | mood | pace | tempo | tags | length):
-{% for track in candidates %}- {{ track.filename }} | {{ track.title }} | {{ track.mood or "unknown" }} | {{ track.pace or "unknown" }} pace | {{ "~%d BPM" % track.bpm if track.bpm else "tempo unknown" }} | {{ track.tags or "-" }} | {{ track.length }}
+Candidate tracks (filename | title | mood | pace | tempo | tags | length | fit to the video):
+{% for track in candidates %}- {{ track.filename }} | {{ track.title }} | {{ track.mood or "unknown" }} | {{ track.pace or "unknown" }} pace | {{ "~%d BPM" % track.bpm if track.bpm else "tempo unknown" }} | {{ track.tags or "-" }} | {{ track.length }} | {{ track.fit }}
 {% endfor %}
 Match the energy of the music to the rhythm of the talk: lively small talk suits a lively pace;
-news, explanations and calm opinions suit a calm pace.
+news, explanations and calm opinions suit a calm pace. Prefer a track that covers the video or
+loops only a few times: a short track repeated many times sounds repetitive.
 
 Rules:
 1. "filename" must be exactly one of the filenames listed above.

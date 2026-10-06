@@ -84,11 +84,14 @@ def score(track: dict[str, Any], genre: str, topic: str, target: float, recent: 
         length_points, loops = -2.0, None
     else:
         loops = max(1, math.ceil(target / duration))
-        length_points = 2.0 if loops == 1 else max(-1.0, -0.5 * (loops - 1))
+        # Many repeats of a short track sound repetitive (a 68 s jingle x9 under a 10-minute talk was
+        # picked in the 22.9 real check), so the penalty grows with the loops, down to -3.
+        length_points = 2.0 if loops == 1 else max(-3.0, -0.5 * (loops - 1))
     recent_points = -1.5 if track["filename"] in recent else 0.0
     return {
         "filename": track["filename"], "title": track["title"], "mood": mood, "tags": track.get("tags"),
         "duration_s": duration, "length": format_length(duration), "loops": loops, "matched_words": matched,
+        "fit": "covers the video" if loops == 1 else (f"loops {loops} times" if loops else "length unknown"),
         "pace": pace, "bpm": track.get("bpm"),
         "parts": {"mood": mood_points, "rhythm": rhythm_points, "topic": topic_points, "length": length_points,
                   "recent": recent_points},

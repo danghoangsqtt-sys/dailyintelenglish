@@ -90,7 +90,7 @@ def test_length_fit_prefers_covering_the_video():
     unknown = select.score(track(duration=None), "news", "", 290, set())
     assert (covers["parts"]["length"], covers["loops"]) == (2.0, 1)
     assert (two_loops["parts"]["length"], two_loops["loops"]) == (-0.5, 2)
-    assert many["parts"]["length"] == -1.0 and unknown["parts"]["length"] == -2.0
+    assert many["parts"]["length"] == -3.0 and unknown["parts"]["length"] == -2.0  # 30 s x10: capped at -3
 
 
 def test_recently_used_tracks_are_penalised():
@@ -128,7 +128,7 @@ def test_ai_picks_among_the_top_candidates(client, fake_ai):
         "ai", "sleepy.mp3", "Calm and gentle for a relaxed chat.")
     assert [item["filename"] for item in result["candidates"]][0] == "market_walk.mp3"  # the rule's top score
     prompt = provider.calls[0].prompt
-    assert "market_walk.mp3 | Market walk | acoustic | unknown pace | tempo unknown | market, street food | 2:20" in prompt
+    assert "market_walk.mp3 | Market walk | acoustic | unknown pace | tempo unknown | market, street food | 2:20 | covers the video" in prompt
     assert "Topic: Weekend markets and street food in Hanoi" in prompt and provider.calls[0].purpose == "music_pick"
 
 
