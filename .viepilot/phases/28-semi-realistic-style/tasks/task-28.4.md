@@ -57,3 +57,10 @@ first.
 - After the run: 2 characters, 8 sheet assets approved (4 each), 2 `face` assets, both locked; the old
   folders are gone; the Demo Episode cast points at the new ids; the app serves the images.
 - The full test suite is unaffected (data change only), but is rerun after any application code change.
+
+## Result (2026-10-06)
+
+Lan and Minh replace the old characters in the real library (`docs/operations/phase28-characters-replaced.md`).
+Next, Task 28.4b: the app's own shot job on a copy of the data (`scripts/make_smoke_copy.py`, a second app on
+port 8001 with `DIE_DATA_DIR`): the Demo Episode's 12 shots, to check the duo refine, the colour retry and the
+extra-person check on photographs with the real faces.
