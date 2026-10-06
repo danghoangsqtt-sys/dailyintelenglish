@@ -347,6 +347,11 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path) ->
     already documents. Temp-props-file + `time.monotonic()` wall time + strict
     output-path validation, mirroring `scripts/run_remotion_spike.py::_run_render` exactly.
     """
+    # Remotion runs with cwd=video-renderer/, so a relative path (DATA_DIR is the relative "data" in a
+    # dev checkout) made it write video-renderer/data/... while this check looked under data/ -- every
+    # Enhanced render then "produced no output" and fell back to ffmpeg (found 2026-10-06 on a real
+    # end-to-end episode). Always hand Remotion an absolute path.
+    output_path = output_path.resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     npx = shutil.which("npx.cmd") or shutil.which("npx") or "npx"
     props_file = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8")

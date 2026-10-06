@@ -312,3 +312,30 @@ async def test_build_input_props_carries_caption_style_with_outline_default(tmp_
 
     assert default_props["captionStyle"] == "outline"
     assert box_props["captionStyle"] == "box"
+
+
+def test_render_via_remotion_sync_hands_remotion_an_absolute_path(tmp_path, monkeypatch):
+    """Regression (2026-10-06, real end-to-end episode): Remotion runs with cwd=video-renderer/, and
+    DATA_DIR is the relative "data" in a dev checkout. A relative output path made it write under
+    video-renderer/data/ while the check looked under data/, so every Enhanced render fell back."""
+    monkeypatch.chdir(tmp_path)
+    renderer_dir = tmp_path / "video-renderer"
+    renderer_dir.mkdir()
+    seen = {}
+
+    def fake_run(command, cwd=None, capture_output=True, text=True, timeout=None):
+        seen["output"], seen["cwd"] = command[5], cwd
+        target = Path(command[5]) if Path(command[5]).is_absolute() else Path(cwd) / command[5]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"fake-mp4-bytes")  # what Remotion does: relative to its own cwd
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(video_renderer_remotion, "VIDEO_RENDERER_DIR", renderer_dir)
+    monkeypatch.setattr(video_renderer_remotion.subprocess, "run", fake_run)
+    relative = Path("data") / "video" / "p1" / "video_remotion.mp4"
+    result = video_renderer_remotion._render_via_remotion_sync(_fake_input_props(), relative)
+
+    assert Path(seen["output"]).is_absolute()
+    assert Path(result["mp4_path"]) == (tmp_path / relative).resolve()
+    assert (tmp_path / relative).is_file()
+    assert not (renderer_dir / "data").exists()
