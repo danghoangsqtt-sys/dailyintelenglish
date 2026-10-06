@@ -43,3 +43,16 @@
 
 - The full suite is green (behaviour unchanged).
 - After screenshots on the same 44 views are compared with before.
+
+## Results (done 2026-10-06)
+
+- **One header** on all 11 pages: DI mark + wordmark, the shared nav with the current page
+  marked, and the theme toggle. The page-level header CSS is removed.
+- **Brand tokens:**
+  - violet → cyan gradient on primary buttons and on the header underline;
+  - indigo dark surfaces;
+  - focus ring;
+  - Montserrat headings (bundled, OFL).
+- **Checked by eye:** the headers of 6 pages in light and dark.
+- **Header-related browser tests:** 54 passed.
+- **Full suite: 1434 passed.**
