@@ -61,6 +61,7 @@ async def character_view(db: aiosqlite.Connection, character_id: str) -> dict:
     row["reference_url"] = next((a["url"] for a in assets if a["id"] == row["reference_asset_id"]), None)
     row["face_url"] = next((a["url"] for a in assets if a["kind"] == "face"), None)
     row["sheet_urls"] = {a["kind"]: a["url"] for a in assets if a["kind"] in SHEET_KINDS}
+    row["body_url"] = row["sheet_urls"].get("full_body")  # the library tile shows the whole person (Task 27.3b)
     return row
 
 

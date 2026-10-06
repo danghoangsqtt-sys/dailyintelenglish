@@ -138,3 +138,18 @@ def test_character_delete_force_and_content_path_guard(client, tmp_path):
     assert client.get(asset["url"]).status_code == 404
     assert client.delete(f"/api/visuals/characters/{character_id}").status_code == 409
     assert data(client.delete(f"/api/visuals/characters/{character_id}?force=true"))["deleted"] == character_id
+
+
+def test_character_view_offers_the_full_body_picture_for_the_grid(client):
+    """Task 27.3b: a library tile shows the full-body sheet view; without one, body_url is null."""
+    character = data(client.post("/api/visuals/characters", json=CHARACTER))
+    assert character["body_url"] is None
+    wait_job(client, data(client.post(f"/api/visuals/characters/{character['id']}/candidates")))
+    character = data(client.get(f"/api/visuals/characters/{character['id']}"))
+    assert character["body_url"] is None  # candidates only
+    candidate = next(asset for asset in character["assets"] if asset["kind"] == "candidate")
+    data(client.put(f"/api/visuals/characters/{character['id']}/reference", json={"asset_id": candidate["id"]}))
+    wait_job(client, data(client.post(f"/api/visuals/characters/{character['id']}/sheet")))
+    character = data(client.get(f"/api/visuals/characters/{character['id']}"))
+    assert character["body_url"] == character["sheet_urls"]["full_body"]
+    assert client.get(character["body_url"]).status_code == 200

@@ -9,11 +9,38 @@
   <style>
     .library-main { width: min(1160px, calc(100% - 32px)); margin: 32px auto 80px; }
     .library-hint { color: var(--muted); }
-    .library-tabs { display: flex; gap: 8px; margin: 24px 0; }
-    .library-layout { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 20px; }
-    .library-list { display: grid; gap: 10px; align-content: start; }
+    .library-tabs { display: flex; gap: 8px; margin: 20px 0; }
+    .library-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+    .library-layout > .library-editor, .scene-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
+    .library-list { display: grid; gap: 14px; align-content: start; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
     .library-card { display: flex; width: 100%; align-items: center; gap: 12px; padding: 12px; text-align: left;
       background: var(--surface); color: var(--text); cursor: pointer; }
+    .character-tile { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; transition: border-color .15s, box-shadow .15s, transform .15s; }
+    .character-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .character-tile[aria-current="true"] { box-shadow: 0 0 0 3px var(--accent-soft); }
+    .tile-art { display: block; aspect-ratio: 3 / 4; overflow: hidden; border-radius: 10px; background: var(--surface-3); }
+    .character-tile .library-face { display: block; width: 100%; height: 100%; border-radius: 0; object-fit: cover; object-position: center top; }
+    .character-tile .library-placeholder { width: 100%; height: 100%; border-radius: 0; }
+    .tile-copy { display: grid; gap: 4px; }
+    .tile-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .library-swatches { display: inline-flex; gap: 4px; }
+    .library-swatch { width: 16px; height: 16px; border: 1px solid var(--border-strong); border-radius: 50%; }
+    .character-hero { display: flex; align-items: center; gap: 16px; margin: 0 0 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .character-hero[hidden] { display: none; }
+    .character-hero img { width: 112px; height: 112px; flex: none; border-radius: 16px; object-fit: cover; box-shadow: var(--shadow); }
+    .character-hero .hero-name { display: block; font-family: var(--font-display); font-size: 22px; font-weight: 800; }
+    .character-hero .hero-role { margin: 2px 0 8px; color: var(--muted); font-size: 13px; }
+    .scene-browse { min-width: 0; }
+    .scene-side { display: grid; gap: 16px; }
+    .scene-detail { padding: 14px; }
+    .scene-detail[hidden] { display: none; }
+    .scene-detail-plate { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; }
+    .scene-detail-plate[hidden], .scene-detail .scene-placeholder[hidden] { display: none; }
+    .scene-detail h3 { margin: 12px 0 4px; }
+    .scene-detail p { margin: 0; color: var(--muted); }
+    .library-scene { cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
+    .library-scene:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .library-scene[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
     .library-card[aria-current="true"] { border-color: var(--accent); }
     .library-face, .library-placeholder { width: 56px; height: 56px; flex: none; border-radius: 50%;
       object-fit: cover; background: var(--surface-2); }
@@ -40,7 +67,8 @@
     .library-asset .selected { border-color: var(--accent); }
     .library-truncation { color: var(--danger); font-size: 12px; }
     .library-progress { min-height: 24px; margin: 16px 0; }
-    .library-scene-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+    .library-progress:empty { display: none; }
+    .library-scene-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
     .library-scene { padding: 14px; }
     .library-scene img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 7px; }
     .library-scene h3 { margin: 10px 0 5px; }
@@ -53,8 +81,11 @@
     .library-message { margin: 12px 0; padding: 10px 14px; border-radius: 8px; background: var(--surface-2); }
     .library-message[hidden] { display: none; }
     .library-message.error { color: var(--danger); }
-    @media (max-width: 720px) {
+    @media (max-width: 900px) {
       .library-layout { grid-template-columns: 1fr; }
+      .library-layout > .library-editor, .scene-side { position: static; max-height: none; overflow: visible; }
+    }
+    @media (max-width: 720px) {
       .library-fields { grid-template-columns: 1fr; }
     }
   </style>
@@ -91,6 +122,7 @@
       <div class="library-layout">
         <div id="character-list" class="library-list" aria-label="Characters"></div>
         <div class="card library-editor">
+          <div id="character-hero" class="character-hero" hidden></div>
           <h2 id="editor-title">New character</h2>
           <form id="character-form">
             <div class="library-fields">
@@ -140,21 +172,34 @@
       </div>
     </section>
     <section id="scenes-panel" role="tabpanel" aria-labelledby="scenes-tab" hidden>
-      <div class="card library-editor">
-        <h2 id="scene-editor-title">New scene</h2>
-        <form id="scene-form" class="library-fields">
-          <label>Scene name<input name="name" required /></label>
-          <label>Place phrase<input name="place" maxlength="40" placeholder="a bright home kitchen" required /></label>
-          <label>Staging<select name="staging"><option value="standing">Standing</option><option value="seated">Seated</option></select></label>
-          <label>Category<select name="category"></select></label>
-          <label>Time of day<select name="time_of_day"></select></label>
-          <p id="scene-stale-warning" class="library-hint" role="status" hidden>Saving will clear this scene's plate; it is regenerated on next use.</p>
-          <div class="library-actions"><button id="save-scene" class="btn btn-primary" type="submit">Add scene</button><button id="cancel-scene-edit" class="btn btn-ghost" type="button" hidden>Cancel edit</button></div>
-        </form>
-        <p class="library-hint">The place phrase uses up to five words. Staging controls the wide conversation pose. The plate (an empty view of the place) keeps every shot in this scene looking like the same place.</p>
+      <div class="library-layout scenes-layout">
+        <div class="scene-browse">
+          <div id="scene-filters" class="library-chips" role="group" aria-label="Filter scenes by category"></div>
+          <div id="scene-grid" class="library-scene-grid" aria-label="Scenes"></div>
+        </div>
+        <aside id="scene-side" class="scene-side" aria-label="Scene details">
+          <div id="scene-detail" class="card scene-detail" hidden>
+            <img id="scene-detail-plate" class="scene-detail-plate" alt="" hidden />
+            <p id="scene-detail-empty" class="scene-placeholder">No plate yet: it is made when the scene is first used, or press Plate.</p>
+            <h3 id="scene-detail-name"></h3>
+            <p id="scene-detail-place"></p>
+            <p id="scene-detail-meta" class="scene-meta"></p>
+          </div>
+        <div class="card library-editor">
+          <h2 id="scene-editor-title">New scene</h2>
+          <form id="scene-form" class="library-fields">
+            <label>Scene name<input name="name" required /></label>
+            <label>Place phrase<input name="place" maxlength="40" placeholder="a bright home kitchen" required /></label>
+            <label>Staging<select name="staging"><option value="standing">Standing</option><option value="seated">Seated</option></select></label>
+            <label>Category<select name="category"></select></label>
+            <label>Time of day<select name="time_of_day"></select></label>
+            <p id="scene-stale-warning" class="library-hint" role="status" hidden>Saving will clear this scene's plate; it is regenerated on next use.</p>
+            <div class="library-actions"><button id="save-scene" class="btn btn-primary" type="submit">Add scene</button><button id="cancel-scene-edit" class="btn btn-ghost" type="button" hidden>Cancel edit</button></div>
+          </form>
+          <p class="library-hint">The place phrase uses up to five words. Staging controls the wide conversation pose. The plate (an empty view of the place) keeps every shot in this scene looking like the same place.</p>
+        </div>
+        </aside>
       </div>
-      <div id="scene-filters" class="library-chips" role="group" aria-label="Filter scenes by category"></div>
-      <div id="scene-grid" class="library-scene-grid" aria-label="Scenes"></div>
     </section>
   </main>
   <script src="/static/js/theme.js"></script>

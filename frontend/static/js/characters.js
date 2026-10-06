@@ -8,7 +8,7 @@
   };
   const state = {
     characters: [], scenes: [], options: null, health: null,
-    selectedId: null, editingSceneId: null, sceneFilter: "all", busy: false, progress: null,
+    selectedId: null, selectedSceneId: null, editingSceneId: null, sceneFilter: "all", busy: false, progress: null,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -87,6 +87,51 @@
     return card;
   }
 
+  const COLOUR_CSS = {
+    white: "#ffffff", black: "#111111", grey: "#8c8c8c", "navy blue": "#1f2a5c", "light blue": "#a9d3f5", red: "#d62d2d",
+    pink: "#f4a6c0", yellow: "#f5cf3a", orange: "#f08a24", green: "#3a9d3f", beige: "#e0cfae", brown: "#7a5230",
+  };
+
+  // One round swatch per garment of the locked outfit (title: "white top").
+  function outfitSwatches(character) {
+    const holder = document.createElement("span");
+    holder.className = "library-swatches";
+    [["top", character.top_color], ["bottom", character.bottom_color]].forEach(([part, colour]) => {
+      const dot = document.createElement("span");
+      dot.className = "library-swatch";
+      dot.title = `${colour} ${part}`;
+      dot.style.background = COLOUR_CSS[colour] || "#8c8c8c";
+      holder.append(dot);
+    });
+    return holder;
+  }
+
+  function renderCharacterHero() {
+    const hero = $("character-hero");
+    const character = selectedCharacter();
+    hero.replaceChildren();
+    hero.hidden = !character;
+    if (!character) return;
+    if (character.face_url) {
+      const face = document.createElement("img");
+      face.src = character.face_url;
+      face.alt = `${character.name} face`;
+      hero.append(face);
+    }
+    const copy = document.createElement("div");
+    const name = document.createElement("span");
+    name.className = "hero-name";
+    name.textContent = character.name;
+    const role = document.createElement("p");
+    role.className = "hero-role";
+    role.textContent = [character.role, character.hair].filter(Boolean).join(" · ");
+    const badge = document.createElement("span");
+    badge.className = "library-badge";
+    badge.textContent = character.status;
+    copy.append(name, role, outfitSwatches(character), " ", badge);
+    hero.append(copy);
+  }
+
   function renderCharacterList() {
     const list = $("character-list");
     list.replaceChildren();
@@ -100,33 +145,40 @@
     state.characters.forEach((character) => {
       const card = document.createElement("button");
       card.type = "button";
-      card.className = "library-card card";
+      card.className = "library-card character-tile card";
       card.setAttribute("aria-current", String(character.id === state.selectedId));
       card.addEventListener("click", () => {
         state.selectedId = character.id;
         renderCharacters();
       });
-      if (character.face_url) {
+      const art = document.createElement("span");
+      art.className = "tile-art";
+      const picture = character.body_url || character.face_url;
+      if (picture) {
         const face = document.createElement("img");
         face.className = "library-face";
-        face.src = character.face_url;
+        face.src = picture;
         face.alt = "";
-        card.append(face);
+        art.append(face);
       } else {
         const placeholder = document.createElement("span");
         placeholder.className = "library-placeholder";
         placeholder.textContent = "Portrait";
-        card.append(placeholder);
+        art.append(placeholder);
       }
       const copy = document.createElement("span");
+      copy.className = "tile-copy";
       const name = document.createElement("span");
       name.className = "library-card-name";
       name.textContent = character.name;
+      const meta = document.createElement("span");
+      meta.className = "tile-meta";
       const badge = document.createElement("span");
       badge.className = "library-badge";
       badge.textContent = character.status;
-      copy.append(name, badge);
-      card.append(copy);
+      meta.append(badge, outfitSwatches(character));
+      copy.append(name, meta);
+      card.append(art, copy);
       list.append(card);
     });
   }
@@ -211,6 +263,7 @@
   }
 
   function renderCharacters() {
+    renderCharacterHero();
     renderCharacterList();
     renderEditor();
   }
@@ -241,6 +294,35 @@
       form.elements.place.value.trim() !== original.place || form.elements.time_of_day.value !== original.time_of_day));
   }
 
+  function sceneMeta(scene) {
+    const used = scene.used_count || 0;
+    return `${scene.category || "other"} · ${scene.time_of_day || "day"} · ${scene.staging}`
+      + ` · Used in ${used} project${used === 1 ? "" : "s"}`;
+  }
+
+  function renderSceneDetail() {
+    const scene = state.scenes.find((item) => item.id === state.selectedSceneId) || null;
+    $("scene-detail").hidden = !scene;
+    if (!scene) return;
+    const plate = $("scene-detail-plate");
+    plate.hidden = !scene.preview_url;
+    $("scene-detail-empty").hidden = Boolean(scene.preview_url);
+    if (scene.preview_url) {
+      plate.src = scene.preview_url;
+      plate.alt = `${scene.name} plate`;
+    }
+    $("scene-detail-name").textContent = scene.name;
+    $("scene-detail-place").textContent = scene.place;
+    $("scene-detail-meta").textContent = sceneMeta(scene);
+  }
+
+  function selectScene(scene) {
+    state.selectedSceneId = scene.id;
+    document.querySelectorAll("#scene-grid .library-scene").forEach((card) =>
+      card.setAttribute("aria-current", String(card.dataset.sceneId === scene.id)));
+    renderSceneDetail();
+  }
+
   function renderScenes() {
     renderSceneFilters();
     const grid = $("scene-grid");
@@ -251,6 +333,10 @@
       const card = document.createElement("article");
       card.className = "card library-scene";
       card.dataset.sceneId = scene.id;
+      card.setAttribute("aria-current", String(scene.id === state.selectedSceneId));
+      card.addEventListener("click", (event) => {
+        if (!event.target.closest("button")) selectScene(scene); // a button keeps its own meaning
+      });
       if (scene.preview_url) {
         const image = document.createElement("img");
         image.src = scene.preview_url;
@@ -274,9 +360,7 @@
       place.textContent = scene.place;
       const meta = document.createElement("p");
       meta.className = "scene-meta";
-      const used = scene.used_count || 0;
-      meta.textContent = `${scene.category || "other"} · ${scene.time_of_day || "day"} · ${scene.staging}`
-        + ` · Used in ${used} project${used === 1 ? "" : "s"}`;
+      meta.textContent = sceneMeta(scene);
       const actions = document.createElement("div");
       actions.className = "library-actions";
       const edit = document.createElement("button");
@@ -284,6 +368,7 @@
       edit.className = "btn btn-ghost btn-sm";
       edit.textContent = "Edit";
       edit.addEventListener("click", () => {
+        selectScene(scene);
         state.editingSceneId = scene.id;
         $("scene-editor-title").textContent = `Edit ${scene.name}`;
         const form = $("scene-form");
@@ -322,6 +407,7 @@
       card.append(title, place, meta, actions);
       grid.append(card);
     });
+    renderSceneDetail();
   }
 
   async function refresh() {

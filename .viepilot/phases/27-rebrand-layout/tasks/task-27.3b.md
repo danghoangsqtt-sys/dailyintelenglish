@@ -63,3 +63,13 @@ button and the multi-upload); only characters and scenes move to grids here.
 ## Out of scope
 
 The music list as a grid, the studio frame (27.4), drag and drop of characters.
+
+## Implementation notes (2026-10-06)
+
+- Done as planned: `body_url` in the character view; portrait tiles (full-body picture, name, status, an outfit swatch per
+  garment) and a hero in the sticky detail panel; the scenes tab is a grid of larger cards with a sticky side panel (the
+  selected scene's big plate, place and meta, with the form below it); selecting a card (not its buttons) updates the
+  panel, and Edit selects too. Below 900 px everything stacks.
+- Found with the real data: the empty progress strip left a 64 px gap under the page heading (now hidden when empty).
+- Tests: `tests/test_library_grid_browser.py` (3), one API test; the 6 existing library browser tests pass unchanged.
+- Screenshots with Lan, Minh and the 55 new plates, light and dark: `docs/operations/ui-audit/library-*.png`.
