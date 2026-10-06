@@ -153,7 +153,13 @@ def live_server(tmp_path_factory: pytest.TempPathFactory, slug: str) -> Iterator
     original_data_dir = settings.DATA_DIR
     settings.DATA_DIR = tmp_path_factory.mktemp(f"{slug}-data")
     port = _find_free_port()
-    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
+    # 2026-10-06: twice in ~9 full-suite runs, every test after test_storyboard_browser.py errored
+    # (337/338 errors) -- this server not stopping within the join, leaving its DB connection open
+    # for the stale-connection guard to (correctly) refuse. uvicorn waits forever by default for
+    # in-flight connections on shutdown (a closed browser can leave one, e.g. a file stream), so
+    # bound that wait; the join below then has room for the lifespan shutdown too.
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning",
+                                           timeout_graceful_shutdown=5))
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
 
@@ -181,7 +187,7 @@ def live_server(tmp_path_factory: pytest.TempPathFactory, slug: str) -> Iterator
         yield f"http://127.0.0.1:{port}"
     finally:
         server.should_exit = True
-        thread.join(timeout=10.0)
+        thread.join(timeout=20.0)
         settings.DATA_DIR = original_data_dir
         if thread.is_alive():
             pytest.fail(f"live_server({slug!r}): server thread did not stop within the join timeout")
