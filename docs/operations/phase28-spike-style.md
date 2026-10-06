@@ -93,3 +93,21 @@ was counted with the real CLIP tokenizer (all ≤ 77).
 - It is trained for photographic people, the gap seen in round 3b.
 - Plan if approved: the same round 3b prompts, seeds and sheets on RealVisXL, side by side with base.
 - Not recommended: Juggernaut XL (its commercial terms are less clear).
+
+## Round 4: RealVisXL V5.0 vs SDXL base 1.0 (owner approved the download)
+
+**Sheets:** `docs/operations/phase28-spike/r4_compare_*.png` (top row SDXL base, bottom row RealVisXL; the same
+prompts, negatives, seeds, 35 steps, CFG 6.5, Euler-a). **Script:** `scripts/spike_style_realvis.py`.
+16 images, ~27 s each. RealVisXL V5.0 fp16 (openrail++), the same fp16-fix VAE.
+
+- **Outfits now hold:** the man wears a black shirt in 4 of 4 (base: a jacket in 2 of 4, grey in 1);
+  the woman wears a plain white buttoned shirt in 4 of 4, with no open collar.
+- **Faces:** cleaner, brighter, younger and sweeter, closer to the owner's references than the base.
+- **Backgrounds:** crisp and believable (windows, plants, chairs) instead of the base's blur and blinds.
+- **Remaining limit:** this is a polished everyday-photo look, not the heavy retouched "idol" look of
+  the references. Raising it further belongs to Task 28.2 (prompt tuning on RealVisXL, IP-Adapter
+  face reference after the owner locks one face).
+- **Duo:** not yet re-tested on RealVisXL; Task 28.2.
+- **Cache note:** the new huggingface_hub keeps the real weights in the shared `models/image/hub/blobs`
+  folder, and the model folder holds only links. The spike script reads the partial snapshot folder
+  directly, because `snapshot_download(local_files_only=True)` demands every file of the repository.

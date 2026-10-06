@@ -112,3 +112,9 @@ No product code changes.
   (Task 28.2).
 - **Round 4** (`scripts/spike_style_realvis.py`): the round 3b prompts, negatives, seeds and sampler on
   RealVisXL. The compare sheets put SDXL base above RealVisXL.
+
+## Round 4 result (2026-10-06)
+
+RealVisXL V5.0 beats SDXL base on all four checks: outfits, face quality, background clarity and
+sharpness (`docs/operations/phase28-spike-style.md`, round 4). **Waiting for the owner to pick the look
+and one face per character** (seeds 7, 21, 42, 99 in the sheets). Task 28.1 closes on that answer.

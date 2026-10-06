@@ -29,7 +29,9 @@ def build() -> StableDiffusionXLPipeline:
     vae = AutoencoderKL.from_pretrained(snapshot_download("madebyollin/sdxl-vae-fp16-fix",
                                         allow_patterns=["config.json", "diffusion_pytorch_model.safetensors"]),
                                         torch_dtype=torch.float16)
-    path = snapshot_download(REPO, local_files_only=True)
+    # Only the fp16 files were downloaded, so the cached snapshot is partial: read its folder directly
+    # (snapshot_download(local_files_only=True) insists on every file of the repository).
+    path = next((ROOT / "models" / "image" / "hub" / "models--SG161222--RealVisXL_V5.0" / "snapshots").iterdir())
     pipe = StableDiffusionXLPipeline.from_pretrained(path, vae=vae, torch_dtype=torch.float16, variant="fp16",
                                                      use_safetensors=True, add_watermarker=False).to("cuda")
     pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config)
