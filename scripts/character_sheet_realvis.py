@@ -85,7 +85,7 @@ PANELS = {
                    "Close-up of the face and shoulders from the front with a warm natural smile, teeth slightly "
                    "visible, eyes engaged, hair framing the face; the talking-video expression."),
     # Task 28.4: the library locks a character only with four sheet views, one of them "surprised".
-    "face_surprised": ((1024, 1024), 0.5, "close-up face portrait, facing the camera, surprised face, open mouth, wide eyes",
+    "face_surprised": ((1024, 1024), 0.3, "close-up portrait, shocked surprised expression, mouth wide open in surprise, raised eyebrows, wide eyes",
                        "Close-up of the face and shoulders from the front with a surprised expression: raised "
                        "eyebrows, wide eyes and a slightly open mouth."),
 }
@@ -98,7 +98,11 @@ def prompt_for(char: dict, panel: str) -> tuple[str, str]:
     if panel in FULL:  # the outfit leads (right after the person) so its colour wins over the background
         return (f"{style}, {char['identity']}, {char['outfit']}, {view}, {char['body']}",
                 f"{NEG_COMMON}, {char['negative']}")
-    return f"{style}, {char['identity']}, {char['outfit'].split(',')[0]}, {view}", f"{NEG_COMMON}, {char['negative']}"
+    negative = f"{NEG_COMMON}, {char['negative']}"
+    if panel == "face_surprised":  # the identity reference is calm or smiling: forbid those expressions
+        negative = ("smile, closed mouth, calm, blurry, cartoon, 3d render, ugly, deformed, extra person, glasses, "
+                    "text, watermark, " + char["negative"])
+    return f"{style}, {char['identity']}, {char['outfit'].split(',')[0]}, {view}", negative
 
 
 def _geometry():
