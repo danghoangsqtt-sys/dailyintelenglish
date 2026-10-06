@@ -192,3 +192,13 @@ is out of frame, and in the back view it is not needed.
   She stays in the fitted, buttoned white blouse and keeps natural proportions (a narrow waist and hips),
   with no open collar. Only her full-front panel is redone (pose + depth, seeds 7 and 21, about 17
   minutes each).
+
+## Task 28.2 closed (2026-10-06): the owner approved both characters as they are
+
+- **Minh and Lan: APPROVED**, the sheets in `docs/operations/phase28-characters/` (built with the body-map
+  size factor 1.0). The bigger-bust try (factor 1.4) was stopped when the owner accepted the current
+  shape; its one finished image is kept outside git (`data/tmp/character-sheets/bust14/`). The script is
+  back to factor 1.0 and the 0.42 spacing, so it reproduces the approved sheet.
+- Lessons: two ControlNets plus the UNet overflow the 12 GB card (about 17 minutes an image); depth alone
+  breaks the figure; a stopped background task can leave its process running (check the process list).
+- Next: Task 28.3 (recipes and checks in the app).

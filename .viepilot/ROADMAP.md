@@ -1381,7 +1381,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 **Status:** 🟡 Planned 2026-10-06 | Plan `docs/implementation/phase-28-semi-realistic-style.md` (D58, D59).
 
 - [x] 28.1 Spike (GPU): semi-realistic look; RealVisXL V5.0 approved
-- [ ] 28.2 Character reference sheets for the woman and the man, with detailed prompts per view
+- [x] 28.2 Character reference sheets for the woman and the man, with detailed prompts per view
 - [ ] 28.3 Recipes + re-tuned colour / extra-person checks
 - [ ] 28.4 Redo the library (two characters, 55 scene plates)
 - [ ] 28.5 Gate B-20

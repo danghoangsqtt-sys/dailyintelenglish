@@ -232,9 +232,9 @@
     "28": {
       "name": "Semi-realistic picture style (ENH-019)",
       "status": "planned",
-      "tasks_done": 1,
+      "tasks_done": 2,
       "tasks_total": 5,
-      "note": "28.1 done (RealVisXL V5.0 approved, look + faces picked 2026-10-06); 28.2 character sheets in progress."
+      "note": "28.1 and 28.2 done (RealVisXL V5.0; Minh and Lan approved 2026-10-06). Next: 28.3 recipes + checks in the app."
     }
   },
   "key_decisions": [
