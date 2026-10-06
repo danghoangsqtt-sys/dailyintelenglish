@@ -104,3 +104,10 @@ rules; a regression test pins the measured values instead.
 bug (black garments measured on the hand, because the cel outline filter removed the shirt); fixed with
 `include_dark` for black, 2 new tests. The duo's colour swap is a single-pass effect that the app's refine
 and retry repair; it is verified with the real library in Task 28.4.
+
+## Task 28.3 closed (2026-10-06)
+
+Full suite: **1446 passed** (1435 before + 11 new). Done: RealVisXL V5.0 and Euler-a in the worker request,
+editorial recipes and photographic negatives, single-colour outfits (rule removed, `outfit_phrase`), the
+black-garment measurement fix, the fp16-first download, and the smoke report. The library redo with the
+approved faces (Task 28.4) verifies the duo refine and colour retry on real characters.
