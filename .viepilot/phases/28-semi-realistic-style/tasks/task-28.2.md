@@ -69,3 +69,28 @@ above) with a **detailed prompt for each view**: the face from each angle and th
   The face holds across all six panels for both characters; outfits are single colour.
 - Height and weight (160 cm / 50 kg, 180 cm / 80 kg) cannot be measured in a picture: they are in
   `prompts.md` and shown by the figure only (the man is clearly muscular and lean).
+
+## Owner feedback on the sheets (2026-10-06), fix round
+
+The owner sent 5 clothed reference photos of well-proportioned people and said both body proportions
+are wrong:
+
+- **Woman:** the hips and buttocks are too big, the bust too small. References: a fuller bust, a narrow
+  waist, slim hips, a fitted short-sleeve white blouse tucked in.
+- **Man:** the shoulders are too high and the muscles are not clear. References: a broad chest, defined
+  biceps and shoulders, a fitted shirt that shows the muscle, a V-shaped torso.
+
+**Cause found in `app/services/visuals/geometry.py`:** the skeleton puts the shoulders only 0.1 head
+below the neck (a shrug), the hips at 3.0 and the knees/ankles too short, and my wide-leg trousers
+widened the hips.
+
+**Fix (script only, not the app):**
+
+- Full-body skeleton: shoulders about 0.95 below the nose; hips at 3.3 with a narrower hip width for
+  the woman; knees 4.9, ankles 6.5 (a 7.4-head figure); the man's shoulder width kept broad.
+- Prompts: the woman "full bust, slim waist, narrow hips, fitted white blouse tucked in, slim straight
+  white trousers" (clothed and buttoned, no open collar); the man "muscular broad chest, defined
+  biceps, V-taper torso, fitted short-sleeve black shirt". The negative adds "wide hips, flared
+  trousers, rolled sleeves, hunched shoulders".
+- Only the 2 full-body panels per character are redone (3 seeds), then the sheets are recomposed.
+- Real photos are not model inputs; the words describe proportion only.
