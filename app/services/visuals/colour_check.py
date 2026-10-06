@@ -57,10 +57,14 @@ def _clip(box: tuple[float, ...], size: tuple[int, int]) -> tuple[int, int, int,
     return (x0, y0, x1, y1) if x1 - x0 >= 8 and y1 - y0 >= 8 else None
 
 
-def measure(image: Image.Image, box: tuple[int, int, int, int]) -> dict[str, float] | None:
-    """Median hue (degrees), saturation and value (0..1) of the region, outlines excluded."""
+def measure(image: Image.Image, box: tuple[int, int, int, int],
+            include_dark: bool = False) -> dict[str, float] | None:
+    """Median hue (degrees), saturation and value (0..1) of the region, outlines excluded.
+
+    Pixels darker than v 0.22 are cel outlines and are dropped. For a **black** garment those pixels are the
+    garment itself (a photograph has no outlines), so `include_dark` keeps them (Phase 28 calibration)."""
     hsv = np.asarray(image.convert("RGB").crop(box).convert("HSV"), dtype=np.float32).reshape(-1, 3) / 255.0
-    kept = hsv[hsv[:, 2] > 0.22]
+    kept = hsv if include_dark else hsv[hsv[:, 2] > 0.22]
     if len(kept) < MIN_PIXELS:
         return None
     s, v = float(np.median(kept[:, 1])), float(np.median(kept[:, 2]))
@@ -110,7 +114,7 @@ def check_person(image: Image.Image, person: dict[str, Any], character: dict[str
         parts.append(("bottom", bottom_box, character["bottom_color"]))
     for name, box_of, colour in parts:
         box = box_of(person, image.size)
-        hsv = measure(image, box) if box else None
+        hsv = measure(image, box, include_dark=colour == "black") if box else None
         passed = True if hsv is None else matches(colour, hsv)
         result[name] = {"expected": colour, "measured": hsv, "box": box, "ok": passed}
         result["ok"] = result["ok"] and passed

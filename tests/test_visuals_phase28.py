@@ -180,3 +180,44 @@ def test_finetune_download_prefers_fp16_and_falls_back(tmp_path, monkeypatch):
     assert calls == [worker.FINETUNE_FP16_PATTERNS, worker.FINETUNE_PATTERNS]
     with pytest.raises(ValueError, match="base"):
         worker.ImageWorker._resolve_base("lightning", None, "SG161222/RealVisXL_V5.0")
+
+
+def _black_shirt_with_a_hand():
+    """A black shirt (v 0.10) with a skin-coloured hand and a light button in the measured box."""
+    from PIL import Image, ImageDraw
+    image = Image.new("RGB", (200, 200), (26, 26, 28))
+    draw = ImageDraw.Draw(image)
+    draw.ellipse((20, 20, 70, 70), fill=(214, 160, 130))   # the hand
+    draw.rectangle((150, 150, 156, 156), fill=(120, 120, 125))  # a button
+    return image
+
+
+def test_black_garment_is_measured_on_all_its_pixels():
+    """Phase 28 calibration: `measure` drops every pixel darker than v 0.22 as a cel outline, which on a
+    photograph removed the whole black shirt and left only the hand (the Minh smoke image failed the check).
+    For a black garment the dark pixels are the garment."""
+    image, box = _black_shirt_with_a_hand(), (0, 0, 200, 200)
+    assert colour_check.measure(image, box)["v"] > 0.6                      # outline mode: skin only
+    assert colour_check.measure(image, box, include_dark=True)["v"] < 0.2    # garment mode: the shirt
+    person = {"head": (0, 0)}
+    assert colour_check.matches("black", colour_check.measure(image, box, include_dark=True))
+    assert not colour_check.matches("black", colour_check.measure(image, box))
+    assert person  # (the person geometry is covered by the existing colour-check tests)
+
+
+def test_check_person_uses_garment_mode_only_for_black(monkeypatch):
+    seen = []
+    real = colour_check.measure
+
+    def spy(image, box, include_dark=False):
+        seen.append(include_dark)
+        return real(image, box, include_dark)
+
+    monkeypatch.setattr(colour_check, "measure", spy)
+    from app.services.visuals import geometry
+    person = geometry.shot_people("single", "standing", (1344, 768))[0]
+    from PIL import Image
+    image = Image.new("RGB", (1344, 768), (230, 230, 230))
+    colour_check.check_person(image, person, MINH, check_bottom=False)
+    colour_check.check_person(image, person, LAN, check_bottom=False)
+    assert seen == [True, False]
