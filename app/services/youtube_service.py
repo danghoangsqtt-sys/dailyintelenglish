@@ -245,6 +245,17 @@ async def save_package(
     return await get_package(db, project_id)
 
 
+def with_music_credit(package: dict | None, credit: str | None) -> dict | None:
+    """Task 22.5: the description ends with the episode's music credit. Added when the package is
+    read or exported (never stored), so changing the music changes the credit; never doubled."""
+    if package is None:
+        return None
+    result = {**package, "music_credit": credit}
+    if credit and credit not in package["description"]:
+        result["description"] = f"{package['description'].rstrip()}\n\n{credit}"
+    return result
+
+
 def _build_metadata_text(package: dict) -> str:
     """Render the package's text fields as a plain-text metadata.txt for the export zip."""
     lines = ["=== TITLES ===", ""]

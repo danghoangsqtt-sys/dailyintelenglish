@@ -171,3 +171,37 @@ async def with_details(db: aiosqlite.Connection, tracks: list[dict[str, Any]]) -
 async def list_tracks(db: aiosqlite.Connection) -> list[dict[str, Any]]:
     """Every library track with its details (the Library page and auto-select share this)."""
     return await with_details(db, await asyncio.to_thread(list_music_files))
+
+
+CREDIT_PREFIX = "🎵 Music: "
+
+
+def credit_line(filename: str, row: dict[str, Any] | None) -> str:
+    """Task 22.5: the owner's credit text when given, else a line built from the track details."""
+    row = row or {}
+    if row.get("attribution"):
+        return CREDIT_PREFIX + row["attribution"]
+    title = row.get("title") or guess_title(filename)
+    text = f'"{title}"'
+    if row.get("artist"):
+        text += f" by {row['artist']}"
+    if row.get("source") in SOURCES:
+        text += f" — {SOURCES[row['source']]}"
+    if row.get("licence") in LICENCES:
+        text += f" ({LICENCES[row['licence']]['label']})"
+    if row.get("source_url"):
+        text += f" {row['source_url']}"
+    return CREDIT_PREFIX + text
+
+
+async def music_credit(db: aiosqlite.Connection, project_id: str) -> str | None:
+    """The credit for the music in the project's completed audio mix, or None."""
+    cursor = await db.execute(
+        "SELECT background_music FROM audio_jobs WHERE project_id = ? AND status = 'complete'", (project_id,),
+    )
+    job = await cursor.fetchone()
+    if job is None or not job[0]:
+        return None
+    cursor = await db.execute("SELECT * FROM music_tracks WHERE filename = ?", (job[0],))
+    row = await cursor.fetchone()
+    return credit_line(job[0], dict(row) if row else None)

@@ -107,6 +107,7 @@
     contentWrap.hidden = false;
     renderTitles();
     byId("description-text").textContent = state.package.description;
+    byId("music-credit-note").hidden = !state.package.music_credit;
     byId("chapters-text").textContent = state.package.chapters_text;
     // Default to "Estimated" unless the backend explicitly says otherwise — never claim
     // "Measured" on a false-y/missing value (safer default than assuming precision).

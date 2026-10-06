@@ -13,6 +13,7 @@ from app.db.database import get_db
 from app.services import (
     audio_service,
     learning_service,
+    music_library_service,
     project_service,
     script_service,
     thumbnail_service,
@@ -43,7 +44,9 @@ async def generate_youtube_package(
     package = await youtube_service.generate_package(project, script_lines, timestamps)  # no lock — Gemini call
     async with write_transaction(db):
         saved = await youtube_service.save_package(db, project_id, package, commit=False)
-    return ok(saved, started_at=started_at)
+    async with read_transaction():
+        credit = await music_library_service.music_credit(db, project_id)
+    return ok(youtube_service.with_music_credit(saved, credit), started_at=started_at)
 
 
 @router.get("")
@@ -53,7 +56,8 @@ async def get_youtube_package(project_id: str, db: aiosqlite.Connection = Depend
     async with read_transaction():
         await project_service.get_project(db, project_id)
         package = await youtube_service.get_package(db, project_id)
-    return ok(package, started_at=started_at)
+        credit = await music_library_service.music_credit(db, project_id)
+    return ok(youtube_service.with_music_credit(package, credit), started_at=started_at)
 
 
 @router.get("/export")
@@ -70,6 +74,7 @@ async def export_youtube_package(project_id: str, db: aiosqlite.Connection = Dep
         thumbnail_rows = await thumbnail_service.get_thumbnail_rows(db, project_id)
         script_lines = await script_service.get_script(db, project_id)
         learning_content = await learning_service.get_learning_content(db, project_id)
+        package = youtube_service.with_music_credit(package, await music_library_service.music_credit(db, project_id))
 
     missing = []
     if package is None:
