@@ -36,7 +36,7 @@ CHARACTERS = {
         "ref": ROOT / "data/tmp/style-realvis/presenter_E1_bright_s21.png",
         "crop": (0.26, 0.10, 0.76, 0.62),
         "bg": "white",
-        "shoulder": 0.80, "hip": 0.55,
+        "shoulder": 0.80, "hip": 0.55, "full": (0.075, 0.118),
         "identity": "beautiful young Vietnamese woman, very long straight black hair with side bangs, fair skin",
         "outfit": "plain white blouse, plain white trousers, white shoes",
         "negative": "black clothes, colorful clothes, short hair, tan skin, grey clothes",
@@ -50,7 +50,7 @@ CHARACTERS = {
         "ref": ROOT / "data/tmp/style-realvis-male2/N3_soft_s42.png",
         "crop": (0.10, 0.02, 0.72, 0.64),
         "bg": "white",
-        "shoulder": 0.97, "hip": 0.50,
+        "shoulder": 0.97, "hip": 0.50, "full": (0.085, 0.112),  # the taller man is drawn smaller so the shoes fit
         "identity": "handsome young Vietnamese man, fair skin, tousled black hair, long fringe",
         "outfit": "black fitted shirt, black trousers, black shoes",
         "negative": "white clothes, colorful clothes, shirtless, beard, grey clothes, short buzz cut",
@@ -64,7 +64,7 @@ CHARACTERS = {
 
 # panel -> (size, ip_scale, view words, detailed description of the view); POSE gives the ControlNet scale
 POSE_SCALE = {"full_front": 0.85, "full_back": 0.85, "face_front": 0.6, "face_profile": 1.0,
-              "face_three_quarter": 0.9, "face_smile": 0.6}
+              "face_three_quarter": 1.0, "face_smile": 0.6}
 PANELS = {
     "full_front": ((832, 1216), 0.55, "full body, standing straight facing camera, arms at sides",
                    "Full-body front view, standing upright, feet together, arms relaxed at the sides, facing the "
@@ -78,10 +78,10 @@ PANELS = {
     "face_profile": ((1024, 1024), 0.2, "close-up side profile portrait, face turned 90 degrees to the right",
                      "Close-up of the head in a strict side profile facing right: forehead, nose bridge, lips, "
                      "chin line and jaw, and the ear are visible."),
-    "face_three_quarter": ((1024, 1024), 0.35, "close-up three-quarter view portrait, face turned 45 degrees",
+    "face_three_quarter": ((1024, 1024), 0.2, "close-up three-quarter view portrait, face turned 45 degrees",
                            "Close-up of the face turned about 45 degrees, both eyes visible, the far cheek "
                            "partly hidden by the nose line, a soft natural expression."),
-    "face_smile": ((1024, 1024), 0.65, "close-up face portrait, facing the camera, warm natural smile",
+    "face_smile": ((1024, 1024), 0.5, "close-up face portrait, facing the camera, big happy smile, teeth visible",
                    "Close-up of the face and shoulders from the front with a warm natural smile, teeth slightly "
                    "visible, eyes engaged, hair framing the face; the talking-video expression."),
 }
@@ -121,7 +121,7 @@ def pose_map(char: dict, panel: str):
         arms = {**body, "r_elbow": (-sh - 0.2, 2.05), "r_wrist": (-sh - 0.3, 3.15),
                 "l_elbow": (sh + 0.2, 2.05), "l_wrist": (sh + 0.3, 3.15)}
         legs = {"r_knee": (-0.45, 4.6), "l_knee": (0.45, 4.6), "r_ankle": (-0.5, 6.25), "l_ankle": (0.5, 6.25)}
-        points = geo.person_pose(size, 0.5, 0.075, 0.125, "front", arms, legs)
+        points = geo.person_pose(size, 0.5, char["full"][0], char["full"][1], "front", arms, legs)
         if panel == "full_back":
             points = [None if key in _FACE else pt for key, pt in zip(keys, points, strict=True)]
         return geo.draw_pose_pixels(points, size)
