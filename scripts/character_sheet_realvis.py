@@ -36,7 +36,7 @@ CHARACTERS = {
         "ref": ROOT / "data/tmp/style-realvis/presenter_E1_bright_s21.png",
         "crop": (0.26, 0.10, 0.76, 0.62),
         "bg": "white",
-        "shoulder": 0.80, "hip": 0.55, "full_sh": 0.85, "full_hip": 0.40, "neck_y": 0.65, "sh_y": 0.95, "bust": 1.0, "full": (0.07, 0.11),
+        "shoulder": 0.80, "hip": 0.55, "full_sh": 0.85, "full_hip": 0.40, "neck_y": 0.65, "sh_y": 0.95, "bust": 1.4, "full": (0.07, 0.11),
         "identity": "voluptuous busty young Vietnamese woman, very long straight black hair, fair skin",
         "outfit": "tight white blouse stretched across the chest, slim white trousers, white shoes",
         "negative": "black clothes, colorful clothes, short hair, tan skin, grey clothes, wide hips, flared trousers, small bust, flat chest",
@@ -185,7 +185,7 @@ def depth_map(char: dict, panel: str):
                    (cx + side * 0.45 * u, ny + 6.5 * u)], fill=150, width=round(0.42 * u), joint="curve")
     r = 0.42 * u * char["bust"]
     for side in (-1, 1):                                                                            # the bust forms
-        x = cx + side * 0.42 * u
+        x = cx + side * 0.46 * u
         draw.ellipse((x - r, bust_y - r, x + r, bust_y + r), fill=215)
     return canvas.filter(ImageFilter.GaussianBlur(0.07 * u))
 
