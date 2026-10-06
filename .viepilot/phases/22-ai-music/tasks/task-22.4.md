@@ -146,3 +146,15 @@ When an episode has background music, the music:
     silent on the last frame).
   - vitest 42 and `tsc` clean.
 - **Full suite: 1399 passed;** vitest 42 passed (2026-10-06).
+
+## Owner feedback 1 (2026-10-06)
+
+- The owner watched the check videos in `data/tmp/music-bed-check/` and said: "okey thời gian nhạc
+  vào và ra hợp lý". The music's entry and exit timing is right.
+- **Timing accepted:**
+  - fade-in 1 s;
+  - fade-out 3 s ending on the last frame;
+  - music over the intro and outro;
+  - the 4 s Standard tail.
+- **Still open for Gate B-17:** the volume levels (`MUSIC_BED_LUFS` −20, `MUSIC_DUCK_DB` −14),
+  judged with real downloaded tracks.
