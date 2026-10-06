@@ -36,7 +36,7 @@ CHARACTERS = {
         "ref": ROOT / "data/tmp/style-realvis/presenter_E1_bright_s21.png",
         "crop": (0.26, 0.10, 0.76, 0.62),
         "bg": "white",
-        "shoulder": 0.80, "hip": 0.55, "full_sh": 0.85, "full_hip": 0.40, "neck_y": 0.65, "sh_y": 0.95, "full": (0.05, 0.115),
+        "shoulder": 0.80, "hip": 0.55, "full_sh": 0.85, "full_hip": 0.40, "neck_y": 0.65, "sh_y": 0.95, "bust": 1.0, "full": (0.05, 0.115),
         "identity": "voluptuous busty young Vietnamese woman, very long straight black hair, fair skin",
         "outfit": "tight white blouse stretched across the chest, slim white trousers, white shoes",
         "negative": "black clothes, colorful clothes, short hair, tan skin, grey clothes, wide hips, flared trousers, small bust, flat chest",
@@ -152,6 +152,44 @@ def pose_map(char: dict, panel: str):
     return geo.draw_pose_pixels(out, size)
 
 
+DEPTH_SCALE = {"full_front": 0.5}  # panels that get the torso depth control (the others use a black map, scale 0)
+
+
+def depth_map(char: dict, panel: str):
+    """A smooth grey-scale depth map of a clothed torso (white = near): chest with two raised bust forms, a
+    narrow waist, narrow hips. Only characters with a "bust" size get one; the others get black (no control)."""
+    from PIL import Image, ImageDraw, ImageFilter
+    size = PANELS[panel][0]
+    canvas = Image.new("L", size, 0)
+    if "bust" not in char or panel not in DEPTH_SCALE:
+        return canvas
+    width, height = size
+    nose_y, head_h = char["full"]
+    u = head_h * height
+    cx, ny = width / 2, nose_y * height
+    sy = ny + char["sh_y"] * u
+    hip_y = ny + (3.3 + char["sh_y"] - 0.95) * u
+    bust_y = sy + 0.9 * u
+    waist_y = hip_y - 0.8 * u
+    draw = ImageDraw.Draw(canvas)
+    draw.ellipse((cx - 0.38 * u, ny - 0.55 * u, cx + 0.38 * u, ny + 0.45 * u), fill=175)          # head
+    draw.rectangle((cx - 0.2 * u, ny + 0.3 * u, cx + 0.2 * u, sy), fill=150)                       # neck
+    torso = [(cx - 1.0 * u, sy), (cx - 0.92 * u, bust_y), (cx - 0.52 * u, waist_y),
+             (cx - 0.78 * u, hip_y + 0.2 * u), (cx + 0.78 * u, hip_y + 0.2 * u), (cx + 0.52 * u, waist_y),
+             (cx + 0.92 * u, bust_y), (cx + 1.0 * u, sy)]
+    draw.polygon(torso, fill=160)
+    for side in (-1, 1):                                                                            # arms, legs
+        draw.line([(cx + side * 1.0 * u, sy), (cx + side * 1.15 * u, sy + 1.25 * u),
+                   (cx + side * 1.25 * u, sy + 2.45 * u)], fill=140, width=round(0.33 * u), joint="curve")
+        draw.line([(cx + side * 0.4 * u, hip_y), (cx + side * 0.4 * u, ny + 4.9 * u),
+                   (cx + side * 0.45 * u, ny + 6.5 * u)], fill=150, width=round(0.42 * u), joint="curve")
+    r = 0.42 * u * char["bust"]
+    for side in (-1, 1):                                                                            # the bust forms
+        x = cx + side * 0.42 * u
+        draw.ellipse((x - r, bust_y - r, x + r, bust_y + r), fill=215)
+    return canvas.filter(ImageFilter.GaussianBlur(0.07 * u))
+
+
 def tokens_only() -> int:
     from transformers import CLIPTokenizer
     tok = CLIPTokenizer.from_pretrained(next(REALVIS.iterdir()), subfolder="tokenizer")
@@ -175,7 +213,8 @@ def build():
     vae = AutoencoderKL.from_pretrained(snapshot_download("madebyollin/sdxl-vae-fp16-fix",
                                         allow_patterns=["config.json", "diffusion_pytorch_model.safetensors"]),
                                         torch_dtype=torch.float16)
-    controlnet = ControlNetModel.from_pretrained("xinsir/controlnet-openpose-sdxl-1.0", torch_dtype=torch.float16)
+    controlnet = [ControlNetModel.from_pretrained("xinsir/controlnet-openpose-sdxl-1.0", torch_dtype=torch.float16),
+                  ControlNetModel.from_pretrained("xinsir/controlnet-depth-sdxl-1.0", torch_dtype=torch.float16)]
     pipe = StableDiffusionXLControlNetPipeline.from_pretrained(
         next(REALVIS.iterdir()), vae=vae, controlnet=controlnet, torch_dtype=torch.float16, variant="fp16",
         use_safetensors=True, add_watermarker=False)
@@ -218,8 +257,13 @@ def generate(seeds: list[int], only: list[str], panels: list[str]) -> int:
                 started = time.monotonic()
                 control = pose_map(char, panel)
                 control.save(CAND / f"pose_{key}_{panel}.png")
-                image = pipe(prompt=prompt, negative_prompt=negative, ip_adapter_image=ref, image=control,
-                             controlnet_conditioning_scale=POSE_SCALE[panel], width=width,
+                depth = depth_map(char, panel)
+                if depth.getbbox():
+                    depth.save(CAND / f"depth_{key}_{panel}.png")
+                depth_scale = DEPTH_SCALE.get(panel, 0.0) if depth.getbbox() else 0.0
+                image = pipe(prompt=prompt, negative_prompt=negative, ip_adapter_image=ref,
+                             image=[control, depth.convert("RGB")],
+                             controlnet_conditioning_scale=[POSE_SCALE[panel], depth_scale], width=width,
                              height=height, num_inference_steps=35, guidance_scale=6.5,
                              generator=torch.Generator("cpu").manual_seed(seed)).images[0]
                 image.save(CAND / f"{key}_{panel}_s{seed}.png")
