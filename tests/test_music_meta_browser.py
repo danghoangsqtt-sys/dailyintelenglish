@@ -44,7 +44,13 @@ async def test_edit_details_shows_mood_length_and_credit_warning(browser_instanc
     await card.wait_for()
     assert await card.locator(".track-name").text_content() == "Morning coffee"
     assert await card.locator(".is-length").text_content() == "1:05"
-    assert await card.locator(".is-missing").text_content() == "No mood yet"
+    # Task 22.9: the new track is analysed after the list renders; a steady tone has no attacks,
+    # so it is classified calm (absolute onset floor) and gets an automatic mood suggestion.
+    await page.wait_for_selector("#analysis-note", state="hidden", timeout=60000)
+    card = page.locator("[data-filename='morning_coffee.mp3']")
+    await card.locator(".is-pace").wait_for()
+    assert await card.locator(".is-pace").text_content() == "Calm pace · auto"
+    assert (await card.locator(".is-mood").text_content()).endswith("· auto")
     assert await card.locator(".details-form").is_hidden()
 
     await card.locator("[data-action='edit-details']").click()
@@ -79,6 +85,7 @@ async def test_bad_link_is_refused_and_cancel_hides_the_form(browser_instance: B
     await page.goto(f"{live_server_url}/music")
     card = page.locator("[data-filename='morning_coffee.mp3']")
     await card.wait_for()
+    await page.wait_for_selector("#analysis-note", state="hidden", timeout=60000)
     await card.locator("[data-action='edit-details']").click()
     await card.locator("[name='source_url']").fill("ftp://example.com/x")
     await card.locator("button[type='submit']").click()

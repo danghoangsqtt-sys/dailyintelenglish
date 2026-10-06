@@ -8,8 +8,9 @@
   let uploadInFlight = false;
   let loadPromise = null;
   const deletesInFlight = new Set();
-  let options = { moods: [], sources: [], licences: [] };
-  const DETAIL_FIELDS = ["title", "artist", "mood", "tags", "source", "licence", "attribution", "source_url"];
+  let options = { moods: [], sources: [], licences: [], paces: [] };
+  let analysing = false;
+  const DETAIL_FIELDS = ["title", "artist", "mood", "pace", "tags", "source", "licence", "attribution", "source_url"];
 
   function formatDuration(seconds) {
     if (seconds == null) return "length unknown";
@@ -58,7 +59,10 @@
     form.append(
       textField("title", "Title", track.title, "Track title"),
       textField("artist", "Artist", track.artist, "Composer or artist"),
-      selectField("mood", "Mood", options.moods, track.mood, "Choose a mood"),
+      selectField("mood", "Mood", options.moods, track.mood,
+        track.mood_is_auto ? `Auto (${track.mood_label})` : "Choose a mood"),
+      selectField("pace", "Pace", options.paces || [], track.pace_is_auto ? "" : track.pace,
+        track.pace_is_auto ? `Auto (${track.pace_label})` : "Auto"),
       textField("tags", "Tags", track.tags, "e.g. cafe, morning, study"),
       selectField("source", "Downloaded from", options.sources, track.source, "Choose a source"),
       selectField("licence", "Licence", options.licences.map((licence) => ({
@@ -100,6 +104,42 @@
     error.textContent = kind === "error" ? text : "";
   }
 
+  function buildBadges(track) {
+    const badges = document.createElement("div");
+    badges.className = "track-badges";
+    badges.append(badge(formatDuration(track.duration_s), "is-length"));
+    if (track.mood_label) {
+      badges.append(badge(track.mood_is_auto ? `${track.mood_label} · auto` : track.mood_label, "is-mood"));
+    } else {
+      badges.append(badge(track.needs_analysis ? "Analysing…" : "No mood yet", "is-missing"));
+    }
+    // Task 22.9: the measured pace (calm / medium / lively) and the estimated tempo.
+    if (track.pace_label) {
+      badges.append(badge(track.pace_is_auto ? `${track.pace_label} · auto` : track.pace_label, "is-pace"));
+    }
+    if (track.bpm) badges.append(badge(`~${Math.round(track.bpm)} BPM`));
+    if (track.licence_label) badges.append(badge(track.licence_label));
+    if (track.needs_attribution) badges.append(badge("⚠ Credit needed", "is-warning"));
+    return badges;
+  }
+
+  /** After analysis: refresh each card's badges (and its closed details form) in place, so audio
+   * players keep playing -- re-rendering the list would stop and rewind any track being heard. */
+  function updateTracksInPlace(tracks) {
+    const list = document.getElementById("track-list");
+    const cards = new Map([...list.querySelectorAll("[data-filename]")].map((card) => [card.dataset.filename, card]));
+    if (tracks.length !== cards.size || tracks.some((track) => !cards.has(track.filename))) {
+      renderTracks(tracks); // the library itself changed meanwhile
+      return;
+    }
+    tracks.forEach((track) => {
+      const card = cards.get(track.filename);
+      card.querySelector(".track-badges").replaceWith(buildBadges(track));
+      const form = card.querySelector(".details-form");
+      if (form && form.hidden) form.replaceWith(buildDetailsForm(track));
+    });
+  }
+
   function renderTracks(tracks) {
     const list = document.getElementById("track-list");
     const empty = document.getElementById("empty-state");
@@ -120,13 +160,7 @@
       const file = document.createElement("span");
       file.className = "track-size";
       file.textContent = `${track.filename} · ${formatBytes(track.size_bytes)}`;
-      const badges = document.createElement("div");
-      badges.className = "track-badges";
-      badges.append(badge(formatDuration(track.duration_s), "is-length"));
-      badges.append(track.mood_label ? badge(track.mood_label, "is-mood") : badge("No mood yet", "is-missing"));
-      if (track.licence_label) badges.append(badge(track.licence_label));
-      if (track.needs_attribution) badges.append(badge("⚠ Credit needed", "is-warning"));
-      details.append(name, file, badges);
+      details.append(name, file, buildBadges(track));
 
       const preview = document.createElement("div");
       preview.className = "track-preview";
@@ -169,7 +203,9 @@
     if (loadPromise) return loadPromise;
     loadPromise = (async () => {
       try {
-        renderTracks(await Api.listMusic());
+        const tracks = await Api.listMusic();
+        renderTracks(tracks);
+        if (tracks.some((track) => track.needs_analysis)) analyseTracks();
       } catch (error) {
         console.error("Failed to load music library:", error);
         document.getElementById("track-count").textContent = "Unavailable";
@@ -179,6 +215,23 @@
       }
     })();
     return loadPromise;
+  }
+
+  // Task 22.9: classify new tracks (pace, tempo, mood suggestion) after the list is on screen.
+  async function analyseTracks() {
+    if (analysing) return;
+    analysing = true;
+    const note = document.getElementById("analysis-note");
+    note.hidden = false;
+    try {
+      const result = await Api.analyseMusic();
+      updateTracksInPlace(result.tracks);
+    } catch (error) {
+      console.error("Failed to analyse music:", error);
+    } finally {
+      analysing = false;
+      note.hidden = true;
+    }
   }
 
   function validateFile(file) {

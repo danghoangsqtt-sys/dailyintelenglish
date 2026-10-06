@@ -19,6 +19,10 @@ WINDOW_AT = (0.25, 0.5, 0.75)  # three windows; the median onset rate ignores on
 CALM_BELOW = 4.2  # onsets per second (calibrated on the spike tracks)
 LIVELY_FROM = 5.8
 BRIGHT_FROM_HZ = 2000.0
+# librosa picks onset peaks relative to the envelope, so a steady tone (envelope ~0.05) still
+# "had" 3-5 onsets/s from codec ripple. Real attacks in the owner's tracks are around 1-10; only
+# peaks at or above this absolute strength count.
+MIN_ONSET_STRENGTH = 0.3
 PACES = ("calm", "medium", "lively")
 
 
@@ -36,6 +40,13 @@ def suggest_mood(pace: str, brightness_hz: float) -> str:
     if pace == "medium":
         return "inspiring" if bright else "acoustic"
     return "calm" if bright else "lofi"
+
+
+def _onset_rate(librosa: Any, np: Any, window: Any, sr: int) -> float:
+    envelope = librosa.onset.onset_strength(y=window, sr=sr)
+    peaks = librosa.onset.onset_detect(onset_envelope=envelope, sr=sr, units="frames")
+    strong = [frame for frame in peaks if envelope[frame] >= MIN_ONSET_STRENGTH]
+    return len(strong) / (len(window) / sr)
 
 
 def analyse(path: Path) -> dict[str, Any] | None:
@@ -56,7 +67,7 @@ def analyse(path: Path) -> dict[str, Any] | None:
     windows = [window for window in windows if len(window) >= 2 * sr and np.any(window)]
     if not windows:
         return None
-    rates = [len(librosa.onset.onset_detect(y=window, sr=sr, units="time")) / (len(window) / sr) for window in windows]
+    rates = [_onset_rate(librosa, np, window, sr) for window in windows]
     onset_rate = float(np.median(rates))
     y = np.concatenate(windows)
     tempo = librosa.feature.tempo(y=y, sr=sr)[0]

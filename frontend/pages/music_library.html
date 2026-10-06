@@ -115,6 +115,8 @@
       border: 1px solid var(--surface-border); background: var(--surface); color: var(--text-muted); }
     .track-badge.is-mood { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
     .track-badge.is-missing { border-style: dashed; }
+    .track-badge.is-pace { color: var(--success); border-color: var(--success); }
+    .analysis-note { margin: -8px 0 14px; color: var(--text-muted); font-size: 13px; }
     .track-badge.is-warning { color: var(--danger); border-color: var(--danger); background: rgba(248, 81, 73, 0.08); }
     .track-buttons { display: flex; flex-direction: column; gap: 8px; }
     .details-form { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -183,6 +185,7 @@
         <h2 id="library-title">Your tracks</h2>
         <span id="track-count" class="track-count">Loading…</span>
       </div>
+      <p id="analysis-note" class="analysis-note" role="status" hidden>Analysing new tracks (pace, tempo, mood)…</p>
       <div id="track-list" class="track-list" aria-live="polite"></div>
       <div id="empty-state" class="empty-state" hidden>
         <span class="empty-state-icon" aria-hidden="true">🎧</span>

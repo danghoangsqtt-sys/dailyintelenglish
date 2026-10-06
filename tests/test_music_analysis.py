@@ -76,6 +76,17 @@ def test_brightness_separates_noise_bursts_from_low_tones(tmp_path):
     assert (dark["mood_auto"], bright["mood_auto"]) == ("inspiring", "upbeat")
 
 
+def test_a_steady_tone_has_no_attacks(tmp_path):
+    """Regression: librosa's relative peak picking found 3-5 "onsets"/s in codec ripple on a steady
+    tone; the absolute strength floor makes it calm."""
+    t = np.arange(int(60 * SR)) / SR
+    pcm = (0.3 * np.sin(2 * np.pi * 330 * t) * 32767).astype(np.int16)
+    path = tmp_path / "tone.mp3"
+    AudioSegment(pcm.tobytes(), frame_rate=SR, sample_width=2, channels=1).export(str(path), format="mp3", bitrate="64k")
+    result = music_analysis.analyse(path)
+    assert result["onset_rate"] == 0.0 and result["pace"] == "calm"
+
+
 def test_silence_and_garbage_are_not_analysed(tmp_path):
     AudioSegment.silent(duration=10000, frame_rate=SR).export(str(tmp_path / "s.wav"), format="wav")
     (tmp_path / "x.mp3").write_bytes(b"ID3 not audio")

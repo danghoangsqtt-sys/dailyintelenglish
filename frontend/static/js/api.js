@@ -84,6 +84,8 @@ const Api = (() => {
     musicContentUrl: (filename) => `/api/music/${encodeURIComponent(filename)}`,
     // Task 22.7: track details (mood, tags, licence, credit) for the free-music library.
     getMusicOptions: () => request("/api/music/options"),
+    // Task 22.9: classify tracks not analysed yet (pace, ~BPM, mood suggestion).
+    analyseMusic: () => request("/api/music/analyse", { method: "POST" }),
     // Task 22.8: the library track that best fits a project's topic and length.
     suggestMusic: (projectId) => request(`/api/projects/${projectId}/music/suggest`, { method: "POST" }),
     updateMusic: (filename, details) =>
