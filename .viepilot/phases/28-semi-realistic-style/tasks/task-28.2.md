@@ -168,3 +168,11 @@ The owner agreed to option 1 (draw a body map and add the control model it needs
   image (about 20 times slower). **Fix:** one ControlNet at a time. The depth map already holds the
   silhouette, so the woman's full-front panel uses the depth control alone (scale 0.9) and the other
   panels keep the skeleton. Her frame is lowered (nose 0.07) so the head is not cut.
+
+### Depth alone failed (2026-10-06)
+
+The depth ControlNet alone (the silhouette without the skeleton) broke the figure in 3 of 4 images
+(a floating torso, wrong limbs): rejected, not shown to the owner as a candidate. OpenPose + depth
+together is the only variant that worked (the first image), at about 20 minutes an image because the two
+controls plus the UNet overflow the 12 GB card. The script is back to "both"; two seeds are run in the
+background (seeds 7 and 21). Option 2 (a body-shape LoRA) is not pursued: see the answer to the owner.

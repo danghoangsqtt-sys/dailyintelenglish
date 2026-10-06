@@ -152,7 +152,7 @@ def pose_map(char: dict, panel: str):
     return geo.draw_pose_pixels(out, size)
 
 
-DEPTH_SCALE = {"full_front": 0.9}  # panels that get the torso depth control (the others use a black map, scale 0)
+DEPTH_SCALE = {"full_front": 0.5}  # panels that get the torso depth control (the others use a black map, scale 0)
 
 
 def depth_map(char: dict, panel: str):
@@ -205,7 +205,8 @@ def tokens_only() -> int:
 
 
 def build(control: str = "pose"):
-    """One ControlNet at a time ("pose" or "depth"): two together overflowed the 12 GB card (19 minutes an image)."""
+    """"pose", or "both" (pose + depth). Both together overflow the 12 GB card, so the VRAM spills to system
+    memory: about 20 minutes an image instead of one. Depth alone (tried) breaks the figure."""
     import torch
     from diffusers import (AutoencoderKL, ControlNetModel, EulerAncestralDiscreteScheduler,
                            StableDiffusionXLControlNetPipeline)
@@ -214,8 +215,9 @@ def build(control: str = "pose"):
     vae = AutoencoderKL.from_pretrained(snapshot_download("madebyollin/sdxl-vae-fp16-fix",
                                         allow_patterns=["config.json", "diffusion_pytorch_model.safetensors"]),
                                         torch_dtype=torch.float16)
-    repo = {"pose": "xinsir/controlnet-openpose-sdxl-1.0", "depth": "xinsir/controlnet-depth-sdxl-1.0"}[control]
-    controlnet = ControlNetModel.from_pretrained(repo, torch_dtype=torch.float16)
+    names = ["xinsir/controlnet-openpose-sdxl-1.0"] + (["xinsir/controlnet-depth-sdxl-1.0"] if control == "both" else [])
+    nets = [ControlNetModel.from_pretrained(name, torch_dtype=torch.float16) for name in names]
+    controlnet = nets if len(nets) > 1 else nets[0]
     pipe = StableDiffusionXLControlNetPipeline.from_pretrained(
         next(REALVIS.iterdir()), vae=vae, controlnet=controlnet, torch_dtype=torch.float16, variant="fp16",
         use_safetensors=True, add_watermarker=False)
@@ -265,16 +267,17 @@ def generate(seeds: list[int], only: list[str], panels: list[str]) -> int:
             prompt, negative = prompt_for(char, panel)
             depth = depth_map(char, panel)
             use_depth = bool(depth.getbbox())  # the depth map holds the silhouette (and the bust), so it replaces the skeleton
-            pipe = pipe_for("depth" if use_depth else "pose")
+            pipe = pipe_for("both" if use_depth else "pose")
             pipe.set_ip_adapter_scale(scale)
             for seed in seeds:
                 started = time.monotonic()
+                pose = pose_map(char, panel)
+                pose.save(CAND / f"pose_{key}_{panel}.png")
                 if use_depth:
-                    control, control_scale = depth.convert("RGB"), DEPTH_SCALE[panel]
-                    control.save(CAND / f"depth_{key}_{panel}.png")
+                    control, control_scale = [pose, depth.convert("RGB")], [POSE_SCALE[panel], DEPTH_SCALE[panel]]
+                    depth.save(CAND / f"depth_{key}_{panel}.png")
                 else:
-                    control, control_scale = pose_map(char, panel), POSE_SCALE[panel]
-                    control.save(CAND / f"pose_{key}_{panel}.png")
+                    control, control_scale = pose, POSE_SCALE[panel]
                 image = pipe(prompt=prompt, negative_prompt=negative, ip_adapter_image=ref, image=control,
                              controlnet_conditioning_scale=control_scale, width=width,
                              height=height, num_inference_steps=35, guidance_scale=6.5,
