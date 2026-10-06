@@ -27,6 +27,9 @@ Versioning: [SemVer](https://semver.org/)
   covers the whole video beats one that must loop). It avoids the music used by the last
   episodes, and the AI makes the final choice among the best few. The pick and its reason are shown,
   and any track or None can still be chosen by hand.
+- **Task 22.5:** the YouTube description ends with a **music credit line** for the track actually
+  used in the episode. It uses the credit text from the Music Library, or one built from the title,
+  artist, source and licence. It follows the music: change the track and the credit changes.
 
 ### Removed (Phase 22, D50, 2026-10-05)
 - The ACE-Step 1.5 music generator was tried (spike report

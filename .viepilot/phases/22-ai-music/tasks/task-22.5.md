@@ -38,3 +38,19 @@ AI-written text, so changing the music changes the credit without regenerating t
 - Unit tests for the formats (attribution / built / partial / none / idempotent).
 - API tests: GET and export include the line; changing the job's music changes it.
 - The full suite is green.
+
+## Results (done 2026-10-06)
+
+- **Built as planned:**
+  - `music_library_service.credit_line` / `music_credit`;
+  - `youtube_service.with_music_credit` (pure, idempotent, never stored);
+  - GET, generate and export apply it;
+  - Step 7 shows "🎵 The music credit was added from the Music Library".
+- **Tests:** `tests/test_music_credit.py` (3). The existing YouTube tests (54) are unchanged and
+  pass.
+- **Full suite:**
+  - **First run:** `1077 passed, 337 errors` in 6:20, about half the usual time. It was run
+    without `-rE`, so the error text was not kept.
+  - **Rerun** of the unchanged code, with `-rE`: **1413 passed, 0 errors** (14:09).
+  - A subset run in between also passed. The 337 errors were a transient environment failure
+    (fixture setup errors, not test failures). Its cause is not determined.
