@@ -67,3 +67,16 @@ StyleTTS 2 were never wired in.
 - `grep` finds no runtime reference to omnivoice, styletts or kokoro in `app/` except the
   documented legacy normalisation.
 - A real Edge TTS line preview still works.
+
+## Results (done 2026-10-06)
+
+- **Code:** commit `c1522ee`. Built as planned.
+- **Migration 013, checked on a sqlite backup copy of the real DB** (the real `data/app.db` was only
+  read; it migrates on the next app start):
+  - speakers before: `edge_tts` 3, `omnivoice` 13;
+  - after: `edge_tts` 16.
+- `/api/tts/engines` lists only `edge_tts`.
+- A real Edge TTS preview of a real line through the API succeeded (`engine_used: edge_tts`).
+- `scripts/check_dependencies.py` passes all checks, with no OmniVoice check.
+- **Disk freed** (Kokoro + StyleTTS 2 + OmniVoice): 1.37 + 6.75 + 3.04 = **11.2 GB**.
+- **Full suite: 1412 passed.**

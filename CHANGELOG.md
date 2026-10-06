@@ -8,6 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Removed (2026-10-06, D56)
+- **Edge TTS is the only voice engine.** The unused Kokoro, StyleTTS 2 and OmniVoice engines and
+  their files were removed, freeing 11.2 GB. Existing projects keep the same voices, since they
+  were already spoken by Edge TTS.
+
 ### Added (Phase 22 — free background music, 2026-10-06)
 - **Task 22.7:** every Music Library track has details: title, artist, **mood** (Lofi / Acoustic /
   Upbeat / Calm / Inspiring), tags, where it was downloaded, its licence, the credit text and the
