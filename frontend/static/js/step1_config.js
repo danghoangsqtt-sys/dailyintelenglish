@@ -180,7 +180,7 @@
           name: "",
           gender: GENDERS[i % GENDERS.length],
           accent: state.accent,
-          tts_engine: "omnivoice",
+          tts_engine: "edge_tts",
           voice_description: "",
           // Task 14.10: no explicit speed -- the server resolves this to the
           // project's CEFR-level default (CEFR_DEFAULT_TTS_SPEED) at creation.
@@ -310,7 +310,7 @@
       name: speaker.name ?? "",
       gender: speaker.gender ?? "neutral",
       accent: speaker.accent ?? state.accent,
-      tts_engine: speaker.tts_engine ?? "omnivoice",
+      tts_engine: speaker.tts_engine ?? "edge_tts",
       voice_description: speaker.voice_description ?? "",
       speed: speaker.speed ?? 1.0,
       pitch: speaker.pitch ?? 0.0,
@@ -423,7 +423,7 @@
         name: speaker.name.trim(),
         gender: speaker.gender,
         accent: speaker.accent,
-        tts_engine: speaker.tts_engine ?? "omnivoice",
+        tts_engine: speaker.tts_engine ?? "edge_tts",
         voice_description: speaker.voice_description ?? "",
         // null (not a hardcoded 1.0) so an unset speed still resolves to the
         // CEFR-level default server-side; an existing, already-resolved speaker's

@@ -3,7 +3,7 @@
 import socket
 import threading
 import time
-from asyncio import Lock, Semaphore
+from asyncio import Lock
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
@@ -223,13 +223,3 @@ def _reset_write_lock():
     yield
 
 
-@pytest.fixture(autouse=True)
-def _reset_omnivoice_semaphore():
-    """Give every test a fresh tts_service._omnivoice_semaphore — same event-loop-binding
-    hazard as `write_lock` above (module-level asyncio primitive constructed once at
-    import time, reused across pytest-asyncio's per-test event loops)."""
-    from app.core.constants import MAX_CONCURRENT_TTS
-    from app.services import tts_service
-
-    tts_service._omnivoice_semaphore = Semaphore(MAX_CONCURRENT_TTS)
-    yield

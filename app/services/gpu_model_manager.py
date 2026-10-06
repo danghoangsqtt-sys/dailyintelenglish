@@ -6,7 +6,7 @@ workers. This process cannot load them all the same way, but it can decide who g
 card and free it. So this is an **arbiter, not a loader**: a consumer takes an exclusive
 lease, loads and unloads its own model inside it, and hands the card back on exit.
 
-    async with get_gpu_manager().lease("styletts2", min_free_mb=settings.GPU_MIN_FREE_MB_STYLETTS2):
+    async with get_gpu_manager().lease("image", min_free_mb=8192):
         ...  # spawn/load, synthesize, unload -- nobody else is on the GPU here
 
 Why a lease is needed at all (real code, task-20.1.md "What the real code does today"):

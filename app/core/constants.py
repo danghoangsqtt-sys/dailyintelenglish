@@ -89,7 +89,10 @@ TTS_SPEED_DEFAULT = 1.0
 # module docstring). Advertising an engine choice that quietly does something
 # different than requested is exactly the "fake capability" this project's own rules
 # forbid.
-TTS_ENGINES = ["omnivoice", "edge_tts"]
+TTS_ENGINES = ["edge_tts"]
+# D56 (owner 2026-10-06): Edge TTS is the only engine. "omnivoice" (always fell back to Edge) is
+# still ACCEPTED from older clients/rows and normalised to "edge_tts", never rejected.
+LEGACY_TTS_ENGINES = {"omnivoice": "edge_tts"}
 
 # Edge TTS voice map: accent -> gender -> ShortName, verified live against
 # edge_tts.list_voices() on 2026-09-11. "scottish" has no distinct Edge TTS locale,

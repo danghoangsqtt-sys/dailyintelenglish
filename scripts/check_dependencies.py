@@ -82,7 +82,7 @@ def check_gpu() -> tuple[bool, str]:
     """Verify an NVIDIA GPU is visible via nvidia-smi and report VRAM size."""
     nvidia_smi = shutil.which("nvidia-smi")
     if nvidia_smi is None:
-        return False, "nvidia-smi not found — GPU features (OmniVoice, LivePortrait) unavailable"
+        return False, "nvidia-smi not found — GPU features (AI images) unavailable"
     try:
         result = subprocess.run(
             [nvidia_smi, "--query-gpu=name,memory.total", "--format=csv,noheader"],
@@ -113,18 +113,6 @@ def check_cloud_provider() -> tuple[bool, str]:
     if settings.OPENAI_COMPAT_API_KEY and settings.OPENAI_COMPAT_MODEL:
         return True, f"configured (model: {settings.OPENAI_COMPAT_MODEL})"
     return False, "not configured -- set via the Settings page, or DIE_OPENAI_COMPAT_API_KEY/_MODEL in .env"
-
-
-def check_omnivoice_model() -> tuple[bool, str]:
-    """Verify the OmniVoice model directory exists and is non-empty."""
-    model_path = settings.OMNIVOICE_MODEL_PATH
-    if not model_path.is_absolute():
-        model_path = PROJECT_ROOT / model_path
-    if not model_path.exists():
-        return False, f"model path not found: {model_path}"
-    if not any(model_path.iterdir()):
-        return False, f"model path is empty: {model_path}"
-    return True, f"model files present at {model_path}"
 
 
 def check_node_version() -> tuple[bool, str]:
@@ -171,7 +159,6 @@ def main() -> int:
         ("ffmpeg", check_ffmpeg),
         ("NVIDIA GPU", check_gpu),
         ("Ollama + model", check_ollama),
-        ("OmniVoice model", check_omnivoice_model),
         ("data/ directories", check_data_dirs),
     ]
     informational_checks = [

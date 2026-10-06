@@ -1,14 +1,7 @@
 """Converts script lines to speech per speaker (Task 1.6, Sub-task 1.6a).
 
-Engine priority: OmniVoice (local GPU) first when configured and its model directory
-exists, falling back to Edge TTS automatically on any failure (SYSTEM-RULES "OmniVoice
-Rules": catch OOM/model errors -> fall back, never surface a raw GPU error to the user).
-
-OmniVoice model weights are not present on every development machine yet (see
-TRACKER.md Known Issues), so `_synthesize_omnivoice` always raises
-`_OmniVoiceUnavailableError` for now — this is the correct, honest state of the local
-GPU path, not a stub standing in for a "real" implementation. The fallback logic around
-it is what Sub-task 1.6a actually delivers and tests.
+Edge TTS is the only engine (D56, owner 2026-10-06). The never-integrated OmniVoice path, which
+always fell back to Edge, and the Kokoro / StyleTTS 2 experiments were removed.
 """
 
 import asyncio
@@ -22,13 +15,10 @@ import aiosqlite
 import edge_tts
 
 from app.core.config import settings
-from app.core.constants import EDGE_TTS_VOICE_MAP, MAX_CONCURRENT_TTS
+from app.core.constants import EDGE_TTS_VOICE_MAP
 from app.core.exceptions import NotFoundError, TTSError
 
 logger = logging.getLogger(__name__)
-
-_omnivoice_semaphore = asyncio.Semaphore(MAX_CONCURRENT_TTS)
-
 
 class WordBoundary(NamedTuple):
     """One word's timing within its own line's audio (local time, not mix-aggregated).
@@ -40,10 +30,6 @@ class WordBoundary(NamedTuple):
     text: str
     offset_sec: float
     duration_sec: float
-
-
-class _OmniVoiceUnavailableError(Exception):
-    """Internal signal that the OmniVoice path could not run — caller falls back to Edge TTS."""
 
 
 def _edge_tts_voice_for(accent: str, gender: str) -> str:
@@ -72,17 +58,6 @@ def _pitch_hz(pitch: float) -> str:
     """
     value = round(pitch * 50)
     return f"{'+' if value >= 0 else ''}{value}Hz"
-
-
-async def _synthesize_omnivoice(text: str, speaker: dict) -> bytes:
-    """Attempt local-GPU synthesis via OmniVoice. Raises _OmniVoiceUnavailableError.
-
-    Not yet integrated: doing so requires the actual OmniVoice model weights and its
-    Python package, neither of which are installed. When that lands, this function
-    should load the model once at startup (never per-request — SYSTEM-RULES) and run
-    inference in a threadpool executor (it's CPU/GPU-bound, not I/O).
-    """
-    raise _OmniVoiceUnavailableError("OmniVoice model not loaded (models/omnivoice is empty)")
 
 
 EDGE_TTS_MAX_ATTEMPTS = 2
@@ -178,8 +153,7 @@ def _write_word_boundaries_sync(path: Path, word_boundaries: list[WordBoundary])
 async def synthesize_line_audio(project: dict, line: dict) -> dict:
     """Synthesize one script line's audio and cache it to disk. Touches no database.
 
-    This is the slow half (network call to Edge TTS, or GPU inference once OmniVoice
-    is real) of what `synthesize_line` used to do as one step. Callers that hold a
+    This is the slow half (network call to Edge TTS) of what `synthesize_line` used to do as one step. Callers that hold a
     `write_transaction` lock (see `app/db/transactions.py`'s module docstring on why
     that lock must never wrap slow network/GPU work) must call this function
     *outside* that lock, then a separate, short `save_line_audio_cache` call inside
@@ -189,42 +163,25 @@ async def synthesize_line_audio(project: dict, line: dict) -> dict:
     (even an unrelated dashboard GET) for the duration of a live Edge TTS call.
 
     Returns:
-        {"audio_path": str, "engine_used": "omnivoice" | "edge_tts"}
+        {"audio_path": str, "engine_used": "edge_tts"}
 
     Raises:
         NotFoundError: If the line's speaker_id doesn't match any project speaker.
-        TTSError: If Edge TTS also fails after an OmniVoice fallback (or is the only
-            configured engine and fails).
+        TTSError: If Edge TTS fails after its retry.
 
-    Task 19.2: when Edge TTS is used, its captured per-word timestamps are written to a
-    sidecar file next to the cached MP3 (`_word_timestamps_path`) rather than returned here
-    -- `AudioService.mix_project` derives the same path independently at mix time (D19.2-c).
-    OmniVoice lines get no sidecar (no word-boundary support for local synthesis today).
+    Task 19.2: the captured per-word timestamps are written to a sidecar file next to the
+    cached MP3 (`_word_timestamps_path`) rather than returned here -- `AudioService.mix_project`
+    derives the same path independently at mix time (D19.2-c).
     """
     speaker = _find_speaker(project, line["speaker_id"])
 
-    audio_bytes: bytes
-    engine_used: str
-    word_boundaries: list[WordBoundary] = []
-    omnivoice_model_present = await asyncio.to_thread(settings.OMNIVOICE_MODEL_PATH.exists)
-    if speaker["tts_engine"] == "omnivoice" and omnivoice_model_present:
-        async with _omnivoice_semaphore:
-            try:
-                audio_bytes = await _synthesize_omnivoice(line["text"], speaker)
-                engine_used = "omnivoice"
-            except _OmniVoiceUnavailableError as exc:
-                logger.warning("OmniVoice unavailable for line %s, falling back to Edge TTS: %s", line["id"], exc)
-                audio_bytes, word_boundaries = await _synthesize_edge_tts(line["text"], speaker)
-                engine_used = "edge_tts"
-    else:
-        audio_bytes, word_boundaries = await _synthesize_edge_tts(line["text"], speaker)
-        engine_used = "edge_tts"
+    audio_bytes, word_boundaries = await _synthesize_edge_tts(line["text"], speaker)
+    engine_used = "edge_tts"
 
     cache_dir = settings.DATA_DIR / "tts_cache" / project["id"]
     audio_path = cache_dir / f"{line['id']}.mp3"
     await asyncio.to_thread(_write_audio_cache_sync, cache_dir, audio_path, audio_bytes)
-    if engine_used == "edge_tts":
-        await asyncio.to_thread(_write_word_boundaries_sync, _word_timestamps_path(audio_path), word_boundaries)
+    await asyncio.to_thread(_write_word_boundaries_sync, _word_timestamps_path(audio_path), word_boundaries)
 
     return {"audio_path": str(audio_path), "engine_used": engine_used}
 

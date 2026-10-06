@@ -72,8 +72,7 @@ async def _learning_job_handler(job: dict, worker: AIWorker) -> None:
 async def lifespan(app: FastAPI):
     """Initialize the database and verify external tooling on startup.
 
-    OmniVoice's model is loaded lazily on first TTS request (Task 1.6),
-    not here — startup should stay fast.
+    Voices come from Edge TTS (online, D56), so no voice model is loaded here — startup stays fast.
     """
     for subdir in (
         "audio",

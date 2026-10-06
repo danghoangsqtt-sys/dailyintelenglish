@@ -10,6 +10,7 @@ from app.core.constants import (
     MAX_SPEAKERS,
     MIN_SPEAKERS,
     PROJECT_STATUSES,
+    LEGACY_TTS_ENGINES,
     TTS_ENGINES,
     TTS_SPEED_MAX,
     TTS_SPEED_MIN,
@@ -72,6 +73,7 @@ class SpeakerConfig(BaseModel):
     @field_validator("tts_engine")
     @classmethod
     def validate_tts_engine(cls, value: str) -> str:
+        value = LEGACY_TTS_ENGINES.get(value, value)
         if value not in TTS_ENGINES:
             raise ValueError(f"tts_engine must be one of {TTS_ENGINES}")
         return value
@@ -101,6 +103,7 @@ class SpeakerUpdate(BaseModel):
     @field_validator("tts_engine")
     @classmethod
     def validate_tts_engine(cls, value: str | None) -> str | None:
+        value = LEGACY_TTS_ENGINES.get(value, value) if value is not None else None
         if value is not None and value not in TTS_ENGINES:
             raise ValueError(f"tts_engine must be one of {TTS_ENGINES}")
         return value

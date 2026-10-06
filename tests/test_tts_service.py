@@ -2,8 +2,8 @@
 
 No real network calls: `tts_service._synthesize_edge_tts` is monkeypatched with a fake
 async function returning canned bytes, same pattern used for Gemini in
-test_script_service.py. `_synthesize_omnivoice` is exercised directly to confirm it
-always raises `_OmniVoiceUnavailableError` (honest not-yet-integrated state).
+test_script_service.py. Edge TTS is the only engine (D56); a legacy "omnivoice" value is
+normalised to "edge_tts".
 """
 
 import json
@@ -89,20 +89,18 @@ async def test_synthesize_line_uses_edge_tts_when_engine_is_edge_tts(db, monkeyp
     assert row["audio_cache_path"] == result["audio_path"]
 
 
-async def test_synthesize_line_falls_back_to_edge_tts_when_omnivoice_configured_but_unavailable(db, monkeypatch, tmp_path):
-    """Speaker requests OmniVoice, and the model dir exists, but synthesis itself fails ->
-    must fall back to Edge TTS rather than raising, per SYSTEM-RULES OmniVoice Rules."""
+async def test_legacy_omnivoice_speaker_is_stored_and_spoken_as_edge_tts(db, monkeypatch, tmp_path):
+    """D56 (Edge TTS only): an older client may still send "omnivoice". It is accepted,
+    normalised to "edge_tts", and the line is spoken by Edge TTS."""
     project = await project_service.create_project(
         db,
         make_config(speakers=[SpeakerConfig(name="Alex", gender="male", accent="american", tts_engine="omnivoice")]),
     )
     speaker = project["speakers"][0]
-    assert speaker["tts_engine"] == "omnivoice"
+    assert speaker["tts_engine"] == "edge_tts"
     line = await _insert_line(db, project["id"], speaker["id"])
 
-    monkeypatch.setattr(tts_service.settings, "OMNIVOICE_MODEL_PATH", tmp_path)  # exists()==True
-
-    calls = {"omnivoice": 0, "edge_tts": 0}
+    calls = {"edge_tts": 0}
 
     async def fake_edge_tts(text: str, spk: dict) -> tuple[bytes, list]:
         calls["edge_tts"] += 1
@@ -121,10 +119,14 @@ async def test_synthesize_line_falls_back_to_edge_tts_when_omnivoice_configured_
     audio_path.unlink()
 
 
-async def test_omnivoice_synthesis_always_raises_unavailable_for_now():
-    """Honest current state: no model weights on this machine, so OmniVoice never succeeds yet."""
-    with pytest.raises(tts_service._OmniVoiceUnavailableError):
-        await tts_service._synthesize_omnivoice("text", {"id": "spk-1"})
+def test_only_edge_tts_is_offered_and_unknown_engines_are_refused():
+    from app.models.project import SpeakerUpdate
+
+    assert SpeakerUpdate(tts_engine="omnivoice").tts_engine == "edge_tts"
+    with pytest.raises(ValueError):
+        SpeakerUpdate(tts_engine="kokoro")
+    with pytest.raises(ValueError):
+        SpeakerConfig(name="A", gender="male", accent="american", tts_engine="styletts2")
 
 
 async def test_synthesize_line_raises_not_found_for_unknown_speaker(db):

@@ -321,12 +321,6 @@ def test_manager_is_built_from_settings(monkeypatch):
         gpu_module.set_gpu_manager(None)
 
 
-def test_styletts2_threshold_default_is_the_measured_number():
-    from app.core.config import Settings
-
-    assert Settings().GPU_MIN_FREE_MB_STYLETTS2 == 6144
-
-
 # --- /health (D20.1-f) --------------------------------------------------------------
 
 

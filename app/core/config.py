@@ -46,7 +46,6 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     DATA_DIR: Path = Field(default_factory=_default_data_dir)
-    OMNIVOICE_MODEL_PATH: Path = Path("models/omnivoice")
 
     FFMPEG_PATH: str = "ffmpeg"
 
@@ -111,7 +110,6 @@ class Settings(BaseSettings):
     # by their own spikes (20.2, Phase 22), not guessed here.
     GPU_MANAGER_ENABLED: bool = True
     GPU_EVICT_OLLAMA: bool = True
-    GPU_MIN_FREE_MB_STYLETTS2: int = 6144
     AI_VISUALS_ENABLED: bool = True
     IMAGE_ENGINE: Literal["worker", "fake"] = "worker"
     VISUALS_DUO_REFINE: bool = True
