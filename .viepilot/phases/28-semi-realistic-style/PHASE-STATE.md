@@ -8,5 +8,5 @@
 | 28.2 | Character reference sheets for the woman and the man, with detailed prompts per view | done 2026-10-06 (owner approved both characters; card `tasks/task-28.2.md`) |
 | 28.3 | Recipes + re-tuned colour / extra-person checks (single-colour outfits, RealVisXL in the worker) | done 2026-10-06 (1446 passed; card `tasks/task-28.3.md`) |
 | 28.4a | The 55 scene plates in the new look (script, owner request while waiting for the 28.3 suite) | done 2026-10-06 (card `tasks/task-28.4a.md`; report `docs/operations/phase28-scene-plates.md`) |
-| 28.4 | Redo the library: the two characters from the sheets (the plates are 28.4a) | planned |
+| 28.4 | Redo the library: Lan and Minh replace the two old characters (the plates are 28.4a) | **in_progress** 2026-10-06 (card `tasks/task-28.4.md`) |
 | 28.5 | Gate B-20 (one full episode) | planned |
