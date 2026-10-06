@@ -143,3 +143,19 @@ Sheets recomposed (`docs/operations/phase28-characters/*_sheet_2000.png`, `promp
   synonyms) did not change it much: with this model and a text prompt the bust under a fitted blouse
   stays modest. Options for the owner: accept it, or use a body-shape control (an extra download
   and a hand-drawn torso map) or a different checkpoint.
+
+## Owner decision (2026-10-06): body map approved, the current look kept as the fallback
+
+The owner agreed to option 1 (draw a body map and add the control model it needs) and to option 2
+(add a body-shape model), and to **keep the current sheets as the approved fallback**.
+
+- **Option 1, now:** `xinsir/controlnet-depth-sdxl-1.0` (Apache-2.0, commercial use allowed), loaded
+  next to the OpenPose control (diffusers multi-ControlNet). The script draws a **depth map of the
+  torso** (grey-scale: a rounded chest with two raised bust forms, a narrow waist, narrow hips, and a long
+  neck/sloped shoulders for the man) that is used only for the full-body and the face panels that show the
+  chest. A fuller bust then comes from the shading the control produces, not from a prompt word.
+- **Option 2, after:** a licence check first (commercial use) for any body-shape LoRA; nothing is
+  downloaded until the licence is read.
+- Clothed, buttoned blouse; the depth map is a smooth torso shape, not a nude body.
+- Acceptance: the owner approves the bust size on the woman's sheet. The previous sheets stay in git
+  history (commit "Task 28.2 sheets after round 4").
