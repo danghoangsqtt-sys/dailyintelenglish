@@ -1,4 +1,14 @@
-/* Daily Intel English Studio — shared light-first design system. */
+/* Daily Intel English Studio — shared light-first design system.
+   Phase 26: the brand approved for the video intro/outro (Phase 25) -- the DI violet -> cyan mark,
+   deep-indigo surfaces in dark mode, Montserrat (bundled, SIL OFL: /static/fonts/OFL.txt) for
+   headings and the brand, Inter for body text. */
+
+@font-face {
+  font-family: "Montserrat";
+  src: url("/static/fonts/Montserrat-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-display: swap;
+}
 
 :root {
   color-scheme: light;
@@ -16,9 +26,14 @@
   --text-2: #2c3242;
   --text-muted: #495164;
   --muted: #495164;
-  --accent: #6425c4;
-  --accent-hover: #501c9e;
-  --accent-soft: #f1e9fd;
+  --accent: #6d28d9;
+  --accent-hover: #5b21b6;
+  --accent-soft: #f1eafe;
+  --brand-violet: #7c3aed;
+  --brand-cyan: #22d3ee;
+  --brand-gradient: linear-gradient(135deg, #7c3aed 0%, #4f46e5 55%, #22d3ee 100%);
+  --brand-gradient-soft: linear-gradient(135deg, rgba(124, 58, 237, .10), rgba(34, 211, 238, .10));
+  --focus-ring: 0 0 0 3px rgba(124, 58, 237, .35);
   --accent-ink: #ffffff;
   --success: #146c2e;
   --success-bg: #dcf5e2;
@@ -36,17 +51,18 @@
   --r-lg: 14px;
   --shadow: 0 10px 28px rgba(20, 24, 38, 0.08);
   --font: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Montserrat", "Inter", "Segoe UI", system-ui, sans-serif;
 }
 
 /* The former palette remains available through Theme's existing data-theme contract. */
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0d1117;
-  --bg-canvas: #0d1117;
-  --bg-elevated: #11151c;
+  --bg: #0b1026;
+  --bg-canvas: #0b1026;
+  --bg-elevated: #10163a;
   --surface: rgba(255, 255, 255, 0.04);
-  --surface-2: #161b22;
-  --surface-3: #21262d;
+  --surface-2: #121a3d;
+  --surface-3: #1b2350;
   --surface-border: rgba(124, 58, 237, 0.3);
   --surface-border-hover: rgba(124, 58, 237, 0.6);
   --border: rgba(124, 58, 237, 0.3);
@@ -55,8 +71,8 @@
   --text-2: #c9d1d9;
   --text-muted: #8b949e;
   --muted: #8b949e;
-  --accent: #a371f7;
-  --accent-hover: #c297ff;
+  --accent: #a78bfa;
+  --accent-hover: #c4b5fd;
   --accent-soft: rgba(124, 58, 237, 0.2);
   --accent-ink: #ffffff;
   --success: #3fb950;
@@ -91,8 +107,10 @@ button { cursor: pointer; }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; border: 1px solid var(--border-strong); border-radius: 8px; padding: 7px 14px; background: var(--surface-2); color: var(--text-2); font-size: 14px; font-weight: 650; text-decoration: none; transition: transform .15s ease, background .15s ease, border-color .15s ease; }
 .btn:active { transform: scale(.97); }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 18px rgba(100, 37, 196, .22); }
-.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-primary { background: var(--brand-gradient); border-color: transparent; color: #fff; box-shadow: 0 6px 20px rgba(79, 70, 229, .28); }
+.btn-primary:hover { filter: brightness(1.08); box-shadow: 0 8px 26px rgba(79, 70, 229, .36); }
+.btn:focus-visible, .icon-toggle:focus-visible, .app-nav a:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .btn-ghost { background: transparent; }
 .btn-ghost:hover { background: var(--surface-3); border-color: var(--surface-border-hover); }
 .btn-danger { color: var(--danger); background: var(--danger-bg); }
@@ -124,11 +142,21 @@ button { cursor: pointer; }
 .step-nav-pill.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 
 /* Shared CapCut-style workspace shell. */
-.topbar { height: 58px; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--surface); }
-.brand, .logo { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 800; letter-spacing: -.02em; }
-.brand-mark { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: linear-gradient(145deg, var(--accent), #8b5cf6); color: #fff; font-size: 14px; }
+.topbar { position: relative; height: 58px; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--bg-elevated); }
+.topbar::after { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--brand-gradient); opacity: .55; content: ""; }
+.brand, .logo { display: flex; align-items: center; gap: 10px; color: var(--text); font-family: var(--font-display); font-weight: 800; letter-spacing: -.02em; text-decoration: none; }
+.brand-mark { width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 9px; background: linear-gradient(135deg, var(--brand-violet), var(--brand-cyan)); box-shadow: 0 4px 14px rgba(124, 58, 237, .35); color: #fff; font-family: var(--font-display); font-size: 13px; font-weight: 800; letter-spacing: -.5px; }
+.brand-word { display: flex; flex-direction: column; line-height: 1.02; }
+.brand-word b { font-size: 15px; font-weight: 800; }
+.brand-word small { margin-top: 2px; color: var(--accent); font-size: 9.5px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; }
 .project-name { padding-left: 14px; border-left: 1px solid var(--border); color: var(--text-2); font-weight: 650; }
+.app-nav { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.app-nav a { padding: 7px 11px; border-radius: 8px; color: var(--muted); font-size: 13px; font-weight: 650; text-decoration: none; transition: color .15s ease, background .15s ease; }
+.app-nav a:hover { background: var(--surface-3); color: var(--text); }
+.app-nav a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); }
 .topbar .actions, .topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.app-nav + .actions, .app-nav + .topbar-actions { margin-left: 8px; padding-left: 10px; border-left: 1px solid var(--border); }
+h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); letter-spacing: -.01em; }
 .save-indicator, .save-status { min-height: 16px; color: var(--muted); font-size: 12px; font-weight: 650; }
 .save-indicator[data-status="failed"] { color: var(--danger); }
 

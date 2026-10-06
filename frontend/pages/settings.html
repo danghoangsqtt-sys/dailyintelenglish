@@ -10,17 +10,7 @@
   <style>
     body { margin: 0; }
 
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 40px;
-      border-bottom: 1px solid var(--surface-border);
-      background: var(--bg-elevated);
-    }
 
-    .topbar-actions { display: flex; align-items: center; gap: 12px; }
-    .logo { font-size: 20px; font-weight: 800; text-decoration: none; }
 
     .main {
       width: min(640px, calc(100% - 80px));
@@ -66,9 +56,9 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="logo" href="/">🎙️ Daily Intel English Studio</a>
+    <a class="brand" href="/" aria-label="Daily Intel English Studio dashboard"><span class="brand-mark" aria-hidden="true">DI</span><span class="brand-word"><b>Daily Intel</b><small>English Studio</small></span></a>
+    <nav class="app-nav" aria-label="Main"><a href="/">Dashboard</a><a href="/characters">Character Library</a><a href="/music">Music Library</a><a href="/settings" aria-current="page">Settings</a></nav>
     <div class="topbar-actions">
-      <a class="btn btn-ghost" href="/">← Dashboard</a>
       <button id="theme-toggle" class="icon-toggle" type="button" aria-label="Toggle dark/light mode">☀️</button>
     </div>
   </header>
