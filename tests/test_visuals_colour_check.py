@@ -62,7 +62,7 @@ def test_unmeasurable_region_never_fails():
 
 def test_garment_refine_prompt_budget_and_order():
     prompt = recipes.garment_refine_prompt(CHARACTER, SCENE)
-    assert prompt.startswith(recipes.STYLE_CEL_ANIME + ", plain light blue slim-fit shirt, plain black")
+    assert prompt.startswith(recipes.STYLE_EDITORIAL + ", plain light blue slim-fit shirt, plain black")
     assert recipes.token_count(prompt) <= 75
 
 

@@ -78,3 +78,22 @@ on photographs. The library data (the new Lan and Minh, the 55 plates) is Task 2
 
 The library redo (28.4), the shot-level IP-Adapter tuning with the new faces (28.4 checks it), the
 duo placement of two outfit colours beyond what the existing per-person refine already does.
+
+## Calibration result (step 1, 2026-10-06)
+
+Measured with the app's own `colour_check.measure` / `matches` on 33 woman and 21 man full-body images
+(the approved sheets and every candidate): **white** garments measure v 0.82-0.97 and s <= 0.07 and all 33
+pass the current rule. **Black** garments on the approved Minh sheet measure v 0.24-0.37 (pass); the
+"failures" are the rejected white-shirt candidates and boxes that touch skin or background in my crude
+fixed region. **Decision: step 4 changes no rule.** The photographic white and black pass the cel-calibrated
+rules; a regression test pins the measured values instead.
+
+## Implementation notes (2026-10-06)
+
+- Done in code: `STYLE_EDITORIAL` and the photographic negatives (real CLIP counts 72 and 44), `outfit_phrase`,
+  the "colours must differ" rule removed, `IMAGE_BASE_REPO` / `IMAGE_SCHEDULER` settings and the `load`
+  request, the worker's fp16-first download, the API `style_id` = `editorial_photo`.
+- New tests: `tests/test_visuals_phase28.py` (9, including a real-tokenizer budget check); four old
+  tests were updated where they pinned the cel-anime strings or the "must differ" rule.
+- **Found for Task 28.4:** the character form allows at most 4 hair words, so Lan's hair is written
+  "long straight black hair" in the library (not "very long ...").

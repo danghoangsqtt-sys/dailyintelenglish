@@ -45,11 +45,11 @@ def wait_job(client, job):
 
 
 def test_character_lifecycle_and_content(client):
-    assert data(client.get("/api/visuals/options"))["style_id"] == "cel_anime"
+    assert data(client.get("/api/visuals/options"))["style_id"] == "editorial_photo"
     bad = client.post("/api/visuals/characters", json={**CHARACTER, "extra": "hat"})
     assert bad.status_code == 422
-    bad = client.post("/api/visuals/characters", json={**CHARACTER, "bottom_color": "yellow"})
-    assert bad.status_code == 422
+    bad = client.post("/api/visuals/characters", json={**CHARACTER, "bottom_color": "plaid"})
+    assert bad.status_code == 422  # a colour outside the solid list (the same colour twice is allowed since Phase 28)
     character = data(client.post("/api/visuals/characters", json=CHARACTER))
     character_id = character["id"]
     assert character["status"] == "draft"

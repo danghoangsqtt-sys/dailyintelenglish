@@ -112,6 +112,10 @@ class Settings(BaseSettings):
     GPU_EVICT_OLLAMA: bool = True
     AI_VISUALS_ENABLED: bool = True
     IMAGE_ENGINE: Literal["worker", "fake"] = "worker"
+    # Phase 28 (owner, 2026-10-06): pictures come from RealVisXL V5.0 (openrail++, photographic people),
+    # sampled with Euler-a as in the spike. An empty repo falls back to SDXL base 1.0 and its default sampler.
+    IMAGE_BASE_REPO: str = "SG161222/RealVisXL_V5.0"
+    IMAGE_SCHEDULER: Literal["default", "euler_a"] = "euler_a"
     VISUALS_DUO_REFINE: bool = True
     # Task 20.11: re-refine a person whose measured top/bottom colour misses the locked
     # colour, at most this many times per person per shot (0 disables the check).

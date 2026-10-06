@@ -25,6 +25,7 @@ Licence and watermark constraints (owner, 2026-09-30: free, commercial-safe with
 registration, no vendor watermark; task-20.2.md Amendment A). Every model fetched here is
 `openrail++`, `mit` or `apache-2.0`:
 - `stabilityai/stable-diffusion-xl-base-1.0`: `openrail++`;
+- `SG161222/RealVisXL_V5.0` (the app's picture model since Phase 28): `openrail++`;
 - `madebyollin/sdxl-vae-fp16-fix`: `mit`;
 - `ByteDance/SDXL-Lightning`: `openrail++`;
 - `h94/IP-Adapter`: `apache-2.0`.
@@ -93,6 +94,21 @@ FINETUNE_PATTERNS = [
     "text_encoder/*",
     "text_encoder_2/*",
     "unet/*",
+    "vae/config.json",
+]
+# Phase 28: RealVisXL V5.0 keeps fp32 shards (about 10 GB) next to the fp16 files the app uses (about 6.8 GB),
+# so a fine-tune is fetched fp16-only first and falls back to FINETUNE_PATTERNS when the repo has no fp16 UNet.
+FINETUNE_FP16_PATTERNS = [
+    "model_index.json",
+    "scheduler/*",
+    "tokenizer/*",
+    "tokenizer_2/*",
+    "text_encoder/config.json",
+    "text_encoder/model.fp16.safetensors",
+    "text_encoder_2/config.json",
+    "text_encoder_2/model.fp16.safetensors",
+    "unet/config.json",
+    "unet/diffusion_pytorch_model.fp16.safetensors",
     "vae/config.json",
 ]
 SCHEDULERS = ("default", "euler_a")
@@ -181,6 +197,9 @@ class ImageWorker:
         if repo != BASE_REPO:
             if mode != "base":
                 raise ValueError("a custom base_repo supports mode 'base' only (Lightning is an SDXL-base UNet)")
+            folder = Path(snapshot_download(repo, allow_patterns=FINETUNE_FP16_PATTERNS))
+            if (folder / "unet" / "diffusion_pytorch_model.fp16.safetensors").is_file():
+                return folder
             return Path(snapshot_download(repo, allow_patterns=FINETUNE_PATTERNS))
         patterns = list(BASE_CONFIG_FILES)
         if mode == "base":

@@ -63,11 +63,11 @@ def test_recipe_strings_and_worst_case_budget():
     )
     assert recipes.character_phrase(CHARACTER) == phrase
     assert recipes.candidate_prompt(CHARACTER) == (
-        recipes.STYLE_CEL_ANIME + ", " + phrase
+        recipes.STYLE_EDITORIAL + ", " + phrase
         + ", portrait, facing the viewer, arms down, plain light background"
     )
     assert recipes.single_prompt(CHARACTER, SCENE) == (
-        recipes.STYLE_CEL_ANIME + ", " + phrase
+        recipes.STYLE_EDITORIAL + ", " + phrase
         + ", close-up, talking, in a cozy Vietnamese street cafe"
     )
     prompts = [
@@ -79,7 +79,7 @@ def test_recipe_strings_and_worst_case_budget():
           for staging in ("standing", "seated") for kind in ("duo_close", "duo_wide")),
     ]
     assert all(recipes.token_count(prompt) <= 75 for prompt in prompts)
-    assert recipes.token_count(recipes.single_prompt(CHARACTER, SCENE)) == 69
+    assert recipes.token_count(recipes.single_prompt(CHARACTER, SCENE)) == 56
 
 
 def test_every_builtin_place_fits_the_real_clip_budget():

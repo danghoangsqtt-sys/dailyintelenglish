@@ -3,28 +3,23 @@
 import re
 from collections.abc import Mapping
 
-# Style spike 2026-10-04 (owner's references): a 1990s hand-drawn cel-anime film look --
-# clean dark ink outlines, flat 2-tone cel shading, saturated natural colours, a lush
-# gouache-painted background in warm sunlight. It replaces the r3 watercolor preset, whose
-# "watercolor / pastel" words produced the washed-out, low-contrast, semi-realistic faces.
-# Task 20.10 (O11): no studio, artist or franchise names -- the look comes from neutral words
-# (A/B against the named wording: docs/operations/phase20-t10-neutral-style-ab.png).
-STYLE_CEL_ANIME = (
-    "hand-drawn 1990s anime film still, clean ink outlines, flat cel shading, "
-    "lush painted background, warm sunlight, vivid colors"
-)
+# Phase 28 (owner, 2026-10-06): the pictures are crisp editorial photographs, like the channel banner,
+# drawn by RealVisXL V5.0 (the cel-anime look of 2026-10-04 was replaced). Spike evidence:
+# docs/operations/phase28-spike-style.md. No blur or bokeh (the owner disliked it), no studio, artist or
+# franchise names.
+STYLE_EDITORIAL = "editorial photograph, soft natural light, crisp sharp focus, high resolution"
 # CLIP reads 77 tokens of the negative too, so the style guards come first and the
 # outfit-lock words (owner 20.2h: 1 plain top + 1 plain bottom) follow.
 NEGATIVE = (
-    "watercolor, pastel, washed out, faded, overexposed, photorealistic, realistic face, 3d render, "
-    "glossy skin, text, watermark, deformed, bad anatomy, extra fingers, deformed hands, extra person, "
-    "crowd, backpack, hat, jacket, hoodie, scarf, stripes, plaid, print, multicolored clothes"
+    "blurry, bokeh, low resolution, cartoon, anime, 3d render, plastic skin, ugly, asymmetrical face, "
+    "text, watermark, deformed, bad anatomy, extra fingers, deformed hands, extra person, crowd, glasses, "
+    "backpack, hat, jacket, hoodie, scarf, stripes, plaid, print, multicolored clothes"
 )
 # Task 23.3: the scene plate must be empty -- a person in the plate is carried into shots by
 # the scene reference (the Market and Office plates of the first built-in run had people).
 PLATE_NEGATIVE = (
-    "person, people, man, woman, girl, boy, child, crowd, character, figure, watercolor, pastel, "
-    "washed out, faded, overexposed, photorealistic, 3d render, text, watermark, blurry"
+    "person, people, man, woman, girl, boy, child, crowd, character, figure, blurry, bokeh, cartoon, anime, "
+    "illustration, 3d render, low resolution, text, watermark"
 )
 HAND_PROMPT = "detailed hand, five fingers, natural hand"
 HAND_NEGATIVE = "extra fingers, missing fingers, fused fingers, deformed hands, bad anatomy, blurry"
@@ -43,15 +38,23 @@ def token_count(prompt: str) -> int:
 
 
 def _styled(*parts: str) -> str:
-    return ", ".join((STYLE_CEL_ANIME, *parts))
+    return ", ".join((STYLE_EDITORIAL, *parts))
+
+
+def outfit_phrase(character: Mapping) -> str:
+    """The locked outfit. A single-colour outfit (the Phase 28 characters: the woman all white, the man
+    all black) names its colour once; two colours name each garment."""
+    if character["top_color"] == character["bottom_color"]:
+        return f"plain {character['top_color']} {character['top_item']} and {character['bottom_item']}"
+    return (f"plain {character['top_color']} {character['top_item']}, plain {character['bottom_color']} "
+            f"{character['bottom_item']}")
 
 
 def character_phrase(character: Mapping) -> str:
     gender_noun = "woman" if character["gender"] == "female" else "man"
     return (
         f"{character['age_group']} {character['ethnicity']} {gender_noun} {character['role']}, "
-        f"{character['hair']}, {character['eyes']}, plain {character['top_color']} "
-        f"{character['top_item']}, plain {character['bottom_color']} {character['bottom_item']}"
+        f"{character['hair']}, {character['eyes']}, {outfit_phrase(character)}"
     )
 
 
@@ -107,8 +110,7 @@ def garment_refine_prompt(character: Mapping, scene: Mapping) -> str:
     colours carry the most weight when one person's region is repainted."""
     gender_noun = "woman" if character["gender"] == "female" else "man"
     return _styled(
-        f"plain {character['top_color']} {character['top_item']}, plain {character['bottom_color']} "
-        f"{character['bottom_item']}, {character['age_group']} {character['ethnicity']} {gender_noun}, "
+        f"{outfit_phrase(character)}, {character['age_group']} {character['ethnicity']} {gender_noun}, "
         f"{character['hair']}, talking, in {scene['place']}"
     )
 
@@ -133,8 +135,7 @@ def compact_phrase(character: Mapping) -> str:
     gender_noun = "woman" if character["gender"] == "female" else "man"
     return (
         f"{character['age_group']} {character['ethnicity']} {gender_noun}, {character['hair']}, "
-        f"plain {character['top_color']} {character['top_item']}, plain {character['bottom_color']} "
-        f"{character['bottom_item']}"
+        f"{outfit_phrase(character)}"
     )
 
 

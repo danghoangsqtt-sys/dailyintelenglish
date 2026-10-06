@@ -121,8 +121,11 @@ class WorkerImageEngine:
                 # Task 23.2 probe: the 1344x768 VAE decode is the VRAM peak. Without tiling the L2
                 # render reserved 13.2 GB (14.1 GB with the scene adapter) on the 12 GB card and
                 # spilled into shared memory (2.7x slower shots); tiled: 10.9 GB, same image.
-                await self.request({"command": "load", "mode": "base", "pipeline": pipeline, "encoders": encoders,
-                                    "vae_tiling": True})
+                load = {"command": "load", "mode": "base", "pipeline": pipeline, "encoders": encoders,
+                        "vae_tiling": True}
+                if settings.IMAGE_BASE_REPO:
+                    load.update(base_repo=settings.IMAGE_BASE_REPO, scheduler=settings.IMAGE_SCHEDULER)
+                await self.request(load)
                 if ip != "none":
                     adapter = {"command": "load_ip_adapter"}
                     if scene:  # Task 23.2: + the scene-plate adapter

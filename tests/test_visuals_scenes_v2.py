@@ -54,7 +54,8 @@ def test_preview_prompt_time_of_day_and_budget():
     scene = {"place": "a cozy Vietnamese street cafe", "time_of_day": "sunset"}
     prompt = recipes.scene_preview_prompt(scene)
     assert "golden sunset light" in prompt and prompt.endswith("wide view, empty scene, no people")
-    assert "light" not in recipes.scene_preview_prompt({**scene, "time_of_day": "day"}).replace("sunlight", "")
+    day = recipes.scene_preview_prompt({**scene, "time_of_day": "day"})
+    assert not any(word in day for word in ("morning", "sunset", "night", "lamps"))
     assert recipes.token_count(prompt) <= 75
 
 

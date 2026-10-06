@@ -66,8 +66,7 @@ class CharacterInput(BaseModel):
             raise ValueError("choose one of the solid colours")
         if self.top_item not in TOPS or self.bottom_item not in BOTTOMS:
             raise ValueError("choose one top and one bottom item")
-        if self.top_color == self.bottom_color:
-            raise ValueError("top and bottom colours must differ")
+        # Phase 28: one colour for both garments is allowed (the woman all white, the man all black).
         return self
 
 
