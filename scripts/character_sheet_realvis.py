@@ -36,11 +36,11 @@ CHARACTERS = {
         "ref": ROOT / "data/tmp/style-realvis/presenter_E1_bright_s21.png",
         "crop": (0.26, 0.10, 0.76, 0.62),
         "bg": "white",
-        "shoulder": 0.80, "hip": 0.55, "full_sh": 0.85, "full_hip": 0.40, "full": (0.05, 0.115),
+        "shoulder": 0.80, "hip": 0.55, "full_sh": 0.85, "full_hip": 0.40, "neck_y": 0.65, "sh_y": 0.95, "full": (0.05, 0.115),
         "identity": "beautiful young Vietnamese woman, very long straight black hair with side bangs, fair skin",
-        "outfit": "tight short-sleeve white blouse tucked in, slim straight white trousers, white shoes",
-        "negative": "black clothes, colorful clothes, short hair, tan skin, grey clothes, wide hips, flared trousers, loose blouse",
-        "body": "full bust, slim waist, narrow hips, slim legs",
+        "outfit": "tight white blouse stretched across the chest, slim white trousers, white shoes",
+        "negative": "black clothes, colorful clothes, short hair, tan skin, grey clothes, wide hips, flared trousers, small bust, flat chest",
+        "body": "curvy hourglass figure, large bust, slim waist, narrow hips",
         "summary": ("Lan, a young Vietnamese woman. 160 cm, 50 kg, a slender hourglass figure with a narrow waist "
                     "and gently rounded hips, upright posture. Very long straight black hair with side bangs, fair "
                     "luminous skin, a soft delicate face with large dark eyes. All-white outfit."),
@@ -50,11 +50,11 @@ CHARACTERS = {
         "ref": ROOT / "data/tmp/style-realvis-male2/N3_soft_s42.png",
         "crop": (0.10, 0.02, 0.72, 0.64),
         "bg": "white",
-        "shoulder": 0.97, "hip": 0.50, "full_sh": 1.15, "full_hip": 0.45, "full": (0.085, 0.105),
+        "shoulder": 0.97, "hip": 0.50, "full_sh": 1.05, "full_hip": 0.42, "neck_y": 0.85, "sh_y": 1.25, "full": (0.08, 0.103),
         "identity": "handsome young Vietnamese man, fair skin, tousled black hair, long fringe",
         "outfit": "fitted short-sleeve black shirt, black trousers, black shoes",
         "negative": "white clothes, colorful clothes, shirtless, bare back, crop top, torn clothes, beard, grey clothes, rolled sleeves, hunched shoulders",
-        "body": "muscular broad chest, defined biceps, V-taper torso",
+        "body": "long neck, sloped broad shoulders, slim waist, lean muscular",
         "summary": ("Minh, a young Vietnamese man. 180 cm, 80 kg, a lean muscular athletic build: broad shoulders, "
                     "defined chest and arms, a narrow waist, a V-shaped torso. Fair clear skin, a refined slim "
                     "face with straight eyebrows and almond eyes, tousled black hair with a long side-swept "
@@ -119,11 +119,14 @@ def pose_map(char: dict, panel: str):
     keys = geo._KEYS
     if panel in ("full_front", "full_back"):
         fs, fh = char["full_sh"], char["full_hip"]  # shoulders sit ~0.95 below the nose (not a shrug)
-        arms = {"neck": (0.0, 0.65), "r_shoulder": (-fs, 0.95), "l_shoulder": (fs, 0.95),
-                "r_hip": (-fh, 3.3), "l_hip": (fh, 3.3),
-                "r_elbow": (-fs - 0.15, 2.2), "r_wrist": (-fs - 0.25, 3.4),
-                "l_elbow": (fs + 0.15, 2.2), "l_wrist": (fs + 0.25, 3.4)}
-        legs = {"r_knee": (-fh, 4.9), "l_knee": (fh, 4.9), "r_ankle": (-fh - 0.05, 6.5), "l_ankle": (fh + 0.05, 6.5)}
+        ny, sy = char["neck_y"], char["sh_y"]
+        drop = sy - 0.95  # every joint below the shoulders moves down with them
+        arms = {"neck": (0.0, ny), "r_shoulder": (-fs, sy), "l_shoulder": (fs, sy),
+                "r_hip": (-fh, 3.3 + drop), "l_hip": (fh, 3.3 + drop),
+                "r_elbow": (-fs - 0.15, 2.2 + drop), "r_wrist": (-fs - 0.25, 3.4 + drop),
+                "l_elbow": (fs + 0.15, 2.2 + drop), "l_wrist": (fs + 0.25, 3.4 + drop)}
+        legs = {"r_knee": (-fh, 4.9 + drop), "l_knee": (fh, 4.9 + drop),
+                "r_ankle": (-fh - 0.05, 6.5 + drop), "l_ankle": (fh + 0.05, 6.5 + drop)}
         points = geo.person_pose(size, 0.5, char["full"][0], char["full"][1], "front", arms, legs)
         if panel == "full_back":
             points = [None if key in _FACE else pt for key, pt in zip(keys, points, strict=True)]
