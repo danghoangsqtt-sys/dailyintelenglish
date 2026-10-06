@@ -38,3 +38,27 @@ download (the models were already on disk). **Script:** `scripts/spike_style_sem
 ## Owner decision needed
 
 Pick **A, B or C** (or a mix, for example A for people and C for places), or say what to change.
+
+## Round 2 (owner feedback: beautiful faces, crisp editorial, no blur)
+
+**Sheets:** `docs/operations/phase28-spike/r2_sheet_*.png`. **Script:** `scripts/spike_style_semireal2.py`.
+16 images, ~27 s each (35 steps).
+
+| Recipe | Wording |
+|---|---|
+| **E1 bright** | editorial fashion photograph, bright airy natural light, crisp sharp focus, clean fine details, high resolution, soft warm tones |
+| **E2 warm** | cinematic editorial photograph, warm golden glow, crisp sharp focus, rich fine details, high resolution, luminous skin |
+
+Both add: beautiful, flawless clear skin, delicate features, large bright eyes (handsome, sharp features
+for the man). The negative adds blur, bokeh, haze, noise, grain, skin flaws.
+
+- **Faces are clearly more beautiful** than round 1, and **sharp**: no film grain, no soft focus.
+- **The presenter keeps her glasses** without losing beauty (compare the two presenter sheets).
+- **The male student** is very good: clear skin, defined features, a crisp shirt.
+- **Background:** deep enough to read as a real place; E2 keeps a gentle blur on far lamps only.
+- **Found:** the cream blouse falls open at the neck. The product prompt will say a buttoned collar.
+- **Still open: glasses leak to the man in the duo** (4 of 4 images), because "no glasses" does not work
+  in CLIP. The fix belongs to the pipeline: the glasses are an attribute of the presenter only, so
+  they are written into her single/refine prompts and never into the shared duo prompt; the per-person
+  refine then paints her with them and him without. Checked in Task 28.2.
+- Words used for attractiveness describe a polished editorial look; no reference photo's face is copied.
