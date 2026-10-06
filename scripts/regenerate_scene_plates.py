@@ -32,9 +32,15 @@ DB = ROOT / "data" / "app.db"
 BACKUP_PLATES = ROOT / "data" / "tmp" / "plates-cel-anime-backup"
 WORK = ROOT / "data" / "tmp" / "plates-new"
 SHEETS = ROOT / "docs" / "operations" / "phase28-scene-plates"
-PEOPLE_FRACTION = 0.05  # a plate must be empty; above this the cut-out sees a person
+PEOPLE_FRACTION = 0.05
 MAX_RETRIES = 2
 PER_SHEET = 12
+# The plate must be empty (a person in it is carried into the shots). The people check below is the anime-seg
+# cut-out, which is unreliable on photographs (it said 0.0 on a market full of vendors), so the contact sheets are
+# the real check, and a place that always draws people gets a plate-only wording (the library place is unchanged).
+PLATE_PLACE = {
+    "builtin-market": "an empty open-air street market at dawn, wooden stalls with crates of fruit and vegetables, nobody there",
+}
 
 
 def load_scenes() -> list[dict]:
@@ -81,7 +87,7 @@ async def render_all(only: list[str], retries: int) -> None:
                 out = WORK / f"{scene['id']}.png"
                 started = time.monotonic()
                 await session.request({
-                    "command": "generate", "prompt": recipes.scene_preview_prompt(scene),
+                    "command": "generate", "prompt": recipes.scene_preview_prompt({**scene, "place": PLATE_PLACE.get(scene["id"], scene["place"])}),
                     "negative_prompt": recipes.PLATE_NEGATIVE, "seed": seed, "width": 1344, "height": 768,
                     "steps": 30, "guidance_scale": 6.0, "output_path": str(out)})
                 cut = WORK / f"{scene['id']}_cut.png"

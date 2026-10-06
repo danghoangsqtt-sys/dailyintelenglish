@@ -41,3 +41,10 @@ backgrounds of the scene library and the scene reference of every shot, so they 
 - Claude looks at every contact sheet; any plate with a person, text, or a clearly wrong place is redone.
 - The owner sees the sheets and can ask for specific scenes to be redone.
 - Tests: the existing suite is untouched by this task (data and one script only).
+
+## Task 28.4a closed (2026-10-06)
+
+55 plates redone and verified (`docs/operations/phase28-scene-plates.md`); the market was redone with a
+plate-only wording. Finding recorded: anime-seg is unreliable on photographs, so the extra-person check on
+shots is verified in Task 28.4. No application code changed, so no new test run is needed beyond the
+27.1 full suite (1466 passed) that ran on the same code.
