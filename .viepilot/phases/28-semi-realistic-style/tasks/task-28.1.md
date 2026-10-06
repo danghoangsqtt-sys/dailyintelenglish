@@ -99,3 +99,16 @@ No product code changes.
 - See `docs/operations/phase28-spike-style.md`: 3b is closer to the references, but base SDXL tops out
   below the "idol" faces.
 - **Waiting for the owner:** approval to download RealVisXL V5.0 (openrail++, ~7 GB) for a side-by-side.
+
+## Owner decision (2026-10-06): RealVisXL V5.0 approved, Ghibli models removed
+
+- Download approved: `SG161222/RealVisXL_V5.0` (openrail++), fp16 diffusers files only (~6.8 GB). The
+  fp32 file and its own VAE are skipped; the fp16-fix VAE is reused.
+- Removed from `models/image` (6.8 GB freed), because they were used only by the old style spike:
+  - `cagliostrolab/animagine-xl-4.0`;
+  - `ntc-ai/SDXL-LoRA-slider.Studio-Ghibli-style`.
+- **Kept**, because the app uses them today: SDXL base 1.0, SDXL-Lightning, IP-Adapter, ControlNet
+  openpose, anime-seg, the fp16-fix VAE. SDXL base can go only after RealVisXL is wired in and proven
+  (Task 28.2).
+- **Round 4** (`scripts/spike_style_realvis.py`): the round 3b prompts, negatives, seeds and sampler on
+  RealVisXL. The compare sheets put SDXL base above RealVisXL.
