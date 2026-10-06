@@ -37,10 +37,10 @@ CHARACTERS = {
         "crop": (0.26, 0.10, 0.76, 0.62),
         "bg": "white",
         "shoulder": 0.80, "hip": 0.55, "full_sh": 0.85, "full_hip": 0.40, "neck_y": 0.65, "sh_y": 0.95, "full": (0.05, 0.115),
-        "identity": "beautiful young Vietnamese woman, very long straight black hair with side bangs, fair skin",
+        "identity": "voluptuous busty young Vietnamese woman, very long straight black hair, fair skin",
         "outfit": "tight white blouse stretched across the chest, slim white trousers, white shoes",
         "negative": "black clothes, colorful clothes, short hair, tan skin, grey clothes, wide hips, flared trousers, small bust, flat chest",
-        "body": "curvy hourglass figure, large bust, slim waist, narrow hips",
+        "body": "large full bust, curvy hourglass, tiny waist, narrow hips",
         "summary": ("Lan, a young Vietnamese woman. 160 cm, 50 kg, a slender hourglass figure with a narrow waist "
                     "and gently rounded hips, upright posture. Very long straight black hair with side bangs, fair "
                     "luminous skin, a soft delicate face with large dark eyes. All-white outfit."),
