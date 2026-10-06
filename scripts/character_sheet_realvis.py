@@ -36,10 +36,10 @@ CHARACTERS = {
         "ref": ROOT / "data/tmp/style-realvis/presenter_E1_bright_s21.png",
         "crop": (0.26, 0.10, 0.76, 0.62),
         "bg": "white",
-        "shoulder": 0.80, "hip": 0.55, "full_sh": 0.85, "full_hip": 0.40, "full": (0.07, 0.13),
+        "shoulder": 0.80, "hip": 0.55, "full_sh": 0.85, "full_hip": 0.40, "full": (0.05, 0.115),
         "identity": "beautiful young Vietnamese woman, very long straight black hair with side bangs, fair skin",
-        "outfit": "fitted plain white blouse tucked in, slim straight plain white trousers, white shoes",
-        "negative": "black clothes, colorful clothes, short hair, tan skin, grey clothes, wide hips, flared trousers",
+        "outfit": "tight short-sleeve white blouse tucked in, slim straight white trousers, white shoes",
+        "negative": "black clothes, colorful clothes, short hair, tan skin, grey clothes, wide hips, flared trousers, loose blouse",
         "body": "full bust, slim waist, narrow hips, slim legs",
         "summary": ("Lan, a young Vietnamese woman. 160 cm, 50 kg, a slender hourglass figure with a narrow waist "
                     "and gently rounded hips, upright posture. Very long straight black hair with side bangs, fair "
@@ -50,10 +50,10 @@ CHARACTERS = {
         "ref": ROOT / "data/tmp/style-realvis-male2/N3_soft_s42.png",
         "crop": (0.10, 0.02, 0.72, 0.64),
         "bg": "white",
-        "shoulder": 0.97, "hip": 0.50, "full_sh": 1.15, "full_hip": 0.45, "full": (0.07, 0.13),
+        "shoulder": 0.97, "hip": 0.50, "full_sh": 1.15, "full_hip": 0.45, "full": (0.05, 0.115),
         "identity": "handsome young Vietnamese man, fair skin, tousled black hair, long fringe",
         "outfit": "fitted short-sleeve black shirt, black trousers, black shoes",
-        "negative": "white clothes, colorful clothes, shirtless, beard, grey clothes, rolled sleeves, hunched shoulders",
+        "negative": "white clothes, colorful clothes, shirtless, bare back, beard, grey clothes, rolled sleeves, hunched shoulders",
         "body": "muscular broad chest, defined biceps, V-taper torso",
         "summary": ("Minh, a young Vietnamese man. 180 cm, 80 kg, a lean muscular athletic build: broad shoulders, "
                     "defined chest and arms, a narrow waist, a V-shaped torso. Fair clear skin, a refined slim "

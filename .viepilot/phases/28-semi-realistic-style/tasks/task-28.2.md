@@ -94,3 +94,10 @@ widened the hips.
   trousers, rolled sleeves, hunched shoulders".
 - Only the 2 full-body panels per character are redone (3 seeds), then the sheets are recomposed.
 - Real photos are not model inputs; the words describe proportion only.
+
+### Fix round 2 (2026-10-06)
+
+Man: shoulders natural and muscle clear (seed 21), but one back view was shirtless (rejected, "bare back"
+added to the negative). Woman: the blouse was still loose and the bust not fuller, and the shoes were cut
+off for both. Changes: "tight short-sleeve white blouse tucked in"; the figure is drawn smaller in the frame
+(nose 0.05, head unit 0.115) so the shoes fit; both characters' full-body panels redone at 3 seeds.
