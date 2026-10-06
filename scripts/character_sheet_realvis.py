@@ -50,10 +50,10 @@ CHARACTERS = {
         "ref": ROOT / "data/tmp/style-realvis-male2/N3_soft_s42.png",
         "crop": (0.10, 0.02, 0.72, 0.64),
         "bg": "white",
-        "shoulder": 0.97, "hip": 0.50, "full_sh": 1.15, "full_hip": 0.45, "full": (0.05, 0.115),
+        "shoulder": 0.97, "hip": 0.50, "full_sh": 1.15, "full_hip": 0.45, "full": (0.085, 0.105),
         "identity": "handsome young Vietnamese man, fair skin, tousled black hair, long fringe",
         "outfit": "fitted short-sleeve black shirt, black trousers, black shoes",
-        "negative": "white clothes, colorful clothes, shirtless, bare back, beard, grey clothes, rolled sleeves, hunched shoulders",
+        "negative": "white clothes, colorful clothes, shirtless, bare back, crop top, torn clothes, beard, grey clothes, rolled sleeves, hunched shoulders",
         "body": "muscular broad chest, defined biceps, V-taper torso",
         "summary": ("Minh, a young Vietnamese man. 180 cm, 80 kg, a lean muscular athletic build: broad shoulders, "
                     "defined chest and arms, a narrow waist, a V-shaped torso. Fair clear skin, a refined slim "

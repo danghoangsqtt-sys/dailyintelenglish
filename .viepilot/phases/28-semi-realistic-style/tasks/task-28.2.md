@@ -101,3 +101,9 @@ Man: shoulders natural and muscle clear (seed 21), but one back view was shirtle
 added to the negative). Woman: the blouse was still loose and the bust not fuller, and the shoes were cut
 off for both. Changes: "tight short-sleeve white blouse tucked in"; the figure is drawn smaller in the frame
 (nose 0.05, head unit 0.115) so the shoes fit; both characters' full-body panels redone at 3 seeds.
+
+### Fix round 3 (2026-10-06)
+
+The woman is good (fitted short-sleeve blouse, narrow hips, shoes in frame). The man's head top was cut
+off and one front view was a torn crop top: his full-body framing is now nose 0.085 / unit 0.105, and
+"crop top, torn clothes" are in his negative. Only his two full-body panels are redone.
