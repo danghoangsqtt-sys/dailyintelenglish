@@ -50,3 +50,22 @@ above) with a **detailed prompt for each view**: the face from each angle and th
 
 28.3 Recipes + re-tuned colour / extra-person checks (single-colour outfits, RealVisXL in the worker);
 28.4 Redo the library (the two characters from the sheets, the 55 scene plates); 28.5 Gate B-20.
+
+## Result (2026-10-06), awaiting owner approval
+
+- `docs/operations/phase28-characters/{woman,man}_sheet_2000.png` (full size `*_sheet.png`), the six
+  panels per character, and `prompts.md` (detailed description, generation prompt, negative per view).
+- **Changes from the plan:**
+  - an OpenPose ControlNet (skeletons from `geometry.py`) was added, because the face IP-Adapter alone
+    gave random poses and a grey shirt on the man;
+  - the "head from above" panel was dropped (the model drew the face instead: two tries) and replaced
+    by a **smile** panel, which is also the talking-video expression;
+  - a true 90-degree profile needed the skeleton to hide one eye and one ear, and a weaker face
+    reference (0.2).
+- **Known flaws, shown honestly to the owner:**
+  - the man's full-front panel is mid-stride and his lower foot is cropped at the edge;
+  - the woman's back view is cut at the ankles;
+  - his front and back panels have different backgrounds (grey and light).
+  The face holds across all six panels for both characters; outfits are single colour.
+- Height and weight (160 cm / 50 kg, 180 cm / 80 kg) cannot be measured in a picture: they are in
+  `prompts.md` and shown by the figure only (the man is clearly muscular and lean).
