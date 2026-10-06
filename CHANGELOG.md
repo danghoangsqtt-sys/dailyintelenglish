@@ -8,6 +8,16 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Phase 25 — branded intro and outro, 2026-10-06)
+- **Task 25.2:** every Enhanced video **opens with a professional morph-style title sequence**.
+  - **Opening:** the Daily Intel English logo glides into the corner while the background colours
+    move, then the episode title, level, topic and speakers rise in, plus a per-episode wish. Jenny
+    says "Welcome to Daily Intel English Channel!" and the wish.
+  - **Closing:** it mirrors the opening, with "Thanks for watching!", Like / Subscribe / Share and
+    Jenny's farewell.
+  - The background music dips under her voice.
+  - New bundled font: Montserrat (SIL Open Font License).
+
 ### Removed (2026-10-06, D56)
 - **Edge TTS is the only voice engine.** The unused Kokoro, StyleTTS 2 and OmniVoice engines and
   their files were removed, freeing 11.2 GB. Existing projects keep the same voices, since they

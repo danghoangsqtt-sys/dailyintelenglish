@@ -1370,7 +1370,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 **Status:** 🟡 Planned 2026-10-06 | Plan `docs/implementation/phase-25-branded-intro-outro.md` (D52–D55).
 
 - [x] 25.1 Spike: owner PASS 2026-10-06 (voice Jenny, look approved, bundled font approved)
-- [ ] 25.2 Build: greeting/farewell TTS + morph BrandIntro/BrandOutro + soundtrack voices
+- [x] 25.2 Build: greeting/farewell TTS + morph BrandIntro/BrandOutro + soundtrack voices (2026-10-06)
 - [ ] 25.3 Gate B-18 (owner watches 2 real episodes)
 
 ## Phase 22 — Background music (ENH-016), re-scoped by D50

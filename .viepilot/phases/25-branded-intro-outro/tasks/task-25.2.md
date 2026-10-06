@@ -84,3 +84,46 @@ The music bed (22.4) ducks under both voices. The Standard (ffmpeg) videos are u
 - The full suite is green.
 - **Real Enhanced render of 1 real project** (DB copy) with music: check the length = intro + speech
   + outro, Jenny audible in the intro and outro, the music ducked under her, and key-frame stills.
+
+## Results (done 2026-10-06)
+
+- **Built as planned:**
+  - `brand_service` (12 wishes, 8 farewells, deterministic per project; Jenny cached by text);
+  - the soundtrack `extra_voices` (normalised to the voice loudness, ducking spans);
+  - the Remotion runner `_add_brand`: if Edge is down, the branded slides render silent at 6 s;
+  - `Brand.tsx` with Montserrat (bundled SIL OFL, 745 KB variable TTF) and a larger header
+    wordmark;
+  - `Episode.tsx` uses `BrandIntro`/`BrandOutro`; the spike composition is removed.
+- **Fixes found while checking:**
+  - Remotion `<Audio>` mounted late does not start at its own beginning, so the brand voice is
+    wrapped in a `<Sequence from=…>`.
+  - The ratio threshold in the spectral test was set too high, then set to a sound one (~+10 dB).
+  - A loudness comparison across two separately normalised soundtracks was meaningless. It was
+    replaced by a within-track spectral check.
+  - **Mid-morph overlap on the real render:** the wordmark slid under the DI mark at about 2.2 s.
+    The mark and the wordmark now have their own springs (intro: mark first; outro: wordmark
+    first). Checked on 12 dense stills across both transitions (commit `314f9dc`).
+- **Real check:**
+  - Real project `b330d37f` (DB copy), real cached Edge TTS lines, the real Pixabay track
+    `no-copyright-music-2026-corporate-background-611659.mp3` (178.9 s, so the music loops), and
+    Jenny.
+  - Enhanced render 78–80 s, no fallback.
+  - Wish: "Wishing you a productive and happy day of learning!"; farewell: "Don't forget to
+    subscribe, and see you soon."
+  - Intro 7.66 s + speech 176.02 s + outro 8.54 s = 192.22 s expected; the video is **192.28 s**.
+  - Momentary loudness:
+
+    | Section | Loudness |
+    |---|---|
+    | Greeting section | −25.3 LUFS |
+    | Speech | −23.8 LUFS |
+    | Farewell section | −22.1 LUFS |
+    | Last 0.4 s (fading out) | −41.2 LUFS |
+
+  - The video is in `data/tmp/brand-check/episode_brand.mp4`; the key frames are in `contact.png`.
+- **Tests:**
+  - `tests/test_brand_service.py` (8);
+  - vitest `brand.test.ts` (2), vitest 44 passed in total;
+  - `tsc` clean.
+  - **Full suite: 1420 passed** (before the TSX-only morph fix; vitest and `tsc` were rerun after
+    it).

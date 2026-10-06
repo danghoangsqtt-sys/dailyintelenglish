@@ -217,10 +217,10 @@
     },
     "25": {
       "name": "Branded intro and outro (ENH-017)",
-      "status": "planned",
-      "tasks_done": 0,
+      "status": "in_progress",
+      "tasks_done": 2,
       "tasks_total": 3,
-      "note": "Planned 2026-10-06 (D52-D55): morph-style intro/outro + female Edge TTS greeting/farewell; spike 25.1 first (3 voices + preview MP4)."
+      "note": "25.1 owner PASS (Jenny, look, Montserrat); 25.2 done (real render exact length, 1420 passed); next Gate B-18."
     }
   },
   "key_decisions": [
