@@ -111,3 +111,19 @@ prompts, negatives, seeds, 35 steps, CFG 6.5, Euler-a). **Script:** `scripts/spi
 - **Cache note:** the new huggingface_hub keeps the real weights in the shared `models/image/hub/blobs`
   folder, and the model folder holds only links. The spike script reads the partial snapshot folder
   directly, because `snapshot_download(local_files_only=True)` demands every file of the repository.
+
+## Rounds 5 and 6: the male character (owner: woman approved, man not handsome enough)
+
+**Scripts:** `scripts/spike_style_realvis_male.py` (round 5), `scripts/spike_style_realvis_male2.py` (round 6).
+**Sheets:** `r5_sheet_male_too_harsh.png`, `r6_sheet_male_refined.png`. Text descriptions only; no real
+person's photo is used as a face reference. Every prompt is exactly within 77 tokens.
+
+- **Round 5 overshot:** "chiseled, strong eyebrows, intense gaze" gave an older, tanned, frowning model.
+  The first version (round 4) had been too boyish. The look in the references sits between the two.
+- **Round 6** (21 years old, fair porcelain skin, refined delicate features, slim V-line face, relaxed
+  straight eyebrows, soft lips, long fringe over the forehead; negative adds tan, frown, mature, muscular,
+  stubble): faces are fair, slim, young and sharp without frowning. N3 (head tilted, looking away) is the
+  closest to the references' poses.
+- **Known issue:** "light grey background" bleeds into the shirt (grey in 5 of 12). The product prompt
+  places the cafe/scene instead of a grey wall and puts the shirt colour next to the person, as the
+  outfit-lock already does.

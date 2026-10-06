@@ -118,3 +118,26 @@ No product code changes.
 RealVisXL V5.0 beats SDXL base on all four checks: outfits, face quality, background clarity and
 sharpness (`docs/operations/phase28-spike-style.md`, round 4). **Waiting for the owner to pick the look
 and one face per character** (seeds 7, 21, 42, 99 in the sheets). Task 28.1 closes on that answer.
+
+## Owner feedback on round 4 (2026-10-06)
+
+- RealVisXL V5.0 is "very strong": no face errors and no outfit errors.
+- **The woman is approved** (keep the round 4 look; a face is picked from the 4 seeds later).
+- **The man's face is not handsome enough**: redo the male character only.
+- The 4 male reference photos show: straight dark eyebrows, narrow sharp eyes with an intense
+  gaze, defined lips, a V-shaped jaw and slim face, fair luminous skin, thick voluminous tousled
+  black hair with a swept fringe, studio editorial light.
+- Method: text description only. The reference photos of real people are NOT fed to the model as
+  face references (no likeness copying).
+
+## Round 5 plan (`scripts/spike_style_realvis_male.py`)
+
+- 3 prompt variants of the man x 4 seeds on RealVisXL, a plain soft studio background so the face is
+  judged alone; the black shirt stays; a negative against the boyish look ("baby face, round face,
+  soft jaw, thin eyebrows"); prompts counted with the real tokenizer.
+
+## Rounds 5 / 6 (2026-10-06)
+
+Round 5 overshot (harsh, older, tanned). Round 6 is fair, young and refined: 12 images,
+`docs/operations/phase28-spike/r6_sheet_male_refined.png`. **Waiting for the owner's pick** of one man
+(variant + seed) and one woman (round 4 seed).
