@@ -46,7 +46,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-# Same stdout isolation as kokoro_worker.py / styletts2_worker.py. huggingface_hub
+# Same stdout isolation as styletts2_worker.py (and the removed Kokoro worker). huggingface_hub
 # download progress, diffusers deprecation notices and transformers' torchvision fallback
 # notice all print. Only `_write_protocol_line` may touch the real stdout.
 _PROTOCOL_STDOUT = sys.stdout
