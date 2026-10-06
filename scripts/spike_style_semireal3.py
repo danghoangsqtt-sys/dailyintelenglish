@@ -1,7 +1,9 @@
-"""Task 28.1 round 3: the owner's reference faces (female: long straight black hair, fair skin, white
-outfit; male: messy black hair, pale sharp features, black outfit). Not shipped.
+"""Task 28.1 round 3: the owner's reference faces, editorial only (owner 2026-10-06). Not shipped.
+Female: very long straight black hair, fair skin, all white. Male (4 photographic references): thick black
+hair with a soft fringe to the brows, fair skin, sharp features, all black. No face is copied.
 
-    venv-image\Scripts\python scripts\spike_style_semireal3.py --out data\tmp\style-semireal3
+    venv-image\\Scripts\\python scripts\\spike_style_semireal3.py --out data\\tmp\\style-semireal3
+    venv-image\\Scripts\\python scripts\\spike_style_semireal3.py --tokens-only
 """
 
 from __future__ import annotations
@@ -16,53 +18,54 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import spike_style_semireal as base  # noqa: E402
 import torch  # noqa: E402
 
-EDITORIAL = {
-    "E1_bright": ("editorial fashion photograph, bright airy natural light, crisp sharp focus, clean fine details, "
-                  "high resolution, soft warm tones"),
-    "E2_warm": ("cinematic editorial photograph, warm golden glow, crisp sharp focus, rich fine details, "
-                "high resolution, luminous skin"),
+STYLES = {
+    "E1_bright": "editorial photograph, bright airy natural light, crisp sharp focus, high resolution",
+    "E2_warm": "cinematic editorial photograph, warm golden light, crisp sharp focus, high resolution",
 }
-ILLUSTRATED = {
-    "I_illustrated": ("semi-realistic digital illustration, manhwa style, sharp clean line art, detailed shading, "
-                      "soft cinematic light, high resolution"),
-}
-NEG_PHOTO = ("blurry, out of focus, soft focus, bokeh, haze, noise, grain, low resolution, cartoon, anime, "
-             "illustration, 3d render, plastic skin, ugly, asymmetrical face, wrinkles, blemishes, dull skin, text, "
-             "watermark, deformed, bad anatomy, extra fingers, deformed hands, extra person, crowd, glasses, "
-             "patterned clothes, jacket, hat")
-NEG_ILL = ("blurry, low resolution, photo, 3d render, ugly, asymmetrical face, text, watermark, deformed, bad "
-           "anatomy, extra fingers, deformed hands, extra person, crowd, glasses, patterned clothes")
-WOMAN = ("beautiful young Vietnamese woman, very long straight silky black hair with soft side-parted bangs, fair "
-         "luminous skin, soft delicate face, large dark eyes, gentle smile, natural coral lips, plain white "
-         "button-up shirt")
-MAN = ("handsome young Vietnamese man, messy layered black hair with bangs falling over his eyes, pale flawless "
-       "skin, sharp jawline, slim narrow dark eyes, calm cool expression, plain black shirt")
-ITEMS = {  # name -> (subject, size, styles, negative, seeds)
-    "presenter": (f"{WOMAN}, portrait, bright cozy cafe", (1024, 1024), EDITORIAL, NEG_PHOTO, (7, 21, 42)),
-    "student": (f"{MAN}, portrait, bright cozy cafe", (1024, 1024), EDITORIAL, NEG_PHOTO, (7, 21, 42)),
-    "student_illustrated": (f"{MAN}, portrait, bright cafe background", (1024, 1024), ILLUSTRATED, NEG_ILL,
-                            (7, 21, 42)),
-    "duo_cafe": ("two attractive Vietnamese people talking face to face, woman with very long straight black hair "
-                 "in a plain white shirt on the left, handsome man with messy black hair in a plain black shirt on "
-                 "the right, sitting at a table in a bright cafe", (1344, 768), EDITORIAL, NEG_PHOTO, (7, 21)),
+NEGATIVE = ("blurry, out of focus, soft focus, bokeh, haze, noise, grain, low resolution, cartoon, anime, "
+            "illustration, 3d render, plastic skin, ugly, asymmetrical face, blemishes, dull skin, text, watermark, "
+            "deformed, bad anatomy, extra fingers, deformed hands, extra person, glasses, jewelry, patterned clothes")
+WOMAN = ("beautiful young Vietnamese woman, very long straight silky black hair, soft side bangs, fair luminous "
+         "skin, delicate face, large dark eyes, gentle smile, plain white shirt")
+MAN = ("handsome young Vietnamese man, thick glossy black hair, soft fringe to the eyebrows, fair clear skin, "
+       "sharp jawline, almond dark eyes, calm gaze, plain black shirt")
+ITEMS = {  # name -> (subject, size, seeds)
+    "presenter": (f"{WOMAN}, portrait, bright cafe", (1024, 1024), (7, 21, 42, 99)),
+    "student": (f"{MAN}, portrait, bright cafe", (1024, 1024), (7, 21, 42, 99)),
+    "duo_cafe": ("two young Vietnamese people talking, beautiful woman with long straight black hair in plain white "
+                 "shirt on the left, handsome man with black fringe hair in plain black shirt on the right, "
+                 "table in a bright cafe", (1344, 768), (7, 21)),
 }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", default="data/tmp/style-semireal3")
-    out = Path(parser.parse_args().out)
+    parser.add_argument("--tokens-only", action="store_true")
+    args = parser.parse_args()
+    if args.tokens_only:
+        from transformers import CLIPTokenizer
+        from huggingface_hub import snapshot_download
+        path = snapshot_download("stabilityai/stable-diffusion-xl-base-1.0", allow_patterns=["tokenizer/*"])
+        tok = CLIPTokenizer.from_pretrained(path, subfolder="tokenizer")
+        for item, (subject, _, _) in ITEMS.items():
+            for style, words in STYLES.items():
+                print(item, style, len(tok(f"{words}, {subject}", truncation=False).input_ids))
+        print("negative", len(tok(NEGATIVE, truncation=False).input_ids))
+        return 0
+    out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     pipe = base.build()
+    base.STYLES = STYLES
     log = []
-    for item, (subject, size, styles, negative, seeds) in ITEMS.items():
-        base.STYLES, base.SEEDS = styles, seeds
-        for style, words in styles.items():
+    for item, (subject, size, seeds) in ITEMS.items():
+        base.SEEDS = seeds
+        for style, words in STYLES.items():
             prompt = f"{words}, {subject}"
             tokens = len(pipe.tokenizer(prompt, truncation=False).input_ids)
             for seed in seeds:
                 started = time.monotonic()
-                image = pipe(prompt=prompt, negative_prompt=negative, width=size[0], height=size[1],
+                image = pipe(prompt=prompt, negative_prompt=NEGATIVE, width=size[0], height=size[1],
                              num_inference_steps=35, guidance_scale=6.5,
                              generator=torch.Generator("cpu").manual_seed(seed)).images[0]
                 image.save(out / f"{item}_{style}_s{seed}.png")

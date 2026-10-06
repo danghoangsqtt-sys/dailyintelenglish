@@ -83,3 +83,13 @@ No product code changes.
 - 3 seeds for portraits, 2 for the duo.
 - **Product consequence to check in Task 28.2:** the library today requires a different top and
   bottom colour; a single-colour outfit needs that rule relaxed and the colour check adapted.
+
+## Owner correction before round 3 ran (2026-10-06)
+
+- The male references are replaced by **4 photographs**: thick glossy black hair with a soft fringe to
+  the brows, fair clear skin, a sharp jaw, calm almond eyes, black clothes.
+- **Editorial only**: no illustrated version. Focus on making **both** characters as good as possible.
+- Round 3 therefore drops the illustrated row. It runs 4 seeds per portrait (so one face can be
+  picked and locked), plus the duo at 2 seeds.
+- Every prompt is counted with the real CLIP tokenizer first (`--tokens-only`): 55–57 tokens, and the
+  negative is 76. Round 2's duo prompt (81) had been truncated.
