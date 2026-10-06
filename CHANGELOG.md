@@ -8,6 +8,18 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Task 22.9 — automatic music classification, 2026-10-06)
+- **Classification.** New Music Library tracks are analysed automatically:
+  - a **pace** (calm / medium / lively), from how busy the music is;
+  - an estimated **BPM**;
+  - a **suggested mood**, marked "auto".
+  The owner's own mood and pace always win.
+- **Automatic music selection** now also matches the **rhythm of the episode**: lively music for
+  small talk, calm music for news and explanations.
+- **Guard rail.** The AI only chooses among tracks the app has already judged suitable, which
+  means close to the best score and not looping much more than the shortest-looping option. The
+  length shown is always measured by the app.
+
 ### Added (Phase 25 — branded intro and outro, 2026-10-06)
 - **Task 25.2:** every Enhanced video **opens with a professional morph-style title sequence**.
   - **Opening:** the Daily Intel English logo glides into the corner while the background colours

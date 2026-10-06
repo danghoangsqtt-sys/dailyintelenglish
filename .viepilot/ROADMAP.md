@@ -1387,5 +1387,5 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 - [x] 22.4 Smart bed (D51): fit to the video length, volume under the voice, fade out at the video end (2026-10-06)
 - [x] 22.8 Auto-select a track by topic + length (D51) (2026-10-06)
 - [x] 22.5 YouTube description credit line from the episode's music (2026-10-06)
-- [ ] 22.9 Automatic track classification (pace, ~BPM, energy, mood suggestion) + rhythm-aware auto-select
+- [x] 22.9 Automatic track classification (pace, ~BPM, energy, mood suggestion) + rhythm-aware auto-select (2026-10-06)
 - [ ] 22.6 Gate B-17 (owner listening test on a real episode) → 1.3.0-beta
