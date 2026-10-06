@@ -128,7 +128,7 @@ def test_ai_picks_among_the_top_candidates(client, fake_ai):
         "ai", "sleepy.mp3", "Calm and gentle for a relaxed chat.")
     assert [item["filename"] for item in result["candidates"]][0] == "market_walk.mp3"  # the rule's top score
     prompt = provider.calls[0].prompt
-    assert "market_walk.mp3 | Market walk | acoustic | market, street food | 2:20" in prompt
+    assert "market_walk.mp3 | Market walk | acoustic | unknown pace | tempo unknown | market, street food | 2:20" in prompt
     assert "Topic: Weekend markets and street food in Hanoi" in prompt and provider.calls[0].purpose == "music_pick"
 
 

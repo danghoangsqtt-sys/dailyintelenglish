@@ -16,7 +16,7 @@ from app.core.exceptions import MusicUploadTooLargeError, NotFoundError, Validat
 from app.core.responses import ok
 from app.db.database import get_db
 from app.db.transactions import write_transaction
-from app.models.music import LICENCES, MOODS, SOURCES, MusicTrackPatch
+from app.models.music import LICENCES, MOODS, PACES, SOURCES, MusicTrackPatch
 from app.services import music_library_service as library
 from app.services import music_select_service
 
@@ -128,7 +128,17 @@ async def music_options() -> dict:
         "moods": [{"id": key, "label": label} for key, label in MOODS.items()],
         "sources": [{"id": key, "label": label} for key, label in SOURCES.items()],
         "licences": [{"id": key, **value} for key, value in LICENCES.items()],
+        "paces": [{"id": key, "label": label} for key, label in PACES.items()],
     })
+
+
+@router.post("/analyse")
+async def analyse_music(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Task 22.9: classify every track not analysed yet (pace, ~BPM, energy, mood suggestion)."""
+    started_at = time.perf_counter()
+    analysed = await library.analyse_missing(db)
+    tracks = await library.list_tracks(db)
+    return ok({"analysed": analysed, "tracks": tracks}, started_at=started_at)
 
 
 @router.post("")

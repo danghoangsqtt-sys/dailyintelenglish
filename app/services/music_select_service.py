@@ -19,7 +19,7 @@ from app.core.config import settings
 from app.core.exceptions import ProviderError, SchemaValidationError
 from app.core.prompt_loader import render_music_pick_prompt
 from app.db.transactions import read_transaction
-from app.models.music import GENRE_MOODS, MOODS
+from app.models.music import GENRE_MOODS, GENRE_PACES, MOODS, PACES
 from app.services import music_library_service as library
 from app.services import project_service
 from app.services.ai.contracts import GenerationRequest
@@ -72,8 +72,11 @@ async def recent_tracks(db: aiosqlite.Connection, project_id: str) -> set[str]:
 def score(track: dict[str, Any], genre: str, topic: str, target: float, recent: set[str]) -> dict[str, Any]:
     """Pure: the score and its parts, so the choice can be explained."""
     preferred = GENRE_MOODS.get(genre, ())
-    mood = track.get("mood")
+    mood = track.get("effective_mood", track.get("mood"))  # Task 22.9: the owner's mood, else the analysed one
     mood_points = 3 - preferred.index(mood) if mood in preferred else 0
+    paces = GENRE_PACES.get(genre, ())
+    pace = track.get("pace")
+    rhythm_points = 2 - paces.index(pace) if pace in paces else 0
     matched = sorted(_words(topic) & (_words(track.get("tags")) | _words(track.get("title"))))
     topic_points = min(MAX_TOPIC_POINTS, len(matched))
     duration = track.get("duration_s")
@@ -86,8 +89,10 @@ def score(track: dict[str, Any], genre: str, topic: str, target: float, recent: 
     return {
         "filename": track["filename"], "title": track["title"], "mood": mood, "tags": track.get("tags"),
         "duration_s": duration, "length": format_length(duration), "loops": loops, "matched_words": matched,
-        "parts": {"mood": mood_points, "topic": topic_points, "length": length_points, "recent": recent_points},
-        "score": mood_points + topic_points + length_points + recent_points,
+        "pace": pace, "bpm": track.get("bpm"),
+        "parts": {"mood": mood_points, "rhythm": rhythm_points, "topic": topic_points, "length": length_points,
+                  "recent": recent_points},
+        "score": mood_points + rhythm_points + topic_points + length_points + recent_points,
     }
 
 
@@ -95,6 +100,8 @@ def rule_reason(best: dict[str, Any], genre: str) -> str:
     bits = []
     if best["parts"]["mood"]:
         bits.append(f"{MOODS[best['mood']]} suits {genre.replace('_', ' ')} episodes")
+    if best["parts"].get("rhythm"):
+        bits.append(f"{PACES[best['pace']].lower()} fits the rhythm of the talk")
     if best["matched_words"]:
         bits.append(f"tags match the topic ({', '.join(best['matched_words'])})")
     if best["loops"] == 1:

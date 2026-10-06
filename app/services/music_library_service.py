@@ -20,7 +20,8 @@ import aiosqlite
 
 from app.core.config import settings
 from app.db.transactions import read_transaction, write_transaction
-from app.models.music import LICENCES, MOODS, SOURCES
+from app.models.music import LICENCES, MOODS, PACES, SOURCES
+from app.services import music_analysis
 
 FFPROBE_TIMEOUT_SECONDS = 30
 AUDIO_EXTENSIONS = {".mp3", ".wav", ".ogg", ".m4a"}
@@ -80,15 +81,51 @@ async def set_duration(db: aiosqlite.Connection, filename: str, duration_s: floa
 
 
 async def patch_track(db: aiosqlite.Connection, filename: str, changes: dict[str, Any]) -> None:
-    """`changes` holds only the fields the owner sent (None clears a field)."""
+    """`changes` holds only the fields the owner sent (None clears a field). Task 22.9: a pace sets
+    an owner override; an empty pace returns to the automatic class from the measured onset rate."""
     fields = [field for field in DETAIL_FIELDS if field in changes]
-    if not fields:
+    if fields:
+        assignments = ", ".join(f"{field} = ?" for field in fields)
+        await db.execute(
+            f"UPDATE music_tracks SET {assignments}, updated_at = ? WHERE filename = ?",
+            (*[changes[field] for field in fields], _now(), filename),
+        )
+    if "pace" in changes:
+        if changes["pace"]:
+            await db.execute("UPDATE music_tracks SET pace = ?, pace_source = 'owner', updated_at = ? WHERE filename = ?",
+                             (changes["pace"], _now(), filename))
+        else:
+            cursor = await db.execute("SELECT onset_rate FROM music_tracks WHERE filename = ?", (filename,))
+            row = await cursor.fetchone()
+            auto = music_analysis.classify_pace(row[0]) if row and row[0] is not None else None
+            await db.execute("UPDATE music_tracks SET pace = ?, pace_source = 'auto', updated_at = ? WHERE filename = ?",
+                             (auto, _now(), filename))
+
+
+async def save_analysis(db: aiosqlite.Connection, filename: str, result: dict[str, Any] | None) -> None:
+    """Store an analysis; an owner-set pace is kept. A failed analysis is marked done (no retry loop)."""
+    if result is None:
+        await db.execute("UPDATE music_tracks SET analysed_at = ? WHERE filename = ?", (_now(), filename))
         return
-    assignments = ", ".join(f"{field} = ?" for field in fields)
     await db.execute(
-        f"UPDATE music_tracks SET {assignments}, updated_at = ? WHERE filename = ?",
-        (*[changes[field] for field in fields], _now(), filename),
+        "UPDATE music_tracks SET bpm = ?, onset_rate = ?, energy_db = ?, brightness_hz = ?, mood_auto = ?, "
+        "pace = CASE WHEN pace_source = 'owner' THEN pace ELSE ? END, "
+        "pace_source = COALESCE(pace_source, 'auto'), analysed_at = ? WHERE filename = ?",
+        (result["bpm"], result["onset_rate"], result["energy_db"], result["brightness_hz"], result["mood_auto"],
+         result["pace"], _now(), filename),
     )
+
+
+async def analyse_missing(db: aiosqlite.Connection) -> int:
+    """Task 22.9: classify every library track not analysed yet (librosa, off the event loop)."""
+    tracks = await list_tracks(db)
+    pending = [track["filename"] for track in tracks if track["needs_analysis"]]
+    folder = music_dir()
+    for filename in pending:
+        result = await asyncio.to_thread(music_analysis.analyse, folder / filename)
+        async with write_transaction(db):
+            await save_analysis(db, filename, result)
+    return len(pending)
 
 
 async def delete_row(db: aiosqlite.Connection, filename: str) -> None:
@@ -106,12 +143,23 @@ def track_view(track: dict[str, Any], row: dict[str, Any] | None) -> dict[str, A
     row = row or {}
     details = {field: row.get(field) for field in DETAIL_FIELDS}
     required = attribution_required(details["licence"])
+    effective_mood = details["mood"] or row.get("mood_auto")
+    pace = row.get("pace")
     return {
         **track,
         **details,
         "title": details["title"] or guess_title(track["filename"]),
         "duration_s": row.get("duration_s"),
-        "mood_label": MOODS.get(details["mood"] or ""),
+        # Task 22.9: the owner's mood wins; otherwise the analysed suggestion, marked as automatic.
+        "effective_mood": effective_mood,
+        "mood_is_auto": not details["mood"] and bool(row.get("mood_auto")),
+        "mood_label": MOODS.get(effective_mood or ""),
+        "pace": pace,
+        "pace_label": PACES.get(pace or ""),
+        "pace_is_auto": bool(pace) and row.get("pace_source") != "owner",
+        "bpm": row.get("bpm"),
+        "onset_rate": row.get("onset_rate"),
+        "needs_analysis": row.get("analysed_at") is None,
         "source_label": SOURCES.get(details["source"] or ""),
         "licence_label": LICENCES[details["licence"]]["label"] if details["licence"] in LICENCES else None,
         "attribution_required": required,

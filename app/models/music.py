@@ -31,6 +31,8 @@ LICENCES = {
     "cc_by_4": {"label": "CC BY 4.0 (attribution required)", "attribution_required": True},
     "other": {"label": "Other (check the terms)", "attribution_required": None},
 }
+# Task 22.9: the automatic pace classes (owner can override in the details form).
+PACES = {"calm": "Calm pace", "medium": "Medium pace", "lively": "Lively pace"}
 MAX_TEXT = 120
 MAX_ATTRIBUTION = 500
 MAX_TAGS = 12
@@ -56,6 +58,7 @@ class MusicTrackPatch(BaseModel):
     licence: str | None = None
     attribution: str | None = Field(default=None, max_length=MAX_ATTRIBUTION)
     source_url: str | None = Field(default=None, max_length=MAX_ATTRIBUTION)
+    pace: str | None = None  # Task 22.9: an owner override; empty returns to the automatic pace
 
     @field_validator("title", "artist", "attribution")
     @classmethod
@@ -67,6 +70,13 @@ class MusicTrackPatch(BaseModel):
     def validate_mood(cls, value: str | None) -> str | None:
         if value not in (None, "") and value not in MOODS:
             raise ValueError(f"mood must be one of {', '.join(MOODS)}")
+        return value or None
+
+    @field_validator("pace")
+    @classmethod
+    def validate_pace(cls, value: str | None) -> str | None:
+        if value not in (None, "") and value not in PACES:
+            raise ValueError(f"pace must be one of {', '.join(PACES)}")
         return value or None
 
     @field_validator("source")
@@ -120,4 +130,19 @@ GENRE_MOODS = {
     "debate": ("lofi", "inspiring", "calm"),
     "informational": ("lofi", "calm", "acoustic"),
     "instructions": ("lofi", "calm", "upbeat"),
+}
+
+
+# Task 22.9: the music pace that suits each script genre, best first (rhythm score 2/1).
+GENRE_PACES = {
+    "small_talk": ("lively", "medium"),
+    "directions": ("medium", "lively"),
+    "negotiation": ("medium", "lively"),
+    "storytelling": ("calm", "medium"),
+    "interview": ("medium", "calm"),
+    "news": ("calm", "medium"),
+    "opinion": ("calm", "medium"),
+    "debate": ("medium", "calm"),
+    "informational": ("calm", "medium"),
+    "instructions": ("calm", "medium"),
 }
