@@ -94,3 +94,7 @@ The grid libraries (27.3), the studio frame polish (27.4), and the video intro/o
   - the project card gradient still used the old indigo colours: now brand greens (tested).
 - Tests: `tests/test_app_sidebar_browser.py` (15), the brand test updated; screenshots in
   `docs/operations/ui-audit/after-27-2/`.
+
+## Task 27.2 closed (2026-10-06)
+
+Full suite: **1482 passed** (1466 + 16 new). Screenshots checked by eye (light, dark, expanded, rail).

@@ -225,9 +225,9 @@
     "27": {
       "name": "Rebrand + Canva/CapCut-style layout (ENH-018)",
       "status": "in_progress",
-      "tasks_done": 1,
+      "tasks_done": 2,
       "tasks_total": 6,
-      "note": "27.1 done (1466 passed). Next 27.2 sidebar (card written), 27.3 libraries."
+      "note": "27.1, 27.2 done (1482 passed). Next 27.3a music (card written), 27.3 grids."
     },
     "28": {
       "name": "Semi-realistic picture style (ENH-019)",
