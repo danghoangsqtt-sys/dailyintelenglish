@@ -1372,7 +1372,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 - [x] 27.1 Brand pack: logo, palette, name in the app, YouTube prompts and the greeting
 - [x] 27.2 App shell: collapsible left sidebar
 - [x] 27.3a Music Library: many files at once, more formats, clearer listening
-- [ ] 27.3b Characters and scenes as large image grids with a detail panel
+- [x] 27.3b Characters and scenes as large image grids with a detail panel
 - [ ] 27.4 Studio steps 1–7: one 3-panel frame
 - [ ] 27.5 Video intro/outro with the new logo, name and palette
 - [ ] 27.6 Gate B-19

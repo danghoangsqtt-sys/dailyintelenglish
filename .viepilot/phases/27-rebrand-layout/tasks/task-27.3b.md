@@ -73,3 +73,7 @@ The music list as a grid, the studio frame (27.4), drag and drop of characters.
 - Found with the real data: the empty progress strip left a 64 px gap under the page heading (now hidden when empty).
 - Tests: `tests/test_library_grid_browser.py` (3), one API test; the 6 existing library browser tests pass unchanged.
 - Screenshots with Lan, Minh and the 55 new plates, light and dark: `docs/operations/ui-audit/library-*.png`.
+
+## Task 27.3b closed (2026-10-07)
+
+Full suite: **1510 passed** (1506 + 4 new).
