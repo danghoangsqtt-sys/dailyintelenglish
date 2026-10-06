@@ -1,4 +1,4 @@
 {
-  "woman": {"full_front": 21, "full_back": 21, "face_front": 21, "face_profile": 21, "face_three_quarter": 21, "face_smile": 21},
-  "man":   {"full_front": 21, "full_back": 21, "face_front": 21, "face_profile": 21, "face_three_quarter": 7, "face_smile": 21}
+  "woman": {"full_front": 21, "full_back": 42, "face_front": 21, "face_profile": 21, "face_three_quarter": 21, "face_smile": 21},
+  "man":   {"full_front": 21, "full_back": 42, "face_front": 21, "face_profile": 21, "face_three_quarter": 7, "face_smile": 21}
 }

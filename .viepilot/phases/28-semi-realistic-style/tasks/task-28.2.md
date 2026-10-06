@@ -134,3 +134,12 @@ Sheets recomposed (`docs/operations/phase28-characters/*_sheet_2000.png`, `promp
   77 tokens, so lower-value words are traded out.
 - Redo the 2 full-body panels per character at 3 seeds, look at them, then the man's close-ups if
   the neck still reads short.
+
+### Result of fix round 4 (2026-10-06), awaiting owner approval
+
+- **Man:** a long neck, sloped shoulders, a slim V-taper with defined arms: the Korean-idol proportion the
+  owner described (front seed 21, back seed 42).
+- **Woman:** the bust is only slightly fuller (seeds 21 and 42). Rewording the prompt (figure words first,
+  synonyms) did not change it much: with this model and a text prompt the bust under a fitted blouse
+  stays modest. Options for the owner: accept it, or use a body-shape control (an extra download
+  and a hand-drawn torso map) or a different checkpoint.
