@@ -183,3 +183,12 @@ Pose + depth, seeds 7 and 21 (about 1000 s each): both show a visibly fuller bus
 narrow hips, with the head and shoes in frame; seed 21 is on the woman's sheet (full front). The other five
 woman panels are unchanged. The depth map is used only for the full-front panel: in the close-ups the chest
 is out of frame, and in the back view it is not needed.
+
+## Owner decision (2026-10-06): Minh approved; Lan's bust bigger
+
+- **Minh (man): APPROVED** (long neck, sloped shoulders, lean muscular, the current sheet). Locked.
+- **Lan (woman):** the bust must be a big size, larger than the body-map result. Plan: the bust forms of the
+  depth map grow (the size factor 1.0 -> 1.4, a little further apart); the prompt keeps "large full bust".
+  She stays in the fitted, buttoned white blouse and keeps natural proportions (a narrow waist and hips),
+  with no open collar. Only her full-front panel is redone (pose + depth, seeds 7 and 21, about 17
+  minutes each).
