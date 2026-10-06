@@ -64,7 +64,7 @@ CHARACTERS = {
 
 # panel -> (size, ip_scale, view words, detailed description of the view); POSE gives the ControlNet scale
 POSE_SCALE = {"full_front": 0.85, "full_back": 0.85, "face_front": 0.6, "face_profile": 1.0,
-              "face_three_quarter": 1.0, "face_smile": 0.6}
+              "face_three_quarter": 1.0, "face_smile": 0.6, "face_surprised": 0.6}
 PANELS = {
     "full_front": ((832, 1216), 0.55, "full body, standing straight facing camera, arms at sides",
                    "Full-body front view, standing upright, feet together, arms relaxed at the sides, facing the "
@@ -84,6 +84,10 @@ PANELS = {
     "face_smile": ((1024, 1024), 0.5, "close-up face portrait, facing the camera, big happy smile, teeth visible",
                    "Close-up of the face and shoulders from the front with a warm natural smile, teeth slightly "
                    "visible, eyes engaged, hair framing the face; the talking-video expression."),
+    # Task 28.4: the library locks a character only with four sheet views, one of them "surprised".
+    "face_surprised": ((1024, 1024), 0.5, "close-up face portrait, facing the camera, surprised face, open mouth, wide eyes",
+                       "Close-up of the face and shoulders from the front with a surprised expression: raised "
+                       "eyebrows, wide eyes and a slightly open mouth."),
 }
 FULL = ("full_front", "full_back")
 
