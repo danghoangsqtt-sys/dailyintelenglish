@@ -40,3 +40,23 @@ No product code changes.
 
 - 24 images are made (4 items × 3 recipes × 2 seeds) and checked by eye.
 - The owner decides the look.
+
+## Owner feedback on round 1 (2026-10-06)
+
+- The characters are **not beautiful enough**: the faces must be beautiful (the owner sent 3
+  idol-style reference photos with bright, flawless skin, large eyes and delicate features, in warm
+  or airy light).
+- Use the **editorial** look (recipe B), but **not blurred**: the shallow depth of field and the soft
+  focus of round 1 looked hazy and unpleasant.
+- References are used for light, polish and attractiveness only. No face is copied.
+
+## Round 2 plan
+
+- Editorial recipes with **crisp sharp focus and deep focus** (no bokeh, no film grain), plus
+  attractiveness words (clear skin, delicate features, large bright eyes).
+- Two lightings, E1 (bright airy, like the cherry-blossom reference) and E2 (warm glow, like the
+  warm references).
+- Items: the presenter **with glasses**, the presenter **without** glasses (to see whether the
+  glasses cost beauty), the male student, and the cafe duo (the man with no glasses).
+- 35 steps, CFG 6.5; the negative adds blur, bokeh, haze, noise, grain and skin flaws.
+- Script: `scripts/spike_style_semireal2.py`.
