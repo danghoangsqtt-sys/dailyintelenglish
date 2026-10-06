@@ -232,9 +232,9 @@
     "28": {
       "name": "Semi-realistic picture style (ENH-019)",
       "status": "planned",
-      "tasks_done": 5,
-      "tasks_total": 6,
-      "note": "28.1-28.4a done (1498 passed). 28.5 face counting + check-this-shot mark in progress; 28.6 Gate B-20."
+      "tasks_done": 6,
+      "tasks_total": 7,
+      "note": "28.1-28.5 done (1506 passed). Only 28.6 Gate B-20 (owner: one full real episode in the new style) is left."
     }
   },
   "key_decisions": [

@@ -101,3 +101,7 @@ the swapped-outfit case.
   fixed a false alarm of the black rule from the data.
 - Tests: `tests/test_shot_faces.py` (9, with the real model), `tests/test_shot_review_browser.py` (1), the black
   sample in `tests/test_visuals_phase28.py`; the two old cut-out tests were removed.
+
+## Task 28.5 closed (2026-10-06)
+
+Full suite: **1506 passed** (1498 + 8 new net: +11 new, 2 old cut-out tests removed, +1 sample).
