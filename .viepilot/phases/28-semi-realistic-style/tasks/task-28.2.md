@@ -116,3 +116,21 @@ Sheets recomposed (`docs/operations/phase28-characters/*_sheet_2000.png`, `promp
 - **Woman:** fitted short-sleeve blouse tucked in, narrow hips, slim straight trousers, shoes in frame.
 - **Not fully achieved, stated to the owner:** the bust reads only moderately full (the model still
   draws a modest bust under a fitted blouse); her head top is a little tight in the back view.
+
+## Owner feedback on the fixed sheets (2026-10-06), fix round 4
+
+- **Woman:** the bust is far too small for the channel's direction. She must have a clearly fuller
+  bust, in the same fitted, buttoned white blouse.
+- **Man:** the shoulders are still a little high and the neck is short. The owner wants the look of a
+  Korean man: a long neck, sloped broad shoulders, a slim waist.
+
+**Plan (script only):**
+
+- Man skeleton: a longer neck (the neck joint 0.85 below the nose, was 0.65), shoulders lower
+  (1.25, was 0.95) and a little less wide; elbows, wrists, hips, knees and ankles shifted to keep a
+  figure of about 7.6 heads. Prompt: "long neck, sloped broad shoulders, slim waist, lean muscular".
+- Woman prompt: "curvy hourglass figure, large bust, slim waist, blouse fitted across the chest" (clothed,
+  buttoned, no open collar); the negative adds "small bust, flat chest". The prompt budget stays at
+  77 tokens, so lower-value words are traded out.
+- Redo the 2 full-body panels per character at 3 seeds, look at them, then the man's close-ups if
+  the neck still reads short.
