@@ -354,7 +354,7 @@
 
   function configureCreateMode() {
     pageMode = "create";
-    document.title = "New Project — Daily Intel English Studio";
+    document.title = "New Project — Daily Beyond English";
     document.getElementById("page-title").textContent = "Step 1 — Project Configuration";
     document.getElementById("page-subtitle").textContent =
       "Set up the topic, level, speakers, and language focus for your new episode.";
@@ -365,7 +365,7 @@
 
   function configureEditMode() {
     pageMode = "edit";
-    document.title = "Edit Project — Daily Intel English Studio";
+    document.title = "Edit Project — Daily Beyond English";
     document.getElementById("page-title").textContent = "Step 1 — Edit Project Configuration";
     document.getElementById("page-subtitle").textContent =
       "Update this draft project's topic, level, speakers, and language focus.";
@@ -376,7 +376,7 @@
 
   function configureLockedMode() {
     pageMode = "locked";
-    document.title = "Project Configuration — Daily Intel English Studio";
+    document.title = "Project Configuration — Daily Beyond English";
     document.getElementById("page-title").textContent = "Step 1 — Project Configuration";
     document.getElementById("page-subtitle").textContent =
       "Review the configuration used for this project.";
@@ -492,7 +492,7 @@
       console.error("Failed to load project:", err);
       pageMode = "load_error";
       clearStatus();
-      document.title = "Project Unavailable — Daily Intel English Studio";
+      document.title = "Project Unavailable — Daily Beyond English";
       document.getElementById("page-title").textContent = "Step 1 — Project Unavailable";
       document.getElementById("page-subtitle").textContent =
         "Return to the dashboard and try opening the project again.";

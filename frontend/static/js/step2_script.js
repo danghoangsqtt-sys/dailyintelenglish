@@ -3,7 +3,7 @@
  * goes through Api.* (frontend/static/js/api.js), never fetch() directly (CR-05).
  */
 (() => {
-  const SPEAKER_COLORS = ["#7c3aed", "#0ea5e9", "#f59e0b", "#10b981", "#ef4444", "#ec4899"];
+  const SPEAKER_COLORS = ["#1f7a2e", "#0ea5e9", "#f59e0b", "#10b981", "#ef4444", "#ec4899"];
 
   const state = {
     projectId: null,

@@ -1,7 +1,8 @@
-/* Daily Intel English Studio — shared light-first design system.
-   Phase 26: the brand approved for the video intro/outro (Phase 25) -- the DI violet -> cyan mark,
-   deep-indigo surfaces in dark mode, Montserrat (bundled, SIL OFL: /static/fonts/OFL.txt) for
-   headings and the brand, Inter for body text. */
+/* Daily Beyond English — shared light-first design system.
+   Phase 27: the owner's brand (the avatar logo): green -> lime, yellow, white, a red call to action and
+   navy titles; deep-green surfaces in dark mode; Montserrat (bundled, SIL OFL: /static/fonts/OFL.txt) for
+   headings and the brand, Inter for body text. Text and button colours are checked for AA contrast in
+   tests/test_brand_assets.py. */
 
 @font-face {
   font-family: "Montserrat";
@@ -26,14 +27,18 @@
   --text-2: #2c3242;
   --text-muted: #495164;
   --muted: #495164;
-  --accent: #6d28d9;
-  --accent-hover: #5b21b6;
-  --accent-soft: #f1eafe;
-  --brand-violet: #7c3aed;
-  --brand-cyan: #22d3ee;
-  --brand-gradient: linear-gradient(135deg, #7c3aed 0%, #4f46e5 55%, #22d3ee 100%);
-  --brand-gradient-soft: linear-gradient(135deg, rgba(124, 58, 237, .10), rgba(34, 211, 238, .10));
-  --focus-ring: 0 0 0 3px rgba(124, 58, 237, .35);
+  --accent: #1f7a2e;
+  --accent-hover: #17601f;
+  --accent-soft: #e8f6e6;
+  --brand-green: #3a9d3f;
+  --brand-lime: #9bd13c;
+  --brand-yellow: #ffd60a;
+  --brand-navy: #151a5c;
+  --brand-gradient: linear-gradient(135deg, #3a9d3f 0%, #9bd13c 100%);
+  --brand-gradient-soft: linear-gradient(135deg, rgba(58, 157, 63, .10), rgba(155, 209, 60, .12));
+  --btn-gradient: linear-gradient(135deg, #17601f 0%, #1f7a2e 100%);
+  --cta: #c92a25;
+  --focus-ring: 0 0 0 3px rgba(58, 157, 63, .40);
   --accent-ink: #ffffff;
   --success: #146c2e;
   --success-bg: #dcf5e2;
@@ -57,23 +62,25 @@
 /* The former palette remains available through Theme's existing data-theme contract. */
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0b1026;
-  --bg-canvas: #0b1026;
-  --bg-elevated: #10163a;
+  --bg: #0c1a12;
+  --bg-canvas: #0c1a12;
+  --bg-elevated: #11241a;
   --surface: rgba(255, 255, 255, 0.04);
-  --surface-2: #121a3d;
-  --surface-3: #1b2350;
-  --surface-border: rgba(124, 58, 237, 0.3);
-  --surface-border-hover: rgba(124, 58, 237, 0.6);
-  --border: rgba(124, 58, 237, 0.3);
-  --border-strong: rgba(124, 58, 237, 0.6);
+  --surface-2: #14291d;
+  --surface-3: #1b3626;
+  --surface-border: rgba(155, 209, 60, 0.25);
+  --surface-border-hover: rgba(155, 209, 60, 0.5);
+  --border: rgba(155, 209, 60, 0.25);
+  --border-strong: rgba(155, 209, 60, 0.5);
   --text: #e6edf3;
   --text-2: #c9d1d9;
-  --text-muted: #8b949e;
-  --muted: #8b949e;
-  --accent: #a78bfa;
-  --accent-hover: #c4b5fd;
-  --accent-soft: rgba(124, 58, 237, 0.2);
+  --text-muted: #9fb3a6;
+  --muted: #9fb3a6;
+  --accent: #9bd13c;
+  --accent-hover: #b6e060;
+  --accent-soft: rgba(155, 209, 60, 0.18);
+  --btn-gradient: linear-gradient(135deg, #17601f 0%, #1f7a2e 100%);
+  --cta: #e5322d;
   --accent-ink: #ffffff;
   --success: #3fb950;
   --success-bg: rgba(63, 185, 80, 0.14);
@@ -107,8 +114,10 @@ button { cursor: pointer; }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; border: 1px solid var(--border-strong); border-radius: 8px; padding: 7px 14px; background: var(--surface-2); color: var(--text-2); font-size: 14px; font-weight: 650; text-decoration: none; transition: transform .15s ease, background .15s ease, border-color .15s ease; }
 .btn:active { transform: scale(.97); }
-.btn-primary { background: var(--brand-gradient); border-color: transparent; color: #fff; box-shadow: 0 6px 20px rgba(79, 70, 229, .28); }
-.btn-primary:hover { filter: brightness(1.08); box-shadow: 0 8px 26px rgba(79, 70, 229, .36); }
+.btn-primary { background: var(--btn-gradient); border-color: transparent; color: #fff; box-shadow: 0 6px 20px rgba(31, 122, 46, .28); }
+.btn-primary:hover { filter: brightness(1.1); box-shadow: 0 8px 26px rgba(31, 122, 46, .38); }
+.btn-cta { background: var(--cta); border-color: transparent; color: #fff; box-shadow: 0 6px 20px rgba(201, 42, 37, .25); }
+.btn-cta:hover { filter: brightness(1.08); }
 .btn:focus-visible, .icon-toggle:focus-visible, .app-nav a:focus-visible, input:focus-visible, select:focus-visible,
 textarea:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .btn-ghost { background: transparent; }
@@ -145,9 +154,10 @@ textarea:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .topbar { position: relative; height: 58px; display: flex; align-items: center; gap: 14px; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--bg-elevated); }
 .topbar::after { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--brand-gradient); opacity: .55; content: ""; }
 .brand, .logo { display: flex; align-items: center; gap: 10px; color: var(--text); font-family: var(--font-display); font-weight: 800; letter-spacing: -.02em; text-decoration: none; }
-.brand-mark { width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 9px; background: linear-gradient(135deg, var(--brand-violet), var(--brand-cyan)); box-shadow: 0 4px 14px rgba(124, 58, 237, .35); color: #fff; font-family: var(--font-display); font-size: 13px; font-weight: 800; letter-spacing: -.5px; }
+.brand-logo { width: 36px; height: 36px; flex: 0 0 auto; border-radius: 50%; box-shadow: 0 2px 10px rgba(21, 26, 92, .22); object-fit: cover; }
 .brand-word { display: flex; flex-direction: column; line-height: 1.02; }
-.brand-word b { font-size: 15px; font-weight: 800; }
+.brand-word b { color: var(--brand-navy); font-size: 15px; font-weight: 800; }
+[data-theme="dark"] .brand-word b { color: #fff; }
 .brand-word small { margin-top: 2px; color: var(--accent); font-size: 9.5px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; }
 .project-name { padding-left: 14px; border-left: 1px solid var(--border); color: var(--text-2); font-weight: 650; }
 .app-nav { display: flex; align-items: center; gap: 2px; margin-left: auto; }
@@ -239,7 +249,7 @@ h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); lett
 .dashboard-main { max-width: 1200px; margin: 0 auto; padding: 0 32px 64px; }
 .dashboard-hero { padding: 36px 32px 28px; }
 .hero-inner { position: relative; max-width: 1136px; margin: 0 auto; padding: 40px 44px; overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--brand-gradient-soft), var(--bg-elevated); }
-.hero-inner::after { position: absolute; right: -40px; top: -60px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, rgba(34, 211, 238, .22), transparent 70%); content: ""; pointer-events: none; }
+.hero-inner::after { position: absolute; right: -40px; top: -60px; width: 320px; height: 320px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 214, 10, .28), transparent 70%); content: ""; pointer-events: none; }
 .hero-eyebrow { margin: 0 0 8px !important; color: var(--accent) !important; font-family: var(--font-display); font-size: 12px !important; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
 .dashboard-hero h1 { max-width: 720px; margin: 0 0 10px; color: var(--text); font-size: 34px; font-weight: 800; line-height: 1.15; }
 .dashboard-hero p { max-width: 640px; margin: 0 0 22px; color: var(--muted); font-size: 15px; line-height: 1.55; }
@@ -261,7 +271,7 @@ h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); lett
 .project-thumb.has-image { padding: 0; background: var(--surface-3); }
 .project-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s ease; }
 .project-card:hover .project-thumb img { transform: scale(1.04); }
-.thumb-mark { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 8px; background: linear-gradient(135deg, var(--brand-violet), var(--brand-cyan)); font-family: var(--font-display); font-size: 12px; font-weight: 800; }
+.thumb-mark { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; box-shadow: 0 2px 8px rgba(21, 26, 92, .25); }
 .thumb-topic { display: -webkit-box; overflow: hidden; font-family: var(--font-display); font-size: 15px; font-weight: 700; line-height: 1.25; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .project-progress { height: 4px; overflow: hidden; border-radius: 999px; background: var(--surface-3); }
 .project-progress span { display: block; height: 100%; border-radius: inherit; background: var(--brand-gradient); }

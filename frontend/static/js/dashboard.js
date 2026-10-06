@@ -46,7 +46,7 @@
     // Task 26.3: a real picture when the episode has one, else a brand tile with the topic.
     const thumb = project.preview_url
       ? `<div class="project-thumb has-image" aria-hidden="true"><img src="${escapeHtml(project.preview_url)}" alt="" loading="lazy" /></div>`
-      : `<div class="project-thumb" aria-hidden="true"><span class="thumb-mark">DI</span><span class="thumb-topic">${escapeHtml(project.topic || project.name || "New episode")}</span></div>`;
+      : `<div class="project-thumb" aria-hidden="true"><img class="thumb-mark" src="/static/brand/logo-64.png" alt="" width="30" height="30" /><span class="thumb-topic">${escapeHtml(project.topic || project.name || "New episode")}</span></div>`;
     const step = STATUS_TO_STEP[project.status] || 1;
     const progress = project.status === "draft" ? 1 : project.status === "complete" ? 7 : step;
     return `

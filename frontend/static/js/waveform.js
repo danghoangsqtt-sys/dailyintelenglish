@@ -9,7 +9,7 @@
  * cosmetic feature must never break audio preview itself.
  */
 const Waveform = (() => {
-  const PLAYED_COLOR = "#7c3aed"; // --accent
+  const PLAYED_COLOR = "#1f7a2e"; // --accent
   const UNPLAYED_COLOR = "#8b949e"; // --text-muted
   const BAR_GAP_RATIO = 0.35;
 

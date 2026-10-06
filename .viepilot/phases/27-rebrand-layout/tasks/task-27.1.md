@@ -83,3 +83,18 @@ lime, yellow, white, a red accent). Behaviour, ids, roles and flows do not chang
 ## Out of scope
 
 The sidebar (27.2), the grid libraries (27.3), the studio frame (27.4), the video intro/outro (27.5).
+
+## Implementation notes (2026-10-06)
+
+- Done as planned: logo assets (`logo-full.png` = the owner's file, `logo.png` 512, `logo-64.png`), the green/yellow
+  tokens with `--btn-gradient` (dark green, white text 5.4:1) and `--cta` (red `#c92a25` light, `#e5322d` dark),
+  the new header on 11 pages, titles, favicon, the dashboard project-card mark, step 1 titles, the two hard-coded
+  violets, `app/main.py`.
+- Palette contrast is tested: accent on white 5.41, white on the red CTA 5.47, lime on the dark page 9.9.
+- **Found while verifying in the browser:** the server sent no cache headers, so after an upgrade the new HTML
+  showed with the old CSS and scripts. Fixed with `RevalidateUi` (a pure ASGI middleware: pages and `/static`
+  get `Cache-Control: no-cache`; the ETag still gives a cheap 304). Test: `tests/test_static_cache.py`.
+- **Found:** the character form hint still said "different-colour bottom"; changed to allow one colour.
+- Not done here (by plan): `youtube_service.py` has no product-name text, so there was nothing to rename; the
+  video intro/outro and the greeting are Task 27.5.
+- Screenshots: `docs/operations/ui-audit/after-27-1/` (44 images + `overview-light.png`, `overview-dark.png`).

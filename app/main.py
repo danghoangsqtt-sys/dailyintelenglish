@@ -1,4 +1,4 @@
-"""FastAPI application entrypoint for Daily Intel English Studio."""
+"""FastAPI application entrypoint for Daily Beyond English."""
 
 import time
 from contextlib import asynccontextmanager
@@ -110,7 +110,7 @@ async def lifespan(app: FastAPI):
     await close_db()
 
 
-app = FastAPI(title="Daily Intel English Studio", lifespan=lifespan)
+app = FastAPI(title="Daily Beyond English", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -164,6 +164,39 @@ app.include_router(visuals.project_router)
 app.include_router(storyboard.router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
+
+
+class RevalidateUi:
+    """Pure ASGI middleware (streams untouched): the pages and /static files carry `Cache-Control: no-cache`.
+
+    Without it browsers cache style.css and the scripts heuristically, so after an upgrade the new HTML
+    appeared with the old styles (seen in Phase 27). The ETag and Last-Modified that Starlette already sends
+    keep the revalidation cheap: an unchanged file is a 304."""
+
+    def __init__(self, app) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        is_static = scope["path"].startswith("/static/")
+
+        async def send_with_cache_control(message) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                names = {name.lower() for name, _ in headers}
+                is_page = any(name.lower() == b"content-type" and value.startswith(b"text/html")
+                              for name, value in headers)
+                if (is_static or is_page) and b"cache-control" not in names:
+                    headers.append((b"cache-control", b"no-cache"))
+                    message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, send_with_cache_control)
+
+
+app.add_middleware(RevalidateUi)
 
 
 @app.get("/")

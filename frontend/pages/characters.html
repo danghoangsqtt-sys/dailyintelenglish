@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Character Library — Daily Intel English Studio</title>
+  <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
+  <title>Character Library — Daily Beyond English</title>
   <link rel="stylesheet" href="/static/css/style.css" />
   <style>
     .library-main { width: min(1160px, calc(100% - 32px)); margin: 32px auto 80px; }
@@ -60,7 +61,7 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="Daily Intel English Studio dashboard"><span class="brand-mark" aria-hidden="true">DI</span><span class="brand-word"><b>Daily Intel</b><small>English Studio</small></span></a>
+    <a class="brand" href="/" aria-label="Daily Beyond English dashboard"><img class="brand-logo" src="/static/brand/logo-64.png" width="36" height="36" alt="" /><span class="brand-word"><b>Daily Beyond</b><small>English</small></span></a>
     <nav class="app-nav" aria-label="Main"><a href="/">Dashboard</a><a href="/characters" aria-current="page">Character Library</a><a href="/music">Music Library</a><a href="/settings">Settings</a></nav>
     <div class="actions">
       <button id="theme-toggle" class="icon-toggle" type="button" aria-label="Toggle dark/light mode">☀️</button>
@@ -99,7 +100,7 @@
               <label>Bottom colour<select name="bottom_color" required></select></label>
               <label>Bottom item<select name="bottom_item" required></select></label>
             </div>
-            <p class="library-hint">One solid-colour top and one different-colour bottom. No patterns or layers.</p>
+            <p class="library-hint">One solid-colour top and one solid-colour bottom (the same colour for both is fine). No patterns or layers.</p>
             <div class="library-actions">
               <button id="save-character" class="btn btn-primary" type="submit">Create character</button>
               <button id="delete-character" class="btn btn-ghost" type="button" hidden>Delete</button>
