@@ -31,3 +31,29 @@ singles, 1 close duo, 6 wide duos, 3 inserts), about 62 job steps, about 45 minu
 - Fix (1) in the colour rule and the prompts: calibrated on these measurements.
 - (2) needs a person or face detector that works on photographs; that is a download and is asked of the owner.
 - (3) is a prompt and negative question: tried after (1), measured again.
+
+## Fixes made and measured again (2026-10-06)
+
+- **Colour rule for black** (`colour_check.py`): `(v < 0.35 and v * s < 0.055) or (s < 0.25 and v < 0.42)`. The 7
+  navy duo shirts (v * s 0.07-0.12) now fail it, so the colour retry fires; every measured black (v * s up to
+  0.046, or low saturation) still passes.
+- **`recipes.negative_for(*characters)`**, used by the duo refine, the colour retry and the shot encode: a black
+  outfit swaps "multicolored clothes" for "navy blue clothes"; a white outfit adds "blazer" and (unless someone
+  wears jeans) "blue jeans". A navy outfit is never fought. Always within 77 real CLIP tokens (tested for every
+  combination).
+- **Re-run of shots 6, 8 and 12** with the new code (`docs/operations/phase28-shots-after-fixes.png`):
+  - shot 6: **fixed**: Minh's shirt is black, Lan has no blazer;
+  - shot 8: **mostly fixed**: black shirt, no blue jeans; the trousers still differ (grey on Minh, black on Lan),
+    because a seated duo gets no trouser check (the table hides the legs);
+  - shot 12: **no third person this time, but the two swapped outfits** (Minh in white, Lan in a white dress);
+    the colour retry ran out (2 attempts) and the shot stayed wrong with no warning to the user.
+
+## Still open, and what each needs
+
+1. **Detecting a third person on photographs** needs a face or person detector that works on photos. The small
+   ONNX face detectors (about 1-2 MB, MIT licence, run with the onnxruntime that is already installed) are the
+   cheap answer; it is a download, so the owner decides.
+2. **A shot that still fails its colour check after the retries** is accepted silently. Either more retries
+   (each about 2 minutes), or render two candidates and keep the one that passes, or mark the shot "colour
+   mismatch" in Step 5 so the owner can regenerate it. The mark is cheap; the other two cost time.
+3. **Trouser colour in seated duos** is unchecked.

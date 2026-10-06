@@ -230,7 +230,7 @@ async def _colour_pass(session, runner: ImageJobRunner, job: dict, context: dict
             await asyncio.to_thread(_save, mask, mask_path)
             await session.request({
                 "command": "generate", "prompt": recipes.garment_refine_prompt(character, context["scene"]),
-                "negative_prompt": recipes.NEGATIVE, "seed": row["seed"] + 300 + 10 * attempts + index,
+                "negative_prompt": recipes.negative_for(character), "seed": row["seed"] + 300 + 10 * attempts + index,
                 "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,
                 "output_path": str(rendered), "init_image": str(current), "mask_image": str(mask_path),
                 "strength": COLOUR_RETRY_STRENGTH, "ip_adapter_image": context["faces"][index],
@@ -394,7 +394,8 @@ async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows
             folder = context["folder"]
             context["embeds"] = folder / "embeds.pt"
             payload = {"command": "encode", "output_path": str(context["embeds"]),
-                       "items": [{"prompt": context["prompt"], "negative_prompt": recipes.NEGATIVE}],
+                       "items": [{"prompt": context["prompt"],
+                                  "negative_prompt": recipes.negative_for(*context["characters"])}],
                        "guidance_scale": 6.0}
             if len(context["faces"]) == 1:
                 payload["ip_adapter_image"] = context["faces"][0]
@@ -464,7 +465,8 @@ async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows
                     await session.request({
                         "command": "generate", "prompt": recipes.refine_prompt(context["characters"][index],
                                                                                    context["scene"]),
-                        "negative_prompt": recipes.NEGATIVE, "seed": row["seed"] + 100 + index,
+                        "negative_prompt": recipes.negative_for(context["characters"][index]),
+                        "seed": row["seed"] + 100 + index,
                         "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,
                         "output_path": str(rendered), "init_image": str(current), "mask_image": str(mask_path),
                         "strength": 0.55, "ip_adapter_image": context["faces"][index], "ip_adapter_scale": 0.5,

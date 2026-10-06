@@ -21,6 +21,21 @@ PLATE_NEGATIVE = (
     "person, people, man, woman, girl, boy, child, crowd, character, figure, blurry, bokeh, cartoon, anime, "
     "illustration, 3d render, low resolution, text, watermark"
 )
+def negative_for(*characters: Mapping) -> str:
+    """`NEGATIVE` for the people in a picture, naming the colours this cast tends to drift into (Task 28.4b): a
+    black outfit drifts to navy, a white one gets a blazer or blue jeans. A navy outfit (or jeans) is never fought.
+    Stays within 77 real CLIP tokens (tested)."""
+    colours = {character[key] for character in characters for key in ("top_color", "bottom_color")}
+    negative = NEGATIVE
+    if "black" in colours and "navy blue" not in colours:
+        negative = negative.replace("multicolored clothes", "navy blue clothes")
+    if "white" in colours:
+        negative += ", blazer"
+        if not any(character["bottom_item"] == "jeans" for character in characters):
+            negative += ", blue jeans"
+    return negative
+
+
 HAND_PROMPT = "detailed hand, five fingers, natural hand"
 HAND_NEGATIVE = "extra fingers, missing fingers, fused fingers, deformed hands, bad anatomy, blurry"
 SHEET_KINDS = ("full_body", "portrait_calm", "portrait_smile", "portrait_surprised")

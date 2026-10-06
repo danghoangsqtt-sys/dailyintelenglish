@@ -221,3 +221,79 @@ def test_check_person_uses_garment_mode_only_for_black(monkeypatch):
     colour_check.check_person(image, person, MINH, check_bottom=False)
     colour_check.check_person(image, person, LAN, check_bottom=False)
     assert seen == [True, False]
+
+
+# ---- Task 28.4b: found by running the app's own shot job with Lan (white) and Minh (black) -----------------------
+
+def test_black_rule_rejects_navy_and_keeps_real_black():
+    """Measured medians (2026-10-06): Minh alone in black (0.075-0.133 value, saturation 0.12-0.30), the approved
+    sheet (value 0.24-0.37, saturation 0.12-0.20) and, wrongly, the navy shirts of seven duo shots (hue 225-234,
+    saturation 0.32-0.42, value 0.12-0.32), which the old rule `v < 0.35` accepted."""
+    blacks = [(240.0, 0.122, 0.075), (216.5, 0.298, 0.098), (225.4, 0.231, 0.133), (16.4, 0.145, 0.239),
+              (232.9, 0.149, 0.251), (225.1, 0.125, 0.369), (240.0, 0.141, 0.043)]
+    navies = [(233.2, 0.42, 0.184), (226.3, 0.376, 0.184), (225.1, 0.369, 0.318), (233.8, 0.322, 0.267),
+              (225.8, 0.388, 0.208), (232.3, 0.412, 0.188)]
+    for h, s, v in blacks:
+        assert colour_check.matches("black", {"h": h, "s": s, "v": v}), (h, s, v)
+    for h, s, v in navies:
+        assert not colour_check.matches("black", {"h": h, "s": s, "v": v}), (h, s, v)
+        assert colour_check.matches("navy blue", {"h": h, "s": s, "v": v}), (h, s, v)  # it is a navy, still known
+
+
+def test_negative_for_names_the_wrong_colours_of_this_cast():
+    assert recipes.negative_for() == recipes.NEGATIVE
+    black = recipes.negative_for(MINH)
+    assert "navy blue clothes" in black and "multicolored clothes" not in black
+    white = recipes.negative_for(LAN)
+    assert "blazer" in white and "blue jeans" in white and "navy blue clothes" not in white
+    both = recipes.negative_for(LAN, MINH)
+    assert "navy blue clothes" in both and "blue jeans" in both
+    navy = recipes.negative_for(TWO_COLOURS)  # a navy-blue outfit must not be fought
+    assert "navy blue clothes" not in navy
+    jeans = recipes.negative_for({**LAN, "bottom_item": "jeans"})
+    assert "blue jeans" not in jeans  # jeans are a legitimate item in the library
+
+
+def test_every_cast_negative_fits_the_real_clip_budget():
+    tok = _real_tokenizer()
+    for cast in ((), (LAN,), (MINH,), (LAN, MINH), (TWO_COLOURS,), (LAN, TWO_COLOURS, MINH)):
+        assert len(tok(recipes.negative_for(*cast), truncation=False).input_ids) <= 77, cast
+
+
+def _set_outfits(client, ids, outfits):
+    import sqlite3
+    with sqlite3.connect(settings.db_path) as connection:
+        for character_id, (top, bottom, bottom_item) in zip(ids, outfits, strict=True):
+            connection.execute("UPDATE characters SET top_color = ?, bottom_color = ?, bottom_item = ? WHERE id = ?",
+                               (top, bottom, bottom_item, character_id))
+
+
+def test_the_shot_job_sends_each_person_the_negative_of_their_outfit(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+    from tests.test_visuals_project_api import data, setup_project, wait_job
+
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(settings, "IMAGE_ENGINE", "fake")
+    monkeypatch.setattr(settings, "AI_VISUALS_ENABLED", True)
+    monkeypatch.setattr(settings, "VISUALS_DUO_REFINE", True)
+    monkeypatch.setattr(settings, "VISUALS_COLOUR_RETRIES", 0)
+    log = []
+    original = engine.FakeImageEngine.request
+
+    async def recording(self, payload):
+        log.append(dict(payload))
+        return await original(self, payload)
+
+    monkeypatch.setattr(engine.FakeImageEngine, "request", recording)
+    with TestClient(app) as client:
+        project, ids, _ = setup_project(client, 2, 1)
+        _set_outfits(client, ids, [("black", "black", "trousers"), ("white", "white", "trousers")])
+        wait_job(client, data(client.post(f"/api/projects/{project['id']}/visuals/shots")))
+    black, white = recipes.negative_for(MINH), recipes.negative_for(LAN)
+    refines = [p for p in log if p.get("mask_image") and p["negative_prompt"] != recipes.HAND_NEGATIVE]
+    assert refines, "no duo refine request was recorded"
+    assert {p["negative_prompt"] for p in refines} == {black, white}
+    encodes = [item["negative_prompt"] for p in log if p.get("command") == "encode" for item in p["items"]]
+    assert recipes.negative_for(MINH, LAN) in encodes and black in encodes and white in encodes
