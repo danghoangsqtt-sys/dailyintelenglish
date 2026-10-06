@@ -48,7 +48,7 @@ def add_track(client, filename, seconds, **details):
     path = settings.DATA_DIR / "music_library" / filename
     path.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run([settings.FFMPEG_PATH, "-y", "-loglevel", "error", "-f", "lavfi", "-i",
-                    f"anullsrc=r=8000:cl=mono", "-t", str(seconds), "-b:a", "16k", str(path)], check=True)
+                    "anullsrc=r=8000:cl=mono", "-t", str(seconds), "-b:a", "16k", str(path)], check=True)
     data(client.get("/api/music"))
     if details:
         data(client.patch(f"/api/music/{filename}", json=details))
@@ -120,14 +120,16 @@ def test_a_single_track_is_picked_without_the_ai(client, fake_ai):
 def test_ai_picks_among_the_top_candidates(client, fake_ai):
     project = make_project(client)
     add_track(client, "market_walk.mp3", 140, mood="acoustic", tags="market, street food")
-    add_track(client, "sleepy.mp3", 140, mood="calm")
-    add_track(client, "party.mp3", 20, mood="upbeat")
+    add_track(client, "sleepy.mp3", 140, mood="lofi", tags="market")
+    add_track(client, "party.mp3", 20, mood="upbeat")  # loops 7x: never offered to the AI
     provider = fake_ai([answer({"filename": "sleepy.mp3", "reason": "Calm and gentle for a relaxed chat."})])
     result = data(client.post(f"/api/projects/{project['id']}/music/suggest"))
-    assert (result["path"], result["filename"], result["reason"]) == (
-        "ai", "sleepy.mp3", "Calm and gentle for a relaxed chat.")
-    assert [item["filename"] for item in result["candidates"]][0] == "market_walk.mp3"  # the rule's top score
+    assert (result["path"], result["filename"], result["reason"], result["fit"]) == (
+        "ai", "sleepy.mp3", "Calm and gentle for a relaxed chat.", "covers the video")
+    assert [item["filename"] for item in result["candidates"]] == ["market_walk.mp3", "sleepy.mp3"]
+    assert provider.calls[0].temperature == select.AI_TEMPERATURE
     prompt = provider.calls[0].prompt
+    assert "party.mp3" not in prompt
     assert "market_walk.mp3 | Market walk | acoustic | unknown pace | tempo unknown | market, street food | 2:20 | covers the video" in prompt
     assert "Topic: Weekend markets and street food in Hanoi" in prompt and provider.calls[0].purpose == "music_pick"
 
@@ -135,7 +137,7 @@ def test_ai_picks_among_the_top_candidates(client, fake_ai):
 def test_invalid_pick_gets_one_repair_then_the_rule(client, fake_ai):
     project = make_project(client)
     add_track(client, "market_walk.mp3", 140, mood="acoustic", tags="market")
-    add_track(client, "sleepy.mp3", 140, mood="calm")
+    add_track(client, "sleepy.mp3", 140, mood="lofi")
     provider = fake_ai([answer({"filename": "not-in-library.mp3", "reason": "x"}),
                         answer({"filename": "sleepy.mp3", "reason": "Fits."})])
     result = data(client.post(f"/api/projects/{project['id']}/music/suggest"))
@@ -167,3 +169,29 @@ def test_recent_episodes_and_real_audio_length(client, fake_ai):
     assert result["target_s"] == 87.5  # the real mix (80 s) + intro/outro, not the planned 10 min
     assert result["filename"] == "b.mp3"  # a.mp3 was just used by another episode
     assert "used recently" not in result["reason"]
+
+
+# --- guard rail (Task 22.9 debug: the AI once chose a 68 s jingle looping 9x) ----------------
+
+def ranked_item(name, points, loops):
+    return {"filename": name, "title": name, "score": points, "loops": loops}
+
+
+def test_eligible_keeps_the_best_and_drops_far_worse_or_too_repetitive_tracks():
+    ranked = [ranked_item("best", 3.0, 5), ranked_item("close", 0.5, 4), ranked_item("jingle", 0.0, 9),
+              ranked_item("ok", 0.0, 5), ranked_item("far", -1.0, 3), ranked_item("unknown", 0.5, None)]
+    names = [item["filename"] for item in select.eligible(ranked)]
+    assert names == ["best", "close", "ok"]  # jingle 9 > 3 + 2 loops; far < 3.0 - 3; unknown length out
+    assert select.eligible([]) == []
+    assert [i["filename"] for i in select.eligible([ranked_item("only", -5.0, 12)])] == ["only"]
+
+
+def test_the_ai_cannot_choose_a_track_outside_the_guard_rail(client, fake_ai):
+    project = make_project(client, minutes=10)
+    add_track(client, "long_calm.mp3", 250, mood="acoustic")
+    add_track(client, "medium.mp3", 180, mood="lofi")
+    add_track(client, "jingle.mp3", 68, mood="acoustic")  # would loop 9x under a 10-minute episode
+    fake_ai([answer({"filename": "jingle.mp3", "reason": "x"}), answer({"filename": "jingle.mp3", "reason": "x"})])
+    result = data(client.post(f"/api/projects/{project['id']}/music/suggest"))
+    assert "jingle.mp3" not in [item["filename"] for item in result["candidates"]]
+    assert result["filename"] != "jingle.mp3" and result["path"] == "rule"

@@ -523,7 +523,8 @@
       state.selectedMusic = pick.filename || "";
       if (pick.filename) {
         const track = state.musicTracks.find((item) => item.filename === pick.filename) || {};
-        setAutoNote(`Auto pick: ${trackLabel({ ...track, title: pick.title, filename: pick.filename })} — ${pick.reason}`);
+        const fit = pick.fit ? `, ${pick.fit}` : "";  // measured by the app, not the AI's wording
+        setAutoNote(`Auto pick: ${trackLabel({ ...track, title: pick.title, filename: pick.filename })}${fit} — ${pick.reason}`);
       } else {
         setAutoNote(`No automatic music: ${pick.reason}`);
       }

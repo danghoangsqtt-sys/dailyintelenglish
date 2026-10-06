@@ -27,6 +27,13 @@ from app.services.ai.router import AIRouter, build_ai_router_from_settings
 
 VIDEO_EXTRA_SECONDS = 7.5  # the Enhanced intro + outro (2.5 + 5.0), the longest video either renderer makes
 TOP_CANDIDATES = 5
+# Task 22.9 debug (real Gemini, 5 repeats + an earlier run): the AI's choice varied between calls,
+# once picking a 68 s jingle that loops 9x under a 9.8-min talk, and its reasons sometimes state
+# wrong facts ("fewest loops", a made-up length). So the deterministic score is the guard rail and
+# the AI only chooses by taste among the tracks that pass it:
+SCORE_MARGIN = 3.0  # within this many points of the best score
+EXTRA_LOOPS_ALLOWED = 2  # at most this many more loops than the track that loops least
+AI_TEMPERATURE = 0.2  # steadier answers between calls
 RECENT_EPISODES = 3
 MAX_TOPIC_POINTS = 3
 STOPWORDS = {
@@ -116,6 +123,25 @@ def rule_reason(best: dict[str, Any], genre: str) -> str:
     return "; ".join(bits) or "the only usable track"
 
 
+def eligible(ranked: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Pure: the tracks the AI may choose among. The best-scored track always stays; others must be
+    within SCORE_MARGIN of it and loop at most EXTRA_LOOPS_ALLOWED times more than the least-looping
+    track (a track of unknown length is out when lengths are known)."""
+    if not ranked:
+        return []
+    best = ranked[0]
+    known = [item["loops"] for item in ranked if item["loops"]]
+    max_loops = min(known) + EXTRA_LOOPS_ALLOWED if known else None
+    keep = [best]
+    for item in ranked[1:]:
+        if item["score"] < best["score"] - SCORE_MARGIN:
+            continue
+        if max_loops is not None and (item["loops"] is None or item["loops"] > max_loops):
+            continue
+        keep.append(item)
+    return keep
+
+
 def pick_schema(filenames: list[str]) -> dict:
     return {"type": "object", "properties": {"filename": {"type": "string", "enum": filenames},
                                               "reason": {"type": "string"}}, "required": ["filename", "reason"]}
@@ -143,14 +169,14 @@ async def suggest(db: aiosqlite.Connection, project_id: str, router: AIRouter | 
     tracks = await library.list_tracks(db)
     ranked = sorted((score(track, project["genre"], project["topic"], target, recent) for track in tracks),
                     key=lambda item: (-item["score"], item["title"].lower()))
-    candidates = ranked[:TOP_CANDIDATES]
-    result: dict[str, Any] = {"target_s": target, "candidates": candidates, "filename": None, "title": None,
-                              "reason": "The Music Library is empty.", "path": "none"}
+    candidates = eligible(ranked)[:TOP_CANDIDATES]
+    result: dict[str, Any] = {"target_s": target, "candidates": candidates, "ranked": ranked[:8], "filename": None,
+                              "title": None, "fit": None, "reason": "The Music Library is empty.", "path": "none"}
     if not candidates:
         return result
     best = candidates[0]
-    result.update(filename=best["filename"], title=best["title"], reason=rule_reason(best, project["genre"]),
-                  path="single" if len(candidates) == 1 else "rule")
+    result.update(filename=best["filename"], title=best["title"], fit=best["fit"],
+                  reason=rule_reason(best, project["genre"]), path="single" if len(candidates) == 1 else "rule")
     if len(candidates) == 1:
         return result
     filenames = [item["filename"] for item in candidates]
@@ -161,7 +187,7 @@ async def suggest(db: aiosqlite.Connection, project_id: str, router: AIRouter | 
             topic=project["topic"], genre=project["genre"], cefr_level=project["cefr_level"],
             target_minutes=round(target / 60, 1), candidates=candidates, previous_error=previous_error,
         )
-        request = GenerationRequest(prompt=prompt, json_schema=pick_schema(filenames),
+        request = GenerationRequest(prompt=prompt, json_schema=pick_schema(filenames), temperature=AI_TEMPERATURE,
                                     deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS, purpose="music_pick")
         try:
             answer = await router.generate(request)
@@ -174,7 +200,9 @@ async def suggest(db: aiosqlite.Connection, project_id: str, router: AIRouter | 
             previous_error = result["ai_error"] = str(exc)
             continue
         chosen = next(item for item in candidates if item["filename"] == filename)
-        result.update(filename=filename, title=chosen["title"], reason=reason or rule_reason(chosen, project["genre"]),
+        # The fit shown to the owner is the app's own measurement, never the AI's wording.
+        result.update(filename=filename, title=chosen["title"], fit=chosen["fit"],
+                      reason=reason or rule_reason(chosen, project["genre"]),
                       path="ai" if attempt == 0 else "ai_repaired")
         result.pop("ai_error", None)
         break
