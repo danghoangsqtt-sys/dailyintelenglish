@@ -12,7 +12,7 @@ from app.core.config import settings
 from tests.conftest import live_server
 from tests.test_visuals_project_api import PROJECT, locked_character
 
-NOTE = "Minh's top is not black; 3 faces found for 2 people"
+NOTE = "Minh's top may not be black; 3 faces found for 2 people"
 
 
 @pytest.fixture(scope="module")

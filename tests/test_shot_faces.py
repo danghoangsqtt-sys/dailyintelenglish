@@ -159,7 +159,7 @@ def test_a_colour_failure_that_survives_the_retries_is_marked_with_who_and_what(
     monkeypatch.setattr(pipelines, "_colour_result", failing)
     monkeypatch.setattr(settings, "VISUALS_COLOUR_RETRIES", 1)  # 0 switches the colour check off
     _, _, shots = _run(client)
-    assert shots and all(shot["review_note"] and "is not black" in shot["review_note"]
+    assert shots and all(shot["review_note"] and "may not be black" in shot["review_note"]
                          for shot in shots if shot["kind"] != "insert")
 
 
@@ -177,7 +177,7 @@ def test_regenerating_a_shot_clears_its_old_note(client, faces):  # noqa: F811
 def test_the_note_text_names_the_person_and_the_garment():
     character = {"name": "Minh", "top_color": "black", "bottom_color": "black"}
     result = {"ok": False, "top": {"expected": "black", "ok": False}, "bottom": {"expected": "black", "ok": False}}
-    assert pipelines.colour_notes(character, result) == ["Minh's top is not black", "Minh's bottom is not black"]
+    assert pipelines.colour_notes(character, result) == ["Minh's top may not be black", "Minh's bottom may not be black"]
     assert pipelines.colour_notes(character, {"ok": True, "top": {"ok": True}, "bottom": None}) == []
     assert pipelines.face_note(3, 2) == "3 faces found for 2 people"
     assert pipelines.face_note(2, 2) is None and pipelines.face_note(1, 2) is None

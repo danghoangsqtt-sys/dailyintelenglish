@@ -92,3 +92,12 @@
 
 Trouser colour in seated duos (the legs are hidden by the table) and the choice of a better outfit-lock prompt for
 the swapped-outfit case.
+
+## Implementation notes (2026-10-06)
+
+- Done as planned (A and B). The worker prints to stderr (stdout is its protocol channel), so the real-model test
+  reads both streams. The wording of a colour note is "may not be <colour>" because the heuristic can be wrong.
+- Real run on the data copy: see `docs/operations/phase28-shots-real-pipeline.md` (Task 28.5 section). It found and
+  fixed a false alarm of the black rule from the data.
+- Tests: `tests/test_shot_faces.py` (9, with the real model), `tests/test_shot_review_browser.py` (1), the black
+  sample in `tests/test_visuals_phase28.py`; the two old cut-out tests were removed.

@@ -183,7 +183,7 @@ def colour_notes(character: dict, result: dict) -> list[str]:
     for part in ("top", "bottom"):
         entry = result.get(part)
         if entry and not entry.get("ok", True):
-            notes.append(f"{character['name']}'s {part} is not {entry['expected']}")
+            notes.append(f"{character['name']}'s {part} may not be {entry['expected']}")
     return notes
 
 

@@ -57,3 +57,21 @@ singles, 1 close duo, 6 wide duos, 3 inserts), about 62 job steps, about 45 minu
    (each about 2 minutes), or render two candidates and keep the one that passes, or mark the shot "colour
    mismatch" in Step 5 so the owner can regenerate it. The mark is cheap; the other two cost time.
 3. **Trouser colour in seated duos** is unchecked.
+
+## Task 28.5: face counting and the "check this shot" mark, run on the real job (2026-10-06)
+
+- **Model:** UltraFace RFB-320 (MIT, 1.27 MB, pinned commit, SHA-256 checked), on the CPU with the onnxruntime already
+  in `venv-image`. Measured on this project's shots: singles 1 face, duos 2, inserts 0, the fixed shot 12 = 2, and the
+  original three-person shot 12 = **3** (the anime cut-out said 0.0). It is a test fixture
+  (`tests/fixtures/three_people_cafe.png`) with 0 / 1 / 2 / 3 face checks on the real model.
+- **Real run (shots 12 and 6 regenerated with the new code):** shot 12 now has 2 faces and passes both colour checks, no
+  note. Shot 6 finished with the note **"Minh's top ... not black"** produced by the pipeline itself: the colour was
+  still outside the black rule after the two retries. Step 5 shows it as an amber line with Regenerate as the primary
+  button (`docs/operations/ui-audit/step5-check-this-shot.png`).
+- **That note was a false alarm** (Minh's shirt is black in the picture): it measured value 0.157, saturation 0.37,
+  just past the threshold set the day before. The data separates the two better by value: real blacks read <= 0.16,
+  the navy shirts >= 0.18. The black rule became `v < 0.16 or (s < 0.25 and v < 0.42)` (the real black is a test
+  sample now) and shots 6 and 12 pass.
+- **A limit that stays:** a *lit* black shirt (value 0.27, saturation 0.32, shot 8) is not separable from navy by HSV.
+  So the note says "may not be black" and never asserts it; the cost of a false alarm is one look and one click.
+  Re-measured with the new rule, the four older navy duo shots (3, 4, 9, 10) are flagged, as they should be.

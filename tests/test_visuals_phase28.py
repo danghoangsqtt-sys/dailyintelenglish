@@ -230,6 +230,7 @@ def test_black_rule_rejects_navy_and_keeps_real_black():
     sheet (value 0.24-0.37, saturation 0.12-0.20) and, wrongly, the navy shirts of seven duo shots (hue 225-234,
     saturation 0.32-0.42, value 0.12-0.32), which the old rule `v < 0.35` accepted."""
     blacks = [(240.0, 0.122, 0.075), (216.5, 0.298, 0.098), (225.4, 0.231, 0.133), (16.4, 0.145, 0.239),
+              (224.1, 0.369, 0.157),  # Minh's real black shirt in a duo, measured by the real job (value 0.157)
               (232.9, 0.149, 0.251), (225.1, 0.125, 0.369), (240.0, 0.141, 0.043)]
     navies = [(233.2, 0.42, 0.184), (226.3, 0.376, 0.184), (225.1, 0.369, 0.318), (233.8, 0.322, 0.267),
               (225.8, 0.388, 0.208), (232.3, 0.412, 0.188)]

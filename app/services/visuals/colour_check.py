@@ -88,9 +88,11 @@ def matches(colour: str, hsv: dict[str, float]) -> bool:
     h, s, v = hsv["h"], hsv["s"], hsv["v"]
     rules = {
         "white": s < 0.2 and v > 0.72,
-        # Phase 28: a photographed black shirt is v < 0.15 with little colour; a dark NAVY shirt (v 0.12-0.32) is a
-        # saturated blue (v * s 0.07-0.12), which the old `v < 0.35` accepted as black (seen in 7 of 7 duo shots).
-        "black": (v < 0.35 and v * s < 0.055) or (s < 0.25 and v < 0.42),
+        # Phase 28 (measured on the real shot job, Task 28.4b/28.5): a photographed black shirt reads value <= 0.16 even
+        # with a blue cast from shadow (saturation up to 0.37); a dark NAVY shirt reads value >= 0.18 with saturation
+        # 0.32-0.42, which the old `v < 0.35` accepted as black (7 of 7 duo shots). A lit, low-saturation dark (a charcoal
+        # or a studio black) still passes.
+        "black": v < 0.16 or (s < 0.25 and v < 0.42),
         "grey": s < 0.18 and 0.3 <= v <= 0.85,
         "navy blue": _hue_in(h, 185, 255) and v < 0.72 and s > 0.2,
         # Cel-shaded light blue reads as a pale cyan: hue 85-185, saturation 0.09-0.2 (calibrated
