@@ -1439,3 +1439,11 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 ### Phase 31: Alex and Lina and the owner's pictures in the library (ENH-022) - done 2026-10-07
 - [x] 31.1 Alex (navy suit) and Lina (white mini dress), Russian, replace Lan and Minh
 - [x] 31.2 The owner's own pictures into the Shot Library (inbox folder, names carry the tags), the list of the 55 scenes
+
+### Phase 32: Talking characters as sprites, visual-novel style (ENH-023) - planned 2026-10-07
+- [ ] 32.1 Sprite library (model, inbox import, alignment, page)
+- [ ] 32.2 Speech to mouth states and the expression plan
+- [ ] 32.3 Remotion composition (turns, enter and leave, blink, mouth)
+- [ ] 32.4 API and Step 5 mode `podcast_sprites`
+- [ ] 32.5 Real render with the owner's first sprite set
+- [ ] 32.6 Gate B-22 (owner)
