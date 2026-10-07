@@ -225,9 +225,9 @@
     "27": {
       "name": "Rebrand + Canva/CapCut-style layout (ENH-018)",
       "status": "in_progress",
-      "tasks_done": 4,
+      "tasks_done": 5,
       "tasks_total": 6,
-      "note": "27.1, 27.2, 27.3a, 27.3b done (1510 passed). Next 27.4 studio frame, 27.5 video intro/outro, 27.6 gate. Owner asked: 27.4+27.5 first, or Gate B-20 (28.6) first?"
+      "note": "27.1-27.3b, 27.5 done (1511 passed). Left: 27.4 studio frame, 27.6 gate. Next: one full episode for Gate B-20 (28.6)."
     },
     "28": {
       "name": "Semi-realistic picture style (ENH-019)",

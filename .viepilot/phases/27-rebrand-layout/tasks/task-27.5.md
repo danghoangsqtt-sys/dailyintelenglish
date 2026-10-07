@@ -73,3 +73,7 @@ templates), and any new voice.
 
 - Done as planned. The first full render failed on a missing stand-in speech file (a leftover of the Phase 25 spike), not
   on the brand: a generated 3 s tone replaced it. Report: `docs/operations/phase27-brand-video.md`.
+
+## Task 27.5 closed (2026-10-07)
+
+Full suite: **1511 passed**; vitest 47 passed; `tsc` clean.

@@ -10,5 +10,5 @@
 | 27.3a | Music Library: many files at once, more formats, clearer listening | done 2026-10-06 (1498 passed; card `tasks/task-27.3a.md`) |
 | 27.3b | Characters and scenes as large image grids with a detail panel (music keeps its list, see 27.3a) | done 2026-10-07 (1510 passed; card `tasks/task-27.3b.md`) |
 | 27.4 | Studio steps 1–7: one 3-panel frame | planned |
-| 27.5 | Video intro/outro with the new logo, name and palette | **in_progress** 2026-10-07 (card `tasks/task-27.5.md`) |
+| 27.5 | Video intro/outro with the new logo, name and palette | done 2026-10-07 (1511 passed; card `tasks/task-27.5.md`) |
 | 27.6 | Gate B-19 (owner review) | planned |
