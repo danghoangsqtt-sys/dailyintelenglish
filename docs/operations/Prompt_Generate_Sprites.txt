@@ -1,0 +1,82 @@
+﻿Bạn đang chạy trên máy tính Windows của tôi. Hãy tự tạo ảnh bằng công cụ tạo ảnh của bạn và LƯU TRỰC TIẾP vào thư mục đích, không bắt tôi sao chép gì.
+
+THƯ MỤC
+- ĐÍCH (ghi ảnh vào đây): D:\DataAdmin\Daily_Intel_English\data\library\sprites_inbox
+- LOG và ảnh xem thử: D:\DataAdmin\Daily_Intel_English\data\assets_sprites\logs
+- ẢNH THAM CHIẾU của nhân vật (chỉ đọc, KHÔNG sửa, KHÔNG xóa):
+  D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\
+    lina_sheet.jpg, lina_pose1.jpg, lina_pose2.jpg, lina_pose3.jpg
+    alex_sheet.jpg, alex_pose1.jpg, alex_pose2.jpg, alex_pose3.jpg
+- Tạo hai thư mục ĐÍCH và LOG nếu chưa có. KHÔNG ghi, KHÔNG xóa, KHÔNG sửa bất cứ thứ gì ngoài hai thư mục này.
+
+MỤC TIÊU
+Tạo bộ "sprite" (như assets game visual novel) cho 2 nhân vật Lina (nữ) và Alex (nam): nhiều ảnh CÙNG một cơ thể, CÙNG một đầu, chỉ khác biểu cảm / miệng / cử chỉ tay. Hệ thống sẽ ghép miệng nhép theo lời nói và đổi biểu cảm theo nội dung, nên các ảnh phải khớp nhau từng điểm ảnh.
+
+QUY TẮC CHO MỌI ẢNH (rất quan trọng)
+1. PNG nền TRONG SUỐT (alpha). Nếu công cụ không xuất được nền trong suốt: tạo trên nền xanh lá đặc #00B140 (KHÔNG dùng nền trắng vì váy Lina màu trắng) rồi tự tách nền bằng Pillow (chroma key, xử lý viền xanh) và kiểm tra lại alpha.
+2. Kích thước CHÍNH XÁC 1280 x 1536 px cho tất cả ảnh của cả hai nhân vật.
+3. Khung hình: nhân vật ở giữa, từ ngay trên đỉnh đầu đến giữa đùi (đỉnh tóc cách mép trên khoảng 6%), cùng cỡ và cùng vị trí ở mọi ảnh.
+4. Hướng nhìn: hơi quay (khoảng 15 độ) về phía người kia. Lina đứng bên TRÁI khung nên quay nhẹ về PHÍA PHẢI khung; Alex đứng bên PHẢI khung nên quay nhẹ về PHÍA TRÁI khung. Ánh mắt hướng về người kia, không nhìn vào ống kính.
+5. Cùng cơ thể, cùng quần áo, cùng ánh sáng mềm đều, cùng đường nét ở mọi ảnh của một nhân vật. ĐẦU KHÔNG ĐƯỢC DỊCH CHUYỂN, đổi cỡ hay xoay giữa các ảnh.
+6. Không chữ, không logo, không watermark, không trang sức, không kính, không phụ kiện thêm. Không râu cho Alex.
+7. Phong cách: ảnh chụp thật, photorealistic, chất lượng cao như các ảnh tham chiếu.
+
+NHẬN DẠNG NHÂN VẬT
+LINA (nữ): young adult woman, fair porcelain skin, slim feminine body, delicate oval heart-shaped face, large almond-shaped warm brown eyes, soft full pink lips, long dark chocolate brown hair with soft curtain bangs, wearing the SAME ivory white fitted mini dress with corset-inspired bodice, thin spaghetti straps, small center keyhole with delicate tie strings. No jewelry.
+ALEX (nam): young adult man, fair light skin, tall slim athletic build, handsome angular oval face, defined jawline, warm brown almond eyes, thick dark eyebrows, clean-shaven, short dark brown hair with subtle caramel blond highlights, voluminous swept-back hairstyle with side-swept front and tapered sides, wearing the SAME tailored deep navy blue suit (single-breasted blazer), crisp white dress shirt, black textured bow tie, matching navy trousers.
+Dùng đúng khuôn mặt, tóc, quần áo trong ảnh tham chiếu (lina_sheet.jpg / alex_sheet.jpg và các ảnh pose). Prompt phủ định chung: different person, face change, inconsistent face, different hairstyle, different outfit, different outfit color, anime, cartoon, illustration, 3d render, plastic skin, bad anatomy, extra fingers, bad hands, deformed hands, text, logo, watermark, jewelry, glasses, hat, duplicate person.
+
+CÁCH LÀM (bắt buộc theo thứ tự này)
+BƯỚC 1 - ẢNH GỐC (reference) cho từng nhân vật:
+  lina__calm__closed.png và alex__calm__closed.png
+  Từ ảnh tham chiếu, tạo ảnh nửa người (đỉnh đầu đến giữa đùi) đúng quy tắc trên: nét mặt bình thản thân thiện, MIỆNG ĐÓNG tự nhiên (môi khép nhẹ), hai tay thả lỏng phía trước.
+  Sau khi tạo xong 2 ảnh gốc: DỪNG LẠI, in ra đường dẫn hai file và chờ tôi gõ chữ "tiếp tục". Không làm bước 2 khi chưa có chữ đó.
+BƯỚC 2 - MỌI ẢNH KHÁC: KHÔNG tạo lại từ đầu. Luôn CHỈNH SỬA chính ảnh gốc (calm__closed) của nhân vật đó, với mệnh lệnh mẫu:
+  "Edit the attached picture. Keep the head position, head size, hair, clothes, body, lighting and canvas size exactly identical (1280x1536, transparent background). Change only: <thay đổi>."
+  Nếu ảnh trả về bị lệch đầu / đổi mặt / đổi quần áo: bỏ ảnh đó và chỉnh sửa lại từ ẢNH GỐC (không chỉnh từ ảnh hỏng). Thử tối đa 3 lần cho mỗi file; nếu vẫn hỏng, ghi vào log và đi tiếp.
+
+DANH SÁCH FILE (viết cho từng nhân vật: thay <ten> bằng lina hoặc alex). Làm TẦNG 1 trước, xong mới làm tầng 2, rồi tầng 3.
+
+TẦNG 1 (7 ảnh mỗi nhân vật)
+  <ten>__calm__closed.png       (ảnh gốc, đã làm ở bước 1)
+  <ten>__calm__open.png         change only: mouth slightly open as if saying a word ("ah"), upper teeth just visible, natural speaking, not a wide yawn
+  <ten>__smile__closed.png      change only: warm gentle smile, lips closed
+  <ten>__smile__open.png        change only: smiling while speaking, mouth open, teeth visible
+  <ten>__surprised__closed.png  change only: surprised expression, wide eyes, raised eyebrows, lips closed
+  <ten>__surprised__open.png    change only: surprised expression, wide eyes, raised eyebrows, mouth open
+  <ten>__blink.png              change only: both eyes closed gently as in a blink, mouth closed, everything else identical
+
+TẦNG 2 (8 ảnh mỗi nhân vật)
+  <ten>__laugh__closed.png      change only: happy laughing expression, eyes narrowed, big smile, lips closed
+  <ten>__laugh__open.png        change only: laughing, eyes narrowed, wide smile, mouth open
+  <ten>__thinking__closed.png   change only: thoughtful look, eyes slightly looking up and sideways, one eyebrow slightly raised, lips closed
+  <ten>__thinking__open.png     change only: thoughtful look, mouth slightly open as if saying "hmm"
+  <ten>__worried__closed.png    change only: worried look, eyebrows drawn together and slightly up, lips closed
+  <ten>__worried__open.png      change only: worried look, mouth slightly open speaking
+  <ten>__serious__closed.png    change only: serious calm expression, brows level, lips closed
+  <ten>__serious__open.png      change only: serious expression, mouth slightly open speaking
+
+TẦNG 3 - CỬ CHỈ (7 ảnh mỗi nhân vật; CHỈ đổi tay/cánh tay, ĐẦU và khuôn mặt giữ y hệt ảnh calm__closed)
+  <ten>__gesture-talk.png     change only: the arms: one hand raised at chest height with an open palm, explaining
+  <ten>__gesture-point.png    change only: the arms: one hand pointing to the side (toward the other person's side of the frame)
+  <ten>__gesture-think.png    change only: the arms: one hand on the chin, the other arm across the body
+  <ten>__gesture-open.png     change only: the arms: both hands open palms up at waist height, a small shrug
+  <ten>__gesture-heart.png    change only: the arms: one hand resting on the chest, sincere
+  <ten>__gesture-listen.png   change only: the arms: hands gently together in front, listening
+  <ten>__gesture-wave.png     change only: the arms: one hand raised waving hello, friendly
+
+KIỂM TRA SAU MỖI ẢNH (tự động, bằng Pillow)
+- đúng 1280x1536, có kênh alpha, 4 điểm góc ảnh có alpha = 0;
+- vùng alpha (bounding box) nằm gần như trùng với ảnh gốc: mép trên của đầu lệch tối đa 8 px so với ảnh gốc;
+- không có chữ/watermark; không đổi màu quần áo;
+- nếu trượt: tạo lại (tối đa 3 lần) như đã nói ở BƯỚC 2.
+
+GHI LOG
+- Ghi mỗi ảnh một dòng vào logs\sprites_log.csv: tên file, tầng, số lần thử, kết quả kiểm tra, prompt đã dùng.
+- Cho phép chạy lại: bỏ qua file đã tồn tại và đã qua kiểm tra.
+- Cuối cùng tạo 2 ảnh xem thử (mỗi nhân vật một ảnh gồm tất cả sprite xếp lưới, có tên file) trong thư mục logs, KHÔNG để ảnh xem thử trong thư mục đích. In ra bảng tóm tắt: số file đạt / hỏng theo từng tầng.
+
+ĐIỀU CẦN TRÁNH
+- Không đặt tên file khác quy ước (tên đúng dạng nhanvat__bieucam__mieng.png, ví dụ alex__smile__open.png).
+- Không đưa nhiều nhân vật vào cùng một ảnh. Không tạo collage trong thư mục đích.
+- Không xóa hay ghi đè ảnh tham chiếu.
