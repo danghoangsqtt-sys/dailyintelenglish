@@ -120,6 +120,10 @@ class Settings(BaseSettings):
     # Task 20.11: re-refine a person whose measured top/bottom colour misses the locked
     # colour, at most this many times per person per shot (0 disables the check).
     VISUALS_COLOUR_RETRIES: int = 2
+    # Task 29.1 (owner, 2026-10-07: both people stared into the lens): "off" = as before; "words" = gaze words in the
+    # prompts; "turned" = the words plus each person's face reference turned toward the other one (a library asset
+    # `face_turned`, mirrored for the person on the right; a character without one keeps its front face).
+    VISUALS_GAZE: Literal["off", "words", "turned"] = "off"
     # Task 20.11: re-render a duo whose head-level gap holds a third person (anime-seg
     # occupancy >= 0.5), at most this many times, keeping the emptiest render (0 disables).
     VISUALS_EXTRA_PERSON_RETRIES: int = 2

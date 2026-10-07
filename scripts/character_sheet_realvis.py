@@ -64,7 +64,7 @@ CHARACTERS = {
 
 # panel -> (size, ip_scale, view words, detailed description of the view); POSE gives the ControlNet scale
 POSE_SCALE = {"full_front": 0.85, "full_back": 0.85, "face_front": 0.6, "face_profile": 1.0,
-              "face_three_quarter": 1.0, "face_smile": 0.6, "face_surprised": 0.6}
+              "face_three_quarter": 1.0, "face_smile": 0.6, "face_surprised": 0.6, "face_turn": 1.0}
 PANELS = {
     "full_front": ((832, 1216), 0.55, "full body, standing straight facing camera, arms at sides",
                    "Full-body front view, standing upright, feet together, arms relaxed at the sides, facing the "
@@ -85,6 +85,10 @@ PANELS = {
                    "Close-up of the face and shoulders from the front with a warm natural smile, teeth slightly "
                    "visible, eyes engaged, hair framing the face; the talking-video expression."),
     # Task 28.4: the library locks a character only with four sheet views, one of them "surprised".
+    # Task 29.1: a reference for talking TO someone: the head turned about 35 degrees and the eyes glancing the same way.
+    "face_turn": ((1024, 1024), 0.12, "close-up portrait, head turned sharply to the right, three-quarter view, eyes looking away from the camera to the right, gentle smile",
+                  "Close-up with the head turned about 35 degrees to the right and the eyes looking to the right, "
+                  "as when listening to the person beside."),
     "face_surprised": ((1024, 1024), 0.3, "close-up portrait, shocked surprised expression, mouth wide open in surprise, raised eyebrows, wide eyes",
                        "Close-up of the face and shoulders from the front with a surprised expression: raised "
                        "eyebrows, wide eyes and a slightly open mouth."),
@@ -99,6 +103,9 @@ def prompt_for(char: dict, panel: str) -> tuple[str, str]:
         return (f"{style}, {char['identity']}, {char['outfit']}, {view}, {char['body']}",
                 f"{NEG_COMMON}, {char['negative']}")
     negative = f"{NEG_COMMON}, {char['negative']}"
+    if panel == "face_turn":  # the identity reference is frontal: forbid the stare into the lens
+        negative = ("looking at the camera, front view, blurry, cartoon, 3d render, ugly, deformed, extra person, glasses, "
+                    "text, watermark, " + char["negative"])
     if panel == "face_surprised":  # the identity reference is calm or smiling: forbid those expressions
         negative = ("smile, closed mouth, calm, blurry, cartoon, 3d render, ugly, deformed, extra person, glasses, "
                     "text, watermark, " + char["negative"])
@@ -148,6 +155,8 @@ def pose_map(char: dict, panel: str):
                          "l_ear": (-0.1, -0.05), "r_ear": None},
         "face_three_quarter": {"nose": (0.25, 0), "r_eye": (0.02, -0.12), "l_eye": (0.34, -0.12),
                                "l_ear": (-0.12, -0.05), "r_ear": None},
+        "face_turn": {"nose": (0.58, 0), "r_eye": (0.20, -0.12), "l_eye": (0.58, -0.12),
+                      "l_ear": (-0.02, -0.05), "r_ear": None},
     }.get(panel)
     out = []
     for key, pt in zip(keys, points, strict=True):

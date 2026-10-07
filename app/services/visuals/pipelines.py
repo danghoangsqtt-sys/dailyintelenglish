@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 from app.core.config import settings
 from app.core.exceptions import ConflictError
@@ -163,6 +163,28 @@ COLOUR_RETRY_STRENGTH = 0.8
 EXTRA_PERSON_SEED_STEP = 7919
 
 
+def gaze_reference(face: str, turned: str | None, side: str, folder: Path) -> str:
+    """Task 29.1: the IP-Adapter face reference of a person who looks toward `side`. The turned face (a library asset)
+    looks right; for "left" a mirrored copy is made once next to it. A character without one keeps its front face."""
+    if not turned:
+        return face
+    if side == "right":
+        return turned
+    flipped = Path(folder) / "face_turned_flipped.png"
+    if not flipped.is_file() or flipped.stat().st_mtime < Path(turned).stat().st_mtime:
+        with Image.open(turned) as source:
+            ImageOps.mirror(source.convert("RGB")).save(flipped, format="PNG")
+    return str(flipped)
+
+
+def gaze_sides(kind: str, indexes: list[int]) -> list[str]:
+    """Where each person of a shot looks: a duo looks at each other (left person right, right person left); a single
+    speaker looks to the side of the partner (speaker 0 right, speaker 1 left: the classic shot / reverse shot)."""
+    if kind == "single":
+        return ["right" if indexes[0] == 0 else "left"]
+    return ["right", "left"]
+
+
 async def _count_faces(session, image_path: Path, expected: int) -> int:
     """Task 28.5: the faces a picture shows (the fake engine answers `expected_faces`)."""
     response = await session.request({"command": "count_faces", "input_path": str(image_path),
@@ -243,7 +265,8 @@ async def _colour_pass(session, runner: ImageJobRunner, job: dict, context: dict
             destination = folder / f"colour_fixed_{index}_{attempts}.png"
             await asyncio.to_thread(_save, mask, mask_path)
             await session.request({
-                "command": "generate", "prompt": recipes.garment_refine_prompt(character, context["scene"]),
+                "command": "generate", "prompt": recipes.garment_refine_prompt(character, context["scene"],
+                                                                         gaze=context["sides"][index]),
                 "negative_prompt": recipes.negative_for(character), "seed": row["seed"] + 300 + 10 * attempts + index,
                 "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,
                 "output_path": str(rendered), "init_image": str(current), "mask_image": str(mask_path),
@@ -270,10 +293,11 @@ async def _contexts(db, project_id: str, rows: list[dict]) -> list[dict[str, Any
                   for scene_id in {row["scene_id"] for row in rows if row["scene_id"]}}
         characters = {index: await library.get_character_row(db, member["character_id"])
                       for index, member in cast.items()}
-        faces = {}
+        faces, turned_faces = {}, {}
         for index, member in cast.items():
             assets = await library.list_assets(db, member["character_id"])
             faces[index] = next(asset["path"] for asset in assets if asset["kind"] == "face")
+            turned_faces[index] = next((asset["path"] for asset in assets if asset["kind"] == "face_turned"), None)
     contexts = []
     for row in rows:
         indexes = json.loads(row["speaker_indexes"])
@@ -287,17 +311,29 @@ async def _contexts(db, project_id: str, rows: list[dict]) -> list[dict[str, Any
         people = [characters[index] for index in indexes]
         scene = scenes[row["scene_id"]]
         action, expression = row.get("action") or "", row.get("expression") or "calm"
+        gaze_on = settings.VISUALS_GAZE != "off"
+        sides = gaze_sides(kind, indexes)
+        single_gaze = sides[0] if gaze_on else None
         if action or expression != "calm":  # Task 24.3/24.5a: a storyboard beat's action and mood
-            prompt = (recipes.beat_single_prompt(people[0], scene, action, expression) if kind == "single"
-                      else recipes.beat_duo_prompt(people[0], people[1], scene, kind, action, expression))
+            prompt = (recipes.beat_single_prompt(people[0], scene, action, expression, gaze=single_gaze)
+                      if kind == "single"
+                      else recipes.beat_duo_prompt(people[0], people[1], scene, kind, action, expression,
+                                                   gaze=gaze_on))
             poses = geometry.beat_people(kind, scene["staging"], SIZE,
                                          [geometry.action_category(action)] * len(indexes))
         else:  # legacy shot sets keep their exact prompts and poses
-            prompt = (recipes.single_prompt(people[0], scene) if kind == "single"
-                      else recipes.duo_prompt(people[0], people[1], scene, kind))
+            prompt = (recipes.single_prompt(people[0], scene, gaze=single_gaze) if kind == "single"
+                      else recipes.duo_prompt(people[0], people[1], scene, kind, gaze=gaze_on))
             poses = geometry.shot_people(kind, scene["staging"], SIZE)
+        if gaze_on and kind == "single":  # a duo skeleton already turns its heads inward
+            poses = [geometry.turn_head(pose, side) for pose, side in zip(poses, sides, strict=True)]
+        shot_faces = [faces[index] for index in indexes]
+        if settings.VISUALS_GAZE == "turned":
+            shot_faces = [gaze_reference(faces[index], turned_faces[index], side,
+                                         Path(faces[index]).parent)
+                          for index, side in zip(indexes, sides, strict=True)]
         contexts.append({"row": row, "indexes": indexes, "characters": people,
-                         "faces": [faces[index] for index in indexes], "scene": scene,
+                         "faces": shot_faces, "scene": scene, "sides": sides if gaze_on else [None] * len(indexes),
                          "prompt": prompt, "folder": folder, "people": poses})
     return contexts
 
@@ -480,7 +516,8 @@ async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows
                     await asyncio.to_thread(_save, mask, mask_path)
                     await session.request({
                         "command": "generate", "prompt": recipes.refine_prompt(context["characters"][index],
-                                                                                   context["scene"]),
+                                                                                   context["scene"],
+                                                                                   gaze=context["sides"][index]),
                         "negative_prompt": recipes.negative_for(context["characters"][index]),
                         "seed": row["seed"] + 100 + index,
                         "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,

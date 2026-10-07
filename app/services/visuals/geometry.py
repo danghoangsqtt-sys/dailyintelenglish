@@ -57,6 +57,25 @@ def person_pose(
     ]
 
 
+def turn_head(person: dict[str, Any], side: str) -> dict[str, Any]:
+    """Task 29.1: the same person with the head keypoints turned toward `side` ("right" / "left"), the body untouched.
+    A frontal head makes the ControlNet pose and the face reference agree on a stare into the lens."""
+    if side not in ("right", "left"):
+        raise ValueError("side must be 'right' or 'left'")
+    sign = 1 if side == "right" else -1
+    points = dict(zip(_KEYS, person["points"], strict=True))
+    neck, nose = points["neck"], points["nose"]
+    if neck is None or nose is None:
+        return person
+    unit = person["head_h"] * 768.0  # `head_h` is a fraction of the frame height (every shot is 768 high)
+    cx, ny = neck[0], nose[1]
+    points["nose"] = (cx + 0.25 * unit * sign, ny)
+    points["r_eye"] = (cx + (-0.13 + 0.15 * sign) * unit, ny - 0.12 * unit)
+    points["l_eye"] = (cx + (0.13 + 0.15 * sign) * unit, ny - 0.12 * unit)
+    points["l_ear" if side == "right" else "r_ear"] = None
+    return {**person, "points": [points[key] for key in _KEYS]}
+
+
 def shot_people(kind: str, staging: str, size: tuple[int, int] = (1344, 768)) -> list[dict[str, Any]]:
     """Exact r8 single/duo head heights, positions, gestures and legs."""
     if kind == "single":

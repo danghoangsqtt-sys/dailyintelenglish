@@ -97,17 +97,22 @@ def scene_preview_prompt(scene: Mapping) -> str:
     return _styled(scene["place"], *((light,) if light else ()), "wide view, empty scene, no people")
 
 
-def single_prompt(character: Mapping, scene: Mapping) -> str:
+def gaze_words(side: str | None) -> tuple[str, ...]:
+    """Task 29.1: where a person looks ("right" / "left"), as prompt parts; nothing when `side` is None."""
+    return (f"looking to the {side}",) if side else ()
+
+
+def single_prompt(character: Mapping, scene: Mapping, gaze: str | None = None) -> str:
     # Task 23.3: "close-up, talking" (was "..., talking with a hand gesture"): with the longest
     # character the real CLIP tokenizer counted 78-79 tokens for the built-in Cafe/Classroom
     # places, cutting the place's last word (the estimator said 74). The pose sets the hand.
-    return _styled(character_phrase(character), f"close-up, talking, in {scene['place']}")
+    return _styled(character_phrase(character), "close-up, talking", *gaze_words(gaze), f"in {scene['place']}")
 
 
-def duo_prompt(left: Mapping, right: Mapping, scene: Mapping, kind: str) -> str:
+def duo_prompt(left: Mapping, right: Mapping, scene: Mapping, kind: str, gaze: bool = False) -> str:
     base = (
         f"two {left['ethnicity']} people talking face to face, {duo_person(left)} on the left, "
-        f"{duo_person(right)} on the right"
+        f"{duo_person(right)} on the right" + (", looking at each other" if gaze else "")
     )
     if kind == "duo_close":
         return _styled(base, f"close-up, in {scene['place']}")
@@ -116,17 +121,17 @@ def duo_prompt(left: Mapping, right: Mapping, scene: Mapping, kind: str) -> str:
     return _styled(base, f"standing in {scene['place']}")
 
 
-def refine_prompt(character: Mapping, scene: Mapping) -> str:
-    return _styled(character_phrase(character), f"talking, in {scene['place']}")
+def refine_prompt(character: Mapping, scene: Mapping, gaze: str | None = None) -> str:
+    return _styled(character_phrase(character), "talking", *gaze_words(gaze), f"in {scene['place']}")
 
 
-def garment_refine_prompt(character: Mapping, scene: Mapping) -> str:
+def garment_refine_prompt(character: Mapping, scene: Mapping, gaze: str | None = None) -> str:
     """Task 20.11 colour retry: the garments lead (right after the style), so the locked
     colours carry the most weight when one person's region is repainted."""
     gender_noun = "woman" if character["gender"] == "female" else "man"
     return _styled(
         f"{outfit_phrase(character)}, {character['age_group']} {character['ethnicity']} {gender_noun}, "
-        f"{character['hair']}, talking, in {scene['place']}"
+        f"{character['hair']}, talking" + (f", {gaze_words(gaze)[0]}" if gaze else "") + f", in {scene['place']}"
     )
 
 
@@ -188,21 +193,23 @@ def insert_prompt(subject: str) -> str:
     return _styled(subject, "wide view, detailed scene")
 
 
-def beat_single_prompt(character: Mapping, scene: Mapping, action: str, expression: str) -> str:
+def beat_single_prompt(character: Mapping, scene: Mapping, action: str, expression: str,
+                       gaze: str | None = None) -> str:
     feeling = EXPRESSION_WORDS.get(expression, EXPRESSION_WORDS["calm"])
 
     def build(act: str, place: str) -> str:
-        return _styled(compact_phrase(character), "close-up", feeling, act or "talking",
+        return _styled(compact_phrase(character), "close-up", feeling, *gaze_words(gaze), act or "talking",
                        *((f"in {place}",) if place else ()))
 
     return fit_budget(build, action, scene["place"])
 
 
-def beat_duo_prompt(left: Mapping, right: Mapping, scene: Mapping, kind: str, action: str, expression: str) -> str:
+def beat_duo_prompt(left: Mapping, right: Mapping, scene: Mapping, kind: str, action: str, expression: str,
+                    gaze: bool = False) -> str:
     feeling = EXPRESSION_WORDS.get(expression, EXPRESSION_WORDS["calm"])
     base = (
         f"two {left['ethnicity']} people talking face to face, {duo_person(left)} on the left, "
-        f"{duo_person(right)} on the right"
+        f"{duo_person(right)} on the right" + (", looking at each other" if gaze else "")
     )
     framing = ("close-up" if kind == "duo_close" else
                "sitting at a table" if scene["staging"] == "seated" else "standing")
