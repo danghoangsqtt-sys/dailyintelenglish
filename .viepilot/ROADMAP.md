@@ -1379,7 +1379,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 **Status:** 🟡 Planned 2026-10-07 | Plan `docs/implementation/phase-29-shot-library.md`. Starts after Gate B-20.
 
 - [x] 29.0 Cleaner cuts (owner feedback 2026-10-07)
-- [ ] 29.1 Gaze toward the other person (spike, then the fix)
+- [x] 29.1 Gaze toward the other person (spike, then the fix)
 - [ ] 29.2 Inserts with a character
 - [ ] 29.3 Library vocabulary spike (variants, gestures, camera angles)
 - [ ] 29.4 Data model and service

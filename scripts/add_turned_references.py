@@ -1,4 +1,4 @@
-"""Task 29.1: give Lan and Minh a turned face reference (asset kind `face_turned`) for the gaze toward the other person.
+r"""Task 29.1: give Lan and Minh a turned face reference (asset kind `face_turned`) for the gaze toward the other person.
 
     venv\Scripts\python scripts\add_turned_references.py                      # the data folder of the settings
     DIE_DATA_DIR=data/tmp/smoke28-4b venv\Scripts\python scripts\add_turned_references.py   # a throw-away copy
