@@ -168,7 +168,50 @@
     showMessage(...note); // load() clears the message, so the result is shown after it
   }
 
+  async function refreshInbox() {
+    try {
+      const inbox = await Api.getLibraryInbox();
+      byId("inbox-folder").textContent = inbox.folder;
+      byId("inbox-count").textContent = inbox.files.length
+        ? `${inbox.files.length} picture${inbox.files.length === 1 ? "" : "s"} waiting in the folder` : "The folder is empty.";
+      byId("import-btn").disabled = state.busy || inbox.files.length === 0;
+    } catch (error) {
+      console.error("Failed to read the inbox folder:", error);
+    }
+  }
+
+  async function importInbox() {
+    state.busy = true;
+    byId("import-btn").disabled = true;
+    const list = byId("import-result");
+    list.replaceChildren();
+    try {
+      const result = await Api.importLibraryInbox();
+      const summary = document.createElement("li");
+      summary.textContent = `${result.imported.length} imported, ${result.skipped.length} left in the folder.`;
+      list.append(summary);
+      result.imported.filter((item) => item.cropped).forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = `${item.file}: cropped to 16:9 (the top was kept).`;
+        list.append(li);
+      });
+      result.skipped.forEach((item) => {
+        const li = document.createElement("li");
+        li.className = "is-error";
+        li.textContent = `${item.file}: ${item.reason}`;
+        list.append(li);
+      });
+    } catch (error) {
+      showMessage(error.message || "Could not import the pictures.");
+    }
+    state.busy = false;
+    await load();
+    await refreshInbox();
+  }
+
   function setup() {
+    byId("import-btn").addEventListener("click", importInbox);
+    refreshInbox();
     [["filter-scene", "scene_id"], ["filter-kind", "kind"], ["filter-state", "review_state"]].forEach(([id, key]) => {
       byId(id).addEventListener("change", (event) => {
         state.filters[key] = event.target.value;

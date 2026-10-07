@@ -98,3 +98,34 @@ async def test_the_empty_library_says_what_to_do_and_the_sidebar_links_to_it(bro
     await link.click()
     await page.wait_for_url("**/shots")
     await page.close()
+
+
+@pytest.mark.asyncio
+async def test_pictures_dropped_in_the_inbox_folder_are_imported_from_the_page(browser_instance: Browser, live_server_url: str):
+    import sqlite3
+
+    from PIL import Image
+
+    from app.services.visuals import shot_library_service as lib
+    from tests.test_visuals_project_api import locked_character
+
+    lina, alex = locked_character("Lina", "white"), locked_character("Alex", "navy")
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute("UPDATE characters SET gender = 'male' WHERE id = ?", (alex,))
+        connection.execute("UPDATE characters SET created_at = '2026-01-01' WHERE id = ?", (lina,))
+    lib.inbox_dir().mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (1344, 768), (10, 120, 10)).save(lib.inbox_dir() / "park__duo-wide-lina-alex.png")
+    Image.new("RGB", (1344, 768), (10, 10, 120)).save(lib.inbox_dir() / "nowhere__duo-wide.png")
+    page = await browser_instance.new_page()
+    await page.goto(f"{live_server_url}/shots")
+    await page.locator("#import-card summary").click()
+    await page.wait_for_function("document.getElementById('inbox-count').textContent.includes('2 pictures')")
+    assert (await page.locator("#inbox-folder").text_content()).endswith("shots_inbox")
+    before = await page.locator("#shot-grid .shot-card").count()
+    await page.click("#import-btn")
+    await page.locator("#import-result li.is-error").wait_for()
+    results = await page.locator("#import-result li").all_text_contents()
+    assert results[0].startswith("1 imported, 1 left") and "unknown scene" in results[1]
+    await page.wait_for_function(f"document.querySelectorAll('#shot-grid .shot-card').length === {before + 1}")
+    assert "1 picture waiting" in await page.locator("#inbox-count").text_content()
+    await page.close()

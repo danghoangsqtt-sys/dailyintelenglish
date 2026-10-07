@@ -10,12 +10,14 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import re
 import shutil
 import uuid
 from pathlib import Path
 from typing import Any
 
 import aiosqlite
+from PIL import Image
 
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
@@ -212,6 +214,164 @@ async def find_match(db: aiosqlite.Connection, *, scene_id: str, kind: str, char
         return None
     usable.sort(key=lambda row: (row["use_count"], row["last_used_at"] or ""))
     return usable[0]
+
+
+async def delete_for_character(db: aiosqlite.Connection, character_id: str) -> int:
+    """Remove every library shot that shows this character (a deleted character leaves no orphan pictures).
+    Caller holds the write transaction; returns how many were removed."""
+    cursor = await db.execute("SELECT id, path, character_ids_json FROM shot_library")
+    doomed = [row for row in await cursor.fetchall() if character_id in json.loads(row["character_ids_json"])]
+    for row in doomed:
+        await db.execute("DELETE FROM shot_library WHERE id = ?", (row["id"],))
+        await asyncio.to_thread(Path(row["path"]).unlink, True)
+    return len(doomed)
+
+
+# ---- importing the owner's own pictures (Phase 31) ------------------------------------------------------------------------
+
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
+EXPRESSIONS = ("calm", "smile", "laugh", "surprised", "thinking", "worried", "serious")
+TARGET_ASPECT = 16 / 9
+ASPECT_TOLERANCE = 0.06  # a picture within 6% of 16:9 is kept as it is
+CROP_TOP_ANCHOR = 0.15  # a taller picture loses most of its bottom (the heads are at the top)
+
+
+def inbox_dir() -> Path:
+    return settings.DATA_DIR / "library" / "shots_inbox"
+
+
+def _slug(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+def parse_inbox_name(stem: str) -> dict[str, Any]:
+    """`scene__framing[__action words][__expression]`: framing is `duo-wide`, `duo-close` (the woman on the left, the man
+    on the right), `duo-wide-rev` / `duo-close-rev` (the other way round), `duo-wide-<left>-<right>` (the two names, left to
+    right: needed when the library has more than two characters) or `single-<character name>`. Raises ValueError."""
+    parts = [part for part in stem.split("__") if part]
+    if len(parts) < 2:
+        raise ValueError("the name must be scene__framing, for example cafe__duo-wide")
+    scene, framing, rest = parts[0], _slug(parts[1]), parts[2:]
+    match = re.fullmatch(r"(duo-wide|duo-close)(?:-(?!rev)([a-z0-9]+)-([a-z0-9]+))?(-rev)?|single-([a-z0-9-]+)", framing)
+    if match is None:
+        raise ValueError(f"framing '{parts[1]}' is not duo-wide, duo-close, duo-wide-rev, duo-close-rev, "
+                         "duo-wide-<left>-<right> or single-<name>")
+    expression, action = "calm", ""
+    for part in rest:
+        if _slug(part) in EXPRESSIONS:
+            expression = _slug(part)
+        else:
+            action = " ".join(re.sub(r"[^A-Za-z]+", " ", part).split()).lower()
+    kind = "single" if match.group(5) else match.group(1).replace("-", "_")
+    return {"scene": scene, "kind": kind, "reverse": bool(match.group(4)), "single": match.group(5),
+            "pair": (match.group(2), match.group(3)) if match.group(2) else None, "action": action, "expression": expression}
+
+
+async def _resolve_scene(db: aiosqlite.Connection, token: str) -> str | None:
+    wanted = _slug(token)
+    cursor = await db.execute("SELECT id, name FROM scenes")
+    for row in await cursor.fetchall():
+        if wanted in (_slug(row["id"]), _slug(row["id"]).removeprefix("builtin-"), _slug(row["name"])):
+            return row["id"]
+    return None
+
+
+async def _resolve_characters(db: aiosqlite.Connection, parsed: dict[str, Any]) -> list[str]:
+    cursor = await db.execute("SELECT id, name, gender FROM characters WHERE status = 'locked' ORDER BY created_at, rowid")
+    people = [dict(row) for row in await cursor.fetchall()]
+    if parsed["single"]:
+        match = [p for p in people if _slug(p["name"]) == parsed["single"]]
+        if not match:
+            raise ValueError(f"no locked character named '{parsed['single']}'")
+        return [match[0]["id"]]
+    if parsed.get("pair"):
+        by_name = {_slug(p["name"]): p["id"] for p in people}
+        missing = [name for name in parsed["pair"] if name not in by_name]
+        if missing:
+            raise ValueError(f"no locked character named '{missing[0]}'")
+        return [by_name[name] for name in parsed["pair"]]
+    if len(people) != 2:
+        raise ValueError("a duo picture needs exactly two locked characters in the library, or the names: "
+                         "duo-wide-<left>-<right>")
+    people.sort(key=lambda p: 0 if p["gender"] == "female" else 1)  # the woman on the left, the man on the right
+    ordered = [people[0]["id"], people[1]["id"]]
+    return ordered[::-1] if parsed["reverse"] else ordered
+
+
+def _fit_16_9(path: Path, target: Path) -> bool:
+    """Save the picture as a PNG; a picture that is not about 16:9 is cropped to it (the top is kept). True if cropped."""
+    with Image.open(path) as source:
+        image = source.convert("RGB")
+    width, height = image.size
+    cropped = False
+    if abs(width / height - TARGET_ASPECT) / TARGET_ASPECT > ASPECT_TOLERANCE:
+        cropped = True
+        if width / height < TARGET_ASPECT:  # too tall: cut height
+            new_height = round(width / TARGET_ASPECT)
+            top = round((height - new_height) * CROP_TOP_ANCHOR)
+            image = image.crop((0, top, width, top + new_height))
+        else:  # too wide: cut width, centred
+            new_width = round(height * TARGET_ASPECT)
+            left = (width - new_width) // 2
+            image = image.crop((left, 0, left + new_width, height))
+    target.parent.mkdir(parents=True, exist_ok=True)
+    image.save(target, format="PNG")
+    return cropped
+
+
+async def import_picture(db: aiosqlite.Connection, source: Path, scene_id: str, kind: str, character_ids: list[str],
+                         action: str = "", expression: str = "calm") -> tuple[dict, bool]:
+    """Add the owner's own picture to the library as `pending`. Returns (the library shot, whether it was cropped).
+    Caller holds the write transaction. A picture already in the library (same content) raises ConflictError."""
+    library_id = str(uuid.uuid4())
+    target = shots_dir() / f"{library_id}.png"
+    cropped = await asyncio.to_thread(_fit_16_9, source, target)
+    digest = await asyncio.to_thread(_sha, target)
+    cursor = await db.execute("SELECT 1 FROM shot_library WHERE content_sha = ?", (digest,))
+    if await cursor.fetchone() is not None:
+        await asyncio.to_thread(target.unlink, True)
+        raise ConflictError("this picture is already in the library")
+    now = library._now()
+    await db.execute(
+        "INSERT INTO shot_library (id, kind, scene_id, character_ids_json, action, expression, gaze, face_signature, "
+        "path, content_sha, review_state, source_project_id, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, 'imported', ?, ?, ?, 'pending', NULL, ?, ?)",
+        (library_id, kind, scene_id, json.dumps(character_ids), action, expression,
+         await face_signature(db, character_ids), str(target), digest, now, now),
+    )
+    return _view(await _get_row(db, library_id)), cropped
+
+
+def list_inbox() -> list[str]:
+    folder = inbox_dir()
+    if not folder.is_dir():
+        return []
+    return sorted(p.name for p in folder.iterdir() if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS)
+
+
+async def import_inbox(db: aiosqlite.Connection) -> dict[str, list]:
+    """Import every picture of the inbox folder (named by the convention above). Imported files move to `imported/`;
+    a file that cannot be imported stays, with the reason. Caller holds the write transaction."""
+    folder = inbox_dir()
+    imported, skipped = [], []
+    for name in list_inbox():
+        path = folder / name
+        try:
+            parsed = parse_inbox_name(path.stem)
+            scene_id = await _resolve_scene(db, parsed["scene"])
+            if scene_id is None:
+                raise ValueError(f"unknown scene '{parsed['scene']}' (use a scene id or name from the list)")
+            characters = await _resolve_characters(db, parsed)
+            shot, cropped = await import_picture(db, path, scene_id, parsed["kind"], characters, parsed["action"],
+                                                 parsed["expression"])
+        except (ValueError, ConflictError) as error:
+            skipped.append({"file": name, "reason": str(error)})
+            continue
+        done = folder / "imported"
+        await asyncio.to_thread(done.mkdir, parents=True, exist_ok=True)
+        await asyncio.to_thread(shutil.move, str(path), str(done / name))
+        imported.append({"file": name, "id": shot["id"], "scene_id": scene_id, "kind": parsed["kind"], "cropped": cropped})
+    return {"imported": imported, "skipped": skipped}
 
 
 async def mark_used(db: aiosqlite.Connection, shot_id: str) -> None:

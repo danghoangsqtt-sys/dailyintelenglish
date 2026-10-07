@@ -91,17 +91,9 @@ async def test_each_page_renders_and_navigates_shared_step_nav(
         "#step-nav .step-nav-pill:not(.active)"
     ).first.evaluate("element => getComputedStyle(element).color")
 
-    if current_step in (2, 3, 4, 5, 6, 7):
-        # Steps 2-7 use the 3-panel shell — #step-nav lives inside #pane-sidebar,
-        # not directly under the topbar.
-        assert await page.locator("#pane-sidebar #step-nav .step-nav-workflow").count() == 1
-        assert await page.locator("#step-nav .workflow-item .step-dot.active").text_content() == str(current_step)
-    else:
-        is_between_header_and_main = await page.locator("#step-nav").evaluate(
-            "element => element.previousElementSibling?.matches('header.topbar') === true "
-            "&& element.nextElementSibling?.matches('main.main') === true"
-        )
-        assert is_between_header_and_main
+    # Task 27.4: all seven steps use the 3-panel shell: #step-nav lives inside #pane-sidebar, not under the topbar.
+    assert await page.locator("#pane-sidebar #step-nav .step-nav-workflow").count() == 1
+    assert await page.locator("#step-nav .workflow-item .step-dot.active").text_content() == str(current_step)
 
     target_step = 7 if current_step != 7 else 1
     target = page.locator(f'#step-nav .step-nav-pill[data-step="{target_step}"]')

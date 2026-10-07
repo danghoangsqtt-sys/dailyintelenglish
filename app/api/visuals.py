@@ -240,6 +240,18 @@ async def list_library_shots(
     return ok(rows)
 
 
+@router.get("/library/inbox")
+async def library_inbox() -> dict:
+    return ok({"folder": str(shot_library.inbox_dir()), "files": shot_library.list_inbox()})
+
+
+@router.post("/library/inbox/import")
+async def import_library_inbox(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        result = await shot_library.import_inbox(db)
+    return ok(result)
+
+
 @router.patch("/library/shots/{shot_id}")
 async def review_library_shot(shot_id: str, body: ShotReviewInput, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     async with write_transaction(db):

@@ -114,7 +114,8 @@ def check_person(image: Image.Image, person: dict[str, Any], character: dict[str
     """{'top': {...}, 'bottom': {...}|None, 'ok': bool}; an unmeasurable region never fails."""
     result: dict[str, Any] = {"ok": True}
     parts = [("top", top_box, character["top_color"])]
-    if check_bottom:
+    # A dress is one garment: the thighs below it are skin, not the bottom colour (Phase 31).
+    if check_bottom and character["top_item"] != character["bottom_item"]:
         parts.append(("bottom", bottom_box, character["bottom_color"]))
     for name, box_of, colour in parts:
         box = box_of(person, image.size)

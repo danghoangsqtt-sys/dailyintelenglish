@@ -27,10 +27,14 @@ def negative_for(*characters: Mapping) -> str:
     Stays within 77 real CLIP tokens (tested)."""
     colours = {character[key] for character in characters for key in ("top_color", "bottom_color")}
     negative = NEGATIVE
+    suit = any(character["top_item"] == "suit jacket" for character in characters)
+    if suit:  # Phase 31: a suit is a jacket over a white shirt and a tie: do not fight any of it
+        negative = negative.replace("jacket, ", "").replace(", multicolored clothes", "")
     if "black" in colours and "navy blue" not in colours:
         negative = negative.replace("multicolored clothes", "navy blue clothes")
     if "white" in colours:
-        negative += ", blazer"
+        if not suit:
+            negative += ", blazer"
         if not any(character["bottom_item"] == "jeans" for character in characters):
             negative += ", blue jeans"
     return negative
@@ -56,13 +60,20 @@ def _styled(*parts: str) -> str:
     return ", ".join((STYLE_EDITORIAL, *parts))
 
 
+# Phase 31: what is always worn with a garment (Alex's suit comes with a white shirt and a black bow tie).
+ACCESSORIES = {"suit jacket": ", white shirt, black bow tie"}
+
+
 def outfit_phrase(character: Mapping) -> str:
     """The locked outfit. A single-colour outfit (the Phase 28 characters: the woman all white, the man
-    all black) names its colour once; two colours name each garment."""
+    all black) names its colour once; two colours name each garment; a dress is one garment."""
+    accessory = ACCESSORIES.get(character["top_item"], "")
+    if character["top_item"] == character["bottom_item"]:
+        return f"plain {character['top_color']} {character['top_item']}"
     if character["top_color"] == character["bottom_color"]:
-        return f"plain {character['top_color']} {character['top_item']} and {character['bottom_item']}"
+        return f"plain {character['top_color']} {character['top_item']} and {character['bottom_item']}{accessory}"
     return (f"plain {character['top_color']} {character['top_item']}, plain {character['bottom_color']} "
-            f"{character['bottom_item']}")
+            f"{character['bottom_item']}{accessory}")
 
 
 def character_phrase(character: Mapping) -> str:

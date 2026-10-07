@@ -14,6 +14,12 @@
     .shot-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 18px 0; }
     .shot-filters label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
     .shot-filters select { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--surface-border); background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
+    .import-card { margin: 14px 0; padding: 12px 16px; border: 1px solid var(--surface-border); border-radius: 12px; background: var(--surface); font-size: 13px; }
+    .import-card summary { cursor: pointer; font-weight: 700; }
+    .import-card code { padding: 1px 5px; border-radius: 4px; background: var(--accent-soft); font-size: 12px; }
+    .import-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+    .import-result { margin: 10px 0 0; padding-left: 18px; color: var(--text-muted); }
+    .import-result .is-error { color: var(--danger); }
     .shot-summary { color: var(--text-muted); font-size: 13px; margin: 0 0 14px; }
     .shot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
     .shot-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--surface-border); border-left-width: 4px; border-radius: 12px; background: var(--surface); }
@@ -57,6 +63,26 @@
         reuses approved pictures that match its scene, framing, action and mood, and draws only what is missing. A picture of
         a character that was changed afterwards shows as stale and is never reused.</p>
     </section>
+    <details class="import-card" id="import-card">
+      <summary>Add your own pictures</summary>
+      <p>Copy pictures of the two characters into this folder, named <code>scene__framing</code>, then press Import:
+        <code id="inbox-folder"></code></p>
+      <ul>
+        <li><code>cafe__duo-wide.png</code>, <code>cafe__duo-close.png</code>: the woman on the left, the man on the right;
+          add <code>-rev</code> (<code>cafe__duo-wide-rev.png</code>) when the man is on the left, or name them left to right:
+          <code>cafe__duo-wide-alex-lina.png</code>.</li>
+        <li><code>cafe__single-lina.png</code>, <code>cafe__single-alex.png</code>: one person (the character's name).</li>
+        <li>Optional parts after the framing: an action and one of calm, smile, laugh, surprised, thinking, worried, serious,
+          for example <code>cafe__duo-wide__drinking-coffee__smile.png</code>.</li>
+        <li>The scene is a scene id or name without spaces: <code>cafe</code>, <code>city-street</code>, <code>living-room</code>.
+          Pictures should be 16:9; others are cropped to it (the top is kept). Imported pictures wait for your review below.</li>
+      </ul>
+      <div class="import-row">
+        <button id="import-btn" class="btn btn-primary" type="button">Import pictures</button>
+        <span id="inbox-count" class="shot-summary" role="status"></span>
+      </div>
+      <ul id="import-result" class="import-result" role="status"></ul>
+    </details>
     <div class="shot-filters" role="group" aria-label="Filters">
       <label>Scene <select id="filter-scene"><option value="">All scenes</option></select></label>
       <label>Framing <select id="filter-kind"><option value="">All</option><option value="single">Single</option><option value="duo_close">Duo close</option><option value="duo_wide">Duo wide</option></select></label>

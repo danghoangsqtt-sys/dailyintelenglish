@@ -1435,3 +1435,7 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 - [x] 22.5 YouTube description credit line from the episode's music (2026-10-06)
 - [x] 22.9 Automatic track classification (pace, ~BPM, energy, mood suggestion) + rhythm-aware auto-select (2026-10-06)
 - [ ] 22.6 Gate B-17 (owner listening test on a real episode) → 1.3.0-beta
+
+### Phase 31: Alex and Lina and the owner's pictures in the library (ENH-022) - done 2026-10-07
+- [x] 31.1 Alex (navy suit) and Lina (white mini dress), Russian, replace Lan and Minh
+- [x] 31.2 The owner's own pictures into the Shot Library (inbox folder, names carry the tags), the list of the 55 scenes

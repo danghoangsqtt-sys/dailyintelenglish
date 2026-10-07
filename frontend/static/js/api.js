@@ -125,6 +125,8 @@ const Api = (() => {
     reviewLibraryShot: (id, reviewState) => request(`/api/visuals/library/shots/${id}`, {
       method: "PATCH", body: JSON.stringify({ review_state: reviewState }),
     }),
+    getLibraryInbox: () => request("/api/visuals/library/inbox"),
+    importLibraryInbox: () => request("/api/visuals/library/inbox/import", { method: "POST" }),
     deleteLibraryShot: (id) => request(`/api/visuals/library/shots/${id}`, { method: "DELETE" }),
     addProjectShotToLibrary: (projectId, shotId) =>
       request(`/api/projects/${projectId}/visuals/shots/${shotId}/to-library`, { method: "POST" }),

@@ -198,6 +198,9 @@ async def delete_character(db: aiosqlite.Connection, character_id: str, force: b
         raise ConflictError("Character is used by a project cast; use force=true to remove those cast entries")
     if force:
         await db.execute("DELETE FROM project_cast WHERE character_id = ?", (character_id,))
+    from app.services.visuals import shot_library_service  # lazy: that module imports this one
+
+    await shot_library_service.delete_for_character(db, character_id)  # Phase 31: no orphan library pictures
     await db.execute("DELETE FROM characters WHERE id = ?", (character_id,))
 
 

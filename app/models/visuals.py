@@ -9,8 +9,10 @@ COLORS = (
     "white", "black", "navy blue", "light blue", "red", "yellow", "green", "beige",
     "grey", "pink", "brown", "orange",
 )
-TOPS = ("t-shirt", "shirt", "slim-fit shirt", "sweater", "blouse", "polo shirt")
-BOTTOMS = ("jeans", "trousers", "slim trousers", "skirt", "shorts")
+TOPS = ("t-shirt", "shirt", "slim-fit shirt", "sweater", "blouse", "polo shirt", "suit jacket", "mini dress")
+BOTTOMS = ("jeans", "trousers", "slim trousers", "skirt", "shorts", "suit trousers", "mini dress")
+# A dress is one garment: it is both the top and the bottom item, in one colour (Phase 31: Lina's white mini dress).
+ONE_PIECE = ("mini dress",)
 AGE_GROUPS = ("young", "adult", "middle-aged", "senior")
 GENDERS = ("female", "male")
 SCENE_CATEGORIES = ("home", "school", "work", "city", "countryside", "nature", "food", "travel", "other")
@@ -67,6 +69,9 @@ class CharacterInput(BaseModel):
         if self.top_item not in TOPS or self.bottom_item not in BOTTOMS:
             raise ValueError("choose one top and one bottom item")
         # Phase 28: one colour for both garments is allowed (the woman all white, the man all black).
+        if ((self.top_item in ONE_PIECE or self.bottom_item in ONE_PIECE)
+                and (self.top_item != self.bottom_item or self.top_color != self.bottom_color)):
+            raise ValueError("a dress is one garment: use it as the top and the bottom, in one colour")
         return self
 
 
