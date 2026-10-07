@@ -25,7 +25,9 @@ Rules:
 4. Every beat sets "kind": "scene" for people talking in a place, "insert" for an illustration.
    Use at most 3 "insert" beats, each for one concrete thing a speaker describes. An insert sets
    scene_id to null, new_place to what the picture shows (at most 5 plain words, for example
-   "crowded subway at rush hour"), and speakers to [] unless the characters appear in it.
+   "crowded subway at rush hour"), and speakers to [] for an object, a place or a crowd. When a
+   speaker does the thing (checking a phone, eating oatmeal, stretching), set speakers to that one
+   speaker index and put the action in action: the picture then shows that character.
 5. speakers: the speaker indexes on screen, usually the people talking in the beat (0, 1 or 2).
 6. action: what the on-screen people are doing, at most 8 plain words, visual and simple
    (for example "pointing at a city map", "drinking coffee"). Use "" when they just talk.

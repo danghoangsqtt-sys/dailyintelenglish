@@ -160,6 +160,7 @@ def _composite_refine(source: Path, rendered: Path, mask: Image.Image, destinati
 
 
 COLOUR_RETRY_STRENGTH = 0.8
+INSERT_FACE_SCALE = 0.5  # Task 29.2: the face reference of an insert that shows a character (sheet recipe: 0.45)
 EXTRA_PERSON_SEED_STEP = 7919
 
 
@@ -304,8 +305,16 @@ async def _contexts(db, project_id: str, rows: list[dict]) -> list[dict[str, Any
         folder = settings.DATA_DIR / "visuals" / project_id / "shots" / row["id"]
         kind = row["kind"]
         if kind == "insert":
+            person = next((index for index in indexes if index in characters), None)
+            subject = row.get("subject") or row.get("action") or ""
+            if person is not None:  # Task 29.2: a cast speaker does the thing: drawn with the character's face
+                contexts.append({"row": row, "insert": True, "folder": folder, "people": [],
+                                 "characters": [characters[person]], "faces": [faces[person]],
+                                 "prompt": recipes.insert_person_prompt(characters[person], row.get("action") or subject),
+                                 "negative": recipes.negative_for(characters[person])})
+                continue
             contexts.append({"row": row, "insert": True, "folder": folder, "people": [], "faces": [],
-                             "prompt": recipes.insert_prompt(row.get("subject") or "an illustration"),
+                             "prompt": recipes.insert_prompt(subject or "an illustration"),
                              "negative": recipes.PLATE_NEGATIVE if not indexes else recipes.NEGATIVE})
             continue
         people = [characters[index] for index in indexes]
@@ -339,26 +348,38 @@ async def _contexts(db, project_id: str, rows: list[dict]) -> list[dict[str, Any
 
 
 async def _render_inserts(db, engine, runner: ImageJobRunner, job: dict, inserts: list[dict]) -> None:
-    """Task 24.5a: insert shots are plain text2img illustrations (no faces, no plate, no pose);
-    their raw image is final."""
-    async with engine.session("text2img", ip="none", consumer="visuals_shots_inserts") as session:
-        for index, context in enumerate(inserts):
-            await runner.boundary(job["id"], f"insert {index + 1}/{len(inserts)}", 0)
-            row, folder = context["row"], context["folder"]
-            raw_path, final_path = folder / "raw.png", folder / "final.png"
-            response = await session.request({
-                "command": "generate", "prompt": context["prompt"], "negative_prompt": context["negative"],
-                "seed": row["seed"], "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,
-                "output_path": str(raw_path),
-            })
-            await asyncio.to_thread(shutil.copyfile, raw_path, final_path)
-            async with write_transaction(db):
-                await db.execute(
-                    "UPDATE project_shots SET raw_path = ?, final_path = ?, prompt_tokens = ?, prompt_truncated = ?, "
-                    "status = 'complete', updated_at = ? WHERE id = ?",
-                    (str(raw_path), str(final_path), response.get("prompt_tokens"),
-                     int(bool(response.get("prompt_truncated"))), library._now(), row["id"]),
-                )
+    """Task 24.5a: insert shots are text2img illustrations (no plate, no pose); their raw image is final. Task 29.2:
+    an insert that names a cast speaker is drawn with that character's face reference (IP-Adapter, the character
+    sheet's recipe); the others stay plain illustrations in the first session."""
+    plain = [context for context in inserts if not context["faces"]]
+    with_person = [context for context in inserts if context["faces"]]
+    done = 0
+    for contexts, session_args in ((plain, {"ip": "none", "consumer": "visuals_shots_inserts"}),
+                                   (with_person, {"ip": "with_encoder", "consumer": "visuals_shots_inserts_person"})):
+        if not contexts:
+            continue
+        async with engine.session("text2img", **session_args) as session:
+            for context in contexts:
+                done += 1
+                await runner.boundary(job["id"], f"insert {done}/{len(inserts)}", 0)
+                row, folder = context["row"], context["folder"]
+                raw_path, final_path = folder / "raw.png", folder / "final.png"
+                payload = {
+                    "command": "generate", "prompt": context["prompt"], "negative_prompt": context["negative"],
+                    "seed": row["seed"], "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,
+                    "output_path": str(raw_path),
+                }
+                if context["faces"]:
+                    payload.update({"ip_adapter_image": context["faces"][0], "ip_adapter_scale": INSERT_FACE_SCALE})
+                response = await session.request(payload)
+                await asyncio.to_thread(shutil.copyfile, raw_path, final_path)
+                async with write_transaction(db):
+                    await db.execute(
+                        "UPDATE project_shots SET raw_path = ?, final_path = ?, prompt_tokens = ?, prompt_truncated = ?, "
+                        "status = 'complete', updated_at = ? WHERE id = ?",
+                        (str(raw_path), str(final_path), response.get("prompt_tokens"),
+                         int(bool(response.get("prompt_truncated"))), library._now(), row["id"]),
+                    )
 
 
 async def recover_pending_shots(db) -> int:

@@ -7,7 +7,7 @@
 |---|---|---|
 | 29.0 | Cleaner cuts: near-hard cuts between shots (owner feedback 2026-10-07) | done 2026-10-07 (vitest 47, real render checked) |
 | 29.1 | Gaze toward the other person (spike, then the fix in the pipeline) | done 2026-10-07 (variant C `turned` is the default; `docs/operations/phase29-gaze.md`) |
-| 29.2 | Inserts with a character | **in_progress** 2026-10-07 (card `tasks/task-29.2.md`) |
+| 29.2 | Inserts with a character | done 2026-10-07 (`docs/operations/phase29-inserts.md`) |
 | 29.3 | Library vocabulary spike (variants, gestures, camera angles) | planned |
 | 29.4 | Data model and service (shot_library, review state) | planned |
 | 29.5 | Matcher and the library-first shot job | planned |

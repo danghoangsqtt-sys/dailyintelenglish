@@ -193,6 +193,15 @@ def insert_prompt(subject: str) -> str:
     return _styled(subject, "wide view, detailed scene")
 
 
+def insert_person_prompt(character: Mapping, subject: str) -> str:
+    """Task 29.2: an insert that shows a cast character doing what the speaker describes (checking a phone, eating
+    oatmeal, stretching). The face reference carries identity; the locked outfit is named; no pose, no plate."""
+    def build(act: str, place: str) -> str:
+        return _styled(compact_phrase(character), "medium shot", act or "relaxed, natural")
+
+    return fit_budget(build, subject, "")
+
+
 def beat_single_prompt(character: Mapping, scene: Mapping, action: str, expression: str,
                        gaze: str | None = None) -> str:
     feeling = EXPRESSION_WORDS.get(expression, EXPRESSION_WORDS["calm"])
