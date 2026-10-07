@@ -209,6 +209,17 @@
                 <button class="chip" type="button" data-renderer="ffmpeg" aria-pressed="true">Standard (ffmpeg)</button>
                 <button class="chip" type="button" data-renderer="remotion" aria-pressed="false">Enhanced (Remotion, opt-in)</button>
               </div>
+              <div class="aspect-ratio-row" role="group" aria-label="Video pictures" id="visual-mode-group">
+                <button class="chip" type="button" data-visual-mode="illustrated" aria-pressed="true">Illustrated story</button>
+                <button class="chip" type="button" data-visual-mode="podcast_black" aria-pressed="false">Podcast: black screen</button>
+                <button class="chip" type="button" data-visual-mode="podcast_characters" aria-pressed="false">Podcast: with characters</button>
+                <button class="chip" type="button" data-visual-mode="podcast_still" aria-pressed="false">Podcast: one still scene</button>
+              </div>
+              <p class="section-hint" id="visual-mode-hint">Podcast videos need no drawn shots: they are ready in about two minutes.</p>
+              <div class="aspect-ratio-row" id="still-scene-row" hidden>
+                <label for="still-scene">Scene picture</label>
+                <select id="still-scene" class="settings-input"></select>
+              </div>
               <div class="aspect-ratio-row" role="group" aria-label="Caption style" id="caption-style-group">
                 <button class="chip" type="button" data-caption-style="outline" aria-pressed="true">Captions: film style (outline)</button>
                 <button class="chip" type="button" data-caption-style="box" aria-pressed="false">Caption box</button>

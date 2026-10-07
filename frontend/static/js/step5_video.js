@@ -19,6 +19,12 @@
   // file (the card's claimed "subtitle-style picker etc." doesn't exist); following
   // theme.js's real, confirmed "die-<name>" convention instead.
   const RENDERER_STORAGE_KEY = "die-video-renderer";
+  // Phase 30 (ENH-021): what is behind the captions; remembered like the renderer choice.
+  const VISUAL_MODE_STORAGE_KEY = "die-visual-mode";
+  const STILL_SCENE_STORAGE_KEY = "die-still-scene";
+  const VISUAL_MODES = ["illustrated", "podcast_black", "podcast_characters", "podcast_still"];
+  const VISUAL_MODE_ENABLED_TOOLTIP = "What is behind the captions";
+  const VISUAL_MODE_DISABLED_TOOLTIP = "Video pictures need the Enhanced (Remotion) renderer.";
 
   // Task 19.7.n1: owner feedback (Gate B-12 live test, 2026-09-29) -- the old one-line
   // tooltip didn't say what "Enhanced" actually adds. Single source of truth for both
@@ -53,6 +59,9 @@
     aspectRatio: "16:9",
     renderer: "ffmpeg",
     captionStyle: "outline",
+    visualMode: "illustrated",
+    stillScene: "",
+    stillScenes: [],
     remotionConfigured: false,
     audioReady: false,
     audioJob: null,
@@ -709,6 +718,96 @@
     }
   }
 
+  function readStoredVisualMode() {
+    try {
+      const stored = localStorage.getItem(VISUAL_MODE_STORAGE_KEY);
+      return VISUAL_MODES.includes(stored) ? stored : "illustrated";
+    } catch {
+      return "illustrated";
+    }
+  }
+
+  function readStoredStillScene() {
+    try {
+      return localStorage.getItem(STILL_SCENE_STORAGE_KEY) || "";
+    } catch {
+      return "";
+    }
+  }
+
+  function remember(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      /* the choice just is not remembered */
+    }
+  }
+
+  function renderVisualModes() {
+    const group = byId("visual-mode-group");
+    if (!group) return;
+    const enhanced = state.renderer === "remotion";
+    group.querySelectorAll(".chip").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.visualMode === state.visualMode));
+      button.disabled = !enhanced || state.isGenerating;
+      button.title = enhanced ? VISUAL_MODE_ENABLED_TOOLTIP : VISUAL_MODE_DISABLED_TOOLTIP;
+    });
+    group.title = enhanced ? VISUAL_MODE_ENABLED_TOOLTIP : VISUAL_MODE_DISABLED_TOOLTIP;
+    const row = byId("still-scene-row");
+    if (row) row.hidden = !(enhanced && state.visualMode === "podcast_still");
+    const select = byId("still-scene");
+    if (select) select.disabled = state.isGenerating;
+  }
+
+  function renderStillScenes() {
+    const select = byId("still-scene");
+    if (!select) return;
+    select.replaceChildren();
+    const auto = document.createElement("option");
+    auto.value = "";
+    auto.textContent = "Automatic (first scene with a plate)";
+    select.append(auto);
+    state.stillScenes.forEach((scene) => {
+      const option = document.createElement("option");
+      option.value = scene.id;
+      option.textContent = scene.name;
+      select.append(option);
+    });
+    select.value = state.stillScenes.some((scene) => scene.id === state.stillScene) ? state.stillScene : "";
+    state.stillScene = select.value;
+  }
+
+  async function loadStillScenes() {
+    try {
+      const scenes = await Api.listScenes();
+      state.stillScenes = scenes.filter((scene) => scene.preview_url); // only a scene with a plate can be shown
+    } catch (error) {
+      console.error("Failed to load the scenes for the still picture:", error);
+      state.stillScenes = [];
+    }
+    renderStillScenes();
+  }
+
+  function setupVisualModes() {
+    const group = byId("visual-mode-group");
+    if (!group) return;
+    group.querySelectorAll(".chip").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (state.isGenerating || button.disabled) return;
+        state.visualMode = button.dataset.visualMode;
+        remember(VISUAL_MODE_STORAGE_KEY, state.visualMode);
+        renderVisualModes();
+      });
+    });
+    const select = byId("still-scene");
+    if (select) {
+      select.addEventListener("change", () => {
+        state.stillScene = select.value;
+        remember(STILL_SCENE_STORAGE_KEY, state.stillScene);
+      });
+    }
+  }
+
   function readStoredCaptionStyle() {
     try {
       const stored = localStorage.getItem(CAPTION_STYLE_STORAGE_KEY);
@@ -752,6 +851,7 @@
 
   function renderRendererToggle() {
     renderCaptionStyleToggle();
+    renderVisualModes();
     const group = byId("renderer-group");
     if (!group) return;
     const buttons = group.querySelectorAll(".chip");
@@ -835,7 +935,9 @@
         state.selectedTemplate,
         state.aspectRatio,
         attemptedRenderer,
-        attemptedRenderer === "remotion" ? state.captionStyle : null
+        attemptedRenderer === "remotion" ? state.captionStyle : null,
+        attemptedRenderer === "remotion" && state.visualMode !== "illustrated" ? state.visualMode : null,
+        attemptedRenderer === "remotion" && state.visualMode === "podcast_still" ? state.stillScene || null : null
       );
       renderResult(job);
       // Task 19.7 (I36-a): a Remotion failure always falls back to ffmpeg rather than
@@ -928,6 +1030,8 @@
     // otherwise the toggle would render as checked-but-disabled, a confusing combination.
     state.renderer = state.remotionConfigured ? readStoredRenderer() : "ffmpeg";
     state.captionStyle = readStoredCaptionStyle();
+    state.visualMode = readStoredVisualMode();
+    state.stillScene = readStoredStillScene();
 
     try {
       const job = await Api.getVideoStatus(state.projectId);
@@ -946,6 +1050,8 @@
     setupAspectRatioToggle();
     setupRendererToggle();
     setupCaptionStyleToggle();
+    setupVisualModes();
+    await loadStillScenes();
     renderRendererToggle();
     applyLocks();
   }

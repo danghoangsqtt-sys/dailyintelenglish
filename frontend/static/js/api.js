@@ -169,9 +169,14 @@ const Api = (() => {
     // DIE_VIDEO_RENDERER kill switch already allows it (video_service._resolve_renderer).
     // Task 20.2d: `captionStyle` is only sent when given (Enhanced renders) -- Standard
     // request bodies stay exactly as before.
-    generateVideo: (projectId, templateId, aspectRatio = "16:9", renderer = "ffmpeg", captionStyle = null) => {
+    // Phase 30: `visualMode` ("podcast_black" | "podcast_characters" | "podcast_still") and `stillSceneId` are sent only
+    // when set, so the default (the drawn story) keeps its body unchanged.
+    generateVideo: (projectId, templateId, aspectRatio = "16:9", renderer = "ffmpeg", captionStyle = null,
+                    visualMode = null, stillSceneId = null) => {
       const body = { template_id: templateId, aspect_ratio: aspectRatio, renderer };
       if (captionStyle) body.caption_style = captionStyle;
+      if (visualMode) body.visual_mode = visualMode;
+      if (stillSceneId) body.still_scene_id = stillSceneId;
       return request(`/api/projects/${projectId}/video/generate`, {
         method: "POST",
         body: JSON.stringify(body),
