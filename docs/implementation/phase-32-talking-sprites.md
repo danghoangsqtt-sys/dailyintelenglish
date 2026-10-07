@@ -28,6 +28,10 @@ and pose identical in every picture; only the face changes:
 
 Minimum set: 3 x 2 + 1 = **7 pictures per character** (14 for the pair). Full expression set: 15 per character.
 
+**Gestures need one picture each:** the head is identical in every picture, so the importer takes the face region (the pixels that
+differ between the expression pictures) and lets any gesture picture wear any face, with a feathered mask. The full pack is 44 pictures
+for the pair; `docs/operations/sprite-asset-spec.md` lists them, the canvas (1280 x 1536, transparent PNG) and prompt templates.
+
 Names: `<character>__<expression>__<mouth>.png` (`alex__smile__open.png`, `lina__calm__closed.png`, `lina__blink.png`,
 `alex__gesture-hand__open.png`) in the inbox folder `data/library/sprites_inbox`, imported like the shot pictures.
 
