@@ -247,7 +247,8 @@ async def test_remotion_success_returns_remotion_result_without_touching_ffmpeg(
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     monkeypatch.setattr(settings, "VIDEO_RENDERER", "remotion")
 
-    async def _fake_success(db_, project_, audio_job_, learning_, output_path, caption_style="outline"):
+    async def _fake_success(db_, project_, audio_job_, learning_, output_path, caption_style="outline",
+                            visual_mode="illustrated", still_scene_id=None):
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(b"fake-remotion-mp4")
         return {
@@ -287,8 +288,10 @@ async def test_generate_video_forwards_caption_style_to_remotion(tmp_path, monke
     monkeypatch.setattr(settings, "VIDEO_RENDERER", "remotion")
     seen = {}
 
-    async def _fake_success(db_, project_, audio_job_, learning_, output_path, caption_style="outline"):
+    async def _fake_success(db_, project_, audio_job_, learning_, output_path, caption_style="outline",
+                            visual_mode="illustrated", still_scene_id=None):
         seen["caption_style"] = caption_style
+        seen["visual"] = (visual_mode, still_scene_id)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(b"fake")
         return {"mp4_path": str(output_path), "srt_path": None, "background_image": None, "mode": "remotion",
@@ -298,10 +301,11 @@ async def test_generate_video_forwards_caption_style_to_remotion(tmp_path, monke
     audio_job = await _real_audio_job(tmp_path)
     await video_service.generate_video(
         "proj-caption", audio_job, "midnight", renderer="remotion", db=db, project=_real_project(),
-        caption_style=caption_style,
+        caption_style=caption_style, visual_mode="podcast_still", still_scene_id="builtin-cafe",
     )
 
     assert seen["caption_style"] == caption_style
+    assert seen["visual"] == ("podcast_still", "builtin-cafe")  # Phase 30: the mode and the scene reach the renderer
 
 
 async def test_build_input_props_carries_caption_style_with_outline_default(tmp_path, db):

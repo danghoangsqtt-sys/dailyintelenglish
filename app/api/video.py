@@ -75,6 +75,8 @@ async def generate_video(
             payload.aspect_ratio,
             renderer=payload.renderer,
             caption_style=payload.caption_style,
+            visual_mode=payload.visual_mode,
+            still_scene_id=payload.still_scene_id,
             db=db,
             project=project,
             learning=learning,

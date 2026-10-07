@@ -245,6 +245,8 @@ async def generate_video(
     project: dict | None = None,
     learning: dict | None = None,
     caption_style: str = "outline",
+    visual_mode: str = "illustrated",
+    still_scene_id: str | None = None,
 ) -> dict:
     """Render a project's completed audio mix into an MP4.
 
@@ -286,7 +288,8 @@ async def generate_video(
         remotion_output_path = settings.DATA_DIR / "video" / project_id / "video_remotion.mp4"
         try:
             return await video_renderer_remotion.render_via_remotion(
-                db, project, audio_job, learning, remotion_output_path, caption_style=caption_style
+                db, project, audio_job, learning, remotion_output_path, caption_style=caption_style,
+                visual_mode=visual_mode, still_scene_id=still_scene_id,
             )
         except RemotionRenderFailedError as exc:
             logger.warning("remotion_render_failed_fallback_to_ffmpeg project_id=%s reason=%s", project_id, exc)

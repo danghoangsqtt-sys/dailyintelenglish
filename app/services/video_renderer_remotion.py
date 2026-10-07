@@ -33,7 +33,7 @@ import aiosqlite
 
 from app.core.config import settings
 from app.core.constants import VIDEO_FPS, VIDEO_HEIGHT_STANDARD, VIDEO_WIDTH_STANDARD
-from app.core.exceptions import AudioMixError, RemotionRenderFailedError, TTSError
+from app.core.exceptions import AudioMixError, NotFoundError, RemotionRenderFailedError, TTSError, ValidationError
 from app.core.paths import get_project_root
 from app.services import audio_service, avatar_service, brand_service, youtube_service
 from app.services.visuals import library_service, project_visuals_service, storyboard_service
@@ -212,12 +212,61 @@ def _copy_audio_into_public(project_id: str, mp3_path: str) -> None:
     shutil.copyfile(mp3_path, REMOTION_AUDIO_DIR / f"{project_id}.mp3")
 
 
+async def _resolve_still_plate(db: aiosqlite.Connection, project_id: str, still_scene_id: str | None) -> Path:
+    """Phase 30: the plate of the scene a `podcast_still` video shows. The chosen scene (it must have a plate); else the
+    first of the project's scenes that has one; else the first library scene that has one. Raises ValidationError."""
+    async def plate_of(scene: dict) -> Path | None:
+        if not scene.get("preview_path"):
+            return None
+        try:
+            return await asyncio.to_thread(library_service.resolve_library_content, scene["preview_path"], "library/scenes")
+        except Exception:
+            return None
+
+    if still_scene_id:
+        try:
+            scene = await library_service.get_scene_row(db, still_scene_id)
+        except NotFoundError as exc:  # a bad choice in the request is a 422, not a missing page
+            raise ValidationError("Choose a scene from the library: that scene does not exist.") from exc
+        plate = await plate_of(scene)
+        if plate is None:
+            raise ValidationError(f"The scene \"{scene['name']}\" has no plate yet: make its plate in the Character Library first.")
+        return plate
+    candidates = list(await project_visuals_service.scene_rows(db, project_id))
+    cursor = await db.execute("SELECT * FROM scenes ORDER BY is_builtin DESC, name")
+    candidates += [dict(row) for row in await cursor.fetchall()]
+    for scene in candidates:
+        plate = await plate_of(scene)
+        if plate is not None:
+            return plate
+    raise ValidationError("No scene has a plate yet: make a scene plate in the Character Library, or choose another video picture mode.")
+
+
+async def _portrait_for(db: aiosqlite.Connection, character_id: str, speaker_id: str) -> str | None:
+    """Phase 30: the cast character's full-body sheet view (else its face) as a card picture, copied under public/."""
+    assets = await library_service.list_assets(db, character_id)
+    for kind in ("full_body", "face"):
+        asset = next((a for a in assets if a["kind"] == kind), None)
+        if not asset:
+            continue
+        try:
+            source = await asyncio.to_thread(library_service.resolve_library_content, asset["path"], "library/characters")
+        except Exception:
+            continue
+        destination = REMOTION_AVATARS_DIR / f"{speaker_id}_portrait.png"
+        await asyncio.to_thread(_copy_visual_source, source, destination)
+        return f"remotion-render/avatars/{destination.name}"
+    return None
+
+
 async def _build_input_props(
     db: aiosqlite.Connection,
     project: dict,
     audio_job: dict,
     learning: dict | None,
     caption_style: str = "outline",
+    visual_mode: str = "illustrated",
+    still_scene_id: str | None = None,
 ) -> dict[str, Any]:
     """Real per-project props for the `Episode`/`StillFrame` compositions -- mirrors
     `scripts/run_remotion_spike.py::_build_input_props`, extended with real avatar
@@ -244,7 +293,9 @@ async def _build_input_props(
     cast = await project_visuals_service.cast_rows(db, project_id)
     cast_by_index = {member["speaker_index"]: member for member in cast}
     scenes = await project_visuals_service.scene_rows(db, project_id)
-    shot_rows = await project_visuals_service.shot_rows(db, project_id)
+    podcast = visual_mode != "illustrated"
+    still_plate = await _resolve_still_plate(db, project_id, still_scene_id) if visual_mode == "podcast_still" else None
+    shot_rows = [] if podcast else await project_visuals_service.shot_rows(db, project_id)  # a podcast needs no drawn shots
     complete_shots = [shot for shot in shot_rows if shot["status"] == "complete" and shot["final_path"]]
     shot_props: dict[str, dict[str, str]] = {}
     for shot in complete_shots:
@@ -264,6 +315,18 @@ async def _build_input_props(
     speakers_props: list[dict[str, Any]] = []
     for speaker in project["speakers"]:
         speaker_props: dict[str, Any] = {"id": speaker["id"], "name": speaker["name"], "gender": speaker["gender"]}
+        if visual_mode in ("podcast_black", "podcast_still"):  # no picture of anyone in these two modes
+            speakers_props.append(speaker_props)
+            continue
+        if visual_mode == "podcast_characters":
+            member = cast_by_index.get(speaker_indexes[speaker["id"]])
+            portrait = await _portrait_for(db, member["character_id"], speaker["id"]) if member else None
+            if portrait is None and speaker.get("avatar_image_path"):
+                portrait = await _copy_avatar_into_public(db, project["id"], speaker["id"])
+            if portrait is not None:
+                speaker_props["portraitUrl"] = portrait
+            speakers_props.append(speaker_props)
+            continue
         if speaker.get("avatar_image_path"):
             avatar_url = await _copy_avatar_into_public(db, project["id"], speaker["id"])
             if avatar_url is not None:
@@ -303,7 +366,12 @@ async def _build_input_props(
         "captionStyle": caption_style,
         "introSec": REMOTION_INTRO_SEC,
         "outroSec": REMOTION_OUTRO_SEC,
+        "visualMode": visual_mode,
     }
+    if still_plate is not None:
+        destination = REMOTION_VISUALS_DIR / project_id / "still.png"
+        await asyncio.to_thread(_copy_visual_source, still_plate, destination)
+        props["stillUrl"] = f"remotion-render/visuals/{project_id}/still.png"
     if shot_props:
         # Task 24.5b: the approved storyboard drives the pictures when its shots exist.
         beats = await storyboard_service.approved_beats(db, project_id)
@@ -402,6 +470,8 @@ async def render_via_remotion(
     learning: dict | None,
     output_path: Path,
     caption_style: str = "outline",
+    visual_mode: str = "illustrated",
+    still_scene_id: str | None = None,
 ) -> dict[str, Any]:
     """D19.7-c: builds real props (async -- resolves avatars via the DB), then hands off to
     `_render_via_remotion_sync` in a thread for the actual blocking subprocess call. Raises
@@ -410,7 +480,8 @@ async def render_via_remotion(
     (I36-a); this function itself never falls back to anything.
     """
     project_id = project["id"]
-    input_props = await _build_input_props(db, project, audio_job, learning, caption_style)
+    input_props = await _build_input_props(db, project, audio_job, learning, caption_style,
+                                           visual_mode=visual_mode, still_scene_id=still_scene_id)
     await asyncio.to_thread(_copy_audio_into_public, project_id, audio_job["mp3_path"])
     voices = await _add_brand(project_id, input_props)
     soundtrack = await _build_soundtrack(project_id, audio_job, input_props, voices)

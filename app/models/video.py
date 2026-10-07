@@ -20,6 +20,10 @@ class GenerateVideoRequest(BaseModel):
     # Task 20.2d (D20.2d-a/b): caption treatment for the Remotion path only -- the ffmpeg
     # path ignores it. "outline" (film-subtitle style) is the owner-preferred default.
     caption_style: Literal["outline", "box", "shade"] = "outline"
+    # Phase 30 (ENH-021): what is behind the captions in an Enhanced render. "illustrated" = the drawn shots (before);
+    # the podcast modes need no shots: a black screen, the cast's portrait cards, or one still of a scene's plate.
+    visual_mode: Literal["illustrated", "podcast_black", "podcast_characters", "podcast_still"] = "illustrated"
+    still_scene_id: str | None = None
 
     @field_validator("template_id")
     @classmethod

@@ -90,7 +90,7 @@ async def test_remotion_render_sends_the_soundtrack_prop(tmp_path, monkeypatch):
     job = await mixed_job(tmp_path, "bed.mp3")
     captured = {}
 
-    async def fake_props(db, project, audio_job, learning, caption_style):
+    async def fake_props(db, project, audio_job, learning, caption_style, **_options):
         return {**props_for(audio_job), "episodeId": project["id"]}
 
     def fake_render(input_props, output_path):
