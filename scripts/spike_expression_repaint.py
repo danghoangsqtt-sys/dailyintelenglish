@@ -23,7 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from PIL import Image, ImageChops, ImageDraw, ImageFilter  # noqa: E402
+from PIL import Image, ImageDraw, ImageFilter, ImageOps  # noqa: E402
 
 from app.core.config import settings  # noqa: E402
 from app.services.visuals import recipes  # noqa: E402
@@ -36,6 +36,19 @@ STRENGTH = 0.55
 FACE_SCALE = 0.6
 
 
+def reference_for(person: dict, index: int, count: int, turned: bool) -> str:
+    """The face reference of a person: the front face, or (turned) the face turned toward the other one: the left
+    person looks right (as stored), the right person gets the mirrored copy; a single person looks right."""
+    if not turned or person.get("turned_path") is None:
+        return person["face_path"]
+    if index == 0 or count == 1:
+        return person["turned_path"]
+    mirrored = WORK / f"turned_flipped_{person['id']}.png"
+    with Image.open(person["turned_path"]) as source:
+        ImageOps.mirror(source.convert("RGB")).save(mirrored)
+    return str(mirrored)
+
+
 def character_rows(names: list[str]) -> list[dict]:
     connection = sqlite3.connect(settings.db_path)
     connection.row_factory = sqlite3.Row
@@ -43,7 +56,8 @@ def character_rows(names: list[str]) -> list[dict]:
     for name in names:
         row = connection.execute("SELECT * FROM characters WHERE name = ?", (name,)).fetchone()
         face = connection.execute("SELECT path FROM character_assets WHERE character_id = ? AND kind = 'face'", (row["id"],)).fetchone()
-        rows.append({**dict(row), "face_path": face["path"]})
+        turned = connection.execute("SELECT path FROM character_assets WHERE character_id = ? AND kind = 'face_turned'", (row["id"],)).fetchone()
+        rows.append({**dict(row), "face_path": face["path"], "turned_path": turned["path"] if turned else None})
     connection.close()
     return rows
 
@@ -56,7 +70,7 @@ def face_mask(box: list[float], size: tuple[int, int]) -> Image.Image:
     return mask.filter(ImageFilter.GaussianBlur(max(4, round(half_w * 0.12))))
 
 
-async def run(shot: Path, names: list[str], expressions: list[str]) -> None:
+async def run(shot: Path, names: list[str], expressions: list[str], turned: bool, strength: float, tag: str) -> None:
     WORK.mkdir(parents=True, exist_ok=True)
     people = character_rows(names)
     original = Image.open(shot).convert("RGB")
@@ -83,7 +97,8 @@ async def run(shot: Path, names: list[str], expressions: list[str]) -> None:
                     "command": "generate", "prompt": prompt, "negative_prompt": recipes.negative_for(person),
                     "seed": 4242 + index, "width": size[0], "height": size[1], "steps": 30, "guidance_scale": 6.0,
                     "output_path": str(out_path), "init_image": str(init_path), "mask_image": str(mask_path),
-                    "strength": STRENGTH, "ip_adapter_image": person["face_path"], "ip_adapter_scale": FACE_SCALE,
+                    "strength": strength, "ip_adapter_image": reference_for(person, index, len(people), turned),
+                    "ip_adapter_scale": FACE_SCALE,
                 })
                 repainted = Image.open(out_path).convert("RGB")
                 current = Image.composite(repainted, current, mask)
@@ -98,9 +113,10 @@ async def run(shot: Path, names: list[str], expressions: list[str]) -> None:
         x, y = (number % 3) * cell_w, (number // 3) * (cell_h + 16)
         sheet.paste(picture.resize((cell_w, cell_h)), (x, y + 16))
         draw.text((x + 4, y + 2), f"{label}" + (f"  {timings[label]} s" if label in timings else ""), fill="black")
-    sheet.save(OUT / "phase29-expression-spike.png")
-    (OUT / "phase29-expression-spike.json").write_text(json.dumps({"shot": str(shot), "seconds": timings}, indent=1), encoding="utf-8")
-    print("sheet:", OUT / "phase29-expression-spike.png")
+    sheet.save(OUT / f"phase29-expression-spike{tag}.png")
+    (OUT / f"phase29-expression-spike{tag}.json").write_text(
+        json.dumps({"shot": str(shot), "seconds": timings, "turned": turned, "strength": strength}, indent=1), encoding="utf-8")
+    print("sheet:", OUT / f"phase29-expression-spike{tag}.png")
 
 
 def main() -> int:
@@ -108,9 +124,12 @@ def main() -> int:
     parser.add_argument("--shot", required=True)
     parser.add_argument("--characters", default="Minh,Lan", help="left to right")
     parser.add_argument("--expressions", default="laugh,surprised,worried,serious,thinking")
+    parser.add_argument("--turned", action="store_true", help="use the turned face references (keeps the gaze toward the other person)")
+    parser.add_argument("--strength", type=float, default=STRENGTH)
+    parser.add_argument("--tag", default="", help="suffix of the output files")
     args = parser.parse_args()
     asyncio.run(run(Path(args.shot), [n.strip() for n in args.characters.split(",")],
-                    [e.strip() for e in args.expressions.split(",")]))
+                    [e.strip() for e in args.expressions.split(",")], args.turned, args.strength, args.tag))
     return 0
 
 
