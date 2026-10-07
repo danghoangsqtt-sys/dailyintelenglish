@@ -71,3 +71,15 @@ If a picture comes back with the head moved or the face changed, discard it and 
 Copy the files into `data\library\sprites_inbox` (the importer arrives with Phase 32.1). The app checks that every picture has the
 same canvas size, aligns it to `calm__closed` and tells you which file it refused and why. Tier 1 is enough for me to build and show
 the first talking video; the rest can follow while you review it.
+
+## 5. What the first pack taught us (2026-10-08)
+
+- **Direction:** in the video the **first speaker (Alex) stands on the left and faces right**, the second (Lina) stands on the right and faces left.
+  (The first prompt said the opposite; the packs were turned the right way afterwards.)
+- **Alignment:** an AI image editor redraws the whole picture, so the pictures of Alex's first pack drifted: the torso moved 20 to 100 px
+  between pictures and the hands changed place, which would make the character jump when the face changes. Lina's first pack was
+  consistent (torso within 5 px). To make every pack consistent: edit with a **mask** (the face only, or the arms only) and paste the masked
+  region back onto the reference with Pillow, so everything outside the mask is identical.
+- **Check:** `venv\Scripts\python scripts\check_sprites.py <character>` compares every picture with `<character>__calm__closed.png`
+  (canvas, transparent corners, head top within 6 px and head middle within 8 px, torso edges within 8 px, silhouette within 4%) and exits with 1 if any picture fails.
+- **Hands:** an expression picture keeps the hands where the reference has them; only a gesture picture changes the arms.

@@ -39,6 +39,7 @@ Names: `<character>__<expression>__<mouth>.png` (`alex__smile__open.png`, `lina_
 
 - **Layers:** background (the scene plate of the beat, a short cross-fade when the scene changes), the two sprites (the first speaker
   on the left, the second on the right), the name label, the captions and the vocabulary card (already there), the chapter bar.
+- **Places:** the first speaker (Alex) on the left facing right, the second (Lina) on the right facing left.
 - **Turns:** the speaking sprite is full colour and a little larger with a small hop when the turn starts; the listener is dimmed and
   still. A sprite **enters** (slide and fade, 12 frames) at the first line of a scene and **leaves** at its end.
 - **Expression:** the beat's expression (calm when there is none), refined per line by simple rules (a question mark thinks, an
@@ -63,6 +64,9 @@ Names: `<character>__<expression>__<mouth>.png` (`alex__smile__open.png`, `lina_
 
 ## 5. Decisions and risks
 
+- **First pack findings (2026-10-08):** Alex's 22 pictures (all tiers) are complete and look right but are not aligned with each other
+  (torso 20 to 100 px, hands moved); Lina's old pack was aligned. `scripts/check_sprites.py` measures this; the importer must also align
+  each picture to the reference by its torso (scale and shift) and may take only the head of an expression picture.
 - **Consistency of the variants is the risk:** a variant where the body moved a few pixels shows as a jump. The importer aligns each
   picture to the calm-closed one and the composition cross-fades faces for 2 frames; pictures that cannot be aligned are refused with
   the reason. Ask the image tool to "change only the face, keep everything else identical".

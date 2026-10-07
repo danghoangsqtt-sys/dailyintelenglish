@@ -1,0 +1,53 @@
+﻿Bạn đang chạy trên máy tính Windows của tôi. Hãy tự tạo ảnh bằng công cụ tạo ảnh của bạn và LƯU TRỰC TIẾP vào thư mục đích.
+
+NHIỆM VỤ
+Làm lại TOÀN BỘ bộ sprite của nhân vật LINA từ bảng nhân vật MỚI của tôi (22 ảnh), cùng khung hình và cùng cỡ với bộ sprite của ALEX đã có. Bộ Lina cũ được làm từ bảng cũ nên phải thay hết.
+
+THƯ MỤC (đường dẫn đầy đủ)
+- ĐÍCH (ghi ảnh Lina mới vào đây): D:\DataAdmin\Daily_Intel_English\data\library\sprites_inbox
+- LOG và ảnh xem thử: D:\DataAdmin\Daily_Intel_English\data\assets_sprites\logs
+- ẢNH THAM CHIẾU CỦA LINA (chỉ đọc): D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\lina_sheet_v2.jpg
+  (bảng nhân vật mới: toàn thân trước/bên/sau, khuôn mặt trước/nghiêng/45 độ, 8 biểu cảm, chi tiết khuôn mặt)
+- ẢNH THAM CHIẾU VỀ KHUNG HÌNH VÀ CỠ (chỉ đọc, KHÔNG sửa): D:\DataAdmin\Daily_Intel_English\data\library\sprites_inbox\alex__calm__closed.png
+- THƯ MỤC CẤT BỘ LINA CŨ: D:\DataAdmin\Daily_Intel_English\data\assets_sprites\old\lina_v1
+VIỆC ĐẦU TIÊN: DI CHUYỂN (không xóa) mọi file lina__*.png đang nằm trong thư mục ĐÍCH sang thư mục cất bộ cũ ở trên. KHÔNG đụng vào các file alex__*.png. KHÔNG ghi hay xóa gì ngoài thư mục ĐÍCH, LOG và thư mục cất bộ cũ.
+
+QUY CÁCH MỖI ẢNH
+1. PNG nền TRONG SUỐT. Nếu công cụ không xuất được nền trong suốt: tạo trên nền xanh lá đặc #00B140 (KHÔNG dùng nền trắng vì váy trắng) rồi tự tách nền bằng Pillow và kiểm tra lại viền.
+2. Kích thước CHÍNH XÁC 1280 x 1536 px.
+3. Khung hình giống alex__calm__closed.png: nhân vật ở giữa khung, đỉnh tóc cách mép trên khoảng 6 đến 7 phần trăm (khoảng 95 đến 105 px), đầu (từ đỉnh tóc đến cằm) cao khoảng 280 px, thân người kéo dài xuống sát mép dưới ảnh (cắt ở khoảng giữa đùi). Cùng cỡ máy ảnh với Alex.
+4. HƯỚNG: Lina đứng bên PHẢI khung hình và quay nhẹ (khoảng 15 độ) về phía TRÁI khung, ánh mắt nhìn về phía Alex (Alex đứng bên trái và quay về bên phải). Không nhìn vào ống kính.
+5. Nhận dạng: đúng khuôn mặt, tóc, màu da, váy, vóc dáng trong lina_sheet_v2.jpg (mặt trái xoan, mắt nâu hạnh nhân to, môi đầy hồng, tóc nâu chocolate đậm dài có mái thưa che hai bên; váy trắng ngà ngắn hai dây, thân váy ôm corset, có dây buộc nhỏ ở giữa ngực). Thể hiện vóc dáng tự nhiên đúng như bảng tham chiếu, không nhấn mạnh hay cường điệu. Người trưởng thành, phong cách ảnh thời trang đời thường, tư thế tự nhiên, trang nhã.
+6. Không chữ, logo, watermark, trang sức, kính, mũ. Cùng ánh sáng mềm đều ở mọi ảnh.
+
+PHƯƠNG PHÁP BẮT BUỘC (để các ảnh khớp nhau từng điểm ảnh)
+Bộ Alex hiện có đẹp nhưng LỆCH nhau: thân và đầu giữa các ảnh lệch 20 đến 100 px, vị trí tay đổi. Lý do: công cụ vẽ lại cả bức tranh mỗi lần chỉnh. Lần này làm như sau:
+A. Ảnh gốc lina__calm__closed.png làm xong, DỪNG LẠI, in đường dẫn và chờ tôi gõ "tiếp tục".
+B. Mọi ảnh khác tạo bằng CHỈNH SỬA CÓ MẶT NẠ (inpainting) trên ảnh gốc:
+   - Ảnh BIỂU CẢM: tạo mặt nạ chỉ phủ KHUÔN MẶT (trán sát chân tóc, hai má, mắt, mũi, miệng, cằm). KHÔNG phủ viền tóc, cổ, vai, tay. Nếu có sẵn nhận diện điểm mốc khuôn mặt (mediapipe, dlib, OpenCV) thì dùng; nếu không, dùng hình elip ước lượng rồi xem lại bằng mắt.
+   - Ảnh CỬ CHỈ: mặt nạ chỉ phủ phần CÁNH TAY VÀ BÀN TAY (và phần thân bị che bởi tay). ĐẦU, TÓC, CỔ giữ nguyên tuyệt đối.
+   - Sau khi công cụ trả ảnh, GHÉP LẠI bằng Pillow: ảnh cuối = bản sao của ảnh gốc, rồi chỉ dán vùng trong mặt nạ (làm mờ viền 8 đến 12 px) từ ảnh vừa tạo. Như vậy mọi điểm ảnh ngoài mặt nạ giống hệt ảnh gốc.
+   - Nếu công cụ không hỗ trợ mặt nạ: vẫn phải dán lại đúng như trên, nhưng trước đó căn chỉnh khuôn mặt vừa tạo vào ảnh gốc (dịch và co giãn cho trùng vị trí hai mắt và mũi).
+C. Mệnh lệnh mẫu cho công cụ: "Edit only the masked area of the attached picture. Do not change anything outside the mask. <thay đổi>."
+D. Không bao giờ chỉnh từ một ảnh đã chỉnh. Luôn bắt đầu từ ảnh gốc lina__calm__closed.png.
+
+DANH SÁCH 22 FILE (tên đúng như sau, làm tầng 1 trước, rồi tầng 2, rồi tầng 3)
+TẦNG 1: lina__calm__closed (ảnh gốc), lina__calm__open (miệng hé như nói "ah", thấy hàm răng trên một chút, không ngáp), lina__smile__closed (cười dịu, môi khép), lina__smile__open (cười và đang nói, miệng mở), lina__surprised__closed (ngạc nhiên, mắt mở to, lông mày nhướng, môi khép), lina__surprised__open (ngạc nhiên, miệng mở), lina__blink (mắt nhắm nhẹ như chớp mắt, miệng khép).
+TẦNG 2: lina__laugh__closed (cười tươi, mắt cong, môi khép), lina__laugh__open (cười, mắt cong, miệng mở), lina__thinking__closed (suy nghĩ, mắt hơi nhìn lên và sang bên, môi khép), lina__thinking__open (suy nghĩ, miệng hé "hmm"), lina__worried__closed (lo lắng, lông mày chụm và hơi nhướng, môi khép), lina__worried__open (lo lắng, miệng hé nói), lina__serious__closed (nghiêm túc, lông mày ngang, môi khép), lina__serious__open (nghiêm túc, miệng hé nói).
+TẦNG 3 (chỉ đổi tay, đầu giữ y hệt): lina__gesture-talk (một tay giơ ngang ngực, lòng bàn tay mở, giải thích), lina__gesture-point (một tay chỉ sang bên, về phía Alex), lina__gesture-think (một tay chống cằm, tay kia đặt ngang người), lina__gesture-open (hai tay mở lòng bàn tay ngang eo, nhún vai nhẹ), lina__gesture-heart (một tay đặt lên ngực, chân thành), lina__gesture-listen (hai tay đan nhẹ phía trước, lắng nghe), lina__gesture-wave (một tay giơ lên vẫy chào thân thiện).
+(thêm đuôi .png cho mọi tên)
+
+KIỂM TRA BẮT BUỘC SAU MỖI NHÓM (và lần cuối)
+Chạy lệnh sau và dán kết quả vào log:
+  D:\DataAdmin\Daily_Intel_English\venv\Scripts\python.exe D:\DataAdmin\Daily_Intel_English\scripts\check_sprites.py lina
+Mục tiêu: "0 picture(s) failed". Tiêu chí: đúng 1280x1536, bốn góc trong suốt, đỉnh đầu lệch tối đa 6 px và giữa đầu lệch ngang tối đa 8 px so với ảnh gốc, thân (hai mép áo/váy ở hàng 55 đến 90 phần trăm chiều cao) lệch tối đa 8 px, hình bóng phần dưới đầu khác ảnh gốc tối đa 4 phần trăm (ảnh biểu cảm), hình bóng vùng đầu khác tối đa 4 phần trăm (ảnh cử chỉ). Ảnh nào trượt: làm lại từ ảnh gốc (tối đa 3 lần).
+
+NẾU CÔNG CỤ TẠO ẢNH TỪ CHỐI (an toàn nội dung)
+Lần trước một yêu cầu chỉnh dáng Lina đã bị công cụ từ chối ở bước xuất ảnh. Nếu một ảnh bị từ chối: KHÔNG đổi cách diễn đạt để lách, KHÔNG thử lại hơn 1 lần; ghi dòng REFUSED vào log và làm tiếp file khác. Giữ mô tả trung tính như trên, không nhắc đến số đo cơ thể. Cuối cùng liệt kê rõ các file bị từ chối để tôi quyết định.
+
+GHI LOG
+- Mỗi ảnh một dòng trong D:\DataAdmin\Daily_Intel_English\data\assets_sprites\logs\sprites_log.csv: tên file, tầng, số lần thử, kết quả kiểm tra, prompt đã dùng (các dòng cũ giữ nguyên, thêm dòng mới ở cuối).
+- Cho phép chạy lại: bỏ qua file đã tồn tại và đã qua kiểm tra.
+- Cuối cùng tạo ảnh xem thử (lưới tất cả 22 sprite của Lina, có tên file) trong thư mục LOG, KHÔNG để ảnh xem thử trong thư mục ĐÍCH, và in bảng tóm tắt: số file đạt, bị từ chối, hỏng theo từng tầng.
+
+GHI CHÚ: sau khi Lina xong và nếu tôi yêu cầu, hãy làm lại các ảnh Alex trượt kiểm tra bằng đúng phương pháp này (thay lina bằng alex; tham chiếu D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\alex_sheet.jpg; Alex đứng bên trái và quay về bên phải).
