@@ -7,7 +7,7 @@ image stack installs on this project's own interpreter, verified with a real ins
 - the ~5.5 GB venv must stay out of the packaged .exe;
 - a worker that exits returns 100% of its VRAM, which is what the Task 20.1 GPU lease
   relies on.
-The parent (`scripts/spike_images.py`) holds that lease while this process is alive.
+The parent (the app's image job runner) holds that lease while this process is alive.
 
 Protocol: the same line-delimited JSON over stdin/stdout as `styletts2_worker.py`. The
 first line is a handshake (`ready` / `unavailable`), then there is one response per

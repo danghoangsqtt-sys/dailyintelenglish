@@ -31,7 +31,7 @@ class CharacterInput(BaseModel):
     name: str = Field(min_length=1, max_length=40)
     gender: Literal["female", "male"]
     age_group: Literal["young", "adult", "middle-aged", "senior"]
-    ethnicity: str = "Vietnamese"
+    ethnicity: str = "Russian"
     role: str
     hair: str
     eyes: str

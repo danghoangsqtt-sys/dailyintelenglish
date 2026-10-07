@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parent.parent
 IMAGE_PYTHON = ROOT / "venv-image" / "Scripts" / "python.exe"
 MODEL = ROOT / "models" / "image" / "face" / "ultraface-rfb-320.onnx"
 WORKER = ROOT / "scripts" / "image_worker.py"
-PORTRAITS = ROOT / "docs" / "operations" / "phase28-characters"
+PORTRAITS = ROOT / "tests" / "fixtures" / "faces"
 THREE = ROOT / "tests" / "fixtures" / "three_people_cafe.png"
 PINNED_SHA256 = "34cd7e60aeff28744c657de7a3dc64e872d506741de66987f3426f2b79f88017"
 
