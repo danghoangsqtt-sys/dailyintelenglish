@@ -235,6 +235,13 @@
       "tasks_done": 6,
       "tasks_total": 7,
       "note": "28.1-28.5 done (1506 passed). Only 28.6 Gate B-20 (owner: one full real episode in the new style) is left."
+    },
+    "29": {
+      "name": "Ready-made shot library (ENH-020)",
+      "status": "planned",
+      "tasks_done": 0,
+      "tasks_total": 6,
+      "note": "Planned 2026-10-07; starts after Gate B-20."
     }
   },
   "key_decisions": [

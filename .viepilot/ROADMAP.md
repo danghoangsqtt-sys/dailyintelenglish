@@ -1365,6 +1365,17 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 - [x] 24.6 Remotion polish (crossfade, pan/zoom, inserts)
 - [ ] 24.7 Gate B-16
 
+## Phase 29 — Ready-made shot library of Lan and Minh (ENH-020)
+
+**Status:** 🟡 Planned 2026-10-07 | Plan `docs/implementation/phase-29-shot-library.md`. Starts after Gate B-20.
+
+- [ ] 29.1 Design and spike (vocabulary, face-repaint variants, gesture poses, camera angles)
+- [ ] 29.2 Data model and service
+- [ ] 29.3 Matcher and the library-first shot job
+- [ ] 29.4 Resumable batch generator for the core set
+- [ ] 29.5 Shot Library UI and coverage view
+- [ ] 29.6 Gate B-21
+
 ## Phase 27 — Rebrand to Daily Beyond English + Canva/CapCut-style layout (ENH-018)
 
 **Status:** 🟡 Planned 2026-10-06 | Plan `docs/implementation/phase-27-rebrand-and-layout.md` (D57, D60–D62).
