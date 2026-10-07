@@ -82,6 +82,15 @@
         <span id="inbox-count" class="shot-summary" role="status"></span>
       </div>
       <ul id="import-result" class="import-result" role="status"></ul>
+      <hr />
+      <p><strong>Scene backgrounds</strong> (pictures without people): put <code>cafe.png</code> and its prompt <code>cafe.txt</code>
+        in the <code>assets</code> and <code>prompts</code> folders of <code id="bg-folder"></code>, named by scene key
+        (<code>docs/operations/scene-list-55.md</code>). A background replaces the picture of that scene.</p>
+      <div class="import-row">
+        <button id="bg-import-btn" class="btn btn-primary" type="button">Import backgrounds</button>
+        <span id="bg-count" class="shot-summary" role="status"></span>
+      </div>
+      <ul id="bg-result" class="import-result" role="status"></ul>
     </details>
     <div class="shot-filters" role="group" aria-label="Filters">
       <label>Scene <select id="filter-scene"><option value="">All scenes</option></select></label>

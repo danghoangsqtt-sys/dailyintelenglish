@@ -112,7 +112,7 @@ async def test_scenes_have_a_detail_panel_that_follows_the_selected_card(
     plate = page.locator("#scene-detail-plate")
     assert "/preview" in await plate.get_attribute("src")
     text = await detail.inner_text()
-    assert "Cafe" in text and "a cozy Vietnamese street cafe" in text
+    assert "Cafe" in text and "a cozy street cafe" in text
     grid, panel = await _box(page.locator("#scene-grid")), await _box(page.locator("#scene-side"))
     assert panel["x"] >= grid["x"] + grid["w"] - 2
     assert await page.locator("#scene-side").evaluate("e => getComputedStyle(e).position") == "sticky"

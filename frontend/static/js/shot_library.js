@@ -209,8 +209,42 @@
     await refreshInbox();
   }
 
+  async function refreshBackgrounds() {
+    try {
+      const status = await Api.getLibraryBackgrounds();
+      byId("bg-folder").textContent = status.folder;
+      byId("bg-count").textContent = `${status.images} background picture${status.images === 1 ? "" : "s"} in the folder`;
+    } catch (error) {
+      console.error("Failed to read the backgrounds folder:", error);
+    }
+  }
+
+  async function importBackgrounds() {
+    byId("bg-import-btn").disabled = true;
+    const list = byId("bg-result");
+    list.replaceChildren();
+    const add = (text, className = "") => {
+      const li = document.createElement("li");
+      li.textContent = text;
+      if (className) li.className = className;
+      list.append(li);
+    };
+    try {
+      const result = await Api.importLibraryBackgrounds();
+      add(`${result.imported.length} backgrounds imported, ${result.unchanged.length} unchanged, ${result.skipped.length} skipped.`);
+      result.imported.filter((item) => item.cropped).forEach((item) => add(`${item.file}: cropped to 16:9.`));
+      result.skipped.forEach((item) => add(`${item.file}: ${item.reason}`, "is-error"));
+    } catch (error) {
+      add(error.message || "Could not import the backgrounds.", "is-error");
+    }
+    byId("bg-import-btn").disabled = false;
+    await refreshBackgrounds();
+  }
+
   function setup() {
     byId("import-btn").addEventListener("click", importInbox);
+    byId("bg-import-btn").addEventListener("click", importBackgrounds);
+    refreshBackgrounds();
     refreshInbox();
     [["filter-scene", "scene_id"], ["filter-kind", "kind"], ["filter-state", "review_state"]].forEach(([id, key]) => {
       byId(id).addEventListener("change", (event) => {

@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import aiosqlite
-from PIL import Image
+from PIL import Image, ImageOps
 
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
@@ -35,6 +35,17 @@ def shots_dir() -> Path:
 
 def _expression_fits(wanted: str, have: str) -> bool:
     return wanted == have or (wanted in _RELAXED and have in _RELAXED)
+
+
+def _action_fits(wanted: str, have: str) -> bool:
+    """The same action, or every word of the library action is in the wanted one ("walking" serves "walking along the
+    path"); an empty library action only serves an empty one."""
+    wanted, have = (wanted or "").strip().lower(), (have or "").strip().lower()
+    if wanted == have:
+        return True
+    if not have:
+        return False
+    return set(re.findall(r"[a-z]+", have)) <= set(re.findall(r"[a-z]+", wanted))
 
 
 def _gaze_fits(have: str) -> bool:
@@ -185,34 +196,43 @@ async def content_path(db: aiosqlite.Connection, shot_id: str) -> Path:
 
 async def find_match(db: aiosqlite.Connection, *, scene_id: str, kind: str, character_ids: list[str], action: str,
                      expression: str, exclude: set[str] | None = None) -> dict | None:
-    """The best approved, non-stale library shot for a shot spec, or None. The scene, framing, ordered characters and
-    action must be the same (an empty action only matches an empty one); the expression is the same (calm and smile
-    stand in for each other). Ranked by: not used lately, fewest uses. A shot in `exclude` (already used in this
+    """The best approved, non-stale library shot for a shot spec, or None. The scene, framing and characters must be the
+    same; for two people the picture may also have them the other way round (the returned row then has `mirror` True and
+    the picture must be flipped when it is used); the action fits (same, or every word of the library action is in the
+    wanted one; an empty library action only serves an empty one); the expression is the same (calm and smile stand in
+    for each other). Ranked by: not mirrored, not used lately, fewest uses. A shot in `exclude` (already used in this
     episode) is skipped, so a picture is not repeated inside one video."""
     if kind not in LIBRARY_KINDS or not scene_id or not character_ids:
         return None
+    orders = [list(character_ids)]
+    if kind != "single" and len(character_ids) == 2:
+        orders.append(list(character_ids)[::-1])
+    marks = ",".join("?" * len(orders))
     cursor = await db.execute(
-        "SELECT * FROM shot_library WHERE scene_id = ? AND kind = ? AND character_ids_json = ? "
+        f"SELECT * FROM shot_library WHERE scene_id = ? AND kind = ? AND character_ids_json IN ({marks}) "
         "AND review_state = 'approved' AND stale = 0",
-        (scene_id, kind, json.dumps(character_ids)),
+        (scene_id, kind, *(json.dumps(order) for order in orders)),
     )
     candidates = [dict(row) for row in await cursor.fetchall()]
-    if not candidates:
-        return None
-    signature = await face_signature(db, character_ids)
     usable = []
+    signatures: dict[str, str] = {}
     for row in candidates:
-        if row["face_signature"] != signature:
+        ids = json.loads(row["character_ids_json"])
+        key = row["character_ids_json"]
+        if key not in signatures:
+            signatures[key] = await face_signature(db, ids)
+        if row["face_signature"] != signatures[key]:
             await db.execute("UPDATE shot_library SET stale = 1, updated_at = ? WHERE id = ?", (library._now(), row["id"]))
             continue
-        if (row["id"] in (exclude or set()) or row["action"].strip().lower() != (action or "").strip().lower()
+        if (row["id"] in (exclude or set()) or not _action_fits(action, row["action"])
                 or not _expression_fits(expression or "calm", row["expression"]) or not _gaze_fits(row["gaze"])
                 or not Path(row["path"]).is_file()):
             continue
+        row["mirror"] = ids != list(character_ids)
         usable.append(row)
     if not usable:
         return None
-    usable.sort(key=lambda row: (row["use_count"], row["last_used_at"] or ""))
+    usable.sort(key=lambda row: (row["mirror"], row["use_count"], row["last_used_at"] or ""))
     return usable[0]
 
 
@@ -258,6 +278,8 @@ def parse_inbox_name(stem: str) -> dict[str, Any]:
                          "duo-wide-<left>-<right> or single-<name>")
     expression, action = "calm", ""
     for part in rest:
+        if part.isdigit():  # a variant number (cafe__duo-wide__2): the same tags, another picture
+            continue
         if _slug(part) in EXPRESSIONS:
             expression = _slug(part)
         else:
@@ -374,6 +396,57 @@ async def import_inbox(db: aiosqlite.Connection) -> dict[str, list]:
     return {"imported": imported, "skipped": skipped}
 
 
+# ---- the owner's own scene backgrounds (Phase 31) --------------------------------------------------------------------
+
+def backgrounds_dir() -> Path:
+    return settings.DATA_DIR / "assets_background"
+
+
+def backgrounds_status() -> dict[str, Any]:
+    folder = backgrounds_dir()
+    images = sorted(p.name for p in (folder / "assets").iterdir() if p.suffix.lower() in IMAGE_EXTENSIONS) \
+        if (folder / "assets").is_dir() else []
+    return {"folder": str(folder), "images": len(images)}
+
+
+async def import_backgrounds(db: aiosqlite.Connection) -> dict[str, list]:
+    """Make the pictures of `assets_background/assets` (named by scene key: cafe.png, city-street.png...) the plates of
+    their scenes, and keep the prompt of `assets_background/prompts/<key>.txt` next to the plate. A picture that is not
+    16:9 is cropped to it. Importing again is safe: an unchanged picture is reported as unchanged. Caller holds the write
+    transaction."""
+    folder = backgrounds_dir()
+    assets = folder / "assets"
+    imported, unchanged, skipped = [], [], []
+    if not assets.is_dir():
+        return {"imported": imported, "unchanged": unchanged, "skipped": skipped}
+    for image in sorted(p for p in assets.iterdir() if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS):
+        scene_id = await _resolve_scene(db, image.stem)
+        if scene_id is None:
+            skipped.append({"file": image.name, "reason": f"unknown scene '{image.stem}' (use a scene key)"})
+            continue
+        target = settings.DATA_DIR / "library" / "scenes" / scene_id / "preview.png"
+        staged = target.with_suffix(".new.png")
+        try:
+            cropped = await asyncio.to_thread(_fit_16_9, image, staged)
+        except OSError as error:
+            skipped.append({"file": image.name, "reason": f"not a readable picture ({error})"})
+            continue
+        same = target.is_file() and await asyncio.to_thread(_sha, staged) == await asyncio.to_thread(_sha, target)
+        if same:
+            await asyncio.to_thread(staged.unlink, True)
+            unchanged.append(image.name)
+        else:
+            await asyncio.to_thread(staged.replace, target)
+            await db.execute("UPDATE scenes SET preview_path = ?, updated_at = ? WHERE id = ?",
+                             (str(target.resolve()), library._now(), scene_id))
+            imported.append({"file": image.name, "scene_id": scene_id, "cropped": cropped})
+        prompt = folder / "prompts" / f"{image.stem}.txt"
+        if prompt.is_file():
+            text = await asyncio.to_thread(prompt.read_text, "utf-8-sig")
+            await asyncio.to_thread((target.parent / "prompt.txt").write_text, text, "utf-8")
+    return {"imported": imported, "unchanged": unchanged, "skipped": skipped}
+
+
 async def mark_used(db: aiosqlite.Connection, shot_id: str) -> None:
     await db.execute("UPDATE shot_library SET use_count = use_count + 1, last_used_at = ? WHERE id = ?",
                      (library._now(), shot_id))
@@ -411,6 +484,11 @@ async def coverage(db: aiosqlite.Connection, project_id: str) -> dict[str, Any]:
             "missing": sum(1 for item in reusable if not item["covered"])}
 
 
+def _save_mirrored(source: Path, target: Path) -> None:
+    with Image.open(source) as picture:
+        ImageOps.mirror(picture.convert("RGB")).save(target, format="PNG")
+
+
 async def reuse_for_rows(db: aiosqlite.Connection, project_id: str, rows: list[dict]) -> tuple[list[dict], list[str]]:
     """Task 29.5: copy an approved library shot into each pending non-insert row that has a match (no GPU) and return
     (the rows still to generate, the ids of the rows served from the library). Caller holds the write transaction."""
@@ -431,7 +509,10 @@ async def reuse_for_rows(db: aiosqlite.Connection, project_id: str, rows: list[d
         folder = settings.DATA_DIR / "visuals" / project_id / "shots" / row["id"]
         final_path = folder / "final.png"
         await asyncio.to_thread(folder.mkdir, parents=True, exist_ok=True)
-        await asyncio.to_thread(shutil.copyfile, match["path"], final_path)
+        if match.get("mirror"):  # the picture has the two people the other way round: flip it
+            await asyncio.to_thread(_save_mirrored, Path(match["path"]), final_path)
+        else:
+            await asyncio.to_thread(shutil.copyfile, match["path"], final_path)
         await db.execute(
             "UPDATE project_shots SET final_path = ?, status = 'complete', review_note = NULL, source = 'library', "
             "library_shot_id = ?, error = NULL, updated_at = ? WHERE id = ?",

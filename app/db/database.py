@@ -52,7 +52,7 @@ class Database:
 # (slug, name, place, staging, category); ids are `builtin-<slug>`.
 BUILTIN_SCENES = (
     ("classroom", "Classroom", "a sunny classroom with a whiteboard", "standing", "school"),
-    ("cafe", "Cafe", "a cozy Vietnamese street cafe", "seated", "city"),
+    ("cafe", "Cafe", "a cozy street cafe", "seated", "city"),
     ("library", "Library", "a bright university library", "standing", "school"),
     ("kitchen", "Kitchen", "a bright home kitchen", "standing", "home"),
     ("park", "Park", "a green city park", "standing", "city"),
@@ -96,7 +96,7 @@ BUILTIN_SCENES = (
     ("school-gate", "School gate", "a school gate", "standing", "school"),
     ("farm", "Farm", "a small family farm", "standing", "countryside"),
     ("rice-fields", "Rice fields", "green rice fields", "standing", "countryside"),
-    ("village-road", "Village road", "a Vietnamese village road", "standing", "countryside"),
+    ("village-road", "Village road", "a village road", "standing", "countryside"),
     ("mountain-stream", "Mountain stream", "a clear mountain stream", "standing", "countryside"),
     ("mountain-forest", "Mountain forest", "a misty mountain forest", "standing", "countryside"),
     ("village-market", "Village market", "a rural village market", "standing", "countryside"),

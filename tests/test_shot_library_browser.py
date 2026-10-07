@@ -129,3 +129,42 @@ async def test_pictures_dropped_in_the_inbox_folder_are_imported_from_the_page(b
     await page.wait_for_function(f"document.querySelectorAll('#shot-grid .shot-card').length === {before + 1}")
     assert "1 picture waiting" in await page.locator("#inbox-count").text_content()
     await page.close()
+
+
+@pytest.mark.asyncio
+async def test_step5_casts_the_library_characters_named_like_the_speakers(browser_instance: Browser, live_server_url: str):
+    import sqlite3
+
+    from tests.test_visuals_project_api import PROJECT, locked_character
+
+    lina_id = locked_character("Olga", "white")
+    alex_id = locked_character("Ivan", "navy")
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute("UPDATE characters SET gender = 'male' WHERE id = ?", (alex_id,))
+    page = await browser_instance.new_page()
+    body = {**PROJECT, "speakers": [{"name": "Ivan", "gender": "male", "accent": "american"},
+                                    {"name": "Olga", "gender": "female", "accent": "american"}]}
+    created = await page.request.post(f"{live_server_url}/api/projects", data=body)
+    project_id = (await created.json())["data"]["id"]
+    await page.route(
+        f"**/api/projects/{project_id}/audio/status",
+        lambda route: route.fulfill(json={"success": True, "data": {"status": "complete", "timestamps": []}}),
+    )
+    await page.goto(f"{live_server_url}/step5?project_id={project_id}")
+    await page.wait_for_function(
+        "document.getElementById('visual-speaker-0') && document.getElementById('visual-speaker-0').value !== ''")
+    assert await page.locator("#visual-speaker-0").input_value() == alex_id
+    assert await page.locator("#visual-speaker-1").input_value() == lina_id
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_a_new_project_starts_with_alex_and_lina_as_speakers(browser_instance: Browser, live_server_url: str):
+    page = await browser_instance.new_page()
+    await page.goto(f"{live_server_url}/step1")
+    await page.wait_for_selector("#speaker-name-0")
+    assert await page.locator("#speaker-name-0").input_value() == "Alex"
+    assert await page.locator("#speaker-gender-0").input_value() == "male"
+    assert await page.locator("#speaker-name-1").input_value() == "Lina"
+    assert await page.locator("#speaker-gender-1").input_value() == "female"
+    await page.close()

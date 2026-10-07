@@ -240,6 +240,18 @@ async def list_library_shots(
     return ok(rows)
 
 
+@router.get("/library/backgrounds")
+async def library_backgrounds() -> dict:
+    return ok(shot_library.backgrounds_status())
+
+
+@router.post("/library/backgrounds/import")
+async def import_library_backgrounds(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        result = await shot_library.import_backgrounds(db)
+    return ok(result)
+
+
 @router.get("/library/inbox")
 async def library_inbox() -> dict:
     return ok({"folder": str(shot_library.inbox_dir()), "files": shot_library.list_inbox()})

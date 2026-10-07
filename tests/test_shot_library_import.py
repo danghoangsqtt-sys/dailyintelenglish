@@ -37,6 +37,7 @@ def test_the_names_carry_the_tags():
     assert (parsed["kind"], parsed["reverse"], parsed["action"], parsed["expression"]) == (
         "duo_close", True, "drinking coffee", "smile")
     assert lib.parse_inbox_name("park__single-Lina__laugh")["single"] == "lina"
+    assert lib.parse_inbox_name("market__duo-wide__walking__2")["action"] == "walking"  # a variant number is ignored
     for bad in ("cafe", "cafe__wide", "cafe__duo"):
         with pytest.raises(ValueError):
             lib.parse_inbox_name(bad)
@@ -109,3 +110,31 @@ def test_an_imported_picture_is_reused_once_approved(client, requests_log):  # n
     shots = data(client.get(base))["shots"]
     assert [shot["source"] for shot in shots] == ["library"] * 4
     assert not [call for call in requests_log if call.get("command") in ("encode", "generate")]  # no GPU work at all
+
+
+def test_a_picture_with_the_people_the_other_way_round_is_reused_flipped(client, requests_log):  # noqa: F811
+    lina, alex = _two_characters()
+    project = data(client.post("/api/projects", json=PROJECT))
+    base = f"/api/projects/{project['id']}/visuals"
+    # the project's first speaker is Alex, the second Lina: the picture (Lina left, Alex right) is the other way round
+    data(client.put(f"{base}/cast", json=[{"speaker_index": 0, "character_id": alex},
+                                          {"speaker_index": 1, "character_id": lina}]))
+    data(client.put(f"{base}/scenes", json=["builtin-cafe"]))
+    folder = lib.inbox_dir()
+    folder.mkdir(parents=True, exist_ok=True)
+    asymmetric = Image.new("RGB", (1344, 768), (0, 0, 255))
+    asymmetric.paste(Image.new("RGB", (672, 768), (255, 0, 0)), (0, 0))  # red on the left, blue on the right
+    asymmetric.save(folder / "cafe__duo-wide.png")
+    for kind, colour in (("duo-close", (9, 9, 9)), ("single-lina", (8, 8, 8)), ("single-alex", (7, 7, 7))):
+        Image.new("RGB", (1344, 768), colour).save(folder / f"cafe__{kind}.png")
+    assert len(data(client.post("/api/visuals/library/inbox/import"))["imported"]) == 4
+    for row in _library(client):
+        data(client.patch(f"/api/visuals/library/shots/{row['id']}", json={"review_state": "approved"}))
+    requests_log.clear()
+    wait_job(client, data(client.post(f"{base}/shots")))
+    shots = data(client.get(base))["shots"]
+    assert [shot["source"] for shot in shots] == ["library"] * 4 and not [
+        call for call in requests_log if call.get("command") in ("encode", "generate")]
+    wide = next(shot for shot in shots if shot["kind"] == "duo_wide")
+    picture = Image.open(settings.DATA_DIR / "visuals" / project["id"] / "shots" / wide["id"] / "final.png")
+    assert picture.getpixel((10, 10)) == (0, 0, 255) and picture.getpixel((1330, 10)) == (255, 0, 0)  # flipped

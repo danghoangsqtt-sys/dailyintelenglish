@@ -683,11 +683,24 @@
     }
   }
 
+  // Phase 31: a project with no cast yet takes the locked library characters named like its speakers (Alex, Lina).
+  async function castByName() {
+    if (state.visuals.cast.length) return;
+    const members = [];
+    (state.project?.speakers || []).forEach((speaker) => {
+      const wanted = (speaker.name || "").trim().toLowerCase();
+      const match = state.visualCharacters.find((c) => c.status === "locked" && c.name.trim().toLowerCase() === wanted);
+      if (match) members.push({ speaker_index: speaker.speaker_index, character_id: match.id });
+    });
+    if (members.length) state.visuals = await Api.setProjectCast(state.projectId, members);
+  }
+
   async function loadProjectVisuals() {
     try {
       [state.visuals, state.visualCharacters, state.visualScenes, state.visualHealth] = await Promise.all([
         Api.getProjectVisuals(state.projectId), Api.listCharacters(), Api.listScenes(), Api.getVisualsHealth(),
       ]);
+      await castByName();
       state.visualSceneSelection = state.visuals.scenes.map((scene) => scene.id);
       renderProjectVisuals();
       if (state.visuals.active_job) watchVisualJob(state.visuals.active_job);

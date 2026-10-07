@@ -38,6 +38,8 @@
   ];
 
   const GENDERS = ["male", "female", "neutral"];
+  // Phase 31: the default cast of a new episode is Alex (male) and Lina (female), the library characters of the same names.
+  const DEFAULT_SPEAKERS = [{ name: "Alex", gender: "male" }, { name: "Lina", gender: "female" }];
   const DURATION_PRESETS = [5, 10, 15, 20];
   const MIN_SPEAKERS = 1;
   const MAX_SPEAKERS = 6;
@@ -176,9 +178,10 @@
     const speakers = state.speakers;
     if (count > speakers.length) {
       for (let i = speakers.length; i < count; i++) {
+        const preset = DEFAULT_SPEAKERS[i];
         speakers.push({
-          name: "",
-          gender: GENDERS[i % GENDERS.length],
+          name: preset ? preset.name : "",
+          gender: preset ? preset.gender : GENDERS[i % GENDERS.length],
           accent: state.accent,
           tts_engine: "edge_tts",
           voice_description: "",

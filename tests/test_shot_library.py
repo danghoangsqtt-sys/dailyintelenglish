@@ -174,6 +174,10 @@ async def test_matching_rules_action_expression_gaze_and_no_repeat_in_one_episod
         assert await find(action="") is None and await find(action="reading") is None  # the action must be the same
         assert await find(expression="serious") is None
         assert await find(exclude={added["id"]}) is None  # not repeated inside one episode
-        assert await find(character_ids=added["character_ids"][::-1]) is None  # left and right matter
+        flipped = await find(character_ids=added["character_ids"][::-1])
+        assert flipped["id"] == added["id"] and flipped["mirror"] is True  # the other way round: reused flipped
+        assert (await find())["mirror"] is False
+        assert await find(action="drinking coffee and talking") is not None  # every word of the library action is in it
+        assert await find(action="reading a book") is None
         monkeypatch.setattr(settings, "VISUALS_GAZE", "off")
         assert await find() is None  # drawn with the gaze fix, the setup now has it off
