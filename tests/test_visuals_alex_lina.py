@@ -14,12 +14,12 @@ from tests.test_visuals_project_api import client, data, setup_project  # noqa: 
 
 LINA = {
     "gender": "female", "age_group": "young", "ethnicity": "Russian", "role": "English teacher",
-    "hair": "long dark brown hair", "eyes": "brown eyes",
+    "hair": "long chocolate brown hair", "eyes": "brown eyes", "extra": "fair porcelain skin, curtain bangs",
     "top_color": "white", "top_item": "mini dress", "bottom_color": "white", "bottom_item": "mini dress",
 }
 ALEX = {
     "gender": "male", "age_group": "young", "ethnicity": "Russian", "role": "university student",
-    "hair": "side-swept highlighted brown hair", "eyes": "brown eyes",
+    "hair": "short swept-back brown hair", "eyes": "brown eyes", "extra": "caramel blond highlights, clean-shaven",
     "top_color": "navy blue", "top_item": "suit jacket", "bottom_color": "navy blue", "bottom_item": "suit trousers",
 }
 SCENE = {"place": "a cozy street cafe", "staging": "seated", "time_of_day": "day"}
@@ -34,15 +34,23 @@ def test_the_two_characters_are_valid_and_a_dress_is_one_garment():
         CharacterInput(name="Lina", **{**LINA, "bottom_color": "black"})
     with pytest.raises(ValueError, match="one garment"):
         CharacterInput(name="Alex", **{**ALEX, "top_item": "mini dress"})
+    assert CharacterInput(name="Lina", **LINA).extra == "fair porcelain skin, curtain bangs"
+    for bad in ("one two three four five six seven", "x" * 51, "digits 123"):
+        with pytest.raises(ValueError, match="extra"):
+            CharacterInput(name="Lina", **{**LINA, "extra": bad})
 
 
 def test_the_outfit_phrases_and_the_negatives_do_not_fight_the_suit_or_the_dress():
-    assert recipes.outfit_phrase(LINA) == "plain white mini dress"
+    assert recipes.outfit_phrase(LINA) == "plain white mini dress, fitted corset bodice, thin straps"
     assert recipes.outfit_phrase(ALEX) == "plain navy blue suit jacket and suit trousers, white shirt, black bow tie"
     assert recipes.duo_person(LINA) == "woman in plain white mini dress"
+    assert "fair porcelain skin, curtain bangs" in recipes.character_phrase(LINA)
+    assert "caramel blond highlights, clean-shaven" in recipes.compact_phrase(ALEX)
+    assert "short hair" in recipes.negative_for(LINA) and "short hair" not in recipes.negative_for(LINA, ALEX)
+    assert "beard" in recipes.negative_for(ALEX) and "beard" in recipes.negative_for(LINA, ALEX)
     assert "jacket" not in recipes.negative_for(ALEX) and "multicolored" not in recipes.negative_for(ALEX)
     assert "blazer" not in recipes.negative_for(LINA, ALEX)  # a duo with the suit must not forbid a jacket
-    assert "blazer" in recipes.negative_for(LINA) and "blue jeans" in recipes.negative_for(LINA)
+    assert "blazer" in recipes.negative_for(LINA) and "blue jeans" not in recipes.negative_for(LINA)  # a dress: no trousers
     assert "jacket" in recipes.NEGATIVE  # the other characters keep the old rule
 
 

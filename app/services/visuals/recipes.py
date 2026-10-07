@@ -32,11 +32,15 @@ def negative_for(*characters: Mapping) -> str:
         negative = negative.replace("jacket, ", "").replace(", multicolored clothes", "")
     if "black" in colours and "navy blue" not in colours:
         negative = negative.replace("multicolored clothes", "navy blue clothes")
+    if len(characters) == 1 and characters[0].get("extra") and "long" in characters[0]["hair"]:
+        negative += ", short hair"  # Phase 31: a long-haired woman keeps her hair (not in a duo: the man's would be fought)
+    if any("clean-shaven" in (character.get("extra") or "") for character in characters):
+        negative += ", beard"
     if "white" in colours:
         if not suit:
             negative += ", blazer"
-        if not any(character["bottom_item"] == "jeans" for character in characters):
-            negative += ", blue jeans"
+        if not any(character["bottom_item"] in ("jeans", "mini dress") for character in characters):
+            negative += ", blue jeans"  # (a dress has no trousers to drift into jeans)
     return negative
 
 
@@ -61,7 +65,7 @@ def _styled(*parts: str) -> str:
 
 
 # Phase 31: what is always worn with a garment (Alex's suit comes with a white shirt and a black bow tie).
-ACCESSORIES = {"suit jacket": ", white shirt, black bow tie"}
+ACCESSORIES = {"suit jacket": ", white shirt, black bow tie", "mini dress": ", fitted corset bodice, thin straps"}
 
 
 def outfit_phrase(character: Mapping) -> str:
@@ -69,18 +73,24 @@ def outfit_phrase(character: Mapping) -> str:
     all black) names its colour once; two colours name each garment; a dress is one garment."""
     accessory = ACCESSORIES.get(character["top_item"], "")
     if character["top_item"] == character["bottom_item"]:
-        return f"plain {character['top_color']} {character['top_item']}"
+        return f"plain {character['top_color']} {character['top_item']}{accessory}"
     if character["top_color"] == character["bottom_color"]:
         return f"plain {character['top_color']} {character['top_item']} and {character['bottom_item']}{accessory}"
     return (f"plain {character['top_color']} {character['top_item']}, plain {character['bottom_color']} "
             f"{character['bottom_item']}{accessory}")
 
 
+def hair_phrase(character: Mapping) -> str:
+    """The hair and the owner's identity detail (`extra`: skin, bangs...), as one prompt part."""
+    extra = (character.get("extra") or "").strip()
+    return f"{character['hair']}, {extra}" if extra else character["hair"]
+
+
 def character_phrase(character: Mapping) -> str:
     gender_noun = "woman" if character["gender"] == "female" else "man"
     return (
         f"{character['age_group']} {character['ethnicity']} {gender_noun} {character['role']}, "
-        f"{character['hair']}, {character['eyes']}, {outfit_phrase(character)}"
+        f"{hair_phrase(character)}, {character['eyes']}, {outfit_phrase(character)}"
     )
 
 
@@ -142,7 +152,7 @@ def garment_refine_prompt(character: Mapping, scene: Mapping, gaze: str | None =
     gender_noun = "woman" if character["gender"] == "female" else "man"
     return _styled(
         f"{outfit_phrase(character)}, {character['age_group']} {character['ethnicity']} {gender_noun}, "
-        f"{character['hair']}, talking" + (f", {gaze_words(gaze)[0]}" if gaze else "") + f", in {scene['place']}"
+        f"{hair_phrase(character)}, talking" + (f", {gaze_words(gaze)[0]}" if gaze else "") + f", in {scene['place']}"
     )
 
 
@@ -165,7 +175,7 @@ def compact_phrase(character: Mapping) -> str:
     identity, and the freed tokens go to the action and the expression."""
     gender_noun = "woman" if character["gender"] == "female" else "man"
     return (
-        f"{character['age_group']} {character['ethnicity']} {gender_noun}, {character['hair']}, "
+        f"{character['age_group']} {character['ethnicity']} {gender_noun}, {hair_phrase(character)}, "
         f"{outfit_phrase(character)}"
     )
 

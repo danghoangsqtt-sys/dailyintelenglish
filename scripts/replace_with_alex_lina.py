@@ -41,16 +41,16 @@ SEED = 31
 SPEC = {
     "Lina": {
         "form": dict(name="Lina", gender="female", age_group="young", ethnicity="Russian", role="English teacher",
-                     hair="long dark brown hair", eyes="brown eyes", top_color="white", top_item="mini dress",
-                     bottom_color="white", bottom_item="mini dress"),
+                     hair="long chocolate brown hair", eyes="brown eyes", extra="fair porcelain skin, curtain bangs",
+                     top_color="white", top_item="mini dress", bottom_color="white", bottom_item="mini dress"),
         "sheet": "lina_sheet.jpg", "pose": "lina_pose1.jpg",
         "front": ((420, 70, 603, 512), (501, 224), 345), "turned": ((770, 70, 938, 512), (826, 222), 340),
         "smile": (1068, 72, 1190, 272), "surprised": (947, 305, 1066, 510),
     },
     "Alex": {
         "form": dict(name="Alex", gender="male", age_group="young", ethnicity="Russian", role="university student",
-                     hair="side-swept highlighted brown hair", eyes="brown eyes", top_color="navy blue",
-                     top_item="suit jacket", bottom_color="navy blue", bottom_item="suit trousers"),
+                     hair="short swept-back brown hair", eyes="brown eyes", extra="caramel blond highlights, clean-shaven",
+                     top_color="navy blue", top_item="suit jacket", bottom_color="navy blue", bottom_item="suit trousers"),
         "sheet": "alex_sheet.jpg", "pose": "alex_pose3.jpg",
         "front": ((507, 42, 695, 298), (588, 158), 235), "turned": ((888, 42, 1073, 298), (972, 150), 232),
         "smile": (649, 372, 790, 557), "surprised": (507, 585, 645, 775),

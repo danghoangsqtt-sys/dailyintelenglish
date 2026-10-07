@@ -57,10 +57,15 @@ class CharacterInput(BaseModel):
 
     @field_validator("extra")
     @classmethod
-    def reject_extra(cls, value: str) -> str:
-        if value:
-            raise ValueError("extra is not supported in this phase")
-        return ""
+    def validate_extra(cls, value: str) -> str:
+        """Phase 31: a short identity detail for the prompts (skin, bangs...): the CLIP text window is only 77 tokens, so at
+        most 6 words and 50 letters, spaces, hyphens or commas."""
+        value = " ".join(value.strip().split())
+        if not value:
+            return ""
+        if len(value) > 50 or len(value.split()) > 6 or not re.fullmatch(r"[A-Za-z ,-]+", value):
+            raise ValueError("extra must have at most 6 words and 50 letters, spaces, hyphens or commas")
+        return value
 
     @model_validator(mode="after")
     def validate_outfit(self):
