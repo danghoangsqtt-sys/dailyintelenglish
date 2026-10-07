@@ -1365,6 +1365,15 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 - [x] 24.6 Remotion polish (crossfade, pan/zoom, inserts)
 - [ ] 24.7 Gate B-16
 
+## Phase 30 — Podcast visual modes (ENH-021)
+
+**Status:** 🟡 In progress 2026-10-07 | Plan `docs/implementation/phase-30-podcast-visuals.md`.
+
+- [ ] 30.1 Composition: visualMode props, Podcast.tsx (black, one still, character cards)
+- [ ] 30.2 API and props builder per mode
+- [ ] 30.3 Step 5 chip group and scene picker
+- [ ] 30.4 Real renders of the three modes
+
 ## Phase 29 — Ready-made shot library of Lan and Minh (ENH-020)
 
 **Status:** 🟡 Planned 2026-10-07 | Plan `docs/implementation/phase-29-shot-library.md`. Starts after Gate B-20.

@@ -242,6 +242,13 @@
       "tasks_done": 1,
       "tasks_total": 9,
       "note": "29.0 done. 29.1 gaze toward the partner (spike + fix) in progress; then 29.2 inserts with a character, 29.3 vocabulary spike, 29.4-29.8 library."
+    },
+    "30": {
+      "name": "Podcast visual modes (ENH-021)",
+      "status": "in_progress",
+      "tasks_done": 0,
+      "tasks_total": 4,
+      "note": "Started 2026-10-07 while the Phase 29.1 gaze comparison renders."
     }
   },
   "key_decisions": [
