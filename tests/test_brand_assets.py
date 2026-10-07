@@ -105,3 +105,13 @@ def test_the_small_logo_in_a_project_card_is_not_stretched_like_a_preview_image(
     """Found in the browser: `.project-thumb img` (the preview picture rule) also hit the placeholder's logo."""
     assert ".project-thumb img:not(.thumb-mark)" in CSS
     assert re.search(r"^\.thumb-mark \{[^}]*width: 30px; height: 30px", CSS, re.M)
+
+
+def test_the_video_logo_exists_and_is_not_git_ignored():
+    """Task 27.5: the intro/outro load the owner's logo with staticFile('brand/logo.png')."""
+    import subprocess
+
+    logo = ROOT / "video-renderer" / "public" / "brand" / "logo.png"
+    assert Image.open(logo).size == (512, 512)
+    ignored = subprocess.run(["git", "check-ignore", "-q", str(logo)], cwd=ROOT).returncode == 0
+    assert not ignored, "video-renderer/.gitignore must keep public/brand/ as source"

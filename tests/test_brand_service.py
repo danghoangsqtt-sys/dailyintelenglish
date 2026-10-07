@@ -43,8 +43,8 @@ def fake_edge(monkeypatch):
 def test_lines_are_deterministic_per_project_and_vary_across_projects():
     first = brand_service.brand_lines("project-a")
     assert first == brand_service.brand_lines("project-a")
-    assert first["greeting_text"] == f"Welcome to Daily Intel English Channel! {first['wish']}"
-    assert first["farewell_text"].startswith("Thanks for watching Daily Intel English! ")
+    assert first["greeting_text"] == f"Welcome to Daily Beyond English Channel! {first['wish']}"
+    assert first["farewell_text"].startswith("Thanks for watching Daily Beyond English! ")
     assert first["wish"] in brand_service.WISHES and first["farewell_line"] in brand_service.FAREWELLS
     wishes = {brand_service.brand_lines(f"project-{index}")["wish"] for index in range(60)}
     assert len(wishes) >= 8  # episodes get different wishes
@@ -58,8 +58,8 @@ def test_timing_follows_the_voice_with_a_minimum():
 
 
 async def test_voice_is_jenny_and_cached(fake_edge):
-    first = await brand_service.synthesize("Welcome to Daily Intel English Channel!")
-    again = await brand_service.synthesize("Welcome to Daily Intel English Channel!")
+    first = await brand_service.synthesize("Welcome to Daily Beyond English Channel!")
+    again = await brand_service.synthesize("Welcome to Daily Beyond English Channel!")
     assert first == again and len(fake_edge) == 1
     assert fake_edge[0][1] == "en-US-JennyNeural"
     assert first["duration_s"] == pytest.approx(60 * 39 / 1000, abs=0.08)

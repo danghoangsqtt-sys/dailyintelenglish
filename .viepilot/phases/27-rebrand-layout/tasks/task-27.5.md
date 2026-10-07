@@ -68,3 +68,8 @@
 
 The Remotion pictures of the episode itself (the shots), the YouTube thumbnail templates (Step 6 keeps its own
 templates), and any new voice.
+
+## Implementation notes (2026-10-07)
+
+- Done as planned. The first full render failed on a missing stand-in speech file (a leftover of the Phase 25 spike), not
+  on the brand: a generated 3 s tone replaced it. Report: `docs/operations/phase27-brand-video.md`.

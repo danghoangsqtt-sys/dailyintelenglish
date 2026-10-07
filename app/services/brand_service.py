@@ -19,7 +19,7 @@ from app.core.config import settings
 from app.core.exceptions import TTSError
 
 BRAND_VOICE = "en-US-JennyNeural"  # owner pick, spike 25.1
-GREETING = "Welcome to Daily Intel English Channel!"
+GREETING = "Welcome to Daily Beyond English Channel!"
 WISHES = (
     "Wishing you a wonderful time learning English today!",
     "Good luck with your studies, and enjoy the lesson!",
@@ -34,7 +34,7 @@ WISHES = (
     "Keep going, you are doing great!",
     "Wishing you a bright day full of new words!",
 )
-FAREWELL = "Thanks for watching Daily Intel English!"
+FAREWELL = "Thanks for watching Daily Beyond English!"
 FAREWELLS = (
     "Keep practising, and see you in the next lesson.",
     "Take care, and see you next time.",

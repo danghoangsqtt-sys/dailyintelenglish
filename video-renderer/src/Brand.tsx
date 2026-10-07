@@ -1,6 +1,8 @@
 /**
  * Phase 25 (D52-D55): the branded intro and outro, owner-approved in spike 25.1.
  *
+ * Phase 27: the Daily Beyond English brand (the owner's circular logo, deep green with green / lime / yellow).
+ *
  * "Morph" = PowerPoint-style: the same elements stay on screen and glide between layouts
  * (position, size, colour, radius) with spring easing instead of cutting between unrelated slides.
  * The intro opens on the logo, morphs it into a header, then brings in the episode; the outro
@@ -12,6 +14,7 @@ import {
   AbsoluteFill,
   Audio,
   Easing,
+  Img,
   Sequence,
   continueRender,
   delayRender,
@@ -24,12 +27,19 @@ import {
 import type { EpisodeBrand, EpisodeSpeaker } from "./types";
 
 export const BRAND_FONT = "'Montserrat', 'Segoe UI', Arial, sans-serif";
-const INK = "#F8FAFC";
-const MUTED = "#C7D2FE";
-const VIOLET = "#7C3AED";
-const CYAN = "#22D3EE";
-const AMBER = "#F59E0B";
-const SPEAKER_RING = ["#F59E0B", "#58A6FF"];
+// The owner's palette (logo + banner): greens, a yellow accent, white text on deep green, a red Subscribe.
+export const BRAND_PALETTE = {
+  green: "#3A9D3F", lime: "#9BD13C", yellow: "#FFD60A", ink: "#F8FFF6", muted: "#CFE8D2",
+  bgStart: "#0A1F12", bgMid: "#0F2A1A", bgEnd: "#17361F", pillInk: "#1F1A00", subscribe: "#C92A25",
+} as const;
+export const BRAND_NAME = { top: "Daily Beyond", sub: "ENGLISH" } as const;
+export const LOGO_PATH = "brand/logo.png";
+const INK = BRAND_PALETTE.ink;
+const MUTED = BRAND_PALETTE.muted;
+const GREEN = BRAND_PALETTE.green;
+const LIME = BRAND_PALETTE.lime;
+const YELLOW = BRAND_PALETTE.yellow;
+const SPEAKER_RING = [BRAND_PALETTE.yellow, BRAND_PALETTE.lime];
 export const DEFAULT_WISH = "Wishing you a wonderful time learning English today!";
 
 // Bundled SIL OFL font (video-renderer/public/fonts/OFL.txt); the render waits until it is loaded.
@@ -66,9 +76,9 @@ function useMorph(startSec: number, damping = 18, durationSec = 1.0): number {
 
 function Blobs({ morph, drift }: { morph: number; drift: number }) {
   const blobs = [
-    { a: [260, 180, 520], b: [1080, 160, 620], c1: VIOLET, c2: "#4F46E5" },
-    { a: [1040, 560, 460], b: [220, 600, 520], c1: CYAN, c2: "#0EA5E9" },
-    { a: [700, 360, 300], b: [760, 700, 360], c1: "#DB2777", c2: AMBER },
+    { a: [260, 180, 520], b: [1080, 160, 620], c1: GREEN, c2: "#1F7A2E" },
+    { a: [1040, 560, 460], b: [220, 600, 520], c1: LIME, c2: GREEN },
+    { a: [700, 360, 300], b: [760, 700, 360], c1: YELLOW, c2: LIME },
   ];
   return (
     <>
@@ -91,9 +101,9 @@ function Blobs({ morph, drift }: { morph: number; drift: number }) {
 function Background({ morph }: { morph: number }) {
   const frame = useCurrentFrame();
   return (
-    <AbsoluteFill style={{ background: "linear-gradient(135deg, #0B1026 0%, #151339 55%, #1E1B4B 100%)", overflow: "hidden" }}>
+    <AbsoluteFill style={{ background: `linear-gradient(135deg, ${BRAND_PALETTE.bgStart} 0%, ${BRAND_PALETTE.bgMid} 55%, ${BRAND_PALETTE.bgEnd} 100%)`, overflow: "hidden" }}>
       <Blobs morph={morph} drift={frame / 45} />
-      <AbsoluteFill style={{ background: "radial-gradient(ellipse at center, transparent 40%, rgba(5,6,20,0.65) 100%)" }} />
+      <AbsoluteFill style={{ background: "radial-gradient(ellipse at center, transparent 40%, rgba(3,12,6,0.65) 100%)" }} />
     </AbsoluteFill>
   );
 }
@@ -111,23 +121,20 @@ function Logo({ markMorph, wordMorph, appear }: { markMorph: number; wordMorph: 
   const wordSize = mix(64, 34, wordMorph);
   return (
     <>
-      <div style={{
+      <Img src={staticFile(LOGO_PATH)} style={{
         position: "absolute", left: markX, top: markY, width: markSize, height: markSize,
-        borderRadius: mix(40, 20, morph), transform: `scale(${appear})`, opacity: appear,
-        background: `linear-gradient(135deg, ${VIOLET}, ${CYAN})`,
-        boxShadow: `0 ${mix(24, 10, morph)}px ${mix(60, 24, morph)}px rgba(124,58,237,0.45)`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: BRAND_FONT, fontWeight: 800, color: INK, fontSize: markSize * 0.42, letterSpacing: -1,
-      }}>DI</div>
+        borderRadius: "50%", transform: `scale(${appear})`, opacity: appear, objectFit: "cover",
+        boxShadow: `0 ${mix(24, 10, morph)}px ${mix(60, 24, morph)}px rgba(155,209,60,0.4)`,
+      }} />
       <div style={{
         // The centring shift finishes early, so the moving wordmark never slides under the mark.
         position: "absolute", left: wordX, top: wordY, transform: `translateX(${mix(-50, 0, Math.min(1, wordMorph * 1.6))}%)`,
         opacity: appear, fontFamily: BRAND_FONT, color: INK, whiteSpace: "nowrap",
         textAlign: wordMorph < 0.5 ? "center" : "left",
       }}>
-        <div style={{ fontSize: wordSize, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.05 }}>Daily Intel</div>
+        <div style={{ fontSize: wordSize, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.05 }}>{BRAND_NAME.top}</div>
         <div style={{ fontSize: Math.max(14, wordSize * 0.42), fontWeight: 700, letterSpacing: wordSize * 0.16,
-          color: CYAN, marginTop: 2 }}>ENGLISH</div>
+          color: YELLOW, marginTop: 2 }}>{BRAND_NAME.sub}</div>
       </div>
     </>
   );
@@ -172,7 +179,7 @@ export function BrandIntro({ title, topic, cefrLevel, speakers, brand }: {
         </div>
         <div style={{ ...rise(metaIn), marginTop: 22, display: "flex", justifyContent: "center", gap: 14, alignItems: "center" }}>
           {cefrLevel ? (
-            <span style={{ padding: "6px 14px", borderRadius: 999, background: AMBER, color: "#1F1300", fontWeight: 800, fontSize: 22 }}>
+            <span style={{ padding: "6px 14px", borderRadius: 999, background: YELLOW, color: BRAND_PALETTE.pillInk, fontWeight: 800, fontSize: 22 }}>
               {cefrLevel}
             </span>
           ) : null}
@@ -224,7 +231,7 @@ export function BrandOutro({ brand }: { brand?: EpisodeBrand }) {
             return (
               <span key={chip} style={{ transform: `scale(${pop})`, opacity: pop, padding: "12px 26px", borderRadius: 999,
                 fontSize: 26, fontWeight: 800, color: INK,
-                background: index === 1 ? "#E11D48" : "rgba(255,255,255,0.1)", border: "2px solid rgba(255,255,255,0.18)" }}>
+                background: index === 1 ? BRAND_PALETTE.subscribe : "rgba(255,255,255,0.1)", border: "2px solid rgba(255,255,255,0.18)" }}>
                 {chip}
               </span>
             );

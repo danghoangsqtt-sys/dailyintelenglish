@@ -2,7 +2,8 @@ node_modules/
 build/
 out/
 .remotion/
-# Render inputs are generated; only the bundled brand font (Phase 25, SIL OFL) is source.
+# Render inputs are generated; only the bundled brand font (Phase 25, SIL OFL) and the owner's logo (Phase 27) are source.
 public/*
 !public/fonts/
+!public/brand/
 *.log
