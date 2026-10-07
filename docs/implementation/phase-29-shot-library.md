@@ -44,15 +44,32 @@ storyboard prompt is told the library's gestures, so its actions land on tags mo
 **Safety:** a library shot is tied to the **face reference of each character**; if a character is regenerated or
 changed, its shots are marked stale instead of silently reused.
 
+## 2b. Owner feedback on the Gate B-20 episode (2026-10-07), added to this phase
+
+1. **Cuts are too ghosty.** The shot-to-shot dissolve is 10 frames (0.33 s), 18 for inserts, and the dialogue changes
+   speaker line by line, so two faces overlap on screen. Fix: near-hard cuts (4 frames, 9 for inserts).
+2. **The two people talk but both look at the camera.** Unnatural. Cause (measured): the face reference given to the
+   refine is a frontal face, which pulls every head to the camera although the skeleton turns the heads. Plan: use the
+   character sheet's **three-quarter view** (mirrored for the left person) as the face reference of a duo, add gaze words
+   ("looking at the man on the left"), and for a **single** shot of a speaker turn the head toward the off-screen partner.
+   Gaze toward the partner becomes a **tag** of every library shot and a check in the owner's review.
+3. **Illustration shots should be able to show a character.** An insert today is "no characters" (a person in it is a
+   stranger). New: an insert may name a speaker, and is drawn as that character doing the action (checking a phone,
+   eating oatmeal, stretching) with the face reference, no scene plate needed.
+4. **Fix the errors discussed so far:** the outfit swap (Minh in white), the false alarms and the weak checks. A library
+   shot is **reviewed once by the owner** (approve or reject in a grid); only approved shots are ever reused, so a wrong
+   outfit or a stare at the camera cannot reach an episode.
+
 ## 3. Tasks
 
 | Task | What | Accept when |
 |---|---|---|
-| 29.1 | **Design and spike (GPU):** fix the vocabulary and the budget; test (a) expression and mouth variants by face repaint, (b) gesture pose maps (arms, hands), (c) three new camera angles; measure seconds and look at the pictures | the owner sees the samples and approves the vocabulary and the size of the core set |
-| 29.2 | **Data model and service:** `shot_library` table (migration), files under `data/library/shots/`, add / list / filter / delete / mark stale; API | tests green |
-| 29.3 | **Matcher and the library-first job:** the project shot job resolves each shot spec against the library, copies a match (no GPU) and generates only the rest; the project shot records `source` (library or generated) | a fake-engine test generates only the missing shots; a real run on the Demo Episode |
-| 29.4 | **Batch generator:** a resumable job that renders the core set overnight from a plan file, with the shot checks (colours, faces) and a coverage report | the core set is generated and looked at by sheets |
-| 29.5 | **Shot Library UI:** a library page (grid, filters by scene / framing / expression / gesture), "from library" and "Add to library" in Step 5, and a coverage view ("what is missing for this storyboard") | tests green; screenshots |
+| 29.0 | **Cleaner cuts:** near-hard cuts between shots (4 frames, 9 for inserts) | vitest green; a real render shows no double exposure on a speaker change |
+| 29.1 | **Design and spike (GPU):** gaze toward the partner (three-quarter references, gaze words), expression and mouth variants by face repaint, gesture pose maps, camera angles, and an insert with a character; measure seconds and look at the pictures | the owner sees the samples and approves the vocabulary and the size of the core set |
+| 29.2 | **Data model and service:** `shot_library` table (migration) with a review state (pending / approved / rejected), files under `data/library/shots/`, add / list / filter / delete / mark stale; API | tests green |
+| 29.3 | **Matcher and the library-first job:** the project shot job resolves each shot spec against the **approved** library shots, copies a match (no GPU) and generates only the rest; inserts may name a character; the project shot records `source` | a fake-engine test generates only the missing shots; a real run on the Demo Episode |
+| 29.4 | **Batch generator:** a resumable job that renders the core set overnight from a plan file, with the shot checks (colours, faces, gaze) and a coverage report | the core set is generated and looked at by sheets |
+| 29.5 | **Shot Library UI:** a library page (grid, filters by scene / framing / expression / gesture, approve / reject), "from library" and "Add to library" in Step 5, and a coverage view ("what is missing for this storyboard") | tests green; screenshots |
 | 29.6 | **Gate B-21:** the owner makes an episode and times it against generating everything | owner PASS |
 
 ## 4. Decisions needed from the owner (asked after the Gate B-20 episode)

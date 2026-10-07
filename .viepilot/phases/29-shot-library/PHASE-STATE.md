@@ -1,11 +1,12 @@
 # PHASE-STATE — Phase 29: Ready-made shot library of Lan and Minh (ENH-020)
 
 - **Status:** planned 2026-10-07 (owner request). **Plan:** `docs/implementation/phase-29-shot-library.md`.
-- **Starts after:** Gate B-20 (the first full episode in the new style).
+- **Started 2026-10-07:** the owner reviewed the Gate B-20 episode (cuts too ghosty, both people stare at the camera, inserts should show a character) and asked to continue with this phase to fix what was discussed.
 
 | Task | Description | Status |
 |---|---|---|
-| 29.1 | Design and spike (vocabulary, face-repaint variants, gesture poses, camera angles) | planned |
+| 29.0 | Cleaner cuts: near-hard cuts between shots (owner feedback 2026-10-07) | **in_progress** 2026-10-07 |
+| 29.1 | Design and spike (gaze toward the partner, variants, gestures, angles, insert with a character) | planned |
 | 29.2 | Data model and service (shot_library) | planned |
 | 29.3 | Matcher and the library-first shot job | planned |
 | 29.4 | Resumable batch generator for the core set | planned |
