@@ -8,6 +8,26 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Phases 27-30 — new look, ready-made shots, podcast pictures, 2026-10-07)
+- **Daily Beyond English.** New name, logo and green / yellow / white / red palette in the app and the video intro and
+  outro; a collapsible app sidebar; large image grids for characters and scenes; the Music Library takes many files at once,
+  plays them one at a time and accepts ogg / m4a; all seven steps share one studio frame (Step 1 joined it).
+- **Editorial photo look.** Pictures are drawn in a semi-realistic editorial style (RealVisXL V5.0) with two approved
+  characters: Lan (all white) and Minh (all black). Shots that still fail a check (outfit colour, an extra face) are marked in
+  Step 5 for you to regenerate.
+- **Natural gaze.** The two people look at each other (or past the lens in a single shot) instead of staring at the camera:
+  `VISUALS_GAZE` is `turned` by default (`off` restores the old behaviour).
+- **Cleaner cuts.** Shot changes are near-hard cuts, without the ghosting of the long dissolves.
+- **Inserts with a character.** An illustration shot may show Lan or Minh doing what is described (checking a phone, eating
+  oatmeal, stretching).
+- **Shot Library.** Ready-made pictures of Lan and Minh by scene, framing, action and mood: add a good shot from Step 5,
+  approve each one once on the Shot Library page (`/shots`), and the next episode reuses approved matches without any GPU time
+  and draws only what is missing; a changed character makes its pictures stale. `scripts/build_shot_library.py` fills the
+  library scene by scene (resumable).
+- **Podcast pictures (Step 5, "Video pictures").** "Podcast: with characters" (the story pictures, as before),
+  "Podcast: black screen" and "Podcast: one still scene" (a slow zoom on one scene picture); the last two need no drawn
+  shots and render in about two minutes.
+
 ### Added (Task 22.9 — automatic music classification, 2026-10-06)
 - **Classification.** New Music Library tracks are analysed automatically:
   - a **pace** (calm / medium / lively), from how busy the music is;
