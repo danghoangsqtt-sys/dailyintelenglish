@@ -6,9 +6,11 @@
 | Task | Description | Status |
 |---|---|---|
 | 29.0 | Cleaner cuts: near-hard cuts between shots (owner feedback 2026-10-07) | done 2026-10-07 (vitest 47, real render checked) |
-| 29.1 | Design and spike (gaze toward the partner, variants, gestures, angles, insert with a character) | **in_progress** 2026-10-07 (card `tasks/task-29.1.md`) |
-| 29.2 | Data model and service (shot_library) | planned |
-| 29.3 | Matcher and the library-first shot job | planned |
-| 29.4 | Resumable batch generator for the core set | planned |
-| 29.5 | Shot Library UI, "from library" / "Add to library", coverage view | planned |
-| 29.6 | Gate B-21 (owner times an episode against generating everything) | planned |
+| 29.1 | Gaze toward the other person (spike, then the fix in the pipeline) | **in_progress** 2026-10-07 (card `tasks/task-29.1.md`) |
+| 29.2 | Inserts with a character | planned |
+| 29.3 | Library vocabulary spike (variants, gestures, camera angles) | planned |
+| 29.4 | Data model and service (shot_library, review state) | planned |
+| 29.5 | Matcher and the library-first shot job | planned |
+| 29.6 | Resumable batch generator for the core set | planned |
+| 29.7 | Shot Library UI, "from library" / "Add to library", coverage view | planned |
+| 29.8 | Gate B-21 (owner times an episode against generating everything) | planned |

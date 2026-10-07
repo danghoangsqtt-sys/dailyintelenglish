@@ -64,13 +64,15 @@ changed, its shots are marked stale instead of silently reused.
 
 | Task | What | Accept when |
 |---|---|---|
-| 29.0 | **Cleaner cuts:** near-hard cuts between shots (4 frames, 9 for inserts) | vitest green; a real render shows no double exposure on a speaker change |
-| 29.1 | **Design and spike (GPU):** gaze toward the partner (three-quarter references, gaze words), expression and mouth variants by face repaint, gesture pose maps, camera angles, and an insert with a character; measure seconds and look at the pictures | the owner sees the samples and approves the vocabulary and the size of the core set |
-| 29.2 | **Data model and service:** `shot_library` table (migration) with a review state (pending / approved / rejected), files under `data/library/shots/`, add / list / filter / delete / mark stale; API | tests green |
-| 29.3 | **Matcher and the library-first job:** the project shot job resolves each shot spec against the **approved** library shots, copies a match (no GPU) and generates only the rest; inserts may name a character; the project shot records `source` | a fake-engine test generates only the missing shots; a real run on the Demo Episode |
-| 29.4 | **Batch generator:** a resumable job that renders the core set overnight from a plan file, with the shot checks (colours, faces, gaze) and a coverage report | the core set is generated and looked at by sheets |
-| 29.5 | **Shot Library UI:** a library page (grid, filters by scene / framing / expression / gesture, approve / reject), "from library" and "Add to library" in Step 5, and a coverage view ("what is missing for this storyboard") | tests green; screenshots |
-| 29.6 | **Gate B-21:** the owner makes an episode and times it against generating everything | owner PASS |
+| 29.0 | **Cleaner cuts:** near-hard cuts between shots (4 frames, 9 for inserts) | done: vitest green, real render checked |
+| 29.1 | **Gaze toward the other person (spike, then the fix):** a turned face reference, gaze words, a setting to compare them on the real job | the owner sees A / B / C sheets; the winner is the default |
+| 29.2 | **Inserts with a character:** an insert may name a speaker and is drawn as that character doing the action | a real insert shows the right person |
+| 29.3 | **Library vocabulary spike (GPU):** expression and mouth variants by face repaint, gesture pose maps, camera angles; seconds and pictures | the owner approves the vocabulary and the size of the core set |
+| 29.4 | **Data model and service:** `shot_library` table (migration) with a review state (pending / approved / rejected), files under `data/library/shots/`, add / list / filter / delete / mark stale; API | tests green |
+| 29.5 | **Matcher and the library-first job:** the project shot job resolves each shot spec against the **approved** library shots, copies a match (no GPU) and generates only the rest; the project shot records `source` | a fake-engine test generates only the missing shots; a real run on the Demo Episode |
+| 29.6 | **Batch generator:** a resumable job that renders the core set overnight from a plan file, with the shot checks (colours, faces, gaze) and a coverage report | the core set is generated and looked at by sheets |
+| 29.7 | **Shot Library UI:** a library page (grid, filters, approve / reject), "from library" and "Add to library" in Step 5, a coverage view ("what is missing for this storyboard") | tests green; screenshots |
+| 29.8 | **Gate B-21:** the owner makes an episode and times it against generating everything | owner PASS |
 
 ## 4. Decisions needed from the owner (asked after the Gate B-20 episode)
 
