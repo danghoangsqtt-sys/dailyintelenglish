@@ -234,7 +234,7 @@ async def prepare_regenerate(db: aiosqlite.Connection, project_id: str, shot_id:
         seed = random.randint(1, 2**31 - 1)
     await db.execute(
         "UPDATE project_shots SET seed = ?, status = 'pending', raw_path = NULL, final_path = NULL, "
-        "error = NULL, review_note = NULL, updated_at = ? WHERE id = ?",
+        "error = NULL, review_note = NULL, source = 'generated', library_shot_id = NULL, updated_at = ? WHERE id = ?",
         (seed, library._now(), shot_id),
     )
     return await get_shot_row(db, project_id, shot_id)

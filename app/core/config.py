@@ -120,6 +120,11 @@ class Settings(BaseSettings):
     # Task 20.11: re-refine a person whose measured top/bottom colour misses the locked
     # colour, at most this many times per person per shot (0 disables the check).
     VISUALS_COLOUR_RETRIES: int = 2
+    # Task 29.5 (ENH-020): a project shot job first copies an approved library shot for every spec it matches (no GPU)
+    # and generates only the rest; Task 29.4: with AUTO_ADD every generated shot that passed its checks also goes to the
+    # library as `pending` (the owner still approves it once before it can ever be reused).
+    VISUALS_USE_LIBRARY: bool = True
+    VISUALS_LIBRARY_AUTO_ADD: bool = False
     # Task 29.1 (owner, 2026-10-07: both people stared into the lens): "off" = as before; "words" = gaze words in the
     # prompts; "turned" = the words plus each person's face reference turned toward the other one (a library asset
     # `face_turned`, mirrored for the person on the right; a character without one keeps its front face).

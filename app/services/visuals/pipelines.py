@@ -14,7 +14,7 @@ from PIL import Image, ImageOps
 from app.core.config import settings
 from app.core.exceptions import ConflictError
 from app.db.transactions import read_transaction, write_transaction
-from app.services.visuals import colour_check, geometry, shot_checks, library_service as library, project_visuals_service as project_visuals, recipes
+from app.services.visuals import colour_check, geometry, shot_checks, library_service as library, project_visuals_service as project_visuals, recipes, shot_library_service as shot_library
 from app.services.visuals.engine import get_image_engine
 from app.services.visuals.runner import ImageJobRunner, JobCancelled
 
@@ -586,6 +586,15 @@ async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows
                     (str(final_path), "; ".join(notes) or None, library._now(), row["id"]),
                 )
     await runner.boundary(job["id"], "shots complete", 99)
+    if settings.VISUALS_LIBRARY_AUTO_ADD:  # Task 29.4: a shot that passed its checks goes to the library as pending
+        for context in contexts:
+            try:
+                finished = await project_visuals.get_shot_row(db, project_id, context["row"]["id"])
+                if finished["status"] == "complete" and not finished["review_note"]:
+                    async with write_transaction(db):
+                        await shot_library.add_from_project_shot(db, project_id, finished["id"])
+            except Exception:  # noqa: BLE001  (a library hiccup never fails the shot job)
+                pass
     return {"shot_ids": [context["row"]["id"] for context in inserts + contexts]}
 
 
@@ -599,7 +608,11 @@ async def project_shots(job: dict, runner: ImageJobRunner) -> dict:
     directory = settings.DATA_DIR / "visuals" / project_id / "shots"
     await asyncio.to_thread(shutil.rmtree, directory, ignore_errors=True)
     try:
-        return await _generate_set(job, runner, project_id, rows)
+        # Task 29.5: approved library shots serve every spec they match; only the rest is drawn.
+        async with write_transaction(db):
+            rows, served = await shot_library.reuse_for_rows(db, project_id, rows)
+        result = await _generate_set(job, runner, project_id, rows) if rows else {"shot_ids": []}
+        return {**result, "from_library": served}
     except JobCancelled:
         await _mark_error(db, rows, "cancelled")
         raise

@@ -128,6 +128,11 @@ class ReferenceInput(BaseModel):
     asset_id: str
 
 
+class ShotReviewInput(BaseModel):
+    """Task 29.4: the owner's one-time review of a library shot."""
+    review_state: Literal["pending", "approved", "rejected"]
+
+
 class ApprovalInput(BaseModel):
     approved: bool
 

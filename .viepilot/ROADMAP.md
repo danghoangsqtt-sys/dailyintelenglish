@@ -1382,8 +1382,8 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 - [x] 29.1 Gaze toward the other person (spike, then the fix)
 - [x] 29.2 Inserts with a character
 - [ ] 29.3 Library vocabulary spike (variants, gestures, camera angles)
-- [ ] 29.4 Data model and service
-- [ ] 29.5 Matcher and the library-first shot job
+- [x] 29.4 Data model and service
+- [x] 29.5 Matcher and the library-first shot job
 - [ ] 29.6 Resumable batch generator
 - [ ] 29.7 Shot Library UI and coverage view
 - [ ] 29.8 Gate B-21

@@ -15,12 +15,13 @@ from app.db.database import get_db
 from app.db.transactions import read_transaction, write_transaction
 from app.models.visuals import (
     AGE_GROUPS, BOTTOMS, COLORS, GENDERS, SCENE_CATEGORIES, TIMES_OF_DAY, TOPS, ApprovalInput, CharacterInput,
-    CastMemberInput, CharacterPatch, ReferenceInput, SceneInput, ScenePatch, SheetItemInput,
+    CastMemberInput, CharacterPatch, ReferenceInput, SceneInput, ScenePatch, SheetItemInput, ShotReviewInput,
 )
 from app.services import project_service
 from app.services.visuals import jobs
 from app.services.visuals import library_service as library
 from app.services.visuals import project_visuals_service as project_visuals
+from app.services.visuals import shot_library_service as shot_library
 from app.services.visuals import storyboard_service
 from app.services.visuals.engine import IMAGE_PYTHON, require_generation
 
@@ -225,6 +226,54 @@ async def cancel_image_job(job_id: str, db: aiosqlite.Connection = Depends(get_d
     async with write_transaction(db):
         job = await jobs.request_cancel(db, job_id)
     return ok(job)
+
+
+@router.get("/library/shots")
+async def list_library_shots(
+    scene_id: str | None = None, kind: str | None = None, review_state: str | None = None,
+    character_id: str | None = None, db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    async with write_transaction(db):
+        await shot_library.refresh_stale(db)  # a regenerated character's shots show as stale
+    async with read_transaction():
+        rows = await shot_library.list_shots(db, scene_id, kind, review_state, character_id)
+    return ok(rows)
+
+
+@router.patch("/library/shots/{shot_id}")
+async def review_library_shot(shot_id: str, body: ShotReviewInput, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        row = await shot_library.set_review(db, shot_id, body.review_state)
+    return ok(row)
+
+
+@router.delete("/library/shots/{shot_id}")
+async def delete_library_shot(shot_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        await shot_library.delete_shot(db, shot_id)
+    return ok({"deleted": shot_id})
+
+
+@router.get("/library/shots/{shot_id}/content")
+async def library_shot_content(shot_id: str, db: aiosqlite.Connection = Depends(get_db)) -> FileResponse:
+    async with read_transaction():
+        path = await shot_library.content_path(db, shot_id)
+    return FileResponse(path, media_type="image/png")
+
+
+@project_router.post("/shots/{shot_id}/to-library")
+async def add_project_shot_to_library(project_id: str, shot_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        row = await shot_library.add_from_project_shot(db, project_id, shot_id)
+    return ok(row)
+
+
+@project_router.get("/library-coverage")
+async def library_coverage(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with read_transaction():
+        await project_service.get_project(db, project_id)
+        result = await shot_library.coverage(db, project_id)
+    return ok(result)
 
 
 @project_router.get("")
