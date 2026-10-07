@@ -10,4 +10,4 @@
 | 28.4a | The 55 scene plates in the new look (script, owner request while waiting for the 28.3 suite) | done 2026-10-06 (card `tasks/task-28.4a.md`; report `docs/operations/phase28-scene-plates.md`) |
 | 28.4 | Redo the library: Lan and Minh replace the two old characters (the plates are 28.4a) | done 2026-10-06 (1498 passed; card `tasks/task-28.4.md`) |
 | 28.5 | Shot checks on photographs: face counting (owner approved the small model) and a "check this shot" mark in Step 5 | done 2026-10-06 (1506 passed; card `tasks/task-28.5.md`) |
-| 28.6 | Gate B-20 (one full episode) | planned |
+| 28.6 | Gate B-20 (one full episode) | **ready for the owner** 2026-10-07: the episode and the report `docs/operations/phase28-gate-b20.md` |
