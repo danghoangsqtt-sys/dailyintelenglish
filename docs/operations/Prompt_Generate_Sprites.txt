@@ -3,10 +3,15 @@
 THƯ MỤC
 - ĐÍCH (ghi ảnh vào đây): D:\DataAdmin\Daily_Intel_English\data\library\sprites_inbox
 - LOG và ảnh xem thử: D:\DataAdmin\Daily_Intel_English\data\assets_sprites\logs
-- ẢNH THAM CHIẾU của nhân vật (chỉ đọc, KHÔNG sửa, KHÔNG xóa):
-  D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\
-    lina_sheet.jpg, lina_pose1.jpg, lina_pose2.jpg, lina_pose3.jpg
-    alex_sheet.jpg, alex_pose1.jpg, alex_pose2.jpg, alex_pose3.jpg
+- ẢNH THAM CHIẾU của nhân vật (chỉ đọc, KHÔNG sửa, KHÔNG xóa), đường dẫn đầy đủ:
+    D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\lina_sheet.jpg
+    D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\lina_pose1.jpg
+    D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\lina_pose2.jpg
+    D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\lina_pose3.jpg
+    D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\alex_sheet.jpg
+    D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\alex_pose1.jpg
+    D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\alex_pose2.jpg
+    D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\alex_pose3.jpg
 - Tạo hai thư mục ĐÍCH và LOG nếu chưa có. KHÔNG ghi, KHÔNG xóa, KHÔNG sửa bất cứ thứ gì ngoài hai thư mục này.
 
 MỤC TIÊU
@@ -24,7 +29,7 @@ QUY TẮC CHO MỌI ẢNH (rất quan trọng)
 NHẬN DẠNG NHÂN VẬT
 LINA (nữ): young adult woman, fair porcelain skin, slim feminine body, delicate oval heart-shaped face, large almond-shaped warm brown eyes, soft full pink lips, long dark chocolate brown hair with soft curtain bangs, wearing the SAME ivory white fitted mini dress with corset-inspired bodice, thin spaghetti straps, small center keyhole with delicate tie strings. No jewelry.
 ALEX (nam): young adult man, fair light skin, tall slim athletic build, handsome angular oval face, defined jawline, warm brown almond eyes, thick dark eyebrows, clean-shaven, short dark brown hair with subtle caramel blond highlights, voluminous swept-back hairstyle with side-swept front and tapered sides, wearing the SAME tailored deep navy blue suit (single-breasted blazer), crisp white dress shirt, black textured bow tie, matching navy trousers.
-Dùng đúng khuôn mặt, tóc, quần áo trong ảnh tham chiếu (lina_sheet.jpg / alex_sheet.jpg và các ảnh pose). Prompt phủ định chung: different person, face change, inconsistent face, different hairstyle, different outfit, different outfit color, anime, cartoon, illustration, 3d render, plastic skin, bad anatomy, extra fingers, bad hands, deformed hands, text, logo, watermark, jewelry, glasses, hat, duplicate person.
+Dùng đúng khuôn mặt, tóc, quần áo trong ảnh tham chiếu (D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\lina_sheet.jpg, D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\alex_sheet.jpg và các ảnh pose cùng thư mục). Prompt phủ định chung: different person, face change, inconsistent face, different hairstyle, different outfit, different outfit color, anime, cartoon, illustration, 3d render, plastic skin, bad anatomy, extra fingers, bad hands, deformed hands, text, logo, watermark, jewelry, glasses, hat, duplicate person.
 
 CÁCH LÀM (bắt buộc theo thứ tự này)
 BƯỚC 1 - ẢNH GỐC (reference) cho từng nhân vật:
@@ -72,9 +77,9 @@ KIỂM TRA SAU MỖI ẢNH (tự động, bằng Pillow)
 - nếu trượt: tạo lại (tối đa 3 lần) như đã nói ở BƯỚC 2.
 
 GHI LOG
-- Ghi mỗi ảnh một dòng vào logs\sprites_log.csv: tên file, tầng, số lần thử, kết quả kiểm tra, prompt đã dùng.
+- Ghi mỗi ảnh một dòng vào D:\DataAdmin\Daily_Intel_English\data\assets_sprites\logs\sprites_log.csv: tên file, tầng, số lần thử, kết quả kiểm tra, prompt đã dùng.
 - Cho phép chạy lại: bỏ qua file đã tồn tại và đã qua kiểm tra.
-- Cuối cùng tạo 2 ảnh xem thử (mỗi nhân vật một ảnh gồm tất cả sprite xếp lưới, có tên file) trong thư mục logs, KHÔNG để ảnh xem thử trong thư mục đích. In ra bảng tóm tắt: số file đạt / hỏng theo từng tầng.
+- Cuối cùng tạo 2 ảnh xem thử (mỗi nhân vật một ảnh gồm tất cả sprite xếp lưới, có tên file) trong D:\DataAdmin\Daily_Intel_English\data\assets_sprites\logs, KHÔNG để ảnh xem thử trong thư mục đích. In ra bảng tóm tắt: số file đạt / hỏng theo từng tầng.
 
 ĐIỀU CẦN TRÁNH
 - Không đặt tên file khác quy ước (tên đúng dạng nhanvat__bieucam__mieng.png, ví dụ alex__smile__open.png).
