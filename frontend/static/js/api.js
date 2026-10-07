@@ -117,6 +117,18 @@ const Api = (() => {
     lockCharacter: (id) => request(`/api/visuals/characters/${id}/lock`, { method: "POST" }),
     unlockCharacter: (id) => request(`/api/visuals/characters/${id}/unlock`, { method: "POST" }),
     listScenes: () => request("/api/visuals/scenes"),
+    // Task 29.7: the shot library of ready-made pictures.
+    listLibraryShots: (filters = {}) => {
+      const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));
+      return request(`/api/visuals/library/shots${query.toString() ? `?${query}` : ""}`);
+    },
+    reviewLibraryShot: (id, reviewState) => request(`/api/visuals/library/shots/${id}`, {
+      method: "PATCH", body: JSON.stringify({ review_state: reviewState }),
+    }),
+    deleteLibraryShot: (id) => request(`/api/visuals/library/shots/${id}`, { method: "DELETE" }),
+    addProjectShotToLibrary: (projectId, shotId) =>
+      request(`/api/projects/${projectId}/visuals/shots/${shotId}/to-library`, { method: "POST" }),
+    getLibraryCoverage: (projectId) => request(`/api/projects/${projectId}/visuals/library-coverage`),
     createScene: (scene) => request("/api/visuals/scenes", { method: "POST", body: JSON.stringify(scene) }),
     updateScene: (id, patch) => request(`/api/visuals/scenes/${id}`, {
       method: "PATCH", body: JSON.stringify(patch),

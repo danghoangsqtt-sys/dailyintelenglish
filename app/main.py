@@ -253,6 +253,12 @@ async def music_library() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "pages" / "music_library.html")
 
 
+@app.get("/shots")
+async def shot_library() -> FileResponse:
+    """Serve the Shot Library (Task 29.7)."""
+    return FileResponse(FRONTEND_DIR / "pages" / "shot_library.html")
+
+
 @app.get("/characters")
 async def character_library() -> FileResponse:
     """Serve the global Character Library."""

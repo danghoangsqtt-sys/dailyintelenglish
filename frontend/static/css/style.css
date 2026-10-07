@@ -341,3 +341,7 @@ h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); lett
 .page-heading h1, .library-heading h1 { margin: 0 0 8px; color: var(--text); font-family: var(--font-display); font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
 .page-heading p, .library-heading p { max-width: 720px; margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
 .library-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+
+/* Task 29.5/29.7: a shot copied from the Shot Library. */
+.visual-badge { display: inline-block; margin: 4px 0; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  color: var(--success); border: 1px solid var(--success); background: rgba(63, 185, 80, 0.1); }

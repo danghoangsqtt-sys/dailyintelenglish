@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
+  <title>Shot Library — Daily Beyond English</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    body { margin: 0; }
+    .main { width: min(1180px, calc(100% - 80px)); margin: 0 auto; padding: 48px 0 80px; }
+    .shot-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 18px 0; }
+    .shot-filters label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .shot-filters select { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--surface-border); background: var(--surface); color: inherit; font: inherit; font-size: 13px; }
+    .shot-summary { color: var(--text-muted); font-size: 13px; margin: 0 0 14px; }
+    .shot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+    .shot-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--surface-border); border-left-width: 4px; border-radius: 12px; background: var(--surface); }
+    .shot-card.is-approved { border-left-color: var(--success); }
+    .shot-card.is-rejected { border-left-color: var(--danger); opacity: .7; }
+    .shot-card.is-stale { border-left-color: var(--danger); border-style: dashed; }
+    .shot-card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; background: #000; }
+    .shot-title { margin: 0; font-size: 14px; font-weight: 700; }
+    .shot-meta { margin: 0; color: var(--text-muted); font-size: 12px; min-height: 1.4em; }
+    .track-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+    .track-badge { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; border: 1px solid var(--surface-border); background: var(--surface); color: var(--text-muted); }
+    .track-badge.is-pace { color: var(--success); border-color: var(--success); }
+    .track-badge.is-warning { color: var(--danger); border-color: var(--danger); background: rgba(248, 81, 73, 0.08); }
+    .track-badge.is-missing { border-style: dashed; }
+    .message { margin: 12px 0; padding: 11px 14px; border-radius: 10px; font-size: 13px; }
+    .message-success { color: var(--success); background: rgba(63, 185, 80, 0.1); }
+    .message-error { color: var(--danger); background: rgba(248, 81, 73, 0.1); }
+    .empty-state { padding: 54px 20px; text-align: center; color: var(--text-muted); }
+    .delete-btn:hover { border-color: var(--danger); color: var(--danger); }
+  </style>
+</head>
+<body>
+  <aside id="app-sidebar" class="app-sidebar" aria-label="App navigation">
+    <a class="brand" href="/" aria-label="Daily Beyond English home"><img class="brand-logo" src="/static/brand/logo-64.png" width="36" height="36" alt="" /><span class="brand-word"><b>Daily Beyond</b><small>English</small></span></a>
+    <nav class="side-nav" aria-label="Main"><a class="side-link" href="/" aria-label="Dashboard" title="Dashboard"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg><span class="side-label">Dashboard</span></a><a class="side-link" href="/characters" aria-label="Character Library" title="Character Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><circle cx="17.2" cy="9.2" r="2.4"/><path d="M16.2 14.3c2.8.3 4.8 2.4 4.8 5.7"/></svg><span class="side-label">Character Library</span></a><a class="side-link" href="/shots" aria-current="page" aria-label="Shot Library" title="Shot Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M8 5v4M16 5v4M8 15l2.5-3 2 2 2-2.5L18 15"/></svg><span class="side-label">Shot Library</span></a><a class="side-link" href="/music" aria-label="Music Library" title="Music Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg><span class="side-label">Music Library</span></a><a class="side-link" href="/settings" aria-label="Settings" title="Settings"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span class="side-label">Settings</span></a></nav>
+    <button id="sidebar-toggle" class="side-toggle" type="button" aria-expanded="true" aria-controls="app-sidebar" aria-label="Collapse sidebar" title="Collapse sidebar"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14.5 6-6 6 6 6"/></svg><span class="side-label">Collapse</span></button>
+  </aside>
+  <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+  <script src="/static/js/app_sidebar.js"></script>
+  <header class="topbar">
+    <button id="sidebar-open" class="sidebar-opener" type="button" aria-controls="app-sidebar" aria-expanded="false" aria-label="Open menu"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        <div class="topbar-actions">
+      <button id="theme-toggle" class="icon-toggle" type="button" aria-label="Toggle dark/light mode">☀️</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="page-heading">
+      <h1>Shot Library</h1>
+      <p>Ready-made pictures of Lan and Minh in their scenes. Look at each picture once and approve it: a new episode then
+        reuses approved pictures that match its scene, framing, action and mood, and draws only what is missing. A picture of
+        a character that was changed afterwards shows as stale and is never reused.</p>
+    </section>
+    <div class="shot-filters" role="group" aria-label="Filters">
+      <label>Scene <select id="filter-scene"><option value="">All scenes</option></select></label>
+      <label>Framing <select id="filter-kind"><option value="">All</option><option value="single">Single</option><option value="duo_close">Duo close</option><option value="duo_wide">Duo wide</option></select></label>
+      <label>Review <select id="filter-state"><option value="">All</option><option value="pending">Needs review</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></label>
+      <button id="approve-all-btn" class="btn btn-ghost" type="button" disabled>Approve all in view</button>
+    </div>
+    <p id="shot-count" class="shot-summary" role="status"></p>
+    <div id="shot-message" hidden role="alert"></div>
+    <div id="shot-grid" class="shot-grid"></div>
+    <div id="shot-empty" class="empty-state" hidden>
+      <span>No pictures yet. In Step 5, press "Add to library" under a finished shot, or let the batch builder fill the library.</span>
+    </div>
+  </main>
+
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/shot_library.js"></script>
+</body>
+</html>

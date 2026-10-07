@@ -540,6 +540,12 @@
           warning.textContent = "⚠ description too long";
           card.append(warning);
         }
+        if (shot.source === "library") { // Task 29.5: copied from the Shot Library, no GPU time spent
+          const fromLibrary = document.createElement("span");
+          fromLibrary.className = "visual-badge";
+          fromLibrary.textContent = "from library";
+          card.append(fromLibrary);
+        }
         if (shot.review_note) { // Task 28.5: it still failed a check after the retries: the user decides
           card.classList.add("needs-review");
           const review = document.createElement("p");
@@ -568,6 +574,26 @@
         regenerate.addEventListener("click", () => startVisualJob(
           () => Api.regenerateProjectShot(state.projectId, shot.id)));
         actions.append(toggle, regenerate);
+        if (shot.kind !== "insert" && shot.status === "complete" && shot.source !== "library") {
+          const addToLibrary = document.createElement("button");  // Task 29.7: keep a good picture for the next episodes
+          addToLibrary.type = "button";
+          addToLibrary.className = "btn btn-ghost btn-sm";
+          addToLibrary.dataset.action = "add-to-library";
+          addToLibrary.textContent = "+ Add to library";
+          addToLibrary.title = "Copy this picture to the Shot Library (you approve it there once).";
+          addToLibrary.addEventListener("click", async () => {
+            addToLibrary.disabled = true;
+            try {
+              await Api.addProjectShotToLibrary(state.projectId, shot.id);
+              addToLibrary.textContent = "✓ In the library";
+            } catch (error) {
+              addToLibrary.textContent = "+ Add to library";
+              addToLibrary.disabled = false;
+              visualWarning(error.message || "Could not add the picture to the library.");
+            }
+          });
+          actions.append(addToLibrary);
+        }
         card.append(actions);
         grid.append(card);
       });
@@ -576,8 +602,27 @@
     });
   }
 
+  // Task 29.7: how much of this project's pictures the approved Shot Library already covers.
+  async function renderLibraryCoverage() {
+    const line = byId("library-coverage");
+    if (!line || !state.projectId) return;
+    try {
+      const coverage = await Api.getLibraryCoverage(state.projectId);
+      if (!coverage.total || !coverage.covered) {
+        line.hidden = true;
+        return;
+      }
+      line.hidden = false;
+      line.textContent = `Shot Library: ${coverage.covered} of ${coverage.total} pictures are ready to reuse; `
+        + `${coverage.missing} will be drawn.`;
+    } catch {
+      line.hidden = true;
+    }
+  }
+
   function renderProjectVisuals() {
     if (!state.visuals) return;
+    renderLibraryCoverage();
     renderVisualCast();
     renderVisualScenes();
     renderVisualShots();

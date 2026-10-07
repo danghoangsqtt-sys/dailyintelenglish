@@ -12,5 +12,5 @@
 | 29.4 | Data model and service (shot_library, review state) | done 2026-10-07 (`tasks/task-29.4.md`, tests/test_shot_library.py) |
 | 29.5 | Matcher and the library-first shot job | done 2026-10-07 (`tasks/task-29.5.md`, tests/test_shot_library.py) |
 | 29.6 | Resumable batch generator for the core set | planned |
-| 29.7 | Shot Library UI, "from library" / "Add to library", coverage view | planned |
+| 29.7 | Shot Library UI, "from library" / "Add to library", coverage view | done 2026-10-07 (`tasks/task-29.7.md`, tests/test_shot_library_browser.py) |
 | 29.8 | Gate B-21 (owner times an episode against generating everything) | planned |
