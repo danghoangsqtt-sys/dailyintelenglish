@@ -238,10 +238,10 @@
     },
     "29": {
       "name": "Ready-made shot library (ENH-020)",
-      "status": "planned",
-      "tasks_done": 0,
-      "tasks_total": 6,
-      "note": "Planned 2026-10-07; starts after Gate B-20."
+      "status": "in_progress",
+      "tasks_done": 1,
+      "tasks_total": 7,
+      "note": "29.0 cuts done. 29.1 spike (gaze toward partner, inserts with a character, variants) in progress."
     }
   },
   "key_decisions": [

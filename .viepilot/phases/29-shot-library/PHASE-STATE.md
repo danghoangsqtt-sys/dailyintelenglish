@@ -5,8 +5,8 @@
 
 | Task | Description | Status |
 |---|---|---|
-| 29.0 | Cleaner cuts: near-hard cuts between shots (owner feedback 2026-10-07) | **in_progress** 2026-10-07 |
-| 29.1 | Design and spike (gaze toward the partner, variants, gestures, angles, insert with a character) | planned |
+| 29.0 | Cleaner cuts: near-hard cuts between shots (owner feedback 2026-10-07) | done 2026-10-07 (vitest 47, real render checked) |
+| 29.1 | Design and spike (gaze toward the partner, variants, gestures, angles, insert with a character) | **in_progress** 2026-10-07 (card `tasks/task-29.1.md`) |
 | 29.2 | Data model and service (shot_library) | planned |
 | 29.3 | Matcher and the library-first shot job | planned |
 | 29.4 | Resumable batch generator for the core set | planned |

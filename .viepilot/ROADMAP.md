@@ -1369,7 +1369,8 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 
 **Status:** 🟡 Planned 2026-10-07 | Plan `docs/implementation/phase-29-shot-library.md`. Starts after Gate B-20.
 
-- [ ] 29.1 Design and spike (vocabulary, face-repaint variants, gesture poses, camera angles)
+- [x] 29.0 Cleaner cuts (owner feedback 2026-10-07)
+- [ ] 29.1 Design and spike (gaze toward the partner, variants, gestures, angles, insert with a character)
 - [ ] 29.2 Data model and service
 - [ ] 29.3 Matcher and the library-first shot job
 - [ ] 29.4 Resumable batch generator for the core set

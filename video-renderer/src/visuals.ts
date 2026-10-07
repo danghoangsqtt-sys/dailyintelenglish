@@ -2,9 +2,11 @@ import type { EpisodeLine, EpisodeVisuals } from "./types";
 
 type ShotKind = "single" | "duo_close" | "duo_wide" | "insert";
 
-const CROSSFADE_FRAMES = 10;
-/** Task 24.6: a cut into or out of an insert (a change of picture world) fades more softly. */
-const INSERT_CROSSFADE_FRAMES = 18;
+// Owner 2026-10-07 (Gate B-20): the dialogue changes speaker line by line, and a third of a second of dissolve showed two
+// faces on top of each other each time. Near-hard cuts (4 frames = 0.13 s) still hide a one-frame pop.
+const CROSSFADE_FRAMES = 4;
+/** Task 24.6: a cut into or out of an insert (a change of picture world) is a little softer (0.3 s). */
+const INSERT_CROSSFADE_FRAMES = 9;
 
 /** Task 24.6: with few pictures per episode, motion carries the life between cuts, kept subtle (O8). */
 export type ShotMotion = "zoom-in" | "zoom-out" | "pan-left" | "pan-right";

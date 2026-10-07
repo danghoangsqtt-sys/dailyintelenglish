@@ -27,3 +27,8 @@
 - vitest: the two constants, that `crossfadeFrames` returns them, that the previous picture is gone after 4 frames (and
   after 9 for an insert), and that the new picture is at full opacity then.
 - A real render of a speaker change (frames around a cut) shows no overlap after the fade; sheet saved.
+
+## Task 29.0 closed (2026-10-07)
+
+Done as planned; report `docs/operations/phase29-cuts.md`. vitest 47 passed, `tsc` clean, a real render checked. The change is
+TypeScript only (no Python file changed), so the Python suite is run with the next task.

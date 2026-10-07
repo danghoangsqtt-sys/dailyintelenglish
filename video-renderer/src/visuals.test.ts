@@ -30,11 +30,12 @@ describe("AI visual props", () => {
     expect(vocabCardPosition("insert")).toBe("top-right");
   });
 
-  it("selects shots, crossfades over ten frames, and scales during each line", () => {
+  it("selects shots, cuts through a four-frame dissolve, and scales during each line", () => {
     expect(visualBackgroundForFrame(30, 30, lines, visuals).current).toBe("one.png");
-    const transition = visualBackgroundForFrame(65, 30, lines, visuals);
+    const transition = visualBackgroundForFrame(62, 30, lines, visuals);
     expect(transition).toMatchObject({ current: "duo.png", previous: "one.png", kind: "duo_wide", opacity: 0.5 });
     expect(transition.scale).toBeGreaterThan(1);
+    expect(visualBackgroundForFrame(64, 30, lines, visuals)).toMatchObject({ opacity: 1, previous: null });
     expect(visualBackgroundForFrame(75, 30, lines, visuals).opacity).toBe(1);
     expect(visualBackgroundForFrame(75, 30, lines, visuals).previous).toBeNull();
     expect(visualBackgroundForFrame(30, 30, lines, { shots: {}, lineShots: [] }).current).toBeNull();
@@ -66,9 +67,9 @@ describe("AI visual props", () => {
     }
     const secondLine = visualBackgroundForFrame(76, 30, paused, sameThenDuo);
     expect(secondLine).toMatchObject({ current: "one.png", previous: null, opacity: 1 });
-    const change = visualBackgroundForFrame(149, 30, paused, sameThenDuo);
+    const change = visualBackgroundForFrame(146, 30, paused, sameThenDuo);
     expect(change).toMatchObject({ current: "duo.png", previous: "one.png", kind: "duo_wide", opacity: 0.5 });
-    expect(change.progress).toBeLessThan(0.2); // 5 of the run's 36 frames
+    expect(change.progress).toBeLessThan(0.2); // 2 of the run's 36 frames
   });
 
   // Task 24.6: varied, subtle, reproducible motion; softer cuts around inserts.
@@ -91,16 +92,19 @@ describe("AI visual props", () => {
     expect(motionTransform("pan-left", 1).x).toBeCloseTo(-0.025);
   });
 
-  it("fades into and out of inserts over eighteen frames", () => {
-    expect(crossfadeFrames("insert", "single")).toBe(18);
-    expect(crossfadeFrames("duo_wide", "insert")).toBe(18);
-    expect(crossfadeFrames("duo_wide", "single")).toBe(10);
+  it("cuts into and out of inserts over nine frames (owner 2026-10-07: less ghosting)", () => {
+    expect(crossfadeFrames("insert", "single")).toBe(9);
+    expect(crossfadeFrames("duo_wide", "insert")).toBe(9);
+    expect(crossfadeFrames("duo_wide", "single")).toBe(4);
+    expect(crossfadeFrames("single", "single")).toBe(4);
     const withInsert = {
       shots: { one: { url: "one.png", kind: "single" as const }, ins: { url: "ins.png", kind: "insert" as const } },
       lineShots: ["one", "ins"],
     };
-    const nine = visualBackgroundForFrame(60 + 9, 30, lines, withInsert);
-    expect(nine).toMatchObject({ current: "ins.png", previous: "one.png", opacity: 0.5 });
+    const half = visualBackgroundForFrame(60 + 4, 30, lines, withInsert);
+    expect(half).toMatchObject({ current: "ins.png", previous: "one.png", opacity: 4 / 9 });
+    expect(visualBackgroundForFrame(60 + 9, 30, lines, withInsert)).toMatchObject({ opacity: 1, previous: null });
+    const nine = half;
     expect(nine.transform).toMatch(/^translate\(-?\d+\.\d{3}%, -?\d+\.\d{3}%\) scale\(\d\.\d{4}\)$/);
   });
 });
