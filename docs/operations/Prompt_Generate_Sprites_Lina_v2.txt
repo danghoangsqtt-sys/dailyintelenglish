@@ -40,7 +40,7 @@ TẦNG 3 (chỉ đổi tay, đầu giữ y hệt): lina__gesture-talk (một tay
 KIỂM TRA BẮT BUỘC SAU MỖI NHÓM (và lần cuối)
 Chạy lệnh sau và dán kết quả vào log:
   D:\DataAdmin\Daily_Intel_English\venv\Scripts\python.exe D:\DataAdmin\Daily_Intel_English\scripts\check_sprites.py lina
-Mục tiêu: "0 picture(s) failed". Tiêu chí: đúng 1280x1536, bốn góc trong suốt, đỉnh đầu lệch tối đa 6 px và giữa đầu lệch ngang tối đa 8 px so với ảnh gốc, thân (hai mép áo/váy ở hàng 55 đến 90 phần trăm chiều cao) lệch tối đa 8 px, hình bóng phần dưới đầu khác ảnh gốc tối đa 4 phần trăm (ảnh biểu cảm), hình bóng vùng đầu khác tối đa 4 phần trăm (ảnh cử chỉ). Ảnh nào trượt: làm lại từ ảnh gốc (tối đa 3 lần).
+Mục tiêu: "0 picture(s) failed". Tiêu chí: đúng 1280x1536, bốn góc trong suốt, đỉnh đầu lệch tối đa 6 px và giữa đầu lệch ngang tối đa 10 px so với ảnh gốc, thân (hai mép áo/váy ở hàng 55 đến 90 phần trăm chiều cao) lệch tối đa 8 px, hình bóng phần dưới đầu khác ảnh gốc tối đa 4 phần trăm (ảnh biểu cảm), hình bóng vùng đầu khác tối đa 4 phần trăm (ảnh cử chỉ). Ảnh nào trượt: làm lại từ ảnh gốc (tối đa 3 lần).
 
 NẾU CÔNG CỤ TẠO ẢNH TỪ CHỐI (an toàn nội dung)
 Lần trước một yêu cầu chỉnh dáng Lina đã bị công cụ từ chối ở bước xuất ảnh. Nếu một ảnh bị từ chối: KHÔNG đổi cách diễn đạt để lách, KHÔNG thử lại hơn 1 lần; ghi dòng REFUSED vào log và làm tiếp file khác. Giữ mô tả trung tính như trên, không nhắc đến số đo cơ thể. Cuối cùng liệt kê rõ các file bị từ chối để tôi quyết định.

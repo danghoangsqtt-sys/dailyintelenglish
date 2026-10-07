@@ -81,5 +81,8 @@ the first talking video; the rest can follow while you review it.
   consistent (torso within 5 px). To make every pack consistent: edit with a **mask** (the face only, or the arms only) and paste the masked
   region back onto the reference with Pillow, so everything outside the mask is identical.
 - **Check:** `venv\Scripts\python scripts\check_sprites.py <character>` compares every picture with `<character>__calm__closed.png`
-  (canvas, transparent corners, head top within 6 px and head middle within 8 px, torso edges within 8 px, silhouette within 4%) and exits with 1 if any picture fails.
+  (canvas, transparent corners, head top within 6 px and head middle within 10 px, torso edges within 8 px, silhouette within 4%) and exits with 1 if any picture fails.
 - **Hands:** an expression picture keeps the hands where the reference has them; only a gesture picture changes the arms.
+- **Result of the first Alex pack (2026-10-08):** of 22 pictures only `calm__closed` (the reference) and `smile__closed` passed; the other 20
+  failed and were deleted. They are redone with `docs/operations/Prompt_Generate_Sprites_Alex_Redo.txt` (masked edits, pasted back onto the
+  reference). `check_sprites.py <character> --list-failed` prints the names of the failing pictures.

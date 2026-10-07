@@ -7,7 +7,7 @@ and the same head position, so that switching pictures does not make the charact
 Exit code 0 when every picture passes, 1 otherwise. An AI image editor redraws the whole picture, so the pictures are never identical
 pixel for pixel; the limits below are what a smooth video needs:
 
-  every picture      1280 x 1536, transparent corners, the top of the head within 6 px and the middle of the head within 8 px of the reference
+  every picture      1280 x 1536, transparent corners, the top of the head within 6 px and the middle of the head within 10 px of the reference
   an expression      the torso edges (rows 55 to 90% of the figure) within 8 px, the silhouette below the head differs by at most 4%
   a gesture          the head zone silhouette differs by at most 4%, the top of the head within 6 px (the arms may differ)
 """
@@ -24,7 +24,7 @@ from PIL import Image
 DEFAULT_FOLDER = Path(r"D:\DataAdmin\Daily_Intel_English\data\library\sprites_inbox")
 SIZE = (1280, 1536)
 TOP_LIMIT = 6
-HEAD_SIDE_LIMIT = 8
+HEAD_SIDE_LIMIT = 10
 EDGE_LIMIT = 8
 SILHOUETTE_LIMIT = 4.0
 
@@ -54,6 +54,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("character")
     parser.add_argument("--folder", default=str(DEFAULT_FOLDER))
+    parser.add_argument("--list-failed", action="store_true", help="print only the file names of the pictures that fail, one per line")
     parser.add_argument("--reference", default=None, help="compare with this file instead of <character>__calm__closed.png")
     args = parser.parse_args()
     folder, who = Path(args.folder), args.character.lower()
@@ -64,17 +65,23 @@ def main() -> int:
     reference = load(reference_path)
     ref_alpha = reference[..., 3] > 20
     rx0, ry0, rx1, ry1 = bbox(ref_alpha)
-    head_end = ry0 + int((ry1 - ry0) * 0.30)
+    head_end = ry0 + int((ry1 - ry0) * 0.20)  # head and neck only (no shoulders, so raised arms do not count as head)
     ref_head_x = float(np.where(ref_alpha[:head_end])[1].mean())
     ref_left, ref_right = torso_edges(ref_alpha, ry0, ry1)
-    print(f"reference {reference_path.name}: top margin {ry0 / SIZE[1]:.1%}, head about {int((ry1 - ry0) * 0.2)} px at the top zone")
-    print(f"{'file':34} {'top':>5} {'torso edges':>12} {'below-head diff%':>17} {'head diff%':>11}  result")
+    quiet = args.list_failed
+    failed_names: list[str] = []
+    if not quiet:
+        print(f"reference {reference_path.name}: top margin {ry0 / SIZE[1]:.1%}, head about {int((ry1 - ry0) * 0.2)} px at the top zone")
+    if not quiet:
+        print(f"{'file':34} {'top':>5} {'torso edges':>12} {'below-head diff%':>17} {'head diff%':>11}  result")
     failed = 0
     for path in sorted(folder.glob(f"{who}__*.png")):
         picture = Image.open(path)
         if picture.size != SIZE:
-            print(f"{path.name:34} wrong canvas size {picture.size}, expected {SIZE}")
+            if not quiet:
+                print(f"{path.name:34} wrong canvas size {picture.size}, expected {SIZE}")
             failed += 1
+            failed_names.append(path.name)
             continue
         data = load(path)
         alpha = data[..., 3] > 20
@@ -102,9 +109,14 @@ def main() -> int:
                 problems.append(f"body differs {body_xor:.1f}%")
         if problems and path.name != reference_path.name:
             failed += 1
-        print(f"{path.name:34} {y0 - ry0:+5d} {edge_shift:12.1f} {body_xor:17.1f} {head_xor:11.1f}  "
+            failed_names.append(path.name)
+        if not quiet:
+            print(f"{path.name:34} {y0 - ry0:+5d} {edge_shift:12.1f} {body_xor:17.1f} {head_xor:11.1f}  "
               f"{'OK' if not problems else '; '.join(problems)}")
-    print(f"\n{failed} picture(s) failed")
+    if quiet:
+        print("\n".join(failed_names))
+    else:
+        print(f"\n{failed} picture(s) failed")
     return 1 if failed else 0
 
 

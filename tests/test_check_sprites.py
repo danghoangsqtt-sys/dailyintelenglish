@@ -51,3 +51,12 @@ def test_a_moved_torso_a_moved_head_and_a_wrong_canvas_fail(checker, tmp_path, m
 def test_a_missing_reference_is_reported(checker, tmp_path, monkeypatch, capsys):
     assert _run(checker, tmp_path, monkeypatch, name="lina") == 1
     assert "missing" in capsys.readouterr().out
+
+
+def test_list_failed_prints_only_the_names_of_the_failing_pictures(checker, tmp_path, monkeypatch, capsys):
+    _figure(tmp_path / "alex__calm__closed.png")
+    _figure(tmp_path / "alex__smile__open.png")
+    _figure(tmp_path / "alex__laugh__open.png", torso_dx=40)
+    monkeypatch.setattr("sys.argv", ["check_sprites.py", "alex", "--folder", str(tmp_path), "--list-failed"])
+    assert checker.main() == 1
+    assert capsys.readouterr().out.split() == ["alex__laugh__open.png"]
