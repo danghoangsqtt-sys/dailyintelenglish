@@ -7,6 +7,8 @@ import { activeSpeakerId } from "./speakers";
 import { activeItemForFrame, attachItemsToLines, type LearningItem } from "./vocab";
 import { BOTTOM_SHADE_STYLE, captionStyleSpec, type CaptionStyle } from "./captionStyle";
 import { visualBackgroundForFrame, vocabCardPosition } from "./visuals";
+import { PodcastLayerView } from "./Podcast";
+import { podcastLayer, type VisualMode } from "./podcastLayout";
 import type { Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker, EpisodeVisuals } from "./types";
 
 /** Average pixel color of frontend/static/video_backgrounds/midnight.png (measured 2026-09-28
@@ -291,6 +293,8 @@ export function AudioWindowContent({
   chapters,
   captionStyle,
   visuals,
+  visualMode = "illustrated",
+  stillUrl,
   playAudio = true,
 }: {
   lines: EpisodeLine[];
@@ -302,6 +306,9 @@ export function AudioWindowContent({
   chapters: Chapter[];
   captionStyle: CaptionStyle;
   visuals: EpisodeVisuals;
+  /** Phase 30: the podcast modes draw their own layer instead of the drawn shots. */
+  visualMode?: VisualMode;
+  stillUrl?: string;
   /** Task 22.4: false when the episode's full-video soundtrack already carries the voice. */
   playAudio?: boolean;
 }) {
@@ -315,10 +322,14 @@ export function AudioWindowContent({
     [learning, lines]
   );
   const activeLearningItem = activeItemForFrame(currentTimeSec, lines, attachedLearning);
-  const background = visualBackgroundForFrame(frame, fps, lines, visuals);
+  const layer = podcastLayer(visualMode);
+  const background = visualBackgroundForFrame(frame, fps, lines, layer === "none" ? visuals : { shots: {}, lineShots: [] });
+  const speechProgress = audioDurationSec > 0 ? frame / (audioDurationSec * fps) : 0;
 
   return (
     <>
+      <PodcastLayerView layer={layer} stillUrl={stillUrl} progress={speechProgress} speakers={speakers}
+        activeId={activeId} frameWidth={1280} />
       {background.previous ? (
         <Img src={staticFile(background.previous)} style={{ position: "absolute", width: "100%", height: "100%",
           objectFit: "cover", opacity: background.current ? 1 : 1 - background.opacity }} />
@@ -330,7 +341,7 @@ export function AudioWindowContent({
       {playAudio ? <Audio src={staticFile(audioPath)} startFrom={0} /> : null}
       {captionStyleSpec(captionStyle).bottomShade ? <div style={BOTTOM_SHADE_STYLE} /> : null}
       <ChapterProgressBar frame={frame} fps={fps} audioDurationSec={audioDurationSec} chapters={chapters} />
-      <SpeakerChips speakers={speakers} activeId={activeId} />
+      {layer === "cards" ? null : <SpeakerChips speakers={speakers} activeId={activeId} />}
       {activeLearningItem ? (
         <VocabCard
           item={activeLearningItem.item}
@@ -374,6 +385,8 @@ export const Episode: React.FC<EpisodeInputProps> = ({
   outroSec,
   captionStyle,
   visuals,
+  visualMode,
+  stillUrl,
   soundtrackPath,
   brand,
 }) => {
@@ -403,6 +416,8 @@ export const Episode: React.FC<EpisodeInputProps> = ({
           chapters={chapters}
           captionStyle={captionStyle}
           visuals={visuals}
+          visualMode={visualMode}
+          stillUrl={stillUrl}
           playAudio={!soundtrackPath}
         />
       </Sequence>

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CAPTION_STYLES } from "./captionStyle";
+import { VISUAL_MODES } from "./podcastLayout";
 
 /**
  * Phase 19 spike (Task 19.1) input-props shape, as a zod schema (Remotion's own recommended
@@ -46,6 +47,8 @@ export const episodeSpeakerSchema = z.object({
   name: z.string(),
   gender: z.string(),
   avatarUrl: z.string().optional(),
+  /** Phase 30: the cast character's full picture for the podcast "with characters" cards (falls back to `avatarUrl`). */
+  portraitUrl: z.string().optional(),
 });
 
 /**
@@ -148,6 +151,10 @@ export const episodeInputPropsSchema = z.object({
    * owner-preferred default so older runner invocations / props files still render. */
   captionStyle: z.enum(CAPTION_STYLES).default("outline"),
   visuals: episodeVisualsSchema.default({ shots: {}, lineShots: [] }),
+  /** Phase 30 (ENH-021): what is behind the captions. "illustrated" = the drawn shots (the previous behaviour); the podcast
+   * modes need no shots: a black screen, the cast's portrait cards, or one still picture (`stillUrl`). */
+  visualMode: z.enum(VISUAL_MODES).default("illustrated"),
+  stillUrl: z.string().optional(),
   /** Task 22.4 (D51): when set, one full-video soundtrack (voice + music bed covering the intro,
    * speech and outro, faded out on the last frame) plays from frame 0 instead of `audioPath`. */
   soundtrackPath: z.string().optional(),

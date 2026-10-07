@@ -21,6 +21,7 @@ const defaultProps: EpisodeInputProps = {
   outroText: "Thanks for watching · Subscribe for more · See you next episode!",
   captionStyle: "outline",
   visuals: { shots: {}, lineShots: [] },
+  visualMode: "illustrated",
 };
 
 export const RemotionRoot: React.FC = () => {
