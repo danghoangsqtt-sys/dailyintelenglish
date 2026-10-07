@@ -328,8 +328,7 @@ export function AudioWindowContent({
 
   return (
     <>
-      <PodcastLayerView layer={layer} stillUrl={stillUrl} progress={speechProgress} speakers={speakers}
-        activeId={activeId} frameWidth={1280} />
+      <PodcastLayerView layer={layer} stillUrl={stillUrl} progress={speechProgress} />
       {background.previous ? (
         <Img src={staticFile(background.previous)} style={{ position: "absolute", width: "100%", height: "100%",
           objectFit: "cover", opacity: background.current ? 1 : 1 - background.opacity }} />
@@ -341,7 +340,7 @@ export function AudioWindowContent({
       {playAudio ? <Audio src={staticFile(audioPath)} startFrom={0} /> : null}
       {captionStyleSpec(captionStyle).bottomShade ? <div style={BOTTOM_SHADE_STYLE} /> : null}
       <ChapterProgressBar frame={frame} fps={fps} audioDurationSec={audioDurationSec} chapters={chapters} />
-      {layer === "cards" ? null : <SpeakerChips speakers={speakers} activeId={activeId} />}
+      <SpeakerChips speakers={speakers} activeId={activeId} />
       {activeLearningItem ? (
         <VocabCard
           item={activeLearningItem.item}

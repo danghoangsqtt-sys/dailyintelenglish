@@ -22,7 +22,7 @@
   // Phase 30 (ENH-021): what is behind the captions; remembered like the renderer choice.
   const VISUAL_MODE_STORAGE_KEY = "die-visual-mode";
   const STILL_SCENE_STORAGE_KEY = "die-still-scene";
-  const VISUAL_MODES = ["illustrated", "podcast_black", "podcast_characters", "podcast_still"];
+  const VISUAL_MODES = ["illustrated", "podcast_black", "podcast_still"];
   const VISUAL_MODE_ENABLED_TOOLTIP = "What is behind the captions";
   const VISUAL_MODE_DISABLED_TOOLTIP = "Video pictures need the Enhanced (Remotion) renderer.";
 

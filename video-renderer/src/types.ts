@@ -48,7 +48,6 @@ export const episodeSpeakerSchema = z.object({
   gender: z.string(),
   avatarUrl: z.string().optional(),
   /** Phase 30: the cast character's full picture for the podcast "with characters" cards (falls back to `avatarUrl`). */
-  portraitUrl: z.string().optional(),
 });
 
 /**

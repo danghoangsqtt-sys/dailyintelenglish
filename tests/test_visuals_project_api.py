@@ -156,7 +156,7 @@ def test_shot_prompt_truncation_from_fake_encode(client, monkeypatch):
     from app.services.visuals import recipes
 
     project, _, _ = setup_project(client, 1, 1)
-    monkeypatch.setattr(recipes, "single_prompt", lambda character, scene: "word " * 80)
+    monkeypatch.setattr(recipes, "single_prompt", lambda character, scene, **kwargs: "word " * 80)
     base = f"/api/projects/{project['id']}/visuals"
     wait_job(client, data(client.post(f"{base}/shots")))
     shot = data(client.get(base))["shots"][0]

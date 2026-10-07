@@ -43,3 +43,11 @@ the music. The Standard (ffmpeg) renderer is unchanged and ignores the mode.
 | 30.2 | **API and props:** `visual_mode`, `still_scene_id`, the props builder for each mode, validation | Python tests green |
 | 30.3 | **Step 5:** the chip group, the scene picker, persistence, the disabled states | browser tests green; screenshot |
 | 30.4 | **Real renders:** one episode in each of the three new modes; frames and times; sent to the owner | the owner sees all three |
+
+## Correction 2026-10-07 (owner feedback after the first renders)
+
+The "with characters" mode was **not** a new fourth mode: it is the existing drawn-story video (Lan and Minh, scene changes,
+inserts). Only the black screen and the one still scene are new. The `podcast_characters` mode (portrait cards, then one held
+duo shot), its `portraitUrl` prop, `CharacterCards` and the cast-shot resolver were removed; Step 5 offers three chips: "Podcast:
+with characters" (the default, request unchanged), "Podcast: black screen", "Podcast: one still scene". Text above that describes
+portrait cards or four modes is superseded by this note.

@@ -26,18 +26,6 @@ def _audio_job(project):
                             "speaker_id": project["speakers"][0]["id"], "text": "Hello"}], "word_timestamps": []}
 
 
-def _give_the_cast_a_body_picture(project_id: str) -> None:
-    """The library character sheet's full-body view, as the real characters have."""
-    with sqlite3.connect(settings.db_path) as connection:
-        for index, (character_id,) in enumerate(connection.execute(
-                "SELECT character_id FROM project_cast WHERE project_id = ? ORDER BY speaker_index", (project_id,)).fetchall()):
-            path = settings.DATA_DIR / "library" / "characters" / character_id / "sheet" / "full_body.png"
-            path.parent.mkdir(parents=True, exist_ok=True)
-            Image.new("RGB", (832, 1216), (30 + index * 50, 90, 120)).save(path)
-            connection.execute("INSERT INTO character_assets (id, character_id, kind, path, approved, created_at) "
-                               "VALUES (?, ?, 'full_body', ?, 1, 'now')", (f"body-{character_id}", character_id, str(path)))
-
-
 def _make_a_plate(scene_id: str) -> None:
     path = settings.DATA_DIR / "library" / "scenes" / scene_id / "preview.png"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -54,7 +42,7 @@ def test_request_defaults_keep_the_drawn_story_and_unknown_modes_are_refused():
     assert GenerateVideoRequest(template_id="midnight", visual_mode="podcast_still",
                                 still_scene_id="builtin-cafe").still_scene_id == "builtin-cafe"
     with pytest.raises(PydanticValidationError):
-        GenerateVideoRequest(template_id="midnight", visual_mode="slideshow")
+        GenerateVideoRequest(template_id="midnight", visual_mode="podcast_characters")
 
 
 # ---- the props ----------------------------------------------------------------------------------------------------
@@ -70,35 +58,8 @@ async def test_podcast_black_has_no_pictures_of_anyone_and_no_shots(client, tmp_
             db, project, _audio_job(project), None, visual_mode="podcast_black")
     assert props["visualMode"] == "podcast_black"
     assert "visuals" not in props and "stillUrl" not in props
-    assert all("avatarUrl" not in s and "portraitUrl" not in s for s in props["speakers"])
+    assert all("avatarUrl" not in s for s in props["speakers"])
     assert not (tmp_path / "public" / "visuals").exists()  # not even copied: nothing to wait for
-
-
-@pytest.mark.asyncio
-async def test_podcast_characters_gives_every_cast_speaker_a_portrait(client, tmp_path, monkeypatch):  # noqa: F811
-    project, _, _ = setup_project(client, 2, 1)
-    _give_the_cast_a_body_picture(project["id"])
-    _public(tmp_path, monkeypatch)
-    async with aiosqlite.connect(settings.db_path) as db:
-        db.row_factory = aiosqlite.Row
-        props = await video_renderer_remotion._build_input_props(
-            db, project, _audio_job(project), None, visual_mode="podcast_characters")
-    assert props["visualMode"] == "podcast_characters" and "visuals" not in props
-    portraits = [s["portraitUrl"] for s in props["speakers"]]
-    assert len(portraits) == 2 and all(p.endswith("_portrait.png") for p in portraits)
-    for speaker in props["speakers"]:
-        assert (tmp_path / "public" / "avatars" / f"{speaker['id']}_portrait.png").is_file()
-
-
-@pytest.mark.asyncio
-async def test_podcast_characters_falls_back_to_the_face_when_there_is_no_body_view(client, tmp_path, monkeypatch):  # noqa: F811
-    project, _, _ = setup_project(client, 1, 1)
-    _public(tmp_path, monkeypatch)
-    async with aiosqlite.connect(settings.db_path) as db:
-        db.row_factory = aiosqlite.Row
-        props = await video_renderer_remotion._build_input_props(
-            db, project, _audio_job(project), None, visual_mode="podcast_characters")
-    assert props["speakers"][0]["portraitUrl"].endswith("_portrait.png")  # the cast face stands in
 
 
 @pytest.mark.asyncio
@@ -113,7 +74,7 @@ async def test_podcast_still_uses_the_chosen_scene_plate(client, tmp_path, monke
     assert props["visualMode"] == "podcast_still" and "visuals" not in props
     assert props["stillUrl"] == f"remotion-render/visuals/{project['id']}/still.png"
     assert Image.open(tmp_path / "public" / "visuals" / project["id"] / "still.png").size == (1344, 768)
-    assert all("avatarUrl" not in s and "portraitUrl" not in s for s in props["speakers"])
+    assert all("avatarUrl" not in s for s in props["speakers"])
 
 
 @pytest.mark.asyncio

@@ -1369,10 +1369,10 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 
 **Status:** 🟡 In progress 2026-10-07 | Plan `docs/implementation/phase-30-podcast-visuals.md`.
 
-- [ ] 30.1 Composition: visualMode props, Podcast.tsx (black, one still, character cards)
-- [ ] 30.2 API and props builder per mode
-- [ ] 30.3 Step 5 chip group and scene picker
-- [ ] 30.4 Real renders of the three modes
+- [x] 30.1 Composition: visualMode props, Podcast.tsx (black, one still, character cards)
+- [x] 30.2 API and props builder per mode
+- [x] 30.3 Step 5 chip group and scene picker
+- [x] 30.4 Real renders of the three modes
 
 ## Phase 29 — Ready-made shot library of Lan and Minh (ENH-020)
 

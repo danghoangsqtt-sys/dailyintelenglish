@@ -79,7 +79,7 @@ async def test_four_modes_the_drawn_story_is_the_default_and_its_request_is_unch
     page = await _open(browser_instance, live_server_url, bodies)
     labels = await page.locator("#visual-mode-group .chip").all_text_contents()
     assert [text.strip() for text in labels] == [
-        "Illustrated story", "Podcast: black screen", "Podcast: with characters", "Podcast: one still scene"]
+        "Podcast: with characters", "Podcast: black screen", "Podcast: one still scene"]
     assert await page.locator("[data-visual-mode='illustrated']").get_attribute("aria-pressed") == "true"
     assert await page.locator("#still-scene-row").is_hidden()
     await _generate(page)
@@ -91,17 +91,19 @@ async def test_four_modes_the_drawn_story_is_the_default_and_its_request_is_unch
 async def test_each_podcast_mode_is_sent_and_remembered(browser_instance, live_server_url):
     bodies: list = []
     page = await _open(browser_instance, live_server_url, bodies)
-    for mode in ("podcast_black", "podcast_characters"):
-        await page.click(f"[data-visual-mode='{mode}']")
-        assert await page.locator(f"[data-visual-mode='{mode}']").get_attribute("aria-pressed") == "true"
-        assert await page.locator("[data-visual-mode='illustrated']").get_attribute("aria-pressed") == "false"
-        assert await page.locator("#still-scene-row").is_hidden()
-        await _generate(page)
-    assert [body["visual_mode"] for body in bodies] == ["podcast_black", "podcast_characters"]
-    assert all("still_scene_id" not in body for body in bodies)
+    await page.click("[data-visual-mode='podcast_black']")
+    assert await page.locator("[data-visual-mode='podcast_black']").get_attribute("aria-pressed") == "true"
+    assert await page.locator("[data-visual-mode='illustrated']").get_attribute("aria-pressed") == "false"
+    assert await page.locator("#still-scene-row").is_hidden()
+    await _generate(page)
+    assert [body["visual_mode"] for body in bodies] == ["podcast_black"]
+    assert "still_scene_id" not in bodies[0]
     await page.reload()
     await page.wait_for_selector("#workspace:not([hidden])")
-    assert await page.locator("[data-visual-mode='podcast_characters']").get_attribute("aria-pressed") == "true"
+    assert await page.locator("[data-visual-mode='podcast_black']").get_attribute("aria-pressed") == "true"
+    await page.click("[data-visual-mode='illustrated']")  # back to the story pictures: the old request again
+    await _generate(page)
+    assert "visual_mode" not in bodies[-1]
     await page.close()
 
 
@@ -129,7 +131,7 @@ async def test_the_modes_need_the_enhanced_renderer(browser_instance, live_serve
     page = await _open(browser_instance, live_server_url, bodies)
     await page.click("[data-visual-mode='podcast_black']")
     await page.click("[data-renderer='ffmpeg']")
-    for mode in ("illustrated", "podcast_black", "podcast_characters", "podcast_still"):
+    for mode in ("illustrated", "podcast_black", "podcast_still"):
         assert await page.locator(f"[data-visual-mode='{mode}']").is_disabled()
     assert "Enhanced" in (await page.locator("#visual-mode-group").get_attribute("title") or "") \
         or "Enhanced" in (await page.locator("[data-visual-mode='podcast_black']").get_attribute("title") or "")

@@ -32,3 +32,11 @@
 ## Verification
 
 `npx vitest run`, `npx tsc --noEmit`; stills of the three modes are rendered in Task 30.4.
+
+## Correction 2026-10-07 (owner feedback after the first renders)
+
+The "with characters" mode was **not** a new fourth mode: it is the existing drawn-story video (Lan and Minh, scene changes,
+inserts). Only the black screen and the one still scene are new. The `podcast_characters` mode (portrait cards, then one held
+duo shot), its `portraitUrl` prop, `CharacterCards` and the cast-shot resolver were removed; Step 5 offers three chips: "Podcast:
+with characters" (the default, request unchanged), "Podcast: black screen", "Podcast: one still scene". Text above that describes
+portrait cards or four modes is superseded by this note.
