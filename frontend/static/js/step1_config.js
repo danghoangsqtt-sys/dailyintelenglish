@@ -467,7 +467,14 @@
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
-    StepNav.render("step-nav", { projectId, currentStep: 1 });
+    StepNav.render("step-nav", { projectId, currentStep: 1, variant: "workflow" });
+    WorkspaceShell.init({
+      sidebar: document.getElementById("pane-sidebar"),
+      resizerLeft: document.getElementById("resizer-left"),
+      inspector: document.getElementById("pane-inspector"),
+      resizerRight: document.getElementById("resizer-right"),
+      collapseBtn: document.getElementById("sidebar-collapse-btn"),
+    });
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
     const form = document.getElementById("config-form");
     form.hidden = true;

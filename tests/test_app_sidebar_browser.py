@@ -117,9 +117,14 @@ async def test_narrow_screens_use_a_drawer(browser_instance, live_server_url):
 
 
 @pytest.mark.asyncio
-async def test_step1_keeps_the_step_nav_right_after_the_top_bar(browser_instance, live_server_url):
+async def test_step1_keeps_the_step_nav_in_the_steps_panel_right_below_the_top_bar(browser_instance, live_server_url):
+    # Task 27.4: Step 1 now has the studio frame; its step list sits in the left panel, which follows the top bar.
     page = await _open(browser_instance, f"{live_server_url}/step1?project_id=none")
-    assert await page.locator("#step-nav").evaluate(
+    assert await page.locator("#pane-sidebar #step-nav").count() == 1
+    assert await page.locator(".shell-flex").evaluate(
         "element => element.previousElementSibling?.matches('header.topbar') === true"
     )
+    top = await page.locator("header.topbar").bounding_box()
+    nav = await page.locator("#step-nav").bounding_box()
+    assert nav["y"] >= top["y"] + top["height"] - 1  # not hidden behind the top bar
     await page.close()

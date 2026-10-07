@@ -14,11 +14,13 @@
 
 
 
-    .main {
+    .config-wrap {
       max-width: 860px;
       margin: 0 auto;
-      padding: 40px 40px 100px;
+      padding: 28px 32px 80px;
     }
+
+    .next-steps { margin: 10px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.6; color: var(--text-muted); }
 
     .page-title {
       margin: 0 0 6px;
@@ -298,9 +300,17 @@
     </div>
   </header>
 
-  <div id="step-nav"></div>
+  <div class="shell-flex">
+    <div class="shell-row">
+      <aside id="pane-sidebar" class="pane-sidebar" aria-label="Project workflow">
+        <button id="sidebar-collapse-btn" type="button" class="btn btn-ghost sidebar-collapse-btn" aria-expanded="true">« Collapse</button>
+        <div id="step-nav"></div>
+        <div class="sidebar-label sidebar-summary card" style="margin-top:16px; padding:12px;"><strong>Project setup</strong><p class="inspector-empty">Choose the topic, level and speakers. Everything after this step is made from these choices.</p></div>
+      </aside>
+      <div id="resizer-left" class="resizer-v" role="separator" aria-orientation="vertical" aria-label="Resize workflow sidebar" tabindex="0"></div>
 
-  <main class="main">
+      <main id="pane-main" class="pane-main">
+  <div class="config-wrap">
     <h1 id="page-title" class="page-title">Step 1 — Project Configuration</h1>
     <p id="page-subtitle" class="page-subtitle">Set up the topic, level, speakers, and language focus for your new episode.</p>
 
@@ -370,12 +380,30 @@
         <button type="submit" id="submit-btn" class="btn btn-primary">Create Project</button>
       </div>
     </form>
-  </main>
+  </div>
+      </main>
+
+      <div id="resizer-right" class="resizer-v" role="separator" aria-orientation="vertical" aria-label="Resize inspector" tabindex="0"></div>
+      <aside id="pane-inspector" class="pane-inspector" aria-label="What happens next">
+        <div class="inspector-empty">
+          <strong>What happens next</strong>
+          <ol class="next-steps">
+            <li>Script: the AI writes the conversation; you edit it.</li>
+            <li>Learning: vocabulary, idioms, grammar and a quiz.</li>
+            <li>Audio: voices, pauses and background music.</li>
+            <li>Video: pictures, captions and the render.</li>
+            <li>Thumbnail and YouTube package.</li>
+          </ol>
+        </div>
+      </aside>
+    </div>
+  </div>
 
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/api.js"></script>
   <script src="/static/js/step_nav.js"></script>
   <script src="/static/js/keyboard_shortcuts.js"></script>
+  <script src="/static/js/shell.js"></script>
   <script src="/static/js/step1_config.js"></script>
 </body>
 </html>
