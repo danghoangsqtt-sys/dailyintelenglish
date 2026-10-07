@@ -60,3 +60,19 @@ def test_list_failed_prints_only_the_names_of_the_failing_pictures(checker, tmp_
     monkeypatch.setattr("sys.argv", ["check_sprites.py", "alex", "--folder", str(tmp_path), "--list-failed"])
     assert checker.main() == 1
     assert capsys.readouterr().out.split() == ["alex__laugh__open.png"]
+
+
+def test_normalize_puts_the_figure_on_the_standard_canvas_at_the_standard_scale_on_the_bottom_edge(tmp_path):
+    spec = importlib.util.spec_from_file_location("normalize_sprite_base", SCRIPT.parent / "normalize_sprite_base.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    picture = Image.new("RGBA", (1145, 1374), (0, 0, 0, 0))
+    ImageDraw.Draw(picture).rectangle((312, 26, 931, 1373), fill=(250, 240, 230, 255))  # a figure with a 349 px head
+    path = tmp_path / "lina__calm__closed.png"
+    picture.save(path)
+    width, height, top = module.normalize(path, source_head_px=349, target_head_px=338)
+    result = Image.open(path)
+    assert result.size == (1280, 1536)
+    assert top + height == 1536 and abs(height - round(1348 * 338 / 349)) <= 1  # on the bottom edge, scaled like the head
+    assert result.getpixel((0, 0))[3] == 0 and result.getpixel((640, 1535))[3] == 255
+    assert abs((width + 2 * ((1280 - width) // 2)) - 1280) <= 1  # centred

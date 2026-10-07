@@ -71,7 +71,7 @@ def main() -> int:
     quiet = args.list_failed
     failed_names: list[str] = []
     if not quiet:
-        print(f"reference {reference_path.name}: top margin {ry0 / SIZE[1]:.1%}, head about {int((ry1 - ry0) * 0.2)} px at the top zone")
+        print(f"reference {reference_path.name}: top margin {ry0 / SIZE[1]:.1%}")
     if not quiet:
         print(f"{'file':34} {'top':>5} {'torso edges':>12} {'below-head diff%':>17} {'head diff%':>11}  result")
     failed = 0
