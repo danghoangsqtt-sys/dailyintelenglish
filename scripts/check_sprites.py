@@ -23,6 +23,12 @@ from PIL import Image
 
 DEFAULT_FOLDER = Path(r"D:\DataAdmin\Daily_Intel_English\data\library\sprites_inbox")
 SIZE = (1280, 1536)
+TIERS = {
+    1: ["calm__closed", "calm__open", "smile__closed", "smile__open", "surprised__closed", "surprised__open", "blink"],
+    2: ["laugh__closed", "laugh__open", "thinking__closed", "thinking__open", "worried__closed", "worried__open",
+        "serious__closed", "serious__open"],
+    3: [f"gesture-{name}" for name in ("talk", "point", "think", "open", "heart", "listen", "wave")],
+}
 TOP_LIMIT = 6
 HEAD_SIDE_LIMIT = 10
 EDGE_LIMIT = 8
@@ -54,6 +60,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("character")
     parser.add_argument("--folder", default=str(DEFAULT_FOLDER))
+    parser.add_argument("--expect", default="", help="tiers that must be complete, for example 1,2 or 1,2,3: a missing picture then fails")
     parser.add_argument("--list-failed", action="store_true", help="print only the file names of the pictures that fail, one per line")
     parser.add_argument("--reference", default=None, help="compare with this file instead of <character>__calm__closed.png")
     args = parser.parse_args()
@@ -113,6 +120,13 @@ def main() -> int:
         if not quiet:
             print(f"{path.name:34} {y0 - ry0:+5d} {edge_shift:12.1f} {body_xor:17.1f} {head_xor:11.1f}  "
               f"{'OK' if not problems else '; '.join(problems)}")
+    expected = [f"{who}__{name}.png" for tier in (args.expect.split(",") if args.expect else []) for name in TIERS[int(tier)]]
+    for name in expected:
+        if not (folder / name).is_file():
+            failed += 1
+            failed_names.append(name)
+            if not quiet:
+                print(f"{name:34} MISSING")
     if quiet:
         print("\n".join(failed_names))
     else:

@@ -1,0 +1,44 @@
+﻿Bạn đang chạy trên máy tính Windows của tôi. Hãy chỉnh sửa ảnh và LƯU TRỰC TIẾP vào thư mục đích.
+
+BỐI CẢNH
+Công cụ tạo ảnh từ chối chỉnh ảnh toàn thân của Lina. Vì vậy lần này KHÔNG chỉnh ảnh toàn thân nữa. Tôi đã cắt riêng ảnh ĐẦU VÀ CỔ của Lina (một chân dung bình thường). Bạn chỉ chỉnh BIỂU CẢM trên ảnh cắt này. Việc ghép ảnh đã chỉnh trở lại thân người sẽ do một script trên máy tôi làm, bạn không cần xử lý thân người, tay hay quần áo. Lina vẫn là người trưởng thành.
+
+THƯ MỤC (đường dẫn đầy đủ)
+- ẢNH ĐẦU VÀO (chỉ đọc, KHÔNG sửa): D:\DataAdmin\Daily_Intel_English\data\assets_sprites\heads\lina_head_crop.png   (542 x 456 px, đầu và cổ trên nền xám)
+- ẢNH THAM CHIẾU NHẬN DẠNG (chỉ đọc): D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\lina_sheet_v2.jpg   (có mục EXPRESSIONS: NEUTRAL, SMILE, BIG SMILE, SERIOUS, SURPRISED, EMBARRASSED, THINKING, TROUBLED)
+- ĐÍCH (ghi ảnh đã chỉnh vào đây): D:\DataAdmin\Daily_Intel_English\data\assets_sprites\heads\edited
+- LOG: D:\DataAdmin\Daily_Intel_English\data\assets_sprites\logs\sprites_log.csv  (giữ nguyên các dòng cũ, thêm dòng mới ở cuối)
+Tạo thư mục ĐÍCH nếu chưa có. KHÔNG ghi hay xóa gì ngoài thư mục ĐÍCH và file log. KHÔNG đụng vào thư mục sprites_inbox.
+
+QUY TẮC CHO MỖI ẢNH
+1. Mỗi ảnh đầu ra là một phiên bản của lina_head_crop.png với BIỂU CẢM KHÁC. Mọi thứ khác giữ nguyên: cùng khung hình, cùng kích thước 542 x 456 px, cùng góc quay đầu (đầu hơi quay sang trái khung, nhìn về bên trái), cùng mái tóc, cùng màu da và ánh sáng, cùng nền xám. Không đổi tóc, không đổi vị trí đầu, không phóng to hay thu nhỏ.
+2. Ưu tiên chỉnh có mặt nạ (inpainting) chỉ phủ phần khuôn mặt (trán, mắt, lông mày, má, mũi, miệng, cằm); không phủ viền tóc hay vai.
+3. Luôn bắt đầu từ lina_head_crop.png gốc cho MỖI ảnh, không chỉnh từ ảnh đã chỉnh.
+4. Nhận dạng đúng khuôn mặt Lina: mắt nâu hạnh nhân to, môi đầy hồng, da sáng. Không trang sức, không chữ, không watermark.
+
+14 FILE (đúng tên, đuôi .png, lưu vào thư mục ĐÍCH)
+lina__calm__open.png          miệng hé như nói "ah", thấy hàm răng trên một chút, tự nhiên, không ngáp; nét mặt bình thản thân thiện
+lina__smile__closed.png       cười dịu, môi khép
+lina__smile__open.png         đang cười và nói, miệng mở, thấy răng
+lina__surprised__closed.png   ngạc nhiên, mắt mở to, lông mày nhướng, môi khép
+lina__surprised__open.png     ngạc nhiên, miệng mở
+lina__laugh__closed.png       cười tươi, mắt cong, môi khép
+lina__laugh__open.png         cười, mắt cong, miệng mở
+lina__thinking__closed.png    suy nghĩ, mắt hơi nhìn lên và sang bên, môi khép
+lina__thinking__open.png      suy nghĩ, miệng hé như nói "hmm"
+lina__worried__closed.png     lo lắng, lông mày chụm và hơi nhướng, môi khép
+lina__worried__open.png       lo lắng, miệng hé nói
+lina__serious__closed.png     nghiêm túc, lông mày ngang, môi khép
+lina__serious__open.png       nghiêm túc, miệng hé nói
+lina__blink.png               mắt nhắm nhẹ như chớp mắt, miệng khép, nét mặt bình thản
+
+SAU KHI LÀM XONG (hoặc sau mỗi 5 ảnh) CHẠY HAI LỆNH NÀY VÀ DÁN KẾT QUẢ VÀO LOG
+  D:\DataAdmin\Daily_Intel_English\venv\Scripts\python.exe D:\DataAdmin\Daily_Intel_English\scripts\sprite_face_tools.py compose lina
+  D:\DataAdmin\Daily_Intel_English\venv\Scripts\python.exe D:\DataAdmin\Daily_Intel_English\scripts\check_sprites.py lina --expect 1,2
+Lệnh thứ nhất ghép khuôn mặt đã chỉnh vào ảnh gốc và tạo các file lina__*.png trong sprites_inbox; lệnh thứ hai kiểm tra. Mục tiêu: "0 picture(s) failed". Vì chỉ khuôn mặt được ghép vào, các ảnh luôn khớp thân với ảnh gốc. Nếu lệnh thứ hai báo thiếu file thì làm nốt các file còn thiếu.
+
+NẾU CÔNG CỤ TẠO ẢNH TỪ CHỐI MỘT ẢNH
+Không đổi cách diễn đạt để lách, không thử lại hơn 1 lần; ghi dòng REFUSED vào log và làm tiếp file khác. Cuối cùng liệt kê các file bị từ chối.
+
+GHI LOG
+Mỗi ảnh một dòng: tên file, "faces", số lần thử, kết quả, prompt đã dùng. Cuối cùng in bảng tóm tắt: số file đạt, bị từ chối.

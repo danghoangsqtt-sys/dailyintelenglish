@@ -86,3 +86,12 @@ the first talking video; the rest can follow while you review it.
 - **Result of the first Alex pack (2026-10-08):** of 22 pictures only `calm__closed` (the reference) and `smile__closed` passed; the other 20
   failed and were deleted. They are redone with `docs/operations/Prompt_Generate_Sprites_Alex_Redo.txt` (masked edits, pasted back onto the
   reference). `check_sprites.py <character> --list-failed` prints the names of the failing pictures.
+
+## 6. Lina's expressions through head crops (2026-10-08)
+
+The image tool refused every edit of Lina's full-figure base picture (its safety filter, for the body). Her expression pictures (tiers 1
+and 2) are therefore made from a **crop of the head and neck** only: `scripts/sprite_face_tools.py prepare lina` writes the crop and the
+face position, the image tool edits the expression on the crop (`docs/operations/Prompt_Generate_Lina_Faces.txt`), and
+`sprite_face_tools.py compose lina` pastes the edited face back into `lina__calm__closed.png` inside a feathered ellipse, keeping the base's
+transparency: every picture is aligned with the base by construction. This cannot make the **gestures** (tier 3: they need new arms), so
+Lina has none for now and the video uses her base picture where a gesture would be shown.

@@ -76,3 +76,15 @@ def test_normalize_puts_the_figure_on_the_standard_canvas_at_the_standard_scale_
     assert top + height == 1536 and abs(height - round(1348 * 338 / 349)) <= 1  # on the bottom edge, scaled like the head
     assert result.getpixel((0, 0))[3] == 0 and result.getpixel((640, 1535))[3] == 255
     assert abs((width + 2 * ((1280 - width) // 2)) - 1280) <= 1  # centred
+
+
+def test_expect_makes_missing_pictures_fail(checker, tmp_path, monkeypatch, capsys):
+    _figure(tmp_path / "lina__calm__closed.png")
+    _figure(tmp_path / "lina__smile__open.png")
+    monkeypatch.setattr("sys.argv", ["check_sprites.py", "lina", "--folder", str(tmp_path)])
+    assert checker.main() == 0  # without --expect only the pictures that exist are checked
+    capsys.readouterr()
+    monkeypatch.setattr("sys.argv", ["check_sprites.py", "lina", "--folder", str(tmp_path), "--expect", "1"])
+    assert checker.main() == 1
+    out = capsys.readouterr().out
+    assert "lina__calm__open.png" in out and "MISSING" in out and "5 picture(s) failed" in out
