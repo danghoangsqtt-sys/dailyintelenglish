@@ -8,5 +8,5 @@
 | 32.2 | Speech to mouth states and the expression plan per line | done 2026-10-08 (`sprite_plan.py`) |
 | 32.3 | Remotion composition (layers, turns, enter and leave, blink, mouth) | done 2026-10-08 (`spriteTimeline.ts`, `Sprites.tsx`; owner: pose changes are a paper-doll flip, the listener is not resized) |
 | 32.4 | API and Step 5 mode `podcast_sprites` | done 2026-10-08 (mode `podcast_sprites`, Step 5 chip) |
-| 32.5 | Real render with the owner's first sprite set | in_progress (Demo Episode preview) |
+| 32.5 | Real render with the owner's first sprite set | done 2026-10-08: Demo Episode preview `data/video/b330d37f-.../video_sprites_preview.mp4` (Enhanced, 129 s render). Alex's Codex `__open` pictures had closed mouths: replaced by 7 head-crop edits from ChatGPT web composed on his calm body (old ones kept in `data/assets_sprites/old/alex_open_codex_closed_mouth`) |
 | 32.6 | Gate B-22 (owner) | planned |
