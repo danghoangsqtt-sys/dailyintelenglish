@@ -1,0 +1,97 @@
+﻿HƯỚNG DẪN TẠO TOÀN THÂN LINA (BIỂU CẢM + CỬ CHỈ) BẰNG CHATGPT WEB - KHÔNG CẮT ĐẦU
+
+Cách này tạo cả người Lina trong từng ảnh. ChatGPT web vẽ lại cả bức nên mỗi ảnh lệch vị trí một chút và có nền xanh lá; công cụ trên máy tôi sẽ tự tách nền, căn lại đầu cho khớp ảnh gốc rồi chạy kiểm tra. Ảnh nào còn lệch quá thì tạo lại ảnh đó.
+Lưu ý: lần trước công cụ Codex đã từ chối chỉnh toàn thân của Lina. Nếu ChatGPT web cũng từ chối: KHÔNG đổi cách diễn đạt để lách, báo cho tôi tên ảnh bị từ chối, ta dùng cách cắt đầu (file Prompt_ChatGPT_Web_Lina_Faces.txt) cho biểu cảm.
+
+ẢNH CẦN ĐÍNH KÈM (đính kèm CẢ HAI cho MỖI ảnh, trong cuộc trò chuyện MỚI)
+1. Ảnh gốc của Lina trên nền xanh lá (1280 x 1536):
+   D:\DataAdmin\Daily_Intel_English\data\assets_sprites\web_raw\lina_base_on_green.png
+2. Bảng nhân vật (để giữ đúng khuôn mặt, tóc, váy):
+   D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\lina_sheet_v2.jpg
+
+CÁCH LÀM
+1. Mở cuộc trò chuyện MỚI cho mỗi ảnh. Đính kèm hai ảnh trên, dán "LỜI MỞ ĐẦU" rồi dòng "THAY ĐỔI" của ảnh đó (chỉ một thay đổi mỗi lần).
+2. Nếu kết quả đổi tóc, đổi váy, đổi tỉ lệ cơ thể, cắt mất đầu hoặc chân, thêm chữ/vật dụng, hoặc nền không còn xanh lá phẳng: tạo lại hoặc mở cuộc trò chuyện mới. KHÔNG nhờ chỉnh tiếp từ ảnh vừa tạo.
+3. Tải ảnh về, ĐỔI TÊN đúng như dòng "LƯU THÀNH" (đuôi .png) rồi copy vào thư mục:
+   D:\DataAdmin\Daily_Intel_English\data\assets_sprites\web_raw
+   Kích thước ảnh tải về là bao nhiêu cũng được, nhưng KHÔNG tự cắt và KHÔNG tự xóa nền.
+4. Xong một nhóm (hoặc tất cả) thì nhắn cho tôi "xong N ảnh". Tôi sẽ chạy tách nền, căn đầu và kiểm tra. Hoặc tự chạy:
+   D:\DataAdmin\Daily_Intel_English\venv\Scripts\python.exe D:\DataAdmin\Daily_Intel_English\scripts\sprite_web_import.py lina
+   Lệnh này ghi ảnh vào D:\DataAdmin\Daily_Intel_English\data\library\sprites_inbox và in kết quả kiểm tra; ảnh báo lỗi thì tạo lại ảnh đó.
+
+LỜI MỞ ĐẦU (dán trước dòng THAY ĐỔI, giống nhau cho mọi ảnh)
+Use the first attached image (a full-length picture of an adult woman, Lina, on a flat green background) as the base, and the second attached image as the character sheet for her face, hair and dress. Create a new picture of the same woman in the same dress. Keep exactly the same character, the same hair, the same dress, the same proportions, the same camera distance, the same framing, the same body position in the picture (feet on the bottom edge, same size), the same slight turn to the left of the frame, the same soft even lighting and the same flat pure green background (#00B140, no floor, no shadow, no gradient). Output the same portrait format. No text, no logos, no jewelry, no props. Change only this:
+
+DANH SÁCH - BIỂU CẢM (14 ảnh) - mỗi ảnh dán LỜI MỞ ĐẦU rồi dòng THAY ĐỔI
+
+1) LƯU THÀNH: lina__calm__open.png
+THAY ĐỔI: her mouth is slightly open as if saying "ah", upper teeth just visible, natural speaking, not a yawn; calm friendly face.
+
+2) LƯU THÀNH: lina__smile__closed.png
+THAY ĐỔI: a warm gentle smile with the lips closed.
+
+3) LƯU THÀNH: lina__smile__open.png
+THAY ĐỔI: smiling while speaking, mouth open, teeth visible.
+
+4) LƯU THÀNH: lina__surprised__closed.png
+THAY ĐỔI: surprised look, eyes wide open, eyebrows raised, lips closed.
+
+5) LƯU THÀNH: lina__surprised__open.png
+THAY ĐỔI: surprised look, eyes wide open, eyebrows raised, mouth open.
+
+6) LƯU THÀNH: lina__laugh__closed.png
+THAY ĐỔI: happy laughing look, eyes narrowed and curved, big smile, lips closed.
+
+7) LƯU THÀNH: lina__laugh__open.png
+THAY ĐỔI: laughing, eyes narrowed and curved, wide smile, mouth open.
+
+8) LƯU THÀNH: lina__thinking__closed.png
+THAY ĐỔI: thoughtful look, eyes glancing slightly upward and to the side, one eyebrow slightly raised, lips closed.
+
+9) LƯU THÀNH: lina__thinking__open.png
+THAY ĐỔI: thoughtful look, eyes glancing slightly upward and to the side, mouth slightly open as if saying "hmm".
+
+10) LƯU THÀNH: lina__worried__closed.png
+THAY ĐỔI: worried look, eyebrows drawn together and slightly raised, lips closed.
+
+11) LƯU THÀNH: lina__worried__open.png
+THAY ĐỔI: worried look, eyebrows drawn together and slightly raised, mouth slightly open as if speaking.
+
+12) LƯU THÀNH: lina__serious__closed.png
+THAY ĐỔI: serious calm expression, level eyebrows, lips closed.
+
+13) LƯU THÀNH: lina__serious__open.png
+THAY ĐỔI: serious expression, mouth slightly open as if speaking.
+
+14) LƯU THÀNH: lina__blink.png
+THAY ĐỔI: both eyes gently closed as in a blink, lips closed, calm face.
+
+DANH SÁCH - CỬ CHỈ (7 ảnh) - đầu và nét mặt giữ NGUYÊN như ảnh gốc (miệng khép, bình thản), chỉ đổi tay/tư thế
+
+15) LƯU THÀNH: lina__gesture-talk.png
+THAY ĐỔI: keep the face and head exactly as in the base; one hand raised to chest height with the palm open, as if explaining.
+
+16) LƯU THÀNH: lina__gesture-point.png
+THAY ĐỔI: keep the face and head exactly as in the base; one hand pointing to the side of the frame (to the left of the picture), the other arm relaxed.
+
+17) LƯU THÀNH: lina__gesture-think.png
+THAY ĐỔI: keep the face and head exactly as in the base; one hand resting under the chin in a thinking pose, the other arm across the waist.
+
+18) LƯU THÀNH: lina__gesture-open.png
+THAY ĐỔI: keep the face and head exactly as in the base; both hands open with palms up at waist height, a small shrug.
+
+19) LƯU THÀNH: lina__gesture-heart.png
+THAY ĐỔI: keep the face and head exactly as in the base; one hand resting on the chest, sincere, "thank you".
+
+20) LƯU THÀNH: lina__gesture-listen.png
+THAY ĐỔI: keep the face and head exactly as in the base; both hands lightly clasped in front of the body, listening.
+
+21) LƯU THÀNH: lina__gesture-wave.png
+THAY ĐỔI: keep the face and head exactly as in the base; one hand raised and waving a friendly hello.
+
+THỨ TỰ ƯU TIÊN
+Làm trước 6 ảnh: calm__open, smile__closed, smile__open, surprised__closed, surprised__open, blink, rồi các ảnh còn lại. Làm thiếu vẫn được: video dùng ảnh gốc thay cho ảnh chưa có.
+
+SAU KHI NHẬP
+- Ảnh nào báo "head moved" hoặc "body differs" quá nhiều: tạo lại ảnh đó, hoặc nhắn tôi để làm biểu cảm đó bằng cách ghép mặt (face-only, không lệch).
+- Ảnh cử chỉ bị tay che đầu hoặc đổi đầu thì tạo lại.

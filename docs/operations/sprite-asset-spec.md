@@ -95,3 +95,13 @@ face position, the image tool edits the expression on the crop (`docs/operations
 `sprite_face_tools.py compose lina` pastes the edited face back into `lina__calm__closed.png` inside a feathered ellipse, keeping the base's
 transparency: every picture is aligned with the base by construction. This cannot make the **gestures** (tier 3: they need new arms), so
 Lina has none for now and the video uses her base picture where a gesture would be shown.
+
+### 6b. Two ways to make Lina's pictures on ChatGPT web (2026-10-08)
+
+- **Head crops** (face only, always aligned): `scripts/sprite_face_tools.py prepare lina` also writes a square `lina_head_edit_input.png`
+  (web tools return squares; `compose` cuts the padding off again). Prompts: `docs/operations/Prompt_ChatGPT_Web_Lina_Faces.txt`.
+- **Full figure** (expressions and gestures in one picture, no crop): `docs/operations/Prompt_ChatGPT_Web_Lina_FullBody.txt`. The web
+  pictures go to `data/assets_sprites/web_raw/` (flat green `#00B140` background, any size);
+  `scripts/sprite_web_import.py lina` keys out the green, finds the face, scales and places the figure on the 1280 x 1536 canvas by the face
+  and then by the overlap of the head-zone silhouettes, writes into `sprites_inbox` and runs `check_sprites.py`. Pictures that still fail are
+  made again. If the web tool refuses a full-figure edit, use the head crops for the expressions.
