@@ -1,0 +1,123 @@
+﻿ALEX - TẠO LẠI TOÀN BỘ ẢNH NHÂN VẬT BẰNG CHATGPT WEB (28 ảnh)
+
+NGUYÊN TẮC: mọi ảnh là ảnh gốc được SỬA MỘT VÙNG NHỎ, không bao giờ vẽ lại cả bức.
+Cách làm mỗi ảnh:
+  1. Mở cuộc trò chuyện MỚI trên ChatGPT web, tải lên đúng "Ảnh tải lên" của dòng đó.
+  2. Bấm vào ảnh -> chọn công cụ CHỌN VÙNG (cọ Select) -> tô KÍN đúng "Vùng tô" (không tô chỗ khác).
+  3. Dán nguyên "Prompt" -> gửi.
+  4. Tải ảnh về, đổi tên đúng "Tên file", lưu vào:
+     D:\DataAdmin\Daily_Intel_English\data\assets_sprites\web_raw
+  5. So với ảnh đã tải lên: ngoài vùng tô KHÔNG được khác gì (mặt, mắt, tóc, vai, áo, nền xanh, kích thước người).
+     Khác thì tạo lại trong cuộc trò chuyện mới.
+
+ẢNH GỐC: D:\DataAdmin\Daily_Intel_English\data\assets_sprites\web_inputs\INPUT_alex__calm__closed.png
+Các ảnh bạn vừa tạo cũng nằm trong web_raw; bước 2 và bước 4 tải lên chính các ảnh đó.
+
+=====================================================================================================
+BƯỚC 1 - BIỂU CẢM VÀ CHỚP MẮT (7 ảnh)
+Ảnh tải lên: INPUT_alex__calm__closed.png
+Vùng tô: toàn bộ khuôn mặt từ lông mày đến cằm, KHÔNG tô tóc, tai, cổ (riêng ảnh chớp mắt: chỉ tô hai mắt)
+=====================================================================================================
+
+Tên file: alex__smile__closed.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, head angle, hair, body, suit, flat green background, framing and image size. A warm gentle smile with the lips closed.
+
+Tên file: alex__laugh__closed.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, head angle, hair, body, suit, flat green background, framing and image size. A happy laughing look, eyes narrowed and curved, a big smile with the lips closed.
+
+Tên file: alex__surprised__closed.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, head angle, hair, body, suit, flat green background, framing and image size. Surprised: eyes wide open, eyebrows raised, lips closed.
+
+Tên file: alex__thinking__closed.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, head angle, hair, body, suit, flat green background, framing and image size. Thoughtful: eyes glancing slightly upward, one eyebrow slightly raised, lips closed. The head does not move.
+
+Tên file: alex__worried__closed.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, head angle, hair, body, suit, flat green background, framing and image size. Worried: eyebrows drawn together and slightly raised, lips closed.
+
+Tên file: alex__serious__closed.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, head angle, hair, body, suit, flat green background, framing and image size. A serious calm expression, level eyebrows, lips closed.
+
+Tên file: alex__blink.png   (Vùng tô: CHỈ HAI MẮT)
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, head angle, hair, body, suit, flat green background, framing and image size. Both eyes gently closed, as in a blink.
+
+=====================================================================================================
+BƯỚC 2 - MIỆNG MỞ (7 ảnh)
+Ảnh tải lên: ảnh miệng ngậm ghi ở từng dòng
+Vùng tô: CHỈ MIỆNG (hai môi và một chút da quanh môi), không tô mũi, má, cằm
+=====================================================================================================
+
+Ảnh tải lên: INPUT_alex__calm__closed.png
+Tên file: alex__calm__open.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, eyes, head angle, hair, body, suit, flat green background, framing and image size. The mouth is open as when saying "ah", upper teeth slightly visible, natural, not a yawn.
+
+Ảnh tải lên: alex__smile__closed.png
+Tên file: alex__smile__open.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, eyes, head angle, hair, body, suit, flat green background, framing and image size. Smiling while speaking: the mouth is open, teeth visible.
+
+Ảnh tải lên: alex__laugh__closed.png
+Tên file: alex__laugh__open.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, eyes, head angle, hair, body, suit, flat green background, framing and image size. Laughing: a wide open smile, teeth visible.
+
+Ảnh tải lên: alex__surprised__closed.png
+Tên file: alex__surprised__open.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, eyes, head angle, hair, body, suit, flat green background, framing and image size. The mouth is open in a small round "oh".
+
+Ảnh tải lên: alex__thinking__closed.png
+Tên file: alex__thinking__open.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, eyes, head angle, hair, body, suit, flat green background, framing and image size. The mouth is slightly open as if saying "hmm".
+
+Ảnh tải lên: alex__worried__closed.png
+Tên file: alex__worried__open.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, eyes, head angle, hair, body, suit, flat green background, framing and image size. The mouth is slightly open as if speaking.
+
+Ảnh tải lên: alex__serious__closed.png
+Tên file: alex__serious__open.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face shape, eyes, head angle, hair, body, suit, flat green background, framing and image size. The mouth is slightly open as if speaking.
+
+=====================================================================================================
+BƯỚC 3 - CỬ CHỈ (7 ảnh)
+Ảnh tải lên: INPUT_alex__calm__closed.png
+Vùng tô: CHỈ HAI CÁNH TAY VÀ BÀN TAY, cộng khoảng nền xanh nơi tay sẽ giơ tới. KHÔNG tô đầu, cổ, ngực áo.
+Bàn tay phải nằm TRỌN trong ảnh, không chạm mép ảnh.
+=====================================================================================================
+
+Tên file: alex__gesture-talk.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, suit, flat green background, framing and image size. One hand raised to chest height with the palm open, as if explaining. The whole hand stays inside the picture.
+
+Tên file: alex__gesture-point.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, suit, flat green background, framing and image size. One hand pointing to the side, the elbow bent so the hand stays well inside the picture.
+
+Tên file: alex__gesture-think.png   (Vùng tô: tay và một chút dưới cằm nơi bàn tay chạm vào)
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, suit, flat green background, framing and image size. One hand resting lightly under the chin, the other arm across the waist. The head does not move.
+
+Tên file: alex__gesture-open.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, suit, flat green background, framing and image size. Both hands open with the palms up at waist height, close to the body, a small shrug. The hands stay inside the picture.
+
+Tên file: alex__gesture-heart.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, suit, flat green background, framing and image size. One hand resting flat on the chest, sincere, as when saying thank you.
+
+Tên file: alex__gesture-listen.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, suit, flat green background, framing and image size. Both hands lightly clasped in front of the body at waist height, listening.
+
+Tên file: alex__gesture-wave.png
+Prompt: Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, suit, flat green background, framing and image size. One hand raised beside the shoulder, waving hello. The whole hand stays inside the picture.
+
+=====================================================================================================
+BƯỚC 4 - MIỆNG MỞ KHI ĐANG LÀM CỬ CHỈ (7 ảnh)
+Ảnh tải lên: ảnh cử chỉ vừa tạo ở bước 3 (ghi ở từng dòng)
+Vùng tô: CHỈ MIỆNG
+Prompt (giống nhau cho cả 7 ảnh): Edit only the selected area. Keep everything outside it exactly the same: the same face shape, eyes, head angle, hair, body, hands, suit, flat green background, framing and image size. The mouth is open as when speaking, upper teeth slightly visible.
+=====================================================================================================
+
+Ảnh tải lên: alex__gesture-talk.png     ->  Tên file: alex__gesture-talk__open.png
+Ảnh tải lên: alex__gesture-point.png    ->  Tên file: alex__gesture-point__open.png
+Ảnh tải lên: alex__gesture-think.png    ->  Tên file: alex__gesture-think__open.png
+Ảnh tải lên: alex__gesture-open.png     ->  Tên file: alex__gesture-open__open.png
+Ảnh tải lên: alex__gesture-heart.png    ->  Tên file: alex__gesture-heart__open.png
+Ảnh tải lên: alex__gesture-listen.png   ->  Tên file: alex__gesture-listen__open.png
+Ảnh tải lên: alex__gesture-wave.png     ->  Tên file: alex__gesture-wave__open.png
+
+=====================================================================================================
+LÀM DẦN CŨNG ĐƯỢC: alex__calm__open.png (bước 2, dòng đầu) là đủ để Alex nhép miệng; mỗi phần làm thêm thì video có thêm
+biểu cảm hoặc cử chỉ. Đặt sai tên cũng được: báo tôi, tôi xem ảnh và sửa tên.
+Xong (hoặc xong một phần) thì nhắn tôi: tôi tách nền, đặt về khung chuẩn, kiểm tra từng ảnh và dựng lại video thử.
