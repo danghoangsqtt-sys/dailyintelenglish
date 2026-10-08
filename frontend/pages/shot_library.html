@@ -91,6 +91,18 @@
         <span id="bg-count" class="shot-summary" role="status"></span>
       </div>
       <ul id="bg-result" class="import-result" role="status"></ul>
+      <hr />
+      <p><strong>Talking sprites</strong> (the "Podcast: talking characters" video): put transparent 1280 x 1536 PNGs named
+        <code>alex__calm__closed.png</code>, <code>alex__smile__open.png</code>, <code>alex__blink.png</code>,
+        <code>alex__gesture-wave.png</code> ... in <code id="sprite-folder"></code>
+        (<code>docs/operations/sprite-asset-spec.md</code>). Every picture is checked against the calm, closed-mouth one; a picture
+        that would make the character jump is refused.</p>
+      <div class="import-row">
+        <button id="sprite-import-btn" class="btn btn-primary" type="button">Import sprites</button>
+        <span id="sprite-count" class="shot-summary" role="status"></span>
+      </div>
+      <ul id="sprite-sets" class="import-result" aria-label="Sprite sets"></ul>
+      <ul id="sprite-result" class="import-result" role="status"></ul>
     </details>
     <div class="shot-filters" role="group" aria-label="Filters">
       <label>Scene <select id="filter-scene"><option value="">All scenes</option></select></label>

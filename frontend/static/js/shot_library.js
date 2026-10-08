@@ -241,9 +241,59 @@
     await refreshBackgrounds();
   }
 
+  async function refreshSprites() {
+    try {
+      const status = await Api.getLibrarySprites();
+      byId("sprite-folder").textContent = status.folder;
+      byId("sprite-count").textContent = `${status.inbox.length} sprite picture${status.inbox.length === 1 ? "" : "s"} in the folder`;
+      const list = byId("sprite-sets");
+      list.replaceChildren();
+      status.sets.forEach((set) => {
+        const li = document.createElement("li");
+        li.dataset.character = set.name;
+        if (!set.has_set) {
+          li.textContent = `${set.name}: no sprites yet.`;
+        } else {
+          const missing = set.missing.length ? ` Missing: ${set.missing.join(", ")}.` : "";
+          li.textContent = `${set.name}: ${set.faces} of ${set.faces_total} faces, ${set.gestures} of ${set.gestures_total} gestures` +
+            `${set.usable ? "" : " (not usable: calm__closed and calm__open are needed)"}.${missing}`;
+          if (!set.usable) li.className = "is-error";
+        }
+        list.append(li);
+      });
+    } catch (error) {
+      console.error("Failed to read the sprite sets:", error);
+    }
+  }
+
+  async function importSprites() {
+    byId("sprite-import-btn").disabled = true;
+    const list = byId("sprite-result");
+    list.replaceChildren();
+    const add = (text, className = "") => {
+      const li = document.createElement("li");
+      li.textContent = text;
+      if (className) li.className = className;
+      list.append(li);
+    };
+    try {
+      const result = await Api.importLibrarySprites();
+      add(`${result.imported.length} sprite set${result.imported.length === 1 ? "" : "s"} imported: ` +
+        (result.imported.map((item) => `${item.name} (${item.pictures} pictures)`).join(", ") || "none") + ".");
+      result.refused.forEach((item) => add(`${item.file}: ${item.reason}`, "is-error"));
+      result.ignored.forEach((file) => add(`${file}: not a sprite name, ignored.`));
+    } catch (error) {
+      add(error.message || "Could not import the sprites.", "is-error");
+    }
+    byId("sprite-import-btn").disabled = false;
+    await refreshSprites();
+  }
+
   function setup() {
     byId("import-btn").addEventListener("click", importInbox);
     byId("bg-import-btn").addEventListener("click", importBackgrounds);
+    byId("sprite-import-btn").addEventListener("click", importSprites);
+    refreshSprites();
     refreshBackgrounds();
     refreshInbox();
     [["filter-scene", "scene_id"], ["filter-kind", "kind"], ["filter-state", "review_state"]].forEach(([id, key]) => {

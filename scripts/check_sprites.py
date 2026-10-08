@@ -21,39 +21,20 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from app.services.visuals.sprite_service import SIZE, Reference, measure  # noqa: E402  (the app's import uses the same rules)
+
 DEFAULT_FOLDER = Path(r"D:\DataAdmin\Daily_Intel_English\data\library\sprites_inbox")
-SIZE = (1280, 1536)
 TIERS = {
     1: ["calm__closed", "calm__open", "smile__closed", "smile__open", "surprised__closed", "surprised__open", "blink"],
     2: ["laugh__closed", "laugh__open", "thinking__closed", "thinking__open", "worried__closed", "worried__open",
         "serious__closed", "serious__open"],
     3: [f"gesture-{name}" for name in ("talk", "point", "think", "open", "heart", "listen", "wave")],
 }
-TOP_LIMIT = 6
-HEAD_SIDE_LIMIT = 10
-EDGE_LIMIT = 8
-SILHOUETTE_LIMIT = 4.0
 
 
 def load(path: Path) -> np.ndarray:
     return np.asarray(Image.open(path).convert("RGBA"))
-
-
-def bbox(alpha: np.ndarray) -> tuple[int, int, int, int]:
-    ys, xs = np.where(alpha)
-    return int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
-
-
-def torso_edges(alpha: np.ndarray, top: int, bottom: int) -> tuple[float, float]:
-    """Mean left and right edge of the figure over the torso rows (55 to 90% of the figure's height)."""
-    first, last = top + int((bottom - top) * 0.55), top + int((bottom - top) * 0.90)
-    lefts, rights = [], []
-    for y in range(first, last, 6):
-        xs = np.where(alpha[y])[0]
-        if len(xs):
-            lefts.append(xs.min())
-            rights.append(xs.max())
-    return float(np.mean(lefts)), float(np.mean(rights))
 
 
 def main() -> int:
@@ -69,56 +50,25 @@ def main() -> int:
     if not reference_path.is_file():
         print(f"missing {reference_path}")
         return 1
-    reference = load(reference_path)
-    ref_alpha = reference[..., 3] > 20
-    rx0, ry0, rx1, ry1 = bbox(ref_alpha)
-    head_end = ry0 + int((ry1 - ry0) * 0.20)  # head and neck only (no shoulders, so raised arms do not count as head)
-    ref_head_x = float(np.where(ref_alpha[:head_end])[1].mean())
-    ref_left, ref_right = torso_edges(ref_alpha, ry0, ry1)
+    reference = Reference(load(reference_path))
     quiet = args.list_failed
     failed_names: list[str] = []
     if not quiet:
-        print(f"reference {reference_path.name}: top margin {ry0 / SIZE[1]:.1%}")
-    if not quiet:
+        print(f"reference {reference_path.name}: top margin {reference.top / SIZE[1]:.1%}")
         print(f"{'file':34} {'top':>5} {'torso edges':>12} {'below-head diff%':>17} {'head diff%':>11}  result")
     failed = 0
     for path in sorted(folder.glob(f"{who}__*.png")):
-        picture = Image.open(path)
-        if picture.size != SIZE:
-            if not quiet:
-                print(f"{path.name:34} wrong canvas size {picture.size}, expected {SIZE}")
-            failed += 1
-            failed_names.append(path.name)
-            continue
-        data = load(path)
-        alpha = data[..., 3] > 20
-        corners = all(data[y, x, 3] == 0 for y in (0, -1) for x in (0, -1))
-        x0, y0, x1, y1 = bbox(alpha)
-        left, right = torso_edges(alpha, y0, y1)
-        head_x = float(np.where(alpha[:head_end])[1].mean()) if alpha[:head_end].any() else -9999.0
-        edge_shift = max(abs(left - ref_left), abs(right - ref_right))
-        head_xor = (alpha[:head_end] ^ ref_alpha[:head_end]).sum() / max(1, ref_alpha[:head_end].sum()) * 100
-        body_xor = (alpha[head_end:] ^ ref_alpha[head_end:]).sum() / max(1, ref_alpha[head_end:].sum()) * 100
-        problems = []
-        if not corners:
-            problems.append("corners not transparent")
-        if abs(y0 - ry0) > TOP_LIMIT:
-            problems.append(f"head top moved {y0 - ry0:+d}px")
-        if abs(head_x - ref_head_x) > HEAD_SIDE_LIMIT:
-            problems.append(f"head moved sideways {head_x - ref_head_x:+.0f}px")
-        if "gesture" in path.name:
-            if head_xor > SILHOUETTE_LIMIT:
-                problems.append(f"head differs {head_xor:.1f}%")
-        else:
-            if edge_shift > EDGE_LIMIT:
-                problems.append(f"torso moved {edge_shift:.0f}px")
-            if body_xor > SILHOUETTE_LIMIT:
-                problems.append(f"body differs {body_xor:.1f}%")
+        result = measure(load(path), reference, "gesture" in path.name)
+        problems = result["problems"]
         if problems and path.name != reference_path.name:
             failed += 1
             failed_names.append(path.name)
-        if not quiet:
-            print(f"{path.name:34} {y0 - ry0:+5d} {edge_shift:12.1f} {body_xor:17.1f} {head_xor:11.1f}  "
+        if quiet:
+            continue
+        if "top" not in result:  # the canvas itself is wrong: no numbers to show
+            print(f"{path.name:34} {'; '.join(problems)}")
+            continue
+        print(f"{path.name:34} {result['top']:+5d} {result['edge_shift']:12.1f} {result['body_diff']:17.1f} {result['head_diff']:11.1f}  "
               f"{'OK' if not problems else '; '.join(problems)}")
     expected = [f"{who}__{name}.png" for tier in (args.expect.split(",") if args.expect else []) for name in TIERS[int(tier)]]
     for name in expected:

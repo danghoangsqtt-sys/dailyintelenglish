@@ -22,6 +22,7 @@ from app.services.visuals import jobs
 from app.services.visuals import library_service as library
 from app.services.visuals import project_visuals_service as project_visuals
 from app.services.visuals import shot_library_service as shot_library
+from app.services.visuals import sprite_service
 from app.services.visuals import storyboard_service
 from app.services.visuals.engine import IMAGE_PYTHON, require_generation
 
@@ -262,6 +263,32 @@ async def import_library_inbox(db: aiosqlite.Connection = Depends(get_db)) -> di
     async with write_transaction(db):
         result = await shot_library.import_inbox(db)
     return ok(result)
+
+
+@router.get("/library/sprites")
+async def library_sprites(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 32: the talking-sprite set of every library character, and the inbox the sets are imported from."""
+    async with read_transaction():
+        sets = await sprite_service.list_sets(db)
+    return ok({"folder": str(sprite_service.inbox_dir()), "inbox": sprite_service.list_inbox(), "sets": sets})
+
+
+@router.post("/library/sprites/import")
+async def import_library_sprites(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with read_transaction():  # only the character names are read; the sets are files (checked outside the lock)
+        characters = await sprite_service.characters_by_key(db)
+    result = await sprite_service.import_inbox(characters)
+    return ok(result)
+
+
+@router.get("/library/sprites/{character_id}/{name}/content")
+async def library_sprite_content(character_id: str, name: str) -> FileResponse:
+    if name not in sprite_service.ALL_NAMES:
+        raise NotFoundError("Sprite picture not found")
+    path = sprite_service.sprite_dir(character_id) / f"{name}.png"
+    if "/" in character_id or "\\" in character_id or ".." in character_id or not path.is_file():
+        raise NotFoundError("Sprite picture not found")
+    return FileResponse(path, media_type="image/png")
 
 
 @router.patch("/library/shots/{shot_id}")

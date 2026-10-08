@@ -168,3 +168,36 @@ async def test_a_new_project_starts_with_alex_and_lina_as_speakers(browser_insta
     assert await page.locator("#speaker-name-1").input_value() == "Lina"
     assert await page.locator("#speaker-gender-1").input_value() == "female"
     await page.close()
+
+
+@pytest.mark.asyncio
+async def test_sprite_pictures_in_the_inbox_become_a_set_from_the_page(browser_instance: Browser, live_server_url: str):
+    """Phase 32 (Task 32.1): the Talking sprites card lists the sets, imports the inbox and shows what was refused."""
+    import sqlite3
+
+    from app.services.visuals import sprite_service
+    from tests.test_sprite_service import _figure
+    from tests.test_visuals_project_api import locked_character
+
+    with sqlite3.connect(settings.db_path) as connection:
+        known = {row[0].lower() for row in connection.execute("SELECT name FROM characters")}
+    if "lina" not in known:
+        locked_character("Lina", "white")
+    for name in ("calm__closed", "calm__open", "smile__open"):
+        _figure(sprite_service.inbox_dir() / f"lina__{name}.png")
+    _figure(sprite_service.inbox_dir() / "lina__laugh__open.png", torso_dx=40)
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(sprite_service, "detected_face_ellipse", lambda _path: None)  # no face model in a test
+        page = await browser_instance.new_page()
+        await page.goto(f"{live_server_url}/shots")
+        await page.locator("#import-card summary").click()
+        await page.wait_for_function("document.getElementById('sprite-count').textContent.includes('4 sprite pictures')")
+        assert (await page.locator("#sprite-folder").text_content()).endswith("sprites_inbox")
+        assert "no sprites yet" in await page.locator("#sprite-sets li[data-character='Lina']").text_content()
+        await page.click("#sprite-import-btn")
+        await page.locator("#sprite-result li.is-error").wait_for()
+        results = await page.locator("#sprite-result li").all_text_contents()
+        assert results[0].startswith("1 sprite set imported: Lina (3 pictures)") and "torso moved" in results[1]
+        await page.wait_for_function(
+            "document.querySelector(\"#sprite-sets li[data-character='Lina']\").textContent.includes('3 of 15 faces')")
+        await page.close()

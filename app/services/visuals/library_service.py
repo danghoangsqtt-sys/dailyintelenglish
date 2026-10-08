@@ -207,6 +207,8 @@ async def delete_character(db: aiosqlite.Connection, character_id: str, force: b
 async def remove_character_files(character_id: str) -> None:
     path = settings.DATA_DIR / "library" / "characters" / character_id
     await asyncio.to_thread(shutil.rmtree, path, ignore_errors=True)
+    # Phase 32: the character's talking-sprite set goes with it
+    await asyncio.to_thread(shutil.rmtree, settings.DATA_DIR / "library" / "sprites" / character_id, ignore_errors=True)
 
 
 async def list_scenes(db: aiosqlite.Connection) -> list[dict]:
