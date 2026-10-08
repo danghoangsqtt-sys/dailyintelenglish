@@ -1,4 +1,44 @@
-# 🚀 Daily Intel English Studio — Claude Code Kickoff Prompt
+# 🚀 Daily Intel English Studio — Claude Code Resume Prompt
+
+## Current continuation instructions — 2026-10-08
+
+These are the active instructions. The Phase 1 bootstrap prompt retained below is historical;
+do not execute its Task 1.1 checklist or treat its original stack decisions as current.
+
+### Current state
+
+- Phase 31 is done. Phase 32 is in progress: Tasks 32.1–32.5 are done; owner Gate B-22 is
+  pending.
+- The owner wants to continue with reusable, full-frame activity cutaways for the talking
+  characters. Read `docs/brainstorm/session-2026-10-08.md` first; confirm the proposed task
+  breakdown and owner gate before implementation.
+- The current implementation is documented in `docs/implementation/phase-32-talking-sprites.md`.
+  Phase 32 source sprites and their web inputs are under `data/assets_sprites/`.
+
+### Read before making changes
+
+1. `.viepilot/AI-GUIDE.md`
+2. `.viepilot/TRACKER.md` and `.viepilot/HANDOFF.json`
+3. `.viepilot/ROADMAP.md` and `.viepilot/phases/32-talking-sprites/PHASE-STATE.md`
+4. `docs/brainstorm/session-2026-10-08.md`
+5. `docs/implementation/phase-32-talking-sprites.md`
+6. `.viepilot/PROJECT-CONTEXT.md` and `.viepilot/SYSTEM-RULES.md`
+
+At startup, inspect `git status` and stay on the current branch unless the owner asks otherwise.
+Never stage `.env`, runtime databases, `data/backups/`, local caches or machine-specific launch
+settings. Preserve owner-created project assets.
+
+### Current stack
+
+- Backend: Python 3.11+ / FastAPI / SQLite (`aiosqlite`)
+- Main UI: HTML, CSS and JavaScript
+- Enhanced video renderer: isolated Node.js / React / Remotion workspace in `video-renderer/`
+- AI: cloud-first with local fallback; TTS: Edge TTS
+
+For validation, use `venv\\Scripts\\python.exe -m pytest -q`, `venv\\Scripts\\ruff.exe check app scripts tests`,
+and from `video-renderer/`, `npm test` and `npm run typecheck`.
+
+## Historical Phase 1 bootstrap prompt (superseded; do not execute)
 
 ## Dự án
 **Daily Intel English Studio** — AI-powered podcast production tool cho YouTube (local web app)

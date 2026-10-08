@@ -17,6 +17,10 @@ build/
 .env
 *.env.local
 
+# Local caches and IDE launch profiles
+.cache/
+.claude/launch.json
+
 # Data (runtime — don't commit generated content)
 data/projects/
 data/audio/
@@ -25,6 +29,7 @@ data/thumbnails/
 data/tts_cache/
 data/quality_reviews/
 data/tmp/
+data/backups/
 # Phase 20: generated character/scene library and per-project shots (user content)
 data/library/
 data/visuals/

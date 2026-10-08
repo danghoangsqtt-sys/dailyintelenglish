@@ -3,8 +3,8 @@
   "version": "1.2.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phases_27_30_built_await_owner_gates_B19_B20_B21_and_library_review",
-  "current_phase": "29",
+  "status": "phase_32_talking_sprites_built_await_gate_B22_and_activity_cutaway_scope_confirmation",
+  "current_phase": "32",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
     "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
@@ -245,10 +245,24 @@
     },
     "30": {
       "name": "Podcast visual modes (ENH-021)",
-      "status": "in_progress",
-      "tasks_done": 0,
+      "status": "complete",
+      "tasks_done": 4,
       "tasks_total": 4,
-      "note": "Started 2026-10-07 while the Phase 29.1 gaze comparison renders."
+      "note": "30.1-30.4 done 2026-10-07; Phase 30 is marked complete in PHASE-STATE and ROADMAP."
+    },
+    "31": {
+      "name": "Alex and Lina and the owner's pictures in the library (ENH-022)",
+      "status": "complete",
+      "tasks_done": 2,
+      "tasks_total": 2,
+      "note": "31.1 and 31.2 done 2026-10-07; Phase 31 is marked done in ROADMAP and PHASE-STATE."
+    },
+    "32": {
+      "name": "Talking characters as sprites, visual-novel style (ENH-023)",
+      "status": "in_progress",
+      "tasks_done": 5,
+      "tasks_total": 6,
+      "note": "32.1-32.5 done 2026-10-08; Gate B-22 remains. Read docs/brainstorm/session-2026-10-08.md before continuing: activity cutaways are proposed, with task breakdown and owner gate confirmation open."
     }
   },
   "key_decisions": [
