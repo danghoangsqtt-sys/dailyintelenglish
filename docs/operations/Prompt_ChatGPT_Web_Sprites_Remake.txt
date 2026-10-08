@@ -1,0 +1,83 @@
+﻿LÀM LẠI TOÀN BỘ ẢNH NHÂN VẬT ALEX VÀ LINA BẰNG CHATGPT WEB (khuôn mặt, miệng, cử chỉ)
+
+NGUYÊN TẮC DUY NHẤT: mọi ảnh đều là ảnh gốc được SỬA MỘT VÙNG NHỎ. Không bao giờ để ChatGPT vẽ lại cả bức.
+Trong ChatGPT web: bấm vào ảnh đã tải lên -> chọn công cụ CHỌN VÙNG (cọ "Select") -> tô KÍN vùng cần sửa (và chỉ vùng đó)
+-> gõ prompt -> gửi. Vùng không tô sẽ được giữ nguyên, nên thân và mặt không bị lệch.
+(Nếu không thấy công cụ chọn vùng: vẫn dán prompt, nhưng kết quả dễ bị vẽ lại cả ảnh; ảnh nào lệch thì tạo lại.)
+
+ẢNH GỐC (giữ nguyên, KHÔNG sửa trực tiếp, chỉ tải lên làm đầu vào):
+  Alex: D:\DataAdmin\Daily_Intel_English\data\assets_sprites\web_inputs\INPUT_alex__calm__closed.png
+  Lina: D:\DataAdmin\Daily_Intel_English\data\assets_sprites\web_inputs\INPUT_lina__calm__closed.png
+
+NƠI LƯU MỌI ẢNH TẠO RA: D:\DataAdmin\Daily_Intel_English\data\assets_sprites\web_raw
+Tên file: theo cột "Tên file" bên dưới (đuôi .png). Đặt sai tên cũng được, báo tôi, tôi xem ảnh và sửa tên.
+
+Câu dặn chung (đã có trong mỗi prompt): "Edit only the selected area. Keep everything outside it exactly the same: the same face,
+head angle, hair, body, clothes, flat green background, framing and image size."
+
+Làm cho Alex trước, rồi lặp lại y hệt cho Lina (thay "alex" bằng "lina" trong tên file, "his" bằng "her").
+
+===========================================================================================================
+BƯỚC 1 - BIỂU CẢM (tải lên ẢNH GỐC, tô chọn TOÀN BỘ KHUÔN MẶT từ lông mày đến cằm, KHÔNG tô tóc)
+===========================================================================================================
+Tên file                     Prompt
+alex__smile__closed.png      Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, clothes, flat green background, framing and image size. A warm gentle smile with the lips closed.
+alex__laugh__closed.png      Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, clothes, flat green background, framing and image size. A happy laughing look, eyes narrowed and curved, big smile with the lips closed.
+alex__surprised__closed.png  Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, clothes, flat green background, framing and image size. Surprised: eyes wide open, eyebrows raised, lips closed.
+alex__thinking__closed.png   Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, clothes, flat green background, framing and image size. Thoughtful: eyes glancing slightly upward, one eyebrow slightly raised, lips closed. The head does not move.
+alex__worried__closed.png    Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, clothes, flat green background, framing and image size. Worried: eyebrows drawn together and slightly raised, lips closed.
+alex__serious__closed.png    Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, clothes, flat green background, framing and image size. Serious calm expression, level eyebrows, lips closed.
+
+Chớp mắt (tải lên ẢNH GỐC, tô chọn CHỈ HAI MẮT):
+alex__blink.png              Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, clothes, flat green background, framing and image size. Both eyes gently closed, as in a blink.
+
+===========================================================================================================
+BƯỚC 2 - MIỆNG MỞ (tải lên ẢNH MIỆNG NGẬM tương ứng, tô chọn CHỈ MIỆNG: môi và một chút quanh môi)
+===========================================================================================================
+Ảnh tải lên                      Tên file                    Prompt
+INPUT_alex__calm__closed.png     alex__calm__open.png        Edit only the selected area. Keep everything outside it exactly the same: the same face, head angle, hair, body, clothes, flat green background, framing and image size. The mouth is open as when saying "ah", upper teeth slightly visible, natural, not a yawn.
+alex__smile__closed.png          alex__smile__open.png       (câu dặn chung) Smiling while speaking: mouth open, teeth visible.
+alex__laugh__closed.png          alex__laugh__open.png       (câu dặn chung) Laughing: wide open smile, teeth visible.
+alex__surprised__closed.png      alex__surprised__open.png   (câu dặn chung) Mouth open in a small round "oh".
+alex__thinking__closed.png       alex__thinking__open.png    (câu dặn chung) Mouth slightly open as if saying "hmm".
+alex__worried__closed.png        alex__worried__open.png     (câu dặn chung) Mouth slightly open as if speaking.
+alex__serious__closed.png        alex__serious__open.png     (câu dặn chung) Mouth slightly open as if speaking.
+("(câu dặn chung)" = dán câu "Edit only the selected area. Keep everything outside ... image size." ở đầu prompt.)
+
+===========================================================================================================
+BƯỚC 3 - CỬ CHỈ (tải lên ẢNH GỐC, tô chọn CHỈ HAI CÁNH TAY VÀ BÀN TAY, cùng khoảng nền xanh nơi tay sẽ giơ tới;
+KHÔNG tô đầu, KHÔNG tô thân áo/váy. Bàn tay phải nằm TRỌN trong ảnh, không chạm mép ảnh)
+===========================================================================================================
+Tên file                     Prompt
+alex__gesture-talk.png       (câu dặn chung) One hand raised to chest height with the palm open, as if explaining. The whole hand stays inside the picture.
+alex__gesture-point.png      (câu dặn chung) One hand pointing to the side, toward the other person, elbow bent so the hand stays well inside the picture.
+alex__gesture-think.png      (câu dặn chung) One hand resting lightly under the chin, the other arm across the waist. The head does not move.
+alex__gesture-open.png       (câu dặn chung) Both hands open with palms up at waist height, close to the body, a small shrug. The hands stay inside the picture.
+alex__gesture-heart.png      (câu dặn chung) One hand resting flat on the chest, sincere, as when saying thank you.
+alex__gesture-listen.png     (câu dặn chung) Both hands lightly clasped in front of the body at waist height, listening.
+alex__gesture-wave.png       (câu dặn chung) One hand raised beside the shoulder, waving hello. The whole hand stays inside the picture.
+
+===========================================================================================================
+BƯỚC 4 - MIỆNG MỞ KHI ĐANG LÀM CỬ CHỈ (tải lên ẢNH CỬ CHỈ vừa tạo ở bước 3, tô chọn CHỈ MIỆNG)
+===========================================================================================================
+Ảnh tải lên                  Tên file                         Prompt
+alex__gesture-talk.png       alex__gesture-talk__open.png     (câu dặn chung) The mouth is open as when speaking, upper teeth slightly visible.
+alex__gesture-point.png      alex__gesture-point__open.png    (như trên)
+alex__gesture-think.png      alex__gesture-think__open.png    (như trên)
+alex__gesture-open.png       alex__gesture-open__open.png     (như trên)
+alex__gesture-heart.png      alex__gesture-heart__open.png    (như trên)
+alex__gesture-listen.png     alex__gesture-listen__open.png   (như trên)
+alex__gesture-wave.png       alex__gesture-wave__open.png     (như trên)
+
+===========================================================================================================
+TỔNG: mỗi nhân vật 28 ảnh (6 biểu cảm + 1 chớp mắt + 7 miệng mở + 7 cử chỉ + 7 cử chỉ miệng mở), hai nhân vật 56 ảnh.
+Thứ tự ưu tiên nếu muốn làm dần: bước 2 dòng đầu (calm__open) -> bước 1 -> bước 2 -> bước 3 -> bước 4.
+Chỉ cần calm__open là video đã nhép miệng được; mỗi phần làm thêm thì video có thêm biểu cảm hoặc cử chỉ.
+
+KIỂM TRA NHANH TRƯỚC KHI LƯU
+- Đặt ảnh mới cạnh ảnh đã tải lên: ngoài vùng đã tô, KHÔNG được khác gì (mặt, mắt, tóc, vai, áo, nền xanh, kích thước người).
+- Nền phải là màu xanh lá phẳng như ảnh gốc.
+- Ảnh nào khác ngoài vùng tô: tạo lại (cuộc trò chuyện mới, tải lại đúng ảnh đầu vào).
+
+KHI XONG (hoặc xong một phần): nhắn tôi. Tôi sẽ tách nền, đặt về khung chuẩn, kiểm tra từng ảnh, thay bộ ảnh cũ
+(bộ cũ được cất vào data\assets_sprites\old, không xóa hẳn) và dựng lại video thử.
