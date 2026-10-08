@@ -48,6 +48,18 @@ def test_the_check_refuses_pictures_that_would_jump(tmp_path):
     assert "wrong canvas size" in reasons["serious__open.png"]
 
 
+def test_a_hand_cut_by_the_canvas_edge_is_refused(tmp_path):
+    _figure(tmp_path / "calm__closed.png")
+    _figure(tmp_path / "gesture-point.png")
+    with Image.open(tmp_path / "gesture-point.png") as opened:
+        picture = opened.copy()
+    ImageDraw.Draw(picture).rectangle((900, 700, 1279, 760), fill=(220, 180, 160, 255))  # the arm runs off the right edge
+    picture.save(tmp_path / "gesture-point.png")
+    accepted, refused = sprites.check_folder({path.stem: path for path in tmp_path.glob("*.png")})
+    assert "gesture-point" not in accepted
+    assert "cut by the right edge" in refused[0]["reason"]
+
+
 def test_an_opaque_base_refuses_the_whole_set(tmp_path):
     _figure(tmp_path / "calm__closed.png", opaque=True)
     _figure(tmp_path / "calm__open.png")

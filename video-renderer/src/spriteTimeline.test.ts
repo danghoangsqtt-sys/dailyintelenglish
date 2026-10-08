@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { podcastLayer } from "./podcastLayout";
 import {
+  FLIP_SQUASH, bodyAt, flipAt,
   BACKGROUND_FADE_FRAMES, LISTENER_BRIGHTNESS, SPRITE_HEIGHT, canvasBox, faceMask, heldLineIndex, isBlinking, isMouthOpen,
   spriteBackground, spriteFrame, stageTop,
 } from "./spriteTimeline";
@@ -73,7 +74,7 @@ describe("Phase 32 talking sprites", () => {
   it("dims and shrinks the listener and brightens the speaker after a short turn change", () => {
     const listener = at(1, 1);
     expect(listener.brightness).toBeCloseTo(LISTENER_BRIGHTNESS);
-    expect(listener.scale).toBeLessThan(1);
+    expect(listener.scale).toBe(1); // dimmed, never resized
     expect(listener.face).toBe("calm__closed" === listener.body ? null : listener.face);
     const turn = at(1, 2.5 + 3 / FPS);
     expect(turn.brightness).toBeGreaterThan(LISTENER_BRIGHTNESS);
@@ -126,5 +127,21 @@ describe("Phase 32 talking sprites", () => {
     expect(right.left).toBeGreaterThan(left.left);
     expect(faceMask([0.5, 0.25, 0.08, 0.07], [0.5, 0.25])).toBe(
       "radial-gradient(ellipse 8.00% 7.00% at 50.00% 25.00%, #000 70%, transparent 100%)");
+  });
+
+  it("changes the pose with a quick paper-doll flip, never a blend", () => {
+    const alex = sprites.characters[0];
+    // Alex waves during line 0 (0 to 2 s) and keeps the wave 0.3 s: the calm body comes back at 2.3 s
+    const change = Math.round(2.3 * FPS);
+    expect(bodyAt(alex, change - 1, FPS, timeline, sprites)).toBe("gesture-wave");
+    expect(bodyAt(alex, change, FPS, timeline, sprites)).toBe("calm__closed");
+    const squash = [-3, -2, -1, 0, 1, 2, 3].map((offset) => flipAt(alex, change + offset, FPS, timeline, sprites));
+    expect(squash[0]).toBe(1);
+    expect(squash[1]).toBeLessThan(1);
+    expect(squash[2]).toBeCloseTo(FLIP_SQUASH);
+    expect(squash[3]).toBeCloseTo(FLIP_SQUASH);
+    expect(squash[4]).toBeGreaterThan(FLIP_SQUASH);
+    expect(squash[6]).toBe(1);
+    expect(at(0, 1).flip).toBe(1); // no change near: no squash
   });
 });

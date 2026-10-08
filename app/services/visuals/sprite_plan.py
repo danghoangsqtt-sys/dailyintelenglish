@@ -19,6 +19,8 @@ from app.core.config import settings
 SAMPLE_RATE = 16000
 OPEN_FRACTION = 0.35  # a frame is open above 35% of the line's 90th-percentile loudness
 MIN_RUN_FRAMES = 2  # shorter open runs are dropped, shorter closed gaps are filled (no flicker)
+MAX_OPEN_FRAMES = 8  # a longer open run (a long vowel, words run together) flaps: 6 frames open, 2 closed (D32-d, measured 2026-10-08)
+FLAP_OPEN, FLAP_CLOSED = 6, 2
 WORD_CLOSE_SEC = 0.06  # word-timestamp fallback: the mouth closes this long before each word ends
 TALK_GESTURE_SEC = 4.0
 LISTEN_GESTURE_SEC = 6.0
@@ -69,7 +71,13 @@ def mouth_intervals(loudness: np.ndarray, fps: int, start_sec: float, end_sec: f
     for start, end in _runs([not flag for flag in flags]):  # fill short gaps inside speech
         if 0 < start and end < len(flags) and end - start < MIN_RUN_FRAMES:
             flags[start:end] = [True] * (end - start)
-    runs = [(start, end) for start, end in _runs(flags) if end - start >= MIN_RUN_FRAMES]
+    runs = []
+    for start, end in _runs(flags):
+        while end - start > MAX_OPEN_FRAMES:
+            runs.append((start, start + FLAP_OPEN))
+            start += FLAP_OPEN + FLAP_CLOSED
+        if end - start >= MIN_RUN_FRAMES:
+            runs.append((start, end))
     return [[round((first + start) / fps, 3), round((first + end) / fps, 3)] for start, end in runs]
 
 

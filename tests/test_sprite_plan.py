@@ -23,7 +23,8 @@ def test_loud_frames_open_the_mouth_without_flicker():
     loudness[30] = 0.5  # a one-frame click is dropped
     loudness[40:46] = 0.4
     intervals = plan.mouth_intervals(loudness, FPS, 0.0, 2.0)
-    assert intervals == [[round(10 / 30, 3), round(22 / 30, 3)], [round(40 / 30, 3), round(46 / 30, 3)]]
+    assert intervals == [[round(10 / 30, 3), round(16 / 30, 3)], [round(18 / 30, 3), round(22 / 30, 3)],  # 12 frames flap
+                         [round(40 / 30, 3), round(46 / 30, 3)]]
 
 
 def test_a_silent_line_keeps_the_mouth_closed():

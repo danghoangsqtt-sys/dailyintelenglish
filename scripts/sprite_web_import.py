@@ -24,7 +24,7 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import sprite_face_tools as tools  # noqa: E402
@@ -48,7 +48,10 @@ def key_out_green(rgb: Image.Image) -> Image.Image:
     alpha = 1.0 - np.clip((green - low) / (high - low), 0.0, 1.0)
     alpha[alpha < 0.04] = 0.0
     limit = np.maximum(data[..., 0], data[..., 2])
-    data[..., 1] = np.where(alpha < 1.0, np.minimum(data[..., 1], limit), data[..., 1])
+    # the green spill: every pixel within 4 px of the background (not only the half-transparent ones: the hair's outer strands are
+    # opaque but tinted) has its green held to its red or blue
+    near_background = np.asarray(Image.fromarray(((alpha < 0.5) * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(9))) > 0
+    data[..., 1] = np.where(near_background | (alpha < 1.0), np.minimum(data[..., 1], limit), data[..., 1])
     out = np.dstack([np.clip(data, 0, 255), alpha * 255]).astype(np.uint8)
     return Image.fromarray(out, "RGBA")
 

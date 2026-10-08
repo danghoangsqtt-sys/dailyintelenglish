@@ -23,7 +23,7 @@ function Sprite({ character, frame, fps, lines, sprites, totalFrames }: {
   return (
     <div style={{
       position: "absolute", left: box.left, top: box.top, width: box.width, height: box.height,
-      transform: `translate(${state.x.toFixed(1)}px, ${state.y.toFixed(2)}px) scale(${state.scale.toFixed(4)})`,
+      transform: `translate(${state.x.toFixed(1)}px, ${state.y.toFixed(2)}px) scale(${(state.scale * state.flip).toFixed(4)}, ${state.scale.toFixed(4)})`,
       transformOrigin: "50% 100%", opacity: state.opacity, filter: `brightness(${state.brightness.toFixed(3)})`,
     }}>
       <Img src={staticFile(character.pictures[state.body])} style={{ position: "absolute", width: "100%", height: "100%" }} />

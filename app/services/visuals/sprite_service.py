@@ -43,6 +43,7 @@ HEAD_SIDE_LIMIT = 10
 EDGE_LIMIT = 8
 SILHOUETTE_LIMIT = 4.0
 HEAD_FRACTION = 0.20
+EDGE_PIXELS = 8  # a figure touching the left, right or top edge of the canvas over more pixels than this is cut off (a hand, the hair)
 SET_FILE = "sprite_set.json"
 
 
@@ -111,12 +112,14 @@ def measure(rgba: np.ndarray, reference: Reference, gesture: bool) -> dict:
     x0, y0, x1, y1 = _bbox(alpha)
     left, right = _torso_edges(alpha, y0, y1)
     head_end = reference.head_end
+    cut = [side for side, pixels in (("left", alpha[:, 0].sum()), ("right", alpha[:, -1].sum()), ("top", alpha[0].sum()))
+           if pixels > EDGE_PIXELS]
     head_x = float(np.where(alpha[:head_end])[1].mean()) if alpha[:head_end].any() else -9999.0
     edge_shift = max(abs(left - reference.left), abs(right - reference.right))
     ref_alpha = reference.alpha
     head_xor = float((alpha[:head_end] ^ ref_alpha[:head_end]).sum() / max(1, ref_alpha[:head_end].sum()) * 100)
     body_xor = float((alpha[head_end:] ^ ref_alpha[head_end:]).sum() / max(1, ref_alpha[head_end:].sum()) * 100)
-    problems = []
+    problems = [f"the figure is cut by the {side} edge of the canvas" for side in cut]
     if abs(y0 - reference.top) > TOP_LIMIT:
         problems.append(f"head top moved {y0 - reference.top:+d}px")
     if abs(head_x - reference.head_x) > HEAD_SIDE_LIMIT:
