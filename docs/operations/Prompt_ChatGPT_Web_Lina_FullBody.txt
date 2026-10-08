@@ -1,7 +1,7 @@
 ﻿PROMPT TẠO ẢNH LINA TOÀN THÂN CHO CHATGPT WEB
 
 ẢNH ĐÍNH KÈM (đính kèm CẢ HAI ảnh này cho MỖI lần tạo, mở cuộc trò chuyện mới mỗi ảnh)
-1. D:\DataAdmin\Daily_Intel_English\datassets_sprites\web_raw\lina_base_on_green.png
+1. D:\DataAdmin\Daily_Intel_English\data\assets_sprites\web_raw\lina_base_on_green.png
 2. D:\DataAdmin\Daily_Intel_English\docs\operations\phase31-characters\lina_sheet_v2.jpg
 
 CÁCH DÙNG: đính kèm 2 ảnh, dán LỜI MỞ ĐẦU, xuống dòng rồi dán một dòng "THAY ĐỔI" bên dưới. Tải ảnh về và đặt tên theo "Tên file".
@@ -77,4 +77,4 @@ THAY ĐỔI: keep the face and head exactly as in the base; both hands lightly c
 THAY ĐỔI: keep the face and head exactly as in the base; one hand raised and waving a friendly hello.
 
 Nếu kết quả đổi tóc, váy, tỉ lệ cơ thể, cắt mất đầu/chân hoặc nền không còn xanh lá phẳng thì tạo lại, đừng nhờ chỉnh tiếp từ ảnh vừa tạo.
-Sau khi tải ảnh về, copy vào D:\DataAdmin\Daily_Intel_English\datassets_sprites\web_raw rồi báo tôi để nhập vào dự án.
+Sau khi tải ảnh về, copy vào D:\DataAdmin\Daily_Intel_English\data\assets_sprites\web_raw rồi báo tôi để nhập vào dự án.
