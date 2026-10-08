@@ -104,6 +104,35 @@ export const episodeVisualsSchema = z.object({
   lineShots: z.array(z.string().nullable()),
 });
 
+/** Phase 32: one talking sprite set. `pictures` maps a picture name (`calm__closed`, `smile__open`, `blink`, `gesture-wave`)
+ * to its public path; `faceEllipse` is [cx, cy, rx, ry] as fractions of the 1280 x 1536 canvas; `offsets` is each picture's head
+ * offset from the calm picture in canvas pixels; `topFraction` is where the figure starts on the canvas (0..1). */
+export const spriteCharacterSchema = z.object({
+  slot: z.number().int().min(0).max(1),
+  name: z.string(),
+  pictures: z.record(z.string(), z.string()),
+  faceEllipse: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+  offsets: z.record(z.string(), z.tuple([z.number(), z.number()])).default({}),
+  topFraction: z.number().default(0.15),
+});
+
+/** Phase 32: what the sprites do on each line (`app/services/visuals/sprite_plan.py`). */
+export const spriteLineSchema = z.object({
+  slot: z.number().int().min(0).max(1).nullable(),
+  expression: z.string(),
+  listenerExpression: z.string(),
+  gesture: z.string().nullable(),
+  listenerGesture: z.string().nullable(),
+  mouth: z.array(z.tuple([z.number(), z.number()])),
+});
+
+export const episodeSpritesSchema = z.object({
+  characters: z.array(spriteCharacterSchema),
+  lines: z.array(spriteLineSchema),
+  backgrounds: z.record(z.string(), z.string()).default({}),
+  lineBackgrounds: z.array(z.string().nullable()).default([]),
+});
+
 /** Phase 25 (D52-D55): the branded intro/outro -- Jenny's greeting + wish and farewell. Optional,
  * so older props files render the branded slides without a voice and with the default wish. */
 export const episodeBrandSchema = z.object({
@@ -154,6 +183,8 @@ export const episodeInputPropsSchema = z.object({
    * modes need no shots: a black screen, the cast's portrait cards, or one still picture (`stillUrl`). */
   visualMode: z.enum(VISUAL_MODES).default("illustrated"),
   stillUrl: z.string().optional(),
+  /** Phase 32: the talking sprites of `visualMode: "podcast_sprites"`. */
+  sprites: episodeSpritesSchema.optional(),
   /** Task 22.4 (D51): when set, one full-video soundtrack (voice + music bed covering the intro,
    * speech and outro, faded out on the last frame) plays from frame 0 instead of `audioPath`. */
   soundtrackPath: z.string().optional(),
@@ -170,3 +201,6 @@ export type Chapter = z.infer<typeof chapterSchema>;
 export type EpisodeInputProps = z.infer<typeof episodeInputPropsSchema>;
 export type EpisodeVisuals = z.infer<typeof episodeVisualsSchema>;
 export type EpisodeBrand = z.infer<typeof episodeBrandSchema>;
+export type SpriteCharacter = z.infer<typeof spriteCharacterSchema>;
+export type SpriteLine = z.infer<typeof spriteLineSchema>;
+export type EpisodeSprites = z.infer<typeof episodeSpritesSchema>;

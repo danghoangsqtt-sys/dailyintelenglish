@@ -3,14 +3,16 @@
  * them. `Podcast.tsx` draws what these functions describe.
  */
 
-export const VISUAL_MODES = ["illustrated", "podcast_black", "podcast_still"] as const;
+/** Phase 32 adds "podcast_sprites": the two characters as talking sprites over the scene plates (`Sprites.tsx`). */
+export const VISUAL_MODES = ["illustrated", "podcast_black", "podcast_still", "podcast_sprites"] as const;
 export type VisualMode = (typeof VISUAL_MODES)[number];
-export type PodcastLayer = "none" | "black" | "still";
+export type PodcastLayer = "none" | "black" | "still" | "sprites";
 
 /** Which layer a mode draws behind the captions ("none": the drawn shots of the storyboard, as before). */
 export function podcastLayer(mode: VisualMode): PodcastLayer {
   if (mode === "podcast_black") return "black";
   if (mode === "podcast_still") return "still";
+  if (mode === "podcast_sprites") return "sprites";
   return "none";
 }
 

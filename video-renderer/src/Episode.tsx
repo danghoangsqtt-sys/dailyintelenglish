@@ -8,8 +8,11 @@ import { activeItemForFrame, attachItemsToLines, type LearningItem } from "./voc
 import { BOTTOM_SHADE_STYLE, captionStyleSpec, type CaptionStyle } from "./captionStyle";
 import { visualBackgroundForFrame, vocabCardPosition } from "./visuals";
 import { PodcastLayerView } from "./Podcast";
+import { SpriteStage } from "./Sprites";
 import { podcastLayer, type VisualMode } from "./podcastLayout";
-import type { Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker, EpisodeVisuals } from "./types";
+import type {
+  Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker, EpisodeSprites, EpisodeVisuals,
+} from "./types";
 
 /** Average pixel color of frontend/static/video_backgrounds/midnight.png (measured 2026-09-28
  * via PIL: Image.open(...).convert("RGB").resize((1,1)).getpixel((0,0)) == (14, 15, 21)).
@@ -295,6 +298,7 @@ export function AudioWindowContent({
   visuals,
   visualMode = "illustrated",
   stillUrl,
+  sprites,
   playAudio = true,
 }: {
   lines: EpisodeLine[];
@@ -309,6 +313,8 @@ export function AudioWindowContent({
   /** Phase 30: the podcast modes draw their own layer instead of the drawn shots. */
   visualMode?: VisualMode;
   stillUrl?: string;
+  /** Phase 32: the talking sprites of the "podcast_sprites" mode. */
+  sprites?: EpisodeSprites;
   /** Task 22.4: false when the episode's full-video soundtrack already carries the voice. */
   playAudio?: boolean;
 }) {
@@ -328,7 +334,12 @@ export function AudioWindowContent({
 
   return (
     <>
-      <PodcastLayerView layer={layer} stillUrl={stillUrl} progress={speechProgress} />
+      {layer === "sprites" && sprites ? (
+        <SpriteStage sprites={sprites} lines={lines} fps={fps} frame={frame} progress={speechProgress}
+          totalFrames={Math.round(audioDurationSec * fps)} />
+      ) : (
+        <PodcastLayerView layer={layer === "sprites" ? "black" : layer} stillUrl={stillUrl} progress={speechProgress} />
+      )}
       {background.previous ? (
         <Img src={staticFile(background.previous)} style={{ position: "absolute", width: "100%", height: "100%",
           objectFit: "cover", opacity: background.current ? 1 : 1 - background.opacity }} />
@@ -345,7 +356,7 @@ export function AudioWindowContent({
         <VocabCard
           item={activeLearningItem.item}
           opacity={vocabCardOpacity(currentTimeSec, activeLearningItem.slotStartSec, activeLearningItem.slotEndSec)}
-          position={vocabCardPosition(background.kind)}
+          position={layer === "sprites" ? "top-center" : vocabCardPosition(background.kind)}
         />
       ) : null}
       {line ? (
@@ -386,6 +397,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
   visuals,
   visualMode,
   stillUrl,
+  sprites,
   soundtrackPath,
   brand,
 }) => {
@@ -417,6 +429,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
           visuals={visuals}
           visualMode={visualMode}
           stillUrl={stillUrl}
+          sprites={sprites}
           playAudio={!soundtrackPath}
         />
       </Sequence>
