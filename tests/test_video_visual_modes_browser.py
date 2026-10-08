@@ -79,7 +79,7 @@ async def test_four_modes_the_drawn_story_is_the_default_and_its_request_is_unch
     page = await _open(browser_instance, live_server_url, bodies)
     labels = await page.locator("#visual-mode-group .chip").all_text_contents()
     assert [text.strip() for text in labels] == [
-        "Podcast: with characters", "Podcast: black screen", "Podcast: one still scene"]
+        "Podcast: with characters", "Podcast: black screen", "Podcast: one still scene", "Podcast: talking characters"]
     assert await page.locator("[data-visual-mode='illustrated']").get_attribute("aria-pressed") == "true"
     assert await page.locator("#still-scene-row").is_hidden()
     await _generate(page)
@@ -131,7 +131,7 @@ async def test_the_modes_need_the_enhanced_renderer(browser_instance, live_serve
     page = await _open(browser_instance, live_server_url, bodies)
     await page.click("[data-visual-mode='podcast_black']")
     await page.click("[data-renderer='ffmpeg']")
-    for mode in ("illustrated", "podcast_black", "podcast_still"):
+    for mode in ("illustrated", "podcast_black", "podcast_still", "podcast_sprites"):
         assert await page.locator(f"[data-visual-mode='{mode}']").is_disabled()
     assert "Enhanced" in (await page.locator("#visual-mode-group").get_attribute("title") or "") \
         or "Enhanced" in (await page.locator("[data-visual-mode='podcast_black']").get_attribute("title") or "")
@@ -140,4 +140,21 @@ async def test_the_modes_need_the_enhanced_renderer(browser_instance, live_serve
     await page.click("[data-renderer='remotion']")
     assert await page.locator("[data-visual-mode='podcast_black']").is_enabled()
     assert await page.locator("[data-visual-mode='podcast_black']").get_attribute("aria-pressed") == "true"  # remembered
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_the_talking_characters_mode_is_sent_with_the_scene_for_videos_without_a_storyboard(browser_instance, live_server_url):
+    """Phase 32 (Task 32.4)."""
+    bodies: list = []
+    page = await _open(browser_instance, live_server_url, bodies)
+    await page.click("[data-visual-mode='podcast_sprites']")
+    assert await page.locator("[data-visual-mode='podcast_sprites']").get_attribute("aria-pressed") == "true"
+    await page.locator("#still-scene-row").wait_for(state="visible")
+    await _generate(page)
+    assert bodies[-1]["visual_mode"] == "podcast_sprites" and "still_scene_id" not in bodies[-1]
+    await page.select_option("#still-scene", "builtin-cafe")
+    await _generate(page)
+    assert bodies[-1]["visual_mode"] == "podcast_sprites" and bodies[-1]["still_scene_id"] == "builtin-cafe"
+    assert "Talking characters" in await page.locator("#visual-mode-hint").text_content()
     await page.close()

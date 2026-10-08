@@ -22,7 +22,9 @@
   // Phase 30 (ENH-021): what is behind the captions; remembered like the renderer choice.
   const VISUAL_MODE_STORAGE_KEY = "die-visual-mode";
   const STILL_SCENE_STORAGE_KEY = "die-still-scene";
-  const VISUAL_MODES = ["illustrated", "podcast_black", "podcast_still"];
+  const VISUAL_MODES = ["illustrated", "podcast_black", "podcast_still", "podcast_sprites"];
+  // the modes that use the scene picture chosen below (talking characters: when the storyboard gives no places)
+  const STILL_SCENE_MODES = ["podcast_still", "podcast_sprites"];
   const VISUAL_MODE_ENABLED_TOOLTIP = "What is behind the captions";
   const VISUAL_MODE_DISABLED_TOOLTIP = "Video pictures need the Enhanced (Remotion) renderer.";
 
@@ -812,7 +814,7 @@
     });
     group.title = enhanced ? VISUAL_MODE_ENABLED_TOOLTIP : VISUAL_MODE_DISABLED_TOOLTIP;
     const row = byId("still-scene-row");
-    if (row) row.hidden = !(enhanced && state.visualMode === "podcast_still");
+    if (row) row.hidden = !(enhanced && STILL_SCENE_MODES.includes(state.visualMode));
     const select = byId("still-scene");
     if (select) select.disabled = state.isGenerating;
   }
@@ -995,7 +997,7 @@
         attemptedRenderer,
         attemptedRenderer === "remotion" ? state.captionStyle : null,
         attemptedRenderer === "remotion" && state.visualMode !== "illustrated" ? state.visualMode : null,
-        attemptedRenderer === "remotion" && state.visualMode === "podcast_still" ? state.stillScene || null : null
+        attemptedRenderer === "remotion" && STILL_SCENE_MODES.includes(state.visualMode) ? state.stillScene || null : null
       );
       renderResult(job);
       // Task 19.7 (I36-a): a Remotion failure always falls back to ffmpeg rather than

@@ -36,7 +36,7 @@ from app.core.constants import VIDEO_FPS, VIDEO_HEIGHT_STANDARD, VIDEO_WIDTH_STA
 from app.core.exceptions import AudioMixError, NotFoundError, RemotionRenderFailedError, TTSError, ValidationError
 from app.core.paths import get_project_root
 from app.services import audio_service, avatar_service, brand_service, youtube_service
-from app.services.visuals import library_service, project_visuals_service, storyboard_service
+from app.services.visuals import library_service, project_visuals_service, sprite_plan, sprite_service, storyboard_service
 
 VIDEO_RENDERER_DIR = get_project_root() / "video-renderer"
 REMOTION_AUDIO_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "audio"
@@ -48,6 +48,7 @@ REMOTION_INTRO_SEC = 2.5
 REMOTION_OUTRO_SEC = 5.0
 REMOTION_AVATARS_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "avatars"
 REMOTION_VISUALS_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "visuals"
+REMOTION_SPRITES_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "sprites"
 
 
 def _copy_visual_source(source: Path, destination: Path) -> None:
@@ -242,6 +243,115 @@ async def _resolve_still_plate(db: aiosqlite.Connection, project_id: str, still_
     raise ValidationError("No scene has a plate yet: make a scene plate in the Character Library, or choose another video picture mode.")
 
 
+def _copy_if_changed(source: Path, destination: Path) -> None:
+    """A sprite set is about 30 MB: an unchanged picture is not copied again for every render."""
+    if destination.is_file() and destination.stat().st_size == source.stat().st_size \
+            and destination.stat().st_mtime >= source.stat().st_mtime:
+        return
+    _copy_visual_source(source, destination)
+
+
+def _figure_top(path: Path) -> float:
+    from PIL import Image
+
+    with Image.open(path) as picture:
+        box = picture.convert("RGBA").getchannel("A").point(lambda value: 255 if value > 20 else 0).getbbox()
+    return box[1] / sprite_service.SIZE[1] if box else 0.15
+
+
+def _beat_scene_per_line(beats: list[dict], line_count: int) -> list[str | None]:
+    """The place of each line from the approved storyboard: a scene beat's scene; an insert keeps the place before it (or the next
+    place when the story opens on an insert)."""
+    places: list[str | None] = [None] * line_count
+    for beat in beats:
+        for index in range(beat["line_from"], min(beat["line_to"], line_count - 1) + 1):
+            places[index] = beat["scene_id"] if beat["kind"] == "scene" else None
+    last = None
+    for index, place in enumerate(places):
+        last = place or last
+        places[index] = last
+    following = next((place for place in places if place), None)
+    return [place or following for place in places]
+
+
+async def _scene_plate(db: aiosqlite.Connection, scene_id: str) -> Path | None:
+    try:
+        scene = await library_service.get_scene_row(db, scene_id)
+        if not scene.get("preview_path"):
+            return None
+        return await asyncio.to_thread(library_service.resolve_library_content, scene["preview_path"], "library/scenes")
+    except Exception:
+        return None
+
+
+async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: list[dict], audio_job: dict,
+                              still_scene_id: str | None) -> dict[str, Any]:
+    """Phase 32 (Task 32.4): the props of the "podcast_sprites" mode -- the two cast characters' sprite sets (copied under public/),
+    the plan of each line (`sprite_plan`) and the scene plate of each line. Raises ValidationError when a speaker's character has no
+    usable sprite set (D32-i)."""
+    project_id = project["id"]
+    cast_by_index = {member["speaker_index"]: member for member in await project_visuals_service.cast_rows(db, project_id)}
+    speaker_indexes = {speaker["id"]: speaker.get("speaker_index", index) for index, speaker in enumerate(project["speakers"])}
+    characters: list[dict[str, Any]] = []
+    available: dict[int, set[str]] = {}
+    for slot in sorted({index for index in speaker_indexes.values() if index in (0, 1)}):
+        member = cast_by_index.get(slot)
+        speaker_name = next(s["name"] for s in project["speakers"] if speaker_indexes[s["id"]] == slot)
+        if member is None:
+            raise ValidationError(f"{speaker_name} has no library character: cast one in Step 4 before the talking characters video.")
+        sprite_set = await asyncio.to_thread(sprite_service.load_set, member["character_id"])
+        if not sprite_service.usable(sprite_set):
+            raise ValidationError(f"{member['name']} has no talking sprites yet: import the sprite pictures on the Shot Library page "
+                                  "(Talking sprites), or choose another video picture mode.")
+        folder = Path(sprite_set["folder"])
+        pictures: dict[str, str] = {}
+        for name in sprite_set["names"]:
+            await asyncio.to_thread(_copy_if_changed, folder / f"{name}.png",
+                                    REMOTION_SPRITES_DIR / project_id / str(slot) / f"{name}.png")
+            pictures[name] = f"remotion-render/sprites/{project_id}/{slot}/{name}.png"
+        characters.append({
+            "slot": slot, "name": member["name"], "pictures": pictures, "faceEllipse": sprite_set["face_ellipse"],
+            "offsets": {name: [value["head_dx"], value["head_dy"]] for name, value in sprite_set["pictures"].items()},
+            "topFraction": await asyncio.to_thread(_figure_top, folder / f"{sprite_service.BASE}.png"),
+        })
+        available[slot] = set(sprite_set["names"])
+
+    # the place of each line: the approved storyboard's scenes that have a plate, else one plate for the whole video
+    beats = await storyboard_service.approved_beats(db, project_id)
+    backgrounds: dict[str, str] = {}
+    line_backgrounds: list[str | None] = [None] * len(lines)
+    if beats:
+        for index, scene_id in enumerate(_beat_scene_per_line(beats, len(lines))):
+            if scene_id is None:
+                continue
+            if scene_id not in backgrounds:
+                plate = await _scene_plate(db, scene_id)
+                if plate is None:
+                    continue
+                await asyncio.to_thread(_copy_visual_source, plate, REMOTION_SPRITES_DIR / project_id / "bg" / f"{scene_id}.png")
+                backgrounds[scene_id] = f"remotion-render/sprites/{project_id}/bg/{scene_id}.png"
+            line_backgrounds[index] = scene_id
+    if not backgrounds:
+        plate = await _resolve_still_plate(db, project_id, still_scene_id)
+        await asyncio.to_thread(_copy_visual_source, plate, REMOTION_SPRITES_DIR / project_id / "bg" / "still.png")
+        backgrounds = {"still": f"remotion-render/sprites/{project_id}/bg/still.png"}
+        line_backgrounds = ["still"] * len(lines)
+
+    line_slots = [speaker_indexes.get(line["speakerId"]) for line in lines]
+    line_slots = [slot if slot in available else None for slot in line_slots]
+    beat_expressions: list[str | None] = [None] * len(lines)
+    for beat in beats or []:
+        for index in range(beat["line_from"], min(beat["line_to"], len(lines) - 1) + 1):
+            beat_expressions[index] = beat.get("expression")
+    try:
+        loudness = await asyncio.to_thread(sprite_plan.loudness_per_frame, audio_job["mp3_path"], VIDEO_FPS)
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        logger.warning("sprite_loudness_unavailable project_id=%s reason=%s -- mouths follow the words", project_id, exc)
+        loudness = None
+    plan = sprite_plan.build_plan(lines, line_slots, beat_expressions, available, loudness, VIDEO_FPS)
+    return {"characters": characters, "lines": plan, "backgrounds": backgrounds, "lineBackgrounds": line_backgrounds}
+
+
 async def _build_input_props(
     db: aiosqlite.Connection,
     project: dict,
@@ -342,6 +452,8 @@ async def _build_input_props(
         "outroSec": REMOTION_OUTRO_SEC,
         "visualMode": visual_mode,
     }
+    if visual_mode == "podcast_sprites":
+        props["sprites"] = await _build_sprite_props(db, project, lines, audio_job, still_scene_id)
     if still_plate is not None:
         destination = REMOTION_VISUALS_DIR / project_id / "still.png"
         await asyncio.to_thread(_copy_visual_source, still_plate, destination)
