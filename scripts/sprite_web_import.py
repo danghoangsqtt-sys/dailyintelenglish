@@ -109,6 +109,74 @@ def face_box(picture: Image.Image, work: Path) -> list[float] | None:
         return None
 
 
+def _shift_by_phase(a: np.ndarray, b: np.ndarray) -> tuple[int, int, float]:
+    """Where `b` sits in `a` (both grey, `b` no larger): (dx, dy, mean absolute difference over the overlap), by phase correlation."""
+    height, width = max(a.shape[0], b.shape[0]), max(a.shape[1], b.shape[1])
+    fill_a, fill_b = float(np.median(a)), float(np.median(b))
+    pa = np.full((height, width), fill_a, np.float32)
+    pa[:a.shape[0], :a.shape[1]] = a
+    pb = np.full((height, width), fill_b, np.float32)
+    pb[:b.shape[0], :b.shape[1]] = b
+    spectrum = np.fft.fft2(pa - fill_a) * np.conj(np.fft.fft2(pb - fill_b))
+    peak = np.fft.ifft2(spectrum / (np.abs(spectrum) + 1e-6)).real
+    dy, dx = np.unravel_index(int(np.argmax(peak)), peak.shape)
+    dy = dy - height if dy > height // 2 else dy
+    dx = dx - width if dx > width // 2 else dx
+    y0, x0 = max(0, dy), max(0, dx)
+    y1, x1 = min(a.shape[0], dy + b.shape[0]), min(a.shape[1], dx + b.shape[1])
+    if y1 - y0 < 50 or x1 - x0 < 50:
+        return int(dx), int(dy), 1e9
+    error = float(np.abs(a[y0:y1, x0:x1] - b[y0 - dy:y1 - dy, x0 - dx:x1 - dx]).mean())
+    return int(dx), int(dy), error
+
+
+def register(raw: Image.Image, base: Image.Image) -> tuple[float, int, int, float]:
+    """How a region edit that the image tool also rescaled and cropped maps onto the base input: (scale, dx, dy, error) with the raw
+    pixel (u, v) = the base scaled by `scale`, pixel (u + dx, v + dy). Coarse scale search at a quarter size, then fine."""
+    raw_grey = np.asarray(raw.convert("L"), dtype=np.float32)
+    base_grey = base.convert("L")
+
+    def try_scale(scale: float, step: int) -> tuple[int, int, float]:
+        scaled = base_grey.resize((round(base.width * scale / step), round(base.height * scale / step)), Image.Resampling.BILINEAR)
+        small = raw_grey if step == 1 else np.asarray(raw.convert("L").resize(
+            (round(raw.width / step), round(raw.height / step)), Image.Resampling.BILINEAR), dtype=np.float32)
+        return _shift_by_phase(np.asarray(scaled, dtype=np.float32), small)
+
+    coarse = min((try_scale(s, 4)[2], s) for s in np.arange(0.90, 1.1001, 0.005))[1]
+    fine = min((try_scale(s, 2)[2], s) for s in np.arange(coarse - 0.006, coarse + 0.0061, 0.001))[1]
+    # last, at full size in steps of 0.0002 (a 1536-pixel canvas then lands within a third of a pixel: no jitter between twins)
+    error, best = min((try_scale(s, 1)[2], s) for s in np.arange(fine - 0.001, fine + 0.00101, 0.0002))
+    dx, dy, error = try_scale(best, 1)
+    return float(best), dx, dy, error
+
+
+def import_registered(raw_path: Path, base_input: Image.Image) -> tuple[Image.Image, str]:
+    """A region edit returned at another size or crop: put back on the canvas exactly where the base input had it, then keyed."""
+    raw = Image.open(raw_path).convert("RGB")
+    scale, dx, dy, error = register(raw, base_input)
+    if error > 12:
+        raise ValueError(f"does not match the base input (difference {error:.1f}): it was drawn again, make it again")
+    green = tuple(int(v) for v in np.median(np.concatenate([np.asarray(raw)[0], np.asarray(raw)[-1]]), axis=0))
+    canvas = raw.transform(CANVAS, Image.Transform.AFFINE, (scale, 0, -dx, 0, scale, -dy),
+                           resample=Image.Resampling.BICUBIC, fillcolor=green)
+    return key_out_green(canvas), f"registered: scale {scale:.3f}, shift {dx:+d},{dy:+d}, difference {error:.1f}"
+
+
+def twin_source(path: Path, who: str, placed: dict[str, Image.Image], base_input: Image.Image) -> Image.Image:
+    """The picture a region edit was made from, on green: an open mouth was made from its closed twin (calm__open from the base
+    input), everything else from the base input. Registering a twin on its own closed picture keeps the pair within a fraction
+    of a pixel, so the face does not jump when the mouth moves."""
+    stem = path.stem
+    if not stem.endswith("__open") or stem == f"{who}__calm__open":
+        return base_input
+    closed = stem[:-len("__open")] + ("__closed" if not stem.startswith(f"{who}__gesture-") else "")
+    if closed not in placed:
+        return base_input
+    flat = Image.new("RGBA", CANVAS, (0, 177, 64, 255))
+    flat.alpha_composite(placed[closed])
+    return flat.convert("RGB")
+
+
 def import_resized(raw_path: Path) -> Image.Image:
     """A picture made by a region edit of the green base input: the same framing, only smaller. It is resized to the canvas and
     keyed, never moved (moving it by a pixel or two would make the face jump between pictures that should match)."""
@@ -158,6 +226,8 @@ def main() -> int:
     parser.add_argument("character")
     parser.add_argument("--raw", default=str(RAW))
     parser.add_argument("--face-only", default="", help="comma list of expressions (for example thinking__open) to keep as the base body plus the web face")
+    parser.add_argument("--base-input", default=None,
+                        help="the green base input the region edits were made from (default: web_inputs/INPUT_<character>__calm__closed.png)")
     parser.add_argument("--align", action="store_true",
                         help="pictures drawn again by the image tool (other size and place): find the face and align them. Without it the "
                              "pictures are region edits of the base input and are only resized")
@@ -168,11 +238,16 @@ def main() -> int:
         print(f"missing {base_path}")
         return 1
     base = Image.open(base_path).convert("RGBA")
-    files = sorted((p for p in raw_folder.rglob(f"{who}__*.png") if p.name != base_path.name), key=lambda p: p.name)  # subfolders too
+    # subfolders too; the closed pictures first, so that an open-mouth twin is registered on its own closed picture
+    files = sorted((p for p in raw_folder.rglob(f"{who}__*.png") if p.name != base_path.name),
+                   key=lambda p: (p.stem.endswith("__open"), p.name))
     if not files:
         print(f"no {who}__*.png in {raw_folder}")
         return 1
+    base_input_path = Path(args.base_input) if args.base_input else ROOT / "data" / "assets_sprites" / "web_inputs" / f"INPUT_{who}__calm__closed.png"
+    base_input = Image.open(base_input_path).convert("RGB") if base_input_path.is_file() else None
     made, failed = 0, []
+    placed: dict[str, Image.Image] = {}
     with tempfile.TemporaryDirectory() as temp:
         work = Path(temp)
         base_face = None
@@ -188,11 +263,17 @@ def main() -> int:
                     picture, overlap = import_one(path, base, base_face, work)
                     note = f"head overlap {overlap:.2f}"
                 else:
-                    picture, note = import_resized(path), "resized"
+                    with Image.open(path) as probe:
+                        same_shape = abs(probe.width / probe.height - CANVAS[0] / CANVAS[1]) <= 0.01
+                    if same_shape:
+                        picture, note = import_resized(path), "resized"
+                    else:  # the image tool also rescaled and cropped it: find where it sits on its source picture
+                        picture, note = import_registered(path, twin_source(path, who, placed, base_input))
             except ValueError as error:
                 failed.append(f"{path.name} ({error})")
                 continue
             picture.save(INBOX / path.name)
+            placed[path.stem] = picture
             made += 1
             print(f"{path.name:34} {note}")
     print(f"imported {made} of {len(files)} into {INBOX}")

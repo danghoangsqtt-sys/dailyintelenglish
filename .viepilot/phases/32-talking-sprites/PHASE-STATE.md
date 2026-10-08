@@ -18,3 +18,13 @@ squash flip (a pose is swapped on one frame), nothing pasted on a gesture pictur
 the first 1.6 s of the line, then talks on the plain body), and the import refuses a gesture whose torso edges moved more than 20 px.
 Moved out of the inbox to `data/assets_sprites/old/refused_body_moved_20261008/`: all 7 of Alex's gestures (body moved 55 to 144 px,
 two hands cut by the canvas edge) and Lina's gesture-open (35 px). Sets now: Alex 15 pictures (no gestures), Lina 21.
+
+## Both packs remade by region edits (2026-10-08)
+
+Owner: the face of Alex jumped on every mouth flap and Lina's face slid when her head was raised. Cause: the open-mouth pictures
+came from other image runs (other head angle, other eyes). Fix: the owner remade both packs on ChatGPT web, every picture a region
+edit of one base picture (`docs/operations/Prompt_ChatGPT_Web_Alex.txt`, `..._Lina.txt`): faces, blink, open mouths, 7 gestures
+and their open-mouth twins `gesture-X__open`. The video shows whole pictures only (no pasted faces, no squash); the mouth flaps
+between a picture and its twin. `sprite_web_import.py` resizes same-shape pictures (Alex) and registers rescaled or cropped ones by
+phase correlation (Lina), an open twin on its own closed picture (twins within 1 px). Gestures are checked by the share of the body
+that kept its colour (at least 60%). Old pictures of both characters deleted at the owner's request. Sets: Alex 29, Lina 29.
