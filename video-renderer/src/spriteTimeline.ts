@@ -23,13 +23,12 @@ const BREATH_PERIOD_SEC = 4;
 const ENTER_FRAMES = 12;
 const BLINK_FRAMES = 4;
 export const BACKGROUND_FADE_FRAMES = 12;
-/** A gesture stays a moment after its line ends. */
+/** A listener's gesture stays a moment after the line ends. */
 const GESTURE_HOLD_SEC = 0.3;
-/** Owner 2026-10-08: a change of pose is a quick paper-doll flip, never a blend (a blend blurs two bodies): the old pose narrows
- * over 2 frames, the new one is swapped in narrow and opens over 3 frames. Both pictures are shown exactly as they were made. */
-export const FLIP_SQUASH = 0.8;
-const FLIP_BEFORE = 2;
-const FLIP_AFTER = 3;
+/** Owner 2026-10-08: a gesture picture is shown exactly as it was made (its own face, nothing pasted on it, never squashed or
+ * blended): the pose is swapped in on one frame and back on one frame, like a game character. Its mouth cannot move, so the
+ * speaker holds the gesture only for the first 1.6 s of the line and then talks on the plain body. */
+export const SPEAKER_GESTURE_SEC = 1.6;
 
 /** Index of the last line that has started by `time` (-1 before the first): faces and turns hold through the pauses. */
 export function heldLineIndex(time: number, lines: Array<{ startSec: number }>): number {
@@ -81,8 +80,6 @@ export type SpriteFrame = {
   speaking: boolean;
   brightness: number;
   scale: number;
-  /** horizontal squash of the paper-doll flip (1 = none) */
-  flip: number;
   /** offsets in video pixels */
   x: number;
   y: number;
@@ -109,26 +106,18 @@ function turnStart(index: number, lines: SpriteLine[], timeline: EpisodeLine[]):
   return timeline[first].startSec;
 }
 
-/** The body picture of a sprite on a frame: its gesture picture during a line that has one, else the calm picture. */
-export function bodyAt(character: SpriteCharacter, frame: number, fps: number, timeline: EpisodeLine[], sprites: EpisodeSprites): string {
+/** The gesture picture a sprite shows on a frame, or null (the plain body that talks). */
+export function gestureAt(character: SpriteCharacter, frame: number, fps: number, timeline: EpisodeLine[], sprites: EpisodeSprites): string | null {
   const time = frame / fps;
   const index = heldLineIndex(time, timeline);
   const line = index >= 0 ? sprites.lines[index] : undefined;
-  if (!line || time >= timeline[index].endSec + GESTURE_HOLD_SEC) return "calm__closed";
-  const gesture = line.slot === character.slot ? line.gesture : line.listenerGesture;
-  return gesture ? pick(character, [`gesture-${gesture}`]) : "calm__closed";
-}
-
-/** The squash of the flip around a change of body picture (1 when no change is near). */
-export function flipAt(character: SpriteCharacter, frame: number, fps: number, timeline: EpisodeLine[], sprites: EpisodeSprites): number {
-  const body = (at: number) => bodyAt(character, at, fps, timeline, sprites);
-  for (let ahead = 1; ahead <= FLIP_BEFORE; ahead += 1) {  // the old pose narrows just before the change
-    if (body(frame + ahead) !== body(frame + ahead - 1)) return 1 - ((1 - FLIP_SQUASH) * (FLIP_BEFORE + 1 - ahead)) / FLIP_BEFORE;
-  }
-  for (let since = 0; since < FLIP_AFTER; since += 1) {  // the new pose opens after it
-    if (frame - since > 0 && body(frame - since) !== body(frame - since - 1)) return FLIP_SQUASH + ((1 - FLIP_SQUASH) * since) / FLIP_AFTER;
-  }
-  return 1;
+  if (!line) return null;
+  const speaking = line.slot === character.slot;
+  const until = speaking ? Math.min(timeline[index].startSec + SPEAKER_GESTURE_SEC, timeline[index].endSec)
+    : timeline[index].endSec + GESTURE_HOLD_SEC;
+  const gesture = speaking ? line.gesture : line.listenerGesture;
+  const name = gesture ? `gesture-${gesture}` : null;
+  return name && time < until && name in character.pictures ? name : null;
 }
 
 export function spriteFrame(
@@ -145,9 +134,10 @@ export function spriteFrame(
   const mouthOpen = speaking && line !== undefined && isMouthOpen(time, line.mouth);
   const blink = !mouthOpen && isBlinking(frame, fps, character.name) && "blink" in character.pictures;
 
+  const gesture = gestureAt(character, frame, fps, timeline, sprites);
   const faceName = blink ? "blink" : pick(character, [`${expression}__${mouthOpen ? "open" : "closed"}`, `calm__${mouthOpen ? "open" : "closed"}`]);
-  const body = bodyAt(character, frame, fps, timeline, sprites);
-  const face = faceName === body ? null : faceName;
+  const body = gesture ?? "calm__closed";
+  const face = gesture || faceName === body ? null : faceName; // a gesture keeps its own face
   const bodyOffset = character.offsets[body] ?? [0, 0];
   const faceOffset = face ? character.offsets[face] ?? [0, 0] : [0, 0];
   const [cx, cy] = character.faceEllipse;
@@ -174,7 +164,6 @@ export function spriteFrame(
     faceShift: [bodyOffset[0] - faceOffset[0], bodyOffset[1] - faceOffset[1]],
     maskCentre: [cx + faceOffset[0] / 1280, cy + faceOffset[1] / 1536],
     speaking, brightness, scale,
-    flip: flipAt(character, frame, fps, timeline, sprites),
     x: side * (1 - eased) * 0.35 * width,
     y: hop + breath,
     opacity: eased,

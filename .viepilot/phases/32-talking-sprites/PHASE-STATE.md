@@ -10,3 +10,11 @@
 | 32.4 | API and Step 5 mode `podcast_sprites` | done 2026-10-08 (mode `podcast_sprites`, Step 5 chip) |
 | 32.5 | Real render with the owner's first sprite set | done 2026-10-08: Demo Episode preview `data/video/b330d37f-.../video_sprites_preview.mp4` (Enhanced, 129 s render). Alex's Codex `__open` pictures had closed mouths: replaced by 7 head-crop edits from ChatGPT web composed on his calm body (old ones kept in `data/assets_sprites/old/alex_open_codex_closed_mouth`) |
 | 32.6 | Gate B-22 (owner) | planned |
+
+## Owner review of the preview (2026-10-08)
+
+"Too many pictures with a shifted or distorted body; with a flip to change gestures there is no need to skew the body." Changed: no
+squash flip (a pose is swapped on one frame), nothing pasted on a gesture picture (shown exactly as made; the speaker holds it for
+the first 1.6 s of the line, then talks on the plain body), and the import refuses a gesture whose torso edges moved more than 20 px.
+Moved out of the inbox to `data/assets_sprites/old/refused_body_moved_20261008/`: all 7 of Alex's gestures (body moved 55 to 144 px,
+two hands cut by the canvas edge) and Lina's gesture-open (35 px). Sets now: Alex 15 pictures (no gestures), Lina 21.

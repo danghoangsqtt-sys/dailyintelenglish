@@ -36,7 +36,8 @@ def test_the_check_refuses_pictures_that_would_jump(tmp_path):
     _figure(tmp_path / "calm__closed.png")
     _figure(tmp_path / "smile__open.png")
     _figure(tmp_path / "laugh__open.png", torso_dx=40)  # the body slid
-    _figure(tmp_path / "gesture-wave.png", torso_dx=40)  # a gesture may move the body, not the head
+    _figure(tmp_path / "gesture-wave.png", torso_dx=12)  # a gesture may move the arms a little, not the head
+    _figure(tmp_path / "gesture-talk.png", torso_dx=40)  # but not the whole body
     _figure(tmp_path / "blink.png", head_dx=60)  # the head moved
     _figure(tmp_path / "serious__open.png", size=(1000, 1000))
     files = {path.stem: path for path in tmp_path.glob("*.png")}
@@ -46,6 +47,7 @@ def test_the_check_refuses_pictures_that_would_jump(tmp_path):
     assert "torso moved" in reasons["laugh__open.png"]
     assert "head moved sideways" in reasons["blink.png"]
     assert "wrong canvas size" in reasons["serious__open.png"]
+    assert "body moved" in reasons["gesture-talk.png"]
 
 
 def test_a_hand_cut_by_the_canvas_edge_is_refused(tmp_path):

@@ -9,7 +9,8 @@ pixel for pixel; the limits below are what a smooth video needs:
 
   every picture      1280 x 1536, transparent corners, the top of the head within 6 px and the middle of the head within 10 px of the reference
   an expression      the torso edges (rows 55 to 90% of the figure) within 8 px, the silhouette below the head differs by at most 4%
-  a gesture          the head zone silhouette differs by at most 4%, the top of the head within 6 px (the arms may differ)
+  a gesture          the head zone silhouette differs by at most 4%, the top of the head within 6 px, the torso edges within
+                     20 px (the arms may differ, the body may not)
 """
 
 from __future__ import annotations

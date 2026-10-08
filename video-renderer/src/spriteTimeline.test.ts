@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { podcastLayer } from "./podcastLayout";
 import {
-  FLIP_SQUASH, bodyAt, flipAt,
+  SPEAKER_GESTURE_SEC, gestureAt,
   BACKGROUND_FADE_FRAMES, LISTENER_BRIGHTNESS, SPRITE_HEIGHT, canvasBox, faceMask, heldLineIndex, isBlinking, isMouthOpen,
   spriteBackground, spriteFrame, stageTop,
 } from "./spriteTimeline";
@@ -28,7 +28,7 @@ const timeline: EpisodeLine[] = [
 const sprites: EpisodeSprites = {
   characters: [character(0, "Alex", ["gesture-wave"]), character(1, "Lina")],
   lines: [
-    { slot: 0, expression: "smile", listenerExpression: "calm", gesture: "wave", listenerGesture: null, mouth: [[0.2, 0.6]] },
+    { slot: 0, expression: "smile", listenerExpression: "calm", gesture: "wave", listenerGesture: null, mouth: [[0.2, 0.6], [1.65, 1.9]] },
     { slot: 1, expression: "calm", listenerExpression: "smile", gesture: null, listenerGesture: null, mouth: [[3, 4]] },
     { slot: 1, expression: "calm", listenerExpression: "calm", gesture: "talk", listenerGesture: null, mouth: [] },
   ],
@@ -55,14 +55,13 @@ describe("Phase 32 talking sprites", () => {
     expect(isMouthOpen(0.6, [[0.2, 0.6]])).toBe(false);
   });
 
-  it("puts the speaker's face for the mouth on the body, and the gesture body while the line lasts", () => {
-    const open = at(0, 0.4);
+  it("puts the speaker's face for the mouth on the plain body once the gesture is over", () => {
+    const open = at(0, 1.7);
     expect(open.speaking).toBe(true);
-    expect(open.body).toBe("gesture-wave");
+    expect(open.body).toBe("calm__closed");
     expect(open.face).toBe("smile__open");
-    expect(open.faceShift).toEqual([1 - 4, 1 + 2]);
-    expect(at(0, 1.0).face).toBe("smile__closed");
-    expect(at(0, 2.4).body).toBe("calm__closed"); // the gesture ends just after the line
+    expect(open.faceShift).toEqual([-4, 2]); // the face picture's own head offset is undone
+    expect(at(0, 1.0).face).toBeNull(); // still waving: the gesture picture's own face
   });
 
   it("uses only pictures that exist: Lina has no talking gesture, the plain body stays", () => {
@@ -129,19 +128,16 @@ describe("Phase 32 talking sprites", () => {
       "radial-gradient(ellipse 8.00% 7.00% at 50.00% 25.00%, #000 70%, transparent 100%)");
   });
 
-  it("changes the pose with a quick paper-doll flip, never a blend", () => {
+  it("shows a gesture picture as it was made, swapped in and out on one frame", () => {
     const alex = sprites.characters[0];
-    // Alex waves during line 0 (0 to 2 s) and keeps the wave 0.3 s: the calm body comes back at 2.3 s
-    const change = Math.round(2.3 * FPS);
-    expect(bodyAt(alex, change - 1, FPS, timeline, sprites)).toBe("gesture-wave");
-    expect(bodyAt(alex, change, FPS, timeline, sprites)).toBe("calm__closed");
-    const squash = [-3, -2, -1, 0, 1, 2, 3].map((offset) => flipAt(alex, change + offset, FPS, timeline, sprites));
-    expect(squash[0]).toBe(1);
-    expect(squash[1]).toBeLessThan(1);
-    expect(squash[2]).toBeCloseTo(FLIP_SQUASH);
-    expect(squash[3]).toBeCloseTo(FLIP_SQUASH);
-    expect(squash[4]).toBeGreaterThan(FLIP_SQUASH);
-    expect(squash[6]).toBe(1);
-    expect(at(0, 1).flip).toBe(1); // no change near: no squash
+    const end = Math.round(SPEAKER_GESTURE_SEC * FPS); // the speaker's wave lasts the first 1.6 s of the line
+    expect(gestureAt(alex, end - 1, FPS, timeline, sprites)).toBe("gesture-wave");
+    expect(gestureAt(alex, end, FPS, timeline, sprites)).toBeNull();
+    const waving = at(0, 0.4);
+    expect(waving.body).toBe("gesture-wave");
+    expect(waving.face).toBeNull(); // its own face: nothing pasted on a gesture
+    expect(waving.scale).toBe(1);
+    const talking = at(0, 1.7);
+    expect(talking.body).toBe("calm__closed");
   });
 });

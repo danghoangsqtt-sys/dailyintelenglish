@@ -41,6 +41,7 @@ MINIMUM = ("calm__closed", "calm__open")  # a set the video can use: the face mu
 TOP_LIMIT = 6
 HEAD_SIDE_LIMIT = 10
 EDGE_LIMIT = 8
+GESTURE_EDGE_LIMIT = 20  # owner 2026-10-08: a gesture moves the arms; a body that is bigger, smaller or shifted is refused
 SILHOUETTE_LIMIT = 4.0
 HEAD_FRACTION = 0.20
 EDGE_PIXELS = 8  # a figure touching the left, right or top edge of the canvas over more pixels than this is cut off (a hand, the hair)
@@ -127,6 +128,8 @@ def measure(rgba: np.ndarray, reference: Reference, gesture: bool) -> dict:
     if gesture:
         if head_xor > SILHOUETTE_LIMIT:
             problems.append(f"head differs {head_xor:.1f}%")
+        if edge_shift > GESTURE_EDGE_LIMIT:
+            problems.append(f"body moved {edge_shift:.0f}px (a gesture may move the arms, not the body)")
     else:
         if edge_shift > EDGE_LIMIT:
             problems.append(f"torso moved {edge_shift:.0f}px")
