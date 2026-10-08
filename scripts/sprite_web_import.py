@@ -126,10 +126,26 @@ def import_one(raw_path: Path, base: Image.Image, base_face: list[float] | None,
     return place(figure, scale, dx, dy), overlap
 
 
+def face_only(who: str, names: list[str]) -> list[str]:
+    """Rewrite imported expression pictures as the base body with only the web picture's face pasted in (a picture whose body drifted)."""
+    meta = tools.json.loads((tools.HEADS / f"{who}_head_meta.json").read_text(encoding="utf-8"))
+    box, ellipse = tuple(meta["crop_box"]), tuple(meta["ellipse"])
+    base = Image.open(INBOX / f"{who}__calm__closed.png").convert("RGBA")
+    done = []
+    for name in names:
+        path = INBOX / f"{who}__{name}.png"
+        if not path.is_file():
+            continue
+        tools.paste_face(base, tools.flatten(Image.open(path).convert("RGBA"), box), box, ellipse).save(path)
+        done.append(name)
+    return done
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("character")
     parser.add_argument("--raw", default=str(RAW))
+    parser.add_argument("--face-only", default="", help="comma list of expressions (for example thinking__open) to keep as the base body plus the web face")
     args = parser.parse_args()
     who, raw_folder = args.character.lower(), Path(args.raw)
     base_path = INBOX / f"{who}__calm__closed.png"
@@ -160,6 +176,8 @@ def main() -> int:
             made += 1
             print(f"{path.name:34} head overlap {overlap:.2f}")
     print(f"imported {made} of {len(files)} into {INBOX}")
+    if args.face_only:
+        print("face only (base body kept): " + ", ".join(face_only(who, [n.strip() for n in args.face_only.split(",") if n.strip()])))
     if failed:
         print("not imported: " + "; ".join(failed))
     check = subprocess.run([sys.executable, str(Path(__file__).with_name("check_sprites.py")), who], capture_output=True, text=True)

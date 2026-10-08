@@ -105,3 +105,7 @@ Lina has none for now and the video uses her base picture where a gesture would 
   `scripts/sprite_web_import.py lina` keys out the green, finds the face, scales and places the figure on the 1280 x 1536 canvas by the face
   and then by the overlap of the head-zone silhouettes, writes into `sprites_inbox` and runs `check_sprites.py`. Pictures that still fail are
   made again. If the web tool refuses a full-figure edit, use the head crops for the expressions.
+
+`sprite_web_import.py lina --face-only thinking__open` keeps the base body and pastes only the face of the web picture, for an expression
+picture whose body drifted (the head matches but the body leans: the check fails on "torso moved"). Used on 2026-10-08 for
+`thinking__closed` and `thinking__open`; the other 19 web pictures passed as they were (the gestures are checked on the head only).
