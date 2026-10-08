@@ -8,6 +8,18 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Phase 32 — talking characters, 2026-10-08)
+- **"Podcast: talking characters" (Step 5, Enhanced).** Alex and Lina stand over the scene pictures of the storyboard like the
+  characters of a visual novel: their mouths open and close with the loudness of the speech, their faces follow the storyboard
+  and the line (smile, laugh, surprised, thinking, worried, serious), they blink, breathe, take turns (the listener is dimmed),
+  wave, point or think on the right words, and change pose with a quick paper-doll flip. No GPU time: it renders like the
+  other podcast modes.
+- **Talking sprites on the Shot Library page.** Put the transparent 1280 x 1536 pictures (`alex__smile__open.png` ...) in
+  `data/library/sprites_inbox` and press "Import sprites": every picture is checked against the calm one, and a picture that
+  would make the character jump, or that is cut by the edge of the canvas, is refused with the reason.
+- `scripts/sprite_web_import.py` brings full-figure pictures made on ChatGPT web (green background, any size) onto the sprite
+  canvas; `scripts/sprite_face_tools.py` makes expressions from head crops.
+
 ### Added (Phases 27-30 — new look, ready-made shots, podcast pictures, 2026-10-07)
 - **Daily Beyond English.** New name, logo and green / yellow / white / red palette in the app and the video intro and
   outro; a collapsible app sidebar; large image grids for characters and scenes; the Music Library takes many files at once,
