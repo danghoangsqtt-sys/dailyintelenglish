@@ -1,0 +1,35 @@
+﻿PROMPT TẠO 7 ẢNH MIỆNG MỞ CỦA ALEX CHO CHATGPT WEB
+
+VÌ SAO: trong bộ ảnh Alex hiện có, mọi ảnh "__open" đều đang ngậm miệng, nên video không nhép miệng được cho Alex.
+Lần này chỉ sửa KHUÔN MẶT trên ảnh cắt đầu; máy tôi tự ghép mặt vào thân gốc nên thân không bị lệch.
+
+ẢNH ĐÍNH KÈM (chỉ một ảnh, đính kèm cho MỖI lần tạo, mở cuộc trò chuyện mới mỗi ảnh)
+D:\DataAdmin\Daily_Intel_English\data\assets_sprites\heads\alex_head_edit_input.png
+
+CÁCH DÙNG: đính kèm ảnh, dán nguyên một prompt bên dưới, tải ảnh về và đặt đúng "Tên file".
+Nếu ảnh trả về đổi tóc, đổi góc đầu, đổi khung hoặc miệng vẫn ngậm: tạo lại trong cuộc trò chuyện mới.
+
+1) Tên file: alex__calm__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the mouth: his mouth is clearly open as if saying "ah", upper teeth visible, a calm friendly face, natural speaking, not a yawn.
+
+2) Tên file: alex__smile__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: smiling while speaking, mouth clearly open, teeth visible.
+
+3) Tên file: alex__laugh__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: laughing, eyes narrowed and curved, wide open smile, teeth visible.
+
+4) Tên file: alex__surprised__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: surprised, eyes wide open, eyebrows raised, mouth open in a small "oh".
+
+5) Tên file: alex__thinking__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: thoughtful look, eyes glancing slightly upward, mouth slightly but clearly open as if saying "hmm, well".
+
+6) Tên file: alex__worried__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: worried look, eyebrows drawn together and raised, mouth clearly open as if speaking.
+
+7) Tên file: alex__serious__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: serious expression, level eyebrows, mouth clearly open as if speaking.
+
+SAU KHI TẢI VỀ
+Copy 7 ảnh vào: D:\DataAdmin\Daily_Intel_English\data\assets_sprites\heads\edited
+(đặt sai tên cũng được, cứ báo tôi, tôi sẽ xem ảnh và sửa tên) rồi nhắn tôi để ghép vào bộ Alex và dựng lại video.
