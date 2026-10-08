@@ -1,0 +1,71 @@
+﻿HƯỚNG DẪN TẠO 14 BIỂU CẢM CỦA LINA BẰNG CHATGPT WEB (làm bên ngoài, sau đó copy vào thư mục dự án)
+
+CHUẨN BỊ
+- Ảnh đầu vào (một chân dung đầu và cổ, nền xám, khung vuông 1024 x 1024):
+  D:\DataAdmin\Daily_Intel_English\data\assets_sprites\heads\lina_head_edit_input.png
+- Chỉ đính kèm ảnh này. KHÔNG đính kèm bảng nhân vật toàn thân.
+
+CÁCH LÀM CHO MỖI ẢNH (lặp lại 14 lần)
+1. Mở một cuộc trò chuyện MỚI (để ChatGPT không bị ảnh hưởng bởi ảnh trước đó).
+2. Đính kèm lina_head_edit_input.png rồi dán prompt tương ứng ở dưới (mỗi prompt đã có sẵn câu khóa khung hình).
+3. Nếu ảnh trả về bị đổi khung hình, đổi tóc, đổi màu nền, cắt mất đầu hoặc đổi khuôn mặt: bấm tạo lại hoặc mở cuộc trò chuyện mới, KHÔNG nhờ chỉnh tiếp từ ảnh vừa tạo.
+4. Tải ảnh về, ĐỔI TÊN đúng như dòng "LƯU THÀNH" (đuôi .png), rồi copy vào:
+   D:\DataAdmin\Daily_Intel_English\data\assets_sprites\heads\edited
+   Ảnh có thể ở dạng vuông (khung giống ảnh đầu vào) hoặc đúng dạng ảnh cắt; kích thước cụ thể không quan trọng, nhưng KHÔNG cắt lại ảnh và không đổi tỷ lệ.
+
+SAU KHI CÓ ẢNH
+Nhắn cho tôi "xong N ảnh" (N là số ảnh đã copy), tôi sẽ ghép khuôn mặt vào ảnh gốc và kiểm tra. Hoặc tự chạy hai lệnh:
+  D:\DataAdmin\Daily_Intel_English\venv\Scripts\python.exe D:\DataAdmin\Daily_Intel_English\scripts\sprite_face_tools.py compose lina
+  D:\DataAdmin\Daily_Intel_English\venv\Scripts\python.exe D:\DataAdmin\Daily_Intel_English\scripts\check_sprites.py lina --expect 1,2
+Làm thiếu vẫn được: các ảnh làm rồi sẽ được ghép, ảnh còn thiếu được liệt kê.
+
+CÂU KHÓA KHUNG HÌNH (đã có trong mỗi prompt bên dưới)
+"Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression:"
+
+DANH SÁCH 14 PROMPT (dán nguyên văn sau khi đính kèm ảnh)
+
+1) LƯU THÀNH: lina__calm__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: calm friendly face, mouth slightly open as if saying the word "ah", upper teeth just visible, natural speaking, not a yawn.
+
+2) LƯU THÀNH: lina__smile__closed.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: a warm gentle smile with the lips closed.
+
+3) LƯU THÀNH: lina__smile__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: smiling while speaking, mouth open, teeth visible.
+
+4) LƯU THÀNH: lina__surprised__closed.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: surprised, eyes wide open, eyebrows raised, lips closed.
+
+5) LƯU THÀNH: lina__surprised__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: surprised, eyes wide open, eyebrows raised, mouth open.
+
+6) LƯU THÀNH: lina__laugh__closed.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: happy laughing look, eyes narrowed and curved, big smile, lips closed.
+
+7) LƯU THÀNH: lina__laugh__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: laughing, eyes narrowed and curved, wide smile, mouth open.
+
+8) LƯU THÀNH: lina__thinking__closed.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: thoughtful look, eyes glancing slightly upward and to the side, one eyebrow slightly raised, lips closed.
+
+9) LƯU THÀNH: lina__thinking__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: thoughtful look, eyes glancing slightly upward and to the side, mouth slightly open as if saying "hmm".
+
+10) LƯU THÀNH: lina__worried__closed.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: worried look, eyebrows drawn together and slightly raised, lips closed.
+
+11) LƯU THÀNH: lina__worried__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: worried look, eyebrows drawn together and slightly raised, mouth slightly open as if speaking.
+
+12) LƯU THÀNH: lina__serious__closed.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: serious calm expression, level eyebrows, lips closed.
+
+13) LƯU THÀNH: lina__serious__open.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: serious expression, mouth slightly open as if speaking.
+
+14) LƯU THÀNH: lina__blink.png
+Edit the attached portrait. Keep exactly the same framing, the same head position and angle, the same hair, the same skin tone, the same lighting and the same plain grey background, and keep the square image size. Change only the facial expression: both eyes gently closed as in a blink, lips closed, calm face.
+
+GHI CHÚ
+- Cử chỉ tay của Lina (7 ảnh) tạm thời bỏ qua. Nếu muốn thử, hãy tạo ảnh riêng bằng công cụ nào chấp nhận, đặt tên lina__gesture-talk.png v.v. và báo tôi.
+- Nếu một biểu cảm bị từ chối, bỏ qua và báo tôi tên file; tôi có thể làm biến thể đó bằng mô hình chạy trên máy.

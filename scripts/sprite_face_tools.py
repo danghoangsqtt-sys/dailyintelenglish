@@ -28,6 +28,7 @@ INBOX = ROOT / "data" / "library" / "sprites_inbox"
 HEADS = ROOT / "data" / "assets_sprites" / "heads"
 VENV_IMAGE = ROOT / "venv-image" / "Scripts" / "python.exe"
 GREY = (190, 190, 190)
+SQUARE = 1024  # side of the square edit input
 HEAD_PX = 338  # the head height of the standard canvas (see normalize_sprite_base.py)
 EXPRESSION_FILES = [f"{expression}__{mouth}" for expression in ("calm", "smile", "surprised", "laugh", "thinking", "worried", "serious")
                     for mouth in ("closed", "open")] + ["blink"]
@@ -80,18 +81,48 @@ def ellipse_mask(size: tuple[int, int], ellipse: tuple[float, float, float, floa
     return np.asarray(mask).astype(np.float32) / 255.0
 
 
+def square_input(crop: Image.Image, size: int = SQUARE) -> tuple[Image.Image, dict]:
+    """The head crop centred on a square grey canvas: image tools on the web often return a square, and the padding is cut off again."""
+    scale = size / max(crop.size)
+    content = crop.resize((round(crop.width * scale), round(crop.height * scale)), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGB", (size, size), GREY)
+    left, top = (size - content.width) // 2, (size - content.height) // 2
+    canvas.paste(content, (left, top))
+    return canvas, {"size": size, "left": left, "top": top, "width": content.width, "height": content.height}
+
+
+def to_crop_size(edited: Image.Image, meta: dict) -> Image.Image:
+    """An edited head picture (the crop itself, or the square made by `square_input`, at any resolution) at the size of the crop."""
+    box = meta["crop_box"]
+    width, height = box[2] - box[0], box[3] - box[1]
+    ratio = edited.width / edited.height
+    if abs(ratio - width / height) < 0.04:
+        return edited.convert("RGB").resize((width, height), Image.Resampling.LANCZOS)
+    info = meta["square"]
+    if abs(ratio - 1.0) < 0.04:
+        factor = edited.width / info["size"]
+        region = (round(info["left"] * factor), round(info["top"] * factor),
+                  round((info["left"] + info["width"]) * factor), round((info["top"] + info["height"]) * factor))
+        return edited.convert("RGB").crop(region).resize((width, height), Image.Resampling.LANCZOS)
+    raise ValueError(f"unexpected picture shape {edited.width} x {edited.height}: use the square or the crop shape")
+
+
 def prepare(who: str) -> int:
     base_path = INBOX / f"{who}__calm__closed.png"
     base = Image.open(base_path).convert("RGBA")
     box = crop_box(np.asarray(base.getchannel("A")))
     HEADS.mkdir(parents=True, exist_ok=True)
     crop_path = HEADS / f"{who}_head_crop.png"
-    flatten(base, box).save(crop_path)
+    crop = flatten(base, box)
+    crop.save(crop_path)
     face = detect_face(crop_path)
-    meta = {"crop_box": box, "face": face, "ellipse": face_ellipse(face), "base": base_path.name}
+    square, info = square_input(crop)
+    square_path = HEADS / f"{who}_head_edit_input.png"
+    square.save(square_path)
+    meta = {"crop_box": box, "face": face, "ellipse": face_ellipse(face), "base": base_path.name, "square": info}
     (HEADS / f"{who}_head_meta.json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
     print(f"head crop {box[2] - box[0]} x {box[3] - box[1]} px at {box[:2]}, face box {[round(v) for v in face[:4]]}")
-    print(f"edit this picture once per expression: {crop_path}")
+    print(f"edit this picture once per expression (a square, for image tools that return squares): {square_path}")
     print("expected edited files in", HEADS / "edited", ":", ", ".join(f"{who}__{name}.png" for name in EXPRESSION_FILES))
     return 0
 
@@ -111,7 +142,7 @@ def paste_face(base: Image.Image, edited: Image.Image, box: tuple[int, int, int,
 def compose(who: str) -> int:
     meta = json.loads((HEADS / f"{who}_head_meta.json").read_text(encoding="utf-8"))
     base = Image.open(INBOX / f"{who}__calm__closed.png").convert("RGBA")
-    made, missing = [], []
+    made, missing, rejected = [], [], []
     for name in EXPRESSION_FILES:
         if name == "calm__closed":
             continue
@@ -119,11 +150,18 @@ def compose(who: str) -> int:
         if not source.is_file():
             missing.append(name)
             continue
-        paste_face(base, Image.open(source), tuple(meta["crop_box"]), tuple(meta["ellipse"])).save(INBOX / f"{who}__{name}.png")
+        try:
+            patch = to_crop_size(Image.open(source), meta)
+        except ValueError as error:
+            rejected.append(f"{name} ({error})")
+            continue
+        paste_face(base, patch, tuple(meta["crop_box"]), tuple(meta["ellipse"])).save(INBOX / f"{who}__{name}.png")
         made.append(name)
     print(f"composed {len(made)}: {', '.join(made) or '-'}")
     print(f"still missing {len(missing)}: {', '.join(missing) or '-'}")
-    return 0
+    if rejected:
+        print(f"rejected {len(rejected)}: {'; '.join(rejected)}")
+    return 1 if rejected else 0
 
 
 def main() -> int:

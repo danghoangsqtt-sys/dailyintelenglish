@@ -64,3 +64,19 @@ def test_compose_makes_a_picture_for_every_edited_head_and_reports_the_missing_o
     assert tools.compose("lina") == 0
     out = capsys.readouterr().out
     assert (inbox / "lina__smile__open.png").is_file() and "composed 1: smile__open" in out and "still missing 13" in out
+
+
+def test_a_square_picture_from_the_web_is_cut_back_to_the_crop(tools):
+    base = _base()
+    box = (396, 206, 844, 662)
+    crop = tools.flatten(base, box)
+    square, info = tools.square_input(crop)
+    meta = {"crop_box": box, "square": info}
+    assert square.size == (1024, 1024) and 0 in (info["left"], info["top"])  # the longer side fills the square, grey on the other two sides
+    for size in (1024, 1536):  # the tool may return the square at another resolution
+        back = tools.to_crop_size(square.resize((size, size)), meta)
+        assert back.size == crop.size
+        assert np.abs(np.asarray(back).astype(int) - np.asarray(crop).astype(int)).mean() < 6
+    assert tools.to_crop_size(crop, meta).size == crop.size  # the crop shape itself is accepted too
+    with pytest.raises(ValueError, match="unexpected picture shape"):
+        tools.to_crop_size(Image.new("RGB", (1024, 1536)), meta)
