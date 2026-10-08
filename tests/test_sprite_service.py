@@ -11,11 +11,12 @@ from tests.test_shot_library_import import _two_characters
 from tests.test_visuals_project_api import client, data, locked_character  # noqa: F401
 
 
-def _figure(path: Path, head_dx: int = 0, torso_dx: int = 0, size=(1280, 1536), opaque: bool = False) -> None:
+def _figure(path: Path, head_dx: int = 0, torso_dx: int = 0, size=(1280, 1536), opaque: bool = False,
+            body=(20, 30, 100, 255)) -> None:
     image = Image.new("RGBA", size, (90, 90, 90, 255) if opaque else (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
     draw.ellipse((500 + head_dx, 200, 780 + head_dx, 520), fill=(200, 160, 140, 255))  # the head
-    draw.rectangle((380 + torso_dx, 520, 900 + torso_dx, 1535), fill=(20, 30, 100, 255))  # the body to the bottom edge
+    draw.rectangle((380 + torso_dx, 520, 900 + torso_dx, 1535), fill=body)  # the body to the bottom edge
     path.parent.mkdir(parents=True, exist_ok=True)
     image.save(path)
 
@@ -37,7 +38,7 @@ def test_the_check_refuses_pictures_that_would_jump(tmp_path):
     _figure(tmp_path / "smile__open.png")
     _figure(tmp_path / "laugh__open.png", torso_dx=40)  # the body slid
     _figure(tmp_path / "gesture-wave.png", torso_dx=12)  # a gesture may move the arms a little, not the head
-    _figure(tmp_path / "gesture-talk.png", torso_dx=40)  # but not the whole body
+    _figure(tmp_path / "gesture-talk.png", body=(150, 40, 40, 255))  # but not draw the whole body again
     _figure(tmp_path / "blink.png", head_dx=60)  # the head moved
     _figure(tmp_path / "serious__open.png", size=(1000, 1000))
     files = {path.stem: path for path in tmp_path.glob("*.png")}
@@ -47,7 +48,7 @@ def test_the_check_refuses_pictures_that_would_jump(tmp_path):
     assert "torso moved" in reasons["laugh__open.png"]
     assert "head moved sideways" in reasons["blink.png"]
     assert "wrong canvas size" in reasons["serious__open.png"]
-    assert "body moved" in reasons["gesture-talk.png"]
+    assert "drawn again" in reasons["gesture-talk.png"]
 
 
 def test_a_hand_cut_by_the_canvas_edge_is_refused(tmp_path):

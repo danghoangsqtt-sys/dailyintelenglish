@@ -25,9 +25,10 @@ const BLINK_FRAMES = 4;
 export const BACKGROUND_FADE_FRAMES = 12;
 /** A listener's gesture stays a moment after the line ends. */
 const GESTURE_HOLD_SEC = 0.3;
-/** Owner 2026-10-08: a gesture picture is shown exactly as it was made (its own face, nothing pasted on it, never squashed or
- * blended): the pose is swapped in on one frame and back on one frame, like a game character. Its mouth cannot move, so the
- * speaker holds the gesture only for the first 1.6 s of the line and then talks on the plain body. */
+/** Owner 2026-10-08: every picture is shown exactly as it was made -- nothing is pasted on it, it is never squashed or blended.
+ * The mouth moves by swapping a picture with its open-mouth twin (the same picture with only the mouth edited), and a pose is
+ * swapped in on one frame, like a game character. A gesture without its open-mouth twin cannot talk, so the speaker holds it
+ * only for the first 1.6 s of the line and then talks on the plain picture. */
 export const SPEAKER_GESTURE_SEC = 1.6;
 
 /** Index of the last line that has started by `time` (-1 before the first): faces and turns hold through the pauses. */
@@ -71,12 +72,8 @@ function pick(character: SpriteCharacter, wanted: string[]): string {
 }
 
 export type SpriteFrame = {
-  body: string;
-  face: string | null;
-  /** translation of the face picture (canvas pixels) so its face lands on the body's face */
-  faceShift: [number, number];
-  /** centre of the face mask on the face picture, fractions of the canvas */
-  maskCentre: [number, number];
+  /** the one picture shown (a name of `character.pictures`) */
+  picture: string;
   speaking: boolean;
   brightness: number;
   scale: number;
@@ -113,11 +110,14 @@ export function gestureAt(character: SpriteCharacter, frame: number, fps: number
   const line = index >= 0 ? sprites.lines[index] : undefined;
   if (!line) return null;
   const speaking = line.slot === character.slot;
-  const until = speaking ? Math.min(timeline[index].startSec + SPEAKER_GESTURE_SEC, timeline[index].endSec)
-    : timeline[index].endSec + GESTURE_HOLD_SEC;
   const gesture = speaking ? line.gesture : line.listenerGesture;
   const name = gesture ? `gesture-${gesture}` : null;
-  return name && time < until && name in character.pictures ? name : null;
+  if (!name || !(name in character.pictures)) return null;
+  const talks = `${name}__open` in character.pictures;
+  const until = speaking
+    ? (talks ? timeline[index].endSec : Math.min(timeline[index].startSec + SPEAKER_GESTURE_SEC, timeline[index].endSec))
+    : timeline[index].endSec + GESTURE_HOLD_SEC;
+  return time < until ? name : null;
 }
 
 export function spriteFrame(
@@ -132,15 +132,13 @@ export function spriteFrame(
 
   const expression = !line || line.slot === null ? "calm" : speaking ? line.expression : line.listenerExpression;
   const mouthOpen = speaking && line !== undefined && isMouthOpen(time, line.mouth);
-  const blink = !mouthOpen && isBlinking(frame, fps, character.name) && "blink" in character.pictures;
-
   const gesture = gestureAt(character, frame, fps, timeline, sprites);
-  const faceName = blink ? "blink" : pick(character, [`${expression}__${mouthOpen ? "open" : "closed"}`, `calm__${mouthOpen ? "open" : "closed"}`]);
-  const body = gesture ?? "calm__closed";
-  const face = gesture || faceName === body ? null : faceName; // a gesture keeps its own face
-  const bodyOffset = character.offsets[body] ?? [0, 0];
-  const faceOffset = face ? character.offsets[face] ?? [0, 0] : [0, 0];
-  const [cx, cy] = character.faceEllipse;
+  // the blink picture has the calm face: it is used only on the calm face, with the mouth closed and no gesture
+  const blink = !gesture && !mouthOpen && expression === "calm" && isBlinking(frame, fps, character.name) && "blink" in character.pictures;
+  const mouth = mouthOpen ? "open" : "closed";
+  const picture = gesture
+    ? (mouthOpen && `${gesture}__open` in character.pictures ? `${gesture}__open` : gesture)
+    : blink ? "blink" : pick(character, [`${expression}__${mouth}`, `calm__${mouth}`]);
 
   // turns: the speaker brightens and grows over 6 frames, with a small hop when the turn starts
   const start = turnStart(index, sprites.lines, timeline);
@@ -160,9 +158,7 @@ export function spriteFrame(
   const side = slot === 0 ? -1 : 1;
 
   return {
-    body, face,
-    faceShift: [bodyOffset[0] - faceOffset[0], bodyOffset[1] - faceOffset[1]],
-    maskCentre: [cx + faceOffset[0] / 1280, cy + faceOffset[1] / 1536],
+    picture,
     speaking, brightness, scale,
     x: side * (1 - eased) * 0.35 * width,
     y: hop + breath,
@@ -193,11 +189,4 @@ export function spriteBackground(frame: number, fps: number, timeline: EpisodeLi
   const previous = urlOf(ids[first - 1]);
   if (since >= BACKGROUND_FADE_FRAMES || previous === current) return { current, previous: null, opacity: 1 };
   return { current, previous, opacity: Math.max(0, since) / BACKGROUND_FADE_FRAMES };
-}
-
-/** The CSS mask that keeps only the face of a face picture (a feathered ellipse). */
-export function faceMask(ellipse: [number, number, number, number], centre: [number, number]): string {
-  const [, , rx, ry] = ellipse;
-  const pct = (value: number) => `${(value * 100).toFixed(2)}%`;
-  return `radial-gradient(ellipse ${pct(rx)} ${pct(ry)} at ${pct(centre[0])} ${pct(centre[1])}, #000 70%, transparent 100%)`;
 }

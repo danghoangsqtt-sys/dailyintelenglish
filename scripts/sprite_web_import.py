@@ -44,7 +44,7 @@ def key_out_green(rgb: Image.Image) -> Image.Image:
     key = float(np.median(border))
     if key < 40:
         raise ValueError("the background is not green: ask for a flat #00B140 background")
-    low, high = 0.30 * key, 0.85 * key
+    low, high = 0.30 * key, 0.70 * key  # 0.70: the web's green is uneven near the corners (measured 2026-10-08)
     alpha = 1.0 - np.clip((green - low) / (high - low), 0.0, 1.0)
     alpha[alpha < 0.04] = 0.0
     limit = np.maximum(data[..., 0], data[..., 2])
@@ -109,6 +109,15 @@ def face_box(picture: Image.Image, work: Path) -> list[float] | None:
         return None
 
 
+def import_resized(raw_path: Path) -> Image.Image:
+    """A picture made by a region edit of the green base input: the same framing, only smaller. It is resized to the canvas and
+    keyed, never moved (moving it by a pixel or two would make the face jump between pictures that should match)."""
+    raw = Image.open(raw_path).convert("RGB")
+    if abs(raw.width / raw.height - CANVAS[0] / CANVAS[1]) > 0.01:
+        raise ValueError(f"not the base's shape ({raw.width} x {raw.height}): use --align")
+    return key_out_green(raw.resize(CANVAS, Image.Resampling.LANCZOS))
+
+
 def import_one(raw_path: Path, base: Image.Image, base_face: list[float] | None, work: Path) -> tuple[Image.Image, float]:
     raw = Image.open(raw_path).convert("RGB")
     figure = key_out_green(raw)
@@ -149,6 +158,9 @@ def main() -> int:
     parser.add_argument("character")
     parser.add_argument("--raw", default=str(RAW))
     parser.add_argument("--face-only", default="", help="comma list of expressions (for example thinking__open) to keep as the base body plus the web face")
+    parser.add_argument("--align", action="store_true",
+                        help="pictures drawn again by the image tool (other size and place): find the face and align them. Without it the "
+                             "pictures are region edits of the base input and are only resized")
     args = parser.parse_args()
     who, raw_folder = args.character.lower(), Path(args.raw)
     base_path = INBOX / f"{who}__calm__closed.png"
@@ -156,28 +168,33 @@ def main() -> int:
         print(f"missing {base_path}")
         return 1
     base = Image.open(base_path).convert("RGBA")
-    files = sorted(p for p in raw_folder.glob(f"{who}__*.png") if p.name != base_path.name)
+    files = sorted((p for p in raw_folder.rglob(f"{who}__*.png") if p.name != base_path.name), key=lambda p: p.name)  # subfolders too
     if not files:
         print(f"no {who}__*.png in {raw_folder}")
         return 1
     made, failed = 0, []
     with tempfile.TemporaryDirectory() as temp:
         work = Path(temp)
-        flat = tools.flatten(base, (0, 0, base.width, base.height))
-        flat.save(work / "base_probe.png")
-        try:
-            base_face = tools.detect_face(work / "base_probe.png")
-        except SystemExit:
-            base_face = None
+        base_face = None
+        if args.align:
+            tools.flatten(base, (0, 0, base.width, base.height)).save(work / "base_probe.png")
+            try:
+                base_face = tools.detect_face(work / "base_probe.png")
+            except SystemExit:
+                base_face = None
         for path in files:
             try:
-                picture, overlap = import_one(path, base, base_face, work)
+                if args.align:
+                    picture, overlap = import_one(path, base, base_face, work)
+                    note = f"head overlap {overlap:.2f}"
+                else:
+                    picture, note = import_resized(path), "resized"
             except ValueError as error:
                 failed.append(f"{path.name} ({error})")
                 continue
             picture.save(INBOX / path.name)
             made += 1
-            print(f"{path.name:34} head overlap {overlap:.2f}")
+            print(f"{path.name:34} {note}")
     print(f"imported {made} of {len(files)} into {INBOX}")
     if args.face_only:
         print("face only (base body kept): " + ", ".join(face_only(who, [n.strip() for n in args.face_only.split(",") if n.strip()])))

@@ -33,7 +33,9 @@ MOUTHS = ("closed", "open")
 GESTURES = ("talk", "point", "think", "open", "heart", "listen", "wave")
 FACE_NAMES = tuple(f"{expression}__{mouth}" for expression in EXPRESSIONS for mouth in MOUTHS) + ("blink",)
 GESTURE_NAMES = tuple(f"gesture-{gesture}" for gesture in GESTURES)
-ALL_NAMES = FACE_NAMES + GESTURE_NAMES
+# a gesture with the mouth open (the same picture, only the mouth edited): the character can talk while making the gesture
+GESTURE_OPEN_NAMES = tuple(f"{name}__open" for name in GESTURE_NAMES)
+ALL_NAMES = FACE_NAMES + GESTURE_NAMES + GESTURE_OPEN_NAMES
 BASE = "calm__closed"
 MINIMUM = ("calm__closed", "calm__open")  # a set the video can use: the face must at least open and close its mouth
 
@@ -41,7 +43,9 @@ MINIMUM = ("calm__closed", "calm__open")  # a set the video can use: the face mu
 TOP_LIMIT = 6
 HEAD_SIDE_LIMIT = 10
 EDGE_LIMIT = 8
-GESTURE_EDGE_LIMIT = 20  # owner 2026-10-08: a gesture moves the arms; a body that is bigger, smaller or shifted is refused
+# owner 2026-10-08: a gesture changes the arms only. A body drawn again (bigger, smaller, shifted) is refused: at least this share of
+# the calm picture's body (below the head) must keep its colour (region-edited gestures keep 69 to 91%, expressions 99 to 100%)
+GESTURE_BODY_KEPT = 0.60
 SILHOUETTE_LIMIT = 4.0
 HEAD_FRACTION = 0.20
 EDGE_PIXELS = 8  # a figure touching the left, right or top edge of the canvas over more pixels than this is cut off (a hand, the hair)
@@ -94,11 +98,21 @@ class Reference:
     """What the pictures of a set are compared with: the calm, closed-mouth picture."""
 
     def __init__(self, rgba: np.ndarray):
+        self.rgb = rgba[..., :3].astype(np.float32)
         self.alpha = rgba[..., 3] > 20
         x0, self.top, x1, self.bottom = _bbox(self.alpha)
         self.head_end = self.top + int((self.bottom - self.top) * HEAD_FRACTION)
         self.head_x = float(np.where(self.alpha[:self.head_end])[1].mean())
         self.left, self.right = _torso_edges(self.alpha, self.top, self.bottom)
+
+
+def body_kept(rgba: np.ndarray, reference: Reference) -> float:
+    """The share of the reference's body (below the head zone) that keeps its colour in this picture."""
+    body = reference.alpha.copy()
+    body[:reference.head_end] = False
+    both = body & (rgba[..., 3] > 200)
+    difference = np.abs(rgba[..., :3].astype(np.float32) - reference.rgb).mean(axis=2)
+    return float((difference[both] < 25).sum() / max(1, body.sum()))
 
 
 def measure(rgba: np.ndarray, reference: Reference, gesture: bool) -> dict:
@@ -128,8 +142,9 @@ def measure(rgba: np.ndarray, reference: Reference, gesture: bool) -> dict:
     if gesture:
         if head_xor > SILHOUETTE_LIMIT:
             problems.append(f"head differs {head_xor:.1f}%")
-        if edge_shift > GESTURE_EDGE_LIMIT:
-            problems.append(f"body moved {edge_shift:.0f}px (a gesture may move the arms, not the body)")
+        kept = body_kept(rgba, reference)
+        if kept < GESTURE_BODY_KEPT:
+            problems.append(f"the body was drawn again (only {kept:.0%} of it is unchanged; a gesture may change the arms only)")
     else:
         if edge_shift > EDGE_LIMIT:
             problems.append(f"torso moved {edge_shift:.0f}px")

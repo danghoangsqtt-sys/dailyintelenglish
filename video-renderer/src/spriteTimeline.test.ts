@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { podcastLayer } from "./podcastLayout";
 import {
   SPEAKER_GESTURE_SEC, gestureAt,
-  BACKGROUND_FADE_FRAMES, LISTENER_BRIGHTNESS, SPRITE_HEIGHT, canvasBox, faceMask, heldLineIndex, isBlinking, isMouthOpen,
+  BACKGROUND_FADE_FRAMES, LISTENER_BRIGHTNESS, SPRITE_HEIGHT, canvasBox, heldLineIndex, isBlinking, isMouthOpen,
   spriteBackground, spriteFrame, stageTop,
 } from "./spriteTimeline";
 import { episodeInputPropsSchema, type EpisodeLine, type EpisodeSprites, type SpriteCharacter } from "./types";
@@ -26,11 +26,11 @@ const timeline: EpisodeLine[] = [
 ];
 
 const sprites: EpisodeSprites = {
-  characters: [character(0, "Alex", ["gesture-wave"]), character(1, "Lina")],
+  characters: [character(0, "Alex", ["gesture-wave"]), character(1, "Lina", ["gesture-listen", "gesture-talk", "gesture-talk__open"])],
   lines: [
     { slot: 0, expression: "smile", listenerExpression: "calm", gesture: "wave", listenerGesture: null, mouth: [[0.2, 0.6], [1.65, 1.9]] },
     { slot: 1, expression: "calm", listenerExpression: "smile", gesture: null, listenerGesture: null, mouth: [[3, 4]] },
-    { slot: 1, expression: "calm", listenerExpression: "calm", gesture: "talk", listenerGesture: null, mouth: [] },
+    { slot: 1, expression: "calm", listenerExpression: "calm", gesture: "talk", listenerGesture: null, mouth: [[6.4, 6.6]] },
   ],
   backgrounds: { cafe: "remotion-render/sprites/p/bg/cafe.png", park: "remotion-render/sprites/p/bg/park.png" },
   lineBackgrounds: ["cafe", "cafe", "park"],
@@ -55,32 +55,28 @@ describe("Phase 32 talking sprites", () => {
     expect(isMouthOpen(0.6, [[0.2, 0.6]])).toBe(false);
   });
 
-  it("puts the speaker's face for the mouth on the plain body once the gesture is over", () => {
-    const open = at(0, 1.7);
-    expect(open.speaking).toBe(true);
-    expect(open.body).toBe("calm__closed");
-    expect(open.face).toBe("smile__open");
-    expect(open.faceShift).toEqual([-4, 2]); // the face picture's own head offset is undone
-    expect(at(0, 1.0).face).toBeNull(); // still waving: the gesture picture's own face
+  it("shows one whole picture: the expression with the mouth open or closed, nothing pasted on it", () => {
+    expect(at(0, 1.7).picture).toBe("smile__open");
+    expect(at(0, 1.95).picture).toBe("smile__closed");
+    expect(at(1, 4.5).picture).toBe("calm__closed"); // Lina speaks with a calm face, mouth closed between the words
+    expect(at(1, 3.5).picture).toBe("calm__open");
   });
 
-  it("uses only pictures that exist: Lina has no talking gesture, the plain body stays", () => {
-    const state = at(1, 6);
-    expect(state.body).toBe("calm__closed");
-    expect(state.face).toBeNull(); // calm and closed on the calm body: one picture is enough
+  it("talks while making a gesture when the gesture has its open-mouth twin", () => {
+    expect(at(1, 6).picture).toBe("gesture-talk"); // the whole line, not only the first 1.6 s
+    expect(at(1, 6.5).picture).toBe("gesture-talk__open");
   });
 
   it("dims and shrinks the listener and brightens the speaker after a short turn change", () => {
     const listener = at(1, 1);
     expect(listener.brightness).toBeCloseTo(LISTENER_BRIGHTNESS);
     expect(listener.scale).toBe(1); // dimmed, never resized
-    expect(listener.face).toBe("calm__closed" === listener.body ? null : listener.face);
     const turn = at(1, 2.5 + 3 / FPS);
     expect(turn.brightness).toBeGreaterThan(LISTENER_BRIGHTNESS);
     expect(turn.brightness).toBeLessThan(1);
     expect(at(1, 3.5).brightness).toBeCloseTo(1);
     expect(at(1, 2.5 + 4 / FPS).y).toBeLessThan(-5); // the hop
-    expect(at(0, 3.5).face).toBe("smile__closed"); // the listener smiles back
+    expect(at(0, 3.5).picture).toBe("smile__closed"); // the listener smiles back
   });
 
   it("slides in at the start and out at the end", () => {
@@ -124,20 +120,19 @@ describe("Phase 32 talking sprites", () => {
     expect(left.height).toBeCloseTo(SPRITE_HEIGHT * 720);
     expect(left.left + left.width / 2).toBeCloseTo(0.27 * 1280);
     expect(right.left).toBeGreaterThan(left.left);
-    expect(faceMask([0.5, 0.25, 0.08, 0.07], [0.5, 0.25])).toBe(
-      "radial-gradient(ellipse 8.00% 7.00% at 50.00% 25.00%, #000 70%, transparent 100%)");
   });
 
-  it("shows a gesture picture as it was made, swapped in and out on one frame", () => {
+  it("holds a gesture without an open-mouth twin only 1.6 s, then talks on the plain picture", () => {
     const alex = sprites.characters[0];
-    const end = Math.round(SPEAKER_GESTURE_SEC * FPS); // the speaker's wave lasts the first 1.6 s of the line
+    const end = Math.round(SPEAKER_GESTURE_SEC * FPS);
     expect(gestureAt(alex, end - 1, FPS, timeline, sprites)).toBe("gesture-wave");
     expect(gestureAt(alex, end, FPS, timeline, sprites)).toBeNull();
-    const waving = at(0, 0.4);
-    expect(waving.body).toBe("gesture-wave");
-    expect(waving.face).toBeNull(); // its own face: nothing pasted on a gesture
-    expect(waving.scale).toBe(1);
-    const talking = at(0, 1.7);
-    expect(talking.body).toBe("calm__closed");
+    expect(at(0, 0.4).picture).toBe("gesture-wave"); // its own face, mouth as drawn
+    expect(at(0, 0.4).scale).toBe(1);
+  });
+
+  it("blinks only on the calm face with the mouth closed", () => {
+    const blinkFrame = Array.from({ length: 300 }, (_, frame) => frame).find((frame) => isBlinking(frame, FPS, "Lina"));
+    expect(blinkFrame).toBeDefined();
   });
 });
