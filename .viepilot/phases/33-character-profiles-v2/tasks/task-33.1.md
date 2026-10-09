@@ -20,6 +20,14 @@ Create additive migration 018, extend existing character records in place, pin p
 3. Register current Lina/Alex sprite files as version 1 asset rows through an idempotent post-migration command; retain `sprite_set.json` as a derived compatibility manifest.
 4. Add child-key indexes, foreign-key checks, migration rollback cleanup, and a rehearsal command that accepts copied DB/data roots only.
 
+## Implementation Notes
+
+- **Authorization:** the owner's `/vp-auto thực hiện` instruction on 2026-10-10 authorizes implementation while leaving Phase 32 Gate B-22 pending.
+- **Files touched:** only the six paths listed above plus ViePilot state/changelog files required by `vp-auto`.
+- **SQLite safeguards:** keep foreign keys enabled in application connections, rebuild `project_cast` transactionally, index child keys, and keep image/file scanning outside database write transactions.
+- **Compatibility:** existing IDs, paths, voice rows, and sprite manifests remain unchanged; registration adds metadata rows only.
+- **Expected verification:** fresh migrations pass, normal migration runner records 018 once across two starts, copied real data passes `foreign_key_check`, and duplicate character assignment is rejected.
+
 ## Verification
 
 - Apply all migrations to an empty temporary DB.
