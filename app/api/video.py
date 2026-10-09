@@ -17,6 +17,7 @@ from app.db.database import get_db
 from app.models.project import ProjectUpdate
 from app.models.video import GenerateVideoRequest
 from app.services import audio_service, learning_service, project_service, video_service, video_renderer_remotion
+from app.services.visuals import activity_library_service as activity_library
 
 router = APIRouter(prefix="/api/projects/{project_id}/video", tags=["video"])
 templates_router = APIRouter(prefix="/api/video", tags=["video"])
@@ -98,6 +99,10 @@ async def generate_video(
             background_image=result["background_image"],
             commit=False,
         )
+        for usage in result.get("activity_uses", []):
+            await activity_library.record_usage(
+                db, usage["activity_id"], project_id, usage.get("beat_id"), job["id"],
+            )
         if project["status"] == "audio_generated":
             await project_service.update_project(
                 db, project_id, ProjectUpdate(status="video_generated"), commit=False

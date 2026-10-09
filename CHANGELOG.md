@@ -14,6 +14,10 @@ Versioning: [SemVer](https://semver.org/)
   recursive inbox import, duplicate and image validation, approve/reject states, safe local
   content serving and persistent per-render usage history. Pending/rejected images cannot enter
   matching or usage rotation.
+- **Activity matching and pre-render coverage (2026-10-09).** Insert beats prefer an
+  approved image of the speaking character, then a matching generic image, and otherwise
+  keep the existing talking-sprite scene. Step 5 reports character/generic totals and names
+  every missing action; successful renders record the chosen image, beat and video job.
 - **Activity Library smart upload (2026-10-09).** Choose Alex, Lina or Generic and add one
   or many activity pictures; the app's dedicated local Qwen3-VL 4B Q4 model proposes the
   activity, context and matching aliases. Pictures remain “Needs review” until approved.

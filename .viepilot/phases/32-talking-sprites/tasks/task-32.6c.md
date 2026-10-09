@@ -29,6 +29,20 @@ Select approved activity images deterministically for storyboard insert beats an
 
 ## Acceptance Criteria
 
-- [ ] Character-specific > generic > existing sprites fallback.
-- [ ] No asset for another named character can match.
-- [ ] Step 5 reports coverage before render and explains missing items.
+- [x] Character-specific > generic > existing sprites fallback.
+- [x] No asset for another named character can match.
+- [x] Step 5 reports coverage before render and explains missing items.
+
+## Result — 2026-10-09
+
+- Matching is deterministic and explainable: canonical activity/aliases qualify a candidate,
+  context raises its score, character scope outranks generic, another character is excluded,
+  and equal variants rotate by use count, oldest use and stable ID.
+- The project coverage API returns per-beat `character`, `generic` or `missing` status plus
+  aggregate counts. Every missing action explicitly declares `sprites` as its safe fallback.
+- Step 5 shows character/generic totals and names each missing action before render.
+- A successful Remotion render returns its selected activity IDs; the video route records their
+  beat and final video-job ID inside the same transaction that publishes the successful job.
+  Preview, coverage, and failed/fallback renders do not increment usage.
+- Verification: required matcher/browser gate 9 passed; broader Activity Library, sprite-props
+  and video-API regression gate 45 passed; targeted Ruff and `git diff --check` passed.

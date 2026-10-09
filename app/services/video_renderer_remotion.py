@@ -350,7 +350,7 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
         logger.warning("sprite_loudness_unavailable project_id=%s reason=%s -- mouths follow the words", project_id, exc)
         loudness = None
     plan = sprite_plan.build_plan(lines, line_slots, beat_expressions, available, loudness, VIDEO_FPS)
-    candidates, cutaways = await activity_library.approved_candidates(db), []
+    candidates, cutaways, activity_uses = await activity_library.approved_candidates(db), [], []
     for beat in beats or []:
         if beat["kind"] != "insert" or beat["line_from"] >= len(lines):
             continue
@@ -368,8 +368,9 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
         if end > start:
             cutaways.append({"startSec": start, "endSec": end,
                              "url": f"remotion-render/sprites/{project_id}/activities/{destination.name}"})
+            activity_uses.append({"activity_id": selected["activity_id"], "beat_id": beat["id"]})
     return {"characters": characters, "lines": plan, "backgrounds": backgrounds, "lineBackgrounds": line_backgrounds,
-            "cutaways": cutaways}
+            "cutaways": cutaways, "_activityUses": activity_uses}
 
 
 async def _build_input_props(
@@ -588,6 +589,9 @@ async def render_via_remotion(
     project_id = project["id"]
     input_props = await _build_input_props(db, project, audio_job, learning, caption_style,
                                            visual_mode=visual_mode, still_scene_id=still_scene_id)
+    # Private backend metadata is not part of the Remotion schema. Preserve it for
+    # the caller, but never write it into the props JSON consumed by the renderer.
+    activity_uses = input_props.get("sprites", {}).pop("_activityUses", [])
     await asyncio.to_thread(_copy_audio_into_public, project_id, audio_job["mp3_path"])
     voices = await _add_brand(project_id, input_props)
     soundtrack = await _build_soundtrack(project_id, audio_job, input_props, voices)
@@ -596,7 +600,8 @@ async def render_via_remotion(
         if "brand" in input_props:
             input_props["brand"]["voicesInSoundtrack"] = bool(voices)
     result = await asyncio.to_thread(_render_via_remotion_sync, input_props, output_path)
-    return {**result, "soundtrack": soundtrack is not None, "brand_voice": bool(voices)}
+    return {**result, "soundtrack": soundtrack is not None, "brand_voice": bool(voices),
+            "activity_uses": activity_uses}
 
 
 def _copy_brand_voice(source: str) -> str:

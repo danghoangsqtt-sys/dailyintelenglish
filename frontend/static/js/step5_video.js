@@ -629,7 +629,14 @@
       const coverage = await Api.getActivityCoverage(state.projectId);
       if (!coverage.items.length) { line.hidden = true; return; }
       line.hidden = false;
-      line.textContent = `Activity cutaways: ${coverage.matched} matched; ${coverage.missing} missing (missing beats keep talking sprites).`;
+      const missing = coverage.items
+        .filter((item) => item.status === "missing")
+        .map((item) => item.action || `insert ${item.position + 1}`);
+      const fallback = missing.length
+        ? ` Missing → sprite fallback (${missing.length}): ${missing.join(", ")}.`
+        : " No sprite fallback needed.";
+      line.textContent = `Activity cutaways: ${coverage.matched} matched `
+        + `(${coverage.character} character, ${coverage.generic} generic).${fallback}`;
     } catch {
       line.hidden = true;
     }

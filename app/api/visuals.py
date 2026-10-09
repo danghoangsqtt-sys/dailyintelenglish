@@ -478,9 +478,14 @@ async def activity_coverage(project_id: str, db: aiosqlite.Connection = Depends(
         dialogue = " ".join(line["text"] for line in lines if beat["line_from"] <= line["line_index"] <= beat["line_to"])
         found = activity_matcher.match_activity(candidates, character_id, beat.get("action") or "", dialogue)
         items.append({"beat_id": beat["id"], "position": beat["position"], "action": beat.get("action") or "",
-                      "status": "matched" if found else "missing", "match": {key: value for key, value in found.items() if key != "asset"} if found else None})
-    return ok({"items": items, "matched": sum(item["status"] == "matched" for item in items),
-               "missing": sum(item["status"] == "missing" for item in items)})
+                      "status": found["match_type"] if found else "missing",
+                      "fallback": None if found else "sprites",
+                      "match": {key: value for key, value in found.items() if key != "asset"} if found else None})
+    character = sum(item["status"] == "character" for item in items)
+    generic = sum(item["status"] == "generic" for item in items)
+    missing = sum(item["status"] == "missing" for item in items)
+    return ok({"items": items, "matched": character + generic, "character": character,
+               "generic": generic, "missing": missing, "sprite_fallback": missing})
 
 
 @project_router.get("")
