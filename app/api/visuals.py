@@ -1,12 +1,14 @@
 """Character, scene, and project visuals API."""
 
 import asyncio
+import io
+import json
 import time
 from typing import Literal
 
 import aiosqlite
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
@@ -15,8 +17,8 @@ from app.db.database import get_db
 from app.db.transactions import read_transaction, write_transaction
 from app.models.visuals import (
     AGE_GROUPS, BOTTOMS, COLORS, GENDERS, SCENE_CATEGORIES, TIMES_OF_DAY, TOPS, ActivityMetadataInput,
-    ActivityMetadataPatch, ActivityReviewInput, ApprovalInput, CastMemberInput, CharacterInput, CharacterPatch,
-    ReferenceInput, SceneInput, ScenePatch, SheetItemInput, ShotReviewInput,
+    ActivityMetadataPatch, ActivityReviewInput, ApprovalInput, CastMemberInput, CharacterAssetReviewInput,
+    CharacterInput, CharacterPatch, ReferenceInput, SceneInput, ScenePatch, SheetItemInput, ShotReviewInput,
 )
 from app.services import project_service
 from app.services.visuals import jobs
@@ -24,11 +26,13 @@ from app.services.visuals import activity_analysis_service as activity_analysis
 from app.services.visuals import activity_library_service as activity_library
 from app.services.visuals import activity_matcher
 from app.services.visuals import character_profile_service as character_profiles
+from app.services.visuals import character_asset_service as character_assets
 from app.services.visuals import library_service as library
 from app.services.visuals import project_visuals_service as project_visuals
 from app.services.visuals import shot_library_service as shot_library
 from app.services.visuals import sprite_service
 from app.services.visuals import storyboard_service
+from app.services.visuals.image_upload import prepare_image, read_upload
 from app.services.visuals.engine import IMAGE_PYTHON, require_generation
 
 router = APIRouter(prefix="/api/visuals", tags=["visuals"])
@@ -175,6 +179,126 @@ async def generate_sheet(
     if body and len(body) != 1:
         raise ValidationError("Request all sheet assets or exactly one kind")
     return await _enqueue(db, "character_sheet", character_id, {"kind": body[0].kind} if body else {})
+
+
+@router.get("/characters/{character_id}/asset-slots")
+async def list_character_asset_slots(character_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with read_transaction():
+        result = await character_assets.asset_slots(db, character_id)
+    return ok(result)
+
+
+@router.post("/characters/{character_id}/assets/upload-batch")
+async def upload_character_asset_batch(
+    character_id: str,
+    pictures: list[UploadFile] = File(...),
+    mapping_json: str = Form(...),
+    expected_identity_version: int = Form(..., ge=1),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    if not 1 <= len(pictures) <= 40:
+        raise ValidationError("Choose between 1 and 40 character pictures")
+    try:
+        mapping = json.loads(mapping_json)
+    except json.JSONDecodeError as exc:
+        raise ValidationError("mapping_json must be valid JSON") from exc
+    if not isinstance(mapping, list) or len(mapping) != len(pictures):
+        raise ValidationError("Map every selected picture exactly once")
+    indexes = [item.get("file_index") for item in mapping if isinstance(item, dict)]
+    slots = [item.get("slot_key") for item in mapping if isinstance(item, dict)]
+    if sorted(indexes) != list(range(len(pictures))) or len(set(slots)) != len(slots):
+        raise ValidationError("Batch mapping must use each file index and canonical slot once")
+    async with read_transaction():
+        initial = await library.get_character_row(db, character_id)
+    if initial["identity_version"] != expected_identity_version:
+        raise ConflictError("Character identity changed; reload the profile before uploading")
+    raw: dict[int, tuple[str, bytes] | str] = {}
+    for index, picture in enumerate(pictures):
+        try:
+            raw[index] = await read_upload(picture)
+        except ValidationError as exc:
+            raw[index] = str(exc)
+    prepared: list[tuple[str, str, object | None, bool, str | None]] = []
+    for item in mapping:
+        value = raw[item["file_index"]]
+        if isinstance(value, str):
+            prepared.append((item["slot_key"], "", None, False, value))
+            continue
+        filename, content = value
+        try:
+            contract = character_assets.get_contract(item["slot_key"])
+            image = await prepare_image(content, contract)
+            prepared.append((item["slot_key"], filename, image, bool(item.get("replace_identity", False)), None))
+        except ValidationError as exc:
+            prepared.append((item["slot_key"], filename, None, False, str(exc)))
+    results = []
+    for slot_key, filename, image, replace_identity, preparation_error in prepared:
+        if preparation_error:
+            results.append({"slot_key": slot_key, "success": False, "error": preparation_error})
+            continue
+        try:
+            async with write_transaction(db):
+                current = await library.get_character_row(db, character_id)
+                result = await character_assets.store_prepared(
+                    db, character_id, slot_key, filename, image, current["identity_version"],
+                    replace_identity=replace_identity,
+                )
+            results.append({"slot_key": slot_key, "success": True, "asset": result})
+        except (ConflictError, ValidationError) as exc:
+            results.append({"slot_key": slot_key, "success": False, "error": str(exc)})
+    return ok(results)
+
+
+@router.post("/characters/{character_id}/assets/{slot_key}/upload")
+async def upload_character_asset(
+    character_id: str,
+    slot_key: str,
+    picture: UploadFile = File(...),
+    expected_identity_version: int = Form(..., ge=1),
+    replace_identity: bool = Form(False),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    filename, content = await read_upload(picture)
+    prepared = await prepare_image(content, character_assets.get_contract(slot_key))
+    async with write_transaction(db):
+        result = await character_assets.store_prepared(
+            db, character_id, slot_key, filename, prepared, expected_identity_version,
+            replace_identity=replace_identity,
+        )
+    return ok(result)
+
+
+@router.put("/characters/{character_id}/assets/{asset_id}/review")
+async def review_character_asset(
+    character_id: str,
+    asset_id: str,
+    body: CharacterAssetReviewInput,
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    async with write_transaction(db):
+        result = await character_assets.review_asset(db, character_id, asset_id, body.review_state)
+    return ok(result)
+
+
+@router.delete("/characters/{character_id}/assets/{asset_id}")
+async def remove_character_asset(
+    character_id: str, asset_id: str, db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    async with write_transaction(db):
+        path = await character_assets.remove_asset(db, character_id, asset_id)
+    if path is not None:
+        await asyncio.to_thread(path.unlink, missing_ok=True)
+    return ok({"removed": asset_id})
+
+
+@router.get("/characters/{character_id}/prompt-pack")
+async def character_prompt_pack(character_id: str, db: aiosqlite.Connection = Depends(get_db)) -> StreamingResponse:
+    async with read_transaction():
+        filename, content = await character_assets.prompt_pack(db, character_id)
+    return StreamingResponse(
+        io.BytesIO(content), media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.put("/characters/{character_id}/assets/{asset_id}/approve")

@@ -3,7 +3,7 @@
   "version": "1.2.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_33_task_33_2_complete",
+  "status": "phase_33_task_33_3_complete",
   "current_phase": "33",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
@@ -267,9 +267,9 @@
     "33": {
       "name": "Character Profiles v2",
       "status": "in_progress",
-      "tasks_done": 2,
+      "tasks_done": 3,
       "tasks_total": 9,
-      "note": "Tasks 33.1-33.2 complete 2026-10-10. Versioned schema plus profile/readiness/lifecycle API pass 17 profile and legacy API regressions. Next: 33.3 asset slots and upload. Phase 32 Gate B-22 remains pending."
+      "note": "Tasks 33.1-33.3 complete 2026-10-10. Canonical 34-slot direct/batch upload, validation, review, versioning and prompt ZIP pass 24 regressions. Next: 33.4 Character Library wizard. Phase 32 Gate B-22 remains pending."
     }
   },
   "key_decisions": [

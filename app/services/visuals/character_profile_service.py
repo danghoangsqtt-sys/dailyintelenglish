@@ -74,13 +74,19 @@ async def readiness(db: aiosqlite.Connection, row: dict, assets: list[dict] | No
     ]
     approved = {
         asset.get("slot_key") or asset["kind"] for asset in assets
-        if asset.get("is_current", 1) and (asset.get("review_state") == "approved" or asset.get("approved"))
+        if asset.get("identity_version", row["identity_version"]) == row["identity_version"]
+        and asset.get("is_current", 1)
+        and (asset.get("review_state") == "approved" or asset.get("approved"))
     }
     # Phase 20 locked profiles already passed the four-sheet review. Their face row was
     # an internal crop rather than a separately reviewed asset.
     if row.get("status") == "locked" and any(asset["kind"] == "face" for asset in assets):
         approved.add("face")
-    sprite_names = {asset.get("slot_key") for asset in assets if asset.get("kind") == "sprite" and asset.get("approved")}
+    sprite_names = {
+        asset.get("slot_key") for asset in assets
+        if asset.get("kind") == "sprite" and asset.get("approved")
+        and asset.get("identity_version", row["identity_version"]) == row["identity_version"]
+    }
     legacy_set = sprite_service.load_set(row["id"])
     if legacy_set:
         sprite_names.update(legacy_set["names"])

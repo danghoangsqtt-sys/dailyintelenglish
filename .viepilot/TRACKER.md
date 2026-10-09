@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Now (2026-10-10):** Phase 33 Tasks 33.1–33.2 are complete while Phase 32 Gate B-22 remains pending. The app now has versioned profile storage plus a reusable profile domain/API with name-only drafts, step autosave, independent readiness explanations, search/filter, duplicate, archive/restore, dependency reports and safe permanent deletion. Regression: 17 profile and legacy Character/Project API tests pass. Next: Task 33.3 asset slots, direct upload, validation, review and prompt export.
+**Now (2026-10-10):** Phase 33 Tasks 33.1–33.3 are complete while Phase 32 Gate B-22 remains pending. Profiles now include a canonical 34-slot asset contract, bounded direct/batch upload, PNG normalization, sprite transparency/alignment checks, explicit review, prompt-pack export and identity-version stale propagation. Asset/profile/legacy API regression: 24 passed. Next: Task 33.4 Character Library and ten-step wizard.
 
 **Now (2026-10-07, after /vp-auto):** Phases 27 (rebrand and studio frame), 28 (editorial photo look, Lan and Minh), 29 (shot library: gaze, inserts with a character, library, matcher, UI, batch, vocabulary spike) and 30 (podcast pictures: black screen, one still scene) are built and pushed; the full suite passes and `dist/DailyIntelEnglishStudio` was rebuilt and smoke-tested. **Waiting for the owner:** review the 27 library pictures on `/shots` (docs/operations/phase29-library-batch-*.png), Gate B-19 (pages and an episode), Gate B-20 (the photo-look episode), Gate B-21 (time an episode against drawing everything), and the four library questions (GPU hours, scenes first, gesture list, repetition) in `docs/implementation/phase-29-shot-library.md`.
 

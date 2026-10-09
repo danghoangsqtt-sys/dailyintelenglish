@@ -210,6 +210,10 @@ class ApprovalInput(BaseModel):
     approved: bool
 
 
+class CharacterAssetReviewInput(BaseModel):
+    review_state: Literal["needs_review", "approved", "rejected"]
+
+
 class SheetItemInput(BaseModel):
     kind: Literal["full_body", "portrait_calm", "portrait_smile", "portrait_surprised"]
 

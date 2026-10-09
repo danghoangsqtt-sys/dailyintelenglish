@@ -9,6 +9,7 @@ Make profile assets manageable through explicit canonical slots with safe direct
 - `app/models/visuals.py`
 - `app/api/visuals.py`
 - `app/services/visuals/character_asset_service.py`
+- `app/services/visuals/character_profile_service.py`
 - `app/services/visuals/image_upload.py`
 - `app/services/visuals/sprite_service.py`
 - `tests/test_character_asset_upload.py`
@@ -37,8 +38,14 @@ Make profile assets manageable through explicit canonical slots with safe direct
 
 ## Acceptance Criteria
 
-- [ ] Uploading into a slot always assigns that slot's canonical key.
-- [ ] A corrupt, oversized, or invalid replacement cannot damage the current approved asset.
-- [ ] Technically valid uploads start as `needs_review`.
-- [ ] Changing an identity base marks dependent assets stale while retaining prior version files.
+- [x] Uploading into a slot always assigns that slot's canonical key.
+- [x] A corrupt, oversized, or invalid replacement cannot damage the current approved asset.
+- [x] Technically valid uploads start as `needs_review`.
+- [x] Changing an identity base marks dependent assets stale while retaining prior version files.
+
+## Verification Result — PASS (2026-10-10)
+
+- Asset upload/slot/profile regression: **24 passed**.
+- Ruff on changed Python and `git diff --check`: PASS.
+- Verified single and explicit batch mapping, PNG/JPEG/WebP normalization, exact transparent sprite canvas, current-slot review/remove, failed replacement preservation, prompt ZIP and identity-version stale propagation.
 
