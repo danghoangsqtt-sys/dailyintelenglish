@@ -3,7 +3,7 @@
   "version": "1.2.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_32_activity_cutaways_32_6f_next_tests_demo_render",
+  "status": "phase_32_waiting_owner_gate_b22",
   "current_phase": "32",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
@@ -260,9 +260,9 @@
     "32": {
       "name": "Talking characters as sprites, visual-novel style (ENH-023)",
       "status": "in_progress",
-      "tasks_done": 10,
+      "tasks_done": 11,
       "tasks_total": 12,
-      "note": "32.1-32.5 done 2026-10-08; 32.6a-e done 2026-10-09. Activity Library has 156 real pending records; smart upload is local/review-gated; matching is character > generic > sprite fallback; Remotion cutaways are full-frame, capped at 6 s with 0.3 s fades while audio/overlays continue. Storyboard inserts target 3-6 s and the canonical D72 pack matches all 20 real generic/common files. Next 32.6f tests/demo, then owner Gate B-22."
+      "note": "32.1-32.5 done 2026-10-08; 32.6a-f done 2026-10-09. Activity Library import/review, smart local metadata, character > generic > sprite matching, Step 5 coverage, full-frame 6 s cutaways with 0.3 s fades, storyboard guidance and D72 prompt pack are complete. Task 32.6f passed 1,646 Python tests plus 65 Vitest tests and rendered Demo Episode with exactly 3 approved generic inserts, no fallback and continuous audio/captions. Baseline and candidate are ready; waiting only for owner Gate B-22. Phase 33 remains unopened."
     }
   },
   "key_decisions": [

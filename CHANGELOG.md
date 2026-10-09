@@ -9,6 +9,12 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Added (Phase 32 — talking characters, 2026-10-08)
+- **Verified Demo Episode with activity cutaways (2026-10-09).** The real production
+  Remotion path rendered three approved generic inserts (morning routine, exercise and
+  cooking), persisted their usage history, kept captions/vocabulary/audio continuous and
+  did not fall back. Full verification covered 1,646 Python tests, 65 Vitest tests,
+  TypeScript, Ruff, ffprobe, full decode and transition-frame inspection. The prior
+  talking-sprites preview is preserved for owner Gate B-22 comparison.
 - **Review-gated Activity Library backend (2026-10-09).** Reusable 16:9 activity images
   support generic or character-specific scopes, normalized activity/context/alias metadata,
   recursive inbox import, duplicate and image validation, approve/reject states, safe local

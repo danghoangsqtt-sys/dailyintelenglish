@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 32: Talking characters as sprites, visual-novel style (ENH-023)
 
-- **Status:** in progress 2026-10-08: both sprite packs complete (Alex and Lina, 22 pictures each, check 0 failed). **Plan:** `docs/implementation/phase-32-talking-sprites.md`; implementation decisions D32-a to D32-i in `tasks/task-32.1-32.4.md`.
+- **Status:** in progress 2026-10-09: Tasks 32.1–32.6f complete; waiting for owner Gate B-22 (32.7). Phase 33 remains unopened. **Plan:** `docs/implementation/phase-32-talking-sprites.md`; implementation decisions D32-a to D32-i in `tasks/task-32.1-32.4.md`.
 
 | Task | Description | Status |
 |---|---|---|
@@ -14,8 +14,8 @@
 | 32.6c | Deterministic activity matching and Step 5 coverage | done 2026-10-09 (character > generic > sprite fallback; 45 related tests) |
 | 32.6d | Full-screen activity cutaways in the Remotion sprite composition | done 2026-10-09 (6 s cap, 0.3 s fades, overlays/audio preserved) |
 | 32.6e | Storyboard insert guidance and the 20-image generic prompt pack | done 2026-10-09 (D72 names/prompts locked; 20/20 real assets verified) |
-| 32.6f | Automated verification and Demo Episode render with three cutaways | planned |
-| 32.7 | Gate B-22: owner comparison of illustrated talking sprites and talking-sprites baseline | planned |
+| 32.6f | Automated verification and Demo Episode render with three cutaways | done 2026-10-09 (1,646 Python + 65 Vitest; real render, 3/3 matched, no fallback, continuous audio/captions) |
+| 32.7 | Gate B-22: owner comparison of updated cutaways and talking-sprites baseline | waiting for owner review |
 
 ## Owner review of the preview (2026-10-08)
 

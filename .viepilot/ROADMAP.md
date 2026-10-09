@@ -1451,5 +1451,5 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 - [x] 32.6c Activity matching and Step 5 coverage before render (2026-10-09)
 - [x] 32.6d Full-screen activity cutaways in `podcast_sprites` (2026-10-09)
 - [x] 32.6e Storyboard insert guidance and generic-activity prompt pack (2026-10-09)
-- [ ] 32.6f Tests and Demo Episode render with three insert beats
+- [x] 32.6f Tests and Demo Episode render with three insert beats (2026-10-09)
 - [ ] 32.7 Gate B-22 (owner): compare the updated video against the talking-sprites baseline
