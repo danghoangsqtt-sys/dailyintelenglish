@@ -126,11 +126,16 @@ export const spriteLineSchema = z.object({
   mouth: z.array(z.tuple([z.number(), z.number()])),
 });
 
+export const spriteCutawaySchema = z.object({
+  startSec: z.number().min(0), endSec: z.number().min(0), url: z.string(),
+}).refine((item) => item.endSec > item.startSec && item.endSec - item.startSec <= 6);
+
 export const episodeSpritesSchema = z.object({
   characters: z.array(spriteCharacterSchema),
   lines: z.array(spriteLineSchema),
   backgrounds: z.record(z.string(), z.string()).default({}),
   lineBackgrounds: z.array(z.string().nullable()).default([]),
+  cutaways: z.array(spriteCutawaySchema).default([]),
 });
 
 /** Phase 25 (D52-D55): the branded intro/outro -- Jenny's greeting + wish and farewell. Optional,

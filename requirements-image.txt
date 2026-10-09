@@ -10,7 +10,7 @@
 #
 # Setup (owner's machine, Python 3.14):
 #   py -3.14 -m venv venv-image
-#   venv-image\Scripts\pip install torch --index-url https://download.pytorch.org/whl/cu128
+#   venv-image\Scripts\pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 #   venv-image\Scripts\pip install -r requirements-image.txt
 #   venv-image\Scripts\python -c "import torch; print(torch.version.cuda, torch.cuda.is_available())"
 #   -> must print a CUDA version and True. Plain PyPI gives Windows a CPU-only torch (Task
@@ -29,6 +29,9 @@ diffusers==0.40.0
 transformers==5.17.0
 accelerate==1.15.0
 safetensors==0.8.0
+# Qwen3-VL's image/video processor imports torchvision. Install its `+cu128`
+# wheel with torch using the command above before installing this file.
+torchvision==0.26.0
 huggingface-hub==1.33.0
 pillow==12.3.0
 psutil==7.2.2
@@ -36,3 +39,7 @@ psutil==7.2.2
 # No downloaded code executes, unlike BiRefNet's trust_remote_code loader. Verified to
 # install + import on Python 3.14 (2026-09-30).
 onnxruntime==1.30.0
+
+# Phase 32.6b Activity Vision reuses this isolated CUDA/Transformers environment.
+# Qwen3-VL is implemented natively by the pinned Transformers release; no
+# trust_remote_code, qwen-vl-utils or extra quantization runtime is required.

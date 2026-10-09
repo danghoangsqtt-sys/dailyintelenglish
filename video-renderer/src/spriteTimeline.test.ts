@@ -3,7 +3,7 @@ import { podcastLayer } from "./podcastLayout";
 import {
   SPEAKER_GESTURE_SEC, gestureAt,
   BACKGROUND_FADE_FRAMES, LISTENER_BRIGHTNESS, SPRITE_HEIGHT, canvasBox, heldLineIndex, isBlinking, isMouthOpen,
-  spriteBackground, spriteFrame, stageTop,
+  activityCutawayAt, spriteBackground, spriteFrame, stageTop,
 } from "./spriteTimeline";
 import { episodeInputPropsSchema, type EpisodeLine, type EpisodeSprites, type SpriteCharacter } from "./types";
 
@@ -34,6 +34,7 @@ const sprites: EpisodeSprites = {
   ],
   backgrounds: { cafe: "remotion-render/sprites/p/bg/cafe.png", park: "remotion-render/sprites/p/bg/park.png" },
   lineBackgrounds: ["cafe", "cafe", "park"],
+  cutaways: [],
 };
 
 const total = 7 * FPS;
@@ -111,6 +112,15 @@ describe("Phase 32 talking sprites", () => {
     expect(middle.current).toBe(sprites.backgrounds.park);
     expect(middle.opacity).toBeCloseTo(0.5);
     expect(spriteBackground(change + BACKGROUND_FADE_FRAMES, FPS, timeline, sprites).previous).toBeNull();
+  });
+
+  it("cross-fades an approved activity cutaway for its bounded interval only", () => {
+    const withCutaway = { ...sprites, cutaways: [{ startSec: 2, endSec: 5, url: "activity.png" }] };
+    expect(activityCutawayAt(1.99, withCutaway)).toBeNull();
+    expect(activityCutawayAt(2, withCutaway)?.opacity).toBe(0);
+    expect(activityCutawayAt(2.15, withCutaway)?.opacity).toBeCloseTo(0.5);
+    expect(activityCutawayAt(4.85, withCutaway)?.opacity).toBeCloseTo(0.5);
+    expect(activityCutawayAt(5, withCutaway)).toBeNull();
   });
 
   it("stands both canvases on the stage with the highest head near the top", () => {

@@ -6,7 +6,7 @@ import React from "react";
 import { AbsoluteFill, Img, staticFile, useVideoConfig } from "remotion";
 import { BOTTOM_SHADE_STYLE } from "./captionStyle";
 import { stillScale } from "./podcastLayout";
-import { canvasBox, spriteBackground, spriteFrame } from "./spriteTimeline";
+import { activityCutawayAt, canvasBox, spriteBackground, spriteFrame } from "./spriteTimeline";
 import type { EpisodeLine, EpisodeSprites, SpriteCharacter } from "./types";
 
 const FILL: React.CSSProperties = { position: "absolute", width: "100%", height: "100%", objectFit: "cover" };
@@ -32,6 +32,7 @@ export function SpriteStage({ sprites, lines, fps, frame, totalFrames, progress 
   sprites: EpisodeSprites; lines: EpisodeLine[]; fps: number; frame: number; totalFrames: number; progress: number;
 }) {
   const background = spriteBackground(frame, fps, lines, sprites);
+  const cutaway = activityCutawayAt(frame / fps, sprites);
   const zoom = `scale(${stillScale(progress).toFixed(4)})`;
   return (
     <AbsoluteFill style={{ overflow: "hidden", backgroundColor: "#000000" }}>
@@ -43,6 +44,7 @@ export function SpriteStage({ sprites, lines, fps, frame, totalFrames, progress 
         <Sprite key={character.slot} character={character} frame={frame} fps={fps} lines={lines} sprites={sprites}
           totalFrames={totalFrames} />
       ))}
+      {cutaway ? <Img src={staticFile(cutaway.url)} style={{ ...FILL, opacity: cutaway.opacity }} /> : null}
       <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: "18%",
         background: "linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0))" }} />
       <div style={BOTTOM_SHADE_STYLE} />

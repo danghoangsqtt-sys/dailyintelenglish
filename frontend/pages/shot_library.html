@@ -39,6 +39,25 @@
     .message-error { color: var(--danger); background: rgba(248, 81, 73, 0.1); }
     .empty-state { padding: 54px 20px; text-align: center; color: var(--text-muted); }
     .delete-btn:hover { border-color: var(--danger); color: var(--danger); }
+    .activity-section { margin-top: 42px; padding-top: 28px; border-top: 1px solid var(--surface-border); }
+    .activity-section h2 { margin: 0 0 8px; font-size: 21px; }
+    .activity-dialog { width: min(720px, calc(100vw - 36px)); color: var(--text); background: var(--surface); border: 1px solid var(--surface-border); border-radius: 14px; padding: 18px; }
+    .activity-dialog::backdrop { background: rgba(0, 0, 0, .6); }
+    .activity-dialog-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, .8fr); gap: 18px; }
+    .activity-dialog img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 9px; background: #000; }
+    .activity-editor { display: grid; gap: 10px; }
+    .activity-editor label { display: grid; gap: 5px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .activity-editor input, .activity-editor select { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--surface-border); border-radius: 8px; color: inherit; background: var(--bg); font: inherit; }
+    .activity-upload-placeholder { display: grid; place-items: center; min-height: 220px; margin: 0; padding: 18px; border: 1px dashed var(--surface-border); border-radius: 9px; color: var(--text-muted); text-align: center; }
+    .activity-targets { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 10px; margin: 10px 0 16px; }
+    .activity-target { display: grid; justify-items: center; gap: 7px; min-height: 112px; padding: 10px; color: var(--text); background: var(--surface-2, var(--surface)); border: 2px solid var(--surface-border); border-radius: 12px; cursor: pointer; }
+    .activity-target:hover { border-color: var(--accent); }
+    .activity-target.is-selected { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124, 58, 237, .18); }
+    .activity-target img, .activity-target-icon { width: 58px; height: 58px; border-radius: 50%; object-fit: cover; background: rgba(124, 58, 237, .15); }
+    .activity-target-icon { display: grid; place-items: center; font-size: 26px; }
+    .activity-target-name { font-weight: 700; text-align: center; }
+    .activity-upload-note { padding: 10px 12px; border-radius: 9px; background: rgba(124, 58, 237, .1); color: var(--text-muted); }
+    @media (max-width: 680px) { .activity-dialog-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -104,6 +123,28 @@
       <ul id="sprite-sets" class="import-result" aria-label="Sprite sets"></ul>
       <ul id="sprite-result" class="import-result" role="status"></ul>
     </details>
+    <section class="activity-section" aria-labelledby="activity-library-heading">
+      <div class="library-heading">
+        <div><h2 id="activity-library-heading">Activity Library</h2>
+          <p class="shot-summary">Choose Alex, Lina or Generic and add pictures. AI describes their activities automatically; you only review the result.</p>
+        </div>
+        <button id="activity-upload-open" class="btn btn-primary" type="button">Add activity pictures</button>
+      </div>
+      <details class="import-card" id="activity-import-card">
+        <summary>Advanced: import a prepared folder</summary>
+        <p>For bulk work, the filename format remains <code>generic__activity__context__variant.png</code> or
+          <code>alex__activity__context__variant.png</code> under <code>data/library/activities_inbox</code>.</p>
+        <div class="import-row"><button id="activity-import-btn" class="btn btn-primary" type="button">Import activity pictures</button></div>
+        <ul id="activity-import-result" class="import-result" role="status"></ul>
+      </details>
+      <div class="shot-filters" role="group" aria-label="Activity filters">
+        <label>Scope <select id="activity-filter-scope"><option value="">All</option><option value="generic">Generic</option><option value="character">Character</option></select></label>
+        <label>Review <select id="activity-filter-state"><option value="">All</option><option value="pending">Needs review</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></label>
+      </div>
+      <p id="activity-count" class="shot-summary" role="status"></p>
+      <div id="activity-grid" class="shot-grid"></div>
+      <div id="activity-empty" class="empty-state" hidden>Press “Add activity pictures” to add the first reusable illustration.</div>
+    </section>
     <div class="shot-filters" role="group" aria-label="Filters">
       <label>Scene <select id="filter-scene"><option value="">All scenes</option></select></label>
       <label>Framing <select id="filter-kind"><option value="">All</option><option value="single">Single</option><option value="duo_close">Duo close</option><option value="duo_wide">Duo wide</option></select></label>
@@ -117,6 +158,44 @@
       <span>No pictures yet. In Step 5, press "Add to library" under a finished shot, or let the batch builder fill the library.</span>
     </div>
   </main>
+  <dialog id="activity-dialog" class="activity-dialog" aria-labelledby="activity-dialog-title">
+    <form id="activity-editor-form" method="dialog">
+      <div class="activity-dialog-grid">
+        <div><img id="activity-preview" alt="Activity preview" /></div>
+        <div class="activity-editor">
+          <h2 id="activity-dialog-title">Review activity picture</h2>
+          <label>Scope <select id="activity-character"><option value="">Generic</option></select></label>
+          <label>Activity <input id="activity-name" required maxlength="80" /></label>
+          <label>Context tags <input id="activity-context" placeholder="morning, outdoor" /></label>
+          <label>Aliases <input id="activity-aliases" placeholder="work out, exercise" /></label>
+          <label>Variant <input id="activity-variant" maxlength="80" /></label>
+          <p id="activity-history" class="shot-summary"></p>
+          <div class="library-actions"><button id="activity-save-btn" class="btn btn-primary" type="submit">Save metadata</button><button id="activity-close-btn" class="btn btn-ghost" type="button">Close</button></div>
+        </div>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="activity-upload-dialog" class="activity-dialog" aria-labelledby="activity-upload-title">
+    <form id="activity-upload-form">
+      <div class="activity-dialog-grid">
+        <div>
+          <img id="activity-upload-preview" alt="Selected activity image preview" hidden />
+          <p id="activity-upload-placeholder" class="activity-upload-placeholder">Choose one or more 16:9 PNG, JPEG, or WebP images (at least 640×360).</p>
+        </div>
+        <div class="activity-editor">
+          <h2 id="activity-upload-title">Add activity pictures</h2>
+          <p class="shot-summary">Who should these pictures belong to?</p>
+          <div id="activity-upload-targets" class="activity-targets" role="radiogroup" aria-label="Picture shelf"></div>
+          <input id="activity-upload-character" name="character_id" type="hidden" value="" />
+          <label>Pictures <input id="activity-upload-file" name="files" type="file" accept="image/png,image/jpeg,image/webp" multiple required /></label>
+          <p id="activity-upload-selection" class="shot-summary">No pictures selected.</p>
+          <p class="activity-upload-note">AI will identify the visible activity, context and useful alternative phrases. Every picture starts as “Needs review” before it can be used in a video.</p>
+          <details class="shot-summary"><summary>How AI analysis works</summary><p>By default, a dedicated Qwen vision model analyzes a resized copy locally on this computer. The model closes after the batch to release GPU memory. Cloud fallback is used only when explicitly enabled; if AI is unavailable, the picture is still added for manual review.</p></details>
+          <div class="library-actions"><button id="activity-upload-submit" class="btn btn-primary" type="submit" disabled>Analyze and add</button><button id="activity-upload-close" class="btn btn-ghost" type="button">Cancel</button></div>
+        </div>
+      </div>
+    </form>
+  </dialog>
 
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/api.js"></script>

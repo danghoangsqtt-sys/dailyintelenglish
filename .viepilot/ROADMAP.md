@@ -1446,4 +1446,10 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 - [x] 32.3 Remotion composition (turns, enter and leave, blink, mouth)
 - [x] 32.4 API and Step 5 mode `podcast_sprites`
 - [x] 32.5 Real render with the owner's first sprite set
-- [ ] 32.6 Gate B-22 (owner)
+- [ ] 32.6a Activity Library backend: migration, inbox import, validation, review and usage history
+- [x] 32.6b Activity Library UI: grid/cards, preview, metadata and approval workflow (local Qwen3-VL smart upload, 2026-10-09)
+- [ ] 32.6c Activity matching and Step 5 coverage before render
+- [ ] 32.6d Full-screen activity cutaways in `podcast_sprites`
+- [ ] 32.6e Storyboard insert guidance and generic-activity prompt pack
+- [ ] 32.6f Tests and Demo Episode render with three insert beats
+- [ ] 32.7 Gate B-22 (owner): compare the updated video against the talking-sprites baseline

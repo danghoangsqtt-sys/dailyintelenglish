@@ -125,6 +125,22 @@ const Api = (() => {
     reviewLibraryShot: (id, reviewState) => request(`/api/visuals/library/shots/${id}`, {
       method: "PATCH", body: JSON.stringify({ review_state: reviewState }),
     }),
+    listLibraryActivities: (filters = {}) => {
+      const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));
+      return request(`/api/visuals/library/activities${query.toString() ? `?${query}` : ""}`);
+    },
+    importLibraryActivities: () => request("/api/visuals/library/activities/import", { method: "POST" }),
+    uploadLibraryActivity: (formData) =>
+      request("/api/visuals/library/activities/upload", { method: "POST", body: formData }),
+    smartUploadLibraryActivities: (formData) =>
+      request("/api/visuals/library/activities/smart-upload", { method: "POST", body: formData }),
+    updateLibraryActivity: (id, patch) => request(`/api/visuals/library/activities/${id}`, {
+      method: "PATCH", body: JSON.stringify(patch),
+    }),
+    reviewLibraryActivity: (id, reviewState) => request(`/api/visuals/library/activities/${id}/review`, {
+      method: "PATCH", body: JSON.stringify({ review_state: reviewState }),
+    }),
+    getLibraryActivityHistory: (id) => request(`/api/visuals/library/activities/${id}/history`),
     getLibraryBackgrounds: () => request("/api/visuals/library/backgrounds"),
     importLibraryBackgrounds: () => request("/api/visuals/library/backgrounds/import", { method: "POST" }),
     getLibrarySprites: () => request("/api/visuals/library/sprites"),
@@ -135,6 +151,7 @@ const Api = (() => {
     addProjectShotToLibrary: (projectId, shotId) =>
       request(`/api/projects/${projectId}/visuals/shots/${shotId}/to-library`, { method: "POST" }),
     getLibraryCoverage: (projectId) => request(`/api/projects/${projectId}/visuals/library-coverage`),
+    getActivityCoverage: (projectId) => request(`/api/projects/${projectId}/visuals/activity-coverage`),
     createScene: (scene) => request("/api/visuals/scenes", { method: "POST", body: JSON.stringify(scene) }),
     updateScene: (id, patch) => request(`/api/visuals/scenes/${id}`, {
       method: "PATCH", body: JSON.stringify(patch),

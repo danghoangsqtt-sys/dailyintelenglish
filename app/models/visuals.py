@@ -143,6 +143,30 @@ class ShotReviewInput(BaseModel):
     review_state: Literal["pending", "approved", "rejected"]
 
 
+class ActivityMetadataInput(BaseModel):
+    """Owner-editable metadata for a reusable activity cutaway."""
+
+    character_id: str | None = None
+    activity: str = Field(min_length=1, max_length=80)
+    context_tags: list[str] = Field(default_factory=list, max_length=8)
+    aliases: list[str] = Field(default_factory=list, max_length=20)
+    variant: str = Field(default="", max_length=80)
+
+
+class ActivityMetadataPatch(BaseModel):
+    """Partial owner edit; omitted fields keep their stored values."""
+
+    character_id: str | None = None
+    activity: str | None = Field(default=None, min_length=1, max_length=80)
+    context_tags: list[str] | None = Field(default=None, max_length=8)
+    aliases: list[str] | None = Field(default=None, max_length=20)
+    variant: str | None = Field(default=None, max_length=80)
+
+
+class ActivityReviewInput(BaseModel):
+    review_state: Literal["pending", "approved", "rejected"]
+
+
 class ApprovalInput(BaseModel):
     approved: bool
 

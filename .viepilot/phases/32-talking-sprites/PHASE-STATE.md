@@ -9,7 +9,13 @@
 | 32.3 | Remotion composition (layers, turns, enter and leave, blink, mouth) | done 2026-10-08 (`spriteTimeline.ts`, `Sprites.tsx`; owner: pose changes are a paper-doll flip, the listener is not resized) |
 | 32.4 | API and Step 5 mode `podcast_sprites` | done 2026-10-08 (mode `podcast_sprites`, Step 5 chip) |
 | 32.5 | Real render with the owner's first sprite set | done 2026-10-08: Demo Episode preview `data/video/b330d37f-.../video_sprites_preview.mp4` (Enhanced, 129 s render). Alex's Codex `__open` pictures had closed mouths: replaced by 7 head-crop edits from ChatGPT web composed on his calm body (old ones kept in `data/assets_sprites/old/alex_open_codex_closed_mouth`) |
-| 32.6 | Gate B-22 (owner) | planned |
+| 32.6a | Activity Library backend: migration, inbox import, metadata, review and usage history | in progress 2026-10-08 |
+| 32.6b | Activity Library UI inside Shot Library | done 2026-10-09 (one-click multi-image upload; Alex/Lina/Generic picture selectors use character head references; local Qwen3-VL 4B Q4 metadata analysis with review gate, cloud opt-in only; real `go straight` smoke 0.98; full suite 1,633 passed) |
+| 32.6c | Deterministic activity matching and Step 5 coverage | in progress 2026-10-08 |
+| 32.6d | Full-screen activity cutaways in the Remotion sprite composition | planned |
+| 32.6e | Storyboard insert guidance and the 20-image generic prompt pack | planned |
+| 32.6f | Automated verification and Demo Episode render with three cutaways | planned |
+| 32.7 | Gate B-22: owner comparison of illustrated talking sprites and talking-sprites baseline | planned |
 
 ## Owner review of the preview (2026-10-08)
 

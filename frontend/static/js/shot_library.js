@@ -1,7 +1,8 @@
 /** Shot Library page (Task 29.7): the ready-made pictures of the cast. Review each one once (approve / reject); only approved,
  * current shots are reused by a new episode, so a wrong outfit or a stare at the camera can never reach a video. */
 (() => {
-  const state = { shots: [], scenes: [], characters: [], busy: false, filters: { scene_id: "", kind: "", review_state: "" } };
+  const state = { shots: [], activities: [], scenes: [], characters: [], busy: false, activityBusy: false,
+    activityEditing: null, filters: { scene_id: "", kind: "", review_state: "" }, activityFilters: { review_state: "" } };
   const byId = (id) => document.getElementById(id);
   const KINDS = [["single", "Single"], ["duo_close", "Duo close"], ["duo_wide", "Duo wide"]];
 
@@ -95,6 +96,243 @@
       grid.append(card);
     });
     renderCounts();
+  }
+
+  function activityScope(activity) {
+    return activity.character_id ? state.characters.find((character) => character.id === activity.character_id)?.name || "Character" : "Generic";
+  }
+
+  function renderActivities() {
+    const grid = byId("activity-grid");
+    grid.replaceChildren();
+    const scope = byId("activity-filter-scope").value;
+    const visible = state.activities.filter((activity) => !scope || (scope === "generic" ? !activity.character_id : activity.character_id));
+    byId("activity-empty").hidden = visible.length > 0;
+    const counts = { approved: 0, pending: 0, rejected: 0 };
+    visible.forEach((activity) => { counts[activity.review_state] += 1; });
+    byId("activity-count").textContent = visible.length ? `${visible.length} activity pictures · ${counts.approved} approved · ${counts.pending} waiting for review · ${counts.rejected} rejected` : "";
+    visible.forEach((activity) => {
+      const card = document.createElement("article");
+      card.className = `shot-card is-${activity.review_state}`;
+      card.dataset.activityId = activity.id;
+      const image = document.createElement("img");
+      image.src = `${activity.content_url}?v=${encodeURIComponent(activity.updated_at)}`;
+      image.alt = `${activity.activity} activity illustration`;
+      image.loading = "lazy";
+      image.addEventListener("click", () => openActivity(activity));
+      const title = document.createElement("p");
+      title.className = "shot-title";
+      title.textContent = `${activity.activity} · ${activityScope(activity)}`;
+      const meta = document.createElement("p");
+      meta.className = "shot-meta";
+      meta.textContent = [...activity.context_tags, activity.variant].filter(Boolean).join(" · ") || "No context tags";
+      const badges = document.createElement("div");
+      badges.className = "track-badges";
+      badges.append(badge(activity.review_state === "pending" ? "needs review" : activity.review_state,
+        activity.review_state === "approved" ? "is-pace" : activity.review_state === "rejected" ? "is-warning" : "is-missing"));
+      if (activity.use_count) badges.append(badge(`used ${activity.use_count}×`));
+      const actions = document.createElement("div");
+      actions.className = "library-actions";
+      const edit = document.createElement("button");
+      edit.type = "button"; edit.className = "btn btn-ghost btn-sm"; edit.textContent = "Preview / edit";
+      edit.disabled = state.activityBusy; edit.addEventListener("click", () => openActivity(activity));
+      const approve = document.createElement("button");
+      approve.type = "button"; approve.className = "btn btn-primary btn-sm"; approve.textContent = "Approve";
+      approve.disabled = state.activityBusy || activity.review_state === "approved";
+      approve.addEventListener("click", () => reviewActivity(activity.id, "approved"));
+      const reject = document.createElement("button");
+      reject.type = "button"; reject.className = "btn btn-ghost btn-sm"; reject.textContent = "Reject";
+      reject.disabled = state.activityBusy || activity.review_state === "rejected";
+      reject.addEventListener("click", () => reviewActivity(activity.id, "rejected"));
+      actions.append(edit, approve, reject);
+      card.append(image, title, meta, badges, actions);
+      grid.append(card);
+    });
+  }
+
+  async function refreshActivities() {
+    try {
+      state.activities = await Api.listLibraryActivities(state.activityFilters);
+    } catch (error) {
+      showMessage(error.message || "Could not load the Activity Library.");
+    }
+    renderActivities();
+  }
+
+  async function reviewActivity(id, reviewState) {
+    state.activityBusy = true; renderActivities();
+    try { await Api.reviewLibraryActivity(id, reviewState); showMessage(""); }
+    catch (error) { showMessage(error.message || "Could not save the activity review."); }
+    state.activityBusy = false;
+    await refreshActivities();
+  }
+
+  function activityValues(values) {
+    return values.split(",").map((value) => value.trim()).filter(Boolean);
+  }
+
+  function fillActivityCharacterSelect(select, genericLabel = "Generic") {
+    select.replaceChildren(new Option(genericLabel, ""));
+    state.characters.forEach((character) => select.append(new Option(character.name, character.id)));
+  }
+
+  async function openActivity(activity) {
+    state.activityEditing = activity;
+    const select = byId("activity-character");
+    fillActivityCharacterSelect(select);
+    select.value = activity.character_id || "";
+    byId("activity-name").value = activity.activity;
+    byId("activity-context").value = activity.context_tags.join(", ");
+    byId("activity-aliases").value = activity.aliases.join(", ");
+    byId("activity-variant").value = activity.variant || "";
+    byId("activity-preview").src = `${activity.content_url}?v=${encodeURIComponent(activity.updated_at)}`;
+    byId("activity-history").textContent = `${activity.use_count} render use${activity.use_count === 1 ? "" : "s"}`;
+    const dialog = byId("activity-dialog");
+    if (!dialog.open) dialog.showModal();
+  }
+
+  async function saveActivity(event) {
+    event.preventDefault();
+    if (!state.activityEditing || state.activityBusy) return;
+    state.activityBusy = true;
+    byId("activity-save-btn").disabled = true;
+    try {
+      await Api.updateLibraryActivity(state.activityEditing.id, {
+        character_id: byId("activity-character").value || null,
+        activity: byId("activity-name").value,
+        context_tags: activityValues(byId("activity-context").value),
+        aliases: activityValues(byId("activity-aliases").value),
+        variant: byId("activity-variant").value,
+      });
+      byId("activity-dialog").close(); showMessage("Activity metadata saved.", "success");
+    } catch (error) { showMessage(error.message || "Could not save activity metadata."); }
+    state.activityBusy = false; byId("activity-save-btn").disabled = false;
+    await refreshActivities();
+  }
+
+  let activityUploadPreviewUrl = null;
+
+  function clearActivityUploadPreview() {
+    if (activityUploadPreviewUrl) URL.revokeObjectURL(activityUploadPreviewUrl);
+    activityUploadPreviewUrl = null;
+    byId("activity-upload-preview").removeAttribute("src");
+    byId("activity-upload-preview").hidden = true;
+    byId("activity-upload-placeholder").hidden = false;
+    byId("activity-upload-selection").textContent = "No pictures selected.";
+    byId("activity-upload-submit").disabled = true;
+  }
+
+  function activityTargetButton(id, name, picture = "") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "activity-target";
+    button.dataset.characterId = id;
+    button.setAttribute("role", "radio");
+    button.setAttribute("aria-checked", "false");
+    if (picture) {
+      const image = document.createElement("img");
+      image.src = picture;
+      image.alt = "";
+      button.append(image);
+    } else {
+      const icon = document.createElement("span");
+      icon.className = "activity-target-icon";
+      icon.textContent = id ? name.slice(0, 1).toUpperCase() : "🖼️";
+      button.append(icon);
+    }
+    const label = document.createElement("span");
+    label.className = "activity-target-name";
+    label.textContent = name;
+    button.append(label);
+    button.addEventListener("click", () => selectActivityTarget(id));
+    return button;
+  }
+
+  function renderActivityTargets() {
+    const targets = byId("activity-upload-targets");
+    targets.replaceChildren(activityTargetButton("", "Generic"));
+    state.characters.forEach((character) => {
+      targets.append(activityTargetButton(
+        character.id, character.name, character.face_url || character.reference_url || character.body_url || "",
+      ));
+    });
+    selectActivityTarget(byId("activity-upload-character").value || "");
+  }
+
+  function selectActivityTarget(characterId) {
+    byId("activity-upload-character").value = characterId;
+    byId("activity-upload-targets").querySelectorAll(".activity-target").forEach((button) => {
+      const selected = button.dataset.characterId === characterId;
+      button.classList.toggle("is-selected", selected);
+      button.setAttribute("aria-checked", String(selected));
+    });
+  }
+
+  function openActivityUpload() {
+    byId("activity-upload-form").reset();
+    clearActivityUploadPreview();
+    renderActivityTargets();
+    byId("activity-upload-dialog").showModal();
+  }
+
+  function previewActivityUpload() {
+    clearActivityUploadPreview();
+    const files = byId("activity-upload-file").files;
+    const file = files[0];
+    if (!file) return;
+    activityUploadPreviewUrl = URL.createObjectURL(file);
+    const preview = byId("activity-upload-preview");
+    preview.src = activityUploadPreviewUrl;
+    preview.hidden = false;
+    byId("activity-upload-placeholder").hidden = true;
+    byId("activity-upload-selection").textContent = `${files.length} picture${files.length === 1 ? "" : "s"} selected.`;
+    byId("activity-upload-submit").disabled = false;
+  }
+
+  async function uploadActivity(event) {
+    event.preventDefault();
+    if (state.activityBusy) return;
+    state.activityBusy = true;
+    const button = byId("activity-upload-submit");
+    button.disabled = true;
+    const originalLabel = button.textContent;
+    button.textContent = "AI is analyzing…";
+    try {
+      const result = await Api.smartUploadLibraryActivities(new FormData(event.currentTarget));
+      if (result.items.length) {
+        byId("activity-upload-dialog").close();
+        clearActivityUploadPreview();
+      }
+      await refreshActivities();
+      const localCount = result.items.filter((item) => item.analysis_source === "local_ai").length;
+      const cloudCount = result.items.filter((item) => item.analysis_source === "cloud_ai").length;
+      const fallbackCount = result.items.length - localCount - cloudCount;
+      const parts = [`${result.items.length} picture${result.items.length === 1 ? "" : "s"} added`];
+      if (localCount) parts.push(`${localCount} described locally`);
+      if (cloudCount) parts.push(`${cloudCount} described by cloud fallback`);
+      if (fallbackCount) parts.push(`${fallbackCount} need a quick metadata review`);
+      if (result.rejected.length) parts.push(`${result.rejected.length} rejected`);
+      showMessage(`${parts.join(" · ")}.`, result.items.length ? "success" : "error");
+    } catch (error) {
+      showMessage(error.message || "Could not add the activity pictures.");
+    } finally {
+      state.activityBusy = false;
+      button.textContent = originalLabel;
+      button.disabled = byId("activity-upload-file").files.length === 0;
+    }
+  }
+
+  async function importActivities() {
+    const button = byId("activity-import-btn"), list = byId("activity-import-result");
+    button.disabled = true; list.replaceChildren();
+    const add = (text, className = "") => { const item = document.createElement("li"); item.textContent = text; item.className = className; list.append(item); };
+    try {
+      const result = await Api.importLibraryActivities();
+      add(`${result.imported.length} activity picture${result.imported.length === 1 ? "" : "s"} imported.`);
+      result.rejected.forEach((item) => add(`${item.file}: ${item.reason}`, "is-error"));
+    } catch (error) { add(error.message || "Could not import activity pictures.", "is-error"); }
+    button.disabled = false;
+    await refreshActivities();
   }
 
   async function load() {
@@ -293,6 +531,18 @@
     byId("import-btn").addEventListener("click", importInbox);
     byId("bg-import-btn").addEventListener("click", importBackgrounds);
     byId("sprite-import-btn").addEventListener("click", importSprites);
+    byId("activity-import-btn").addEventListener("click", importActivities);
+    byId("activity-upload-open").addEventListener("click", openActivityUpload);
+    byId("activity-upload-file").addEventListener("change", previewActivityUpload);
+    byId("activity-upload-form").addEventListener("submit", uploadActivity);
+    byId("activity-upload-close").addEventListener("click", () => byId("activity-upload-dialog").close());
+    byId("activity-upload-dialog").addEventListener("close", clearActivityUploadPreview);
+    byId("activity-filter-state").addEventListener("change", (event) => {
+      state.activityFilters.review_state = event.target.value; refreshActivities();
+    });
+    byId("activity-filter-scope").addEventListener("change", renderActivities);
+    byId("activity-editor-form").addEventListener("submit", saveActivity);
+    byId("activity-close-btn").addEventListener("click", () => byId("activity-dialog").close());
     refreshSprites();
     refreshBackgrounds();
     refreshInbox();
@@ -304,6 +554,7 @@
     });
     byId("approve-all-btn").addEventListener("click", approveAllPending);
     load();
+    refreshActivities();
   }
 
   document.addEventListener("DOMContentLoaded", setup);

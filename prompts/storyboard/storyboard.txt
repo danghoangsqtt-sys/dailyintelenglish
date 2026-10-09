@@ -23,7 +23,9 @@ Rules:
    library scene fits, set scene_id to null and new_place to a short plain place (at most 5 words,
    letters only).
 4. Every beat sets "kind": "scene" for people talking in a place, "insert" for an illustration.
-   Use at most 3 "insert" beats, each for one concrete thing a speaker describes. An insert sets
+   Use at most 3 "insert" beats, each for one concrete thing a speaker describes. An insert should cover about 3 to 6 seconds
+   of spoken time: make it action-led and useful for comprehension, never decorative. Its action must be a reusable plain activity
+   phrase such as "cooking dinner", "walking to work" or "reading a book"; do not invent a long cinematic description. An insert sets
    scene_id to null, new_place to what the picture shows (at most 5 plain words, for example
    "crowded subway at rush hour"), and speakers to [] for an object, a place or a crowd. When a
    speaker does the thing (checking a phone, eating oatmeal, stretching), set speakers to that one

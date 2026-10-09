@@ -139,6 +139,22 @@ class Settings(BaseSettings):
     # Task 24.1 (owner E4): a storyboard may need at most this many images per episode.
     VISUALS_IMAGE_CAP: int = 12
 
+    # Phase 32.6b Amendment A -- dedicated, review-gated Activity Vision. Ollama is
+    # the measured/default Q4 runtime; direct Hugging Face remains an optional worker
+    # that exits after each batch. Both release the model before image/video work.
+    ACTIVITY_VISION_PROVIDER: Literal["local", "cloud", "filename"] = "local"
+    ACTIVITY_VISION_RUNTIME: Literal["ollama", "huggingface"] = "ollama"
+    ACTIVITY_VISION_MODEL: str = "qwen3-vl:4b-instruct-q4_K_M"
+    ACTIVITY_VISION_HF_MODEL: str = "Qwen/Qwen3-VL-4B-Instruct"
+    ACTIVITY_VISION_PYTHON: Path = Path("venv-image/Scripts/python.exe")
+    ACTIVITY_VISION_CACHE_DIR: Path = Path("models/activity-vision")
+    ACTIVITY_VISION_TIMEOUT_SECONDS: float = 900.0
+    ACTIVITY_VISION_MIN_FREE_MB: int = 10240
+    ACTIVITY_VISION_MAX_NEW_TOKENS: int = 220
+    # Privacy-safe default: local failure falls back to a filename suggestion. Set
+    # true only when the owner explicitly accepts sending a resized copy to Gemini.
+    ACTIVITY_VISION_CLOUD_FALLBACK: bool = False
+
     # Phase 18/D22-D24 -- the generic OpenAI-compatible cloud provider (OpenRouter,
     # first). Empty key/model collapses the effective mode to "local" (invariant 32).
     OPENAI_COMPAT_BASE_URL: str = "https://openrouter.ai/api/v1"

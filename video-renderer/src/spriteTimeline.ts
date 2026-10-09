@@ -23,6 +23,7 @@ const BREATH_PERIOD_SEC = 4;
 const ENTER_FRAMES = 12;
 const BLINK_FRAMES = 4;
 export const BACKGROUND_FADE_FRAMES = 12;
+export const CUTAWAY_FADE_SEC = 0.3;
 /** A listener's gesture stays a moment after the line ends. */
 const GESTURE_HOLD_SEC = 0.3;
 /** Owner 2026-10-08: every picture is shown exactly as it was made -- nothing is pasted on it, it is never squashed or blended.
@@ -189,4 +190,12 @@ export function spriteBackground(frame: number, fps: number, timeline: EpisodeLi
   const previous = urlOf(ids[first - 1]);
   if (since >= BACKGROUND_FADE_FRAMES || previous === current) return { current, previous: null, opacity: 1 };
   return { current, previous, opacity: Math.max(0, since) / BACKGROUND_FADE_FRAMES };
+}
+
+export function activityCutawayAt(time: number, sprites: EpisodeSprites): { url: string; opacity: number } | null {
+  const cutaway = sprites.cutaways.find((item) => time >= item.startSec && time < item.endSec);
+  if (!cutaway) return null;
+  const entering = Math.min(1, (time - cutaway.startSec) / CUTAWAY_FADE_SEC);
+  const leaving = Math.min(1, (cutaway.endSec - time) / CUTAWAY_FADE_SEC);
+  return { url: cutaway.url, opacity: Math.max(0, Math.min(entering, leaving)) };
 }

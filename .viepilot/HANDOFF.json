@@ -3,7 +3,7 @@
   "version": "1.2.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_32_talking_sprites_built_await_gate_B22_and_activity_cutaway_scope_confirmation",
+  "status": "phase_32_activity_cutaways_32_6c_in_progress_matching_coverage",
   "current_phase": "32",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
@@ -260,9 +260,9 @@
     "32": {
       "name": "Talking characters as sprites, visual-novel style (ENH-023)",
       "status": "in_progress",
-      "tasks_done": 5,
-      "tasks_total": 6,
-      "note": "32.1-32.5 done 2026-10-08; Gate B-22 remains. Read docs/brainstorm/session-2026-10-08.md before continuing: activity cutaways are proposed, with task breakdown and owner gate confirmation open."
+      "tasks_done": 6,
+      "tasks_total": 12,
+      "note": "32.1-32.5 done 2026-10-08; 32.6b done 2026-10-09 with local Qwen3-VL 4B Q4 smart upload (real go-straight smoke 0.98, model unloaded, full suite 1,633 passed). 32.6a/32.6c remain in progress; then 32.6d-f and owner Gate B-22."
     }
   },
   "key_decisions": [

@@ -5,7 +5,7 @@ import time
 from typing import Literal
 
 import aiosqlite
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
@@ -14,11 +14,15 @@ from app.core.responses import ok
 from app.db.database import get_db
 from app.db.transactions import read_transaction, write_transaction
 from app.models.visuals import (
-    AGE_GROUPS, BOTTOMS, COLORS, GENDERS, SCENE_CATEGORIES, TIMES_OF_DAY, TOPS, ApprovalInput, CharacterInput,
-    CastMemberInput, CharacterPatch, ReferenceInput, SceneInput, ScenePatch, SheetItemInput, ShotReviewInput,
+    AGE_GROUPS, BOTTOMS, COLORS, GENDERS, SCENE_CATEGORIES, TIMES_OF_DAY, TOPS, ActivityMetadataInput,
+    ActivityMetadataPatch, ActivityReviewInput, ApprovalInput, CastMemberInput, CharacterInput, CharacterPatch,
+    ReferenceInput, SceneInput, ScenePatch, SheetItemInput, ShotReviewInput,
 )
 from app.services import project_service
 from app.services.visuals import jobs
+from app.services.visuals import activity_analysis_service as activity_analysis
+from app.services.visuals import activity_library_service as activity_library
+from app.services.visuals import activity_matcher
 from app.services.visuals import library_service as library
 from app.services.visuals import project_visuals_service as project_visuals
 from app.services.visuals import shot_library_service as shot_library
@@ -28,6 +32,10 @@ from app.services.visuals.engine import IMAGE_PYTHON, require_generation
 
 router = APIRouter(prefix="/api/visuals", tags=["visuals"])
 project_router = APIRouter(prefix="/api/projects/{project_id}/visuals", tags=["visuals"])
+
+
+def _form_labels(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
 
 
 @router.get("/health")
@@ -241,6 +249,127 @@ async def list_library_shots(
     return ok(rows)
 
 
+@router.get("/library/activities")
+async def list_library_activities(
+    review_state: str | None = None, character_id: str | None = None, activity: str | None = None,
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    async with read_transaction():
+        rows = await activity_library.list_activities(db, review_state, character_id, activity)
+    return ok(rows)
+
+
+@router.post("/library/activities/import")
+async def import_library_activities(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        result = await activity_library.import_inbox(db)
+    return ok(result)
+
+
+@router.post("/library/activities/upload", status_code=201)
+async def upload_library_activity(
+    file: UploadFile = File(...),
+    activity: str = Form(...),
+    character_id: str = Form(""),
+    context_tags: str = Form(""),
+    aliases: str = Form(""),
+    variant: str = Form(""),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Upload one activity picture directly; it always starts pending review."""
+    metadata = ActivityMetadataInput(
+        character_id=character_id or None,
+        activity=activity,
+        context_tags=_form_labels(context_tags),
+        aliases=_form_labels(aliases),
+        variant=variant,
+    )
+    async with write_transaction(db):
+        row = await activity_library.upload_activity(db, file, metadata.model_dump())
+    return ok(row)
+
+
+@router.post("/library/activities/smart-upload", status_code=201)
+async def smart_upload_library_activities(
+    files: list[UploadFile] = File(...),
+    character_id: str = Form(""),
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Add up to 20 pictures; vision suggests all metadata while the user only chooses the shelf."""
+    if not files or len(files) > 20:
+        raise ValidationError("choose between 1 and 20 activity images")
+    selected_character = character_id or None
+    if selected_character:
+        async with read_transaction():
+            await library.get_character_row(db, selected_character)
+
+    items, rejected = [], []
+    uploads: list[tuple[bytes, str]] = []
+    for file in files:
+        filename = file.filename or "activity.png"
+        try:
+            content = await activity_library.read_upload(file)
+            uploads.append((content, filename))
+        except (ConflictError, ValidationError) as exc:
+            rejected.append({"file": filename, "reason": str(exc)})
+
+    suggestions = await activity_analysis.analyze_activity_images(uploads)
+    for (content, filename), suggestion in zip(uploads, suggestions):
+        try:
+            async with write_transaction(db):
+                variant = await activity_library.next_variant(db, selected_character, suggestion["activity"])
+                row = await activity_library.upload_activity_bytes(
+                    db,
+                    filename,
+                    content,
+                    {
+                        "character_id": selected_character,
+                        "activity": suggestion["activity"],
+                        "context_tags": suggestion["context_tags"],
+                        "aliases": suggestion["aliases"],
+                        "variant": variant,
+                    },
+                )
+            row["analysis_source"] = suggestion["source"]
+            row["analysis_confidence"] = suggestion["confidence"]
+            items.append(row)
+        except (ConflictError, ValidationError) as exc:
+            rejected.append({"file": filename, "reason": str(exc)})
+    return ok({"items": items, "rejected": rejected})
+
+
+@router.get("/library/activities/{activity_id}/content")
+async def activity_content(activity_id: str, db: aiosqlite.Connection = Depends(get_db)) -> FileResponse:
+    async with read_transaction():
+        path = await activity_library.content_path(db, activity_id)
+    return FileResponse(path)
+
+
+@router.patch("/library/activities/{activity_id}")
+async def edit_library_activity(
+    activity_id: str, body: ActivityMetadataPatch, db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    async with write_transaction(db):
+        row = await activity_library.update_metadata(activity_id=activity_id, db=db,
+                                                     changes=body.model_dump(exclude_unset=True))
+    return ok(row)
+
+
+@router.patch("/library/activities/{activity_id}/review")
+async def review_library_activity(
+    activity_id: str, body: ActivityReviewInput, db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    async with write_transaction(db):
+        row = await activity_library.set_review(db, activity_id, body.review_state)
+    return ok(row)
+
+
+@router.get("/library/activities/{activity_id}/history")
+async def activity_history(activity_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with read_transaction():
+        return ok(await activity_library.history(db, activity_id))
+
+
 @router.get("/library/backgrounds")
 async def library_backgrounds() -> dict:
     return ok(shot_library.backgrounds_status())
@@ -325,6 +454,33 @@ async def library_coverage(project_id: str, db: aiosqlite.Connection = Depends(g
         await project_service.get_project(db, project_id)
         result = await shot_library.coverage(db, project_id)
     return ok(result)
+
+
+@project_router.get("/activity-coverage")
+async def activity_coverage(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Explain selected/missing reusable activity illustrations before a talking-sprites render."""
+    async with read_transaction():
+        await project_service.get_project(db, project_id)
+        beats = await storyboard_service.approved_beats(db, project_id) or []
+        cursor = await db.execute(
+            "SELECT sl.line_index, sl.text, sp.speaker_index FROM script_lines sl JOIN speakers sp ON sp.id = sl.speaker_id "
+            "WHERE sl.project_id = ? ORDER BY sl.line_index", (project_id,),
+        )
+        lines = [dict(row) for row in await cursor.fetchall()]
+        cast = {row["speaker_index"]: row["character_id"] for row in await project_visuals.cast_rows(db, project_id)}
+        candidates = await activity_library.approved_candidates(db)
+    items = []
+    for beat in beats:
+        if beat["kind"] != "insert":
+            continue
+        speakers = beat.get("speakers") or []
+        character_id = cast.get(speakers[0]) if len(speakers) == 1 else None
+        dialogue = " ".join(line["text"] for line in lines if beat["line_from"] <= line["line_index"] <= beat["line_to"])
+        found = activity_matcher.match_activity(candidates, character_id, beat.get("action") or "", dialogue)
+        items.append({"beat_id": beat["id"], "position": beat["position"], "action": beat.get("action") or "",
+                      "status": "matched" if found else "missing", "match": {key: value for key, value in found.items() if key != "asset"} if found else None})
+    return ok({"items": items, "matched": sum(item["status"] == "matched" for item in items),
+               "missing": sum(item["status"] == "missing" for item in items)})
 
 
 @project_router.get("")

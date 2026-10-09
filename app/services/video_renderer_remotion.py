@@ -36,7 +36,8 @@ from app.core.constants import VIDEO_FPS, VIDEO_HEIGHT_STANDARD, VIDEO_WIDTH_STA
 from app.core.exceptions import AudioMixError, NotFoundError, RemotionRenderFailedError, TTSError, ValidationError
 from app.core.paths import get_project_root
 from app.services import audio_service, avatar_service, brand_service, youtube_service
-from app.services.visuals import library_service, project_visuals_service, sprite_plan, sprite_service, storyboard_service
+from app.services.visuals import activity_library_service as activity_library
+from app.services.visuals import activity_matcher, library_service, project_visuals_service, sprite_plan, sprite_service, storyboard_service
 
 VIDEO_RENDERER_DIR = get_project_root() / "video-renderer"
 REMOTION_AUDIO_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "audio"
@@ -349,7 +350,26 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
         logger.warning("sprite_loudness_unavailable project_id=%s reason=%s -- mouths follow the words", project_id, exc)
         loudness = None
     plan = sprite_plan.build_plan(lines, line_slots, beat_expressions, available, loudness, VIDEO_FPS)
-    return {"characters": characters, "lines": plan, "backgrounds": backgrounds, "lineBackgrounds": line_backgrounds}
+    candidates, cutaways = await activity_library.approved_candidates(db), []
+    for beat in beats or []:
+        if beat["kind"] != "insert" or beat["line_from"] >= len(lines):
+            continue
+        speakers = beat.get("speakers") or []
+        character_id = cast_by_index.get(speakers[0], {}).get("character_id") if len(speakers) == 1 else None
+        dialogue = " ".join(line["text"] for line in lines[beat["line_from"]:beat["line_to"] + 1])
+        selected = activity_matcher.match_activity(candidates, character_id, beat.get("action") or "", dialogue)
+        if selected is None:
+            continue
+        source = await activity_library.content_path(db, selected["activity_id"])
+        destination = REMOTION_SPRITES_DIR / project_id / "activities" / f"{selected['activity_id']}{source.suffix.lower()}"
+        await asyncio.to_thread(_copy_visual_source, source, destination)
+        start, last = lines[beat["line_from"]]["startSec"], lines[min(beat["line_to"], len(lines) - 1)]["endSec"]
+        end = min(last, start + 6.0)
+        if end > start:
+            cutaways.append({"startSec": start, "endSec": end,
+                             "url": f"remotion-render/sprites/{project_id}/activities/{destination.name}"})
+    return {"characters": characters, "lines": plan, "backgrounds": backgrounds, "lineBackgrounds": line_backgrounds,
+            "cutaways": cutaways}
 
 
 async def _build_input_props(

@@ -9,6 +9,10 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Added (Phase 32 — talking characters, 2026-10-08)
+- **Activity Library smart upload (2026-10-09).** Choose Alex, Lina or Generic and add one
+  or many activity pictures; the app's dedicated local Qwen3-VL 4B Q4 model proposes the
+  activity, context and matching aliases. Pictures remain “Needs review” until approved.
+  The model unloads after each batch, and sending a resized copy to Gemini is opt-in only.
 - **"Podcast: talking characters" (Step 5, Enhanced).** Alex and Lina stand over the scene pictures of the storyboard like the
   characters of a visual novel: their mouths open and close with the loudness of the speech, their faces follow the storyboard
   and the line (smile, laugh, surprised, thinking, worried, serious), they blink, breathe, take turns (the listener is dimmed),

@@ -622,9 +622,23 @@
     }
   }
 
+  async function renderActivityCoverage() {
+    const line = byId("activity-coverage");
+    if (!line || !state.projectId) return;
+    try {
+      const coverage = await Api.getActivityCoverage(state.projectId);
+      if (!coverage.items.length) { line.hidden = true; return; }
+      line.hidden = false;
+      line.textContent = `Activity cutaways: ${coverage.matched} matched; ${coverage.missing} missing (missing beats keep talking sprites).`;
+    } catch {
+      line.hidden = true;
+    }
+  }
+
   function renderProjectVisuals() {
     if (!state.visuals) return;
     renderLibraryCoverage();
+    renderActivityCoverage();
     renderVisualCast();
     renderVisualScenes();
     renderVisualShots();
