@@ -36,8 +36,15 @@ Create additive migration 018, extend existing character records in place, pin p
 
 ## Acceptance Criteria
 
-- [ ] Lina/Alex IDs, files, and project cast assignments are unchanged.
-- [ ] Existing speaker voice settings are unchanged.
-- [ ] Active normalized names are unique and project casts cannot duplicate a character.
-- [ ] No migration or rehearsal writes to the real database or real asset directory.
+- [x] Lina/Alex IDs, files, and project cast assignments are unchanged.
+- [x] Existing speaker voice settings are unchanged.
+- [x] Active normalized names are unique and project casts cannot duplicate a character.
+- [x] No migration or rehearsal writes to the real database or real asset directory.
+
+## Verification Result — PASS (2026-10-10)
+
+- Targeted migration/database/project-visual suite: **12 passed**.
+- Focused migration suite after cleanup: **4 passed**; Ruff and `git diff --check`: PASS.
+- Rehearsal used a SQLite backup plus copied character/sprite roots: migration 018 applied once, **58** current legacy sprites registered, characters/cast/speaker voice rows unchanged, and `PRAGMA foreign_key_check` returned no rows.
+- The rehearsal script refuses the configured live DB/data paths and never moved or renamed existing files.
 

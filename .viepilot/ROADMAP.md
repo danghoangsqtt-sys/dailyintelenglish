@@ -1454,11 +1454,11 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 - [x] 32.6f Tests and Demo Episode render with three insert beats (2026-10-09)
 - [ ] 32.7 Gate B-22 (owner): compare the updated video against the talking-sprites baseline
 
-### Phase 33: Character Profiles v2 — proposed, unopened 2026-10-10
+### Phase 33: Character Profiles v2 — in progress 2026-10-10
 
-Phase 33 is planned in `docs/implementation/phase-33-character-profiles-v2.md` and remains unopened until Phase 32 Gate B-22 is accepted. Planning this phase does not change the active phase or tracker state.
+Phase 33 implementation was explicitly started by the owner's `/vp-auto thực hiện` instruction. Phase 32 Gate B-22 remains pending and was not recorded as accepted.
 
-- [ ] 33.1 Profile schema, versioning, and Lina/Alex migration rehearsal
+- [x] 33.1 Profile schema, versioning, and Lina/Alex migration rehearsal
 - [ ] 33.2 Profile domain, readiness, lifecycle, and API
 - [ ] 33.3 Asset slots, direct upload, validation, review, and prompt packs
 - [ ] 33.4 Character Library and ten-step creation wizard

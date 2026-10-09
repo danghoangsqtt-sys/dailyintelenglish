@@ -17,7 +17,7 @@ from app.services.visuals import library_service as library
 
 async def cast_rows(db: aiosqlite.Connection, project_id: str) -> list[dict]:
     cursor = await db.execute(
-        "SELECT pc.speaker_index, pc.character_id, c.name, c.top_color, c.status "
+        "SELECT pc.speaker_index, pc.character_id, pc.profile_version, c.name, c.top_color, c.status "
         "FROM project_cast pc JOIN characters c ON c.id = pc.character_id "
         "WHERE pc.project_id = ? ORDER BY pc.speaker_index",
         (project_id,),
@@ -103,15 +103,17 @@ async def set_cast(db: aiosqlite.Connection, project_id: str, members: list[dict
     indexes = [member["speaker_index"] for member in members]
     if len(indexes) != len(set(indexes)) or any(index not in valid_indexes for index in indexes):
         raise ValidationError("Cast speaker indexes must be unique and exist in this project")
+    versions: dict[str, int] = {}
     for member in members:
         character = await library.get_character_row(db, member["character_id"])
         if character["status"] != "locked":
             raise ValidationError("Only locked characters can join a project cast")
+        versions[member["character_id"]] = character["identity_version"]
     await db.execute("DELETE FROM project_cast WHERE project_id = ?", (project_id,))
     for member in members:
         await db.execute(
-            "INSERT INTO project_cast (project_id, speaker_index, character_id) VALUES (?, ?, ?)",
-            (project_id, member["speaker_index"], member["character_id"]),
+            "INSERT INTO project_cast (project_id, speaker_index, character_id, profile_version) VALUES (?, ?, ?, ?)",
+            (project_id, member["speaker_index"], member["character_id"], versions[member["character_id"]]),
         )
     return await project_visuals(db, project_id)
 

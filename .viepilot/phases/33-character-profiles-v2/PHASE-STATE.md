@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 33: Character Profiles v2
 
-- **Status:** in progress 2026-10-10 — Task 33.1 started by explicit owner `/vp-auto thực hiện` instruction.
+- **Status:** in progress 2026-10-10 — Task 33.1 complete; Task 33.2 is next.
 - **Entry gate:** Owner authorized implementation on 2026-10-10. Phase 32 Gate B-22 remains pending and is not recorded as accepted by this authorization.
 - **Plan:** `docs/implementation/phase-33-character-profiles-v2.md`
 - **Scope source:** `docs/brainstorm/session-2026-10-10.md`
@@ -10,7 +10,7 @@ This directory is an implementation plan. Creating it does not change the active
 
 | Task | Description | Status | Depends on |
 |---|---|---|---|
-| 33.1 | Data migration, profile versioning, and Lina/Alex rehearsal | in progress 2026-10-10 | owner implementation authorization |
+| 33.1 | Data migration, profile versioning, and Lina/Alex rehearsal | done 2026-10-10 | owner implementation authorization |
 | 33.2 | Profile domain service, readiness, lifecycle, and API | planned | 33.1 |
 | 33.3 | Asset slot contract, upload, validation, review, and prompt export | planned | 33.1, 33.2 |
 | 33.4 | Character Library and ten-step creation wizard | planned | 33.2 |

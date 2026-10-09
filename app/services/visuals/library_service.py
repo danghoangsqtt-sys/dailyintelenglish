@@ -26,6 +26,11 @@ CHARACTER_FIELDS = (
 )
 
 
+def normalize_character_name(value: str) -> str:
+    """Return the stable comparison form used by active-profile uniqueness checks."""
+    return " ".join(value.strip().lower().split())
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -74,10 +79,11 @@ async def create_character(db: aiosqlite.Connection, body: CharacterInput) -> di
     character_id, now = str(uuid.uuid4()), _now()
     values = body.model_dump()
     await db.execute(
-        "INSERT INTO characters (id, name, gender, age_group, ethnicity, role, hair, eyes, extra, "
+        "INSERT INTO characters (id, name, normalized_name, gender, age_group, ethnicity, role, hair, eyes, extra, "
         "top_color, top_item, bottom_color, bottom_item, status, base_seed, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)",
-        (character_id, *(values[key] for key in CHARACTER_FIELDS), random.randint(1, 2**31 - 5), now, now),
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)",
+        (character_id, values["name"], normalize_character_name(values["name"]),
+         *(values[key] for key in CHARACTER_FIELDS if key != "name"), random.randint(1, 2**31 - 5), now, now),
     )
     return await character_view(db, character_id)
 
@@ -102,8 +108,8 @@ async def edit_character(db: aiosqlite.Connection, character_id: str, patch: Cha
         )
     await db.execute(
         "UPDATE characters SET " + ", ".join(f"{key} = ?" for key in CHARACTER_FIELDS)
-        + ", updated_at = ? WHERE id = ?",
-        (*(new[key] for key in CHARACTER_FIELDS), _now(), character_id),
+        + ", normalized_name = ?, updated_at = ? WHERE id = ?",
+        (*(new[key] for key in CHARACTER_FIELDS), normalize_character_name(new["name"]), _now(), character_id),
     )
     return await character_view(db, character_id)
 
