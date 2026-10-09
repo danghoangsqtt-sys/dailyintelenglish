@@ -29,17 +29,29 @@ def _phrase(value: str, field_name: str, max_words: int) -> str:
 
 class CharacterInput(BaseModel):
     name: str = Field(min_length=1, max_length=40)
-    gender: Literal["female", "male"]
-    age_group: Literal["young", "adult", "middle-aged", "senior"]
+    gender: Literal["female", "male"] = "female"
+    age_group: Literal["young", "adult", "middle-aged", "senior"] = "adult"
     ethnicity: str = "Russian"
-    role: str
-    hair: str
-    eyes: str
+    role: str = "learner"
+    hair: str = "dark hair"
+    eyes: str = "brown eyes"
     extra: str = ""
-    top_color: str
-    top_item: str
-    bottom_color: str
-    bottom_item: str
+    top_color: str = "white"
+    top_item: str = "shirt"
+    bottom_color: str = "navy blue"
+    bottom_item: str = "trousers"
+    intro: str = Field(default="", max_length=240)
+    personality: list[str] = Field(default_factory=list, max_length=4)
+    speaking_style: str = Field(default="", max_length=80)
+    dialogue_behavior: str = Field(default="", max_length=400)
+    default_accent: str = Field(default="", max_length=40)
+    default_tts_engine: str = Field(default="edge_tts", min_length=1, max_length=40)
+    default_voice_id: str = Field(default="", max_length=120)
+    default_voice_description: str = Field(default="", max_length=400)
+    default_speed: float = Field(default=1.0, ge=0.75, le=1.5)
+    default_pitch: float = Field(default=0.0, ge=-1.0, le=1.0)
+    default_volume: float = Field(default=1.0, ge=0.0, le=2.0)
+    wizard_step: int = Field(default=0, ge=0, le=10)
 
     @field_validator("name")
     @classmethod
@@ -67,6 +79,16 @@ class CharacterInput(BaseModel):
             raise ValueError("extra must have at most 6 words and 50 letters, spaces, hyphens or commas")
         return value
 
+    @field_validator("personality")
+    @classmethod
+    def validate_personality(cls, values: list[str]) -> list[str]:
+        cleaned = [" ".join(value.strip().split()) for value in values]
+        if any(not value or len(value) > 40 for value in cleaned):
+            raise ValueError("personality traits must contain 1–40 characters")
+        if len({value.lower() for value in cleaned}) != len(cleaned):
+            raise ValueError("personality traits must be distinct")
+        return cleaned
+
     @model_validator(mode="after")
     def validate_outfit(self):
         if self.top_color not in COLORS or self.bottom_color not in COLORS:
@@ -93,6 +115,23 @@ class CharacterPatch(BaseModel):
     top_item: str | None = None
     bottom_color: str | None = None
     bottom_item: str | None = None
+    intro: str | None = Field(default=None, max_length=240)
+    personality: list[str] | None = Field(default=None, max_length=4)
+    speaking_style: str | None = Field(default=None, max_length=80)
+    dialogue_behavior: str | None = Field(default=None, max_length=400)
+    default_accent: str | None = Field(default=None, max_length=40)
+    default_tts_engine: str | None = Field(default=None, min_length=1, max_length=40)
+    default_voice_id: str | None = Field(default=None, max_length=120)
+    default_voice_description: str | None = Field(default=None, max_length=400)
+    default_speed: float | None = Field(default=None, ge=0.75, le=1.5)
+    default_pitch: float | None = Field(default=None, ge=-1.0, le=1.0)
+    default_volume: float | None = Field(default=None, ge=0.0, le=2.0)
+    wizard_step: int | None = Field(default=None, ge=0, le=10)
+
+    @field_validator("personality")
+    @classmethod
+    def validate_personality(cls, values: list[str] | None) -> list[str] | None:
+        return CharacterInput.validate_personality(values) if values is not None else None
 
 
 class SceneInput(BaseModel):

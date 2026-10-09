@@ -3,7 +3,7 @@
   "version": "1.2.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_33_task_33_1_complete",
+  "status": "phase_33_task_33_2_complete",
   "current_phase": "33",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
@@ -267,9 +267,9 @@
     "33": {
       "name": "Character Profiles v2",
       "status": "in_progress",
-      "tasks_done": 1,
+      "tasks_done": 2,
       "tasks_total": 9,
-      "note": "Task 33.1 complete 2026-10-10. Migration 018 rehearsed on a real-data copy: 58 sprites registered, IDs/cast/speaker voice unchanged, foreign_key_check clean. Phase 32 Gate B-22 remains pending."
+      "note": "Tasks 33.1-33.2 complete 2026-10-10. Versioned schema plus profile/readiness/lifecycle API pass 17 profile and legacy API regressions. Next: 33.3 asset slots and upload. Phase 32 Gate B-22 remains pending."
     }
   },
   "key_decisions": [

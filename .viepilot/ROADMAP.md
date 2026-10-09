@@ -1459,7 +1459,7 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 Phase 33 implementation was explicitly started by the owner's `/vp-auto thực hiện` instruction. Phase 32 Gate B-22 remains pending and was not recorded as accepted.
 
 - [x] 33.1 Profile schema, versioning, and Lina/Alex migration rehearsal
-- [ ] 33.2 Profile domain, readiness, lifecycle, and API
+- [x] 33.2 Profile domain, readiness, lifecycle, and API
 - [ ] 33.3 Asset slots, direct upload, validation, review, and prompt packs
 - [ ] 33.4 Character Library and ten-step creation wizard
 - [ ] 33.5 Visual Asset Studio, bulk mapping, and local generation integration

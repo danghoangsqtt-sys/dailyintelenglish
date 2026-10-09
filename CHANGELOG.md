@@ -10,6 +10,7 @@ Versioning: [SemVer](https://semver.org/)
 
 ### Added (Phase 33 — Character Profiles v2, 2026-10-10)
 - **Task 33.1:** additive profile/version schema and safe copied-data rehearsal. Existing Lina/Alex IDs, cast assignments, voice settings, image paths and sprite manifests remain unchanged; project casts now pin the character identity version and prevent duplicate profile assignment.
+- **Task 33.2:** reusable profile API with name-only drafts, autosave/resume, independent Profile/Voice/Visual/Sprite/Activity readiness, normalized active-name uniqueness, duplicate, archive/restore, dependency reporting and safe deletion.
 
 ### Added (Phase 32 — talking characters, 2026-10-08)
 - **Verified Demo Episode with activity cutaways (2026-10-09).** The real production

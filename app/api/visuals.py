@@ -5,7 +5,7 @@ import time
 from typing import Literal
 
 import aiosqlite
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
@@ -23,6 +23,7 @@ from app.services.visuals import jobs
 from app.services.visuals import activity_analysis_service as activity_analysis
 from app.services.visuals import activity_library_service as activity_library
 from app.services.visuals import activity_matcher
+from app.services.visuals import character_profile_service as character_profiles
 from app.services.visuals import library_service as library
 from app.services.visuals import project_visuals_service as project_visuals
 from app.services.visuals import shot_library_service as shot_library
@@ -55,23 +56,28 @@ async def visuals_options() -> dict:
 
 
 @router.get("/characters")
-async def list_characters(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+async def list_characters(
+    q: str = Query(default="", max_length=80),
+    state: Literal["active", "archived", "all"] = "active",
+    readiness: Literal["", "video_ready", "talking_ready", "needs_setup"] = "",
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
     async with read_transaction():
-        rows = await library.list_characters(db)
+        rows = await character_profiles.list_profiles(db, query=q, state=state, readiness_filter=readiness)
     return ok(rows)
 
 
 @router.post("/characters")
 async def create_character(body: CharacterInput, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     async with write_transaction(db):
-        row = await library.create_character(db, body)
+        row = await character_profiles.create_profile(db, body)
     return ok(row)
 
 
 @router.get("/characters/{character_id}")
 async def get_character(character_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     async with read_transaction():
-        row = await library.character_view(db, character_id)
+        row = await character_profiles.profile_view(db, character_id)
     return ok(row)
 
 
@@ -80,7 +86,7 @@ async def edit_character(
     character_id: str, body: CharacterPatch, db: aiosqlite.Connection = Depends(get_db),
 ) -> dict:
     async with write_transaction(db):
-        row = await library.edit_character(db, character_id, body)
+        row = await character_profiles.patch_profile(db, character_id, body)
     return ok(row)
 
 
@@ -89,9 +95,42 @@ async def delete_character(
     character_id: str, force: bool = False, db: aiosqlite.Connection = Depends(get_db),
 ) -> dict:
     async with write_transaction(db):
-        await library.delete_character(db, character_id, force)
+        if force:
+            # Temporary compatibility for the legacy Character Library. The Phase 33
+            # profile UI never offers force-delete and uses archive instead.
+            await library.delete_character(db, character_id, force=True)
+        else:
+            await character_profiles.permanent_delete(db, character_id)
     await library.remove_character_files(character_id)
     return ok({"deleted": character_id})
+
+
+@router.post("/characters/{character_id}/duplicate")
+async def duplicate_character(character_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        row = await character_profiles.duplicate_profile(db, character_id)
+    return ok(row)
+
+
+@router.post("/characters/{character_id}/archive")
+async def archive_character(character_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        row = await character_profiles.archive_profile(db, character_id)
+    return ok(row)
+
+
+@router.post("/characters/{character_id}/restore")
+async def restore_character(character_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        row = await character_profiles.restore_profile(db, character_id)
+    return ok(row)
+
+
+@router.get("/characters/{character_id}/dependencies")
+async def character_dependencies(character_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with read_transaction():
+        result = await character_profiles.dependencies(db, character_id)
+    return ok(result)
 
 
 async def _enqueue(db: aiosqlite.Connection, kind: str, target_id: str, payload: dict | None = None) -> dict:

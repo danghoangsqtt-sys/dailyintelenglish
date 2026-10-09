@@ -35,8 +35,15 @@ Provide one domain service and API for complete reusable profiles, independent r
 
 ## Acceptance Criteria
 
-- [ ] A draft can be created, patched by step, refreshed, and resumed.
-- [ ] Readiness explains every missing requirement.
-- [ ] Archive preserves dependencies; seed/dependent profiles cannot be permanently deleted.
-- [ ] Duplicate creates a new ID and a conflict-free active name.
+- [x] A draft can be created, patched by step, refreshed, and resumed.
+- [x] Readiness explains every missing requirement.
+- [x] Archive preserves dependencies; seed/dependent profiles cannot be permanently deleted.
+- [x] Duplicate creates a new ID and a conflict-free active name.
+
+## Verification Result — PASS (2026-10-10)
+
+- New profile service/API suite: **7 passed**.
+- Combined profile plus legacy Character/Project API regression: **17 passed**.
+- Ruff on all changed Python and `git diff --check`: PASS.
+- Existing full character payloads and legacy generation/lock routes remain compatible; the new default route also accepts a name-only draft.
 
