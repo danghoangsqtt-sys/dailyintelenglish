@@ -1453,3 +1453,17 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 - [x] 32.6e Storyboard insert guidance and generic-activity prompt pack (2026-10-09)
 - [x] 32.6f Tests and Demo Episode render with three insert beats (2026-10-09)
 - [ ] 32.7 Gate B-22 (owner): compare the updated video against the talking-sprites baseline
+
+### Phase 33: Character Profiles v2 — proposed, unopened 2026-10-10
+
+Phase 33 is planned in `docs/implementation/phase-33-character-profiles-v2.md` and remains unopened until Phase 32 Gate B-22 is accepted. Planning this phase does not change the active phase or tracker state.
+
+- [ ] 33.1 Profile schema, versioning, and Lina/Alex migration rehearsal
+- [ ] 33.2 Profile domain, readiness, lifecycle, and API
+- [ ] 33.3 Asset slots, direct upload, validation, review, and prompt packs
+- [ ] 33.4 Character Library and ten-step creation wizard
+- [ ] 33.5 Visual Asset Studio, bulk mapping, and local generation integration
+- [ ] 33.6 Tiered sprite readiness and renderer compatibility
+- [ ] 33.7 Game-style Character Selector and explicit project assignment
+- [ ] 33.8 Dynamic Activity/Storyboard/Shot integration for 3–6 cast
+- [ ] 33.9 Real three-character acceptance project and Gate B-23

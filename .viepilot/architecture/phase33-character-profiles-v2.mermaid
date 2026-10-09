@@ -1,0 +1,18 @@
+flowchart LR
+    U[Character Library / Wizard / Selector] --> API[FastAPI character profile API]
+    API --> PS[CharacterProfileService]
+    API --> AS[CharacterAssetService]
+    API --> CS[ProjectCastService]
+    PS --> DB[(SQLite)]
+    AS --> V[Image validation and normalization]
+    AS --> FS[Versioned profile asset files]
+    AS --> LG[Existing local image job pipeline]
+    CS --> DB
+    PS --> R[Readiness projector]
+    AS --> R
+    R --> U
+    CS --> SB[Storyboard / shot planning]
+    AS --> SR[Sprite and activity adapters]
+    SR --> RM[Remotion renderer]
+    SB --> RM
+

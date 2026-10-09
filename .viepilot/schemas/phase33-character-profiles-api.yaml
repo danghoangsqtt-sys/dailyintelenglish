@@ -1,0 +1,153 @@
+openapi: 3.1.0
+info:
+  title: Phase 33 Character Profiles v2 proposed API
+  version: 0.1.0-proposed
+  description: Planning contract. Implementation OpenAPI remains authoritative.
+paths:
+  /api/visuals/characters:
+    get:
+      summary: List profiles with search, lifecycle, and readiness filters
+      parameters:
+        - {name: q, in: query, schema: {type: string}}
+        - {name: state, in: query, schema: {type: string, enum: [active, archived, all]}}
+        - {name: readiness, in: query, schema: {type: string}}
+      responses:
+        '200': {description: Profile summaries and readiness}
+    post:
+      summary: Create an autosaved draft profile
+      responses:
+        '201': {description: Draft created}
+        '409': {description: Active normalized name already exists}
+  /api/visuals/characters/{character_id}:
+    get:
+      summary: Read a complete profile, readiness, assets, and activity counts
+      responses:
+        '200': {description: Profile detail}
+        '404': {description: Unknown profile}
+    patch:
+      summary: Autosave explicit profile fields and wizard progress
+      responses:
+        '200': {description: Saved profile and recomputed readiness}
+        '409': {description: Duplicate active name or stale identity version}
+    delete:
+      summary: Permanently delete a non-seed profile with no dependencies
+      responses:
+        '204': {description: Deleted}
+        '409': {description: Seed or dependencies prevent deletion}
+  /api/visuals/characters/{character_id}/duplicate:
+    post:
+      summary: Duplicate profile fields into a new draft; assets are not silently shared
+      responses:
+        '201': {description: Draft duplicate created}
+  /api/visuals/characters/{character_id}/archive:
+    post:
+      summary: Hide a profile from the default selector while preserving dependencies
+      responses:
+        '200': {description: Archived}
+  /api/visuals/characters/{character_id}/restore:
+    post:
+      summary: Restore an archived profile after normalized-name validation
+      responses:
+        '200': {description: Restored}
+        '409': {description: Active name conflict}
+  /api/visuals/characters/{character_id}/dependencies:
+    get:
+      summary: Report project, shot, sprite, and activity dependencies
+      responses:
+        '200': {description: Dependency counts and references}
+  /api/visuals/characters/{character_id}/asset-slots:
+    get:
+      summary: List slot contract, examples, prompts, state, and current assets
+      responses:
+        '200': {description: Slot groups and tier progress}
+  /api/visuals/characters/{character_id}/assets/{slot_key}/upload:
+    post:
+      summary: Upload one multipart image to an explicit canonical slot
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [picture]
+              properties:
+                picture: {type: string, format: binary}
+                expected_identity_version: {type: integer, minimum: 1}
+      responses:
+        '201': {description: Persisted as needs_review}
+        '409': {description: Stale identity version or replacement conflict}
+        '422': {description: Technical validation failed}
+  /api/visuals/characters/{character_id}/assets/upload-batch:
+    post:
+      summary: Upload many pictures using an explicit file-to-slot mapping
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [pictures, mapping_json]
+              properties:
+                pictures:
+                  type: array
+                  items: {type: string, format: binary}
+                mapping_json:
+                  type: string
+                  description: JSON mapping each multipart file index to slot_key and replacement action
+      responses:
+        '200': {description: Per-file results in original order}
+        '422': {description: Invalid or incomplete mapping}
+  /api/visuals/characters/{character_id}/assets/{slot_key}/generate:
+    post:
+      summary: Queue the existing local image pipeline for one slot
+      responses:
+        '202': {description: Image job queued}
+        '409': {description: Missing prerequisite or GPU job conflict}
+  /api/visuals/characters/{character_id}/assets/{asset_id}/review:
+    put:
+      summary: Approve or reject one current asset
+      responses:
+        '200': {description: Review saved and readiness recomputed}
+  /api/visuals/characters/{character_id}/assets/{asset_id}:
+    delete:
+      summary: Remove the current asset while retaining versioned history when referenced
+      responses:
+        '204': {description: Removed from current profile}
+        '409': {description: Referenced asset cannot be physically deleted}
+  /api/visuals/characters/{character_id}/prompt-pack:
+    get:
+      summary: Export provider-neutral prompts, checklist, references, and canonical slot names
+      responses:
+        '200': {description: ZIP prompt pack}
+  /api/visuals/projects/{project_id}/cast:
+    put:
+      summary: Explicitly assign distinct profile IDs and pinned profile versions to speakers
+      responses:
+        '200': {description: Cast saved and optional voice defaults copied}
+        '409': {description: Duplicate profile or incompatible readiness}
+components:
+  schemas:
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code: {type: string}
+        message: {type: string}
+        field: {type: string}
+        slot_key: {type: string}
+    Readiness:
+      type: object
+      required: [profile, voice, visual, talking_starter, full_expressions, full_sprite_pack, activities]
+      properties:
+        profile: {type: string, enum: [missing, ready]}
+        voice: {type: string, enum: [missing, ready]}
+        visual: {type: string, enum: [missing, partial, ready]}
+        talking_starter: {type: string, enum: [missing, partial, ready]}
+        full_expressions: {type: string, enum: [missing, partial, ready]}
+        full_sprite_pack: {type: string, enum: [missing, partial, ready]}
+        activities:
+          type: object
+          properties:
+            approved: {type: integer, minimum: 0}
+            pending: {type: integer, minimum: 0}
+            rejected: {type: integer, minimum: 0}
