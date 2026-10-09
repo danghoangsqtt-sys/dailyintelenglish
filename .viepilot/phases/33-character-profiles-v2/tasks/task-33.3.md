@@ -21,6 +21,16 @@ Make profile assets manageable through explicit canonical slots with safe direct
 3. Persist original filenames as metadata while deriving storage paths only from character ID, identity version, and canonical slot key.
 4. Add review/remove/replace behavior, identity-version conflict checks, stale propagation, content delivery, and prompt-pack export.
 
+## Implementation Notes
+
+- **Files touched:** the seven paths listed above plus ViePilot state/changelog files.
+- **Upload limits:** 20 MB per file, 40 files per batch, bounded 1 MB reads, actual Pillow format verification, and a 24 megapixel decode ceiling.
+- **Slot contract:** core visuals accept PNG/JPEG/WebP; sprite slots require exact 1280×1536 RGBA PNG with clear corners and no opaque canvas edge.
+- **Storage:** stage under the version directory, normalize to PNG, then atomically replace; database current-slot changes occur only after validation and file persistence.
+- **Review:** all uploaded/local-generated assets start `needs_review`; renderer readiness only counts approved current assets.
+- **Identity version:** replacing `face`, `full_body`, or `calm__closed` increments the profile version after explicit confirmation and marks old-version dependents stale without deleting files.
+- **Expected verification:** corruption, size, alpha, dimension, replacement rollback, review, stale propagation, batch mapping, and prompt archive tests.
+
 ## Verification
 
 `venv\Scripts\python.exe -m pytest tests/test_character_asset_upload.py tests/test_character_asset_slots.py -q`
