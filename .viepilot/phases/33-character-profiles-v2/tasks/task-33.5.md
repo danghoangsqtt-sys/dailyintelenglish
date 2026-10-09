@@ -33,3 +33,11 @@ Let users complete every picture requirement inside the wizard using external up
 - [ ] Upload and generation errors identify the affected picture and preserve other work.
 - [ ] Normal use requires no folder copy or manual filename change.
 
+## Implementation Notes
+
+- Reuse the canonical slot registry and upload endpoints from Task 33.3; the browser never derives a slot from a filename.
+- Keep selected `File` objects in browser memory so a failed item can be remapped or retried without selecting the batch again.
+- Open the studio from wizard Steps 5–9 and return to the same step after review.
+- Treat local generation as an explicit per-slot job request with the same pending-review result contract as uploaded images.
+- Keep GPU work inside the existing image job runner and cancellation/progress UI.
+
