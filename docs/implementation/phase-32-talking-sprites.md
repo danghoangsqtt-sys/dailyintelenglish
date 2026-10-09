@@ -48,8 +48,10 @@ Names: `<character>__<expression>__<mouth>.png` (`alex__smile__open.png`, `lina_
   hold so it does not flicker); with three mouth pictures the loudness picks closed, half or open. Pauses between words close it.
 - **Life:** a slow breathing bob, a blink every 3 to 5 seconds (a fixed pseudo-random pattern, so a render is repeatable), an optional
   gesture picture on a stressed word or a beat action.
-- **Cutaways:** an insert still cuts to its full-frame illustration; a beat with a library picture of both (a walk in the market) may
-  show it instead of the sprites.
+- **Cutaways:** an approved Activity Library match fills the 16:9 frame from the insert beat start through its end, capped at six
+  seconds, with 0.3-second in/out fades. Character-specific images outrank generic images; a missing match keeps the sprites. Audio,
+  captions, speaker chips, vocabulary and chapter overlays continue unchanged above the image. Step 5 reports this coverage before
+  render, and successful renders record the activity, beat and video-job IDs.
 
 ## 4. Tasks
 
@@ -60,7 +62,13 @@ Names: `<character>__<expression>__<mouth>.png` (`alex__smile__open.png`, `lina_
 | 32.3 | **Remotion composition `Sprites.tsx` + `spriteTimeline.ts`:** layers, turns, enter and leave, blink, breathing, mouth; props schema; vitest | vitest green, `tsc` clean |
 | 32.4 | **API and Step 5:** `visual_mode = "podcast_sprites"` (Enhanced only), the props builder (backgrounds from the storyboard beats, sprites, mouth and expression plans), a chip "Podcast: talking characters" | tests; browser test |
 | 32.5 | **Real render** of the demo episode with the owner's first sprite set | owner sees the video |
-| 32.6 | **Gate B-22:** the owner compares it with the story-picture video | owner PASS |
+| 32.6a | Activity Library migration, import, validation, review and usage history | contract tests and real data check |
+| 32.6b | Activity Library cards, metadata/review UI and local-vision smart upload | browser tests and real local-model smoke |
+| 32.6c | Deterministic character/generic matching and Step 5 coverage | matcher/API/browser tests |
+| 32.6d | Full-screen Remotion cutaways | Python props tests, Vitest and TypeScript check |
+| 32.6e | Storyboard insert guidance and locked D72 generic prompt pack | prompt contract and exact 20-file manifest test |
+| 32.6f | Full automated verification and Demo Episode render with three inserts | test matrix, media probe and demo evidence |
+| 32.7 | **Gate B-22:** owner compares the new cutaway video with the talking-sprites baseline | owner PASS |
 
 ## 5. Decisions and risks
 

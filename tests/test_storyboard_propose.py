@@ -1,10 +1,12 @@
 """Task 24.2: AI storyboard proposal -- validated, one repair, deterministic fallback."""
 
 import json
+import re
 
 import pytest
 
 from app.core.exceptions import ProviderError
+from app.core.paths import get_project_root
 from app.services.ai.contracts import AIMode, GenerationResult
 from app.services.ai.fake_provider import FakeProvider
 from app.services.ai.router import AIRouter
@@ -54,7 +56,31 @@ def test_valid_ai_answer_is_saved(client, fake_ai):  # noqa: F811
     prompt = provider.calls[0].prompt
     assert "[0] (speaker 0) Line number 0 of the lesson." in prompt
     assert "builtin-rice-fields | Rice fields | green rice fields | countryside" in prompt
+    assert "Every insert must target 3 to 6 seconds" in prompt
+    assert "action-led and useful for comprehension, never" in prompt and "decorative" in prompt
+    assert "reusable plain activity" in prompt
     assert "Your previous answer was rejected" not in prompt and provider.calls[0].purpose == "storyboard"
+
+
+def test_locked_d72_prompt_pack_has_exactly_the_twenty_canonical_import_names_and_constraints():
+    text = (get_project_root() / "docs" / "operations" / "activity-library-prompt-pack.md").read_text(encoding="utf-8")
+    expected = {
+        "generic__exercise__morning__01.png", "generic__walking__outdoors__01.png",
+        "generic__jogging__outdoors__01.png", "generic__cycling__outdoors__01.png",
+        "generic__cooking__kitchen__01.png", "generic__baking__kitchen__01.png",
+        "generic__eating__cafe__01.png", "generic__drinking-coffee__cafe__01.png",
+        "generic__grocery-shopping__store__01.png", "generic__cleaning__home__01.png",
+        "generic__gardening__balcony__01.png", "generic__reading__library__01.png",
+        "generic__studying__desk__01.png", "generic__laptop-work__home-office__01.png",
+        "generic__meeting__office__01.png", "generic__commuting__train__01.png",
+        "generic__driving__city__01.png", "generic__packing__bedroom__01.png",
+        "generic__relaxing__living-room__01.png", "generic__morning-routine__bedroom__01.png",
+    }
+    filenames = re.findall(r"`(generic__[a-z0-9-]+__[a-z0-9-]+__01\.png)`", text)
+    assert len(filenames) == 20 and set(filenames) == expected
+    assert "16:9 landscape 1280x720" in text and "calm lower-centre space for subtitles" in text
+    assert "No text, captions, readable signs, logo, watermark" in text
+    assert len(re.findall(r"^\| \d+ \|", text, flags=re.MULTILINE)) == 20
 
 
 def test_invalid_json_then_repair(client, fake_ai):  # noqa: F811

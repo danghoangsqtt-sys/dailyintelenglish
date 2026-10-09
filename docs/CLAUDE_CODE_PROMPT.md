@@ -7,7 +7,7 @@ do not execute its Task 1.1 checklist or treat its original stack decisions as c
 
 ### Current state
 
-- Phase 31 is done. Phase 32 is in progress: Tasks 32.1–32.6d are done, Task 32.6e is
+- Phase 31 is done. Phase 32 is in progress: Tasks 32.1–32.6e are done, Task 32.6f is
   next, and owner Gate B-22 is pending.
 - The owner wants to continue with reusable, full-frame activity cutaways for the talking
   characters. Read `docs/brainstorm/session-2026-10-08.md` first; the task breakdown and owner

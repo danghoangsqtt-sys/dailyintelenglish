@@ -22,6 +22,10 @@ Versioning: [SemVer](https://semver.org/)
   insert fills the frame with a cover crop for at most six seconds and fades in/out over
   0.3 seconds. The uninterrupted audio, captions, speaker chips, vocabulary and chapter
   overlays stay above it; missing inserts continue showing the talking sprites.
+- **Storyboard and D72 prompt pack (2026-10-09).** Storyboard proposals target at most
+  three useful, action-led 3–6 second inserts. The canonical generic pack documents exact
+  import names, activity-appropriate clothing/actions, 16:9 composition and shared negative
+  constraints for the 20 D72 starter images.
 - **Activity Library smart upload (2026-10-09).** Choose Alex, Lina or Generic and add one
   or many activity pictures; the app's dedicated local Qwen3-VL 4B Q4 model proposes the
   activity, context and matching aliases. Pictures remain “Needs review” until approved.
