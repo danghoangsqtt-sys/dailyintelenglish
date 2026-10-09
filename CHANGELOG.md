@@ -9,6 +9,11 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Added (Phase 32 — talking characters, 2026-10-08)
+- **Review-gated Activity Library backend (2026-10-09).** Reusable 16:9 activity images
+  support generic or character-specific scopes, normalized activity/context/alias metadata,
+  recursive inbox import, duplicate and image validation, approve/reject states, safe local
+  content serving and persistent per-render usage history. Pending/rejected images cannot enter
+  matching or usage rotation.
 - **Activity Library smart upload (2026-10-09).** Choose Alex, Lina or Generic and add one
   or many activity pictures; the app's dedicated local Qwen3-VL 4B Q4 model proposes the
   activity, context and matching aliases. Pictures remain “Needs review” until approved.

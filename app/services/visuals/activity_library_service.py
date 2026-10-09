@@ -223,9 +223,12 @@ async def import_inbox(db: aiosqlite.Connection) -> dict[str, list[dict[str, str
     if not folder.is_dir():
         return {"imported": imported, "rejected": rejected}
     for source in sorted(path for path in folder.rglob("*") if path.is_file()):
+        target: Path | None = None
         try:
             if source.suffix.lower() not in _IMAGE_SUFFIXES:
                 raise ValidationError("supported formats are PNG, JPEG and WebP")
+            if source.stat().st_size > _MAX_UPLOAD_BYTES:
+                raise ValidationError("activity images must be 20 MB or smaller")
             metadata = _filename(source, keys)
             await asyncio.to_thread(_verify_image, source)
             digest = await asyncio.to_thread(_sha, source)
@@ -243,7 +246,11 @@ async def import_inbox(db: aiosqlite.Connection) -> dict[str, list[dict[str, str
                  json.dumps(metadata["aliases"]), metadata["variant"], str(target), digest, now, now),
             )
             imported.append({"id": activity_id, "file": source.name})
-        except (ValidationError, ConflictError) as exc:
+        except (ValidationError, ConflictError, OSError) as exc:
+            # The inbox is the recovery source. Never leave a copied orphan when
+            # validation/storage fails, and never delete the owner's source file.
+            if target is not None:
+                await asyncio.to_thread(target.unlink, missing_ok=True)
             rejected.append({"file": source.name, "reason": str(exc)})
     return {"imported": imported, "rejected": rejected}
 
@@ -352,7 +359,9 @@ async def record_usage(
     db: aiosqlite.Connection, activity_id: str, project_id: str, beat_id: str | None, render_id: str | None,
 ) -> None:
     """Persist a real selected render use; preview and coverage must never call this function."""
-    await _row(db, activity_id)
+    row = await _row(db, activity_id)
+    if row["review_state"] != "approved":
+        raise ConflictError("Only an approved activity image can be recorded as used")
     now = _now()
     await db.execute(
         "INSERT INTO activity_library_usage (id, activity_id, project_id, beat_id, render_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",

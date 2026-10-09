@@ -34,7 +34,20 @@ Expected: tests cover migration, filename parsing, unknown character, duplicate 
 
 ## Acceptance Criteria
 
-- [ ] Pending imported items are invisible to matching by default.
-- [ ] Generic and character-specific images are both representable.
-- [ ] Invalid/import-failed files report a reason and remain recoverable in inbox.
-- [ ] Approved/rejected state, metadata and usage history survive a DB reopen.
+- [x] Pending imported items are invisible to matching by default.
+- [x] Generic and character-specific images are both representable.
+- [x] Invalid/import-failed files report a reason and remain recoverable in inbox.
+- [x] Approved/rejected state, metadata and usage history survive a DB reopen.
+
+## Result — 2026-10-09
+
+- Completed and verified the migration, normalized metadata lifecycle, recursive inbox import,
+  review gate, root-contained content lookup, API lifecycle and usage history.
+- Inbox imports now reject files over 20 MB, preserve every source file on failure and remove a
+  partially copied destination if a file-level validation/storage error occurs.
+- Usage recording now refuses pending/rejected assets, preserving the invariant that only an
+  approved image selected by a real render can affect history and rotation counters.
+- Real library check: 156 records (`Alex` 25, `Lina` 25, `Generic` 106), all pending review;
+  the 155 owner-created inbox source images remain intact.
+- Verification: `pytest tests/test_activity_library.py -q` → 10 passed; targeted Ruff and
+  `git diff --check` passed.

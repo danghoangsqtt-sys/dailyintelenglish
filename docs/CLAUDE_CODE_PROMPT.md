@@ -7,11 +7,11 @@ do not execute its Task 1.1 checklist or treat its original stack decisions as c
 
 ### Current state
 
-- Phase 31 is done. Phase 32 is in progress: Tasks 32.1–32.5 are done; owner Gate B-22 is
-  pending.
+- Phase 31 is done. Phase 32 is in progress: Tasks 32.1–32.6b are done, Task 32.6c is
+  in progress, and owner Gate B-22 is pending.
 - The owner wants to continue with reusable, full-frame activity cutaways for the talking
-  characters. Read `docs/brainstorm/session-2026-10-08.md` first; confirm the proposed task
-  breakdown and owner gate before implementation.
+  characters. Read `docs/brainstorm/session-2026-10-08.md` first; the task breakdown and owner
+  gate are approved, so resume at the first incomplete Phase 32 task without reopening scope.
 - The current implementation is documented in `docs/implementation/phase-32-talking-sprites.md`.
   Phase 32 source sprites and their web inputs are under `data/assets_sprites/`.
 
