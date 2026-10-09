@@ -30,3 +30,11 @@ Replace the long create/edit form with a clear ten-step, game-like wizard and up
 - [ ] Readiness and missing actions are visible from both card and detail views.
 - [ ] The page remains usable at 1024 px wide without nested form scrolling or tiny labels.
 
+## Implementation Notes
+
+- Keep the existing Scenes tab and legacy local image generation workflow available while replacing the character create/edit form.
+- Use the Phase 33 profile API for search, lifecycle filters, duplicate, archive, restore, and persisted `wizard_step` progress.
+- Treat Steps 1–4 as profile setup, Steps 5–10 as guided asset/readiness checkpoints; optional sprite tiers may be skipped.
+- Autosave only changed fields, retain unsaved form values after a failed request, and expose a visible retry action.
+- Keep the wizard in the page flow at 1024 px and below so the document owns scrolling; avoid scrollable form panes.
+
