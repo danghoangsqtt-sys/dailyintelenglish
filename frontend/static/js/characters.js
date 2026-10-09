@@ -9,6 +9,8 @@
   const state = {
     characters: [], scenes: [], options: null, health: null,
     selectedId: null, selectedSceneId: null, editingSceneId: null, sceneFilter: "all", busy: false, progress: null,
+    filters: { q: "", state: "active", readiness: "" }, wizardStep: 0, wizardCharacter: null,
+    saveTimer: null, savePending: null, saveError: null, saving: false,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -47,7 +49,7 @@
   }
 
   function fillOptions() {
-    const form = $("character-form");
+    const form = $("character-wizard-form");
     const mapping = {
       gender: state.options.genders,
       age_group: state.options.age_groups,
@@ -57,6 +59,9 @@
       bottom_item: state.options.bottoms,
     };
     Object.entries(mapping).forEach(([name, values]) => optionList(form.elements[name], values));
+    form.elements.ethnicity.value = "Russian";
+    form.elements.hair.value = "dark hair";
+    form.elements.eyes.value = "brown eyes";
     form.elements.bottom_color.value = "navy blue";
     const sceneForm = $("scene-form");
     optionList(sceneForm.elements.category, state.options.scene_categories || ["other"]);
@@ -69,6 +74,24 @@
     return state.characters.find((character) => character.id === state.selectedId) || null;
   }
 
+  function portrait(character) {
+    const asset = (character?.assets || []).find((item) =>
+      ["face", "portrait_calm"].includes(item.slot_key || item.kind) && (item.is_current ?? 1));
+    return character?.face_url || character?.body_url || asset?.url || "";
+  }
+
+  const READINESS_LABELS = {
+    profile: "Profile", voice: "Voice", visual: "Core visuals",
+    talking_starter: "Talking starter", full_expressions: "Expressions", full_sprite_pack: "Full sprites",
+  };
+
+  function pill(label, item) {
+    const node = document.createElement("span");
+    node.className = `readiness-pill ${item?.state || "missing"}`;
+    node.textContent = `${item?.state === "ready" ? "Ready" : "Needs work"} · ${label}`;
+    return node;
+  }
+
   function assetCard(asset, label, fullBody = false) {
     const card = document.createElement("article");
     card.className = `library-asset${fullBody ? " full-body" : ""}`;
@@ -78,125 +101,21 @@
     const title = document.createElement("strong");
     title.textContent = label;
     card.append(image, title);
-    if (asset.prompt_truncated) {
-      const warning = document.createElement("div");
-      warning.className = "library-truncation";
-      warning.textContent = "⚠ description too long";
-      card.append(warning);
-    }
     return card;
-  }
-
-  const COLOUR_CSS = {
-    white: "#ffffff", black: "#111111", grey: "#8c8c8c", "navy blue": "#1f2a5c", "light blue": "#a9d3f5", red: "#d62d2d",
-    pink: "#f4a6c0", yellow: "#f5cf3a", orange: "#f08a24", green: "#3a9d3f", beige: "#e0cfae", brown: "#7a5230",
-  };
-
-  // One round swatch per garment of the locked outfit (title: "white top").
-  function outfitSwatches(character) {
-    const holder = document.createElement("span");
-    holder.className = "library-swatches";
-    [["top", character.top_color], ["bottom", character.bottom_color]].forEach(([part, colour]) => {
-      const dot = document.createElement("span");
-      dot.className = "library-swatch";
-      dot.title = `${colour} ${part}`;
-      dot.style.background = COLOUR_CSS[colour] || "#8c8c8c";
-      holder.append(dot);
-    });
-    return holder;
-  }
-
-  function renderCharacterHero() {
-    const hero = $("character-hero");
-    const character = selectedCharacter();
-    hero.replaceChildren();
-    hero.hidden = !character;
-    if (!character) return;
-    if (character.face_url) {
-      const face = document.createElement("img");
-      face.src = character.face_url;
-      face.alt = `${character.name} face`;
-      hero.append(face);
-    }
-    const copy = document.createElement("div");
-    const name = document.createElement("span");
-    name.className = "hero-name";
-    name.textContent = character.name;
-    const role = document.createElement("p");
-    role.className = "hero-role";
-    role.textContent = [character.role, character.hair].filter(Boolean).join(" · ");
-    const badge = document.createElement("span");
-    badge.className = "library-badge";
-    badge.textContent = character.status;
-    copy.append(name, role, outfitSwatches(character), " ", badge);
-    hero.append(copy);
-  }
-
-  function renderCharacterList() {
-    const list = $("character-list");
-    list.replaceChildren();
-    if (!state.characters.length) {
-      const empty = document.createElement("p");
-      empty.className = "library-hint";
-      empty.textContent = "No characters yet. Create your first character.";
-      list.append(empty);
-      return;
-    }
-    state.characters.forEach((character) => {
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = "library-card character-tile card";
-      card.setAttribute("aria-current", String(character.id === state.selectedId));
-      card.addEventListener("click", () => {
-        state.selectedId = character.id;
-        renderCharacters();
-      });
-      const art = document.createElement("span");
-      art.className = "tile-art";
-      const picture = character.body_url || character.face_url;
-      if (picture) {
-        const face = document.createElement("img");
-        face.className = "library-face";
-        face.src = picture;
-        face.alt = "";
-        art.append(face);
-      } else {
-        const placeholder = document.createElement("span");
-        placeholder.className = "library-placeholder";
-        placeholder.textContent = "Portrait";
-        art.append(placeholder);
-      }
-      const copy = document.createElement("span");
-      copy.className = "tile-copy";
-      const name = document.createElement("span");
-      name.className = "library-card-name";
-      name.textContent = character.name;
-      const meta = document.createElement("span");
-      meta.className = "tile-meta";
-      const badge = document.createElement("span");
-      badge.className = "library-badge";
-      badge.textContent = character.status;
-      meta.append(badge, outfitSwatches(character));
-      copy.append(name, meta);
-      card.append(art, copy);
-      list.append(card);
-    });
   }
 
   function renderCandidates(character) {
     const grid = $("candidate-grid");
     grid.replaceChildren();
-    const candidates = character.assets.filter((asset) => asset.kind === "candidate");
-    candidates.forEach((asset, index) => {
+    (character.assets || []).filter((asset) => asset.kind === "candidate").forEach((asset, index) => {
       const card = assetCard(asset, `Candidate ${index + 1}`);
       const pick = document.createElement("button");
       pick.className = "btn btn-ghost btn-sm";
       pick.type = "button";
-      pick.textContent = character.reference_asset_id === asset.id ? "✓ Selected" : "Choose this portrait";
+      pick.textContent = character.reference_asset_id === asset.id ? "Selected" : "Choose this portrait";
       pick.disabled = state.busy || character.status === "locked";
-      pick.addEventListener("click", async () => {
-        await act(async () => Api.pickCharacterReference(character.id, asset.id), "Portrait selected.");
-      });
+      pick.addEventListener("click", () => act(
+        () => Api.pickCharacterReference(character.id, asset.id), "Portrait selected."));
       card.append(pick);
       grid.append(card);
     });
@@ -206,68 +125,370 @@
     const grid = $("sheet-grid");
     grid.replaceChildren();
     Object.entries(SHEET_LABELS).forEach(([kind, label]) => {
-      const asset = character.assets.find((item) => item.kind === kind);
+      const asset = (character.assets || []).find((item) => item.kind === kind);
       if (!asset) return;
       const card = assetCard(asset, label, kind === "full_body");
-      const buttons = document.createElement("div");
-      buttons.className = "library-actions";
+      const actions = document.createElement("div");
+      actions.className = "library-actions";
       const approve = document.createElement("button");
       approve.type = "button";
       approve.className = "btn btn-ghost btn-sm";
-      approve.textContent = asset.approved ? "✓ Approved" : "✓ Approve";
+      approve.textContent = asset.approved ? "Approved" : "Approve";
       approve.disabled = state.busy || character.status === "locked";
       approve.addEventListener("click", () => act(
         () => Api.approveCharacterAsset(character.id, asset.id, !asset.approved),
-        asset.approved ? "Approval removed." : "Sheet asset approved.",
-      ));
+        asset.approved ? "Approval removed." : "Sheet asset approved."));
       const regenerate = document.createElement("button");
       regenerate.type = "button";
       regenerate.className = "btn btn-ghost btn-sm";
-      regenerate.textContent = "↻ Regenerate";
+      regenerate.textContent = "Regenerate";
       setGenerateButton(regenerate, character.status !== "locked");
       regenerate.addEventListener("click", () => startJob(() => Api.generateCharacterSheet(character.id, kind)));
-      buttons.append(approve, regenerate);
-      card.append(buttons);
+      actions.append(approve, regenerate);
+      card.append(actions);
       grid.append(card);
     });
   }
 
-  function renderEditor() {
-    const character = selectedCharacter();
-    const form = $("character-form");
-    const locked = character?.status === "locked";
-    $("editor-title").textContent = character ? character.name : "New character";
-    for (const field of form.querySelectorAll("input, select")) {
-      if (character && character[field.name] !== undefined) field.value = character[field.name];
-      field.disabled = Boolean(locked);
+  function renderCharacterList() {
+    const list = $("character-list");
+    list.replaceChildren();
+    $("character-count").textContent = `${state.characters.length} profile${state.characters.length === 1 ? "" : "s"}`;
+    if (!state.characters.length) {
+      const empty = document.createElement("div");
+      empty.className = "profile-empty card";
+      empty.innerHTML = "<h2>No matching profiles</h2><p>Change the filters or create a new character.</p>";
+      list.append(empty);
+      return;
     }
-    $("save-character").textContent = character ? "Save character" : "Create character";
-    $("save-character").disabled = Boolean(locked || state.busy);
-    $("delete-character").hidden = !character;
-    $("delete-character").disabled = state.busy;
-    $("character-workflow").hidden = !character;
+    state.characters.forEach((character) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "profile-card";
+      card.setAttribute("aria-current", String(character.id === state.selectedId));
+      card.setAttribute("aria-label", `${character.name}, ${character.role || "profile"}`);
+      card.addEventListener("click", () => { state.selectedId = character.id; renderCharacters(); });
+      const art = document.createElement("span");
+      art.className = "profile-card-art";
+      const picture = portrait(character);
+      if (picture) {
+        const image = document.createElement("img");
+        image.src = picture;
+        image.alt = "";
+        art.append(image);
+      } else art.textContent = "Portrait needed";
+      const copy = document.createElement("span");
+      copy.className = "profile-card-copy";
+      const name = document.createElement("strong");
+      name.textContent = character.name;
+      const role = document.createElement("small");
+      role.textContent = character.role || "Role not set";
+      const badges = document.createElement("span");
+      badges.className = "profile-mini-badges";
+      badges.append(pill("Profile", character.readiness?.profile), pill("Video", character.readiness?.visual),
+        pill("Talk", character.readiness?.talking_starter));
+      copy.append(name, role, badges);
+      card.append(art, copy);
+      list.append(card);
+    });
+  }
+
+  function missingItems(character) {
+    const result = [];
+    Object.entries(READINESS_LABELS).forEach(([key, label]) => {
+      const item = character.readiness?.[key];
+      if (item?.state === "ready") return;
+      result.push(`${label}: ${item?.missing?.length ? item.missing.join(", ") : "setup needed"}`);
+    });
+    return result;
+  }
+
+  function renderCharacterDetail() {
+    const character = selectedCharacter();
+    $("profile-empty").hidden = Boolean(character);
+    $("profile-content").hidden = !character;
     if (!character) return;
+    const hero = $("character-hero");
+    hero.replaceChildren();
+    const picture = portrait(character);
+    if (picture) {
+      const image = document.createElement("img");
+      image.src = picture;
+      image.alt = `${character.name} portrait`;
+      hero.append(image);
+    } else {
+      const blank = document.createElement("div");
+      blank.className = "profile-hero-placeholder";
+      blank.textContent = "Portrait";
+      hero.append(blank);
+    }
+    const copy = document.createElement("div");
+    copy.innerHTML = `<h2></h2><p></p><p></p>`;
+    copy.querySelector("h2").textContent = character.name;
+    copy.querySelectorAll("p")[0].textContent =
+      [character.role, character.lifecycle === "archived" ? "Archived" : ""].filter(Boolean).join(" · ");
+    copy.querySelectorAll("p")[1].textContent =
+      `Profile v${character.profile_version || 1} · Identity v${character.identity_version || 1}`;
+    hero.append(copy);
+    $("profile-intro").textContent = character.intro || "No introduction yet.";
+
+    const grid = $("profile-readiness");
+    grid.replaceChildren();
+    Object.entries(READINESS_LABELS).forEach(([key, label]) => {
+      const item = character.readiness?.[key] || { state: "missing", missing: [] };
+      const card = document.createElement("div");
+      card.className = "readiness-card";
+      const title = document.createElement("strong");
+      title.textContent = label;
+      const detail = document.createElement("span");
+      detail.textContent = item.state === "ready" ? "Ready"
+        : (item.total ? `${item.complete || 0} of ${item.total}` : "Needs setup");
+      card.append(title, detail, pill(item.state, item));
+      grid.append(card);
+    });
+    const missing = $("profile-missing");
+    missing.replaceChildren();
+    const items = missingItems(character);
+    (items.length ? items : ["All configured capabilities are ready."]).forEach((text) => {
+      const li = document.createElement("li");
+      li.textContent = text;
+      missing.append(li);
+    });
+
+    const archived = character.lifecycle === "archived";
+    $("resume-character").textContent = character.wizard_step >= 10 ? "Edit profile" :
+      `Resume step ${character.wizard_step || 1}`;
+    $("resume-character").disabled = archived || state.busy;
+    $("duplicate-character").disabled = state.busy;
+    $("archive-character").hidden = archived;
+    $("restore-character").hidden = !archived;
+    $("archive-character").disabled = state.busy || Boolean(character.is_seed);
+    $("archive-character").title = character.is_seed ? "Seed profiles cannot be archived." : "";
+
     renderCandidates(character);
     renderSheet(character);
+    const locked = character.status === "locked";
     setGenerateButton($("generate-candidates"), !locked);
     setGenerateButton($("generate-sheet"), Boolean(character.reference_asset_id && !locked));
     const approved = Object.keys(SHEET_LABELS).every((kind) =>
-      character.assets.some((asset) => asset.kind === kind && asset.approved));
+      (character.assets || []).some((asset) => asset.kind === kind && asset.approved));
     $("lock-character").hidden = locked;
     $("lock-character").disabled = state.busy || !approved || !character.reference_asset_id;
     $("unlock-character").hidden = !locked;
     $("unlock-character").disabled = state.busy;
-    $("lock-summary").textContent = locked
-      ? "Appearance and outfit are locked. Unlock to make changes after removing this character from project casts."
-      : `${Object.keys(SHEET_LABELS).filter((kind) => character.assets.some((asset) => asset.kind === kind && asset.approved)).length} of 4 sheet assets approved.`;
+    $("lock-summary").textContent = locked ? "Appearance and outfit are locked." :
+      `${Object.keys(SHEET_LABELS).filter((kind) =>
+        (character.assets || []).some((asset) => asset.kind === kind && asset.approved)).length} of 4 sheet assets approved.`;
   }
 
-  function renderCharacters() {
-    renderCharacterHero();
-    renderCharacterList();
-    renderEditor();
+  function renderCharacters() { renderCharacterList(); renderCharacterDetail(); }
+
+  function formValues() {
+    const form = $("character-wizard-form");
+    const body = {};
+    ["name", "role", "intro", "speaking_style", "dialogue_behavior", "gender", "age_group",
+      "ethnicity", "hair", "eyes", "extra", "top_color", "top_item", "bottom_color", "bottom_item",
+      "default_accent", "default_tts_engine", "default_voice_id", "default_voice_description"]
+      .forEach((name) => { body[name] = String(form.elements[name]?.value || "").trim(); });
+    body.personality = String(form.elements.personality.value || "").split(",")
+      .map((item) => item.trim()).filter(Boolean);
+    ["default_speed", "default_pitch", "default_volume"].forEach((name) => {
+      body[name] = Number(form.elements[name].value);
+    });
+    return body;
   }
 
+  function fillWizard(character) {
+    const form = $("character-wizard-form");
+    form.reset();
+    form.elements.ethnicity.value = "Russian";
+    form.elements.hair.value = "dark hair";
+    form.elements.eyes.value = "brown eyes";
+    form.elements.bottom_color.value = "navy blue";
+    if (!character) return;
+    for (const field of form.querySelectorAll("[name]")) {
+      if (field.name === "visual_source") continue;
+      const value = field.name === "personality" ? (character.personality || []).join(", ") : character[field.name];
+      if (value !== undefined && value !== null) field.value = value;
+    }
+  }
+
+  function renderReadinessGuide() {
+    document.querySelectorAll(".asset-guide [data-readiness]").forEach((box) => {
+      const key = box.dataset.readiness;
+      box.replaceChildren();
+      if (!state.wizardCharacter) { box.textContent = "Save the profile first to see readiness."; return; }
+      if (key === "activities") {
+        const counts = state.wizardCharacter.readiness?.activities || {};
+        box.textContent = `${counts.approved || 0} approved · ${counts.pending || 0} waiting for review`;
+        return;
+      }
+      const item = state.wizardCharacter.readiness?.[key] || { state: "missing", missing: [] };
+      const title = document.createElement("strong");
+      title.textContent = item.state === "ready" ? "Ready" :
+        `${item.complete || 0} of ${item.total || item.missing?.length || 0} approved`;
+      box.append(title);
+      if (item.missing?.length) {
+        const list = document.createElement("ul");
+        item.missing.forEach((slot) => { const li = document.createElement("li"); li.textContent = slot; list.append(li); });
+        box.append(list);
+      }
+    });
+  }
+
+  function renderWizard() {
+    const step = state.wizardStep;
+    document.querySelectorAll(".wizard-step").forEach((section) => {
+      section.hidden = Number(section.dataset.step) !== step;
+    });
+    $("wizard-step-label").textContent = `Step ${step} of 10`;
+    $("wizard-progress-fill").style.width = `${step * 10}%`;
+    $("wizard-progress-fill").parentElement.setAttribute("aria-valuenow", String(step));
+    const dots = Array.from({ length: 11 }, (_, index) => {
+      const dot = document.createElement("li");
+      dot.textContent = index;
+      dot.className = index === step ? "current" : (index < step ? "complete" : "");
+      return dot;
+    });
+    $("wizard-step-dots").replaceChildren(...dots);
+    $("wizard-back").disabled = step === 0;
+    $("wizard-skip").hidden = ![8, 9, 10].includes(step);
+    $("wizard-next").textContent = step === 10 ? "Finish setup" : "Continue";
+    $("wizard-title").textContent = state.wizardCharacter?.name || "Create a character";
+    const values = formValues();
+    $("wizard-preview-name").textContent = values.name || state.wizardCharacter?.name || "New character";
+    $("wizard-preview-role").textContent = values.role || "Build the profile one small step at a time.";
+    const art = $("wizard-preview-art");
+    art.replaceChildren();
+    const picture = portrait(state.wizardCharacter);
+    if (picture) {
+      const image = document.createElement("img");
+      image.src = picture;
+      image.alt = "";
+      art.append(image);
+    } else art.textContent = "Portrait preview";
+    const badges = $("wizard-preview-badges");
+    badges.replaceChildren();
+    if (state.wizardCharacter) {
+      badges.append(pill("Profile", state.wizardCharacter.readiness?.profile),
+        pill("Voice", state.wizardCharacter.readiness?.voice),
+        pill("Talk", state.wizardCharacter.readiness?.talking_starter));
+      $("wizard-prompt-pack").href = Api.characterPromptPackUrl(state.wizardCharacter.id);
+    }
+    renderReadinessGuide();
+  }
+
+  function openWizard(character = null) {
+    state.wizardCharacter = character;
+    state.wizardStep = character ? Math.max(0, Math.min(10, character.wizard_step || 1)) : 0;
+    fillWizard(character);
+    $("character-browser").hidden = true;
+    $("character-wizard").hidden = false;
+    $("wizard-save-status").textContent = character ? "All saved." : "The profile is created after the name step.";
+    $("wizard-retry").hidden = true;
+    localStorage.setItem("characterWizardId", character?.id || "new");
+    renderWizard();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function changedFields(character, values) {
+    return Object.fromEntries(Object.entries(values).filter(([key, value]) => {
+      const current = key === "personality" ? (character.personality || []) : character[key];
+      return JSON.stringify(current) !== JSON.stringify(value);
+    }));
+  }
+
+  async function saveWizard(extra = {}) {
+    if (state.saving) { state.savePending = extra; return state.wizardCharacter; }
+    const values = formValues();
+    if (!values.name) return state.wizardCharacter;
+    state.saving = true;
+    $("wizard-save-status").classList.remove("save-error");
+    $("wizard-save-status").textContent = "Saving…";
+    $("wizard-retry").hidden = true;
+    try {
+      let saved;
+      if (!state.wizardCharacter) {
+        saved = await Api.createCharacter({ ...values, ...extra });
+        localStorage.setItem("characterWizardId", saved.id);
+      } else {
+        const patch = { ...changedFields(state.wizardCharacter, values), ...extra };
+        saved = Object.keys(patch).length ? await Api.updateCharacter(state.wizardCharacter.id, patch)
+          : state.wizardCharacter;
+      }
+      state.wizardCharacter = saved;
+      state.selectedId = saved.id;
+      const index = state.characters.findIndex((item) => item.id === saved.id);
+      if (index >= 0) state.characters[index] = saved; else state.characters.push(saved);
+      $("wizard-save-status").textContent = "Saved.";
+      renderWizard();
+      return saved;
+    } catch (error) {
+      state.saveError = error;
+      $("wizard-save-status").textContent = error.message || "Save failed.";
+      $("wizard-save-status").classList.add("save-error");
+      $("wizard-retry").hidden = false;
+      throw error;
+    } finally {
+      state.saving = false;
+      if (state.savePending) {
+        const pending = state.savePending;
+        state.savePending = null;
+        setTimeout(() => saveWizard(pending).catch(() => {}), 0);
+      }
+    }
+  }
+
+  async function refreshCharacters() {
+    state.characters = await Api.listCharacters(state.filters);
+    if (state.selectedId && !selectedCharacter()) state.selectedId = null;
+    renderCharacters();
+  }
+
+  async function closeWizard() {
+    clearTimeout(state.saveTimer);
+    if (state.wizardCharacter && !state.saving) await saveWizard();
+    localStorage.removeItem("characterWizardId");
+    $("character-wizard").hidden = true;
+    $("character-browser").hidden = false;
+    state.selectedId = state.wizardCharacter?.id || state.selectedId;
+    state.wizardCharacter = null;
+    await refreshCharacters();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function scheduleAutosave() {
+    renderWizard();
+    if (!state.wizardCharacter) return;
+    clearTimeout(state.saveTimer);
+    $("wizard-save-status").textContent = "Unsaved changes…";
+    state.saveTimer = setTimeout(() => saveWizard().catch(() => {}), 600);
+  }
+
+  async function advanceWizard() {
+    const current = document.querySelector(`.wizard-step[data-step="${state.wizardStep}"]`);
+    const invalid = [...current.querySelectorAll("[required]")].find((field) => !field.checkValidity());
+    if (invalid) { invalid.reportValidity(); invalid.focus(); return; }
+    const next = Math.min(10, state.wizardStep + 1);
+    try {
+      if (state.wizardStep === 0 && !state.wizardCharacter) {
+        state.wizardStep = 1;
+        renderWizard();
+        return;
+      }
+      await saveWizard({ wizard_step: state.wizardStep === 10 ? 10 : next });
+      if (state.wizardStep === 10) {
+        await closeWizard();
+        message("Character setup saved.");
+        return;
+      }
+      state.wizardStep = next;
+      renderWizard();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      // The failed save keeps local field values and exposes Retry.
+    }
+  }
   function renderSceneFilters() {
     const bar = $("scene-filters");
     bar.replaceChildren();
@@ -412,7 +633,7 @@
 
   async function refresh() {
     [state.characters, state.scenes, state.health] = await Promise.all([
-      Api.listCharacters(), Api.listScenes(), Api.getVisualsHealth(),
+      Api.listCharacters(state.filters), Api.listScenes(), Api.getVisualsHealth(),
     ]);
     if (state.selectedId && !selectedCharacter()) state.selectedId = null;
     renderCharacters();
@@ -491,36 +712,52 @@
   }
 
   function setupEvents() {
-    $("new-character").addEventListener("click", () => {
-      state.selectedId = null;
-      $("character-form").reset();
-      $("character-form").elements.bottom_color.value = "navy blue";
-      renderCharacters();
-      $("character-form").elements.name.focus();
+    $("new-character").addEventListener("click", () => openWizard());
+    let searchTimer;
+    $("character-search").addEventListener("input", (event) => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(async () => {
+        state.filters.q = event.target.value.trim();
+        try { await refreshCharacters(); } catch (error) { message(error.message, true); }
+      }, 250);
     });
-    $("character-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const body = Object.fromEntries(new FormData(event.currentTarget));
-      const existing = selectedCharacter();
-      await act(async () => {
-        const saved = existing ? await Api.updateCharacter(existing.id, body) : await Api.createCharacter(body);
-        state.selectedId = saved.id;
-      }, existing ? "Character saved." : "Character created. Generate candidates next.");
+    [["character-state", "state"], ["character-readiness", "readiness"]].forEach(([id, key]) => {
+      $(id).addEventListener("change", async (event) => {
+        state.filters[key] = event.target.value;
+        try { await refreshCharacters(); } catch (error) { message(error.message, true); }
+      });
     });
-    $("delete-character").addEventListener("click", async () => {
+    $("resume-character").addEventListener("click", () => openWizard(selectedCharacter()));
+    $("duplicate-character").addEventListener("click", async () => {
       const character = selectedCharacter();
-      if (!character || !confirm(`Delete "${character.name}"?`)) return;
-      await act(async () => {
-        try {
-          await Api.deleteCharacter(character.id);
-        } catch (error) {
-          if (error.status !== 409 || !confirm("This character is used in a project. Remove it from those casts and delete it?")) throw error;
-          await Api.deleteCharacter(character.id, true);
-        }
-        state.selectedId = null;
-        $("character-form").reset();
-      }, "Character deleted.");
+      if (!character) return;
+      await act(async () => { const copy = await Api.duplicateCharacter(character.id); state.selectedId = copy.id; },
+        "Profile duplicated.");
     });
+    $("archive-character").addEventListener("click", async () => {
+      const character = selectedCharacter();
+      if (!character || !confirm(`Archive "${character.name}"? Existing projects keep their assignment.`)) return;
+      await act(async () => { await Api.archiveCharacter(character.id); state.selectedId = null; }, "Profile archived.");
+    });
+    $("restore-character").addEventListener("click", async () => {
+      const character = selectedCharacter();
+      if (!character) return;
+      await act(() => Api.restoreCharacter(character.id), "Profile restored.");
+    });
+    $("character-wizard-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      advanceWizard();
+    });
+    $("character-wizard-form").addEventListener("input", scheduleAutosave);
+    $("character-wizard-form").addEventListener("change", scheduleAutosave);
+    $("wizard-back").addEventListener("click", () => {
+      state.wizardStep = Math.max(0, state.wizardStep - 1);
+      renderWizard();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+    $("wizard-skip").addEventListener("click", advanceWizard);
+    $("wizard-retry").addEventListener("click", () => saveWizard().catch(() => {}));
+    $("wizard-close").addEventListener("click", () => closeWizard().catch((error) => message(error.message, true)));
     $("generate-candidates").addEventListener("click", () => startJob(
       () => Api.generateCharacterCandidates(state.selectedId)));
     $("generate-sheet").addEventListener("click", () => startJob(
@@ -565,6 +802,12 @@
       state.options = await Api.getVisualsOptions();
       fillOptions();
       await refresh();
+      const resumeId = localStorage.getItem("characterWizardId");
+      if (resumeId === "new") openWizard();
+      else if (resumeId) {
+        const character = state.characters.find((item) => item.id === resumeId) || await Api.getCharacter(resumeId);
+        openWizard(character);
+      }
     } catch (error) {
       message(error.message || "The library could not load.", true);
     }

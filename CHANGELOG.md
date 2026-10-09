@@ -12,6 +12,7 @@ Versioning: [SemVer](https://semver.org/)
 - **Task 33.1:** additive profile/version schema and safe copied-data rehearsal. Existing Lina/Alex IDs, cast assignments, voice settings, image paths and sprite manifests remain unchanged; project casts now pin the character identity version and prevent duplicate profile assignment.
 - **Task 33.2:** reusable profile API with name-only drafts, autosave/resume, independent Profile/Voice/Visual/Sprite/Activity readiness, normalized active-name uniqueness, duplicate, archive/restore, dependency reporting and safe deletion.
 - **Task 33.3:** canonical core and 29-sprite asset slots with bounded direct/batch upload, technical image validation, explicit review, versioned storage, stale propagation and provider-neutral prompt ZIP export.
+- **Task 33.4:** searchable Character Library with readiness and missing-action summaries, safe profile lifecycle actions, and a resumable ten-step game-style setup wizard with autosave, retry and readable responsive layout.
 
 ### Added (Phase 32 — talking characters, 2026-10-08)
 - **Verified Demo Episode with activity cutaways (2026-10-09).** The real production

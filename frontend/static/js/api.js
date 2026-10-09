@@ -92,7 +92,10 @@ const Api = (() => {
       request(`/api/music/${encodeURIComponent(filename)}`, { method: "PATCH", body: JSON.stringify(details) }),
     getVisualsHealth: () => request("/api/visuals/health"),
     getVisualsOptions: () => request("/api/visuals/options"),
-    listCharacters: () => request("/api/visuals/characters"),
+    listCharacters: (filters = {}) => {
+      const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));
+      return request(`/api/visuals/characters${query.toString() ? `?${query}` : ""}`);
+    },
     getCharacter: (id) => request(`/api/visuals/characters/${id}`),
     createCharacter: (character) => request("/api/visuals/characters", {
       method: "POST", body: JSON.stringify(character),
@@ -103,6 +106,12 @@ const Api = (() => {
     deleteCharacter: (id, force = false) => request(`/api/visuals/characters/${id}?force=${force}`, {
       method: "DELETE",
     }),
+    duplicateCharacter: (id) => request(`/api/visuals/characters/${id}/duplicate`, { method: "POST" }),
+    archiveCharacter: (id) => request(`/api/visuals/characters/${id}/archive`, { method: "POST" }),
+    restoreCharacter: (id) => request(`/api/visuals/characters/${id}/restore`, { method: "POST" }),
+    getCharacterDependencies: (id) => request(`/api/visuals/characters/${id}/dependencies`),
+    getCharacterAssetSlots: (id) => request(`/api/visuals/characters/${id}/asset-slots`),
+    characterPromptPackUrl: (id) => `/api/visuals/characters/${id}/prompt-pack`,
     generateCharacterCandidates: (id) => request(`/api/visuals/characters/${id}/candidates`, { method: "POST" }),
     pickCharacterReference: (id, assetId) => request(`/api/visuals/characters/${id}/reference`, {
       method: "PUT", body: JSON.stringify({ asset_id: assetId }),

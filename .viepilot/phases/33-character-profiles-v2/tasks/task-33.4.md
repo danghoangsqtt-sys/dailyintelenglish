@@ -11,6 +11,7 @@ Replace the long create/edit form with a clear ten-step, game-like wizard and up
 - `frontend/static/js/api.js`
 - `frontend/static/css/style.css`
 - `tests/test_character_profiles_browser.py`
+- `tests/test_visuals_library_browser.py` (legacy local-generation regression updated for the wizard entry flow)
 
 ## File-Level Plan
 
@@ -25,10 +26,10 @@ Replace the long create/edit form with a clear ten-step, game-like wizard and up
 
 ## Acceptance Criteria
 
-- [ ] The user never needs to fill the complete profile on one screen.
-- [ ] Refreshing after each required step resumes at the saved step with entered data.
-- [ ] Readiness and missing actions are visible from both card and detail views.
-- [ ] The page remains usable at 1024 px wide without nested form scrolling or tiny labels.
+- [x] The user never needs to fill the complete profile on one screen.
+- [x] Refreshing after each required step resumes at the saved step with entered data.
+- [x] Readiness and missing actions are visible from both card and detail views.
+- [x] The page remains usable at 1024 px wide without nested form scrolling or tiny labels.
 
 ## Implementation Notes
 
@@ -37,4 +38,11 @@ Replace the long create/edit form with a clear ten-step, game-like wizard and up
 - Treat Steps 1–4 as profile setup, Steps 5–10 as guided asset/readiness checkpoints; optional sprite tiers may be skipped.
 - Autosave only changed fields, retain unsaved form values after a failed request, and expose a visible retry action.
 - Keep the wizard in the page flow at 1024 px and below so the document owns scrolling; avoid scrollable form panes.
+
+## Completion Evidence
+
+- 2026-10-10: Character Library search/lifecycle/readiness filters, profile cards, detail view, duplicate/archive/restore actions and the ten-step wizard are implemented.
+- Autosave retains local edits after failure, exposes Retry, and resumes from persisted `wizard_step` through local browser state after refresh.
+- `tests/test_character_profiles_browser.py` and the updated legacy generation flow pass at real Chromium viewport widths, including 1024 px.
+- Targeted profile, asset and browser regression: 18 passed; Ruff, JavaScript syntax and `git diff --check` pass.
 

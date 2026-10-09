@@ -119,57 +119,69 @@
       <button id="scenes-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="false">Scenes</button>
     </div>
     <section id="characters-panel" role="tabpanel" aria-labelledby="characters-tab">
-      <div class="library-layout">
-        <div id="character-list" class="library-list" aria-label="Characters"></div>
-        <div class="card library-editor">
-          <div id="character-hero" class="character-hero" hidden></div>
-          <h2 id="editor-title">New character</h2>
-          <form id="character-form">
-            <div class="library-fields">
-              <label>Name<input name="name" maxlength="40" required /></label>
-              <label>Gender<select name="gender" required></select></label>
-              <label>Age group<select name="age_group" required></select></label>
-              <label>Ethnicity<input name="ethnicity" maxlength="40" value="Russian" required /></label>
-              <label>Role<input name="role" maxlength="40" placeholder="English teacher" required /></label>
-              <label>Hair<input name="hair" maxlength="40" placeholder="long black hair" required /></label>
-              <label>Eyes<input name="eyes" maxlength="40" placeholder="brown eyes" required /></label>
-              <label>Top colour<select name="top_color" required></select></label>
-              <label>Top item<select name="top_item" required></select></label>
-              <label>Bottom colour<select name="bottom_color" required></select></label>
-              <label>Bottom item<select name="bottom_item" required></select></label>
-            </div>
-            <p class="library-hint">One solid-colour top and one solid-colour bottom (the same colour for both is fine). No patterns or layers.</p>
-            <div class="library-actions">
-              <button id="save-character" class="btn btn-primary" type="submit">Create character</button>
-              <button id="delete-character" class="btn btn-ghost" type="button" hidden>Delete</button>
-            </div>
-          </form>
-          <div id="character-workflow" hidden>
-            <ol class="library-steps" aria-label="Character steps">
-              <li>1. Candidates</li><li>2. Sheet</li><li>3. Lock</li><li>4. Locked</li>
-            </ol>
-            <section class="library-stage" aria-labelledby="candidates-heading">
-              <h3 id="candidates-heading">Candidates</h3>
-              <button id="generate-candidates" class="btn btn-ghost" type="button">Generate 4</button>
-              <p class="library-hint">Choose the portrait that best represents this character.</p>
-              <div id="candidate-grid" class="library-grid"></div>
-            </section>
-            <section class="library-stage" aria-labelledby="sheet-heading">
-              <h3 id="sheet-heading">Character sheet</h3>
-              <button id="generate-sheet" class="btn btn-ghost" type="button">Generate sheet</button>
-              <div id="sheet-grid" class="library-grid"></div>
-            </section>
-            <section class="library-stage" aria-labelledby="lock-heading">
-              <h3 id="lock-heading">Lock character</h3>
-              <p id="lock-summary" class="library-hint"></p>
-              <div class="library-actions">
-                <button id="lock-character" class="btn btn-primary" type="button">Lock character</button>
-                <button id="unlock-character" class="btn btn-ghost" type="button" hidden>Unlock</button>
-              </div>
-            </section>
-          </div>
+      <section id="character-browser">
+        <div class="profile-toolbar" aria-label="Character filters">
+          <label class="profile-search"><span>Search profiles</span><input id="character-search" type="search" placeholder="Name or role" /></label>
+          <label><span>Library</span><select id="character-state"><option value="active">Active</option><option value="archived">Archived</option><option value="all">All profiles</option></select></label>
+          <label><span>Readiness</span><select id="character-readiness"><option value="">Any readiness</option><option value="needs_setup">Needs setup</option><option value="video_ready">Video ready</option><option value="talking_ready">Talking ready</option></select></label>
         </div>
-      </div>
+        <div class="profile-library-layout">
+          <div><p id="character-count" class="profile-count" aria-live="polite"></p><div id="character-list" class="profile-grid" aria-label="Character profiles"></div></div>
+          <aside id="profile-detail" class="card profile-detail" aria-label="Selected character profile">
+            <div id="profile-empty" class="profile-empty"><div class="profile-empty-art">+</div><h2>Choose a character</h2><p>Select a profile to see its voice, visuals and setup progress.</p></div>
+            <div id="profile-content" hidden>
+              <div id="character-hero" class="profile-hero"></div>
+              <p id="profile-intro" class="profile-intro"></p>
+              <div id="profile-readiness" class="readiness-grid"></div>
+              <section class="profile-section"><h3>Missing next</h3><ul id="profile-missing" class="missing-list"></ul></section>
+              <div class="profile-actions">
+                <button id="resume-character" class="btn btn-primary" type="button">Resume setup</button>
+                <button id="duplicate-character" class="btn btn-ghost" type="button">Duplicate</button>
+                <button id="archive-character" class="btn btn-ghost" type="button">Archive</button>
+                <button id="restore-character" class="btn btn-ghost" type="button" hidden>Restore</button>
+              </div>
+              <details id="legacy-character-tools" class="legacy-tools">
+                <summary>Local AI legacy tools</summary>
+                <p class="library-hint">Generate the original four-image sheet with the configured local image engine.</p>
+                <section class="library-stage" aria-labelledby="candidates-heading"><h3 id="candidates-heading">Portrait candidates</h3><button id="generate-candidates" class="btn btn-ghost" type="button">Generate 4</button><div id="candidate-grid" class="library-grid"></div></section>
+                <section class="library-stage" aria-labelledby="sheet-heading"><h3 id="sheet-heading">Character sheet</h3><button id="generate-sheet" class="btn btn-ghost" type="button">Generate sheet</button><div id="sheet-grid" class="library-grid"></div></section>
+                <section class="library-stage" aria-labelledby="lock-heading"><h3 id="lock-heading">Legacy lock</h3><p id="lock-summary" class="library-hint"></p><div class="library-actions"><button id="lock-character" class="btn btn-primary" type="button">Lock character</button><button id="unlock-character" class="btn btn-ghost" type="button" hidden>Unlock</button></div></section>
+              </details>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="character-wizard" class="character-wizard" aria-labelledby="wizard-title" hidden>
+        <header class="wizard-header">
+          <div><p id="wizard-kicker" class="wizard-kicker">Character setup</p><h2 id="wizard-title">Create a character</h2><p id="wizard-step-label" class="wizard-step-label"></p></div>
+          <button id="wizard-close" class="btn btn-ghost" type="button">Save and close</button>
+        </header>
+        <div class="wizard-progress" role="progressbar" aria-valuemin="0" aria-valuemax="10"><span id="wizard-progress-fill"></span></div>
+        <ol id="wizard-step-dots" class="wizard-step-dots" aria-label="Setup progress"></ol>
+        <div class="wizard-layout">
+          <aside class="wizard-preview" aria-label="Live character preview">
+            <div id="wizard-preview-art" class="wizard-preview-art"><span>Portrait preview</span></div>
+            <h3 id="wizard-preview-name">New character</h3><p id="wizard-preview-role">Build the profile one small step at a time.</p>
+            <div id="wizard-preview-badges" class="preview-badges"></div>
+          </aside>
+          <form id="character-wizard-form" class="wizard-form" novalidate>
+            <section class="wizard-step" data-step="0"><h3>How will you build the visuals?</h3><p>Choose a starting path. You can change this later.</p><div class="choice-grid"><label class="choice-card"><input type="radio" name="visual_source" value="external" checked /><strong>Prepare with another AI</strong><span>Use our reference checklist and prompt pack, then upload each result into its named slot.</span></label><label class="choice-card"><input type="radio" name="visual_source" value="local" /><strong>Generate on this computer</strong><span>Use the local image engine. Results may need more review and correction.</span></label></div></section>
+            <section class="wizard-step" data-step="1" hidden><h3>Name and purpose</h3><p>Give the character a distinct identity people can recognize.</p><div class="wizard-fields"><label>Character name<input name="name" maxlength="40" autocomplete="off" required /></label><label>Role<input name="role" maxlength="40" placeholder="English teacher" required /></label><label class="field-wide">Short introduction<textarea name="intro" maxlength="240" rows="4" placeholder="Who is this character and when should they appear?"></textarea></label></div></section>
+            <section class="wizard-step" data-step="2" hidden><h3>Personality and dialogue</h3><p>These details guide script lines and acting choices.</p><div class="wizard-fields"><label class="field-wide">Personality traits<input name="personality" maxlength="160" placeholder="warm, curious, patient" /></label><label>Speaking style<input name="speaking_style" maxlength="80" placeholder="clear and encouraging" /></label><label class="field-wide">Dialogue behaviour<textarea name="dialogue_behavior" maxlength="400" rows="4" placeholder="How does this character react and take turns?"></textarea></label></div></section>
+            <section class="wizard-step" data-step="3" hidden><h3>Consistent appearance</h3><p>Keep one simple outfit so generated images match across the video.</p><div class="wizard-fields"><label>Gender<select name="gender"></select></label><label>Age group<select name="age_group"></select></label><label>Ethnicity<input name="ethnicity" maxlength="40" required /></label><label>Hair<input name="hair" maxlength="40" required /></label><label>Eyes<input name="eyes" maxlength="40" required /></label><label>Extra identity detail<input name="extra" maxlength="50" placeholder="freckles, side bangs" /></label><label>Top colour<select name="top_color"></select></label><label>Top item<select name="top_item"></select></label><label>Bottom colour<select name="bottom_color"></select></label><label>Bottom item<select name="bottom_item"></select></label></div></section>
+            <section class="wizard-step" data-step="4" hidden><h3>Default voice</h3><p>This voice is copied into a project when the profile is assigned.</p><div class="wizard-fields"><label>Accent<input name="default_accent" maxlength="40" placeholder="American English" /></label><label>Voice engine<select name="default_tts_engine"><option value="edge_tts">Edge TTS</option><option value="kokoro">Kokoro</option></select></label><label>Voice ID<input name="default_voice_id" maxlength="120" placeholder="en-US-JennyNeural" /></label><label>Speed<input name="default_speed" type="number" min="0.75" max="1.5" step="0.05" value="1" /></label><label>Pitch<input name="default_pitch" type="number" min="-1" max="1" step="0.1" value="0" /></label><label>Volume<input name="default_volume" type="number" min="0" max="2" step="0.1" value="1" /></label><label class="field-wide">Voice description<textarea name="default_voice_description" maxlength="400" rows="3" placeholder="Warm adult voice, relaxed pace"></textarea></label></div></section>
+            <section class="wizard-step asset-guide" data-step="5" hidden><h3>Identity references</h3><p>Prepare a clear face portrait and full-body reference before creating expressions.</p><div data-readiness="visual"></div><a id="wizard-prompt-pack" class="btn btn-ghost" href="#">Download prompt and slot guide</a></section>
+            <section class="wizard-step asset-guide" data-step="6" hidden><h3>Core visual set</h3><p>Review the face, full body, calm, smile and surprised images.</p><div data-readiness="visual"></div></section>
+            <section class="wizard-step asset-guide" data-step="7" hidden><h3>Talking Starter — 7 sprites</h3><p>This required starter pack enables expressive talking videos.</p><div data-readiness="talking_starter"></div></section>
+            <section class="wizard-step asset-guide" data-step="8" data-optional="true" hidden><h3>Expression upgrade — 15 sprites</h3><p>Add laugh, thinking, worried and serious pairs when you need more emotional range.</p><div data-readiness="full_expressions"></div></section>
+            <section class="wizard-step asset-guide" data-step="9" data-optional="true" hidden><h3>Full sprite pack — 29 sprites</h3><p>Complete every supported pose and transition for the richest animation.</p><div data-readiness="full_sprite_pack"></div></section>
+            <section class="wizard-step asset-guide" data-step="10" data-optional="true" hidden><h3>Activity pictures and finish</h3><p>Activity pictures add cutaways such as walking, cooking or reading. They are optional and can be added later.</p><div data-readiness="activities"></div></section>
+            <div class="wizard-save-row"><span id="wizard-save-status" role="status">Changes save automatically.</span><button id="wizard-retry" class="btn btn-ghost btn-sm" type="button" hidden>Retry save</button></div>
+            <footer class="wizard-actions"><button id="wizard-back" class="btn btn-ghost" type="button">Back</button><button id="wizard-skip" class="btn btn-ghost" type="button" hidden>Skip for now</button><button id="wizard-next" class="btn btn-primary" type="submit">Continue</button></footer>
+          </form>
+        </div>
+      </section>
     </section>
     <section id="scenes-panel" role="tabpanel" aria-labelledby="scenes-tab" hidden>
       <div class="library-layout scenes-layout">
