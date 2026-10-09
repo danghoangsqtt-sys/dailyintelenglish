@@ -18,6 +18,10 @@ Versioning: [SemVer](https://semver.org/)
   approved image of the speaking character, then a matching generic image, and otherwise
   keep the existing talking-sprite scene. Step 5 reports character/generic totals and names
   every missing action; successful renders record the chosen image, beat and video job.
+- **Full-screen activity cutaways (2026-10-09).** In talking-sprites videos, a matched
+  insert fills the frame with a cover crop for at most six seconds and fades in/out over
+  0.3 seconds. The uninterrupted audio, captions, speaker chips, vocabulary and chapter
+  overlays stay above it; missing inserts continue showing the talking sprites.
 - **Activity Library smart upload (2026-10-09).** Choose Alex, Lina or Generic and add one
   or many activity pictures; the app's dedicated local Qwen3-VL 4B Q4 model proposes the
   activity, context and matching aliases. Pictures remain “Needs review” until approved.

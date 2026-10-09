@@ -49,6 +49,14 @@ describe("Phase 32 talking sprites", () => {
     expect(parsed.sprites?.characters[1].name).toBe("Lina");
   });
 
+  it("rejects a cutaway longer than six seconds at the props boundary", () => {
+    expect(() => episodeInputPropsSchema.parse({
+      episodeId: "p", lines: [], audioPath: "a.mp3", fps: 30, width: 1280, height: 720,
+      visualMode: "podcast_sprites",
+      sprites: { ...sprites, cutaways: [{ startSec: 1, endSec: 7.01, url: "too-long.png" }] },
+    })).toThrow();
+  });
+
   it("holds the last started line and opens the mouth only inside its intervals", () => {
     expect(heldLineIndex(-1, timeline)).toBe(-1);
     expect(heldLineIndex(2.2, timeline)).toBe(0);
@@ -121,6 +129,22 @@ describe("Phase 32 talking sprites", () => {
     expect(activityCutawayAt(2.15, withCutaway)?.opacity).toBeCloseTo(0.5);
     expect(activityCutawayAt(4.85, withCutaway)?.opacity).toBeCloseTo(0.5);
     expect(activityCutawayAt(5, withCutaway)).toBeNull();
+  });
+
+  it("uses exactly nine frames for each 0.3 second cutaway fade at 30 fps", () => {
+    const withCutaway = { ...sprites, cutaways: [{ startSec: 2, endSec: 6, url: "activity.png" }] };
+    expect(activityCutawayAt(2 + 8 / FPS, withCutaway)?.opacity).toBeCloseTo(8 / 9);
+    expect(activityCutawayAt(2 + 9 / FPS, withCutaway)?.opacity).toBeCloseTo(1);
+    expect(activityCutawayAt(6 - 9 / FPS, withCutaway)?.opacity).toBeCloseTo(1);
+    expect(activityCutawayAt(6 - 1 / FPS, withCutaway)?.opacity).toBeCloseTo(1 / 9);
+  });
+
+  it("keeps overlapping fades bounded for a cutaway shorter than 0.6 seconds", () => {
+    const withCutaway = { ...sprites, cutaways: [{ startSec: 1, endSec: 1.3, url: "activity.png" }] };
+    const middle = activityCutawayAt(1.15, withCutaway);
+    expect(middle?.opacity).toBeCloseTo(0.5);
+    expect(middle?.opacity).toBeGreaterThanOrEqual(0);
+    expect(middle?.opacity).toBeLessThanOrEqual(1);
   });
 
   it("stands both canvases on the stage with the highest head near the top", () => {

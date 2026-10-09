@@ -12,7 +12,7 @@
 | 32.6a | Activity Library backend: migration, inbox import, metadata, review and usage history | done 2026-10-09 (156 real records; 10 contract tests; review-gated usage) |
 | 32.6b | Activity Library UI inside Shot Library | done 2026-10-09 (one-click multi-image upload; Alex/Lina/Generic picture selectors use character head references; local Qwen3-VL 4B Q4 metadata analysis with review gate, cloud opt-in only; real `go straight` smoke 0.98; full suite 1,633 passed) |
 | 32.6c | Deterministic activity matching and Step 5 coverage | done 2026-10-09 (character > generic > sprite fallback; 45 related tests) |
-| 32.6d | Full-screen activity cutaways in the Remotion sprite composition | planned |
+| 32.6d | Full-screen activity cutaways in the Remotion sprite composition | done 2026-10-09 (6 s cap, 0.3 s fades, overlays/audio preserved) |
 | 32.6e | Storyboard insert guidance and the 20-image generic prompt pack | planned |
 | 32.6f | Automated verification and Demo Episode render with three cutaways | planned |
 | 32.7 | Gate B-22: owner comparison of illustrated talking sprites and talking-sprites baseline | planned |

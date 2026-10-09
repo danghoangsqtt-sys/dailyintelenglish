@@ -28,6 +28,22 @@ Render selected activity images as full-frame inserts in `podcast_sprites`, pres
 
 ## Acceptance Criteria
 
-- [ ] Insert image is fullscreen for no more than 6 seconds.
-- [ ] Crossfade is 0.3 seconds at 30 fps when duration permits.
-- [ ] Audio/subtitles remain continuous; missing image leaves the sprite stage visible.
+- [x] Insert image is fullscreen for no more than 6 seconds.
+- [x] Crossfade is 0.3 seconds at 30 fps when duration permits.
+- [x] Audio/subtitles remain continuous; missing image leaves the sprite stage visible.
+
+## Result — 2026-10-09
+
+- Approved matches are copied into the isolated Remotion public tree and emitted from insert
+  start through insert end, capped at six seconds. Pending/missing assets emit no cutaway, so
+  the existing sprite stage remains visible.
+- The cutaway uses full-frame `object-fit: cover` above the scene/sprites and below the shared
+  chapter bar, speaker chips, vocabulary card and caption band. The existing `Audio` component
+  and line timestamps are unchanged.
+- The 0.3-second opacity ramp is nine frames at 30 fps. Tests pin both normal ramps and bounded,
+  overlapping ramps for clips shorter than 0.6 seconds; the Zod props boundary rejects durations
+  over six seconds.
+- Private activity usage metadata is removed before writing Remotion props and returned only to
+  the backend after a successful render.
+- Verification: activity/server regression 14 passed; Remotion Vitest 65 passed; TypeScript
+  `tsc --noEmit`, targeted Ruff and `git diff --check` passed.
