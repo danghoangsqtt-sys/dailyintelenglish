@@ -12,6 +12,7 @@ Replace dropdown/name matching with a game-style roster and profile panel that e
 - `frontend/static/js/step5_video.js`
 - `frontend/static/js/api.js`
 - `app/api/visuals.py`
+- `app/models/visuals.py`
 - `app/services/visuals/project_visuals_service.py`
 - `tests/test_character_selector_browser.py`
 - `tests/test_visuals_project_api.py`
@@ -33,4 +34,11 @@ Replace dropdown/name matching with a game-style roster and profile panel that e
 - [ ] Choosing saves the expected ID/version and never assigns the same profile twice.
 - [ ] Existing custom project voice settings are not silently overwritten.
 - [ ] No cast path searches by display name.
+
+## Implementation Notes
+
+- Keep roster-card clicks read-only; only the explicit speaker assignment action may persist cast data.
+- Send the copy-defaults decision with each assignment and update project speaker fields only when it is true.
+- Treat profile IDs and pinned identity versions as the cast identity. Speaker display names remain editable dialogue labels.
+- Explain renderer readiness from profile capability data before assignment and keep duplicate-profile prevention in both the browser and service layer.
 
