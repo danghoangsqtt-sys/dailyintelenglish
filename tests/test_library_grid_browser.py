@@ -1,4 +1,4 @@
-"""Task 27.3b: the Character and Scene libraries as large image grids with a sticky detail panel."""
+"""The Character and Scene libraries as image grids with sticky detail panels."""
 
 import re
 import time
@@ -39,38 +39,36 @@ async def _box(locator) -> dict:
 
 
 @pytest.mark.asyncio
-async def test_characters_are_portrait_tiles_with_outfit_swatches_and_a_sticky_detail_panel(
+async def test_characters_are_game_style_profile_cards_with_readiness_and_a_sticky_detail_panel(
         browser_instance: Browser, live_server_url: str):
     locked_character("Lan", "yellow")
     locked_character("Minh", "green")
     page = await browser_instance.new_page(viewport={"width": 1400, "height": 900})
     await page.goto(f"{live_server_url}/characters")
-    tiles = page.locator("#character-list .character-tile")
+    tiles = page.locator("#character-list .profile-card")
     await tiles.nth(1).wait_for()
     assert await tiles.count() == 2
     for index in range(2):
-        picture = await _box(tiles.nth(index).locator("img.library-face"))
-        assert picture["w"] >= 140 and picture["h"] > picture["w"], picture  # a portrait, not a 56 px avatar
-        swatches = tiles.nth(index).locator(".library-swatch")
-        assert await swatches.count() == 2
-        titles = await swatches.evaluate_all("items => items.map(item => item.title)")
-        assert titles[1] == "navy blue bottom" and titles[0].endswith(" top")
+        picture = await _box(tiles.nth(index).locator(".profile-card-art img"))
+        assert picture["w"] >= 140 and picture["h"] >= 100, picture
+        assert await tiles.nth(index).locator(".readiness-pill").count() == 3
     # the detail panel is on the right of the grid and stays in view
-    grid, editor = await _box(page.locator("#character-list")), await _box(page.locator(".library-editor").first)
+    grid, editor = await _box(page.locator("#character-list")), await _box(page.locator("#profile-detail"))
     assert editor["x"] >= grid["x"] + grid["w"] - 2
-    assert await page.locator("#characters-panel .library-editor").first.evaluate(
+    assert await page.locator("#profile-detail").evaluate(
         "e => getComputedStyle(e).position") == "sticky"
-    # selecting a tile fills the hero with its face, name and status
-    assert await page.locator("#character-hero").is_hidden()
+    # selecting a card fills the profile panel with its face, name and readiness
+    assert await page.locator("#profile-content").is_hidden()
     await tiles.nth(1).click()
     assert await tiles.nth(1).get_attribute("aria-current") == "true"
     assert await tiles.nth(0).get_attribute("aria-current") == "false"
     hero = page.locator("#character-hero")
     await hero.wait_for(state="visible")
-    face = await tiles.nth(1).locator("img.library-face").get_attribute("src")
+    face = await tiles.nth(1).locator(".profile-card-art img").get_attribute("src")
     assert await hero.locator("img").get_attribute("src") == face
-    names = await tiles.locator(".library-card-name").all_text_contents()
-    assert names[1] in await hero.inner_text() and "locked" in await hero.inner_text()
+    names = await tiles.locator(".profile-card-copy strong").all_text_contents()
+    assert names[1] in await hero.inner_text()
+    assert await page.locator("#profile-readiness .readiness-card").count() >= 3
     await page.close()
 
 
@@ -79,8 +77,8 @@ async def test_a_narrow_screen_stacks_the_grid_above_the_detail_panel(browser_in
     locked_character("Narrow", "yellow")
     page = await browser_instance.new_page(viewport={"width": 700, "height": 900})
     await page.goto(f"{live_server_url}/characters")
-    await page.locator("#character-list .character-tile").first.wait_for()
-    grid, editor = await _box(page.locator("#character-list")), await _box(page.locator(".library-editor").first)
+    await page.locator("#character-list .profile-card").first.wait_for()
+    grid, editor = await _box(page.locator("#character-list")), await _box(page.locator("#profile-detail"))
     assert editor["y"] >= grid["y"] + grid["h"] - 2
     assert await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
     await page.close()

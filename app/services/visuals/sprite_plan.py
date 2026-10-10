@@ -149,18 +149,22 @@ def _gesture(gesture: str | None, available: set[str]) -> str | None:
 
 
 def build_plan(lines: list[dict], slots: list[int | None], beat_expressions: list[str | None],
-               available: dict[int, set[str]], loudness: np.ndarray | None, fps: int) -> list[dict]:
-    """One entry per line: who speaks (`slot`, 0 = left, 1 = right, None = nobody on screen), the faces of both sprites, their
-    gestures, and the open-mouth intervals of the speaker. `lines` use the props shape (startSec, endSec, text, words)."""
+               available: dict[int, set[str]], loudness: np.ndarray | None, fps: int,
+               visible_slots: list[list[int]] | None = None) -> list[dict]:
+    """One entry per line: who speaks, which one or two cast slots are visible, their faces and gestures, and the speaker's
+    open-mouth intervals. `lines` use the props shape (startSec, endSec, text, words)."""
     plan: list[dict] = []
     long_lines: dict[int, int] = {}
-    for line, slot, beat_expression in zip(lines, slots, beat_expressions, strict=True):
+    if visible_slots is None:
+        visible_slots = [sorted(available)[:2] for _line in lines]
+    for line, slot, beat_expression, visible in zip(lines, slots, beat_expressions, visible_slots, strict=True):
+        visible = list(dict.fromkeys(item for item in visible if item in available))[:2]
         duration = line["endSec"] - line["startSec"]
         if slot is None:
             plan.append({"slot": None, "expression": "calm", "listenerExpression": "calm", "gesture": None,
-                         "listenerGesture": None, "mouth": []})
+                         "listenerGesture": None, "mouth": [], "visibleSlots": visible})
             continue
-        listener = 1 - slot
+        listener = next((item for item in visible if item != slot), None)
         expression = _face(line_expression(line["text"], beat_expression), available.get(slot, set()))
         gesture = line_gesture(line["text"], expression, duration, long_lines.get(slot, 0))
         if duration >= TALK_GESTURE_SEC:
@@ -169,10 +173,12 @@ def build_plan(lines: list[dict], slots: list[int | None], beat_expressions: lis
                  else mouth_from_words(line.get("words") or []))
         plan.append({
             "slot": slot,
+            "visibleSlots": visible,
             "expression": expression,
-            "listenerExpression": _face(listener_expression(expression), available.get(listener, set())),
+            "listenerExpression": _face(listener_expression(expression), available.get(listener, set())) if listener is not None else "calm",
             "gesture": _gesture(gesture, available.get(slot, set())),
-            "listenerGesture": _gesture("listen" if duration >= LISTEN_GESTURE_SEC else None, available.get(listener, set())),
+            "listenerGesture": (_gesture("listen" if duration >= LISTEN_GESTURE_SEC else None, available.get(listener, set()))
+                                if listener is not None else None),
             "mouth": mouth,
         })
     return plan

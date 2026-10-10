@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import shutil
 import sqlite3
@@ -45,6 +46,30 @@ def ensure_copy_targets(db_path: Path, data_dir: Path) -> None:
         raise ValueError(f"Copied database does not exist: {db_path}")
     if not data_dir.is_dir():
         raise ValueError(f"Copied data directory does not exist: {data_dir}")
+
+
+def asset_snapshot(data_dir: Path, character_ids: list[str]) -> dict[str, dict[str, int | str]]:
+    """Hash copied character and sprite files without following data outside the rehearsal root."""
+    snapshot: dict[str, dict[str, int | str]] = {}
+    for library_name in ("characters", "sprites"):
+        root = data_dir / "library" / library_name
+        for character_id in character_ids:
+            folder = root / character_id
+            if not folder.is_dir():
+                continue
+            for path in sorted(item for item in folder.rglob("*") if item.is_file()):
+                content = path.read_bytes()
+                relative = path.relative_to(data_dir).as_posix()
+                snapshot[relative] = {"bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()}
+    return snapshot
+
+
+async def table_counts(db: aiosqlite.Connection) -> dict[str, int]:
+    """Counts whose preservation or deliberate growth is useful migration evidence."""
+    result = {}
+    for table in ("characters", "character_assets", "project_cast", "projects", "speakers"):
+        result[table] = (await (await db.execute(f"SELECT COUNT(*) FROM {table}")).fetchone())[0]
+    return result
 
 
 async def apply_pending_migrations(db: aiosqlite.Connection) -> list[str]:
@@ -116,6 +141,9 @@ async def rehearse(db_path: Path, data_dir: Path) -> dict:
         before_characters = [tuple(row) for row in await (await db.execute(
             "SELECT id, name FROM characters ORDER BY id"
         )).fetchall()]
+        character_ids = [row[0] for row in before_characters]
+        before_files = await asyncio.to_thread(asset_snapshot, data_dir, character_ids)
+        before_counts = await table_counts(db)
         before_cast = [tuple(row) for row in await (await db.execute(
             "SELECT project_id, speaker_index, character_id FROM project_cast ORDER BY project_id, speaker_index"
         )).fetchall()]
@@ -133,15 +161,21 @@ async def rehearse(db_path: Path, data_dir: Path) -> dict:
         after_speakers = [tuple(row) for row in await (await db.execute(
             "SELECT id, name, accent, tts_engine, voice_id, speed, pitch, volume FROM speakers ORDER BY id"
         )).fetchall()]
+        after_files = await asyncio.to_thread(asset_snapshot, data_dir, character_ids)
+        after_counts = await table_counts(db)
         foreign_keys = [dict(row) for row in await (await db.execute("PRAGMA foreign_key_check")).fetchall()]
     return {
         "database": str(db_path),
         "data_dir": str(data_dir),
         "applied": applied,
         "registered_sprites": registered,
+        "counts_before": before_counts,
+        "counts_after": after_counts,
         "characters_unchanged": before_characters == after_characters,
         "cast_unchanged": before_cast == after_cast,
         "speakers_unchanged": before_speakers == after_speakers,
+        "asset_files_unchanged": before_files == after_files,
+        "asset_checksums": after_files,
         "foreign_key_errors": foreign_keys,
     }
 
@@ -167,7 +201,9 @@ def main() -> int:
         print(json.dumps({"ok": False, "error": str(exc)}, indent=2))
         return 1
     print(json.dumps({"ok": not report["foreign_key_errors"] and all(
-        report[key] for key in ("characters_unchanged", "cast_unchanged", "speakers_unchanged")
+        report[key] for key in (
+            "characters_unchanged", "cast_unchanged", "speakers_unchanged", "asset_files_unchanged",
+        )
     ), **report}, indent=2))
     return 0
 

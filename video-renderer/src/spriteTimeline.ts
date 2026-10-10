@@ -10,7 +10,7 @@ export const SPRITE_HEIGHT = 1.2;
 const CANVAS_RATIO = 1280 / 1536;
 /** Where the highest head starts, as a fraction of the video height. */
 const HEAD_MARGIN = 0.05;
-/** The centre of each slot's canvas, as a fraction of the video width (slot 0 = left, the first speaker). */
+/** The centre of each visible canvas, as a fraction of the video width. */
 export const SLOT_X = [0.27, 0.73];
 export const LISTENER_BRIGHTNESS = 0.78;
 /** 1: the listener is only dimmed, never resized (a resize resamples the picture: owner 2026-10-08, no blur). */
@@ -90,10 +90,27 @@ export function stageTop(characters: SpriteCharacter[]): number {
   return HEAD_MARGIN - top * SPRITE_HEIGHT;
 }
 
-export function canvasBox(slot: number, width: number, height: number, characters: SpriteCharacter[]) {
+export function visibleSlotsAt(frame: number, fps: number, timeline: EpisodeLine[], sprites: EpisodeSprites): number[] {
+  const index = Math.max(0, heldLineIndex(frame / fps, timeline));
+  const requested = sprites.lines[index]?.visibleSlots ?? [];
+  const known = new Set(sprites.characters.map((character) => character.slot));
+  const visible = [...new Set(requested.filter((slot) => known.has(slot)))].slice(0, 2);
+  return visible.length > 0 ? visible : sprites.characters.slice(0, 2).map((character) => character.slot);
+}
+
+export function canvasBox(slot: number, width: number, height: number, characters: SpriteCharacter[], visibleSlots?: number[]) {
   const boxHeight = SPRITE_HEIGHT * height;
   const boxWidth = boxHeight * CANVAS_RATIO;
-  return { left: SLOT_X[slot] * width - boxWidth / 2, top: stageTop(characters) * height, width: boxWidth, height: boxHeight };
+  const visible = visibleSlots?.length ? visibleSlots : characters.slice(0, 2).map((character) => character.slot);
+  const position = visible.indexOf(slot);
+  const center = visible.length === 1 ? 0.5 : SLOT_X[Math.max(0, position)] ?? SLOT_X[0];
+  const stageCharacters = characters.filter((character) => visible.includes(character.slot));
+  return {
+    left: center * width - boxWidth / 2,
+    top: stageTop(stageCharacters.length ? stageCharacters : characters) * height,
+    width: boxWidth,
+    height: boxHeight,
+  };
 }
 
 function turnStart(index: number, lines: SpriteLine[], timeline: EpisodeLine[]): number | null {
@@ -129,6 +146,9 @@ export function spriteFrame(
   const index = heldLineIndex(time, timeline);
   const line = index >= 0 ? sprites.lines[index] : undefined;
   const slot = character.slot;
+  const visibleSlots = visibleSlotsAt(frame, fps, timeline, sprites);
+  const visiblePosition = visibleSlots.indexOf(slot);
+  const visible = visiblePosition >= 0;
   const speaking = line !== undefined && line.slot === slot;
 
   const expression = !line || line.slot === null ? "calm" : speaking ? line.expression : line.listenerExpression;
@@ -156,14 +176,14 @@ export function spriteFrame(
   const leave = Math.min(1, Math.max(0, (totalFrames - frame) / ENTER_FRAMES));
   const presence = Math.min(enter, leave);
   const eased = 1 - (1 - presence) * (1 - presence);
-  const side = slot === 0 ? -1 : 1;
+  const side = visibleSlots.length === 1 ? 0 : visiblePosition === 0 ? -1 : 1;
 
   return {
     picture,
     speaking, brightness, scale,
     x: side * (1 - eased) * 0.35 * width,
     y: hop + breath,
-    opacity: eased,
+    opacity: visible ? eased : 0,
   };
 }
 

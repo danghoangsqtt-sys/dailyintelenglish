@@ -88,8 +88,11 @@ async def test_rehearsal_preserves_ids_cast_and_voice_and_registers_sprites(tmp_
     assert report["characters_unchanged"] is True
     assert report["cast_unchanged"] is True
     assert report["speakers_unchanged"] is True
+    assert report["asset_files_unchanged"] is True
     assert report["foreign_key_errors"] == []
     assert report["registered_sprites"] == 1
+    assert report["counts_after"]["character_assets"] == report["counts_before"]["character_assets"] + 1
+    assert report["asset_checksums"]["library/sprites/lina-id/calm__closed.png"]["sha256"]
     async with aiosqlite.connect(copied_db) as db:
         row = await (await db.execute(
             "SELECT is_seed, default_accent, default_voice_id FROM characters WHERE id = 'lina-id'"

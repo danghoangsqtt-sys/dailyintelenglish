@@ -17,6 +17,7 @@ Versioning: [SemVer](https://semver.org/)
 - **Task 33.6:** pinned profile-version sprite resolution for Remotion, seven-image Talking Starter support, deterministic missing-expression/gesture fallbacks, and legacy Lina/Alex manifest compatibility.
 - **Task 33.7:** game-style project cast selector with preview-only roster cards, explicit profile-ID assignment, duplicate prevention, renderer-readiness guidance, pinned versions, and user-controlled copying of profile name/voice defaults.
 - **Task 33.8:** dynamic profile filters/counts for activities and sprites, dialogue-derived two-person storyboard beats, and ordered single/pair shot planning and reuse for projects with up to six cast members.
+- **Task 33.9 acceptance candidate:** safe real-data migration rehearsal, resumable UI creation of a third profile, real three-character and legacy Lina/Alex Remotion renders, and dynamic talking-sprite pairs for cast slots 0–5. Gate B-23 remains pending owner review.
 
 ### Added (Phase 32 — talking characters, 2026-10-08)
 - **Verified Demo Episode with activity cutaways (2026-10-09).** The real production

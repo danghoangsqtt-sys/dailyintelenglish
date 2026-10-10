@@ -7,7 +7,20 @@ Prove migration safety and the complete owner workflow, then obtain owner accept
 ## Paths
 
 - `docs/operations/phase33-character-profiles-acceptance.md`
+- `scripts/migrate_character_profiles_v2.py`
+- `scripts/run_phase33_acceptance.py`
+- `app/services/video_renderer_remotion.py`
+- `app/services/visuals/sprite_plan.py`
+- `video-renderer/src/types.ts`
+- `video-renderer/src/spriteTimeline.ts`
+- `video-renderer/src/Sprites.tsx`
 - `tests/test_character_profiles_migration.py`
+- `tests/test_sprite_plan.py`
+- `tests/test_sprite_video_props.py`
+- `video-renderer/src/spriteTimeline.test.ts`
+- `frontend/pages/characters.html`
+- `tests/test_library_grid_browser.py`
+- `tests/test_visuals_project_browser.py`
 - Existing character, project, sprite, activity, storyboard, shot, video-props, and browser suites
 
 ## Execution Plan
@@ -27,10 +40,10 @@ Prove migration safety and the complete owner workflow, then obtain owner accept
 
 ## Acceptance Criteria
 
-- [ ] Migration rehearsal has no lost or orphaned data.
-- [ ] The third profile is created without filesystem manipulation.
-- [ ] A three-speaker project uses the intended profile for every speaker and the intended pair for every beat.
-- [ ] Old Lina/Alex project behavior remains stable.
+- [x] Migration rehearsal has no lost or orphaned data.
+- [x] The third profile is created without filesystem manipulation.
+- [x] A three-speaker project uses the intended profile for every speaker and the intended pair for every beat.
+- [x] Old Lina/Alex project behavior remains stable.
 - [ ] Owner accepts Gate B-23; only then may Phase 33 be marked complete.
 
 ## Implementation Notes
@@ -39,4 +52,15 @@ Prove migration safety and the complete owner workflow, then obtain owner accept
 - Keep Phase 32 Gate B-22 pending and keep Phase 33 open until the owner explicitly accepts Gate B-23.
 - Separate automated proof, generated acceptance artifacts, and owner visual review in the report so a passing test is not recorded as owner acceptance.
 - Preserve any existing project/profile data used for comparison and record hashes before and after the rehearsal.
+
+## Automated Acceptance Result — 2026-10-10
+
+- Fresh copied-data migration passed with 0 foreign-key errors, unchanged Lina/Alex IDs, cast rows, speaker settings and file hashes; 58 legacy sprite files were registered.
+- UI rehearsal created and locked Rowan with 5/5 core and 7/7 Talking Starter assets, including a browser-context restart between creation and resume.
+- Three Remotion renders completed without fallback: three-cast still, three-cast talking, and the old Lina/Alex project.
+- Acceptance exposed and fixed a real 3+ cast renderer defect: only slots 0/1 were loaded. Props and Remotion now carry slots 0–5 and show each approved storyboard pair.
+- Evidence and commands are recorded in `docs/operations/phase33-character-profiles-acceptance.md`.
+- Final full suite: 1,674 passed, 7 skipped, 0 failed; Vitest: 66 passed; TypeScript and changed-file Ruff clean.
+- Gate B-23 remains pending explicit owner review; Task 33.9 stays `in progress`.
+- Skills applied: `vp-auto@0.2.2`.
 

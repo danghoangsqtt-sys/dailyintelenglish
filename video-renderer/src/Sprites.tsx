@@ -6,7 +6,7 @@ import React from "react";
 import { AbsoluteFill, Img, staticFile, useVideoConfig } from "remotion";
 import { BOTTOM_SHADE_STYLE } from "./captionStyle";
 import { stillScale } from "./podcastLayout";
-import { activityCutawayAt, canvasBox, spriteBackground, spriteFrame } from "./spriteTimeline";
+import { activityCutawayAt, canvasBox, spriteBackground, spriteFrame, visibleSlotsAt } from "./spriteTimeline";
 import type { EpisodeLine, EpisodeSprites, SpriteCharacter } from "./types";
 
 const FILL: React.CSSProperties = { position: "absolute", width: "100%", height: "100%", objectFit: "cover" };
@@ -15,7 +15,8 @@ function Sprite({ character, frame, fps, lines, sprites, totalFrames }: {
   character: SpriteCharacter; frame: number; fps: number; lines: EpisodeLine[]; sprites: EpisodeSprites; totalFrames: number;
 }) {
   const { width, height } = useVideoConfig();
-  const box = canvasBox(character.slot, width, height, sprites.characters);
+  const visibleSlots = visibleSlotsAt(frame, fps, lines, sprites);
+  const box = canvasBox(character.slot, width, height, sprites.characters, visibleSlots);
   const state = spriteFrame(character, frame, fps, lines, sprites, totalFrames, width);
   return (
     <div style={{

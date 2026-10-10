@@ -96,4 +96,20 @@ def test_the_plan_uses_only_pictures_that_exist():
     assert result[1]["expression"] == "calm" and result[1]["gesture"] is None  # Lina has no laugh pictures, no gestures
     assert result[1]["listenerGesture"] == "listen" and result[1]["listenerExpression"] == "calm"
     assert result[2] == {"slot": None, "expression": "calm", "listenerExpression": "calm", "gesture": None,
-                         "listenerGesture": None, "mouth": []}
+                         "listenerGesture": None, "mouth": [], "visibleSlots": [0, 1]}
+
+
+def test_the_plan_uses_the_storyboard_pair_for_a_third_speaker():
+    lines = [
+        {"startSec": 0.0, "endSec": 1.0, "text": "First.", "words": []},
+        {"startSec": 1.0, "endSec": 2.0, "text": "Third.", "words": []},
+    ]
+    available = {0: ALL, 1: ALL, 2: ALL}
+
+    result = plan.build_plan(
+        lines, [0, 2], [None, None], available, None, FPS, [[0, 1], [0, 2]],
+    )
+
+    assert result[0]["visibleSlots"] == [0, 1]
+    assert result[1]["slot"] == 2 and result[1]["visibleSlots"] == [0, 2]
+    assert result[1]["listenerExpression"] == "calm"

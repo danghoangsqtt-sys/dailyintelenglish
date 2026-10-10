@@ -12,7 +12,7 @@ from app.services import video_renderer_remotion as remotion
 from app.services.visuals import sprite_service
 from tests.test_podcast_modes import _make_a_plate
 from tests.test_sprite_service import _figure
-from tests.test_visuals_project_api import client, data, setup_project  # noqa: F401
+from tests.test_visuals_project_api import client, data, locked_character, setup_project  # noqa: F401
 
 
 def _public(tmp_path, monkeypatch):
@@ -32,6 +32,19 @@ def _audio_job(project):
             {"words": [{"text": "Hello", "start_sec": 0.1, "end_sec": 0.5}, {"text": "there", "start_sec": 0.5, "end_sec": 1.0}]},
             {"words": [{"text": "Hi", "start_sec": 2.1, "end_sec": 2.6}]},
         ],
+    }
+
+
+def _three_speaker_audio_job(project):
+    order = [0, 1, 2, 2, 2, 0]
+    return {
+        "mp3_path": str(settings.DATA_DIR / "no-such-audio.mp3"),
+        "timestamps": [
+            {"start_sec": index * 1.5, "end_sec": index * 1.5 + 1.0, "label": f"Line {index + 1}",
+             "speaker_id": project["speakers"][speaker_index]["id"], "text": f"Dialogue {index + 1}."}
+            for index, speaker_index in enumerate(order)
+        ],
+        "word_timestamps": [],
     }
 
 
@@ -86,6 +99,55 @@ async def test_the_sprite_props_carry_both_sets_the_plan_and_one_plate(client, t
     assert (second["slot"], second["expression"], second["listenerExpression"]) == (1, "calm", "calm")
     assert sprites["backgrounds"] == {"still": f"remotion-render/sprites/{project['id']}/bg/still.png"}
     assert sprites["lineBackgrounds"] == ["still", "still"]
+
+
+@pytest.mark.asyncio
+async def test_three_speaker_props_load_every_set_and_follow_each_storyboard_pair(client, tmp_path, monkeypatch):  # noqa: F811
+    project = data(client.post("/api/projects", json={
+        "name": "Three speaker render", "topic": "A food tour", "cefr_level": "B1", "duration_minutes": 2,
+        "num_speakers": 3, "genre": "small_talk", "accent": "american", "speakers": [
+            {"name": "Host", "gender": "female", "accent": "american"},
+            {"name": "Guest", "gender": "male", "accent": "american"},
+            {"name": "Guide", "gender": "female", "accent": "american"},
+        ],
+    }))
+    ids = [locked_character(name, color) for name, color in (
+        ("Nova", "yellow"), ("Mira", "green"), ("Rowan", "blue"),
+    )]
+    for character_id in ids:
+        _give_sprites(character_id)
+    data(client.put(f"/api/projects/{project['id']}/visuals/cast", json=[
+        {"speaker_index": index, "character_id": character_id}
+        for index, character_id in enumerate(ids)
+    ]))
+    speakers = project["speakers"]
+    order = [0, 1, 2, 2, 2, 0]
+    data(client.put(f"/api/projects/{project['id']}/script", json={"lines": [
+        {"speaker_id": speakers[speaker_index]["id"], "text": f"Dialogue {index + 1}."}
+        for index, speaker_index in enumerate(order)
+    ]}))
+    _make_a_plate("builtin-cafe")
+    data(client.put(f"/api/projects/{project['id']}/storyboard", json={"status": "approved", "beats": [
+        {"line_from": 0, "line_to": 1, "kind": "scene", "scene_id": "builtin-cafe", "speakers": [0, 1]},
+        {"line_from": 2, "line_to": 3, "kind": "insert", "speakers": [2], "action": "cooking"},
+        {"line_from": 4, "line_to": 5, "kind": "scene", "scene_id": "builtin-cafe", "speakers": [0, 2]},
+    ]}))
+    _public(tmp_path, monkeypatch)
+
+    async with aiosqlite.connect(settings.db_path) as db:
+        db.row_factory = aiosqlite.Row
+        props = await remotion._build_input_props(
+            db, project, _three_speaker_audio_job(project), None, visual_mode="podcast_sprites",
+        )
+
+    sprites = props["sprites"]
+    assert [(item["slot"], item["name"]) for item in sprites["characters"]] == [
+        (0, "Nova"), (1, "Mira"), (2, "Rowan"),
+    ]
+    assert [line["visibleSlots"] for line in sprites["lines"]] == [
+        [0, 1], [0, 1], [2], [2], [0, 2], [0, 2],
+    ]
+    assert (tmp_path / "public" / "sprites" / project["id"] / "2" / "calm__open.png").is_file()
 
 
 def test_each_line_takes_the_place_of_its_beat_and_an_insert_keeps_the_place_before():

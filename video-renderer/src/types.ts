@@ -108,7 +108,7 @@ export const episodeVisualsSchema = z.object({
  * to its public path; `faceEllipse` is [cx, cy, rx, ry] as fractions of the 1280 x 1536 canvas; `offsets` is each picture's head
  * offset from the calm picture in canvas pixels; `topFraction` is where the figure starts on the canvas (0..1). */
 export const spriteCharacterSchema = z.object({
-  slot: z.number().int().min(0).max(1),
+  slot: z.number().int().min(0).max(5),
   name: z.string(),
   pictures: z.record(z.string(), z.string()),
   faceEllipse: z.tuple([z.number(), z.number(), z.number(), z.number()]),
@@ -118,7 +118,8 @@ export const spriteCharacterSchema = z.object({
 
 /** Phase 32: what the sprites do on each line (`app/services/visuals/sprite_plan.py`). */
 export const spriteLineSchema = z.object({
-  slot: z.number().int().min(0).max(1).nullable(),
+  slot: z.number().int().min(0).max(5).nullable(),
+  visibleSlots: z.array(z.number().int().min(0).max(5)).max(2).default([]),
   expression: z.string(),
   listenerExpression: z.string(),
   gesture: z.string().nullable(),

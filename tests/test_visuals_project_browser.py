@@ -1,5 +1,7 @@
-"""Task 20.6 Step 5 visual shot flow against the fake engine."""
+"""Step 5 visual shot flow against the fake engine."""
 
+import sqlite3
+import uuid
 from typing import AsyncGenerator, Generator
 
 import pytest
@@ -9,6 +11,21 @@ from app.api import visuals as visuals_api
 from app.core.config import settings
 from tests.conftest import live_server
 from tests.test_visuals_project_api import PROJECT, locked_character
+
+
+def make_core_ready(character_id: str) -> None:
+    """Give a minimal locked-character fixture every approved Phase 33 core slot."""
+    path = settings.DATA_DIR / "library" / "characters" / character_id / "face.png"
+    with sqlite3.connect(settings.db_path) as connection:
+        for slot in ("full_body", "portrait_calm", "portrait_smile", "portrait_surprised"):
+            asset_id = str(uuid.uuid4())
+            connection.execute(
+                "INSERT INTO character_assets "
+                "(id, character_id, kind, path, approved, created_at, slot_key, source, original_filename, "
+                "review_state, validation_json, identity_version, is_current, updated_at) "
+                "VALUES (?, ?, ?, ?, 1, 'now', ?, 'test', 'face.png', 'approved', '{}', 1, 1, 'now')",
+                (asset_id, character_id, slot, str(path), slot),
+            )
 
 
 @pytest.fixture(scope="module")
@@ -43,6 +60,8 @@ async def test_step5_cast_scenes_generate_grid_and_regenerate(browser_instance: 
     project_id = (await response.json())["data"]["id"]
     first = locked_character("Nova", "yellow")
     second = locked_character("Mira", "green")
+    make_core_ready(first)
+    make_core_ready(second)
     scenes_response = await page.request.get(f"{live_server_url}/api/visuals/scenes")
     scene_names = [scene["name"] for scene in (await scenes_response.json())["data"][:2]]
     await page.route(
@@ -50,11 +69,19 @@ async def test_step5_cast_scenes_generate_grid_and_regenerate(browser_instance: 
         lambda route: route.fulfill(json={"success": True, "data": {"status": "complete", "timestamps": []}}),
     )
     await page.goto(f"{live_server_url}/step5?project_id={project_id}")
-    await page.locator("#visual-speaker-0").wait_for()
-    await page.locator("#visual-speaker-0").select_option(first)
-    await page.wait_for_function("document.querySelector('#visual-speaker-0')?.value !== '' && !document.querySelector('#visual-speaker-0')?.disabled")
-    await page.locator("#visual-speaker-1").select_option(second)
-    await page.wait_for_function("document.querySelector('#visual-speaker-1')?.value !== '' && !document.querySelector('#visual-speaker-1')?.disabled")
+    slots = page.locator("#visual-cast-grid .cast-speaker-slot")
+    await slots.first.wait_for()
+    await page.locator(f'.cast-roster-card[data-character-id="{first}"]').click()
+    await page.locator('[data-action="choose-profile"]').click()
+    await page.wait_for_function(
+        "id => [...document.querySelectorAll('.cast-speaker-slot')][0]?.textContent.includes(id)", arg="Nova",
+    )
+    await slots.nth(1).click()
+    await page.locator(f'.cast-roster-card[data-character-id="{second}"]').click()
+    await page.locator('[data-action="choose-profile"]').click()
+    await page.wait_for_function(
+        "id => [...document.querySelectorAll('.cast-speaker-slot')][1]?.textContent.includes(id)", arg="Mira",
+    )
     await page.locator("#visual-scene-options button", has_text=scene_names[0]).click()
     await page.wait_for_function("document.querySelectorAll('#visual-scene-order span').length === 1")
     await page.locator("#visual-scene-options button", has_text=scene_names[1]).click()

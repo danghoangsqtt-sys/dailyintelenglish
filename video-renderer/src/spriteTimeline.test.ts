@@ -28,9 +28,9 @@ const timeline: EpisodeLine[] = [
 const sprites: EpisodeSprites = {
   characters: [character(0, "Alex", ["gesture-wave"]), character(1, "Lina", ["gesture-listen", "gesture-talk", "gesture-talk__open"])],
   lines: [
-    { slot: 0, expression: "smile", listenerExpression: "calm", gesture: "wave", listenerGesture: null, mouth: [[0.2, 0.6], [1.65, 1.9]] },
-    { slot: 1, expression: "calm", listenerExpression: "smile", gesture: null, listenerGesture: null, mouth: [[3, 4]] },
-    { slot: 1, expression: "calm", listenerExpression: "calm", gesture: "talk", listenerGesture: null, mouth: [[6.4, 6.6]] },
+    { slot: 0, visibleSlots: [0, 1], expression: "smile", listenerExpression: "calm", gesture: "wave", listenerGesture: null, mouth: [[0.2, 0.6], [1.65, 1.9]] },
+    { slot: 1, visibleSlots: [0, 1], expression: "calm", listenerExpression: "smile", gesture: null, listenerGesture: null, mouth: [[3, 4]] },
+    { slot: 1, visibleSlots: [0, 1], expression: "calm", listenerExpression: "calm", gesture: "talk", listenerGesture: null, mouth: [[6.4, 6.6]] },
   ],
   backgrounds: { cafe: "remotion-render/sprites/p/bg/cafe.png", park: "remotion-render/sprites/p/bg/park.png" },
   lineBackgrounds: ["cafe", "cafe", "park"],
@@ -154,6 +154,37 @@ describe("Phase 32 talking sprites", () => {
     expect(left.height).toBeCloseTo(SPRITE_HEIGHT * 720);
     expect(left.left + left.width / 2).toBeCloseTo(0.27 * 1280);
     expect(right.left).toBeGreaterThan(left.left);
+  });
+
+  it("shows the storyboard pair when a third cast member becomes active", () => {
+    const trioTimeline: EpisodeLine[] = [
+      { startSec: 0, endSec: 2, speaker: "Alex", speakerId: "a", text: "Hello.", words: [] },
+      { startSec: 2, endSec: 4, speaker: "Rowan", speakerId: "r", text: "Hello too.", words: [] },
+    ];
+    const trio: EpisodeSprites = {
+      ...sprites,
+      characters: [...sprites.characters, character(2, "Rowan")],
+      lines: [
+        { slot: 0, visibleSlots: [0, 1], expression: "calm", listenerExpression: "calm", gesture: null, listenerGesture: null, mouth: [] },
+        { slot: 2, visibleSlots: [0, 2], expression: "calm", listenerExpression: "calm", gesture: null, listenerGesture: null, mouth: [] },
+      ],
+      lineBackgrounds: ["cafe", "cafe"],
+    };
+    const frame = 3 * FPS;
+    const alex = spriteFrame(trio.characters[0], frame, FPS, trioTimeline, trio, 4 * FPS, WIDTH);
+    const lina = spriteFrame(trio.characters[1], frame, FPS, trioTimeline, trio, 4 * FPS, WIDTH);
+    const rowan = spriteFrame(trio.characters[2], frame, FPS, trioTimeline, trio, 4 * FPS, WIDTH);
+
+    expect(lina.opacity).toBe(0);
+    expect(rowan.opacity).toBeGreaterThan(0);
+    expect(rowan.speaking).toBe(true);
+    expect(canvasBox(0, WIDTH, 720, trio.characters, [0, 2]).left)
+      .toBeLessThan(canvasBox(2, WIDTH, 720, trio.characters, [0, 2]).left);
+    expect(episodeInputPropsSchema.parse({
+      episodeId: "p", lines: trioTimeline, audioPath: "a.mp3", fps: FPS, width: WIDTH, height: 720,
+      visualMode: "podcast_sprites", sprites: trio,
+    }).sprites?.characters[2].name).toBe("Rowan");
+    expect(alex.opacity).toBeGreaterThan(0);
   });
 
   it("holds a gesture without an open-mouth twin only 1.6 s, then talks on the plain picture", () => {

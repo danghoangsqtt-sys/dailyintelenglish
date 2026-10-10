@@ -3,7 +3,7 @@
   "version": "1.2.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_33_task_33_8_complete",
+  "status": "phase_33_gate_b23_ready",
   "current_phase": "33",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
@@ -269,7 +269,7 @@
       "status": "in_progress",
       "tasks_done": 8,
       "tasks_total": 9,
-      "note": "Tasks 33.1-33.8 complete 2026-10-10. Activity and sprite shelves are profile-driven; three-to-six-cast storyboards derive ordered singles/pairs from reviewed beats and dialogue while retaining the two-visible limit. Shot planning/reuse no longer substitutes the first cast pair. Focused verification: 24 passed. Next: 33.9 migration rehearsal, regression, real three-character render, and owner Gate B-23. Phase 32 Gate B-22 remains pending."
+      "note": "Tasks 33.1-33.8 are complete and Task 33.9 automated acceptance is ready. Copied-live-data migration preserved Lina/Alex IDs, cast, speakers and file hashes with zero foreign-key errors. UI rehearsal created and locked Rowan (5/5 core, 7/7 starter), assigned three profiles, and produced still, talking and old-project Remotion videos without fallback. The acceptance-discovered slot-0/1 renderer defect is fixed: slots 0-5 load and storyboard visible pairs drive each line. Final gates: 1,674 Python/browser tests and 66 Vitest tests passed; TypeScript and changed-file Ruff clean. Waiting for explicit owner Gate B-23 acceptance; Task 33.9 and Phase 33 remain in progress. Phase 32 Gate B-22 remains pending."
     }
   },
   "key_decisions": [

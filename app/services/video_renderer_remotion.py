@@ -287,7 +287,7 @@ async def _scene_plate(db: aiosqlite.Connection, scene_id: str) -> Path | None:
 
 async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: list[dict], audio_job: dict,
                               still_scene_id: str | None) -> dict[str, Any]:
-    """Phase 32 (Task 32.4): the props of the "podcast_sprites" mode -- the two cast characters' sprite sets (copied under public/),
+    """The props of the "podcast_sprites" mode -- every cast character's sprite set (copied under public/),
     the plan of each line (`sprite_plan`) and the scene plate of each line. Raises ValidationError when a speaker's character has no
     usable sprite set (D32-i)."""
     project_id = project["id"]
@@ -295,7 +295,7 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
     speaker_indexes = {speaker["id"]: speaker.get("speaker_index", index) for index, speaker in enumerate(project["speakers"])}
     characters: list[dict[str, Any]] = []
     available: dict[int, set[str]] = {}
-    for slot in sorted({index for index in speaker_indexes.values() if index in (0, 1)}):
+    for slot in sorted(set(speaker_indexes.values())):
         member = cast_by_index.get(slot)
         speaker_name = next(s["name"] for s in project["speakers"] if speaker_indexes[s["id"]] == slot)
         if member is None:
@@ -344,15 +344,27 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
     line_slots = [speaker_indexes.get(line["speakerId"]) for line in lines]
     line_slots = [slot if slot in available else None for slot in line_slots]
     beat_expressions: list[str | None] = [None] * len(lines)
+    fallback_pair = sorted(available)[:2]
+    visible_slots: list[list[int]] = []
+    for slot in line_slots:
+        pair = fallback_pair.copy()
+        if slot is not None and slot not in pair:
+            pair = [slot, *[item for item in fallback_pair if item != slot]][:2]
+        visible_slots.append(pair)
     for beat in beats or []:
         for index in range(beat["line_from"], min(beat["line_to"], len(lines) - 1) + 1):
             beat_expressions[index] = beat.get("expression")
+            pair = list(dict.fromkeys(item for item in (beat.get("speakers") or []) if item in available))[:2]
+            slot = line_slots[index]
+            if slot is not None and slot not in pair:
+                pair = [slot, *pair][:2]
+            visible_slots[index] = pair or visible_slots[index]
     try:
         loudness = await asyncio.to_thread(sprite_plan.loudness_per_frame, audio_job["mp3_path"], VIDEO_FPS)
     except (OSError, subprocess.SubprocessError, ValueError) as exc:
         logger.warning("sprite_loudness_unavailable project_id=%s reason=%s -- mouths follow the words", project_id, exc)
         loudness = None
-    plan = sprite_plan.build_plan(lines, line_slots, beat_expressions, available, loudness, VIDEO_FPS)
+    plan = sprite_plan.build_plan(lines, line_slots, beat_expressions, available, loudness, VIDEO_FPS, visible_slots)
     candidates, cutaways, activity_uses = await activity_library.approved_candidates(db), [], []
     for beat in beats or []:
         if beat["kind"] != "insert" or beat["line_from"] >= len(lines):
