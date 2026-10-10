@@ -32,3 +32,10 @@ Support the existing 29-picture sprite contract for every profile while allowing
 - [ ] Missing optional assets use deterministic fallbacks and never crash rendering.
 - [ ] Lina/Alex compatibility manifests remain equivalent to their current 29-key sets.
 
+## Implementation Notes
+
+- Resolve approved database slots by character ID and pinned identity/profile version before falling back to the legacy filesystem manifest.
+- Materialize a renderer-compatible manifest at the render boundary; do not change the Remotion prop contract.
+- Tier 1 fallbacks must be deterministic and remain within the seven approved keys.
+- Keep full Lina/Alex legacy manifests byte-for-byte addressable and verify their 29 canonical names are unchanged.
+
