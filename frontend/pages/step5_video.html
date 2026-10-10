@@ -87,12 +87,39 @@
     .timeline-clip.synced { border-left-color: var(--success); }
     .music-clip { border-left-color: var(--info); }
     .timeline-status { font-size: 11px; }
-    .visual-cast-grid, .visual-shot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
-    .visual-cast-card, .visual-shot-card { padding: 12px; }
-    .visual-cast-card label { display: block; margin-bottom: 7px; font-weight: 700; }
-    .visual-cast-card select { width: 100%; padding: 9px; border: 1px solid var(--border); border-radius: 8px;
-      background: var(--surface); color: var(--text); }
-    .visual-cast-face { display: block; width: 58px; height: 58px; margin: 9px 0; border-radius: 50%; object-fit: cover; }
+    .visual-cast-grid { display: grid; gap: 14px; }
+    .visual-shot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+    .visual-shot-card { padding: 12px; }
+    .cast-speaker-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+    .cast-speaker-slot { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--border); border-radius: 10px;
+      background: var(--surface); color: var(--text); text-align: left; cursor: pointer; }
+    .cast-speaker-slot span { color: var(--muted); font-size: 12px; }
+    .cast-speaker-slot.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+    .cast-chooser { display: grid; grid-template-columns: minmax(300px, 1.1fr) minmax(320px, .9fr); gap: 16px; align-items: start; }
+    .cast-chooser h4 { margin: 0 0 10px; }
+    .cast-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)); gap: 10px; max-height: 430px; overflow: auto; padding: 2px; }
+    .cast-roster-card { position: relative; display: grid; gap: 5px; padding: 8px; border: 1px solid var(--border); border-radius: 10px;
+      background: var(--surface); color: var(--text); text-align: left; cursor: pointer; }
+    .cast-roster-card img, .cast-roster-placeholder { width: 100%; aspect-ratio: 1 / 1; border-radius: 8px; object-fit: cover; background: var(--surface-2); }
+    .cast-roster-placeholder { display: grid; place-items: center; color: var(--muted); font-size: 11px; }
+    .cast-roster-card small { color: var(--muted); }
+    .cast-roster-card em { color: var(--warning); font-size: 11px; font-style: normal; font-weight: 700; }
+    .cast-roster-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+    .cast-profile-panel { position: sticky; top: 12px; padding: 16px; }
+    .cast-profile-heading { display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: start; }
+    .cast-profile-heading img { width: 120px; height: 150px; border-radius: 10px; object-fit: cover; background: var(--surface-2); }
+    .cast-profile-heading h4 { font-size: 20px; }
+    .cast-profile-heading p { margin: 0 0 7px; color: var(--muted); }
+    .cast-readiness { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0; }
+    .cast-readiness-badge { padding: 5px 8px; border-radius: 999px; background: var(--surface-2); font-size: 11px; font-weight: 700; }
+    .cast-readiness-badge.ready { color: var(--success); }
+    .cast-readiness-badge.partial { color: var(--warning); }
+    .cast-readiness-badge.missing { color: var(--danger); }
+    .cast-copy-defaults { display: flex; gap: 8px; align-items: flex-start; font-weight: 700; }
+    .cast-change-note { max-height: 100px; overflow: auto; margin: 8px 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .cast-compatibility { margin: 8px 0; font-size: 12px; }
+    .cast-profile-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    @media (max-width: 900px) { .cast-chooser { grid-template-columns: 1fr; } .cast-profile-panel { position: static; } }
     .visual-scene-options, .visual-scene-order { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
     .visual-scene-options button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
     .visual-scene-order { color: var(--muted); font-size: 12px; }
@@ -169,8 +196,8 @@
 
             <section class="section" id="project-visuals-section">
               <h2 class="section-title">Characters &amp; scenes</h2>
-              <p class="section-hint">Map speakers to locked characters and choose up to three scenes. <a href="/characters">Open Character Library</a>. Shots appear in Enhanced (Remotion) renders.</p>
-              <h3>Cast</h3>
+              <p class="section-hint">Select a speaker, preview a profile, then use the explicit Choose button. Each profile can be assigned once. <a href="/characters">Open Character Library</a>.</p>
+              <h3>Cast profiles</h3>
               <div id="visual-cast-grid" class="visual-cast-grid"></div>
               <h3>Scenes</h3>
               <div id="visual-scene-options" class="visual-scene-options" role="group" aria-label="Project scenes"></div>
@@ -217,7 +244,7 @@
                 <button class="chip" type="button" data-visual-mode="podcast_still" aria-pressed="false">Podcast: one still scene</button>
                 <button class="chip" type="button" data-visual-mode="podcast_sprites" aria-pressed="false">Podcast: talking characters</button>
               </div>
-              <p class="section-hint" id="visual-mode-hint">With characters: the story pictures of Step 4 (Alex and Lina, scene changes, inserts). Black screen and one still scene need no drawn shots: ready in about two minutes. Talking characters: Alex and Lina as visual-novel sprites that move their mouths with the speech, over the scene pictures of the storyboard (or the scene chosen below); needs their sprite sets (Shot Library page).</p>
+              <p class="section-hint" id="visual-mode-hint">With characters: story pictures use the profiles assigned above, plus scene changes and inserts. Black screen and one still scene need no drawn shots. Talking characters uses the assigned profiles as visual-novel sprites over storyboard scenes and requires each profile's starter sprite set.</p>
               <div class="aspect-ratio-row" id="still-scene-row" hidden>
                 <label for="still-scene">Scene picture</label>
                 <select id="still-scene" class="settings-input"></select>

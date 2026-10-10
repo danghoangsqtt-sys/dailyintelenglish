@@ -110,6 +110,51 @@ def test_cast_validation_warning_and_speaker_replacement(client):
     assert client.put(f"{base}/scenes", json=["missing"]).status_code == 404
 
 
+def test_cast_uses_distinct_profile_ids_and_copies_defaults_only_when_requested(client):
+    project = data(client.post("/api/projects", json=PROJECT))
+    first = locked_character("Nova", "yellow")
+    second = locked_character("Mira", "green")
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute(
+            "UPDATE characters SET default_accent = 'british', default_tts_engine = 'edge_tts', "
+            "default_voice_id = 'en-GB-SoniaNeural', default_voice_description = 'warm and clear', "
+            "default_speed = 0.92, default_pitch = 0.1, default_volume = 0.8, identity_version = 3 "
+            "WHERE id = ?",
+            (first,),
+        )
+    base = f"/api/projects/{project['id']}/visuals"
+
+    duplicate = client.put(f"{base}/cast", json=[
+        {"speaker_index": 0, "character_id": first},
+        {"speaker_index": 1, "character_id": first},
+    ])
+    assert duplicate.status_code == 422
+
+    visuals = data(client.put(f"{base}/cast", json=[{
+        "speaker_index": 0, "character_id": first, "copy_profile_defaults": True,
+    }]))
+    assert visuals["cast"][0]["character_id"] == first
+    assert visuals["cast"][0]["profile_version"] == 3
+    assigned = data(client.get(f"/api/projects/{project['id']}"))["speakers"][0]
+    assert assigned["name"] == "Nova"
+    assert assigned["accent"] == "british"
+    assert assigned["voice_id"] == "en-GB-SoniaNeural"
+    assert assigned["voice_description"] == "warm and clear"
+    assert (assigned["speed"], assigned["pitch"], assigned["volume"]) == (0.92, 0.1, 0.8)
+
+    speaker_id = assigned["id"]
+    data(client.patch(f"/api/projects/{project['id']}/speakers/{speaker_id}", json={
+        "voice_description": "project-specific voice", "speed": 1.15,
+    }))
+    data(client.put(f"{base}/cast", json=[{
+        "speaker_index": 0, "character_id": second, "copy_profile_defaults": False,
+    }]))
+    preserved = data(client.get(f"/api/projects/{project['id']}"))["speakers"][0]
+    assert preserved["voice_description"] == "project-specific voice"
+    assert preserved["speed"] == 1.15
+    assert preserved["name"] == "Nova"
+
+
 @pytest.mark.parametrize("cast_count,scene_count", [(1, 1), (2, 2), (2, 3)])
 def test_shot_sets_regenerate_and_content_guard(client, cast_count, scene_count, tmp_path):
     project, ids, scenes = setup_project(client, cast_count, scene_count)

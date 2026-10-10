@@ -38,7 +38,7 @@
   ];
 
   const GENDERS = ["male", "female", "neutral"];
-  // Phase 31: the default cast of a new episode is Alex (male) and Lina (female), the library characters of the same names.
+  // Starter dialogue labels only. Character profiles are assigned explicitly by ID in Video Studio.
   const DEFAULT_SPEAKERS = [{ name: "Alex", gender: "male" }, { name: "Lina", gender: "female" }];
   const DURATION_PRESETS = [5, 10, 15, 20];
   const MIN_SPEAKERS = 1;

@@ -103,18 +103,40 @@ async def set_cast(db: aiosqlite.Connection, project_id: str, members: list[dict
     indexes = [member["speaker_index"] for member in members]
     if len(indexes) != len(set(indexes)) or any(index not in valid_indexes for index in indexes):
         raise ValidationError("Cast speaker indexes must be unique and exist in this project")
+    character_ids = [member["character_id"] for member in members]
+    if len(character_ids) != len(set(character_ids)):
+        raise ValidationError("Each project speaker must use a distinct character profile")
     versions: dict[str, int] = {}
+    characters: dict[str, dict] = {}
     for member in members:
         character = await library.get_character_row(db, member["character_id"])
         if character["status"] != "locked":
             raise ValidationError("Only locked characters can join a project cast")
         versions[member["character_id"]] = character["identity_version"]
+        characters[member["character_id"]] = character
     await db.execute("DELETE FROM project_cast WHERE project_id = ?", (project_id,))
     for member in members:
         await db.execute(
             "INSERT INTO project_cast (project_id, speaker_index, character_id, profile_version) VALUES (?, ?, ?, ?)",
             (project_id, member["speaker_index"], member["character_id"], versions[member["character_id"]]),
         )
+        if member.get("copy_profile_defaults"):
+            character = characters[member["character_id"]]
+            accent = character["default_accent"] or project["speakers"][member["speaker_index"]]["accent"]
+            await db.execute(
+                "UPDATE speakers SET name = ?, gender = ?, accent = ?, tts_engine = ?, voice_id = ?, "
+                "voice_description = ?, speed = ?, pitch = ?, volume = ? "
+                "WHERE project_id = ? AND speaker_index = ?",
+                (
+                    character["name"], character["gender"], accent,
+                    character["default_tts_engine"], character["default_voice_id"] or None,
+                    character["default_voice_description"], character["default_speed"],
+                    character["default_pitch"], character["default_volume"], project_id,
+                    member["speaker_index"],
+                ),
+            )
+    if any(member.get("copy_profile_defaults") for member in members):
+        await project_service.mark_speaker_voice_changed(db, project_id, commit=False)
     return await project_visuals(db, project_id)
 
 

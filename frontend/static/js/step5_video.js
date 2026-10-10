@@ -80,6 +80,8 @@
     visualBusy: false,
     visualProgress: null,
     visualError: "",
+    castSpeakerIndex: null,
+    castPreviewId: null,
     shotVariants: {},
   };
 
@@ -390,60 +392,228 @@
     byId("visual-warnings").textContent = state.visualError || state.visuals?.warnings?.join(" ") || "";
   }
 
-  function renderVisualCast() {
-    const grid = byId("visual-cast-grid");
-    grid.replaceChildren();
-    (state.project?.speakers || []).forEach((speaker) => {
-      const card = document.createElement("div");
-      card.className = "card visual-cast-card";
-      const label = document.createElement("label");
-      const select = document.createElement("select");
-      select.id = `visual-speaker-${speaker.speaker_index}`;
-      label.htmlFor = select.id;
-      label.textContent = speaker.name;
-      const none = document.createElement("option");
-      none.value = "";
-      none.textContent = "— none —";
-      select.append(none);
-      state.visualCharacters.filter((character) => character.status === "locked").forEach((character) => {
-        const option = document.createElement("option");
-        option.value = character.id;
-        option.textContent = character.name;
-        select.append(option);
-      });
-      const castMember = state.visuals?.cast.find((member) => member.speaker_index === speaker.speaker_index);
-      select.value = castMember?.character_id || "";
-      select.disabled = state.visualBusy;
-      select.addEventListener("change", async () => {
-        const members = state.visuals.cast
-          .filter((member) => member.speaker_index !== speaker.speaker_index)
-          .map((member) => ({ speaker_index: member.speaker_index, character_id: member.character_id }));
-        if (select.value) members.push({ speaker_index: speaker.speaker_index, character_id: select.value });
-        members.sort((a, b) => a.speaker_index - b.speaker_index);
-        state.visualBusy = true;
-        grid.querySelectorAll("select").forEach((control) => { control.disabled = true; });
-        try {
-          state.visuals = await Api.setProjectCast(state.projectId, members);
-          state.visualError = "";
-          renderProjectVisuals();
-        } catch (error) {
-          visualWarning(error.message || "Could not save the cast.");
-        } finally {
-          state.visualBusy = false;
-          renderProjectVisuals();
-        }
-      });
-      card.append(label, select);
-      const chosen = state.visualCharacters.find((character) => character.id === select.value);
-      if (chosen?.face_url) {
-        const image = document.createElement("img");
-        image.className = "visual-cast-face";
-        image.src = chosen.face_url;
-        image.alt = `${chosen.name} face`;
-        card.append(image);
-      }
-      grid.append(card);
+  function castMemberFor(speakerIndex) {
+    return state.visuals?.cast.find((member) => member.speaker_index === speakerIndex) || null;
+  }
+
+  function profileCompatibility(character) {
+    if (!character) return "Choose a profile to preview it.";
+    if (character.status !== "locked") return "Finish the profile and lock it in Character Library first.";
+    if (state.visualMode === "podcast_sprites" && character.readiness?.talking_starter?.state !== "ready") {
+      const missing = character.readiness?.talking_starter?.missing || [];
+      return `Talking characters needs the 7 starter sprites${missing.length ? `: ${missing.join(", ")}` : "."}`;
+    }
+    if (state.visualMode === "illustrated" && character.readiness?.visual?.state !== "ready") {
+      const missing = character.readiness?.visual?.missing || [];
+      return `Illustrated video needs approved core pictures${missing.length ? `: ${missing.join(", ")}` : "."}`;
+    }
+    return "";
+  }
+
+  function voiceDefaultChanges(speaker, character) {
+    if (!speaker || !character) return [];
+    const fields = [
+      ["Name", speaker.name, character.name],
+      ["Accent", speaker.accent, character.default_accent || speaker.accent],
+      ["Voice engine", speaker.tts_engine, character.default_tts_engine],
+      ["Voice", speaker.voice_id || "Automatic", character.default_voice_id || "Automatic"],
+      ["Voice description", speaker.voice_description || "None", character.default_voice_description || "None"],
+      ["Speed", speaker.speed, character.default_speed],
+      ["Pitch", speaker.pitch, character.default_pitch],
+      ["Volume", speaker.volume, character.default_volume],
+    ];
+    return fields.filter(([, before, after]) => String(before ?? "") !== String(after ?? ""));
+  }
+
+  async function saveCastAssignment(speakerIndex, characterId, copyProfileDefaults = false) {
+    const members = (state.visuals?.cast || [])
+      .filter((member) => member.speaker_index !== speakerIndex)
+      .map((member) => ({ speaker_index: member.speaker_index, character_id: member.character_id }));
+    if (characterId) members.push({
+      speaker_index: speakerIndex, character_id: characterId, copy_profile_defaults: copyProfileDefaults,
     });
+    members.sort((a, b) => a.speaker_index - b.speaker_index);
+    state.visualBusy = true;
+    renderVisualCast();
+    try {
+      state.visuals = await Api.setProjectCast(state.projectId, members);
+      if (copyProfileDefaults) {
+        state.project = await Api.getProject(state.projectId);
+        renderHeader();
+        renderAvatars();
+      }
+      state.visualError = "";
+      state.castPreviewId = characterId || null;
+    } catch (error) {
+      visualWarning(error.message || "Could not save the cast.");
+    } finally {
+      state.visualBusy = false;
+      renderProjectVisuals();
+    }
+  }
+
+  function renderVisualCast() {
+    const container = byId("visual-cast-grid");
+    container.replaceChildren();
+    const speakers = state.project?.speakers || [];
+    if (!speakers.length) return;
+    if (!speakers.some((speaker) => speaker.speaker_index === state.castSpeakerIndex)) {
+      state.castSpeakerIndex = speakers[0].speaker_index;
+    }
+    const activeSpeaker = speakers.find((speaker) => speaker.speaker_index === state.castSpeakerIndex);
+    const activeMember = castMemberFor(state.castSpeakerIndex);
+    if (!state.castPreviewId) state.castPreviewId = activeMember?.character_id || state.visualCharacters[0]?.id || null;
+    const preview = state.visualCharacters.find((character) => character.id === state.castPreviewId) || null;
+
+    const slots = document.createElement("div");
+    slots.className = "cast-speaker-slots";
+    speakers.forEach((speaker) => {
+      const member = castMemberFor(speaker.speaker_index);
+      const profile = state.visualCharacters.find((character) => character.id === member?.character_id);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "cast-speaker-slot";
+      button.classList.toggle("selected", speaker.speaker_index === state.castSpeakerIndex);
+      button.dataset.castSpeakerIndex = String(speaker.speaker_index);
+      button.setAttribute("aria-pressed", String(speaker.speaker_index === state.castSpeakerIndex));
+      const strong = document.createElement("strong");
+      strong.textContent = `Speaker ${speaker.speaker_index + 1}: ${speaker.name}`;
+      const assignment = document.createElement("span");
+      assignment.textContent = profile ? `${profile.name} · profile v${member.profile_version}` : "No profile assigned";
+      button.append(strong, assignment);
+      button.addEventListener("click", () => {
+        state.castSpeakerIndex = speaker.speaker_index;
+        state.castPreviewId = member?.character_id || state.castPreviewId;
+        renderVisualCast();
+      });
+      slots.append(button);
+    });
+
+    const roster = document.createElement("div");
+    roster.className = "cast-roster";
+    state.visualCharacters.forEach((character) => {
+      const usedBy = (state.visuals?.cast || []).find((member) => member.character_id === character.id);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "cast-roster-card";
+      button.classList.toggle("selected", character.id === preview?.id);
+      button.dataset.characterId = character.id;
+      button.setAttribute("aria-pressed", String(character.id === preview?.id));
+      const imageUrl = character.face_url || character.body_url;
+      if (imageUrl) {
+        const image = document.createElement("img");
+        image.src = imageUrl;
+        image.alt = "";
+        button.append(image);
+      } else {
+        const placeholder = document.createElement("span");
+        placeholder.className = "cast-roster-placeholder";
+        placeholder.textContent = "No picture";
+        button.append(placeholder);
+      }
+      const name = document.createElement("strong");
+      name.textContent = character.name;
+      const role = document.createElement("small");
+      role.textContent = character.role || "Character";
+      button.append(name, role);
+      if (usedBy && usedBy.speaker_index !== state.castSpeakerIndex) {
+        const used = document.createElement("em");
+        used.textContent = `Used by Speaker ${usedBy.speaker_index + 1}`;
+        button.append(used);
+      }
+      button.addEventListener("click", () => {
+        state.castPreviewId = character.id;
+        renderVisualCast();
+      });
+      roster.append(button);
+    });
+
+    const detail = document.createElement("div");
+    detail.className = "cast-profile-panel card";
+    if (!preview) {
+      const empty = document.createElement("p");
+      empty.className = "section-hint";
+      empty.textContent = "Create a character profile before assigning the cast.";
+      detail.append(empty);
+    } else {
+      const usedBy = (state.visuals?.cast || []).find((member) =>
+        member.character_id === preview.id && member.speaker_index !== state.castSpeakerIndex);
+      const compatibility = profileCompatibility(preview);
+      const changes = voiceDefaultChanges(activeSpeaker, preview);
+      const heading = document.createElement("div");
+      heading.className = "cast-profile-heading";
+      const imageUrl = preview.body_url || preview.face_url;
+      if (imageUrl) {
+        const image = document.createElement("img");
+        image.src = imageUrl;
+        image.alt = preview.name;
+        heading.append(image);
+      }
+      const summary = document.createElement("div");
+      const title = document.createElement("h4");
+      title.textContent = preview.name;
+      const role = document.createElement("p");
+      role.textContent = `${preview.role || "Character"}${preview.personality?.length ? ` · ${preview.personality.join(", ")}` : ""}`;
+      const version = document.createElement("small");
+      version.textContent = `Profile v${preview.profile_version || 1} · Identity v${preview.identity_version || 1}`;
+      summary.append(title, role, version);
+      heading.append(summary);
+      const readiness = document.createElement("div");
+      readiness.className = "cast-readiness";
+      [["Profile", "profile"], ["Video", "visual"], ["Talking", "talking_starter"]].forEach(([label, key]) => {
+        const badge = document.createElement("span");
+        badge.className = `cast-readiness-badge ${preview.readiness?.[key]?.state || "missing"}`;
+        badge.textContent = `${label}: ${preview.readiness?.[key]?.state || "missing"}`;
+        readiness.append(badge);
+      });
+      const copyLabel = document.createElement("label");
+      copyLabel.className = "cast-copy-defaults";
+      const copy = document.createElement("input");
+      copy.type = "checkbox";
+      copy.id = "cast-copy-profile-defaults";
+      copy.checked = !activeMember;
+      copyLabel.append(copy, document.createTextNode(" Copy profile name and voice defaults"));
+      const changeNote = document.createElement("p");
+      changeNote.className = "cast-change-note";
+      changeNote.textContent = changes.length
+        ? `If copying is enabled, this will change: ${changes.map(([name, before, after]) => `${name} (${before} → ${after})`).join("; ")}.`
+        : "The project speaker already matches these profile defaults.";
+      const warning = document.createElement("p");
+      warning.className = "visual-warning cast-compatibility";
+      warning.textContent = usedBy
+        ? `${preview.name} is already assigned to Speaker ${usedBy.speaker_index + 1}.`
+        : compatibility;
+      warning.hidden = !warning.textContent;
+      const actions = document.createElement("div");
+      actions.className = "cast-profile-actions";
+      const choose = document.createElement("button");
+      choose.type = "button";
+      choose.className = "btn btn-primary";
+      choose.dataset.action = "choose-profile";
+      choose.textContent = `Choose for ${activeSpeaker.name}`;
+      choose.disabled = state.visualBusy || Boolean(usedBy || compatibility);
+      choose.addEventListener("click", () => saveCastAssignment(state.castSpeakerIndex, preview.id, copy.checked));
+      actions.append(choose);
+      if (activeMember) {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "btn btn-ghost";
+        remove.textContent = `Remove from ${activeSpeaker.name}`;
+        remove.disabled = state.visualBusy;
+        remove.addEventListener("click", () => saveCastAssignment(state.castSpeakerIndex, null));
+        actions.append(remove);
+      }
+      detail.append(heading, readiness, copyLabel, changeNote, warning, actions);
+    }
+
+    const chooser = document.createElement("div");
+    chooser.className = "cast-chooser";
+    const rosterWrap = document.createElement("div");
+    const rosterHeading = document.createElement("h4");
+    rosterHeading.textContent = "Character roster";
+    rosterWrap.append(rosterHeading, roster);
+    chooser.append(rosterWrap, detail);
+    container.append(slots, chooser);
   }
 
   function renderVisualScenes() {
@@ -706,24 +876,11 @@
     }
   }
 
-  // Phase 31: a project with no cast yet takes the locked library characters named like its speakers (Alex, Lina).
-  async function castByName() {
-    if (state.visuals.cast.length) return;
-    const members = [];
-    (state.project?.speakers || []).forEach((speaker) => {
-      const wanted = (speaker.name || "").trim().toLowerCase();
-      const match = state.visualCharacters.find((c) => c.status === "locked" && c.name.trim().toLowerCase() === wanted);
-      if (match) members.push({ speaker_index: speaker.speaker_index, character_id: match.id });
-    });
-    if (members.length) state.visuals = await Api.setProjectCast(state.projectId, members);
-  }
-
   async function loadProjectVisuals() {
     try {
       [state.visuals, state.visualCharacters, state.visualScenes, state.visualHealth] = await Promise.all([
         Api.getProjectVisuals(state.projectId), Api.listCharacters(), Api.listScenes(), Api.getVisualsHealth(),
       ]);
-      await castByName();
       state.visualSceneSelection = state.visuals.scenes.map((scene) => scene.id);
       renderProjectVisuals();
       if (state.visuals.active_job) watchVisualJob(state.visuals.active_job);
@@ -878,6 +1035,7 @@
         state.visualMode = button.dataset.visualMode;
         remember(VISUAL_MODE_STORAGE_KEY, state.visualMode);
         renderVisualModes();
+        renderVisualCast();
       });
     });
     const select = byId("still-scene");

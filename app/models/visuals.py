@@ -221,3 +221,4 @@ class SheetItemInput(BaseModel):
 class CastMemberInput(BaseModel):
     speaker_index: int = Field(ge=0)
     character_id: str
+    copy_profile_defaults: bool = False

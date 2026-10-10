@@ -1464,6 +1464,6 @@ Phase 33 implementation was explicitly started by the owner's `/vp-auto thực h
 - [x] 33.4 Character Library and ten-step creation wizard
 - [x] 33.5 Visual Asset Studio, bulk mapping, and local generation integration
 - [x] 33.6 Tiered sprite readiness and renderer compatibility
-- [ ] 33.7 Game-style Character Selector and explicit project assignment
+- [x] 33.7 Game-style Character Selector and explicit project assignment
 - [ ] 33.8 Dynamic Activity/Storyboard/Shot integration for 3–6 cast
 - [ ] 33.9 Real three-character acceptance project and Gate B-23

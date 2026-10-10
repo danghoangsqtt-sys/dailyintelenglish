@@ -30,10 +30,10 @@ Replace dropdown/name matching with a game-style roster and profile panel that e
 
 ## Acceptance Criteria
 
-- [ ] Clicking a roster card only previews it.
-- [ ] Choosing saves the expected ID/version and never assigns the same profile twice.
-- [ ] Existing custom project voice settings are not silently overwritten.
-- [ ] No cast path searches by display name.
+- [x] Clicking a roster card only previews it.
+- [x] Choosing saves the expected ID/version and never assigns the same profile twice.
+- [x] Existing custom project voice settings are not silently overwritten.
+- [x] No cast path searches by display name.
 
 ## Implementation Notes
 
@@ -41,4 +41,12 @@ Replace dropdown/name matching with a game-style roster and profile panel that e
 - Send the copy-defaults decision with each assignment and update project speaker fields only when it is true.
 - Treat profile IDs and pinned identity versions as the cast identity. Speaker display names remain editable dialogue labels.
 - Explain renderer readiness from profile capability data before assignment and keep duplicate-profile prevention in both the browser and service layer.
+
+## Completion Evidence
+
+- Video Studio now uses speaker slots, a visual roster, a large profile panel, readiness badges, and an explicit **Choose for {speaker}** action.
+- Cast writes persist the selected profile ID and current identity version. Duplicate profile IDs are rejected in both the browser and service layer.
+- Copying profile name/voice defaults is visible and opt-in for an existing assignment; preserving project overrides leaves custom voice data unchanged.
+- The automatic `castByName()` path was removed. Step 1 now explains that speaker names are dialogue labels and profiles are assigned explicitly.
+- Verification: 8 selector/project-visual tests and 11 Video Studio regressions passed; Ruff, Node syntax, and diff checks passed.
 
