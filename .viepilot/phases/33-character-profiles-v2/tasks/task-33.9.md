@@ -33,3 +33,10 @@ Prove migration safety and the complete owner workflow, then obtain owner accept
 - [ ] Old Lina/Alex project behavior remains stable.
 - [ ] Owner accepts Gate B-23; only then may Phase 33 be marked complete.
 
+## Implementation Notes
+
+- Never run the rehearsal against the live database or mutate the owner's active asset folders; use a timestamped isolated copy.
+- Keep Phase 32 Gate B-22 pending and keep Phase 33 open until the owner explicitly accepts Gate B-23.
+- Separate automated proof, generated acceptance artifacts, and owner visual review in the report so a passing test is not recorded as owner acceptance.
+- Preserve any existing project/profile data used for comparison and record hashes before and after the rehearsal.
+
