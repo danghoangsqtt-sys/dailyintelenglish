@@ -11,6 +11,7 @@ Make downstream visual systems work with arbitrary profiles and meaningful speak
 - `app/services/visuals/storyboard_service.py`
 - `app/services/visuals/project_visuals_service.py`
 - `app/services/visuals/shot_library_service.py`
+- `frontend/pages/shot_library.html`
 - `frontend/static/js/shot_library.js`
 - `frontend/static/js/storyboard.js`
 - `tests/test_character_profile_integration.py`
@@ -33,4 +34,11 @@ Make downstream visual systems work with arbitrary profiles and meaningful speak
 - [ ] A three-speaker storyboard rotates singles/pairs according to the active dialogue.
 - [ ] No beat persists more than two visible speakers.
 - [ ] Missing profile-specific activities fall back without blocking the render.
+
+## Implementation Notes
+
+- Populate Activity Library profile filters and count summaries from the profile API; do not encode profile names in HTML or JavaScript.
+- Preserve the matcher priority of profile-specific activity, generic activity, then sprite fallback.
+- Normalize every beat to zero, one, or two valid cast speaker indexes and derive duo shots from that beat's ordered participants.
+- Keep shot-library identity based on ordered character IDs resolved from speaker indexes; never substitute the first cast pair for a reviewed pair.
 

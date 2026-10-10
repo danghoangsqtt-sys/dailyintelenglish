@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 33: Character Profiles v2
 
-- **Status:** in progress 2026-10-10 — Tasks 33.1–33.7 complete; Task 33.8 is next.
+- **Status:** in progress 2026-10-10 — Tasks 33.1–33.7 complete; Task 33.8 is in progress.
 - **Entry gate:** Owner authorized implementation on 2026-10-10. Phase 32 Gate B-22 remains pending and is not recorded as accepted by this authorization.
 - **Plan:** `docs/implementation/phase-33-character-profiles-v2.md`
 - **Scope source:** `docs/brainstorm/session-2026-10-10.md`
@@ -17,7 +17,7 @@ This directory is an implementation plan. Creating it does not change the active
 | 33.5 | Visual Asset Studio, bulk mapping, and local generation integration | done 2026-10-10 | 33.3, 33.4 |
 | 33.6 | Tiered sprites and renderer compatibility | done 2026-10-10 | 33.3, 33.5 |
 | 33.7 | Game-style Character Selector and copy-on-assign defaults | done 2026-10-10 | 33.2, 33.4 |
-| 33.8 | Dynamic activity, storyboard, and shot integration for 3–6 cast | planned | 33.6, 33.7 |
+| 33.8 | Dynamic activity, storyboard, and shot integration for 3–6 cast | in progress 2026-10-10 | 33.6, 33.7 |
 | 33.9 | Migration rehearsal, regression, real three-character render, Gate B-23 | planned | 33.1–33.8 |
 
 ## Locked Phase 33 limits
