@@ -102,15 +102,47 @@
     return activity.character_id ? state.characters.find((character) => character.id === activity.character_id)?.name || "Character" : "Generic";
   }
 
+  function renderActivityScopeFilter() {
+    const select = byId("activity-filter-scope");
+    const current = select.value;
+    select.replaceChildren(new Option("All profiles", ""), new Option("Generic", "generic"));
+    state.characters.forEach((character) => select.append(new Option(character.name, character.id)));
+    select.value = [...select.options].some((option) => option.value === current) ? current : "";
+  }
+
+  function renderActivityProfileCounts() {
+    const container = byId("activity-profile-counts");
+    container.replaceChildren();
+    [[null, "Generic"], ...state.characters.map((character) => [character.id, character.name])]
+      .forEach(([characterId, name]) => {
+        const rows = state.activities.filter((activity) => activity.character_id === characterId);
+        const counts = { approved: 0, pending: 0, rejected: 0 };
+        rows.forEach((activity) => { counts[activity.review_state] += 1; });
+        const item = document.createElement("span");
+        item.className = "activity-profile-count";
+        const title = document.createElement("strong");
+        title.textContent = name;
+        item.append(title, document.createTextNode(
+          `${counts.approved} approved · ${counts.pending} pending · ${counts.rejected} rejected`,
+        ));
+        container.append(item);
+      });
+  }
+
   function renderActivities() {
     const grid = byId("activity-grid");
     grid.replaceChildren();
     const scope = byId("activity-filter-scope").value;
-    const visible = state.activities.filter((activity) => !scope || (scope === "generic" ? !activity.character_id : activity.character_id));
+    const reviewState = state.activityFilters.review_state;
+    const visible = state.activities.filter((activity) => {
+      const scopeMatches = !scope || (scope === "generic" ? !activity.character_id : activity.character_id === scope);
+      return scopeMatches && (!reviewState || activity.review_state === reviewState);
+    });
     byId("activity-empty").hidden = visible.length > 0;
     const counts = { approved: 0, pending: 0, rejected: 0 };
     visible.forEach((activity) => { counts[activity.review_state] += 1; });
     byId("activity-count").textContent = visible.length ? `${visible.length} activity pictures · ${counts.approved} approved · ${counts.pending} waiting for review · ${counts.rejected} rejected` : "";
+    renderActivityProfileCounts();
     visible.forEach((activity) => {
       const card = document.createElement("article");
       card.className = `shot-card is-${activity.review_state}`;
@@ -152,7 +184,7 @@
 
   async function refreshActivities() {
     try {
-      state.activities = await Api.listLibraryActivities(state.activityFilters);
+      state.activities = await Api.listLibraryActivities();
     } catch (error) {
       showMessage(error.message || "Could not load the Activity Library.");
     }
@@ -344,6 +376,8 @@
       state.scenes = scenes;
       state.characters = characters;
       renderSceneFilter();
+      renderActivityScopeFilter();
+      renderActivities();
       showMessage("");
     } catch (error) {
       console.error("Failed to load the shot library:", error);
@@ -538,7 +572,7 @@
     byId("activity-upload-close").addEventListener("click", () => byId("activity-upload-dialog").close());
     byId("activity-upload-dialog").addEventListener("close", clearActivityUploadPreview);
     byId("activity-filter-state").addEventListener("change", (event) => {
-      state.activityFilters.review_state = event.target.value; refreshActivities();
+      state.activityFilters.review_state = event.target.value; renderActivities();
     });
     byId("activity-filter-scope").addEventListener("change", renderActivities);
     byId("activity-editor-form").addEventListener("submit", saveActivity);

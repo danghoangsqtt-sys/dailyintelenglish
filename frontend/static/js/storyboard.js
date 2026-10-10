@@ -31,18 +31,28 @@
 
   /** Mirror of storyboard_service.estimate_images (owner E4). */
   function estimateImages(beats, castSize) {
-    const framing = Math.max(1, castSize + (castSize >= 2 ? 2 : 0));
-    const actions = new Map();
-    let inserts = 0;
+    const moments = new Map();
+    let total = 0;
     beats.forEach((beat) => {
-      if (beat.kind === "insert") { inserts += 1; return; }
+      if (beat.kind === "insert") { total += 1; return; }
       const key = placeKey(beat);
-      if (!actions.has(key)) actions.set(key, new Set());
-      actions.get(key).add(beat.action || "");
+      const speakers = (beat.speakers || []).slice(0, 2);
+      const signature = JSON.stringify([beat.action || "", speakers]);
+      if (!moments.has(key)) {
+        moments.set(key, new Set([signature]));
+        total += Math.max(1, castSize) + (speakers.length === 2 || (!speakers.length && castSize >= 2) ? 2 : 0);
+      } else if (!moments.get(key).has(signature)) {
+        moments.get(key).add(signature);
+        total += 1;
+      }
     });
-    let total = inserts;
-    actions.forEach((found) => { total += framing + found.size - 1; });
     return total;
+  }
+
+  function speakersForRange(lineFrom, lineTo) {
+    const castIndexes = new Set(state.cast.map((member) => member.speaker_index));
+    return [...new Set(state.lineSpeakers.slice(lineFrom, lineTo + 1))]
+      .filter((index) => castIndexes.has(index)).slice(0, 2);
   }
 
   function sceneName(id) {
@@ -177,14 +187,19 @@
         checked: (beat.speakers || []).includes(member.speaker_index),
       });
       box.addEventListener("change", () => {
-        const chosen = new Set(beat.speakers || []);
-        if (box.checked) chosen.add(member.speaker_index); else chosen.delete(member.speaker_index);
-        if (chosen.size > 2) { box.checked = false; return; }
-        beat.speakers = [...chosen].sort((a, b) => a - b);
+        const chosen = [...(beat.speakers || [])];
+        if (box.checked && !chosen.includes(member.speaker_index)) chosen.push(member.speaker_index);
+        const selectedAt = chosen.indexOf(member.speaker_index);
+        if (!box.checked && selectedAt >= 0) chosen.splice(selectedAt, 1);
+        if (chosen.length > 2) { box.checked = false; return; }
+        beat.speakers = chosen;
         markDirty();
+        renderBeats();
       });
+      box.disabled = !(beat.speakers || []).includes(member.speaker_index) && (beat.speakers || []).length >= 2;
       speakers.append(element("label", { htmlFor: box.id }, [box, ` ${member.speaker_name}`]));
     });
+    speakers.append(element("small", { text: "Up to two profiles. Order follows the selected pair." }));
     card.append(speakers);
 
     const actions = element("div", { className: "library-actions" });
@@ -196,8 +211,11 @@
       const split = element("button", { type: "button", className: "btn btn-ghost btn-sm", text: "Split at" });
       split.addEventListener("click", () => {
         const cut = Number(at.value);
-        state.beats.splice(index + 1, 0, { ...beat, line_from: cut, speakers: [...(beat.speakers || [])] });
+        state.beats.splice(index + 1, 0, {
+          ...beat, line_from: cut, speakers: speakersForRange(cut, beat.line_to),
+        });
         beat.line_to = cut - 1;
+        beat.speakers = speakersForRange(beat.line_from, beat.line_to);
         markDirty();
         renderBeats();
       });
@@ -207,6 +225,7 @@
       const merge = element("button", { type: "button", className: "btn btn-ghost btn-sm", text: "Merge with next" });
       merge.addEventListener("click", () => {
         beat.line_to = state.beats[index + 1].line_to;
+        beat.speakers = speakersForRange(beat.line_from, beat.line_to);
         state.beats.splice(index + 1, 1);
         markDirty();
         renderBeats();
@@ -264,6 +283,8 @@
       state.lines = lines;
       state.speakerNames = Object.fromEntries(project.speakers.map((speaker) => [speaker.id, speaker.name]));
       const namesByIndex = Object.fromEntries(project.speakers.map((speaker) => [speaker.speaker_index, speaker.name]));
+      const indexesById = Object.fromEntries(project.speakers.map((speaker) => [speaker.id, speaker.speaker_index]));
+      state.lineSpeakers = lines.map((line) => indexesById[line.speaker_id]);
       state.cast = visuals.cast.map((member) => ({
         ...member, speaker_name: namesByIndex[member.speaker_index] || `Speaker ${member.speaker_index + 1}`,
       }));

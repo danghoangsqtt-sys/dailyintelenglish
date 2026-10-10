@@ -57,6 +57,9 @@
     .activity-target-icon { display: grid; place-items: center; font-size: 26px; }
     .activity-target-name { font-weight: 700; text-align: center; }
     .activity-upload-note { padding: 10px 12px; border-radius: 9px; background: rgba(124, 58, 237, .1); color: var(--text-muted); }
+    .activity-profile-counts { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
+    .activity-profile-count { padding: 7px 9px; border: 1px solid var(--surface-border); border-radius: 9px; background: var(--surface-2, var(--surface)); font-size: 12px; }
+    .activity-profile-count strong { display: block; margin-bottom: 2px; }
     @media (max-width: 680px) { .activity-dialog-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -78,13 +81,13 @@
   <main class="main">
     <section class="page-heading">
       <h1>Shot Library</h1>
-      <p>Ready-made pictures of Alex and Lina in their scenes. Look at each picture once and approve it: a new episode then
+      <p>Ready-made pictures of your character profiles in their scenes. Look at each picture once and approve it: a new episode then
         reuses approved pictures that match its scene, framing, action and mood, and draws only what is missing. A picture of
         a character that was changed afterwards shows as stale and is never reused.</p>
     </section>
     <details class="import-card" id="import-card">
       <summary>Add your own pictures</summary>
-      <p>Copy pictures of the two characters into this folder, named <code>scene__framing</code>, then press Import:
+      <p>Copy pictures of your character profiles into this folder, named <code>scene__framing</code>, then press Import:
         <code id="inbox-folder"></code></p>
       <ul>
         <li><code>cafe__duo-wide.png</code>, <code>cafe__duo-close.png</code>: the woman on the left, the man on the right;
@@ -126,7 +129,7 @@
     <section class="activity-section" aria-labelledby="activity-library-heading">
       <div class="library-heading">
         <div><h2 id="activity-library-heading">Activity Library</h2>
-          <p class="shot-summary">Choose Alex, Lina or Generic and add pictures. AI describes their activities automatically; you only review the result.</p>
+          <p class="shot-summary">Choose any active character profile or Generic and add pictures. AI describes their activities automatically; you only review the result.</p>
         </div>
         <button id="activity-upload-open" class="btn btn-primary" type="button">Add activity pictures</button>
       </div>
@@ -138,10 +141,11 @@
         <ul id="activity-import-result" class="import-result" role="status"></ul>
       </details>
       <div class="shot-filters" role="group" aria-label="Activity filters">
-        <label>Scope <select id="activity-filter-scope"><option value="">All</option><option value="generic">Generic</option><option value="character">Character</option></select></label>
+        <label>Scope <select id="activity-filter-scope"><option value="">All profiles</option><option value="generic">Generic</option></select></label>
         <label>Review <select id="activity-filter-state"><option value="">All</option><option value="pending">Needs review</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></label>
       </div>
       <p id="activity-count" class="shot-summary" role="status"></p>
+      <div id="activity-profile-counts" class="activity-profile-counts" aria-label="Activity counts by profile"></div>
       <div id="activity-grid" class="shot-grid"></div>
       <div id="activity-empty" class="empty-state" hidden>Press “Add activity pictures” to add the first reusable illustration.</div>
     </section>

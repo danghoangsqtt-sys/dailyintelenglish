@@ -16,6 +16,7 @@ Versioning: [SemVer](https://semver.org/)
 - **Task 33.5:** in-app Visual Asset Studio with slot requirements and prompts, immediate single-upload preview, numbered bulk mapping, per-slot review, and queued local generation for core character pictures.
 - **Task 33.6:** pinned profile-version sprite resolution for Remotion, seven-image Talking Starter support, deterministic missing-expression/gesture fallbacks, and legacy Lina/Alex manifest compatibility.
 - **Task 33.7:** game-style project cast selector with preview-only roster cards, explicit profile-ID assignment, duplicate prevention, renderer-readiness guidance, pinned versions, and user-controlled copying of profile name/voice defaults.
+- **Task 33.8:** dynamic profile filters/counts for activities and sprites, dialogue-derived two-person storyboard beats, and ordered single/pair shot planning and reuse for projects with up to six cast members.
 
 ### Added (Phase 32 — talking characters, 2026-10-08)
 - **Verified Demo Episode with activity cutaways (2026-10-09).** The real production

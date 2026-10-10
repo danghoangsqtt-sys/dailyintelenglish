@@ -3,7 +3,7 @@
   "version": "1.2.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_33_task_33_7_complete",
+  "status": "phase_33_task_33_8_complete",
   "current_phase": "33",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
@@ -267,9 +267,9 @@
     "33": {
       "name": "Character Profiles v2",
       "status": "in_progress",
-      "tasks_done": 7,
+      "tasks_done": 8,
       "tasks_total": 9,
-      "note": "Tasks 33.1-33.7 complete 2026-10-10. Projects now assign distinct profile IDs and pinned versions through an explicit game-style roster; preview clicks do not mutate cast, and copying profile name/voice defaults is user-controlled. Selector/API regressions: 19 passed. Next: 33.8 dynamic Activity/Storyboard/Shot integration for 3-6 cast. Phase 32 Gate B-22 remains pending."
+      "note": "Tasks 33.1-33.8 complete 2026-10-10. Activity and sprite shelves are profile-driven; three-to-six-cast storyboards derive ordered singles/pairs from reviewed beats and dialogue while retaining the two-visible limit. Shot planning/reuse no longer substitutes the first cast pair. Focused verification: 24 passed. Next: 33.9 migration rehearsal, regression, real three-character render, and owner Gate B-23. Phase 32 Gate B-22 remains pending."
     }
   },
   "key_decisions": [

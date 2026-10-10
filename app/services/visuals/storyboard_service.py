@@ -29,19 +29,28 @@ def _now() -> str:
 
 def estimate_images(beats: list[BeatInput] | list[dict], cast_size: int) -> int:
     """Owner E4: images follow places and actions, not duration. Each distinct place gets its
-    framing set (one single per cast member, plus duo close + duo wide with two or more), each
-    further distinct action in that place one image, and each insert one image."""
-    framing = cast_size + (2 if cast_size >= 2 else 0)
-    actions: dict[str, set[str]] = {}
-    inserts = 0
+    framing set (one single per cast member, plus close/wide for the first reviewed pair), each
+    further distinct action/pair in that place one image, and each insert one image."""
+    moments: dict[str, set[tuple[str, tuple[int, ...]]]] = {}
+    total = 0
     for beat in beats:
         item = beat if isinstance(beat, dict) else beat.model_dump()
         if item["kind"] == "insert":
-            inserts += 1
+            total += 1
             continue
         place = item.get("scene_id") or f"new:{item.get('new_place')}"
-        actions.setdefault(place, set()).add(item.get("action") or "")
-    return sum(max(framing, 1) + len(found) - 1 for found in actions.values()) + inserts
+        speakers = tuple((item.get("speakers") or [])[:2])
+        # Empty speakers are retained for old storyboards; their render-time fallback is the
+        # first pair. New saves fill them from script participation in validate_against_project.
+        duo = len(speakers) == 2 or (not speakers and cast_size >= 2)
+        signature = (item.get("action") or "", speakers)
+        if place not in moments:
+            moments[place] = {signature}
+            total += max(cast_size, 1) + (2 if duo else 0)
+        elif signature not in moments[place]:
+            moments[place].add(signature)
+            total += 1
+    return total
 
 
 async def _line_speakers(db: aiosqlite.Connection, project_id: str) -> list[int]:
@@ -111,10 +120,18 @@ async def validate_against_project(db: aiosqlite.Connection, project_id: str,
     if expected != len(line_speakers):
         raise ValidationError(f"Beats must cover lines 0..{len(line_speakers) - 1}; they end at {expected - 1}")
     cast = await _cast_indexes(db, project_id)
+    normalized: list[BeatInput] = []
     for position, beat in enumerate(beats):
         unknown = [index for index in beat.speakers if index not in cast]
         if unknown:
             raise ValidationError(f"beat {position + 1}: speaker(s) {unknown} are not in the project cast")
+        if beat.kind == "scene" and not beat.speakers:
+            active = list(dict.fromkeys(
+                index for index in line_speakers[beat.line_from:beat.line_to + 1] if index in cast
+            ))[:2]
+            beat = beat.model_copy(update={"speakers": active})
+        normalized.append(beat)
+    beats = normalized
     scene_ids = {beat.scene_id for beat in beats if beat.scene_id}
     if scene_ids:
         marks = ",".join("?" * len(scene_ids))
@@ -165,7 +182,9 @@ def rule_beats(line_speakers: list[int], cast: set[int], scene_ids: list[str]) -
     beats = []
     for index in range(count):
         start, end = round(index * total / count), round((index + 1) * total / count) - 1
-        talking = sorted({speaker for speaker in line_speakers[start:end + 1] if speaker in cast})[:2]
+        talking = list(dict.fromkeys(
+            speaker for speaker in line_speakers[start:end + 1] if speaker in cast
+        ))[:2]
         beats.append(BeatInput(line_from=start, line_to=end, scene_id=places[index], speakers=talking))
     return beats
 

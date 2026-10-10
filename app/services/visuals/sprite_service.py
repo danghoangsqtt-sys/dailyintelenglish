@@ -366,20 +366,22 @@ def picture_path(sprite_set: dict, name: str) -> Path:
 
 
 async def list_sets(db: aiosqlite.Connection) -> list[dict]:
-    """Per library character: its sprite set (pictures, gestures, what is missing) or none."""
-    cursor = await db.execute("SELECT id, name FROM characters ORDER BY created_at, id")
+    """Per active profile: its current DB-backed or legacy sprite set and missing slots."""
+    cursor = await db.execute(
+        "SELECT id, name, identity_version FROM characters WHERE archived_at IS NULL ORDER BY created_at, id"
+    )
     rows = [dict(row) for row in await cursor.fetchall()]
     views = []
     for row in rows:
-        sprite_set = await asyncio.to_thread(load_set, row["id"])
+        sprite_set = await load_profile_set(db, row["id"], row["identity_version"])
         names = sprite_set["names"] if sprite_set else []
         views.append({
             "character_id": row["id"], "name": row["name"], "has_set": sprite_set is not None, "usable": usable(sprite_set),
             "faces": len([name for name in names if name in FACE_NAMES]), "faces_total": len(FACE_NAMES),
             "gestures": len([name for name in names if name in GESTURE_NAMES]), "gestures_total": len(GESTURE_NAMES),
             "missing": [name for name in ALL_NAMES if name not in names] if sprite_set else list(ALL_NAMES),
-            "imported_at": sprite_set["imported_at"] if sprite_set else None,
-            "face_from": sprite_set["face_from"] if sprite_set else None,
+            "imported_at": sprite_set.get("imported_at") if sprite_set else None,
+            "face_from": sprite_set.get("face_from") if sprite_set else None,
         })
     return views
 

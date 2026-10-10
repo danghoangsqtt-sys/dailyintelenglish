@@ -181,14 +181,20 @@ async def prepare_shots(db: aiosqlite.Connection, project_id: str) -> list[dict]
 
 def storyboard_shot_specs(beats: list[dict], cast: list[dict]) -> list[dict]:
     """Task 24.5a (owner E4): the pictures an approved storyboard needs, in order of first use.
-    Per place: its framing set (one single per cast member, plus duo close + duo wide with two or
-    more) carrying the place's first action and expression; one action shot per later beat there
-    with a different action (a duo wide when two people are on screen, else that person's single);
+    Per place: its framing set (one single per cast member, plus duo close + duo wide for the
+    first reviewed pair) carrying the place's first action and expression; one action shot per
+    later distinct action/pair (a duo wide for two people, else that person's single);
     one insert shot per insert. The count equals `storyboard_service.estimate_images`."""
     indexes = [member["speaker_index"] for member in cast]
-    pair = indexes[:2]
     specs: list[dict] = []
-    seen_actions: dict[str, set[str]] = {}
+    seen_moments: dict[str, set[tuple[str, tuple[int, ...]]]] = {}
+
+    def participants(beat: dict) -> list[int]:
+        reviewed = list(dict.fromkeys(
+            index for index in (beat.get("speakers") or []) if index in indexes
+        ))[:2]
+        return reviewed or indexes[:2] or indexes[:1]
+
     for position, beat in enumerate(beats):
         if beat["kind"] == "insert":
             specs.append({"scene_id": "", "kind": "insert", "speakers": list(beat.get("speakers") or []),
@@ -198,24 +204,25 @@ def storyboard_shot_specs(beats: list[dict], cast: list[dict]) -> list[dict]:
             continue
         place = beat["scene_id"]
         action, expression = beat.get("action") or "", beat.get("expression") or "calm"
-        if place not in seen_actions:
-            seen_actions[place] = {action}
+        on_screen = participants(beat)
+        signature = (action, tuple(on_screen))
+        if place not in seen_moments:
+            seen_moments[place] = {signature}
             for index in indexes:
                 specs.append({"scene_id": place, "kind": "single", "speakers": [index], "action": action,
                               "expression": expression, "subject": None, "beat_position": None})
-            if len(indexes) >= 2:
+            if len(on_screen) == 2:
                 for kind in ("duo_close", "duo_wide"):
-                    specs.append({"scene_id": place, "kind": kind, "speakers": pair, "action": action,
+                    specs.append({"scene_id": place, "kind": kind, "speakers": on_screen, "action": action,
                                   "expression": expression, "subject": None, "beat_position": None})
             continue
-        if action in seen_actions[place]:
+        if signature in seen_moments[place]:
             continue
-        seen_actions[place].add(action)
-        on_screen = [index for index in (beat.get("speakers") or []) if index in indexes]
-        if len(on_screen) >= 2 or (not on_screen and len(indexes) >= 2):
-            kind, speakers = "duo_wide", pair
+        seen_moments[place].add(signature)
+        if len(on_screen) == 2:
+            kind, speakers = "duo_wide", on_screen
         else:
-            kind, speakers = "single", on_screen[:1] or indexes[:1]
+            kind, speakers = "single", on_screen[:1]
         specs.append({"scene_id": place, "kind": kind, "speakers": speakers, "action": action,
                       "expression": expression, "subject": None, "beat_position": position})
     return specs
@@ -331,20 +338,32 @@ def assign_beat_shots(lines: list[dict], beats: list[dict], shots: list[dict]) -
         framing = [shot for shot in place if shot.get("beat_position") is None]
         action_shot = next((shot for shot in place if shot.get("beat_position") == position), None)
 
-        def first(kind: str, speaker: int | None = None) -> dict | None:
+        def first(kind: str, speaker: int | None = None, speakers: list[int] | None = None) -> dict | None:
             return next((shot for shot in framing if shot["kind"] == kind
-                         and (speaker is None or speaker in speakers_of(shot))), None)
+                         and (speaker is None or speaker in speakers_of(shot))
+                         and (speakers is None or speakers_of(shot) == speakers)), None)
 
         offset = index - beat["line_from"]
+        reviewed = list(dict.fromkeys(beat.get("speakers") or []))[:2]
+        if not reviewed:
+            reviewed = list(dict.fromkeys(
+                item.get("speaker_index") for item in lines[beat["line_from"]:beat["line_to"] + 1]
+                if item.get("speaker_index") is not None
+            ))[:2]
         if action_shot is not None:
             wanted = action_shot if offset % 2 == 0 else first("single", line.get("speaker_index"))
         elif offset == 0:
-            wanted = first("duo_wide")
+            wanted = (first("duo_wide", speakers=reviewed) if len(reviewed) == 2
+                      else first("single", reviewed[0] if reviewed else line.get("speaker_index")))
         elif offset % 4 == 3:
-            wanted = first("duo_close")
+            wanted = (first("duo_close", speakers=reviewed) if len(reviewed) == 2
+                      else first("single", reviewed[0] if reviewed else line.get("speaker_index")))
         else:
             wanted = first("single", line.get("speaker_index"))
-        chosen = wanted or first("single") or first("duo_close") or first("duo_wide") or (place[0] if place else None)
+        chosen = (wanted or first("single", line.get("speaker_index"))
+                  or (first("duo_close", speakers=reviewed) if len(reviewed) == 2 else None)
+                  or (first("duo_wide", speakers=reviewed) if len(reviewed) == 2 else None)
+                  or first("single") or (place[0] if place else None))
         assigned.append(chosen["id"] if chosen else None)
     return assigned
 

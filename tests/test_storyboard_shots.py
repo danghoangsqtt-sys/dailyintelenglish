@@ -44,12 +44,29 @@ def test_specs_follow_places_actions_and_inserts():
         ("builtin-cafe", "duo_close", "drinking coffee"), ("builtin-cafe", "duo_wide", "drinking coffee"),
         ("builtin-cafe", "duo_wide", "reading city plans"),
         ("", "insert", ""),
-        ("s-tea", "single", ""), ("s-tea", "single", ""), ("s-tea", "duo_close", ""), ("s-tea", "duo_wide", ""),
+        ("s-tea", "single", ""), ("s-tea", "single", ""),
     ]
     assert specs[4]["beat_position"] == 1 and specs[5]["subject"] == "crowded subway at rush hour"
     solo = storyboard_shot_specs([{"kind": "scene", "scene_id": "a", "speakers": [1], "action": "x"},
                                   {"kind": "scene", "scene_id": "a", "speakers": [1], "action": "y"}], cast)
     assert (solo[-1]["kind"], solo[-1]["speakers"]) == ("single", [1])
+
+
+def test_three_speaker_specs_use_each_reviewed_pair_instead_of_the_first_pair():
+    cast = [{"speaker_index": index} for index in range(3)]
+    beats = [
+        {"kind": "scene", "scene_id": "cafe", "speakers": [0, 1], "action": "talking"},
+        {"kind": "scene", "scene_id": "cafe", "speakers": [2, 1], "action": "talking"},
+        {"kind": "scene", "scene_id": "cafe", "speakers": [2, 0], "action": "planning"},
+    ]
+
+    specs = storyboard_shot_specs(beats, cast)
+
+    assert [(spec["kind"], spec["speakers"]) for spec in specs] == [
+        ("single", [0]), ("single", [1]), ("single", [2]),
+        ("duo_close", [0, 1]), ("duo_wide", [0, 1]),
+        ("duo_wide", [2, 1]), ("duo_wide", [2, 0]),
+    ]
 
 
 def test_draft_storyboard_keeps_the_legacy_path(client):  # noqa: F811
@@ -65,7 +82,7 @@ def test_approved_storyboard_generates_beat_shots(client, requests_log):  # noqa
     data(client.put(f"{base}/storyboard", json={"beats": BEATS, "status": "approved"}))
     wait_job(client, data(client.post(f"{base}/visuals/shots")))
     shots = data(client.get(f"{base}/visuals"))["shots"]
-    assert len(shots) == 10 and all(shot["status"] == "complete" for shot in shots)
+    assert len(shots) == 8 and all(shot["status"] == "complete" for shot in shots)
     insert = next(shot for shot in shots if shot["kind"] == "insert")
     assert (insert["scene_name"], insert["subject"]) == ("Inserts", "crowded subway at rush hour")
     tea = next(scene for scene in data(client.get("/api/visuals/scenes")) if scene["place"] == "a quiet tea house")

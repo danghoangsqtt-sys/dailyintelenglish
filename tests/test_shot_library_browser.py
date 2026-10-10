@@ -1,6 +1,5 @@
 """Task 29.7: the Shot Library page (review once), and Step 5's "Add to library", "from library" and coverage line."""
 
-import time
 from typing import AsyncGenerator, Generator
 
 import pytest
@@ -132,7 +131,7 @@ async def test_pictures_dropped_in_the_inbox_folder_are_imported_from_the_page(b
 
 
 @pytest.mark.asyncio
-async def test_step5_casts_the_library_characters_named_like_the_speakers(browser_instance: Browser, live_server_url: str):
+async def test_step5_requires_explicit_profile_assignment_even_when_names_match(browser_instance: Browser, live_server_url: str):
     import sqlite3
 
     from tests.test_visuals_project_api import PROJECT, locked_character
@@ -150,11 +149,21 @@ async def test_step5_casts_the_library_characters_named_like_the_speakers(browse
         f"**/api/projects/{project_id}/audio/status",
         lambda route: route.fulfill(json={"success": True, "data": {"status": "complete", "timestamps": []}}),
     )
+    await page.add_init_script("localStorage.setItem('die-visual-mode', 'podcast_black')")
     await page.goto(f"{live_server_url}/step5?project_id={project_id}")
-    await page.wait_for_function(
-        "document.getElementById('visual-speaker-0') && document.getElementById('visual-speaker-0').value !== ''")
-    assert await page.locator("#visual-speaker-0").input_value() == alex_id
-    assert await page.locator("#visual-speaker-1").input_value() == lina_id
+    await page.locator(f'[data-character-id="{alex_id}"]').wait_for()
+    visuals_response = await page.request.get(f"{live_server_url}/api/projects/{project_id}/visuals")
+    assert (await visuals_response.json())["data"]["cast"] == []
+
+    await page.locator(f'[data-character-id="{alex_id}"]').click()
+    await page.locator('[data-action="choose-profile"]').click()
+    await page.locator('[data-cast-speaker-index="1"]').click()
+    await page.locator(f'[data-character-id="{lina_id}"]').click()
+    await page.locator('[data-action="choose-profile"]').click()
+
+    cast_response = await page.request.get(f"{live_server_url}/api/projects/{project_id}/visuals")
+    cast = (await cast_response.json())["data"]["cast"]
+    assert [member["character_id"] for member in cast] == [alex_id, lina_id]
     await page.close()
 
 
