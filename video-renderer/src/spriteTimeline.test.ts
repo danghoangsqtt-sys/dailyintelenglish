@@ -3,7 +3,7 @@ import { podcastLayer } from "./podcastLayout";
 import {
   SPEAKER_GESTURE_SEC, gestureAt,
   BACKGROUND_FADE_FRAMES, LISTENER_BRIGHTNESS, SPRITE_HEIGHT, canvasBox, heldLineIndex, isBlinking, isMouthOpen,
-  activityCutawayAt, spriteBackground, spriteFrame, stageTop,
+  activityCutawayAt, spriteBackground, spriteFrame, stageTop, visibleSlotsAt,
 } from "./spriteTimeline";
 import { episodeInputPropsSchema, type EpisodeLine, type EpisodeSprites, type SpriteCharacter } from "./types";
 
@@ -166,7 +166,7 @@ describe("Phase 32 talking sprites", () => {
       characters: [...sprites.characters, character(2, "Rowan")],
       lines: [
         { slot: 0, visibleSlots: [0, 1], expression: "calm", listenerExpression: "calm", gesture: null, listenerGesture: null, mouth: [] },
-        { slot: 2, visibleSlots: [0, 2], expression: "calm", listenerExpression: "calm", gesture: null, listenerGesture: null, mouth: [] },
+        { slot: 2, visibleSlots: [2, 0], expression: "calm", listenerExpression: "calm", gesture: null, listenerGesture: null, mouth: [] },
       ],
       lineBackgrounds: ["cafe", "cafe"],
     };
@@ -175,6 +175,7 @@ describe("Phase 32 talking sprites", () => {
     const lina = spriteFrame(trio.characters[1], frame, FPS, trioTimeline, trio, 4 * FPS, WIDTH);
     const rowan = spriteFrame(trio.characters[2], frame, FPS, trioTimeline, trio, 4 * FPS, WIDTH);
 
+    expect(visibleSlotsAt(frame, FPS, trioTimeline, trio)).toEqual([0, 2]);
     expect(lina.opacity).toBe(0);
     expect(rowan.opacity).toBeGreaterThan(0);
     expect(rowan.speaking).toBe(true);

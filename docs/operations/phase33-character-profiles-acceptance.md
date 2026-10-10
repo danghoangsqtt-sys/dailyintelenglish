@@ -68,6 +68,21 @@ The fix now:
 
 Regression tests cover the three-character props, `[0, 2]` pair selection, hidden Lina, visible speaking Rowan, schema parsing and canvas placement. Visual inspection of `frame-talking-31.png` confirms Alex on the left and Rowan on the right.
 
+## Owner-review remediation
+
+The first owner review found two additional composition defects in the Talking Starter video:
+
+1. An activity illustration was drawn after the sprites and covered the active speaker.
+2. Storyboard pairs could be stored in either order, allowing the same two characters to exchange left/right positions between beats even though their source pictures have fixed gaze directions.
+
+The renderer now draws the activity illustration above the scene plate but below all sprites. It also sorts every visible pair by cast slot before assigning stage positions. The active speaker therefore remains visible during a cutaway, and Alex stays left of Lina when their speaking turn changes. Focused layer-order and reversed-pair regression tests pass.
+
+The replacement talking video rendered through the real Remotion API in 32.27 seconds with no fallback. Visual inspection confirms:
+
+- `frame-fixed-18.png`: Rowan remains visible and speaking over the cooking illustration.
+- `frame-pair-10.png` and `frame-pair-14.png`: Alex remains left and Lina remains right before and after the active speaker changes.
+- `frame-fixed-31.png`: Alex and Rowan retain the intended pair after the cutaway.
+
 ## Render evidence
 
 Evidence directory: `data/backups/phase33-acceptance-20261010/evidence-final`
@@ -75,7 +90,7 @@ Evidence directory: `data/backups/phase33-acceptance-20261010/evidence-final`
 | Artifact | Duration | Media | Size | Result |
 |---|---:|---|---:|---|
 | `phase33-three-cast-still.mp4` | 42.411 s | 1280×720, H.264/AAC, 30 fps | 13,460,532 bytes | Remotion, no fallback |
-| `phase33-three-cast-talking.mp4` | 42.411 s | 1280×720, H.264/AAC, 30 fps | 13,886,276 bytes | Remotion, no fallback |
+| `phase33-three-cast-talking-fixed.mp4` | 42.411 s | 1280×720, H.264/AAC, 30 fps | 14,119,270 bytes | Replacement Remotion render, no fallback |
 | `phase33-old-alex-lina.mp4` | 192.256 s | 1280×720, H.264/AAC, 30 fps | 28,129,470 bytes | Remotion, no fallback |
 
 Supporting files:
@@ -86,6 +101,9 @@ Supporting files:
 - `04-three-character-selector.png`
 - `frame-talking-18.png` — approved Generic cooking cutaway
 - `frame-talking-31.png` — corrected Alex and Rowan pair
+- `frame-fixed-18.png` — active Rowan remains above the cooking illustration
+- `frame-pair-10.png` and `frame-pair-14.png` — Alex/Lina keep stable sides across a speaker change
+- `frame-fixed-31.png` — corrected Alex/Rowan pair in the replacement render
 - `acceptance-result.json` — IDs, readiness, cast, speakers, beats, activity coverage and render jobs
 - `server.log` — no error, traceback or fallback message
 
@@ -105,7 +123,7 @@ Environment:
 | Migration unit tests | 4 passed |
 | Sprite plan, props and tier regression | 34 passed |
 | Phase 33 and affected browser regression group | 97 passed |
-| Vitest | 66 passed across 9 files |
+| Vitest | 67 passed across 10 files after owner-review remediation |
 | TypeScript `tsc --noEmit` | Pass |
 | Ruff on every changed Python file | Pass |
 | Real isolated workflow | Pass in 161.43 s |

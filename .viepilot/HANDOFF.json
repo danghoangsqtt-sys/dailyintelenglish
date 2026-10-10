@@ -269,7 +269,7 @@
       "status": "in_progress",
       "tasks_done": 8,
       "tasks_total": 9,
-      "note": "Tasks 33.1-33.8 are complete and Task 33.9 automated acceptance is ready. Copied-live-data migration preserved Lina/Alex IDs, cast, speakers and file hashes with zero foreign-key errors. UI rehearsal created and locked Rowan (5/5 core, 7/7 starter), assigned three profiles, and produced still, talking and old-project Remotion videos without fallback. The acceptance-discovered slot-0/1 renderer defect is fixed: slots 0-5 load and storyboard visible pairs drive each line. Final gates: 1,674 Python/browser tests and 66 Vitest tests passed; TypeScript and changed-file Ruff clean. Waiting for explicit owner Gate B-23 acceptance; Task 33.9 and Phase 33 remain in progress. Phase 32 Gate B-22 remains pending."
+      "note": "Tasks 33.1-33.8 are complete and Task 33.9 replacement acceptance is ready. Copied-live-data migration preserved Lina/Alex IDs, cast, speakers and file hashes with zero foreign-key errors. UI rehearsal created and locked Rowan (5/5 core, 7/7 starter), assigned three profiles, and produced still, talking and old-project Remotion videos without fallback. Renderer fixes load slots 0-5, keep active speakers above activity illustrations, and canonicalize pair order so characters retain stable left/right sides. Replacement render passed without fallback; 67 Vitest tests across 10 files and TypeScript pass. The prior full gate remains 1,674 Python/browser tests with changed-file Ruff clean. Waiting for explicit owner Gate B-23 acceptance; Task 33.9 and Phase 33 remain in progress. Phase 32 Gate B-22 remains pending."
     }
   },
   "key_decisions": [

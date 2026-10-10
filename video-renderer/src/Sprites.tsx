@@ -41,11 +41,11 @@ export function SpriteStage({ sprites, lines, fps, frame, totalFrames, progress 
       {background.current ? (
         <Img src={staticFile(background.current)} style={{ ...FILL, transform: zoom, opacity: background.opacity }} />
       ) : null}
+      {cutaway ? <Img src={staticFile(cutaway.url)} style={{ ...FILL, opacity: cutaway.opacity }} /> : null}
       {sprites.characters.map((character) => (
         <Sprite key={character.slot} character={character} frame={frame} fps={fps} lines={lines} sprites={sprites}
           totalFrames={totalFrames} />
       ))}
-      {cutaway ? <Img src={staticFile(cutaway.url)} style={{ ...FILL, opacity: cutaway.opacity }} /> : null}
       <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: "18%",
         background: "linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0))" }} />
       <div style={BOTTOM_SHADE_STYLE} />

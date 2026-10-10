@@ -94,8 +94,12 @@ export function visibleSlotsAt(frame: number, fps: number, timeline: EpisodeLine
   const index = Math.max(0, heldLineIndex(frame / fps, timeline));
   const requested = sprites.lines[index]?.visibleSlots ?? [];
   const known = new Set(sprites.characters.map((character) => character.slot));
-  const visible = [...new Set(requested.filter((slot) => known.has(slot)))].slice(0, 2);
-  return visible.length > 0 ? visible : sprites.characters.slice(0, 2).map((character) => character.slot);
+  // Storyboard speakers may be stored in click order or speaker order. Stage order must be stable so the same
+  // pair never exchanges sides between beats: lower cast slot stands left, higher cast slot stands right.
+  const visible = [...new Set(requested.filter((slot) => known.has(slot)))].sort((a, b) => a - b).slice(0, 2);
+  return visible.length > 0
+    ? visible
+    : sprites.characters.map((character) => character.slot).sort((a, b) => a - b).slice(0, 2);
 }
 
 export function canvasBox(slot: number, width: number, height: number, characters: SpriteCharacter[], visibleSlots?: number[]) {

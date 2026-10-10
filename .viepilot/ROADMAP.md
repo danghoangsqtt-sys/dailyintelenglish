@@ -1468,4 +1468,4 @@ Phase 33 implementation was explicitly started by the owner's `/vp-auto thực h
 - [x] 33.8 Dynamic Activity/Storyboard/Shot integration for 3–6 cast
 - [ ] 33.9 Real three-character acceptance project and Gate B-23
 
-Task 33.9 automated evidence is complete: copied-data migration, UI-created Rowan, real three-character still/talking renders and old Lina/Alex regression all pass without fallback. The checkbox remains open for explicit owner Gate B-23 acceptance.
+Task 33.9 replacement evidence is complete: copied-data migration, UI-created Rowan, real three-character still/talking renders and old Lina/Alex regression all pass without fallback. Owner feedback fixes keep the active speaker visible over activity illustrations and keep each pair on stable left/right sides. The checkbox remains open for explicit owner Gate B-23 acceptance.

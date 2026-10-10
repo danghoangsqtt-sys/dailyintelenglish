@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 33: Character Profiles v2
 
-- **Status:** in progress 2026-10-10 - Tasks 33.1-33.8 complete; Task 33.9 automated evidence is complete and ready for owner review. Gate B-23 remains pending.
+- **Status:** in progress 2026-10-10 - Tasks 33.1-33.8 complete; Task 33.9 replacement evidence includes the owner-review fixes for visible speakers during cutaways and stable character sides. Gate B-23 remains pending.
 - **Entry gate:** Owner authorized implementation on 2026-10-10. Phase 32 Gate B-22 remains pending and is not recorded as accepted by this authorization.
 - **Plan:** `docs/implementation/phase-33-character-profiles-v2.md`
 - **Scope source:** `docs/brainstorm/session-2026-10-10.md`
@@ -18,7 +18,7 @@ This directory is an implementation plan. Creating it does not change the active
 | 33.6 | Tiered sprites and renderer compatibility | done 2026-10-10 | 33.3, 33.5 |
 | 33.7 | Game-style Character Selector and copy-on-assign defaults | done 2026-10-10 | 33.2, 33.4 |
 | 33.8 | Dynamic activity, storyboard, and shot integration for 3–6 cast | done 2026-10-10 | 33.6, 33.7 |
-| 33.9 | Migration rehearsal, regression, real three-character render, Gate B-23 | automated evidence ready; owner gate pending 2026-10-10 | 33.1-33.8 |
+| 33.9 | Migration rehearsal, regression, real three-character render, Gate B-23 | replacement render ready after owner feedback; owner gate pending 2026-10-10 | 33.1-33.8 |
 
 ## Locked Phase 33 limits
 
