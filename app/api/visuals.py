@@ -268,6 +268,23 @@ async def upload_character_asset(
     return ok(result)
 
 
+@router.post("/characters/{character_id}/assets/{slot_key}/generate")
+async def generate_character_asset(
+    character_id: str, slot_key: str, replace_identity: bool = False,
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    contract = character_assets.get_contract(slot_key)
+    if contract["group"] == "sprite":
+        raise ValidationError("Local sprite generation is not reliable; upload a transparent sprite for this slot")
+    async with read_transaction():
+        character = await library.get_character_row(db, character_id)
+    return await _enqueue(
+        db, "character_asset", character_id,
+        {"slot_key": slot_key, "identity_version": character["identity_version"],
+         "replace_identity": replace_identity},
+    )
+
+
 @router.put("/characters/{character_id}/assets/{asset_id}/review")
 async def review_character_asset(
     character_id: str,

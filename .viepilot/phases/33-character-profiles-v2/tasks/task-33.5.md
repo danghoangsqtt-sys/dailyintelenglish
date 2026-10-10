@@ -13,7 +13,10 @@ Let users complete every picture requirement inside the wizard using external up
 - `app/api/visuals.py`
 - `app/services/visuals/jobs.py`
 - `app/services/visuals/pipelines.py`
+- `app/services/visuals/character_asset_service.py`
+- `app/main.py`
 - `tests/test_character_asset_studio_browser.py`
+- `tests/test_visuals_library_api.py` (local generation job regression)
 
 ## File-Level Plan
 
@@ -28,10 +31,10 @@ Let users complete every picture requirement inside the wizard using external up
 
 ## Acceptance Criteria
 
-- [ ] Every selected image stays visible while it is mapped and named.
-- [ ] The user can correct every proposed slot before import.
-- [ ] Upload and generation errors identify the affected picture and preserve other work.
-- [ ] Normal use requires no folder copy or manual filename change.
+- [x] Every selected image stays visible while it is mapped and named.
+- [x] The user can correct every proposed slot before import.
+- [x] Upload and generation errors identify the affected picture and preserve other work.
+- [x] Normal use requires no folder copy or manual filename change.
 
 ## Implementation Notes
 
@@ -40,4 +43,11 @@ Let users complete every picture requirement inside the wizard using external up
 - Open the studio from wizard Steps 5–9 and return to the same step after review.
 - Treat local generation as an explicit per-slot job request with the same pending-review result contract as uploaded images.
 - Keep GPU work inside the existing image job runner and cancellation/progress UI.
+
+## Completion Evidence
+
+- Single-slot uploads show an immediate preview, preserve explicit slot assignment, and return to the persisted reviewed asset.
+- Bulk mapping keeps numbered previews and original names visible, rejects missing/duplicate slot choices, and reports failures per slot while retaining the selected batch.
+- Core visual slots can use the existing cancellable local image queue; generated results enter `needs_review`. Sprite generation is explicitly refused because the local engine cannot reliably make the required aligned transparent canvas.
+- Targeted studio, API, upload and slot regression: 13 passed; prior wizard/legacy browser regression: 4 passed; Ruff, JavaScript syntax and diff checks pass.
 

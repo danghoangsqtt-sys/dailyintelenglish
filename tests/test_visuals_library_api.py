@@ -92,6 +92,20 @@ def test_character_lifecycle_and_content(client):
     assert data(client.delete(f"/api/visuals/characters/{character_id}"))["deleted"] == character_id
 
 
+def test_character_asset_studio_local_generation_uses_review_queue(client):
+    character = data(client.post("/api/visuals/characters", json={"name": "Local Studio"}))
+    character_id = character["id"]
+    job = data(client.post(f"/api/visuals/characters/{character_id}/assets/face/generate"))
+    wait_job(client, job)
+    slots = data(client.get(f"/api/visuals/characters/{character_id}/asset-slots"))
+    face = next(item for item in slots["groups"]["core"] if item["key"] == "face")
+    assert face["state"] == "needs_review"
+    assert face["asset"]["source"] == "local_generation"
+    assert client.post(
+        f"/api/visuals/characters/{character_id}/assets/calm__closed/generate"
+    ).status_code == 422
+
+
 def test_scene_crud_preview_builtin_and_kill_switch(client, monkeypatch):
     scenes = data(client.get("/api/visuals/scenes"))
     assert len([scene for scene in scenes if scene["is_builtin"]]) == 55

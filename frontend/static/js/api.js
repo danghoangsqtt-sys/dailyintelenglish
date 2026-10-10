@@ -112,6 +112,30 @@ const Api = (() => {
     getCharacterDependencies: (id) => request(`/api/visuals/characters/${id}/dependencies`),
     getCharacterAssetSlots: (id) => request(`/api/visuals/characters/${id}/asset-slots`),
     characterPromptPackUrl: (id) => `/api/visuals/characters/${id}/prompt-pack`,
+    uploadCharacterAsset: (id, slot, file, identityVersion, replaceIdentity = false) => {
+      const body = new FormData();
+      body.append("picture", file);
+      body.append("expected_identity_version", identityVersion);
+      body.append("replace_identity", replaceIdentity);
+      return request(`/api/visuals/characters/${id}/assets/${encodeURIComponent(slot)}/upload`, { method: "POST", body });
+    },
+    uploadCharacterAssetBatch: (id, files, mapping, identityVersion) => {
+      const body = new FormData();
+      files.forEach((file) => body.append("pictures", file));
+      body.append("mapping_json", JSON.stringify(mapping));
+      body.append("expected_identity_version", identityVersion);
+      return request(`/api/visuals/characters/${id}/assets/upload-batch`, { method: "POST", body });
+    },
+    reviewCharacterAsset: (id, assetId, reviewState) =>
+      request(`/api/visuals/characters/${id}/assets/${assetId}/review`, {
+        method: "PUT", body: JSON.stringify({ review_state: reviewState }),
+      }),
+    removeCharacterAsset: (id, assetId) =>
+      request(`/api/visuals/characters/${id}/assets/${assetId}`, { method: "DELETE" }),
+    generateCharacterAsset: (id, slot, replaceIdentity = false) =>
+      request(`/api/visuals/characters/${id}/assets/${encodeURIComponent(slot)}/generate?replace_identity=${replaceIdentity}`, {
+        method: "POST",
+      }),
     generateCharacterCandidates: (id) => request(`/api/visuals/characters/${id}/candidates`, { method: "POST" }),
     pickCharacterReference: (id, assetId) => request(`/api/visuals/characters/${id}/reference`, {
       method: "PUT", body: JSON.stringify({ asset_id: assetId }),

@@ -11,6 +11,7 @@
     selectedId: null, selectedSceneId: null, editingSceneId: null, sceneFilter: "all", busy: false, progress: null,
     filters: { q: "", state: "active", readiness: "" }, wizardStep: 0, wizardCharacter: null,
     saveTimer: null, savePending: null, saveError: null, saving: false,
+    assetSlots: null, assetGroup: "core", bulkFiles: [],
   };
 
   const $ = (id) => document.getElementById(id);
@@ -489,6 +490,139 @@
       // The failed save keeps local field values and exposes Retry.
     }
   }
+  function studioSlots() { return state.assetSlots?.groups?.[state.assetGroup] || []; }
+
+  function slotRules(slot) {
+    const size = slot.exact_size || slot.minimum_size;
+    return `${slot.transparent ? "Transparent PNG" : "PNG, JPEG or WebP"} · ${slot.exact_size ? "exactly" : "at least"} ${size[0]}×${size[1]}`;
+  }
+
+  async function reloadStudio() {
+    state.assetSlots = await Api.getCharacterAssetSlots(state.wizardCharacter.id);
+    state.wizardCharacter = await Api.getCharacter(state.wizardCharacter.id);
+    renderAssetSlots();
+    renderReadinessGuide();
+  }
+
+  function studioButton(label, className, action) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = className;
+    button.textContent = label;
+    button.addEventListener("click", action);
+    return button;
+  }
+
+  function renderAssetSlots() {
+    const grid = $("asset-slot-grid");
+    grid.replaceChildren();
+    $("asset-studio-title").textContent = `${state.wizardCharacter.name} · ${state.assetGroup.replace("_", " ")}`;
+    studioSlots().forEach((slot) => {
+      const card = document.createElement("article");
+      card.className = `asset-slot-card${slot.group === "sprite" ? " sprite" : ""}`;
+      const title = document.createElement("h3"); title.textContent = slot.title;
+      const preview = document.createElement("div"); preview.className = "asset-slot-preview";
+      if (slot.asset) {
+        const image = document.createElement("img"); image.src = slot.asset.content_url; image.alt = slot.title; preview.append(image);
+      } else preview.textContent = "No picture yet";
+      const rules = document.createElement("p"); rules.className = "asset-slot-rules"; rules.textContent = slotRules(slot);
+      const prompt = document.createElement("p"); prompt.className = "asset-slot-prompt"; prompt.textContent = slot.prompt;
+      const upload = document.createElement("label"); upload.className = "slot-upload-label";
+      upload.append(slot.asset ? "Replace picture" : "Add picture");
+      const input = document.createElement("input"); input.type = "file";
+      input.accept = slot.transparent ? "image/png" : "image/png,image/jpeg,image/webp";
+      input.addEventListener("change", async () => {
+        const file = input.files[0]; if (!file) return;
+        const local = URL.createObjectURL(file);
+        const image = document.createElement("img"); image.src = local; image.alt = file.name; preview.replaceChildren(image);
+        try {
+          const replace = Boolean(slot.asset && ["face", "full_body", "calm__closed"].includes(slot.key));
+          if (replace && !confirm("This creates a new identity version and makes older current pictures stale. Continue?")) return;
+          await Api.uploadCharacterAsset(state.wizardCharacter.id, slot.key, file, state.assetSlots.identity_version, replace);
+          message(`${slot.title} uploaded. Review it before use.`); await reloadStudio();
+        } catch (error) { message(`${file.name}: ${error.message}`, true); await reloadStudio(); }
+        finally { URL.revokeObjectURL(local); }
+      });
+      upload.append(input);
+      const actions = document.createElement("div"); actions.className = "slot-review-actions";
+      if (slot.asset) {
+        [["Approve", "approved"], ["Reject", "rejected"]].forEach(([label, review]) => {
+          const button = studioButton(label, review === "approved" ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm", async () => {
+            await Api.reviewCharacterAsset(state.wizardCharacter.id, slot.asset.id, review); await reloadStudio();
+          });
+          button.disabled = slot.state === review; actions.append(button);
+        });
+      }
+      if (slot.group === "core") {
+        const generate = studioButton("Generate locally", "btn btn-ghost btn-sm", async () => {
+          const replace = Boolean(slot.asset && ["face", "full_body"].includes(slot.key));
+          if (replace && !confirm("Generate a new identity version for this base picture?")) return;
+          await startJob(() => Api.generateCharacterAsset(state.wizardCharacter.id, slot.key, replace));
+          await reloadStudio();
+        });
+        setGenerateButton(generate, true); actions.append(generate);
+      }
+      card.append(title, pill(slot.state.replace("_", " "), { state: slot.state === "approved" ? "ready" : (slot.state === "missing" ? "missing" : "partial") }), preview, rules, prompt, upload, actions);
+      grid.append(card);
+    });
+  }
+
+  async function openAssetStudio(group) {
+    if (!state.wizardCharacter) { message("Save the character first.", true); return; }
+    state.assetGroup = group;
+    state.assetSlots = await Api.getCharacterAssetSlots(state.wizardCharacter.id);
+    $("asset-studio").hidden = false;
+    document.querySelectorAll("#character-wizard > .wizard-header, #character-wizard > .wizard-progress, #wizard-step-dots, #character-wizard > .wizard-layout").forEach((node) => { node.hidden = true; });
+    renderAssetSlots(); renderBulkMapping(); window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function closeAssetStudio() {
+    $("asset-studio").hidden = true;
+    document.querySelectorAll("#character-wizard > .wizard-header, #character-wizard > .wizard-progress, #wizard-step-dots, #character-wizard > .wizard-layout").forEach((node) => { node.hidden = false; });
+    renderWizard();
+  }
+
+  function validateBulkMapping() {
+    const chosen = state.bulkFiles.map((item) => item.slot).filter(Boolean);
+    const duplicates = new Set(chosen.filter((slot, index) => chosen.indexOf(slot) !== index));
+    document.querySelectorAll(".bulk-map-item").forEach((item, index) => item.classList.toggle("invalid", !state.bulkFiles[index].slot || duplicates.has(state.bulkFiles[index].slot)));
+    const valid = state.bulkFiles.length > 0 && chosen.length === state.bulkFiles.length && !duplicates.size;
+    $("asset-bulk-upload").disabled = !valid;
+    $("asset-bulk-status").textContent = duplicates.size ? "Each picture needs a unique slot." : (state.bulkFiles.length && !valid ? "Choose a slot for every picture." : "");
+    return valid;
+  }
+
+  function renderBulkMapping() {
+    const list = $("asset-bulk-list"); list.replaceChildren();
+    state.bulkFiles.forEach((entry, index) => {
+      const item = document.createElement("article"); item.className = "bulk-map-item";
+      const image = document.createElement("img"); image.src = entry.preview; image.alt = `Picture ${index + 1}`;
+      const copy = document.createElement("div"); const name = document.createElement("strong"); name.textContent = `${index + 1}. ${entry.file.name}`;
+      const select = document.createElement("select"); select.setAttribute("aria-label", `Slot for picture ${index + 1}`); select.append(new Option("Choose a slot", ""));
+      studioSlots().forEach((slot) => select.append(new Option(slot.title, slot.key))); select.value = entry.slot;
+      select.addEventListener("change", () => { entry.slot = select.value; validateBulkMapping(); });
+      copy.append(name, select); item.append(image, copy); list.append(item);
+    });
+    validateBulkMapping();
+  }
+
+  async function uploadBulkAssets() {
+    if (!validateBulkMapping()) return;
+    $("asset-bulk-upload").disabled = true; $("asset-bulk-status").textContent = "Uploading…";
+    try {
+      const results = await Api.uploadCharacterAssetBatch(state.wizardCharacter.id,
+        state.bulkFiles.map((entry) => entry.file), state.bulkFiles.map((entry, index) => ({ file_index: index, slot_key: entry.slot })), state.assetSlots.identity_version);
+      const failed = results.filter((item) => !item.success);
+      $("asset-bulk-status").textContent = failed.length ? `${results.length - failed.length} uploaded · ${failed.map((item) => `${item.slot_key}: ${item.error}`).join(" · ")}` : `${results.length} pictures uploaded. Review them below.`;
+      await reloadStudio();
+      if (!failed.length) {
+        state.bulkFiles.forEach((entry) => URL.revokeObjectURL(entry.preview));
+        state.bulkFiles = []; $("asset-bulk-input").value = ""; renderBulkMapping();
+        $("asset-bulk-status").textContent = `${results.length} pictures uploaded. Review them below.`;
+      }
+    } catch (error) { $("asset-bulk-status").textContent = error.message; $("asset-bulk-upload").disabled = false; }
+  }
+
   function renderSceneFilters() {
     const bar = $("scene-filters");
     bar.replaceChildren();
@@ -758,6 +892,15 @@
     $("wizard-skip").addEventListener("click", advanceWizard);
     $("wizard-retry").addEventListener("click", () => saveWizard().catch(() => {}));
     $("wizard-close").addEventListener("click", () => closeWizard().catch((error) => message(error.message, true)));
+    document.querySelectorAll(".open-asset-studio").forEach((button) => button.addEventListener("click", () =>
+      openAssetStudio(button.dataset.group).catch((error) => message(error.message, true))));
+    $("asset-studio-close").addEventListener("click", closeAssetStudio);
+    $("asset-bulk-input").addEventListener("change", (event) => {
+      state.bulkFiles.forEach((entry) => URL.revokeObjectURL(entry.preview));
+      state.bulkFiles = [...event.target.files].map((file) => ({ file, slot: "", preview: URL.createObjectURL(file) }));
+      renderBulkMapping();
+    });
+    $("asset-bulk-upload").addEventListener("click", uploadBulkAssets);
     $("generate-candidates").addEventListener("click", () => startJob(
       () => Api.generateCharacterCandidates(state.selectedId)));
     $("generate-sheet").addEventListener("click", () => startJob(

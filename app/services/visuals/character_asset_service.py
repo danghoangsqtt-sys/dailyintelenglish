@@ -108,6 +108,7 @@ async def store_prepared(
     expected_identity_version: int,
     *,
     replace_identity: bool = False,
+    source: str = "external_upload",
 ) -> dict:
     """Persist one validated image and create a needs-review current asset row."""
     contract = get_contract(slot_key)
@@ -160,8 +161,8 @@ async def store_prepared(
                 "INSERT INTO character_assets (id, character_id, kind, path, seed, prompt_tokens, prompt_truncated, "
                 "approved, created_at, slot_key, source, original_filename, review_state, validation_json, "
                 "identity_version, is_current, updated_at) "
-                "VALUES (?, ?, ?, ?, NULL, NULL, 0, 0, ?, ?, 'external_upload', ?, 'needs_review', ?, ?, 1, ?)",
-                (asset_id, character_id, _asset_kind(contract), str(target), now, slot_key,
+                "VALUES (?, ?, ?, ?, NULL, NULL, 0, 0, ?, ?, ?, ?, 'needs_review', ?, ?, 1, ?)",
+                (asset_id, character_id, _asset_kind(contract), str(target), now, slot_key, source,
                  Path(original_filename).name, json.dumps(prepared.validation()), target_version, now),
             )
             if slot_key == "face":

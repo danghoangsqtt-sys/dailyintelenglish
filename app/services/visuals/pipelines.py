@@ -14,8 +14,10 @@ from PIL import Image, ImageOps
 from app.core.config import settings
 from app.core.exceptions import ConflictError
 from app.db.transactions import read_transaction, write_transaction
+from app.services.visuals import character_asset_service as character_assets
 from app.services.visuals import colour_check, geometry, shot_checks, library_service as library, project_visuals_service as project_visuals, recipes, shot_library_service as shot_library
 from app.services.visuals.engine import get_image_engine
+from app.services.visuals.image_upload import prepare_image
 from app.services.visuals.runner import ImageJobRunner, JobCancelled
 
 
@@ -97,6 +99,50 @@ async def character_sheet(job: dict, runner: ImageJobRunner) -> dict:
             (library._now(), character_id),
         )
     return {"asset_ids": asset_ids}
+
+
+async def character_asset(job: dict, runner: ImageJobRunner) -> dict:
+    """Generate one core profile slot and store it under the same review contract as uploads."""
+    db = runner.get_db()
+    payload = json.loads(job["payload_json"])
+    slot_key = payload["slot_key"]
+    contract = character_assets.get_contract(slot_key)
+    if contract["group"] == "sprite":
+        raise ConflictError("Local sprite generation is not supported")
+    async with read_transaction():
+        character = await library.get_character_row(db, job["target_id"])
+    if character["identity_version"] != payload["identity_version"]:
+        raise ConflictError("Character identity changed; start generation again")
+    await runner.boundary(job["id"], f"generating {contract['title']}", 5)
+    width, height = contract["minimum_size"]
+    width, height = max(1024, width), max(1024, height)
+    output = settings.DATA_DIR / "library" / "characters" / character["id"] / "jobs" / f"{job['id']}.png"
+    identity = ", ".join(filter(None, (
+        character["name"], character["role"], character["age_group"], character["ethnicity"],
+        character["hair"], character["eyes"], character["extra"],
+        f"{character['top_color']} {character['top_item']}",
+        f"{character['bottom_color']} {character['bottom_item']}",
+    )))
+    engine = get_image_engine()
+    try:
+        async with engine.session("text2img", ip="none", consumer="character_asset") as session:
+            await session.request({
+                "command": "generate", "prompt": f"{contract['prompt']}. {identity}. editorial character photo",
+                "negative_prompt": recipes.NEGATIVE, "seed": random.randint(1, 2**31 - 1),
+                "width": width, "height": height, "steps": 30, "guidance_scale": 6.0,
+                "output_path": str(output),
+            })
+        await runner.boundary(job["id"], "validating generated image", 85)
+        prepared = await prepare_image(await asyncio.to_thread(output.read_bytes), contract)
+        async with write_transaction(db):
+            asset = await character_assets.store_prepared(
+                db, character["id"], slot_key, f"local-{slot_key}.png", prepared,
+                payload["identity_version"], replace_identity=payload.get("replace_identity", False),
+                source="local_generation",
+            )
+        return {"asset_id": asset["id"], "slot_key": slot_key}
+    finally:
+        await asyncio.to_thread(output.unlink, missing_ok=True)
 
 
 async def scene_preview(job: dict, runner: ImageJobRunner) -> dict:

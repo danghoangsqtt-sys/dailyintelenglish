@@ -96,6 +96,7 @@ async def lifespan(app: FastAPI):
     ai_worker.register_handler("learning", _learning_job_handler)
     image_job_runner.register_handler("character_candidates", visuals_pipelines.character_candidates)
     image_job_runner.register_handler("character_sheet", visuals_pipelines.character_sheet)
+    image_job_runner.register_handler("character_asset", visuals_pipelines.character_asset)
     image_job_runner.register_handler("scene_preview", visuals_pipelines.scene_preview)
     image_job_runner.register_handler("project_shots", visuals_pipelines.project_shots)
     image_job_runner.register_handler("shot_regenerate", visuals_pipelines.shot_regenerate)
