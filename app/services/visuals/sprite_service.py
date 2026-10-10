@@ -38,6 +38,10 @@ GESTURE_OPEN_NAMES = tuple(f"{name}__open" for name in GESTURE_NAMES)
 ALL_NAMES = FACE_NAMES + GESTURE_NAMES + GESTURE_OPEN_NAMES
 BASE = "calm__closed"
 MINIMUM = ("calm__closed", "calm__open")  # a set the video can use: the face must at least open and close its mouth
+TIER_1 = ("calm__closed", "calm__open", "smile__closed", "smile__open",
+          "surprised__closed", "surprised__open", "blink")
+TIER_2 = TIER_1 + ("laugh__closed", "laugh__open", "thinking__closed", "thinking__open",
+                   "worried__closed", "worried__open", "serious__closed", "serious__open")
 
 # the limits of scripts/check_sprites.py (what a smooth video needs)
 TOP_LIMIT = 6
@@ -311,6 +315,54 @@ def load_set(character_id: str) -> dict | None:
 
 def usable(sprite_set: dict | None) -> bool:
     return sprite_set is not None and all(name in sprite_set["names"] for name in MINIMUM)
+
+
+def readiness_tier(names: list[str] | set[str]) -> int:
+    """Highest complete sprite tier: 0 incomplete, 1 starter, 2 expressions, 3 all 29."""
+    available = set(names)
+    if set(ALL_NAMES) <= available:
+        return 3
+    if set(TIER_2) <= available:
+        return 2
+    if set(TIER_1) <= available:
+        return 1
+    return 0
+
+
+async def load_profile_set(
+    db: aiosqlite.Connection, character_id: str, profile_version: int,
+) -> dict | None:
+    """Resolve one pinned DB sprite version, with legacy manifests as a compatibility fallback."""
+    cursor = await db.execute(
+        "SELECT slot_key, path, validation_json FROM character_assets "
+        "WHERE character_id = ? AND identity_version = ? AND kind = 'sprite' "
+        "AND review_state IN ('approved', 'stale') ORDER BY created_at, id",
+        (character_id, profile_version),
+    )
+    paths = {row["slot_key"]: Path(row["path"]) for row in await cursor.fetchall()
+             if row["slot_key"] in ALL_NAMES and Path(row["path"]).is_file()}
+    if not paths:
+        return await asyncio.to_thread(load_set, character_id)
+    if BASE not in paths:
+        return None
+    accepted, _ = await asyncio.to_thread(check_folder, paths)
+    names = [name for name in ALL_NAMES if name in accepted]
+    if readiness_tier(names) == 0:
+        return None
+    base_alpha = await asyncio.to_thread(lambda: _load(paths[BASE])[..., 3])
+    return {
+        "canvas": list(SIZE), "face_ellipse": geometric_face_ellipse(base_alpha),
+        "face_from": "silhouette", "pictures": accepted, "names": names,
+        "paths": {name: str(paths[name]) for name in names}, "source": "profile_assets",
+        "profile_version": profile_version, "tier": readiness_tier(names),
+    }
+
+
+def picture_path(sprite_set: dict, name: str) -> Path:
+    """Get a picture path from either a DB-backed set or the legacy folder manifest."""
+    if sprite_set.get("paths"):
+        return Path(sprite_set["paths"][name])
+    return Path(sprite_set["folder"]) / f"{name}.png"
 
 
 async def list_sets(db: aiosqlite.Connection) -> list[dict]:

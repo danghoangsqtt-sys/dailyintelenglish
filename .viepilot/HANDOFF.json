@@ -3,7 +3,7 @@
   "version": "1.2.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_33_task_33_5_complete",
+  "status": "phase_33_task_33_6_complete",
   "current_phase": "33",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
@@ -267,9 +267,9 @@
     "33": {
       "name": "Character Profiles v2",
       "status": "in_progress",
-      "tasks_done": 5,
+      "tasks_done": 6,
       "tasks_total": 9,
-      "note": "Tasks 33.1-33.5 complete 2026-10-10. In-app Visual Asset Studio supports direct and numbered bulk mapping, review, retry-preserving errors, and queued local generation for core pictures. Next: 33.6 tiered sprites and renderer compatibility. Phase 32 Gate B-22 remains pending."
+      "note": "Tasks 33.1-33.6 complete 2026-10-10. Remotion resolves pinned DB sprite versions with legacy fallback; tiers 7/15/29 and deterministic optional fallbacks pass 16 regressions. Next: 33.7 game-style Character Selector. Phase 32 Gate B-22 remains pending."
     }
   },
   "key_decisions": [

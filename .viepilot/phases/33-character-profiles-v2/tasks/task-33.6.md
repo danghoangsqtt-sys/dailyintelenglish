@@ -27,10 +27,10 @@ Support the existing 29-picture sprite contract for every profile while allowing
 
 ## Acceptance Criteria
 
-- [ ] Seven approved Tier 1 assets enable Talking Starter.
-- [ ] Fifteen and twenty-nine assets upgrade readiness without changing Tier 1 behavior.
-- [ ] Missing optional assets use deterministic fallbacks and never crash rendering.
-- [ ] Lina/Alex compatibility manifests remain equivalent to their current 29-key sets.
+- [x] Seven approved Tier 1 assets enable Talking Starter.
+- [x] Fifteen and twenty-nine assets upgrade readiness without changing Tier 1 behavior.
+- [x] Missing optional assets use deterministic fallbacks and never crash rendering.
+- [x] Lina/Alex compatibility manifests remain equivalent to their current 29-key sets.
 
 ## Implementation Notes
 
@@ -38,4 +38,11 @@ Support the existing 29-picture sprite contract for every profile while allowing
 - Materialize a renderer-compatible manifest at the render boundary; do not change the Remotion prop contract.
 - Tier 1 fallbacks must be deterministic and remain within the seven approved keys.
 - Keep full Lina/Alex legacy manifests byte-for-byte addressable and verify their 29 canonical names are unchanged.
+
+## Completion Evidence
+
+- Renderer resolution now reads approved database sprite slots by character ID and pinned profile version, then falls back to the legacy manifest when no DB set exists.
+- Historical stale assets remain renderable for an already pinned project after a new identity version starts.
+- Tier 1 plans request only calm/smile/surprised/blink states and deterministically omit unavailable gestures or downgrade optional expressions.
+- Tier/legacy/renderer regression: 16 passed; Ruff and diff checks pass.
 

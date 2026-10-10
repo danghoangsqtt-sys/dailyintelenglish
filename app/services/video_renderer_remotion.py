@@ -300,20 +300,23 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
         speaker_name = next(s["name"] for s in project["speakers"] if speaker_indexes[s["id"]] == slot)
         if member is None:
             raise ValidationError(f"{speaker_name} has no library character: cast one in Step 4 before the talking characters video.")
-        sprite_set = await asyncio.to_thread(sprite_service.load_set, member["character_id"])
+        sprite_set = await sprite_service.load_profile_set(
+            db, member["character_id"], member["profile_version"],
+        )
         if not sprite_service.usable(sprite_set):
             raise ValidationError(f"{member['name']} has no talking sprites yet: import the sprite pictures on the Shot Library page "
                                   "(Talking sprites), or choose another video picture mode.")
-        folder = Path(sprite_set["folder"])
         pictures: dict[str, str] = {}
         for name in sprite_set["names"]:
-            await asyncio.to_thread(_copy_if_changed, folder / f"{name}.png",
+            await asyncio.to_thread(_copy_if_changed, sprite_service.picture_path(sprite_set, name),
                                     REMOTION_SPRITES_DIR / project_id / str(slot) / f"{name}.png")
             pictures[name] = f"remotion-render/sprites/{project_id}/{slot}/{name}.png"
         characters.append({
             "slot": slot, "name": member["name"], "pictures": pictures, "faceEllipse": sprite_set["face_ellipse"],
             "offsets": {name: [value["head_dx"], value["head_dy"]] for name, value in sprite_set["pictures"].items()},
-            "topFraction": await asyncio.to_thread(_figure_top, folder / f"{sprite_service.BASE}.png"),
+            "topFraction": await asyncio.to_thread(
+                _figure_top, sprite_service.picture_path(sprite_set, sprite_service.BASE),
+            ),
         })
         available[slot] = set(sprite_set["names"])
 
