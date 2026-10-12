@@ -16,7 +16,7 @@ This directory is an implementation plan. Creating it does not change the active
 | 33.4 | Character Library, Quick create, optional wizard sections | done 2026-10-12 (`c6dea48`; Profiles tab, Quick create, optional details; old tabs kept) | 33.2 |
 | 33.5 | Visual Asset Studio, bulk mapping, and local generation integration | done 2026-10-12 (`c6dea48`; slot cards with input picture, region, prompt, drop zone, review; local generation stays on the old tab, deferred) | 33.3, 33.4 |
 | 33.6 | Tiered sprites, renderer compatibility, male-left/female-right placement, mirroring | done 2026-10-12 (`aac3c8a`, `af62eac`; men left / women right, mirroring, slot uploads → sprite_set.json, derived face references D87) | 33.3, 33.5 |
-| 33.7 | Game-style Character Selector in Step 1 (replaces name entry) and Step 5; copy-on-assign defaults | planned | 33.2, 33.4 |
+| 33.7 | Game-style Character Selector in Step 1 (replaces name entry) and Step 5; copy-on-assign defaults | in_progress | 33.2, 33.4 |
 | 33.8 | Dynamic activity, storyboard, and shot integration for 3–6 cast | planned | 33.6, 33.7 |
 | 33.9 | Migration rehearsal, regression, real three-character render, Gate B-23 | planned | 33.1–33.8 |
 

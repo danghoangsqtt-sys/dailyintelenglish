@@ -42,3 +42,21 @@ Replace dropdown/name matching with a game-style roster and profile panel that e
 - Old projects keep their speaker names; Step 5 shows **Use character name** where the name and the cast character differ
   (e.g. Demo Episode "Maya" → Lina).
 - Paths add: `frontend/static/js/step1_config.js`, `frontend/pages/step1_config.html`, `tests/test_step1_config_edit_browser.py`.
+
+## Implementation Notes (2026-10-12, before coding; D80)
+
+- **Shared selector** `frontend/static/js/character_selector.js` (`CharacterSelector.open({slots, profiles, onChoose})`): an
+  overlay with the speaker slots on top, a searchable roster of active profiles (picture, name, gender, badges) and a large
+  preview panel (picture, gender, accent, voice, intro, personality, readiness). Clicking a card only previews it; **Choose for
+  {speaker}** assigns. A profile already used by another speaker is disabled and names that speaker; a profile that is not
+  video ready is disabled with what it still needs.
+- **Step 1:** each speaker card shows the chosen character (picture, name, gender, accent) and **Choose character**; the
+  free-text name, gender and accent inputs are gone for new projects. Choosing copies name, gender, accent and voice
+  (speed/pitch/volume) into the speaker; when a speaker already has different voice settings (edit mode) a confirm shows
+  what changes and lets the owner keep them. Save requires every speaker to have a character; after create/update the cast is
+  saved with `PUT /api/projects/{id}/visuals/cast` (IDs + profile version). Edit mode reads the existing cast.
+- **Step 5:** the cast dropdown lists video-ready profiles (not only legacy `locked` ones) and a **Use character name** button
+  appears when a speaker's name differs from its character's (Demo Episode "Maya" → Lina). `castByName()` is removed: no
+  cast is ever inferred from a display name.
+- **Backend:** `set_cast` accepts a legacy `locked` character or a profile whose readiness is `video_ready`; the refusal names
+  what is missing. Duplicate assignment stays refused (33.1).
