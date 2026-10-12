@@ -248,6 +248,23 @@ async def test_generate_all_happy_path_shows_player_and_downloads(browser_instan
     assert "format=wav" in wav_href
     progress_text = await page.locator("#generate-progress").text_content()
     assert "Done" in progress_text
+    assert await page.locator("#result-words-warning").is_hidden()  # every line has word timings
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_generate_all_warns_when_lines_have_no_word_timings(browser_instance: Browser, live_server_url: str):
+    """Task 32.8c (BUG-030): lines without word timings lose karaoke -- the result card says so."""
+    page = await browser_instance.new_page()
+    await _default_routes(page, generate_body={**AUDIO_JOB, "lines_without_words": 2})
+    await page.goto(f"{live_server_url}/step4?project_id={PROJECT['id']}")
+    await page.wait_for_selector("#workspace:not([hidden])")
+
+    await page.click("#generate-btn")
+
+    warning = page.locator("#result-words-warning")
+    await warning.wait_for(state="visible", timeout=5000)
+    assert "2 line(s) have no word timings" in await warning.text_content()
     await page.close()
 
 

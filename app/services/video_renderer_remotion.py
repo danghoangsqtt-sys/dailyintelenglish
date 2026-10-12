@@ -393,6 +393,10 @@ async def _build_input_props(
         if audio_job["word_timestamps"]
         else [[] for _ in audio_job["timestamps"]]
     )
+    without_words = sum(1 for words in word_timestamps_by_line if not words)
+    if without_words:  # Task 32.8c (BUG-030): those lines get plain captions, not karaoke
+        logger.warning("karaoke_words_missing project_id=%s lines=%d/%d -- regenerate the audio to restore karaoke",
+                       project["id"], without_words, len(word_timestamps_by_line))
     lines = [
         {
             "startSec": entry["start_sec"],

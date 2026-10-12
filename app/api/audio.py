@@ -8,6 +8,7 @@ youtube) is a synchronous await-then-return call with no SSE anywhere in the act
 implementation.
 """
 
+import asyncio
 import time
 
 import aiosqlite
@@ -20,7 +21,7 @@ from app.core.responses import ok
 from app.db.database import get_db
 from app.models.audio import GenerateAudioRequest
 from app.models.project import ProjectUpdate
-from app.services import audio_service, project_service
+from app.services import audio_service, project_service, tts_service
 
 router = APIRouter(prefix="/api/projects/{project_id}/audio", tags=["audio"])
 
@@ -43,6 +44,7 @@ async def generate_audio(
     # audio_service.mix_project — same "no lock across slow work" rule already applied to
     # Gemini calls elsewhere in this codebase).
     try:
+        await _resynthesize_lines_without_word_timings(db, project, lines)
         result = await audio_service.mix_project(project, lines, payload.background_music)
     except Exception as exc:
         async with write_transaction(db):
@@ -67,7 +69,27 @@ async def generate_audio(
             await project_service.update_project(
                 db, project_id, ProjectUpdate(status="audio_generated"), commit=False
             )
+    # Task 32.8c (BUG-030): say how many lines still have no word timings (no karaoke) instead of hiding it.
+    job = {**job, "lines_without_words": sum(1 for entry in result["word_timestamps"] if not entry["words"])}
     return ok(job, started_at=started_at)
+
+
+async def _resynthesize_lines_without_word_timings(db: aiosqlite.Connection, project: dict, lines: list[dict]) -> None:
+    """Task 32.8c (BUG-030, D77): a cached line without its word-timing sidecar counts as a cache miss.
+
+    Lines cached before Task 19.2 (no `.words.json`) are re-synthesized with word boundaries before the mix, so the
+    finished episode keeps karaoke captions. The Edge TTS call runs outside the write lock (see `app/api/tts.py`).
+    Lines with no cached audio at all are left to `mix_project`, which reports them.
+    """
+    for line in lines:
+        if not line.get("audio_cache_path"):
+            continue
+        if await asyncio.to_thread(tts_service.has_word_timings, line["audio_cache_path"]):
+            continue
+        synthesized = await tts_service.synthesize_line_audio(project, line)
+        async with write_transaction(db):
+            await tts_service.save_line_audio_cache(db, project["id"], line["id"], synthesized["audio_path"], commit=False)
+        line["audio_cache_path"] = synthesized["audio_path"]
 
 
 @router.get("/status")

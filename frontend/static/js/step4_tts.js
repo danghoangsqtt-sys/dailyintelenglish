@@ -561,6 +561,13 @@
     byId("download-wav").href = `${Api.audioDownloadUrl(state.projectId, "wav")}&t=${cacheBust}`;
     byId("download-mp3").download = `${state.projectId}.mp3`;
     byId("download-wav").download = `${state.projectId}.wav`;
+    // Task 32.8c (BUG-030): lines without word timings get plain captions instead of karaoke -- say so.
+    const missingWords = job && job.lines_without_words ? job.lines_without_words : 0;
+    const warning = byId("result-words-warning");
+    warning.hidden = missingWords === 0;
+    warning.textContent = missingWords === 0 ? "" :
+      `${missingWords} line(s) have no word timings, so their captions will not highlight word by word. ` +
+      "Generate the audio again to fix it.";
   }
 
   async function generateAll() {

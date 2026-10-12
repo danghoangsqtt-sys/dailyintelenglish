@@ -93,6 +93,30 @@ def test_generate_audio_returns_200_and_mixed_result(client: TestClient):
     assert data["loudness_lufs"] == pytest.approx(-16, abs=1.0)
 
 
+def test_generate_audio_resynthesizes_old_cache_lines_without_word_timings(client: TestClient, monkeypatch):
+    """Task 32.8c (BUG-030, D77): an MP3 cached before Task 19.2 has no `.words.json`; mixing it as-is loses karaoke."""
+    project = create_project(client)
+    lines = save_script(client, project)
+    synthesize_all(client, project, lines)
+    old_cache = settings.DATA_DIR / "tts_cache" / project["id"] / f"{lines[0]['id']}.words.json"
+    old_cache.unlink()  # line 0 now looks like a pre-19.2 cache entry
+    synthesized: list[str] = []
+
+    async def fake_edge_tts(text: str, speaker: dict) -> tuple[bytes, list]:
+        synthesized.append(text)
+        boundary = tts_service.WordBoundary(text="Welcome", offset_sec=0.0, duration_sec=0.3)
+        return _real_tone_mp3_bytes(), [boundary]
+
+    monkeypatch.setattr(tts_service, "_synthesize_edge_tts", fake_edge_tts)
+
+    data = client.post(f"/api/projects/{project['id']}/audio/generate", json={}).json()["data"]
+
+    assert synthesized == ["Welcome to the show!"]  # only the line without word timings, never the reusable one
+    assert old_cache.is_file()
+    assert [len(entry["words"]) for entry in data["word_timestamps"]] == [1, 0]
+    assert data["lines_without_words"] == 1  # line 1's sidecar exists but its fake synthesis returned no words
+
+
 def test_generate_audio_advances_project_status_to_audio_generated(client: TestClient):
     project = create_project(client)
     lines = save_script(client, project)

@@ -66,6 +66,7 @@
     .music-auto-note { display: block; min-height: 16px; margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.45; }
     .generate-progress { min-height: 18px; margin-top: 14px; color: var(--muted); font-size: 13px; }
     .result-card { margin-top: 18px; padding: 20px; }
+    .result-note { margin: 10px 0 0; color: var(--warning); font-size: 13px; }
     .result-player { width: 100%; margin-bottom: 16px; }
     .download-links { display: flex; gap: 10px; }
     .pipeline-actions { display: flex; justify-content: flex-end; margin-top: 20px; }
@@ -146,6 +147,7 @@
 
               <div class="card result-card" id="result-card" hidden>
                 <audio class="result-player" id="result-player" controls></audio>
+                <p class="result-note" id="result-words-warning" role="status" hidden></p>
                 <div class="download-links">
                   <a class="btn btn-ghost btn-sm" id="download-mp3" download>Download MP3</a>
                   <a class="btn btn-ghost btn-sm" id="download-wav" download>Download WAV</a>

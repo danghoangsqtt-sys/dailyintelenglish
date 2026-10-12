@@ -150,6 +150,15 @@ def _write_word_boundaries_sync(path: Path, word_boundaries: list[WordBoundary])
     )
 
 
+def has_word_timings(audio_cache_path: str) -> bool:
+    """Task 32.8c (BUG-030): a cached line is only reusable for a mix when its word-timing sidecar exists.
+
+    Lines cached before Task 19.2 have an MP3 but no sidecar; mixing them silently drops karaoke for those lines.
+    Blocking filesystem check -- call it in a thread from async code.
+    """
+    return _word_timestamps_path(Path(audio_cache_path)).is_file()
+
+
 async def synthesize_line_audio(project: dict, line: dict) -> dict:
     """Synthesize one script line's audio and cache it to disk. Touches no database.
 
