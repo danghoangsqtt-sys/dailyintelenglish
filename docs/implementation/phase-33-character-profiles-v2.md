@@ -6,6 +6,24 @@
 **Source:** `docs/brainstorm/session-2026-10-10.md`  
 **UI baseline:** `.viepilot/ui-direction/session-2026-10-06/index.html` and the current `/characters` application shell
 
+## Amendment A — 2026-10-12 (owner decisions D78–D83)
+
+Source: `docs/brainstorm/session-2026-10-12.md`. Where this amendment and the sections below disagree, the amendment wins.
+
+| ID | Rule |
+|---|---|
+| D78 | Phase 33 is updated, not replaced. Library, selector, slot contract, prompt pack, versioning and Lina/Alex migration stay. |
+| D79 | **Quick create** replaces the mandatory steps 1–4 of the wizard: name, gender (required), accent/nationality, appearance, outfit. The system writes the prompt pack and picks the Edge TTS voice from gender + accent. Personality, role, speaking style and detailed voice become optional fields edited later. |
+| D80 | **Step 1 picks characters instead of typing names.** Each speaker slot opens the game-style selector; the speaker's name is the character's name and the voice defaults are copied in (still editable per project, rule 5). New projects have no free-text speaker name field. Old projects keep their names; Step 5 offers "Use character name". |
+| D81 | **Placement by gender.** One male + one female: male always left, female always right, whatever the speaker order. Same gender (two male / two female) is allowed: speaker 1 left, speaker 2 right. Gender becomes required on every profile. |
+| D82 | **Facing each other.** Every sprite pack has a native facing (prompt pack: male faces right, female faces left; stored as `sprite_facing`). A character placed on the side opposite its native facing is mirrored horizontally (all bodies, faces, mouths and gestures) so the two face each other, unless that profile has an approved opposite-facing pack, which is used instead. Mirroring flips asymmetric details (hair parting, gesturing hand); accepted as the default. |
+| D83 | **Auto-process, approve once.** Uploading the external-AI pack maps each file to its slot by the prompt pack's canonical file names, aligns it (shared scale, feet on the canvas floor, face region), runs the technical checks and shows one review grid with **Approve all** (and per-picture reject). After approval the character is immediately usable in Step 1 and in videos. Files with non-canonical names still need a manual slot choice. Nothing is approved without the owner's review. |
+
+Task changes: 33.1 (`gender` required, `sprite_facing`, opposite-facing flag), 33.3 (prompt pack from Quick create with
+file names and facing; auto-map + align + review grid), 33.4 (Quick create screen; remaining wizard steps optional),
+33.6 (renderer placement D81 + mirroring D82), 33.7 (selector in Step 1 replacing name entry, D80), 33.9 (Gate B-23 adds a
+same-gender pair facing each other and a female-first project placed male-left).
+
 ## 1. Objective
 
 Turn the existing visual-only character records into reusable character profiles. A profile owns identity, role and personality, appearance, voice defaults, visual assets, sprite readiness, and activity coverage. The user can create any number of profiles through a guided wizard and explicitly assign a profile to each project speaker from a game-style selector.
@@ -218,10 +236,10 @@ All mutation errors return a stable `code`, a user-facing `message`, and optiona
 | 33.1 | Migration, domain fields, versioning, and Lina/Alex rehearsal | Gate B-22 |
 | 33.2 | Profile/readiness/lifecycle service and API | 33.1 |
 | 33.3 | Slot contract, direct upload, review, validation, prompt pack | 33.1, 33.2 |
-| 33.4 | Library and ten-step wizard with autosave/resume | 33.2 |
+| 33.4 | Library, Quick create (D79) and optional wizard steps with autosave/resume | 33.2 |
 | 33.5 | Asset Studio, bulk mapping, and local generation integration | 33.3, 33.4 |
-| 33.6 | Tiered sprite pack and renderer compatibility | 33.3, 33.5 |
-| 33.7 | Game-style selector and copy-on-assign cast flow | 33.2, 33.4 |
+| 33.6 | Tiered sprite pack, renderer compatibility, gender placement (D81) and mirroring (D82) | 33.3, 33.5 |
+| 33.7 | Game-style selector in Step 1 (replaces name entry, D80) and Step 5; copy-on-assign cast flow | 33.2, 33.4 |
 | 33.8 | Dynamic Activity/Storyboard/Shot integration for 3–6 cast | 33.6, 33.7 |
 | 33.9 | Migration rehearsal, regression, real three-character render, Gate B-23 | 33.1–33.8 |
 

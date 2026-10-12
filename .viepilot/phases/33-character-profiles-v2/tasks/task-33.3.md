@@ -32,3 +32,13 @@ Make profile assets manageable through explicit canonical slots with safe direct
 - [ ] Technically valid uploads start as `needs_review`.
 - [ ] Changing an identity base marks dependent assets stale while retaining prior version files.
 
+## Amendment A (2026-10-12, D79, D82, D83)
+
+- The prompt pack is generated from the Quick create fields: identity, appearance and outfit text, the canonical file name of
+  every slot (`{slot}.png`) and the facing rule (male looks to the right of the picture, female to the left).
+- Bulk upload: files named as in the prompt pack are mapped to their slots automatically; other names need a manual slot.
+- Automatic alignment before review: shared scale against the identity full body, feet on the canvas floor, face region
+  checked; the same checks as `sprite_service` imports today.
+- One review grid per upload with **Approve all** and per-picture reject; approval makes the pack usable at once.
+- Verification adds: a canonical-name pack maps with no manual step; a misaligned picture is reported, not silently fixed
+  beyond the shared alignment; nothing is approved before the grid action.

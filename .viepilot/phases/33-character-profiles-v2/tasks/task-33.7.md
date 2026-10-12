@@ -34,3 +34,11 @@ Replace dropdown/name matching with a game-style roster and profile panel that e
 - [ ] Existing custom project voice settings are not silently overwritten.
 - [ ] No cast path searches by display name.
 
+## Amendment A (2026-10-12, D80)
+
+- The selector replaces the free-text speaker name fields in Step 1 (`frontend/static/js/step1_config.js`,
+  `frontend/pages/step1_config.html`): each speaker slot opens the selector; the speaker name becomes the character name and
+  voice defaults are copied in. New projects cannot be created with an unassigned speaker.
+- Old projects keep their speaker names; Step 5 shows **Use character name** where the name and the cast character differ
+  (e.g. Demo Episode "Maya" → Lina).
+- Paths add: `frontend/static/js/step1_config.js`, `frontend/pages/step1_config.html`, `tests/test_step1_config_edit_browser.py`.

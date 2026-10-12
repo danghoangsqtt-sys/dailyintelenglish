@@ -33,3 +33,8 @@ Prove migration safety and the complete owner workflow, then obtain owner accept
 - [ ] Old Lina/Alex project behavior remains stable.
 - [ ] Owner accepts Gate B-23; only then may Phase 33 be marked complete.
 
+## Amendment A (2026-10-12, D81–D83)
+
+Gate B-23 also checks: a project created in Step 1 only by picking characters; a female-first speaker order rendered with
+the male on the left; a same-gender pair facing each other (mirrored or opposite-facing pack); a third character created by
+Quick create → prompt pack → external pictures → one review grid → used in a video without further setup.

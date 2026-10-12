@@ -32,3 +32,14 @@ Support the existing 29-picture sprite contract for every profile while allowing
 - [ ] Missing optional assets use deterministic fallbacks and never crash rendering.
 - [ ] Lina/Alex compatibility manifests remain equivalent to their current 29-key sets.
 
+## Amendment A (2026-10-12, D81, D82)
+
+- Placement: with one male and one female in a beat the male takes the left slot and the female the right, whatever the
+  speaker order; with the same gender, speaker 1 left, speaker 2 right. Replace the speaker-index slot mapping in
+  `video_renderer_remotion.py` with a pure placement function shared by props and tests.
+- Facing: a character on the side opposite its `sprite_facing` is mirrored (Remotion `scaleX(-1)` on the sprite box, mouth and
+  face regions mirrored with it, gestures included); an approved opposite-facing pack is used instead when present.
+- Paths add: `app/services/video_renderer_remotion.py`, `video-renderer/src/Sprites.tsx`, `video-renderer/src/spriteTimeline.ts`,
+  `video-renderer/src/spriteTimeline.test.ts`, `tests/test_sprite_video_props.py`.
+- Verification adds: female-first project still renders male left; two-male and two-female projects face each other; Alex/Lina
+  Demo Episode unchanged (male left, female right already).

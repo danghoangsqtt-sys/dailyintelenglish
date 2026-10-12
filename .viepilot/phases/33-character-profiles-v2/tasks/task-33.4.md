@@ -30,3 +30,9 @@ Replace the long create/edit form with a clear ten-step, game-like wizard and up
 - [ ] Readiness and missing actions are visible from both card and detail views.
 - [ ] The page remains usable at 1024 px wide without nested form scrolling or tiny labels.
 
+## Amendment A (2026-10-12, D79)
+
+- **Quick create** is the first and only required screen: name, gender, accent/nationality, appearance, outfit. Saving it
+  creates the profile, picks the Edge TTS voice from gender + accent and opens the prompt pack.
+- The former steps for personality, role, speaking style and detailed voice stay available as optional, resumable sections;
+  they no longer block video readiness.

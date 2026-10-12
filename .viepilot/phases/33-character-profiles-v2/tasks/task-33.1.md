@@ -33,3 +33,10 @@ Create additive migration 018, extend existing character records in place, pin p
 - [ ] Active normalized names are unique and project casts cannot duplicate a character.
 - [ ] No migration or rehearsal writes to the real database or real asset directory.
 
+## Amendment A (2026-10-12, D81–D82)
+
+- `characters.gender` is required for every profile (`male` / `female`); the migration keeps Alex `male`, Lina `female`
+  and refuses a profile without gender instead of guessing.
+- Add `characters.sprite_facing` (`right` / `left`; default `right` for male, `left` for female) and track whether an
+  approved opposite-facing pack exists (slot set or flag, decided in the migration design).
+- Paths add: `app/db/migrations/018_character_profiles_v2.sql` (same migration, extra columns).
