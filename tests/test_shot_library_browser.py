@@ -1,6 +1,5 @@
 """Task 29.7: the Shot Library page (review once), and Step 5's "Add to library", "from library" and coverage line."""
 
-import time
 from typing import AsyncGenerator, Generator
 
 import pytest
