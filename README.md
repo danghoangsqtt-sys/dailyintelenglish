@@ -1,15 +1,18 @@
-# Daily Intel English Studio
+# Daily Beyond English Studio
 
 > 🎙️ AI-powered podcast production studio for English learning YouTube content
+
+The product brand is **Daily Beyond English** (Phase 27). The repository, the Python package and
+the packaged `DailyIntelEnglishStudio.exe` keep the original technical name *Daily Intel English*.
 
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-latest-green)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![GPU: RTX 3060](https://img.shields.io/badge/GPU-RTX%203060-76b900)](https://nvidia.com)
 
-## What is Daily Intel English Studio?
+## What is Daily Beyond English Studio?
 
-**Daily Intel English Studio** là công cụ sản xuất nội dung tiếng Anh hỗ trợ bởi AI dành cho content creator YouTube. Ứng dụng tự động hóa toàn bộ pipeline từ ý tưởng → kịch bản → giọng đọc → video → YouTube description.
+**Daily Beyond English Studio** là công cụ sản xuất nội dung tiếng Anh hỗ trợ bởi AI dành cho content creator YouTube. Ứng dụng tự động hóa toàn bộ pipeline từ ý tưởng → kịch bản → giọng đọc → video → YouTube description.
 
 ### ✨ Key Features
 
@@ -108,7 +111,28 @@ local`) reverts to 100% offline immediately.
 | **Phase 16** | 🩹 **Stability Hardening** — worker loop guard + `worker_alive` health signal; ffmpeg subprocess timeouts + atomic render; test-data leak fix + `conftest` guard; evidence-driven repetition avoid list | ✅ Done |
 | **Phase 17** | 📏 **Budget-Aware Global Validation** — global word-count repair covering the mixed section-over/section-under case with a length-aware repetition repair path | ✅ Done |
 | **Phase 18** | ☁️ **Cloud-First AI with Local Fallback** — the current default. Generic `OpenAICompatProvider`; multi-provider cloud chain (Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter Nemotron/Gemma/Dots3 → local qwen); per-provider circuit breaker and time budget; kill switch `DIE_AI_ALLOW_CLOUD=false`. Gate B-11 real measurement: **~45s median vs. ~127s local (2.8× faster)**. **v1.1.0-beta** shipped at close | ✅ Done |
-| **Phase 19** | 🎬 **Animated Learning Videos (Remotion)** — in-flight partial: word-level karaoke captions with per-word Edge TTS timing capture; active-speaker chip indicator; report-readiness elapsed counter + ETA + Step 4/5 progress parity across the 4 AI-generation pages. Remaining sub-tasks (vocab pop-up cards, intro/outro/chapters, packaging + toggle wire-up, Gate B-12, close-out) deferred to post-report continuation | 🟡 In progress |
+| **Phase 19** | 🎬 **Animated Learning Videos (Remotion)** — the "Enhanced" renderer, default since 1.2.0-beta: word-level karaoke captions from per-word Edge TTS timings, active-speaker chip, timed vocabulary/idiom cards, intro/outro and a chapter/progress bar. The ffmpeg renderer stays as the fallback (`DIE_VIDEO_RENDERER=ffmpeg`). Gate B-12 media and visual PASS; the voice complaint was an Edge TTS issue, not a renderer one (D38) | ✅ Done |
+
+#### Visual studio: pictures, music, brand and talking characters (Phases 20–32)
+
+Phases 20, 23 and 24 shipped in `1.2.0-beta`. Phases 22 and 25–32 are on the development branch
+and listed under `[Unreleased]` in [CHANGELOG.md](CHANGELOG.md). "Built, owner gate pending" means
+the code and tests are done and the owner has not yet signed off on a real episode.
+
+| Phase | Feature | Status |
+|-------|---------|--------|
+| **Phase 20** | 🖼️ **AI Visuals** — local GPU image generation in a separate `venv-image` worker (diffusers), one GPU arbiter for the RTX 3060, a Character Library and Scene Library, and per-project shots used by the Enhanced video ([plan](docs/implementation/phase-20-ai-visuals.md)) | 🟡 Built, owner Gate B-14 pending |
+| **Phase 21** | 🗣️ **Better TTS engine** — Kokoro (D36) and StyleTTS 2 (D38) spikes both failed the owner listening test; Edge TTS stays, and the spike engines were removed (D56) ([plan](docs/implementation/phase-21-tts-kokoro.md)) | ⛔ Closed, won't fix |
+| **Phase 22** | 🎵 **Background music** — AI music generation was dropped (D50); free library tracks instead, with automatic pace/mood classification, auto-select by topic and length, a bed fitted to the episode and ducked under the voice, and a music credit in the YouTube description ([plan](docs/implementation/phase-22-ai-music.md), [free sources](docs/user/free-music-sources.md)) | 🟡 Built, owner Gate B-17 (levels) pending |
+| **Phase 23–24** | 🗺️ **Scene Library v2 and storyboard** — a 55-place scene library; the AI proposes story beats, the owner reviews them in Step 5, and approved beats become the shots that drive the video timeline ([plan](docs/implementation/phase-23-24-scenes-and-storyboard.md)) | 🟡 Built, owner Gates B-15 / B-16 pending |
+| **Phase 25** | 🎬 **Branded intro and outro** — logo morph and a spoken greeting and farewell in every Enhanced video, with the music ducked under the voice ([plan](docs/implementation/phase-25-branded-intro-outro.md)) | ✅ Done |
+| **Phase 26** | ✨ **UI polish** — interim polish before the layout redo ([plan](docs/implementation/phase-26-ui-polish.md)) | ✅ Done |
+| **Phase 27** | 🎨 **Rebrand and studio layout** — Daily Beyond English name, logo and palette in the app and video; collapsible sidebar; image grids for characters and scenes; all seven steps share one studio frame ([plan](docs/implementation/phase-27-rebrand-and-layout.md)) | 🟡 Built, owner Gate B-19 pending |
+| **Phase 28** | 📷 **Semi-realistic picture style** — RealVisXL V5.0 editorial look, approved character sheets, outfit-colour and extra-person checks with a "check this shot" mark in Step 5 ([plan](docs/implementation/phase-28-semi-realistic-style.md)) | 🟡 Built, owner Gate B-20 pending |
+| **Phase 29** | 🗂️ **Shot Library** (`/shots`) — reviewed, reusable pictures of the cast by scene, framing, action and mood; new episodes reuse approved matches and draw only what is missing; natural gaze and cleaner cuts ([plan](docs/implementation/phase-29-shot-library.md)) | 🟡 Built, owner Gate B-21 pending |
+| **Phase 30** | 🎧 **Podcast picture modes** — Step 5 "Video pictures": with characters, black screen, or one still scene with a slow zoom ([plan](docs/implementation/phase-30-podcast-visuals.md)) | ✅ Done |
+| **Phase 31** | 👥 **Alex and Lina** — the owner's own characters replace the earlier pair; the owner's pictures import into the Shot Library from an inbox folder ([55-scene list](docs/operations/scene-list-55.md)) | ✅ Done |
+| **Phase 32** | 🗨️ **Talking characters** — Step 5 mode "Podcast: talking characters": visual-novel style sprites whose mouths follow the speech, with expressions, blinks, gestures and turn-taking; an Activity Library of reviewed pictures (upload with an owner-entered name per image) that become full-screen cutaways on storyboard insert beats ([plan](docs/implementation/phase-32-talking-sprites.md), [sprite spec](docs/operations/sprite-asset-spec.md), [activity upload](docs/operations/activity-library-manual-upload.md)) | 🟡 Built, owner Gate B-22 pending |
 
 ## Quick Start
 
@@ -201,11 +225,11 @@ in-app `/health` status still report ffmpeg's presence honestly either way.
 2️⃣  Step 2: AI Script        → Generate, preview, inline edit, per-line regenerate (Shipped - Task 1.4)
 3️⃣  Step 3: Learning Content → Vocabulary, idioms, grammar, comprehension quiz (Shipped - Task 1.5)
 4️⃣  Step 4: TTS Audio Studio → Voice assignment, per-line preview, real audio mix + loudness normalization, MP3/WAV export (Shipped - Task 1.6)
-5️⃣  Step 5: Video Studio     → Template selector, real MP4 with burned-in subtitles/SRT, 16:9 + 9:16 export, per-speaker avatar upload, preview + downloads (Shipped - Task 1.7/2.5b); LivePortrait lips-sync inference itself remains a deferred, not-yet-started effort
+5️⃣  Step 5: Video Studio     → Enhanced (Remotion) video by default: storyboard review, shots from the Shot/Scene libraries, picture modes (story pictures, black screen, one still, talking characters), activity cutaways; Standard (ffmpeg) fallback with burned-in subtitles; SRT, 16:9 + 9:16 export (Phases 1, 19–32)
 6️⃣  Step 6: Thumbnail        → AI-assisted templates, A/B variants, manual editor, export (Shipped - Task 1.8)
 7️⃣  Step 7: YouTube Package  → Titles/description/tags/chapters (measured once audio exists) + full .zip export (Shipped - Task 1.9)
 ```
-Music Library (Task 1.10, `/music`) is a standalone background-music management feature, not a numbered pipeline step — upload/list/preview/delete, volume leveling, Step 4 background-track selection, and waveform visualization are all shipped.
+Music Library (Task 1.10, `/music`) is a standalone background-music management feature, not a numbered pipeline step — upload/list/preview/delete, volume leveling, Step 4 background-track selection, and waveform visualization are all shipped. The Character Library (`/characters`) and Shot Library (`/shots`, with talking sprites and the Activity Library) are also standalone pages that feed Step 5.
 
 ## Tech Stack
 
@@ -221,7 +245,8 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
   measurement (median 45s cloud vs. 127s local, 2.8× faster).
 - **TTS**: Edge TTS (sole engine — OmniVoice GPU cloning considered, dropped 2026-09-13; see [docs/tts-setup.md](docs/tts-setup.md))
 - **Audio**: pydub + ffmpeg (real ITU-R BS.1770 loudness normalization via `pyloudnorm`)
-- **Video**: ffmpeg (background templates + burned-in subtitles, 16:9 and 9:16 export). LivePortrait lip-sync avatar remains a deferred, not-yet-started research effort
+- **Video**: **Enhanced** renderer (default since 1.2.0-beta): Remotion 4 + React 19 + TypeScript in the separate [`video-renderer/`](video-renderer/) Node workspace, run locally as a subprocess from FastAPI. **Standard** fallback: ffmpeg (background templates + burned-in subtitles); `DIE_VIDEO_RENDERER=ffmpeg` forces it. 16:9 and 9:16 export
+- **Images**: local GPU image generation (diffusers, RealVisXL V5.0) in its own `venv-image` environment and worker process (`requirements-image.txt`, `scripts/image_worker.py`); optional — every library also accepts the owner's own pictures
 - **Thumbnail**: Pillow + AI (local Ollama by default) text/palette suggestions
 - **Database**: SQLite (aiosqlite async transactions)
 
@@ -232,6 +257,8 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
 | [docs/prompt-guide.md](docs/prompt-guide.md) | How to customize the AI prompt templates (script genres, CEFR blocks, learning content, thumbnails, YouTube package) — shared by every provider in the cloud-first chain (Gemini, OpenRouter models, local qwen) |
 | [docs/tts-setup.md](docs/tts-setup.md) | Edge TTS voice map and known limitations; why OmniVoice was investigated but not integrated |
 | [docs/api.md](docs/api.md) | Full API reference, auto-generated from the app's real FastAPI OpenAPI schema (`scripts/generate_api_docs.py`) — also live at `/docs` while the app is running |
+| [docs/implementation/](docs/implementation/) | Per-phase implementation plans (Phase 19 onward) |
+| [docs/operations/](docs/operations/) | Operation guides and gate reports (local AI, music sources, sprites, Activity Library) |
 | [.viepilot/ARCHITECTURE.md](.viepilot/ARCHITECTURE.md) | System design, services, data models |
 | [.viepilot/ROADMAP.md](.viepilot/ROADMAP.md) | Phase/task plan with acceptance criteria |
 | [.viepilot/TRACKER.md](.viepilot/TRACKER.md) | Full progress and decision log |
@@ -242,7 +269,8 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
 Daily_Intel_English/
 ├── app/                    # FastAPI backend
 ├── frontend/               # HTML/CSS/JS pages
-├── data/                   # Runtime data (gitignored)
+├── video-renderer/         # Remotion (React/TypeScript) Enhanced video renderer
+├── data/                   # Runtime data and libraries (gitignored)
 ├── prompts/                # AI prompt templates (shared across cloud + local providers)
 ├── models/                 # Local AI models
 ├── scripts/                # Setup utilities
