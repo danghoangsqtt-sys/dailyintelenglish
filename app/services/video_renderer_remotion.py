@@ -351,11 +351,13 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
         loudness = None
     plan = sprite_plan.build_plan(lines, line_slots, beat_expressions, available, loudness, VIDEO_FPS)
     candidates, cutaways, activity_uses = await activity_library.approved_candidates(db), [], []
+    all_line_speakers = [speaker_indexes.get(line["speakerId"]) for line in lines]
+    line_texts = [line["text"] for line in lines]
     for beat in beats or []:
         if beat["kind"] != "insert" or beat["line_from"] >= len(lines):
             continue
-        speakers = beat.get("speakers") or []
-        character_id = cast_by_index.get(speakers[0], {}).get("character_id") if len(speakers) == 1 else None
+        speaker = activity_matcher.beat_speaker_index(beat, all_line_speakers, line_texts)
+        character_id = cast_by_index.get(speaker, {}).get("character_id") if speaker is not None else None
         dialogue = " ".join(line["text"] for line in lines[beat["line_from"]:beat["line_to"] + 1])
         selected = activity_matcher.match_activity(candidates, character_id, beat.get("action") or "", dialogue)
         if selected is None:

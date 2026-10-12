@@ -499,11 +499,16 @@ async def activity_coverage(project_id: str, db: aiosqlite.Connection = Depends(
         cast = {row["speaker_index"]: row["character_id"] for row in await project_visuals.cast_rows(db, project_id)}
         candidates = await activity_library.approved_candidates(db)
     items = []
+    size = max((line["line_index"] for line in lines), default=-1) + 1
+    line_speakers: list[int | None] = [None] * size
+    line_texts = [""] * size
+    for line in lines:
+        line_speakers[line["line_index"]], line_texts[line["line_index"]] = line["speaker_index"], line["text"]
     for beat in beats:
         if beat["kind"] != "insert":
             continue
-        speakers = beat.get("speakers") or []
-        character_id = cast.get(speakers[0]) if len(speakers) == 1 else None
+        speaker = activity_matcher.beat_speaker_index(beat, line_speakers, line_texts) if size else None
+        character_id = cast.get(speaker) if speaker is not None else None
         dialogue = " ".join(line["text"] for line in lines if beat["line_from"] <= line["line_index"] <= beat["line_to"])
         found = activity_matcher.match_activity(candidates, character_id, beat.get("action") or "", dialogue)
         items.append({"beat_id": beat["id"], "position": beat["position"], "action": beat.get("action") or "",

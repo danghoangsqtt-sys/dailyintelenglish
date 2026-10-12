@@ -87,6 +87,43 @@ async def test_approved_insert_is_copied_full_frame_for_at_most_six_seconds_and_
 
 
 @pytest.mark.asyncio
+async def test_speakerless_insert_uses_the_speaking_characters_picture(client, tmp_path, monkeypatch):  # noqa: F811
+    """Task 32.8a (BUG-029, D76): the storyboard leaves inserts as ``speakers: []``; the line's speaker still decides."""
+    project, character_ids, scenes = setup_project(client, 2, 1)
+    _give_sprites(character_ids[0])
+    _give_sprites(character_ids[1])
+    _make_a_plate(scenes[0]["id"])
+    _public(tmp_path, monkeypatch)
+    picture = settings.DATA_DIR / "library" / "activities" / "packing-any.png"
+    picture.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (1280, 720), (30, 60, 90)).save(picture)
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute(
+            "INSERT INTO project_storyboards (project_id, status, source, updated_at) VALUES (?, 'approved', 'owner', 'now')",
+            (project["id"],),
+        )
+        connection.execute(
+            "INSERT INTO project_beats (id, project_id, position, line_from, line_to, kind, speakers_json, action, "
+            "expression, created_at, updated_at) VALUES ('insert-own', ?, 0, 0, 0, 'insert', '[]', 'packing suitcase', "
+            "'calm', 'now', 'now')",
+            (project["id"],),
+        )
+        for asset_id, character_id in (("packing-generic", None), ("packing-other", character_ids[1]),
+                                       ("packing-own", character_ids[0])):
+            connection.execute(
+                "INSERT INTO activity_library (id, character_id, activity, path, content_sha, review_state, created_at, "
+                "updated_at) VALUES (?, ?, 'packing', ?, ?, 'approved', 'now', 'now')",
+                (asset_id, character_id, str(picture), f"sha-{asset_id}"),
+            )
+
+    async with aiosqlite.connect(settings.db_path) as db:
+        db.row_factory = aiosqlite.Row
+        props = await remotion._build_input_props(db, project, _long_audio(project), None, visual_mode="podcast_sprites")
+
+    assert props["sprites"]["_activityUses"] == [{"activity_id": "packing-own", "beat_id": "insert-own"}]
+
+
+@pytest.mark.asyncio
 async def test_backend_usage_metadata_is_not_sent_to_remotion_but_returns_after_success(tmp_path, monkeypatch):
     seen: dict = {}
 

@@ -16,7 +16,7 @@
 | 32.6e | Storyboard insert guidance and the 20-image generic prompt pack | done 2026-10-09 (D72 names/prompts locked; 20/20 real assets verified) |
 | 32.6f | Automated verification and Demo Episode render with three cutaways | done 2026-10-09 (1,646 Python + 65 Vitest; real render, 3/3 matched, no fallback, continuous audio/captions) |
 | 32.7 | Gate B-22: owner comparison of updated cutaways and talking-sprites baseline | **FAIL** 2026-10-12 (owner): activity pictures cover both characters (wanted behind them, D75, ENH-028); no character pictures used although approved Alex/Lina ones exist (D76, BUG-029); no karaoke captions (old TTS cache without word timings, D77, BUG-030). Re-gate after the fixes |
-| 32.8a | Prefer the speaking character's activity pictures (BUG-029, D76) | in_progress (`tasks/task-32.8a.md`) |
+| 32.8a | Prefer the speaking character's activity pictures (BUG-029, D76) | done 2026-10-12 (`tasks/task-32.8a.md`): shared `beat_speaker_index`, render + coverage; 4 new tests, the render test fails without the fix |
 | 32.8b | Activity pictures behind the talking characters (ENH-028, D75) | in_progress (`tasks/task-32.8b.md`) |
 | 32.8c | Never mix lines without word timings silently (BUG-030, D77) | in_progress (`tasks/task-32.8c.md`) |
 | 32.8d | Regenerate and re-render the Demo Episode, evidence r2 | planned (`tasks/task-32.8d.md`) |

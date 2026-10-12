@@ -35,6 +35,25 @@ def _score(candidate: dict[str, Any], query: str, contexts: list[str]) -> tuple[
     return score, reason
 
 
+def beat_speaker_index(beat: dict[str, Any], line_speakers: list[int | None], line_texts: list[str]) -> int | None:
+    """Task 32.8a (BUG-029, D76): whose activity pictures an insert beat should prefer.
+
+    One index in ``beat["speakers"]`` names that person. Otherwise (the storyboard leaves inserts as ``[]``) the beat's own
+    lines decide: a single speaker wins; with two, the speaker of the one line that mentions the action, else the first line's.
+    ``line_speakers``/``line_texts`` are indexed by line index; ``None`` means the speaker is unknown.
+    """
+    speakers = beat.get("speakers") or []
+    if len(speakers) == 1:
+        return speakers[0]
+    span = range(max(0, beat["line_from"]), min(beat["line_to"], len(line_speakers) - 1) + 1)
+    lines = [(line_speakers[index], line_texts[index]) for index in span if line_speakers[index] is not None]
+    distinct = list(dict.fromkeys(speaker for speaker, _ in lines))
+    if len(distinct) <= 1:
+        return distinct[0] if distinct else None
+    naming = list(dict.fromkeys(speaker for speaker, text in lines if _contains(text, beat.get("action") or "")))
+    return naming[0] if len(naming) == 1 else lines[0][0]
+
+
 def match_activity(
     candidates: list[dict[str, Any]], character_id: str | None, action: str, dialogue: str, contexts: list[str] | None = None,
 ) -> dict[str, Any] | None:
