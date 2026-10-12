@@ -86,6 +86,12 @@ async def lifespan(app: FastAPI):
         (settings.DATA_DIR / subdir).mkdir(parents=True, exist_ok=True)
 
     await init_db()
+    # Phase 33: Phase 32 sprite packs on disk become slot rows the first time (idempotent, a few milliseconds)
+    from app.services.visuals.character_asset_service import register_legacy_sprites
+
+    connection = Database.instance().connection
+    if await register_legacy_sprites(connection):
+        await connection.commit()
     await settings_service.load_cloud_settings_from_db(Database.instance().connection)
     await settings_service.load_provider_chain_from_db(Database.instance().connection)
     await settings_service.load_ai_mode_from_db(Database.instance().connection)

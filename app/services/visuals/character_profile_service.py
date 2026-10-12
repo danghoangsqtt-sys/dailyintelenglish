@@ -115,9 +115,27 @@ def _public(row: dict) -> dict[str, Any]:
     }
 
 
+async def _pictures(db: aiosqlite.Connection, row: dict) -> dict[str, str | None]:
+    """URLs for the library card: the calm portrait when approved, else the current base sprite (any review state)."""
+    cursor = await db.execute(
+        "SELECT id, slot_key, review_state FROM character_assets WHERE character_id = ? AND identity_version = ? "
+        "AND is_current = 1 AND facing = 'native' AND slot_key IN ('portrait_calm', 'sprite/calm__closed')",
+        (row["id"], row["identity_version"]),
+    )
+    found = {item["slot_key"]: item for item in await cursor.fetchall()}
+
+    def url(slot_key: str, approved_only: bool) -> str | None:
+        asset = found.get(slot_key)
+        if asset is None or (approved_only and asset["review_state"] != "approved"):
+            return None
+        return f"/api/visuals/profiles/{row['id']}/assets/{asset['id']}/content"
+
+    return {"portrait": url("portrait_calm", True), "base": url("sprite/calm__closed", False)}
+
+
 async def get_profile(db: aiosqlite.Connection, character_id: str) -> dict[str, Any]:
     row = await _row(db, character_id)
-    return {**_public(row), "readiness": await readiness(db, row)}
+    return {**_public(row), "pictures": await _pictures(db, row), "readiness": await readiness(db, row)}
 
 
 async def list_profiles(db: aiosqlite.Connection, q: str = "", state: str = "active") -> list[dict[str, Any]]:

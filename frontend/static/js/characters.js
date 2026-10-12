@@ -529,18 +529,15 @@
       () => Api.lockCharacter(state.selectedId), "Character locked."));
     $("unlock-character").addEventListener("click", () => act(
       () => Api.unlockCharacter(state.selectedId), "Character unlocked."));
-    $("characters-tab").addEventListener("click", () => {
-      $("characters-panel").hidden = false;
-      $("scenes-panel").hidden = true;
-      $("characters-tab").setAttribute("aria-selected", "true");
-      $("scenes-tab").setAttribute("aria-selected", "false");
-    });
-    $("scenes-tab").addEventListener("click", () => {
-      $("characters-panel").hidden = true;
-      $("scenes-panel").hidden = false;
-      $("characters-tab").setAttribute("aria-selected", "false");
-      $("scenes-tab").setAttribute("aria-selected", "true");
-    });
+    // Phase 33: three tabs -- Profiles (default), the local generator, scenes.
+    const tabs = ["profiles", "characters", "scenes"];
+    tabs.forEach((name) => $(`${name}-tab`).addEventListener("click", () => {
+      tabs.forEach((other) => {
+        $(`${other}-panel`).hidden = other !== name;
+        $(`${other}-tab`).setAttribute("aria-selected", String(other === name));
+      });
+      $("new-character").hidden = name !== "characters";  // the local generator's own "New character"
+    }));
     $("scene-form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const body = Object.fromEntries(new FormData(event.currentTarget));

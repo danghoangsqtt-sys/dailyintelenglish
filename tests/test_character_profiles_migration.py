@@ -187,3 +187,36 @@ async def test_app_runner_applies_018_once_and_survives_a_restart(tmp_path, monk
         columns = {row[1] for row in connection.execute("PRAGMA table_info(project_cast)")}
     assert applied == (1,)
     assert "profile_version" in columns
+
+
+def test_migration_020_fills_quick_profile_fields_for_older_characters(tmp_path):
+    with closing(_old_database(tmp_path / "old.db")) as connection:
+        connection.execute("UPDATE characters SET hair = 'long dark brown hair', eyes = 'brown eyes', extra = 'fair skin', "
+                           "top_color = 'white', top_item = 'mini dress', bottom_color = 'white', bottom_item = 'mini dress' "
+                           "WHERE id = ?", (LINA,))
+        _apply(connection, only=MIGRATION_018)
+        _apply(connection, only="019_character_quick_profile.sql")
+        _apply(connection, only="020_backfill_legacy_profiles.sql")
+        lina = connection.execute(
+            "SELECT appearance, outfit, default_accent, default_voice_id FROM characters WHERE id = ?", (LINA,)).fetchone()
+        alex = connection.execute("SELECT outfit, default_voice_id FROM characters WHERE id = ?", (ALEX,)).fetchone()
+    assert lina == ("long dark brown hair, brown eyes, fair skin", "white mini dress", "american", "en-US-JennyNeural")
+    assert alex == ("navy suit jacket and navy suit trousers", "en-US-GuyNeural")
+
+
+@pytest.mark.asyncio
+async def test_startup_registers_legacy_sprite_packs_once_and_reads_old_relative_paths(db, tmp_path, monkeypatch):
+    from app.services.visuals import character_asset_service as assets
+
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path / "data")
+    character = await library_service.create_character(db, _input("Alex"))
+    folder = tmp_path / "data" / "library" / "sprites" / character["id"]
+    folder.mkdir(parents=True)
+    for name in ("calm__closed", "calm__open"):
+        Image.new("RGBA", (8, 8)).save(folder / f"{name}.png")
+    (folder / "sprite_set.json").write_text(json.dumps({"pictures": {"calm__closed": {}, "calm__open": {}}}))
+    assert await assets.register_legacy_sprites(db) == 2
+    assert await assets.register_legacy_sprites(db) == 0
+    old = assets.stored_path(r"data\library\characters\x\full_body.png")
+    assert old == tmp_path / "data" / "library" / "characters" / "x" / "full_body.png"
+    assert assets.stored_path(str(folder / "calm__open.png")) == folder / "calm__open.png"

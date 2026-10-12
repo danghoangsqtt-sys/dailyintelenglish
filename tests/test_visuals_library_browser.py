@@ -47,6 +47,7 @@ async def test_library_create_pick_approve_lock_and_read_only(browser_instance: 
     await page.goto(live_server_url)
     await page.get_by_role("link", name="Character Library").click()
     assert page.url.endswith("/characters")
+    await page.locator("#characters-tab").click()  # Phase 33: Profiles is the default tab
     await page.locator("#character-form [name=gender] option").first.wait_for(state="attached")
     await _create_character(page, "Nova")
     await page.get_by_role("button", name="Generate 4").click()
@@ -69,10 +70,12 @@ async def test_library_health_off_disables_generate_but_keeps_browsing(
 ):
     page = await browser_instance.new_page()
     await page.goto(f"{live_server_url}/characters")
-    await page.get_by_role("button", name="New character").click()
+    await page.locator("#characters-tab").click()  # Phase 33: Profiles is the default tab
+    await page.locator("#new-character").click()
     await _create_character(page, "Mira")
     monkeypatch.setattr(settings, "AI_VISUALS_ENABLED", False)
     await page.reload()
+    await page.locator("#characters-tab").click()
     await page.get_by_role("button", name="Mira draft").click()
     generate = page.get_by_role("button", name="Generate 4")
     assert await generate.is_disabled()

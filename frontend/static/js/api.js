@@ -29,6 +29,31 @@ const Api = (() => {
   }
 
   return {
+    // Phase 33 (Tasks 33.2-33.5): character profiles, picture slots and review.
+    getProfileOptions: () => request("/api/visuals/profiles/options"),
+    listProfiles: (query = "") => request(`/api/visuals/profiles${query ? `?${query}` : ""}`),
+    getProfile: (id) => request(`/api/visuals/profiles/${id}`),
+    createProfile: (body) => request("/api/visuals/profiles", { method: "POST", body: JSON.stringify(body) }),
+    patchProfile: (id, patch) => request(`/api/visuals/profiles/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
+    duplicateProfile: (id) => request(`/api/visuals/profiles/${id}/duplicate`, { method: "POST" }),
+    archiveProfile: (id) => request(`/api/visuals/profiles/${id}/archive`, { method: "POST" }),
+    restoreProfile: (id) => request(`/api/visuals/profiles/${id}/restore`, { method: "POST" }),
+    deleteProfile: (id) => request(`/api/visuals/profiles/${id}`, { method: "DELETE" }),
+    listProfileSlots: (id) => request(`/api/visuals/profiles/${id}/slots`),
+    uploadProfileSlot: (id, slotKey, file) => {
+      const body = new FormData();
+      body.append("file", file);
+      return request(`/api/visuals/profiles/${id}/slots/${encodeURIComponent(slotKey)}/upload`, { method: "POST", body });
+    },
+    uploadProfileSlotsBatch: (id, files) => {
+      const body = new FormData();
+      files.forEach((file) => body.append("files", file));
+      return request(`/api/visuals/profiles/${id}/slots/upload-batch`, { method: "POST", body });
+    },
+    reviewProfileAsset: (id, assetId, decision) =>
+      request(`/api/visuals/profiles/${id}/assets/${assetId}/review`, { method: "PUT", body: JSON.stringify({ decision }) }),
+    approveProfileAssets: (id, assetIds) =>
+      request(`/api/visuals/profiles/${id}/assets/approve`, { method: "POST", body: JSON.stringify({ asset_ids: assetIds }) }),
     listProjects: () => request("/api/projects"),
     createProject: (config) =>
       request("/api/projects", { method: "POST", body: JSON.stringify(config) }),

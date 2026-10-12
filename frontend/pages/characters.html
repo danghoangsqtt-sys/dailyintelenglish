@@ -10,6 +10,55 @@
     .library-main { width: min(1160px, calc(100% - 32px)); margin: 32px auto 80px; }
     .library-hint { color: var(--muted); }
     .library-tabs { display: flex; gap: 8px; margin: 20px 0; }
+    /* Phase 33 (Tasks 33.4/33.5): the Profiles tab -- one page scroll, large readable cards, no nested scrolling form. */
+    .profile-layout { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 20px; align-items: start; }
+    .profile-tools { display: grid; gap: 6px; margin-bottom: 14px; }
+    .profile-list { display: grid; gap: 10px; }
+    .profile-card { display: flex; gap: 12px; align-items: center; width: 100%; padding: 10px; text-align: left;
+      border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); cursor: pointer; }
+    .profile-card.is-selected { box-shadow: 0 0 0 3px var(--accent-soft); border-color: var(--accent); }
+    .profile-card img, .profile-card-empty { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; flex: none;
+      background: var(--border); display: grid; place-items: center; font-size: 24px; color: var(--muted); }
+    .profile-card-body { display: grid; gap: 4px; min-width: 0; font-size: 16px; }
+    .profile-card-meta { color: var(--muted); font-size: 14px; }
+    .profile-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+    .profile-badge { font-size: 13px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); }
+    .profile-badge.is-ok { background: var(--success-bg); color: var(--success); border-color: transparent; }
+    .profile-panel { padding: 20px; font-size: 16px; }
+    .profile-form { display: grid; gap: 6px; max-width: 560px; }
+    .profile-form textarea, .profile-form input, .profile-form select { font-size: 16px; }
+    .profile-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .profile-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+    .profile-readiness { margin: 12px 0; }
+    .profile-details { margin: 12px 0; }
+    .profile-details summary { cursor: pointer; font-weight: 600; }
+    .profile-slot-tools { margin-top: 18px; }
+    .slot-group h4 { margin: 18px 0 8px; }
+    .slot-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+    .slot-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; background: var(--surface);
+      display: grid; gap: 8px; align-content: start; }
+    .slot-card-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .slot-tier { margin-left: auto; color: var(--muted); font-size: 13px; }
+    .slot-chip { font-size: 13px; padding: 2px 8px; border-radius: 999px; background: var(--border); }
+    .slot-chip-approved { background: var(--success-bg); color: var(--success); }
+    .slot-chip-needs_review { background: var(--warning-bg); color: var(--warning); }
+    .slot-chip-rejected, .slot-chip-stale { background: var(--danger-bg); color: var(--danger); }
+    .slot-drop { position: relative; display: grid; place-items: center; aspect-ratio: 5 / 6; border: 2px dashed var(--border-strong);
+      border-radius: var(--radius); background: repeating-conic-gradient(var(--border) 0% 25%, transparent 0% 50%) 50% / 16px 16px;
+      cursor: pointer; text-align: center; padding: 8px; color: var(--muted); }
+    .slot-drop.is-over { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .slot-drop.is-disabled { cursor: not-allowed; opacity: .6; }
+    .slot-drop img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+    .slot-drop img.is-preview { opacity: .55; }
+    .slot-busy { position: relative; background: var(--surface); padding: 4px 8px; border-radius: 8px; color: var(--text); }
+    .slot-note { font-size: 14px; color: var(--muted); margin: 0; }
+    .slot-note .is-error, .library-message.is-error { color: var(--danger); }
+    .slot-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 15px; }
+    .slot-prompt { width: 100%; font-size: 14px; margin-top: 4px; resize: vertical; }
+    .slot-actions { display: flex; gap: 8px; }
+    @media (max-width: 900px) {
+      .profile-layout { grid-template-columns: 1fr; }
+    }
     .library-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
     .library-layout > .library-editor, .scene-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
     .library-list { display: grid; gap: 14px; align-content: start; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
@@ -107,7 +156,7 @@
   <main class="library-main">
     <div class="library-heading">
       <div><h1>Character Library</h1><p>Build and lock your original characters before using them in project scenes.</p></div>
-      <button id="new-character" class="btn btn-primary" type="button">New character</button>
+      <button id="new-character" class="btn btn-primary" type="button" hidden>New character</button>
     </div>
     <div id="library-message" class="library-message" role="status" hidden></div>
     <div class="library-actions">
@@ -115,10 +164,97 @@
       <button id="cancel-library-job" class="btn btn-ghost btn-sm" type="button" hidden>Cancel</button>
     </div>
     <div class="library-tabs" role="tablist" aria-label="Library sections">
-      <button id="characters-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="true">Characters</button>
+      <button id="profiles-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="true">Profiles</button>
+      <button id="characters-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="false">Generate locally</button>
       <button id="scenes-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="false">Scenes</button>
     </div>
-    <section id="characters-panel" role="tabpanel" aria-labelledby="characters-tab">
+    <section id="profiles-panel" role="tabpanel" aria-labelledby="profiles-tab">
+      <div id="profile-message" class="library-message" role="status" hidden></div>
+      <div class="profile-layout">
+        <div class="profile-side">
+          <div class="profile-tools">
+            <label class="field-label" for="profile-search">Search</label>
+            <input id="profile-search" type="search" placeholder="Name" autocomplete="off" />
+            <label class="field-label" for="profile-filter">Show</label>
+            <select id="profile-filter">
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
+              <option value="all">All</option>
+            </select>
+            <button id="profile-new" class="btn btn-primary" type="button">New character</button>
+          </div>
+          <div id="profile-list" class="profile-list" aria-label="Characters"></div>
+        </div>
+        <div class="profile-main">
+          <div id="profile-create" class="card profile-panel" hidden>
+            <h2>New character</h2>
+            <p class="library-hint">Only these fields are needed. The voice, the side of the video and the picture prompts are
+              made from them: men stand on the left, women on the right.</p>
+            <form id="profile-create-form" class="profile-form">
+              <label class="field-label" for="profile-create-name">Name</label>
+              <input id="profile-create-name" name="name" required maxlength="40" autocomplete="off" />
+              <label class="field-label" for="profile-create-gender">Gender</label>
+              <select id="profile-create-gender" name="gender" required>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+              <label class="field-label" for="profile-create-accent">Accent (voice)</label>
+              <select id="profile-create-accent" name="accent" required></select>
+              <label class="field-label" for="profile-create-nationality">Nationality (one word, optional)</label>
+              <input id="profile-create-nationality" name="nationality" maxlength="40" autocomplete="off" />
+              <label class="field-label" for="profile-create-appearance">Appearance</label>
+              <textarea id="profile-create-appearance" name="appearance" required maxlength="400" rows="3"
+                placeholder="e.g. tall, short black hair, round glasses, friendly face"></textarea>
+              <label class="field-label" for="profile-create-outfit">Outfit</label>
+              <textarea id="profile-create-outfit" name="outfit" required maxlength="200" rows="2"
+                placeholder="e.g. grey hoodie and dark blue jeans, white sneakers"></textarea>
+              <div class="profile-actions">
+                <button class="btn btn-primary" type="submit">Create character</button>
+                <button id="profile-create-cancel" class="btn btn-ghost" type="button">Cancel</button>
+              </div>
+            </form>
+          </div>
+          <div id="profile-detail" class="card profile-panel" hidden>
+            <div class="profile-head">
+              <div>
+                <h2 id="profile-name"></h2>
+                <p id="profile-summary" class="library-hint"></p>
+              </div>
+              <div class="profile-actions">
+                <button id="profile-duplicate" class="btn btn-ghost btn-sm" type="button">Duplicate</button>
+                <button id="profile-archive" class="btn btn-ghost btn-sm" type="button">Archive</button>
+                <button id="profile-delete" class="btn btn-ghost btn-sm" type="button">Delete</button>
+              </div>
+            </div>
+            <div id="profile-readiness" class="profile-readiness"></div>
+            <details class="profile-details">
+              <summary>Details (optional) <span id="profile-save-state" class="library-hint" aria-live="polite"></span></summary>
+              <form id="profile-details-form" class="profile-form">
+                <label class="field-label" for="profile-intro">Introduction</label>
+                <textarea id="profile-intro" name="intro" maxlength="400" rows="2"></textarea>
+                <label class="field-label" for="profile-personality">Personality (comma separated)</label>
+                <input id="profile-personality" name="personality" autocomplete="off" />
+                <label class="field-label" for="profile-speaking-style">Speaking style</label>
+                <input id="profile-speaking-style" name="speaking_style" maxlength="200" autocomplete="off" />
+              </form>
+            </details>
+            <div class="profile-slot-tools">
+              <h3>Pictures</h3>
+              <p class="library-hint">Make each picture with an outside AI from its card: attach the input picture, select the
+                region, paste the prompt. Then drop the result on the same card; it is renamed and placed for you.</p>
+              <div class="profile-actions">
+                <a id="profile-prompt-pack" class="btn btn-ghost btn-sm" href="#" download>Download prompt pack</a>
+                <label class="btn btn-ghost btn-sm" for="profile-bulk">Add several named pictures…</label>
+                <input id="profile-bulk" type="file" accept="image/png" multiple hidden />
+                <button id="profile-approve-all" class="btn btn-primary btn-sm" type="button" hidden>Approve all pending</button>
+              </div>
+            </div>
+            <div id="profile-slots" class="profile-slots"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="characters-panel" role="tabpanel" aria-labelledby="characters-tab" hidden>
       <div class="library-layout">
         <div id="character-list" class="library-list" aria-label="Characters"></div>
         <div class="card library-editor">
@@ -206,5 +342,6 @@
   <script src="/static/js/api.js"></script>
   <script src="/static/js/generation_status.js"></script>
   <script src="/static/js/characters.js"></script>
+  <script src="/static/js/character_profiles.js"></script>
 </body>
 </html>

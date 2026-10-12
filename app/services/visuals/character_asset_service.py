@@ -113,6 +113,43 @@ def slot_prompt(profile: dict, slot: dict) -> str:
     return f"{KEEP} {slot['change'][0].upper()}{slot['change'][1:]}"
 
 
+def stored_path(path: str) -> Path:
+    """An asset path as stored: older rows hold `data\library\...` relative to the app folder; read them under the current
+    data folder (the packaged app and the tests do not keep their data in ./data)."""
+    candidate = Path(path)
+    if not candidate.is_absolute() and candidate.parts and candidate.parts[0] == "data":
+        return settings.DATA_DIR.joinpath(*candidate.parts[1:])
+    return candidate
+
+
+async def register_legacy_sprites(db: aiosqlite.Connection) -> int:
+    """Startup, idempotent: a character with a sprite pack on disk (Phase 32 `sprite_set.json`) but no sprite slot rows yet
+    gets one approved row per picture, so its slot cards show the pictures it already has. Returns the rows added."""
+    cursor = await db.execute("SELECT id, identity_version FROM characters")
+    added, now = 0, _now()
+    for character in await cursor.fetchall():
+        character_id, version = character[0], character[1]
+        existing = await db.execute(
+            "SELECT 1 FROM character_assets WHERE character_id = ? AND kind = 'sprite' LIMIT 1", (character_id,))
+        if await existing.fetchone() is not None:
+            continue
+        sprite_set = sprite_service.load_set(character_id)
+        if not sprite_set:
+            continue
+        folder = sprite_service.sprite_dir(character_id)
+        for name in sorted(sprite_set.get("pictures", {})):
+            picture = folder / f"{name}.png"
+            if name not in SLOTS_BY_KEY or not picture.is_file():
+                continue
+            await db.execute(
+                "INSERT INTO character_assets (id, character_id, kind, path, approved, created_at, slot_key, source, "
+                "original_filename, review_state, identity_version, is_current, updated_at, facing) "
+                "VALUES (?, ?, 'sprite', ?, 1, ?, ?, 'legacy_migration', ?, 'approved', ?, 1, ?, 'native')",
+                (str(uuid.uuid4()), character_id, str(picture), now, f"sprite/{name}", picture.name, version, now))
+            added += 1
+    return added
+
+
 def _asset_dir(character_id: str, identity_version: int, facing: str) -> Path:
     return settings.DATA_DIR / "library" / "characters" / character_id / f"v{identity_version}" / facing
 
@@ -208,7 +245,8 @@ async def upload(db: aiosqlite.Connection, character_id: str, slot_key: str, con
     base_ok = base if base and base["review_state"] == "approved" else None
     try:
         canvas, validation = await asyncio.to_thread(
-            _process_sync, slot_key, content, parent_ok["path"] if parent_ok else None, base_ok["path"] if base_ok else None)
+            _process_sync, slot_key, content, str(stored_path(parent_ok["path"])) if parent_ok else None,
+            str(stored_path(base_ok["path"])) if base_ok else None)
     except sprite_upload.UploadError as exc:
         raise ValidationError(str(exc)) from exc
 
@@ -223,8 +261,8 @@ async def upload(db: aiosqlite.Connection, character_id: str, slot_key: str, con
         if previous is not None:
             # keep the replaced picture's file under its own ID so an older render or review can still see it
             kept = folder / f"{slot_key}.{previous['id'][:8]}.png"
-            if Path(previous["path"]).is_file():
-                await asyncio.to_thread(Path(previous["path"]).replace, kept)
+            if stored_path(previous["path"]).is_file():
+                await asyncio.to_thread(stored_path(previous["path"]).replace, kept)
             await db.execute("UPDATE character_assets SET is_current = 0, path = ?, updated_at = ? WHERE id = ?",
                              (str(kept), now, previous["id"]))
         await db.execute(
@@ -311,7 +349,7 @@ async def derive_core_pictures(db: aiosqlite.Connection, character_id: str) -> l
         if not source or source["review_state"] != "approved":
             continue
         destination = _asset_dir(character_id, row["identity_version"], "native") / f"core_{kind}.png"
-        await asyncio.to_thread(_derive_sync, source["path"], kind, destination)
+        await asyncio.to_thread(_derive_sync, str(stored_path(source["path"])), kind, destination)
         now = _now()
         await db.execute("UPDATE character_assets SET is_current = 0, updated_at = ? WHERE character_id = ? AND slot_key = ? "
                          "AND is_current = 1 AND identity_version = ?", (now, character_id, kind, row["identity_version"]))
@@ -330,7 +368,7 @@ async def asset_content(db: aiosqlite.Connection, character_id: str, asset_id: s
     asset = await _asset_row(db, asset_id)
     if asset["character_id"] != character_id:
         raise NotFoundError("Picture not found")
-    return resolve_library_content(asset["path"])
+    return resolve_library_content(str(stored_path(asset["path"])))
 
 
 async def parent_input(db: aiosqlite.Connection, character_id: str, slot_key: str) -> bytes:
@@ -343,7 +381,7 @@ async def parent_input(db: aiosqlite.Connection, character_id: str, slot_key: st
     def render() -> bytes:
         import io
 
-        with Image.open(asset["path"]) as sprite:
+        with Image.open(stored_path(asset["path"])) as sprite:
             picture = sprite_upload.parent_on_green(sprite.convert("RGBA"))
         buffer = io.BytesIO()
         picture.save(buffer, "PNG")

@@ -45,6 +45,7 @@ async def test_characters_are_portrait_tiles_with_outfit_swatches_and_a_sticky_d
     locked_character("Minh", "green")
     page = await browser_instance.new_page(viewport={"width": 1400, "height": 900})
     await page.goto(f"{live_server_url}/characters")
+    await page.locator("#characters-tab").click()  # Phase 33: Profiles is the default tab
     tiles = page.locator("#character-list .character-tile")
     await tiles.nth(1).wait_for()
     assert await tiles.count() == 2
@@ -79,6 +80,7 @@ async def test_a_narrow_screen_stacks_the_grid_above_the_detail_panel(browser_in
     locked_character("Narrow", "yellow")
     page = await browser_instance.new_page(viewport={"width": 700, "height": 900})
     await page.goto(f"{live_server_url}/characters")
+    await page.locator("#characters-tab").click()  # Phase 33: Profiles is the default tab
     await page.locator("#character-list .character-tile").first.wait_for()
     grid, editor = await _box(page.locator("#character-list")), await _box(page.locator(".library-editor").first)
     assert editor["y"] >= grid["y"] + grid["h"] - 2
