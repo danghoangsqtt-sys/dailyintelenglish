@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.core.constants import TTS_SPEED_MAX, TTS_SPEED_MIN
+
 COLORS = (
     "white", "black", "navy blue", "light blue", "red", "yellow", "green", "beige",
     "grey", "pink", "brown", "orange",
@@ -184,3 +186,93 @@ class SheetItemInput(BaseModel):
 class CastMemberInput(BaseModel):
     speaker_index: int = Field(ge=0)
     character_id: str
+
+
+# Phase 33 (Task 33.2, Amendment A D79): character profiles. Quick create asks only what the prompt pack and the voice need.
+PROFILE_ACCENTS = ("american", "british", "australian", "canadian", "irish", "scottish", "indian", "singaporean",
+                   "new_zealand", "south_african")
+
+
+def _free_text(value: str, field_name: str, max_length: int) -> str:
+    value = " ".join(value.strip().split())
+    if len(value) > max_length:
+        raise ValueError(f"{field_name} must be at most {max_length} characters")
+    return value
+
+
+class ProfileQuickCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+    gender: Literal["female", "male"]
+    accent: Literal[PROFILE_ACCENTS]  # type: ignore[valid-type]
+    nationality: str = ""
+    appearance: str = Field(min_length=1, max_length=400)
+    outfit: str = Field(min_length=1, max_length=200)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        value = " ".join(value.strip().split())
+        if not value:
+            raise ValueError("name cannot be blank")
+        return value
+
+    @field_validator("nationality")
+    @classmethod
+    def validate_nationality(cls, value: str) -> str:
+        value = value.strip()
+        return _phrase(value, "nationality", 1) if value else ""
+
+    @field_validator("appearance", "outfit")
+    @classmethod
+    def validate_text(cls, value: str, info) -> str:
+        value = _free_text(value, info.field_name, 400 if info.field_name == "appearance" else 200)
+        if not value:
+            raise ValueError(f"{info.field_name} cannot be blank")
+        return value
+
+
+class ProfilePatch(BaseModel):
+    """Autosave: every field is optional; only the fields sent are changed."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=40)
+    gender: Literal["female", "male"] | None = None
+    accent: Literal[PROFILE_ACCENTS] | None = None  # type: ignore[valid-type]
+    nationality: str | None = None
+    appearance: str | None = Field(default=None, max_length=400)
+    outfit: str | None = Field(default=None, max_length=200)
+    intro: str | None = Field(default=None, max_length=400)
+    personality: list[str] | None = Field(default=None, max_length=8)
+    speaking_style: str | None = Field(default=None, max_length=200)
+    dialogue_behavior: str | None = Field(default=None, max_length=200)
+    default_voice_id: str | None = Field(default=None, max_length=80)
+    default_speed: float | None = Field(default=None, ge=TTS_SPEED_MIN, le=TTS_SPEED_MAX)
+    default_pitch: float | None = Field(default=None, ge=-1.0, le=1.0)
+    default_volume: float | None = Field(default=None, ge=0.0, le=2.0)
+    wizard_step: int | None = Field(default=None, ge=0, le=10)
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = " ".join(value.strip().split())
+        if not value:
+            raise ValueError("name cannot be blank")
+        return value
+
+    @field_validator("nationality")
+    @classmethod
+    def validate_nationality(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None if value is None else ""
+        return _phrase(value, "nationality", 1)
+
+    @field_validator("personality")
+    @classmethod
+    def validate_personality(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        traits = [" ".join(item.strip().split()) for item in value]
+        if any(not trait or len(trait) > 30 for trait in traits):
+            raise ValueError("each personality trait must have 1–30 characters")
+        return traits

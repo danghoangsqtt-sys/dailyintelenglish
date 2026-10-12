@@ -10,8 +10,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api import (
-    ai_jobs, audio, learning, music, projects, settings as settings_api, storyboard, thumbnail, tts, video, visuals,
-    youtube,
+    ai_jobs, audio, learning, music, profiles, projects, settings as settings_api, storyboard, thumbnail, tts, video,
+    visuals, youtube,
 )
 from app.core.config import settings
 from app.core.exceptions import AppError
@@ -159,6 +159,7 @@ app.include_router(youtube.router)
 app.include_router(settings_api.router)
 app.include_router(ai_jobs.router)
 app.include_router(ai_jobs.health_router)
+app.include_router(profiles.router)  # Phase 33: before visuals so /api/visuals/profiles is never shadowed
 app.include_router(visuals.router)
 app.include_router(visuals.project_router)
 app.include_router(storyboard.router)
