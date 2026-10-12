@@ -10,8 +10,8 @@ This directory is an implementation plan. Creating it does not change the active
 
 | Task | Description | Status | Depends on |
 |---|---|---|---|
-| 33.1 | Data migration, profile versioning, required gender + sprite facing, and Lina/Alex rehearsal | in_progress | B-22 ✅ |
-| 33.2 | Profile domain service, readiness, lifecycle, and API | planned | 33.1 |
+| 33.1 | Data migration, profile versioning, required gender + sprite facing, and Lina/Alex rehearsal | done 2026-10-12 (`16d8cb1`; rehearsal on a DB copy: Lina/Alex unchanged, 58 sprites, no FK problems; full suite 1660 passed + 1 browser timeout that passes alone) | B-22 ✅ |
+| 33.2 | Profile domain service, readiness, lifecycle, and API | in_progress | 33.1 |
 | 33.3 | Asset slots, prompt pack from Quick create, auto-mapped upload, alignment, approve-once grid | planned | 33.1, 33.2 |
 | 33.4 | Character Library, Quick create, optional wizard sections | planned | 33.2 |
 | 33.5 | Visual Asset Studio, bulk mapping, and local generation integration | planned | 33.3, 33.4 |
