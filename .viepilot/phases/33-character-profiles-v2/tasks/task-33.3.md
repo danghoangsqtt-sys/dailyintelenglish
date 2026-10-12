@@ -57,7 +57,7 @@ only as metadata. Alignment and technical checks run on upload; the card shows t
   canonical slot names; any other file must be dropped on its card.
 - The prompt pack is shown per card (copy button) and is also downloadable as one text file for the whole profile.
 
-## Amendment C (2026-10-12, owner D85 — activity slots)
+## Amendment C (2026-10-12, owner D85 — activity slots) — **WITHDRAWN by D86, not implemented**
 
 The character's picture library also has **activity slots** (e.g. working out, cooking): the default list is the 25 activities
 the Alex/Lina packs use today (`activity_library` character scope), and the owner can add a slot by typing an activity name.
@@ -65,3 +65,7 @@ Each activity slot shows a prompt built from the profile (identity, appearance, 
 a drop zone. A picture dropped there is stored through `activity_library_service` with `character_id` = the profile and
 `activity` = the slot's name (renamed on disk like every upload), and waits for review as Activity Library pictures do today.
 Activity slots never block readiness (Phase 33 rule 8).
+
+## Amendment D (2026-10-12, owner D86 — supersedes D85)
+
+"Actions" means the **gestures and mouth shapes** of the talking-sprite pack, as in `data/library/sprites_inbox` (`alex__gesture-wave__open.png` ...). The character picture library therefore has the core pictures plus exactly the 29 sprite slots: 7 expressions x closed/open mouth (14) + `blink` + 7 gestures x closed/open mouth (14). Each slot card shows its prompt and drop zone; a dropped file is renamed to the slot name (`<slot>.png`, the same names as `sprites_inbox` without the character prefix). No activity slots on the character page: activity pictures stay in the Activity Library as today.
