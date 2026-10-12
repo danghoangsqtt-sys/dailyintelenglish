@@ -36,3 +36,15 @@ Replace the long create/edit form with a clear ten-step, game-like wizard and up
   creates the profile, picks the Edge TTS voice from gender + accent and opens the prompt pack.
 - The former steps for personality, role, speaking style and detailed voice stay available as optional, resumable sections;
   they no longer block video readiness.
+
+## Implementation Notes (2026-10-12, before coding; D79, D84, D86)
+
+- `/characters` gets a first, default **Profiles** tab (new `frontend/static/js/character_profiles.js`); the existing local
+  generation tab (renamed "Generate locally") and the Scenes tab stay as they are. Tab switching becomes one function for the
+  three tabs in `characters.js`.
+- Left column: search, Active/Archived filter, **New character**, and one card per profile (picture, name, gender, badges
+  "Video ready", "Talking ready", "n/29 pictures").
+- Right panel, one page scroll: **Quick create** (name, gender, accent, nationality, appearance, outfit — the only required
+  screen) or the selected profile: header (voice, facing), Duplicate / Archive-Restore / Delete, readiness with every
+  missing item, **Details (optional)** fields autosaved on change with a visible Saving/Saved/Failed state.
+- The picture slots of 33.5 sit in the same panel under the profile (the owner's flow: create, then fill slots).

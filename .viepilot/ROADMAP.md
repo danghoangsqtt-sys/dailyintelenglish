@@ -1475,7 +1475,7 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 Phase 33 is planned in `docs/implementation/phase-33-character-profiles-v2.md` and remains unopened until Phase 32 Gate B-22 is accepted. Planning this phase does not change the active phase or tracker state.
 
 - [x] 33.1 Profile schema, versioning, and Lina/Alex migration rehearsal
-- [ ] 33.2 Profile domain, readiness, lifecycle, and API
+- [x] 33.2 Profile domain, readiness, lifecycle, and API
 - [ ] 33.3 Asset slots, direct upload, validation, review, and prompt packs
 - [ ] 33.4 Character Library, Quick create (D79) and optional wizard sections
 - [ ] 33.5 Visual Asset Studio, bulk mapping, and local generation integration

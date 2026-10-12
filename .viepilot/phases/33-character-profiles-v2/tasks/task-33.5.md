@@ -33,3 +33,14 @@ Let users complete every picture requirement inside the wizard using external up
 - [ ] Upload and generation errors identify the affected picture and preserve other work.
 - [ ] Normal use requires no folder copy or manual filename change.
 
+
+## Implementation Notes (2026-10-12, before coding; D84, D86)
+
+- Slot cards grouped Base / Expressions and mouths / Blink / Gestures, each: file name, tier, state chip (empty, waiting for
+  its parent, needs review, approved, rejected, stale), current picture, validation method and problems, **Input picture**
+  download (the parent on green), region to select, prompt with **Copy**, and a drop zone (click or drag) disabled until the
+  parent is approved. The upload goes to that card's slot; a local preview shows at once and is replaced by the stored
+  result. Approve / Reject on the card; **Approve all pending** on the panel; **Download prompt pack** for the whole set.
+- Optional bulk drop (canonical names) on the panel lists what was stored, unmatched and failed.
+- "Generate locally" stays on the old tab for this phase (local generation into slots is not part of the owner's flow; noted
+  as deferred, not dropped).
