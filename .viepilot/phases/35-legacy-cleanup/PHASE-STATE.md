@@ -7,8 +7,8 @@
 
 | Task | Description | Request | Status |
 |---|---|---|---|
-| 35.1 | Old name in AI prompts and user-facing text | ENH-030 | in_progress |
-| 35.2 | Remove obsolete scripts, their tests, old prompt/hand-off docs, `models/activity-vision` | ENH-030 | planned |
+| 35.1 | Old name in AI prompts and user-facing text | ENH-030 | done 2026-10-13 |
+| 35.2 | Remove obsolete scripts, their tests, old prompt/hand-off docs, `models/activity-vision` | ENH-030 | in_progress |
 | 35.3 | Remove the "Generate locally" tab and the sprite inbox import; guard legacy routes | ENH-029 | planned |
 | 35.4 | Step 5: remove the avatar section; cast through the shared selector | ENH-029 | planned |
 | 35.5 | Remove the Standard ffmpeg renderer, its templates and the silent fallback | ENH-031 | planned |

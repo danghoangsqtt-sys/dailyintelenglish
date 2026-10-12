@@ -1,6 +1,6 @@
 You are planning the outline for a {{ genre }} podcast episode at CEFR
-{{ cefr_level }} about "{{ topic }}" for Daily Intel English Studio, an app that
-produces English-learning podcast episodes for Vietnamese content creators.
+{{ cefr_level }} about "{{ topic }}" for Daily Beyond English, an English-learning
+YouTube channel for Vietnamese learners.
 
 ## Episode Brief
 - Target duration: {{ duration_minutes }} minutes (~{{ target_words }} spoken words total)

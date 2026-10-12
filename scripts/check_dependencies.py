@@ -1,4 +1,4 @@
-"""Verify the local machine is ready to run Daily Intel English Studio.
+"""Verify the local machine is ready to run Daily Beyond English Studio.
 
 Usage:
     python scripts/check_dependencies.py
@@ -171,7 +171,7 @@ def main() -> int:
     ]
 
     all_passed = True
-    print("Daily Intel English Studio - Dependency Check\n" + "-" * 48)
+    print("Daily Beyond English Studio - Dependency Check\n" + "-" * 48)
     for label, check_fn in required_checks:
         passed, detail = check_fn()
         status = "GREEN" if passed else "RED"

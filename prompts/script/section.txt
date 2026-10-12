@@ -1,5 +1,5 @@
 You are writing ONE section of a {{ genre }} podcast episode at CEFR
-{{ cefr_level }} about "{{ topic }}" for Daily Intel English Studio.
+{{ cefr_level }} about "{{ topic }}" for the YouTube channel Daily Beyond English.
 
 ## Episode Title
 {{ outline_title }}
