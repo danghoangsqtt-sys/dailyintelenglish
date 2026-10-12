@@ -1496,3 +1496,15 @@ Phase 32 (Gate B-22 open); Phase 33 stays unopened. State: `.viepilot/phases/34-
 - [x] 34.4 ARCHITECTURE, PROJECT-META, regenerated API reference (ENH-025)
 - [x] 34.5 Clean Ruff check (ENH-026)
 - [x] 34.6 Verification, re-audit, close the requests, `die-vp-p34-complete`
+
+### Phase 35: Remove old names and overlapping old features (ENH-029, ENH-030, ENH-031) - planned 2026-10-13
+
+Owner D89. State: `.viepilot/phases/35-legacy-cleanup/PHASE-STATE.md`.
+
+- [ ] 35.1 Old name in AI prompts and user-facing text
+- [ ] 35.2 Obsolete scripts, tests, docs, `models/activity-vision`
+- [ ] 35.3 Remove "Generate locally" tab and sprite inbox import; guard legacy routes
+- [ ] 35.4 Step 5 without avatars; cast through the shared selector
+- [ ] 35.5 Remove the Standard ffmpeg renderer
+- [ ] 35.6 Verification, docs, close requests
+
