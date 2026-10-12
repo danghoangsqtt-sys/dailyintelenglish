@@ -2173,6 +2173,7 @@ Suite 964 → 1175. **Version 1.1.0-beta.** Follow-ups: ENH-014 (outro heuristic
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-10-12 | **D78–D83 (owner, brainstorm `docs/brainstorm/session-2026-10-12.md`):** update Phase 33 (not a new phase): Quick create (name, gender, accent, appearance, outfit) with auto prompt pack and auto Edge voice; Step 1 picks characters instead of typing names; male left / female right, same-gender pair speaker 1 left; sprites mirrored to face each other unless a facing-the-other-way pack exists; uploads auto-mapped by prompt-pack file names, aligned, approved once in a grid | Phase 33 plan to be updated by `/vp-evolve`; Phase 33 stays unopened until Gate B-22 passes |
 | 2026-10-12 | **Gate B-22 FAIL (owner).** Three findings on the Demo Episode: activity pictures cover both characters; no character pictures used; no karaoke captions | Logged ENH-028, BUG-029, BUG-030; Phase 32 stays open |
 | 2026-10-12 | **D75 (owner):** activity illustrations sit behind Alex and Lina, who stay in front for the whole beat, even when the picture shows the speaking character ("đây là ý đồ nghệ thuật và giáo dục của tôi") | ENH-028 |
 | 2026-10-12 | **D76 (owner):** prefer the activity picture of the character who speaks the beat, else generic | BUG-029 |
