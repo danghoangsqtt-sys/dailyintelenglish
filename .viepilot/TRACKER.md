@@ -2,7 +2,9 @@
 
 ## Current Status
 
-**Now (2026-10-12, Phase 33 paused before 33.9):** 33.1–33.7 done, 33.8 built (full suite running). Owner paused the video step to finish Jack's expressions (has base + smile/laugh/surprised/thinking closed; needs at least `calm__open`, ideally Tier 1: `calm__open`, `smile__open`, `surprised__open`, `blink`) in the **sandbox copy** on port 8010. The real app (port 8000) still runs the old code and the real DB has migrations only up to 017. Resume: back up, restart the real app, copy Jack from the sandbox, render a 3-character project, Gate B-23.
+**Now (2026-10-12, Gate B-23):** Phase 33.1–33.8 done; the real app runs the Phase 33 code (migrations 018–020 applied after backups), Jack copied in from the sandbox, and a 3-character talking-sprites video rendered (`data/video/afbc299e-2362-4b8b-8d65-65ca01984f47/video_remotion.mp4`, report `docs/operations/phase33-gate-b23.md`). **Waiting for owner Gate B-23.**
+
+**Earlier (2026-10-12, Phase 33 paused before 33.9):** 33.1–33.7 done, 33.8 built (full suite running). Owner paused the video step to finish Jack's expressions (has base + smile/laugh/surprised/thinking closed; needs at least `calm__open`, ideally Tier 1: `calm__open`, `smile__open`, `surprised__open`, `blink`) in the **sandbox copy** on port 8010. The real app (port 8000) still runs the old code and the real DB has migrations only up to 017. Resume: back up, restart the real app, copy Jack from the sandbox, render a 3-character project, Gate B-23.
 
 **Earlier (2026-10-12, Phase 32 closed):** owner **Gate B-22 PASS** on the re-rendered Demo Episode (activity pictures behind both characters, Alex's own pictures, karaoke). Phase 32 ✅ complete, tag `die-vp-p32-complete`. Phase 33 plan amended with D78–D83 (Amendment A, `/vp-evolve` 2026-10-12); ready to open with `/vp-auto --phase 33`.
 
