@@ -1283,7 +1283,7 @@ Authority: owner decisions D21–D24 (brainstorm `docs/brainstorm/session-2026-0
 
 ## Phase 19 — Animated Learning Videos with Remotion (ENH-013)
 
-**Status:** 🟡 Open (planning, task 19.1 doc-first ready) | **Opened:** 2026-09-28
+**Status:** ✅ Closed 2026-10-05 (Task 19.9, D38; see the status update below) | **Opened:** 2026-09-28
 (`/vp-evolve ENH-013`) | Plan `docs/implementation/phase-19-remotion.md`.
 Authority: owner **D29** (2026-09-24, `docs/brainstorm/session-2026-09-24.md`) +
 planning-shape **D32** (2026-09-28, this phase: spike-first + `video-renderer/` subdir).
@@ -1297,25 +1297,25 @@ opt-in behind a request flag, settings toggle, and `DIE_VIDEO_RENDERER` kill swi
 `video-renderer/` workspace invoked from FastAPI as a subprocess — no per-episode data leaves
 the machine (invariant 37).
 
-- [ ] 19.1 Spike: `video-renderer/` scaffold + minimal composition (background + line-level
+- [x] 19.1 Spike: `video-renderer/` scaffold + minimal composition (background + line-level
   captions matching today's ffmpeg output, no word-timing yet) rendered for one real B1 8-min
   episode from `data/app.db`. Measure render wall time, install/packaging footprint, output
   correctness. Report `docs/operations/phase19-spike-remotion.md`. Doc-first card
   `.viepilot/phases/19-remotion/tasks/task-19.1.md`. **PASS / SCOPE-CUT / STOP decision here
   gates every later task.**
-- [ ] 19.2 Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration
+- [x] 19.2 Edge TTS `WordBoundary` capture + per-word timestamps storage + additive migration
   (provisional — opens only on 19.1 PASS)
-- [ ] 19.3 Word-level karaoke captions composition (`@remotion/captions`, provisional)
-- [ ] 19.4 Active-speaker indicator (provisional)
-- [ ] 19.5 Vocabulary/idiom pop-up cards timed to the containing line (provisional)
-- [ ] 19.6 Intro/outro + chapter/progress bar + Remotion-rendered thumbnail still — feeds
+- [x] 19.3 Word-level karaoke captions composition (`@remotion/captions`, provisional)
+- [x] 19.4 Active-speaker indicator (provisional)
+- [x] 19.5 Vocabulary/idiom pop-up cards timed to the containing line (provisional)
+- [x] 19.6 Intro/outro + chapter/progress bar + Remotion-rendered thumbnail still — feeds
   ENH-012/Phase 20 (provisional)
-- [ ] 19.7 Wire the renderer into `VideoService` behind request flag + settings toggle +
+- [x] 19.7 Wire the renderer into `VideoService` behind request flag + settings toggle +
   `DIE_VIDEO_RENDERER` kill switch; fallback-rate readout; packaging +
   `check_dependencies.py` updates (provisional)
-- [ ] 19.8 Gate B-12: media gate + owner visual sign-off on real episodes, PM
+- [x] 19.8 Gate B-12: media gate + owner visual sign-off on real episodes, PM
   (provisional)
-- [ ] 19.9 Close-out: flip default to `remotion` **only if** Gate B-12 accepted; version
+- [x] 19.9 Close-out: flip default to `remotion` **only if** Gate B-12 accepted; version
   bump to `1.2.0-beta`; tag `die-vp-p19-complete` (provisional)
 
 **Follow-ups already logged for later phases:** ENH-014 (outro heuristic — decide before the
@@ -1367,7 +1367,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 
 ## Phase 30 — Podcast visual modes (ENH-021)
 
-**Status:** 🟡 In progress 2026-10-07 | Plan `docs/implementation/phase-30-podcast-visuals.md`.
+**Status:** ✅ Complete 2026-10-07 | Plan `docs/implementation/phase-30-podcast-visuals.md`.
 
 - [x] 30.1 Composition: visualMode props, Podcast.tsx (black, one still, character cards)
 - [x] 30.2 API and props builder per mode
@@ -1376,7 +1376,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 
 ## Phase 29 — Ready-made shot library of Lan and Minh (ENH-020)
 
-**Status:** 🟡 Planned 2026-10-07 | Plan `docs/implementation/phase-29-shot-library.md`. Starts after Gate B-20.
+**Status:** 🟡 Built 2026-10-07 (29.0–29.7 done); waiting for owner Gate B-21 (29.8) | Plan `docs/implementation/phase-29-shot-library.md`.
 
 - [x] 29.0 Cleaner cuts (owner feedback 2026-10-07)
 - [x] 29.1 Gaze toward the other person (spike, then the fix)
@@ -1390,7 +1390,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 
 ## Phase 27 — Rebrand to Daily Beyond English + Canva/CapCut-style layout (ENH-018)
 
-**Status:** 🟡 Planned 2026-10-06 | Plan `docs/implementation/phase-27-rebrand-and-layout.md` (D57, D60–D62).
+**Status:** 🟡 Built 2026-10-07 (27.1–27.5 done); waiting for owner Gate B-19 (27.6) | Plan `docs/implementation/phase-27-rebrand-and-layout.md` (D57, D60–D62).
 
 - [x] 27.1 Brand pack: logo, palette, name in the app, YouTube prompts and the greeting
 - [x] 27.2 App shell: collapsible left sidebar
@@ -1402,7 +1402,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 
 ## Phase 28 — Semi-realistic picture style like the banner (ENH-019)
 
-**Status:** 🟡 Planned 2026-10-06 | Plan `docs/implementation/phase-28-semi-realistic-style.md` (D58, D59).
+**Status:** 🟡 Built 2026-10-06 (28.1–28.5 done); waiting for owner Gate B-20 (28.6) | Plan `docs/implementation/phase-28-semi-realistic-style.md` (D58, D59).
 
 - [x] 28.1 Spike (GPU): semi-realistic look; RealVisXL V5.0 approved
 - [x] 28.2 Character reference sheets for the woman and the man, with detailed prompts per view
@@ -1447,7 +1447,7 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 - [x] 32.4 API and Step 5 mode `podcast_sprites`
 - [x] 32.5 Real render with the owner's first sprite set
 - [x] 32.6a Activity Library backend: migration, inbox import, validation, review and usage history (2026-10-09)
-- [x] 32.6b Activity Library UI: grid/cards, preview, metadata and approval workflow (local Qwen3-VL smart upload, 2026-10-09)
+- [x] 32.6b Activity Library UI: grid/cards, preview, metadata and approval workflow (2026-10-09; the local Qwen3-VL smart upload was replaced the same day by owner-entered names per image)
 - [x] 32.6c Activity matching and Step 5 coverage before render (2026-10-09)
 - [x] 32.6d Full-screen activity cutaways in `podcast_sprites` (2026-10-09)
 - [x] 32.6e Storyboard insert guidance and generic-activity prompt pack (2026-10-09)

@@ -63,7 +63,7 @@ Names: `<character>__<expression>__<mouth>.png` (`alex__smile__open.png`, `lina_
 | 32.4 | **API and Step 5:** `visual_mode = "podcast_sprites"` (Enhanced only), the props builder (backgrounds from the storyboard beats, sprites, mouth and expression plans), a chip "Podcast: talking characters" | tests; browser test |
 | 32.5 | **Real render** of the demo episode with the owner's first sprite set | owner sees the video |
 | 32.6a | Activity Library migration, import, validation, review and usage history | contract tests and real data check |
-| 32.6b | Activity Library cards, metadata/review UI and local-vision smart upload | browser tests and real local-model smoke |
+| 32.6b | Activity Library cards, metadata/review UI and upload with an owner-entered name per image (the local-vision smart upload was removed by owner decision 2026-10-09) | browser tests |
 | 32.6c | Deterministic character/generic matching and Step 5 coverage | matcher/API/browser tests |
 | 32.6d | Full-screen Remotion cutaways | Python props tests, Vitest and TypeScript check |
 | 32.6e | Storyboard insert guidance and locked D72 generic prompt pack | prompt contract and exact 20-file manifest test |

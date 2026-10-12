@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 29: Ready-made shot library of Lan and Minh (ENH-020)
 
-- **Status:** planned 2026-10-07 (owner request). **Plan:** `docs/implementation/phase-29-shot-library.md`.
+- **Status:** built 2026-10-07: 29.0–29.7 done; waiting for owner Gate B-21 (29.8). Planned 2026-10-07 (owner request). **Plan:** `docs/implementation/phase-29-shot-library.md`.
 - **Started 2026-10-07:** the owner reviewed the Gate B-20 episode (cuts too ghosty, both people stare at the camera, inserts should show a character) and asked to continue with this phase to fix what was discussed.
 
 | Task | Description | Status |

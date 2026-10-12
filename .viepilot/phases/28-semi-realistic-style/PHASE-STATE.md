@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 28: Semi-realistic picture style like the banner (ENH-019)
 
-- **Status:** planned 2026-10-06 (brainstorm D58, D59). **Plan:** `docs/implementation/phase-28-semi-realistic-style.md`.
+- **Status:** built 2026-10-06: 28.1–28.5 done; waiting for owner Gate B-20 (28.6). Planned 2026-10-06 (brainstorm D58, D59). **Plan:** `docs/implementation/phase-28-semi-realistic-style.md`.
 
 | Task | Description | Status |
 |---|---|---|
