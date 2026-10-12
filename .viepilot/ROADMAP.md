@@ -1467,3 +1467,16 @@ Phase 33 is planned in `docs/implementation/phase-33-character-profiles-v2.md` a
 - [ ] 33.7 Game-style Character Selector and explicit project assignment
 - [ ] 33.8 Dynamic Activity/Storyboard/Shot integration for 3–6 cast
 - [ ] 33.9 Real three-character acceptance project and Gate B-23
+
+### Phase 34: Project hygiene: state records, checkpoint tags, docs and lint (BUG-024, BUG-026, ENH-024, ENH-025, ENH-026) - planned 2026-10-12
+
+Refactor mode: records, tags, docs and three unused imports; no behaviour change, version stays `1.2.0-beta`. Runs alongside
+Phase 32 (Gate B-22 open); Phase 33 stays unopened. State: `.viepilot/phases/34-project-hygiene/PHASE-STATE.md`.
+
+- [ ] 34.0 Land the Activity Library manual-upload work first (full suite, separate commit)
+- [ ] 34.1 Reconcile phase status records (BUG-026)
+- [ ] 34.2 Completion tags for Phases 21, 26, 30, 31 (BUG-024)
+- [ ] 34.3 README refresh (ENH-024)
+- [ ] 34.4 ARCHITECTURE, PROJECT-META, regenerated API reference (ENH-025)
+- [ ] 34.5 Clean Ruff check (ENH-026)
+- [ ] 34.6 Verification, re-audit, close the requests, `die-vp-p34-complete`

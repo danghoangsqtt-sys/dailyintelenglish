@@ -2,6 +2,8 @@
 
 ## Current Status
 
+**Now (2026-10-12, /vp-evolve):** Phase 34 (project hygiene: BUG-024, BUG-026, ENH-024, ENH-025, ENH-026) planned in `.viepilot/phases/34-project-hygiene/`. Records, tags, docs and lint only; no behaviour change; version stays `1.2.0-beta`. It runs alongside Phase 32, which still waits for owner Gate B-22; Phase 33 stays unopened. First step 34.0 lands the uncommitted Activity Library manual-upload work (owner decision 2026-10-09). Branch `owner-runs/20261001-r9` is 186 commits ahead of `main`.
+
 **Now (2026-10-09):** Phase 32.1–32.6f are done. Task 32.6f passed 1,646 Python tests and 65 Remotion tests, then rendered the real Demo Episode through the production API with exactly three approved generic cutaways, no fallback, continuous audio/captions and three persisted usage records. The baseline and candidate are ready under `data/video/b330d37f-a212-4cf7-a779-7a109098bd6c/`. **Waiting for owner Gate B-22:** compare `video_sprites_preview.mp4` with `video_remotion.mp4`; Phase 32 stays open and Phase 33 stays unopened until explicit PASS.
 
 **Now (2026-10-07, after /vp-auto):** Phases 27 (rebrand and studio frame), 28 (editorial photo look, Lan and Minh), 29 (shot library: gaze, inserts with a character, library, matcher, UI, batch, vocabulary spike) and 30 (podcast pictures: black screen, one still scene) are built and pushed; the full suite passes and `dist/DailyIntelEnglishStudio` was rebuilt and smoke-tested. **Waiting for the owner:** review the 27 library pictures on `/shots` (docs/operations/phase29-library-batch-*.png), Gate B-19 (pages and an episode), Gate B-20 (the photo-look episode), Gate B-21 (time an episode against drawing everything), and the four library questions (GPU hours, scenes first, gesture list, repetition) in `docs/implementation/phase-29-shot-library.md`.
@@ -2169,6 +2171,12 @@ Suite 964 → 1175. **Version 1.1.0-beta.** Follow-ups: ENH-014 (outro heuristic
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-10-09 | Owner decision: Activity Library uploads use a user-entered name for each image; vision auto-naming is removed | A precise owner label avoids inaccurate direction names and model load latency; review gate remains |
+| 2026-10-09 | BUG-027 auto-logged by vp-audit Tier 3: Activity Vision loses compass directions and dialogue matching | Superseded by manual naming |
+| 2026-10-09 | ENH-027 auto-logged by vp-audit Tier 3: Activity Vision one-image upload latency | Superseded by manual naming |
+| 2026-10-09 | BUG-026 auto-logged by vp-audit Tier 1: stale phase status records | Backlog |
+| 2026-10-09 | ENH-025 auto-logged by vp-audit Tier 2: stale architecture, metadata and API reference | Backlog |
+| 2026-10-09 | ENH-026 auto-logged by vp-audit Tier 3: Ruff unused imports | Backlog |
 | 2026-10-06 | **D57–D62 (owner, brainstorm `docs/brainstorm/session-2026-10-06.md`): Daily Beyond English.** D57 channel/app renamed Daily Beyond English with the owner's avatar logo; D58 picture style becomes semi-realistic like `channels4_banner.jpg` (replaces cel-anime); D59 the glasses-wearing teacher is the presenter; D60 palette moves to the logo's green/yellow/white (red accent), replacing the violet→cyan one approved hours earlier; D61 Canva/CapCut-style collapsible left sidebar + image-grid libraries with a detail panel; D62 the name applies to the app, video intro/outro + greeting, and the YouTube package. Phases 27 (rebrand + layout) and 28 (semi-realistic style) planned; prototype in `.viepilot/ui-direction/session-2026-10-06/` | The logo and the banner are two different styles (cartoon vector vs semi-realistic); the owner chose the banner's for the pictures and the logo's colours for the app |
 | 2026-10-06 | **First complete real episode** (owner: "kết hợp giữa tạo video, đưa ảnh vào video và lồng nhạc để tạo ra một kết quả hoàn chỉnh"). Real project b330d37f (DB backed up to `data/backups/app-before-full-episode-20261006-130848.db`): cast Alex=Minh, Maya=Lan; Gemini storyboard 9 beats/12 images (5 s); 12 SDXL shots in 1096 s; auto-picked Pixabay track (loops 2x); Enhanced render 98 s, 192.28 s (expected 192.22), Jenny intro/outro, voice and music levels even. **Bug found and fixed:** Remotion got a relative output path in a dev checkout and wrote under video-renderer/, so every Enhanced render fell back to ffmpeg (f363d38). Owner then asked for a professional UI (Phase 26 planned) | The parts were each verified in isolation; this was the first run of all of them together on real data, which is what exposed the relative-path fallback |
 | 2026-10-06 | **D56 (owner): Edge TTS only.** "Bỏ kokoro … chỉ sử dụng Edge, có thể xóa luôn Kokoro để giảm dung lượng"; owner then confirmed removing StyleTTS 2 and OmniVoice too. Kokoro (never wired in) removed; OmniVoice (always fell back to Edge) and StyleTTS 2 removed from code; legacy "omnivoice" normalised to edge_tts; migration 013 relabels speakers; 11.2 GB freed; 1412 passed | One engine that actually runs; the others cost 11.2 GB of disk for no runtime use |
@@ -3160,6 +3168,7 @@ Suite 964 → 1175. **Version 1.1.0-beta.** Follow-ups: ENH-014 (outro heuristic
 ### Pending Requests
 | ID | Type | Title | Priority | Status |
 |----|------|-------|----------|--------|
+| BUG-028 | Bug | Bulk approval fails when the running API is stale | high | done |
 | BUG-001 | Bug | Restore valid machine-readable ViePilot state | medium | done |
 | BUG-002 | Bug | Reconcile Phase 1 progress counters | medium | done |
 | BUG-003 | Bug | Enforce doc-first incremental task gates | medium | done |
