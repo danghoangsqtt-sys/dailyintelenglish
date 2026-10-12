@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Now (2026-10-12, Gate B-22):** owner Gate B-22 **FAILED** with three findings (ENH-028 pictures behind the characters, BUG-029 speaking character's pictures, BUG-030 karaoke lost from an old TTS cache); decisions D75-D77. Phase 32 stays open; next `/vp-evolve ENH-028 BUG-029 BUG-030`.
+**Now (2026-10-12, Gate B-22):** owner Gate B-22 **FAILED** with three findings (ENH-028 pictures behind the characters, BUG-029 speaking character's pictures, BUG-030 karaoke lost from an old TTS cache); decisions D75-D77. Phase 32 stays open; fixes planned as Tasks 32.8a-32.8d with the re-gate as 32.9 (`/vp-evolve` 2026-10-12, add-feature mode inside Phase 32); next `/vp-auto`.
 
 **Now (2026-10-12, /vp-auto):** Phase 34 (project hygiene) ✅ complete: the 2026-10-09 Activity Library manual-upload work landed (`8ac0307`, after removing a stale `.git/index.lock` from 2026-10-10 that had blocked commits), phase records reconciled (BUG-026), retroactive tags for Phases 21/26/30/31 (BUG-024), README / ARCHITECTURE / PROJECT-META / API reference refreshed (ENH-024, ENH-025), Ruff clean (ENH-026). pytest 1648 passed, Vitest 65 passed. Version stays `1.2.0-beta`. Product state unchanged: Phase 32 waits for owner Gate B-22; Phase 33 stays unopened; owner gates B-14..B-21 still open. Branch `owner-runs/20261001-r9` is far ahead of `main`.
 
