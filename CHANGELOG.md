@@ -8,6 +8,14 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Fixed / Changed (Gate B-22 fixes, 2026-10-12)
+- **Activity pictures sit behind the talking characters.** In "Podcast: talking characters" an insert beat's picture now
+  replaces the scene behind Alex and Lina, who stay in front and keep talking (owner decision D75).
+- **The speaking character's own activity pictures are used.** An insert beat prefers the picture of the character who
+  says its line (Alex working out for Alex's stretching line), otherwise a generic one; Step 5 coverage agrees (D76).
+- **Karaoke captions are no longer lost on a re-mix.** Lines cached before word timings existed are re-synthesized
+  before mixing; the result reports lines without word timings and Step 4 warns about them (D77).
+
 ### Docs / housekeeping (Phase 34, 2026-10-12)
 - README, ARCHITECTURE (overview, diagrams, services 9-14), PROJECT-META and the generated API reference describe the current Daily Beyond English app: Remotion renderer with ffmpeg fallback, cloud-first AI, visual libraries and talking characters. Phase status records and completion tags are reconciled; Ruff passes again. No behaviour change.
 

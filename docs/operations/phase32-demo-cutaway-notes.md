@@ -53,3 +53,23 @@ microsecond. The cutaway layer therefore does not interrupt or replace the sound
 
 The owner should compare image relevance, transition quality, subtitle/audio continuity
 and whether three cutaways add useful visual variety without distracting from the lesson.
+
+## Round 2 (Task 32.8d, 2026-10-12) — after Gate B-22 FAIL
+
+Fixes: 32.8a (BUG-029, speaking character's pictures), 32.8b (ENH-028, pictures behind both characters),
+32.8c (BUG-030, word timings restored). The rejected render is kept as `video_gate_b22_r1.mp4`; the previous mix as
+`data/audio/<project>/mix_before_r2.*`; database backup `data/backups/app-before-phase32-r2-20261012-140347.db`.
+
+Audio (production API, 113 s): 30/30 lines re-synthesized from the pre-19.2 cache, 413 words, `lines_without_words` 0,
+176.02 s, -16.0 LUFS. Render (production API, Enhanced, 176.6 s): 192.256 s, H.264 1280x720 + AAC, full decode clean.
+
+| Beat | Line | Speaker | Final video time | Picture chosen |
+|---|---|---|---:|---|
+| morning routine | 4 | Alex | 27.91–33.86 | Alex `morning routine` (character) |
+| exercise | 8 | Alex | 52.92–57.77 | Alex `exercise` (character) |
+| cooking breakfast | 22–23 | Alex | 133.99–139.99 | Alex `cooking` (character) |
+
+Frames in `data/video/b330d37f-a212-4cf7-a779-7a109098bd6c/phase32_evidence/r2/`: at every beat midpoint both
+sprites stand in front of the activity picture; `karaoke_a.png` / `karaoke_b.png` and the beat frames show the active
+word highlighted. Seen in passing (not part of B-22): the speaker chip reads "Maya", the project's speaker name for
+the Lina cast slot; the vocabulary card can sit over the background picture's person.
