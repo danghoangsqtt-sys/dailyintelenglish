@@ -2,7 +2,8 @@
  * current shots are reused by a new episode, so a wrong outfit or a stare at the camera can never reach a video. */
 (() => {
   const state = { shots: [], activities: [], scenes: [], characters: [], busy: false, activityBusy: false,
-    activityEditing: null, filters: { scene_id: "", kind: "", review_state: "" }, activityFilters: { review_state: "" } };
+    activityEditing: null, selectedActivities: new Set(),
+    filters: { scene_id: "", kind: "", review_state: "" }, activityFilters: { review_state: "" } };
   const byId = (id) => document.getElementById(id);
   const KINDS = [["single", "Single"], ["duo_close", "Duo close"], ["duo_wide", "Duo wide"]];
 
@@ -102,19 +103,57 @@
     return activity.character_id ? state.characters.find((character) => character.id === activity.character_id)?.name || "Character" : "Generic";
   }
 
+  function visibleActivities() {
+    const scope = byId("activity-filter-scope").value;
+    return state.activities.filter((activity) => !scope || (scope === "generic" ? !activity.character_id : activity.character_id));
+  }
+
+  function showActivityMessage(text, kind = "error") {
+    const element = byId("activity-message");
+    element.textContent = text;
+    element.className = text ? `message message-${kind}` : "";
+    element.hidden = !text;
+  }
+
   function renderActivities() {
     const grid = byId("activity-grid");
     grid.replaceChildren();
-    const scope = byId("activity-filter-scope").value;
-    const visible = state.activities.filter((activity) => !scope || (scope === "generic" ? !activity.character_id : activity.character_id));
+    const visible = visibleActivities();
     byId("activity-empty").hidden = visible.length > 0;
     const counts = { approved: 0, pending: 0, rejected: 0 };
     visible.forEach((activity) => { counts[activity.review_state] += 1; });
     byId("activity-count").textContent = visible.length ? `${visible.length} activity pictures · ${counts.approved} approved · ${counts.pending} waiting for review · ${counts.rejected} rejected` : "";
+    byId("activity-approve-all-btn").disabled = state.activityBusy || counts.pending === 0;
+    const selected = visible.filter((activity) => state.selectedActivities.has(activity.id));
+    const selectAll = byId("activity-select-all");
+    selectAll.checked = visible.length > 0 && selected.length === visible.length;
+    selectAll.indeterminate = selected.length > 0 && selected.length < visible.length;
+    selectAll.disabled = state.activityBusy || visible.length === 0;
+    byId("activity-selected-count").textContent = `${selected.length} selected`;
+    byId("activity-clear-selection").disabled = state.activityBusy || selected.length === 0;
+    byId("activity-approve-selected").disabled = state.activityBusy || !selected.some((activity) => activity.review_state !== "approved");
+    byId("activity-reject-selected").disabled = state.activityBusy || !selected.some((activity) => activity.review_state !== "rejected");
+    byId("activity-delete-selected").disabled = state.activityBusy || selected.length === 0;
     visible.forEach((activity) => {
       const card = document.createElement("article");
-      card.className = `shot-card is-${activity.review_state}`;
+      card.className = `shot-card is-${activity.review_state}${state.selectedActivities.has(activity.id) ? " is-selected" : ""}`;
       card.dataset.activityId = activity.id;
+      const selectionRow = document.createElement("div");
+      selectionRow.className = "activity-select-row";
+      const selectionLabel = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "activity-select-checkbox";
+      checkbox.checked = state.selectedActivities.has(activity.id);
+      checkbox.disabled = state.activityBusy;
+      checkbox.setAttribute("aria-label", `Select ${activity.activity} picture`);
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) state.selectedActivities.add(activity.id);
+        else state.selectedActivities.delete(activity.id);
+        renderActivities();
+      });
+      selectionLabel.append(checkbox, document.createTextNode("Select"));
+      selectionRow.append(selectionLabel);
       const image = document.createElement("img");
       image.src = `${activity.content_url}?v=${encodeURIComponent(activity.updated_at)}`;
       image.alt = `${activity.activity} activity illustration`;
@@ -144,8 +183,12 @@
       reject.type = "button"; reject.className = "btn btn-ghost btn-sm"; reject.textContent = "Reject";
       reject.disabled = state.activityBusy || activity.review_state === "rejected";
       reject.addEventListener("click", () => reviewActivity(activity.id, "rejected"));
-      actions.append(edit, approve, reject);
-      card.append(image, title, meta, badges, actions);
+      const remove = document.createElement("button");
+      remove.type = "button"; remove.className = "btn btn-ghost btn-sm delete-btn"; remove.textContent = "Delete";
+      remove.disabled = state.activityBusy;
+      remove.addEventListener("click", () => removeActivity(activity));
+      actions.append(edit, approve, reject, remove);
+      card.append(selectionRow, image, title, meta, badges, actions);
       grid.append(card);
     });
   }
@@ -153,6 +196,10 @@
   async function refreshActivities() {
     try {
       state.activities = await Api.listLibraryActivities(state.activityFilters);
+      const loadedIds = new Set(state.activities.map((activity) => activity.id));
+      for (const id of state.selectedActivities) {
+        if (!loadedIds.has(id)) state.selectedActivities.delete(id);
+      }
     } catch (error) {
       showMessage(error.message || "Could not load the Activity Library.");
     }
@@ -165,6 +212,116 @@
     catch (error) { showMessage(error.message || "Could not save the activity review."); }
     state.activityBusy = false;
     await refreshActivities();
+  }
+
+  async function removeActivity(activity) {
+    if (state.activityBusy) return;
+    const priorUse = activity.use_count
+      ? ` It was used in ${activity.use_count} render${activity.use_count === 1 ? "" : "s"}; existing videos stay intact, but this picture's use history will be removed.`
+      : "";
+    if (!window.confirm(`Delete “${activity.activity}” from the Activity Library? Future videos cannot use it.${priorUse}`)) return;
+    state.activityBusy = true;
+    renderActivities();
+    try {
+      const result = await Api.deleteLibraryActivity(activity.id);
+      await refreshActivities();
+      showActivityMessage(result.file_removed ? "Activity picture deleted." :
+        "Activity picture removed from the library, but its file could not be deleted from disk.",
+      result.file_removed ? "success" : "error");
+    } catch (error) {
+      await refreshActivities();
+      showActivityMessage(error.message || "Could not delete the activity picture.");
+    } finally {
+      state.activityBusy = false;
+      renderActivities();
+    }
+  }
+
+  async function applySelectedActivities(action) {
+    if (state.activityBusy) return;
+    const selected = visibleActivities().filter((activity) => state.selectedActivities.has(activity.id));
+    const targetState = action === "approve" ? "approved" : "rejected";
+    const targets = action === "delete" ? selected : selected.filter((activity) => activity.review_state !== targetState);
+    if (!targets.length) return;
+    const verb = action === "approve" ? "Approve" : action === "reject" ? "Reject" : "Delete";
+    const count = targets.length;
+    const skipped = selected.length - count;
+    const used = targets.filter((activity) => activity.use_count > 0).length;
+    const warning = action === "delete"
+      ? ` This permanently removes their library records and image files. Existing videos remain.${used ? ` Use history for ${used} previously used picture${used === 1 ? "" : "s"} will also be removed.` : ""}`
+      : `${action === "approve" ? " Check their names first." : ""}${skipped ? ` ${skipped} already ${targetState} picture${skipped === 1 ? "" : "s"} will be skipped.` : ""}`;
+    if (!window.confirm(`${verb} ${count} selected activity picture${count === 1 ? "" : "s"}?${warning}`)) return;
+    state.activityBusy = true;
+    renderActivities();
+    let completed = 0;
+    let filesNotRemoved = 0;
+    let failure = null;
+    for (const activity of targets) {
+      showActivityMessage(`${verb} picture ${completed + 1} of ${count}…`, "success");
+      try {
+        if (action === "delete") {
+          const result = await Api.deleteLibraryActivity(activity.id);
+          if (!result.file_removed) filesNotRemoved += 1;
+        } else {
+          await Api.reviewLibraryActivity(activity.id, targetState);
+        }
+        state.selectedActivities.delete(activity.id);
+        completed += 1;
+      } catch (error) {
+        failure = error;
+        break;
+      }
+    }
+    if (!failure) state.selectedActivities.clear();
+    await refreshActivities();
+    if (failure) {
+      const restart = action === "delete" && failure.status === 405 ? " Restart the app to enable image deletion." : "";
+      const past = action === "approve" ? "approved" : action === "reject" ? "rejected" : "deleted";
+      showActivityMessage(`${completed} of ${count} pictures ${past}. Stopped: ${failure.message || "request failed"}.${restart}`);
+    } else if (filesNotRemoved) {
+      showActivityMessage(`${completed} pictures deleted from the library, but ${filesNotRemoved} image file${filesNotRemoved === 1 ? "" : "s"} could not be removed from disk.`);
+    } else {
+      showActivityMessage(`${completed} activity picture${completed === 1 ? "" : "s"} ${action === "delete" ? "deleted" : targetState}.`, "success");
+    }
+    state.activityBusy = false;
+    renderActivities();
+  }
+
+  async function approvePendingActivities() {
+    if (state.activityBusy) return;
+    const pending = visibleActivities().filter((activity) => activity.review_state === "pending");
+    if (!pending.length) return;
+    const count = pending.length;
+    if (!window.confirm(`Approve ${count} activity picture${count === 1 ? "" : "s"} in view? Check their names first. Incorrect names may make videos choose the wrong picture.`)) return;
+    state.activityBusy = true;
+    renderActivities();
+    try {
+      let approved;
+      try {
+        const result = await Api.approveLibraryActivitiesBatch(pending.map((activity) => activity.id));
+        approved = result.approved;
+      } catch (error) {
+        if (error.status !== 404 && error.status !== 405) throw error;
+        approved = 0;
+        for (const activity of pending) {
+          showActivityMessage(`Approving picture ${approved + 1} of ${count}…`, "success");
+          try {
+            await Api.reviewLibraryActivity(activity.id, "approved");
+          } catch (singleError) {
+            throw new Error(`Approved ${approved} of ${count} pictures. Could not approve the next picture: ${singleError.message || "request failed"}`);
+          }
+          approved += 1;
+        }
+      }
+      await refreshActivities();
+      showActivityMessage(`${approved} activity picture${approved === 1 ? "" : "s"} approved.`, "success");
+    } catch (error) {
+      await refreshActivities();
+      showActivityMessage(error.message || "Could not approve the selected activity pictures.");
+    } finally {
+      state.activityBusy = false;
+      renderActivities();
+    }
   }
 
   function activityValues(values) {
@@ -210,16 +367,150 @@
     await refreshActivities();
   }
 
-  let activityUploadPreviewUrl = null;
+  let activityUploadPreviewUrls = [];
+  let activityUploadPreviewIndex = 0;
+
+  function showActivityUploadMessage(text) {
+    const element = byId("activity-upload-message");
+    element.textContent = text;
+    element.className = text ? "message message-error" : "";
+    element.hidden = !text;
+  }
 
   function clearActivityUploadPreview() {
-    if (activityUploadPreviewUrl) URL.revokeObjectURL(activityUploadPreviewUrl);
-    activityUploadPreviewUrl = null;
+    activityUploadPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    activityUploadPreviewUrls = [];
+    activityUploadPreviewIndex = 0;
     byId("activity-upload-preview").removeAttribute("src");
     byId("activity-upload-preview").hidden = true;
     byId("activity-upload-placeholder").hidden = false;
+    byId("activity-upload-preview-controls").hidden = true;
+    byId("activity-upload-preview-count").textContent = "";
+    byId("activity-upload-preview-filename").textContent = "";
+    byId("activity-upload-preview-filename").hidden = true;
+    byId("activity-upload-filmstrip").replaceChildren();
+    byId("activity-upload-filmstrip").hidden = true;
     byId("activity-upload-selection").textContent = "No pictures selected.";
+    renderActivityUploadItems([]);
     byId("activity-upload-submit").disabled = true;
+    showActivityUploadMessage("");
+  }
+
+  function updateActivityUploadReady() {
+    const files = byId("activity-upload-file").files;
+    const names = [...byId("activity-upload-items").querySelectorAll(".activity-upload-name")];
+    const named = names.filter((input) => input.value.trim()).length;
+    byId("activity-upload-progress").textContent = files.length
+      ? `Editing picture ${activityUploadPreviewIndex + 1} of ${files.length} · ${named} named`
+      : "Choose pictures to begin";
+    byId("activity-upload-submit").disabled = state.activityBusy || !files.length || files.length !== names.length
+      || names.some((input) => !input.value.trim());
+  }
+
+  function renderActivityUploadItems(files, drafts = []) {
+    const list = byId("activity-upload-items");
+    list.replaceChildren();
+    (files.length ? [...files] : [null]).forEach((file, index) => {
+      const item = document.createElement("div");
+      item.className = "activity-upload-item";
+      item.dataset.fileName = file?.name || "";
+      const header = document.createElement("div");
+      header.className = "activity-upload-item-header";
+      const labels = document.createElement("div");
+      labels.className = "activity-upload-item-label";
+      const number = document.createElement("strong");
+      number.textContent = file ? `Picture ${index + 1} of ${files.length}` : "Picture 1 — choose a file above";
+      labels.append(number);
+      if (file) {
+        const filename = document.createElement("span");
+        filename.className = "activity-upload-file-name";
+        filename.textContent = file.name;
+        labels.append(filename);
+      }
+      header.append(labels);
+      const field = (labelText, className, placeholder, required = false) => {
+        const label = document.createElement("label");
+        label.textContent = labelText;
+        const input = document.createElement("input");
+        input.className = className;
+        input.type = "text";
+        input.placeholder = placeholder;
+        input.required = required;
+        input.maxLength = required ? 80 : 400;
+        input.value = drafts[index]?.[className] || "";
+        label.append(input);
+        return label;
+      };
+      item.append(header,
+        field("Activity name", "activity-upload-name", "go east", true),
+        field("Context tags (optional)", "activity-upload-context", "city, waterfront"),
+        field("Alternative phrases (optional)", "activity-upload-aliases", "head east, walk east"));
+      if (files.length > 1) {
+        const navigation = document.createElement("div");
+        navigation.className = "activity-upload-form-nav";
+        const addNavigation = (text, targetIndex) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "btn btn-ghost btn-sm";
+          button.textContent = text;
+          button.addEventListener("click", () => {
+            selectActivityUploadPreview(targetIndex);
+            list.querySelectorAll(".activity-upload-item")[targetIndex].querySelector(".activity-upload-name").focus();
+          });
+          navigation.append(button);
+        };
+        if (index > 0) addNavigation("Previous picture", index - 1);
+        if (index < files.length - 1) addNavigation("Next picture", index + 1);
+        item.append(navigation);
+      }
+      list.append(item);
+    });
+    updateActivityUploadReady();
+  }
+
+  function renderActivityUploadFilmstrip(files) {
+    const strip = byId("activity-upload-filmstrip");
+    strip.replaceChildren();
+    files.forEach((file, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.setAttribute("aria-label", `Show picture ${index + 1} of ${files.length}`);
+      const image = document.createElement("img");
+      image.src = activityUploadPreviewUrls[index];
+      image.alt = "";
+      const number = document.createElement("span");
+      number.textContent = String(index + 1);
+      button.append(image, number);
+      button.addEventListener("click", () => selectActivityUploadPreview(index));
+      strip.append(button);
+    });
+    strip.hidden = false;
+  }
+
+  function selectActivityUploadPreview(index) {
+    if (index < 0 || index >= activityUploadPreviewUrls.length) return;
+    activityUploadPreviewIndex = index;
+    const files = byId("activity-upload-file").files;
+    const preview = byId("activity-upload-preview");
+    preview.src = activityUploadPreviewUrls[index];
+    preview.alt = `Picture ${index + 1} of ${files.length}: ${files[index].name}`;
+    preview.hidden = false;
+    byId("activity-upload-placeholder").hidden = true;
+    byId("activity-upload-preview-controls").hidden = false;
+    byId("activity-upload-preview-count").textContent = `Picture ${index + 1} of ${files.length}`;
+    byId("activity-upload-preview-filename").textContent = files[index].name;
+    byId("activity-upload-preview-filename").hidden = false;
+    byId("activity-upload-previous").disabled = index === 0;
+    byId("activity-upload-next").disabled = index === files.length - 1;
+    const list = byId("activity-upload-items");
+    list.querySelectorAll(".activity-upload-item").forEach((item, itemIndex) => {
+      item.hidden = itemIndex !== index;
+      item.classList.toggle("is-previewed", itemIndex === index);
+    });
+    byId("activity-upload-filmstrip").querySelectorAll("button").forEach((button, buttonIndex) => {
+      button.classList.toggle("is-previewed", buttonIndex === index);
+    });
+    updateActivityUploadReady();
   }
 
   function activityTargetButton(id, name, picture = "") {
@@ -276,17 +567,61 @@
   }
 
   function previewActivityUpload() {
+    const previous = [...byId("activity-upload-items").querySelectorAll(".activity-upload-item")].map((row) => ({
+      fileName: row.dataset.fileName,
+      fields: {
+        "activity-upload-name": row.querySelector(".activity-upload-name").value,
+        "activity-upload-context": row.querySelector(".activity-upload-context").value,
+        "activity-upload-aliases": row.querySelector(".activity-upload-aliases").value,
+      },
+    }));
+    const files = [...byId("activity-upload-file").files];
+    const available = previous.filter((row) => row.fileName);
+    const firstDraft = previous[0]?.fileName ? null : previous[0]?.fields;
+    const drafts = files.map((file, index) => {
+      const matching = available.findIndex((row) => row.fileName === file.name);
+      if (matching !== -1) return available.splice(matching, 1)[0].fields;
+      return index === 0 ? firstDraft : null;
+    });
     clearActivityUploadPreview();
-    const files = byId("activity-upload-file").files;
     const file = files[0];
-    if (!file) return;
-    activityUploadPreviewUrl = URL.createObjectURL(file);
-    const preview = byId("activity-upload-preview");
-    preview.src = activityUploadPreviewUrl;
-    preview.hidden = false;
-    byId("activity-upload-placeholder").hidden = true;
+    if (!file) {
+      renderActivityUploadItems([], [previous[0]?.fields]);
+      return;
+    }
+    activityUploadPreviewUrls = files.map((selectedFile) => URL.createObjectURL(selectedFile));
     byId("activity-upload-selection").textContent = `${files.length} picture${files.length === 1 ? "" : "s"} selected.`;
-    byId("activity-upload-submit").disabled = false;
+    renderActivityUploadItems(files, drafts);
+    renderActivityUploadFilmstrip(files);
+    selectActivityUploadPreview(0);
+  }
+
+  async function uploadActivityPictures(files, metadata, characterId) {
+    const batch = new FormData();
+    batch.set("character_id", characterId);
+    batch.set("metadata_json", JSON.stringify(metadata));
+    files.forEach((file) => batch.append("files", file, file.name));
+    try {
+      return await Api.uploadLibraryActivitiesBatch(batch);
+    } catch (error) {
+      if (error.status !== 404 && error.status !== 405) throw error;
+    }
+    const result = { items: [], rejected: [] };
+    for (const [index, file] of files.entries()) {
+      byId("activity-upload-submit").textContent = `Adding picture ${index + 1} of ${files.length}…`;
+      const single = new FormData();
+      single.set("file", file, file.name);
+      single.set("character_id", characterId);
+      single.set("activity", metadata[index].activity);
+      single.set("context_tags", metadata[index].context_tags.join(", "));
+      single.set("aliases", metadata[index].aliases.join(", "));
+      try {
+        result.items.push(await Api.uploadLibraryActivity(single));
+      } catch (error) {
+        result.rejected.push({ file: file.name, reason: error.message || "upload failed" });
+      }
+    }
+    return result;
   }
 
   async function uploadActivity(event) {
@@ -296,29 +631,40 @@
     const button = byId("activity-upload-submit");
     button.disabled = true;
     const originalLabel = button.textContent;
-    button.textContent = "AI is analyzing…";
+    button.textContent = "Adding pictures…";
+    byId("activity-upload-close").disabled = true;
     try {
-      const result = await Api.smartUploadLibraryActivities(new FormData(event.currentTarget));
+      const files = [...byId("activity-upload-file").files];
+      const rows = [...byId("activity-upload-items").querySelectorAll(".activity-upload-item")];
+      if (!files.length || files.length !== rows.length || rows.some((row) => !row.querySelector(".activity-upload-name").value.trim())) {
+        showActivityUploadMessage("Choose pictures and enter an activity name for each one.");
+        return;
+      }
+      showActivityUploadMessage("");
+      const metadata = rows.map((row) => ({
+        activity: row.querySelector(".activity-upload-name").value.trim(),
+        context_tags: activityValues(row.querySelector(".activity-upload-context").value),
+        aliases: activityValues(row.querySelector(".activity-upload-aliases").value),
+      }));
+      const result = await uploadActivityPictures(files, metadata, byId("activity-upload-character").value);
       if (result.items.length) {
         byId("activity-upload-dialog").close();
         clearActivityUploadPreview();
       }
       await refreshActivities();
-      const localCount = result.items.filter((item) => item.analysis_source === "local_ai").length;
-      const cloudCount = result.items.filter((item) => item.analysis_source === "cloud_ai").length;
-      const fallbackCount = result.items.length - localCount - cloudCount;
       const parts = [`${result.items.length} picture${result.items.length === 1 ? "" : "s"} added`];
-      if (localCount) parts.push(`${localCount} described locally`);
-      if (cloudCount) parts.push(`${cloudCount} described by cloud fallback`);
-      if (fallbackCount) parts.push(`${fallbackCount} need a quick metadata review`);
-      if (result.rejected.length) parts.push(`${result.rejected.length} rejected`);
-      showMessage(`${parts.join(" · ")}.`, result.items.length ? "success" : "error");
+      if (result.rejected.length) parts.push(result.rejected.map((item) => `${item.file}: ${item.reason}`).join("; "));
+      const message = `${parts.join(" · ")}.`;
+      if (result.items.length) showActivityMessage(message, result.rejected.length ? "error" : "success");
+      else showActivityUploadMessage(message);
     } catch (error) {
-      showMessage(error.message || "Could not add the activity pictures.");
+      showActivityUploadMessage(error.message || "Could not add the activity pictures.");
     } finally {
       state.activityBusy = false;
       button.textContent = originalLabel;
-      button.disabled = byId("activity-upload-file").files.length === 0;
+      byId("activity-upload-close").disabled = false;
+      updateActivityUploadReady();
+      renderActivities();
     }
   }
 
@@ -534,13 +880,33 @@
     byId("activity-import-btn").addEventListener("click", importActivities);
     byId("activity-upload-open").addEventListener("click", openActivityUpload);
     byId("activity-upload-file").addEventListener("change", previewActivityUpload);
+    byId("activity-upload-previous").addEventListener("click", () => selectActivityUploadPreview(activityUploadPreviewIndex - 1));
+    byId("activity-upload-next").addEventListener("click", () => selectActivityUploadPreview(activityUploadPreviewIndex + 1));
+    byId("activity-upload-items").addEventListener("input", updateActivityUploadReady);
     byId("activity-upload-form").addEventListener("submit", uploadActivity);
     byId("activity-upload-close").addEventListener("click", () => byId("activity-upload-dialog").close());
     byId("activity-upload-dialog").addEventListener("close", clearActivityUploadPreview);
     byId("activity-filter-state").addEventListener("change", (event) => {
+      state.selectedActivities.clear();
       state.activityFilters.review_state = event.target.value; refreshActivities();
     });
-    byId("activity-filter-scope").addEventListener("change", renderActivities);
+    byId("activity-filter-scope").addEventListener("change", () => {
+      state.selectedActivities.clear(); renderActivities();
+    });
+    byId("activity-select-all").addEventListener("change", (event) => {
+      visibleActivities().forEach((activity) => {
+        if (event.target.checked) state.selectedActivities.add(activity.id);
+        else state.selectedActivities.delete(activity.id);
+      });
+      renderActivities();
+    });
+    byId("activity-clear-selection").addEventListener("click", () => {
+      state.selectedActivities.clear(); renderActivities();
+    });
+    byId("activity-approve-selected").addEventListener("click", () => applySelectedActivities("approve"));
+    byId("activity-reject-selected").addEventListener("click", () => applySelectedActivities("reject"));
+    byId("activity-delete-selected").addEventListener("click", () => applySelectedActivities("delete"));
+    byId("activity-approve-all-btn").addEventListener("click", approvePendingActivities);
     byId("activity-editor-form").addEventListener("submit", saveActivity);
     byId("activity-close-btn").addEventListener("click", () => byId("activity-dialog").close());
     refreshSprites();

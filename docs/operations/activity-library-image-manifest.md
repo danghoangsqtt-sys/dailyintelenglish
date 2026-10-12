@@ -1,5 +1,9 @@
 # Activity Library image manifest
 
+For direct uploads on the Shot Library page, the owner enters an activity name
+for each picture. This manifest is for the separate prepared-folder import;
+the names in its filenames are owner-written, not generated from image analysis.
+
 Store generated images in these three folders. The importer now scans their files
 recursively, so do not move approved assets elsewhere before importing.
 

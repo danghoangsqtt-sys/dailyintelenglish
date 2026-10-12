@@ -132,13 +132,17 @@ const Api = (() => {
     importLibraryActivities: () => request("/api/visuals/library/activities/import", { method: "POST" }),
     uploadLibraryActivity: (formData) =>
       request("/api/visuals/library/activities/upload", { method: "POST", body: formData }),
-    smartUploadLibraryActivities: (formData) =>
-      request("/api/visuals/library/activities/smart-upload", { method: "POST", body: formData }),
+    uploadLibraryActivitiesBatch: (formData) =>
+      request("/api/visuals/library/activities/upload-batch", { method: "POST", body: formData }),
     updateLibraryActivity: (id, patch) => request(`/api/visuals/library/activities/${id}`, {
       method: "PATCH", body: JSON.stringify(patch),
     }),
     reviewLibraryActivity: (id, reviewState) => request(`/api/visuals/library/activities/${id}/review`, {
       method: "PATCH", body: JSON.stringify({ review_state: reviewState }),
+    }),
+    deleteLibraryActivity: (id) => request(`/api/visuals/library/activities/${id}`, { method: "DELETE" }),
+    approveLibraryActivitiesBatch: (ids) => request("/api/visuals/library/activities/approve-batch", {
+      method: "POST", body: JSON.stringify({ ids }),
     }),
     getLibraryActivityHistory: (id) => request(`/api/visuals/library/activities/${id}/history`),
     getLibraryBackgrounds: () => request("/api/visuals/library/backgrounds"),

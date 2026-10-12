@@ -1,12 +1,15 @@
 """Character, scene, and project visuals API."""
 
 import asyncio
+import json
+import logging
 import time
 from typing import Literal
 
 import aiosqlite
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import FileResponse
+from pydantic import ValidationError as PydanticValidationError
 
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
@@ -14,13 +17,12 @@ from app.core.responses import ok
 from app.db.database import get_db
 from app.db.transactions import read_transaction, write_transaction
 from app.models.visuals import (
-    AGE_GROUPS, BOTTOMS, COLORS, GENDERS, SCENE_CATEGORIES, TIMES_OF_DAY, TOPS, ActivityMetadataInput,
-    ActivityMetadataPatch, ActivityReviewInput, ApprovalInput, CastMemberInput, CharacterInput, CharacterPatch,
-    ReferenceInput, SceneInput, ScenePatch, SheetItemInput, ShotReviewInput,
+    AGE_GROUPS, BOTTOMS, COLORS, GENDERS, SCENE_CATEGORIES, TIMES_OF_DAY, TOPS, ActivityApproveBatchInput,
+    ActivityMetadataInput, ActivityMetadataPatch, ActivityReviewInput, ApprovalInput, CastMemberInput, CharacterInput,
+    CharacterPatch, ReferenceInput, SceneInput, ScenePatch, SheetItemInput, ShotReviewInput,
 )
 from app.services import project_service
 from app.services.visuals import jobs
-from app.services.visuals import activity_analysis_service as activity_analysis
 from app.services.visuals import activity_library_service as activity_library
 from app.services.visuals import activity_matcher
 from app.services.visuals import library_service as library
@@ -32,6 +34,7 @@ from app.services.visuals.engine import IMAGE_PYTHON, require_generation
 
 router = APIRouter(prefix="/api/visuals", tags=["visuals"])
 project_router = APIRouter(prefix="/api/projects/{project_id}/visuals", tags=["visuals"])
+logger = logging.getLogger(__name__)
 
 
 def _form_labels(value: str) -> list[str]:
@@ -289,53 +292,66 @@ async def upload_library_activity(
     return ok(row)
 
 
-@router.post("/library/activities/smart-upload", status_code=201)
-async def smart_upload_library_activities(
+@router.post("/library/activities/upload-batch", status_code=201)
+async def upload_library_activities_batch(
     files: list[UploadFile] = File(...),
+    metadata_json: str = Form(...),
     character_id: str = Form(""),
     db: aiosqlite.Connection = Depends(get_db),
 ) -> dict:
-    """Add up to 20 pictures; vision suggests all metadata while the user only chooses the shelf."""
+    """Add up to 20 pictures with one owner-entered activity name per file."""
     if not files or len(files) > 20:
         raise ValidationError("choose between 1 and 20 activity images")
+    try:
+        raw_metadata = json.loads(metadata_json)
+    except (TypeError, ValueError) as exc:
+        raise ValidationError("picture metadata must be a JSON list") from exc
+    if not isinstance(raw_metadata, list) or len(raw_metadata) != len(files):
+        raise ValidationError("provide one activity name for each picture")
     selected_character = character_id or None
     if selected_character:
         async with read_transaction():
             await library.get_character_row(db, selected_character)
+    metadata_items = []
+    for entry in raw_metadata:
+        if not isinstance(entry, dict):
+            raise ValidationError("each picture needs an activity name")
+        if not isinstance(entry.get("activity"), str) or not entry["activity"].strip():
+            raise ValidationError("each picture needs an activity name")
+        try:
+            metadata_items.append(ActivityMetadataInput.model_validate({
+                "character_id": selected_character,
+                "activity": entry.get("activity"),
+                "context_tags": entry.get("context_tags", []),
+                "aliases": entry.get("aliases", []),
+            }))
+        except PydanticValidationError as exc:
+            raise ValidationError("each picture needs a valid activity name and optional tags/aliases") from exc
 
     items, rejected = [], []
-    uploads: list[tuple[bytes, str]] = []
-    for file in files:
+    for file, metadata in zip(files, metadata_items):
         filename = file.filename or "activity.png"
         try:
             content = await activity_library.read_upload(file)
-            uploads.append((content, filename))
-        except (ConflictError, ValidationError) as exc:
-            rejected.append({"file": filename, "reason": str(exc)})
-
-    suggestions = await activity_analysis.analyze_activity_images(uploads)
-    for (content, filename), suggestion in zip(uploads, suggestions):
-        try:
             async with write_transaction(db):
-                variant = await activity_library.next_variant(db, selected_character, suggestion["activity"])
+                variant = await activity_library.next_variant(db, selected_character, metadata.activity)
                 row = await activity_library.upload_activity_bytes(
-                    db,
-                    filename,
-                    content,
-                    {
-                        "character_id": selected_character,
-                        "activity": suggestion["activity"],
-                        "context_tags": suggestion["context_tags"],
-                        "aliases": suggestion["aliases"],
-                        "variant": variant,
-                    },
+                    db, filename, content, {**metadata.model_dump(), "variant": variant},
                 )
-            row["analysis_source"] = suggestion["source"]
-            row["analysis_confidence"] = suggestion["confidence"]
             items.append(row)
         except (ConflictError, ValidationError) as exc:
             rejected.append({"file": filename, "reason": str(exc)})
     return ok({"items": items, "rejected": rejected})
+
+
+@router.post("/library/activities/approve-batch")
+async def approve_library_activities_batch(
+    body: ActivityApproveBatchInput, db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Approve only the pending activity pictures explicitly selected in the UI."""
+    async with write_transaction(db):
+        approved = await activity_library.approve_pending_batch(db, body.ids)
+    return ok({"approved": approved})
 
 
 @router.get("/library/activities/{activity_id}/content")
@@ -353,6 +369,19 @@ async def edit_library_activity(
         row = await activity_library.update_metadata(activity_id=activity_id, db=db,
                                                      changes=body.model_dump(exclude_unset=True))
     return ok(row)
+
+
+@router.delete("/library/activities/{activity_id}")
+async def delete_library_activity(activity_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Delete one library image after its database removal commits."""
+    async with write_transaction(db):
+        path = await activity_library.delete_activity(db, activity_id)
+    try:
+        await asyncio.to_thread(path.unlink, missing_ok=True)
+    except OSError as exc:
+        logger.warning("activity_file_cleanup_failed activity_id=%s error=%s", activity_id, type(exc).__name__)
+        return ok({"deleted": activity_id, "file_removed": False})
+    return ok({"deleted": activity_id, "file_removed": True})
 
 
 @router.patch("/library/activities/{activity_id}/review")

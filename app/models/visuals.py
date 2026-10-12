@@ -167,6 +167,12 @@ class ActivityReviewInput(BaseModel):
     review_state: Literal["pending", "approved", "rejected"]
 
 
+class ActivityApproveBatchInput(BaseModel):
+    """Explicit selection of pending activity pictures to approve together."""
+
+    ids: list[str] = Field(min_length=1, max_length=500)
+
+
 class ApprovalInput(BaseModel):
     approved: bool
 

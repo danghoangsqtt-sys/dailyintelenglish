@@ -14,7 +14,6 @@ from starlette.datastructures import UploadFile
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.main import app
-from app.services.visuals import activity_analysis_service as analysis
 from app.services.visuals import activity_library_service as activities
 
 MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "app" / "db" / "migrations"
@@ -45,19 +44,6 @@ async def seed_project(db: aiosqlite.Connection, project_id: str = "project-acti
         "INSERT INTO projects (id, name, created_at, updated_at) VALUES (?, 'Activity test', 'now', 'now')",
         (project_id,),
     )
-
-
-@pytest.mark.asyncio
-async def test_activity_analysis_uses_filename_fallback_when_vision_is_disabled(monkeypatch):
-    monkeypatch.setattr(settings, "ACTIVITY_VISION_PROVIDER", "filename")
-    result = await analysis.analyze_activity_image(b"not sent or decoded", "washing-dishes.png")
-    assert result == {
-        "activity": "washing dishes",
-        "context_tags": [],
-        "aliases": [],
-        "confidence": 0.0,
-        "source": "filename",
-    }
 
 
 @pytest.mark.asyncio
@@ -275,3 +261,156 @@ def test_activity_library_api_lifecycle(tmp_path, monkeypatch):
         assert client.get(f"/api/visuals/library/activities/{activity_id}/content").status_code == 200
         history = client.get(f"/api/visuals/library/activities/{activity_id}/history")
         assert history.status_code == 200 and history.json()["data"] == []
+
+
+def test_batch_upload_uses_separate_owner_names_and_stays_pending(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/visuals/library/activities/upload-batch",
+            files=[
+                ("files", ("east.png", image_bytes((180, 30, 30)), "image/png")),
+                ("files", ("west.png", image_bytes((30, 30, 180)), "image/png")),
+            ],
+            data={"metadata_json": '[{"activity":"Go East","context_tags":["city"],'
+                                   '"aliases":["head east"]},{"activity":"Go West",'
+                                   '"context_tags":["waterfront"],"aliases":["head west"]}]'},
+        )
+        assert response.status_code == 201, response.text
+        rows = response.json()["data"]["items"]
+        assert response.json()["data"]["rejected"] == []
+        assert [(row["activity"], row["aliases"], row["review_state"]) for row in rows] == [
+            ("go east", ["head east"], "pending"),
+            ("go west", ["head west"], "pending"),
+        ]
+        assert client.post("/api/visuals/library/activities/smart-upload").status_code == 405
+
+
+def test_batch_upload_rejects_missing_or_misaligned_names_without_saving(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    with TestClient(app) as client:
+        files = [("files", ("east.png", image_bytes((60, 90, 120)), "image/png"))]
+        for metadata_json in ('[]', '[{"activity":"   "}]', 'not json'):
+            response = client.post(
+                "/api/visuals/library/activities/upload-batch",
+                files=files,
+                data={"metadata_json": metadata_json},
+            )
+            assert response.status_code == 422, response.text
+        assert client.get("/api/visuals/library/activities").json()["data"] == []
+
+
+def test_batch_approval_is_explicit_pending_only_and_atomic(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    with TestClient(app) as client:
+        created = client.post(
+            "/api/visuals/library/activities/upload-batch",
+            files=[
+                ("files", ("east.png", image_bytes((30, 60, 90)), "image/png")),
+                ("files", ("west.png", image_bytes((90, 60, 30)), "image/png")),
+                ("files", ("left.png", image_bytes((60, 90, 30)), "image/png")),
+            ],
+            data={"metadata_json": '[{"activity":"go east"},{"activity":"go west"},{"activity":"turn left"}]'},
+        )
+        assert created.status_code == 201, created.text
+        east, west, left = [row["id"] for row in created.json()["data"]["items"]]
+        rejected = client.patch(
+            f"/api/visuals/library/activities/{left}/review", json={"review_state": "rejected"},
+        )
+        assert rejected.status_code == 200
+        endpoint = "/api/visuals/library/activities/approve-batch"
+        assert client.post(endpoint, json={"ids": [east, east]}).status_code == 422
+        assert client.post(endpoint, json={"ids": [east, left]}).status_code == 409
+        pending = client.get("/api/visuals/library/activities", params={"review_state": "pending"})
+        assert {row["id"] for row in pending.json()["data"]} == {east, west}
+        response = client.post(endpoint, json={"ids": [east, west]})
+        assert response.status_code == 200, response.text
+        assert response.json()["data"] == {"approved": 2}
+        assert client.post(endpoint, json={"ids": [east]}).status_code == 409
+        approved = client.get("/api/visuals/library/activities", params={"review_state": "approved"})
+        assert {row["id"] for row in approved.json()["data"]} == {east, west}
+
+
+def test_delete_activity_removes_record_and_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/visuals/library/activities/upload",
+            files={"file": ("east.png", image_bytes((20, 80, 140)), "image/png")},
+            data={"activity": "go east"},
+        )
+        assert response.status_code == 201, response.text
+        activity_id = response.json()["data"]["id"]
+        stored = activities.activities_dir() / f"{activity_id}.png"
+        assert stored.is_file()
+        assert client.patch(
+            f"/api/visuals/library/activities/{activity_id}/review", json={"review_state": "approved"},
+        ).status_code == 200
+        deleted = client.delete(f"/api/visuals/library/activities/{activity_id}")
+        assert deleted.status_code == 200, deleted.text
+        assert deleted.json()["data"] == {"deleted": activity_id, "file_removed": True}
+        assert not stored.exists()
+        assert client.get(f"/api/visuals/library/activities/{activity_id}/content").status_code == 404
+        assert client.delete(f"/api/visuals/library/activities/{activity_id}").status_code == 404
+        assert client.get("/api/visuals/library/activities").json()["data"] == []
+
+
+def test_delete_activity_reports_a_file_cleanup_failure(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/visuals/library/activities/upload",
+            files={"file": ("locked.png", image_bytes((140, 80, 20)), "image/png")},
+            data={"activity": "turn right"},
+        )
+        activity_id = response.json()["data"]["id"]
+        stored = activities.activities_dir() / f"{activity_id}.png"
+        original_unlink = Path.unlink
+
+        def fail_stored_unlink(path: Path, missing_ok: bool = False) -> None:
+            if path == stored:
+                raise PermissionError("file in use")
+            original_unlink(path, missing_ok=missing_ok)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(Path, "unlink", fail_stored_unlink)
+            deleted = client.delete(f"/api/visuals/library/activities/{activity_id}")
+        assert deleted.status_code == 200
+        assert deleted.json()["data"] == {"deleted": activity_id, "file_removed": False}
+        assert stored.is_file()
+        assert client.get("/api/visuals/library/activities").json()["data"] == []
+
+
+@pytest.mark.asyncio
+async def test_delete_activity_refuses_a_path_outside_the_library(db, tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    created = await activities.upload_activity(
+        db, image_upload("inside.png", (100, 80, 60)), {"activity": "walk"},
+    )
+    outside = tmp_path / "outside.png"
+    outside.write_bytes(image_bytes((60, 80, 100)))
+    await db.execute("UPDATE activity_library SET path = ? WHERE id = ?", (str(outside), created["id"]))
+    with pytest.raises(ValidationError, match="outside the library"):
+        await activities.delete_activity(db, created["id"])
+    assert outside.is_file()
+    assert len(await activities.list_activities(db)) == 1
+
+
+@pytest.mark.asyncio
+async def test_delete_used_activity_cascades_only_its_history(db, tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    await seed_project(db)
+    used = await activities.upload_activity(
+        db, image_upload("used.png", (20, 50, 80)), {"activity": "go east"},
+    )
+    kept = await activities.upload_activity(
+        db, image_upload("kept.png", (80, 50, 20)), {"activity": "go west"},
+    )
+    await activities.set_review(db, used["id"], "approved")
+    await activities.record_usage(db, used["id"], "project-activity", "beat-east", "render-1")
+    assert len(await activities.history(db, used["id"])) == 1
+    await activities.delete_activity(db, used["id"])
+    await db.commit()
+    cursor = await db.execute("SELECT COUNT(*) FROM activity_library_usage WHERE activity_id = ?", (used["id"],))
+    assert (await cursor.fetchone())[0] == 0
+    assert (await activities.content_path(db, kept["id"])).is_file()

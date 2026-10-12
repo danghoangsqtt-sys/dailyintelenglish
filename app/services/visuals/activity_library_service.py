@@ -338,6 +338,38 @@ async def set_review(db: aiosqlite.Connection, activity_id: str, review_state: s
     return _view(await _row(db, activity_id))
 
 
+async def approve_pending_batch(db: aiosqlite.Connection, ids: list[str]) -> int:
+    """Approve an explicit set of pending pictures as one transaction."""
+    if not ids or len(ids) > 500 or len(set(ids)) != len(ids):
+        raise ValidationError("choose between 1 and 500 distinct activity pictures")
+    placeholders = ", ".join("?" for _ in ids)
+    cursor = await db.execute(
+        f"SELECT id, review_state FROM activity_library WHERE id IN ({placeholders})", ids,
+    )
+    rows = await cursor.fetchall()
+    if len(rows) != len(ids):
+        raise NotFoundError("One or more activity pictures no longer exist")
+    if any(row[1] != "pending" for row in rows):
+        raise ConflictError("Only pictures waiting for review can be approved in a batch")
+    cursor = await db.execute(
+        f"UPDATE activity_library SET review_state = 'approved', updated_at = ? WHERE id IN ({placeholders}) "
+        "AND review_state = 'pending'", (_now(), *ids),
+    )
+    if cursor.rowcount != len(ids):
+        raise ConflictError("The selected activity pictures changed during approval")
+    return len(ids)
+
+
+async def delete_activity(db: aiosqlite.Connection, activity_id: str) -> Path:
+    """Remove one library record and return its validated file path for post-commit cleanup."""
+    row = await _row(db, activity_id)
+    root, candidate = activities_dir().resolve(), Path(row["path"]).resolve()
+    if not candidate.is_relative_to(root):
+        raise ValidationError("Activity image path is outside the library")
+    await db.execute("DELETE FROM activity_library WHERE id = ?", (activity_id,))
+    return candidate
+
+
 async def content_path(db: aiosqlite.Connection, activity_id: str) -> Path:
     row = await _row(db, activity_id)
     root, candidate = activities_dir().resolve(), Path(row["path"]).resolve()

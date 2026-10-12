@@ -8,6 +8,15 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Activity Library deletion, 2026-10-09)
+- Activity Library cards can delete one picture with confirmation. The database record is removed before its stored image file is cleaned up; completed videos retain their rendered output.
+
+### Added (Activity Library review, 2026-10-09)
+- Activity Library can approve the pending pictures in the current filtered view in one confirmed action. Existing names remain owner-entered; new uploads continue to wait for review.
+
+### Changed (Activity Library upload, 2026-10-09)
+- Activity picture uploads now use an English action name entered by the owner for each selected image. Optional aliases help video matching, and context tags remain available for library metadata; every new image still needs approval. The local/cloud vision auto-naming path and its configuration were removed.
+
 ### Added (Phase 32 — talking characters, 2026-10-08)
 - **Verified Demo Episode with activity cutaways (2026-10-09).** The real production
   Remotion path rendered three approved generic inserts (morning routine, exercise and
