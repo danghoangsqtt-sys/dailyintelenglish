@@ -40,3 +40,27 @@ Create additive migration 018, extend existing character records in place, pin p
 - Add `characters.sprite_facing` (`right` / `left`; default `right` for male, `left` for female) and track whether an
   approved opposite-facing pack exists (slot set or flag, decided in the migration design).
 - Paths add: `app/db/migrations/018_character_profiles_v2.sql` (same migration, extra columns).
+
+## Implementation Notes (2026-10-12, before coding)
+
+- Migration `018_character_profiles_v2.sql`, wrapped in one `BEGIN … COMMIT`:
+  - `characters`: the columns of `.viepilot/schemas/phase33-character-profiles.sql` plus `sprite_facing TEXT NOT NULL DEFAULT ''`
+    backfilled `right` for male, `left` for female; `normalized_name = lower(trim(name))`; unique active-name index;
+    `is_seed = 1` for the real Lina/Alex IDs (`e961d07c-…`, `0383161f-…`), no effect on other databases.
+  - `character_assets`: schema columns plus `facing TEXT NOT NULL DEFAULT 'native'` (`native` / `opposite` — decides D82:
+    an opposite-facing pack is a set of asset rows with `facing='opposite'`, no separate flag). Backfill: `slot_key = kind`
+    for the sheet kinds (full_body, portrait_calm/smile/surprised), `review_state` from `approved`, `updated_at = created_at`.
+    One-current-slot unique index includes `facing`.
+  - `project_cast` rebuilt (create new, copy, drop, rename): `profile_version` from the character's `identity_version`,
+    `UNIQUE (project_id, character_id)`, character FK `ON DELETE RESTRICT` (`delete_character` already removes cast rows
+    first, so its behaviour is unchanged).
+- Gender is already `NOT NULL` and validated `female`/`male` by `CharacterInput`; no extra constraint needed.
+- `library_service`: create/edit write `normalized_name` and default `sprite_facing`; a duplicate active name raises
+  `ConflictError` instead of an IntegrityError.
+- `project_visuals_service.set_cast`: refuses the same character twice (ValidationError) and stores `profile_version`.
+- `scripts/migrate_character_profiles_v2.py`: `register_legacy_sprites` (idempotent) adds each sprite in
+  `sprite_set.json` as an approved `character_assets` row (`kind='sprite'`, `slot_key='sprite/<name>'`,
+  `source='legacy_migration'`, path unchanged); `rehearse` copies a DB + library folders to a temp dir, runs `init_db` and the
+  registration there, and prints a before/after comparison (IDs, counts, cast, approved paths, `PRAGMA foreign_key_check`).
+  It refuses a target under the real `data/`.
+- The real database gets migration 018 the normal way at the next app start (after a backup); the rehearsal never writes it.

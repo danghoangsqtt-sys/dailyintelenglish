@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 33: Character Profiles v2
 
-- **Status:** ready to open 2026-10-12 — entry gate met (Gate B-22 PASS 2026-10-12); plan amended with D78–D83 (Amendment A in the plan doc, `docs/brainstorm/session-2026-10-12.md`)
+- **Status:** in progress 2026-10-12 (opened by `/vp-auto --phase 33`); was ready to open 2026-10-12 — entry gate met (Gate B-22 PASS 2026-10-12); plan amended with D78–D83 (Amendment A in the plan doc, `docs/brainstorm/session-2026-10-12.md`)
 - **Entry gate:** Phase 32 Gate B-22 must be accepted before Task 33.1 starts.
 - **Plan:** `docs/implementation/phase-33-character-profiles-v2.md`
 - **Scope source:** `docs/brainstorm/session-2026-10-10.md`
@@ -10,7 +10,7 @@ This directory is an implementation plan. Creating it does not change the active
 
 | Task | Description | Status | Depends on |
 |---|---|---|---|
-| 33.1 | Data migration, profile versioning, required gender + sprite facing, and Lina/Alex rehearsal | planned | B-22 ✅ |
+| 33.1 | Data migration, profile versioning, required gender + sprite facing, and Lina/Alex rehearsal | in_progress | B-22 ✅ |
 | 33.2 | Profile domain service, readiness, lifecycle, and API | planned | 33.1 |
 | 33.3 | Asset slots, prompt pack from Quick create, auto-mapped upload, alignment, approve-once grid | planned | 33.1, 33.2 |
 | 33.4 | Character Library, Quick create, optional wizard sections | planned | 33.2 |
