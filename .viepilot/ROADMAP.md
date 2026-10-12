@@ -1465,7 +1465,7 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 - [x] 32.6f Tests and Demo Episode render with three insert beats (2026-10-09)
 - [ ] 32.7 Gate B-22 (owner): compare the updated video against the talking-sprites baseline — FAIL 2026-10-12 (ENH-028, BUG-029, BUG-030), re-gate after the fixes
 - [x] 32.8a Speaking character's activity pictures preferred (BUG-029, D76)
-- [ ] 32.8b Activity pictures behind both characters (ENH-028, D75)
+- [x] 32.8b Activity pictures behind both characters (ENH-028, D75)
 - [ ] 32.8c No silent mix without word timings; old cache lines re-synthesized (BUG-030, D77)
 - [ ] 32.8d Demo Episode regenerated and re-rendered (evidence r2)
 - [ ] 32.9 Gate B-22 re-run (owner)
