@@ -56,3 +56,12 @@ only as metadata. Alignment and technical checks run on upload; the card shows t
 - Secondary path (kept from D83, optional): dropping several files at once onto the library maps files whose names are
   canonical slot names; any other file must be dropped on its card.
 - The prompt pack is shown per card (copy button) and is also downloadable as one text file for the whole profile.
+
+## Amendment C (2026-10-12, owner D85 — activity slots)
+
+The character's picture library also has **activity slots** (e.g. working out, cooking): the default list is the 25 activities
+the Alex/Lina packs use today (`activity_library` character scope), and the owner can add a slot by typing an activity name.
+Each activity slot shows a prompt built from the profile (identity, appearance, outfit, the activity, 16:9 scene picture) and
+a drop zone. A picture dropped there is stored through `activity_library_service` with `character_id` = the profile and
+`activity` = the slot's name (renamed on disk like every upload), and waits for review as Activity Library pictures do today.
+Activity slots never block readiness (Phase 33 rule 8).
