@@ -7,7 +7,7 @@ import React from "react";
 import { AbsoluteFill, Img, staticFile, useVideoConfig } from "remotion";
 import { BOTTOM_SHADE_STYLE } from "./captionStyle";
 import { stillScale } from "./podcastLayout";
-import { activityCutawayAt, canvasBox, spriteBackground, spriteFrame, spriteTransform } from "./spriteTimeline";
+import { activityCutawayAt, canvasBox, onStage, spriteBackground, spriteFrame, spriteTransform } from "./spriteTimeline";
 import type { EpisodeLine, EpisodeSprites, SpriteCharacter } from "./types";
 
 const FILL: React.CSSProperties = { position: "absolute", width: "100%", height: "100%", objectFit: "cover" };
@@ -43,9 +43,9 @@ export function SpriteStage({ sprites, lines, fps, frame, totalFrames, progress 
       ) : null}
       {/* Task 32.8b (ENH-028, D75): the activity picture replaces the scene behind the characters, who stay in front. */}
       {cutaway ? <Img src={staticFile(cutaway.url)} style={{ ...FILL, transform: zoom, opacity: cutaway.opacity }} /> : null}
-      {sprites.characters.map((character) => (
-        <Sprite key={character.slot} character={character} frame={frame} fps={fps} lines={lines} sprites={sprites}
-          totalFrames={totalFrames} />
+      {sprites.characters.filter((character) => onStage(character, frame, fps)).map((character) => (
+        <Sprite key={`${character.slot}-${character.name}-${character.fromSec}`} character={character} frame={frame} fps={fps}
+          lines={lines} sprites={sprites} totalFrames={totalFrames} />
       ))}
       <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: "18%",
         background: "linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0))" }} />

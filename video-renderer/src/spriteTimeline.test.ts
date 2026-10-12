@@ -3,7 +3,7 @@ import { podcastLayer } from "./podcastLayout";
 import {
   SPEAKER_GESTURE_SEC, gestureAt,
   BACKGROUND_FADE_FRAMES, LISTENER_BRIGHTNESS, SPRITE_HEIGHT, canvasBox, heldLineIndex, isBlinking, isMouthOpen,
-  activityCutawayAt, spriteBackground, spriteFrame, spriteTransform, stageTop,
+  activityCutawayAt, onStage, spriteBackground, spriteFrame, spriteTransform, stageTop,
 } from "./spriteTimeline";
 import { episodeInputPropsSchema, spriteCharacterSchema, type EpisodeLine, type EpisodeSprites, type SpriteCharacter } from "./types";
 
@@ -14,6 +14,7 @@ function character(slot: number, name: string, extra: string[] = []): SpriteChar
   const names = ["calm__closed", "calm__open", "smile__closed", "smile__open", "blink", ...extra];
   return {
     slot, name, faceEllipse: [0.5, 0.25, 0.08, 0.07], topFraction: slot === 0 ? 0.1 : 0.15, mirror: false,
+    fromSec: 0, toSec: null,
     pictures: Object.fromEntries(names.map((n) => [n, `remotion-render/sprites/p/${name}/${n}.png`])),
     offsets: { "smile__open": [4, -2], "gesture-wave": [1, 1] },
   };
@@ -183,5 +184,24 @@ describe("Phase 33 facing (D82)", () => {
       slot: 0, name: "Alex", pictures: { calm__closed: "a.png" }, faceEllipse: [0.5, 0.2, 0.1, 0.1],
     });
     expect(parsed.mirror).toBe(false);
+  });
+});
+
+describe("Phase 33 segments (Task 33.8)", () => {
+  it("draws an entry only inside its window", () => {
+    const entry = { fromSec: 2, toSec: 5 };
+    expect(onStage(entry, 59, 30)).toBe(false);
+    expect(onStage(entry, 60, 30)).toBe(true);
+    expect(onStage(entry, 149, 30)).toBe(true);
+    expect(onStage(entry, 150, 30)).toBe(false);
+    expect(onStage({ fromSec: 0, toSec: null }, 10_000, 30)).toBe(true);
+  });
+
+  it("slides in after its window opens and out before it closes", () => {
+    const windowed = { ...sprites, characters: [{ ...sprites.characters[0], fromSec: 2, toSec: 5 }] };
+    const opacity = (frame: number) => spriteFrame(windowed.characters[0], frame, FPS, timeline, windowed, 600, WIDTH).opacity;
+    expect(opacity(60)).toBe(0);            // the window opens: still off stage
+    expect(opacity(90)).toBeCloseTo(1);     // fully in after the enter frames
+    expect(opacity(149)).toBeLessThan(0.2); // leaving just before the window closes
   });
 });

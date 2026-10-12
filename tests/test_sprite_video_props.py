@@ -76,8 +76,10 @@ async def test_the_sprite_props_carry_both_sets_the_plan_and_one_plate(client, t
     sprites = props["sprites"]
     left, right = sprites["characters"]
     assert (left["slot"], left["name"], right["slot"], right["name"]) == (0, "Nova", 1, "Mira")
-    assert left["pictures"]["gesture-wave"] == f"remotion-render/sprites/{project['id']}/0/gesture-wave.png"
-    assert (tmp_path / "public" / "sprites" / project["id"] / "1" / "calm__open.png").is_file()
+    # Task 33.8: copied per character (one character can stand in different slots in different segments)
+    assert left["pictures"]["gesture-wave"] == f"remotion-render/sprites/{project['id']}/{ids[0]}/gesture-wave.png"
+    assert (tmp_path / "public" / "sprites" / project["id"] / ids[1] / "calm__open.png").is_file()
+    assert (left["fromSec"], left["toSec"]) == (0.0, None)  # two speakers: one segment for the whole video
     assert left["faceEllipse"] == [0.5, 0.22, 0.08, 0.07] and 0.1 < left["topFraction"] < 0.2
     assert left["offsets"]["calm__closed"] == [0.0, 0]
     first, second = sprites["lines"]

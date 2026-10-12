@@ -151,9 +151,11 @@ export function spriteFrame(
   const hop = speaking && sinceTurn >= 0 && sinceTurn < HOP_FRAMES ? -HOP_PX * Math.sin((Math.PI * sinceTurn) / HOP_FRAMES) : 0;
   const breath = BREATH_PX * Math.sin(2 * Math.PI * (time / BREATH_PERIOD_SEC + slot * 0.37));
 
-  // enter at the start of the speech, leave at its end (slide from the own side and fade)
-  const enter = Math.min(1, frame / ENTER_FRAMES);
-  const leave = Math.min(1, Math.max(0, (totalFrames - frame) / ENTER_FRAMES));
+  // enter at the start of its window (the speech, or its segment), leave at its end (slide from the own side and fade)
+  const fromFrame = Math.round((character.fromSec ?? 0) * fps);
+  const toFrame = character.toSec == null ? totalFrames : Math.round(character.toSec * fps);
+  const enter = Math.min(1, Math.max(0, (frame - fromFrame) / ENTER_FRAMES));
+  const leave = Math.min(1, Math.max(0, (toFrame - frame) / ENTER_FRAMES));
   const presence = Math.min(enter, leave);
   const eased = 1 - (1 - presence) * (1 - presence);
   const side = slot === 0 ? -1 : 1;
@@ -205,4 +207,10 @@ export function activityCutawayAt(time: number, sprites: EpisodeSprites): { url:
 export function spriteTransform(state: Pick<SpriteFrame, "x" | "y" | "scale">, mirror: boolean): string {
   const base = `translate(${state.x.toFixed(1)}px, ${state.y.toFixed(2)}px) scale(${state.scale.toFixed(4)})`;
   return mirror ? `${base} scaleX(-1)` : base;
+}
+
+/** Phase 33 (Task 33.8): whether a sprite entry is on stage at a frame (its window, with the leave fade inside it). */
+export function onStage(character: Pick<SpriteCharacter, "fromSec" | "toSec">, frame: number, fps: number): boolean {
+  const time = frame / fps;
+  return time >= (character.fromSec ?? 0) && (character.toSec == null || time < character.toSec);
 }

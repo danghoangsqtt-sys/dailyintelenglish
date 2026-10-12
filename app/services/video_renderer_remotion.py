@@ -296,6 +296,35 @@ def sprite_placement(members: list[tuple[int, str]]) -> dict[int, int]:
     return {index: slot for slot, (index, _gender) in enumerate(sorted(members))}
 
 
+def sprite_segments(line_speakers: list[int | None]) -> list[dict[str, Any]]:
+    """Task 33.8: who stands on screen for each line, as runs of lines with the same pair. A line's pair is its speaker and
+    the last other speaker before it (else the next other speaker), so a dialogue between two of five people shows those
+    two. Lines without a known speaker keep the pair before them. Returns [{"pair": frozenset, "first": i, "last": j}]."""
+    known = [index for index in line_speakers if index is not None]
+    if not known:
+        return []
+    pairs: list[frozenset | None] = []
+    for position, speaker in enumerate(line_speakers):
+        if speaker is None:
+            pairs.append(None)
+            continue
+        before = next((other for other in reversed(line_speakers[:position]) if other is not None and other != speaker), None)
+        after = next((other for other in line_speakers[position + 1:] if other is not None and other != speaker), None)
+        partner = before if before is not None else after
+        pairs.append(frozenset({speaker} if partner is None else {speaker, partner}))
+    first_known = next(pair for pair in pairs if pair is not None)
+    for position, pair in enumerate(pairs):  # a line with no known speaker keeps the pair before it (the first pair at the start)
+        if pair is None:
+            pairs[position] = pairs[position - 1] if position else first_known
+    segments: list[dict[str, Any]] = []
+    for position, pair in enumerate(pairs):
+        if segments and segments[-1]["pair"] == pair:
+            segments[-1]["last"] = position
+        else:
+            segments.append({"pair": pair, "first": position, "last": position})
+    return segments
+
+
 def sprite_mirrored(slot: int, sprite_facing: str, gender: str) -> bool:
     """Phase 33 (D82): the left figure looks right and the right figure looks left, so the two face each other; a pack that
     looks the other way is mirrored. A pack with no recorded facing faces like its gender's default."""
@@ -311,16 +340,15 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
     project_id = project["id"]
     cast_by_index = {member["speaker_index"]: member for member in await project_visuals_service.cast_rows(db, project_id)}
     speaker_indexes = {speaker["id"]: speaker.get("speaker_index", index) for index, speaker in enumerate(project["speakers"])}
-    characters: list[dict[str, Any]] = []
-    available: dict[int, set[str]] = {}
-    visible = sorted({index for index in speaker_indexes.values() if index in (0, 1)})
-    for speaker_index in visible:
+    line_speakers = [speaker_indexes.get(line["speakerId"]) for line in lines]
+    segments = sprite_segments(line_speakers)
+    for speaker_index in sorted({index for segment in segments for index in segment["pair"]}):
         if speaker_index not in cast_by_index:
             speaker_name = next(s["name"] for s in project["speakers"] if speaker_indexes[s["id"]] == speaker_index)
             raise ValidationError(f"{speaker_name} has no library character: cast one in Step 4 before the talking characters video.")
-    placement = sprite_placement([(index, cast_by_index[index]["gender"]) for index in visible])
-    for speaker_index in visible:
-        slot = placement[speaker_index]
+
+    sets: dict[str, dict] = {}  # character_id -> its copied pack, prepared once even when it stands in several segments
+    for speaker_index in sorted({index for segment in segments for index in segment["pair"]}):
         member = cast_by_index[speaker_index]
         sprite_set = await asyncio.to_thread(sprite_service.load_set, member["character_id"])
         if not sprite_service.usable(sprite_set):
@@ -330,15 +358,32 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
         pictures: dict[str, str] = {}
         for name in sprite_set["names"]:
             await asyncio.to_thread(_copy_if_changed, folder / f"{name}.png",
-                                    REMOTION_SPRITES_DIR / project_id / str(slot) / f"{name}.png")
-            pictures[name] = f"remotion-render/sprites/{project_id}/{slot}/{name}.png"
-        characters.append({
-            "slot": slot, "name": member["name"], "pictures": pictures, "faceEllipse": sprite_set["face_ellipse"],
-            "mirror": sprite_mirrored(slot, member.get("sprite_facing") or "", member.get("gender") or ""),
+                                    REMOTION_SPRITES_DIR / project_id / member["character_id"] / f"{name}.png")
+            pictures[name] = f"remotion-render/sprites/{project_id}/{member['character_id']}/{name}.png"
+        sets[member["character_id"]] = {
+            "pictures": pictures, "names": set(sprite_set["names"]), "faceEllipse": sprite_set["face_ellipse"],
             "offsets": {name: [value["head_dx"], value["head_dy"]] for name, value in sprite_set["pictures"].items()},
             "topFraction": await asyncio.to_thread(_figure_top, folder / f"{sprite_service.BASE}.png"),
-        })
-        available[slot] = set(sprite_set["names"])
+        }
+
+    # Task 33.8: each segment shows its own pair, placed (D81) and mirrored (D82) for that pair, inside a time window
+    characters: list[dict[str, Any]] = []
+    segment_plans: list[tuple[dict, dict[int, int], dict[int, set[str]]]] = []
+    for number, segment in enumerate(segments):
+        placement = sprite_placement([(index, cast_by_index[index]["gender"]) for index in sorted(segment["pair"])])
+        from_sec = 0.0 if number == 0 else lines[segment["first"]]["startSec"]
+        to_sec = None if number == len(segments) - 1 else lines[segments[number + 1]["first"]]["startSec"]
+        available: dict[int, set[str]] = {}
+        for speaker_index, slot in placement.items():
+            member = cast_by_index[speaker_index]
+            pack = sets[member["character_id"]]
+            characters.append({
+                "slot": slot, "name": member["name"], "pictures": pack["pictures"], "faceEllipse": pack["faceEllipse"],
+                "mirror": sprite_mirrored(slot, member.get("sprite_facing") or "", member.get("gender") or ""),
+                "offsets": pack["offsets"], "topFraction": pack["topFraction"], "fromSec": from_sec, "toSec": to_sec,
+            })
+            available[slot] = pack["names"]
+        segment_plans.append((segment, placement, available))
 
     # the place of each line: the approved storyboard's scenes that have a plate, else one plate for the whole video
     beats = await storyboard_service.approved_beats(db, project_id)
@@ -361,8 +406,6 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
         backgrounds = {"still": f"remotion-render/sprites/{project_id}/bg/still.png"}
         line_backgrounds = ["still"] * len(lines)
 
-    line_slots = [placement.get(speaker_indexes.get(line["speakerId"])) for line in lines]  # screen slots (D81)
-    line_slots = [slot if slot in available else None for slot in line_slots]
     beat_expressions: list[str | None] = [None] * len(lines)
     for beat in beats or []:
         for index in range(beat["line_from"], min(beat["line_to"], len(lines) - 1) + 1):
@@ -372,7 +415,12 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
     except (OSError, subprocess.SubprocessError, ValueError) as exc:
         logger.warning("sprite_loudness_unavailable project_id=%s reason=%s -- mouths follow the words", project_id, exc)
         loudness = None
-    plan = sprite_plan.build_plan(lines, line_slots, beat_expressions, available, loudness, VIDEO_FPS)
+    plan: list[dict] = []
+    for segment, placement, available in segment_plans:  # each segment's lines point at that segment's screen slots
+        span = range(segment["first"], segment["last"] + 1)
+        slots = [placement.get(line_speakers[index]) for index in span]
+        plan += sprite_plan.build_plan([lines[index] for index in span], [slot if slot in available else None for slot in slots],
+                                       [beat_expressions[index] for index in span], available, loudness, VIDEO_FPS)
     candidates, cutaways, activity_uses = await activity_library.approved_candidates(db), [], []
     all_line_speakers = [speaker_indexes.get(line["speakerId"]) for line in lines]
     line_texts = [line["text"] for line in lines]

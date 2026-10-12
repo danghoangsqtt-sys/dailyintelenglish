@@ -104,3 +104,70 @@ async def test_a_legacy_pack_is_never_rewritten_from_its_own_folder(client):  # 
         await db.execute("UPDATE character_assets SET review_state = 'approved' WHERE character_id = ?", (ids[0],))
         assert await assets.materialize_sprite_set(db, ids[0]) is None
     assert sorted(path.name for path in sprite_service.sprite_dir(ids[0]).iterdir()) == before
+
+
+@pytest.mark.parametrize("line_speakers,expected", [
+    ([0, 1, 0, 1], [({0, 1}, 0, 3)]),                                    # two people: one segment, the old video
+    ([0, 1, 2, 2, 0], [({0, 1}, 0, 1), ({1, 2}, 2, 3), ({0, 2}, 4, 4)]),  # three: each line shows its speaker and partner
+    ([2, 0, 2], [({0, 2}, 0, 2)]),                                       # a first line pairs with the next other speaker
+    ([0, 0], [({0}, 0, 1)]),                                             # one speaker alone
+    ([None, 1, None, 0], [({0, 1}, 0, 3)]),                              # unknown lines keep the pair around them
+    ([None], []),
+])
+def test_segments_show_each_lines_speaker_with_the_person_they_talk_to(line_speakers, expected):
+    segments = remotion.sprite_segments(line_speakers)
+    assert [(set(segment["pair"]), segment["first"], segment["last"]) for segment in segments] == expected
+
+
+@pytest.mark.asyncio
+async def test_a_three_speaker_project_changes_the_pair_on_screen_by_segment(client, tmp_path, monkeypatch):  # noqa: F811
+    from tests.test_visuals_project_api import locked_character
+
+    project, ids, scenes = setup_project(client, 2, 1)
+    third = locked_character("Omar", "green")
+    _gender(ids[0], "female", "left")  # Nova
+    _gender(ids[1], "female", "left")  # Mira
+    _gender(third, "male", "right")    # Omar
+    for character_id in (*ids, third):
+        _give_sprites(character_id)
+    _make_a_plate(scenes[0]["id"])
+    _public(tmp_path, monkeypatch)
+    speakers = [*project["speakers"], {"id": "s-omar", "speaker_index": 2, "name": "Omar", "gender": "male",
+                                       "accent": "american"}]
+    project = {**project, "speakers": speakers}
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute("INSERT INTO speakers (id, project_id, speaker_index, name, gender, accent, tts_engine) "
+                           "VALUES ('s-omar', ?, 2, 'Omar', 'male', 'american', 'edge_tts')", (project["id"],))
+        connection.execute("INSERT INTO project_cast (project_id, speaker_index, character_id, profile_version) VALUES (?, 2, ?, 1)",
+                           (project["id"], third))
+    first, second = project["speakers"][0]["id"], project["speakers"][1]["id"]
+    audio = {
+        "mp3_path": str(settings.DATA_DIR / "no-such-audio.mp3"),
+        "timestamps": [
+            {"start_sec": 0.0, "end_sec": 2.0, "label": "Nova", "speaker_id": first, "text": "Hi Mira!"},
+            {"start_sec": 2.0, "end_sec": 4.0, "label": "Mira", "speaker_id": second, "text": "Hello!"},
+            {"start_sec": 4.0, "end_sec": 6.0, "label": "Omar", "speaker_id": "s-omar", "text": "Can I join?"},
+        ],
+        "word_timestamps": [{"words": []}] * 3,
+    }
+    async with aiosqlite.connect(settings.db_path) as db:
+        db.row_factory = aiosqlite.Row
+        props = await remotion._build_input_props(db, project, audio, None, visual_mode="podcast_sprites")
+    sprites = props["sprites"]
+    entries = {(c["name"], c["slot"], c["fromSec"], c["toSec"], c["mirror"]) for c in sprites["characters"]}
+    assert entries == {
+        ("Nova", 0, 0.0, 4.0, True), ("Mira", 1, 0.0, 4.0, False),   # two women: speaker order, the left one turned round
+        ("Omar", 0, 4.0, None, False), ("Mira", 1, 4.0, None, False),  # Omar answers Mira: the man left, the woman right
+    }
+    assert [line["slot"] for line in sprites["lines"]] == [0, 1, 0]  # every speaker is on screen when talking
+    assert max(len([c for c in sprites["characters"] if c["fromSec"] <= t < (c["toSec"] or 99)]) for t in (1, 3, 5)) == 2
+
+
+def test_a_three_speaker_storyboard_shows_the_two_who_talk_most_in_each_beat(monkeypatch):
+    from app.services.visuals import storyboard_service
+
+    monkeypatch.setattr(storyboard_service.settings, "VISUALS_IMAGE_CAP", 15)  # 3 places x 5 framings
+    lines = [0, 1, 0, 1, 2, 1, 2, 2, 2, 0, 2, 0]  # beat 1: 0 and 1; beat 2: 2 and 1; beat 3: 2 and 0
+    beats = storyboard_service.rule_beats(lines, {0, 1, 2}, ["a", "b", "c"])
+    assert [beat.speakers for beat in beats] == [[0, 1], [1, 2], [0, 2]]
+    assert all(len(beat.speakers) <= 2 for beat in beats)

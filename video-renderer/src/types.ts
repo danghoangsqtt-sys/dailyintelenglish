@@ -116,6 +116,9 @@ export const spriteCharacterSchema = z.object({
   topFraction: z.number().default(0.15),
   /** Phase 33 (D82): show the pack mirrored, so the left figure looks right and the right figure looks left. */
   mirror: z.boolean().default(false),
+  /** Phase 33 (Task 33.8): the time window of this entry -- with three or more speakers each segment shows its own pair. */
+  fromSec: z.number().default(0),
+  toSec: z.number().nullable().default(null),
 });
 
 /** Phase 32: what the sprites do on each line (`app/services/visuals/sprite_plan.py`). */

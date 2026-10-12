@@ -154,6 +154,17 @@ async def replace_storyboard(db: aiosqlite.Connection, project_id: str, body: St
     return await get_storyboard(db, project_id)
 
 
+def _most_active(line_speakers: list[int], cast: set[int]) -> list[int]:
+    """Task 33.8: the (at most two) cast members who talk most in a beat, ties going to the first to speak; with three or more
+    people the two on screen are the ones the beat is about, not the two lowest speaker numbers."""
+    counts: dict[int, int] = {}
+    for speaker in line_speakers:
+        if speaker in cast:
+            counts[speaker] = counts.get(speaker, 0) + 1
+    order = {speaker: line_speakers.index(speaker) for speaker in counts}
+    return sorted(sorted(counts, key=lambda speaker: (-counts[speaker], order[speaker]))[:2])
+
+
 def rule_beats(line_speakers: list[int], cast: set[int], scene_ids: list[str]) -> list[BeatInput]:
     """Task 24.2 deterministic fallback: the lines split into k near-equal contiguous beats, one per
     project scene (at most 3, and never more places than the image cap allows), each showing the
@@ -165,7 +176,7 @@ def rule_beats(line_speakers: list[int], cast: set[int], scene_ids: list[str]) -
     beats = []
     for index in range(count):
         start, end = round(index * total / count), round((index + 1) * total / count) - 1
-        talking = sorted({speaker for speaker in line_speakers[start:end + 1] if speaker in cast})[:2]
+        talking = _most_active(line_speakers[start:end + 1], cast)
         beats.append(BeatInput(line_from=start, line_to=end, scene_id=places[index], speakers=talking))
     return beats
 
