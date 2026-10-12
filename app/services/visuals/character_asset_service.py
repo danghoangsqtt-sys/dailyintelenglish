@@ -18,7 +18,7 @@ from typing import Any
 
 import aiosqlite
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError, ValidationError
@@ -99,12 +99,15 @@ def base_prompt(profile: dict) -> str:
     side = "right" if profile["sprite_facing"] == "right" else "left"
     who = f"{profile['nationality']} " if profile.get("nationality") else ""
     person = "man" if profile["gender"] == "male" else "woman"
-    # The framing and pose of the Alex/Lina packs: head to mid-thigh filling the height, facing the camera, turned a little
-    # toward the partner (owner feedback 2026-10-12: a full-length picture looking away did not match them).
+    # The framing and pose of the Alex/Lina packs: head to mid-thigh filling the height, a clear three-quarter turn toward the
+    # partner. Owner feedback 2026-10-12: "slightly" was ignored by the image AI (a full-length or straight-to-camera picture).
+    # Turning toward the picture's right brings the person's own right shoulder toward the camera, and the other way round.
+    shoulder = "right" if side == "right" else "left"
     return (f"A three-quarter length portrait of an adult {who}{person} named {profile['name']}: {profile['appearance']}. "
             f"Wearing {profile['outfit']}. {EXPRESSION_LOOKS['calm'].capitalize()}, lips closed, arms relaxed at the sides. "
-            f"Standing facing the camera, the body turned only slightly toward the {side} side of the picture; the face "
-            f"toward the camera with the eyes looking just a little to the {side}, at eye level, not up and not away. "
+            f"Three-quarter view: the whole body and the head are turned about 30 degrees toward the {side} side of the "
+            f"image, so the {shoulder} shoulder is nearer the camera. The eyes look toward the {side} edge of the image, as "
+            f"if talking to someone standing on the {side}; not looking at the camera. "
             "Framed from the top of the head to mid-thigh: the figure fills the picture height, the head close to the top "
             "edge, the legs cut at mid-thigh by the bottom edge, centred. Portrait format (5:6). Soft even studio lighting. "
             "A flat pure green background (#00B140): no floor, no shadow, no gradient. Photorealistic. No text, no logos, "
@@ -357,35 +360,48 @@ async def approve_many(db: aiosqlite.Connection, character_id: str, asset_ids: l
     return results
 
 
-def _derive_sync(source: str, kind: str, destination: Path) -> None:
+def _derive_sync(source: str, kind: str, destination: Path, mirror: bool = False) -> None:
+    """A derived library picture from an approved sprite: the full figure, a head-and-shoulders portrait (768 px), or the
+    512 px face reference the GPU shot pipeline uses (`face`, `face_turned`, D87)."""
     with Image.open(source) as sprite:
         figure = sprite.convert("RGBA")
     background = Image.new("RGBA", figure.size, (236, 238, 241, 255))
     background.alpha_composite(figure)
     picture = background.convert("RGB")
-    if kind != "full_body":  # head and shoulders: the top third of the figure, square
-        ys, xs = np.where(np.asarray(figure.getchannel("A")) > 20)
+    if kind != "full_body":
+        alpha = np.asarray(figure.getchannel("A")) > 20
+        ys = np.where(alpha.any(axis=1))[0]
         top, height = int(ys.min()), int(ys.max() - ys.min())
-        side = int(height * 0.36)
-        centre = int(np.where(np.asarray(figure.getchannel("A"))[top:top + side // 2] > 20)[1].mean())
+        side = int(height * (0.36 if kind.startswith("portrait") else 0.24))  # face crops: the head only
+        centre = int(np.where(alpha[top:top + side // 2])[1].mean())
         left = max(0, min(picture.width - side, centre - side // 2))
-        picture = picture.crop((left, max(0, top - side // 12), left + side, max(0, top - side // 12) + side))
-        picture = picture.resize((768, 768), Image.Resampling.LANCZOS)
+        upper = max(0, top - side // 12)
+        size = 768 if kind.startswith("portrait") else 512
+        picture = picture.crop((left, upper, left + side, upper + side)).resize((size, size), Image.Resampling.LANCZOS)
+    if mirror:
+        picture = ImageOps.mirror(picture)
     destination.parent.mkdir(parents=True, exist_ok=True)
     picture.save(destination, "PNG")
 
 
 async def derive_core_pictures(db: aiosqlite.Connection, character_id: str) -> list[str]:
-    """Full body and the three portraits from the approved sprites; each one replaces the current core picture of its slot."""
+    """Full body, the three portraits and the two face references from the approved sprites. A derived picture replaces the
+    previous derived one of its kind (the GPU pipelines take the first `face` row they find, so old ones are removed)."""
     row = await _profile_row(db, character_id)
+    looks_left = (row["sprite_facing"] or ("right" if row["gender"] == "male" else "left")) == "left"
+    jobs = [(kind, source, False) for kind, source in DERIVED_CORE.items()]
+    # D87: the face references of the shot pipeline; `face_turned` must look right (the pipeline mirrors it for left)
+    jobs += [("face", BASE, False), ("face_turned", BASE, looks_left)]
     made = []
-    for kind, source_slot in DERIVED_CORE.items():
+    for kind, source_slot, mirror in jobs:
         source = await _current(db, row, source_slot)
         if not source or source["review_state"] != "approved":
             continue
         destination = _asset_dir(character_id, row["identity_version"], "native") / f"core_{kind}.png"
-        await asyncio.to_thread(_derive_sync, str(stored_path(source["path"])), kind, destination)
+        await asyncio.to_thread(_derive_sync, str(stored_path(source["path"])), kind, destination, mirror)
         now = _now()
+        await db.execute("DELETE FROM character_assets WHERE character_id = ? AND slot_key = ? AND source = 'derived'",
+                         (character_id, kind))
         await db.execute("UPDATE character_assets SET is_current = 0, updated_at = ? WHERE character_id = ? AND slot_key = ? "
                          "AND is_current = 1 AND identity_version = ?", (now, character_id, kind, row["identity_version"]))
         await db.execute(

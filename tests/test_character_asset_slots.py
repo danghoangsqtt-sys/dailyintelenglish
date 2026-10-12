@@ -76,8 +76,8 @@ def test_every_profile_has_the_29_sprite_slots_with_prompts_parents_and_regions(
     assert len(cards) == 29 and len(SLOTS) == 29
     base = cards["calm__closed"]
     assert base["parent"] is None and base["file_name"] == "calm__closed.png"
-    for words in ("Kai", "Japanese man", "round glasses", "grey hoodie", "#00B140", "toward the right", "mid-thigh",
-                  "toward the camera"):
+    for words in ("Kai", "Japanese man", "round glasses", "grey hoodie", "#00B140", "30 degrees toward the right",
+                  "right shoulder is nearer the camera", "not looking at the camera", "mid-thigh"):
         assert words in base["prompt"]
     assert (cards["smile__open"]["parent"], cards["smile__open"]["region"]) == ("smile__closed", "mouth")
     assert (cards["gesture-wave"]["parent"], cards["gesture-wave"]["region"]) == ("calm__closed", "arms")
@@ -89,7 +89,8 @@ def test_every_profile_has_the_29_sprite_slots_with_prompts_parents_and_regions(
 def test_female_base_prompt_faces_left(client):
     lena = data(client.post("/api/visuals/profiles", json={**QUICK, "name": "Lena", "gender": "female"}))
     base = data(client.get(f"/api/visuals/profiles/{lena['id']}/slots"))["slots"][0]
-    assert "woman" in base["prompt"] and "toward the left" in base["prompt"]
+    assert "woman" in base["prompt"] and "toward the left side" in base["prompt"]
+    assert "left shoulder is nearer the camera" in base["prompt"]
 
 
 def test_base_upload_is_renamed_keyed_and_placed_on_the_canvas_and_waits_for_review(client):
@@ -218,3 +219,17 @@ def test_a_full_length_picture_is_cut_at_mid_thigh_like_the_other_packs(client):
     assert ys.max() >= 1530 and ys.min() <= 170  # the cut edge on the floor, the head near the top
     jeans = np.asarray(Image.open(stored))[..., :3][alpha]
     assert ((jeans == (40, 60, 120)).all(axis=1)).mean() < 0.35  # most of the legs are gone, the hoodie fills the frame
+
+
+def test_approving_the_base_derives_the_face_references_of_the_shot_pipeline(client):
+    """D87: `face` and `face_turned` (512 px, the turned one looking right) come from the approved base sprite."""
+    for name, gender in (("Kai", "male"), ("Lena", "female")):
+        profile = data(client.post("/api/visuals/profiles", json={**QUICK, "name": name, "gender": gender}))
+        base = _upload(client, profile["id"], "calm__closed", _bytes(_person()))
+        _approve(client, profile["id"], base["id"])
+        folder = settings.DATA_DIR / "library" / "characters" / profile["id"] / "v1" / "native"
+        face, turned = Image.open(folder / "core_face.png"), Image.open(folder / "core_face_turned.png")
+        assert face.size == turned.size == (512, 512)
+        same = np.array_equal(np.asarray(face), np.asarray(turned))
+        mirrored = np.array_equal(np.asarray(face)[:, ::-1], np.asarray(turned))
+        assert same if gender == "male" else mirrored  # a woman's pack looks left: her turned face is mirrored to look right
