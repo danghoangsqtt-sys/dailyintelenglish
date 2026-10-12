@@ -2,6 +2,8 @@
 
 ## Current Status
 
+**Now (2026-10-12, Gate B-22):** owner Gate B-22 **FAILED** with three findings (ENH-028 pictures behind the characters, BUG-029 speaking character's pictures, BUG-030 karaoke lost from an old TTS cache); decisions D75-D77. Phase 32 stays open; next `/vp-evolve ENH-028 BUG-029 BUG-030`.
+
 **Now (2026-10-12, /vp-auto):** Phase 34 (project hygiene) ✅ complete: the 2026-10-09 Activity Library manual-upload work landed (`8ac0307`, after removing a stale `.git/index.lock` from 2026-10-10 that had blocked commits), phase records reconciled (BUG-026), retroactive tags for Phases 21/26/30/31 (BUG-024), README / ARCHITECTURE / PROJECT-META / API reference refreshed (ENH-024, ENH-025), Ruff clean (ENH-026). pytest 1648 passed, Vitest 65 passed. Version stays `1.2.0-beta`. Product state unchanged: Phase 32 waits for owner Gate B-22; Phase 33 stays unopened; owner gates B-14..B-21 still open. Branch `owner-runs/20261001-r9` is far ahead of `main`.
 
 **Now (2026-10-09):** Phase 32.1–32.6f are done. Task 32.6f passed 1,646 Python tests and 65 Remotion tests, then rendered the real Demo Episode through the production API with exactly three approved generic cutaways, no fallback, continuous audio/captions and three persisted usage records. The baseline and candidate are ready under `data/video/b330d37f-a212-4cf7-a779-7a109098bd6c/`. **Waiting for owner Gate B-22:** compare `video_sprites_preview.mp4` with `video_remotion.mp4`; Phase 32 stays open and Phase 33 stays unopened until explicit PASS.
@@ -2171,6 +2173,10 @@ Suite 964 → 1175. **Version 1.1.0-beta.** Follow-ups: ENH-014 (outro heuristic
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-10-12 | **Gate B-22 FAIL (owner).** Three findings on the Demo Episode: activity pictures cover both characters; no character pictures used; no karaoke captions | Logged ENH-028, BUG-029, BUG-030; Phase 32 stays open |
+| 2026-10-12 | **D75 (owner):** activity illustrations sit behind Alex and Lina, who stay in front for the whole beat, even when the picture shows the speaking character ("đây là ý đồ nghệ thuật và giáo dục của tôi") | ENH-028 |
+| 2026-10-12 | **D76 (owner):** prefer the activity picture of the character who speaks the beat, else generic | BUG-029 |
+| 2026-10-12 | **D77:** a cached TTS line without its `.words.json` sidecar is a cache miss and is re-synthesized; the Demo Episode audio and video are regenerated | BUG-030 (root cause: 2026-09-15 cache predates Task 19.2) |
 | 2026-10-09 | Owner decision: Activity Library uploads use a user-entered name for each image; vision auto-naming is removed | A precise owner label avoids inaccurate direction names and model load latency; review gate remains |
 | 2026-10-09 | BUG-027 auto-logged by vp-audit Tier 3: Activity Vision loses compass directions and dialogue matching | Superseded by manual naming |
 | 2026-10-09 | ENH-027 auto-logged by vp-audit Tier 3: Activity Vision one-image upload latency | Superseded by manual naming |

@@ -3,7 +3,7 @@
   "version": "1.2.0-beta",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_32_waiting_owner_gate_b22",
+  "status": "phase_32_gate_b22_failed_fixes_pending",
   "current_phase": "32",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
