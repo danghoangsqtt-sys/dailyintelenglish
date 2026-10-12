@@ -19,7 +19,7 @@
 | 32.8a | Prefer the speaking character's activity pictures (BUG-029, D76) | done 2026-10-12 (`tasks/task-32.8a.md`): shared `beat_speaker_index`, render + coverage; 4 new tests, the render test fails without the fix |
 | 32.8b | Activity pictures behind the talking characters (ENH-028, D75) | done 2026-10-12 (`tasks/task-32.8b.md`): activity layer between the scene and the sprites (same slow zoom); tsc + 65 Vitest; layer order checked on the real render in 32.8d (no DOM test environment for Remotion components) |
 | 32.8c | Never mix lines without word timings silently (BUG-030, D77) | done 2026-10-12 (`tasks/task-32.8c.md`): old-cache lines re-synthesized before the mix, `lines_without_words` in the result, Step 4 warning, render log; API + browser tests, the API test fails without the fix |
-| 32.8d | Regenerate and re-render the Demo Episode, evidence r2 | planned (`tasks/task-32.8d.md`) |
+| 32.8d | Regenerate and re-render the Demo Episode, evidence r2 | in_progress (`tasks/task-32.8d.md`) |
 | 32.9 | Gate B-22 re-run (owner) | planned (`tasks/task-32.9.md`) |
 
 ## Owner review of the preview (2026-10-08)
