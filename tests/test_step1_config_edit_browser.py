@@ -57,6 +57,53 @@ DRAFT_PROJECT = {
 }
 
 
+def _profile(profile_id: str, name: str, gender: str, accent: str, voice=(1.0, 0.0, 1.0)) -> dict:
+    ready = {"ready": True, "missing": []}
+    return {
+        "id": profile_id, "name": name, "gender": gender, "accent": accent, "archived": False, "intro": "",
+        "personality": [], "pictures": {"portrait": None, "base": None},
+        "voice": {"voice_id": "en-GB-RyanNeural", "speed": voice[0], "pitch": voice[1], "volume": voice[2]},
+        "readiness": {"profile": ready, "voice": ready, "core_visuals": ready, "video_ready": True, "talking_ready": True},
+    }
+
+
+PROFILES = [
+    _profile("p-alex", "Alex", "male", "british", (1.25, 0.1, 0.8)),
+    _profile("p-sam", "Sam", "female", "american", (0.9, -0.2, 1.1)),
+    _profile("p-ben", "Ben", "male", "british", (1.0, 0.0, 1.0)),
+    _profile("p-lina", "Lina", "female", "american"),
+]
+
+
+async def _character_routes(page, cast: list[dict], saved_casts: list) -> None:
+    """Phase 33 (D80): Step 1 reads the profiles and the existing cast, and saves the chosen cast after the project."""
+
+    async def profiles(route):
+        await route.fulfill(status=200, content_type="application/json",
+                            body=json.dumps({"success": True, "data": PROFILES}))
+
+    async def visuals(route):
+        await route.fulfill(status=200, content_type="application/json",
+                            body=json.dumps({"success": True, "data": {"cast": cast, "scenes": [], "shots": []}}))
+
+    async def save_cast(route):
+        saved_casts.append(json.loads(route.request.post_data))
+        await route.fulfill(status=200, content_type="application/json",
+                            body=json.dumps({"success": True, "data": {"cast": [], "scenes": [], "shots": []}}))
+
+    await page.route("**/api/visuals/profiles*", profiles)
+    await page.route("**/api/projects/*/visuals", visuals)
+    await page.route("**/api/projects/*/visuals/cast", save_cast)
+
+
+async def _choose(page, speaker_index: int, name: str) -> None:
+    await page.click(f'[data-choose="{speaker_index}"]')
+    await page.locator(".cs-card", has_text=name).click()
+    await page.locator('[data-cs="choose"]').click()
+    await page.wait_for_selector(f'.cs-slot[data-slot="{speaker_index}"]:has-text("{name}")')
+    await page.locator('[data-cs="close"]').click()
+
+
 @pytest.fixture(scope="module")
 def live_server_url(tmp_path_factory: pytest.TempPathFactory):
     with live_server(tmp_path_factory, "step1-config-edit") as url:
@@ -144,13 +191,17 @@ async def test_draft_save_uses_one_put_preserves_id_and_refetches_update(
             post_count += 1
         await route.continue_()
 
+    saved_casts: list = []
     await page.route(f"**/api/projects/{PROJECT_ID}", handle_project)
     await page.route("**/api/projects", count_posts)
+    await _character_routes(page, [{"speaker_index": 0, "character_id": "p-alex"},
+                                   {"speaker_index": 1, "character_id": "p-sam"}], saved_casts)
     await page.goto(f"{live_server_url}/step1?project_id={PROJECT_ID}")
     await page.wait_for_selector("#submit-btn:not([hidden])")
 
     await page.fill("#name", "Updated Draft")
-    await page.fill("#speaker-name-0", "Alex Updated")
+    page.once("dialog", lambda dialog: asyncio.ensure_future(dialog.dismiss()))  # keep this project's own voice settings
+    await _choose(page, 0, "Ben")
     await page.evaluate(
         """
         const form = document.getElementById("config-form");
@@ -164,8 +215,9 @@ async def test_draft_save_uses_one_put_preserves_id_and_refetches_update(
     assert post_count == 0
     payload = put_payloads[0]
     assert payload["name"] == "Updated Draft"
+    assert saved_casts == [[{"speaker_index": 0, "character_id": "p-ben"}, {"speaker_index": 1, "character_id": "p-sam"}]]
     assert payload["speakers"][0] == {
-        "name": "Alex Updated",
+        "name": "Ben",
         "gender": "male",
         "accent": "british",
         "tts_engine": "edge_tts",
@@ -253,19 +305,24 @@ async def test_no_project_id_keeps_create_flow(browser_instance: Browser, live_s
         else:
             await route.continue_()
 
+    saved_casts: list = []
     await page.route("**/api/projects", handle_projects)
+    await _character_routes(page, [], saved_casts)
     await page.goto(f"{live_server_url}/step1")
     await page.wait_for_selector("#submit-btn:not([hidden])")
 
     assert await page.locator("#submit-btn").text_content() == "Create Project"
+    assert await page.input_value("#speaker-name-0") == "Alex"  # the old defaults, now real characters
+    assert await page.input_value("#speaker-name-1") == "Lina"
+    assert await page.locator("#speaker-name-0").get_attribute("readonly") is not None
     await page.fill("#name", "New Project")
     await page.fill("#topic", "A new topic")
-    await page.fill("#speaker-name-0", "Taylor")
-    await page.fill("#speaker-name-1", "Morgan")
+    await _choose(page, 1, "Sam")
     await page.click("#submit-btn")
     await page.wait_for_url("**/step2?project_id=new-project-id*")
 
     assert len(post_payloads) == 1
     assert post_payloads[0]["name"] == "New Project"
-    assert [speaker["name"] for speaker in post_payloads[0]["speakers"]] == ["Taylor", "Morgan"]
+    assert [speaker["name"] for speaker in post_payloads[0]["speakers"]] == ["Alex", "Sam"]
+    assert saved_casts == [[{"speaker_index": 0, "character_id": "p-alex"}, {"speaker_index": 1, "character_id": "p-sam"}]]
     await page.close()

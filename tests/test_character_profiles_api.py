@@ -142,3 +142,22 @@ def test_readiness_counts_approved_current_assets_and_legacy_sprite_sets(client)
 def test_legacy_character_routes_still_work_beside_profiles(client):
     create(client)
     assert [row["name"] for row in data(client.get("/api/visuals/characters"))] == ["Kai"]
+
+
+def test_a_cast_accepts_a_video_ready_profile_and_explains_a_profile_that_is_not(client):
+    """Task 33.7: profiles made from outside-AI pictures are never 'locked'; video readiness lets them join a cast."""
+    kai, lena = create(client), create(client, name="Lena", gender="female")
+    with sqlite3.connect(settings.db_path) as connection:
+        for slot in ("full_body", "portrait_calm", "portrait_smile", "portrait_surprised"):
+            connection.execute(
+                "INSERT INTO character_assets (id, character_id, kind, path, approved, created_at, slot_key, review_state) "
+                "VALUES (?, ?, ?, 'x.png', 1, 'now', ?, 'approved')", (str(uuid.uuid4()), kai["id"], slot, slot))
+    project = data(client.post("/api/projects", json={
+        "name": "Cast", "topic": "Coffee", "cefr_level": "B1", "duration_minutes": 5, "num_speakers": 2, "genre": "small_talk",
+        "accent": "american", "speakers": [{"name": "Kai", "gender": "male", "accent": "british"},
+                                           {"name": "Lena", "gender": "female", "accent": "american"}]}))
+    url = f"/api/projects/{project['id']}/visuals/cast"
+    cast = data(client.put(url, json=[{"speaker_index": 0, "character_id": kai["id"]}]))["cast"]
+    assert [(member["speaker_index"], member["character_id"]) for member in cast] == [(0, kai["id"])]
+    refused = client.put(url, json=[{"speaker_index": 1, "character_id": lena["id"]}])
+    assert refused.status_code == 422 and "Lena is not ready for videos yet: picture full_body" in refused.json()["error"]

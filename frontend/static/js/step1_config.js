@@ -60,6 +60,7 @@
     genre: GENRES[7].value, // small_talk
     accent: ACCENTS[0].value, // american
     speakers: [],
+    profiles: [],  // Phase 33: the character profiles a speaker can be (Api.listProfiles)
     languageFeatures: Object.fromEntries(LANGUAGE_FEATURES.map((f) => [f.key, f.default])),
   };
 
@@ -180,6 +181,7 @@
       for (let i = speakers.length; i < count; i++) {
         const preset = DEFAULT_SPEAKERS[i];
         speakers.push({
+          character_id: null,  // Phase 33 (D80): every speaker is a chosen character
           name: preset ? preset.name : "",
           gender: preset ? preset.gender : GENDERS[i % GENDERS.length],
           accent: state.accent,
@@ -197,14 +199,29 @@
     }
   }
 
+  function profilePicture(profile) {
+    return profile?.pictures?.portrait || profile?.pictures?.base || null;
+  }
+
+  // Phase 33 (D80): the speaker is a chosen character; its name and gender come from the character, the accent can still be
+  // changed for this project.
   function speakerCardHtml(speaker, index) {
+    const profile = state.profiles.find((item) => item.id === speaker.character_id);
+    const picture = profilePicture(profile);
     return `
       <div class="card speaker-card" data-index="${index}">
-        <label class="field-label" for="speaker-name-${index}">Speaker ${index + 1} Name</label>
-        <input type="text" id="speaker-name-${index}" data-field="name" data-index="${index}" value="${escapeHtml(speaker.name)}" placeholder="e.g. Alex" />
+        <div class="speaker-character">
+          ${picture ? `<img src="${picture}" alt="" class="speaker-face" />` : '<span class="speaker-face speaker-face-empty" aria-hidden="true">?</span>'}
+          <button type="button" class="btn ${speaker.character_id ? "btn-ghost" : "btn-primary"} btn-sm" data-choose="${index}">
+            ${speaker.character_id ? "Change character" : "Choose character"}</button>
+        </div>
+        <label class="field-label" for="speaker-name-${index}">Speaker ${index + 1}</label>
+        <input type="text" id="speaker-name-${index}" value="${escapeHtml(speaker.name)}" readonly
+          placeholder="Choose a character" aria-describedby="speaker-name-hint-${index}" />
+        <span id="speaker-name-hint-${index}" class="speaker-hint">The name comes from the character.</span>
 
         <label class="field-label" for="speaker-gender-${index}">Gender</label>
-        <select id="speaker-gender-${index}" data-field="gender" data-index="${index}">
+        <select id="speaker-gender-${index}" disabled>
           ${GENDERS.map((g) => `<option value="${g}" ${g === speaker.gender ? "selected" : ""}>${g}</option>`).join("")}
         </select>
 
@@ -216,6 +233,47 @@
           ).join("")}
         </select>
       </div>`;
+  }
+
+  function voiceDiffers(speaker, profile) {
+    const voice = profile.voice || {};
+    return speaker.speed != null && (speaker.speed !== voice.speed || speaker.pitch !== voice.pitch || speaker.volume !== voice.volume);
+  }
+
+  function applyProfile(index, profile) {
+    const speaker = state.speakers[index];
+    const keepVoice = pageMode === "edit" && speaker.character_id && voiceDiffers(speaker, profile)
+      && !window.confirm(`Use ${profile.name}'s voice settings (speed ${profile.voice.speed}, pitch ${profile.voice.pitch}, `
+        + `volume ${profile.voice.volume}) for Speaker ${index + 1}? Cancel keeps this project's own settings.`);
+    Object.assign(speaker, {
+      character_id: profile.id, name: profile.name, gender: profile.gender, accent: profile.accent || speaker.accent,
+    });
+    if (!keepVoice && pageMode === "edit") {
+      Object.assign(speaker, { speed: profile.voice.speed, pitch: profile.voice.pitch, volume: profile.voice.volume });
+    }
+    renderSpeakerCards();
+  }
+
+  function openSelector(index) {
+    CharacterSelector.open({
+      slots: state.speakers.map((speaker, i) => ({ index: i, label: `Speaker ${i + 1}`, characterId: speaker.character_id })),
+      profiles: state.profiles,
+      startSlot: index,
+      onChoose: (slotIndex, profile) => applyProfile(slotIndex, profile),
+    });
+  }
+
+  // A new project starts with Alex and Lina when they are ready (the old defaults, now real characters).
+  function preselectDefaults() {
+    state.speakers.forEach((speaker, index) => {
+      if (speaker.character_id) return;
+      const wanted = DEFAULT_SPEAKERS[index]?.name;
+      const used = new Set(state.speakers.map((item) => item.character_id));
+      const profile = state.profiles.find((item) => item.name === wanted && CharacterSelector.castReady(item) && !used.has(item.id));
+      if (profile) Object.assign(speaker, { character_id: profile.id, name: profile.name, gender: profile.gender,
+        accent: profile.accent || speaker.accent });
+      else Object.assign(speaker, { name: "", gender: speaker.gender });
+    });
   }
 
   function renderSpeakerCards() {
@@ -233,6 +291,11 @@
       e.target.value = count;
       syncSpeakersToCount(count);
       renderSpeakerCards();
+    });
+
+    document.getElementById("speaker-grid").addEventListener("click", (e) => {
+      const button = e.target.closest("[data-choose]");
+      if (button && !button.disabled) openSelector(Number(button.dataset.choose));
     });
 
     document.getElementById("speaker-grid").addEventListener("input", (e) => {
@@ -310,6 +373,7 @@
       ])
     );
     state.speakers = (project.speakers || []).map((speaker) => ({
+      character_id: null,
       name: speaker.name ?? "",
       gender: speaker.gender ?? "neutral",
       accent: speaker.accent ?? state.accent,
@@ -406,7 +470,7 @@
     }
 
     state.speakers.forEach((speaker, index) => {
-      if (!speaker.name.trim()) errors.push(`Speaker ${index + 1} needs a name.`);
+      if (!speaker.character_id) errors.push(`Speaker ${index + 1}: choose a character.`);
     });
 
     return errors;
@@ -456,6 +520,10 @@
         pageMode === "edit"
           ? await Api.updateProject(projectId, buildPayload())
           : await Api.createProject(buildPayload());
+      // Phase 33 (D80): the chosen characters are the project's cast, by ID (never by name)
+      await Api.setProjectCast(project.id, state.speakers.map((speaker, index) => ({
+        speaker_index: index, character_id: speaker.character_id,
+      })));
       window.location.href = `/step2?project_id=${encodeURIComponent(project.id)}&name=${encodeURIComponent(project.name)}`;
     } catch (err) {
       console.error(`Failed to ${pageMode === "edit" ? "update" : "create"} project:`, err);
@@ -482,7 +550,16 @@
     const form = document.getElementById("config-form");
     form.hidden = true;
 
+    try {
+      state.profiles = await Api.listProfiles("state=active");
+    } catch (err) {
+      console.error("Failed to load characters:", err);
+      showError("We couldn't load the characters. Please reload the page.");
+    }
+
     if (!projectId) {
+      syncSpeakersToCount(sanitizeSpeakerCount(document.getElementById("num-speakers").value));
+      preselectDefaults();
       renderForm();
       configureCreateMode();
       return;
@@ -492,6 +569,10 @@
     try {
       const project = await Api.getProject(projectId);
       loadProjectIntoState(project);
+      const visuals = await Api.getProjectVisuals(projectId).catch(() => null);
+      (visuals?.cast || []).forEach((member) => {
+        if (state.speakers[member.speaker_index]) state.speakers[member.speaker_index].character_id = member.character_id;
+      });
       renderForm();
       if (project.status === "draft") {
         configureEditMode();

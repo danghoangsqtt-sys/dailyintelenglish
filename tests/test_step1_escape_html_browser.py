@@ -33,11 +33,21 @@ async def browser_instance() -> AsyncGenerator[Browser, None]:
 async def test_speaker_name_with_quote_cannot_break_out_of_value_attribute(
     browser_instance: Browser, live_server_url: str
 ):
-    page = await browser_instance.new_page()
-    await page.goto(f"{live_server_url}/step1")
-    await page.wait_for_selector("#speaker-name-0")
+    from tests.test_step1_config_edit_browser import _character_routes, _choose, _profile
 
-    await page.fill("#speaker-name-0", MALICIOUS_NAME)
+    # Phase 33 (D80): a speaker's name now comes from a character profile -- the payload arrives as a profile name
+    import tests.test_step1_config_edit_browser as profiles_fixture
+
+    page = await browser_instance.new_page()
+    original = profiles_fixture.PROFILES
+    profiles_fixture.PROFILES = [_profile("p-bad", MALICIOUS_NAME, "male", "british")]
+    try:
+        await _character_routes(page, [], [])
+        await page.goto(f"{live_server_url}/step1")
+        await page.wait_for_selector("#speaker-name-0")
+        await _choose(page, 0, "img src")
+    finally:
+        profiles_fixture.PROFILES = original
     # Changing speaker count forces renderSpeakerCards() to re-serialize state.speakers
     # (the only path that would actually re-inject the name into innerHTML-built markup).
     await page.fill("#num-speakers", "3")

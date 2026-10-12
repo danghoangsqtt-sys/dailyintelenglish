@@ -107,10 +107,15 @@ async def set_cast(db: aiosqlite.Connection, project_id: str, members: list[dict
     if len(character_ids) != len(set(character_ids)):  # Task 33.1: one profile per project (UNIQUE in migration 018)
         raise ValidationError("A character can play only one speaker in a project")
     versions = {}
+    from app.services.visuals import character_profile_service  # lazy: that module imports the library too
+
     for member in members:
         character = await library.get_character_row(db, member["character_id"])
-        if character["status"] != "locked":
-            raise ValidationError("Only locked characters can join a project cast")
+        if character["status"] != "locked":  # Phase 33: a profile made from outside-AI pictures is never "locked"
+            readiness = await character_profile_service.readiness(db, character)
+            if not readiness["video_ready"]:
+                missing = [item for key in ("profile", "voice", "core_visuals") for item in readiness[key]["missing"]]
+                raise ValidationError(f"{character['name']} is not ready for videos yet: {', '.join(missing[:4])}")
         versions[member["character_id"]] = character["identity_version"]
     await db.execute("DELETE FROM project_cast WHERE project_id = ?", (project_id,))
     for member in members:

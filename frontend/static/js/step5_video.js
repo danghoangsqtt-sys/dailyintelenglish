@@ -405,7 +405,8 @@
       none.value = "";
       none.textContent = "— none —";
       select.append(none);
-      state.visualCharacters.filter((character) => character.status === "locked").forEach((character) => {
+      // Phase 33: every character ready for videos (a legacy locked one or a profile made from outside-AI pictures)
+      state.visualCharacters.filter((character) => character.video_ready).forEach((character) => {
         const option = document.createElement("option");
         option.value = character.id;
         option.textContent = character.name;
@@ -441,6 +442,24 @@
         image.src = chosen.face_url;
         image.alt = `${chosen.name} face`;
         card.append(image);
+      }
+      // Phase 33 (D80): an older project's speaker can keep another name than its character (Demo Episode "Maya" is Lina)
+      if (chosen && chosen.name !== speaker.name) {
+        const rename = document.createElement("button");
+        rename.type = "button";
+        rename.className = "btn btn-ghost btn-sm";
+        rename.textContent = `Use character name (${chosen.name})`;
+        rename.disabled = state.visualBusy;
+        rename.addEventListener("click", async () => {
+          try {
+            await Api.updateSpeaker(state.projectId, speaker.id, { name: chosen.name });
+            speaker.name = chosen.name;
+            renderProjectVisuals();
+          } catch (error) {
+            visualWarning(error.message || "Could not rename the speaker.");
+          }
+        });
+        card.append(rename);
       }
       grid.append(card);
     });
@@ -706,24 +725,28 @@
     }
   }
 
-  // Phase 31: a project with no cast yet takes the locked library characters named like its speakers (Alex, Lina).
-  async function castByName() {
-    if (state.visuals.cast.length) return;
-    const members = [];
-    (state.project?.speakers || []).forEach((speaker) => {
-      const wanted = (speaker.name || "").trim().toLowerCase();
-      const match = state.visualCharacters.find((c) => c.status === "locked" && c.name.trim().toLowerCase() === wanted);
-      if (match) members.push({ speaker_index: speaker.speaker_index, character_id: match.id });
+  // Phase 33 (Task 33.7): the cast is chosen explicitly (Step 1 or here); it is never inferred from a speaker's name.
+  function castOptions(characters, profiles) {
+    const ready = new Map(profiles.filter((profile) => profile.readiness?.video_ready)
+      .map((profile) => [profile.id, profile]));
+    return characters.map((character) => {
+      const profile = ready.get(character.id);
+      return {
+        ...character,
+        video_ready: character.status === "locked" || Boolean(profile),
+        face_url: character.face_url || profile?.pictures?.portrait || profile?.pictures?.base || null,
+      };
     });
-    if (members.length) state.visuals = await Api.setProjectCast(state.projectId, members);
   }
 
   async function loadProjectVisuals() {
     try {
-      [state.visuals, state.visualCharacters, state.visualScenes, state.visualHealth] = await Promise.all([
+      let characters, profiles;
+      [state.visuals, characters, state.visualScenes, state.visualHealth, profiles] = await Promise.all([
         Api.getProjectVisuals(state.projectId), Api.listCharacters(), Api.listScenes(), Api.getVisualsHealth(),
+        Api.listProfiles("state=active"),
       ]);
-      await castByName();
+      state.visualCharacters = castOptions(characters, profiles);
       state.visualSceneSelection = state.visuals.scenes.map((scene) => scene.id);
       renderProjectVisuals();
       if (state.visuals.active_job) watchVisualJob(state.visuals.active_job);
