@@ -82,7 +82,11 @@ def test_every_profile_has_the_29_sprite_slots_with_prompts_parents_and_regions(
     assert (cards["smile__open"]["parent"], cards["smile__open"]["region"]) == ("smile__closed", "mouth")
     assert (cards["gesture-wave"]["parent"], cards["gesture-wave"]["region"]) == ("calm__closed", "arms")
     assert cards["blink"]["region"] == "eyes" and cards["gesture-wave__open"]["parent"] == "gesture-wave"
-    assert cards["smile__closed"]["prompt"].startswith("Edit only the selected area.")
+    smile = cards["smile__closed"]["prompt"]  # owner feedback: a short edit prompt barely changed the face
+    assert smile.startswith("Edit the attached picture of Kai") and "corners of the mouth turned well up" in smile
+    assert "clearly visible" in smile and "Do not redraw" in smile
+    assert "the hand on the right side" in cards["gesture-wave"]["prompt"]  # the partner's side
+    assert "the hands" not in cards["gesture-wave"]["prompt"].split("Keep everything else")[1]
     assert not cards["smile__closed"]["parent_ready"]
 
 

@@ -25,32 +25,42 @@ from app.core.exceptions import ConflictError, NotFoundError, ValidationError
 from app.services.visuals import sprite_service, sprite_upload
 
 BASE = "calm__closed"
+# Owner feedback 2026-10-12: a short "a warm gentle smile" left the face almost unchanged. Each change now names what must
+# visibly differ, and says that the change has to be clearly visible.
 EXPRESSION_LOOKS = {
     "calm": "a calm friendly face",
-    "smile": "a warm gentle smile",
-    "laugh": "a happy laughing look, eyes narrowed and curved, a big smile",
-    "surprised": "surprised: eyes wide open, eyebrows raised",
-    "thinking": "thoughtful: eyes glancing slightly upward, one eyebrow slightly raised; the head does not move",
-    "worried": "worried: eyebrows drawn together and slightly raised",
-    "serious": "a serious calm expression, level eyebrows",
+    "smile": ("a clear, warm smile with the lips closed: the corners of the mouth turned well up, the cheeks lifted, small "
+              "smile lines at the outer corners of the eyes"),
+    "laugh": ("a happy laugh with the lips closed: a big wide closed-mouth grin, the cheeks raised high, the eyes narrowed "
+              "into happy curved crescents"),
+    "surprised": ("surprised: the eyes opened very wide with white showing above the irises, the eyebrows raised high, the "
+                  "forehead lifted, the lips closed and relaxed"),
+    "thinking": ("thoughtful: the eyes looking up and to the side, one eyebrow raised higher than the other, the lips pressed "
+                 "together and pulled a little to one side"),
+    "worried": ("worried: the inner ends of the eyebrows raised and drawn together with a small frown line between them, "
+                "the eyes a little wider, the lips closed and slightly tense"),
+    "serious": ("serious: the eyebrows level and slightly lowered, a steady focused look, no smile at all, the lips closed "
+                "in a straight line"),
 }
 OPEN_MOUTHS = {
-    "calm": 'the mouth is open as when saying "ah", upper teeth slightly visible, natural, not a yawn',
-    "smile": "smiling while speaking: the mouth is open, teeth visible",
-    "laugh": "laughing: a wide open smile, teeth visible",
-    "surprised": 'the mouth is open in a small round "oh"',
-    "thinking": 'the mouth is slightly open as if saying "hmm"',
-    "worried": "the mouth is slightly open as if speaking",
-    "serious": "the mouth is slightly open as if speaking",
+    "calm": ("open the mouth as when saying \"ah\" in the middle of a sentence: the lips parted about a finger's width, the "
+             "upper teeth visible, the jaw slightly lowered; natural speech, not a yawn"),
+    "smile": "keep the same smile and part the lips while speaking: the upper and lower teeth clearly visible",
+    "laugh": "turn the grin into an open laugh: the mouth wide open, the upper teeth fully visible",
+    "surprised": 'open the mouth into a small round "oh", the lips rounded and parted',
+    "thinking": 'part the lips slightly as if saying "hmm", the teeth just visible',
+    "worried": "part the lips as if speaking, the upper teeth just visible, the worried tension kept",
+    "serious": "part the lips as if speaking calmly, the upper teeth just visible",
 }
+# {side}: the partner's side of the image (the way the figure faces); a gesture uses the hand on that side.
 GESTURE_POSES = {
-    "talk": "one hand raised to chest height with the palm open, as if explaining. The whole hand stays inside the picture",
-    "point": "one hand pointing to the side, the elbow bent so the hand stays well inside the picture",
-    "think": "one hand resting lightly under the chin, the other arm across the waist. The head does not move",
-    "open": "both hands open with the palms up at waist height, close to the body, a small shrug",
-    "heart": "one hand resting flat on the chest, sincere, as when saying thank you",
-    "listen": "both hands lightly clasped in front of the body at waist height, listening",
-    "wave": "one hand raised beside the shoulder, waving hello. The whole hand stays inside the picture",
+    "talk": "the hand on the {side} side raised to chest height with the palm open and turned up, as if explaining something",
+    "point": "the hand on the {side} side pointing toward the {side} with the index finger, the elbow bent so the hand stays well inside the picture",
+    "think": "one hand resting lightly under the chin with the index finger along the cheek, the other arm folded across the waist",
+    "open": "both hands open at waist height with the palms up, close to the body, in a small friendly shrug",
+    "heart": "one hand resting flat on the chest over the heart, sincere, as when saying thank you",
+    "listen": "both hands lightly clasped together in front of the body at waist height, attentive",
+    "wave": "the hand on the {side} side raised beside the shoulder with the palm open toward the camera, waving hello",
 }
 REGIONS = {
     "face": "the whole face from the eyebrows to the chin (not the hair, ears or neck)",
@@ -58,8 +68,18 @@ REGIONS = {
     "mouth": "only the mouth (both lips and a little skin around them; not the nose, cheeks or chin)",
     "arms": "only the two arms and hands, plus the green area where the hand will go (not the head, neck or chest)",
 }
-KEEP = ("Edit only the selected area. Keep everything outside it exactly the same: the same face shape, head angle, hair, "
-        "body, outfit, flat green background, framing and image size.")
+CHANGE_WHAT = {
+    "face": "Change only the facial expression.",
+    "eyes": "Change only the eyes.",
+    "mouth": "Change only the mouth.",
+    "arms": "Change only the arms and hands.",
+}
+KEEP = {
+    "face": "the face shape and identity, the hair, the head position and angle",
+    "eyes": "the eyebrows, the mouth, the whole face and identity, the hair, the head position and angle",
+    "mouth": "the eyes, eyebrows and the rest of the expression, the face and identity, the hair, the head position and angle",
+    "arms": "the head, the face and its expression, the hair, the body angle",
+}
 
 
 def _slot(key: str, group: str, tier: int, parent: str | None, region: str | None, change: str) -> dict[str, Any]:
@@ -71,14 +91,14 @@ def _build_slots() -> list[dict[str, Any]]:
     for expression, look in EXPRESSION_LOOKS.items():
         tier = 1 if expression in ("calm", "smile", "surprised") else 2
         if expression != "calm":
-            slots.append(_slot(f"{expression}__closed", "expression", tier, BASE, "face", f"{look}, lips closed."))
+            slots.append(_slot(f"{expression}__closed", "expression", tier, BASE, "face", f"{look}."))
         slots.append(_slot(f"{expression}__open", "mouth", tier, f"{expression}__closed", "mouth",
                            OPEN_MOUTHS[expression] + "."))
-    slots.append(_slot("blink", "blink", 1, BASE, "eyes", "Both eyes gently closed, as in a blink."))
+    slots.append(_slot("blink", "blink", 1, BASE, "eyes", "both eyes fully closed, as in the middle of a blink, the eyelids relaxed."))
     for gesture, pose in GESTURE_POSES.items():
         slots.append(_slot(f"gesture-{gesture}", "gesture", 3, BASE, "arms", pose + "."))
         slots.append(_slot(f"gesture-{gesture}__open", "mouth", 3, f"gesture-{gesture}", "mouth",
-                           "The mouth is open as when speaking, upper teeth slightly visible."))
+                           "part the lips as if speaking: the upper teeth visible, the jaw slightly lowered."))
     return slots
 
 
@@ -115,9 +135,18 @@ def base_prompt(profile: dict) -> str:
 
 
 def slot_prompt(profile: dict, slot: dict) -> str:
+    """A region edit prompt that stands on its own: what to edit, what the change must look like (clearly visible), and
+    everything that must stay the same -- even when the outside AI is used without selecting the region."""
     if slot["key"] == BASE:
         return base_prompt(profile)
-    return f"{KEEP} {slot['change'][0].upper()}{slot['change'][1:]}"
+    side = "right" if profile["sprite_facing"] == "right" else "left"
+    person = "man" if profile["gender"] == "male" else "woman"
+    change = slot["change"].format(side=side).rstrip(".")
+    return (f"Edit the attached picture of {profile['name']}, the same {person}. {CHANGE_WHAT[slot['region']]} "
+            f"New look: {change}. The change must be clearly visible at a glance. "
+            f"Keep everything else exactly as it is in the attached picture: {KEEP[slot['region']]}, "
+            f"{'the legs' if slot['region'] == 'arms' else 'the body pose, the hands'}, the clothes, the flat green "
+            "background, the framing and the image size. Do not redraw the picture.")
 
 
 def stored_path(path: str) -> Path:
