@@ -2,50 +2,49 @@ flowchart LR
     A([▶ New Project]) --> B
 
     subgraph B["Step 1: Config"]
-        B1[Topic\nCEFR Level\nDuration]
-        B2[Speakers\nGender\nAccent]
-        B3[Language Features\nCollocation/Idiom/Slang]
+        B1[Topic, CEFR, duration]
+        B2[Speakers, accent, genre]
     end
 
     subgraph C["Step 2: AI Script"]
-        C1[Gemini API\nStrict Prompt]
-        C2[Script Preview\n+ Inline Editor]
-        C3[Re-generate\nper segment]
+        C1[AI Gateway\ncloud-first, local fallback]
+        C2[Section budget + repairs]
+        C3[Inline editor]
     end
 
     subgraph D["Step 3: Learning Content"]
-        D1[Vocabulary List\ntiered]
-        D2[Collocation\n& Idiom explain]
-        D3[Grammar Structures\n+ Comprehension Q]
+        D1[Vocabulary, idioms, grammar, quiz]
     end
 
     subgraph E["Step 4: TTS Audio Studio"]
-        E1[Voice Assignment\nper speaker]
-        E2[Edge TTS\ngenerate per line]
-        E3[Preview + Mix\npydub + ffmpeg]
-        E4[Export\nMP3 + WAV]
+        E1[Edge TTS per line\n+ per-word timings]
+        E2[Mix + loudness\n+ smart music bed]
     end
 
     subgraph F["Step 5: Video Studio"]
-        F1[Background\nTemplate / Image]
-        F2[Subtitle Overlay\nburned-in + SRT]
-        F3[Lips-sync Avatar\nLivePortrait — NOT implemented, deferred]
-        F4[Export MP4]
+        F1[Storyboard beats\nowner review]
+        F2[Shots: Shot Library first,\nGPU draws the rest]
+        F3[Picture mode: story, black,\none still, talking sprites\n+ activity cutaways]
+        F4[Enhanced Remotion render\nor Standard ffmpeg]
     end
 
     subgraph G["Step 6: Thumbnail"]
-        G1[Template Select]
-        G2[AI Fill\nGemini]
-        G3[Manual Editor]
-        G4[A/B Export\n16:9 + 9:16]
+        G1[Templates + AI fill + editor]
     end
 
     subgraph H["Step 7: YouTube Package"]
-        H1[AI Description\nGemini]
-        H2[Auto Timestamps\nfrom audio]
-        H3[Tags & Keywords]
-        H4[Full Transcript\n+ Vocab + Grammar]
+        H1[Titles, description, tags,\nmeasured chapters, music credit]
+        H2[.zip export]
+    end
+
+    subgraph L["Libraries (standalone pages)"]
+        L1[Characters + scenes]
+        L2[Shot Library]
+        L3[Sprites + Activity Library]
+        L4[Music Library]
     end
 
     B --> C --> D --> E --> F --> G --> H
-    H --> I([📦 Export Package\nReady for YouTube])
+    L1 & L2 & L3 --> F
+    L4 --> E
+    H --> I([📦 Ready for YouTube])

@@ -1,47 +1,55 @@
 graph TB
     subgraph Browser["🖥️ Browser (localhost:8000)"]
-        UI[HTML/CSS/JS Frontend]
-        WZ[7-Step Wizard UI]
+        UI[Dashboard + 7-step studio]
+        LIB[Characters / Shot Library / Music Library / Settings]
     end
 
     subgraph FastAPI["⚙️ FastAPI Backend"]
         AR[API Routes]
-        SS[Script Service]
-        LCS[Learning Content Service]
-        TS[TTS Service]
-        AS[Audio Service]
-        VS[Video Service]
-        THS[Thumbnail Service]
         PS[Project Service]
+        SS[Script pipeline]
+        LCS[Learning pipeline]
+        JOBS[Durable AI jobs + worker]
+        TS[TTS Service]
+        AS[Audio Service + music bed]
+        VS[Video Service]
+        VIS[Visuals: libraries, storyboard, matchers, image jobs]
+        THS[Thumbnail Service]
         YTS[YouTube Package Service]
     end
 
-    subgraph AI["🤖 AI Engines"]
-        GEM[Gemini API\ngemini-3.8-flash]
-        OV[OmniVoice\nLocal GPU RTX 3060]
-        ETSS[Edge TTS\nOnline Free]
+    subgraph AI["🤖 AI"]
+        GW[AI Gateway router]
+        CLOUD[Gemini / OpenRouter cloud chain]
+        OLL[Ollama qwen3.5:9b local fallback]
+        ETSS[Edge TTS online]
     end
 
-    subgraph Media["🎬 Media Processing"]
-        FFMP[ffmpeg\nAudio Mix + Video]
-        PDY[pydub\nAudio Manipulation]
-        PIL[Pillow\nThumbnail]
+    subgraph Sub["🧩 Subprocess runtimes"]
+        REM[video-renderer/ Remotion, Node]
+        IMG[venv-image image_worker, RTX 3060]
     end
 
-    subgraph Storage["💾 Local Storage"]
-        DB[(SQLite\nProject DB)]
-        FS[Filesystem\nAudio/Video/Images]
-        ML[Music Library\nUser Background Music]
+    subgraph Media["🎬 Media"]
+        FFMP[ffmpeg]
+        PDY[pydub + pyloudnorm]
+        PIL[Pillow]
     end
 
-    UI --> AR
-    WZ --> AR
-    AR --> SS & LCS & TS & AS & VS & THS & PS & YTS
-    SS & LCS --> GEM
-    TS --> OV & ETSS
-    AS --> FFMP & PDY & ML
-    VS --> FFMP & PIL
-    THS --> GEM & PIL
-    YTS --> GEM
-    PS --> DB
-    AS & VS & THS --> FS
+    subgraph Storage["💾 Local storage"]
+        DB[(SQLite)]
+        FS[data/: audio, video, thumbnails, libraries]
+    end
+
+    UI & LIB --> AR
+    AR --> PS & SS & LCS & JOBS & TS & AS & VS & VIS & THS & YTS
+    SS & LCS & JOBS --> GW
+    THS & YTS & VIS --> GW
+    GW --> CLOUD & OLL
+    TS --> ETSS
+    AS --> FFMP & PDY
+    VS --> REM & FFMP
+    VIS --> IMG
+    THS --> PIL
+    PS & JOBS & VIS --> DB
+    AS & VS & THS & VIS --> FS

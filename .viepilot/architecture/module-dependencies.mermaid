@@ -1,29 +1,50 @@
 graph LR
-    subgraph Services
-        SS[ScriptService]
-        LCS[LearningContentService]
+    subgraph Core["Core services"]
+        PS[ProjectService]
+        SP[script_pipeline / ScriptService]
+        LP[learning_pipeline / LearningService]
+        AJ[ai_job_service + ai_worker]
         TS[TTSService]
         AS[AudioService]
+        MB[music_bed + music_select + music_analysis]
         VS[VideoService]
+        RR[video_renderer_remotion]
+        BR[brand_service]
         THS[ThumbnailService]
         YTS[YouTubePackageService]
-        PS[ProjectService]
+    end
+
+    subgraph Visuals["app/services/visuals"]
+        LS[library_service\ncharacters + scenes]
+        PV[project_visuals_service]
+        SB[storyboard_service]
+        SL[shot_library_service]
+        SPR[sprite_service + sprite_plan]
+        ACT[activity_library_service + activity_matcher]
+        IJ[jobs + runner + pipelines + engine]
+        CHK[colour_check + shot_checks]
     end
 
     subgraph External
-        GEM[Gemini API]
-        OV[OmniVoice]
+        GW[AI router\napp/services/ai]
         ET[Edge TTS]
         FF[ffmpeg]
-        PD[pydub]
+        REM[Remotion video-renderer]
+        GPU[gpu_model_manager]
+        IW[image_worker in venv-image]
         PI[Pillow]
     end
 
-    SS --> GEM
-    LCS --> GEM
-    TS --> OV & ET
-    AS --> FF & PD
-    VS --> FF
-    THS --> GEM & PI
-    YTS --> GEM
-    PS --> SS & LCS & TS & AS & VS & THS & YTS
+    SP & LP & THS & YTS & SB --> GW
+    AJ -. registered handlers .-> SP & LP
+    SP & LP --> AJ
+    TS --> ET
+    AS --> FF & MB
+    VS --> FF & RR
+    RR --> REM & AS & BR & YTS & PV & SB & SPR & ACT & LS
+    PV --> LS & SB
+    LS --> SL
+    IJ --> PV & LS & SL & CHK
+    IJ --> GPU --> IW
+    THS --> PI
+    SP & LP & YTS & RR & PV & SB --> PS

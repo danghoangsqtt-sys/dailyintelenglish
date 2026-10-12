@@ -1,6 +1,6 @@
 # API Reference
 
-Auto-generated from `Daily Intel English Studio`'s real FastAPI OpenAPI schema by `scripts/generate_api_docs.py` — do not hand-edit; re-run the script after changing any route. The live, always-current version of this same schema is also served at `/docs` (Swagger UI) and `/openapi.json` whenever the app is running.
+Auto-generated from `Daily Beyond English`'s real FastAPI OpenAPI schema by `scripts/generate_api_docs.py` — do not hand-edit; re-run the script after changing any route. The live, always-current version of this same schema is also served at `/docs` (Swagger UI) and `/openapi.json` whenever the app is running.
 
 OpenAPI version: `3.1.0`
 
@@ -131,7 +131,7 @@ the production route.
 
 List Music
 
-List background music tracks available in the local music library.
+List background music tracks with their details (Task 22.7).
 
 - **Response body:** `object`
 
@@ -140,6 +140,22 @@ List background music tracks available in the local music library.
 Upload Music
 
 Upload a validated MP3/WAV track without overwriting an existing file.
+
+- **Response body:** `object`
+
+### `POST /api/music/analyse`
+
+Analyse Music
+
+Task 22.9: classify every track not analysed yet (pace, ~BPM, energy, mood suggestion).
+
+- **Response body:** `object`
+
+### `GET /api/music/options`
+
+Music Options
+
+Task 22.7: the choices for a track's mood, source and licence.
 
 - **Response body:** `object`
 
@@ -152,6 +168,16 @@ Stream one library track for native browser audio preview.
 - **Response body:** `object`
 - **Parameters:** `filename`
 
+### `PATCH /api/music/{filename}`
+
+Edit Music
+
+Task 22.7: edit a track's details; only the fields sent change, an empty value clears.
+
+- **Request body:** `MusicTrackPatch`
+- **Response body:** `object`
+- **Parameters:** `filename`
+
 ### `DELETE /api/music/{filename}`
 
 Delete Music
@@ -160,6 +186,16 @@ Delete one library track without allowing paths outside the library.
 
 - **Response body:** `object`
 - **Parameters:** `filename`
+
+### `POST /api/projects/{project_id}/music/suggest`
+
+Suggest Music
+
+Task 22.8 (D51): the library track that best fits this episode's topic and length, with the
+reason (AI choice among the top candidates, else the deterministic score).
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
 
 ## projects
 
@@ -304,19 +340,13 @@ succeeded — see `avatar_service.delete_avatar`'s docstring for why.
 
 Get Settings
 
-Report the Gemini API key's status and the current AI_MODE.
+Report the cloud provider's status and the current AI_MODE.
 
-Never returns the raw key -- see settings_service.get_gemini_api_key_status.
+Never returns the raw cloud key -- see settings_service.get_cloud_settings_status.
+`allow_cloud` (Task 18.3, PM review C3) and `effective_mode`/`effective_reason`
+let the Settings page show, and explain, when the selected mode differs from
+what actually runs.
 
-- **Response body:** `object`
-
-### `PUT /api/settings`
-
-Update Gemini Api Key
-
-Save a new Gemini API key -- takes effect immediately, no restart needed.
-
-- **Request body:** `GeminiApiKeyUpdate`
 - **Response body:** `object`
 
 ### `PUT /api/settings/ai-mode`
@@ -328,13 +358,105 @@ Save a new AI_MODE (ADR-001 kill switch) -- takes effect immediately, no restart
 - **Request body:** `AIModeUpdate`
 - **Response body:** `object`
 
-### `DELETE /api/settings/gemini-api-key`
+### `PUT /api/settings/cloud`
 
-Clear Gemini Api Key
+Update Cloud Settings
 
-Remove the stored key and revert to the original .env/environment value.
+Save the cloud provider's base URL/model, and (optionally) its API key --
+takes effect immediately, no restart needed.
+
+- **Request body:** `CloudSettingsUpdate`
+- **Response body:** `object`
+
+### `DELETE /api/settings/cloud/api-key`
+
+Clear Cloud Api Key
+
+Remove the stored cloud API key and revert to the original .env/environment value.
 
 - **Response body:** `object`
+
+### `PUT /api/settings/cloud/gemini`
+
+Update Gemini Settings
+
+Task 18.8: save Gemini's base URL/model chain, and (optionally) its API
+key -- takes effect immediately, no restart needed.
+
+- **Request body:** `GeminiSettingsUpdate`
+- **Response body:** `object`
+
+### `DELETE /api/settings/cloud/gemini/api-key`
+
+Clear Gemini Cloud Api Key
+
+Task 18.8: remove the stored Gemini API key, reverting to the original
+.env/environment value.
+
+- **Response body:** `object`
+
+### `PUT /api/settings/cloud/opencode-zen`
+
+Update Opencode Zen Settings
+
+Task 18.8: save OpenCode Zen's base URL/model, and (optionally) its API
+key -- takes effect immediately, no restart needed.
+
+- **Request body:** `OpenCodeZenSettingsUpdate`
+- **Response body:** `object`
+
+### `DELETE /api/settings/cloud/opencode-zen/api-key`
+
+Clear Opencode Zen Api Key
+
+Task 18.8: remove the stored OpenCode Zen API key, reverting to the
+original .env/environment value.
+
+- **Response body:** `object`
+
+### `PUT /api/settings/cloud/order`
+
+Update Cloud Provider Order
+
+Task 18.8: save the cloud dispatch order -- takes effect immediately.
+
+- **Request body:** `CloudProviderOrderUpdate`
+- **Response body:** `object`
+
+### `POST /api/settings/cloud/test-connection`
+
+Test Cloud Connection
+
+One real, tiny probe call to the cloud provider -- never persists anything.
+
+- **Request body:** `CloudTestConnectionRequest`
+- **Response body:** `object`
+
+## storyboard
+
+### `GET /api/projects/{project_id}/storyboard`
+
+Get Storyboard
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `PUT /api/projects/{project_id}/storyboard`
+
+Put Storyboard
+
+- **Request body:** `StoryboardInput`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/storyboard/propose`
+
+Propose Storyboard
+
+Task 24.2: AI proposal (one repair, then the deterministic rule); replaces the draft.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
 
 ## thumbnails
 
@@ -392,6 +514,7 @@ List Thumbnail Templates
 List the five validated checked-in thumbnail templates.
 
 - **Response body:** `object`
+- **Parameters:** `project_id` (optional)
 
 ## tts
 
@@ -408,7 +531,7 @@ Serve a previously synthesized line's cached audio file.
 
 Preview Line
 
-Synthesize one script line to audio (OmniVoice if configured, else Edge TTS) and cache it.
+Synthesize one script line to audio with Edge TTS and cache it.
 
 No lock is held across the synthesis call itself (network round-trip to Edge
 TTS, potentially slow) — same "no lock across slow work" rule already applied
@@ -424,17 +547,8 @@ to Gemini calls and audio/video generation elsewhere in this codebase. A short
 
 List Engines
 
-Report which TTS engines are currently usable on this machine.
-
-Only lists engines `tts_service.py` can actually dispatch to (matches
-`TTS_ENGINES`). `omnivoice` is unconditionally reported unavailable: its
-synthesis function is a hardcoded, always-failing stub today (see
-`tts_service.py`'s module docstring) — no filesystem check could make that
-claim honestly `true`, model directory or not. "piper"/"google"/"azure" were
-removed entirely 2026-09-18 (found by an independent audit): they were
-accepted as valid `tts_engine` values but had zero synthesis implementation,
-silently falling through to Edge TTS with no error — an advertised capability
-that didn't actually run.
+Report the TTS engines this app can use: Edge TTS only (D56, owner 2026-10-06).
+OmniVoice (never integrated), Kokoro and StyleTTS 2 were removed.
 
 - **Response body:** `object`
 
@@ -445,6 +559,14 @@ that didn't actually run.
 Root
 
 Serve the dashboard as the app's landing page.
+
+- **Response body:** `object`
+
+### `GET /characters`
+
+Character Library
+
+Serve the global Character Library.
 
 - **Response body:** `object`
 
@@ -469,6 +591,14 @@ Serve the background Music Library management page.
 Settings Page
 
 Serve the app-level Settings page (Task 12.1 — Gemini API key).
+
+- **Response body:** `object`
+
+### `GET /shots`
+
+Shot Library
+
+Serve the Shot Library (Task 29.7).
 
 - **Response body:** `object`
 
@@ -544,7 +674,12 @@ subtitle file.
 
 Generate Video
 
-Render the project's completed audio mix into an MP4 with burned-in subtitles.
+Render the project's completed audio mix into an MP4.
+
+Task 19.7: `payload.renderer` ("ffmpeg" default) is only ever actually honored as
+"remotion" when `video_service._resolve_renderer`'s kill-switch check agrees (D19.7-b)
+-- passing "remotion" here is always safe, it just silently resolves to ffmpeg when the
+deployment hasn't opted in via `DIE_VIDEO_RENDERER=remotion`.
 
 - **Request body:** `GenerateVideoRequest`
 - **Response body:** `object`
@@ -559,6 +694,16 @@ Return the current video job for a project (404 if video was never generated).
 - **Response body:** `object`
 - **Parameters:** `project_id`
 
+### `GET /api/video/health`
+
+Video Health
+
+Task 19.7 (D19.7-d): Remotion availability + the in-memory fallback-rate counters
+(process-lifetime only, reset on restart -- same precedent as app/main.py's
+`_ai_circuits`, Phase 18).
+
+- **Response body:** `object`
+
 ### `GET /api/video/templates`
 
 List Templates
@@ -566,6 +711,388 @@ List Templates
 List the fixed set of pre-rendered background templates.
 
 - **Response body:** `object`
+
+## visuals
+
+### `GET /api/projects/{project_id}/visuals`
+
+Get Project Visuals
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `GET /api/projects/{project_id}/visuals/activity-coverage`
+
+Activity Coverage
+
+Explain selected/missing reusable activity illustrations before a talking-sprites render.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `PUT /api/projects/{project_id}/visuals/cast`
+
+Set Project Cast
+
+- **Request body:** `CastMemberInput`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `GET /api/projects/{project_id}/visuals/library-coverage`
+
+Library Coverage
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `PUT /api/projects/{project_id}/visuals/scenes`
+
+Set Project Scenes
+
+- **Request body:** `object`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/visuals/shots`
+
+Generate Project Shots
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `GET /api/projects/{project_id}/visuals/shots/{shot_id}/content`
+
+Project Shot Content
+
+- **Response body:** `object`
+- **Parameters:** `project_id`, `shot_id`, `variant` (optional)
+
+### `POST /api/projects/{project_id}/visuals/shots/{shot_id}/regenerate`
+
+Regenerate Project Shot
+
+- **Response body:** `object`
+- **Parameters:** `project_id`, `shot_id`
+
+### `POST /api/projects/{project_id}/visuals/shots/{shot_id}/to-library`
+
+Add Project Shot To Library
+
+- **Response body:** `object`
+- **Parameters:** `project_id`, `shot_id`
+
+### `GET /api/visuals/assets/{asset_id}/content`
+
+Asset Content
+
+- **Response body:** `object`
+- **Parameters:** `asset_id`
+
+### `GET /api/visuals/characters`
+
+List Characters
+
+- **Response body:** `object`
+
+### `POST /api/visuals/characters`
+
+Create Character
+
+- **Request body:** `CharacterInput`
+- **Response body:** `object`
+
+### `GET /api/visuals/characters/{character_id}`
+
+Get Character
+
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `PATCH /api/visuals/characters/{character_id}`
+
+Edit Character
+
+- **Request body:** `CharacterPatch`
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `DELETE /api/visuals/characters/{character_id}`
+
+Delete Character
+
+- **Response body:** `object`
+- **Parameters:** `character_id`, `force` (optional)
+
+### `PUT /api/visuals/characters/{character_id}/assets/{asset_id}/approve`
+
+Approve Asset
+
+- **Request body:** `ApprovalInput`
+- **Response body:** `object`
+- **Parameters:** `character_id`, `asset_id`
+
+### `POST /api/visuals/characters/{character_id}/candidates`
+
+Generate Candidates
+
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `POST /api/visuals/characters/{character_id}/lock`
+
+Lock Character
+
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `PUT /api/visuals/characters/{character_id}/reference`
+
+Pick Reference
+
+- **Request body:** `ReferenceInput`
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `POST /api/visuals/characters/{character_id}/sheet`
+
+Generate Sheet
+
+- **Request body:** `object`
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `POST /api/visuals/characters/{character_id}/unlock`
+
+Unlock Character
+
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `GET /api/visuals/health`
+
+Visuals Health
+
+- **Response body:** `object`
+
+### `GET /api/visuals/jobs/{job_id}`
+
+Get Image Job
+
+- **Response body:** `object`
+- **Parameters:** `job_id`
+
+### `POST /api/visuals/jobs/{job_id}/cancel`
+
+Cancel Image Job
+
+- **Response body:** `object`
+- **Parameters:** `job_id`
+
+### `GET /api/visuals/library/activities`
+
+List Library Activities
+
+- **Response body:** `object`
+- **Parameters:** `review_state` (optional), `character_id` (optional), `activity` (optional)
+
+### `POST /api/visuals/library/activities/approve-batch`
+
+Approve Library Activities Batch
+
+Approve only the pending activity pictures explicitly selected in the UI.
+
+- **Request body:** `ActivityApproveBatchInput`
+- **Response body:** `object`
+
+### `POST /api/visuals/library/activities/import`
+
+Import Library Activities
+
+- **Response body:** `object`
+
+### `POST /api/visuals/library/activities/upload`
+
+Upload Library Activity
+
+Upload one activity picture directly; it always starts pending review.
+
+- **Response body:** `object`
+
+### `POST /api/visuals/library/activities/upload-batch`
+
+Upload Library Activities Batch
+
+Add up to 20 pictures with one owner-entered activity name per file.
+
+- **Response body:** `object`
+
+### `PATCH /api/visuals/library/activities/{activity_id}`
+
+Edit Library Activity
+
+- **Request body:** `ActivityMetadataPatch`
+- **Response body:** `object`
+- **Parameters:** `activity_id`
+
+### `DELETE /api/visuals/library/activities/{activity_id}`
+
+Delete Library Activity
+
+Delete one library image after its database removal commits.
+
+- **Response body:** `object`
+- **Parameters:** `activity_id`
+
+### `GET /api/visuals/library/activities/{activity_id}/content`
+
+Activity Content
+
+- **Response body:** `object`
+- **Parameters:** `activity_id`
+
+### `GET /api/visuals/library/activities/{activity_id}/history`
+
+Activity History
+
+- **Response body:** `object`
+- **Parameters:** `activity_id`
+
+### `PATCH /api/visuals/library/activities/{activity_id}/review`
+
+Review Library Activity
+
+- **Request body:** `ActivityReviewInput`
+- **Response body:** `object`
+- **Parameters:** `activity_id`
+
+### `GET /api/visuals/library/backgrounds`
+
+Library Backgrounds
+
+- **Response body:** `object`
+
+### `POST /api/visuals/library/backgrounds/import`
+
+Import Library Backgrounds
+
+- **Response body:** `object`
+
+### `GET /api/visuals/library/inbox`
+
+Library Inbox
+
+- **Response body:** `object`
+
+### `POST /api/visuals/library/inbox/import`
+
+Import Library Inbox
+
+- **Response body:** `object`
+
+### `GET /api/visuals/library/shots`
+
+List Library Shots
+
+- **Response body:** `object`
+- **Parameters:** `scene_id` (optional), `kind` (optional), `review_state` (optional), `character_id` (optional)
+
+### `PATCH /api/visuals/library/shots/{shot_id}`
+
+Review Library Shot
+
+- **Request body:** `ShotReviewInput`
+- **Response body:** `object`
+- **Parameters:** `shot_id`
+
+### `DELETE /api/visuals/library/shots/{shot_id}`
+
+Delete Library Shot
+
+- **Response body:** `object`
+- **Parameters:** `shot_id`
+
+### `GET /api/visuals/library/shots/{shot_id}/content`
+
+Library Shot Content
+
+- **Response body:** `object`
+- **Parameters:** `shot_id`
+
+### `GET /api/visuals/library/sprites`
+
+Library Sprites
+
+Phase 32: the talking-sprite set of every library character, and the inbox the sets are imported from.
+
+- **Response body:** `object`
+
+### `POST /api/visuals/library/sprites/import`
+
+Import Library Sprites
+
+- **Response body:** `object`
+
+### `GET /api/visuals/library/sprites/{character_id}/{name}/content`
+
+Library Sprite Content
+
+- **Response body:** `object`
+- **Parameters:** `character_id`, `name`
+
+### `GET /api/visuals/options`
+
+Visuals Options
+
+- **Response body:** `object`
+
+### `GET /api/visuals/scenes`
+
+List Scenes
+
+- **Response body:** `object`
+
+### `POST /api/visuals/scenes`
+
+Create Scene
+
+- **Request body:** `SceneInput`
+- **Response body:** `object`
+
+### `PATCH /api/visuals/scenes/{scene_id}`
+
+Edit Scene
+
+- **Request body:** `ScenePatch`
+- **Response body:** `object`
+- **Parameters:** `scene_id`
+
+### `DELETE /api/visuals/scenes/{scene_id}`
+
+Delete Scene
+
+- **Response body:** `object`
+- **Parameters:** `scene_id`
+
+### `POST /api/visuals/scenes/{scene_id}/duplicate`
+
+Duplicate Scene
+
+- **Response body:** `object`
+- **Parameters:** `scene_id`
+
+### `GET /api/visuals/scenes/{scene_id}/preview`
+
+Scene Preview Content
+
+- **Response body:** `object`
+- **Parameters:** `scene_id`
+
+### `POST /api/visuals/scenes/{scene_id}/preview`
+
+Generate Scene Preview
+
+- **Response body:** `object`
+- **Parameters:** `scene_id`
 
 ## youtube
 

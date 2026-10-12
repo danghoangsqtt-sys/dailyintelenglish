@@ -1,38 +1,36 @@
-# ARCHITECTURE.md — Daily Intel English Studio
+# ARCHITECTURE.md — Daily Beyond English Studio (Daily Intel English)
 
 <!-- crystallize_version: 0.8.0 -->
 
+*Refreshed 2026-10-12 (Task 34.4 / ENH-025) for `1.2.0-beta` plus the unreleased Phases 22 and 25–32.*
+
 ## System Overview
 
-Daily Intel English Studio là một **local web application** chạy trên `http://localhost:8000`. Backend Python FastAPI xử lý toàn bộ logic AI, TTS, audio/video processing. Frontend HTML/CSS/JS thuần túy giao tiếp với backend qua REST API.
+Daily Beyond English Studio là một **local web application** chạy trên `http://localhost:8000`. Backend Python FastAPI xử lý toàn bộ logic AI, TTS, audio/video và hình ảnh. Frontend HTML/CSS/JS thuần túy giao tiếp với backend qua REST API. Hai môi trường phụ chạy như tiến trình con, tách khỏi venv chính: Node.js `video-renderer/` (Remotion) và `venv-image` (image worker trên GPU).
 
 ```
 Browser (localhost:8000)
         ↕ REST API (synchronous, polling — no WebSocket/SSE anywhere in the app)
 FastAPI Backend (Python 3.11+)
-        ├── AI Gateway (script + learning content + thumbnail fill) —
-        │     Ollama (qwen3.5:9b, local) by default as of Phase 14; Google
-        │     Gemini remains in the codebase, dormant, as an unsupported
-        │     rollback (see ADR-001 amendment A2)
-        ├── Edge TTS (sole real TTS engine — see note below)
-        ├── pydub + ffmpeg (audio mix + video export)
+        ├── AI Gateway (app/services/ai/) — cloud-first (Phase 18, D21/D31):
+        │     Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter free
+        │     (Nemotron → Gemma 4 → Dots3) → local Ollama qwen3.5:9b;
+        │     kill switch DIE_AI_ALLOW_CLOUD=false / DIE_AI_MODE=local
+        ├── Durable AI jobs + in-process worker (script, learning, storyboard)
+        ├── Edge TTS (the only engine, D56) + per-word timings
+        ├── pydub + ffmpeg + pyloudnorm (audio mix, smart music bed)
+        ├── Video: Remotion subprocess (Enhanced, default) | ffmpeg (Standard fallback)
+        ├── Visuals (app/services/visuals/): character/scene/shot/sprite/activity
+        │     libraries, storyboard, matchers, durable image jobs
+        │     → scripts/image_worker.py in venv-image (diffusers, RealVisXL V5.0)
+        │       behind one GPU arbiter (gpu_model_manager)
         ├── Pillow (thumbnail generation)
-        └── SQLite (project storage)
+        └── SQLite (aiosqlite, numbered migrations in app/db/migrations/)
 ```
 
-`_synthesize_omnivoice()` is a hardcoded stub that unconditionally raises
-`_OmniVoiceUnavailableError` — no real GPU inference code exists anywhere in this
-codebase, only the honest fallback-to-Edge-TTS branch around that stub. Edge TTS is
-therefore the *only* engine that can ever actually produce audio today. See the
-"TTSService" section below for the real reason OmniVoice was never pursued (it was
-never simply "decided against" a *working* implementation — its real API turned out
-to be a different feature than originally planned). `TTS_ENGINES`
-(`app/core/constants.py`) lists only `["omnivoice", "edge_tts"]` as legal
-`speaker.tts_engine` values as of 2026-09-18 — `"piper"`/`"google"`/`"azure"` were
-removed that day (found by an independent audit): they were accepted as valid input
-with zero synthesis implementation anywhere, silently falling through to Edge TTS
-with no error. `GET /api/tts/engines` correspondingly always reports `omnivoice` as
-unavailable, not a filesystem check that could misleadingly say otherwise.
+**TTS note:** Edge TTS is the only engine (`TTS_ENGINES = ["edge_tts"]`, D56 2026-10-06).
+OmniVoice, Kokoro and StyleTTS 2 were investigated and removed; a legacy `"omnivoice"`
+value in old projects maps to Edge TTS (`LEGACY_TTS_ENGINES`).
 
 ## ViePilot Organization Context
 
@@ -44,12 +42,12 @@ profile_id: none / not configured
 
 | Diagram Type | Status | Rationale | Diagram source |
 |---|---|---|---|
-| system-overview | required | Kiến trúc local web app multi-module | .viepilot/architecture/system-overview.mermaid |
-| data-flow | required | Pipeline 7 bước Script→Audio→Video | .viepilot/architecture/data-flow.mermaid |
-| event-flows | N/A | No event-driven flows anywhere in the app — all routes are synchronous REST, and status polling is a plain polling GET, not real WebSocket/SSE (corrected 2026-09-18; this row previously said "optional / WebSocket streaming TTS", which was never true and contradicted the System Overview diagram above) | — |
+| system-overview | required | Local web app with two subprocess runtimes (Remotion, image worker) | .viepilot/architecture/system-overview.mermaid |
+| data-flow | required | 7-step pipeline plus the visual libraries feeding Step 5 | .viepilot/architecture/data-flow.mermaid |
+| event-flows | N/A | No event-driven flows anywhere in the app — all routes are synchronous REST, and job/status progress is a plain polling GET, not WebSocket/SSE (corrected 2026-09-18) | — |
 | module-dependencies | required | Services graph | .viepilot/architecture/module-dependencies.mermaid |
-| deployment | N/A | Local only, no cloud deployment | — |
-| user-use-case | optional | Single user, use cases straightforward | — |
+| deployment | N/A | Local only, no cloud deployment (packaged as a Windows folder build via PyInstaller) | — |
+| user-use-case | optional | Single user, use cases straightforward; omitted | — |
 
 ---
 
@@ -60,51 +58,59 @@ profile_id: none / not configured
 ```mermaid
 graph TB
     subgraph Browser["🖥️ Browser (localhost:8000)"]
-        UI[HTML/CSS/JS Frontend]
-        WZ[7-Step Wizard UI]
+        UI[Dashboard + 7-step studio]
+        LIB[Characters / Shot Library / Music Library / Settings]
     end
 
     subgraph FastAPI["⚙️ FastAPI Backend"]
         AR[API Routes]
-        SS[Script Service]
-        LCS[Learning Content Service]
-        TS[TTS Service]
-        AS[Audio Service]
-        VS[Video Service]
-        THS[Thumbnail Service]
         PS[Project Service]
+        SS[Script pipeline]
+        LCS[Learning pipeline]
+        JOBS[Durable AI jobs + worker]
+        TS[TTS Service]
+        AS[Audio Service + music bed]
+        VS[Video Service]
+        VIS[Visuals: libraries, storyboard, matchers, image jobs]
+        THS[Thumbnail Service]
         YTS[YouTube Package Service]
     end
 
-    subgraph AI["🤖 AI Engines"]
-        GEM[AI Gateway\nOllama qwen3.5:9b local, default\nGemini dormant]
-        OV[OmniVoice\nLocal GPU RTX 3060]
-        ETSS[Edge TTS\nOnline Free]
+    subgraph AI["🤖 AI"]
+        GW[AI Gateway router]
+        CLOUD[Gemini / OpenRouter cloud chain]
+        OLL[Ollama qwen3.5:9b local fallback]
+        ETSS[Edge TTS online]
     end
 
-    subgraph Media["🎬 Media Processing"]
-        FFMP[ffmpeg\nAudio Mix + Video]
-        PDY[pydub\nAudio Manipulation]
-        PIL[Pillow\nThumbnail]
+    subgraph Sub["🧩 Subprocess runtimes"]
+        REM[video-renderer/ Remotion, Node]
+        IMG[venv-image image_worker, RTX 3060]
     end
 
-    subgraph Storage["💾 Local Storage"]
-        DB[(SQLite\nProject DB)]
-        FS[Filesystem\nAudio/Video/Images]
-        ML[Music Library\nUser Background Music]
+    subgraph Media["🎬 Media"]
+        FFMP[ffmpeg]
+        PDY[pydub + pyloudnorm]
+        PIL[Pillow]
     end
 
-    UI --> AR
-    WZ --> AR
-    AR --> SS & LCS & TS & AS & VS & THS & PS & YTS
-    SS & LCS --> GEM
-    TS --> OV & ETSS
-    AS --> FFMP & PDY & ML
-    VS --> FFMP & PIL
-    THS --> GEM & PIL
-    YTS --> GEM
-    PS --> DB
-    AS & VS & THS --> FS
+    subgraph Storage["💾 Local storage"]
+        DB[(SQLite)]
+        FS[data/: audio, video, thumbnails, libraries]
+    end
+
+    UI & LIB --> AR
+    AR --> PS & SS & LCS & JOBS & TS & AS & VS & VIS & THS & YTS
+    SS & LCS & JOBS --> GW
+    THS & YTS & VIS --> GW
+    GW --> CLOUD & OLL
+    TS --> ETSS
+    AS --> FFMP & PDY
+    VS --> REM & FFMP
+    VIS --> IMG
+    THS --> PIL
+    PS & JOBS & VIS --> DB
+    AS & VS & THS & VIS --> FS
 ```
 
 ---
@@ -118,53 +124,52 @@ flowchart LR
     A([▶ New Project]) --> B
 
     subgraph B["Step 1: Config"]
-        B1[Topic\nCEFR Level\nDuration]
-        B2[Speakers\nGender\nAccent]
-        B3[Language Features\nCollocation/Idiom/Slang]
+        B1[Topic, CEFR, duration]
+        B2[Speakers, accent, genre]
     end
 
     subgraph C["Step 2: AI Script"]
-        C1[AI Gateway\nOllama local, Strict Prompt]
-        C2[Script Preview\n+ Inline Editor]
-        C3[Re-generate\nper segment]
+        C1[AI Gateway\ncloud-first, local fallback]
+        C2[Section budget + repairs]
+        C3[Inline editor]
     end
 
     subgraph D["Step 3: Learning Content"]
-        D1[Vocabulary List\ntiered]
-        D2[Collocation\n& Idiom explain]
-        D3[Grammar Structures\n+ Comprehension Q]
+        D1[Vocabulary, idioms, grammar, quiz]
     end
 
     subgraph E["Step 4: TTS Audio Studio"]
-        E1[Voice Assignment\nper speaker]
-        E2[Edge TTS\ngenerate per line]
-        E3[Preview + Mix\npydub + ffmpeg]
-        E4[Export\nMP3 + WAV]
+        E1[Edge TTS per line\n+ per-word timings]
+        E2[Mix + loudness\n+ smart music bed]
     end
 
     subgraph F["Step 5: Video Studio"]
-        F1[Background\nTemplate / Image]
-        F2[Subtitle Overlay\nburned-in + SRT]
-        F3[Lips-sync Avatar\nLivePortrait — NOT implemented, deferred]
-        F4[Export MP4]
+        F1[Storyboard beats\nowner review]
+        F2[Shots: Shot Library first,\nGPU draws the rest]
+        F3[Picture mode: story, black,\none still, talking sprites\n+ activity cutaways]
+        F4[Enhanced Remotion render\nor Standard ffmpeg]
     end
 
     subgraph G["Step 6: Thumbnail"]
-        G1[Template Select]
-        G2[AI Fill\nOllama local]
-        G3[Manual Editor]
-        G4[A/B Export\n16:9 + 9:16]
+        G1[Templates + AI fill + editor]
     end
 
     subgraph H["Step 7: YouTube Package"]
-        H1[AI Description\nOllama local]
-        H2[Auto Timestamps\nfrom audio]
-        H3[Tags & Keywords]
-        H4[Full Transcript\n+ Vocab + Grammar]
+        H1[Titles, description, tags,\nmeasured chapters, music credit]
+        H2[.zip export]
+    end
+
+    subgraph L["Libraries (standalone pages)"]
+        L1[Characters + scenes]
+        L2[Shot Library]
+        L3[Sprites + Activity Library]
+        L4[Music Library]
     end
 
     B --> C --> D --> E --> F --> G --> H
-    H --> I([📦 Export Package\nReady for YouTube])
+    L1 & L2 & L3 --> F
+    L4 --> E
+    H --> I([📦 Ready for YouTube])
 ```
 
 ---
@@ -175,49 +180,72 @@ flowchart LR
 
 ```mermaid
 graph LR
-    subgraph Services
-        SS[ScriptService]
-        LCS[LearningContentService]
+    subgraph Core["Core services"]
+        PS[ProjectService]
+        SP[script_pipeline / ScriptService]
+        LP[learning_pipeline / LearningService]
+        AJ[ai_job_service + ai_worker]
         TS[TTSService]
         AS[AudioService]
+        MB[music_bed + music_select + music_analysis]
         VS[VideoService]
+        RR[video_renderer_remotion]
+        BR[brand_service]
         THS[ThumbnailService]
         YTS[YouTubePackageService]
-        PS[ProjectService]
+    end
+
+    subgraph Visuals["app/services/visuals"]
+        LS[library_service\ncharacters + scenes]
+        PV[project_visuals_service]
+        SB[storyboard_service]
+        SL[shot_library_service]
+        SPR[sprite_service + sprite_plan]
+        ACT[activity_library_service + activity_matcher]
+        IJ[jobs + runner + pipelines + engine]
+        CHK[colour_check + shot_checks]
     end
 
     subgraph External
-        GEM[AI Gateway\nOllama local, Gemini dormant]
-        OV[OmniVoice]
+        GW[AI router\napp/services/ai]
         ET[Edge TTS]
         FF[ffmpeg]
-        PD[pydub]
+        REM[Remotion video-renderer]
+        GPU[gpu_model_manager]
+        IW[image_worker in venv-image]
         PI[Pillow]
     end
 
-    SS --> GEM
-    LCS --> GEM
-    TS --> OV & ET
-    AS --> FF & PD
-    VS --> FF
-    THS --> GEM & PI
-    YTS --> GEM
-    PS --> SS & LCS & TS & AS & VS & THS & YTS
+    SP & LP & THS & YTS & SB --> GW
+    AJ -. registered handlers .-> SP & LP
+    SP & LP --> AJ
+    TS --> ET
+    AS --> FF & MB
+    VS --> FF & RR
+    RR --> REM & AS & BR & YTS & PV & SB & SPR & ACT & LS
+    PV --> LS & SB
+    LS --> SL
+    IJ --> PV & LS & SL & CHK
+    IJ --> GPU --> IW
+    THS --> PI
+    SP & LP & YTS & RR & PV & SB --> PS
 ```
 
 ---
 
 ## Services Definitions
 
-### 1. ScriptService (`app/services/script_service.py`)
-- **Responsibility:** Generate podcast script via the AI Gateway (Ollama local by default, Gemini dormant) with strict prompt control
+Sections 1–8 are the original core services; each now calls the cloud-first AI Gateway (section 9). Sections 9–14 cover Phases 13–32.
+
+### 1. ScriptService (`app/services/script_service.py`, `script_pipeline.py`)
+- **Responsibility:** Generate podcast script via the AI Gateway (cloud-first, local fallback) as a durable, checkpointed job (section-by-section budget, repetition and global length repairs)
 - **Inputs:** topic, CEFR level, duration, num_speakers, genre, accent, language_features
 - **Outputs:** Structured script JSON (speaker, line, timing_estimate, language_notes)
 - **Key logic:** CEFR-calibrated prompt templates, per-genre prompt, language feature toggles
 - **Re-generate:** per-segment regeneration support
 
 ### 2. LearningContentService (`app/services/learning_service.py`)
-- **Responsibility:** Generate vocabulary, idioms, grammar notes, and comprehension questions via the AI Gateway (Ollama local by default, Gemini dormant) with strict structured JSON schema
+- **Responsibility:** Generate vocabulary, idioms, grammar notes, and comprehension questions via the AI Gateway as a durable job (`learning_pipeline.py`) with strict structured JSON schema
 - **Inputs:** project script lines, CEFR level, topic
 - **Outputs:** Structured learning pack JSON (`LearningPackOut`: vocabulary with IPA and bilingual definitions, idioms, grammar points, quiz questions with answer keys)
 - **Key logic:** Structured JSON schema validation (`responseSchema`), fallback handling, SQLite persistence with UPSERT
@@ -225,22 +253,10 @@ graph LR
 
 ### 3. TTSService (`app/services/tts_service.py`)
 - **Responsibility:** Convert script lines → audio files per speaker
-- **Engine: Edge TTS** (free, online, 10 accents x 3 genders, live-verified) — the sole
-  official engine, by user decision 2026-09-13.
-  - OmniVoice (local GPU) was the originally-planned primary engine, but its real API
-    turned out to be zero-shot voice *cloning* from a reference audio sample, not the
-    text-described "voice design" originally envisioned — pursuing it further didn't
-    clearly improve on Edge TTS enough to justify the voice-cloning consent/rights
-    questions a reference-sample source would raise. The semaphore-guarded fallback
-    branch (`_synthesize_omnivoice()` → honest "model not loaded" → Edge TTS) stays in
-    the code as a harmless, tested example of the fallback pattern, but is not a live
-    engine choice in the UI.
-  - Piper TTS / Google Cloud TTS / Azure TTS were never implemented. They used to be
-    kept as valid `TTS_ENGINES` enum values "for schema flexibility," but an
-    independent audit (2026-09-18) correctly flagged that as a real problem, not
-    harmless flexibility: accepting them as legal input silently fell through to
-    Edge TTS with no error, an advertised capability that didn't actually run. All
-    3 were removed from `TTS_ENGINES` that day.
+- **Engine: Edge TTS** (free, online, 10 accents x 3 genders) — the only engine (D56,
+  2026-10-06). OmniVoice, Kokoro and StyleTTS 2 were investigated and removed; a legacy
+  `"omnivoice"` value maps to Edge TTS. Edge TTS `WordBoundary` events give per-word
+  timestamps (Task 19.2) for karaoke captions and talking-sprite mouths.
 - **Outputs:** Per-line WAV/MP3 files in `data/tts_cache/`
 - **Voice mapping:** Each speaker → accent + gender → a concrete Edge TTS neural voice
   (`EDGE_TTS_VOICE_MAP`), plus speed/pitch/volume settings
@@ -256,7 +272,9 @@ graph LR
   - Add background music from `data/music_library/` (optional, filename passed per
     generate-call — no project-level "selected track" column yet): looped/trimmed to the
     mix's duration and capped at a **flat** `MUSIC_DUCKING_MAX_DBFS` ceiling for its whole
-    length — a static-level duck, not dynamic speech-reactive ducking
+    length in the original Phase 1 design. **Superseded by Phase 22 (D51):** `music_bed.py` fits the
+    track to the episode (crossfade loop), ducks it under speech, carries it over the intro/outro and
+    fades it to silence; `music_select_service.py` auto-selects a track by topic, length and pace
   - Export MP3 (192kbps) + WAV (44100Hz 16-bit) to `data/audio_output/{project_id}/`
   - Advances `projects.status` to `audio_generated`, but only when the current status is
     exactly `script_generated` (best-effort — a later re-mix doesn't fight the forward-only
@@ -269,23 +287,18 @@ graph LR
 ### 5. VideoService (`app/services/video_service.py`) — Sub-task 1.7a, DONE
 - **Responsibility:** Generate podcast video (MP4). Only processes an already-completed
   audio mix from AudioService (Task 1.6) — never generates audio itself.
-- **Pipeline:**
-  - **Phase 1 fallback (DONE):** one of 3 fixed pre-rendered background templates
-    (`frontend/static/video_backgrounds/{midnight,deep_purple,charcoal_wave}.png`, no
-    custom upload yet) + the real completed audio mix + burned-in subtitles via ffmpeg's
-    `subtitles` filter (libass) — real SRT cues built from AudioService's measured
-    per-line timestamps (start/end seconds + actual dialogue text + speaker label), not
-    estimated.
-  - **Phase 1 primary (NOT DONE, deferred):** LivePortrait lips-sync per speaker avatar —
-    blocked on a real user decision (same class of blocker as OmniVoice's `ref_audio`):
-    no speaker has an avatar image (`speakers.avatar_image_path` is null for every
-    speaker) and no upload/generation feature exists yet.
-  - SRT file generation from timestamps — done, see above.
-- **Output:** MP4 (1280x720 standard only for now — Shorts 720x1280 not implemented) + SRT file
+- **Renderers:** `VIDEO_RENDERER` = `remotion` (default since 1.2.0-beta, "Enhanced") or `ffmpeg`
+  ("Standard", the tested fallback; `DIE_VIDEO_RENDERER=ffmpeg` forces it). See section 11.
+  - **Standard (ffmpeg):** one of the background templates + the audio mix + burned-in subtitles
+    (libass) from AudioService's measured per-line timestamps; 16:9 and 9:16 (blur-pad) output.
+  - **Enhanced (Remotion):** karaoke captions, speaker chips, vocabulary cards, chapter bar, branded
+    intro/outro and the picture modes of Phases 20–32.
+  - LivePortrait lip-sync was never implemented; Phase 32 talking sprites took its place.
+- **Output:** MP4 1280x720 (+ 720x1280 vertical) + SRT
 
 ### 6. ThumbnailService (`app/services/thumbnail_service.py`)
 - **Responsibility:** Generate professional YouTube thumbnails
-- **Pipeline:** Load template PNG → AI Gateway (Ollama local by default) fills text/color → Pillow renders → export 3-5 A/B variants
+- **Pipeline:** Load template PNG → AI Gateway (cloud-first, local fallback) fills text/color → Pillow renders → export 3-5 A/B variants
 - **Templates:** Stored in `frontend/static/thumbnail_templates/`
 - **Output:** PNG 1280x720 + PNG 720x1280 (Shorts)
 
@@ -293,8 +306,8 @@ graph LR
 - **Responsibility:** Generate YouTube upload metadata and assemble the final downloadable
   package.
 - **Output (`youtube_packages` table, `003_youtube_package.sql` + `004_youtube_chapters_measured.sql`):**
-  - 3 AI-generated title options (AI Gateway, Ollama local by default): `click_worthy`, `educational`, `seo` variants
-  - AI-generated video description (AI Gateway, Ollama local by default)
+  - 3 AI-generated title options (AI Gateway, cloud-first): `click_worthy`, `educational`, `seo` variants
+  - AI-generated video description (AI Gateway, cloud-first)
   - Chapters: **measured** from AudioService's real per-line timestamps once a project's
     audio has been mixed (Task 1.6/1.7), otherwise **estimated** from cumulative script
     word count at a fixed reading speed (`YOUTUBE_CHAPTER_WORDS_PER_MINUTE`) for a project
@@ -317,96 +330,74 @@ graph LR
 
 ---
 
+### 9. AI Gateway (`app/services/ai/`) and durable AI jobs — Phases 13–18
+- `router.py`: `AI_MODE` selection (`cloud_first` default, `local` kill switch), bounded per-provider
+  retry with backoff, per-provider circuit breaker and time budget, ordered fallback chain
+  Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter free models → Ollama `qwen3.5:9b`.
+- Providers: `openai_compat_provider.py` (Gemini, OpenRouter and optional OpenCode Zen through one
+  OpenAI-compatible client, order from `CLOUD_PROVIDER_ORDER`),
+  `ollama_provider.py`, `fake_provider.py` (tests). `validation.py` parses and validates JSON output.
+- `ai_job_service.py` + `ai_worker.py`: durable `ai_generation_jobs` rows with checkpoints; the in-process
+  worker dispatches to handlers registered by the script and learning pipelines, so a crash resumes.
+
+### 10. Visual libraries and pipelines (`app/services/visuals/`) — Phases 20, 23, 24, 28, 29, 31, 32
+- `library_service.py`: global Character and Scene libraries (55 places) with safe content paths.
+- `project_visuals_service.py`: a project's cast, ordered scenes and shot records.
+- `storyboard_service.py`: AI-proposed story beats, validated against the project, owner-reviewed in Step 5.
+- `shot_library_service.py`: reviewed, reusable shots of the cast; the matcher reuses approved shots
+  and only the missing ones are drawn. `colour_check.py` and `shot_checks.py` flag outfit-colour and
+  extra-person failures.
+- `sprite_service.py` + `sprite_plan.py`: talking-sprite sets per character and the per-line plan
+  (face, gesture, mouth open/closed from speech loudness).
+- `activity_library_service.py` + `activity_matcher.py`: review-gated activity pictures (generic or per
+  character, owner-entered name per image) and the deterministic matcher for storyboard insert beats,
+  with per-render usage history.
+- `jobs.py`, `runner.py`, `pipelines.py`, `engine.py`, `recipes.py`, `geometry.py`: persistent FIFO image
+  jobs run one at a time against `scripts/image_worker.py` in `venv-image` (diffusers, RealVisXL V5.0);
+  `IMAGE_ENGINE=fake` gives a deterministic GPU-free engine for tests.
+
+### 11. Remotion renderer (`app/services/video_renderer_remotion.py`, `video-renderer/`) — Phase 19+
+- Builds the composition props (timings, captions, cast, storyboard shots, sprites, activity cutaways,
+  brand intro/outro, music) and runs the Node `video-renderer/` workspace (Remotion 4, React 19,
+  TypeScript, Vitest) as a local subprocess. Nothing per-episode leaves the machine (invariant 37).
+- Falls back to the ffmpeg path when Remotion is unavailable or disabled (invariant 36).
+
+### 12. GPU arbiter (`app/services/gpu_model_manager.py`) — Task 20.1
+- An arbiter, not a loader: each GPU consumer (image worker, local Ollama fallback) takes an exclusive
+  lease on the single RTX 3060, loads and unloads its own model inside it, and hands the card back.
+
+### 13. Music (`music_library_service.py`, `music_analysis.py`, `music_select_service.py`, `music_bed.py`) — Phase 22
+- Library upload and details (licence, credit), automatic pace/BPM/mood classification, auto-select with
+  a guard-railed AI pick, the fitted and ducked bed, and the credit line in the YouTube description.
+
+### 14. Brand (`brand_service.py`) — Phases 25, 27
+- The Daily Beyond English intro/outro voice lines, cached as Edge TTS audio for the Enhanced video.
+
+---
+
 ## Technology Decisions
 
 | Decision | Choice | Rationale |
 |---|---|---|
 | Backend framework | FastAPI | Async, fast, auto OpenAPI docs, Python ecosystem |
 | Frontend | Vanilla HTML/CSS/JS | Nhẹ, không dependency, dễ maintain |
-| TTS engine | Edge TTS (sole engine, decided 2026-09-13) | Free, online, 300+ voices including all English accents — OmniVoice (k2-fsa) considered but dropped: real API is voice cloning (needs a reference sample), not text-described voice design as first assumed |
-| Audio processing | pydub + ffmpeg | Mature, well-documented, wide format support |
-| Video generation | ffmpeg | Universal, GPU-accelerated |
-| Lips-sync | LivePortrait | Fastest inference, real-time capable, VRAM-efficient |
+| AI engine | Cloud-first gateway with local fallback (Phase 18, D21/D31) | Gate B-11: ~45 s median B1 script vs ~127 s local; `DIE_AI_ALLOW_CLOUD=false` / `DIE_AI_MODE=local` forces 100% offline Ollama `qwen3.5:9b` |
+| TTS engine | Edge TTS only (D56) | Kokoro (D36) and StyleTTS 2 (D38) failed the owner's listening tests; OmniVoice is voice cloning, not voice design |
+| Audio processing | pydub + ffmpeg + pyloudnorm | Mature; real ITU-R BS.1770 loudness |
+| Video generation | Remotion (default) + ffmpeg fallback | Animated learning video (karaoke, cards, sprites) with a tested, dependency-light fallback |
+| Images | diffusers + RealVisXL V5.0 in `venv-image` (Phase 28) | Local GPU, isolated heavy dependencies; libraries reuse approved pictures to save GPU time |
+| Lips-sync | Not implemented; talking sprites (Phase 32) instead | No GPU time per episode, owner-made sprite sets |
 | Thumbnail | Pillow + template | Consistent branding, no API cost, user-editable |
-| AI engine | Ollama (`qwen3.5:9b`), local-only default | Phase 14 (Amendment D): Gemini dropped after Gate B evidence (0/5 cloud completions, quota/503 storms) plus owner decision D9-D12; Gemini remains dormant as an unsupported rollback (`DIE_AI_ALLOW_CLOUD=true`) |
-| Database | SQLite | Zero-config, single-user, sufficient performance |
+| Database | SQLite (aiosqlite) | Zero-config, single-user, sufficient performance |
 | Storage | Local filesystem | Simple, offline-first, no cloud dependency |
 
 ---
 
 ## API Endpoints
 
-### Projects
-```
-GET    /api/projects              # List all projects
-POST   /api/projects              # Create new project
-GET    /api/projects/{id}         # Get project details
-PUT    /api/projects/{id}         # Update project
-DELETE /api/projects/{id}         # Delete project
-```
-
-### Script Generation
-```
-GET    /api/projects/{id}/script             # Get the current script (empty list if not generated yet)
-POST   /api/projects/{id}/script/generate    # Generate script via the AI Gateway (Ollama local by default)
-POST   /api/projects/{id}/script/regenerate  # Regenerate specific segment
-PUT    /api/projects/{id}/script             # Save edited script
-```
-
-### Learning Content
-```
-POST   /api/projects/{id}/learning/generate  # Generate vocabulary/grammar content
-GET    /api/projects/{id}/learning           # Get learning content
-PUT    /api/projects/{id}/learning           # Save edited learning content
-```
-
-### TTS & Audio
-```
-POST   /api/projects/{id}/tts/preview        # Preview single line TTS
-POST   /api/projects/{id}/audio/generate     # Generate full audio mix (synchronous; body: {background_music?})
-GET    /api/projects/{id}/audio/status       # Poll current audio_jobs row (plain GET, not SSE — see below)
-GET    /api/projects/{id}/audio/download     # Download final audio (?format=mp3|wav)
-```
-
-### Video
-```
-GET    /api/video/templates                  # List the 3 fixed background templates
-POST   /api/projects/{id}/video/generate     # Generate video (body: {template_id, aspect_ratio?: "16:9"|"9:16"}; synchronous)
-GET    /api/projects/{id}/video/status       # Poll current video_jobs row (plain GET, not SSE — see Task 1.6's audio/status for the same documented deviation)
-GET    /api/projects/{id}/video/download     # Download video (?format=mp4|mp4_vertical|srt)
-```
-
-### Thumbnails
-```
-POST   /api/projects/{id}/thumbnails/generate  # Generate A/B thumbnails
-GET    /api/projects/{id}/thumbnails           # List thumbnails
-PATCH  /api/projects/{id}/thumbnails/{thumbnail_id}  # Edit and re-render one thumbnail
-PUT    /api/projects/{id}/thumbnails/{thumbnail_id}/favorite  # Select favorite
-GET    /api/projects/{id}/thumbnails/{thumbnail_id}/{aspect}.{format}  # Get PNG/JPG derivative
-GET    /api/thumbnails/templates               # List templates
-```
-
-### YouTube Package
-```
-POST   /api/projects/{id}/youtube/generate   # Generate YouTube package (chapters measured if audio exists, else estimated)
-GET    /api/projects/{id}/youtube            # Get package content
-GET    /api/projects/{id}/youtube/export     # Download full .zip (video+thumbnail+SRT+metadata.txt)
-```
-
-### TTS Engines
-```
-GET    /api/tts/engines           # List available engines + status
-GET    /api/tts/voices/{engine}   # List voices for engine
-POST   /api/tts/test              # Test voice
-```
-
-### Music Library
-```
-GET    /api/music                 # List music library
-POST   /api/music                 # Upload MP3/WAV track
-GET    /api/music/{filename}      # Stream track for browser preview
-DELETE /api/music/{filename}      # Remove track
-```
+The endpoint list is generated from the live FastAPI schema into [`docs/api.md`](../docs/api.md)
+(`scripts/generate_api_docs.py`; 128 routes on 2026-10-12) and served at `/docs` while the app runs.
+It is no longer copied here by hand, so it cannot drift.
 
 ---
 

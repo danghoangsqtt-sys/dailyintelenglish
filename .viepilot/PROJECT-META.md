@@ -4,9 +4,9 @@
 
 | Field | Value |
 |-------|-------|
-| **Project Name** | Daily Intel English Studio |
+| **Project Name** | Daily Beyond English Studio (brand since Phase 27; technical name Daily Intel English Studio) |
 | **Slug** | DailyIntelEnglish |
-| **Version** | 1.0.0-beta |
+| **Version** | 1.2.0-beta (released 2026-10-05; Phases 22 and 25–32 unreleased) |
 | **Inception Year** | 2026 |
 | **License** | MIT |
 | **Type** | AI-powered Local Web Application |
@@ -14,7 +14,13 @@
 
 ## Description
 
-Daily Intel English Studio là một ứng dụng web local (chạy trên máy tính cá nhân) dành cho content creator muốn sản xuất video podcast tiếng Anh cho YouTube. Ứng dụng kết hợp AI (Gemini API) để tạo kịch bản, TTS (Edge TTS — kỹ sư duy nhất thực sự chạy được; OmniVoice từng dự tính làm engine chính nhưng API thật của nó là voice cloning chứ không phải voice design như hình dung ban đầu, nên không được triển khai) để tạo giọng đọc, và công cụ chỉnh sửa audio/video để xuất bản lên YouTube — tất cả trong một quy trình 7 bước liền mạch.
+Daily Beyond English Studio là một ứng dụng web local (chạy trên máy tính cá nhân) dành cho content creator muốn sản xuất video podcast tiếng Anh cho YouTube — tất cả trong một quy trình 7 bước liền mạch. Stack hiện tại (2026-10-12):
+
+- **AI:** gateway cloud-first (Gemini 3.1 Flash-Lite → OpenRouter free → Ollama `qwen3.5:9b` local fallback) cho kịch bản, nội dung học, storyboard, thumbnail và gói YouTube.
+- **TTS:** Edge TTS là engine duy nhất (D56); OmniVoice, Kokoro, StyleTTS 2 đã thử và bỏ.
+- **Audio:** pydub + ffmpeg + pyloudnorm, nhạc nền thông minh từ Music Library.
+- **Video:** Remotion (`video-renderer/`, mặc định "Enhanced") với ffmpeg làm fallback "Standard".
+- **Hình ảnh:** thư viện nhân vật/bối cảnh/shot/sprite/activity; sinh ảnh local trên GPU bằng diffusers + RealVisXL V5.0 trong `venv-image`.
 
 ## Organization
 
@@ -58,7 +64,8 @@ DailyIntelEnglish/
 │   ├── thumbnails/        # Generated thumbnails
 │   ├── music_library/     # User's background music
 │   └── tts_cache/         # TTS audio cache
-├── prompts/               # Gemini prompt templates
+├── video-renderer/        # Remotion (React/TypeScript) Enhanced video renderer
+├── prompts/               # AI prompt templates (shared by every provider)
 │   ├── script/            # Script generation prompts
 │   └── learning/          # Learning content prompts
 ├── models/                # Local AI model files (OmniVoice, etc.)
