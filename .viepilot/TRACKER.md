@@ -2,7 +2,9 @@
 
 ## Current Status
 
-**Now (2026-10-12, Gate B-22):** owner Gate B-22 **FAILED** with three findings (ENH-028 pictures behind the characters, BUG-029 speaking character's pictures, BUG-030 karaoke lost from an old TTS cache); decisions D75-D77. Phase 32 stays open; Tasks 32.8a-32.8d **done** 2026-10-12 (full suite 1654 passed, Vitest 65); the Demo Episode was regenerated and re-rendered (30/30 lines with word timings, 3/3 inserts use Alex pictures behind both characters, karaoke visible). **Waiting for owner Gate B-22 re-run (32.9)** on `video_remotion.mp4`; the rejected render is `video_gate_b22_r1.mp4`. The stale API server from 2026-10-09 was restarted with owner OK.
+**Now (2026-10-12, Phase 32 closed):** owner **Gate B-22 PASS** on the re-rendered Demo Episode (activity pictures behind both characters, Alex's own pictures, karaoke). Phase 32 ✅ complete, tag `die-vp-p32-complete`. Next: update the Phase 33 plan with D78–D83 (`/vp-evolve`), then open Phase 33.
+
+**Earlier (2026-10-12, Gate B-22):** owner Gate B-22 **FAILED** with three findings (ENH-028 pictures behind the characters, BUG-029 speaking character's pictures, BUG-030 karaoke lost from an old TTS cache); decisions D75-D77. Phase 32 stays open; Tasks 32.8a-32.8d **done** 2026-10-12 (full suite 1654 passed, Vitest 65); the Demo Episode was regenerated and re-rendered (30/30 lines with word timings, 3/3 inserts use Alex pictures behind both characters, karaoke visible). **Waiting for owner Gate B-22 re-run (32.9)** on `video_remotion.mp4`; the rejected render is `video_gate_b22_r1.mp4`. The stale API server from 2026-10-09 was restarted with owner OK.
 
 **Now (2026-10-12, /vp-auto):** Phase 34 (project hygiene) ✅ complete: the 2026-10-09 Activity Library manual-upload work landed (`8ac0307`, after removing a stale `.git/index.lock` from 2026-10-10 that had blocked commits), phase records reconciled (BUG-026), retroactive tags for Phases 21/26/30/31 (BUG-024), README / ARCHITECTURE / PROJECT-META / API reference refreshed (ENH-024, ENH-025), Ruff clean (ENH-026). pytest 1648 passed, Vitest 65 passed. Version stays `1.2.0-beta`. Product state unchanged: Phase 32 waits for owner Gate B-22; Phase 33 stays unopened; owner gates B-14..B-21 still open. Branch `owner-runs/20261001-r9` is far ahead of `main`.
 
@@ -2173,6 +2175,7 @@ Suite 964 → 1175. **Version 1.1.0-beta.** Follow-ups: ENH-014 (outro heuristic
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-10-12 | **Gate B-22 PASS (owner)** on the re-run (32.9) | Phase 32 closed; ENH-028, BUG-029, BUG-030 done |
 | 2026-10-12 | **D78–D83 (owner, brainstorm `docs/brainstorm/session-2026-10-12.md`):** update Phase 33 (not a new phase): Quick create (name, gender, accent, appearance, outfit) with auto prompt pack and auto Edge voice; Step 1 picks characters instead of typing names; male left / female right, same-gender pair speaker 1 left; sprites mirrored to face each other unless a facing-the-other-way pack exists; uploads auto-mapped by prompt-pack file names, aligned, approved once in a grid | Phase 33 plan to be updated by `/vp-evolve`; Phase 33 stays unopened until Gate B-22 passes |
 | 2026-10-12 | **Gate B-22 FAIL (owner).** Three findings on the Demo Episode: activity pictures cover both characters; no character pictures used; no karaoke captions | Logged ENH-028, BUG-029, BUG-030; Phase 32 stays open |
 | 2026-10-12 | **D75 (owner):** activity illustrations sit behind Alex and Lina, who stay in front for the whole beat, even when the picture shows the speaking character ("đây là ý đồ nghệ thuật và giáo dục của tôi") | ENH-028 |

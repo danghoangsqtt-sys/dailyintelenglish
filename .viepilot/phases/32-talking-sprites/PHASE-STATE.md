@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 32: Talking characters as sprites, visual-novel style (ENH-023)
 
-- **Status:** in progress 2026-10-09: Tasks 32.1–32.6f complete; owner Gate B-22 (32.7) **FAILED** 2026-10-12 (ENH-028, BUG-029, BUG-030); fixes to plan, then re-gate. Phase 33 remains unopened. **Plan:** `docs/implementation/phase-32-talking-sprites.md`; implementation decisions D32-a to D32-i in `tasks/task-32.1-32.4.md`.
+- **Status:** ✅ complete 2026-10-12: owner Gate B-22 **PASS** on the re-run (32.9) after fixes 32.8a–32.8d. **Plan:** `docs/implementation/phase-32-talking-sprites.md`; implementation decisions D32-a to D32-i in `tasks/task-32.1-32.4.md`.
 
 | Task | Description | Status |
 |---|---|---|
@@ -20,7 +20,7 @@
 | 32.8b | Activity pictures behind the talking characters (ENH-028, D75) | done 2026-10-12 (`tasks/task-32.8b.md`): activity layer between the scene and the sprites (same slow zoom); tsc + 65 Vitest; layer order checked on the real render in 32.8d (no DOM test environment for Remotion components) |
 | 32.8c | Never mix lines without word timings silently (BUG-030, D77) | done 2026-10-12 (`tasks/task-32.8c.md`): old-cache lines re-synthesized before the mix, `lines_without_words` in the result, Step 4 warning, render log; API + browser tests, the API test fails without the fix |
 | 32.8d | Regenerate and re-render the Demo Episode, evidence r2 | done 2026-10-12 (`tasks/task-32.8d.md`): audio 30/30 lines with words, 3/3 inserts use Alex pictures behind both sprites, karaoke visible; `phase32_evidence/r2/`, notes Round 2 |
-| 32.9 | Gate B-22 re-run (owner) | waiting for owner (`tasks/task-32.9.md`) |
+| 32.9 | Gate B-22 re-run (owner) | **PASS** 2026-10-12 (owner) (`tasks/task-32.9.md`) |
 
 ## Owner review of the preview (2026-10-08)
 
