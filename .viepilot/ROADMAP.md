@@ -1343,7 +1343,7 @@ TTS and let 19.9 proceed).
 
 ## Phase 23 — Scene Library v2 (after Phase 20)
 
-Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §3.
+**Status:** 🟡 Built 2026-10-05 (23.1–23.4 done); waiting for owner Gate B-15 (23.5) | Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §3.
 
 - [x] 23.1 Spike: same-place consistency → owner picked the scene-plate IP reference (~0.4)
 - [x] 23.2 Scene model v2 (category, time of day, seed, plate) + plate as a background IP reference
@@ -1354,7 +1354,7 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §3.
 
 ## Phase 24 — Story-driven visuals: storyboard (after Phase 23)
 
-Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images follow story beats
+**Status:** 🟡 Built 2026-10-05 (24.1–24.6 done); waiting for owner Gate B-16 (24.7) | Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images follow story beats
 (place/action changes), default cap 12 per episode (owner E4).
 
 - [x] 24.1 Beat schema + migration + storyboard API (estimate + cap)
@@ -1410,6 +1410,17 @@ Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images foll
 - [x] 28.4 Redo the library (two characters, 55 scene plates)
 - [x] 28.5 Shot checks on photographs (face counting) and a "check this shot" mark in Step 5
 - [ ] 28.6 Gate B-20
+
+## Phase 26 — UI polish (interim)
+
+**Status:** ✅ Complete 2026-10-06 | Plan `docs/implementation/phase-26-ui-polish.md`; tag `die-vp-p26-complete`.
+*(Entry added 2026-10-12 by Task 34.1; the phase had a PHASE-STATE but no ROADMAP entry.)*
+
+- [x] 26.1 UI audit (44 screenshots, findings)
+- [x] 26.2 Brand tokens, typography and one shared top bar
+- [x] 26.3 Dashboard polish (real previews, progress, hero)
+- [x] 26.4 Library and Settings pages polish
+- [x] 26.5 Owner review — superseded by Phase 27 (full layout redo; the gate moved to B-19)
 
 ## Phase 25 — Branded intro and outro (ENH-017)
 
@@ -1468,15 +1479,15 @@ Phase 33 is planned in `docs/implementation/phase-33-character-profiles-v2.md` a
 - [ ] 33.8 Dynamic Activity/Storyboard/Shot integration for 3–6 cast
 - [ ] 33.9 Real three-character acceptance project and Gate B-23
 
-### Phase 34: Project hygiene: state records, checkpoint tags, docs and lint (BUG-024, BUG-026, ENH-024, ENH-025, ENH-026) - planned 2026-10-12
+### Phase 34: Project hygiene: state records, checkpoint tags, docs and lint (BUG-024, BUG-026, ENH-024, ENH-025, ENH-026) - done 2026-10-12
 
 Refactor mode: records, tags, docs and three unused imports; no behaviour change, version stays `1.2.0-beta`. Runs alongside
 Phase 32 (Gate B-22 open); Phase 33 stays unopened. State: `.viepilot/phases/34-project-hygiene/PHASE-STATE.md`.
 
-- [ ] 34.0 Land the Activity Library manual-upload work first (full suite, separate commit)
-- [ ] 34.1 Reconcile phase status records (BUG-026)
-- [ ] 34.2 Completion tags for Phases 21, 26, 30, 31 (BUG-024)
-- [ ] 34.3 README refresh (ENH-024)
-- [ ] 34.4 ARCHITECTURE, PROJECT-META, regenerated API reference (ENH-025)
-- [ ] 34.5 Clean Ruff check (ENH-026)
-- [ ] 34.6 Verification, re-audit, close the requests, `die-vp-p34-complete`
+- [x] 34.0 Land the Activity Library manual-upload work first (full suite, separate commit)
+- [x] 34.1 Reconcile phase status records (BUG-026)
+- [x] 34.2 Completion tags for Phases 21, 26, 30, 31 (BUG-024)
+- [x] 34.3 README refresh (ENH-024)
+- [x] 34.4 ARCHITECTURE, PROJECT-META, regenerated API reference (ENH-025)
+- [x] 34.5 Clean Ruff check (ENH-026)
+- [x] 34.6 Verification, re-audit, close the requests, `die-vp-p34-complete`

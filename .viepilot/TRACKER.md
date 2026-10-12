@@ -2,7 +2,7 @@
 
 ## Current Status
 
-**Now (2026-10-12, /vp-evolve):** Phase 34 (project hygiene: BUG-024, BUG-026, ENH-024, ENH-025, ENH-026) planned in `.viepilot/phases/34-project-hygiene/`. Records, tags, docs and lint only; no behaviour change; version stays `1.2.0-beta`. It runs alongside Phase 32, which still waits for owner Gate B-22; Phase 33 stays unopened. First step 34.0 lands the uncommitted Activity Library manual-upload work (owner decision 2026-10-09). Branch `owner-runs/20261001-r9` is 186 commits ahead of `main`.
+**Now (2026-10-12, /vp-auto):** Phase 34 (project hygiene) ✅ complete: the 2026-10-09 Activity Library manual-upload work landed (`8ac0307`, after removing a stale `.git/index.lock` from 2026-10-10 that had blocked commits), phase records reconciled (BUG-026), retroactive tags for Phases 21/26/30/31 (BUG-024), README / ARCHITECTURE / PROJECT-META / API reference refreshed (ENH-024, ENH-025), Ruff clean (ENH-026). pytest 1648 passed, Vitest 65 passed. Version stays `1.2.0-beta`. Product state unchanged: Phase 32 waits for owner Gate B-22; Phase 33 stays unopened; owner gates B-14..B-21 still open. Branch `owner-runs/20261001-r9` is far ahead of `main`.
 
 **Now (2026-10-09):** Phase 32.1–32.6f are done. Task 32.6f passed 1,646 Python tests and 65 Remotion tests, then rendered the real Demo Episode through the production API with exactly three approved generic cutaways, no fallback, continuous audio/captions and three persisted usage records. The baseline and candidate are ready under `data/video/b330d37f-a212-4cf7-a779-7a109098bd6c/`. **Waiting for owner Gate B-22:** compare `video_sprites_preview.mp4` with `video_remotion.mp4`; Phase 32 stays open and Phase 33 stays unopened until explicit PASS.
 

@@ -8,6 +8,9 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Docs / housekeeping (Phase 34, 2026-10-12)
+- README, ARCHITECTURE (overview, diagrams, services 9-14), PROJECT-META and the generated API reference describe the current Daily Beyond English app: Remotion renderer with ffmpeg fallback, cloud-first AI, visual libraries and talking characters. Phase status records and completion tags are reconciled; Ruff passes again. No behaviour change.
+
 ### Added (Activity Library deletion, 2026-10-09)
 - Activity Library cards can delete one picture with confirmation. The database record is removed before its stored image file is cleaned up; completed videos retain their rendered output.
 

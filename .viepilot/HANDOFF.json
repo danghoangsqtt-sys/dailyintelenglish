@@ -231,7 +231,7 @@
     },
     "28": {
       "name": "Semi-realistic picture style (ENH-019)",
-      "status": "planned",
+      "status": "in_progress",
       "tasks_done": 6,
       "tasks_total": 7,
       "note": "28.1-28.5 done (1506 passed). Only 28.6 Gate B-20 (owner: one full real episode in the new style) is left."
@@ -263,6 +263,13 @@
       "tasks_done": 11,
       "tasks_total": 12,
       "note": "32.1-32.5 done 2026-10-08; 32.6a-f done 2026-10-09. Activity Library import/review, smart local metadata, character > generic > sprite matching, Step 5 coverage, full-frame 6 s cutaways with 0.3 s fades, storyboard guidance and D72 prompt pack are complete. Task 32.6f passed 1,646 Python tests plus 65 Vitest tests and rendered Demo Episode with exactly 3 approved generic inserts, no fallback and continuous audio/captions. Baseline and candidate are ready; waiting only for owner Gate B-22. Phase 33 remains unopened."
+    },
+    "34": {
+      "name": "Project hygiene: state records, checkpoint tags, docs and lint",
+      "status": "complete",
+      "tasks_done": 7,
+      "tasks_total": 7,
+      "note": "2026-10-12: BUG-024, BUG-026, ENH-024, ENH-025, ENH-026 done; 34.0 landed the manual-upload work (8ac0307). pytest 1648 passed, Vitest 65. No behaviour change; version 1.2.0-beta."
     }
   },
   "key_decisions": [
