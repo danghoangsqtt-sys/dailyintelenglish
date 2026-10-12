@@ -70,14 +70,36 @@ async def list_characters(db: aiosqlite.Connection) -> list[dict]:
     return [await character_view(db, row["id"]) for row in await cursor.fetchall()]
 
 
+def normalized_name(name: str) -> str:
+    """Task 33.1: the active-name uniqueness key (trim + case-fold), same rule as migration 018's backfill."""
+    return name.strip().lower()
+
+
+def default_sprite_facing(gender: str) -> str:
+    """Amendment A (D82): a male pack looks to the right of the picture, a female pack to the left."""
+    return "right" if gender == "male" else "left"
+
+
+async def _ensure_name_free(db: aiosqlite.Connection, name: str, own_id: str | None = None) -> None:
+    row = await _one(
+        db, "SELECT id FROM characters WHERE normalized_name = ? AND archived_at IS NULL AND id IS NOT ?",
+        (normalized_name(name), own_id),
+    )
+    if row is not None:
+        raise ConflictError(f"A character named {name.strip()!r} already exists")
+
+
 async def create_character(db: aiosqlite.Connection, body: CharacterInput) -> dict:
     character_id, now = str(uuid.uuid4()), _now()
     values = body.model_dump()
+    await _ensure_name_free(db, values["name"])
     await db.execute(
         "INSERT INTO characters (id, name, gender, age_group, ethnicity, role, hair, eyes, extra, "
-        "top_color, top_item, bottom_color, bottom_item, status, base_seed, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?)",
-        (character_id, *(values[key] for key in CHARACTER_FIELDS), random.randint(1, 2**31 - 5), now, now),
+        "top_color, top_item, bottom_color, bottom_item, status, base_seed, created_at, updated_at, "
+        "normalized_name, sprite_facing) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)",
+        (character_id, *(values[key] for key in CHARACTER_FIELDS), random.randint(1, 2**31 - 5), now, now,
+         normalized_name(values["name"]), default_sprite_facing(values["gender"])),
     )
     return await character_view(db, character_id)
 
@@ -94,6 +116,7 @@ async def edit_character(db: aiosqlite.Connection, character_id: str, patch: Cha
     except PydanticValidationError as exc:
         raise ValidationError(str(exc)) from exc
     new = merged.model_dump()
+    await _ensure_name_free(db, new["name"], own_id=character_id)
     changed = any(new[key] != row[key] for key in CHARACTER_FIELDS if key != "name")
     if changed:
         await db.execute("DELETE FROM character_assets WHERE character_id = ?", (character_id,))
@@ -102,8 +125,9 @@ async def edit_character(db: aiosqlite.Connection, character_id: str, patch: Cha
         )
     await db.execute(
         "UPDATE characters SET " + ", ".join(f"{key} = ?" for key in CHARACTER_FIELDS)
-        + ", updated_at = ? WHERE id = ?",
-        (*(new[key] for key in CHARACTER_FIELDS), _now(), character_id),
+        + ", normalized_name = ?, sprite_facing = ?, updated_at = ? WHERE id = ?",
+        (*(new[key] for key in CHARACTER_FIELDS), normalized_name(new["name"]), default_sprite_facing(new["gender"]),
+         _now(), character_id),
     )
     return await character_view(db, character_id)
 
