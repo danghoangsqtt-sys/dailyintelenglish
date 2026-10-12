@@ -1476,10 +1476,10 @@ Phase 33 is planned in `docs/implementation/phase-33-character-profiles-v2.md` a
 
 - [x] 33.1 Profile schema, versioning, and Lina/Alex migration rehearsal
 - [x] 33.2 Profile domain, readiness, lifecycle, and API
-- [ ] 33.3 Asset slots, direct upload, validation, review, and prompt packs
-- [ ] 33.4 Character Library, Quick create (D79) and optional wizard sections
-- [ ] 33.5 Visual Asset Studio, bulk mapping, and local generation integration
-- [ ] 33.6 Tiered sprite readiness, renderer compatibility, male-left/female-right placement and mirroring (D81–D82)
+- [x] 33.3 Asset slots, direct upload, validation, review, and prompt packs
+- [x] 33.4 Character Library, Quick create (D79) and optional wizard sections
+- [x] 33.5 Visual Asset Studio, bulk mapping, and local generation integration
+- [x] 33.6 Tiered sprite readiness, renderer compatibility, male-left/female-right placement and mirroring (D81–D82)
 - [ ] 33.7 Game-style Character Selector in Step 1 (replaces name entry, D80) and explicit project assignment
 - [ ] 33.8 Dynamic Activity/Storyboard/Shot integration for 3–6 cast
 - [ ] 33.9 Real three-character acceptance project and Gate B-23
