@@ -17,7 +17,7 @@ This directory is an implementation plan. Creating it does not change the active
 | 33.5 | Visual Asset Studio, bulk mapping, and local generation integration | done 2026-10-12 (`c6dea48`; slot cards with input picture, region, prompt, drop zone, review; local generation stays on the old tab, deferred) | 33.3, 33.4 |
 | 33.6 | Tiered sprites, renderer compatibility, male-left/female-right placement, mirroring | done 2026-10-12 (`aac3c8a`, `af62eac`; men left / women right, mirroring, slot uploads → sprite_set.json, derived face references D87) | 33.3, 33.5 |
 | 33.7 | Game-style Character Selector in Step 1 (replaces name entry) and Step 5; copy-on-assign defaults | done 2026-10-12 (`f13f13d`, `4fbe547`; selector in Step 1 and Step 5, no cast by name, compact speaker cards D88; full suite 1717 passed) | 33.2, 33.4 |
-| 33.8 | Dynamic activity, storyboard, and shot integration for 3–6 cast | in_progress | 33.6, 33.7 |
+| 33.8 | Dynamic activity, storyboard, and shot integration for 3–6 cast | done 2026-10-12 (`87efc1c`; segments with two on screen, storyboard most-active pair; full suite 1725 passed) | 33.6, 33.7 |
 | 33.9 | Migration rehearsal, regression, real three-character render, Gate B-23 | paused 2026-10-12 — owner is adding Jack\'s expressions in the sandbox copy (http://localhost:8010, data under the session scratchpad); then: back up the real DB, restart the real app on the new code (migrations 018–020), copy Jack and his approved pictures from the sandbox, render a 3-character project, Gate B-23 | 33.1–33.8 |
 
 ## Locked Phase 33 limits

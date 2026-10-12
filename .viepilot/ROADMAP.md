@@ -1481,7 +1481,7 @@ Phase 33 is planned in `docs/implementation/phase-33-character-profiles-v2.md` a
 - [x] 33.5 Visual Asset Studio, bulk mapping, and local generation integration
 - [x] 33.6 Tiered sprite readiness, renderer compatibility, male-left/female-right placement and mirroring (D81–D82)
 - [x] 33.7 Game-style Character Selector in Step 1 (replaces name entry, D80) and explicit project assignment
-- [ ] 33.8 Dynamic Activity/Storyboard/Shot integration for 3–6 cast
+- [x] 33.8 Dynamic Activity/Storyboard/Shot integration for 3–6 cast
 - [ ] 33.9 Real three-character acceptance project and Gate B-23
 
 ### Phase 34: Project hygiene: state records, checkpoint tags, docs and lint (BUG-024, BUG-026, ENH-024, ENH-025, ENH-026) - done 2026-10-12
