@@ -43,3 +43,18 @@ Support the existing 29-picture sprite contract for every profile while allowing
   `video-renderer/src/spriteTimeline.test.ts`, `tests/test_sprite_video_props.py`.
 - Verification adds: female-first project still renders male left; two-male and two-female projects face each other; Alex/Lina
   Demo Episode unchanged (male left, female right already).
+
+## Implementation Notes (2026-10-12, before coding; D81, D82)
+
+- **Manifest from slots:** `character_asset_service.materialize_sprite_set` writes the Phase 32 `sprite_set.json` folder
+  (`sprite_service._write_set` + `check_folder`, silhouette face ellipse) from the approved current uploaded slot pictures;
+  called after every approval. Skipped for packs whose rows point inside the sprite folder already (Lina/Alex legacy rows),
+  so a legacy pack is never deleted by its own rewrite. The renderer keeps reading `sprite_set.json`.
+- **Placement (D81):** pure `sprite_placement(members)` in `video_renderer_remotion.py`: one man + one woman → man slot 0
+  (left), woman slot 1 (right); same gender (or one person) → speaker order, a lone woman on the right. `cast_rows` adds
+  `gender` and `sprite_facing`. Line slots map through the same placement.
+- **Facing (D82):** slot 0 must look right, slot 1 left; `mirror = sprite_facing != wanted`. Props carry `mirror`; `Sprites.tsx`
+  appends `scaleX(-1)` to the sprite box (the whole picture: face, mouth and gestures together). `offsets`/`faceEllipse` are not
+  used for drawing, so nothing else flips. Opposite-facing packs (`facing='opposite'`) are not uploadable yet → always mirror.
+- Tests: placement table (male/female both orders, two men, two women, one woman), mirror flags, manifest from uploads,
+  legacy pack untouched, Vitest for the mirrored transform helper.

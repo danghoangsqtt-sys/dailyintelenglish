@@ -15,7 +15,7 @@ This directory is an implementation plan. Creating it does not change the active
 | 33.3 | Asset slots, prompt pack from Quick create, auto-mapped upload, alignment, approve-once grid | in_progress (backend done; UI in 33.4/33.5) | 33.1, 33.2 |
 | 33.4 | Character Library, Quick create, optional wizard sections | in_progress | 33.2 |
 | 33.5 | Visual Asset Studio, bulk mapping, and local generation integration | in_progress | 33.3, 33.4 |
-| 33.6 | Tiered sprites, renderer compatibility, male-left/female-right placement, mirroring | planned | 33.3, 33.5 |
+| 33.6 | Tiered sprites, renderer compatibility, male-left/female-right placement, mirroring | in_progress | 33.3, 33.5 |
 | 33.7 | Game-style Character Selector in Step 1 (replaces name entry) and Step 5; copy-on-assign defaults | planned | 33.2, 33.4 |
 | 33.8 | Dynamic activity, storyboard, and shot integration for 3–6 cast | planned | 33.6, 33.7 |
 | 33.9 | Migration rehearsal, regression, real three-character render, Gate B-23 | planned | 33.1–33.8 |
