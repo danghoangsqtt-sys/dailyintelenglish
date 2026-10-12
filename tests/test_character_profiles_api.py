@@ -144,6 +144,23 @@ def test_legacy_character_routes_still_work_beside_profiles(client):
     assert [row["name"] for row in data(client.get("/api/visuals/characters"))] == ["Kai"]
 
 
+def test_legacy_routes_never_wipe_a_profile_or_delete_a_seed(client):
+    """Phase 35 (D89): the old edit route wiped every picture on an appearance change, the old delete ignored `is_seed`."""
+    kai, seed = create(client), create(client, name="Seed")
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute("UPDATE characters SET is_seed = 1 WHERE id = ?", (seed["id"],))
+        connection.execute(
+            "INSERT INTO character_assets (id, character_id, kind, path, approved, created_at, slot_key, review_state) "
+            "VALUES ('kai-base', ?, 'sprite', 'x.png', 1, 'now', 'sprite/calm__closed', 'approved')", (kai["id"],))
+    for character in (kai, seed):
+        refused = data(client.patch(f"/api/visuals/characters/{character['id']}", json={"hair": "long red hair"}), status=409)
+        assert "Profiles tab" in refused["error"]
+    with sqlite3.connect(settings.db_path) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM character_assets WHERE character_id = ?", (kai["id"],)).fetchone()[0] == 1
+    data(client.delete(f"/api/visuals/characters/{seed['id']}?force=true"), status=409)
+    data(client.get(f"/api/visuals/profiles/{seed['id']}"))
+
+
 def test_a_cast_accepts_a_video_ready_profile_and_explains_a_profile_that_is_not(client):
     """Task 33.7: profiles made from outside-AI pictures are never 'locked'; video readiness lets them join a cast."""
     kai, lena = create(client), create(client, name="Lena", gender="female")

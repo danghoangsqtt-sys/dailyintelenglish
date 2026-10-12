@@ -172,8 +172,6 @@ const Api = (() => {
     getLibraryActivityHistory: (id) => request(`/api/visuals/library/activities/${id}/history`),
     getLibraryBackgrounds: () => request("/api/visuals/library/backgrounds"),
     importLibraryBackgrounds: () => request("/api/visuals/library/backgrounds/import", { method: "POST" }),
-    getLibrarySprites: () => request("/api/visuals/library/sprites"),
-    importLibrarySprites: () => request("/api/visuals/library/sprites/import", { method: "POST" }),
     getLibraryInbox: () => request("/api/visuals/library/inbox"),
     importLibraryInbox: () => request("/api/visuals/library/inbox/import", { method: "POST" }),
     deleteLibraryShot: (id) => request(`/api/visuals/library/shots/${id}`, { method: "DELETE" }),

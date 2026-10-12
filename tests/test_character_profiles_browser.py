@@ -95,14 +95,14 @@ async def test_a_bad_picture_shows_the_reason_and_keeps_the_card_usable(browser_
 
 
 @pytest.mark.asyncio
-async def test_the_old_local_generation_and_scenes_tabs_still_open(browser_instance: Browser, live_server_url: str):
+async def test_only_the_profiles_and_scenes_tabs_remain(browser_instance: Browser, live_server_url: str):
+    """Phase 35 (D89): the old "Generate locally" character tab is gone; Profiles and Scenes still switch."""
     page = await browser_instance.new_page()
     await page.goto(f"{live_server_url}/characters")
-    await page.click("#characters-tab")
-    assert await page.locator("#characters-panel").is_visible()
-    assert await page.locator("#profiles-panel").is_hidden()
+    assert await page.locator("#characters-tab, #characters-panel, #new-character").count() == 0
     await page.click("#scenes-tab")
     assert await page.locator("#scenes-panel").is_visible()
+    assert await page.locator("#profiles-panel").is_hidden()
     await page.click("#profiles-tab")
     assert await page.locator("#profiles-panel").is_visible()
     await page.close()

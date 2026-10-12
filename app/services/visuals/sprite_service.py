@@ -1,9 +1,9 @@
 """Phase 32 (Task 32.1): the talking-sprite sets of the library characters.
 
 A sprite set is a folder per character, `data/library/sprites/<character_id>/<name>.png`, with a `sprite_set.json` (D32-a): the
-pictures are made outside the app (one transparent 1280 x 1536 PNG per expression and mouth, a blink, the gestures) and copied into
-`data/library/sprites_inbox` as `<character name>__<name>.png`. The import checks that every picture lines up with the character's
-`calm__closed` picture (the rules of the Phase 32 sprite checker) and refuses the ones that do not, with the reason.
+pictures (one transparent 1280 x 1536 PNG per expression and mouth, a blink, the gestures) come from the character's profile slots
+(Phase 33, `character_asset_service.materialize_sprite_set`), which keep only the pictures that line up with the character's
+`calm__closed` picture (`check_folder`). The Phase 32 inbox import was removed in Phase 35 (D89).
 
 The video draws one body (the calm picture, or a gesture) and puts the face of the current expression and mouth on it inside a feathered
 ellipse, so the body never shimmers when the mouth moves (D32-c); `sprite_set.json` holds that ellipse and each picture's head offset.
@@ -14,18 +14,14 @@ from __future__ import annotations
 import asyncio
 import json
 import shutil
-import subprocess
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
-import aiosqlite
 import numpy as np
 from PIL import Image
 
 from app.core.config import settings
-from app.core.paths import get_project_root
 
 SIZE = (1280, 1536)
 EXPRESSIONS = ("calm", "smile", "laugh", "surprised", "thinking", "worried", "serious")
@@ -56,23 +52,8 @@ def sprites_root() -> Path:
     return settings.DATA_DIR / "library" / "sprites"
 
 
-def inbox_dir() -> Path:
-    return settings.DATA_DIR / "library" / "sprites_inbox"
-
-
 def sprite_dir(character_id: str) -> Path:
     return sprites_root() / character_id
-
-
-def parse_name(filename: str) -> tuple[str, str] | None:
-    """`alex__smile__open.png` -> ("alex", "smile__open"); None for a file that is not a sprite picture."""
-    if not filename.lower().endswith(".png"):
-        return None
-    stem = filename[:-4]
-    who, separator, name = stem.partition("__")
-    if not separator or not who or name not in ALL_NAMES:
-        return None
-    return who.strip().lower(), name
 
 
 # ---------------------------------------------------------------- the alignment check (pure)
@@ -172,38 +153,7 @@ def geometric_face_ellipse(alpha: np.ndarray) -> list[float]:
     return [cx / alpha.shape[1], cy / alpha.shape[0], head * 0.30 / alpha.shape[1], head * 0.40 / alpha.shape[0]]
 
 
-def detected_face_ellipse(base_path: Path) -> list[float] | None:
-    """The face found by the app's face model (in the image environment), grown to take the forehead, the cheeks and the chin, as
-    fractions of the canvas [cx, cy, rx, ry]; None when the image environment is missing or finds no face."""
-    from app.services.visuals.engine import IMAGE_PYTHON
-
-    if not IMAGE_PYTHON.is_file():
-        return None
-    root = get_project_root()
-    with tempfile.TemporaryDirectory() as temp:
-        probe = Path(temp) / "probe.png"
-        with Image.open(base_path) as opened:
-            picture = opened.convert("RGBA")
-        flat = Image.new("RGBA", picture.size, (190, 190, 190, 255))
-        flat.alpha_composite(picture)
-        flat.convert("RGB").save(probe)
-        code = ("import sys, json; sys.path.insert(0, r'%s'); from scripts.image_worker import detect_faces; "
-                "print(json.dumps(detect_faces(r'%s', 0.5)))" % (root, probe))
-        try:
-            result = subprocess.run([str(IMAGE_PYTHON), "-c", code], capture_output=True, text=True, cwd=root, timeout=300)
-        except (OSError, subprocess.SubprocessError):
-            return None
-    output = result.stdout.splitlines() + result.stderr.splitlines()
-    found = [line for line in output if line.startswith("[[")] if result.returncode == 0 else []
-    faces = json.loads(found[-1]) if found else []
-    if not faces:
-        return None
-    x1, y1, x2, y2 = max(faces, key=lambda face: face[4])[:4]
-    width, height = SIZE
-    return [(x1 + x2) / 2 / width, ((y1 + y2) / 2 - 0.04 * (y2 - y1)) / height, 0.64 * (x2 - x1) / width, 0.64 * (y2 - y1) / height]
-
-
-# ---------------------------------------------------------------- the import
+# ---------------------------------------------------------------- the set files
 
 def _load(path: Path) -> np.ndarray:
     with Image.open(path) as opened:
@@ -236,16 +186,6 @@ def check_folder(files: dict[str, Path]) -> tuple[dict[str, dict], list[dict]]:
     return accepted, refused
 
 
-async def characters_by_key(db: aiosqlite.Connection) -> dict[str, dict]:
-    cursor = await db.execute("SELECT id, name FROM characters ORDER BY created_at, id")
-    return {row["name"].strip().lower(): {"id": row["id"], "name": row["name"]} for row in await cursor.fetchall()}
-
-
-def list_inbox() -> list[str]:
-    folder = inbox_dir()
-    return sorted(path.name for path in folder.glob("*.png")) if folder.is_dir() else []
-
-
 def _write_set(character_id: str, files: dict[str, Path], accepted: dict[str, dict],
                face: Callable[[Path], list[float] | None]) -> dict:
     target = sprite_dir(character_id)
@@ -266,38 +206,6 @@ def _write_set(character_id: str, files: dict[str, Path], accepted: dict[str, di
     return meta
 
 
-async def import_inbox(characters: dict[str, dict], face: Callable[[Path], list[float] | None] | None = None) -> dict:
-    """Imports the sprite pictures of the inbox, one set per library character (`characters_by_key`: the file name prefix is the
-    character's name). A set replaces the character's previous one. The inbox keeps its files. Touches no table."""
-    face = face or detected_face_ellipse
-    groups: dict[str, dict[str, Path]] = {}
-    ignored: list[str] = []
-    for filename in list_inbox():
-        parsed = parse_name(filename)
-        if parsed is None:
-            ignored.append(filename)
-            continue
-        who, name = parsed
-        groups.setdefault(who, {})[name] = inbox_dir() / filename
-    imported, refused = [], []
-    for who, files in sorted(groups.items()):
-        character = characters.get(who)
-        if character is None:
-            refused += [{"file": path.name, "reason": f"no library character is called \"{who}\""} for path in files.values()]
-            continue
-        if BASE not in files:
-            refused.append({"file": f"{who}__{BASE}.png", "reason": "missing: every set needs its calm, closed-mouth picture"})
-            continue
-        accepted, refused_here = await asyncio.to_thread(check_folder, files)
-        refused += refused_here
-        if not accepted:
-            continue
-        meta = await asyncio.to_thread(_write_set, character["id"], files, accepted, face)
-        imported.append({"character_id": character["id"], "name": character["name"], "pictures": len(accepted),
-                         "face_from": meta["face_from"]})
-    return {"folder": str(inbox_dir()), "imported": imported, "refused": refused, "ignored": ignored}
-
-
 def load_set(character_id: str) -> dict | None:
     """The imported set of a character: its meta and the names of its pictures; None without a set."""
     folder = sprite_dir(character_id)
@@ -311,25 +219,6 @@ def load_set(character_id: str) -> dict | None:
 
 def usable(sprite_set: dict | None) -> bool:
     return sprite_set is not None and all(name in sprite_set["names"] for name in MINIMUM)
-
-
-async def list_sets(db: aiosqlite.Connection) -> list[dict]:
-    """Per library character: its sprite set (pictures, gestures, what is missing) or none."""
-    cursor = await db.execute("SELECT id, name FROM characters ORDER BY created_at, id")
-    rows = [dict(row) for row in await cursor.fetchall()]
-    views = []
-    for row in rows:
-        sprite_set = await asyncio.to_thread(load_set, row["id"])
-        names = sprite_set["names"] if sprite_set else []
-        views.append({
-            "character_id": row["id"], "name": row["name"], "has_set": sprite_set is not None, "usable": usable(sprite_set),
-            "faces": len([name for name in names if name in FACE_NAMES]), "faces_total": len(FACE_NAMES),
-            "gestures": len([name for name in names if name in GESTURE_NAMES]), "gestures_total": len(GESTURE_NAMES),
-            "missing": [name for name in ALL_NAMES if name not in names] if sprite_set else list(ALL_NAMES),
-            "imported_at": sprite_set["imported_at"] if sprite_set else None,
-            "face_from": sprite_set["face_from"] if sprite_set else None,
-        })
-    return views
 
 
 async def remove_set(character_id: str) -> None:

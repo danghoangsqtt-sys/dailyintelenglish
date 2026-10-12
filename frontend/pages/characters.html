@@ -61,24 +61,6 @@
     }
     .library-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
     .library-layout > .library-editor, .scene-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
-    .library-list { display: grid; gap: 14px; align-content: start; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-    .library-card { display: flex; width: 100%; align-items: center; gap: 12px; padding: 12px; text-align: left;
-      background: var(--surface); color: var(--text); cursor: pointer; }
-    .character-tile { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; transition: border-color .15s, box-shadow .15s, transform .15s; }
-    .character-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
-    .character-tile[aria-current="true"] { box-shadow: 0 0 0 3px var(--accent-soft); }
-    .tile-art { display: block; aspect-ratio: 3 / 4; overflow: hidden; border-radius: 10px; background: var(--surface-3); }
-    .character-tile .library-face { display: block; width: 100%; height: 100%; border-radius: 0; object-fit: cover; object-position: center top; }
-    .character-tile .library-placeholder { width: 100%; height: 100%; border-radius: 0; }
-    .tile-copy { display: grid; gap: 4px; }
-    .tile-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .library-swatches { display: inline-flex; gap: 4px; }
-    .library-swatch { width: 16px; height: 16px; border: 1px solid var(--border-strong); border-radius: 50%; }
-    .character-hero { display: flex; align-items: center; gap: 16px; margin: 0 0 18px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-    .character-hero[hidden] { display: none; }
-    .character-hero img { width: 112px; height: 112px; flex: none; border-radius: 16px; object-fit: cover; box-shadow: var(--shadow); }
-    .character-hero .hero-name { display: block; font-family: var(--font-display); font-size: 22px; font-weight: 800; }
-    .character-hero .hero-role { margin: 2px 0 8px; color: var(--muted); font-size: 13px; }
     .scene-browse { min-width: 0; }
     .scene-side { display: grid; gap: 16px; }
     .scene-detail { padding: 14px; }
@@ -90,11 +72,6 @@
     .library-scene { cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
     .library-scene:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
     .library-scene[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-    .library-card[aria-current="true"] { border-color: var(--accent); }
-    .library-face, .library-placeholder { width: 56px; height: 56px; flex: none; border-radius: 50%;
-      object-fit: cover; background: var(--surface-2); }
-    .library-placeholder { display: grid; place-items: center; color: var(--muted); }
-    .library-card-name { font-weight: 700; display: block; }
     .library-badge { display: inline-block; margin-top: 4px; padding: 3px 8px; border-radius: 999px;
       background: var(--accent-soft); color: var(--accent); font-size: 12px; }
     .library-editor { padding: 22px; min-width: 0; }
@@ -104,17 +81,6 @@
     .library-fields input, .library-fields select { min-width: 0; width: 100%; padding: 9px 10px;
       border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
     .library-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
-    .library-steps { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 18px; padding: 0; list-style: none; }
-    .library-steps li { padding: 6px 10px; border-radius: 99px; background: var(--surface-2); font-size: 12px; }
-    .library-stage { margin: 22px 0; }
-    .library-stage h3 { margin: 0 0 12px; }
-    .library-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    .library-asset { padding: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
-    .library-asset img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; }
-    .library-asset.full-body img { aspect-ratio: 832 / 1216; }
-    .library-asset button { margin-top: 8px; }
-    .library-asset .selected { border-color: var(--accent); }
-    .library-truncation { color: var(--danger); font-size: 12px; }
     .library-progress { min-height: 24px; margin: 16px 0; }
     .library-progress:empty { display: none; }
     .library-scene-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
@@ -155,8 +121,7 @@
   </header>
   <main class="library-main">
     <div class="library-heading">
-      <div><h1>Character Library</h1><p>Build and lock your original characters before using them in project scenes.</p></div>
-      <button id="new-character" class="btn btn-primary" type="button" hidden>New character</button>
+      <div><h1>Character Library</h1><p>Pick a character, make its talking pictures with an outside AI, and manage the scenes.</p></div>
     </div>
     <div id="library-message" class="library-message" role="status" hidden></div>
     <div class="library-actions">
@@ -165,7 +130,6 @@
     </div>
     <div class="library-tabs" role="tablist" aria-label="Library sections">
       <button id="profiles-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="true">Profiles</button>
-      <button id="characters-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="false">Generate locally</button>
       <button id="scenes-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="false">Scenes</button>
     </div>
     <section id="profiles-panel" role="tabpanel" aria-labelledby="profiles-tab">
@@ -250,59 +214,6 @@
               </div>
             </div>
             <div id="profile-slots" class="profile-slots"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-    <section id="characters-panel" role="tabpanel" aria-labelledby="characters-tab" hidden>
-      <div class="library-layout">
-        <div id="character-list" class="library-list" aria-label="Characters"></div>
-        <div class="card library-editor">
-          <div id="character-hero" class="character-hero" hidden></div>
-          <h2 id="editor-title">New character</h2>
-          <form id="character-form">
-            <div class="library-fields">
-              <label>Name<input name="name" maxlength="40" required /></label>
-              <label>Gender<select name="gender" required></select></label>
-              <label>Age group<select name="age_group" required></select></label>
-              <label>Ethnicity<input name="ethnicity" maxlength="40" value="Russian" required /></label>
-              <label>Role<input name="role" maxlength="40" placeholder="English teacher" required /></label>
-              <label>Hair<input name="hair" maxlength="40" placeholder="long black hair" required /></label>
-              <label>Eyes<input name="eyes" maxlength="40" placeholder="brown eyes" required /></label>
-              <label>Top colour<select name="top_color" required></select></label>
-              <label>Top item<select name="top_item" required></select></label>
-              <label>Bottom colour<select name="bottom_color" required></select></label>
-              <label>Bottom item<select name="bottom_item" required></select></label>
-            </div>
-            <p class="library-hint">One solid-colour top and one solid-colour bottom (the same colour for both is fine). No patterns or layers.</p>
-            <div class="library-actions">
-              <button id="save-character" class="btn btn-primary" type="submit">Create character</button>
-              <button id="delete-character" class="btn btn-ghost" type="button" hidden>Delete</button>
-            </div>
-          </form>
-          <div id="character-workflow" hidden>
-            <ol class="library-steps" aria-label="Character steps">
-              <li>1. Candidates</li><li>2. Sheet</li><li>3. Lock</li><li>4. Locked</li>
-            </ol>
-            <section class="library-stage" aria-labelledby="candidates-heading">
-              <h3 id="candidates-heading">Candidates</h3>
-              <button id="generate-candidates" class="btn btn-ghost" type="button">Generate 4</button>
-              <p class="library-hint">Choose the portrait that best represents this character.</p>
-              <div id="candidate-grid" class="library-grid"></div>
-            </section>
-            <section class="library-stage" aria-labelledby="sheet-heading">
-              <h3 id="sheet-heading">Character sheet</h3>
-              <button id="generate-sheet" class="btn btn-ghost" type="button">Generate sheet</button>
-              <div id="sheet-grid" class="library-grid"></div>
-            </section>
-            <section class="library-stage" aria-labelledby="lock-heading">
-              <h3 id="lock-heading">Lock character</h3>
-              <p id="lock-summary" class="library-hint"></p>
-              <div class="library-actions">
-                <button id="lock-character" class="btn btn-primary" type="button">Lock character</button>
-                <button id="unlock-character" class="btn btn-ghost" type="button" hidden>Unlock</button>
-              </div>
-            </section>
           </div>
         </div>
       </div>

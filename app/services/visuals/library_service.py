@@ -111,6 +111,13 @@ async def edit_character(db: aiosqlite.Connection, character_id: str, patch: Cha
     fields = patch.model_dump(exclude_unset=True)
     if any(value is None for value in fields.values()):
         raise ValidationError("Character fields cannot be null")
+    if any(value != row[key] for key, value in fields.items() if key != "name"):
+        # Phase 35 (D89): this old route wipes every picture on an appearance change; a profile's slot pictures (and the
+        # seeds) are never wiped from here -- the Profiles tab edits them.
+        cursor = await db.execute("SELECT 1 FROM character_assets WHERE character_id = ? AND slot_key IS NOT NULL LIMIT 1",
+                                  (character_id,))
+        if row["is_seed"] or await cursor.fetchone() is not None:
+            raise ConflictError("This character's pictures are made in its profile; change its appearance in the Profiles tab")
     try:
         merged = CharacterInput.model_validate({key: fields.get(key, row[key]) for key in CHARACTER_FIELDS})
     except PydanticValidationError as exc:
@@ -216,7 +223,9 @@ async def unlock_character(db: aiosqlite.Connection, character_id: str) -> dict:
 
 
 async def delete_character(db: aiosqlite.Connection, character_id: str, force: bool) -> None:
-    await get_character_row(db, character_id)
+    row = await get_character_row(db, character_id)
+    if row["is_seed"]:  # Phase 35 (D89): the old route ignored this; the profile route already refused it
+        raise ConflictError("Lina and Alex are protected profiles; archive them instead")
     cursor = await db.execute("SELECT 1 FROM project_cast WHERE character_id = ? LIMIT 1", (character_id,))
     if await cursor.fetchone() is not None and not force:
         raise ConflictError("Character is used by a project cast; use force=true to remove those cast entries")

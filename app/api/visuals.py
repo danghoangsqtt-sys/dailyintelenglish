@@ -423,22 +423,6 @@ async def import_library_inbox(db: aiosqlite.Connection = Depends(get_db)) -> di
     return ok(result)
 
 
-@router.get("/library/sprites")
-async def library_sprites(db: aiosqlite.Connection = Depends(get_db)) -> dict:
-    """Phase 32: the talking-sprite set of every library character, and the inbox the sets are imported from."""
-    async with read_transaction():
-        sets = await sprite_service.list_sets(db)
-    return ok({"folder": str(sprite_service.inbox_dir()), "inbox": sprite_service.list_inbox(), "sets": sets})
-
-
-@router.post("/library/sprites/import")
-async def import_library_sprites(db: aiosqlite.Connection = Depends(get_db)) -> dict:
-    async with read_transaction():  # only the character names are read; the sets are files (checked outside the lock)
-        characters = await sprite_service.characters_by_key(db)
-    result = await sprite_service.import_inbox(characters)
-    return ok(result)
-
-
 @router.get("/library/sprites/{character_id}/{name}/content")
 async def library_sprite_content(character_id: str, name: str) -> FileResponse:
     if name not in sprite_service.ALL_NAMES:

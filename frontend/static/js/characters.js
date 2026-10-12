@@ -1,14 +1,9 @@
-/** Global Character and Scene Library. All server calls go through Api. */
+/** The Character Library page: the tab switch and the Scenes tab (the Profiles tab is `character_profiles.js`; the old
+ * "Generate locally" character tab was removed in Phase 35, D89). All server calls go through Api. */
 (() => {
-  const SHEET_LABELS = {
-    full_body: "Full body",
-    portrait_calm: "Calm",
-    portrait_smile: "Smile",
-    portrait_surprised: "Surprised",
-  };
   const state = {
-    characters: [], scenes: [], options: null, health: null,
-    selectedId: null, selectedSceneId: null, editingSceneId: null, sceneFilter: "all", busy: false, progress: null,
+    scenes: [], options: null, health: null,
+    selectedSceneId: null, editingSceneId: null, sceneFilter: "all", busy: false, progress: null,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -33,7 +28,7 @@
 
   function setGenerateButton(button, allowed) {
     button.disabled = state.busy || !canGenerate() || !allowed;
-    button.title = generationHint() || (allowed ? "" : "Complete the previous character step first.");
+    button.title = generationHint();
   }
 
   function optionList(select, values) {
@@ -47,225 +42,11 @@
   }
 
   function fillOptions() {
-    const form = $("character-form");
-    const mapping = {
-      gender: state.options.genders,
-      age_group: state.options.age_groups,
-      top_color: state.options.colors,
-      top_item: state.options.tops,
-      bottom_color: state.options.colors,
-      bottom_item: state.options.bottoms,
-    };
-    Object.entries(mapping).forEach(([name, values]) => optionList(form.elements[name], values));
-    form.elements.bottom_color.value = "navy blue";
     const sceneForm = $("scene-form");
     optionList(sceneForm.elements.category, state.options.scene_categories || ["other"]);
     optionList(sceneForm.elements.time_of_day, state.options.times_of_day || ["day"]);
     sceneForm.elements.category.value = "other";
     sceneForm.elements.time_of_day.value = "day";
-  }
-
-  function selectedCharacter() {
-    return state.characters.find((character) => character.id === state.selectedId) || null;
-  }
-
-  function assetCard(asset, label, fullBody = false) {
-    const card = document.createElement("article");
-    card.className = `library-asset${fullBody ? " full-body" : ""}`;
-    const image = document.createElement("img");
-    image.src = asset.url;
-    image.alt = `${label} portrait`;
-    const title = document.createElement("strong");
-    title.textContent = label;
-    card.append(image, title);
-    if (asset.prompt_truncated) {
-      const warning = document.createElement("div");
-      warning.className = "library-truncation";
-      warning.textContent = "⚠ description too long";
-      card.append(warning);
-    }
-    return card;
-  }
-
-  const COLOUR_CSS = {
-    white: "#ffffff", black: "#111111", grey: "#8c8c8c", "navy blue": "#1f2a5c", "light blue": "#a9d3f5", red: "#d62d2d",
-    pink: "#f4a6c0", yellow: "#f5cf3a", orange: "#f08a24", green: "#3a9d3f", beige: "#e0cfae", brown: "#7a5230",
-  };
-
-  // One round swatch per garment of the locked outfit (title: "white top").
-  function outfitSwatches(character) {
-    const holder = document.createElement("span");
-    holder.className = "library-swatches";
-    [["top", character.top_color], ["bottom", character.bottom_color]].forEach(([part, colour]) => {
-      const dot = document.createElement("span");
-      dot.className = "library-swatch";
-      dot.title = `${colour} ${part}`;
-      dot.style.background = COLOUR_CSS[colour] || "#8c8c8c";
-      holder.append(dot);
-    });
-    return holder;
-  }
-
-  function renderCharacterHero() {
-    const hero = $("character-hero");
-    const character = selectedCharacter();
-    hero.replaceChildren();
-    hero.hidden = !character;
-    if (!character) return;
-    if (character.face_url) {
-      const face = document.createElement("img");
-      face.src = character.face_url;
-      face.alt = `${character.name} face`;
-      hero.append(face);
-    }
-    const copy = document.createElement("div");
-    const name = document.createElement("span");
-    name.className = "hero-name";
-    name.textContent = character.name;
-    const role = document.createElement("p");
-    role.className = "hero-role";
-    role.textContent = [character.role, character.hair].filter(Boolean).join(" · ");
-    const badge = document.createElement("span");
-    badge.className = "library-badge";
-    badge.textContent = character.status;
-    copy.append(name, role, outfitSwatches(character), " ", badge);
-    hero.append(copy);
-  }
-
-  function renderCharacterList() {
-    const list = $("character-list");
-    list.replaceChildren();
-    if (!state.characters.length) {
-      const empty = document.createElement("p");
-      empty.className = "library-hint";
-      empty.textContent = "No characters yet. Create your first character.";
-      list.append(empty);
-      return;
-    }
-    state.characters.forEach((character) => {
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = "library-card character-tile card";
-      card.setAttribute("aria-current", String(character.id === state.selectedId));
-      card.addEventListener("click", () => {
-        state.selectedId = character.id;
-        renderCharacters();
-      });
-      const art = document.createElement("span");
-      art.className = "tile-art";
-      const picture = character.body_url || character.face_url;
-      if (picture) {
-        const face = document.createElement("img");
-        face.className = "library-face";
-        face.src = picture;
-        face.alt = "";
-        art.append(face);
-      } else {
-        const placeholder = document.createElement("span");
-        placeholder.className = "library-placeholder";
-        placeholder.textContent = "Portrait";
-        art.append(placeholder);
-      }
-      const copy = document.createElement("span");
-      copy.className = "tile-copy";
-      const name = document.createElement("span");
-      name.className = "library-card-name";
-      name.textContent = character.name;
-      const meta = document.createElement("span");
-      meta.className = "tile-meta";
-      const badge = document.createElement("span");
-      badge.className = "library-badge";
-      badge.textContent = character.status;
-      meta.append(badge, outfitSwatches(character));
-      copy.append(name, meta);
-      card.append(art, copy);
-      list.append(card);
-    });
-  }
-
-  function renderCandidates(character) {
-    const grid = $("candidate-grid");
-    grid.replaceChildren();
-    const candidates = character.assets.filter((asset) => asset.kind === "candidate");
-    candidates.forEach((asset, index) => {
-      const card = assetCard(asset, `Candidate ${index + 1}`);
-      const pick = document.createElement("button");
-      pick.className = "btn btn-ghost btn-sm";
-      pick.type = "button";
-      pick.textContent = character.reference_asset_id === asset.id ? "✓ Selected" : "Choose this portrait";
-      pick.disabled = state.busy || character.status === "locked";
-      pick.addEventListener("click", async () => {
-        await act(async () => Api.pickCharacterReference(character.id, asset.id), "Portrait selected.");
-      });
-      card.append(pick);
-      grid.append(card);
-    });
-  }
-
-  function renderSheet(character) {
-    const grid = $("sheet-grid");
-    grid.replaceChildren();
-    Object.entries(SHEET_LABELS).forEach(([kind, label]) => {
-      const asset = character.assets.find((item) => item.kind === kind);
-      if (!asset) return;
-      const card = assetCard(asset, label, kind === "full_body");
-      const buttons = document.createElement("div");
-      buttons.className = "library-actions";
-      const approve = document.createElement("button");
-      approve.type = "button";
-      approve.className = "btn btn-ghost btn-sm";
-      approve.textContent = asset.approved ? "✓ Approved" : "✓ Approve";
-      approve.disabled = state.busy || character.status === "locked";
-      approve.addEventListener("click", () => act(
-        () => Api.approveCharacterAsset(character.id, asset.id, !asset.approved),
-        asset.approved ? "Approval removed." : "Sheet asset approved.",
-      ));
-      const regenerate = document.createElement("button");
-      regenerate.type = "button";
-      regenerate.className = "btn btn-ghost btn-sm";
-      regenerate.textContent = "↻ Regenerate";
-      setGenerateButton(regenerate, character.status !== "locked");
-      regenerate.addEventListener("click", () => startJob(() => Api.generateCharacterSheet(character.id, kind)));
-      buttons.append(approve, regenerate);
-      card.append(buttons);
-      grid.append(card);
-    });
-  }
-
-  function renderEditor() {
-    const character = selectedCharacter();
-    const form = $("character-form");
-    const locked = character?.status === "locked";
-    $("editor-title").textContent = character ? character.name : "New character";
-    for (const field of form.querySelectorAll("input, select")) {
-      if (character && character[field.name] !== undefined) field.value = character[field.name];
-      field.disabled = Boolean(locked);
-    }
-    $("save-character").textContent = character ? "Save character" : "Create character";
-    $("save-character").disabled = Boolean(locked || state.busy);
-    $("delete-character").hidden = !character;
-    $("delete-character").disabled = state.busy;
-    $("character-workflow").hidden = !character;
-    if (!character) return;
-    renderCandidates(character);
-    renderSheet(character);
-    setGenerateButton($("generate-candidates"), !locked);
-    setGenerateButton($("generate-sheet"), Boolean(character.reference_asset_id && !locked));
-    const approved = Object.keys(SHEET_LABELS).every((kind) =>
-      character.assets.some((asset) => asset.kind === kind && asset.approved));
-    $("lock-character").hidden = locked;
-    $("lock-character").disabled = state.busy || !approved || !character.reference_asset_id;
-    $("unlock-character").hidden = !locked;
-    $("unlock-character").disabled = state.busy;
-    $("lock-summary").textContent = locked
-      ? "Appearance and outfit are locked. Unlock to make changes after removing this character from project casts."
-      : `${Object.keys(SHEET_LABELS).filter((kind) => character.assets.some((asset) => asset.kind === kind && asset.approved)).length} of 4 sheet assets approved.`;
-  }
-
-  function renderCharacters() {
-    renderCharacterHero();
-    renderCharacterList();
-    renderEditor();
   }
 
   function renderSceneFilters() {
@@ -411,18 +192,14 @@
   }
 
   async function refresh() {
-    [state.characters, state.scenes, state.health] = await Promise.all([
-      Api.listCharacters(), Api.listScenes(), Api.getVisualsHealth(),
-    ]);
-    if (state.selectedId && !selectedCharacter()) state.selectedId = null;
-    renderCharacters();
+    [state.scenes, state.health] = await Promise.all([Api.listScenes(), Api.getVisualsHealth()]);
     renderScenes();
   }
 
   async function act(operation, success) {
     try {
       state.busy = true;
-      renderCharacters();
+      renderScenes();
       await operation();
       await refresh();
       message(success);
@@ -430,7 +207,6 @@
       message(error.message || "The library action failed.", true);
     } finally {
       state.busy = false;
-      renderCharacters();
       renderScenes();
     }
   }
@@ -438,7 +214,6 @@
   async function startJob(operation) {
     if (state.busy || !canGenerate()) return;
     state.busy = true;
-    renderCharacters();
     renderScenes();
     message("");
     try {
@@ -476,7 +251,6 @@
       $("cancel-library-job").hidden = true;
       $("cancel-library-job").onclick = null;
       state.busy = false;
-      renderCharacters();
       renderScenes();
     }
   }
@@ -491,52 +265,13 @@
   }
 
   function setupEvents() {
-    $("new-character").addEventListener("click", () => {
-      state.selectedId = null;
-      $("character-form").reset();
-      $("character-form").elements.bottom_color.value = "navy blue";
-      renderCharacters();
-      $("character-form").elements.name.focus();
-    });
-    $("character-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const body = Object.fromEntries(new FormData(event.currentTarget));
-      const existing = selectedCharacter();
-      await act(async () => {
-        const saved = existing ? await Api.updateCharacter(existing.id, body) : await Api.createCharacter(body);
-        state.selectedId = saved.id;
-      }, existing ? "Character saved." : "Character created. Generate candidates next.");
-    });
-    $("delete-character").addEventListener("click", async () => {
-      const character = selectedCharacter();
-      if (!character || !confirm(`Delete "${character.name}"?`)) return;
-      await act(async () => {
-        try {
-          await Api.deleteCharacter(character.id);
-        } catch (error) {
-          if (error.status !== 409 || !confirm("This character is used in a project. Remove it from those casts and delete it?")) throw error;
-          await Api.deleteCharacter(character.id, true);
-        }
-        state.selectedId = null;
-        $("character-form").reset();
-      }, "Character deleted.");
-    });
-    $("generate-candidates").addEventListener("click", () => startJob(
-      () => Api.generateCharacterCandidates(state.selectedId)));
-    $("generate-sheet").addEventListener("click", () => startJob(
-      () => Api.generateCharacterSheet(state.selectedId)));
-    $("lock-character").addEventListener("click", () => act(
-      () => Api.lockCharacter(state.selectedId), "Character locked."));
-    $("unlock-character").addEventListener("click", () => act(
-      () => Api.unlockCharacter(state.selectedId), "Character unlocked."));
-    // Phase 33: three tabs -- Profiles (default), the local generator, scenes.
-    const tabs = ["profiles", "characters", "scenes"];
+    // Two tabs -- Profiles (default) and scenes.
+    const tabs = ["profiles", "scenes"];
     tabs.forEach((name) => $(`${name}-tab`).addEventListener("click", () => {
       tabs.forEach((other) => {
         $(`${other}-panel`).hidden = other !== name;
         $(`${other}-tab`).setAttribute("aria-selected", String(other === name));
       });
-      $("new-character").hidden = name !== "characters";  // the local generator's own "New character"
     }));
     $("scene-form").addEventListener("submit", async (event) => {
       event.preventDefault();

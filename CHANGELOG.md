@@ -8,6 +8,15 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Removed / Changed (Phase 35 legacy cleanup, 2026-10-13)
+- **The AI writes as Daily Beyond English.** Script, outline, section and learning-pack prompts name the YouTube channel
+  instead of the old app name (35.1).
+- **Old one-off scripts and prompt files are gone.** 18 spike/one-off scripts, their tests, the Phase 32 `Prompt_*.txt`
+  files and the old hand-off prompt docs were removed (35.2).
+- **One way to make a character.** The Characters page keeps only Profiles and Scenes: the old "Generate locally" tab
+  and the Shot Library "Import sprites" inbox are removed (talking pictures come from the profile slots). The old
+  character routes can no longer wipe a profile's pictures on an appearance change or delete Lina and Alex (35.3).
+
 ### Fixed / Changed (Gate B-22 fixes, 2026-10-12)
 - **Activity pictures sit behind the talking characters.** In "Podcast: talking characters" an insert beat's picture now
   replaces the scene behind Alex and Lina, who stay in front and keep talking (owner decision D75).

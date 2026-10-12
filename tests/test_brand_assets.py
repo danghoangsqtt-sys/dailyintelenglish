@@ -96,11 +96,6 @@ def test_text_and_buttons_meet_aa_contrast_in_both_themes():
     assert _contrast(_token("--text-muted", light), white) >= 4.5
 
 
-def test_the_character_form_hint_allows_one_colour_for_both_garments():
-    html = (FRONTEND / "pages" / "characters.html").read_text(encoding="utf-8")
-    assert "different-colour" not in html and "the same colour for both is fine" in html
-
-
 def test_the_small_logo_in_a_project_card_is_not_stretched_like_a_preview_image():
     """Found in the browser: `.project-thumb img` (the preview picture rule) also hit the placeholder's logo."""
     assert ".project-thumb img:not(.thumb-mark)" in CSS
