@@ -3,7 +3,7 @@
 A sprite set is a folder per character, `data/library/sprites/<character_id>/<name>.png`, with a `sprite_set.json` (D32-a): the
 pictures are made outside the app (one transparent 1280 x 1536 PNG per expression and mouth, a blink, the gestures) and copied into
 `data/library/sprites_inbox` as `<character name>__<name>.png`. The import checks that every picture lines up with the character's
-`calm__closed` picture (the rules `scripts/check_sprites.py` reports) and refuses the ones that do not, with the reason.
+`calm__closed` picture (the rules of the Phase 32 sprite checker) and refuses the ones that do not, with the reason.
 
 The video draws one body (the calm picture, or a gesture) and puts the face of the current expression and mouth on it inside a feathered
 ellipse, so the body never shimmers when the mouth moves (D32-c); `sprite_set.json` holds that ellipse and each picture's head offset.
@@ -39,7 +39,7 @@ ALL_NAMES = FACE_NAMES + GESTURE_NAMES + GESTURE_OPEN_NAMES
 BASE = "calm__closed"
 MINIMUM = ("calm__closed", "calm__open")  # a set the video can use: the face must at least open and close its mouth
 
-# the limits of scripts/check_sprites.py (what a smooth video needs)
+# the limits of the Phase 32 sprite checker (what a smooth video needs)
 TOP_LIMIT = 6
 HEAD_SIDE_LIMIT = 10
 EDGE_LIMIT = 8
@@ -75,7 +75,7 @@ def parse_name(filename: str) -> tuple[str, str] | None:
     return who.strip().lower(), name
 
 
-# ---------------------------------------------------------------- the alignment check (pure, shared with check_sprites.py)
+# ---------------------------------------------------------------- the alignment check (pure)
 
 def _bbox(alpha: np.ndarray) -> tuple[int, int, int, int]:
     ys, xs = np.where(alpha)

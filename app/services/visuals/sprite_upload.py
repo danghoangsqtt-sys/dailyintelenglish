@@ -1,12 +1,12 @@
 """Phase 33 (Task 33.3, D84/D86): turn a picture made with an outside AI into a talking-sprite slot picture.
 
-The outside-AI recipe is the one proven in Phase 32 (`docs/operations/Prompt_ChatGPT_Web_Alex.txt`): one full-length base
+The outside-AI recipe is the one proven in Phase 32 (its prompt files were removed in Phase 35): one full-length base
 picture on a flat green background, and every other picture a small region edit (face, mouth, eyes or arms) of its parent.
 This module only does pixels -- no database, no files:
 
 - `prepare_base`: key out the green and fit the figure on the 1280 x 1536 canvas like the existing packs (feet on the
   floor, centred, the same height).
-- `prepare_edit`: put a region edit back exactly where its parent was (phase correlation, as `scripts/sprite_web_import.py`
+- `prepare_edit`: put a region edit back exactly where its parent was (phase correlation, as the Phase 32 web importer
   does); when the outside AI drew the whole picture again, fall back to fitting the figure's height and head silhouette.
 - `parent_on_green`: the picture the owner attaches in the outside AI (the parent sprite on the same green, canvas size).
 """
@@ -66,7 +66,7 @@ def _has_transparency(picture: Image.Image) -> bool:
 
 
 def key_out_green(rgb: Image.Image) -> Image.Image:
-    """RGBA from a picture on a flat green background (the logic of `scripts/sprite_web_import.py`, kept identical)."""
+    """RGBA from a picture on a flat green background (the logic of the Phase 32 web importer, kept identical)."""
     data = np.asarray(rgb.convert("RGB")).astype(np.float32)
     green = data[..., 1] - np.maximum(data[..., 0], data[..., 2])
     border = np.concatenate([green[0], green[-1], green[:, 0], green[:, -1]])

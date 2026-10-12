@@ -1,6 +1,6 @@
 """Task 22.9: automatic classification of a library track (blocking; run in a thread).
 
-Spike `scripts/spike_music_analysis.py` on the owner's Pixabay tracks: tempo detection is ambiguous
+A spike (script removed in Phase 35) on the owner's Pixabay tracks: tempo detection is ambiguous
 (the same track gives 83 or 123 BPM, 74 or 144), so BPM is only an estimate for display. Onset
 density (attacks per second) orders the tracks the way their names describe them, so the pace class
 comes from it -- taken as the median of three 30 s windows (25/50/75 %): a single middle window

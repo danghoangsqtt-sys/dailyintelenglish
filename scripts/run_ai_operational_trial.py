@@ -2,7 +2,7 @@
 (Phase 13 Task 13.9; extended for Phase 14 Task 14.4 -- "Gate B-2", the
 re-run of Gate B under the 14.1/14.2/14.3 resilience changes).
 
-Drives a real in-process `uvicorn` server (same pattern as `record_demo_video.py` and
+Drives a real in-process `uvicorn` server (same pattern as
 the browser test suite's `live_server_url` fixture) over real HTTP via `httpx` --
 never `fastapi.testclient.TestClient`, never a mocked provider. `DIE_AI_MODE` is set
 before any `app.*` import so the mode is genuinely in effect for the whole trial, per

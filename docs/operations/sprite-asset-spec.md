@@ -74,6 +74,11 @@ the first talking video; the rest can follow while you review it.
 
 ## 5. What the first pack taught us (2026-10-08)
 
+> **Phase 35 (2026-10-13):** sections 5–6b record the Phase 32 manual recipe. Its scripts (`check_sprites.py`,
+> `sprite_face_tools.py`, `sprite_web_import.py`) and `Prompt_*.txt` files were removed: pictures are now made in the Characters page
+> (profile slots, D83–D87), with the same green key-out and alignment checks in `app/services/visuals/sprite_upload.py` and
+> `sprite_service.py`.
+
 - **Direction:** in the video the **first speaker (Alex) stands on the left and faces right**, the second (Lina) stands on the right and faces left.
   (The first prompt said the opposite; the packs were turned the right way afterwards.)
 - **Alignment:** an AI image editor redraws the whole picture, so the pictures of Alex's first pack drifted: the torso moved 20 to 100 px

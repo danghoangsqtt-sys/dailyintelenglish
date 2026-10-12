@@ -2,7 +2,7 @@
 building, the subprocess contract, and in-memory fallback-rate counters.
 
 The only place `app/` ever invokes the `video-renderer/` subprocess in production. Mirrors
-`scripts/run_remotion_spike.py`'s proven pattern (temp props file, `time.monotonic()` wall
+the proven pattern of the Phase 19 spike runner (removed in Phase 35) (temp props file, `time.monotonic()` wall
 time, strict output-path validation, `cwd=video-renderer/`) rather than importing that
 script directly -- it's a standalone measurement tool with its own `sys.path` setup, not a
 module meant to be imported by `app/`.
@@ -168,7 +168,7 @@ def _record_call(fallback_reason: str | None) -> None:
 def _parse_chapters_text(chapters_text: str) -> list[dict[str, Any]]:
     """Task 19.6/19.7 (D19.6-e): `youtube_service.real_chapters_from_timestamps` returns a
     plain-text "MM:SS Label" block, not the structured `Array<{title, startSec}>` the
-    video-renderer props schema needs. Duplicated from `scripts/run_remotion_spike.py`
+    video-renderer props schema needs. Duplicated from the Phase 19 spike runner
     rather than imported (that script is a standalone tool, not a module `app/` imports) --
     same small-helper-duplication convention already used elsewhere in this codebase (e.g.
     every browser test file owns its own `_envelope()`). Only reformats fields the function
@@ -456,7 +456,7 @@ async def _build_input_props(
     still_scene_id: str | None = None,
 ) -> dict[str, Any]:
     """Real per-project props for the `Episode`/`StillFrame` compositions -- mirrors
-    `scripts/run_remotion_spike.py::_build_input_props`, extended with real avatar
+    the Phase 19 spike runner's `_build_input_props`, extended with real avatar
     resolution (via the service layer, not a raw DB column) and real learning-content
     camelCase conversion (D19.2/19.4/19.5/19.6 field shapes, unchanged)."""
     word_timestamps_by_line = (
@@ -597,7 +597,7 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path) ->
     """Blocking subprocess call -- must run in a thread (`asyncio.to_thread`), never on the
     event loop directly, same "Forbidden Scope" rule `video_service._render_video_sync`
     already documents. Temp-props-file + `time.monotonic()` wall time + strict
-    output-path validation, mirroring `scripts/run_remotion_spike.py::_run_render` exactly.
+    output-path validation, mirroring the Phase 19 spike runner's `_run_render`.
     """
     # Remotion runs with cwd=video-renderer/, so a relative path (DATA_DIR is the relative "data" in a
     # dev checkout) made it write video-renderer/data/... while this check looked under data/ -- every
