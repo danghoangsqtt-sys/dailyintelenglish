@@ -42,3 +42,17 @@ Make profile assets manageable through explicit canonical slots with safe direct
 - One review grid per upload with **Approve all** and per-picture reject; approval makes the pack usable at once.
 - Verification adds: a canonical-name pack maps with no manual step; a misaligned picture is reported, not silently fixed
   beyond the shared alignment; nothing is approved before the grid action.
+
+## Amendment B (2026-10-12, owner D84 — supersedes the auto-mapping emphasis of D83)
+
+The owner's flow is **slot by slot**: the character library shows every picture slot of a profile (core pictures, Tier 1–3
+expressions and gestures) as a card with **its own prompt** and **its own upload drop zone**. The owner makes the picture with
+an outside AI from that card's prompt and drops it into the same card. The server stores it under the slot's canonical name
+(`<character_id>/v<identity_version>/<slot_key>.png`), whatever the uploaded file was called; the original filename is kept
+only as metadata. Alignment and technical checks run on upload; the card shows the result; approval stays with the owner
+(per card, or **Approve all** for the cards filled in this session).
+
+- Primary path: single-slot upload (`POST …/assets/{slot_key}/upload`); the slot comes from the card, never from the filename.
+- Secondary path (kept from D83, optional): dropping several files at once onto the library maps files whose names are
+  canonical slot names; any other file must be dropped on its card.
+- The prompt pack is shown per card (copy button) and is also downloadable as one text file for the whole profile.
