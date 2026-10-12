@@ -17,7 +17,7 @@ from app.services.visuals import library_service as library
 
 async def cast_rows(db: aiosqlite.Connection, project_id: str) -> list[dict]:
     cursor = await db.execute(
-        "SELECT pc.speaker_index, pc.character_id, c.name, c.top_color, c.status "
+        "SELECT pc.speaker_index, pc.character_id, c.name, c.top_color, c.status, c.gender, c.sprite_facing "
         "FROM project_cast pc JOIN characters c ON c.id = pc.character_id "
         "WHERE pc.project_id = ? ORDER BY pc.speaker_index",
         (project_id,),

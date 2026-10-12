@@ -7,7 +7,7 @@ import React from "react";
 import { AbsoluteFill, Img, staticFile, useVideoConfig } from "remotion";
 import { BOTTOM_SHADE_STYLE } from "./captionStyle";
 import { stillScale } from "./podcastLayout";
-import { activityCutawayAt, canvasBox, spriteBackground, spriteFrame } from "./spriteTimeline";
+import { activityCutawayAt, canvasBox, spriteBackground, spriteFrame, spriteTransform } from "./spriteTimeline";
 import type { EpisodeLine, EpisodeSprites, SpriteCharacter } from "./types";
 
 const FILL: React.CSSProperties = { position: "absolute", width: "100%", height: "100%", objectFit: "cover" };
@@ -21,7 +21,7 @@ function Sprite({ character, frame, fps, lines, sprites, totalFrames }: {
   return (
     <div style={{
       position: "absolute", left: box.left, top: box.top, width: box.width, height: box.height,
-      transform: `translate(${state.x.toFixed(1)}px, ${state.y.toFixed(2)}px) scale(${state.scale.toFixed(4)})`,
+      transform: spriteTransform(state, character.mirror),
       transformOrigin: "50% 100%", opacity: state.opacity, filter: `brightness(${state.brightness.toFixed(3)})`,
     }}>
       <Img src={staticFile(character.pictures[state.picture])} style={{ position: "absolute", width: "100%", height: "100%" }} />

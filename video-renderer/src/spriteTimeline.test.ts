@@ -3,9 +3,9 @@ import { podcastLayer } from "./podcastLayout";
 import {
   SPEAKER_GESTURE_SEC, gestureAt,
   BACKGROUND_FADE_FRAMES, LISTENER_BRIGHTNESS, SPRITE_HEIGHT, canvasBox, heldLineIndex, isBlinking, isMouthOpen,
-  activityCutawayAt, spriteBackground, spriteFrame, stageTop,
+  activityCutawayAt, spriteBackground, spriteFrame, spriteTransform, stageTop,
 } from "./spriteTimeline";
-import { episodeInputPropsSchema, type EpisodeLine, type EpisodeSprites, type SpriteCharacter } from "./types";
+import { episodeInputPropsSchema, spriteCharacterSchema, type EpisodeLine, type EpisodeSprites, type SpriteCharacter } from "./types";
 
 const FPS = 30;
 const WIDTH = 1280;
@@ -13,7 +13,7 @@ const WIDTH = 1280;
 function character(slot: number, name: string, extra: string[] = []): SpriteCharacter {
   const names = ["calm__closed", "calm__open", "smile__closed", "smile__open", "blink", ...extra];
   return {
-    slot, name, faceEllipse: [0.5, 0.25, 0.08, 0.07], topFraction: slot === 0 ? 0.1 : 0.15,
+    slot, name, faceEllipse: [0.5, 0.25, 0.08, 0.07], topFraction: slot === 0 ? 0.1 : 0.15, mirror: false,
     pictures: Object.fromEntries(names.map((n) => [n, `remotion-render/sprites/p/${name}/${n}.png`])),
     offsets: { "smile__open": [4, -2], "gesture-wave": [1, 1] },
   };
@@ -168,5 +168,20 @@ describe("Phase 32 talking sprites", () => {
   it("blinks only on the calm face with the mouth closed", () => {
     const blinkFrame = Array.from({ length: 300 }, (_, frame) => frame).find((frame) => isBlinking(frame, FPS, "Lina"));
     expect(blinkFrame).toBeDefined();
+  });
+});
+
+describe("Phase 33 facing (D82)", () => {
+  it("mirrors a pack that looks the other way and leaves the others as they are", () => {
+    const state = { x: 12.345, y: -1.5, scale: 0.97 };
+    expect(spriteTransform(state, false)).toBe("translate(12.3px, -1.50px) scale(0.9700)");
+    expect(spriteTransform(state, true)).toBe("translate(12.3px, -1.50px) scale(0.9700) scaleX(-1)");
+  });
+
+  it("defaults mirror to false for Phase 32 props", () => {
+    const parsed = spriteCharacterSchema.parse({
+      slot: 0, name: "Alex", pictures: { calm__closed: "a.png" }, faceEllipse: [0.5, 0.2, 0.1, 0.1],
+    });
+    expect(parsed.mirror).toBe(false);
   });
 });

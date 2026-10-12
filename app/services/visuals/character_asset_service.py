@@ -99,12 +99,16 @@ def base_prompt(profile: dict) -> str:
     side = "right" if profile["sprite_facing"] == "right" else "left"
     who = f"{profile['nationality']} " if profile.get("nationality") else ""
     person = "man" if profile["gender"] == "male" else "woman"
-    return (f"A full-length picture of an adult {who}{person} named {profile['name']}: {profile['appearance']}. "
+    # The framing and pose of the Alex/Lina packs: head to mid-thigh filling the height, facing the camera, turned a little
+    # toward the partner (owner feedback 2026-10-12: a full-length picture looking away did not match them).
+    return (f"A three-quarter length portrait of an adult {who}{person} named {profile['name']}: {profile['appearance']}. "
             f"Wearing {profile['outfit']}. {EXPRESSION_LOOKS['calm'].capitalize()}, lips closed, arms relaxed at the sides. "
-            f"The body and face turned slightly toward the {side} side of the picture, looking toward the {side}. "
-            "The whole body from the top of the head to the feet, the feet on the bottom edge, nothing cut off, in the centre. "
-            "Portrait format (5:6). Soft even studio lighting. A flat pure green background (#00B140): no floor, no shadow, "
-            "no gradient. Photorealistic. No text, no logos, no props.")
+            f"Standing facing the camera, the body turned only slightly toward the {side} side of the picture; the face "
+            f"toward the camera with the eyes looking just a little to the {side}, at eye level, not up and not away. "
+            "Framed from the top of the head to mid-thigh: the figure fills the picture height, the head close to the top "
+            "edge, the legs cut at mid-thigh by the bottom edge, centred. Portrait format (5:6). Soft even studio lighting. "
+            "A flat pure green background (#00B140): no floor, no shadow, no gradient. Photorealistic. No text, no logos, "
+            "no props.")
 
 
 def slot_prompt(profile: dict, slot: dict) -> str:
@@ -287,7 +291,8 @@ async def _asset_row(db: aiosqlite.Connection, asset_id: str) -> dict:
     return dict(found)
 
 
-async def review(db: aiosqlite.Connection, character_id: str, asset_id: str, decision: str) -> dict[str, Any]:
+async def review(db: aiosqlite.Connection, character_id: str, asset_id: str, decision: str,
+                 refresh: bool = True) -> dict[str, Any]:
     """Approve or reject one picture. Approving a new base when another base was approved starts a new identity version:
     the other sprites were edits of the old base, so they must be made again (Phase 33 rule 10)."""
     asset = await _asset_row(db, asset_id)
@@ -310,16 +315,46 @@ async def review(db: aiosqlite.Connection, character_id: str, asset_id: str, dec
                 (_now(), character_id, row["identity_version"], asset_id))
     await db.execute("UPDATE character_assets SET review_state = ?, approved = ?, updated_at = ? WHERE id = ?",
                      (state, int(state == "approved"), _now(), asset_id))
-    if state == "approved":
+    if state == "approved" and refresh:
         await derive_core_pictures(db, character_id)
+        await materialize_sprite_set(db, character_id)  # the video uses the approved pictures at once (D83)
     return _asset_view(await _asset_row(db, asset_id)) | {"slot": asset["slot_key"].split("/", 1)[1]}
+
+
+async def materialize_sprite_set(db: aiosqlite.Connection, character_id: str) -> dict | None:
+    """Task 33.6: the renderer's `sprite_set.json` pack, written from the approved current uploaded slot pictures.
+
+    Skipped (None) without an approved base, and for packs whose rows already live in the sprite folder (Lina/Alex's Phase 32
+    packs): rewriting the folder from itself would delete it first. Pictures that fail the pack checks are left out of the
+    manifest, as the Phase 32 import does.
+    """
+    row = await _profile_row(db, character_id)
+    cursor = await db.execute(
+        "SELECT slot_key, path FROM character_assets WHERE character_id = ? AND identity_version = ? AND facing = 'native' "
+        "AND is_current = 1 AND review_state = 'approved' AND kind = 'sprite'",
+        (character_id, row["identity_version"]))
+    files = {item["slot_key"].split("/", 1)[1]: stored_path(item["path"]) for item in await cursor.fetchall()}
+    if BASE not in files:
+        return None
+    folder = sprite_service.sprite_dir(character_id).resolve()
+    if any(path.resolve().is_relative_to(folder) for path in files.values()):
+        return None
+
+    def write() -> dict:
+        accepted, _refused = sprite_service.check_folder(files)
+        return sprite_service._write_set(character_id, files, accepted, lambda _path: None)  # silhouette face ellipse
+
+    return await asyncio.to_thread(write)
 
 
 async def approve_many(db: aiosqlite.Connection, character_id: str, asset_ids: list[str]) -> list[dict[str, Any]]:
     """Approve all (D83/D84): the base first, so the rest are checked against the right version."""
     rows = [await _asset_row(db, asset_id) for asset_id in asset_ids]
     rows.sort(key=lambda asset: asset["slot_key"] != f"sprite/{BASE}")
-    return [await review(db, character_id, asset["id"], "approve") for asset in rows]
+    results = [await review(db, character_id, asset["id"], "approve", refresh=False) for asset in rows]
+    await derive_core_pictures(db, character_id)
+    await materialize_sprite_set(db, character_id)
+    return results
 
 
 def _derive_sync(source: str, kind: str, destination: Path) -> None:

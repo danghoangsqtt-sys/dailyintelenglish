@@ -199,3 +199,10 @@ export function activityCutawayAt(time: number, sprites: EpisodeSprites): { url:
   const leaving = Math.min(1, (cutaway.endSec - time) / CUTAWAY_FADE_SEC);
   return { url: cutaway.url, opacity: Math.max(0, Math.min(entering, leaving)) };
 }
+
+/** Phase 33 (D82): the CSS transform of a sprite box -- the frame's move and scale, then a mirror for a pack that looks the
+ * other way. The mirror flips the whole picture (face, mouth and gesture together) around the box centre. */
+export function spriteTransform(state: Pick<SpriteFrame, "x" | "y" | "scale">, mirror: boolean): string {
+  const base = `translate(${state.x.toFixed(1)}px, ${state.y.toFixed(2)}px) scale(${state.scale.toFixed(4)})`;
+  return mirror ? `${base} scaleX(-1)` : base;
+}

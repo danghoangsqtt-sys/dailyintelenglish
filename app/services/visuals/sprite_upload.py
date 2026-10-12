@@ -28,6 +28,9 @@ MIN_HEIGHT = 512
 REGISTRATION_LIMIT = 12.0  # mean grey difference over the overlap; above it the picture was drawn again
 REDRAWN_SHARE = 0.30  # a region edit (mouth, face, eyes, arms) changes well under this share of the figure
 HEAD_FRACTION = 0.20
+# The packs show the figure from the top of the head to mid-thigh (Alex, Lina). A full-length upload -- feet clear of the
+# bottom edge -- is cut at this share of its height (mid-thigh on a standing adult is about 4.5 of 7.5 head heights).
+KNEE_UP_SHARE = 0.60
 
 
 class UploadError(ValueError):
@@ -81,8 +84,15 @@ def key_out_green(rgb: Image.Image) -> Image.Image:
 
 def _figure(picture: Image.Image) -> Image.Image:
     figure = picture if _has_transparency(picture) else key_out_green(picture)
-    if not (np.asarray(figure.getchannel("A")) > 20).any():
+    alpha = np.asarray(figure.getchannel("A")) > 20
+    if not alpha.any():
         raise UploadError("no figure was found in the picture")
+    ys = np.where(alpha.any(axis=1))[0]
+    top, bottom = int(ys.min()), int(ys.max())
+    if bottom < figure.height - 3:  # the feet are in the picture: a full-length picture, cut to the packs' mid-thigh framing
+        cut = top + int((bottom - top) * KNEE_UP_SHARE)
+        figure = figure.copy()
+        figure.paste((0, 0, 0, 0), (0, cut, figure.width, figure.height))
     return figure
 
 

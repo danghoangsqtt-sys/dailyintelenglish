@@ -285,6 +285,24 @@ async def _scene_plate(db: aiosqlite.Connection, scene_id: str) -> Path | None:
         return None
 
 
+def sprite_placement(members: list[tuple[int, str]]) -> dict[int, int]:
+    """Phase 33 (D81): the screen slot (0 = left, 1 = right) of each visible speaker. A man and a woman: the man on the left,
+    the woman on the right, whoever speaks first. Two of the same gender: speaker order. One person: a woman on the right."""
+    if len(members) == 2 and {members[0][1], members[1][1]} == {"male", "female"}:
+        return {index: 0 if gender == "male" else 1 for index, gender in members}
+    if len(members) == 1:
+        index, gender = members[0]
+        return {index: 1 if gender == "female" else 0}
+    return {index: slot for slot, (index, _gender) in enumerate(sorted(members))}
+
+
+def sprite_mirrored(slot: int, sprite_facing: str, gender: str) -> bool:
+    """Phase 33 (D82): the left figure looks right and the right figure looks left, so the two face each other; a pack that
+    looks the other way is mirrored. A pack with no recorded facing faces like its gender's default."""
+    facing = sprite_facing or ("right" if gender == "male" else "left")
+    return facing != ("right" if slot == 0 else "left")
+
+
 async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: list[dict], audio_job: dict,
                               still_scene_id: str | None) -> dict[str, Any]:
     """Phase 32 (Task 32.4): the props of the "podcast_sprites" mode -- the two cast characters' sprite sets (copied under public/),
@@ -295,11 +313,15 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
     speaker_indexes = {speaker["id"]: speaker.get("speaker_index", index) for index, speaker in enumerate(project["speakers"])}
     characters: list[dict[str, Any]] = []
     available: dict[int, set[str]] = {}
-    for slot in sorted({index for index in speaker_indexes.values() if index in (0, 1)}):
-        member = cast_by_index.get(slot)
-        speaker_name = next(s["name"] for s in project["speakers"] if speaker_indexes[s["id"]] == slot)
-        if member is None:
+    visible = sorted({index for index in speaker_indexes.values() if index in (0, 1)})
+    for speaker_index in visible:
+        if speaker_index not in cast_by_index:
+            speaker_name = next(s["name"] for s in project["speakers"] if speaker_indexes[s["id"]] == speaker_index)
             raise ValidationError(f"{speaker_name} has no library character: cast one in Step 4 before the talking characters video.")
+    placement = sprite_placement([(index, cast_by_index[index]["gender"]) for index in visible])
+    for speaker_index in visible:
+        slot = placement[speaker_index]
+        member = cast_by_index[speaker_index]
         sprite_set = await asyncio.to_thread(sprite_service.load_set, member["character_id"])
         if not sprite_service.usable(sprite_set):
             raise ValidationError(f"{member['name']} has no talking sprites yet: import the sprite pictures on the Shot Library page "
@@ -312,6 +334,7 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
             pictures[name] = f"remotion-render/sprites/{project_id}/{slot}/{name}.png"
         characters.append({
             "slot": slot, "name": member["name"], "pictures": pictures, "faceEllipse": sprite_set["face_ellipse"],
+            "mirror": sprite_mirrored(slot, member.get("sprite_facing") or "", member.get("gender") or ""),
             "offsets": {name: [value["head_dx"], value["head_dy"]] for name, value in sprite_set["pictures"].items()},
             "topFraction": await asyncio.to_thread(_figure_top, folder / f"{sprite_service.BASE}.png"),
         })
@@ -338,7 +361,7 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
         backgrounds = {"still": f"remotion-render/sprites/{project_id}/bg/still.png"}
         line_backgrounds = ["still"] * len(lines)
 
-    line_slots = [speaker_indexes.get(line["speakerId"]) for line in lines]
+    line_slots = [placement.get(speaker_indexes.get(line["speakerId"])) for line in lines]  # screen slots (D81)
     line_slots = [slot if slot in available else None for slot in line_slots]
     beat_expressions: list[str | None] = [None] * len(lines)
     for beat in beats or []:

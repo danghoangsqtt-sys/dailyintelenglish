@@ -76,7 +76,8 @@ def test_every_profile_has_the_29_sprite_slots_with_prompts_parents_and_regions(
     assert len(cards) == 29 and len(SLOTS) == 29
     base = cards["calm__closed"]
     assert base["parent"] is None and base["file_name"] == "calm__closed.png"
-    for words in ("Kai", "Japanese man", "round glasses", "grey hoodie", "#00B140", "toward the right", "feet on the bottom"):
+    for words in ("Kai", "Japanese man", "round glasses", "grey hoodie", "#00B140", "toward the right", "mid-thigh",
+                  "toward the camera"):
         assert words in base["prompt"]
     assert (cards["smile__open"]["parent"], cards["smile__open"]["region"]) == ("smile__closed", "mouth")
     assert (cards["gesture-wave"]["parent"], cards["gesture-wave"]["region"]) == ("calm__closed", "arms")
@@ -204,3 +205,16 @@ def test_bulk_drop_maps_canonical_names_and_lists_the_rest(client):
     assert [item["slot"] for item in result["stored"]] == ["calm__closed"]
     assert [item["file"] for item in result["unmatched"]] == ["photo 1.png"]
     assert result["failed"][0]["slot"] == "smile__closed"  # its parent is not approved yet
+
+
+def test_a_full_length_picture_is_cut_at_mid_thigh_like_the_other_packs(client):
+    """Owner feedback 2026-10-12: a full-length base (feet visible) looked small next to Alex and Lina, who are framed
+    from the head to mid-thigh. The upload keeps the head-to-mid-thigh part and fills the canvas height with it."""
+    kai = _profile(client)
+    _upload(client, kai["id"], "calm__closed", _bytes(_person(size=(600, 900))))  # feet well above the bottom edge
+    stored = settings.DATA_DIR / "library" / "characters" / kai["id"] / "v1" / "native" / "calm__closed.png"
+    alpha = np.asarray(Image.open(stored))[..., 3] > 20
+    ys = np.where(alpha.any(axis=1))[0]
+    assert ys.max() >= 1530 and ys.min() <= 170  # the cut edge on the floor, the head near the top
+    jeans = np.asarray(Image.open(stored))[..., :3][alpha]
+    assert ((jeans == (40, 60, 120)).all(axis=1)).mean() < 0.35  # most of the legs are gone, the hoodie fills the frame

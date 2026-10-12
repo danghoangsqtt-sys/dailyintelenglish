@@ -114,6 +114,8 @@ export const spriteCharacterSchema = z.object({
   faceEllipse: z.tuple([z.number(), z.number(), z.number(), z.number()]),
   offsets: z.record(z.string(), z.tuple([z.number(), z.number()])).default({}),
   topFraction: z.number().default(0.15),
+  /** Phase 33 (D82): show the pack mirrored, so the left figure looks right and the right figure looks left. */
+  mirror: z.boolean().default(false),
 });
 
 /** Phase 32: what the sprites do on each line (`app/services/visuals/sprite_plan.py`). */
