@@ -5,15 +5,20 @@ Library page working unchanged during the phase; the new library, Quick create a
 """
 
 import time
+from pathlib import Path
 from typing import Literal
 
 import aiosqlite
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi.responses import FileResponse, PlainTextResponse, Response
+from pydantic import BaseModel, Field
 
+from app.core.exceptions import NotFoundError, ValidationError
 from app.core.responses import ok
 from app.db.database import get_db
 from app.db.transactions import read_transaction, write_transaction
 from app.models.visuals import PROFILE_ACCENTS, ProfilePatch, ProfileQuickCreate
+from app.services.visuals import character_asset_service as assets
 from app.services.visuals import character_profile_service as profiles
 from app.services.visuals import library_service as library
 
@@ -90,3 +95,116 @@ async def delete_profile(character_id: str, db: aiosqlite.Connection = Depends(g
         await profiles.delete(db, character_id)
     await library.remove_character_files(character_id)
     return ok({"deleted": character_id})
+
+
+# ---------------------------------------------------------------- Task 33.3 (D84/D86): picture slots, prompts, upload, review
+
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+
+
+class ReviewInput(BaseModel):
+    decision: Literal["approve", "reject"]
+
+
+class ApproveManyInput(BaseModel):
+    asset_ids: list[str] = Field(min_length=1, max_length=40)
+
+
+def _slot_from_filename(filename: str) -> str | None:
+    """Optional bulk shortcut (D83): `gesture-wave__open.png` or `kai__gesture-wave__open.png` -> `gesture-wave__open`."""
+    stem = Path(filename or "").name
+    if not stem.lower().endswith(".png"):
+        return None
+    stem = stem[:-4]
+    if stem in assets.SLOTS_BY_KEY:
+        return stem
+    _, separator, rest = stem.partition("__")
+    return rest if separator and rest in assets.SLOTS_BY_KEY else None
+
+
+async def _read_limited(file: UploadFile) -> bytes:
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise ValidationError("the file is larger than 20 MB")
+    return content
+
+
+@router.get("/{character_id}/slots")
+async def list_slots(character_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with read_transaction():
+        result = await assets.list_slots(db, character_id)
+    return ok(result)
+
+
+@router.post("/{character_id}/slots/{slot_key}/upload")
+async def upload_slot(
+    character_id: str, slot_key: str, file: UploadFile = File(...), db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """The slot comes from the card the picture was dropped on, never from the file name (D84)."""
+    content = await _read_limited(file)
+    async with write_transaction(db):
+        result = await assets.upload(db, character_id, slot_key, content, file.filename)
+    return ok(result)
+
+
+@router.post("/{character_id}/slots/upload-batch")
+async def upload_batch(
+    character_id: str, files: list[UploadFile] = File(...), db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    """Bulk shortcut: files named after a slot go into it (the base first); every other file is listed, not guessed."""
+    if len(files) > 40:
+        raise ValidationError("drop at most 40 pictures at once")
+    named = [(file, _slot_from_filename(file.filename or "")) for file in files]
+    named.sort(key=lambda item: item[1] != assets.BASE)
+    stored, unmatched, failed = [], [], []
+    for file, slot_key in named:
+        if slot_key is None:
+            unmatched.append({"file": file.filename, "reason": "drop this picture on its slot card"})
+            continue
+        try:
+            content = await _read_limited(file)
+            async with write_transaction(db):
+                stored.append(await assets.upload(db, character_id, slot_key, content, file.filename))
+        except (ValidationError, NotFoundError) as exc:
+            failed.append({"file": file.filename, "slot": slot_key, "reason": exc.message})
+    return ok({"stored": stored, "unmatched": unmatched, "failed": failed})
+
+
+@router.get("/{character_id}/slots/{slot_key}/input.png")
+async def slot_input(character_id: str, slot_key: str, db: aiosqlite.Connection = Depends(get_db)) -> Response:
+    async with read_transaction():
+        content = await assets.parent_input(db, character_id, slot_key)
+    return Response(content, media_type="image/png",
+                    headers={"Content-Disposition": f'attachment; filename="INPUT_{slot_key}.png"'})
+
+
+@router.put("/{character_id}/assets/{asset_id}/review")
+async def review_asset(
+    character_id: str, asset_id: str, body: ReviewInput, db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    async with write_transaction(db):
+        result = await assets.review(db, character_id, asset_id, body.decision)
+    return ok(result)
+
+
+@router.post("/{character_id}/assets/approve")
+async def approve_assets(
+    character_id: str, body: ApproveManyInput, db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    async with write_transaction(db):
+        result = await assets.approve_many(db, character_id, body.asset_ids)
+    return ok(result)
+
+
+@router.get("/{character_id}/assets/{asset_id}/content")
+async def asset_content(character_id: str, asset_id: str, db: aiosqlite.Connection = Depends(get_db)) -> FileResponse:
+    async with read_transaction():
+        path = await assets.asset_content(db, character_id, asset_id)
+    return FileResponse(path, media_type="image/png")
+
+
+@router.get("/{character_id}/prompt-pack.txt")
+async def prompt_pack(character_id: str, db: aiosqlite.Connection = Depends(get_db)) -> PlainTextResponse:
+    async with read_transaction():
+        text = await assets.prompt_pack_text(db, character_id)
+    return PlainTextResponse(text, headers={"Content-Disposition": 'attachment; filename="prompt-pack.txt"'})

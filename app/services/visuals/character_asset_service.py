@@ -1,0 +1,370 @@
+"""Phase 33 (Task 33.3, D84/D86): the picture slots of a character profile, their prompts, uploads and review.
+
+Every profile has the 29 talking-sprite slots of `data/library/sprites_inbox` (7 expressions x closed/open mouth, `blink`,
+7 gestures x closed/open mouth). Each slot card shows the picture to attach in the outside AI (its parent), the region to
+select, the prompt, and a drop zone. A dropped file is stored under the slot's canonical name whatever it was called, and
+waits for the owner's review. The four core pictures (full body and three portraits) are derived from approved sprites, so
+the owner only makes the 29 sprite pictures.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import aiosqlite
+import numpy as np
+from PIL import Image
+
+from app.core.config import settings
+from app.core.exceptions import ConflictError, NotFoundError, ValidationError
+from app.services.visuals import sprite_service, sprite_upload
+
+BASE = "calm__closed"
+EXPRESSION_LOOKS = {
+    "calm": "a calm friendly face",
+    "smile": "a warm gentle smile",
+    "laugh": "a happy laughing look, eyes narrowed and curved, a big smile",
+    "surprised": "surprised: eyes wide open, eyebrows raised",
+    "thinking": "thoughtful: eyes glancing slightly upward, one eyebrow slightly raised; the head does not move",
+    "worried": "worried: eyebrows drawn together and slightly raised",
+    "serious": "a serious calm expression, level eyebrows",
+}
+OPEN_MOUTHS = {
+    "calm": 'the mouth is open as when saying "ah", upper teeth slightly visible, natural, not a yawn',
+    "smile": "smiling while speaking: the mouth is open, teeth visible",
+    "laugh": "laughing: a wide open smile, teeth visible",
+    "surprised": 'the mouth is open in a small round "oh"',
+    "thinking": 'the mouth is slightly open as if saying "hmm"',
+    "worried": "the mouth is slightly open as if speaking",
+    "serious": "the mouth is slightly open as if speaking",
+}
+GESTURE_POSES = {
+    "talk": "one hand raised to chest height with the palm open, as if explaining. The whole hand stays inside the picture",
+    "point": "one hand pointing to the side, the elbow bent so the hand stays well inside the picture",
+    "think": "one hand resting lightly under the chin, the other arm across the waist. The head does not move",
+    "open": "both hands open with the palms up at waist height, close to the body, a small shrug",
+    "heart": "one hand resting flat on the chest, sincere, as when saying thank you",
+    "listen": "both hands lightly clasped in front of the body at waist height, listening",
+    "wave": "one hand raised beside the shoulder, waving hello. The whole hand stays inside the picture",
+}
+REGIONS = {
+    "face": "the whole face from the eyebrows to the chin (not the hair, ears or neck)",
+    "eyes": "only the two eyes",
+    "mouth": "only the mouth (both lips and a little skin around them; not the nose, cheeks or chin)",
+    "arms": "only the two arms and hands, plus the green area where the hand will go (not the head, neck or chest)",
+}
+KEEP = ("Edit only the selected area. Keep everything outside it exactly the same: the same face shape, head angle, hair, "
+        "body, outfit, flat green background, framing and image size.")
+
+
+def _slot(key: str, group: str, tier: int, parent: str | None, region: str | None, change: str) -> dict[str, Any]:
+    return {"key": key, "group": group, "tier": tier, "parent": parent, "region": region, "change": change}
+
+
+def _build_slots() -> list[dict[str, Any]]:
+    slots = [_slot(BASE, "base", 1, None, None, EXPRESSION_LOOKS["calm"] + ", lips closed")]
+    for expression, look in EXPRESSION_LOOKS.items():
+        tier = 1 if expression in ("calm", "smile", "surprised") else 2
+        if expression != "calm":
+            slots.append(_slot(f"{expression}__closed", "expression", tier, BASE, "face", f"{look}, lips closed."))
+        slots.append(_slot(f"{expression}__open", "mouth", tier, f"{expression}__closed", "mouth",
+                           OPEN_MOUTHS[expression] + "."))
+    slots.append(_slot("blink", "blink", 1, BASE, "eyes", "Both eyes gently closed, as in a blink."))
+    for gesture, pose in GESTURE_POSES.items():
+        slots.append(_slot(f"gesture-{gesture}", "gesture", 3, BASE, "arms", pose + "."))
+        slots.append(_slot(f"gesture-{gesture}__open", "mouth", 3, f"gesture-{gesture}", "mouth",
+                           "The mouth is open as when speaking, upper teeth slightly visible."))
+    return slots
+
+
+SLOTS = _build_slots()
+SLOT_KEYS = tuple(slot["key"] for slot in SLOTS)
+SLOTS_BY_KEY = {slot["key"]: slot for slot in SLOTS}
+assert set(SLOT_KEYS) == set(sprite_service.ALL_NAMES), "the slot registry must match the sprite contract"
+DERIVED_CORE = {"full_body": BASE, "portrait_calm": BASE, "portrait_smile": "smile__closed",
+                "portrait_surprised": "surprised__closed"}
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def base_prompt(profile: dict) -> str:
+    """The prompt of the base picture, written from the Quick create fields (D79) with the facing rule (D82)."""
+    side = "right" if profile["sprite_facing"] == "right" else "left"
+    who = f"{profile['nationality']} " if profile.get("nationality") else ""
+    person = "man" if profile["gender"] == "male" else "woman"
+    return (f"A full-length picture of an adult {who}{person} named {profile['name']}: {profile['appearance']}. "
+            f"Wearing {profile['outfit']}. {EXPRESSION_LOOKS['calm'].capitalize()}, lips closed, arms relaxed at the sides. "
+            f"The body and face turned slightly toward the {side} side of the picture, looking toward the {side}. "
+            "The whole body from the top of the head to the feet, the feet on the bottom edge, nothing cut off, in the centre. "
+            "Portrait format (5:6). Soft even studio lighting. A flat pure green background (#00B140): no floor, no shadow, "
+            "no gradient. Photorealistic. No text, no logos, no props.")
+
+
+def slot_prompt(profile: dict, slot: dict) -> str:
+    if slot["key"] == BASE:
+        return base_prompt(profile)
+    return f"{KEEP} {slot['change'][0].upper()}{slot['change'][1:]}"
+
+
+def _asset_dir(character_id: str, identity_version: int, facing: str) -> Path:
+    return settings.DATA_DIR / "library" / "characters" / character_id / f"v{identity_version}" / facing
+
+
+async def _profile_row(db: aiosqlite.Connection, character_id: str) -> dict:
+    cursor = await db.execute("SELECT * FROM characters WHERE id = ?", (character_id,))
+    row = await cursor.fetchone()
+    if row is None:
+        raise NotFoundError("Character profile not found")
+    return dict(row)
+
+
+async def _current(db: aiosqlite.Connection, row: dict, slot_key: str, facing: str = "native") -> dict | None:
+    cursor = await db.execute(
+        "SELECT * FROM character_assets WHERE character_id = ? AND identity_version = ? AND facing = ? AND slot_key = ? "
+        "AND is_current = 1",
+        (row["id"], row["identity_version"], facing, f"sprite/{slot_key}"),
+    )
+    found = await cursor.fetchone()
+    return dict(found) if found else None
+
+
+def _profile_view(row: dict) -> dict:
+    return {"name": row["name"], "gender": row["gender"], "nationality": row["ethnicity"], "appearance": row["appearance"],
+            "outfit": row["outfit"], "sprite_facing": row["sprite_facing"] or ("right" if row["gender"] == "male" else "left")}
+
+
+def _asset_view(asset: dict | None) -> dict | None:
+    if asset is None:
+        return None
+    return {"id": asset["id"], "review_state": asset["review_state"], "original_filename": asset["original_filename"],
+            "validation": json.loads(asset["validation_json"] or "{}"), "updated_at": asset["updated_at"],
+            "url": f"/api/visuals/profiles/{asset['character_id']}/assets/{asset['id']}/content"}
+
+
+async def list_slots(db: aiosqlite.Connection, character_id: str) -> dict[str, Any]:
+    row = await _profile_row(db, character_id)
+    profile = _profile_view(row)
+    cards = []
+    for slot in SLOTS:
+        asset = await _current(db, row, slot["key"])
+        parent = await _current(db, row, slot["parent"]) if slot["parent"] else None
+        cards.append({
+            **slot, "file_name": f"{slot['key']}.png", "prompt": slot_prompt(profile, slot),
+            "region_text": REGIONS.get(slot["region"] or "", ""),
+            "parent_ready": slot["parent"] is None or bool(parent and parent["review_state"] == "approved"),
+            "parent_input_url": (f"/api/visuals/profiles/{character_id}/slots/{slot['parent']}/input.png"
+                                 if slot["parent"] else None),
+            "asset": _asset_view(asset),
+        })
+    return {"character_id": character_id, "identity_version": row["identity_version"], "slots": cards}
+
+
+def _validate(slot_key: str, canvas: Image.Image, base: Image.Image | None) -> dict:
+    """The sprite checks of `sprite_service` against the approved base (the base itself has nothing to compare with)."""
+    if slot_key == BASE or base is None:
+        return {"problems": []}
+    rgba = np.asarray(canvas.convert("RGBA"))
+    result = sprite_service.measure(rgba, sprite_service.Reference(np.asarray(base.convert("RGBA"))),
+                                    slot_key.startswith("gesture-"))
+    return {"problems": list(result.get("problems", []))}
+
+
+def _process_sync(slot_key: str, content: bytes, parent_path: str | None, base_path: str | None) -> tuple[Image.Image, dict]:
+    picture = sprite_upload.open_upload(content)
+    if slot_key == BASE:
+        canvas, info = sprite_upload.prepare_base(picture)
+        base = None
+    else:
+        if parent_path is None or base_path is None:
+            raise sprite_upload.UploadError(f"approve the {SLOTS_BY_KEY[slot_key]['parent']} picture first: "
+                                            "this picture is an edit of it")
+        with Image.open(parent_path) as parent, Image.open(base_path) as base_file:
+            parent_rgba, base = parent.convert("RGBA"), base_file.convert("RGBA")
+        canvas, info = sprite_upload.prepare_edit(picture, parent_rgba, base)
+    return canvas, {**info, **_validate(slot_key, canvas, base)}
+
+
+async def upload(db: aiosqlite.Connection, character_id: str, slot_key: str, content: bytes,
+                 original_filename: str | None) -> dict[str, Any]:
+    """Store an outside-AI picture in its slot (D84): renamed to `<slot>.png`, aligned, checked, `needs_review`.
+
+    The picture is processed and written to a temporary file before any database change; the previous asset of the slot is
+    only retired (is_current = 0) in the same transaction that adds the new row, so a failed upload changes nothing.
+    """
+    if slot_key not in SLOTS_BY_KEY:
+        raise NotFoundError(f"Unknown picture slot {slot_key!r}")
+    row = await _profile_row(db, character_id)
+    slot = SLOTS_BY_KEY[slot_key]
+    parent = await _current(db, row, slot["parent"]) if slot["parent"] else None
+    base = await _current(db, row, BASE)
+    parent_ok = parent if parent and parent["review_state"] == "approved" else None
+    base_ok = base if base and base["review_state"] == "approved" else None
+    try:
+        canvas, validation = await asyncio.to_thread(
+            _process_sync, slot_key, content, parent_ok["path"] if parent_ok else None, base_ok["path"] if base_ok else None)
+    except sprite_upload.UploadError as exc:
+        raise ValidationError(str(exc)) from exc
+
+    folder = _asset_dir(character_id, row["identity_version"], "native")
+    final = folder / f"{slot_key}.png"
+    temp = folder / f".{slot_key}.{uuid.uuid4().hex}.tmp.png"
+    await asyncio.to_thread(folder.mkdir, parents=True, exist_ok=True)
+    await asyncio.to_thread(canvas.save, temp, "PNG")
+    previous = await _current(db, row, slot_key)
+    asset_id, now = str(uuid.uuid4()), _now()
+    try:
+        if previous is not None:
+            # keep the replaced picture's file under its own ID so an older render or review can still see it
+            kept = folder / f"{slot_key}.{previous['id'][:8]}.png"
+            if Path(previous["path"]).is_file():
+                await asyncio.to_thread(Path(previous["path"]).replace, kept)
+            await db.execute("UPDATE character_assets SET is_current = 0, path = ?, updated_at = ? WHERE id = ?",
+                             (str(kept), now, previous["id"]))
+        await db.execute(
+            "INSERT INTO character_assets (id, character_id, kind, path, approved, created_at, slot_key, source, "
+            "original_filename, review_state, validation_json, identity_version, is_current, updated_at, facing) "
+            "VALUES (?, ?, 'sprite', ?, 0, ?, ?, 'upload', ?, 'needs_review', ?, ?, 1, ?, 'native')",
+            (asset_id, character_id, str(final), now, f"sprite/{slot_key}", (original_filename or "")[:200],
+             json.dumps(validation), row["identity_version"], now),
+        )
+        await asyncio.to_thread(temp.replace, final)
+    except Exception:
+        await asyncio.to_thread(temp.unlink, missing_ok=True)
+        raise
+    return _asset_view(await _asset_row(db, asset_id)) | {"slot": slot_key}
+
+
+async def _asset_row(db: aiosqlite.Connection, asset_id: str) -> dict:
+    cursor = await db.execute("SELECT * FROM character_assets WHERE id = ?", (asset_id,))
+    found = await cursor.fetchone()
+    if found is None:
+        raise NotFoundError("Picture not found")
+    return dict(found)
+
+
+async def review(db: aiosqlite.Connection, character_id: str, asset_id: str, decision: str) -> dict[str, Any]:
+    """Approve or reject one picture. Approving a new base when another base was approved starts a new identity version:
+    the other sprites were edits of the old base, so they must be made again (Phase 33 rule 10)."""
+    asset = await _asset_row(db, asset_id)
+    if asset["character_id"] != character_id or not asset["is_current"]:
+        raise ConflictError("Only the current picture of a slot can be reviewed")
+    state = {"approve": "approved", "reject": "rejected"}[decision]
+    row = await _profile_row(db, character_id)
+    if state == "approved" and asset["slot_key"] == f"sprite/{BASE}":
+        cursor = await db.execute(
+            "SELECT 1 FROM character_assets WHERE character_id = ? AND slot_key = ? AND review_state = 'approved' "
+            "AND id != ? AND identity_version = ?", (character_id, f"sprite/{BASE}", asset_id, row["identity_version"]))
+        if await cursor.fetchone() is not None:
+            new_version = row["identity_version"] + 1
+            await db.execute("UPDATE characters SET identity_version = ?, updated_at = ? WHERE id = ?",
+                             (new_version, _now(), character_id))
+            await db.execute("UPDATE character_assets SET identity_version = ? WHERE id = ?", (new_version, asset_id))
+            await db.execute(
+                "UPDATE character_assets SET review_state = 'stale', updated_at = ? WHERE character_id = ? "
+                "AND identity_version = ? AND is_current = 1 AND kind = 'sprite' AND id != ?",
+                (_now(), character_id, row["identity_version"], asset_id))
+    await db.execute("UPDATE character_assets SET review_state = ?, approved = ?, updated_at = ? WHERE id = ?",
+                     (state, int(state == "approved"), _now(), asset_id))
+    if state == "approved":
+        await derive_core_pictures(db, character_id)
+    return _asset_view(await _asset_row(db, asset_id)) | {"slot": asset["slot_key"].split("/", 1)[1]}
+
+
+async def approve_many(db: aiosqlite.Connection, character_id: str, asset_ids: list[str]) -> list[dict[str, Any]]:
+    """Approve all (D83/D84): the base first, so the rest are checked against the right version."""
+    rows = [await _asset_row(db, asset_id) for asset_id in asset_ids]
+    rows.sort(key=lambda asset: asset["slot_key"] != f"sprite/{BASE}")
+    return [await review(db, character_id, asset["id"], "approve") for asset in rows]
+
+
+def _derive_sync(source: str, kind: str, destination: Path) -> None:
+    with Image.open(source) as sprite:
+        figure = sprite.convert("RGBA")
+    background = Image.new("RGBA", figure.size, (236, 238, 241, 255))
+    background.alpha_composite(figure)
+    picture = background.convert("RGB")
+    if kind != "full_body":  # head and shoulders: the top third of the figure, square
+        ys, xs = np.where(np.asarray(figure.getchannel("A")) > 20)
+        top, height = int(ys.min()), int(ys.max() - ys.min())
+        side = int(height * 0.36)
+        centre = int(np.where(np.asarray(figure.getchannel("A"))[top:top + side // 2] > 20)[1].mean())
+        left = max(0, min(picture.width - side, centre - side // 2))
+        picture = picture.crop((left, max(0, top - side // 12), left + side, max(0, top - side // 12) + side))
+        picture = picture.resize((768, 768), Image.Resampling.LANCZOS)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    picture.save(destination, "PNG")
+
+
+async def derive_core_pictures(db: aiosqlite.Connection, character_id: str) -> list[str]:
+    """Full body and the three portraits from the approved sprites; each one replaces the current core picture of its slot."""
+    row = await _profile_row(db, character_id)
+    made = []
+    for kind, source_slot in DERIVED_CORE.items():
+        source = await _current(db, row, source_slot)
+        if not source or source["review_state"] != "approved":
+            continue
+        destination = _asset_dir(character_id, row["identity_version"], "native") / f"core_{kind}.png"
+        await asyncio.to_thread(_derive_sync, source["path"], kind, destination)
+        now = _now()
+        await db.execute("UPDATE character_assets SET is_current = 0, updated_at = ? WHERE character_id = ? AND slot_key = ? "
+                         "AND is_current = 1 AND identity_version = ?", (now, character_id, kind, row["identity_version"]))
+        await db.execute(
+            "INSERT INTO character_assets (id, character_id, kind, path, approved, created_at, slot_key, source, "
+            "review_state, identity_version, is_current, updated_at, facing) "
+            "VALUES (?, ?, ?, ?, 1, ?, ?, 'derived', 'approved', ?, 1, ?, 'native')",
+            (str(uuid.uuid4()), character_id, kind, str(destination), now, kind, row["identity_version"], now))
+        made.append(kind)
+    return made
+
+
+async def asset_content(db: aiosqlite.Connection, character_id: str, asset_id: str) -> Path:
+    from app.services.visuals.library_service import resolve_library_content
+
+    asset = await _asset_row(db, asset_id)
+    if asset["character_id"] != character_id:
+        raise NotFoundError("Picture not found")
+    return resolve_library_content(asset["path"])
+
+
+async def parent_input(db: aiosqlite.Connection, character_id: str, slot_key: str) -> bytes:
+    """The picture the owner attaches in the outside AI for the slots made from `slot_key` (on green, canvas size)."""
+    row = await _profile_row(db, character_id)
+    asset = await _current(db, row, slot_key)
+    if not asset or asset["review_state"] != "approved":
+        raise NotFoundError(f"Approve the {slot_key} picture first")
+
+    def render() -> bytes:
+        import io
+
+        with Image.open(asset["path"]) as sprite:
+            picture = sprite_upload.parent_on_green(sprite.convert("RGBA"))
+        buffer = io.BytesIO()
+        picture.save(buffer, "PNG")
+        return buffer.getvalue()
+
+    return await asyncio.to_thread(render)
+
+
+async def prompt_pack_text(db: aiosqlite.Connection, character_id: str) -> str:
+    """The whole pack as one text file, in the layout of the Phase 32 ChatGPT-web prompt files."""
+    data = await list_slots(db, character_id)
+    row = await _profile_row(db, character_id)
+    lines = [f"{row['name'].upper()} — BỘ ẢNH NHÂN VẬT CHO AI BÊN NGOÀI ({len(SLOTS)} ảnh)", "",
+             "Cách làm: mỗi ô có ẢNH TẢI LÊN (tải ở ô cha trong thư viện), VÙNG TÔ và PROMPT. Mở cuộc trò chuyện mới cho mỗi ảnh,",
+             "tải ảnh lên, tô đúng vùng, dán prompt, tải ảnh về rồi thả vào đúng ô trong thư viện nhân vật (tên file không quan trọng).",
+             ""]
+    for card in data["slots"]:
+        lines.append(f"Ô: {card['file_name']}  (tier {card['tier']})")
+        lines.append(f"Ảnh tải lên: {card['parent'] + '.png' if card['parent'] else 'không (ảnh gốc, tạo mới)'}")
+        if card["region_text"]:
+            lines.append(f"Vùng tô: {card['region_text']}")
+        lines.append(f"Prompt: {card['prompt']}")
+        lines.append("")
+    return "\n".join(lines)
