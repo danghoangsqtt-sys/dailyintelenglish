@@ -1508,3 +1508,24 @@ Owner D89. State: `.viepilot/phases/35-legacy-cleanup/PHASE-STATE.md`.
 - [ ] 35.5 Remove the Standard ffmpeg renderer
 - [ ] 35.6 Verification, docs, close requests
 
+### Phase 36: YouTube publishing package -- horizontal video (D90–D97) - planned 2026-10-13
+
+State: `.viepilot/phases/36-youtube-package/PHASE-STATE.md`. After Phase 35.
+
+- [ ] 36.1 Learning pack: collocations, sentence patterns, phrasal verbs
+- [ ] 36.2 SEO description, hashtags, pinned-comment transcript, copy buttons
+- [ ] 36.3 Composed thumbnail with characters and illustration (replaces the Pillow templates)
+- [ ] 36.4 Outside-AI thumbnail slot
+- [ ] 36.5 AI-planned series with numbered episodes
+- [ ] 36.6 Tests, a real series, Gate B-24
+
+### Phase 37: Vertical video for YouTube Shorts and TikTok (D98–D101) - planned 2026-10-13
+
+State: `.viepilot/phases/37-vertical-video/PHASE-STATE.md`. After Phase 36.
+
+- [ ] 37.1 Remotion 1080x1920 composition
+- [ ] 37.2 AI-proposed, owner-approved highlight clips
+- [ ] 37.3 Full episode in vertical
+- [ ] 37.4 Shorts and TikTok packages with a vertical cover
+- [ ] 37.5 Tests, real clips, Gate B-25
+
