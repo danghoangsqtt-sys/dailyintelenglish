@@ -2,7 +2,9 @@
 
 ## Current Status
 
-**Now (2026-10-12, Phase 32 closed):** owner **Gate B-22 PASS** on the re-rendered Demo Episode (activity pictures behind both characters, Alex's own pictures, karaoke). Phase 32 ✅ complete, tag `die-vp-p32-complete`. Phase 33 plan amended with D78–D83 (Amendment A, `/vp-evolve` 2026-10-12); ready to open with `/vp-auto --phase 33`.
+**Now (2026-10-12, Phase 33 paused before 33.9):** 33.1–33.7 done, 33.8 built (full suite running). Owner paused the video step to finish Jack's expressions (has base + smile/laugh/surprised/thinking closed; needs at least `calm__open`, ideally Tier 1: `calm__open`, `smile__open`, `surprised__open`, `blink`) in the **sandbox copy** on port 8010. The real app (port 8000) still runs the old code and the real DB has migrations only up to 017. Resume: back up, restart the real app, copy Jack from the sandbox, render a 3-character project, Gate B-23.
+
+**Earlier (2026-10-12, Phase 32 closed):** owner **Gate B-22 PASS** on the re-rendered Demo Episode (activity pictures behind both characters, Alex's own pictures, karaoke). Phase 32 ✅ complete, tag `die-vp-p32-complete`. Phase 33 plan amended with D78–D83 (Amendment A, `/vp-evolve` 2026-10-12); ready to open with `/vp-auto --phase 33`.
 
 **Earlier (2026-10-12, Gate B-22):** owner Gate B-22 **FAILED** with three findings (ENH-028 pictures behind the characters, BUG-029 speaking character's pictures, BUG-030 karaoke lost from an old TTS cache); decisions D75-D77. Phase 32 stays open; Tasks 32.8a-32.8d **done** 2026-10-12 (full suite 1654 passed, Vitest 65); the Demo Episode was regenerated and re-rendered (30/30 lines with word timings, 3/3 inserts use Alex pictures behind both characters, karaoke visible). **Waiting for owner Gate B-22 re-run (32.9)** on `video_remotion.mp4`; the rejected render is `video_gate_b22_r1.mp4`. The stale API server from 2026-10-09 was restarted with owner OK.
 
