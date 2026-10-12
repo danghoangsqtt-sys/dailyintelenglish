@@ -34,3 +34,20 @@ Make downstream visual systems work with arbitrary profiles and meaningful speak
 - [ ] No beat persists more than two visible speakers.
 - [ ] Missing profile-specific activities fall back without blocking the render.
 
+
+## Implementation Notes (2026-10-12, before coding)
+
+- Already general (checked): the Activity Library character filters and targets are built from the character list
+  (`shot_library.js`); the storyboard keeps at most two speakers per beat from the speakers of its lines
+  (`storyboard_service.py:168,201`, `BeatInput.speakers max_length=2`); the activity matcher uses the beat's speaker (32.8a).
+- **The gap — talking sprites:** `_build_sprite_props` shows only speakers 0 and 1, so a third speaker talks off screen.
+  New pure `sprite_segments(line_speakers)` in `video_renderer_remotion.py`: each line's on-screen pair = its speaker + the
+  last other speaker before it (else the next one); consecutive lines with the same pair form a segment. Each segment is
+  placed with `sprite_placement` (D81) and mirrored (D82) on its own; its characters carry a window `fromSec`/`toSec`
+  (segment boundaries; the first starts at 0, the last has no end) and enter/leave with the existing slide-and-fade. The
+  plan (`sprite_plan.build_plan`) runs per segment with that segment's slots. Pictures are copied per character
+  (`sprites/<project>/<character_id>/`), so one character can stand in different slots in different segments.
+- Renderer: `spriteCharacterSchema` gains `fromSec` (default 0) and `toSec` (nullable); `spriteFrame` uses the window for
+  presence; a character outside its window is not drawn. Two-speaker projects produce one segment: same video as before.
+- Tests: segment table (2 speakers, 3 speakers rotating, a lone speaker, unknown speakers), props for a 3-speaker project
+  (who is on screen per line, windows, placement per segment), Vitest for windowed presence, the existing 2-speaker props.
