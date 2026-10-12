@@ -364,7 +364,9 @@
     try {
       const options = await Api.getProfileOptions();
       $("profile-create-form").elements.accent.innerHTML = options.accents
-        .map((accent) => `<option value="${accent}">${accent.replace("_", " ")}</option>`).join("");
+        .map((accent) => `<option value="${accent}"${accent === "scottish"
+          ? ' title="Edge TTS has no Scottish voice: this accent uses the British voices"' : ""}>${accent.replace("_", " ")}</option>`)
+        .join("");
       await loadProfiles();
     } catch (error) {
       notice(error.message || "The characters could not load.", true);

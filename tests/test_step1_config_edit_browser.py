@@ -314,7 +314,9 @@ async def test_no_project_id_keeps_create_flow(browser_instance: Browser, live_s
     assert await page.locator("#submit-btn").text_content() == "Create Project"
     assert await page.input_value("#speaker-name-0") == "Alex"  # the old defaults, now real characters
     assert await page.input_value("#speaker-name-1") == "Lina"
-    assert await page.locator("#speaker-name-0").get_attribute("readonly") is not None
+    assert await page.locator("#speaker-name-0").get_attribute("type") == "hidden"  # D88: nothing to type or pick
+    assert await page.locator("#speaker-label-1").text_content() == "Lina"
+    assert "female" in await page.locator(".speaker-meta").nth(1).text_content()
     await page.fill("#name", "New Project")
     await page.fill("#topic", "A new topic")
     await _choose(page, 1, "Sam")

@@ -241,8 +241,10 @@
     .speaker-character { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
     .speaker-face { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--border);
       display: grid; place-items: center; font-size: 26px; color: var(--muted); flex: none; }
-    .speaker-hint { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
-    .speaker-card input[readonly] { background: var(--surface-2, var(--surface)); }
+    .speaker-character { margin-bottom: 0; }
+    .speaker-identity { display: grid; gap: 4px; justify-items: start; min-width: 0; }
+    .speaker-identity strong { font-size: 17px; }
+    .speaker-slot, .speaker-meta { font-size: 13px; color: var(--muted); }
 
     #error-banner,
     #status-banner {

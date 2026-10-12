@@ -203,35 +203,27 @@
     return profile?.pictures?.portrait || profile?.pictures?.base || null;
   }
 
-  // Phase 33 (D80): the speaker is a chosen character; its name and gender come from the character, the accent can still be
-  // changed for this project.
+  // Phase 33 (D80, D88): the speaker IS the chosen character -- the card shows it (picture, name, gender, accent) and keeps
+  // the values only in hidden fields; nothing about the speaker is typed or picked here.
   function speakerCardHtml(speaker, index) {
     const profile = state.profiles.find((item) => item.id === speaker.character_id);
     const picture = profilePicture(profile);
+    const accent = ACCENTS.find((item) => item.value === speaker.accent);
     return `
       <div class="card speaker-card" data-index="${index}">
         <div class="speaker-character">
           ${picture ? `<img src="${picture}" alt="" class="speaker-face" />` : '<span class="speaker-face speaker-face-empty" aria-hidden="true">?</span>'}
-          <button type="button" class="btn ${speaker.character_id ? "btn-ghost" : "btn-primary"} btn-sm" data-choose="${index}">
-            ${speaker.character_id ? "Change character" : "Choose character"}</button>
+          <div class="speaker-identity">
+            <span class="speaker-slot">Speaker ${index + 1}</span>
+            <strong id="speaker-label-${index}">${speaker.character_id ? escapeHtml(speaker.name) : "No character yet"}</strong>
+            ${speaker.character_id ? `<span class="speaker-meta">${escapeHtml(speaker.gender)} · ${escapeHtml(accent ? accent.label : speaker.accent)}</span>` : ""}
+            <button type="button" class="btn ${speaker.character_id ? "btn-ghost" : "btn-primary"} btn-sm" data-choose="${index}">
+              ${speaker.character_id ? "Change character" : "Choose character"}</button>
+          </div>
         </div>
-        <label class="field-label" for="speaker-name-${index}">Speaker ${index + 1}</label>
-        <input type="text" id="speaker-name-${index}" value="${escapeHtml(speaker.name)}" readonly
-          placeholder="Choose a character" aria-describedby="speaker-name-hint-${index}" />
-        <span id="speaker-name-hint-${index}" class="speaker-hint">The name comes from the character.</span>
-
-        <label class="field-label" for="speaker-gender-${index}">Gender</label>
-        <select id="speaker-gender-${index}" disabled>
-          ${GENDERS.map((g) => `<option value="${g}" ${g === speaker.gender ? "selected" : ""}>${g}</option>`).join("")}
-        </select>
-
-        <label class="field-label" for="speaker-accent-${index}">Accent</label>
-        <select id="speaker-accent-${index}" data-field="accent" data-index="${index}">
-          ${ACCENTS.map(
-            (a) =>
-              `<option value="${a.value}" ${a.value === speaker.accent ? "selected" : ""} ${a.note ? `title="${escapeHtml(a.note)}"` : ""}>${a.flag} ${a.label}</option>`
-          ).join("")}
-        </select>
+        <input type="hidden" id="speaker-name-${index}" value="${escapeHtml(speaker.name)}" />
+        <input type="hidden" id="speaker-gender-${index}" value="${escapeHtml(speaker.gender)}" />
+        <input type="hidden" id="speaker-accent-${index}" value="${escapeHtml(speaker.accent)}" />
       </div>`;
   }
 

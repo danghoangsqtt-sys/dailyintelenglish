@@ -42,18 +42,17 @@ async def test_scottish_accent_chip_discloses_shared_british_voice(browser_insta
 
 
 @pytest.mark.asyncio
-async def test_scottish_per_speaker_accent_option_discloses_shared_british_voice(
+async def test_scottish_profile_accent_option_discloses_shared_british_voice(
     browser_instance: Browser, live_server_url: str
 ):
+    """D88: a speaker's accent is its character's, so the disclosure moved from the Step 1 speaker card to the accent
+    choice of a new character (Profiles tab, Quick create)."""
     page = await browser_instance.new_page()
-    await page.goto(f"{live_server_url}/step1")
-    await page.wait_for_selector("#speaker-grid select[data-field='accent']")
-
-    first_speaker_select = page.locator("#speaker-grid select[data-field='accent']").first
-    option_title = await first_speaker_select.locator("option[value='scottish']").get_attribute("title")
+    await page.goto(f"{live_server_url}/characters")
+    await page.click("#profile-new")
+    accent = page.locator("#profile-create-form [name=accent]")
+    await accent.locator("option[value='scottish']").wait_for(state="attached")
+    option_title = await accent.locator("option[value='scottish']").get_attribute("title")
     assert option_title and "British" in option_title
-
-    american_title = await first_speaker_select.locator("option[value='american']").get_attribute("title")
-    assert not american_title
-
+    assert not await accent.locator("option[value='american']").get_attribute("title")
     await page.close()

@@ -44,7 +44,7 @@ async def test_speaker_name_with_quote_cannot_break_out_of_value_attribute(
     try:
         await _character_routes(page, [], [])
         await page.goto(f"{live_server_url}/step1")
-        await page.wait_for_selector("#speaker-name-0")
+        await page.wait_for_selector("#speaker-name-0", state="attached")
         await _choose(page, 0, "img src")
     finally:
         profiles_fixture.PROFILES = original
@@ -52,7 +52,7 @@ async def test_speaker_name_with_quote_cannot_break_out_of_value_attribute(
     # (the only path that would actually re-inject the name into innerHTML-built markup).
     await page.fill("#num-speakers", "3")
     await page.dispatch_event("#num-speakers", "input")
-    await page.wait_for_selector("#speaker-name-2")
+    await page.wait_for_selector("#speaker-name-2", state="attached")
 
     fired = await page.evaluate("() => window.__xss_fired === true")
     assert fired is False, "escapeHtml() failed to neutralize a quote-breakout payload"
