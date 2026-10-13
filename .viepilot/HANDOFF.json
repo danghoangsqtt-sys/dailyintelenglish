@@ -1,10 +1,10 @@
 {
   "project": "DailyIntelEnglish",
-  "version": "1.2.0-beta",
+  "version": "1.3.0",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_33_waiting_owner_gate_b23",
-  "current_phase": "33",
+  "status": "project_closed_1.3.0_gate_b25_pending",
+  "current_phase": "37",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
     "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
@@ -266,10 +266,22 @@
     },
     "34": {
       "name": "Project hygiene: state records, checkpoint tags, docs and lint",
-      "status": "complete",
+      "status": "complete 2026-10-12",
       "tasks_done": 7,
       "tasks_total": 7,
       "note": "2026-10-12: BUG-024, BUG-026, ENH-024, ENH-025, ENH-026 done; 34.0 landed the manual-upload work (8ac0307). pytest 1648 passed, Vitest 65. No behaviour change; version 1.2.0-beta."
+    },
+    "33": {
+      "status": "complete 2026-10-13 (Gate B-23 PASS)"
+    },
+    "35": {
+      "status": "complete 2026-10-13"
+    },
+    "36": {
+      "status": "complete 2026-10-13 (Gate B-24 PASS)"
+    },
+    "37": {
+      "status": "37.1-37.4 done 2026-10-13 (vertical episode, Shorts/TikTok clips, migration 024); Gate B-25 pending: restart the real app for migration 024, then owner reviews real clips"
     }
   },
   "key_decisions": [
@@ -452,5 +464,17 @@
   ],
   "profile_id": "none",
   "repository": "https://github.com/danghoangsqtt-sys/dailyintelenglish",
-  "codex_availability": "Quota restored 2026-09-14 per the user -- available again as second AI Implementer under the existing AR-06 PM-Implementer contract (docs/CODEX_CODE_PROMPT.md, .viepilot/SYSTEM-RULES.md)."
+  "codex_availability": "Quota restored 2026-09-14 per the user -- available again as second AI Implementer under the existing AR-06 PM-Implementer contract (docs/CODEX_CODE_PROMPT.md, .viepilot/SYSTEM-RULES.md).",
+  "close_out": {
+    "date": "2026-10-13",
+    "report": "docs/report/final-report.md",
+    "version": "1.3.0",
+    "open": [
+      "Gate B-25 (Phase 37) on the real app",
+      "ENH-015 deferred (Gemini first-pass length)"
+    ],
+    "decisions": [
+      "D109: Gates B-14..B-21 closed as superseded by B-22..B-24"
+    ]
+  }
 }

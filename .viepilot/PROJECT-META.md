@@ -6,7 +6,7 @@
 |-------|-------|
 | **Project Name** | Daily Beyond English Studio (brand since Phase 27; technical name Daily Intel English Studio) |
 | **Slug** | DailyIntelEnglish |
-| **Version** | 1.2.0-beta (released 2026-10-05; Phases 22 and 25–32 unreleased) |
+| **Version** | 1.3.0 (released 2026-10-13, project close-out; 1.2.0-beta 2026-10-05) |
 | **Inception Year** | 2026 |
 | **License** | MIT |
 | **Type** | AI-powered Local Web Application |

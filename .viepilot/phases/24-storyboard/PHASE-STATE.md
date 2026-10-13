@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 24: Story-driven visuals (storyboard)
 
-- **Status:** open 2026-10-05 (`/vp-auto` "thực hiện bước tiếp theo"; Phases 20 and 23 wait only
+- **Status:** ✅ complete 2026-10-13 — owner gate closed 2026-10-13 by owner decision D109: superseded by Gates B-22..B-24 PASS. Earlier: open 2026-10-05 (`/vp-auto` "thực hiện bước tiếp theo"; Phases 20 and 23 wait only
   on owner Gates B-14 / B-15).
 - **Plan:** `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4 (owner E3: AI proposes,
   owner reviews; E4: few images by story beats, default cap 12).

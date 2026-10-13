@@ -4,7 +4,7 @@
 
 - **Phase:** 20
 - **Slug:** `20-ai-visuals`
-- **Status:** *(2026-10-01: Tasks 20.3–20.8 implemented; PM review r1 fixes F1–F5 applied by Claude; verification run + owner Gate B-14 pending.)*
+- **Status:** ✅ complete 2026-10-13 — owner gate closed 2026-10-13 by owner decision D109: superseded by Gates B-22..B-24 PASS. Earlier: *(2026-10-01: Tasks 20.3–20.8 implemented; PM review r1 fixes F1–F5 applied by Claude; verification run + owner Gate B-14 pending.)*
   - 20.1 is implemented and awaiting owner-machine verification and PM acceptance.
   - 20.2 is done (owner PASS, SDXL-Lightning).
   - 20.2b (character-library spike): owner-machine run r3 complete, 7/7 phases ok; report

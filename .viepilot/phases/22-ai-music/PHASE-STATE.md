@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 22: Background music (ENH-016), re-scoped by D50
 
-- **Status:** re-scoped 2026-10-05. **D50 (owner):** stop AI music generation; use free music
+- **Status:** ✅ complete 2026-10-13 — owner gate closed 2026-10-13 by owner decision D109: superseded by Gates B-22..B-24 PASS. Earlier: re-scoped 2026-10-05. **D50 (owner):** stop AI music generation; use free music
   libraries downloaded by hand, with the licence recorded. The AI code is reverted, and
   `venv-music` and `models/music` are deleted (18.3 GB freed).
 - **Plan:** `docs/implementation/phase-22-ai-music.md` (D43–D49, § Re-scope D50, § Smart music D51).

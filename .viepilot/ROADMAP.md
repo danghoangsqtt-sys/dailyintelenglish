@@ -1329,7 +1329,7 @@ TTS and let 19.9 proceed).
 
 ## Phase 20 — AI Visuals: Character Library, Scene Library, shots (ENH-012)
 
-**Status:** 🟡 Open | Spec `docs/implementation/phase-20-ai-visuals-feature-spec.md`.
+**Status:** ✅ Complete 2026-10-13 (D109) | Spec `docs/implementation/phase-20-ai-visuals-feature-spec.md`.
 20.1–20.8 built; review r1 F1–F5 fixed; 20.9 cel-anime style (2026-10-04). Close-out plan:
 `docs/implementation/phase-23-24-scenes-and-storyboard.md` §2.
 
@@ -1337,24 +1337,24 @@ TTS and let 19.9 proceed).
 - [x] 20.9 Cel-anime recipes from the owner's references
 - [x] 20.10 O11 neutral style wording (no studio name, no franchise LoRA), A/B verified
 - [x] 20.11 Duo fixes: extra-person + garment-colour checks with bounded retries
-- [ ] 20.12 Gate B-14 on a real episode → tag `die-vp-p20-complete`
+- [x] 20.12 Gate B-14 on a real episode → tag `die-vp-p20-complete` — closed 2026-10-13 by owner decision D109: superseded by Gates B-22..B-24 PASS
 
 ## Phase 21 — Better TTS engine — ⛔ closed wontfix (D38, 2026-09-30: Edge TTS stays)
 
 ## Phase 23 — Scene Library v2 (after Phase 20)
 
-**Status:** 🟡 Built 2026-10-05 (23.1–23.4 done); waiting for owner Gate B-15 (23.5) | Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §3.
+**Status:** ✅ Complete 2026-10-13 (built 2026-10-05, 23.1–23.4 done; Gate B-15 closed by D109) | Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §3.
 
 - [x] 23.1 Spike: same-place consistency → owner picked the scene-plate IP reference (~0.4)
 - [x] 23.2 Scene model v2 (category, time of day, seed, plate) + plate as a background IP reference
 - [x] 23.3 Built-in pack: 16 places (plates rendered)
 - [x] 23.3b Exam-setting pack: 55 built-ins (city / school / countryside, IELTS + Cambridge listening)
 - [x] 23.4 Scene Library UI v2
-- [ ] 23.5 Gate B-15
+- [x] 23.5 Gate B-15 — closed 2026-10-13 by owner decision D109: superseded by Gates B-22..B-24 PASS
 
 ## Phase 24 — Story-driven visuals: storyboard (after Phase 23)
 
-**Status:** 🟡 Built 2026-10-05 (24.1–24.6 done); waiting for owner Gate B-16 (24.7) | Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images follow story beats
+**Status:** ✅ Complete 2026-10-13 (built 2026-10-05, 24.1–24.6 done; Gate B-16 closed by D109) | Plan `docs/implementation/phase-23-24-scenes-and-storyboard.md` §4. Images follow story beats
 (place/action changes), default cap 12 per episode (owner E4).
 
 - [x] 24.1 Beat schema + migration + storyboard API (estimate + cap)
@@ -1363,7 +1363,7 @@ TTS and let 19.9 proceed).
 - [x] 24.4 Step 5 storyboard review/edit
 - [x] 24.5 Generation + timeline from beats
 - [x] 24.6 Remotion polish (crossfade, pan/zoom, inserts)
-- [ ] 24.7 Gate B-16
+- [x] 24.7 Gate B-16 — closed 2026-10-13 by owner decision D109: superseded by Gates B-22..B-24 PASS
 
 ## Phase 30 — Podcast visual modes (ENH-021)
 
@@ -1376,7 +1376,7 @@ TTS and let 19.9 proceed).
 
 ## Phase 29 — Ready-made shot library of Lan and Minh (ENH-020)
 
-**Status:** 🟡 Built 2026-10-07 (29.0–29.7 done); waiting for owner Gate B-21 (29.8) | Plan `docs/implementation/phase-29-shot-library.md`.
+**Status:** ✅ Complete 2026-10-13 (built 2026-10-07, 29.0–29.7 done; Gate B-21 closed by D109) | Plan `docs/implementation/phase-29-shot-library.md`.
 
 - [x] 29.0 Cleaner cuts (owner feedback 2026-10-07)
 - [x] 29.1 Gaze toward the other person (spike, then the fix)
@@ -1386,11 +1386,11 @@ TTS and let 19.9 proceed).
 - [x] 29.5 Matcher and the library-first shot job
 - [x] 29.6 Resumable batch generator
 - [x] 29.7 Shot Library UI and coverage view
-- [ ] 29.8 Gate B-21
+- [x] 29.8 Gate B-21 — closed 2026-10-13 by owner decision D109: superseded by Gates B-22..B-24 PASS
 
 ## Phase 27 — Rebrand to Daily Beyond English + Canva/CapCut-style layout (ENH-018)
 
-**Status:** 🟡 Built 2026-10-07 (27.1–27.5 done); waiting for owner Gate B-19 (27.6) | Plan `docs/implementation/phase-27-rebrand-and-layout.md` (D57, D60–D62).
+**Status:** ✅ Complete 2026-10-13 (built 2026-10-07, 27.1–27.5 done; Gate B-19 closed by D109) | Plan `docs/implementation/phase-27-rebrand-and-layout.md` (D57, D60–D62).
 
 - [x] 27.1 Brand pack: logo, palette, name in the app, YouTube prompts and the greeting
 - [x] 27.2 App shell: collapsible left sidebar
@@ -1398,18 +1398,18 @@ TTS and let 19.9 proceed).
 - [x] 27.3b Characters and scenes as large image grids with a detail panel
 - [x] 27.4 Studio steps 1–7: one 3-panel frame
 - [x] 27.5 Video intro/outro with the new logo, name and palette
-- [ ] 27.6 Gate B-19
+- [x] 27.6 Gate B-19 — closed 2026-10-13 by owner decision D109: superseded by Gates B-22..B-24 PASS
 
 ## Phase 28 — Semi-realistic picture style like the banner (ENH-019)
 
-**Status:** 🟡 Built 2026-10-06 (28.1–28.5 done); waiting for owner Gate B-20 (28.6) | Plan `docs/implementation/phase-28-semi-realistic-style.md` (D58, D59).
+**Status:** ✅ Complete 2026-10-13 (built 2026-10-06, 28.1–28.5 done; Gate B-20 closed by D109) | Plan `docs/implementation/phase-28-semi-realistic-style.md` (D58, D59).
 
 - [x] 28.1 Spike (GPU): semi-realistic look; RealVisXL V5.0 approved
 - [x] 28.2 Character reference sheets for the woman and the man, with detailed prompts per view
 - [x] 28.3 Recipes + re-tuned colour / extra-person checks
 - [x] 28.4 Redo the library (two characters, 55 scene plates)
 - [x] 28.5 Shot checks on photographs (face counting) and a "check this shot" mark in Step 5
-- [ ] 28.6 Gate B-20
+- [x] 28.6 Gate B-20 — closed 2026-10-13 by owner decision D109: superseded by Gates B-22..B-24 PASS
 
 ## Phase 26 — UI polish (interim)
 
@@ -1432,7 +1432,7 @@ TTS and let 19.9 proceed).
 
 ## Phase 22 — Background music (ENH-016), re-scoped by D50
 
-**Status:** 🟡 Re-scoped 2026-10-05. The owner judged the ACE-Step 1.5 output too poor (22.1 FAIL)
+**Status:** ✅ Complete 2026-10-13 (D109; re-scoped 2026-10-05). The owner judged the ACE-Step 1.5 output too poor (22.1 FAIL)
 and chose **free music libraries, downloaded by hand, with the licence recorded** (D50). The AI
 generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Plan
 `docs/implementation/phase-22-ai-music.md` (§ Re-scope D50).
@@ -1445,7 +1445,7 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 - [x] 22.8 Auto-select a track by topic + length (D51) (2026-10-06)
 - [x] 22.5 YouTube description credit line from the episode's music (2026-10-06)
 - [x] 22.9 Automatic track classification (pace, ~BPM, energy, mood suggestion) + rhythm-aware auto-select (2026-10-06)
-- [ ] 22.6 Gate B-17 (owner listening test on a real episode) → 1.3.0-beta
+- [x] 22.6 Gate B-17 (owner listening test on a real episode) → 1.3.0-beta — closed 2026-10-13 by owner decision D109: superseded by Gates B-22..B-24 PASS
 
 ### Phase 31: Alex and Lina and the owner's pictures in the library (ENH-022) - done 2026-10-07
 - [x] 31.1 Alex (navy suit) and Lina (white mini dress), Russian, replace Lan and Minh
@@ -1470,7 +1470,7 @@ generator (22.2/22.3) was reverted and `venv-music` + `models/music` deleted. Pl
 - [x] 32.8d Demo Episode regenerated and re-rendered (evidence r2)
 - [x] 32.9 Gate B-22 re-run (owner) — PASS 2026-10-12
 
-### Phase 33: Character Profiles v2 — ready to open 2026-10-12 (Gate B-22 PASS; Amendment A, D78–D83)
+### Phase 33: Character Profiles v2 (Amendment A, D78–D83) - done 2026-10-13 (Gate B-23 PASS)
 
 Phase 33 is planned in `docs/implementation/phase-33-character-profiles-v2.md` and remains unopened until Phase 32 Gate B-22 is accepted. Planning this phase does not change the active phase or tracker state.
 
@@ -1482,7 +1482,7 @@ Phase 33 is planned in `docs/implementation/phase-33-character-profiles-v2.md` a
 - [x] 33.6 Tiered sprite readiness, renderer compatibility, male-left/female-right placement and mirroring (D81–D82)
 - [x] 33.7 Game-style Character Selector in Step 1 (replaces name entry, D80) and explicit project assignment
 - [x] 33.8 Dynamic Activity/Storyboard/Shot integration for 3–6 cast
-- [ ] 33.9 Real three-character acceptance project and Gate B-23
+- [x] 33.9 Real three-character acceptance project and Gate B-23
 
 ### Phase 34: Project hygiene: state records, checkpoint tags, docs and lint (BUG-024, BUG-026, ENH-024, ENH-025, ENH-026) - done 2026-10-12
 
@@ -1497,27 +1497,27 @@ Phase 32 (Gate B-22 open); Phase 33 stays unopened. State: `.viepilot/phases/34-
 - [x] 34.5 Clean Ruff check (ENH-026)
 - [x] 34.6 Verification, re-audit, close the requests, `die-vp-p34-complete`
 
-### Phase 35: Remove old names and overlapping old features (ENH-029, ENH-030, ENH-031) - planned 2026-10-13
+### Phase 35: Remove old names and overlapping old features (ENH-029, ENH-030, ENH-031) - done 2026-10-13
 
 Owner D89. State: `.viepilot/phases/35-legacy-cleanup/PHASE-STATE.md`.
 
-- [ ] 35.1 Old name in AI prompts and user-facing text
-- [ ] 35.2 Obsolete scripts, tests, docs, `models/activity-vision`
-- [ ] 35.3 Remove "Generate locally" tab and sprite inbox import; guard legacy routes
-- [ ] 35.4 Step 5 without avatars; cast through the shared selector
-- [ ] 35.5 Remove the Standard ffmpeg renderer
-- [ ] 35.6 Verification, docs, close requests
+- [x] 35.1 Old name in AI prompts and user-facing text
+- [x] 35.2 Obsolete scripts, tests, docs, `models/activity-vision`
+- [x] 35.3 Remove "Generate locally" tab and sprite inbox import; guard legacy routes
+- [x] 35.4 Step 5 without avatars; cast through the shared selector
+- [x] 35.5 Remove the Standard ffmpeg renderer
+- [x] 35.6 Verification, docs, close requests
 
-### Phase 36: YouTube publishing package -- horizontal video (D90–D97) - planned 2026-10-13
+### Phase 36: YouTube publishing package -- horizontal video (D90–D97) - done 2026-10-13 (Gate B-24 PASS)
 
 State: `.viepilot/phases/36-youtube-package/PHASE-STATE.md`. After Phase 35.
 
-- [ ] 36.1 Learning pack: collocations, sentence patterns, phrasal verbs
-- [ ] 36.2 SEO description, hashtags, pinned-comment transcript, copy buttons
-- [ ] 36.3 Composed thumbnail with characters and illustration (replaces the Pillow templates)
-- [ ] 36.4 Outside-AI thumbnail slot
-- [ ] 36.5 AI-planned series with numbered episodes
-- [ ] 36.6 Tests, a real series, Gate B-24
+- [x] 36.1 Learning pack: collocations, sentence patterns, phrasal verbs
+- [x] 36.2 SEO description, hashtags, pinned-comment transcript, copy buttons
+- [x] 36.3 Composed thumbnail with characters and illustration (replaces the Pillow templates)
+- [x] 36.4 Outside-AI thumbnail slot
+- [x] 36.5 AI-planned series with numbered episodes
+- [x] 36.6 Tests, a real series, Gate B-24
 
 ### Phase 37: Vertical video for YouTube Shorts and TikTok (D98–D101) - 37.1–37.4 done 2026-10-13; Gate B-25 pending
 

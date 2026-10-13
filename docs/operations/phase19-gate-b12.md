@@ -29,7 +29,7 @@ The isolated server started with `DIE_VIDEO_RENDERER=remotion` env so the reques
 `renderer` field could actually resolve to `"remotion"` (per Task 19.7 D19.7-b kill
 switch).
 
-Raw evidence: `docs/operations/gate-b12-evidence/gate-b12-runs.json`.
+Raw evidence: `docs/operations/gate-b12-evidence/gate-b12-runs.json`. The six evidence videos were removed from the working tree on 2026-10-13 (project cleanup); they remain in git history (e.g. `git show 63bb0be:docs/operations/gate-b12-evidence/22484f26_remotion.mp4`).
 
 | Episode | Renderer | Wall time | Output size | Duration | Video stream | Audio stream | A/V drift |
 |---|---|---|---|---|---|---|---|

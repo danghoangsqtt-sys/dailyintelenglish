@@ -91,7 +91,7 @@ exists, or a word-count estimate otherwise (see `app/services/youtube_service.py
 
 - All Gemini calls request `responseMimeType: application/json` with an explicit
   `responseJsonSchema` (not the `google-generativeai` SDK's own schema helper — Gemini is
-  called directly via `httpx.AsyncClient` REST, see `docs/tts-setup.md`'s sibling note on
+  called directly via `httpx.AsyncClient` REST, see `docs/user/tts-setup.md`'s sibling note on
   why). Changing a template's expected output shape means updating the matching Pydantic
   model in `app/models/` too, or Gemini's structurally-valid-but-wrong-shape response will
   fail validation.

@@ -523,7 +523,7 @@ experimental. Gate thresholds are not weakened after seeing results.
 
 **Allowed files:** `README.md`, `.viepilot/ARCHITECTURE.md`, `.viepilot/AI-GUIDE.md`,
 `.viepilot/PROJECT-CONTEXT.md`, `.viepilot/ROADMAP.md`, `.viepilot/TRACKER.md`,
-`.viepilot/HANDOFF.json`, `docs/api.md`, `docs/prompt-guide.md`,
+`.viepilot/HANDOFF.json`, `docs/api.md`, `docs/user/prompt-guide.md`,
 `docs/operations/local-ai.md`, `docs/operations/phase13-acceptance.md`,
 `CHANGELOG.md`, `.env.example`, `scripts/check_dependencies.py`,
 `daily_intel_english_studio.spec`, `scripts/build_exe.ps1` if verified changes are needed.

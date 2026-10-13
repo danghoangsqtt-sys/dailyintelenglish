@@ -8,6 +8,22 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-13
+
+Project close-out release: everything built after `1.2.0-beta` (Phases 22 and 25–37). Final report:
+`docs/report/final-report.md`.
+
+### Fixed (project close-out, 2026-10-13)
+- **BUG-025: a scene lookup no longer hides database and disk errors.** In a talking-characters video, only a missing
+  scene, plate or file falls back to the video's other places (now logged with the project and scene); any other
+  failure stops the render with its real reason instead of quietly showing a different place.
+
+### Changed (project close-out, 2026-10-13)
+- **Tidier repository.** Loose guides moved to `docs/user/` (prompt guide, TTS setup) and reports to `docs/report/`
+  (demo, product review, sprint walkthrough); 19 redundant `.gitkeep` placeholders and the unused `prompts/tts/`
+  removed; the six Gate B-12 evidence videos (74 MB, three from the removed ffmpeg renderer) taken out of the tree
+  (still in git history).
+
 ### Added (Phase 37 Shorts & TikTok, 2026-10-13)
 - **The whole episode in vertical (37.1/37.3).** Step 5 renders a 1080x1920 version for TikTok: the picture on top, big
   karaoke captions in the middle, both characters below; `POST /api/projects/{id}/video/vertical` and the `mp4_vertical`
@@ -1214,7 +1230,7 @@ complete — see `.viepilot/TRACKER.md` for the full evidence trail. 533/533 tes
 - `BUG-007`: Enforced strict Gemini structured-output schema on all AI generation calls (`ScriptService`, `LearningContentService`), added dedicated `regenerate_line.txt` template and `render_regenerate_line_prompt`; confirmed structural determinism is achieved via schema (see `BUG-011`), sampling `temperature` intentionally left unset so "Regenerate" keeps returning varied content
 - `BUG-008`: Fixed race conditions and data loss on rapid Step navigation by adding dirty state checks, save awaiting in `handleNextStep`, UI action locking, and `beforeunload` warning in Step 2 and Step 3
 - `BUG-009`: Restored PM-only acceptance authority — all Sprint 1.5R requests reverted to `ready_for_review` pending explicit PM sign-off (`AR-06`); reconciled test counts (223) and `_write_lock` terminology across `TRACKER.md`/`PHASE-STATE.md`/`HANDOFF.json`/`ROADMAP.md`/`task-1.5.md`
-- `BUG-010`: Fixed `README.md` Task 1.7–1.10 numbering to match `ROADMAP.md`/`SPEC.md` (1.7 Video Studio, 1.8 Thumbnail Generator, 1.9 YouTube Package, 1.10 Music Library), confirmed `.viepilot/ARCHITECTURE.md` and `docs/walkthrough-sprint-1.5r.md` are committed and `git diff --check` is clean
+- `BUG-010`: Fixed `README.md` Task 1.7–1.10 numbering to match `ROADMAP.md`/`SPEC.md` (1.7 Video Studio, 1.8 Thumbnail Generator, 1.9 YouTube Package, 1.10 Music Library), confirmed `.viepilot/ARCHITECTURE.md` and `docs/report/walkthrough-sprint-1.5r.md` are committed and `git diff --check` is clean
 - `BUG-011`: Switched `ScriptService`/`LearningContentService` from the unsupported `responseSchema` field to Gemini's `responseJsonSchema` field (the correct carrier for Pydantic's `$defs`/`$ref` output), removed the silent schema-less fallback on `TypeError`, added wire-payload regression tests
 - `BUG-012`: Added explicit `saveStatus` state machine (`saved`/`dirty`/`saving`/`failed`) to Step 2/Step 3 so navigation only proceeds after a confirmed save, with a real `/step4` placeholder route and a Playwright regression suite (`tests/test_ui_async_browser.py`) for save/failure/retry/rapid-edit races
 - Task 1.2 closed: Dashboard automated browser tests (`tests/test_dashboard_browser.py`, 7 Playwright tests) covering listing/status badges, filter, search, empty state, "New Project" → `/step1` navigation, "Continue" → `/step2?project_id=...` navigation, and delete-after-confirm
@@ -1286,10 +1302,10 @@ complete — see `.viepilot/TRACKER.md` for the full evidence trail. 533/533 tes
   were left noted-only in TRACKER.md Known Issues per the user's explicit choice. 532/533
   full suite passes (1 pre-existing tracked flake).
 - Phase 3 documentation (2026-09-15, by Claude Code as PM + Implementer): `README.md`
-  updated to reflect Phase 2's completion; new `docs/prompt-guide.md` (how to customize
+  updated to reflect Phase 2's completion; new `docs/user/prompt-guide.md` (how to customize
   the Gemini script/learning/thumbnail/YouTube prompt templates, including the
   CEFR-ceiling-vs-language-toggle precedence rule and solo-speaker override); new
-  `docs/tts-setup.md` (Edge TTS voice map, the Scottish/British voice-id limitation, and
+  `docs/user/tts-setup.md` (Edge TTS voice map, the Scottish/British voice-id limitation, and
   why real OmniVoice integration was investigated but not pursued); new `docs/api.md`
   auto-generated from the app's real FastAPI OpenAPI schema via new
   `scripts/generate_api_docs.py` (49 routes documented) instead of hand-written prose that
@@ -1303,7 +1319,7 @@ complete — see `.viepilot/TRACKER.md` for the full evidence trail. 533/533 tes
   through the entire pipeline (project creation → script → learning content → TTS/audio
   → video → thumbnail → YouTube package) with video recording enabled, producing a real
   `ffprobe`-verified 223.9-second `docs/demo/demo-video.webm`; new
-  `docs/product-review.md` (feature checklist/known issues/future improvements,
+  `docs/report/product-review.md` (feature checklist/known issues/future improvements,
   cross-checked against `ROADMAP.md`/`TRACKER.md`). Two real bugs found and fixed while
   building the recording script: Step 1's speaker-name fields are empty by default and
   block form submission, and Step 4's original 120s wait timeout was too tight for ~29
@@ -1331,6 +1347,9 @@ complete — see `.viepilot/TRACKER.md` for the full evidence trail. 533/533 tes
 - `.viepilot/` architecture artifacts created
 - Brainstorm session completed
 
-[Unreleased]: https://github.com/danghoangsqtt-sys/dailyintelenglish/compare/v1.0.0-beta...HEAD
+[Unreleased]: https://github.com/danghoangsqtt-sys/dailyintelenglish/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/danghoangsqtt-sys/dailyintelenglish/compare/v1.2.0-beta...v1.3.0
+[1.2.0-beta]: https://github.com/danghoangsqtt-sys/dailyintelenglish/compare/v1.1.0-beta...v1.2.0-beta
+[1.1.0-beta]: https://github.com/danghoangsqtt-sys/dailyintelenglish/compare/v1.0.0-beta...v1.1.0-beta
 [1.0.0-beta]: https://github.com/danghoangsqtt-sys/dailyintelenglish/compare/3fc1cb8...v1.0.0-beta
 [0.1.0]: https://github.com/danghoangsqtt-sys/dailyintelenglish/commit/3fc1cb8

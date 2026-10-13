@@ -25,7 +25,7 @@ full evidence and decision rationale rather than duplicating it here.
 downloaded, GPU-load verified) but decided against 2026-09-13 — OmniVoice's real API is
 zero-shot voice *cloning* from a reference sample, not the text-described "voice design"
 originally planned, and raises consent/rights questions without a clear benefit over the
-already-working Edge TTS. See `docs/tts-setup.md`.
+already-working Edge TTS. See `docs/user/tts-setup.md`.
 
 ### Phase 2 — Testing & Polish (✅ Complete at buildable scope, 2026-09-15, Day 6 of 21)
 

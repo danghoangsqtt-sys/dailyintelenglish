@@ -2,7 +2,9 @@
 
 ## Current Status
 
-**Now (2026-10-13, Phase 37):** 37.1–37.4 done — the whole episode in vertical (1080x1920) and AI-proposed, owner-approved Shorts/TikTok highlight clips with a hook banner, a 9:16 cover and ready-to-post texts (migration 024). Sandbox run on "The New Neighbor" ep. 1: real AI proposed 3 clips (44–58 s); one rendered in ~46 s. **Waiting for owner Gate B-25** (real clips on the real app). Phases 35 and 36 complete (Gate B-24 PASS).
+**Now (2026-10-13, project close-out, `1.3.0`):** final report `docs/report/final-report.md`. Close-out audit: source clean (no dead modules/pages/scripts/prompts, all dependencies used, Ruff clean); BUG-025 fixed; request statuses reconciled; docs layout tidied, 19 `.gitkeep` + unused `prompts/tts/` + 74 MB Gate B-12 videos removed from the tree; missing `v1.2.0-beta` tag created. Owner D109: Gates B-14..B-21 closed as superseded by B-22..B-24. Open: Gate B-25 (real clips on the real app), ENH-015 deferred.
+
+**Earlier (2026-10-13, Phase 37):** 37.1–37.4 done — the whole episode in vertical (1080x1920) and AI-proposed, owner-approved Shorts/TikTok highlight clips with a hook banner, a 9:16 cover and ready-to-post texts (migration 024). Sandbox run on "The New Neighbor" ep. 1: real AI proposed 3 clips (44–58 s); one rendered in ~46 s. **Waiting for owner Gate B-25** (real clips on the real app). Phases 35 and 36 complete (Gate B-24 PASS).
 
 **Now (2026-10-12, Gate B-23):** Phase 33.1–33.8 done; the real app runs the Phase 33 code (migrations 018–020 applied after backups), Jack copied in from the sandbox, and a 3-character talking-sprites video rendered (`data/video/afbc299e-2362-4b8b-8d65-65ca01984f47/video_remotion.mp4`, report `docs/operations/phase33-gate-b23.md`). **Waiting for owner Gate B-23.**
 
@@ -2182,6 +2184,7 @@ Suite 964 → 1175. **Version 1.1.0-beta.** Follow-ups: ENH-014 (outro heuristic
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-10-13 | **D106–D108 (owner):** the dashboard becomes the channel cockpit: stats, next publish and today's actions; a 5-stage roadmap computed from real data with next-step links; a production board by step; the project grid below | Phase 36 Task 36.7 |
+| 2026-10-13 | **D109 (owner, project close-out):** close Gates B-14, B-15, B-16, B-17, B-19, B-20 and B-21 (Phases 20, 22, 23, 24, 27, 28, 29) as superseded: their features are part of every episode accepted at Gates B-22, B-23 and B-24. Also approved: restart the real app for migration 024 (Gate B-25), delete local temp/cache, `build/` and `demo_output/raw`, push with tags `v1.2.0-beta` and `v1.3.0` | Phases 20–29, close-out |
 | 2026-10-13 | **D103–D105 (owner, after Gate B-23 PASS):** a channel needs many playlists and topics, each with its own series: topics (playlists) → series → episodes; the AI proposes the whole channel map; an interleaved publishing calendar across topics | Phase 36 Task 36.5 |
 | 2026-10-13 | **D102 (owner, after Gate B-23 "video rất tốt"):** an insert without a library picture can be drawn: local GPU (one ordinary person doing the activity, no cast character) plus an outside-AI prompt slot; new pictures are approved in Step 5 and join the Activity Library as generic; drawn on a Step 5 button, not at render | Phase 33 Task 33.10 |
 | 2026-10-13 | **D98–D101 (owner):** publish both horizontal YouTube videos and vertical ones: 1–3 AI-proposed, owner-approved highlight clips (30–90 s) per episode for YouTube Shorts and TikTok plus an optional full vertical episode; a new Remotion 1080x1920 layout (illustration top, big karaoke captions middle, both characters below, man left / woman right); separate Shorts and TikTok packages with a vertical cover. The old ffmpeg blur-pad 9:16 export still goes in Phase 35 | Phase 37 |

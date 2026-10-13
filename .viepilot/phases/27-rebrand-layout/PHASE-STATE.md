@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 27: Rebrand to Daily Beyond English and a Canva/CapCut-style layout (ENH-018)
 
-- **Status:** built 2026-10-07: 27.1–27.5 done; waiting for owner Gate B-19 (27.6). Planned 2026-10-06 (brainstorm D57, D60–D62). **Plan:** `docs/implementation/phase-27-rebrand-and-layout.md`.
+- **Status:** ✅ complete 2026-10-13 — owner gate closed 2026-10-13 by owner decision D109: superseded by Gates B-22..B-24 PASS. Earlier: built 2026-10-07: 27.1–27.5 done; waiting for owner Gate B-19 (27.6). Planned 2026-10-06 (brainstorm D57, D60–D62). **Plan:** `docs/implementation/phase-27-rebrand-and-layout.md`.
 - **Prototype:** `.viepilot/ui-direction/session-2026-10-06/index.html`.
 
 | Task | Description | Status |

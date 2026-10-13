@@ -56,8 +56,8 @@ isolation). See `.viepilot/TRACKER.md` for the full evidence trail.
 
 | Task | Feature | Status |
 |------|---------|--------|
-| **Task 3.1** | 📖 **Documentation** — README, [Prompt Engineering Guide](docs/prompt-guide.md), [TTS Setup Guide](docs/tts-setup.md), auto-generated [API Reference](docs/api.md) | ✅ Done |
-| **Task 3.2** | 🎬 **Demo & Review** — [3 sample episodes](docs/samples/) (A1/B1/C1, real script+audio), a real [223.9s end-to-end demo recording](docs/demo-video.md), and a [product review report](docs/product-review.md) | ✅ Done |
+| **Task 3.1** | 📖 **Documentation** — README, [Prompt Engineering Guide](docs/user/prompt-guide.md), [TTS Setup Guide](docs/user/tts-setup.md), auto-generated [API Reference](docs/api.md) | ✅ Done |
+| **Task 3.2** | 🎬 **Demo & Review** — [3 sample episodes](docs/samples/) (A1/B1/C1, real script+audio), a real [223.9s end-to-end demo recording](docs/report/demo-video.md), and a [product review report](docs/report/product-review.md) | ✅ Done |
 | **Task 3.3** | 🧹 **Final Cleanup** — removed 5 dead `Settings` fields and synced `.env.example`; `print()`/`logging` and pinned `requirements.txt` already satisfied | ✅ Done |
 
 All 3 planned phases (Full Feature Build, Testing & Polish, Review & Documentation) are
@@ -86,8 +86,8 @@ multiple separate AI-assisted read-only `/vp-audit` passes), with major AI-archi
 work in Phases 13–18. Each closed with zero real defects found on PM review. Full evidence
 trail in `.viepilot/ROADMAP.md` and `.viepilot/TRACKER.md`.
 
-**Current version:** `1.2.0-beta` (2026-10-05, Phase 19 close-out: Enhanced/Remotion video by
-default; AI visuals and the storyboard are included, with owner gates pending). AI writes are
+**Current version:** `1.3.0` (2026-10-13, project close-out — see the
+[final report](docs/report/final-report.md)). `1.2.0-beta` (2026-10-05) made the Remotion video the default. AI writes are
 **cloud-first with local fallback** — Gemini 3.1 Flash-Lite is the primary, with an
 automatic chain through OpenRouter free models and finally local `qwen3.5:9b` on the
 RTX 3060. Real Gate B-11 measurement: **~45s B1 8-min script generation median, vs. ~127s
@@ -113,29 +113,30 @@ local`) reverts to 100% offline immediately.
 | **Phase 18** | ☁️ **Cloud-First AI with Local Fallback** — the current default. Generic `OpenAICompatProvider`; multi-provider cloud chain (Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter Nemotron/Gemma/Dots3 → local qwen); per-provider circuit breaker and time budget; kill switch `DIE_AI_ALLOW_CLOUD=false`. Gate B-11 real measurement: **~45s median vs. ~127s local (2.8× faster)**. **v1.1.0-beta** shipped at close | ✅ Done |
 | **Phase 19** | 🎬 **Animated Learning Videos (Remotion)** — the "Enhanced" renderer, default since 1.2.0-beta: word-level karaoke captions from per-word Edge TTS timings, active-speaker chip, timed vocabulary/idiom cards, intro/outro and a chapter/progress bar. The ffmpeg renderer stays as the fallback (`DIE_VIDEO_RENDERER=ffmpeg`). Gate B-12 media and visual PASS; the voice complaint was an Edge TTS issue, not a renderer one (D38) | ✅ Done |
 
-#### Visual studio: pictures, music, brand and talking characters (Phases 20–32)
+#### Visual studio, publishing and the channel (Phases 20–37)
 
-Phases 20, 23 and 24 shipped in `1.2.0-beta`. Phases 22 and 25–32 are on the development branch
-and listed under `[Unreleased]` in [CHANGELOG.md](CHANGELOG.md). "Built, owner gate pending" means
-the code and tests are done and the owner has not yet signed off on a real episode.
+Phases 20, 23 and 24 shipped in `1.2.0-beta`; Phases 22 and 25–37 ship in `1.3.0` (see [CHANGELOG.md](CHANGELOG.md)). Gates B-14 to B-21 were closed by owner decision D109 (2026-10-13): their features are part of every episode
+accepted at Gates B-22 to B-24.
 
 | Phase | Feature | Status |
 |-------|---------|--------|
-| **Phase 20** | 🖼️ **AI Visuals** — local GPU image generation in a separate `venv-image` worker (diffusers), one GPU arbiter for the RTX 3060, a Character Library and Scene Library, and per-project shots used by the Enhanced video ([plan](docs/implementation/phase-20-ai-visuals.md)) | 🟡 Built, owner Gate B-14 pending |
+| **Phase 20** | 🖼️ **AI Visuals** — local GPU image generation in a separate `venv-image` worker (diffusers), one GPU arbiter for the RTX 3060, a Character Library and Scene Library, and per-project shots used by the Enhanced video ([plan](docs/implementation/phase-20-ai-visuals.md)) | ✅ Done (gate closed by D109) |
 | **Phase 21** | 🗣️ **Better TTS engine** — Kokoro (D36) and StyleTTS 2 (D38) spikes both failed the owner listening test; Edge TTS stays, and the spike engines were removed (D56) ([plan](docs/implementation/phase-21-tts-kokoro.md)) | ⛔ Closed, won't fix |
-| **Phase 22** | 🎵 **Background music** — AI music generation was dropped (D50); free library tracks instead, with automatic pace/mood classification, auto-select by topic and length, a bed fitted to the episode and ducked under the voice, and a music credit in the YouTube description ([plan](docs/implementation/phase-22-ai-music.md), [free sources](docs/user/free-music-sources.md)) | 🟡 Built, owner Gate B-17 (levels) pending |
-| **Phase 23–24** | 🗺️ **Scene Library v2 and storyboard** — a 55-place scene library; the AI proposes story beats, the owner reviews them in Step 5, and approved beats become the shots that drive the video timeline ([plan](docs/implementation/phase-23-24-scenes-and-storyboard.md)) | 🟡 Built, owner Gates B-15 / B-16 pending |
+| **Phase 22** | 🎵 **Background music** — AI music generation was dropped (D50); free library tracks instead, with automatic pace/mood classification, auto-select by topic and length, a bed fitted to the episode and ducked under the voice, and a music credit in the YouTube description ([plan](docs/implementation/phase-22-ai-music.md), [free sources](docs/user/free-music-sources.md)) | ✅ Done (gate closed by D109) |
+| **Phase 23–24** | 🗺️ **Scene Library v2 and storyboard** — a 55-place scene library; the AI proposes story beats, the owner reviews them in Step 5, and approved beats become the shots that drive the video timeline ([plan](docs/implementation/phase-23-24-scenes-and-storyboard.md)) | ✅ Done (gate closed by D109) |
 | **Phase 25** | 🎬 **Branded intro and outro** — logo morph and a spoken greeting and farewell in every Enhanced video, with the music ducked under the voice ([plan](docs/implementation/phase-25-branded-intro-outro.md)) | ✅ Done |
 | **Phase 26** | ✨ **UI polish** — interim polish before the layout redo ([plan](docs/implementation/phase-26-ui-polish.md)) | ✅ Done |
-| **Phase 27** | 🎨 **Rebrand and studio layout** — Daily Beyond English name, logo and palette in the app and video; collapsible sidebar; image grids for characters and scenes; all seven steps share one studio frame ([plan](docs/implementation/phase-27-rebrand-and-layout.md)) | 🟡 Built, owner Gate B-19 pending |
-| **Phase 28** | 📷 **Semi-realistic picture style** — RealVisXL V5.0 editorial look, approved character sheets, outfit-colour and extra-person checks with a "check this shot" mark in Step 5 ([plan](docs/implementation/phase-28-semi-realistic-style.md)) | 🟡 Built, owner Gate B-20 pending |
-| **Phase 29** | 🗂️ **Shot Library** (`/shots`) — reviewed, reusable pictures of the cast by scene, framing, action and mood; new episodes reuse approved matches and draw only what is missing; natural gaze and cleaner cuts ([plan](docs/implementation/phase-29-shot-library.md)) | 🟡 Built, owner Gate B-21 pending |
+| **Phase 27** | 🎨 **Rebrand and studio layout** — Daily Beyond English name, logo and palette in the app and video; collapsible sidebar; image grids for characters and scenes; all seven steps share one studio frame ([plan](docs/implementation/phase-27-rebrand-and-layout.md)) | ✅ Done (gate closed by D109) |
+| **Phase 28** | 📷 **Semi-realistic picture style** — RealVisXL V5.0 editorial look, approved character sheets, outfit-colour and extra-person checks with a "check this shot" mark in Step 5 ([plan](docs/implementation/phase-28-semi-realistic-style.md)) | ✅ Done (gate closed by D109) |
+| **Phase 29** | 🗂️ **Shot Library** (`/shots`) — reviewed, reusable pictures of the cast by scene, framing, action and mood; new episodes reuse approved matches and draw only what is missing; natural gaze and cleaner cuts ([plan](docs/implementation/phase-29-shot-library.md)) | ✅ Done (gate closed by D109) |
 | **Phase 30** | 🎧 **Podcast picture modes** — Step 5 "Video pictures": with characters, black screen, or one still scene with a slow zoom ([plan](docs/implementation/phase-30-podcast-visuals.md)) | ✅ Done |
 | **Phase 31** | 👥 **Alex and Lina** — the owner's own characters replace the earlier pair; the owner's pictures import into the Shot Library from an inbox folder ([55-scene list](docs/operations/scene-list-55.md)) | ✅ Done |
-| **Phase 32** | 🗨️ **Talking characters** — Step 5 mode "Podcast: talking characters": visual-novel style sprites whose mouths follow the speech, with expressions, blinks, gestures and turn-taking; an Activity Library of reviewed pictures (upload with an owner-entered name per image) that become full-screen cutaways on storyboard insert beats ([plan](docs/implementation/phase-32-talking-sprites.md), [sprite spec](docs/operations/sprite-asset-spec.md), [activity upload](docs/operations/activity-library-manual-upload.md)) | 🟡 Built, owner Gate B-22 pending |
-| **Phase 33** | 🎮 **Character profiles v2** — game-style character selection in Steps 1 and 5, profiles with 29 talking-sprite slots filled from outside-AI pictures (prompts per slot, automatic renaming and alignment), man left / woman right facing each other, 3–6 speakers; Gate B-23 fixes: storyboard inserts named from the Activity Library, missing illustrations drawn on the local GPU or made with an outside AI | ✅ Owner: "video rất tốt" |
+| **Phase 32** | 🗨️ **Talking characters** — Step 5 mode "Podcast: talking characters": visual-novel style sprites whose mouths follow the speech, with expressions, blinks, gestures and turn-taking; an Activity Library of reviewed pictures (upload with an owner-entered name per image) that become full-screen cutaways on storyboard insert beats ([plan](docs/implementation/phase-32-talking-sprites.md), [sprite spec](docs/operations/sprite-asset-spec.md), [activity upload](docs/operations/activity-library-manual-upload.md)) | ✅ Done (Gate B-22 PASS) |
+| **Phase 33** | 🎮 **Character profiles v2** — game-style character selection in Steps 1 and 5, profiles with 29 talking-sprite slots filled from outside-AI pictures (prompts per slot, automatic renaming and alignment), man left / woman right facing each other, 3–6 speakers; Gate B-23 fixes: storyboard inserts named from the Activity Library, missing illustrations drawn on the local GPU or made with an outside AI | ✅ Done (Gate B-23 PASS) |
+| **Phase 34** | 🧾 **Project hygiene** — phase records reconciled, checkpoint tags, README / architecture / API reference refreshed, Ruff clean | ✅ Done |
 | **Phase 35** | 🧹 **Legacy cleanup** — the old app name in the AI prompts, one-off scripts and prompt files, the "Generate locally" tab, the sprite inbox import, speaker avatars and the Standard ffmpeg renderer removed (D89) | ✅ Done |
-| **Phase 36** | 📦 **YouTube publishing package** — collocations, phrasal verbs and sentence patterns; an SEO description with hashtags and the transcript as the pinned comment; thumbnails with the episode's characters or an outside-AI picture (36.1–36.4); series planning next (36.5) | 🔄 In progress |
+| **Phase 36** | 📦 **YouTube publishing package** — collocations, phrasal verbs and sentence patterns; an SEO description with hashtags and the transcript as the pinned comment; thumbnails with the episode's characters or an outside-AI picture; a **Channel plan** (topics → series → numbered episodes, AI channel map, rotating 2-week calendar) and a **channel cockpit dashboard** (stats, Today, 5-stage roadmap, Kanban board) | ✅ Done (Gate B-24 PASS) |
+| **Phase 37** | 📱 **Shorts & TikTok** — the whole episode in vertical 1080x1920 (picture on top, big karaoke captions, both characters below) and 1–3 AI-proposed, owner-approved 30–90 s highlight clips opening on a hook banner, each with a 9:16 cover, a Shorts title/description and a TikTok caption | ✅ Built, owner Gate B-25 pending |
 
 ## Quick Start
 
@@ -228,7 +229,7 @@ in-app `/health` status still report ffmpeg's presence honestly either way.
 2️⃣  Step 2: AI Script        → Generate, preview, inline edit, per-line regenerate (Shipped - Task 1.4)
 3️⃣  Step 3: Learning Content → Vocabulary, idioms, collocations, phrasal verbs, sentence patterns, grammar, listening quiz (Tasks 1.5, 36.1)
 4️⃣  Step 4: TTS Audio Studio → Voice assignment, per-line preview, real audio mix + loudness normalization, MP3/WAV export (Shipped - Task 1.6)
-5️⃣  Step 5: Video Studio     → The Remotion episode (the only renderer since Phase 35): cast through the character selector, storyboard review, shots from the Shot/Scene libraries, picture modes (story pictures, black screen, one still, talking characters), activity illustrations (drawn on the local GPU or made with an outside AI when missing); MP4 + SRT (Phases 1, 19–35)
+5️⃣  Step 5: Video Studio     → The Remotion episode (the only renderer since Phase 35): cast through the character selector, storyboard review, shots from the Shot/Scene libraries, picture modes (story pictures, black screen, one still, talking characters), activity illustrations (drawn on the local GPU or made with an outside AI when missing); MP4 + SRT; a vertical episode and Shorts/TikTok highlight clips with covers and texts (Phases 1, 19–37)
 6️⃣  Step 6: Thumbnail        → The episode's characters over a topic picture with a headline, CEFR badge and logo (3–5 variants, 16:9 + 9:16), or your outside-AI picture; manual editor, export (Tasks 1.8, 36.3–36.4)
 7️⃣  Step 7: YouTube Package  → Titles, an SEO description within 5,000 characters (chapters, learning items with Vietnamese meanings, listening questions, hashtags), the transcript as the pinned comment, tags, copy buttons + full .zip export (Tasks 1.9, 36.2)
 ```
@@ -246,9 +247,9 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
   `OpenAICompatProvider`. See
   [docs/operations/phase18-gate-b11.md](docs/operations/phase18-gate-b11.md) for real
   measurement (median 45s cloud vs. 127s local, 2.8× faster).
-- **TTS**: Edge TTS (sole engine — OmniVoice GPU cloning considered, dropped 2026-09-13; see [docs/tts-setup.md](docs/tts-setup.md))
+- **TTS**: Edge TTS (sole engine — OmniVoice GPU cloning considered, dropped 2026-09-13; see [docs/user/tts-setup.md](docs/user/tts-setup.md))
 - **Audio**: pydub + ffmpeg (real ITU-R BS.1770 loudness normalization via `pyloudnorm`)
-- **Video**: Remotion 4 + React 19 + TypeScript in the separate [`video-renderer/`](video-renderer/) Node workspace, run locally as a subprocess from FastAPI — the only renderer since Phase 35 (the Standard ffmpeg renderer and its 9:16 blur-pad export were removed; vertical video returns on Remotion in Phase 37). Node.js, `npm install` in `video-renderer/` and Chrome Headless Shell are required
+- **Video**: Remotion 4 + React 19 + TypeScript in the separate [`video-renderer/`](video-renderer/) Node workspace, run locally as a subprocess from FastAPI — the only renderer since Phase 35 (the Standard ffmpeg renderer was removed; the vertical 1080x1920 layout and highlight clips are Remotion too, Phase 37). Node.js, `npm install` in `video-renderer/` and Chrome Headless Shell are required
 - **Images**: local GPU image generation (diffusers, RealVisXL V5.0) in its own `venv-image` environment and worker process (`requirements-image.txt`, `scripts/image_worker.py`); optional — every library also accepts the owner's own pictures
 - **Thumbnail**: Pillow composition of the cast's talking sprites over the episode's pictures (Montserrat headline, CEFR badge, logo) + AI headline suggestions
 - **Database**: SQLite (aiosqlite async transactions)
@@ -257,11 +258,13 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
 
 | Doc | Purpose |
 |-----|---------|
-| [docs/prompt-guide.md](docs/prompt-guide.md) | How to customize the AI prompt templates (script genres, CEFR blocks, learning content, thumbnails, YouTube package) — shared by every provider in the cloud-first chain (Gemini, OpenRouter models, local qwen) |
-| [docs/tts-setup.md](docs/tts-setup.md) | Edge TTS voice map and known limitations; why OmniVoice was investigated but not integrated |
+| [docs/user/prompt-guide.md](docs/user/prompt-guide.md) | How to customize the AI prompt templates (script genres, CEFR blocks, learning content, thumbnails, YouTube package) — shared by every provider in the cloud-first chain (Gemini, OpenRouter models, local qwen) |
+| [docs/user/tts-setup.md](docs/user/tts-setup.md) | Edge TTS voice map and known limitations; why OmniVoice was investigated but not integrated |
 | [docs/api.md](docs/api.md) | Full API reference, auto-generated from the app's real FastAPI OpenAPI schema (`scripts/generate_api_docs.py`) — also live at `/docs` while the app is running |
+| [docs/report/final-report.md](docs/report/final-report.md) | Final project report: scope, timeline, results, quality, audit and open items |
+| [docs/presentation/](docs/presentation/) | ChatGPT prompt for the judges' presentation |
 | [docs/implementation/](docs/implementation/) | Per-phase implementation plans (Phase 19 onward) |
-| [docs/operations/](docs/operations/) | Operation guides and gate reports (local AI, music sources, sprites, Activity Library) |
+| [docs/operations/](docs/operations/) | Operation guides and gate reports (local AI, sprites, Activity Library prompt packs, gates B-2 to B-24) |
 | [.viepilot/ARCHITECTURE.md](.viepilot/ARCHITECTURE.md) | System design, services, data models |
 | [.viepilot/ROADMAP.md](.viepilot/ROADMAP.md) | Phase/task plan with acceptance criteria |
 | [.viepilot/TRACKER.md](.viepilot/TRACKER.md) | Full progress and decision log |
@@ -279,7 +282,16 @@ Daily_Intel_English/
 ├── scripts/                # Setup utilities
 ├── tests/                  # Automated test suite (pytest)
 ├── .viepilot/              # Project architecture & governance docs
-└── docs/                   # Developer & user documentation
+└── docs/
+    ├── user/               # Guides: prompts, TTS, free music sources
+    ├── operations/         # Runbooks, library prompt packs, gate and spike reports
+    ├── implementation/     # Per-phase implementation plans
+    ├── brainstorm/         # Owner decision sessions (D1–D108)
+    ├── report/             # Final report, demo, product review, benchmarks
+    ├── presentation/       # Prompt for the judges' slides
+    ├── architecture/       # ADRs
+    ├── samples/            # Sample A1/B1/C1 scripts
+    └── api.md              # Generated API reference
 ```
 
 ## License

@@ -38,7 +38,7 @@ existing production code, which is itself useful evidence:
   `GEMINI_MODEL_FALLBACKS` (`gemini-3.8-flash` → `3.7` → `3.6`) before succeeding — the
   real fallback-chain mechanism working as designed, not a scripted scenario.
 - OmniVoice's fallback path correctly and immediately deferred to Edge TTS for every
-  line (`models/omnivoice` is empty on this machine — see `docs/tts-setup.md`).
+  line (`models/omnivoice` is empty on this machine — see `docs/user/tts-setup.md`).
 
 ## Reproducing this recording
 

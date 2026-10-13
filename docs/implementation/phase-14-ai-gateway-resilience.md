@@ -500,7 +500,7 @@ annotations; `git diff` shows additions only within the annotated regions.
 `CHANGELOG.md`, `.env.example`, `scripts/check_dependencies.py`,
 `daily_intel_english_studio.spec`, `scripts/build_exe.ps1`, `.viepilot/ARCHITECTURE.md`,
 `.viepilot/AI-GUIDE.md`, `.viepilot/PROJECT-CONTEXT.md`; PM — `docs/api.md`,
-`docs/prompt-guide.md`, `docs/operations/local-ai.md`,
+`docs/user/prompt-guide.md`, `docs/operations/local-ai.md`,
 `docs/operations/phase13-acceptance.md`, `.viepilot/ROADMAP.md`, `.viepilot/TRACKER.md`,
 `.viepilot/HANDOFF.json`.
 
