@@ -19,7 +19,7 @@ FastAPI Backend (Python 3.11+)
         ├── Durable AI jobs + in-process worker (script, learning, storyboard)
         ├── Edge TTS (the only engine, D56) + per-word timings
         ├── pydub + ffmpeg + pyloudnorm (audio mix, smart music bed)
-        ├── Video: Remotion subprocess (Enhanced, default) | ffmpeg (Standard fallback)
+        ├── Video: Remotion subprocess (the only renderer since Phase 35)
         ├── Visuals (app/services/visuals/): character/scene/shot/sprite/activity
         │     libraries, storyboard, matchers, durable image jobs
         │     → scripts/image_worker.py in venv-image (diffusers, RealVisXL V5.0)
@@ -147,11 +147,11 @@ flowchart LR
         F1[Storyboard beats\nowner review]
         F2[Shots: Shot Library first,\nGPU draws the rest]
         F3[Picture mode: story, black,\none still, talking sprites\n+ activity cutaways]
-        F4[Enhanced Remotion render\nor Standard ffmpeg]
+        F4[Remotion render\n+ SRT]
     end
 
     subgraph G["Step 6: Thumbnail"]
-        G1[Templates + AI fill + editor]
+        G1[Cast sprites over the episode's pictures\n+ AI headline + editor;\nor an outside-AI picture]
     end
 
     subgraph H["Step 7: YouTube Package"]
@@ -287,20 +287,24 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
 ### 5. VideoService (`app/services/video_service.py`) — Sub-task 1.7a, DONE
 - **Responsibility:** Generate podcast video (MP4). Only processes an already-completed
   audio mix from AudioService (Task 1.6) — never generates audio itself.
-- **Renderers:** `VIDEO_RENDERER` = `remotion` (default since 1.2.0-beta, "Enhanced") or `ffmpeg`
-  ("Standard", the tested fallback; `DIE_VIDEO_RENDERER=ffmpeg` forces it). See section 11.
-  - **Standard (ffmpeg):** one of the background templates + the audio mix + burned-in subtitles
-    (libass) from AudioService's measured per-line timestamps; 16:9 and 9:16 (blur-pad) output.
-  - **Enhanced (Remotion):** karaoke captions, speaker chips, vocabulary cards, chapter bar, branded
-    intro/outro and the picture modes of Phases 20–32.
-  - LivePortrait lip-sync was never implemented; Phase 32 talking sprites took its place.
-- **Output:** MP4 1280x720 (+ 720x1280 vertical) + SRT
+- **Renderer:** Remotion only (Phase 35, Task 35.5, D89 — the Standard ffmpeg renderer, its background templates, the
+  9:16 blur-pad export, the `DIE_VIDEO_RENDERER` kill switch and the silent fallback were removed). Karaoke captions,
+  speaker chips, vocabulary cards, chapter bar, branded intro/outro and the picture modes of Phases 20–33. See section 11.
+  - `renderer_problem()` names what is missing (Node.js, `video-renderer` packages, Chrome Headless Shell) before any work;
+    a failed render fails the job with Remotion's reason.
+  - LivePortrait lip-sync was never implemented; Phase 32 talking sprites took its place. Speaker avatar uploads were
+    removed in Task 35.4: a speaker's picture is its cast character's.
+- **Output:** MP4 1280x720 + SRT (shifted by the intro). Vertical video returns on Remotion in Phase 37.
 
 ### 6. ThumbnailService (`app/services/thumbnail_service.py`)
-- **Responsibility:** Generate professional YouTube thumbnails
-- **Pipeline:** Load template PNG → AI Gateway (cloud-first, local fallback) fills text/color → Pillow renders → export 3-5 A/B variants
-- **Templates:** Stored in `frontend/static/thumbnail_templates/`
-- **Output:** PNG 1280x720 + PNG 720x1280 (Shorts)
+- **Responsibility:** Generate the episode's YouTube thumbnails (Phase 36, Tasks 36.3/36.4, D90–D92)
+- **Kinds:** `composed` — `thumbnail_compose` draws the two main cast characters cut from their approved talking sprites
+  (the video's placement and mirroring) over an Activity Library picture the storyboard uses, else a scene plate, else
+  the brand gradient, with a Montserrat headline, CEFR/episode badges and the logo; `outside_ai` — the owner's picture
+  made from the episode prompt (`GET .../thumbnails/outside-prompt`), with only the text, badges and logo added.
+- **Pipeline:** AI Gateway headline/palette suggestions (renamed fields normalized) → Pillow composition → 3-5 variants;
+  the composition inputs live in each variant's `render.json` so an edit re-renders the same picture.
+- **Output:** PNG/JPG 1280x720 + 720x1280
 
 ### 7. YouTubePackageService (`app/services/youtube_service.py`) — Sub-tasks 1.9a + 1.9b, DONE
 - **Responsibility:** Generate YouTube upload metadata and assemble the final downloadable
@@ -360,7 +364,7 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
 - Builds the composition props (timings, captions, cast, storyboard shots, sprites, activity cutaways,
   brand intro/outro, music) and runs the Node `video-renderer/` workspace (Remotion 4, React 19,
   TypeScript, Vitest) as a local subprocess. Nothing per-episode leaves the machine (invariant 37).
-- Falls back to the ffmpeg path when Remotion is unavailable or disabled (invariant 36).
+- The only renderer since Task 35.5 (invariant 36 is retired: there is no ffmpeg fallback any more).
 
 ### 12. GPU arbiter (`app/services/gpu_model_manager.py`) — Task 20.1
 - An arbiter, not a loader: each GPU consumer (image worker, local Ollama fallback) takes an exclusive
@@ -384,10 +388,10 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
 | AI engine | Cloud-first gateway with local fallback (Phase 18, D21/D31) | Gate B-11: ~45 s median B1 script vs ~127 s local; `DIE_AI_ALLOW_CLOUD=false` / `DIE_AI_MODE=local` forces 100% offline Ollama `qwen3.5:9b` |
 | TTS engine | Edge TTS only (D56) | Kokoro (D36) and StyleTTS 2 (D38) failed the owner's listening tests; OmniVoice is voice cloning, not voice design |
 | Audio processing | pydub + ffmpeg + pyloudnorm | Mature; real ITU-R BS.1770 loudness |
-| Video generation | Remotion (default) + ffmpeg fallback | Animated learning video (karaoke, cards, sprites) with a tested, dependency-light fallback |
+| Video generation | Remotion (the only renderer since Phase 35) | Animated learning video (karaoke, cards, sprites); one renderer, no overlapping fallback (D89) |
 | Images | diffusers + RealVisXL V5.0 in `venv-image` (Phase 28) | Local GPU, isolated heavy dependencies; libraries reuse approved pictures to save GPU time |
 | Lips-sync | Not implemented; talking sprites (Phase 32) instead | No GPU time per episode, owner-made sprite sets |
-| Thumbnail | Pillow + template | Consistent branding, no API cost, user-editable |
+| Thumbnail | Pillow composition of the cast sprites + episode pictures | Consistent branding, no API cost, user-editable |
 | Database | SQLite (aiosqlite) | Zero-config, single-user, sufficient performance |
 | Storage | Local filesystem | Simple, offline-first, no cloud dependency |
 

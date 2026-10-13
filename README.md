@@ -133,6 +133,9 @@ the code and tests are done and the owner has not yet signed off on a real episo
 | **Phase 30** | 🎧 **Podcast picture modes** — Step 5 "Video pictures": with characters, black screen, or one still scene with a slow zoom ([plan](docs/implementation/phase-30-podcast-visuals.md)) | ✅ Done |
 | **Phase 31** | 👥 **Alex and Lina** — the owner's own characters replace the earlier pair; the owner's pictures import into the Shot Library from an inbox folder ([55-scene list](docs/operations/scene-list-55.md)) | ✅ Done |
 | **Phase 32** | 🗨️ **Talking characters** — Step 5 mode "Podcast: talking characters": visual-novel style sprites whose mouths follow the speech, with expressions, blinks, gestures and turn-taking; an Activity Library of reviewed pictures (upload with an owner-entered name per image) that become full-screen cutaways on storyboard insert beats ([plan](docs/implementation/phase-32-talking-sprites.md), [sprite spec](docs/operations/sprite-asset-spec.md), [activity upload](docs/operations/activity-library-manual-upload.md)) | 🟡 Built, owner Gate B-22 pending |
+| **Phase 33** | 🎮 **Character profiles v2** — game-style character selection in Steps 1 and 5, profiles with 29 talking-sprite slots filled from outside-AI pictures (prompts per slot, automatic renaming and alignment), man left / woman right facing each other, 3–6 speakers; Gate B-23 fixes: storyboard inserts named from the Activity Library, missing illustrations drawn on the local GPU or made with an outside AI | ✅ Owner: "video rất tốt" |
+| **Phase 35** | 🧹 **Legacy cleanup** — the old app name in the AI prompts, one-off scripts and prompt files, the "Generate locally" tab, the sprite inbox import, speaker avatars and the Standard ffmpeg renderer removed (D89) | ✅ Done |
+| **Phase 36** | 📦 **YouTube publishing package** — collocations, phrasal verbs and sentence patterns; an SEO description with hashtags and the transcript as the pinned comment; thumbnails with the episode's characters or an outside-AI picture (36.1–36.4); series planning next (36.5) | 🔄 In progress |
 
 ## Quick Start
 
@@ -223,13 +226,13 @@ in-app `/health` status still report ffmpeg's presence honestly either way.
 ```
 1️⃣  Step 1: Script Config    → Topic, CEFR level, duration, speakers, genre, accent (Shipped - Task 1.3)
 2️⃣  Step 2: AI Script        → Generate, preview, inline edit, per-line regenerate (Shipped - Task 1.4)
-3️⃣  Step 3: Learning Content → Vocabulary, idioms, grammar, comprehension quiz (Shipped - Task 1.5)
+3️⃣  Step 3: Learning Content → Vocabulary, idioms, collocations, phrasal verbs, sentence patterns, grammar, listening quiz (Tasks 1.5, 36.1)
 4️⃣  Step 4: TTS Audio Studio → Voice assignment, per-line preview, real audio mix + loudness normalization, MP3/WAV export (Shipped - Task 1.6)
-5️⃣  Step 5: Video Studio     → Enhanced (Remotion) video by default: storyboard review, shots from the Shot/Scene libraries, picture modes (story pictures, black screen, one still, talking characters), activity cutaways; Standard (ffmpeg) fallback with burned-in subtitles; SRT, 16:9 + 9:16 export (Phases 1, 19–32)
-6️⃣  Step 6: Thumbnail        → AI-assisted templates, A/B variants, manual editor, export (Shipped - Task 1.8)
-7️⃣  Step 7: YouTube Package  → Titles/description/tags/chapters (measured once audio exists) + full .zip export (Shipped - Task 1.9)
+5️⃣  Step 5: Video Studio     → The Remotion episode (the only renderer since Phase 35): cast through the character selector, storyboard review, shots from the Shot/Scene libraries, picture modes (story pictures, black screen, one still, talking characters), activity illustrations (drawn on the local GPU or made with an outside AI when missing); MP4 + SRT (Phases 1, 19–35)
+6️⃣  Step 6: Thumbnail        → The episode's characters over a topic picture with a headline, CEFR badge and logo (3–5 variants, 16:9 + 9:16), or your outside-AI picture; manual editor, export (Tasks 1.8, 36.3–36.4)
+7️⃣  Step 7: YouTube Package  → Titles, an SEO description within 5,000 characters (chapters, learning items with Vietnamese meanings, listening questions, hashtags), the transcript as the pinned comment, tags, copy buttons + full .zip export (Tasks 1.9, 36.2)
 ```
-Music Library (Task 1.10, `/music`) is a standalone background-music management feature, not a numbered pipeline step — upload/list/preview/delete, volume leveling, Step 4 background-track selection, and waveform visualization are all shipped. The Character Library (`/characters`) and Shot Library (`/shots`, with talking sprites and the Activity Library) are also standalone pages that feed Step 5.
+Music Library (Task 1.10, `/music`) is a standalone background-music management feature, not a numbered pipeline step — upload/list/preview/delete, volume leveling, Step 4 background-track selection, and waveform visualization are all shipped. The Character Library (`/characters`: character profiles with their talking-sprite slots, and the scenes) and Shot Library (`/shots`, with the Activity Library) are also standalone pages that feed Step 5.
 
 ## Tech Stack
 
@@ -245,9 +248,9 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
   measurement (median 45s cloud vs. 127s local, 2.8× faster).
 - **TTS**: Edge TTS (sole engine — OmniVoice GPU cloning considered, dropped 2026-09-13; see [docs/tts-setup.md](docs/tts-setup.md))
 - **Audio**: pydub + ffmpeg (real ITU-R BS.1770 loudness normalization via `pyloudnorm`)
-- **Video**: **Enhanced** renderer (default since 1.2.0-beta): Remotion 4 + React 19 + TypeScript in the separate [`video-renderer/`](video-renderer/) Node workspace, run locally as a subprocess from FastAPI. **Standard** fallback: ffmpeg (background templates + burned-in subtitles); `DIE_VIDEO_RENDERER=ffmpeg` forces it. 16:9 and 9:16 export
+- **Video**: Remotion 4 + React 19 + TypeScript in the separate [`video-renderer/`](video-renderer/) Node workspace, run locally as a subprocess from FastAPI — the only renderer since Phase 35 (the Standard ffmpeg renderer and its 9:16 blur-pad export were removed; vertical video returns on Remotion in Phase 37). Node.js, `npm install` in `video-renderer/` and Chrome Headless Shell are required
 - **Images**: local GPU image generation (diffusers, RealVisXL V5.0) in its own `venv-image` environment and worker process (`requirements-image.txt`, `scripts/image_worker.py`); optional — every library also accepts the owner's own pictures
-- **Thumbnail**: Pillow + AI (local Ollama by default) text/palette suggestions
+- **Thumbnail**: Pillow composition of the cast's talking sprites over the episode's pictures (Montserrat headline, CEFR badge, logo) + AI headline suggestions
 - **Database**: SQLite (aiosqlite async transactions)
 
 ## Documentation
