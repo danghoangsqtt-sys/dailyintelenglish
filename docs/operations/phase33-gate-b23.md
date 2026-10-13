@@ -32,3 +32,25 @@ Date: 2026-10-12. Project: `Gate B-23: weekend plans with three friends` (`afbc2
 | 4 Alex | Alex left, Jack right, Jack mirrored | D81 same gender: speaker order; D82 facing each other |
 
 Seen in passing (not part of B-23): the AI script still greets with the old name "Daily Intel English Studio".
+
+## Owner review and re-render (2026-10-13, Task 33.10)
+
+Owner: "video rất tốt nhưng tôi không thấy hình minh họa và từ vựng hiển thị lên?" Causes: the gate script skipped Step 3
+(no learning pack, so no vocabulary cards), and the only storyboard insert ("searching for travel accommodation") matched no
+Activity Library picture. Fixed in Task 33.10 (the storyboard prompt lists the library activities; Step 5 names inserts
+without a picture; missing ones can be drawn on the GPU or made with an outside AI, D102).
+
+Re-render on the real app (restarted with the owner's permission after a DB backup,
+`data/backups/app-before-migrations-021-022-20261013-095651.db`; migrations 021-022 applied, integrity ok), same script and
+audio (`scratchpad/gate_b23_rerun.py`):
+
+| Step | Result |
+|---|---|
+| Learning pack | 15 s: 4 vocabulary, 2 idioms, 1 collocation, 1 phrasal verb, 1 pattern, 3 questions |
+| Storyboard (AI) | 4 beats: talk (lines 0-2), insert "find hotel" (3-4), insert "packing" (5), talk (6-8) |
+| Illustrations | both inserts matched library pictures (generic) -- nothing to draw |
+| Video | Remotion, 90.8 s render, `video_remotion.mp4` |
+
+Frames (`data/video/<project>/phase33_evidence/rerun_sheet.png`): vocabulary cards (getaway, scenic, secluded, on board)
+with Vietnamese meanings, karaoke highlight, the hotel and packing pictures behind the speakers on their lines. The
+greeting still says "Daily Intel English Studio": the script was kept on purpose (new scripts use the new name, Task 35.1).
