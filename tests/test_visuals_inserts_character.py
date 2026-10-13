@@ -46,7 +46,10 @@ def test_the_person_insert_prompt_names_the_character_the_outfit_and_the_action_
     assert len(_real_tokenizer()(recipes.insert_person_prompt(LAN, long_action))["input_ids"]) <= 77
 
 
-def test_an_insert_with_a_speaker_gets_that_characters_face_and_one_without_stays_plain(client, requests_log):  # noqa: F811
+def test_an_insert_with_a_speaker_gets_that_characters_face_and_one_without_stays_plain(client, requests_log,  # noqa: F811
+                                                                                         monkeypatch):
+    """The RealVisXL path (Phase 39: the fallback when Qwen-Image-Edit-2511 is switched off or missing)."""
+    monkeypatch.setattr(settings, "IMAGE_CHARACTER_ENGINE", "realvisxl")
     project = project_with_script(client)
     base = f"/api/projects/{project['id']}"
     data(client.put(f"{base}/storyboard", json={"beats": BEATS, "status": "approved"}))
@@ -62,3 +65,40 @@ def test_an_insert_with_a_speaker_gets_that_characters_face_and_one_without_stay
     cast = data(client.get(f"{base}/visuals"))["cast"]
     second = next(member for member in cast if member["speaker_index"] == 1)
     assert second["character_id"] in person[0]["ip_adapter_image"]  # speaker 1's own face, not the other character's
+
+
+@pytest.fixture
+def qwen_log(monkeypatch):
+    monkeypatch.setattr(FakeImageEngine, "qwen_calls", [])
+    monkeypatch.setattr(FakeImageEngine, "qwen_available", True)
+    return FakeImageEngine.qwen_calls
+
+
+def test_phase39_a_character_insert_is_drawn_by_qwen_edit_from_that_speakers_face(client, requests_log, qwen_log):  # noqa: F811
+    project = project_with_script(client)
+    base = f"/api/projects/{project['id']}"
+    data(client.put(f"{base}/storyboard", json={"beats": BEATS, "status": "approved"}))
+    wait_job(client, data(client.post(f"{base}/visuals/shots")))
+    assert all(shot["status"] == "complete" for shot in data(client.get(f"{base}/visuals"))["shots"])
+    edits = [call for call in qwen_log if call["model"] == "qwen_edit"]
+    assert len(edits) == 1 and len(edits[0]["items"]) == 1
+    item = edits[0]["items"][0]
+    second = next(member for member in data(client.get(f"{base}/visuals"))["cast"] if member["speaker_index"] == 1)
+    assert item["reference"].endswith("face.png") and second["character_id"] in item["reference"]
+    assert "checking a phone" in item["prompt"] and ", wearing " in item["prompt"]  # the locked outfit is named
+    # no SDXL face-adapter render for it; the insert without a speaker stays a RealVisXL illustration
+    assert not [p for p in requests_log if "checking a phone" in p.get("prompt", "")]
+    assert [p for p in requests_log if "crowded subway at rush hour" in p.get("prompt", "")]
+
+
+def test_phase39_without_qwen_the_character_insert_falls_back_to_realvisxl(client, requests_log, qwen_log,  # noqa: F811
+                                                                          monkeypatch):
+    monkeypatch.setattr(FakeImageEngine, "qwen_available", False)
+    project = project_with_script(client)
+    base = f"/api/projects/{project['id']}"
+    data(client.put(f"{base}/storyboard", json={"beats": BEATS, "status": "approved"}))
+    wait_job(client, data(client.post(f"{base}/visuals/shots")))
+    assert all(shot["status"] == "complete" for shot in data(client.get(f"{base}/visuals"))["shots"])
+    assert [call["model"] for call in qwen_log].count("qwen_edit") == 1  # tried once, then RealVisXL
+    person = [p for p in requests_log if "checking a phone" in p.get("prompt", "") and p.get("command") == "generate"]
+    assert len(person) == 1 and person[0]["ip_adapter_image"].endswith("face.png")

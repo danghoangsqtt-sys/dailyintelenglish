@@ -230,6 +230,8 @@
       .variant-count-wrap { width: 100%; }
     }
     .template-option[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; }
+    .topic-picture-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 4px; }
+    .topic-picture-preview { width: 192px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
     .outside-panel { margin: 14px 0 4px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; }
     .outside-panel > summary { cursor: pointer; font-weight: 700; }
     .outside-steps { margin: 10px 0; padding-left: 20px; font-size: 13px; color: var(--muted); }
@@ -278,6 +280,11 @@
             <section class="section card generator-card" id="generator-section">
               <h2 class="section-title">1. Choose a thumbnail kind</h2>
               <div class="template-gallery" id="template-gallery"></div>
+              <div class="topic-picture-row" id="topic-picture-row">
+                <button class="btn btn-ghost btn-sm" id="topic-picture-btn" type="button">🎨 Draw a topic picture with local AI</button>
+                <span class="helper-text" id="topic-picture-status" role="status">Qwen-Image-2.1 on this computer (about 1–2 minutes). The composed thumbnail then uses it as its background.</span>
+                <img id="topic-picture-preview" class="topic-picture-preview" alt="Topic picture drawn with local AI" hidden />
+              </div>
               <details class="outside-panel" id="outside-panel">
                 <summary>Make the picture with an outside AI (optional)</summary>
                 <ol class="outside-steps">

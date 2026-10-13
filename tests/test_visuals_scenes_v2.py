@@ -70,6 +70,7 @@ def test_background_mask_excludes_people():
 
 def test_shots_make_missing_plates_once_and_pass_the_scene(client, monkeypatch, requests_log):  # noqa: F811
     monkeypatch.setattr(settings, "VISUALS_COLOUR_RETRIES", 0)
+    monkeypatch.setattr(settings, "IMAGE_ILLUSTRATION_ENGINE", "realvisxl")  # Phase 39: the RealVisXL fallback path
     project, _, scenes = setup_project(client, 2, 2)
     base = f"/api/projects/{project['id']}/visuals"
     wait_job(client, data(client.post(f"{base}/shots")))
@@ -98,6 +99,7 @@ def test_scene_reference_off_keeps_the_old_path(client, monkeypatch, requests_lo
 
 def test_plates_use_the_people_free_negative(client, monkeypatch, requests_log):  # noqa: F811
     monkeypatch.setattr(settings, "VISUALS_COLOUR_RETRIES", 0)
+    monkeypatch.setattr(settings, "IMAGE_ILLUSTRATION_ENGINE", "realvisxl")  # Phase 39: the RealVisXL fallback path
     project, _, _ = setup_project(client, 1, 1)
     wait_job(client, data(client.post(f"/api/projects/{project['id']}/visuals/shots")))
     plates = [p for p in requests_log if "empty scene" in p.get("prompt", "")]

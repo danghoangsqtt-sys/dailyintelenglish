@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import json
-import random
 import asyncio
+import json
+import logging
+import random
 import shutil
 from pathlib import Path
 from typing import Any
@@ -18,7 +19,7 @@ from backend.ai.image import colour_check, geometry, shot_checks, recipes
 from backend.library import (
     library_service as library, project_visuals_service as project_visuals, shot_library_service as shot_library,
 )
-from backend.ai.image.engine import get_image_engine
+from backend.ai.image.engine import QwenUnavailable, get_image_engine
 from backend.ai.image.runner import ImageJobRunner, JobCancelled
 
 
@@ -109,14 +110,18 @@ async def scene_preview(job: dict, runner: ImageJobRunner) -> dict:
     path = settings.DATA_DIR / "library" / "scenes" / scene["id"] / "preview.png"
     await runner.boundary(job["id"], "scene preview", 0)
     engine = get_image_engine()
-    async with engine.session("text2img", ip="none", consumer="visuals_scene_preview") as session:
-        response = await session.request({
-            "command": "generate", "prompt": recipes.scene_preview_prompt(scene),
-            "negative_prompt": recipes.PLATE_NEGATIVE,
-            "seed": scene.get("seed") or random.randint(1, 2**31 - 1),
-            "width": 1344, "height": 768, "steps": 30, "guidance_scale": 6.0,
-            "output_path": str(path),
-        })
+    seed = scene.get("seed") or random.randint(1, 2**31 - 1)
+    response: dict[str, Any] = {}
+    qwen_item = {"prompt": recipes.qwen_scene_prompt(scene), "seed": seed, "width": 1344, "height": 768,
+                 "output_path": str(path)}
+    if not await _qwen_pictures(engine, "qwen21", [qwen_item], "visuals_scene_preview"):
+        async with engine.session("text2img", ip="none", consumer="visuals_scene_preview") as session:
+            response = await session.request({
+                "command": "generate", "prompt": recipes.scene_preview_prompt(scene),
+                "negative_prompt": recipes.PLATE_NEGATIVE, "seed": seed,
+                "width": 1344, "height": 768, "steps": 30, "guidance_scale": 6.0,
+                "output_path": str(path),
+            })
     await runner.boundary(job["id"], "scene preview complete", 99)
     async with write_transaction(db):
         await db.execute(
@@ -127,6 +132,25 @@ async def scene_preview(job: dict, runner: ImageJobRunner) -> dict:
 
 
 SIZE = (1344, 768)
+logger = logging.getLogger(__name__)
+
+
+async def _qwen_pictures(engine, model: str, items: list[dict[str, Any]], consumer: str) -> bool:
+    """Phase 39 (D118): draw `items` with a Qwen model (`qwen21` for illustrations, plates and topic pictures,
+    `qwen_edit` for character inserts) when the settings choose it. False means "draw them with RealVisXL": Qwen is
+    switched off, not installed, or failed (logged); the caller then runs its own SDXL path."""
+    chosen = settings.IMAGE_CHARACTER_ENGINE if model == "qwen_edit" else settings.IMAGE_ILLUSTRATION_ENGINE
+    if chosen != model or not items:
+        return False
+    try:
+        await engine.qwen_batch(model, items, consumer)
+    except QwenUnavailable as exc:
+        logger.warning("qwen_unavailable consumer=%s reason=%s -- RealVisXL draws these", consumer, exc)
+        return False
+    except (RuntimeError, OSError, ValueError) as exc:
+        logger.warning("qwen_failed consumer=%s reason=%s -- RealVisXL draws these", consumer, exc)
+        return False
+    return all(Path(item["output_path"]).is_file() for item in items)
 
 
 def _save(image: Image.Image, path: Path) -> None:
@@ -352,11 +376,37 @@ async def _contexts(db, project_id: str, rows: list[dict]) -> list[dict[str, Any
 
 async def _render_inserts(db, engine, runner: ImageJobRunner, job: dict, inserts: list[dict]) -> None:
     """Task 24.5a: insert shots are text2img illustrations (no plate, no pose); their raw image is final. Task 29.2:
-    an insert that names a cast speaker is drawn with that character's face reference (IP-Adapter, the character
-    sheet's recipe); the others stay plain illustrations in the first session."""
+    an insert that names a cast speaker is drawn with that character's face reference. Phase 39 (D118): those
+    character inserts are drawn by Qwen-Image-Edit-2511 from the face (the action happens in the place), RealVisXL with
+    the face IP-Adapter is the fallback; the others stay plain RealVisXL illustrations."""
     plain = [context for context in inserts if not context["faces"]]
     with_person = [context for context in inserts if context["faces"]]
     done = 0
+
+    async def finish(context: dict, response: dict) -> None:
+        row, folder = context["row"], context["folder"]
+        raw_path, final_path = folder / "raw.png", folder / "final.png"
+        await asyncio.to_thread(shutil.copyfile, raw_path, final_path)
+        async with write_transaction(db):
+            await db.execute(
+                "UPDATE project_shots SET raw_path = ?, final_path = ?, prompt_tokens = ?, prompt_truncated = ?, "
+                "status = 'complete', updated_at = ? WHERE id = ?",
+                (str(raw_path), str(final_path), response.get("prompt_tokens"),
+                 int(bool(response.get("prompt_truncated"))), library._now(), row["id"]),
+            )
+
+    if with_person:
+        qwen_items = [{"prompt": recipes.qwen_insert_person_prompt(context["characters"][0], context["row"].get("action")
+                                                                  or context["row"].get("subject") or ""),
+                       "seed": context["row"]["seed"], "width": SIZE[0], "height": SIZE[1],
+                       "reference": str(library.data_path(context["faces"][0]).resolve()),
+                       "output_path": str(context["folder"] / "raw.png")} for context in with_person]
+        await runner.boundary(job["id"], f"character inserts 0/{len(with_person)}", 0)
+        if await _qwen_pictures(engine, "qwen_edit", qwen_items, "visuals_shots_inserts_person"):
+            for context in with_person:
+                await finish(context, {})
+            done += len(with_person)
+            with_person = []
     for contexts, session_args in ((plain, {"ip": "none", "consumer": "visuals_shots_inserts"}),
                                    (with_person, {"ip": "with_encoder", "consumer": "visuals_shots_inserts_person"})):
         if not contexts:
@@ -366,23 +416,14 @@ async def _render_inserts(db, engine, runner: ImageJobRunner, job: dict, inserts
                 done += 1
                 await runner.boundary(job["id"], f"insert {done}/{len(inserts)}", 0)
                 row, folder = context["row"], context["folder"]
-                raw_path, final_path = folder / "raw.png", folder / "final.png"
                 payload = {
                     "command": "generate", "prompt": context["prompt"], "negative_prompt": context["negative"],
                     "seed": row["seed"], "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,
-                    "output_path": str(raw_path),
+                    "output_path": str(folder / "raw.png"),
                 }
                 if context["faces"]:
                     payload.update({"ip_adapter_image": context["faces"][0], "ip_adapter_scale": INSERT_FACE_SCALE})
-                response = await session.request(payload)
-                await asyncio.to_thread(shutil.copyfile, raw_path, final_path)
-                async with write_transaction(db):
-                    await db.execute(
-                        "UPDATE project_shots SET raw_path = ?, final_path = ?, prompt_tokens = ?, prompt_truncated = ?, "
-                        "status = 'complete', updated_at = ? WHERE id = ?",
-                        (str(raw_path), str(final_path), response.get("prompt_tokens"),
-                         int(bool(response.get("prompt_truncated"))), library._now(), row["id"]),
-                    )
+                await finish(context, await session.request(payload))
 
 
 async def recover_pending_shots(db) -> int:
@@ -419,22 +460,34 @@ async def _ensure_plates(db, engine, runner: ImageJobRunner, job: dict, contexts
         scene = context["scene"]
         if not (scene.get("preview_path") and Path(scene["preview_path"]).is_file()):
             missing[scene["id"]] = scene
-    if missing:
-        async with engine.session("text2img", ip="none", consumer="visuals_scene_plates") as session:
-            for index, scene in enumerate(missing.values()):
-                await runner.boundary(job["id"], f"scene plate {index + 1}/{len(missing)}", 0)
-                path = _plate_path(scene)
-                await session.request({
-                    "command": "generate", "prompt": recipes.scene_preview_prompt(scene),
-                    "negative_prompt": recipes.PLATE_NEGATIVE,
-                    "seed": scene.get("seed") or random.randint(1, 2**31 - 1),
-                    "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,
-                    "output_path": str(path),
-                })
-                async with write_transaction(db):
-                    await db.execute("UPDATE scenes SET preview_path = ?, updated_at = ? WHERE id = ?",
-                                     (str(path), library._now(), scene["id"]))
-                scene["preview_path"] = str(path)  # contexts share each scene's dict
+    if not missing:
+        return
+
+    async def stored(scene: dict, path: Path) -> None:
+        async with write_transaction(db):
+            await db.execute("UPDATE scenes SET preview_path = ?, updated_at = ? WHERE id = ?",
+                             (str(path), library._now(), scene["id"]))
+        scene["preview_path"] = str(path)  # contexts share each scene's dict
+
+    seeds = {scene_id: scene.get("seed") or random.randint(1, 2**31 - 1) for scene_id, scene in missing.items()}
+    await runner.boundary(job["id"], f"scene plates 0/{len(missing)}", 0)
+    qwen_items = [{"prompt": recipes.qwen_scene_prompt(scene), "seed": seeds[scene_id], "width": SIZE[0],
+                   "height": SIZE[1], "output_path": str(_plate_path(scene))} for scene_id, scene in missing.items()]
+    if await _qwen_pictures(engine, "qwen21", qwen_items, "visuals_scene_plates"):
+        for scene in missing.values():
+            await stored(scene, _plate_path(scene))
+        return
+    async with engine.session("text2img", ip="none", consumer="visuals_scene_plates") as session:
+        for index, (scene_id, scene) in enumerate(missing.items()):
+            await runner.boundary(job["id"], f"scene plate {index + 1}/{len(missing)}", 0)
+            path = _plate_path(scene)
+            await session.request({
+                "command": "generate", "prompt": recipes.scene_preview_prompt(scene),
+                "negative_prompt": recipes.PLATE_NEGATIVE, "seed": seeds[scene_id],
+                "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,
+                "output_path": str(path),
+            })
+            await stored(scene, path)
 
 
 async def _generate_set(job: dict, runner: ImageJobRunner, project_id: str, rows: list[dict]) -> dict:
@@ -658,24 +711,32 @@ async def activity_illustrations(job: dict, runner: ImageJobRunner) -> dict:
     folder = settings.DATA_DIR / "visuals" / project_id / "activity_drafts"
     await asyncio.to_thread(folder.mkdir, parents=True, exist_ok=True)
     engine = get_image_engine()
-    async with engine.session("text2img", ip="none", consumer="visuals_activity_illustrations") as session:
-        for done, item in enumerate(todo, start=1):
-            await runner.boundary(job["id"], f"illustration {done}/{len(todo)}", int(100 * (done - 1) / len(todo)))
-            path = folder / f"{item['beat_id']}.png"
-            await session.request({
-                "command": "generate", "prompt": recipes.activity_illustration_prompt(item["action"], item["place"]),
-                "negative_prompt": recipes.ACTIVITY_NEGATIVE, "seed": random.randint(1, 2**31 - 1),
-                "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0, "output_path": str(path),
-            })
-            content = await asyncio.to_thread(path.read_bytes)
-            metadata = {"activity": item["activity"], "context_tags": [item["place"]] if item["place"] else []}
-            try:
-                async with write_transaction(db):
-                    row = await activity_library.upload_activity_bytes(db, path.name, content, metadata)
-            except ConflictError:  # the same picture again: nothing new to review
-                continue
-            finally:
-                await asyncio.to_thread(path.unlink, missing_ok=True)
-            created.append(row["id"])
+    paths = {item["beat_id"]: folder / f"{item['beat_id']}.png" for item in todo}
+    seeds = {item["beat_id"]: random.randint(1, 2**31 - 1) for item in todo}
+    await runner.boundary(job["id"], f"illustrations 0/{len(todo)}", 0)
+    qwen_items = [{"prompt": recipes.qwen_activity_prompt(item["action"], item["place"]), "seed": seeds[item["beat_id"]],
+                   "width": SIZE[0], "height": SIZE[1], "output_path": str(paths[item["beat_id"]])} for item in todo]
+    if not await _qwen_pictures(engine, "qwen21", qwen_items, "visuals_activity_illustrations"):
+        async with engine.session("text2img", ip="none", consumer="visuals_activity_illustrations") as session:
+            for done, item in enumerate(todo, start=1):
+                await runner.boundary(job["id"], f"illustration {done}/{len(todo)}", int(100 * (done - 1) / len(todo)))
+                await session.request({
+                    "command": "generate", "prompt": recipes.activity_illustration_prompt(item["action"], item["place"]),
+                    "negative_prompt": recipes.ACTIVITY_NEGATIVE, "seed": seeds[item["beat_id"]],
+                    "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0,
+                    "output_path": str(paths[item["beat_id"]]),
+                })
+    for item in todo:
+        path = paths[item["beat_id"]]
+        content = await asyncio.to_thread(path.read_bytes)
+        metadata = {"activity": item["activity"], "context_tags": [item["place"]] if item["place"] else []}
+        try:
+            async with write_transaction(db):
+                row = await activity_library.upload_activity_bytes(db, path.name, content, metadata)
+        except ConflictError:  # the same picture again: nothing new to review
+            continue
+        finally:
+            await asyncio.to_thread(path.unlink, missing_ok=True)
+        created.append(row["id"])
     await runner.boundary(job["id"], "illustrations ready for review", 99)
     return {"created": created}

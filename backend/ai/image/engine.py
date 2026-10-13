@@ -46,6 +46,8 @@ class ImageEngine(Protocol):
         ip: str = "none", consumer: str = "visuals", scene: bool = False,
     ) -> Any: ...
 
+    async def qwen_batch(self, model: str, items: list[dict[str, Any]], consumer: str) -> dict[str, Any]: ...
+
 
 class _WorkerProcess:
     """Owns one line-delimited worker process and its stderr log."""
@@ -74,11 +76,13 @@ class _WorkerProcess:
             raise RuntimeError(f"image worker exited unexpectedly; see {self.stderr_file.name}")
         return json.loads(line)
 
-    def request(self, payload: dict[str, Any]) -> dict[str, Any]:
+    def request(self, payload: dict[str, Any], *, allow_unavailable: bool = False) -> dict[str, Any]:
         assert self.process.stdin is not None
         self.process.stdin.write(json.dumps(payload) + "\n")
         self.process.stdin.flush()
         response = self._read_line()
+        if allow_unavailable and response.get("status") == "unavailable":
+            return response
         if response.get("status") != "ok":
             raise RuntimeError(response.get("message", "image worker request failed"))
         return response
@@ -102,11 +106,33 @@ class _WorkerProcess:
             self.stderr_file.close()
 
 
+class QwenUnavailable(RuntimeError):
+    """Phase 39: the Qwen model is not installed (or there is no GPU); callers fall back to RealVisXL."""
+
+
+def qwen_request(model: str, items: list[dict[str, Any]]) -> dict[str, Any]:
+    return {"command": "qwen_generate", "model": model, "items": items}
+
+
 class WorkerImageEngine:
     """Leased subprocess engine; it never imports the image model stack."""
 
     def __init__(self) -> None:
         self._encoded_tokens: dict[str, list[dict[str, Any]]] = {}
+
+    async def qwen_batch(self, model: str, items: list[dict[str, Any]], consumer: str) -> dict[str, Any]:
+        """Phase 39 (D118): one worker, one GPU lease, a batch of Qwen pictures (`qwen21` or `qwen_edit`). Raises
+        `QwenUnavailable` when the model is missing so the caller can fall back to RealVisXL."""
+        require_generation()
+        async with get_gpu_manager().lease(consumer, min_free_mb=8192):
+            worker = await asyncio.to_thread(_WorkerProcess)
+            try:
+                response = await asyncio.to_thread(worker.request, qwen_request(model, items), allow_unavailable=True)
+            finally:
+                await asyncio.to_thread(worker.close)
+        if response.get("status") == "unavailable":
+            raise QwenUnavailable(f"{model}: {response.get('reason')} {response.get('missing') or ''}".strip())
+        return response
 
     @asynccontextmanager
     async def session(
@@ -151,8 +177,22 @@ class WorkerImageEngine:
 class FakeImageEngine:
     """Deterministic solid-colour PNGs with the worker's JSON response shape."""
 
+    qwen_available = True  # tests flip it to exercise the RealVisXL fallback
+    qwen_calls: list[dict[str, Any]] = []
+
     def __init__(self) -> None:
         self._encoded_tokens: dict[str, list[dict[str, Any]]] = {}
+
+    async def qwen_batch(self, model: str, items: list[dict[str, Any]], consumer: str) -> dict[str, Any]:
+        require_generation()
+        FakeImageEngine.qwen_calls.append(qwen_request(model, items))
+        if not FakeImageEngine.qwen_available:
+            raise QwenUnavailable(f"{model}: model_missing")
+        for item in items:
+            await asyncio.to_thread(_solid_png, Path(item["output_path"]), (int(item["width"]), int(item["height"])),
+                                    int(item["seed"]))
+        return {"status": "ok", "model": model, "items": [{"output_path": item["output_path"], "seconds": 0.0}
+                                                          for item in items]}
 
     @asynccontextmanager
     async def session(

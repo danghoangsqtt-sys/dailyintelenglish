@@ -118,6 +118,39 @@ async def get_outside_image(project_id: str, db: aiosqlite.Connection = Depends(
     return FileResponse(path, media_type="image/png", headers={"Cache-Control": "no-store"})
 
 
+@router.post("/api/projects/{project_id}/thumbnails/topic-picture", status_code=201)
+async def draw_topic_picture(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 39 (D118): draw the episode's topic picture on the local GPU with Qwen-Image-2.1-Turbo (~1-2 min with the
+    model load). The composed thumbnail then uses it as its background, under the characters, headline and badges."""
+    from backend.ai.image import recipes
+    from backend.ai.image.engine import QwenUnavailable, get_image_engine
+
+    started_at = time.perf_counter()
+    async with read_transaction():
+        project = await project_service.get_project(db, project_id)
+        actions = await thumbnail_service.storyboard_actions(db, project_id)
+    target = thumbnail_service.topic_picture_path(project_id)
+    illustration = ", ".join(dict.fromkeys(actions[:3]))
+    item = {"prompt": recipes.qwen_topic_prompt(project["topic"], illustration), "seed": int(time.time()) % 2**31,
+            "width": 1280, "height": 720, "output_path": str(target)}
+    try:
+        await get_image_engine().qwen_batch("qwen21", [item], "thumbnail_topic_picture")
+    except QwenUnavailable as exc:
+        raise ValidationError("The local image model (Qwen-Image-2.1-Turbo) is not installed on this computer") from exc
+    return ok({"preview_url": f"/api/projects/{project_id}/thumbnails/topic-picture", "prompt": item["prompt"]},
+              started_at=started_at)
+
+
+@router.get("/api/projects/{project_id}/thumbnails/topic-picture")
+async def get_topic_picture(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> FileResponse:
+    async with read_transaction():
+        await project_service.get_project(db, project_id)
+    path = thumbnail_service.topic_picture_path(project_id)
+    if not await asyncio.to_thread(path.is_file):
+        raise NotFoundError("No topic picture yet")
+    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "no-store"})
+
+
 @router.get("/api/projects/{project_id}/thumbnails/outside-prompt")
 async def get_outside_prompt(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Task 36.4 (D90): the prompt to paste into an outside AI and the character pictures to attach with it."""

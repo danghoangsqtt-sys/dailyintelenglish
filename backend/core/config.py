@@ -108,6 +108,11 @@ class Settings(BaseSettings):
     # sampled with Euler-a as in the spike. An empty repo falls back to SDXL base 1.0 and its default sampler.
     IMAGE_BASE_REPO: str = "SG161222/RealVisXL_V5.0"
     IMAGE_SCHEDULER: Literal["default", "euler_a"] = "euler_a"
+    # Phase 39 (D118, benchmark docs/operations/phase39-image-benchmark.md): Qwen-Image-2.1-Turbo draws the activity
+    # illustrations, topic pictures and new scene plates; Qwen-Image-Edit-2511 the single-character inserts. RealVisXL is
+    # the automatic fallback when a Qwen model is missing or fails, and still draws everything else.
+    IMAGE_ILLUSTRATION_ENGINE: Literal["qwen21", "realvisxl"] = "qwen21"
+    IMAGE_CHARACTER_ENGINE: Literal["qwen_edit", "realvisxl"] = "qwen_edit"
     VISUALS_DUO_REFINE: bool = True
     # Task 20.11: re-refine a person whose measured top/bottom colour misses the locked
     # colour, at most this many times per person per shot (0 disables the check).

@@ -1,7 +1,7 @@
 """Task 36.3/36.4 (D90-D92): the episode thumbnail composed from what the episode already has.
 
-`composed`: a topic illustration as the background (an approved Activity Library picture the storyboard uses, else a scene
-plate, else the brand gradient), the two cast characters cut from their approved talking sprites (man left / woman right and
+`composed`: a topic illustration as the background (the topic picture drawn on the local GPU, Phase 39, else an approved
+Activity Library picture the storyboard uses, else a scene plate, else the brand gradient), the two cast characters cut from their approved talking sprites (man left / woman right and
 facing each other, exactly as in the video, D81/D82), a big headline, the CEFR badge, the episode number and the channel logo.
 `outside_ai`: the owner's own picture made with an outside AI is the whole background; only the text, badges and logo are added.
 
@@ -59,6 +59,7 @@ async def composition_inputs(db: aiosqlite.Connection, project: dict, episode: i
         if path and Path(path).is_file() and str(path) not in backgrounds:
             backgrounds.append(str(path))
 
+    add(settings.DATA_DIR / "thumbnails" / project_id / "topic_qwen.png")  # Phase 39: the local-AI topic picture first
     coverage = await activity_illustrations.coverage(db, project_id)
     for item in coverage["items"]:
         if item.get("match"):

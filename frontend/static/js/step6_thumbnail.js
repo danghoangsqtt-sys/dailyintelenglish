@@ -426,6 +426,32 @@
     byId("outside-file").value = "";
   }
 
+  /** Phase 39 (D118): the topic picture drawn on the local GPU; composed thumbnails use it as their background. */
+  function showTopicPicture() {
+    const preview = byId("topic-picture-preview");
+    preview.onload = () => { preview.hidden = false; };
+    preview.onerror = () => { preview.hidden = true; };
+    preview.src = `/api/projects/${state.projectId}/thumbnails/topic-picture?t=${Date.now()}`;
+  }
+
+  async function drawTopicPicture() {
+    const button = byId("topic-picture-btn");
+    const status = byId("topic-picture-status");
+    button.disabled = true;
+    status.textContent = "Drawing the topic picture on this computer… (1–2 minutes)";
+    try {
+      await Api.drawThumbnailTopicPicture(state.projectId);
+      showTopicPicture();
+      state.selectedTemplate = "composed";
+      renderTemplates();
+      status.textContent = "Done. Generate a composed thumbnail: it uses this picture as the background.";
+    } catch (error) {
+      status.textContent = error.message || "The topic picture could not be drawn.";
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   async function init() {
     const params = new URLSearchParams(window.location.search);
     state.projectId = params.get("project_id");
@@ -470,6 +496,8 @@
     byId("outside-file").addEventListener("change", (event) => {
       if (event.target.files[0]) uploadOutsidePicture(event.target.files[0]);
     });
+    byId("topic-picture-btn").addEventListener("click", drawTopicPicture);
+    showTopicPicture();
     loadOutsidePrompt();
     renderTemplates();
     renderVariants();

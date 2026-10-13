@@ -226,6 +226,7 @@ const Api = (() => {
       request(`/api/projects/${projectId}/visuals/shots/${shotId}/regenerate`, { method: "POST" }),
     listThumbnailTemplates: (projectId) => request(`/api/thumbnails/templates${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""}`),
     listThumbnails: (projectId) => request(`/api/projects/${projectId}/thumbnails`),
+    drawThumbnailTopicPicture: (projectId) => request(`/api/projects/${projectId}/thumbnails/topic-picture`, { method: "POST" }),
     getThumbnailOutsidePrompt: (projectId) => request(`/api/projects/${projectId}/thumbnails/outside-prompt`),
     uploadThumbnailOutsideImage: (projectId, file) => {
       const body = new FormData();

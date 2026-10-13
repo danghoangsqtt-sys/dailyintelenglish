@@ -74,6 +74,12 @@ def outside_image_path(project_id: str) -> Path:
     return settings.DATA_DIR / "thumbnails" / project_id / "outside_source.png"
 
 
+def topic_picture_path(project_id: str) -> Path:
+    """Phase 39 (D118): the topic picture drawn on the local GPU (Qwen-Image-2.1-Turbo); the composed thumbnail uses it
+    as its first background."""
+    return settings.DATA_DIR / "thumbnails" / project_id / "topic_qwen.png"
+
+
 async def list_templates(project_id: str | None = None) -> list[dict]:
     """The two thumbnail kinds; `outside_ai` is available once the owner's picture is uploaded."""
     has_outside = bool(project_id) and await asyncio.to_thread(outside_image_path(project_id).is_file)

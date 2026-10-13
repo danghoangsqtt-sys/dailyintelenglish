@@ -238,6 +238,41 @@ def activity_outside_prompt(action: str, place: str = "") -> str:
             "background. No text, no letters, no logo, no watermark, no famous person, no cartoon style.")
 
 
+# Phase 39 (D118): Qwen reads whole sentences (no CLIP 77-token limit), so its prompts describe the picture in plain
+# English instead of comma tags. D110: illustrations show a few ordinary people of different looks (the benchmark showed
+# Qwen repeats one face unless asked for variety).
+QWEN_PHOTO = "Photorealistic editorial photograph, soft natural light, crisp sharp focus."
+
+
+def qwen_activity_prompt(action: str, place: str = "") -> str:
+    where = f" in {place}" if place else ""
+    return (f"{QWEN_PHOTO} A natural candid moment: ordinary people {action or 'going about the day'}{where}. One to three "
+            "everyday people of different ages, genders and looks, the action clearly visible in the middle of the frame, "
+            "realistic faces and hands, casual clothes. No text, no letters, no logo, no watermark.")
+
+
+def qwen_scene_prompt(scene: Mapping) -> str:
+    light = TIME_OF_DAY_LIGHT.get(scene.get("time_of_day", "day"), "")
+    return (f"{QWEN_PHOTO} A wide view of {scene['place']}{', ' + light if light else ''}. The place is completely empty, "
+            "with no people at all. Realistic details. No text, no letters, no logo.")
+
+
+def qwen_insert_person_prompt(character: Mapping, action: str) -> str:
+    """Qwen-Image-Edit-2511 with the character's face as the reference picture."""
+    noun = "woman" if character.get("gender") == "female" else "man"
+    return (f"{QWEN_PHOTO} Medium shot: the same {noun} as in the reference picture, with the same face and hair, wearing "
+            f"{outfit_phrase(character)}, {action or 'relaxed and natural'}. Natural pose, the action and the place clearly "
+            "visible, realistic hands. No text, no logo.")
+
+
+def qwen_topic_prompt(topic: str, illustration: str) -> str:
+    """The thumbnail's topic picture: the background the composer draws the characters, headline and badges on."""
+    return (f"Vivid, eye-catching photorealistic picture for a YouTube thumbnail of an English-learning episode about "
+            f"{topic}: {illustration or topic}. Bright colours, high contrast, sharp focus, a clear subject on the right side; "
+            "the left 45% calmer and slightly darker for a title. No people in the foreground, no text, no letters, "
+            "no logo, no watermark.")
+
+
 def insert_person_prompt(character: Mapping, subject: str) -> str:
     """Task 29.2: an insert that shows a cast character doing what the speaker describes (checking a phone, eating
     oatmeal, stretching). The face reference carries identity; the locked outfit is named; no pose, no plate."""
