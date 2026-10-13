@@ -648,14 +648,21 @@
       const coverage = await Api.getActivityCoverage(state.projectId);
       if (!coverage.items.length) { line.hidden = true; return; }
       line.hidden = false;
+      // Gate B-23: an insert without a library picture shows no illustration (the scene stays); say so and name the closest.
       const missing = coverage.items
         .filter((item) => item.status === "missing")
-        .map((item) => item.action || `insert ${item.position + 1}`);
+        .map((item) => {
+          const name = `"${item.action || `insert ${item.position + 1}`}"`;
+          const closest = (item.suggestions || []).map((value) => `"${value}"`).join(", ");
+          return closest ? `${name} (closest in the library: ${closest})` : name;
+        });
       const fallback = missing.length
-        ? ` Missing → sprite fallback (${missing.length}): ${missing.join(", ")}.`
-        : " No sprite fallback needed.";
-      line.textContent = `Activity cutaways: ${coverage.matched} matched `
+        ? ` No illustration for ${missing.length}: ${missing.join("; ")} -- the scene stays behind the speakers.`
+          + " Change the insert's action in the storyboard to a library activity to show a picture."
+        : " Every insert has an illustration.";
+      line.textContent = `Activity illustrations: ${coverage.matched} of ${coverage.items.length} inserts matched `
         + `(${coverage.character} character, ${coverage.generic} generic).${fallback}`;
+      line.classList.toggle("is-warning", missing.length > 0);
     } catch {
       line.hidden = true;
     }

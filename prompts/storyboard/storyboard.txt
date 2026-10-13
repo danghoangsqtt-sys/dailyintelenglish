@@ -14,6 +14,9 @@ Script lines (line index, speaker index, text):
 Scene library (scene_id | name | place | category):
 {% for scene in scenes %}{{ scene.id }} | {{ scene.name }} | {{ scene.place }} | {{ scene.category }}
 {% endfor %}
+{% if activities %}Activity Library (illustrations that already exist; "own picture" names the characters drawn doing it):
+{% for activity in activities %}- {{ activity.name }}{% if activity.characters %} (own picture: {{ activity.characters | join(", ") }}){% endif %}
+{% endfor %}{% endif %}
 Rules:
 1. Return beats that cover every line from 0 to {{ line_count - 1 }} exactly once, in order, with no gaps
    or overlaps. A beat covers lines line_from..line_to (inclusive).
@@ -23,10 +26,15 @@ Rules:
    library scene fits, set scene_id to null and new_place to a short plain place (at most 5 words,
    letters only).
 4. Every beat sets "kind": "scene" for people talking in a place, "insert" for an illustration.
-   Use at most 3 "insert" beats, each for one concrete thing a speaker describes. Every insert must target 3 to 6 seconds
-   of spoken time (the smallest contiguous line range likely to fit): make it action-led and useful for comprehension, never
-   decorative. Its action must be a reusable plain activity
-   phrase such as "cooking dinner", "walking to work" or "reading a book"; do not invent a long cinematic description. An insert sets
+   Inserts are the illustrations the learner sees behind the speakers, so use them generously: whenever a speaker talks
+   about doing something, add an insert for it -- about one every 2 to 3 lines, at most {{ max_inserts }} in total. Each is
+   for one concrete thing a speaker describes and covers the smallest contiguous line range about it (3 to 6 seconds of
+   speech): action-led and useful for comprehension, never decorative.{% if activities %}
+   The action of an insert MUST be copied exactly from the Activity Library list above (for example "packing", "find hotel",
+   "drinking coffee"): pick the closest one to what is said; prefer one with an own picture of the speaker. Only when nothing
+   in the list is close, write a plain activity phrase instead (that picture will be missing).{% else %} Its action must be
+   a reusable plain activity phrase such as "cooking dinner", "walking to work" or "reading a book".{% endif %}
+   Do not invent a long cinematic description. An insert sets
    scene_id to null, new_place to what the picture shows (at most 5 plain words, for example
    "crowded subway at rush hour"), and speakers to [] for an object, a place or a crowd. When a
    speaker does the thing (checking a phone, eating oatmeal, stretching), set speakers to that one

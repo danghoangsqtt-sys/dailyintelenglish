@@ -35,6 +35,21 @@ def _score(candidate: dict[str, Any], query: str, contexts: list[str]) -> tuple[
     return score, reason
 
 
+def suggest(candidates: list[dict[str, Any]], text: str, limit: int = 3) -> list[str]:
+    """Gate B-23 finding: the closest library activities for an insert that matched none, by the share of the activity's words
+    found in ``text`` (a word also counts when the text has it with an ending: "finding" for "find")."""
+    words = normalize(text).split()
+    scored: dict[str, float] = {}
+    for candidate in candidates:
+        wanted = normalize(candidate["activity"]).split()
+        if not wanted:
+            continue
+        found = sum(any(word == want or (len(want) >= 3 and word.startswith(want)) for word in words) for want in wanted)
+        if found:
+            scored[candidate["activity"]] = max(scored.get(candidate["activity"], 0.0), found / len(wanted))
+    return [name for name, _ in sorted(scored.items(), key=lambda item: (-item[1], item[0]))[:limit]]
+
+
 def beat_speaker_index(beat: dict[str, Any], line_speakers: list[int | None], line_texts: list[str]) -> int | None:
     """Task 32.8a (BUG-029, D76): whose activity pictures an insert beat should prefer.
 

@@ -56,10 +56,34 @@ def test_valid_ai_answer_is_saved(client, fake_ai):  # noqa: F811
     prompt = provider.calls[0].prompt
     assert "[0] (speaker 0) Line number 0 of the lesson." in prompt
     assert "builtin-rice-fields | Rice fields | green rice fields | countryside" in prompt
-    assert "Every insert must target 3 to 6 seconds" in prompt
+    assert "3 to 6 seconds" in prompt and "about one every 2 to 3 lines" in prompt
     assert "action-led and useful for comprehension, never" in prompt and "decorative" in prompt
-    assert "reusable plain activity" in prompt
+    assert "reusable plain activity" in prompt and "Activity Library" not in prompt  # no library rows in this test
     assert "Your previous answer was rejected" not in prompt and provider.calls[0].purpose == "storyboard"
+
+
+def test_the_prompt_lists_the_activity_library_so_inserts_name_a_picture_that_exists(client, fake_ai):  # noqa: F811
+    """Gate B-23 finding: the AI invented "searching for travel accommodation", which no library picture matched."""
+    import sqlite3
+
+    from app.core.config import settings
+
+    project = project_with_script(client)
+    with sqlite3.connect(settings.db_path) as connection:
+        character_id = connection.execute(
+            "SELECT character_id FROM project_cast WHERE project_id = ? ORDER BY speaker_index", (project["id"],)).fetchone()[0]
+        name = connection.execute("SELECT name FROM characters WHERE id = ?", (character_id,)).fetchone()[0]
+        for row_id, owner, activity in (("a-pack", None, "packing"), ("a-pack-own", character_id, "packing"),
+                                        ("a-hotel", None, "find hotel"), ("a-wait", None, "pending one")):
+            connection.execute(
+                "INSERT INTO activity_library (id, character_id, activity, path, content_sha, review_state, created_at, "
+                "updated_at) VALUES (?, ?, ?, 'x.png', ?, ?, 'now', 'now')",
+                (row_id, owner, activity, f"sha-{row_id}", "pending" if activity == "pending one" else "approved"))
+    provider = fake_ai([_result(GOOD)])
+    data(client.post(f"/api/projects/{project['id']}/storyboard/propose"))
+    prompt = provider.calls[0].prompt
+    assert f"- packing (own picture: {name})" in prompt and "- find hotel" + chr(10) in prompt and "pending one" not in prompt
+    assert "MUST be copied exactly from the Activity Library list" in prompt
 
 
 def test_locked_d72_prompt_pack_has_exactly_the_twenty_canonical_import_names_and_constraints():

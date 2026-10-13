@@ -33,7 +33,7 @@ async def test_step5_explains_character_generic_and_missing_activity_coverage(
                     {"beat_id": "beat-straight", "position": 1, "action": "go straight", "status": "generic",
                      "fallback": None, "match": {"activity_id": "generic-straight", "match_type": "generic"}},
                     {"beat_id": "beat-cross", "position": 2, "action": "cross the street", "status": "missing",
-                     "fallback": "sprites", "match": None},
+                     "fallback": "sprites", "match": None, "suggestions": ["walking", "go straight"]},
                 ],
             },
             "error": None,
@@ -46,6 +46,7 @@ async def test_step5_explains_character_generic_and_missing_activity_coverage(
     coverage = page.locator("#activity-coverage:not([hidden])")
     await coverage.wait_for()
     text = await coverage.text_content()
-    assert "2 matched (1 character, 1 generic)" in text
-    assert "Missing → sprite fallback (1): cross the street" in text
+    assert "2 of 3 inserts matched (1 character, 1 generic)" in text
+    assert 'No illustration for 1: "cross the street" (closest in the library: "walking", "go straight")' in text
+    assert "is-warning" in (await coverage.get_attribute("class"))
     await page.close()

@@ -317,8 +317,19 @@ async def _proposal_context(db: aiosqlite.Connection, project_id: str) -> dict[s
         "SELECT scene_id FROM project_scenes WHERE project_id = ? ORDER BY position", (project_id,),
     )
     project_scene_ids = [row[0] for row in await cursor.fetchall()]
+    cursor = await db.execute(
+        "SELECT a.activity, c.name FROM activity_library a LEFT JOIN characters c ON c.id = a.character_id "
+        "WHERE a.review_state = 'approved' ORDER BY a.activity, c.name"
+    )
+    own: dict[str, list[str]] = {}
+    for activity, character in await cursor.fetchall():
+        names = own.setdefault(activity, [])
+        if character and character not in names:
+            names.append(character)
+    cast_names = {member["character_name"] for member in cast}
+    activities = [{"name": name, "characters": [who for who in names if who in cast_names]} for name, names in own.items()]
     return {"project": project, "lines": lines, "cast": cast, "scenes": scenes,
-            "project_scene_ids": project_scene_ids}
+            "project_scene_ids": project_scene_ids, "activities": activities}
 
 
 async def propose_storyboard(db: aiosqlite.Connection, project_id: str,
@@ -338,7 +349,7 @@ async def propose_storyboard(db: aiosqlite.Connection, project_id: str,
         prompt = await render_storyboard_prompt(
             topic=project["topic"], genre=project["genre"], cefr_level=project["cefr_level"],
             cast=context["cast"], lines=context["lines"], scenes=context["scenes"], framing=framing,
-            image_cap=settings.VISUALS_IMAGE_CAP, previous_error=previous_error,
+            image_cap=settings.VISUALS_IMAGE_CAP, previous_error=previous_error, activities=context["activities"],
         )
         request = GenerationRequest(prompt=prompt, json_schema=proposal_schema(),
                                     deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS, purpose="storyboard")

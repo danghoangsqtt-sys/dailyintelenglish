@@ -5,7 +5,7 @@ from PIL import Image
 
 from app.core.config import settings
 from app.services import video_service
-from app.services.visuals.activity_matcher import beat_speaker_index, match_activity
+from app.services.visuals.activity_matcher import beat_speaker_index, match_activity, suggest
 from tests.test_visuals_project_api import client, data, setup_project  # noqa: F401
 
 
@@ -211,3 +211,13 @@ def test_successful_video_records_the_selected_activity_in_the_same_job(client, 
     assert item["use_count"] == 1 and item["last_used_at"]
     assert history[0]["beat_id"] == "beat-straight"
     assert history[0]["render_id"] == generated["id"]
+
+
+def test_an_unmatched_insert_gets_the_closest_library_activities():
+    """Gate B-23: "searching for travel accommodation" over lines about a cabin and a hotel matched nothing."""
+    candidates = [_asset("h", None, "find hotel"), _asset("c", None, "check in hotel"), _asset("p", None, "packing"),
+                  _asset("p2", "alex", "packing"), _asset("w", None, "working out")]
+    text = "searching for travel accommodation finding a cabin is cheaper than a fancy hotel"
+    assert suggest(candidates, text) == ["find hotel", "check in hotel"]
+    assert suggest(candidates, "we should pack warm clothes") == []
+    assert suggest(candidates, "start packing tonight", limit=1) == ["packing"]

@@ -498,6 +498,8 @@ async def activity_coverage(project_id: str, db: aiosqlite.Connection = Depends(
         items.append({"beat_id": beat["id"], "position": beat["position"], "action": beat.get("action") or "",
                       "status": found["match_type"] if found else "missing",
                       "fallback": None if found else "sprites",
+                      "suggestions": [] if found else activity_matcher.suggest(
+                          candidates, f"{beat.get('action') or ''} {beat.get('new_place') or ''} {dialogue}"),
                       "match": {key: value for key, value in found.items() if key != "asset"} if found else None})
     character = sum(item["status"] == "character" for item in items)
     generic = sum(item["status"] == "generic" for item in items)

@@ -393,12 +393,16 @@ async def render_storyboard_prompt(
     framing: int,
     image_cap: int,
     previous_error: str = "",
+    activities: list[dict] | None = None,
 ) -> str:
-    """Render the storyboard proposal prompt (Task 24.2); `previous_error` turns it into the repair."""
+    """Render the storyboard proposal prompt (Task 24.2); `previous_error` turns it into the repair. `activities` (Gate B-23
+    finding): the Activity Library's approved activity names (`name`, `characters` with an own picture), so an insert names
+    one the video can actually show."""
     return await asyncio.to_thread(
         _render_storyboard_prompt_sync, topic=topic, genre=genre, cefr_level=cefr_level, cast=cast,
         lines=lines, line_count=len(lines), scenes=scenes, framing=framing, image_cap=image_cap,
-        max_places=max(1, image_cap // max(1, framing)), previous_error=previous_error,
+        max_places=max(1, image_cap // max(1, framing)), previous_error=previous_error, activities=activities or [],
+        max_inserts=max(1, min(6, image_cap - framing)),
     )
 
 
