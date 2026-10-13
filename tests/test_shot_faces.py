@@ -16,15 +16,15 @@ from backend.ai.image.engine import FakeImageEngine
 from tests.test_visuals_project_api import client, data, setup_project, wait_job  # noqa: F401
 
 ROOT = Path(__file__).resolve().parent.parent
-IMAGE_PYTHON = ROOT / "venv-image" / "Scripts" / "python.exe"
-MODEL = ROOT / "models" / "image" / "face" / "ultraface-rfb-320.onnx"
+IMAGE_PYTHON = ROOT / ".venv-image" / "Scripts" / "python.exe"
+MODEL = ROOT / "backend" / "ai" / "models" / "image" / "face" / "ultraface-rfb-320.onnx"
 WORKER = ROOT / "scripts" / "image_worker.py"
 PORTRAITS = ROOT / "tests" / "fixtures" / "faces"
 THREE = ROOT / "tests" / "fixtures" / "three_people_cafe.png"
 PINNED_SHA256 = "34cd7e60aeff28744c657de7a3dc64e872d506741de66987f3426f2b79f88017"
 
 needs_model = pytest.mark.skipif(not (MODEL.is_file() and IMAGE_PYTHON.is_file()),
-                                 reason="the face model or venv-image is not present")
+                                 reason="the face model or .venv-image is not present")
 
 
 # ---- the pure rule ----------------------------------------------------------------------------------------------

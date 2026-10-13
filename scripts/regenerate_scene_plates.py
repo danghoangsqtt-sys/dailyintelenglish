@@ -1,5 +1,5 @@
 """Task 28.4a: regenerate the 55 built-in scene plates in the Phase 28 look. Run with the project venv; the image
-worker runs in venv-image on the GPU (the app must not be running: it needs the GPU lease).
+worker runs in .venv-image on the GPU (the app must not be running: it needs the GPU lease).
 
     venv\\Scripts\\python scripts\\regenerate_scene_plates.py            # all scenes, resumable
     venv\\Scripts\\python scripts\\regenerate_scene_plates.py --only builtin-bookshop builtin-cafe

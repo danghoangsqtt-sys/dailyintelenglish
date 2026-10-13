@@ -60,7 +60,7 @@ def test_style_is_editorial_and_the_negatives_guard_a_photograph():
 
 def _real_tokenizer():
     from huggingface_hub import snapshot_download  # noqa: F401  (import check only)
-    folders = list((ROOT / "models/image/hub/models--SG161222--RealVisXL_V5.0/snapshots").glob("*/tokenizer"))
+    folders = list((ROOT / "backend/ai/models/image/hub/models--SG161222--RealVisXL_V5.0/snapshots").glob("*/tokenizer"))
     if not folders:
         pytest.skip("the RealVisXL tokenizer is not cached")
     from transformers import CLIPTokenizer

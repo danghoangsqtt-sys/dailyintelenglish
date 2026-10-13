@@ -7,7 +7,9 @@ __pycache__/
 venv/
 .venv/
 # Task 20.2: isolated Python 3.14 environment for the SDXL image worker (keeps torch and
-# diffusers, ~5.5 GB, out of the main venv and the .exe). Set up via `requirements-image.txt`.
+# diffusers, ~5.5 GB, out of the main venv and the .exe). Set up via `backend/ai/image/requirements.txt`.
+.venv-image/
+.venv-qwen/
 venv-image/
 *.egg-info/
 dist/
@@ -38,9 +40,11 @@ data/visuals/
 data/music_library/*
 !data/music_library/.gitkeep
 
-# AI Models (large binary files)
+# AI Models (large binary files) -- Phase 38: backend/ai/models/ (models/ kept until the old folder is gone)
+backend/ai/models/*
+!backend/ai/models/.gitkeep
 models/*
-!models/.gitkeep
+
 
 # IDE
 .vscode/

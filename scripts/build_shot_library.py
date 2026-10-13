@@ -1,7 +1,7 @@
 r"""Task 29.6 (ENH-020): fill the Shot Library with ready-made pictures of the cast, a scene at a time, resumable.
 
-    venv\Scripts\python scripts\build_shot_library.py --base http://127.0.0.1:8000
-    venv\Scripts\python scripts\build_shot_library.py --scenes builtin-cafe,builtin-park --max-minutes 120
+    .venv\Scripts\python scripts\build_shot_library.py --base http://127.0.0.1:8000
+    .venv\Scripts\python scripts\build_shot_library.py --scenes builtin-cafe,builtin-park --max-minutes 120
 
 The app must be running (it owns the GPU queue). For every scene of the plan the script makes a throw-away builder
 project with the cast (Lan + Minh by default), lets the normal shot job draw the framing set (a single of each person,

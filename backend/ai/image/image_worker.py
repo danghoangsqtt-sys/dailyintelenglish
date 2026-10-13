@@ -1,6 +1,6 @@
 """Task 20.2 (Phase 20 spike) -- local SDXL image worker process.
 
-Runs INSIDE `venv-image/` (Python 3.14). Unlike Kokoro (21.1) and StyleTTS 2 (21.1b), the
+Runs INSIDE `.venv-image/` (Python 3.14). Unlike Kokoro (21.1) and StyleTTS 2 (21.1b), the
 image stack installs on this project's own interpreter, verified with a real install
 (task-20.2.md F3). It is still a separate venv and a subprocess:
 - torch is not in `requirements.txt`;
@@ -55,8 +55,8 @@ _PROTOCOL_STDOUT = sys.stdout
 sys.stdout = sys.stderr
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]  # backend/ai/image/image_worker.py -> project root
-MODEL_CACHE_DIR = PROJECT_ROOT / "models" / "image"
-# Weights land in models/image/ (gitignored by the existing `models/*` rule), never the
+MODEL_CACHE_DIR = PROJECT_ROOT / "backend" / "ai" / "models" / "image"
+# Weights land in backend/ai/models/image/ (gitignored by the `backend/ai/models/*` rule), never the
 # user's global HF cache. It must be set before huggingface_hub is imported.
 os.environ.setdefault("HF_HOME", str(MODEL_CACHE_DIR))
 

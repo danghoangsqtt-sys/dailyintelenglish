@@ -16,13 +16,13 @@ from PIL import Image
 
 from backend.core.config import settings
 from backend.core.exceptions import ConflictError
-from backend.core.paths import get_project_root
+from backend.core.paths import IMAGE_VENV_DIR, get_project_root
 from backend.ai.image.gpu_model_manager import get_gpu_manager
 from backend.ai.image.recipes import token_count
 
 ROOT = get_project_root()
-IMAGE_PYTHON = ROOT / "venv-image" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-IMAGE_WORKER = ROOT / "backend" / "ai" / "image" / "image_worker.py"
+IMAGE_PYTHON = IMAGE_VENV_DIR / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+IMAGE_WORKER = Path(__file__).resolve().parent / "image_worker.py"
 
 
 def generation_available() -> bool:
@@ -33,7 +33,7 @@ def require_generation() -> None:
     if not settings.AI_VISUALS_ENABLED:
         raise ConflictError("AI visuals generation is disabled")
     if settings.IMAGE_ENGINE == "worker" and not IMAGE_PYTHON.is_file():
-        raise ConflictError("Image environment is missing (venv-image)")
+        raise ConflictError("Image environment is missing (.venv-image)")
 
 
 class ImageSession(Protocol):

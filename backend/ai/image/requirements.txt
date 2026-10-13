@@ -1,4 +1,4 @@
-# Task 20.2 (Phase 20 spike): pinned deps for the ISOLATED venv-image/ environment only.
+# Task 20.2 (Phase 20 spike): pinned deps for the ISOLATED .venv-image/ environment only.
 #
 # Python 3.14 works here, unlike the removed Kokoro / StyleTTS 2 venvs (3.11). A real, non-dry-run
 # install into a fresh Python 3.14.7 venv succeeded on 2026-09-30, and the diffusers SDXL and
@@ -9,10 +9,10 @@
 #   - a worker that exits returns all of its VRAM, which the Task 20.1 lease relies on.
 #
 # Setup (owner's machine, Python 3.14):
-#   py -3.14 -m venv venv-image
-#   venv-image\Scripts\pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-#   venv-image\Scripts\pip install -r requirements-image.txt
-#   venv-image\Scripts\python -c "import torch; print(torch.version.cuda, torch.cuda.is_available())"
+#   py -3.14 -m venv .venv-image
+#   .venv-image\Scripts\pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+#   .venv-image\Scripts\pip install -r backend\ai\image\requirements.txt
+#   .venv-image\Scripts\python -c "import torch; print(torch.version.cuda, torch.cuda.is_available())"
 #   -> must print a CUDA version and True. Plain PyPI gives Windows a CPU-only torch (Task
 #      21.1 evidence). The worker's handshake refuses with `cpu_only_torch_build` rather than
 #      measure CPU as GPU.

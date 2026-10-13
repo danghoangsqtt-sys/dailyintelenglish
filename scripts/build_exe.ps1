@@ -5,13 +5,13 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
-& "$root\venv\Scripts\pip.exe" show pyinstaller *> $null
+& "$root\.venv\Scripts\pip.exe" show pyinstaller *> $null
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Installing pyinstaller..."
-    & "$root\venv\Scripts\pip.exe" install pyinstaller
+    & "$root\.venv\Scripts\pip.exe" install pyinstaller
 }
 
-& "$root\venv\Scripts\pyinstaller.exe" daily_intel_english_studio.spec --noconfirm
+& "$root\.venv\Scripts\pyinstaller.exe" daily_intel_english_studio.spec --noconfirm
 
 Write-Host ""
 Write-Host "Build complete: $root\dist\DailyIntelEnglishStudio\DailyIntelEnglishStudio.exe"

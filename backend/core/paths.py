@@ -34,3 +34,5 @@ AI_DIR = BACKEND_DIR / "ai"
 PROMPTS_DIR = AI_DIR / "prompts"
 MIGRATIONS_DIR = BACKEND_DIR / "db" / "migrations"
 RENDERER_DIR = PROJECT_ROOT / "renderer"
+MODELS_DIR = AI_DIR / "models"  # local model weights (gitignored)
+IMAGE_VENV_DIR = PROJECT_ROOT / ".venv-image"  # the image worker's own Python (torch, diffusers)

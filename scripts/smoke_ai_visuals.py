@@ -1,8 +1,8 @@
 r"""Isolated Phase 20 end-to-end smoke through the API and Remotion still renderer.
 
 Usage:
-    venv\Scripts\python scripts\smoke_ai_visuals.py --fake
-    venv\Scripts\python scripts\smoke_ai_visuals.py --output-dir data\tmp\gate-b14 --duo-refine on --seed 20261001
+    .venv\Scripts\python scripts\smoke_ai_visuals.py --fake
+    .venv\Scripts\python scripts\smoke_ai_visuals.py --output-dir data\tmp\gate-b14 --duo-refine on --seed 20261001
 
 With --output-dir the run keeps, besides the three Remotion stills, every shot's raw and final
 image, both characters' candidates/face/sheet, and `contact_shots.png` (raw | final per shot), so
