@@ -1540,11 +1540,11 @@ State: `.viepilot/phases/38-restructure/PHASE-STATE.md`. Plan `docs/structure/RE
 - [x] 38.4 `backend/ai/models/` (was `models/`)
 - [x] 38.5 Docs and real-app restart
 
-### Phase 39: Image model benchmark — RealVisXL vs Qwen-Image (D110–D116) - 39.1–39.3 done 2026-10-13; owner choice pending
+### Phase 39: Image model benchmark — RealVisXL vs Qwen-Image (D110–D118) - 39.1–39.4 built 2026-10-14; Gate B-26 pending
 
 State: `.viepilot/phases/39-image-model-benchmark/PHASE-STATE.md`.
 
 - [x] 39.1 Harness and prompts
 - [x] 39.2 Four tasks × engines
 - [x] 39.3 Report and owner blind scoring
-- [ ] 39.4 Apply the winners, Gate B-26
+- [x] 39.4 Apply the winners (D118) — Gate B-26 pending

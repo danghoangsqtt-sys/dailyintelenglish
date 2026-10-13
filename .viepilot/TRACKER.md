@@ -2,6 +2,8 @@
 
 ## Current Status
 
+**Now (2026-10-14):** Phase 38 ✅ (layout: `backend/` by domain, AI under `backend/ai/`, `renderer/`, `.venv`/`.venv-image`); Phase 39 built — Qwen-Image-2.1-Turbo draws illustrations, new plates and the Step 6 topic picture, Qwen-Image-Edit-2511 the character inserts, RealVisXL is the fallback (D117, D118; report `docs/operations/phase39-image-benchmark.md`). Full suite 1,697 passed; the real app runs `backend.main` on `.venv`. **Waiting for the owner:** Gate B-25 (Shorts/TikTok clips, Step 5) and Gate B-26 (new pictures: the composed thumbnail on "Choosing the Menu" now, illustrations on the next episode — the three existing episodes have none missing).
+
 **Now (2026-10-13, project close-out, `1.3.0`):** final report `docs/report/final-report.md`. Close-out audit: source clean (no dead modules/pages/scripts/prompts, all dependencies used, Ruff clean); BUG-025 fixed; request statuses reconciled; docs layout tidied, 19 `.gitkeep` + unused `prompts/tts/` + 74 MB Gate B-12 videos removed from the tree; missing `v1.2.0-beta` tag created. Owner D109: Gates B-14..B-21 closed as superseded by B-22..B-24. Open: Gate B-25 (real clips on the real app), ENH-015 deferred.
 
 **Earlier (2026-10-13, Phase 37):** 37.1–37.4 done — the whole episode in vertical (1080x1920) and AI-proposed, owner-approved Shorts/TikTok highlight clips with a hook banner, a 9:16 cover and ready-to-post texts (migration 024). Sandbox run on "The New Neighbor" ep. 1: real AI proposed 3 clips (44–58 s); one rendered in ~46 s. **Waiting for owner Gate B-25** (real clips on the real app). Phases 35 and 36 complete (Gate B-24 PASS).

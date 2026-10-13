@@ -3,8 +3,8 @@
   "version": "1.3.0",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "project_closed_1.3.0_gate_b25_pending",
-  "current_phase": "37",
+  "status": "phase_39_built_gates_b25_b26_pending",
+  "current_phase": "39",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
     "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
@@ -282,6 +282,12 @@
     },
     "37": {
       "status": "37.1-37.4 done 2026-10-13 (vertical episode, Shorts/TikTok clips, migration 024); Gate B-25 pending: restart the real app for migration 024, then owner reviews real clips"
+    },
+    "38": {
+      "status": "complete 2026-10-13 (D115)"
+    },
+    "39": {
+      "status": "39.1-39.4 built 2026-10-14 (D110-D118); Gate B-26 pending"
     }
   },
   "key_decisions": [
@@ -470,8 +476,9 @@
     "report": "docs/report/final-report.md",
     "version": "1.3.0",
     "open": [
-      "Gate B-25 (Phase 37) on the real app",
-      "ENH-015 deferred (Gemini first-pass length)"
+      "Gate B-25 (Phase 37 clips)",
+      "Gate B-26 (Phase 39 pictures)",
+      "ENH-015 deferred"
     ],
     "decisions": [
       "D109: Gates B-14..B-21 closed as superseded by B-22..B-24"
