@@ -663,9 +663,116 @@
       line.textContent = `Activity illustrations: ${coverage.matched} of ${coverage.items.length} inserts matched `
         + `(${coverage.character} character, ${coverage.generic} generic).${fallback}`;
       line.classList.toggle("is-warning", missing.length > 0);
+      renderMissingIllustrations(coverage);
     } catch {
       line.hidden = true;
+      byId("activity-missing").hidden = true;
     }
+  }
+
+  // Task 33.10 (D102): an insert without a library picture -- draw one on the GPU, or make it with an outside AI and drop it here.
+  function renderMissingIllustrations(coverage) {
+    const box = byId("activity-missing");
+    const list = byId("activity-missing-list");
+    const items = coverage.items.filter((item) => item.status === "missing");
+    box.hidden = items.length === 0;
+    list.replaceChildren();
+    const draw = byId("draw-illustrations-btn");
+    draw.disabled = state.visualBusy || !visualGenerationAllowed() || !coverage.to_draw;
+    draw.title = visualGenerationHint() || (coverage.to_draw ? "" : "Every insert has a picture waiting for approval.");
+    items.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = "card activity-missing-card";
+      card.dataset.beat = item.beat_id;
+      let picture;
+      if (item.pending) {
+        picture = document.createElement("img");
+        picture.src = `${item.pending.url}?t=${Date.now()}`;
+        picture.alt = `Picture waiting for approval: ${item.activity}`;
+      } else {
+        picture = document.createElement("div");
+        picture.className = "activity-empty";
+        picture.textContent = "No picture yet";
+      }
+      const body = document.createElement("div");
+      const title = document.createElement("h4");
+      title.textContent = `Insert ${item.position + 1}: ${item.action || item.place || "illustration"}`;
+      const closest = document.createElement("p");
+      closest.textContent = item.suggestions?.length
+        ? `Closest in the library: ${item.suggestions.join(", ")} (change the insert's action in the storyboard to use one).`
+        : "Nothing close in the library.";
+      const prompt = document.createElement("textarea");
+      prompt.readOnly = true;
+      prompt.value = item.prompt || "";
+      prompt.setAttribute("aria-label", `Outside-AI prompt for ${item.activity}`);
+      const actions = document.createElement("div");
+      actions.className = "activity-missing-actions";
+      const button = (label, onClick, primary = false) => {
+        const element = document.createElement("button");
+        element.type = "button";
+        element.className = `btn ${primary ? "btn-primary" : "btn-ghost"} btn-sm`;
+        element.textContent = label;
+        element.disabled = state.visualBusy;
+        element.addEventListener("click", onClick);
+        actions.append(element);
+        return element;
+      };
+      if (item.pending) {
+        button("Approve", () => reviewIllustration(item.pending.id, "approved"), true).dataset.action = "approve";
+        button("Redraw", () => redrawIllustration(item.pending.id)).dataset.action = "redraw";
+      }
+      button("Copy prompt", async () => {
+        try { await navigator.clipboard.writeText(prompt.value); } catch { prompt.select(); }
+      });
+      const file = document.createElement("input");
+      file.type = "file";
+      file.accept = "image/png,image/jpeg,image/webp";
+      file.id = `activity-file-${item.beat_id}`;
+      file.addEventListener("change", () => {
+        if (file.files[0]) uploadIllustration(item, file.files[0]);
+      });
+      const upload = document.createElement("label");
+      upload.className = "btn btn-ghost btn-sm";
+      upload.htmlFor = file.id;
+      upload.textContent = "Upload outside-AI picture";
+      actions.append(file, upload);
+      body.append(title, closest, prompt, actions);
+      card.append(picture, body);
+      list.append(card);
+    });
+  }
+
+  async function reviewIllustration(id, reviewState) {
+    try {
+      await Api.reviewLibraryActivity(id, reviewState);
+    } catch (error) {
+      visualWarning(error.message || "Could not review the picture.");
+    }
+    await renderActivityCoverage();
+  }
+
+  async function redrawIllustration(id) {
+    try {
+      await Api.reviewLibraryActivity(id, "rejected");
+    } catch (error) {
+      visualWarning(error.message || "Could not reject the picture.");
+      return;
+    }
+    await renderActivityCoverage();
+    if (visualGenerationAllowed()) await startVisualJob(() => Api.drawActivityIllustrations(state.projectId));
+  }
+
+  async function uploadIllustration(item, file) {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("activity", item.activity);
+    if (item.place) form.append("context_tags", item.place);
+    try {
+      await Api.uploadLibraryActivity(form);
+    } catch (error) {
+      visualWarning(error.message || "Could not upload the picture.");
+    }
+    await renderActivityCoverage();
   }
 
   function renderProjectVisuals() {
@@ -1189,6 +1296,8 @@
     byId("generate-btn").addEventListener("click", generateVideo);
     byId("generate-shots-btn").addEventListener("click", () => startVisualJob(
       () => Api.generateProjectShots(state.projectId)));
+    byId("draw-illustrations-btn").addEventListener("click", () => startVisualJob(
+      () => Api.drawActivityIllustrations(state.projectId)));
     window.addEventListener("beforeunload", (event) => {
       if (state.isGenerating) {
         event.preventDefault();

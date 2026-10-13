@@ -27,13 +27,16 @@ async def test_step5_explains_character_generic_and_missing_activity_coverage(
                 "generic": 1,
                 "missing": 1,
                 "sprite_fallback": 1,
+                "to_draw": 0,
                 "items": [
                     {"beat_id": "beat-left", "position": 0, "action": "turn left", "status": "character",
                      "fallback": None, "match": {"activity_id": "alex-left", "match_type": "character"}},
                     {"beat_id": "beat-straight", "position": 1, "action": "go straight", "status": "generic",
                      "fallback": None, "match": {"activity_id": "generic-straight", "match_type": "generic"}},
                     {"beat_id": "beat-cross", "position": 2, "action": "cross the street", "status": "missing",
-                     "fallback": "sprites", "match": None, "suggestions": ["walking", "go straight"]},
+                     "fallback": "sprites", "match": None, "suggestions": ["walking", "go straight"],
+                     "activity": "cross the street", "place": "", "prompt": "Create a semi-realistic illustration of one adult",
+                     "pending": {"id": "pending-cross", "url": "/static/img/logo.png"}},
                 ],
             },
             "error": None,
@@ -49,4 +52,10 @@ async def test_step5_explains_character_generic_and_missing_activity_coverage(
     assert "2 of 3 inserts matched (1 character, 1 generic)" in text
     assert 'No illustration for 1: "cross the street" (closest in the library: "walking", "go straight")' in text
     assert "is-warning" in (await coverage.get_attribute("class"))
+    card = page.locator('.activity-missing-card[data-beat="beat-cross"]')
+    await card.wait_for()
+    assert await card.locator('button[data-action="approve"]').is_visible()
+    assert await card.locator('button[data-action="redraw"]').is_visible()
+    assert "one adult" in await card.locator("textarea").input_value()
+    assert await page.locator("#draw-illustrations-btn").is_disabled()  # the only missing insert already has a picture
     await page.close()

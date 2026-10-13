@@ -636,3 +636,43 @@ async def shot_regenerate(job: dict, runner: ImageJobRunner) -> dict:
     except Exception as exc:
         await _mark_error(db, [row], str(exc))
         raise
+
+
+async def activity_illustrations(job: dict, runner: ImageJobRunner) -> dict:
+    """Task 33.10 (D102): one local-GPU picture per storyboard insert with no library picture and none pending; each is stored
+    as a pending generic Activity Library item (approved in Step 5, then reused by every later video)."""
+    from app.services.visuals import activity_illustrations as illustrations
+    from app.services.visuals import activity_library_service as activity_library
+
+    db = runner.get_db()
+    project_id = job["target_id"]
+    async with read_transaction():
+        report = await illustrations.coverage(db, project_id)
+    todo = [item for item in report["items"] if item["status"] == "missing" and item["pending"] is None]
+    created: list[str] = []
+    if not todo:
+        return {"created": created}
+    folder = settings.DATA_DIR / "visuals" / project_id / "activity_drafts"
+    await asyncio.to_thread(folder.mkdir, parents=True, exist_ok=True)
+    engine = get_image_engine()
+    async with engine.session("text2img", ip="none", consumer="visuals_activity_illustrations") as session:
+        for done, item in enumerate(todo, start=1):
+            await runner.boundary(job["id"], f"illustration {done}/{len(todo)}", int(100 * (done - 1) / len(todo)))
+            path = folder / f"{item['beat_id']}.png"
+            await session.request({
+                "command": "generate", "prompt": recipes.activity_illustration_prompt(item["action"], item["place"]),
+                "negative_prompt": recipes.ACTIVITY_NEGATIVE, "seed": random.randint(1, 2**31 - 1),
+                "width": SIZE[0], "height": SIZE[1], "steps": 30, "guidance_scale": 6.0, "output_path": str(path),
+            })
+            content = await asyncio.to_thread(path.read_bytes)
+            metadata = {"activity": item["activity"], "context_tags": [item["place"]] if item["place"] else []}
+            try:
+                async with write_transaction(db):
+                    row = await activity_library.upload_activity_bytes(db, path.name, content, metadata)
+            except ConflictError:  # the same picture again: nothing new to review
+                continue
+            finally:
+                await asyncio.to_thread(path.unlink, missing_ok=True)
+            created.append(row["id"])
+    await runner.boundary(job["id"], "illustrations ready for review", 99)
+    return {"created": created}

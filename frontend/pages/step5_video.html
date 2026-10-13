@@ -14,6 +14,19 @@
     .section { margin-bottom: 28px; }
     .section-title { margin: 0 0 14px; font-size: 18px; font-weight: 800; }
     .section-hint { margin: -8px 0 14px; color: var(--muted); font-size: 12.5px; }
+    .activity-missing { display: grid; gap: 10px; margin: 0 0 14px; }
+    .activity-missing[hidden] { display: none; }
+    .activity-missing-list { display: grid; gap: 10px; }
+    .activity-missing-card { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; padding: 12px; }
+    .activity-missing-card img, .activity-missing-card .activity-empty { width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
+      border-radius: 8px; background: var(--surface-2); }
+    .activity-missing-card .activity-empty { display: grid; place-items: center; color: var(--muted); font-size: 12px; text-align: center; padding: 8px; }
+    .activity-missing-card h4 { margin: 0 0 4px; }
+    .activity-missing-card p { margin: 0 0 6px; font-size: 12.5px; color: var(--muted); }
+    .activity-missing-card textarea { width: 100%; min-height: 64px; font-size: 12px; resize: vertical; }
+    .activity-missing-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+    .activity-missing-actions input[type="file"] { display: none; }
+    @media (max-width: 720px) { .activity-missing-card { grid-template-columns: 1fr; } }
     #activity-coverage.is-warning { padding: 8px 10px; border-radius: 8px; background: var(--warning-bg); color: var(--warning); }
     .avatar-details > summary { cursor: pointer; }
     .avatar-details:not([open]) > summary { margin-bottom: 0; }
@@ -179,6 +192,13 @@
               <div id="visual-warnings" class="visual-warning" role="status"></div>
               <p id="library-coverage" class="section-hint" role="status" hidden></p>
               <p id="activity-coverage" class="section-hint" role="status" hidden></p>
+              <div id="activity-missing" class="activity-missing" hidden>
+                <div class="generate-row">
+                  <button id="draw-illustrations-btn" class="btn btn-ghost" type="button">Draw missing illustrations</button>
+                  <span class="section-hint">Local GPU, one ordinary person doing the activity. Or make it with an outside AI below.</span>
+                </div>
+                <div id="activity-missing-list" class="activity-missing-list"></div>
+              </div>
               <div class="generate-row">
                 <button id="generate-shots-btn" class="btn btn-primary" type="button">Generate shots</button>
                 <button id="cancel-shots-btn" class="btn btn-ghost" type="button" hidden>Cancel</button>

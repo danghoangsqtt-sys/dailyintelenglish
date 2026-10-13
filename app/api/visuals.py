@@ -24,7 +24,7 @@ from app.models.visuals import (
 from app.services import project_service
 from app.services.visuals import jobs
 from app.services.visuals import activity_library_service as activity_library
-from app.services.visuals import activity_matcher
+from app.services.visuals import activity_illustrations
 from app.services.visuals import library_service as library
 from app.services.visuals import project_visuals_service as project_visuals
 from app.services.visuals import shot_library_service as shot_library
@@ -471,41 +471,23 @@ async def library_coverage(project_id: str, db: aiosqlite.Connection = Depends(g
 
 @project_router.get("/activity-coverage")
 async def activity_coverage(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
-    """Explain selected/missing reusable activity illustrations before a talking-sprites render."""
+    """Explain selected/missing reusable activity illustrations before a talking-sprites render (Task 33.10: with the
+    closest library activities, the pending picture and the outside-AI prompt for each missing one)."""
     async with read_transaction():
         await project_service.get_project(db, project_id)
-        beats = await storyboard_service.approved_beats(db, project_id) or []
-        cursor = await db.execute(
-            "SELECT sl.line_index, sl.text, sp.speaker_index FROM script_lines sl JOIN speakers sp ON sp.id = sl.speaker_id "
-            "WHERE sl.project_id = ? ORDER BY sl.line_index", (project_id,),
-        )
-        lines = [dict(row) for row in await cursor.fetchall()]
-        cast = {row["speaker_index"]: row["character_id"] for row in await project_visuals.cast_rows(db, project_id)}
-        candidates = await activity_library.approved_candidates(db)
-    items = []
-    size = max((line["line_index"] for line in lines), default=-1) + 1
-    line_speakers: list[int | None] = [None] * size
-    line_texts = [""] * size
-    for line in lines:
-        line_speakers[line["line_index"]], line_texts[line["line_index"]] = line["speaker_index"], line["text"]
-    for beat in beats:
-        if beat["kind"] != "insert":
-            continue
-        speaker = activity_matcher.beat_speaker_index(beat, line_speakers, line_texts) if size else None
-        character_id = cast.get(speaker) if speaker is not None else None
-        dialogue = " ".join(line["text"] for line in lines if beat["line_from"] <= line["line_index"] <= beat["line_to"])
-        found = activity_matcher.match_activity(candidates, character_id, beat.get("action") or "", dialogue)
-        items.append({"beat_id": beat["id"], "position": beat["position"], "action": beat.get("action") or "",
-                      "status": found["match_type"] if found else "missing",
-                      "fallback": None if found else "sprites",
-                      "suggestions": [] if found else activity_matcher.suggest(
-                          candidates, f"{beat.get('action') or ''} {beat.get('new_place') or ''} {dialogue}"),
-                      "match": {key: value for key, value in found.items() if key != "asset"} if found else None})
-    character = sum(item["status"] == "character" for item in items)
-    generic = sum(item["status"] == "generic" for item in items)
-    missing = sum(item["status"] == "missing" for item in items)
-    return ok({"items": items, "matched": character + generic, "character": character,
-               "generic": generic, "missing": missing, "sprite_fallback": missing})
+        result = await activity_illustrations.coverage(db, project_id)
+    return ok(result)
+
+
+@project_router.post("/activity-illustrations")
+async def draw_activity_illustrations(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """D102: draw (local GPU) a pending library picture for every insert that has neither a match nor a pending picture."""
+    async with read_transaction():
+        await project_service.get_project(db, project_id)
+        result = await activity_illustrations.coverage(db, project_id)
+    if not result["to_draw"]:
+        raise ValidationError("Every insert already has an illustration or a picture waiting for approval")
+    return await _enqueue(db, "activity_illustrations", project_id)
 
 
 @project_router.get("")

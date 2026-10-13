@@ -8,6 +8,14 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added / Fixed (Gate B-23 fixes, Task 33.10, 2026-10-13)
+- **More illustrations, named so the video can show them.** The storyboard AI now sees the Activity Library and copies an
+  insert's activity from it, about one insert every 2-3 lines.
+- **Step 5 says which inserts have no picture** and names the closest library activities.
+- **Missing illustrations can be drawn (D102).** "Draw missing illustrations" makes one local-GPU picture per insert
+  without one (an ordinary person doing the activity, no cast character); each insert also has an outside-AI prompt to copy
+  and an upload. New pictures are approved (or redrawn) in Step 5 and join the Activity Library for every later video.
+
 ### Removed / Changed (Phase 35 legacy cleanup, 2026-10-13)
 - **The AI writes as Daily Beyond English.** Script, outline, section and learning-pack prompts name the YouTube channel
   instead of the old app name (35.1).

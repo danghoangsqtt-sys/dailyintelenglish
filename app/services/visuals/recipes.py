@@ -214,6 +214,30 @@ def insert_prompt(subject: str) -> str:
     return _styled(subject, "wide view, detailed scene")
 
 
+# D102 (owner 2026-10-13): an activity illustration shows any ordinary person doing the thing, never a cast character.
+ACTIVITY_NEGATIVE = (
+    "blurry, bokeh, low resolution, cartoon, anime, 3d render, plastic skin, ugly, asymmetrical face, text, watermark, "
+    "logo, deformed, bad anatomy, extra fingers, deformed hands, crowd"
+)
+
+
+def activity_illustration_prompt(action: str, place: str = "") -> str:
+    """D102: the local GPU picture for an insert with no library picture -- one ordinary adult doing the action."""
+    def build(act: str, where: str) -> str:
+        return _styled("one ordinary adult person", act or "going about the day", *((f"in {where}",) if where else ()),
+                       "wide view, the action clearly visible")
+
+    return fit_budget(build, action, place)
+
+
+def activity_outside_prompt(action: str, place: str = "") -> str:
+    """D102: the prompt the owner pastes into an outside AI for the same picture (no attachment needed)."""
+    where = f" in {place}" if place else ""
+    return (f"Create a semi-realistic illustration, landscape 16:9 (1344 x 768), of one ordinary adult {action}{where}. "
+            "Show the action clearly in the middle of the picture, natural light, friendly everyday mood, a simple uncluttered "
+            "background. No text, no letters, no logo, no watermark, no famous person, no cartoon style.")
+
+
 def insert_person_prompt(character: Mapping, subject: str) -> str:
     """Task 29.2: an insert that shows a cast character doing what the speaker describes (checking a phone, eating
     oatmeal, stretching). The face reference carries identity; the locked outfit is named; no pose, no plate."""

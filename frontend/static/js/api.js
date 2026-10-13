@@ -179,6 +179,8 @@ const Api = (() => {
       request(`/api/projects/${projectId}/visuals/shots/${shotId}/to-library`, { method: "POST" }),
     getLibraryCoverage: (projectId) => request(`/api/projects/${projectId}/visuals/library-coverage`),
     getActivityCoverage: (projectId) => request(`/api/projects/${projectId}/visuals/activity-coverage`),
+    drawActivityIllustrations: (projectId) =>
+      request(`/api/projects/${projectId}/visuals/activity-illustrations`, { method: "POST" }),
     createScene: (scene) => request("/api/visuals/scenes", { method: "POST", body: JSON.stringify(scene) }),
     updateScene: (id, patch) => request(`/api/visuals/scenes/${id}`, {
       method: "PATCH", body: JSON.stringify(patch),
@@ -224,6 +226,7 @@ const Api = (() => {
       request(`/api/projects/${projectId}/youtube/generate`, { method: "POST" }),
     getYoutubePackage: (projectId) => request(`/api/projects/${projectId}/youtube`),
     youtubeExportUrl: (projectId) => `/api/projects/${projectId}/youtube/export`,
+    youtubeTranscriptUrl: (projectId) => `/api/projects/${projectId}/youtube/transcript.txt`,
     getVideoStatus: (projectId) => request(`/api/projects/${projectId}/video/status`),
     listVideoTemplates: () => request("/api/video/templates"),
     // Task 19.7: renderer defaults to "ffmpeg" -- every pre-Phase-19 caller that omits it
