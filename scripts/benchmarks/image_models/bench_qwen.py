@@ -38,6 +38,8 @@ ENGINES = {
                      "gguf": ("unsloth/Qwen-Image-2.1-Turbo-GGUF", "qwen-image-2.1-turbo-Q8_0.gguf"),
                      "lora": None, "steps": 8, "tasks": ("activity", "plate", "thumbnail")},
 }
+OFFLOAD = {"offload_type": "block_level", "num_blocks_per_group": 1, "use_stream": True}  # --offload leaf switches
+
 LIGHTNING_SCHEDULER = {  # ModelTC/Qwen-Image-Lightning generate_with_diffusers.py (shift 3 used in distillation)
     "base_image_seq_len": 256, "base_shift": math.log(3), "invert_sigmas": False, "max_image_seq_len": 8192,
     "max_shift": math.log(3), "num_train_timesteps": 1000, "shift": 1.0, "shift_terminal": None,
@@ -71,9 +73,9 @@ def characters() -> dict[str, dict]:
 def pipeline_class(name: str, spec: dict):
     import diffusers
 
-    if name == "qwen-edit-2511":
+    if name.startswith("qwen-edit-2511"):
         return diffusers.QwenImageEditPlusPipeline
-    if name == "qwen21-turbo":
+    if name.startswith("qwen21-turbo"):
         for candidate in ("QwenImage21Pipeline", "QwenImage2Pipeline"):
             if hasattr(diffusers, candidate):
                 return getattr(diffusers, candidate)
@@ -120,7 +122,7 @@ def render_all(name: str, spec: dict, jobs: list[dict], embeds: dict, seeds: lis
     from diffusers import FlowMatchEulerDiscreteScheduler, GGUFQuantizationConfig
 
     started = time.monotonic()
-    model_class = diffusers.QwenImage21Transformer2DModel if name == "qwen21-turbo" else diffusers.QwenImageTransformer2DModel
+    model_class = diffusers.QwenImage21Transformer2DModel if name.startswith("qwen21-turbo") else diffusers.QwenImageTransformer2DModel
     transformer = model_class.from_single_file(
         str(hub_file(*spec["gguf"])), quantization_config=GGUFQuantizationConfig(compute_dtype=torch.bfloat16),
         torch_dtype=torch.bfloat16, config=str(snapshot(spec["repo"])) if (snapshot(spec["repo"]) / "transformer").is_dir()
@@ -139,7 +141,7 @@ def render_all(name: str, spec: dict, jobs: list[dict], embeds: dict, seeds: lis
         placement = "gpu"
     else:  # stream the transformer blocks from RAM; VAE stays on the GPU
         pipe.transformer.enable_group_offload(onload_device=torch.device("cuda"), offload_device=torch.device("cpu"),
-                                              offload_type="block_level", num_blocks_per_group=2, use_stream=True,
+                                              **OFFLOAD,
                                               low_cpu_mem_usage=True)
         pipe.vae.to("cuda")
         placement = "group_offload"
@@ -194,7 +196,7 @@ def edit_all(name: str, spec: dict, jobs: list[dict], seeds: list[int], size: li
         scheduler=FlowMatchEulerDiscreteScheduler.from_config(LIGHTNING_SCHEDULER), torch_dtype=torch.bfloat16)
     pipe.load_lora_weights(str(hub_file(*spec["lora"])))
     pipe.transformer.enable_group_offload(onload_device=torch.device("cuda"), offload_device=torch.device("cpu"),
-                                          offload_type="block_level", num_blocks_per_group=2, use_stream=True,
+                                          **OFFLOAD,
                                               low_cpu_mem_usage=True)
     pipe.vae.to("cuda")
     pipe.vae.enable_tiling()
@@ -223,6 +225,8 @@ def main() -> None:
     parser.add_argument("--engine", choices=sorted(ENGINES), required=True)
     parser.add_argument("--only", default="")
     parser.add_argument("--tasks", default="")
+    parser.add_argument("--offload", choices=("block", "leaf"), default="block")
+    parser.add_argument("--tag", default="", help="suffix for the output folder, e.g. -leaf")
     args = parser.parse_args()
     spec = ENGINES[args.engine]
     data = bench_set()
@@ -241,13 +245,17 @@ def main() -> None:
         if character:
             job["image"] = Image.open(character["face_path"]).convert("RGB")
         jobs.append(job)
-    record(args.engine, {"event": "start", "items": [job["id"] for job in jobs]})
+    if args.offload == "leaf":
+        OFFLOAD.clear()
+        OFFLOAD.update(offload_type="leaf_level", use_stream=True)
+    label = args.engine + args.tag
+    record(label, {"event": "start", "items": [job["id"] for job in jobs], "offload": args.offload})
     if args.engine == "qwen-edit-2511":
-        edit_all(args.engine, spec, jobs, data["seeds"], data["size"])
+        edit_all(label, spec, jobs, data["seeds"], data["size"])
     else:
-        embeds = encode_all(args.engine, spec, jobs, cast)
-        render_all(args.engine, spec, jobs, embeds, data["seeds"], data["size"])
-    (OUT / args.engine / "prompts.json").write_text(json.dumps({job["id"]: job["prompt"] for job in jobs}, indent=1),
+        embeds = encode_all(label, spec, jobs, cast)
+        render_all(label, spec, jobs, embeds, data["seeds"], data["size"])
+    (OUT / label / "prompts.json").write_text(json.dumps({job["id"]: job["prompt"] for job in jobs}, indent=1),
                                                      encoding="utf-8")
 
 
