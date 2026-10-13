@@ -139,7 +139,8 @@ def render_all(name: str, spec: dict, jobs: list[dict], embeds: dict, seeds: lis
         placement = "gpu"
     else:  # stream the transformer blocks from RAM; VAE stays on the GPU
         pipe.transformer.enable_group_offload(onload_device=torch.device("cuda"), offload_device=torch.device("cpu"),
-                                              offload_type="block_level", num_blocks_per_group=2, use_stream=True)
+                                              offload_type="block_level", num_blocks_per_group=2, use_stream=True,
+                                              low_cpu_mem_usage=True)
         pipe.vae.to("cuda")
         placement = "group_offload"
     pipe.vae.enable_tiling()
@@ -193,7 +194,8 @@ def edit_all(name: str, spec: dict, jobs: list[dict], seeds: list[int], size: li
         scheduler=FlowMatchEulerDiscreteScheduler.from_config(LIGHTNING_SCHEDULER), torch_dtype=torch.bfloat16)
     pipe.load_lora_weights(str(hub_file(*spec["lora"])))
     pipe.transformer.enable_group_offload(onload_device=torch.device("cuda"), offload_device=torch.device("cpu"),
-                                          offload_type="block_level", num_blocks_per_group=2, use_stream=True)
+                                          offload_type="block_level", num_blocks_per_group=2, use_stream=True,
+                                              low_cpu_mem_usage=True)
     pipe.vae.to("cuda")
     pipe.vae.enable_tiling()
     record(name, {"event": "pipeline_ready", "placement": "te_4bit_gpu+group_offload",
