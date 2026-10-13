@@ -109,11 +109,30 @@ def encode_all(name: str, spec: dict, jobs: list[dict], cast: dict) -> dict[str,
                 prompt_embeds, mask = pipe.encode_prompt(**kwargs)[:2]
             seconds = time.monotonic() - tick
         embeds[job["id"]] = (prompt_embeds.cpu(), None if mask is None else mask.cpu())
-        record(name, {"event": "encode", "id": job["id"], "seconds": round(seconds, 2), "vram_peak_mib": vram.peak})
+        record(name, {"event": "encode", "id": job["id"], "seconds": round(seconds, 2), "vram_peak_mib": vram.peak,
+                      "shape": list(prompt_embeds.shape), "mask": None if mask is None else list(mask.shape)})
     del pipe, text_encoder
     gc.collect()
     torch.cuda.empty_cache()
     return embeds
+
+
+def dequantize_non_linear(model) -> int:
+    """diffusers 0.41 keeps GGUF BF16 tensors as raw bytes; GGUFLinear dequantizes its own weight, but norms and other
+    non-Linear modules read the bytes (Qwen-Image-2.1's text_norm: 8192 bytes for 4096 bf16 values). Dequantize those."""
+    import torch
+    from diffusers.quantizers.gguf.utils import GGUFLinear, GGUFParameter, dequantize_gguf_tensor
+
+    fixed = 0
+    for module in model.modules():
+        if isinstance(module, GGUFLinear):
+            continue
+        for key, param in list(module.named_parameters(recurse=False)):
+            if isinstance(param, GGUFParameter):
+                setattr(module, key, torch.nn.Parameter(dequantize_gguf_tensor(param).to(torch.bfloat16),
+                                                        requires_grad=False))
+                fixed += 1
+    return fixed
 
 
 def render_all(name: str, spec: dict, jobs: list[dict], embeds: dict, seeds: list[int], size: list[int]) -> None:
@@ -127,6 +146,7 @@ def render_all(name: str, spec: dict, jobs: list[dict], embeds: dict, seeds: lis
         str(hub_file(*spec["gguf"])), quantization_config=GGUFQuantizationConfig(compute_dtype=torch.bfloat16),
         torch_dtype=torch.bfloat16, config=str(snapshot(spec["repo"])) if (snapshot(spec["repo"]) / "transformer").is_dir()
         else spec["repo"], subfolder="transformer")
+    fixed = dequantize_non_linear(transformer) if name.startswith("qwen21-turbo") else 0
     extra = {}
     if spec["lora"]:
         extra["scheduler"] = FlowMatchEulerDiscreteScheduler.from_config(LIGHTNING_SCHEDULER)
@@ -147,7 +167,7 @@ def render_all(name: str, spec: dict, jobs: list[dict], embeds: dict, seeds: lis
         placement = "group_offload"
     pipe.vae.enable_tiling()
     record(name, {"event": "transformer_ready", "placement": placement, "load_s": round(time.monotonic() - started, 1),
-                  "gguf_gb": round(weights, 1)})
+                  "gguf_gb": round(weights, 1), "dequantized_non_linear": fixed})
     for job in jobs:
         prompt_embeds, mask = embeds[job["id"]]
         for seed in seeds:
