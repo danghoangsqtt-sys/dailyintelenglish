@@ -10,7 +10,7 @@
 | 35.1 | Old name in AI prompts and user-facing text | ENH-030 | done 2026-10-13 |
 | 35.2 | Remove obsolete scripts, their tests, old prompt/hand-off docs, `models/activity-vision` | ENH-030 | done 2026-10-13 |
 | 35.3 | Remove the "Generate locally" tab and the sprite inbox import; guard legacy routes | ENH-029 | done 2026-10-13 |
-| 35.4 | Step 5: remove the avatar section; cast through the shared selector | ENH-029 | planned |
+| 35.4 | Step 5: remove the avatar section; cast through the shared selector | ENH-029 | in_progress |
 | 35.5 | Remove the Standard ffmpeg renderer, its templates and the silent fallback | ENH-031 | planned |
 | 35.6 | Full suite, docs (README/ARCHITECTURE), close requests | all | planned |
 
@@ -24,5 +24,9 @@
   inbox import (UI, `/api/visuals/library/sprites/import`, `sprite_service.import_inbox`); legacy routes refuse to edit a
   profile's appearance or delete a seed. GPU library code used by story pictures/scene plates stays (group E kept).
 - 35.4: Step 5 avatar section, its API calls and avatar routes removed; the cast uses `CharacterSelector`.
+  Detail (2026-10-13): `app/services/avatar_service.py`, its constants and tests go; `/api/projects/{id}/speakers/{sid}/avatar`
+  POST/GET/DELETE go; `project_service` no longer returns `avatar_image_path` (the column stays: migrations are history);
+  the Remotion renderer's non-sprite modes use only the cast character's face (no uploaded avatar). Step 5: each cast card
+  shows the character's face and name with "Change character" (opens `CharacterSelector`, saves the cast) and "Remove".
 - 35.5: Standard renderer removed (`_render_video_sync`, `_render_vertical_sync`, templates, toggle, fallback); a Remotion
   failure fails the job with its reason.
