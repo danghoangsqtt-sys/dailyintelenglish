@@ -1,0 +1,23 @@
+{
+  "note": "Phase 39 (D110-D116): the same subjects for every engine. A = activity illustrations (a few ordinary people, D110), B = scene plates (no people), C = thumbnail / topic pictures (short text on a sign), D = character inserts (Alex/Lina from their library face reference). Subjects come from real storyboard inserts and the built-in scene library.",
+  "size": [1344, 768],
+  "seeds": [20261013, 777],
+  "items": [
+    {"id": "A1", "task": "activity", "people": "three ordinary adult friends", "action": "brainstorming ideas around a table with notebooks and coffee", "place": "a bright meeting room"},
+    {"id": "A2", "task": "activity", "people": "two ordinary adults", "action": "choosing fresh vegetables at a market stall", "place": "an outdoor market"},
+    {"id": "A3", "task": "activity", "people": "two ordinary adult friends", "action": "chopping vegetables and preparing ingredients together", "place": "a bright home kitchen"},
+    {"id": "A4", "task": "activity", "people": "one ordinary adult", "action": "packing clothes into an open suitcase on the bed", "place": "a bedroom at home"},
+    {"id": "A5", "task": "activity", "people": "one ordinary adult", "action": "stretching arms up near a big window in the morning", "place": "a living room"},
+    {"id": "A6", "task": "activity", "people": "two ordinary adults", "action": "eating bowls of oatmeal with spoons at breakfast", "place": "a cozy kitchen table"},
+    {"id": "B1", "task": "plate", "place": "a cozy street cafe", "time_of_day": "day"},
+    {"id": "B2", "task": "plate", "place": "a hotel reception desk", "time_of_day": "day"},
+    {"id": "B3", "task": "plate", "place": "a misty mountain forest", "time_of_day": "morning"},
+    {"id": "B4", "task": "plate", "place": "a small family restaurant", "time_of_day": "night"},
+    {"id": "C1", "task": "thumbnail", "subject": "a wooden table with fresh vegetables and a small chalkboard sign", "text": "TODAY'S MENU"},
+    {"id": "C2", "task": "thumbnail", "subject": "a cozy wooden cabin in the mountains at sunset with a wooden signpost", "text": "WEEKEND TRIP"},
+    {"id": "C3", "task": "thumbnail", "subject": "a smartphone on a bedside table next to a cup of coffee, the screen shows a notification", "text": "GOOD MORNING"},
+    {"id": "D1", "task": "character", "character": "Alex", "action": "checking his phone at a city bus stop"},
+    {"id": "D2", "task": "character", "character": "Lina", "action": "cooking vegetables in a bright kitchen"},
+    {"id": "D3", "task": "character", "character": "Lina", "action": "reading a book in a cozy bookshop"}
+  ]
+}
