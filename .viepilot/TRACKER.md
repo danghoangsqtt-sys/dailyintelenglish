@@ -2179,6 +2179,7 @@ Suite 964 → 1175. **Version 1.1.0-beta.** Follow-ups: ENH-014 (outro heuristic
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-10-13 | **D106–D108 (owner):** the dashboard becomes the channel cockpit: stats, next publish and today's actions; a 5-stage roadmap computed from real data with next-step links; a production board by step; the project grid below | Phase 36 Task 36.7 |
 | 2026-10-13 | **D103–D105 (owner, after Gate B-23 PASS):** a channel needs many playlists and topics, each with its own series: topics (playlists) → series → episodes; the AI proposes the whole channel map; an interleaved publishing calendar across topics | Phase 36 Task 36.5 |
 | 2026-10-13 | **D102 (owner, after Gate B-23 "video rất tốt"):** an insert without a library picture can be drawn: local GPU (one ordinary person doing the activity, no cast character) plus an outside-AI prompt slot; new pictures are approved in Step 5 and join the Activity Library as generic; drawn on a Step 5 button, not at render | Phase 33 Task 33.10 |
 | 2026-10-13 | **D98–D101 (owner):** publish both horizontal YouTube videos and vertical ones: 1–3 AI-proposed, owner-approved highlight clips (30–90 s) per episode for YouTube Shorts and TikTok plus an optional full vertical episode; a new Remotion 1080x1920 layout (illustration top, big karaoke captions middle, both characters below, man left / woman right); separate Shorts and TikTok packages with a vertical cover. The old ffmpeg blur-pad 9:16 export still goes in Phase 35 | Phase 37 |
