@@ -363,7 +363,9 @@ async def approve_pending_batch(db: aiosqlite.Connection, ids: list[str]) -> int
 async def delete_activity(db: aiosqlite.Connection, activity_id: str) -> Path:
     """Remove one library record and return its validated file path for post-commit cleanup."""
     row = await _row(db, activity_id)
-    root, candidate = activities_dir().resolve(), Path(row["path"]).resolve()
+    from app.services.visuals.library_service import data_path  # older rows hold `data\...` relative paths
+
+    root, candidate = activities_dir().resolve(), data_path(row["path"]).resolve()
     if not candidate.is_relative_to(root):
         raise ValidationError("Activity image path is outside the library")
     await db.execute("DELETE FROM activity_library WHERE id = ?", (activity_id,))
@@ -372,7 +374,9 @@ async def delete_activity(db: aiosqlite.Connection, activity_id: str) -> Path:
 
 async def content_path(db: aiosqlite.Connection, activity_id: str) -> Path:
     row = await _row(db, activity_id)
-    root, candidate = activities_dir().resolve(), Path(row["path"]).resolve()
+    from app.services.visuals.library_service import data_path  # older rows hold `data\...` relative paths
+
+    root, candidate = activities_dir().resolve(), data_path(row["path"]).resolve()
     if not candidate.is_relative_to(root) or not candidate.is_file():
         raise NotFoundError("Activity image file not found")
     return candidate

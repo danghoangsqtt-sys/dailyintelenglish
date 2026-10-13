@@ -87,3 +87,20 @@ def test_a_series_without_characters_and_pending_pictures_are_todays_actions(cli
     labels = [action["label"] for action in data(client.get("/api/channel/dashboard"))["actions"]]
     assert "1 illustration waiting for your approval" in labels
     assert any(label.startswith("Choose the characters of 2 series") for label in labels)
+
+
+def test_a_relative_data_path_is_read_under_the_current_data_folder(client, tmp_path):  # noqa: F811
+    """Demo-recording finding: a copied data folder (or the packaged app) keeps `data\library\...` rows from the dev app."""
+    from PIL import Image
+
+    from app.core.exceptions import NotFoundError
+    from app.services.visuals import library_service
+
+    plate = settings.DATA_DIR / "library" / "scenes" / "s1" / "preview.png"
+    plate.parent.mkdir(parents=True)
+    Image.new("RGB", (8, 8)).save(plate)
+    assert library_service.resolve_library_content("data/library/scenes/s1/preview.png", "library/scenes") == plate.resolve()
+    import pytest
+
+    with pytest.raises(NotFoundError):
+        library_service.resolve_library_content("data/../../etc/passwd", "library/scenes")

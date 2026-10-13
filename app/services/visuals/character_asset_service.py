@@ -152,10 +152,9 @@ def slot_prompt(profile: dict, slot: dict) -> str:
 def stored_path(path: str) -> Path:
     r"""An asset path as stored: older rows hold `data\library\...` relative to the app folder; read them under the current
     data folder (the packaged app and the tests do not keep their data in ./data)."""
-    candidate = Path(path)
-    if not candidate.is_absolute() and candidate.parts and candidate.parts[0] == "data":
-        return settings.DATA_DIR.joinpath(*candidate.parts[1:])
-    return candidate
+    from app.services.visuals.library_service import data_path
+
+    return data_path(path)
 
 
 async def register_legacy_sprites(db: aiosqlite.Connection) -> int:

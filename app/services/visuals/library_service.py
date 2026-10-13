@@ -328,9 +328,19 @@ async def delete_scene(db: aiosqlite.Connection, scene_id: str) -> None:
     await db.execute("DELETE FROM scenes WHERE id = ?", (scene_id,))
 
 
+def data_path(path: str) -> Path:
+    r"""A stored file path: older rows hold `data\library\...` relative to the app folder; read them under the current data
+    folder, so a packaged app or a copied data folder still finds its pictures (absolute paths are kept as they are)."""
+    candidate = Path(path)
+    if not candidate.is_absolute() and candidate.parts and candidate.parts[0] == "data":
+        return settings.DATA_DIR.joinpath(*candidate.parts[1:])
+    return candidate
+
+
 def resolve_library_content(path: str, subtree: str = "library") -> Path:
     root = (settings.DATA_DIR / subtree).resolve()
-    candidate = Path(path).resolve()
+    candidate = data_path(path)
+    candidate = candidate.resolve()
     if not candidate.is_relative_to(root) or not candidate.is_file():
         raise NotFoundError("Image not found")
     return candidate
