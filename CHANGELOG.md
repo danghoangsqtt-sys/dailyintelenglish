@@ -15,6 +15,15 @@ Versioning: [SemVer](https://semver.org/)
   `video-renderer/` is `renderer/`; the Python environments are `.venv` and `.venv-image`. Run with
   `uvicorn backend.main:app`. Map: `docs/structure/STRUCTURE.md`; plan: `docs/structure/RESTRUCTURE-PLAN.md`.
 
+### Added (Phase 39 local image models, 2026-10-14, D118)
+- **Qwen image models on the studio's GPU.** After a benchmark on four tasks (`docs/operations/phase39-image-benchmark.md`),
+  Qwen-Image-2.1-Turbo draws the activity illustrations (varied ordinary people, the right count and action, ~30 s each),
+  new scene plates and a new **thumbnail topic picture** (Step 6 "Draw a topic picture with local AI", used as the composed
+  thumbnail's background); Qwen-Image-Edit-2511 (4-step Lightning) draws inserts that show a cast character from the face
+  reference — the character now does the action in the place (~56 s each). RealVisXL stays the automatic fallback and
+  draws everything else. Settings `DIE_IMAGE_ILLUSTRATION_ENGINE` / `DIE_IMAGE_CHARACTER_ENGINE`.
+- `.venv-image` moves to diffusers 0.41 with gguf, bitsandbytes and peft (SDXL unchanged).
+
 ### Added (Phase 39 benchmark harness, 2026-10-13)
 - `scripts/benchmarks/image_models/`: RealVisXL (through the app's own worker) vs Qwen-Image-2512, Qwen-Image-Edit-2511
   and Qwen-Image-2.1-Turbo (evaluation only) on four tasks — activity illustrations, scene plates, thumbnail pictures and

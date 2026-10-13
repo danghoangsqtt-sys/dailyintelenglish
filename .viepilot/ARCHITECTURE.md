@@ -389,7 +389,7 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
 | TTS engine | Edge TTS only (D56) | Kokoro (D36) and StyleTTS 2 (D38) failed the owner's listening tests; OmniVoice is voice cloning, not voice design |
 | Audio processing | pydub + ffmpeg + pyloudnorm | Mature; real ITU-R BS.1770 loudness |
 | Video generation | Remotion (the only renderer since Phase 35) | Animated learning video (karaoke, cards, sprites); one renderer, no overlapping fallback (D89) |
-| Images | diffusers + RealVisXL V5.0 in `.venv-image` (Phase 28) | Local GPU, isolated heavy dependencies; libraries reuse approved pictures to save GPU time |
+| Images | diffusers 0.41 in `.venv-image`: Qwen-Image-2.1-Turbo (illustrations, plates, topic pictures) and Qwen-Image-Edit-2511 (character inserts), Phase 39; RealVisXL V5.0 (sheets, duo shots, fallback), Phase 28 | Local GPU, isolated heavy dependencies; the benchmark (`docs/operations/phase39-image-benchmark.md`) chose per task; libraries reuse approved pictures to save GPU time |
 | Lips-sync | Not implemented; talking sprites (Phase 32) instead | No GPU time per episode, owner-made sprite sets |
 | Thumbnail | Pillow composition of the cast sprites + episode pictures | Consistent branding, no API cost, user-editable |
 | Database | SQLite (aiosqlite) | Zero-config, single-user, sufficient performance |

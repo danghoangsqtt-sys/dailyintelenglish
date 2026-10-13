@@ -40,6 +40,7 @@ Layout of Phase 38 (D115, `docs/structure/RESTRUCTURE-PLAN.md`). Generated from 
 | `image_worker.py` | Task 20.2 (Phase 20 spike) -- local SDXL image worker process. |
 | `jobs.py` | Persistent FIFO image jobs. Write methods run inside write_transaction. |
 | `pipelines.py` | Background image jobs for the global character and scene library. |
+| `qwen_runner.py` | Phase 39 (D118): Qwen image models inside the image worker (runs in `.venv-image`; the app never imports it). |
 | `recipes.py` | The fixed Phase 20 image prompts and conservative CLIP token estimator. |
 | `runner.py` | One-at-a-time image job loop with durable restart and cancellation semantics. |
 | `shot_checks.py` | Task 28.5: the extra-person rule of a shot (pure, no GPU). |

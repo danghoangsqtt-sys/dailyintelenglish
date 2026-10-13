@@ -253,7 +253,7 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
 - **TTS**: Edge TTS (sole engine — OmniVoice GPU cloning considered, dropped 2026-09-13; see [docs/user/tts-setup.md](docs/user/tts-setup.md))
 - **Audio**: pydub + ffmpeg (real ITU-R BS.1770 loudness normalization via `pyloudnorm`)
 - **Video**: Remotion 4 + React 19 + TypeScript in the separate [`renderer/`](renderer/) Node workspace, run locally as a subprocess from FastAPI — the only renderer since Phase 35 (the Standard ffmpeg renderer was removed; the vertical 1080x1920 layout and highlight clips are Remotion too, Phase 37). Node.js, `npm install` in `renderer/` and Chrome Headless Shell are required
-- **Images**: local GPU image generation (diffusers, RealVisXL V5.0) in its own `.venv-image` environment and worker process (`backend/ai/image/requirements.txt`, `backend/ai/image/image_worker.py`); optional — every library also accepts the owner's own pictures
+- **Images**: local GPU image generation in its own `.venv-image` environment — Qwen-Image-2.1-Turbo (illustrations, plates, topic pictures) and Qwen-Image-Edit-2511 (character inserts) since Phase 39, RealVisXL V5.0 (character sheets, duo shots, fallback); see [the benchmark](docs/operations/phase39-image-benchmark.md) — and worker process (`backend/ai/image/requirements.txt`, `backend/ai/image/image_worker.py`); optional — every library also accepts the owner's own pictures
 - **Thumbnail**: Pillow composition of the cast's talking sprites over the episode's pictures (Montserrat headline, CEFR badge, logo) + AI headline suggestions
 - **Database**: SQLite (aiosqlite async transactions)
 
