@@ -22,6 +22,8 @@ const defaultProps: EpisodeInputProps = {
   captionStyle: "outline",
   visuals: { shots: {}, lineShots: [] },
   visualMode: "illustrated",
+  layout: "horizontal",
+  audioOffsetSec: 0,
 };
 
 export const RemotionRoot: React.FC = () => {

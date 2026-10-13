@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 37: Vertical video for YouTube Shorts and TikTok
 
-- **Status:** in progress 2026-10-13 (owner /vp-auto: finish the whole project) (`docs/brainstorm/session-2026-10-13.md`, D98–D101). Starts after Phase 36 (reuses its
+- **Status:** in progress 2026-10-13 (owner /vp-auto: finish the whole project). Paused at the usage limit: 37.1 renderer side done (vertical layout + audioOffsetSec, tsc clean, 69 Vitest tests pass); Python wiring (render_via_remotion layout/clip) next. (`docs/brainstorm/session-2026-10-13.md`, D98–D101). Starts after Phase 36 (reuses its
   learning pack, hashtags and cover composition).
 
 | Task | Description | Main paths | Status |

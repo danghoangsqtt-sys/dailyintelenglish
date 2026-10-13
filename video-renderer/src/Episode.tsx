@@ -10,8 +10,9 @@ import { visualBackgroundForFrame, vocabCardPosition } from "./visuals";
 import { PodcastLayerView } from "./Podcast";
 import { SpriteStage } from "./Sprites";
 import { podcastLayer, type VisualMode } from "./podcastLayout";
+import { VERTICAL_PICTURE } from "./Sprites";
 import type {
-  Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker, EpisodeSprites, EpisodeVisuals,
+  Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker, EpisodeSprites, EpisodeVisuals, Layout,
 } from "./types";
 
 /** Average pixel color of frontend/static/video_backgrounds/midnight.png (measured 2026-09-28
@@ -125,16 +126,20 @@ function CaptionBand({
   line,
   currentTimeSec,
   captionStyle,
+  layout = "horizontal",
 }: {
   line: EpisodeLine;
   currentTimeSec: number;
   captionStyle: CaptionStyle;
+  layout?: Layout;
 }) {
   const tokens = useMemo(() => buildKaraokeTokens(line), [line]);
   // Task 20.2d: the selected treatment only overrides textShadow (and optionally wraps the
   // span in a box) -- font/size/color/alignment stay the D19.3-b base style.
   const spec = captionStyleSpec(captionStyle);
-  const textStyle = { ...CAPTION_TEXT_STYLE, ...spec.text, ...(spec.box ?? {}) };
+  // Phase 37 (D100): big captions for a phone screen.
+  const size = layout === "vertical" ? { fontSize: 54, lineHeight: 1.18 } : {};
+  const textStyle = { ...CAPTION_TEXT_STYLE, ...spec.text, ...(spec.box ?? {}), ...size };
 
   if (tokens.length === 0) {
     // D19.3-c fallback: the plain line-level span (only the 20.2d style layer is added).
@@ -181,14 +186,17 @@ function vocabCardOpacity(currentTimeSec: number, slotStartSec: number, slotEndS
  * opposite the speaker chips (top-left, 19.4) and the caption band (bottom, 19.1/19.3), so it
  * can never collide with either even when speaker chips wrap to a second row at 5-6 speakers.
  */
-function VocabCard({ item, opacity, position }: { item: LearningItem; opacity: number; position: "top-right" | "top-center" }) {
+function VocabCard({ item, opacity, position, layout = "horizontal" }: {
+  item: LearningItem; opacity: number; position: "top-right" | "top-center"; layout?: Layout;
+}) {
   return (
     <div
       style={{
         position: "absolute",
-        top: "5%",
+        top: layout === "vertical" ? "7%" : "5%",
         ...(position === "top-center" ? { left: "50%", transform: "translateX(-50%)" } : { right: "5%" }),
-        maxWidth: "32%",
+        maxWidth: layout === "vertical" ? "86%" : "32%",
+        zoom: layout === "vertical" ? 1.6 : 1,
         opacity,
         backgroundColor: "rgba(14, 15, 21, 0.85)",
         borderRadius: 12,
@@ -300,6 +308,8 @@ export function AudioWindowContent({
   stillUrl,
   sprites,
   playAudio = true,
+  layout = "horizontal",
+  audioOffsetSec = 0,
 }: {
   lines: EpisodeLine[];
   speakers: EpisodeSpeaker[];
@@ -317,6 +327,9 @@ export function AudioWindowContent({
   sprites?: EpisodeSprites;
   /** Task 22.4: false when the episode's full-video soundtrack already carries the voice. */
   playAudio?: boolean;
+  /** Phase 37: vertical layout, and where a clip's window starts in the mixed audio. */
+  layout?: Layout;
+  audioOffsetSec?: number;
 }) {
   const frame = useCurrentFrame();
   const currentTimeSec = frame / fps;
@@ -336,27 +349,30 @@ export function AudioWindowContent({
     <>
       {layer === "sprites" && sprites ? (
         <SpriteStage sprites={sprites} lines={lines} fps={fps} frame={frame} progress={speechProgress}
-          totalFrames={Math.round(audioDurationSec * fps)} />
+          totalFrames={Math.round(audioDurationSec * fps)} layout={layout} />
       ) : (
         <PodcastLayerView layer={layer === "sprites" ? "black" : layer} stillUrl={stillUrl} progress={speechProgress} />
       )}
       {background.previous ? (
         <Img src={staticFile(background.previous)} style={{ position: "absolute", width: "100%", height: "100%",
-          objectFit: "cover", opacity: background.current ? 1 : 1 - background.opacity }} />
+          objectFit: "cover", ...(layout === "vertical" ? VERTICAL_PICTURE : {}),
+          opacity: background.current ? 1 : 1 - background.opacity }} />
       ) : null}
       {background.current ? (
         <Img src={staticFile(background.current)} style={{ position: "absolute", width: "100%", height: "100%",
-          objectFit: "cover", opacity: background.opacity, transform: background.transform }} />
+          objectFit: "cover", ...(layout === "vertical" ? VERTICAL_PICTURE : {}),
+          opacity: background.opacity, transform: background.transform }} />
       ) : null}
-      {playAudio ? <Audio src={staticFile(audioPath)} startFrom={0} /> : null}
-      {captionStyleSpec(captionStyle).bottomShade ? <div style={BOTTOM_SHADE_STYLE} /> : null}
+      {playAudio ? <Audio src={staticFile(audioPath)} startFrom={Math.round(audioOffsetSec * fps)} /> : null}
+      {captionStyleSpec(captionStyle).bottomShade && layout !== "vertical" ? <div style={BOTTOM_SHADE_STYLE} /> : null}
       <ChapterProgressBar frame={frame} fps={fps} audioDurationSec={audioDurationSec} chapters={chapters} />
       <SpeakerChips speakers={speakers} activeId={activeId} />
       {activeLearningItem ? (
         <VocabCard
           item={activeLearningItem.item}
           opacity={vocabCardOpacity(currentTimeSec, activeLearningItem.slotStartSec, activeLearningItem.slotEndSec)}
-          position={layer === "sprites" ? "top-center" : vocabCardPosition(background.kind)}
+          position={layer === "sprites" || layout === "vertical" ? "top-center" : vocabCardPosition(background.kind)}
+          layout={layout}
         />
       ) : null}
       {line ? (
@@ -365,13 +381,13 @@ export function AudioWindowContent({
             position: "absolute",
             left: 0,
             right: 0,
-            bottom: "10%",
+            ...(layout === "vertical" ? { top: "44%", height: "16%", alignItems: "center" } : { bottom: "10%" }),
             display: "flex",
             justifyContent: "center",
             padding: "0 5%",
           }}
         >
-          <CaptionBand line={line} currentTimeSec={currentTimeSec} captionStyle={captionStyle} />
+          <CaptionBand line={line} currentTimeSec={currentTimeSec} captionStyle={captionStyle} layout={layout} />
         </div>
       ) : null}
     </>
@@ -400,6 +416,8 @@ export const Episode: React.FC<EpisodeInputProps> = ({
   sprites,
   soundtrackPath,
   brand,
+  layout = "horizontal",
+  audioOffsetSec = 0,
 }) => {
   // D19.6-a: total video = intro + audio + outro (Option B, extend). `audioDurationSec` is
   // the same "last line's endSec" measure Root.tsx's calculateMetadata already uses for the
@@ -414,7 +432,10 @@ export const Episode: React.FC<EpisodeInputProps> = ({
       {/* Task 22.4 (D51): the music bed spans intro + speech + outro, so it plays from frame 0. */}
       {soundtrackPath ? <Audio src={staticFile(soundtrackPath)} startFrom={0} /> : null}
       <Sequence from={0} durationInFrames={introFrames} name="Intro">
-        <BrandIntro title={title} topic={topic} cefrLevel={cefrLevel} speakers={speakers} brand={brand} />
+        {/* Phase 37: the 1280x720 brand slides are scaled up to fill a phone screen */}
+        <AbsoluteFill style={layout === "vertical" ? { zoom: 1.5 } : undefined}>
+          <BrandIntro title={title} topic={topic} cefrLevel={cefrLevel} speakers={speakers} brand={brand} />
+        </AbsoluteFill>
       </Sequence>
       <Sequence from={introFrames} durationInFrames={audioFrames} name="Audio">
         <AudioWindowContent
@@ -431,10 +452,14 @@ export const Episode: React.FC<EpisodeInputProps> = ({
           stillUrl={stillUrl}
           sprites={sprites}
           playAudio={!soundtrackPath}
+          layout={layout}
+          audioOffsetSec={audioOffsetSec}
         />
       </Sequence>
       <Sequence from={introFrames + audioFrames} durationInFrames={outroFrames} name="Outro">
-        <BrandOutro brand={brand} />
+        <AbsoluteFill style={layout === "vertical" ? { zoom: 1.5 } : undefined}>
+          <BrandOutro brand={brand} />
+        </AbsoluteFill>
       </Sequence>
     </AbsoluteFill>
   );

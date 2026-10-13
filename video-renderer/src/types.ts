@@ -199,6 +199,11 @@ export const episodeInputPropsSchema = z.object({
    * speech and outro, faded out on the last frame) plays from frame 0 instead of `audioPath`. */
   soundtrackPath: z.string().optional(),
   brand: episodeBrandSchema.optional(),
+  /** Phase 37 (D100): "vertical" (1080x1920, Shorts/TikTok): picture on top, big captions in the middle, the characters
+   * below. Default "horizontal" keeps every older props file unchanged. */
+  layout: z.enum(["horizontal", "vertical"]).default("horizontal"),
+  /** Phase 37 (D99): a highlight clip is a window of the mixed episode -- its audio and soundtrack start here. */
+  audioOffsetSec: z.number().default(0),
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;
@@ -214,3 +219,4 @@ export type EpisodeBrand = z.infer<typeof episodeBrandSchema>;
 export type SpriteCharacter = z.infer<typeof spriteCharacterSchema>;
 export type SpriteLine = z.infer<typeof spriteLineSchema>;
 export type EpisodeSprites = z.infer<typeof episodeSpritesSchema>;
+export type Layout = "horizontal" | "vertical";

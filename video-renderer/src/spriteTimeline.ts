@@ -90,7 +90,18 @@ export function stageTop(characters: SpriteCharacter[]): number {
   return HEAD_MARGIN - top * SPRITE_HEIGHT;
 }
 
-export function canvasBox(slot: number, width: number, height: number, characters: SpriteCharacter[]) {
+/** Phase 37 (D100): in the vertical video the characters stand in the bottom part, heads just under the caption band. */
+export const VERTICAL_SPRITE_HEIGHT = 0.56;
+export const VERTICAL_HEAD_TOP = 0.6;
+
+export function canvasBox(slot: number, width: number, height: number, characters: SpriteCharacter[],
+  layout: "horizontal" | "vertical" = "horizontal") {
+  if (layout === "vertical") {
+    const boxHeight = VERTICAL_SPRITE_HEIGHT * height;
+    const top = Math.min(...characters.map((character) => character.topFraction), 0.15);
+    return { left: SLOT_X[slot] * width - (boxHeight * CANVAS_RATIO) / 2, top: VERTICAL_HEAD_TOP * height - top * boxHeight,
+      width: boxHeight * CANVAS_RATIO, height: boxHeight };
+  }
   const boxHeight = SPRITE_HEIGHT * height;
   const boxWidth = boxHeight * CANVAS_RATIO;
   return { left: SLOT_X[slot] * width - boxWidth / 2, top: stageTop(characters) * height, width: boxWidth, height: boxHeight };
