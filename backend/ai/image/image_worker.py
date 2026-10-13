@@ -794,6 +794,32 @@ class ImageWorker:
         # "unloaded" and "exited" is visible in the evidence.
         return {"status": "ok", "was_loaded": was_loaded, **{k: v for k, v in self.stats().items() if k != "status"}}
 
+    def qwen_generate(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Phase 39 (D118): a batch of Qwen pictures (`model` qwen21 | qwen_edit). Qwen and SDXL never share a worker: the
+        12 GB card holds one of them at a time, and the worker exits afterwards to return all VRAM."""
+        import qwen_runner  # sibling module; only this worker (in .venv-image) imports it
+
+        if self.pipe is not None:
+            raise RuntimeError(f"an SDXL pipeline is loaded (mode={self.mode}) -- Qwen runs in its own worker")
+        model, items = qwen_runner.validate(request)
+        missing = qwen_runner.installed(model)
+        if missing:
+            return {"status": "unavailable", "reason": "model_missing", "model": model, "missing": missing}
+        if self.device != "cuda":
+            return {"status": "unavailable", "reason": "needs_gpu", "model": model}
+        torch = self.torch
+        torch.cuda.reset_peak_memory_stats()
+        started = time.monotonic()
+        run = qwen_runner.generate_qwen21 if model == "qwen21" else qwen_runner.generate_qwen_edit
+        result = run(torch, items, lambda message: _log(f"qwen {model}: {message}"))
+        return {"status": "ok", "model": model, **result, "wall_time_sec": round(time.monotonic() - started, 1),
+                "vram_peak_mb": _mb(torch.cuda.max_memory_reserved())}
+
+    def qwen_installed(self, request: dict[str, Any]) -> dict[str, Any]:
+        import qwen_runner
+
+        return {"status": "ok", "models": {model: qwen_runner.installed(model) for model in qwen_runner.MODELS}}
+
     def _require_pipe(self) -> Any:
         if self.pipe is None:
             raise RuntimeError("no model loaded -- send load first")
@@ -809,6 +835,8 @@ def _handle(worker: ImageWorker, request: dict[str, Any]) -> dict[str, Any]:
         "encode": worker.encode,
         "remove_background": worker.remove_background,
         "count_faces": worker.count_faces,
+        "qwen_generate": worker.qwen_generate,
+        "qwen_installed": worker.qwen_installed,
     }
     if command in handlers:
         return handlers[command](request)

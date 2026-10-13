@@ -20,12 +20,15 @@
 # Deliberately NOT installed (task-20.2.md Amendment A):
 #   - invisible-watermark: diffusers' SDXL pipeline would add an invisible watermark
 #     whenever it is present. The worker also passes add_watermarker=False.
-#   - peft: only diffusers' LoRA path needs it. SDXL-Lightning is loaded as its full UNet
-#     checkpoint, which its README recommends for an SDXL base.
-#   - sentencepiece / gguf: only FLUX needed them, and FLUX was dropped.
+#   - sentencepiece: only FLUX needed it, and FLUX was dropped.
 #
 # Versions are the ones that resolved in the verified install (Python 3.14.7, 2026-09-30).
-diffusers==0.40.0
+# Phase 39 (D118): diffusers 0.41 for Qwen-Image-2.1 / Edit-2511 (SDXL verified unchanged on 0.41: 22 s/picture);
+# gguf for the quantized transformers, bitsandbytes for the 4-bit text encoders, peft for the Lightning LoRA.
+diffusers==0.41.0
+gguf==0.19.0
+bitsandbytes==0.50.2
+peft==0.21.2
 transformers==5.17.0
 accelerate==1.15.0
 safetensors==0.8.0
