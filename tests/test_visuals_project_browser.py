@@ -11,6 +11,20 @@ from tests.conftest import live_server
 from tests.test_visuals_project_api import PROJECT, locked_character
 
 
+async def choose_cast(page, speaker_index: int, character_id: str) -> None:
+    """Task 35.4: Step 5 casts through the shared CharacterSelector (preview a card, then "Choose for <speaker>")."""
+    card = page.locator(f'.visual-cast-card[data-speaker="{speaker_index}"]')
+    await card.locator('[data-action="choose-character"]').click()
+    await page.locator(f'.cs-card[data-id="{character_id}"]').click()
+    await page.locator('[data-cs="choose"]').click()
+    await card.locator('[data-action="remove-character"]').wait_for()
+    close = page.locator('[data-cs="close"]')
+    if await close.count() and await close.is_visible():  # the selector stays open for the next speaker, as in Step 1
+        await close.click()
+    await page.wait_for_function(
+        f"!document.querySelector('.visual-cast-card[data-speaker=\"{speaker_index}\"] [data-action=choose-character]').disabled")
+
+
 @pytest.fixture(scope="module")
 def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Generator[str, None, None]:
     pretend_image_python = tmp_path_factory.mktemp("visuals-project-venv") / "python.exe"
@@ -50,11 +64,8 @@ async def test_step5_cast_scenes_generate_grid_and_regenerate(browser_instance: 
         lambda route: route.fulfill(json={"success": True, "data": {"status": "complete", "timestamps": []}}),
     )
     await page.goto(f"{live_server_url}/step5?project_id={project_id}")
-    await page.locator("#visual-speaker-0").wait_for()
-    await page.locator("#visual-speaker-0").select_option(first)
-    await page.wait_for_function("document.querySelector('#visual-speaker-0')?.value !== '' && !document.querySelector('#visual-speaker-0')?.disabled")
-    await page.locator("#visual-speaker-1").select_option(second)
-    await page.wait_for_function("document.querySelector('#visual-speaker-1')?.value !== '' && !document.querySelector('#visual-speaker-1')?.disabled")
+    await choose_cast(page, 0, first)
+    await choose_cast(page, 1, second)
     await page.locator("#visual-scene-options button", has_text=scene_names[0]).click()
     await page.wait_for_function("document.querySelectorAll('#visual-scene-order span').length === 1")
     await page.locator("#visual-scene-options button", has_text=scene_names[1]).click()

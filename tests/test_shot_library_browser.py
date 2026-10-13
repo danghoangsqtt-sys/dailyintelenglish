@@ -152,9 +152,12 @@ async def test_step5_never_casts_by_name_and_offers_the_character_name(browser_i
         lambda route: route.fulfill(json={"success": True, "data": {"status": "complete", "timestamps": []}}),
     )
     await page.goto(f"{live_server_url}/step5?project_id={project_id}")
-    await page.wait_for_selector("#visual-speaker-1 option[value]:not([value=''])", state="attached")
-    assert await page.locator("#visual-speaker-0").input_value() == ""  # same name, but never cast by name
-    await page.locator("#visual-speaker-1").select_option(alex_id)  # Olga's speaker played by "Ivan"
+    from tests.test_visuals_project_browser import choose_cast
+
+    first_card = page.locator('.visual-cast-card[data-speaker="0"]')
+    await first_card.locator('[data-action="choose-character"]').wait_for()
+    assert "No character yet" in await first_card.text_content()  # same name, but never cast by name
+    await choose_cast(page, 1, alex_id)  # Olga's speaker played by "Ivan"
     rename = page.get_by_role("button", name="Use character name (Ivan)")
     await rename.wait_for()
     assert lina_id

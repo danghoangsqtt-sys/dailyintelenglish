@@ -71,7 +71,6 @@
     selectedLineId: null,
     timelineError: "",
     isGenerating: false,
-    avatarBusy: {},
     visuals: null,
     visualCharacters: [],
     visualScenes: [],
@@ -282,99 +281,6 @@
     if (clip) selectLine(clip.dataset.lineId);
   }
 
-  function renderAvatars() {
-    const grid = byId("avatar-grid");
-    grid.replaceChildren();
-    (state.project.speakers || []).forEach((speaker) => {
-      const card = document.createElement("div");
-      card.className = "card avatar-card";
-
-      const preview = speaker.avatar_image_path
-        ? Object.assign(document.createElement("img"), {
-            className: "avatar-preview",
-            src: `${speaker.avatar_image_path}?t=${Date.now()}`,
-            alt: `${speaker.name}'s avatar`,
-          })
-        : Object.assign(document.createElement("div"), {
-            className: "avatar-placeholder",
-            textContent: "No image",
-          });
-
-      const name = document.createElement("div");
-      name.className = "avatar-name";
-      name.textContent = speaker.name;
-
-      const fileInput = document.createElement("input");
-      fileInput.type = "file";
-      fileInput.accept = "image/png,image/jpeg";
-      fileInput.id = `avatar-file-${speaker.id}`;
-
-      const uploadLabel = document.createElement("label");
-      uploadLabel.className = "btn btn-ghost btn-sm";
-      uploadLabel.htmlFor = fileInput.id;
-      uploadLabel.textContent = speaker.avatar_image_path ? "Replace" : "Upload";
-
-      const status = document.createElement("div");
-      status.className = "avatar-status";
-
-      const busy = Boolean(state.avatarBusy[speaker.id]);
-      fileInput.disabled = busy;
-      status.textContent = busy ? "Saving…" : "";
-
-      fileInput.addEventListener("change", () => {
-        const file = fileInput.files && fileInput.files[0];
-        if (file) uploadAvatar(speaker.id, file);
-      });
-
-      const actions = document.createElement("div");
-      actions.className = "avatar-actions";
-      actions.append(uploadLabel, fileInput);
-
-      // Not `.hidden` on a `.btn`-classed element: this app's stylesheet has no
-      // `[hidden]` rule, so `.btn { display: inline-flex }` would keep it visible.
-      if (speaker.avatar_image_path) {
-        const removeButton = document.createElement("button");
-        removeButton.type = "button";
-        removeButton.className = "btn btn-ghost btn-sm";
-        removeButton.textContent = "Remove";
-        removeButton.disabled = busy;
-        removeButton.addEventListener("click", () => removeAvatar(speaker.id));
-        actions.append(removeButton);
-      }
-
-      card.append(preview, name, actions, status);
-      grid.appendChild(card);
-    });
-  }
-
-  async function uploadAvatar(speakerId, file) {
-    state.avatarBusy[speakerId] = true;
-    renderAvatars();
-    try {
-      state.project = await Api.uploadSpeakerAvatar(state.projectId, speakerId, file);
-    } catch (error) {
-      console.error("Failed to upload avatar:", error);
-      showError("We couldn't upload that image. Please try a PNG or JPEG under 8 MB.");
-    } finally {
-      delete state.avatarBusy[speakerId];
-      renderAvatars();
-    }
-  }
-
-  async function removeAvatar(speakerId) {
-    state.avatarBusy[speakerId] = true;
-    renderAvatars();
-    try {
-      state.project = await Api.deleteSpeakerAvatar(state.projectId, speakerId);
-    } catch (error) {
-      console.error("Failed to remove avatar:", error);
-      showError("We couldn't remove that image. Please try again.");
-    } finally {
-      delete state.avatarBusy[speakerId];
-      renderAvatars();
-    }
-  }
-
   function visualGenerationAllowed() {
     return Boolean(state.visualHealth?.enabled && state.visualHealth?.venv_image_present);
   }
@@ -390,52 +296,51 @@
     byId("visual-warnings").textContent = state.visualError || state.visuals?.warnings?.join(" ") || "";
   }
 
+  // Phase 35 (Task 35.4, D89): the cast is chosen with the shared game-style selector of Step 1 (no dropdown, no avatar).
+  async function saveCast(speakerIndex, characterId) {
+    const members = state.visuals.cast
+      .filter((member) => member.speaker_index !== speakerIndex)
+      .map((member) => ({ speaker_index: member.speaker_index, character_id: member.character_id }));
+    if (characterId) members.push({ speaker_index: speakerIndex, character_id: characterId });
+    members.sort((a, b) => a.speaker_index - b.speaker_index);
+    state.visualBusy = true;
+    renderProjectVisuals();
+    try {
+      state.visuals = await Api.setProjectCast(state.projectId, members);
+      state.visualError = "";
+    } catch (error) {
+      visualWarning(error.message || "Could not save the cast.");
+    } finally {
+      state.visualBusy = false;
+      renderProjectVisuals();
+    }
+  }
+
+  function openCastSelector(speakerIndex) {
+    const speakers = state.project?.speakers || [];
+    CharacterSelector.open({
+      slots: speakers.map((speaker) => ({
+        index: speaker.speaker_index, label: speaker.name,
+        characterId: state.visuals?.cast.find((member) => member.speaker_index === speaker.speaker_index)?.character_id || null,
+      })),
+      profiles: state.visualProfiles || [],
+      startSlot: speakerIndex,
+      onChoose: (slotIndex, profile) => saveCast(slotIndex, profile.id),
+    });
+  }
+
   function renderVisualCast() {
     const grid = byId("visual-cast-grid");
     grid.replaceChildren();
     (state.project?.speakers || []).forEach((speaker) => {
       const card = document.createElement("div");
       card.className = "card visual-cast-card";
+      card.dataset.speaker = speaker.speaker_index;
       const label = document.createElement("label");
-      const select = document.createElement("select");
-      select.id = `visual-speaker-${speaker.speaker_index}`;
-      label.htmlFor = select.id;
       label.textContent = speaker.name;
-      const none = document.createElement("option");
-      none.value = "";
-      none.textContent = "— none —";
-      select.append(none);
-      // Phase 33: every character ready for videos (a legacy locked one or a profile made from outside-AI pictures)
-      state.visualCharacters.filter((character) => character.video_ready).forEach((character) => {
-        const option = document.createElement("option");
-        option.value = character.id;
-        option.textContent = character.name;
-        select.append(option);
-      });
       const castMember = state.visuals?.cast.find((member) => member.speaker_index === speaker.speaker_index);
-      select.value = castMember?.character_id || "";
-      select.disabled = state.visualBusy;
-      select.addEventListener("change", async () => {
-        const members = state.visuals.cast
-          .filter((member) => member.speaker_index !== speaker.speaker_index)
-          .map((member) => ({ speaker_index: member.speaker_index, character_id: member.character_id }));
-        if (select.value) members.push({ speaker_index: speaker.speaker_index, character_id: select.value });
-        members.sort((a, b) => a.speaker_index - b.speaker_index);
-        state.visualBusy = true;
-        grid.querySelectorAll("select").forEach((control) => { control.disabled = true; });
-        try {
-          state.visuals = await Api.setProjectCast(state.projectId, members);
-          state.visualError = "";
-          renderProjectVisuals();
-        } catch (error) {
-          visualWarning(error.message || "Could not save the cast.");
-        } finally {
-          state.visualBusy = false;
-          renderProjectVisuals();
-        }
-      });
-      card.append(label, select);
-      const chosen = state.visualCharacters.find((character) => character.id === select.value);
+      const chosen = state.visualCharacters.find((character) => character.id === castMember?.character_id);
+      card.append(label);
       if (chosen?.face_url) {
         const image = document.createElement("img");
         image.className = "visual-cast-face";
@@ -443,6 +348,31 @@
         image.alt = `${chosen.name} face`;
         card.append(image);
       }
+      const name = document.createElement("div");
+      name.className = "visual-cast-name";
+      name.textContent = chosen ? chosen.name : "No character yet";
+      card.append(name);
+      const actions = document.createElement("div");
+      actions.className = "visual-cast-actions";
+      const change = document.createElement("button");
+      change.type = "button";
+      change.className = "btn btn-primary btn-sm";
+      change.dataset.action = "choose-character";
+      change.textContent = chosen ? "Change character" : "Choose character";
+      change.disabled = state.visualBusy;
+      change.addEventListener("click", () => openCastSelector(speaker.speaker_index));
+      actions.append(change);
+      if (castMember) {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "btn btn-ghost btn-sm";
+        remove.dataset.action = "remove-character";
+        remove.textContent = "Remove";
+        remove.disabled = state.visualBusy;
+        remove.addEventListener("click", () => saveCast(speaker.speaker_index, null));
+        actions.append(remove);
+      }
+      card.append(actions);
       // Phase 33 (D80): an older project's speaker can keep another name than its character (Demo Episode "Maya" is Lina)
       if (chosen && chosen.name !== speaker.name) {
         const rename = document.createElement("button");
@@ -861,6 +791,7 @@
         Api.listProfiles("state=active"),
       ]);
       state.visualCharacters = castOptions(characters, profiles);
+      state.visualProfiles = profiles;
       state.visualSceneSelection = state.visuals.scenes.map((scene) => scene.id);
       renderProjectVisuals();
       if (state.visuals.active_job) watchVisualJob(state.visuals.active_job);
@@ -1261,7 +1192,6 @@
     byId("loading-panel").hidden = true;
     byId("workspace").hidden = false;
     await loadProjectVisuals();
-    renderAvatars();
     renderTemplates();
     renderTimeline();
     renderInspector();

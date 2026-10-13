@@ -35,7 +35,7 @@ from app.core.config import settings
 from app.core.constants import VIDEO_FPS, VIDEO_HEIGHT_STANDARD, VIDEO_WIDTH_STANDARD
 from app.core.exceptions import AudioMixError, NotFoundError, RemotionRenderFailedError, TTSError, ValidationError
 from app.core.paths import get_project_root
-from app.services import audio_service, avatar_service, brand_service, youtube_service
+from app.services import audio_service, brand_service, youtube_service
 from app.services.visuals import activity_library_service as activity_library
 from app.services.visuals import activity_matcher, library_service, project_visuals_service, sprite_plan, sprite_service, storyboard_service
 
@@ -187,23 +187,6 @@ def _words_to_props(words: list[dict]) -> list[dict]:
     """`audio_jobs.word_timestamps_json`'s per-word shape (`start_sec`/`end_sec`) to the
     video-renderer props shape (`startSec`/`endSec`)."""
     return [{"text": word["text"], "startSec": word["start_sec"], "endSec": word["end_sec"]} for word in words]
-
-
-async def _copy_avatar_into_public(db: aiosqlite.Connection, project_id: str, speaker_id: str) -> str | None:
-    """Resolves the speaker's real avatar file via `avatar_service.resolve_avatar_path`
-    (NOT `project["speakers"]`'s own `avatar_image_path` field, which
-    `project_service.get_project` already rewrites into a served URL, not a filesystem
-    path -- a real finding: the spike runner's raw-DB read never hit this, since it reads
-    the column directly, but this production path goes through the normal service layer).
-    Returns `None` (not an error) when the speaker has no avatar."""
-    try:
-        avatar_path = await avatar_service.resolve_avatar_path(db, project_id, speaker_id)
-    except Exception:
-        return None
-    REMOTION_AVATARS_DIR.mkdir(parents=True, exist_ok=True)
-    destination = REMOTION_AVATARS_DIR / f"{speaker_id}{avatar_path.suffix or '.png'}"
-    shutil.copyfile(avatar_path, destination)
-    return f"remotion-render/avatars/{destination.name}"
 
 
 def _copy_audio_into_public(project_id: str, mp3_path: str) -> None:
@@ -509,11 +492,7 @@ async def _build_input_props(
         if podcast:  # no picture of anyone in the podcast modes
             speakers_props.append(speaker_props)
             continue
-        if speaker.get("avatar_image_path"):
-            avatar_url = await _copy_avatar_into_public(db, project["id"], speaker["id"])
-            if avatar_url is not None:
-                speaker_props["avatarUrl"] = avatar_url
-        if "avatarUrl" not in speaker_props and speaker_indexes[speaker["id"]] in cast_by_index:
+        if speaker_indexes[speaker["id"]] in cast_by_index:  # Task 35.4: the cast character's face is the only picture
             member = cast_by_index[speaker_indexes[speaker["id"]]]
             assets = await library_service.list_assets(db, member["character_id"])
             face = next((asset for asset in assets if asset["kind"] == "face"), None)

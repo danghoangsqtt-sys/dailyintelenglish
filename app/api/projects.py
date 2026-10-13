@@ -3,16 +3,14 @@
 import time
 
 import aiosqlite
-from fastapi import APIRouter, Depends, File, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends
 
 from app.core.responses import ok
 from app.db.database import get_db
 from app.db.transactions import read_transaction, write_transaction
 from app.models.project import ProjectUpdate, ScriptConfig, SpeakerUpdate
 from app.models.script import RegenerateLineRequest, ScriptUpdate
-from app.services import avatar_service, project_service, script_service
-from app.services.avatar_service import AVATAR_MEDIA_TYPES
+from app.services import project_service, script_service
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -107,54 +105,6 @@ async def update_speaker(
         if patch.model_dump(exclude_unset=True):
             await project_service.mark_speaker_voice_changed(db, project_id, commit=False)
         project = await project_service.update_speaker(db, project_id, speaker_id, patch, commit=False)
-    return ok(project, started_at=started_at)
-
-
-@router.post("/{project_id}/speakers/{speaker_id}/avatar")
-async def upload_speaker_avatar(
-    project_id: str,
-    speaker_id: str,
-    file: UploadFile = File(...),
-    db: aiosqlite.Connection = Depends(get_db),
-) -> dict:
-    """Upload (or replace) one speaker's avatar image (Task 1.7c — upload only, no lip-sync).
-
-    The previous avatar file (if any) is only deleted after this block's commit has
-    durably succeeded — see `avatar_service.cleanup_previous_avatar_file` for why.
-    """
-    started_at = time.perf_counter()
-    async with write_transaction(db):
-        project, previous_avatar_path = await avatar_service.upload_avatar(
-            db, project_id, speaker_id, file, commit=False
-        )
-    await avatar_service.cleanup_previous_avatar_file(previous_avatar_path)
-    return ok(project, started_at=started_at)
-
-
-@router.get("/{project_id}/speakers/{speaker_id}/avatar")
-async def get_speaker_avatar(
-    project_id: str, speaker_id: str, db: aiosqlite.Connection = Depends(get_db)
-) -> FileResponse:
-    """Serve one speaker's stored avatar image."""
-    async with read_transaction():
-        path = await avatar_service.resolve_avatar_path(db, project_id, speaker_id)
-    return FileResponse(path, media_type=AVATAR_MEDIA_TYPES[path.suffix.lower()])
-
-
-@router.delete("/{project_id}/speakers/{speaker_id}/avatar")
-async def delete_speaker_avatar(
-    project_id: str, speaker_id: str, db: aiosqlite.Connection = Depends(get_db)
-) -> dict:
-    """Remove one speaker's avatar image.
-
-    The file itself is only deleted after this block's commit has durably
-    succeeded — see `avatar_service.delete_avatar`'s docstring for why.
-    """
-    started_at = time.perf_counter()
-    async with write_transaction(db):
-        project, files_to_remove = await avatar_service.delete_avatar(db, project_id, speaker_id, commit=False)
-    for path in files_to_remove:
-        await avatar_service.cleanup_previous_avatar_file(str(path))
     return ok(project, started_at=started_at)
 
 

@@ -41,6 +41,9 @@ Versioning: [SemVer](https://semver.org/)
 - **One way to make a character.** The Characters page keeps only Profiles and Scenes: the old "Generate locally" tab
   and the Shot Library "Import sprites" inbox are removed (talking pictures come from the profile slots). The old
   character routes can no longer wipe a profile's pictures on an appearance change or delete Lina and Alex (35.3).
+- **Step 5 casts with the character selector.** Each speaker card shows its character's face with "Change
+  character" (the same game-style selector as Step 1) and "Remove"; the old optional speaker-avatar upload and its
+  routes are gone — a speaker's picture in a video is its character's face (35.4).
 
 ### Fixed / Changed (Gate B-22 fixes, 2026-10-12)
 - **Activity pictures sit behind the talking characters.** In "Podcast: talking characters" an insert beat's picture now

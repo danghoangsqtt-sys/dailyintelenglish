@@ -28,37 +28,6 @@
     .activity-missing-actions input[type="file"] { display: none; }
     @media (max-width: 720px) { .activity-missing-card { grid-template-columns: 1fr; } }
     #activity-coverage.is-warning { padding: 8px 10px; border-radius: 8px; background: var(--warning-bg); color: var(--warning); }
-    .avatar-details > summary { cursor: pointer; }
-    .avatar-details:not([open]) > summary { margin-bottom: 0; }
-
-    .avatar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
-    .avatar-card { padding: 14px; text-align: center; }
-    .avatar-preview {
-      width: 88px;
-      height: 88px;
-      margin: 0 auto 10px;
-      border: 1px solid var(--border);
-      border-radius: 50%;
-      object-fit: cover;
-      background: var(--surface-2);
-    }
-    .avatar-placeholder {
-      width: 88px;
-      height: 88px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 10px;
-      border: 1px dashed var(--border);
-      border-radius: 50%;
-      background: var(--surface-2);
-      color: var(--muted);
-      font-size: 11px;
-    }
-    .avatar-name { margin-bottom: 10px; font-size: 13px; font-weight: 700; }
-    .avatar-actions { display: flex; flex-direction: column; gap: 6px; }
-    .avatar-actions input[type="file"] { display: none; }
-    .avatar-status { min-height: 14px; margin-top: 6px; color: var(--muted); font-size: 11px; }
 
     .template-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
     .aspect-ratio-row { display: flex; gap: 10px; margin-top: 14px; }
@@ -104,8 +73,8 @@
     .visual-cast-grid, .visual-shot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
     .visual-cast-card, .visual-shot-card { padding: 12px; }
     .visual-cast-card label { display: block; margin-bottom: 7px; font-weight: 700; }
-    .visual-cast-card select { width: 100%; padding: 9px; border: 1px solid var(--border); border-radius: 8px;
-      background: var(--surface); color: var(--text); }
+    .visual-cast-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .visual-cast-name { font-size: 13px; color: var(--muted); }
     .visual-cast-face { display: block; width: 58px; height: 58px; margin: 9px 0; border-radius: 50%; object-fit: cover; }
     .visual-scene-options, .visual-scene-order { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
     .visual-scene-options button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
@@ -172,18 +141,9 @@
           </div>
 
           <div id="workspace" hidden>
-            <details class="section avatar-details" id="avatar-details">
-              <summary class="section-title">1. Speaker avatars (optional)</summary>
-              <p class="section-hint">
-                Upload a portrait image per speaker for future use. Lip-sync video isn't built yet —
-                these images aren't used by "Generate video" below.
-              </p>
-              <div class="avatar-grid" id="avatar-grid"></div>
-            </details>
-
             <section class="section" id="project-visuals-section">
               <h2 class="section-title">Characters &amp; scenes</h2>
-              <p class="section-hint">Map speakers to locked characters and choose up to three scenes. <a href="/characters">Open Character Library</a>. Shots appear in Enhanced (Remotion) renders.</p>
+              <p class="section-hint">Choose each speaker's character and up to three scenes. <a href="/characters">Open Character Library</a>. Shots appear in Enhanced (Remotion) renders.</p>
               <h3>Cast</h3>
               <div id="visual-cast-grid" class="visual-cast-grid"></div>
               <h3>Scenes</h3>
@@ -289,6 +249,7 @@
   <script src="/static/js/keyboard_shortcuts.js"></script>
   <script src="/static/js/generation_status.js"></script>
   <script src="/static/js/shell.js"></script>
+  <script src="/static/js/character_selector.js"></script>
   <script src="/static/js/step5_video.js"></script>
   <script src="/static/js/storyboard.js"></script>
 </body>

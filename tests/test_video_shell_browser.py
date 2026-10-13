@@ -189,26 +189,6 @@ async def _mock_video_routes(
                     }
                 ),
             )
-        elif "/speakers/speaker-a/avatar" in url and method == "POST":
-            project_state["speakers"][0]["avatar_image_path"] = (
-                f"/api/projects/{PROJECT_ID}/speakers/speaker-a/avatar"
-            )
-            if event_log is not None:
-                event_log.append(("avatar", "POST"))
-            await route.fulfill(
-                status=200,
-                content_type="application/json",
-                body=_envelope(project_state),
-            )
-        elif "/speakers/speaker-a/avatar" in url and method == "DELETE":
-            project_state["speakers"][0]["avatar_image_path"] = None
-            if event_log is not None:
-                event_log.append(("avatar", "DELETE"))
-            await route.fulfill(
-                status=200,
-                content_type="application/json",
-                body=_envelope(project_state),
-            )
         else:
             await route.continue_()
 
@@ -353,42 +333,4 @@ async def test_script_failure_is_non_fatal_to_video_workflow(
     assert await page.locator("#generate-btn").is_enabled()
     assert "Script unavailable" in await page.locator("#timeline-status").text_content()
     assert await page.locator("#music-timeline .timeline-clip").count() == 1
-    await page.close()
-
-
-@pytest.mark.asyncio
-async def test_avatar_and_generate_flows_remain_wired(
-    browser_instance: Browser, live_server_url: str, tmp_path
-):
-    page = await browser_instance.new_page()
-    event_log: list[tuple[str, str]] = []
-    await _mock_video_routes(page, event_log=event_log)
-    # Task 19.9 made Enhanced the default wherever Remotion is installed; this test is about the
-    # Standard flow, so it stores the owner's Standard choice (machine-independent).
-    await page.add_init_script("try { localStorage.setItem('die-video-renderer', 'ffmpeg'); } catch (e) {}")
-    await page.goto(f"{live_server_url}/step5?project_id={PROJECT_ID}")
-    await page.wait_for_selector("#workspace:not([hidden])")
-    await page.locator("#avatar-details summary").click()
-
-    fixture = tmp_path / "avatar.png"
-    fixture.write_bytes(b"\x89PNG\r\n\x1a\nfake-png-bytes")
-    await page.locator("#avatar-file-speaker-a").set_input_files(str(fixture))
-    await page.wait_for_selector(".avatar-preview")
-    await page.locator(".avatar-card:has-text('Alex') button:has-text('Remove')").click()
-    await page.wait_for_function(
-        "document.querySelectorAll('.avatar-placeholder').length === 2"
-    )
-
-    await page.click("[data-template-id='deep_purple']")
-    await page.click("[data-aspect-ratio='9:16']")
-    await page.click("#generate-btn")
-    await page.wait_for_selector("#result-card:not([hidden])")
-
-    assert ("avatar", "POST") in event_log
-    assert ("avatar", "DELETE") in event_log
-    expected_payload = json.dumps(
-        {"template_id": "deep_purple", "aspect_ratio": "9:16", "renderer": "ffmpeg"}, sort_keys=True
-    )
-    assert ("generate", expected_payload) in event_log
-    assert await page.locator("#download-mp4-vertical").is_visible()
     await page.close()

@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 # Every per-project data directory that a real project deletion must also clean up
 # (project_service knows none of these services' internals -- this list must stay in
-# sync with the "<category>/<project_id>" convention used by avatar_service, tts_service,
-# audio_service, video_service, and thumbnail_service).
+# sync with the "<category>/<project_id>" convention used by tts_service, audio_service, video_service and
+# thumbnail_service; "avatars" stays because projects made before Task 35.4 may still hold one).
 _PROJECT_ARTIFACT_CATEGORIES = ("avatars", "audio", "video", "thumbnails", "tts_cache", "visuals")
 _DOWNSTREAM_STATUSES = frozenset({"audio_generated", "video_generated", "complete"})
 
@@ -236,17 +236,13 @@ async def get_project(db: aiosqlite.Connection, project_id: str) -> dict:
 
     speaker_cursor = await db.execute(
         "SELECT id, speaker_index, name, gender, accent, tts_engine, voice_id, "
-        "voice_description, speed, pitch, volume, avatar_image_path FROM speakers "
+        "voice_description, speed, pitch, volume FROM speakers "
         "WHERE project_id = ? ORDER BY speaker_index",
         (project_id,),
     )
     speaker_rows = await speaker_cursor.fetchall()
-    speakers = [dict(speaker_row) for speaker_row in speaker_rows]
-    for speaker in speakers:
-        # Never leak the raw on-disk path to API clients — only a served URL, or null.
-        if speaker["avatar_image_path"]:
-            speaker["avatar_image_path"] = f"/api/projects/{project_id}/speakers/{speaker['id']}/avatar"
-    project["speakers"] = speakers
+    # Phase 35 (Task 35.4, D89): no uploaded speaker avatar any more -- a speaker's picture is its cast character's.
+    project["speakers"] = [dict(speaker_row) for speaker_row in speaker_rows]
     return project
 
 

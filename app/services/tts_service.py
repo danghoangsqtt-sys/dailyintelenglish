@@ -230,7 +230,7 @@ async def synthesize_line(
 def _resolve_cached_audio_sync(project_id: str, stored_path: str) -> str:
     """Validate a stored audio-cache path is still a real file under this project's own
     cache directory before it's ever handed to FileResponse — same containment check
-    already used by avatar_service._resolve_avatar_sync and
+    already used by
     thumbnail_service._resolve_content_sync, applied here for consistency (a moved/deleted
     cache file would otherwise surface as an unhandled FileNotFoundError/500 instead of a
     clean 404)."""

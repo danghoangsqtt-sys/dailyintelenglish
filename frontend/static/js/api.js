@@ -255,13 +255,6 @@ const Api = (() => {
     },
     videoDownloadUrl: (projectId, format) => `/api/projects/${projectId}/video/download?format=${format}`,
     getVideoHealth: () => request("/api/video/health"),
-    uploadSpeakerAvatar: (projectId, speakerId, file) => {
-      const body = new FormData();
-      body.append("file", file);
-      return request(`/api/projects/${projectId}/speakers/${speakerId}/avatar`, { method: "POST", body });
-    },
-    deleteSpeakerAvatar: (projectId, speakerId) =>
-      request(`/api/projects/${projectId}/speakers/${speakerId}/avatar`, { method: "DELETE" }),
     health: () => request("/health"),
     getSettings: () => request("/api/settings"),
     updateAiMode: (aiMode) =>
