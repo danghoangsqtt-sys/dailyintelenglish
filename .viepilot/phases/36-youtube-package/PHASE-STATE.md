@@ -1,7 +1,7 @@
 # PHASE-STATE — Phase 36: YouTube publishing package (horizontal video)
 
-- **Status:** in progress 2026-10-13 (`docs/brainstorm/session-2026-10-13.md`, D90–D97). The owner asked to do the thumbnail
-  and the description (36.1–36.4) now, while Phase 35 continues; 36.5 (series) and 36.6 stay after Phase 35.
+- **Status:** complete 2026-10-13 — owner accepted Gate B-24 ("thực hiện theo đề xuất"); follow-up seen: an off-topic
+  library illustration ("meeting" on a dinner-planning line)
 
 | Task | Description | Main paths | Status |
 |---|---|---|---|
@@ -11,7 +11,7 @@
 | 36.4 | Outside-AI thumbnail: per-episode prompt (with character pictures), drop zone, text/badge/logo overlay | same as 36.3 | done 2026-10-13 |
 | 36.5 | Channel plan (D103–D105): topics → series → episodes; AI channel map; numbered projects per series; interleaved publishing calendar; series/playlist links and episode numbers in descriptions and thumbnails | new `channel_service`, `app/api/channel.py`, `/channel` page, migration 023, prompt `prompts/channel/` | done 2026-10-13 (real AI map on the sandbox: 3 topics × 2 series, 4 projects created, calendar rotating topics) |
 | 36.7 | Channel dashboard (D106–D108): stats, next publish, today's actions, 5-stage roadmap from real data, production board by step, 2-week calendar; project grid kept below | `app/services/dashboard_service.py`, `GET /api/channel/dashboard`, `frontend/pages/dashboard.html`, `frontend/static/js/dashboard_channel.js` | done 2026-10-13 |
-| 36.6 | Tests, a real 3-episode series (≥1 complete episode), Gate B-24 | — | in_progress |
+| 36.6 | Tests, a real 3-episode series (≥1 complete episode), Gate B-24 | — | done 2026-10-13 (`docs/operations/phase36-gate-b24.md`) |
 
 ## Implementation notes (before coding)
 
