@@ -144,7 +144,7 @@ def test_settings_default_to_realvisxl_with_euler_a():
 
 
 def _worker_module():
-    spec = importlib.util.spec_from_file_location("image_worker_under_test", ROOT / "scripts" / "image_worker.py")
+    spec = importlib.util.spec_from_file_location("image_worker_under_test", ROOT / "backend" / "ai" / "image" / "image_worker.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
