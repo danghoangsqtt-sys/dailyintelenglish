@@ -8,6 +8,18 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Changed (Phase 38 project layout, 2026-10-13, D115)
+- **One home per concern.** `app/` is now `backend/`, grouped by domain: every AI part sits under `backend/ai/` (`llm/`
+  gateway and providers, `image/` engine + worker + recipes + GPU arbiter, `tts/`, `prompts/`, `models/` weights);
+  `content/`, `media/`, `library/`, `channel/`; Pydantic models are `backend/schemas/`. The image worker left `scripts/`;
+  `video-renderer/` is `renderer/`; the Python environments are `.venv` and `.venv-image`. Run with
+  `uvicorn backend.main:app`. Map: `docs/structure/STRUCTURE.md`; plan: `docs/structure/RESTRUCTURE-PLAN.md`.
+
+### Added (Phase 39 benchmark harness, 2026-10-13)
+- `scripts/benchmarks/image_models/`: RealVisXL (through the app's own worker) vs Qwen-Image-2512, Qwen-Image-Edit-2511
+  and Qwen-Image-2.1-Turbo (evaluation only) on four tasks — activity illustrations, scene plates, thumbnail pictures and
+  character inserts — with time and VRAM per picture.
+
 ## [1.3.0] - 2026-10-13
 
 Project close-out release: everything built after `1.2.0-beta` (Phases 22 and 25–37). Final report:

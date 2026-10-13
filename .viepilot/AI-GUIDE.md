@@ -16,22 +16,22 @@
 | `.viepilot/SYSTEM-RULES.md` | Coding standards, async rules, style guide |
 | `.viepilot/ROADMAP.md` | Phase tasks with acceptance criteria |
 | `.viepilot/TRACKER.md` | Current progress, decision log |
-| `app/` | FastAPI backend source |
+| `backend/` | FastAPI backend source (domain packages; every AI part in `backend/ai/`) |
 | `frontend/` | HTML/CSS/JS pages |
-| `prompts/` | AI prompt Jinja2 templates (Ollama default, Gemini dormant) |
+| `backend/ai/prompts/` | AI prompt Jinja2 templates (Ollama default, Gemini dormant) |
 | `data/` | Runtime data (audio, video, projects) |
 
 ## Context Loading Strategy
 
 For **script generation tasks** → read:
 1. `PROJECT-CONTEXT.md` (CEFR rules, genre rules, accent rules)
-2. `prompts/script/` templates
-3. `app/services/script_service.py`
+2. `backend/ai/prompts/script/` templates
+3. `backend/content/script_service.py`
 
 For **TTS/audio tasks** → read:
 1. `ARCHITECTURE.md` (TTSService, AudioService sections)
 2. `SYSTEM-RULES.md` (OmniVoice rules, async rules)
-3. `app/services/tts_service.py`, `app/services/audio_service.py`
+3. `backend/ai/tts/tts_service.py`, `backend/media/audio_service.py`
 
 For **UI/frontend tasks** → read:
 1. `ARCHITECTURE.md` (API endpoints)

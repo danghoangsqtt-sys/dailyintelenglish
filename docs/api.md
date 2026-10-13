@@ -699,7 +699,7 @@ Return the current video job for a project (404 if video was never generated).
 Video Health
 
 Task 19.7 (D19.7-d): Remotion availability + the in-memory fallback-rate counters
-(process-lifetime only, reset on restart -- same precedent as app/main.py's
+(process-lifetime only, reset on restart -- same precedent as backend/main.py's
 `_ai_circuits`, Phase 18).
 
 - **Response body:** `object`

@@ -120,7 +120,7 @@ accepted at Gates B-22 to B-24.
 
 | Phase | Feature | Status |
 |-------|---------|--------|
-| **Phase 20** | 🖼️ **AI Visuals** — local GPU image generation in a separate `venv-image` worker (diffusers), one GPU arbiter for the RTX 3060, a Character Library and Scene Library, and per-project shots used by the Enhanced video ([plan](docs/implementation/phase-20-ai-visuals.md)) | ✅ Done (gate closed by D109) |
+| **Phase 20** | 🖼️ **AI Visuals** — local GPU image generation in a separate `.venv-image` worker (diffusers), one GPU arbiter for the RTX 3060, a Character Library and Scene Library, and per-project shots used by the Enhanced video ([plan](docs/implementation/phase-20-ai-visuals.md)) | ✅ Done (gate closed by D109) |
 | **Phase 21** | 🗣️ **Better TTS engine** — Kokoro (D36) and StyleTTS 2 (D38) spikes both failed the owner listening test; Edge TTS stays, and the spike engines were removed (D56) ([plan](docs/implementation/phase-21-tts-kokoro.md)) | ⛔ Closed, won't fix |
 | **Phase 22** | 🎵 **Background music** — AI music generation was dropped (D50); free library tracks instead, with automatic pace/mood classification, auto-select by topic and length, a bed fitted to the episode and ducked under the voice, and a music credit in the YouTube description ([plan](docs/implementation/phase-22-ai-music.md), [free sources](docs/user/free-music-sources.md)) | ✅ Done (gate closed by D109) |
 | **Phase 23–24** | 🗺️ **Scene Library v2 and storyboard** — a 55-place scene library; the AI proposes story beats, the owner reviews them in Step 5, and approved beats become the shots that drive the video timeline ([plan](docs/implementation/phase-23-24-scenes-and-storyboard.md)) | ✅ Done (gate closed by D109) |
@@ -165,8 +165,8 @@ accepted at Gates B-22 to B-24.
 cd d:\DataAdmin\Daily_Intel_English
 
 # 2. Create virtual environment
-python -m venv venv
-venv\Scripts\activate
+python -m venv .venv
+.venv\Scripts\activate
 
 # 3. Install dependencies
 pip install -r requirements.txt
@@ -180,8 +180,11 @@ copy .env.example .env
 # 5. Check dependencies (verifies Ollama is running and the model is pulled)
 python scripts/check_dependencies.py
 
+# (optional) Local image generation: a separate Python for torch + diffusers
+#   py -3.14 -m venv .venv-image   then follow backend/ai/image/requirements.txt
+
 # 6. Run the app
-uvicorn app.main:app --reload --port 8000
+uvicorn backend.main:app --reload --port 8000
 ```
 
 ### Open the app
@@ -250,7 +253,7 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
 - **TTS**: Edge TTS (sole engine — OmniVoice GPU cloning considered, dropped 2026-09-13; see [docs/user/tts-setup.md](docs/user/tts-setup.md))
 - **Audio**: pydub + ffmpeg (real ITU-R BS.1770 loudness normalization via `pyloudnorm`)
 - **Video**: Remotion 4 + React 19 + TypeScript in the separate [`renderer/`](renderer/) Node workspace, run locally as a subprocess from FastAPI — the only renderer since Phase 35 (the Standard ffmpeg renderer was removed; the vertical 1080x1920 layout and highlight clips are Remotion too, Phase 37). Node.js, `npm install` in `renderer/` and Chrome Headless Shell are required
-- **Images**: local GPU image generation (diffusers, RealVisXL V5.0) in its own `venv-image` environment and worker process (`requirements-image.txt`, `scripts/image_worker.py`); optional — every library also accepts the owner's own pictures
+- **Images**: local GPU image generation (diffusers, RealVisXL V5.0) in its own `.venv-image` environment and worker process (`backend/ai/image/requirements.txt`, `backend/ai/image/image_worker.py`); optional — every library also accepts the owner's own pictures
 - **Thumbnail**: Pillow composition of the cast's talking sprites over the episode's pictures (Montserrat headline, CEFR badge, logo) + AI headline suggestions
 - **Database**: SQLite (aiosqlite async transactions)
 
@@ -271,27 +274,32 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
 
 ## Project Structure
 
+Where-is-what map: [docs/structure/STRUCTURE.md](docs/structure/STRUCTURE.md) (Phase 38 layout, D115).
+
 ```
 Daily_Intel_English/
-├── app/                    # FastAPI backend
-├── frontend/               # HTML/CSS/JS pages
-├── renderer/         # Remotion (React/TypeScript) Enhanced video renderer
-├── data/                   # Runtime data and libraries (gitignored)
-├── prompts/                # AI prompt templates (shared across cloud + local providers)
-├── models/                 # Local AI models
-├── scripts/                # Setup utilities
-├── tests/                  # Automated test suite (pytest)
-├── .viepilot/              # Project architecture & governance docs
-└── docs/
-    ├── user/               # Guides: prompts, TTS, free music sources
-    ├── operations/         # Runbooks, library prompt packs, gate and spike reports
-    ├── implementation/     # Per-phase implementation plans
-    ├── brainstorm/         # Owner decision sessions (D1–D108)
-    ├── report/             # Final report, demo, product review, benchmarks
-    ├── presentation/       # Prompt for the judges' slides
-    ├── architecture/       # ADRs
-    ├── samples/            # Sample A1/B1/C1 scripts
-    └── api.md              # Generated API reference
+├── backend/                 # FastAPI package — run with `uvicorn backend.main:app`
+│   ├── api/                 # HTTP routes (one module per area)
+│   ├── core/                # config, paths, constants, errors, settings
+│   ├── db/                  # SQLite access + migrations/
+│   ├── schemas/             # Pydantic request/response models
+│   ├── ai/                  # every AI part
+│   │   ├── llm/             #   cloud-first gateway, providers, AI jobs, prompt loader
+│   │   ├── image/           #   local GPU images: engine, worker, pipelines, recipes, GPU arbiter
+│   │   ├── tts/             #   Edge TTS
+│   │   ├── prompts/         #   prompt templates
+│   │   └── models/          #   local model weights (gitignored)
+│   ├── content/             # projects, scripts, learning packs, YouTube, Shorts
+│   ├── media/               # audio, music, video (Remotion bridge), thumbnails, brand
+│   ├── library/             # characters, scenes, shots, sprites, Activity Library, storyboard
+│   └── channel/             # channel plan, dashboard
+├── frontend/                # pages/ + static/ (vanilla HTML/CSS/JS)
+├── renderer/                # Remotion (React/TypeScript) video renderer
+├── scripts/                 # maintenance CLIs and benchmarks (nothing the app imports)
+├── tests/                   # pytest suite
+├── docs/                    # user/, operations/, implementation/, report/, structure/ ...
+├── data/                    # runtime data (gitignored)
+└── .venv/  .venv-image/     # Python environments (gitignored)
 ```
 
 ## License

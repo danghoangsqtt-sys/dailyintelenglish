@@ -83,13 +83,13 @@ async def gen(pid, cfg, d):  # ❌ No type hints, no docstring, bad names
 ```
 
 ### CR-02: Configuration Management
-- ALL magic numbers → named constants in `app/core/constants.py`
+- ALL magic numbers → named constants in `backend/core/constants.py`
 - ALL API keys → environment variables via `python-dotenv`
 - NEVER hardcode paths — use `pathlib.Path` and `settings.DATA_DIR`
 
 ```python
 # CORRECT
-from app.core.constants import DEFAULT_SILENCE_BETWEEN_SPEAKERS_MS
+from backend.core.constants import DEFAULT_SILENCE_BETWEEN_SPEAKERS_MS
 gap = DEFAULT_SILENCE_BETWEEN_SPEAKERS_MS  # 500
 
 # WRONG
@@ -97,7 +97,7 @@ gap = 500  # ❌ Magic number
 ```
 
 ### CR-03: Prompt Template Management
-- ALL Gemini prompts → files in `prompts/` directory (NOT hardcoded strings)
+- ALL Gemini prompts → files in `backend/ai/prompts/` directory (NOT hardcoded strings)
 - Prompts use Jinja2 template syntax for variable injection
 - Prompt files named: `{domain}_{variant}.txt` (e.g., `script_debate_b2.txt`)
 
@@ -217,7 +217,7 @@ test(script): add CEFR level vocabulary tests
 
 ### SQLite Rules
 - Use `aiosqlite` for async access (NOT sqlite3 blocking)
-- Run migrations with simple SQL files in `app/db/migrations/`
+- Run migrations with simple SQL files in `backend/db/migrations/`
 - Always close connections in `finally` blocks
 
 ### ffmpeg Rules

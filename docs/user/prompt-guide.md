@@ -2,9 +2,9 @@
 
 How to customize the Gemini prompts that drive script, learning-content, thumbnail, and
 YouTube-package generation. All prompts are Jinja2 templates loaded via
-`app/core/prompt_loader.py` and rendered off the event loop (`asyncio.to_thread`).
+`backend/ai/llm/prompt_loader.py` and rendered off the event loop (`asyncio.to_thread`).
 
-## Script generation (`prompts/script/`)
+## Script generation (`backend/ai/prompts/script/`)
 
 Rendered by `render_script_prompt()` for `POST /api/projects/{id}/script/generate` and
 `regenerate` (single line via `regenerate_line.txt`).
@@ -17,9 +17,9 @@ Rendered by `render_script_prompt()` for `POST /api/projects/{id}/script/generat
 | `regenerate_line.txt` | Separate template for re-generating one existing line, given the current text + surrounding genre/CEFR context. |
 
 ### To add or tweak a genre
-1. Add the genre string to `GENRES` in `app/core/constants.py` (also update the wizard's
+1. Add the genre string to `GENRES` in `backend/core/constants.py` (also update the wizard's
    genre selector in `frontend/pages/step1_config.html` if it should be user-selectable).
-2. Create `prompts/script/{genre}.txt` — plain instructions for what that genre's script
+2. Create `backend/ai/prompts/script/{genre}.txt` — plain instructions for what that genre's script
    should contain/sound like. No speaker/CEFR variables available here; those come from
    `script_base.txt`.
 3. `_read_genre_block_sync()` in `prompt_loader.py` validates against `GENRES` before ever
@@ -27,7 +27,7 @@ Rendered by `render_script_prompt()` for `POST /api/projects/{id}/script/generat
    rejected with a `ValidationError`, not a file-not-found further down.
 
 ### To add or tweak a CEFR level's constraints
-Edit `prompts/script/cefr_{level}.txt` directly — these are the actual difficulty ceiling
+Edit `backend/ai/prompts/script/cefr_{level}.txt` directly — these are the actual difficulty ceiling
 per level (vocabulary range, sentence complexity, words-per-minute pacing guidance used
 for Script Rule 1 in `script_base.txt`). `CEFR_LEVELS` in `constants.py` is the fixed set
 of 6 levels (A1–C2); adding a 7th level isn't supported by the rest of the domain model
@@ -64,7 +64,7 @@ by name. `ScriptService` enforces this as a second validation layer: a syntactic
 valid but hallucinated UUID (one that isn't actually one of the project's speakers) is
 rejected before it ever reaches the database.
 
-## Learning Content (`prompts/learning/learning_pack.txt`)
+## Learning Content (`backend/ai/prompts/learning/learning_pack.txt`)
 
 Rendered by `render_learning_prompt(topic, cefr_level, genre, transcript_text)` for
 `POST /api/projects/{id}/learning/generate`. Single template, no genre/CEFR sub-blocks —
@@ -72,20 +72,20 @@ extraction (vocabulary/idioms/grammar/quiz) is driven directly off the already-g
 script transcript rather than needing its own difficulty-ceiling logic (the source script
 was already CEFR-constrained at generation time).
 
-## Thumbnail suggestions (`prompts/thumbnail/thumbnail_suggestions.txt`)
+## Thumbnail suggestions (`backend/ai/prompts/thumbnail/thumbnail_suggestions.txt`)
 
 Rendered by `render_thumbnail_prompt()` for `POST /api/projects/{id}/thumbnails/generate`.
 Validates `genre`, `cefr_level`, and `template_name` (must be one of
 `THUMBNAIL_TEMPLATE_IDS`) before rendering; Gemini's response is constrained via
 `responseJsonSchema` to an exact-count, duplicate-rejected set of headline/color
-suggestions — see `app/services/thumbnail_service.py`.
+suggestions — see `backend/media/thumbnail_service.py`.
 
-## YouTube package (`prompts/youtube/youtube_package.txt`)
+## YouTube package (`backend/ai/prompts/youtube/youtube_package.txt`)
 
 Rendered by `render_youtube_prompt()` for `POST /api/projects/{id}/youtube/generate` —
 titles (3 variants), description, and tags from the full transcript. Chapters are **not**
 Gemini-generated at all: they come from `real_chapters_from_timestamps()` once audio
-exists, or a word-count estimate otherwise (see `app/services/youtube_service.py`).
+exists, or a word-count estimate otherwise (see `backend/content/youtube_service.py`).
 
 ## General rules for any prompt change
 
@@ -93,7 +93,7 @@ exists, or a word-count estimate otherwise (see `app/services/youtube_service.py
   `responseJsonSchema` (not the `google-generativeai` SDK's own schema helper — Gemini is
   called directly via `httpx.AsyncClient` REST, see `docs/user/tts-setup.md`'s sibling note on
   why). Changing a template's expected output shape means updating the matching Pydantic
-  model in `app/models/` too, or Gemini's structurally-valid-but-wrong-shape response will
+  model in `backend/schemas/` too, or Gemini's structurally-valid-but-wrong-shape response will
   fail validation.
 - `generationConfig.temperature` is deliberately left unset (Gemini's default), not pinned
   low — every "Regenerate" feature (script line, learning pack, thumbnail batch) resends
@@ -101,7 +101,7 @@ exists, or a word-count estimate otherwise (see `app/services/youtube_service.py
   (always valid, schema-conforming JSON) already comes from `responseJsonSchema`, which is
   the actual reliability guarantee that matters — pinning temperature low would silently
   break every regenerate button instead.
-- Template files under `prompts/` are read via `StrictUndefined` Jinja2 environments — a
+- Template files under `backend/ai/prompts/` are read via `StrictUndefined` Jinja2 environments — a
   template referencing a variable that wasn't passed raises immediately instead of
   silently rendering an empty string, so a typo'd `{{ context_var }}` fails loudly during
   development rather than shipping a broken prompt.

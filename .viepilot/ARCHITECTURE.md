@@ -6,13 +6,13 @@
 
 ## System Overview
 
-Daily Beyond English Studio là một **local web application** chạy trên `http://localhost:8000`. Backend Python FastAPI xử lý toàn bộ logic AI, TTS, audio/video và hình ảnh. Frontend HTML/CSS/JS thuần túy giao tiếp với backend qua REST API. Hai môi trường phụ chạy như tiến trình con, tách khỏi venv chính: Node.js `video-renderer/` (Remotion) và `venv-image` (image worker trên GPU).
+Daily Beyond English Studio là một **local web application** chạy trên `http://localhost:8000`. Backend Python FastAPI xử lý toàn bộ logic AI, TTS, audio/video và hình ảnh. Frontend HTML/CSS/JS thuần túy giao tiếp với backend qua REST API. Hai môi trường phụ chạy như tiến trình con, tách khỏi venv chính: Node.js `renderer/` (Remotion) và `.venv-image` (image worker trên GPU).
 
 ```
 Browser (localhost:8000)
         ↕ REST API (synchronous, polling — no WebSocket/SSE anywhere in the app)
 FastAPI Backend (Python 3.11+)
-        ├── AI Gateway (app/services/ai/) — cloud-first (Phase 18, D21/D31):
+        ├── AI Gateway (backend/ai/llm/) — cloud-first (Phase 18, D21/D31):
         │     Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter free
         │     (Nemotron → Gemma 4 → Dots3) → local Ollama qwen3.5:9b;
         │     kill switch DIE_AI_ALLOW_CLOUD=false / DIE_AI_MODE=local
@@ -20,12 +20,12 @@ FastAPI Backend (Python 3.11+)
         ├── Edge TTS (the only engine, D56) + per-word timings
         ├── pydub + ffmpeg + pyloudnorm (audio mix, smart music bed)
         ├── Video: Remotion subprocess (the only renderer since Phase 35)
-        ├── Visuals (app/services/visuals/): character/scene/shot/sprite/activity
+        ├── Visuals (backend/library/): character/scene/shot/sprite/activity
         │     libraries, storyboard, matchers, durable image jobs
-        │     → scripts/image_worker.py in venv-image (diffusers, RealVisXL V5.0)
+        │     → backend/ai/image/image_worker.py in .venv-image (diffusers, RealVisXL V5.0)
         │       behind one GPU arbiter (gpu_model_manager)
         ├── Pillow (thumbnail generation)
-        └── SQLite (aiosqlite, numbered migrations in app/db/migrations/)
+        └── SQLite (aiosqlite, numbered migrations in backend/db/migrations/)
 ```
 
 **TTS note:** Edge TTS is the only engine (`TTS_ENGINES = ["edge_tts"]`, D56 2026-10-06).
@@ -84,8 +84,8 @@ graph TB
     end
 
     subgraph Sub["🧩 Subprocess runtimes"]
-        REM[video-renderer/ Remotion, Node]
-        IMG[venv-image image_worker, RTX 3060]
+        REM[renderer/ Remotion, Node]
+        IMG[.venv-image image_worker, RTX 3060]
     end
 
     subgraph Media["🎬 Media"]
@@ -195,7 +195,7 @@ graph LR
         YTS[YouTubePackageService]
     end
 
-    subgraph Visuals["app/services/visuals"]
+    subgraph Visuals["backend/library + backend/ai/image"]
         LS[library_service\ncharacters + scenes]
         PV[project_visuals_service]
         SB[storyboard_service]
@@ -207,12 +207,12 @@ graph LR
     end
 
     subgraph External
-        GW[AI router\napp/services/ai]
+        GW[AI router\nbackend/ai/llm]
         ET[Edge TTS]
         FF[ffmpeg]
-        REM[Remotion video-renderer]
+        REM[Remotion renderer]
         GPU[gpu_model_manager]
-        IW[image_worker in venv-image]
+        IW[image_worker in .venv-image]
         PI[Pillow]
     end
 
@@ -237,21 +237,21 @@ graph LR
 
 Sections 1–8 are the original core services; each now calls the cloud-first AI Gateway (section 9). Sections 9–14 cover Phases 13–32.
 
-### 1. ScriptService (`app/services/script_service.py`, `script_pipeline.py`)
+### 1. ScriptService (`backend/content/script_service.py`, `script_pipeline.py`)
 - **Responsibility:** Generate podcast script via the AI Gateway (cloud-first, local fallback) as a durable, checkpointed job (section-by-section budget, repetition and global length repairs)
 - **Inputs:** topic, CEFR level, duration, num_speakers, genre, accent, language_features
 - **Outputs:** Structured script JSON (speaker, line, timing_estimate, language_notes)
 - **Key logic:** CEFR-calibrated prompt templates, per-genre prompt, language feature toggles
 - **Re-generate:** per-segment regeneration support
 
-### 2. LearningContentService (`app/services/learning_service.py`)
+### 2. LearningContentService (`backend/content/learning_service.py`)
 - **Responsibility:** Generate vocabulary, idioms, grammar notes, and comprehension questions via the AI Gateway as a durable job (`learning_pipeline.py`) with strict structured JSON schema
 - **Inputs:** project script lines, CEFR level, topic
 - **Outputs:** Structured learning pack JSON (`LearningPackOut`: vocabulary with IPA and bilingual definitions, idioms, grammar points, quiz questions with answer keys)
 - **Key logic:** Structured JSON schema validation (`responseSchema`), fallback handling, SQLite persistence with UPSERT
 - **Storage:** `learning_contents` table in SQLite
 
-### 3. TTSService (`app/services/tts_service.py`)
+### 3. TTSService (`backend/ai/tts/tts_service.py`)
 - **Responsibility:** Convert script lines → audio files per speaker
 - **Engine: Edge TTS** (free, online, 10 accents x 3 genders) — the only engine (D56,
   2026-10-06). OmniVoice, Kokoro and StyleTTS 2 were investigated and removed; a legacy
@@ -261,7 +261,7 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
 - **Voice mapping:** Each speaker → accent + gender → a concrete Edge TTS neural voice
   (`EDGE_TTS_VOICE_MAP`), plus speed/pitch/volume settings
 
-### 4. AudioService (`app/services/audio_service.py`) — Sub-task 1.6b, DONE
+### 4. AudioService (`backend/media/audio_service.py`) — Sub-task 1.6b, DONE
 - **Responsibility:** Mix per-speaker audio lines → final podcast audio. Only processes
   already-synthesized audio (never calls a TTS engine itself — that split is deliberate).
 - **Operations:**
@@ -284,19 +284,19 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
   Sub-task 1.9b consumes it (1.9a still estimates chapters from word count only, since no
   audio existed yet at that time)
 
-### 5. VideoService (`app/services/video_service.py`) — Sub-task 1.7a, DONE
+### 5. VideoService (`backend/media/video_service.py`) — Sub-task 1.7a, DONE
 - **Responsibility:** Generate podcast video (MP4). Only processes an already-completed
   audio mix from AudioService (Task 1.6) — never generates audio itself.
 - **Renderer:** Remotion only (Phase 35, Task 35.5, D89 — the Standard ffmpeg renderer, its background templates, the
   9:16 blur-pad export, the `DIE_VIDEO_RENDERER` kill switch and the silent fallback were removed). Karaoke captions,
   speaker chips, vocabulary cards, chapter bar, branded intro/outro and the picture modes of Phases 20–33. See section 11.
-  - `renderer_problem()` names what is missing (Node.js, `video-renderer` packages, Chrome Headless Shell) before any work;
+  - `renderer_problem()` names what is missing (Node.js, `renderer` packages, Chrome Headless Shell) before any work;
     a failed render fails the job with Remotion's reason.
   - LivePortrait lip-sync was never implemented; Phase 32 talking sprites took its place. Speaker avatar uploads were
     removed in Task 35.4: a speaker's picture is its cast character's.
 - **Output:** MP4 1280x720 + SRT (shifted by the intro). Vertical video returns on Remotion in Phase 37.
 
-### 6. ThumbnailService (`app/services/thumbnail_service.py`)
+### 6. ThumbnailService (`backend/media/thumbnail_service.py`)
 - **Responsibility:** Generate the episode's YouTube thumbnails (Phase 36, Tasks 36.3/36.4, D90–D92)
 - **Kinds:** `composed` — `thumbnail_compose` draws the two main cast characters cut from their approved talking sprites
   (the video's placement and mirroring) over an Activity Library picture the storyboard uses, else a scene plate, else
@@ -306,7 +306,7 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
   the composition inputs live in each variant's `render.json` so an edit re-renders the same picture.
 - **Output:** PNG/JPG 1280x720 + 720x1280
 
-### 7. YouTubePackageService (`app/services/youtube_service.py`) — Sub-tasks 1.9a + 1.9b, DONE
+### 7. YouTubePackageService (`backend/content/youtube_service.py`) — Sub-tasks 1.9a + 1.9b, DONE
 - **Responsibility:** Generate YouTube upload metadata and assemble the final downloadable
   package.
 - **Output (`youtube_packages` table, `003_youtube_package.sql` + `004_youtube_chapters_measured.sql`):**
@@ -327,14 +327,14 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
   acceptance criterion, which only asks for video+thumbnail+SRT+metadata.txt).
 - **Format:** Markdown + plain text for easy copy-paste
 
-### 8. ProjectService (`app/services/project_service.py`)
+### 8. ProjectService (`backend/content/project_service.py`)
 - **Responsibility:** CRUD for projects, auto-save, state machine
 - **State machine:** `draft → script_generated → audio_generated → video_generated → complete`
 - **Storage:** SQLite (aiosqlite)
 
 ---
 
-### 9. AI Gateway (`app/services/ai/`) and durable AI jobs — Phases 13–18
+### 9. AI Gateway (`backend/ai/llm/`) and durable AI jobs — Phases 13–18
 - `router.py`: `AI_MODE` selection (`cloud_first` default, `local` kill switch), bounded per-provider
   retry with backoff, per-provider circuit breaker and time budget, ordered fallback chain
   Gemini 3.1 Flash-Lite → Gemini Flash-Lite latest → OpenRouter free models → Ollama `qwen3.5:9b`.
@@ -344,7 +344,7 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
 - `ai_job_service.py` + `ai_worker.py`: durable `ai_generation_jobs` rows with checkpoints; the in-process
   worker dispatches to handlers registered by the script and learning pipelines, so a crash resumes.
 
-### 10. Visual libraries and pipelines (`app/services/visuals/`) — Phases 20, 23, 24, 28, 29, 31, 32
+### 10. Visual libraries and pipelines (`backend/library/`) — Phases 20, 23, 24, 28, 29, 31, 32
 - `library_service.py`: global Character and Scene libraries (55 places) with safe content paths.
 - `project_visuals_service.py`: a project's cast, ordered scenes and shot records.
 - `storyboard_service.py`: AI-proposed story beats, validated against the project, owner-reviewed in Step 5.
@@ -357,16 +357,16 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
   character, owner-entered name per image) and the deterministic matcher for storyboard insert beats,
   with per-render usage history.
 - `jobs.py`, `runner.py`, `pipelines.py`, `engine.py`, `recipes.py`, `geometry.py`: persistent FIFO image
-  jobs run one at a time against `scripts/image_worker.py` in `venv-image` (diffusers, RealVisXL V5.0);
+  jobs run one at a time against `backend/ai/image/image_worker.py` in `.venv-image` (diffusers, RealVisXL V5.0);
   `IMAGE_ENGINE=fake` gives a deterministic GPU-free engine for tests.
 
-### 11. Remotion renderer (`app/services/video_renderer_remotion.py`, `video-renderer/`) — Phase 19+
+### 11. Remotion renderer (`backend/media/video_renderer_remotion.py`, `renderer/`) — Phase 19+
 - Builds the composition props (timings, captions, cast, storyboard shots, sprites, activity cutaways,
-  brand intro/outro, music) and runs the Node `video-renderer/` workspace (Remotion 4, React 19,
+  brand intro/outro, music) and runs the Node `renderer/` workspace (Remotion 4, React 19,
   TypeScript, Vitest) as a local subprocess. Nothing per-episode leaves the machine (invariant 37).
 - The only renderer since Task 35.5 (invariant 36 is retired: there is no ffmpeg fallback any more).
 
-### 12. GPU arbiter (`app/services/gpu_model_manager.py`) — Task 20.1
+### 12. GPU arbiter (`backend/ai/image/gpu_model_manager.py`) — Task 20.1
 - An arbiter, not a loader: each GPU consumer (image worker, local Ollama fallback) takes an exclusive
   lease on the single RTX 3060, loads and unloads its own model inside it, and hands the card back.
 
@@ -389,7 +389,7 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
 | TTS engine | Edge TTS only (D56) | Kokoro (D36) and StyleTTS 2 (D38) failed the owner's listening tests; OmniVoice is voice cloning, not voice design |
 | Audio processing | pydub + ffmpeg + pyloudnorm | Mature; real ITU-R BS.1770 loudness |
 | Video generation | Remotion (the only renderer since Phase 35) | Animated learning video (karaoke, cards, sprites); one renderer, no overlapping fallback (D89) |
-| Images | diffusers + RealVisXL V5.0 in `venv-image` (Phase 28) | Local GPU, isolated heavy dependencies; libraries reuse approved pictures to save GPU time |
+| Images | diffusers + RealVisXL V5.0 in `.venv-image` (Phase 28) | Local GPU, isolated heavy dependencies; libraries reuse approved pictures to save GPU time |
 | Lips-sync | Not implemented; talking sprites (Phase 32) instead | No GPU time per episode, owner-made sprite sets |
 | Thumbnail | Pillow composition of the cast sprites + episode pictures | Consistent branding, no API cost, user-editable |
 | Database | SQLite (aiosqlite) | Zero-config, single-user, sufficient performance |
