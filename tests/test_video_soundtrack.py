@@ -63,7 +63,7 @@ async def test_remotion_render_sends_the_soundtrack_prop(tmp_path, monkeypatch):
     async def fake_props(db, project, audio_job, learning, caption_style, **_options):
         return {**props_for(audio_job), "episodeId": project["id"]}
 
-    def fake_render(input_props, output_path):
+    def fake_render(input_props, output_path, frames=None):
         captured.update(json.loads(json.dumps(input_props)))
         return {"mp4_path": str(output_path), "mode": "remotion", "fallback_used": False}
 

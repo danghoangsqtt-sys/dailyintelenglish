@@ -532,7 +532,8 @@ async def _build_input_props(
     return props
 
 
-def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path) -> dict[str, Any]:
+def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path,
+                              frames: tuple[int, int] | None = None) -> dict[str, Any]:
     """Blocking subprocess call -- must run in a thread (`asyncio.to_thread`), never on the
     event loop directly, same "Forbidden Scope" rule as every blocking render call. Temp-props-file + `time.monotonic()` wall time + strict
     output-path validation, mirroring the Phase 19 spike runner's `_run_render`.
@@ -549,6 +550,8 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path) ->
         json.dump(input_props, props_file)
         props_file.close()
         command = [npx, "remotion", "render", "src/index.ts", "Episode", str(output_path), f"--props={props_file.name}"]
+        if frames is not None:  # Phase 37 (D99): a highlight clip is a frame range of the vertical episode
+            command.append(f"--frames={frames[0]}-{frames[1]}")
         start = time.monotonic()
         try:
             result = subprocess.run(
@@ -589,8 +592,13 @@ async def render_via_remotion(
     caption_style: str = "outline",
     visual_mode: str = "illustrated",
     still_scene_id: str | None = None,
+    layout: str = "horizontal",
+    clip: dict | None = None,
 ) -> dict[str, Any]:
-    """D19.7-c: builds real props (async -- resolves avatars via the DB), then hands off to
+    """Phase 37: `layout="vertical"` renders 1080x1920 (D100); `clip` ({line_from, line_to, hook}) renders only that passage
+    of the vertical episode, opening on its hook banner (D99).
+
+    D19.7-c: builds real props (async -- resolves avatars via the DB), then hands off to
     `_render_via_remotion_sync` in a thread for the actual blocking subprocess call. Raises
     `RemotionRenderFailedError` on timeout, non-zero exit, or a missing output file -- the
     caller (`video_service.generate_video`) fails the job with that reason (Task 35.5: there is no other renderer).
@@ -608,7 +616,13 @@ async def render_via_remotion(
         input_props["soundtrackPath"] = soundtrack
         if "brand" in input_props:
             input_props["brand"]["voicesInSoundtrack"] = bool(voices)
-    result = await asyncio.to_thread(_render_via_remotion_sync, input_props, output_path)
+    frames = None
+    if layout == "vertical":
+        input_props.update(layout="vertical", width=VERTICAL_WIDTH, height=VERTICAL_HEIGHT)
+    if clip is not None:
+        frames = clip_frames(input_props, clip["line_from"], clip["line_to"])
+        input_props.update(hook=clip.get("hook") or "", hookAtSec=input_props["lines"][clip["line_from"]]["startSec"])
+    result = await asyncio.to_thread(_render_via_remotion_sync, input_props, output_path, frames)
     return {**result, "soundtrack": soundtrack is not None, "brand_voice": bool(voices),
             "activity_uses": activity_uses, "intro_seconds": float(input_props.get("introSec") or 0.0)}
 
@@ -618,6 +632,21 @@ def _copy_brand_voice(source: str) -> str:
     destination = REMOTION_BRAND_DIR / Path(source).name
     shutil.copyfile(source, destination)
     return f"remotion-render/brand/{destination.name}"
+
+
+VERTICAL_WIDTH, VERTICAL_HEIGHT = 1080, 1920
+CLIP_LEAD_S, CLIP_TAIL_S = 0.6, 0.8
+
+
+def clip_frames(input_props: dict[str, Any], line_from: int, line_to: int) -> tuple[int, int]:
+    """Phase 37 (D99): the composition frames of a passage -- from just before its first line to just after its last."""
+    lines, fps = input_props["lines"], input_props["fps"]
+    if not 0 <= line_from <= line_to < len(lines):
+        raise ValidationError("The clip's lines are outside the script")
+    start = input_props["introSec"] + lines[line_from]["startSec"] - CLIP_LEAD_S
+    end = input_props["introSec"] + lines[line_to]["endSec"] + CLIP_TAIL_S
+    last = math.ceil(composition_seconds(input_props) * fps) - 1
+    return max(0, round(start * fps)), min(last, round(end * fps))
 
 
 def outro_start_seconds(input_props: dict[str, Any]) -> float:

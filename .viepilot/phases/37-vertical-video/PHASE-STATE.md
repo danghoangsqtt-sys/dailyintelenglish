@@ -1,15 +1,15 @@
 # PHASE-STATE — Phase 37: Vertical video for YouTube Shorts and TikTok
 
-- **Status:** in progress 2026-10-13 (owner /vp-auto: finish the whole project). Paused at the usage limit: 37.1 renderer side done (vertical layout + audioOffsetSec, tsc clean, 69 Vitest tests pass); Python wiring (render_via_remotion layout/clip) next. (`docs/brainstorm/session-2026-10-13.md`, D98–D101). Starts after Phase 36 (reuses its
+- **Status:** 37.1–37.4 done 2026-10-13; 37.5 Gate B-25 waits for the owner (owner /vp-auto: finish the whole project). (`docs/brainstorm/session-2026-10-13.md`, D98–D101). Starts after Phase 36 (reuses its
   learning pack, hashtags and cover composition).
 
 | Task | Description | Main paths | Status |
 |---|---|---|---|
-| 37.1 | Remotion 1080x1920 composition: illustration top, big karaoke captions middle, both characters below (D81/D82), reusing sprites, segments and karaoke | `video-renderer/src/`, `app/services/video_renderer_remotion.py` | in_progress |
-| 37.2 | Highlight clips: AI proposes 1–3 complete 30–90 s passages with a hook title; owner trims and approves; each clip renders | new clip model/service/API, Step 5 UI | planned |
-| 37.3 | Full episode in vertical for TikTok | `video_service.py`, Step 5 | planned |
-| 37.4 | Separate Shorts and TikTok packages + vertical cover; copy buttons; downloads | `youtube_service.py`, Step 7 | planned |
-| 37.5 | Tests, real clips, Gate B-25 | — | planned |
+| 37.1 | Remotion 1080x1920 composition: illustration top, big karaoke captions middle, both characters below (D81/D82), reusing sprites, segments and karaoke | `video-renderer/src/`, `app/services/video_renderer_remotion.py` | done |
+| 37.2 | Highlight clips: AI proposes 1–3 complete 30–90 s passages with a hook title; owner trims and approves; each clip renders | new clip model/service/API, Step 5 UI | done |
+| 37.3 | Full episode in vertical for TikTok | `video_service.py`, Step 5 | done |
+| 37.4 | Separate Shorts and TikTok packages + vertical cover; copy buttons; downloads | `shorts_service.py`, Step 5 | done |
+| 37.5 | Tests, real clips, Gate B-25 | — | gate_pending |
 
 ## Implementation notes (before coding)
 
@@ -27,3 +27,15 @@
 - 37.4: per clip: a 9:16 cover from `thumbnail_compose` (hook as headline), a Shorts package (title <= 100 chars with
   #Shorts, short description with 3 learning items and the full episode's link when published, hashtags) and a TikTok
   caption (hook, two lines, <= 5 hashtags); Step 5 "Shorts & TikTok" section with copy buttons and downloads.
+
+## As built (2026-10-13)
+
+- Changed from the plan: a clip is **a frame range of the vertical episode** (`clip_frames`: from line_from's start minus
+  0.6 s to line_to's end plus 0.8 s; Remotion `--frames=a-b`), not a re-timed window -- so the audio, soundtrack, segments and
+  sprites are exactly the episode's, and `audioOffsetSec` was dropped. The clip opens on a yellow **hook banner** (3.5 s,
+  `hookOpacity`); the vocabulary card waits until the banner fades.
+- The Shorts/TikTok texts and the 9:16 cover live with each clip in Step 5 ("Shorts & TikTok", `step5_shorts.js`), not Step 7.
+- Real run (sandbox, "The New Neighbor" ep. 1): the full vertical episode rendered; the real cloud AI proposed 3 clips
+  (53 s, 58 s, 44 s) with good hooks; the 44 s clip rendered in ~46 s at 1080x1920 with audio, hook banner, captions,
+  characters, and its cover; Shorts title/description and TikTok caption correct.
+- Tests: `tests/test_shorts.py` (5), `video-renderer/src/hook.test.ts`; the Step 5 browser test now expects the vertical download.

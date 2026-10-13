@@ -102,9 +102,42 @@ async def generate_video(
     srt_path = output_dir / "subtitles.srt"
     srt = generate_srt(audio_job["timestamps"], offset_seconds=float(result.get("intro_seconds") or 0.0))
     await asyncio.to_thread(_write_srt_sync, srt_path, srt)
-    # A vertical file from the removed ffmpeg 9:16 export is stale now (Phase 37 brings vertical video back on Remotion).
-    await asyncio.to_thread((output_dir / "video_vertical.mp4").unlink, missing_ok=True)
     return {**result, "srt_path": str(srt_path)}
+
+
+async def render_vertical(
+    project_id: str,
+    audio_job: dict | None,
+    *,
+    db: aiosqlite.Connection,
+    project: dict,
+    learning: dict | None = None,
+    caption_style: str = "outline",
+    visual_mode: str = "podcast_sprites",
+    still_scene_id: str | None = None,
+    clip: dict | None = None,
+    output_path: Path | None = None,
+) -> dict:
+    """Phase 37 (D98-D100): the whole episode in 1080x1920 for TikTok (`video_vertical.mp4`), or one highlight clip
+    (`clip` = {line_from, line_to, hook}) for Shorts/TikTok. Same checks and errors as `generate_video`."""
+    if audio_job is None or audio_job.get("status") != "complete":
+        raise VideoRenderError("Cannot generate video: the audio mix hasn't been generated yet.")
+    problem = await asyncio.to_thread(renderer_problem)
+    if problem:
+        raise VideoRenderError(f"The video renderer is not ready: {problem}")
+    output = output_path or settings.DATA_DIR / "video" / project_id / "video_vertical.mp4"
+    try:
+        return await video_renderer_remotion.render_via_remotion(
+            db, project, audio_job, learning, output, caption_style=caption_style, visual_mode=visual_mode,
+            still_scene_id=still_scene_id, layout="vertical", clip=clip,
+        )
+    except RemotionRenderFailedError as exc:
+        logger.warning("remotion_vertical_render_failed project_id=%s reason=%s", project_id, exc)
+        raise VideoRenderError(f"The vertical video could not be rendered: {exc}") from exc
+
+
+async def set_vertical_path(db: aiosqlite.Connection, project_id: str, path: str) -> None:
+    await db.execute("UPDATE video_jobs SET mp4_path_vertical = ? WHERE project_id = ?", (path, project_id))
 
 
 def _row_to_video_job(row: aiosqlite.Row) -> dict:

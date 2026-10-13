@@ -8,6 +8,16 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Phase 37 Shorts & TikTok, 2026-10-13)
+- **The whole episode in vertical (37.1/37.3).** Step 5 renders a 1080x1920 version for TikTok: the picture on top, big
+  karaoke captions in the middle, both characters below; `POST /api/projects/{id}/video/vertical` and the `mp4_vertical`
+  download.
+- **Highlight clips (37.2).** The AI proposes 1-3 complete 30-90 s passages with a hook title; the owner edits the lines
+  and the hook, approves, and renders each clip (a frame range of the vertical episode opening on a yellow hook banner).
+- **Ready-to-post texts and a cover per clip (37.4).** A 9:16 cover with the hook as headline, a Shorts title and
+  description (#Shorts, three learning items, the full episode's link) and a TikTok caption (at most 5 hashtags), with
+  copy buttons and downloads. Migration 024 `short_clips`.
+
 ### Added (Phase 36 YouTube package, 2026-10-13)
 - **A fuller learning pack (36.1).** Collocations, phrasal verbs and sentence patterns, each with English and Vietnamese
   meanings and the sentence from the episode, in three new Step 3 tabs.

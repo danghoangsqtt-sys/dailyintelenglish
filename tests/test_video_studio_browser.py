@@ -110,7 +110,7 @@ async def test_workspace_has_no_background_or_renderer_choice(browser_instance: 
 
     await page.wait_for_selector("#workspace:not([hidden])")
     assert await page.locator(
-        "#template-grid, #renderer-group, #aspect-ratio-group, #download-mp4-vertical, #avatar-details").count() == 0
+        "#template-grid, #renderer-group, #aspect-ratio-group, #avatar-details").count() == 0  # 37: vertical link is in Shorts
     assert await page.locator("#renderer-status").is_hidden()
     assert await page.locator("#generate-btn").is_enabled()
     assert await page.locator("#no-result-yet").is_visible()

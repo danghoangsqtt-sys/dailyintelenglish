@@ -227,6 +227,28 @@ function VocabCard({ item, opacity, position, layout = "horizontal" }: {
   );
 }
 
+/** Phase 37 (D99): a highlight clip opens on its hook title -- a big yellow banner for HOOK_SECONDS, fading in and out. */
+const HOOK_SECONDS = 3.5;
+
+export function hookOpacity(currentTimeSec: number, hookAtSec: number): number {
+  const fadeIn = interpolate(currentTimeSec, [hookAtSec - 0.6, hookAtSec - 0.2], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const fadeOut = interpolate(currentTimeSec, [hookAtSec + HOOK_SECONDS - 0.4, hookAtSec + HOOK_SECONDS], [1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return Math.min(fadeIn, fadeOut);
+}
+
+function HookBanner({ hook, opacity }: { hook: string; opacity: number }) {
+  if (opacity <= 0) return null;
+  return (
+    <div style={{ position: "absolute", left: "6%", right: "6%", top: "22%", opacity, display: "flex", justifyContent: "center" }}>
+      <div style={{ background: "#FFD23F", color: "#14301F", borderRadius: 28, padding: "26px 34px", fontFamily: "Arial, sans-serif",
+        fontSize: 64, fontWeight: 800, lineHeight: 1.1, textAlign: "center", boxShadow: "0 10px 40px rgba(0,0,0,0.45)" }}>
+        {hook}
+      </div>
+    </div>
+  );
+}
+
 /** Task 19.6 (D19.6-d): thin full-width strip at the very top edge -- opposite the
  * bottom-anchored caption band, and above the speaker chips' own `top: "5%"` origin so the
  * two overlays never collide. */
@@ -309,7 +331,8 @@ export function AudioWindowContent({
   sprites,
   playAudio = true,
   layout = "horizontal",
-  audioOffsetSec = 0,
+  hook,
+  hookAtSec,
 }: {
   lines: EpisodeLine[];
   speakers: EpisodeSpeaker[];
@@ -327,9 +350,10 @@ export function AudioWindowContent({
   sprites?: EpisodeSprites;
   /** Task 22.4: false when the episode's full-video soundtrack already carries the voice. */
   playAudio?: boolean;
-  /** Phase 37: vertical layout, and where a clip's window starts in the mixed audio. */
+  /** Phase 37: the vertical layout, and a highlight clip's hook banner. */
   layout?: Layout;
-  audioOffsetSec?: number;
+  hook?: string;
+  hookAtSec?: number;
 }) {
   const frame = useCurrentFrame();
   const currentTimeSec = frame / fps;
@@ -344,6 +368,8 @@ export function AudioWindowContent({
   const layer = podcastLayer(visualMode);
   const background = visualBackgroundForFrame(frame, fps, lines, layer === "none" ? visuals : { shots: {}, lineShots: [] });
   const speechProgress = audioDurationSec > 0 ? frame / (audioDurationSec * fps) : 0;
+  // a clip's hook banner has the top of the frame to itself while it shows
+  const hookShown = hook && hookAtSec !== undefined ? hookOpacity(currentTimeSec, hookAtSec) : 0;
 
   return (
     <>
@@ -363,14 +389,16 @@ export function AudioWindowContent({
           objectFit: "cover", ...(layout === "vertical" ? VERTICAL_PICTURE : {}),
           opacity: background.opacity, transform: background.transform }} />
       ) : null}
-      {playAudio ? <Audio src={staticFile(audioPath)} startFrom={Math.round(audioOffsetSec * fps)} /> : null}
+      {playAudio ? <Audio src={staticFile(audioPath)} startFrom={0} /> : null}
       {captionStyleSpec(captionStyle).bottomShade && layout !== "vertical" ? <div style={BOTTOM_SHADE_STYLE} /> : null}
       <ChapterProgressBar frame={frame} fps={fps} audioDurationSec={audioDurationSec} chapters={chapters} />
       <SpeakerChips speakers={speakers} activeId={activeId} />
       {activeLearningItem ? (
         <VocabCard
           item={activeLearningItem.item}
-          opacity={vocabCardOpacity(currentTimeSec, activeLearningItem.slotStartSec, activeLearningItem.slotEndSec)}
+          opacity={
+            vocabCardOpacity(currentTimeSec, activeLearningItem.slotStartSec, activeLearningItem.slotEndSec) * (1 - hookShown)
+          }
           position={layer === "sprites" || layout === "vertical" ? "top-center" : vocabCardPosition(background.kind)}
           layout={layout}
         />
@@ -390,6 +418,7 @@ export function AudioWindowContent({
           <CaptionBand line={line} currentTimeSec={currentTimeSec} captionStyle={captionStyle} layout={layout} />
         </div>
       ) : null}
+      {hook && hookAtSec !== undefined ? <HookBanner hook={hook} opacity={hookShown} /> : null}
     </>
   );
 }
@@ -417,7 +446,8 @@ export const Episode: React.FC<EpisodeInputProps> = ({
   soundtrackPath,
   brand,
   layout = "horizontal",
-  audioOffsetSec = 0,
+  hook,
+  hookAtSec,
 }) => {
   // D19.6-a: total video = intro + audio + outro (Option B, extend). `audioDurationSec` is
   // the same "last line's endSec" measure Root.tsx's calculateMetadata already uses for the
@@ -453,7 +483,8 @@ export const Episode: React.FC<EpisodeInputProps> = ({
           sprites={sprites}
           playAudio={!soundtrackPath}
           layout={layout}
-          audioOffsetSec={audioOffsetSec}
+          hook={hook}
+          hookAtSec={hookAtSec}
         />
       </Sequence>
       <Sequence from={introFrames + audioFrames} durationInFrames={outroFrames} name="Outro">

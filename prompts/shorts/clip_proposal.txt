@@ -1,0 +1,24 @@
+You pick highlight clips from an episode of Daily Beyond English, an English-learning YouTube channel for Vietnamese
+learners. Each clip becomes a YouTube Short and a TikTok video, so it must make sense on its own and hook a scrolling
+viewer in the first seconds.
+
+Topic: {{ topic }}
+CEFR level: {{ cefr_level }}
+
+Script lines (index, start-end seconds, speaker: text):
+{% for line in lines %}[{{ line.index }}] {{ "%.1f" | format(line.start) }}-{{ "%.1f" | format(line.end) }} {{ line.speaker }}: {{ line.text }}
+{% endfor %}
+{% if learning %}Words and phrases worth learning in this episode: {{ learning | join(", ") }}
+{% endif %}
+Rules:
+1. Propose {{ count }} clips. Each covers a run of consecutive lines (line_from..line_to, inclusive) lasting between
+   {{ min_seconds }} and {{ max_seconds }} seconds (end of line_to minus start of line_from).
+2. A clip is a complete little moment: it starts where a new idea starts and ends on a natural close (an answer, a
+   joke, a conclusion) -- never in the middle of an exchange. Prefer passages that use the words and phrases above.
+3. Clips do not overlap.
+4. "hook": a short, punchy English title for the top of the video (at most 7 words), curiosity-driven and truthful,
+   for example "Don't say this to a new neighbor!" or "3 ways to ask for help".
+5. "reason": one sentence on why this passage works as a short (what the viewer learns).
+
+Return JSON only, exactly in this shape:
+{"clips": [{"line_from": 3, "line_to": 7, "hook": "...", "reason": "..."}]}

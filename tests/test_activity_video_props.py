@@ -138,7 +138,7 @@ async def test_backend_usage_metadata_is_not_sent_to_remotion_but_returns_after_
     async def no_soundtrack(*_args, **_kwargs):
         return None
 
-    def fake_render(props, output_path):
+    def fake_render(props, output_path, frames=None):
         seen["props"] = props
         return {"mp4_path": str(output_path), "srt_path": None, "background_image": None,
                 "mode": "remotion", "fallback_used": False, "wall_time_seconds": 0.1}

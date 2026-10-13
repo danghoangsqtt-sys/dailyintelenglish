@@ -1519,13 +1519,13 @@ State: `.viepilot/phases/36-youtube-package/PHASE-STATE.md`. After Phase 35.
 - [ ] 36.5 AI-planned series with numbered episodes
 - [ ] 36.6 Tests, a real series, Gate B-24
 
-### Phase 37: Vertical video for YouTube Shorts and TikTok (D98–D101) - planned 2026-10-13
+### Phase 37: Vertical video for YouTube Shorts and TikTok (D98–D101) - 37.1–37.4 done 2026-10-13; Gate B-25 pending
 
 State: `.viepilot/phases/37-vertical-video/PHASE-STATE.md`. After Phase 36.
 
-- [ ] 37.1 Remotion 1080x1920 composition
-- [ ] 37.2 AI-proposed, owner-approved highlight clips
-- [ ] 37.3 Full episode in vertical
-- [ ] 37.4 Shorts and TikTok packages with a vertical cover
+- [x] 37.1 Remotion 1080x1920 composition
+- [x] 37.2 AI-proposed, owner-approved highlight clips
+- [x] 37.3 Full episode in vertical
+- [x] 37.4 Shorts and TikTok packages with a vertical cover
 - [ ] 37.5 Tests, real clips, Gate B-25
 

@@ -2,6 +2,8 @@
 
 ## Current Status
 
+**Now (2026-10-13, Phase 37):** 37.1–37.4 done — the whole episode in vertical (1080x1920) and AI-proposed, owner-approved Shorts/TikTok highlight clips with a hook banner, a 9:16 cover and ready-to-post texts (migration 024). Sandbox run on "The New Neighbor" ep. 1: real AI proposed 3 clips (44–58 s); one rendered in ~46 s. **Waiting for owner Gate B-25** (real clips on the real app). Phases 35 and 36 complete (Gate B-24 PASS).
+
 **Now (2026-10-12, Gate B-23):** Phase 33.1–33.8 done; the real app runs the Phase 33 code (migrations 018–020 applied after backups), Jack copied in from the sandbox, and a 3-character talking-sprites video rendered (`data/video/afbc299e-2362-4b8b-8d65-65ca01984f47/video_remotion.mp4`, report `docs/operations/phase33-gate-b23.md`). **Waiting for owner Gate B-23.**
 
 **Earlier (2026-10-12, Phase 33 paused before 33.9):** 33.1–33.7 done, 33.8 built (full suite running). Owner paused the video step to finish Jack's expressions (has base + smile/laugh/surprised/thinking closed; needs at least `calm__open`, ideally Tier 1: `calm__open`, `smile__open`, `surprised__open`, `blink`) in the **sandbox copy** on port 8010. The real app (port 8000) still runs the old code and the real DB has migrations only up to 017. Resume: back up, restart the real app, copy Jack from the sandbox, render a 3-character project, Gate B-23.

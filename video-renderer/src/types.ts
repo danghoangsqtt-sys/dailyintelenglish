@@ -202,8 +202,10 @@ export const episodeInputPropsSchema = z.object({
   /** Phase 37 (D100): "vertical" (1080x1920, Shorts/TikTok): picture on top, big captions in the middle, the characters
    * below. Default "horizontal" keeps every older props file unchanged. */
   layout: z.enum(["horizontal", "vertical"]).default("horizontal"),
-  /** Phase 37 (D99): a highlight clip is a window of the mixed episode -- its audio and soundtrack start here. */
-  audioOffsetSec: z.number().default(0),
+  /** Phase 37 (D99): a highlight clip is a frame range of the vertical episode; its hook title shows as a banner for a
+   * few seconds from `hookAtSec` (speech time). */
+  hook: z.string().optional(),
+  hookAtSec: z.number().optional(),
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;

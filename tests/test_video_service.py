@@ -169,16 +169,16 @@ async def test_generate_video_renders_with_remotion_and_writes_srt_after_the_int
                 "intro_seconds": 4.0, "soundtrack": False, "activity_uses": [], "kwargs": kwargs}
 
     monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", fake_render)
-    stale = tmp_path / "video" / "proj-1" / "video_vertical.mp4"
-    stale.parent.mkdir(parents=True)
-    stale.write_bytes(b"old 9:16 export")
+    vertical = tmp_path / "video" / "proj-1" / "video_vertical.mp4"
+    vertical.parent.mkdir(parents=True)
+    vertical.write_bytes(b"vertical episode")
     result = await video_service.generate_video("proj-1", AUDIO_JOB, db=None, project={"id": "proj-1"},
                                                 caption_style="box", visual_mode="podcast_sprites")
     assert result["mode"] == "remotion" and result["mp4_path"].endswith("video_remotion.mp4")
     assert result["kwargs"] == {"caption_style": "box", "visual_mode": "podcast_sprites", "still_scene_id": None}
     srt = Path(result["srt_path"]).read_text(encoding="utf-8")
     assert "00:00:04,000 --> 00:00:05,500" in srt and "Alex: Hello there." in srt  # shifted by the intro
-    assert not stale.exists()  # the removed ffmpeg 9:16 export leaves no stale file
+    assert vertical.exists()  # Phase 37: the vertical episode is its own render and is kept
 
 
 async def test_a_remotion_failure_fails_the_render_with_its_reason(ready_renderer, monkeypatch):
