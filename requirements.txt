@@ -13,10 +13,17 @@ Pillow==12.3.0
 edge-tts==7.2.8
 aiofiles==25.1.0
 python-multipart==0.0.32
+numpy==2.5.3  # used directly (audio levels, sprites, colour checks); was only pulled in by pyloudnorm
+librosa==1.0.0  # Task 22.9 music pace/mood analysis (backend/media/music_analysis.py); was undeclared (Phase 38)
+tzdata==2026.4  # zoneinfo data on Windows: Gemini quota reset at midnight America/Los_Angeles; was undeclared (Phase 38)
 
 pytest==9.1.1
 pytest-asyncio==1.4.0
 ruff==0.7.4
+# Tests only: the real CLIP tokenizer for the prompt-budget tests (tests/test_visuals_phase28.py).
+# No torch here -- tokenizers only; the PyInstaller spec excludes transformers from the .exe.
+transformers==5.17.0
+huggingface_hub==1.33.0
 playwright==1.62.0  # browser tests use playwright.async_api directly, not the pytest-playwright
                     # plugin; after installing, also run: playwright install chromium
 
