@@ -9,7 +9,7 @@
 | 36.2 | SEO description with a character budget, ≤15 hashtags, pinned-comment transcript (split at 10,000 chars) + transcript file, copy buttons in Step 7, zip update | `app/services/youtube_service.py`, `prompts/youtube/youtube_package.txt`, `app/models/youtube.py`, `frontend/static/js/step7_youtube.js` | done 2026-10-13 |
 | 36.3 | Composed thumbnail: sprite characters + topic illustration (Activity Library / scene plate) + headline, CEFR, episode no., logo; 3 variants; replaces the 5 Pillow templates and ai_scene | `app/services/thumbnail_service.py`, `prompts/thumbnail/`, `frontend/static/js/step6_thumbnail.js` | done 2026-10-13 |
 | 36.4 | Outside-AI thumbnail: per-episode prompt (with character pictures), drop zone, text/badge/logo overlay | same as 36.3 | done 2026-10-13 |
-| 36.5 | Channel plan (D103–D105): topics → series → episodes; AI channel map; numbered projects per series; interleaved publishing calendar; series/playlist links and episode numbers in descriptions and thumbnails | new `channel_service`, `app/api/channel.py`, `/channel` page, migration 023, prompt `prompts/channel/` | in_progress |
+| 36.5 | Channel plan (D103–D105): topics → series → episodes; AI channel map; numbered projects per series; interleaved publishing calendar; series/playlist links and episode numbers in descriptions and thumbnails | new `channel_service`, `app/api/channel.py`, `/channel` page, migration 023, prompt `prompts/channel/` | done 2026-10-13 (real AI map on the sandbox: 3 topics × 2 series, 4 projects created, calendar rotating topics) |
 | 36.6 | Tests, a real 3-episode series (≥1 complete episode), Gate B-24 | — | planned |
 
 ## Implementation notes (before coding)

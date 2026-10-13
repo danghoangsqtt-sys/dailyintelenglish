@@ -12,6 +12,7 @@ from app.core.responses import ok
 from app.db.database import get_db
 from app.services import (
     audio_service,
+    channel_service,
     learning_service,
     music_library_service,
     project_service,
@@ -33,7 +34,8 @@ async def _composed(db: aiosqlite.Connection, project_id: str, package: dict | N
     script_lines = await script_service.get_script(db, project_id)
     learning = await learning_service.get_learning_content(db, project_id)
     credit = await music_library_service.music_credit(db, project_id)
-    return youtube_service.compose(package, project, script_lines, learning, credit)
+    episode = await channel_service.episode_context(db, project_id)  # Task 36.5: the series block
+    return youtube_service.compose(package, project, script_lines, learning, credit, episode)
 
 
 @router.post("/generate")

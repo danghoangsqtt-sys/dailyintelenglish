@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api import (
-    ai_jobs, audio, learning, music, profiles, projects, settings as settings_api, storyboard, thumbnail, tts, video,
+    ai_jobs, audio, channel, learning, music, profiles, projects, settings as settings_api, storyboard, thumbnail, tts, video,
     visuals, youtube,
 )
 from app.core.config import settings
@@ -166,6 +166,7 @@ app.include_router(youtube.router)
 app.include_router(settings_api.router)
 app.include_router(ai_jobs.router)
 app.include_router(ai_jobs.health_router)
+app.include_router(channel.router)
 app.include_router(profiles.router)  # Phase 33: before visuals so /api/visuals/profiles is never shadowed
 app.include_router(visuals.router)
 app.include_router(visuals.project_router)
@@ -271,6 +272,12 @@ async def shot_library() -> FileResponse:
 async def character_library() -> FileResponse:
     """Serve the global Character Library."""
     return FileResponse(FRONTEND_DIR / "pages" / "characters.html")
+
+
+@app.get("/channel")
+async def channel_page() -> FileResponse:
+    """Task 36.5 (D103-D105): the channel plan -- topics, series, episodes and the publishing calendar."""
+    return FileResponse(FRONTEND_DIR / "pages" / "channel.html")
 
 
 @app.get("/settings")

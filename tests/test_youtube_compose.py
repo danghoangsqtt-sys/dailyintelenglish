@@ -85,3 +85,17 @@ def test_titles_given_by_variant_are_accepted():
     package = YouTubePackageOut.model_validate({
         "titles": {"click_worthy": "A", "educational": "B", "seo": "C"}, "description": "Summary.", "tags": ["english"]})
     assert [(title.variant, title.text) for title in package.titles] == [("click_worthy", "A"), ("educational", "B"), ("seo", "C")]
+
+
+def test_a_series_episode_names_its_series_and_links_its_neighbours():
+    """Task 36.5 (D103): the series line under the summary; previous/next/playlist links before the subscribe line."""
+    episode = {"series": "Weekend Trip with Friends", "topic": "Travel English", "number": 2, "total": 3,
+               "playlist_url": "https://youtube.com/playlist?list=T",
+               "previous": {"number": 1, "title": "Planning the Trip", "url": "https://youtu.be/one"},
+               "next": {"number": 3, "title": "Packing Day", "url": ""}}
+    text = yt.compose_description(PACKAGE, None, None, episode)
+    head = "📺 Weekend Trip with Friends — Episode 2 of 3 (Travel English)"
+    assert text.index(PACKAGE["description"]) < text.index(head) < text.index("⏱ Chapters")
+    assert "⏮ Previous: Ep. 1 Planning the Trip https://youtu.be/one" in text and "⏭ Next" not in text  # not published yet
+    assert text.index("📃 The whole series: https://youtube.com/playlist?list=T") < text.index(yt.SUBSCRIBE_LINE)
+    assert "📺" not in yt.compose_description(PACKAGE, None, None)

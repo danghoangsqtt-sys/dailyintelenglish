@@ -301,10 +301,26 @@ def _question_text(number: int, item: dict) -> str:
     return f"{number}. {item['question']}" + (f"\n   {options}" if options else "")
 
 
-def compose_description(package: dict, learning: dict | None, credit: str | None) -> str:
+def _series_lines(episode: dict | None) -> tuple[str | None, str | None]:
+    """Task 36.5 (D103): the series line under the summary and the "watch next" block before the subscribe line."""
+    if not episode:
+        return None, None
+    head = f"📺 {episode['series']} — Episode {episode['number']} of {episode['total']} ({episode['topic']})"
+    links = []
+    if (episode.get("previous") or {}).get("url"):
+        links.append(f"⏮ Previous: Ep. {episode['previous']['number']} {episode['previous']['title']} {episode['previous']['url']}")
+    if (episode.get("next") or {}).get("url"):
+        links.append(f"⏭ Next: Ep. {episode['next']['number']} {episode['next']['title']} {episode['next']['url']}")
+    if episode.get("playlist_url"):
+        links.append(f"📃 The whole series: {episode['playlist_url']}")
+    return head, "\n".join(links) or None
+
+
+def compose_description(package: dict, learning: dict | None, credit: str | None, episode: dict | None = None) -> str:
     """The description pasted into YouTube, within 5,000 characters. The fixed parts come first; the learning items fill
     what is left, section by section, so a long pack shortens the lists instead of breaking the limit."""
-    head = [part for part in (package.get("hook", "").strip(), package["description"].strip()) if part]
+    series_head, series_links = _series_lines(episode)
+    head = [part for part in (package.get("hook", "").strip(), package["description"].strip(), series_head) if part]
     if package.get("chapters_text", "").strip():
         head.append("⏱ Chapters\n" + package["chapters_text"].strip())
     questions = _listening_questions(learning)
@@ -313,6 +329,8 @@ def compose_description(package: dict, learning: dict | None, credit: str | None
         tail.append("🎧 Listening practice (answers in the pinned comment)\n"
                     + "\n".join(_question_text(number, item) for number, item in enumerate(questions, start=1)))
     tail.append("📜 The full transcript is in the pinned comment.")
+    if series_links:
+        tail.append(series_links)
     tail.append(SUBSCRIBE_LINE)
     if credit:
         tail.append(credit.strip())
@@ -371,13 +389,14 @@ def transcript_text(project: dict, script_lines: list[dict]) -> str:
 
 
 def compose(package: dict | None, project: dict, script_lines: list[dict], learning: dict | None,
-            credit: str | None) -> dict | None:
+            credit: str | None, episode: dict | None = None) -> dict | None:
     """The package as Step 7 and the export show it: the stored parts plus the composed description, the hashtags line and
     the pinned comment(s)."""
     if package is None:
         return None
     result = {**package, "summary": package["description"], "music_credit": credit}
-    result["description"] = compose_description(package, learning, credit)
+    result["description"] = compose_description(package, learning, credit, episode)
+    result["episode"] = episode
     result["hashtags_text"] = " ".join(f"#{tag}" for tag in package.get("hashtags") or [])
     result["pinned_comments"] = pinned_comments(project, script_lines, learning)
     return result

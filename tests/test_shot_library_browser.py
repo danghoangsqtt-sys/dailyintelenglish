@@ -87,7 +87,7 @@ async def test_add_to_library_review_it_once_and_the_next_run_is_served_from_the
 async def test_the_empty_library_says_what_to_do_and_the_sidebar_links_to_it(browser_instance: Browser, live_server_url: str):
     page = await browser_instance.new_page()
     await page.goto(f"{live_server_url}/shots")
-    await page.wait_for_selector("#shot-count, #shot-empty")
+    await page.wait_for_selector("#shot-empty:not([hidden]), #shot-count:not(:empty)")  # whichever this library state shows
     assert "Add to library" in await page.locator("#shot-empty").text_content()  # the hint exists (shown when empty)
     link = page.locator("#app-sidebar a[href='/shots']")
     assert await link.get_attribute("aria-current") == "page"

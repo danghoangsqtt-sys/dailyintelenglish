@@ -95,6 +95,11 @@ async def composition_inputs(db: aiosqlite.Connection, project: dict, episode: i
         "slot": slots[row["speaker_index"]],
         "mirror": sprite_mirrored(slots[row["speaker_index"]], row.get("sprite_facing") or "", row.get("gender") or "male"),
     } for row in ready]
+    if episode is None:  # Task 36.5: the episode number of a project in the channel plan
+        from app.services import channel_service
+
+        context = await channel_service.episode_context(db, project_id)
+        episode = context["number"] if context else None
     outside = settings.DATA_DIR / "thumbnails" / project_id / "outside_source.png"
     return {"backgrounds": backgrounds, "characters": characters, "cefr": (project.get("cefr_level") or "").upper(),
             "episode": episode, "outside_image": str(outside) if outside.is_file() else None}

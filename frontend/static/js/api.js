@@ -28,7 +28,24 @@ const Api = (() => {
     return envelope.data;
   }
 
+  const json = (method, body) => ({ method, body: JSON.stringify(body) });
+
   return {
+    // Task 36.5 (D103-D105): the channel plan -- topics -> series -> episodes, the AI map and the calendar.
+    getChannel: () => request("/api/channel"),
+    proposeChannelPlan: (body) => request("/api/channel/plan/propose", json("POST", body)),
+    applyChannelPlan: (plan, cast) => request("/api/channel/plan/apply", json("POST", { plan, cast })),
+    createChannelTopic: (body) => request("/api/channel/topics", json("POST", body)),
+    updateChannelTopic: (id, patch) => request(`/api/channel/topics/${id}`, json("PATCH", patch)),
+    deleteChannelTopic: (id) => request(`/api/channel/topics/${id}`, { method: "DELETE" }),
+    createChannelSeries: (topicId, body) => request(`/api/channel/topics/${topicId}/series`, json("POST", body)),
+    updateChannelSeries: (id, patch) => request(`/api/channel/series/${id}`, json("PATCH", patch)),
+    deleteChannelSeries: (id) => request(`/api/channel/series/${id}`, { method: "DELETE" }),
+    addChannelEpisode: (seriesId, body) => request(`/api/channel/series/${seriesId}/episodes`, json("POST", body)),
+    createSeriesProjects: (seriesId) => request(`/api/channel/series/${seriesId}/projects`, { method: "POST" }),
+    updateChannelEpisode: (id, patch) => request(`/api/channel/episodes/${id}`, json("PATCH", patch)),
+    deleteChannelEpisode: (id) => request(`/api/channel/episodes/${id}`, { method: "DELETE" }),
+    scheduleChannel: (body) => request("/api/channel/schedule", json("POST", body)),
     // Phase 33 (Tasks 33.2-33.5): character profiles, picture slots and review.
     getProfileOptions: () => request("/api/visuals/profiles/options"),
     listProfiles: (query = "") => request(`/api/visuals/profiles${query ? `?${query}` : ""}`),

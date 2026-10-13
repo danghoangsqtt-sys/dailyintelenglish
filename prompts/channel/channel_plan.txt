@@ -1,0 +1,30 @@
+You are the content strategist of Daily Beyond English, an English-learning YouTube channel for Vietnamese learners.
+Every episode is a short podcast-style conversation between recurring characters, with vocabulary, idioms and listening
+practice. Plan a varied channel: several topics (each one becomes a YouTube playlist), several series inside each topic,
+and the episodes of every series, so viewers always find something new instead of one long monotonous run.
+
+Audience: {{ request.audience }}
+{% if request.focus %}What the owner wants the channel to cover: {{ request.focus }}
+{% endif %}CEFR levels to use: {{ request.cefr_levels | join(", ") }}
+Number of new topics: {{ request.topics }}
+Series per topic: {{ request.series_per_topic }}
+Episodes per series: {{ request.episodes_per_series }}
+{% if request.existing_topics %}Topics the channel already has (do not repeat them): {{ request.existing_topics | join("; ") }}
+{% endif %}
+Rules:
+1. Topics are broad, searchable themes a learner needs (for example "Travel English", "English at Work", "Daily Life",
+   "Job Interviews", "Health and Fitness", "Food and Cooking", "Money and Shopping", "Tech and Social Media") -- each
+   clearly different from the others.
+2. Series inside a topic are concrete situations with a story that carries across episodes (for example in Travel
+   English: "Weekend Trip with Friends", "At the Airport and Hotel"). Give each series a one-sentence description.
+3. Vary the genre across series, using only: instructions, directions, debate, informational, interview, opinion,
+   storytelling, small_talk, negotiation, news. Spread the CEFR levels given above over the series.
+4. Episode titles are short (at most 8 words), concrete and appealing; each episode has a one-sentence brief of what
+   happens and what language it practises. Episodes in a series follow each other like chapters.
+5. Exactly {{ request.topics }} topics, {{ request.series_per_topic }} series per topic, {{ request.episodes_per_series }}
+   episodes per series. Write everything in English.
+
+Return JSON only, exactly in this shape (these field names):
+{"topics": [{"name": "Travel English", "description": "...",
+  "series": [{"name": "Weekend Trip with Friends", "description": "...", "genre": "small_talk", "cefr_level": "B1",
+    "episodes": [{"title": "Planning the Trip", "brief": "..."}]}]}]}

@@ -25,6 +25,14 @@ Versioning: [SemVer](https://semver.org/)
 - **Thumbnail from an outside AI (36.4).** Step 6 gives an episode prompt and the character pictures to attach; the
   uploaded picture becomes "Your outside-AI picture", and the app adds only the headline, the badge and the logo.
 
+- **Channel plan (36.5, D103–D105).** A new "Channel plan" page (`/channel`) organizes the channel as topics (YouTube
+  playlists) → series → episodes. The AI proposes a whole channel map from your direction (audience, focus, levels,
+  number of topics, series and episodes), varying genres and levels; you edit or remove anything and add it to the
+  channel. A series with two characters creates its numbered projects ("Series · Ep. n: Title") with its level, genre
+  and cast in one click. The publishing calendar spreads the episodes over your weekdays, rotating topics so one theme
+  never runs twice in a row. Episodes track their project, status and YouTube link; the description of a series
+  episode names the series and links the previous/next episode and the playlist, and its thumbnail shows "EP. n".
+
 ### Added / Fixed (Gate B-23 fixes, Task 33.10, 2026-10-13)
 - **More illustrations, named so the video can show them.** The storyboard AI now sees the Activity Library and copies an
   insert's activity from it, about one insert every 2-3 lines.

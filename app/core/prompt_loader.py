@@ -33,6 +33,7 @@ THUMBNAIL_PROMPTS_DIR = PROMPTS_DIR / "thumbnail"
 YOUTUBE_PROMPTS_DIR = PROMPTS_DIR / "youtube"
 STORYBOARD_PROMPTS_DIR = PROMPTS_DIR / "storyboard"
 MUSIC_PROMPTS_DIR = PROMPTS_DIR / "music"
+CHANNEL_PROMPTS_DIR = PROMPTS_DIR / "channel"
 
 _env = Environment(
     loader=FileSystemLoader(str(SCRIPT_PROMPTS_DIR)),
@@ -431,3 +432,23 @@ async def render_music_pick_prompt(
         _render_music_pick_prompt_sync, topic=topic, genre=genre, cefr_level=cefr_level,
         target_minutes=target_minutes, candidates=candidates, previous_error=previous_error,
     )
+
+
+_channel_env = Environment(
+    loader=FileSystemLoader(str(CHANNEL_PROMPTS_DIR)),
+    undefined=StrictUndefined,
+    keep_trailing_newline=True,
+)
+
+
+def _render_channel_prompt_sync(**fields) -> str:
+    try:
+        template = _channel_env.get_template("channel_plan.txt")
+    except TemplateNotFound as exc:
+        raise ValidationError(f"Prompt template not found: {exc}") from exc
+    return template.render(**fields)
+
+
+async def render_channel_prompt(*, request) -> str:
+    """Task 36.5 (D104): the AI channel map prompt from the owner's direction (`models.channel.PlanRequest`)."""
+    return await asyncio.to_thread(_render_channel_prompt_sync, request=request)
