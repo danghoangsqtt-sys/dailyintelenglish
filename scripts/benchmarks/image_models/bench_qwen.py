@@ -36,7 +36,7 @@ ENGINES = {
                        "steps": 8, "tasks": ("character",)},
     "qwen21-turbo": {"repo": "Qwen/Qwen-Image-2.1-Turbo",
                      "gguf": ("unsloth/Qwen-Image-2.1-Turbo-GGUF", "qwen-image-2.1-turbo-Q8_0.gguf"),
-                     "lora": None, "steps": 8, "tasks": ("activity", "plate", "thumbnail")},
+                     "lora": None, "steps": 8, "tasks": ("activity", "plate", "thumbnail", "character")},
 }
 OFFLOAD = {"offload_type": "block_level", "num_blocks_per_group": 1, "use_stream": True}  # --offload leaf switches
 
@@ -196,28 +196,39 @@ def render_all(name: str, spec: dict, jobs: list[dict], embeds: dict, seeds: lis
 
 
 def edit_all(name: str, spec: dict, jobs: list[dict], seeds: list[int], size: list[int]) -> None:
-    """Edit-2511 (character inserts): the prompt encoding needs the pipeline's own preprocessing of the reference
-    picture, so it runs in one phase: 4-bit text encoder resident on the GPU, transformer streamed from RAM."""
+    """Character inserts from a reference picture (Edit-2511, and Qwen-Image-2.1 which edits with the same checkpoint):
+    the prompt encoding needs the pipeline's own preprocessing of the reference, so it runs in one phase: 4-bit text
+    encoder resident on the GPU, transformer streamed from RAM."""
+    import diffusers
     import torch
-    from diffusers import FlowMatchEulerDiscreteScheduler, GGUFQuantizationConfig, QwenImageTransformer2DModel
+    from diffusers import FlowMatchEulerDiscreteScheduler, GGUFQuantizationConfig
     from transformers import AutoModelForImageTextToText, BitsAndBytesConfig
 
     started = time.monotonic()
+    text_repo = snapshot(spec.get("text_repo", spec["repo"]))
     text_encoder = AutoModelForImageTextToText.from_pretrained(
-        snapshot(spec["text_repo"]) / "text_encoder", quantization_config=BitsAndBytesConfig(
+        text_repo / "text_encoder", quantization_config=BitsAndBytesConfig(
             load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.bfloat16),
         torch_dtype=torch.bfloat16, device_map="cuda")
-    transformer = QwenImageTransformer2DModel.from_single_file(
+    is21 = name.startswith("qwen21-turbo")
+    model_class = diffusers.QwenImage21Transformer2DModel if is21 else diffusers.QwenImageTransformer2DModel
+    transformer = model_class.from_single_file(
         str(hub_file(*spec["gguf"])), quantization_config=GGUFQuantizationConfig(compute_dtype=torch.bfloat16),
-        torch_dtype=torch.bfloat16, config=spec["repo"], subfolder="transformer")
-    pipe = pipeline_class(name, spec).from_pretrained(
-        snapshot(spec["repo"]), transformer=transformer, text_encoder=text_encoder,
-        tokenizer=snapshot(spec["text_repo"]) / "tokenizer" if not (snapshot(spec["repo"]) / "tokenizer").is_dir() else None,
-        scheduler=FlowMatchEulerDiscreteScheduler.from_config(LIGHTNING_SCHEDULER), torch_dtype=torch.bfloat16)
-    pipe.load_lora_weights(str(hub_file(*spec["lora"])))
+        torch_dtype=torch.bfloat16, config=str(snapshot(spec["repo"])) if (snapshot(spec["repo"]) / "transformer").is_dir()
+        else spec["repo"], subfolder="transformer")
+    if is21:
+        dequantize_non_linear(transformer)
+    extra = {}
+    if spec["lora"]:
+        extra["scheduler"] = FlowMatchEulerDiscreteScheduler.from_config(LIGHTNING_SCHEDULER)
+    if not (snapshot(spec["repo"]) / "tokenizer").is_dir() and (text_repo / "tokenizer").is_dir():
+        extra["tokenizer"] = text_repo / "tokenizer"
+    pipe = pipeline_class(name, spec).from_pretrained(snapshot(spec["repo"]), transformer=transformer,
+                                                      text_encoder=text_encoder, torch_dtype=torch.bfloat16, **extra)
+    if spec["lora"]:
+        pipe.load_lora_weights(str(hub_file(*spec["lora"])))
     pipe.transformer.enable_group_offload(onload_device=torch.device("cuda"), offload_device=torch.device("cpu"),
-                                          **OFFLOAD,
-                                              low_cpu_mem_usage=True)
+                                          low_cpu_mem_usage=True, **OFFLOAD)
     pipe.vae.to("cuda")
     pipe.vae.enable_tiling()
     record(name, {"event": "pipeline_ready", "placement": "te_4bit_gpu+group_offload",
@@ -229,9 +240,11 @@ def edit_all(name: str, spec: dict, jobs: list[dict], seeds: list[int], size: li
             with VramPeak() as vram:
                 tick = time.monotonic()
                 with torch.no_grad():
-                    image = pipe(image=[job["image"]], prompt=job["prompt"], num_inference_steps=spec["steps"],
-                                 true_cfg_scale=1.0, width=size[0], height=size[1],
-                                 generator=torch.Generator("cuda").manual_seed(seed)).images[0]
+                    call = {"image": [job["image"]], "prompt": job["prompt"], "width": size[0], "height": size[1],
+                            "generator": torch.Generator("cuda").manual_seed(seed)}
+                    if spec["lora"]:
+                        call.update(num_inference_steps=spec["steps"], true_cfg_scale=1.0)
+                    image = pipe(**call).images[0]
                 seconds = time.monotonic() - tick
             if image.size != tuple(size):
                 image = image.resize(tuple(size))
@@ -277,7 +290,7 @@ def main() -> None:
         OFFLOAD.update(offload_type="leaf_level", use_stream=True)
     label = args.engine + args.tag
     record(label, {"event": "start", "items": [job["id"] for job in jobs], "offload": args.offload})
-    if args.engine == "qwen-edit-2511":
+    if args.engine == "qwen-edit-2511" or all(job.get("image") is not None for job in jobs):
         edit_all(label, spec, jobs, data["seeds"], data["size"])
     else:
         embeds = encode_all(label, spec, jobs, cast)

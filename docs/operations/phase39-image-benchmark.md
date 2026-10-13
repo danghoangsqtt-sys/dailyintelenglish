@@ -13,7 +13,7 @@ owner's characters).
 | RealVisXL V5.0 (SDXL, current) | open (commercial OK) | app worker, 30 steps, CFG 6 | already installed |
 | Qwen-Image-2512 | Apache 2.0 | GGUF Q4_K_S (11.4 GB) streamed from RAM + text encoder 4-bit, Lightning LoRA 8 or 4 steps | ~30 GB |
 | Qwen-Image-Edit-2511 (character shots) | Apache 2.0 | GGUF Q4_K_S + 4-bit text encoder + Lightning 8/4 steps, face reference from the library | +13 GB |
-| Qwen-Image-2.1-Turbo | **Qwen Research Licence — no commercial use** (evaluation only, D111) | GGUF Q8 (7.1 GB) fully on the GPU, 8 steps | ~25 GB |
+| Qwen-Image-2.1-Turbo | Qwen Research Licence; **allowed for this channel by D117** (the owner is an author; `docs/legal/`) | GGUF Q8 (7.1 GB) fully on the GPU, 8 steps | ~25 GB |
 
 ## Time and memory (median per picture, model already loaded)
 
@@ -25,6 +25,7 @@ owner's characters).
 | Qwen-Image-Edit-2511, 8 steps | 106 s | 10.1 GB | 51 s |
 | **Qwen-Image-Edit-2511, 4 steps** | **56 s** | 10.3 GB | 53 s |
 | Qwen-Image-2.1-Turbo | 31 s | 10.9 GB | 31 s + 16 s |
+| Qwen-Image-2.1-Turbo with a reference picture (character) | **~11 min** (VRAM full, spills to shared memory) | 12.0 GB | 44 s |
 
 Notes: the 20B Qwen models do not fit the 12 GB card; their transformer streams from RAM block by block, which costs time
 (the bottleneck is the GGUF dequantisation, not the PCIe copy: leaf-level streaming was slower, 64 s). The 4-step
@@ -32,22 +33,22 @@ Lightning LoRA halves the time with no visible loss (`q8_vs_q4.jpg`, `edit8_vs_4
 
 ## Quality by task (PM review of the sheets; the owner's blind scoring decides)
 
-| Task | RealVisXL | Qwen-Image-2512 (4 steps) | Qwen-Image-2.1-Turbo (reference only) |
+| Task | RealVisXL | Qwen-Image-2512 (4 steps) | Qwen-Image-2.1-Turbo |
 |---|---|---|---|
-| **A. Activity illustrations** (a few ordinary people) | varied people (age, gender, ethnicity), natural light; miscounts people (A3: 3 instead of 2); crowd in the background | right number of people and clear actions, candid and sharp; **people repeat the same face** (bearded dark-haired man in most pictures); the two seeds give nearly the same picture | best: varied, right count, natural; not usable commercially |
+| **A. Activity illustrations** (a few ordinary people) | varied people (age, gender, ethnicity), natural light; miscounts people (A3: 3 instead of 2); crowd in the background | right number of people and clear actions, candid and sharp; **people repeat the same face** (bearded dark-haired man in most pictures); the two seeds give nearly the same picture | **best**: varied people (men and women, ages), right count, natural |
 | **B. Scene plates** (empty places) | natural, photographic, empty | richer and warmer, a little "staged"; empty | clean, modern; empty |
 | **C. Thumbnail / topic pictures** (text on a sign) | **misspells** ("Toodday's Menu"), text often missing | **text exact** every time, bold and vivid — clear winner | text exact, cleaner layout |
-| **D. Character inserts** (Alex/Lina from the face reference) | posed, looking at the camera, the action and the place mostly lost (no bookshop in D3) | Edit-2511: **does the action in the place** (cooking at the stove, reading among shelves, phone at a bus stop), outfit kept, face close to the reference — clear winner | — |
+| **D. Character inserts** (Alex/Lina from the face reference) | posed, looking at the camera, the action and the place mostly lost (no bookshop in D3) | Edit-2511: **does the action in the place** (cooking at the stove, reading among shelves, phone at a bus stop), outfit kept, face close to the reference — clear winner | with the face reference: frontal, copied face, weak action, white bands/lines on two pictures, ~11 min — not usable |
 
-## Recommendation (to confirm with the owner's blind scores)
+## Recommendation (after D117; to confirm with the owner's blind scores)
 
 | Task | Recommended engine | Why |
 |---|---|---|
-| Thumbnail / topic pictures | **Qwen-Image-2512, 4 steps** | correct text is decisive for thumbnails; 30 s meets D113 |
-| Character inserts | **Qwen-Image-Edit-2511, 4 steps** | much better pictures; 56 s is over D113's ~30 s, but the shots are reused through the Shot Library |
-| Activity illustrations | **Qwen-Image-2512, 4 steps with prompts that name varied people** (e.g. "a woman in her thirties and an older man"), else keep RealVisXL | Qwen's counting and actions are better; its face repetition must be fixed by the prompt before it wins |
-| Scene plates | **keep RealVisXL** | equal quality, faster, more natural; the plates already exist for 55 places |
-| Qwen-Image-2.1-Turbo | do not use | research licence; ask Qwen for a commercial licence only if its quality becomes essential |
+| Activity illustrations | **Qwen-Image-2.1-Turbo** | varied people, right count and action, 31 s on the GPU (D113 met) |
+| Thumbnail / topic pictures | **Qwen-Image-2.1-Turbo** | exact text, cleanest layout, same model as above |
+| Scene plates | **Qwen-Image-2.1-Turbo for new places** (the 55 existing plates stay) | clean and modern; RealVisXL equally good, so either is fine |
+| Character inserts | **Qwen-Image-Edit-2511, 4 steps** | only engine that keeps the character *and* draws the action in the place; 56 s (over D113, reused via the Shot Library) |
+| Qwen-Image-2512 | not needed if the above is chosen | 2.1-Turbo covers its tasks better; its 30 GB could be freed |
 
 Each switch keeps RealVisXL as the automatic fallback (missing model, out of memory, error).
 
