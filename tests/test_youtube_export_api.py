@@ -160,7 +160,7 @@ def build_full_pipeline(
     )
     thumbnails = client.post(
         f"/api/projects/{project['id']}/thumbnails/generate",
-        json={"template_name": "minimal_clean", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     ).json()["data"]
     favorite_id = thumbnails[0]["id"]
     assert client.put(f"/api/projects/{project['id']}/thumbnails/{favorite_id}/favorite").status_code == 200
@@ -239,7 +239,7 @@ def test_export_missing_video_returns_422(client: TestClient):
     client.post(f"/api/projects/{project['id']}/audio/generate", json={})
     thumbnails = client.post(
         f"/api/projects/{project['id']}/thumbnails/generate",
-        json={"template_name": "minimal_clean", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     ).json()["data"]
     client.put(f"/api/projects/{project['id']}/thumbnails/{thumbnails[0]['id']}/favorite")
     client.post(f"/api/projects/{project['id']}/youtube/generate")

@@ -13,7 +13,7 @@ async def test_thumbnail_prompt_renders_all_project_and_template_context() -> No
         topic="How AI changes careers",
         genre="debate",
         cefr_level="B2",
-        template_name="modern_split",
+        template_name="composed",
         template_description="Balanced split layout",
         variant_count=4,
     )
@@ -22,7 +22,7 @@ async def test_thumbnail_prompt_renders_all_project_and_template_context() -> No
     assert "How AI changes careers" in prompt
     assert "debate" in prompt
     assert "B2" in prompt
-    assert "modern_split" in prompt
+    assert "composed" in prompt
     assert "exactly 4 distinct variants" in prompt
 
 
@@ -43,7 +43,7 @@ async def test_thumbnail_prompt_rejects_unapproved_context(field: str, value: ob
         "topic": "How AI changes careers",
         "genre": "debate",
         "cefr_level": "B2",
-        "template_name": "modern_split",
+        "template_name": "composed",
         "template_description": "Balanced split layout",
         "variant_count": 3,
     }

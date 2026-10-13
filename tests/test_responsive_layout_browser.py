@@ -97,11 +97,8 @@ THUMBNAIL_TEMPLATES = [
         "preview_url": f"/static/thumbnail_templates/{template_id}.png",
     }
     for template_id, display_name in (
-        ("minimal_clean", "Minimal Clean"),
-        ("gradient_bold", "Gradient Bold"),
-        ("modern_split", "Modern Split"),
-        ("dynamic_wave", "Dynamic Wave"),
-        ("podcast_classic", "Podcast Classic"),
+        ("composed", "Characters + illustration"),
+        ("outside_ai", "Your outside-AI picture"),
     )
 ]
 YOUTUBE_PACKAGE = {

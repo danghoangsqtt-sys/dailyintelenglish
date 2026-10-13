@@ -1,18 +1,24 @@
-You are creating YouTube thumbnail copy and color directions for an English-learning podcast.
+You are writing the text of YouTube thumbnails for Daily Beyond English, an English-learning channel for Vietnamese
+learners. The thumbnail already shows the episode's characters and a picture of the topic; your words go on top.
 
 Project name: {{ project_name }}
 Topic: {{ topic }}
 Genre: {{ genre }}
 CEFR level: {{ cefr_level }}
-Selected template: {{ template_name }}
-Template visual character: {{ template_description }}
+Thumbnail kind: {{ template_name }}
+What the thumbnail shows: {{ template_description }}
 
 Return exactly {{ variant_count }} distinct variants. Each variant must:
-- use a concise, high-impact English headline suitable for a thumbnail;
-- keep the headline truthful to the topic and readable at small size;
-- optionally add one short supporting line;
+- have a punchy English headline of 2 to 5 words that a learner can read at a glance on a phone (for example
+  "Weekend Trip English", "Don't Say THIS at the Cafe"), truthful to the topic;
+- optionally add a supporting line of at most 4 words (for example "Real conversation", "B1 listening");
 - provide 1-5 useful topic keywords;
-- provide primary, secondary, accent, and text colors as full six-digit hex values;
+- provide primary, secondary, accent, and text colors as full six-digit hex values: primary and secondary are a
+  fallback background, accent is a bright highlight (the brand likes fresh green and sunny yellow), text stays very light
+  (white or near white) so it reads over a picture;
 - differ meaningfully from every other variant in headline, palette, or both.
 
-Return JSON only. The API-provided JSON Schema is authoritative.
+Return JSON only, exactly in this shape (these field names, colors as "#RRGGBB"):
+{"variants": [{"headline": "Weekend Trip English", "supporting_text": "Real conversation",
+  "topic_keywords": ["travel", "weekend"],
+  "palette": {"primary": "#0E5E3A", "secondary": "#2BB673", "accent": "#FFD23F", "text": "#FFFFFF"}}]}

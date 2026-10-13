@@ -124,6 +124,9 @@
       button.classList.toggle("selected", template.id === state.selectedTemplate);
       button.dataset.templateId = template.id;
       button.setAttribute("aria-pressed", template.id === state.selectedTemplate ? "true" : "false");
+      const available = template.available !== false;
+      button.setAttribute("aria-disabled", available ? "false" : "true");
+      if (!available) button.title = "Upload your outside-AI picture first (below).";
 
       const image = document.createElement("img");
       image.src = template.preview_url;
@@ -140,7 +143,7 @@
       copy.append(name, description);
       button.append(image, copy);
       button.addEventListener("click", () => {
-        if (hasUnresolvedEdit() || state.isGenerating || state.favoriteInFlight) return;
+        if (hasUnresolvedEdit() || state.isGenerating || state.favoriteInFlight || !available) return;
         state.selectedTemplate = template.id;
         renderTemplates();
         applyLocks();
@@ -388,6 +391,41 @@
     }
   }
 
+  // Task 36.4 (D90): the episode prompt for an outside image AI, the character pictures to attach, and the upload.
+  async function loadOutsidePrompt() {
+    try {
+      const data = await Api.getThumbnailOutsidePrompt(state.projectId);
+      byId("outside-prompt").value = data.prompt;
+      const links = byId("outside-pictures");
+      links.replaceChildren();
+      data.pictures.forEach((picture) => {
+        const link = document.createElement("a");
+        link.className = "btn btn-ghost btn-sm";
+        link.href = picture.url;
+        link.download = `${picture.number}-${picture.name}.png`;
+        link.textContent = `⬇ Picture ${picture.number}: ${picture.name}`;
+        links.append(link);
+      });
+    } catch (error) {
+      console.error("Failed to load the outside-AI prompt:", error);
+    }
+  }
+
+  async function uploadOutsidePicture(file) {
+    const status = byId("outside-status");
+    status.textContent = "Uploading…";
+    try {
+      await Api.uploadThumbnailOutsideImage(state.projectId, file);
+      state.templates = await Api.listThumbnailTemplates(state.projectId);
+      state.selectedTemplate = "outside_ai";
+      renderTemplates();
+      status.textContent = "Uploaded. Generate to add the headline, badge and logo.";
+    } catch (error) {
+      status.textContent = error.message || "Could not upload the picture.";
+    }
+    byId("outside-file").value = "";
+  }
+
   async function init() {
     const params = new URLSearchParams(window.location.search);
     state.projectId = params.get("project_id");
@@ -413,7 +451,7 @@
         Api.listThumbnails(state.projectId),
       ]);
       const priorTemplate = state.thumbnails[0]?.template_name;
-      state.selectedTemplate = state.templates.some((template) => template.id === priorTemplate)
+      state.selectedTemplate = state.templates.some((template) => template.id === priorTemplate && template.available !== false)
         ? priorTemplate : state.templates[0]?.id || null;
       state.activeId = state.thumbnails.find((thumbnail) => thumbnail.is_selected)?.id || null;
     } catch (error) {
@@ -426,6 +464,13 @@
 
     byId("loading-panel").hidden = true;
     byId("workspace").hidden = false;
+    byId("outside-copy-btn").addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(byId("outside-prompt").value); } catch { byId("outside-prompt").select(); }
+    });
+    byId("outside-file").addEventListener("change", (event) => {
+      if (event.target.files[0]) uploadOutsidePicture(event.target.files[0]);
+    });
+    loadOutsidePrompt();
     renderTemplates();
     renderVariants();
     syncEditorFromActive();

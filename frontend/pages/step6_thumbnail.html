@@ -229,6 +229,13 @@
       .generator-actions { align-items: stretch; flex-direction: column; }
       .variant-count-wrap { width: 100%; }
     }
+    .template-option[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; }
+    .outside-panel { margin: 14px 0 4px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; }
+    .outside-panel > summary { cursor: pointer; font-weight: 700; }
+    .outside-steps { margin: 10px 0; padding-left: 20px; font-size: 13px; color: var(--muted); }
+    .outside-prompt { width: 100%; min-height: 110px; font-size: 13px; resize: vertical; }
+    .outside-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+    .outside-pictures { display: inline-flex; flex-wrap: wrap; gap: 6px; }
   </style>
 </head>
 <body>
@@ -261,7 +268,7 @@
         <section id="pane-stage" class="pane-stage" aria-label="Thumbnail generator stage">
           <div class="stage-header">
             <div><h1 class="stage-title">Thumbnail Generator</h1><div class="page-badges" id="project-badges"></div></div>
-            <div class="stage-actions"><span class="badge">Step 6 of 7</span><span class="badge">Pillow + local AI text</span></div>
+            <div class="stage-actions"><span class="badge">Step 6 of 7</span><span class="badge">Characters + AI headline</span></div>
           </div>
 
           <div id="error-banner" role="alert" hidden></div>
@@ -269,8 +276,24 @@
 
           <div id="workspace" hidden>
             <section class="section card generator-card" id="generator-section">
-              <h2 class="section-title">1. Choose a template</h2>
+              <h2 class="section-title">1. Choose a thumbnail kind</h2>
               <div class="template-gallery" id="template-gallery"></div>
+              <details class="outside-panel" id="outside-panel">
+                <summary>Make the picture with an outside AI (optional)</summary>
+                <ol class="outside-steps">
+                  <li>Copy the prompt and paste it into ChatGPT, Gemini or another image AI.</li>
+                  <li>Attach the character pictures below so the faces and outfits stay the same.</li>
+                  <li>Upload the picture here, choose "Your outside-AI picture" and generate: the app adds the headline, the CEFR badge and the logo.</li>
+                </ol>
+                <textarea id="outside-prompt" class="outside-prompt" readonly aria-label="Outside-AI thumbnail prompt"></textarea>
+                <div class="outside-actions">
+                  <button class="btn btn-ghost btn-sm" id="outside-copy-btn" type="button">📋 Copy prompt</button>
+                  <span id="outside-pictures" class="outside-pictures"></span>
+                  <input id="outside-file" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+                  <label class="btn btn-primary btn-sm" for="outside-file">⬆ Upload picture</label>
+                  <span id="outside-status" class="helper-text" role="status"></span>
+                </div>
+              </details>
               <div class="generator-row">
                 <label class="variant-count-wrap">
                   <span class="field-label">A/B variants</span>

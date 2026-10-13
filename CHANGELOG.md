@@ -16,6 +16,14 @@ Versioning: [SemVer](https://semver.org/)
   2-3 listening questions, a subscribe line, the music credit and up to 15 hashtags (`#DailyBeyondEnglish` always
   included). The full transcript and the listening answers become the pinned comment, split into 10,000-character
   parts. Every part has a copy button; the transcript downloads as a .txt and goes into the zip.
+- **Thumbnails with the episode's characters (36.3).** "Characters + illustration" composes each variant from the
+  episode itself: an Activity Library picture the storyboard uses (else a scene plate, else the brand gradient) as the
+  background, the two main characters cut from their talking sprites (man left, woman right, facing each other, with a
+  white sticker outline), a big Montserrat headline, the CEFR badge and the channel logo; each variant changes the
+  picture, the layout and the expressions (smiling, surprised, laughing), in 16:9 and 9:16. The five old Pillow
+  templates and the "AI scene" template are gone (D92).
+- **Thumbnail from an outside AI (36.4).** Step 6 gives an episode prompt and the character pictures to attach; the
+  uploaded picture becomes "Your outside-AI picture", and the app adds only the headline, the badge and the logo.
 
 ### Added / Fixed (Gate B-23 fixes, Task 33.10, 2026-10-13)
 - **More illustrations, named so the video can show them.** The storyboard AI now sees the Activity Library and copies an

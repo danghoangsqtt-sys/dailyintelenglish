@@ -26,9 +26,8 @@ TEMPLATES = [
         "preview_url": f"/static/thumbnail_templates/{template_id}.png",
     }
     for template_id, display_name in (
-        ("minimal_clean", "Minimal Clean"),
-        ("gradient_bold", "Gradient Bold"),
-        ("modern_split", "Modern Split"),
+        ("composed", "Characters + illustration"),
+        ("outside_ai", "Your outside-AI picture"),
     )
 ]
 
@@ -63,12 +62,12 @@ def _variant(
 ) -> dict:
     thumbnail_id = f"thumbnail-shell-{index}"
     revision = revision or f"shell-revision-{index}"
-    image_name = ("minimal_clean", "gradient_bold", "modern_split")[index % 3]
+    image_name = ("composed", "outside_ai")[index % 2]
     image_url = f"/static/thumbnail_templates/{image_name}.png?revision={revision}"
     return {
         "id": thumbnail_id,
         "project_id": PROJECT_ID,
-        "template_name": "minimal_clean",
+        "template_name": "composed",
         "variant_index": index,
         "is_selected": selected,
         "created_at": "2026-09-16T00:00:00Z",

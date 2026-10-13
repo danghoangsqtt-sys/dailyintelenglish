@@ -103,7 +103,7 @@ async def test_step2_header_indicator_reflects_saving_then_saved(browser_instanc
 # ---------------------------------------------------------------------------
 
 STEP6_PROJECT = {"id": PROJECT_ID, "name": "Save Indicator Test", "topic": "t", "cefr_level": "B1", "genre": "small_talk"}
-STEP6_TEMPLATES = [{"id": "minimal_clean", "display_name": "Minimal Clean", "description": "d", "preview_url": "/x.png"}]
+STEP6_TEMPLATES = [{"id": "composed", "display_name": "Characters + illustration", "description": "d", "preview_url": "/x.png"}]
 
 
 def _step6_thumbnail():
@@ -111,7 +111,7 @@ def _step6_thumbnail():
     return {
         "id": "thumb-1",
         "project_id": PROJECT_ID,
-        "template_name": "minimal_clean",
+        "template_name": "composed",
         "variant_index": 0,
         "is_selected": True,
         "created_at": "2026-09-13T00:00:00Z",

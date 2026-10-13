@@ -69,13 +69,16 @@ def create_project(client: TestClient) -> dict:
     return response.json()["data"]
 
 
-def test_templates_endpoint_lists_five_valid_preview_assets(client: TestClient) -> None:
+def test_templates_endpoint_lists_the_two_thumbnail_kinds(client: TestClient) -> None:
+    """Task 36.3/36.4 (D92)."""
     response = client.get("/api/thumbnails/templates")
 
     assert response.status_code == 200
     templates = response.json()["data"]
-    assert len(templates) == 5
+    assert [template["id"] for template in templates] == ["composed", "outside_ai"]
     assert all(template["preview_url"].endswith(".png") for template in templates)
+    for template in templates:
+        assert client.get(template["preview_url"]).status_code == 200
 
 
 def test_generate_creates_exactly_n_rows_for_one_selected_template(client: TestClient) -> None:
@@ -83,14 +86,14 @@ def test_generate_creates_exactly_n_rows_for_one_selected_template(client: TestC
 
     response = client.post(
         f"/api/projects/{project['id']}/thumbnails/generate",
-        json={"template_name": "modern_split", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     )
 
     assert response.status_code == 200
     variants = response.json()["data"]
     assert len(variants) == 3
     assert [variant["variant_index"] for variant in variants] == [0, 1, 2]
-    assert {variant["template_name"] for variant in variants} == {"modern_split"}
+    assert {variant["template_name"] for variant in variants} == {"composed"}
     assert len({variant["id"] for variant in variants}) == 3
     assert all("image_path_16x9" not in variant for variant in variants)
     assert all("image_path_9x16" not in variant for variant in variants)
@@ -100,7 +103,7 @@ def test_generated_derivatives_are_streamed_with_correct_media_types(client: Tes
     project = create_project(client)
     variants = client.post(
         f"/api/projects/{project['id']}/thumbnails/generate",
-        json={"template_name": "minimal_clean", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     ).json()["data"]
 
     for aspect in ("16x9", "9x16"):
@@ -115,7 +118,7 @@ def test_list_endpoint_restores_render_metadata_and_urls(client: TestClient) -> 
     project = create_project(client)
     generated = client.post(
         f"/api/projects/{project['id']}/thumbnails/generate",
-        json={"template_name": "dynamic_wave", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     ).json()["data"]
 
     response = client.get(f"/api/projects/{project['id']}/thumbnails")
@@ -131,7 +134,7 @@ def test_favorite_selection_is_exclusive_idempotent_and_persistent(client: TestC
     project = create_project(client)
     variants = client.post(
         f"/api/projects/{project['id']}/thumbnails/generate",
-        json={"template_name": "modern_split", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     ).json()["data"]
     endpoint = f"/api/projects/{project['id']}/thumbnails/{variants[1]['id']}/favorite"
 
@@ -156,7 +159,7 @@ def test_manual_edit_rerenders_one_row_and_persists_latest_revision(client: Test
     project = create_project(client)
     variants = client.post(
         f"/api/projects/{project['id']}/thumbnails/generate",
-        json={"template_name": "gradient_bold", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     ).json()["data"]
     original = variants[0]
     client.put(f"/api/projects/{project['id']}/thumbnails/{original['id']}/favorite")
@@ -208,7 +211,7 @@ def test_manual_edit_rejects_invalid_contract(client: TestClient, patch: dict) -
     project = create_project(client)
     original = client.post(
         f"/api/projects/{project['id']}/thumbnails/generate",
-        json={"template_name": "minimal_clean", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     ).json()["data"][0]
     payload = {
         "revision": original["revision"],
@@ -232,7 +235,7 @@ def test_stale_edit_returns_409_without_changing_latest_revision(client: TestCli
     project = create_project(client)
     original = client.post(
         f"/api/projects/{project['id']}/thumbnails/generate",
-        json={"template_name": "minimal_clean", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     ).json()["data"][0]
     endpoint = f"/api/projects/{project['id']}/thumbnails/{original['id']}"
     first_payload = {
@@ -259,7 +262,7 @@ def test_thumbnail_mutations_enforce_project_ownership(client: TestClient) -> No
     other = client.post("/api/projects", json=other_payload).json()["data"]
     original = client.post(
         f"/api/projects/{owner['id']}/thumbnails/generate",
-        json={"template_name": "minimal_clean", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     ).json()["data"][0]
 
     favorite = client.put(
@@ -285,7 +288,7 @@ def test_edit_db_failure_removes_staged_revision_and_keeps_original(
     project = create_project(client)
     original = client.post(
         f"/api/projects/{project['id']}/thumbnails/generate",
-        json={"template_name": "minimal_clean", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     ).json()["data"][0]
     project_dir = settings.DATA_DIR / "thumbnails" / project["id"]
     dirs_before = set(project_dir.iterdir())
@@ -317,7 +320,7 @@ def test_regeneration_replaces_rows_and_removes_superseded_files(
     endpoint = f"/api/projects/{project['id']}/thumbnails/generate"
     first = client.post(
         endpoint,
-        json={"template_name": "minimal_clean", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     ).json()["data"]
     first_dirs = [
         settings.DATA_DIR / "thumbnails" / project["id"] / variant["id"] for variant in first
@@ -329,12 +332,12 @@ def test_regeneration_replaces_rows_and_removes_superseded_files(
     monkeypatch.setattr(thumbnail_service, "generate_suggestions", second_generate_suggestions)
     second_response = client.post(
         endpoint,
-        json={"template_name": "podcast_classic", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     )
 
     assert second_response.status_code == 200
     second = second_response.json()["data"]
-    assert {variant["template_name"] for variant in second} == {"podcast_classic"}
+    assert {variant["template_name"] for variant in second} == {"composed"}
     assert not any(path.exists() for path in first_dirs)
     assert len(client.get(f"/api/projects/{project['id']}/thumbnails").json()["data"]) == 3
 
@@ -343,8 +346,8 @@ def test_regeneration_replaces_rows_and_removes_superseded_files(
     "payload",
     [
         {"template_name": "../escape", "variant_count": 3},
-        {"template_name": "modern_split", "variant_count": 2},
-        {"template_name": "modern_split", "variant_count": 6},
+        {"template_name": "composed", "variant_count": 2},
+        {"template_name": "composed", "variant_count": 6},
     ],
 )
 def test_generate_rejects_invalid_template_or_variant_count(
@@ -364,7 +367,7 @@ def test_generate_rejects_invalid_template_or_variant_count(
 def test_unknown_project_thumbnail_routes_return_404(client: TestClient) -> None:
     generate = client.post(
         "/api/projects/missing/thumbnails/generate",
-        json={"template_name": "modern_split", "variant_count": 3},
+        json={"template_name": "composed", "variant_count": 3},
     )
     listing = client.get("/api/projects/missing/thumbnails")
     content = client.get("/api/projects/missing/thumbnails/id/16x9.png")

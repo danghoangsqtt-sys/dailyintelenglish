@@ -12,20 +12,15 @@ from pathlib import Path
 from urllib.parse import quote
 
 import aiosqlite
-from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageOps
+from PIL import Image
 from pydantic import TypeAdapter
 from pydantic import ValidationError as PydanticValidationError
 
 from app.core.config import settings
 from app.core.constants import (
-    THUMBNAIL_ACCENT_HEIGHT_RATIO,
-    THUMBNAIL_FONT_SIZE_STEP,
     THUMBNAIL_HEIGHT_16X9,
     THUMBNAIL_HEIGHT_9X16,
     THUMBNAIL_JPEG_QUALITY,
-    THUMBNAIL_LINE_SPACING_RATIO,
-    THUMBNAIL_MIN_LINE_SPACING,
-    THUMBNAIL_TEMPLATE_IDS,
     THUMBNAIL_WIDTH_16X9,
     THUMBNAIL_WIDTH_9X16,
 )
@@ -39,7 +34,6 @@ from app.core.exceptions import (
 from app.core.paths import get_project_root
 from app.core.prompt_loader import render_thumbnail_prompt
 from app.models.thumbnail import (
-    TextZone,
     ThumbnailAspect,
     ThumbnailEditRequest,
     ThumbnailFormat,
@@ -50,90 +44,134 @@ from app.models.thumbnail import (
 from app.services.ai.contracts import GenerationRequest
 from app.services.ai.router import AIRouter, build_ai_router_from_settings
 from app.services.ai.validation import parse_and_validate
-from app.services.visuals import project_visuals_service
+from app.services import thumbnail_compose
 
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = get_project_root()
-TEMPLATE_DIR = PROJECT_ROOT / "frontend" / "static" / "thumbnail_templates"
 ASPECT_SIZES: dict[ThumbnailAspect, tuple[int, int]] = {
     "16x9": (THUMBNAIL_WIDTH_16X9, THUMBNAIL_HEIGHT_16X9),
     "9x16": (THUMBNAIL_WIDTH_9X16, THUMBNAIL_HEIGHT_9X16),
 }
 
-AI_SCENE_TEMPLATE = ThumbnailTemplateConfig.model_validate({
-    "id": "ai_scene", "display_name": "AI scene", "category": "dark",
-    "description": "Use a generated character scene behind the episode headline.",
-    "base_image": "ai_scene.png",
-    "headline_zone": {"x": 0.05, "y": 0.28, "width": 0.50, "height": 0.32,
-                      "min_font_size": 36, "max_font_size": 92, "align": "left"},
-    "supporting_zone": {"x": 0.05, "y": 0.64, "width": 0.50, "height": 0.16,
-                        "min_font_size": 20, "max_font_size": 36, "align": "left"},
-})
-
-
-async def first_ai_scene_shot(db: aiosqlite.Connection, project_id: str) -> dict | None:
-    """Pick the first safe, complete close duo, single, or other shot."""
-    shots = await project_visuals_service.shot_rows(db, project_id)
-    priority = {"duo_close": 0, "single": 1}
-    for shot in sorted(shots, key=lambda item: priority.get(item["kind"], 2)):
-        if shot["status"] != "complete" or not shot["final_path"]:
-            continue
-        try:
-            source = await asyncio.to_thread(
-                project_visuals_service.resolve_shot_content, project_id, shot["final_path"],
-            )
-        except NotFoundError:
-            continue
-        return {**shot, "source": source}
-    return None
-
-
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _load_template_sync(template_name: str) -> ThumbnailTemplateConfig:
-    """Load one approved template config and verify its paired PNG asset."""
-    if template_name not in THUMBNAIL_TEMPLATE_IDS:
-        raise ThumbnailGenerationError(f"Unknown thumbnail template: {template_name!r}")
-    config_path = TEMPLATE_DIR / f"{template_name}.json"
-    try:
-        config = ThumbnailTemplateConfig.model_validate_json(config_path.read_text("utf-8"))
-    except (OSError, PydanticValidationError) as exc:
-        raise ThumbnailGenerationError(
-            f"Thumbnail template config is unavailable or invalid: {template_name}"
-        ) from exc
-    if config.id != template_name:
-        raise ThumbnailGenerationError("Thumbnail template config id does not match its filename")
-    if not (TEMPLATE_DIR / config.base_image).is_file():
-        raise ThumbnailGenerationError(f"Thumbnail base image is missing: {config.base_image}")
-    return config
+_ZONE = {"x": 0.05, "y": 0.2, "width": 0.5, "height": 0.5, "min_font_size": 28, "max_font_size": 116}
+TEMPLATES = {
+    "composed": ThumbnailTemplateConfig.model_validate({
+        "id": "composed", "display_name": "Characters + illustration", "category": "bold", "base_image": "composed.png",
+        "description": "The episode's characters (as in the video) over a topic illustration, a big headline, the CEFR "
+                       "badge and the channel logo. Each variant changes the picture, the layout and the expressions.",
+        "headline_zone": _ZONE, "supporting_zone": _ZONE, "uppercase_headline": True,
+    }),
+    "outside_ai": ThumbnailTemplateConfig.model_validate({
+        "id": "outside_ai", "display_name": "Your outside-AI picture", "category": "bold", "base_image": "outside_ai.png",
+        "description": "A picture you made with an outside AI from the episode prompt; the app adds only the headline, the "
+                       "CEFR badge and the logo.",
+        "headline_zone": _ZONE, "supporting_zone": _ZONE, "uppercase_headline": True,
+    }),
+}
 
 
 async def load_template(template_name: str) -> ThumbnailTemplateConfig:
-    """Load and validate one approved thumbnail template without blocking the event loop."""
-    if template_name == "ai_scene":
-        return AI_SCENE_TEMPLATE
-    return await asyncio.to_thread(_load_template_sync, template_name)
+    """One of the two thumbnail kinds (Task 36.3/36.4)."""
+    if template_name not in TEMPLATES:
+        raise ThumbnailGenerationError(f"Unknown thumbnail template: {template_name!r}")
+    return TEMPLATES[template_name]
 
 
-def _list_templates_sync() -> list[dict]:
+def outside_image_path(project_id: str) -> Path:
+    return settings.DATA_DIR / "thumbnails" / project_id / "outside_source.png"
+
+
+async def list_templates(project_id: str | None = None) -> list[dict]:
+    """The two thumbnail kinds; `outside_ai` is available once the owner's picture is uploaded."""
+    has_outside = bool(project_id) and await asyncio.to_thread(outside_image_path(project_id).is_file)
     return [
-        {
-            **_load_template_sync(template_id).model_dump(),
-            "preview_url": f"/static/thumbnail_templates/{template_id}.png",
-        }
-        for template_id in THUMBNAIL_TEMPLATE_IDS
+        {**TEMPLATES["composed"].model_dump(), "available": True,
+         "preview_url": "/static/thumbnail_templates/composed.png"},
+        {**TEMPLATES["outside_ai"].model_dump(), "available": has_outside,
+         "preview_url": f"/api/projects/{project_id}/thumbnails/outside-image" if has_outside
+         else "/static/thumbnail_templates/outside_ai.png"},
     ]
 
 
-async def list_templates() -> list[dict]:
-    """Return public metadata for all five validated template assets."""
-    return await asyncio.to_thread(_list_templates_sync)
+async def storyboard_actions(db: aiosqlite.Connection, project_id: str) -> list[str]:
+    """The insert actions of the approved storyboard: what the episode's illustrations show."""
+    from app.services.visuals import storyboard_service
+
+    beats = await storyboard_service.approved_beats(db, project_id) or []
+    return [beat.get("action") or beat.get("new_place") for beat in beats
+            if beat["kind"] == "insert" and (beat.get("action") or beat.get("new_place"))]
+
+
+def outside_prompt(project: dict, composition: dict, actions: list[str]) -> dict:
+    """Task 36.4 (D90): one prompt per episode for an outside image AI, with the character pictures to attach (the same
+    approved sprites the video uses), so the characters keep their faces and outfits."""
+    characters = sorted(composition.get("characters") or [], key=lambda item: item["slot"])
+    pictures = []
+    for number, character in enumerate(characters, start=1):
+        name = next((candidate for candidate in ("smile__open", "smile__closed", "calm__closed")
+                     if candidate in character["names"]), None)
+        if name:
+            pictures.append({"name": character["name"], "number": number,
+                             "url": f"/api/visuals/library/sprites/{character['character_id']}/{name}/content"})
+    if len(characters) == 2:
+        who = (f"{characters[0]['name']} (attached picture 1) on the left and {characters[1]['name']} (attached picture 2) on "
+               "the right, turned slightly towards each other")
+    elif characters:
+        who = f"{characters[0]['name']} (attached picture 1)"
+    else:
+        who = "two friendly young adults having a conversation"
+    illustration = ", ".join(dict.fromkeys(actions[:3])) or project["topic"]
+    text = (
+        f"Create a YouTube thumbnail, landscape 16:9 (1280 x 720), for an episode of the English-learning channel Daily Beyond "
+        f"English. Topic: {project['topic']}. Show {who}, upper body, big expressive smiles, looking at the viewer. Keep each "
+        "person's face, hair and outfit exactly as in the attached picture. Background: a bright, detailed illustration of "
+        f"{illustration}. Semi-realistic style, vivid colours, high contrast, sharp focus, eye-catching even at a small size. "
+        "Keep the left 45% of the picture calmer and slightly darker for a title. No text, no letters, no numbers, no logo, "
+        "no watermark."
+    )
+    return {"prompt": text, "pictures": pictures}
 
 
 _SUGGESTION_PACK_ADAPTER = TypeAdapter(ThumbnailSuggestionPack)
+_SUPPORTING_KEYS = ("supporting_text", "supporting_line", "supporting", "subline", "subtitle", "tagline")
+_KEYWORD_KEYS = ("topic_keywords", "keywords", "topics", "tags")
+_PALETTE_KEYS = ("palette", "colors", "colours", "color_palette")
+
+
+def _hex(value: object) -> object:
+    if isinstance(value, str):
+        text = value.strip()
+        if len(text) == 6 and all(char in "0123456789abcdefABCDEF" for char in text):
+            return f"#{text}"
+    return value
+
+
+def normalize_suggestion_pack(parsed: object) -> object:
+    """Real-AI finding (Task 36.3, Gemini 3.1 flash lite through the cloud gateway): the answer keeps the meaning but renames
+    fields -- `supporting_line`, `keywords`, `colors` or flat `primary_color`, hex without `#`. Map those onto the schema;
+    anything else is left for validation to reject."""
+    if not isinstance(parsed, dict) or not isinstance(parsed.get("variants"), list):
+        return parsed
+    variants = []
+    for item in parsed["variants"]:
+        if not isinstance(item, dict):
+            variants.append(item)
+            continue
+        fixed = {"headline": item.get("headline") or item.get("title")}
+        fixed["supporting_text"] = next((item[key] for key in _SUPPORTING_KEYS if isinstance(item.get(key), str)), "")
+        fixed["topic_keywords"] = next((item[key] for key in _KEYWORD_KEYS if isinstance(item.get(key), list)), None)
+        palette = next((item[key] for key in _PALETTE_KEYS if isinstance(item.get(key), dict)), None) or {}
+        palette = {str(key).removesuffix("_color").removesuffix("_colour"): value for key, value in palette.items()}
+        for role in ("primary", "secondary", "accent", "text"):
+            palette.setdefault(role, item.get(f"{role}_color") or item.get(f"{role}_colour"))
+        fixed["palette"] = {role: _hex(palette.get(role)) for role in ("primary", "secondary", "accent", "text")}
+        variants.append(fixed)
+    return {**parsed, "variants": variants}
 
 
 async def generate_suggestions(
@@ -177,8 +215,13 @@ async def generate_suggestions(
     except ProviderError as exc:
         raise ThumbnailGenerationError(f"Thumbnail suggestion generation failed: {exc}") from exc
 
+    text = result.text
     try:
-        pack = parse_and_validate(result.text, _SUGGESTION_PACK_ADAPTER)
+        text = json.dumps(normalize_suggestion_pack(json.loads(text)))
+    except (json.JSONDecodeError, TypeError):
+        pass  # parse_and_validate reports it
+    try:
+        pack = parse_and_validate(text, _SUGGESTION_PACK_ADAPTER)
     except SchemaValidationError as exc:
         raise ThumbnailGenerationError(str(exc)) from exc
     if len(pack.variants) != variant_count:
@@ -188,141 +231,17 @@ async def generate_suggestions(
     return pack
 
 
-def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    """Load Pillow's scalable embedded font without consulting operating-system paths."""
-    return ImageFont.load_default(size=size)
-
-
-def _wrap_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, width: int) -> str:
-    words = text.split()
-    if not words:
-        return ""
-    lines = [words[0]]
-    for word in words[1:]:
-        candidate = f"{lines[-1]} {word}"
-        if draw.textbbox((0, 0), candidate, font=font)[2] <= width:
-            lines[-1] = candidate
-        else:
-            lines.append(word)
-    return "\n".join(lines)
-
-
-def _zone_pixels(zone: TextZone, size: tuple[int, int]) -> tuple[int, int, int, int]:
-    width, height = size
-    return (
-        round(zone.x * width),
-        round(zone.y * height),
-        round(zone.width * width),
-        round(zone.height * height),
-    )
-
-
-def _draw_fitted_text(
-    draw: ImageDraw.ImageDraw,
-    text: str,
-    zone: TextZone,
-    canvas_size: tuple[int, int],
-    color: str,
-) -> None:
-    """Wrap and shrink text until it fits completely inside a normalized template zone."""
-    if not text:
-        return
-    x, y, max_width, max_height = _zone_pixels(zone, canvas_size)
-    for font_size in range(zone.max_font_size, zone.min_font_size - 1, -THUMBNAIL_FONT_SIZE_STEP):
-        font = _font(font_size)
-        wrapped = _wrap_text(draw, text, font, max_width)
-        spacing = max(
-            THUMBNAIL_MIN_LINE_SPACING,
-            round(font_size * THUMBNAIL_LINE_SPACING_RATIO),
-        )
-        bounds = draw.multiline_textbbox(
-            (0, 0), wrapped, font=font, spacing=spacing, align=zone.align
-        )
-        text_width = bounds[2] - bounds[0]
-        text_height = bounds[3] - bounds[1]
-        if text_width <= max_width and text_height <= max_height:
-            if zone.align == "center":
-                draw_x = x + (max_width - text_width) / 2
-            elif zone.align == "right":
-                draw_x = x + max_width - text_width
-            else:
-                draw_x = x
-            draw.multiline_text(
-                (draw_x, y), wrapped, fill=color, font=font, spacing=spacing, align=zone.align
-            )
-            return
-    raise ThumbnailGenerationError("Thumbnail text does not fit within its template zone")
-
-
-def _render_ai_scene(source: Path, suggestion: ThumbnailSuggestion, aspect: ThumbnailAspect) -> Image.Image:
-    size = ASPECT_SIZES[aspect]
-    with Image.open(source) as original:
-        scene = original.convert("RGB")
-    if aspect == "9x16":
-        crop_width = round(scene.height * size[0] / size[1])
-        center_x = round(scene.width * 0.32)
-        left = max(0, min(scene.width - crop_width, center_x - crop_width // 2))
-        scene = scene.crop((left, 0, left + crop_width, scene.height))
-    image = ImageOps.fit(scene, size, method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
-    overlay = Image.new("RGBA", size, (0, 0, 0, 0))
-    shade = ImageDraw.Draw(overlay)
-    for x in range(size[0]):
-        alpha = round(179 * (1 - x / max(1, size[0] - 1)))
-        shade.line((x, 0, x, size[1]), fill=(0, 0, 0, alpha))
-    image = Image.alpha_composite(image.convert("RGBA"), overlay).convert("RGB")
-    draw = ImageDraw.Draw(image)
-    zone = AI_SCENE_TEMPLATE.headline_zone
-    x, y, max_width, max_height = _zone_pixels(zone, size)
-    for font_size in range(zone.max_font_size, zone.min_font_size - 1, -THUMBNAIL_FONT_SIZE_STEP):
-        font = _font(font_size)
-        wrapped = _wrap_text(draw, suggestion.headline, font, max_width)
-        spacing = max(THUMBNAIL_MIN_LINE_SPACING, round(font_size * THUMBNAIL_LINE_SPACING_RATIO))
-        bounds = draw.multiline_textbbox((0, 0), wrapped, font=font, spacing=spacing, stroke_width=3)
-        if bounds[2] - bounds[0] <= max_width and bounds[3] - bounds[1] <= max_height:
-            draw.multiline_text((x, y), wrapped, fill="white", font=font, spacing=spacing,
-                                stroke_width=3, stroke_fill="black")
-            break
-    else:
-        raise ThumbnailGenerationError("Thumbnail text does not fit within its template zone")
-    _draw_fitted_text(draw, suggestion.supporting_text, AI_SCENE_TEMPLATE.supporting_zone, size, "white")
-    return image
-
-
 def _render_image(
     template: ThumbnailTemplateConfig,
     suggestion: ThumbnailSuggestion,
     aspect: ThumbnailAspect,
-    ai_scene_source: Path | None = None,
+    composition: dict,
+    variant_index: int,
 ) -> Image.Image:
-    """Render one suggestion/template pairing at one target aspect ratio."""
-    if template.id == "ai_scene":
-        if ai_scene_source is None or not ai_scene_source.is_file():
-            raise ThumbnailGenerationError("AI scene shot is unavailable")
-        return _render_ai_scene(ai_scene_source, suggestion, aspect)
-    size = ASPECT_SIZES[aspect]
-    with Image.open(TEMPLATE_DIR / template.base_image) as source:
-        base = ImageOps.fit(source.convert("L"), size, method=Image.Resampling.LANCZOS)
-    image = ImageOps.colorize(
-        base,
-        black=ImageColor.getrgb(suggestion.palette.primary),
-        white=ImageColor.getrgb(suggestion.palette.secondary),
-    ).convert("RGB")
-    draw = ImageDraw.Draw(image)
-    accent_height = max(
-        THUMBNAIL_MIN_LINE_SPACING,
-        round(size[1] * THUMBNAIL_ACCENT_HEIGHT_RATIO),
-    )
-    draw.rectangle((0, size[1] - accent_height, size[0], size[1]), fill=suggestion.palette.accent)
-    headline = suggestion.headline.upper() if template.uppercase_headline else suggestion.headline
-    _draw_fitted_text(draw, headline, template.headline_zone, size, suggestion.palette.text)
-    _draw_fitted_text(
-        draw,
-        suggestion.supporting_text,
-        template.supporting_zone,
-        size,
-        suggestion.palette.text,
-    )
-    return image
+    """Render one suggestion at one aspect ratio (Task 36.3/36.4: `thumbnail_compose`)."""
+    if template.id == "outside_ai" and not (composition.get("outside_image") and Path(composition["outside_image"]).is_file()):
+        raise ThumbnailGenerationError("Upload your outside-AI picture first")
+    return thumbnail_compose.render(composition, suggestion, aspect, variant_index, template.id)
 
 
 def _render_record_sync(
@@ -332,7 +251,7 @@ def _render_record_sync(
     template: ThumbnailTemplateConfig,
     suggestion: ThumbnailSuggestion,
     revision: str,
-    ai_scene_source: Path | None = None,
+    composition: dict,
 ) -> dict:
     """Render and stage one complete four-file thumbnail revision."""
     variant_dir = settings.DATA_DIR / "thumbnails" / project_id / revision
@@ -341,7 +260,7 @@ def _render_record_sync(
     try:
         assets: dict[str, dict[str, str]] = {}
         for aspect in ASPECT_SIZES:
-            image = _render_image(template, suggestion, aspect, ai_scene_source)
+            image = _render_image(template, suggestion, aspect, composition, variant_index)
             try:
                 png_path = variant_dir / f"{aspect}.png"
                 jpg_path = variant_dir / f"{aspect}.jpg"
@@ -358,9 +277,8 @@ def _render_record_sync(
             "revision": revision,
             "suggestion": suggestion.model_dump(),
             "assets": assets,
+            "composition": composition,  # Task 36.3: an edit re-renders the same picture
         }
-        if ai_scene_source:
-            sidecar["ai_scene_source"] = str(ai_scene_source)
         (variant_dir / "render.json").write_text(
             json.dumps(sidecar, indent=2), encoding="utf-8"
         )
@@ -374,7 +292,7 @@ def _render_batch_sync(
     project_id: str,
     template: ThumbnailTemplateConfig,
     suggestions: list[ThumbnailSuggestion],
-    ai_scene_source: Path | None = None,
+    composition: dict,
 ) -> list[dict]:
     """Render one selected template once per suggestion, producing four derivatives per row."""
     project_dir = settings.DATA_DIR / "thumbnails" / project_id
@@ -391,7 +309,7 @@ def _render_batch_sync(
                     template,
                     suggestion,
                     thumbnail_id,
-                    ai_scene_source,
+                    composition,
                 )
             )
     except Exception:
@@ -405,11 +323,11 @@ async def render_batch(
     project_id: str,
     template: ThumbnailTemplateConfig,
     suggestions: list[ThumbnailSuggestion],
-    ai_scene_source: Path | None = None,
+    composition: dict,
 ) -> list[dict]:
     """Render all derivatives in a worker thread and return persistence-ready records."""
     try:
-        return await asyncio.to_thread(_render_batch_sync, project_id, template, suggestions, ai_scene_source)
+        return await asyncio.to_thread(_render_batch_sync, project_id, template, suggestions, composition)
     except ThumbnailGenerationError:
         raise
     except Exception as exc:
@@ -455,16 +373,12 @@ async def render_edited_thumbnail(record: dict, edit: ThumbnailEditRequest) -> d
         }
     )
     revision = str(uuid.uuid4())
-    ai_scene_source = None
-    if template.id == "ai_scene":
-        sidecar_path = Path(record["image_path_16x9"]).parent / "render.json"
-        try:
-            sidecar = await asyncio.to_thread(lambda: json.loads(sidecar_path.read_text("utf-8")))
-            ai_scene_source = await asyncio.to_thread(
-                project_visuals_service.resolve_shot_content, record["project_id"], sidecar["ai_scene_source"],
-            )
-        except (OSError, KeyError, ValueError, NotFoundError) as exc:
-            raise ThumbnailGenerationError("AI scene shot is unavailable") from exc
+    sidecar_path = Path(record["image_path_16x9"]).parent / "render.json"
+    try:
+        sidecar = await asyncio.to_thread(lambda: json.loads(sidecar_path.read_text("utf-8")))
+    except (OSError, ValueError) as exc:
+        raise ThumbnailGenerationError("Thumbnail render metadata is unavailable") from exc
+    composition = sidecar.get("composition") or {}
     try:
         return await asyncio.to_thread(
             _render_record_sync,
@@ -474,7 +388,7 @@ async def render_edited_thumbnail(record: dict, edit: ThumbnailEditRequest) -> d
             template,
             suggestion,
             revision,
-            ai_scene_source,
+            composition,
         )
     except ThumbnailGenerationError:
         raise

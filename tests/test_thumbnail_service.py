@@ -31,6 +31,10 @@ PROJECT = {
 }
 
 
+# Task 36.3: what `thumbnail_compose.composition_inputs` gathers; no picture and no character -> the brand gradient.
+COMPOSITION = {"backgrounds": [], "characters": [], "cefr": "B2", "episode": None, "outside_image": None}
+
+
 def suggestion(index: int = 0) -> ThumbnailSuggestion:
     """Build one valid, visibly distinct thumbnail suggestion."""
     palettes = [
@@ -74,22 +78,27 @@ def persisted_row(record: dict) -> dict:
 
 
 @pytest.mark.asyncio
-async def test_list_templates_validates_all_five_assets() -> None:
-    templates = await thumbnail_service.list_templates()
-
-    assert [template["id"] for template in templates] == list(THUMBNAIL_TEMPLATE_IDS)
-    assert {template["category"] for template in templates} == {
-        "minimal",
-        "bold",
-        "split",
-        "dark",
-        "educational",
-    }
-    assert all(template["preview_url"].endswith(f"{template['id']}.png") for template in templates)
+async def test_the_two_thumbnail_kinds_are_listed_and_outside_ai_waits_for_its_picture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Task 36.3/36.4 (D92): `composed` and `outside_ai` replace the five Pillow templates and ai_scene."""
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    templates = await thumbnail_service.list_templates("project-1")
+    assert [template["id"] for template in templates] == list(THUMBNAIL_TEMPLATE_IDS) == ["composed", "outside_ai"]
+    assert [template["available"] for template in templates] == [True, False]
+    assert templates[1]["preview_url"] == "/static/thumbnail_templates/outside_ai.png"
+    picture = thumbnail_service.outside_image_path("project-1")
+    picture.parent.mkdir(parents=True)
+    Image.new("RGB", (1280, 720), "#336699").save(picture)
+    templates = await thumbnail_service.list_templates("project-1")
+    assert templates[1]["available"] and templates[1]["preview_url"].endswith("/thumbnails/outside-image")
+    for template_id in ("composed", "outside_ai"):
+        assert (Path(thumbnail_service.PROJECT_ROOT) / "frontend" / "static" / "thumbnail_templates" /
+                f"{template_id}.png").is_file()
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("template_name", THUMBNAIL_TEMPLATE_IDS)
+@pytest.mark.parametrize("template_name", ["composed"])
 async def test_each_template_renders_png_and_jpg_at_both_aspects(
     template_name: str,
     tmp_path: Path,
@@ -98,7 +107,7 @@ async def test_each_template_renders_png_and_jpg_at_both_aspects(
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     template = await thumbnail_service.load_template(template_name)
 
-    records = await thumbnail_service.render_batch("project-1", template, [suggestion()])
+    records = await thumbnail_service.render_batch("project-1", template, [suggestion()], COMPOSITION)
 
     assert len(records) == 1
     expected_sizes = {
@@ -121,10 +130,10 @@ async def test_ab_variants_have_distinct_rendered_pixels(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    template = await thumbnail_service.load_template("gradient_bold")
+    template = await thumbnail_service.load_template("composed")
 
     records = await thumbnail_service.render_batch(
-        "project-1", template, [suggestion(index) for index in range(3)]
+        "project-1", template, [suggestion(index) for index in range(3)], COMPOSITION
     )
 
     hashes = {
@@ -133,7 +142,7 @@ async def test_ab_variants_have_distinct_rendered_pixels(
     }
     assert len(hashes) == 3
     assert [record["variant_index"] for record in records] == [0, 1, 2]
-    assert {record["template_name"] for record in records} == {"gradient_bold"}
+    assert {record["template_name"] for record in records} == {"composed"}
 
 
 @pytest.mark.asyncio
@@ -142,7 +151,7 @@ async def test_render_failure_removes_every_partial_variant_directory(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    template = await thumbnail_service.load_template("minimal_clean")
+    template = await thumbnail_service.load_template("composed")
     real_render = thumbnail_service._render_image
     calls = 0
 
@@ -156,7 +165,7 @@ async def test_render_failure_removes_every_partial_variant_directory(
     monkeypatch.setattr(thumbnail_service, "_render_image", fail_after_first_image)
 
     with pytest.raises(ThumbnailGenerationError, match="simulated render failure"):
-        await thumbnail_service.render_batch("project-1", template, [suggestion()])
+        await thumbnail_service.render_batch("project-1", template, [suggestion()], COMPOSITION)
 
     project_dir = tmp_path / "thumbnails" / "project-1"
     assert list(project_dir.iterdir()) == []
@@ -168,8 +177,8 @@ async def test_edit_render_stages_new_revision_and_preserves_noneditable_fields(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    template = await thumbnail_service.load_template("minimal_clean")
-    original = (await thumbnail_service.render_batch("project-1", template, [suggestion()]))[0]
+    template = await thumbnail_service.load_template("composed")
+    original = (await thumbnail_service.render_batch("project-1", template, [suggestion()], COMPOSITION))[0]
     row = persisted_row(original)
     edit = ThumbnailEditRequest.model_validate(
         {
@@ -202,8 +211,8 @@ async def test_edit_render_rejects_stale_revision_before_creating_files(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    template = await thumbnail_service.load_template("minimal_clean")
-    original = (await thumbnail_service.render_batch("project-1", template, [suggestion()]))[0]
+    template = await thumbnail_service.load_template("composed")
+    original = (await thumbnail_service.render_batch("project-1", template, [suggestion()], COMPOSITION))[0]
     row = persisted_row(original)
     edit = ThumbnailEditRequest.model_validate(
         {
@@ -253,7 +262,7 @@ async def test_generate_suggestions_applies_pydantic_validation_and_exact_count(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
-    template = await thumbnail_service.load_template("modern_split")
+    template = await thumbnail_service.load_template("composed")
     router = _gateway_router(AIMode.CLOUD, [_suggestion_result(suggestion_json(3))])
 
     pack = await thumbnail_service.generate_suggestions(PROJECT, template, 3, router=router)
@@ -266,7 +275,7 @@ async def test_generate_suggestions_rejects_wrong_count_and_invalid_schema(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
-    template = await thumbnail_service.load_template("modern_split")
+    template = await thumbnail_service.load_template("composed")
 
     router = _gateway_router(AIMode.CLOUD, [_suggestion_result(suggestion_json(3))])
     with pytest.raises(ThumbnailGenerationError, match="expected exactly 4"):
@@ -287,9 +296,24 @@ async def test_generate_suggestions_runs_end_to_end_under_ai_mode_local() -> Non
     _gateway_router(AIMode.LOCAL, ...) pattern already used for script/
     learning/YouTube generation. Not a claim about real Ollama structured-
     output quality for this schema (measured for real in Task 14.9)."""
-    template = await thumbnail_service.load_template("modern_split")
+    template = await thumbnail_service.load_template("composed")
     router = _gateway_router(AIMode.LOCAL, gemini_outcomes=[], local_outcomes=[_suggestion_result(suggestion_json(3))])
 
     pack = await thumbnail_service.generate_suggestions(PROJECT, template, 3, router=router)
 
     assert len(pack.variants) == 3
+
+
+def test_renamed_ai_fields_are_mapped_onto_the_schema() -> None:
+    """Task 36.3 real-AI finding: `supporting_line`, `keywords`, `colors` / flat `*_color`, hex without `#`."""
+    raw = {"variants": [
+        {"headline": "Morning Talk", "supporting_line": "B1 English", "keywords": ["routine"],
+         "colors": {"primary": "2E7D32", "secondary": "1B5E20", "accent": "#FFD23F", "text": "FFFFFF"}},
+        {"headline": "Coffee Chat", "supporting_text": "", "topic_keywords": ["coffee"], "primary_color": "EF6C00",
+         "secondary_color": "E65100", "accent_color": "C6FF00", "text_color": "FAFAFA"},
+        suggestion(2).model_dump(),  # an answer already in the schema's shape stays as it is
+    ]}
+    pack = thumbnail_service.ThumbnailSuggestionPack.model_validate(thumbnail_service.normalize_suggestion_pack(raw))
+    assert pack.variants[0].supporting_text == "B1 English" and pack.variants[0].palette.primary == "#2E7D32"
+    assert pack.variants[1].topic_keywords == ["coffee"] and pack.variants[1].palette.text == "#FAFAFA"
+    assert thumbnail_service.normalize_suggestion_pack("not a pack") == "not a pack"

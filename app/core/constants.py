@@ -42,16 +42,11 @@ THUMBNAIL_HEIGHT_9X16 = 1280
 THUMBNAIL_MIN_VARIANTS = 3
 THUMBNAIL_MAX_VARIANTS = 5
 THUMBNAIL_JPEG_QUALITY = 90
-THUMBNAIL_FONT_SIZE_STEP = 2
-THUMBNAIL_LINE_SPACING_RATIO = 0.18
-THUMBNAIL_MIN_LINE_SPACING = 4
-THUMBNAIL_ACCENT_HEIGHT_RATIO = 0.018
+# Task 36.3/36.4 (D92): the composed episode thumbnail and the owner's outside-AI picture replace the five Pillow templates
+# and ai_scene.
 THUMBNAIL_TEMPLATE_IDS = (
-    "minimal_clean",
-    "gradient_bold",
-    "modern_split",
-    "dynamic_wave",
-    "podcast_classic",
+    "composed",
+    "outside_ai",
 )
 
 # Video

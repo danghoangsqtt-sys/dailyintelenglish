@@ -18,21 +18,14 @@ PROJECT = {
     "genre": "debate",
 }
 
-TEMPLATES = [
-    {
-        "id": template_id,
-        "display_name": display_name,
-        "description": f"{display_name} thumbnail layout",
-        "preview_url": f"/static/thumbnail_templates/{template_id}.png",
-    }
-    for template_id, display_name in (
-        ("minimal_clean", "Minimal Clean"),
-        ("gradient_bold", "Gradient Bold"),
-        ("modern_split", "Modern Split"),
-        ("dynamic_wave", "Dynamic Wave"),
-        ("podcast_classic", "Podcast Classic"),
-    )
+TEMPLATES = [  # Task 36.3/36.4 (D92): the two thumbnail kinds
+    {"id": "composed", "display_name": "Characters + illustration", "description": "composed", "available": True,
+     "preview_url": "/static/thumbnail_templates/composed.png"},
+    {"id": "outside_ai", "display_name": "Your outside-AI picture", "description": "outside", "available": True,
+     "preview_url": "/static/thumbnail_templates/outside_ai.png"},
 ]
+OUTSIDE_PROMPT = {"prompt": "Create a YouTube thumbnail, landscape 16:9 ... Alex (attached picture 1)",
+                  "pictures": [{"name": "Alex", "number": 1, "url": "/static/thumbnail_templates/composed.png"}]}
 
 
 def envelope(data: object = None, *, error: str | None = None) -> str:
@@ -53,7 +46,7 @@ def variant(
     selected: bool = False,
     revision: str | None = None,
     headline: str | None = None,
-    template_name: str = "minimal_clean",
+    template_name: str = "composed",
 ) -> dict:
     """Build one public thumbnail record consumed by the browser UI."""
     thumbnail_id = f"00000000-0000-0000-0000-00000000010{index}"
@@ -125,6 +118,8 @@ async def install_base_routes(page, thumbnails: list[dict], extra_handler=None) 
             await fulfill_json(route, TEMPLATES)
         elif path == f"/api/projects/{PROJECT['id']}/thumbnails" and method == "GET":
             await fulfill_json(route, thumbnails)
+        elif path == f"/api/projects/{PROJECT['id']}/thumbnails/outside-prompt" and method == "GET":
+            await fulfill_json(route, OUTSIDE_PROMPT)
         elif extra_handler and await extra_handler(route, path, method):
             return
         else:
@@ -159,8 +154,8 @@ async def test_template_generation_double_submit_lock(
     await install_base_routes(page, thumbnails, mutations)
     await page.goto(f"{live_server_url}/step6?project_id={PROJECT['id']}")
     await page.locator("#workspace").wait_for()
-    assert await page.locator(".template-option").count() == 5
-    await page.locator('[data-template-id="gradient_bold"]').click()
+    assert await page.locator(".template-option").count() == 2
+    await page.locator('[data-template-id="outside_ai"]').click()
     await page.select_option("#variant-count", "3")
     await page.evaluate(
         "const button = document.getElementById('generate-btn'); button.click(); button.click();"
@@ -169,7 +164,7 @@ async def test_template_generation_double_submit_lock(
     await page.locator(".variant-card").first.wait_for()
     assert generate_calls == 1
     assert await page.locator(".variant-card").count() == 3
-    assert await page.locator('[data-template-id="gradient_bold"]').get_attribute(
+    assert await page.locator('[data-template-id="outside_ai"]').get_attribute(
         "aria-pressed"
     ) == "true"
     await page.close()
@@ -381,3 +376,26 @@ async def test_dirty_editor_registers_beforeunload_guard(
 
     assert prevented is True
     await page.close()
+
+
+@pytest.mark.asyncio
+async def test_the_outside_ai_panel_gives_the_prompt_and_the_card_waits_for_the_picture(
+    browser_instance: Browser, live_server_url: str,
+) -> None:
+    """Task 36.4 (D90): the prompt and the character pictures to attach; the outside-AI card is locked until an upload."""
+    page = await browser_instance.new_page()
+    TEMPLATES[1]["available"] = False
+    try:
+        await install_base_routes(page, [])
+        await page.goto(f"{live_server_url}/step6?project_id={PROJECT['id']}")
+        await page.locator("#workspace").wait_for()
+        card = page.locator('[data-template-id="outside_ai"]')
+        assert await card.get_attribute("aria-disabled") == "true"
+        assert await card.is_disabled() and await card.get_attribute("aria-pressed") == "false"
+        assert await page.locator('[data-template-id="composed"]').get_attribute("aria-pressed") == "true"
+        await page.locator("#outside-panel summary").click()
+        await page.wait_for_function("document.getElementById('outside-prompt').value.includes('16:9')")
+        assert "Picture 1: Alex" in await page.locator("#outside-pictures").text_content()
+    finally:
+        TEMPLATES[1]["available"] = True
+        await page.close()
