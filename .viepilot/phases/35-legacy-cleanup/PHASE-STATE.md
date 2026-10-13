@@ -30,3 +30,12 @@
   shows the character's face and name with "Change character" (opens `CharacterSelector`, saves the cast) and "Remove".
 - 35.5: Standard renderer removed (`_render_video_sync`, `_render_vertical_sync`, templates, toggle, fallback); a Remotion
   failure fails the job with its reason.
+  Detail (2026-10-13): `video_service.generate_video(project_id, audio_job, *, db, project, learning, caption_style,
+  visual_mode, still_scene_id)` always renders with Remotion; Remotion not installed -> `VideoRenderError` naming what is
+  missing (`check_node_version`/`check_video_renderer_deps`/`check_remotion_browser`); `RemotionRenderFailedError` -> the job
+  fails with that reason (no ffmpeg fallback, no fallback counters, no `DIE_VIDEO_RENDERER` kill switch). Removed: the
+  ffmpeg render/vertical/escape helpers, `list_video_templates` + `GET /api/video/templates`, the three
+  `frontend/static/video_backgrounds` PNGs and their generator script, `VIDEO_TEMPLATE_*`/aspect constants, the request's
+  `template_id`/`aspect_ratio`/`renderer` (extra fields are ignored, so old clients still work), the `mp4_vertical` download
+  (Phase 37 brings vertical video back on Remotion). Step 5 loses the background-template grid, the renderer toggle, the
+  9:16 option, the vertical link and the fallback notice. Tests that rendered with ffmpeg use a fake Remotion render.
