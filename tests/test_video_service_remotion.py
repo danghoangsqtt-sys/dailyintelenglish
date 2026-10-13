@@ -183,3 +183,22 @@ def test_render_via_remotion_sync_hands_remotion_an_absolute_path(tmp_path, monk
     assert Path(result["mp4_path"]) == (tmp_path / relative).resolve()
     assert (tmp_path / relative).is_file()
     assert not (renderer_dir / "data").exists()
+
+
+def test_renderer_deps_follow_npms_own_install_record(tmp_path, monkeypatch):
+    """Phase 38: a lockfile-only change (the package rename) rewrites node_modules/.package-lock.json but not the
+    folder's own time; the check reads npm's record, so a fresh `npm install` is not reported as stale."""
+    import os
+
+    renderer = tmp_path / "renderer"
+    (renderer / "node_modules").mkdir(parents=True)
+    monkeypatch.setattr(video_renderer_remotion, "VIDEO_RENDERER_DIR", renderer)
+    lockfile, record = renderer / "package-lock.json", renderer / "node_modules" / ".package-lock.json"
+    lockfile.write_text("{}", encoding="utf-8")
+    os.utime(renderer / "node_modules", (1_000, 1_000))
+    record.write_text("{}", encoding="utf-8")
+    os.utime(lockfile, (2_000, 2_000))
+    os.utime(record, (3_000, 3_000))
+    assert video_renderer_remotion.check_video_renderer_deps()[0] is True
+    os.utime(lockfile, (4_000, 4_000))  # the lockfile changed after the last install
+    assert video_renderer_remotion.check_video_renderer_deps()[0] is False

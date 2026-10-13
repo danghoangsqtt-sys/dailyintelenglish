@@ -99,7 +99,11 @@ def check_video_renderer_deps() -> tuple[bool, str]:
     lockfile = VIDEO_RENDERER_DIR / "package-lock.json"
     if not node_modules.is_dir():
         return False, f"{node_modules} not found -- run `npm install` in renderer/"
-    if lockfile.is_file() and lockfile.stat().st_mtime > node_modules.stat().st_mtime:
+    # npm (v7+) rewrites node_modules/.package-lock.json on every install; the folder's own time only changes when a
+    # package is added or removed, so a lockfile-only change (Phase 38 rename) read as a stale install.
+    installed = node_modules / ".package-lock.json"
+    installed_at = (installed if installed.is_file() else node_modules).stat().st_mtime
+    if lockfile.is_file() and lockfile.stat().st_mtime > installed_at:
         return False, "renderer/package-lock.json is newer than node_modules/ -- run `npm install` again"
     return True, f"{node_modules} present and up to date"
 
