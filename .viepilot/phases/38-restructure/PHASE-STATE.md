@@ -1,7 +1,6 @@
 # PHASE-STATE — Phase 38: Project layout restructure (D115)
 
-- **Status:** 38.1–38.3 and 38.5 done 2026-10-13; 38.4 (move `models/`) waits for the Phase 39 downloads (a junction
-  `backend/ai/models/image` → `models/image` keeps the app working meanwhile). Opened 2026-10-13 (owner request: "các mô hình AI tập trung hết trên thư mục backend… bố cục lại thư mục và
+- **Status:** ✅ complete 2026-10-13 (38.1–38.5). Opened 2026-10-13 (owner request: "các mô hình AI tập trung hết trên thư mục backend… bố cục lại thư mục và
   cấu trúc dự án"; layout chosen by the owner). Plan: `docs/structure/RESTRUCTURE-PLAN.md` (made with the new `vp-struct` skill).
 
 | Task | Description | Status |
@@ -9,7 +8,7 @@
 | 38.1 | `app/` → `backend/` with domain packages (`ai/{llm,image,tts,prompts}`, `content`, `media`, `library`, `channel`, `schemas`); image worker out of `scripts/`; codemod imports; path constants; entry points | done |
 | 38.2 | `video-renderer/` → `renderer/` | done |
 | 38.3 | `.venv`, `.venv-image` recreated from freeze; launch/build scripts | done |
-| 38.4 | `models/` → `backend/ai/models/` (after the Phase 39 downloads) | planned |
+| 38.4 | `models/` → `backend/ai/models/` (after the Phase 39 downloads) | done |
 | 38.5 | Docs (README, ARCHITECTURE, AI-GUIDE, `docs/structure/STRUCTURE.md`, CHANGELOG); restart the real app (owner OK) | done |
 
 ## Implementation notes (before coding)
@@ -31,3 +30,5 @@
 - Removed with the owner's OK: `venv/` (5.5 GB), the old `Daily_Intel_English_phase33_auto` worktree (branch kept),
   `.agents/`, `.cache/`. Still to remove: `venv-image/` (used by the running download) and `models/` → `backend/ai/models/`.
 - Full suite on the new layout and `.venv`: 1,675 passed + the 10 dependency failures fixed (91/91 on rerun).
+- 38.4 done after the Phase 39 downloads: the 95 GB `models/image` folder renamed to `backend/ai/models/image` (same drive);
+  `venv-image/` (4.6 GB) removed. Repository root now: backend, frontend, renderer, scripts, tests, docs, data + config files.

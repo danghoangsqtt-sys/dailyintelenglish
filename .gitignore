@@ -10,7 +10,6 @@ venv/
 # diffusers, ~5.5 GB, out of the main venv and the .exe). Set up via `backend/ai/image/requirements.txt`.
 .venv-image/
 .venv-qwen/
-venv-image/
 *.egg-info/
 dist/
 build/
@@ -40,10 +39,9 @@ data/visuals/
 data/music_library/*
 !data/music_library/.gitkeep
 
-# AI Models (large binary files) -- Phase 38: backend/ai/models/ (models/ kept until the old folder is gone)
+# AI Models (large binary files) -- Phase 38: backend/ai/models/
 backend/ai/models/*
 !backend/ai/models/.gitkeep
-models/*
 
 
 # IDE

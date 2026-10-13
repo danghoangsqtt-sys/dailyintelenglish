@@ -1530,15 +1530,15 @@ State: `.viepilot/phases/37-vertical-video/PHASE-STATE.md`. After Phase 36.
 - [ ] 37.5 Tests, real clips, Gate B-25
 
 
-### Phase 38: Project layout restructure (D115) - in progress 2026-10-13
+### Phase 38: Project layout restructure (D115) - done 2026-10-13
 
 State: `.viepilot/phases/38-restructure/PHASE-STATE.md`. Plan `docs/structure/RESTRUCTURE-PLAN.md`.
 
-- [ ] 38.1 `backend/` with domain packages; image worker out of `scripts/`; imports rewritten
-- [ ] 38.2 `renderer/` (was `video-renderer/`)
-- [ ] 38.3 `.venv` / `.venv-image` recreated
-- [ ] 38.4 `backend/ai/models/` (was `models/`)
-- [ ] 38.5 Docs and real-app restart
+- [x] 38.1 `backend/` with domain packages; image worker out of `scripts/`; imports rewritten
+- [x] 38.2 `renderer/` (was `video-renderer/`)
+- [x] 38.3 `.venv` / `.venv-image` recreated
+- [x] 38.4 `backend/ai/models/` (was `models/`)
+- [x] 38.5 Docs and real-app restart
 
 ### Phase 39: Image model benchmark — RealVisXL vs Qwen-Image (D110–D116) - planned 2026-10-13
 
