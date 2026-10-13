@@ -76,3 +76,12 @@ def test_compose_keeps_the_summary_and_adds_the_published_fields():
     assert result["pinned_comments"] == ["📜 Full transcript\nAlex: Hello there."]
     assert yt.compose(None, PROJECT, lines, None, None) is None
     assert yt.transcript_text(PROJECT, lines) == "Weekend plans\nDaily Beyond English\n\nAlex: Hello there.\n"
+
+
+def test_titles_given_by_variant_are_accepted():
+    """Task 36.2 real-AI finding: `titles` as an object keyed by variant."""
+    from app.models.youtube import YouTubePackageOut
+
+    package = YouTubePackageOut.model_validate({
+        "titles": {"click_worthy": "A", "educational": "B", "seo": "C"}, "description": "Summary.", "tags": ["english"]})
+    assert [(title.variant, title.text) for title in package.titles] == [("click_worthy", "A"), ("educational", "B"), ("seo", "C")]

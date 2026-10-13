@@ -27,4 +27,7 @@ everyday English it practises. Do not list vocabulary, timestamps, links or hash
 "tags": 5-15 relevant tags/keywords as a list of short strings (no leading '#', no commas inside a single tag) -- their
 combined comma-joined length must stay well under 500 characters.
 
-Return JSON only. The API-provided JSON Schema is authoritative.
+Return JSON only, exactly in this shape (these field names; "titles" is a list of 3 objects):
+{"titles": [{"variant": "click_worthy", "text": "..."}, {"variant": "educational", "text": "..."},
+            {"variant": "seo", "text": "..."}],
+ "hook": "...", "description": "...", "hashtags": ["LearnEnglish", "..."], "tags": ["learn english", "..."]}

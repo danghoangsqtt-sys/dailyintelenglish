@@ -31,6 +31,14 @@ class YouTubePackageOut(BaseModel):
     hook: str = Field(default="", max_length=400)
     hashtags: list[str] = Field(default_factory=list, max_length=30)
 
+    @model_validator(mode="before")
+    @classmethod
+    def accept_titles_by_variant(cls, data: object) -> object:
+        """Real-AI finding (Task 36.2, Gemini 3.1 flash lite): `titles` sometimes comes as {"seo": "...", ...}."""
+        if isinstance(data, dict) and isinstance(data.get("titles"), dict):
+            data = {**data, "titles": [{"variant": variant, "text": text} for variant, text in data["titles"].items()]}
+        return data
+
     @model_validator(mode="after")
     def validate_titles_and_tags(self) -> "YouTubePackageOut":
         """Require exactly one title per variant, and tags to be nonblank and fit the joined limit."""
