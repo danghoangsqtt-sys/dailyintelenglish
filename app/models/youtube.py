@@ -24,8 +24,12 @@ class YouTubePackageOut(BaseModel):
     model_config = {"str_strip_whitespace": True}
 
     titles: list[TitleOption] = Field(min_length=3, max_length=3)
+    # Task 36.2 (D93): `description` is the episode summary; the published description is composed around it
+    # (`youtube_service.compose`). `hook` and `hashtags` are optional so older answers stay valid.
     description: str = Field(min_length=1, max_length=5000)
     tags: list[str] = Field(min_length=1, max_length=30)
+    hook: str = Field(default="", max_length=400)
+    hashtags: list[str] = Field(default_factory=list, max_length=30)
 
     @model_validator(mode="after")
     def validate_titles_and_tags(self) -> "YouTubePackageOut":

@@ -56,6 +56,13 @@
     .title-text { margin: 0 0 10px; overflow-wrap: anywhere; font-size: 15px; font-weight: 600; }
     .music-credit-note { margin: -6px 0 0; color: var(--muted); font-size: 12px; }
     #description-text { margin: 0 0 14px; overflow-wrap: anywhere; white-space: pre-wrap; font-size: 14px; line-height: 1.6; }
+    #hashtags-text { margin: 0; font-size: 14px; color: var(--accent); overflow-wrap: anywhere; }
+    .char-count { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+    .char-count.is-over { color: var(--danger); }
+    .pinned-part { margin: 0 0 12px; }
+    .pinned-part pre { margin: 6px 0 0; max-height: 260px; overflow: auto; white-space: pre-wrap; font-size: 13px; line-height: 1.5;
+      padding: 10px; border-radius: 8px; background: var(--surface-2); }
+    .pinned-part-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
     #chapters-text { margin: 0 0 6px; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 13px; }
     .estimate-note { margin: 0 0 14px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 
@@ -131,8 +138,27 @@
                 <h2>Description</h2>
                 <button type="button" class="btn btn-ghost copy-btn" data-copy-target="description-text">📋 Copy</button>
               </div>
+              <p id="description-count" class="char-count" role="status"></p>
               <p id="description-text"></p>
               <p id="music-credit-note" class="music-credit-note" hidden>🎵 The music credit was added from the Music Library (it follows the track used in Step 4).</p>
+            </section>
+
+            <section class="section-block card">
+              <div class="section-header">
+                <h2>Hashtags</h2>
+                <button type="button" class="btn btn-ghost copy-btn" data-copy-target="hashtags-text">📋 Copy</button>
+              </div>
+              <p class="estimate-note">At most 15 (YouTube ignores them all above 15); the first three show above the title. They are already at the end of the description.</p>
+              <p id="hashtags-text"></p>
+            </section>
+
+            <section class="section-block card">
+              <div class="section-header">
+                <h2>Pinned comment</h2>
+                <a id="transcript-link" class="btn btn-ghost" href="#" download>⬇ Transcript (.txt)</a>
+              </div>
+              <p class="estimate-note">The full transcript and the listening answers. Post each part as a comment on the video and pin the first one.</p>
+              <div id="pinned-comments"></div>
             </section>
 
             <section class="section-block card">

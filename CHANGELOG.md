@@ -8,6 +8,15 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Phase 36 YouTube package, 2026-10-13)
+- **A fuller learning pack (36.1).** Collocations, phrasal verbs and sentence patterns, each with English and Vietnamese
+  meanings and the sentence from the episode, in three new Step 3 tabs.
+- **An SEO description ready to paste (36.2).** Step 7 composes it within YouTube's 5,000 characters: a keyword opening,
+  the summary, chapters, selected vocabulary, idioms, collocations, phrasal verbs and patterns with Vietnamese meanings,
+  2-3 listening questions, a subscribe line, the music credit and up to 15 hashtags (`#DailyBeyondEnglish` always
+  included). The full transcript and the listening answers become the pinned comment, split into 10,000-character
+  parts. Every part has a copy button; the transcript downloads as a .txt and goes into the zip.
+
 ### Added / Fixed (Gate B-23 fixes, Task 33.10, 2026-10-13)
 - **More illustrations, named so the video can show them.** The storyboard AI now sees the Activity Library and copies an
   insert's activity from it, about one insert every 2-3 lines.

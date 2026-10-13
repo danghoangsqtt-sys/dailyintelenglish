@@ -1,4 +1,5 @@
-You are writing YouTube metadata for an English-learning podcast episode.
+You are writing YouTube metadata for an episode of Daily Beyond English, an English-learning YouTube channel for
+Vietnamese learners. Write everything in English.
 
 Project name: {{ project_name }}
 Topic: {{ topic }}
@@ -14,10 +15,16 @@ Produce exactly 3 titles, one per angle:
 - "seo": keyword-forward, matches how a learner would search for this topic.
 Each title must be a single line, at most 100 characters, and truthful to the transcript.
 
-Produce one YouTube description (1-5000 characters) that summarizes the episode, mentions the
-CEFR level and genre, and would make sense pasted directly into a YouTube upload form.
+"hook": one or two sentences (at most 300 characters) that open the description. Put the main search keywords first
+(for example "English conversation", the topic, the CEFR level) and tell the viewer what they will learn.
 
-Produce 5-15 relevant tags/keywords as a list of short strings (no leading '#', no commas
-inside a single tag) — their combined comma-joined length must stay well under 500 characters.
+"description": a 2-4 sentence summary of the episode (at most 800 characters): who talks, about what, and which
+everyday English it practises. Do not list vocabulary, timestamps, links or hashtags -- the app adds those.
+
+"hashtags": 5-12 hashtags without '#', each one word in CamelCase (for example "LearnEnglish",
+"EnglishConversation", "{{ cefr_level }}English"). Put the three most important first: YouTube shows them above the title.
+
+"tags": 5-15 relevant tags/keywords as a list of short strings (no leading '#', no commas inside a single tag) -- their
+combined comma-joined length must stay well under 500 characters.
 
 Return JSON only. The API-provided JSON Schema is authoritative.

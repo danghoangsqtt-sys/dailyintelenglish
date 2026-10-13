@@ -87,6 +87,40 @@
     byId("tags-text").textContent = state.package.tags.join(", ");
   }
 
+  // Task 36.2 (D93/D97): hashtags, the pinned comment part(s) and the description length, each ready to copy.
+  function renderPublishing() {
+    const description = state.package.description || "";
+    const count = byId("description-count");
+    count.textContent = `${description.length.toLocaleString("en-US")} / 5,000 characters`;
+    count.classList.toggle("is-over", description.length > 5000);
+    byId("hashtags-text").textContent = state.package.hashtags_text || "";
+    byId("transcript-link").href = Api.youtubeTranscriptUrl(state.projectId);
+    const box = byId("pinned-comments");
+    box.replaceChildren();
+    const parts = state.package.pinned_comments || [];
+    parts.forEach((text, index) => {
+      const part = document.createElement("div");
+      part.className = "pinned-part";
+      const head = document.createElement("div");
+      head.className = "pinned-part-head";
+      const label = document.createElement("span");
+      label.textContent = parts.length > 1
+        ? `Part ${index + 1} of ${parts.length} · ${text.length.toLocaleString("en-US")} characters`
+        : `${text.length.toLocaleString("en-US")} characters`;
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "btn btn-ghost copy-btn";
+      copy.dataset.copyTarget = `pinned-comment-${index}`;
+      copy.textContent = "📋 Copy";
+      const pre = document.createElement("pre");
+      pre.id = `pinned-comment-${index}`;
+      pre.textContent = text;
+      head.append(label, copy);
+      part.append(head, pre);
+      box.append(part);
+    });
+  }
+
   function render() {
     const generatePanel = byId("generate-panel");
     const contentWrap = byId("content-wrap");
@@ -115,6 +149,7 @@
       ? "✅ Measured from the final generated audio."
       : "⏱ Estimated from script length and reading speed — generate the audio in Step 4 for real measured timestamps.";
     renderTags();
+    renderPublishing();
     renderExportStatus();
   }
 

@@ -24,6 +24,18 @@ from app.services import (
 router = APIRouter(prefix="/api/projects/{project_id}/youtube", tags=["youtube"])
 
 
+async def _composed(db: aiosqlite.Connection, project_id: str, package: dict | None) -> dict | None:
+    """Task 36.2: the package with its composed description, hashtags line and pinned comment(s) (caller holds a read
+    transaction)."""
+    if package is None:
+        return None
+    project = await project_service.get_project(db, project_id)
+    script_lines = await script_service.get_script(db, project_id)
+    learning = await learning_service.get_learning_content(db, project_id)
+    credit = await music_library_service.music_credit(db, project_id)
+    return youtube_service.compose(package, project, script_lines, learning, credit)
+
+
 @router.post("/generate")
 async def generate_youtube_package(
     project_id: str, db: aiosqlite.Connection = Depends(get_db)
@@ -45,8 +57,8 @@ async def generate_youtube_package(
     async with write_transaction(db):
         saved = await youtube_service.save_package(db, project_id, package, commit=False)
     async with read_transaction():
-        credit = await music_library_service.music_credit(db, project_id)
-    return ok(youtube_service.with_music_credit(saved, credit), started_at=started_at)
+        composed = await _composed(db, project_id, saved)
+    return ok(composed, started_at=started_at)
 
 
 @router.get("")
@@ -55,9 +67,23 @@ async def get_youtube_package(project_id: str, db: aiosqlite.Connection = Depend
     started_at = time.perf_counter()
     async with read_transaction():
         await project_service.get_project(db, project_id)
-        package = await youtube_service.get_package(db, project_id)
-        credit = await music_library_service.music_credit(db, project_id)
-    return ok(youtube_service.with_music_credit(package, credit), started_at=started_at)
+        package = await _composed(db, project_id, await youtube_service.get_package(db, project_id))
+    return ok(package, started_at=started_at)
+
+
+@router.get("/transcript.txt")
+async def download_transcript(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> Response:
+    """Task 36.2 (D93): the full transcript as a text file, to attach or share with the episode."""
+    async with read_transaction():
+        project = await project_service.get_project(db, project_id)
+        script_lines = await script_service.get_script(db, project_id)
+    if not script_lines:
+        raise ValidationError("The project has no script yet")
+    return Response(
+        content=youtube_service.transcript_text(project, script_lines).encode("utf-8"),
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{project_id}-transcript.txt"'},
+    )
 
 
 @router.get("/export")
@@ -74,7 +100,7 @@ async def export_youtube_package(project_id: str, db: aiosqlite.Connection = Dep
         thumbnail_rows = await thumbnail_service.get_thumbnail_rows(db, project_id)
         script_lines = await script_service.get_script(db, project_id)
         learning_content = await learning_service.get_learning_content(db, project_id)
-        package = youtube_service.with_music_credit(package, await music_library_service.music_credit(db, project_id))
+        package = await _composed(db, project_id, package)
 
     missing = []
     if package is None:

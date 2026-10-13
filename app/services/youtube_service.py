@@ -16,6 +16,7 @@ import io
 import json
 import logging
 import uuid
+import re
 import zipfile
 from datetime import datetime, timezone
 
@@ -183,6 +184,8 @@ async def generate_package(
         "titles": [title.model_dump() for title in package.titles],
         "description": package.description,
         "tags": package.tags,
+        "hook": package.hook,
+        "hashtags": normalize_hashtags(package.hashtags),
         "chapters_text": chapters_text,
         "chapters_estimated": chapters_estimated,
     }
@@ -194,6 +197,7 @@ def _row_to_package(row: aiosqlite.Row) -> dict:
     package["titles"] = json.loads(package.pop("title_options_json"))
     package["tags"] = [tag.strip() for tag in package["tags"].split(",") if tag.strip()]
     package["chapters_estimated"] = bool(package["chapters_estimated"])
+    package["hashtags"] = json.loads(package.pop("hashtags_json") or "[]")
     return package
 
 
@@ -201,7 +205,7 @@ async def get_package(db: aiosqlite.Connection, project_id: str) -> dict | None:
     """Fetch a project's YouTube package, or None if never generated."""
     cursor = await db.execute(
         "SELECT id, project_id, title_options_json, description, chapters_text, tags, "
-        "chapters_estimated, created_at, updated_at FROM youtube_packages WHERE project_id = ?",
+        "chapters_estimated, hook, hashtags_json, created_at, updated_at FROM youtube_packages WHERE project_id = ?",
         (project_id,),
     )
     row = await cursor.fetchone()
@@ -220,13 +224,15 @@ async def save_package(
     await db.execute(
         "INSERT INTO youtube_packages "
         "(id, project_id, title_options_json, description, chapters_text, tags, "
-        "chapters_estimated, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
+        "chapters_estimated, hook, hashtags_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
         "ON CONFLICT(project_id) DO UPDATE SET "
         "title_options_json = excluded.title_options_json, "
         "description = excluded.description, "
         "chapters_text = excluded.chapters_text, "
         "tags = excluded.tags, "
         "chapters_estimated = excluded.chapters_estimated, "
+        "hook = excluded.hook, "
+        "hashtags_json = excluded.hashtags_json, "
         "updated_at = excluded.updated_at",
         (
             str(uuid.uuid4()),
@@ -236,6 +242,8 @@ async def save_package(
             package["chapters_text"],
             ", ".join(package["tags"]),
             int(package.get("chapters_estimated", True)),
+            package.get("hook", ""),
+            json.dumps(normalize_hashtags(package.get("hashtags", []))),
             now,
             now,
         ),
@@ -245,14 +253,133 @@ async def save_package(
     return await get_package(db, project_id)
 
 
-def with_music_credit(package: dict | None, credit: str | None) -> dict | None:
-    """Task 22.5: the description ends with the episode's music credit. Added when the package is
-    read or exported (never stored), so changing the music changes the credit; never doubled."""
+# ---------------------------------------------------------------- Task 36.2 (D93/D94/D97): the published text
+
+DESCRIPTION_LIMIT = 5000  # YouTube's description limit
+COMMENT_LIMIT = 10000  # YouTube's comment limit
+HASHTAG_LIMIT = 15  # more than 15 and YouTube ignores every hashtag
+BRAND_HASHTAG = "DailyBeyondEnglish"
+SUBSCRIBE_LINE = "🔔 Subscribe to Daily Beyond English for a new English conversation every week."
+# (section, heading, how many at most): the learning items offered to the description, in this order.
+LEARNING_SECTIONS = (
+    ("vocabulary", "📚 Vocabulary", 8), ("idioms", "💬 Idioms", 4), ("collocations", "🔗 Collocations", 4),
+    ("phrasal_verbs", "🧩 Phrasal verbs", 4), ("patterns", "🧱 Sentence patterns", 3),
+)
+
+
+def normalize_hashtags(values: list[str]) -> list[str]:
+    """`#learn english!` -> `LearnEnglish`: one word, no `#`, no duplicates (case-insensitive), the brand tag kept, <= 15."""
+    result: list[str] = []
+    for value in values:
+        words = re.findall(r"[A-Za-z0-9]+", value or "")
+        if not words:
+            continue
+        tag = "".join(word if word[0].isupper() or word.isdigit() else word[0].upper() + word[1:] for word in words)
+        if tag.lower() not in {existing.lower() for existing in result}:
+            result.append(tag)
+    if BRAND_HASHTAG.lower() not in {tag.lower() for tag in result}:
+        result = result[:HASHTAG_LIMIT - 1] + [BRAND_HASHTAG]
+    return result[:HASHTAG_LIMIT]
+
+
+def _learning_line(section: str, item: dict) -> str:
+    if section == "vocabulary":
+        return f"• {item['word']} ({item['part_of_speech']}) — {item['definition_vi']}"
+    if section == "patterns":
+        return f"• {item['pattern']} — {item['use_vi']}"
+    return f"• {item['phrase']} — {item['meaning_vi']}"
+
+
+def _listening_questions(learning: dict | None, count: int = 3) -> list[dict]:
+    """The multiple-choice questions first (they read well in a description), at most `count`."""
+    questions = (learning or {}).get("questions", [])
+    return ([item for item in questions if item.get("options")] + [item for item in questions if not item.get("options")])[:count]
+
+
+def _question_text(number: int, item: dict) -> str:
+    options = "  ".join(f"{chr(65 + index)}) {option}" for index, option in enumerate(item.get("options") or []))
+    return f"{number}. {item['question']}" + (f"\n   {options}" if options else "")
+
+
+def compose_description(package: dict, learning: dict | None, credit: str | None) -> str:
+    """The description pasted into YouTube, within 5,000 characters. The fixed parts come first; the learning items fill
+    what is left, section by section, so a long pack shortens the lists instead of breaking the limit."""
+    head = [part for part in (package.get("hook", "").strip(), package["description"].strip()) if part]
+    if package.get("chapters_text", "").strip():
+        head.append("⏱ Chapters\n" + package["chapters_text"].strip())
+    questions = _listening_questions(learning)
+    tail = []
+    if questions:
+        tail.append("🎧 Listening practice (answers in the pinned comment)\n"
+                    + "\n".join(_question_text(number, item) for number, item in enumerate(questions, start=1)))
+    tail.append("📜 The full transcript is in the pinned comment.")
+    tail.append(SUBSCRIBE_LINE)
+    if credit:
+        tail.append(credit.strip())
+    hashtags = package.get("hashtags") or []
+    if hashtags:
+        tail.append(" ".join(f"#{tag}" for tag in hashtags))
+
+    def total(blocks: list[str]) -> int:
+        return len("\n\n".join(blocks))
+
+    middle: list[str] = []
+    for section, heading, limit in LEARNING_SECTIONS:
+        lines: list[str] = []
+        for item in ((learning or {}).get(section) or [])[:limit]:
+            candidate = "\n".join([heading, *lines, _learning_line(section, item)])
+            if total(head + middle + [candidate] + tail) > DESCRIPTION_LIMIT:
+                break
+            lines.append(_learning_line(section, item))
+        if lines:
+            middle.append("\n".join([heading, *lines]))
+    text = "\n\n".join(head + middle + tail)
+    return text if len(text) <= DESCRIPTION_LIMIT else text[:DESCRIPTION_LIMIT - 1].rstrip() + "…"
+
+
+def pinned_comments(project: dict, script_lines: list[dict], learning: dict | None) -> list[str]:
+    """The full transcript (and the listening answers) as pinned comment text, split at line breaks into parts that each
+    fit one YouTube comment; a part says "(2/3)" when there is more than one."""
+    names = {speaker["id"]: speaker["name"] for speaker in project["speakers"]}
+    lines = [f"{names.get(line['speaker_id'], line['speaker_id'])}: {line['text']}" for line in script_lines]
+    questions = _listening_questions(learning)
+    answers = [f"{number}. {item.get('correct_answer') or item.get('explanation', '')}"
+               for number, item in enumerate(questions, start=1)]
+    blocks = ["📜 Full transcript", *lines]
+    if answers:
+        blocks += ["", "✅ Listening practice answers", *answers]
+    reserve = 12  # room for the " (n/m)" label
+    parts: list[list[str]] = [[]]
+    for line in blocks:
+        while len(line) > COMMENT_LIMIT - reserve:  # a single overlong line (never in practice) is cut, not lost
+            parts.append([line[:COMMENT_LIMIT - reserve]])
+            line = line[COMMENT_LIMIT - reserve:]
+        if parts[-1] and len("\n".join(parts[-1] + [line])) > COMMENT_LIMIT - reserve:
+            parts.append([])
+        parts[-1].append(line)
+    texts = ["\n".join(part).strip() for part in parts if any(entry.strip() for entry in part)]
+    if len(texts) > 1:
+        texts = [f"{text} ({index}/{len(texts)})" for index, text in enumerate(texts, start=1)]
+    return texts
+
+
+def transcript_text(project: dict, script_lines: list[dict]) -> str:
+    names = {speaker["id"]: speaker["name"] for speaker in project["speakers"]}
+    title = project.get("name") or "Daily Beyond English"
+    body = "\n".join(f"{names.get(line['speaker_id'], line['speaker_id'])}: {line['text']}" for line in script_lines)
+    return f"{title}\nDaily Beyond English\n\n{body}\n"
+
+
+def compose(package: dict | None, project: dict, script_lines: list[dict], learning: dict | None,
+            credit: str | None) -> dict | None:
+    """The package as Step 7 and the export show it: the stored parts plus the composed description, the hashtags line and
+    the pinned comment(s)."""
     if package is None:
         return None
-    result = {**package, "music_credit": credit}
-    if credit and credit not in package["description"]:
-        result["description"] = f"{package['description'].rstrip()}\n\n{credit}"
+    result = {**package, "summary": package["description"], "music_credit": credit}
+    result["description"] = compose_description(package, learning, credit)
+    result["hashtags_text"] = " ".join(f"#{tag}" for tag in package.get("hashtags") or [])
+    result["pinned_comments"] = pinned_comments(project, script_lines, learning)
     return result
 
 
@@ -262,6 +389,8 @@ def _build_metadata_text(package: dict) -> str:
     for title in package["titles"]:
         lines.append(f"[{title['variant']}] {title['text']}")
     lines += ["", "=== DESCRIPTION ===", "", package["description"]]
+    if package.get("hashtags_text"):
+        lines += ["", "=== HASHTAGS ===", "", package["hashtags_text"]]
     lines += ["", "=== TAGS ===", "", ", ".join(package["tags"])]
     chapter_kind = "Estimated (word-count projection)" if package["chapters_estimated"] else "Measured (from real audio)"
     lines += ["", f"=== CHAPTERS ({chapter_kind}) ===", "", package["chapters_text"]]
@@ -307,6 +436,17 @@ def _build_transcript_and_learning_text(
             )
     else:
         lines.append("No items.")
+
+    for section, heading in (("collocations", "COLLOCATIONS"), ("phrasal_verbs", "PHRASAL VERBS")):
+        items = learning_content.get(section, [])
+        if items:
+            lines += ["", f"=== {heading} ===", ""]
+            lines += [f"{item['phrase']} — {item['meaning_en']} — {item['meaning_vi']} — {item['example_sentence']}"
+                      for item in items]
+    patterns = learning_content.get("patterns", [])
+    if patterns:
+        lines += ["", "=== SENTENCE PATTERNS ===", ""]
+        lines += [f"{item['pattern']} — {item['use_en']} — {item['use_vi']} — {item['example_sentence']}" for item in patterns]
 
     lines += ["", "=== GRAMMAR POINTS ===", ""]
     grammar = learning_content.get("grammar", [])
@@ -372,4 +512,6 @@ def build_export_zip(
         archive.writestr(
             "transcript_and_vocabulary.txt", transcript_text.encode("utf-8")
         )
+        if package.get("pinned_comments"):  # Task 36.2: paste each part as a comment, pin the first
+            archive.writestr("pinned_comment.txt", "\n\n----------\n\n".join(package["pinned_comments"]).encode("utf-8"))
     return buffer.getvalue()

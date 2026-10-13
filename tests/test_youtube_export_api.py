@@ -184,6 +184,7 @@ def test_export_returns_a_real_zip_with_all_five_files(client: TestClient):
             "thumbnail.png",
             "metadata.txt",
             "transcript_and_vocabulary.txt",
+            "pinned_comment.txt",  # Task 36.2
         }
         assert len(archive.read("video.mp4")) > 0
         assert len(archive.read("thumbnail.png")) > 0

@@ -185,4 +185,5 @@ def test_regenerate_replaces_previous_package(client: TestClient, monkeypatch):
     second = client.post(f"/api/projects/{project['id']}/youtube/generate").json()["data"]
 
     assert first["id"] == second["id"]
-    assert second["description"] == "A regenerated description."
+    assert second["summary"] == "A regenerated description."  # Task 36.2: the description is composed around it
+    assert second["description"].startswith("A regenerated description.")

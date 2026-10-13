@@ -9,7 +9,6 @@ from fastapi.testclient import TestClient
 from app.core.config import settings
 from app.main import app
 from app.services import music_library_service as library
-from app.services import youtube_service
 
 
 @pytest.fixture
@@ -34,16 +33,6 @@ def test_credit_text_wins_and_lines_are_built_from_details():
     assert library.credit_line("x.mp3", full) == (
         '🎵 Music: "Sunny Walk" by Lexin — Pixabay Music (Pixabay Content License) https://pixabay.com/music/sunny-walk')
     assert library.credit_line("calm_piano-loop.mp3", None) == '🎵 Music: "Calm piano loop"'
-
-
-def test_with_music_credit_appends_once_and_never_stores():
-    package = {"description": "Learn English with us.\n", "titles": []}
-    credited = youtube_service.with_music_credit(package, "🎵 Music: X")
-    assert credited["description"] == "Learn English with us.\n\n🎵 Music: X"
-    assert youtube_service.with_music_credit(credited, "🎵 Music: X")["description"] == credited["description"]
-    assert package["description"] == "Learn English with us.\n"  # the stored text is untouched
-    assert youtube_service.with_music_credit(package, None)["description"] == package["description"]
-    assert youtube_service.with_music_credit(None, "x") is None
 
 
 # --- through the API ------------------------------------------------------------------------
@@ -71,17 +60,18 @@ def test_get_package_carries_the_credit_of_the_mixed_track(client):
         connection.execute("INSERT INTO audio_jobs (id, project_id, status, background_music) "
                            "VALUES ('a1', ?, 'complete', 'morning.mp3')", (project["id"],))
     package = data(client.get(f"/api/projects/{project['id']}/youtube"))
-    assert package["description"] == "Learn with us.\n\n🎵 Music: Morning by Kevin MacLeod, CC BY 4.0"
+    # Task 36.2: the summary opens the description; the credit follows the subscribe line.
+    assert package["description"].startswith("Learn with us.")
+    assert package["description"].endswith("every week.\n\n🎵 Music: Morning by Kevin MacLeod, CC BY 4.0")
     assert package["music_credit"].endswith("CC BY 4.0")
 
     with sqlite3.connect(settings.DATA_DIR / "app.db") as connection:
         connection.execute("UPDATE audio_jobs SET background_music = 'night.mp3' WHERE id = 'a1'")
-    assert data(client.get(f"/api/projects/{project['id']}/youtube"))["description"] == \
-        'Learn with us.\n\n🎵 Music: "Night"'
+    assert data(client.get(f"/api/projects/{project['id']}/youtube"))["description"].endswith('\n\n🎵 Music: "Night"')
 
     with sqlite3.connect(settings.DATA_DIR / "app.db") as connection:
         connection.execute("UPDATE audio_jobs SET background_music = NULL WHERE id = 'a1'")
         stored = connection.execute("SELECT description FROM youtube_packages").fetchone()[0]
     package = data(client.get(f"/api/projects/{project['id']}/youtube"))
-    assert package["description"] == "Learn with us." and package["music_credit"] is None
+    assert "Music:" not in package["description"] and package["music_credit"] is None
     assert stored == "Learn with us."

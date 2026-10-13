@@ -29,6 +29,8 @@ PACKAGE = {
     "chapters_text": "00:00 Introduction\n01:20 Working from home",
     "chapters_estimated": True,
     "tags": ["remote work", "english learning", "b1 podcast"],
+    "hashtags_text": "#LearnEnglish #RemoteWork #DailyBeyondEnglish",
+    "pinned_comments": ["📜 Full transcript\nAlex: Hi. (1/2)", "✅ Listening practice answers\n1. B (2/2)"],
     "created_at": "2026-09-12T00:00:00Z",
     "updated_at": "2026-09-12T00:00:00Z",
 }
@@ -144,6 +146,14 @@ async def test_existing_package_loads_directly_without_generate_click(
     await page.wait_for_selector("#content-wrap:not([hidden])")
     assert await page.locator("#generate-panel").is_hidden()
     assert await page.locator("#description-text").text_content() == PACKAGE["description"]
+    # Task 36.2: the description length, the hashtags and each pinned comment part are shown and copyable.
+    assert "/ 5,000 characters" in await page.locator("#description-count").text_content()
+    assert await page.locator("#hashtags-text").text_content() == PACKAGE["hashtags_text"]
+    assert await page.locator(".pinned-part").count() == 2
+    assert "Part 2 of 2" in await page.locator(".pinned-part").nth(1).text_content()
+    assert await page.locator("#pinned-comment-1").text_content() == PACKAGE["pinned_comments"][1]
+    assert await page.locator("button[data-copy-target='pinned-comment-0']").is_visible()
+    assert (await page.locator("#transcript-link").get_attribute("href")).endswith("/youtube/transcript.txt")
     await page.close()
 
 
