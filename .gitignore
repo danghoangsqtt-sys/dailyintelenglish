@@ -69,3 +69,7 @@ data/brand_voice/
 
 # The owner's own background pictures and prompts (large working files)
 data/assets_background/
+
+# Demo video and its raw recordings (Task: judges demo, 2026-10-13)
+demo_output/
+docs/presentation/screenshots/
