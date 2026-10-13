@@ -21,11 +21,14 @@ import asyncio
 import json
 import logging
 import math
+import os
 import platform
+import re
 import shutil
 import subprocess
 import tempfile
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -556,12 +559,16 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path,
     # end-to-end episode). Always hand Remotion an absolute path.
     output_path = output_path.resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    _remove_leftovers(output_path)
+    # Render to a staging file, then publish it (Gate B-26 finding, 2026-10-14): Remotion's last step renames its file onto
+    # the target, which Windows refuses while the old video is open (the Step 5 player streams it) -- the whole render failed.
+    staging = output_path.with_name(f"{output_path.stem}.rendering-{uuid.uuid4().hex[:8]}{output_path.suffix}")
     npx = shutil.which("npx.cmd") or shutil.which("npx") or "npx"
     props_file = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8")
     try:
         json.dump(input_props, props_file)
         props_file.close()
-        command = [npx, "remotion", "render", "src/index.ts", "Episode", str(output_path), f"--props={props_file.name}"]
+        command = [npx, "remotion", "render", "src/index.ts", "Episode", str(staging), f"--props={props_file.name}"]
         if frames is not None:  # Phase 37 (D99): a highlight clip is a frame range of the vertical episode
             command.append(f"--frames={frames[0]}-{frames[1]}")
         start = time.monotonic()
@@ -574,6 +581,7 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path,
                 timeout=REMOTION_RENDER_TIMEOUT_SECONDS,
             )
         except subprocess.TimeoutExpired:
+            _remove_leftovers(output_path)
             raise RemotionRenderFailedError(
                 f"Remotion render timed out after {REMOTION_RENDER_TIMEOUT_SECONDS:g}s"
             ) from None
@@ -582,17 +590,62 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path,
         Path(props_file.name).unlink(missing_ok=True)
 
     if result.returncode != 0:
-        raise RemotionRenderFailedError(f"Remotion render failed: {result.stderr[-500:]}")
-    if not output_path.is_file():
+        _remove_leftovers(output_path)
+        raise RemotionRenderFailedError(f"Remotion render failed: {_error_summary(result.stderr)}")
+    if not staging.is_file():
         raise RemotionRenderFailedError("Remotion render exited 0 but produced no output file")
+    published = _publish(staging, output_path)
 
     return {
-        "mp4_path": str(output_path),
+        "mp4_path": str(published),
         "srt_path": None,
         "background_image": None,
         "mode": "remotion",
         "wall_time_seconds": round(wall_time_seconds, 3),
     }
+
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _error_summary(stderr: str) -> str:
+    """The error line(s) of Remotion's stderr without colour codes and stack frames (the raw tail cut the message)."""
+    lines = [_ANSI.sub("", line).strip() for line in (stderr or "").splitlines()]
+    lines = [line for line in lines if line and not line.startswith("at ")]
+    errors = [line for line in lines if "error" in line.lower()]
+    return " | ".join((errors or lines)[-3:])[:600] or "no error output"
+
+
+def _remove_leftovers(output_path: Path) -> None:
+    """Staging files and Remotion's `*.remotion-in-progress` files left by an earlier failed render of this output."""
+    for pattern in (f"{output_path.stem}.rendering-*{output_path.suffix}", f"{output_path.name}.*.remotion-in-progress",
+                    f"{output_path.stem}.rendering-*{output_path.suffix}.*.remotion-in-progress"):
+        for leftover in output_path.parent.glob(pattern):
+            try:
+                leftover.unlink()
+            except OSError:
+                logger.warning("remotion_leftover_locked path=%s", leftover)
+
+
+def _publish(staging: Path, target: Path, attempts: int = 10, wait_s: float = 0.5) -> Path:
+    """Move the finished render onto `target`, retrying while the old file is locked; if it stays locked (open in a
+    player), keep the new video under a timestamped name instead of failing the render. Returns the final path."""
+    for attempt in range(attempts):
+        try:
+            os.replace(staging, target)
+            for older in target.parent.glob(f"{target.stem}-*{target.suffix}"):  # earlier timestamped copies
+                try:
+                    older.unlink()
+                except OSError:
+                    pass
+            return target
+        except PermissionError:
+            if attempt < attempts - 1:
+                time.sleep(wait_s)
+    fallback = target.with_name(f"{target.stem}-{time.strftime('%Y%m%d-%H%M%S')}{target.suffix}")
+    os.replace(staging, fallback)
+    logger.warning("remotion_output_locked target=%s saved_as=%s", target, fallback.name)
+    return fallback
 
 
 async def render_via_remotion(

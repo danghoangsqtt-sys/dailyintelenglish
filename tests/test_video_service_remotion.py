@@ -202,3 +202,43 @@ def test_renderer_deps_follow_npms_own_install_record(tmp_path, monkeypatch):
     assert video_renderer_remotion.check_video_renderer_deps()[0] is True
     os.utime(lockfile, (4_000, 4_000))  # the lockfile changed after the last install
     assert video_renderer_remotion.check_video_renderer_deps()[0] is False
+
+
+def test_a_locked_old_video_does_not_fail_the_render(tmp_path, monkeypatch):
+    """Gate B-26 finding (2026-10-14): the Step 5 player held video_remotion.mp4 open and Remotion's final rename onto it
+    failed the whole render. The render now goes to a staging file and is published with retries, else under a new name."""
+    import os
+
+    target = tmp_path / "video_remotion.mp4"
+    target.write_bytes(b"old video")
+    staging = tmp_path / "video_remotion.rendering-abc.mp4"
+    staging.write_bytes(b"new video")
+    real_replace = os.replace
+
+    def locked(source, destination):
+        if Path(destination) == target:
+            raise PermissionError("in use")
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(video_renderer_remotion.os, "replace", locked)
+    published = video_renderer_remotion._publish(staging, target, attempts=2, wait_s=0.0)
+    assert published != target and published.name.startswith("video_remotion-") and published.read_bytes() == b"new video"
+    assert target.read_bytes() == b"old video" and not staging.exists()
+    monkeypatch.setattr(video_renderer_remotion.os, "replace", real_replace)
+    second = tmp_path / "video_remotion.rendering-def.mp4"
+    second.write_bytes(b"newer video")
+    assert video_renderer_remotion._publish(second, target) == target and target.read_bytes() == b"newer video"
+    assert not published.exists()  # the earlier timestamped copy is cleaned up once the main name is free
+
+
+def test_leftovers_of_a_failed_render_are_removed(tmp_path):
+    target = tmp_path / "video_remotion.mp4"
+    for name in ("video_remotion.mp4.c715.remotion-in-progress", "video_remotion.rendering-1234.mp4", "keep.mp4"):
+        (tmp_path / name).write_bytes(b"x")
+    video_renderer_remotion._remove_leftovers(target)
+    assert sorted(path.name for path in tmp_path.iterdir()) == ["keep.mp4"]
+
+
+def test_the_error_summary_keeps_the_error_line_without_colours_or_stack():
+    stderr = "\x1b[31mError: EPERM: operation not permitted, rename 'a' -> 'b'\x1b[39m\n\x1b[31m    at async Object.rename\x1b[39m"
+    assert video_renderer_remotion._error_summary(stderr) == "Error: EPERM: operation not permitted, rename 'a' -> 'b'"
