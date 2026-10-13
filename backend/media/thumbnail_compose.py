@@ -24,7 +24,7 @@ from backend.schemas.thumbnail import ThumbnailAspect, ThumbnailSuggestion
 
 PROJECT_ROOT = get_project_root()
 FONT_PATH = PROJECT_ROOT / "frontend" / "static" / "fonts" / "Montserrat-Variable.ttf"
-LOGO_PATH = PROJECT_ROOT / "video-renderer" / "public" / "brand" / "logo.png"
+LOGO_PATH = PROJECT_ROOT / "renderer" / "public" / "brand" / "logo.png"
 SIZES: dict[str, tuple[int, int]] = {"16x9": (1280, 720), "9x16": (720, 1280)}
 BADGE_YELLOW = "#FFD23F"
 BADGE_INK = "#14301F"

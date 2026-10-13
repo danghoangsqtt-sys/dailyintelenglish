@@ -162,7 +162,7 @@ def main() -> int:
         ("data/ directories", check_data_dirs),
         # Task 35.5 (D89): Remotion is the only video renderer now, so these three are required.
         ("Node.js (video renderer)", check_node_version),
-        ("video-renderer/ dependencies", check_video_renderer_deps),
+        ("renderer/ dependencies", check_video_renderer_deps),
         ("Chrome Headless Shell (video renderer)", check_remotion_browser),
     ]
     informational_checks = [

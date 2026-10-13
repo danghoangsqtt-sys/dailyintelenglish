@@ -42,7 +42,7 @@ const YELLOW = BRAND_PALETTE.yellow;
 const SPEAKER_RING = [BRAND_PALETTE.yellow, BRAND_PALETTE.lime];
 export const DEFAULT_WISH = "Wishing you a wonderful time learning English today!";
 
-// Bundled SIL OFL font (video-renderer/public/fonts/OFL.txt); the render waits until it is loaded.
+// Bundled SIL OFL font (renderer/public/fonts/OFL.txt); the render waits until it is loaded.
 if (typeof document !== "undefined" && typeof FontFace !== "undefined") {
   const handle = delayRender("Loading Montserrat");
   const font = new FontFace("Montserrat", `url('${staticFile("fonts/Montserrat-Variable.ttf")}') format('truetype')`,

@@ -39,7 +39,7 @@ export const episodeLineSchema = z.object({
 
 /**
  * Task 19.4: one project speaker, for the persistent speaker-chip overlay. `avatarUrl` is a
- * path relative to video-renderer/public/ (same staticFile() convention as audioPath) --
+ * path relative to renderer/public/ (same staticFile() convention as audioPath) --
  * absent when `speakers.avatar_image_path` is NULL in the real DB.
  */
 export const episodeSpeakerSchema = z.object({
@@ -163,7 +163,7 @@ export const episodeInputPropsSchema = z.object({
   speakers: z.array(episodeSpeakerSchema).default([]),
   learning: episodeLearningSchema.optional(),
   /**
-   * Path to the mixed episode audio, relative to video-renderer/public/ (Remotion requires
+   * Path to the mixed episode audio, relative to renderer/public/ (Remotion requires
    * every asset to live under public/ and be loaded via staticFile() -- absolute filesystem
    * paths are not supported). The runner script copies AudioService's mixed MP3
    * (audio_job["mp3_path"]) to public/spike-audio/<episodeId>.mp3 before invoking render.

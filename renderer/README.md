@@ -1,4 +1,4 @@
-# video-renderer
+# renderer
 
 Phase 19 (ENH-013) spike workspace — an isolated Node/TypeScript/React tree evaluating
 Remotion as a replacement video renderer. **Never imported by `app/`.** Invoked only as a
@@ -10,7 +10,7 @@ See `.viepilot/phases/19-remotion/tasks/task-19.1.md` for the full design record
 ## Install
 
 ```
-cd video-renderer
+cd renderer
 npm install
 ```
 
@@ -47,6 +47,6 @@ except for the typecheck below.
 ## Typecheck
 
 ```
-cd video-renderer
+cd renderer
 npm run typecheck
 ```

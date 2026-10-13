@@ -11,7 +11,7 @@ import aiosqlite
 
 from backend.core.paths import get_project_root
 
-LOGO = get_project_root() / "video-renderer" / "public" / "brand" / "logo.png"
+LOGO = get_project_root() / "renderer" / "public" / "brand" / "logo.png"
 
 # The production steps in order: (key, label, page of the step).
 STEPS = (

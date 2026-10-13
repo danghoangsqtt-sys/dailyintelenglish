@@ -1,9 +1,9 @@
 """Task 19.7: `VideoService`'s Remotion render path -- renderer resolution, prop
 building, the subprocess contract, and in-memory fallback-rate counters.
 
-The only place `app/` ever invokes the `video-renderer/` subprocess in production. Mirrors
+The only place `app/` ever invokes the `renderer/` subprocess in production. Mirrors
 the proven pattern of the Phase 19 spike runner (removed in Phase 35) (temp props file, `time.monotonic()` wall
-time, strict output-path validation, `cwd=video-renderer/`) rather than importing that
+time, strict output-path validation, `cwd=renderer/`) rather than importing that
 script directly -- it's a standalone measurement tool with its own `sys.path` setup, not a
 module meant to be imported by `app/`.
 
@@ -42,7 +42,7 @@ from backend.library import (
     activity_matcher, library_service, project_visuals_service, sprite_plan, sprite_service, storyboard_service,
 )
 
-VIDEO_RENDERER_DIR = get_project_root() / "video-renderer"
+VIDEO_RENDERER_DIR = get_project_root() / "renderer"
 REMOTION_AUDIO_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "audio"
 REMOTION_BRAND_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "brand"
 # The owner-signed intro/outro timings (types.ts defaults, task-19.6.md), now sent explicitly so the
@@ -69,11 +69,11 @@ REMOTION_RENDER_TIMEOUT_SECONDS = 600.0
 # Task 19.7 (D19.7-d): module-level, process-lifetime counters -- same in-memory-only
 # pattern as backend/main.py's `_ai_circuits: dict[str, CircuitBreaker] = {}` (Phase 18). Reset
 # on server restart; no DB persistence, owner-accepted precedent from that same task.
-REMOTION_MIN_NODE_MAJOR = 24  # video-renderer/package.json's own "engines.node": ">=24.0.0"
+REMOTION_MIN_NODE_MAJOR = 24  # renderer/package.json's own "engines.node": ">=24.0.0"
 
 
 def check_node_version() -> tuple[bool, str]:
-    """Task 19.7 (D19.7-e): real finding -- this project's own `video-renderer/package.json`
+    """Task 19.7 (D19.7-e): real finding -- this project's own `renderer/package.json`
     pins `>=24.0.0` for its installed Remotion 4.0.529, not a generic "Remotion 4.0.x needs
     >=20" figure; the owner's real installed Node is v24.20.0 (confirmed 2026-09-28)."""
     node = shutil.which("node")
@@ -88,19 +88,19 @@ def check_node_version() -> tuple[bool, str]:
         major = int(version.split(".")[0])
     except (ValueError, IndexError):
         return False, f"Could not parse Node.js version from {result.stdout.strip()!r}"
-    return major >= REMOTION_MIN_NODE_MAJOR, f"Node.js {version} (video-renderer requires >={REMOTION_MIN_NODE_MAJOR})"
+    return major >= REMOTION_MIN_NODE_MAJOR, f"Node.js {version} (renderer requires >={REMOTION_MIN_NODE_MAJOR})"
 
 
 def check_video_renderer_deps() -> tuple[bool, str]:
-    """`video-renderer/node_modules/` must exist and be at least as fresh as
+    """`renderer/node_modules/` must exist and be at least as fresh as
     `package-lock.json` -- a stale install (lockfile changed since the last `npm install`)
     would otherwise silently report GREEN."""
     node_modules = VIDEO_RENDERER_DIR / "node_modules"
     lockfile = VIDEO_RENDERER_DIR / "package-lock.json"
     if not node_modules.is_dir():
-        return False, f"{node_modules} not found -- run `npm install` in video-renderer/"
+        return False, f"{node_modules} not found -- run `npm install` in renderer/"
     if lockfile.is_file() and lockfile.stat().st_mtime > node_modules.stat().st_mtime:
-        return False, "video-renderer/package-lock.json is newer than node_modules/ -- run `npm install` again"
+        return False, "renderer/package-lock.json is newer than node_modules/ -- run `npm install` again"
     return True, f"{node_modules} present and up to date"
 
 
@@ -131,7 +131,7 @@ def is_remotion_configured() -> bool:
 def _parse_chapters_text(chapters_text: str) -> list[dict[str, Any]]:
     """Task 19.6/19.7 (D19.6-e): `youtube_service.real_chapters_from_timestamps` returns a
     plain-text "MM:SS Label" block, not the structured `Array<{title, startSec}>` the
-    video-renderer props schema needs. Duplicated from the Phase 19 spike runner
+    renderer props schema needs. Duplicated from the Phase 19 spike runner
     rather than imported (that script is a standalone tool, not a module `app/` imports) --
     same small-helper-duplication convention already used elsewhere in this codebase (e.g.
     every browser test file owns its own `_envelope()`). Only reformats fields the function
@@ -148,13 +148,13 @@ def _parse_chapters_text(chapters_text: str) -> list[dict[str, Any]]:
 
 def _words_to_props(words: list[dict]) -> list[dict]:
     """`audio_jobs.word_timestamps_json`'s per-word shape (`start_sec`/`end_sec`) to the
-    video-renderer props shape (`startSec`/`endSec`)."""
+    renderer props shape (`startSec`/`endSec`)."""
     return [{"text": word["text"], "startSec": word["start_sec"], "endSec": word["end_sec"]} for word in words]
 
 
 def _copy_audio_into_public(project_id: str, mp3_path: str) -> None:
     """Remotion can't read an absolute filesystem path as an asset src -- every asset must
-    live under `video-renderer/public/` and be loaded via `staticFile()` (same constraint
+    live under `renderer/public/` and be loaded via `staticFile()` (same constraint
     the spike runner works around)."""
     REMOTION_AUDIO_DIR.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(mp3_path, REMOTION_AUDIO_DIR / f"{project_id}.mp3")
@@ -546,8 +546,8 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path,
     event loop directly, same "Forbidden Scope" rule as every blocking render call. Temp-props-file + `time.monotonic()` wall time + strict
     output-path validation, mirroring the Phase 19 spike runner's `_run_render`.
     """
-    # Remotion runs with cwd=video-renderer/, so a relative path (DATA_DIR is the relative "data" in a
-    # dev checkout) made it write video-renderer/data/... while this check looked under data/ -- every
+    # Remotion runs with cwd=renderer/, so a relative path (DATA_DIR is the relative "data" in a
+    # dev checkout) made it write renderer/data/... while this check looked under data/ -- every
     # Enhanced render then "produced no output" and fell back to ffmpeg (found 2026-10-06 on a real
     # end-to-end episode). Always hand Remotion an absolute path.
     output_path = output_path.resolve()

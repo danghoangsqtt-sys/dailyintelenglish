@@ -159,11 +159,11 @@ async def test_build_input_props_carries_caption_style_with_outline_default(tmp_
 
 
 def test_render_via_remotion_sync_hands_remotion_an_absolute_path(tmp_path, monkeypatch):
-    """Regression (2026-10-06, real end-to-end episode): Remotion runs with cwd=video-renderer/, and
+    """Regression (2026-10-06, real end-to-end episode): Remotion runs with cwd=renderer/, and
     DATA_DIR is the relative "data" in a dev checkout. A relative output path made it write under
-    video-renderer/data/ while the check looked under data/, so every Enhanced render fell back."""
+    renderer/data/ while the check looked under data/, so every Enhanced render fell back."""
     monkeypatch.chdir(tmp_path)
-    renderer_dir = tmp_path / "video-renderer"
+    renderer_dir = tmp_path / "renderer"
     renderer_dir.mkdir()
     seen = {}
 

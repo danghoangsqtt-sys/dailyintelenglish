@@ -249,7 +249,7 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
   measurement (median 45s cloud vs. 127s local, 2.8× faster).
 - **TTS**: Edge TTS (sole engine — OmniVoice GPU cloning considered, dropped 2026-09-13; see [docs/user/tts-setup.md](docs/user/tts-setup.md))
 - **Audio**: pydub + ffmpeg (real ITU-R BS.1770 loudness normalization via `pyloudnorm`)
-- **Video**: Remotion 4 + React 19 + TypeScript in the separate [`video-renderer/`](video-renderer/) Node workspace, run locally as a subprocess from FastAPI — the only renderer since Phase 35 (the Standard ffmpeg renderer was removed; the vertical 1080x1920 layout and highlight clips are Remotion too, Phase 37). Node.js, `npm install` in `video-renderer/` and Chrome Headless Shell are required
+- **Video**: Remotion 4 + React 19 + TypeScript in the separate [`renderer/`](renderer/) Node workspace, run locally as a subprocess from FastAPI — the only renderer since Phase 35 (the Standard ffmpeg renderer was removed; the vertical 1080x1920 layout and highlight clips are Remotion too, Phase 37). Node.js, `npm install` in `renderer/` and Chrome Headless Shell are required
 - **Images**: local GPU image generation (diffusers, RealVisXL V5.0) in its own `venv-image` environment and worker process (`requirements-image.txt`, `scripts/image_worker.py`); optional — every library also accepts the owner's own pictures
 - **Thumbnail**: Pillow composition of the cast's talking sprites over the episode's pictures (Montserrat headline, CEFR badge, logo) + AI headline suggestions
 - **Database**: SQLite (aiosqlite async transactions)
@@ -275,7 +275,7 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
 Daily_Intel_English/
 ├── app/                    # FastAPI backend
 ├── frontend/               # HTML/CSS/JS pages
-├── video-renderer/         # Remotion (React/TypeScript) Enhanced video renderer
+├── renderer/         # Remotion (React/TypeScript) Enhanced video renderer
 ├── data/                   # Runtime data and libraries (gitignored)
 ├── prompts/                # AI prompt templates (shared across cloud + local providers)
 ├── models/                 # Local AI models
