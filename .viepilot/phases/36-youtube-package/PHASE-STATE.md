@@ -9,7 +9,7 @@
 | 36.2 | SEO description with a character budget, ≤15 hashtags, pinned-comment transcript (split at 10,000 chars) + transcript file, copy buttons in Step 7, zip update | `app/services/youtube_service.py`, `prompts/youtube/youtube_package.txt`, `app/models/youtube.py`, `frontend/static/js/step7_youtube.js` | done 2026-10-13 |
 | 36.3 | Composed thumbnail: sprite characters + topic illustration (Activity Library / scene plate) + headline, CEFR, episode no., logo; 3 variants; replaces the 5 Pillow templates and ai_scene | `app/services/thumbnail_service.py`, `prompts/thumbnail/`, `frontend/static/js/step6_thumbnail.js` | done 2026-10-13 |
 | 36.4 | Outside-AI thumbnail: per-episode prompt (with character pictures), drop zone, text/badge/logo overlay | same as 36.3 | done 2026-10-13 |
-| 36.5 | Series: model, API, Series page; AI plans series name and episode topics; numbered projects with cast; shared style; links in descriptions | new `series` service/API/page, migration | planned |
+| 36.5 | Channel plan (D103–D105): topics → series → episodes; AI channel map; numbered projects per series; interleaved publishing calendar; series/playlist links and episode numbers in descriptions and thumbnails | new `channel_service`, `app/api/channel.py`, `/channel` page, migration 023, prompt `prompts/channel/` | in_progress |
 | 36.6 | Tests, a real 3-episode series (≥1 complete episode), Gate B-24 | — | planned |
 
 ## Implementation notes (before coding)
@@ -41,3 +41,14 @@
   /api/projects/{id}/thumbnails/outside-image` stores the owner's picture; it is the whole background, no sprites drawn, the
   same text/CEFR/logo on top. `GET .../thumbnails/outside-prompt` gives the episode prompt and the character picture links
   to attach. Step 6: the two template cards and an "Outside-AI picture" panel (prompt, copy, picture links, upload).
+- 36.5 (D103–D105, replaces "one series" of D96): migration 023 adds `channel_topics` (name, description, playlist URL,
+  position), `channel_series` (topic, name, description, genre, CEFR, cast, playlist URL, position) and `channel_episodes`
+  (series, number, title, brief, project id, status planned/created/published, publish date, video URL).
+  `channel_service`: CRUD; `apply_plan` saves an approved AI map; `create_projects(series)` makes the numbered projects
+  ("<series> · Ep. n: <title>", the series' CEFR/genre/cast, 2 speakers by default); `schedule(start, weekdays)` assigns
+  publish dates round-robin across topics (one topic never twice in a row while others have episodes left);
+  `episode_context(project)` gives series name, episode n/N, playlist and previous/next published links.
+  AI planner (`prompts/channel/channel_plan.txt`, schema-checked, renamed fields tolerated): direction in, map out.
+  `/channel` page: plan form → proposed map to edit → apply; topic/series/episode tree with status, project links,
+  "Create projects", calendar with dates and published links. YouTube description adds the series block (name, Ep. n/N,
+  playlist, previous/next episode); thumbnails show "EP. n" from the series.
