@@ -18,7 +18,8 @@ This directory is an implementation plan. Creating it does not change the active
 | 33.6 | Tiered sprites, renderer compatibility, male-left/female-right placement, mirroring | done 2026-10-12 (`aac3c8a`, `af62eac`; men left / women right, mirroring, slot uploads → sprite_set.json, derived face references D87) | 33.3, 33.5 |
 | 33.7 | Game-style Character Selector in Step 1 (replaces name entry) and Step 5; copy-on-assign defaults | done 2026-10-12 (`f13f13d`, `4fbe547`; selector in Step 1 and Step 5, no cast by name, compact speaker cards D88; full suite 1717 passed) | 33.2, 33.4 |
 | 33.8 | Dynamic activity, storyboard, and shot integration for 3–6 cast | done 2026-10-12 (`87efc1c`; segments with two on screen, storyboard most-active pair; full suite 1725 passed) | 33.6, 33.7 |
-| 33.9 | Migration rehearsal, regression, real three-character render, Gate B-23 | waiting for owner Gate B-23 — real app switched to Phase 33 (backups first), Jack copied in, 3-character project rendered (`docs/operations/phase33-gate-b23.md`) | 33.1–33.8 |
+| 33.9 | Migration rehearsal, regression, real three-character render, Gate B-23 | owner 2026-10-13: "video rất tốt" (cast, placement, mirroring pass); missing illustrations/vocabulary traced: no learning content in the gate project, the only insert named an activity the library lacks -> 33.10 | 33.1–33.8 |
+| 33.10 | Gate B-23 fixes: storyboard inserts name a library activity, Step 5 names inserts without a picture (`dba9e18`); D102 draw the missing illustrations (local GPU + outside-AI slot, approve in Step 5) | in_progress | 33.9 |
 
 ## Locked Phase 33 limits
 
@@ -31,3 +32,23 @@ This directory is an implementation plan. Creating it does not change the active
 - Gender is required on every profile; Quick create is the only required creation screen (D79).
 - Activity coverage is informative and does not block video readiness.
 
+
+## Task 33.10 plan (D102, owner 2026-10-13)
+
+Owner: "có thể kết hợp AI tạo ảnh để tạo ảnh minh họa không? không cần hình nhân vật nói ở trong ảnh minh họa chỉ cần ảnh minh
+họa cho hoạt động đó và có con người bất kỳ trong ảnh". Choices: local GPU + outside-AI slot; quick approval in Step 5; a Step 5
+button (no drawing at render time).
+
+- `app/services/visuals/activity_illustrations.py` (new): `coverage(db, project_id)` -- the per-insert match the
+  `/activity-coverage` route computed, plus `suggestions`, the pending picture made for it (`pending`), and the outside-AI
+  `prompt`; the route now calls it.
+- `app/services/visuals/recipes.py`: `activity_illustration_prompt` (GPU: one ordinary person doing the action, the place, no
+  text) and `activity_outside_prompt` (outside AI, 16:9); `ACTIVITY_NEGATIVE`.
+- `app/services/visuals/pipelines.py`: job `activity_illustrations` (target = project): text2img 1344x768 for every insert
+  with neither an approved match nor a pending picture; each picture is stored with `activity_library.upload_activity_bytes`
+  as a pending generic activity (activity = the insert's action, context = its place). Registered in `app/main.py`.
+- `app/api/visuals.py`: `POST /api/projects/{id}/visuals/activity-illustrations` enqueues it.
+- Step 5: under the coverage line, one card per insert without a picture: closest library activities, the pending picture with
+  Approve / Redraw, the outside-AI prompt (copy) and a file drop (uploads as that activity); a "Draw missing illustrations"
+  button runs the job with the existing job progress. An approved picture enters the library and matches next time.
+- Tests: coverage service, the job with a fake engine, the route, the Step 5 cards (browser).
