@@ -266,11 +266,15 @@ def qwen_insert_person_prompt(character: Mapping, action: str) -> str:
 
 
 def qwen_topic_prompt(topic: str, illustration: str) -> str:
-    """The thumbnail's topic picture: the background the composer draws the characters, headline and badges on."""
-    return (f"Vivid, eye-catching photorealistic picture for a YouTube thumbnail of an English-learning episode about "
-            f"{topic}: {illustration or topic}. Bright colours, high contrast, sharp focus, a clear subject on the right side; "
-            "the left 45% calmer and slightly darker for a title. No people in the foreground, no text, no letters, "
-            "no logo, no watermark.")
+    """The thumbnail's topic picture: the background the composer draws the characters, headline and badges on. Gate
+    B-26 r1: naming a "thumbnail" or a "title" made the model letter the picture and put a person in front, so it is
+    described as a plain scene with objects only (the cast and the text are added by the composer)."""
+    short_topic = topic.split(". ")[0].strip().rstrip(".")
+    subject = illustration or short_topic
+    return (f"{QWEN_PHOTO} A vivid, colourful still-life scene about {short_topic.lower()}: {subject}, shown with objects "
+            "only. The main objects fill the right half of the frame; the left half is a softly blurred, calm, slightly "
+            "darker background. Bright colours, high contrast. Absolutely no people, no hands, no text, no letters, "
+            "no signs, no logo, no watermark.")
 
 
 def insert_person_prompt(character: Mapping, subject: str) -> str:

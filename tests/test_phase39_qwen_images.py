@@ -43,7 +43,8 @@ def test_the_qwen_prompts_describe_the_picture_in_sentences():
     assert "the same woman as in the reference picture" in insert and "cooking vegetables" in insert
     assert recipes.outfit_phrase(character) in insert
     topic = recipes.qwen_topic_prompt("Choosing the Menu", "cooking, grocery shopping")
-    assert "Choosing the Menu: cooking, grocery shopping" in topic and "left 45%" in topic and "no text" in topic
+    assert "about choosing the menu: cooking, grocery shopping" in topic and "left half" in topic and "no text" in topic
+    assert "thumbnail" not in topic and "title" not in topic and "no people" in topic.lower()
 
 
 def test_the_worker_side_validates_a_qwen_request_without_a_gpu():
@@ -110,7 +111,7 @@ def test_the_topic_picture_is_drawn_locally_and_becomes_the_first_thumbnail_back
     assert response.status_code == 201, response.text
     assert [call["model"] for call in qwen_log] == ["qwen21"]
     item = qwen_log[0]["items"][0]
-    assert (item["width"], item["height"]) == (1280, 720) and project["topic"] in item["prompt"]
+    assert (item["width"], item["height"]) == (1280, 720) and project["topic"].split(". ")[0].lower() in item["prompt"]
     picture = client.get(f"/api/projects/{project['id']}/thumbnails/topic-picture")
     assert picture.status_code == 200 and picture.headers["content-type"] == "image/png"
     path = Path(item["output_path"])
