@@ -226,9 +226,16 @@ def main() -> None:
     parser.add_argument("--only", default="")
     parser.add_argument("--tasks", default="")
     parser.add_argument("--offload", choices=("block", "leaf"), default="block")
-    parser.add_argument("--tag", default="", help="suffix for the output folder, e.g. -leaf")
+    parser.add_argument("--tag", default="", help="suffix for the output folder, e.g. --tag=-leaf")
+    parser.add_argument("--fast4", action="store_true", help="the 4-step Lightning LoRA instead of the 8-step one")
     args = parser.parse_args()
-    spec = ENGINES[args.engine]
+    spec = dict(ENGINES[args.engine])
+    if args.fast4:
+        if not spec["lora"]:
+            raise SystemExit("--fast4 needs an engine with a Lightning LoRA")
+        repo, name = spec["lora"]
+        spec["lora"], spec["steps"] = (repo, name.replace("8steps", "4steps")), 4
+        args.tag = args.tag or "-4step"
     data = bench_set()
     items = [item for item in data["items"] if item["task"] in spec["tasks"]]
     if args.only:
