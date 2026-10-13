@@ -52,7 +52,8 @@ def _envelope(data, error=None):
     return json.dumps({"success": error is None, "data": data, "error": error, "meta": {}})
 
 
-async def _default_routes(page, *, audio_status=200, video_job_status=404, video_job=None, generate_status=200):
+async def _default_routes(page, *, audio_status=200, video_job_status=404, video_job=None, generate_status=200,
+                         health=None):
     async def handle_routes(route):
         url = route.request.url
         method = route.request.method
@@ -64,8 +65,9 @@ async def _default_routes(page, *, audio_status=200, video_job_status=404, video
                 await route.fulfill(status=200, content_type="application/json", body=_envelope({"status": "complete"}))
             else:
                 await route.fulfill(status=404, content_type="application/json", body=_envelope(None, "no audio"))
-        elif url.endswith("/api/video/templates") and method == "GET":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope(TEMPLATES))
+        elif url.endswith("/api/video/health") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json",
+                                body=_envelope(health or {"remotion_configured": True, "renderer_problem": None}))
         elif url.endswith("/video/status") and method == "GET":
             if video_job_status == 200:
                 await route.fulfill(status=200, content_type="application/json", body=_envelope(video_job or VIDEO_JOB))
@@ -75,7 +77,8 @@ async def _default_routes(page, *, audio_status=200, video_job_status=404, video
             await route.fulfill(
                 status=generate_status,
                 content_type="application/json",
-                body=_envelope(None, "boom") if generate_status != 200 else _envelope(VIDEO_JOB),
+                body=_envelope(None, "The video could not be rendered: boom") if generate_status != 200
+                else _envelope(VIDEO_JOB),
             )
         else:
             await route.continue_()
@@ -98,14 +101,18 @@ async def test_empty_state_shown_when_no_audio_yet(browser_instance: Browser, li
 
 
 @pytest.mark.asyncio
-async def test_workspace_loads_templates_when_audio_ready(browser_instance: Browser, live_server_url: str):
+async def test_workspace_has_no_background_or_renderer_choice(browser_instance: Browser, live_server_url: str):
+    """Task 35.5 (D89): Remotion is the only renderer -- no background templates, no Standard/Enhanced or 9:16 choice."""
     page = await browser_instance.new_page()
     await _default_routes(page)
 
     await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
 
     await page.wait_for_selector("#workspace:not([hidden])")
-    assert await page.locator(".template-option").count() == 3
+    assert await page.locator(
+        "#template-grid, #renderer-group, #aspect-ratio-group, #download-mp4-vertical, #avatar-details").count() == 0
+    assert await page.locator("#renderer-status").is_hidden()
+    assert await page.locator("#generate-btn").is_enabled()
     assert await page.locator("#no-result-yet").is_visible()
     await page.close()
 
@@ -140,7 +147,7 @@ async def test_existing_completed_job_shown_on_load(browser_instance: Browser, l
 
 
 @pytest.mark.asyncio
-async def test_generate_failure_shows_friendly_error_only(browser_instance: Browser, live_server_url: str):
+async def test_generate_failure_shows_the_reason(browser_instance: Browser, live_server_url: str):
     page = await browser_instance.new_page()
     await _default_routes(page, generate_status=502)
     await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
@@ -150,98 +157,7 @@ async def test_generate_failure_shows_friendly_error_only(browser_instance: Brow
 
     await page.wait_for_selector("#error-banner:not([hidden])", timeout=5000)
     banner_text = await page.locator("#error-banner").text_content()
-    assert "couldn't generate" in banner_text.lower()
-    assert "boom" not in banner_text
-    await page.close()
-
-
-@pytest.mark.asyncio
-async def test_aspect_ratio_defaults_to_16x9_and_hides_vertical_download(
-    browser_instance: Browser, live_server_url: str
-):
-    """Task 2.5b: the default toggle state must send `"16:9"` and never show a vertical
-    download link when the server didn't produce one (`mp4_path_vertical: null`)."""
-    page = await browser_instance.new_page()
-    captured_bodies = []
-
-    async def handle_routes(route):
-        url, method = route.request.url, route.request.method
-        if url.endswith(f"/api/projects/{PROJECT['id']}") and method == "GET":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope(PROJECT))
-        elif url.endswith("/audio/status") and method == "GET":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope({"status": "complete"}))
-        elif url.endswith("/api/video/templates") and method == "GET":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope(TEMPLATES))
-        elif url.endswith("/video/status") and method == "GET":
-            await route.fulfill(status=404, content_type="application/json", body=_envelope(None, "no video"))
-        elif url.endswith("/video/generate") and method == "POST":
-            captured_bodies.append(json.loads(route.request.post_data))
-            await route.fulfill(
-                status=200, content_type="application/json", body=_envelope({**VIDEO_JOB, "mp4_path_vertical": None})
-            )
-        else:
-            await route.continue_()
-
-    # Task 19.9 made Enhanced the default wherever Remotion is installed; this test is about the
-    # Standard flow, so it stores the owner's Standard choice (machine-independent).
-    await page.add_init_script("try { localStorage.setItem('die-video-renderer', 'ffmpeg'); } catch (e) {}")
-    await page.route("**/api/**", handle_routes)
-    await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
-    await page.wait_for_selector("#workspace:not([hidden])")
-
-    assert await page.locator("[data-aspect-ratio='16:9']").get_attribute("aria-pressed") == "true"
-    assert await page.locator("[data-aspect-ratio='9:16']").get_attribute("aria-pressed") == "false"
-
-    await page.click("#generate-btn")
-    await page.wait_for_selector("#result-card:not([hidden])", timeout=5000)
-
-    assert captured_bodies == [{"template_id": "midnight", "aspect_ratio": "16:9", "renderer": "ffmpeg"}]
-    assert await page.locator("#download-mp4-vertical").is_hidden()
-    await page.close()
-
-
-@pytest.mark.asyncio
-async def test_selecting_9x16_sends_it_and_shows_vertical_download(browser_instance: Browser, live_server_url: str):
-    """Task 2.5b: selecting the 9:16 chip sends `aspect_ratio: "9:16"`, and a real
-    `mp4_path_vertical` in the response reveals the second download link."""
-    page = await browser_instance.new_page()
-    captured_bodies = []
-    vertical_job = {**VIDEO_JOB, "mp4_path_vertical": "data/video/video-proj-e2e/video_vertical.mp4"}
-
-    async def handle_routes(route):
-        url, method = route.request.url, route.request.method
-        if url.endswith(f"/api/projects/{PROJECT['id']}") and method == "GET":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope(PROJECT))
-        elif url.endswith("/audio/status") and method == "GET":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope({"status": "complete"}))
-        elif url.endswith("/api/video/templates") and method == "GET":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope(TEMPLATES))
-        elif url.endswith("/video/status") and method == "GET":
-            await route.fulfill(status=404, content_type="application/json", body=_envelope(None, "no video"))
-        elif url.endswith("/video/generate") and method == "POST":
-            captured_bodies.append(json.loads(route.request.post_data))
-            await route.fulfill(status=200, content_type="application/json", body=_envelope(vertical_job))
-        else:
-            await route.continue_()
-
-    # Task 19.9 made Enhanced the default wherever Remotion is installed; this test is about the
-    # Standard flow, so it stores the owner's Standard choice (machine-independent).
-    await page.add_init_script("try { localStorage.setItem('die-video-renderer', 'ffmpeg'); } catch (e) {}")
-    await page.route("**/api/**", handle_routes)
-    await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
-    await page.wait_for_selector("#workspace:not([hidden])")
-
-    await page.click("[data-aspect-ratio='9:16']")
-    assert await page.locator("[data-aspect-ratio='9:16']").get_attribute("aria-pressed") == "true"
-    assert await page.locator("[data-aspect-ratio='16:9']").get_attribute("aria-pressed") == "false"
-
-    await page.click("#generate-btn")
-    await page.wait_for_selector("#result-card:not([hidden])", timeout=5000)
-
-    assert captured_bodies == [{"template_id": "midnight", "aspect_ratio": "9:16", "renderer": "ffmpeg"}]
-    vertical_href = await page.locator("#download-mp4-vertical").get_attribute("href")
-    assert "format=mp4_vertical" in vertical_href
-    assert await page.locator("#download-mp4-vertical").is_visible()
+    assert "could not be rendered: boom" in banner_text  # Task 35.5: no silent fallback -- the reason is shown
     await page.close()
 
 
@@ -287,65 +203,45 @@ async def test_step5_back_link_points_to_step4(browser_instance: Browser, live_s
 
 
 @pytest.mark.asyncio
-async def test_caption_style_chips_follow_renderer_and_are_sent_only_for_enhanced(
-    browser_instance: Browser, live_server_url: str
-):
-    """Task 20.2d: the caption-style chips are disabled on Standard and enabled on Enhanced;
-    `caption_style` is sent only for an Enhanced render (Standard bodies stay unchanged)."""
+async def test_a_missing_renderer_disables_generate_and_says_why(browser_instance: Browser, live_server_url: str):
+    page = await browser_instance.new_page()
+    await _default_routes(page, health={"remotion_configured": False, "renderer_problem": "Node.js not found"})
+    await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
+    await page.wait_for_selector("#workspace:not([hidden])")
+    status = page.locator("#renderer-status")
+    assert await status.is_visible() and "Node.js not found" in await status.text_content()
+    assert await page.locator("#generate-btn").is_disabled()
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_caption_style_is_always_sent_and_remembered(browser_instance: Browser, live_server_url: str):
+    """Task 20.2d / 35.5: every render is a Remotion render, so the caption chips are always on and always sent."""
     page = await browser_instance.new_page()
     captured_bodies = []
 
-    async def handle_routes(route):
-        url, method = route.request.url, route.request.method
-        if url.endswith(f"/api/projects/{PROJECT['id']}") and method == "GET":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope(PROJECT))
-        elif url.endswith("/audio/status") and method == "GET":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope({"status": "complete"}))
-        elif url.endswith("/api/video/templates") and method == "GET":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope(TEMPLATES))
-        elif url.endswith("/api/video/health") and method == "GET":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope({"remotion_configured": True}))
-        elif url.endswith("/video/status") and method == "GET":
-            await route.fulfill(status=404, content_type="application/json", body=_envelope(None, "no video"))
-        elif url.endswith("/video/generate") and method == "POST":
+    async def capture(route):
+        if route.request.url.endswith("/video/generate") and route.request.method == "POST":
             captured_bodies.append(json.loads(route.request.post_data))
             await route.fulfill(status=200, content_type="application/json", body=_envelope(VIDEO_JOB))
         else:
-            await route.continue_()
+            await route.fallback()
 
-    await page.route("**/api/**", handle_routes)
+    await _default_routes(page)
+    await page.route("**/video/generate", capture)
     await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
     await page.wait_for_selector("#workspace:not([hidden])")
-    await page.evaluate("localStorage.removeItem('die-video-renderer'); localStorage.removeItem('die-caption-style')")
+    await page.evaluate("localStorage.removeItem('die-caption-style')")
     await page.reload()
     await page.wait_for_selector("#workspace:not([hidden])")
-
-    # Task 19.9: with Remotion installed and nothing stored, Enhanced is the default.
-    assert await page.locator("[data-renderer='remotion']").get_attribute("aria-pressed") == "true"
-    assert await page.locator("[data-caption-style='box']").is_enabled()
-    # Standard: chips disabled, outline shown as the default, nothing extra sent.
-    await page.click("[data-renderer='ffmpeg']")
-    assert await page.locator("[data-renderer='ffmpeg']").get_attribute("aria-pressed") == "true"
     assert await page.locator("[data-caption-style='outline']").get_attribute("aria-pressed") == "true"
-    assert await page.locator("[data-caption-style='box']").is_disabled()
     await page.click("#generate-btn")
     await page.wait_for_selector("#result-card:not([hidden])", timeout=5000)
-
-    # Enhanced: chips enabled; picking "box" sends it and is remembered across a reload.
-    await page.click("[data-renderer='remotion']")
-    assert await page.locator("[data-caption-style='box']").is_enabled()
     await page.click("[data-caption-style='box']")
-    assert await page.locator("[data-caption-style='box']").get_attribute("aria-pressed") == "true"
-    assert await page.locator("[data-caption-style='outline']").get_attribute("aria-pressed") == "false"
     await page.wait_for_function("!document.getElementById('generate-btn').disabled")
     await page.click("#generate-btn")
     await page.wait_for_function("document.getElementById('generate-btn').textContent.includes('Generate video')")
-
-    assert captured_bodies == [
-        {"template_id": "midnight", "aspect_ratio": "16:9", "renderer": "ffmpeg"},
-        {"template_id": "midnight", "aspect_ratio": "16:9", "renderer": "remotion", "caption_style": "box"},
-    ]
-
+    assert captured_bodies == [{"caption_style": "outline"}, {"caption_style": "box"}]
     await page.reload()
     await page.wait_for_selector("#workspace:not([hidden])")
     assert await page.locator("[data-caption-style='box']").get_attribute("aria-pressed") == "true"

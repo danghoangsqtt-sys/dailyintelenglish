@@ -18,7 +18,6 @@ MUSIC_MERGE_GAP_S = 2.5
 MUSIC_FADE_IN_S = 1.0
 MUSIC_FADE_OUT_S = 3.0
 MUSIC_CROSSFADE_S = 3.0
-STANDARD_MUSIC_TAIL_S = 4.0
 MP3_BITRATE = "192k"
 WAV_SAMPLE_RATE_HZ = 44100
 WAV_BIT_DEPTH = 16
@@ -47,22 +46,6 @@ THUMBNAIL_TEMPLATE_IDS = (
 VIDEO_FPS = 30
 VIDEO_WIDTH_STANDARD = 1280
 VIDEO_HEIGHT_STANDARD = 720
-VIDEO_WIDTH_SHORTS = 720
-VIDEO_HEIGHT_SHORTS = 1280
-# VIDEO_WIDTH_SHORTS/VIDEO_HEIGHT_SHORTS existed but were never wired up until Task 2.5b
-# closed the real "no 9:16 output exists" gap found by Task 2.1c's QA pass.
-VIDEO_ASPECT_RATIOS = ("16:9", "9:16")
-VIDEO_TEMPLATE_IDS = ("midnight", "deep_purple", "charcoal_wave")
-VIDEO_TEMPLATE_LABELS = {
-    "midnight": "Midnight",
-    "deep_purple": "Deep Purple",
-    "charcoal_wave": "Charcoal Wave",
-}
-# Bounded ffmpeg render timeout (Task 16.2, ENH-008): a hung encoder must not keep a
-# job "rendering" forever. Scales with the audio it has to encode, with a generous floor
-# for short clips.
-VIDEO_RENDER_TIMEOUT_MIN_SECONDS = 300
-VIDEO_RENDER_TIMEOUT_PER_AUDIO_SECOND = 4.0
 
 # TTS
 MAX_CONCURRENT_TTS = 2

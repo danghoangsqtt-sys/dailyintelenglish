@@ -18,38 +18,6 @@ from app.services import video_renderer_remotion, video_service
 # --- D19.7-b: renderer resolution (pure, no I/O) -------------------------------------
 
 
-def test_resolve_renderer_kill_switch_off_forces_ffmpeg_regardless_of_request(monkeypatch):
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "VIDEO_RENDERER", "ffmpeg")
-    assert video_renderer_remotion._resolve_renderer(None) == "ffmpeg"
-    assert video_renderer_remotion._resolve_renderer("ffmpeg") == "ffmpeg"
-    assert video_renderer_remotion._resolve_renderer("remotion") == "ffmpeg"
-
-
-def test_resolve_renderer_kill_switch_on_request_none_uses_remotion(monkeypatch):
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "VIDEO_RENDERER", "remotion")
-    assert video_renderer_remotion._resolve_renderer(None) == "remotion"
-
-
-def test_resolve_renderer_kill_switch_on_request_remotion_uses_remotion(monkeypatch):
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "VIDEO_RENDERER", "remotion")
-    assert video_renderer_remotion._resolve_renderer("remotion") == "remotion"
-
-
-def test_resolve_renderer_request_may_always_downgrade_to_ffmpeg(monkeypatch):
-    """The other direction (D19.7-b): env says remotion, request wants ffmpeg -- the safer
-    path is always allowed."""
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "VIDEO_RENDERER", "remotion")
-    assert video_renderer_remotion._resolve_renderer("ffmpeg") == "ffmpeg"
-
-
 # --- D19.7-e: chapter text parsing (pure) ---------------------------------------------
 
 
@@ -85,7 +53,6 @@ def test_render_via_remotion_sync_success_produces_real_output(tmp_path, monkeyp
 
     assert result["mp4_path"] == str(output_path)
     assert result["mode"] == "remotion"
-    assert result["fallback_used"] is False
     assert isinstance(result["wall_time_seconds"], float)
     assert output_path.is_file()
 
@@ -123,33 +90,6 @@ def test_render_via_remotion_sync_raises_on_missing_output_despite_exit_zero(tmp
 # --- D19.7-d: fallback-rate counters ---------------------------------------------------
 
 
-def test_fallback_rate_counters_track_calls_and_failures(tmp_path, monkeypatch):
-    monkeypatch.setattr(
-        video_renderer_remotion, "_remotion_stats", {"total_calls": 0, "fallback_count": 0, "last_fallback_reason": None}
-    )
-
-    def fake_run_success(command, cwd=None, capture_output=True, text=True, timeout=None):
-        Path(command[5]).write_bytes(b"ok")
-        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-
-    def fake_run_failure(command, cwd=None, capture_output=True, text=True, timeout=None):
-        return subprocess.CompletedProcess(command, 1, stdout="", stderr="boom")
-
-    monkeypatch.setattr(video_renderer_remotion.subprocess, "run", fake_run_success)
-    video_renderer_remotion._render_via_remotion_sync(_fake_input_props(), tmp_path / "a.mp4")
-    video_renderer_remotion._render_via_remotion_sync(_fake_input_props(), tmp_path / "b.mp4")
-
-    monkeypatch.setattr(video_renderer_remotion.subprocess, "run", fake_run_failure)
-    with pytest.raises(RemotionRenderFailedError):
-        video_renderer_remotion._render_via_remotion_sync(_fake_input_props(), tmp_path / "c.mp4")
-
-    stats = video_renderer_remotion.get_remotion_stats()
-    assert stats["remotion_total_calls"] == 3
-    assert stats["remotion_fallback_count"] == 1
-    assert stats["fallback_rate"] == pytest.approx(1 / 3, abs=1e-4)
-    assert stats["last_fallback_reason"] == "non_zero_exit"
-
-
 # --- D19.7-a/I36-a: generate_video's kill switch + fallback integration --------------
 
 
@@ -177,106 +117,6 @@ def _real_project() -> dict:
     }
 
 
-async def test_kill_switch_forces_ffmpeg_even_when_request_wants_remotion(tmp_path, monkeypatch, db):
-    """D19.7-b's safety direction: DIE_VIDEO_RENDERER unset (default "ffmpeg") must force
-    ffmpeg regardless of what the request asks for -- render_via_remotion must never even
-    be attempted."""
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    monkeypatch.setattr(settings, "VIDEO_RENDERER", "ffmpeg")
-
-    def _fail_if_called(*args, **kwargs):
-        raise AssertionError("render_via_remotion must never be called when the kill switch is off")
-
-    monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", _fail_if_called)
-
-    audio_job = await _real_audio_job(tmp_path)
-    result = await video_service.generate_video(
-        "proj-remotion", audio_job, "midnight", renderer="remotion", db=db, project=_real_project()
-    )
-
-    assert result.get("fallback_used") in (None, False)
-    assert Path(result["mp4_path"]).is_file()
-
-
-async def test_remotion_selected_without_db_or_project_falls_back_to_ffmpeg(tmp_path, monkeypatch):
-    """Defensive branch: if a caller ever resolves to "remotion" without passing `db`/
-    `project` (the route always passes both, but `generate_video`'s own signature makes
-    them optional to preserve every pre-Phase-19 positional call site), this must degrade
-    to ffmpeg rather than crash -- `render_via_remotion` needs both to build real props."""
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    monkeypatch.setattr(settings, "VIDEO_RENDERER", "remotion")
-
-    audio_job = await _real_audio_job(tmp_path)
-    result = await video_service.generate_video("proj-no-db", audio_job, "midnight", renderer="remotion")
-
-    assert result["fallback_used"] is True
-    assert result["mode"] == "background"
-    assert Path(result["mp4_path"]).is_file()
-
-
-async def test_remotion_failure_falls_back_to_ffmpeg_and_records_fallback_used(tmp_path, monkeypatch, db):
-    """I36-a: any Remotion failure must still produce a playable video via ffmpeg, with
-    `fallback_used=True` recorded."""
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    monkeypatch.setattr(settings, "VIDEO_RENDERER", "remotion")
-
-    async def _always_fails(*args, **kwargs):
-        raise RemotionRenderFailedError("simulated failure")
-
-    monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", _always_fails)
-
-    audio_job = await _real_audio_job(tmp_path)
-    result = await video_service.generate_video(
-        "proj-remotion-fail", audio_job, "midnight", renderer="remotion", db=db, project=_real_project()
-    )
-
-    assert result["fallback_used"] is True
-    assert result["mode"] == "background"
-    assert Path(result["mp4_path"]).is_file()
-
-
-async def test_remotion_success_returns_remotion_result_without_touching_ffmpeg(tmp_path, monkeypatch, db):
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    monkeypatch.setattr(settings, "VIDEO_RENDERER", "remotion")
-
-    async def _fake_success(db_, project_, audio_job_, learning_, output_path, caption_style="outline",
-                            visual_mode="illustrated", still_scene_id=None):
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(b"fake-remotion-mp4")
-        return {
-            "mp4_path": str(output_path),
-            "srt_path": None,
-            "background_image": None,
-            "mode": "remotion",
-            "fallback_used": False,
-            "wall_time_seconds": 1.23,
-        }
-
-    monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", _fake_success)
-
-    def _fail_if_ffmpeg_called(*args, **kwargs):
-        raise AssertionError("ffmpeg must not run when Remotion succeeds")
-
-    monkeypatch.setattr(video_service, "_render_video_sync", _fail_if_ffmpeg_called)
-
-    audio_job = await _real_audio_job(tmp_path)
-    result = await video_service.generate_video(
-        "proj-remotion-ok", audio_job, "midnight", renderer="remotion", db=db, project=_real_project()
-    )
-
-    assert result["mode"] == "remotion"
-    assert result["fallback_used"] is False
-    assert Path(result["mp4_path"]).read_bytes() == b"fake-remotion-mp4"
-
-
 # --- Task 20.2d: caption style reaches the Remotion props --------------------------------
 
 
@@ -285,7 +125,7 @@ async def test_generate_video_forwards_caption_style_to_remotion(tmp_path, monke
     from app.core.config import settings
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    monkeypatch.setattr(settings, "VIDEO_RENDERER", "remotion")
+    monkeypatch.setattr(video_service, "renderer_problem", lambda: None)
     seen = {}
 
     async def _fake_success(db_, project_, audio_job_, learning_, output_path, caption_style="outline",
@@ -295,12 +135,12 @@ async def test_generate_video_forwards_caption_style_to_remotion(tmp_path, monke
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(b"fake")
         return {"mp4_path": str(output_path), "srt_path": None, "background_image": None, "mode": "remotion",
-                "fallback_used": False, "wall_time_seconds": 0.1}
+                "wall_time_seconds": 0.1}
 
     monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", _fake_success)
     audio_job = await _real_audio_job(tmp_path)
     await video_service.generate_video(
-        "proj-caption", audio_job, "midnight", renderer="remotion", db=db, project=_real_project(),
+        "proj-caption", audio_job, db=db, project=_real_project(),
         caption_style=caption_style, visual_mode="podcast_still", still_scene_id="builtin-cafe",
     )
 

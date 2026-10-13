@@ -1,19 +1,13 @@
-"""Renders a project's mixed audio into an MP4 with a background image and burned-in
-subtitles (Task 1.7, Sub-task 1.7a — "Level 2" background+subtitle path).
+"""Renders a project's mixed audio into the episode MP4 with Remotion (the only video renderer since Phase 35, Task 35.5,
+D89: the Standard ffmpeg background+subtitle renderer, its templates and the silent fallback were removed) and writes the
+SRT subtitles beside it.
 
-Level 3 (LivePortrait avatar lip-sync) is deliberately not implemented here: it needs a
-real per-speaker avatar image, and no speaker has one (`speakers.avatar_image_path` is
-null, no upload feature exists) — the same class of blocker OmniVoice's `ref_audio` hit,
-requiring a real user decision on where avatar images come from before writing that code.
-
-Only processes an already-completed audio mix (from AudioService, Task 1.6) — this module
-never generates audio itself, mirroring the AudioService/TTSService responsibility split.
+Only processes an already-completed audio mix (from AudioService, Task 1.6) — this module never generates audio itself,
+mirroring the AudioService/TTSService responsibility split.
 """
 
 import asyncio
 import logging
-import os
-import subprocess
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,38 +15,13 @@ from pathlib import Path
 import aiosqlite
 
 from app.core.config import settings
-from app.core.constants import (
-    STANDARD_MUSIC_TAIL_S,
-    VIDEO_HEIGHT_SHORTS,
-    VIDEO_RENDER_TIMEOUT_MIN_SECONDS,
-    VIDEO_RENDER_TIMEOUT_PER_AUDIO_SECOND,
-    VIDEO_TEMPLATE_IDS,
-    VIDEO_TEMPLATE_LABELS,
-    VIDEO_WIDTH_SHORTS,
-)
-from app.core.exceptions import AudioMixError, RemotionRenderFailedError, VideoRenderError
-from app.core.paths import get_project_root
-from app.services import audio_service, video_renderer_remotion
+from app.core.exceptions import RemotionRenderFailedError, VideoRenderError
+from app.services import video_renderer_remotion
 
 logger = logging.getLogger(__name__)
 
-TEMPLATE_DIR = get_project_root() / "frontend" / "static" / "video_backgrounds"
-
-
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def list_video_templates() -> list[dict]:
-    """Report the fixed set of pre-rendered background templates (no custom upload yet)."""
-    return [
-        {
-            "id": template_id,
-            "display_name": VIDEO_TEMPLATE_LABELS[template_id],
-            "preview_url": f"/static/video_backgrounds/{template_id}.png",
-        }
-        for template_id in VIDEO_TEMPLATE_IDS
-    ]
 
 
 def _format_srt_timestamp(seconds: float) -> str:
@@ -64,11 +33,12 @@ def _format_srt_timestamp(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 
-def generate_srt(timestamps: list[dict]) -> str:
+def generate_srt(timestamps: list[dict], offset_seconds: float = 0.0) -> str:
     """Build an SRT subtitle document from AudioService's real (measured) per-line timestamps.
 
     Each timestamp entry is `{start_sec, end_sec, label, speaker_id, text}` — see
-    audio_service.py's `_mix_project_sync`. Cues are numbered sequentially starting at 1.
+    audio_service.py's `_mix_project_sync`. Cues are numbered sequentially starting at 1. `offset_seconds` shifts every cue
+    (Task 35.5: the Remotion episode opens with the branded intro, so speech starts that much later in the video).
     """
     blocks = []
     for index, cue in enumerate(timestamps, start=1):
@@ -77,287 +47,64 @@ def generate_srt(timestamps: list[dict]) -> str:
         cue_text = f"{label}: {text}" if label else text
         blocks.append(
             f"{index}\n"
-            f"{_format_srt_timestamp(cue['start_sec'])} --> {_format_srt_timestamp(cue['end_sec'])}\n"
+            f"{_format_srt_timestamp(cue['start_sec'] + offset_seconds)} --> "
+            f"{_format_srt_timestamp(cue['end_sec'] + offset_seconds)}\n"
             f"{cue_text}\n"
         )
     return "\n".join(blocks)
 
 
-def _escape_ffmpeg_filter_path(path: str) -> str:
-    """Escape a path for use inside an ffmpeg filtergraph value (e.g. `subtitles=...`).
-
-    ffmpeg's filter parser treats `:` as a key=value separator and `\\` as an escape
-    character, so a Windows absolute path (`C:\\Users\\...`) must have both escaped before
-    being wrapped in quotes — confirmed against the real installed ffmpeg build, not
-    assumed from documentation alone.
-    """
-    return path.replace("\\", "\\\\").replace(":", "\\:")
+def renderer_problem() -> str | None:
+    """Why the video renderer cannot run on this machine (the first failing check), or None."""
+    for passed, detail in (video_renderer_remotion.check_node_version(), video_renderer_remotion.check_video_renderer_deps(),
+                           video_renderer_remotion.check_remotion_browser()):
+        if not passed:
+            return detail
+    return None
 
 
-def _render_timeout_seconds(audio_duration_seconds: float) -> float:
-    """Bounded ffmpeg timeout for one render pass (Task 16.2, ENH-008): scales with
-    the audio it has to encode, with a generous floor for short clips. Both ffmpeg
-    passes render the same underlying audio length, so they share this one formula."""
-    return max(VIDEO_RENDER_TIMEOUT_MIN_SECONDS, VIDEO_RENDER_TIMEOUT_PER_AUDIO_SECOND * audio_duration_seconds)
-
-
-def _rendering_temp_path(output_path: Path) -> Path:
-    """The temp sibling a render writes to before an atomic replace (Task 16.2,
-    Amendment B) -- never the final path directly. Keeps the `.mp4` extension so
-    ffmpeg still infers the right container from it."""
-    return output_path.with_name(f"{output_path.stem}.rendering{output_path.suffix}")
-
-
-def _publish_rendered_output(temp_path: Path, output_path: Path, context: str) -> None:
-    """Atomically publish a completed render, `temp_path` -> `output_path` (Task 16.2,
-    Amendment B). `os.replace` can itself fail on Windows (N4) -- most realistically a
-    `PermissionError` if the prior `output_path` is open elsewhere (e.g. the Video Studio
-    preview streaming it through `FileResponse`, which opens without `FILE_SHARE_DELETE`).
-    On any such failure the temp file is cleaned up (never left behind) and a
-    user-actionable `VideoRenderError` is raised instead of a raw `OSError` -- the prior
-    video itself is untouched either way, since `os.replace` never partially applies."""
-    try:
-        os.replace(temp_path, output_path)
-    except OSError as exc:
-        temp_path.unlink(missing_ok=True)
-        raise VideoRenderError(
-            f"{context} finished, but could not replace the previous video "
-            f"({type(exc).__name__}) -- is it open in a player or being downloaded "
-            "elsewhere? Close it and try again."
-        ) from None
-
-
-def _render_video_sync(
-    background_path: Path, audio_path: str, srt_path: Path, output_path: Path, audio_duration_seconds: float
-) -> None:
-    """Blocking ffmpeg subprocess call — must run in a thread (asyncio.to_thread), never
-    on the event loop directly (this task's Forbidden Scope).
-
-    Task 14.10 (D14): `-t {audio_duration_seconds}` replaces `-shortest`.
-    `-shortest` measurably overshoots on this exact command shape at real durations
-    (confirmed: exactly matched at 10s, ~2.5s tail at ~300s, reproduced directly and
-    root-caused to `-shortest` only stopping further *reads* once the audio input
-    ends while frames already buffered in libx264's B-frame reordering pipeline still
-    get flushed afterward -- Gate B-3 measured this exact 2.48s gap). `-t` is a hard,
-    frame-accurate output cutoff regardless of encoder buffering, using the duration
-    AudioService already measured for real (`audio_jobs.duration_seconds`) rather
-    than a second ffprobe call.
-
-    Task 16.2 (ENH-008, Amendment B): renders into a temp sibling and only atomically
-    replaces `output_path` on success. `-y` truncates whatever it's pointed at the
-    instant a render starts, and `mark_video_job_failed` (BUG-017) deliberately leaves
-    the DB row pointing at the prior successful video on any failure -- rendering
-    straight into the final path would let a timed-out (or otherwise failed) re-render
-    delete or truncate the file that row still points at.
-    """
-    temp_path = _rendering_temp_path(output_path)
-    vf = f"subtitles='{_escape_ffmpeg_filter_path(str(srt_path))}'"
-    command = [
-        settings.FFMPEG_PATH,
-        "-y",
-        "-loop", "1",
-        "-i", str(background_path),
-        "-i", audio_path,
-        "-vf", vf,
-        "-c:v", "libx264",
-        "-tune", "stillimage",
-        "-c:a", "aac",
-        "-b:a", "192k",
-        "-pix_fmt", "yuv420p",
-        "-t", str(audio_duration_seconds),
-        str(temp_path),
-    ]
-    timeout = _render_timeout_seconds(audio_duration_seconds)
-    try:
-        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        temp_path.unlink(missing_ok=True)
-        raise VideoRenderError(f"ffmpeg video render timed out after {timeout:g} s") from None
-    if result.returncode != 0:
-        temp_path.unlink(missing_ok=True)
-        raise VideoRenderError(f"ffmpeg video render failed: {result.stderr[-500:]}")
-    _publish_rendered_output(temp_path, output_path, "ffmpeg video render")
-
-
-def _render_vertical_sync(source_mp4_path: Path, output_path: Path, audio_duration_seconds: float) -> None:
-    """Second ffmpeg pass: reformat an already-rendered 16:9 MP4 into a 9:16 vertical MP4.
-
-    Blurred-background-pad technique (Task 2.5b research — the real convention used by
-    YouTube Shorts/TikTok/Reels tooling): the source is scaled+cropped to fill the full
-    vertical canvas as a blurred backdrop, then the same source scaled to fit the width
-    is overlaid centered on top. Runs over the finished 16:9 render, not a rewrite of the
-    tested subtitle-burn path in `_render_video_sync` — audio is copied, not re-encoded,
-    since the audio content itself never changes. `source_mp4_path` is always the final,
-    already-replaced `video.mp4` from `_render_video_sync` -- this pass only runs after
-    that one has returned successfully.
-
-    Must run in a thread (asyncio.to_thread), never on the event loop directly.
-
-    Task 16.2 (ENH-008, Amendment B): same temp-then-atomic-replace write as
-    `_render_video_sync`, and the same timeout budget (same underlying audio length).
-    """
-    temp_path = _rendering_temp_path(output_path)
-    filter_complex = (
-        f"[0:v]scale={VIDEO_WIDTH_SHORTS}:{VIDEO_HEIGHT_SHORTS}:force_original_aspect_ratio=increase,"
-        f"crop={VIDEO_WIDTH_SHORTS}:{VIDEO_HEIGHT_SHORTS},gblur=sigma=20[bg];"
-        f"[0:v]scale={VIDEO_WIDTH_SHORTS}:-2[fg];"
-        f"[bg][fg]overlay=(W-w)/2:(H-h)/2,format=yuv420p[v]"
-    )
-    command = [
-        settings.FFMPEG_PATH,
-        "-y",
-        "-i", str(source_mp4_path),
-        "-filter_complex", filter_complex,
-        "-map", "[v]",
-        "-map", "0:a",
-        "-c:v", "libx264",
-        "-c:a", "copy",
-        str(temp_path),
-    ]
-    timeout = _render_timeout_seconds(audio_duration_seconds)
-    try:
-        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        temp_path.unlink(missing_ok=True)
-        raise VideoRenderError(f"ffmpeg vertical (9:16) render timed out after {timeout:g} s") from None
-    if result.returncode != 0:
-        temp_path.unlink(missing_ok=True)
-        raise VideoRenderError(f"ffmpeg vertical (9:16) render failed: {result.stderr[-500:]}")
-    _publish_rendered_output(temp_path, output_path, "ffmpeg vertical (9:16) render")
-
-
-def _write_video_outputs_sync(background_path: Path, output_dir: Path, srt_path: Path, srt_content: str) -> None:
-    """Blocking filesystem prep for a video render — must run in a thread, never on the
-    event loop directly (this task's Forbidden Scope)."""
-    if not background_path.is_file():
-        raise VideoRenderError(f"Background template not found: {background_path.stem}")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    srt_path.write_text(srt_content, encoding="utf-8")
+def _write_srt_sync(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
 
 
 async def generate_video(
     project_id: str,
     audio_job: dict | None,
-    template_id: str,
-    aspect_ratio: str = "16:9",
-    renderer: str = "ffmpeg",
-    db: aiosqlite.Connection | None = None,
-    project: dict | None = None,
+    *,
+    db: aiosqlite.Connection,
+    project: dict,
     learning: dict | None = None,
     caption_style: str = "outline",
     visual_mode: str = "illustrated",
     still_scene_id: str | None = None,
 ) -> dict:
-    """Render a project's completed audio mix into an MP4.
-
-    Args:
-        project_id: Project UUID.
-        audio_job: The project's `audio_jobs` row (from `audio_service.get_audio_job`).
-        template_id: One of `VIDEO_TEMPLATE_IDS`. Ignored by the Remotion path (D19.7-a) --
-            Remotion's own composition supplies its background, not a template PNG.
-        aspect_ratio: One of `VIDEO_ASPECT_RATIOS`. `"16:9"` (default) renders only the
-            existing background+subtitle path, unchanged. `"9:16"` additionally renders a
-            second, vertical MP4 via `_render_vertical_sync` (Task 2.5b) — a real gap
-            found by Task 2.1c's QA pass (no 9:16 output existed anywhere before this).
-            Ignored by the Remotion path for now (out of this task's scope).
-        renderer: Task 19.7 (D19.7-a/b). `"ffmpeg"` (default) takes the exact same code
-            path this function has always taken -- `db`/`project`/`learning` are never
-            read on that path. `"remotion"` only actually renders via Remotion when
-            `_resolve_renderer` (the kill-switch + request resolution, D19.7-b) agrees;
-            otherwise it silently resolves back to `"ffmpeg"`. A Remotion failure of any
-            kind (timeout, non-zero exit, missing output) is caught here and falls back to
-            the ffmpeg path below (I36-a) -- `result["fallback_used"]` records this.
-        db: Required only for the Remotion path (avatar resolution via
-            `avatar_service.resolve_avatar_path`). Unused on the ffmpeg path.
-        project: Required only for the Remotion path (speakers, title, topic, CEFR level).
-            Unused on the ffmpeg path.
-        learning: Optional, Remotion path only (vocab/idiom pop-up cards, Task 19.5).
-            Unused on the ffmpeg path.
-        caption_style: Task 20.2d. Remotion path only (`"outline"` / `"box"` / `"shade"`);
-            the ffmpeg path's libass subtitles are unchanged.
+    """Render a project's completed audio mix into the episode MP4 with Remotion, and write its SRT.
 
     Raises:
-        VideoRenderError: If no completed audio mix exists yet, or ffmpeg fails.
+        VideoRenderError: If no completed audio mix exists yet, the renderer is not installed (the message names what is
+            missing), or the render fails (the message carries Remotion's reason) -- there is no other renderer to fall back to.
     """
     if audio_job is None or audio_job.get("status") != "complete":
         raise VideoRenderError("Cannot generate video: the audio mix hasn't been generated yet.")
-
-    effective_renderer = video_renderer_remotion._resolve_renderer(renderer)
-    fallback_used = False
-    if effective_renderer == "remotion" and db is not None and project is not None:
-        remotion_output_path = settings.DATA_DIR / "video" / project_id / "video_remotion.mp4"
-        try:
-            return await video_renderer_remotion.render_via_remotion(
-                db, project, audio_job, learning, remotion_output_path, caption_style=caption_style,
-                visual_mode=visual_mode, still_scene_id=still_scene_id,
-            )
-        except RemotionRenderFailedError as exc:
-            logger.warning("remotion_render_failed_fallback_to_ffmpeg project_id=%s reason=%s", project_id, exc)
-            fallback_used = True
-    elif effective_renderer == "remotion":
-        logger.warning("remotion_selected_without_db_or_project project_id=%s -- falling back to ffmpeg", project_id)
-        fallback_used = True
-
-    background_path = TEMPLATE_DIR / f"{template_id}.png"
+    problem = await asyncio.to_thread(renderer_problem)
+    if problem:
+        raise VideoRenderError(f"The video renderer is not ready: {problem}")
     output_dir = settings.DATA_DIR / "video" / project_id
+    try:
+        result = await video_renderer_remotion.render_via_remotion(
+            db, project, audio_job, learning, output_dir / "video_remotion.mp4", caption_style=caption_style,
+            visual_mode=visual_mode, still_scene_id=still_scene_id,
+        )
+    except RemotionRenderFailedError as exc:
+        logger.warning("remotion_render_failed project_id=%s reason=%s", project_id, exc)
+        raise VideoRenderError(f"The video could not be rendered: {exc}") from exc
     srt_path = output_dir / "subtitles.srt"
-    mp4_path = output_dir / "video.mp4"
-    mp4_path_vertical = output_dir / "video_vertical.mp4"
-
-    await asyncio.to_thread(
-        _write_video_outputs_sync, background_path, output_dir, srt_path, generate_srt(audio_job["timestamps"])
-    )
-
-    # Task 22.4 (D51): with music, the video's audio is voice + a music bed that runs on for a short
-    # tail after the last line and fades out on the last frame. No lead-in, so the SRT is unchanged.
-    audio_path, audio_seconds = audio_job["mp3_path"], audio_job["duration_seconds"]
-    try:
-        soundtrack = await audio_service.build_soundtrack(
-            audio_job, 0.0, audio_seconds + STANDARD_MUSIC_TAIL_S, output_dir / audio_service.SOUNDTRACK_NAME,
-        )
-    except AudioMixError as exc:
-        raise VideoRenderError(str(exc)) from exc
-    if soundtrack is not None:
-        audio_path, audio_seconds = soundtrack["path"], soundtrack["duration_seconds"]
-
-    try:
-        await asyncio.to_thread(
-            _render_video_sync,
-            background_path, audio_path, srt_path, mp4_path, audio_seconds,
-        )
-    except VideoRenderError:
-        raise
-    except Exception as exc:
-        raise VideoRenderError(f"Video rendering failed: {exc}") from exc
-
-    result = {
-        "mp4_path": str(mp4_path),
-        "srt_path": str(srt_path),
-        "background_image": template_id,
-        "mode": "background",
-        "fallback_used": fallback_used,
-        "soundtrack": soundtrack is not None,
-    }
-
-    if aspect_ratio == "9:16":
-        try:
-            await asyncio.to_thread(
-                _render_vertical_sync, mp4_path, mp4_path_vertical, audio_seconds
-            )
-        except VideoRenderError:
-            raise
-        except Exception as exc:
-            raise VideoRenderError(f"Vertical video rendering failed: {exc}") from exc
-        result["mp4_path_vertical"] = str(mp4_path_vertical)
-    else:
-        # A previous call for this project may have rendered a vertical file (Task 2.6b
-        # fix): it was derived from the 16:9 render/subtitle-burn we just replaced, so
-        # it's now stale and would otherwise linger on disk as an orphan even though the
-        # DB row's mp4_path_vertical is about to go back to NULL (nothing references it
-        # any more, but nothing deleted it either — found in the post-Task-2.5 audit).
-        await asyncio.to_thread(mp4_path_vertical.unlink, missing_ok=True)
-
-    return result
+    srt = generate_srt(audio_job["timestamps"], offset_seconds=float(result.get("intro_seconds") or 0.0))
+    await asyncio.to_thread(_write_srt_sync, srt_path, srt)
+    # A vertical file from the removed ffmpeg 9:16 export is stale now (Phase 37 brings vertical video back on Remotion).
+    await asyncio.to_thread((output_dir / "video_vertical.mp4").unlink, missing_ok=True)
+    return {**result, "srt_path": str(srt_path)}
 
 
 def _row_to_video_job(row: aiosqlite.Row) -> dict:

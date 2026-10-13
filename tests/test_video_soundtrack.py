@@ -1,17 +1,13 @@
-"""Task 22.4 (D51): the full-video music soundtrack on both renderers."""
+"""Task 22.4 (D51): the full-video music soundtrack of the Remotion render (the ffmpeg renderer went in Task 35.5)."""
 
 import json
-import subprocess
-from pathlib import Path
 
 import pytest
 from pydub.generators import Sine
 
 from app.core.config import settings
-from app.core.constants import STANDARD_MUSIC_TAIL_S
-from app.services import audio_service, music_bed, video_renderer_remotion, video_service
+from app.services import audio_service, music_bed, video_renderer_remotion
 from app.services.music_bed import SAMPLE_RATE
-from app.services.music_library_service import ffprobe_path
 
 PROJECT = {"id": "proj-video-bed", "speakers": [{"id": "sp1", "name": "Lan"}]}
 
@@ -31,32 +27,6 @@ async def mixed_job(tmp_path, music_name: str | None) -> dict:
     lines = [{"id": "l0", "speaker_id": "sp1", "audio_cache_path": str(line), "text": "Hello there."}]
     job = await audio_service.mix_project(PROJECT, lines, background_music_filename=music_name)
     return {**job, "status": "complete", "project_id": PROJECT["id"], "background_music": music_name}
-
-
-def video_seconds(path: str) -> float:
-    out = subprocess.run([ffprobe_path(), "-v", "error", "-show_entries", "format=duration",
-                          "-of", "csv=p=0", path], capture_output=True, text=True, check=True)
-    return float(out.stdout.strip())
-
-
-async def test_standard_video_with_music_runs_a_tail_and_fades_out(tmp_path):
-    job = await mixed_job(tmp_path, "bed.mp3")
-    result = await video_service.generate_video(PROJECT["id"], job, "midnight")
-    assert result["soundtrack"] is True
-    expected = job["duration_seconds"] + STANDARD_MUSIC_TAIL_S
-    assert video_seconds(result["mp4_path"]) == pytest.approx(expected, abs=0.15)
-    track = music_bed.decode(Path(result["mp4_path"]))
-    end = track[:, -int(0.05 * SAMPLE_RATE):]
-    assert float(abs(end).max()) < 0.01  # silent on the last frame
-    srt = Path(result["srt_path"]).read_text(encoding="utf-8")
-    assert "00:00:00,000 -->" in srt  # no lead-in: captions keep their timing
-
-
-async def test_standard_video_without_music_is_unchanged(tmp_path):
-    job = await mixed_job(tmp_path, None)
-    result = await video_service.generate_video(PROJECT["id"], job, "midnight")
-    assert result["soundtrack"] is False
-    assert video_seconds(result["mp4_path"]) == pytest.approx(job["duration_seconds"], abs=0.15)
 
 
 def props_for(job: dict) -> dict:

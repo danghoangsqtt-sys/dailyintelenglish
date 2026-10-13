@@ -9,40 +9,19 @@
   const TIMELINE_MIN_CLIP_WIDTH_PX = 72;
   const TIMELINE_MAX_CLIP_WIDTH_PX = 240;
 
-  // Report-UX-1: real ffmpeg render measurement (docs/operations/phase19-spike-remotion.md
-  // and AudioService timing history) -- render is well under a second, so no ETA string
-  // (showEta: false below) is shown, only the elapsed counter as the honest "something is
-  // happening" signal.
+  // A Remotion render takes minutes and varies a lot with the episode, so no ETA is shown (showEta: false below), only the
+  // elapsed counter as the honest "something is happening" signal.
   const VIDEO_BASELINE_SECONDS = 1;
 
-  // Task 19.7 (D19.7-f): real finding -- no existing localStorage precedent lives in this
-  // file (the card's claimed "subtitle-style picker etc." doesn't exist); following
-  // theme.js's real, confirmed "die-<name>" convention instead.
-  const RENDERER_STORAGE_KEY = "die-video-renderer";
-  // Phase 30 (ENH-021): what is behind the captions; remembered like the renderer choice.
+  // Phase 30 (ENH-021): what is behind the captions, remembered per browser.
   const VISUAL_MODE_STORAGE_KEY = "die-visual-mode";
   const STILL_SCENE_STORAGE_KEY = "die-still-scene";
   const VISUAL_MODES = ["illustrated", "podcast_black", "podcast_still", "podcast_sprites"];
   // the modes that use the scene picture chosen below (talking characters: when the storyboard gives no places)
   const STILL_SCENE_MODES = ["podcast_still", "podcast_sprites"];
   const VISUAL_MODE_ENABLED_TOOLTIP = "What is behind the captions";
-  const VISUAL_MODE_DISABLED_TOOLTIP = "Video pictures need the Enhanced (Remotion) renderer.";
 
-  // Task 19.7.n1: owner feedback (Gate B-12 live test, 2026-09-29) -- the old one-line
-  // tooltip didn't say what "Enhanced" actually adds. Single source of truth for both
-  // strings, per the card's own recommendation. "About 9x" (not the card draft's "about
-  // 3x" -- corrected against real measured data: Task 19.7's own live verification was
-  // 70.6s Remotion vs 7.76s ffmpeg on the same b330d37f... episode, ~9.1x; Gate B-12's
-  // cited 62s vs 7s is ~8.9x -- both real data points land near 9x, not 3x).
-  const RENDERER_ENABLED_TOOLTIP =
-    "Enhanced (Remotion): word-by-word karaoke highlight, speaker name chip, vocabulary " +
-    "pop-up cards, intro title + outro CTA, chapter progress bar. Higher-quality YouTube " +
-    "output. Slower render than Standard (about 9× wall time).";
-  const RENDERER_DISABLED_TOOLTIP =
-    "Enhanced rendering requires Node.js and Chrome Headless Shell. Not installed on this " +
-    "machine — see scripts/check_dependencies.py. Standard (ffmpeg) rendering still works.";
-
-  // Task 20.2d: caption treatment for Enhanced renders, remembered like the renderer choice.
+  // Task 20.2d: caption treatment, remembered per browser.
   const CAPTION_STYLE_STORAGE_KEY = "die-caption-style";
   const CAPTION_STYLES = ["outline", "box", "shade"];
   const CAPTION_STYLE_TOOLTIPS = {
@@ -50,21 +29,16 @@
     box: "Text on a semi-transparent dark box, like YouTube captions. The most readable on very busy images.",
     shade: "Outlined text plus a soft dark shade over the bottom of the picture.",
   };
-  const CAPTION_STYLE_DISABLED_TOOLTIP =
-    "Caption styles apply to Enhanced (Remotion) renders. Standard (ffmpeg) keeps its own subtitles.";
 
   const state = {
     projectId: null,
     project: null,
-    templates: [],
-    selectedTemplate: null,
-    aspectRatio: "16:9",
-    renderer: "ffmpeg",
     captionStyle: "outline",
     visualMode: "illustrated",
     stillScene: "",
     stillScenes: [],
     remotionConfigured: false,
+    rendererProblem: null,
     audioReady: false,
     audioJob: null,
     lines: [],
@@ -800,71 +774,10 @@
     }
   }
 
-  function renderTemplates() {
-    const grid = byId("template-grid");
-    grid.replaceChildren();
-    state.templates.forEach((template) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "card template-option";
-      button.classList.toggle("selected", template.id === state.selectedTemplate);
-      button.dataset.templateId = template.id;
-      const image = document.createElement("img");
-      image.src = template.preview_url;
-      image.alt = `${template.display_name} background preview`;
-      image.loading = "lazy";
-      const name = document.createElement("span");
-      name.className = "template-name";
-      name.textContent = template.display_name;
-      button.append(image, name);
-      button.addEventListener("click", () => {
-        if (state.isGenerating) return;
-        state.selectedTemplate = template.id;
-        renderTemplates();
-      });
-      grid.appendChild(button);
-    });
-  }
-
   function applyLocks() {
-    byId("generate-btn").disabled = state.isGenerating || !state.audioReady || !state.selectedTemplate;
-    document.querySelectorAll(".template-option").forEach((button) => {
-      button.disabled = state.isGenerating;
-    });
-    document.querySelectorAll("#aspect-ratio-group .chip").forEach((button) => {
-      button.disabled = state.isGenerating;
-    });
-  }
-
-  function setupAspectRatioToggle() {
-    const group = byId("aspect-ratio-group");
-    group.querySelectorAll(".chip").forEach((button) => {
-      button.addEventListener("click", () => {
-        if (state.isGenerating) return;
-        state.aspectRatio = button.dataset.aspectRatio;
-        group.querySelectorAll(".chip").forEach((candidate) => {
-          candidate.setAttribute("aria-pressed", String(candidate === button));
-        });
-      });
-    });
-  }
-
-  function readStoredRenderer() {
-    try {
-      // Task 19.9: Enhanced is the default once Remotion is installed (the caller only uses
-      // this when remotionConfigured); a choice the owner already stored is kept.
-      return localStorage.getItem(RENDERER_STORAGE_KEY) || "remotion";
-    } catch {
-      return "remotion"; // localStorage unavailable — the default (still gated by remotionConfigured)
-    }
-  }
-
-  function storeRenderer(renderer) {
-    try {
-      localStorage.setItem(RENDERER_STORAGE_KEY, renderer);
-    } catch {
-      /* localStorage unavailable — the choice just won't persist across reloads */
-    }
+    const button = byId("generate-btn");
+    button.disabled = state.isGenerating || !state.audioReady || !state.remotionConfigured;
+    button.title = state.remotionConfigured ? "" : `The video renderer is not ready: ${state.rendererProblem || "unknown"}`;
   }
 
   function readStoredVisualMode() {
@@ -895,15 +808,14 @@
   function renderVisualModes() {
     const group = byId("visual-mode-group");
     if (!group) return;
-    const enhanced = state.renderer === "remotion";
     group.querySelectorAll(".chip").forEach((button) => {
       button.setAttribute("aria-pressed", String(button.dataset.visualMode === state.visualMode));
-      button.disabled = !enhanced || state.isGenerating;
-      button.title = enhanced ? VISUAL_MODE_ENABLED_TOOLTIP : VISUAL_MODE_DISABLED_TOOLTIP;
+      button.disabled = state.isGenerating;
+      button.title = VISUAL_MODE_ENABLED_TOOLTIP;
     });
-    group.title = enhanced ? VISUAL_MODE_ENABLED_TOOLTIP : VISUAL_MODE_DISABLED_TOOLTIP;
+    group.title = VISUAL_MODE_ENABLED_TOOLTIP;
     const row = byId("still-scene-row");
-    if (row) row.hidden = !(enhanced && STILL_SCENE_MODES.includes(state.visualMode));
+    if (row) row.hidden = !STILL_SCENE_MODES.includes(state.visualMode);
     const select = byId("still-scene");
     if (select) select.disabled = state.isGenerating;
   }
@@ -977,11 +889,10 @@
   function renderCaptionStyleToggle() {
     const group = byId("caption-style-group");
     if (!group) return;
-    const enabled = state.renderer === "remotion" && !state.isGenerating;
     group.querySelectorAll(".chip").forEach((button) => {
       button.setAttribute("aria-pressed", String(button.dataset.captionStyle === state.captionStyle));
-      button.disabled = !enabled;
-      button.title = state.renderer === "remotion" ? CAPTION_STYLE_TOOLTIPS[button.dataset.captionStyle] : CAPTION_STYLE_DISABLED_TOOLTIP;
+      button.disabled = state.isGenerating;
+      button.title = CAPTION_STYLE_TOOLTIPS[button.dataset.captionStyle];
     });
   }
 
@@ -998,36 +909,16 @@
     });
   }
 
-  function renderRendererToggle() {
+  function renderRenderOptions() {
     renderCaptionStyleToggle();
     renderVisualModes();
-    const group = byId("renderer-group");
-    if (!group) return;
-    const buttons = group.querySelectorAll(".chip");
-    buttons.forEach((button) => {
-      const isRemotion = button.dataset.renderer === "remotion";
-      button.setAttribute("aria-pressed", String(button.dataset.renderer === state.renderer));
-      if (isRemotion) {
-        button.disabled = !state.remotionConfigured || state.isGenerating;
-        button.title = state.remotionConfigured ? RENDERER_ENABLED_TOOLTIP : RENDERER_DISABLED_TOOLTIP;
-      } else {
-        button.disabled = state.isGenerating;
-        button.title = "";
-      }
-    });
-  }
-
-  function setupRendererToggle() {
-    const group = byId("renderer-group");
-    if (!group) return;
-    group.querySelectorAll(".chip").forEach((button) => {
-      button.addEventListener("click", () => {
-        if (state.isGenerating || button.disabled) return;
-        state.renderer = button.dataset.renderer;
-        storeRenderer(state.renderer);
-        renderRendererToggle();
-      });
-    });
+    const status = byId("renderer-status");
+    if (status) {
+      status.hidden = state.remotionConfigured;
+      status.textContent = state.remotionConfigured ? ""
+        : `The video renderer is not ready on this machine: ${state.rendererProblem || "unknown"}. `
+          + "Run scripts/check_dependencies.py for the details.";
+    }
   }
 
   function setGenerateLoading(loading) {
@@ -1053,60 +944,38 @@
     byId("download-mp4").download = `${state.projectId}.mp4`;
     byId("download-srt").download = `${state.projectId}.srt`;
 
-    const verticalLink = byId("download-mp4-vertical");
-    if (job.mp4_path_vertical) {
-      verticalLink.href = `${Api.videoDownloadUrl(state.projectId, "mp4_vertical")}&t=${cacheBust}`;
-      verticalLink.download = `${state.projectId}_vertical.mp4`;
-      verticalLink.hidden = false;
-    } else {
-      verticalLink.hidden = true;
-    }
   }
 
   async function generateVideo() {
-    if (state.isGenerating || !state.audioReady || !state.selectedTemplate) return;
+    if (state.isGenerating || !state.audioReady || !state.remotionConfigured) return;
     state.isGenerating = true;
     clearError();
     setGenerateLoading(true);
-    renderRendererToggle();
+    renderRenderOptions();
     const generationStatus = GenerationStatus.mount({
       element: byId("generate-progress"),
       baselineSec: VIDEO_BASELINE_SECONDS,
       showEta: false,
     });
-    const attemptedRenderer = state.renderer;
-    generationStatus.setProgress({
-      stageLabel: attemptedRenderer === "remotion" ? "Rendering with Remotion (Enhanced)…" : "Rendering with ffmpeg…",
-    });
+    generationStatus.setProgress({ stageLabel: "Rendering the video…" });
     try {
-      const job = await Api.generateVideo(
-        state.projectId,
-        state.selectedTemplate,
-        state.aspectRatio,
-        attemptedRenderer,
-        attemptedRenderer === "remotion" ? state.captionStyle : null,
-        attemptedRenderer === "remotion" && state.visualMode !== "illustrated" ? state.visualMode : null,
-        attemptedRenderer === "remotion" && STILL_SCENE_MODES.includes(state.visualMode) ? state.stillScene || null : null
-      );
+      const job = await Api.generateVideo(state.projectId, {
+        captionStyle: state.captionStyle,
+        visualMode: state.visualMode !== "illustrated" ? state.visualMode : null,
+        stillSceneId: STILL_SCENE_MODES.includes(state.visualMode) ? state.stillScene || null : null,
+      });
       renderResult(job);
-      // Task 19.7 (I36-a): a Remotion failure always falls back to ffmpeg rather than
-      // failing the request -- surface that honestly instead of silently claiming Enhanced.
-      const doneLabel =
-        attemptedRenderer === "remotion" && job.fallback_used
-          ? "Done (Remotion unavailable this time — used Standard instead)."
-          : "Done.";
-      generationStatus.setProgress({ stageLabel: doneLabel, done: true });
+      generationStatus.setProgress({ stageLabel: "Done.", done: true });
     } catch (error) {
       console.error("Failed to generate video:", error);
-      showError("We couldn't generate the video. Please try again.");
+      showError(error.message || "We couldn't generate the video. Please try again.");
       generationStatus.destroy();
       byId("generate-progress").textContent = "";
     } finally {
       state.isGenerating = false;
       setGenerateLoading(false);
-      // Task 20.2d: re-enable the renderer + caption-style chips once the render ends (they
-      // were locked by the renderRendererToggle() call at the start and never unlocked).
-      renderRendererToggle();
+      // Task 20.2d: re-enable the caption-style and picture chips once the render ends.
+      renderRenderOptions();
     }
   }
 
@@ -1159,25 +1028,14 @@
     }
 
     try {
-      state.templates = await Api.listVideoTemplates();
-      state.selectedTemplate = state.templates[0]?.id || null;
-    } catch (error) {
-      console.error("Failed to load video templates:", error);
-      byId("loading-panel").hidden = true;
-      showError("We couldn't load the background templates. Please refresh.");
-      return;
-    }
-
-    try {
       const health = await Api.getVideoHealth();
       state.remotionConfigured = Boolean(health.remotion_configured);
+      state.rendererProblem = health.renderer_problem || null;
     } catch (error) {
-      console.error("Failed to load video renderer health (non-fatal, Standard still works):", error);
+      console.error("Failed to load the video renderer status:", error);
       state.remotionConfigured = false;
+      state.rendererProblem = "its status could not be read";
     }
-    // Only honor a stored "remotion" preference when it's actually usable right now --
-    // otherwise the toggle would render as checked-but-disabled, a confusing combination.
-    state.renderer = state.remotionConfigured ? readStoredRenderer() : "ffmpeg";
     state.captionStyle = readStoredCaptionStyle();
     state.visualMode = readStoredVisualMode();
     state.stillScene = readStoredStillScene();
@@ -1192,15 +1050,12 @@
     byId("loading-panel").hidden = true;
     byId("workspace").hidden = false;
     await loadProjectVisuals();
-    renderTemplates();
     renderTimeline();
     renderInspector();
-    setupAspectRatioToggle();
-    setupRendererToggle();
     setupCaptionStyleToggle();
     setupVisualModes();
     await loadStillScenes();
-    renderRendererToggle();
+    renderRenderOptions();
     applyLocks();
   }
 

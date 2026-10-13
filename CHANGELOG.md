@@ -44,6 +44,11 @@ Versioning: [SemVer](https://semver.org/)
 - **Step 5 casts with the character selector.** Each speaker card shows its character's face with "Change
   character" (the same game-style selector as Step 1) and "Remove"; the old optional speaker-avatar upload and its
   routes are gone — a speaker's picture in a video is its character's face (35.4).
+- **One video renderer.** Every video is the Remotion episode (karaoke captions, intro and outro, vocabulary cards,
+  characters). The Standard ffmpeg renderer, its three background templates, the renderer toggle, the old 9:16 blur-pad
+  export and the silent fallback are gone: if the renderer is not installed, Step 5 says what is missing and keeps
+  "Generate" disabled; a failed render shows its reason. The SRT is still written, shifted by the intro. Vertical video
+  comes back on Remotion in Phase 37 (35.5).
 
 ### Fixed / Changed (Gate B-22 fixes, 2026-10-12)
 - **Activity pictures sit behind the talking characters.** In "Podcast: talking characters" an insert beat's picture now

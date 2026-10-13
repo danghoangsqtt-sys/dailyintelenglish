@@ -83,7 +83,7 @@ async def test_four_modes_the_drawn_story_is_the_default_and_its_request_is_unch
     assert await page.locator("[data-visual-mode='illustrated']").get_attribute("aria-pressed") == "true"
     assert await page.locator("#still-scene-row").is_hidden()
     await _generate(page)
-    assert bodies == [{"template_id": "midnight", "aspect_ratio": "16:9", "renderer": "remotion", "caption_style": "outline"}]
+    assert bodies == [{"caption_style": "outline"}]  # Task 35.5: no template, aspect or renderer any more
     await page.close()
 
 
@@ -122,24 +122,6 @@ async def test_the_still_mode_offers_only_scenes_with_a_plate_and_sends_the_choi
     await page.select_option("#still-scene", "")
     await _generate(page)
     assert "still_scene_id" not in bodies[-1]
-    await page.close()
-
-
-@pytest.mark.asyncio
-async def test_the_modes_need_the_enhanced_renderer(browser_instance, live_server_url):
-    bodies: list = []
-    page = await _open(browser_instance, live_server_url, bodies)
-    await page.click("[data-visual-mode='podcast_black']")
-    await page.click("[data-renderer='ffmpeg']")
-    for mode in ("illustrated", "podcast_black", "podcast_still", "podcast_sprites"):
-        assert await page.locator(f"[data-visual-mode='{mode}']").is_disabled()
-    assert "Enhanced" in (await page.locator("#visual-mode-group").get_attribute("title") or "") \
-        or "Enhanced" in (await page.locator("[data-visual-mode='podcast_black']").get_attribute("title") or "")
-    await _generate(page)
-    assert bodies == [{"template_id": "midnight", "aspect_ratio": "16:9", "renderer": "ffmpeg"}]  # nothing extra on Standard
-    await page.click("[data-renderer='remotion']")
-    assert await page.locator("[data-visual-mode='podcast_black']").is_enabled()
-    assert await page.locator("[data-visual-mode='podcast_black']").get_attribute("aria-pressed") == "true"  # remembered
     await page.close()
 
 

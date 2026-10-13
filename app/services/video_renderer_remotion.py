@@ -66,13 +66,6 @@ REMOTION_RENDER_TIMEOUT_SECONDS = 600.0
 # Task 19.7 (D19.7-d): module-level, process-lifetime counters -- same in-memory-only
 # pattern as app/main.py's `_ai_circuits: dict[str, CircuitBreaker] = {}` (Phase 18). Reset
 # on server restart; no DB persistence, owner-accepted precedent from that same task.
-_remotion_stats: dict[str, Any] = {
-    "total_calls": 0,
-    "fallback_count": 0,
-    "last_fallback_reason": None,
-}
-
-
 REMOTION_MIN_NODE_MAJOR = 24  # video-renderer/package.json's own "engines.node": ">=24.0.0"
 
 
@@ -130,39 +123,6 @@ def is_remotion_configured() -> bool:
     """`GET /api/video/health`'s `remotion_configured` -- true only when all 3 real checks
     above pass, computed live (not cached) since availability can change mid-first-download."""
     return all(passed for passed, _ in (check_node_version(), check_video_renderer_deps(), check_remotion_browser()))
-
-
-def _resolve_renderer(requested: str | None) -> str:
-    """D19.7-b: exactly two real backend tiers. `settings.VIDEO_RENDERER` is the kill
-    switch -- any value other than the literal string `"remotion"` (unset, `"ffmpeg"`, or
-    anything else) forces ffmpeg regardless of what the request asks for (I36's safety
-    direction). A request may always downgrade `"remotion"` -> `"ffmpeg"` (the safer path
-    is always allowed); it can only ever reach `"remotion"` when the kill switch already
-    permits it."""
-    if settings.VIDEO_RENDERER != "remotion":
-        return "ffmpeg"
-    if requested == "ffmpeg":
-        return "ffmpeg"
-    return "remotion"
-
-
-def get_remotion_stats() -> dict[str, Any]:
-    """Snapshot of the fallback-rate counters for `GET /api/video/health` (D19.7-d)."""
-    total = _remotion_stats["total_calls"]
-    fallback = _remotion_stats["fallback_count"]
-    return {
-        "remotion_total_calls": total,
-        "remotion_fallback_count": fallback,
-        "fallback_rate": round(fallback / total, 4) if total else 0.0,
-        "last_fallback_reason": _remotion_stats["last_fallback_reason"],
-    }
-
-
-def _record_call(fallback_reason: str | None) -> None:
-    _remotion_stats["total_calls"] += 1
-    if fallback_reason is not None:
-        _remotion_stats["fallback_count"] += 1
-        _remotion_stats["last_fallback_reason"] = fallback_reason
 
 
 def _parse_chapters_text(chapters_text: str) -> list[dict[str, Any]]:
@@ -574,8 +534,7 @@ async def _build_input_props(
 
 def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path) -> dict[str, Any]:
     """Blocking subprocess call -- must run in a thread (`asyncio.to_thread`), never on the
-    event loop directly, same "Forbidden Scope" rule `video_service._render_video_sync`
-    already documents. Temp-props-file + `time.monotonic()` wall time + strict
+    event loop directly, same "Forbidden Scope" rule as every blocking render call. Temp-props-file + `time.monotonic()` wall time + strict
     output-path validation, mirroring the Phase 19 spike runner's `_run_render`.
     """
     # Remotion runs with cwd=video-renderer/, so a relative path (DATA_DIR is the relative "data" in a
@@ -600,7 +559,6 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path) ->
                 timeout=REMOTION_RENDER_TIMEOUT_SECONDS,
             )
         except subprocess.TimeoutExpired:
-            _record_call("timeout")
             raise RemotionRenderFailedError(
                 f"Remotion render timed out after {REMOTION_RENDER_TIMEOUT_SECONDS:g}s"
             ) from None
@@ -609,19 +567,15 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path) ->
         Path(props_file.name).unlink(missing_ok=True)
 
     if result.returncode != 0:
-        _record_call("non_zero_exit")
         raise RemotionRenderFailedError(f"Remotion render failed: {result.stderr[-500:]}")
     if not output_path.is_file():
-        _record_call("missing_output")
         raise RemotionRenderFailedError("Remotion render exited 0 but produced no output file")
 
-    _record_call(None)
     return {
         "mp4_path": str(output_path),
         "srt_path": None,
         "background_image": None,
         "mode": "remotion",
-        "fallback_used": False,
         "wall_time_seconds": round(wall_time_seconds, 3),
     }
 
@@ -639,8 +593,7 @@ async def render_via_remotion(
     """D19.7-c: builds real props (async -- resolves avatars via the DB), then hands off to
     `_render_via_remotion_sync` in a thread for the actual blocking subprocess call. Raises
     `RemotionRenderFailedError` on timeout, non-zero exit, or a missing output file -- the
-    caller (`video_service.generate_video`) always catches this and falls back to ffmpeg
-    (I36-a); this function itself never falls back to anything.
+    caller (`video_service.generate_video`) fails the job with that reason (Task 35.5: there is no other renderer).
     """
     project_id = project["id"]
     input_props = await _build_input_props(db, project, audio_job, learning, caption_style,
@@ -657,7 +610,7 @@ async def render_via_remotion(
             input_props["brand"]["voicesInSoundtrack"] = bool(voices)
     result = await asyncio.to_thread(_render_via_remotion_sync, input_props, output_path)
     return {**result, "soundtrack": soundtrack is not None, "brand_voice": bool(voices),
-            "activity_uses": activity_uses}
+            "activity_uses": activity_uses, "intro_seconds": float(input_props.get("introSec") or 0.0)}
 
 
 def _copy_brand_voice(source: str) -> str:

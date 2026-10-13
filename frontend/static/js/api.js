@@ -234,17 +234,9 @@ const Api = (() => {
     youtubeExportUrl: (projectId) => `/api/projects/${projectId}/youtube/export`,
     youtubeTranscriptUrl: (projectId) => `/api/projects/${projectId}/youtube/transcript.txt`,
     getVideoStatus: (projectId) => request(`/api/projects/${projectId}/video/status`),
-    listVideoTemplates: () => request("/api/video/templates"),
-    // Task 19.7: renderer defaults to "ffmpeg" -- every pre-Phase-19 caller that omits it
-    // behaves exactly as before. "remotion" only actually takes effect when the backend's
-    // DIE_VIDEO_RENDERER kill switch already allows it (video_service._resolve_renderer).
-    // Task 20.2d: `captionStyle` is only sent when given (Enhanced renders) -- Standard
-    // request bodies stay exactly as before.
-    // Phase 30: `visualMode` ("podcast_black" | "podcast_still") and `stillSceneId` are sent only
-    // when set, so the default (the drawn story) keeps its body unchanged.
-    generateVideo: (projectId, templateId, aspectRatio = "16:9", renderer = "ffmpeg", captionStyle = null,
-                    visualMode = null, stillSceneId = null) => {
-      const body = { template_id: templateId, aspect_ratio: aspectRatio, renderer };
+    // Task 35.5: Remotion is the only renderer; `captionStyle`/`visualMode`/`stillSceneId` are sent when set.
+    generateVideo: (projectId, { captionStyle = null, visualMode = null, stillSceneId = null } = {}) => {
+      const body = {};
       if (captionStyle) body.caption_style = captionStyle;
       if (visualMode) body.visual_mode = visualMode;
       if (stillSceneId) body.still_scene_id = stillSceneId;

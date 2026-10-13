@@ -302,16 +302,13 @@ async def test_step4_elapsed_counter_advances_against_real_wall_clock(
 # ---------------------------------------------------------------------------
 
 VIDEO_PROJECT = {"id": "genstatus-video-proj", "name": "Generation Status Video Test", "status": "audio_generated", "cefr_level": "B1", "genre": "small_talk"}
-VIDEO_TEMPLATES = [
-    {"id": "midnight", "display_name": "Midnight", "preview_url": "/static/video_backgrounds/midnight.png"},
-]
 VIDEO_JOB = {
     "project_id": VIDEO_PROJECT["id"],
     "status": "complete",
-    "mode": "background",
-    "mp4_path": "data/video/genstatus-video-proj/video.mp4",
+    "mode": "remotion",
+    "mp4_path": "data/video/genstatus-video-proj/video_remotion.mp4",
     "srt_path": "data/video/genstatus-video-proj/subtitles.srt",
-    "background_image": "midnight",
+    "background_image": None,
     "error_message": None,
     "started_at": _now_iso(),
     "completed_at": None,
@@ -331,8 +328,9 @@ async def _mock_video_routes(page: Page) -> None:
             await route.fulfill(status=200, content_type="application/json", body=_envelope(VIDEO_PROJECT))
         elif url.endswith("/audio/status") and method == "GET":
             await route.fulfill(status=200, content_type="application/json", body=_envelope({"status": "complete"}))
-        elif url.endswith("/api/video/templates") and method == "GET":
-            await route.fulfill(status=200, content_type="application/json", body=_envelope(VIDEO_TEMPLATES))
+        elif url.endswith("/api/video/health") and method == "GET":
+            await route.fulfill(status=200, content_type="application/json",
+                                body=_envelope({"remotion_configured": True, "renderer_problem": None}))
         elif url.endswith("/video/status") and method == "GET":
             await route.fulfill(status=404, content_type="application/json", body=_envelope(None, "no video"))
         elif url.endswith("/video/generate") and method == "POST":
@@ -351,9 +349,6 @@ async def test_step5_elapsed_counter_advances_against_real_wall_clock(
 ):
     page = await browser_instance.new_page()
     await _mock_video_routes(page)
-    # Task 19.9 made Enhanced the default wherever Remotion is installed; this test is about the
-    # Standard flow, so it stores the owner's Standard choice (machine-independent).
-    await page.add_init_script("try { localStorage.setItem('die-video-renderer', 'ffmpeg'); } catch (e) {}")
     await page.goto(f"{video_live_server_url}/step5?project_id={VIDEO_PROJECT['id']}")
     await page.wait_for_selector("#workspace:not([hidden])")
 
@@ -362,5 +357,5 @@ async def test_step5_elapsed_counter_advances_against_real_wall_clock(
 
     progress_text = await page.locator("#generate-progress").text_content()
     assert progress_text is not None and re.search(r"0:0[1-9]", progress_text), progress_text
-    assert "Rendering with ffmpeg" in progress_text
+    assert "Rendering the video" in progress_text
     await page.close()

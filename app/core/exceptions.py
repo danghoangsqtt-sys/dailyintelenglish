@@ -67,10 +67,8 @@ class VideoRenderError(AppError):
 
 class RemotionRenderFailedError(AppError):
     """Raised by `video_renderer_remotion._render_via_remotion` on timeout, non-zero
-    exit, or a missing output file (Task 19.7, D19.7-c). Always caught internally by
-    `video_service.generate_video` and turned into an ffmpeg fallback (I36-a) -- never
-    surfaces past that boundary, so its `status_code` is never actually returned to a
-    client, but it still needs one since it subclasses `AppError`."""
+    exit, or a missing output file (Task 19.7, D19.7-c). `video_service.generate_video` turns it into a
+    `VideoRenderError` carrying the same reason (Task 35.5: there is no other renderer to fall back to)."""
 
     status_code = 500
 

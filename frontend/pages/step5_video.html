@@ -29,7 +29,6 @@
     @media (max-width: 720px) { .activity-missing-card { grid-template-columns: 1fr; } }
     #activity-coverage.is-warning { padding: 8px 10px; border-radius: 8px; background: var(--warning-bg); color: var(--warning); }
 
-    .template-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
     .aspect-ratio-row { display: flex; gap: 10px; margin-top: 14px; }
     .chip {
       display: flex;
@@ -47,19 +46,6 @@
     }
     .chip:hover { border-color: var(--border-strong); }
     .chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
-    .template-option {
-      appearance: none;
-      overflow: hidden;
-      padding: 0;
-      background: var(--surface);
-      color: var(--text);
-      text-align: left;
-      cursor: pointer;
-    }
-    .template-option:hover { border-color: var(--border-strong); }
-    .template-option.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
-    .template-option img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #07090d; }
-    .template-name { display: block; padding: 9px 12px; font-size: 13px; font-weight: 700; }
 
     .generate-row { display: flex; align-items: center; gap: 14px; margin-top: 18px; }
     .generate-progress { color: var(--muted); font-size: 13px; }
@@ -143,7 +129,7 @@
           <div id="workspace" hidden>
             <section class="section" id="project-visuals-section">
               <h2 class="section-title">Characters &amp; scenes</h2>
-              <p class="section-hint">Choose each speaker's character and up to three scenes. <a href="/characters">Open Character Library</a>. Shots appear in Enhanced (Remotion) renders.</p>
+              <p class="section-hint">Choose each speaker's character and up to three scenes. <a href="/characters">Open Character Library</a>. Shots appear in the video.</p>
               <h3>Cast</h3>
               <div id="visual-cast-grid" class="visual-cast-grid"></div>
               <h3>Scenes</h3>
@@ -182,16 +168,8 @@
             </section>
 
             <section class="section">
-              <h2 class="section-title">2. Choose a background</h2>
-              <div class="template-grid" id="template-grid"></div>
-              <div class="aspect-ratio-row" role="group" aria-label="Output format" id="aspect-ratio-group">
-                <button class="chip" type="button" data-aspect-ratio="16:9" aria-pressed="true">16:9 (standard)</button>
-                <button class="chip" type="button" data-aspect-ratio="9:16" aria-pressed="false">9:16 (vertical)</button>
-              </div>
-              <div class="aspect-ratio-row" role="group" aria-label="Video renderer" id="renderer-group">
-                <button class="chip" type="button" data-renderer="ffmpeg" aria-pressed="true">Standard (ffmpeg)</button>
-                <button class="chip" type="button" data-renderer="remotion" aria-pressed="false">Enhanced (Remotion, opt-in)</button>
-              </div>
+              <h2 class="section-title">2. Render the video</h2>
+              <p class="section-hint" id="renderer-status" role="status" hidden></p>
               <div class="aspect-ratio-row" role="group" aria-label="Video pictures" id="visual-mode-group">
                 <button class="chip" type="button" data-visual-mode="illustrated" aria-pressed="true">Podcast: with characters</button>
                 <button class="chip" type="button" data-visual-mode="podcast_black" aria-pressed="false">Podcast: black screen</button>
@@ -220,7 +198,6 @@
                 <video class="result-player" id="result-player" controls></video>
                 <div class="download-links">
                   <a class="btn btn-ghost btn-sm" id="download-mp4" download>Download MP4</a>
-                  <a class="btn btn-ghost btn-sm" id="download-mp4-vertical" download hidden>Download 9:16 MP4</a>
                   <a class="btn btn-ghost btn-sm" id="download-srt" download>Download SRT</a>
                 </div>
               </div>

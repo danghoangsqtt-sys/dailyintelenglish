@@ -48,6 +48,21 @@ def _fake_edge_tts(monkeypatch):
     monkeypatch.setattr(tts_service, "_synthesize_edge_tts", fake_edge_tts)
 
 
+@pytest.fixture(autouse=True)
+def _fake_remotion(monkeypatch):
+    """Task 35.5: Remotion is the only renderer; these API tests use a fake render (a real one takes minutes)."""
+    from app.services import video_renderer_remotion
+
+    async def fake_render(db, project, audio_job, learning, output_path, **kwargs):
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(b"fake mp4")
+        return {"mp4_path": str(output_path), "srt_path": None, "background_image": None, "mode": "remotion",
+                "intro_seconds": 0.0, "soundtrack": False, "activity_uses": []}
+
+    monkeypatch.setattr(video_service, "renderer_problem", lambda: None)
+    monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", fake_render)
+
+
 def create_project(client: TestClient) -> dict:
     response = client.post("/api/projects", json=PROJECT_PAYLOAD)
     assert response.status_code == 200
@@ -70,26 +85,19 @@ def generate_audio(client: TestClient, project: dict, lines: list[dict]) -> None
     assert response.status_code == 200
 
 
-def test_list_templates_returns_three_options(client: TestClient):
-    response = client.get("/api/video/templates")
-    assert response.status_code == 200
-    ids = {t["id"] for t in response.json()["data"]}
-    assert ids == {"midnight", "deep_purple", "charcoal_wave"}
-
-
 def test_generate_video_returns_200_after_audio_exists(client: TestClient):
     project = create_project(client)
     lines = save_script(client, project)
     generate_audio(client, project, lines)
 
+    # Task 35.5: an old client's template_id is ignored, not refused
     response = client.post(f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"})
 
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["status"] == "complete"
-    assert data["mp4_path"]
-    assert data["srt_path"]
-    assert data["background_image"] == "midnight"
+    assert data["status"] == "complete" and data["mode"] == "remotion"
+    assert data["mp4_path"].endswith("video_remotion.mp4")
+    assert data["srt_path"] and data["background_image"] is None and data["mp4_path_vertical"] is None
 
 
 def test_generate_video_advances_project_status_to_video_generated(client: TestClient):
@@ -108,18 +116,6 @@ def test_generate_video_before_audio_returns_422(client: TestClient):
     save_script(client, project)  # no audio generated yet
 
     response = client.post(f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"})
-
-    assert response.status_code == 422
-
-
-def test_generate_video_unknown_template_returns_422(client: TestClient):
-    project = create_project(client)
-    lines = save_script(client, project)
-    generate_audio(client, project, lines)
-
-    response = client.post(
-        f"/api/projects/{project['id']}/video/generate", json={"template_id": "not-a-real-template"}
-    )
 
     assert response.status_code == 422
 
@@ -202,73 +198,6 @@ def test_download_unsupported_format_returns_422(client: TestClient):
 
 
 # --- Task 2.5b: 9:16 vertical output (real gap found by Task 2.1c's QA pass) ---
-
-
-def test_generate_video_default_omits_vertical_output(client: TestClient):
-    project = create_project(client)
-    lines = save_script(client, project)
-    generate_audio(client, project, lines)
-
-    response = client.post(f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"})
-
-    assert response.status_code == 200
-    assert response.json()["data"]["mp4_path_vertical"] is None
-
-
-def test_generate_video_with_9x16_returns_vertical_path(client: TestClient):
-    project = create_project(client)
-    lines = save_script(client, project)
-    generate_audio(client, project, lines)
-
-    response = client.post(
-        f"/api/projects/{project['id']}/video/generate",
-        json={"template_id": "midnight", "aspect_ratio": "9:16"},
-    )
-
-    assert response.status_code == 200
-    data = response.json()["data"]
-    assert data["mp4_path_vertical"]
-    # The 16:9 path is still produced alongside the vertical one.
-    assert data["mp4_path"]
-
-
-def test_generate_video_invalid_aspect_ratio_returns_422(client: TestClient):
-    project = create_project(client)
-    lines = save_script(client, project)
-    generate_audio(client, project, lines)
-
-    response = client.post(
-        f"/api/projects/{project['id']}/video/generate",
-        json={"template_id": "midnight", "aspect_ratio": "4:3"},
-    )
-
-    assert response.status_code == 422
-
-
-def test_download_mp4_vertical_after_9x16_generate(client: TestClient):
-    project = create_project(client)
-    lines = save_script(client, project)
-    generate_audio(client, project, lines)
-    client.post(
-        f"/api/projects/{project['id']}/video/generate",
-        json={"template_id": "midnight", "aspect_ratio": "9:16"},
-    )
-
-    response = client.get(f"/api/projects/{project['id']}/video/download?format=mp4_vertical")
-
-    assert response.status_code == 200
-    assert response.headers["content-type"] == "video/mp4"
-
-
-def test_download_mp4_vertical_returns_404_when_not_generated(client: TestClient):
-    project = create_project(client)
-    lines = save_script(client, project)
-    generate_audio(client, project, lines)
-    client.post(f"/api/projects/{project['id']}/video/generate", json={"template_id": "midnight"})
-
-    response = client.get(f"/api/projects/{project['id']}/video/download?format=mp4_vertical")
-
-    assert response.status_code == 404
 
 
 def test_failed_video_regeneration_keeps_prior_outputs_downloadable(client: TestClient, monkeypatch):

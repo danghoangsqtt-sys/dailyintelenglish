@@ -149,7 +149,7 @@ def main() -> int:
     """Run all checks and print a GREEN/RED report; exit 1 if any required check fails.
 
     Task 14.7 (Amendment D): Ollama + the configured model are required
-    (local-only is always the fallback and default AI_MODE). The cloud
+    (local-only is always the fallback and default AI_MODE); Task 35.5: so is the Remotion video renderer. The cloud
     provider (Task 18.3, ENH-011) is informational only -- still reported,
     never failing the overall check -- since AI_MODE defaults to "local"
     regardless of whether it's configured.
@@ -160,14 +160,13 @@ def main() -> int:
         ("NVIDIA GPU", check_gpu),
         ("Ollama + model", check_ollama),
         ("data/ directories", check_data_dirs),
+        # Task 35.5 (D89): Remotion is the only video renderer now, so these three are required.
+        ("Node.js (video renderer)", check_node_version),
+        ("video-renderer/ dependencies", check_video_renderer_deps),
+        ("Chrome Headless Shell (video renderer)", check_remotion_browser),
     ]
     informational_checks = [
         ("Cloud provider (optional — see Settings page)", check_cloud_provider),
-        # Task 19.7 (D19.7-e): Remotion is an opt-in alternative to ffmpeg (Task 19.7) --
-        # never required, "Standard (ffmpeg)" always works regardless of these 3.
-        ("Node.js (optional — Remotion video renderer)", check_node_version),
-        ("video-renderer/ dependencies (optional — Remotion video renderer)", check_video_renderer_deps),
-        ("Chrome Headless Shell (optional — Remotion video renderer)", check_remotion_browser),
     ]
 
     all_passed = True

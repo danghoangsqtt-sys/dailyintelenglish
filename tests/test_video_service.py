@@ -1,24 +1,18 @@
-"""Tests for VideoService (Task 1.7, Sub-task 1.7a).
+"""Tests for VideoService: SRT subtitles, the Remotion-only render (Task 35.5, D89: the Standard ffmpeg renderer, its
+templates and the silent fallback were removed) and the persisted video job."""
 
-Like AudioService (tests/test_audio_service.py), ffmpeg is a required local system binary
-this project cannot function without, so the render test exercises the real ffmpeg
-subprocess on a real tiny background image + real tiny audio file — not mocked.
-"""
-
-import subprocess
-import sys
+from pathlib import Path
 
 import pytest
-from pydub.generators import Sine
 
-from app.core.exceptions import VideoRenderError
-from app.services import audio_service, video_service  # noqa: F401 -- audio_service import
+from app.core.config import settings
+from app.core.exceptions import RemotionRenderFailedError, VideoRenderError
+from app.services import video_renderer_remotion, video_service
 
-# ^ audio_service's module-level `_ensure_ffmpeg_dir_on_path` shim is what makes pydub's
-# own `shutil.which("ffprobe")` lookup succeed on this machine (DIE_FFMPEG_PATH is an
-# absolute path, not on the system PATH) -- video_service itself never needs this since it
-# calls ffmpeg via an explicit subprocess path, but this test file uses pydub directly to
-# build fixture audio.
+AUDIO_JOB = {
+    "status": "complete", "mp3_path": "x.mp3", "duration_seconds": 3.0,
+    "timestamps": [{"start_sec": 0.0, "end_sec": 1.5, "label": "Alex", "speaker_id": "s1", "text": "Hello there."}],
+}
 
 
 def test_generate_srt_formats_cues_with_speaker_label_and_sequential_numbers():
@@ -33,248 +27,26 @@ def test_generate_srt_formats_cues_with_speaker_label_and_sequential_numbers():
     assert "2\n00:00:01,500 --> 00:00:03,250\nSam: Thanks for having me.\n" in srt
 
 
+
 def test_generate_srt_handles_hour_boundary():
     timestamps = [{"start_sec": 3661.234, "end_sec": 3662.0, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}]
     srt = video_service.generate_srt(timestamps)
     assert "01:01:01,234 --> 01:01:02,000" in srt
 
 
+
 def test_generate_srt_empty_timestamps_returns_empty_string():
     assert video_service.generate_srt([]) == ""
 
 
-def test_list_video_templates_returns_all_three_with_preview_urls():
-    templates = video_service.list_video_templates()
-    ids = {t["id"] for t in templates}
-    assert ids == set(video_service.VIDEO_TEMPLATE_IDS)
-    for template in templates:
-        assert template["preview_url"] == f"/static/video_backgrounds/{template['id']}.png"
-
 
 async def test_generate_video_raises_when_audio_not_complete():
     with pytest.raises(VideoRenderError, match="audio mix hasn't been generated"):
-        await video_service.generate_video("proj-1", None, "midnight")
+        await video_service.generate_video("proj-1", None, db=None, project={})
 
     with pytest.raises(VideoRenderError, match="audio mix hasn't been generated"):
-        await video_service.generate_video("proj-1", {"status": "error"}, "midnight")
+        await video_service.generate_video("proj-1", {"status": "error"}, db=None, project={})
 
-
-async def test_generate_video_raises_on_unknown_template(tmp_path, monkeypatch):
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    audio_path = tmp_path / "mix.mp3"
-    Sine(440).to_audio_segment(duration=500).export(str(audio_path), format="mp3", bitrate="192k")
-    audio_job = {"status": "complete", "mp3_path": str(audio_path), "timestamps": []}
-
-    with pytest.raises(VideoRenderError, match="Background template not found"):
-        await video_service.generate_video("proj-1", audio_job, "not-a-real-template")
-
-
-async def test_generate_video_produces_a_real_playable_mp4(tmp_path, monkeypatch):
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    audio_path = tmp_path / "mix.mp3"
-    Sine(440).to_audio_segment(duration=800).apply_gain(-20).export(str(audio_path), format="mp3", bitrate="192k")
-    audio_job = {
-        "status": "complete",
-        "mp3_path": str(audio_path),
-        "duration_seconds": 0.8,
-        "timestamps": [{"start_sec": 0.0, "end_sec": 0.8, "label": "Alex", "speaker_id": "sp1", "text": "Hello!"}],
-    }
-
-    result = await video_service.generate_video("proj-real", audio_job, "midnight")
-
-    from pathlib import Path
-
-    mp4_path = Path(result["mp4_path"])
-    srt_path = Path(result["srt_path"])
-    assert mp4_path.is_file() and mp4_path.stat().st_size > 0
-    assert srt_path.is_file()
-    assert "Alex: Hello!" in srt_path.read_text(encoding="utf-8")
-    assert result["background_image"] == "midnight"
-    # Task 16.2 (Amendment B): the temp-then-atomic-replace write leaves no
-    # leftover temp file behind on a successful render.
-    assert not video_service._rendering_temp_path(mp4_path).exists()
-
-
-async def test_generate_video_duration_matches_audio_exactly(tmp_path, monkeypatch):
-    """Task 14.10 (D14): `-t {duration}` replaces `-shortest`, which measurably
-    overshot at real (~300s) durations (Gate B-3 measured a 2.48s tail, root-caused
-    and reproduced directly against this exact command shape -- see task-14.10.md).
-    A short fixture can't reproduce the overshoot itself (it only appeared at real
-    scale), but it can and does prove `-t` -- not `-shortest` -- is what's actually
-    driving the render, since the rendered video's own stream duration now comes
-    from the passed `duration_seconds`, not from wherever the audio input happens
-    to end."""
-    import subprocess
-    from pathlib import Path
-
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    audio_path = tmp_path / "mix.mp3"
-    Sine(440).to_audio_segment(duration=800).apply_gain(-20).export(str(audio_path), format="mp3", bitrate="192k")
-    audio_job = {
-        "status": "complete",
-        "mp3_path": str(audio_path),
-        "duration_seconds": 0.8,
-        "timestamps": [{"start_sec": 0.0, "end_sec": 0.8, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}],
-    }
-
-    result = await video_service.generate_video("proj-av-match", audio_job, "midnight")
-
-    probe = subprocess.run(
-        [
-            "ffprobe", "-v", "error", "-select_streams", "v:0",
-            "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1",
-            str(Path(result["mp4_path"])),
-        ],
-        capture_output=True, text=True, timeout=30,
-    )
-    assert float(probe.stdout.strip()) == pytest.approx(0.8, abs=0.05)
-
-
-async def test_generate_video_default_aspect_ratio_does_not_render_vertical(tmp_path, monkeypatch):
-    """Task 2.5b: default (`"16:9"`) must be byte-for-byte the existing behavior --
-    no vertical file, no `mp4_path_vertical` key, zero extra ffmpeg calls."""
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    audio_path = tmp_path / "mix.mp3"
-    Sine(440).to_audio_segment(duration=500).apply_gain(-20).export(str(audio_path), format="mp3", bitrate="192k")
-    audio_job = {
-        "status": "complete",
-        "mp3_path": str(audio_path),
-        "duration_seconds": 0.5,
-        "timestamps": [{"start_sec": 0.0, "end_sec": 0.5, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}],
-    }
-
-    result = await video_service.generate_video("proj-default-ratio", audio_job, "midnight")
-
-    assert "mp4_path_vertical" not in result
-
-
-async def test_generate_video_16x9_regenerate_deletes_stale_vertical_file(tmp_path, monkeypatch):
-    """Task 2.6b: a vertical file from an earlier `"9:16"` call must not linger as an
-    orphan on disk once a later regenerate call doesn't ask for it again -- it was
-    derived from the 16:9 render/subtitles that call just replaced, so it's stale."""
-    from pathlib import Path
-
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    audio_path = tmp_path / "mix.mp3"
-    Sine(440).to_audio_segment(duration=500).apply_gain(-20).export(str(audio_path), format="mp3", bitrate="192k")
-    audio_job = {
-        "status": "complete",
-        "mp3_path": str(audio_path),
-        "duration_seconds": 0.5,
-        "timestamps": [{"start_sec": 0.0, "end_sec": 0.5, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}],
-    }
-
-    first = await video_service.generate_video("proj-stale-vertical", audio_job, "midnight", "9:16")
-    vertical_path = Path(first["mp4_path_vertical"])
-    assert vertical_path.is_file()
-
-    second = await video_service.generate_video("proj-stale-vertical", audio_job, "midnight")
-
-    assert "mp4_path_vertical" not in second
-    assert not vertical_path.exists()
-
-
-async def test_generate_video_9x16_produces_a_real_playable_vertical_mp4(tmp_path, monkeypatch):
-    """Task 2.5b, closing the real gap Task 2.1c found: real ffprobe confirms the
-    rendered vertical MP4 is genuinely 9:16 (VIDEO_WIDTH_SHORTS x VIDEO_HEIGHT_SHORTS),
-    not the same 16:9 file relabeled."""
-    import subprocess
-    from pathlib import Path
-
-    from app.core.config import settings
-    from app.core.constants import VIDEO_HEIGHT_SHORTS, VIDEO_WIDTH_SHORTS
-
-    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    audio_path = tmp_path / "mix.mp3"
-    Sine(440).to_audio_segment(duration=800).apply_gain(-20).export(str(audio_path), format="mp3", bitrate="192k")
-    audio_job = {
-        "status": "complete",
-        "mp3_path": str(audio_path),
-        "duration_seconds": 0.8,
-        "timestamps": [{"start_sec": 0.0, "end_sec": 0.8, "label": "Alex", "speaker_id": "sp1", "text": "Hello!"}],
-    }
-
-    result = await video_service.generate_video("proj-vertical", audio_job, "midnight", "9:16")
-
-    assert "mp4_path_vertical" in result
-    vertical_path = Path(result["mp4_path_vertical"])
-    assert vertical_path.is_file() and vertical_path.stat().st_size > 0
-    # The 16:9 output must still exist and be untouched by the second ffmpeg pass.
-    assert Path(result["mp4_path"]).is_file()
-
-    probe = subprocess.run(
-        [
-            "ffprobe", "-v", "error", "-select_streams", "v:0",
-            "-show_entries", "stream=width,height", "-of", "csv=s=x:p=0",
-            str(vertical_path),
-        ],
-        capture_output=True, text=True, timeout=30,
-    )
-    assert probe.stdout.strip() == f"{VIDEO_WIDTH_SHORTS}x{VIDEO_HEIGHT_SHORTS}"
-
-
-async def test_default_renderer_still_ffmpeg_never_touches_remotion(tmp_path, monkeypatch):
-    """Task 19.7 (D19.7-a): the strongest possible signal that the default (no `renderer`
-    arg passed, no DIE_VIDEO_RENDERER set) never touches the Remotion path at all --
-    monkeypatches `render_via_remotion` to raise if it's ever called. Revert-and-confirm-
-    failure (done manually during implementation, D19.7-a): temporarily changing
-    `_resolve_renderer`'s default to "remotion" makes this test fail for real, with the
-    injected exception surfacing, not a silent pass."""
-    from app.core.config import settings
-    from app.services import video_renderer_remotion
-
-    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    monkeypatch.setattr(settings, "VIDEO_RENDERER", "ffmpeg")
-
-    def _fail_if_called(*args, **kwargs):
-        raise AssertionError("render_via_remotion must never be called on the default path")
-
-    monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", _fail_if_called)
-
-    audio_path = tmp_path / "mix.mp3"
-    Sine(440).to_audio_segment(duration=500).apply_gain(-20).export(str(audio_path), format="mp3", bitrate="192k")
-    audio_job = {
-        "status": "complete",
-        "mp3_path": str(audio_path),
-        "duration_seconds": 0.5,
-        "timestamps": [{"start_sec": 0.0, "end_sec": 0.5, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}],
-    }
-
-    result = await video_service.generate_video("proj-default-renderer", audio_job, "midnight")
-
-    assert result.get("fallback_used") in (None, False)
-    assert result.get("mode") in (None, "background")
-
-
-async def test_generate_video_invalid_aspect_ratio_does_not_render_vertical(tmp_path, monkeypatch):
-    """`generate_video` itself doesn't validate aspect_ratio (the API layer's Pydantic
-    validator does) -- confirms only the exact `"9:16"` string triggers the second pass,
-    so an unrecognized value degrades to the safe default rather than silently rendering."""
-    from app.core.config import settings
-
-    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    audio_path = tmp_path / "mix.mp3"
-    Sine(440).to_audio_segment(duration=500).apply_gain(-20).export(str(audio_path), format="mp3", bitrate="192k")
-    audio_job = {
-        "status": "complete",
-        "mp3_path": str(audio_path),
-        "duration_seconds": 0.5,
-        "timestamps": [{"start_sec": 0.0, "end_sec": 0.5, "label": "Alex", "speaker_id": "sp1", "text": "Hi"}],
-    }
-
-    result = await video_service.generate_video("proj-bad-ratio", audio_job, "midnight", "not-a-ratio")
-
-    assert "mp4_path_vertical" not in result
 
 
 async def test_save_and_get_video_job_roundtrip(db):
@@ -309,8 +81,10 @@ async def test_save_and_get_video_job_roundtrip(db):
     assert row["n"] == 1
 
 
+
 async def test_get_video_job_returns_none_when_never_generated(db):
     assert await video_service.get_video_job(db, "no-such-project") is None
+
 
 
 async def test_mark_video_job_failed_preserves_every_existing_non_failure_column(db, monkeypatch):
@@ -354,6 +128,7 @@ async def test_mark_video_job_failed_preserves_every_existing_non_failure_column
     assert failed["srt_path"] == "prior.srt"
 
 
+
 async def test_mark_video_job_failed_inserts_error_only_row_on_first_attempt(db, monkeypatch):
     await db.execute(
         "INSERT INTO projects (id, name, status, created_at, updated_at) "
@@ -379,142 +154,52 @@ async def test_mark_video_job_failed_inserts_error_only_row_on_first_attempt(db,
         assert failed[column] is None
 
 
-# --- Task 16.2 (ENH-008): bounded ffmpeg timeouts -----------------------------------
 
-
-def _install_sleepy_subprocess_run(monkeypatch) -> None:
-    """Replace `video_service.subprocess.run` with a wrapper that ignores the built
-    ffmpeg command and instead really execs a short Python subprocess that sleeps,
-    forwarding only the `timeout=` kwarg -- exercises the real stdlib
-    `subprocess.TimeoutExpired`, not a hand-rolled fake exception, without needing
-    ffmpeg to actually hang for real (impractical at the ~300s default timeout)."""
-    real_run = subprocess.run
-
-    def sleepy_run(command, capture_output=True, text=True, timeout=None):
-        return real_run(
-            [sys.executable, "-c", "import time; time.sleep(5)"],
-            capture_output=capture_output, text=text, timeout=timeout,
-        )
-
-    monkeypatch.setattr(video_service.subprocess, "run", sleepy_run)
-
-
-def _patch_tiny_render_timeout(monkeypatch) -> None:
-    monkeypatch.setattr(video_service, "VIDEO_RENDER_TIMEOUT_MIN_SECONDS", 0.05)
-    monkeypatch.setattr(video_service, "VIDEO_RENDER_TIMEOUT_PER_AUDIO_SECOND", 0.01)
-
-
-def test_render_video_sync_raises_video_render_error_on_timeout(tmp_path, monkeypatch):
-    _patch_tiny_render_timeout(monkeypatch)
-    _install_sleepy_subprocess_run(monkeypatch)
-
-    background_path = tmp_path / "bg.png"
-    background_path.write_bytes(b"fake-bg")
-    srt_path = tmp_path / "subs.srt"
-    srt_path.write_text("", encoding="utf-8")
-    output_path = tmp_path / "video.mp4"
-
-    with pytest.raises(VideoRenderError, match="timed out"):
-        video_service._render_video_sync(background_path, "mix.mp3", srt_path, output_path, 0.5)
-
-    assert not output_path.exists()
-    assert not video_service._rendering_temp_path(output_path).exists()
-
-
-def test_render_vertical_sync_raises_video_render_error_on_timeout(tmp_path, monkeypatch):
-    _patch_tiny_render_timeout(monkeypatch)
-    _install_sleepy_subprocess_run(monkeypatch)
-
-    source_path = tmp_path / "video.mp4"
-    source_path.write_bytes(b"source")
-    output_path = tmp_path / "video_vertical.mp4"
-
-    with pytest.raises(VideoRenderError, match="timed out"):
-        video_service._render_vertical_sync(source_path, output_path, 0.5)
-
-    assert not output_path.exists()
-    assert not video_service._rendering_temp_path(output_path).exists()
-
-
-def test_render_video_sync_leaves_the_prior_video_untouched_on_timeout(tmp_path, monkeypatch):
-    """Task 16.2, Amendment B: a timed-out re-render must never delete or truncate
-    the prior successful video the DB row still points at (BUG-017)."""
-    _patch_tiny_render_timeout(monkeypatch)
-    _install_sleepy_subprocess_run(monkeypatch)
-
-    background_path = tmp_path / "bg.png"
-    background_path.write_bytes(b"fake-bg")
-    srt_path = tmp_path / "subs.srt"
-    srt_path.write_text("", encoding="utf-8")
-    output_path = tmp_path / "video.mp4"
-    marker_bytes = b"prior-good-video-bytes"
-    output_path.write_bytes(marker_bytes)
-
-    with pytest.raises(VideoRenderError, match="timed out"):
-        video_service._render_video_sync(background_path, "mix.mp3", srt_path, output_path, 0.5)
-
-    assert output_path.read_bytes() == marker_bytes
-    assert not video_service._rendering_temp_path(output_path).exists()
-
-
-def test_render_video_sync_raises_actionable_error_when_replace_fails(tmp_path, monkeypatch):
-    """Task 16.2, N4: `os.replace` can itself fail on Windows -- most realistically a
-    `PermissionError` if the prior video is open elsewhere (e.g. the Video Studio
-    preview streaming it via `FileResponse`, which opens without `FILE_SHARE_DELETE`).
-    Must surface an actionable `VideoRenderError`, clean up the temp file, and leave
-    the prior video byte-for-byte untouched -- `os.replace` never partially applies."""
-    from pathlib import Path
-
-    background_path = tmp_path / "bg.png"
-    background_path.write_bytes(b"fake-bg")
-    srt_path = tmp_path / "subs.srt"
-    srt_path.write_text("", encoding="utf-8")
-    output_path = tmp_path / "video.mp4"
-    marker_bytes = b"prior-good-video-bytes"
-    output_path.write_bytes(marker_bytes)
-
-    class _FakeCompletedProcess:
-        returncode = 0
-        stderr = ""
-
-    def fake_run(command, capture_output=True, text=True, timeout=None):
-        # Simulate a successful ffmpeg run that wrote the temp output file.
-        Path(command[-1]).write_bytes(b"new-render-bytes")
-        return _FakeCompletedProcess()
-
-    monkeypatch.setattr(video_service.subprocess, "run", fake_run)
-
-    def fake_replace(src, dst):
-        raise PermissionError("in use")
-
-    monkeypatch.setattr(video_service.os, "replace", fake_replace)
-
-    with pytest.raises(VideoRenderError, match="could not replace"):
-        video_service._render_video_sync(background_path, "mix.mp3", srt_path, output_path, 0.5)
-
-    assert output_path.read_bytes() == marker_bytes
-    assert not video_service._rendering_temp_path(output_path).exists()
-
-
-async def test_generate_video_timeout_surfaces_as_video_render_error_not_double_wrapped(tmp_path, monkeypatch):
-    from app.core.config import settings
-
+@pytest.fixture
+def ready_renderer(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    _patch_tiny_render_timeout(monkeypatch)
-    _install_sleepy_subprocess_run(monkeypatch)
+    monkeypatch.setattr(video_service, "renderer_problem", lambda: None)
 
-    audio_path = tmp_path / "mix.mp3"
-    Sine(440).to_audio_segment(duration=500).export(str(audio_path), format="mp3", bitrate="192k")
-    audio_job = {
-        "status": "complete",
-        "mp3_path": str(audio_path),
-        "duration_seconds": 0.5,
-        "timestamps": [],
-    }
 
-    with pytest.raises(VideoRenderError) as exc_info:
-        await video_service.generate_video("proj-timeout", audio_job, "midnight")
+async def test_generate_video_renders_with_remotion_and_writes_srt_after_the_intro(ready_renderer, monkeypatch, tmp_path):
+    async def fake_render(db, project, audio_job, learning, output_path, **kwargs):
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(b"mp4")
+        return {"mp4_path": str(output_path), "srt_path": None, "background_image": None, "mode": "remotion",
+                "intro_seconds": 4.0, "soundtrack": False, "activity_uses": [], "kwargs": kwargs}
 
-    message = str(exc_info.value)
-    assert "timed out" in message
-    assert not message.startswith("Video rendering failed")
+    monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", fake_render)
+    stale = tmp_path / "video" / "proj-1" / "video_vertical.mp4"
+    stale.parent.mkdir(parents=True)
+    stale.write_bytes(b"old 9:16 export")
+    result = await video_service.generate_video("proj-1", AUDIO_JOB, db=None, project={"id": "proj-1"},
+                                                caption_style="box", visual_mode="podcast_sprites")
+    assert result["mode"] == "remotion" and result["mp4_path"].endswith("video_remotion.mp4")
+    assert result["kwargs"] == {"caption_style": "box", "visual_mode": "podcast_sprites", "still_scene_id": None}
+    srt = Path(result["srt_path"]).read_text(encoding="utf-8")
+    assert "00:00:04,000 --> 00:00:05,500" in srt and "Alex: Hello there." in srt  # shifted by the intro
+    assert not stale.exists()  # the removed ffmpeg 9:16 export leaves no stale file
+
+
+async def test_a_remotion_failure_fails_the_render_with_its_reason(ready_renderer, monkeypatch):
+    async def failing(*args, **kwargs):
+        raise RemotionRenderFailedError("Remotion render timed out after 900s")
+
+    monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", failing)
+    with pytest.raises(VideoRenderError, match="timed out after 900s"):
+        await video_service.generate_video("proj-1", AUDIO_JOB, db=None, project={"id": "proj-1"})
+
+
+async def test_a_missing_renderer_is_named_before_any_render(monkeypatch):
+    monkeypatch.setattr(video_service, "renderer_problem", lambda: "Node.js not found")
+
+    async def never(*args, **kwargs):
+        raise AssertionError("must not render")
+
+    monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", never)
+    with pytest.raises(VideoRenderError, match="not ready: Node.js not found"):
+        await video_service.generate_video("proj-1", AUDIO_JOB, db=None, project={"id": "proj-1"})
+
+
+def test_the_srt_can_be_shifted():
+    assert video_service.generate_srt(AUDIO_JOB["timestamps"], offset_seconds=2.25).splitlines()[1] ==         "00:00:02,250 --> 00:00:03,750"

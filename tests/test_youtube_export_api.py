@@ -1,7 +1,7 @@
 """HTTP tests for the full YouTube package .zip export (Task 1.9, Sub-task 1.9b).
 
 Exercises the real chain end-to-end: real script -> real Edge TTS (network mocked, real
-decodable audio) -> real AudioService mix -> real VideoService render -> real Pillow
+decodable audio) -> real AudioService mix -> a fake Remotion render (Task 35.5) -> real Pillow
 thumbnail render -> real zip assembly. Only the three Gemini-backed calls (YouTube
 package text, thumbnail suggestions, and Learning Content) are mocked.
 """
@@ -18,7 +18,14 @@ from app.core.config import settings
 from app.main import app
 from app.models.learning import LearningPackOut
 from app.models.thumbnail import ThumbnailSuggestionPack
-from app.services import learning_service, thumbnail_service, tts_service, youtube_service
+from app.services import (
+    learning_service,
+    thumbnail_service,
+    tts_service,
+    video_renderer_remotion,
+    video_service,
+    youtube_service,
+)
 
 PROJECT_PAYLOAD = {
     "name": "Export API Test Episode",
@@ -121,6 +128,16 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(youtube_service, "generate_package", fake_generate_package)
     monkeypatch.setattr(thumbnail_service, "generate_suggestions", fake_generate_suggestions)
     monkeypatch.setattr(learning_service, "generate_learning_pack", fake_generate_learning_pack)
+
+    # Task 35.5: Remotion is the only renderer and a real render takes minutes; the zip only needs its MP4 and SRT.
+    async def fake_render(db, project, audio_job, learning, output_path, **kwargs):
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(b"fake mp4 bytes")
+        return {"mp4_path": str(output_path), "srt_path": None, "background_image": None, "mode": "remotion",
+                "intro_seconds": 4.0, "soundtrack": False, "activity_uses": []}
+
+    monkeypatch.setattr(video_service, "renderer_problem", lambda: None)
+    monkeypatch.setattr(video_renderer_remotion, "render_via_remotion", fake_render)
 
     with TestClient(app) as test_client:
         yield test_client
