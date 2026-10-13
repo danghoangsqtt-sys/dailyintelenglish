@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 33: Character Profiles v2
 
-- **Status:** in progress 2026-10-12 (opened by `/vp-auto --phase 33`); was ready to open 2026-10-12 — entry gate met (Gate B-22 PASS 2026-10-12); plan amended with D78–D83 (Amendment A in the plan doc, `docs/brainstorm/session-2026-10-12.md`)
+- **Status:** complete 2026-10-13 — owner Gate B-23 PASS ("okey chất lượng tốt"; note: "hơi ít hình minh họa nhưng không sao" — 2 inserts in 9 lines, kept as a follow-up idea)
 - **Entry gate:** Phase 32 Gate B-22 must be accepted before Task 33.1 starts.
 - **Plan:** `docs/implementation/phase-33-character-profiles-v2.md`
 - **Scope source:** `docs/brainstorm/session-2026-10-10.md`
@@ -19,7 +19,7 @@ This directory is an implementation plan. Creating it does not change the active
 | 33.7 | Game-style Character Selector in Step 1 (replaces name entry) and Step 5; copy-on-assign defaults | done 2026-10-12 (`f13f13d`, `4fbe547`; selector in Step 1 and Step 5, no cast by name, compact speaker cards D88; full suite 1717 passed) | 33.2, 33.4 |
 | 33.8 | Dynamic activity, storyboard, and shot integration for 3–6 cast | done 2026-10-12 (`87efc1c`; segments with two on screen, storyboard most-active pair; full suite 1725 passed) | 33.6, 33.7 |
 | 33.9 | Migration rehearsal, regression, real three-character render, Gate B-23 | owner 2026-10-13: "video rất tốt" (cast, placement, mirroring pass); missing illustrations/vocabulary traced: no learning content in the gate project, the only insert named an activity the library lacks -> 33.10 | 33.1–33.8 |
-| 33.10 | Gate B-23 fixes: storyboard inserts name a library activity, Step 5 names inserts without a picture (`dba9e18`); D102 draw the missing illustrations (local GPU + outside-AI slot, approve in Step 5) | done 2026-10-13 (coverage service, `activity_illustrations` job, Step 5 cards; 240 visuals/Step 5 tests passed) — the real re-render for the owner is next | 33.9 |
+| 33.10 | Gate B-23 fixes: storyboard inserts name a library activity, Step 5 names inserts without a picture (`dba9e18`); D102 draw the missing illustrations (local GPU + outside-AI slot, approve in Step 5) | done 2026-10-13 (coverage service, `activity_illustrations` job, Step 5 cards; 240 visuals/Step 5 tests passed) — re-rendered with vocabulary cards and library illustrations; owner PASS | 33.9 |
 
 ## Locked Phase 33 limits
 
