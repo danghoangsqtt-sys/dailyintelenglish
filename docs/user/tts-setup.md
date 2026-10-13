@@ -13,7 +13,7 @@ there) — it's a free, network-based Microsoft neural TTS endpoint, not a local
 An internet connection is required at synthesis time; no API key is needed.
 
 ### Voice map
-`app/core/constants.py::EDGE_TTS_VOICE_MAP` resolves each (accent, gender) pair to a real
+`backend/core/constants.py::EDGE_TTS_VOICE_MAP` resolves each (accent, gender) pair to a real
 Edge TTS neural voice id, covering all 10 accents in `ACCENTS` × 3 genders:
 
 | Accent | Male | Female | Neutral |
@@ -37,7 +37,7 @@ option/chip discloses this via a `title` tooltip (Task 2.5c) so the user isn't s
 by identical-sounding output.
 
 ### Reliability
-`_synthesize_edge_tts()` (`app/services/tts_service.py`) retries once on an empty audio
+`_synthesize_edge_tts()` (`backend/ai/tts/tts_service.py`) retries once on an empty audio
 response before failing the line — Edge TTS's free endpoint occasionally returns "no
 audio received" under rapid-fire requests, which succeeds on immediate retry (observed
 live during Sub-task 1.6a). `MAX_CONCURRENT_TTS = 2` caps concurrent synthesis calls

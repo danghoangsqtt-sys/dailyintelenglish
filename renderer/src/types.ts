@@ -6,7 +6,7 @@ import { VISUAL_MODES } from "./podcastLayout";
  * Phase 19 spike (Task 19.1) input-props shape, as a zod schema (Remotion's own recommended
  * pattern for typed `<Composition>` props in v4).
  *
- * Strict subset of what app/services/audio_service.py + video_service.py already compute --
+ * Strict subset of what backend/media/audio_service.py + video_service.py already compute --
  * no new DB read paths, no per-word timing (that is Task 19.2). See task card D19.1-b for the
  * field-by-field justification: .viepilot/phases/19-remotion/tasks/task-19.1.md
  */
@@ -121,7 +121,7 @@ export const spriteCharacterSchema = z.object({
   toSec: z.number().nullable().default(null),
 });
 
-/** Phase 32: what the sprites do on each line (`app/services/visuals/sprite_plan.py`). */
+/** Phase 32: what the sprites do on each line (`backend/library/sprite_plan.py`). */
 export const spriteLineSchema = z.object({
   slot: z.number().int().min(0).max(1).nullable(),
   expression: z.string(),

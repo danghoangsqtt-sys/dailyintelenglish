@@ -14,7 +14,7 @@ graph LR
         YTS[YouTubePackageService]
     end
 
-    subgraph Visuals["app/services/visuals"]
+    subgraph Visuals["backend/library + backend/ai/image"]
         LS[library_service\ncharacters + scenes]
         PV[project_visuals_service]
         SB[storyboard_service]
@@ -26,12 +26,12 @@ graph LR
     end
 
     subgraph External
-        GW[AI router\napp/services/ai]
+        GW[AI router\nbackend/ai/llm]
         ET[Edge TTS]
         FF[ffmpeg]
-        REM[Remotion video-renderer]
+        REM[Remotion renderer]
         GPU[gpu_model_manager]
-        IW[image_worker in venv-image]
+        IW[image_worker in .venv-image]
         PI[Pillow]
     end
 

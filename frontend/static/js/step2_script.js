@@ -400,7 +400,7 @@
   }
 
   // The PUT /script response carries the server-assigned line ids (save_script always
-  // reissues fresh ids — see app/services/script_service.py), which differ from whatever
+  // reissues fresh ids — see backend/content/script_service.py), which differ from whatever
   // ids state.lines/the DOM held before this save. Sync both so a later Regenerate on
   // this line targets an id that still exists in the database.
   function syncLineIdsFromServer(saved) {

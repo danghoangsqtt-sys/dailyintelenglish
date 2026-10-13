@@ -1,7 +1,7 @@
 /** Music Library page: upload (many files at once, Task 27.3a), preview, list, edit details (Task 22.7), and delete background tracks. */
 (() => {
   // Client-side pre-check only — the server enforces the real limit via
-  // MAX_MUSIC_UPLOAD_BYTES (app/core/constants.py). Keep this value in sync with
+  // MAX_MUSIC_UPLOAD_BYTES (backend/core/constants.py). Keep this value in sync with
   // MAX_MUSIC_UPLOAD_MB there; there's no shared-config channel between the two yet.
   const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
   const ALLOWED_EXTENSIONS = [".mp3", ".wav", ".ogg", ".m4a"];

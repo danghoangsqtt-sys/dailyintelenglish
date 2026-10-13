@@ -3,7 +3,7 @@
  * UI state, serialized saves, and calls through Api (CR-05).
  *
  * "Generate All" orchestrates two separate backend steps because AudioService only mixes
- * already-synthesized lines (see app/services/audio_service.py): synthesize every line
+ * already-synthesized lines (see backend/media/audio_service.py): synthesize every line
  * sequentially, then mix. Sequential (not parallel) is deliberate — matches this task's
  * Forbidden Scope "No VRAM exhaustion without fallback" and avoids hammering the free
  * Edge TTS endpoint.
