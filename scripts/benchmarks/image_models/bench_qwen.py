@@ -115,11 +115,13 @@ def encode_all(name: str, spec: dict, jobs: list[dict], cast: dict) -> dict[str,
 
 
 def render_all(name: str, spec: dict, jobs: list[dict], embeds: dict, seeds: list[int], size: list[int]) -> None:
+    import diffusers
     import torch
-    from diffusers import FlowMatchEulerDiscreteScheduler, GGUFQuantizationConfig, QwenImageTransformer2DModel
+    from diffusers import FlowMatchEulerDiscreteScheduler, GGUFQuantizationConfig
 
     started = time.monotonic()
-    transformer = QwenImageTransformer2DModel.from_single_file(
+    model_class = diffusers.QwenImage21Transformer2DModel if name == "qwen21-turbo" else diffusers.QwenImageTransformer2DModel
+    transformer = model_class.from_single_file(
         str(hub_file(*spec["gguf"])), quantization_config=GGUFQuantizationConfig(compute_dtype=torch.bfloat16),
         torch_dtype=torch.bfloat16, config=str(snapshot(spec["repo"])) if (snapshot(spec["repo"]) / "transformer").is_dir()
         else spec["repo"], subfolder="transformer")
