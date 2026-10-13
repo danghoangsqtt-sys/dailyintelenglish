@@ -123,6 +123,29 @@ def validate_answers(pack: LearningPackOut) -> list[str]:
     return errors
 
 
+def prune_extras(pack: LearningPackOut, transcript: str) -> LearningPackOut:
+    """Task 36.1 (D95): collocations, phrasal verbs and sentence patterns are optional. An item whose example sentence is not in
+    the transcript, or that repeats an earlier one, is dropped -- they never fail or repair a pack."""
+    normalized_transcript = normalize_text(transcript)
+
+    def keep(items: list, key: str) -> list:
+        seen: set[str] = set()
+        kept = []
+        for item in items:
+            name = normalize_text(getattr(item, key))
+            if name in seen or normalize_text(item.example_sentence) not in normalized_transcript:
+                continue
+            seen.add(name)
+            kept.append(item)
+        return kept
+
+    return pack.model_copy(update={
+        "collocations": keep(pack.collocations, "phrase"),
+        "phrasal_verbs": keep(pack.phrasal_verbs, "phrase"),
+        "patterns": keep(pack.patterns, "pattern"),
+    })
+
+
 def validate_pack(pack: LearningPackOut, transcript: str) -> list[str]:
     """All hard checks combined. Empty list means the pack is valid."""
     return (
@@ -218,7 +241,7 @@ async def _generate_pack(router: "AIRouter", project: dict, transcript: str, db,
         ),
         is_repair=False, adapter=_PACK_ADAPTER,
     )
-    return parse_and_validate(result.text, _PACK_ADAPTER)
+    return prune_extras(parse_and_validate(result.text, _PACK_ADAPTER), transcript)
 
 
 async def _repair_pack(
@@ -240,7 +263,7 @@ async def _repair_pack(
         ),
         is_repair=True, adapter=_PACK_ADAPTER,
     )
-    return parse_and_validate(result.text, _PACK_ADAPTER)
+    return prune_extras(parse_and_validate(result.text, _PACK_ADAPTER), transcript)
 
 
 # --- orchestration -----------------------------------------------------------------------

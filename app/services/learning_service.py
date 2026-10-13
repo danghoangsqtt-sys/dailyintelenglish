@@ -110,13 +110,16 @@ async def generate_learning_pack(
         raise LearningGenerationError(str(exc)) from exc
 
 
+# Task 36.1: every list section of a pack, in display order (each stored as `<section>_json`).
+SECTIONS = ("vocabulary", "idioms", "collocations", "phrasal_verbs", "patterns", "grammar", "questions")
+_COLUMNS = ", ".join(f"{section}_json" for section in SECTIONS)
+
+
 def _row_to_pack(row: aiosqlite.Row) -> dict:
     """Convert a learning_contents row to a dict, decoding its JSON columns."""
     pack = dict(row)
-    pack["vocabulary"] = json.loads(pack.pop("vocabulary_json"))
-    pack["idioms"] = json.loads(pack.pop("idioms_json"))
-    pack["grammar"] = json.loads(pack.pop("grammar_json"))
-    pack["questions"] = json.loads(pack.pop("questions_json"))
+    for section in SECTIONS:
+        pack[section] = json.loads(pack.pop(f"{section}_json"))
     return pack
 
 
@@ -134,8 +137,7 @@ async def get_learning_content(db: aiosqlite.Connection, project_id: str) -> dic
         script_service.get_script's "empty means not generated yet".
     """
     cursor = await db.execute(
-        "SELECT id, project_id, vocabulary_json, idioms_json, grammar_json, questions_json, "
-        "created_at, updated_at FROM learning_contents WHERE project_id = ?",
+        f"SELECT id, project_id, {_COLUMNS}, created_at, updated_at FROM learning_contents WHERE project_id = ?",
         (project_id,),
     )
     row = await cursor.fetchone()
@@ -166,25 +168,12 @@ async def save_learning_content(
     """
     now = _now()
     await db.execute(
-        "INSERT INTO learning_contents "
-        "(id, project_id, vocabulary_json, idioms_json, grammar_json, questions_json, "
-        "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+        f"INSERT INTO learning_contents (id, project_id, {_COLUMNS}, created_at, updated_at) "
+        f"VALUES (?, ?, {', '.join('?' * len(SECTIONS))}, ?, ?) "
         "ON CONFLICT(project_id) DO UPDATE SET "
-        "vocabulary_json = excluded.vocabulary_json, "
-        "idioms_json = excluded.idioms_json, "
-        "grammar_json = excluded.grammar_json, "
-        "questions_json = excluded.questions_json, "
-        "updated_at = excluded.updated_at",
-        (
-            str(uuid.uuid4()),
-            project_id,
-            json.dumps(pack.get("vocabulary", [])),
-            json.dumps(pack.get("idioms", [])),
-            json.dumps(pack.get("grammar", [])),
-            json.dumps(pack.get("questions", [])),
-            now,
-            now,
-        ),
+        + ", ".join(f"{section}_json = excluded.{section}_json" for section in SECTIONS)
+        + ", updated_at = excluded.updated_at",
+        (str(uuid.uuid4()), project_id, *(json.dumps(pack.get(section, [])) for section in SECTIONS), now, now),
     )
     if commit:
         await db.commit()
@@ -214,30 +203,18 @@ async def update_learning_content(
     if existing is None:
         raise NotFoundError(f"No learning content found for project {project_id}")
 
-    for section in ("vocabulary", "idioms", "grammar", "questions"):
+    for section in SECTIONS:
         if section in patch and patch[section] is None:
             raise ValueError(
                 f"explicit null not allowed for: {section} — omit the field instead to leave it unchanged"
             )
 
-    merged = {
-        "vocabulary": patch["vocabulary"] if "vocabulary" in patch else existing["vocabulary"],
-        "idioms": patch["idioms"] if "idioms" in patch else existing["idioms"],
-        "grammar": patch["grammar"] if "grammar" in patch else existing["grammar"],
-        "questions": patch["questions"] if "questions" in patch else existing["questions"],
-    }
+    merged = {section: patch[section] if section in patch else existing[section] for section in SECTIONS}
 
     await db.execute(
-        "UPDATE learning_contents SET vocabulary_json = ?, idioms_json = ?, grammar_json = ?, "
-        "questions_json = ?, updated_at = ? WHERE project_id = ?",
-        (
-            json.dumps(merged["vocabulary"]),
-            json.dumps(merged["idioms"]),
-            json.dumps(merged["grammar"]),
-            json.dumps(merged["questions"]),
-            _now(),
-            project_id,
-        ),
+        "UPDATE learning_contents SET " + ", ".join(f"{section}_json = ?" for section in SECTIONS)
+        + ", updated_at = ? WHERE project_id = ?",
+        (*(json.dumps(merged[section]) for section in SECTIONS), _now(), project_id),
     )
     if commit:
         await db.commit()

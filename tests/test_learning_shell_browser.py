@@ -50,6 +50,23 @@ PACK = {
             "example_sentence": "I had to pick up the slack.",
         }
     ],
+    "collocations": [
+        {
+            "phrase": "split the cost",
+            "meaning_en": "each pays a share",
+            "meaning_vi": "chia tiền",
+            "example_sentence": "We can split the cost evenly.",
+        }
+    ],
+    "phrasal_verbs": [],
+    "patterns": [
+        {
+            "pattern": "It would be + comparative + than + noun",
+            "use_en": "compare two choices",
+            "use_vi": "so sánh hai lựa chọn",
+            "example_sentence": "It would be cheaper than a hotel.",
+        }
+    ],
     "grammar": [
         {
             "point": "Present perfect",
@@ -203,6 +220,14 @@ async def test_learning_inspector_defaults_by_tab_and_keeps_existing_selection(
     await page.click("[data-tab='vocabulary']")
     assert "deliberate" in await page.locator("#learning-inspector").text_content()
 
+    # Task 36.1: collocations, phrasal verbs and sentence patterns have their own tabs.
+    await page.click("[data-tab='collocations']")
+    assert "chia tiền" in await page.locator("#learning-inspector").text_content()
+    await page.click("[data-tab='phrasal']")
+    assert "No phrasal verbs" in await page.locator("#phrasal-panel").text_content()
+    await page.click("[data-tab='patterns']")
+    assert "compare two choices" in await page.locator("#learning-inspector").text_content()
+
     # Switching tabs selects the first real item instead of leaving the inspector empty.
     await page.click("[data-tab='grammar']")
     assert "Present perfect" in await page.locator("#learning-inspector").text_content()
@@ -248,7 +273,7 @@ async def test_learning_cards_support_tab_enter_and_space_selection(
     card_semantics = await page.locator(".item-card").evaluate_all(
         "cards => cards.map(card => [card.getAttribute('role'), card.getAttribute('tabindex')])"
     )
-    assert card_semantics == [["button", "0"]] * 5
+    assert card_semantics == [["button", "0"]] * 7  # Task 36.1: + a collocation and a pattern
 
     # The last editable field in item 0 is immediately before item 1 in keyboard order.
     await page.locator(

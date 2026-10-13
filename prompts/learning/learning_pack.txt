@@ -21,14 +21,24 @@ material the transcript does not contain.
    {{ cefr_level }}. For each: part of speech, a standard IPA transcription,
    a clear English definition, an accurate and natural Vietnamese
    translation, and an example sentence taken directly from the transcript.
-2. **Idioms & Collocations** — natural idioms/collocations that appear in the
-   transcript, with their meaning in English and Vietnamese and the exact
-   sentence from the transcript where they occur.
-3. **Grammar Spotlight** — 1-2 grammar points that are central to this
+2. **Idioms** — natural idioms and fixed expressions that appear in the
+   transcript (for example "a piece of cake"), with their meaning in English
+   and Vietnamese and the exact sentence from the transcript where they occur.
+3. **Collocations** — 3-6 word partnerships worth learning together (for
+   example "split the cost", "fully on board"), with meanings in English and
+   Vietnamese and the exact transcript sentence. Do not repeat an idiom here.
+4. **Phrasal Verbs** — every useful phrasal verb in the transcript (0-6, for
+   example "look forward to", "go down"), as the base form, with meanings and
+   the exact transcript sentence. Leave the list empty if there is none.
+5. **Sentence Patterns** — 2-4 reusable sentence structures a learner can copy
+   (for example "It would be + comparative + than + noun"), what the pattern
+   is used for in English and Vietnamese, and the exact transcript sentence
+   that uses it.
+6. **Grammar Spotlight** — 1-2 grammar points that are central to this
    episode's language, with the structure/formula, an explanation in both
    English and Vietnamese, and example sentences drawn from (or closely
    modeled on) the transcript.
-4. **Comprehension Questions** — 3-5 questions (multiple-choice or
+7. **Listening Questions** — 3-5 questions (multiple-choice or
    open-ended) that let a listener check how well they understood the
    episode's content.
 
@@ -53,6 +63,30 @@ preamble or text before or after the JSON) with this exact shape:
       "phrase": "...",
       "meaning_en": "...",
       "meaning_vi": "...",
+      "example_sentence": "..."
+    }
+  ],
+  "collocations": [
+    {
+      "phrase": "...",
+      "meaning_en": "...",
+      "meaning_vi": "...",
+      "example_sentence": "..."
+    }
+  ],
+  "phrasal_verbs": [
+    {
+      "phrase": "...",
+      "meaning_en": "...",
+      "meaning_vi": "...",
+      "example_sentence": "..."
+    }
+  ],
+  "patterns": [
+    {
+      "pattern": "...",
+      "use_en": "...",
+      "use_vi": "...",
       "example_sentence": "..."
     }
   ],

@@ -25,5 +25,5 @@ return the corrected JSON.
 
 ## Output Format
 Return ONLY a corrected JSON object (no markdown fences, no commentary), the
-same shape as before: `{"vocabulary": [...], "idioms": [...], "grammar": [...],
-"questions": [...]}`.
+same shape as before: `{"vocabulary": [...], "idioms": [...], "collocations": [...],
+"phrasal_verbs": [...], "patterns": [...], "grammar": [...], "questions": [...]}`.

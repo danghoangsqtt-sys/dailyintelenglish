@@ -602,3 +602,17 @@ async def test_call_router_local_mode_never_retries_since_nothing_is_primary_ser
     assert result.text == "not valid json"
     assert result.fallback_used is False
     assert fallback.call_count == 1
+
+
+def test_extras_with_an_example_outside_the_transcript_are_dropped_not_failed():
+    """Task 36.1 (D95): collocations/phrasal verbs/patterns are optional -- pruned, never a reason to repair or fail."""
+    grounded = {"phrase": "hit the ground running", "meaning_en": "start fast", "meaning_vi": "bắt tay vào việc ngay",
+                "example_sentence": "you really hit the ground running when the pandemic started"}
+    invented = {**grounded, "phrase": "work from home", "example_sentence": "We all work from home on Fridays."}
+    pattern = {"pattern": "have been + V-ing + for + time", "use_en": "still going on", "use_vi": "vẫn đang tiếp diễn",
+               "example_sentence": "I have been working remotely from home for five years now."}
+    pack = _pack(collocations=[grounded, invented, grounded], phrasal_verbs=[invented], patterns=[pattern])
+    pruned = learning_pipeline.prune_extras(pack, TRANSCRIPT)
+    assert [item.phrase for item in pruned.collocations] == ["hit the ground running"]
+    assert pruned.phrasal_verbs == [] and len(pruned.patterns) == 1
+    assert learning_pipeline.validate_pack(pruned, TRANSCRIPT) == []

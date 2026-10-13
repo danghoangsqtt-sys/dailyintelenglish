@@ -4,7 +4,10 @@
  */
 (() => {
   // UI tab id -> LearningPack section key (the API/model uses "questions", the tab is "quiz").
-  const TAB_SECTION = { vocabulary: "vocabulary", idioms: "idioms", grammar: "grammar", quiz: "questions" };
+  const TAB_SECTION = {
+    vocabulary: "vocabulary", idioms: "idioms", collocations: "collocations", phrasal: "phrasal_verbs",
+    patterns: "patterns", grammar: "grammar", quiz: "questions",
+  };
 
   const state = {
     projectId: null,
@@ -260,15 +263,28 @@
       </div>`;
   }
 
-  function idiomItemHtml(item, index) {
-    return `
-      <div class="card item-card${itemSelectedClass("idioms", index)}" role="button" tabindex="0" data-section="idioms" data-index="${index}">
+  // Idioms, collocations and phrasal verbs share one shape (Task 36.1).
+  function phraseItemHtml(section) {
+    return (item, index) => `
+      <div class="card item-card${itemSelectedClass(section, index)}" role="button" tabindex="0" data-section="${section}" data-index="${index}">
         <div class="item-head">
-          ${fieldSpan("idioms", index, "phrase", item.phrase, "item-title")}
+          ${fieldSpan(section, index, "phrase", item.phrase, "item-title")}
         </div>
-        <div class="field-row"><span class="field-label">EN:</span> ${fieldSpan("idioms", index, "meaning_en", item.meaning_en)}</div>
-        <div class="field-row"><span class="field-label">VI:</span> ${fieldSpan("idioms", index, "meaning_vi", item.meaning_vi)}</div>
-        <div class="field-row example-sentence"><span class="field-label">Example:</span> ${fieldSpan("idioms", index, "example_sentence", item.example_sentence)}</div>
+        <div class="field-row"><span class="field-label">EN:</span> ${fieldSpan(section, index, "meaning_en", item.meaning_en)}</div>
+        <div class="field-row"><span class="field-label">VI:</span> ${fieldSpan(section, index, "meaning_vi", item.meaning_vi)}</div>
+        <div class="field-row example-sentence"><span class="field-label">Example:</span> ${fieldSpan(section, index, "example_sentence", item.example_sentence)}</div>
+      </div>`;
+  }
+
+  function patternItemHtml(item, index) {
+    return `
+      <div class="card item-card${itemSelectedClass("patterns", index)}" role="button" tabindex="0" data-section="patterns" data-index="${index}">
+        <div class="item-head">
+          ${fieldSpan("patterns", index, "pattern", item.pattern, "item-title")}
+        </div>
+        <div class="field-row"><span class="field-label">EN:</span> ${fieldSpan("patterns", index, "use_en", item.use_en)}</div>
+        <div class="field-row"><span class="field-label">VI:</span> ${fieldSpan("patterns", index, "use_vi", item.use_vi)}</div>
+        <div class="field-row example-sentence"><span class="field-label">Example:</span> ${fieldSpan("patterns", index, "example_sentence", item.example_sentence)}</div>
       </div>`;
   }
 
@@ -310,7 +326,12 @@
 
   const TAB_RENDERERS = {
     vocabulary: { key: "vocabulary", itemHtml: vocabItemHtml, empty: "No vocabulary items in this pack." },
-    idioms: { key: "idioms", itemHtml: idiomItemHtml, empty: "No idioms in this pack." },
+    idioms: { key: "idioms", itemHtml: phraseItemHtml("idioms"), empty: "No idioms in this pack." },
+    collocations: { key: "collocations", itemHtml: phraseItemHtml("collocations"),
+      empty: "No collocations in this pack (regenerate to add them)." },
+    phrasal: { key: "phrasal_verbs", itemHtml: phraseItemHtml("phrasal_verbs"),
+      empty: "No phrasal verbs in this pack." },
+    patterns: { key: "patterns", itemHtml: patternItemHtml, empty: "No sentence patterns in this pack (regenerate to add them)." },
     grammar: { key: "grammar", itemHtml: grammarItemHtml, empty: "No grammar points in this pack." },
     quiz: { key: "questions", itemHtml: quizItemHtml, empty: "No quiz questions in this pack." },
   };
@@ -367,7 +388,12 @@
         <div class="inspector-meta"><span class="badge">${escapeHtml(item.part_of_speech || "")}</span><span class="ipa">${escapeHtml(item.ipa || "")}</span></div>
         <p class="inspector-copy">${escapeHtml(item.definition_en)}<br />${escapeHtml(item.definition_vi)}</p>
         <div class="callout"><strong>Example</strong><br />${escapeHtml(item.example_sentence || "—")}</div>`;
-    } else if (selected.section === "idioms") {
+    } else if (selected.section === "patterns") {
+      container.innerHTML = `
+        <h2 class="inspector-title">${escapeHtml(item.pattern)}</h2>
+        <p class="inspector-copy">${escapeHtml(item.use_en)}<br />${escapeHtml(item.use_vi)}</p>
+        <div class="callout"><strong>Example</strong><br />${escapeHtml(item.example_sentence || "—")}</div>`;
+    } else if (["idioms", "collocations", "phrasal_verbs"].includes(selected.section)) {
       container.innerHTML = `
         <h2 class="inspector-title">${escapeHtml(item.phrase)}</h2>
         <p class="inspector-copy">${escapeHtml(item.meaning_en)}<br />${escapeHtml(item.meaning_vi)}</p>
@@ -606,7 +632,7 @@
       return;
     }
     const confirmed = confirm(
-      "This will overwrite the entire learning pack (vocabulary, idioms, grammar, quiz) with a brand new AI-generated version. Continue?"
+      "This will overwrite the entire learning pack (vocabulary, idioms, collocations, phrasal verbs, patterns, grammar, quiz) with a brand new AI-generated version. Continue?"
     );
     if (confirmed) handleGenerate();
   }

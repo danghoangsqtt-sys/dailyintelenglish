@@ -14,6 +14,7 @@
     .tabs {
       display: flex;
       gap: 4px;
+      overflow-x: auto;
       border-bottom: 1px solid var(--border);
       margin-bottom: 20px;
     }
@@ -209,12 +210,18 @@
             <div class="tabs" id="content-tabs">
               <button class="tab-btn active" data-tab="vocabulary">📚 Vocabulary</button>
               <button class="tab-btn" data-tab="idioms">💬 Idioms</button>
+              <button class="tab-btn" data-tab="collocations">🔗 Collocations</button>
+              <button class="tab-btn" data-tab="phrasal">🧩 Phrasal verbs</button>
+              <button class="tab-btn" data-tab="patterns">🧱 Patterns</button>
               <button class="tab-btn" data-tab="grammar">🔍 Grammar</button>
               <button class="tab-btn" data-tab="quiz">❓ Quiz</button>
             </div>
 
             <section class="tab-panel" id="vocabulary-panel" data-tab-panel="vocabulary"></section>
             <section class="tab-panel" id="idioms-panel" data-tab-panel="idioms" hidden></section>
+            <section class="tab-panel" id="collocations-panel" data-tab-panel="collocations" hidden></section>
+            <section class="tab-panel" id="phrasal-panel" data-tab-panel="phrasal" hidden></section>
+            <section class="tab-panel" id="patterns-panel" data-tab-panel="patterns" hidden></section>
             <section class="tab-panel" id="grammar-panel" data-tab-panel="grammar" hidden></section>
             <section class="tab-panel" id="quiz-panel" data-tab-panel="quiz" hidden></section>
 

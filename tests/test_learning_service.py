@@ -349,3 +349,20 @@ async def test_deleting_project_cascades_to_learning_content(db):
 # GeminiProvider (D23) in favour of OpenAICompatProvider, which never sends
 # `response_format`/a JSON schema at all (see tests/test_openai_compat_provider.py,
 # Task 18.1, for that provider's own request-shape coverage).
+
+
+async def test_collocations_phrasal_verbs_and_patterns_are_saved_and_patched(db):
+    """Task 36.1 (D95): the three new sections round-trip; a pack without them reads back as empty lists."""
+    project = await project_service.create_project(db, make_project_config())
+    saved = await learning_service.save_learning_content(db, project["id"], VALID_PACK)
+    assert saved["collocations"] == [] and saved["phrasal_verbs"] == [] and saved["patterns"] == []
+    phrase = {"phrase": "work remotely", "meaning_en": "work away from the office", "meaning_vi": "làm việc từ xa",
+              "example_sentence": "I work remotely."}
+    pattern = {"pattern": "have been + V-ing + for + time", "use_en": "an action still going on",
+               "use_vi": "hành động kéo dài đến hiện tại", "example_sentence": "I have been working for five years."}
+    updated = await learning_service.update_learning_content(
+        db, project["id"], {"collocations": [phrase], "phrasal_verbs": [], "patterns": [pattern]})
+    assert updated["collocations"] == [phrase] and updated["patterns"] == [pattern]
+    assert updated["vocabulary"] == VALID_PACK["vocabulary"]
+    again = await learning_service.save_learning_content(db, project["id"], {**VALID_PACK, "phrasal_verbs": [phrase]})
+    assert again["phrasal_verbs"] == [phrase] and again["collocations"] == []

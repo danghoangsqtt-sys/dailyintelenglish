@@ -23,6 +23,24 @@ class IdiomItem(BaseModel):
     example_sentence: str = Field(min_length=1)
 
 
+class PhraseItem(BaseModel):
+    """Task 36.1 (D95): one collocation or phrasal verb from the script, with its meaning and the sentence it is in."""
+
+    phrase: str = Field(min_length=1)
+    meaning_en: str = Field(min_length=1)
+    meaning_vi: str = Field(min_length=1)
+    example_sentence: str = Field(min_length=1)
+
+
+class PatternItem(BaseModel):
+    """Task 36.1 (D95): one reusable sentence pattern (its structure) and the sentence of the script that uses it."""
+
+    pattern: str = Field(min_length=1)
+    use_en: str = Field(min_length=1)
+    use_vi: str = Field(min_length=1)
+    example_sentence: str = Field(min_length=1)
+
+
 class GrammarItem(BaseModel):
     """One grammar spotlight point drawn from the script."""
 
@@ -49,6 +67,10 @@ class LearningPackOut(BaseModel):
     idioms: list[IdiomItem] = Field(default_factory=list)
     grammar: list[GrammarItem] = Field(default_factory=list)
     questions: list[QuestionItem] = Field(default_factory=list)
+    # Task 36.1 (D95): optional extras -- older packs and answers without them stay valid.
+    collocations: list[PhraseItem] = Field(default_factory=list)
+    phrasal_verbs: list[PhraseItem] = Field(default_factory=list)
+    patterns: list[PatternItem] = Field(default_factory=list)
 
 
 class LearningPackUpdate(BaseModel):
@@ -63,6 +85,9 @@ class LearningPackUpdate(BaseModel):
     idioms: list[IdiomItem] | None = None
     grammar: list[GrammarItem] | None = None
     questions: list[QuestionItem] | None = None
+    collocations: list[PhraseItem] | None = None
+    phrasal_verbs: list[PhraseItem] | None = None
+    patterns: list[PatternItem] | None = None
 
     @model_validator(mode="before")
     @classmethod
