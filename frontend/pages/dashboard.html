@@ -24,17 +24,44 @@
     </div>
   </header>
 
-  <section class="dashboard-hero">
-    <div class="hero-inner">
-      <p class="hero-eyebrow">Daily Beyond English</p>
-      <h1>Create English listening episodes with AI</h1>
-      <p>CEFR-levelled scripts, natural voices, illustrated story videos, background music and a YouTube
-        package — in one workspace.</p>
-      <button id="new-project-btn" class="btn btn-primary large">＋ New project</button>
-    </div>
-  </section>
-
   <main class="dashboard-main">
+    <!-- Task 36.7 (D106-D108): the channel cockpit; the project grid below keeps its IDs and behaviour. -->
+    <section class="cockpit-head" aria-labelledby="cockpit-title">
+      <div>
+        <p class="hero-eyebrow">Daily Beyond English</p>
+        <h1 id="cockpit-title">Channel dashboard</h1>
+        <div id="cockpit-stats" class="cockpit-stats" aria-live="polite"></div>
+      </div>
+      <div class="cockpit-head-actions">
+        <a class="btn btn-ghost" href="/channel">Channel plan</a>
+        <button id="new-project-btn" class="btn btn-primary">＋ New project</button>
+      </div>
+    </section>
+    <div class="cockpit-row">
+      <section class="card cockpit-card" aria-labelledby="next-title">
+        <h2 id="next-title">Next to publish</h2>
+        <div id="cockpit-next" class="cockpit-next"></div>
+      </section>
+      <section class="card cockpit-card" aria-labelledby="today-title">
+        <h2 id="today-title">Today</h2>
+        <ul id="cockpit-actions" class="cockpit-actions"></ul>
+      </section>
+    </div>
+    <section class="card cockpit-card" aria-labelledby="roadmap-title">
+      <h2 id="roadmap-title">Channel roadmap</h2>
+      <ol id="roadmap-steps" class="roadmap-steps"></ol>
+      <div id="roadmap-detail" class="roadmap-detail"></div>
+    </section>
+    <section class="card cockpit-card" aria-labelledby="board-title">
+      <h2 id="board-title">Production board</h2>
+      <div id="production-board" class="production-board"></div>
+    </section>
+    <section class="card cockpit-card" aria-labelledby="calendar-title">
+      <h2 id="calendar-title">Next two weeks</h2>
+      <ol id="cockpit-calendar" class="cockpit-calendar"></ol>
+    </section>
+
+    <h2 class="projects-title">All projects</h2>
     <div class="toolbar">
       <div class="filter-bar" aria-label="Project status filters">
         <button class="filter-btn active" data-filter="all">All</button>
@@ -58,5 +85,6 @@
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/api.js"></script>
   <script src="/static/js/dashboard.js"></script>
+  <script src="/static/js/dashboard_channel.js"></script>
 </body>
 </html>

@@ -33,6 +33,7 @@ const Api = (() => {
   return {
     // Task 36.5 (D103-D105): the channel plan -- topics -> series -> episodes, the AI map and the calendar.
     getChannel: () => request("/api/channel"),
+    getChannelDashboard: () => request("/api/channel/dashboard"),
     proposeChannelPlan: (body) => request("/api/channel/plan/propose", json("POST", body)),
     applyChannelPlan: (plan, cast) => request("/api/channel/plan/apply", json("POST", { plan, cast })),
     createChannelTopic: (body) => request("/api/channel/topics", json("POST", body)),

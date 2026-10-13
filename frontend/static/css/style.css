@@ -345,3 +345,47 @@ h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); lett
 /* Task 29.5/29.7: a shot copied from the Shot Library. */
 .visual-badge { display: inline-block; margin: 4px 0; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
   color: var(--success); border: 1px solid var(--success); background: rgba(63, 185, 80, 0.1); }
+
+/* Task 36.7 (D106-D108): the channel cockpit on the dashboard */
+.cockpit-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 32px 0 18px; }
+.cockpit-head h1 { margin: 0 0 10px; font-size: 30px; font-weight: 800; }
+.cockpit-head-actions { display: flex; gap: 10px; }
+.cockpit-stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.cockpit-stat { display: grid; min-width: 104px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.cockpit-stat b { font-size: 20px; }
+.cockpit-stat span { color: var(--muted); font-size: 12px; }
+.cockpit-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; }
+.cockpit-card { margin: 0 0 16px; padding: 16px 18px; }
+.cockpit-card h2 { margin: 0 0 10px; font-size: 16px; }
+.cockpit-next strong { display: block; font-size: 17px; }
+.cockpit-next p { margin: 4px 0; color: var(--muted); font-size: 13px; }
+.cockpit-actions { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.cockpit-actions a { display: block; padding: 8px 10px; border-radius: 8px; background: var(--surface-2); color: var(--text); text-decoration: none; font-size: 13.5px; }
+.cockpit-actions a:hover { background: var(--accent-soft); }
+.cockpit-empty { color: var(--muted); font-size: 13.5px; }
+.roadmap-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; padding: 0; list-style: none; counter-reset: stage; }
+.roadmap-steps button { width: 100%; height: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+.roadmap-steps button[data-state="done"] { border-color: var(--accent); background: var(--accent-soft); }
+.roadmap-steps button[data-state="current"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.roadmap-steps button[aria-pressed="true"] { outline: 2px solid var(--accent); }
+.roadmap-steps .stage-name { display: block; font-weight: 700; font-size: 13.5px; }
+.roadmap-steps .stage-meta { color: var(--muted); font-size: 12px; }
+.roadmap-detail ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.roadmap-detail li { display: flex; gap: 8px; align-items: center; font-size: 13.5px; }
+.roadmap-detail li a { color: var(--text); }
+.roadmap-next { margin-top: 10px; }
+.production-board { display: grid; grid-template-columns: repeat(7, minmax(140px, 1fr)); gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.board-column { min-width: 140px; padding: 8px; border-radius: 10px; background: var(--surface-2); }
+.board-column h3 { margin: 0 0 8px; font-size: 12.5px; color: var(--muted); }
+.board-card { display: block; margin: 0 0 6px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); text-decoration: none; font-size: 12.5px; }
+.board-card:hover { border-color: var(--accent); }
+.board-card small { display: block; color: var(--muted); }
+.board-card[data-published="true"] { opacity: 0.7; }
+.cockpit-calendar { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.cockpit-calendar li { display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 10px; font-size: 13.5px; }
+.projects-title { margin: 28px 0 8px; font-size: 18px; }
+@media (max-width: 860px) {
+  .cockpit-row { grid-template-columns: 1fr; }
+  .roadmap-steps { grid-template-columns: 1fr; }
+  .cockpit-calendar li { grid-template-columns: 1fr; }
+}

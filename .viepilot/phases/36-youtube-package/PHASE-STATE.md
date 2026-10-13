@@ -10,7 +10,7 @@
 | 36.3 | Composed thumbnail: sprite characters + topic illustration (Activity Library / scene plate) + headline, CEFR, episode no., logo; 3 variants; replaces the 5 Pillow templates and ai_scene | `app/services/thumbnail_service.py`, `prompts/thumbnail/`, `frontend/static/js/step6_thumbnail.js` | done 2026-10-13 |
 | 36.4 | Outside-AI thumbnail: per-episode prompt (with character pictures), drop zone, text/badge/logo overlay | same as 36.3 | done 2026-10-13 |
 | 36.5 | Channel plan (D103–D105): topics → series → episodes; AI channel map; numbered projects per series; interleaved publishing calendar; series/playlist links and episode numbers in descriptions and thumbnails | new `channel_service`, `app/api/channel.py`, `/channel` page, migration 023, prompt `prompts/channel/` | done 2026-10-13 (real AI map on the sandbox: 3 topics × 2 series, 4 projects created, calendar rotating topics) |
-| 36.7 | Channel dashboard (D106–D108): stats, next publish, today's actions, 5-stage roadmap from real data, production board by step, 2-week calendar; project grid kept below | `app/services/dashboard_service.py`, `GET /api/channel/dashboard`, `frontend/pages/dashboard.html`, `frontend/static/js/dashboard_channel.js` | in_progress |
+| 36.7 | Channel dashboard (D106–D108): stats, next publish, today's actions, 5-stage roadmap from real data, production board by step, 2-week calendar; project grid kept below | `app/services/dashboard_service.py`, `GET /api/channel/dashboard`, `frontend/pages/dashboard.html`, `frontend/static/js/dashboard_channel.js` | done 2026-10-13 |
 | 36.6 | Tests, a real 3-episode series (≥1 complete episode), Gate B-24 | — | in_progress |
 
 ## Implementation notes (before coding)

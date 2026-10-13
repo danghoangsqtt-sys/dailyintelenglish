@@ -33,6 +33,12 @@ Versioning: [SemVer](https://semver.org/)
   never runs twice in a row. Episodes track their project, status and YouTube link; the description of a series
   episode names the series and links the previous/next episode and the playlist, and its thumbnail shows "EP. n".
 
+- **Channel dashboard (36.7, D106–D108).** The home page is now the channel cockpit: channel numbers, the next episode
+  to publish, today's actions (episodes going out this week and their next step, pictures waiting for approval, series
+  without characters), a five-stage channel roadmap computed from real data (identity → channel plan → first 10
+  episodes → weekly rhythm → grow) with a "Next" button to the right page, a production board by step (script →
+  learning → audio → video → thumbnail → YouTube → publish) and the next two weeks. The project grid stays below.
+
 ### Added / Fixed (Gate B-23 fixes, Task 33.10, 2026-10-13)
 - **More illustrations, named so the video can show them.** The storyboard AI now sees the Activity Library and copies an
   insert's activity from it, about one insert every 2-3 lines.

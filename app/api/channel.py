@@ -20,7 +20,7 @@ from app.models.channel import (
     TopicInput,
     TopicPatch,
 )
-from app.services import channel_service
+from app.services import channel_service, dashboard_service
 
 router = APIRouter(prefix="/api/channel", tags=["channel"])
 
@@ -35,6 +35,15 @@ async def get_channel(db: aiosqlite.Connection = Depends(get_db)) -> dict:
     started_at = time.perf_counter()
     async with read_transaction():
         result = await channel_service.channel(db)
+    return ok(result, started_at=started_at)
+
+
+@router.get("/dashboard")
+async def get_dashboard(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Task 36.7 (D106-D108): stats, today's actions, the roadmap, the production board and the next two weeks."""
+    started_at = time.perf_counter()
+    async with read_transaction():
+        result = await dashboard_service.dashboard(db)
     return ok(result, started_at=started_at)
 
 
