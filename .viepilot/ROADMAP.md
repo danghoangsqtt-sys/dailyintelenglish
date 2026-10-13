@@ -1529,3 +1529,22 @@ State: `.viepilot/phases/37-vertical-video/PHASE-STATE.md`. After Phase 36.
 - [x] 37.4 Shorts and TikTok packages with a vertical cover
 - [ ] 37.5 Tests, real clips, Gate B-25
 
+
+### Phase 38: Project layout restructure (D115) - in progress 2026-10-13
+
+State: `.viepilot/phases/38-restructure/PHASE-STATE.md`. Plan `docs/structure/RESTRUCTURE-PLAN.md`.
+
+- [ ] 38.1 `backend/` with domain packages; image worker out of `scripts/`; imports rewritten
+- [ ] 38.2 `renderer/` (was `video-renderer/`)
+- [ ] 38.3 `.venv` / `.venv-image` recreated
+- [ ] 38.4 `backend/ai/models/` (was `models/`)
+- [ ] 38.5 Docs and real-app restart
+
+### Phase 39: Image model benchmark — RealVisXL vs Qwen-Image (D110–D116) - planned 2026-10-13
+
+State: `.viepilot/phases/39-image-model-benchmark/PHASE-STATE.md`.
+
+- [ ] 39.1 Harness and prompts
+- [ ] 39.2 Four tasks × engines
+- [ ] 39.3 Report and owner blind scoring
+- [ ] 39.4 Apply the winners, Gate B-26

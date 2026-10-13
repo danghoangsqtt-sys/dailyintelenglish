@@ -65,7 +65,7 @@ Nguồn: [Qwen-Image-2.1 trên GitHub](https://github.com/QwenLM/Qwen-Image-2.1)
 
 ## Phases
 
-### Phase 38 — Qwen-Image cho ảnh minh họa hoạt động (D110–D114)
+### Phase 39 — Qwen-Image cho ảnh minh họa hoạt động (D110–D114; đánh số lại 39 vì Phase 38 là tái cấu trúc thư mục)
 
 - **38.1 Spike so sánh (bắt buộc làm trước):**
   - Bộ prompt: 12 prompt lấy từ các insert thật của storyboard (tập "Choosing the Menu", "The New Neighbor"…). Có cảnh 1 người,
@@ -95,3 +95,8 @@ Bỏ qua (waiver): dự án một người, đã có `PROJECT-META.md`; `profile
 
 1. `/vp-evolve` thêm Phase 38 theo D110–D114.
 2. `/vp-auto --phase 38`: chạy spike 38.1 trước, rồi dừng chờ chủ dự án chấm ảnh.
+
+## Bổ sung (2026-10-13, sau phiên)
+
+- **D116 (chủ dự án):** benchmark mở rộng cho 4 nhiệm vụ của hệ thống: ảnh minh họa hoạt động, ảnh nền cảnh, ảnh thumbnail/chủ đề, và shot có nhân vật. Riêng shot nhân vật dùng Qwen-Image-Edit-2511 để so với IP-Adapter của RealVisXL; D110 vẫn áp dụng cho ảnh minh họa. Được phép tải khoảng 72 GB. Chỉ áp dụng vào dự án sau khi so sánh xong (Phase 39).
+- **D115:** tái cấu trúc thư mục dự án trước (Phase 38).
