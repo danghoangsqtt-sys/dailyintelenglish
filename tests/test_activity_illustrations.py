@@ -9,8 +9,8 @@ import sqlite3
 
 from PIL import Image
 
-from app.core.config import settings
-from app.services.visuals import recipes
+from backend.core.config import settings
+from backend.ai.image import recipes
 from tests.test_visuals_project_api import client, data, setup_project, wait_job  # noqa: F401
 
 

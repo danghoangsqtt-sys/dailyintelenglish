@@ -2,8 +2,8 @@
 
 import pytest
 
-from app.core.exceptions import ValidationError
-from app.core.prompt_loader import render_thumbnail_prompt
+from backend.core.exceptions import ValidationError
+from backend.ai.llm.prompt_loader import render_thumbnail_prompt
 
 
 @pytest.mark.asyncio

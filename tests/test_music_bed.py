@@ -5,16 +5,11 @@ import math
 import numpy as np
 import pytest
 
-from app.core.constants import (
-    MUSIC_BED_LUFS,
-    MUSIC_CROSSFADE_S,
-    MUSIC_DUCK_DB,
-    MUSIC_FADE_IN_S,
-    MUSIC_FADE_OUT_S,
-    TARGET_LOUDNESS_LUFS,
+from backend.core.constants import (
+    MUSIC_BED_LUFS, MUSIC_CROSSFADE_S, MUSIC_DUCK_DB, MUSIC_FADE_IN_S, MUSIC_FADE_OUT_S, TARGET_LOUDNESS_LUFS,
 )
-from app.services import music_bed
-from app.services.music_bed import SAMPLE_RATE
+from backend.media import music_bed
+from backend.media.music_bed import SAMPLE_RATE
 
 SR = SAMPLE_RATE
 

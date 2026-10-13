@@ -8,11 +8,11 @@ approach for the script routes.
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import settings
-from app.core.exceptions import LearningGenerationError
-from app.main import app
-from app.models.learning import LearningPackOut
-from app.services import learning_service
+from backend.core.config import settings
+from backend.core.exceptions import LearningGenerationError
+from backend.main import app
+from backend.schemas.learning import LearningPackOut
+from backend.content import learning_service
 
 PROJECT_PAYLOAD = {
     "name": "Learning API Test Episode",

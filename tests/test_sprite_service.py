@@ -7,7 +7,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from app.services.visuals import sprite_service as sprites
+from backend.library import sprite_service as sprites
 from tests.test_shot_library_import import _two_characters
 from tests.test_visuals_project_api import client, data, locked_character  # noqa: F401
 

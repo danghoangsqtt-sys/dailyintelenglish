@@ -6,9 +6,9 @@ import asyncio
 
 import pytest
 
-from app.core.exceptions import GpuUnavailableError
-from app.services import gpu_model_manager as gpu_module
-from app.services.gpu_model_manager import GpuLeaseNestingError, GpuModelManager
+from backend.core.exceptions import GpuUnavailableError
+from backend.ai.image import gpu_model_manager as gpu_module
+from backend.ai.image.gpu_model_manager import GpuLeaseNestingError, GpuModelManager
 
 
 class FakeGpu:
@@ -307,7 +307,7 @@ async def test_kill_switch_still_refuses_nesting():
 
 
 def test_manager_is_built_from_settings(monkeypatch):
-    from app.core.config import settings
+    from backend.core.config import settings
 
     monkeypatch.setattr(settings, "GPU_MANAGER_ENABLED", False)
     monkeypatch.setattr(settings, "GPU_EVICT_OLLAMA", False)
@@ -327,8 +327,8 @@ def test_manager_is_built_from_settings(monkeypatch):
 def test_health_reports_live_gpu_memory_and_manager_state(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
 
-    from app import main as main_module
-    from app.core.config import settings
+    from backend import main as main_module
+    from backend.core.config import settings
 
     async def fake_gpu_memory() -> dict:
         return {"used_mb": 8195, "free_mb": 3916, "total_mb": 12288}
@@ -342,14 +342,14 @@ def test_health_reports_live_gpu_memory_and_manager_state(tmp_path, monkeypatch)
 
 
 async def test_get_gpu_memory_is_none_without_nvidia_smi(monkeypatch):
-    from app.core import system_checks
+    from backend.core import system_checks
 
     monkeypatch.setattr(system_checks.shutil, "which", lambda name: None)
     assert await system_checks.get_gpu_memory() is None
 
 
 async def test_get_gpu_memory_parses_nvidia_smi_csv(monkeypatch):
-    from app.core import system_checks
+    from backend.core import system_checks
 
     class FakeProcess:
         returncode = 0

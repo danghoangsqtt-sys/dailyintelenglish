@@ -1,7 +1,7 @@
 """HTTP tests for GET /api/ai/health (Task 13.6).
 
-The route itself lives in app/api/ai_jobs.py (built in Task 13.3, before
-app/api/ai_health.py was ever locked into a task's allowed-file list -- see
+The route itself lives in backend/api/ai_jobs.py (built in Task 13.3, before
+backend/api/ai_health.py was ever locked into a task's allowed-file list -- see
 task-13.6.md's "deviation #1"). This file adds the Task 13.6-specific checks
 (the health payload reflecting a live AI_MODE setting change) rather than
 duplicating the baseline reachability/key-redaction tests already covered in
@@ -11,8 +11,8 @@ tests/test_ai_jobs_api.py, which is not in this task's allowed files to edit.
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import settings
-from app.main import app
+from backend.core.config import settings
+from backend.main import app
 
 
 @pytest.fixture
@@ -122,16 +122,16 @@ def test_health_reports_circuit_open_false_by_default(client):
 
 
 def _open_circuit(name: str):
-    """Task 18.8: whitebox helper -- `app.main`'s app-lifetime `_ai_circuits`
+    """Task 18.8: whitebox helper -- `backend.main`'s app-lifetime `_ai_circuits`
     dict is keyed by provider name now, and a provider gets no entry at all
     until it's actually dispatched to, so a test that wants one open must
-    create it first (matches `app/services/ai/router.py`'s own
+    create it first (matches `backend/ai/llm/router.py`'s own
     `circuits.setdefault(...)`). Returns the breaker so the caller can
     `record_success()` it back closed in a `finally`, same discipline the old
     single-`_ai_circuit` tests already used."""
-    from app.core.constants import AI_CIRCUIT_COOLDOWN_SECONDS, AI_CIRCUIT_FAILURE_THRESHOLD
-    from app.main import _ai_circuits
-    from app.services.ai.router import CircuitBreaker
+    from backend.core.constants import AI_CIRCUIT_COOLDOWN_SECONDS, AI_CIRCUIT_FAILURE_THRESHOLD
+    from backend.main import _ai_circuits
+    from backend.ai.llm.router import CircuitBreaker
 
     circuit = _ai_circuits.setdefault(name, CircuitBreaker(AI_CIRCUIT_FAILURE_THRESHOLD, AI_CIRCUIT_COOLDOWN_SECONDS))
     circuit.open_immediately()
@@ -201,7 +201,7 @@ def test_health_reports_worker_alive_true_during_normal_operation(client):
 def test_health_reports_worker_alive_false_when_the_worker_task_is_dead(client):
     """Whitebox: forces `AIWorker.is_alive` to `False` by clearing the real
     singleton's task, since stopping it for real would tear down the shared app
-    (app/main.py, which constructs it, is outside this task's allowed files).
+    (backend/main.py, which constructs it, is outside this task's allowed files).
 
     Task 16.2 (N3): restores the real task in a `finally` here rather than
     relying on `monkeypatch`'s own fixture-teardown revert, whose timing
@@ -210,7 +210,7 @@ def test_health_reports_worker_alive_false_when_the_worker_task_is_dead(client):
     `stop()` runs, its `if self._task is None: return` guard would return
     immediately and orphan the real loop task instead of awaiting/cancelling
     it."""
-    from app.main import ai_worker
+    from backend.main import ai_worker
 
     real_task = ai_worker._task
     ai_worker._task = None
@@ -241,7 +241,7 @@ def test_health_fallback_rate_passes_through_the_service_aggregate(client, monke
     `ai_job_service.get_fallback_rate_stats` -- the aggregation itself (window
     composition, rate math, reason breakdown) is covered by
     tests/test_ai_job_service.py's direct seeded-row tests, not re-derived here."""
-    from app.services import ai_job_service
+    from backend.ai.llm import ai_job_service
 
     fake_stats = {
         "window": 5,

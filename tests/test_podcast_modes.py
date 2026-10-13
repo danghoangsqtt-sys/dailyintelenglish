@@ -9,10 +9,10 @@ import pytest
 from PIL import Image
 from pydantic import ValidationError as PydanticValidationError
 
-from app.core.config import settings
-from app.core.exceptions import ValidationError
-from app.models.video import GenerateVideoRequest
-from app.services import video_renderer_remotion
+from backend.core.config import settings
+from backend.core.exceptions import ValidationError
+from backend.schemas.video import GenerateVideoRequest
+from backend.media import video_renderer_remotion
 from tests.test_visuals_project_api import client, data, setup_project, wait_job  # noqa: F401
 
 

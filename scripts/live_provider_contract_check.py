@@ -12,7 +12,7 @@ parts (none currently extracted; the request-building itself lives in
 `tests/test_openai_compat_provider.py`'s per-vendor payload contract tests).
 
 Sends the app's EXACT request (built by the real `OpenAICompatProvider` class,
-via `app.services.ai.router`'s own chain-building helpers -- the same code
+via `backend.ai.llm.router`'s own chain-building helpers -- the same code
 `build_ai_router_from_settings` uses, so this checks precisely what a real job
 would send) with one tiny fixed prompt to each currently-configured vendor.
 Calls each provider's `generate()` directly -- bypassing `AIRouter` and every
@@ -39,10 +39,10 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.core.config import settings  # noqa: E402
-from app.core.exceptions import ProviderError  # noqa: E402
-from app.services.ai.contracts import GenerationRequest  # noqa: E402
-from app.services.ai.router import _build_chain_entries, _configured_cloud_provider_names  # noqa: E402
+from backend.core.config import settings  # noqa: E402
+from backend.core.exceptions import ProviderError  # noqa: E402
+from backend.ai.llm.contracts import GenerationRequest  # noqa: E402
+from backend.ai.llm.router import _build_chain_entries, _configured_cloud_provider_names  # noqa: E402
 
 _PROBE_PROMPT = "Reply with the single word: ok."
 _PROBE_DEADLINE_SECONDS = 15.0

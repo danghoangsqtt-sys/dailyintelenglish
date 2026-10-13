@@ -2,9 +2,9 @@
 
 import pytest
 
-from app.db.database import BUILTIN_SCENES
-from app.models.storyboard import EXPRESSIONS
-from app.services.visuals import geometry, recipes
+from backend.db.database import BUILTIN_SCENES
+from backend.schemas.storyboard import EXPRESSIONS
+from backend.ai.image import geometry, recipes
 
 SIZE = (1344, 768)
 LONGEST = {

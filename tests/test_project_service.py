@@ -5,12 +5,12 @@ import json
 import pytest
 from pydantic import ValidationError as PydanticValidationError
 
-from app.core.config import settings
-from app.core.constants import CEFR_DEFAULT_TTS_SPEED
-from app.core.exceptions import NotFoundError
-from app.core.exceptions import ValidationError as AppValidationError
-from app.models.project import ProjectUpdate, ScriptConfig, SpeakerConfig
-from app.services import project_service
+from backend.core.config import settings
+from backend.core.constants import CEFR_DEFAULT_TTS_SPEED
+from backend.core.exceptions import NotFoundError
+from backend.core.exceptions import ValidationError as AppValidationError
+from backend.schemas.project import ProjectUpdate, ScriptConfig, SpeakerConfig
+from backend.content import project_service
 
 
 def make_config(**overrides) -> ScriptConfig:
@@ -171,7 +171,7 @@ async def test_cleanup_project_artifacts_removes_every_category_directory(monkey
     """Real bug found by PM audit 2026-09-14: delete_project only ever removed DB rows
     (cascade), never any of the 5 per-project data directories -- every deleted project
     permanently leaked its avatars/audio/video/thumbnails/tts_cache files."""
-    from app.core.config import settings
+    from backend.core.config import settings
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     project_id = "proj-cleanup-1"
@@ -189,7 +189,7 @@ async def test_cleanup_project_artifacts_removes_every_category_directory(monkey
 async def test_cleanup_project_artifacts_is_a_noop_when_nothing_was_ever_generated(monkeypatch, tmp_path):
     """A project deleted before any avatar/audio/video/thumbnail/TTS work ever happened
     has no directories to remove -- must not raise."""
-    from app.core.config import settings
+    from backend.core.config import settings
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
 

@@ -5,25 +5,23 @@ import json
 import pytest
 from pydantic import TypeAdapter
 
-from app.core.exceptions import (
-    ProviderAuthError,
-    ProviderInvalidResponseError,
-    ProviderRateLimitError,
-    ProviderTimeoutError,
+from backend.core.exceptions import (
+    ProviderAuthError, ProviderInvalidResponseError, ProviderRateLimitError, ProviderTimeoutError,
     ProviderUnavailableError,
 )
-from app.models.learning import LearningPackOut
-from app.models.project import ScriptConfig, SpeakerConfig
-from app.services import ai_job_service, learning_pipeline, learning_service, project_service, script_service
-from app.services.ai.contracts import AIMode, GenerationRequest, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter
-from app.services.ai_worker import AIWorker
+from backend.schemas.learning import LearningPackOut
+from backend.schemas.project import ScriptConfig, SpeakerConfig
+from backend.ai.llm import ai_job_service
+from backend.content import learning_pipeline, learning_service, project_service, script_service
+from backend.ai.llm.contracts import AIMode, GenerationRequest, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import AIRouter
+from backend.ai.llm.ai_worker import AIWorker
 
 
 async def _no_op_sleep(delay: float) -> None:
     """Task 14.2 error-code tests exercise the router's real transient-error
-    exhaustion path (4 attempts) -- patched onto `app.services.ai.router.sleep`
+    exhaustion path (4 attempts) -- patched onto `backend.ai.llm.router.sleep`
     so nothing actually waits out the backoff. See tests/test_ai_router.py's
     `sleep_calls` fixture for the same pattern."""
     return None
@@ -384,7 +382,7 @@ async def test_pipeline_marks_stale_when_project_changed_since_job_creation(db):
     )
     claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
 
-    from app.models.project import ProjectUpdate
+    from backend.schemas.project import ProjectUpdate
 
     await project_service.update_project(db, project["id"], ProjectUpdate(topic="A totally different topic now"))
 
@@ -487,7 +485,7 @@ async def test_pipeline_cloud_first_fallback_records_fallback_telemetry(db, monk
     under `AIMode.HYBRID` (local attempted first, gemini rescued). Under
     `AIMode.CLOUD_FIRST` the roles invert -- the exhausting provider is now
     the primary/cloud one, the rescuing provider is now the fallback/local one."""
-    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    monkeypatch.setattr("backend.ai.llm.router.sleep", _no_op_sleep)
     project = await _project_with_script(db)
 
     primary = FakeProvider("openai_compat", [ProviderUnavailableError("down")] * 4)
@@ -522,7 +520,7 @@ async def test_pipeline_cloud_first_fallback_records_fallback_telemetry(db, monk
     ],
 )
 async def test_pipeline_maps_provider_errors_to_specific_error_codes(db, monkeypatch, outcomes, expected_error_code):
-    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    monkeypatch.setattr("backend.ai.llm.router.sleep", _no_op_sleep)
     project = await _project_with_script(db)
     router, gemini, _local = _build_router(list(outcomes))
 

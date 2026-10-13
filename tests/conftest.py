@@ -12,10 +12,10 @@ import aiosqlite
 import pytest
 import uvicorn
 
-from app.core.paths import get_project_root
-from app.db.database import Database
+from backend.core.paths import get_project_root
+from backend.db.database import Database
 
-MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "app" / "db" / "migrations"
+MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "backend" / "db" / "migrations"
 
 # Task 16.3 (BUG-023): the one real data/app.db this whole suite must never open,
 # computed independently of `settings.DATA_DIR` -- the very thing the guard below
@@ -24,7 +24,7 @@ _REAL_DB_PATH = (get_project_root() / "data" / "app.db").resolve()
 
 
 def _install_real_db_guard() -> None:
-    """Patch `Database.connect` (never `app/db/database.py` itself -- outside this
+    """Patch `Database.connect` (never `backend/db/database.py` itself -- outside this
     task's allowed files) so no test can ever open, or silently keep reusing, the
     real database. Applied once at conftest import time, before any test or fixture
     runs (including module-scoped ones), and never restored: nothing in this suite
@@ -47,7 +47,7 @@ def _install_real_db_guard() -> None:
     original_connect = Database.connect
 
     async def guarded_connect(self: Database) -> aiosqlite.Connection:
-        from app.core.config import settings
+        from backend.core.config import settings
 
         current_path = settings.db_path.resolve()
         if self._connection is not None:
@@ -77,7 +77,7 @@ _install_real_db_guard()
 
 
 def _neutralize_cloud_config() -> None:
-    """Task 18.3 (PM review N1): `app.core.config` loads the real `.env` at
+    """Task 18.3 (PM review N1): `backend.core.config` loads the real `.env` at
     import time, so without this, `settings.OPENAI_COMPAT_*` holds the
     owner's real OpenRouter key and base URL for this whole pytest process.
     Investigating the browser test's route-glob bug during 18.3, a debug
@@ -92,7 +92,7 @@ def _neutralize_cloud_config() -> None:
     that need cloud behaviour set their own fake key/URL via `monkeypatch`,
     which every cloud-related test in this suite already does.
     """
-    from app.core import config
+    from backend.core import config
 
     config.settings.OPENAI_COMPAT_API_KEY = ""
     config.ENV_OPENAI_COMPAT_API_KEY = ""
@@ -106,7 +106,7 @@ def _neutralize_cloud_config() -> None:
     # Gemini chain entries dispatch against, so this neutralization now matters
     # exactly as much as OPENAI_COMPAT_API_KEY above.
     config.settings.GEMINI_API_KEY = ""
-    # PM review N1 (18.8): ENV_GEMINI_API_KEY (app/core/config.py) was never
+    # PM review N1 (18.8): ENV_GEMINI_API_KEY (backend/core/config.py) was never
     # blanked here, unlike ENV_OPENAI_COMPAT_API_KEY/ENV_OPENCODE_ZEN_API_KEY
     # below -- a "clear the Gemini key" code path reverts to this value, which
     # would have put the owner's real key back into the test process (the
@@ -147,8 +147,8 @@ def live_server(tmp_path_factory: pytest.TempPathFactory, slug: str) -> Iterator
     whatever test runs next to inherit, which is exactly how BUG-023 leaked.
     `slug` names the tmp directory so failures are traceable to their caller.
     """
-    from app.core.config import settings
-    from app.main import app
+    from backend.core.config import settings
+    from backend.main import app
 
     original_data_dir = settings.DATA_DIR
     settings.DATA_DIR = tmp_path_factory.mktemp(f"{slug}-data")
@@ -214,7 +214,7 @@ async def db() -> aiosqlite.Connection:
 
 @pytest.fixture(autouse=True)
 def _reset_write_lock():
-    """Give every test a fresh app.db.transactions.write_lock.
+    """Give every test a fresh backend.db.transactions.write_lock.
 
     asyncio.Lock binds to whichever event loop first calls acquire() on it,
     and pytest-asyncio hands each test function its own loop (function-scoped
@@ -223,7 +223,7 @@ def _reset_write_lock():
     artifact of the test runner, never reachable in production where the app
     has exactly one event loop for its entire lifetime.
     """
-    from app.db import transactions
+    from backend.db import transactions
 
     transactions.write_lock = Lock()
     yield

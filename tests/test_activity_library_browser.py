@@ -10,9 +10,9 @@ import pytest
 from PIL import Image
 from playwright.async_api import Browser, async_playwright
 
-from app.api import visuals as visuals_api
-from app.core.config import settings
-from app.services.visuals import activity_library_service as activities
+from backend.api import visuals as visuals_api
+from backend.core.config import settings
+from backend.library import activity_library_service as activities
 from tests.conftest import live_server
 
 

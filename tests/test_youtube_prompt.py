@@ -2,8 +2,8 @@
 
 import pytest
 
-from app.core.exceptions import ValidationError
-from app.core.prompt_loader import render_youtube_prompt
+from backend.core.exceptions import ValidationError
+from backend.ai.llm.prompt_loader import render_youtube_prompt
 
 
 async def test_render_youtube_prompt_injects_all_variables():

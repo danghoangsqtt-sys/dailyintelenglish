@@ -6,13 +6,13 @@ import aiosqlite
 import pytest
 from PIL import Image, ImageChops
 
-from app.core.config import settings
-from app.core.exceptions import GpuUnavailableError
-from app.db.database import Database, MIGRATIONS_DIR, init_db
-from app.db.transactions import write_transaction
-from app.services.visuals import geometry, jobs, recipes
-from app.services.visuals.engine import FakeImageEngine, WorkerImageEngine
-from app.services.visuals.runner import ImageJobRunner
+from backend.core.config import settings
+from backend.core.exceptions import GpuUnavailableError
+from backend.db.database import Database, MIGRATIONS_DIR, init_db
+from backend.db.transactions import write_transaction
+from backend.ai.image import geometry, jobs, recipes
+from backend.ai.image.engine import FakeImageEngine, WorkerImageEngine
+from backend.ai.image.runner import ImageJobRunner
 
 CHARACTER = {
     "age_group": "middle-aged", "ethnicity": "Vietnamese", "gender": "female",
@@ -87,7 +87,7 @@ def test_every_builtin_place_fits_the_real_clip_budget():
     Measured 2026-10-05 with the real tokenizer over every recipe x built-in place x this
     (longest) character: max 77 real tokens (duo_close, Classroom) at 72 estimated -- the limit,
     so the place (the prompt's tail) is never cut. A higher estimate needs a new measurement."""
-    from app.db.database import BUILTIN_SCENES
+    from backend.db.database import BUILTIN_SCENES
 
     assert len(BUILTIN_SCENES) == 55
     for _, _, place, staging, _ in BUILTIN_SCENES:

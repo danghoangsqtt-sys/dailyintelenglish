@@ -11,11 +11,11 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import settings
-from app.core.exceptions import ScriptGenerationError
-from app.main import app
-from app.services import project_service, script_service
-from app.services.script_service import LanguageNotesOut, ScriptLineOut
+from backend.core.config import settings
+from backend.core.exceptions import ScriptGenerationError
+from backend.main import app
+from backend.content import project_service, script_service
+from backend.content.script_service import LanguageNotesOut, ScriptLineOut
 
 PROJECT_PAYLOAD = {
     "name": "Script API Test Episode",

@@ -7,7 +7,7 @@ from typing import AsyncGenerator
 import pytest
 from playwright.async_api import Browser, Page, async_playwright
 
-from app.core.config import settings
+from backend.core.config import settings
 from tests.conftest import live_server
 
 VALID_MP3 = b"ID3\x04\x00\x00\x00\x00\x00\x00music-data"

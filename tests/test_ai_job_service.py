@@ -6,22 +6,15 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.core.constants import AI_JOB_MAX_RECORDED_CALLS, AI_JOB_MAX_RECOVERY_ATTEMPTS
-from app.core.exceptions import (
-    NotFoundError,
-    ProviderAuthError,
-    ProviderDailyQuotaError,
-    ProviderError,
-    ProviderInvalidResponseError,
-    ProviderRateLimitError,
-    ProviderRequestRejectedError,
-    ProviderTimeoutError,
-    ProviderUnavailableError,
-    SchemaValidationError,
-    ValidationError,
+from backend.core.constants import AI_JOB_MAX_RECORDED_CALLS, AI_JOB_MAX_RECOVERY_ATTEMPTS
+from backend.core.exceptions import (
+    NotFoundError, ProviderAuthError, ProviderDailyQuotaError, ProviderError, ProviderInvalidResponseError,
+    ProviderRateLimitError, ProviderRequestRejectedError, ProviderTimeoutError, ProviderUnavailableError,
+    SchemaValidationError, ValidationError,
 )
-from app.models.project import ScriptConfig, SpeakerConfig
-from app.services import ai_job_service, project_service
+from backend.schemas.project import ScriptConfig, SpeakerConfig
+from backend.ai.llm import ai_job_service
+from backend.content import project_service
 
 
 def make_config(name: str) -> ScriptConfig:

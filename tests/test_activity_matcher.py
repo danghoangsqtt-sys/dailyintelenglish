@@ -3,9 +3,9 @@ import sqlite3
 
 from PIL import Image
 
-from app.core.config import settings
-from app.services import video_service
-from app.services.visuals.activity_matcher import beat_speaker_index, match_activity, suggest
+from backend.core.config import settings
+from backend.media import video_service
+from backend.library.activity_matcher import beat_speaker_index, match_activity, suggest
 from tests.test_visuals_project_api import client, data, setup_project  # noqa: F401
 
 

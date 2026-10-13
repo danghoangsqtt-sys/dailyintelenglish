@@ -4,7 +4,7 @@ Section 7/9 of the controlling plan (docs/implementation/phase-13-local-first-ai
 reliability.md) requires that prompt bodies, response bodies, and API keys never
 reach routine logs or API errors -- only job/provider/model/purpose/prompt_hash/
 stage/attempt/latency/counters/validation-code/fallback-reason/exception-type are
-allowed. `app/services/ai/router.py` is the one place in the whole AI layer that
+allowed. `backend/ai/llm/router.py` is the one place in the whole AI layer that
 logs anything beyond a single job-recovery-count line in `ai_worker.py` (confirmed
 by auditing every logger call site before writing this file -- see
 tasks/task-13.8.md). These tests exercise the router with `FakeProvider`s carrying
@@ -20,10 +20,10 @@ import logging
 
 import pytest
 
-from app.core.exceptions import ProviderAuthError, ProviderUnavailableError
-from app.services.ai.contracts import AIMode, GenerationRequest, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter
+from backend.core.exceptions import ProviderAuthError, ProviderUnavailableError
+from backend.ai.llm.contracts import AIMode, GenerationRequest, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import AIRouter
 
 SECRET_PROMPT_MARKER = "SECRET_PROMPT_MARKER_user_topic_12345"
 SECRET_RESPONSE_MARKER = "SECRET_RESPONSE_MARKER_model_output_67890"
@@ -39,7 +39,7 @@ def _patch_router_sleep(monkeypatch):
     async def _fake_sleep(delay: float) -> None:
         return None
 
-    monkeypatch.setattr("app.services.ai.router.sleep", _fake_sleep)
+    monkeypatch.setattr("backend.ai.llm.router.sleep", _fake_sleep)
 
 
 def _request() -> GenerationRequest:
@@ -177,11 +177,11 @@ async def test_router_logs_only_the_documented_safe_fields(caplog):
     primary = FakeProvider("openai_compat", [])
     router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.LOCAL)
 
-    with caplog.at_level(logging.INFO, logger="app.services.ai.router"):
+    with caplog.at_level(logging.INFO, logger="backend.ai.llm.router"):
         await router.generate(_request())
 
-    router_records = [r for r in caplog.records if r.name == "app.services.ai.router"]
-    assert router_records, "expected at least one log record from app.services.ai.router"
+    router_records = [r for r in caplog.records if r.name == "backend.ai.llm.router"]
+    assert router_records, "expected at least one log record from backend.ai.llm.router"
     for record in router_records:
         message = record.getMessage()
         assert "prompt_hash=" in message or "provider=" in message

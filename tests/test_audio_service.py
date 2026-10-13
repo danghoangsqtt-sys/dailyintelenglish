@@ -13,14 +13,11 @@ import pytest
 from pydub import AudioSegment
 from pydub.generators import Sine
 
-from app.core.constants import (
-    MUSIC_DUCKING_MAX_DBFS,
-    SILENCE_DIFFERENT_SPEAKER_MS,
-    SILENCE_SAME_SPEAKER_MS,
-    TARGET_LOUDNESS_LUFS,
+from backend.core.constants import (
+    MUSIC_DUCKING_MAX_DBFS, SILENCE_DIFFERENT_SPEAKER_MS, SILENCE_SAME_SPEAKER_MS, TARGET_LOUDNESS_LUFS,
 )
-from app.core.exceptions import AudioMixError
-from app.services import audio_service
+from backend.core.exceptions import AudioMixError
+from backend.media import audio_service
 
 PROJECT = {"id": "proj-audio-1", "speakers": [{"id": "sp1", "name": "Alex"}, {"id": "sp2", "name": "Sam"}]}
 
@@ -33,7 +30,7 @@ def _make_tone_mp3(path, *, freq: int = 440, duration_ms: int = 600, gain_db: fl
 @pytest.fixture(autouse=True)
 def _isolate_data_dir(tmp_path, monkeypatch):
     """Every test gets its own DATA_DIR so audio_output/music_library never collide."""
-    from app.core.config import settings
+    from backend.core.config import settings
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     yield
@@ -153,7 +150,7 @@ async def test_mix_project_exports_playable_mp3_and_wav(tmp_path):
 
 async def test_mix_project_with_background_music_caps_at_ducking_ceiling(tmp_path):
     lines = _lines_for(tmp_path, [("sp1", 440)])
-    from app.core.config import settings
+    from backend.core.config import settings
 
     music_dir = settings.DATA_DIR / "music_library"
     music_dir.mkdir(parents=True, exist_ok=True)

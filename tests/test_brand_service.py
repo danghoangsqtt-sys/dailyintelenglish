@@ -7,10 +7,10 @@ import pytest
 from pydub import AudioSegment
 from pydub.generators import Sine
 
-from app.core.config import settings
-from app.core.constants import MUSIC_DUCK_DB
-from app.core.exceptions import TTSError
-from app.services import audio_service, brand_service, music_bed, video_renderer_remotion
+from backend.core.config import settings
+from backend.core.constants import MUSIC_DUCK_DB
+from backend.core.exceptions import TTSError
+from backend.media import audio_service, brand_service, music_bed, video_renderer_remotion
 
 SR = music_bed.SAMPLE_RATE
 

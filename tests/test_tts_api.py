@@ -7,9 +7,9 @@ suite, same approach as tests/test_learning_api.py for Gemini.
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import settings
-from app.main import app
-from app.services import tts_service
+from backend.core.config import settings
+from backend.main import app
+from backend.ai.tts import tts_service
 
 PROJECT_PAYLOAD = {
     "name": "TTS API Test Episode",

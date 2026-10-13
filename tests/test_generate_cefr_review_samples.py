@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from app.core.exceptions import ScriptGenerationError
-from app.services.script_service import LanguageNotesOut, ScriptLineOut
+from backend.core.exceptions import ScriptGenerationError
+from backend.content.script_service import LanguageNotesOut, ScriptLineOut
 from scripts import generate_cefr_review_samples as sample_cli
 
 

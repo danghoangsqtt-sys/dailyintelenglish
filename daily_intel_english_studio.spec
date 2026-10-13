@@ -4,8 +4,8 @@
 onedir, not onefile: faster startup (no self-extraction on every launch) and
 easier to diagnose if a resource is missing -- see task-12.2.md for the reasoning.
 
-`frontend/`, `prompts/`, and `app/db/migrations/` are staged as plain data at the
-same relative paths app.core.paths.get_project_root() expects to find them under
+`frontend/`, `prompts/`, and `backend/db/migrations/` are staged as plain data at the
+same relative paths backend.core.paths.get_project_root() expects to find them under
 sys._MEIPASS at runtime.
 """
 
@@ -13,8 +13,8 @@ from PyInstaller.utils.hooks import collect_all
 
 datas = [
     ("frontend", "frontend"),
-    ("prompts", "prompts"),
-    ("app/db/migrations", "app/db/migrations"),
+    ("backend/ai/prompts", "backend/ai/prompts"),
+    ("backend/db/migrations", "backend/db/migrations"),
 ]
 binaries = []
 hiddenimports = []
@@ -31,7 +31,7 @@ for package in ("uvicorn",):
 # This app's real requirements.txt needs none of these -- they were pulled in
 # purely because the dev venv also has leftover packages installed from the
 # abandoned OmniVoice GPU experimentation (Phase 1; _synthesize_omnivoice() is a
-# hardcoded stub today, see app/services/tts_service.py). Confirmed via a repo-wide
+# hardcoded stub today, see backend/ai/tts/tts_service.py). Confirmed via a repo-wide
 # grep that no file under app/ imports any of them. Without this list, PyInstaller's
 # static analysis still finds them importable in site-packages and balloons the
 # build to ~4.5GB (torch alone, with bundled CUDA kernels, is ~4GB) for a plain
@@ -52,7 +52,7 @@ excludes = [
 ]
 
 a = Analysis(
-    ["app/desktop_launcher.py"],
+    ["backend/desktop_launcher.py"],
     pathex=[],
     binaries=binaries,
     datas=datas,

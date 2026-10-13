@@ -10,9 +10,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from app.core.config import settings
-from app.services.visuals import pipelines, shot_checks
-from app.services.visuals.engine import FakeImageEngine
+from backend.core.config import settings
+from backend.ai.image import pipelines, shot_checks
+from backend.ai.image.engine import FakeImageEngine
 from tests.test_visuals_project_api import client, data, setup_project, wait_job  # noqa: F401
 
 ROOT = Path(__file__).resolve().parent.parent

@@ -2,10 +2,10 @@
 
 import pytest
 
-from app.core.config import settings
-from app.services.visuals import recipes
-from app.services.visuals.engine import FakeImageEngine
-from app.services.visuals.project_visuals_service import storyboard_shot_specs
+from backend.core.config import settings
+from backend.ai.image import recipes
+from backend.ai.image.engine import FakeImageEngine
+from backend.library.project_visuals_service import storyboard_shot_specs
 from tests.test_storyboard_api import project_with_script
 from tests.test_visuals_project_api import client, data, wait_job  # noqa: F401
 
@@ -87,7 +87,7 @@ def _shot(shot_id, scene_id, kind, indexes, beat_position=None):
 
 
 def test_assign_beat_shots_inserts_actions_speakers_and_fallbacks():
-    from app.services.visuals.project_visuals_service import assign_beat_shots, storyboard_timeline_ready
+    from backend.library.project_visuals_service import assign_beat_shots, storyboard_timeline_ready
 
     beats = [
         {"line_from": 0, "line_to": 4, "kind": "scene", "scene_id": "cafe"},
@@ -117,7 +117,7 @@ def test_assign_beat_shots_inserts_actions_speakers_and_fallbacks():
 async def test_remotion_uses_the_beat_timeline_once_storyboard_shots_exist(client, tmp_path, monkeypatch, requests_log):  # noqa: F811,E501
     import aiosqlite
 
-    from app.services import video_renderer_remotion
+    from backend.media import video_renderer_remotion
 
     project = project_with_script(client)
     base = f"/api/projects/{project['id']}"

@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from app.main import app
+from backend.main import app
 
 
 def test_static_files_must_revalidate_and_still_answer_304():

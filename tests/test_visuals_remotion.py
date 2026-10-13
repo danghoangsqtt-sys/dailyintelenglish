@@ -3,9 +3,9 @@
 import aiosqlite
 import pytest
 
-from app.core.config import settings
-from app.services import video_renderer_remotion
-from app.services.visuals.project_visuals_service import assign_line_shots
+from backend.core.config import settings
+from backend.media import video_renderer_remotion
+from backend.library.project_visuals_service import assign_line_shots
 from tests.test_visuals_project_api import client, setup_project, wait_job, data  # noqa: F401
 
 

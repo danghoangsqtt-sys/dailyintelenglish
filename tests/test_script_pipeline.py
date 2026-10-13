@@ -8,25 +8,23 @@ import pytest
 
 from pydantic import TypeAdapter
 
-from app.core.exceptions import (
-    ProviderAuthError,
-    ProviderInvalidResponseError,
-    ProviderRateLimitError,
-    ProviderTimeoutError,
+from backend.core.exceptions import (
+    ProviderAuthError, ProviderInvalidResponseError, ProviderRateLimitError, ProviderTimeoutError,
     ProviderUnavailableError,
 )
-from app.models.project import ProjectUpdate, ScriptConfig, SpeakerConfig
-from app.services import ai_job_service, project_service, script_pipeline, script_service
-from app.services.ai.contracts import AIMode, GenerationRequest, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter
-from app.services.ai_worker import AIWorker
-from app.services.script_service import LanguageNotesOut
+from backend.schemas.project import ProjectUpdate, ScriptConfig, SpeakerConfig
+from backend.ai.llm import ai_job_service
+from backend.content import project_service, script_pipeline, script_service
+from backend.ai.llm.contracts import AIMode, GenerationRequest, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import AIRouter
+from backend.ai.llm.ai_worker import AIWorker
+from backend.content.script_service import LanguageNotesOut
 
 
 async def _no_op_sleep(delay: float) -> None:
     """Task 14.2 error-code tests exercise the router's real transient-error
-    exhaustion path (4 attempts) -- patched onto `app.services.ai.router.sleep`
+    exhaustion path (4 attempts) -- patched onto `backend.ai.llm.router.sleep`
     so nothing actually waits out the backoff. See tests/test_ai_router.py's
     `sleep_calls` fixture for the same pattern."""
     return None
@@ -309,7 +307,7 @@ def test_resolve_section_lines_logs_only_actual_resolutions(caplog):
         script_pipeline.SectionLineWire(speaker="S1", text=_words(5, 0)),
         script_pipeline.SectionLineWire(speaker="nonsense-unresolvable-value", text=_words(5, 100)),
     ]
-    with caplog.at_level(logging.INFO, logger="app.services.script_pipeline"):
+    with caplog.at_level(logging.INFO, logger="backend.content.script_pipeline"):
         resolved = script_pipeline.resolve_section_lines(wire_lines, SPEAKERS_2)
 
     assert resolved[0].speaker_id == SPEAKERS_2[0]["id"]
@@ -385,7 +383,7 @@ async def test_pipeline_model_returning_a_near_miss_uuid_resolves_and_completes(
     claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
     worker = AIWorker(db_getter=lambda: db)
 
-    with caplog.at_level(logging.INFO, logger="app.services.script_pipeline"):
+    with caplog.at_level(logging.INFO, logger="backend.content.script_pipeline"):
         await script_pipeline.make_handler(router)(claimed, worker)
 
     final_job = await ai_job_service.get_job(db, job["id"], project["id"])
@@ -774,7 +772,7 @@ def test_constants_pin_word_tolerances_are_unchanged_by_task_14_3():
     SCRIPT_MAX_REPEATED_8GRAM_RATIO, and SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO are a
     stop condition, not an implementation choice -- this pins all five values so
     a silent edit fails CI."""
-    from app.core import constants
+    from backend.core import constants
 
     assert constants.SCRIPT_GLOBAL_WORD_TOLERANCE == 0.10
     assert constants.SCRIPT_SECTION_WORD_TOLERANCE == 0.15
@@ -788,7 +786,7 @@ def test_constants_pin_pace_calibration_table_matches_the_d13_measurement():
     CEFR_DEFAULT_TTS_SPEED are measured values (real Edge TTS synthesis at 5
     speeds, data/quality_reviews/phase14/gate-b3/pace-calibration.json), not an
     implementation choice -- pins both tables so a silent edit fails CI."""
-    from app.core import constants
+    from backend.core import constants
 
     assert constants.CEFR_WORDS_PER_MINUTE == {
         "A1": 111, "A2": 111, "B1": 125, "B2": 132, "C1": 145, "C2": 159,
@@ -846,7 +844,7 @@ async def test_pipeline_section_prompt_word_range_matches_the_tolerance_constant
     computed from SCRIPT_SECTION_WORD_TOLERANCE at render time, not a second,
     hard-coded copy of it in the template -- pins the two from silently
     drifting apart."""
-    from app.core.constants import SCRIPT_SECTION_WORD_TOLERANCE
+    from backend.core.constants import SCRIPT_SECTION_WORD_TOLERANCE
 
     project = await _project(db)
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
@@ -1346,7 +1344,7 @@ async def test_pipeline_cloud_first_fallback_records_fallback_telemetry(db, monk
     `AIMode.CLOUD_FIRST` the roles invert -- the provider attempted first
     (and that exhausts) is now the primary/cloud one; the rescuing provider
     is now the fallback/local one."""
-    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    monkeypatch.setattr("backend.ai.llm.router.sleep", _no_op_sleep)
     project = await _project(db)
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
 
@@ -1399,7 +1397,7 @@ async def test_pipeline_cloud_first_fallback_records_fallback_telemetry(db, monk
     ],
 )
 async def test_pipeline_maps_provider_errors_to_specific_error_codes(db, monkeypatch, outcomes, expected_error_code):
-    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    monkeypatch.setattr("backend.ai.llm.router.sleep", _no_op_sleep)
     project = await _project(db)
     router, gemini, _local = _build_router(list(outcomes))
 
@@ -2722,7 +2720,7 @@ async def test_call_router_malformed_json_retry_also_failing_records_the_retrys_
     that error's specific code, and telemetry shows one outcome="error" record
     for the retry attempt (not the original malformed-but-technically-successful
     primary call)."""
-    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    monkeypatch.setattr("backend.ai.llm.router.sleep", _no_op_sleep)
     adapter = TypeAdapter(str)
     project, job = await _running_job(db)
     primary = FakeProvider("openai_compat", [_real_result("openai_compat", "not valid json")])

@@ -12,13 +12,13 @@ import zipfile
 
 import pytest
 
-from app.core.constants import YOUTUBE_CHAPTER_MIN_LINES, YOUTUBE_CHAPTER_WORDS_PER_MINUTE
-from app.core.exceptions import ProviderUnavailableError, ValidationError, YouTubePackageGenerationError
-from app.models.project import ScriptConfig, SpeakerConfig
-from app.services import project_service, youtube_service
-from app.services.ai.contracts import AIMode, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter
+from backend.core.constants import YOUTUBE_CHAPTER_MIN_LINES, YOUTUBE_CHAPTER_WORDS_PER_MINUTE
+from backend.core.exceptions import ProviderUnavailableError, ValidationError, YouTubePackageGenerationError
+from backend.schemas.project import ScriptConfig, SpeakerConfig
+from backend.content import project_service, youtube_service
+from backend.ai.llm.contracts import AIMode, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import AIRouter
 
 SAMPLE_PROJECT = {
     "name": "Future English",
@@ -79,7 +79,7 @@ def _gateway_router(mode: AIMode, gemini_outcomes: list, local_outcomes: list | 
 
 
 async def _no_op_sleep(delay: float) -> None:
-    """Task 14.1 amendment A: patched onto `app.services.ai.router.sleep` in the
+    """Task 14.1 amendment A: patched onto `backend.ai.llm.router.sleep` in the
     provider-exhaustion test below so real transient-error backoff (1s+2s+4s)
     doesn't actually elapse -- see tests/test_ai_router.py's `sleep_calls` fixture
     for the same pattern."""
@@ -212,9 +212,9 @@ async def test_generate_package_wraps_provider_error(monkeypatch):
     every attempt, generate_package wraps the failure.
 
     Task 14.1 amendment A: 4 outcomes (not 2) for a real AI_TRANSIENT_MAX_ATTEMPTS
-    exhaustion, `app.services.ai.router.sleep` patched to a no-op.
+    exhaustion, `backend.ai.llm.router.sleep` patched to a no-op.
     """
-    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    monkeypatch.setattr("backend.ai.llm.router.sleep", _no_op_sleep)
     router = _gateway_router(AIMode.CLOUD, [ProviderUnavailableError("down")] * 4)
 
     with pytest.raises(YouTubePackageGenerationError, match="YouTube package generation failed"):

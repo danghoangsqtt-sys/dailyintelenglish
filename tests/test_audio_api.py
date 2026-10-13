@@ -12,9 +12,10 @@ import pytest
 from fastapi.testclient import TestClient
 from pydub.generators import Sine
 
-from app.core.config import settings
-from app.main import app
-from app.services import audio_service, tts_service
+from backend.core.config import settings
+from backend.main import app
+from backend.media import audio_service
+from backend.ai.tts import tts_service
 
 PROJECT_PAYLOAD = {
     "name": "Audio API Test Episode",

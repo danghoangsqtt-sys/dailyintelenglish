@@ -64,7 +64,7 @@ def test_every_page_carries_the_new_name_header_and_favicon(page):
 def test_titles_set_by_script_and_the_server_use_the_new_name():
     script = (FRONTEND / "static" / "js" / "step1_config.js").read_text(encoding="utf-8")
     assert "Daily Intel" not in script and script.count("Daily Beyond English") >= 4
-    main = (ROOT / "app" / "main.py").read_text(encoding="utf-8")
+    main = (ROOT / "backend" / "main.py").read_text(encoding="utf-8")
     assert 'title="Daily Beyond English"' in main and "Daily Intel" not in main
 
 

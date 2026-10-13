@@ -16,10 +16,10 @@ The old Gemini-key settings surface (`get_gemini_api_key_status`,
 import httpx
 import pytest
 
-from app.core import config
-from app.core.exceptions import ValidationError
-from app.services import settings_service
-from app.services.ai import openai_compat_provider as openai_compat_provider_module
+from backend.core import config
+from backend.core.exceptions import ValidationError
+from backend.core import settings_service
+from backend.ai.llm import openai_compat_provider as openai_compat_provider_module
 
 
 def _install_mock_transport(monkeypatch, module, handler) -> None:
@@ -556,14 +556,14 @@ async def test_ai_mode_migration_is_logged(db, caplog):
     required behaviour 5) -- confirmed here for the DB-stored read path;
     config.py's mirror-image env-sourced migration (module-level code that
     runs once at import time) is verified by code review instead of an
-    automated test, since reloading app.core.config to re-exercise it would
+    automated test, since reloading backend.core.config to re-exercise it would
     replace the shared `settings` singleton object mid-test-session for every
-    other already-imported module that did `from app.core.config import
+    other already-imported module that did `from backend.core.config import
     settings` -- an unsafe, cross-test-polluting operation in this
     shared-process suite, not a safe thing to do even in one isolated test."""
     await _seed_legacy_ai_mode_value(db, "gemini")
 
-    with caplog.at_level("INFO", logger="app.services.settings_service"):
+    with caplog.at_level("INFO", logger="backend.core.settings_service"):
         await settings_service.get_ai_mode_status(db)
 
     migration_lines = [r.getMessage() for r in caplog.records if "ai_mode_migrated" in r.getMessage()]

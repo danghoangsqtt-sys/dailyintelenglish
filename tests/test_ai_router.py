@@ -18,23 +18,14 @@ import time
 
 import pytest
 
-from app.core.exceptions import (
-    ProviderAuthError,
-    ProviderDailyQuotaError,
-    ProviderRateLimitError,
-    ProviderRequestRejectedError,
-    ProviderTimeoutError,
-    ProviderUnavailableError,
-    SchemaValidationError,
+from backend.core.exceptions import (
+    ProviderAuthError, ProviderDailyQuotaError, ProviderRateLimitError, ProviderRequestRejectedError,
+    ProviderTimeoutError, ProviderUnavailableError, SchemaValidationError,
 )
-from app.services.ai.contracts import AIMode, GenerationRequest, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import (
-    AIRouter,
-    ChainEntry,
-    CircuitBreaker,
-    build_ai_router_from_settings,
-    compute_effective_mode,
+from backend.ai.llm.contracts import AIMode, GenerationRequest, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import (
+    AIRouter, ChainEntry, CircuitBreaker, build_ai_router_from_settings, compute_effective_mode,
 )
 
 
@@ -52,7 +43,7 @@ def sleep_calls(monkeypatch):
     async def _fake_sleep(delay: float) -> None:
         calls.append(delay)
 
-    monkeypatch.setattr("app.services.ai.router.sleep", _fake_sleep)
+    monkeypatch.setattr("backend.ai.llm.router.sleep", _fake_sleep)
     return calls
 
 
@@ -242,7 +233,7 @@ async def test_transient_exhaustion_raises_the_last_error_and_logs_exhausted(sle
     primary = FakeProvider("openai_compat", [])
     router = AIRouter(primary=primary, fallback=fallback, mode=AIMode.LOCAL)
 
-    with caplog.at_level(logging.WARNING, logger="app.services.ai.router"):
+    with caplog.at_level(logging.WARNING, logger="backend.ai.llm.router"):
         with pytest.raises(ProviderUnavailableError):
             await router.generate(_request())
 
@@ -546,9 +537,9 @@ async def test_router_local_mode_matches_the_effective_local_collapse():
 def test_build_ai_router_from_settings_reads_current_settings_each_call(monkeypatch):
     """Point 1's 'a changed setting reaches the next job without a restart':
     each call reads `settings.*` live, so a Settings-page change between two
-    job dispatches (`app/main.py`'s `_build_ai_router`, which this function
+    job dispatches (`backend/main.py`'s `_build_ai_router`, which this function
     backs) is reflected on the very next call, no restart needed."""
-    from app.core import config
+    from backend.core import config
 
     monkeypatch.setattr(config.settings, "OLLAMA_MODEL", "qwen3.5:9b")
     router1 = build_ai_router_from_settings()
@@ -560,7 +551,7 @@ def test_build_ai_router_from_settings_reads_current_settings_each_call(monkeypa
 
 
 def _configure_openrouter(monkeypatch):
-    from app.core import config
+    from backend.core import config
 
     monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", True)
     monkeypatch.setattr(config.settings, "AI_MODE", "cloud_first")
@@ -570,7 +561,7 @@ def _configure_openrouter(monkeypatch):
 
 
 def test_build_ai_router_from_settings_threads_the_same_circuit_breaker_through_every_call(monkeypatch):
-    """Point 1's 'breaker state survives across two jobs': `app/main.py` holds
+    """Point 1's 'breaker state survives across two jobs': `backend/main.py` holds
     ONE `dict[str, CircuitBreaker]` for the app's whole lifetime and passes it
     to every per-job router it builds -- simulated here by building two
     routers ("job 1", "job 2") with the same dict and confirming both hold the
@@ -597,7 +588,7 @@ def test_build_ai_router_from_settings_default_circuit_is_fresh_per_call(monkeyp
     """Every other caller of `build_ai_router_from_settings` (the 4
     `*_service.py` files) doesn't pass `circuits`, and must keep getting a
     fresh breaker per call -- matching today's per-call-fresh router
-    semantics, not `app/main.py`'s special app-lifetime sharing."""
+    semantics, not `backend/main.py`'s special app-lifetime sharing."""
     _configure_openrouter(monkeypatch)
     router1 = build_ai_router_from_settings()
     router2 = build_ai_router_from_settings()
@@ -608,7 +599,7 @@ def test_build_ai_router_from_settings_default_circuit_is_fresh_per_call(monkeyp
 def test_build_ai_router_from_settings_reads_fallback_models(monkeypatch):
     """Task 18.6 (D27): the model chain is parsed from live settings, same
     live-settings pattern as every other OPENAI_COMPAT_* field."""
-    from app.core import config
+    from backend.core import config
 
     monkeypatch.setattr(config.settings, "AI_ALLOW_CLOUD", True)
     monkeypatch.setattr(config.settings, "AI_MODE", "cloud_first")
@@ -724,7 +715,7 @@ async def test_plain_rate_limit_error_still_gets_backoff_retry_unlike_daily_quot
     """Regression guard distinguishing ProviderDailyQuotaError's new
     no-retry path from an ordinary ProviderRateLimitError, which must keep
     its existing backoff/retry behaviour unchanged."""
-    from app.core.exceptions import ProviderRateLimitError
+    from backend.core.exceptions import ProviderRateLimitError
 
     primary = FakeProvider(
         "openai_compat",
@@ -1060,7 +1051,7 @@ async def test_fallback_reason_is_no_cloud_provider_configured_when_chain_is_emp
 
 def test_default_cloud_provider_order_is_gemini_first():
     """D30: locks in the flipped default (was 'openrouter,gemini')."""
-    from app.core.config import Settings
+    from backend.core.config import Settings
 
     assert Settings.model_fields["CLOUD_PROVIDER_ORDER"].default == "gemini,openrouter"
 
@@ -1073,7 +1064,7 @@ def test_default_ai_mode_is_cloud_first():
     this on every construction, not just the one shared `config.settings`
     singleton conftest.py neutralizes), which could pull the owner's real
     keys into this test process. Nothing here ever constructs `Settings()`."""
-    from app.core.config import Settings
+    from backend.core.config import Settings
 
     assert Settings.model_fields["AI_MODE"].default == "cloud_first"
 

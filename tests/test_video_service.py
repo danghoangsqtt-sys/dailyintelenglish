@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from app.core.config import settings
-from app.core.exceptions import RemotionRenderFailedError, VideoRenderError
-from app.services import video_renderer_remotion, video_service
+from backend.core.config import settings
+from backend.core.exceptions import RemotionRenderFailedError, VideoRenderError
+from backend.media import video_renderer_remotion, video_service
 
 AUDIO_JOB = {
     "status": "complete", "mp3_path": "x.mp3", "duration_seconds": 3.0,

@@ -11,9 +11,10 @@ import pytest
 from fastapi.testclient import TestClient
 from pydub.generators import Sine
 
-from app.core.config import settings
-from app.main import app
-from app.services import tts_service, video_service
+from backend.core.config import settings
+from backend.main import app
+from backend.ai.tts import tts_service
+from backend.media import video_service
 
 PROJECT_PAYLOAD = {
     "name": "Video API Test Episode",
@@ -51,7 +52,7 @@ def _fake_edge_tts(monkeypatch):
 @pytest.fixture(autouse=True)
 def _fake_remotion(monkeypatch):
     """Task 35.5: Remotion is the only renderer; these API tests use a fake render (a real one takes minutes)."""
-    from app.services import video_renderer_remotion
+    from backend.media import video_renderer_remotion
 
     async def fake_render(db, project, audio_job, learning, output_path, **kwargs):
         output_path.parent.mkdir(parents=True, exist_ok=True)

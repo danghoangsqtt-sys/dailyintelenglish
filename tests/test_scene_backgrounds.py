@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from PIL import Image
 
-from app.core.config import settings
-from app.services.visuals import shot_library_service as lib
+from backend.core.config import settings
+from backend.library import shot_library_service as lib
 from tests.test_visuals_project_api import client, data  # noqa: F401
 
 

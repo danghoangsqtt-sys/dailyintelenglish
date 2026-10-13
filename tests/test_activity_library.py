@@ -11,12 +11,12 @@ from fastapi.testclient import TestClient
 from PIL import Image
 from starlette.datastructures import UploadFile
 
-from app.core.config import settings
-from app.core.exceptions import ConflictError, NotFoundError, ValidationError
-from app.main import app
-from app.services.visuals import activity_library_service as activities
+from backend.core.config import settings
+from backend.core.exceptions import ConflictError, NotFoundError, ValidationError
+from backend.main import app
+from backend.library import activity_library_service as activities
 
-MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "app" / "db" / "migrations"
+MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "backend" / "db" / "migrations"
 
 
 def image_bytes(color: tuple[int, int, int]) -> bytes:

@@ -5,9 +5,9 @@ import sqlite3
 import pytest
 from PIL import Image
 
-from app.core.config import settings
-from app.services.visuals import geometry, recipes
-from app.services.visuals.engine import FakeImageEngine
+from backend.core.config import settings
+from backend.ai.image import geometry, recipes
+from backend.ai.image.engine import FakeImageEngine
 from tests.test_visuals_project_api import client, data, setup_project, wait_job  # noqa: F401
 
 SIZE = (1344, 768)
@@ -127,7 +127,7 @@ def test_used_count_duplicate_and_versioned_plate_url(client):  # noqa: F811
 async def test_builtin_category_moves_respect_user_choices(tmp_path, monkeypatch):
     """Task 23.3b: a built-in still on its previously seeded category moves to the owner's
     grouping; one the user re-categorised keeps the user's choice."""
-    from app.db.database import Database, init_db
+    from backend.db.database import Database, init_db
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     old = Database._instance
@@ -149,7 +149,7 @@ async def test_builtin_category_moves_respect_user_choices(tmp_path, monkeypatch
 async def test_builtin_place_upgrade_keeps_user_edits(tmp_path, monkeypatch):
     """Task 23.3b: a built-in still holding a replaced place text gets the new text and loses its
     stale plate; a place the user edited is kept with its plate."""
-    from app.db.database import Database, init_db
+    from backend.db.database import Database, init_db
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     old = Database._instance

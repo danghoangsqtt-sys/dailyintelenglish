@@ -3,9 +3,9 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core import config
-from app.core.config import settings
-from app.main import app
+from backend.core import config
+from backend.core.config import settings
+from backend.main import app
 
 
 @pytest.fixture
@@ -13,7 +13,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     monkeypatch.setattr(settings, "OPENAI_COMPAT_API_KEY", "env-default-key-9999")
     # config.ENV_OPENAI_COMPAT_API_KEY is captured once at process import time from the
-    # real .env file and never changes afterward (see app/core/config.py) -- clearing a
+    # real .env file and never changes afterward (see backend/core/config.py) -- clearing a
     # stored key reverts to it in production, so it must be isolated here too, or
     # "clear" tests would revert to (and leak parts of) this machine's real key.
     monkeypatch.setattr(config, "ENV_OPENAI_COMPAT_API_KEY", "env-default-key-9999")
@@ -224,7 +224,7 @@ def test_old_gemini_routes_are_gone(client):
 def test_post_test_connection_reports_ok_true_on_success(client, monkeypatch):
     import httpx
 
-    from app.services.ai import openai_compat_provider as openai_compat_provider_module
+    from backend.ai.llm import openai_compat_provider as openai_compat_provider_module
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
@@ -249,7 +249,7 @@ def test_post_test_connection_reports_ok_true_on_success(client, monkeypatch):
 def test_post_test_connection_reports_error_class_and_status_never_the_key(client, monkeypatch):
     import httpx
 
-    from app.services.ai import openai_compat_provider as openai_compat_provider_module
+    from backend.ai.llm import openai_compat_provider as openai_compat_provider_module
 
     marker = "SECRET_TEST_CONNECTION_KEY_MARKER"
 

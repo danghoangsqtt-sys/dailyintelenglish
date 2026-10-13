@@ -7,20 +7,16 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from app.core.config import settings
-from app.core.constants import (
-    THUMBNAIL_HEIGHT_16X9,
-    THUMBNAIL_HEIGHT_9X16,
-    THUMBNAIL_TEMPLATE_IDS,
-    THUMBNAIL_WIDTH_16X9,
-    THUMBNAIL_WIDTH_9X16,
+from backend.core.config import settings
+from backend.core.constants import (
+    THUMBNAIL_HEIGHT_16X9, THUMBNAIL_HEIGHT_9X16, THUMBNAIL_TEMPLATE_IDS, THUMBNAIL_WIDTH_16X9, THUMBNAIL_WIDTH_9X16,
 )
-from app.core.exceptions import ConflictError, ThumbnailGenerationError
-from app.models.thumbnail import ThumbnailEditRequest, ThumbnailSuggestion
-from app.services import thumbnail_service
-from app.services.ai.contracts import AIMode, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter
+from backend.core.exceptions import ConflictError, ThumbnailGenerationError
+from backend.schemas.thumbnail import ThumbnailEditRequest, ThumbnailSuggestion
+from backend.media import thumbnail_service
+from backend.ai.llm.contracts import AIMode, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import AIRouter
 
 PROJECT = {
     "id": "project-1",

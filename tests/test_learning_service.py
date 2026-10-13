@@ -11,12 +11,12 @@ import json
 
 import pytest
 
-from app.core.exceptions import LearningGenerationError, NotFoundError, ProviderUnavailableError
-from app.models.project import ScriptConfig, SpeakerConfig
-from app.services import learning_service, project_service
-from app.services.ai.contracts import AIMode, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter
+from backend.core.exceptions import LearningGenerationError, NotFoundError, ProviderUnavailableError
+from backend.schemas.project import ScriptConfig, SpeakerConfig
+from backend.content import learning_service, project_service
+from backend.ai.llm.contracts import AIMode, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import AIRouter
 
 SAMPLE_CONFIG = {
     "topic": "Remote work culture",
@@ -105,7 +105,7 @@ def _gateway_router(mode: AIMode, gemini_outcomes: list, local_outcomes: list | 
 
 
 async def _no_op_sleep(delay: float) -> None:
-    """Task 14.1 amendment A: patched onto `app.services.ai.router.sleep` in the
+    """Task 14.1 amendment A: patched onto `backend.ai.llm.router.sleep` in the
     provider-exhaustion test below so real transient-error backoff (1s+2s+4s)
     doesn't actually elapse -- see tests/test_ai_router.py's `sleep_calls` fixture
     for the same pattern."""
@@ -162,7 +162,7 @@ async def test_render_learning_prompt_different_cefr_and_genre():
 
 
 async def test_render_learning_prompt_rejects_unknown_cefr_level():
-    from app.core.exceptions import ValidationError
+    from backend.core.exceptions import ValidationError
 
     with pytest.raises(ValidationError, match="CEFR level"):
         await learning_service.render_learning_prompt(
@@ -171,7 +171,7 @@ async def test_render_learning_prompt_rejects_unknown_cefr_level():
 
 
 async def test_render_learning_prompt_rejects_unknown_genre():
-    from app.core.exceptions import ValidationError
+    from backend.core.exceptions import ValidationError
 
     with pytest.raises(ValidationError, match="genre"):
         await learning_service.render_learning_prompt(
@@ -202,9 +202,9 @@ async def test_generate_learning_pack_wraps_provider_error(monkeypatch):
     every attempt, generate_learning_pack wraps the failure.
 
     Task 14.1 amendment A: 4 outcomes (not 2) for a real AI_TRANSIENT_MAX_ATTEMPTS
-    exhaustion, `app.services.ai.router.sleep` patched to a no-op.
+    exhaustion, `backend.ai.llm.router.sleep` patched to a no-op.
     """
-    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    monkeypatch.setattr("backend.ai.llm.router.sleep", _no_op_sleep)
     router = _gateway_router(AIMode.CLOUD, [ProviderUnavailableError("down")] * 4)
 
     with pytest.raises(LearningGenerationError, match="Learning content generation failed"):

@@ -3,9 +3,9 @@
 import jinja2
 import pytest
 
-from app.core.constants import CEFR_LEVELS, GENRES
-from app.core.exceptions import ValidationError
-from app.core.prompt_loader import load_cefr_block, load_genre_block, render_script_prompt
+from backend.core.constants import CEFR_LEVELS, GENRES
+from backend.core.exceptions import ValidationError
+from backend.ai.llm.prompt_loader import load_cefr_block, load_genre_block, render_script_prompt
 
 SAMPLE_CONTEXT = {
     "topic": "How AI assistants are changing daily routines",
@@ -213,7 +213,7 @@ async def test_every_genre_cefr_combination_renders_cleanly(genre, cefr_level):
 
 
 async def test_render_regenerate_line_prompt_renders_cleanly():
-    from app.core.prompt_loader import render_regenerate_line_prompt
+    from backend.ai.llm.prompt_loader import render_regenerate_line_prompt
 
     prompt = await render_regenerate_line_prompt(
         genre="interview",

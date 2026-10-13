@@ -8,8 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from app.core.config import settings
-from app.main import app
+from backend.core.config import settings
+from backend.main import app
 
 PROJECT = {
     "name": "Conversation lesson", "topic": "Meeting at a cafe", "cefr_level": "B1",
@@ -153,7 +153,7 @@ def test_project_delete_removes_visual_files(client):
 
 
 def test_shot_prompt_truncation_from_fake_encode(client, monkeypatch):
-    from app.services.visuals import recipes
+    from backend.ai.image import recipes
 
     project, _, _ = setup_project(client, 1, 1)
     monkeypatch.setattr(recipes, "single_prompt", lambda character, scene, **kwargs: "word " * 80)

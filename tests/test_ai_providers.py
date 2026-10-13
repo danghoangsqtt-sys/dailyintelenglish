@@ -11,12 +11,12 @@ import json
 import httpx
 import pytest
 
-from app.core.exceptions import ProviderInvalidResponseError, ProviderTimeoutError, ProviderUnavailableError
-from app.services.ai import ollama_provider as ollama_provider_module
-from app.services.ai.contracts import AIMode, GenerationRequest
-from app.services.ai.ollama_provider import OllamaProvider, validate_loopback_url
-from app.services.ai.router import AIRouter
-from app.services.gpu_model_manager import GpuModelManager, set_gpu_manager
+from backend.core.exceptions import ProviderInvalidResponseError, ProviderTimeoutError, ProviderUnavailableError
+from backend.ai.llm import ollama_provider as ollama_provider_module
+from backend.ai.llm.contracts import AIMode, GenerationRequest
+from backend.ai.llm.ollama_provider import OllamaProvider, validate_loopback_url
+from backend.ai.llm.router import AIRouter
+from backend.ai.image.gpu_model_manager import GpuModelManager, set_gpu_manager
 
 
 def _request(**overrides) -> GenerationRequest:

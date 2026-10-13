@@ -1,0 +1,35 @@
+"""Task 24.1: a project's storyboard (beats that tile the script lines)."""
+
+import aiosqlite
+from fastapi import APIRouter, Depends
+
+from backend.core.responses import ok
+from backend.db.database import get_db
+from backend.db.transactions import read_transaction, write_transaction
+from backend.schemas.storyboard import StoryboardInput
+from backend.content import project_service
+from backend.library import storyboard_service as storyboard
+
+router = APIRouter(prefix="/api/projects/{project_id}/storyboard", tags=["storyboard"])
+
+
+@router.get("")
+async def get_storyboard(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with read_transaction():
+        await project_service.get_project(db, project_id)
+        return ok(await storyboard.get_storyboard(db, project_id))
+
+
+@router.put("")
+async def put_storyboard(project_id: str, body: StoryboardInput, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        await project_service.get_project(db, project_id)
+        return ok(await storyboard.replace_storyboard(db, project_id, body, "owner"))
+
+
+@router.post("/propose")
+async def propose_storyboard(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Task 24.2: AI proposal (one repair, then the deterministic rule); replaces the draft."""
+    async with read_transaction():
+        await project_service.get_project(db, project_id)
+    return ok(await storyboard.propose_storyboard(db, project_id))

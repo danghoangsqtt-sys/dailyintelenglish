@@ -9,9 +9,9 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import settings
-from app.main import app
-from app.services.visuals.character_profile_service import TIER1_SPRITES
+from backend.core.config import settings
+from backend.main import app
+from backend.library.character_profile_service import TIER1_SPRITES
 
 QUICK = {"name": "Kai", "gender": "male", "accent": "british", "nationality": "Japanese",
          "appearance": "tall, short black hair, round glasses", "outfit": "grey hoodie and jeans"}

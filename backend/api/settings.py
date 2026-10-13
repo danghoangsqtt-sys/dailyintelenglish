@@ -1,0 +1,144 @@
+"""App-level settings routes (Task 12.1; Task 18.3 cloud provider settings)."""
+
+import time
+
+import aiosqlite
+from fastapi import APIRouter, Depends
+
+from backend.core.config import settings
+from backend.db.transactions import write_transaction
+from backend.core.responses import ok
+from backend.db.database import get_db
+from backend.schemas.settings import (
+    AIModeUpdate, CloudProviderOrderUpdate, CloudSettingsUpdate, CloudTestConnectionRequest, GeminiSettingsUpdate,
+    OpenCodeZenSettingsUpdate,
+)
+from backend.core import settings_service
+
+router = APIRouter(prefix="/api/settings", tags=["settings"])
+
+
+@router.get("")
+async def get_settings(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Report the cloud provider's status and the current AI_MODE.
+
+    Never returns the raw cloud key -- see settings_service.get_cloud_settings_status.
+    `allow_cloud` (Task 18.3, PM review C3) and `effective_mode`/`effective_reason`
+    let the Settings page show, and explain, when the selected mode differs from
+    what actually runs.
+    """
+    started_at = time.perf_counter()
+    cloud_status = await settings_service.get_cloud_settings_status(db)
+    provider_chain_status = await settings_service.get_provider_chain_status(db)
+    ai_mode_status = await settings_service.get_ai_mode_status(db)
+    effective_mode, effective_reason = settings_service.compute_effective_mode_and_reason(
+        ai_mode_status["ai_mode"]
+    )
+    return ok(
+        {
+            **cloud_status,
+            **provider_chain_status,
+            **ai_mode_status,
+            "allow_cloud": settings.AI_ALLOW_CLOUD,
+            "effective_mode": effective_mode,
+            "effective_reason": effective_reason,
+        },
+        started_at=started_at,
+    )
+
+
+@router.put("/ai-mode")
+async def update_ai_mode(payload: AIModeUpdate, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Save a new AI_MODE (ADR-001 kill switch) -- takes effect immediately, no restart needed."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.set_ai_mode(db, payload.ai_mode)
+    return ok(status, started_at=started_at)
+
+
+@router.put("/cloud")
+async def update_cloud_settings(
+    payload: CloudSettingsUpdate, db: aiosqlite.Connection = Depends(get_db)
+) -> dict:
+    """Save the cloud provider's base URL/model, and (optionally) its API key --
+    takes effect immediately, no restart needed."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.set_cloud_settings(
+            db, payload.base_url, payload.model, payload.api_key, payload.fallback_models
+        )
+    return ok(status, started_at=started_at)
+
+
+@router.delete("/cloud/api-key")
+async def clear_cloud_api_key(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Remove the stored cloud API key and revert to the original .env/environment value."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.clear_cloud_api_key(db)
+    return ok(status, started_at=started_at)
+
+
+@router.post("/cloud/test-connection")
+async def test_cloud_connection(payload: CloudTestConnectionRequest) -> dict:
+    """One real, tiny probe call to the cloud provider -- never persists anything."""
+    started_at = time.perf_counter()
+    result = await settings_service.test_cloud_connection(payload.base_url, payload.model, payload.api_key)
+    return ok(result, started_at=started_at)
+
+
+@router.put("/cloud/opencode-zen")
+async def update_opencode_zen_settings(
+    payload: OpenCodeZenSettingsUpdate, db: aiosqlite.Connection = Depends(get_db)
+) -> dict:
+    """Task 18.8: save OpenCode Zen's base URL/model, and (optionally) its API
+    key -- takes effect immediately, no restart needed."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.set_opencode_zen_settings(
+            db, payload.base_url, payload.model, payload.api_key
+        )
+    return ok(status, started_at=started_at)
+
+
+@router.delete("/cloud/opencode-zen/api-key")
+async def clear_opencode_zen_api_key(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Task 18.8: remove the stored OpenCode Zen API key, reverting to the
+    original .env/environment value."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.clear_opencode_zen_api_key(db)
+    return ok(status, started_at=started_at)
+
+
+@router.put("/cloud/gemini")
+async def update_gemini_settings(
+    payload: GeminiSettingsUpdate, db: aiosqlite.Connection = Depends(get_db)
+) -> dict:
+    """Task 18.8: save Gemini's base URL/model chain, and (optionally) its API
+    key -- takes effect immediately, no restart needed."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.set_gemini_settings(db, payload.base_url, payload.models, payload.api_key)
+    return ok(status, started_at=started_at)
+
+
+@router.delete("/cloud/gemini/api-key")
+async def clear_gemini_cloud_api_key(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Task 18.8: remove the stored Gemini API key, reverting to the original
+    .env/environment value."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.clear_gemini_cloud_api_key(db)
+    return ok(status, started_at=started_at)
+
+
+@router.put("/cloud/order")
+async def update_cloud_provider_order(
+    payload: CloudProviderOrderUpdate, db: aiosqlite.Connection = Depends(get_db)
+) -> dict:
+    """Task 18.8: save the cloud dispatch order -- takes effect immediately."""
+    started_at = time.perf_counter()
+    async with write_transaction(db):
+        status = await settings_service.set_cloud_provider_order(db, payload.order)
+    return ok(status, started_at=started_at)

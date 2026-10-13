@@ -7,8 +7,8 @@ import subprocess
 import numpy as np
 import pytest
 
-from app.core.config import settings
-from app.services.visuals import sprite_plan as plan
+from backend.core.config import settings
+from backend.library import sprite_plan as plan
 
 FPS = 30
 ALL = {f"{e}__{m}" for e in ("calm", "smile", "laugh", "surprised", "thinking", "worried", "serious") for m in ("closed", "open")} | {

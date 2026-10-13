@@ -8,11 +8,11 @@ import httpx
 import pytest
 from playwright.async_api import Browser, async_playwright
 
-from app.core.config import settings
-from app.services import music_select_service
-from app.services.ai.contracts import AIMode, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter
+from backend.core.config import settings
+from backend.media import music_select_service
+from backend.ai.llm.contracts import AIMode, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import AIRouter
 from tests.conftest import live_server
 
 

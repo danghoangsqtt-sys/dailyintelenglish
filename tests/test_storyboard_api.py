@@ -4,9 +4,9 @@ import sqlite3
 
 import pytest
 
-from app.core.config import settings
-from app.models.storyboard import BeatInput
-from app.services.visuals.storyboard_service import estimate_images
+from backend.core.config import settings
+from backend.schemas.storyboard import BeatInput
+from backend.library.storyboard_service import estimate_images
 from tests.test_visuals_project_api import client, data, locked_character  # noqa: F401
 
 

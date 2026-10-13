@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import settings
-from app.main import app
-from app.services import music_library_service as library
+from backend.core.config import settings
+from backend.main import app
+from backend.media import music_library_service as library
 
 
 @pytest.fixture

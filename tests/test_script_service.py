@@ -2,7 +2,7 @@
 
 No real network calls: since Task 13.7, `generate_script`/`regenerate_line` are
 exercised through an injected `FakeProvider`-backed `AIRouter` (see
-`app/services/ai/fake_provider.py`, `tests/test_ai_router.py`) instead of
+`backend/ai/llm/fake_provider.py`, `tests/test_ai_router.py`) instead of
 monkeypatching a per-service HTTP transport -- the router/provider layer's own
 retry/fallback/timeout policy is already covered by `tests/test_ai_router.py` and
 `tests/test_ai_providers.py`, so these tests only prove `script_service` calls the
@@ -13,11 +13,11 @@ import json
 
 import pytest
 
-from app.core.exceptions import ProviderUnavailableError, ScriptGenerationError
-from app.services import script_service
-from app.services.ai.contracts import AIMode, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter
+from backend.core.exceptions import ProviderUnavailableError, ScriptGenerationError
+from backend.content import script_service
+from backend.ai.llm.contracts import AIMode, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import AIRouter
 
 SAMPLE_CONFIG = {
     "topic": "Remote work culture",
@@ -93,7 +93,7 @@ def _gateway_router(mode: AIMode, gemini_outcomes: list, local_outcomes: list | 
 
 
 async def _no_op_sleep(delay: float) -> None:
-    """Task 14.1 amendment A: patched onto `app.services.ai.router.sleep` in the
+    """Task 14.1 amendment A: patched onto `backend.ai.llm.router.sleep` in the
     provider-exhaustion tests below so real transient-error backoff (1s+2s+4s)
     doesn't actually elapse -- see tests/test_ai_router.py's `sleep_calls` fixture
     for the same pattern."""
@@ -117,10 +117,10 @@ async def test_generate_script_wraps_provider_error_as_script_generation_error(m
 
     Task 14.1 amendment A: the router now makes AI_TRANSIENT_MAX_ATTEMPTS=4 attempts
     with backoff before giving up, so 4 outcomes (not 2) are needed for a real
-    exhaustion, and `app.services.ai.router.sleep` is patched to a no-op so this test
+    exhaustion, and `backend.ai.llm.router.sleep` is patched to a no-op so this test
     doesn't really wait out 1s+2s+4s of backoff.
     """
-    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    monkeypatch.setattr("backend.ai.llm.router.sleep", _no_op_sleep)
     router = _gateway_router(AIMode.CLOUD, [ProviderUnavailableError("down")] * 4)
 
     with pytest.raises(ScriptGenerationError, match="Script generation failed"):
@@ -190,7 +190,7 @@ async def test_generate_script_cloud_first_mode_with_no_key_falls_through_to_loc
     process, matching this file's "no real network calls" header."""
     import httpx
 
-    from app.services.ai import ollama_provider as ollama_provider_module
+    from backend.ai.llm import ollama_provider as ollama_provider_module
 
     monkeypatch.setattr(script_service.settings, "AI_MODE", "cloud_first")
     monkeypatch.setattr(script_service.settings, "AI_ALLOW_CLOUD", True)
@@ -217,9 +217,9 @@ async def test_regenerate_line_via_injected_gateway_router_returns_validated_lin
     """regenerate_line accepts an injected AIRouter (Task 13.4) -- proves the
     gateway migration actually routes through AIRouter.generate(), not just that
     the legacy httpx path still happens to work."""
-    from app.services.ai.contracts import AIMode, GenerationResult
-    from app.services.ai.fake_provider import FakeProvider
-    from app.services.ai.router import AIRouter
+    from backend.ai.llm.contracts import AIMode, GenerationResult
+    from backend.ai.llm.fake_provider import FakeProvider
+    from backend.ai.llm.router import AIRouter
 
     scripted = GenerationResult(
         text=json.dumps(VALID_LINES[0]),
@@ -249,12 +249,12 @@ async def test_regenerate_line_via_injected_gateway_router_returns_validated_lin
 async def test_regenerate_line_wraps_provider_error_as_script_generation_error(monkeypatch):
     """Task 14.1 amendment A: see test_generate_script_wraps_provider_error_as_script_generation_error
     above -- 4 outcomes for a real exhaustion, `sleep` patched to a no-op."""
-    from app.core.exceptions import ProviderUnavailableError
-    from app.services.ai.contracts import AIMode
-    from app.services.ai.fake_provider import FakeProvider
-    from app.services.ai.router import AIRouter
+    from backend.core.exceptions import ProviderUnavailableError
+    from backend.ai.llm.contracts import AIMode
+    from backend.ai.llm.fake_provider import FakeProvider
+    from backend.ai.llm.router import AIRouter
 
-    monkeypatch.setattr("app.services.ai.router.sleep", _no_op_sleep)
+    monkeypatch.setattr("backend.ai.llm.router.sleep", _no_op_sleep)
     gemini = FakeProvider("fake-gemini", [ProviderUnavailableError("down")] * 4)
     local = FakeProvider("fake-ollama", [])
     router = AIRouter(primary=gemini, fallback=local, mode=AIMode.CLOUD)
@@ -271,9 +271,9 @@ async def test_regenerate_line_wraps_provider_error_as_script_generation_error(m
 
 
 async def test_regenerate_line_still_rejects_speaker_id_change_via_gateway():
-    from app.services.ai.contracts import AIMode, GenerationResult
-    from app.services.ai.fake_provider import FakeProvider
-    from app.services.ai.router import AIRouter
+    from backend.ai.llm.contracts import AIMode, GenerationResult
+    from backend.ai.llm.fake_provider import FakeProvider
+    from backend.ai.llm.router import AIRouter
 
     wrong_speaker_line = dict(VALID_LINES[0])
     wrong_speaker_line["speaker_id"] = "22222222-2222-2222-2222-222222222222"

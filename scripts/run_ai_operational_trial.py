@@ -115,8 +115,8 @@ os.environ["DIE_DATA_DIR"] = str(TRIAL_DATA_DIR)
 import httpx  # noqa: E402
 import uvicorn  # noqa: E402
 
-from app.core.constants import CEFR_WORDS_PER_MINUTE, SCRIPT_GLOBAL_WORD_TOLERANCE  # noqa: E402
-from app.main import app  # noqa: E402
+from backend.core.constants import CEFR_WORDS_PER_MINUTE, SCRIPT_GLOBAL_WORD_TOLERANCE  # noqa: E402
+from backend.main import app  # noqa: E402
 
 # --- Gate B thresholds (controlling plan section 8, Task 13.9 / section 3) ----------
 WORD_COUNT_MIN, WORD_COUNT_MAX = 720, 880
@@ -225,7 +225,7 @@ async def create_and_wait_job(
     """POST an ai-job, poll until terminal, and return a timing/outcome record.
 
     `AIJobOut` deliberately excludes internal checkpoint-level bookkeeping (see
-    app/models/ai_job.py), so per-section timing here is derived from observed
+    backend/schemas/ai_job.py), so per-section timing here is derived from observed
     `stage` transitions in the poll timeline, not read directly from the DB --
     an honest approximation given the API-only constraint this runner is under,
     not a claim of exact internal measurement.
@@ -522,7 +522,7 @@ def _open_trial_db(db_path: Path) -> sqlite3.Connection | None:
 def read_section_checkpoints(job_id: str, db_path: Path) -> list[dict[str, Any]]:
     """Best-effort read of one job's `stage='section'` checkpoints straight from
     the trial's own SQLite file. `AIJobOut` deliberately never exposes
-    checkpoint-level data (see `app/models/ai_job.py`'s own docstring) -- this is
+    checkpoint-level data (see `backend/schemas/ai_job.py`'s own docstring) -- this is
     a diagnostic runner, not the running app, and is allowed to look deeper."""
     conn = _open_trial_db(db_path)
     if conn is None:
@@ -695,7 +695,7 @@ def ffprobe_info(path: Path) -> dict[str, Any]:
 async def synthesize_all_lines(client: httpx.AsyncClient, project_id: str) -> list[dict[str, Any]]:
     """Task 14.4a-c (PM finding from the first real local Gate B-2 media run):
     `POST .../audio/generate` requires every `script_lines` row to already have
-    `audio_cache_path` set (see `app/services/audio_service.py`'s "Line(s) not
+    `audio_cache_path` set (see `backend/media/audio_service.py`'s "Line(s) not
     yet synthesized" check) -- the UI drives that one line at a time via
     `POST .../tts/preview` (see `frontend/static/js/api.js`'s
     `previewTtsLine`), which this runner never called before, so

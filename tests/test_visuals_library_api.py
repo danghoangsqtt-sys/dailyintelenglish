@@ -7,8 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from app.core.config import settings
-from app.main import app
+from backend.core.config import settings
+from backend.main import app
 
 CHARACTER = {
     "name": "Linh", "gender": "female", "age_group": "young", "ethnicity": "Vietnamese",

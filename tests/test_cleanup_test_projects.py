@@ -12,8 +12,8 @@ from pathlib import Path
 import aiosqlite
 import pytest
 
-from app.models.project import ScriptConfig, SpeakerConfig
-from app.services import project_service
+from backend.schemas.project import ScriptConfig, SpeakerConfig
+from backend.content import project_service
 from tests.conftest import MIGRATIONS_DIR
 
 import scripts.cleanup_test_projects as cleanup
@@ -160,7 +160,7 @@ def test_default_db_path_and_data_dir_come_from_settings(monkeypatch, tmp_path):
     """Confirms the script's defaults are the real, configured settings -- callers
     (tests, the PM) must pass --db/--data-dir explicitly to target anything else,
     which is exactly what every other test in this file does."""
-    from app.core.config import settings
+    from backend.core.config import settings
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     assert cleanup._default_data_dir() == tmp_path
@@ -207,8 +207,8 @@ async def test_database_connect_guard_rejects_the_real_db_path(monkeypatch):
     """Check (a): a connection attempt straight against the literal real
     data/app.db is rejected before it's ever opened -- the original `connect()`
     body (and so the real file) is never reached."""
-    from app.core.config import settings
-    from app.db.database import Database
+    from backend.core.config import settings
+    from backend.db.database import Database
     from tests.conftest import _REAL_DB_PATH
 
     monkeypatch.setattr(settings, "DATA_DIR", _REAL_DB_PATH.parent)
@@ -222,8 +222,8 @@ async def test_database_connect_guard_rejects_stale_reuse_against_a_different_da
     that would otherwise silently reuse an already-open connection is rejected
     once `settings.DATA_DIR` no longer matches the path that connection was
     actually opened against."""
-    from app.core.config import settings
-    from app.db.database import Database
+    from backend.core.config import settings
+    from backend.db.database import Database
 
     dir_a = tmp_path / "a"
     dir_b = tmp_path / "b"

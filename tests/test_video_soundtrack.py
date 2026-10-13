@@ -5,9 +5,9 @@ import json
 import pytest
 from pydub.generators import Sine
 
-from app.core.config import settings
-from app.services import audio_service, music_bed, video_renderer_remotion
-from app.services.music_bed import SAMPLE_RATE
+from backend.core.config import settings
+from backend.media import audio_service, music_bed, video_renderer_remotion
+from backend.media.music_bed import SAMPLE_RATE
 
 PROJECT = {"id": "proj-video-bed", "speakers": [{"id": "sp1", "name": "Lan"}]}
 

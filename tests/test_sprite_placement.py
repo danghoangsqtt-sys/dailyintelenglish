@@ -7,10 +7,10 @@ import sqlite3
 import aiosqlite
 import pytest
 
-from app.core.config import settings
-from app.services import video_renderer_remotion as remotion
-from app.services.visuals import character_asset_service as assets
-from app.services.visuals import sprite_service
+from backend.core.config import settings
+from backend.media import video_renderer_remotion as remotion
+from backend.library import character_asset_service as assets
+from backend.library import sprite_service
 from tests.test_character_asset_slots import _bytes, _person
 from tests.test_podcast_modes import _make_a_plate
 from tests.test_sprite_video_props import _audio_job, _give_sprites, _public
@@ -164,7 +164,7 @@ async def test_a_three_speaker_project_changes_the_pair_on_screen_by_segment(cli
 
 
 def test_a_three_speaker_storyboard_shows_the_two_who_talk_most_in_each_beat(monkeypatch):
-    from app.services.visuals import storyboard_service
+    from backend.library import storyboard_service
 
     monkeypatch.setattr(storyboard_service.settings, "VISUALS_IMAGE_CAP", 15)  # 3 places x 5 framings
     lines = [0, 1, 0, 1, 2, 1, 2, 2, 2, 0, 2, 0]  # beat 1: 0 and 1; beat 2: 2 and 1; beat 3: 2 and 0

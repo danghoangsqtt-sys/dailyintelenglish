@@ -1,0 +1,468 @@
+"""Project CRUD and state-machine logic."""
+
+import asyncio
+import json
+import logging
+import shutil
+import uuid
+from datetime import datetime, timezone
+
+import aiosqlite
+
+from backend.core.config import settings
+from backend.core.constants import CEFR_DEFAULT_TTS_SPEED, PROJECT_STATUSES
+from backend.core.exceptions import NotFoundError, ValidationError
+from backend.schemas.project import ProjectUpdate, ScriptConfig, SpeakerConfig, SpeakerUpdate
+
+logger = logging.getLogger(__name__)
+
+# Every per-project data directory that a real project deletion must also clean up
+# (project_service knows none of these services' internals -- this list must stay in
+# sync with the "<category>/<project_id>" convention used by tts_service, audio_service, video_service and
+# thumbnail_service; "avatars" stays because projects made before Task 35.4 may still hold one).
+_PROJECT_ARTIFACT_CATEGORIES = ("avatars", "audio", "video", "thumbnails", "tts_cache", "visuals")
+_DOWNSTREAM_STATUSES = frozenset({"audio_generated", "video_generated", "complete"})
+
+_LIST_COLUMNS = "id, name, status, cefr_level, genre, accent, created_at, updated_at"
+_DETAIL_COLUMNS = (
+    "id, name, status, topic, cefr_level, duration_minutes, num_speakers, "
+    "genre, accent, language_features, config_json, created_at, updated_at"
+)
+
+
+def _now() -> str:
+    """Current UTC timestamp in ISO8601, used for created_at/updated_at."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _row_to_project(row: aiosqlite.Row) -> dict:
+    """Convert a projects row to a dict, decoding the language_features JSON blob."""
+    project = dict(row)
+    if project.get("language_features"):
+        project["language_features"] = json.loads(project["language_features"])
+    return project
+
+
+def _validate_status_transition(current_status: str, new_status: str) -> None:
+    """Enforce the forward-only state machine: draft -> script_generated -> audio_generated ->
+    video_generated -> complete. No skipping steps and no going backward.
+    """
+    if new_status == current_status:
+        return
+    if current_status not in PROJECT_STATUSES or new_status not in PROJECT_STATUSES:
+        raise ValidationError(f"unknown status: {current_status!r} or {new_status!r}")
+    current_index = PROJECT_STATUSES.index(current_status)
+    new_index = PROJECT_STATUSES.index(new_status)
+    if new_index != current_index + 1:
+        raise ValidationError(
+            f"invalid status transition: {current_status} -> {new_status} "
+            f"(must advance one step at a time through {' -> '.join(PROJECT_STATUSES)})"
+        )
+
+
+def _resolve_speaker_speeds(speakers: list[SpeakerConfig], cefr_level: str) -> list[SpeakerConfig]:
+    """A speaker with no explicit `speed` (Task 14.10) gets the CEFR level's default.
+
+    Called once, before a speaker list is used for both the `config_json` snapshot
+    and `_replace_speakers`, so the two never disagree. A speaker that already has a
+    stored `speed` (round-tripped from an existing project) is returned unchanged --
+    this only ever fills in a `None`, never overwrites a real value.
+    """
+    default_speed = CEFR_DEFAULT_TTS_SPEED[cefr_level]
+    return [
+        speaker if speaker.speed is not None else speaker.model_copy(update={"speed": default_speed})
+        for speaker in speakers
+    ]
+
+
+async def _replace_speakers(
+    db: aiosqlite.Connection, project_id: str, speakers: list[SpeakerConfig]
+) -> None:
+    """Delete and re-insert a project's speakers, preserving submitted order as speaker_index."""
+    await db.execute("DELETE FROM speakers WHERE project_id = ?", (project_id,))
+    for index, speaker in enumerate(speakers):
+        await db.execute(
+            "INSERT INTO speakers (id, project_id, speaker_index, name, gender, accent, "
+            "tts_engine, voice_description, speed, pitch, volume) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                str(uuid.uuid4()),
+                project_id,
+                index,
+                speaker.name,
+                speaker.gender,
+                speaker.accent,
+                speaker.tts_engine,
+                speaker.voice_description,
+                speaker.speed,
+                speaker.pitch,
+                speaker.volume,
+            ),
+        )
+
+
+def _build_config_snapshot(scalars: dict, language_features: dict, speakers: list[dict]) -> str:
+    """Build the config_json blob — a ScriptConfig-shaped snapshot kept in sync on every write."""
+    snapshot = {
+        **scalars,
+        "language_features": language_features,
+        "speakers": [
+            {
+                "name": speaker["name"],
+                "gender": speaker["gender"],
+                "accent": speaker["accent"],
+                "tts_engine": speaker["tts_engine"],
+                "voice_description": speaker.get("voice_description") or "",
+                "speed": speaker["speed"],
+                "pitch": speaker["pitch"],
+                "volume": speaker["volume"],
+            }
+            for speaker in speakers
+        ],
+    }
+    return json.dumps(snapshot)
+
+
+async def list_projects(db: aiosqlite.Connection) -> list[dict]:
+    """List all projects ordered by most recently updated.
+
+    Args:
+        db: Open aiosqlite connection.
+
+    Returns:
+        List of project rows as dicts (empty list if none exist yet).
+    """
+    cursor = await db.execute(
+        f"SELECT {_LIST_COLUMNS}, topic, "
+        # Phase 26 (Task 26.3): a real picture for the dashboard card -- the selected thumbnail,
+        # else the first finished shot, else none.
+        "(SELECT t.id || '|' || t.image_path_16x9 FROM thumbnails t WHERE t.project_id = projects.id "
+        " AND t.is_selected = 1 AND t.image_path_16x9 IS NOT NULL LIMIT 1) AS selected_thumb, "
+        "(SELECT s.id FROM project_shots s WHERE s.project_id = projects.id AND s.status = 'complete' "
+        " AND s.final_path IS NOT NULL ORDER BY s.created_at, s.id LIMIT 1) AS first_shot "
+        "FROM projects ORDER BY updated_at DESC"
+    )
+    rows = await cursor.fetchall()
+    return [_with_preview(dict(row)) for row in rows]
+
+
+def _with_preview(project: dict) -> dict:
+    thumb, shot = project.pop("selected_thumb"), project.pop("first_shot")
+    project["preview_url"] = None
+    if thumb:
+        thumbnail_id, path = thumb.split("|", 1)
+        image_format = "jpg" if path.lower().endswith((".jpg", ".jpeg")) else "png"
+        project["preview_url"] = f"/api/projects/{project['id']}/thumbnails/{thumbnail_id}/16x9.{image_format}"
+    elif shot:
+        project["preview_url"] = f"/api/projects/{project['id']}/visuals/shots/{shot}/content?variant=final"
+    return project
+
+
+async def create_project(
+    db: aiosqlite.Connection, config: ScriptConfig, commit: bool = True
+) -> dict:
+    """Create a new project and its speakers from a script config.
+
+    Args:
+        db: Open aiosqlite connection.
+        config: Validated Step 1 wizard configuration.
+        commit: If False, skip the commit — the caller is responsible for
+            committing (or rolling back) as part of a larger transaction.
+
+    Returns:
+        The newly created project, including its speakers.
+    """
+    project_id = str(uuid.uuid4())
+    now = _now()
+    scalars = {
+        "name": config.name,
+        "topic": config.topic,
+        "cefr_level": config.cefr_level,
+        "duration_minutes": config.duration_minutes,
+        "num_speakers": config.num_speakers,
+        "genre": config.genre,
+        "accent": config.accent,
+    }
+    language_features = config.language_features.model_dump()
+    resolved_speakers = _resolve_speaker_speeds(config.speakers, config.cefr_level)
+    config_json = _build_config_snapshot(
+        scalars, language_features, [speaker.model_dump() for speaker in resolved_speakers]
+    )
+    await db.execute(
+        "INSERT INTO projects (id, name, status, topic, cefr_level, duration_minutes, "
+        "num_speakers, genre, accent, language_features, config_json, created_at, updated_at) "
+        "VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            project_id,
+            scalars["name"],
+            scalars["topic"],
+            scalars["cefr_level"],
+            scalars["duration_minutes"],
+            scalars["num_speakers"],
+            scalars["genre"],
+            scalars["accent"],
+            json.dumps(language_features),
+            config_json,
+            now,
+            now,
+        ),
+    )
+    await _replace_speakers(db, project_id, resolved_speakers)
+    if commit:
+        await db.commit()
+    return await get_project(db, project_id)
+
+
+async def get_project(db: aiosqlite.Connection, project_id: str) -> dict:
+    """Fetch a single project with its speakers.
+
+    Args:
+        db: Open aiosqlite connection.
+        project_id: UUID of the project.
+
+    Returns:
+        Project dict with a nested `speakers` list.
+
+    Raises:
+        NotFoundError: If no project with this id exists.
+    """
+    cursor = await db.execute(
+        f"SELECT {_DETAIL_COLUMNS} FROM projects WHERE id = ?", (project_id,)
+    )
+    row = await cursor.fetchone()
+    if row is None:
+        raise NotFoundError(f"Project {project_id} not found")
+    project = _row_to_project(row)
+
+    speaker_cursor = await db.execute(
+        "SELECT id, speaker_index, name, gender, accent, tts_engine, voice_id, "
+        "voice_description, speed, pitch, volume FROM speakers "
+        "WHERE project_id = ? ORDER BY speaker_index",
+        (project_id,),
+    )
+    speaker_rows = await speaker_cursor.fetchall()
+    # Phase 35 (Task 35.4, D89): no uploaded speaker avatar any more -- a speaker's picture is its cast character's.
+    project["speakers"] = [dict(speaker_row) for speaker_row in speaker_rows]
+    return project
+
+
+async def update_speaker(
+    db: aiosqlite.Connection, project_id: str, speaker_id: str, patch: SpeakerUpdate, commit: bool = True
+) -> dict:
+    """Update one speaker's TTS voice settings in place (Step 4 Audio Studio).
+
+    Unlike `update_project`'s `speakers` replace-all path (new ids every call — see
+    `_replace_speakers`), this updates the existing row by id and never touches any other
+    speaker or any script_lines row. Safe to call after a script/audio already exists.
+
+    Raises:
+        NotFoundError: If the project or the speaker (within that project) doesn't exist.
+    """
+    project = await get_project(db, project_id)
+    if not any(speaker["id"] == speaker_id for speaker in project["speakers"]):
+        raise NotFoundError(f"Speaker {speaker_id} not found on project {project_id}")
+
+    fields = patch.model_dump(exclude_unset=True)
+    if fields:
+        set_clause = ", ".join(f"{key} = ?" for key in fields)
+        await db.execute(
+            f"UPDATE speakers SET {set_clause} WHERE id = ? AND project_id = ?",
+            (*fields.values(), speaker_id, project_id),
+        )
+        if commit:
+            await db.commit()
+    return await get_project(db, project_id)
+
+
+async def update_project(
+    db: aiosqlite.Connection, project_id: str, patch: ProjectUpdate, commit: bool = True
+) -> dict:
+    """Apply a partial update to a project and bump updated_at (used for auto-save).
+
+    `config_json` is recomputed from the merged (current + patched) state on every
+    call, so it never drifts from the individual columns. If `status` is included,
+    the transition is checked against the forward-only state machine. If either of
+    `num_speakers` / `speakers` is present, both must be (enforced by ProjectUpdate)
+    and the speakers table is replaced atomically alongside the column update.
+
+    Args:
+        db: Open aiosqlite connection.
+        project_id: UUID of the project.
+        patch: Fields to change; omitted fields are left untouched.
+        commit: If False, skip the commit — the caller is responsible for
+            committing (or rolling back) as part of a larger transaction.
+
+    Returns:
+        The updated project.
+
+    Raises:
+        NotFoundError: If no project with this id exists.
+        ValidationError: If `status` is not a legal transition from the current status.
+    """
+    current = await get_project(db, project_id)
+
+    if patch.status is not None:
+        _validate_status_transition(current["status"], patch.status)
+
+    patch_fields = patch.model_dump(exclude_unset=True, exclude={"speakers"})
+
+    merged_scalars = {
+        key: patch_fields.get(key, current[key])
+        for key in ("name", "topic", "cefr_level", "duration_minutes", "num_speakers", "genre", "accent")
+    }
+    merged_language_features = patch_fields.get("language_features", current["language_features"])
+    resolved_patch_speakers = (
+        _resolve_speaker_speeds(patch.speakers, merged_scalars["cefr_level"])
+        if patch.speakers is not None
+        else None
+    )
+    merged_speakers = (
+        [speaker.model_dump() for speaker in resolved_patch_speakers]
+        if resolved_patch_speakers is not None
+        else current["speakers"]
+    )
+
+    set_fields = {key: value for key, value in patch_fields.items() if key != "language_features"}
+    if "language_features" in patch_fields:
+        set_fields["language_features"] = json.dumps(patch_fields["language_features"])
+    set_fields["config_json"] = _build_config_snapshot(
+        merged_scalars, merged_language_features, merged_speakers
+    )
+
+    set_clause = ", ".join(f"{key} = ?" for key in set_fields)
+    values = [*set_fields.values(), _now(), project_id]
+    await db.execute(f"UPDATE projects SET {set_clause}, updated_at = ? WHERE id = ?", values)
+
+    if resolved_patch_speakers is not None:
+        await _replace_speakers(db, project_id, resolved_patch_speakers)
+
+    if commit:
+        await db.commit()
+    return await get_project(db, project_id)
+
+
+async def _downgrade_downstream_to_script_generated(
+    db: aiosqlite.Connection, project_id: str, current_status: str
+) -> bool:
+    """Downgrade stale downstream artifacts without handling early workflow states."""
+    if current_status not in _DOWNSTREAM_STATUSES:
+        return False
+    await db.execute(
+        "UPDATE projects SET status = 'script_generated', updated_at = ? WHERE id = ?",
+        (_now(), project_id),
+    )
+    return True
+
+
+async def mark_script_changed(
+    db: aiosqlite.Connection, project_id: str, commit: bool = True
+) -> None:
+    """Set the lifecycle status that truthfully follows a script change.
+
+    This is a narrow internal transition path for script persistence only. It accepts
+    no caller-selected target status: a draft advances to ``script_generated``, that
+    status is idempotent, and any later pipeline status is downgraded to
+    ``script_generated`` because its downstream artifacts may now be stale. Public
+    project updates continue to use :func:`update_project` and its forward-only
+    validator.
+
+    Args:
+        db: Open aiosqlite connection.
+        project_id: UUID of the project whose script changed.
+        commit: If False, the caller owns the surrounding transaction.
+
+    Raises:
+        NotFoundError: If no project with this id exists.
+        ValidationError: If the stored status is unknown.
+    """
+    cursor = await db.execute("SELECT status FROM projects WHERE id = ?", (project_id,))
+    row = await cursor.fetchone()
+    if row is None:
+        raise NotFoundError(f"Project {project_id} not found")
+
+    current_status = row["status"]
+    if current_status not in PROJECT_STATUSES:
+        raise ValidationError(f"unknown status: {current_status!r}")
+    if current_status == "script_generated":
+        return
+    if current_status == "draft":
+        # Preserve the existing validated forward-transition path. The direct update
+        # below is reserved for the three intentional internal downgrades only.
+        await update_project(
+            db, project_id, ProjectUpdate(status="script_generated"), commit=commit
+        )
+        return
+
+    await _downgrade_downstream_to_script_generated(db, project_id, current_status)
+    if commit:
+        await db.commit()
+
+
+async def mark_speaker_voice_changed(
+    db: aiosqlite.Connection, project_id: str, commit: bool = True
+) -> None:
+    """Downgrade only projects whose generated audio may now be stale.
+
+    Voice settings are valid to edit before a script or audio exists, so ``draft``
+    and ``script_generated`` deliberately remain unchanged. This differs from
+    :func:`mark_script_changed`, whose draft advance represents first script creation.
+    """
+    cursor = await db.execute("SELECT status FROM projects WHERE id = ?", (project_id,))
+    row = await cursor.fetchone()
+    if row is None:
+        raise NotFoundError(f"Project {project_id} not found")
+
+    current_status = row["status"]
+    if current_status not in PROJECT_STATUSES:
+        raise ValidationError(f"unknown status: {current_status!r}")
+    changed = await _downgrade_downstream_to_script_generated(db, project_id, current_status)
+    if changed and commit:
+        await db.commit()
+
+
+async def delete_project(db: aiosqlite.Connection, project_id: str, commit: bool = True) -> None:
+    """Delete a project and its cascade-linked rows (speakers, script lines, jobs).
+
+    Args:
+        db: Open aiosqlite connection.
+        project_id: UUID of the project.
+        commit: If False, skip the commit — the caller is responsible for
+            committing (or rolling back) as part of a larger transaction.
+
+    Raises:
+        NotFoundError: If no project with this id exists.
+    """
+    await get_project(db, project_id)
+    await db.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+    if commit:
+        await db.commit()
+
+
+def _remove_project_directory_sync(category: str, project_id: str) -> None:
+    """Best-effort removal of one per-project data directory; never raises for a
+    directory that was never created (nothing was ever generated in that category)."""
+    directory = settings.DATA_DIR / category / project_id
+    try:
+        shutil.rmtree(directory)
+    except FileNotFoundError:
+        pass
+    except OSError:
+        logger.warning(
+            "project_artifact_cleanup_failed category=%s project_id=%s",
+            category,
+            project_id,
+            exc_info=True,
+        )
+
+
+async def cleanup_project_artifacts(project_id: str) -> None:
+    """Remove a deleted project's on-disk files (avatars, audio, video, thumbnails, TTS
+    cache) — the DB row's ON DELETE CASCADE only ever removed related table rows, never
+    these directories, so every deleted project previously leaked its files permanently.
+
+    Best-effort by design: call only *after* the project's DB row is durably committed as
+    deleted, never inside the same transaction — a filesystem failure here must not roll
+    back (or block) the fact that the project record itself is already gone.
+    """
+    for category in _PROJECT_ARTIFACT_CATEGORIES:
+        await asyncio.to_thread(_remove_project_directory_sync, category, project_id)

@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from app.core.exceptions import RemotionRenderFailedError
-from app.services import video_renderer_remotion, video_service
+from backend.core.exceptions import RemotionRenderFailedError
+from backend.media import video_renderer_remotion, video_service
 
 
 # --- D19.7-b: renderer resolution (pure, no I/O) -------------------------------------
@@ -122,7 +122,7 @@ def _real_project() -> dict:
 
 @pytest.mark.parametrize("caption_style", ["outline", "box", "shade"])
 async def test_generate_video_forwards_caption_style_to_remotion(tmp_path, monkeypatch, db, caption_style):
-    from app.core.config import settings
+    from backend.core.config import settings
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     monkeypatch.setattr(video_service, "renderer_problem", lambda: None)

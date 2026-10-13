@@ -14,18 +14,13 @@ import pytest
 from fastapi.testclient import TestClient
 from pydub.generators import Sine
 
-from app.core.config import settings
-from app.main import app
-from app.models.learning import LearningPackOut
-from app.models.thumbnail import ThumbnailSuggestionPack
-from app.services import (
-    learning_service,
-    thumbnail_service,
-    tts_service,
-    video_renderer_remotion,
-    video_service,
-    youtube_service,
-)
+from backend.core.config import settings
+from backend.main import app
+from backend.schemas.learning import LearningPackOut
+from backend.schemas.thumbnail import ThumbnailSuggestionPack
+from backend.content import learning_service, youtube_service
+from backend.media import thumbnail_service, video_renderer_remotion, video_service
+from backend.ai.tts import tts_service
 
 PROJECT_PAYLOAD = {
     "name": "Export API Test Episode",

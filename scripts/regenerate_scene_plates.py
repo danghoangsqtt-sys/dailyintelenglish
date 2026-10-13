@@ -24,9 +24,9 @@ sys.path.insert(0, str(ROOT))
 
 from PIL import Image, ImageDraw  # noqa: E402
 
-from app.core.config import settings  # noqa: E402
-from app.services.visuals import recipes  # noqa: E402
-from app.services.visuals.engine import WorkerImageEngine  # noqa: E402
+from backend.core.config import settings  # noqa: E402
+from backend.ai.image import recipes  # noqa: E402
+from backend.ai.image.engine import WorkerImageEngine  # noqa: E402
 
 DB = ROOT / "data" / "app.db"
 BACKUP_PLATES = ROOT / "data" / "tmp" / "plates-cel-anime-backup"

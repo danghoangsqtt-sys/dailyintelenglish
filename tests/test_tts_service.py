@@ -10,10 +10,11 @@ import json
 
 import pytest
 
-from app.core.constants import ACCENTS, EDGE_TTS_VOICE_MAP, GENDERS
-from app.core.exceptions import NotFoundError, TTSError
-from app.models.project import ScriptConfig, SpeakerConfig
-from app.services import project_service, tts_service
+from backend.core.constants import ACCENTS, EDGE_TTS_VOICE_MAP, GENDERS
+from backend.core.exceptions import NotFoundError, TTSError
+from backend.schemas.project import ScriptConfig, SpeakerConfig
+from backend.content import project_service
+from backend.ai.tts import tts_service
 
 FAKE_MP3_BYTES = b"ID3-fake-mp3-bytes-for-tests"
 
@@ -120,7 +121,7 @@ async def test_legacy_omnivoice_speaker_is_stored_and_spoken_as_edge_tts(db, mon
 
 
 def test_only_edge_tts_is_offered_and_unknown_engines_are_refused():
-    from app.models.project import SpeakerUpdate
+    from backend.schemas.project import SpeakerUpdate
 
     assert SpeakerUpdate(tts_engine="omnivoice").tts_engine == "edge_tts"
     with pytest.raises(ValueError):
@@ -179,13 +180,13 @@ async def test_preview_line_does_not_hold_the_write_lock_during_synthesis(db, mo
     network call inside the app's single connection-wide write lock, stalling every
     other request (even an unrelated dashboard GET) for the duration. Same "no lock
     across slow work" rule already applied to Gemini calls and audio/video
-    generation elsewhere (see app/db/transactions.py's module docstring) must also
+    generation elsewhere (see backend/db/transactions.py's module docstring) must also
     apply here."""
     import asyncio
 
-    from app.api import tts as tts_api
-    from app.db import transactions
-    from app.models.tts import PreviewLineRequest
+    from backend.api import tts as tts_api
+    from backend.db import transactions
+    from backend.schemas.tts import PreviewLineRequest
 
     project = await project_service.create_project(db, make_config())
     speaker = project["speakers"][0]

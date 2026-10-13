@@ -3,7 +3,7 @@
 
 PM review C2: this script does real work at *module import time* -- it reads
 sys.argv for --gate/--matrix/--mode and unconditionally sets
-os.environ["DIE_AI_MODE"]/["DIE_DATA_DIR"] before importing app.main (see the
+os.environ["DIE_AI_MODE"]/["DIE_DATA_DIR"] before importing backend.main (see the
 script's own module docstring). This file's `runner_module` fixture snapshots
 and restores os.environ, sys.argv, and sys.modules around a fresh
 `importlib`-based load of the script (following the same pattern already used

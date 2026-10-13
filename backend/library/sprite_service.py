@@ -1,0 +1,225 @@
+"""Phase 32 (Task 32.1): the talking-sprite sets of the library characters.
+
+A sprite set is a folder per character, `data/library/sprites/<character_id>/<name>.png`, with a `sprite_set.json` (D32-a): the
+pictures (one transparent 1280 x 1536 PNG per expression and mouth, a blink, the gestures) come from the character's profile slots
+(Phase 33, `character_asset_service.materialize_sprite_set`), which keep only the pictures that line up with the character's
+`calm__closed` picture (`check_folder`). The Phase 32 inbox import was removed in Phase 35 (D89).
+
+The video draws one body (the calm picture, or a gesture) and puts the face of the current expression and mouth on it inside a feathered
+ellipse, so the body never shimmers when the mouth moves (D32-c); `sprite_set.json` holds that ellipse and each picture's head offset.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import shutil
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Callable
+
+import numpy as np
+from PIL import Image
+
+from backend.core.config import settings
+
+SIZE = (1280, 1536)
+EXPRESSIONS = ("calm", "smile", "laugh", "surprised", "thinking", "worried", "serious")
+MOUTHS = ("closed", "open")
+GESTURES = ("talk", "point", "think", "open", "heart", "listen", "wave")
+FACE_NAMES = tuple(f"{expression}__{mouth}" for expression in EXPRESSIONS for mouth in MOUTHS) + ("blink",)
+GESTURE_NAMES = tuple(f"gesture-{gesture}" for gesture in GESTURES)
+# a gesture with the mouth open (the same picture, only the mouth edited): the character can talk while making the gesture
+GESTURE_OPEN_NAMES = tuple(f"{name}__open" for name in GESTURE_NAMES)
+ALL_NAMES = FACE_NAMES + GESTURE_NAMES + GESTURE_OPEN_NAMES
+BASE = "calm__closed"
+MINIMUM = ("calm__closed", "calm__open")  # a set the video can use: the face must at least open and close its mouth
+
+# the limits of the Phase 32 sprite checker (what a smooth video needs)
+TOP_LIMIT = 6
+HEAD_SIDE_LIMIT = 10
+EDGE_LIMIT = 8
+# owner 2026-10-08: a gesture changes the arms only. A body drawn again (bigger, smaller, shifted) is refused: at least this share of
+# the calm picture's body (below the head) must keep its colour (region-edited gestures keep 69 to 91%, expressions 99 to 100%)
+GESTURE_BODY_KEPT = 0.60
+SILHOUETTE_LIMIT = 4.0
+HEAD_FRACTION = 0.20
+EDGE_PIXELS = 8  # a figure touching the left, right or top edge of the canvas over more pixels than this is cut off (a hand, the hair)
+SET_FILE = "sprite_set.json"
+
+
+def sprites_root() -> Path:
+    return settings.DATA_DIR / "library" / "sprites"
+
+
+def sprite_dir(character_id: str) -> Path:
+    return sprites_root() / character_id
+
+
+# ---------------------------------------------------------------- the alignment check (pure)
+
+def _bbox(alpha: np.ndarray) -> tuple[int, int, int, int]:
+    ys, xs = np.where(alpha)
+    return int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
+
+
+def _torso_edges(alpha: np.ndarray, top: int, bottom: int) -> tuple[float, float]:
+    """Mean left and right edge of the figure over the torso rows (55 to 90% of the figure's height)."""
+    first, last = top + int((bottom - top) * 0.55), top + int((bottom - top) * 0.90)
+    lefts, rights = [], []
+    for y in range(first, last, 6):
+        xs = np.where(alpha[y])[0]
+        if len(xs):
+            lefts.append(xs.min())
+            rights.append(xs.max())
+    return (float(np.mean(lefts)), float(np.mean(rights))) if lefts else (0.0, 0.0)
+
+
+class Reference:
+    """What the pictures of a set are compared with: the calm, closed-mouth picture."""
+
+    def __init__(self, rgba: np.ndarray):
+        self.rgb = rgba[..., :3].astype(np.float32)
+        self.alpha = rgba[..., 3] > 20
+        x0, self.top, x1, self.bottom = _bbox(self.alpha)
+        self.head_end = self.top + int((self.bottom - self.top) * HEAD_FRACTION)
+        self.head_x = float(np.where(self.alpha[:self.head_end])[1].mean())
+        self.left, self.right = _torso_edges(self.alpha, self.top, self.bottom)
+
+
+def body_kept(rgba: np.ndarray, reference: Reference) -> float:
+    """The share of the reference's body (below the head zone) that keeps its colour in this picture."""
+    body = reference.alpha.copy()
+    body[:reference.head_end] = False
+    both = body & (rgba[..., 3] > 200)
+    difference = np.abs(rgba[..., :3].astype(np.float32) - reference.rgb).mean(axis=2)
+    return float((difference[both] < 25).sum() / max(1, body.sum()))
+
+
+def measure(rgba: np.ndarray, reference: Reference, gesture: bool) -> dict:
+    """The check of one picture against the reference: its numbers and its problems (empty when it passes)."""
+    if (rgba.shape[1], rgba.shape[0]) != SIZE:
+        return {"problems": [f"wrong canvas size {rgba.shape[1]} x {rgba.shape[0]}, expected {SIZE[0]} x {SIZE[1]}"]}
+    if rgba.shape[2] < 4 or not all(rgba[y, x, 3] == 0 for y in (0, -1) for x in (0, -1)):
+        return {"problems": ["the background is not transparent (the four corners must be)"]}
+    alpha = rgba[..., 3] > 20
+    if not alpha.any():
+        return {"problems": ["the picture is empty"]}
+    x0, y0, x1, y1 = _bbox(alpha)
+    left, right = _torso_edges(alpha, y0, y1)
+    head_end = reference.head_end
+    cut = [side for side, pixels in (("left", alpha[:, 0].sum()), ("right", alpha[:, -1].sum()), ("top", alpha[0].sum()))
+           if pixels > EDGE_PIXELS]
+    head_x = float(np.where(alpha[:head_end])[1].mean()) if alpha[:head_end].any() else -9999.0
+    edge_shift = max(abs(left - reference.left), abs(right - reference.right))
+    ref_alpha = reference.alpha
+    head_xor = float((alpha[:head_end] ^ ref_alpha[:head_end]).sum() / max(1, ref_alpha[:head_end].sum()) * 100)
+    body_xor = float((alpha[head_end:] ^ ref_alpha[head_end:]).sum() / max(1, ref_alpha[head_end:].sum()) * 100)
+    problems = [f"the figure is cut by the {side} edge of the canvas" for side in cut]
+    if abs(y0 - reference.top) > TOP_LIMIT:
+        problems.append(f"head top moved {y0 - reference.top:+d}px")
+    if abs(head_x - reference.head_x) > HEAD_SIDE_LIMIT:
+        problems.append(f"head moved sideways {head_x - reference.head_x:+.0f}px")
+    if gesture:
+        if head_xor > SILHOUETTE_LIMIT:
+            problems.append(f"head differs {head_xor:.1f}%")
+        kept = body_kept(rgba, reference)
+        if kept < GESTURE_BODY_KEPT:
+            problems.append(f"the body was drawn again (only {kept:.0%} of it is unchanged; a gesture may change the arms only)")
+    else:
+        if edge_shift > EDGE_LIMIT:
+            problems.append(f"torso moved {edge_shift:.0f}px")
+        if body_xor > SILHOUETTE_LIMIT:
+            problems.append(f"body differs {body_xor:.1f}%")
+    return {
+        "top": y0 - reference.top, "edge_shift": edge_shift, "body_diff": body_xor, "head_diff": head_xor,
+        "head_dx": head_x - reference.head_x, "head_dy": y0 - reference.top, "problems": problems,
+    }
+
+
+# ---------------------------------------------------------------- the face ellipse
+
+def geometric_face_ellipse(alpha: np.ndarray) -> list[float]:
+    """A fallback when the face model is not installed: the face inside the head zone of the silhouette (hair included), as fractions
+    of the canvas [cx, cy, rx, ry]. The head is about a fifth of the figure; the face is the lower two thirds of it."""
+    mask = alpha > 20
+    ys = np.where(mask.any(axis=1))[0]
+    top, bottom = int(ys.min()), int(ys.max())
+    head = (bottom - top) * 0.22
+    rows = mask[top:int(top + head)]
+    xs = np.where(rows.any(axis=0))[0]
+    cx = (xs.min() + xs.max()) / 2
+    cy = top + head * 0.58
+    return [cx / alpha.shape[1], cy / alpha.shape[0], head * 0.30 / alpha.shape[1], head * 0.40 / alpha.shape[0]]
+
+
+# ---------------------------------------------------------------- the set files
+
+def _load(path: Path) -> np.ndarray:
+    with Image.open(path) as opened:
+        return np.asarray(opened.convert("RGBA"))
+
+
+def check_folder(files: dict[str, Path]) -> tuple[dict[str, dict], list[dict]]:
+    """Measures every picture of one character's files against its `calm__closed` one: (accepted name -> measures, refused list)."""
+    reference_rgba = _load(files[BASE])
+    size = (reference_rgba.shape[1], reference_rgba.shape[0])
+    corners_clear = all(reference_rgba[y, x, 3] == 0 for y in (0, -1) for x in (0, -1))
+    if size != SIZE or not corners_clear or not (reference_rgba[..., 3] > 20).any():
+        reason = f"the base picture must be a transparent {SIZE[0]} x {SIZE[1]} PNG (it is {size[0]} x {size[1]}" + \
+                 ("" if corners_clear else ", not transparent") + ")"
+        refused = [{"file": files[BASE].name, "reason": reason}]
+        refused += [{"file": path.name, "reason": "not checked: the base picture was refused"}
+                    for name, path in sorted(files.items()) if name != BASE]
+        return {}, refused
+    reference = Reference(reference_rgba)
+    accepted: dict[str, dict] = {BASE: {"head_dx": 0.0, "head_dy": 0}}
+    refused: list[dict] = []
+    for name, path in sorted(files.items()):
+        if name == BASE:
+            continue
+        result = measure(_load(path), reference, name.startswith("gesture-"))
+        if result["problems"]:
+            refused.append({"file": path.name, "reason": "; ".join(result["problems"])})
+        else:
+            accepted[name] = {"head_dx": round(result["head_dx"], 1), "head_dy": int(result["head_dy"])}
+    return accepted, refused
+
+
+def _write_set(character_id: str, files: dict[str, Path], accepted: dict[str, dict],
+               face: Callable[[Path], list[float] | None]) -> dict:
+    target = sprite_dir(character_id)
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True)
+    for name in accepted:
+        shutil.copyfile(files[name], target / f"{name}.png")
+    ellipse = face(target / f"{BASE}.png")
+    source = "face model"
+    if ellipse is None:
+        ellipse, source = geometric_face_ellipse(_load(target / f"{BASE}.png")[..., 3]), "silhouette"
+    meta = {
+        "canvas": list(SIZE), "face_ellipse": [round(value, 4) for value in ellipse], "face_from": source,
+        "pictures": accepted, "imported_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+    (target / SET_FILE).write_text(json.dumps(meta, indent=1), encoding="utf-8")
+    return meta
+
+
+def load_set(character_id: str) -> dict | None:
+    """The imported set of a character: its meta and the names of its pictures; None without a set."""
+    folder = sprite_dir(character_id)
+    meta_path = folder / SET_FILE
+    if not meta_path.is_file():
+        return None
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    names = [name for name in meta.get("pictures", {}) if (folder / f"{name}.png").is_file()]
+    return {**meta, "names": names, "folder": str(folder)}
+
+
+def usable(sprite_set: dict | None) -> bool:
+    return sprite_set is not None and all(name in sprite_set["names"] for name in MINIMUM)
+
+
+async def remove_set(character_id: str) -> None:
+    await asyncio.to_thread(shutil.rmtree, sprite_dir(character_id), True)

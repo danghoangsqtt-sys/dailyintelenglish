@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from app.core.config import settings
-from app.models.visuals import CharacterInput
-from app.services.visuals import colour_check, engine, recipes
+from backend.core.config import settings
+from backend.schemas.visuals import CharacterInput
+from backend.ai.image import colour_check, engine, recipes
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -214,7 +214,7 @@ def test_check_person_uses_garment_mode_only_for_black(monkeypatch):
         return real(image, box, include_dark)
 
     monkeypatch.setattr(colour_check, "measure", spy)
-    from app.services.visuals import geometry
+    from backend.ai.image import geometry
     person = geometry.shot_people("single", "standing", (1344, 768))[0]
     from PIL import Image
     image = Image.new("RGB", (1344, 768), (230, 230, 230))
@@ -272,7 +272,7 @@ def _set_outfits(client, ids, outfits):
 def test_the_shot_job_sends_each_person_the_negative_of_their_outfit(monkeypatch, tmp_path):
     from fastapi.testclient import TestClient
 
-    from app.main import app
+    from backend.main import app
     from tests.test_visuals_project_api import data, setup_project, wait_job
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)

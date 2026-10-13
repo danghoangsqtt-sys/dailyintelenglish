@@ -3,9 +3,9 @@ serialize ALL access to the shared connection — writes *and* reads, not just
 same-project script writes — so one request's rollback can never touch another
 request's uncommitted work, and a read can never see a write's data before it
 commits (a dirty read) or after it rolls back (a phantom read). See
-app/db/transactions.py::write_transaction / read_transaction / write_lock.
+backend/db/transactions.py::write_transaction / read_transaction / write_lock.
 
-Calls `app.api.projects` internals directly (not through TestClient) against the
+Calls `backend.api.projects` internals directly (not through TestClient) against the
 `db` fixture (raw aiosqlite connection, migrations applied — see conftest.py) so
 the test can deterministically control exactly when each transaction is paused,
 using asyncio.Event for synchronization rather than sleep-based timing.
@@ -15,10 +15,10 @@ import asyncio
 
 import pytest
 
-from app.api import projects as projects_api
-from app.db import transactions
-from app.models.project import ScriptConfig, SpeakerConfig
-from app.services import project_service, script_service
+from backend.api import projects as projects_api
+from backend.db import transactions
+from backend.schemas.project import ScriptConfig, SpeakerConfig
+from backend.content import project_service, script_service
 
 
 def make_config(name: str) -> ScriptConfig:

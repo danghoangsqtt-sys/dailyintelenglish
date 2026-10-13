@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.services import youtube_service as yt
+from backend.content import youtube_service as yt
 
 PROJECT = {"name": "Weekend plans", "speakers": [{"id": "s1", "name": "Alex"}, {"id": "s2", "name": "Lina"}]}
 PACKAGE = {
@@ -80,7 +80,7 @@ def test_compose_keeps_the_summary_and_adds_the_published_fields():
 
 def test_titles_given_by_variant_are_accepted():
     """Task 36.2 real-AI finding: `titles` as an object keyed by variant."""
-    from app.models.youtube import YouTubePackageOut
+    from backend.schemas.youtube import YouTubePackageOut
 
     package = YouTubePackageOut.model_validate({
         "titles": {"click_worthy": "A", "educational": "B", "seo": "C"}, "description": "Summary.", "tags": ["english"]})

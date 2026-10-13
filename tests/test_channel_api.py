@@ -7,10 +7,10 @@ from datetime import date
 
 import pytest
 
-from app.services import channel_service
-from app.services.ai.contracts import AIMode, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter
+from backend.channel import channel_service
+from backend.ai.llm.contracts import AIMode, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import AIRouter
 from tests.test_visuals_project_api import client, data, locked_character  # noqa: F401
 
 PLAN = {"topics": [
@@ -134,9 +134,9 @@ async def test_the_ai_map_tolerates_renamed_fields_and_is_never_saved(client, mo
 
 def test_the_thumbnail_shows_the_episode_number_of_the_series(client, monkeypatch):  # noqa: F811
     """Task 36.5: a project made from a series carries its episode number into the thumbnail's composition."""
-    from app.core.config import settings
-    from app.models.thumbnail import ThumbnailSuggestionPack
-    from app.services import thumbnail_service
+    from backend.core.config import settings
+    from backend.schemas.thumbnail import ThumbnailSuggestionPack
+    from backend.media import thumbnail_service
     from tests.test_thumbnail_service import suggestion_json
 
     async def fake(project, template, variant_count, router=None):

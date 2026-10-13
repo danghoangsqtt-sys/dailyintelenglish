@@ -5,9 +5,9 @@ from __future__ import annotations
 import pytest
 from PIL import Image
 
-from app.core.config import settings
-from app.models.visuals import CharacterInput
-from app.services.visuals import colour_check, recipes
+from backend.core.config import settings
+from backend.schemas.visuals import CharacterInput
+from backend.ai.image import colour_check, recipes
 from tests.test_shot_library import _library, _make_shots, requests_log  # noqa: F401
 from tests.test_visuals_phase28 import _real_tokenizer
 from tests.test_visuals_project_api import client, data, setup_project  # noqa: F401
@@ -78,7 +78,7 @@ def _person_boxes():
     # a standing person: shoulders, hips and knees inside a 1344 x 768 picture
     points = {"r_shoulder": (560, 250), "l_shoulder": (700, 250), "r_hip": (580, 420), "l_hip": (690, 420),
               "r_knee": (580, 560), "l_knee": (690, 560)}
-    from app.services.visuals.geometry import _KEYS
+    from backend.ai.image.geometry import _KEYS
     return {"points": [points.get(key) for key in _KEYS]}
 
 

@@ -1,0 +1,313 @@
+"""FastAPI application entrypoint for Daily Beyond English."""
+
+import time
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+from backend.api import (
+    ai_jobs, audio, channel, learning, music, profiles, projects, shorts, settings as settings_api, storyboard,
+    thumbnail, tts, video, visuals, youtube,
+)
+from backend.core.config import settings
+from backend.core.exceptions import AppError
+from backend.core.paths import get_project_root
+from backend.core.responses import ok
+from backend.core.system_checks import check_ffmpeg, get_gpu_info, get_gpu_memory
+from backend.db.database import Database, close_db, init_db
+from backend.content import learning_pipeline, script_pipeline
+from backend.core import settings_service
+from backend.ai.llm.router import AIRouter, CircuitBreaker, build_ai_router_from_settings
+from backend.ai.llm.ai_worker import AIWorker
+from backend.ai.image.runner import ImageJobRunner
+from backend.ai.image import pipelines as visuals_pipelines
+
+PROJECT_ROOT = get_project_root()
+FRONTEND_DIR = PROJECT_ROOT / "frontend"
+
+app_state: dict = {"ffmpeg_ok": False, "gpu_info": None}
+ai_worker = AIWorker(db_getter=lambda: Database.instance().connection)
+image_job_runner = ImageJobRunner(db_getter=lambda: Database.instance().connection)
+
+# Phase 18/Task 18.8: one circuit breaker PER cloud provider name, for the app's
+# whole lifetime, threaded through every freshly-built per-job router below -- so
+# breaker state survives across jobs even though the router itself is rebuilt per
+# job dispatch (to pick up a Settings-page change without a restart; see
+# _build_ai_router's docstring). Starts empty and grows on demand (a breaker is
+# created the first time a given provider name is actually dispatched to,
+# backend/ai/llm/router.py's `_chain_entry`) -- never hardcodes which provider
+# names exist, so adding/removing/reordering providers in Settings needs no
+# change here.
+_ai_circuits: dict[str, CircuitBreaker] = {}
+
+
+def _build_ai_router() -> AIRouter:
+    """One fresh `AIRouter` per call, reading `settings.*` live (Phase 18),
+    sharing this module's one app-lifetime `_ai_circuits` dict.
+
+    Called once per job dispatch (not once at startup, and not once per
+    `generate()` call within a job) by the two handler wrappers below --
+    `AIWorker`'s registered handlers used to close over a single router built
+    once in `lifespan`, so a Settings-page change (Task 18.3) would never
+    reach a running job's actual provider calls (both `OllamaProvider` and the
+    old `GeminiProvider` froze their config at construction). Rebuilding here
+    fixes that; `_ai_circuits` keeps each breaker itself from also resetting on
+    every rebuild.
+    """
+    return build_ai_router_from_settings(circuits=_ai_circuits)
+
+
+async def _script_job_handler(job: dict, worker: AIWorker) -> None:
+    await script_pipeline.make_handler(_build_ai_router())(job, worker)
+
+
+async def _learning_job_handler(job: dict, worker: AIWorker) -> None:
+    await learning_pipeline.make_handler(_build_ai_router())(job, worker)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize the database and verify external tooling on startup.
+
+    Voices come from Edge TTS (online, D56), so no voice model is loaded here — startup stays fast.
+    """
+    for subdir in (
+        "audio",
+        "music_library",
+        "projects",
+        "thumbnails",
+        "tts_cache",
+        "video",
+        "visuals",
+    ):
+        (settings.DATA_DIR / subdir).mkdir(parents=True, exist_ok=True)
+
+    await init_db()
+    # Phase 33: Phase 32 sprite packs on disk become slot rows the first time (idempotent, a few milliseconds)
+    from backend.library.character_asset_service import register_legacy_sprites
+
+    connection = Database.instance().connection
+    if await register_legacy_sprites(connection):
+        await connection.commit()
+    await settings_service.load_cloud_settings_from_db(Database.instance().connection)
+    await settings_service.load_provider_chain_from_db(Database.instance().connection)
+    await settings_service.load_ai_mode_from_db(Database.instance().connection)
+    app_state["ffmpeg_ok"] = await check_ffmpeg()
+    app_state["gpu_info"] = await get_gpu_info()
+
+    ai_worker.register_handler("script", _script_job_handler)
+    ai_worker.register_handler("learning", _learning_job_handler)
+    image_job_runner.register_handler("character_candidates", visuals_pipelines.character_candidates)
+    image_job_runner.register_handler("character_sheet", visuals_pipelines.character_sheet)
+    image_job_runner.register_handler("scene_preview", visuals_pipelines.scene_preview)
+    image_job_runner.register_handler("project_shots", visuals_pipelines.project_shots)
+    image_job_runner.register_handler("shot_regenerate", visuals_pipelines.shot_regenerate)
+    image_job_runner.register_handler("activity_illustrations", visuals_pipelines.activity_illustrations)
+    await visuals_pipelines.recover_pending_shots(Database.instance().connection)
+    await image_job_runner.start()
+    await ai_worker.start()
+
+    yield
+
+    await image_job_runner.stop()
+    await ai_worker.stop()
+    await close_db()
+
+
+app = FastAPI(title="Daily Beyond English", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"^https?://localhost(:\d+)?$",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.exception_handler(AppError)
+async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+    """Convert typed service exceptions into the standard error envelope."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"success": False, "data": None, "error": exc.message, "meta": {}},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Convert Pydantic request-validation failures into the standard error envelope."""
+    details = [
+        f"{'.'.join(str(part) for part in error['loc'] if part != 'body')}: {error['msg']}"
+        for error in exc.errors()
+    ]
+    return JSONResponse(
+        status_code=422,
+        content={"success": False, "data": None, "error": "; ".join(details), "meta": {}},
+    )
+
+
+app.include_router(projects.router)
+app.include_router(learning.router)
+app.include_router(tts.router)
+app.include_router(tts.preview_router)
+app.include_router(audio.router)
+app.include_router(video.router)
+app.include_router(video.templates_router)
+app.include_router(music.router)
+app.include_router(music.project_router)
+app.include_router(thumbnail.router)
+app.include_router(youtube.router)
+app.include_router(settings_api.router)
+app.include_router(ai_jobs.router)
+app.include_router(ai_jobs.health_router)
+app.include_router(channel.router)
+app.include_router(shorts.router)
+app.include_router(profiles.router)  # Phase 33: before visuals so /api/visuals/profiles is never shadowed
+app.include_router(visuals.router)
+app.include_router(visuals.project_router)
+app.include_router(storyboard.router)
+
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
+
+
+class RevalidateUi:
+    """Pure ASGI middleware (streams untouched): the pages and /static files carry `Cache-Control: no-cache`.
+
+    Without it browsers cache style.css and the scripts heuristically, so after an upgrade the new HTML
+    appeared with the old styles (seen in Phase 27). The ETag and Last-Modified that Starlette already sends
+    keep the revalidation cheap: an unchanged file is a 304."""
+
+    def __init__(self, app) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        is_static = scope["path"].startswith("/static/")
+
+        async def send_with_cache_control(message) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                names = {name.lower() for name, _ in headers}
+                is_page = any(name.lower() == b"content-type" and value.startswith(b"text/html")
+                              for name, value in headers)
+                if (is_static or is_page) and b"cache-control" not in names:
+                    headers.append((b"cache-control", b"no-cache"))
+                    message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, send_with_cache_control)
+
+
+app.add_middleware(RevalidateUi)
+
+
+@app.get("/")
+async def root() -> FileResponse:
+    """Serve the dashboard as the app's landing page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "dashboard.html")
+
+
+@app.get("/step1")
+async def step1_config() -> FileResponse:
+    """Serve the Step 1 — Script Config wizard."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step1_config.html")
+
+
+@app.get("/step2")
+async def step2_script() -> FileResponse:
+    """Serve the Step 2 — AI Script Generation page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step2_script.html")
+
+
+@app.get("/step3")
+async def step3_learning() -> FileResponse:
+    """Serve the Step 3 — Learning Content page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step3_learning.html")
+
+
+@app.get("/step4")
+async def step4_tts() -> FileResponse:
+    """Serve the Step 4 — TTS Audio Studio."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step4_tts.html")
+
+
+@app.get("/step5")
+async def step5_video() -> FileResponse:
+    """Serve the Step 5 — Video Studio page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step5_video.html")
+
+
+@app.get("/step6")
+async def step6_thumbnail() -> FileResponse:
+    """Serve the Step 6 — interactive Thumbnail Generator page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step6_thumbnail.html")
+
+
+@app.get("/step7")
+async def step7_youtube() -> FileResponse:
+    """Serve the Step 7 — YouTube Package page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "step7_youtube.html")
+
+
+@app.get("/music")
+async def music_library() -> FileResponse:
+    """Serve the background Music Library management page."""
+    return FileResponse(FRONTEND_DIR / "pages" / "music_library.html")
+
+
+@app.get("/shots")
+async def shot_library() -> FileResponse:
+    """Serve the Shot Library (Task 29.7)."""
+    return FileResponse(FRONTEND_DIR / "pages" / "shot_library.html")
+
+
+@app.get("/characters")
+async def character_library() -> FileResponse:
+    """Serve the global Character Library."""
+    return FileResponse(FRONTEND_DIR / "pages" / "characters.html")
+
+
+@app.get("/channel")
+async def channel_page() -> FileResponse:
+    """Task 36.5 (D103-D105): the channel plan -- topics, series, episodes and the publishing calendar."""
+    return FileResponse(FRONTEND_DIR / "pages" / "channel.html")
+
+
+@app.get("/settings")
+async def settings_page() -> FileResponse:
+    """Serve the app-level Settings page (Task 12.1 — Gemini API key)."""
+    return FileResponse(FRONTEND_DIR / "pages" / "settings.html")
+
+
+
+@app.get("/health")
+async def health() -> dict:
+    """Report readiness of the database, ffmpeg, and GPU for the check_dependencies script and UI."""
+    started_at = time.perf_counter()
+    db_ok = True
+    try:
+        await Database.instance().connection.execute("SELECT 1")
+    except Exception:
+        db_ok = False
+    return ok(
+        {
+            "status": "ok",
+            "database": db_ok,
+            "ffmpeg": app_state["ffmpeg_ok"],
+            "gpu": app_state["gpu_info"],
+            # Task 20.1 (D20.1-f): live VRAM (measured per call, not cached at startup
+            # like `gpu`), so a gate report can cite the app's own numbers.
+            "gpu_memory": await get_gpu_memory(),
+            "gpu_manager_enabled": settings.GPU_MANAGER_ENABLED,
+        },
+        started_at=started_at,
+    )

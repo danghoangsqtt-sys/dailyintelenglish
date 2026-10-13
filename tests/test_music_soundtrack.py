@@ -7,9 +7,9 @@ import pytest
 from pydub import AudioSegment
 from pydub.generators import Sine
 
-from app.core.config import settings
-from app.core.constants import MUSIC_DUCK_DB, TARGET_LOUDNESS_LUFS
-from app.services import audio_service, music_bed
+from backend.core.config import settings
+from backend.core.constants import MUSIC_DUCK_DB, TARGET_LOUDNESS_LUFS
+from backend.media import audio_service, music_bed
 
 PROJECT = {"id": "proj-bed", "speakers": [{"id": "sp1", "name": "Lan"}, {"id": "sp2", "name": "Minh"}]}
 SR = music_bed.SAMPLE_RATE

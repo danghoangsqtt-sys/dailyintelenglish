@@ -3,8 +3,8 @@
 import pytest
 from pydantic import BaseModel, TypeAdapter
 
-from app.core.exceptions import SchemaValidationError
-from app.services.ai.validation import parse_and_validate
+from backend.core.exceptions import SchemaValidationError
+from backend.ai.llm.validation import parse_and_validate
 
 
 class _Item(BaseModel):

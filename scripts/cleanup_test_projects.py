@@ -24,7 +24,7 @@ and the project's per-project directories are removed too, never left orphaned b
 a raw `DELETE FROM projects`.
 
 `--db`/`--data-dir` default to the real, configured database and data directory
-(`app.core.config.settings`), so this script's own tests always pass them
+(`backend.core.config.settings`), so this script's own tests always pass them
 explicitly to target a tmp copy instead.
 
 Invariant 26 (Phase 16 plan): only the PM runs `--apply` against the real database,
@@ -82,9 +82,9 @@ def backup_path_for(data_dir: Path) -> Path:
 async def apply_deletions(db_path: Path, data_dir: Path, matches: dict[str, list[str]]) -> Path:
     """Back up `db_path`, then delete every matched project via the same
     service-layer path the API's own delete route uses. Returns the backup path."""
-    from app.core.config import settings
-    from app.db import transactions
-    from app.services import project_service
+    from backend.core.config import settings
+    from backend.db import transactions
+    from backend.content import project_service
 
     backup_path = backup_path_for(data_dir)
     backup_path.parent.mkdir(parents=True, exist_ok=True)
@@ -128,13 +128,13 @@ async def run(db_path: Path, data_dir: Path, apply: bool) -> str:
 
 
 def _default_db_path() -> Path:
-    from app.core.config import settings
+    from backend.core.config import settings
 
     return settings.db_path
 
 
 def _default_data_dir() -> Path:
-    from app.core.config import settings
+    from backend.core.config import settings
 
     return settings.DATA_DIR
 

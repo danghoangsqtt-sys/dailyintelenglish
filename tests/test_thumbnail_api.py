@@ -6,10 +6,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import settings
-from app.main import app
-from app.models.thumbnail import ThumbnailSuggestionPack
-from app.services import thumbnail_service
+from backend.core.config import settings
+from backend.main import app
+from backend.schemas.thumbnail import ThumbnailSuggestionPack
+from backend.media import thumbnail_service
 
 PROJECT_PAYLOAD = {
     "name": "Thumbnail API Episode",

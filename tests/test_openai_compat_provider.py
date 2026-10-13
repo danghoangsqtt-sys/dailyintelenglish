@@ -10,21 +10,14 @@ from zoneinfo import ZoneInfo
 import httpx
 import pytest
 
-from app.core.exceptions import (
-    ProviderAuthError,
-    ProviderDailyQuotaError,
-    ProviderInvalidResponseError,
-    ProviderRateLimitError,
-    ProviderRequestRejectedError,
-    ProviderTimeoutError,
-    ProviderUnavailableError,
+from backend.core.exceptions import (
+    ProviderAuthError, ProviderDailyQuotaError, ProviderInvalidResponseError, ProviderRateLimitError,
+    ProviderRequestRejectedError, ProviderTimeoutError, ProviderUnavailableError,
 )
-from app.services.ai import openai_compat_provider as openai_compat_provider_module
-from app.services.ai.contracts import GenerationRequest
-from app.services.ai.openai_compat_provider import (
-    OpenAICompatProvider,
-    parse_fallback_models,
-    validate_openai_compat_base_url,
+from backend.ai.llm import openai_compat_provider as openai_compat_provider_module
+from backend.ai.llm.contracts import GenerationRequest
+from backend.ai.llm.openai_compat_provider import (
+    OpenAICompatProvider, parse_fallback_models, validate_openai_compat_base_url,
 )
 
 

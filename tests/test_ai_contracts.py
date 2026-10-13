@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.services.ai.contracts import AIMode, GenerationRequest, GenerationResult
+from backend.ai.llm.contracts import AIMode, GenerationRequest, GenerationResult
 
 
 def test_ai_mode_values():

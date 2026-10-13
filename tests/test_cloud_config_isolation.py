@@ -1,7 +1,7 @@
 """Guard tests for tests/conftest.py's `_neutralize_cloud_config()` (Task
 18.3, PM review N1).
 
-`app.core.config` loads the real `.env` at import time, so without that
+`backend.core.config` loads the real `.env` at import time, so without that
 neutralization, `settings.OPENAI_COMPAT_*` would hold the owner's real
 OpenRouter key and base URL for this whole pytest process -- a test whose
 mock slips could spend the owner's free-tier quota or send real project data
@@ -59,7 +59,7 @@ def test_cloud_settings_are_neutralized_for_the_whole_session():
     it doesn't -- exactly the mechanism that put the real key into this very
     test's own output while diagnosing N1. Comparing lengths means a failure
     can never render the secret, on this path or any future one like it."""
-    from app.core import config
+    from backend.core import config
 
     key_len = len(config.settings.OPENAI_COMPAT_API_KEY)
     assert key_len == 0, f"cloud API key not neutralised (length {key_len}; value hidden)"

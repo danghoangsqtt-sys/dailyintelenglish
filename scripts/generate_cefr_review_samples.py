@@ -17,16 +17,10 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.core.config import settings  # noqa: E402
-from app.core.constants import (  # noqa: E402
-    ACCENTS,
-    CEFR_LEVELS,
-    GEMINI_MODEL,
-    GEMINI_RATE_LIMIT_RPM,
-    GENRES,
-)
-from app.services import script_service  # noqa: E402
-from app.services.script_service import ScriptLineOut  # noqa: E402
+from backend.core.config import settings  # noqa: E402
+from backend.core.constants import ACCENTS, CEFR_LEVELS, GEMINI_MODEL, GEMINI_RATE_LIMIT_RPM, GENRES  # noqa: E402
+from backend.content import script_service  # noqa: E402
+from backend.content.script_service import ScriptLineOut  # noqa: E402
 
 APPROVED_GENRES = ("small_talk", "interview", "news")
 TOPICS_BY_GENRE = {

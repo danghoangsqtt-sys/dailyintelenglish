@@ -7,11 +7,11 @@ import sqlite3
 import aiosqlite
 import pytest
 
-from app.core.config import settings
-from app.core.exceptions import NotFoundError, ValidationError
-from app.models.video import GenerateVideoRequest
-from app.services import video_renderer_remotion as remotion
-from app.services.visuals import library_service, sprite_service
+from backend.core.config import settings
+from backend.core.exceptions import NotFoundError, ValidationError
+from backend.schemas.video import GenerateVideoRequest
+from backend.media import video_renderer_remotion as remotion
+from backend.library import library_service, sprite_service
 from tests.test_podcast_modes import _make_a_plate
 from tests.test_sprite_service import _figure
 from tests.test_visuals_project_api import client, data, setup_project  # noqa: F401

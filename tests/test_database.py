@@ -7,12 +7,12 @@ about re-running migrations against an already-migrated persisted database, the 
 two real app restarts would.
 """
 
-from app.db.database import MIGRATIONS_DIR, init_db
+from backend.db.database import MIGRATIONS_DIR, init_db
 
 
 async def test_init_db_is_idempotent_across_repeated_calls(tmp_path, monkeypatch):
-    from app.core.config import settings
-    from app.db.database import Database
+    from backend.core.config import settings
+    from backend.db.database import Database
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
 
@@ -31,8 +31,8 @@ async def test_init_db_is_idempotent_across_repeated_calls(tmp_path, monkeypatch
 
 
 async def test_init_db_records_every_migration_file_exactly_once(tmp_path, monkeypatch):
-    from app.core.config import settings
-    from app.db.database import Database
+    from backend.core.config import settings
+    from backend.db.database import Database
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
 

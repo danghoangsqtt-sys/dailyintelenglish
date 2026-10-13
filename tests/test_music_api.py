@@ -7,11 +7,11 @@ from threading import Barrier
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api import music as music_api
-from app.core.config import settings
-from app.core.constants import MAX_MUSIC_UPLOAD_MB
-from app.core.exceptions import ValidationError
-from app.main import app
+from backend.api import music as music_api
+from backend.core.config import settings
+from backend.core.constants import MAX_MUSIC_UPLOAD_MB
+from backend.core.exceptions import ValidationError
+from backend.main import app
 
 VALID_MP3 = b"ID3\x04\x00\x00\x00\x00\x00\x00music-data"
 VALID_FRAME_MP3 = b"\xff\xfb\x90\x64music-data"

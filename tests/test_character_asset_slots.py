@@ -9,9 +9,9 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image, ImageDraw
 
-from app.core.config import settings
-from app.main import app
-from app.services.visuals.character_asset_service import SLOTS
+from backend.core.config import settings
+from backend.main import app
+from backend.library.character_asset_service import SLOTS
 
 QUICK = {"name": "Kai", "gender": "male", "accent": "british", "nationality": "Japanese",
          "appearance": "tall, short black hair, round glasses", "outfit": "grey hoodie and jeans"}

@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from app.core.config import settings
-from app.services.visuals import geometry, pipelines, recipes
-from app.services.visuals.engine import FakeImageEngine
+from backend.core.config import settings
+from backend.ai.image import geometry, pipelines, recipes
+from backend.ai.image.engine import FakeImageEngine
 from tests.test_visuals_phase28 import LAN, MINH, _real_tokenizer
 from tests.test_visuals_project_api import client, data, setup_project, wait_job  # noqa: F401
 
@@ -38,7 +38,7 @@ def test_a_duo_looks_at_each_other_and_each_person_looks_toward_the_other():
 
 def test_every_gaze_prompt_still_fits_the_real_clip_budget():
     tok = _real_tokenizer()
-    from app.db.database import BUILTIN_SCENES
+    from backend.db.database import BUILTIN_SCENES
 
     for _, _, place, staging, _ in BUILTIN_SCENES:
         scene = {"place": place, "staging": staging, "time_of_day": "day"}

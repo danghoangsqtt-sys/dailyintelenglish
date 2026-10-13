@@ -5,11 +5,12 @@ from __future__ import annotations
 import json
 import sqlite3
 
-from app.core.config import settings
-from app.services import shorts_service, video_renderer_remotion, video_service
-from app.services.ai.contracts import AIMode, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter
+from backend.core.config import settings
+from backend.content import shorts_service
+from backend.media import video_renderer_remotion, video_service
+from backend.ai.llm.contracts import AIMode, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import AIRouter
 from tests.test_storyboard_api import project_with_script
 from tests.test_visuals_project_api import client, data  # noqa: F401
 

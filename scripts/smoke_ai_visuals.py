@@ -32,9 +32,9 @@ from pydub.generators import Sine
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from app.core.config import settings  # noqa: E402
-from app.main import app  # noqa: E402
-from app.services import video_renderer_remotion  # noqa: E402
+from backend.core.config import settings  # noqa: E402
+from backend.main import app  # noqa: E402
+from backend.media import video_renderer_remotion  # noqa: E402
 
 
 def api(client: TestClient, method: str, path: str, body: object | None = None):

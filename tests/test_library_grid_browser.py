@@ -7,8 +7,8 @@ from typing import AsyncGenerator, Generator
 import pytest
 from playwright.async_api import Browser, async_playwright
 
-from app.api import visuals as visuals_api
-from app.core.config import settings
+from backend.api import visuals as visuals_api
+from backend.core.config import settings
 from tests.conftest import live_server
 
 

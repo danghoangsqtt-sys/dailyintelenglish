@@ -14,7 +14,7 @@ import pytest
 from playwright.async_api import Browser, async_playwright
 from pydub.generators import Sine
 
-from app.core.config import settings
+from backend.core.config import settings
 from tests.conftest import live_server
 
 

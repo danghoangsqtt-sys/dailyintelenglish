@@ -7,8 +7,8 @@ from typing import AsyncGenerator, Generator
 import pytest
 from playwright.async_api import Browser, async_playwright
 
-from app.api import visuals as visuals_api
-from app.core.config import settings
+from backend.api import visuals as visuals_api
+from backend.core.config import settings
 from tests.conftest import live_server
 from tests.test_visuals_project_api import PROJECT, locked_character
 

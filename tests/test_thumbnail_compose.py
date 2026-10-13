@@ -11,10 +11,10 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from app.core.config import settings
-from app.models.thumbnail import ThumbnailSuggestionPack
-from app.services import thumbnail_service
-from app.services.visuals import sprite_service
+from backend.core.config import settings
+from backend.schemas.thumbnail import ThumbnailSuggestionPack
+from backend.media import thumbnail_service
+from backend.library import sprite_service
 from tests.test_activity_illustrations import _project_with_inserts
 from tests.test_sprite_service import _figure
 from tests.test_thumbnail_service import suggestion_json

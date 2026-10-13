@@ -5,8 +5,8 @@ import sqlite3
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import settings
-from app.main import app
+from backend.core.config import settings
+from backend.main import app
 
 
 @pytest.fixture

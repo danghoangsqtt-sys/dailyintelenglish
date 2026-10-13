@@ -7,13 +7,13 @@ import subprocess
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import settings
-from app.core.exceptions import ProviderError
-from app.main import app
-from app.services import music_select_service as select
-from app.services.ai.contracts import AIMode, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter
+from backend.core.config import settings
+from backend.core.exceptions import ProviderError
+from backend.main import app
+from backend.media import music_select_service as select
+from backend.ai.llm.contracts import AIMode, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import AIRouter
 
 
 @pytest.fixture

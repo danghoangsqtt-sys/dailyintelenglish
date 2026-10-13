@@ -11,8 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.core.config import settings  # noqa: E402
-from app.services import video_renderer_remotion  # noqa: E402
+from backend.core.config import settings  # noqa: E402
+from backend.media import video_renderer_remotion  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MIN_PYTHON = (3, 11)
@@ -35,7 +35,7 @@ def check_python_version() -> tuple[bool, str]:
 def check_ffmpeg() -> tuple[bool, str]:
     """Verify the configured ffmpeg binary (settings.FFMPEG_PATH) is installed and runnable.
 
-    Mirrors the resolution logic in app.core.system_checks.check_ffmpeg so both
+    Mirrors the resolution logic in backend.core.system_checks.check_ffmpeg so both
     the startup check and this CLI script agree on which binary is actually used.
     """
     configured = settings.FFMPEG_PATH
@@ -55,7 +55,7 @@ def check_ollama() -> tuple[bool, str]:
 
     Task 14.7 (Amendment D): local-only release path -- Ollama is now a hard
     requirement to *generate* (not to *start*, Phase 13 invariant 9 stays).
-    Mirrors app/api/ai_jobs.py's own /api/ai/health probe rather than
+    Mirrors backend/api/ai_jobs.py's own /api/ai/health probe rather than
     importing it, matching this script's existing "checks the same source of
     truth the app itself uses, independently" style (see check_ffmpeg).
     """
@@ -106,7 +106,7 @@ def check_cloud_provider() -> tuple[bool, str]:
 
     settings.OPENAI_COMPAT_API_KEY/_MODEL already reflect the process
     environment first, falling back to `.env` then any DB-stored Settings-page
-    value (see app.core.config.Settings / app.services.settings_service), so
+    value (see backend.core.config.Settings / backend.core.settings_service), so
     this checks the same source of truth the app itself uses instead of
     re-parsing `.env`.
     """

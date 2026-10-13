@@ -6,10 +6,11 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.db import transactions
-from app.models.project import ScriptConfig, SpeakerConfig
-from app.services import ai_job_service, project_service
-from app.services.ai_worker import AIWorker
+from backend.db import transactions
+from backend.schemas.project import ScriptConfig, SpeakerConfig
+from backend.ai.llm import ai_job_service
+from backend.content import project_service
+from backend.ai.llm.ai_worker import AIWorker
 
 
 def make_config(name: str) -> ScriptConfig:
@@ -148,7 +149,7 @@ async def test_worker_recovers_abandoned_jobs_on_start(db):
 
 
 async def test_worker_stop_is_bounded_even_if_a_handler_never_returns(db, monkeypatch):
-    import app.services.ai_worker as ai_worker_module
+    import backend.ai.llm.ai_worker as ai_worker_module
 
     monkeypatch.setattr(ai_worker_module, "AI_WORKER_SHUTDOWN_GRACE_SECONDS", 0.2)
 
@@ -175,7 +176,7 @@ async def test_worker_stop_is_bounded_even_if_a_handler_never_returns(db, monkey
 async def test_loop_survives_a_transient_claim_error_and_processes_a_later_job(db, monkeypatch):
     """A failure inside `_claim_next` (e.g. `database is locked`) must not end the
     poll loop -- the next job still gets claimed and completed."""
-    import app.services.ai_worker as ai_worker_module
+    import backend.ai.llm.ai_worker as ai_worker_module
 
     monkeypatch.setattr(ai_worker_module, "AI_WORKER_LOOP_ERROR_BACKOFF_SECONDS", 0.01)
 
@@ -214,7 +215,7 @@ async def test_loop_survives_a_transient_claim_error_and_processes_a_later_job(d
 
 
 async def test_loop_logs_and_backs_off_on_an_unhandled_iteration_error(db, monkeypatch, caplog):
-    import app.services.ai_worker as ai_worker_module
+    import backend.ai.llm.ai_worker as ai_worker_module
 
     monkeypatch.setattr(ai_worker_module, "AI_WORKER_LOOP_ERROR_BACKOFF_SECONDS", 0.01)
 
@@ -228,7 +229,7 @@ async def test_loop_logs_and_backs_off_on_an_unhandled_iteration_error(db, monke
 
     worker = AIWorker(db_getter=lambda: db, poll_interval_seconds=0.02)
     worker.register_handler("script", handler)
-    with caplog.at_level(logging.ERROR, logger="app.services.ai_worker"):
+    with caplog.at_level(logging.ERROR, logger="backend.ai.llm.ai_worker"):
         await worker.start()
         await asyncio.sleep(0.1)
         await worker.stop()
@@ -252,7 +253,7 @@ async def test_process_survives_an_illegal_error_transition_after_handler_alread
 
     worker = AIWorker(db_getter=lambda: db, poll_interval_seconds=0.02)
     worker.register_handler("script", handler)
-    with caplog.at_level(logging.ERROR, logger="app.services.ai_worker"):
+    with caplog.at_level(logging.ERROR, logger="backend.ai.llm.ai_worker"):
         await worker.start()
         try:
             await _wait_until(lambda: _job_status_is(db, job["id"], project["id"], "complete"))
@@ -292,7 +293,7 @@ async def test_done_callback_logs_when_loop_task_ends_without_stop(db, caplog):
     worker = AIWorker(db_getter=lambda: db, poll_interval_seconds=0.02)
     await worker.start()
     task = worker._task
-    with caplog.at_level(logging.ERROR, logger="app.services.ai_worker"):
+    with caplog.at_level(logging.ERROR, logger="backend.ai.llm.ai_worker"):
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task

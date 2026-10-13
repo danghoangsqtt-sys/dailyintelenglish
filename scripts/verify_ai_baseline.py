@@ -13,8 +13,8 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.models.learning import LearningPackOut  # noqa: E402
-from app.models.project import ScriptConfig  # noqa: E402
+from backend.schemas.learning import LearningPackOut  # noqa: E402
+from backend.schemas.project import ScriptConfig  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = ROOT / "tests" / "fixtures" / "ai"

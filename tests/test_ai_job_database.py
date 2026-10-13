@@ -7,10 +7,10 @@ from pathlib import Path
 import aiosqlite
 import pytest
 
-from app.models.project import ScriptConfig, SpeakerConfig
-from app.services import project_service
+from backend.schemas.project import ScriptConfig, SpeakerConfig
+from backend.content import project_service
 
-MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "app" / "db" / "migrations"
+MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "backend" / "db" / "migrations"
 
 
 def _now() -> str:
@@ -77,13 +77,13 @@ async def test_migration_applies_cleanly_on_a_fresh_database():
 
 
 async def test_migration_is_idempotent_via_init_db_double_apply(tmp_path, monkeypatch):
-    """The real app.db.database.init_db() tracks applied migrations by filename in
+    """The real backend.db.database.init_db() tracks applied migrations by filename in
     schema_migrations -- running it twice against the same real file must not
     re-execute 006 a second time (which would otherwise hit real UNIQUE/CHECK
     constraint machinery harmlessly, but the point is it must not error or
     duplicate rows either way)."""
-    from app.core.config import settings
-    from app.db import database
+    from backend.core.config import settings
+    from backend.db import database
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     database.Database._instance = None

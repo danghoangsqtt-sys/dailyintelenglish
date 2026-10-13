@@ -18,7 +18,7 @@ import aiohttp
 import pytest
 from pydub import AudioSegment
 
-from app.services.tts_service import _synthesize_edge_tts
+from backend.ai.tts.tts_service import _synthesize_edge_tts
 
 # 6 words, B1-shaped, inside the card's 5-8 word range.
 TEST_LINE = "The weather today is absolutely beautiful."

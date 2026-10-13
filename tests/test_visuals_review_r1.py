@@ -7,15 +7,16 @@ import uuid
 import pytest
 from PIL import Image
 
-from app.core.config import settings
-from app.core.exceptions import ConflictError
-from app.db.transactions import write_transaction
-from app.models.project import ScriptConfig, SpeakerConfig
-from app.models.visuals import CharacterInput
-from app.services import project_service
-from app.services.visuals import engine as engine_module
-from app.services.visuals import jobs, library_service, pipelines, project_visuals_service
-from app.services.visuals.runner import JobCancelled
+from backend.core.config import settings
+from backend.core.exceptions import ConflictError
+from backend.db.transactions import write_transaction
+from backend.schemas.project import ScriptConfig, SpeakerConfig
+from backend.schemas.visuals import CharacterInput
+from backend.content import project_service
+from backend.ai.image import engine as engine_module
+from backend.ai.image import jobs, pipelines
+from backend.library import library_service, project_visuals_service
+from backend.ai.image.runner import JobCancelled
 
 
 @pytest.fixture(autouse=True)

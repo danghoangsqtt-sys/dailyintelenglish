@@ -5,12 +5,12 @@ import re
 
 import pytest
 
-from app.core.exceptions import ProviderError
-from app.core.paths import get_project_root
-from app.services.ai.contracts import AIMode, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter
-from app.services.visuals import storyboard_service
+from backend.core.exceptions import ProviderError
+from backend.core.paths import get_project_root
+from backend.ai.llm.contracts import AIMode, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import AIRouter
+from backend.library import storyboard_service
 from tests.test_storyboard_api import project_with_script
 from tests.test_visuals_project_api import client, data  # noqa: F401
 
@@ -66,7 +66,7 @@ def test_the_prompt_lists_the_activity_library_so_inserts_name_a_picture_that_ex
     """Gate B-23 finding: the AI invented "searching for travel accommodation", which no library picture matched."""
     import sqlite3
 
-    from app.core.config import settings
+    from backend.core.config import settings
 
     project = project_with_script(client)
     with sqlite3.connect(settings.db_path) as connection:
@@ -189,7 +189,7 @@ def _covers(beats, total):
 
 
 def test_fit_to_cap_trims_in_order_and_keeps_coverage(monkeypatch):
-    from app.models.storyboard import BeatInput
+    from backend.schemas.storyboard import BeatInput
 
     monkeypatch.setattr(storyboard_service.settings, "VISUALS_IMAGE_CAP", 12)
     over = [

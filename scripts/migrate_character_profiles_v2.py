@@ -79,8 +79,8 @@ def _snapshot(connection: sqlite3.Connection) -> dict:
 
 
 async def _apply_migrations(data_dir: Path) -> None:
-    from app.core.config import settings
-    from app.db import database
+    from backend.core.config import settings
+    from backend.db import database
 
     settings.DATA_DIR = data_dir  # the runner opens settings.db_path, which lives under DATA_DIR
     database.Database._instance = None

@@ -8,10 +8,10 @@ import pytest
 from fastapi.testclient import TestClient
 from pydub import AudioSegment
 
-from app.core.config import settings
-from app.main import app
-from app.services import music_analysis
-from app.services import music_select_service as select
+from backend.core.config import settings
+from backend.main import app
+from backend.media import music_analysis
+from backend.media import music_select_service as select
 
 SR = 22050
 

@@ -8,8 +8,8 @@ from typing import Generator
 
 import pytest
 
-from app.api import visuals as visuals_api
-from app.core.config import settings
+from backend.api import visuals as visuals_api
+from backend.core.config import settings
 from tests.conftest import live_server
 from tests.test_visuals_project_api import locked_character
 

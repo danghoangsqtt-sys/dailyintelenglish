@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.config import settings
-from app.services.visuals import recipes
-from app.services.visuals.engine import FakeImageEngine
+from backend.core.config import settings
+from backend.ai.image import recipes
+from backend.ai.image.engine import FakeImageEngine
 from tests.test_storyboard_api import project_with_script
 from tests.test_visuals_gaze import SCENE  # noqa: F401
 from tests.test_visuals_phase28 import LAN, _real_tokenizer

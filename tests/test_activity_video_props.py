@@ -9,8 +9,8 @@ import aiosqlite
 import pytest
 from PIL import Image
 
-from app.core.config import settings
-from app.services import video_renderer_remotion as remotion
+from backend.core.config import settings
+from backend.media import video_renderer_remotion as remotion
 from tests.test_podcast_modes import _make_a_plate
 from tests.test_sprite_video_props import _give_sprites, _public
 from tests.test_visuals_project_api import client, setup_project  # noqa: F401

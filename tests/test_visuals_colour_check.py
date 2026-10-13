@@ -5,8 +5,8 @@ import json
 import pytest
 from PIL import Image, ImageDraw
 
-from app.core.config import settings
-from app.services.visuals import colour_check, geometry, recipes
+from backend.core.config import settings
+from backend.ai.image import colour_check, geometry, recipes
 from tests.test_visuals_project_api import client, data, setup_project, wait_job  # noqa: F401
 
 SIZE = (1344, 768)

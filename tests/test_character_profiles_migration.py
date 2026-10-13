@@ -11,11 +11,11 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from app.core.config import settings
-from app.core.exceptions import ConflictError, ValidationError
-from app.db.database import MIGRATIONS_DIR
-from app.models.visuals import CharacterInput
-from app.services.visuals import library_service, project_visuals_service
+from backend.core.config import settings
+from backend.core.exceptions import ConflictError, ValidationError
+from backend.db.database import MIGRATIONS_DIR
+from backend.schemas.visuals import CharacterInput
+from backend.library import library_service, project_visuals_service
 from scripts.migrate_character_profiles_v2 import register_legacy_sprites
 
 LINA, ALEX = "e961d07c-da89-4395-beec-7741df69142d", "0383161f-b197-41af-b1fd-f912253ed42e"
@@ -174,7 +174,7 @@ def test_legacy_sprites_register_once_as_approved_native_assets(tmp_path):
 
 @pytest.mark.asyncio
 async def test_app_runner_applies_018_once_and_survives_a_restart(tmp_path, monkeypatch):
-    from app.db import database
+    from backend.db import database
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     for _ in range(2):  # a second start must not re-run the ALTERs
@@ -206,7 +206,7 @@ def test_migration_020_fills_quick_profile_fields_for_older_characters(tmp_path)
 
 @pytest.mark.asyncio
 async def test_startup_registers_legacy_sprite_packs_once_and_reads_old_relative_paths(db, tmp_path, monkeypatch):
-    from app.services.visuals import character_asset_service as assets
+    from backend.library import character_asset_service as assets
 
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path / "data")
     character = await library_service.create_character(db, _input("Alex"))

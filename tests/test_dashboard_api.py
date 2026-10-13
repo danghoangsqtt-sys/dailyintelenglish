@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import date, timedelta
 
-from app.core.config import settings
+from backend.core.config import settings
 from tests.test_channel_api import PLAN
 from tests.test_visuals_project_api import client, data, locked_character  # noqa: F401
 
@@ -93,8 +93,8 @@ def test_a_relative_data_path_is_read_under_the_current_data_folder(client, tmp_
     """Demo-recording finding: a copied data folder (or the packaged app) keeps `data\library\...` rows from the dev app."""
     from PIL import Image
 
-    from app.core.exceptions import NotFoundError
-    from app.services.visuals import library_service
+    from backend.core.exceptions import NotFoundError
+    from backend.library import library_service
 
     plate = settings.DATA_DIR / "library" / "scenes" / "s1" / "preview.png"
     plate.parent.mkdir(parents=True)

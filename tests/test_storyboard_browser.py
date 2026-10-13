@@ -6,12 +6,12 @@ from typing import AsyncGenerator, Generator
 import pytest
 from playwright.async_api import Browser, async_playwright
 
-from app.api import visuals as visuals_api
-from app.core.config import settings
-from app.services.ai.contracts import AIMode, GenerationResult
-from app.services.ai.fake_provider import FakeProvider
-from app.services.ai.router import AIRouter
-from app.services.visuals import storyboard_service
+from backend.api import visuals as visuals_api
+from backend.core.config import settings
+from backend.ai.llm.contracts import AIMode, GenerationResult
+from backend.ai.llm.fake_provider import FakeProvider
+from backend.ai.llm.router import AIRouter
+from backend.library import storyboard_service
 from tests.conftest import live_server
 from tests.test_visuals_project_api import locked_character
 
