@@ -1,8 +1,8 @@
-"""Phase 39 benchmark, Qwen side (run with `.venv-qwen`: diffusers 0.41 + gguf + bitsandbytes).
+"""Phase 39 benchmark, Qwen side (run with `.venv-image`: diffusers 0.41 + gguf + bitsandbytes, Phase 39.4).
 
     .venv-qwen\\Scripts\\python scripts\\benchmarks\\image_models\\bench_qwen.py --engine qwen2512 [--only A1] [--tasks activity]
-    engines: qwen2512 (Qwen-Image-2512, Apache 2.0), qwen-edit-2511 (character inserts, Apache 2.0),
-             qwen21-turbo (Qwen-Image-2.1-Turbo, research licence: evaluation only, D111)
+    engines: qwen2512 (Qwen-Image-2512, Apache 2.0; its GGUF was removed after D118), qwen-edit-2511 (character inserts, Apache 2.0),
+             qwen21-turbo (Qwen-Image-2.1-Turbo, allowed for this channel by D117)
 
 A 20B model does not fit a 12 GB card with its 7B text encoder, so each run has two phases, like the app's SDXL
 "encoders=false" path: (1) the text encoder in 4-bit on the GPU encodes every prompt, then is freed; (2) the GGUF

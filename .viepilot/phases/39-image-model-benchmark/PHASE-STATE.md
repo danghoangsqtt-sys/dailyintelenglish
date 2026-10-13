@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 39: Image model benchmark — RealVisXL vs Qwen-Image (D110–D116)
 
-- **Status:** 39.1–39.3 done 2026-10-13 (report `docs/operations/phase39-image-benchmark.md`); owner chose per task (D118); 39.4 in progress. Downloads: ~72 GB + 1.6 GB of 4-step LoRAs (owner approved). Brainstorm:
+- **Status:** 39.1–39.3 done 2026-10-13 (report `docs/operations/phase39-image-benchmark.md`); owner chose per task (D118); 39.4 built 2026-10-14, Gate B-26 pending. Downloads: ~72 GB + 1.6 GB of 4-step LoRAs (owner approved). Brainstorm:
   `docs/brainstorm/session-2026-10-13-qwen-image.md`.
 
 | Task | Description | Status |
@@ -36,3 +36,15 @@ Implementation notes (before coding):
   existing outside-AI picture slot (`thumbnail_service`), so composition and download are unchanged.
 - **Tests:** prompt builders, engine selection and fallback, worker command validation (no GPU), thumbnail endpoint with the
   fake engine. Then a real run on the sandbox, and **Gate B-26** (owner reviews new pictures on a real episode).
+
+## 39.4 as built (2026-10-14)
+
+- Worker: `qwen_generate` / `qwen_installed` (`backend/ai/image/qwen_runner.py`), real GPU check: 2.1-Turbo 30 s/picture
+  (9.0 GB peak), Edit-2511 57 s/picture (8.7 GB peak); local cache only (`try_to_load_from_cache`, since the snapshots are
+  partial by design).
+- App: `engine.qwen_batch` + `QwenUnavailable` fallback; activity illustrations, scene preview, missing plates and
+  single-character inserts use Qwen by default; Step 6 topic picture. Settings `IMAGE_ILLUSTRATION_ENGINE`,
+  `IMAGE_CHARACTER_ENGINE`.
+- Full suite 1,697 passed. Removed: Qwen-Image-2512 GGUF + LoRAs (13.6 GB; its text encoder stays for Edit-2511) and
+  `.venv-qwen` (4.8 GB; `.venv-image` now has diffusers 0.41 + gguf + bitsandbytes + peft).
+- Next: restart the real app (owner OK), then **Gate B-26** on a real episode.
