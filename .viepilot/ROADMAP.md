@@ -1548,3 +1548,11 @@ State: `.viepilot/phases/39-image-model-benchmark/PHASE-STATE.md`.
 - [x] 39.2 Four tasks × engines
 - [x] 39.3 Report and owner blind scoring
 - [x] 39.4 Apply the winners (D118) — Gate B-26 pending
+
+### Phase 40: Character names follow the chosen profile (D119) - in progress 2026-10-14
+
+State: `.viepilot/phases/40-character-names/PHASE-STATE.md`.
+
+- [ ] 40.1 No Alex/Lina preselection; "Character 1..N" slots (Step 1, channel plan)
+- [ ] 40.2 Speaker takes the character's name, script lines follow, audio marked stale
+- [ ] 40.3 Step 5 notice, generic hints, tests
