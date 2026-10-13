@@ -218,13 +218,18 @@ def _beat_scene_per_line(beats: list[dict], line_count: int) -> list[str | None]
     return [place or following for place in places]
 
 
-async def _scene_plate(db: aiosqlite.Connection, scene_id: str) -> Path | None:
+async def _scene_plate(db: aiosqlite.Connection, scene_id: str, project_id: str = "") -> Path | None:
+    """A storyboard scene's plate, or None when the scene, its plate or the file is missing (the line then keeps the
+    video's other places). BUG-025: only those expected misses fall back, and they are logged; a database or disk
+    failure is raised, so the render fails with its real reason instead of quietly showing another place."""
     try:
         scene = await library_service.get_scene_row(db, scene_id)
         if not scene.get("preview_path"):
+            logger.warning("sprite_scene_without_plate project_id=%s scene_id=%s", project_id, scene_id)
             return None
         return await asyncio.to_thread(library_service.resolve_library_content, scene["preview_path"], "library/scenes")
-    except Exception:
+    except NotFoundError as exc:
+        logger.warning("sprite_scene_plate_missing project_id=%s scene_id=%s reason=%s", project_id, scene_id, exc)
         return None
 
 
@@ -337,7 +342,7 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
             if scene_id is None:
                 continue
             if scene_id not in backgrounds:
-                plate = await _scene_plate(db, scene_id)
+                plate = await _scene_plate(db, scene_id, project_id)
                 if plate is None:
                     continue
                 await asyncio.to_thread(_copy_visual_source, plate, REMOTION_SPRITES_DIR / project_id / "bg" / f"{scene_id}.png")

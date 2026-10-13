@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import sqlite3
+
 import aiosqlite
 import pytest
 
 from app.core.config import settings
-from app.core.exceptions import ValidationError
+from app.core.exceptions import NotFoundError, ValidationError
 from app.models.video import GenerateVideoRequest
 from app.services import video_renderer_remotion as remotion
-from app.services.visuals import sprite_service
+from app.services.visuals import library_service, sprite_service
 from tests.test_podcast_modes import _make_a_plate
 from tests.test_sprite_service import _figure
 from tests.test_visuals_project_api import client, data, setup_project  # noqa: F401
@@ -98,3 +100,23 @@ def test_each_line_takes_the_place_of_its_beat_and_an_insert_keeps_the_place_bef
         {"line_from": 4, "line_to": 5, "kind": "scene", "scene_id": "park"},
     ]
     assert remotion._beat_scene_per_line(beats, 6) == ["cafe", "cafe", "cafe", "cafe", "park", "park"]
+
+
+# BUG-025: a missing scene or plate falls back (and is logged); a database or disk failure is not hidden.
+async def test_a_missing_scene_plate_falls_back_and_is_logged(monkeypatch, caplog):
+    async def missing(_db, _scene_id):
+        raise NotFoundError("Scene not found")
+
+    monkeypatch.setattr(library_service, "get_scene_row", missing)
+    with caplog.at_level("WARNING"):
+        assert await remotion._scene_plate(None, "scene-9", "proj-1") is None
+    assert "sprite_scene_plate_missing project_id=proj-1 scene_id=scene-9" in caplog.text
+
+
+async def test_a_database_failure_in_the_scene_lookup_is_raised(monkeypatch):
+    async def broken(_db, _scene_id):
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(library_service, "get_scene_row", broken)
+    with pytest.raises(sqlite3.OperationalError):
+        await remotion._scene_plate(None, "scene-9", "proj-1")
