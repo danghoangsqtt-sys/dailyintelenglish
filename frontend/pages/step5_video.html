@@ -56,8 +56,8 @@
     .timeline-clip.synced { border-left-color: var(--success); }
     .music-clip { border-left-color: var(--info); }
     .timeline-status { font-size: 11px; }
-    .visual-cast-grid, .visual-shot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
-    .visual-cast-card, .visual-shot-card { padding: 12px; }
+    .visual-cast-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+    .visual-cast-card { padding: 12px; }
     .visual-cast-card label { display: block; margin-bottom: 7px; font-weight: 700; }
     .shorts-list { display: grid; gap: 12px; margin-top: 10px; }
     .short-card { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 14px; padding: 12px; }
@@ -77,13 +77,6 @@
     .visual-scene-options, .visual-scene-order { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
     .visual-scene-options button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
     .visual-scene-order { color: var(--muted); font-size: 12px; }
-    .visual-shot-card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; }
-    .visual-shot-card h4 { margin: 8px 0; }
-    .visual-shot-card .library-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-    .visual-shot-card .visual-warning { color: var(--danger); font-size: 12px; }
-    .visual-shot-card.needs-review { border-color: var(--warning); box-shadow: 0 0 0 2px var(--warning-bg); }
-    .visual-shot-card .visual-review { margin: 6px 0 0; padding: 6px 8px; border-radius: 6px; background: var(--warning-bg); color: var(--warning); font-size: 12px; font-weight: 600; line-height: 1.4; }
-    .visual-shot-scene { margin-top: 24px; }
     .visual-warning { color: var(--danger); }
     .storyboard-summary { margin: 10px 0; color: var(--muted); }
     .storyboard-summary .over-cap { color: var(--danger); font-weight: 700; }
@@ -141,14 +134,13 @@
           <div id="workspace" hidden>
             <section class="section" id="project-visuals-section">
               <h2 class="section-title">Characters &amp; scenes</h2>
-              <p class="section-hint">Choose each speaker's character and up to three scenes. <a href="/characters">Open Character Library</a>. Shots appear in the video.</p>
+              <p class="section-hint">Choose each speaker's character and up to three scenes. <a href="/characters">Open Character Library</a>. The characters talk on screen as sprites; illustrations come from the generic Activity Library or the local AI and never show a cast member's face.</p>
               <h3>Cast</h3>
               <div id="visual-cast-grid" class="visual-cast-grid"></div>
               <h3>Scenes</h3>
               <div id="visual-scene-options" class="visual-scene-options" role="group" aria-label="Project scenes"></div>
               <div id="visual-scene-order" class="visual-scene-order" aria-live="polite"></div>
               <div id="visual-warnings" class="visual-warning" role="status"></div>
-              <p id="library-coverage" class="section-hint" role="status" hidden></p>
               <p id="activity-coverage" class="section-hint" role="status" hidden></p>
               <div id="activity-missing" class="activity-missing" hidden>
                 <div class="generate-row">
@@ -157,12 +149,7 @@
                 </div>
                 <div id="activity-missing-list" class="activity-missing-list"></div>
               </div>
-              <div class="generate-row">
-                <button id="generate-shots-btn" class="btn btn-primary" type="button">Generate shots</button>
-                <button id="cancel-shots-btn" class="btn btn-ghost" type="button" hidden>Cancel</button>
-                <span id="visual-job-progress" class="generate-progress" aria-live="polite"></span>
-              </div>
-              <div id="visual-shot-grid"></div>
+              <span id="visual-job-progress" class="generate-progress" aria-live="polite"></span>
             </section>
 
             <section class="section" id="storyboard-section">
@@ -183,12 +170,11 @@
               <h2 class="section-title">2. Render the video</h2>
               <p class="section-hint" id="renderer-status" role="status" hidden></p>
               <div class="aspect-ratio-row" role="group" aria-label="Video pictures" id="visual-mode-group">
-                <button class="chip" type="button" data-visual-mode="illustrated" aria-pressed="true">Podcast: with characters</button>
-                <button class="chip" type="button" data-visual-mode="podcast_black" aria-pressed="false">Podcast: black screen</button>
+                <button class="chip" type="button" data-visual-mode="podcast_sprites" aria-pressed="true">Podcast: talking characters</button>
                 <button class="chip" type="button" data-visual-mode="podcast_still" aria-pressed="false">Podcast: one still scene</button>
-                <button class="chip" type="button" data-visual-mode="podcast_sprites" aria-pressed="false">Podcast: talking characters</button>
+                <button class="chip" type="button" data-visual-mode="podcast_black" aria-pressed="false">Podcast: black screen</button>
               </div>
-              <p class="section-hint" id="visual-mode-hint">With characters: the story pictures of Step 4 (the episode's characters, scene changes, inserts). Black screen and one still scene need no drawn shots: ready in about two minutes. Talking characters: the episode's characters as visual-novel sprites that move their mouths with the speech, over the scene pictures of the storyboard (or the scene chosen below); needs their sprite sets (Shot Library page).</p>
+              <p class="section-hint" id="visual-mode-hint">Talking characters: the episode's characters as visual-novel sprites that move their mouths with the speech, over the scene pictures of the storyboard (or the scene chosen below), with the illustrations of the inserts; needs their sprite sets (Shot Library page). One still scene and black screen: ready in about two minutes.</p>
               <div class="aspect-ratio-row" id="still-scene-row" hidden>
                 <label for="still-scene">Scene picture</label>
                 <select id="still-scene" class="settings-input"></select>

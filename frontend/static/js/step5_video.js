@@ -16,7 +16,8 @@
   // Phase 30 (ENH-021): what is behind the captions, remembered per browser.
   const VISUAL_MODE_STORAGE_KEY = "die-visual-mode";
   const STILL_SCENE_STORAGE_KEY = "die-still-scene";
-  const VISUAL_MODES = ["illustrated", "podcast_black", "podcast_still", "podcast_sprites"];
+  // Phase 44 (D123): the drawn-shot "illustrated" mode was removed with RealVisXL; talking characters is the default.
+  const VISUAL_MODES = ["podcast_sprites", "podcast_still", "podcast_black"];
   // the modes that use the scene picture chosen below (talking characters: when the storyboard gives no places)
   const STILL_SCENE_MODES = ["podcast_still", "podcast_sprites"];
   const VISUAL_MODE_ENABLED_TOOLTIP = "What is behind the captions";
@@ -34,7 +35,7 @@
     projectId: null,
     project: null,
     captionStyle: "outline",
-    visualMode: "illustrated",
+    visualMode: "podcast_sprites",
     stillScene: "",
     stillScenes: [],
     remotionConfigured: false,
@@ -53,7 +54,6 @@
     visualBusy: false,
     visualProgress: null,
     visualError: "",
-    shotVariants: {},
   };
 
   const byId = (id) => document.getElementById(id);
@@ -267,7 +267,7 @@
 
   function visualWarning(text) {
     state.visualError = text || "";
-    byId("visual-warnings").textContent = state.visualError || state.visuals?.warnings?.join(" ") || "";
+    byId("visual-warnings").textContent = state.visualError;
   }
 
   // Phase 35 (Task 35.4, D89): the cast is chosen with the shared game-style selector of Step 1 (no dropdown, no avatar).
@@ -431,132 +431,6 @@
     });
   }
 
-  function renderVisualShots() {
-    const root = byId("visual-shot-grid");
-    root.replaceChildren();
-    const shots = state.visuals?.shots || [];
-    if (!shots.length) return;
-    // Task 24.5a: group by each shot's own place (storyboard shots may use any library scene;
-    // inserts have none), in the order shots were planned.
-    const groups = [...new Map(shots.map((shot) => [shot.scene_id, { id: shot.scene_id, name: shot.scene_name }])).values()];
-    groups.forEach((scene) => {
-      const group = shots.filter((shot) => shot.scene_id === scene.id);
-      if (!group.length) return;
-      const section = document.createElement("section");
-      section.className = "visual-shot-scene";
-      const heading = document.createElement("h3");
-      heading.textContent = scene.name;
-      const grid = document.createElement("div");
-      grid.className = "visual-shot-grid";
-      group.forEach((shot) => {
-        const card = document.createElement("article");
-        card.className = "card visual-shot-card";
-        const kind = document.createElement("h4");
-        const who = shot.speaker_indexes.map((i) =>
-          state.project.speakers.find((speaker) => speaker.speaker_index === i)?.name || `Speaker ${i + 1}`).join(" & ");
-        kind.textContent = shot.kind === "insert" ? `insert · ${shot.subject || "illustration"}`
-          : `${shot.kind.replace("_", " ")} · ${who}`;
-        card.append(kind);
-        if (shot.kind !== "insert" && (shot.action || (shot.expression && shot.expression !== "calm"))) {
-          const beat = document.createElement("p");
-          beat.className = "visual-shot-beat";
-          beat.textContent = [shot.action, shot.expression].filter(Boolean).join(" · ");
-          card.append(beat);
-        }
-        const variant = state.shotVariants[shot.id] || "final";
-        const url = variant === "raw" ? shot.raw_url : shot.final_url;
-        if (url) {
-          const image = document.createElement("img");
-          image.src = `${url}&seed=${shot.seed}`;
-          image.alt = `${scene.name} ${shot.kind} ${variant} shot`;
-          card.append(image);
-        }
-        if (shot.prompt_truncated) {
-          const warning = document.createElement("span");
-          warning.className = "visual-warning";
-          warning.textContent = "⚠ description too long";
-          card.append(warning);
-        }
-        if (shot.source === "library") { // Task 29.5: copied from the Shot Library, no GPU time spent
-          const fromLibrary = document.createElement("span");
-          fromLibrary.className = "visual-badge";
-          fromLibrary.textContent = "from library";
-          card.append(fromLibrary);
-        }
-        if (shot.review_note) { // Task 28.5: it still failed a check after the retries: the user decides
-          card.classList.add("needs-review");
-          const review = document.createElement("p");
-          review.className = "visual-review";
-          review.setAttribute("role", "status");
-          review.textContent = `⚠ Check this shot: ${shot.review_note}. Press Regenerate to try again.`;
-          card.append(review);
-        }
-        const actions = document.createElement("div");
-        actions.className = "library-actions";
-        const toggle = document.createElement("button");
-        toggle.type = "button";
-        toggle.className = "btn btn-ghost btn-sm";
-        toggle.textContent = variant === "raw" ? "Show final" : "Show raw";
-        toggle.disabled = !shot.raw_url || !shot.final_url;
-        toggle.addEventListener("click", () => {
-          state.shotVariants[shot.id] = variant === "raw" ? "final" : "raw";
-          renderVisualShots();
-        });
-        const regenerate = document.createElement("button");
-        regenerate.type = "button";
-        regenerate.className = shot.review_note ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm";
-        regenerate.textContent = "↻ Regenerate";
-        regenerate.disabled = state.visualBusy || !visualGenerationAllowed();
-        regenerate.title = visualGenerationHint();
-        regenerate.addEventListener("click", () => startVisualJob(
-          () => Api.regenerateProjectShot(state.projectId, shot.id)));
-        actions.append(toggle, regenerate);
-        if (shot.kind !== "insert" && shot.status === "complete" && shot.source !== "library") {
-          const addToLibrary = document.createElement("button");  // Task 29.7: keep a good picture for the next episodes
-          addToLibrary.type = "button";
-          addToLibrary.className = "btn btn-ghost btn-sm";
-          addToLibrary.dataset.action = "add-to-library";
-          addToLibrary.textContent = "+ Add to library";
-          addToLibrary.title = "Copy this picture to the Shot Library (you approve it there once).";
-          addToLibrary.addEventListener("click", async () => {
-            addToLibrary.disabled = true;
-            try {
-              await Api.addProjectShotToLibrary(state.projectId, shot.id);
-              addToLibrary.textContent = "✓ In the library";
-            } catch (error) {
-              addToLibrary.textContent = "+ Add to library";
-              addToLibrary.disabled = false;
-              visualWarning(error.message || "Could not add the picture to the library.");
-            }
-          });
-          actions.append(addToLibrary);
-        }
-        card.append(actions);
-        grid.append(card);
-      });
-      section.append(heading, grid);
-      root.append(section);
-    });
-  }
-
-  // Task 29.7: how much of this project's pictures the approved Shot Library already covers.
-  async function renderLibraryCoverage() {
-    const line = byId("library-coverage");
-    if (!line || !state.projectId) return;
-    try {
-      const coverage = await Api.getLibraryCoverage(state.projectId);
-      if (!coverage.total || !coverage.covered) {
-        line.hidden = true;
-        return;
-      }
-      line.hidden = false;
-      line.textContent = `Shot Library: ${coverage.covered} of ${coverage.total} pictures are ready to reuse; `
-        + `${coverage.missing} will be drawn.`;
-    } catch {
-      line.hidden = true;
-    }
-  }
-
   async function renderActivityCoverage() {
     const line = byId("activity-coverage");
     if (!line || !state.projectId) return;
@@ -693,17 +567,10 @@
 
   function renderProjectVisuals() {
     if (!state.visuals) return;
-    renderLibraryCoverage();
     renderActivityCoverage();
     renderVisualCast();
     renderVisualScenes();
-    renderVisualShots();
-    const button = byId("generate-shots-btn");
-    button.disabled = state.visualBusy || !visualGenerationAllowed()
-      || !state.visuals.cast.length || !state.visuals.scenes.length;
-    button.title = visualGenerationHint() || (!state.visuals.cast.length || !state.visuals.scenes.length
-      ? "Assign a cast and at least one scene first." : "");
-    byId("visual-warnings").textContent = state.visualError || state.visuals.warnings.join(" ");
+    byId("visual-warnings").textContent = state.visualError;
   }
 
   async function watchVisualJob(job) {
@@ -713,18 +580,6 @@
     state.visualProgress = GenerationStatus.mount({
       element: byId("visual-job-progress"), baselineSec: 180, startedAtIso: job.created_at,
     });
-    const cancel = byId("cancel-shots-btn");
-    cancel.hidden = false;
-    cancel.disabled = false;
-    cancel.onclick = async () => {
-      cancel.disabled = true;
-      try {
-        await Api.cancelImageJob(job.id);
-      } catch (error) {
-        cancel.disabled = false;
-        visualWarning(error.message || "Could not cancel the shot job.");
-      }
-    };
     try {
       let current = job;
       while (!["complete", "error", "cancelled"].includes(current.status)) {
@@ -733,14 +588,12 @@
         current = await Api.getImageJob(job.id);
       }
       state.visualProgress.setProgress({ stageLabel: current.stage, progressPercent: current.progress, done: true });
-      if (current.status === "error") throw new Error(current.error || "Shot job failed.");
+      if (current.status === "error") throw new Error(current.error || "The picture job failed.");
       state.visuals = await Api.getProjectVisuals(state.projectId);
-      state.visualError = current.status === "cancelled" ? "Shot generation cancelled. Completed shots were kept." : "";
+      state.visualError = current.status === "cancelled" ? "Cancelled." : "";
     } catch (error) {
-      visualWarning(error.message || "Could not generate shots.");
+      visualWarning(error.message || "The pictures could not be drawn.");
     } finally {
-      cancel.hidden = true;
-      cancel.onclick = null;
       state.visualBusy = false;
       renderProjectVisuals();
     }
@@ -751,7 +604,7 @@
     try {
       await watchVisualJob(await operation());
     } catch (error) {
-      visualWarning(error.message || "Could not start shot generation.");
+      visualWarning(error.message || "Could not start drawing the pictures.");
     }
   }
 
@@ -780,7 +633,6 @@
       state.visualProfiles = profiles;
       state.visualSceneSelection = state.visuals.scenes.map((scene) => scene.id);
       renderProjectVisuals();
-      if (state.visuals.active_job) watchVisualJob(state.visuals.active_job);
     } catch (error) {
       visualWarning(error.message || "Characters and scenes could not load.");
     }
@@ -795,9 +647,9 @@
   function readStoredVisualMode() {
     try {
       const stored = localStorage.getItem(VISUAL_MODE_STORAGE_KEY);
-      return VISUAL_MODES.includes(stored) ? stored : "illustrated";
+      return VISUAL_MODES.includes(stored) ? stored : "podcast_sprites";  // an old "illustrated" choice -> the default
     } catch {
-      return "illustrated";
+      return "podcast_sprites";
     }
   }
 
@@ -973,7 +825,7 @@
     try {
       const job = await Api.generateVideo(state.projectId, {
         captionStyle: state.captionStyle,
-        visualMode: state.visualMode !== "illustrated" ? state.visualMode : null,
+        visualMode: state.visualMode,
         stillSceneId: STILL_SCENE_MODES.includes(state.visualMode) ? state.stillScene || null : null,
       });
       renderResult(job);
@@ -1092,8 +944,6 @@
     byId("script-timeline").addEventListener("click", handleTimelineClick);
     byId("voice-timeline").addEventListener("click", handleTimelineClick);
     byId("generate-btn").addEventListener("click", generateVideo);
-    byId("generate-shots-btn").addEventListener("click", () => startVisualJob(
-      () => Api.generateProjectShots(state.projectId)));
     byId("draw-illustrations-btn").addEventListener("click", () => startVisualJob(
       () => Api.drawActivityIllustrations(state.projectId)));
     window.addEventListener("beforeunload", (event) => {

@@ -132,30 +132,11 @@
   <main class="main">
     <section class="page-heading">
       <h1>Shot Library</h1>
-      <p>Ready-made pictures of your characters in their scenes. Look at each picture once and approve it: a new episode then
-        reuses approved pictures that match its scene, framing, action and mood, and draws only what is missing. A picture of
-        a character that was changed afterwards shows as stale and is never reused.</p>
+      <p>Pictures the videos reuse: generic activity illustrations (ordinary people doing an action, never a cast member's
+        face) shown during the inserts, and the scene backgrounds behind the talking characters.</p>
     </section>
     <details class="import-card" id="import-card">
-      <summary>Add your own pictures</summary>
-      <p>Copy pictures of the two characters into this folder, named <code>scene__framing</code>, then press Import:
-        <code id="inbox-folder"></code></p>
-      <ul>
-        <li><code>cafe__duo-wide.png</code>, <code>cafe__duo-close.png</code>: the woman on the left, the man on the right;
-          add <code>-rev</code> (<code>cafe__duo-wide-rev.png</code>) when the man is on the left, or name them left to right:
-          <code>cafe__duo-wide-alex-lina.png</code>.</li>
-        <li><code>cafe__single-lina.png</code>, <code>cafe__single-alex.png</code>: one person (the character's name).</li>
-        <li>Optional parts after the framing: an action and one of calm, smile, laugh, surprised, thinking, worried, serious,
-          for example <code>cafe__duo-wide__drinking-coffee__smile.png</code>.</li>
-        <li>The scene is a scene id or name without spaces: <code>cafe</code>, <code>city-street</code>, <code>living-room</code>.
-          Pictures should be 16:9; others are cropped to it (the top is kept). Imported pictures wait for your review below.</li>
-      </ul>
-      <div class="import-row">
-        <button id="import-btn" class="btn btn-primary" type="button">Import pictures</button>
-        <span id="inbox-count" class="shot-summary" role="status"></span>
-      </div>
-      <ul id="import-result" class="import-result" role="status"></ul>
-      <hr />
+      <summary>Add scene backgrounds</summary>
       <p><strong>Scene backgrounds</strong> (pictures without people): put <code>cafe.png</code> and its prompt <code>cafe.txt</code>
         in the <code>assets</code> and <code>prompts</code> folders of <code id="bg-folder"></code>, named by scene key
         (<code>docs/operations/scene-list-55.md</code>). A background replaces the picture of that scene.</p>
@@ -165,6 +146,7 @@
       </div>
       <ul id="bg-result" class="import-result" role="status"></ul>
     </details>
+    <div id="shot-message" hidden role="alert"></div>
     <section class="activity-section" aria-labelledby="activity-library-heading">
       <div class="library-heading">
         <div><h2 id="activity-library-heading">Activity Library</h2>
@@ -197,18 +179,6 @@
       <div id="activity-grid" class="shot-grid"></div>
       <div id="activity-empty" class="empty-state" hidden>Press “Add activity pictures” to add the first reusable illustration.</div>
     </section>
-    <div class="shot-filters" role="group" aria-label="Filters">
-      <label>Scene <select id="filter-scene"><option value="">All scenes</option></select></label>
-      <label>Framing <select id="filter-kind"><option value="">All</option><option value="single">Single</option><option value="duo_close">Duo close</option><option value="duo_wide">Duo wide</option></select></label>
-      <label>Review <select id="filter-state"><option value="">All</option><option value="pending">Needs review</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></label>
-      <button id="approve-all-btn" class="btn btn-ghost" type="button" disabled>Approve all in view</button>
-    </div>
-    <p id="shot-count" class="shot-summary" role="status"></p>
-    <div id="shot-message" hidden role="alert"></div>
-    <div id="shot-grid" class="shot-grid"></div>
-    <div id="shot-empty" class="empty-state" hidden>
-      <span>No pictures yet. In Step 5, press "Add to library" under a finished shot, or let the batch builder fill the library.</span>
-    </div>
   </main>
   <dialog id="activity-dialog" class="activity-dialog" aria-labelledby="activity-dialog-title">
     <form id="activity-editor-form" method="dialog">

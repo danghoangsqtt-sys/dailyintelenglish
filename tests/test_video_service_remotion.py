@@ -129,7 +129,7 @@ async def test_generate_video_forwards_caption_style_to_remotion(tmp_path, monke
     seen = {}
 
     async def _fake_success(db_, project_, audio_job_, learning_, output_path, caption_style="outline",
-                            visual_mode="illustrated", still_scene_id=None):
+                            visual_mode="podcast_sprites", still_scene_id=None):
         seen["caption_style"] = caption_style
         seen["visual"] = (visual_mode, still_scene_id)
         output_path.parent.mkdir(parents=True, exist_ok=True)

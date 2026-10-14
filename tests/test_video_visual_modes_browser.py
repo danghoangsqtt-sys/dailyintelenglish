@@ -1,4 +1,5 @@
-"""Phase 30 (ENH-021): Step 5 "Video pictures" modes (drawn story, podcast black, with characters, one still)."""
+"""Phase 30 (ENH-021): Step 5 "Video pictures" modes. Phase 44 (D123): the drawn-story "with characters" mode is gone;
+talking characters is the default."""
 
 import json
 from typing import AsyncGenerator
@@ -74,16 +75,28 @@ async def _generate(page):
 
 
 @pytest.mark.asyncio
-async def test_four_modes_the_drawn_story_is_the_default_and_its_request_is_unchanged(browser_instance, live_server_url):
+async def test_three_modes_talking_characters_is_the_default(browser_instance, live_server_url):
     bodies: list = []
     page = await _open(browser_instance, live_server_url, bodies)
     labels = await page.locator("#visual-mode-group .chip").all_text_contents()
     assert [text.strip() for text in labels] == [
-        "Podcast: with characters", "Podcast: black screen", "Podcast: one still scene", "Podcast: talking characters"]
-    assert await page.locator("[data-visual-mode='illustrated']").get_attribute("aria-pressed") == "true"
-    assert await page.locator("#still-scene-row").is_hidden()
+        "Podcast: talking characters", "Podcast: one still scene", "Podcast: black screen"]
+    assert await page.locator("[data-visual-mode='illustrated']").count() == 0
+    assert await page.locator("[data-visual-mode='podcast_sprites']").get_attribute("aria-pressed") == "true"
+    assert await page.locator("#generate-shots-btn").count() == 0  # no two-person shots any more
     await _generate(page)
-    assert bodies == [{"caption_style": "outline"}]  # Task 35.5: no template, aspect or renderer any more
+    assert bodies == [{"caption_style": "outline", "visual_mode": "podcast_sprites"}]
+    await page.close()
+
+
+@pytest.mark.asyncio
+async def test_a_remembered_drawn_story_choice_becomes_talking_characters(browser_instance, live_server_url):
+    bodies: list = []
+    page = await _open(browser_instance, live_server_url, bodies)
+    await page.evaluate("localStorage.setItem('die-visual-mode', 'illustrated')")
+    await page.reload()
+    await page.wait_for_selector("#workspace:not([hidden])")
+    assert await page.locator("[data-visual-mode='podcast_sprites']").get_attribute("aria-pressed") == "true"
     await page.close()
 
 
@@ -93,7 +106,7 @@ async def test_each_podcast_mode_is_sent_and_remembered(browser_instance, live_s
     page = await _open(browser_instance, live_server_url, bodies)
     await page.click("[data-visual-mode='podcast_black']")
     assert await page.locator("[data-visual-mode='podcast_black']").get_attribute("aria-pressed") == "true"
-    assert await page.locator("[data-visual-mode='illustrated']").get_attribute("aria-pressed") == "false"
+    assert await page.locator("[data-visual-mode='podcast_sprites']").get_attribute("aria-pressed") == "false"
     assert await page.locator("#still-scene-row").is_hidden()
     await _generate(page)
     assert [body["visual_mode"] for body in bodies] == ["podcast_black"]
@@ -101,9 +114,9 @@ async def test_each_podcast_mode_is_sent_and_remembered(browser_instance, live_s
     await page.reload()
     await page.wait_for_selector("#workspace:not([hidden])")
     assert await page.locator("[data-visual-mode='podcast_black']").get_attribute("aria-pressed") == "true"
-    await page.click("[data-visual-mode='illustrated']")  # back to the story pictures: the old request again
+    await page.click("[data-visual-mode='podcast_sprites']")  # back to the default
     await _generate(page)
-    assert "visual_mode" not in bodies[-1]
+    assert bodies[-1]["visual_mode"] == "podcast_sprites"
     await page.close()
 
 

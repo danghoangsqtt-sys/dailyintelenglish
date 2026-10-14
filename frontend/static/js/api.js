@@ -146,13 +146,6 @@ const Api = (() => {
     deleteCharacter: (id, force = false) => request(`/api/visuals/characters/${id}?force=${force}`, {
       method: "DELETE",
     }),
-    generateCharacterCandidates: (id) => request(`/api/visuals/characters/${id}/candidates`, { method: "POST" }),
-    pickCharacterReference: (id, assetId) => request(`/api/visuals/characters/${id}/reference`, {
-      method: "PUT", body: JSON.stringify({ asset_id: assetId }),
-    }),
-    generateCharacterSheet: (id, kind = null) => request(`/api/visuals/characters/${id}/sheet`, {
-      method: "POST", body: JSON.stringify(kind ? [{ kind }] : []),
-    }),
     approveCharacterAsset: (id, assetId, approved) =>
       request(`/api/visuals/characters/${id}/assets/${assetId}/approve`, {
         method: "PUT", body: JSON.stringify({ approved }),
@@ -161,13 +154,6 @@ const Api = (() => {
     unlockCharacter: (id) => request(`/api/visuals/characters/${id}/unlock`, { method: "POST" }),
     listScenes: () => request("/api/visuals/scenes"),
     // Task 29.7: the shot library of ready-made pictures.
-    listLibraryShots: (filters = {}) => {
-      const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));
-      return request(`/api/visuals/library/shots${query.toString() ? `?${query}` : ""}`);
-    },
-    reviewLibraryShot: (id, reviewState) => request(`/api/visuals/library/shots/${id}`, {
-      method: "PATCH", body: JSON.stringify({ review_state: reviewState }),
-    }),
     listLibraryActivities: (filters = {}) => {
       const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));
       return request(`/api/visuals/library/activities${query.toString() ? `?${query}` : ""}`);
@@ -190,12 +176,6 @@ const Api = (() => {
     getLibraryActivityHistory: (id) => request(`/api/visuals/library/activities/${id}/history`),
     getLibraryBackgrounds: () => request("/api/visuals/library/backgrounds"),
     importLibraryBackgrounds: () => request("/api/visuals/library/backgrounds/import", { method: "POST" }),
-    getLibraryInbox: () => request("/api/visuals/library/inbox"),
-    importLibraryInbox: () => request("/api/visuals/library/inbox/import", { method: "POST" }),
-    deleteLibraryShot: (id) => request(`/api/visuals/library/shots/${id}`, { method: "DELETE" }),
-    addProjectShotToLibrary: (projectId, shotId) =>
-      request(`/api/projects/${projectId}/visuals/shots/${shotId}/to-library`, { method: "POST" }),
-    getLibraryCoverage: (projectId) => request(`/api/projects/${projectId}/visuals/library-coverage`),
     getActivityCoverage: (projectId) => request(`/api/projects/${projectId}/visuals/activity-coverage`),
     drawActivityIllustrations: (projectId) =>
       request(`/api/projects/${projectId}/visuals/activity-illustrations`, { method: "POST" }),
@@ -220,10 +200,6 @@ const Api = (() => {
     setProjectScenes: (projectId, scenes) => request(`/api/projects/${projectId}/visuals/scenes`, {
       method: "PUT", body: JSON.stringify(scenes),
     }),
-    generateProjectShots: (projectId) =>
-      request(`/api/projects/${projectId}/visuals/shots`, { method: "POST" }),
-    regenerateProjectShot: (projectId, shotId) =>
-      request(`/api/projects/${projectId}/visuals/shots/${shotId}/regenerate`, { method: "POST" }),
     listThumbnailTemplates: (projectId) => request(`/api/thumbnails/templates${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""}`),
     listThumbnails: (projectId) => request(`/api/projects/${projectId}/thumbnails`),
     drawThumbnailTopicPicture: (projectId) => request(`/api/projects/${projectId}/thumbnails/topic-picture`, { method: "POST" }),

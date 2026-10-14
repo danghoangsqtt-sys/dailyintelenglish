@@ -1,4 +1,4 @@
-"""Task 20.6 Step 5 visual shot flow against the fake engine."""
+"""Task 20.6 Step 5 cast and scenes against the fake engine (Phase 44, D123: no drawn shots any more)."""
 
 from typing import AsyncGenerator, Generator
 
@@ -32,10 +32,6 @@ def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Generator[str, 
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(settings, "IMAGE_ENGINE", "fake")
         patch.setattr(settings, "AI_VISUALS_ENABLED", True)
-        # The fake engine paints solid random colours, so every person fails the Task 20.11
-        # colour check and retries twice: the job outgrew this UI test's 30 s wait. The retry
-        # itself is covered by tests/test_visuals_colour_check.py.
-        patch.setattr(settings, "VISUALS_COLOUR_RETRIES", 0)
         patch.setattr(visuals_api, "IMAGE_PYTHON", pretend_image_python)
         with live_server(tmp_path_factory, "visuals-project-browser") as url:
             yield url
@@ -50,7 +46,7 @@ async def browser_instance() -> AsyncGenerator[Browser, None]:
 
 
 @pytest.mark.asyncio
-async def test_step5_cast_scenes_generate_grid_and_regenerate(browser_instance: Browser, live_server_url: str):
+async def test_step5_cast_and_scenes_without_drawn_shots(browser_instance: Browser, live_server_url: str):
     page = await browser_instance.new_page()
     response = await page.request.post(f"{live_server_url}/api/projects", data=PROJECT)
     assert response.ok, await response.text()
@@ -73,16 +69,6 @@ async def test_step5_cast_scenes_generate_grid_and_regenerate(browser_instance: 
     assert await page.locator("#visual-scene-order span").all_text_contents() == [
         f"1. {scene_names[0]}", f"2. {scene_names[1]}",
     ]
-    await page.get_by_role("button", name="Generate shots").click()
-    await page.wait_for_function("document.querySelectorAll('#visual-shot-grid .visual-shot-card').length === 8")
-    first_card = page.locator("#visual-shot-grid .visual-shot-card").first
-    await first_card.get_by_role("button", name="Show raw").click()
-    assert await first_card.get_by_role("button", name="Show final").is_visible()
-    old_image = await first_card.locator("img").get_attribute("src")
-    await first_card.get_by_role("button", name="Regenerate").click()
-    await page.wait_for_function(
-        "old => document.querySelector('#visual-shot-grid .visual-shot-card img')?.getAttribute('src') !== old",
-        arg=old_image,
-    )
-    assert await first_card.locator("img").get_attribute("src") != old_image
+    assert await page.get_by_role("button", name="Generate shots").count() == 0
+    assert await page.locator("#visual-shot-grid").count() == 0
     await page.close()

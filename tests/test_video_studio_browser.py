@@ -241,7 +241,9 @@ async def test_caption_style_is_always_sent_and_remembered(browser_instance: Bro
     await page.wait_for_function("!document.getElementById('generate-btn').disabled")
     await page.click("#generate-btn")
     await page.wait_for_function("document.getElementById('generate-btn').textContent.includes('Generate video')")
-    assert captured_bodies == [{"caption_style": "outline"}, {"caption_style": "box"}]
+    # Phase 44 (D123): the default mode (talking characters) is always sent too
+    assert [body["caption_style"] for body in captured_bodies] == ["outline", "box"]
+    assert all(body["visual_mode"] == "podcast_sprites" for body in captured_bodies)
     await page.reload()
     await page.wait_for_selector("#workspace:not([hidden])")
     assert await page.locator("[data-caption-style='box']").get_attribute("aria-pressed") == "true"
