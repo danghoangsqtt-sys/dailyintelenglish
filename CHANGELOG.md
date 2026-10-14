@@ -8,6 +8,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Fixed (2026-10-14, walkthrough)
+- **Audio failed with "Edge TTS synthesis failed: 403"**: Microsoft now rejects edge-tts 7.2.8's client version;
+  upgraded to edge-tts 7.3.1.
+- **Changing a speaker's character now gives the speaker that character's voice** (gender, accent, Edge voice), not
+  only its name: swapping Alex for Hoang gives Hoang's Canadian voice. Speed, pitch and volume stay the project's.
+
 ### Changed (Phase 42, 2026-10-14, D121)
 - **The vertical video respects the TikTok / Reels / Shorts safe zone** (owner's 1080x1920 template): speaker chips,
   vocabulary card, hook banner and captions sit inside it, the captions left of the like/comment column, the characters'

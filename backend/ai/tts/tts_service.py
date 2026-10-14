@@ -81,7 +81,9 @@ async def _synthesize_edge_tts(text: str, speaker: dict) -> tuple[bytes, list[Wo
     passing `boundary="WordBoundary"`. Word boundaries are returned alongside the audio
     bytes rather than via a separate call, so there's exactly one Edge TTS request per line.
     """
-    voice = _edge_tts_voice_for(speaker["accent"], speaker["gender"])
+    # a character's own Edge voice wins (Phase 40 follow-up); otherwise resolve it from accent + gender
+    own = speaker.get("voice_id") or ""
+    voice = own if own.endswith("Neural") else _edge_tts_voice_for(speaker["accent"], speaker["gender"])
     last_error: Exception | None = None
     for attempt in range(1, EDGE_TTS_MAX_ATTEMPTS + 1):
         communicate = edge_tts.Communicate(

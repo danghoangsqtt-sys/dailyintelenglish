@@ -311,6 +311,31 @@ async def rename_speaker(
     return result
 
 
+async def has_script(db: aiosqlite.Connection, project_id: str) -> bool:
+    cursor = await db.execute("SELECT 1 FROM script_lines WHERE project_id = ? LIMIT 1", (project_id,))
+    return await cursor.fetchone() is not None
+
+
+async def apply_character_voice(db: aiosqlite.Connection, project_id: str, speaker: dict, character: dict) -> bool:
+    """Phase 40 follow-up (D119): a speaker also takes its character's voice -- gender, accent, engine, voice id -- so
+    swapping Alex for Hoang gives Hoang's Canadian voice, not Alex's. Speed, pitch and volume stay the project's own (set
+    for the level, as Step 1 keeps them). Profile fields left empty keep the speaker's value. Returns True when anything
+    changed. Does not commit."""
+    wanted = {
+        "gender": character.get("gender") or speaker.get("gender"),
+        "accent": character.get("default_accent") or speaker.get("accent"),
+        "tts_engine": character.get("default_tts_engine") or speaker.get("tts_engine"),
+        "voice_id": character.get("default_voice_id") or speaker.get("voice_id"),
+    }
+    changes = {key: value for key, value in wanted.items() if value != speaker.get(key)}
+    if not changes:
+        return False
+    sets = ", ".join(f"{key} = ?" for key in changes)
+    await db.execute(f"UPDATE speakers SET {sets} WHERE id = ? AND project_id = ?",
+                     (*changes.values(), speaker["id"], project_id))
+    return True
+
+
 async def update_project(
     db: aiosqlite.Connection, project_id: str, patch: ProjectUpdate, commit: bool = True
 ) -> dict:

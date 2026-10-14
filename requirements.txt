@@ -10,7 +10,7 @@ pydub==0.25.1
 audioop-lts==0.2.2; python_version >= "3.13"  # pydub needs stdlib audioop, removed in 3.13 (PEP 594)
 pyloudnorm==0.2.0  # real ITU-R BS.1770 loudness measurement for AudioService normalization
 Pillow==12.3.0
-edge-tts==7.2.8
+edge-tts==7.3.1
 aiofiles==25.1.0
 python-multipart==0.0.32
 numpy==2.5.3  # used directly (audio levels, sprites, colour checks); was only pulled in by pyloudnorm

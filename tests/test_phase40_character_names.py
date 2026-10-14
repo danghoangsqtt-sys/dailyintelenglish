@@ -77,3 +77,23 @@ def test_step1_and_the_channel_plan_no_longer_preselect_alex_and_lina():
     for source in (step1, channel):
         assert '"Alex"' not in source and '"Lina"' not in source
     assert "preselectDefaults" not in step1 and "Character ${index + 1}" in step1
+
+
+def test_choosing_a_character_also_gives_the_speaker_its_voice(client):  # noqa: F811
+    project = _project(client)
+    kim = locked_character("Kim", "white")
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute("UPDATE characters SET default_accent = 'australian', default_voice_id = 'en-AU-NatashaNeural', "
+                           "default_speed = 0.9 WHERE id = ?", (kim,))
+    data(client.put(f"/api/projects/{project['id']}/visuals/cast", json=[{"speaker_index": 0, "character_id": kim}]))
+    speaker = next(s for s in data(client.get(f"/api/projects/{project['id']}"))["speakers"] if s["speaker_index"] == 0)
+    assert (speaker["name"], speaker["gender"], speaker["accent"], speaker["voice_id"], speaker["speed"]) \
+        == ("Kim", "female", "australian", "en-AU-NatashaNeural", 0.85)  # the level's speed stays
+
+
+def test_the_edge_voice_comes_from_the_speakers_own_voice_id_when_it_has_one():
+    import inspect
+
+    from backend.ai.tts import tts_service
+    source = inspect.getsource(tts_service._synthesize_edge_tts)
+    assert 'speaker.get("voice_id")' in source
