@@ -186,10 +186,9 @@ def generate_qwen_edit(torch: Any, items: list[dict[str, Any]], progress: Callab
     results = []
     for index, item in enumerate(items, start=1):
         tick = time.monotonic()
-        with Image.open(item["reference"]) as reference:
-            reference_rgb = reference.convert("RGB")
+        references = [_flat_reference(Image, path) for path in references_of(item)]
         with torch.no_grad():
-            image = pipe(image=[reference_rgb], prompt=item["prompt"], num_inference_steps=spec["steps"],
+            image = pipe(image=references, prompt=item["prompt"], num_inference_steps=spec["steps"],
                          true_cfg_scale=1.0, width=int(item["width"]), height=int(item["height"]),
                          generator=torch.Generator("cuda").manual_seed(int(item["seed"]))).images[0]
         _save(image, item)
@@ -198,6 +197,24 @@ def generate_qwen_edit(torch: Any, items: list[dict[str, Any]], progress: Callab
     del pipe
     _free(torch)
     return {"load_sec": round(load_sec, 1), "items": results}
+
+
+def references_of(item: dict[str, Any]) -> list[str]:
+    """Phase 43 (D122): an item has one `reference` (a character insert) or 1-3 `references` (the AI-scene thumbnail
+    draws both characters, picture 1 and picture 2 in the prompt)."""
+    return list(item.get("references") or [item["reference"]])
+
+
+def _flat_reference(image_module: Any, path: str) -> Any:
+    """A reference picture as RGB; a transparent sprite is laid on white (the 2026-10-14 trial: clean cut-outs keep the
+    faces and outfits better than a black or noisy backdrop)."""
+    with image_module.open(path) as opened:
+        picture = opened.convert("RGBA") if opened.mode in ("RGBA", "LA", "P") else opened.convert("RGB")
+    if picture.mode != "RGBA":
+        return picture
+    flat = image_module.new("RGB", picture.size, (255, 255, 255))
+    flat.paste(picture, mask=picture.getchannel("A"))
+    return flat
 
 
 def _save(image: Any, item: dict[str, Any]) -> None:
@@ -223,6 +240,11 @@ def validate(request: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
                 raise ValueError(f"item is missing {key!r}")
         if int(item["width"]) % 16 or int(item["height"]) % 16:
             raise ValueError("width and height must be multiples of 16")
-        if model == "qwen_edit" and not item.get("reference"):
-            raise ValueError("qwen_edit items need a reference picture")
+        if model == "qwen_edit":
+            references = item.get("references")
+            if references is not None and (not isinstance(references, list) or not 1 <= len(references) <= 3
+                                           or not all(isinstance(path, str) and path for path in references)):
+                raise ValueError("qwen_edit references must be a list of 1-3 picture paths")
+            if not references and not item.get("reference"):
+                raise ValueError("qwen_edit items need a reference picture")
     return model, items

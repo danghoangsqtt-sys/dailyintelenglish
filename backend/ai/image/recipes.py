@@ -277,6 +277,28 @@ def qwen_topic_prompt(topic: str, illustration: str) -> str:
             "no signs, no logo, no watermark.")
 
 
+def qwen_thumbnail_scene_prompt(names: list[str], topic: str, scene: str = "") -> str:
+    """Phase 43 (D122): the AI-scene thumbnail -- Qwen-Image-Edit-2511 draws the episode's characters (picture 1, 2 =
+    their sprites) together in a scene of the topic. The same composition rules as the outside-AI prompt (2026-10-14
+    thumbnail research): head-and-shoulders, big faces, heads apart, a plain side for the headline the app adds, no
+    lettering. The picture is drawn wider than the frame (1536x720); the app then picks the 1280x720 window."""
+    short_topic = topic.split(". ")[0].strip().rstrip(".")
+    place = (scene or f"a real place that fits {short_topic.lower()}").strip().rstrip(".")
+    if len(names) >= 2:
+        who = (f"{names[0]} (the person in picture 1) and {names[1]} (the person in picture 2) standing side by side, "
+               f"{names[0]} on the left, turned slightly towards each other; shoulders may touch but their heads and "
+               "faces do not overlap")
+    elif names:
+        who = f"{names[0]} (the person in picture 1)"
+    else:
+        who = "two friendly young adults side by side"
+    return (f"{QWEN_PHOTO} A bright, eye-catching photo of {who}, in {place}. Head-and-shoulders close-up, each face "
+            "large, big natural smiles, looking at the viewer. Keep each person's face, hair and clothes exactly as in "
+            "their picture. The two people stand in the right part of the picture; the left part is only softly blurred "
+            "background, calm and slightly darker, with no people and no objects in front. Vivid colours, high "
+            "contrast. Absolutely no text, no letters, no numbers, no signs, no logo, no badge, no watermark.")
+
+
 def insert_person_prompt(character: Mapping, subject: str) -> str:
     """Task 29.2: an insert that shows a cast character doing what the speaker describes (checking a phone, eating
     oatmeal, stretching). The face reference carries identity; the locked outfit is named; no pose, no plate."""
