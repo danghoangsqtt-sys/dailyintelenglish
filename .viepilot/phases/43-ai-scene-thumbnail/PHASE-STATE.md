@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 43: "AI scene" thumbnail drawn locally by Qwen-Image-Edit (D122)
 
-- **Status:** planned 2026-10-14 (owner "okey" to the proposal); 43.1-43.4 done 2026-10-14; 43.5 (real run, Gate B-27) next.
+- **Status:** planned 2026-10-14 (owner "okey" to the proposal); 43.1-43.4 done 2026-10-14; 43.5 real draw done, **waiting for owner Gate B-27**.
 - **Why:** the owner made a thumbnail in ChatGPT from the app's outside-AI prompt with the two character pictures
   attached: the people stand *in* the scene (light, depth, big smiles), far better than the composed "sticker" kind.
   A trial on this computer (2026-10-14, `D:\Example-videos\walkthrough-2026-10-14\32-*.png`) showed
@@ -26,7 +26,7 @@ with progress); the composed kind stays the quick default.
 | 43.2 | **Find the people, choose the frame.** Run the worker's existing ONNX face detector (`count_faces`, Task 28.5) on the drawn picture -- face boxes, widened to the head (hair) as the keep-out zone; the `isnetis.onnx` people mask only if faces are not found (no new dependency). Crop the 1280x720 window that leaves the widest free side for the headline (≥ 45 % of the width) and keeps heads ≥ 60 px from the edges; pick the layout (text left or right) from the free side. If no window gives 40 %, mark the variant "crowded" so the UI offers "Draw again". Unit tests on synthetic masks | done |
 | 43.3 | **Compose.** `thumbnail_compose.ai_scene_picture` + template `ai_scene`: 16:9 = the chosen 1280x720 window, headline/pill/badges/logo in the computed text box, the shade reaching just past the title strip (faces keep their light); the supporting pill shrinks to the title box (all kinds). **Changed from the plan:** 9:16 needs no second GPU draw -- the band around the faces fills the lower part, the same scene enlarged, blurred and darkened carries the headline above it. Corner cleaning: not needed after 43.1 (the new prompt drew no fake logo or lettering in 3/3); the real badges/logo still cover the top corners | done |
 | 43.4 | **Step 6 UI.** A third kind card "AI scene (local Qwen)" with the honest time ("about 1–2 minutes per variant"), a background job with progress and ETA, per-variant "Draw again", GPU-busy and model-missing messages (fallback: suggest the composed kind). The project folder (Phase 41) gets the favorite as usual | done |
-| 43.5 | **Real run and Gate B-27.** Ep. 2 "Shopping at the Market" (Hoang, Kim): 3 variants on the real app, timing recorded, frames checked against the thumbnail rules (headline never on a face, faces ≥ 150-px-readable, corners); owner review **Gate B-27** | planned |
+| 43.5 | **Real run and Gate B-27.** Ep. 2 "Shopping at the Market" (Hoang, Kim): 3 variants on the real app, timing recorded, frames checked against the thumbnail rules (headline never on a face, faces ≥ 150-px-readable, corners); owner review **Gate B-27** | waiting for owner (Gate B-27) |
 
 ## Thumbnail rules applied (research 2026-10-14)
 
@@ -64,3 +64,7 @@ hold our badge and logo. Sources: thumbnailtest.com, vidIQ, TubeCore, Search Eng
   carries `ai_scenes` so an edit re-renders the same picture. Step 6: an "AI scene" panel (1-3 pictures, elapsed/ETA,
   pictures with "title on the left/right" or a red "Crowded / No faces" note and "Draw again"); after drawing, the kind
   is available and selected. A request is synchronous like the topic picture and the video render (minutes).
+- **43.5 (2026-10-14):** real app, Ep. 2, Step 6 "Draw AI scenes" x3: 201 in ~6 min (load + 86.7-92.2 s per
+  picture), 2 faces found on each, none crowded (free 33-38 %), title on the left. The owner had already generated
+  outside-AI thumbnails from their ChatGPT picture, so the "Generate" click (which replaces the variant set) is left to
+  the owner; offline renders of the three real scenes: `39-real-ai-scene-thumbnails.jpg`, `39-real-ai-scene-9x16.jpg`.
