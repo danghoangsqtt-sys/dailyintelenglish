@@ -28,15 +28,6 @@
     return { visual_mode: mode, caption_style: caption, ...(scene ? { still_scene_id: scene } : {}) };
   }
 
-  async function call(path, method = "GET", body) {
-    const response = await fetch(`/api/projects/${projectId}${path}`, {
-      method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined,
-    });
-    const envelope = await response.json();
-    if (!response.ok || envelope.success === false) throw new Error(envelope.error || "Request failed");
-    return envelope.data;
-  }
-
   function copyButton(label, source) {
     return el("button", { type: "button", className: "btn btn-ghost btn-sm", textContent: `📋 ${label}`,
       onclick: async () => { try { await navigator.clipboard.writeText(source.value); } catch { source.select(); } } });
@@ -51,18 +42,18 @@
       : el("div", { className: "short-empty", textContent: clip.status === "approved" ? "Approved — render it" : "Not rendered yet" });
     const actions = el("div", { className: "short-actions" }, [
       el("button", { type: "button", className: "btn btn-ghost btn-sm", textContent: "Save", disabled: busy,
-        onclick: () => run(() => call(`/shorts/${clip.id}`, "PATCH",
+        onclick: () => run(() => Api.updateShort(projectId, clip.id,
           { line_from: Number(from.value) - 1, line_to: Number(to.value) - 1, hook: hook.value }), "Saved.") }),
       clip.status === "proposed" ? el("button", { type: "button", className: "btn btn-ghost btn-sm", textContent: "Approve",
         dataset: { action: "approve" }, disabled: busy,
-        onclick: () => run(() => call(`/shorts/${clip.id}`, "PATCH", { status: "approved", hook: hook.value }), "Approved.") }) : null,
+        onclick: () => run(() => Api.updateShort(projectId, clip.id, { status: "approved", hook: hook.value }), "Approved.") }) : null,
       clip.status !== "proposed" ? el("button", { type: "button", className: "btn btn-primary btn-sm", dataset: { action: "render" },
         textContent: clip.status === "rendered" ? "Render again" : "Render", disabled: busy,
-        onclick: () => run(() => call(`/shorts/${clip.id}/render`, "POST", renderOptions()), "Clip rendered.", "Rendering the clip…") }) : null,
+        onclick: () => run(() => Api.renderShort(projectId, clip.id, renderOptions()), "Clip rendered.", "Rendering the clip…") }) : null,
       clip.video_url ? el("a", { className: "btn btn-ghost btn-sm", href: clip.video_url, download: "", textContent: "⬇ Video" }) : null,
       clip.cover_url ? el("a", { className: "btn btn-ghost btn-sm", href: clip.cover_url, download: "", textContent: "⬇ Cover" }) : null,
       el("button", { type: "button", className: "btn btn-ghost btn-sm", textContent: "Delete", disabled: busy,
-        onclick: async () => (await ConfirmDialog.ask("Delete this clip?", { confirmLabel: "Delete", danger: true })) && run(() => call(`/shorts/${clip.id}`, "DELETE"), "Clip deleted.") }),
+        onclick: async () => (await ConfirmDialog.ask("Delete this clip?", { confirmLabel: "Delete", danger: true })) && run(() => Api.deleteShort(projectId, clip.id), "Clip deleted.") }),
     ]);
     const shortsTitle = el("textarea", { readOnly: true, value: clip.packages.shorts.title, rows: 1, "aria-label": "Shorts title" });
     const shortsText = el("textarea", { readOnly: true, value: clip.packages.shorts.description, "aria-label": "Shorts description" });
@@ -84,7 +75,7 @@
   }
 
   async function refresh() {
-    const clips = await call("/shorts");
+    const clips = await Api.listShorts(projectId);
     $("shorts-list").replaceChildren(...(clips.length ? clips.map(clipCard)
       : [el("p", { className: "section-hint", textContent: "No clips yet: let the AI propose them." })]));
   }
@@ -109,7 +100,7 @@
     button.disabled = true;
     $("vertical-progress").textContent = "Rendering the vertical episode… (a few minutes)";
     try {
-      await call("/video/vertical", "POST", renderOptions());
+      await Api.renderVertical(projectId, renderOptions());
       showVerticalLink(true);
       $("vertical-progress").textContent = "Done.";
     } catch (error) {
@@ -129,7 +120,7 @@
     if (!projectId || !$("shorts-section")) return;
     let job = null;
     try {
-      job = await call("/video/status");
+      job = await Api.getVideoStatus(projectId);
     } catch {
       job = null;
     }
@@ -141,7 +132,7 @@
     $("shorts-section").hidden = false;
     showVerticalLink(Boolean(job.mp4_path_vertical));
     $("vertical-btn").addEventListener("click", renderVertical);
-    $("shorts-propose-btn").addEventListener("click", () => run(() => call("/shorts/propose", "POST", { count: 3 }),
+    $("shorts-propose-btn").addEventListener("click", () => run(() => Api.proposeShorts(projectId, 3),
       "Clips proposed: adjust, approve and render them.", "The AI is choosing the best moments…"));
     await refresh().catch(() => {});
   }

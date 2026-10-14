@@ -1396,3 +1396,5 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
         await script_service.save_script(db, project_id, server_lines, known_speaker_ids, commit=False)
         await project_service.mark_script_changed(db, project_id, commit=False)
         await ai_job_service.transition_status(db, job_id, "complete", commit=False)
+    from backend.content import export_service
+    await export_service.sync_quietly(db, project_id)

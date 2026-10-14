@@ -1557,44 +1557,58 @@ State: `.viepilot/phases/40-character-names/PHASE-STATE.md`.
 - [x] 40.2 Speaker takes the character's name, script lines follow, audio marked stale
 - [x] 40.3 Step 5 notice, generic hints, tests
 
-### Phase 41: Project output folder (D120) - in progress 2026-10-14
+### Phase 41: Project output folder (D120) - complete 2026-10-14
 
 State: `.viepilot/phases/41-project-folder/PHASE-STATE.md`.
 
-- [ ] 41.1 Folder and component choice stored per project (migration 025)
-- [ ] 41.2 Export service: automatic sync of the ticked components
-- [ ] 41.3 Step 1 and Step 7 UI (native folder picker, checkboxes, open folder, save now)
-- [ ] 41.4 Tests and a real run
+- [x] 41.1 Folder and component choice stored per project (migration 025)
+- [x] 41.2 Export service: automatic sync of the ticked components (script/learning edits covered by Phase 45)
+- [x] 41.3 Step 1 and Step 7 UI (native folder picker, checkboxes, open folder, save now)
+- [x] 41.4 Tests and a real sandbox run
 
-### Phase 42: Vertical video inside the platform safe zone + vertical intro/outro (D121) - in progress 2026-10-14
+### Phase 42: Vertical video inside the platform safe zone + vertical intro/outro (D121) - built; Gate B-25 pending
 
 State: `.viepilot/phases/42-vertical-safe-zone/PHASE-STATE.md`.
 
 - [x] 42.1 Safe-zone definition and checks
 - [x] 42.2 Vertical episode layout inside the zone
 - [x] 42.3 Vertical intro and outro
-- [ ] 42.4 Real render, overlay check, Gate B-25 re-run
+- [x] 42.4 Real sandbox render and safe-zone overlay check
+- [ ] Owner Gate B-25 re-run
 
-### Phase 43: "AI scene" thumbnail drawn locally by Qwen-Image-Edit (D122) - planned 2026-10-14
+### Phase 43: "AI scene" thumbnail drawn locally by Qwen-Image-Edit (D122) - built; Gate B-27 pending
 
 State: `.viepilot/phases/43-ai-scene-thumbnail/PHASE-STATE.md`. A third Step 6 kind (the composed and outside-AI kinds
 stay): Qwen-Image-Edit-2511 draws both characters in a topic scene from their sprites; the app finds the people,
 chooses the frame and adds headline, badges and logo on the free side.
 
-- [ ] 43.1 Worker: multi-reference Qwen edit + thumbnail scene prompt (1536x720 draw)
-- [ ] 43.2 Find the people (isnetis mask), choose the 1280x720 window and the text side
-- [ ] 43.3 Compose, clean the corners, 9:16 only for the favorite
-- [ ] 43.4 Step 6 UI: third kind, background job with progress, "Draw again"
-- [ ] 43.5 Real run on Ep. 2, timing, Gate B-27
+- [x] 43.1 Worker: multi-reference Qwen edit + thumbnail scene prompt (1536x720 draw)
+- [x] 43.2 Find the people (isnetis mask), choose the 1280x720 window and the text side
+- [x] 43.3 Compose, clean the corners, 9:16 only for the favorite
+- [x] 43.4 Step 6 UI: third kind, background job with progress, "Draw again"
+- [x] 43.5 Real run on Ep. 2 and timing recorded
+- [ ] Owner Gate B-27
 
-### Phase 44: Remove RealVisXL/SDXL, the two-person shots and the "with characters" video (D123) - planned 2026-10-14
+### Phase 44: Remove RealVisXL/SDXL, the two-person shots and the "with characters" video (D123) - built; Gate B-28 pending
 
 State: `.viepilot/phases/44-remove-sdxl-shots/PHASE-STATE.md`. Illustrations come from the generic Activity Library or
 local Qwen, never with a cast member's face; talking characters becomes the default video.
 
-- [ ] 44.1 Backup the DB, archive the old shot pictures
-- [ ] 44.2 Backend removal (pipelines, worker, routes, settings, migration 026)
-- [ ] 44.3 Renderer: drop the illustrated shot track
-- [ ] 44.4 Frontend: Step 5, Shots page, Characters page
-- [ ] 44.5 Delete the SDXL models (~24 GB) and update the docs
-- [ ] 44.6 Full tests, real render, Gate B-28
+- [x] 44.1 Backup the DB, archive the old shot pictures
+- [x] 44.2 Backend removal (pipelines, worker, routes, settings, migration 026)
+- [x] 44.3 Renderer: drop the illustrated shot track
+- [x] 44.4 Frontend: Step 5, Shots page, Characters page
+- [x] 44.5 Delete the SDXL models and update the docs
+- [x] 44.6 Full tests and sandbox render
+- [x] 44.7 Storyboard picture estimate without removed shots
+- [ ] Owner Gate B-28
+
+### Phase 45: Audit follow-ups (BUG-031–034, ENH-032–033) - complete 2026-10-14
+
+State: `.viepilot/phases/45-audit-followups/PHASE-STATE.md`.
+
+- [x] 45.1 Script and learning exports follow successful edits and AI jobs
+- [x] 45.2 Filesystem copy runs outside the shared database lock
+- [x] 45.3 Folder and Shorts frontend calls use `api.js`
+- [x] 45.4 README and generated API reference match current code
+- [x] 45.5 ViePilot state and eligible checkpoint tags reconciled

@@ -18,18 +18,6 @@
     ["learning", "Learning pack (transcript, vocabulary, idioms…)", false],
   ];
 
-  async function call(url, method = "GET", body) {
-    const response = await fetch(url, {
-      method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined,
-    });
-    const envelope = await response.json().catch(() => ({}));
-    if (!response.ok || envelope.success === false) {
-      const detail = Array.isArray(envelope.detail) ? envelope.detail.map((item) => item.msg).join(" ") : envelope.detail;
-      throw new Error(envelope.error || detail || "Request failed");
-    }
-    return envelope.data;
-  }
-
   function mount(container, { projectId = null, actions = false } = {}) {
     container.innerHTML = `
       <div class="pf-row">
@@ -66,7 +54,7 @@
       const wanted = settings();
       if (!wanted.output_dir) return null;  // no folder: nothing is exported (optional)
       if (!wanted.items.length) throw new Error("Tick at least one thing to save in the folder");
-      const view = await call(`/api/projects/${id}/export`, "PUT", wanted);
+      const view = await Api.saveProjectExport(id, wanted);
       show(view.settings);
       const written = view.sync?.written || [];
       status(written.length ? `Saved ${written.length} file(s) in the folder.` : "Folder ready: files are added as you make them.");
@@ -76,7 +64,7 @@
     $('[data-pf="choose"]').addEventListener("click", async () => {
       status("Choose the folder in the window that opened…");
       try {
-        const { path } = await call("/api/system/choose-folder", "POST", { initial: $(".pf-path").value.trim() || null });
+        const { path } = await Api.chooseProjectFolder($(".pf-path").value.trim() || null);
         if (path) $(".pf-path").value = path;
         status(path ? "" : "No folder chosen: you can also type the path.");
       } catch (error) {
@@ -88,11 +76,11 @@
         try { await save(projectId); } catch (error) { status(error.message); }
       });
       $('[data-pf="open"]').addEventListener("click", async () => {
-        try { await call(`/api/projects/${projectId}/export/open`, "POST"); } catch (error) { status(error.message); }
+        try { await Api.openProjectExport(projectId); } catch (error) { status(error.message); }
       });
       $('[data-pf="stop"]').addEventListener("click", async () => {
         try {
-          await call(`/api/projects/${projectId}/export`, "DELETE");
+          await Api.stopProjectExport(projectId);
           $(".pf-path").value = "";
           status("This project no longer saves to a folder (the files already there are kept).");
         } catch (error) {
@@ -100,7 +88,7 @@
         }
       });
     }
-    if (projectId) call(`/api/projects/${projectId}/export`).then((view) => show(view.settings)).catch(() => {});
+    if (projectId) Api.getProjectExport(projectId).then((view) => show(view.settings)).catch(() => {});
     return { save, settings };
   }
 

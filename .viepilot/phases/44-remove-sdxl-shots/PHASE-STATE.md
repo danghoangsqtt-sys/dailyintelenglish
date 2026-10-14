@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 44: remove RealVisXL/SDXL, the two-person shots and the "with characters" video (D123)
 
-- **Status:** planned 2026-10-14 (owner answers in chat); 44.1-44.6 done 2026-10-14; **waiting for owner Gate B-28**; 44.7 (storyboard estimate) done.
+- **Status:** 44.1–44.7 implemented 2026-10-14; **waiting for owner Gate B-28**.
 - **Why (owner, 2026-10-14):** Step 5 still offered "Generate shots" (single / duo close / duo wide pictures of the
   cast drawn by RealVisXL), whose faces never match the real characters. The owner had asked to drop RealVisXL:
   illustrations in a conversation come from the **generic Activity Library or the local AI (Qwen)** and show **no

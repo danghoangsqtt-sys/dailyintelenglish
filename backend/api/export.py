@@ -34,9 +34,13 @@ async def save_export(project_id: str, body: export_service.ExportSettings,
                       db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Set the folder and the ticked components, then copy what already exists."""
     started_at = time.perf_counter()
+    async with read_transaction():
+        await project_service.get_project(db, project_id)
+    await asyncio.to_thread(export_service._check_folder, Path(body.output_dir))
     async with write_transaction(db):
         await export_service.save_settings(db, project_id, body)
-        result = await export_service.sync(db, project_id)
+    result = await export_service.sync(db, project_id)
+    async with read_transaction():
         view = await export_service.public(db, project_id)
     return ok({**view, "sync": result}, started_at=started_at)
 
@@ -53,9 +57,9 @@ async def clear_export(project_id: str, db: aiosqlite.Connection = Depends(get_d
 @router.post("/api/projects/{project_id}/export/sync")
 async def sync_export(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     started_at = time.perf_counter()
-    async with write_transaction(db):
+    async with read_transaction():
         await project_service.get_project(db, project_id)
-        result = await export_service.sync(db, project_id)
+    result = await export_service.sync(db, project_id)
     if result["folder"] is None:
         raise ValidationError("Choose a folder for this project first")
     return ok(result, started_at=started_at)

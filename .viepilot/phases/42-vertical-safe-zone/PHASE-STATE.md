@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 42: Vertical video inside the platform safe zone + vertical intro/outro (D121)
 
-- **Status:** 42.1–42.3 done 2026-10-14; 42.4 sandbox renders checked with the safe-zone overlay; Gate B-25 re-run with the owner. Opened 2026-10-14. Owner Gate B-25 review of `video_vertical.mp4`: the vertical video does not keep its
+- **Status:** 42.1–42.4 implemented and sandbox renders checked with the safe-zone overlay 2026-10-14; owner Gate B-25 re-run pending. Opened 2026-10-14. Owner Gate B-25 review of `video_vertical.mp4`: the vertical video does not keep its
   content in the safe area of TikTok / Reels / YouTube Shorts (the app's buttons, tabs and captions cover it), and the
   intro/outro are the horizontal slides zoomed (logo cut, title off-centre) — they need their own vertical version.
 
@@ -9,7 +9,7 @@
 | 42.1 | `renderer/src/safeZone.ts`: the 1080x1920 safe zone (owner's TikTok template, stricter bottom for captions) + a check helper; Vitest that every vertical element box lies inside it | done |
 | 42.2 | Vertical episode layout rebuilt on it: picture top (decoration may run under the UI), speaker chips, vocabulary card, hook banner and captions inside the zone (captions clear of the right button column), characters' faces above the bottom caption area | done |
 | 42.3 | `BrandIntroVertical` / `BrandOutroVertical`: logo, title, level, cast, greeting and Like/Subscribe/Share stacked and centred inside the zone | done |
-| 42.4 | Real vertical render + a clip, frames with the safe-zone overlay; Gate B-25 re-run | in_progress |
+| 42.4 | Real sandbox vertical render + clip, frames with safe-zone overlay | done; Gate B-25 pending owner |
 
 ## Safe zone (1080x1920 pixels)
 

@@ -10,7 +10,7 @@ from backend.db.database import get_db
 from backend.db.transactions import read_transaction, write_transaction
 from backend.schemas.project import ProjectUpdate, ScriptConfig, SpeakerUpdate
 from backend.schemas.script import RegenerateLineRequest, ScriptUpdate
-from backend.content import project_service, script_service
+from backend.content import export_service, project_service, script_service
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -111,6 +111,8 @@ async def update_speaker(
         project = await project_service.update_speaker(
             db, project_id, speaker_id, SpeakerUpdate(**voice.model_dump(exclude_unset=True, exclude_none=True)),
             commit=False)
+    if rename and rename["changed"]:
+        await export_service.sync_quietly(db, project_id)
     return ok({**project, "renamed": rename} if rename else project, started_at=started_at)
 
 
@@ -154,6 +156,7 @@ async def generate_script(project_id: str, db: aiosqlite.Connection = Depends(ge
     saved = await _save_script_and_advance(
         db, project_id, project, [line.model_dump() for line in lines]
     )
+    await export_service.sync_quietly(db, project_id)
     return ok(saved, started_at=started_at)
 
 
@@ -175,6 +178,7 @@ async def regenerate_script_line(
             commit=False,
         )
         await _sync_status_after_script_change(db, project_id)
+    await export_service.sync_quietly(db, project_id)
     return ok(updated, started_at=started_at)
 
 
@@ -194,4 +198,5 @@ async def save_script(
         [line.model_dump() for line in payload.lines],
         known_speaker_ids,
     )
+    await export_service.sync_quietly(db, project_id)
     return ok(saved, started_at=started_at)

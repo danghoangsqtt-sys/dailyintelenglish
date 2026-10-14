@@ -508,3 +508,5 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
     async with write_transaction(db):
         await learning_service.save_learning_content(db, project_id, pack.model_dump(), commit=False)
         await ai_job_service.transition_status(db, job_id, "complete", commit=False)
+    from backend.content import export_service
+    await export_service.sync_quietly(db, project_id)

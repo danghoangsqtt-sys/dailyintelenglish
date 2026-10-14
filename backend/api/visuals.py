@@ -20,7 +20,7 @@ from backend.schemas.visuals import (
     ActivityMetadataInput, ActivityMetadataPatch, ActivityReviewInput, ApprovalInput, CastMemberInput, CharacterInput,
     CharacterPatch, SceneInput, ScenePatch,
 )
-from backend.content import project_service
+from backend.content import export_service, project_service
 from backend.ai.image import jobs
 from backend.library import activity_library_service as activity_library
 from backend.library import activity_illustrations
@@ -407,6 +407,8 @@ async def set_project_cast(
 ) -> dict:
     async with write_transaction(db):
         result = await project_visuals.set_cast(db, project_id, [member.model_dump() for member in body])
+    if result.get("renamed"):
+        await export_service.sync_quietly(db, project_id)
     return ok(result)
 
 

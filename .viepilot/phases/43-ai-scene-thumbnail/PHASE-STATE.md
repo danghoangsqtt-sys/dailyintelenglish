@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 43: "AI scene" thumbnail drawn locally by Qwen-Image-Edit (D122)
 
-- **Status:** planned 2026-10-14 (owner "okey" to the proposal); 43.1-43.4 done 2026-10-14; 43.5 real draw done, **waiting for owner Gate B-27**.
+- **Status:** 43.1–43.5 built and real draw checked 2026-10-14; **waiting for owner Gate B-27**.
 - **Why:** the owner made a thumbnail in ChatGPT from the app's outside-AI prompt with the two character pictures
   attached: the people stand *in* the scene (light, depth, big smiles), far better than the composed "sticker" kind.
   A trial on this computer (2026-10-14, `D:\Example-videos\walkthrough-2026-10-14\32-*.png`) showed

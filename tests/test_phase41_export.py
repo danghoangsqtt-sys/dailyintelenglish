@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 
 from backend.content import export_service
 from backend.core.config import settings
@@ -76,3 +77,97 @@ def test_stopping_the_export_keeps_the_files(client, tmp_path):  # noqa: F811
     assert (folder / "script.txt").is_file()
     data(client.delete(f"/api/projects/{project['id']}/export"))
     assert (folder / "script.txt").is_file() and data(client.get(f"/api/projects/{project['id']}/export"))["settings"] is None
+
+
+def test_script_and_learning_edits_refresh_selected_files(client, tmp_path, monkeypatch):  # noqa: F811
+    from backend.content import learning_service
+    from tests.test_learning_api import VALID_PACK
+
+    project = _project(client, names=("Mia", "Tom"))
+    project_id = project["id"]
+    folder = tmp_path / "edited"
+    monkeypatch.setattr(learning_service, "generate_learning_pack", lambda *args: _pack_result(VALID_PACK))
+    data(client.post(f"/api/projects/{project_id}/learning/generate"))
+    data(client.put(f"/api/projects/{project_id}/export", json={
+        "output_dir": str(folder), "items": ["script", "learning"],
+    }))
+    assert "Hi Tom!" in (folder / "script.txt").read_text(encoding="utf-8")
+
+    data(client.put(f"/api/projects/{project_id}/script", json={"lines": [
+        {"speaker_id": project["ids"][0], "text": "A fresh edited line."},
+        {"speaker_id": project["ids"][1], "text": "And a second line."},
+    ]}))
+    assert "A fresh edited line." in (folder / "script.txt").read_text(encoding="utf-8")
+    assert "Hi Tom!" not in (folder / "script.txt").read_text(encoding="utf-8")
+    assert "A fresh edited line." in (folder / "learning_pack.txt").read_text(encoding="utf-8")
+
+    vocabulary = [{**VALID_PACK.vocabulary[0].model_dump(), "definition_en": "edited definition"}]
+    data(client.put(f"/api/projects/{project_id}/learning", json={"vocabulary": vocabulary}))
+    assert "edited definition" in (folder / "learning_pack.txt").read_text(encoding="utf-8")
+
+    data(client.patch(f"/api/projects/{project_id}/speakers/{project['ids'][0]}", json={"name": "Maya"}))
+    assert "Maya: A fresh edited line." in (folder / "script.txt").read_text(encoding="utf-8")
+
+
+async def _pack_result(pack):
+    return pack
+
+
+def test_slow_export_copy_does_not_hold_the_database_lock(client, tmp_path, monkeypatch):  # noqa: F811
+    project = _project(client)
+    folder = tmp_path / "slow"
+    data(client.put(f"/api/projects/{project['id']}/export", json={
+        "output_dir": str(folder), "items": ["script"],
+    }))
+    started, release, read_done = threading.Event(), threading.Event(), threading.Event()
+    original_write = export_service._write
+
+    def slow_write(path, plan):
+        started.set()
+        assert release.wait(5), "test did not release the slow copy"
+        return original_write(path, plan)
+
+    monkeypatch.setattr(export_service, "_write", slow_write)
+    copying = threading.Thread(target=lambda: client.post(f"/api/projects/{project['id']}/export/sync"), daemon=True)
+    reading = threading.Thread(target=lambda: (client.get("/api/projects"), read_done.set()), daemon=True)
+    copying.start()
+    try:
+        assert started.wait(5), "export copy did not start"
+        reading.start()
+        assert read_done.wait(2), "unrelated DB read waited behind filesystem copy"
+    finally:
+        release.set()
+        copying.join(5)
+        if reading.ident is not None:
+            reading.join(5)
+
+
+def test_old_copy_cannot_mark_a_new_folder_as_synced(client, tmp_path, monkeypatch):  # noqa: F811
+    project = _project(client)
+    old_folder, new_folder = tmp_path / "old", tmp_path / "new"
+    data(client.put(f"/api/projects/{project['id']}/export", json={
+        "output_dir": str(old_folder), "items": ["script"],
+    }))
+    started, release = threading.Event(), threading.Event()
+    original_write = export_service._write
+
+    def slow_write(path, plan):
+        started.set()
+        assert release.wait(5)
+        return original_write(path, plan)
+
+    monkeypatch.setattr(export_service, "_write", slow_write)
+    copying = threading.Thread(target=lambda: client.post(f"/api/projects/{project['id']}/export/sync"), daemon=True)
+    copying.start()
+    try:
+        assert started.wait(5)
+        with sqlite3.connect(settings.db_path) as connection:
+            connection.execute(
+                "UPDATE project_exports SET output_dir = ?, updated_at = ?, last_sync_at = NULL WHERE project_id = ?",
+                (str(new_folder), "new-settings-version", project["id"]),
+            )
+    finally:
+        release.set()
+        copying.join(5)
+    current = data(client.get(f"/api/projects/{project['id']}/export"))["settings"]
+    assert current["output_dir"] == str(new_folder) and current["last_sync_at"] is None

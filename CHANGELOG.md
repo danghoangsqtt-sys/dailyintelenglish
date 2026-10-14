@@ -8,6 +8,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Fixed (2026-10-14, Phase 45 audit follow-ups)
+- A project's selected `script.txt` and `learning_pack.txt` now refresh after script/learning edits, speaker renames and successful AI jobs.
+- Project-folder copies run outside the app's shared database lock, so a large file copy does not stall unrelated project requests.
+- The folder and Shorts controls use the shared frontend API client. The README renderer description and generated API reference were refreshed.
+- Phase 41–44 progress records now distinguish built work from the owner gates still awaiting review. The exe rebuild remains scheduled after those gates.
+
 ### Changed (2026-10-14, owner review)
 - **AI-scene thumbnails are brighter and fresher** (they looked darker and duller than ChatGPT's): a natural-daylight
   medium shot from the waist up with open gestures and the place visible beside the pair, a gentle grade (levels,

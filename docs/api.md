@@ -89,6 +89,318 @@ Return the current audio job for a project (404 if audio was never generated).
 - **Response body:** `object`
 - **Parameters:** `project_id`
 
+## channel
+
+### `GET /api/channel`
+
+Get Channel
+
+- **Response body:** `object`
+
+### `GET /api/channel/dashboard`
+
+Get Dashboard
+
+Task 36.7 (D106-D108): stats, today's actions, the roadmap, the production board and the next two weeks.
+
+- **Response body:** `object`
+
+### `PATCH /api/channel/episodes/{episode_id}`
+
+Patch Episode
+
+- **Request body:** `EpisodePatch`
+- **Response body:** `object`
+- **Parameters:** `episode_id`
+
+### `DELETE /api/channel/episodes/{episode_id}`
+
+Delete Episode
+
+- **Response body:** `object`
+- **Parameters:** `episode_id`
+
+### `POST /api/channel/plan/apply`
+
+Apply Plan
+
+- **Request body:** `ApplyPlanRequest`
+- **Response body:** `object`
+
+### `POST /api/channel/plan/propose`
+
+Propose Plan
+
+The AI's channel map (nothing saved): topics -> series -> episode titles.
+
+- **Request body:** `PlanRequest`
+- **Response body:** `object`
+
+### `GET /api/channel/projects/{project_id}`
+
+Project Context
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/channel/schedule`
+
+Schedule
+
+Publishing dates for the unpublished episodes, rotating topics over the chosen weekdays (D105).
+
+- **Request body:** `ScheduleRequest`
+- **Response body:** `object`
+
+### `PATCH /api/channel/series/{series_id}`
+
+Patch Series
+
+- **Request body:** `SeriesPatch`
+- **Response body:** `object`
+- **Parameters:** `series_id`
+
+### `DELETE /api/channel/series/{series_id}`
+
+Delete Series
+
+- **Response body:** `object`
+- **Parameters:** `series_id`
+
+### `POST /api/channel/series/{series_id}/episodes`
+
+Add Episode
+
+- **Request body:** `EpisodeInput`
+- **Response body:** `object`
+- **Parameters:** `series_id`
+
+### `POST /api/channel/series/{series_id}/projects`
+
+Create Projects
+
+One numbered project per planned episode of the series, with its cast.
+
+- **Response body:** `object`
+- **Parameters:** `series_id`
+
+### `POST /api/channel/topics`
+
+Create Topic
+
+- **Request body:** `TopicInput`
+- **Response body:** `object`
+
+### `PATCH /api/channel/topics/{topic_id}`
+
+Patch Topic
+
+- **Request body:** `TopicPatch`
+- **Response body:** `object`
+- **Parameters:** `topic_id`
+
+### `DELETE /api/channel/topics/{topic_id}`
+
+Delete Topic
+
+- **Response body:** `object`
+- **Parameters:** `topic_id`
+
+### `POST /api/channel/topics/{topic_id}/series`
+
+Create Series
+
+- **Request body:** `SeriesInput`
+- **Response body:** `object`
+- **Parameters:** `topic_id`
+
+## character profiles
+
+### `GET /api/visuals/profiles`
+
+List Profiles
+
+- **Response body:** `object`
+- **Parameters:** `q` (optional), `state` (optional)
+
+### `POST /api/visuals/profiles`
+
+Create Profile
+
+- **Request body:** `ProfileQuickCreate`
+- **Response body:** `object`
+
+### `GET /api/visuals/profiles/options`
+
+Profile Options
+
+- **Response body:** `object`
+
+### `GET /api/visuals/profiles/{character_id}`
+
+Get Profile
+
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `PATCH /api/visuals/profiles/{character_id}`
+
+Patch Profile
+
+- **Request body:** `ProfilePatch`
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `DELETE /api/visuals/profiles/{character_id}`
+
+Delete Profile
+
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `POST /api/visuals/profiles/{character_id}/archive`
+
+Archive Profile
+
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `POST /api/visuals/profiles/{character_id}/assets/approve`
+
+Approve Assets
+
+- **Request body:** `ApproveManyInput`
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `GET /api/visuals/profiles/{character_id}/assets/{asset_id}/content`
+
+Asset Content
+
+- **Response body:** `object`
+- **Parameters:** `character_id`, `asset_id`
+
+### `PUT /api/visuals/profiles/{character_id}/assets/{asset_id}/review`
+
+Review Asset
+
+- **Request body:** `ReviewInput`
+- **Response body:** `object`
+- **Parameters:** `character_id`, `asset_id`
+
+### `GET /api/visuals/profiles/{character_id}/dependencies`
+
+Profile Dependencies
+
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `POST /api/visuals/profiles/{character_id}/duplicate`
+
+Duplicate Profile
+
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `GET /api/visuals/profiles/{character_id}/prompt-pack.txt`
+
+Prompt Pack
+
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `POST /api/visuals/profiles/{character_id}/restore`
+
+Restore Profile
+
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `GET /api/visuals/profiles/{character_id}/slots`
+
+List Slots
+
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `POST /api/visuals/profiles/{character_id}/slots/upload-batch`
+
+Upload Batch
+
+Bulk shortcut: files named after a slot go into it (the base first); every other file is listed, not guessed.
+
+- **Response body:** `object`
+- **Parameters:** `character_id`
+
+### `GET /api/visuals/profiles/{character_id}/slots/{slot_key}/input.png`
+
+Slot Input
+
+- **Response body:** `object`
+- **Parameters:** `character_id`, `slot_key`
+
+### `POST /api/visuals/profiles/{character_id}/slots/{slot_key}/upload`
+
+Upload Slot
+
+The slot comes from the card the picture was dropped on, never from the file name (D84).
+
+- **Response body:** `object`
+- **Parameters:** `character_id`, `slot_key`
+
+## export
+
+### `GET /api/projects/{project_id}/export`
+
+Get Export
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `PUT /api/projects/{project_id}/export`
+
+Save Export
+
+Set the folder and the ticked components, then copy what already exists.
+
+- **Request body:** `ExportSettings`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `DELETE /api/projects/{project_id}/export`
+
+Clear Export
+
+Stop exporting (the folder and its files stay as they are).
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/export/open`
+
+Open Export Folder
+
+Open the folder in Windows Explorer (the app runs on the owner's computer).
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/export/sync`
+
+Sync Export
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/system/choose-folder`
+
+Choose Folder
+
+The native folder picker on the owner's screen; `path` is null when cancelled or unavailable.
+
+- **Request body:** `FolderRequest`
+- **Response body:** `object`
+
 ## learning
 
 ### `GET /api/projects/{project_id}/learning`
@@ -301,39 +613,6 @@ the full-replace `speakers` path on that route is unsafe to reuse here.
 - **Response body:** `object`
 - **Parameters:** `project_id`, `speaker_id`
 
-### `GET /api/projects/{project_id}/speakers/{speaker_id}/avatar`
-
-Get Speaker Avatar
-
-Serve one speaker's stored avatar image.
-
-- **Response body:** `object`
-- **Parameters:** `project_id`, `speaker_id`
-
-### `POST /api/projects/{project_id}/speakers/{speaker_id}/avatar`
-
-Upload Speaker Avatar
-
-Upload (or replace) one speaker's avatar image (Task 1.7c — upload only, no lip-sync).
-
-The previous avatar file (if any) is only deleted after this block's commit has
-durably succeeded — see `avatar_service.cleanup_previous_avatar_file` for why.
-
-- **Response body:** `object`
-- **Parameters:** `project_id`, `speaker_id`
-
-### `DELETE /api/projects/{project_id}/speakers/{speaker_id}/avatar`
-
-Delete Speaker Avatar
-
-Remove one speaker's avatar image.
-
-The file itself is only deleted after this block's commit has durably
-succeeded — see `avatar_service.delete_avatar`'s docstring for why.
-
-- **Response body:** `object`
-- **Parameters:** `project_id`, `speaker_id`
-
 ## settings
 
 ### `GET /api/settings`
@@ -432,6 +711,72 @@ One real, tiny probe call to the cloud provider -- never persists anything.
 - **Request body:** `CloudTestConnectionRequest`
 - **Response body:** `object`
 
+## shorts
+
+### `GET /api/projects/{project_id}/shorts`
+
+List Clips
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/shorts`
+
+Create Clip
+
+- **Request body:** `ClipInput`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/shorts/propose`
+
+Propose
+
+The AI's 1-3 highlight clips (30-90 s, complete, with a hook); they replace the clips not rendered yet.
+
+- **Request body:** `ProposeRequest`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `PATCH /api/projects/{project_id}/shorts/{clip_id}`
+
+Update Clip
+
+- **Request body:** `ClipPatch`
+- **Response body:** `object`
+- **Parameters:** `project_id`, `clip_id`
+
+### `DELETE /api/projects/{project_id}/shorts/{clip_id}`
+
+Delete Clip
+
+- **Response body:** `object`
+- **Parameters:** `project_id`, `clip_id`
+
+### `GET /api/projects/{project_id}/shorts/{clip_id}/cover.jpg`
+
+Clip Cover
+
+- **Response body:** `object`
+- **Parameters:** `project_id`, `clip_id`
+
+### `POST /api/projects/{project_id}/shorts/{clip_id}/render`
+
+Render Clip
+
+Render an approved clip (a frame range of the vertical episode) and its 9:16 cover.
+
+- **Request body:** `RenderRequest`
+- **Response body:** `object`
+- **Parameters:** `project_id`, `clip_id`
+
+### `GET /api/projects/{project_id}/shorts/{clip_id}/video.mp4`
+
+Clip Video
+
+- **Response body:** `object`
+- **Parameters:** `project_id`, `clip_id`
+
 ## storyboard
 
 ### `GET /api/projects/{project_id}/storyboard`
@@ -469,6 +814,40 @@ List the current persisted thumbnail generation batch for a project.
 - **Response body:** `object`
 - **Parameters:** `project_id`
 
+### `GET /api/projects/{project_id}/thumbnails/ai-scenes`
+
+List Ai Scenes
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/thumbnails/ai-scenes`
+
+Draw Ai Scenes
+
+Phase 43 (D122): draw 1-3 scenes of the episode's characters on the local GPU (Qwen-Image-Edit-2511, ~1.5 min
+load + ~1.5 min per picture); each is framed on its faces. Replaces the previous scenes.
+
+- **Request body:** `object`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `GET /api/projects/{project_id}/thumbnails/ai-scenes/{index}`
+
+Get Ai Scene
+
+- **Response body:** `object`
+- **Parameters:** `project_id`, `index`
+
+### `POST /api/projects/{project_id}/thumbnails/ai-scenes/{index}/redraw`
+
+Redraw Ai Scene
+
+Phase 43: draw one scene again (a new seed), e.g. when it came out crowded.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`, `index`
+
 ### `POST /api/projects/{project_id}/thumbnails/generate`
 
 Generate Thumbnails
@@ -476,6 +855,48 @@ Generate Thumbnails
 Generate and persist exactly N variants for one project and selected template.
 
 - **Request body:** `ThumbnailGenerateRequest`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `GET /api/projects/{project_id}/thumbnails/outside-image`
+
+Get Outside Image
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/thumbnails/outside-image`
+
+Upload Outside Image
+
+Task 36.4 (D90): the owner's thumbnail picture made with an outside AI; the `outside_ai` thumbnail draws on it.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `GET /api/projects/{project_id}/thumbnails/outside-prompt`
+
+Get Outside Prompt
+
+Task 36.4 (D90): the prompt to paste into an outside AI and the character pictures to attach with it.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `GET /api/projects/{project_id}/thumbnails/topic-picture`
+
+Get Topic Picture
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/thumbnails/topic-picture`
+
+Draw Topic Picture
+
+Phase 39 (D118): draw the episode's topic picture on the local GPU with Qwen-Image-2.1-Turbo (~1-2 min with the
+model load). The composed thumbnail then uses it as its background, under the characters, headline and badges.
+
 - **Response body:** `object`
 - **Parameters:** `project_id`
 
@@ -511,7 +932,7 @@ Serve one validated thumbnail derivative without exposing the runtime data tree.
 
 List Thumbnail Templates
 
-List the five validated checked-in thumbnail templates.
+The two thumbnail kinds (Task 36.3/36.4): composed, and the owner's outside-AI picture once uploaded.
 
 - **Response body:** `object`
 - **Parameters:** `project_id` (optional)
@@ -562,6 +983,14 @@ Serve the dashboard as the app's landing page.
 
 - **Response body:** `object`
 
+### `GET /channel`
+
+Channel Page
+
+Task 36.5 (D103-D105): the channel plan -- topics, series, episodes and the publishing calendar.
+
+- **Response body:** `object`
+
 ### `GET /characters`
 
 Character Library
@@ -598,7 +1027,7 @@ Serve the app-level Settings page (Task 12.1 — Gemini API key).
 
 Shot Library
 
-Serve the Shots page: the Activity Library and the scene-background import (the two-person shot library was removed in Phase 44).
+Serve the Shots page: the Activity Library and the scene-background import (Phase 44, D123).
 
 - **Response body:** `object`
 
@@ -674,12 +1103,8 @@ subtitle file.
 
 Generate Video
 
-Render the project's completed audio mix into an MP4.
-
-Task 19.7: `payload.renderer` ("ffmpeg" default) is only ever actually honored as
-"remotion" when `video_service._resolve_renderer`'s kill-switch check agrees (D19.7-b)
--- passing "remotion" here is always safe, it just silently resolves to ffmpeg when the
-deployment hasn't opted in via `DIE_VIDEO_RENDERER=remotion`.
+Render the project's completed audio mix into the episode MP4 with Remotion (Task 35.5: the only renderer; a
+failure fails the job with its reason).
 
 - **Request body:** `GenerateVideoRequest`
 - **Response body:** `object`
@@ -694,21 +1119,22 @@ Return the current video job for a project (404 if video was never generated).
 - **Response body:** `object`
 - **Parameters:** `project_id`
 
+### `POST /api/projects/{project_id}/video/vertical`
+
+Generate Vertical
+
+Phase 37 (D98/D100): the whole episode in 1080x1920 for TikTok. Needs the horizontal video first (same audio,
+storyboard and cast).
+
+- **Request body:** `GenerateVideoRequest`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
 ### `GET /api/video/health`
 
 Video Health
 
-Task 19.7 (D19.7-d): Remotion availability + the in-memory fallback-rate counters
-(process-lifetime only, reset on restart -- same precedent as backend/main.py's
-`_ai_circuits`, Phase 18).
-
-- **Response body:** `object`
-
-### `GET /api/video/templates`
-
-List Templates
-
-List the fixed set of pre-rendered background templates.
+Whether the video renderer (Remotion, the only one since Task 35.5) can run, and if not, why.
 
 - **Response body:** `object`
 
@@ -725,7 +1151,17 @@ Get Project Visuals
 
 Activity Coverage
 
-Explain selected/missing reusable activity illustrations before a talking-sprites render.
+Explain selected/missing reusable activity illustrations before a talking-sprites render (Task 33.10: with the
+closest library activities, the pending picture and the outside-AI prompt for each missing one).
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/visuals/activity-illustrations`
+
+Draw Activity Illustrations
+
+D102: draw (local GPU) a pending library picture for every insert that has neither a match nor a pending picture.
 
 - **Response body:** `object`
 - **Parameters:** `project_id`
@@ -738,13 +1174,6 @@ Set Project Cast
 - **Response body:** `object`
 - **Parameters:** `project_id`
 
-### `GET /api/projects/{project_id}/visuals/library-coverage`
-
-Library Coverage
-
-- **Response body:** `object`
-- **Parameters:** `project_id`
-
 ### `PUT /api/projects/{project_id}/visuals/scenes`
 
 Set Project Scenes
@@ -752,34 +1181,6 @@ Set Project Scenes
 - **Request body:** `object`
 - **Response body:** `object`
 - **Parameters:** `project_id`
-
-### `POST /api/projects/{project_id}/visuals/shots`
-
-Generate Project Shots
-
-- **Response body:** `object`
-- **Parameters:** `project_id`
-
-### `GET /api/projects/{project_id}/visuals/shots/{shot_id}/content`
-
-Project Shot Content
-
-- **Response body:** `object`
-- **Parameters:** `project_id`, `shot_id`, `variant` (optional)
-
-### `POST /api/projects/{project_id}/visuals/shots/{shot_id}/regenerate`
-
-Regenerate Project Shot
-
-- **Response body:** `object`
-- **Parameters:** `project_id`, `shot_id`
-
-### `POST /api/projects/{project_id}/visuals/shots/{shot_id}/to-library`
-
-Add Project Shot To Library
-
-- **Response body:** `object`
-- **Parameters:** `project_id`, `shot_id`
 
 ### `GET /api/visuals/assets/{asset_id}/content`
 
@@ -831,33 +1232,10 @@ Approve Asset
 - **Response body:** `object`
 - **Parameters:** `character_id`, `asset_id`
 
-### `POST /api/visuals/characters/{character_id}/candidates`
-
-Generate Candidates
-
-- **Response body:** `object`
-- **Parameters:** `character_id`
-
 ### `POST /api/visuals/characters/{character_id}/lock`
 
 Lock Character
 
-- **Response body:** `object`
-- **Parameters:** `character_id`
-
-### `PUT /api/visuals/characters/{character_id}/reference`
-
-Pick Reference
-
-- **Request body:** `ReferenceInput`
-- **Response body:** `object`
-- **Parameters:** `character_id`
-
-### `POST /api/visuals/characters/{character_id}/sheet`
-
-Generate Sheet
-
-- **Request body:** `object`
 - **Response body:** `object`
 - **Parameters:** `character_id`
 
@@ -977,61 +1355,6 @@ Import Library Backgrounds
 
 - **Response body:** `object`
 
-### `GET /api/visuals/library/inbox`
-
-Library Inbox
-
-- **Response body:** `object`
-
-### `POST /api/visuals/library/inbox/import`
-
-Import Library Inbox
-
-- **Response body:** `object`
-
-### `GET /api/visuals/library/shots`
-
-List Library Shots
-
-- **Response body:** `object`
-- **Parameters:** `scene_id` (optional), `kind` (optional), `review_state` (optional), `character_id` (optional)
-
-### `PATCH /api/visuals/library/shots/{shot_id}`
-
-Review Library Shot
-
-- **Request body:** `ShotReviewInput`
-- **Response body:** `object`
-- **Parameters:** `shot_id`
-
-### `DELETE /api/visuals/library/shots/{shot_id}`
-
-Delete Library Shot
-
-- **Response body:** `object`
-- **Parameters:** `shot_id`
-
-### `GET /api/visuals/library/shots/{shot_id}/content`
-
-Library Shot Content
-
-- **Response body:** `object`
-- **Parameters:** `shot_id`
-
-### `GET /api/visuals/library/sprites`
-
-Library Sprites
-
-Phase 32: the talking-sprite set of every library character, and the inbox the sets are imported from.
-
-- **Response body:** `object`
-
-### `POST /api/visuals/library/sprites/import`
-
-Import Library Sprites
-
-- **Response body:** `object`
-
 ### `GET /api/visuals/library/sprites/{character_id}/{name}/content`
 
 Library Sprite Content
@@ -1125,6 +1448,15 @@ Generate a YouTube package (titles/description/tags/chapters) via Gemini.
 
 Chapters are measured from real audio when a completed audio mix exists (Task 1.6),
 otherwise estimated from script word count (Sub-task 1.9a's original behavior).
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `GET /api/projects/{project_id}/youtube/transcript.txt`
+
+Download Transcript
+
+Task 36.2 (D93): the full transcript as a text file, to attach or share with the episode.
 
 - **Response body:** `object`
 - **Parameters:** `project_id`

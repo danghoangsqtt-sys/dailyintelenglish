@@ -1,15 +1,15 @@
 # PHASE-STATE — Phase 41: Project output folder (D120)
 
-- **Status:** 41.1–41.3 built 2026-10-14; full suite running; then the real app restart (migration 025). Opened 2026-10-14. Owner: "khi bắt đầu thực hiện video mới, người dùng có thể chọn thư mục lưu cho dự án
+- **Status:** complete 2026-10-14; implementation, sandbox run and tests are recorded below. Phase 45 closes the later audit gaps in script/learning auto-export and copy concurrency. Opened 2026-10-14. Owner: "khi bắt đầu thực hiện video mới, người dùng có thể chọn thư mục lưu cho dự án
   video; video tạo ra sẽ lưu vào thư mục đó kèm nội dung đi kèm" + "người dùng có thể chọn các thành phần sẽ xuất ra thay vì
   nhận cả đống file không dùng đến". Choices: automatic on every new version; the owner ticks the components.
 
 | Task | Description | Status |
 |---|---|---|
-| 41.1 | Migration 025: `projects.output_dir`, `projects.export_items` (JSON); schema + API fields; validation (absolute, creatable, writable) | in_progress |
-| 41.2 | `backend/content/export_service.py`: `sync(project_id)` copies the ticked components that exist into the folder (idempotent); hooks after video/vertical/clip render, thumbnail favourite, YouTube package, audio, learning | in_progress |
-| 41.3 | Step 1 "Save to folder": path + "Choose folder…" (native Windows dialog from the local server, typed path as fallback) + component checkboxes; Step 7 panel: folder, components, "Open folder", "Save now" | in_progress |
-| 41.4 | Tests and a real run | in_progress |
+| 41.1 | Migration 025: `project_exports` table; settings API and folder validation | done |
+| 41.2 | `backend/content/export_service.py`: idempotent copy of selected components (Phase 45 fills script/learning edit hooks) | done |
+| 41.3 | Step 1 and Step 7 folder UI, picker and component choices | done |
+| 41.4 | Tests and real sandbox run | done |
 
 ## Implementation notes (before coding)
 

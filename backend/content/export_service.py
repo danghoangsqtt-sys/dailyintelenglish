@@ -10,6 +10,8 @@ import asyncio
 import json
 import logging
 import shutil
+import uuid
+import weakref
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -32,6 +34,14 @@ ITEMS = {
     "learning": "Learning pack (transcript, vocabulary, idioms…)",
 }
 DEFAULT_ITEMS = ["video", "thumbnail", "youtube"]
+_sync_locks: weakref.WeakKeyDictionary = weakref.WeakKeyDictionary()
+
+
+def _sync_lock(project_id: str) -> asyncio.Lock:
+    """Serialize exports of one project without tying locks to an old test event loop."""
+    loop = asyncio.get_running_loop()
+    locks = _sync_locks.setdefault(loop, {})
+    return locks.setdefault(project_id, asyncio.Lock())
 
 
 class ExportSettings(BaseModel):
@@ -72,11 +82,13 @@ def _check_folder(path: Path) -> None:
 
 async def get_settings(db: aiosqlite.Connection, project_id: str) -> dict | None:
     cursor = await db.execute(
-        "SELECT output_dir, items_json, last_sync_at, last_error FROM project_exports WHERE project_id = ?", (project_id,))
+        "SELECT output_dir, items_json, last_sync_at, last_error, updated_at FROM project_exports WHERE project_id = ?",
+        (project_id,))
     row = await cursor.fetchone()
     if row is None:
         return None
-    return {"output_dir": row[0], "items": json.loads(row[1] or "[]"), "last_sync_at": row[2], "last_error": row[3]}
+    return {"output_dir": row[0], "items": json.loads(row[1] or "[]"), "last_sync_at": row[2],
+            "last_error": row[3], "updated_at": row[4]}
 
 
 async def public(db: aiosqlite.Connection, project_id: str) -> dict:
@@ -89,11 +101,10 @@ async def save_settings(db: aiosqlite.Connection, project_id: str, body: ExportS
     cursor = await db.execute("SELECT 1 FROM projects WHERE id = ?", (project_id,))
     if await cursor.fetchone() is None:
         raise NotFoundError("Project not found")
-    await asyncio.to_thread(_check_folder, Path(body.output_dir))
     await db.execute(
         "INSERT INTO project_exports (project_id, output_dir, items_json, updated_at) VALUES (?, ?, ?, ?) "
         "ON CONFLICT(project_id) DO UPDATE SET output_dir = excluded.output_dir, items_json = excluded.items_json, "
-        "updated_at = excluded.updated_at",
+        "updated_at = excluded.updated_at, last_sync_at = NULL, last_error = NULL",
         (project_id, body.output_dir, json.dumps(body.items), _now()))
     return await public(db, project_id)
 
@@ -114,7 +125,7 @@ def _copy(source: str | Path | None, target: Path) -> bool:
         if here.st_size == there.st_size and there.st_mtime >= here.st_mtime:
             return False
     target.parent.mkdir(parents=True, exist_ok=True)
-    temporary = target.with_name(target.name + ".part")
+    temporary = target.with_name(f"{target.name}.{uuid.uuid4().hex}.part")
     shutil.copyfile(source, temporary)
     try:
         temporary.replace(target)
@@ -128,7 +139,9 @@ def _text(content: str, target: Path) -> bool:
     if target.is_file() and target.read_text(encoding="utf-8") == content:
         return False
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
+    temporary = target.with_name(f"{target.name}.{uuid.uuid4().hex}.part")
+    temporary.write_text(content, encoding="utf-8")
+    temporary.replace(target)
     return True
 
 
@@ -196,30 +209,37 @@ def _write(folder: Path, plan: list[tuple[str, Any, str]]) -> list[str]:
 
 async def sync(db: aiosqlite.Connection, project_id: str) -> dict:
     """Copy the ticked components that exist into the project's folder. Returns {"written": [...]} (no folder: no-op)."""
-    saved = await get_settings(db, project_id)
-    if not saved:
-        return {"written": [], "folder": None}
-    plan = await _plan(db, project_id, saved["items"])
-    error = None
-    written: list[str] = []
-    try:
-        await asyncio.to_thread(_check_folder, Path(saved["output_dir"]))
-        written = await asyncio.to_thread(_write, Path(saved["output_dir"]), plan)
-    except (OSError, ValidationError) as exc:
-        error = str(exc)
-        logger.warning("project_export_failed project_id=%s folder=%s reason=%s", project_id, saved["output_dir"], exc)
-    await db.execute("UPDATE project_exports SET last_sync_at = ?, last_error = ? WHERE project_id = ?",
-                     (_now(), error, project_id))
-    return {"written": written, "folder": saved["output_dir"], "error": error}
+    from backend.db.transactions import read_transaction, write_transaction
+
+    async with _sync_lock(project_id):
+        async with read_transaction():
+            saved = await get_settings(db, project_id)
+            if not saved:
+                return {"written": [], "folder": None}
+            plan = await _plan(db, project_id, saved["items"])
+        error = None
+        written: list[str] = []
+        try:
+            await asyncio.to_thread(_check_folder, Path(saved["output_dir"]))
+            written = await asyncio.to_thread(_write, Path(saved["output_dir"]), plan)
+        except (OSError, ValidationError) as exc:
+            error = str(exc)
+            logger.warning("project_export_failed project_id=%s folder=%s reason=%s", project_id, saved["output_dir"], exc)
+        # A folder change or Stop can commit while the copy runs. Do not report the
+        # old copy as the new folder's latest sync.
+        async with write_transaction(db):
+            await db.execute(
+                "UPDATE project_exports SET last_sync_at = ?, last_error = ? "
+                "WHERE project_id = ? AND updated_at = ?",
+                (_now(), error, project_id, saved["updated_at"]),
+            )
+        return {"written": written, "folder": saved["output_dir"], "error": error}
 
 
 async def sync_quietly(db: aiosqlite.Connection, project_id: str) -> None:
     """The automatic hook after a new version: never fails the action that triggered it."""
-    from backend.db.transactions import write_transaction
-
     try:
-        async with write_transaction(db):
-            result = await sync(db, project_id)
+        result = await sync(db, project_id)
         if result["written"]:
             logger.info("project_export project_id=%s wrote=%s", project_id, ",".join(result["written"]))
     except Exception as exc:  # noqa: BLE001 -- an export problem must never break a render

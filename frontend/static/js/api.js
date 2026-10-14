@@ -79,6 +79,17 @@ const Api = (() => {
     updateProject: (id, patch) =>
       request(`/api/projects/${id}`, { method: "PUT", body: JSON.stringify(patch) }),
     deleteProject: (id) => request(`/api/projects/${id}`, { method: "DELETE" }),
+    getProjectExport: (id) => request(`/api/projects/${id}/export`),
+    saveProjectExport: (id, settings) => request(`/api/projects/${id}/export`, json("PUT", settings)),
+    stopProjectExport: (id) => request(`/api/projects/${id}/export`, { method: "DELETE" }),
+    openProjectExport: (id) => request(`/api/projects/${id}/export/open`, { method: "POST" }),
+    chooseProjectFolder: (initial) => request("/api/system/choose-folder", json("POST", { initial })),
+    listShorts: (id) => request(`/api/projects/${id}/shorts`),
+    proposeShorts: (id, count) => request(`/api/projects/${id}/shorts/propose`, json("POST", { count })),
+    updateShort: (id, clipId, patch) => request(`/api/projects/${id}/shorts/${clipId}`, json("PATCH", patch)),
+    deleteShort: (id, clipId) => request(`/api/projects/${id}/shorts/${clipId}`, { method: "DELETE" }),
+    renderShort: (id, clipId, options) => request(`/api/projects/${id}/shorts/${clipId}/render`, json("POST", options)),
+    renderVertical: (id, options) => request(`/api/projects/${id}/video/vertical`, json("POST", options)),
     getScript: (projectId) => request(`/api/projects/${projectId}/script`),
     generateScript: (projectId) =>
       request(`/api/projects/${projectId}/script/generate`, { method: "POST" }),

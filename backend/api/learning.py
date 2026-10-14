@@ -10,7 +10,7 @@ from backend.core.exceptions import ValidationError
 from backend.core.responses import ok
 from backend.db.database import get_db
 from backend.schemas.learning import LearningPackUpdate
-from backend.content import learning_service, project_service, script_service
+from backend.content import export_service, learning_service, project_service, script_service
 
 router = APIRouter(prefix="/api/projects/{project_id}/learning", tags=["learning"])
 
@@ -40,6 +40,7 @@ async def generate_learning_content(
         saved = await learning_service.save_learning_content(
             db, project_id, pack.model_dump(), commit=False
         )
+    await export_service.sync_quietly(db, project_id)
     return ok(saved, started_at=started_at)
 
 
@@ -65,4 +66,5 @@ async def update_learning_content(
         updated = await learning_service.update_learning_content(
             db, project_id, payload.model_dump(exclude_unset=True), commit=False
         )
+    await export_service.sync_quietly(db, project_id)
     return ok(updated, started_at=started_at)

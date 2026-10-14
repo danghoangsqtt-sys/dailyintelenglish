@@ -3,8 +3,8 @@
   "version": "1.3.0",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_39_built_gates_b25_b26_pending",
-  "current_phase": "39",
+  "status": "phase_45_complete_gates_b25_b26_b27_b28_pending",
+  "current_phase": "45",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
     "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
@@ -13,8 +13,8 @@
     "tts_backup": "n/a -- Edge TTS is the only official engine now",
     "tts_offline": "Piper TTS (availability-checked, not actively used)",
     "audio": "pydub + ffmpeg",
-    "video": "ffmpeg + burned-in subtitles (Level 2). LivePortrait (Level 3) not started -- see key_decisions",
-    "thumbnail": "Pillow + local AI (Ollama) text/palette suggestions via the shared gateway; Gemini dormant since Task 14.7",
+    "video": "Remotion (the sole renderer since Phase 35), horizontal and vertical episodes plus Shorts/TikTok clips; ffmpeg remains for audio/probes",
+    "thumbnail": "Composed and outside-AI pictures plus Phase 43 local Qwen-Image-Edit AI scene; Pillow composes badges, headline and logo",
     "database": "SQLite (aiosqlite)",
     "storage": "Local filesystem"
   },
@@ -281,13 +281,31 @@
       "status": "complete 2026-10-13 (Gate B-24 PASS)"
     },
     "37": {
-      "status": "37.1-37.4 done 2026-10-13 (vertical episode, Shorts/TikTok clips, migration 024); Gate B-25 pending: restart the real app for migration 024, then owner reviews real clips"
+      "status": "37.1-37.4 built; Phase 42 safe-zone corrections and sandbox renders done; owner Gate B-25 pending"
     },
     "38": {
       "status": "complete 2026-10-13 (D115)"
     },
     "39": {
       "status": "39.1-39.4 built 2026-10-14 (D110-D118); Gate B-26 pending"
+    },
+    "40": {
+      "status": "complete 2026-10-14 (D119)"
+    },
+    "41": {
+      "status": "complete 2026-10-14 (D120); Phase 45 closes audit gaps in script/learning exports and copy concurrency"
+    },
+    "42": {
+      "status": "42.1-42.4 built and sandbox checked 2026-10-14 (D121); owner Gate B-25 pending"
+    },
+    "43": {
+      "status": "43.1-43.5 built and real draw checked 2026-10-14 (D122); owner Gate B-27 pending"
+    },
+    "44": {
+      "status": "44.1-44.7 built and sandbox checked 2026-10-14 (D123); owner Gate B-28 pending"
+    },
+    "45": {
+      "status": "BUG-031-034 and ENH-032-033 audit follow-ups complete 2026-10-14; exe rebuild deferred until owner gates pass"
     }
   },
   "key_decisions": [
