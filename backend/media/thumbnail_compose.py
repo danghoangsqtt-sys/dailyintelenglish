@@ -33,19 +33,25 @@ EXPRESSIONS = (("smile__open", "smile__closed"), ("surprised__open", "surprised_
 FALLBACK_EXPRESSIONS = ("smile__open", "smile__closed", "calm__open", "calm__closed")
 CROP_SHARE = 0.52  # head to chest: big faces read at thumbnail size (the sprite canvas is knee-up)
 
-# Normalized layouts per variant (16x9). text: (x, y, width, height, align); slots: the (left, right) x-range each
-# character owns -- side by side, never on top of each other, clear of the headline (walkthrough 2026-10-14: fixed
-# centres made the two head-to-chest figures, almost square, overlap and run under the logo); height: the tallest a
-# character may be, as a share of the canvas (it shrinks to fit its slot); shade: where the text-side darkening comes from.
+# Normalized layouts per variant. text: (x, y, width, height, align); group: where the characters stand -- "right" /
+# "left" of the headline (rule of thirds), "split" on both sides of a centred headline, "bottom" under it (9:16);
+# height: the tallest a character may be, as a share of the canvas; shade: where the text-side darkening comes from.
+#
+# Walkthrough 2026-10-14, owner review + YouTube thumbnail guides (faces recognisable at 150 px wide, ~40-50 % of the
+# frame; keep faces and text out of the bottom-right duration badge; ~60 px margins): the characters are big, their
+# bodies may overlap a little and bleed off the outer edge, but their heads never touch (see `arrange_figures`).
 LAYOUTS_16X9 = (
-    {"text": (0.045, 0.21, 0.45, 0.50, "left"), "slots": ((0.50, 0.74), (0.75, 0.985)), "height": 0.78, "shade": "left"},
-    {"text": (0.27, 0.17, 0.46, 0.40, "center"), "slots": ((0.015, 0.26), (0.74, 0.985)), "height": 0.78, "shade": "top"},
-    {"text": (0.51, 0.21, 0.45, 0.50, "right"), "slots": ((0.015, 0.25), (0.26, 0.495)), "height": 0.78, "shade": "right"},
+    {"text": (0.045, 0.21, 0.45, 0.50, "left"), "group": "right", "height": 0.86, "shade": "left"},
+    {"text": (0.27, 0.17, 0.46, 0.40, "center"), "group": "split", "height": 0.86, "shade": "top"},
+    {"text": (0.51, 0.21, 0.45, 0.50, "right"), "group": "left", "height": 0.86, "shade": "right"},
 )
-LAYOUT_9X16 = {"text": (0.07, 0.22, 0.86, 0.20, "center"), "slots": ((0.04, 0.49), (0.51, 0.96)), "height": 0.44,
-               "shade": "middle"}
+LAYOUT_9X16 = {"text": (0.07, 0.15, 0.86, 0.20, "center"), "group": "bottom", "height": 0.50, "shade": "middle"}
 LOGO_SHARE = 0.14  # the channel logo's height, as a share of the short side
 MARGIN_SHARE = 0.04
+SAFE_MARGIN = 60 / 1280  # heads stay this far (of the width) from the frame's edges
+HEAD_SHARE = 0.40  # the top share of a head-to-chest figure that holds the head (hair, face, neck)
+HEAD_GAP = 0.025  # at least this much (of the width) between the two heads
+MAX_BLEED = 0.35  # a body may run off the outer edge by at most this share of its width
 
 
 # ---------------------------------------------------------------- inputs (async, read once)
@@ -246,24 +252,106 @@ def _logo(image: Image.Image, height: int, margin: int) -> None:
     image.alpha_composite(logo, (image.width - logo.width - margin, margin))
 
 
-def character_slot(layout: dict, slot: int, count: int) -> tuple[float, float]:
-    """The x-range a character owns: its own slot, or both slots together when it is alone."""
-    if count <= 1:
-        return layout["slots"][0][0], layout["slots"][1][1]
-    return layout["slots"][slot]
+def head_box(figure: Image.Image) -> tuple[int, int, int, int]:
+    """(left, top, right, bottom) of the figure's head -- the opaque part of its top `HEAD_SHARE` rows."""
+    alpha = figure.getchannel("A")
+    bottom = max(1, round(figure.height * HEAD_SHARE))
+    box = alpha.crop((0, 0, figure.width, bottom)).getbbox() or (0, 0, figure.width, bottom)
+    return box[0], box[1], box[2], bottom
 
 
-def place_figure(figure_size: tuple[int, int], slot: tuple[float, float], size: tuple[int, int],
-                 max_height: float) -> tuple[int, int, int, int]:
-    """(left, top, width, height) of a figure scaled to fit its slot (bottom-anchored, centred in the slot), no taller
-    than `max_height` of the canvas nor reaching up into the logo row."""
+def _covers(front: Image.Image, front_at: tuple[int, int], rect: tuple[int, int, int, int]) -> bool:
+    """True when any opaque pixel of `front` (drawn at `front_at`) falls inside the canvas rectangle `rect`."""
+    left, top = max(rect[0], front_at[0]), max(rect[1], front_at[1])
+    right, bottom = min(rect[2], front_at[0] + front.width), min(rect[3], front_at[1] + front.height)
+    if left >= right or top >= bottom:
+        return False
+    patch = front.getchannel("A").crop((left - front_at[0], top - front_at[1], right - front_at[0], bottom - front_at[1]))
+    return patch.getextrema()[1] > 24
+
+
+def _place(figures: list[Image.Image], layout: dict, size: tuple[int, int]) -> list[tuple[int, int]] | None:
+    """Positions (left, top) for figures already drawn at one height, or None when they do not fit the layout."""
     width, height = size
-    slot_left, slot_right = round(slot[0] * width), round(slot[1] * width)
+    margin, gap = round(width * SAFE_MARGIN), round(width * HEAD_GAP)
+    x, _, box_width, _, _ = layout["text"]
+    text_left, text_right = round(x * width), round((x + box_width) * width)
+    group = layout["group"]
+    tops = [height - figure.height for figure in figures]
+    heads = [head_box(figure) for figure in figures]
+
+    def bleed_ok(index: int, left: int) -> bool:
+        over = max(0, -left) + max(0, left + figures[index].width - width)
+        return over <= figures[index].width * MAX_BLEED
+
+    if len(figures) == 1:
+        head = heads[0]
+        if group in ("right", "split"):
+            left = width - margin - head[2]
+            ok = left >= text_right
+        elif group == "left":
+            left = margin - head[0]
+            ok = left + figures[0].width <= text_left
+        else:
+            left, ok = (width - figures[0].width) // 2, True
+        return [(left, tops[0])] if ok and bleed_ok(0, left) else None
+    if group == "split":
+        lefts = [margin - heads[0][0], width - margin - heads[1][2]]
+        if lefts[0] + figures[0].width > text_left or lefts[1] < text_right:
+            return None
+        return list(zip(lefts, tops)) if all(bleed_ok(i, left) for i, left in enumerate(lefts)) else None
+    # two figures in one group: the outer one at the edge, the inner (front) one beside it, heads apart
+    left_fig, right_fig = figures
+    left_head, right_head = heads
+    for extra in range(0, round(width * 0.12), max(1, round(width * 0.01))):
+        if group in ("right", "bottom"):
+            right_left = width - margin - right_head[2]
+            left_left = right_left + right_head[0] - gap - extra - left_head[2]
+        else:
+            left_left = margin - left_head[0]
+            right_left = left_left + left_head[2] + gap + extra - right_head[0]
+        if group == "bottom":  # centre the pair of heads
+            shift = (width - (left_left + left_head[0]) - (right_left + right_head[2])) // 2
+            left_left, right_left = left_left + shift, right_left + shift
+            if left_left + left_head[0] < margin:
+                return None
+        elif group == "right" and left_left < text_right:
+            return None
+        elif group == "left" and right_left + right_fig.width > text_left:
+            return None
+        if not (bleed_ok(0, left_left) and bleed_ok(1, right_left)):
+            return None
+        # the inner figure is drawn in front: it must not cover the other's head
+        if group in ("right", "bottom"):
+            back_head = (right_left + right_head[0], tops[1] + right_head[1],
+                         right_left + right_head[2], tops[1] + right_head[3])
+            clear = not _covers(left_fig, (left_left, tops[0]), back_head)
+        else:
+            back_head = (left_left + left_head[0], tops[0] + left_head[1],
+                         left_left + left_head[2], tops[0] + left_head[3])
+            clear = not _covers(right_fig, (right_left, tops[1]), back_head)
+        if clear:
+            return [(left_left, tops[0]), (right_left, tops[1])]
+    return None
+
+
+def arrange_figures(draw_at, layout: dict, size: tuple[int, int]) -> list[tuple[Image.Image, tuple[int, int]]]:
+    """The biggest figures that fit: `draw_at(height)` returns the figures (left to right) drawn at that height. Tries
+    from the layout's height down, never into the logo row; returns (figure, position) in drawing order (back first)."""
+    width, height = size
     top_reserved = round(min(size) * (MARGIN_SHARE + LOGO_SHARE + 0.02))
-    aspect = figure_size[0] / figure_size[1]
-    fit_height = min(round(height * max_height), height - top_reserved, int((slot_right - slot_left) / aspect))
-    fit_width = round(fit_height * aspect)
-    return (slot_left + (slot_right - slot_left - fit_width) // 2, height - fit_height, fit_width, fit_height)
+    tallest = min(round(height * layout["height"]), height - top_reserved)
+    step = max(4, round(height * 0.02))
+    for target in range(tallest, round(height * 0.3), -step):
+        figures = draw_at(target)
+        if not figures:
+            return []
+        positions = _place(figures, layout, size)
+        if positions is not None:
+            pairs = list(zip(figures, positions))
+            # the inner figure goes in front of the outer one
+            return pairs[::-1] if layout["group"] in ("right", "bottom") and len(pairs) == 2 else pairs
+    return []
 
 
 def render(inputs: dict, suggestion: ThumbnailSuggestion, aspect: ThumbnailAspect, variant_index: int,
@@ -281,16 +369,13 @@ def render(inputs: dict, suggestion: ThumbnailSuggestion, aspect: ThumbnailAspec
     image = _shade(_background(source, size, suggestion), layout["shade"]).convert("RGBA")
 
     if template_id != "outside_ai":
-        characters = inputs.get("characters") or []
-        for character in characters:
-            figure = _character(character, variant_index, round(height * layout["height"]))
-            if figure is None:
-                continue
-            slot = character_slot(layout, character["slot"], len(characters))
-            left, top, fit_width, fit_height = place_figure(figure.size, slot, size, layout["height"])
-            if (fit_width, fit_height) != figure.size:
-                figure = _character(character, variant_index, fit_height) or figure
-            image.alpha_composite(figure, (left, height - figure.height))
+        characters = sorted(inputs.get("characters") or [], key=lambda character: character["slot"])
+
+        def draw_at(target: int) -> list[Image.Image]:
+            return [figure for figure in (_character(c, variant_index, target) for c in characters) if figure is not None]
+
+        for figure, position in arrange_figures(draw_at, layout, size):
+            image.alpha_composite(figure, position)
 
     draw = ImageDraw.Draw(image)
     margin = round(min(size) * MARGIN_SHARE)

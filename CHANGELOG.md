@@ -21,8 +21,11 @@ Versioning: [SemVer](https://semver.org/)
   with "…" instead of being cut mid-line; the Shorts / vertical section opens right after the first render.
 - **The level badge (B1) sat on the frame's left edge** in the wide intro (pushed out by a long topic): it now has its
   own centred row above the topic, which keeps side margins and at most two lines.
-- **The two thumbnail characters overlapped** (fixed centres, near-square figures) and ran under the logo: each
-  character now owns a slot beside the headline and shrinks to fit it, below the logo row, in every variant and 9:16.
+- **Thumbnail characters: big and never covering each other's face** (YouTube thumbnail guides: faces readable at
+  150 px wide, rule of thirds, nothing key in the bottom-right duration badge, ~60 px margins). The pair stands beside
+  the headline at the largest size that fits (about 60-80 % of the frame height, below the logo row); bodies may
+  overlap a little or bleed off the outer edge, but the heads stay apart and the front figure never covers the other's
+  head (checked pixel by pixel). Replaces the first fix, which made the figures too small.
 
 ### Changed (Phase 42, 2026-10-14, D121)
 - **The vertical video respects the TikTok / Reels / Shorts safe zone** (owner's 1080x1920 template): speaker chips,
