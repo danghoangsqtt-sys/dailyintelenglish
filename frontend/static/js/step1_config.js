@@ -503,6 +503,15 @@
       await Api.setProjectCast(project.id, state.speakers.map((speaker, index) => ({
         speaker_index: index, character_id: speaker.character_id,
       })));
+      // Phase 41 (D120): the project's own output folder (optional)
+      try {
+        await state.folderPanel?.save(project.id);
+      } catch (folderError) {
+        showError(`The project was saved, but its folder was not: ${folderError.message}`);
+        isSubmitting = false;
+        setLoading(false);
+        return;
+      }
       window.location.href = `/step2?project_id=${encodeURIComponent(project.id)}&name=${encodeURIComponent(project.name)}`;
     } catch (err) {
       console.error(`Failed to ${pageMode === "edit" ? "update" : "create"} project:`, err);
@@ -536,6 +545,9 @@
       showError("We couldn't load the characters. Please reload the page.");
     }
 
+    state.folderPanel = window.ProjectFolder
+      ? ProjectFolder.mount(document.getElementById("project-folder"), { projectId: projectId || null })
+      : null;
     if (!projectId) {
       syncSpeakersToCount(sanitizeSpeakerCount(document.getElementById("num-speakers").value));
       renderForm();

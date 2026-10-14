@@ -17,6 +17,7 @@ from backend.db.database import get_db
 from backend.schemas.thumbnail import ThumbnailAspect, ThumbnailEditRequest, ThumbnailFormat, ThumbnailGenerateRequest
 from backend.content import project_service
 from backend.media import thumbnail_compose, thumbnail_service
+from backend.content import export_service
 
 router = APIRouter(tags=["thumbnails"])
 
@@ -194,6 +195,7 @@ async def select_thumbnail_favorite(
     async with read_transaction():
         selected = await thumbnail_service.get_thumbnail_row(db, project_id, thumbnail_id)
         result = (await thumbnail_service.public_records([selected]))[0]
+    await export_service.sync_quietly(db, project_id)  # Phase 41 (D120): the project folder follows
     return ok(result, started_at=started_at)
 
 

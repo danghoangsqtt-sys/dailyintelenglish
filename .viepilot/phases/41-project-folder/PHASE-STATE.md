@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 41: Project output folder (D120)
 
-- **Status:** in progress 2026-10-14. Owner: "khi bắt đầu thực hiện video mới, người dùng có thể chọn thư mục lưu cho dự án
+- **Status:** 41.1–41.3 built 2026-10-14; full suite running; then the real app restart (migration 025). Opened 2026-10-14. Owner: "khi bắt đầu thực hiện video mới, người dùng có thể chọn thư mục lưu cho dự án
   video; video tạo ra sẽ lưu vào thư mục đó kèm nội dung đi kèm" + "người dùng có thể chọn các thành phần sẽ xuất ra thay vì
   nhận cả đống file không dùng đến". Choices: automatic on every new version; the owner ticks the components.
 
@@ -24,3 +24,13 @@
 - The folder picker runs `tkinter.filedialog.askdirectory` in a worker thread on the server (the app is local); if Tk is
   missing (packaged exe) the UI keeps the typed path.
 - Existing projects have no folder (nothing exported) until one is set in Step 1 (edit) or Step 7.
+
+## As built (2026-10-14)
+
+- Migration 025 `project_exports`; `backend/content/export_service.py` (settings, plan, idempotent copy, text files,
+  `sync_quietly` hook, native folder dialog); `backend/api/export.py` (GET/PUT/DELETE `/api/projects/{id}/export`,
+  `POST …/export/sync`, `POST …/export/open`, `POST /api/system/choose-folder`).
+- Automatic copy after: video render, vertical render, Shorts clip render, thumbnail favourite, YouTube package, audio mix.
+- UI: shared `frontend/static/js/project_folder.js`; Step 1 "Save to folder (optional)"; Step 7 "Project folder" panel.
+- Sandbox run: a real project exported 11 files (video, subtitles, vertical, thumbnails, YouTube texts, clip + cover +
+  captions, script, learning pack) and nothing unticked. Tests: `tests/test_phase41_export.py` (4).

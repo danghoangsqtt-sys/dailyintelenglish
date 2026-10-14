@@ -8,6 +8,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (Phase 41, 2026-10-14, D120)
+- **A folder for each video project.** Step 1 (or Step 7 later) chooses the folder — with the Windows folder picker or a
+  typed path — and ticks what to keep there: video + subtitles, vertical video, thumbnail, YouTube texts, Shorts/TikTok
+  clips with covers and captions, audio, script, learning pack. Every new version of a ticked part is copied in
+  automatically; Step 7 can open the folder, copy now or stop saving there (files already there are kept).
+
 ### Changed (Phase 40, 2026-10-14, D119)
 - **No fixed Alex and Lina.** A new episode's speaker slots read "Character 1", "Character 2"… until a character profile is
   chosen (Step 1 and the channel plan); the speaker then takes that character's name. Choosing another character in

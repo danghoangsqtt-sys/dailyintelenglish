@@ -24,6 +24,7 @@ from backend.schemas.project import ProjectUpdate
 from backend.media import audio_service
 from backend.content import project_service
 from backend.ai.tts import tts_service
+from backend.content import export_service
 
 router = APIRouter(prefix="/api/projects/{project_id}/audio", tags=["audio"])
 
@@ -73,6 +74,7 @@ async def generate_audio(
             )
     # Task 32.8c (BUG-030): say how many lines still have no word timings (no karaoke) instead of hiding it.
     job = {**job, "lines_without_words": sum(1 for entry in result["word_timestamps"] if not entry["words"])}
+    await export_service.sync_quietly(db, project_id)  # Phase 41 (D120): the project folder follows
     return ok(job, started_at=started_at)
 
 

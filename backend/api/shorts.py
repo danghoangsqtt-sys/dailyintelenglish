@@ -16,6 +16,7 @@ from backend.db.database import get_db
 from backend.db.transactions import read_transaction, write_transaction
 from backend.media import audio_service, video_service
 from backend.content import learning_service, project_service, shorts_service, youtube_service
+from backend.content import export_service
 
 router = APIRouter(prefix="/api/projects/{project_id}/shorts", tags=["shorts"])
 
@@ -113,6 +114,7 @@ async def render_clip(project_id: str, clip_id: str, body: RenderRequest, db: ai
         await db.execute("UPDATE short_clips SET status = 'rendered', mp4_path = ?, cover_path = ?, updated_at = ? WHERE id = ?",
                          (result["mp4_path"], cover, shorts_service._now(), clip_id))
         view = (await _views(db, project_id, [await shorts_service.get_clip(db, project_id, clip_id)]))[0]
+    await export_service.sync_quietly(db, project_id)  # Phase 41 (D120): the project folder follows
     return ok(view, started_at=started_at)
 
 

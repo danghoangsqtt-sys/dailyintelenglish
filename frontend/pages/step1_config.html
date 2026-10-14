@@ -219,6 +219,12 @@
       transform: translateX(18px);
     }
 
+    .pf-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+    .pf-path { flex: 1 1 320px; min-width: 220px; }
+    .pf-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px 14px; margin: 10px 0;
+      border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+    .pf-items legend { font-weight: 700; font-size: 13px; padding: 0 6px; }
+    .pf-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
     #speaker-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -384,6 +390,13 @@
         <div id="language-features" class="toggle-list"></div>
       </section>
 
+      <section class="card section-card" id="project-folder-section">
+        <h2 class="section-title">Save to folder (optional)</h2>
+        <p class="section-hint">Choose a folder for this video and tick what to keep there. Every new version (video,
+          thumbnail, clips…) is copied in automatically; leave the path empty to keep everything inside the app only.</p>
+        <div id="project-folder"></div>
+      </section>
+
       <div class="form-actions">
         <a href="/" class="btn btn-ghost">Cancel</a>
         <button type="submit" id="submit-btn" class="btn btn-primary">Create Project</button>
@@ -411,6 +424,7 @@
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/api.js"></script>
   <script src="/static/js/character_selector.js"></script>
+  <script src="/static/js/project_folder.js"></script>
   <script src="/static/js/step_nav.js"></script>
   <script src="/static/js/keyboard_shortcuts.js"></script>
   <script src="/static/js/shell.js"></script>

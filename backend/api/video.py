@@ -19,6 +19,7 @@ from backend.schemas.video import GenerateVideoRequest
 from backend.media import audio_service, video_service
 from backend.content import learning_service, project_service
 from backend.library import activity_library_service as activity_library
+from backend.content import export_service
 
 router = APIRouter(prefix="/api/projects/{project_id}/video", tags=["video"])
 templates_router = APIRouter(prefix="/api/video", tags=["video"])
@@ -88,6 +89,7 @@ async def generate_video(
             await project_service.update_project(
                 db, project_id, ProjectUpdate(status="video_generated"), commit=False
             )
+    await export_service.sync_quietly(db, project_id)  # Phase 41 (D120): the project folder follows
     return ok(job, started_at=started_at)
 
 
@@ -111,6 +113,7 @@ async def generate_vertical(
     async with write_transaction(db):
         await video_service.set_vertical_path(db, project_id, result["mp4_path"])
         job = await video_service.get_video_job(db, project_id)
+    await export_service.sync_quietly(db, project_id)  # Phase 41 (D120): the project folder follows
     return ok(job, started_at=started_at)
 
 

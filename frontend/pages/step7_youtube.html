@@ -84,7 +84,13 @@
     @media (max-width: 720px) {
       .section-header { align-items: flex-start; flex-direction: column; }
     }
-  </style>
+      .pf-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; }
+    .pf-path { flex: 1 1 320px; min-width: 220px; }
+    .pf-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px 14px; margin: 10px 0;
+      border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+    .pf-items legend { font-weight: 700; font-size: 13px; padding: 0 6px; }
+    .pf-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+</style>
 </head>
 <body>
   <aside id="app-sidebar" class="app-sidebar" aria-label="App navigation">
@@ -193,6 +199,11 @@
           <p class="estimate-note" id="export-status-note">Generate the YouTube package to check export readiness.</p>
           <a id="export-zip-link" class="btn btn-primary" href="#" aria-disabled="true">📦 Download full package (.zip)</a>
         </section>
+        <section class="card export-card" id="project-folder-section">
+          <h2>Project folder</h2>
+          <p class="estimate-note">The ticked parts of this video are copied here automatically after every new version.</p>
+          <div id="project-folder"></div>
+        </section>
       </aside>
     </div>
   </div>
@@ -202,6 +213,13 @@
   <script src="/static/js/step_nav.js"></script>
   <script src="/static/js/keyboard_shortcuts.js"></script>
   <script src="/static/js/shell.js"></script>
+  <script src="/static/js/project_folder.js"></script>
   <script src="/static/js/step7_youtube.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const id = new URLSearchParams(window.location.search).get("project_id");
+      if (id) ProjectFolder.mount(document.getElementById("project-folder"), { projectId: id, actions: true });
+    });
+  </script>
 </body>
 </html>

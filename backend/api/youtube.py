@@ -13,6 +13,7 @@ from backend.db.database import get_db
 from backend.media import audio_service, music_library_service, thumbnail_service, video_service
 from backend.channel import channel_service
 from backend.content import learning_service, project_service, script_service, youtube_service
+from backend.content import export_service
 
 router = APIRouter(prefix="/api/projects/{project_id}/youtube", tags=["youtube"])
 
@@ -52,6 +53,7 @@ async def generate_youtube_package(
         saved = await youtube_service.save_package(db, project_id, package, commit=False)
     async with read_transaction():
         composed = await _composed(db, project_id, saved)
+    await export_service.sync_quietly(db, project_id)  # Phase 41 (D120): the project folder follows
     return ok(composed, started_at=started_at)
 
 

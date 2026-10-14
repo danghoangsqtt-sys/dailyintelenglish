@@ -25,6 +25,7 @@ from backend.ai.llm.router import AIRouter, CircuitBreaker, build_ai_router_from
 from backend.ai.llm.ai_worker import AIWorker
 from backend.ai.image.runner import ImageJobRunner
 from backend.ai.image import pipelines as visuals_pipelines
+from backend.api import export as export_api
 
 PROJECT_ROOT = get_project_root()
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
@@ -169,6 +170,7 @@ app.include_router(ai_jobs.router)
 app.include_router(ai_jobs.health_router)
 app.include_router(channel.router)
 app.include_router(shorts.router)
+app.include_router(export_api.router)  # Phase 41
 app.include_router(profiles.router)  # Phase 33: before visuals so /api/visuals/profiles is never shadowed
 app.include_router(visuals.router)
 app.include_router(visuals.project_router)
