@@ -1556,3 +1556,12 @@ State: `.viepilot/phases/40-character-names/PHASE-STATE.md`.
 - [x] 40.1 No Alex/Lina preselection; "Character 1..N" slots (Step 1, channel plan)
 - [x] 40.2 Speaker takes the character's name, script lines follow, audio marked stale
 - [x] 40.3 Step 5 notice, generic hints, tests
+
+### Phase 41: Project output folder (D120) - in progress 2026-10-14
+
+State: `.viepilot/phases/41-project-folder/PHASE-STATE.md`.
+
+- [ ] 41.1 Folder and component choice stored per project (migration 025)
+- [ ] 41.2 Export service: automatic sync of the ticked components
+- [ ] 41.3 Step 1 and Step 7 UI (native folder picker, checkboxes, open folder, save now)
+- [ ] 41.4 Tests and a real run
