@@ -120,6 +120,8 @@ def test_vertical_cover_preserves_both_people_and_keeps_content_in_the_platform_
 
     source = Image.new("RGB", (1280, 720), "#34543A")
     painter = ImageDraw.Draw(source)
+    painter.rectangle((0, 0, 150, 719), fill="#F06420")
+    painter.rectangle((151, 0, 300, 719), fill="#14A8B5")
     painter.rectangle((650, 250, 750, 350), fill="blue")
     painter.rectangle((1000, 250, 1100, 350), fill="red")
     source_path = tmp_path / "pair.png"
@@ -132,6 +134,7 @@ def test_vertical_cover_preserves_both_people_and_keeps_content_in_the_platform_
     assert cover.size == (720, 1280)
     assert cover.getpixel((390, 378))[2] > 200  # the first person is still visible
     assert cover.getpixel((560, 378))[0] > 200  # so is the second person
+    assert abs(cover.getpixel((100, 1100))[0] - cover.getpixel((500, 1100))[0]) > 80  # scene fills the lower canvas
 
     safe, photo, headline = compose.PORTRAIT_SAFE, compose.PORTRAIT_PHOTO, compose.PORTRAIT_HEADLINE
     zone_source = (Path(__file__).resolve().parents[1] / "renderer" / "src" / "safeZone.ts").read_text(encoding="utf-8")

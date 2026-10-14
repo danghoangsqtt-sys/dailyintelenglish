@@ -389,8 +389,8 @@ def ai_scene_picture(scene: dict, size: tuple[int, int]) -> Image.Image:
 
 
 def _portrait_picture(inputs: dict, suggestion: ThumbnailSuggestion, variant_index: int,
-                      template_id: str) -> Image.Image:
-    """A landscape picture for the portrait cover's safe photo area, with both people still in frame."""
+                      template_id: str) -> tuple[Image.Image, Image.Image]:
+    """A complete landscape photo for the safe area and its unadorned scene for the full-height backdrop."""
     photo_width = PORTRAIT_PHOTO[2] - PORTRAIT_PHOTO[0]
     photo_height = PORTRAIT_PHOTO[3] - PORTRAIT_PHOTO[1]
     photo_size = (photo_width, photo_height)
@@ -414,7 +414,7 @@ def _portrait_picture(inputs: dict, suggestion: ThumbnailSuggestion, variant_ind
 
         for figure, position in arrange_figures(draw_at, PORTRAIT_FIGURE_LAYOUT, photo_size):
             photo.alpha_composite(figure, position)
-    return photo.convert("RGB")
+    return photo.convert("RGB"), picture
 
 
 def _shorten_to_fit(text: str, fits: Callable[[str], bool]) -> str:
@@ -451,9 +451,14 @@ def _render_portrait(inputs: dict, suggestion: ThumbnailSuggestion, variant_inde
                      template_id: str) -> Image.Image:
     """9:16 cover: photo, faces, branding and text occupy the owner's platform-safe shape."""
     size = SIZES["9x16"]
-    photo = _portrait_picture(inputs, suggestion, variant_index, template_id)
-    backdrop = ImageOps.fit(photo, size, method=Image.Resampling.LANCZOS).filter(ImageFilter.GaussianBlur(28))
-    backdrop = Image.blend(backdrop, Image.new("RGB", size, ImageColor.getrgb(suggestion.palette.primary)), 0.72)
+    photo, scene = _portrait_picture(inputs, suggestion, variant_index, template_id)
+    # Keep the source scene visible across the entire 9:16 canvas. The platform may cover the lower part, but a
+    # flat colour there makes the cover look unfinished in galleries and exported files. Crop the left side of the
+    # landscape source for the atmospheric backdrop; the foreground photo card still holds the complete pair.
+    backdrop_slice = scene.crop((0, 0, max(1, round(scene.width * 0.30)), scene.height))
+    backdrop = ImageOps.fit(backdrop_slice, size, method=Image.Resampling.LANCZOS)
+    backdrop = backdrop.filter(ImageFilter.GaussianBlur(5))
+    backdrop = Image.blend(backdrop, Image.new("RGB", size, (8, 23, 17)), 0.34)
     image = backdrop.convert("RGBA")
     left, top, right, bottom = PORTRAIT_PHOTO
     photo_mask = Image.new("L", photo.size, 0)
@@ -461,6 +466,13 @@ def _render_portrait(inputs: dict, suggestion: ThumbnailSuggestion, variant_inde
     image.paste(photo, (left, top), photo_mask)
     draw = ImageDraw.Draw(image)
     draw.rounded_rectangle((left, top, right - 1, bottom - 1), radius=18, outline="#FFFFFF", width=2)
+
+    # A soft dark patch gives the lettering contrast without flattening the lower scene or turning it into a box.
+    text_mask = Image.new("L", size, 0)
+    ImageDraw.Draw(text_mask).rounded_rectangle((34, 602, 592, 888), radius=20, fill=130)
+    text_mask = text_mask.filter(ImageFilter.GaussianBlur(16))
+    image.paste(Image.new("RGBA", size, (5, 16, 11, 255)), (0, 0), text_mask)
+    draw = ImageDraw.Draw(image)
 
     badge_x = PORTRAIT_SAFE["left"]
     badge_y = 164
