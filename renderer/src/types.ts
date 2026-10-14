@@ -97,13 +97,6 @@ export const chapterSchema = z.object({
   startSec: z.number(),
 });
 
-export const episodeVisualsSchema = z.object({
-  shots: z.record(z.string(), z.object({
-    url: z.string(), kind: z.enum(["single", "duo_close", "duo_wide", "insert"]),
-  })),
-  lineShots: z.array(z.string().nullable()),
-});
-
 /** Phase 32: one talking sprite set. `pictures` maps a picture name (`calm__closed`, `smile__open`, `blink`, `gesture-wave`)
  * to its public path; `faceEllipse` is [cx, cy, rx, ry] as fractions of the 1280 x 1536 canvas; `offsets` is each picture's head
  * offset from the calm picture in canvas pixels; `topFraction` is where the figure starts on the canvas (0..1). */
@@ -188,10 +181,9 @@ export const episodeInputPropsSchema = z.object({
   /** Task 20.2d: user-selected caption treatment (see `captionStyle.ts`). Optional with the
    * owner-preferred default so older runner invocations / props files still render. */
   captionStyle: z.enum(CAPTION_STYLES).default("outline"),
-  visuals: episodeVisualsSchema.default({ shots: {}, lineShots: [] }),
-  /** Phase 30 (ENH-021): what is behind the captions. "illustrated" = the drawn shots (the previous behaviour); the podcast
-   * modes need no shots: a black screen, the cast's portrait cards, or one still picture (`stillUrl`). */
-  visualMode: z.enum(VISUAL_MODES).default("illustrated"),
+  /** Phase 30 (ENH-021) / 32: what is behind the captions -- a black screen, one still picture (`stillUrl`), or the
+   * talking sprites (the default). Phase 44 (D123): the drawn-shot "illustrated" mode was removed with RealVisXL. */
+  visualMode: z.enum(VISUAL_MODES).default("podcast_sprites"),
   stillUrl: z.string().optional(),
   /** Phase 32: the talking sprites of `visualMode: "podcast_sprites"`. */
   sprites: episodeSpritesSchema.optional(),
@@ -216,7 +208,6 @@ export type IdiomItem = z.infer<typeof idiomItemSchema>;
 export type EpisodeLearning = z.infer<typeof episodeLearningSchema>;
 export type Chapter = z.infer<typeof chapterSchema>;
 export type EpisodeInputProps = z.infer<typeof episodeInputPropsSchema>;
-export type EpisodeVisuals = z.infer<typeof episodeVisualsSchema>;
 export type EpisodeBrand = z.infer<typeof episodeBrandSchema>;
 export type SpriteCharacter = z.infer<typeof spriteCharacterSchema>;
 export type SpriteLine = z.infer<typeof spriteLineSchema>;

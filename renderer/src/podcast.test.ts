@@ -7,9 +7,10 @@ const base = {
 };
 
 describe("Phase 30 podcast visual modes", () => {
-  it("keeps the drawn-story behaviour by default and names a layer for every podcast mode", () => {
-    expect(episodeInputPropsSchema.parse(base).visualMode).toBe("illustrated");
-    expect(podcastLayer("illustrated")).toBe("none");
+  it("defaults to the talking characters and names a layer for every mode (Phase 44: no drawn-shot mode)", () => {
+    expect(episodeInputPropsSchema.parse(base).visualMode).toBe("podcast_sprites");
+    expect(podcastLayer("podcast_sprites")).toBe("sprites");
+    expect(() => episodeInputPropsSchema.parse({ ...base, visualMode: "illustrated" })).toThrow();
     expect(podcastLayer("podcast_black")).toBe("black");
     expect(podcastLayer("podcast_still")).toBe("still");
   });

@@ -23,11 +23,10 @@ function Still({ url, progress }: { url: string; progress: number }) {
   );
 }
 
-/** The layer of a podcast mode. "none" (the drawn story) draws nothing here. */
+/** The layer of a podcast mode (the sprites draw their own stage; here they fall back to black). */
 export function PodcastLayerView({ layer, stillUrl, progress }: {
   layer: PodcastLayer; stillUrl?: string; progress: number;
 }) {
-  if (layer === "none") return null;
   return (
     <>
       <AbsoluteFill style={{ backgroundColor: PODCAST_BLACK }} />

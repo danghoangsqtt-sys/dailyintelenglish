@@ -6,14 +6,12 @@ import { activeTokenIndex, buildKaraokeTokens, captionPage, withScriptPunctuatio
 import { activeSpeakerId } from "./speakers";
 import { activeItemForFrame, attachItemsToLines, type LearningItem } from "./vocab";
 import { BOTTOM_SHADE_STYLE, captionStyleSpec, type CaptionStyle } from "./captionStyle";
-import { visualBackgroundForFrame, vocabCardPosition } from "./visuals";
 import { PodcastLayerView } from "./Podcast";
 import { SpriteStage } from "./Sprites";
 import { podcastLayer, type VisualMode } from "./podcastLayout";
-import { VERTICAL_PICTURE } from "./Sprites";
 import { VERTICAL } from "./safeZone";
 import type {
-  Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker, EpisodeSprites, EpisodeVisuals, Layout,
+  Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker, EpisodeSprites, Layout,
 } from "./types";
 
 /** Average pixel color of frontend/static/video_backgrounds/midnight.png (measured 2026-09-28
@@ -338,8 +336,7 @@ export function AudioWindowContent({
   audioDurationSec,
   chapters,
   captionStyle,
-  visuals,
-  visualMode = "illustrated",
+  visualMode = "podcast_sprites",
   stillUrl,
   sprites,
   playAudio = true,
@@ -355,8 +352,7 @@ export function AudioWindowContent({
   audioDurationSec: number;
   chapters: Chapter[];
   captionStyle: CaptionStyle;
-  visuals: EpisodeVisuals;
-  /** Phase 30: the podcast modes draw their own layer instead of the drawn shots. */
+  /** Phase 30/32: what is behind the captions (Phase 44, D123: the drawn-shot track is gone). */
   visualMode?: VisualMode;
   stillUrl?: string;
   /** Phase 32: the talking sprites of the "podcast_sprites" mode. */
@@ -379,7 +375,6 @@ export function AudioWindowContent({
   );
   const activeLearningItem = activeItemForFrame(currentTimeSec, lines, attachedLearning);
   const layer = podcastLayer(visualMode);
-  const background = visualBackgroundForFrame(frame, fps, lines, layer === "none" ? visuals : { shots: {}, lineShots: [] });
   const speechProgress = audioDurationSec > 0 ? frame / (audioDurationSec * fps) : 0;
   // a clip's hook banner has the top of the frame to itself while it shows
   const hookShown = hook && hookAtSec !== undefined ? hookOpacity(currentTimeSec, hookAtSec) : 0;
@@ -392,16 +387,6 @@ export function AudioWindowContent({
       ) : (
         <PodcastLayerView layer={layer === "sprites" ? "black" : layer} stillUrl={stillUrl} progress={speechProgress} />
       )}
-      {background.previous ? (
-        <Img src={staticFile(background.previous)} style={{ position: "absolute", width: "100%", height: "100%",
-          objectFit: "cover", ...(layout === "vertical" ? VERTICAL_PICTURE : {}),
-          opacity: background.current ? 1 : 1 - background.opacity }} />
-      ) : null}
-      {background.current ? (
-        <Img src={staticFile(background.current)} style={{ position: "absolute", width: "100%", height: "100%",
-          objectFit: "cover", ...(layout === "vertical" ? VERTICAL_PICTURE : {}),
-          opacity: background.opacity, transform: background.transform }} />
-      ) : null}
       {playAudio ? <Audio src={staticFile(audioPath)} startFrom={0} /> : null}
       {captionStyleSpec(captionStyle).bottomShade && layout !== "vertical" ? <div style={BOTTOM_SHADE_STYLE} /> : null}
       <ChapterProgressBar frame={frame} fps={fps} audioDurationSec={audioDurationSec} chapters={chapters} />
@@ -412,7 +397,7 @@ export function AudioWindowContent({
           opacity={
             vocabCardOpacity(currentTimeSec, activeLearningItem.slotStartSec, activeLearningItem.slotEndSec) * (1 - hookShown)
           }
-          position={layer === "sprites" || layout === "vertical" ? "top-center" : vocabCardPosition(background.kind)}
+          position={layer === "sprites" || layout === "vertical" ? "top-center" : "top-right"}
           layout={layout}
         />
       ) : null}
@@ -452,7 +437,6 @@ export const Episode: React.FC<EpisodeInputProps> = ({
   introSec,
   outroSec,
   captionStyle,
-  visuals,
   visualMode,
   stillUrl,
   sprites,
@@ -488,7 +472,6 @@ export const Episode: React.FC<EpisodeInputProps> = ({
           audioDurationSec={audioDurationSec}
           chapters={chapters}
           captionStyle={captionStyle}
-          visuals={visuals}
           visualMode={visualMode}
           stillUrl={stillUrl}
           sprites={sprites}

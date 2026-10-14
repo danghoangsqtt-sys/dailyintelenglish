@@ -20,8 +20,7 @@ const defaultProps: EpisodeInputProps = {
   outroSec: 5.0,
   outroText: "Thanks for watching · Subscribe for more · See you next episode!",
   captionStyle: "outline",
-  visuals: { shots: {}, lineShots: [] },
-  visualMode: "illustrated",
+  visualMode: "podcast_black",
   layout: "horizontal",
 };
 
