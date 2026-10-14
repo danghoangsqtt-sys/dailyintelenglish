@@ -1,6 +1,7 @@
 {
-  "current_session_id": "debug-20260912T000000Z",
-  "file": "session-debug-20260912T000000Z.json",
-  "status": "wontfix",
-  "updated_at": "2026-09-13T00:00:01Z"
+  "active_session": "debug-20261014T091435Z",
+  "current_session_id": "debug-20261014T091435Z",
+  "file": "session-debug-20261014T091435Z.json",
+  "status": "active",
+  "updated_at": "2026-10-14T09:14:35Z"
 }

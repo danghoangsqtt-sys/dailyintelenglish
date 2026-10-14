@@ -1,0 +1,40 @@
+{
+  "id": "debug-20261014T091435Z",
+  "status": "active",
+  "created_at": "2026-10-14T09:14:35Z",
+  "updated_at": "2026-10-14T09:14:35Z",
+  "problem": {
+    "description": "A video render in the running source app failed while Remotion navigated its headless browser to the temporary local render page.",
+    "symptoms": [
+      "The latest video_jobs row failed at 2026-10-14T09:10:53Z; its prior video_remotion.mp4 remains on disk.",
+      "The app reported a failed navigation to http://localhost:3000/index.html."
+    ],
+    "error_messages": [
+      "The video could not be rendered: Remotion render failed: Error: Visited \"http://localhost:3000/index.html\" but got no response."
+    ],
+    "affected_files": [
+      "backend/media/video_renderer_remotion.py",
+      "backend/media/video_service.py"
+    ]
+  },
+  "investigation": {
+    "hypotheses": [
+      {"id": 1, "description": "Node, Chrome Headless Shell or Remotion install is missing or broken", "status": "rejected"},
+      {"id": 2, "description": "A transient headless browser navigation or local server failure occurred during the full render", "status": "possible"},
+      {"id": 3, "description": "A competing process occupied port 3000 at failure time", "status": "unconfirmed"},
+      {"id": 4, "description": "Resource pressure from the full episode or the large public asset tree caused a tab to fail", "status": "unconfirmed"}
+    ],
+    "tests_run": [
+      {"command": "Read-only SQLite query of video_jobs", "output": "Latest project job failed with the reported message at 09:10:53Z; previous video file remains present.", "timestamp": "2026-10-14T09:14:35Z"},
+      {"command": "Remotion compositions src/index.ts --log=verbose", "output": "Exit 0; bundling, Chrome launch and localhost:3000 composition navigation succeeded.", "timestamp": "2026-10-14T09:14:35Z"},
+      {"command": "Remotion render Episode --frames=0-2 --log=verbose", "output": "Exit 0; three frames rendered to a temporary MP4.", "timestamp": "2026-10-14T09:14:35Z"},
+      {"command": "Current port and runtime checks", "output": "Node v24.20.0 available; no current listener on port 3000; about 18 GB physical memory free; renderer/public/remotion-render about 810 MB.", "timestamp": "2026-10-14T09:14:35Z"}
+    ],
+    "findings": [
+      "Remotion's installed gotoPageOrThrow emits this exact message when page.goto returns a null navigation response; the message alone does not identify why.",
+      "The temporary localhost:3000 endpoint is started by Remotion for a render and is not a user-facing app server.",
+      "Current lightweight checks pass, so the failure is not continuously reproducible. No shipping fix is justified without a confirmed cause."
+    ]
+  },
+  "resolution": null
+}
