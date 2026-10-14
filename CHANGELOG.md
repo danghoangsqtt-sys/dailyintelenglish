@@ -19,6 +19,10 @@ Versioning: [SemVer](https://semver.org/)
   time, breaking after a sentence. **Captions keep the script's punctuation** (Edge TTS reports bare words).
 - The quiet speaker's chip has a dark backing (it vanished over bright pictures); the vertical intro's topic ends
   with "…" instead of being cut mid-line; the Shorts / vertical section opens right after the first render.
+- **The level badge (B1) sat on the frame's left edge** in the wide intro (pushed out by a long topic): it now has its
+  own centred row above the topic, which keeps side margins and at most two lines.
+- **The two thumbnail characters overlapped** (fixed centres, near-square figures) and ran under the logo: each
+  character now owns a slot beside the headline and shrinks to fit it, below the logo row, in every variant and 9:16.
 
 ### Changed (Phase 42, 2026-10-14, D121)
 - **The vertical video respects the TikTok / Reels / Shorts safe zone** (owner's 1080x1920 template): speaker chips,

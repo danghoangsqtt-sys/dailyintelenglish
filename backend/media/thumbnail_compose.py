@@ -33,14 +33,19 @@ EXPRESSIONS = (("smile__open", "smile__closed"), ("surprised__open", "surprised_
 FALLBACK_EXPRESSIONS = ("smile__open", "smile__closed", "calm__open", "calm__closed")
 CROP_SHARE = 0.52  # head to chest: big faces read at thumbnail size (the sprite canvas is knee-up)
 
-# Normalized layouts per variant (16x9). text: (x, y, width, height, align); centers: x of the left/right character;
-# height: the character's height as a share of the canvas; shade: where the text-side darkening comes from.
+# Normalized layouts per variant (16x9). text: (x, y, width, height, align); slots: the (left, right) x-range each
+# character owns -- side by side, never on top of each other, clear of the headline (walkthrough 2026-10-14: fixed
+# centres made the two head-to-chest figures, almost square, overlap and run under the logo); height: the tallest a
+# character may be, as a share of the canvas (it shrinks to fit its slot); shade: where the text-side darkening comes from.
 LAYOUTS_16X9 = (
-    {"text": (0.045, 0.21, 0.50, 0.50, "left"), "centers": (0.64, 0.86), "height": 0.90, "shade": "left"},
-    {"text": (0.26, 0.17, 0.48, 0.40, "center"), "centers": (0.14, 0.86), "height": 0.86, "shade": "top"},
-    {"text": (0.47, 0.21, 0.49, 0.50, "right"), "centers": (0.15, 0.37), "height": 0.90, "shade": "right"},
+    {"text": (0.045, 0.21, 0.45, 0.50, "left"), "slots": ((0.50, 0.74), (0.75, 0.985)), "height": 0.78, "shade": "left"},
+    {"text": (0.27, 0.17, 0.46, 0.40, "center"), "slots": ((0.015, 0.26), (0.74, 0.985)), "height": 0.78, "shade": "top"},
+    {"text": (0.51, 0.21, 0.45, 0.50, "right"), "slots": ((0.015, 0.25), (0.26, 0.495)), "height": 0.78, "shade": "right"},
 )
-LAYOUT_9X16 = {"text": (0.07, 0.22, 0.86, 0.20, "center"), "centers": (0.27, 0.73), "height": 0.44, "shade": "middle"}
+LAYOUT_9X16 = {"text": (0.07, 0.22, 0.86, 0.20, "center"), "slots": ((0.04, 0.49), (0.51, 0.96)), "height": 0.44,
+               "shade": "middle"}
+LOGO_SHARE = 0.14  # the channel logo's height, as a share of the short side
+MARGIN_SHARE = 0.04
 
 
 # ---------------------------------------------------------------- inputs (async, read once)
@@ -241,6 +246,26 @@ def _logo(image: Image.Image, height: int, margin: int) -> None:
     image.alpha_composite(logo, (image.width - logo.width - margin, margin))
 
 
+def character_slot(layout: dict, slot: int, count: int) -> tuple[float, float]:
+    """The x-range a character owns: its own slot, or both slots together when it is alone."""
+    if count <= 1:
+        return layout["slots"][0][0], layout["slots"][1][1]
+    return layout["slots"][slot]
+
+
+def place_figure(figure_size: tuple[int, int], slot: tuple[float, float], size: tuple[int, int],
+                 max_height: float) -> tuple[int, int, int, int]:
+    """(left, top, width, height) of a figure scaled to fit its slot (bottom-anchored, centred in the slot), no taller
+    than `max_height` of the canvas nor reaching up into the logo row."""
+    width, height = size
+    slot_left, slot_right = round(slot[0] * width), round(slot[1] * width)
+    top_reserved = round(min(size) * (MARGIN_SHARE + LOGO_SHARE + 0.02))
+    aspect = figure_size[0] / figure_size[1]
+    fit_height = min(round(height * max_height), height - top_reserved, int((slot_right - slot_left) / aspect))
+    fit_width = round(fit_height * aspect)
+    return (slot_left + (slot_right - slot_left - fit_width) // 2, height - fit_height, fit_width, fit_height)
+
+
 def render(inputs: dict, suggestion: ThumbnailSuggestion, aspect: ThumbnailAspect, variant_index: int,
            template_id: str) -> Image.Image:
     """One thumbnail picture (RGB) at one aspect ratio."""
@@ -256,15 +281,19 @@ def render(inputs: dict, suggestion: ThumbnailSuggestion, aspect: ThumbnailAspec
     image = _shade(_background(source, size, suggestion), layout["shade"]).convert("RGBA")
 
     if template_id != "outside_ai":
-        for character in inputs.get("characters") or []:
+        characters = inputs.get("characters") or []
+        for character in characters:
             figure = _character(character, variant_index, round(height * layout["height"]))
             if figure is None:
                 continue
-            center = layout["centers"][character["slot"] if len(inputs["characters"]) > 1 else 1]
-            image.alpha_composite(figure, (round(width * center - figure.width / 2), height - figure.height))
+            slot = character_slot(layout, character["slot"], len(characters))
+            left, top, fit_width, fit_height = place_figure(figure.size, slot, size, layout["height"])
+            if (fit_width, fit_height) != figure.size:
+                figure = _character(character, variant_index, fit_height) or figure
+            image.alpha_composite(figure, (left, height - figure.height))
 
     draw = ImageDraw.Draw(image)
-    margin = round(min(size) * 0.04)
+    margin = round(min(size) * MARGIN_SHARE)
     x, y, box_width, box_height, align = layout["text"]
     text_box = (round(x * width), round(y * height), round(box_width * width), round(box_height * height))
     fill = suggestion.palette.text if _luminance(suggestion.palette.text) >= 0.6 else "#FFFFFF"
@@ -284,5 +313,5 @@ def render(inputs: dict, suggestion: ThumbnailSuggestion, aspect: ThumbnailAspec
         badge_x += badge_width + round(margin * 0.5)
     if inputs.get("episode"):
         _pill(draw, f"EP. {inputs['episode']}", (badge_x, margin), badge_size, "#FFFFFF", BADGE_INK)
-    _logo(image, round(min(size) * 0.14), margin)
+    _logo(image, round(min(size) * LOGO_SHARE), margin)
     return image.convert("RGB")

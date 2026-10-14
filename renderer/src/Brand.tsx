@@ -187,13 +187,17 @@ function BrandIntroWide({ title, topic, cefrLevel, speakers, brand }: {
         <div style={{ ...rise(titleIn), fontSize: 62, fontWeight: 800, color: INK, letterSpacing: -1, padding: "0 120px" }}>
           {title}
         </div>
-        <div style={{ ...rise(metaIn), marginTop: 22, display: "flex", justifyContent: "center", gap: 14, alignItems: "center" }}>
+        {/* the level badge on its own centred row: beside a long topic it was pushed to the frame's edge (walkthrough
+            2026-10-14); the topic keeps the title's side margins and at most two lines */}
+        <div style={{ ...rise(metaIn), marginTop: 22, display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+          padding: "0 160px" }}>
           {cefrLevel ? (
-            <span style={{ padding: "6px 14px", borderRadius: 999, background: YELLOW, color: BRAND_PALETTE.pillInk, fontWeight: 800, fontSize: 22 }}>
+            <span style={{ padding: "6px 16px", borderRadius: 999, background: YELLOW, color: BRAND_PALETTE.pillInk, fontWeight: 800, fontSize: 22 }}>
               {cefrLevel}
             </span>
           ) : null}
-          <span style={{ fontSize: 26, color: MUTED, fontWeight: 600 }}>{topic}</span>
+          <span style={{ fontSize: 26, color: MUTED, fontWeight: 600, lineHeight: 1.3, display: "-webkit-box",
+            WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflow: "hidden" }}>{topic}</span>
         </div>
         <div style={{ ...rise(metaIn), marginTop: 22, display: "flex", justifyContent: "center", gap: 12 }}>
           {speakers.map((speaker, index) => (
