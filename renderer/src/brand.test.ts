@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BRAND_NAME, BRAND_PALETTE, LOGO_PATH, mix, mixColor } from "./Brand";
+import { BRAND_NAME, BRAND_PALETTE, LOGO_PATH, mix, mixColor, titleParts } from "./Brand";
 
 function luminance(hex: string): number {
   const channel = (i: number) => {
@@ -51,5 +51,17 @@ describe("Phase 27 Daily Beyond English brand", () => {
     }
     expect(contrast(BRAND_PALETTE.pillInk, BRAND_PALETTE.yellow)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(BRAND_PALETTE.ink, BRAND_PALETTE.subscribe)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe("titleParts (BUG-036)", () => {
+  it("splits a series episode title and keeps 'Ep. n' unbreakable", () => {
+    expect(titleParts("The Dinner Party Challenge · Ep. 2: Shopping at the Market")).toEqual({
+      series: "The Dinner Party Challenge", episode: "Ep.\u00A02", name: "Shopping at the Market",
+    });
+  });
+  it("leaves other titles whole", () => {
+    expect(titleParts("Ordering Coffee")).toEqual({ name: "Ordering Coffee" });
+    expect(titleParts("Tea · Coffee: a guide")).toEqual({ name: "Tea · Coffee: a guide" });
   });
 });

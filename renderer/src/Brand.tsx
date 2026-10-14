@@ -37,6 +37,27 @@ export const BRAND_NAME = { top: "Daily Beyond", sub: "ENGLISH" } as const;
 export const LOGO_PATH = "brand/logo.png";
 const INK = BRAND_PALETTE.ink;
 const MUTED = BRAND_PALETTE.muted;
+// BUG-036 (owner 2026-10-14): a series project is named "<series> · Ep. n: <name>"; printed as one string the browser
+// broke it between "Ep." and "2:". The intro shows the series and the episode line separately, "Ep. n:" unbroken.
+const EPISODE_TITLE = /^(.+?)\s+·\s+(Ep\.\s*\d+):\s*(.+)$/;
+
+export function titleParts(title: string): { series?: string; episode?: string; name: string } {
+  const match = EPISODE_TITLE.exec(title.trim());
+  if (!match) return { name: title };
+  return { series: match[1], episode: match[2].replace(/\s+/, String.fromCharCode(160)), name: match[3] };
+}
+
+function TitleLines({ title }: { title: string }) {
+  const { series, episode, name } = titleParts(title);
+  if (!episode) return <>{title}</>;
+  return (
+    <>
+      <span style={{ display: "block", fontSize: "0.72em", color: MUTED, letterSpacing: 0 }}>{series}</span>
+      <span style={{ display: "block" }}><span style={{ whiteSpace: "nowrap" }}>{episode}:</span> {name}</span>
+    </>
+  );
+}
+
 const GREEN = BRAND_PALETTE.green;
 const LIME = BRAND_PALETTE.lime;
 const YELLOW = BRAND_PALETTE.yellow;
@@ -185,7 +206,7 @@ function BrandIntroWide({ title, topic, cefrLevel, speakers, brand }: {
       <Logo markMorph={markMorph} wordMorph={morph} appear={appear} />
       <div style={{ position: "absolute", left: 0, right: 0, top: 230, textAlign: "center", fontFamily: BRAND_FONT }}>
         <div style={{ ...rise(titleIn), fontSize: 62, fontWeight: 800, color: INK, letterSpacing: -1, padding: "0 120px" }}>
-          {title}
+          <TitleLines title={title} />
         </div>
         {/* the level badge on its own centred row: beside a long topic it was pushed to the frame's edge (walkthrough
             2026-10-14); the topic keeps the title's side margins and at most two lines */}
@@ -316,7 +337,7 @@ function BrandIntroVertical({ title, topic, cefrLevel, speakers, brand }: {
         textAlign: "center", fontFamily: BRAND_FONT }}>
         <div style={{ ...rise(titleIn), fontSize: 60, fontWeight: 800, color: INK, letterSpacing: -1, lineHeight: 1.12,
           maxHeight: 4 * 60 * 1.12, overflow: "hidden" }}>
-          {title}
+          <TitleLines title={title} />
         </div>
       </div>
       <div style={{ position: "absolute", left: narrow.left, width: narrow.width, top: 920, textAlign: "center",
