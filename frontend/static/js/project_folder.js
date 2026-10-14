@@ -42,12 +42,22 @@
       items: [...container.querySelectorAll(".pf-items input:checked")].map((input) => input.value),
     });
 
-    function show(saved) {
-      if (!saved) return;
+    // ENH-035: an episode of a series saves into its own "Ep 02 - …" subfolder of the chosen (series) folder; a new
+    // episode is offered the folder its series already uses.
+    function show(view) {
+      const saved = view?.settings;
+      if (!saved) {
+        if (view?.suggested_dir && !$(".pf-path").value) {
+          $(".pf-path").value = view.suggested_dir;
+          status("The folder of this series' other episodes: this episode gets its own subfolder inside it.");
+        }
+        return;
+      }
       $(".pf-path").value = saved.output_dir || "";
       container.querySelectorAll(".pf-items input").forEach((input) => { input.checked = saved.items.includes(input.value); });
       const when = saved.last_sync_at ? new Date(saved.last_sync_at).toLocaleString() : "not yet";
-      status(saved.last_error ? `Last copy failed: ${saved.last_error}` : `Last copied: ${when}`);
+      const where = view.folder && view.folder !== saved.output_dir ? ` · Files go to ${view.folder}` : "";
+      status((saved.last_error ? `Last copy failed: ${saved.last_error}` : `Last copied: ${when}`) + where);
     }
 
     async function save(id) {
@@ -55,9 +65,11 @@
       if (!wanted.output_dir) return null;  // no folder: nothing is exported (optional)
       if (!wanted.items.length) throw new Error("Tick at least one thing to save in the folder");
       const view = await Api.saveProjectExport(id, wanted);
-      show(view.settings);
+      show(view);
       const written = view.sync?.written || [];
-      status(written.length ? `Saved ${written.length} file(s) in the folder.` : "Folder ready: files are added as you make them.");
+      const where = view.folder ? ` (${view.folder})` : "";
+      status(written.length ? `Saved ${written.length} file(s) in the folder${where}.`
+        : `Folder ready${where}: files are added as you make them.`);
       return view;
     }
 
@@ -88,7 +100,7 @@
         }
       });
     }
-    if (projectId) Api.getProjectExport(projectId).then((view) => show(view.settings)).catch(() => {});
+    if (projectId) Api.getProjectExport(projectId).then(show).catch(() => {});
     return { save, settings };
   }
 

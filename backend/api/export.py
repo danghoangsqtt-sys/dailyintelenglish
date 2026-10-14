@@ -70,9 +70,11 @@ async def open_export_folder(project_id: str, db: aiosqlite.Connection = Depends
     """Open the folder in Windows Explorer (the app runs on the owner's computer)."""
     async with read_transaction():
         saved = await export_service.get_settings(db, project_id)
+        folder = await export_service.resolved_folder(db, project_id, saved["output_dir"]) if saved else None
     if not saved:
         raise NotFoundError("No folder chosen for this project")
-    folder = Path(saved["output_dir"])
+    if not folder.is_dir():  # ENH-035: the episode subfolder appears with the first file; until then the series folder
+        folder = Path(saved["output_dir"])
     if not folder.is_dir():
         raise NotFoundError("The folder does not exist yet")
     if hasattr(os, "startfile"):

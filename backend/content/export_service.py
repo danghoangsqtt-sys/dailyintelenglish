@@ -2,6 +2,9 @@
 components to export; after every new version (video, vertical video, clip, thumbnail, YouTube package, audio, learning)
 the ticked components that exist are copied there. Unticked components are never written, and nothing is ever deleted
 from the owner's folder.
+
+ENH-035 (owner 2026-10-14): for an episode of a series the chosen folder is the series folder; the files go to its own
+subfolder "Ep 02 - <episode title>", so the episodes of one series no longer overwrite each other's `video.mp4`.
 """
 
 from __future__ import annotations
@@ -9,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import shutil
 import uuid
 import weakref
@@ -80,6 +84,50 @@ def _check_folder(path: Path) -> None:
         raise ValidationError(f"The folder cannot be used: {exc.strerror or exc}") from exc
 
 
+_UNSAFE_NAME = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def episode_folder_name(number: int, title: str) -> str:
+    """A Windows-safe folder name for one episode: "Ep 02 - Shopping at the Market"."""
+    name = " ".join(_UNSAFE_NAME.sub(" ", f"Ep {number:02d} - {title}").split())
+    return name[:80].rstrip(". ") or f"Ep {number:02d}"
+
+
+async def _episode(db: aiosqlite.Connection, project_id: str) -> dict | None:
+    cursor = await db.execute("SELECT series_id, number, title FROM channel_episodes WHERE project_id = ?", (project_id,))
+    row = await cursor.fetchone()
+    return {"series_id": row[0], "number": row[1], "title": row[2]} if row else None
+
+
+def destination(root: str | Path, episode: dict | None) -> Path:
+    """Where the files go: the episode's subfolder of the series folder, or the chosen folder itself (a project outside
+    the channel plan, or a folder the owner already named after this episode)."""
+    root = Path(root)
+    if not episode:
+        return root
+    name = episode_folder_name(episode["number"], episode["title"])
+    return root if root.name.casefold() == name.casefold() else root / name
+
+
+async def resolved_folder(db: aiosqlite.Connection, project_id: str, root: str | Path) -> Path:
+    return destination(root, await _episode(db, project_id))
+
+
+async def _series_folder(db: aiosqlite.Connection, project_id: str, episode: dict | None) -> str | None:
+    """The series folder another episode of the same series already uses (the newest), for a new episode's panel."""
+    if not episode:
+        return None
+    cursor = await db.execute(
+        "SELECT x.output_dir, e.number, e.title FROM project_exports x JOIN channel_episodes e ON e.project_id = x.project_id "
+        "WHERE e.series_id = ? AND x.project_id != ? ORDER BY x.updated_at DESC LIMIT 1", (episode["series_id"], project_id))
+    row = await cursor.fetchone()
+    if row is None:
+        return None
+    root = Path(row[0])
+    # a sibling whose chosen folder is its own episode folder: the series folder is the one above it
+    return str(root.parent if root.name.casefold() == episode_folder_name(row[1], row[2]).casefold() else root)
+
+
 async def get_settings(db: aiosqlite.Connection, project_id: str) -> dict | None:
     cursor = await db.execute(
         "SELECT output_dir, items_json, last_sync_at, last_error, updated_at FROM project_exports WHERE project_id = ?",
@@ -93,8 +141,10 @@ async def get_settings(db: aiosqlite.Connection, project_id: str) -> dict | None
 
 async def public(db: aiosqlite.Connection, project_id: str) -> dict:
     saved = await get_settings(db, project_id)
+    episode = await _episode(db, project_id)
     return {"components": [{"key": key, "label": label} for key, label in ITEMS.items()], "default_items": DEFAULT_ITEMS,
-            "settings": saved}
+            "settings": saved, "folder": str(destination(saved["output_dir"], episode)) if saved else None,
+            "suggested_dir": None if saved else await _series_folder(db, project_id, episode)}
 
 
 async def save_settings(db: aiosqlite.Connection, project_id: str, body: ExportSettings) -> dict:
@@ -217,14 +267,15 @@ async def sync(db: aiosqlite.Connection, project_id: str) -> dict:
             if not saved:
                 return {"written": [], "folder": None}
             plan = await _plan(db, project_id, saved["items"])
+            folder = await resolved_folder(db, project_id, saved["output_dir"])
         error = None
         written: list[str] = []
         try:
-            await asyncio.to_thread(_check_folder, Path(saved["output_dir"]))
-            written = await asyncio.to_thread(_write, Path(saved["output_dir"]), plan)
+            await asyncio.to_thread(_check_folder, folder)
+            written = await asyncio.to_thread(_write, folder, plan)
         except (OSError, ValidationError) as exc:
             error = str(exc)
-            logger.warning("project_export_failed project_id=%s folder=%s reason=%s", project_id, saved["output_dir"], exc)
+            logger.warning("project_export_failed project_id=%s folder=%s reason=%s", project_id, folder, exc)
         # A folder change or Stop can commit while the copy runs. Do not report the
         # old copy as the new folder's latest sync.
         async with write_transaction(db):
@@ -233,7 +284,7 @@ async def sync(db: aiosqlite.Connection, project_id: str) -> dict:
                 "WHERE project_id = ? AND updated_at = ?",
                 (_now(), error, project_id, saved["updated_at"]),
             )
-        return {"written": written, "folder": saved["output_dir"], "error": error}
+        return {"written": written, "folder": str(folder), "error": error}
 
 
 async def sync_quietly(db: aiosqlite.Connection, project_id: str) -> None:

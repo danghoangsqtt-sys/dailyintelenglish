@@ -171,3 +171,58 @@ def test_old_copy_cannot_mark_a_new_folder_as_synced(client, tmp_path, monkeypat
         copying.join(5)
     current = data(client.get(f"/api/projects/{project['id']}/export"))["settings"]
     assert current["output_dir"] == str(new_folder) and current["last_sync_at"] is None
+
+
+def _episode(project_id: str, number: int, title: str, series_id: str = "s1") -> None:
+    now = "2026-10-14T00:00:00+00:00"
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute("INSERT OR IGNORE INTO channel_topics (id, name, created_at, updated_at) VALUES ('t1', 'Food', ?, ?)",
+                           (now, now))
+        connection.execute("INSERT OR IGNORE INTO channel_series (id, topic_id, name, created_at, updated_at) "
+                           "VALUES (?, 't1', 'The Dinner Party Challenge', ?, ?)", (series_id, now, now))
+        connection.execute("INSERT INTO channel_episodes (id, series_id, number, title, project_id, created_at, updated_at) "
+                           "VALUES (?, ?, ?, ?, ?, ?, ?)", (f"e{number}", series_id, number, title, project_id, now, now))
+
+
+def test_episode_folder_names_are_windows_safe():
+    assert export_service.episode_folder_name(2, "Shopping at the Market") == "Ep 02 - Shopping at the Market"
+    assert export_service.episode_folder_name(12, 'Why? "Yes": a/b|c*.') == "Ep 12 - Why Yes a b c"
+    assert len(export_service.episode_folder_name(3, "x" * 200)) == 80
+
+
+def test_series_episodes_get_their_own_subfolder(client, tmp_path):  # noqa: F811
+    first = _project(client, names=("Mia", "Tom"))
+    second = _project(client, names=("Mia", "Tom"))
+    _episode(first["id"], 1, "Planning the Menu")
+    _episode(second["id"], 2, "Shopping at the Market")
+    series = tmp_path / "Dinner Party"
+    view = data(client.put(f"/api/projects/{first['id']}/export", json={"output_dir": str(series), "items": ["script"]}))
+    assert view["folder"] == str(series / "Ep 01 - Planning the Menu")
+    assert (series / "Ep 01 - Planning the Menu" / "script.txt").is_file() and not (series / "script.txt").exists()
+
+    # the next episode is offered the series folder, and writes beside episode 1, not over it
+    offered = data(client.get(f"/api/projects/{second['id']}/export"))
+    assert offered["settings"] is None and offered["suggested_dir"] == str(series)
+    data(client.put(f"/api/projects/{second['id']}/export", json={"output_dir": str(series), "items": ["script"]}))
+    assert (series / "Ep 02 - Shopping at the Market" / "script.txt").is_file()
+    assert (series / "Ep 01 - Planning the Menu" / "script.txt").is_file()
+
+
+def test_a_folder_already_named_after_the_episode_is_not_nested(client, tmp_path):  # noqa: F811
+    project = _project(client, names=("Mia", "Tom"))
+    other = _project(client, names=("Mia", "Tom"))
+    _episode(project["id"], 2, "Shopping at the Market")
+    _episode(other["id"], 3, "Cooking Together")
+    own = tmp_path / "Dinner Party" / "Ep 02 - Shopping at the Market"
+    data(client.put(f"/api/projects/{project['id']}/export", json={"output_dir": str(own), "items": ["script"]}))
+    assert (own / "script.txt").is_file() and not (own / "Ep 02 - Shopping at the Market").exists()
+    # a sibling chose its own episode folder: the suggestion is the series folder above it
+    assert data(client.get(f"/api/projects/{other['id']}/export"))["suggested_dir"] == str(tmp_path / "Dinner Party")
+
+
+def test_projects_outside_a_series_keep_the_chosen_folder(client, tmp_path):  # noqa: F811
+    project = _project(client, names=("Mia", "Tom"))
+    view = data(client.put(f"/api/projects/{project['id']}/export", json={"output_dir": str(tmp_path / "solo"),
+                                                                          "items": ["script"]}))
+    assert view["folder"] == str(tmp_path / "solo") and (tmp_path / "solo" / "script.txt").is_file()
+    assert data(client.get(f"/api/projects/{_project(client, names=('Mia', 'Tom'))['id']}/export"))["suggested_dir"] is None
