@@ -83,7 +83,7 @@ async def test_propose_edit_merge_save_reload_approve(browser_instance: Browser,
     beats = page.locator("#storyboard-beats .storyboard-beat")
     await page.wait_for_function("document.querySelectorAll('#storyboard-beats .storyboard-beat').length === 3")
     text = await summary.inner_text()
-    assert "3 beats" in text and "9/12 images" in text and "proposal: ai" in text
+    assert "3 beats" in text and "3/12 pictures" in text and "proposal: ai" in text  # Phase 44: per place + insert
     assert "Cafe" in await beats.nth(0).locator("h4").inner_text()
     assert "insert: crowded subway at rush hour" in await beats.nth(1).locator("h4").inner_text()
 
@@ -93,7 +93,7 @@ async def test_propose_edit_merge_save_reload_approve(browser_instance: Browser,
     await beats.nth(0).get_by_role("button", name="Merge with next").click()
     await page.wait_for_function("document.querySelectorAll('#storyboard-beats .storyboard-beat').length === 2")
     assert "lines 1–4" in await beats.nth(0).locator("h4").inner_text()
-    assert "8/12 images" in await summary.inner_text()
+    assert "2/12 pictures" in await summary.inner_text()
 
     await page.locator("#storyboard-save").click()
     await page.wait_for_function("!document.querySelector('#storyboard-summary').textContent.includes('unsaved')")

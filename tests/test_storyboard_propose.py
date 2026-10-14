@@ -52,7 +52,7 @@ def test_valid_ai_answer_is_saved(client, fake_ai):  # noqa: F811
     assert saved["proposal"] == {"path": "ai", "reason": None}
     assert saved["source"] == "ai" and saved["status"] == "draft"
     assert [beat["kind"] for beat in saved["beats"]] == ["scene", "insert", "scene"]
-    assert saved["estimate"]["images"] == 9
+    assert saved["estimate"]["images"] == 3  # Phase 44: one picture per place, one per insert
     prompt = provider.calls[0].prompt
     assert "[0] (speaker 0) Line number 0 of the lesson." in prompt
     assert "builtin-rice-fields | Rice fields | green rice fields | countryside" in prompt
@@ -136,14 +136,14 @@ def test_provider_error_falls_back_to_project_scenes(client, fake_ai):  # noqa: 
     assert saved["proposal"] == {"path": "rule", "reason": "AI unavailable (ProviderError)"}
     assert [(b["line_from"], b["line_to"], b["scene_id"]) for b in saved["beats"]] == [
         (0, 1, "builtin-classroom"), (2, 3, "builtin-park"), (4, 5, "builtin-farm")]
-    assert saved["estimate"]["images"] == 12
+    assert saved["estimate"]["images"] == 3
 
 
 def test_rule_beats_tile_cap_and_talkers(monkeypatch):
     beats = storyboard_service.rule_beats([0, 0, 0, 1, 1, 1, 1], {0, 1}, ["a", "b"])
     assert [(b.line_from, b.line_to, b.speakers) for b in beats] == [(0, 3, [0, 1]), (4, 6, [1])]
-    monkeypatch.setattr(storyboard_service.settings, "VISUALS_IMAGE_CAP", 8)
-    assert len(storyboard_service.rule_beats([0, 1] * 5, {0, 1}, ["a", "b", "c"])) == 2  # 3 places x 4 > 8
+    monkeypatch.setattr(storyboard_service.settings, "VISUALS_IMAGE_CAP", 2)
+    assert len(storyboard_service.rule_beats([0, 1] * 5, {0, 1}, ["a", "b", "c"])) == 2  # 3 places x 1 > 2
     assert [b.scene_id for b in storyboard_service.rule_beats([0], set(), [])] == ["builtin-cafe"]
 
 
@@ -191,7 +191,7 @@ def _covers(beats, total):
 def test_fit_to_cap_trims_in_order_and_keeps_coverage(monkeypatch):
     from backend.schemas.storyboard import BeatInput
 
-    monkeypatch.setattr(storyboard_service.settings, "VISUALS_IMAGE_CAP", 12)
+    monkeypatch.setattr(storyboard_service.settings, "VISUALS_IMAGE_CAP", 3)
     over = [
         BeatInput(line_from=0, line_to=3, scene_id="office", action="sitting at desks"),
         BeatInput(line_from=4, line_to=4, kind="insert", new_place="crowded street"),
@@ -200,21 +200,22 @@ def test_fit_to_cap_trims_in_order_and_keeps_coverage(monkeypatch):
         BeatInput(line_from=10, line_to=12, scene_id="cafe", action="reading plans"),
         BeatInput(line_from=13, line_to=15, scene_id="park", action="walking"),
     ]
-    assert storyboard_service.estimate_images(over, 2) == 15
+    assert storyboard_service.estimate_images(over, 2) == 5  # 3 places + 2 inserts
     fitted, steps = storyboard_service.fit_to_cap(over, 2)
-    assert storyboard_service.estimate_images(fitted, 2) <= 12 and _covers(fitted, 16)
-    # the cafe's second action goes first (15 -> 14), then the last insert (13), then the first (12)
-    assert steps == 3 and [beat.kind for beat in fitted] == ["scene"] * 4
+    assert storyboard_service.estimate_images(fitted, 2) <= 3 and _covers(fitted, 16)
+    # the last insert goes first (5 -> 4), then the first (3); the cafe keeps both of its actions (they are free)
+    assert steps == 2 and [beat.kind for beat in fitted] == ["scene"] * 4
     assert [(beat.scene_id, beat.action) for beat in fitted] == [
-        ("office", "sitting at desks"), ("cafe", "drinking coffee"), ("cafe", "drinking coffee"), ("park", "walking")]
-    keeps_insert, _ = storyboard_service.fit_to_cap(over[:5], 2)  # 13 images: one action is enough
-    assert [beat.kind for beat in keeps_insert].count("insert") == 2
+        ("office", "sitting at desks"), ("cafe", "drinking coffee"), ("cafe", "reading plans"), ("park", "walking")]
+    keeps_insert, _ = storyboard_service.fit_to_cap(over[:5], 2)  # 2 places + 2 inserts = 4: one insert goes
+    assert [beat.kind for beat in keeps_insert].count("insert") == 1
     many = [BeatInput(line_from=i, line_to=i, scene_id=f"s{i}") for i in range(5)]
     squeezed, _ = storyboard_service.fit_to_cap(many, 2)
     assert len({beat.scene_id for beat in squeezed}) == 3 and _covers(squeezed, 5)
 
 
-def test_over_cap_ai_answer_is_trimmed_not_discarded(client, fake_ai):  # noqa: F811
+def test_over_cap_ai_answer_is_trimmed_not_discarded(client, fake_ai, monkeypatch):  # noqa: F811
+    monkeypatch.setattr(storyboard_service.settings, "VISUALS_IMAGE_CAP", 3)  # 4 places > 3 pictures
     project = project_with_script(client)
     over = {"beats": [
         {"line_from": 0, "line_to": 1, "kind": "scene", "scene_id": "builtin-office", "speakers": [0, 1],
@@ -229,5 +230,5 @@ def test_over_cap_ai_answer_is_trimmed_not_discarded(client, fake_ai):  # noqa: 
     provider = fake_ai([_result(over)])
     saved = data(client.post(f"/api/projects/{project['id']}/storyboard/propose"))
     assert saved["proposal"] == {"path": "ai", "reason": "trimmed to the image cap in 1 step(s)"}
-    assert saved["estimate"]["images"] == 12 and len(provider.calls) == 1
+    assert saved["estimate"]["images"] == 3 and len(provider.calls) == 1
     assert "at most 3 places" in provider.calls[0].prompt

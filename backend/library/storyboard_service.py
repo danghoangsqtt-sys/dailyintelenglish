@@ -20,7 +20,9 @@ from backend.content import project_service
 from backend.ai.llm.contracts import GenerationRequest
 from backend.ai.llm.router import AIRouter, build_ai_router_from_settings
 
-GPU_MINUTES_PER_IMAGE = 2  # measured 20.11/23.2 smokes: ~120 s per shot with checks and repair
+# Phase 44 (D123): a picture is drawn by Qwen-Image-2.1 (~90 s); a library match costs nothing, so the minutes are an
+# upper bound.
+GPU_MINUTES_PER_IMAGE = 1.5
 
 
 def _now() -> str:
@@ -28,20 +30,18 @@ def _now() -> str:
 
 
 def estimate_images(beats: list[BeatInput] | list[dict], cast_size: int) -> int:
-    """Owner E4: images follow places and actions, not duration. Each distinct place gets its
-    framing set (one single per cast member, plus duo close + duo wide with two or more), each
-    further distinct action in that place one image, and each insert one image."""
-    framing = cast_size + (2 if cast_size >= 2 else 0)
-    actions: dict[str, set[str]] = {}
+    """Owner E4: pictures follow places and actions, not duration. Phase 44 (D123): with the talking characters there
+    are no drawn shots of the cast -- each distinct place needs one scene picture and each insert one illustration
+    (both may already exist in the libraries). `cast_size` is kept for the callers' signature."""
+    places: set[str] = set()
     inserts = 0
     for beat in beats:
         item = beat if isinstance(beat, dict) else beat.model_dump()
         if item["kind"] == "insert":
             inserts += 1
-            continue
-        place = item.get("scene_id") or f"new:{item.get('new_place')}"
-        actions.setdefault(place, set()).add(item.get("action") or "")
-    return sum(max(framing, 1) + len(found) - 1 for found in actions.values()) + inserts
+        else:
+            places.add(item.get("scene_id") or f"new:{item.get('new_place')}")
+    return len(places) + inserts
 
 
 async def _line_speakers(db: aiosqlite.Connection, project_id: str) -> list[int]:
@@ -169,7 +169,7 @@ def rule_beats(line_speakers: list[int], cast: set[int], scene_ids: list[str]) -
     """Task 24.2 deterministic fallback: the lines split into k near-equal contiguous beats, one per
     project scene (at most 3, and never more places than the image cap allows), each showing the
     cast members who talk in it. Always passes `validate_against_project`."""
-    framing = max(1, len(cast) + (2 if len(cast) >= 2 else 0))
+    framing = 1  # Phase 44: one scene picture per place
     places = scene_ids or ["builtin-cafe"]
     count = max(1, min(len(places), 3, len(line_speakers), settings.VISUALS_IMAGE_CAP // framing))
     total = len(line_speakers)
@@ -224,9 +224,9 @@ def _normalize_proposal(parsed: object) -> object:
 def fit_to_cap(beats: list[BeatInput], cast_size: int) -> tuple[list[BeatInput], int]:
     """Task 24.2 real-AI finding: the content was good but the image arithmetic often was not
     (15 for a cap of 12, even after the repair). Trim the AI's own plan instead of discarding it,
-    least story value first: give a place's later beats that place's first action (latest first),
-    then fold inserts (the concrete illustrations) into the beat before them, then fold whole
-    places into the beat before. Returns (beats, steps taken).
+    least story value first: fold inserts (the concrete illustrations) into the beat before them,
+    then fold whole places into the beat before (Phase 44: actions inside a place cost nothing, so
+    they are no longer flattened). Returns (beats, steps taken).
     Line coverage is preserved by every step."""
     beats = [beat.model_copy() for beat in sorted(beats, key=lambda beat: beat.line_from)]
     steps = 0
@@ -243,19 +243,6 @@ def fit_to_cap(beats: list[BeatInput], cast_size: int) -> tuple[list[BeatInput],
 
     while estimate_images(beats, cast_size) > settings.VISUALS_IMAGE_CAP and len(beats) > 1:
         steps += 1
-        first_action: dict[str, str] = {}
-        changed = False
-        for beat in beats:
-            if beat.kind != "insert":
-                first_action.setdefault(place(beat), beat.action)
-        for index in range(len(beats) - 1, -1, -1):
-            beat = beats[index]
-            if beat.kind != "insert" and beat.action != first_action[place(beat)]:
-                beats[index] = beat.model_copy(update={"action": first_action[place(beat)]})
-                changed = True
-                break
-        if changed:
-            continue
         inserts = [index for index, beat in enumerate(beats) if beat.kind == "insert"]
         if inserts:
             merge_into_previous(inserts[-1])
@@ -341,7 +328,7 @@ async def propose_storyboard(db: aiosqlite.Connection, project_id: str,
         context = await _proposal_context(db, project_id)
     project = context["project"]
     cast_indexes = {member["speaker_index"] for member in context["cast"]}
-    framing = max(1, len(cast_indexes) + (2 if len(cast_indexes) >= 2 else 0))
+    framing = 1  # Phase 44 (D123): one scene picture per place, no per-cast shot set
     router = router or build_ai_router_from_settings()
     chosen: StoryboardInput | None = None
     path, reason, previous_error = "rule", None, ""

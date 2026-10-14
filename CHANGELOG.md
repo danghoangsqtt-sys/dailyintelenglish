@@ -13,6 +13,9 @@ Versioning: [SemVer](https://semver.org/)
   medium shot from the waist up with open gestures and the place visible beside the pair, a gentle grade (levels,
   brightness, colour, crispness) and a lighter shade behind the headline; more room for the title (43-48 %).
 - Step 5: the hint under the video-mode buttons no longer overlaps them (the buttons also wrap on a narrow window).
+- **Storyboard estimate after the shots were removed** (Phase 44.7): one picture per place and one per insert, "up to
+  ~N GPU min" at 1.5 min a picture (Ep. 2: 4/12 pictures, was "10/12 images, ~20 GPU min"); the 12-picture cap no
+  longer trims beats for drawn shots that do not exist, and trimming keeps a place's second action.
 - **D124 (owner):** Alex's and Lina's own activity pictures keep their priority; every other character uses the generic
   Activity Library, and Qwen-Image draws a missing illustration.
 

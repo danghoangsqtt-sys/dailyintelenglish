@@ -43,10 +43,10 @@ Rules:
 6. action: what the on-screen people are doing, at most 8 plain words, visual and simple
    (for example "pointing at a city map", "drinking coffee"). Use "" when they just talk.
 7. expression: one of calm, smile, laugh, surprised, thinking, worried, serious -- matching the mood.
-8. Images cost GPU time and the total must be at most {{ image_cap }}. Each place used costs
-   {{ framing }} images, each further different action in that same place 1 more, each insert 1.
+8. Pictures cost GPU time and the total must be at most {{ image_cap }}. Each place used costs
+   {{ framing }} picture and each insert 1; actions inside a place cost nothing extra.
    So use at most {{ max_places }} places in total. Count before answering, for example:
-   2 places = {{ 2 * framing }}, plus 1 second action in one place = {{ 2 * framing + 1 }}, plus 2 inserts = {{ 2 * framing + 3 }}.
+   2 places = {{ 2 * framing }}, plus 2 inserts = {{ 2 * framing + 2 }}.
 {% if previous_error %}
 Your previous answer was rejected: {{ previous_error }}
 Fix exactly that problem and return the whole storyboard again.

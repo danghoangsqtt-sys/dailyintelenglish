@@ -44,7 +44,7 @@ def test_round_trip_estimate_and_warnings(client):  # noqa: F811
     ]}))
     assert [b["line_from"] for b in saved["beats"]] == [0, 2]  # stored in line order
     assert saved["source"] == "owner" and saved["status"] == "draft"
-    assert saved["estimate"] == {"images": 8, "cap": 12, "gpu_minutes": 16}
+    assert saved["estimate"] == {"images": 2, "cap": 12, "gpu_minutes": 3.0}  # Phase 44: one picture per place
     assert data(client.get(base))["beats"][1]["action"] == "walking along the path"
     warned = data(client.put(base, json={"beats": [beat(0, 0, speakers=[0, 1]), beat(1, 5, speakers=[0, 1])]}))
     assert warned["warnings"] == ["beat 1: speaker(s) [1] are on screen but do not speak in its lines"]
@@ -70,19 +70,20 @@ def test_shape_validation_and_cap(client, monkeypatch):  # noqa: F811
     assert client.put(base, json={"beats": [both]}).status_code == 422
     assert client.put(base, json={"beats": [beat(0, 5, action="dancing!!")]}).status_code == 422
     assert client.put(base, json={"beats": [beat(0, 5, expression="angry")]}).status_code == 422
-    monkeypatch.setattr(settings, "VISUALS_IMAGE_CAP", 5)
-    assert data(client.put(base, json={"beats": [beat(0, 5)]}))["estimate"]["images"] == 4  # within the cap
-    over = client.put(base, json={"beats": [beat(0, 2), beat(3, 5, scene_id="builtin-park")]})
-    assert over.status_code == 422 and "needs 8 images; the cap is 5" in over.text
+    monkeypatch.setattr(settings, "VISUALS_IMAGE_CAP", 2)
+    assert data(client.put(base, json={"beats": [beat(0, 5)]}))["estimate"]["images"] == 1  # within the cap
+    over = client.put(base, json={"beats": [beat(0, 1), beat(2, 3, scene_id="builtin-park"),
+                                            beat(4, 5, scene_id="builtin-beach")]})
+    assert over.status_code == 422 and "needs 3 images; the cap is 2" in over.text
 
 
 def test_estimate_examples():
+    # Phase 44 (D123): one scene picture per place, one illustration per insert, whatever the cast size
     one = BeatInput(line_from=0, line_to=1, scene_id="a")
-    assert estimate_images([one], 2) == 4                     # framing set: 2 singles + 2 duos
-    assert estimate_images([one], 1) == 1                     # one single
-    assert estimate_images([one, BeatInput(line_from=2, line_to=3, scene_id="a", action="reading a book")], 2) == 5
-    assert estimate_images([one, BeatInput(line_from=2, line_to=3, kind="insert")], 2) == 5
-    assert estimate_images([one, BeatInput(line_from=2, line_to=3, new_place="a tea house")], 2) == 8
+    assert estimate_images([one], 2) == estimate_images([one], 1) == 1
+    assert estimate_images([one, BeatInput(line_from=2, line_to=3, scene_id="a", action="reading a book")], 2) == 1
+    assert estimate_images([one, BeatInput(line_from=2, line_to=3, kind="insert")], 2) == 2
+    assert estimate_images([one, BeatInput(line_from=2, line_to=3, new_place="a tea house")], 2) == 2
 
 
 def test_project_delete_cascades(client):  # noqa: F811

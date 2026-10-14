@@ -5,7 +5,7 @@
  */
 (function () {
   const EXPRESSIONS = ["calm", "smile", "laugh", "surprised", "thinking", "worried", "serious"];
-  const GPU_MINUTES_PER_IMAGE = 2;
+  const GPU_MINUTES_PER_IMAGE = 1.5;  // Qwen-Image-2.1 (~90 s); a library match costs nothing
   const NEW_PLACE = "__new__";
   const state = {
     projectId: new URLSearchParams(window.location.search).get("project_id"),
@@ -30,19 +30,16 @@
   }
 
   /** Mirror of storyboard_service.estimate_images (owner E4). */
-  function estimateImages(beats, castSize) {
-    const framing = Math.max(1, castSize + (castSize >= 2 ? 2 : 0));
-    const actions = new Map();
+  // Phase 44 (D123): mirrors storyboard_service.estimate_images -- one scene picture per place, one illustration per
+  // insert (no drawn shots of the cast any more).
+  function estimateImages(beats) {
+    const places = new Set();
     let inserts = 0;
     beats.forEach((beat) => {
-      if (beat.kind === "insert") { inserts += 1; return; }
-      const key = placeKey(beat);
-      if (!actions.has(key)) actions.set(key, new Set());
-      actions.get(key).add(beat.action || "");
+      if (beat.kind === "insert") inserts += 1;
+      else places.add(placeKey(beat));
     });
-    let total = inserts;
-    actions.forEach((found) => { total += framing + found.size - 1; });
-    return total;
+    return places.size + inserts;
   }
 
   function sceneName(id) {
@@ -72,10 +69,10 @@
       summary.textContent = "No storyboard yet. Let the AI propose one from the script.";
       return;
     }
-    const images = estimateImages(state.beats, state.cast.length);
+    const images = estimateImages(state.beats);
     const cost = element("span", {
       className: images > state.cap ? "over-cap" : "",
-      text: `${images}/${state.cap} images · ~${images * GPU_MINUTES_PER_IMAGE} GPU min`,
+      text: `${images}/${state.cap} pictures · up to ~${Math.round(images * GPU_MINUTES_PER_IMAGE)} GPU min`,
     });
     const parts = [`${state.beats.length} beats · `, cost];
     if (state.meta.status) parts.push(` · ${state.meta.status} (${state.meta.source})`);

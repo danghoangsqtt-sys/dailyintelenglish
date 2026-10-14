@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 44: remove RealVisXL/SDXL, the two-person shots and the "with characters" video (D123)
 
-- **Status:** planned 2026-10-14 (owner answers in chat); 44.1-44.6 done 2026-10-14; **waiting for owner Gate B-28**; 44.7 (storyboard estimate) in progress.
+- **Status:** planned 2026-10-14 (owner answers in chat); 44.1-44.6 done 2026-10-14; **waiting for owner Gate B-28**; 44.7 (storyboard estimate) done.
 - **Why (owner, 2026-10-14):** Step 5 still offered "Generate shots" (single / duo close / duo wide pictures of the
   cast drawn by RealVisXL), whose faces never match the real characters. The owner had asked to drop RealVisXL:
   illustrations in a conversation come from the **generic Activity Library or the local AI (Qwen)** and show **no
@@ -40,7 +40,7 @@ still scene, black screen, the composed / outside-AI / AI-scene thumbnails.
 | 44.4 | **Frontend.** Step 5: no "Generate shots" section, no "with characters" chip, talking characters selected by default, the insert-picture panel says "generic library or local AI (no cast face)"; Shots page: Activity Library + sprite sets only; Characters page (scenes): Qwen scene preview only; `api.js` methods for removed routes deleted | done |
 | 44.5 | **Models and docs.** Delete the SDXL model folders and anime-seg from `backend/ai/models/image` (owner approved deletion with D123), trim `backend/ai/image/requirements.txt` (controlnet/ip-adapter extras if unused), update ARCHITECTURE / README / API reference, CHANGELOG | done |
 | 44.6 | **Verification.** Full pytest + Vitest; grep shows no SDXL/RealVisXL/shot code left; real app: Ep. 2 Step 5 (talking characters with generic/Qwen inserts) render; Gate B-28 owner review | waiting for owner (Gate B-28) |
-| 44.7 | **Storyboard estimate without shots** (owner "okey làm đi", 2026-10-14). `estimate_images` = one scene picture per distinct place + one illustration per insert (the old count drew a single per cast member plus two duos per place, and one more picture per extra action); `GPU_MINUTES_PER_IMAGE` 2 -> 1.5 (Qwen-Image-2.1, ~90 s; a library match costs nothing, so the figure is an upper bound); `rule_beats` and the AI proposal use `framing = 1`; the storyboard prompt explains the new cost; the cap (12) stays and now counts pictures; Step 5 summary "N/12 pictures · up to ~M GPU min" (`storyboard.js` mirrors the count). Tests: storyboard API/propose/sprite placement numbers updated | in_progress |
+| 44.7 | **Storyboard estimate without shots** (owner "okey làm đi", 2026-10-14). `estimate_images` = one scene picture per distinct place + one illustration per insert (the old count drew a single per cast member plus two duos per place, and one more picture per extra action); `GPU_MINUTES_PER_IMAGE` 2 -> 1.5 (Qwen-Image-2.1, ~90 s; a library match costs nothing, so the figure is an upper bound); `rule_beats` and the AI proposal use `framing = 1`; the storyboard prompt explains the new cost; the cap (12) stays and now counts pictures; Step 5 summary "N/12 pictures · up to ~M GPU min" (`storyboard.js` mirrors the count). Tests: storyboard API/propose/sprite placement numbers updated | done |
 
 ## Risks
 
@@ -85,5 +85,8 @@ still scene, black screen, the composed / outside-AI / AI-scene thumbnails.
   `data/backups/app-before-migration-026-20261014-123721.db`, 238 pictures / 200.8 MB in
   `data/backups/phase44-shots-20261014-123721.zip`), restarted -> migration 026 applied (no shot tables). Step 5 on Ep. 2:
   no "Generate shots", talking characters first, 3/3 inserts matched to generic pictures; re-render (talking characters,
-  Market) correct (`40-phase44-video-*.jpg`). Known leftover (follow-up): the storyboard estimate still counts the old
-  per-place shot sets ("10/12 images, ~20 GPU min") and caps beats by it.
+  Market) correct (`40-phase44-video-*.jpg`). The storyboard-estimate leftover was fixed in 44.7.
+- **44.7 (2026-10-14):** estimate = distinct places + inserts (cast size no longer matters), 1.5 GPU min per picture
+  (upper bound), `fit_to_cap` no longer flattens a place's second action (actions are free) -- it folds inserts, then
+  places; the storyboard prompt and `rule_beats` use one picture per place. Step 5 on Ep. 2: "7 beats · 4/12 pictures ·
+  up to ~6 GPU min" (was "10/12 images · ~20 GPU min"). Full suite 1,600 passed.
