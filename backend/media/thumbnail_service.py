@@ -112,20 +112,30 @@ def outside_prompt(project: dict, composition: dict, actions: list[str]) -> dict
         if name:
             pictures.append({"name": character["name"], "number": number,
                              "url": f"/api/visuals/library/sprites/{character['character_id']}/{name}/content"})
+    # Walkthrough 2026-10-14 (owner tried it in ChatGPT): the app lays the headline over the left 45 %, so the people must
+    # stand in the right part -- "Hoang on the left and Kim on the right" put them in the middle, under the title. The
+    # composition follows the YouTube thumbnail guides: big faces, heads apart, nothing key in the corners the badge,
+    # the logo and the video-length stamp cover.
     if len(characters) == 2:
-        who = (f"{characters[0]['name']} (attached picture 1) on the left and {characters[1]['name']} (attached picture 2) on "
-               "the right, turned slightly towards each other")
+        who = (f"{characters[0]['name']} (attached picture 1) and {characters[1]['name']} (attached picture 2) side by side "
+               f"in the right 55% of the picture, {characters[0]['name']} on the left of the two, turned slightly towards "
+               "each other, shoulders may touch but their heads and faces must not overlap")
     elif characters:
-        who = f"{characters[0]['name']} (attached picture 1)"
+        who = f"{characters[0]['name']} (attached picture 1) in the right 55% of the picture"
     else:
-        who = "two friendly young adults having a conversation"
-    illustration = ", ".join(dict.fromkeys(actions[:3])) or project["topic"]
+        who = "two friendly young adults having a conversation, in the right 55% of the picture"
+    topic = project["topic"].strip().rstrip(".")
+    illustration = ", ".join(dict.fromkeys(actions[:3])).strip().rstrip(".")
+    scene = f"a bright, detailed scene of {illustration}" if illustration and illustration != topic else \
+        "a bright, detailed real-life place that fits the topic"
     text = (
         f"Create a YouTube thumbnail, landscape 16:9 (1280 x 720), for an episode of the English-learning channel Daily Beyond "
-        f"English. Topic: {project['topic']}. Show {who}, upper body, big expressive smiles, looking at the viewer. Keep each "
-        "person's face, hair and outfit exactly as in the attached picture. Background: a bright, detailed illustration of "
-        f"{illustration}. Semi-realistic style, vivid colours, high contrast, sharp focus, eye-catching even at a small size. "
-        "Keep the left 45% of the picture calmer and slightly darker for a title. No text, no letters, no numbers, no logo, "
+        f"English. Topic: {topic}. Show {who}. Head-and-shoulders close-up: each face large (about a third of the picture's "
+        "height), big expressive smiles, looking at the viewer. Keep each person's face, hair and outfit exactly as in the "
+        f"attached picture. Background: {scene}. Semi-realistic style, vivid colours, high contrast, sharp focus, "
+        "eye-catching even at a small size. The left 45% of the picture is background only -- no people, no hands, nothing "
+        "important -- calmer, softly blurred and slightly darker, because a title is added there later. Keep the four corners "
+        "free of faces (a badge, a logo and the video length are placed there). No text, no letters, no numbers, no logo, "
         "no watermark."
     )
     return {"prompt": text, "pictures": pictures}

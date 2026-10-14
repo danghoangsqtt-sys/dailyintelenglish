@@ -109,3 +109,22 @@ def test_the_outside_ai_picture_is_uploaded_checked_and_used(client, tmp_path): 
     with Image.open(io.BytesIO(picture)) as image:
         corner = image.convert("RGB").getpixel((1260, 700))  # bottom-right: the uploaded picture, no sprite drawn there
     assert abs(corner[1] - 0x7F) < 40 and Path(thumbnail_service.outside_image_path(project["id"])).is_file()
+
+
+def test_the_outside_prompt_keeps_the_title_side_free_and_the_faces_big():
+    """Walkthrough 2026-10-14: ChatGPT put the pair in the middle, under the app's left-side title. The people go in the
+    right 55 %, heads apart, faces large; the topic is said once, without a double full stop."""
+    from backend.media.thumbnail_service import outside_prompt
+
+    topic = "Shopping at the Market. The group navigates the local market."
+    composition = {"characters": [
+        {"slot": 0, "name": "Hoang", "character_id": "h", "names": ["smile__open"]},
+        {"slot": 1, "name": "Kim", "character_id": "k", "names": ["smile__open"]},
+    ]}
+    prompt = outside_prompt({"topic": topic}, composition, [])["prompt"]
+    assert "right 55%" in prompt and "must not overlap" in prompt and "left 45% of the picture is background only" in prompt
+    assert "about a third of the picture's height" in prompt and "four corners" in prompt
+    assert prompt.count("navigates the local market") == 1 and ".." not in prompt
+    assert "Hoang (attached picture 1)" in prompt and "Kim (attached picture 2)" in prompt
+    with_actions = outside_prompt({"topic": topic}, composition, ["weighing tomatoes at a stall"])["prompt"]
+    assert "a bright, detailed scene of weighing tomatoes at a stall" in with_actions

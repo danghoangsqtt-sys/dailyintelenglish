@@ -9,6 +9,9 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Fixed (2026-10-14, walkthrough)
+- **The outside-AI thumbnail prompt put the two people in the middle, under the title** the app adds on the left: it
+  now asks for the pair in the right 55 % (head-and-shoulders, faces about a third of the height, heads not
+  overlapping), the left 45 % as plain background, faces out of the corners, and says the topic once.
 - **"Regenerate thumbnails" (and other confirm-gated buttons) did nothing** where the host blocks the browser's
   native confirm() dialog (an embedded browser pane, some webviews): every confirmation is now an in-page dialog
   (`confirm_dialog.js`; Enter confirms, Escape cancels, a double click never queues a second action).
