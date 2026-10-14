@@ -1,8 +1,8 @@
 # Task 20.2 (Phase 20 spike): pinned deps for the ISOLATED .venv-image/ environment only.
 #
 # Python 3.14 works here, unlike the removed Kokoro / StyleTTS 2 venvs (3.11). A real, non-dry-run
-# install into a fresh Python 3.14.7 venv succeeded on 2026-09-30, and the diffusers SDXL and
-# IP-Adapter imports were verified (task-20.2.md F3). It still gets its own venv and
+# install into a fresh Python 3.14.7 venv succeeded on 2026-09-30 (task-20.2.md F3). Since Phase 44 (D123) it runs only
+# Qwen-Image (qwen_runner.py) and the ONNX face detector; SDXL/RealVisXL were removed. It still gets its own venv and
 # subprocess:
 #   - torch is not in requirements.txt;
 #   - this venv is ~5.5 GB and must stay out of the packaged .exe;

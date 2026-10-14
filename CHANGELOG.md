@@ -8,6 +8,23 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Removed (Phase 44, 2026-10-14, D123)
+- **RealVisXL / SDXL everywhere** (the fallback of illustrations and scene pictures, the old character candidate and
+  sheet generation, IP-Adapter, ControlNet, inpaint, the anime cut-out) and their models: **30.9 GB freed**. Only Qwen
+  draws now; without it a job says "not installed" instead of falling back.
+- **The two-person shots**: Step 5 "Generate shots" (single / duo close / duo wide), shot regeneration and "add to
+  library", the **"Podcast: with characters"** video mode that played them, and the **two-person Shot Library** with its
+  inbox import. **Talking characters** is the default video; one still scene and black screen stay. Old shot pictures
+  were zipped to `data/backups/` (`scripts/archive_old_shots.py`) before migration 026 dropped their tables.
+- **Inserts with a cast member's face**: insert illustrations come from the generic Activity Library or Qwen-Image-2.1
+  (ordinary people doing the action, hand gestures, activities -- never the speaking character).
+
+### Added (Phase 43, 2026-10-14, D122)
+- **"AI scene (local Qwen)" thumbnails**: Qwen-Image-Edit-2511 draws the episode's two characters together in a scene of
+  the topic from their sprites (about 1.5 minutes per picture); the app finds the faces, picks the 1280x720 window,
+  sizes the headline to the free side and adds the badges and logo; the 9:16 version comes from the same picture. A
+  crowded picture is flagged with "Draw again". The composed and outside-AI kinds stay.
+
 ### Fixed (2026-10-14, walkthrough)
 - **The outside-AI thumbnail prompt put the two people in the middle, under the title** the app adds on the left: it
   now asks for the pair in the right 55 % (head-and-shoulders, faces about a third of the height, heads not

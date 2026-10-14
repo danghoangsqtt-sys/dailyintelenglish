@@ -264,7 +264,7 @@ async def music_library() -> FileResponse:
 
 @app.get("/shots")
 async def shot_library() -> FileResponse:
-    """Serve the Shot Library (Task 29.7)."""
+    """Serve the Shots page: the Activity Library and the scene-background import (Phase 44, D123)."""
     return FileResponse(FRONTEND_DIR / "pages" / "shot_library.html")
 
 

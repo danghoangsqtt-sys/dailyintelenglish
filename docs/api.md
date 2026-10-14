@@ -598,7 +598,7 @@ Serve the app-level Settings page (Task 12.1 — Gemini API key).
 
 Shot Library
 
-Serve the Shot Library (Task 29.7).
+Serve the Shots page: the Activity Library and the scene-background import (the two-person shot library was removed in Phase 44).
 
 - **Response body:** `object`
 

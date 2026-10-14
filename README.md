@@ -236,7 +236,7 @@ in-app `/health` status still report ffmpeg's presence honestly either way.
 6️⃣  Step 6: Thumbnail        → The episode's characters over a topic picture with a headline, CEFR badge and logo (3–5 variants, 16:9 + 9:16), or your outside-AI picture; manual editor, export (Tasks 1.8, 36.3–36.4)
 7️⃣  Step 7: YouTube Package  → Titles, an SEO description within 5,000 characters (chapters, learning items with Vietnamese meanings, listening questions, hashtags), the transcript as the pinned comment, tags, copy buttons + full .zip export (Tasks 1.9, 36.2)
 ```
-Music Library (Task 1.10, `/music`) is a standalone background-music management feature, not a numbered pipeline step — upload/list/preview/delete, volume leveling, Step 4 background-track selection, and waveform visualization are all shipped. The Character Library (`/characters`: character profiles with their talking-sprite slots, and the scenes) and Shot Library (`/shots`, with the Activity Library) are also standalone pages that feed Step 5.
+Music Library (Task 1.10, `/music`) is a standalone background-music management feature, not a numbered pipeline step — upload/list/preview/delete, volume leveling, Step 4 background-track selection, and waveform visualization are all shipped. The Character Library (`/characters`: character profiles with their talking-sprite slots, and the scenes) and the Shots page (`/shots`: the Activity Library of generic pictures and the scene-background import) are also standalone pages that feed Step 5.
 
 ## Tech Stack
 
@@ -253,7 +253,7 @@ Music Library (Task 1.10, `/music`) is a standalone background-music management 
 - **TTS**: Edge TTS (sole engine — OmniVoice GPU cloning considered, dropped 2026-09-13; see [docs/user/tts-setup.md](docs/user/tts-setup.md))
 - **Audio**: pydub + ffmpeg (real ITU-R BS.1770 loudness normalization via `pyloudnorm`)
 - **Video**: Remotion 4 + React 19 + TypeScript in the separate [`renderer/`](renderer/) Node workspace, run locally as a subprocess from FastAPI — the only renderer since Phase 35 (the Standard ffmpeg renderer was removed; the vertical 1080x1920 layout and highlight clips are Remotion too, Phase 37). Node.js, `npm install` in `renderer/` and Chrome Headless Shell are required
-- **Images**: local GPU image generation in its own `.venv-image` environment — Qwen-Image-2.1-Turbo (illustrations, plates, topic pictures) and Qwen-Image-Edit-2511 (character inserts) since Phase 39, RealVisXL V5.0 (character sheets, duo shots, fallback); see [the benchmark](docs/operations/phase39-image-benchmark.md) — and worker process (`backend/ai/image/requirements.txt`, `backend/ai/image/image_worker.py`); optional — every library also accepts the owner's own pictures
+- **Images**: local GPU image generation in its own `.venv-image` environment — Qwen-Image-2.1-Turbo (illustrations with ordinary people, never a cast face; plates; topic pictures) and Qwen-Image-Edit-2511 (the AI-scene thumbnails); RealVisXL/SDXL and the two-person shots were removed in Phase 44 (D123); see [the benchmark](docs/operations/phase39-image-benchmark.md) — and worker process (`backend/ai/image/requirements.txt`, `backend/ai/image/image_worker.py`); optional — every library also accepts the owner's own pictures
 - **Thumbnail**: Pillow composition of the cast's talking sprites over the episode's pictures (Montserrat headline, CEFR badge, logo) + AI headline suggestions
 - **Database**: SQLite (aiosqlite async transactions)
 

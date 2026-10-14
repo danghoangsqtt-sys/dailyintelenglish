@@ -20,9 +20,9 @@ FastAPI Backend (Python 3.11+)
         ├── Edge TTS (the only engine, D56) + per-word timings
         ├── pydub + ffmpeg + pyloudnorm (audio mix, smart music bed)
         ├── Video: Remotion subprocess (the only renderer since Phase 35)
-        ├── Visuals (backend/library/): character/scene/shot/sprite/activity
+        ├── Visuals (backend/library/): character/scene/sprite/activity
         │     libraries, storyboard, matchers, durable image jobs
-        │     → backend/ai/image/image_worker.py in .venv-image (diffusers, RealVisXL V5.0)
+        │     → backend/ai/image/image_worker.py in .venv-image (diffusers, Qwen-Image; Phase 44 removed SDXL)
         │       behind one GPU arbiter (gpu_model_manager)
         ├── Pillow (thumbnail generation)
         └── SQLite (aiosqlite, numbered migrations in backend/db/migrations/)
@@ -145,8 +145,8 @@ flowchart LR
 
     subgraph F["Step 5: Video Studio"]
         F1[Storyboard beats\nowner review]
-        F2[Shots: Shot Library first,\nGPU draws the rest]
-        F3[Picture mode: story, black,\none still, talking sprites\n+ activity cutaways]
+        F2[Insert illustrations: Activity Library\nor local Qwen, no cast face]
+        F3[Picture mode: talking sprites,\none still, black\n+ activity cutaways]
         F4[Remotion render\n+ SRT]
     end
 
@@ -161,7 +161,7 @@ flowchart LR
 
     subgraph L["Libraries (standalone pages)"]
         L1[Characters + scenes]
-        L2[Shot Library]
+        L2[Scene backgrounds]
         L3[Sprites + Activity Library]
         L4[Music Library]
     end
@@ -356,8 +356,8 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
 - `activity_library_service.py` + `activity_matcher.py`: review-gated activity pictures (generic or per
   character, owner-entered name per image) and the deterministic matcher for storyboard insert beats,
   with per-render usage history.
-- `jobs.py`, `runner.py`, `pipelines.py`, `engine.py`, `recipes.py`, `geometry.py`: persistent FIFO image
-  jobs run one at a time against `backend/ai/image/image_worker.py` in `.venv-image` (diffusers, RealVisXL V5.0);
+- `jobs.py`, `runner.py`, `pipelines.py`, `engine.py`, `recipes.py`: persistent FIFO image jobs (scene pictures, activity
+  illustrations) run one at a time against `backend/ai/image/image_worker.py` in `.venv-image` (Qwen only since Phase 44);
   `IMAGE_ENGINE=fake` gives a deterministic GPU-free engine for tests.
 
 ### 11. Remotion renderer (`backend/media/video_renderer_remotion.py`, `renderer/`) — Phase 19+
@@ -389,7 +389,7 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
 | TTS engine | Edge TTS only (D56) | Kokoro (D36) and StyleTTS 2 (D38) failed the owner's listening tests; OmniVoice is voice cloning, not voice design |
 | Audio processing | pydub + ffmpeg + pyloudnorm | Mature; real ITU-R BS.1770 loudness |
 | Video generation | Remotion (the only renderer since Phase 35) | Animated learning video (karaoke, cards, sprites); one renderer, no overlapping fallback (D89) |
-| Images | diffusers 0.41 in `.venv-image`: Qwen-Image-2.1-Turbo (illustrations, plates, topic pictures) and Qwen-Image-Edit-2511 (character inserts), Phase 39; RealVisXL V5.0 (sheets, duo shots, fallback), Phase 28 | Local GPU, isolated heavy dependencies; the benchmark (`docs/operations/phase39-image-benchmark.md`) chose per task; libraries reuse approved pictures to save GPU time |
+| Images | diffusers 0.41 in `.venv-image`: Qwen-Image-2.1-Turbo (illustrations, plates, topic pictures), Phase 39; Qwen-Image-Edit-2511 (AI-scene thumbnails), Phase 43; RealVisXL/SDXL removed in Phase 44 (D123) | Local GPU, isolated heavy dependencies; the benchmark (`docs/operations/phase39-image-benchmark.md`) chose per task; libraries reuse approved pictures to save GPU time |
 | Lips-sync | Not implemented; talking sprites (Phase 32) instead | No GPU time per episode, owner-made sprite sets |
 | Thumbnail | Pillow composition of the cast sprites + episode pictures | Consistent branding, no API cost, user-editable |
 | Database | SQLite (aiosqlite) | Zero-config, single-user, sufficient performance |
