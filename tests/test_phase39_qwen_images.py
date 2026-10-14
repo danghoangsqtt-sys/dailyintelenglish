@@ -37,11 +37,6 @@ def test_the_qwen_prompts_describe_the_picture_in_sentences():
     assert "different ages, genders and looks" in activity and "No text" in activity  # D110 + the benchmark's repeated face
     plate = recipes.qwen_scene_prompt({"place": "a small family restaurant", "time_of_day": "night"})
     assert "a small family restaurant, night, warm lamps" in plate and "no people at all" in plate
-    character = {"gender": "female", "top_item": "mini dress", "bottom_item": "mini dress", "top_color": "white",
-                 "bottom_color": "white"}
-    insert = recipes.qwen_insert_person_prompt(character, "cooking vegetables")
-    assert "the same woman as in the reference picture" in insert and "cooking vegetables" in insert
-    assert recipes.outfit_phrase(character) in insert
     topic = recipes.qwen_topic_prompt("Choosing the Menu", "cooking, grocery shopping")
     assert "about choosing the menu: cooking, grocery shopping" in topic and "left half" in topic and "no text" in topic
     assert "thumbnail" not in topic and "title" not in topic and "no people" in topic.lower()
@@ -72,35 +67,33 @@ def test_missing_illustrations_are_drawn_by_qwen21_in_one_batch(client, qwen_log
     assert "searching for travel accommodation" in item["prompt"] and (item["width"], item["height"]) == (1344, 768)
 
 
-def test_without_qwen_the_illustrations_fall_back_to_realvisxl(client, qwen_log, monkeypatch):  # noqa: F811
+def test_without_qwen_the_illustrations_say_so_and_nothing_else_draws(client, qwen_log, monkeypatch):  # noqa: F811
+    """Phase 44 (D123): no RealVisXL fallback -- the job fails with a clear message and creates nothing."""
+    import time
+
     monkeypatch.setattr(FakeImageEngine, "qwen_available", False)
     project = _project_with_inserts(client)
-    job = wait_job(client, data(client.post(f"/api/projects/{project['id']}/visuals/activity-illustrations")))
-    assert len(_created(job)) == 1 and [call["model"] for call in qwen_log] == ["qwen21"]
-
-
-def test_the_setting_can_keep_realvisxl_for_illustrations(client, qwen_log, monkeypatch):  # noqa: F811
-    monkeypatch.setattr(settings, "IMAGE_ILLUSTRATION_ENGINE", "realvisxl")
-    project = _project_with_inserts(client)
-    job = wait_job(client, data(client.post(f"/api/projects/{project['id']}/visuals/activity-illustrations")))
-    assert len(_created(job)) == 1 and qwen_log == []
+    job = data(client.post(f"/api/projects/{project['id']}/visuals/activity-illustrations"))
+    for _ in range(500):
+        current = data(client.get(f"/api/visuals/jobs/{job['id']}"))
+        if current["status"] in ("complete", "error", "cancelled"):
+            break
+        time.sleep(0.02)
+    assert current["status"] == "error" and "not installed" in current["error"]
+    assert [call["model"] for call in qwen_log] == ["qwen21"]
 
 
 # --- scene plates ---------------------------------------------------------------------------------------------------
 
-def test_missing_scene_plates_are_drawn_by_qwen21_once_and_reused(client, qwen_log, monkeypatch):  # noqa: F811
-    monkeypatch.setattr(settings, "VISUALS_COLOUR_RETRIES", 0)
-    project, _, scenes = setup_project(client, 2, 2)
-    wait_job(client, data(client.post(f"/api/projects/{project['id']}/visuals/shots")))
-    plates = [call for call in qwen_log if call["model"] == "qwen21"]
-    assert len(plates) == 1 and len(plates[0]["items"]) == 2
-    assert all("completely empty, with no people" in item["prompt"] for item in plates[0]["items"])
-    for scene in scenes:
-        with Image.open(settings.DATA_DIR / "library" / "scenes" / scene["id"] / "preview.png") as image:
-            assert image.size == (1344, 768)
-    qwen_log.clear()
-    wait_job(client, data(client.post(f"/api/projects/{project['id']}/visuals/shots")))
-    assert not [call for call in qwen_log if call["model"] == "qwen21"]  # plates are reused
+def test_a_scene_picture_is_drawn_by_qwen21_without_people(client, qwen_log):  # noqa: F811
+    scene = data(client.get("/api/visuals/scenes"))[0]
+    wait_job(client, data(client.post(f"/api/visuals/scenes/{scene['id']}/preview")))
+    (call,) = qwen_log
+    item = call["items"][0]
+    assert call["model"] == "qwen21" and (item["width"], item["height"]) == (1344, 768)
+    assert "completely empty, with no people" in item["prompt"]
+    with Image.open(settings.DATA_DIR / "library" / "scenes" / scene["id"] / "preview.png") as image:
+        assert image.size == (1344, 768)
 
 
 # --- thumbnail topic picture ---------------------------------------------------------------------------------------

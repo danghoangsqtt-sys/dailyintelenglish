@@ -1,6 +1,5 @@
 """PM review r1 fixes F2-F4 (Phase 20): stale shot rows, worker kill, unlock guard."""
 
-import json
 import subprocess
 import uuid
 
@@ -14,9 +13,7 @@ from backend.schemas.project import ScriptConfig, SpeakerConfig
 from backend.schemas.visuals import CharacterInput
 from backend.content import project_service
 from backend.ai.image import engine as engine_module
-from backend.ai.image import jobs, pipelines
 from backend.library import library_service, project_visuals_service
-from backend.ai.image.runner import JobCancelled
 
 
 @pytest.fixture(autouse=True)
@@ -24,7 +21,6 @@ def fake_engine(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     monkeypatch.setattr(settings, "IMAGE_ENGINE", "fake")
     monkeypatch.setattr(settings, "AI_VISUALS_ENABLED", True)
-    monkeypatch.setattr(settings, "VISUALS_DUO_REFINE", True)
 
 
 async def _locked_character(db, name: str, color: str) -> str:
@@ -66,56 +62,6 @@ async def _project_with_cast(db) -> dict:
         ])
         await project_visuals_service.set_scenes(db, project["id"], ["builtin-cafe"])
     return project
-
-
-class _CancelAfterFirstShot:
-    """Stub runner: requests cancellation at the first image boundary after one shot completed."""
-
-    def __init__(self, db) -> None:
-        self.db = db
-
-    def get_db(self):
-        return self.db
-
-    async def boundary(self, job_id: str, stage: str, progress: int) -> None:
-        cursor = await self.db.execute("SELECT count(*) AS n FROM project_shots WHERE status = 'complete'")
-        if (await cursor.fetchone())["n"] >= 1:
-            raise JobCancelled()
-
-
-@pytest.mark.asyncio
-async def test_cancel_marks_unfinished_shots_and_keeps_completed(db):
-    project = await _project_with_cast(db)
-    async with write_transaction(db):
-        job = await jobs.create_job(db, "project_shots", project["id"])
-    with pytest.raises(JobCancelled):
-        await pipelines.project_shots(job, _CancelAfterFirstShot(db))
-    shots = await project_visuals_service.shot_rows(db, project["id"])
-    statuses = sorted((shot["status"], shot["error"]) for shot in shots)
-    assert len(shots) == 4  # 2 singles + duo_close + duo_wide in one scene
-    assert statuses[0] == ("complete", None)
-    assert all(status == ("error", "cancelled") for status in statuses[1:])
-
-
-@pytest.mark.asyncio
-async def test_startup_recovery_marks_stale_pending_shots(db):
-    project = await _project_with_cast(db)
-    async with write_transaction(db):
-        await db.execute(
-            "INSERT INTO project_shots (id, project_id, scene_id, kind, speaker_indexes, seed, status, "
-            "created_at, updated_at) VALUES ('stale', ?, 'builtin-cafe', 'single', ?, 7, 'pending', 'now', 'now')",
-            (project["id"], json.dumps([0])),
-        )
-        await db.execute(
-            "INSERT INTO project_shots (id, project_id, scene_id, kind, speaker_indexes, seed, status, "
-            "final_path, created_at, updated_at) VALUES "
-            "('done', ?, 'builtin-cafe', 'single', ?, 8, 'complete', 'x.png', 'now', 'now')",
-            (project["id"], json.dumps([1])),
-        )
-    assert await pipelines.recover_pending_shots(db) == 1
-    rows = {row["id"]: row for row in await project_visuals_service.shot_rows(db, project["id"])}
-    assert (rows["stale"]["status"], rows["stale"]["error"]) == ("error", "interrupted by app restart")
-    assert rows["done"]["status"] == "complete"
 
 
 class _StubStdout:

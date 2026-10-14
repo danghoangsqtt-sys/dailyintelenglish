@@ -251,13 +251,10 @@ async def dependencies(db: aiosqlite.Connection, character_id: str) -> dict[str,
 
     report = {
         "projects": await ids("SELECT DISTINCT project_id FROM project_cast WHERE character_id = ?"),
-        # character_ids_json is a JSON list of IDs: look for the quoted ID
-        "shot_library": len(await ids("SELECT id FROM shot_library WHERE instr(character_ids_json, ?) > 0",
-                                      json.dumps(character_id))),
         "activities": len(await ids("SELECT id FROM activity_library WHERE character_id = ?")),
         "sprites": len(await ids("SELECT id FROM character_assets WHERE character_id = ? AND kind = 'sprite'")),
     }
-    report["blocking"] = bool(report["projects"] or report["shot_library"] or report["activities"])
+    report["blocking"] = bool(report["projects"] or report["activities"])
     return report
 
 

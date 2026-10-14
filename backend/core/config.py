@@ -104,35 +104,7 @@ class Settings(BaseSettings):
     GPU_EVICT_OLLAMA: bool = True
     AI_VISUALS_ENABLED: bool = True
     IMAGE_ENGINE: Literal["worker", "fake"] = "worker"
-    # Phase 28 (owner, 2026-10-06): pictures come from RealVisXL V5.0 (openrail++, photographic people),
-    # sampled with Euler-a as in the spike. An empty repo falls back to SDXL base 1.0 and its default sampler.
-    IMAGE_BASE_REPO: str = "SG161222/RealVisXL_V5.0"
-    IMAGE_SCHEDULER: Literal["default", "euler_a"] = "euler_a"
-    # Phase 39 (D118, benchmark docs/operations/phase39-image-benchmark.md): Qwen-Image-2.1-Turbo draws the activity
-    # illustrations, topic pictures and new scene plates; Qwen-Image-Edit-2511 the single-character inserts. RealVisXL is
-    # the automatic fallback when a Qwen model is missing or fails, and still draws everything else.
-    IMAGE_ILLUSTRATION_ENGINE: Literal["qwen21", "realvisxl"] = "qwen21"
-    IMAGE_CHARACTER_ENGINE: Literal["qwen_edit", "realvisxl"] = "qwen_edit"
-    VISUALS_DUO_REFINE: bool = True
-    # Task 20.11: re-refine a person whose measured top/bottom colour misses the locked
-    # colour, at most this many times per person per shot (0 disables the check).
-    VISUALS_COLOUR_RETRIES: int = 2
-    # Task 29.5 (ENH-020): a project shot job first copies an approved library shot for every spec it matches (no GPU)
-    # and generates only the rest; Task 29.4: with AUTO_ADD every generated shot that passed its checks also goes to the
-    # library as `pending` (the owner still approves it once before it can ever be reused).
-    VISUALS_USE_LIBRARY: bool = True
-    VISUALS_LIBRARY_AUTO_ADD: bool = False
-    # Task 29.1 (owner, 2026-10-07: both people stared into the lens): "off" = as before; "words" = gaze words in the
-    # prompts; "turned" = the words plus each person's face reference turned toward the other one (a library asset
-    # `face_turned`, mirrored for the person on the right; a character without one keeps its front face).
-    VISUALS_GAZE: Literal["off", "words", "turned"] = "turned"
-    # Task 20.11: re-render a duo whose head-level gap holds a third person (anime-seg
-    # occupancy >= 0.5), at most this many times, keeping the emptiest render (0 disables).
-    VISUALS_EXTRA_PERSON_RETRIES: int = 2
-    # Task 23.2 (spike 23.1 variant b): weight of the scene plate as a second, background-
-    # masked IP reference in the shot render, so a scene's shots show the same place
-    # (0 disables it: text-only places, the pre-23.2 path).
-    VISUALS_SCENE_REFERENCE_SCALE: float = 0.4
+    # Phase 44 (D123): only Qwen draws (no RealVisXL/SDXL, no two-person shots, no fallback model).
     # Task 24.1 (owner E4): a storyboard may need at most this many images per episode.
     VISUALS_IMAGE_CAP: int = 12
 

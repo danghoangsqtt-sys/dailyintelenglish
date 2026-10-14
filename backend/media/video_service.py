@@ -76,7 +76,7 @@ async def generate_video(
     project: dict,
     learning: dict | None = None,
     caption_style: str = "outline",
-    visual_mode: str = "illustrated",
+    visual_mode: str = "podcast_sprites",
     still_scene_id: str | None = None,
 ) -> dict:
     """Render a project's completed audio mix into the episode MP4 with Remotion, and write its SRT.

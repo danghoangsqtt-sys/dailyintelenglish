@@ -1,41 +1,18 @@
-"""Task 20.2 (Phase 20 spike) -- local SDXL image worker process.
+"""The local image worker process (runs INSIDE `.venv-image/`).
 
-Runs INSIDE `.venv-image/` (Python 3.14). Unlike Kokoro (21.1) and StyleTTS 2 (21.1b), the
-image stack installs on this project's own interpreter, verified with a real install
-(task-20.2.md F3). It is still a separate venv and a subprocess:
-- torch is not in `requirements.txt`;
-- the ~5.5 GB venv must stay out of the packaged .exe;
-- a worker that exits returns 100% of its VRAM, which is what the Task 20.1 GPU lease
-  relies on.
-The parent (the app's image job runner) holds that lease while this process is alive.
+Phase 44 (D123): RealVisXL/SDXL, IP-Adapter, ControlNet, inpaint and the anime cut-out are gone. The worker draws with
+Qwen (`qwen_runner.py`: Qwen-Image-2.1-Turbo for illustrations, plates and topic pictures; Qwen-Image-Edit-2511 for the
+AI-scene thumbnails) and finds faces (UltraFace ONNX, MIT). It is a separate venv and a subprocess: torch stays out of
+the app's `requirements.txt` and of the packaged .exe, and a worker that exits returns all of its VRAM, which is what
+the GPU lease relies on.
 
-Protocol: the same line-delimited JSON over stdin/stdout as `styletts2_worker.py`. The
-first line is a handshake (`ready` / `unavailable`), then there is one response per
-request. A per-request failure never kills the worker.
+Protocol: line-delimited JSON over stdin/stdout. The first line is a handshake (`ready` / `unavailable`), then one
+response per request; a failed request never kills the worker.
 
-    {"command": "load", "mode": "base" | "lightning", "lightning_steps": 4}
-    {"command": "generate", "prompt": "...", "seed": 7, "width": 1344, "height": 768,
-     "output_path": ".../ep1_base.png", "target_size": [1280, 720]}
-    {"command": "load_ip_adapter"}
-    {"command": "generate", ..., "ip_adapter_image": ".../ref.png", "ip_adapter_scale": 0.8}
+    {"command": "qwen_generate", "model": "qwen21" | "qwen_edit", "items": [...], "detect_faces": true}
+    {"command": "qwen_installed"}
+    {"command": "count_faces", "input_path": ".../picture.png"}
     {"command": "stats"}
-    {"command": "unload"}
-
-Licence and watermark constraints (owner, 2026-09-30: free, commercial-safe with no
-registration, no vendor watermark; task-20.2.md Amendment A). Every model fetched here is
-`openrail++`, `mit` or `apache-2.0`:
-- `stabilityai/stable-diffusion-xl-base-1.0`: `openrail++`;
-- `SG161222/RealVisXL_V5.0` (the app's picture model since Phase 28): `openrail++`;
-- `madebyollin/sdxl-vae-fp16-fix`: `mit`;
-- `ByteDance/SDXL-Lightning`: `openrail++`;
-- `h94/IP-Adapter`: `apache-2.0`;
-- UltraFace face detector (`Linzaer/Ultra-Light-Fast-Generic-Face-Detector-1MB`, Task 28.5): `mit`.
-
-The SDXL pipeline is built with `add_watermarker=False`. diffusers 0.40.0 would otherwise
-add an invisible watermark whenever the optional `invisible-watermark` package happens to be
-installed (`pipeline_stable_diffusion_xl.py:276`). Every `load` response reports
-`watermark_active` from the live pipeline object, so the report can show "false" rather
-than assert it.
 """
 
 from __future__ import annotations
@@ -140,10 +117,9 @@ ANIME_SEG_REPO = "skytnt/anime-seg"
 ANIME_SEG_ONNX = "isnetis.onnx"  # 176,069,933 B
 ANIME_SEG_SIZE = 1024
 
-# Task 28.5: counting the people of a shot on photographs. The anime cut-out above cannot (it said 0.0 on a market full
-# of vendors); a small face detector can. UltraFace "version-RFB-320": MIT licence, 1,270,727 bytes, pinned to a commit
+# Task 28.5: counting the people of a shot on photographs. A small face detector does it. UltraFace "version-RFB-320": MIT licence, 1,270,727 bytes, pinned to a commit
 # and checked by SHA-256. Input 320 x 240, (pixel - 127) / 128; outputs `scores` (softmax, column 1 = face) and `boxes`
-# (normalised corners). It runs on the CPU with the onnxruntime that anime-seg already needs.
+# (normalised corners). It runs on the CPU (onnxruntime).
 FACE_MODEL_COMMIT = "0f9ca4a9fc80170fd505168fd1132b837141f7df"
 FACE_MODEL_URL = (
     "https://raw.githubusercontent.com/Linzaer/Ultra-Light-Fast-Generic-Face-Detector-1MB/"
@@ -216,13 +192,6 @@ def detect_faces(image_path: str | Path, threshold: float = 0.7, iou: float = 0.
             kept.append([float(box[0]), float(box[1]), float(box[2]), float(box[3]), float(confidence[index])])
     return [[round(x1 * width, 1), round(y1 * height, 1), round(x2 * width, 1), round(y2 * height, 1), round(score, 3)]
             for x1, y1, x2, y2, score in kept]
-# Task 20.2c: "controlnet_inpaint" = pose-controlled M2 (a character painted into a scene).
-PIPELINE_KINDS = ("text2img", "controlnet", "inpaint", "controlnet_inpaint")
-
-BASE_DEFAULT_STEPS = 30
-BASE_DEFAULT_GUIDANCE = 6.0
-
-
 def _log(message: str) -> None:
     print(message, file=sys.stderr, flush=True)
 
@@ -250,516 +219,9 @@ class ImageWorker:
 
         self.torch = torch
         self.device = device
-        # fp16 on the GPU (what the weights are and what fits 12 GB); fp32 on CPU, where
-        # fp16 kernels are missing or slow. A CPU run exists only to exercise the plumbing.
-        self.dtype = torch.float16 if device == "cuda" else torch.float32
-        self.pipe: Any | None = None
-        self.mode: str | None = None
-        self.lightning_steps: int | None = None
-        self.ip_adapter_loaded = False
-        self.ip_adapter_count = 0
-        self.kind: str | None = None
-        self.encoders = True
-        self._embeds_cache: dict[str, Any] = {}
-        self._anime_seg_session: Any | None = None
-        self._last_size: tuple[int, int] | None = None
-
-    # -- sources -----------------------------------------------------------------------
-
-    @staticmethod
-    def _resolve_base(mode: str, override: str | None, repo: str = BASE_REPO) -> Path:
-        if override:
-            return Path(override)
-        from huggingface_hub import snapshot_download
-
-        if repo != BASE_REPO:
-            if mode != "base":
-                raise ValueError("a custom base_repo supports mode 'base' only (Lightning is an SDXL-base UNet)")
-            folder = Path(snapshot_download(repo, allow_patterns=FINETUNE_FP16_PATTERNS))
-            if (folder / "unet" / "diffusion_pytorch_model.fp16.safetensors").is_file():
-                return folder
-            return Path(snapshot_download(repo, allow_patterns=FINETUNE_PATTERNS))
-        patterns = list(BASE_CONFIG_FILES)
-        if mode == "base":
-            patterns.append(BASE_UNET_WEIGHTS)  # lightning brings its own UNet
-        return Path(snapshot_download(BASE_REPO, allow_patterns=patterns))
-
-    @staticmethod
-    def _resolve_vae(override: str | None) -> Path:
-        if override:
-            return Path(override)
-        from huggingface_hub import snapshot_download
-
-        return Path(snapshot_download(VAE_REPO, allow_patterns=VAE_FILES))
-
-    @staticmethod
-    def _resolve_lightning_unet(steps: int, override: str | None) -> Path:
-        if override:
-            return Path(override)
-        from huggingface_hub import hf_hub_download
-
-        return Path(hf_hub_download(LIGHTNING_REPO, f"sdxl_lightning_{steps}step_unet.safetensors"))
-
-    # -- commands ----------------------------------------------------------------------
-
-    def load(self, request: dict[str, Any]) -> dict[str, Any]:
-        if self.pipe is not None:
-            raise RuntimeError(f"already loaded (mode={self.mode}); one mode per worker -- spawn another")
-        mode = request.get("mode", "base")
-        if mode not in ("base", "lightning"):
-            raise ValueError(f"unknown mode {mode!r}")
-        steps = int(request.get("lightning_steps", 4))
-        if mode == "lightning" and steps not in LIGHTNING_STEPS_ALLOWED:
-            raise ValueError(f"lightning_steps must be one of {LIGHTNING_STEPS_ALLOWED}")
-        sources = request.get("sources") or {}
-        kind = request.get("pipeline", "text2img")
-        if kind not in PIPELINE_KINDS:
-            raise ValueError(f"pipeline must be one of {PIPELINE_KINDS}")
-        # Task 20.2b D20.2b-b: `encoders=false` builds the pipeline WITHOUT the two text
-        # encoders (they are optional components). Renders then come from embeddings
-        # saved earlier by `encode`, which is how UNet + ControlNet + IP layers fit the 12
-        # GB card: SDXL 9.1 + IP 2.0 + ControlNet 2.5 GB would not.
-        encoders = bool(request.get("encoders", True))
-        base_repo = request.get("base_repo") or BASE_REPO
-        scheduler_name = request.get("scheduler", "default")
-        if scheduler_name not in SCHEDULERS:
-            raise ValueError(f"scheduler must be one of {SCHEDULERS}")
-        if mode == "lightning" and scheduler_name != "default":
-            raise ValueError("Lightning needs its own trailing Euler scheduler")
-
-        from diffusers import (
-            AutoencoderKL,
-            ControlNetModel,
-            EulerAncestralDiscreteScheduler,
-            EulerDiscreteScheduler,
-            StableDiffusionXLControlNetInpaintPipeline,
-            StableDiffusionXLControlNetPipeline,
-            StableDiffusionXLInpaintPipeline,
-            StableDiffusionXLPipeline,
-            UNet2DConditionModel,
-        )
-        from safetensors.torch import load_file
-
-        torch = self.torch
-        started = time.monotonic()
-        base_dir = self._resolve_base(mode, sources.get("base_dir"), base_repo)
-        vae_dir = self._resolve_vae(sources.get("vae_dir"))
-        download_seconds = time.monotonic() - started
-
-        load_started = time.monotonic()
-        # `variant="fp16"` only when the fp16 files exist. The Hub snapshot has them; a
-        # local test pipeline saved without a variant does not.
-        variant = "fp16" if (base_dir / "text_encoder" / "model.fp16.safetensors").is_file() else None
-        vae = AutoencoderKL.from_pretrained(vae_dir, torch_dtype=self.dtype)
-        components: dict[str, Any] = {"vae": vae}
-        if mode == "lightning":
-            unet_path = self._resolve_lightning_unet(steps, sources.get("lightning_unet"))
-            # Owner-machine run 2026-09-30 (owner-runs/20260930): the original
-            # `from_config(...).to(device, dtype)` first built the whole 2.57B-param UNet
-            # with random **fp32** weights in CPU RAM (≈10.3 GB, the size of the fp32
-            # UNet file), and failed with "The paging file is too small for this
-            # operation to complete (os error 1455)". Measured here on a 0.9B-param
-            # SDXL-shaped UNet: peak RSS 4186 MB the old way vs 745 MB this way. The
-            # UNet is created on the meta device (no memory), then the fp16 Lightning
-            # tensors are *assigned* straight from the safetensors file on the target
-            # device.
-            from accelerate import init_empty_weights
-
-            with init_empty_weights():
-                unet = UNet2DConditionModel.from_config(base_dir, subfolder="unet")
-            unet.load_state_dict(load_file(str(unet_path), device=self.device), assign=True)
-            unet = unet.to(self.device, self.dtype)
-            components["unet"] = unet
-        if kind in ("controlnet", "controlnet_inpaint"):
-            components["controlnet"] = ControlNetModel.from_pretrained(
-                sources.get("controlnet_dir") or request.get("controlnet_repo", CONTROLNET_OPENPOSE_REPO),
-                torch_dtype=self.dtype,
-            )
-        if not encoders:
-            components.update(text_encoder=None, text_encoder_2=None)
-        pipeline_cls = {
-            "text2img": StableDiffusionXLPipeline,
-            "controlnet": StableDiffusionXLControlNetPipeline,
-            "inpaint": StableDiffusionXLInpaintPipeline,
-            "controlnet_inpaint": StableDiffusionXLControlNetInpaintPipeline,
-        }[kind]
-        pipe = pipeline_cls.from_pretrained(
-            base_dir,
-            torch_dtype=self.dtype,
-            variant=variant,
-            use_safetensors=True,
-            add_watermarker=False,
-            **components,
-        ).to(self.device)
-        if mode == "lightning":
-            pipe.scheduler = EulerDiscreteScheduler.from_config(pipe.scheduler.config, timestep_spacing="trailing")
-        elif scheduler_name == "euler_a":
-            # Task 20.2e: the Animagine XL 4.0 model card's recommended sampler.
-            pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config)
-        pipe.set_progress_bar_config(disable=True)
-        if request.get("vae_tiling"):
-            # Risk-table mitigation (task-20.2.md): the VAE decode at 1344x768 is a VRAM
-            # spike; tiling trades a little speed for a much lower peak. Off by default so
-            # the report shows whether it was actually needed.
-            pipe.vae.enable_tiling()
-
-        self.pipe, self.mode, self.lightning_steps = pipe, mode, steps if mode == "lightning" else None
-        self.kind, self.encoders = kind, encoders
-        return {
-            "status": "ok",
-            "mode": mode,
-            "base_repo": base_repo if not sources.get("base_dir") else f"local:{sources['base_dir']}",
-            "pipeline": kind,
-            "encoders": encoders,
-            "lightning_steps": self.lightning_steps,
-            "download_or_cache_sec": round(download_seconds, 3),
-            "load_sec": round(time.monotonic() - load_started, 3),
-            "device": self.device,
-            "dtype": str(self.dtype),
-            "watermark_active": getattr(pipe, "watermark", None) is not None,
-            "scheduler": type(pipe.scheduler).__name__,
-            "timestep_spacing": pipe.scheduler.config.get("timestep_spacing"),
-            "vram_allocated_mb": _mb(torch.cuda.memory_allocated()) if self.device == "cuda" else None,
-            "rss_mb": _rss_mb(),
-        }
-
-    def load_ip_adapter(self, request: dict[str, Any]) -> dict[str, Any]:
-        pipe = self._require_pipe()
-        before = self.torch.cuda.memory_allocated() if self.device == "cuda" else 0
-        started = time.monotonic()
-        if request.get("scene"):
-            # Task 23.2: adapter 0 = faces, adapter 1 = the scene plate.
-            repo = [IP_ADAPTER_REPO, IP_ADAPTER_REPO]
-            subfolder = [IP_ADAPTER_SUBFOLDER, IP_ADAPTER_SUBFOLDER]
-            weight_name = [IP_ADAPTER_WEIGHT, SCENE_IP_ADAPTER_WEIGHT]
-        else:
-            repo = request.get("repo", IP_ADAPTER_REPO)
-            subfolder = request.get("subfolder", IP_ADAPTER_SUBFOLDER)
-            weight_name = request.get("weight_name", IP_ADAPTER_WEIGHT)
-        pipe.load_ip_adapter(
-            repo, subfolder=subfolder, weight_name=weight_name,
-            image_encoder_folder=request.get("image_encoder_folder", IP_ADAPTER_IMAGE_ENCODER),
-        )
-        self.ip_adapter_loaded = True
-        self.ip_adapter_count = 2 if request.get("scene") else 1
-        after = self.torch.cuda.memory_allocated() if self.device == "cuda" else 0
-        return {
-            "status": "ok",
-            "ip_adapters": self.ip_adapter_count,
-            "load_sec": round(time.monotonic() - started, 3),
-            "vram_added_mb": _mb(after - before) if self.device == "cuda" else None,
-            "rss_mb": _rss_mb(),
-        }
-
-    def generate(self, request: dict[str, Any]) -> dict[str, Any]:
-        from PIL import Image, ImageOps
-
-        pipe = self._require_pipe()
-        torch = self.torch
-        output_path = Path(request["output_path"])
-        width, height = int(request.get("width", 1344)), int(request.get("height", 768))
-
-        if self.mode == "lightning":
-            # Lightning is distilled for exactly N steps at CFG 0 (README). Honouring a
-            # different request would quietly measure a configuration nobody would ship.
-            steps, guidance = self.lightning_steps, 0.0
-        else:
-            steps = int(request.get("steps", BASE_DEFAULT_STEPS))
-            guidance = float(request.get("guidance_scale", BASE_DEFAULT_GUIDANCE))
-
-        call: dict[str, Any] = {
-            "width": width,
-            "height": height,
-            "num_inference_steps": steps,
-            "guidance_scale": guidance,
-            # A CPU generator makes the starting noise identical on every device, so a
-            # CPU plumbing run and the owner's GPU run share seeds meaningfully.
-            "generator": torch.Generator("cpu").manual_seed(int(request["seed"])),
-        }
-        ip_from_embeds = False
-        if request.get("embeds_path"):
-            # Task 20.2b: a render from embeddings saved by `encode` (no text encoders
-            # needed in this process).
-            embeds = self._embeds(request["embeds_path"])
-            item = embeds["items"][int(request.get("embeds_index", 0))]
-            for key in ("prompt_embeds", "pooled_prompt_embeds", "negative_prompt_embeds",
-                        "negative_pooled_prompt_embeds"):
-                if item.get(key) is not None and (embeds["do_cfg"] or not key.startswith("negative")):
-                    call[key] = item[key].to(self.device, self.dtype)
-            if embeds.get("ip_adapter_image_embeds") is not None:
-                if not self.ip_adapter_loaded:
-                    raise RuntimeError("embeds carry IP-Adapter image embeds but no IP-Adapter is loaded")
-                pipe.set_ip_adapter_scale(self._ip_scale(request))
-                call["ip_adapter_image_embeds"] = [e.to(self.device, self.dtype) for e in embeds["ip_adapter_image_embeds"]]
-                ip_from_embeds = True
-            negative_applied = bool(embeds["do_cfg"] and item.get("negative_prompt_embeds") is not None)
-        else:
-            if not self.encoders:
-                raise RuntimeError("this pipeline was loaded with encoders=false; generate needs embeds_path")
-            call["prompt"] = request["prompt"]
-            # With CFG 0 (Lightning) diffusers never runs the unconditional branch, so a
-            # negative prompt has NO effect. It is only passed when it can act, and the
-            # response says whether it was applied (task-20.2.md: the "no text/logos"
-            # rule must live in the positive prompt too).
-            negative_applied = bool(request.get("negative_prompt")) and guidance > 1.0
-            if negative_applied:
-                call["negative_prompt"] = request["negative_prompt"]
-
-        references = self._ip_references(request)
-        if references is not None:
-            if not self.ip_adapter_loaded:
-                raise RuntimeError("ip_adapter_image(s) given but no IP-Adapter loaded -- send load_ip_adapter first")
-            pipe.set_ip_adapter_scale(self._ip_scale(request))
-            call["ip_adapter_image"] = references
-        elif self.ip_adapter_loaded and not ip_from_embeds:
-            raise RuntimeError("IP-Adapter is loaded; every generate call must pass ip_adapter_image")
-        if self.ip_adapter_count == 2 and (ip_from_embeds or references is not None):
-            call["cross_attention_kwargs"] = {"ip_adapter_masks": self._two_adapter_masks(request, width, height)}
-        elif request.get("ip_adapter_masks"):
-            # Task 20.2h: one mask per face (white = where that face's identity applies), in
-            # the order of `ip_adapter_images`, preprocessed as diffusers' IP-Adapter masking
-            # expects: one tensor [1, n_faces, h, w] for the single loaded adapter.
-            from diffusers.image_processor import IPAdapterMaskProcessor
-
-            masks = []
-            for mask_path in request["ip_adapter_masks"]:
-                with Image.open(mask_path) as mask_image:
-                    masks.append(mask_image.convert("L"))
-            processed = IPAdapterMaskProcessor().preprocess(masks, height=height, width=width)
-            call["cross_attention_kwargs"] = {
-                "ip_adapter_masks": [processed.reshape(1, processed.shape[0], processed.shape[2], processed.shape[3])]
-            }
-
-        if self.kind == "controlnet":
-            if not request.get("control_image"):
-                raise RuntimeError("controlnet pipeline needs control_image")
-            with Image.open(request["control_image"]) as control:
-                call["image"] = control.convert("RGB")
-            call["controlnet_conditioning_scale"] = float(request.get("controlnet_conditioning_scale", 1.0))
-        elif self.kind in ("inpaint", "controlnet_inpaint"):
-            if not (request.get("init_image") and request.get("mask_image")):
-                raise RuntimeError(f"{self.kind} pipeline needs init_image and mask_image")
-            with Image.open(request["init_image"]) as init, Image.open(request["mask_image"]) as mask:
-                call["image"] = init.convert("RGB")
-                call["mask_image"] = mask.convert("L")
-            call["strength"] = float(request.get("strength", 0.99))
-            if self.kind == "controlnet_inpaint":
-                if not request.get("control_image"):
-                    raise RuntimeError("controlnet_inpaint pipeline needs control_image")
-                with Image.open(request["control_image"]) as control:
-                    call["control_image"] = control.convert("RGB")
-                call["controlnet_conditioning_scale"] = float(request.get("controlnet_conditioning_scale", 1.0))
-
-        if self.device == "cuda":
-            if self._last_size is not None and self._last_size != (width, height):
-                # Task 20.2b finding F1 (owner run r3): a size switch in one worker grew the
-                # allocator's reserve from 11.3 to 13.1 GB on the 12 GB card (Windows spilled
-                # into shared memory, 2-3x slower). Hand the cached blocks back first.
-                torch.cuda.empty_cache()
-            torch.cuda.reset_peak_memory_stats()
-        self._last_size = (width, height)
-        started = time.monotonic()
-        image = pipe(**call).images[0]
-        wall_seconds = time.monotonic() - started
-
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        image.save(output_path, format="PNG")
-        fitted_path = None
-        if request.get("target_size"):
-            target = (int(request["target_size"][0]), int(request["target_size"][1]))
-            # "Cover" fit: SDXL's nearest 16:9 bucket is 1344x768 (1.75), and the
-            # thumbnail is 1280x720 (1.78), so scale to cover, then centre-crop the
-            # sliver. The same helper the app's template renderer uses (ImageOps.fit).
-            fitted = ImageOps.fit(image, target, method=Image.Resampling.LANCZOS)
-            fitted_path = output_path.with_name(f"{output_path.stem}_{target[0]}x{target[1]}.png")
-            fitted.save(fitted_path, format="PNG")
-
-        return {
-            "status": "ok",
-            "wall_time_sec": round(wall_seconds, 3),
-            "steps": steps,
-            "guidance_scale": guidance,
-            "pipeline": self.kind,
-            "from_embeds": bool(request.get("embeds_path")),
-            "negative_prompt_applied": negative_applied,
-            **self._prompt_tokens(call.get("prompt")),
-            "native_size": list(image.size),
-            "output_path": str(output_path),
-            "fitted_path": str(fitted_path) if fitted_path else None,
-            "peak_vram_allocated_mb": _mb(torch.cuda.max_memory_allocated()) if self.device == "cuda" else None,
-            "peak_vram_reserved_mb": _mb(torch.cuda.max_memory_reserved()) if self.device == "cuda" else None,
-            "rss_mb": _rss_mb(),
-        }
-
-    def _ip_scale(self, request: dict[str, Any]) -> float | list[float]:
-        face = float(request.get("ip_adapter_scale", 0.6))
-        if self.ip_adapter_count == 2:
-            return [face, float(request.get("ip_adapter_scene_scale", 0.0))]
-        return face
-
-    @staticmethod
-    def _face_count(request: dict[str, Any]) -> int:
-        return len(request.get("ip_adapter_masks") or request.get("ip_adapter_images") or []) or 1
-
-    def _two_adapter_masks(self, request: dict[str, Any], width: int, height: int) -> list[Any]:
-        """Task 23.2: one mask tensor per adapter -- [1, n_faces, h, w] for the faces (the
-        given per-face masks, or the full frame for a single face) and [1, 1, h, w] for the
-        scene plate (its background mask, or the full frame)."""
-        from diffusers.image_processor import IPAdapterMaskProcessor
-        from PIL import Image
-
-        def load(path: str | None) -> Any:
-            if not path:
-                return Image.new("L", (width, height), 255)
-            with Image.open(path) as image:
-                return image.convert("L")
-
-        faces = [load(path) for path in request.get("ip_adapter_masks") or [None] * self._face_count(request)]
-        processor = IPAdapterMaskProcessor()
-        face_tensor = processor.preprocess(faces, height=height, width=width)
-        scene_tensor = processor.preprocess([load(request.get("ip_adapter_scene_mask"))], height=height, width=width)
-        return [face_tensor.reshape(1, face_tensor.shape[0], face_tensor.shape[2], face_tensor.shape[3]),
-                scene_tensor.reshape(1, 1, scene_tensor.shape[2], scene_tensor.shape[3])]
-
-    def _ip_references(self, request: dict[str, Any]) -> Any | None:
-        """`ip_adapter_image` (one face, as before) or `ip_adapter_images` (Task 20.2h:
-        several faces for the one loaded adapter -> diffusers' nested [[a, b]] form).
-        Task 23.2: with the scene adapter loaded, the second element is the scene plate."""
-        from PIL import Image
-
-        faces: Any = None
-        if request.get("ip_adapter_images"):
-            faces = []
-            for path in request["ip_adapter_images"]:
-                with Image.open(path) as image:
-                    faces.append(image.convert("RGB"))
-        elif request.get("ip_adapter_image"):
-            with Image.open(request["ip_adapter_image"]) as image:
-                faces = image.convert("RGB")
-        if faces is None:
-            return None
-        if self.ip_adapter_count == 2:
-            if not request.get("ip_adapter_scene_image"):
-                raise RuntimeError("the scene adapter is loaded; pass ip_adapter_scene_image")
-            with Image.open(request["ip_adapter_scene_image"]) as image:
-                return [faces, image.convert("RGB")]
-        return [faces] if isinstance(faces, list) else faces
-
-    def _prompt_tokens(self, prompt: str | None) -> dict[str, Any]:
-        """Task 20.2f finding: CLIP reads 77 tokens and silently drops the rest (20.2c/20.2e
-        prompts ran 87-105 tokens, losing expressions and style tags). Report it."""
-        tokenizer = getattr(self.pipe, "tokenizer", None)
-        if not prompt or tokenizer is None:
-            return {}
-        count = len(tokenizer(prompt, truncation=False).input_ids)
-        return {"prompt_tokens": count, "prompt_truncated": count > tokenizer.model_max_length}
-
-    def _embeds(self, path: str) -> dict[str, Any]:
-        if path not in self._embeds_cache:
-            # Written by this same worker script's `encode` in an earlier process of the
-            # same spike run: a local, trusted file, hence weights_only=False.
-            self._embeds_cache[path] = self.torch.load(path, map_location="cpu", weights_only=False)
-        return self._embeds_cache[path]
-
-    def encode(self, request: dict[str, Any]) -> dict[str, Any]:
-        """Task 20.2b D20.2b-b: text (+ optional IP reference) -> embeddings on disk, so a
-        later process can render with UNet + ControlNet only."""
-        pipe = self._require_pipe()
-        if not self.encoders:
-            raise RuntimeError("encode needs a pipeline loaded with encoders=true")
-        torch = self.torch
-        do_cfg = self.mode != "lightning" and float(request.get("guidance_scale", BASE_DEFAULT_GUIDANCE)) > 1.0
-        started = time.monotonic()
-        ip_embeds = None
-        with torch.no_grad():
-            references = self._ip_references(request)
-            if references is not None:
-                if not self.ip_adapter_loaded:
-                    raise RuntimeError("ip_adapter_image(s) given but no IP-Adapter loaded")
-                # Task 20.2h: several faces for ONE adapter ([[a, b]]) -> embeds shaped
-                # (batch, n_faces, tokens, dim); each face is later confined to its own
-                # region by `ip_adapter_masks` at render time.
-                ip_embeds = pipe.prepare_ip_adapter_image_embeds(references, None, self.device, 1, do_cfg)
-            items = []
-            for item in request["items"]:
-                prompt_embeds, negative_embeds, pooled, negative_pooled = pipe.encode_prompt(
-                    prompt=item["prompt"],
-                    device=self.device,
-                    num_images_per_prompt=1,
-                    do_classifier_free_guidance=do_cfg,
-                    negative_prompt=item.get("negative_prompt") if do_cfg else None,
-                )
-                items.append({
-                    "prompt": item["prompt"],
-                    **self._prompt_tokens(item["prompt"]),
-                    "prompt_embeds": prompt_embeds.cpu(),
-                    "pooled_prompt_embeds": pooled.cpu(),
-                    "negative_prompt_embeds": negative_embeds.cpu() if do_cfg and negative_embeds is not None else None,
-                    "negative_pooled_prompt_embeds": (
-                        negative_pooled.cpu() if do_cfg and negative_pooled is not None else None
-                    ),
-                })
-        payload = {"mode": self.mode, "do_cfg": do_cfg, "items": items,
-                   "ip_adapter_image_embeds": [e.cpu() for e in ip_embeds] if ip_embeds is not None else None}
-        output_path = Path(request["output_path"])
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(payload, output_path)
-        return {"status": "ok", "items": len(items),
-                "item_tokens": [self._prompt_tokens(item["prompt"]) for item in request["items"]],
-                "do_cfg": do_cfg, "with_ip": ip_embeds is not None,
-                "ip_faces": len(request.get("ip_adapter_images") or []) or (1 if request.get("ip_adapter_image") else 0),
-                "output_path": str(output_path), "wall_time_sec": round(time.monotonic() - started, 3)}
-
-    def remove_background(self, request: dict[str, Any]) -> dict[str, Any]:
-        """Task 20.2b: transparent cut-out via skytnt/anime-seg (ONNX, CPU onnxruntime).
-
-        Pre/post-processing follows the model author's own demo: letterbox to a
-        1024 square, RGB/255 float32 NCHW in, a 0..1 mask out, then crop the letterbox
-        back off and resize to the original size."""
-        import numpy as np
-        from PIL import Image
-
-        if self._anime_seg_session is None:
-            import onnxruntime
-
-            model_path = request.get("model_path")
-            if not model_path:
-                from huggingface_hub import hf_hub_download
-
-                model_path = hf_hub_download(ANIME_SEG_REPO, ANIME_SEG_ONNX)
-            self._anime_seg_session = onnxruntime.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
-        session = self._anime_seg_session
-        started = time.monotonic()
-        with Image.open(request["input_path"]) as source:
-            rgb = source.convert("RGB")
-        w0, h0 = rgb.size
-        size = ANIME_SEG_SIZE
-        if h0 > w0:
-            h, w = size, max(1, int(size * w0 / h0))
-        else:
-            h, w = max(1, int(size * h0 / w0)), size
-        ph, pw = size - h, size - w
-        canvas = np.zeros((size, size, 3), dtype=np.float32)
-        canvas[ph // 2:ph // 2 + h, pw // 2:pw // 2 + w] = (
-            np.asarray(rgb.resize((w, h), Image.Resampling.LANCZOS), dtype=np.float32) / 255.0
-        )
-        net_input = canvas.transpose(2, 0, 1)[np.newaxis, :]
-        mask = session.run(None, {session.get_inputs()[0].name: net_input})[0][0]
-        mask = mask[0] if mask.ndim == 3 else mask
-        mask = np.clip(mask[ph // 2:ph // 2 + h, pw // 2:pw // 2 + w], 0.0, 1.0)
-        alpha = Image.fromarray((mask * 255).astype(np.uint8)).resize((w0, h0), Image.Resampling.LANCZOS)
-        cutout = rgb.copy()
-        cutout.putalpha(alpha)
-        output_path = Path(request["output_path"])
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        cutout.save(output_path, format="PNG")
-        alpha_arr = np.asarray(alpha)
-        return {"status": "ok", "output_path": str(output_path), "wall_time_sec": round(time.monotonic() - started, 3),
-                "foreground_fraction": round(float((alpha_arr > 127).mean()), 4),
-                "soft_edge_fraction": round(float(((alpha_arr > 10) & (alpha_arr < 245)).mean()), 4)}
 
     def count_faces(self, request: dict[str, Any]) -> dict[str, Any]:
-        """Task 28.5: how many faces a picture shows (the people in a shot)."""
+        """Task 28.5: the faces a picture shows (Phase 43 frames the AI-scene thumbnails on them)."""
         started = time.monotonic()
         boxes = detect_faces(request["input_path"], float(request.get("threshold", 0.7)),
                              float(request.get("iou", 0.3)))
@@ -770,37 +232,17 @@ class ImageWorker:
         torch = self.torch
         return {
             "status": "ok",
-            "loaded": self.pipe is not None,
-            "mode": self.mode,
-            "ip_adapter_loaded": self.ip_adapter_loaded,
             "device": self.device,
             "vram_allocated_mb": _mb(torch.cuda.memory_allocated()) if self.device == "cuda" else None,
             "vram_reserved_mb": _mb(torch.cuda.memory_reserved()) if self.device == "cuda" else None,
             "rss_mb": _rss_mb(),
         }
 
-    def unload(self) -> dict[str, Any]:
-        import gc
-
-        was_loaded = self.pipe is not None
-        self.pipe, self.mode, self.lightning_steps, self.ip_adapter_loaded = None, None, None, False
-        self.ip_adapter_count = 0
-        self.kind, self.encoders, self._last_size = None, True, None
-        self._embeds_cache.clear()
-        gc.collect()
-        if self.device == "cuda":
-            self.torch.cuda.empty_cache()
-        # The real release is the process exit; this is reported so the gap between
-        # "unloaded" and "exited" is visible in the evidence.
-        return {"status": "ok", "was_loaded": was_loaded, **{k: v for k, v in self.stats().items() if k != "status"}}
-
     def qwen_generate(self, request: dict[str, Any]) -> dict[str, Any]:
-        """Phase 39 (D118): a batch of Qwen pictures (`model` qwen21 | qwen_edit). Qwen and SDXL never share a worker: the
-        12 GB card holds one of them at a time, and the worker exits afterwards to return all VRAM."""
+        """Phase 39 (D118): a batch of Qwen pictures (`model` qwen21 | qwen_edit); the worker exits afterwards to return
+        all VRAM."""
         import qwen_runner  # sibling module; only this worker (in .venv-image) imports it
 
-        if self.pipe is not None:
-            raise RuntimeError(f"an SDXL pipeline is loaded (mode={self.mode}) -- Qwen runs in its own worker")
         model, items = qwen_runner.validate(request)
         missing = qwen_runner.installed(model)
         if missing:
@@ -823,20 +265,10 @@ class ImageWorker:
 
         return {"status": "ok", "models": {model: qwen_runner.installed(model) for model in qwen_runner.MODELS}}
 
-    def _require_pipe(self) -> Any:
-        if self.pipe is None:
-            raise RuntimeError("no model loaded -- send load first")
-        return self.pipe
-
 
 def _handle(worker: ImageWorker, request: dict[str, Any]) -> dict[str, Any]:
     command = request.get("command")
     handlers = {
-        "load": worker.load,
-        "load_ip_adapter": worker.load_ip_adapter,
-        "generate": worker.generate,
-        "encode": worker.encode,
-        "remove_background": worker.remove_background,
         "count_faces": worker.count_faces,
         "qwen_generate": worker.qwen_generate,
         "qwen_installed": worker.qwen_installed,
@@ -845,13 +277,11 @@ def _handle(worker: ImageWorker, request: dict[str, Any]) -> dict[str, Any]:
         return handlers[command](request)
     if command == "stats":
         return worker.stats()
-    if command == "unload":
-        return worker.unload()
     raise ValueError(f"unknown command: {command!r}")
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="SDXL image worker (Task 20.2 spike)")
+    parser = argparse.ArgumentParser(description="Local image worker: Qwen pictures and face detection")
     parser.add_argument("--device", choices=["auto", "cuda", "cpu"], default="auto")
     parser.add_argument("--allow-cpu", action="store_true",
                         help="run on CPU instead of reporting unavailable (plumbing checks only; minutes per image)")

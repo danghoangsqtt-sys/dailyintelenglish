@@ -151,8 +151,11 @@ async def test_generate_video_forwards_caption_style_to_remotion(tmp_path, monke
 async def test_build_input_props_carries_caption_style_with_outline_default(tmp_path, db):
     audio_job = await _real_audio_job(tmp_path)
 
-    default_props = await video_renderer_remotion._build_input_props(db, _real_project(), audio_job, None)
-    box_props = await video_renderer_remotion._build_input_props(db, _real_project(), audio_job, None, "box")
+    # podcast_black: no cast needed for this check (talking characters, the default, needs library characters)
+    default_props = await video_renderer_remotion._build_input_props(db, _real_project(), audio_job, None,
+                                                                     visual_mode="podcast_black")
+    box_props = await video_renderer_remotion._build_input_props(db, _real_project(), audio_job, None, "box",
+                                                                 visual_mode="podcast_black")
 
     assert default_props["captionStyle"] == "outline"
     assert box_props["captionStyle"] == "box"

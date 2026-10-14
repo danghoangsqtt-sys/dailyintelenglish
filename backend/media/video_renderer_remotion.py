@@ -410,7 +410,7 @@ async def _build_input_props(
     audio_job: dict,
     learning: dict | None,
     caption_style: str = "outline",
-    visual_mode: str = "illustrated",
+    visual_mode: str = "podcast_sprites",
     still_scene_id: str | None = None,
 ) -> dict[str, Any]:
     """Real per-project props for the `Episode`/`StillFrame` compositions -- mirrors
@@ -439,50 +439,11 @@ async def _build_input_props(
     ]
 
     project_id = project["id"]
-    cast = await project_visuals_service.cast_rows(db, project_id)
-    cast_by_index = {member["speaker_index"]: member for member in cast}
-    scenes = await project_visuals_service.scene_rows(db, project_id)
-    podcast = visual_mode != "illustrated"
+    # Phase 44 (D123): the drawn-shot ("illustrated") video is gone; an old request for it gets talking characters
+    visual_mode = "podcast_sprites" if visual_mode == "illustrated" else visual_mode
     still_plate = await _resolve_still_plate(db, project_id, still_scene_id) if visual_mode == "podcast_still" else None
-    shot_rows = [] if podcast else await project_visuals_service.shot_rows(db, project_id)  # a podcast needs no drawn shots
-    complete_shots = [shot for shot in shot_rows if shot["status"] == "complete" and shot["final_path"]]
-    shot_props: dict[str, dict[str, str]] = {}
-    for shot in complete_shots:
-        try:
-            source = await asyncio.to_thread(project_visuals_service.resolve_shot_content, project_id, shot["final_path"])
-        except Exception:
-            continue
-        destination = REMOTION_VISUALS_DIR / project_id / f"{shot['id']}.png"
-        await asyncio.to_thread(_copy_visual_source, source, destination)
-        shot_props[shot["id"]] = {
-            "url": f"remotion-render/visuals/{project_id}/{shot['id']}.png", "kind": shot["kind"],
-        }
-    speaker_indexes = {speaker["id"]: speaker.get("speaker_index", index)
-                       for index, speaker in enumerate(project["speakers"])}
-    assignment_lines = [{**line, "speaker_index": speaker_indexes.get(line["speakerId"])} for line in lines]
-
-    speakers_props: list[dict[str, Any]] = []
-    for speaker in project["speakers"]:
-        speaker_props: dict[str, Any] = {"id": speaker["id"], "name": speaker["name"], "gender": speaker["gender"]}
-        if podcast:  # no picture of anyone in the podcast modes
-            speakers_props.append(speaker_props)
-            continue
-        if speaker_indexes[speaker["id"]] in cast_by_index:  # Task 35.4: the cast character's face is the only picture
-            member = cast_by_index[speaker_indexes[speaker["id"]]]
-            assets = await library_service.list_assets(db, member["character_id"])
-            face = next((asset for asset in assets if asset["kind"] == "face"), None)
-            if face:
-                try:
-                    face_path = await asyncio.to_thread(
-                        library_service.resolve_library_content, face["path"], "library/characters",
-                    )
-                except Exception:
-                    face_path = None
-                if face_path:
-                    destination = REMOTION_AVATARS_DIR / f"{speaker['id']}_cast.png"
-                    await asyncio.to_thread(_copy_visual_source, face_path, destination)
-                    speaker_props["avatarUrl"] = f"remotion-render/avatars/{destination.name}"
-        speakers_props.append(speaker_props)
+    speakers_props = [{"id": speaker["id"], "name": speaker["name"], "gender": speaker["gender"]}
+                      for speaker in project["speakers"]]
 
     chapters_text = youtube_service.real_chapters_from_timestamps(audio_job["timestamps"])
 
@@ -510,17 +471,6 @@ async def _build_input_props(
         destination = REMOTION_VISUALS_DIR / project_id / "still.png"
         await asyncio.to_thread(_copy_visual_source, still_plate, destination)
         props["stillUrl"] = f"remotion-render/visuals/{project_id}/still.png"
-    if shot_props:
-        # Task 24.5b: the approved storyboard drives the pictures when its shots exist.
-        beats = await storyboard_service.approved_beats(db, project_id)
-        if project_visuals_service.storyboard_timeline_ready(beats, complete_shots):
-            line_shots = project_visuals_service.assign_beat_shots(assignment_lines, beats, complete_shots)
-        else:
-            line_shots = project_visuals_service.assign_line_shots(assignment_lines, chapters, scenes, complete_shots)
-        props["visuals"] = {
-            "shots": shot_props,
-            "lineShots": [shot_id if shot_id in shot_props else None for shot_id in line_shots],
-        }
     if learning is not None:
         props["learning"] = {
             "vocab": [
@@ -655,7 +605,7 @@ async def render_via_remotion(
     learning: dict | None,
     output_path: Path,
     caption_style: str = "outline",
-    visual_mode: str = "illustrated",
+    visual_mode: str = "podcast_sprites",
     still_scene_id: str | None = None,
     layout: str = "horizontal",
     clip: dict | None = None,

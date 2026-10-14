@@ -14,8 +14,8 @@ class GenerateVideoRequest(BaseModel):
 
     # Task 20.2d (D20.2d-a/b): "outline" (film-subtitle style) is the owner-preferred default.
     caption_style: Literal["outline", "box", "shade"] = "outline"
-    # Phase 30 (ENH-021): what is behind the captions. "illustrated" = the drawn shots; the podcast modes need no shots: a
-    # black screen, or one still of a scene's plate; Phase 32: the two characters as talking sprites over the scene plates
-    # ("podcast_sprites", needs the cast characters' sprite sets).
-    visual_mode: Literal["illustrated", "podcast_black", "podcast_still", "podcast_sprites"] = "illustrated"
+    # Phase 30 (ENH-021): what is behind the captions -- a black screen, one still of a scene's plate, or (Phase 32, the
+    # default since Phase 44 / D123) the two characters as talking sprites over the scene plates with generic inserts.
+    # The drawn-shot "illustrated" video was removed with RealVisXL (D123).
+    visual_mode: Literal["podcast_black", "podcast_still", "podcast_sprites"] = "podcast_sprites"
     still_scene_id: str | None = None

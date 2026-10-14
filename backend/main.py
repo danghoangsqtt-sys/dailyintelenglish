@@ -102,13 +102,9 @@ async def lifespan(app: FastAPI):
 
     ai_worker.register_handler("script", _script_job_handler)
     ai_worker.register_handler("learning", _learning_job_handler)
-    image_job_runner.register_handler("character_candidates", visuals_pipelines.character_candidates)
-    image_job_runner.register_handler("character_sheet", visuals_pipelines.character_sheet)
+    # Phase 44 (D123): only the Qwen jobs remain (no SDXL candidates/sheets, no two-person project shots)
     image_job_runner.register_handler("scene_preview", visuals_pipelines.scene_preview)
-    image_job_runner.register_handler("project_shots", visuals_pipelines.project_shots)
-    image_job_runner.register_handler("shot_regenerate", visuals_pipelines.shot_regenerate)
     image_job_runner.register_handler("activity_illustrations", visuals_pipelines.activity_illustrations)
-    await visuals_pipelines.recover_pending_shots(Database.instance().connection)
     await image_job_runner.start()
     await ai_worker.start()
 

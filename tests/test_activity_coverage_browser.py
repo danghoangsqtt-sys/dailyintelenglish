@@ -1,22 +1,62 @@
 """Task 32.6c: Step 5 explains activity matches and sprite fallbacks before render."""
 
-import pytest
-from playwright.async_api import Browser
+from typing import AsyncGenerator, Generator
 
-from tests.test_shot_library_browser import (  # noqa: F401
-    _step5,
-    browser_instance,
-    live_server_url,
-)
-from tests.test_shot_review_browser import _project_with_shots
+import pytest
+from playwright.async_api import Browser, async_playwright
+
+from backend.api import visuals as visuals_api
+from backend.core.config import settings
+from tests.conftest import live_server
+from tests.test_visuals_project_api import PROJECT, locked_character
+
+
+@pytest.fixture(scope="module")
+def live_server_url(tmp_path_factory: pytest.TempPathFactory) -> Generator[str, None, None]:
+    pretend_image_python = tmp_path_factory.mktemp("activity-coverage-venv") / "python.exe"
+    pretend_image_python.touch()
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(settings, "IMAGE_ENGINE", "fake")
+        patch.setattr(settings, "AI_VISUALS_ENABLED", True)
+        patch.setattr(visuals_api, "IMAGE_PYTHON", pretend_image_python)
+        with live_server(tmp_path_factory, "activity-coverage-browser") as url:
+            yield url
+
+
+@pytest.fixture
+async def browser_instance() -> AsyncGenerator[Browser, None]:
+    async with async_playwright() as playwright:
+        browser = await playwright.chromium.launch(headless=True)
+        yield browser
+        await browser.close()
+
+
+async def _project_with_cast(page, base: str) -> str:
+    """A project with two cast characters and one scene (Phase 44: no drawn shots any more)."""
+    created = await page.request.post(f"{base}/api/projects", data=PROJECT)
+    project_id = (await created.json())["data"]["id"]
+    ids = [locked_character("Nova", "yellow"), locked_character("Mira", "green")]
+    scene = (await (await page.request.get(f"{base}/api/visuals/scenes")).json())["data"][0]["id"]
+    visuals = f"{base}/api/projects/{project_id}/visuals"
+    await page.request.put(f"{visuals}/cast", data=[{"speaker_index": i, "character_id": c} for i, c in enumerate(ids)])
+    await page.request.put(f"{visuals}/scenes", data=[scene])
+    return project_id
+
+
+async def _step5(page, base: str, project_id: str) -> None:
+    await page.route(
+        f"**/api/projects/{project_id}/audio/status",
+        lambda route: route.fulfill(json={"success": True, "data": {"status": "complete", "timestamps": []}}),
+    )
+    await page.goto(f"{base}/step5?project_id={project_id}")
 
 
 @pytest.mark.asyncio
 async def test_step5_explains_character_generic_and_missing_activity_coverage(
-    browser_instance: Browser, live_server_url: str,  # noqa: F811
+    browser_instance: Browser, live_server_url: str,
 ):
     page = await browser_instance.new_page()
-    project_id = await _project_with_shots(page, live_server_url)
+    project_id = await _project_with_cast(page, live_server_url)
     await page.route(
         f"**/api/projects/{project_id}/visuals/activity-coverage",
         lambda route: route.fulfill(json={

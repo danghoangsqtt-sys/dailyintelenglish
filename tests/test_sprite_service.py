@@ -3,13 +3,22 @@ in Phase 35, D89: sets come from the profile slots)."""
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 from PIL import Image, ImageDraw
 
+from backend.core.config import settings
 from backend.library import sprite_service as sprites
-from tests.test_shot_library_import import _two_characters
 from tests.test_visuals_project_api import client, data, locked_character  # noqa: F401
+
+
+def _two_characters() -> list[str]:
+    lina, alex = locked_character("Lina", "white"), locked_character("Alex", "navy")
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute("UPDATE characters SET gender = 'male' WHERE id = ?", (alex,))
+        connection.execute("UPDATE characters SET created_at = '2026-01-01' WHERE id = ?", (lina,))
+    return [lina, alex]
 
 
 def _figure(path: Path, head_dx: int = 0, torso_dx: int = 0, size=(1280, 1536), opaque: bool = False,

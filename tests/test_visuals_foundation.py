@@ -4,14 +4,12 @@ import asyncio
 
 import aiosqlite
 import pytest
-from PIL import Image, ImageChops
 
 from backend.core.config import settings
 from backend.core.exceptions import GpuUnavailableError
 from backend.db.database import Database, MIGRATIONS_DIR, init_db
 from backend.db.transactions import write_transaction
-from backend.ai.image import geometry, jobs, recipes
-from backend.ai.image.engine import FakeImageEngine, WorkerImageEngine
+from backend.ai.image import jobs
 from backend.ai.image.runner import ImageJobRunner
 
 CHARACTER = {
@@ -54,112 +52,6 @@ async def test_migration_008_and_builtin_seed_once(tmp_path, monkeypatch, preexi
     finally:
         await Database.instance().close()
         Database._instance = old
-
-
-def test_recipe_strings_and_worst_case_budget():
-    phrase = (
-        "middle-aged Vietnamese woman English teacher, long wavy black hair, brown eyes, "
-        "plain light blue slim-fit shirt, plain navy blue slim trousers"
-    )
-    assert recipes.character_phrase(CHARACTER) == phrase
-    assert recipes.candidate_prompt(CHARACTER) == (
-        recipes.STYLE_EDITORIAL + ", " + phrase
-        + ", portrait, facing the viewer, arms down, plain light background"
-    )
-    assert recipes.single_prompt(CHARACTER, SCENE) == (
-        recipes.STYLE_EDITORIAL + ", " + phrase
-        + ", close-up, talking, in a cozy Vietnamese street cafe"
-    )
-    prompts = [
-        recipes.candidate_prompt(CHARACTER), recipes.scene_preview_prompt(SCENE),
-        recipes.single_prompt(CHARACTER, SCENE), recipes.refine_prompt(CHARACTER, SCENE),
-        recipes.hand_prompt(),
-        *(recipes.sheet_prompt(CHARACTER, kind) for kind in recipes.SHEET_KINDS),
-        *(recipes.duo_prompt(CHARACTER, CHARACTER, {**SCENE, "staging": staging}, kind)
-          for staging in ("standing", "seated") for kind in ("duo_close", "duo_wide")),
-    ]
-    assert all(recipes.token_count(prompt) <= 75 for prompt in prompts)
-    assert recipes.token_count(recipes.single_prompt(CHARACTER, SCENE)) == 56
-
-
-def test_every_builtin_place_fits_the_real_clip_budget():
-    """Task 23.3: `token_count` under-counts the real CLIP tokenizer by 5-6 on these prompts.
-    Measured 2026-10-05 with the real tokenizer over every recipe x built-in place x this
-    (longest) character: max 77 real tokens (duo_close, Classroom) at 72 estimated -- the limit,
-    so the place (the prompt's tail) is never cut. A higher estimate needs a new measurement."""
-    from backend.db.database import BUILTIN_SCENES
-
-    assert len(BUILTIN_SCENES) == 55
-    for _, _, place, staging, _ in BUILTIN_SCENES:
-        scene = {"place": place, "staging": staging, "time_of_day": "sunset"}
-        prompts = [
-            recipes.single_prompt(CHARACTER, scene), recipes.refine_prompt(CHARACTER, scene),
-            recipes.garment_refine_prompt(CHARACTER, scene), recipes.scene_preview_prompt(scene),
-            *(recipes.duo_prompt(CHARACTER, CHARACTER, scene, kind) for kind in ("duo_close", "duo_wide")),
-        ]
-        assert max(recipes.token_count(prompt) for prompt in prompts) <= 72, place
-
-
-def test_geometry_heads_halves_ears_hands_and_refine_mask():
-    size = (1344, 768)
-    single = geometry.shot_people("single", "standing", size)[0]
-    assert single["points"][0][1] - 0.78 * 0.30 * size[1] > 0.11 * size[1]
-    people = geometry.shot_people("duo_close", "seated", size)
-    assert people[0]["points"][17] is None  # far left-person ear
-    assert people[1]["points"][16] is None  # far right-person ear
-    left, right = geometry.half_masks(size)
-    assert left.getpixel((0, 0)) == 255 and left.getpixel((size[0] - 1, 0)) == 0
-    assert right.getpixel((0, 0)) == 0 and right.getpixel((size[0] - 1, 0)) == 255
-    for person, half in zip(people, (left, right), strict=True):
-        mask = geometry.refine_mask(person, size, half)
-        assert ImageChops.subtract(mask, half).getbbox() is None
-    boxes = geometry.hand_boxes(single["points"], size, single["head_h"])
-    assert boxes
-    for hand in boxes:
-        x0, y0, x1, y1 = hand["box"]
-        assert 0 <= x0 < x1 <= size[0] and 0 <= y0 < y1 <= size[1]
-        assert hand["center"][1] >= 0
-    base = Image.new("RGB", size, "black")
-    hand = boxes[0]
-    fixed = Image.new("RGB", (768, 768), "white")
-    pasted = geometry.paste_hand(base, fixed, hand["box"], geometry.hand_mask(
-        hand["box"][2] - hand["box"][0], hand["center"], hand["radius"]
-    ))
-    assert ImageChops.difference(base, pasted).getbbox() is not None
-    assert ImageChops.difference(base, pasted).getbbox()[0] >= hand["box"][0]
-
-
-@pytest.mark.asyncio
-async def test_fake_engine_and_worker_token_response(tmp_path, monkeypatch):
-    monkeypatch.setattr(settings, "IMAGE_ENGINE", "fake")
-    fake = FakeImageEngine()
-    embeds = tmp_path / "embeds.pt"
-    async with fake.session(ip="with_encoder") as session:
-        encoded = await session.request({
-            "command": "encode", "output_path": str(embeds),
-            "items": [{"prompt": "small"}, {"prompt": "word " * 80}],
-        })
-    assert encoded["items"] == 2
-    assert encoded["item_tokens"][1]["prompt_truncated"] is True
-    async with fake.session(pipeline="controlnet", encoders=False, ip="layers_only") as session:
-        rendered = await session.request({
-            "command": "generate", "embeds_path": str(embeds), "embeds_index": 1,
-            "seed": 7, "width": 32, "height": 24, "output_path": str(tmp_path / "shot.png"),
-        })
-    assert rendered["prompt_truncated"] is True
-    assert Image.open(tmp_path / "shot.png").size == (32, 24)
-
-    class StubWorker:
-        def request(self, payload):
-            if payload["command"] == "encode":
-                return {"status": "ok", "items": 2, "item_tokens": encoded["item_tokens"]}
-            return {"status": "ok", "output_path": str(tmp_path / "shot.png")}
-
-    worker = WorkerImageEngine()
-    worker._worker = StubWorker()
-    await worker.request({"command": "encode", "output_path": str(embeds), "items": [{}, {}]})
-    result = await worker.request({"command": "generate", "embeds_path": str(embeds), "embeds_index": 1})
-    assert result["prompt_truncated"] is True
 
 
 @pytest.mark.asyncio

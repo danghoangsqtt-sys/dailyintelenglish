@@ -1,4 +1,4 @@
-"""Image worker protocol and deterministic, GPU-free test engine."""
+"""Image worker protocol (Qwen batches) and the deterministic, GPU-free test engine."""
 
 from __future__ import annotations
 
@@ -7,8 +7,6 @@ import json
 import os
 import subprocess
 import uuid
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -18,7 +16,6 @@ from backend.core.config import settings
 from backend.core.exceptions import ConflictError
 from backend.core.paths import IMAGE_VENV_DIR, get_project_root
 from backend.ai.image.gpu_model_manager import get_gpu_manager
-from backend.ai.image.recipes import token_count
 
 ROOT = get_project_root()
 IMAGE_PYTHON = IMAGE_VENV_DIR / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
@@ -36,16 +33,7 @@ def require_generation() -> None:
         raise ConflictError("Image environment is missing (.venv-image)")
 
 
-class ImageSession(Protocol):
-    async def request(self, payload: dict[str, Any]) -> dict[str, Any]: ...
-
-
 class ImageEngine(Protocol):
-    def session(
-        self, pipeline: str = "text2img", encoders: bool = True,
-        ip: str = "none", consumer: str = "visuals", scene: bool = False,
-    ) -> Any: ...
-
     async def qwen_batch(self, model: str, items: list[dict[str, Any]], consumer: str,
                          detect_faces: bool = False) -> dict[str, Any]: ...
 
@@ -108,7 +96,7 @@ class _WorkerProcess:
 
 
 class QwenUnavailable(RuntimeError):
-    """Phase 39: the Qwen model is not installed (or there is no GPU); callers fall back to RealVisXL."""
+    """The Qwen model is not installed (or there is no GPU). Phase 44 (D123): callers report it; there is no fallback."""
 
 
 def qwen_request(model: str, items: list[dict[str, Any]], detect_faces: bool = False) -> dict[str, Any]:
@@ -121,13 +109,10 @@ def qwen_request(model: str, items: list[dict[str, Any]], detect_faces: bool = F
 class WorkerImageEngine:
     """Leased subprocess engine; it never imports the image model stack."""
 
-    def __init__(self) -> None:
-        self._encoded_tokens: dict[str, list[dict[str, Any]]] = {}
-
     async def qwen_batch(self, model: str, items: list[dict[str, Any]], consumer: str,
                          detect_faces: bool = False) -> dict[str, Any]:
         """Phase 39 (D118): one worker, one GPU lease, a batch of Qwen pictures (`qwen21` or `qwen_edit`). Raises
-        `QwenUnavailable` when the model is missing so the caller can fall back to RealVisXL. Phase 43: with
+        `QwenUnavailable` when the model is missing (no fallback since D123). Phase 43: with
         `detect_faces` every result item carries the faces found on the drawn picture."""
         require_generation()
         async with get_gpu_manager().lease(consumer, min_free_mb=8192):
@@ -141,55 +126,12 @@ class WorkerImageEngine:
             raise QwenUnavailable(f"{model}: {response.get('reason')} {response.get('missing') or ''}".strip())
         return response
 
-    @asynccontextmanager
-    async def session(
-        self, pipeline: str = "text2img", encoders: bool = True,
-        ip: str = "none", consumer: str = "visuals", scene: bool = False,
-    ) -> AsyncIterator[WorkerImageEngine]:
-        require_generation()
-        async with get_gpu_manager().lease(consumer, min_free_mb=8192):
-            worker = await asyncio.to_thread(_WorkerProcess)
-            self._worker = worker
-            try:
-                # Task 23.2 probe: the 1344x768 VAE decode is the VRAM peak. Without tiling the L2
-                # render reserved 13.2 GB (14.1 GB with the scene adapter) on the 12 GB card and
-                # spilled into shared memory (2.7x slower shots); tiled: 10.9 GB, same image.
-                load = {"command": "load", "mode": "base", "pipeline": pipeline, "encoders": encoders,
-                        "vae_tiling": True}
-                if settings.IMAGE_BASE_REPO:
-                    load.update(base_repo=settings.IMAGE_BASE_REPO, scheduler=settings.IMAGE_SCHEDULER)
-                await self.request(load)
-                if ip != "none":
-                    adapter = {"command": "load_ip_adapter"}
-                    if scene:  # Task 23.2: + the scene-plate adapter
-                        adapter["scene"] = True
-                    if ip == "layers_only":
-                        adapter["image_encoder_folder"] = None
-                    await self.request(adapter)
-                yield self
-            finally:
-                await asyncio.to_thread(worker.close)
-                self._worker = None
-
-    async def request(self, payload: dict[str, Any]) -> dict[str, Any]:
-        response = await asyncio.to_thread(self._worker.request, payload)
-        if payload["command"] == "encode":
-            self._encoded_tokens[str(payload["output_path"])] = response["item_tokens"]
-        elif payload["command"] == "generate" and payload.get("embeds_path"):
-            tokens = self._encoded_tokens[str(payload["embeds_path"])][int(payload.get("embeds_index", 0))]
-            response = {**response, **tokens}
-        return response
-
-
 class FakeImageEngine:
     """Deterministic solid-colour PNGs with the worker's JSON response shape."""
 
-    qwen_available = True  # tests flip it to exercise the RealVisXL fallback
+    qwen_available = True  # tests flip it to exercise the "model missing" message
     qwen_calls: list[dict[str, Any]] = []
     qwen_faces: list[list[float]] = [[560, 79, 818, 397, 1.0], [901, 180, 1134, 468, 1.0]]  # Phase 43 detect_faces
-
-    def __init__(self) -> None:
-        self._encoded_tokens: dict[str, list[dict[str, Any]]] = {}
 
     async def qwen_batch(self, model: str, items: list[dict[str, Any]], consumer: str,
                          detect_faces: bool = False) -> dict[str, Any]:
@@ -206,69 +148,10 @@ class FakeImageEngine:
                 entry["faces"] = [list(face) for face in FakeImageEngine.qwen_faces]
         return {"status": "ok", "model": model, "items": results}
 
-    @asynccontextmanager
-    async def session(
-        self, pipeline: str = "text2img", encoders: bool = True,
-        ip: str = "none", consumer: str = "visuals", scene: bool = False,
-    ) -> AsyncIterator[FakeImageEngine]:
-        require_generation()
-        yield self
-
-    async def request(self, payload: dict[str, Any]) -> dict[str, Any]:
-        command = payload["command"]
-        if command == "encode":
-            tokens = [
-                {"prompt_tokens": token_count(item["prompt"]),
-                 "prompt_truncated": token_count(item["prompt"]) > 75}
-                for item in payload["items"]
-            ]
-            self._encoded_tokens[str(payload["output_path"])] = tokens
-            await asyncio.to_thread(_touch, Path(payload["output_path"]))
-            return {"status": "ok", "items": len(tokens), "do_cfg": True,
-                    "with_ip": bool(payload.get("ip_adapter_image") or payload.get("ip_adapter_images")),
-                    "ip_faces": len(payload.get("ip_adapter_images") or []) or int(bool(payload.get("ip_adapter_image"))),
-                    "output_path": str(payload["output_path"]), "wall_time_sec": 0.0, "item_tokens": tokens}
-        if command == "generate":
-            width, height = int(payload.get("width", 1344)), int(payload.get("height", 768))
-            seed = int(payload["seed"])
-            await asyncio.to_thread(_solid_png, Path(payload["output_path"]), (width, height), seed)
-            if payload.get("embeds_path"):
-                tokens = self._encoded_tokens[str(payload["embeds_path"])][int(payload.get("embeds_index", 0))]
-            else:
-                count = token_count(payload["prompt"])
-                tokens = {"prompt_tokens": count, "prompt_truncated": count > 75}
-            return {"status": "ok", "wall_time_sec": 0.0, "steps": int(payload.get("steps", 30)),
-                    "guidance_scale": float(payload.get("guidance_scale", 6.0)),
-                    "pipeline": "fake", "from_embeds": bool(payload.get("embeds_path")),
-                    "negative_prompt_applied": bool(payload.get("negative_prompt")),
-                    "native_size": [width, height], "output_path": str(payload["output_path"]),
-                    "fitted_path": None, **tokens}
-        if command == "remove_background":
-            # No foreground anywhere: the extra-person check sees an empty gap.
-            await asyncio.to_thread(_transparent_png, Path(payload["input_path"]), Path(payload["output_path"]))
-            return {"status": "ok", "output_path": str(payload["output_path"]), "wall_time_sec": 0.0,
-                    "foreground_fraction": 0.0, "soft_edge_fraction": 0.0}
-        if command == "count_faces":  # a clean shot: as many faces as people (tests script other answers)
-            return {"status": "ok", "faces": int(payload.get("expected_faces", 0)), "boxes": [], "wall_time_sec": 0.0}
-        raise ValueError(f"unsupported fake image command: {command}")
-
-
-def _touch(path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.touch()
-
-
 def _solid_png(path: Path, size: tuple[int, int], seed: int) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     color = ((seed * 73) % 256, (seed * 151) % 256, (seed * 199) % 256)
     Image.new("RGB", size, color).save(path, format="PNG")
-
-
-def _transparent_png(source: Path, path: Path) -> None:
-    with Image.open(source) as image:
-        size = image.size
-    path.parent.mkdir(parents=True, exist_ok=True)
-    Image.new("RGBA", size, (0, 0, 0, 0)).save(path, format="PNG")
 
 
 def get_image_engine() -> ImageEngine:

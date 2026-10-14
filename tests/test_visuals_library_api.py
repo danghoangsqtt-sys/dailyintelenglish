@@ -1,4 +1,4 @@
-"""Task 20.4 library API lifecycle with the deterministic fake image engine."""
+"""Task 20.4 library API with the deterministic fake image engine (the SDXL candidate/sheet flow went in Phase 44, D123)."""
 
 import sqlite3
 import time
@@ -44,54 +44,6 @@ def wait_job(client, job):
     pytest.fail("image job did not finish")
 
 
-def test_character_lifecycle_and_content(client):
-    assert data(client.get("/api/visuals/options"))["style_id"] == "editorial_photo"
-    bad = client.post("/api/visuals/characters", json={**CHARACTER, "extra": "hat 123"})
-    assert bad.status_code == 422  # Phase 31: `extra` is a short identity detail (letters, spaces, hyphens, commas)
-    bad = client.post("/api/visuals/characters", json={**CHARACTER, "bottom_color": "plaid"})
-    assert bad.status_code == 422  # a colour outside the solid list (the same colour twice is allowed since Phase 28)
-    character = data(client.post("/api/visuals/characters", json=CHARACTER))
-    character_id = character["id"]
-    assert character["status"] == "draft"
-    job = data(client.post(f"/api/visuals/characters/{character_id}/candidates"))
-    duplicate = data(client.post(f"/api/visuals/characters/{character_id}/candidates"))
-    assert duplicate["id"] == job["id"]
-    wait_job(client, job)
-    character = data(client.get(f"/api/visuals/characters/{character_id}"))
-    candidates = [asset for asset in character["assets"] if asset["kind"] == "candidate"]
-    assert len(candidates) == 4 and character["status"] == "candidates"
-    assert all(asset["prompt_tokens"] > 0 for asset in candidates)
-    reference = data(client.put(f"/api/visuals/characters/{character_id}/reference", json={
-        "asset_id": candidates[1]["id"],
-    }))
-    assert reference["reference_asset_id"] == candidates[1]["id"]
-    face = next(asset for asset in reference["assets"] if asset["kind"] == "face")
-    assert client.get(face["url"]).status_code == 200
-    with Image.open(settings.DATA_DIR / "library" / "characters" / character_id / "face.png") as image:
-        assert image.size == (512, 512)
-    wait_job(client, data(client.post(f"/api/visuals/characters/{character_id}/sheet", json=[])))
-    character = data(client.get(f"/api/visuals/characters/{character_id}"))
-    sheet = [asset for asset in character["assets"] if asset["kind"].startswith("portrait_")
-             or asset["kind"] == "full_body"]
-    assert len(sheet) == 4 and character["status"] == "sheet"
-    assert client.post(f"/api/visuals/characters/{character_id}/lock").status_code == 409
-    for asset in sheet:
-        data(client.put(f"/api/visuals/characters/{character_id}/assets/{asset['id']}/approve", json={
-            "approved": True,
-        }))
-    locked = data(client.post(f"/api/visuals/characters/{character_id}/lock"))
-    assert locked["status"] == "locked"
-    assert client.patch(f"/api/visuals/characters/{character_id}", json={"hair": "short hair"}).status_code == 409
-    assert data(client.post(f"/api/visuals/characters/{character_id}/unlock"))["status"] == "sheet"
-    wait_job(client, data(client.post(f"/api/visuals/characters/{character_id}/sheet", json=[{
-        "kind": "portrait_calm",
-    }])))
-    changed = data(client.get(f"/api/visuals/characters/{character_id}"))
-    calm = next(asset for asset in changed["assets"] if asset["kind"] == "portrait_calm")
-    assert calm["approved"] == 0
-    assert data(client.delete(f"/api/visuals/characters/{character_id}"))["deleted"] == character_id
-
-
 def test_scene_crud_preview_builtin_and_kill_switch(client, monkeypatch):
     scenes = data(client.get("/api/visuals/scenes"))
     assert len([scene for scene in scenes if scene["is_builtin"]]) == 55
@@ -122,12 +74,11 @@ def test_scene_crud_preview_builtin_and_kill_switch(client, monkeypatch):
 def test_character_delete_force_and_content_path_guard(client, tmp_path):
     character = data(client.post("/api/visuals/characters", json=CHARACTER))
     character_id = character["id"]
-    wait_job(client, data(client.post(f"/api/visuals/characters/{character_id}/candidates")))
-    asset = data(client.get(f"/api/visuals/characters/{character_id}"))["assets"][0]
     outside = tmp_path.parent / "outside_visual.png"
     Image.new("RGB", (8, 8), "red").save(outside)
-    with sqlite3.connect(settings.db_path) as connection:
-        connection.execute("UPDATE character_assets SET path = ? WHERE id = ?", (str(outside), asset["id"]))
+    with sqlite3.connect(settings.db_path) as connection:  # an asset whose path points outside the library
+        connection.execute("INSERT INTO character_assets (id, character_id, kind, path, created_at) "
+                           "VALUES ('asset-out', ?, 'face', ?, 'now')", (character_id, str(outside)))
         connection.execute(
             "INSERT INTO projects (id, name, created_at, updated_at) VALUES ('project-test', 'Test', 'now', 'now')"
         )
@@ -135,21 +86,7 @@ def test_character_delete_force_and_content_path_guard(client, tmp_path):
             "INSERT INTO project_cast (project_id, speaker_index, character_id) VALUES (?, 0, ?)",
             ("project-test", character_id),
         )
-    assert client.get(asset["url"]).status_code == 404
+    assert client.get("/api/visuals/assets/asset-out/content").status_code == 404
     assert client.delete(f"/api/visuals/characters/{character_id}").status_code == 409
     assert data(client.delete(f"/api/visuals/characters/{character_id}?force=true"))["deleted"] == character_id
 
-
-def test_character_view_offers_the_full_body_picture_for_the_grid(client):
-    """Task 27.3b: a library tile shows the full-body sheet view; without one, body_url is null."""
-    character = data(client.post("/api/visuals/characters", json=CHARACTER))
-    assert character["body_url"] is None
-    wait_job(client, data(client.post(f"/api/visuals/characters/{character['id']}/candidates")))
-    character = data(client.get(f"/api/visuals/characters/{character['id']}"))
-    assert character["body_url"] is None  # candidates only
-    candidate = next(asset for asset in character["assets"] if asset["kind"] == "candidate")
-    data(client.put(f"/api/visuals/characters/{character['id']}/reference", json={"asset_id": candidate["id"]}))
-    wait_job(client, data(client.post(f"/api/visuals/characters/{character['id']}/sheet")))
-    character = data(client.get(f"/api/visuals/characters/{character['id']}"))
-    assert character["body_url"] == character["sheet_urls"]["full_body"]
-    assert client.get(character["body_url"]).status_code == 200

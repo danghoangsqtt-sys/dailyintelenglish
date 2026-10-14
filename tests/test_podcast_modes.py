@@ -36,21 +36,22 @@ def _make_a_plate(scene_id: str) -> None:
 
 # ---- the request model --------------------------------------------------------------------------------------------
 
-def test_request_defaults_keep_the_drawn_story_and_unknown_modes_are_refused():
+def test_request_defaults_to_talking_characters_and_unknown_modes_are_refused():
     request = GenerateVideoRequest(template_id="midnight")
-    assert request.visual_mode == "illustrated" and request.still_scene_id is None
+    assert request.visual_mode == "podcast_sprites" and request.still_scene_id is None  # Phase 44 (D123)
     assert GenerateVideoRequest(template_id="midnight", visual_mode="podcast_still",
                                 still_scene_id="builtin-cafe").still_scene_id == "builtin-cafe"
     with pytest.raises(PydanticValidationError):
         GenerateVideoRequest(template_id="midnight", visual_mode="podcast_characters")
+    with pytest.raises(PydanticValidationError):  # the drawn-shot video was removed with RealVisXL
+        GenerateVideoRequest(template_id="midnight", visual_mode="illustrated")
 
 
 # ---- the props ----------------------------------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_podcast_black_has_no_pictures_of_anyone_and_no_shots(client, tmp_path, monkeypatch):  # noqa: F811
+async def test_podcast_black_has_no_pictures_of_anyone(client, tmp_path, monkeypatch):  # noqa: F811
     project, _, _ = setup_project(client, 2, 1)
-    wait_job(client, data(client.post(f"/api/projects/{project['id']}/visuals/shots")))
     _public(tmp_path, monkeypatch)
     async with aiosqlite.connect(settings.db_path) as db:
         db.row_factory = aiosqlite.Row
@@ -105,14 +106,3 @@ async def test_podcast_still_with_no_plate_anywhere_is_refused_with_a_clear_mess
             await video_renderer_remotion._build_input_props(
                 db, project, _audio_job(project), None, visual_mode="podcast_still", still_scene_id="no-such-scene")
 
-
-@pytest.mark.asyncio
-async def test_the_drawn_story_is_unchanged_and_still_marks_its_mode(client, tmp_path, monkeypatch):  # noqa: F811
-    project, _, _ = setup_project(client, 1, 1)
-    wait_job(client, data(client.post(f"/api/projects/{project['id']}/visuals/shots")))
-    _public(tmp_path, monkeypatch)
-    async with aiosqlite.connect(settings.db_path) as db:
-        db.row_factory = aiosqlite.Row
-        props = await video_renderer_remotion._build_input_props(db, project, _audio_job(project), None)
-    assert props["visualMode"] == "illustrated" and props["visuals"]["lineShots"]
-    assert props["speakers"][0]["avatarUrl"].endswith("_cast.png")

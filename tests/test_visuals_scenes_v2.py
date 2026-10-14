@@ -3,10 +3,8 @@
 import sqlite3
 
 import pytest
-from PIL import Image
 
 from backend.core.config import settings
-from backend.ai.image import geometry, recipes
 from backend.ai.image.engine import FakeImageEngine
 from tests.test_visuals_project_api import client, data, setup_project, wait_job  # noqa: F401
 
@@ -48,63 +46,6 @@ def test_create_validate_and_stale_plate(client):  # noqa: F811
     assert renamed["preview_url"]  # a rename keeps the plate
     moved = data(client.patch(f"/api/visuals/scenes/{scene['id']}", json={"time_of_day": "sunset"}))
     assert moved["preview_url"] is None  # the plate showed night: stale
-
-
-def test_preview_prompt_time_of_day_and_budget():
-    scene = {"place": "a cozy Vietnamese street cafe", "time_of_day": "sunset"}
-    prompt = recipes.scene_preview_prompt(scene)
-    assert "golden sunset light" in prompt and prompt.endswith("wide view, empty scene, no people")
-    day = recipes.scene_preview_prompt({**scene, "time_of_day": "day"})
-    assert not any(word in day for word in ("morning", "sunset", "night", "lamps"))
-    assert recipes.token_count(prompt) <= 75
-
-
-def test_background_mask_excludes_people():
-    people = geometry.shot_people("duo_close", "seated", SIZE)
-    mask = geometry.background_mask(people, SIZE)
-    assert mask.getpixel((5, 5)) == 255
-    for person in people:
-        nose = dict(zip(geometry._KEYS, person["points"]))["nose"]
-        assert mask.getpixel((round(nose[0]), round(nose[1]))) == 0
-
-
-def test_shots_make_missing_plates_once_and_pass_the_scene(client, monkeypatch, requests_log):  # noqa: F811
-    monkeypatch.setattr(settings, "VISUALS_COLOUR_RETRIES", 0)
-    monkeypatch.setattr(settings, "IMAGE_ILLUSTRATION_ENGINE", "realvisxl")  # Phase 39: the RealVisXL fallback path
-    project, _, scenes = setup_project(client, 2, 2)
-    base = f"/api/projects/{project['id']}/visuals"
-    wait_job(client, data(client.post(f"{base}/shots")))
-    plates = [p for p in requests_log if p["command"] == "generate" and "empty scene" in p.get("prompt", "")]
-    assert len(plates) == 2
-    for scene in data(client.get("/api/visuals/scenes")):
-        if scene["id"] in {s["id"] for s in scenes}:
-            assert scene["preview_url"]
-            assert Image.open(settings.DATA_DIR / "library" / "scenes" / scene["id"] / "preview.png").size == SIZE
-    encodes = [p for p in requests_log if p["command"] == "encode"]
-    assert encodes and all(p["ip_adapter_scene_image"].endswith("preview.png") for p in encodes)
-    renders = [p for p in requests_log if p.get("embeds_path")]
-    assert renders and all(p["ip_adapter_scene_scale"] == 0.4 and p["ip_adapter_scene_mask"] for p in renders)
-    requests_log.clear()
-    wait_job(client, data(client.post(f"{base}/shots")))
-    assert not [p for p in requests_log if "empty scene" in p.get("prompt", "")]  # plates are reused
-
-
-def test_scene_reference_off_keeps_the_old_path(client, monkeypatch, requests_log):  # noqa: F811
-    monkeypatch.setattr(settings, "VISUALS_SCENE_REFERENCE_SCALE", 0.0)
-    project, _, _ = setup_project(client, 2, 1)
-    wait_job(client, data(client.post(f"/api/projects/{project['id']}/visuals/shots")))
-    assert not [p for p in requests_log if "empty scene" in p.get("prompt", "")]
-    assert not [p for p in requests_log if "ip_adapter_scene_image" in p or "ip_adapter_scene_mask" in p]
-
-
-def test_plates_use_the_people_free_negative(client, monkeypatch, requests_log):  # noqa: F811
-    monkeypatch.setattr(settings, "VISUALS_COLOUR_RETRIES", 0)
-    monkeypatch.setattr(settings, "IMAGE_ILLUSTRATION_ENGINE", "realvisxl")  # Phase 39: the RealVisXL fallback path
-    project, _, _ = setup_project(client, 1, 1)
-    wait_job(client, data(client.post(f"/api/projects/{project['id']}/visuals/shots")))
-    plates = [p for p in requests_log if "empty scene" in p.get("prompt", "")]
-    assert plates and all(p["negative_prompt"] == recipes.PLATE_NEGATIVE for p in plates)
-    assert "people" in recipes.PLATE_NEGATIVE and recipes.token_count(recipes.PLATE_NEGATIVE) <= 72
 
 
 def test_used_count_duplicate_and_versioned_plate_url(client):  # noqa: F811

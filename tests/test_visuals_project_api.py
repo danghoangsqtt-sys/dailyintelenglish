@@ -1,4 +1,4 @@
-"""Task 20.6 cast, scenes and shot jobs with fake image generation."""
+"""Task 20.6 cast and scenes with fake image generation (Phase 44: the shot jobs are gone); shared fixtures."""
 
 import sqlite3
 import time
@@ -24,7 +24,6 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     monkeypatch.setattr(settings, "IMAGE_ENGINE", "fake")
     monkeypatch.setattr(settings, "AI_VISUALS_ENABLED", True)
-    monkeypatch.setattr(settings, "VISUALS_DUO_REFINE", True)
     with TestClient(app) as test_client:
         yield test_client
 
@@ -36,15 +35,14 @@ def data(response):
 
 
 def wait_job(client, job):
-    # 30 s: a shot job now also renders missing scene plates (Task 23.2), and the full suite
-    # runs these on a loaded machine (two 8 s timeouts seen in one full run).
+    # 30 s: the full suite runs these on a loaded machine.
     for _ in range(1500):
         current = data(client.get(f"/api/visuals/jobs/{job['id']}"))
         if current["status"] in ("complete", "error", "cancelled"):
             assert current["status"] == "complete", current["error"]
             return current
         time.sleep(0.02)
-    pytest.fail("shot job did not finish")
+    pytest.fail("image job did not finish")
 
 
 def locked_character(name: str, color: str) -> str:
@@ -96,10 +94,9 @@ def test_cast_validation_warning_and_speaker_replacement(client):
     first = locked_character("Nova", "yellow")
     second = locked_character("Mira", "yellow")
     assert client.put(f"{base}/cast", json=[{"speaker_index": 9, "character_id": first}]).status_code == 422
-    visuals = data(client.put(f"{base}/cast", json=[
+    data(client.put(f"{base}/cast", json=[
         {"speaker_index": 0, "character_id": first}, {"speaker_index": 1, "character_id": second},
     ]))
-    assert visuals["warnings"]
     updated = {"num_speakers": 2, "speakers": [
         {"name": "New One", "gender": "female", "accent": "american"},
         {"name": "New Two", "gender": "male", "accent": "american"},
@@ -110,55 +107,19 @@ def test_cast_validation_warning_and_speaker_replacement(client):
     assert client.put(f"{base}/scenes", json=["missing"]).status_code == 404
 
 
-@pytest.mark.parametrize("cast_count,scene_count", [(1, 1), (2, 2), (2, 3)])
-def test_shot_sets_regenerate_and_content_guard(client, cast_count, scene_count, tmp_path):
-    project, ids, scenes = setup_project(client, cast_count, scene_count)
-    base = f"/api/projects/{project['id']}/visuals"
-    wait_job(client, data(client.post(f"{base}/shots")))
-    shots = data(client.get(base))["shots"]
-    expected_per_scene = cast_count + (2 if cast_count == 2 else 0)
-    assert len(shots) == expected_per_scene * scene_count
-    for scene in scenes:
-        group = [shot for shot in shots if shot["scene_id"] == scene["id"]]
-        assert [shot["kind"] for shot in group] == (
-            ["single"] if cast_count == 1 else ["single", "single", "duo_close", "duo_wide"]
-        )
-    assert all(shot["status"] == "complete" and shot["raw_url"] and shot["final_url"] for shot in shots)
-    shot = shots[-1]
-    assert client.get(shot["final_url"]).headers["content-type"] == "image/png"
-    folder = settings.DATA_DIR / "visuals" / project["id"] / "shots" / shot["id"]
-    assert (folder / "pose.png").is_file() and (folder / "raw.png").is_file()
-    assert (folder / "final.png").is_file()
-    if shot["kind"] != "single":
-        assert (folder / "refine_mask_0.png").is_file()
-    old_seed = shot["seed"]
-    wait_job(client, data(client.post(f"{base}/shots/{shot['id']}/regenerate")))
-    regenerated = next(item for item in data(client.get(base))["shots"] if item["id"] == shot["id"])
-    assert regenerated["seed"] != old_seed and regenerated["status"] == "complete"
-    outside = tmp_path.parent / "outside_shot.png"
-    Image.new("RGB", (8, 8), "red").save(outside)
-    with sqlite3.connect(settings.db_path) as connection:
-        connection.execute("UPDATE project_shots SET final_path = ? WHERE id = ?", (str(outside), shot["id"]))
-    assert client.get(regenerated["final_url"]).status_code == 404
-
-
 def test_project_delete_removes_visual_files(client):
     project, _, _ = setup_project(client, 1, 1)
-    base = f"/api/projects/{project['id']}/visuals"
-    wait_job(client, data(client.post(f"{base}/shots")))
-    directory = settings.DATA_DIR / "visuals" / project["id"]
-    assert directory.is_dir()
+    directory = settings.DATA_DIR / "visuals" / project["id"] / "activity_drafts"
+    directory.mkdir(parents=True)
+    (directory / "draft.png").write_bytes(b"x")
     data(client.delete(f"/api/projects/{project['id']}"))
-    assert not directory.exists()
+    assert not directory.parent.exists()
 
 
-def test_shot_prompt_truncation_from_fake_encode(client, monkeypatch):
-    from backend.ai.image import recipes
-
-    project, _, _ = setup_project(client, 1, 1)
-    monkeypatch.setattr(recipes, "single_prompt", lambda character, scene, **kwargs: "word " * 80)
+def test_the_shot_routes_and_the_visual_warnings_are_gone(client):
+    """Phase 44 (D123): no two-person shots, no "Generate shots", no duo colour warning."""
+    project, _, _ = setup_project(client, 2, 1)
     base = f"/api/projects/{project['id']}/visuals"
-    wait_job(client, data(client.post(f"{base}/shots")))
-    shot = data(client.get(base))["shots"][0]
-    assert shot["prompt_truncated"] == 1
-    assert shot["prompt_tokens"] == 80
+    assert set(data(client.get(base))) == {"cast", "scenes"}
+    assert client.post(f"{base}/shots").status_code in (404, 405)
+    assert client.get("/api/visuals/library/shots").status_code == 404
