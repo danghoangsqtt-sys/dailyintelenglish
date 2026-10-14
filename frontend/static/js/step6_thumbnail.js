@@ -126,7 +126,10 @@
       button.setAttribute("aria-pressed", template.id === state.selectedTemplate ? "true" : "false");
       const available = template.available !== false;
       button.setAttribute("aria-disabled", available ? "false" : "true");
-      if (!available) button.title = "Upload your outside-AI picture first (below).";
+      if (!available) {
+        button.title = template.id === "qwen_scene" ? "Draw the AI scenes first (below)."
+          : "Upload your outside-AI picture first (below).";
+      }
 
       const image = document.createElement("img");
       image.src = template.preview_url;
@@ -452,6 +455,80 @@
     }
   }
 
+  // Phase 43 (D122): the AI scenes -- the characters drawn into a topic scene by Qwen-Image-Edit on this computer.
+  const AI_SCENE_LOAD_SECONDS = 80;
+  const AI_SCENE_PICTURE_SECONDS = 95;
+
+  function renderAiScenes(scenes) {
+    const list = byId("ai-scene-list");
+    list.replaceChildren();
+    scenes.forEach((scene) => {
+      const item = document.createElement("div");
+      item.className = "ai-scene-item";
+      item.classList.toggle("is-crowded", scene.crowded);
+      item.dataset.scene = String(scene.index);
+      const image = document.createElement("img");
+      image.src = scene.preview_url;
+      image.alt = `AI scene ${scene.index + 1}`;
+      const note = document.createElement("span");
+      note.className = "ai-scene-note";
+      note.textContent = scene.crowded
+        ? (scene.faces === 0 ? "⚠ No faces found: draw it again." : "⚠ Crowded: little room for the title. Draw it again.")
+        : `Picture ${scene.index + 1}: title on the ${scene.side}.`;
+      const again = document.createElement("button");
+      again.type = "button";
+      again.className = "btn btn-ghost btn-xs";
+      again.textContent = "↻ Draw again";
+      again.addEventListener("click", () => drawAiScenes([scene.index]));
+      item.append(image, note, again);
+      list.appendChild(item);
+    });
+  }
+
+  async function refreshTemplates(select) {
+    state.templates = await Api.listThumbnailTemplates(state.projectId);
+    if (select && state.templates.some((template) => template.id === select && template.available !== false)) {
+      state.selectedTemplate = select;
+    }
+    renderTemplates();
+  }
+
+  /** Draw all the scenes (indexes omitted) or draw one again; the request runs for minutes, so show the time. */
+  async function drawAiScenes(indexes) {
+    if (state.aiSceneBusy) return;
+    const button = byId("ai-scene-btn");
+    const status = byId("ai-scene-status");
+    const count = indexes ? indexes.length : Number(byId("ai-scene-count").value);
+    state.aiSceneBusy = true;
+    button.disabled = true;
+    byId("ai-scene-list").querySelectorAll("button").forEach((control) => { control.disabled = true; });
+    const progress = GenerationStatus.mount({
+      element: byId("ai-scene-progress"),
+      baselineSec: AI_SCENE_LOAD_SECONDS + AI_SCENE_PICTURE_SECONDS * count,
+    });
+    progress.setProgress({ stageLabel: indexes ? "Drawing the picture again on this computer…"
+      : `Drawing ${count} AI scene${count === 1 ? "" : "s"} on this computer…` });
+    try {
+      const scenes = indexes
+        ? await Api.redrawThumbnailAiScene(state.projectId, indexes[0])
+        : await Api.drawThumbnailAiScenes(state.projectId, count);
+      renderAiScenes(scenes);
+      await refreshTemplates("qwen_scene");
+      const crowded = scenes.filter((scene) => scene.crowded).length;
+      status.textContent = crowded
+        ? `Done. ${crowded} picture${crowded === 1 ? " is" : "s are"} crowded: draw ${crowded === 1 ? "it" : "them"} again, or generate anyway.`
+        : 'Done. "AI scene (local Qwen)" is selected: generate the thumbnails.';
+    } catch (error) {
+      status.textContent = error.message || "The AI scenes could not be drawn.";
+    } finally {
+      progress.destroy();
+      byId("ai-scene-progress").textContent = "";
+      state.aiSceneBusy = false;
+      button.disabled = false;
+      byId("ai-scene-list").querySelectorAll("button").forEach((control) => { control.disabled = false; });
+    }
+  }
+
   async function init() {
     const params = new URLSearchParams(window.location.search);
     state.projectId = params.get("project_id");
@@ -497,6 +574,8 @@
       if (event.target.files[0]) uploadOutsidePicture(event.target.files[0]);
     });
     byId("topic-picture-btn").addEventListener("click", drawTopicPicture);
+    byId("ai-scene-btn").addEventListener("click", () => drawAiScenes(null));
+    Api.listThumbnailAiScenes(state.projectId).then(renderAiScenes).catch(() => {});
     showTopicPicture();
     loadOutsidePrompt();
     renderTemplates();

@@ -812,6 +812,9 @@ class ImageWorker:
         started = time.monotonic()
         run = qwen_runner.generate_qwen21 if model == "qwen21" else qwen_runner.generate_qwen_edit
         result = run(torch, items, lambda message: _log(f"qwen {model}: {message}"))
+        if request.get("detect_faces"):  # Phase 43 (D122): the AI-scene thumbnail frames itself on the drawn faces
+            for entry in result["items"]:
+                entry["faces"] = detect_faces(entry["output_path"])
         return {"status": "ok", "model": model, **result, "wall_time_sec": round(time.monotonic() - started, 1),
                 "vram_peak_mb": _mb(torch.cuda.max_memory_reserved())}
 

@@ -227,6 +227,13 @@ const Api = (() => {
     listThumbnailTemplates: (projectId) => request(`/api/thumbnails/templates${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""}`),
     listThumbnails: (projectId) => request(`/api/projects/${projectId}/thumbnails`),
     drawThumbnailTopicPicture: (projectId) => request(`/api/projects/${projectId}/thumbnails/topic-picture`, { method: "POST" }),
+    // Phase 43 (D122): the characters drawn into a topic scene on this computer
+    drawThumbnailAiScenes: (projectId, count) => request(`/api/projects/${projectId}/thumbnails/ai-scenes`, {
+      method: "POST", body: JSON.stringify({ count }),
+    }),
+    listThumbnailAiScenes: (projectId) => request(`/api/projects/${projectId}/thumbnails/ai-scenes`),
+    redrawThumbnailAiScene: (projectId, index) =>
+      request(`/api/projects/${projectId}/thumbnails/ai-scenes/${index}/redraw`, { method: "POST" }),
     getThumbnailOutsidePrompt: (projectId) => request(`/api/projects/${projectId}/thumbnails/outside-prompt`),
     uploadThumbnailOutsideImage: (projectId, file) => {
       const body = new FormData();

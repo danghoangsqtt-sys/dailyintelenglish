@@ -439,3 +439,63 @@ async def test_regenerate_asks_in_the_page_and_works_where_native_dialogs_are_bl
     assert await page.locator(".confirm-dialog").count() == 0
     assert native_dialogs == []
     await page.close()
+
+
+@pytest.mark.asyncio
+async def test_drawing_ai_scenes_shows_them_and_selects_the_ai_scene_kind(
+    browser_instance: Browser,
+    live_server_url: str,
+) -> None:
+    """Phase 43 (D122): "Draw AI scenes" runs the local Qwen draw, lists the pictures (a crowded one flagged with "Draw
+    again") and makes the "AI scene (local Qwen)" kind available and selected."""
+    page = await browser_instance.new_page()
+    scene_kind = {"id": "qwen_scene", "display_name": "AI scene (local Qwen)", "description": "scene", "available": False,
+                  "preview_url": "/static/thumbnail_templates/qwen_scene.png"}
+    templates = [*TEMPLATES, scene_kind]
+    picture = "/static/thumbnail_templates/qwen_scene.png"
+    scenes = [{"index": 0, "crowded": False, "faces": 2, "side": "left", "free_share": 0.39, "preview_url": picture},
+              {"index": 1, "crowded": True, "faces": 2, "side": "left", "free_share": 0.2, "preview_url": picture}]
+    calls: list[tuple[str, str]] = []
+
+    async def handle(route: Route) -> None:
+        path = urlparse(route.request.url).path
+        method = route.request.method
+        if path == "/api/thumbnails/templates":
+            return await fulfill_json(route, templates)
+        if path.endswith("/thumbnails/ai-scenes") and method == "GET":
+            return await fulfill_json(route, [])
+        if path.endswith("/thumbnails/ai-scenes") and method == "POST":
+            calls.append((path, route.request.post_data))
+            await asyncio.sleep(0.2)
+            scene_kind["available"] = True
+            return await fulfill_json(route, scenes)
+        if path.endswith("/thumbnails/ai-scenes/1/redraw"):
+            calls.append((path, ""))
+            return await fulfill_json(route, [scenes[0], {**scenes[1], "crowded": False}])
+        if path == f"/api/projects/{PROJECT['id']}" and method == "GET":
+            return await fulfill_json(route, PROJECT)
+        if path == f"/api/projects/{PROJECT['id']}/thumbnails" and method == "GET":
+            return await fulfill_json(route, [])
+        if path.endswith("/thumbnails/outside-prompt"):
+            return await fulfill_json(route, OUTSIDE_PROMPT)
+        await route.continue_()
+
+    await page.route("**/api/**", handle)
+    await page.goto(f"{live_server_url}/step6?project_id={PROJECT['id']}")
+    await page.locator("#workspace").wait_for()
+    assert await page.locator('[data-template-id="qwen_scene"]').get_attribute("aria-disabled") == "true"
+
+    await page.select_option("#ai-scene-count", "2")
+    await page.click("#ai-scene-btn")
+    await page.locator("#ai-scene-progress .generation-status-stage").wait_for()
+    await page.locator('.ai-scene-item[data-scene="1"]').wait_for()
+    assert json.loads(calls[0][1]) == {"count": 2}
+    assert "Crowded" in await page.locator('.ai-scene-item[data-scene="1"]').text_content()
+    assert await page.locator('[data-template-id="qwen_scene"]').get_attribute("aria-pressed") == "true"
+    assert "crowded" in (await page.locator("#ai-scene-status").text_content()).lower()
+
+    await page.locator('.ai-scene-item[data-scene="1"] button').click()
+    await page.get_by_text('"AI scene (local Qwen)" is selected').wait_for()
+    assert calls[-1][0].endswith("/ai-scenes/1/redraw")
+    assert await page.locator(".ai-scene-item.is-crowded").count() == 0
+    await page.close()

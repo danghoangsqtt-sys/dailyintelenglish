@@ -80,8 +80,8 @@ async def test_the_two_thumbnail_kinds_are_listed_and_outside_ai_waits_for_its_p
     """Task 36.3/36.4 (D92): `composed` and `outside_ai` replace the five Pillow templates and ai_scene."""
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     templates = await thumbnail_service.list_templates("project-1")
-    assert [template["id"] for template in templates] == list(THUMBNAIL_TEMPLATE_IDS) == ["composed", "outside_ai"]
-    assert [template["available"] for template in templates] == [True, False]
+    assert [template["id"] for template in templates] == list(THUMBNAIL_TEMPLATE_IDS) == ["composed", "outside_ai", "qwen_scene"]
+    assert [template["available"] for template in templates] == [True, False, False]
     assert templates[1]["preview_url"] == "/static/thumbnail_templates/outside_ai.png"
     picture = thumbnail_service.outside_image_path("project-1")
     picture.parent.mkdir(parents=True)

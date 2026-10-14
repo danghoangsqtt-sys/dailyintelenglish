@@ -69,13 +69,13 @@ def create_project(client: TestClient) -> dict:
     return response.json()["data"]
 
 
-def test_templates_endpoint_lists_the_two_thumbnail_kinds(client: TestClient) -> None:
-    """Task 36.3/36.4 (D92)."""
+def test_templates_endpoint_lists_the_thumbnail_kinds(client: TestClient) -> None:
+    """Task 36.3/36.4 (D92) + Phase 43 (D122): composed, outside-AI, and the local AI scene."""
     response = client.get("/api/thumbnails/templates")
 
     assert response.status_code == 200
     templates = response.json()["data"]
-    assert [template["id"] for template in templates] == ["composed", "outside_ai"]
+    assert [template["id"] for template in templates] == ["composed", "outside_ai", "qwen_scene"]
     assert all(template["preview_url"].endswith(".png") for template in templates)
     for template in templates:
         assert client.get(template["preview_url"]).status_code == 200

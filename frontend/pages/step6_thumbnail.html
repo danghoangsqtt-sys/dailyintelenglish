@@ -233,6 +233,17 @@
     .topic-picture-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 4px; }
     .topic-picture-preview { width: 192px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
     .outside-panel { margin: 14px 0 4px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; }
+    .ai-scene-panel { margin: 14px 0 4px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; }
+    .ai-scene-panel .topic-picture-row { margin: 0; }
+    .ai-scene-progress { display: flex; gap: 10px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .ai-scene-progress:empty { display: none; }
+    .ai-scene-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+    .ai-scene-list:empty { display: none; }
+    .ai-scene-item { display: flex; flex-direction: column; gap: 4px; width: 200px; font-size: 12px; }
+    .ai-scene-item img { width: 200px; aspect-ratio: 1536 / 720; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+    .ai-scene-item.is-crowded img { outline: 2px solid var(--danger); }
+    .ai-scene-note { color: var(--muted); }
+    .ai-scene-item.is-crowded .ai-scene-note { color: var(--danger); font-weight: 700; }
     .outside-panel > summary { cursor: pointer; font-weight: 700; }
     .outside-steps { margin: 10px 0; padding-left: 20px; font-size: 13px; color: var(--muted); }
     .outside-prompt { width: 100%; min-height: 110px; font-size: 13px; resize: vertical; }
@@ -284,6 +295,19 @@
                 <button class="btn btn-ghost btn-sm" id="topic-picture-btn" type="button">🎨 Draw a topic picture with local AI</button>
                 <span class="helper-text" id="topic-picture-status" role="status">Qwen-Image-2.1 on this computer (about 1–2 minutes). The composed thumbnail then uses it as its background.</span>
                 <img id="topic-picture-preview" class="topic-picture-preview" alt="Topic picture drawn with local AI" hidden />
+              </div>
+              <div class="ai-scene-panel" id="ai-scene-panel">
+                <div class="topic-picture-row">
+                  <button class="btn btn-ghost btn-sm" id="ai-scene-btn" type="button">🧑‍🤝‍🧑 Draw AI scenes with local Qwen</button>
+                  <label class="helper-text">Pictures
+                    <select id="ai-scene-count" aria-label="How many AI scenes to draw">
+                      <option value="1">1</option><option value="2">2</option><option value="3" selected>3</option>
+                    </select>
+                  </label>
+                  <span class="helper-text" id="ai-scene-status" role="status">Qwen-Image-Edit on this computer draws the episode's characters together in a scene of the topic: about 1.5 minutes to load, then about 1.5 minutes per picture. Then choose "AI scene (local Qwen)" and generate.</span>
+                </div>
+                <div class="ai-scene-progress" id="ai-scene-progress"></div>
+                <div class="ai-scene-list" id="ai-scene-list"></div>
               </div>
               <details class="outside-panel" id="outside-panel">
                 <summary>Make the picture with an outside AI (optional)</summary>
@@ -391,6 +415,7 @@
 
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/confirm_dialog.js"></script>
+  <script src="/static/js/generation_status.js"></script>
   <script src="/static/js/api.js"></script>
   <script src="/static/js/step_nav.js"></script>
   <script src="/static/js/keyboard_shortcuts.js"></script>

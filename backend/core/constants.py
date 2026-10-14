@@ -40,6 +40,7 @@ THUMBNAIL_JPEG_QUALITY = 90
 THUMBNAIL_TEMPLATE_IDS = (
     "composed",
     "outside_ai",
+    "qwen_scene",  # Phase 43 (D122): the characters drawn into a topic scene locally (not the ai_scene kind D92 removed)
 )
 
 # Video

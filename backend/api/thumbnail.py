@@ -8,6 +8,7 @@ import aiosqlite
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import FileResponse
 from PIL import Image, UnidentifiedImageError
+from pydantic import BaseModel, Field
 
 from backend.core.exceptions import NotFoundError, ValidationError
 
@@ -51,6 +52,8 @@ async def generate_thumbnails(
         composition = await thumbnail_compose.composition_inputs(db, project)
     if template.id == "outside_ai" and not composition["outside_image"]:
         raise ValidationError("Upload your outside-AI picture first")
+    if template.id == "qwen_scene" and not composition["ai_scenes"]:
+        raise ValidationError("Draw the AI scenes first")
     suggestions = await thumbnail_service.generate_suggestions(
         project,
         template,
@@ -150,6 +153,79 @@ async def get_topic_picture(project_id: str, db: aiosqlite.Connection = Depends(
     if not await asyncio.to_thread(path.is_file):
         raise NotFoundError("No topic picture yet")
     return FileResponse(path, media_type="image/png", headers={"Cache-Control": "no-store"})
+
+
+class AiSceneDrawRequest(BaseModel):
+    count: int = Field(default=3, ge=1, le=3)
+
+
+def _public_scene(project_id: str, scene: dict) -> dict:
+    return {"index": scene["index"], "crowded": scene["crowded"], "faces": scene["faces"],
+            "side": scene["frame"]["side"], "free_share": scene["frame"]["free_share"],
+            "seconds": scene.get("seconds"),
+            "preview_url": f"/api/projects/{project_id}/thumbnails/ai-scenes/{scene['index']}?seed={scene['seed']}"}
+
+
+async def _draw_ai_scenes(db: aiosqlite.Connection, project_id: str, indexes: list[int], replace: bool) -> list[dict]:
+    from backend.ai.image.engine import QwenUnavailable
+    from backend.media import ai_scene
+
+    async with read_transaction():
+        project = await project_service.get_project(db, project_id)
+        composition = await thumbnail_compose.composition_inputs(db, project)
+    if replace:
+        await asyncio.to_thread(ai_scene.clear_scenes, project_id)
+    try:
+        scenes = await ai_scene.draw_scenes(project, composition, indexes)
+    except QwenUnavailable as exc:
+        raise ValidationError("The local image model (Qwen-Image-Edit-2511) is not installed on this computer") from exc
+    except ValueError as exc:
+        raise ValidationError(str(exc)) from exc
+    return [_public_scene(project_id, scene) for scene in scenes]
+
+
+@router.post("/api/projects/{project_id}/thumbnails/ai-scenes", status_code=201)
+async def draw_ai_scenes(project_id: str, payload: AiSceneDrawRequest | None = None,
+                         db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 43 (D122): draw 1-3 scenes of the episode's characters on the local GPU (Qwen-Image-Edit-2511, ~1.5 min
+    load + ~1.5 min per picture); each is framed on its faces. Replaces the previous scenes."""
+    started_at = time.perf_counter()
+    count = (payload or AiSceneDrawRequest()).count
+    return ok(await _draw_ai_scenes(db, project_id, list(range(count)), replace=True), started_at=started_at)
+
+
+@router.post("/api/projects/{project_id}/thumbnails/ai-scenes/{index}/redraw")
+async def redraw_ai_scene(project_id: str, index: int, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 43: draw one scene again (a new seed), e.g. when it came out crowded."""
+    from backend.media import ai_scene
+
+    started_at = time.perf_counter()
+    if index not in {scene["index"] for scene in await asyncio.to_thread(ai_scene.load_scenes, project_id)}:
+        raise NotFoundError(f"No AI scene {index}")
+    return ok(await _draw_ai_scenes(db, project_id, [index], replace=False), started_at=started_at)
+
+
+@router.get("/api/projects/{project_id}/thumbnails/ai-scenes")
+async def list_ai_scenes(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    from backend.media import ai_scene
+
+    async with read_transaction():
+        await project_service.get_project(db, project_id)
+    scenes = await asyncio.to_thread(ai_scene.load_scenes, project_id)
+    return ok([_public_scene(project_id, scene) for scene in scenes])
+
+
+@router.get("/api/projects/{project_id}/thumbnails/ai-scenes/{index}")
+async def get_ai_scene(project_id: str, index: int, db: aiosqlite.Connection = Depends(get_db)) -> FileResponse:
+    from backend.media import ai_scene
+
+    async with read_transaction():
+        await project_service.get_project(db, project_id)
+    scene = next((scene for scene in await asyncio.to_thread(ai_scene.load_scenes, project_id)
+                  if scene["index"] == index), None)
+    if scene is None:
+        raise NotFoundError(f"No AI scene {index}")
+    return FileResponse(scene["image"], media_type="image/png", headers={"Cache-Control": "no-store"})
 
 
 @router.get("/api/projects/{project_id}/thumbnails/outside-prompt")

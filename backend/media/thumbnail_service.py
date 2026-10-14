@@ -60,6 +60,14 @@ TEMPLATES = {
                        "CEFR badge and the logo.",
         "headline_zone": _ZONE, "supporting_zone": _ZONE, "uppercase_headline": True,
     }),
+    # Phase 43 (D122): the characters drawn into a topic scene on this computer (Qwen-Image-Edit-2511)
+    "qwen_scene": ThumbnailTemplateConfig.model_validate({
+        "id": "qwen_scene", "display_name": "AI scene (local Qwen)", "category": "bold", "base_image": "qwen_scene.png",
+        "description": "The episode's characters drawn together in a scene of the topic on this computer (about 1-2 "
+                       "minutes per picture); the app frames each picture on the faces and adds the headline, the CEFR "
+                       "badge and the logo on the free side.",
+        "headline_zone": _ZONE, "supporting_zone": _ZONE, "uppercase_headline": True,
+    }),
 }
 
 
@@ -81,14 +89,21 @@ def topic_picture_path(project_id: str) -> Path:
 
 
 async def list_templates(project_id: str | None = None) -> list[dict]:
-    """The two thumbnail kinds; `outside_ai` is available once the owner's picture is uploaded."""
+    """The thumbnail kinds; `outside_ai` is available once the owner's picture is uploaded, `qwen_scene` once its scenes
+    are drawn (Phase 43)."""
+    from backend.media import ai_scene
+
     has_outside = bool(project_id) and await asyncio.to_thread(outside_image_path(project_id).is_file)
+    scenes = await asyncio.to_thread(ai_scene.load_scenes, project_id) if project_id else []
     return [
         {**TEMPLATES["composed"].model_dump(), "available": True,
          "preview_url": "/static/thumbnail_templates/composed.png"},
         {**TEMPLATES["outside_ai"].model_dump(), "available": has_outside,
          "preview_url": f"/api/projects/{project_id}/thumbnails/outside-image" if has_outside
          else "/static/thumbnail_templates/outside_ai.png"},
+        {**TEMPLATES["qwen_scene"].model_dump(), "available": bool(scenes), "scene_count": len(scenes),
+         "preview_url": f"/api/projects/{project_id}/thumbnails/ai-scenes/{scenes[0]['index']}" if scenes
+         else "/static/thumbnail_templates/qwen_scene.png"},
     ]
 
 
@@ -245,6 +260,8 @@ def _render_image(
     """Render one suggestion at one aspect ratio (Task 36.3/36.4: `thumbnail_compose`)."""
     if template.id == "outside_ai" and not (composition.get("outside_image") and Path(composition["outside_image"]).is_file()):
         raise ThumbnailGenerationError("Upload your outside-AI picture first")
+    if template.id == "qwen_scene" and not composition.get("ai_scenes"):
+        raise ThumbnailGenerationError("Draw the AI scenes first")
     return thumbnail_compose.render(composition, suggestion, aspect, variant_index, template.id)
 
 

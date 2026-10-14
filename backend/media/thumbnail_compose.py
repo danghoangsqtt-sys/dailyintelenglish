@@ -113,8 +113,11 @@ async def composition_inputs(db: aiosqlite.Connection, project: dict, episode: i
         context = await channel_service.episode_context(db, project_id)
         episode = context["number"] if context else None
     outside = settings.DATA_DIR / "thumbnails" / project_id / "outside_source.png"
+    from backend.media import ai_scene  # Phase 43: the scenes Qwen drew for the "AI scene" kind
+
     return {"backgrounds": backgrounds, "characters": characters, "cefr": (project.get("cefr_level") or "").upper(),
-            "episode": episode, "outside_image": str(outside) if outside.is_file() else None}
+            "episode": episode, "outside_image": str(outside) if outside.is_file() else None,
+            "ai_scenes": ai_scene.load_scenes(project_id)}
 
 
 # ---------------------------------------------------------------- drawing (sync)
@@ -400,7 +403,7 @@ def render(inputs: dict, suggestion: ThumbnailSuggestion, aspect: ThumbnailAspec
     size = SIZES[aspect]
     width, height = size
     layout = LAYOUT_9X16 if aspect == "9x16" else LAYOUTS_16X9[variant_index % len(LAYOUTS_16X9)]
-    if template_id == "ai_scene":
+    if template_id == "qwen_scene":
         scenes = inputs.get("ai_scenes") or []
         if not scenes:
             raise ValueError("no AI scene picture for this thumbnail")
@@ -423,7 +426,7 @@ def render(inputs: dict, suggestion: ThumbnailSuggestion, aspect: ThumbnailAspec
             source = candidates[variant_index % len(candidates)] if candidates else None
         image = _shade(_background(source, size, suggestion), layout["shade"]).convert("RGBA")
 
-    if template_id not in ("outside_ai", "ai_scene"):
+    if template_id not in ("outside_ai", "qwen_scene"):
         characters = sorted(inputs.get("characters") or [], key=lambda character: character["slot"])
 
         def draw_at(target: int) -> list[Image.Image]:

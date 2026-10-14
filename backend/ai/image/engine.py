@@ -46,7 +46,8 @@ class ImageEngine(Protocol):
         ip: str = "none", consumer: str = "visuals", scene: bool = False,
     ) -> Any: ...
 
-    async def qwen_batch(self, model: str, items: list[dict[str, Any]], consumer: str) -> dict[str, Any]: ...
+    async def qwen_batch(self, model: str, items: list[dict[str, Any]], consumer: str,
+                         detect_faces: bool = False) -> dict[str, Any]: ...
 
 
 class _WorkerProcess:
@@ -110,8 +111,11 @@ class QwenUnavailable(RuntimeError):
     """Phase 39: the Qwen model is not installed (or there is no GPU); callers fall back to RealVisXL."""
 
 
-def qwen_request(model: str, items: list[dict[str, Any]]) -> dict[str, Any]:
-    return {"command": "qwen_generate", "model": model, "items": items}
+def qwen_request(model: str, items: list[dict[str, Any]], detect_faces: bool = False) -> dict[str, Any]:
+    request = {"command": "qwen_generate", "model": model, "items": items}
+    if detect_faces:  # Phase 43: each result item also gets the faces found on it
+        request["detect_faces"] = True
+    return request
 
 
 class WorkerImageEngine:
@@ -120,14 +124,17 @@ class WorkerImageEngine:
     def __init__(self) -> None:
         self._encoded_tokens: dict[str, list[dict[str, Any]]] = {}
 
-    async def qwen_batch(self, model: str, items: list[dict[str, Any]], consumer: str) -> dict[str, Any]:
+    async def qwen_batch(self, model: str, items: list[dict[str, Any]], consumer: str,
+                         detect_faces: bool = False) -> dict[str, Any]:
         """Phase 39 (D118): one worker, one GPU lease, a batch of Qwen pictures (`qwen21` or `qwen_edit`). Raises
-        `QwenUnavailable` when the model is missing so the caller can fall back to RealVisXL."""
+        `QwenUnavailable` when the model is missing so the caller can fall back to RealVisXL. Phase 43: with
+        `detect_faces` every result item carries the faces found on the drawn picture."""
         require_generation()
         async with get_gpu_manager().lease(consumer, min_free_mb=8192):
             worker = await asyncio.to_thread(_WorkerProcess)
             try:
-                response = await asyncio.to_thread(worker.request, qwen_request(model, items), allow_unavailable=True)
+                response = await asyncio.to_thread(worker.request, qwen_request(model, items, detect_faces),
+                                                   allow_unavailable=True)
             finally:
                 await asyncio.to_thread(worker.close)
         if response.get("status") == "unavailable":
@@ -179,20 +186,25 @@ class FakeImageEngine:
 
     qwen_available = True  # tests flip it to exercise the RealVisXL fallback
     qwen_calls: list[dict[str, Any]] = []
+    qwen_faces: list[list[float]] = [[560, 79, 818, 397, 1.0], [901, 180, 1134, 468, 1.0]]  # Phase 43 detect_faces
 
     def __init__(self) -> None:
         self._encoded_tokens: dict[str, list[dict[str, Any]]] = {}
 
-    async def qwen_batch(self, model: str, items: list[dict[str, Any]], consumer: str) -> dict[str, Any]:
+    async def qwen_batch(self, model: str, items: list[dict[str, Any]], consumer: str,
+                         detect_faces: bool = False) -> dict[str, Any]:
         require_generation()
-        FakeImageEngine.qwen_calls.append(qwen_request(model, items))
+        FakeImageEngine.qwen_calls.append(qwen_request(model, items, detect_faces))
         if not FakeImageEngine.qwen_available:
             raise QwenUnavailable(f"{model}: model_missing")
         for item in items:
             await asyncio.to_thread(_solid_png, Path(item["output_path"]), (int(item["width"]), int(item["height"])),
                                     int(item["seed"]))
-        return {"status": "ok", "model": model, "items": [{"output_path": item["output_path"], "seconds": 0.0}
-                                                          for item in items]}
+        results = [{"output_path": item["output_path"], "seconds": 0.0} for item in items]
+        if detect_faces:  # the faces of the real 2026-10-14 draw (a pair right of centre); tests may script others
+            for entry in results:
+                entry["faces"] = [list(face) for face in FakeImageEngine.qwen_faces]
+        return {"status": "ok", "model": model, "items": results}
 
     @asynccontextmanager
     async def session(

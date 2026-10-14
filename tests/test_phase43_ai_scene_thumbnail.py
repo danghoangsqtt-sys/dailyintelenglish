@@ -10,6 +10,7 @@ from PIL import Image
 
 from backend.ai.image import recipes
 from backend.core.paths import AI_DIR
+from tests.test_visuals_project_api import client  # noqa: F401
 
 
 def _runner():
@@ -112,15 +113,15 @@ def test_the_ai_scene_thumbnail_is_composed_from_the_drawn_picture(tmp_path):
         headline="Shopping Like A Local", supporting_text="Quantity expressions B1 and a very long extra tail",
         topic_keywords=["market"],
         palette={"primary": "#1B5E20", "secondary": "#2E7D32", "accent": "#FFD54F", "text": "#FFFFFF"})
-    wide = tc.render(inputs, suggestion, "16x9", 0, "ai_scene")
-    tall = tc.render(inputs, suggestion, "9x16", 0, "ai_scene")
+    wide = tc.render(inputs, suggestion, "16x9", 0, "qwen_scene")
+    tall = tc.render(inputs, suggestion, "9x16", 0, "qwen_scene")
     assert wide.size == tc.SIZES["16x9"] and tall.size == tc.SIZES["9x16"]
     # the right part of the frame (the faces) is not shaded or written on: same colour as the drawn picture
     assert wide.getpixel((1000, 300)) == (40, 120, 60)
     background = tc.ai_scene_picture(inputs["ai_scenes"][0], tc.SIZES["16x9"])
     assert background.getpixel((10, 700)) == picture.getpixel((frame["left"] + 10, 700))
     with pytest.raises(ValueError, match="no AI scene"):
-        tc.render({"ai_scenes": []}, suggestion, "16x9", 0, "ai_scene")
+        tc.render({"ai_scenes": []}, suggestion, "16x9", 0, "qwen_scene")
 
 
 def test_a_long_supporting_line_shrinks_to_the_title_box():
@@ -132,3 +133,79 @@ def test_a_long_supporting_line_shrinks_to_the_title_box():
     width, _ = tc._pill(draw, "Quantity expressions B1 and more words", (60, 400), 36, "#FFD54F", "#000000",
                         max_width=380)
     assert width <= 380
+
+
+# --- 43.4 API: draw the scenes, then the "AI scene" kind renders from them --------------------------------------------
+
+@pytest.fixture
+def ai_api(client, tmp_path, monkeypatch):  # noqa: F811
+    from backend.ai.image.engine import FakeImageEngine
+    from backend.media import thumbnail_service
+    from backend.schemas.thumbnail import ThumbnailSuggestionPack
+    from tests.test_thumbnail_compose import _with_sprites
+    from tests.test_thumbnail_service import suggestion_json
+
+    async def fake(project, template, variant_count, router=None):
+        return ThumbnailSuggestionPack.model_validate_json(suggestion_json(variant_count))
+
+    monkeypatch.setattr(thumbnail_service, "generate_suggestions", fake)
+    monkeypatch.setattr(FakeImageEngine, "qwen_calls", [])
+    monkeypatch.setattr(FakeImageEngine, "qwen_available", True)
+    return client, _with_sprites(client, tmp_path), FakeImageEngine
+
+
+def test_the_ai_scenes_are_drawn_with_both_sprites_and_framed_on_their_faces(ai_api):
+    from tests.test_visuals_project_api import data
+
+    client, project, engine = ai_api  # noqa: F811
+    url = f"/api/projects/{project['id']}/thumbnails"
+    templates = {t["id"]: t for t in data(client.get(f"/api/thumbnails/templates?project_id={project['id']}"))}
+    assert templates["qwen_scene"]["available"] is False
+    assert client.post(f"{url}/generate", json={"template_name": "qwen_scene", "variant_count": 3}).status_code == 422
+
+    response = client.post(f"{url}/ai-scenes", json={"count": 3})
+    assert response.status_code == 201
+    scenes = response.json()["data"]
+    assert [scene["index"] for scene in scenes] == [0, 1, 2]
+    assert all(scene["faces"] == 2 and scene["side"] == "left" and not scene["crowded"] for scene in scenes)
+    (call,) = engine.qwen_calls
+    assert call["model"] == "qwen_edit" and call["detect_faces"] is True and len(call["items"]) == 3
+    item = call["items"][0]
+    assert (item["width"], item["height"]) == (1536, 720) and len(item["references"]) == 2
+    assert all(path.endswith("smile__open.png") for path in item["references"])
+    assert "picture 1" in item["prompt"] and "picture 2" in item["prompt"]
+    assert client.get(scenes[0]["preview_url"]).headers["content-type"] == "image/png"
+
+    templates = {t["id"]: t for t in data(client.get(f"/api/thumbnails/templates?project_id={project['id']}"))}
+    assert templates["qwen_scene"]["available"] is True and templates["qwen_scene"]["scene_count"] == 3
+    rows = data(client.post(f"{url}/generate", json={"template_name": "qwen_scene", "variant_count": 3}))
+    assert len(rows) == 3 and {row["template_name"] for row in rows} == {"qwen_scene"}
+
+
+def test_one_scene_can_be_drawn_again_and_the_old_picture_goes(ai_api):
+    from pathlib import Path
+
+    from backend.media import ai_scene
+    from tests.test_visuals_project_api import data
+
+    client, project, engine = ai_api  # noqa: F811
+    url = f"/api/projects/{project['id']}/thumbnails/ai-scenes"
+    assert client.post(url, json={"count": 2}).status_code == 201
+    before = {scene["index"]: scene["image"] for scene in ai_scene.load_scenes(project["id"])}
+    usual = engine.qwen_faces
+    engine.qwen_faces = [[300, 100, 600, 420, 1.0], [900, 100, 1200, 420, 1.0]]  # this time the heads spread out
+    try:
+        scenes = data(client.post(f"{url}/1/redraw"))
+    finally:
+        engine.qwen_faces = usual
+    assert scenes[1]["crowded"] and not scenes[0]["crowded"]
+    after = {scene["index"]: scene["image"] for scene in ai_scene.load_scenes(project["id"])}
+    assert after[0] == before[0] and after[1] != before[1] and not Path(before[1]).exists()
+    assert client.post(f"{url}/7/redraw").status_code == 404
+
+
+def test_without_the_model_the_ai_scenes_say_so(ai_api):
+    client, project, engine = ai_api  # noqa: F811
+    engine.qwen_available = False
+    response = client.post(f"/api/projects/{project['id']}/thumbnails/ai-scenes", json={"count": 1})
+    assert response.status_code == 422 and "Qwen-Image-Edit-2511" in response.json()["error"]
