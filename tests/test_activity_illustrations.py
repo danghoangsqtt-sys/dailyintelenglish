@@ -92,7 +92,7 @@ def test_an_outside_ai_upload_becomes_the_pending_picture(client):  # noqa: F811
 
 
 def test_the_gpu_prompt_shows_any_person_never_a_cast_character():
-    prompt = recipes.activity_illustration_prompt("packing a suitcase", "a bright bedroom")
-    assert prompt.startswith(recipes.STYLE_EDITORIAL) and "one ordinary adult person, packing a suitcase" in prompt
-    assert "in a bright bedroom" in prompt and "text" in recipes.ACTIVITY_NEGATIVE
-    assert "person," not in recipes.ACTIVITY_NEGATIVE  # people are wanted here, unlike a scene plate
+    # Phase 44 (D123): Qwen draws the illustration -- ordinary people doing the action, never a cast member
+    prompt = recipes.qwen_activity_prompt("packing a suitcase", "a bright bedroom")
+    assert prompt.startswith(recipes.QWEN_PHOTO) and "ordinary people packing a suitcase in a bright bedroom" in prompt
+    assert "No text" in prompt and "reference picture" not in prompt

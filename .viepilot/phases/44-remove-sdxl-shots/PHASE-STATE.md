@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 44: remove RealVisXL/SDXL, the two-person shots and the "with characters" video (D123)
 
-- **Status:** planned 2026-10-14 (owner answers in chat); 44.1-44.5 done (`--apply` of the archive runs right before migration 026 is applied); 44.6 (full tests, real run, Gate B-28) next.
+- **Status:** planned 2026-10-14 (owner answers in chat); 44.1-44.6 done 2026-10-14; **waiting for owner Gate B-28**.
 - **Why (owner, 2026-10-14):** Step 5 still offered "Generate shots" (single / duo close / duo wide pictures of the
   cast drawn by RealVisXL), whose faces never match the real characters. The owner had asked to drop RealVisXL:
   illustrations in a conversation come from the **generic Activity Library or the local AI (Qwen)** and show **no
@@ -39,7 +39,7 @@ still scene, black screen, the composed / outside-AI / AI-scene thumbnails.
 | 44.3 | **Renderer.** Remove the `illustrated` shot track from `Episode.tsx` / `visuals.ts` / `Root.tsx` / `types.ts`; modes: `podcast_sprites` (default), `podcast_still`, `podcast_black`; Vitest updated | done |
 | 44.4 | **Frontend.** Step 5: no "Generate shots" section, no "with characters" chip, talking characters selected by default, the insert-picture panel says "generic library or local AI (no cast face)"; Shots page: Activity Library + sprite sets only; Characters page (scenes): Qwen scene preview only; `api.js` methods for removed routes deleted | done |
 | 44.5 | **Models and docs.** Delete the SDXL model folders and anime-seg from `backend/ai/models/image` (owner approved deletion with D123), trim `backend/ai/image/requirements.txt` (controlnet/ip-adapter extras if unused), update ARCHITECTURE / README / API reference, CHANGELOG | done |
-| 44.6 | **Verification.** Full pytest + Vitest; grep shows no SDXL/RealVisXL/shot code left; real app: Ep. 2 Step 5 (talking characters with generic/Qwen inserts) render; Gate B-28 owner review | planned |
+| 44.6 | **Verification.** Full pytest + Vitest; grep shows no SDXL/RealVisXL/shot code left; real app: Ep. 2 Step 5 (talking characters with generic/Qwen inserts) render; Gate B-28 owner review | waiting for owner (Gate B-28) |
 
 ## Risks
 
@@ -79,3 +79,10 @@ still scene, black screen, the composed / outside-AI / AI-scene thumbnails.
   ControlNet openpose + depth, IP-Adapter, the fp16 VAE, SDXL-Lightning, anime-seg). Qwen 2.1 and Qwen Edit still report
   nothing missing. The image requirements stay (all used by Qwen and the face detector). README, ARCHITECTURE,
   docs/api.md and CHANGELOG updated.
+- **44.6 (2026-10-14):** full pytest 1,598 passed + the last SDXL-prompt test rewritten to the Qwen prompt (4/4);
+  Vitest 70/70. Real app: app stopped, `archive_old_shots.py --apply` (DB backup
+  `data/backups/app-before-migration-026-20261014-123721.db`, 238 pictures / 200.8 MB in
+  `data/backups/phase44-shots-20261014-123721.zip`), restarted -> migration 026 applied (no shot tables). Step 5 on Ep. 2:
+  no "Generate shots", talking characters first, 3/3 inserts matched to generic pictures; re-render (talking characters,
+  Market) correct (`40-phase44-video-*.jpg`). Known leftover (follow-up): the storyboard estimate still counts the old
+  per-place shot sets ("10/12 images, ~20 GPU min") and caps beats by it.
