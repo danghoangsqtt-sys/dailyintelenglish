@@ -12,7 +12,7 @@ the thumbnail's `render.json` so an edit re-renders exactly the same picture.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import aiosqlite
 from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageFont, ImageOps
@@ -33,9 +33,9 @@ EXPRESSIONS = (("smile__open", "smile__closed"), ("surprised__open", "surprised_
 FALLBACK_EXPRESSIONS = ("smile__open", "smile__closed", "calm__open", "calm__closed")
 CROP_SHARE = 0.52  # head to chest: big faces read at thumbnail size (the sprite canvas is knee-up)
 
-# Normalized layouts per variant. text: (x, y, width, height, align); group: where the characters stand -- "right" /
-# "left" of the headline (rule of thirds), "split" on both sides of a centred headline, "bottom" under it (9:16);
-# height: the tallest a character may be, as a share of the canvas; shade: where the text-side darkening comes from.
+# Normalized wide layouts per variant. text: (x, y, width, height, align); group: where the characters stand -- "right" /
+# "left" of the headline (rule of thirds), or "split" on both sides of a centred headline. Portrait figures use the
+# separate photo-card layout below. height: the tallest a character may be; shade: where text-side darkening comes from.
 #
 # Walkthrough 2026-10-14, owner review + YouTube thumbnail guides (faces recognisable at 150 px wide, ~40-50 % of the
 # frame; keep faces and text out of the bottom-right duration badge; ~60 px margins): the characters are big, their
@@ -45,7 +45,12 @@ LAYOUTS_16X9 = (
     {"text": (0.27, 0.17, 0.46, 0.40, "center"), "group": "split", "height": 0.86, "shade": "top"},
     {"text": (0.51, 0.21, 0.45, 0.50, "right"), "group": "left", "height": 0.86, "shade": "right"},
 )
-LAYOUT_9X16 = {"text": (0.07, 0.15, 0.86, 0.20, "center"), "group": "bottom", "height": 0.50, "shade": "middle"}
+# The 720x1280 equivalent of renderer/src/safeZone.ts (1080x1920). The photo ends before the platform's right-hand
+# button column begins; all lettering stays left of that column and above the bottom caption/music area.
+PORTRAIT_SAFE = {"left": 48, "right": 672, "top": 155, "bottom": 880, "column_x": 576, "column_from_y": 600}
+PORTRAIT_PHOTO = (48, 232, 672, 582)
+PORTRAIT_HEADLINE = (48, 620, 528, 195)
+PORTRAIT_FIGURE_LAYOUT = {"text": (0, 0, 1, 0, "center"), "group": "bottom", "height": 0.82}
 LOGO_SHARE = 0.14  # the channel logo's height, as a share of the short side
 MARGIN_SHARE = 0.04
 SAFE_MARGIN = 60 / 1280  # heads stay this far (of the width) from the frame's edges
@@ -163,11 +168,8 @@ def _shade(image: Image.Image, where: str, side_span: float = 0.66, strength: in
         span = int(height * 0.68)
         for offset in range(span):
             draw.line((0, offset, width, offset), fill=round(190 * (1 - offset / span) ** 1.2))
-    else:  # middle band (9x16)
-        top, bottom = int(height * 0.22), int(height * 0.60)
-        for y in range(top, bottom):
-            middle = (top + bottom) / 2
-            draw.line((0, y, width, y), fill=round(170 * (1 - abs(y - middle) / ((bottom - top) / 2)) ** 0.6))
+    else:
+        raise ValueError(f"Unknown shade direction: {where}")
     return Image.composite(Image.new("RGB", image.size, (8, 14, 10)), image, mask)
 
 
@@ -252,13 +254,13 @@ def _pill(draw: ImageDraw.ImageDraw, text: str, position: tuple[int, int], size:
     return width, height
 
 
-def _logo(image: Image.Image, height: int, margin: int) -> None:
+def _logo(image: Image.Image, height: int, margin: int, top: int | None = None) -> None:
     if not LOGO_PATH.is_file():
         return
     with Image.open(LOGO_PATH) as opened:
         logo = opened.convert("RGBA")
     logo = logo.resize((max(1, round(logo.width * height / logo.height)), height), Image.Resampling.LANCZOS)
-    image.alpha_composite(logo, (image.width - logo.width - margin, margin))
+    image.alpha_composite(logo, (image.width - logo.width - margin, margin if top is None else top))
 
 
 def head_box(figure: Image.Image) -> tuple[int, int, int, int]:
@@ -377,63 +379,133 @@ def grade_ai_scene(picture: Image.Image) -> Image.Image:
 def ai_scene_picture(scene: dict, size: tuple[int, int]) -> Image.Image:
     """Phase 43 (D122): the background of an "AI scene" thumbnail from Qwen's wide draw.
 
-    16:9 -- the 1280x720 window `ai_scene.choose_frame` picked (the faces decided it). 9:16 -- no second GPU draw: the
-    band around the faces fills the lower part at full width, and above it the same scene, enlarged, blurred and
-    darkened, carries the headline."""
-    width, height = size
+    The 1280x720 window `ai_scene.choose_frame` picked keeps both faces. Portrait covers place that window in the safe
+    photo card instead of cutting it into another aspect ratio."""
     frame = scene["frame"]
     with Image.open(scene["image"]) as opened:
         picture = grade_ai_scene(opened.convert("RGB"))
-    if width >= height:
-        window = picture.crop((frame["left"], frame["top"], frame["left"] + 1280, frame["top"] + 720))
-        return window.resize(size, Image.Resampling.LANCZOS) if window.size != size else window
-    heads = scene.get("heads") or []
-    if heads:
-        left = max(0, int(min(zone[0] for zone in heads)) - 40)
-        right = min(picture.width, int(max(zone[2] for zone in heads)) + 40)
+    window = picture.crop((frame["left"], frame["top"], frame["left"] + 1280, frame["top"] + 720))
+    return window.resize(size, Image.Resampling.LANCZOS) if window.size != size else window
+
+
+def _portrait_picture(inputs: dict, suggestion: ThumbnailSuggestion, variant_index: int,
+                      template_id: str) -> Image.Image:
+    """A landscape picture for the portrait cover's safe photo area, with both people still in frame."""
+    photo_width = PORTRAIT_PHOTO[2] - PORTRAIT_PHOTO[0]
+    photo_height = PORTRAIT_PHOTO[3] - PORTRAIT_PHOTO[1]
+    photo_size = (photo_width, photo_height)
+    if template_id == "qwen_scene":
+        scenes = inputs.get("ai_scenes") or []
+        if not scenes:
+            raise ValueError("no AI scene picture for this thumbnail")
+        picture = ai_scene_picture(scenes[variant_index % len(scenes)], SIZES["16x9"])
     else:
-        left, right = (picture.width - picture.height) // 2, (picture.width + picture.height) // 2
-    band = picture.crop((left, 0, right, picture.height))
-    band_height = round(band.height * width / band.width)
-    band = band.resize((width, band_height), Image.Resampling.LANCZOS)
-    backdrop = ImageOps.fit(picture, size, method=Image.Resampling.LANCZOS, centering=(0.5, 0.3))
-    backdrop = backdrop.filter(ImageFilter.GaussianBlur(18))
-    backdrop = Image.blend(backdrop, Image.new("RGB", size, (8, 14, 10)), 0.35)
-    top = height - band_height
-    feather = min(120, band_height // 4)
-    mask = Image.new("L", band.size, 255)
-    draw = ImageDraw.Draw(mask)
-    for offset in range(feather):  # fade the band's top edge into the blurred backdrop
-        draw.line((0, offset, width, offset), fill=round(255 * offset / feather))
-    backdrop.paste(band, (0, top), mask)
-    return backdrop
+        source = inputs.get("outside_image") if template_id == "outside_ai" else None
+        if template_id == "composed":
+            candidates = inputs.get("backgrounds") or []
+            source = candidates[variant_index % len(candidates)] if candidates else None
+        picture = _background(source, SIZES["16x9"], suggestion)
+    photo = ImageOps.fit(picture, photo_size, method=Image.Resampling.LANCZOS).convert("RGBA")
+    if template_id == "composed":
+        characters = sorted(inputs.get("characters") or [], key=lambda character: character["slot"])
+
+        def draw_at(target: int) -> list[Image.Image]:
+            return [figure for figure in (_character(c, variant_index, target) for c in characters) if figure is not None]
+
+        for figure, position in arrange_figures(draw_at, PORTRAIT_FIGURE_LAYOUT, photo_size):
+            photo.alpha_composite(figure, position)
+    return photo.convert("RGB")
+
+
+def _shorten_to_fit(text: str, fits: Callable[[str], bool]) -> str:
+    """Keep a long AI suggestion inside a fixed portrait safe box, with a visible ellipsis."""
+    if fits(text):
+        return text
+    words = text.split()
+    while len(words) > 1:
+        words.pop()
+        candidate = " ".join(words) + "…"
+        if fits(candidate):
+            return candidate
+    candidate = words[0] if words else text
+    while candidate and not fits(candidate + "…"):
+        candidate = candidate[:-1]
+    return candidate + "…"
+
+
+def _portrait_headline_fits(draw: ImageDraw.ImageDraw, text: str) -> bool:
+    font = _font(26)
+    wrapped = _wrap(draw, text, font, PORTRAIT_HEADLINE[2])
+    left, top, right, bottom = draw.multiline_textbbox((0, 0), wrapped, font=font, spacing=2,
+                                                       stroke_width=max(3, 26 // 14))
+    return right - left <= PORTRAIT_HEADLINE[2] and bottom - top <= PORTRAIT_HEADLINE[3]
+
+
+def _portrait_support_fits(draw: ImageDraw.ImageDraw, text: str) -> bool:
+    font = _font(18, "ExtraBold")
+    left, _, right, _ = draw.textbbox((0, 0), text, font=font)
+    return right - left + 2 * round(18 * 0.55) <= PORTRAIT_HEADLINE[2]
+
+
+def _render_portrait(inputs: dict, suggestion: ThumbnailSuggestion, variant_index: int,
+                     template_id: str) -> Image.Image:
+    """9:16 cover: photo, faces, branding and text occupy the owner's platform-safe shape."""
+    size = SIZES["9x16"]
+    photo = _portrait_picture(inputs, suggestion, variant_index, template_id)
+    backdrop = ImageOps.fit(photo, size, method=Image.Resampling.LANCZOS).filter(ImageFilter.GaussianBlur(28))
+    backdrop = Image.blend(backdrop, Image.new("RGB", size, ImageColor.getrgb(suggestion.palette.primary)), 0.72)
+    image = backdrop.convert("RGBA")
+    left, top, right, bottom = PORTRAIT_PHOTO
+    photo_mask = Image.new("L", photo.size, 0)
+    ImageDraw.Draw(photo_mask).rounded_rectangle((0, 0, photo.width - 1, photo.height - 1), radius=18, fill=255)
+    image.paste(photo, (left, top), photo_mask)
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle((left, top, right - 1, bottom - 1), radius=18, outline="#FFFFFF", width=2)
+
+    badge_x = PORTRAIT_SAFE["left"]
+    badge_y = 164
+    if inputs.get("cefr"):
+        badge_width, _ = _pill(draw, f"{inputs['cefr']} ENGLISH", (badge_x, badge_y), 26, BADGE_YELLOW, BADGE_INK)
+        badge_x += badge_width + 12
+    if inputs.get("episode"):
+        _pill(draw, f"EP. {inputs['episode']}", (badge_x, badge_y), 26, "#FFFFFF", BADGE_INK)
+    _logo(image, 64, size[0] - PORTRAIT_SAFE["right"], top=158)
+
+    fill = suggestion.palette.text if _luminance(suggestion.palette.text) >= 0.6 else "#FFFFFF"
+    title = _shorten_to_fit(suggestion.headline.upper(), lambda value: _portrait_headline_fits(draw, value))
+    title_bottom = _headline(draw, title, PORTRAIT_HEADLINE, "left", fill,
+                             max_size=64, min_size=26)
+    if suggestion.supporting_text:
+        accent = suggestion.palette.accent
+        support = _shorten_to_fit(suggestion.supporting_text, lambda value: _portrait_support_fits(draw, value))
+        _pill(draw, support, (PORTRAIT_HEADLINE[0], title_bottom + 10), 28, accent,
+              "#FFFFFF" if _luminance(accent) < 0.55 else BADGE_INK, max_width=PORTRAIT_HEADLINE[2])
+    return image.convert("RGB")
 
 
 def render(inputs: dict, suggestion: ThumbnailSuggestion, aspect: ThumbnailAspect, variant_index: int,
            template_id: str) -> Image.Image:
     """One thumbnail picture (RGB) at one aspect ratio."""
+    if aspect == "9x16":
+        return _render_portrait(inputs, suggestion, variant_index, template_id)
     size = SIZES[aspect]
     width, height = size
-    layout = LAYOUT_9X16 if aspect == "9x16" else LAYOUTS_16X9[variant_index % len(LAYOUTS_16X9)]
+    layout = LAYOUTS_16X9[variant_index % len(LAYOUTS_16X9)]
     if template_id == "qwen_scene":
         scenes = inputs.get("ai_scenes") or []
         if not scenes:
             raise ValueError("no AI scene picture for this thumbnail")
         scene = scenes[variant_index % len(scenes)]
-        if aspect == "9x16":
-            layout = LAYOUT_9X16
-            image = _shade(ai_scene_picture(scene, size), "middle")
-        else:
-            frame = scene["frame"]
-            layout = {"text": tuple(frame["text_box"]), "shade": frame["side"]}
-            # a light shade, just past the title strip: the faces and the bright scene keep their light (the
-            # headline's dark outline carries the contrast)
-            image = _shade(ai_scene_picture(scene, size), frame["side"], min(0.66, frame["free_share"] + 0.1), 120)
+        frame = scene["frame"]
+        layout = {"text": tuple(frame["text_box"]), "shade": frame["side"]}
+        # a light shade, just past the title strip: the faces and the bright scene keep their light (the
+        # headline's dark outline carries the contrast)
+        image = _shade(ai_scene_picture(scene, size), frame["side"], min(0.66, frame["free_share"] + 0.1), 120)
         image = image.convert("RGBA")
     else:
         if template_id == "outside_ai":
             source = inputs.get("outside_image")
-            layout = LAYOUT_9X16 if aspect == "9x16" else LAYOUTS_16X9[0]
+            layout = LAYOUTS_16X9[0]
         else:
             candidates = inputs.get("backgrounds") or []
             source = candidates[variant_index % len(candidates)] if candidates else None

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import re
 import sqlite3
 from pathlib import Path
 
@@ -109,6 +110,53 @@ def test_the_outside_ai_picture_is_uploaded_checked_and_used(client, tmp_path): 
     with Image.open(io.BytesIO(picture)) as image:
         corner = image.convert("RGB").getpixel((1260, 700))  # bottom-right: the uploaded picture, no sprite drawn there
     assert abs(corner[1] - 0x7F) < 40 and Path(thumbnail_service.outside_image_path(project["id"])).is_file()
+
+
+def test_vertical_cover_preserves_both_people_and_keeps_content_in_the_platform_safe_area(tmp_path):
+    from PIL import ImageDraw
+
+    from backend.media import thumbnail_compose as compose
+    from backend.schemas.thumbnail import ThumbnailSuggestion
+
+    source = Image.new("RGB", (1280, 720), "#34543A")
+    painter = ImageDraw.Draw(source)
+    painter.rectangle((650, 250, 750, 350), fill="blue")
+    painter.rectangle((1000, 250, 1100, 350), fill="red")
+    source_path = tmp_path / "pair.png"
+    source.save(source_path)
+    suggestion = ThumbnailSuggestion(headline="Master Market English", supporting_text="Bargaining made easy",
+                                     topic_keywords=["market"], palette={"primary": "#2D6A4F", "secondary": "#40916C",
+                                                                     "accent": "#FFD700", "text": "#FFFFFF"})
+    cover = compose.render({"outside_image": str(source_path), "cefr": "B1", "episode": 2}, suggestion,
+                           "9x16", 0, "outside_ai")
+    assert cover.size == (720, 1280)
+    assert cover.getpixel((390, 378))[2] > 200  # the first person is still visible
+    assert cover.getpixel((560, 378))[0] > 200  # so is the second person
+
+    safe, photo, headline = compose.PORTRAIT_SAFE, compose.PORTRAIT_PHOTO, compose.PORTRAIT_HEADLINE
+    zone_source = (Path(__file__).resolve().parents[1] / "renderer" / "src" / "safeZone.ts").read_text(encoding="utf-8")
+    for typescript_name, python_name in (("left", "left"), ("right", "right"), ("top", "top"), ("bottom", "bottom"),
+                                         ("columnX", "column_x"), ("columnFromY", "column_from_y")):
+        original = re.search(rf"\b{typescript_name}:\s*(\d+)", zone_source)
+        assert original and safe[python_name] == round(int(original.group(1)) * 2 / 3)
+    assert safe["left"] <= photo[0] < photo[2] <= safe["right"]
+    assert safe["top"] <= photo[1] < photo[3] < safe["column_from_y"]
+    assert safe["left"] <= headline[0] and headline[0] + headline[2] <= safe["column_x"]
+    assert safe["column_from_y"] < headline[1] and headline[1] + headline[3] < safe["bottom"]
+
+
+def test_long_vertical_thumbnail_text_is_shortened_inside_the_safe_box():
+    from PIL import ImageDraw
+
+    from backend.media import thumbnail_compose as compose
+
+    draw = ImageDraw.Draw(Image.new("RGB", (720, 1280)))
+    title = "SUPERCALIFRAGILISTICEXPIALIDOCIOUS" * 2
+    support = "Bargaining made easy with a very long supporting message for a small vertical cover"
+    short_title = compose._shorten_to_fit(title, lambda value: compose._portrait_headline_fits(draw, value))
+    short_support = compose._shorten_to_fit(support, lambda value: compose._portrait_support_fits(draw, value))
+    assert short_title.endswith("…") and compose._portrait_headline_fits(draw, short_title)
+    assert short_support.endswith("…") and compose._portrait_support_fits(draw, short_support)
 
 
 def test_the_outside_prompt_keeps_the_title_side_free_and_the_faces_big():

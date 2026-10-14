@@ -1584,7 +1584,7 @@ chooses the frame and adds headline, badges and logo on the free side.
 
 - [x] 43.1 Worker: multi-reference Qwen edit + thumbnail scene prompt (1536x720 draw)
 - [x] 43.2 Find the people (isnetis mask), choose the 1280x720 window and the text side
-- [x] 43.3 Compose, clean the corners, 9:16 only for the favorite
+- [x] 43.3 Compose, clean the corners, 9:16 only for the favorite; BUG-035 safe portrait layout implemented
 - [x] 43.4 Step 6 UI: third kind, background job with progress, "Draw again"
 - [x] 43.5 Real run on Ep. 2 and timing recorded
 - [ ] Owner Gate B-27

@@ -299,7 +299,7 @@
       "status": "42.1-42.4 built and sandbox checked 2026-10-14 (D121); owner Gate B-25 pending"
     },
     "43": {
-      "status": "43.1-43.5 built and real draw checked 2026-10-14 (D122); owner Gate B-27 pending"
+      "status": "43.1-43.5 built; BUG-035 safe 9:16 thumbnail layout implemented 2026-10-14; owner Gate B-27 pending"
     },
     "44": {
       "status": "44.1-44.7 built and sandbox checked 2026-10-14 (D123); owner Gate B-28 pending"

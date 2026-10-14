@@ -31,13 +31,15 @@ def _overlap(a, b) -> bool:
     return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
 
 
-CASES = [("16x9", layout) for layout in tc.LAYOUTS_16X9] + [("9x16", tc.LAYOUT_9X16)]
+photo = tc.PORTRAIT_PHOTO
+CASES = [(tc.SIZES["16x9"], layout) for layout in tc.LAYOUTS_16X9] + [
+    ((photo[2] - photo[0], photo[3] - photo[1]), tc.PORTRAIT_FIGURE_LAYOUT),
+]
 
 
-@pytest.mark.parametrize("aspect,layout", CASES)
+@pytest.mark.parametrize("size,layout", CASES)
 @pytest.mark.parametrize("ratio", [0.93, 0.97, 1.2])
-def test_two_big_characters_with_their_heads_apart(aspect, layout, ratio):
-    size = tc.SIZES[aspect]
+def test_two_big_characters_with_their_heads_apart(size, layout, ratio):
     width, height = size
     placed = tc.arrange_figures(lambda h: [_bust(h, ratio), _bust(h, ratio)], layout, size)
     assert len(placed) == 2

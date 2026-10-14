@@ -8,6 +8,9 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Fixed (2026-10-14, BUG-035)
+- Portrait thumbnails now preserve both people in a clear photo card. Headline, supporting text, badges and logo stay inside the owner-provided 9:16 platform safe area for composed, outside-AI and local AI-scene kinds.
+
 ### Fixed (2026-10-14, Phase 45 audit follow-ups)
 - A project's selected `script.txt` and `learning_pack.txt` now refresh after script/learning edits, speaker renames and successful AI jobs.
 - Project-folder copies run outside the app's shared database lock, so a large file copy does not stall unrelated project requests.
