@@ -237,9 +237,50 @@ def choose_folder_dialog(initial: str | None = None) -> str | None:
     root = tkinter.Tk()
     root.withdraw()
     root.attributes("-topmost", True)
+    # 2026-10-14 (owner: "chọn nơi lưu vẫn bị lỗi"): the dialog opened behind the browser -- Windows does not let a
+    # background server bring its window forward -- so it is raised to the top and given the focus once it exists.
+    root.after(200, _raise_dialog, root, FOLDER_DIALOG_TITLE)
     try:
         chosen = filedialog.askdirectory(parent=root, initialdir=initial or str(Path.home()), mustexist=False,
-                                         title="Choose the folder for this video project")
+                                         title=FOLDER_DIALOG_TITLE)
     finally:
         root.destroy()
     return str(Path(chosen)) if chosen else None
+
+
+FOLDER_DIALOG_TITLE = "Choose the folder for this video project"
+
+
+def _raise_dialog(root: Any, title: str, attempts: int = 15) -> None:
+    """Find the folder dialog of this process by its title and put it on top with the keyboard focus (Windows only)."""
+    import ctypes
+    import os
+    import sys
+
+    if sys.platform != "win32":
+        return
+    user32 = ctypes.windll.user32
+    found = []
+
+    @ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+    def visit(hwnd, _param):
+        pid = ctypes.c_ulong()
+        user32.GetWindowThreadProcessId(ctypes.c_void_p(hwnd), ctypes.byref(pid))
+        if pid.value == os.getpid():
+            buffer = ctypes.create_unicode_buffer(256)
+            user32.GetWindowTextW(ctypes.c_void_p(hwnd), buffer, 256)
+            if buffer.value == title:
+                found.append(hwnd)
+        return True
+
+    user32.EnumWindows(visit, 0)
+    if not found:
+        if attempts > 0:
+            root.after(200, _raise_dialog, root, title, attempts - 1)
+        return
+    hwnd = ctypes.c_void_p(found[0])
+    topmost, flags = ctypes.c_void_p(-1), 0x0001 | 0x0002 | 0x0040  # HWND_TOPMOST; NOSIZE | NOMOVE | SHOWWINDOW
+    user32.SetWindowPos(hwnd, topmost, 0, 0, 0, 0, flags)
+    user32.keybd_event(0x12, 0, 0, 0)  # a tap of Alt lets this process take the foreground
+    user32.keybd_event(0x12, 0, 2, 0)
+    user32.SetForegroundWindow(hwnd)
