@@ -181,7 +181,7 @@
         remove.className = "btn btn-ghost btn-sm";
         remove.textContent = "Delete";
         remove.addEventListener("click", async () => {
-          if (confirm(`Delete scene "${scene.name}"?`)) await act(() => Api.deleteScene(scene.id), "Scene deleted.");
+          if (await ConfirmDialog.ask(`Delete scene "${scene.name}"?`, { confirmLabel: "Delete", danger: true })) await act(() => Api.deleteScene(scene.id), "Scene deleted.");
         });
         actions.append(remove);
       }

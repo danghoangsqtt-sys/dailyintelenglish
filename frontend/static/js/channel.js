@@ -169,7 +169,7 @@
           `Episode ${episode.number} marked published.`) }));
     }
     actions.append(el("button", { type: "button", className: "btn btn-ghost btn-sm", textContent: "✕", title: "Delete episode",
-      onclick: () => confirm(`Delete episode ${episode.number}?`) && act(() => Api.deleteChannelEpisode(episode.id), "Episode deleted.") }));
+      onclick: async () => (await ConfirmDialog.ask(`Delete episode ${episode.number}?`, { confirmLabel: "Delete", danger: true })) && act(() => Api.deleteChannelEpisode(episode.id), "Episode deleted.") }));
     return el("tr", { dataset: { episode: episode.id } }, [
       el("td", { textContent: `Ep. ${episode.number}` }),
       el("td", {}, saveOnChange(el("input", { className: "inline-input name", value: episode.title, title: episode.brief,
@@ -204,7 +204,7 @@
         saveOnChange(el("input", { className: "inline-input name", value: series.name, "aria-label": "Series name" }),
           (value) => Api.updateChannelSeries(series.id, { name: value })),
         el("button", { type: "button", className: "btn btn-ghost btn-sm", textContent: "Delete series",
-          onclick: () => confirm(`Delete the series "${series.name}"? Its projects are kept.`)
+          onclick: async () => (await ConfirmDialog.ask(`Delete the series "${series.name}"? Its projects are kept.`, { confirmLabel: "Delete", danger: true }))
             && act(() => Api.deleteChannelSeries(series.id), "Series deleted.") }),
       ]),
       el("div", { className: "channel-hint", textContent: series.description }),
@@ -244,7 +244,7 @@
           placeholder: "YouTube playlist link", "aria-label": "Topic playlist link" }),
         (value) => Api.updateChannelTopic(topic.id, { playlist_url: value })),
         el("button", { type: "button", className: "btn btn-ghost btn-sm", textContent: "Delete topic",
-          onclick: () => confirm(`Delete the topic "${topic.name}" and its series? Projects are kept.`)
+          onclick: async () => (await ConfirmDialog.ask(`Delete the topic "${topic.name}" and its series? Projects are kept.`, { confirmLabel: "Delete", danger: true }))
             && act(() => Api.deleteChannelTopic(topic.id), "Topic deleted.") }),
       ]),
       el("div", { className: "channel-hint", textContent: topic.description }),

@@ -624,14 +624,14 @@
     watchLearningAiJob();
   }
 
-  function handleRegenerate() {
+  async function handleRegenerate() {
     if (state.isGenerating || state.saveStatus !== "saved" || state.dirtySections.size > 0) {
       if (state.saveStatus !== "saved" || state.dirtySections.size > 0) {
         showError("Please save or resolve unsaved edits before regenerating the learning pack.");
       }
       return;
     }
-    const confirmed = confirm(
+    const confirmed = await ConfirmDialog.ask(
       "This will overwrite the entire learning pack (vocabulary, idioms, collocations, phrasal verbs, patterns, grammar, quiz) with a brand new AI-generated version. Continue?"
     );
     if (confirmed) handleGenerate();

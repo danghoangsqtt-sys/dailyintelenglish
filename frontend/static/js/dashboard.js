@@ -196,7 +196,7 @@
       const id = card.dataset.id;
 
       if (button.dataset.action === "delete") {
-        if (!confirm("Delete this project? This cannot be undone.")) return;
+        if (!(await ConfirmDialog.ask("Delete this project? This cannot be undone.", { confirmLabel: "Delete", danger: true }))) return;
         try {
           await Api.deleteProject(id);
           allProjects = allProjects.filter((p) => p.id !== id);

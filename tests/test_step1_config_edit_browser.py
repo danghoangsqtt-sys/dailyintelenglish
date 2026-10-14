@@ -9,6 +9,7 @@ import pytest
 from playwright.async_api import Browser, async_playwright
 
 from tests.conftest import live_server
+from tests.browser_confirm import answer_confirm
 
 PROJECT_ID = "step1-edit-project"
 LANGUAGE_FEATURES = {
@@ -96,10 +97,12 @@ async def _character_routes(page, cast: list[dict], saved_casts: list) -> None:
     await page.route("**/api/projects/*/visuals/cast", save_cast)
 
 
-async def _choose(page, speaker_index: int, name: str) -> None:
+async def _choose(page, speaker_index: int, name: str, confirm: bool | None = None) -> None:
     await page.click(f'[data-choose="{speaker_index}"]')
     await page.locator(".cs-card", has_text=name).click()
     await page.locator('[data-cs="choose"]').click()
+    if confirm is not None:  # "Use <name>'s voice settings?" -- asked while choosing
+        await answer_confirm(page, accept=confirm)
     await page.wait_for_selector(f'.cs-slot[data-slot="{speaker_index}"]:has-text("{name}")')
     await page.locator('[data-cs="close"]').click()
 
@@ -200,8 +203,7 @@ async def test_draft_save_uses_one_put_preserves_id_and_refetches_update(
     await page.wait_for_selector("#submit-btn:not([hidden])")
 
     await page.fill("#name", "Updated Draft")
-    page.once("dialog", lambda dialog: asyncio.ensure_future(dialog.dismiss()))  # keep this project's own voice settings
-    await _choose(page, 0, "Ben")
+    await _choose(page, 0, "Ben", confirm=False)  # keep this project's own voice settings
     await page.evaluate(
         """
         const form = document.getElementById("config-form");

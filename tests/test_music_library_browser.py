@@ -5,10 +5,11 @@ import json
 from typing import AsyncGenerator, Generator
 
 import pytest
-from playwright.async_api import Browser, Dialog, async_playwright
+from playwright.async_api import Browser, async_playwright
 
 from backend.core.config import settings
 from tests.conftest import live_server
+from tests.browser_confirm import answer_confirm
 
 VALID_MP3 = b"ID3\x04\x00\x00\x00\x00\x00\x00browser-music"
 
@@ -73,17 +74,13 @@ async def test_delete_requires_confirmation_and_removes_track(
     card = page.locator("[data-filename='delete-me.mp3']")
     await card.wait_for()
 
-    async def dismiss_dialog(dialog: Dialog) -> None:
-        await dialog.dismiss()
-
-    page.on("dialog", dismiss_dialog)
     await card.locator("[data-action='delete']").click()
+    await answer_confirm(page, accept=False)
     assert await card.count() == 1
     assert (music_dir / "delete-me.mp3").exists()
 
-    page.remove_listener("dialog", dismiss_dialog)
-    page.once("dialog", lambda dialog: dialog.accept())
     await card.locator("[data-action='delete']").click()
+    await answer_confirm(page, accept=True)
     await card.wait_for(state="detached")
     assert not (music_dir / "delete-me.mp3").exists()
     await page.close()

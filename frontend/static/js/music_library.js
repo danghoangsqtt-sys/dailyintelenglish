@@ -364,7 +364,7 @@
 
   async function deleteTrack(filename, button) {
     if (deletesInFlight.has(filename)) return;
-    if (!confirm(`Delete "${filename}" from your music library?`)) return;
+    if (!(await ConfirmDialog.ask(`Delete "${filename}" from your music library?`, { confirmLabel: "Delete", danger: true }))) return;
 
     deletesInFlight.add(filename);
     button.disabled = true;

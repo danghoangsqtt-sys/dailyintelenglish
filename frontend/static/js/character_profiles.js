@@ -330,8 +330,8 @@
       act(() => (profile?.archived ? Api.restoreProfile(state.selectedId) : Api.archiveProfile(state.selectedId)),
         profile?.archived ? "Restored." : "Archived.");
     });
-    $("profile-delete").addEventListener("click", () => {
-      if (!window.confirm("Delete this character for good? Its pictures are removed too.")) return;
+    $("profile-delete").addEventListener("click", async () => {
+      if (!(await ConfirmDialog.ask("Delete this character for good? Its pictures are removed too.", { confirmLabel: "Delete", danger: true }))) return;
       act(async () => {
         await Api.deleteProfile(state.selectedId);
         state.selectedId = null;

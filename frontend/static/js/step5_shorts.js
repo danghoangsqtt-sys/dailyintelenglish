@@ -62,7 +62,7 @@
       clip.video_url ? el("a", { className: "btn btn-ghost btn-sm", href: clip.video_url, download: "", textContent: "⬇ Video" }) : null,
       clip.cover_url ? el("a", { className: "btn btn-ghost btn-sm", href: clip.cover_url, download: "", textContent: "⬇ Cover" }) : null,
       el("button", { type: "button", className: "btn btn-ghost btn-sm", textContent: "Delete", disabled: busy,
-        onclick: () => confirm("Delete this clip?") && run(() => call(`/shorts/${clip.id}`, "DELETE"), "Clip deleted.") }),
+        onclick: async () => (await ConfirmDialog.ask("Delete this clip?", { confirmLabel: "Delete", danger: true })) && run(() => call(`/shorts/${clip.id}`, "DELETE"), "Clip deleted.") }),
     ]);
     const shortsTitle = el("textarea", { readOnly: true, value: clip.packages.shorts.title, rows: 1, "aria-label": "Shorts title" });
     const shortsText = el("textarea", { readOnly: true, value: clip.packages.shorts.description, "aria-label": "Shorts description" });

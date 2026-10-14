@@ -9,6 +9,9 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Fixed (2026-10-14, walkthrough)
+- **"Regenerate thumbnails" (and other confirm-gated buttons) did nothing** where the host blocks the browser's
+  native confirm() dialog (an embedded browser pane, some webviews): every confirmation is now an in-page dialog
+  (`confirm_dialog.js`; Enter confirms, Escape cancels, a double click never queues a second action).
 - **Audio failed with "Edge TTS synthesis failed: 403"**: Microsoft now rejects edge-tts 7.2.8's client version;
   upgraded to edge-tts 7.3.1.
 - **Changing a speaker's character now gives the speaker that character's voice** (gender, accent, Edge voice), not

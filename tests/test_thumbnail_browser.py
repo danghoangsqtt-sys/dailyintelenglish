@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 import pytest
 from playwright.async_api import Browser, Route, async_playwright
 
+from tests.browser_confirm import answer_confirm
 from tests.conftest import live_server
 
 PROJECT = {
@@ -399,3 +400,42 @@ async def test_the_outside_ai_panel_gives_the_prompt_and_the_card_waits_for_the_
     finally:
         TEMPLATES[1]["available"] = True
         await page.close()
+
+
+@pytest.mark.asyncio
+async def test_regenerate_asks_in_the_page_and_works_where_native_dialogs_are_blocked(
+    browser_instance: Browser,
+    live_server_url: str,
+) -> None:
+    """Walkthrough 2026-10-14: "Regenerate thumbnails" did nothing in a host that blocks window.confirm(). The page now
+    asks with its own dialog: Cancel keeps the variants, Continue regenerates, and no native dialog is ever used."""
+    page = await browser_instance.new_page()
+    native_dialogs: list[str] = []
+    page.on("dialog", lambda dialog: (native_dialogs.append(dialog.message), asyncio.ensure_future(dialog.dismiss())))
+    thumbnails: list[dict] = [variant(index) for index in range(3)]
+    generate_calls = 0
+
+    async def mutations(route: Route, path: str, method: str) -> bool:
+        nonlocal generate_calls
+        if path.endswith("/thumbnails/generate") and method == "POST":
+            generate_calls += 1
+            thumbnails[:] = [variant(index, headline=f"New {index + 1}") for index in range(3)]
+            await fulfill_json(route, thumbnails)
+            return True
+        return False
+
+    await install_base_routes(page, thumbnails, mutations)
+    await page.goto(f"{live_server_url}/step6?project_id={PROJECT['id']}")
+    await page.locator(".variant-card").first.wait_for()
+
+    await page.click("#generate-btn")
+    assert "replaces all current thumbnail variants" in await answer_confirm(page, accept=False)
+    assert generate_calls == 0
+
+    await page.evaluate("const button = document.getElementById('generate-btn'); button.click(); button.click();")
+    await answer_confirm(page, accept=True)
+    await page.get_by_text("New 1").first.wait_for()
+    assert generate_calls == 1  # the double click did not queue a second regeneration
+    assert await page.locator(".confirm-dialog").count() == 0
+    assert native_dialogs == []
+    await page.close()

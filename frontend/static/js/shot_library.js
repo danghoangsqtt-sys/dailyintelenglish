@@ -219,7 +219,7 @@
     const priorUse = activity.use_count
       ? ` It was used in ${activity.use_count} render${activity.use_count === 1 ? "" : "s"}; existing videos stay intact, but this picture's use history will be removed.`
       : "";
-    if (!window.confirm(`Delete “${activity.activity}” from the Activity Library? Future videos cannot use it.${priorUse}`)) return;
+    if (!(await ConfirmDialog.ask(`Delete “${activity.activity}” from the Activity Library? Future videos cannot use it.${priorUse}`))) return;
     state.activityBusy = true;
     renderActivities();
     try {
@@ -250,7 +250,7 @@
     const warning = action === "delete"
       ? ` This permanently removes their library records and image files. Existing videos remain.${used ? ` Use history for ${used} previously used picture${used === 1 ? "" : "s"} will also be removed.` : ""}`
       : `${action === "approve" ? " Check their names first." : ""}${skipped ? ` ${skipped} already ${targetState} picture${skipped === 1 ? "" : "s"} will be skipped.` : ""}`;
-    if (!window.confirm(`${verb} ${count} selected activity picture${count === 1 ? "" : "s"}?${warning}`)) return;
+    if (!(await ConfirmDialog.ask(`${verb} ${count} selected activity picture${count === 1 ? "" : "s"}?${warning}`))) return;
     state.activityBusy = true;
     renderActivities();
     let completed = 0;
@@ -292,7 +292,7 @@
     const pending = visibleActivities().filter((activity) => activity.review_state === "pending");
     if (!pending.length) return;
     const count = pending.length;
-    if (!window.confirm(`Approve ${count} activity picture${count === 1 ? "" : "s"} in view? Check their names first. Incorrect names may make videos choose the wrong picture.`)) return;
+    if (!(await ConfirmDialog.ask(`Approve ${count} activity picture${count === 1 ? "" : "s"} in view? Check their names first. Incorrect names may make videos choose the wrong picture.`))) return;
     state.activityBusy = true;
     renderActivities();
     try {
@@ -721,7 +721,7 @@
   }
 
   async function removeShot(id) {
-    if (!window.confirm("Delete this picture from the library? Episodes already made keep their own copy.")) return;
+    if (!(await ConfirmDialog.ask("Delete this picture from the library? Episodes already made keep their own copy."))) return;
     state.busy = true;
     renderShots();
     try {
@@ -737,7 +737,7 @@
   async function approveAllPending() {
     const pending = state.shots.filter((shot) => shot.review_state === "pending" && !shot.stale);
     if (!pending.length) return;
-    if (!window.confirm(`Approve the ${pending.length} pictures in view? Only do this after looking at them.`)) return;
+    if (!(await ConfirmDialog.ask(`Approve the ${pending.length} pictures in view? Only do this after looking at them.`))) return;
     state.busy = true;
     renderShots();
     let note = null;

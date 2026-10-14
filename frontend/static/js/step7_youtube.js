@@ -193,9 +193,9 @@
     }
   }
 
-  function handleRegenerate() {
+  async function handleRegenerate() {
     if (state.isGenerating) return;
-    const confirmed = confirm(
+    const confirmed = await ConfirmDialog.ask(
       "This will overwrite the current titles, description, tags, and chapters with a brand new AI-generated version. Continue?"
     );
     if (confirmed) handleGenerate();

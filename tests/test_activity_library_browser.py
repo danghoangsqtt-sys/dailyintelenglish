@@ -14,6 +14,7 @@ from backend.api import visuals as visuals_api
 from backend.core.config import settings
 from backend.library import activity_library_service as activities
 from tests.conftest import live_server
+from tests.browser_confirm import answer_confirm
 
 
 @pytest.fixture(scope="module")
@@ -132,8 +133,8 @@ async def test_activity_pictures_require_separate_owner_names_without_using_the_
     approve_all = page.locator("#activity-approve-all-btn")
     await page.wait_for_function("!document.getElementById('activity-approve-all-btn').disabled")
     assert await approve_all.is_enabled()
-    page.once("dialog", lambda dialog: dialog.dismiss())
     await approve_all.click()
+    await answer_confirm(page, accept=False)
     assert "needs review" in await east_card.text_content()
     batch_route = "**/api/visuals/library/activities/approve-batch"
     await page.route(batch_route, lambda route: route.fulfill(status=404, json={"detail": "Not Found"}))
@@ -148,23 +149,23 @@ async def test_activity_pictures_require_separate_owner_names_without_using_the_
 
     review_route = "**/api/visuals/library/activities/*/review"
     await page.route(review_route, interrupt_second_review)
-    page.once("dialog", lambda dialog: dialog.accept())
     await approve_all.click()
+    await answer_confirm(page, accept=True)
     await page.locator("#activity-message").get_by_text("Approved 1 of 2 pictures.", exact=False).wait_for()
     assert await page.locator("#activity-grid .shot-card.is-pending").count() == 1
     await page.unroute(review_route)
-    page.once("dialog", lambda dialog: dialog.accept())
     await approve_all.click()
+    await answer_confirm(page, accept=True)
     await page.locator("#activity-message").get_by_text("1 activity picture approved.").wait_for()
     assert await page.locator("#activity-grid .shot-card.is-approved").count() >= 2
     assert await approve_all.is_disabled()
     await page.unroute(batch_route)
     delete_east = east_card.get_by_role("button", name="Delete")
-    page.once("dialog", lambda dialog: dialog.dismiss())
     await delete_east.click()
+    await answer_confirm(page, accept=False)
     assert await east_card.count() == 1
-    page.once("dialog", lambda dialog: dialog.accept())
     await delete_east.click()
+    await answer_confirm(page, accept=True)
     await east_card.wait_for(state="detached")
     assert await page.locator("#activity-message").text_content() == "Activity picture deleted."
     assert await west_card.count() == 1
@@ -206,8 +207,8 @@ async def test_select_arbitrary_activity_pictures_for_review_and_delete(
         assert await page.locator("#activity-selected-count").text_content() == "2 selected"
         assert not await beta.locator(".activity-select-checkbox").is_checked()
         approve = page.get_by_role("button", name="Approve selected")
-        page.once("dialog", lambda dialog: dialog.dismiss())
         await approve.click()
+        await answer_confirm(page, accept=False)
         assert "needs review" in await alpha.text_content()
 
         review_calls = []
@@ -221,13 +222,13 @@ async def test_select_arbitrary_activity_pictures_for_review_and_delete(
 
         review_route = "**/api/visuals/library/activities/*/review"
         await page.route(review_route, interrupt_second_review)
-        page.once("dialog", lambda dialog: dialog.accept())
         await approve.click()
+        await answer_confirm(page, accept=True)
         await page.locator("#activity-message").get_by_text("1 of 2 pictures approved.", exact=False).wait_for()
         assert await page.locator("#activity-selected-count").text_content() == "1 selected"
         await page.unroute(review_route)
-        page.once("dialog", lambda dialog: dialog.accept())
         await approve.click()
+        await answer_confirm(page, accept=True)
         await page.locator("#activity-message").get_by_text("1 activity picture approved.").wait_for()
         assert "approved" in await alpha.text_content()
         assert "approved" in await gamma.text_content()
@@ -235,8 +236,8 @@ async def test_select_arbitrary_activity_pictures_for_review_and_delete(
 
         await beta.locator(".activity-select-checkbox").check()
         await gamma.locator(".activity-select-checkbox").check()
-        page.once("dialog", lambda dialog: dialog.accept())
         await page.get_by_role("button", name="Reject selected").click()
+        await answer_confirm(page, accept=True)
         await page.locator("#activity-message").get_by_text("2 activity pictures rejected.").wait_for()
         assert "rejected" in await beta.text_content()
         assert "rejected" in await gamma.text_content()
@@ -253,8 +254,8 @@ async def test_select_arbitrary_activity_pictures_for_review_and_delete(
         await alpha.locator(".activity-select-checkbox").check()
         await gamma.locator(".activity-select-checkbox").check()
         delete = page.get_by_role("button", name="Delete selected")
-        page.once("dialog", lambda dialog: dialog.dismiss())
         await delete.click()
+        await answer_confirm(page, accept=False)
         assert await alpha.count() == 1
         delete_route = "**/api/visuals/library/activities/*"
 
@@ -265,13 +266,13 @@ async def test_select_arbitrary_activity_pictures_for_review_and_delete(
                 await route.continue_()
 
         await page.route(delete_route, unavailable_delete)
-        page.once("dialog", lambda dialog: dialog.accept())
         await delete.click()
+        await answer_confirm(page, accept=True)
         await page.locator("#activity-message").get_by_text("Restart the app to enable image deletion.", exact=False).wait_for()
         assert await page.locator("#activity-selected-count").text_content() == "2 selected"
         await page.unroute(delete_route)
-        page.once("dialog", lambda dialog: dialog.accept())
         await delete.click()
+        await answer_confirm(page, accept=True)
         await page.locator("#activity-message").get_by_text("2 activity pictures deleted.").wait_for()
         assert await alpha.count() == 0
         assert await gamma.count() == 0

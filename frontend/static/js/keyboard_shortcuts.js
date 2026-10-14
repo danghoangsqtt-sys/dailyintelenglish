@@ -1,8 +1,8 @@
 /**
  * Ctrl+Enter (Cmd+Enter on Mac) triggers a page's primary action button (Task 2.3b,
  * ROADMAP "UX Polish" item 3). Pure, synchronous, no network/state — same component
- * shape as StepNav. Escape-to-cancel needs no code: every confirm-gated action already
- * uses native window.confirm() (browser-cancelable on Escape for free), and the two
+ * shape as StepNav. Escape-to-cancel needs no code here: every confirm-gated action uses
+ * ConfirmDialog.ask() (confirm_dialog.js: Escape cancels, Enter confirms), and the two
  * pages with inline-edit-then-commit fields already revert on Escape themselves.
  */
 (() => {

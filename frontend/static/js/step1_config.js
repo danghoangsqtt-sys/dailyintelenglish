@@ -232,11 +232,11 @@
     return speaker.speed != null && (speaker.speed !== voice.speed || speaker.pitch !== voice.pitch || speaker.volume !== voice.volume);
   }
 
-  function applyProfile(index, profile) {
+  async function applyProfile(index, profile) {
     const speaker = state.speakers[index];
     const keepVoice = pageMode === "edit" && speaker.character_id && voiceDiffers(speaker, profile)
-      && !window.confirm(`Use ${profile.name}'s voice settings (speed ${profile.voice.speed}, pitch ${profile.voice.pitch}, `
-        + `volume ${profile.voice.volume}) for ${slotLabel(index)}? Cancel keeps this project's own settings.`);
+      && !(await ConfirmDialog.ask(`Use ${profile.name}'s voice settings (speed ${profile.voice.speed}, pitch ${profile.voice.pitch}, `
+        + `volume ${profile.voice.volume}) for ${slotLabel(index)}? Cancel keeps this project's own settings.`, { confirmLabel: "Use these settings" }));
     Object.assign(speaker, {
       character_id: profile.id, name: profile.name, gender: profile.gender, accent: profile.accent || speaker.accent,
     });

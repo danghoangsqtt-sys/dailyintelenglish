@@ -570,14 +570,14 @@
     watchScriptAiJob();
   }
 
-  function handleRegenerateAll() {
+  async function handleRegenerateAll() {
     if (state.isGenerating || state.saveStatus !== "saved") {
       if (state.saveStatus !== "saved") {
         showError("Please save or resolve unsaved edits before regenerating the script.");
       }
       return;
     }
-    const confirmed = confirm(
+    const confirmed = await ConfirmDialog.ask(
       "This will overwrite the entire script with a brand new AI-generated version. Continue?"
     );
     if (confirmed) handleGenerate();

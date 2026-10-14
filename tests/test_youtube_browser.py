@@ -7,6 +7,7 @@ import pytest
 from playwright.async_api import Browser, async_playwright
 
 from tests.conftest import live_server
+from tests.browser_confirm import answer_confirm
 
 PROJECT = {
     "id": "yt-proj-e2e",
@@ -174,13 +175,13 @@ async def test_regenerate_requires_confirmation_and_can_be_cancelled(
     await page.goto(f"{live_server_url}/step7?project_id={PROJECT['id']}")
     await page.wait_for_selector("#content-wrap:not([hidden])")
 
-    page.once("dialog", lambda dialog: dialog.dismiss())
     await page.click("#regenerate-btn")
+    await answer_confirm(page, accept=False)
     await page.wait_for_timeout(200)
     assert generate_calls == 0
 
-    page.once("dialog", lambda dialog: dialog.accept())
     await page.click("#regenerate-btn")
+    await answer_confirm(page, accept=True)
     await page.wait_for_function(
         "document.getElementById('description-text').textContent.length > 0"
     )

@@ -271,7 +271,7 @@
       return;
     }
     if (state.thumbnails.length > 0) {
-      const confirmed = confirm(
+      const confirmed = await ConfirmDialog.ask(
         "This replaces all current thumbnail variants and their favorite selection. Continue?"
       );
       if (!confirmed) return;

@@ -9,6 +9,7 @@ from backend.api import visuals as visuals_api
 from backend.core.config import settings
 from tests.conftest import live_server
 from tests.test_shot_review_browser import _project_with_shots
+from tests.browser_confirm import answer_confirm
 
 
 @pytest.fixture(scope="module")
@@ -64,8 +65,8 @@ async def test_add_to_library_review_it_once_and_the_next_run_is_served_from_the
     assert await page.locator("#shot-grid .shot-card.is-pending").count() == total
     await grid.first.locator("[data-action='reject']").click()
     await page.locator("#shot-grid .shot-card.is-rejected").wait_for()
-    page.once("dialog", lambda dialog: dialog.accept())
     await page.locator("#approve-all-btn").click()
+    await answer_confirm(page, accept=True)
     await page.locator("#shot-message.message-success").wait_for()
     assert await page.locator("#shot-grid .shot-card.is-approved").count() == total - 1
     assert await page.locator("#shot-grid .shot-card.is-rejected").count() == 1

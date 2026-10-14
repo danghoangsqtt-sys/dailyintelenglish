@@ -18,6 +18,7 @@ import pytest
 from playwright.async_api import async_playwright, Browser
 
 from tests.conftest import live_server
+from tests.browser_confirm import answer_confirm
 
 MOCK_PROJECTS = [
     {
@@ -242,11 +243,11 @@ async def test_dashboard_delete_removes_card_after_confirm(browser_instance: Bro
             await route.continue_()
 
     await page.route("**/api/projects/proj-complete-1", handle_delete)
-    page.on("dialog", lambda dialog: dialog.accept())
 
     await page.goto(f"{live_server_url}/")
     await page.wait_for_selector("[data-id='proj-complete-1']")
     await page.click("[data-id='proj-complete-1'] [data-action='delete']")
+    await answer_confirm(page)
 
     await page.wait_for_selector("[data-id='proj-complete-1']", state="detached")
     assert await page.locator(".project-card").count() == 2
@@ -303,7 +304,7 @@ async def test_dashboard_delete_failure_shows_error_banner_not_native_alert(
     await page.route("**/api/projects/proj-complete-1", handle_delete)
     dialog_messages = []
 
-    def handle_dialog(dialog):
+    def handle_dialog(dialog):  # a native alert()/confirm() must never appear
         dialog_messages.append(dialog.message)
         return dialog.accept()
 
@@ -312,13 +313,15 @@ async def test_dashboard_delete_failure_shows_error_banner_not_native_alert(
     await page.goto(f"{live_server_url}/")
     await page.wait_for_selector("[data-id='proj-complete-1']")
     await page.click("[data-id='proj-complete-1'] [data-action='delete']")
+    confirm_message = await answer_confirm(page)
 
     await page.wait_for_selector("#error-banner:not([hidden])")
     banner_text = await page.text_content("#error-banner")
     assert "couldn't delete" in banner_text.lower()
     assert "Disk write failed" not in banner_text
-    # Only the confirm() dialog should have fired — never a second alert() with raw error text.
-    assert dialog_messages == ["Delete this project? This cannot be undone."]
+    # Only the in-page confirmation should have shown — never a native alert() with raw error text.
+    assert confirm_message == "Delete this project? This cannot be undone."
+    assert dialog_messages == []
     assert await page.locator("[data-id='proj-complete-1']").count() == 1
     await page.close()
 
@@ -424,7 +427,6 @@ async def test_dashboard_delete_last_card_on_last_page_clamps_to_valid_page(
             await route.continue_()
 
     await page.route("**/api/projects/pagination-project-24", handle_delete)
-    page.on("dialog", lambda dialog: dialog.accept())
     await page.goto(f"{live_server_url}/")
 
     await page.wait_for_selector("#project-pagination:not([hidden])")
@@ -433,6 +435,7 @@ async def test_dashboard_delete_last_card_on_last_page_clamps_to_valid_page(
     assert await page.locator(".project-card").first.get_attribute("data-id") == "pagination-project-24"
 
     await page.click("[data-id='pagination-project-24'] [data-action='delete']")
+    await answer_confirm(page)
     await page.wait_for_selector("[data-id='pagination-project-00']")
     assert delete_requests == [f"{live_server_url}/api/projects/pagination-project-24"]
     assert await page.locator(".project-card").count() == 24
