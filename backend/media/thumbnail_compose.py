@@ -144,13 +144,13 @@ def _background(path: str | None, size: tuple[int, int], suggestion: ThumbnailSu
     return _gradient(size, suggestion.palette.primary, suggestion.palette.secondary)
 
 
-def _shade(image: Image.Image, where: str) -> Image.Image:
-    """Darken the text side so the headline reads at thumbnail size."""
+def _shade(image: Image.Image, where: str, side_span: float = 0.66) -> Image.Image:
+    """Darken the text side so the headline reads at thumbnail size (`side_span`: how far a left/right shade reaches)."""
     width, height = image.size
     mask = Image.new("L", image.size, 0)
     draw = ImageDraw.Draw(mask)
     if where in ("left", "right"):
-        span = int(width * 0.66)
+        span = int(width * side_span)
         for offset in range(span):
             alpha = round(200 * (1 - offset / span) ** 1.3)
             x = offset if where == "left" else width - 1 - offset
@@ -228,11 +228,16 @@ def _headline(draw: ImageDraw.ImageDraw, text: str, box: tuple[int, int, int, in
 
 
 def _pill(draw: ImageDraw.ImageDraw, text: str, position: tuple[int, int], size: int, fill: str, ink: str,
-          align: str = "left") -> tuple[int, int]:
-    font = _font(size, "ExtraBold")
-    left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
-    pad_x, pad_y = round(size * 0.55), round(size * 0.32)
-    width, height = right - left + 2 * pad_x, bottom - top + 2 * pad_y
+          align: str = "left", max_width: int | None = None) -> tuple[int, int]:
+    """A rounded label; with `max_width` its text shrinks until the pill fits (it must not reach a face)."""
+    while True:
+        font = _font(size, "ExtraBold")
+        left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
+        pad_x, pad_y = round(size * 0.55), round(size * 0.32)
+        width, height = right - left + 2 * pad_x, bottom - top + 2 * pad_y
+        if max_width is None or width <= max_width or size <= 14:
+            break
+        size -= 1
     x, y = position
     if align == "right":
         x -= width
@@ -354,21 +359,71 @@ def arrange_figures(draw_at, layout: dict, size: tuple[int, int]) -> list[tuple[
     return []
 
 
+def ai_scene_picture(scene: dict, size: tuple[int, int]) -> Image.Image:
+    """Phase 43 (D122): the background of an "AI scene" thumbnail from Qwen's wide draw.
+
+    16:9 -- the 1280x720 window `ai_scene.choose_frame` picked (the faces decided it). 9:16 -- no second GPU draw: the
+    band around the faces fills the lower part at full width, and above it the same scene, enlarged, blurred and
+    darkened, carries the headline."""
+    width, height = size
+    frame = scene["frame"]
+    with Image.open(scene["image"]) as opened:
+        picture = opened.convert("RGB")
+    if width >= height:
+        window = picture.crop((frame["left"], frame["top"], frame["left"] + 1280, frame["top"] + 720))
+        return window.resize(size, Image.Resampling.LANCZOS) if window.size != size else window
+    heads = scene.get("heads") or []
+    if heads:
+        left = max(0, int(min(zone[0] for zone in heads)) - 40)
+        right = min(picture.width, int(max(zone[2] for zone in heads)) + 40)
+    else:
+        left, right = (picture.width - picture.height) // 2, (picture.width + picture.height) // 2
+    band = picture.crop((left, 0, right, picture.height))
+    band_height = round(band.height * width / band.width)
+    band = band.resize((width, band_height), Image.Resampling.LANCZOS)
+    backdrop = ImageOps.fit(picture, size, method=Image.Resampling.LANCZOS, centering=(0.5, 0.3))
+    backdrop = backdrop.filter(ImageFilter.GaussianBlur(18))
+    backdrop = Image.blend(backdrop, Image.new("RGB", size, (8, 14, 10)), 0.35)
+    top = height - band_height
+    feather = min(120, band_height // 4)
+    mask = Image.new("L", band.size, 255)
+    draw = ImageDraw.Draw(mask)
+    for offset in range(feather):  # fade the band's top edge into the blurred backdrop
+        draw.line((0, offset, width, offset), fill=round(255 * offset / feather))
+    backdrop.paste(band, (0, top), mask)
+    return backdrop
+
+
 def render(inputs: dict, suggestion: ThumbnailSuggestion, aspect: ThumbnailAspect, variant_index: int,
            template_id: str) -> Image.Image:
     """One thumbnail picture (RGB) at one aspect ratio."""
     size = SIZES[aspect]
     width, height = size
     layout = LAYOUT_9X16 if aspect == "9x16" else LAYOUTS_16X9[variant_index % len(LAYOUTS_16X9)]
-    if template_id == "outside_ai":
-        source = inputs.get("outside_image")
-        layout = LAYOUT_9X16 if aspect == "9x16" else LAYOUTS_16X9[0]
+    if template_id == "ai_scene":
+        scenes = inputs.get("ai_scenes") or []
+        if not scenes:
+            raise ValueError("no AI scene picture for this thumbnail")
+        scene = scenes[variant_index % len(scenes)]
+        if aspect == "9x16":
+            layout = LAYOUT_9X16
+            image = _shade(ai_scene_picture(scene, size), "middle")
+        else:
+            frame = scene["frame"]
+            layout = {"text": tuple(frame["text_box"]), "shade": frame["side"]}
+            # the shade reaches just past the title strip, so the faces keep their light
+            image = _shade(ai_scene_picture(scene, size), frame["side"], min(0.66, frame["free_share"] + 0.12))
+        image = image.convert("RGBA")
     else:
-        candidates = inputs.get("backgrounds") or []
-        source = candidates[variant_index % len(candidates)] if candidates else None
-    image = _shade(_background(source, size, suggestion), layout["shade"]).convert("RGBA")
+        if template_id == "outside_ai":
+            source = inputs.get("outside_image")
+            layout = LAYOUT_9X16 if aspect == "9x16" else LAYOUTS_16X9[0]
+        else:
+            candidates = inputs.get("backgrounds") or []
+            source = candidates[variant_index % len(candidates)] if candidates else None
+        image = _shade(_background(source, size, suggestion), layout["shade"]).convert("RGBA")
 
-    if template_id != "outside_ai":
+    if template_id not in ("outside_ai", "ai_scene"):
         characters = sorted(inputs.get("characters") or [], key=lambda character: character["slot"])
 
         def draw_at(target: int) -> list[Image.Image]:
@@ -389,7 +444,8 @@ def render(inputs: dict, suggestion: ThumbnailSuggestion, aspect: ThumbnailAspec
         anchor_x = text_box[0] if align == "left" else text_box[0] + text_box[2] if align == "right" else \
             text_box[0] + text_box[2] // 2
         _pill(draw, suggestion.supporting_text, (anchor_x, bottom + round(height * 0.03)),
-              round(min(size) * 0.05), accent, "#FFFFFF" if _luminance(accent) < 0.55 else BADGE_INK, align)
+              round(min(size) * 0.05), accent, "#FFFFFF" if _luminance(accent) < 0.55 else BADGE_INK, align,
+              max_width=text_box[2])
 
     badge_size = round(min(size) * 0.05)
     badge_x = margin

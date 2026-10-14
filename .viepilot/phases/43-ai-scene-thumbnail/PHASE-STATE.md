@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 43: "AI scene" thumbnail drawn locally by Qwen-Image-Edit (D122)
 
-- **Status:** planned 2026-10-14 (owner "okey" to the proposal); 43.1, 43.2 done 2026-10-14; 43.3 next.
+- **Status:** planned 2026-10-14 (owner "okey" to the proposal); 43.1-43.3 done 2026-10-14; 43.4 next.
 - **Why:** the owner made a thumbnail in ChatGPT from the app's outside-AI prompt with the two character pictures
   attached: the people stand *in* the scene (light, depth, big smiles), far better than the composed "sticker" kind.
   A trial on this computer (2026-10-14, `D:\Example-videos\walkthrough-2026-10-14\32-*.png`) showed
@@ -24,7 +24,7 @@ with progress); the composed kind stays the quick default.
 |---|---|---|
 | 43.1 | **Worker: multi-reference Qwen edit.** `qwen_runner.generate_qwen_edit` accepts `references` (1–3 pictures; sprites flattened on white) besides the single `reference` used by inserts; one load per batch. A prompt recipe `recipes.qwen_thumbnail_scene_prompt` built from the same rules as the outside-AI prompt (pair in the right 55 %, head-and-shoulders, heads apart, plain left side, corners free, no text/logo). Draw **1536x720** (wider than the frame) so the app can choose the 1280 window. Tests with the fake engine | done |
 | 43.2 | **Find the people, choose the frame.** Run the worker's existing ONNX face detector (`count_faces`, Task 28.5) on the drawn picture -- face boxes, widened to the head (hair) as the keep-out zone; the `isnetis.onnx` people mask only if faces are not found (no new dependency). Crop the 1280x720 window that leaves the widest free side for the headline (≥ 45 % of the width) and keeps heads ≥ 60 px from the edges; pick the layout (text left or right) from the free side. If no window gives 40 %, mark the variant "crowded" so the UI offers "Draw again". Unit tests on synthetic masks | done |
-| 43.3 | **Compose and clean the corners.** Render with the outside-AI layout on the chosen side: headline + supporting pill + B1/EP badges + logo. Over the top corners the real badges and logo cover what Qwen may have drawn; a soft local blur-and-darken behind the badges/logo and the headline side so any fake logo or letters do not show; the bottom-right corner is left to YouTube's duration badge. The 9:16 version is drawn only for the variant chosen as favorite (720x1280, pair in the lower half), so 3 variants cost ~4–5 min, not 9 | planned |
+| 43.3 | **Compose.** `thumbnail_compose.ai_scene_picture` + template `ai_scene`: 16:9 = the chosen 1280x720 window, headline/pill/badges/logo in the computed text box, the shade reaching just past the title strip (faces keep their light); the supporting pill shrinks to the title box (all kinds). **Changed from the plan:** 9:16 needs no second GPU draw -- the band around the faces fills the lower part, the same scene enlarged, blurred and darkened carries the headline above it. Corner cleaning: not needed after 43.1 (the new prompt drew no fake logo or lettering in 3/3); the real badges/logo still cover the top corners | done |
 | 43.4 | **Step 6 UI.** A third kind card "AI scene (local Qwen)" with the honest time ("about 1–2 minutes per variant"), a background job with progress and ETA, per-variant "Draw again", GPU-busy and model-missing messages (fallback: suggest the composed kind). The project folder (Phase 41) gets the favorite as usual | planned |
 | 43.5 | **Real run and Gate B-27.** Ep. 2 "Shopping at the Market" (Hoang, Kim): 3 variants on the real app, timing recorded, frames checked against the thumbnail rules (headline never on a face, faces ≥ 150-px-readable, corners); owner review **Gate B-27** | planned |
 
@@ -55,3 +55,5 @@ hold our badge and logo. Sources: thumbnailtest.com, vidIQ, TubeCore, Search Eng
   sizes the headline box to that strip minus margin and gap, flags "crowded" below 33 % or with a head in the
   duration-stamp corner). On the three real draws: text left, window x 0, free 38.7-39.2 %, headline box ~32 % wide.
   Face boxes from the worker's existing ONNX detector (no new dependency).
+- **43.3 (2026-10-14):** previews of 3 variants at 16:9 and 9:16 from the real draws
+  (`D:\Example-videos\walkthrough-2026-10-14\35-ai-scene-*.jpg`): titles never touch a head, faces big and unshaded.

@@ -92,3 +92,43 @@ def test_a_crowded_or_faceless_picture_is_flagged_for_drawing_again():
     assert nobody["crowded"] and nobody["faces"] == 0
     in_badge = ai_scene.choose_frame([[1000, 560, 1150, 700]])  # a face down in the duration-stamp corner
     assert in_badge["crowded"]
+
+
+# --- 43.3 compose: crop the chosen window, title on the free side, 9:16 from the same picture ------------------------
+
+def test_the_ai_scene_thumbnail_is_composed_from_the_drawn_picture(tmp_path):
+    from backend.media import ai_scene, thumbnail_compose as tc
+    from backend.schemas.thumbnail import ThumbnailSuggestion
+
+    picture = Image.new("RGB", ai_scene.DRAW_SIZE, (40, 120, 60))
+    for x in range(1536):  # a horizontal ramp: the crop position shows in the pixels
+        picture.putpixel((x, 700), (x % 256, 0, 0))
+    picture.save(tmp_path / "scene.png")
+    faces = [[560, 79, 818, 397], [901, 180, 1134, 468]]
+    frame = ai_scene.choose_frame(faces)
+    inputs = {"cefr": "B1", "episode": 2, "ai_scenes": [{"image": str(tmp_path / "scene.png"), "frame": frame,
+                                                          "heads": ai_scene.head_zones(faces)}]}
+    suggestion = ThumbnailSuggestion(
+        headline="Shopping Like A Local", supporting_text="Quantity expressions B1 and a very long extra tail",
+        topic_keywords=["market"],
+        palette={"primary": "#1B5E20", "secondary": "#2E7D32", "accent": "#FFD54F", "text": "#FFFFFF"})
+    wide = tc.render(inputs, suggestion, "16x9", 0, "ai_scene")
+    tall = tc.render(inputs, suggestion, "9x16", 0, "ai_scene")
+    assert wide.size == tc.SIZES["16x9"] and tall.size == tc.SIZES["9x16"]
+    # the right part of the frame (the faces) is not shaded or written on: same colour as the drawn picture
+    assert wide.getpixel((1000, 300)) == (40, 120, 60)
+    background = tc.ai_scene_picture(inputs["ai_scenes"][0], tc.SIZES["16x9"])
+    assert background.getpixel((10, 700)) == picture.getpixel((frame["left"] + 10, 700))
+    with pytest.raises(ValueError, match="no AI scene"):
+        tc.render({"ai_scenes": []}, suggestion, "16x9", 0, "ai_scene")
+
+
+def test_a_long_supporting_line_shrinks_to_the_title_box():
+    from PIL import ImageDraw
+
+    from backend.media import thumbnail_compose as tc
+
+    draw = ImageDraw.Draw(Image.new("RGB", (1280, 720)))
+    width, _ = tc._pill(draw, "Quantity expressions B1 and more words", (60, 400), 36, "#FFD54F", "#000000",
+                        max_width=380)
+    assert width <= 380
