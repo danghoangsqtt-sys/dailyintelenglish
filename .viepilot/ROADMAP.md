@@ -1586,3 +1586,15 @@ chooses the frame and adds headline, badges and logo on the free side.
 - [ ] 43.3 Compose, clean the corners, 9:16 only for the favorite
 - [ ] 43.4 Step 6 UI: third kind, background job with progress, "Draw again"
 - [ ] 43.5 Real run on Ep. 2, timing, Gate B-27
+
+### Phase 44: Remove RealVisXL/SDXL, the two-person shots and the "with characters" video (D123) - planned 2026-10-14
+
+State: `.viepilot/phases/44-remove-sdxl-shots/PHASE-STATE.md`. Illustrations come from the generic Activity Library or
+local Qwen, never with a cast member's face; talking characters becomes the default video.
+
+- [ ] 44.1 Backup the DB, archive the old shot pictures
+- [ ] 44.2 Backend removal (pipelines, worker, routes, settings, migration 026)
+- [ ] 44.3 Renderer: drop the illustrated shot track
+- [ ] 44.4 Frontend: Step 5, Shots page, Characters page
+- [ ] 44.5 Delete the SDXL models (~24 GB) and update the docs
+- [ ] 44.6 Full tests, real render, Gate B-28
