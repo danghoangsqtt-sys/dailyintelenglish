@@ -1570,7 +1570,19 @@ State: `.viepilot/phases/41-project-folder/PHASE-STATE.md`.
 
 State: `.viepilot/phases/42-vertical-safe-zone/PHASE-STATE.md`.
 
-- [ ] 42.1 Safe-zone definition and checks
-- [ ] 42.2 Vertical episode layout inside the zone
-- [ ] 42.3 Vertical intro and outro
+- [x] 42.1 Safe-zone definition and checks
+- [x] 42.2 Vertical episode layout inside the zone
+- [x] 42.3 Vertical intro and outro
 - [ ] 42.4 Real render, overlay check, Gate B-25 re-run
+
+### Phase 43: "AI scene" thumbnail drawn locally by Qwen-Image-Edit (D122) - planned 2026-10-14
+
+State: `.viepilot/phases/43-ai-scene-thumbnail/PHASE-STATE.md`. A third Step 6 kind (the composed and outside-AI kinds
+stay): Qwen-Image-Edit-2511 draws both characters in a topic scene from their sprites; the app finds the people,
+chooses the frame and adds headline, badges and logo on the free side.
+
+- [ ] 43.1 Worker: multi-reference Qwen edit + thumbnail scene prompt (1536x720 draw)
+- [ ] 43.2 Find the people (isnetis mask), choose the 1280x720 window and the text side
+- [ ] 43.3 Compose, clean the corners, 9:16 only for the favorite
+- [ ] 43.4 Step 6 UI: third kind, background job with progress, "Draw again"
+- [ ] 43.5 Real run on Ep. 2, timing, Gate B-27
