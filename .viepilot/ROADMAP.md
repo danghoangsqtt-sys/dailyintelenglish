@@ -1565,3 +1565,12 @@ State: `.viepilot/phases/41-project-folder/PHASE-STATE.md`.
 - [ ] 41.2 Export service: automatic sync of the ticked components
 - [ ] 41.3 Step 1 and Step 7 UI (native folder picker, checkboxes, open folder, save now)
 - [ ] 41.4 Tests and a real run
+
+### Phase 42: Vertical video inside the platform safe zone + vertical intro/outro (D121) - in progress 2026-10-14
+
+State: `.viepilot/phases/42-vertical-safe-zone/PHASE-STATE.md`.
+
+- [ ] 42.1 Safe-zone definition and checks
+- [ ] 42.2 Vertical episode layout inside the zone
+- [ ] 42.3 Vertical intro and outro
+- [ ] 42.4 Real render, overlay check, Gate B-25 re-run
