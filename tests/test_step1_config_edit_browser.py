@@ -312,13 +312,13 @@ async def test_no_project_id_keeps_create_flow(browser_instance: Browser, live_s
     await page.wait_for_selector("#submit-btn:not([hidden])")
 
     assert await page.locator("#submit-btn").text_content() == "Create Project"
-    assert await page.input_value("#speaker-name-0") == "Alex"  # the old defaults, now real characters
-    assert await page.input_value("#speaker-name-1") == "Lina"
+    assert await page.input_value("#speaker-name-0") == ""  # Phase 40 (D119): no default cast
     assert await page.locator("#speaker-name-0").get_attribute("type") == "hidden"  # D88: nothing to type or pick
-    assert await page.locator("#speaker-label-1").text_content() == "Lina"
-    assert "female" in await page.locator(".speaker-meta").nth(1).text_content()
+    assert await page.locator("#speaker-label-1").text_content() == "Choose a character"
     await page.fill("#name", "New Project")
     await page.fill("#topic", "A new topic")
+    await _choose(page, 0, "Alex")
+    assert await page.locator("#speaker-label-0").text_content() == "Alex"  # the chosen character's name
     await _choose(page, 1, "Sam")
     await page.click("#submit-btn")
     await page.wait_for_url("**/step2?project_id=new-project-id*")

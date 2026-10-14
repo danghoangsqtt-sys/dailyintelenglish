@@ -271,6 +271,16 @@
   }
 
   // Phase 35 (Task 35.4, D89): the cast is chosen with the shared game-style selector of Step 1 (no dropdown, no avatar).
+  // Phase 40 (D119): a speaker takes its character's name everywhere; say what changed and that the audio must be redone.
+  async function afterRename(renamed) {
+    if (!renamed?.length) return;
+    state.project = await Api.getProject(state.projectId);
+    const changed = renamed.reduce((total, item) => total + (item.lines_changed || 0), 0);
+    const names = renamed.map((item) => `${item.old_name || "the speaker"} → ${item.new_name}`).join(", ");
+    visualWarning(`Renamed ${names}${changed ? ` in ${changed} script line${changed === 1 ? "" : "s"}` : ""}. `
+      + "Regenerate the audio in Step 4 so the voices say the new names, then render the video again.");
+  }
+
   async function saveCast(speakerIndex, characterId) {
     const members = state.visuals.cast
       .filter((member) => member.speaker_index !== speakerIndex)
@@ -282,6 +292,7 @@
     try {
       state.visuals = await Api.setProjectCast(state.projectId, members);
       state.visualError = "";
+      await afterRename(state.visuals.renamed);
     } catch (error) {
       visualWarning(error.message || "Could not save the cast.");
     } finally {
@@ -294,7 +305,7 @@
     const speakers = state.project?.speakers || [];
     CharacterSelector.open({
       slots: speakers.map((speaker) => ({
-        index: speaker.speaker_index, label: speaker.name,
+        index: speaker.speaker_index, label: `Character ${speaker.speaker_index + 1}`,
         characterId: state.visuals?.cast.find((member) => member.speaker_index === speaker.speaker_index)?.character_id || null,
       })),
       profiles: state.visualProfiles || [],
@@ -356,8 +367,9 @@
         rename.disabled = state.visualBusy;
         rename.addEventListener("click", async () => {
           try {
-            await Api.updateSpeaker(state.projectId, speaker.id, { name: chosen.name });
+            const updated = await Api.updateSpeaker(state.projectId, speaker.id, { name: chosen.name });
             speaker.name = chosen.name;
+            await afterRename(updated.renamed ? [updated.renamed] : []);
             renderProjectVisuals();
           } catch (error) {
             visualWarning(error.message || "Could not rename the speaker.");

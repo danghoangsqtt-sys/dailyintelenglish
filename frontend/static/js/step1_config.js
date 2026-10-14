@@ -38,8 +38,9 @@
   ];
 
   const GENDERS = ["male", "female", "neutral"];
-  // Phase 31: the default cast of a new episode is Alex (male) and Lina (female), the library characters of the same names.
-  const DEFAULT_SPEAKERS = [{ name: "Alex", gender: "male" }, { name: "Lina", gender: "female" }];
+  // Phase 40 (D119): no default cast -- each slot is "Character N" until a character profile is chosen, and the speaker
+  // then takes that character's name (used in the script and the video).
+  const slotLabel = (index) => `Character ${index + 1}`;
   const DURATION_PRESETS = [5, 10, 15, 20];
   const MIN_SPEAKERS = 1;
   const MAX_SPEAKERS = 6;
@@ -179,11 +180,10 @@
     const speakers = state.speakers;
     if (count > speakers.length) {
       for (let i = speakers.length; i < count; i++) {
-        const preset = DEFAULT_SPEAKERS[i];
         speakers.push({
           character_id: null,  // Phase 33 (D80): every speaker is a chosen character
-          name: preset ? preset.name : "",
-          gender: preset ? preset.gender : GENDERS[i % GENDERS.length],
+          name: "",
+          gender: GENDERS[i % 2],
           accent: state.accent,
           tts_engine: "edge_tts",
           voice_description: "",
@@ -214,8 +214,8 @@
         <div class="speaker-character">
           ${picture ? `<img src="${picture}" alt="" class="speaker-face" />` : '<span class="speaker-face speaker-face-empty" aria-hidden="true">?</span>'}
           <div class="speaker-identity">
-            <span class="speaker-slot">Speaker ${index + 1}</span>
-            <strong id="speaker-label-${index}">${speaker.character_id ? escapeHtml(speaker.name) : "No character yet"}</strong>
+            <span class="speaker-slot">${slotLabel(index)}</span>
+            <strong id="speaker-label-${index}">${speaker.character_id ? escapeHtml(speaker.name) : "Choose a character"}</strong>
             ${speaker.character_id ? `<span class="speaker-meta">${escapeHtml(speaker.gender)} · ${escapeHtml(accent ? accent.label : speaker.accent)}</span>` : ""}
             <button type="button" class="btn ${speaker.character_id ? "btn-ghost" : "btn-primary"} btn-sm" data-choose="${index}">
               ${speaker.character_id ? "Change character" : "Choose character"}</button>
@@ -236,7 +236,7 @@
     const speaker = state.speakers[index];
     const keepVoice = pageMode === "edit" && speaker.character_id && voiceDiffers(speaker, profile)
       && !window.confirm(`Use ${profile.name}'s voice settings (speed ${profile.voice.speed}, pitch ${profile.voice.pitch}, `
-        + `volume ${profile.voice.volume}) for Speaker ${index + 1}? Cancel keeps this project's own settings.`);
+        + `volume ${profile.voice.volume}) for ${slotLabel(index)}? Cancel keeps this project's own settings.`);
     Object.assign(speaker, {
       character_id: profile.id, name: profile.name, gender: profile.gender, accent: profile.accent || speaker.accent,
     });
@@ -248,23 +248,10 @@
 
   function openSelector(index) {
     CharacterSelector.open({
-      slots: state.speakers.map((speaker, i) => ({ index: i, label: `Speaker ${i + 1}`, characterId: speaker.character_id })),
+      slots: state.speakers.map((speaker, i) => ({ index: i, label: slotLabel(i), characterId: speaker.character_id })),
       profiles: state.profiles,
       startSlot: index,
       onChoose: (slotIndex, profile) => applyProfile(slotIndex, profile),
-    });
-  }
-
-  // A new project starts with Alex and Lina when they are ready (the old defaults, now real characters).
-  function preselectDefaults() {
-    state.speakers.forEach((speaker, index) => {
-      if (speaker.character_id) return;
-      const wanted = DEFAULT_SPEAKERS[index]?.name;
-      const used = new Set(state.speakers.map((item) => item.character_id));
-      const profile = state.profiles.find((item) => item.name === wanted && CharacterSelector.castReady(item) && !used.has(item.id));
-      if (profile) Object.assign(speaker, { character_id: profile.id, name: profile.name, gender: profile.gender,
-        accent: profile.accent || speaker.accent });
-      else Object.assign(speaker, { name: "", gender: speaker.gender });
     });
   }
 
@@ -462,7 +449,7 @@
     }
 
     state.speakers.forEach((speaker, index) => {
-      if (!speaker.character_id) errors.push(`Speaker ${index + 1}: choose a character.`);
+      if (!speaker.character_id) errors.push(`${slotLabel(index)}: choose a character.`);
     });
 
     return errors;
@@ -551,7 +538,6 @@
 
     if (!projectId) {
       syncSpeakersToCount(sanitizeSpeakerCount(document.getElementById("num-speakers").value));
-      preselectDefaults();
       renderForm();
       configureCreateMode();
       return;

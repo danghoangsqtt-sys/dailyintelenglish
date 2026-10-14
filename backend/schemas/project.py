@@ -80,6 +80,8 @@ class SpeakerUpdate(BaseModel):
     delete) — Audio Studio must never risk that path once a script exists.
     """
 
+    # Phase 40 (D119): the speaker takes its character's name (renamed in the script lines too, `rename_speaker`).
+    name: str | None = Field(default=None, min_length=1, max_length=60)
     tts_engine: str | None = None
     voice_description: str | None = None
     speed: float | None = Field(default=None, ge=TTS_SPEED_MIN, le=TTS_SPEED_MAX)

@@ -64,12 +64,12 @@
     if (!picks.childElementCount) {
       CEFR.forEach((level) => picks.append(el("label", {}, [
         el("input", { type: "checkbox", name: "cefr", value: level, checked: ["A2", "B1"].includes(level) }), ` ${level}`])));
-      const defaults = ["Alex", "Lina"];
+      // Phase 40 (D119): no default cast; the owner chooses Character 1 and Character 2 from the profiles
       ["plan-cast0", "plan-cast1"].forEach((id, index) => {
         const select = $(id);
-        select.replaceChildren(el("option", { value: "", textContent: "— none —" }),
+        select.replaceChildren(el("option", { value: "", textContent: `— Character ${index + 1} —` }),
           ...readyProfiles().map((profile) => el("option", { value: profile.id, textContent: profile.name })));
-        select.value = readyProfiles().find((profile) => profile.name === defaults[index])?.id || "";
+        select.value = "";
       });
     }
   }

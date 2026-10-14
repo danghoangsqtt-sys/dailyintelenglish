@@ -8,6 +8,16 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Changed (Phase 40, 2026-10-14, D119)
+- **No fixed Alex and Lina.** A new episode's speaker slots read "Character 1", "Character 2"… until a character profile is
+  chosen (Step 1 and the channel plan); the speaker then takes that character's name. Choosing another character in
+  Step 5 renames the speaker and the old name in the script lines, and asks to regenerate the audio.
+
+### Fixed (2026-10-14)
+- **A video render failed when the old video was open** in the Step 5 player (Windows refused Remotion's final rename).
+  The render now goes to a staging file and is published with retries, else under a timestamped name.
+- The Step 5 "Use character name" button did not save the new name.
+
 ### Changed (Phase 38 project layout, 2026-10-13, D115)
 - **One home per concern.** `app/` is now `backend/`, grouped by domain: every AI part sits under `backend/ai/` (`llm/`
   gateway and providers, `image/` engine + worker + recipes + GPU arbiter, `tts/`, `prompts/`, `models/` weights);

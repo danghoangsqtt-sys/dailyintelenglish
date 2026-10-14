@@ -158,17 +158,18 @@ async def test_step5_never_casts_by_name_and_offers_the_character_name(browser_i
     await first_card.locator('[data-action="choose-character"]').wait_for()
     assert "No character yet" in await first_card.text_content()  # same name, but never cast by name
     await choose_cast(page, 1, alex_id)  # Olga's speaker played by "Ivan"
-    rename = page.get_by_role("button", name="Use character name (Ivan)")
-    await rename.wait_for()
+    # Phase 40 (D119): the speaker takes the character's name at once, and Step 5 says the audio must be redone
+    await page.wait_for_function("document.getElementById('visual-warnings')?.textContent.includes('Regenerate the audio')")
+    assert "Olga → Ivan" in await page.locator("#visual-warnings").text_content()
     assert lina_id
     await page.close()
 
 
 @pytest.mark.asyncio
-async def test_a_new_project_starts_with_alex_and_lina_as_speakers(browser_instance: Browser, live_server_url: str):
+async def test_a_new_project_starts_with_empty_character_slots(browser_instance: Browser, live_server_url: str):
     from tests.test_visuals_project_api import locked_character
 
-    # Phase 33 (D80): the defaults are real characters, chosen when they exist and are ready
+    # Phase 40 (D119): no default cast, even when characters named Alex and Lina exist
     import sqlite3
 
     alex = locked_character("Alex", "navy")
@@ -177,11 +178,10 @@ async def test_a_new_project_starts_with_alex_and_lina_as_speakers(browser_insta
         connection.execute("UPDATE characters SET gender = 'male' WHERE id = ?", (alex,))
     page = await browser_instance.new_page()
     await page.goto(f"{live_server_url}/step1")
-    await page.wait_for_function("document.getElementById('speaker-name-0')?.value === 'Alex'")
-    assert await page.locator("#speaker-name-0").input_value() == "Alex"
-    assert await page.locator("#speaker-gender-0").input_value() == "male"
-    assert await page.locator("#speaker-name-1").input_value() == "Lina"
-    assert await page.locator("#speaker-gender-1").input_value() == "female"
+    await page.wait_for_function("document.getElementById('speaker-label-0')?.textContent === 'Choose a character'")
+    assert await page.locator("#speaker-name-0").input_value() == ""
+    assert await page.locator("#speaker-name-1").input_value() == ""
+    assert [await slot.text_content() for slot in await page.locator(".speaker-slot").all()] == ["Character 1", "Character 2"]
     await page.close()
     with sqlite3.connect(settings.db_path) as connection:  # the module shares one database: later tests expect no Lina yet
         connection.execute("DELETE FROM characters WHERE id IN (?, ?)", (alex, lina))

@@ -274,6 +274,43 @@ async def update_speaker(
     return await get_project(db, project_id)
 
 
+async def rename_speaker(
+    db: aiosqlite.Connection, project_id: str, speaker_id: str, new_name: str, commit: bool = True
+) -> dict:
+    """Phase 40 (D119): a speaker takes its character's name everywhere. The speaker row is renamed and the old name is
+    replaced, as a whole word and case-sensitively, in this project's script lines (so "Lina, how would you" becomes
+    "Mia, how would you"); when anything changed the project is marked "script changed" (the audio speaks the old name
+    and must be redone). Returns {"old_name", "new_name", "lines_changed", "changed"}.
+    """
+    import re
+
+    new_name = new_name.strip()
+    cursor = await db.execute("SELECT name FROM speakers WHERE id = ? AND project_id = ?", (speaker_id, project_id))
+    row = await cursor.fetchone()
+    if row is None:
+        raise NotFoundError(f"Speaker {speaker_id} not found on project {project_id}")
+    old_name = (row[0] or "").strip()
+    result = {"old_name": old_name, "new_name": new_name, "lines_changed": 0, "changed": False}
+    if not new_name or new_name == old_name:
+        return result
+    await db.execute("UPDATE speakers SET name = ? WHERE id = ? AND project_id = ?", (new_name, speaker_id, project_id))
+    cursor = await db.execute("SELECT id, text FROM script_lines WHERE project_id = ?", (project_id,))
+    lines = await cursor.fetchall()
+    if old_name:
+        pattern = re.compile(rf"(?<![\w-]){re.escape(old_name)}(?![\w-])")
+        for line_id, text in lines:
+            replaced = pattern.sub(new_name, text or "")
+            if replaced != text:
+                await db.execute("UPDATE script_lines SET text = ? WHERE id = ?", (replaced, line_id))
+                result["lines_changed"] += 1
+    if lines:  # a script exists: its labels (and maybe its words) changed, so audio and video are stale
+        await mark_script_changed(db, project_id, commit=False)
+    result["changed"] = True
+    if commit:
+        await db.commit()
+    return result
+
+
 async def update_project(
     db: aiosqlite.Connection, project_id: str, patch: ProjectUpdate, commit: bool = True
 ) -> dict:

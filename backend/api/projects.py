@@ -101,11 +101,17 @@ async def update_speaker(
     the full-replace `speakers` path on that route is unsafe to reuse here.
     """
     started_at = time.perf_counter()
+    rename = None
     async with write_transaction(db):
-        if patch.model_dump(exclude_unset=True):
+        if patch.name is not None:  # Phase 40 (D119): rename everywhere, not just the label
+            rename = await project_service.rename_speaker(db, project_id, speaker_id, patch.name, commit=False)
+        voice = patch.model_copy(update={"name": None})
+        if voice.model_dump(exclude_unset=True, exclude_none=True):
             await project_service.mark_speaker_voice_changed(db, project_id, commit=False)
-        project = await project_service.update_speaker(db, project_id, speaker_id, patch, commit=False)
-    return ok(project, started_at=started_at)
+        project = await project_service.update_speaker(
+            db, project_id, speaker_id, SpeakerUpdate(**voice.model_dump(exclude_unset=True, exclude_none=True)),
+            commit=False)
+    return ok({**project, "renamed": rename} if rename else project, started_at=started_at)
 
 
 @router.delete("/{project_id}")

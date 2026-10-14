@@ -33,7 +33,8 @@ async def _open(browser: Browser, base: str, profiles: list[dict]):
     try:
         await fixture._character_routes(page, [], [])
         await page.goto(f"{base}/step1")
-        await page.wait_for_function("document.getElementById('speaker-name-1')?.value === 'Lina'")
+        # Phase 40 (D119): no preselected cast -- every slot waits for a choice
+        await page.wait_for_function("document.getElementById('speaker-label-1')?.textContent === 'Choose a character'")
     finally:
         fixture.PROFILES = original
     return page
@@ -45,7 +46,7 @@ async def test_a_click_only_previews_and_choose_assigns(browser_instance: Browse
     await page.click('[data-choose="0"]')
     await page.locator(".cs-card", has_text="Ben").click()
     assert "Ben" in await page.locator('[data-cs="preview"]').text_content()
-    assert "Alex" in await page.locator('.cs-slot[data-slot="0"]').text_content()  # previewing changed nothing
+    assert "Ben" not in await page.locator('.cs-slot[data-slot="0"]').text_content()  # previewing changed nothing
     await page.locator('[data-cs="choose"]').click()
     await page.wait_for_selector('.cs-slot[data-slot="0"]:has-text("Ben")')
     await page.locator('[data-cs="close"]').click()
@@ -56,9 +57,13 @@ async def test_a_click_only_previews_and_choose_assigns(browser_instance: Browse
 @pytest.mark.asyncio
 async def test_one_character_cannot_play_two_speakers(browser_instance: Browser, live_server_url: str):
     page = await _open(browser_instance, live_server_url, fixture.PROFILES)
-    await page.click('[data-choose="0"]')
+    await page.click('[data-choose="1"]')
     await page.locator(".cs-card", has_text="Lina").click()
-    assert "Already chosen for Speaker 2" in await page.locator('[data-cs="preview"]').text_content()
+    await page.locator('[data-cs="choose"]').click()
+    await page.wait_for_selector('.cs-slot[data-slot="1"]:has-text("Lina")')
+    await page.locator('.cs-slot[data-slot="0"]').click()
+    await page.locator(".cs-card", has_text="Lina").click()
+    assert "Already chosen for Character 2" in await page.locator('[data-cs="preview"]').text_content()
     assert await page.locator('[data-cs="choose"]').is_disabled()
     await page.close()
 
@@ -85,5 +90,5 @@ async def test_saving_without_a_character_is_refused(browser_instance: Browser, 
     await page.fill("#topic", "Travel")
     await page.click("#submit-btn")
     await page.wait_for_selector("#error-banner:not([hidden])")
-    assert "Speaker 3: choose a character." in await page.locator("#error-banner").text_content()
+    assert "Character 1: choose a character." in await page.locator("#error-banner").text_content()
     await page.close()

@@ -123,7 +123,17 @@ async def set_cast(db: aiosqlite.Connection, project_id: str, members: list[dict
             "INSERT INTO project_cast (project_id, speaker_index, character_id, profile_version) VALUES (?, ?, ?, ?)",
             (project_id, member["speaker_index"], member["character_id"], versions[member["character_id"]]),
         )
-    return await project_visuals(db, project_id)
+    # Phase 40 (D119): the speaker takes the chosen character's name, in the script lines too
+    speakers = {speaker["speaker_index"]: speaker for speaker in project["speakers"]}
+    renamed = []
+    for member in members:
+        character = await library.get_character_row(db, member["character_id"])
+        speaker = speakers[member["speaker_index"]]
+        if character["name"] and speaker["name"] != character["name"]:
+            change = await project_service.rename_speaker(db, project_id, speaker["id"], character["name"], commit=False)
+            if change["changed"]:
+                renamed.append({"speaker_index": member["speaker_index"], **change})
+    return {**await project_visuals(db, project_id), "renamed": renamed}
 
 
 async def set_scenes(db: aiosqlite.Connection, project_id: str, scene_ids: list[str]) -> dict:
