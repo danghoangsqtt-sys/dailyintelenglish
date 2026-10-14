@@ -129,9 +129,13 @@
     try {
       job = await call("/video/status");
     } catch {
-      return; // no video yet: the section stays hidden
+      job = null;
     }
-    if (!job || job.status !== "complete") return;
+    if (!job || job.status !== "complete") {
+      // no video yet: the section stays hidden until the first render on this page finishes
+      document.addEventListener("video:rendered", init, { once: true });
+      return;
+    }
     $("shorts-section").hidden = false;
     showVerticalLink(Boolean(job.mp4_path_vertical));
     $("vertical-btn").addEventListener("click", renderVertical);

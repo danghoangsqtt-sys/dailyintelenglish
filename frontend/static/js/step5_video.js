@@ -978,6 +978,7 @@
       });
       renderResult(job);
       generationStatus.setProgress({ stageLabel: "Done.", done: true });
+      document.dispatchEvent(new CustomEvent("video:rendered")); // the Shorts / vertical section can open now
     } catch (error) {
       console.error("Failed to generate video:", error);
       showError(error.message || "We couldn't generate the video. Please try again.");
