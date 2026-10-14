@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 44: remove RealVisXL/SDXL, the two-person shots and the "with characters" video (D123)
 
-- **Status:** planned 2026-10-14 (owner answers in chat). Not started.
+- **Status:** planned 2026-10-14 (owner answers in chat); 44.1 done (tool ready; `--apply` runs right before migration 026), 44.2 in progress.
 - **Why (owner, 2026-10-14):** Step 5 still offered "Generate shots" (single / duo close / duo wide pictures of the
   cast drawn by RealVisXL), whose faces never match the real characters. The owner had asked to drop RealVisXL:
   illustrations in a conversation come from the **generic Activity Library or the local AI (Qwen)** and show **no
@@ -34,8 +34,8 @@ still scene, black screen, the composed / outside-AI / AI-scene thumbnails.
 
 | Task | Description | Status |
 |---|---|---|
-| 44.1 | **Backup and archive.** DB backup `data/backups/app-before-migration-026-<time>.db`; zip every project-shot and library-shot picture to `data/backups/phase44-shots-<time>.zip`; a script `scripts/archive_old_shots.py` (dry-run listing first) | planned |
-| 44.2 | **Backend removal.** `pipelines.py`: character candidates/sheet, project shots, shot regenerate, the shot contexts/colour/hand/gaze passes, character inserts, SDXL fallbacks (activity illustrations, plates, scene preview -> Qwen only, clear error without it). `image_worker.py` / `engine.py`: SDXL load/encode/generate/IP-Adapter/ControlNet/inpaint/remove_background and `session()`; keep `qwen_generate`, `qwen_installed`, `count_faces`. `recipes.py`: SDXL prompt builders no longer used. `shot_library_service.py`, the shot parts of `project_visuals_service.py`, `library_service` SDXL bits. API routes: candidates, sheet, library shots (list/review/delete/content), project shots (generate/regenerate/content/to-library), library coverage. Settings `IMAGE_ILLUSTRATION_ENGINE` / `IMAGE_CHARACTER_ENGINE` / `IMAGE_BASE_REPO` / scheduler. Migration 026: drop `project_shots`, `shot_library`; old projects' `illustrated` visual mode -> `podcast_sprites`; old image-job kinds closed | planned |
+| 44.1 | **Backup and archive.** DB backup `data/backups/app-before-migration-026-<time>.db`; zip every project-shot and library-shot picture to `data/backups/phase44-shots-<time>.zip`; a script `scripts/archive_old_shots.py` (dry-run listing first) | done |
+| 44.2 | **Backend removal.** `pipelines.py`: character candidates/sheet, project shots, shot regenerate, the shot contexts/colour/hand/gaze passes, character inserts, SDXL fallbacks (activity illustrations, plates, scene preview -> Qwen only, clear error without it). `image_worker.py` / `engine.py`: SDXL load/encode/generate/IP-Adapter/ControlNet/inpaint/remove_background and `session()`; keep `qwen_generate`, `qwen_installed`, `count_faces`. `recipes.py`: SDXL prompt builders no longer used. `shot_library_service.py`, the shot parts of `project_visuals_service.py`, `library_service` SDXL bits. API routes: candidates, sheet, library shots (list/review/delete/content), project shots (generate/regenerate/content/to-library), library coverage. Settings `IMAGE_ILLUSTRATION_ENGINE` / `IMAGE_CHARACTER_ENGINE` / `IMAGE_BASE_REPO` / scheduler. Migration 026: drop `project_shots`, `shot_library`; old projects' `illustrated` visual mode -> `podcast_sprites`; old image-job kinds closed | in_progress |
 | 44.3 | **Renderer.** Remove the `illustrated` shot track from `Episode.tsx` / `visuals.ts` / `Root.tsx` / `types.ts`; modes: `podcast_sprites` (default), `podcast_still`, `podcast_black`; Vitest updated | planned |
 | 44.4 | **Frontend.** Step 5: no "Generate shots" section, no "with characters" chip, talking characters selected by default, the insert-picture panel says "generic library or local AI (no cast face)"; Shots page: Activity Library + sprite sets only; Characters page (scenes): Qwen scene preview only; `api.js` methods for removed routes deleted | planned |
 | 44.5 | **Models and docs.** Delete the SDXL model folders and anime-seg from `backend/ai/models/image` (owner approved deletion with D123), trim `backend/ai/image/requirements.txt` (controlnet/ip-adapter extras if unused), update ARCHITECTURE / README / API reference, CHANGELOG | planned |
@@ -47,3 +47,9 @@ still scene, black screen, the composed / outside-AI / AI-scene thumbnails.
   kept, their shot pictures archived).
 - Character-specific Activity Library entries (made earlier from a cast member's pictures) stay in the library; new
   pictures are generic only. The matcher keeps preferring generic pictures for any speaker.
+
+## As built
+
+- **44.1 (2026-10-14):** `scripts/archive_old_shots.py` (dry run by default; `--apply` = DB backup via the SQLite
+  backup API, a verified zip of `data/visuals/*/shots/` + `data/library/shots/`, then removal; plates and videos
+  untouched). Dry run on the real data: 238 pictures, 200.8 MB. Test: `tests/test_phase44_remove_sdxl_shots.py`.
