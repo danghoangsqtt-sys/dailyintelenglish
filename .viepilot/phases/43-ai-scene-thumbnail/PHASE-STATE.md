@@ -68,3 +68,8 @@ hold our badge and logo. Sources: thumbnailtest.com, vidIQ, TubeCore, Search Eng
   picture), 2 faces found on each, none crowded (free 33-38 %), title on the left. The owner had already generated
   outside-AI thumbnails from their ChatGPT picture, so the "Generate" click (which replaces the variant set) is left to
   the owner; offline renders of the three real scenes: `39-real-ai-scene-thumbnails.jpg`, `39-real-ai-scene-9x16.jpg`.
+- **Owner review (2026-10-14):** "not as bright and fresh as ChatGPT". Try 1 (high-key close-up + strong grade) blew
+  out the highlights, changed Kim's hair colour and left only 26-30 % for the title (all three "crowded"). Try 2
+  (natural daylight, medium shot from the waist up with open gestures, the place visible on the left, hair colour named,
+  a gentle grade: levels 0.2 %, brightness 1.03, colour 1.1, sharpness 1.15; lighter title shade) on Ep. 2: 3/3 fine,
+  free side 43-48 %, 87-105 s per picture (`42-natural-daylight-thumbnails.jpg`).

@@ -51,9 +51,9 @@ def test_the_ai_scene_prompt_names_both_pictures_and_keeps_a_plain_side():
     prompt = recipes.qwen_thumbnail_scene_prompt(
         ["Hoang", "Kim"], "Shopping at the Market. The group navigates the local market.", "a busy outdoor fruit market")
     assert "Hoang (the person in picture 1)" in prompt and "Kim (the person in picture 2)" in prompt
-    assert "heads and faces do not overlap" in prompt and "Head-and-shoulders close-up" in prompt
-    assert "in a busy outdoor fruit market on a sunny day" in prompt and "left part is only softly blurred, bright" in prompt
-    assert "high-key" in prompt and "darker" not in prompt
+    assert "heads and faces do not overlap" in prompt and "Medium shot from the waist up" in prompt
+    assert "in a busy outdoor fruit market on a clear sunny day" in prompt and "left part shows the place itself" in prompt
+    assert "natural daylight" in prompt and "darker" not in prompt and "hair colour" in prompt
     assert "no text" in prompt.lower() and "no logo" in prompt and "thumbnail" not in prompt.lower()
     fallback = recipes.qwen_thumbnail_scene_prompt(["Hoang", "Kim"], "Shopping at the Market. More words.")
     assert "a real place that fits shopping at the market" in fallback

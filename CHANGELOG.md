@@ -9,9 +9,9 @@ Versioning: [SemVer](https://semver.org/)
 ## [Unreleased]
 
 ### Changed (2026-10-14, owner review)
-- **AI-scene thumbnails are brighter and fresher** (they looked darker and duller than ChatGPT's): a sunny, high-key
-  advertising prompt with a bright blurred left side, a light commercial grade (levels, brightness, colour, crispness)
-  and a lighter shade behind the headline.
+- **AI-scene thumbnails are brighter and fresher** (they looked darker and duller than ChatGPT's): a natural-daylight
+  medium shot from the waist up with open gestures and the place visible beside the pair, a gentle grade (levels,
+  brightness, colour, crispness) and a lighter shade behind the headline; more room for the title (43-48 %).
 - Step 5: the hint under the video-mode buttons no longer overlaps them (the buttons also wrap on a narrow window).
 - **D124 (owner):** Alex's and Lina's own activity pictures keep their priority; every other character uses the generic
   Activity Library, and Qwen-Image draws a missing illustration.

@@ -368,11 +368,10 @@ def grade_ai_scene(picture: Image.Image) -> Image.Image:
     stretch the levels, lift the brightness, more colour and a little crispness (faces stay natural)."""
     from PIL import ImageEnhance
 
-    graded = ImageOps.autocontrast(picture, cutoff=0.5)
-    graded = ImageEnhance.Brightness(graded).enhance(1.07)
-    graded = ImageEnhance.Color(graded).enhance(1.2)
-    graded = ImageEnhance.Contrast(graded).enhance(1.05)
-    return ImageEnhance.Sharpness(graded).enhance(1.25)
+    graded = ImageOps.autocontrast(picture, cutoff=0.2)
+    graded = ImageEnhance.Brightness(graded).enhance(1.03)
+    graded = ImageEnhance.Color(graded).enhance(1.1)
+    return ImageEnhance.Sharpness(graded).enhance(1.15)
 
 
 def ai_scene_picture(scene: dict, size: tuple[int, int]) -> Image.Image:
