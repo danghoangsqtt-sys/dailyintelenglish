@@ -8,13 +8,15 @@ import { AbsoluteFill, Img, staticFile, useVideoConfig } from "remotion";
 import { BOTTOM_SHADE_STYLE } from "./captionStyle";
 import { stillScale } from "./podcastLayout";
 import { activityCutawayAt, canvasBox, onStage, spriteBackground, spriteFrame, spriteTransform } from "./spriteTimeline";
+import { VERTICAL } from "./safeZone";
 import type { EpisodeLine, EpisodeSprites, Layout, SpriteCharacter } from "./types";
 
 const FILL: React.CSSProperties = { position: "absolute", width: "100%", height: "100%", objectFit: "cover" };
-/** Phase 37 (D100): the picture area of the vertical video (top part); the band below it holds the captions. */
-export const VERTICAL_PICTURE: React.CSSProperties = { ...FILL, height: "56%" };
-const VERTICAL_FADE: React.CSSProperties = { position: "absolute", left: 0, right: 0, top: "40%", height: "22%",
-  background: "linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.92))" };
+/** Phase 37 (D100) / 42 (D121): the picture area of the vertical video (top part, decoration that may run under the
+ * platform's top bar); the band below it holds the captions, then the characters (`safeZone.ts`). */
+export const VERTICAL_PICTURE: React.CSSProperties = { ...FILL, height: VERTICAL.picture.height };
+const VERTICAL_FADE: React.CSSProperties = { position: "absolute", left: 0, right: 0, top: VERTICAL.fade.top,
+  height: VERTICAL.fade.height, background: "linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.94))" };
 
 function Sprite({ character, frame, fps, lines, sprites, totalFrames, layout }: {
   character: SpriteCharacter; frame: number; fps: number; lines: EpisodeLine[]; sprites: EpisodeSprites; totalFrames: number;

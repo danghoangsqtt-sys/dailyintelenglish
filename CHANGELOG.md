@@ -8,6 +8,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Changed (Phase 42, 2026-10-14, D121)
+- **The vertical video respects the TikTok / Reels / Shorts safe zone** (owner's 1080x1920 template): speaker chips,
+  vocabulary card, hook banner and captions sit inside it, the captions left of the like/comment column, the characters'
+  faces above the bottom caption area. **The vertical video has its own intro and outro** (logo, title, level, cast,
+  greeting, Like/Subscribe/Share centred inside the zone) instead of the zoomed wide slides.
+
 ### Added (Phase 41, 2026-10-14, D120)
 - **A folder for each video project.** Step 1 (or Step 7 later) chooses the folder — with the Windows folder picker or a
   typed path — and ticks what to keep there: video + subtitles, vertical video, thumbnail, YouTube texts, Shorts/TikTok

@@ -24,7 +24,8 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import type { EpisodeBrand, EpisodeSpeaker } from "./types";
+import { VERTICAL_BRAND } from "./safeZone";
+import type { EpisodeBrand, EpisodeSpeaker, Layout } from "./types";
 
 export const BRAND_FONT = "'Montserrat', 'Segoe UI', Arial, sans-serif";
 // The owner's palette (logo + banner): greens, a yellow accent, white text on deep green, a red Subscribe.
@@ -155,7 +156,16 @@ function BrandVoice({ path, startSec }: { path?: string; startSec?: number }) {
   );
 }
 
-export function BrandIntro({ title, topic, cefrLevel, speakers, brand }: {
+export function BrandIntro({ title, topic, cefrLevel, speakers, brand, layout = "horizontal" }: {
+  title: string; topic: string; cefrLevel: string; speakers: EpisodeSpeaker[]; brand?: EpisodeBrand; layout?: Layout;
+}) {
+  if (layout === "vertical") {
+    return <BrandIntroVertical title={title} topic={topic} cefrLevel={cefrLevel} speakers={speakers} brand={brand} />;
+  }
+  return <BrandIntroWide title={title} topic={topic} cefrLevel={cefrLevel} speakers={speakers} brand={brand} />;
+}
+
+function BrandIntroWide({ title, topic, cefrLevel, speakers, brand }: {
   title: string; topic: string; cefrLevel: string; speakers: EpisodeSpeaker[]; brand?: EpisodeBrand;
 }) {
   const frame = useCurrentFrame();
@@ -203,7 +213,11 @@ export function BrandIntro({ title, topic, cefrLevel, speakers, brand }: {
   );
 }
 
-export function BrandOutro({ brand }: { brand?: EpisodeBrand }) {
+export function BrandOutro({ brand, layout = "horizontal" }: { brand?: EpisodeBrand; layout?: Layout }) {
+  return layout === "vertical" ? <BrandOutroVertical brand={brand} /> : <BrandOutroWide brand={brand} />;
+}
+
+function BrandOutroWide({ brand }: { brand?: EpisodeBrand }) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const enter = interpolate(frame, [0, Math.round(0.6 * fps)], [0, 1], { extrapolateRight: "clamp" });
@@ -238,6 +252,132 @@ export function BrandOutro({ brand }: { brand?: EpisodeBrand }) {
           })}
         </div>
         <div style={{ ...rise(lineIn), marginTop: 30, fontSize: 26, fontWeight: 500, color: MUTED, padding: "0 140px" }}>
+          {brand?.farewellLine ?? "See you in the next lesson"}
+        </div>
+      </div>
+      {playVoice ? <BrandVoice path={brand.farewellPath} startSec={brand.farewellStartSec} /> : null}
+    </AbsoluteFill>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Phase 42 (D121, Gate B-25): the vertical (1080x1920) intro and outro, laid out inside the TikTok / Reels / Shorts safe
+// zone (`safeZone.ts`): everything centred, wide above the platform's button column (y < 900), narrower below it, and
+// nothing under the top bar or the bottom caption area. Same palette, logo, fonts, voice and timing as the wide slides.
+
+/** The brand background drawn for a tall frame: the wide blobs scaled to cover 1080x1920. */
+function VerticalBackground({ morph }: { morph: number }) {
+  const frame = useCurrentFrame();
+  return (
+    <AbsoluteFill style={{ background: `linear-gradient(160deg, ${BRAND_PALETTE.bgStart} 0%, ${BRAND_PALETTE.bgMid} 55%, ${BRAND_PALETTE.bgEnd} 100%)`, overflow: "hidden" }}>
+      <div style={{ position: "absolute", left: -560, top: 280, width: 1280, height: 720, transform: "scale(2.2)", transformOrigin: "50% 50%" }}>
+        <Blobs morph={morph} drift={frame / 45} />
+      </div>
+      <AbsoluteFill style={{ background: "radial-gradient(ellipse at 50% 40%, transparent 35%, rgba(3,12,6,0.7) 100%)" }} />
+    </AbsoluteFill>
+  );
+}
+
+function VerticalLogo({ appear, top }: { appear: number; top: number }) {
+  return (
+    <div style={{ position: "absolute", left: 0, right: 0, top, display: "flex", flexDirection: "column", alignItems: "center",
+      fontFamily: BRAND_FONT, color: INK, opacity: appear }}>
+      <Img src={staticFile(LOGO_PATH)} style={{ width: 210, height: 210, borderRadius: "50%", objectFit: "cover",
+        transform: `scale(${appear})`, boxShadow: "0 18px 50px rgba(155,209,60,0.4)" }} />
+      <div style={{ marginTop: 22, fontSize: 70, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.05 }}>{BRAND_NAME.top}</div>
+      <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: 11, color: YELLOW, marginTop: 4 }}>{BRAND_NAME.sub}</div>
+    </div>
+  );
+}
+
+function BrandIntroVertical({ title, topic, cefrLevel, speakers, brand }: {
+  title: string; topic: string; cefrLevel: string; speakers: EpisodeSpeaker[]; brand?: EpisodeBrand;
+}) {
+  const frame = useCurrentFrame();
+  const { fps, durationInFrames } = useVideoConfig();
+  const appear = useMorph(0.15, 14, 0.9);
+  const morph = useMorph(1.75, 20, 1.1);
+  const titleIn = useMorph(1.6, 18, 0.9);
+  const metaIn = useMorph(2.2, 18, 0.9);
+  const wishIn = useMorph(3.0, 18, 0.9);
+  const exit = interpolate(frame, [durationInFrames - Math.round(0.6 * fps), durationInFrames], [1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.ease) });
+  const playVoice = brand && !brand.voicesInSoundtrack;
+  const narrow = VERTICAL_BRAND.narrow;
+  return (
+    <AbsoluteFill style={{ opacity: exit }}>
+      <VerticalBackground morph={morph} />
+      <VerticalLogo appear={appear} top={262} />
+      <div style={{ position: "absolute", left: VERTICAL_BRAND.wide.left, width: VERTICAL_BRAND.wide.width, top: 620,
+        textAlign: "center", fontFamily: BRAND_FONT }}>
+        <div style={{ ...rise(titleIn), fontSize: 60, fontWeight: 800, color: INK, letterSpacing: -1, lineHeight: 1.12,
+          maxHeight: 4 * 60 * 1.12, overflow: "hidden" }}>
+          {title}
+        </div>
+      </div>
+      <div style={{ position: "absolute", left: narrow.left, width: narrow.width, top: 920, textAlign: "center",
+        fontFamily: BRAND_FONT }}>
+        <div style={{ ...rise(metaIn), display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+          {cefrLevel ? (
+            <span style={{ padding: "8px 20px", borderRadius: 999, background: YELLOW, color: BRAND_PALETTE.pillInk, fontWeight: 800, fontSize: 30 }}>
+              {cefrLevel}
+            </span>
+          ) : null}
+          <span style={{ fontSize: 30, color: MUTED, fontWeight: 600, lineHeight: 1.3, maxHeight: 3 * 30 * 1.3, overflow: "hidden" }}>{topic}</span>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 12 }}>
+            {speakers.map((speaker, index) => (
+              <span key={speaker.id} style={{ padding: "8px 20px", borderRadius: 999, fontSize: 28, fontWeight: 700, color: INK,
+                background: "rgba(255,255,255,0.08)", border: `2px solid ${SPEAKER_RING[index % SPEAKER_RING.length]}` }}>
+                {speaker.name}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div style={{ ...rise(wishIn), marginTop: 34, fontSize: 32, fontStyle: "italic", fontWeight: 500, color: INK,
+          opacity: wishIn * 0.92, lineHeight: 1.3 }}>
+          “{brand?.wish ?? DEFAULT_WISH}”
+        </div>
+      </div>
+      {playVoice ? <BrandVoice path={brand.greetingPath} startSec={brand.greetingStartSec} /> : null}
+    </AbsoluteFill>
+  );
+}
+
+function BrandOutroVertical({ brand }: { brand?: EpisodeBrand }) {
+  const frame = useCurrentFrame();
+  const { fps, durationInFrames } = useVideoConfig();
+  const enter = interpolate(frame, [0, Math.round(0.6 * fps)], [0, 1], { extrapolateRight: "clamp" });
+  const appear = useMorph(0.2, 14, 0.9);
+  const lift = useMorph(1.2, 20, 1.0);
+  const lineIn = useMorph(2.4, 18, 0.9);
+  const chips = ["👍  Like", "🔔  Subscribe", "↗  Share"];
+  const exit = interpolate(frame, [durationInFrames - Math.round(0.9 * fps), durationInFrames], [1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const playVoice = brand && !brand.voicesInSoundtrack;
+  const narrow = VERTICAL_BRAND.narrow;
+  return (
+    <AbsoluteFill style={{ opacity: enter * exit }}>
+      <VerticalBackground morph={0} />
+      <VerticalLogo appear={appear} top={262} />
+      <div style={{ position: "absolute", left: VERTICAL_BRAND.wide.left, width: VERTICAL_BRAND.wide.width, top: 640,
+        textAlign: "center", fontFamily: BRAND_FONT }}>
+        <div style={{ ...rise(lift), fontSize: 64, fontWeight: 800, color: INK }}>Thanks for watching!</div>
+        <div style={{ marginTop: 34, display: "flex", justifyContent: "center", gap: 16 }}>
+          {chips.map((chip, index) => {
+            const pop = spring({ frame: frame - Math.round((1.8 + index * 0.18) * fps), fps, config: { damping: 12 } });
+            return (
+              <span key={chip} style={{ transform: `scale(${pop})`, opacity: pop, padding: "14px 24px", borderRadius: 999,
+                fontSize: 30, fontWeight: 800, color: INK,
+                background: index === 1 ? BRAND_PALETTE.subscribe : "rgba(255,255,255,0.1)", border: "2px solid rgba(255,255,255,0.18)" }}>
+                {chip}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+      <div style={{ position: "absolute", left: narrow.left, width: narrow.width, top: 940, textAlign: "center",
+        fontFamily: BRAND_FONT }}>
+        <div style={{ ...rise(lineIn), fontSize: 32, fontWeight: 500, color: MUTED, lineHeight: 1.35 }}>
           {brand?.farewellLine ?? "See you in the next lesson"}
         </div>
       </div>

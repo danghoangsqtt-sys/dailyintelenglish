@@ -11,6 +11,7 @@ import { PodcastLayerView } from "./Podcast";
 import { SpriteStage } from "./Sprites";
 import { podcastLayer, type VisualMode } from "./podcastLayout";
 import { VERTICAL_PICTURE } from "./Sprites";
+import { VERTICAL } from "./safeZone";
 import type {
   Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker, EpisodeSprites, EpisodeVisuals, Layout,
 } from "./types";
@@ -95,7 +96,9 @@ function SpeakerChip({ speaker, color, isActive }: { speaker: EpisodeSpeaker; co
  * of overflowing the canvas (D19.4-c) -- not exercised by this task's 2-speaker demo, but
  * requires no different code path at higher counts.
  */
-function SpeakerChips({ speakers, activeId }: { speakers: EpisodeSpeaker[]; activeId: string | null }) {
+function SpeakerChips({ speakers, activeId, layout = "horizontal" }: {
+  speakers: EpisodeSpeaker[]; activeId: string | null; layout?: Layout;
+}) {
   if (speakers.length === 0) {
     return null;
   }
@@ -103,8 +106,11 @@ function SpeakerChips({ speakers, activeId }: { speakers: EpisodeSpeaker[]; acti
     <div
       style={{
         position: "absolute",
-        top: "5%",
-        left: "5%",
+        ...(layout === "vertical"  // Phase 42: inside the safe zone, under the platform's top bar
+          // CSS zoom scales the offsets too, so they are given in unzoomed pixels
+          ? { top: VERTICAL.speakerChips.top / 1.4, left: VERTICAL.speakerChips.left / 1.4,
+            maxWidth: VERTICAL.speakerChips.width / 1.4, zoom: 1.4 }
+          : { top: "5%", left: "5%" }),
         display: "flex",
         flexWrap: "wrap",
         gap: 8,
@@ -138,7 +144,7 @@ function CaptionBand({
   // span in a box) -- font/size/color/alignment stay the D19.3-b base style.
   const spec = captionStyleSpec(captionStyle);
   // Phase 37 (D100): big captions for a phone screen.
-  const size = layout === "vertical" ? { fontSize: 54, lineHeight: 1.18 } : {};
+  const size = layout === "vertical" ? { fontSize: 50, lineHeight: 1.18 } : {};
   const textStyle = { ...CAPTION_TEXT_STYLE, ...spec.text, ...(spec.box ?? {}), ...size };
 
   if (tokens.length === 0) {
@@ -193,10 +199,12 @@ function VocabCard({ item, opacity, position, layout = "horizontal" }: {
     <div
       style={{
         position: "absolute",
-        top: layout === "vertical" ? "7%" : "5%",
-        ...(position === "top-center" ? { left: "50%", transform: "translateX(-50%)" } : { right: "5%" }),
-        maxWidth: layout === "vertical" ? "86%" : "32%",
-        zoom: layout === "vertical" ? 1.6 : 1,
+        ...(layout === "vertical"  // Phase 42: left-aligned in the safe zone, clear of the chips and the button column
+          ? { top: VERTICAL.vocabCard.top / VERTICAL.vocabCard.zoom, left: VERTICAL.vocabCard.left / VERTICAL.vocabCard.zoom,
+            maxWidth: VERTICAL.vocabCard.width / VERTICAL.vocabCard.zoom,
+            maxHeight: VERTICAL.vocabCard.height / VERTICAL.vocabCard.zoom, overflow: "hidden", zoom: VERTICAL.vocabCard.zoom }
+          : { top: "5%", ...(position === "top-center" ? { left: "50%", transform: "translateX(-50%)" } : { right: "5%" }),
+            maxWidth: "32%" }),
         opacity,
         backgroundColor: "rgba(14, 15, 21, 0.85)",
         borderRadius: 12,
@@ -240,9 +248,10 @@ export function hookOpacity(currentTimeSec: number, hookAtSec: number): number {
 function HookBanner({ hook, opacity }: { hook: string; opacity: number }) {
   if (opacity <= 0) return null;
   return (
-    <div style={{ position: "absolute", left: "6%", right: "6%", top: "22%", opacity, display: "flex", justifyContent: "center" }}>
+    <div style={{ position: "absolute", left: VERTICAL.hookBanner.left, width: VERTICAL.hookBanner.width, top: VERTICAL.hookBanner.top,
+      opacity, display: "flex", justifyContent: "center" }}>
       <div style={{ background: "#FFD23F", color: "#14301F", borderRadius: 28, padding: "26px 34px", fontFamily: "Arial, sans-serif",
-        fontSize: 64, fontWeight: 800, lineHeight: 1.1, textAlign: "center", boxShadow: "0 10px 40px rgba(0,0,0,0.45)" }}>
+        fontSize: 60, fontWeight: 800, lineHeight: 1.1, textAlign: "center", boxShadow: "0 10px 40px rgba(0,0,0,0.45)" }}>
         {hook}
       </div>
     </div>
@@ -392,7 +401,7 @@ export function AudioWindowContent({
       {playAudio ? <Audio src={staticFile(audioPath)} startFrom={0} /> : null}
       {captionStyleSpec(captionStyle).bottomShade && layout !== "vertical" ? <div style={BOTTOM_SHADE_STYLE} /> : null}
       <ChapterProgressBar frame={frame} fps={fps} audioDurationSec={audioDurationSec} chapters={chapters} />
-      <SpeakerChips speakers={speakers} activeId={activeId} />
+      <SpeakerChips speakers={speakers} activeId={activeId} layout={layout} />
       {activeLearningItem ? (
         <VocabCard
           item={activeLearningItem.item}
@@ -407,12 +416,12 @@ export function AudioWindowContent({
         <div
           style={{
             position: "absolute",
-            left: 0,
-            right: 0,
-            ...(layout === "vertical" ? { top: "44%", height: "16%", alignItems: "center" } : { bottom: "10%" }),
+            ...(layout === "vertical"  // Phase 42: left of the platform's button column, above the characters
+              ? { left: VERTICAL.captions.left, width: VERTICAL.captions.width, top: VERTICAL.captions.top,
+                height: VERTICAL.captions.height, alignItems: "center", padding: 0 }
+              : { left: 0, right: 0, bottom: "10%", padding: "0 5%" }),
             display: "flex",
             justifyContent: "center",
-            padding: "0 5%",
           }}
         >
           <CaptionBand line={line} currentTimeSec={currentTimeSec} captionStyle={captionStyle} layout={layout} />
@@ -462,10 +471,8 @@ export const Episode: React.FC<EpisodeInputProps> = ({
       {/* Task 22.4 (D51): the music bed spans intro + speech + outro, so it plays from frame 0. */}
       {soundtrackPath ? <Audio src={staticFile(soundtrackPath)} startFrom={0} /> : null}
       <Sequence from={0} durationInFrames={introFrames} name="Intro">
-        {/* Phase 37: the 1280x720 brand slides are scaled up to fill a phone screen */}
-        <AbsoluteFill style={layout === "vertical" ? { zoom: 1.5 } : undefined}>
-          <BrandIntro title={title} topic={topic} cefrLevel={cefrLevel} speakers={speakers} brand={brand} />
-        </AbsoluteFill>
+        {/* Phase 42 (D121): the vertical video has its own intro, laid out inside the safe zone */}
+        <BrandIntro title={title} topic={topic} cefrLevel={cefrLevel} speakers={speakers} brand={brand} layout={layout} />
       </Sequence>
       <Sequence from={introFrames} durationInFrames={audioFrames} name="Audio">
         <AudioWindowContent
@@ -488,9 +495,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
         />
       </Sequence>
       <Sequence from={introFrames + audioFrames} durationInFrames={outroFrames} name="Outro">
-        <AbsoluteFill style={layout === "vertical" ? { zoom: 1.5 } : undefined}>
-          <BrandOutro brand={brand} />
-        </AbsoluteFill>
+        <BrandOutro brand={brand} layout={layout} />
       </Sequence>
     </AbsoluteFill>
   );

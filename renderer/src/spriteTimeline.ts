@@ -3,6 +3,7 @@
  * how it moves (turns, hop, breathing, blink, enter and leave) and which scene plate is behind them. `Sprites.tsx` only draws what
  * these functions return, so vitest pins all of it. No randomness: a frame must render the same every time.
  */
+import { VERTICAL, VERTICAL_SIZE } from "./safeZone";
 import type { EpisodeLine, EpisodeSprites, SpriteCharacter, SpriteLine } from "./types";
 
 /** The 1280 x 1536 sprite canvas is drawn this many video heights tall (legs below the knees leave the frame, D32-g). */
@@ -90,16 +91,18 @@ export function stageTop(characters: SpriteCharacter[]): number {
   return HEAD_MARGIN - top * SPRITE_HEIGHT;
 }
 
-/** Phase 37 (D100): in the vertical video the characters stand in the bottom part, heads just under the caption band. */
-export const VERTICAL_SPRITE_HEIGHT = 0.56;
-export const VERTICAL_HEAD_TOP = 0.6;
+/** Phase 37 (D100) / 42 (D121): in the vertical video the characters stand under the caption band, their faces inside the
+ * platform safe zone (above the bottom caption area, left of the button column) -- see `safeZone.ts`. */
+export const VERTICAL_SPRITE_HEIGHT = VERTICAL.spriteHeight / VERTICAL_SIZE.height;
+export const VERTICAL_HEAD_TOP = VERTICAL.headTop / VERTICAL_SIZE.height;
 
 export function canvasBox(slot: number, width: number, height: number, characters: SpriteCharacter[],
   layout: "horizontal" | "vertical" = "horizontal") {
   if (layout === "vertical") {
     const boxHeight = VERTICAL_SPRITE_HEIGHT * height;
     const top = Math.min(...characters.map((character) => character.topFraction), 0.15);
-    return { left: SLOT_X[slot] * width - (boxHeight * CANVAS_RATIO) / 2, top: VERTICAL_HEAD_TOP * height - top * boxHeight,
+    const centre = (VERTICAL.slotX[slot] ?? VERTICAL.slotX[0]) / VERTICAL_SIZE.width;
+    return { left: centre * width - (boxHeight * CANVAS_RATIO) / 2, top: VERTICAL_HEAD_TOP * height - top * boxHeight,
       width: boxHeight * CANVAS_RATIO, height: boxHeight };
   }
   const boxHeight = SPRITE_HEIGHT * height;
