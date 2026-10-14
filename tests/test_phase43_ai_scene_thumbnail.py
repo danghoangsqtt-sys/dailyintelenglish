@@ -52,7 +52,8 @@ def test_the_ai_scene_prompt_names_both_pictures_and_keeps_a_plain_side():
         ["Hoang", "Kim"], "Shopping at the Market. The group navigates the local market.", "a busy outdoor fruit market")
     assert "Hoang (the person in picture 1)" in prompt and "Kim (the person in picture 2)" in prompt
     assert "heads and faces do not overlap" in prompt and "Head-and-shoulders close-up" in prompt
-    assert "in a busy outdoor fruit market" in prompt and "left part is only softly blurred background" in prompt
+    assert "in a busy outdoor fruit market on a sunny day" in prompt and "left part is only softly blurred, bright" in prompt
+    assert "high-key" in prompt and "darker" not in prompt
     assert "no text" in prompt.lower() and "no logo" in prompt and "thumbnail" not in prompt.lower()
     fallback = recipes.qwen_thumbnail_scene_prompt(["Hoang", "Kim"], "Shopping at the Market. More words.")
     assert "a real place that fits shopping at the market" in fallback
@@ -117,11 +118,25 @@ def test_the_ai_scene_thumbnail_is_composed_from_the_drawn_picture(tmp_path):
     tall = tc.render(inputs, suggestion, "9x16", 0, "qwen_scene")
     assert wide.size == tc.SIZES["16x9"] and tall.size == tc.SIZES["9x16"]
     # the right part of the frame (the faces) is not shaded or written on: same colour as the drawn picture
-    assert wide.getpixel((1000, 300)) == (40, 120, 60)
+    graded = tc.grade_ai_scene(picture)
+    assert wide.getpixel((1000, 300)) == graded.getpixel((frame["left"] + 1000, 300))  # the faces' side is not shaded
     background = tc.ai_scene_picture(inputs["ai_scenes"][0], tc.SIZES["16x9"])
-    assert background.getpixel((10, 700)) == picture.getpixel((frame["left"] + 10, 700))
+    assert background.getpixel((10, 700)) == graded.getpixel((frame["left"] + 10, 700))
     with pytest.raises(ValueError, match="no AI scene"):
         tc.render({"ai_scenes": []}, suggestion, "16x9", 0, "qwen_scene")
+
+
+def test_the_grade_brightens_and_saturates_a_dull_picture():
+    from PIL import ImageStat
+
+    from backend.media import thumbnail_compose as tc
+
+    dull = Image.new("RGB", (64, 64), (90, 80, 70))
+    for x in range(64):
+        dull.putpixel((x, 0), (60, 50, 45))
+        dull.putpixel((x, 63), (140, 120, 100))
+    graded = tc.grade_ai_scene(dull)
+    assert ImageStat.Stat(graded).mean[0] > ImageStat.Stat(dull).mean[0]  # brighter
 
 
 def test_a_long_supporting_line_shrinks_to_the_title_box():

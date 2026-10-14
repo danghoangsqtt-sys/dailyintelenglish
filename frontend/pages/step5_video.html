@@ -29,7 +29,9 @@
     @media (max-width: 720px) { .activity-missing-card { grid-template-columns: 1fr; } }
     #activity-coverage.is-warning { padding: 8px 10px; border-radius: 8px; background: var(--warning-bg); color: var(--warning); }
 
-    .aspect-ratio-row { display: flex; gap: 10px; margin-top: 14px; }
+    .aspect-ratio-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    /* a hint right under a row of chips keeps its distance (the -8px pull is meant for a hint under a title) */
+    .aspect-ratio-row + .section-hint { margin-top: 10px; }
     .chip {
       display: flex;
       align-items: center;

@@ -8,6 +8,14 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Changed (2026-10-14, owner review)
+- **AI-scene thumbnails are brighter and fresher** (they looked darker and duller than ChatGPT's): a sunny, high-key
+  advertising prompt with a bright blurred left side, a light commercial grade (levels, brightness, colour, crispness)
+  and a lighter shade behind the headline.
+- Step 5: the hint under the video-mode buttons no longer overlaps them (the buttons also wrap on a narrow window).
+- **D124 (owner):** Alex's and Lina's own activity pictures keep their priority; every other character uses the generic
+  Activity Library, and Qwen-Image draws a missing illustration.
+
 ### Removed (Phase 44, 2026-10-14, D123)
 - **RealVisXL / SDXL everywhere** (the fallback of illustrations and scene pictures, the old character candidate and
   sheet generation, IP-Adapter, ControlNet, inpaint, the anime cut-out) and their models: **30.9 GB freed**. Only Qwen

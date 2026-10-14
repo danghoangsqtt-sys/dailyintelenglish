@@ -147,15 +147,16 @@ def _background(path: str | None, size: tuple[int, int], suggestion: ThumbnailSu
     return _gradient(size, suggestion.palette.primary, suggestion.palette.secondary)
 
 
-def _shade(image: Image.Image, where: str, side_span: float = 0.66) -> Image.Image:
-    """Darken the text side so the headline reads at thumbnail size (`side_span`: how far a left/right shade reaches)."""
+def _shade(image: Image.Image, where: str, side_span: float = 0.66, strength: int = 200) -> Image.Image:
+    """Darken the text side so the headline reads at thumbnail size (`side_span`: how far a left/right shade reaches;
+    `strength`: the darkest alpha at the edge)."""
     width, height = image.size
     mask = Image.new("L", image.size, 0)
     draw = ImageDraw.Draw(mask)
     if where in ("left", "right"):
         span = int(width * side_span)
         for offset in range(span):
-            alpha = round(200 * (1 - offset / span) ** 1.3)
+            alpha = round(strength * (1 - offset / span) ** 1.3)
             x = offset if where == "left" else width - 1 - offset
             draw.line((x, 0, x, height), fill=alpha)
     elif where == "top":
@@ -362,6 +363,18 @@ def arrange_figures(draw_at, layout: dict, size: tuple[int, int]) -> list[tuple[
     return []
 
 
+def grade_ai_scene(picture: Image.Image) -> Image.Image:
+    """Owner review 2026-10-14: the Qwen scenes looked darker and duller than ChatGPT's. A light commercial grade:
+    stretch the levels, lift the brightness, more colour and a little crispness (faces stay natural)."""
+    from PIL import ImageEnhance
+
+    graded = ImageOps.autocontrast(picture, cutoff=0.5)
+    graded = ImageEnhance.Brightness(graded).enhance(1.07)
+    graded = ImageEnhance.Color(graded).enhance(1.2)
+    graded = ImageEnhance.Contrast(graded).enhance(1.05)
+    return ImageEnhance.Sharpness(graded).enhance(1.25)
+
+
 def ai_scene_picture(scene: dict, size: tuple[int, int]) -> Image.Image:
     """Phase 43 (D122): the background of an "AI scene" thumbnail from Qwen's wide draw.
 
@@ -371,7 +384,7 @@ def ai_scene_picture(scene: dict, size: tuple[int, int]) -> Image.Image:
     width, height = size
     frame = scene["frame"]
     with Image.open(scene["image"]) as opened:
-        picture = opened.convert("RGB")
+        picture = grade_ai_scene(opened.convert("RGB"))
     if width >= height:
         window = picture.crop((frame["left"], frame["top"], frame["left"] + 1280, frame["top"] + 720))
         return window.resize(size, Image.Resampling.LANCZOS) if window.size != size else window
@@ -414,8 +427,9 @@ def render(inputs: dict, suggestion: ThumbnailSuggestion, aspect: ThumbnailAspec
         else:
             frame = scene["frame"]
             layout = {"text": tuple(frame["text_box"]), "shade": frame["side"]}
-            # the shade reaches just past the title strip, so the faces keep their light
-            image = _shade(ai_scene_picture(scene, size), frame["side"], min(0.66, frame["free_share"] + 0.12))
+            # a light shade, just past the title strip: the faces and the bright scene keep their light (the
+            # headline's dark outline carries the contrast)
+            image = _shade(ai_scene_picture(scene, size), frame["side"], min(0.66, frame["free_share"] + 0.1), 120)
         image = image.convert("RGBA")
     else:
         if template_id == "outside_ai":

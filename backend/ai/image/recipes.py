@@ -64,8 +64,12 @@ def qwen_thumbnail_scene_prompt(names: list[str], topic: str, scene: str = "") -
         who = f"{names[0]} (the person in picture 1)"
     else:
         who = "two friendly young adults side by side"
-    return (f"{QWEN_PHOTO} A bright, eye-catching photo of {who}, in {place}. Head-and-shoulders close-up, each face "
-            "large, big natural smiles, looking at the viewer. Keep each person's face, hair and clothes exactly as in "
-            "their picture. The two people stand in the right part of the picture; the left part is only softly blurred "
-            "background, calm and slightly darker, with no people and no objects in front. Vivid colours, high "
-            "contrast. Absolutely no text, no letters, no numbers, no signs, no logo, no badge, no watermark.")
+    # Owner review 2026-10-14: the first pictures were darker and duller than ChatGPT's -- ask for a bright, sunny,
+    # high-key advertising look and a bright (not darkened) left side; the app grades the picture afterwards too.
+    return (f"A bright, cheerful, high-key advertising photograph of {who}, in {place} on a sunny day. Head-and-shoulders "
+            "close-up, each face large and evenly lit by soft sunlight, glowing skin, big natural smiles with teeth, "
+            "looking at the viewer. Keep each person's face, hair and clothes exactly as in their picture. The two people "
+            "stand in the right part of the picture; the left part is only softly blurred, bright and colourful "
+            "background with no people and no objects in front. Vivid saturated colours, fresh and luminous, crisp "
+            "sharp focus, clean commercial look. Absolutely no text, no letters, no numbers, no signs, no logo, no "
+            "badge, no watermark.")
