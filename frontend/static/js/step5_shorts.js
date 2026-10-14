@@ -23,7 +23,9 @@
   function renderOptions() {
     const mode = document.querySelector("#visual-mode-group [aria-pressed='true']")?.dataset.visualMode || "podcast_sprites";
     const caption = document.querySelector("#caption-style-group [aria-pressed='true']")?.dataset.captionStyle || "outline";
-    return { visual_mode: mode, caption_style: caption };
+    // the scene picture chosen for the horizontal video (Market, …) -- without it the vertical fell back to the first plate
+    const scene = ["podcast_still", "podcast_sprites"].includes(mode) ? $("still-scene")?.value || null : null;
+    return { visual_mode: mode, caption_style: caption, ...(scene ? { still_scene_id: scene } : {}) };
   }
 
   async function call(path, method = "GET", body) {

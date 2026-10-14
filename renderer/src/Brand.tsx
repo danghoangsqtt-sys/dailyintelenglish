@@ -323,7 +323,8 @@ function BrandIntroVertical({ title, topic, cefrLevel, speakers, brand }: {
               {cefrLevel}
             </span>
           ) : null}
-          <span style={{ fontSize: 30, color: MUTED, fontWeight: 600, lineHeight: 1.3, maxHeight: 3 * 30 * 1.3, overflow: "hidden" }}>{topic}</span>
+          <span style={{ fontSize: 30, color: MUTED, fontWeight: 600, lineHeight: 1.3, display: "-webkit-box", WebkitBoxOrient: "vertical",
+            WebkitLineClamp: 3, overflow: "hidden" }}>{topic}</span>
           <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 12 }}>
             {speakers.map((speaker, index) => (
               <span key={speaker.id} style={{ padding: "8px 20px", borderRadius: 999, fontSize: 28, fontWeight: 700, color: INK,

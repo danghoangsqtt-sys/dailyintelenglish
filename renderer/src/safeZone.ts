@@ -44,6 +44,8 @@ export const VERTICAL = {
   hookBanner: { left: SAFE.left, top: 330, width: SAFE.right - SAFE.left, height: 300 },
   /** Karaoke captions: left of the button column, above the characters. */
   captions: { left: SAFE.left, top: 790, width: SAFE.columnX - SAFE.left, height: 250 },
+  /** At most this many words of a line at once: four lines of 50 px captions fit the band (long lines page). */
+  captionWords: 14,
   /** Where the characters' heads start; their faces sit between here and `facesBottom`. */
   headTop: 1045,
   facesBottom: 1270,

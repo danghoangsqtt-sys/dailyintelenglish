@@ -56,3 +56,59 @@ export function buildKaraokeTokens(line: EpisodeLine): KaraokeToken[] {
 export function activeTokenIndex(tokens: KaraokeToken[], currentTimeMs: number): number {
   return tokens.findIndex((token) => currentTimeMs >= token.fromMs && currentTimeMs < token.toMs);
 }
+
+/** Letters and digits only, lower-cased: how a spoken word and a script word are compared. */
+function bare(word: string): string {
+  return word.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+}
+
+/**
+ * Walkthrough 2026-10-14: Edge TTS reports each spoken word without its punctuation ("already" "Hoang" "The"), so the
+ * captions read "crowded already Hoang The morning". Give each token back the script's spelling ("already," "Hoang!")
+ * by walking the line's words in order; a token that matches no nearby script word keeps its own text.
+ */
+export function withScriptPunctuation(tokens: KaraokeToken[], text: string): KaraokeToken[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  let next = 0;
+  return tokens.map((token) => {
+    const spoken = bare(token.text);
+    if (!spoken) return token;
+    for (let look = next; look < Math.min(words.length, next + 4); look += 1) {
+      if (bare(words[look]) === spoken) {
+        next = look + 1;
+        const lead = token.text.match(/^\s*/)?.[0] ?? "";
+        return { ...token, text: lead + words[look] };
+      }
+    }
+    return token;
+  });
+}
+
+/**
+ * Phase 42 (D121, Gate B-25 review): a long line does not fit the vertical caption band (it ran over the characters'
+ * faces). Split the tokens into pages of at most `maxWords`, breaking after a sentence end -- or a comma -- once a page is
+ * at least half full, and return the page being spoken at `currentTimeMs` (between words: the page of the last word
+ * said; before the first word: the first page).
+ */
+export function captionPage(tokens: KaraokeToken[], currentTimeMs: number, maxWords: number): KaraokeToken[] {
+  if (tokens.length <= maxWords) return tokens;
+  const pages: KaraokeToken[][] = [];
+  let page: KaraokeToken[] = [];
+  tokens.forEach((token, index) => {
+    page.push(token);
+    const remaining = tokens.length - index - 1;
+    const sentenceEnd = /[.!?â€¦]["')\]]?$/.test(token.text.trim());
+    const pause = sentenceEnd || /[,;:â€”]$/.test(token.text.trim());
+    const halfFull = page.length >= Math.ceil(maxWords / 2);
+    if (page.length >= maxWords || (halfFull && pause && remaining >= 3) || (sentenceEnd && page.length >= 3 && remaining >= 3)) {
+      pages.push(page);
+      page = [];
+    }
+  });
+  if (page.length) pages.push(page);
+  let current = 0;
+  pages.forEach((candidate, index) => {
+    if (candidate[0].fromMs <= currentTimeMs) current = index;
+  });
+  return pages[current];
+}

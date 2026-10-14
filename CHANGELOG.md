@@ -13,6 +13,12 @@ Versioning: [SemVer](https://semver.org/)
   upgraded to edge-tts 7.3.1.
 - **Changing a speaker's character now gives the speaker that character's voice** (gender, accent, Edge voice), not
   only its name: swapping Alex for Hoang gives Hoang's Canadian voice. Speed, pitch and volume stay the project's.
+- **The vertical video used the wrong scene** (the first plate, e.g. an airport, instead of the Market chosen for the
+  horizontal video): the vertical and clip renders now send the chosen scene picture.
+- **Vertical captions ran over the characters' faces** on long lines: the vertical band now shows at most 14 words at a
+  time, breaking after a sentence. **Captions keep the script's punctuation** (Edge TTS reports bare words).
+- The quiet speaker's chip has a dark backing (it vanished over bright pictures); the vertical intro's topic ends
+  with "…" instead of being cut mid-line; the Shorts / vertical section opens right after the first render.
 
 ### Changed (Phase 42, 2026-10-14, D121)
 - **The vertical video respects the TikTok / Reels / Shorts safe zone** (owner's 1080x1920 template): speaker chips,

@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { AbsoluteFill, Audio, Img, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { BrandIntro, BrandOutro } from "./Brand";
 import { computeProgressForFrame } from "./chapters";
-import { activeTokenIndex, buildKaraokeTokens } from "./karaoke";
+import { activeTokenIndex, buildKaraokeTokens, captionPage, withScriptPunctuation } from "./karaoke";
 import { activeSpeakerId } from "./speakers";
 import { activeItemForFrame, attachItemsToLines, type LearningItem } from "./vocab";
 import { BOTTOM_SHADE_STYLE, captionStyleSpec, type CaptionStyle } from "./captionStyle";
@@ -63,7 +63,8 @@ function SpeakerChip({ speaker, color, isActive }: { speaker: EpisodeSpeaker; co
         gap: 8,
         padding: "6px 14px",
         borderRadius: 999,
-        backgroundColor: isActive ? color : "rgba(255,255,255,0.08)",
+        // a dark backing keeps the quiet speaker's name readable over a bright picture (walkthrough 2026-10-14)
+        backgroundColor: isActive ? color : "rgba(0,0,0,0.55)",
         opacity: isActive ? 1 : INACTIVE_CHIP_OPACITY,
         transform: isActive ? "scale(1.08)" : "scale(1)",
       }}
@@ -139,7 +140,8 @@ function CaptionBand({
   captionStyle: CaptionStyle;
   layout?: Layout;
 }) {
-  const tokens = useMemo(() => buildKaraokeTokens(line), [line]);
+  // the script's punctuation back on Edge's bare words (walkthrough 2026-10-14)
+  const tokens = useMemo(() => withScriptPunctuation(buildKaraokeTokens(line), line.text), [line]);
   // Task 20.2d: the selected treatment only overrides textShadow (and optionally wraps the
   // span in a box) -- font/size/color/alignment stay the D19.3-b base style.
   const spec = captionStyleSpec(captionStyle);
@@ -156,14 +158,16 @@ function CaptionBand({
     );
   }
 
-  const activeIndex = activeTokenIndex(tokens, currentTimeSec * 1000);
+  // Phase 42 (Gate B-25 review): the vertical band shows a long line a page at a time, never over the faces
+  const shown = layout === "vertical" ? captionPage(tokens, currentTimeSec * 1000, VERTICAL.captionWords) : tokens;
+  const activeIndex = activeTokenIndex(shown, currentTimeSec * 1000);
   return (
     <span style={textStyle}>
       {line.speaker}:{" "}
-      {tokens.map((token, index) => (
+      {shown.map((token, index) => (
         <span key={`${token.fromMs}-${token.text}`} style={index === activeIndex ? { color: ACTIVE_WORD_COLOR } : undefined}>
           {token.text}
-          {index < tokens.length - 1 ? " " : ""}
+          {index < shown.length - 1 ? " " : ""}
         </span>
       ))}
     </span>
