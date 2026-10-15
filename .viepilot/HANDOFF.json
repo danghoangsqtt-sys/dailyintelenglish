@@ -1,10 +1,10 @@
 {
   "project": "DailyIntelEnglish",
-  "version": "1.3.0",
+  "version": "1.4.0-rc.1",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase_45_complete_gates_b25_b26_b27_b28_pending",
-  "current_phase": "45",
+  "status": "owner_authorized_desktop_trial_installed_verified_publish_pending_gates_b25_b26_b27_b28_pending",
+  "current_phase": "46",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
     "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
@@ -178,6 +178,14 @@
       "tasks_total": 9,
       "note": "CLOSED 2026-10-05 (Task 19.9, authority D38): VIDEO_RENDERER default remotion, Step 5 Enhanced by default when installed; version 1.2.0-beta; tag die-vp-p19-complete. Phase 19 opened 2026-09-28 (/vp-evolve ENH-013), D29 + D32 (spike-first + video-renderer/ subdir). Task 19.1 spike accepted PASS by owner (D33) the same day: Coder delivered 4dd325b with real measurement -- 61s wall time for a real 2:56 B1 episode (3 stable runs), extrapolates ~166s for 8 min (well under ENH-013's feared '10+ min'), A/V sync 0.01-0.04s (inside media-gate tolerance), 1280x720 exact (Coder caught PM's mistaken '1920x1080' in the task card first, fixed to match VIDEO_WIDTH/HEIGHT_STANDARD before implementation). video-renderer/node_modules ~660MB (270MB Chrome Headless Shell + 390MB JS/TS), packaged-app estimate 740-840MB (4-5x today's 169MB) -- Chrome ~270MB is a hard floor per plan Amendment A (19.7 must plan for download-on-first-use, drop-Remotion, or accept-bundle; not optimize). PM independently re-verified: full suite 1175/1175 in 401.33s, ruff clean, git-log-scoped confirmation app/services/video_service.py untouched across the entire Phase 19 commit range fe06405..HEAD, 15 files in scope. Real-DB gap disclosed and documented: no 8-min B1 project with completed audio currently exists (only b330d37f... at 2:56); Coder extrapolated linearly rather than fabricate. Carry-over #1: opportunistic 8-min re-confirm once owner generates one, non-blocking. Task 19.2 (Edge TTS WordBoundary capture + per-word timestamps + additive migration 007_word_timestamps.sql) doc-first card written by PM at .viepilot/phases/19-remotion/tasks/task-19.2.md, awaiting Coder pickup. Provisional 19.3-19.9 unchanged. Controlling plan docs/implementation/phase-19-remotion.md; Amendment A landed. | Task 19.2 accepted D34 2026-09-28 (sha 20a1d32): Coder discovered edge_tts.Communicate() defaults to boundary='SentenceBoundary' (2 live probes) -- boundary='WordBoundary' must be explicit; two of the design card's own assertions disproved by real measurement (46% sum-vs-duration gap; ~0.1s leading silence) and corrected. Two-stage storage: per-line sidecar JSON for TTS-to-AudioService handoff + audio_jobs.word_timestamps_json (nullable, migration 007) for whole-episode absolute-time persistence. Full suite 1178/1178 re-verified by PM in 423.81s, ruff clean, revert-and-confirm-failure done on both new tests. Two out-of-scope extensions PM-approved during design: app/api/audio.py +1 line (save_audio_job wiring, without which the feature never writes) and 4 test files' fake_edge_tts helper +1 line each (tuple-contract mechanical fix); a 5th test file, tests/test_tts_service.py, was fixed during implementation with honest post-hoc disclosure (Coder's earlier grep undercounted). INCIDENT: Coder ran real init_db() against data/app.db during migration verification (not the required mode=ro pattern), self-disclosed immediately. Owner D34 accept-as-is: damage nil (additive/nullable, verified read-only by PM), no reversal (would compound violation), logged permanently in TRACKER Known Issues. Task 19.3 (word-level karaoke via @remotion/captions, D19.3-a..f) doc-first card on disk, awaiting Coder pickup. | Task 19.3 accepted PM task-level 2026-09-28 (sha c48037d, no owner decision needed, clean delivery, no incident, no gate crossed): word-level karaoke via @remotion/captions (active word highlights #FFD54A on same font/size/position as spike). Real finding: @remotion/captions is pure data/grouping lib (zero rendering components, confirmed by listing every file in the package); rendering always custom. Second real finding: demo episode b330d37f... has zero captured word data (predates Task 19.2, never re-mixed since -- re-mixing would need real-DB write, forbidden after 19.2 incident), so the runner re-synthesizes each line fresh via real Edge TTS in-memory (30 network calls per demo run, one-time cost), keeps only timings, discards audio, never touches data/app.db or real cached files. Wall time ~95s vs 19.1's ~61s baseline (~1.55x, inside <=2x threshold). vitest 6/6 with revert-and-confirm-failure, +37MB devDependency-only (688->725->727MB), 3/3 frame spot checks correct (t=1.75s bird, t=29.0s usually, t=174.9s luck). ffmpeg-fallback hash mismatch fully investigated and traced to a 2026-09-15 rendered file predating Task 14.10's -shortest fix (unrelated to Phase 19); today's untouched video_service.py renders correctly at matching duration. Full suite 1178/1178 unchanged, ruff clean, tsc clean, test_video_studio_browser.py 10/10. Report: docs/operations/phase19-t3-karaoke.md. Task 19.4 (active-speaker chip + optional avatar highlight, D19.4-a..f) doc-first card on disk; both demo speakers Alex/Maya have avatar_image_path=NULL per read-only preflight, so demo exercises name-only chip path, avatar path exercised via vitest. | Task 19.4 accepted PM task-level 2026-09-28 (sha 693fba7, clean delivery, no incident): active-speaker chip name+avatar top-left, dark-theme --speaker-a/--speaker-b palette (#F59E0B/#58A6FF) chosen for near-black composition background, scale(1.08) active + opacity 0.6 inactive persistent; fallback to name-only chip when avatar_image_path=NULL (demo case for both Alex+Maya). 3/3 frame spot checks + one combined-features frame proving 19.3 karaoke didn't regress. vitest 10/10 (6 karaoke + 4 speaker), revert-and-confirm-failure. Wall-time anomaly (131-142s vs baseline ~95s) A/B-isolated to real +7.9% chip cost; elevated readings attributed to shared-machine load. Full suite 1178/1178 unchanged. DEEP-PIVOT for T6 2026-10-02 report deadline: 19.5 vocab / 19.6 intro-outro / 19.7 packaging / 19.8 gate / 19.9 close-out all PARKED for post-report continuation. New Report-UX-1 task opened (elapsed counter + ETA + Step 4/5 progress parity, frontend-only, no app/ touch) -- Coder's next work. PM 4-day focus: fresh Gate B benchmarks + speed chart + slide deck + live-demo dry-run. Rationale: judging panel primary interest is AI processing speed; UI polish making speed *feel* fast is higher ROI for demo than the last 4 Remotion features. | Report-UX-1 accepted PM task-level 2026-09-28 (sha bb8f864, clean delivery): elapsed counter + ETA + Step 4 % + Step 5 elapsed on all 4 AI-generation pages, new shared generation_status.js component (mount-once guard + started_at-anchored counter avoids a would-have-been-visible reset-to-0:00 bug on every 2s poll). Baselines from Gate B-11 real medians (script 45s, learning 30s, TTS N*5+15, video 1s). Honest-late label 'wrapping up...' when elapsed > baseline. Live-verified on dev server: real banner 'Generating learning pack -- queued (0%) . 0:02 . ~28s left [Cancel]'. Full suite 1182/1182 (1178+4 Playwright), ruff clean (PM auto-fixed 4 pre-existing F541 in own chart script Coder flagged), 32 existing browser tests unchanged. app/ genuinely untouched. Coder disclosed honest revert-and-confirm-failure finding (mount-once-guard-only revert didn't fail because started_at fix masked reset symptom; redid revert properly). PM report deliverables ready in docs/report/: slide-outline.md (8 slides, technical-first hybrid tone), benchmark-chart.png (2.80x median speedup, real Gate B-8 vs B-11 evidence), benchmark-summary.csv (audit trail), samples-A1-B1-C1.zip (3.94MB, 3 real episodes for pre-share). | ENH-014 (outro heuristic) accepted PM task-level 2026-09-29 (sha 5475e3e, clean delivery, optional filler task not part of Phase 19 numbering): 7 new markers added each grounded in real Gate B-11 report text ('tuning in', 'look forward', 'next session', 'appreciate you', 'joining us', 'welcoming you back', 'next week'); 'next episode' correctly NOT added since no real observed instance survives verification. Gate signal wiring: option (ii) as designed -- checks['outro_present'] now reads has_outro_last3, both fields still recorded per-run for --reaggregate compat, new outro_present_last3_rate aggregate field added. Coder verified per-case using trial-data/app.db (Gate B-8 snapshot) read-only: only B-11 run 1 genuinely needed new markers; the other 3 known false negatives are fixed by the has_outro_last3 switch alone via existing markers. Mid-implementation fold-in: existing tests/test_run_ai_operational_trial.py had a test asserting the OLD behavior this task overturns -- updated its assertion+docstring to match, disclosed rather than silently patched. Revert-and-confirm-failure done (reverted all 7 markers, 3 real-ending tests failed with genuine assertion mismatches, restored). Full suite 1189/1189 (1182+7), ruff clean, app/frontend/video-renderer untouched, no live trial rerun (pure Python+unit tests). PM report deliverables complete: slide outline, benchmark chart PNG (2.80x speedup), samples zip, backup demo video 3:20 real end-to-end (Report-UX-1 counter visible first time), dry-run checklist with failure playbook, README refreshed for cloud-first + Phases 13-19."
     },
+    "20": {
+      "name": "AI Visual Generation (thumbnails + consistent characters)",
+      "days": "n/a (opened 2026-09-29, starts after Phase 21 spike resolves)",
+      "status": "complete",
+      "closure": "2026-10-13 D109: owner gate superseded by accepted Gates B-22..B-24",
+      "history_note": "2026-10-05: 20.1-20.11 done (20.9 cel-anime, 20.10 O11 wording, 20.11 extra-person + colour checks). Waiting only on owner Gate B-14 (deferred, D42). 2026-09-30: 20.1 GPU model manager implemented + verified on the owner's machine (1235/1235; live qwen eviction; report docs/operations/phase20-t1-model-manager.md; PM acceptance pending, deviations R1-R6 in task card Part 3). 20.2 done, owner PASS SDXL-Lightning (D39; report docs/operations/phase20-spike-images.md). Proposed Amendment B (Character + Scene libraries) awaiting owner/PM: .viepilot/phases/20-ai-visuals/proposal-amendment-b-asset-library.md. Owner-machine execution uses strict runbooks (docs/operations/owner-runbook-2026-09-30*.md) with evidence on owner-runs/* branches. Previous note: Opened 2026-09-29 from owner's priority statement (natural voice -> thumbnail + character images -> music from text). Supersedes/extends ENH-012 + D26 (2026-09-24, local AI thumbnails on RTX 3060, cartoon/3D characters per topic) with owner's newer requirement that the same character stays recognizable across every image in an episode, not just the thumbnail. Owner decisions 2026-09-29: IP-Adapter for character consistency (1 reference image per speaker, same principle as StyleTTS 2 voice cloning from a reference clip); shared VRAM model manager built FIRST as Task 20.1 rather than each phase inventing its own. Real VRAM constraint measured by Coder in Task 21.1b D21.1b-e: only 3916 MiB free of 12288 with Ollama qwen loaded (10286 at idle) -- no two GPU models can coexist, but the production pipeline is already sequential so load-on-demand + unload-after-use is sufficient. Invariants 46-50: local-only (no paid image API, per D26), fallback to existing 5 Pillow templates always available, VRAM shared never assumed, licence permits commercial use, reference images are owner's own (app never fabricates a likeness). Task 20.4 reuses the existing speakers.avatar_image_path column + upload service from Task 1.7c rather than building a parallel path, and Task 20.5 populates the avatar slot Task 19.4's speaker chip already has waiting. Controlling plan docs/implementation/phase-20-ai-visuals.md.",
+      "note": "Historical implementation details are retained in history_note; current completion is governed by closure and PHASE-STATE.md."
+    },
     "21": {
       "name": "Better TTS Engine (Kokoro-first with Edge TTS fallback)",
       "days": "n/a (opened parallel with Phase 19.9 hold, 2026-09-29)",
@@ -186,62 +194,60 @@
       "tasks_total": 6,
       "note": "CLOSED 2026-09-30 (D38): Kokoro STOP (21.1) and StyleTTS 2 STOP (21.1b, owner: Edge TTS 'tot hon nhieu'). Edge TTS stays the sole engine. 21.2-21.6 cancelled. Phase 19.9 flips the Remotion default on its own (Amendment A). Reports: docs/operations/phase21-spike-kokoro.md, phase21-spike-styletts2.md. Previous note: Opened 2026-09-29 in direct response to owner Gate B-12 feedback: 'giong nghe khong tu nhien, thieu cam xuc'. Real-user finding that Edge TTS voice quality is a blocker for shipping Remotion default in Task 19.9. Kokoro-82M (Apache 2.0, near-ElevenLabs quality, real-time on CPU) chosen as primary; Edge TTS kept as automatic fallback (mirroring Phase 18 cloud-first-with-local-fallback pattern). Phase 19.9 close-out HELD until Phase 21 ships -- combined v1.2.0-beta release flips both defaults. Task 21.1 spike doc-first card ready (mirror Phase 19 spike-first pattern). Real preflight: Kokoro CPU-first per README, doesn't compete GPU with Ollama qwen or Remotion Chrome; ~1 GB model, English-only (matches learner podcast use case). Alternative StyleTTS 2 documented as fallback recommendation if spike shows Kokoro insufficient. Invariants 41-45: fallback always available, kill switch DIE_TTS_ENGINE=edge_tts, thresholds unchanged, licence re-checked, local-only cache. Controlling plan docs/implementation/phase-21-tts-kokoro.md."
     },
-    "20": {
-      "name": "AI Visual Generation (thumbnails + consistent characters)",
-      "days": "n/a (opened 2026-09-29, starts after Phase 21 spike resolves)",
-      "status": "in_progress",
-      "tasks_done": 2,
-      "tasks_total": 7,
-      "note": "2026-10-05: 20.1-20.11 done (20.9 cel-anime, 20.10 O11 wording, 20.11 extra-person + colour checks). Waiting only on owner Gate B-14 (deferred, D42). 2026-09-30: 20.1 GPU model manager implemented + verified on the owner's machine (1235/1235; live qwen eviction; report docs/operations/phase20-t1-model-manager.md; PM acceptance pending, deviations R1-R6 in task card Part 3). 20.2 done, owner PASS SDXL-Lightning (D39; report docs/operations/phase20-spike-images.md). Proposed Amendment B (Character + Scene libraries) awaiting owner/PM: .viepilot/phases/20-ai-visuals/proposal-amendment-b-asset-library.md. Owner-machine execution uses strict runbooks (docs/operations/owner-runbook-2026-09-30*.md) with evidence on owner-runs/* branches. Previous note: Opened 2026-09-29 from owner's priority statement (natural voice -> thumbnail + character images -> music from text). Supersedes/extends ENH-012 + D26 (2026-09-24, local AI thumbnails on RTX 3060, cartoon/3D characters per topic) with owner's newer requirement that the same character stays recognizable across every image in an episode, not just the thumbnail. Owner decisions 2026-09-29: IP-Adapter for character consistency (1 reference image per speaker, same principle as StyleTTS 2 voice cloning from a reference clip); shared VRAM model manager built FIRST as Task 20.1 rather than each phase inventing its own. Real VRAM constraint measured by Coder in Task 21.1b D21.1b-e: only 3916 MiB free of 12288 with Ollama qwen loaded (10286 at idle) -- no two GPU models can coexist, but the production pipeline is already sequential so load-on-demand + unload-after-use is sufficient. Invariants 46-50: local-only (no paid image API, per D26), fallback to existing 5 Pillow templates always available, VRAM shared never assumed, licence permits commercial use, reference images are owner's own (app never fabricates a likeness). Task 20.4 reuses the existing speakers.avatar_image_path column + upload service from Task 1.7c rather than building a parallel path, and Task 20.5 populates the avatar slot Task 19.4's speaker chip already has waiting. Controlling plan docs/implementation/phase-20-ai-visuals.md."
+    "22": {
+      "name": "Background music (ENH-016), re-scoped by D50",
+      "status": "complete",
+      "closure": "2026-10-13 D109: owner gate superseded by accepted Gates B-22..B-24",
+      "history_note": "2026-10-05: ACE-Step 1.5 spike FAIL by owner (nhac qua te); D50 stop AI generation, use free libraries downloaded by hand with licence recorded. 22.2/22.3 reverted (revert commit), venv-music + models/music deleted. Remaining: 22.7 licence metadata + source guide, 22.5 credit line, 22.4 ducking, 22.6 Gate B-17 -> 1.3.0-beta. | 2026-10-06 D51 smart music: 22.7 done (track details, 1380 passed); 22.4 smart bed done (1399 passed); 22.8 auto-select done (1410 passed); 22.5 credit line done (1413 passed); remaining Gate B-17 (levels with real tracks); then 22.8 auto-select, 22.5 credit, 22.6 gate. | 22.9 done (1433 passed). Remaining: Gate B-17 (music levels with real tracks).",
+      "note": "Historical implementation details are retained in history_note; current completion is governed by closure and PHASE-STATE.md."
     },
     "23": {
       "name": "Scene Library v2",
-      "status": "in_progress",
-      "tasks_done": 5,
-      "tasks_total": 6,
-      "note": "23.1-23.4 + 23.3b done 2026-10-05 (plate IP reference 0.4, 55 built-ins, UI v2); waiting on owner Gate B-15."
+      "status": "complete",
+      "closure": "2026-10-13 D109: owner gate superseded by accepted Gates B-22..B-24",
+      "history_note": "23.1-23.4 + 23.3b done 2026-10-05 (plate IP reference 0.4, 55 built-ins, UI v2); waiting on owner Gate B-15.",
+      "note": "Historical implementation details are retained in history_note; current completion is governed by closure and PHASE-STATE.md."
     },
     "24": {
       "name": "Story-driven visuals (storyboard)",
-      "status": "in_progress",
-      "tasks_done": 6,
-      "tasks_total": 7,
-      "note": "24.1-24.6 done (storyboard end to end + motion polish). Only owner Gate B-16 remains (two real episodes)."
-    },
-    "22": {
-      "name": "Background music (ENH-016), re-scoped by D50",
-      "status": "in_progress",
-      "tasks_done": 5,
-      "tasks_total": 6,
-      "note": "2026-10-05: ACE-Step 1.5 spike FAIL by owner (nhac qua te); D50 stop AI generation, use free libraries downloaded by hand with licence recorded. 22.2/22.3 reverted (revert commit), venv-music + models/music deleted. Remaining: 22.7 licence metadata + source guide, 22.5 credit line, 22.4 ducking, 22.6 Gate B-17 -> 1.3.0-beta. | 2026-10-06 D51 smart music: 22.7 done (track details, 1380 passed); 22.4 smart bed done (1399 passed); 22.8 auto-select done (1410 passed); 22.5 credit line done (1413 passed); remaining Gate B-17 (levels with real tracks); then 22.8 auto-select, 22.5 credit, 22.6 gate. | 22.9 done (1433 passed). Remaining: Gate B-17 (music levels with real tracks)."
+      "status": "complete",
+      "closure": "2026-10-13 D109: owner gate superseded by accepted Gates B-22..B-24",
+      "history_note": "24.1-24.6 done (storyboard end to end + motion polish). Only owner Gate B-16 remains (two real episodes).",
+      "note": "Historical implementation details are retained in history_note; current completion is governed by closure and PHASE-STATE.md."
     },
     "25": {
       "name": "Branded intro and outro (ENH-017)",
-      "status": "in_progress",
-      "tasks_done": 2,
-      "tasks_total": 3,
-      "note": "25.1 owner PASS (Jenny, look, Montserrat); 25.2 done (real render exact length, 1420 passed); next Gate B-18."
+      "status": "complete",
+      "closure": "2026-10-06: tasks 25.1/25.2 and owner Gate B-18 PASS",
+      "history_note": "25.1 owner PASS (Jenny, look, Montserrat); 25.2 done (real render exact length, 1420 passed); next Gate B-18.",
+      "note": "Historical implementation details are retained in history_note; current completion is governed by closure and PHASE-STATE.md."
+    },
+    "26": {
+      "name": "UI polish",
+      "status": "complete",
+      "closure": "2026-10-06; die-vp-p26-complete already records this closure",
+      "note": "See phases/26-ui-polish/PHASE-STATE.md."
     },
     "27": {
       "name": "Rebrand + Canva/CapCut-style layout (ENH-018)",
-      "status": "in_progress",
-      "tasks_done": 5,
-      "tasks_total": 6,
-      "note": "27.1-27.3b, 27.5 done (1511 passed). Left: 27.4 studio frame, 27.6 gate. Next: one full episode for Gate B-20 (28.6)."
+      "status": "complete",
+      "closure": "2026-10-13 D109: owner gate superseded by accepted Gates B-22..B-24",
+      "history_note": "27.1-27.3b, 27.5 done (1511 passed). Left: 27.4 studio frame, 27.6 gate. Next: one full episode for Gate B-20 (28.6).",
+      "note": "Historical implementation details are retained in history_note; current completion is governed by closure and PHASE-STATE.md."
     },
     "28": {
       "name": "Semi-realistic picture style (ENH-019)",
-      "status": "in_progress",
-      "tasks_done": 6,
-      "tasks_total": 7,
-      "note": "28.1-28.5 done (1506 passed). Only 28.6 Gate B-20 (owner: one full real episode in the new style) is left."
+      "status": "complete",
+      "closure": "2026-10-13 D109: owner gate superseded by accepted Gates B-22..B-24",
+      "history_note": "28.1-28.5 done (1506 passed). Only 28.6 Gate B-20 (owner: one full real episode in the new style) is left.",
+      "note": "Historical implementation details are retained in history_note; current completion is governed by closure and PHASE-STATE.md."
     },
     "29": {
       "name": "Ready-made shot library (ENH-020)",
-      "status": "in_progress",
-      "tasks_done": 1,
-      "tasks_total": 9,
-      "note": "29.0 done. 29.1 gaze toward the partner (spike + fix) in progress; then 29.2 inserts with a character, 29.3 vocabulary spike, 29.4-29.8 library."
+      "status": "complete",
+      "closure": "2026-10-13 D109: owner gate superseded by accepted Gates B-22..B-24",
+      "history_note": "29.0 done. 29.1 gaze toward the partner (spike + fix) in progress; then 29.2 inserts with a character, 29.3 vocabulary spike, 29.4-29.8 library.",
+      "note": "Historical implementation details are retained in history_note; current completion is governed by closure and PHASE-STATE.md."
     },
     "30": {
       "name": "Podcast visual modes (ENH-021)",
@@ -264,15 +270,15 @@
       "tasks_total": 12,
       "note": "32.1-32.5 done 2026-10-08; 32.6a-f done 2026-10-09. Activity Library import/review, smart local metadata, character > generic > sprite matching, Step 5 coverage, full-frame 6 s cutaways with 0.3 s fades, storyboard guidance and D72 prompt pack are complete. Task 32.6f passed 1,646 Python tests plus 65 Vitest tests and rendered Demo Episode with exactly 3 approved generic inserts, no fallback and continuous audio/captions. Baseline and candidate are ready; waiting only for owner Gate B-22. Phase 33 remains unopened."
     },
+    "33": {
+      "status": "complete 2026-10-13 (Gate B-23 PASS)"
+    },
     "34": {
       "name": "Project hygiene: state records, checkpoint tags, docs and lint",
       "status": "complete 2026-10-12",
       "tasks_done": 7,
       "tasks_total": 7,
       "note": "2026-10-12: BUG-024, BUG-026, ENH-024, ENH-025, ENH-026 done; 34.0 landed the manual-upload work (8ac0307). pytest 1648 passed, Vitest 65. No behaviour change; version 1.2.0-beta."
-    },
-    "33": {
-      "status": "complete 2026-10-13 (Gate B-23 PASS)"
     },
     "35": {
       "status": "complete 2026-10-13"
@@ -306,6 +312,21 @@
     },
     "45": {
       "status": "BUG-031-034 and ENH-032-033 audit follow-ups complete 2026-10-14; exe rebuild deferred until owner gates pass"
+    },
+    "46": {
+      "name": "Audit fixes, video polish and owner desktop trial",
+      "status": "owner_trial_installed_verified_publish_pending",
+      "tasks_done": 0,
+      "tasks_total": 8,
+      "note": "Owner explicitly authorized EXE replacement and GitHub update for an extended trial, superseding the previous packaging hold for this trial. Branded GUI EXE installed and smoke-tested; full pytest 1636 and Vitest 89 passed. GitHub publication in progress. Visual/operational owner gates remain pending.",
+      "tasks_verified": 7,
+      "verification": {
+        "pytest_passed": 1621,
+        "pytest_seconds": 871.13,
+        "vitest_passed": 72,
+        "real_render_seconds": 194.886,
+        "report": "docs/operations/phase46-render-reliability.md"
+      }
     }
   },
   "key_decisions": [
@@ -500,6 +521,23 @@
     ],
     "decisions": [
       "D109: Gates B-14..B-21 closed as superseded by B-22..B-24"
+    ],
+    "note": "Historical release snapshot; current source status and pending gates are recorded in the root status and phases map."
+  },
+  "target_trial_version": "1.4.0-rc.1",
+  "desktop_trial": {
+    "authorized_at": "2026-10-15",
+    "status": "installed_verified_publish_pending",
+    "version": "1.4.0-rc.1",
+    "stable_version": "1.3.0",
+    "report": "docs/operations/exe-trial-20261015.md",
+    "performance_report": "docs/operations/render-performance-20261015.md",
+    "data_projects": 13,
+    "pending_owner_gates": [
+      "B-25",
+      "B-26",
+      "B-27",
+      "B-28"
     ]
   }
 }

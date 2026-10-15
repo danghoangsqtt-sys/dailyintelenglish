@@ -5,6 +5,7 @@
  */
 import { VERTICAL, VERTICAL_SIZE } from "./safeZone";
 import type { EpisodeLine, EpisodeSprites, SpriteCharacter, SpriteLine } from "./types";
+import { conversationBody, conversationCues } from "./conversationMotion";
 
 /** The 1280 x 1536 sprite canvas is drawn this many video heights tall (legs below the knees leave the frame, D32-g). */
 export const SPRITE_HEIGHT = 1.2;
@@ -83,6 +84,7 @@ export type SpriteFrame = {
   x: number;
   y: number;
   opacity: number;
+  rotation?: number;
 };
 
 /** Where the canvases start vertically (fraction of the video height): the highest figure's head sits at HEAD_MARGIN. */
@@ -125,6 +127,8 @@ export function gestureAt(character: SpriteCharacter, frame: number, fps: number
   const line = index >= 0 ? sprites.lines[index] : undefined;
   if (!line) return null;
   const speaking = line.slot === character.slot;
+  const cues = conversationCues(timeline[index], line, character, speaking);
+  if (cues !== null) return cues.find((cue) => time >= cue.startSec && time < cue.endSec)?.picture ?? null;
   const gesture = speaking ? line.gesture : line.listenerGesture;
   const name = gesture ? `gesture-${gesture}` : null;
   if (!name || !(name in character.pictures)) return null;
@@ -173,13 +177,17 @@ export function spriteFrame(
   const presence = Math.min(enter, leave);
   const eased = 1 - (1 - presence) * (1 - presence);
   const side = slot === 0 ? -1 : 1;
+  const articulated = line && conversationCues(timeline[index], line, character, speaking) !== null;
+  const body = articulated ? conversationBody(time, timeline[index].startSec, timeline[index].endSec, slot, speaking)
+    : { x: 0, y: 0, rotation: 0 };
 
   return {
     picture,
     speaking, brightness, scale,
-    x: side * (1 - eased) * 0.35 * width,
-    y: hop + breath,
+    x: side * (1 - eased) * 0.35 * width + body.x,
+    y: hop + breath + body.y,
     opacity: eased,
+    rotation: articulated ? body.rotation : undefined,
   };
 }
 
@@ -218,8 +226,9 @@ export function activityCutawayAt(time: number, sprites: EpisodeSprites): { url:
 
 /** Phase 33 (D82): the CSS transform of a sprite box -- the frame's move and scale, then a mirror for a pack that looks the
  * other way. The mirror flips the whole picture (face, mouth and gesture together) around the box centre. */
-export function spriteTransform(state: Pick<SpriteFrame, "x" | "y" | "scale">, mirror: boolean): string {
-  const base = `translate(${state.x.toFixed(1)}px, ${state.y.toFixed(2)}px) scale(${state.scale.toFixed(4)})`;
+export function spriteTransform(state: Pick<SpriteFrame, "x" | "y" | "scale" | "rotation">, mirror: boolean): string {
+  const rotation = state.rotation === undefined ? "" : ` rotate(${state.rotation.toFixed(3)}deg)`;
+  const base = `translate(${state.x.toFixed(1)}px, ${state.y.toFixed(2)}px) scale(${state.scale.toFixed(4)})${rotation}`;
   return mirror ? `${base} scaleX(-1)` : base;
 }
 

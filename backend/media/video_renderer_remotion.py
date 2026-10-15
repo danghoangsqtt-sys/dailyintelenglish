@@ -1,5 +1,4 @@
-"""Task 19.7: `VideoService`'s Remotion render path -- renderer resolution, prop
-building, the subprocess contract, and in-memory fallback-rate counters.
+"""Remotion rendering: props, subprocess diagnostics, bounded navigation recovery and atomic media publication.
 
 The only place `app/` ever invokes the `renderer/` subprocess in production. Mirrors
 the proven pattern of the Phase 19 spike runner (removed in Phase 35) (temp props file, `time.monotonic()` wall
@@ -29,6 +28,7 @@ import subprocess
 import tempfile
 import time
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -37,7 +37,7 @@ import aiosqlite
 from backend.core.config import settings
 from backend.core.constants import VIDEO_FPS, VIDEO_HEIGHT_STANDARD, VIDEO_WIDTH_STANDARD
 from backend.core.exceptions import AudioMixError, NotFoundError, RemotionRenderFailedError, TTSError, ValidationError
-from backend.core.paths import get_project_root
+from backend.core.paths import RENDERER_DIR
 from backend.media import audio_service, brand_service
 from backend.content import youtube_service
 from backend.library import activity_library_service as activity_library
@@ -45,7 +45,7 @@ from backend.library import (
     activity_matcher, library_service, project_visuals_service, sprite_plan, sprite_service, storyboard_service,
 )
 
-VIDEO_RENDERER_DIR = get_project_root() / "renderer"
+VIDEO_RENDERER_DIR = RENDERER_DIR
 REMOTION_AUDIO_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "audio"
 REMOTION_BRAND_DIR = VIDEO_RENDERER_DIR / "public" / "remotion-render" / "brand"
 # The owner-signed intro/outro timings (types.ts defaults, task-19.6.md), now sent explicitly so the
@@ -62,12 +62,12 @@ def _copy_visual_source(source: Path, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(source, destination)
 
-# Task 19.7 (D19.7-c): cross-checked against every real Phase 19 wall-time measurement so
-# far -- the worst real reading across 19.1-19.6 was 19.6's own transient-load outlier at
-# 85.07s (docs/operations/phase19-t6-intro-outro.md §7); Task 19.1's linear extrapolation to
-# a genuine 8-minute episode was ~166s. 600s is a ~3.6x margin over the extrapolated 8-min
-# case and a ~7x margin over the worst real measurement seen so far.
-REMOTION_RENDER_TIMEOUT_SECONDS = 600.0
+# Task 46.7: the animated 249.5s landscape episode took 724s to render and the
+# portrait exceeded 1800s, outgrowing the historical 600s static-render limit.
+# Retain a bounded shared deadline and
+# allow slower machines/longer episodes to configure it without editing code.
+REMOTION_RENDER_TIMEOUT_SECONDS = settings.REMOTION_RENDER_TIMEOUT_SECONDS
+REMOTION_MAX_RENDER_ATTEMPTS = 2  # one fresh process for the observed null localhost navigation response
 
 # Task 19.7 (D19.7-d): module-level, process-lifetime counters -- same in-memory-only
 # pattern as backend/main.py's `_ai_circuits: dict[str, CircuitBreaker] = {}` (Phase 18). Reset
@@ -512,38 +512,56 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path,
     _remove_leftovers(output_path)
     # Render to a staging file, then publish it (Gate B-26 finding, 2026-10-14): Remotion's last step renames its file onto
     # the target, which Windows refuses while the old video is open (the Step 5 player streams it) -- the whole render failed.
-    staging = output_path.with_name(f"{output_path.stem}.rendering-{uuid.uuid4().hex[:8]}{output_path.suffix}")
+    render_id = uuid.uuid4().hex[:8]
+    staging = output_path.with_name(f"{output_path.stem}.rendering-{render_id}{output_path.suffix}")
+    diagnostics = output_path.with_name(f"{output_path.stem}.render-{render_id}.log")
     npx = shutil.which("npx.cmd") or shutil.which("npx") or "npx"
     props_file = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8")
     try:
         json.dump(input_props, props_file)
         props_file.close()
         command = [npx, "remotion", "render", "src/index.ts", "Episode", str(staging), f"--props={props_file.name}"]
+        command.append("--log=verbose")  # retain browser/server diagnostics instead of only a short UI error
+        if settings.REMOTION_GL != "auto":
+            command.append(f"--gl={settings.REMOTION_GL}")
         if frames is not None:  # Phase 37 (D99): a highlight clip is a frame range of the vertical episode
             command.append(f"--frames={frames[0]}-{frames[1]}")
         start = time.monotonic()
-        try:
-            result = subprocess.run(
-                command,
-                cwd=VIDEO_RENDERER_DIR,
-                capture_output=True,
-                text=True,
-                timeout=REMOTION_RENDER_TIMEOUT_SECONDS,
-            )
-        except subprocess.TimeoutExpired:
+        for attempt in range(1, REMOTION_MAX_RENDER_ATTEMPTS + 1):
+            remaining = REMOTION_RENDER_TIMEOUT_SECONDS - (time.monotonic() - start)
+            if remaining <= 0:
+                raise RemotionRenderFailedError(
+                    f"Remotion render timed out after {REMOTION_RENDER_TIMEOUT_SECONDS:g}s{_diagnostic_note(diagnostics)}"
+                )
+            try:
+                result = subprocess.run(
+                    command,
+                    cwd=VIDEO_RENDERER_DIR,
+                    capture_output=True,
+                    text=True,
+                    timeout=remaining,
+                )
+            except subprocess.TimeoutExpired as exc:
+                _record_render_attempt(diagnostics, attempt, command, start, None, exc.stdout, exc.stderr)
+                _remove_leftovers(output_path)
+                raise RemotionRenderFailedError(
+                    f"Remotion render timed out after {REMOTION_RENDER_TIMEOUT_SECONDS:g}s{_diagnostic_note(diagnostics)}"
+                ) from None
+            _record_render_attempt(diagnostics, attempt, command, start, result.returncode, result.stdout, result.stderr)
+            if result.returncode == 0:
+                break
             _remove_leftovers(output_path)
-            raise RemotionRenderFailedError(
-                f"Remotion render timed out after {REMOTION_RENDER_TIMEOUT_SECONDS:g}s"
-            ) from None
+            if attempt == REMOTION_MAX_RENDER_ATTEMPTS or not _transient_navigation_failure(result.stderr):
+                raise RemotionRenderFailedError(
+                    f"Remotion render failed: {_error_summary(result.stderr)}{_diagnostic_note(diagnostics)}"
+                )
+            logger.warning("remotion_navigation_retry attempt=%s output=%s diagnostics=%s", attempt, output_path, diagnostics)
         wall_time_seconds = time.monotonic() - start
     finally:
         Path(props_file.name).unlink(missing_ok=True)
 
-    if result.returncode != 0:
-        _remove_leftovers(output_path)
-        raise RemotionRenderFailedError(f"Remotion render failed: {_error_summary(result.stderr)}")
     if not staging.is_file():
-        raise RemotionRenderFailedError("Remotion render exited 0 but produced no output file")
+        raise RemotionRenderFailedError(f"Remotion render exited 0 but produced no output file{_diagnostic_note(diagnostics)}")
     published = _publish(staging, output_path)
 
     return {
@@ -552,10 +570,37 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path,
         "background_image": None,
         "mode": "remotion",
         "wall_time_seconds": round(wall_time_seconds, 3),
+        "diagnostics_path": str(diagnostics) if diagnostics.is_file() else None,
     }
 
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _transient_navigation_failure(stderr: str) -> bool:
+    """Retry only Remotion's observed null response from its temporary local render page."""
+    return bool(re.search(r'Visited "http://(?:localhost|127\.0\.0\.1):\d+/[^"\s]*" but got no response\.',
+                          _ANSI.sub("", stderr or "")))
+
+
+def _diagnostic_note(path: Path) -> str:
+    return f" (log: {path})" if path.is_file() else ""
+
+
+def _record_render_attempt(path: Path, attempt: int, command: list[str], started_at: float, returncode: int | None,
+                           stdout: str | bytes | None, stderr: str | bytes | None) -> None:
+    """Keep verbose process diagnostics per attempt without storing the input props or interrupting a render."""
+    def decoded(value: str | bytes | None) -> str:
+        return value.decode("utf-8", errors="replace") if isinstance(value, bytes) else (value or "")
+
+    record = {"at": datetime.now(timezone.utc).isoformat(), "attempt": attempt, "command": command,
+              "elapsed_s": round(time.monotonic() - started_at, 3), "returncode": returncode,
+              "stdout": decoded(stdout), "stderr": decoded(stderr)}
+    try:
+        with path.open("a", encoding="utf-8") as log:
+            log.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except OSError as exc:
+        logger.warning("remotion_diagnostics_unavailable path=%s reason=%s", path, exc)
 
 
 def _error_summary(stderr: str) -> str:

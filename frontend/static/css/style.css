@@ -1,8 +1,17 @@
 /* Daily Beyond English — shared light-first design system.
    Phase 27: the owner's brand (the avatar logo): green -> lime, yellow, white, a red call to action and
    navy titles; deep-green surfaces in dark mode; Montserrat (bundled, SIL OFL: /static/fonts/OFL.txt) for
-   headings and the brand, Inter for body text. Text and button colours are checked for AA contrast in
+   headings and the brand, bundled Inter (SIL OFL: /static/fonts/Inter-OFL.txt) for body text. Text and button colours are checked for AA contrast in
    tests/test_brand_assets.py. */
+
+/* Local fonts keep page load independent of the font CDN, including in offline/browser QA. */
+@font-face {
+  font-family: "Inter";
+  src: url("/static/fonts/Inter-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 @font-face {
   font-family: "Montserrat";
@@ -155,6 +164,9 @@ textarea:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 body { --sidebar-w: 232px; padding-left: var(--sidebar-w); transition: padding-left .18s ease; }
 body.sidebar-collapsed { --sidebar-w: 64px; }
 .app-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40; display: flex; flex-direction: column; gap: 6px; width: var(--sidebar-w); padding: 14px 10px; overflow: hidden; background: #0f2a1a; border-right: 1px solid rgba(155, 209, 60, .18); color: #cfe3d2; transition: width .18s ease; }
+/* Resolve the initial saved/default rail width before enabling user-triggered transitions. */
+body:not(.sidebar-ready), body:not(.sidebar-ready) .app-sidebar,
+body:not(.sidebar-ready) .side-toggle .side-icon { transition: none; }
 .app-sidebar .brand { padding: 2px 4px 14px; color: #fff; }
 .app-sidebar .brand-word b { color: #fff; }
 .app-sidebar .brand-word small { color: var(--brand-lime); }

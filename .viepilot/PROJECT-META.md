@@ -6,7 +6,7 @@
 |-------|-------|
 | **Project Name** | Daily Beyond English Studio (brand since Phase 27; technical name Daily Intel English Studio) |
 | **Slug** | DailyIntelEnglish |
-| **Version** | 1.3.0 (released 2026-10-13, project close-out; 1.2.0-beta 2026-10-05) |
+| **Version** | 1.4.0-rc.1 owner-authorized usage trial (2026-10-15); last stable 1.3.0 (2026-10-13) |
 | **Inception Year** | 2026 |
 | **License** | MIT |
 | **Type** | AI-powered Local Web Application |
@@ -14,13 +14,13 @@
 
 ## Description
 
-Daily Beyond English Studio là một ứng dụng web local (chạy trên máy tính cá nhân) dành cho content creator muốn sản xuất video podcast tiếng Anh cho YouTube — tất cả trong một quy trình 7 bước liền mạch. Stack hiện tại (2026-10-12):
+Daily Beyond English Studio là một ứng dụng web local (chạy trên máy tính cá nhân) dành cho content creator muốn sản xuất video podcast tiếng Anh cho YouTube — tất cả trong một quy trình 7 bước liền mạch. Stack hiện tại (2026-10-15):
 
 - **AI:** gateway cloud-first (Gemini 3.1 Flash-Lite → OpenRouter free → Ollama `qwen3.5:9b` local fallback) cho kịch bản, nội dung học, storyboard, thumbnail và gói YouTube.
 - **TTS:** Edge TTS là engine duy nhất (D56); OmniVoice, Kokoro, StyleTTS 2 đã thử và bỏ.
 - **Audio:** pydub + ffmpeg + pyloudnorm, nhạc nền thông minh từ Music Library.
-- **Video:** Remotion (`renderer/`, mặc định "Enhanced") với ffmpeg làm fallback "Standard".
-- **Hình ảnh:** thư viện nhân vật/bối cảnh/shot/sprite/activity; sinh ảnh local trên GPU bằng diffusers + RealVisXL V5.0 trong `.venv-image`.
+- **Video:** Remotion (`renderer/`) dựng video ngang, video dọc và Shorts với ba chế độ: nhân vật nói chuyện, một bối cảnh tĩnh, màn hình đen. ffmpeg dùng cho âm thanh và kiểm tra media.
+- **Hình ảnh:** thư viện profile nhân vật, sprite, bối cảnh và Activity Library; Qwen-Image-2.1-Turbo tạo ảnh minh họa/bối cảnh, Qwen-Image-Edit-2511 tạo thumbnail AI scene trong `.venv-image`. SDXL và thư viện shot hai người đã được gỡ ở Phase 44.
 
 ## Organization
 
@@ -54,7 +54,7 @@ Daily_Intel_English/       # Phase 38 layout (D115) -- map: docs/structure/STRUC
 │   ├── ai/                # llm/, image/, tts/, prompts/, models/ (weights, gitignored)
 │   ├── content/           # projects, scripts, learning, YouTube, Shorts
 │   ├── media/             # audio, music, video (Remotion bridge), thumbnails, brand
-│   ├── library/           # characters, scenes, shots, sprites, activities, storyboard
+│   ├── library/           # characters, scenes, sprites, activities, storyboard
 │   └── channel/           # channel plan, dashboard
 ├── frontend/              # pages/ + static/
 ├── renderer/              # Remotion (React/TypeScript) video renderer

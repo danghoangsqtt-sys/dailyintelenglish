@@ -8,6 +8,29 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+## [1.4.0-rc.1] - 2026-10-15
+
+Owner-authorized Windows usage trial; visual/operational owner gates B-25/B-26/B-27/B-28 remain pending.
+
+### Added / Changed
+- Branded one-click Desktop launch with the existing logo as the EXE/shortcut icon, no console window, persistent startup logs and a native launch-error dialog.
+- Frozen builds keep UI resources bundled while linking to the existing workspace renderer, image environment, models and project data through a relative runtime locator.
+- Shared scene/caption/learning-card motion for YouTube and portrait, with phrase-level gestures, neutral rests, listener reactions and small whole-character movement using existing picture packs.
+- Windows defaults to the ANGLE GPU compositor after controlled 1,200-frame comparisons were 32–35% faster than Chrome's software default on the owner machine. Encoder and quality unchanged; full-episode improvement is not yet measured.
+- Configurable shared render deadline (default 3,600 seconds) accommodates animated episodes and retains bounded retry/atomic publication behavior.
+- Music-analysis CPU dependencies remain in the frozen build; GPU model libraries stay in the separate image environment.
+
+### Fixed (2026-10-15, Phase 46 audit bugs)
+- Remotion retries the observed temporary localhost navigation/no-response error once within the existing total render budget. Each attempt retains verbose diagnostics; other failures remain visible and the old video is preserved.
+- The studio serves Inter from its own static assets, so a stalled Google Fonts stylesheet cannot block local page loads or browser tests. Typography and normal load checks are preserved; the font licence ships beside the font.
+- Browser QA retries one local navigation on Chromium's transient `ERR_NO_BUFFER_SPACE` with a warning; timeouts and application failures are not retried.
+- The app sidebar applies its initial saved/default width before enabling transitions, preventing the Studio rail from starting mid-animation on a fast page load; user-triggered collapse and drawer behavior stay animated.
+- Reconciled historical HANDOFF phase statuses and completion checkpoints with recorded owner decisions. Refreshed current architecture diagrams and the module inventory after the Qwen/Remotion cleanup. Included in the owner-authorized 1.4.0-rc.1 trial.
+
+### Fixed / Changed (2026-10-14, BUG-036 and ENH-035)
+- Intro cards keep the episode marker (`Ep. n`) together beneath the series title in both horizontal and vertical layouts.
+- Series episodes export into separate `Ep NN - title` subfolders, suggest the saved series folder for siblings, and show the actual destination; existing files stay in place.
+
 ### Fixed (2026-10-14, BUG-035)
 - Portrait thumbnails now preserve both people in a clear photo card. Headline, supporting text, badges and logo stay inside the owner-provided 9:16 platform safe area for composed, outside-AI and local AI-scene kinds.
 

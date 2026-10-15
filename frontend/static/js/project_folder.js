@@ -21,10 +21,11 @@
   function mount(container, { projectId = null, actions = false } = {}) {
     container.innerHTML = `
       <div class="pf-row">
-        <input type="text" class="pf-path" id="pf-path" placeholder="e.g. D:\\Videos\\Daily Beyond English\\Episode 1"
+        <input type="text" class="pf-path" id="pf-path" placeholder="e.g. D:\\Videos\\Daily Beyond English\\Dinner Party"
                aria-label="Folder for this video project" />
         <button type="button" class="btn btn-ghost btn-sm" data-pf="choose">📁 Choose folder…</button>
       </div>
+      <p class="helper-text">For a series, choose its shared folder. Each episode is saved automatically in its own Ep NN - Title subfolder.</p>
       <fieldset class="pf-items"><legend>Save these in the folder</legend>
         ${COMPONENTS.map(([key, label, checked]) => `
           <label class="pf-item"><input type="checkbox" value="${key}" ${checked ? "checked" : ""} /> ${label}</label>`).join("")}

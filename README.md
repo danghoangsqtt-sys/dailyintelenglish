@@ -5,6 +5,12 @@
 The product brand is **Daily Beyond English** (Phase 27). The repository, the Python package and
 the packaged `DailyIntelEnglishStudio.exe` keep the original technical name *Daily Intel English*.
 
+## Windows Desktop trial — 1.4.0-rc.1 (2026-10-15)
+
+Open **Daily Beyond English Studio** from the Desktop icon (the channel logo). It starts the local app and opens its browser interface without a command window. The installed EXE is `dist/DailyIntelEnglishStudio/DailyIntelEnglishStudio.exe`; keep its complete folder together. The trial links to the existing repository's Node/Remotion, ffmpeg, image environment/models and `data` folder.
+
+[Launch, build and rollback guide](docs/operations/exe-trial-20261015.md) · [Render performance findings](docs/operations/render-performance-20261015.md). This is an owner-authorized usage trial; outstanding visual gates remain pending. The last stable release remains 1.3.0.
+
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-latest-green)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -86,7 +92,7 @@ multiple separate AI-assisted read-only `/vp-audit` passes), with major AI-archi
 work in Phases 13–18. Each closed with zero real defects found on PM review. Full evidence
 trail in `.viepilot/ROADMAP.md` and `.viepilot/TRACKER.md`.
 
-**Current version:** `1.3.0` (2026-10-13, project close-out — see the
+**Current trial:** `1.4.0-rc.1` (2026-10-15). **Last stable version:** `1.3.0` (2026-10-13, project close-out — see the
 [final report](docs/report/final-report.md)). `1.2.0-beta` (2026-10-05) made the Remotion video the default. AI writes are
 **cloud-first with local fallback** — Gemini 3.1 Flash-Lite is the primary, with an
 automatic chain through OpenRouter free models and finally local `qwen3.5:9b` on the

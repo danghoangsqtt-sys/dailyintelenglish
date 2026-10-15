@@ -1612,3 +1612,17 @@ State: `.viepilot/phases/45-audit-followups/PHASE-STATE.md`.
 - [x] 45.3 Folder and Shorts frontend calls use `api.js`
 - [x] 45.4 README and generated API reference match current code
 - [x] 45.5 ViePilot state and eligible checkpoint tags reconciled
+
+### Phase 46: Audit bug fixes (BUG-037–040) — implemented/verified; PM review pending 2026-10-15
+
+State: `.viepilot/phases/46-audit-bugfixes/PHASE-STATE.md`. Owner requested implementation after the audit.
+
+- 46.1 **Implemented/verified:** historical HANDOFF/checkpoints and current documentation
+- 46.2 **Implemented/verified:** local Inter, deterministic initial sidebar layout and bounded browser transport recovery
+- 46.3 **Implemented/verified:** bounded Remotion navigation recovery, diagnostics and full real sandbox render
+
+Owner-authorized usage trial: 1.4.0-rc.1; last stable release stays 1.3.0. Gates B-25/B-26/B-27/B-28 stay pending.
+
+Phase 46 verification: 1,621 pytest and 72 Vitest passed; Ruff/TypeScript/JS syntax clean. Formal acceptance and git persistence remain with the owner/PM under AR-06; no Phase 46 completion tag is declared.
+
+Owner follow-up 2026-10-15: Tasks 46.4?46.7 implemented/verified (actual title/folders, portrait polish, motion and phrase gestures). Task 46.8 packages the owner-authorized **1.4.0-rc.1** one-click trial and GitHub update; installed and verified, publication in progress. This supersedes the previous no-build hold for the trial only; pending owner gates remain pending. Current verification: 1,636 Python tests, 89 Vitest, frozen/installed smoke and controlled GPU compositor measurements.

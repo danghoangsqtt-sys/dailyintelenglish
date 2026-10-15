@@ -18,11 +18,9 @@ graph LR
         LS[library_service\ncharacters + scenes]
         PV[project_visuals_service]
         SB[storyboard_service]
-        SL[shot_library_service]
         SPR[sprite_service + sprite_plan]
         ACT[activity_library_service + activity_matcher]
         IJ[jobs + runner + pipelines + engine]
-        CHK[colour_check + shot_checks]
     end
 
     subgraph External
@@ -43,8 +41,7 @@ graph LR
     VS --> FF & RR
     RR --> REM & AS & BR & YTS & PV & SB & SPR & ACT & LS
     PV --> LS & SB
-    LS --> SL
-    IJ --> PV & LS & SL & CHK
+    IJ --> LS & ACT
     IJ --> GPU --> IW
     THS --> PI
     SP & LP & YTS & RR & PV & SB --> PS

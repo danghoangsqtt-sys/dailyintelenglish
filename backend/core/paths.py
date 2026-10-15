@@ -9,6 +9,7 @@ get compiled into an internal archive, so `Path(__file__)` no longer points at a
 real directory on disk the way it does running from source.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -27,12 +28,24 @@ def get_project_root() -> Path:
     return Path(__file__).resolve().parent.parent.parent
 
 
-# Phase 38 (D115): the homes of the folders the app reads at runtime.
+def get_runtime_root() -> Path:
+    """Locate external Node/image runtimes while keeping bundled UI resources separate."""
+    configured = os.environ.get("DIE_WORKSPACE_DIR")
+    if configured:
+        root = Path(configured).expanduser().resolve()
+        if not (root / "renderer/package.json").is_file() or not (root / "backend/ai/image/image_worker.py").is_file():
+            raise RuntimeError("DIE_WORKSPACE_DIR must point to the Studio repository containing renderer and the image worker")
+        return root
+    return get_project_root()
+
+
+# Phase 38 (D115): bundled resources and external compute runtimes have separate roots.
 PROJECT_ROOT = get_project_root()
+RUNTIME_ROOT = get_runtime_root()
 BACKEND_DIR = PROJECT_ROOT / "backend"
 AI_DIR = BACKEND_DIR / "ai"
 PROMPTS_DIR = AI_DIR / "prompts"
 MIGRATIONS_DIR = BACKEND_DIR / "db" / "migrations"
-RENDERER_DIR = PROJECT_ROOT / "renderer"
-MODELS_DIR = AI_DIR / "models"  # local model weights (gitignored)
-IMAGE_VENV_DIR = PROJECT_ROOT / ".venv-image"  # the image worker's own Python (torch, diffusers)
+RENDERER_DIR = RUNTIME_ROOT / "renderer"
+MODELS_DIR = RUNTIME_ROOT / "backend/ai/models"  # local model weights (gitignored)
+IMAGE_VENV_DIR = RUNTIME_ROOT / ".venv-image"  # the image worker's own Python (torch, diffusers)

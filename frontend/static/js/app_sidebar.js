@@ -61,6 +61,10 @@
 
   const saved = stored();
   setCollapsed(saved ? saved === "collapsed" : startsCollapsed());
+  // The initial width must be committed without animating from the stylesheet's expanded default.
+  // Local assets can finish loading before that old 180 ms transition would have settled (BUG-040).
+  sidebar.getBoundingClientRect();
+  body.classList.add("sidebar-ready");
 
   toggle.addEventListener("click", () => {
     if (NARROW.matches) {

@@ -14,10 +14,7 @@ import threading
 import time
 import webbrowser
 
-import uvicorn
-
-from backend.core.config import settings
-from backend.main import app
+from backend.core.desktop_runtime import configure_desktop_runtime
 
 
 def _is_port_open(host: str, port: int) -> bool:
@@ -46,10 +43,17 @@ def _open_browser_when_ready(url: str, host: str, port: int, timeout: float = 20
 
 
 def main() -> None:
+    """Start the desktop server, or open its existing instance on a second click."""
     if getattr(sys, "frozen", False):
         import multiprocessing
 
         multiprocessing.freeze_support()
+
+    configure_desktop_runtime()
+    import uvicorn
+
+    from backend.core.config import settings
+    from backend.main import app
 
     host = settings.APP_HOST
     port = settings.APP_PORT
@@ -67,4 +71,17 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        import traceback
+
+        detail = traceback.format_exc()
+        if sys.stderr is not None:
+            sys.stderr.write(detail)
+        if getattr(sys, "frozen", False) and sys.platform == "win32":
+            import ctypes
+
+            ctypes.windll.user32.MessageBoxW(None, f"Daily Beyond English could not start.\n\n{exc}\n\nSee data/logs/desktop.log for details.",
+                                            "Daily Beyond English", 0x10)
+        raise SystemExit(1) from exc

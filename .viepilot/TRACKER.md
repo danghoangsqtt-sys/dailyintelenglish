@@ -1,6 +1,10 @@
 # TRACKER.md — Daily Intel English Studio
 
+
+**Current owner trial (2026-10-15):** Owner authorized replacing the old EXE and updating GitHub, with the channel logo as the one-click Desktop icon. Task 46.8: windowed branded EXE installed, using the 13-project workspace data; startup, media/runtimes and bundled music analysis verified. Full pytest **1,636 passed**, 89 Vitest, TypeScript/Ruff/JS syntax clean. Chrome had selected CPU SwiftShader; explicit ANGLE uses RTX 3060/D3D11 and improved two 1,200-frame samples by 32?35%. Trial **1.4.0-rc.1**; last stable 1.3.0. GitHub publication in progress; B-25/B-26/B-27/B-28 remain pending. Report: `docs/operations/exe-trial-20261015.md`.
 ## Current Status
+
+**Now (2026-10-15, Phase 46 ready for review):** BUG-037–040 are implemented and technically verified: historical state/checkpoints and current docs reconciled; Inter bundled locally; initial sidebar width applied before transitions; one logged test navigation retry for ERR_NO_BUFFER_SPACE; one bounded Remotion navigation retry with verbose logs. Full pytest **1,621 passed** (14:31), renderer **72 Vitest passed**, Ruff/TypeScript/JS syntax clean. A full 240.917333 s episode rendered in 194.886 s from a read-only DB connection (zero changes). Under AR-06, formal acceptance and commit/push remain with the owner/PM. Version stays 1.3.0 (patch candidate 1.3.1); owner gates B-25/B-26/B-27/B-28 remain pending.
 
 **Now (2026-10-14, BUG-035):** Owner-supplied 9:16 thumbnail exposed a real crop/layout bug: the outside-AI portrait lost one person, covered the other face with the title and placed badges above the platform safe area. The shared portrait compositor now keeps both people in a photo card, puts text below and places all key elements inside the Phase 42 safe zone. A preview from the real source is ready at `data/tmp/thumbnail_9x16_safe_preview.png`; 74 related Python tests passed. Phase 43 owner Gate B-27 remains pending. The old exported thumbnail is retained until the owner chooses to regenerate it.
 

@@ -229,3 +229,17 @@ def _reset_write_lock():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _recover_local_chromium_socket_buffers(monkeypatch):
+    """BUG-040: recover one Windows transport-allocation failure, without rerunning test actions/assertions."""
+    from playwright.async_api import Page
+    from tests.browser_navigation import local_navigation
+
+    original_goto = Page.goto
+
+    async def goto(page, url, **options):
+        return await local_navigation(original_goto, page, url, **options)
+
+    monkeypatch.setattr(Page, "goto", goto)
+
+

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeTokenIndex, buildKaraokeTokens } from "./karaoke";
+import { activeTokenIndex, buildKaraokeTokens, captionPage } from "./karaoke";
 import type { EpisodeLine } from "./types";
 
 const LINE_WITH_WORDS: EpisodeLine = {
@@ -65,5 +65,23 @@ describe("activeTokenIndex", () => {
   it("returns -1 before the first word and after the last", () => {
     expect(activeTokenIndex(tokens, 0)).toBe(-1);
     expect(activeTokenIndex(tokens, 20000)).toBe(-1);
+  });
+});
+
+describe("narrow vertical caption pages", () => {
+  it.each([
+    "various units effectively helps us manage our household finances whenever",
+    "Developing your conversational skills makes navigating public spaces effortless.",
+  ])("preserves every spoken token and its timing while bounding a long page: %s", (text) => {
+    const tokens = text.split(" ").map((word, index) => ({ text: word, fromMs: index * 400, toMs: index * 400 + 300 }));
+    const encountered = new Set();
+    for (const token of tokens) {
+      const page = captionPage(tokens, token.fromMs + 100, 10, 54);
+      expect(page).toContain(token);
+      expect(page.map((word) => word.text).join(" ").length).toBeLessThanOrEqual(54);
+      page.forEach((word) => encountered.add(word));
+    }
+    expect(encountered.size).toBe(tokens.length);
+    expect(captionPage(tokens, 0, 10)).toEqual(tokens); // existing word-only callers keep their behavior
   });
 });

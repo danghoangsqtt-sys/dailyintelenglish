@@ -2,7 +2,7 @@
 
 <!-- crystallize_version: 0.8.0 -->
 
-*Refreshed 2026-10-12 (Task 34.4 / ENH-025) for `1.2.0-beta` plus the unreleased Phases 22 and 25–32.*
+*Refreshed 2026-10-15 (Phase 46) for the current source: Remotion only, Qwen images, profiles, Activity Library, channel planning, Shorts and project exports. Released version remains 1.3.0.*
 
 ## System Overview
 
@@ -59,7 +59,7 @@ profile_id: none / not configured
 graph TB
     subgraph Browser["🖥️ Browser (localhost:8000)"]
         UI[Dashboard + 7-step studio]
-        LIB[Characters / Shot Library / Music Library / Settings]
+        LIB[Characters / Activity Library / Channel / Music / Settings]
     end
 
     subgraph FastAPI["⚙️ FastAPI Backend"]
@@ -151,12 +151,12 @@ flowchart LR
     end
 
     subgraph G["Step 6: Thumbnail"]
-        G1[Cast sprites over the episode's pictures\n+ AI headline + editor;\nor an outside-AI picture]
+        G1[Composed, outside-AI or local Qwen scene\n+ headline, badges and logo]
     end
 
     subgraph H["Step 7: YouTube Package"]
         H1[Titles, description, tags,\nmeasured chapters, music credit]
-        H2[.zip export]
+        H2[.zip + selected component exports\nto the episode folder]
     end
 
     subgraph L["Libraries (standalone pages)"]
@@ -199,11 +199,9 @@ graph LR
         LS[library_service\ncharacters + scenes]
         PV[project_visuals_service]
         SB[storyboard_service]
-        SL[shot_library_service]
         SPR[sprite_service + sprite_plan]
         ACT[activity_library_service + activity_matcher]
         IJ[jobs + runner + pipelines + engine]
-        CHK[colour_check + shot_checks]
     end
 
     subgraph External
@@ -224,8 +222,7 @@ graph LR
     VS --> FF & RR
     RR --> REM & AS & BR & YTS & PV & SB & SPR & ACT & LS
     PV --> LS & SB
-    LS --> SL
-    IJ --> PV & LS & SL & CHK
+    IJ --> LS & ACT
     IJ --> GPU --> IW
     THS --> PI
     SP & LP & YTS & RR & PV & SB --> PS
@@ -294,7 +291,7 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
     a failed render fails the job with Remotion's reason.
   - LivePortrait lip-sync was never implemented; Phase 32 talking sprites took its place. Speaker avatar uploads were
     removed in Task 35.4: a speaker's picture is its cast character's.
-- **Output:** MP4 1280x720 + SRT (shifted by the intro). Vertical video returns on Remotion in Phase 37.
+- **Output:** MP4 1280x720 + SRT (shifted by the intro). Remotion also renders 1080x1920 vertical episodes and approved highlight clips (Phases 37/42).
 
 ### 6. ThumbnailService (`backend/media/thumbnail_service.py`)
 - **Responsibility:** Generate the episode's YouTube thumbnails (Phase 36, Tasks 36.3/36.4, D90–D92)
@@ -346,11 +343,10 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
 
 ### 10. Visual libraries and pipelines (`backend/library/`) — Phases 20, 23, 24, 28, 29, 31, 32
 - `library_service.py`: global Character and Scene libraries (55 places) with safe content paths.
-- `project_visuals_service.py`: a project's cast, ordered scenes and shot records.
+- `project_visuals_service.py`: a project's cast and ordered scenes.
 - `storyboard_service.py`: AI-proposed story beats, validated against the project, owner-reviewed in Step 5.
-- `shot_library_service.py`: reviewed, reusable shots of the cast; the matcher reuses approved shots
-  and only the missing ones are drawn. `colour_check.py` and `shot_checks.py` flag outfit-colour and
-  extra-person failures.
+- Phase 44 removed project shots, the two-person Shot Library and its SDXL checks. Inserts use approved
+  Activity Library pictures or generic Qwen illustrations; the cast is rendered from profile sprites.
 - `sprite_service.py` + `sprite_plan.py`: talking-sprite sets per character and the per-line plan
   (face, gesture, mouth open/closed from speech loudness).
 - `activity_library_service.py` + `activity_matcher.py`: review-gated activity pictures (generic or per
@@ -361,7 +357,7 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
   `IMAGE_ENGINE=fake` gives a deterministic GPU-free engine for tests.
 
 ### 11. Remotion renderer (`backend/media/video_renderer_remotion.py`, `renderer/`) — Phase 19+
-- Builds the composition props (timings, captions, cast, storyboard shots, sprites, activity cutaways,
+- Builds the composition props (timings, captions, cast, storyboard scenes, sprites, activity cutaways,
   brand intro/outro, music) and runs the Node `renderer/` workspace (Remotion 4, React 19,
   TypeScript, Vitest) as a local subprocess. Nothing per-episode leaves the machine (invariant 37).
 - The only renderer since Task 35.5 (invariant 36 is retired: there is no ffmpeg fallback any more).

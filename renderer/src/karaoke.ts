@@ -90,11 +90,20 @@ export function withScriptPunctuation(tokens: KaraokeToken[], text: string): Kar
  * at least half full, and return the page being spoken at `currentTimeMs` (between words: the page of the last word
  * said; before the first word: the first page).
  */
-export function captionPage(tokens: KaraokeToken[], currentTimeMs: number, maxWords: number): KaraokeToken[] {
-  if (tokens.length <= maxWords) return tokens;
+export function captionPage(tokens: KaraokeToken[], currentTimeMs: number, maxWords: number,
+  maxCharacters = Number.POSITIVE_INFINITY): KaraokeToken[] {
+  if (tokens.length <= maxWords && tokens.map((token) => token.text.trim()).join(" ").length <= maxCharacters) return tokens;
   const pages: KaraokeToken[][] = [];
   let page: KaraokeToken[] = [];
+  let characters = 0;
   tokens.forEach((token, index) => {
+    const length = token.text.trim().length;
+    if (page.length && characters + 1 + length > maxCharacters) {
+      pages.push(page);
+      page = [];
+      characters = 0;
+    }
+    characters += length + (page.length ? 1 : 0);
     page.push(token);
     const remaining = tokens.length - index - 1;
     const sentenceEnd = /[.!?â€¦]["')\]]?$/.test(token.text.trim());
@@ -103,6 +112,7 @@ export function captionPage(tokens: KaraokeToken[], currentTimeMs: number, maxWo
     if (page.length >= maxWords || (halfFull && pause && remaining >= 3) || (sentenceEnd && page.length >= 3 && remaining >= 3)) {
       pages.push(page);
       page = [];
+      characters = 0;
     }
   });
   if (page.length) pages.push(page);

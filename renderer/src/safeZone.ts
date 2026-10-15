@@ -35,23 +35,24 @@ export function insideSafeZone(box: Box): boolean {
 /** The vertical layout, in pixels of the 1080x1920 frame. Content boxes are the space each element may use. */
 export const VERTICAL = {
   /** The scene / illustration (decoration: may run under the top bar). */
-  picture: { top: 0, height: 790 },
+  picture: { top: 0, height: 830 },
   /** The dark fade from the picture into the caption band. */
-  fade: { top: 570, height: 240 },
-  speakerChips: { left: SAFE.left, top: 244, width: 560, height: 56 },
-  /** The vocabulary card (scaled up 1.5x for a phone): left-aligned, clear of the chips. */
-  vocabCard: { left: SAFE.left, top: 316, width: 792, height: 460, zoom: 1.5 },
-  hookBanner: { left: SAFE.left, top: 330, width: SAFE.right - SAFE.left, height: 300 },
+  fade: { top: 500, height: 360 },
+  speakerChips: { left: 260, top: 300, width: 560, height: 56 },
+  /** The vocabulary card and captions share the frame's central axis. */
+  vocabCard: { left: 216, top: 376, width: 648, height: 400, zoom: 1.5 },
+  hookBanner: { left: 216, top: 330, width: 648, height: 300 },
   /** Karaoke captions: left of the button column, above the characters. */
-  captions: { left: SAFE.left, top: 790, width: SAFE.columnX - SAFE.left, height: 250 },
-  /** At most this many words of a line at once: four lines of 50 px captions fit the band (long lines page). */
-  captionWords: 14,
+  captions: { left: 216, top: 790, width: 648, height: 250 },
+  /** Short pages leave space for the speaker label and animated word emphasis. */
+  captionWords: 10,
+  captionCharacters: 54,
   /** Where the characters' heads start; their faces sit between here and `facesBottom`. */
   headTop: 1045,
-  facesBottom: 1270,
+  facesBottom: 1240,
   spriteHeight: 960,
   /** Character centres: both faces stay left of the button column. */
-  slotX: [270, 640],
+  slotX: [355, 725],
   /** Faces are about this wide in the sprite packs (for the safe-zone check). */
   faceWidth: 210,
 } as const;

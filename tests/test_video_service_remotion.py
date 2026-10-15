@@ -7,6 +7,7 @@ through `video_service.generate_video` is exercised end-to-end -- same conventio
 """
 
 import subprocess
+import json
 from pathlib import Path
 
 import pytest
@@ -245,3 +246,102 @@ def test_leftovers_of_a_failed_render_are_removed(tmp_path):
 def test_the_error_summary_keeps_the_error_line_without_colours_or_stack():
     stderr = "\x1b[31mError: EPERM: operation not permitted, rename 'a' -> 'b'\x1b[39m\n\x1b[31m    at async Object.rename\x1b[39m"
     assert video_renderer_remotion._error_summary(stderr) == "Error: EPERM: operation not permitted, rename 'a' -> 'b'"
+
+
+NAVIGATION_FAILURE = 'Error: Visited "http://localhost:3000/index.html" but got no response.'
+
+
+def test_transient_navigation_retries_with_remaining_budget_and_keeps_diagnostics(tmp_path, monkeypatch):
+    """BUG-039: one fresh process can recover null page.goto without replacing the old output early."""
+    target = tmp_path / "episode.mp4"
+    target.write_bytes(b"old success")
+    calls, clock = [], [0.0]
+    monkeypatch.setattr(video_renderer_remotion.time, "monotonic", lambda: clock[0])
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs["timeout"]))
+        assert target.read_bytes() == b"old success"
+        clock[0] += 25.0
+        if len(calls) == 1:
+            Path(command[5]).write_bytes(b"partial output")
+            return subprocess.CompletedProcess(command, 1, stdout="startup details", stderr=NAVIGATION_FAILURE)
+        assert not Path(command[5]).exists()  # discard the failed attempt before retrying
+        Path(command[5]).write_bytes(b"new success")
+        return subprocess.CompletedProcess(command, 0, stdout="render complete", stderr="")
+
+    monkeypatch.setattr(video_renderer_remotion.subprocess, "run", fake_run)
+    result = video_renderer_remotion._render_via_remotion_sync(_fake_input_props(), target)
+    assert target.read_bytes() == b"new success" and len(calls) == 2
+    budget = video_renderer_remotion.REMOTION_RENDER_TIMEOUT_SECONDS
+    assert [timeout for _, timeout in calls] == [budget, budget - 25.0]
+    assert result["wall_time_seconds"] == 50.0
+    records = [json.loads(line) for line in Path(result["diagnostics_path"]).read_text(encoding="utf-8").splitlines()]
+    assert [record["returncode"] for record in records] == [1, 0]
+    assert records[0]["stderr"] == NAVIGATION_FAILURE and records[0]["stdout"] == "startup details"
+    assert all("--log=verbose" in command for command, _ in calls)
+
+
+@pytest.mark.parametrize("error,attempts", [(NAVIGATION_FAILURE, 2), ("Missing font or invalid props", 1),
+                                         ('Visited "https://example.com" but got no response.', 1)])
+def test_failed_render_attempts_are_bounded_and_keep_previous_video(tmp_path, monkeypatch, error, attempts):
+    target = tmp_path / "episode.mp4"
+    target.write_bytes(b"old success")
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        Path(command[5]).write_bytes(b"partial output")
+        return subprocess.CompletedProcess(command, 1, stdout="diagnostics", stderr=error)
+
+    monkeypatch.setattr(video_renderer_remotion.subprocess, "run", fake_run)
+    with pytest.raises(RemotionRenderFailedError, match="log:"):
+        video_renderer_remotion._render_via_remotion_sync(_fake_input_props(), target)
+    assert len(calls) == attempts and target.read_bytes() == b"old success"
+    assert not list(tmp_path.glob("*.rendering-*.mp4"))
+    assert len(list(tmp_path.glob("*.render-*.log"))) == 1
+
+
+def test_navigation_retry_cannot_extend_the_render_timeout(tmp_path, monkeypatch):
+    clock, calls = [0.0], []
+    monkeypatch.setattr(video_renderer_remotion, "REMOTION_RENDER_TIMEOUT_SECONDS", 90.0)
+    monkeypatch.setattr(video_renderer_remotion.time, "monotonic", lambda: clock[0])
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        assert kwargs["timeout"] == 90.0
+        clock[0] += 90.0
+        return subprocess.CompletedProcess(command, 1, stdout="", stderr=NAVIGATION_FAILURE)
+
+    monkeypatch.setattr(video_renderer_remotion.subprocess, "run", fake_run)
+    with pytest.raises(RemotionRenderFailedError, match="timed out"):
+        video_renderer_remotion._render_via_remotion_sync(_fake_input_props(), tmp_path / "episode.mp4")
+    assert len(calls) == 1
+
+
+def test_render_budget_is_configurable_and_bounded():
+    from pydantic import ValidationError
+
+    from backend.core.config import Settings
+
+    assert Settings(_env_file=None, REMOTION_RENDER_TIMEOUT_SECONDS=2400).REMOTION_RENDER_TIMEOUT_SECONDS == 2400
+    for value in (0, 7201):
+        with pytest.raises(ValidationError):
+            Settings(_env_file=None, REMOTION_RENDER_TIMEOUT_SECONDS=value)
+
+
+@pytest.mark.parametrize("gl", ["auto", "angle", "swangle"])
+def test_render_uses_the_configured_compositor_without_changing_encoder(tmp_path, monkeypatch, gl):
+    calls = []
+    monkeypatch.setattr(video_renderer_remotion.settings, "REMOTION_GL", gl)
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        Path(command[5]).write_bytes(b"finished")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(video_renderer_remotion.subprocess, "run", fake_run)
+    video_renderer_remotion._render_via_remotion_sync(_fake_input_props(), tmp_path / "out.mp4", frames=(30, 59))
+    command = calls[0]
+    assert [part for part in command if part.startswith("--gl=")] == ([] if gl == "auto" else [f"--gl={gl}"])
+    assert "--frames=30-59" in command
+    assert not any(part.startswith(("--codec", "--crf", "--video-bitrate")) for part in command)

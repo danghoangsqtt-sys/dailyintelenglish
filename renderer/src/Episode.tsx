@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { AbsoluteFill, Audio, Img, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Audio, Img, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { BrandIntro, BrandOutro } from "./Brand";
 import { computeProgressForFrame } from "./chapters";
 import { activeTokenIndex, buildKaraokeTokens, captionPage, withScriptPunctuation } from "./karaoke";
@@ -10,6 +10,8 @@ import { PodcastLayerView } from "./Podcast";
 import { SpriteStage } from "./Sprites";
 import { podcastLayer, type VisualMode } from "./podcastLayout";
 import { VERTICAL } from "./safeZone";
+import { captionLayout } from "./motionLayout";
+import { captionMotion, learningMotion, readingProgress, speakingMeter, wordAccent } from "./verticalMotion";
 import type {
   Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker, EpisodeSprites, Layout,
 } from "./types";
@@ -32,10 +34,6 @@ const CAPTION_TEXT_STYLE: React.CSSProperties = {
   textAlign: "center",
 };
 
-/** Warm-yellow karaoke highlight for the currently active word -- standard convention,
- * chosen as a subtle signal on top of the unchanged base style (D19.3-b). */
-const ACTIVE_WORD_COLOR = "#FFD54A";
-
 /** Task 19.4 (D19.4-a): the app's own real per-speaker palette, dark-theme variant --
  * frontend/static/css/style.css's `--speaker-a`/`--speaker-b`, already used app-wide via an
  * identical `speakerIndex % 2` alternating pattern (step2_script.js, step4_tts.js,
@@ -52,7 +50,9 @@ function activeLine(lines: EpisodeInputProps["lines"], currentTimeSec: number) {
   return lines.find((line) => currentTimeSec >= line.startSec && currentTimeSec < line.endSec);
 }
 
-function SpeakerChip({ speaker, color, isActive }: { speaker: EpisodeSpeaker; color: string; isActive: boolean }) {
+function SpeakerChip({ speaker, color, isActive, meter }: {
+  speaker: EpisodeSpeaker; color: string; isActive: boolean; meter?: number[];
+}) {
   return (
     <div
       style={{
@@ -65,6 +65,7 @@ function SpeakerChip({ speaker, color, isActive }: { speaker: EpisodeSpeaker; co
         backgroundColor: isActive ? color : "rgba(0,0,0,0.55)",
         opacity: isActive ? 1 : INACTIVE_CHIP_OPACITY,
         transform: isActive ? "scale(1.08)" : "scale(1)",
+        boxShadow: meter && isActive ? `0 0 18px ${color}55` : undefined,
       }}
     >
       {speaker.avatarUrl ? (
@@ -84,6 +85,11 @@ function SpeakerChip({ speaker, color, isActive }: { speaker: EpisodeSpeaker; co
       >
         {speaker.name}
       </span>
+      {meter ? <span style={{ display: "flex", alignItems: "center", gap: 2, height: 16, width: 10,
+        opacity: isActive ? 0.9 : 0.35 }}>
+        {meter.map((height, index) => <span key={index} style={{ width: 2, height, borderRadius: 2,
+          background: isActive ? "#102519" : "#FFFFFF" }} />)}
+      </span> : null}
     </div>
   );
 }
@@ -98,6 +104,8 @@ function SpeakerChip({ speaker, color, isActive }: { speaker: EpisodeSpeaker; co
 function SpeakerChips({ speakers, activeId, layout = "horizontal" }: {
   speakers: EpisodeSpeaker[]; activeId: string | null; layout?: Layout;
 }) {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
   if (speakers.length === 0) {
     return null;
   }
@@ -108,7 +116,7 @@ function SpeakerChips({ speakers, activeId, layout = "horizontal" }: {
         ...(layout === "vertical"  // Phase 42: inside the safe zone, under the platform's top bar
           // CSS zoom scales the offsets too, so they are given in unzoomed pixels
           ? { top: VERTICAL.speakerChips.top / 1.4, left: VERTICAL.speakerChips.left / 1.4,
-            maxWidth: VERTICAL.speakerChips.width / 1.4, zoom: 1.4 }
+            width: VERTICAL.speakerChips.width / 1.4, justifyContent: "center", zoom: 1.4 }
           : { top: "5%", left: "5%" }),
         display: "flex",
         flexWrap: "wrap",
@@ -121,6 +129,7 @@ function SpeakerChips({ speakers, activeId, layout = "horizontal" }: {
           speaker={speaker}
           color={SPEAKER_COLORS[index % SPEAKER_COLORS.length]}
           isActive={speaker.id === activeId}
+          meter={speakingMeter(frame, fps, speaker.id === activeId)}
         />
       ))}
     </div>
@@ -143,33 +152,47 @@ function CaptionBand({
   // Task 20.2d: the selected treatment only overrides textShadow (and optionally wraps the
   // span in a box) -- font/size/color/alignment stay the D19.3-b base style.
   const spec = captionStyleSpec(captionStyle);
-  // Phase 37 (D100): big captions for a phone screen.
-  const size = layout === "vertical" ? { fontSize: 50, lineHeight: 1.18 } : {};
-  const textStyle = { ...CAPTION_TEXT_STYLE, ...spec.text, ...(spec.box ?? {}), ...size };
-
-  if (tokens.length === 0) {
-    // D19.3-c fallback: the plain line-level span (only the 20.2d style layer is added).
+  const textStyle = { ...CAPTION_TEXT_STYLE, ...spec.text, ...(spec.box ?? {}) };
+  const density = captionLayout(layout);
+    const now = currentTimeSec * 1000;
+    const shown = captionPage(tokens, now, density.maxWords, density.maxCharacters);
+    const activeIndex = activeTokenIndex(shown, now);
+    const start = shown[0]?.fromMs ?? line.startSec * 1000;
+    const entrance = captionMotion(now, start);
+    const progress = readingProgress(now, start, shown.at(-1)?.toMs ?? line.endSec * 1000);
+    const variant = Math.floor(start / 1000) % 3;
     return (
-      <span style={textStyle}>
-        {line.speaker}: {line.text}
-      </span>
+      <div style={{ position: "relative", width: "100%", boxSizing: "border-box", padding: "14px 16px", borderRadius: 24,
+        background: "linear-gradient(145deg, rgba(17,47,35,0.94), rgba(5,18,15,0.96))",
+        border: "1px solid rgba(189,221,157,0.25)", boxShadow: "0 12px 32px rgba(0,0,0,0.28)",
+        opacity: entrance.opacity,
+        transform: `translate(${entrance.x.toFixed(2)}px, ${entrance.y.toFixed(2)}px) scale(${entrance.scale.toFixed(4)})`,
+        textAlign: "center" }}>
+        <div style={{ fontFamily: "Arial, sans-serif", fontSize: density.speakerSize, fontWeight: 700, color: "#E1C76D",
+          letterSpacing: 2, marginBottom: 8 }}>{line.speaker}</div>
+        <div style={{ ...textStyle, fontSize: density.fontSize, lineHeight: 1.3, fontWeight: 700 }}>
+          {shown.length ? shown.map((token, index) => {
+            const accent = wordAccent(now, token.fromMs, token.toMs, variant);
+            return (
+            <React.Fragment key={`${token.fromMs}-${token.text}`}>
+              <span style={{ display: "inline-block", padding: "0 3px", borderRadius: 8,
+                color: index === activeIndex ? "#102519" : "#FFFFFF",
+                background: index === activeIndex ? "#FFD54A" : "transparent",
+                textShadow: index === activeIndex ? "none" : textStyle.textShadow,
+                transform: `translateY(${accent.y.toFixed(2)}px) scale(${accent.scale.toFixed(4)})`,
+                boxShadow: index === activeIndex ? `0 2px ${accent.glow.toFixed(1)}px rgba(255,213,74,0.28)` : undefined }}>
+                {token.text.trim()}
+              </span>{index < shown.length - 1 ? " " : ""}
+            </React.Fragment>
+          ); }) : line.text}
+        </div>
+        <div style={{ position: "absolute", left: 20, right: 20, bottom: 5, height: 2, overflow: "hidden", borderRadius: 999,
+          background: "rgba(229,218,153,0.08)" }}>
+          <div style={{ width: "100%", height: "100%", background: "linear-gradient(90deg, #85BD73, #FFD54A)",
+            transform: `scaleX(${progress.toFixed(4)})`, transformOrigin: "0 50%" }} />
+        </div>
+      </div>
     );
-  }
-
-  // Phase 42 (Gate B-25 review): the vertical band shows a long line a page at a time, never over the faces
-  const shown = layout === "vertical" ? captionPage(tokens, currentTimeSec * 1000, VERTICAL.captionWords) : tokens;
-  const activeIndex = activeTokenIndex(shown, currentTimeSec * 1000);
-  return (
-    <span style={textStyle}>
-      {line.speaker}:{" "}
-      {shown.map((token, index) => (
-        <span key={`${token.fromMs}-${token.text}`} style={index === activeIndex ? { color: ACTIVE_WORD_COLOR } : undefined}>
-          {token.text}
-          {index < shown.length - 1 ? " " : ""}
-        </span>
-      ))}
-    </span>
-  );
 }
 
 /** Task 19.5 (D19.5-d): ~200ms fade in/out rather than a pop cut, relative to the active
@@ -194,19 +217,26 @@ function vocabCardOpacity(currentTimeSec: number, slotStartSec: number, slotEndS
  * opposite the speaker chips (top-left, 19.4) and the caption band (bottom, 19.1/19.3), so it
  * can never collide with either even when speaker chips wrap to a second row at 5-6 speakers.
  */
-function VocabCard({ item, opacity, position, layout = "horizontal" }: {
+function VocabCard({ item, opacity, position, layout = "horizontal", timeSec = 0, startSec = 0, endSec = 0 }: {
   item: LearningItem; opacity: number; position: "top-right" | "top-center"; layout?: Layout;
+  timeSec?: number; startSec?: number; endSec?: number;
 }) {
+  const motion = learningMotion(timeSec, startSec, endSec);
   return (
     <div
       style={{
         position: "absolute",
-        ...(layout === "vertical"  // Phase 42: left-aligned in the safe zone, clear of the chips and the button column
+        ...(layout === "vertical"  // Centered learning card, inside the safe zone and clear of the speaker row.
           ? { top: VERTICAL.vocabCard.top / VERTICAL.vocabCard.zoom, left: VERTICAL.vocabCard.left / VERTICAL.vocabCard.zoom,
-            maxWidth: VERTICAL.vocabCard.width / VERTICAL.vocabCard.zoom,
-            maxHeight: VERTICAL.vocabCard.height / VERTICAL.vocabCard.zoom, overflow: "hidden", zoom: VERTICAL.vocabCard.zoom }
-          : { top: "5%", ...(position === "top-center" ? { left: "50%", transform: "translateX(-50%)" } : { right: "5%" }),
-            maxWidth: "32%" }),
+            width: VERTICAL.vocabCard.width / VERTICAL.vocabCard.zoom, boxSizing: "border-box",
+            maxHeight: VERTICAL.vocabCard.height / VERTICAL.vocabCard.zoom, overflow: "hidden", zoom: VERTICAL.vocabCard.zoom,
+            border: "1px solid rgba(213,209,137,0.32)",
+            transform: `translate(${motion.x.toFixed(2)}px, ${motion.y.toFixed(2)}px) rotate(${motion.rotation.toFixed(3)}deg) scale(${motion.scale.toFixed(4)})`,
+            transformOrigin: "50% 50%" }
+          : { top: "5%", ...(position === "top-center" ? { left: "50%" } : { right: "5%" }),
+            width: "32%", boxSizing: "border-box", border: "1px solid rgba(213,209,137,0.32)",
+            transform: `${position === "top-center" ? "translateX(-50%) " : ""}translate(${motion.x.toFixed(2)}px, ${motion.y.toFixed(2)}px) rotate(${motion.rotation.toFixed(3)}deg) scale(${motion.scale.toFixed(4)})`,
+            transformOrigin: "50% 50%" }),
         opacity,
         backgroundColor: "rgba(14, 15, 21, 0.85)",
         borderRadius: 12,
@@ -215,6 +245,13 @@ function VocabCard({ item, opacity, position, layout = "horizontal" }: {
         color: "#FFFFFF",
       }}
     >
+      <>
+        <div style={{ position: "absolute", left: 0, top: 12, bottom: 12, width: 3, borderRadius: 999,
+          background: "linear-gradient(#FFD54A, #82B976)" }} />
+        {motion.sweep < 1 ? <div style={{ position: "absolute", top: 0, bottom: 0, width: 26,
+          left: `${-15 + motion.sweep * 125}%`, transform: "skewX(-20deg)",
+          background: "linear-gradient(90deg, transparent, rgba(255,235,168,0.1), transparent)" }} /> : null}
+      </>
       {item.kind === "vocab" ? (
         <>
           <div style={{ fontSize: 24, fontWeight: 700 }}>
@@ -399,6 +436,9 @@ export function AudioWindowContent({
           }
           position={layer === "sprites" || layout === "vertical" ? "top-center" : "top-right"}
           layout={layout}
+          timeSec={currentTimeSec}
+          startSec={activeLearningItem.slotStartSec}
+          endSec={activeLearningItem.slotEndSec}
         />
       ) : null}
       {line ? (
@@ -408,7 +448,7 @@ export function AudioWindowContent({
             ...(layout === "vertical"  // Phase 42: left of the platform's button column, above the characters
               ? { left: VERTICAL.captions.left, width: VERTICAL.captions.width, top: VERTICAL.captions.top,
                 height: VERTICAL.captions.height, alignItems: "center", padding: 0 }
-              : { left: 0, right: 0, bottom: "10%", padding: "0 5%" }),
+              : { left: 0, right: 0, bottom: "6%", padding: "0 12%" }),
             display: "flex",
             justifyContent: "center",
           }}

@@ -23,23 +23,23 @@ flowchart LR
 
     subgraph F["Step 5: Video Studio"]
         F1[Storyboard beats\nowner review]
-        F2[Shots: Shot Library first,\nGPU draws the rest]
-        F3[Picture mode: story, black,\none still, talking sprites\n+ activity cutaways]
-        F4[Enhanced Remotion render\nor Standard ffmpeg]
+        F2[Insert illustrations: Activity Library\nor local Qwen, no cast face]
+        F3[Picture mode: talking sprites,\none still, black\n+ activity cutaways]
+        F4[Remotion render\n+ SRT]
     end
 
     subgraph G["Step 6: Thumbnail"]
-        G1[Templates + AI fill + editor]
+        G1[Composed, outside-AI or local Qwen scene\n+ headline, badges and logo]
     end
 
     subgraph H["Step 7: YouTube Package"]
         H1[Titles, description, tags,\nmeasured chapters, music credit]
-        H2[.zip export]
+        H2[.zip + selected component exports\nto the episode folder]
     end
 
     subgraph L["Libraries (standalone pages)"]
         L1[Characters + scenes]
-        L2[Shot Library]
+        L2[Scene backgrounds]
         L3[Sprites + Activity Library]
         L4[Music Library]
     end

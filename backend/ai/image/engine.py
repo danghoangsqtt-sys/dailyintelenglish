@@ -14,12 +14,12 @@ from PIL import Image
 
 from backend.core.config import settings
 from backend.core.exceptions import ConflictError
-from backend.core.paths import IMAGE_VENV_DIR, get_project_root
+from backend.core.paths import IMAGE_VENV_DIR, RUNTIME_ROOT
 from backend.ai.image.gpu_model_manager import get_gpu_manager
 
-ROOT = get_project_root()
+ROOT = RUNTIME_ROOT
 IMAGE_PYTHON = IMAGE_VENV_DIR / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-IMAGE_WORKER = Path(__file__).resolve().parent / "image_worker.py"
+IMAGE_WORKER = ROOT / "backend/ai/image/image_worker.py"
 
 
 def generation_available() -> bool:

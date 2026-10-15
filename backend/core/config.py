@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     # is already present (or bundled) and lets a missing browser fail fast instead of
     # reaching out to the network -- e.g. for an offline/locked-down deployment.
     REMOTION_ALLOW_DOWNLOAD: bool = True
+    # Animated sprite episodes exceed the original static-render 600s budget.
+    # This is one deadline shared by both attempts, never a per-retry allowance.
+    REMOTION_RENDER_TIMEOUT_SECONDS: float = Field(default=3600.0, ge=60.0, le=7200.0)
+    # On the tested Windows machine Chrome's automatic choice uses CPU SwiftShader.
+    # Explicit ANGLE enables D3D11 compositing; auto remains an opt-out for drivers.
+    REMOTION_GL: Literal["auto", "angle", "swangle"] = "angle" if os.name == "nt" else "auto"
 
     # Phase 13 -- local-first AI reliability (docs/architecture/adr-001-local-first-ai.md).
     # Phase 18/D21 made cloud the default primary, local the automatic fallback,

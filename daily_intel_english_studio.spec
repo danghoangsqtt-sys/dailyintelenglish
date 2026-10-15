@@ -15,6 +15,7 @@ datas = [
     ("frontend", "frontend"),
     ("backend/ai/prompts", "backend/ai/prompts"),
     ("backend/db/migrations", "backend/db/migrations"),
+    ("renderer/public/brand", "renderer/public/brand"),
 ]
 binaries = []
 hiddenimports = []
@@ -28,23 +29,13 @@ for package in ("uvicorn",):
     binaries += pkg_binaries
     hiddenimports += pkg_hiddenimports
 
-# This app's real requirements.txt needs none of these -- they were pulled in
-# purely because the dev venv also has leftover packages installed from the
-# abandoned OmniVoice GPU experimentation (Phase 1; _synthesize_omnivoice() is a
-# hardcoded stub today, see backend/ai/tts/tts_service.py). Confirmed via a repo-wide
-# grep that no file under app/ imports any of them. Without this list, PyInstaller's
-# static analysis still finds them importable in site-packages and balloons the
-# build to ~4.5GB (torch alone, with bundled CUDA kernels, is ~4GB) for a plain
-# FastAPI + SQLite + Pillow + pydub app.
+# Keep model stacks in the separate image environment. Librosa and its CPU
+# dependencies are needed by music analysis and must remain in the desktop build.
 excludes = [
     "torch",
     "torchaudio",
     "transformers",
     "tensorflow",
-    "sklearn",
-    "librosa",
-    "numba",
-    "llvmlite",
     "grpc",
     "hf_xet",
     "tokenizers",
@@ -75,10 +66,9 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    # Keeps a visible console window so uvicorn's own startup log (and any
-    # ffmpeg/GPU-missing warning) is visible on first run -- a silent windowed
-    # exe would hide exactly the errors a trial user most needs to see.
-    console=True,
+    # Desktop bootstrap retains diagnostics in data/logs/desktop.log.
+    console=False,
+    icon="assets/app.ico",
     disable_windowed_traceback=False,
 )
 

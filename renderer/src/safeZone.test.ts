@@ -32,6 +32,26 @@ describe("Phase 42 (D121): the vertical video inside the TikTok / Reels / Shorts
     expect(box.left + box.width / 2).toBeCloseTo(VERTICAL.slotX[1]);
   });
 
+  it("balances the caption, vocabulary, speaker row and character pair on the frame centre", () => {
+    for (const box of [VERTICAL.captions, VERTICAL.vocabCard, VERTICAL.speakerChips]) {
+      expect(box.left + box.width / 2).toBe(540);
+    }
+    expect((VERTICAL.slotX[0] + VERTICAL.slotX[1]) / 2).toBe(540);
+    expect(VERTICAL.captions.left + VERTICAL.captions.width).toBeLessThanOrEqual(SAFE.columnX);
+  });
+
+  it("also keeps the speech overlays and face envelopes inside the owner's 1080x1920 ads reference", () => {
+    const boxes = [VERTICAL.speakerChips, VERTICAL.vocabCard, VERTICAL.hookBanner, VERTICAL.captions,
+      ...VERTICAL.slotX.map((x) => ({ left: x - VERTICAL.faceWidth / 2, top: VERTICAL.headTop,
+        width: VERTICAL.faceWidth, height: VERTICAL.facesBottom - VERTICAL.headTop }))];
+    for (const box of boxes) {
+      expect(box.left).toBeGreaterThanOrEqual(48);
+      expect(box.left + box.width).toBeLessThanOrEqual(1080 - 192);
+      expect(box.top).toBeGreaterThanOrEqual(288);
+      expect(box.top + box.height).toBeLessThanOrEqual(1920 - 672);
+    }
+  });
+
   it("keeps the intro and outro columns inside: wide only above the button column", () => {
     expect(insideSafeZone({ left: VERTICAL_BRAND.wide.left, top: SAFE.top, width: VERTICAL_BRAND.wide.width,
       height: SAFE.columnFromY - SAFE.top })).toBe(true);
