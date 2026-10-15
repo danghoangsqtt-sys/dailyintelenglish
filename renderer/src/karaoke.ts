@@ -1,5 +1,7 @@
 import { createTikTokStyleCaptions } from "@remotion/captions";
 import type { EpisodeLine } from "./types";
+import { captionPageAtTime, paginateCaptionTokens } from "./captionPaging";
+export { captionPageAtTime, paginateCaptionTokens } from "./captionPaging";
 
 /**
  * Task 19.3 (D19.3-b): one highlightable word within a line's karaoke band, in
@@ -85,40 +87,10 @@ export function withScriptPunctuation(tokens: KaraokeToken[], text: string): Kar
 }
 
 /**
- * Phase 42 (D121, Gate B-25 review): a long line does not fit the vertical caption band (it ran over the characters'
- * faces). Split the tokens into pages of at most `maxWords`, breaking after a sentence end -- or a comma -- once a page is
- * at least half full, and return the page being spoken at `currentTimeMs` (between words: the page of the last word
- * said; before the first word: the first page).
+ * Compatibility helper for callers needing one page. The composition memoizes
+ * paginateCaptionTokens and selects with captionPageAtTime on each frame instead.
  */
 export function captionPage(tokens: KaraokeToken[], currentTimeMs: number, maxWords: number,
-  maxCharacters = Number.POSITIVE_INFINITY): KaraokeToken[] {
-  if (tokens.length <= maxWords && tokens.map((token) => token.text.trim()).join(" ").length <= maxCharacters) return tokens;
-  const pages: KaraokeToken[][] = [];
-  let page: KaraokeToken[] = [];
-  let characters = 0;
-  tokens.forEach((token, index) => {
-    const length = token.text.trim().length;
-    if (page.length && characters + 1 + length > maxCharacters) {
-      pages.push(page);
-      page = [];
-      characters = 0;
-    }
-    characters += length + (page.length ? 1 : 0);
-    page.push(token);
-    const remaining = tokens.length - index - 1;
-    const sentenceEnd = /[.!?â€¦]["')\]]?$/.test(token.text.trim());
-    const pause = sentenceEnd || /[,;:â€”]$/.test(token.text.trim());
-    const halfFull = page.length >= Math.ceil(maxWords / 2);
-    if (page.length >= maxWords || (halfFull && pause && remaining >= 3) || (sentenceEnd && page.length >= 3 && remaining >= 3)) {
-      pages.push(page);
-      page = [];
-      characters = 0;
-    }
-  });
-  if (page.length) pages.push(page);
-  let current = 0;
-  pages.forEach((candidate, index) => {
-    if (candidate[0].fromMs <= currentTimeMs) current = index;
-  });
-  return pages[current];
+  maxCharacters = Number.POSITIVE_INFINITY, protectedPhrases: readonly string[] = []): KaraokeToken[] {
+  return captionPageAtTime(paginateCaptionTokens(tokens, maxWords, maxCharacters, protectedPhrases), currentTimeMs);
 }

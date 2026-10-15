@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { AbsoluteFill, Audio, Img, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { BrandIntro, BrandOutro } from "./Brand";
 import { computeProgressForFrame } from "./chapters";
-import { activeTokenIndex, buildKaraokeTokens, captionPage, withScriptPunctuation } from "./karaoke";
+import { activeTokenIndex, buildKaraokeTokens, captionPageAtTime, paginateCaptionTokens, withScriptPunctuation } from "./karaoke";
 import { activeSpeakerId } from "./speakers";
 import { activeItemForFrame, attachItemsToLines, type LearningItem } from "./vocab";
 import { BOTTOM_SHADE_STYLE, captionStyleSpec, type CaptionStyle } from "./captionStyle";
@@ -141,11 +141,13 @@ function CaptionBand({
   currentTimeSec,
   captionStyle,
   layout = "horizontal",
+  protectedPhrases,
 }: {
   line: EpisodeLine;
   currentTimeSec: number;
   captionStyle: CaptionStyle;
   layout?: Layout;
+  protectedPhrases: readonly string[];
 }) {
   // the script's punctuation back on Edge's bare words (walkthrough 2026-10-14)
   const tokens = useMemo(() => withScriptPunctuation(buildKaraokeTokens(line), line.text), [line]);
@@ -154,8 +156,10 @@ function CaptionBand({
   const spec = captionStyleSpec(captionStyle);
   const textStyle = { ...CAPTION_TEXT_STYLE, ...spec.text, ...(spec.box ?? {}) };
   const density = captionLayout(layout);
+  const pages = useMemo(() => paginateCaptionTokens(tokens, density.maxWords, density.maxCharacters, protectedPhrases),
+    [tokens, density.maxWords, density.maxCharacters, protectedPhrases]);
     const now = currentTimeSec * 1000;
-    const shown = captionPage(tokens, now, density.maxWords, density.maxCharacters);
+    const shown = captionPageAtTime(pages, now);
     const activeIndex = activeTokenIndex(shown, now);
     const start = shown[0]?.fromMs ?? line.startSec * 1000;
     const entrance = captionMotion(now, start);
@@ -411,6 +415,10 @@ export function AudioWindowContent({
     [learning, lines]
   );
   const activeLearningItem = activeItemForFrame(currentTimeSec, lines, attachedLearning);
+  const protectedPhrases = useMemo(() => [
+    ...(learning?.idioms ?? []).map(item => item.phrase),
+    ...(learning?.vocab ?? []).map(item => item.word),
+  ], [learning]);
   const layer = podcastLayer(visualMode);
   const speechProgress = audioDurationSec > 0 ? frame / (audioDurationSec * fps) : 0;
   // a clip's hook banner has the top of the frame to itself while it shows
@@ -453,7 +461,8 @@ export function AudioWindowContent({
             justifyContent: "center",
           }}
         >
-          <CaptionBand line={line} currentTimeSec={currentTimeSec} captionStyle={captionStyle} layout={layout} />
+          <CaptionBand line={line} currentTimeSec={currentTimeSec} captionStyle={captionStyle} layout={layout}
+            protectedPhrases={protectedPhrases} />
         </div>
       ) : null}
       {hook && hookAtSec !== undefined ? <HookBanner hook={hook} opacity={hookShown} /> : null}

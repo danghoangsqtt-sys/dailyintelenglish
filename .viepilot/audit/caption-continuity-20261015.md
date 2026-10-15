@@ -2,6 +2,8 @@
 
 **Ngày:** 2026-10-15 · **Skill:** vp-audit · **Kết quả:** 1 lỗi xác nhận, BUG-041.
 
+**Theo dõi sau audit:** Owner đã yêu cầu vp-evolve + vp-auto. Phase 47 triển khai và xác minh BUG-041: 104 renderer tests + TypeScript đạt, 22 lượt thoại × 2 layout giữ nguyên token/timing, 8 PNG và 4 clip production đã dựng/kiểm tra. Báo cáo: `docs/operations/caption-continuity-20261015.md`. Nội dung bên dưới là bằng chứng tại thời điểm audit trước bản sửa; owner visual review còn chờ.
+
 ## Phạm vi
 
 Owner cung cấp bốn ảnh và xác nhận vấn đề là **chữ phụ đề bị chia rời**, không yêu cầu điều tra thêm giọng đọc. Audit tập trung vào phân trang karaoke của video ngang/dọc; không phải một lần đánh giá lại toàn bộ repository.

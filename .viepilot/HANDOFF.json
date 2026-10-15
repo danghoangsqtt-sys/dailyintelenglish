@@ -3,7 +3,7 @@
   "version": "1.4.0-rc.1",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase47_caption_continuity_in_progress_owner_authorized",
+  "status": "phase47_bug041_implemented_verified_owner_visual_review_pending",
   "current_phase": "47",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
@@ -26,10 +26,10 @@
   "phases": {
     "47": {
       "name": "Caption continuity (BUG-041)",
-      "status": "in_progress",
-      "tasks_done": 0,
+      "status": "implemented_verified_pending_owner_review",
+      "tasks_done": 1,
       "tasks_total": 1,
-      "note": "Owner explicitly requested vp-evolve planning and immediate vp-auto implementation on 2026-10-15. Task 47.1 fixes phrase-aware subtitle pagination and verifies real 16:9/9:16 previews. Published trial 1.4.0-rc.1 and older owner gates remain unchanged."
+      "note": "Owner explicitly requested vp-evolve planning and immediate vp-auto implementation on 2026-10-15. Task 47.1 implemented and technically verified: phrase-aware pages and learning phrase protection, memoized in Episode, 104 renderer tests and TypeScript pass, all 22 Episode 3 lines in both layouts preserve tokens/timing and limits, 8 PNGs and 4 fully decoded preview clips. DB read-only, source audio unchanged. Owner visual review pending; no new release asset or full-video replacement. See docs/operations/caption-continuity-20261015.md. Published trial 1.4.0-rc.1 and older owner gates remain unchanged."
     },
     "1": {
       "name": "Full Feature Build",

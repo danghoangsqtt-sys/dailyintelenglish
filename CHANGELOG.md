@@ -8,6 +8,9 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Fixed
+- BUG-041: grammatical, balanced caption pages in both 16:9 and 9:16; fitting learning idioms/multiword vocabulary stay together instead of cuts such as `in the | kitchen` and `piece | of cake`. Pagination is memoized per line/layout; original tokens, word timings, audio and safe-area limits are retained. Verified with 104 renderer tests, TypeScript, all 22 Episode 3 lines in both layouts, and production boundary previews. Source patch only; published v1.4.0-rc.1 artifacts remain unchanged.
+
 ## [1.4.0-rc.1] - 2026-10-15
 
 Owner-authorized Windows usage trial; visual/operational owner gates B-25/B-26/B-27/B-28 remain pending.

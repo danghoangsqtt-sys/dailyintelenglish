@@ -55,3 +55,11 @@ Apply `.viepilot/audit/caption-continuity-20261015.md` guardrails and official N
 ## Progress
 
 - Planning/preflight complete; 47.1 is in_progress before source edits.
+- Plan checkpoint: 8d9a019, annotated task checkpoint die-vp-p47-t47.1. Owner explicitly authorized plan + execute; no extra scope approval was needed.
+- Initial four new screenshot regressions failed while the four original paging tests passed, confirming meaningful regression coverage.
+- Implemented deterministic sentence-aware dynamic programming, grammatical cue costs, balanced tails, fitting learning-phrase protection and capacity fallback. Memoized pages and protected phrase lists in the actual composition.
+- Final renderer suite: **104 passed / 14 files**, TypeScript clean. No backend changes or dependency additions; full Python suite not rerun.
+- Actual Episode 3: **22 lines / 44 layout partitions**, original token objects/times retained and every page within existing limits. General modifier cues were refined after inspecting the narrow-layout output, adding regression coverage for the intact `notoriously difficult recipe` unit.
+- Final real production previews: 8 PNGs and 4 H.264/AAC clips, both resolutions, inspected representative frames, all clips fully decoded. 150/186 video frames (5.0/6.2 s), container AAC padding ~0.05 s. Source MP3/WAV hashes unchanged; DB read-only, zero changes; full production videos/SRT untouched.
+- Evidence and limits: `docs/operations/caption-continuity-20261015.md`; local files under `data/tmp/caption-fix-20261015/`.
+- Technical implementation verified; formal owner visual acceptance pending. Published rc.1 assets unchanged; installed linked-runtime app uses this renderer for future renders.

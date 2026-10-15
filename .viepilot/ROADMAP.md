@@ -2,7 +2,7 @@
 
 ## Current follow-up: Phase 47 — Caption continuity (BUG-041)
 
-Owner authorized vp-evolve planning + immediate vp-auto execution on 2026-10-15. Task 47.1 is **in_progress**: grammatical/phrase-aware caption pages, preserved learning terms, regression tests and actual 16:9/9:16 boundary previews. Plan: `.viepilot/phases/47-caption-continuity/SPEC.md`. Published trial 1.4.0-rc.1 and older owner gates remain unchanged.
+Owner authorized vp-evolve planning + immediate vp-auto execution on 2026-10-15. Task 47.1 is **implemented_verified; owner visual review pending**: grammatical/phrase-aware caption pages, preserved learning terms, 104 renderer tests + TypeScript, all 22 Episode 3 lines in both layouts and actual 16:9/9:16 boundary previews. Plan: `.viepilot/phases/47-caption-continuity/SPEC.md`; report: `docs/operations/caption-continuity-20261015.md`. Published trial 1.4.0-rc.1 and older owner gates remain unchanged.
 
 ## Overview
 
