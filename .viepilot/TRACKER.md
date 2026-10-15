@@ -1,5 +1,7 @@
 # TRACKER.md — Daily Intel English Studio
 
+**Current implementation (2026-10-15): Phase 47 / BUG-041.** Owner requests planning via vp-evolve followed immediately by vp-auto execution. Task 47.1 is in_progress: grammatical caption pages, learning phrase preservation, tests and actual Episode 3 previews in both layouts. Scope is subtitle pagination; published trial and pending owner gates are retained.
+
 
 **Current owner trial (2026-10-15):** Owner authorized replacing the old EXE and updating GitHub, with the channel logo as the one-click Desktop icon. Task 46.8: windowed branded EXE installed, using the 13-project workspace data; startup, media/runtimes and bundled music analysis verified. Full pytest **1,636 passed**, 89 Vitest, TypeScript/Ruff/JS syntax clean. Chrome had selected CPU SwiftShader; explicit ANGLE uses RTX 3060/D3D11 and improved two 1,200-frame samples by 32?35%. Trial **1.4.0-rc.1**; last stable 1.3.0. GitHub prerelease [v1.4.0-rc.1](https://github.com/danghoangsqtt-sys/dailyintelenglish/releases/tag/v1.4.0-rc.1) published with Windows ZIP/checksum; B-25/B-26/B-27/B-28 remain pending. Report: `docs/operations/exe-trial-20261015.md`.
 ## Current Status
@@ -2195,6 +2197,7 @@ Suite 964 → 1175. **Version 1.1.0-beta.** Follow-ups: ENH-014 (outro heuristic
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-10-15 | **BUG-041 auto-logged by vp-audit Tier 3:** Episode 3 captions split `in the \| kitchen` and `piece \| of cake` at hard page limits; owner confirms subtitle text is the issue. Reproduced from real word timings in 16:9/9:16; 4 existing paging tests pass but miss this behavior | Backlog; audit/proposed fix in `.viepilot/audit/caption-continuity-20261015.md`; no source/EXE changes |
 | 2026-10-13 | **D106–D108 (owner):** the dashboard becomes the channel cockpit: stats, next publish and today's actions; a 5-stage roadmap computed from real data with next-step links; a production board by step; the project grid below | Phase 36 Task 36.7 |
 | 2026-10-13 | **D109 (owner, project close-out):** close Gates B-14, B-15, B-16, B-17, B-19, B-20 and B-21 (Phases 20, 22, 23, 24, 27, 28, 29) as superseded: their features are part of every episode accepted at Gates B-22, B-23 and B-24. Also approved: restart the real app for migration 024 (Gate B-25), delete local temp/cache, `build/` and `demo_output/raw`, push with tags `v1.2.0-beta` and `v1.3.0` | Phases 20–29, close-out |
 | 2026-10-13 | **D115 (owner):** restructure the repository: `app/` → `backend/` grouped by domain, every AI part under `backend/ai/` (llm, image, tts, prompts, models), `video-renderer/` → `renderer/`, venvs → `.venv`/`.venv-image`; plan first with the new `vp-struct` skill. **D116 (owner):** benchmark Qwen vs RealVisXL on four system tasks (activity illustration, scene plate, thumbnail picture, character shot — Edit-2511 included for the last), ~72 GB downloads approved; apply only after the comparison | Phases 38, 39 |

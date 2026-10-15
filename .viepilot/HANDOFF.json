@@ -3,8 +3,8 @@
   "version": "1.4.0-rc.1",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "owner_authorized_1_4_0_rc1_trial_delivered_usage_feedback_and_gates_pending",
-  "current_phase": "46",
+  "status": "phase47_caption_continuity_in_progress_owner_authorized",
+  "current_phase": "47",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
     "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
@@ -24,6 +24,13 @@
     "os": "Windows"
   },
   "phases": {
+    "47": {
+      "name": "Caption continuity (BUG-041)",
+      "status": "in_progress",
+      "tasks_done": 0,
+      "tasks_total": 1,
+      "note": "Owner explicitly requested vp-evolve planning and immediate vp-auto implementation on 2026-10-15. Task 47.1 fixes phrase-aware subtitle pagination and verifies real 16:9/9:16 previews. Published trial 1.4.0-rc.1 and older owner gates remain unchanged."
+    },
     "1": {
       "name": "Full Feature Build",
       "days": "1-7",

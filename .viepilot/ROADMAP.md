@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Current follow-up: Phase 47 — Caption continuity (BUG-041)
+
+Owner authorized vp-evolve planning + immediate vp-auto execution on 2026-10-15. Task 47.1 is **in_progress**: grammatical/phrase-aware caption pages, preserved learning terms, regression tests and actual 16:9/9:16 boundary previews. Plan: `.viepilot/phases/47-caption-continuity/SPEC.md`. Published trial 1.4.0-rc.1 and older owner gates remain unchanged.
+
 ## Overview
 
 **Timeline:** 21 ngày (10/09/2026 → 30/09/2026)  
