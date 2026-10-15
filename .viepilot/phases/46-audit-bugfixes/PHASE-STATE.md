@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 46: Audit bug fixes
 
-- **Status:** owner-authorized trial packaged and technically verified 2026-10-15; GitHub publication in progress. Formal visual/operational gates remain pending.
+- **Status:** owner-authorized trial installed, verified and published 2026-10-15. Extended usage feedback and formal visual/operational gates remain pending.
 - **Release:** trial 1.4.0-rc.1; last stable version remains 1.3.0.
 
 | Task | Description | Status |
@@ -12,13 +12,13 @@
 | 46.5 | Center and harmonize portrait layout | implemented_verified |
 | 46.6 | Richer portrait motion library | implemented_verified |
 | 46.7 | Shared YouTube motion and phrase-level dialogue gestures | implemented_verified |
-| 46.8 | Branded one-click EXE, measured GPU compositor improvement and GitHub trial | packaged_verified_publish_pending |
+| 46.8 | Branded one-click EXE, measured GPU compositor improvement and GitHub trial | owner_trial_delivered |
 
 Pending owner gates B-25, B-26, B-27 and B-28 remain pending.
 
 ## Owner trial follow-up (2026-10-15)
 
-Task 46.8 is **in_progress**. The owner explicitly authorized an updated EXE replacing the old build and a GitHub update for an extended usage trial. This lifts the earlier packaging/persistence hold for the trial; the outstanding visual/operational owner gates remain pending. Plan: tasks/task-46.8.md.
+Task 46.8 is **delivered under the owner's explicit trial authorization**. The branded GUI EXE replaced the old build with a full backup, Desktop shortcut was created, current data/runtime smoke passed, and GitHub v1.4.0-rc.1 was published with ZIP/checksum. This lifts the earlier packaging/persistence hold for the trial; outstanding visual/operational owner gates remain pending. Evidence: docs/operations/exe-trial-20261015.md and tasks/task-46.8.md.
 
 ## Initial audit verification
 - Full pytest: 1,621 passed, one existing dependency deprecation warning, 871.13 s (14:31).

@@ -3,7 +3,7 @@
   "version": "1.4.0-rc.1",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "owner_authorized_desktop_trial_installed_verified_publish_pending_gates_b25_b26_b27_b28_pending",
+  "status": "owner_authorized_1_4_0_rc1_trial_delivered_usage_feedback_and_gates_pending",
   "current_phase": "46",
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
@@ -315,11 +315,11 @@
     },
     "46": {
       "name": "Audit fixes, video polish and owner desktop trial",
-      "status": "owner_trial_installed_verified_publish_pending",
+      "status": "owner_trial_delivered_pending_usage_feedback_and_owner_gates",
       "tasks_done": 0,
       "tasks_total": 8,
-      "note": "Owner explicitly authorized EXE replacement and GitHub update for an extended trial, superseding the previous packaging hold for this trial. Branded GUI EXE installed and smoke-tested; full pytest 1636 and Vitest 89 passed. GitHub publication in progress. Visual/operational owner gates remain pending.",
-      "tasks_verified": 7,
+      "note": "Owner explicitly authorized EXE replacement and GitHub update for an extended trial, superseding the previous packaging hold for this trial. Branded GUI EXE installed and smoke-tested; full pytest 1636 and Vitest 89 passed. Source branch, trial tag and GitHub prerelease ZIP/checksum published; public API/digest verified. Visual/operational owner gates remain pending.",
+      "tasks_verified": 8,
       "verification": {
         "pytest_passed": 1621,
         "pytest_seconds": 871.13,
@@ -527,7 +527,7 @@
   "target_trial_version": "1.4.0-rc.1",
   "desktop_trial": {
     "authorized_at": "2026-10-15",
-    "status": "installed_verified_publish_pending",
+    "status": "installed_verified_published",
     "version": "1.4.0-rc.1",
     "stable_version": "1.3.0",
     "report": "docs/operations/exe-trial-20261015.md",
@@ -538,6 +538,9 @@
       "B-26",
       "B-27",
       "B-28"
-    ]
+    ],
+    "source_commit": "f8f76753b9c3d81edd179006c626fde985dc79d7",
+    "release_url": "https://github.com/danghoangsqtt-sys/dailyintelenglish/releases/tag/v1.4.0-rc.1",
+    "archive_sha256": "0abdb9616593ecc983c152d00c0ee08380ee7240c4aa54e6b94d7916eed91b09"
   }
 }

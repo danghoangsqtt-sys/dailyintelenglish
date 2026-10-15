@@ -2,7 +2,7 @@
 
 ## Authorization and status
 
-In progress, 2026-10-15. The owner explicitly requested replacing the old EXE and updating the project's GitHub for an extended usage trial. This authorizes build/install, commit/push and a prerelease artifact, superseding the previous no-build hold for this trial only. B-25/B-26/B-27/B-28 remain pending; no blanket acceptance of those gates.
+Owner-authorized delivery complete, 2026-10-15. The owner explicitly requested replacing the old EXE and updating the project's GitHub for an extended usage trial. This authorizes build/install, commit/push and a prerelease artifact, superseding the previous no-build hold for this trial only. B-25/B-26/B-27/B-28 remain pending; no blanket acceptance of those gates.
 
 ## Plan / allowed_files
 
@@ -35,3 +35,11 @@ In progress, 2026-10-15. The owner explicitly requested replacing the old EXE an
 - Shortcut target/icon/working directory verified. Automatic approval review rejected launching the opaque .lnk with only "blocked by policy"; the explicit verified EXE path was subsequently approved and launched. Do not claim a shortcut-click execution test.
 - CDP confirms CPU SwiftShader in automatic mode versus RTX 3060/D3D11 under ANGLE. Two 1200-frame pairs: 71.392→46.627 s and 70.812→47.975 s. Applied validated configurable Windows ANGLE default; encoder/quality/motion unchanged. Full-episode elapsed gain remains unmeasured.
 - Secret/size scan of the 86-file pending update found no flagged credentials or unexpected large file. GitHub publication and clean-source build metadata remain in progress.
+
+## Delivered result
+
+- Source commit f8f7675 pushed to the existing owner branch; explicit v1.4.0-rc.1 tag published. GitHub prerelease: https://github.com/danghoangsqtt-sys/dailyintelenglish/releases/tag/v1.4.0-rc.1.
+- Clean-source rebuild: source_dirty false; EXE SHA-256 identical to the tested/installed program. Complete ZIP 140,513,826 bytes / 1,462 files; contents match the installed distribution. Standard-library ZIP entry order normalized only after its uncompressed contents were verified identical.
+- GitHub public release/API and uploaded digest verified; ZIP and SHA-256 assets available. Package excludes user runtime data, credentials, models and Node files. Original distribution and DB snapshots retained.
+- Installed application remains running at http://localhost:8000 with the 13-project workspace. Branded Desktop shortcut is ready; no terminal command is needed for normal launch.
+- Further extended-use feedback and owner gates remain open. No stable-release or phase-completion acceptance is inferred.

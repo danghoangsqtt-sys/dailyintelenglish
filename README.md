@@ -9,7 +9,7 @@ the packaged `DailyIntelEnglishStudio.exe` keep the original technical name *Dai
 
 Open **Daily Beyond English Studio** from the Desktop icon (the channel logo). It starts the local app and opens its browser interface without a command window. The installed EXE is `dist/DailyIntelEnglishStudio/DailyIntelEnglishStudio.exe`; keep its complete folder together. The trial links to the existing repository's Node/Remotion, ffmpeg, image environment/models and `data` folder.
 
-[Launch, build and rollback guide](docs/operations/exe-trial-20261015.md) · [Render performance findings](docs/operations/render-performance-20261015.md). This is an owner-authorized usage trial; outstanding visual gates remain pending. The last stable release remains 1.3.0.
+[Download the Windows trial](https://github.com/danghoangsqtt-sys/dailyintelenglish/releases/tag/v1.4.0-rc.1) · [Launch, build and rollback guide](docs/operations/exe-trial-20261015.md) · [Render performance findings](docs/operations/render-performance-20261015.md). This is an owner-authorized usage trial; outstanding visual gates remain pending. The last stable release remains 1.3.0.
 
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-blue)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-latest-green)](https://fastapi.tiangolo.com)
