@@ -4,7 +4,7 @@
 - **Dependencies:** 49.2, 49.4
 - **Requirements:** R04, R06, R07, R12.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
-- **Scope:** card này là kế hoạch, chưa có kết quả triển khai hay acceptance.
+- **Scope:**49.5a foundation technically verified below;49.5b proposal/review integration remains in progress. Owner acceptance is separate.
 
 ## Objective
 
@@ -30,6 +30,7 @@ Explainer plan: đoạn, minh họa, locks và approval. Hoàn thành contract t
 - backend/library/explainer_assets.py
 - backend/library/explainer_timing.py
 - tests/test_explainer_timing.py
+- tests/test_explainer_assets.py
 - backend/content/project_service.py
 - backend/api/ai_jobs.py
 - backend/ai/llm/ai_job_service.py
@@ -60,6 +61,12 @@ Explainer plan: đoạn, minh họa, locks và approval. Hoàn thành contract t
 - Approval stores immutable reviewed snapshot and version refs; source changes are recomputed on read/render to surface stale. Until49.6's real geometry checker is available, production approval must refuse unresolved layouts. Test pin/CAS logic against a labeled validator double, retaining API refusal when geometry is unavailable; do not ship an always-true geometry placeholder.
 - Front21 real owner art remains pending; fixtures only validate mechanics. Existing script/learning jobs and classic storyboard remain unchanged.
 
+### Bounded execution slices
+
+**49.5a — persistence, illustrations and real token timing:**028 migration, explainer_assets/timing services, their focused tests, named image/timing limits in core/constants, and the explainer artifact category in project_service deletion. No new AI operation is exposed until49.5b registers its complete handler/API. Verify migration copy/rollback/restart, immutable image decode/hash/path/CAS/cleanup, token coverage and real prior Edge mapping, full regression/Ruff before a durable subtask checkpoint. Task49.5 remains in_progress.
+
+**49.5b — proposal, draft/history, locks and approval:** bounded plan/wire schemas, service/API/prompt, safe AI operation dispatch + worker registration, source fingerprints and revision CAS. Verify job/cancel/resume/error races and locked fields, missing real geometry/timing/assets/factual-review refusal, then full regression before task completion. Geometry success is verified with actual49.6; no permissive placeholder approval.
+
 Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu phát hiện cần file khác, ghi lý do và mở rộng bounded scope trước code. Các file đã tạo bởi task trước trong Paths được tiếp tục sử dụng; không tự viết lại hệ thống lân cận.
 
 ## Risks / guardrails
@@ -85,4 +92,8 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Progress
 
-- 2026-10-16: planned; shipping code chưa sửa, tests triển khai chưa chạy.
+- 2026-10-16,49.5a technical verification:028 extends the durable operation CHECK and creates a separate immutable project illustration registry. Populated copy preserved17 jobs/43 checkpoints/13 projects/290 script lines; fault injection after table replacement fully rolled back schema/rows/tracking, FK/integrity and2 restarts verified. Owner DB was never opened for writing.
+- Illustration service verifies format/size/pixels, EXIF and alpha, stages/normalizes/hashes outside DB transactions, checks the live Solo project before metadata publication and cleans cancelled attempts. Explicit project deletion includes its explainer files; prior image IDs/versions remain immutable. API upload/serving is49.5b, not exposed yet.
+- Token index validates exact end-exclusive script coverage and in-segment gesture anchors. Timeline uses measured word events, handles split contractions and preserves actual pauses/lead/tail; rejects stale/missing/ambiguous/overlapping events instead of estimating seconds. Real prior Edge fixture resolved25/25 words over11.54s (mapping evidence only, not a Solo render).
+- Verification:34 new focused tests,143 related migration/jobs/projects/timing/image tests passed; `ruff check .` and `git diff --check` clean. Full `pytest tests/ -x -q`: **1809 passed**,1 existing Starlette warning,740.11s. No frontend JS/UI change in49.5a. Evidence:`data/tmp/evolve-20261016/task49_5a-full.log`, `drafts/explainer-migration-copy-1b30664a180b4a6fafd5ffacd9d597b4/verification.json`, `voice-media-dbc2312672/explainer-timing-verification.json` under the same run folder.
+-49.5 remains **in_progress**. Next49.5b: source/revision CAS, proposal/locks/history/approval APIs and worker integration. Approval remains unavailable until actual timing/front/assets/factual review and49.6 geometry validation succeed. Real Hoang front21 and V49 owner acceptance still pending; installed EXE/release unchanged.

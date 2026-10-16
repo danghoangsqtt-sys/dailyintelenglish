@@ -8,7 +8,7 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
-### Added (source, Phase49 tasks49.1–49.4)
+### Added (source, Phase49 tasks49.1–49.4 +49.5a)
 
 - Explicit Classic/Solo project mode and Why/How/List structure, one-presenter Step1 controls and cast readiness before front assets. Bounded photo/diagram/text-card plan schemas, per-file atomic027 migration/tracking with strict rollback, defaultclassic legacy preservation, and mode-aware media publication revision. Full pytest1728, focused70/browser10, real DB online-backup copy with2 restarts/integrity/FK/restore verification. Solo script/front/editor/render work continues in later tasks; installed EXE unchanged.
 
@@ -18,6 +18,8 @@ Versioning: [SemVer](https://semver.org/)
 - Character profile native/front tabs,29/21 approved progress, wide front-neutral prompt/reference card, single/batch import/review, Solo selector readiness, async context/late-response guards, pending-operation locks and same-profile voice-draft preservation. Source26 API/browser flows and full1751 pass; actual copied-Hoang UI inspected. No owner data/EXE/release changes.
 
 - Why/How/List English Solo script instructions flow through full generation, outline/sections, bounded repairs and single-line regeneration, retaining CEFR/word budgets and one presenter. Classic prompts compared unchanged. Focused238 and full1775 pass; two actual model drafts completed but remain editorial/factual/CEFR review inputs, not approved demo content.
+
+- Solo plan foundation: immutable project illustration versions with bounded image normalization/hash/path checks and cancelled-import cleanup; exact script-token coverage and actual word-event timing without guessed timestamps; atomic028 migration retains existing durable jobs/checkpoints and adds illustration metadata. Full1809 and143 related tests pass. Proposal/review APIs and layouts continue in49.5b onward; no new operation exposed yet.
 
 ### Added (source, Phase48 tasks48.1–48.5)
 

@@ -30,7 +30,7 @@
       "evidence": "data/tmp/evolve-20261016/validation.json",
       "implementation_tests": "not_run_planning_only"
     },
-    "note": "Phase48 +49.1–49.4 verified. Solo script full1775 in709.21s,238 focused,9 old-classic prompt comparisons unchanged. Real114/117-word drafts complete with1 repair, current provider policy; content/CEFR/facts NOT owner accepted.49.5 plan/migration/assets/timing preparation only so far (028 DB copy preserved17 jobs/43 checkpoints; timing13 +25 real tokens). Demo Hoang habits; front21 real art and V49 pending. No owner DB/EXE/release change.",
+    "note": "49.5a foundation verified: immutable project illustrations, exact token/real-audio timing and atomic028 job/asset migration. Full1809 passed in740.11s,143 related tests (34 new), Ruff/diff clean. Populated disposable copy preserved17 jobs/43 checkpoints and passed injected rollback/FK/integrity/2 restarts; actual Edge mapping25/25 tokens over11.54s.49.5 remains in_progress for proposal/locks/history/approval; owner DB/EXE/release unchanged.",
     "owner_feedback": {
       "listening": "four_examples_accepted",
       "voices": [
@@ -87,7 +87,18 @@
       "depends_on": [
         "48"
       ],
-      "plan": ".viepilot/phases/49-solo-explainer/PLAN.md"
+      "plan": ".viepilot/phases/49-solo-explainer/PLAN.md",
+      "note": "49.5a foundation verified: immutable project illustrations, exact token/real-audio timing and atomic028 job/asset migration. Full1809 passed in740.11s,143 related tests (34 new), Ruff/diff clean. Populated disposable copy preserved17 jobs/43 checkpoints and passed injected rollback/FK/integrity/2 restarts; actual Edge mapping25/25 tokens over11.54s.49.5 remains in_progress for proposal/locks/history/approval; owner DB/EXE/release unchanged.",
+      "active_subtask": "49.5b",
+      "last_verified_subtask": {
+        "id": "49.5a",
+        "full_pytest": 1809,
+        "seconds": 740.11,
+        "related_pytest": 143,
+        "new_pytest": 34,
+        "status": "technically_verified",
+        "evidence": "data/tmp/evolve-20261016/task49_5a-full.log"
+      }
     },
     "47": {
       "name": "Caption continuity (BUG-041)",

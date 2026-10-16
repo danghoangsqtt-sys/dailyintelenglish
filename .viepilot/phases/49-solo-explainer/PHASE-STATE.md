@@ -21,6 +21,8 @@
 | [49.9](tasks/task-49.9.md) | Shorts, thumbnail, series/copy và export cho Solo | planned |
 | [49.10](tasks/task-49.10.md) | Gate V49: demo thật, hồi quy, đóng gói và bàn giao | planned |
 
+**49.5a checkpoint (2026-10-16):** 49.5a foundation verified: immutable project illustrations, exact token/real-audio timing and atomic028 job/asset migration. Full1809 passed in740.11s,143 related tests (34 new), Ruff/diff clean. Populated disposable copy preserved17 jobs/43 checkpoints and passed injected rollback/FK/integrity/2 restarts; actual Edge mapping25/25 tokens over11.54s.49.5 remains in_progress for proposal/locks/history/approval; owner DB/EXE/release unchanged.
+
 ## Planning verification
 
 SPEC/PLAN đã được viết từ yêu cầu owner và code inventory. Validation tài liệu ghi ở master handoff; không dùng planning validation để đánh dấu implementation pass.

@@ -20,6 +20,8 @@
 - Acceptance: một pack thật21ảnh, video có ảnh/sơ đồ/thẻ chữ, bố cục hai aspect không che nội dung, lưu locks/revision đúng, full16:9/full9:16/Short và staged EXE verified, owner GateV49.
 - Status:**in_progress,4/10 verified;49.5 implementing**.49.4 full1775 passed; Why/How/List pipeline + real LLM structure/timing tested, draft factual/CEFR review still required. Owner demo:Hoang — Why do we build habits?; front21 imported/reviewed images required before V49. Isolated fixtures do not replace that visual gate.
 
+**49.5a checkpoint (2026-10-16):** 49.5a foundation verified: immutable project illustrations, exact token/real-audio timing and atomic028 job/asset migration. Full1809 passed in740.11s,143 related tests (34 new), Ruff/diff clean. Populated disposable copy preserved17 jobs/43 checkpoints and passed injected rollback/FK/integrity/2 restarts; actual Edge mapping25/25 tokens over11.54s.49.5 remains in_progress for proposal/locks/history/approval; owner DB/EXE/release unchanged.
+
 Phase47 owner review và B-25/B-26/B-27/B-28 vẫn pending, không bị thay thế bởi V48/V49. Mục tiêu1.5.0 chỉ là planned version, chưa đổi runtime hay tạo release.
 
 
