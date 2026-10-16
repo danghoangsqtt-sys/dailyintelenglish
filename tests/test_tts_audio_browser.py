@@ -215,7 +215,8 @@ async def test_step4_no_longer_offers_a_tts_engine_picker(browser_instance: Brow
     await page.goto(f"{live_server_url}/step4?project_id={PROJECT['id']}")
     await page.wait_for_selector("#workspace:not([hidden])")
 
-    assert await page.locator(".speaker-card select").count() == 0
+    assert await page.locator(".speaker-card select[data-field='tts_engine']").count() == 0
+    assert await page.locator(".speaker-card .voice-select").count() == len(PROJECT["speakers"])
     await page.close()
 
 

@@ -36,6 +36,7 @@
     previewedLineIds: new Set(),
     selectedLineId: null,
     speakerSave: {}, // speakerId -> { status, timer, queued, draft }
+    voicePickers: {}, voiceDirty: new Set(), voiceSaving: new Set(), dismissedDuplicateSignature: null,
   };
 
   const byId = (id) => document.getElementById(id);
@@ -93,7 +94,7 @@
   }
 
   function anySpeakerUnresolved() {
-    return Object.values(state.speakerSave).some((s) => s.status === "saving" || s.status === "dirty" || s.queued);
+    return Object.values(state.speakerSave).some((s) => s.status === "saving" || s.status === "dirty" || s.status === "failed" || s.queued);
   }
 
   function renderHeader() {
@@ -109,14 +110,134 @@
   }
 
   function applyLocks() {
-    byId("generate-btn").disabled = state.isGenerating || state.lines.length === 0;
+    const numericPending = anySpeakerUnresolved();
+    const voicePending = state.voiceDirty.size > 0 || state.voiceSaving.size > 0;
+    byId("generate-btn").disabled = state.isGenerating || numericPending || voicePending || state.lines.length === 0;
     byId("music-select").disabled = state.isGenerating;
-    document.querySelectorAll(".speaker-card select, .speaker-card input").forEach((el) => {
-      el.disabled = state.isGenerating;
+    document.querySelectorAll(".speaker-card input[type=range]").forEach(el => {
+      el.disabled = state.isGenerating || state.voiceSaving.size > 0;
     });
-    document.querySelectorAll(".preview-btn").forEach((button) => {
-      button.disabled = state.isGenerating || state.linesInFlight.has(button.dataset.lineId);
+    document.querySelectorAll(".apply-profile-voice").forEach(el => {
+      el.disabled = state.isGenerating || numericPending || voicePending;
     });
+    Object.values(state.voicePickers).forEach(picker => {
+      picker.setDisabled(state.isGenerating || numericPending || state.voiceSaving.size > 0);
+    });
+    document.querySelectorAll(".preview-btn").forEach(button => {
+      button.disabled = state.isGenerating || numericPending || voicePending || state.linesInFlight.has(button.dataset.lineId);
+    });
+  }
+
+  let speakerPatchQueue = Promise.resolve();
+  function persistSpeaker(speakerId, payload) {
+    speakerPatchQueue = speakerPatchQueue.catch(() => {}).then(async () => {
+      const updated = await Api.updateSpeaker(state.projectId, speakerId, payload);
+      state.project = updated;
+      const speaker = speakerById(speakerId);
+      state.voicePickers[speakerId]?.setRevision(speaker.voice_revision);
+      document.querySelectorAll(".speaker-actual-voice").forEach(el => {
+        if (el.dataset.speakerId === speakerId) el.textContent = "Project voice: " + voiceCaption(speaker);
+      });
+      invalidateSpeakerPlayback(speakerId);
+      renderDuplicateVoices();
+      return updated;
+    });
+    return speakerPatchQueue;
+  }
+
+  function voiceCaption(speaker) {
+    return speaker.voice_id || speaker.resolved_voice_id || "Accent/gender default";
+  }
+
+  function invalidateSpeakerPlayback(speakerId) {
+    const affected = new Set(state.lines.filter(line => line.speaker_id === speakerId).map(line => line.id));
+    affected.forEach(id => state.previewedLineIds.delete(id));
+    document.querySelectorAll(".line-card").forEach(card => {
+      if (!affected.has(card.dataset.lineId)) return;
+      const audio = card.querySelector("audio");
+      if (audio) { audio.pause(); audio.removeAttribute("src"); audio.load(); audio.hidden = true; }
+    });
+    state.audioJob = null;
+    byId("result-player").pause();
+    byId("result-player").removeAttribute("src");
+    byId("result-card").hidden = true;
+    renderTimeline(); updateInspectorPreviewState();
+  }
+
+  function renderDuplicateVoices() {
+    let box = byId("voice-duplicate-warning");
+    if (!box) {
+      box = document.createElement("div"); box.id = "voice-duplicate-warning"; box.className = "voice-duplicate-warning";
+      byId("speaker-grid").before(box);
+    }
+    const ids = state.project.speakers.map(speaker => speaker.voice_id || speaker.resolved_voice_id).filter(Boolean);
+    const duplicates = [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
+    const signature = ids.join("|");
+    box.hidden = duplicates.length === 0 || state.dismissedDuplicateSignature === signature;
+    box.replaceChildren();
+    if (box.hidden) return;
+    const text = document.createElement("p");
+    text.textContent = "Some speakers share a voice: " + duplicates.join(", ") + ". You can keep this or choose another voice.";
+    const dismiss = document.createElement("button");
+    dismiss.type = "button"; dismiss.className = "btn btn-ghost btn-sm"; dismiss.textContent = "Keep shared voices";
+    dismiss.addEventListener("click", () => { state.dismissedDuplicateSignature = signature; box.hidden = true; });
+    box.append(text, dismiss);
+  }
+
+  function mountSpeakerVoice(card, speaker) {
+    const actual = document.createElement("p");
+    actual.className = "speaker-actual-voice"; actual.dataset.speakerId = speaker.id;
+    actual.textContent = "Project voice: " + voiceCaption(speaker);
+    const details = document.createElement("details"); details.className = "voice-choice";
+    const summary = document.createElement("summary"); summary.textContent = "Choose / listen to English voices";
+    const hint = document.createElement("p"); hint.className = "library-hint";
+    hint.textContent = "Save voice explicitly. After a change, Generate All rebuilds this speaker and the episode mix; previous exported files are kept.";
+    const host = document.createElement("div"); details.append(summary, hint, host); card.append(actual, details);
+    const id = speaker.id;
+    state.voicePickers[id] = VoicePicker.mount(host, {
+      voiceId: speaker.voice_id || speaker.resolved_voice_id, revision: speaker.voice_revision,
+      getParameters: () => {
+        const current = speakerById(id);
+        return {speed: current.speed, pitch: current.pitch, volume: current.volume};
+      },
+      onDirtyChange: dirty => { dirty ? state.voiceDirty.add(id) : state.voiceDirty.delete(id); applyLocks(); },
+      savedMessage: "Project voice saved. Generate All to rebuild the affected speech and audio/video.",
+      onSave: async value => {
+        state.voiceSaving.add(id); applyLocks();
+        try {
+          const updated = await persistSpeaker(id, {voice_id: value.voice_id, expected_voice_revision: value.expected_voice_revision});
+          return {revision: updated.speakers.find(item => item.id === id).voice_revision};
+        } finally { state.voiceSaving.delete(id); applyLocks(); }
+      },
+      onReload: async () => {
+        await speakerPatchQueue.catch(() => {});
+        state.project = await Api.getProject(state.projectId);
+        const current = speakerById(id);
+        card.querySelectorAll("input[type=range]").forEach(input => {
+          input.value = current[input.dataset.field];
+          input.nextElementSibling.textContent = Number(input.value).toFixed(2);
+        });
+        actual.textContent = "Project voice: " + voiceCaption(current);
+        invalidateSpeakerPlayback(id); renderDuplicateVoices();
+        return {voiceId: current.voice_id || current.resolved_voice_id, revision: current.voice_revision};
+      },
+    });
+    if (speaker.character_id) {
+      const apply = document.createElement("button");
+      apply.type = "button"; apply.className = "btn btn-ghost btn-sm apply-profile-voice";
+      apply.textContent = "Apply profile voice";
+      apply.addEventListener("click", async () => {
+        state.voiceSaving.add(id); applyLocks(); clearError();
+        try {
+          const updated = await persistSpeaker(id, {apply_profile_voice: true, expected_voice_revision: speakerById(id).voice_revision});
+          const current = updated.speakers.find(item => item.id === id);
+          state.voicePickers[id].setSaved({voiceId: current.voice_id || current.resolved_voice_id, revision: current.voice_revision,
+            message: "Profile voice applied. Project speed, pitch and volume are kept. Generate All to rebuild audio/video."});
+        } catch (error) { showError(error.message || "Profile voice could not be applied. Reload and try again."); }
+        finally { state.voiceSaving.delete(id); applyLocks(); }
+      });
+      details.append(apply);
+    }
   }
 
   function setSpeakerStatus(speakerId, status, message = null) {
@@ -131,10 +252,13 @@
       failed: "Save failed — will retry on next change",
     };
     el.textContent = message || labels[status];
+    applyLocks();
   }
 
   function renderSpeakers() {
     const grid = byId("speaker-grid");
+    Object.values(state.voicePickers).forEach(picker => picker.destroy());
+    state.voicePickers = {}; state.voiceDirty.clear();
     grid.replaceChildren();
     state.project.speakers.forEach((speaker) => {
       if (!state.speakerSave[speaker.id]) {
@@ -164,7 +288,9 @@
       card.appendChild(status);
 
       grid.appendChild(card);
+      mountSpeakerVoice(card, speaker);
     });
+    renderDuplicateVoices();
   }
 
   function buildSlider(speaker, field, label, min, max, step) {
@@ -225,8 +351,7 @@
     entry.queued = false;
     setSpeakerStatus(speakerId, "saving");
     try {
-      const updated = await Api.updateSpeaker(state.projectId, speakerId, payload);
-      state.project = updated;
+      await persistSpeaker(speakerId, payload);
       if (entry.queued) {
         setSpeakerStatus(speakerId, "dirty");
         await saveSpeaker(speakerId);
@@ -235,6 +360,7 @@
       }
     } catch (error) {
       console.error("Failed to save speaker settings:", error);
+      entry.draft = {...payload, ...(entry.draft || {})};
       entry.queued = false;
       setSpeakerStatus(speakerId, "failed");
       showError("We couldn't save that speaker's voice settings. Adjust it again to retry.");
@@ -571,7 +697,7 @@
   }
 
   async function generateAll() {
-    if (state.isGenerating || state.lines.length === 0) return;
+    if (state.isGenerating || state.lines.length === 0 || anySpeakerUnresolved() || state.voiceDirty.size > 0 || state.voiceSaving.size > 0) return;
     state.isGenerating = true;
     clearError();
     applyLocks();
@@ -596,7 +722,7 @@
         state.linesInFlight.add(activeLineId);
         renderTimeline();
         updateInspectorPreviewState();
-        await Api.previewTtsLine(state.projectId, activeLineId);
+        await Api.previewTtsLine(state.projectId, activeLineId, {reuse_cached: true});
         state.linesInFlight.delete(activeLineId);
         state.previewedLineIds.add(activeLineId);
         activeLineId = null;

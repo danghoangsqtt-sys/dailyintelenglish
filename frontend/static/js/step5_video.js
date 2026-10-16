@@ -912,8 +912,6 @@
       if (error.status !== 404) console.error("Failed to load existing video job:", error);
     }
 
-    byId("loading-panel").hidden = true;
-    byId("workspace").hidden = false;
     await loadProjectVisuals();
     renderTimeline();
     renderInspector();
@@ -922,6 +920,9 @@
     await loadStillScenes();
     renderRenderOptions();
     applyLocks();
+    // Expose the workspace only after async options and renderer-dependent controls are ready.
+    byId("loading-panel").hidden = true;
+    byId("workspace").hidden = false;
   }
 
   document.addEventListener("DOMContentLoaded", () => {

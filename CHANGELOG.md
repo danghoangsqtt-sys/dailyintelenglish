@@ -8,11 +8,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
-### Added (source, Phase48 tasks48.1–48.3)
+### Added (source, Phase48 tasks48.1–48.4)
 
 - English Edge voice catalog with last-good cache/freshness and independent, bounded voice auditions. Preview media never writes project audio/cache. Catalog verified with39 focused tests. Owner accepted Brian/Christopher/Roger/Ryan and requests about20 choices; actual English catalog47. Final V48 technical/UI gate pending.
 - Pinned profile/project voice IDs, guarded revisions and explicit apply-profile action preserve project speed/pitch/volume; cast/series/Step1 round-trip keeps each selection. Focused45 and full pytest1675 pass. Current EXE/release unchanged.
-- Voice-aware TTS fingerprint sidecars and targeted invalidation; unchanged speakers reuse their cache. TTS/mix/render/Shorts write unique attempt paths and reject stale completion, retaining previous files. Soundtrack uses the selected voice stem; a fresh horizontal render cannot promote a stale vertical cut. Full pytest1694, renderer104 + TypeScript pass. Picker UI work continues.
+- Voice-aware TTS fingerprint sidecars and targeted invalidation; unchanged speakers reuse their cache. TTS/mix/render/Shorts write unique attempt paths and reject stale completion, retaining previous files. Soundtrack uses the selected voice stem; a fresh horizontal render cannot promote a stale vertical cut. Full pytest1694, renderer104 + TypeScript pass.
+- Shared voice picker in Character Library and Audio Studio: complete live English catalog (47 observed), locale/gender/search, isolated auditions, explicit save/reload/profile apply, duplicate notices and async/dirty-state guards. Full pytest1704,30 browser flows and a real47-entry UI smoke pass. Final phase documentation/QA continues; installed EXE unchanged.
 
 ### Planned — target 1.5.0 (2026-10-16, not implemented)
 
@@ -21,6 +22,7 @@ Versioning: [SemVer](https://semver.org/)
 - Canonical requirements and execution order: [.viepilot/SPEC.md](.viepilot/SPEC.md), [.viepilot/PLAN.md](.viepilot/PLAN.md). Current runtime/release remains1.4.0-rc.1; no source implementation, DB migration, EXE replacement or release in this planning update. Phase47 review and B-25/B-26/B-27/B-28 remain pending.
 
 ### Fixed
+- Video Studio now finishes async visual options and renderer-dependent locks before showing its workspace, avoiding briefly enabled controls or a missing readiness explanation during startup. A controlled delayed-load browser test proves the old failure and corrected behavior.
 - BUG-041: grammatical, balanced caption pages in both 16:9 and 9:16; fitting learning idioms/multiword vocabulary stay together instead of cuts such as `in the | kitchen` and `piece | of cake`. Pagination is memoized per line/layout; original tokens, word timings, audio and safe-area limits are retained. Verified with 104 renderer tests, TypeScript, all 22 Episode 3 lines in both layouts, and production boundary previews. Source patch only; published v1.4.0-rc.1 artifacts remain unchanged.
 
 ## [1.4.0-rc.1] - 2026-10-15

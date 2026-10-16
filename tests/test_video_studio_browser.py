@@ -5,11 +5,12 @@ intercepts fetches before they reach the real server, so this exercises only the
 frontend JS state machine — no real ffmpeg call needed.
 """
 
+import asyncio
 import json
 from typing import AsyncGenerator
 
 import pytest
-from playwright.async_api import Browser, async_playwright
+from playwright.async_api import Browser, async_playwright, expect
 
 from tests.conftest import live_server
 
@@ -212,6 +213,32 @@ async def test_a_missing_renderer_disables_generate_and_says_why(browser_instanc
     assert await status.is_visible() and "Node.js not found" in await status.text_content()
     assert await page.locator("#generate-btn").is_disabled()
     await page.close()
+
+
+@pytest.mark.asyncio
+async def test_workspace_is_not_ready_until_async_visuals_and_renderer_controls_are_initialized(browser_instance, live_server_url):
+    page = await browser_instance.new_page()
+    await _default_routes(page, health={"remotion_configured": False, "renderer_problem": "Node.js not found"})
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def delayed_visuals(route):
+        started.set()
+        await release.wait()
+        await route.fulfill(status=200, content_type="application/json", body=_envelope({"cast": [], "scenes": []}))
+
+    await page.route(f"**/api/projects/{PROJECT['id']}/visuals", delayed_visuals)
+    try:
+        await page.goto(f"{live_server_url}/step5?project_id={PROJECT['id']}")
+        await asyncio.wait_for(started.wait(), timeout=3)
+        assert await page.locator("#workspace").is_hidden()
+        assert await page.locator("#loading-panel").is_visible()
+        release.set()
+        await page.wait_for_selector("#workspace:not([hidden])")
+        await expect(page.locator("#renderer-status")).to_contain_text("Node.js not found")
+        await expect(page.locator("#generate-btn")).to_be_disabled()
+    finally:
+        release.set()
+        await page.close()
 
 
 @pytest.mark.asyncio

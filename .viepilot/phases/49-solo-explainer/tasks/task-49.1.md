@@ -24,6 +24,10 @@ Mode Solo, schema nền và migration an toàn. Hoàn thành contract tương �
 - backend/schemas/explainer.py
 - tests/test_explainer_migration.py
 - tests/test_explainer_project.py
+- tests/test_explainer_config_browser.py
+- backend/library/project_visuals_service.py
+- frontend/static/js/character_selector.js
+- backend/core/voice.py
 - .viepilot/phases/49-solo-explainer/PHASE-STATE.md
 - .viepilot/TRACKER.md
 - .viepilot/ROADMAP.md
@@ -41,6 +45,15 @@ Mode Solo, schema nền và migration an toàn. Hoàn thành contract tương �
 6. Backup/restore và chạy trên DB mới + bản sao cũ trước khi áp thật; không chạy migration vào instance đang render.
 
 **File mới dự kiến:** `backend/db/migrations/027_solo_explainer.sql`, `backend/schemas/explainer.py`, `tests/test_explainer_migration.py`, `tests/test_explainer_project.py`.
+
+### Execution refinement (planning while Phase48 gate runs; no shipping Solo edits yet)
+
+- Inventory confirms026 is latest.027 adds explicit mode/structure and current/history plan tables with FK/checks. Migration runner must execute complete SQL statements within a per-file transaction, incorporating schema_migrations insertion in the same commit; avoid executescript's implicit commit. Normalize legacy018's BEGIN/COMMIT wrappers under runner ownership. Historical pre027 duplicate ADD COLUMN can be skipped statement-by-statement only after verifying the named column exists, so remaining statements still run;027+ is strict. Test middle-file failure rollback, restart twice and an old partially applied migration.
+- `schemas/explainer.py` defines strict bounded photo/diagram/text-card payloads, token anchors, stable segment IDs, normalized rectangles/layout, locks, presenter asset/version references and plan status/revision. Code/HTML payloads and unexpected keys are rejected; source/timing validation requiring DB context belongs to49.5.
+- Project service persists mode/structure in INSERT/get/config snapshots and validates merged updates, rejects two-speaker Solo or mode changes once a script exists. Mode/structure changes invalidate relevant in-flight snapshots. No migration runs against owner DB in this task.
+- `core/voice.py` includes presentation mode/structure in the existing media-input revision so a configuration change while a job runs cannot publish work for an old mode. Mode/structure edits after a script exists are rejected under the same Step1 read-only policy, rather than silently converting an existing episode.
+- Step1 exposes mode/Why/How/List, forces one speaker for Solo and preserves classic controls. New Solo profiles may be selected/cast once basic identity/voice are configured, before front assets exist; actual front readiness is enforced before render in later tasks. Add an optional Solo eligibility parameter to CharacterSelector and scoped set_cast validation; classic video readiness unchanged.
+- New isolated config browser tests cover mode toggle, count lock, save/reload and classic defaults. Migration tests include a SQLite online-backup copy of the current DB using read-only source access; compare legacy rows/FKs and schema restart without writing owner source.
 
 Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu phát hiện cần file khác, ghi lý do và mở rộng bounded scope trước code. Các file đã tạo bởi task trước trong Paths được tiếp tục sử dụng; không tự viết lại hệ thống lân cận.
 

@@ -6,6 +6,7 @@
   <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
   <title>TTS Audio Studio — Daily Beyond English</title>
   <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/voice_picker.css" />
   <style>
     .loading-panel { padding: 48px 24px; text-align: center; color: var(--muted); }
 
@@ -116,8 +117,8 @@
             <section class="section">
               <h2 class="section-title">1. Adjust speaker voices</h2>
               <p class="section-hint">
-                Changes save automatically. Voices are synthesized with Edge TTS, matched to
-                each speaker's accent and gender.
+                Speed, pitch and volume save automatically. Choose and listen to English voices below, then press Save voice.
+                Each speaker keeps the voice saved for this video.
               </p>
               <div class="speaker-grid" id="speaker-grid"></div>
             </section>
@@ -180,6 +181,7 @@
   <script src="/static/js/keyboard_shortcuts.js"></script>
   <script src="/static/js/generation_status.js"></script>
   <script src="/static/js/shell.js"></script>
+  <script src="/static/js/voice_picker.js"></script>
   <script src="/static/js/step4_tts.js"></script>
 </body>
 </html>

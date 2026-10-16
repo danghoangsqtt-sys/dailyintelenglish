@@ -2,16 +2,16 @@
 
 ## Kế hoạch mới — 2026-10-16
 
-**Execution:** tasks48.1–48.3 implemented_verified: catalog/isolated auditions, pinned profile/project IDs and guarded voice-aware TTS/media publication. Final full **1694 passed** (920.34s), focused34 after a stale-vertical review fix, renderer104/14files + TypeScript, Ruff clean. Initial1693 full passed before that last correction; a new regression confirms new horizontal rendering does not republish an old vertical cut. Task48.4 in_progress; isolated UI draft checks recorded separately in its card. Owner accepted Brian/Christopher/Roger/Ryan and wants about20 choices; live catalog47. Current EXE/release unchanged.
+**Execution:** tasks48.1–48.4 implemented_verified. Shared picker in Character Library/Audio Studio includes full catalog, search/filter, isolated audition and guarded save/reload/apply. Full **1704 passed** (916.89s),30 voice/browser flows plus a deterministic Step5 startup-readiness regression, all6 JS syntax/Ruff/diff clean. Initial full run exposed premature workspace visibility; fixed after red-before/green-after proof. Live unmocked UI showed47 actual voices and profile save/reload while project/media stayed pinned. Real Brian/Roger audio and both renders decoded; embedded speech matched source above0.98. Task48.5 final documentation/QA in_progress. Owner accepted four listening examples and requests about20 choices. Current EXE/release unchanged.
 
 [SPEC](SPEC.md), [PLAN](PLAN.md) control the approved feature execution.
 
 | Phase | Phạm vi | Tasks done / total | Status | Gate mới |
 |---|---|---|---|---|
-| [48](phases/48-character-voices/PLAN.md) | Catalog/audition, persistence, cache/freshness and picker | 3 / 5 technical | in_progress | V48 listening examples accepted; technical/UI pending |
+| [48](phases/48-character-voices/PLAN.md) | Full catalog, auditions, pinned persistence, cache/freshness, picker | 4 / 5 technical | in_progress | V48 listening accepted; final QA/docs pending |
 | [49](phases/49-solo-explainer/PLAN.md) | Front21, Solo, layout/Player/render/integrations | 0 / 10 | planned | V49 not_started |
 
-**Next task:48.4.** Owner authorized `vp-auto --from 48`. Target1.5.0 planned; published trial1.4.0-rc.1, stable1.3.0. Phase47 and B-25/B-26/B-27/B-28 remain pending. No real DB migration, EXE replacement or release.
+**Next task:48.5.** Owner authorized `vp-auto --from 48`. Target1.5.0 planned; published trial1.4.0-rc.1, stable1.3.0. Phase47 and B-25/B-26/B-27/B-28 remain pending. No real DB migration, EXE replacement or release.
 
 **Current implementation (2026-10-15): Phase 47 / BUG-041 implemented and verified; owner visual review pending.** Owner requested vp-evolve + vp-auto. Task 47.1 fixes grammatical caption pages, learning phrase preservation and balanced tails with memoized segmentation. All **104 renderer tests** and TypeScript pass; **22 real Episode 3 lines × 2 layouts**, **8 PNGs / 4 production preview clips** verified. Audio hashes unchanged; DB read-only, zero changes; existing full MP4/SRT retained. Report: `docs/operations/caption-continuity-20261015.md`. Published trial and older owner gates are retained.
 

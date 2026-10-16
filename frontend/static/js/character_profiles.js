@@ -7,7 +7,8 @@
  */
 (() => {
   const $ = (id) => document.getElementById(id);
-  const state = { profiles: [], selectedId: null, creating: false, slots: null, filter: "active", query: "" };
+  const state = { profiles: [], selectedId: null, creating: false, slots: null, filter: "active", query: "",
+    voicePicker: null, voiceProfileId: null, openToken: 0 };
   const GROUPS = [
     ["base", "Base picture"],
     ["expression", "Expressions"],
@@ -76,7 +77,11 @@
 
   // ------------------------------------------------------------------ Quick create (D79)
 
-  function showCreate() {
+  async function showCreate() {
+    if (!(await canLeaveVoice(null))) return;
+    await flushDetails();
+    state.openToken += 1;
+    destroyVoicePicker();
     state.creating = true;
     state.selectedId = null;
     renderList();
@@ -102,22 +107,82 @@
 
   // ------------------------------------------------------------------ profile detail
 
+  function destroyVoicePicker() {
+    state.voicePicker?.destroy();
+    state.voicePicker = null;
+    state.voiceProfileId = null;
+  }
+
+  async function canLeaveVoice(nextId) {
+    if (state.voiceProfileId !== nextId && state.voicePicker?.isSaving()) {
+      notice("Wait until the voice finishes saving before switching characters.");
+      return false;
+    }
+    if (!state.voicePicker?.hasUnsaved() || state.voiceProfileId === nextId) return true;
+    return ConfirmDialog.ask("Discard the unsaved voice selection?", {confirmLabel: "Discard"});
+  }
+
+  function voiceValues(profile) {
+    return {voiceId: profile.voice.voice_id, revision: profile.voice_revision, parameters: {
+      speed: profile.voice.speed, pitch: profile.voice.pitch, volume: profile.voice.volume,
+    }};
+  }
+
+  function updateVoiceSummary(profile) {
+    $("profile-summary").textContent =
+      `${profile.gender} · ${profile.accent} · profile voice ${profile.voice.voice_id} · stands on the ${profile.gender === "male" ? "left" : "right"}, faces ${profile.sprite_facing}`;
+    const index = state.profiles.findIndex(item => item.id === profile.id);
+    if (index >= 0) state.profiles[index] = {...state.profiles[index], ...profile};
+    renderList();
+  }
+
+  function mountVoicePicker(profile) {
+    if (state.voiceProfileId === profile.id && state.voicePicker) return;
+    destroyVoicePicker();
+    const id = profile.id;
+    state.voiceProfileId = id;
+    state.voicePicker = VoicePicker.mount($("profile-voice-picker"), {
+      ...voiceValues(profile), editParameters: true,
+      savedMessage: "Profile voice saved. Existing videos keep their saved voice; use Apply profile voice in Audio Studio to update one.",
+      onDirtyChange: dirty => {
+        ["profile-duplicate", "profile-archive", "profile-delete"].forEach(key => { $(key).disabled = dirty; });
+      },
+      onSave: async value => {
+        const updated = await Api.patchProfile(id, {
+          default_voice_id: value.voice_id, default_speed: value.speed, default_pitch: value.pitch,
+          default_volume: value.volume, expected_voice_revision: value.expected_voice_revision,
+        });
+        if (state.selectedId === id) updateVoiceSummary(updated);
+        return {revision: updated.voice_revision};
+      },
+      onReload: async () => {
+        const updated = await Api.getProfile(id);
+        if (state.selectedId === id) updateVoiceSummary(updated);
+        return voiceValues(updated);
+      },
+    });
+  }
+
   async function openProfile(id) {
+    if (!(await canLeaveVoice(id))) return;
+    await flushDetails();
+    const token = ++state.openToken;
     state.creating = false;
     state.selectedId = id;
     renderList();
     $("profile-create").hidden = true;
     $("profile-detail").hidden = false;
     const [profile, slots] = await Promise.all([Api.getProfile(id), Api.listProfileSlots(id)]);
+    if (token !== state.openToken || state.selectedId !== id) return;
     state.slots = slots;
     renderDetail(profile);
+    mountVoicePicker(profile);
     renderSlots();
   }
 
   function renderDetail(profile) {
     $("profile-name").textContent = profile.name;
-    $("profile-summary").textContent =
-      `${profile.gender} · ${profile.accent} · voice ${profile.voice.voice_id} · stands on the ${profile.gender === "male" ? "left" : "right"}, faces ${profile.sprite_facing}`;
+    updateVoiceSummary(profile);
     $("profile-archive").textContent = profile.archived ? "Restore" : "Archive";
     $("profile-delete").hidden = profile.is_seed;
     const readiness = profile.readiness;
@@ -262,23 +327,38 @@
   // ------------------------------------------------------------------ autosave of the optional details
 
   let saveTimer = null;
+  let pendingDetails = null;
+  let detailSavePromise = Promise.resolve();
   function scheduleSave() {
+    const form = $("profile-details-form");
+    pendingDetails = {id: state.selectedId, patch: {
+      intro: form.elements.intro.value,
+      personality: form.elements.personality.value.split(",").map(item => item.trim()).filter(Boolean),
+      speaking_style: form.elements.speaking_style.value,
+    }};
     $("profile-save-state").textContent = "Saving…";
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(async () => {
-      const form = $("profile-details-form");
-      const patch = {
-        intro: form.elements.intro.value,
-        personality: form.elements.personality.value.split(",").map((item) => item.trim()).filter(Boolean),
-        speaking_style: form.elements.speaking_style.value,
-      };
-      try {
-        await Api.patchProfile(state.selectedId, patch);
-        $("profile-save-state").textContent = "Saved";
-      } catch (error) {
-        $("profile-save-state").textContent = `Not saved: ${error.message || "try again"}`;
-      }
-    }, 600);
+    saveTimer = setTimeout(() => flushDetails().catch(error => notice(error.message, true)), 600);
+  }
+
+  async function flushDetails() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    const pending = pendingDetails;
+    pendingDetails = null;
+    if (pending) {
+      detailSavePromise = detailSavePromise.catch(() => {}).then(async () => {
+        try {
+          await Api.patchProfile(pending.id, pending.patch);
+          if (state.selectedId === pending.id) $("profile-save-state").textContent = "Saved";
+        } catch (error) {
+          pendingDetails = pendingDetails || pending;
+          if (state.selectedId === pending.id) $("profile-save-state").textContent = "Not saved — retry editing";
+          throw error;
+        }
+      });
+    }
+    return detailSavePromise;
   }
 
   // ------------------------------------------------------------------ actions
@@ -303,7 +383,7 @@
         event.target.replaceWith(empty);
       }
     }, true);
-    $("profile-new").addEventListener("click", showCreate);
+    $("profile-new").addEventListener("click", () => showCreate().catch(error => notice(error.message, true)));
     $("profile-create-form").addEventListener("submit", submitCreate);
     $("profile-create-cancel").addEventListener("click", () => {
       $("profile-create").hidden = true;
@@ -335,6 +415,8 @@
       act(async () => {
         await Api.deleteProfile(state.selectedId);
         state.selectedId = null;
+        state.openToken += 1;
+        destroyVoicePicker();
         $("profile-detail").hidden = true;
       }, "Deleted.");
     });

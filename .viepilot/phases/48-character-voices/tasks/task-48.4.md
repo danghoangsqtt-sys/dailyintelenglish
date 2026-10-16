@@ -1,10 +1,10 @@
 # Task 48.4 — Voice picker trong hồ sơ nhân vật và Audio Studio
 
-- **Status:** in_progress · 2026-10-16, following task48.3 technical checkpoint.
+- **Status:** implemented_verified · 2026-10-16; source UI complete, final phase QA/documentation separate.
 - **Dependencies:** 48.1, 48.2, 48.3
 - **Requirements:** R10, R13, R14, R15.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
-- **Scope:** card này là kế hoạch, chưa có kết quả triển khai hay acceptance.
+- **Scope:** shared picker implemented and technically verified in profile/Audio Studio.
 
 ## Objective
 
@@ -24,6 +24,8 @@ Voice picker trong hồ sơ nhân vật và Audio Studio. Hoàn thành contract 
 - tests/test_tts_audio_browser.py
 - frontend/static/js/voice_picker.js
 - tests/test_voice_picker_browser.py
+- frontend/static/js/step5_video.js
+- tests/test_video_studio_browser.py
 - .viepilot/phases/48-character-voices/PHASE-STATE.md
 - .viepilot/TRACKER.md
 - .viepilot/ROADMAP.md
@@ -50,6 +52,7 @@ Owner feedback2026-10-16: all four Brian/Christopher/Roger/Ryan comparisons are 
 - Step4 keeps its existing numeric sliders. Serialize their autosaves, update voice revision after each save, disable voice selection while parameter saves are pending, and disable generation while any voice edit is unsaved. Explicit profile apply preserves project numeric settings. Duplicate-voice notice is dismissible.
 - Generate All requests reuse_cached for unchanged lines; single-line preview still forces generation. Clear affected UI playback and mixed-result readiness after a persisted voice/parameter change. Show the actual project voice above the picker, independent from profile defaults.
 - Browser verification covers at least20 selectable entries, locale/gender/search, same-text preview with late responses, save/reload, error409 draft preservation, profile/project isolation and explicit profile apply. Use actual provider metadata for the real smoke; synthetic UI catalogs are labeled fixtures in tests.
+- Full gate stopped at1553 pass on a second Step5 startup-readiness race: workspace is shown before async visuals/scenes finish and renderer status/Generate locks are applied. Extend bounded scope to move only workspace/loading visibility to the end of init in `step5_video.js`. Add a deterministic delayed-visuals browser regression proving workspace remains loading until controls are ready. This addresses the actual premature-ready UI state underlying the earlier isolated assertion race; do not change rendering behavior. Run both Video browser modules and voice/browser regressions, JS syntax and full suite again before checkpoint.
 
 Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu phát hiện cần file khác, ghi lý do và mở rộng bounded scope trước code. Các file đã tạo bởi task trước trong Paths được tiếp tục sử dụng; không tự viết lại hệ thống lân cận.
 
@@ -76,4 +79,6 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Progress
 
-- 2026-10-16: planned; shipping code chưa sửa, tests triển khai chưa chạy.
+- Combined final browser verification: **45 passed** across Video Studio, visual modes, picker, profiles, Audio Studio and TTS shell; includes the delayed-init regression. Full suite finished **1704 passed in916.89s**; Ruff, all six JS syntax checks and diff check clean.
+- Shared picker and profile/Step4 integration implemented: complete catalog/count/search/filters, same-text audition, draft/reload/save/error states, request tokens and playback cancellation; pinned profile/project display, explicit profile apply and dismissible duplicate notice. Generate All uses validated cache reuse and clears affected UI playback after changes. Existing numeric saves are serialized with voice saves; optional profile details save to captured profile IDs.
+- Isolated browser verification **30 passed**: nine new voice flows plus existing character, Audio Studio and TTS shell regressions. Includes20-entry fixture (explicitly synthetic UI metadata, not a provider availability claim), filter/search/save/reload, late preview/profile responses,409/offline refresh, profile/project isolation, explicit apply, numeric-save race and dirty/pending-save navigation guards. Screenshots reviewed in both pages; refined control sizing/gaps. Candidate applied verbatim after task48.3 durable checkpoint. Ruff, all five changed/new JS syntax checks and diff checks clean. Full workspace **1704 passed** in **916.89s**, one existing Starlette warning. Initial gate1553 pass/1 failure exposed Step5's premature-ready state; a delayed-visuals test failed deterministically on the old source, then passed after moving workspace visibility after init controls. Full final evidence: `data/tmp/evolve-20261016/task48.4-pytest-r2.log`. All six JS syntax checks clean. Live unmocked sandbox UI also showed47 actual choices, saved/reloaded Christopher and preserved project Brian/Roger plus complete media, with zero JS errors. Real media exploratory run:11.54s speech,28.778667s outputs,1280×720 and1080×1920, full decode successful; embedded-speech correlations0.985/0.996. Actual screenshots and reports under `data/tmp/evolve-20261016/voice-media-dbc2312672/`. No real owner data or EXE/release changed; final phase QA/docs remains task48.5.

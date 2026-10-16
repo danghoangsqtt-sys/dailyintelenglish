@@ -114,10 +114,12 @@ const Api = (() => {
         body: JSON.stringify(patch),
       }),
     listTtsEngines: () => request("/api/tts/engines"),
-    previewTtsLine: (projectId, lineId) =>
+    listTtsVoices: (refresh = false) => request(`/api/tts/voices${refresh ? "?refresh=true" : ""}`),
+    previewTtsVoice: (payload, options = {}) => request("/api/tts/voices/preview", {...json("POST", payload), ...options}),
+    previewTtsLine: (projectId, lineId, options = {}) =>
       request(`/api/projects/${projectId}/tts/preview`, {
         method: "POST",
-        body: JSON.stringify({ line_id: lineId }),
+        body: JSON.stringify({ line_id: lineId, ...options }),
       }),
     ttsCacheUrl: (projectId, lineId) => `/api/projects/${projectId}/tts/cache/${lineId}.mp3`,
     generateAudio: (projectId, backgroundMusic) =>

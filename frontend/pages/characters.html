@@ -6,6 +6,7 @@
   <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
   <title>Character Library — Daily Beyond English</title>
   <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/voice_picker.css" />
   <style>
     .library-main { width: min(1160px, calc(100% - 32px)); margin: 32px auto 80px; }
     .library-hint { color: var(--muted); }
@@ -191,6 +192,11 @@
               </div>
             </div>
             <div id="profile-readiness" class="profile-readiness"></div>
+            <details class="voice-choice" open>
+              <summary>Character voice</summary>
+              <p class="library-hint">Default for future casting. Existing videos keep their saved voice.</p>
+              <div id="profile-voice-picker"></div>
+            </details>
             <details class="profile-details">
               <summary>Details (optional) <span id="profile-save-state" class="library-hint" aria-live="polite"></span></summary>
               <form id="profile-details-form" class="profile-form">
@@ -254,6 +260,7 @@
   <script src="/static/js/api.js"></script>
   <script src="/static/js/generation_status.js"></script>
   <script src="/static/js/characters.js"></script>
+  <script src="/static/js/voice_picker.js"></script>
   <script src="/static/js/character_profiles.js"></script>
 </body>
 </html>

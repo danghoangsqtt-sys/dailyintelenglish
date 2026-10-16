@@ -129,7 +129,7 @@ const CharacterSelector = (() => {
       $("preview").innerHTML = `
         ${image ? `<img src="${image}" alt="${escapeHtml(profile.name)}" />` : '<span class="cs-empty" aria-hidden="true">?</span>'}
         <h3>${escapeHtml(profile.name)}</h3>
-        <p>${escapeHtml(profile.gender)} · ${escapeHtml(profile.accent)} accent · voice ${escapeHtml(profile.voice?.voice_id || "")}
+        <p>${escapeHtml(profile.gender)} · ${escapeHtml(profile.accent)} accent · profile voice ${escapeHtml(profile.voice?.voice_id || "accent/gender default")}
           · stands on the ${profile.gender === "male" ? "left" : "right"}</p>
         ${profile.intro ? `<p>${escapeHtml(profile.intro)}</p>` : ""}
         ${(profile.personality || []).length ? `<p class="cs-note">Personality: ${escapeHtml(profile.personality.join(", "))}</p>` : ""}

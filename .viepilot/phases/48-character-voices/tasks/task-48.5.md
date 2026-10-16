@@ -1,8 +1,8 @@
 # Task 48.5 — Gate V48: giọng thật, hồi quy và hướng dẫn
 
-- **Status:** planned · 2026-10-16.
+- **Status:** in_progress · 2026-10-16, after picker technical checkpoint.
 - **Dependencies:** 48.4
-- **Requirements:** R10, R12, R13.
+- **Requirements:** R10, R12, R13, R14, R15.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
 - **Scope:** card này là kế hoạch, chưa có kết quả triển khai hay acceptance.
 
