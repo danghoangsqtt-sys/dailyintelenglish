@@ -1,5 +1,28 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Planned extension — 2026-10-16, target 1.5.0
+
+**Add Feature; chưa triển khai.** [SPEC tổng](SPEC.md), [PLAN tổng](PLAN.md), [brainstorm](../docs/brainstorm/session-2026-10-16.md). 15 task mới planned,0 done. Bản phát hành1.4.0-rc.1 giữ nguyên.
+
+### Phase 48 — Chọn giọng riêng cho nhân vật
+
+- Goal: catalog English voice, nghe thử độc lập, lưu/áp giọng từng profile/speaker và cache đúng voice.
+- Tasks:48.1 catalog/audition →48.2 persistence →48.3 fingerprint/freshness →48.4 UI →48.5 GateV48.
+- [SPEC](phases/48-character-voices/SPEC.md) · [PLAN và cards](phases/48-character-voices/PLAN.md).
+- Acceptance: hai nhân vật cùng gender/locale có hai voice ID thật, save/reload đúng, preview không đổi production cache; đổi giọng không phát lại audio cũ; owner nghe duyệt.
+- Status:**planned,0/5**. Không yêu cầu đóng các gate cũ để xây tính năng; không tự ghi nhận owner acceptance.
+
+### Phase 49 — Solo Explainer và presenter chính diện
+
+- Goal: một người giải thích tiếng Anh, nhìn camera, luôn hiện trước minh họa; auto position/scale, owner preview/edit/approve.
+- Dependencies:Phase48/V48; front21 và script là nền cho explainer plan/layout, sau đó Player/render/integrations.
+- Tasks49.1–49.10:[PLAN và cards](phases/49-solo-explainer/PLAN.md) · [SPEC](phases/49-solo-explainer/SPEC.md).
+- Acceptance: một pack thật21ảnh, video có ảnh/sơ đồ/thẻ chữ, bố cục hai aspect không che nội dung, lưu locks/revision đúng, full16:9/full9:16/Short và staged EXE verified, owner GateV49.
+- Status:**planned,0/10**. Fixture hỗ trợ triển khai; owner chọn topic/profile và tạo ảnh ngoài trước visual demo.
+
+Phase47 owner review và B-25/B-26/B-27/B-28 vẫn pending, không bị thay thế bởi V48/V49. Mục tiêu1.5.0 chỉ là planned version, chưa đổi runtime hay tạo release.
+
+
 ## Current follow-up: Phase 47 — Caption continuity (BUG-041)
 
 Owner authorized vp-evolve planning + immediate vp-auto execution on 2026-10-15. Task 47.1 is **implemented_verified; owner visual review pending**: grammatical/phrase-aware caption pages, preserved learning terms, 104 renderer tests + TypeScript, all 22 Episode 3 lines in both layouts and actual 16:9/9:16 boundary previews. Plan: `.viepilot/phases/47-caption-continuity/SPEC.md`; report: `docs/operations/caption-continuity-20261015.md`. Published trial 1.4.0-rc.1 and older owner gates remain unchanged.

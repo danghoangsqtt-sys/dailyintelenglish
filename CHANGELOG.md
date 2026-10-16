@@ -8,6 +8,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Planned — target 1.5.0 (2026-10-16, not implemented)
+
+- Phase48: English voice catalog/audition and per-character/project voice selection, pinned defaults and voice-aware TTS cache/freshness (5 planned tasks).
+- Phase49: Solo Explainer Why/How/List, externally generated front21 character pack, photos/diagrams/text cards, owner-reviewed layouts for16:9/9:16, shared Player/render scene, Shorts/thumbnail/export/EXE integration (10 planned tasks).
+- Canonical requirements and execution order: [.viepilot/SPEC.md](.viepilot/SPEC.md), [.viepilot/PLAN.md](.viepilot/PLAN.md). Current runtime/release remains1.4.0-rc.1; no source implementation, DB migration, EXE replacement or release in this planning update. Phase47 review and B-25/B-26/B-27/B-28 remain pending.
+
 ### Fixed
 - BUG-041: grammatical, balanced caption pages in both 16:9 and 9:16; fitting learning idioms/multiword vocabulary stay together instead of cuts such as `in the | kitchen` and `piece | of cake`. Pagination is memoized per line/layout; original tokens, word timings, audio and safe-area limits are retained. Verified with 104 renderer tests, TypeScript, all 22 Episode 3 lines in both layouts, and production boundary previews. Source patch only; published v1.4.0-rc.1 artifacts remain unchanged.
 

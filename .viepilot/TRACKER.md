@@ -1,5 +1,19 @@
 # TRACKER.md — Daily Intel English Studio
 
+## Kế hoạch mới — 2026-10-16
+
+**Execution started:** owner invoked `vp-auto --from 48`. Phase48 in_progress, Task48.1 in_progress; technical/owner acceptance not claimed. Existing pending gates retained. Planning checkpoint and per-task evidence follow the execution workflow.
+
+Owner yêu cầu vp-evolve lập SPEC/PLAN cho ý tưởng đã brainstorm. **Planning complete; implementation not started.** [SPEC](SPEC.md), [PLAN](PLAN.md).
+
+| Phase | Phạm vi | Tasks done / total | Status | Gate mới |
+|---|---|---|---|---|
+| [48](phases/48-character-voices/PLAN.md) | Catalog/nghe thử/chọn giọng riêng, profile/project persistence, cache/freshness | 0 / 5 | planned | V48 not_started |
+| [49](phases/49-solo-explainer/PLAN.md) | Front21, Solo Why/How/List, ảnh/sơ đồ/thẻ chữ, auto layout/review, Player/render hai aspect, integrations | 0 / 10 | planned | V49 not_started |
+
+**Next planned task: 48.1**, thực thi bằng `vp-auto --from 48`. Target **1.5.0 planned**; published trial vẫn **1.4.0-rc.1**, stable1.3.0. Đây là add-feature scope, không archive các phase/gate hiện tại. Phase47 vẫn chờ owner xem phụ đề; B-25/B-26/B-27/B-28 vẫn pending. Chưa sửa shipping code, DB, EXE hoặc release; chưa có implementation tests mới.
+
+
 **Current implementation (2026-10-15): Phase 47 / BUG-041 implemented and verified; owner visual review pending.** Owner requested vp-evolve + vp-auto. Task 47.1 fixes grammatical caption pages, learning phrase preservation and balanced tails with memoized segmentation. All **104 renderer tests** and TypeScript pass; **22 real Episode 3 lines × 2 layouts**, **8 PNGs / 4 production preview clips** verified. Audio hashes unchanged; DB read-only, zero changes; existing full MP4/SRT retained. Report: `docs/operations/caption-continuity-20261015.md`. Published trial and older owner gates are retained.
 
 

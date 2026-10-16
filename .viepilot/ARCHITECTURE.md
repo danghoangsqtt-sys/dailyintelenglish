@@ -2,7 +2,20 @@
 
 <!-- crystallize_version: 0.8.0 -->
 
-*Refreshed 2026-10-15 (Phase 46) for the current source: Remotion only, Qwen images, profiles, Activity Library, channel planning, Shorts and project exports. Released version remains 1.3.0.*
+*Current source includes Phase47 caption continuity; published trial1.4.0-rc.1, last stable1.3.0. Planned extension below was recorded2026-10-16 and is not implemented.*
+
+## Planned architecture extension — Phase48/49
+
+Source of truth: [SPEC](SPEC.md), [PLAN](PLAN.md). Existing architecture below describes the running app; the following additions are **planned**:
+
+- Edge TTS catalog + independent audition cache; concrete profile/project voice IDs with computed revision, TTS fingerprint and targeted stale propagation. No new TTS engine.
+- `presentation_mode=classic|solo_explainer`, defaultclassic; one-speaker Why/How/List. Additive migration after026, verified atomic/resumable before real DB use.
+- Existing character_assets facing/version index supports independent native29/front21 packs. Prompt/reference → external AI → import/review; pin manifest revisions in render inputs.
+- Explainer plan service/API: token anchors, photo/diagram/card schema, per-aspect layouts, important regions, locks, optimistic revisions and approved source snapshots.
+- Pure layout validator + shared Remotion scene/presenter/caption components for Player preview and production. Player is a built static widget inside vanilla Step5, not a whole-app SPA migration.
+- Video/Shorts/thumbnail/series/copy/export carry mode, voice and asset revisions; classic paths keep defaults. Build preview bundle before frozen EXE packaging.
+
+Native packs, existing videos and owner gates are retained. No schema/API/widget above is claimed available until its task is implemented and verified.
 
 ## System Overview
 

@@ -3,8 +3,35 @@
   "version": "1.4.0-rc.1",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase47_bug041_implemented_verified_owner_visual_review_pending",
-  "current_phase": "47",
+  "status": "phase48_in_progress_task48.1_catalog_audition",
+  "current_phase": "48",
+  "next_planned_phase": "48",
+  "feature_plan": {
+    "planned_at": "2026-10-16",
+    "mode": "add_feature",
+    "status": "execution_started",
+    "target_version": "1.5.0",
+    "spec": ".viepilot/SPEC.md",
+    "plan": ".viepilot/PLAN.md",
+    "brainstorm": "docs/brainstorm/session-2026-10-16.md",
+    "tasks_total": 15,
+    "tasks_done": 0,
+    "next_task": "48.1",
+    "next_command": "vp-auto --from 48",
+    "implementation_authorized_by_this_request": true,
+    "execution_authorization": "Owner invoked vp-auto --from 48 on 2026-10-16; run planned tasks, retain owner listening/visual gates and no new release without release instruction.",
+    "planning_validation": {
+      "status": "passed",
+      "artifacts": 30,
+      "task_dependency_dag": true,
+      "requirements_covered": 13,
+      "front_slots": 21,
+      "local_links_and_repo_paths": "passed",
+      "evidence": "data/tmp/evolve-20261016/validation.json",
+      "implementation_tests": "not_run_planning_only"
+    },
+    "note": "Planning only. Published trial and current_phase47 status unchanged; B-25/B-26/B-27/B-28 pending. V48 needs owner voice listening; V49 needs one real approved front21 pack and owner demo review. No shipping code, DB, EXE, commit/push or release in this planning turn."
+  },
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
     "frontend": "HTML5 + Vanilla CSS + Vanilla JS",
@@ -24,6 +51,23 @@
     "os": "Windows"
   },
   "phases": {
+    "48": {
+      "name": "Character voice selection",
+      "status": "in_progress",
+      "tasks_done": 0,
+      "tasks_total": 5,
+      "gate": "V48_not_started",
+      "plan": ".viepilot/phases/48-character-voices/PLAN.md"
+    },
+    "49": {
+      "name": "Solo Explainer and front21 presenter pack",
+      "status": "planned",
+      "tasks_done": 0,
+      "tasks_total": 10,
+      "gate": "V49_not_started",
+      "depends_on": ["48"],
+      "plan": ".viepilot/phases/49-solo-explainer/PLAN.md"
+    },
     "47": {
       "name": "Caption continuity (BUG-041)",
       "status": "implemented_verified_pending_owner_review",
