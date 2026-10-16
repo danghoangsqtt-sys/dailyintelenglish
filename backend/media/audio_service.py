@@ -267,7 +267,8 @@ async def build_soundtrack(audio_job: dict, lead_in_s: float, total_s: float, ou
     if not filename:
         return None
     music_path = settings.DATA_DIR / "music_library" / _validate_music_filename(filename)
-    voice_path = voice_stem_path(audio_job["project_id"])
+    voice_path = (Path(audio_job["wav_path"]).with_name("voice.wav") if audio_job.get("wav_path")
+                  else voice_stem_path(audio_job["project_id"]))
     if not await asyncio.to_thread(music_path.is_file) or not await asyncio.to_thread(voice_path.is_file):
         return None
     try:
@@ -335,6 +336,8 @@ async def mix_project(
 
     speaker_names_by_id = {speaker["id"]: speaker["name"] for speaker in project["speakers"]}
     output_dir = settings.DATA_DIR / "audio" / project["id"]
+    if project.get("_attempt_id"):
+        output_dir /= project["_attempt_id"]
 
     try:
         return await asyncio.to_thread(

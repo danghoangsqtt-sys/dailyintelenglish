@@ -52,3 +52,28 @@ def profile_voice_settings(row: dict) -> dict:
         "gender": row.get("gender"), "speed": row.get("default_speed", 1.0),
         "pitch": row.get("default_pitch", 0.0), "volume": row.get("default_volume", 1.0),
     }
+
+
+def line_fingerprint(project: dict, line: dict) -> dict:
+    """Synthesis fingerprint for a line, also used to reject a stale network completion."""
+    speaker = next((item for item in project["speakers"] if item["id"] == line["speaker_id"]), None)
+    if speaker is None:
+        raise ValidationError("The line's speaker no longer belongs to this project.")
+    return {
+        "schema_version": 1, **voice_parameters(speaker),
+        "text_hash": fingerprint(line["text"]), "speaker_id": line["speaker_id"],
+    }
+
+
+def media_revision(project: dict, lines: list[dict], audio_job: dict | None = None, *, include_cache: bool = True) -> str:
+    """Snapshot inputs for mix/render without using a generic, frequently changing updated_at."""
+    return fingerprint({
+        "speakers": [{"id": s["id"], "name": s["name"], "voice": voice_revision(s)} for s in project["speakers"]],
+        "lines": [
+            {"id": line["id"], "speaker_id": line["speaker_id"], "text": line["text"],
+             "audio_cache_path": line.get("audio_cache_path") if include_cache else None}
+            for line in lines
+        ],
+        "audio": {key: audio_job.get(key) for key in
+                  ("id", "status", "mp3_path", "wav_path", "completed_at")} if audio_job else None,
+    })

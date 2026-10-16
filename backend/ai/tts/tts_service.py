@@ -7,6 +7,7 @@ always fell back to Edge, and the Kokoro / StyleTTS 2 experiments were removed.
 import asyncio
 import json
 import logging
+import uuid
 from asyncio import sleep
 from pathlib import Path
 from typing import NamedTuple
@@ -16,7 +17,10 @@ import edge_tts
 
 from backend.core.config import settings
 from backend.core.constants import EDGE_TTS_VOICE_MAP
-from backend.core.exceptions import NotFoundError, TTSError
+from backend.core.exceptions import ConflictError, NotFoundError, TTSError
+
+from backend.core.voice import line_fingerprint, resolve_voice_id
+from backend.db.transactions import write_transaction
 
 logger = logging.getLogger(__name__)
 
@@ -81,9 +85,7 @@ async def _synthesize_edge_tts(text: str, speaker: dict) -> tuple[bytes, list[Wo
     passing `boundary="WordBoundary"`. Word boundaries are returned alongside the audio
     bytes rather than via a separate call, so there's exactly one Edge TTS request per line.
     """
-    # a character's own Edge voice wins (Phase 40 follow-up); otherwise resolve it from accent + gender
-    own = speaker.get("voice_id") or ""
-    voice = own if own.endswith("Neural") else _edge_tts_voice_for(speaker["accent"], speaker["gender"])
+    voice = resolve_voice_id(speaker)
     last_error: Exception | None = None
     for attempt in range(1, EDGE_TTS_MAX_ATTEMPTS + 1):
         communicate = edge_tts.Communicate(
@@ -189,22 +191,29 @@ async def synthesize_line_audio(project: dict, line: dict) -> dict:
     audio_bytes, word_boundaries = await _synthesize_edge_tts(line["text"], speaker)
     engine_used = "edge_tts"
 
-    cache_dir = settings.DATA_DIR / "tts_cache" / project["id"]
+    cache_dir = settings.DATA_DIR / "tts_cache" / project["id"] / uuid.uuid4().hex
     audio_path = cache_dir / f"{line['id']}.mp3"
     await asyncio.to_thread(_write_audio_cache_sync, cache_dir, audio_path, audio_bytes)
     await asyncio.to_thread(_write_word_boundaries_sync, _word_timestamps_path(audio_path), word_boundaries)
 
+    await asyncio.to_thread(
+        audio_path.with_suffix(".tts.json").write_text,
+        json.dumps(line_fingerprint(project, line), sort_keys=True), encoding="utf-8",
+    )
     return {"audio_path": str(audio_path), "engine_used": engine_used}
 
 
 async def save_line_audio_cache(
-    db: aiosqlite.Connection, project_id: str, line_id: str, audio_path: str, *, commit: bool = True
+    db: aiosqlite.Connection, project_id: str, line_id: str, audio_path: str, *, commit: bool = True,
+    expected_fingerprint: dict | None = None,
 ) -> None:
     """Record a script line's freshly synthesized audio path.
 
     Always call this only after `synthesize_line_audio` has already produced the
     file — this function does no synthesis itself, just the fast DB write.
     """
+    if expected_fingerprint is not None:
+        await assert_line_current(db, project_id, line_id, expected_fingerprint)
     await db.execute(
         "UPDATE script_lines SET audio_cache_path = ? WHERE id = ? AND project_id = ?",
         (audio_path, line_id, project_id),
@@ -224,8 +233,18 @@ async def synthesize_line(
     directly instead, so the slow network/GPU work never runs while holding the
     app's connection-wide write lock.
     """
+    _find_speaker(project, line["speaker_id"])
+    expected = line_fingerprint(project, line)
     result = await synthesize_line_audio(project, line)
-    await save_line_audio_cache(db, project["id"], line["id"], result["audio_path"], commit=commit)
+    if commit:
+        async with write_transaction(db):
+            await save_line_audio_cache(
+                db, project["id"], line["id"], result["audio_path"], commit=False, expected_fingerprint=expected,
+            )
+    else:
+        await save_line_audio_cache(
+            db, project["id"], line["id"], result["audio_path"], commit=False, expected_fingerprint=expected,
+        )
     return result
 
 
@@ -255,3 +274,40 @@ async def get_cached_audio_path(db: aiosqlite.Connection, project_id: str, line_
     if not row["audio_cache_path"]:
         return None
     return await asyncio.to_thread(_resolve_cached_audio_sync, project_id, row["audio_cache_path"])
+
+
+def cache_matches(project: dict, line: dict, *, allow_legacy: bool = True) -> bool:
+    """Read-only cache validation; legacy timings remain reusable until an explicit input change clears their reference."""
+    stored = line.get("audio_cache_path")
+    if not stored:
+        return False
+    path = Path(stored)
+    project_root = (settings.DATA_DIR / "tts_cache" / project["id"]).resolve()
+    try:
+        if project_root not in path.resolve().parents or not path.is_file() or not has_word_timings(str(path)):
+            return False
+        metadata = path.with_suffix(".tts.json")
+        if not metadata.exists():
+            return allow_legacy
+        return json.loads(metadata.read_text(encoding="utf-8")) == line_fingerprint(project, line)
+    except (OSError, ValueError):
+        return False
+
+
+async def assert_line_current(
+    db: aiosqlite.Connection, project_id: str, line_id: str, expected_fingerprint: dict,
+) -> None:
+    """Reject a stale TTS completion; caller holds the publication transaction."""
+    cursor = await db.execute(
+        "SELECT id, speaker_id, text FROM script_lines WHERE project_id = ? AND id = ?", (project_id, line_id),
+    )
+    line = await cursor.fetchone()
+    if line is None:
+        raise ConflictError("The script line changed while speech was being generated. Generate it again.")
+    cursor = await db.execute(
+        "SELECT id, tts_engine, voice_id, accent, gender, speed, pitch, volume FROM speakers WHERE project_id=? AND id=?",
+        (project_id, line["speaker_id"]),
+    )
+    speaker = await cursor.fetchone()
+    if speaker is None or line_fingerprint({"speakers": [dict(speaker)]}, dict(line)) != expected_fingerprint:
+        raise ConflictError("Voice or text changed while speech was being generated. Generate it again.")

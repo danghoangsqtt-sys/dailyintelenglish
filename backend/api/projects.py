@@ -159,7 +159,7 @@ async def update_speaker(
             rename = await project_service.rename_speaker(db, project_id, speaker_id, patch.name, commit=False)
         changed = any(value != actual.get(key) for key, value in fields.items())
         if changed:
-            await project_service.mark_speaker_voice_changed(db, project_id, commit=False)
+            await project_service.mark_speaker_voice_changed(db, project_id, commit=False, speaker_id=speaker_id)
         project = await project_service.update_speaker(
             db, project_id, speaker_id, SpeakerUpdate(**fields), commit=False)
     if rename and rename["changed"]:

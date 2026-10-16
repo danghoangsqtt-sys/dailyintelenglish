@@ -7,6 +7,8 @@ real audio to mix.
 """
 
 import io
+import sqlite3
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -99,7 +101,9 @@ def test_generate_audio_resynthesizes_old_cache_lines_without_word_timings(clien
     project = create_project(client)
     lines = save_script(client, project)
     synthesize_all(client, project, lines)
-    old_cache = settings.DATA_DIR / "tts_cache" / project["id"] / f"{lines[0]['id']}.words.json"
+    with sqlite3.connect(settings.db_path) as connection:
+        stored_path = connection.execute("SELECT audio_cache_path FROM script_lines WHERE id = ?", (lines[0]["id"],)).fetchone()[0]
+    old_cache = Path(stored_path).with_suffix(".words.json")
     old_cache.unlink()  # line 0 now looks like a pre-19.2 cache entry
     synthesized: list[str] = []
 
@@ -113,7 +117,10 @@ def test_generate_audio_resynthesizes_old_cache_lines_without_word_timings(clien
     data = client.post(f"/api/projects/{project['id']}/audio/generate", json={}).json()["data"]
 
     assert synthesized == ["Welcome to the show!"]  # only the line without word timings, never the reusable one
-    assert old_cache.is_file()
+    with sqlite3.connect(settings.db_path) as connection:
+        repaired_path = connection.execute("SELECT audio_cache_path FROM script_lines WHERE id = ?", (lines[0]["id"],)).fetchone()[0]
+    assert Path(repaired_path).with_suffix(".words.json").is_file()
+    assert repaired_path != stored_path
     assert [len(entry["words"]) for entry in data["word_timestamps"]] == [1, 0]
     assert data["lines_without_words"] == 1  # line 1's sidecar exists but its fake synthesis returned no words
 

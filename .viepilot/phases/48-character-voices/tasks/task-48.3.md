@@ -1,10 +1,10 @@
 # Task 48.3 — Fingerprint TTS, invalidation và bảo vệ media tốt cũ
 
-- **Status:** in_progress · 2026-10-16, after task48.2 technical checkpoint.
+- **Status:** implemented_verified · 2026-10-16; owner phase gate remains separate.
 - **Dependencies:** 48.2
 - **Requirements:** R12, R13.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
-- **Scope:** card này là kế hoạch, chưa có kết quả triển khai hay acceptance.
+- **Scope:** cache/freshness implemented and technically verified, including stale aspect regeneration.
 
 ## Objective
 
@@ -62,6 +62,7 @@ Fingerprint TTS, invalidation và bảo vệ media tốt cũ. Hoàn thành contr
 - `schemas/tts.py` adds an explicit reuse_cached option for Generate All; a single-line preview still regenerates by default. `api/projects.py` passes the affected speaker ID into invalidation. Text replacement during speaker rename clears affected cache references so the new reuse path cannot speak an old name.
 - Update the source-introspection assertion in `test_phase40_character_names.py` to test concrete voice selection behavior after centralizing the resolver. Isolate the raw-DB TTS test module's DATA_DIR before adding fingerprint sidecars; adapt old fixed-path assertions to the actual published versioned cache path.
 - Shorts cover rendering also uses the attempt folder; snapshot composition inputs under a short read lock and draw outside it. Check clip range/hook/status/revision alongside voice/audio before publishing, preserving old cover/clip files on conflict. Keep audio/generate's existing requirement that uncached lines must first be generated; only nonempty invalid cache entries are repaired by the mix route.
+- Review after the initial1693-pass full run found a remaining stale-aspect publication case: a fresh horizontal render carried forward an old vertical path even when the previous job was marked stale by a voice change. On successful horizontal replacement, preserve the vertical reference only from a previously complete job; otherwise require a new vertical render. Keep the old file intact on disk. Add a regenerate-after-voice-change regression and rerun the full gate before checkpoint.
 
 Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu phát hiện cần file khác, ghi lý do và mở rộng bounded scope trước code. Các file đã tạo bởi task trước trong Paths được tiếp tục sử dụng; không tự viết lại hệ thống lân cận.
 
@@ -88,4 +89,5 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Progress
 
-- 2026-10-16: planned; shipping code chưa sửa, tests triển khai chưa chạy.
+- Implemented voice/text/parameter fingerprint sidecars, targeted line-cache invalidation and immutable attempt output paths, with source checks under publication transactions for TTS/mix/horizontal/vertical/Shorts. Previous files and published paths are retained on stale work/provider failure. Soundtrack follows the selected job's voice stem; public render audio is staged per attempt.
+- Isolated candidate verification:99 focused TTS/cache/audio/video/name tests and73 additional project/music/Shorts/render/cast regressions passed. An initial new test accidentally used its own fake synthesizer; restored the real function in that invalid-ID check and reran successfully. Candidate files were then applied verbatim under the bounded contract. Ruff/diff clean. Initial workspace full suite1693 passed; review then caught stale vertical reference promotion after horizontal regeneration. Corrected it and added a real mix→render regression:34 focused tests passed, final full **1694 passed** in **920.34s**, one existing Starlette warning. Renderer104/14files and TypeScript pass; Ruff/diff clean. Evidence: `data/tmp/evolve-20261016/task48.3-pytest-r2.log`. Old files remain on disk; successful replacement stops advertising an old stale vertical as current. No real DB/EXE/release changes.

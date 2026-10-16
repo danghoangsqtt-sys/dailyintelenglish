@@ -10,13 +10,15 @@ implementation.
 
 import asyncio
 import time
+import uuid
 
 import aiosqlite
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
 from backend.db.transactions import read_transaction, write_transaction
-from backend.core.exceptions import NotFoundError, ValidationError
+from backend.core.exceptions import ConflictError, NotFoundError, ValidationError
+from backend.core.voice import line_fingerprint
 from backend.core.responses import ok
 from backend.db.database import get_db
 from backend.schemas.audio import GenerateAudioRequest
@@ -40,21 +42,36 @@ async def generate_audio(
     async with read_transaction():
         project = await project_service.get_project(db, project_id)
         lines = await audio_service.get_lines_for_mixing(db, project_id)
+        original = await project_service.media_input_revision(db, project_id, include_audio=True, include_cache=False)
     if not lines:
         raise ValidationError("Cannot generate audio: script is empty")
+    project = {**project, "_attempt_id": uuid.uuid4().hex}
 
-    # No lock held across the mixing work itself (CPU-bound, runs in a thread — see
-    # audio_service.mix_project — same "no lock across slow work" rule already applied to
-    # Gemini calls elsewhere in this codebase).
     try:
         await _resynthesize_lines_without_word_timings(db, project, lines)
+        async with read_transaction():
+            if not await project_service.media_revision_is_current(
+                db, project_id, original, include_audio=True, include_cache=False,
+            ):
+                raise ConflictError("Voice, script or audio changed. Generate the audio again.")
+            current_lines = await audio_service.get_lines_for_mixing(db, project_id)
+            if [(item["id"], item.get("audio_cache_path")) for item in current_lines] != [
+                (item["id"], item.get("audio_cache_path")) for item in lines
+            ]:
+                raise ConflictError("Speech cache changed during preparation. Generate the audio again.")
+            expected = await project_service.media_input_revision(db, project_id, include_audio=True)
         result = await audio_service.mix_project(project, lines, payload.background_music)
     except Exception as exc:
         async with write_transaction(db):
-            await audio_service.mark_audio_job_failed(db, project_id, str(exc), commit=False)
+            if await project_service.media_revision_is_current(
+                db, project_id, original, include_audio=True, include_cache=False,
+            ):
+                await audio_service.mark_audio_job_failed(db, project_id, str(exc), commit=False)
         raise
 
     async with write_transaction(db):
+        if not await project_service.media_revision_is_current(db, project_id, expected, include_audio=True):
+            raise ConflictError("Voice, script or audio changed during mixing. The previous audio has been kept.")
         job = await audio_service.save_audio_job(
             db,
             project_id,
@@ -72,9 +89,8 @@ async def generate_audio(
             await project_service.update_project(
                 db, project_id, ProjectUpdate(status="audio_generated"), commit=False
             )
-    # Task 32.8c (BUG-030): say how many lines still have no word timings (no karaoke) instead of hiding it.
     job = {**job, "lines_without_words": sum(1 for entry in result["word_timestamps"] if not entry["words"])}
-    await export_service.sync_quietly(db, project_id)  # Phase 41 (D120): the project folder follows
+    await export_service.sync_quietly(db, project_id)
     return ok(job, started_at=started_at)
 
 
@@ -83,16 +99,19 @@ async def _resynthesize_lines_without_word_timings(db: aiosqlite.Connection, pro
 
     Lines cached before Task 19.2 (no `.words.json`) are re-synthesized with word boundaries before the mix, so the
     finished episode keeps karaoke captions. The Edge TTS call runs outside the write lock (see `backend/api/tts.py`).
-    Lines with no cached audio at all are left to `mix_project`, which reports them.
+    Mismatched voice fingerprints count as misses too. Lines without audio still require Generate All first.
     """
     for line in lines:
         if not line.get("audio_cache_path"):
             continue
-        if await asyncio.to_thread(tts_service.has_word_timings, line["audio_cache_path"]):
+        if await asyncio.to_thread(tts_service.cache_matches, project, line):
             continue
+        expected = line_fingerprint(project, line)
         synthesized = await tts_service.synthesize_line_audio(project, line)
         async with write_transaction(db):
-            await tts_service.save_line_audio_cache(db, project["id"], line["id"], synthesized["audio_path"], commit=False)
+            await tts_service.save_line_audio_cache(
+                db, project["id"], line["id"], synthesized["audio_path"], commit=False, expected_fingerprint=expected,
+            )
         line["audio_cache_path"] = synthesized["audio_path"]
 
 

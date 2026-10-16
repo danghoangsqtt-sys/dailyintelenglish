@@ -1,5 +1,6 @@
 """TTS engine discovery + per-line preview routes (Task 1.6)."""
 
+import asyncio
 import time
 from typing import Literal
 
@@ -10,6 +11,7 @@ from fastapi.responses import FileResponse, Response
 from backend.db.transactions import read_transaction, write_transaction
 from backend.core.exceptions import NotFoundError
 from backend.core.responses import ok
+from backend.core.voice import line_fingerprint
 from backend.db.database import get_db
 from backend.schemas.tts import PreviewLineRequest, VoiceCatalog, VoicePreviewRequest, VoicePreviewResult
 from backend.content import project_service, script_service
@@ -74,10 +76,19 @@ async def preview_line(
     async with read_transaction():
         project = await project_service.get_project(db, project_id)
         line = await script_service.get_script_line(db, project_id, payload.line_id)
-    result = await tts_service.synthesize_line_audio(project, line)  # no lock held — network call
+        cursor = await db.execute("SELECT audio_cache_path FROM script_lines WHERE project_id = ? AND id = ?",
+                                  (project_id, payload.line_id))
+        line["audio_cache_path"] = (await cursor.fetchone())["audio_cache_path"]
+        expected = line_fingerprint(project, line)
+    if payload.reuse_cached and await asyncio.to_thread(tts_service.cache_matches, project, line):
+        async with read_transaction():
+            await tts_service.assert_line_current(db, project_id, payload.line_id, expected)
+        return ok({"audio_path": line["audio_cache_path"], "engine_used": "edge_tts", "reused": True},
+                  started_at=started_at)
+    result = await tts_service.synthesize_line_audio(project, line)
     async with write_transaction(db):
         await tts_service.save_line_audio_cache(
-            db, project_id, payload.line_id, result["audio_path"], commit=False
+            db, project_id, payload.line_id, result["audio_path"], commit=False, expected_fingerprint=expected,
         )
     return ok(result, started_at=started_at)
 
@@ -89,4 +100,4 @@ async def get_cached_audio(project_id: str, line_id: str, db: aiosqlite.Connecti
         audio_path = await tts_service.get_cached_audio_path(db, project_id, line_id)
     if not audio_path:
         raise NotFoundError(f"No cached audio for line {line_id}")
-    return FileResponse(audio_path, media_type="audio/mpeg")
+    return FileResponse(audio_path, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})

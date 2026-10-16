@@ -91,9 +91,21 @@ def test_choosing_a_character_also_gives_the_speaker_its_voice(client):  # noqa:
         == ("Kim", "female", "australian", "en-AU-NatashaNeural", 0.85)  # the level's speed stays
 
 
-def test_the_edge_voice_comes_from_the_speakers_own_voice_id_when_it_has_one():
-    import inspect
-
+async def test_the_edge_voice_comes_from_the_speakers_own_voice_id_when_it_has_one(monkeypatch):
     from backend.ai.tts import tts_service
-    source = inspect.getsource(tts_service._synthesize_edge_tts)
-    assert 'speaker.get("voice_id")' in source
+
+    captured = []
+
+    class FakeCommunicate:
+        def __init__(self, text, voice, **kwargs):
+            captured.append(voice)
+
+        async def stream(self):
+            yield {"type": "audio", "data": b"speech"}
+
+    monkeypatch.setattr(tts_service.edge_tts, "Communicate", FakeCommunicate)
+    await tts_service._synthesize_edge_tts("Hello", {
+        "voice_id": "en-GB-RyanNeural", "accent": "american", "gender": "female",
+        "speed": 1.0, "pitch": 0.0, "volume": 1.0,
+    })
+    assert captured == ["en-GB-RyanNeural"]

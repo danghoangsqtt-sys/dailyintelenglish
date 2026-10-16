@@ -327,10 +327,14 @@ async def rename_speaker(
         for line_id, text in lines:
             replaced = pattern.sub(new_name, text or "")
             if replaced != text:
-                await db.execute("UPDATE script_lines SET text = ? WHERE id = ?", (replaced, line_id))
+                await db.execute(
+                    "UPDATE script_lines SET text = ?, audio_cache_path = NULL, duration_seconds = NULL WHERE id = ?",
+                    (replaced, line_id),
+                )
                 result["lines_changed"] += 1
     if lines:  # a script exists: its labels (and maybe its words) changed, so audio and video are stale
         await mark_script_changed(db, project_id, commit=False)
+        await mark_media_stale(db, project_id)
     result["changed"] = True
     if commit:
         await db.commit()
@@ -487,25 +491,34 @@ async def mark_script_changed(
         await db.commit()
 
 
-async def mark_speaker_voice_changed(
-    db: aiosqlite.Connection, project_id: str, commit: bool = True
-) -> None:
-    """Downgrade only projects whose generated audio may now be stale.
+async def mark_media_stale(db: aiosqlite.Connection, project_id: str) -> None:
+    """Keep last-good files/metadata, while requiring regeneration for their changed source."""
+    message = "Voice or script changed. Generate audio and video again; previous files have been kept."
+    for table in ("audio_jobs", "video_jobs"):
+        await db.execute(
+            f"UPDATE {table} SET status = 'error', error_message = ? WHERE project_id = ?",
+            (message, project_id),
+        )
+    await db.execute("UPDATE short_clips SET status = 'proposed' WHERE project_id = ?", (project_id,))
 
-    Voice settings are valid to edit before a script or audio exists, so ``draft``
-    and ``script_generated`` deliberately remain unchanged. This differs from
-    :func:`mark_script_changed`, whose draft advance represents first script creation.
-    """
+
+async def mark_speaker_voice_changed(
+    db: aiosqlite.Connection, project_id: str, commit: bool = True, *, speaker_id: str | None = None,
+) -> None:
+    """Invalidate only the changed speaker's synthesis; preserve every last-good media file."""
     cursor = await db.execute("SELECT status FROM projects WHERE id = ?", (project_id,))
     row = await cursor.fetchone()
     if row is None:
         raise NotFoundError(f"Project {project_id} not found")
-
     current_status = row["status"]
     if current_status not in PROJECT_STATUSES:
         raise ValidationError(f"unknown status: {current_status!r}")
-    changed = await _downgrade_downstream_to_script_generated(db, project_id, current_status)
-    if changed and commit:
+    where = "project_id = ?" + (" AND speaker_id = ?" if speaker_id else "")
+    params = (project_id, speaker_id) if speaker_id else (project_id,)
+    await db.execute(f"UPDATE script_lines SET audio_cache_path = NULL, duration_seconds = NULL WHERE {where}", params)
+    await mark_media_stale(db, project_id)
+    await _downgrade_downstream_to_script_generated(db, project_id, current_status)
+    if commit:
         await db.commit()
 
 
@@ -555,3 +568,37 @@ async def cleanup_project_artifacts(project_id: str) -> None:
     """
     for category in _PROJECT_ARTIFACT_CATEGORIES:
         await asyncio.to_thread(_remove_project_directory_sync, category, project_id)
+
+
+async def media_input_revision(
+    db: aiosqlite.Connection, project_id: str, *, include_audio: bool = False, include_cache: bool = True,
+) -> str:
+    """Snapshot relevant media inputs while the caller holds a short read/write transaction."""
+    from backend.core.voice import media_revision
+
+    project = await get_project(db, project_id)
+    cursor = await db.execute(
+        "SELECT id, speaker_id, text, audio_cache_path FROM script_lines WHERE project_id = ? ORDER BY line_index",
+        (project_id,),
+    )
+    lines = [dict(row) for row in await cursor.fetchall()]
+    audio = None
+    if include_audio:
+        cursor = await db.execute(
+            "SELECT id, status, mp3_path, wav_path, completed_at FROM audio_jobs WHERE project_id = ?", (project_id,),
+        )
+        row = await cursor.fetchone()
+        audio = dict(row) if row else None
+    return media_revision(project, lines, audio, include_cache=include_cache)
+
+
+async def media_revision_is_current(
+    db: aiosqlite.Connection, project_id: str, expected: str, *, include_audio: bool = False, include_cache: bool = True,
+) -> bool:
+    """A deleted project or edited source invalidates old work without changing newer job state."""
+    try:
+        return await media_input_revision(
+            db, project_id, include_audio=include_audio, include_cache=include_cache,
+        ) == expected
+    except NotFoundError:
+        return False

@@ -2,6 +2,7 @@
 
 import asyncio
 import time
+import uuid
 from pathlib import Path
 
 import aiosqlite
@@ -10,7 +11,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from backend.core.config import settings
-from backend.core.exceptions import NotFoundError, ValidationError
+from backend.core.exceptions import ConflictError, NotFoundError, ValidationError
 from backend.core.responses import ok
 from backend.db.database import get_db
 from backend.db.transactions import read_transaction, write_transaction
@@ -101,16 +102,24 @@ async def render_clip(project_id: str, clip_id: str, body: RenderRequest, db: ai
         clip = await shorts_service.get_clip(db, project_id, clip_id)
         audio_job = await audio_service.get_audio_job(db, project_id)
         learning = await learning_service.get_learning_content(db, project_id)
+        expected = await project_service.media_input_revision(db, project_id, include_audio=True)
     if clip["status"] == "proposed":
         raise ValidationError("Approve the clip before rendering it")
+    if audio_job is None or audio_job["status"] != "complete":
+        raise ValidationError("Generate the audio mix again before rendering.")
+    project = {**project, "_attempt_id": uuid.uuid4().hex}
     output = shorts_service.clip_folder(project_id, clip_id) / "clip.mp4"
     result = await video_service.render_vertical(
         project_id, audio_job, db=db, project=project, learning=learning, caption_style=body.caption_style,
         visual_mode=body.visual_mode, still_scene_id=body.still_scene_id,
         clip={"line_from": clip["line_from"], "line_to": clip["line_to"], "hook": clip["hook"]}, output_path=output)
-    async with read_transaction():
-        cover = await shorts_service.render_cover(db, project, clip)
+    cover = await shorts_service.render_cover(db, project, clip)
     async with write_transaction(db):
+        if not await project_service.media_revision_is_current(db, project_id, expected, include_audio=True):
+            raise ConflictError("Voice, script or audio changed during rendering. The previous clip has been kept.")
+        current_clip = await shorts_service.get_clip(db, project_id, clip_id)
+        if any(current_clip[key] != clip[key] for key in ("line_from", "line_to", "hook", "status", "updated_at")):
+            raise ConflictError("The clip changed during rendering. Review it and render again.")
         await db.execute("UPDATE short_clips SET status = 'rendered', mp4_path = ?, cover_path = ?, updated_at = ? WHERE id = ?",
                          (result["mp4_path"], cover, shorts_service._now(), clip_id))
         view = (await _views(db, project_id, [await shorts_service.get_clip(db, project_id, clip_id)]))[0]

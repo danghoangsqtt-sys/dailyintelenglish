@@ -1,7 +1,7 @@
 # SPEC — Giọng nói riêng và Solo Explainer
 
 - Ngày: 2026-10-16 · Mode: Add Feature · Độ lớn: XL.
-- Trạng thái: **Phase48 executing**, catalog/audition and persistence verified; Phase49 planned. Owner accepted four improved voice examples, requests about20 choices; technical/UI/E2E pending.
+- Trạng thái: **Phase48 executing**, catalog/audition, persistence and cache/freshness verified; Phase49 planned. Owner accepted four improved voice examples, requests about20 choices; technical/UI/E2E pending.
 - Nguồn yêu cầu: [brainstorm 2026-10-16](../docs/brainstorm/session-2026-10-16.md).
 - Kế hoạch thực thi: [PLAN](PLAN.md); [Phase 48](phases/48-character-voices/SPEC.md); [Phase 49](phases/49-solo-explainer/SPEC.md).
 - Bản đang phát hành: **1.4.0-rc.1**, stable gần nhất 1.3.0. Mục tiêu tính năng **1.5.0**; 1.5.0-rc.1 chỉ được tạo sau kiểm thử và quyết định phát hành.

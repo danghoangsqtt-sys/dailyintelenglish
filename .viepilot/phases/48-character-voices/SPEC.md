@@ -3,7 +3,7 @@
 - Ngày: 2026-10-16 · Trạng thái: **executing**.
 - Mục tiêu: Chọn, nghe thử và lưu concrete voice ID cho từng profile/speaker, không dùng lại cache giọng cũ.
 - Dependency: Không cần migration hoặc owner gate cũ đóng để bắt đầu. Không thay trạng thái Phase 47; V48 mới chờ nghe thật.
-- Quy mô: L · 5 task · 2 technically verified, cache/UI/E2E in progress/planned.
+- Quy mô: L · 5 task · 3 technically verified, UI/E2E in progress/planned.
 - Nguồn chuẩn: [SPEC tổng](../../SPEC.md), phần 4.1–4.3; [brainstorm](../../../docs/brainstorm/session-2026-10-16.md).
 - Thực thi: [phase PLAN](PLAN.md), [state](PHASE-STATE.md).
 

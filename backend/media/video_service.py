@@ -91,6 +91,8 @@ async def generate_video(
     if problem:
         raise VideoRenderError(f"The video renderer is not ready: {problem}")
     output_dir = settings.DATA_DIR / "video" / project_id
+    if project.get("_attempt_id"):
+        output_dir /= project["_attempt_id"]
     try:
         result = await video_renderer_remotion.render_via_remotion(
             db, project, audio_job, learning, output_dir / "video_remotion.mp4", caption_style=caption_style,
@@ -126,6 +128,8 @@ async def render_vertical(
     if problem:
         raise VideoRenderError(f"The video renderer is not ready: {problem}")
     output = output_path or settings.DATA_DIR / "video" / project_id / "video_vertical.mp4"
+    if project.get("_attempt_id"):
+        output = output.parent / project["_attempt_id"] / output.name
     try:
         return await video_renderer_remotion.render_via_remotion(
             db, project, audio_job, learning, output, caption_style=caption_style, visual_mode=visual_mode,

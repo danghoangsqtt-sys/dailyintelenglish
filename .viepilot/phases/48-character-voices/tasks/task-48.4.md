@@ -1,6 +1,6 @@
 # Task 48.4 — Voice picker trong hồ sơ nhân vật và Audio Studio
 
-- **Status:** planned · 2026-10-16.
+- **Status:** in_progress · 2026-10-16, following task48.3 technical checkpoint.
 - **Dependencies:** 48.1, 48.2, 48.3
 - **Requirements:** R10, R13, R14, R15.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
@@ -19,6 +19,7 @@ Voice picker trong hồ sơ nhân vật và Audio Studio. Hoàn thành contract 
 - frontend/static/js/step4_tts.js
 - frontend/static/js/api.js
 - frontend/static/css/style.css
+- frontend/static/css/voice_picker.css
 - tests/test_character_profiles_browser.py
 - tests/test_tts_audio_browser.py
 - frontend/static/js/voice_picker.js
@@ -41,6 +42,14 @@ Owner feedback2026-10-16: all four Brian/Christopher/Roger/Ryan comparisons are 
 5. Xử lý offline/voice unavailable/409 bằng thông báo cụ thể và thao tác retry/reload; không hiển thị saved khi request chưa thành công.
 
 **File mới dự kiến:** `frontend/static/js/voice_picker.js`, `tests/test_voice_picker_browser.py`.
+
+### Execution refinement (before shipping code)
+
+- Shared `voice_picker.js` owns catalog filtering/count, same-text auditions, draft/save/reload status and cancellation tokens. Dedicated `voice_picker.css` is linked only on Characters/Step4, avoiding changes to global layout rules.
+- Profile picker lives outside the introduction autosave form. Capture profile IDs in async callbacks, guard late profile loads and preserve voice drafts across asset refreshes. Switching profiles with unsaved voice edits uses the existing ConfirmDialog; serialize optional detail saves before switching so a late save cannot write another profile.
+- Step4 keeps its existing numeric sliders. Serialize their autosaves, update voice revision after each save, disable voice selection while parameter saves are pending, and disable generation while any voice edit is unsaved. Explicit profile apply preserves project numeric settings. Duplicate-voice notice is dismissible.
+- Generate All requests reuse_cached for unchanged lines; single-line preview still forces generation. Clear affected UI playback and mixed-result readiness after a persisted voice/parameter change. Show the actual project voice above the picker, independent from profile defaults.
+- Browser verification covers at least20 selectable entries, locale/gender/search, same-text preview with late responses, save/reload, error409 draft preservation, profile/project isolation and explicit profile apply. Use actual provider metadata for the real smoke; synthetic UI catalogs are labeled fixtures in tests.
 
 Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu phát hiện cần file khác, ghi lý do và mở rộng bounded scope trước code. Các file đã tạo bởi task trước trong Paths được tiếp tục sử dụng; không tự viết lại hệ thống lân cận.
 

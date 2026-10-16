@@ -202,11 +202,17 @@ async def render_cover(db: aiosqlite.Connection, project: dict, clip: dict) -> s
     from backend.schemas.thumbnail import ThumbnailSuggestion
     from backend.media import thumbnail_compose
 
-    inputs = await thumbnail_compose.composition_inputs(db, project)
+    from backend.db.transactions import read_transaction
+
+    async with read_transaction():
+        inputs = await thumbnail_compose.composition_inputs(db, project)
     suggestion = ThumbnailSuggestion.model_validate({
         "headline": clip["hook"][:80], "supporting_text": f"{project['cefr_level'].upper()} English", "topic_keywords": ["english"],
         "palette": {"primary": "#0E5E3A", "secondary": "#2BB673", "accent": "#FFD23F", "text": "#FFFFFF"}})
-    path = clip_folder(project["id"], clip["id"]) / "cover.jpg"
+    folder = clip_folder(project["id"], clip["id"])
+    if project.get("_attempt_id"):
+        folder /= project["_attempt_id"]
+    path = folder / "cover.jpg"
 
     def draw() -> None:
         path.parent.mkdir(parents=True, exist_ok=True)

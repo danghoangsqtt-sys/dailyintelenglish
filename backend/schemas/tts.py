@@ -13,6 +13,7 @@ class PreviewLineRequest(BaseModel):
     """Request body for POST /api/projects/{id}/tts/preview."""
 
     line_id: str = Field(min_length=1)
+    reuse_cached: bool = False
 
 
 class VoiceInfo(BaseModel):

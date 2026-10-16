@@ -5,13 +5,14 @@ deviation as `backend/api/audio.py`'s `/status` route.
 """
 
 import time
+import uuid
 
 import aiosqlite
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
 from backend.db.transactions import read_transaction, write_transaction
-from backend.core.exceptions import NotFoundError, ValidationError
+from backend.core.exceptions import ConflictError, NotFoundError, ValidationError
 from backend.core.responses import ok
 from backend.db.database import get_db
 from backend.schemas.project import ProjectUpdate
@@ -47,9 +48,11 @@ async def generate_video(
         project = await project_service.get_project(db, project_id)
         audio_job = await audio_service.get_audio_job(db, project_id)
         learning = await learning_service.get_learning_content(db, project_id)
+        expected = await project_service.media_input_revision(db, project_id, include_audio=True)
     if audio_job is None or audio_job["status"] != "complete":
         raise ValidationError("Cannot generate video: generate the audio mix first.")
 
+    project = {**project, "_attempt_id": uuid.uuid4().hex}
     # No lock held across the render itself (CPU-bound, runs in a thread — see
     # video_service.generate_video).
     try:
@@ -65,10 +68,13 @@ async def generate_video(
         )
     except Exception as exc:
         async with write_transaction(db):
-            await video_service.mark_video_job_failed(db, project_id, str(exc), commit=False)
+            if await project_service.media_revision_is_current(db, project_id, expected, include_audio=True):
+                await video_service.mark_video_job_failed(db, project_id, str(exc), commit=False)
         raise
 
     async with write_transaction(db):
+        if not await project_service.media_revision_is_current(db, project_id, expected, include_audio=True):
+            raise ConflictError("Voice, script or audio changed during rendering. The previous video has been kept.")
         previous = await video_service.get_video_job(db, project_id)
         job = await video_service.save_video_job(
             db,
@@ -76,7 +82,9 @@ async def generate_video(
             status="complete",
             mode=result.get("mode", "remotion"),
             mp4_path=result["mp4_path"],
-            mp4_path_vertical=(previous or {}).get("mp4_path_vertical"),  # Phase 37: the vertical cut is kept
+            # A stale vertical cut must not become current just because the new horizontal render succeeded.
+            mp4_path_vertical=(previous or {}).get("mp4_path_vertical")
+            if (previous or {}).get("status") == "complete" else None,
             srt_path=result["srt_path"],
             background_image=None,
             commit=False,
@@ -104,13 +112,19 @@ async def generate_vertical(
         project = await project_service.get_project(db, project_id)
         audio_job = await audio_service.get_audio_job(db, project_id)
         learning = await learning_service.get_learning_content(db, project_id)
+        expected = await project_service.media_input_revision(db, project_id, include_audio=True)
         job = await video_service.get_video_job(db, project_id)
     if job is None or job["status"] != "complete":
         raise ValidationError("Generate the horizontal video first; the vertical one reuses it.")
+    if audio_job is None or audio_job["status"] != "complete":
+        raise ValidationError("Generate the audio mix again before rendering.")
+    project = {**project, "_attempt_id": uuid.uuid4().hex}
     result = await video_service.render_vertical(
         project_id, audio_job, db=db, project=project, learning=learning, caption_style=payload.caption_style,
         visual_mode=payload.visual_mode, still_scene_id=payload.still_scene_id)
     async with write_transaction(db):
+        if not await project_service.media_revision_is_current(db, project_id, expected, include_audio=True):
+            raise ConflictError("Voice, script or audio changed during rendering. The previous video has been kept.")
         await video_service.set_vertical_path(db, project_id, result["mp4_path"])
         job = await video_service.get_video_job(db, project_id)
     await export_service.sync_quietly(db, project_id)  # Phase 41 (D120): the project folder follows

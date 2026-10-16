@@ -20,6 +20,12 @@ FAKE_MP3_BYTES = b"ID3-fake-mp3-bytes-for-tests"
 
 
 @pytest.fixture(autouse=True)
+def isolated_tts_files(tmp_path, monkeypatch):
+    from backend.core.config import settings
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+
+
+@pytest.fixture(autouse=True)
 def no_real_sleep(monkeypatch):
     """Edge TTS retry-on-empty-audio must not actually wait in tests.
 
