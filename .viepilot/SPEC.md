@@ -1,7 +1,7 @@
 # SPEC — Giọng nói riêng và Solo Explainer
 
 - Ngày: 2026-10-16 · Mode: Add Feature · Độ lớn: XL.
-- Trạng thái: **Phase48 executing**, catalog/audition API verified; Phase49 planned. Owner V48 requests clearer voice differences and more natural intonation.
+- Trạng thái: **Phase48 executing**, catalog/audition and persistence verified; Phase49 planned. Owner accepted four improved voice examples, requests about20 choices; technical/UI/E2E pending.
 - Nguồn yêu cầu: [brainstorm 2026-10-16](../docs/brainstorm/session-2026-10-16.md).
 - Kế hoạch thực thi: [PLAN](PLAN.md); [Phase 48](phases/48-character-voices/SPEC.md); [Phase 49](phases/49-solo-explainer/SPEC.md).
 - Bản đang phát hành: **1.4.0-rc.1**, stable gần nhất 1.3.0. Mục tiêu tính năng **1.5.0**; 1.5.0-rc.1 chỉ được tạo sau kiểm thử và quyết định phát hành.
@@ -31,6 +31,9 @@ Thêm khả năng chọn giọng thật riêng cho mỗi nhân vật, dùng đư
 | R12 | Tận dụng assets và pipeline hiện có | 48.2, 49.1–49.10 | Project classic/native cũ vẫn chạy |
 | R13 | Đã chọn giọng thì audio phải dùng đúng giọng | 48.2–48.5 | Cache, word timings và freshness nhất quán |
 | R14 | Giọng khác biệt rõ hơn và tự nhiên, có ngữ điệu hơn (feedback2026-10-16) | 48.1, 48.4, 48.5 | So sánh thêm giọng thật/cùng đoạn; owner nghe, khác ID chưa đủ |
+| R15 | Khoảng20 giọng để lựa chọn cho nhiều nhân vật | 48.1, 48.4, 48.5 | Hiện catalog English thật, hiện47; tìm/lọc/nghe/lưu toàn bộ, không chỉ bốn mẫu |
+
+**V48 listening update:** owner xác nhận cả bốn Brian/Christopher/Roger/Ryan tốt, muốn khoảng20 lựa chọn. Phần nghe mẫu được chấp nhận; phase còn chờ persistence/cache/UI/E2E. Catalog hiện trả47 giọng, không đặt trần20 hay bịa giọng nếu provider thay đổi.
 
 ## 2. Hiện trạng đã đối chiếu code
 

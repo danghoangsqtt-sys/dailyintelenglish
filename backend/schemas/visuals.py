@@ -245,6 +245,7 @@ class ProfilePatch(BaseModel):
     speaking_style: str | None = Field(default=None, max_length=200)
     dialogue_behavior: str | None = Field(default=None, max_length=200)
     default_voice_id: str | None = Field(default=None, max_length=80)
+    expected_voice_revision: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     default_speed: float | None = Field(default=None, ge=TTS_SPEED_MIN, le=TTS_SPEED_MAX)
     default_pitch: float | None = Field(default=None, ge=-1.0, le=1.0)
     default_volume: float | None = Field(default=None, ge=0.0, le=2.0)

@@ -21,6 +21,7 @@ from backend.schemas.visuals import PROFILE_ACCENTS, ProfilePatch, ProfileQuickC
 from backend.library import character_asset_service as assets
 from backend.library import character_profile_service as profiles
 from backend.library import library_service as library
+from backend.ai.tts import voice_catalog_service
 
 router = APIRouter(prefix="/api/visuals/profiles", tags=["character profiles"])
 
@@ -56,6 +57,13 @@ async def get_profile(character_id: str, db: aiosqlite.Connection = Depends(get_
 
 @router.patch("/{character_id}")
 async def patch_profile(character_id: str, body: ProfilePatch, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    voice_fields = {"default_voice_id", "default_speed", "default_pitch", "default_volume", "accent", "gender"}
+    if voice_fields.intersection(body.model_fields_set) or body.expected_voice_revision:
+        async with read_transaction():
+            snapshot = await profiles.get_profile(db, character_id)
+        if body.default_voice_id is not None:
+            await voice_catalog_service.require_voice(body.default_voice_id)
+        body = body.model_copy(update={"expected_voice_revision": body.expected_voice_revision or snapshot["voice_revision"]})
     async with write_transaction(db):
         row = await profiles.patch_profile(db, character_id, body)
     return ok(row)

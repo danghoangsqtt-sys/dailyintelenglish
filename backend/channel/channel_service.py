@@ -274,6 +274,7 @@ async def _speakers(db: aiosqlite.Connection, cast: list[str]) -> list[SpeakerCo
         voice = profile.get("voice") or {}
         speakers.append(SpeakerConfig(
             name=profile["name"], gender=profile.get("gender") or "neutral", accent=profile.get("accent") or "american",
+            tts_engine=voice.get("engine") or "edge_tts", voice_id=voice.get("voice_id") or None,
             speed=voice.get("speed"), pitch=voice.get("pitch") or 0.0, volume=voice.get("volume") or 1.0))
     return speakers
 

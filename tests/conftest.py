@@ -243,3 +243,24 @@ def _recover_local_chromium_socket_buffers(monkeypatch):
     monkeypatch.setattr(Page, "goto", goto)
 
 
+@pytest.fixture(autouse=True)
+def _offline_edge_voice_catalog(monkeypatch):
+    """Keep all catalog-backed writes offline; catalog failure tests override this fixture locally."""
+    import edge_tts
+    from backend.core.constants import EDGE_TTS_VOICE_MAP
+
+    voices = {}
+    for accent in EDGE_TTS_VOICE_MAP.values():
+        for gender, voice_id in accent.items():
+            voices.setdefault(voice_id, {
+                "ShortName": voice_id, "Locale": voice_id.rsplit("-", 1)[0],
+                "Gender": gender.title(), "FriendlyName": voice_id,
+            })
+    voices["en-US-AndrewNeural"] = {
+        "ShortName": "en-US-AndrewNeural", "Locale": "en-US", "Gender": "Male", "FriendlyName": "Andrew",
+    }
+
+    async def list_voices():
+        return list(voices.values())
+
+    monkeypatch.setattr(edge_tts, "list_voices", list_voices)

@@ -239,6 +239,7 @@
         + `volume ${profile.voice.volume}) for ${slotLabel(index)}? Cancel keeps this project's own settings.`, { confirmLabel: "Use these settings" }));
     Object.assign(speaker, {
       character_id: profile.id, name: profile.name, gender: profile.gender, accent: profile.accent || speaker.accent,
+      voice_id: profile.voice?.voice_id || null,
     });
     if (!keepVoice && pageMode === "edit") {
       Object.assign(speaker, { speed: profile.voice.speed, pitch: profile.voice.pitch, volume: profile.voice.volume });
@@ -357,6 +358,7 @@
       gender: speaker.gender ?? "neutral",
       accent: speaker.accent ?? state.accent,
       tts_engine: speaker.tts_engine ?? "edge_tts",
+      voice_id: speaker.voice_id || null,
       voice_description: speaker.voice_description ?? "",
       speed: speaker.speed ?? 1.0,
       pitch: speaker.pitch ?? 0.0,
@@ -470,6 +472,7 @@
         gender: speaker.gender,
         accent: speaker.accent,
         tts_engine: speaker.tts_engine ?? "edge_tts",
+        voice_id: speaker.voice_id || null,
         voice_description: speaker.voice_description ?? "",
         // null (not a hardcoded 1.0) so an unset speed still resolves to the
         // CEFR-level default server-side; an existing, already-resolved speaker's

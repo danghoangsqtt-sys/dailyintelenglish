@@ -26,6 +26,7 @@ class SpeakerConfig(BaseModel):
     gender: str = "neutral"
     accent: str = "american"
     tts_engine: str = "edge_tts"
+    voice_id: str | None = Field(default=None, min_length=1, max_length=80)
     voice_description: str = ""
     # Task 14.10: None means "no explicit speed" -- resolved to
     # CEFR_DEFAULT_TTS_SPEED[project.cefr_level] by project_service, not defaulted
@@ -83,6 +84,9 @@ class SpeakerUpdate(BaseModel):
     # Phase 40 (D119): the speaker takes its character's name (renamed in the script lines too, `rename_speaker`).
     name: str | None = Field(default=None, min_length=1, max_length=60)
     tts_engine: str | None = None
+    voice_id: str | None = Field(default=None, min_length=1, max_length=80)
+    expected_voice_revision: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    apply_profile_voice: bool = False
     voice_description: str | None = None
     speed: float | None = Field(default=None, ge=TTS_SPEED_MIN, le=TTS_SPEED_MAX)
     pitch: float | None = Field(default=None, ge=-1.0, le=1.0)

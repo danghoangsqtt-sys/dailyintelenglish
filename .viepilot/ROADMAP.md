@@ -2,7 +2,7 @@
 
 ## Planned extension — 2026-10-16, target 1.5.0
 
-**Add Feature; chưa triển khai.** [SPEC tổng](SPEC.md), [PLAN tổng](PLAN.md), [brainstorm](../docs/brainstorm/session-2026-10-16.md). 15 task mới planned,0 done. Bản phát hành1.4.0-rc.1 giữ nguyên.
+**Add Feature; Phase48 executing.** [SPEC tổng](SPEC.md), [PLAN tổng](PLAN.md), [brainstorm](../docs/brainstorm/session-2026-10-16.md). 15 tasks:2 technically verified,1 in progress,12 planned. Bản phát hành1.4.0-rc.1 giữ nguyên.
 
 ### Phase 48 — Chọn giọng riêng cho nhân vật
 
@@ -10,7 +10,7 @@
 - Tasks:48.1 catalog/audition →48.2 persistence →48.3 fingerprint/freshness →48.4 UI →48.5 GateV48.
 - [SPEC](phases/48-character-voices/SPEC.md) · [PLAN và cards](phases/48-character-voices/PLAN.md).
 - Acceptance: hai nhân vật cùng gender/locale có hai voice ID thật, save/reload đúng, preview không đổi production cache; đổi giọng không phát lại audio cũ; owner nghe duyệt.
-- Status:**in_progress,1/5 technically verified** (48.1 catalog/audition API; full pytest1,668 pass).48.2 starts next. Owner requests clearer differences/naturalness; V48 pending. No old owner gate closed.
+- Status:**in_progress,2/5 technically verified** (catalog/audition and pinned persistence; full pytest1675 pass).48.3 cache/freshness next. Owner accepted four samples, requests about20 choices; final technical/UI gate pending. No old owner gate closed.
 
 ### Phase 49 — Solo Explainer và presenter chính diện
 

@@ -11,7 +11,8 @@ import aiosqlite
 
 from backend.core.config import settings
 from backend.core.constants import CEFR_DEFAULT_TTS_SPEED, PROJECT_STATUSES
-from backend.core.exceptions import NotFoundError, ValidationError
+from backend.core.exceptions import ConflictError, NotFoundError, ValidationError
+from backend.core.voice import resolve_voice_id, voice_revision
 from backend.schemas.project import ProjectUpdate, ScriptConfig, SpeakerConfig, SpeakerUpdate
 
 logger = logging.getLogger(__name__)
@@ -83,8 +84,8 @@ async def _replace_speakers(
     for index, speaker in enumerate(speakers):
         await db.execute(
             "INSERT INTO speakers (id, project_id, speaker_index, name, gender, accent, "
-            "tts_engine, voice_description, speed, pitch, volume) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "tts_engine, voice_id, voice_description, speed, pitch, volume) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 str(uuid.uuid4()),
                 project_id,
@@ -93,6 +94,7 @@ async def _replace_speakers(
                 speaker.gender,
                 speaker.accent,
                 speaker.tts_engine,
+                speaker.voice_id,
                 speaker.voice_description,
                 speaker.speed,
                 speaker.pitch,
@@ -112,6 +114,7 @@ def _build_config_snapshot(scalars: dict, language_features: dict, speakers: lis
                 "gender": speaker["gender"],
                 "accent": speaker["accent"],
                 "tts_engine": speaker["tts_engine"],
+                "voice_id": speaker.get("voice_id"),
                 "voice_description": speaker.get("voice_description") or "",
                 "speed": speaker["speed"],
                 "pitch": speaker["pitch"],
@@ -121,6 +124,17 @@ def _build_config_snapshot(scalars: dict, language_features: dict, speakers: lis
         ],
     }
     return json.dumps(snapshot)
+
+
+async def _sync_speaker_config(db: aiosqlite.Connection, project_id: str) -> None:
+    """Keep the reusable config snapshot in sync with pinned speaker settings."""
+    project = await get_project(db, project_id)
+    keys = ("name", "topic", "cefr_level", "duration_minutes", "num_speakers", "genre", "accent")
+    snapshot = _build_config_snapshot(
+        {key: project[key] for key in keys}, project["language_features"], project["speakers"],
+    )
+    await db.execute("UPDATE projects SET config_json = ?, updated_at = ? WHERE id = ?",
+                     (snapshot, _now(), project_id))
 
 
 async def list_projects(db: aiosqlite.Connection) -> list[dict]:
@@ -239,6 +253,17 @@ async def get_project(db: aiosqlite.Connection, project_id: str) -> dict:
     speaker_rows = await speaker_cursor.fetchall()
     # Phase 35 (Task 35.4, D89): no uploaded speaker avatar any more -- a speaker's picture is its cast character's.
     project["speakers"] = [dict(speaker_row) for speaker_row in speaker_rows]
+    cast_cursor = await db.execute(
+        "SELECT pc.speaker_index, pc.character_id, c.default_voice_id AS profile_voice_id "
+        "FROM project_cast pc JOIN characters c ON c.id = pc.character_id WHERE pc.project_id = ?", (project_id,),
+    )
+    cast = {row["speaker_index"]: dict(row) for row in await cast_cursor.fetchall()}
+    for speaker in project["speakers"]:
+        speaker["voice_revision"] = voice_revision(speaker)
+        speaker["resolved_voice_id"] = speaker.get("voice_id") or resolve_voice_id(speaker)
+        member = cast.get(speaker["speaker_index"], {})
+        speaker["character_id"] = member.get("character_id")
+        speaker["profile_voice_id"] = member.get("profile_voice_id")
     return project
 
 
@@ -258,13 +283,18 @@ async def update_speaker(
     if not any(speaker["id"] == speaker_id for speaker in project["speakers"]):
         raise NotFoundError(f"Speaker {speaker_id} not found on project {project_id}")
 
-    fields = patch.model_dump(exclude_unset=True)
+    speaker = next(s for s in project["speakers"] if s["id"] == speaker_id)
+    if patch.expected_voice_revision and patch.expected_voice_revision != speaker["voice_revision"]:
+        raise ConflictError("Speaker voice settings changed. Reload before saving.")
+    fields = patch.model_dump(exclude_unset=True, exclude_none=True,
+                              exclude={"expected_voice_revision", "apply_profile_voice"})
     if fields:
         set_clause = ", ".join(f"{key} = ?" for key in fields)
         await db.execute(
             f"UPDATE speakers SET {set_clause} WHERE id = ? AND project_id = ?",
             (*fields.values(), speaker_id, project_id),
         )
+        await _sync_speaker_config(db, project_id)
         if commit:
             await db.commit()
     return await get_project(db, project_id)
@@ -329,6 +359,7 @@ async def apply_character_voice(db: aiosqlite.Connection, project_id: str, speak
     sets = ", ".join(f"{key} = ?" for key in changes)
     await db.execute(f"UPDATE speakers SET {sets} WHERE id = ? AND project_id = ?",
                      (*changes.values(), speaker["id"], project_id))
+    await _sync_speaker_config(db, project_id)
     return True
 
 

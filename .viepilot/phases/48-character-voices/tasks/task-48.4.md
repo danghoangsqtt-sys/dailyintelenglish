@@ -2,7 +2,7 @@
 
 - **Status:** planned · 2026-10-16.
 - **Dependencies:** 48.1, 48.2, 48.3
-- **Requirements:** R10, R13.
+- **Requirements:** R10, R13, R14, R15.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
 - **Scope:** card này là kế hoạch, chưa có kết quả triển khai hay acceptance.
 
@@ -31,6 +31,8 @@ Voice picker trong hồ sơ nhân vật và Audio Studio. Hoàn thành contract 
 - .viepilot/phases/48-character-voices/tasks/task-48.4.md
 
 ## File-Level Plan / allowed_files
+
+Owner feedback2026-10-16: all four Brian/Christopher/Roger/Ryan comparisons are good; owner wants about20 voices for more characters. Show the complete actual English catalog (currently47), not just these four; searchable locale/gender filters and same-text auditions must work beyond the initial voices. Do not fabricate entries if provider availability changes.
 
 1. Picker component vanilla dùng chung: search, locale/gender filters, tên+ID, stale indicator, nghe câu mẫu/câu nhập và save.
 2. Profile hiển thị default; Step 4 hiển thị actual project voice và nút áp dụng default profile. Character selector cho biết voice snapshot khi cast.

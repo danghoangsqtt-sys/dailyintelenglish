@@ -2,7 +2,7 @@
 
 - Ngày lập: 2026-10-16 · Trạng thái: **Phase48 executing; Phase49 planned**.
 - Phạm vi: Add Feature từ [SPEC](SPEC.md) và [brainstorm](../docs/brainstorm/session-2026-10-16.md).
-- 15 task: **5 task Phase48 +10 task Phase49**;48.1 implemented_verified,48.2 in_progress,13 planned. R14 added after owner requests clearer voice differences and natural intonation; V48 not accepted.
+- 15 task: **5 task Phase48 +10 task Phase49**;48.1–48.2 implemented_verified,48.3 in_progress,12 planned. R14/R15 record improved voice quality and about20 choices; owner accepted four examples, final phase technical/UI gate pending.
 - Bản đang phát hành giữ **1.4.0-rc.1**; target 1.5.0. Không sửa version runtime, tạo EXE hay release trong phiên lập kế hoạch.
 - Phase 47 chờ owner visual review; B-25/B-26/B-27/B-28 vẫn pending, không dùng planning mới để tự đóng gate.
 

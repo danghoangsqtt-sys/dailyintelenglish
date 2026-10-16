@@ -39,6 +39,7 @@ DRAFT_PROJECT = {
             "accent": "british",
             "tts_engine": "edge_tts",
             "voice_description": "Warm and measured",
+            "voice_id": "en-GB-RyanNeural",
             "speed": 1.25,
             "pitch": 0.1,
             "volume": 0.8,
@@ -50,6 +51,7 @@ DRAFT_PROJECT = {
             "accent": "american",
             "tts_engine": "omnivoice",
             "voice_description": "Bright",
+            "voice_id": "en-US-JennyNeural",
             "speed": 0.9,
             "pitch": -0.2,
             "volume": 1.1,
@@ -224,10 +226,12 @@ async def test_draft_save_uses_one_put_preserves_id_and_refetches_update(
         "accent": "british",
         "tts_engine": "edge_tts",
         "voice_description": "Warm and measured",
+        "voice_id": "en-GB-RyanNeural",
         "speed": 1.25,
         "pitch": 0.1,
         "volume": 0.8,
     }
+    assert payload["speakers"][1]["voice_id"] == "en-US-JennyNeural"  # unchanged character keeps its pinned voice
 
     await page.goto(f"{live_server_url}/step1?project_id={PROJECT_ID}")
     await page.wait_for_selector("#submit-btn:not([hidden])")

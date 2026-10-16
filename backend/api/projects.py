@@ -6,6 +6,9 @@ import aiosqlite
 from fastapi import APIRouter, Depends
 
 from backend.core.responses import ok
+from backend.core.exceptions import ConflictError, NotFoundError, ValidationError
+from backend.core.voice import profile_voice_settings, resolve_voice_id, voice_revision
+from backend.ai.tts import voice_catalog_service
 from backend.db.database import get_db
 from backend.db.transactions import read_transaction, write_transaction
 from backend.schemas.project import ProjectUpdate, ScriptConfig, SpeakerUpdate
@@ -66,6 +69,9 @@ async def create_project(
 ) -> dict:
     """Create a new project from the Step 1 wizard config."""
     started_at = time.perf_counter()
+    for speaker in config.speakers:
+        if speaker.voice_id:
+            await voice_catalog_service.require_voice(speaker.voice_id)
     async with write_transaction(db):
         project = await project_service.create_project(db, config, commit=False)
     return ok(project, started_at=started_at)
@@ -86,6 +92,9 @@ async def update_project(
 ) -> dict:
     """Apply a partial update to a project — also used as the auto-save endpoint."""
     started_at = time.perf_counter()
+    for speaker in patch.speakers or []:
+        if speaker.voice_id:
+            await voice_catalog_service.require_voice(speaker.voice_id)
     async with write_transaction(db):
         project = await project_service.update_project(db, project_id, patch, commit=False)
     return ok(project, started_at=started_at)
@@ -101,16 +110,58 @@ async def update_speaker(
     the full-replace `speakers` path on that route is unsafe to reuse here.
     """
     started_at = time.perf_counter()
+    async with read_transaction():
+        snapshot = await project_service.get_project(db, project_id)
+        speaker = next((s for s in snapshot["speakers"] if s["id"] == speaker_id), None)
+        if speaker is None:
+            raise NotFoundError("Speaker not found in this project.")
+        expected = patch.expected_voice_revision or speaker["voice_revision"]
+        profile_id, profile_revision, profile_row = None, None, None
+        if patch.apply_profile_voice:
+            cursor = await db.execute(
+                "SELECT c.* FROM project_cast pc JOIN characters c ON c.id = pc.character_id "
+                "WHERE pc.project_id = ? AND pc.speaker_index = ?", (project_id, speaker["speaker_index"]),
+            )
+            row = await cursor.fetchone()
+            if row is None:
+                raise ValidationError("Choose a character for this speaker before applying its profile voice.")
+            profile_row = dict(row)
+            profile_id = profile_row["id"]
+            profile_revision = voice_revision(profile_voice_settings(profile_row))
+    fields = patch.model_dump(exclude_unset=True, exclude_none=True,
+                              exclude={"expected_voice_revision", "apply_profile_voice", "name"})
+    if patch.apply_profile_voice:
+        if patch.voice_id is not None:
+            raise ValidationError("Choose either a project voice or apply the profile voice.")
+        fields["voice_id"] = profile_row.get("default_voice_id") or resolve_voice_id(profile_voice_settings(profile_row))
+        fields["tts_engine"] = "edge_tts"
+    if fields.get("voice_id"):
+        await voice_catalog_service.require_voice(fields["voice_id"])  # network outside shared transaction
     rename = None
     async with write_transaction(db):
-        if patch.name is not None:  # Phase 40 (D119): rename everywhere, not just the label
+        current = await project_service.get_project(db, project_id)
+        actual = next((s for s in current["speakers"] if s["id"] == speaker_id), None)
+        if actual is None or actual["voice_revision"] != expected:
+            raise ConflictError("Speaker voice settings changed. Reload before applying this selection.")
+        if profile_id:
+            cursor = await db.execute("SELECT * FROM characters WHERE id = ?", (profile_id,))
+            row = await cursor.fetchone()
+            if row is None or voice_revision(profile_voice_settings(dict(row))) != profile_revision:
+                raise ConflictError("The character profile voice changed. Reload before applying it.")
+            cursor = await db.execute(
+                "SELECT character_id FROM project_cast WHERE project_id = ? AND speaker_index = ?",
+                (project_id, actual["speaker_index"]),
+            )
+            cast = await cursor.fetchone()
+            if cast is None or cast["character_id"] != profile_id:
+                raise ConflictError("The speaker's character changed. Reload before applying its voice.")
+        if patch.name is not None:
             rename = await project_service.rename_speaker(db, project_id, speaker_id, patch.name, commit=False)
-        voice = patch.model_copy(update={"name": None})
-        if voice.model_dump(exclude_unset=True, exclude_none=True):
+        changed = any(value != actual.get(key) for key, value in fields.items())
+        if changed:
             await project_service.mark_speaker_voice_changed(db, project_id, commit=False)
         project = await project_service.update_speaker(
-            db, project_id, speaker_id, SpeakerUpdate(**voice.model_dump(exclude_unset=True, exclude_none=True)),
-            commit=False)
+            db, project_id, speaker_id, SpeakerUpdate(**fields), commit=False)
     if rename and rename["changed"]:
         await export_service.sync_quietly(db, project_id)
     return ok({**project, "renamed": rename} if rename else project, started_at=started_at)

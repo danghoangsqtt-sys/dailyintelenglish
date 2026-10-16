@@ -1,6 +1,6 @@
 # Task 48.3 — Fingerprint TTS, invalidation và bảo vệ media tốt cũ
 
-- **Status:** planned · 2026-10-16.
+- **Status:** in_progress · 2026-10-16, after task48.2 technical checkpoint.
 - **Dependencies:** 48.2
 - **Requirements:** R12, R13.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
@@ -30,6 +30,9 @@ Fingerprint TTS, invalidation và bảo vệ media tốt cũ. Hoàn thành contr
 - backend/library/project_visuals_service.py
 - tests/test_tts_service.py
 - tests/test_video_api.py
+- backend/schemas/tts.py
+- backend/api/projects.py
+- tests/test_phase40_character_names.py
 - .viepilot/phases/48-character-voices/PHASE-STATE.md
 - .viepilot/TRACKER.md
 - .viepilot/ROADMAP.md
@@ -56,6 +59,9 @@ Fingerprint TTS, invalidation và bảo vệ media tốt cũ. Hoàn thành contr
 - Actual voice changes clear cache references only for affected speakers, retain old files and mark mixed audio/video stale through existing error-status fields with an explicit regeneration message. Shorts return to proposed with old media retained for reference. New requests cannot render an old stale mix.
 - `project_visuals_service.py` calls the same targeted invalidation after a changed cast voice; unchanged cast voices remain pinned. Updating a profile alone does not invalidate project media.
 - Commands: targeted TTS/audio/video/Shorts and new voice invalidation regressions, including edit-during-work; full pytest/Ruff before checkpoint. Expected: old files survive both provider failure and stale completion, sidecars/timings match the newly published line.
+- `schemas/tts.py` adds an explicit reuse_cached option for Generate All; a single-line preview still regenerates by default. `api/projects.py` passes the affected speaker ID into invalidation. Text replacement during speaker rename clears affected cache references so the new reuse path cannot speak an old name.
+- Update the source-introspection assertion in `test_phase40_character_names.py` to test concrete voice selection behavior after centralizing the resolver. Isolate the raw-DB TTS test module's DATA_DIR before adding fingerprint sidecars; adapt old fixed-path assertions to the actual published versioned cache path.
+- Shorts cover rendering also uses the attempt folder; snapshot composition inputs under a short read lock and draw outside it. Check clip range/hook/status/revision alongside voice/audio before publishing, preserving old cover/clip files on conflict. Keep audio/generate's existing requirement that uncached lines must first be generated; only nonempty invalid cache entries are repaired by the mix route.
 
 Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu phát hiện cần file khác, ghi lý do và mở rộng bounded scope trước code. Các file đã tạo bởi task trước trong Paths được tiếp tục sử dụng; không tự viết lại hệ thống lân cận.
 

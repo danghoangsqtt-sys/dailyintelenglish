@@ -58,7 +58,7 @@ def test_names_are_unique_among_active_profiles(client):
     data(client.post("/api/visuals/profiles", json={**QUICK, "name": "  KAI "}), status=409)
 
 
-def test_autosave_patch_persists_and_keeps_voice_matching_accent_and_gender(client):
+def test_autosave_patch_persists_and_keeps_the_selected_voice_pinned(client):
     kai = create(client)
     patched = data(client.patch(f"/api/visuals/profiles/{kai['id']}", json={
         "intro": "A barista who loves jazz.", "personality": ["calm", " curious "], "wizard_step": 3,
@@ -68,7 +68,7 @@ def test_autosave_patch_persists_and_keeps_voice_matching_accent_and_gender(clie
     assert refreshed["intro"] == "A barista who loves jazz."
 
     switched = data(client.patch(f"/api/visuals/profiles/{kai['id']}", json={"accent": "indian", "gender": "female"}))
-    assert (switched["voice"]["voice_id"], switched["sprite_facing"]) == ("en-IN-NeerjaNeural", "left")
+    assert (switched["voice"]["voice_id"], switched["sprite_facing"]) == ("en-GB-RyanNeural", "left")
     custom = data(client.patch(f"/api/visuals/profiles/{kai['id']}", json={"accent": "irish",
                                                                            "default_voice_id": "en-IE-ConnorNeural"}))
     assert custom["voice"]["voice_id"] == "en-IE-ConnorNeural"  # an explicit voice wins over the derived one

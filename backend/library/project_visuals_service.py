@@ -73,6 +73,7 @@ async def set_cast(db: aiosqlite.Connection, project_id: str, members: list[dict
     speakers = {speaker["speaker_index"]: speaker for speaker in project["speakers"]}
     renamed = []
     voice_changed = False
+    previous_cast = {s["speaker_index"]: s.get("character_id") for s in project["speakers"]}
     for member in members:
         character = await library.get_character_row(db, member["character_id"])
         speaker = speakers[member["speaker_index"]]
@@ -81,7 +82,9 @@ async def set_cast(db: aiosqlite.Connection, project_id: str, members: list[dict
             if change["changed"]:
                 renamed.append({"speaker_index": member["speaker_index"], **change})
         # the speaker also takes the character's voice (Edge TTS picks the voice from accent + gender)
-        if await project_service.apply_character_voice(db, project_id, speaker, character):
+        if previous_cast.get(member["speaker_index"]) != member["character_id"] and await project_service.apply_character_voice(
+            db, project_id, speaker, character,
+        ):
             voice_changed = True
     if voice_changed and not renamed and await project_service.has_script(db, project_id):
         await project_service.mark_script_changed(db, project_id, commit=False)

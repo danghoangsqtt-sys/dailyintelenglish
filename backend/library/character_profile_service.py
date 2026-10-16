@@ -17,6 +17,7 @@ import aiosqlite
 
 from backend.core.constants import EDGE_TTS_VOICE_MAP
 from backend.core.exceptions import ConflictError, NotFoundError
+from backend.core.voice import profile_voice_settings, voice_revision
 from backend.schemas.visuals import SHEET_KINDS, ProfilePatch, ProfileQuickCreate
 from backend.library import library_service as library
 from backend.library import sprite_service
@@ -102,6 +103,7 @@ async def readiness(db: aiosqlite.Connection, row: dict) -> dict[str, Any]:
 
 def _public(row: dict) -> dict[str, Any]:
     return {
+        "voice_revision": voice_revision(profile_voice_settings(row)),
         "id": row["id"], "name": row["name"], "gender": row["gender"], "accent": row["default_accent"],
         "nationality": row["ethnicity"], "appearance": row["appearance"], "outfit": row["outfit"], "intro": row["intro"],
         "personality": json.loads(row["personality_json"] or "[]"), "speaking_style": row["speaking_style"],
@@ -180,6 +182,9 @@ async def _ensure_name_free(db: aiosqlite.Connection, name: str, own_id: str | N
 async def patch_profile(db: aiosqlite.Connection, character_id: str, patch: ProfilePatch) -> dict[str, Any]:
     row = await _row(db, character_id)
     fields = patch.model_dump(exclude_unset=True)
+    expected = fields.pop("expected_voice_revision", None)
+    if expected and expected != voice_revision(profile_voice_settings(row)):
+        raise ConflictError("The character voice changed. Reload before saving.")
     if not fields:
         return await get_profile(db, character_id)
     sets: dict[str, Any] = {}
@@ -195,8 +200,8 @@ async def patch_profile(db: aiosqlite.Connection, character_id: str, patch: Prof
         sets["sprite_facing"] = library.default_sprite_facing(fields["gender"])
     accent = fields.get("accent") or row["default_accent"]
     gender = fields.get("gender") or row["gender"]
-    if ("accent" in fields or "gender" in fields) and "default_voice_id" not in fields and accent:
-        sets["default_voice_id"] = default_voice(accent, gender)  # keep the voice matching the new accent/gender
+    if ("accent" in fields or "gender" in fields) and not row.get("default_voice_id") and accent:
+        sets.setdefault("default_voice_id", default_voice(accent, gender))
     sets["updated_at"] = _now()
     await db.execute(
         f"UPDATE characters SET {', '.join(f'{column} = ?' for column in sets)} WHERE id = ?",

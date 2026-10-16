@@ -1,10 +1,10 @@
 # Task 48.2 — Lưu giọng theo profile và speaker project
 
-- **Status:** in_progress · 2026-10-16; next implementation after task48.1 checkpoint.
+- **Status:** implemented_verified · 2026-10-16; technical evidence below, owner phase gate separate.
 - **Dependencies:** 48.1
 - **Requirements:** R10, R12, R13.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
-- **Scope:** card này là kế hoạch, chưa có kết quả triển khai hay acceptance.
+- **Scope:** persistence implemented and technically verified; Phase48 UI/E2E gate remains pending.
 
 ## Objective
 
@@ -28,6 +28,7 @@ Lưu giọng theo profile và speaker project. Hoàn thành contract tương ứ
 - backend/channel/channel_service.py
 - frontend/static/js/step1_config.js
 - tests/test_step1_config_edit_browser.py
+- tests/test_video_visual_modes_browser.py
 - .viepilot/phases/48-character-voices/PHASE-STATE.md
 - .viepilot/TRACKER.md
 - .viepilot/ROADMAP.md
@@ -56,6 +57,7 @@ Lưu giọng theo profile và speaker project. Hoàn thành contract tương ứ
 - Tests/conftest.py adds a deterministic fake voice catalog to the existing provider-isolation policy; tests that exercise failure paths override it locally. Update the former accent-change test to the intentionally new pinned-voice rule, retain facing behavior assertions. No DB migration is needed.
 - Step1 currently drops voice_id in load/build payloads: preserve it on draft edit/save and set it for a newly chosen character. Verify existing config browser regression plus JS syntax; no second picker in Step1. New core file is `backend/core/voice.py`.
 - Commands: focused profile/project/channel/voice pytest; Ruff; full pytest before persistence checkpoint. Expected: all tests pass with no real catalog calls from the suite.
+- Full-suite run exposed an existing browser timing race in `test_video_visual_modes_browser.py`: workspace becomes visible before async visual loading and mode initialization finish. The isolated module passes5/5. Use Playwright's retrying expectation for remembered aria-pressed values, preserving the same required result; no Step5 product-code change. Rerun full suite before checkpoint.
 
 Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu phát hiện cần file khác, ghi lý do và mở rộng bounded scope trước code. Các file đã tạo bởi task trước trong Paths được tiếp tục sử dụng; không tự viết lại hệ thống lân cận.
 
@@ -81,4 +83,8 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Progress
 
-- 2026-10-16: planned; shipping code chưa sửa, tests triển khai chưa chạy.
+- Implemented concrete voice_id round-trip in schema/INSERT/config snapshots, computed voice revisions, out-of-lock catalog validation, guarded speaker/profile writes and explicit apply-profile operation. Same cast retains pinned project voice; series and Step1 edit carry the ID. No migration.
+- Focused tests **45 passed**: new persistence/race tests, profile APIs, character-name/cast regressions, channel APIs and real Step1 browser edit/reload tests. Legacy profiles with empty voice IDs exposed a channel validation issue; normalized to None and rerun passed. Ruff and JS syntax clean. Full suite running before checkpoint.
+- Owner accepted all four new sample voices and wants about20 choices; full live English catalog currently47. Phase owner listening examples accepted; final technical/UI gate still pending.
+
+- Full retry **1675 passed**, one existing Starlette warning, **951.38s**. Evidence: `data/tmp/evolve-20261016/task48.2-pytest-r2.log`. Initial full run stopped at1557 pass/1 browser timing failure; isolated5/5 passed, retrying Playwright expectations fixed premature reads without changing Step5 behavior. Ruff/JS/diff checks clean before checkpoint. No real DB/EXE/release changes.
