@@ -26,6 +26,8 @@ Sau khi thiết lập lần đầu, mở bằng **icon logo trên Desktop**. Ứ
 >
 > **Trước khi tải:** gói hiện tại là ZIP chứa ứng dụng và Python đi kèm, **chưa phải bộ Setup tự cài đầy đủ mọi phụ thuộc**. Máy mới cần thiết lập Node.js, renderer và FFmpeg một lần theo [hướng dẫn cài Windows](docs/user/windows-installation.md). Không cần cài Python riêng chỉ để mở EXE.
 
+> **Mã nguồn mới — chọn giọng riêng:** Phase 48 bổ sung bộ chọn toàn bộ giọng tiếng Anh của Edge TTS, nghe thử và lưu riêng theo hồ sơ hoặc video. Lần kiểm tra 16/10/2026 có **47 giọng**. Xem [hướng dẫn chọn giọng](docs/user/character-voices.md). Tính năng này hướng đến 1.5.0 và **chưa có trong EXE 1.4.0-rc.1** ở liên kết tải phía trên.
+
 ## Những gì bạn có thể làm
 
 | Không gian | Khả năng |

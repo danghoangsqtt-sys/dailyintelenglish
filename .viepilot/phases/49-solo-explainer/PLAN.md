@@ -1,6 +1,6 @@
 # PLAN — Phase 49: Solo Explainer và bộ presenter chính diện
 
-- Status: **planned**, ngày 2026-10-16; 0/10 task hoàn thành.
+- Status: **executing49.1**, ngày2026-10-16;0/10 verified, written plan active after V48. Owner demo:Hoang — Why do we build habits?.
 - Đọc [SPEC](SPEC.md) và [PLAN tổng](../../PLAN.md) trước thực thi.
 - Độ lớn: XL. Không cam kết deadline trước khi có input/owner review.
 

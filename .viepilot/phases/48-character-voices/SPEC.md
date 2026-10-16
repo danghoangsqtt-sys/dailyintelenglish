@@ -1,9 +1,9 @@
 # SPEC — Phase 48: Giọng nói riêng cho nhân vật
 
-- Ngày: 2026-10-16 · Trạng thái: **executing**.
+- Ngày: 2026-10-16 · Trạng thái: **implemented_verified**.
 - Mục tiêu: Chọn, nghe thử và lưu concrete voice ID cho từng profile/speaker, không dùng lại cache giọng cũ.
-- Dependency: Không cần migration hoặc owner gate cũ đóng để bắt đầu. Không thay trạng thái Phase 47; V48 mới chờ nghe thật.
-- Quy mô: L · 5 task · 4 technically verified, final phase QA/docs in progress.
+- Dependency: Không cần migration hoặc owner gate cũ đóng để bắt đầu. Không thay trạng thái Phase 47; V48 đã có technical evidence và owner listening acceptance.
+- Quy mô: L · 5 task · 5 technically verified, V48 evidence complete.
 - Nguồn chuẩn: [SPEC tổng](../../SPEC.md), phần 4.1–4.3; [brainstorm](../../../docs/brainstorm/session-2026-10-16.md).
 - Thực thi: [phase PLAN](PLAN.md), [state](PHASE-STATE.md).
 
@@ -32,7 +32,7 @@
 2. Audition không đổi project/cache; profile edit không tự đổi project đã cast.
 3. Voice change không reuse line giọng cũ; chỉ speaker liên quan synth lại, media tổng stale đúng.
 4. Provider/network/race lỗi được báo rõ; audio decode/word timings/mix/render ngắn có evidence.
-5. Owner nghe và duyệt; automated ID checks không thay nhận xét chất giọng. Owner accepted Brian/Christopher/Roger/Ryan on2026-10-16, requesting about20 selectable voices. Show the full real English catalog (47 observed), with search/filter/audition/save, rather than restricting selection to four samples. Phase technical gate remains pending.
+5. Owner nghe và duyệt; automated ID checks không thay nhận xét chất giọng. Owner accepted Brian/Christopher/Roger/Ryan on2026-10-16, requesting about20 selectable voices. Show the full real English catalog (47 observed), with search/filter/audition/save, rather than restricting selection to four samples. Phase technical gate verified; source evidence in SUMMARY, installed EXE unchanged.
 
 ## Không nằm trong phase
 

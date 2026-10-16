@@ -1,6 +1,6 @@
 # Task 49.1 — Mode Solo, schema nền và migration an toàn
 
-- **Status:** planned · 2026-10-16.
+- **Status:** in_progress · 2026-10-16, V48 technical/listening dependency satisfied.
 - **Dependencies:** 48.5
 - **Requirements:** R01, R11, R12.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).

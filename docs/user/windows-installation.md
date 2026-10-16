@@ -4,6 +4,8 @@
 
 **Áp dụng cho:** `v1.4.0-rc.1` · Windows x64 · Cập nhật 15/10/2026.
 
+> **Cập nhật mã nguồn 16/10/2026:** bộ chọn giọng riêng theo nhân vật/video thuộc Phase 48, hướng đến 1.5.0. [Hướng dẫn tính năng](character-voices.md) áp dụng khi chạy mã nguồn mới; gói EXE 1.4.0-rc.1 bên dưới chưa có bộ chọn này. Chỉ cập nhật thư mục mã nguồn không thay backend/frontend đã đóng trong EXE.
+
 ## 1. Hiểu đúng gói cài hiện tại
 
 Gói Windows chứa EXE, Python backend và thư viện đi kèm. Sau khi thiết lập, bạn mở ứng dụng bằng icon logo trên Desktop, không cần gõ lệnh mỗi lần sử dụng.

@@ -1,6 +1,6 @@
 # PLAN — Phase 48: Giọng nói riêng cho nhân vật
 
-- Status: **executing**, ngày2026-10-16;48.1–48.4 implemented_verified,48.5 in_progress. Owner accepted four listening examples and wants about20 choices; technical/UI/E2E still pending.
+- Status: **implemented_verified**, ngày2026-10-16;48.1–48.5 verified. Owner accepted four listening examples and wants about20 choices; actual47-choice UI/media/export evidence complete.
 - Đọc [SPEC](SPEC.md) và [PLAN tổng](../../PLAN.md) trước thực thi.
 - Độ lớn: L. Không cam kết deadline trước khi có input/owner review.
 
@@ -16,7 +16,7 @@
 
 ## Điều kiện bắt đầu
 
-Không cần migration hoặc owner gate cũ đóng để bắt đầu. Không thay trạng thái Phase 47; V48 mới chờ nghe thật.
+Không cần migration hoặc owner gate cũ đóng để bắt đầu. Không thay trạng thái Phase 47; V48 đã có technical evidence và owner listening acceptance.
 Mỗi card có repo-relative Paths và file-level plan. Scope mở rộng phải ghi vào card trước code. Không tự giao agent; mặc định thực hiện tuần tự.
 
 ## Cách kiểm tra
@@ -35,4 +35,4 @@ Chạy tests tập trung trong từng task; quality gates đầy đủ theo SYST
 - Artifact tạm dự kiến: `data/tmp/phase48-voices/`.
 - Card/PHASE-STATE cập nhật kết quả thật; technical verification không thay owner acceptance.
 - Không tự đè EXE đang dùng, thay MP4/audio dự án thật hoặc phát hành chỉ để chứng minh task.
-- Gate V48 chưa chạy. Bản đang phát hành giữ1.4.0-rc.1, target 1.5.0 là kế hoạch.
+- GateV48 technical verified + owner listening accepted; xem [SUMMARY](SUMMARY.md). Bản đang phát hành giữ1.4.0-rc.1, target 1.5.0 là kế hoạch.

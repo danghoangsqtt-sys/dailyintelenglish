@@ -2,7 +2,7 @@
 
 ## Planned extension — 2026-10-16, target 1.5.0
 
-**Add Feature; Phase48 executing.** [SPEC tổng](SPEC.md), [PLAN tổng](PLAN.md), [brainstorm](../docs/brainstorm/session-2026-10-16.md). 15 tasks:4 technically verified,1 in progress,10 planned. Bản phát hành1.4.0-rc.1 giữ nguyên.
+**Add Feature; Phase48 verified, Phase49 executing.** [SPEC tổng](SPEC.md), [PLAN tổng](PLAN.md), [brainstorm](../docs/brainstorm/session-2026-10-16.md). 15 tasks:5 technically verified,1 in progress,9 planned. Bản phát hành1.4.0-rc.1 giữ nguyên.
 
 ### Phase 48 — Chọn giọng riêng cho nhân vật
 
@@ -10,7 +10,7 @@
 - Tasks:48.1 catalog/audition →48.2 persistence →48.3 fingerprint/freshness →48.4 UI →48.5 GateV48.
 - [SPEC](phases/48-character-voices/SPEC.md) · [PLAN và cards](phases/48-character-voices/PLAN.md).
 - Acceptance: hai nhân vật cùng gender/locale có hai voice ID thật, save/reload đúng, preview không đổi production cache; đổi giọng không phát lại audio cũ; owner nghe duyệt.
-- Status:**in_progress,4/5 technically verified** (catalog/persistence/cache/picker; full pytest1704 pass,30 browser cases, actual UI47 voices).48.5 final phase QA/docs next. Owner accepted four samples, requests about20 choices; final technical/UI gate pending. No old owner gate closed.
+- Status:**implemented_verified,5/5**. Owner listening accepted; full final1704,45 browser regressions, real47-choice UI/audio/render/export. [Summary](phases/48-character-voices/SUMMARY.md). Current EXE unchanged; no old owner gate closed.
 
 ### Phase 49 — Solo Explainer và presenter chính diện
 
@@ -18,7 +18,7 @@
 - Dependencies:Phase48/V48; front21 và script là nền cho explainer plan/layout, sau đó Player/render/integrations.
 - Tasks49.1–49.10:[PLAN và cards](phases/49-solo-explainer/PLAN.md) · [SPEC](phases/49-solo-explainer/SPEC.md).
 - Acceptance: một pack thật21ảnh, video có ảnh/sơ đồ/thẻ chữ, bố cục hai aspect không che nội dung, lưu locks/revision đúng, full16:9/full9:16/Short và staged EXE verified, owner GateV49.
-- Status:**planned,0/10**. Fixture hỗ trợ triển khai; owner chọn topic/profile và tạo ảnh ngoài trước visual demo.
+- Status:**in_progress,0/10 verified;49.1 implementing**. Owner demo:Hoang — Why do we build habits?; front21 imported/reviewed images required before V49. Isolated fixtures do not replace that visual gate.
 
 Phase47 owner review và B-25/B-26/B-27/B-28 vẫn pending, không bị thay thế bởi V48/V49. Mục tiêu1.5.0 chỉ là planned version, chưa đổi runtime hay tạo release.
 

@@ -973,6 +973,33 @@ OmniVoice (never integrated), Kokoro and StyleTTS 2 were removed.
 
 - **Response body:** `object`
 
+### `GET /api/tts/voices`
+
+List Voices
+
+Discover actual English voices, including explicit cache freshness metadata.
+
+- **Response body:** `object`
+- **Parameters:** `locale` (optional), `gender` (optional), `q` (optional), `refresh` (optional)
+
+### `POST /api/tts/voices/preview`
+
+Preview Voice
+
+Audition a selected voice independently of every project and production cache.
+
+- **Request body:** `VoicePreviewRequest`
+- **Response body:** `object`
+
+### `GET /api/tts/voices/preview/{preview_id}.mp3`
+
+Voice Preview Media
+
+Serve a bounded audition already read into memory; no open file can race cleanup.
+
+- **Response body:** `object`
+- **Parameters:** `preview_id`
+
 ## untagged
 
 ### `GET /`

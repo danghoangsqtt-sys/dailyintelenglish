@@ -3,9 +3,9 @@
   "version": "1.4.0-rc.1",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase48_in_progress_task48.5_final_qa_docs",
-  "current_phase": "48",
-  "next_planned_phase": "48",
+  "status": "phase49_in_progress_task49.1_foundation",
+  "current_phase": "49",
+  "next_planned_phase": "49",
   "feature_plan": {
     "planned_at": "2026-10-16",
     "mode": "add_feature",
@@ -15,8 +15,8 @@
     "plan": ".viepilot/PLAN.md",
     "brainstorm": "docs/brainstorm/session-2026-10-16.md",
     "tasks_total": 15,
-    "tasks_done": 4,
-    "next_task": "48.5",
+    "tasks_done": 5,
+    "next_task": "49.1",
     "next_command": "vp-auto --from 48",
     "implementation_authorized_by_this_request": true,
     "execution_authorization": "Owner invoked vp-auto --from 48 on 2026-10-16; run planned tasks, retain owner listening/visual gates and no new release without release instruction.",
@@ -30,7 +30,7 @@
       "evidence": "data/tmp/evolve-20261016/validation.json",
       "implementation_tests": "not_run_planning_only"
     },
-    "note": "Tasks48.1–48.4 verified: full pytest1704 passed (916.89s),30 browser flows, real UI47 choices and profile/project isolation. Real Brian/Roger audio and horizontal/vertical render smoke passed; synthetic visual fixtures explicitly labeled. Owner accepted four samples; final QA/docs task48.5 in progress. Current EXE/release and old owner gates unchanged.",
+    "note": "Phase48 source verified; full1704 in901.80s,45 browser cases, actual47-choice UI, real Brian/Roger audio/both renders/ZIP evidence. Owner four-sample listening accepted. Source docs complete; installed EXE/release unchanged. Phase49.1 opened with written bounded plan; isolated70-test candidate only, no owner DB migration.",
     "owner_feedback": {
       "listening": "four_examples_accepted",
       "voices": [
@@ -41,7 +41,14 @@
       ],
       "requested_choices": "about20",
       "observed_catalog_count": 47,
-      "phase_gate": "technical_ui_pending"
+      "phase_gate": "V48_technical_verified_listening_examples_accepted",
+      "solo_demo": {
+        "character": "Hoang",
+        "topic": "Why do we build habits?",
+        "structure": "why",
+        "front21": "owner_external_AI_import_pending",
+        "prepared_prompts": "data/tmp/evolve-20261016/hoang-front21/Hoang-front21-prompts.md"
+      }
     }
   },
   "tech_stack": {
@@ -65,15 +72,15 @@
   "phases": {
     "48": {
       "name": "Character voice selection",
-      "status": "in_progress",
-      "tasks_done": 4,
+      "status": "implemented_verified",
+      "tasks_done": 5,
       "tasks_total": 5,
-      "gate": "V48_listening_examples_accepted_technical_pending",
+      "gate": "V48_technical_verified_listening_examples_accepted",
       "plan": ".viepilot/phases/48-character-voices/PLAN.md"
     },
     "49": {
       "name": "Solo Explainer and front21 presenter pack",
-      "status": "planned",
+      "status": "in_progress",
       "tasks_done": 0,
       "tasks_total": 10,
       "gate": "V49_not_started",

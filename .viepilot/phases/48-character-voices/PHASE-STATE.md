@@ -1,10 +1,10 @@
 # PHASE-STATE — Phase 48: Giọng nói riêng cho nhân vật
 
-- **Status:** in_progress (owner invoked vp-auto --from 48, 2026-10-16).
+- **Status:** implemented_verified (V48 technical complete; owner listening examples accepted,2026-10-16).
 - **Planned at:** 2026-10-16, Asia/Bangkok.
-- **Tasks:** 4/5 technically verified, 1 in progress, 0 planned.
-- **Gate V48:** listening_examples_accepted (Brian/Christopher/Roger/Ryan); owner requests about20 choices, actual English catalog47. Phase technical/UI/E2E acceptance pending.
-- **Dependencies:** Không cần migration hoặc owner gate cũ đóng để bắt đầu. Không thay trạng thái Phase 47; V48 mới chờ nghe thật.
+- **Tasks:** 5/5 technically verified, 0 in progress, 0 planned.
+- **Gate V48:** listening_examples_accepted (Brian/Christopher/Roger/Ryan); owner requests about20 choices, actual English catalog47. Technical/UI/media/export evidence complete; source ready for subsequent Solo work.
+- **Dependencies:** Không cần migration hoặc owner gate cũ đóng để bắt đầu. Không thay trạng thái Phase 47; V48 đã có technical evidence và owner listening acceptance.
 - **Release:** current 1.4.0-rc.1; target 1.5.0 planned, chưa build.
 - **Source:** [SPEC](SPEC.md), [PLAN](PLAN.md), [master PLAN](../../PLAN.md).
 
@@ -14,7 +14,7 @@
 | [48.2](tasks/task-48.2.md) | Lưu giọng theo profile và speaker project | implemented_verified |
 | [48.3](tasks/task-48.3.md) | Fingerprint TTS, invalidation và bảo vệ media tốt cũ | implemented_verified |
 | [48.4](tasks/task-48.4.md) | Voice picker trong hồ sơ nhân vật và Audio Studio | implemented_verified |
-| [48.5](tasks/task-48.5.md) | Gate V48: giọng thật, hồi quy và hướng dẫn | in_progress |
+| [48.5](tasks/task-48.5.md) | Gate V48: giọng thật, hồi quy và hướng dẫn | implemented_verified |
 
 ## Planning verification
 
@@ -22,6 +22,6 @@ SPEC/PLAN đã được viết từ yêu cầu owner và code inventory. Validat
 
 ## Owner inputs
 
-Owner đã nghe và chấp nhận bốn mẫu Brian/Christopher/Roger/Ryan, yêu cầu khoảng20 lựa chọn. Catalog thật hiện47; technical/UI/E2E của phase chưa hoàn tất.
+Owner đã nghe và chấp nhận bốn mẫu Brian/Christopher/Roger/Ryan, yêu cầu khoảng20 lựa chọn. Catalog thật hiện47; technical/UI/media/export evidence đã ghi trong [SUMMARY](SUMMARY.md). Không suy acceptance bốn mẫu thành đánh giá mọi giọng.
 
 Phase 47 vẫn chờ visual review. Gate B-25/B-26/B-27/B-28 giữ pending.

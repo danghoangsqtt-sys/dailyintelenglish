@@ -1,6 +1,6 @@
 # SPEC — Phase 49: Solo Explainer và bộ presenter chính diện
 
-- Ngày: 2026-10-16 · Trạng thái: **planned**.
+- Ngày: 2026-10-16 · Trạng thái: **executing49.1** (V48 verified; no Solo task verified yet).
 - Mục tiêu: Video kiến thức tiếng Anh một người, front21, minh họa đa dạng, bố cục tự đề xuất và owner duyệt.
 - Dependency: Phase 48 / Gate V48; schema → front assets và script → explainer plan → layout → preview → render → integrations → demo.
 - Quy mô: XL · 10 task · chưa triển khai.

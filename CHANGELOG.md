@@ -8,12 +8,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
-### Added (source, Phase48 tasks48.1–48.4)
+### Added (source, Phase48 tasks48.1–48.5)
 
 - English Edge voice catalog with last-good cache/freshness and independent, bounded voice auditions. Preview media never writes project audio/cache. Catalog verified with39 focused tests. Owner accepted Brian/Christopher/Roger/Ryan and requests about20 choices; actual English catalog47. Final V48 technical/UI gate pending.
 - Pinned profile/project voice IDs, guarded revisions and explicit apply-profile action preserve project speed/pitch/volume; cast/series/Step1 round-trip keeps each selection. Focused45 and full pytest1675 pass. Current EXE/release unchanged.
 - Voice-aware TTS fingerprint sidecars and targeted invalidation; unchanged speakers reuse their cache. TTS/mix/render/Shorts write unique attempt paths and reject stale completion, retaining previous files. Soundtrack uses the selected voice stem; a fresh horizontal render cannot promote a stale vertical cut. Full pytest1694, renderer104 + TypeScript pass.
-- Shared voice picker in Character Library and Audio Studio: complete live English catalog (47 observed), locale/gender/search, isolated auditions, explicit save/reload/profile apply, duplicate notices and async/dirty-state guards. Full pytest1704,30 browser flows and a real47-entry UI smoke pass. Final phase documentation/QA continues; installed EXE unchanged.
+- Shared voice picker in Character Library and Audio Studio: complete live English catalog (47 observed), locale/gender/search, isolated auditions, explicit save/reload/profile apply, duplicate notices and async/dirty-state guards. Full pytest1704,30 browser flows and a real47-entry UI smoke pass. Final phase QA/docs complete: full1704, source user/install guides and172-route API reference, real audio/render/ZIP evidence; installed EXE unchanged.
 
 ### Planned — target 1.5.0 (2026-10-16, not implemented)
 

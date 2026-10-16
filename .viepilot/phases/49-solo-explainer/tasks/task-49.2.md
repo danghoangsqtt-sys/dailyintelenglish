@@ -39,6 +39,14 @@ Front21 registry, prompt và version manifest. Hoàn thành contract tương ứ
 
 **File mới dự kiến:** `backend/library/presenter_asset_plan.py`, `tests/test_presenter_asset_plan.py`.
 
+### Execution refinement (isolated candidate preparation only, before dependencies finish)
+
+- Keep native29 constants, processing, materialization and readiness unchanged. A separate presenter_asset_plan module owns front21 prompts, immutable per-asset storage, dependency review and versioned manifests. Add optional Literal native/front view to existing slot/input/upload/batch/review/approve/prompt routes; native remains default and cross-view review is rejected.
+- Front base is full-body standing and keeps head/hands/feet inside canvas. Existing native prepare_base cuts full-length images at mid-thigh, so add a front-only base preparation helper without that crop; compare front edits only against the approved front base. Screen-left/right prompts explicitly name the viewer's screen direction, never gender mirroring.
+- Store front files by full asset UUID, never move or overwrite an older approved file. Validation metadata pins front base/parent IDs; approving a replacement base invalidates front descendants only, replacement gesture invalidates its mouth descendant. Re-review requires a current approved reference chain; stale images made from another base must be imported again.
+- Front manifests pin profile/identity, all21 asset IDs and content hashes, addressed by revision hash. Old manifests remain resolvable after imports. Native sprite_dir is never rewritten by front imports. Add front readiness separately to profile response; front pending never lowers native readiness.
+- Owner chose **Hoang — Why do we build habits?** for final demo. Prepare front prompts using that existing identity/outfit after implementation; no owner DB writes or synthetic-art acceptance.
+
 Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu phát hiện cần file khác, ghi lý do và mở rộng bounded scope trước code. Các file đã tạo bởi task trước trong Paths được tiếp tục sử dụng; không tự viết lại hệ thống lân cận.
 
 ## Risks / guardrails
