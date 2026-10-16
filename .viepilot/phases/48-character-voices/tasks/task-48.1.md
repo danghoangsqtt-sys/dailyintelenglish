@@ -1,6 +1,6 @@
 # Task 48.1 — Catalog giọng Edge TTS và nghe thử độc lập
 
-- **Status:** in_progress · owner authorized vp-auto --from 48 on 2026-10-16.
+- **Status:** implemented_verified · 2026-10-16; phase listening acceptance pending.
 - **Dependencies:** Không có task mới; đọc SPEC/PLAN và trạng thái hiện tại trước.
 - **Requirements:** R10, R13.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
@@ -28,6 +28,9 @@ Catalog giọng Edge TTS và nghe thử độc lập. Hoàn thành contract tư�
 - .viepilot/ROADMAP.md
 - .viepilot/HANDOFF.json
 - CHANGELOG.md
+- .viepilot/SPEC.md
+- .viepilot/PLAN.md
+- .viepilot/phases/48-character-voices/PLAN.md
 - .viepilot/phases/48-character-voices/tasks/task-48.1.md
 
 ## File-Level Plan / allowed_files
@@ -63,6 +66,13 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 - [ ] PM/owner nhận kết quả theo AR-06; ghi technical verification và owner acceptance riêng.
 
 ## Progress
+
+- Final full pytest: **1,668 passed**, one existing warning,1,171.01s; focused **39 passed**, Ruff/diff clean. Evidence: `data/tmp/evolve-20261016/task48.1-pytest.log`. Commit/push checkpoint follows; no phase PASS claimed.
+- Owner feedback: Guy/Andrew differ, but both clearer differences and more natural intonation are required. Four further real auditions (Brian/Christopher/Roger/Ryan) prepared with the same question/example passage at1x speed/pitch0. GateV48 stays pending. No provider/engine change or unsupported emotion claim.
+
+- Implemented English catalog, last-good disk cache, bounded network timeout, typed audition API and separate TTL/quota preview storage. Targeted tests **39 passed** (including legacy TTS routes); Ruff and diff check clean. One fixture setup issue (pre-created tts_cache directory) corrected; no product failure hidden.
+- Live service smoke:47 English voices, Guy/Andrew en-US male auditions generated, each14 word boundaries; both MP3s fully decoded (6.864s/5.256s). Isolated DATA_DIR did not create app.db. Evidence `data/tmp/evolve-20261016/voice-smoke/report.json`. Owner listening question sent asynchronously; this is not phase acceptance.
+- Full post-implementation pytest running before task persistence checkpoint. No frontend, project voice semantics or production audio changes in this task.
 
 - Execution preflight: Codex adapter executes inline; no sub-agents. Read AI-GUIDE, SYSTEM-RULES, STACKS and pytest/SQLite/browser summaries. Installed edge_tts is 7.3.1; existing TTSError/ValidationError handlers reused.
 - Per-file contract: voice_catalog_service.py owns metadata validation, disk cache and timeout; voice_preview_service.py owns separate bounded audition files and opaque URLs; schemas/tts.py owns typed catalog/preview payloads; api/tts.py delegates new routes; constants.py owns TTL/deadlines/cap. paths.py changes only if a path helper is needed. Tests use fake provider/synth and isolated DATA_DIR; one bounded real-provider smoke is separate.

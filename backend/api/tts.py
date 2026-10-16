@@ -1,21 +1,50 @@
 """TTS engine discovery + per-line preview routes (Task 1.6)."""
 
 import time
+from typing import Literal
 
 import aiosqlite
-from fastapi import APIRouter, Depends
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import FileResponse, Response
 
 from backend.db.transactions import read_transaction, write_transaction
 from backend.core.exceptions import NotFoundError
 from backend.core.responses import ok
 from backend.db.database import get_db
-from backend.schemas.tts import PreviewLineRequest
+from backend.schemas.tts import PreviewLineRequest, VoiceCatalog, VoicePreviewRequest, VoicePreviewResult
 from backend.content import project_service, script_service
-from backend.ai.tts import tts_service
+from backend.ai.tts import tts_service, voice_catalog_service, voice_preview_service
 
 router = APIRouter(prefix="/api/tts", tags=["tts"])
 preview_router = APIRouter(prefix="/api/projects/{project_id}/tts", tags=["tts"])
+
+
+@router.get("/voices")
+async def list_voices(
+    locale: str = Query(default="", max_length=35),
+    gender: Literal["", "male", "female", "neutral"] = "",
+    q: str = Query(default="", max_length=100),
+    refresh: bool = False,
+) -> dict:
+    """Discover actual English voices, including explicit cache freshness metadata."""
+    started_at = time.perf_counter()
+    catalog = await voice_catalog_service.get_catalog(refresh=refresh, locale=locale, gender=gender, q=q)
+    return ok(VoiceCatalog.model_validate(catalog).model_dump(), started_at=started_at)
+
+
+@router.post("/voices/preview")
+async def preview_voice(payload: VoicePreviewRequest) -> dict:
+    """Audition a selected voice independently of every project and production cache."""
+    started_at = time.perf_counter()
+    result = await voice_preview_service.preview_voice(payload)
+    return ok(VoicePreviewResult.model_validate(result).model_dump(), started_at=started_at)
+
+
+@router.get("/voices/preview/{preview_id}.mp3")
+async def voice_preview_media(preview_id: str) -> Response:
+    """Serve a bounded audition already read into memory; no open file can race cleanup."""
+    audio = await voice_preview_service.read_preview(preview_id)
+    return Response(audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
 
 
 @router.get("/engines")

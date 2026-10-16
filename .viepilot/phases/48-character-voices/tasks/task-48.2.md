@@ -1,6 +1,6 @@
 # Task 48.2 — Lưu giọng theo profile và speaker project
 
-- **Status:** planned · 2026-10-16.
+- **Status:** in_progress · 2026-10-16; next implementation after task48.1 checkpoint.
 - **Dependencies:** 48.1
 - **Requirements:** R10, R12, R13.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
@@ -26,6 +26,8 @@ Lưu giọng theo profile và speaker project. Hoàn thành contract tương ứ
 - tests/conftest.py
 - tests/test_channel_api.py
 - backend/channel/channel_service.py
+- frontend/static/js/step1_config.js
+- tests/test_step1_config_edit_browser.py
 - .viepilot/phases/48-character-voices/PHASE-STATE.md
 - .viepilot/TRACKER.md
 - .viepilot/ROADMAP.md
@@ -52,6 +54,7 @@ Lưu giọng theo profile và speaker project. Hoàn thành contract tương ứ
 - `project_visuals_service.py`: same cast member must not reapply changed profile voice when another member is swapped. Newly selected character applies its voice normally.
 - `channel_service.py`: copy concrete profile voice into SpeakerConfig/config snapshot for future series projects, not merely into the later cast row.
 - Tests/conftest.py adds a deterministic fake voice catalog to the existing provider-isolation policy; tests that exercise failure paths override it locally. Update the former accent-change test to the intentionally new pinned-voice rule, retain facing behavior assertions. No DB migration is needed.
+- Step1 currently drops voice_id in load/build payloads: preserve it on draft edit/save and set it for a newly chosen character. Verify existing config browser regression plus JS syntax; no second picker in Step1. New core file is `backend/core/voice.py`.
 - Commands: focused profile/project/channel/voice pytest; Ruff; full pytest before persistence checkpoint. Expected: all tests pass with no real catalog calls from the suite.
 
 Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu phát hiện cần file khác, ghi lý do và mở rộng bounded scope trước code. Các file đã tạo bởi task trước trong Paths được tiếp tục sử dụng; không tự viết lại hệ thống lân cận.

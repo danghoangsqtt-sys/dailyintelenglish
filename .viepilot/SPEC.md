@@ -1,7 +1,7 @@
 # SPEC — Giọng nói riêng và Solo Explainer
 
 - Ngày: 2026-10-16 · Mode: Add Feature · Độ lớn: XL.
-- Trạng thái: **planned**, chưa triển khai Phase 48/49.
+- Trạng thái: **Phase48 executing**, catalog/audition API verified; Phase49 planned. Owner V48 requests clearer voice differences and more natural intonation.
 - Nguồn yêu cầu: [brainstorm 2026-10-16](../docs/brainstorm/session-2026-10-16.md).
 - Kế hoạch thực thi: [PLAN](PLAN.md); [Phase 48](phases/48-character-voices/SPEC.md); [Phase 49](phases/49-solo-explainer/SPEC.md).
 - Bản đang phát hành: **1.4.0-rc.1**, stable gần nhất 1.3.0. Mục tiêu tính năng **1.5.0**; 1.5.0-rc.1 chỉ được tạo sau kiểm thử và quyết định phát hành.
@@ -30,6 +30,7 @@ Thêm khả năng chọn giọng thật riêng cho mỗi nhân vật, dùng đư
 | R11 | Dùng được cho video YouTube và video dọc | 49.6–49.10 | Hai bố cục riêng, safe area và caption rõ |
 | R12 | Tận dụng assets và pipeline hiện có | 48.2, 49.1–49.10 | Project classic/native cũ vẫn chạy |
 | R13 | Đã chọn giọng thì audio phải dùng đúng giọng | 48.2–48.5 | Cache, word timings và freshness nhất quán |
+| R14 | Giọng khác biệt rõ hơn và tự nhiên, có ngữ điệu hơn (feedback2026-10-16) | 48.1, 48.4, 48.5 | So sánh thêm giọng thật/cùng đoạn; owner nghe, khác ID chưa đủ |
 
 ## 2. Hiện trạng đã đối chiếu code
 

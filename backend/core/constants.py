@@ -52,6 +52,15 @@ VIDEO_HEIGHT_STANDARD = 720
 MAX_CONCURRENT_TTS = 2
 TTS_SPEED_MIN = 0.75
 TTS_SPEED_MAX = 1.5
+
+# Phase 48: English voice catalog and isolated auditions.
+VOICE_CATALOG_TTL_SECONDS = 24 * 60 * 60
+VOICE_CATALOG_TIMEOUT_SECONDS = 15
+VOICE_PREVIEW_TTL_SECONDS = 24 * 60 * 60
+VOICE_PREVIEW_TIMEOUT_SECONDS = 60
+VOICE_PREVIEW_MAX_BYTES = 256 * 1024 * 1024
+VOICE_PREVIEW_MAX_TEXT_LENGTH = 500
+VOICE_PREVIEW_SAMPLE_TEXT = "A clear explanation begins with a simple example. Let us explore this idea together."
 TTS_SPEED_DEFAULT = 1.0
 # Only engines tts_service.py can actually dispatch to. "piper"/"google"/"azure" were
 # removed 2026-09-18 (found by an independent audit): they were accepted as valid

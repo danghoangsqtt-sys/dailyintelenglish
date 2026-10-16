@@ -10,7 +10,7 @@
 - Tasks:48.1 catalog/audition →48.2 persistence →48.3 fingerprint/freshness →48.4 UI →48.5 GateV48.
 - [SPEC](phases/48-character-voices/SPEC.md) · [PLAN và cards](phases/48-character-voices/PLAN.md).
 - Acceptance: hai nhân vật cùng gender/locale có hai voice ID thật, save/reload đúng, preview không đổi production cache; đổi giọng không phát lại audio cũ; owner nghe duyệt.
-- Status:**planned,0/5**. Không yêu cầu đóng các gate cũ để xây tính năng; không tự ghi nhận owner acceptance.
+- Status:**in_progress,1/5 technically verified** (48.1 catalog/audition API; full pytest1,668 pass).48.2 starts next. Owner requests clearer differences/naturalness; V48 pending. No old owner gate closed.
 
 ### Phase 49 — Solo Explainer và presenter chính diện
 
