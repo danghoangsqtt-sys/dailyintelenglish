@@ -495,8 +495,24 @@
       "owner_acceptance": false,
       "phase_complete_tag_created": false,
       "persistence": {
-        "status": "pending_commit_push_verification",
-        "branch": "owner-runs/20261001-r9"
+        "status": "source_and_technical_tags_remote_verified",
+        "source_commit": "cefb3e206215fad30f67a94dc58e1e022a8fe8ef",
+        "branch": "owner-runs/20261001-r9",
+        "source_remote_verified": true,
+        "technical_task_tags": [
+          "die-vp-p51-t51.1-done",
+          "die-vp-p51-t51.2-done",
+          "die-vp-p51-t51.3-done"
+        ],
+        "tag_targets_remote_verified": true,
+        "worktree_clean_before_documentation_checkpoint": true,
+        "ahead_behind": [
+          0,
+          0
+        ],
+        "documentation_checkpoint_follows": true,
+        "phase_complete_tag_created": false,
+        "owner_V49_accepted": false
       }
     }
   },

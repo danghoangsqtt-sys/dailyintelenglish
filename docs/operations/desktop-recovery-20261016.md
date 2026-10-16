@@ -1,6 +1,6 @@
 # Desktop runtime recovery —2026-10-16
 
-Status: implementation, local installation and full regression verified; Git persistence checkpoint follows. Owner acceptance remains separate. BUG-045 and recurring BUG-044; [bounded Phase51 plan](../../.viepilot/phases/51-desktop-runtime-recovery/PLAN.md).
+Status: implementation, local installation and full regression verified; Source and technical-tag persistence verified. Owner acceptance remains separate. BUG-045 and recurring BUG-044; [bounded Phase51 plan](../../.viepilot/phases/51-desktop-runtime-recovery/PLAN.md).
 
 ## Cause and implementation
 
@@ -39,6 +39,6 @@ An optional combined command to compare data and stop/restart the new installed 
 
 Focused tests:25 passed in4.05s (desktop boot, build identity/privacy/API, wrong-build/database/unknown listener, readiness race/timeout, committed WAL snapshot and unfinished-job/FK guards). Ruff, modified JS syntax and PowerShell installer AST checks passed. OpenAPI reference regenerated:184 routes. Runtime voice catalog is ignored by Git.
 
-Full regression: **1884 passed in787.66s (13:07)**; evidence `data/tmp/phase51-pytest-full.log`. One existing Starlette/httpx deprecation warning, no failures. Ruff/JS syntax/PowerShell AST/diff checks clean. Final persistence is recorded after actual checks.
+Full regression: **1884 passed in787.66s (13:07)**; evidence `data/tmp/phase51-pytest-full.log`. One existing Starlette/httpx deprecation warning, no failures. Ruff/JS syntax/PowerShell AST/diff checks clean. Source checkpoint`cefb3e2` was committed/pushed to`origin/owner-runs/20261001-r9`; all3 annotated technical task tags`die-vp-p51-t51.1-done` through`51.3-done` resolve remotely to that commit. Clean worktree and ahead0/behind0 verified before this documentation checkpoint; final check follows its push. No phase-complete/release/V49 acceptance tag created.
 
 BUG-044 architecture/project metadata/renderer README now describe implemented shared SoloScene, Player, production and integration behavior; distinguish verified implementation, installed local trial and the published ZIP. Historical Phase50 evidence remains historical. Phase49 has9/10 technically verified tasks and49.10 implementation/package checks; the real owner front21 demo and V49 acceptance remain pending because the owner has no pictures yet. Published GitHub1.4.0-rc.1 and stable1.3.0 remain unchanged; target1.5.0 is unreleased. No old owner gate was closed.
