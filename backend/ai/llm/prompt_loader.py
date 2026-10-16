@@ -80,9 +80,39 @@ def _read_cefr_block_sync(cefr_level: str) -> str:
     return (SCRIPT_PROMPTS_DIR / f"cefr_{normalized.lower()}.txt").read_text(encoding="utf-8")
 
 
+def _render_presentation_block_sync(presentation_mode: str, explainer_structure: str | None, num_speakers: int) -> str:
+    """Validate explicit Solo configuration, then render its finite structure template."""
+    if presentation_mode == "classic":
+        return ""
+    if presentation_mode != "solo_explainer":
+        raise ValidationError("Unsupported presentation mode")
+    if num_speakers != 1:
+        raise ValidationError("Solo Explainer requires exactly one presenter")
+    structure = explainer_structure or "why"
+    if structure not in ("why", "how", "list"):
+        raise ValidationError("Solo structure must be Why, How or List")
+    try:
+        template = _env.get_template("solo_explainer.txt")
+    except TemplateNotFound as exc:
+        raise ValidationError(f"Prompt template not found: {exc}") from exc
+    return template.render(explainer_structure=structure)
+
+
+async def load_presentation_block(presentation_mode: str = "classic", explainer_structure: str | None = None,
+                                  num_speakers: int = 1) -> str:
+    """Load Solo instructions off the event loop; a classic project keeps its existing prompt rules."""
+    return await asyncio.to_thread(_render_presentation_block_sync, presentation_mode, explainer_structure, num_speakers)
+
+
 def _render_script_prompt_sync(*, genre: str, cefr_level: str, **context: object) -> str:
     """Blocking: compose and render the full prompt. Runs entirely in a worker thread."""
     genre_instructions = _read_genre_block_sync(genre)
+    mode = context.pop("presentation_mode", "classic")
+    structure = context.pop("explainer_structure", None)
+    solo = _render_presentation_block_sync(mode, structure, int(context.get("num_speakers", 0)))
+    if solo and len(context.get("speakers", [])) != 1:
+        raise ValidationError("Solo Explainer requires exactly one presenter")
+    genre_instructions = solo or genre_instructions
     cefr_constraints = _read_cefr_block_sync(cefr_level)
     try:
         template = _env.get_template("script_base.txt")
@@ -94,6 +124,7 @@ def _render_script_prompt_sync(*, genre: str, cefr_level: str, **context: object
         cefr_level=cefr_level,
         genre_instructions=genre_instructions,
         cefr_constraints=cefr_constraints,
+        presentation_mode=mode,
         **context,
     )
 
@@ -270,8 +301,11 @@ def _render_regenerate_line_prompt_sync(
     current_text: str,
     line_id: str,
     speaker_id: str,
+    presentation_mode: str = "classic",
+    explainer_structure: str | None = None,
 ) -> str:
     """Blocking: validate genre/cefr, then render regenerate_line.txt."""
+    solo = _render_presentation_block_sync(presentation_mode, explainer_structure, 1)
     if genre not in GENRES:
         raise ValidationError(f"No prompt support for genre: {genre!r}")
     if cefr_level.upper() not in CEFR_LEVELS:
@@ -289,6 +323,8 @@ def _render_regenerate_line_prompt_sync(
         current_text=current_text,
         line_id=line_id,
         speaker_id=speaker_id,
+        solo_instructions=solo,
+        cefr_constraints=_read_cefr_block_sync(cefr_level) if solo else "",
     )
 
 
@@ -301,6 +337,8 @@ async def render_regenerate_line_prompt(
     current_text: str,
     line_id: str,
     speaker_id: str,
+    presentation_mode: str = "classic",
+    explainer_structure: str | None = None,
 ) -> str:
     """Render the single-line regeneration prompt using prompts/script/regenerate_line.txt.
 
@@ -325,6 +363,8 @@ async def render_regenerate_line_prompt(
         current_text=current_text,
         line_id=line_id,
         speaker_id=speaker_id,
+        presentation_mode=presentation_mode,
+        explainer_structure=explainer_structure,
     )
 
 

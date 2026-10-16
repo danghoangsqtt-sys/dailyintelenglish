@@ -32,7 +32,7 @@ from backend.core.constants import (
     SCRIPT_SPEAKER_BALANCE_MAX_SHARE, SCRIPT_SPEAKER_BALANCE_MIN_SHARE, SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO,
 )
 from backend.core.exceptions import ProviderError, SchemaValidationError
-from backend.ai.llm.prompt_loader import SCRIPT_PROMPTS_DIR, load_cefr_block, load_genre_block
+from backend.ai.llm.prompt_loader import SCRIPT_PROMPTS_DIR, load_cefr_block, load_genre_block, load_presentation_block
 from backend.db.transactions import read_transaction, write_transaction
 from backend.ai.llm import ai_job_service
 from backend.content import project_service, script_service
@@ -609,7 +609,8 @@ async def _render(template_name: str, **context: object) -> str:
 async def _generate_outline(
     router: "AIRouter", project: dict, target_words: int, num_sections: int, db, job_id: str
 ) -> ScriptOutline:
-    genre_instructions = await load_genre_block(project["genre"])
+    solo = await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]))
+    genre_instructions = solo or await load_genre_block(project["genre"])
     cefr_constraints = await load_cefr_block(project["cefr_level"])
     prompt = await _render(
         "outline.txt",
@@ -624,6 +625,7 @@ async def _generate_outline(
         num_sections=num_sections,
         genre_instructions=genre_instructions,
         cefr_constraints=cefr_constraints,
+        presentation_mode=project.get("presentation_mode", "classic"),
     )
     result = await _call_router(
         db, job_id, router,
@@ -680,6 +682,8 @@ async def _generate_section(
         speakers=project["speakers"],
         num_speakers=len(project["speakers"]),
         max_consecutive_lines=SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER,
+        presentation_mode=project.get("presentation_mode", "classic"),
+        solo_instructions=await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"])),
         cefr_constraints=cefr_constraints,
         language_features=project["language_features"],
     )
@@ -736,6 +740,8 @@ async def _repair_section(
         speakers=project["speakers"],
         errors=errors,
         previous_output=previous_output,
+        solo_instructions=await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"])),
+        cefr_constraints=await load_cefr_block(project["cefr_level"]) if project.get("presentation_mode") == "solo_explainer" else "",
     )
     result = await _call_router(
         db, job_id, router,

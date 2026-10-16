@@ -50,6 +50,12 @@ _SCRIPT_LINES_ADAPTER = TypeAdapter(list[ScriptLineOut])
 _SINGLE_LINE_ADAPTER = TypeAdapter(ScriptLineOut)
 
 
+def _require_single_presenter(config: dict) -> None:
+    """Reject malformed explicit Solo configuration before any provider call."""
+    if config.get("presentation_mode") == "solo_explainer" and (config.get("num_speakers") != 1 or len(config.get("speakers", [])) != 1):
+        raise ScriptGenerationError("Solo Explainer requires exactly one presenter")
+
+
 async def generate_script(
     project_id: str, config: dict, router: AIRouter | None = None
 ) -> list[ScriptLineOut]:
@@ -85,6 +91,7 @@ async def generate_script(
             `compute_effective_mode` already degrades to local automatically,
             per invariant 32.)
     """
+    _require_single_presenter(config)
     known_speaker_ids = {speaker["id"] for speaker in config["speakers"]}
 
     prompt = await render_script_prompt(
@@ -96,6 +103,8 @@ async def generate_script(
         accent=config["accent"],
         speakers=config["speakers"],
         language_features=config["language_features"],
+        presentation_mode=config.get("presentation_mode", "classic"),
+        explainer_structure=config.get("explainer_structure"),
     )
 
     router = router or build_ai_router_from_settings()
@@ -160,6 +169,7 @@ async def regenerate_line(
             JSON, the response fails schema validation, or changes the speaker
             away from `speaker_id`.
     """
+    _require_single_presenter(config)
     speaker = next((s for s in config["speakers"] if s["id"] == speaker_id), None)
     if speaker is None:
         raise ScriptGenerationError(f"speaker_id {speaker_id!r} not found in project {project_id}")
@@ -172,6 +182,8 @@ async def regenerate_line(
         current_text=current_text,
         line_id=line_id,
         speaker_id=speaker_id,
+        presentation_mode=config.get("presentation_mode", "classic"),
+        explainer_structure=config.get("explainer_structure"),
     )
 
     router = router or build_ai_router_from_settings()
@@ -196,6 +208,8 @@ async def regenerate_line(
             f"Model changed speaker_id from {speaker_id} to {line.speaker_id}"
         )
 
+    if config.get("presentation_mode") == "solo_explainer":
+        line = line.model_copy(update={"id": line_id})  # the editor owns this existing line identity
     return line
 
 

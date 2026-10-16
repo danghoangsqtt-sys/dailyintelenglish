@@ -2,7 +2,7 @@
 
 ## Planned extension — 2026-10-16, target 1.5.0
 
-**Add Feature; Phase48 verified, Phase49 executing.** [SPEC tổng](SPEC.md), [PLAN tổng](PLAN.md), [brainstorm](../docs/brainstorm/session-2026-10-16.md). 15 tasks:8 technically verified,1 in progress,6 planned. Bản phát hành1.4.0-rc.1 giữ nguyên.
+**Add Feature; Phase48 verified, Phase49 executing.** [SPEC tổng](SPEC.md), [PLAN tổng](PLAN.md), [brainstorm](../docs/brainstorm/session-2026-10-16.md). 15 tasks:9 technically verified,1 in progress,5 planned. Bản phát hành1.4.0-rc.1 giữ nguyên.
 
 ### Phase 48 — Chọn giọng riêng cho nhân vật
 
@@ -18,7 +18,7 @@
 - Dependencies:Phase48/V48; front21 và script là nền cho explainer plan/layout, sau đó Player/render/integrations.
 - Tasks49.1–49.10:[PLAN và cards](phases/49-solo-explainer/PLAN.md) · [SPEC](phases/49-solo-explainer/SPEC.md).
 - Acceptance: một pack thật21ảnh, video có ảnh/sơ đồ/thẻ chữ, bố cục hai aspect không che nội dung, lưu locks/revision đúng, full16:9/full9:16/Short và staged EXE verified, owner GateV49.
-- Status:**in_progress,3/10 verified;49.4 implementing**.49.3 full1751 passed; Solo config, immutable front21 backend and profile import/review UI verified. Owner demo:Hoang — Why do we build habits?; front21 imported/reviewed images required before V49. Isolated fixtures do not replace that visual gate.
+- Status:**in_progress,4/10 verified;49.5 implementing**.49.4 full1775 passed; Why/How/List pipeline + real LLM structure/timing tested, draft factual/CEFR review still required. Owner demo:Hoang — Why do we build habits?; front21 imported/reviewed images required before V49. Isolated fixtures do not replace that visual gate.
 
 Phase47 owner review và B-25/B-26/B-27/B-28 vẫn pending, không bị thay thế bởi V48/V49. Mục tiêu1.5.0 chỉ là planned version, chưa đổi runtime hay tạo release.
 

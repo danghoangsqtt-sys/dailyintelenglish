@@ -1,3 +1,7 @@
+{% if presentation_mode | default('classic') == 'solo_explainer' %}
+You are writing an English Solo Explainer for Daily Beyond English: one presenter
+addresses the viewer with a clear knowledge explanation, examples and a takeaway.
+{% endif %}
 You are writing ONE section of a {{ genre }} podcast episode at CEFR
 {{ cefr_level }} about "{{ topic }}" for the YouTube channel Daily Beyond English.
 
@@ -65,7 +69,7 @@ use a category at all is controlled ONLY by the list below:
 1. Stay on topic: every line must relate to "{{ topic }}".
 2. Do not invent a speaker — use only the alias values listed above.
 3. Do not number or label lines with an `id` field — the app assigns line IDs.
-4. Vary how speakers agree or react to each other. Never open more than one turn in the whole episode with the same stock agreement phrase — for example, always praising what the other speaker just said in the same way before adding your own view. React differently each time.
+4. {% if presentation_mode | default('classic') == 'solo_explainer' %}Vary examples and transitions while speaking directly to the viewer; never simulate another person's reply.{% else %}Vary how speakers agree or react to each other. Never open more than one turn in the whole episode with the same stock agreement phrase — for example, always praising what the other speaker just said in the same way before adding your own view. React differently each time.{% endif %}
 5. State the episode's main point or takeaway freshly, in your own words, each time it comes up. Never repeat the same summary or takeaway sentence, word-for-word or nearly so, in more than one section.{% if is_last_section %} The one exception is the final section's sign-off (see above): a brief, one-sentence recap of the takeaway is allowed there.{% endif +%}
 6. Do not restate the same sentence or claim twice within this section itself, even reworded in a way that reuses most of the same wording.
 
@@ -84,3 +88,7 @@ has this shape:
   }
 }
 ```
+
+{% if solo_instructions | default('') %}
+{{ solo_instructions }}
+{% endif %}

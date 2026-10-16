@@ -1,10 +1,10 @@
 # Task 49.4 — Kịch bản độc thoại Why / How / List theo CEFR
 
-- **Status:** in_progress · 2026-10-16, after front21 UI checkpoint; depends49.1 satisfied.
+- **Status:** implemented_verified · 2026-10-16; structure/transport verified, content/CEFR owner review remains V49.
 - **Dependencies:** 49.1
 - **Requirements:** R01, R12.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
-- **Scope:** card này là kế hoạch, chưa có kết quả triển khai hay acceptance.
+- **Scope:** Solo script/prompt/repair paths implemented and technically verified. Real LLM smoke recorded separately from owner content/CEFR acceptance.
 
 ## Objective
 
@@ -29,6 +29,11 @@ Kịch bản độc thoại Why / How / List theo CEFR. Hoàn thành contract t�
 - .viepilot/HANDOFF.json
 - CHANGELOG.md
 - .viepilot/phases/49-solo-explainer/tasks/task-49.4.md
+- .viepilot/phases/49-solo-explainer/tasks/task-49.5.md
+- .viepilot/phases/49-solo-explainer/PLAN.md
+- .viepilot/phases/49-solo-explainer/SPEC.md
+- .viepilot/PLAN.md
+- .viepilot/SPEC.md
 
 ## File-Level Plan / allowed_files
 
@@ -72,4 +77,11 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Progress
 
-- 2026-10-16: planned; shipping code chưa sửa, tests triển khai chưa chạy.
+- 2026-10-16:49.3 checkpoint9a74aba persisted/pushed with clean/upstream/ahead0;10 bounded Solo script/test files applied afterward. Ruff/diff clean, no modified frontend JS in this task.
+- Solo Why/How/List Jinja block, explicit one-presenter guard and context through legacy full generation, pipeline outline/section/semantic-length-global repairs, and single-line regeneration implemented. Classic mode keeps its prompt defaults; Solo generated line identity stays server-owned. Existing one-speaker exemptions and checkpoint/budget algorithms retained.
+- Candidate/source focused **238 passed** (source2.85s), including24 new cases for structure×A2/B1/C1, malformed mode/count/structure, one-presenter persistence over10 lines, bounded unknown-speaker repair/failure preserving prior script, classic default equality and regeneration. A draft test expected `failed`; corrected to the actual durable status enum`error` without changing production job states.
+- Real source pipeline smoke in new sandbox `data/tmp/evolve-20261016/solo-llm-18d6918f5b/`: B1 Why,125-word/1min target; actual114 words, one presenter, one repair, complete in124.594s. Gemini3.1 Flash-Lite unavailable; configured chain succeeded with `gemini-flash-lite-latest`. No provider policy override. Read current owner settings via read-only DB connection, wrote only sandbox. Full source regression running; no task PASS yet, no owner content/CEFR/factual certification or real project overwrite.
+- First full gate **1775 passed in707.45s**. Review found the first real draft too abstract with an over-simple brain explanation. Refined Solo-only instructions for concrete language, useful examples instead of padding and careful factual claims; classic templates/transport unchanged. Isolated refined prompt still238 pass; second real pipeline completed117 words in180.706s, one presenter/one repair, last response `gemini-3.1-flash-lite` after transient cloud failures. Its driving/brain-rest wording also needs editorial review, so neither sample is owner-approved or demo-ready; model success is not factual/CEFR acceptance. Refined prompt applied only after first full finished; rerun focused/full gates before checkpoint.
+
+- Final refined source **1775 passed in709.21s**, one existing Starlette warning;238 focused in3.01s, Ruff/diff clean. Separate comparison against pre-Solo committed templates:6 classic full prompts +3 regeneration prompts unchanged, ignoring only trailing whitespace. No frontend JS changed. Real114/117-word smokes are structural evidence only, not approved demo content; editorial/factual limits above retained. No owner script/media/EXE replaced.
+- Next49.5: ignored028 migration copy preserved17 AI jobs/43 checkpoints/13 projects/290 script lines, injected middle-file rollback/schema/tracking and2 restarts/FK/integrity verified. Draft timing13 checks pass and resolves25/25 real Edge tokens,11.54s presentation with source word start/end retained. These are preparation only until49.5 source/task gates.

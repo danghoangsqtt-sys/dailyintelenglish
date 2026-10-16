@@ -1,6 +1,6 @@
 # Task 49.5 — Explainer plan: đoạn, minh họa, locks và approval
 
-- **Status:** planned · 2026-10-16.
+- **Status:** in_progress · 2026-10-16, after49.4 script checkpoint; depends49.2 satisfied.
 - **Dependencies:** 49.2, 49.4
 - **Requirements:** R04, R06, R07, R12.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
@@ -25,6 +25,14 @@ Explainer plan: đoạn, minh họa, locks và approval. Hoàn thành contract t
 - backend/ai/prompts/storyboard/explainer.txt
 - tests/test_explainer_plan.py
 - tests/test_explainer_api.py
+- backend/db/migrations/028_explainer_jobs_assets.sql
+- tests/test_explainer_jobs_migration.py
+- backend/library/explainer_assets.py
+- backend/library/explainer_timing.py
+- tests/test_explainer_timing.py
+- backend/content/project_service.py
+- backend/api/ai_jobs.py
+- backend/ai/llm/ai_job_service.py
 - .viepilot/phases/49-solo-explainer/PHASE-STATE.md
 - .viepilot/TRACKER.md
 - .viepilot/ROADMAP.md
@@ -42,6 +50,15 @@ Explainer plan: đoạn, minh họa, locks và approval. Hoàn thành contract t
 6. Delegate geometry validation cho 49.6; không approve bằng placeholder luôn true. Classic storyboard giữ scene/insert contract.
 
 **File mới dự kiến:** `backend/library/explainer_service.py`, `backend/api/explainer.py`, `backend/ai/prompts/storyboard/explainer.txt`, `tests/test_explainer_plan.py`, `tests/test_explainer_api.py`.
+
+### Execution refinement (isolated exploration during49.4 gate)
+
+- Inventory found the existing jobs table CHECK accepts only script/learning. New028 (never rewrite applied027) must preserve jobs and checkpoint child rows while adding propose_explainer. Rebuild/copy child and parent together under runner transaction, drop old child before parent, rename replacements and recreate indexes. No foreign-key PRAGMA toggles. Test populated DB copy, injected failure rollback, FK and restart.
+- Add immutable project illustration registry in028 and a focused explainer_assets service; do not store knowledge photos in character sprite slots. Stage verified bounded image/hash outside DB lock, publish guarded metadata, expose multipart upload/versioned content APIs, and keep old image versions. Add the explainer artifact category to explicit project deletion; no unsolicited owner-data cleanup.
+- Separate token/time mapping into explainer_timing. End-exclusive anchors refer to script token order; match actual aggregated word events including punctuation/contractions. Missing/ambiguous timings are approval issues, never invented seconds from word count. Coverage must be contiguous, exact and unique.
+- Job snapshots pin source FP, previous draft/locks and expected plan revision. Existing segment IDs/locked fields survive regeneration; missing locked anchors produce explicit issues. Generic AI job entry must construct the same safe explainer snapshot rather than enqueue an incomplete project-only payload. Commit plan/history/job completion atomically after source/revision recheck; resume a validated checkpoint after interruption.
+- Approval stores immutable reviewed snapshot and version refs; source changes are recomputed on read/render to surface stale. Until49.6's real geometry checker is available, production approval must refuse unresolved layouts. Test pin/CAS logic against a labeled validator double, retaining API refusal when geometry is unavailable; do not ship an always-true geometry placeholder.
+- Front21 real owner art remains pending; fixtures only validate mechanics. Existing script/learning jobs and classic storyboard remain unchanged.
 
 Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu phát hiện cần file khác, ghi lý do và mở rộng bounded scope trước code. Các file đã tạo bởi task trước trong Paths được tiếp tục sử dụng; không tự viết lại hệ thống lân cận.
 

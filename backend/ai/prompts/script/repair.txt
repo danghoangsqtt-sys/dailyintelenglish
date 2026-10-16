@@ -41,3 +41,11 @@ shape as before: each element is `{"speaker": "...", "text": "...",
 "language_notes": {"collocations": [...], "idioms": [...], "grammar_point": "..."}}`.
 `"speaker"` must be one of the aliases listed above (e.g. `"S1"`). Do not
 include an `id` field.
+
+{% if solo_instructions | default('') %}
+{{ solo_instructions }}
+## Language ceiling during this rewrite
+{{ cefr_constraints }}
+Preserve the one presenter's existing role and the current idea. Return only the
+requested JSON shape; do not add speakers or change the requested line identity.
+{% endif %}

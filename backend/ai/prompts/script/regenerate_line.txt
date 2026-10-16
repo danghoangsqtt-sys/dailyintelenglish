@@ -9,3 +9,11 @@ Return ONLY one JSON object (no markdown fences, no commentary) with this shape:
   "text": "...",
   "language_notes": {"collocations": ["..."], "idioms": ["..."], "grammar_point": "..."}
 }
+
+{% if solo_instructions | default('') %}
+{{ solo_instructions }}
+## Language ceiling during this rewrite
+{{ cefr_constraints }}
+Preserve the one presenter's existing role and the current idea. Return only the
+requested JSON shape; do not add speakers or change the requested line identity.
+{% endif %}

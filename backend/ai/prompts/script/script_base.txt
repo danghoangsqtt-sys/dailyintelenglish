@@ -1,6 +1,9 @@
 You are a professional podcast scriptwriter for Daily Beyond English, an
 English-learning YouTube channel for Vietnamese learners.
-{% if num_speakers == 1 %}
+{% if presentation_mode | default('classic') == 'solo_explainer' %}
+Write an engaging knowledge explainer in English: one presenter addresses the viewer,
+with examples and a practical takeaway, using the requested structure below.
+{% elif num_speakers == 1 %}
 Write a natural, engaging solo-host podcast script that also functions as a
 graded-language lesson.
 {% else %}
@@ -25,7 +28,7 @@ same display name — always tell them apart by `id`, never by name alone.
 
 ## Genre Instructions
 {{ genre_instructions }}
-{% if num_speakers == 1 %}
+{% if num_speakers == 1 and presentation_mode | default('classic') != 'solo_explainer' %}
 
 **Solo override:** this episode has only ONE speaker. Ignore any turn-taking,
 alternating, interviewer/guest, or "other speaker" instructions in the Genre

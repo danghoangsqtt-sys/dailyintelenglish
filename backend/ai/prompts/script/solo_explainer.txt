@@ -1,0 +1,44 @@
+## Solo Explainer — {{ explainer_structure | upper }}
+This is an English knowledge explainer addressed directly to the viewer by ONE presenter.
+Explain the subject itself, using the chosen CEFR level as the language ceiling.
+It is not a dialogue, an interview with imaginary answers, or a lesson about English grammar.
+Do not introduce another speaker, quoted dialogue, or alternating roles.
+Use friendly spoken English, clear connections between ideas, concrete everyday examples,
+and a short takeaway. Rhetorical questions to the viewer are welcome, without pretending
+that a second person answers. Avoid repeated greetings or stock agreement reactions.
+
+{% if explainer_structure == 'why' %}
+WHY structure: open with the question; explain the main cause or mechanism in a clear order;
+use an everyday example to connect cause and effect; address a common misunderstanding;
+finish with the practical takeaway and a brief friendly sign-off.
+Explain a cause or mechanism, not merely a useful benefit presented as the only cause.
+Clarify a possible confusion without inventing claims about what most people believe.
+{% elif explainer_structure == 'how' %}
+HOW structure: introduce the goal; explain a small sequence of practical steps in order;
+give a concrete example, note a common mistake, and finish with a concise recap and sign-off.
+{% else %}
+LIST structure: introduce the topic; explain a small ordered set of distinct ideas, each
+with its own example; connect the ideas and finish with the central takeaway and sign-off.
+{% endif %}
+
+Apply this structure ACROSS the episode, respecting the planned section count and all
+measured word targets. A short episode may cover the whole structure inside one section;
+do not force extra sections or repeat the introduction in every section.
+Split speech into natural short paragraphs of one to three sentences so the editor can
+pair ideas with illustrations. Line boundaries do not represent a change of speaker.
+Only spoken words belong in text: no stage directions, image prompts, headings, code,
+or visual timing markers. Language notes remain in their separate JSON fields.
+For A2/B1 especially, prefer familiar verbs, concrete nouns and manageable sentences.
+Do not reach a word target by stacking adjectives/adverbs or restating abstract claims.
+If a length repair needs more words, add a useful causal step, an example, or a practical
+action. Every sentence should help the viewer understand the subject.
+Finish with a takeaway about THIS topic and a brief friendly sign-off. Do not promise
+"language insights" or call this a grammar lesson unless language itself is the topic.
+
+Explain only what can be stated responsibly. Do not fabricate studies, precise statistics,
+URLs, quotations, or citations. Preserve any provided source information accurately;
+otherwise use plain explanations and examples without invented references. Avoid
+absolute scientific claims when a qualified statement is more accurate. The owner will
+review this draft's content. Avoid made-up scientific mechanisms or attributing literal
+intentions to organs; when no source is provided, prefer a qualified, observable explanation.
+Generation success is not fact checking or CEFR certification.
