@@ -19,7 +19,7 @@ unrelated dashboard GET -- for its duration. The established pattern (already us
 then take a separate `write_transaction()` to persist the result.
 """
 
-from asyncio import Lock
+from asyncio import CancelledError, Lock, create_task, shield
 from contextlib import asynccontextmanager
 
 import aiosqlite
@@ -58,6 +58,19 @@ async def write_transaction(db: aiosqlite.Connection):
         try:
             yield
             await db.commit()
-        except Exception:
-            await db.rollback()
+        except BaseException:
+            # aiosqlite queues work in a thread. Even a cancelled caller must
+            # finish rollback before another request uses this connection.
+            rollback = create_task(db.rollback())
+            cancellation = None
+            while True:
+                try:
+                    await shield(rollback)
+                    break
+                except CancelledError as exc:
+                    if rollback.cancelled():
+                        raise
+                    cancellation = exc
+            if cancellation is not None:
+                raise cancellation
             raise
