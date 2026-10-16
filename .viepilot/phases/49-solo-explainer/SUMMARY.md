@@ -10,4 +10,4 @@ Feature full pytest 1867 passed in779.20s. Post-Windows-UTF8 full run:1862 passe
 - Next49.10 input: owner creates/imports/reviews21 real Hoang pictures and reviews factual content, then a real16:9/9:16/Short demonstration can be accepted. Fixture sticks and silent audio are not owner art or listening acceptance.
 - Phase47/B-25/B-26/B-27/B-28 and Phase50 PM review retain their prior pending states.
 
-Git persistence is tracked separately after code verification. No phase-complete/owner-accepted/release tag is authorized by these fixture results.
+Implementation commit `c517eca6181578329af690fe7470c90682a329bf` is persisted on origin/owner-runs/20261001-r9; remote branch and technical tags49.6–49.9 were verified independently. This documentation checkpoint follows the verified source commit. No phase-complete/owner-accepted/release tag is authorized by these fixture results.

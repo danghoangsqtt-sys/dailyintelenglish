@@ -42,3 +42,5 @@ Phase 47 vẫn chờ visual review. Gate B-25/B-26/B-27/B-28 giữ pending.
 Feature full pytest 1867 passed in779.20s. Post-Windows-UTF8 full run:1862 passed,5 legacy subprocess mock-signature failures; all40 video/bridge checks passed in7.95s after updating those5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
 
 [Report](../../../docs/operations/phase49-solo-explainer.md) · [Summary](SUMMARY.md). Start with Character Library → Presenter21 to create/import/review real owner pictures; then complete49.10 real demo/V49.
+
+**Git persistence:** source `c517eca6181578329af690fe7470c90682a329bf` and technical tags49.6–49.9 pushed and remote-verified. This documentation checkpoint records the result. No49.10 done/phase-complete/release tag; real V49 remains pending.

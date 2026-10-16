@@ -135,6 +135,22 @@
         "exe_sha256": "09d2ea4f7b5b4d6047598c15266f90f6149c76e968e136eaf194c8d08458fafe",
         "frozen_restarts": 2,
         "production_av_drift_seconds": 0.06
+      },
+      "persistence": {
+        "source_commit": "c517eca6181578329af690fe7470c90682a329bf",
+        "remote_branch": "origin/owner-runs/20261001-r9",
+        "source_remote_verified": true,
+        "technical_task_tags": [
+          "die-vp-p49-t49.6-done",
+          "die-vp-p49-t49.7-done",
+          "die-vp-p49-t49.8-done",
+          "die-vp-p49-t49.9-done"
+        ],
+        "tag_targets_remote_verified": true,
+        "documentation_checkpoint_follows": true,
+        "phase_complete_tag_created": false,
+        "task49_10_done_tag_created": false,
+        "owner_V49_accepted": false
       }
     },
     "47": {

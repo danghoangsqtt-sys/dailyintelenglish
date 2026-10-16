@@ -57,3 +57,7 @@ Latest full log: `data/tmp/phase49-pytest-final.log`. First combined run also pa
 Final frozen production API timing: landscape104.88s, portrait22.31s, including download/decode checks; landscape includes Chrome download after npm ci. Both durations21.227s, drift0.060s. Both Solo composed thumbnail sizes1280×720 and720×1280 rendered with one pinned front presenter.
 
 Hardware/runtime: Windows11, Intel Core i7-12700, RTX3060 12288MiB, Node24.20.0, Python3.14.7. The staged build was made from the source worktree with build-info source_dirty=true; it is an implementation trial, not a new release. Build browser-ensure step additionally executed successfully and PowerShell syntax validated. Git checkpoint/tags are recorded after verification.
+
+## Git persistence
+
+Implementation commit `c517eca6181578329af690fe7470c90682a329bf` pushed to `origin/owner-runs/20261001-r9`; branch and all four annotated technical tags49.6/49.7/49.8/49.9 were independently verified via ls-remote. Source branch divergence was0/0 and worktree clean before this documentation checkpoint. No49.10 done, phase-complete or release tag was created. Owner V49 is still pending.
