@@ -184,3 +184,23 @@ File `.env` là cấu hình tùy chọn tại thư mục gốc; nếu chưa có,
 ## Phạm vi xác minh
 
 Tài liệu được đối chiếu với mã nguồn, script cài và gói `v1.4.0-rc.1`. Gói đã được smoke test trên máy tham chiếu có runtime; **chưa có kiểm thử cài mới từ đầu trên một máy Windows sạch**. Những yêu cầu trên giúp chuẩn bị đúng thành phần, không thay thế kết quả kiểm thử máy đích.
+
+
+## Bản thử cục bộ và lỗi mở nhầm bản cũ (Phase51)
+
+ZIP phát hành `v1.4.0-rc.1` trên GitHub là gói ngày2026-10-15. Bản thử dựng từ mã nguồn mới có thể vẫn mang số1.4.0-rc.1. Xem **Settings → Desktop … Build …** để biết bản đang thực sự phục vụ trình duyệt; `/api/system/build` cung cấp cùng nhận diện mà không trả về đường dẫn dữ liệu.
+
+Nếu hồ sơ cũ thiếu **Character voice** hoặc **Presenter · 21 pictures**, kiểm tra bản đang chạy. Chỉ cập nhật mã nguồn hoặc mở một EXE khác trong khi bản cũ giữ cổng8000 sẽ không nâng cấp tiến trình cũ. Launcher mới chỉ mở lại tiến trình khớp cả build và dữ liệu; nếu khác, nó báo cần hoàn tất tác vụ và cập nhật ứng dụng. Không tự dừng tác vụ khi bấm EXE.
+
+Từ đúng workspace mã nguồn mới, hoàn tất hoặc hủy tác vụ đang chạy, rồi dựng staging và cài:
+
+```powershell
+powershell -NoProfile -File scripts/build_exe.ps1 -OutputRoot data/tmp/phase51-exe-stage
+powershell -NoProfile -File scripts/install_desktop.ps1 -StageDirectory data/tmp/phase51-exe-stage/DailyIntelEnglishStudio
+```
+
+Script cài kiểm tra các job chưa kết thúc và integrity/FK; sao lưu SQLite bằng API backup để giữ cả dữ liệu đã commit trong WAL. Script chỉ dừng EXE tại đường dẫn cài đích, giữ nguyên bản cũ và shortcut trong `data/backups/desktop-<thời gian>/`, rồi thay toàn bộ thư mục ứng dụng. Có cả `app.before-upgrade.db` và `app.at-exit.db`; ảnh/media vẫn ở thư mục dữ liệu hiện có. Script không tự phát hành hoặc tự mở bản vừa cài: bấm lại icon **Daily Beyond English Studio** và kiểm tra Settings.
+
+Trong **Character Library → Profiles**, mở Hoang hoặc hồ sơ cũ: phần **Character voice** nằm trên khu vực ảnh; **Conversation · 29 pictures** và **Presenter · 21 pictures** là hai tab riêng. Tạo/duyệt `calm__closed` trước để mở các ô phụ thuộc; prompt và ảnh tham chiếu đã có trong từng ô. Xem [hướng dẫn Solo](solo-explainer.md).
+
+Nếu cần quay về bản trước, giữ cả backup DB và thư mục EXE/shortcut cùng đợt. Đóng hoàn toàn Studio trước khi khôi phục cặp tương ứng; giữ riêng các chỉnh sửa phát sinh sau nâng cấp, tránh chạy EXE cũ trên schema mới. Việc nâng cấp cục bộ không thay gói GitHub, không xác nhận bộ ảnh thật hoặc nghiệm thu V49. Đây vẫn là thử nghiệm trên máy tham chiếu, không phải kiểm thử cài sạch Windows.

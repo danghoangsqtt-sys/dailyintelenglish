@@ -9,11 +9,15 @@ feels like launching an app, not starting a bare server.
 """
 
 import socket
+import json
 import sys
 import threading
 import time
 import webbrowser
+from urllib.error import URLError
+from urllib.request import ProxyHandler, build_opener
 
+from backend.core.build_info import get_instance_info
 from backend.core.desktop_runtime import configure_desktop_runtime
 
 
@@ -26,17 +30,38 @@ def _is_port_open(host: str, port: int) -> bool:
         return False
 
 
-def _open_browser_when_ready(url: str, host: str, port: int, timeout: float = 20.0) -> None:
-    """Poll the server's own port with a plain TCP connect, then open the browser.
+def _read_running_instance(url: str) -> dict | None:
+    """Read only Studio's small local identity endpoint, bypassing proxy settings."""
+    try:
+        with build_opener(ProxyHandler({})).open(f"{url}/api/system/build", timeout=1) as response:
+            payload = json.loads(response.read(65536))
+        data = payload.get("data") if isinstance(payload, dict) else None
+        return data if isinstance(data, dict) else None
+    except (OSError, URLError, ValueError):
+        return None
 
-    A fixed sleep-then-open risks a "connection refused" flash on a slow cold
-    start (SQLite migrations + the ffmpeg/GPU subprocess checks in backend.main's
-    lifespan); polling the real socket instead means the browser only opens once
-    the server can actually answer.
-    """
+
+def _same_instance(actual: dict | None, expected: dict) -> bool:
+    return actual is not None and all(actual.get(key) == expected[key] for key in ("product", "build_id", "instance_id"))
+
+
+def _reuse_existing_instance(url: str, expected: dict) -> None:
+    """Open only the intended build and database; leave other processes untouched."""
+    if not _same_instance(_read_running_instance(url), expected):
+        raise RuntimeError(
+            f"Another Studio build or application is already using {url}.\n"
+            "Finish any running jobs and close the previous Studio before opening this build.\n"
+            "For a Desktop upgrade, use scripts/install_desktop.ps1 with the verified staging folder; "
+            "it checks active jobs and backs up your data and previous application."
+        )
+    webbrowser.open(url)
+
+
+def _open_browser_when_ready(url: str, expected: dict, timeout: float = 60.0) -> None:
+    """Wait for this build's HTTP readiness, including migrations, before opening."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        if _is_port_open(host, port):
+        if _same_instance(_read_running_instance(url), expected):
             webbrowser.open(url)
             return
         time.sleep(0.2)
@@ -53,20 +78,20 @@ def main() -> None:
     import uvicorn
 
     from backend.core.config import settings
-    from backend.main import app
 
     host = settings.APP_HOST
     port = settings.APP_PORT
-    url = f"http://{host}:{port}"
+    browser_host = "127.0.0.1" if host == "0.0.0.0" else ("[::1]" if host == "::" else host)
+    url = f"http://{browser_host}:{port}"
+    expected = get_instance_info(settings.DATA_DIR)
 
     if _is_port_open(host, port):
-        # Already running (e.g. the exe was double-clicked a second time) --
-        # just open the browser to the existing instance instead of crashing on
-        # a bind error.
-        webbrowser.open(url)
+        _reuse_existing_instance(url, expected)
         return
 
-    threading.Thread(target=_open_browser_when_ready, args=(url, host, port), daemon=True).start()
+    from backend.main import app
+
+    threading.Thread(target=_open_browser_when_ready, args=(url, expected), daemon=True).start()
     uvicorn.run(app, host=host, port=port, reload=False)
 
 

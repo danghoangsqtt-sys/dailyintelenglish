@@ -56,3 +56,44 @@ def test_launcher_import_defers_application_settings_and_workers():
     result = subprocess.run([sys.executable, "-c", "import sys; import backend.desktop_launcher; assert 'backend.main' not in sys.modules; assert 'backend.core.config' not in sys.modules"],
                             capture_output=True, text=True, timeout=10)
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("actual", [None, {}, {"product": "other"}, {"product": "studio", "build_id": "old", "instance_id": "owner"},
+                                    {"product": "studio", "build_id": "new", "instance_id": "another-db"}])
+def test_launcher_never_opens_old_unknown_or_other_database(monkeypatch, actual):
+    from backend import desktop_launcher as launcher
+
+    opened = []
+    monkeypatch.setattr(launcher, "_read_running_instance", lambda url: actual)
+    monkeypatch.setattr(launcher.webbrowser, "open", opened.append)
+    with pytest.raises(RuntimeError, match="Finish any running jobs"):
+        launcher._reuse_existing_instance("http://127.0.0.1:8000", {"product": "studio", "build_id": "new", "instance_id": "owner"})
+    assert not opened
+
+
+def test_second_click_and_readiness_only_open_matching_build(monkeypatch):
+    from backend import desktop_launcher as launcher
+
+    expected = {"product": "studio", "build_id": "new", "instance_id": "owner"}
+    opened = []
+    monkeypatch.setattr(launcher.webbrowser, "open", opened.append)
+    monkeypatch.setattr(launcher, "_read_running_instance", lambda url: expected)
+    launcher._reuse_existing_instance("http://127.0.0.1:8000", expected)
+    replies = iter([None, {**expected, "build_id": "old"}, expected])
+    monkeypatch.setattr(launcher, "_read_running_instance", lambda url: next(replies))
+    monkeypatch.setattr(launcher.time, "sleep", lambda delay: None)
+    launcher._open_browser_when_ready("http://127.0.0.1:8000", expected)
+    assert opened == ["http://127.0.0.1:8000"] * 2
+
+
+def test_readiness_timeout_does_not_open_competing_process(monkeypatch):
+    from backend import desktop_launcher as launcher
+
+    opened = []
+    times = iter([0, 0, 2])
+    monkeypatch.setattr(launcher.time, "monotonic", lambda: next(times))
+    monkeypatch.setattr(launcher.time, "sleep", lambda delay: None)
+    monkeypatch.setattr(launcher, "_read_running_instance", lambda url: {})
+    monkeypatch.setattr(launcher.webbrowser, "open", opened.append)
+    launcher._open_browser_when_ready("http://localhost:8000", {"product": "studio", "build_id": "new", "instance_id": "owner"}, timeout=1)
+    assert not opened

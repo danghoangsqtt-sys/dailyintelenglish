@@ -3,7 +3,7 @@
   "version": "1.4.0-rc.1",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase49_implementation_verified_owner_art_gate_pending",
+  "status": "desktop_runtime_fixed_feature49_owner_art_pending",
   "current_phase": "49",
   "next_planned_phase": "49",
   "feature_plan": {
@@ -462,6 +462,41 @@
         "vitest_passed": 72,
         "real_render_seconds": 194.886,
         "report": "docs/operations/phase46-render-reliability.md"
+      }
+    },
+    "51": {
+      "status": "implemented_verified_pending_owner_review",
+      "tasks_done": 3,
+      "tasks_total": 3,
+      "plan": ".viepilot/phases/51-desktop-runtime-recovery/PLAN.md",
+      "authorization": "Owner vp-auto xử lý bug2026-10-16; fix BUG-045 locally and recurring BUG-044; preserve real-art/release gates.",
+      "report": "docs/operations/desktop-recovery-20261016.md",
+      "local_installation": {
+        "status": "verified",
+        "build_id": "468f9f7ce4b472aa6c26b26469f41d979a02d16ad5822786ef6f3f2c6041e04a",
+        "exe_sha256": "08fdad32d35140dc3d59c71165cb5c5ddc7963e3c346a03d02027193a0a53087",
+        "installed_exe": "dist/DailyIntelEnglishStudio/DailyIntelEnglishStudio.exe",
+        "backup": "data/backups/desktop-20261016-220746-404",
+        "existing_profiles_verified": 5,
+        "voice_choices": 47,
+        "native_files_preserved": 289,
+        "owner_rows_preserved": true,
+        "real_owner_art_available": false,
+        "release_published": false
+      },
+      "technical_verification": {
+        "full_pytest": 1884,
+        "seconds": 787.66,
+        "focused_pytest": 25,
+        "ruff_js_powershell_ast": "passed",
+        "owner_rows_preserved": true,
+        "native_files_preserved": 289
+      },
+      "owner_acceptance": false,
+      "phase_complete_tag_created": false,
+      "persistence": {
+        "status": "pending_commit_push_verification",
+        "branch": "owner-runs/20261001-r9"
       }
     }
   },

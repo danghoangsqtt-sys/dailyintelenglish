@@ -14,6 +14,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Fixed — local Desktop trial, Phase51
+
+- Desktop launch now checks build/data identity instead of silently opening an older app occupying the port. Settings identifies the serving build; installation checks unfinished jobs and creates consistent SQLite/old-application/shortcut backups.
+- Updated the local Desktop installation and verified voice controls plus29 native/21 front picture slots on all five existing profiles; preserved13 projects and289 native files. Published ZIP and real-art V49 acceptance remain separate. Reconciled recurring BUG-044 source/renderer documentation.
+
 ### Source recovery —49.5b and BUG-042/043/044 (2026-10-16)
 
 - Durable Solo explainer proposals, immutable plan/history, owner locks/unlocks, source/revision CAS and guarded approval snapshots. Two proposal entry points share safe snapshots; valid checkpoints resume without another provider call and lost leases/cancelled/stale jobs cannot publish. Real geometry approval remains unavailable until49.6.

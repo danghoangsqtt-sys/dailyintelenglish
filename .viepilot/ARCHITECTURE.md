@@ -2,18 +2,20 @@
 
 <!-- crystallize_version: 0.8.0 -->
 
-*Source snapshot2026-10-16: Phase47 captions, Phase48 voices and Phase49.1–49.5 are technically verified after recovery regression. Owner acceptance remains separate. Published trial remains1.4.0-rc.1; last stable1.3.0. Source additions are not included in that EXE.*
+*Source snapshot2026-10-16: Phase47 captions, Phase48 voices and Phase49.1–49.9 are technically verified;49.10 code/package checks are verified, with the real-art demonstration and owner V49 acceptance pending. Published trial remains1.4.0-rc.1; last stable1.3.0. The published ZIP predates these source additions. Phase51 separately tracks the local Desktop correction; consult its actual installation evidence.*
 
 ## Architecture extension — Phase48/49: current source and remaining plan
 
 Source of truth: [SPEC](SPEC.md), [PLAN](PLAN.md), [Phase49 state](phases/49-solo-explainer/PHASE-STATE.md). The overview below describes the base application. Extension status is:
 
 - **Verified Phase48:** Edge TTS catalog + independent audition cache; pinned profile/project voice IDs, TTS fingerprints and targeted stale propagation. No new TTS engine.
-- **Verified49.1/49.4:** `presentation_mode=classic|solo_explainer`, default classic; one-presenter Why/How/List script generation/repair with CEFR budgets. Migration027 is atomic per SQL file and was verified on disposable legacy copies; this does not authorize applying it to owner data.
+- **Verified49.1/49.4:** `presentation_mode=classic|solo_explainer`, default classic; one-presenter Why/How/List script generation/repair with CEFR budgets. Migration027 is atomic per SQL file and was verified on disposable legacy copies; Phase51 separately records the authorized owner backup/local Desktop upgrade.
 - **Verified49.2/49.3:** independent native29/front21 packs, external-AI prompt/reference → import/review UI, immutable manifests with pinned versions and hashes. Real Hoang front21 art is still pending.
-- **Verified49.5a:** immutable project illustrations, exact end-exclusive script-token coverage, actual audio-word mapping and migration028 preserving durable jobs/checkpoints. Photo/diagram/card and per-aspect layout schemas are bounded data contracts, not a completed layout engine.
-- **Verified49.5b (1848 Python regressions):** explainer plan service/API, source/revision CAS, immutable history, owner locks, bounded proposal/repair worker and approval snapshot pinning. Approval deliberately refuses unavailable production geometry; synthetic validator tests only establish pin/CAS mechanics.
-- **Planned49.6–49.10:** real geometry/path validation, shared scene for embedded Remotion Player preview and production, Solo render/Shorts/thumbnail/series/copy/export and packaging. Build the static Player widget before future frozen packaging; the current renderer workspace does not include it.
+- **Verified49.5a/b:** immutable project illustrations, exact end-exclusive script-token coverage, actual audio-word mapping and migration028 preserving durable jobs/checkpoints; source/revision CAS, immutable plan history, owner locks, bounded proposal/repair worker and approval snapshot pinning.
+- **Verified49.6/49.7:** safe16:9/9:16 geometry using real alpha/motion bounds; serialized layout edits, photo/diagram/card editing, migration029 and embedded Remotion Player. Preview, production and StillFrame share `SoloScene`; Player transport sits outside the picture. Build `npm --prefix renderer run build:preview` before frozen packaging; its output is generated/ignored.
+- **Verified49.8/49.9:** immutable approved media pins, actual word-timed Solo production, guarded render publication, Shorts, composed thumbnails, series/copy/export and monologue publishing text. Owner-source changes invalidate stale approval/media.
+- **49.10 implementation verified:** two frozen fixture launches, real Player/StillFrame comparisons and decoded landscape/portrait/SRT outputs. Real Hoang front21 art and explicit V49 acceptance remain pending; the owner confirmed no real pictures are available yet. The21 upload cards and strict outside-AI prompts are implemented.
+- **Phase51 runtime recovery:** `/api/system/build` identifies the serving build/data instance without returning paths. The Desktop launcher only reuses matching instances. The installer checks unfinished jobs and takes consistent SQLite backups before replacing the exact installed process/distribution; local trial installation evidence is separate from publication.
 
 Native packs and existing outputs are retained. Source verification and owner acceptance remain separate; Phase47 visual review, V49 and B-25/B-26/B-27/B-28 remain pending. Task50.1 addresses cancellation rollback in the shared DB helper; Phase50 does not change the connection architecture.
 

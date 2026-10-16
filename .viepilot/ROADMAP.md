@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase51 — Desktop runtime recovery (2026-10-16)
+
+Status: implemented_verified_pending_owner_review;3/3 technical tasks.51.1 build identity/port guard,51.2 consistent backup + legacy-copy rehearsal + local Desktop update,51.3 docs. Full1884 passed;5/5 old profiles verified,289 native files/original rows preserved. [Plan](phases/51-desktop-runtime-recovery/PLAN.md). No publication/V49 acceptance.
+
 ## Audit recovery — Phase50, authorized2026-10-16
 
 Owner invoked vp-evolve+vp-auto for BUG-042/043/044 and completion49.5b. [Phase50 plan](phases/50-audit-recovery/PLAN.md):50.1 shared cancellation rollback and50.2 documentation implemented_verified;2/2 technical, PM review separate. BUG-043 belongs49.5b. Current_phase49, target1.5.0 and pending owner gates unchanged; no release/version bump.

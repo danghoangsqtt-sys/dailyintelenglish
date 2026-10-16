@@ -1,5 +1,6 @@
 """FastAPI application entrypoint for Daily Beyond English."""
 
+import asyncio
 import time
 from contextlib import asynccontextmanager
 
@@ -293,6 +294,14 @@ async def settings_page() -> FileResponse:
     """Serve the app-level Settings page (Task 12.1 — Gemini API key)."""
     return FileResponse(FRONTEND_DIR / "pages" / "settings.html")
 
+
+
+@app.get("/api/system/build")
+async def running_build() -> dict:
+    """Identify the code and data instance actually serving this browser."""
+    from backend.core.build_info import get_instance_info
+
+    return ok(await asyncio.to_thread(get_instance_info, settings.DATA_DIR))
 
 
 @app.get("/health")

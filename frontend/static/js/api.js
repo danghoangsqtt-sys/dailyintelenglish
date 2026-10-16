@@ -279,6 +279,7 @@ const Api = (() => {
     videoDownloadUrl: (projectId, format) => `/api/projects/${projectId}/video/download?format=${format}`,
     getVideoHealth: () => request("/api/video/health"),
     health: () => request("/health"),
+    getBuildInfo: () => request("/api/system/build"),
     getSettings: () => request("/api/settings"),
     updateAiMode: (aiMode) =>
       request("/api/settings/ai-mode", { method: "PUT", body: JSON.stringify({ ai_mode: aiMode }) }),

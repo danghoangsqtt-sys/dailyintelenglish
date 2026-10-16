@@ -1115,6 +1115,14 @@ Serve the dashboard as the app's landing page.
 
 - **Response body:** `object`
 
+### `GET /api/system/build`
+
+Running Build
+
+Identify the code and data instance actually serving this browser.
+
+- **Response body:** `object`
+
 ### `GET /channel`
 
 Channel Page

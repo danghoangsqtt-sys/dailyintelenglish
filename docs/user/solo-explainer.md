@@ -2,6 +2,8 @@
 
 Đây là chức năng trong mã nguồn Phase49. Bản phát hành đang công bố vẫn là1.4.0-rc.1; không suy ra EXE đã cài có chức năng mới chỉ vì mã nguồn đã được cập nhật. Target1.5.0 và nghiệm thu V49 được theo dõi riêng.
 
+Máy hiện tại đã được cập nhật bản thử Desktop ngày2026-10-16, Build `468f9f7ce4b4`; kiểm tra tại **Settings**. Hồ sơ cũ đã có bộ chọn giọng và tab21 ảnh. Nếu còn tab trình duyệt mở từ bản cũ, tải lại trang rồi mở hồ sơ trong **Character Library → Profiles**.
+
 ## Chuẩn bị21 ảnh trong hồ sơ nhân vật
 
 1. Mở **Character Library**, chọn hồ sơ Hoang hoặc tạo hồ sơ với mô tả ngoại hình và trang phục cụ thể.

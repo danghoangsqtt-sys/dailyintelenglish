@@ -5,7 +5,7 @@
 - **Tasks:**9/10 technically verified;49.10 implementation verified but its real-art/owner gate remains pending. No implementation task is left planned.
 - **Gate V49:** fixture technical checks passed; real-art demonstration and explicit owner acceptance pending.
 - **Dependencies:** Phase 48 / Gate V48; schema → front assets và script → explainer plan → layout → preview → render → integrations → demo.
-- **Release:** published1.4.0-rc.1 unchanged; local staged source EXE verified; target1.5.0 unreleased.
+- **Release:** published1.4.0-rc.1 unchanged; local source EXE installed/old profiles verified in Phase51 (Build468f9f7ce4b4); target1.5.0 unreleased.
 - **Source:** [SPEC](SPEC.md), [PLAN](PLAN.md), [master PLAN](../../PLAN.md).
 
 | Task | Nội dung | Status |

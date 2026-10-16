@@ -6,8 +6,10 @@ The Python backend invokes this Node workspace as a subprocess through
 renderer since Phase35; FFmpeg still handles audio, probes and media validation.
 
 The private package version is independent of the application release version.
-Published Windows trial:1.4.0-rc.1; source development target:1.5.0. The Solo
-layout/Player/render extensions in Phase49.6 onward are still planned.
+Published Windows trial:1.4.0-rc.1; source target:1.5.0 unreleased. Solo layout,
+embedded Player and render/integrations are implemented and technically verified.
+Real owner front21 pictures and V49 acceptance remain pending. The published ZIP
+and the locally installed development trial are separate artifacts.
 
 ## Install
 
@@ -17,11 +19,15 @@ From the repository root in PowerShell:
 Set-Location renderer
 npm.cmd ci
 npx.cmd remotion browser ensure
+npm.cmd run build:preview
 ```
 
 Requires Node.js>=24.0.0; `.npmrc` enforces the engine requirement. FFmpeg/ffprobe
 must be available to the backend. The Windows application links to this external
 runtime; it does not bundle the full renderer/browser in its Python EXE.
+`build:preview` generates `frontend/static/solo-preview/player.js` (ignored by Git).
+Run it before packaging; `scripts/build_exe.ps1` installs dependencies, checks
+types, builds Player and prepares the Remotion browser before PyInstaller.
 
 ## Compositions and inputs
 
@@ -67,5 +73,6 @@ npm.cmd run typecheck
 
 Tests cover caption paging, karaoke, layout/safe zones, sprite timing, motion and
 other deterministic helpers. Passing them does not replace real render checks or
-owner visual acceptance. `@remotion/player` and the Solo editor bundle are future
-Phase49 work; this workspace currently exposes the render compositions above.
+owner visual acceptance. `@remotion/player` powers the embedded Solo editor bundle.
+Player, Episode and StillFrame share `SoloScene` and real word timings; the preview
+shows the content window while production also includes the branded intro/outro.

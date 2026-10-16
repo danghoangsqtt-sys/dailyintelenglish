@@ -371,4 +371,14 @@
 
   loadStatus();
   loadFallbackRate();
+  const buildLabel = document.getElementById("running-build");
+  if (buildLabel) {
+    Api.getBuildInfo().then((info) => {
+      const kind = info.packaged ? "Desktop" : "Source";
+      const date = info.built_at_utc ? ` · ${new Date(info.built_at_utc).toLocaleString()}` : "";
+      buildLabel.textContent = `${kind} ${info.version}${date} · Build ${info.build_id.slice(0, 12)}${info.source_dirty ? " · local trial" : ""}`;
+    }).catch(() => {
+      buildLabel.textContent = "Build identity unavailable. Close the previous Studio and reopen the updated Desktop app.";
+    });
+  }
 })();
