@@ -68,6 +68,8 @@ def line_fingerprint(project: dict, line: dict) -> dict:
 def media_revision(project: dict, lines: list[dict], audio_job: dict | None = None, *, include_cache: bool = True) -> str:
     """Snapshot inputs for mix/render without using a generic, frequently changing updated_at."""
     return fingerprint({
+        "presentation_mode": project.get("presentation_mode", "classic"),
+        "explainer_structure": project.get("explainer_structure"),
         "speakers": [{"id": s["id"], "name": s["name"], "voice": voice_revision(s)} for s in project["speakers"]],
         "lines": [
             {"id": line["id"], "speaker_id": line["speaker_id"], "text": line["text"],

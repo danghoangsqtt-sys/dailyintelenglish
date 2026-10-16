@@ -3,7 +3,7 @@
   "version": "1.4.0-rc.1",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase49_in_progress_task49.1_foundation",
+  "status": "phase49_in_progress_task49.2_front21_registry",
   "current_phase": "49",
   "next_planned_phase": "49",
   "feature_plan": {
@@ -15,8 +15,8 @@
     "plan": ".viepilot/PLAN.md",
     "brainstorm": "docs/brainstorm/session-2026-10-16.md",
     "tasks_total": 15,
-    "tasks_done": 5,
-    "next_task": "49.1",
+    "tasks_done": 6,
+    "next_task": "49.2",
     "next_command": "vp-auto --from 48",
     "implementation_authorized_by_this_request": true,
     "execution_authorization": "Owner invoked vp-auto --from 48 on 2026-10-16; run planned tasks, retain owner listening/visual gates and no new release without release instruction.",
@@ -30,7 +30,7 @@
       "evidence": "data/tmp/evolve-20261016/validation.json",
       "implementation_tests": "not_run_planning_only"
     },
-    "note": "Phase48 source verified; full1704 in901.80s,45 browser cases, actual47-choice UI, real Brian/Roger audio/both renders/ZIP evidence. Owner four-sample listening accepted. Source docs complete; installed EXE/release unchanged. Phase49.1 opened with written bounded plan; isolated70-test candidate only, no owner DB migration.",
+    "note": "Phase48 verified;49.1 foundation verified: focused70/browser10, full1728 in581.51s; atomic027 rollback/restart, legacy read-only online-backup copy integrity/FK/original rows/restore verified. First full hit unrelated music Windows handle cleanup;7/7 isolated and unchanged full retry passed.49.2 front21 active with written scope; no owner DB migration or EXE/release update. Demo Hoang — Why do we build habits?; front21 real art pending.",
     "owner_feedback": {
       "listening": "four_examples_accepted",
       "voices": [
@@ -81,7 +81,7 @@
     "49": {
       "name": "Solo Explainer and front21 presenter pack",
       "status": "in_progress",
-      "tasks_done": 0,
+      "tasks_done": 1,
       "tasks_total": 10,
       "gate": "V49_not_started",
       "depends_on": [

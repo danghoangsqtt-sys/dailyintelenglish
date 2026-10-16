@@ -1,5 +1,7 @@
 """Pydantic models for project creation and update requests."""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from backend.core.constants import (
@@ -114,6 +116,8 @@ class ScriptConfig(BaseModel):
     cefr_level: str = "B1"
     duration_minutes: float = Field(default=10.0, gt=0)
     num_speakers: int = Field(default=2, ge=MIN_SPEAKERS, le=MAX_SPEAKERS)
+    presentation_mode: Literal["classic", "solo_explainer"] = "classic"
+    explainer_structure: Literal["why", "how", "list"] | None = None
     genre: str = "small_talk"
     accent: str = "american"
     language_features: LanguageFeatures = Field(default_factory=LanguageFeatures)
@@ -158,6 +162,11 @@ class ScriptConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_speakers_match_num_speakers(self) -> "ScriptConfig":
+        if self.presentation_mode == "solo_explainer":
+            if self.num_speakers != 1:
+                raise ValueError("Solo Explainer requires exactly one presenter.")
+            if self.explainer_structure is None:
+                self.explainer_structure = "why"
         if len(self.speakers) != self.num_speakers:
             raise ValueError(
                 f"speakers has {len(self.speakers)} entries but num_speakers={self.num_speakers}"
@@ -180,6 +189,8 @@ class ProjectUpdate(BaseModel):
     cefr_level: str | None = None
     duration_minutes: float | None = Field(default=None, gt=0)
     num_speakers: int | None = Field(default=None, ge=MIN_SPEAKERS, le=MAX_SPEAKERS)
+    presentation_mode: Literal["classic", "solo_explainer"] | None = None
+    explainer_structure: Literal["why", "how", "list"] | None = None
     genre: str | None = None
     accent: str | None = None
     language_features: LanguageFeatures | None = None

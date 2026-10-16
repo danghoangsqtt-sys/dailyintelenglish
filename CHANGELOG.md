@@ -8,18 +8,22 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added (source, Phase49 task49.1)
+
+- Explicit Classic/Solo project mode and Why/How/List structure, one-presenter Step1 controls and cast readiness before front assets. Bounded photo/diagram/text-card plan schemas, per-file atomic027 migration/tracking with strict rollback, defaultclassic legacy preservation, and mode-aware media publication revision. Full pytest1728, focused70/browser10, real DB online-backup copy with2 restarts/integrity/FK/restore verification. Solo script/front/editor/render work continues in later tasks; installed EXE unchanged.
+
 ### Added (source, Phase48 tasks48.1–48.5)
 
-- English Edge voice catalog with last-good cache/freshness and independent, bounded voice auditions. Preview media never writes project audio/cache. Catalog verified with39 focused tests. Owner accepted Brian/Christopher/Roger/Ryan and requests about20 choices; actual English catalog47. Final V48 technical/UI gate pending.
+- English Edge voice catalog with last-good cache/freshness and independent, bounded voice auditions. Preview media never writes project audio/cache. Catalog verified with39 focused tests. Owner accepted Brian/Christopher/Roger/Ryan and requests about20 choices; actual English catalog47. V48 technical/UI/media evidence verified; owner listening examples accepted.
 - Pinned profile/project voice IDs, guarded revisions and explicit apply-profile action preserve project speed/pitch/volume; cast/series/Step1 round-trip keeps each selection. Focused45 and full pytest1675 pass. Current EXE/release unchanged.
 - Voice-aware TTS fingerprint sidecars and targeted invalidation; unchanged speakers reuse their cache. TTS/mix/render/Shorts write unique attempt paths and reject stale completion, retaining previous files. Soundtrack uses the selected voice stem; a fresh horizontal render cannot promote a stale vertical cut. Full pytest1694, renderer104 + TypeScript pass.
 - Shared voice picker in Character Library and Audio Studio: complete live English catalog (47 observed), locale/gender/search, isolated auditions, explicit save/reload/profile apply, duplicate notices and async/dirty-state guards. Full pytest1704,30 browser flows and a real47-entry UI smoke pass. Final phase QA/docs complete: full1704, source user/install guides and172-route API reference, real audio/render/ZIP evidence; installed EXE unchanged.
 
-### Planned — target 1.5.0 (2026-10-16, not implemented)
+### Feature milestone — target1.5.0 (planned2026-10-16; implementation underway)
 
-- Phase48: English voice catalog/audition and per-character/project voice selection, pinned defaults and voice-aware TTS cache/freshness (5 planned tasks).
-- Phase49: Solo Explainer Why/How/List, externally generated front21 character pack, photos/diagrams/text cards, owner-reviewed layouts for16:9/9:16, shared Player/render scene, Shorts/thumbnail/export/EXE integration (10 planned tasks).
-- Canonical requirements and execution order: [.viepilot/SPEC.md](.viepilot/SPEC.md), [.viepilot/PLAN.md](.viepilot/PLAN.md). Current runtime/release remains1.4.0-rc.1; no source implementation, DB migration, EXE replacement or release in this planning update. Phase47 review and B-25/B-26/B-27/B-28 remain pending.
+- Phase48: all5 source tasks verified; see entries above.
+- Phase49: Solo Explainer Why/How/List, externally generated front21 character pack, photos/diagrams/text cards, owner-reviewed layouts for16:9/9:16, shared Player/render scene, Shorts/thumbnail/export/EXE integration (49.1 foundation verified,49.2 active; remaining8 planned).
+- Canonical requirements and execution order: [.viepilot/SPEC.md](.viepilot/SPEC.md), [.viepilot/PLAN.md](.viepilot/PLAN.md). Current runtime/release remains1.4.0-rc.1; source implementation described above; no owner DB migration, EXE replacement or new release. Phase47 review and B-25/B-26/B-27/B-28 remain pending.
 
 ### Fixed
 - Video Studio now finishes async visual options and renderer-dependent locks before showing its workspace, avoiding briefly enabled controls or a missing readiness explanation during startup. A controlled delayed-load browser test proves the old failure and corrected behavior.

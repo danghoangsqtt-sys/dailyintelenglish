@@ -1,6 +1,6 @@
 # Task 49.2 — Front21 registry, prompt và version manifest
 
-- **Status:** planned · 2026-10-16.
+- **Status:** in_progress · 2026-10-16, after49.1 durable foundation checkpoint.
 - **Dependencies:** 49.1
 - **Requirements:** R02, R08, R09, R12.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).

@@ -67,7 +67,7 @@ const CharacterSelector = (() => {
     document.head.append(style);
   }
 
-  function open({ slots, profiles, startSlot = slots[0]?.index, onChoose }) {
+  function open({ slots, profiles, startSlot = slots[0]?.index, onChoose, eligibility = "classic" }) {
     ensureStyle();
     const state = { slot: startSlot, previewId: null, query: "", busy: false };
     const slotOf = (index) => slots.find((slot) => slot.index === index);
@@ -97,7 +97,11 @@ const CharacterSelector = (() => {
       const other = usedBy(profile.id);
       if (other) return `Already chosen for ${other.label}.`;
       const needed = missing(profile);
-      if (!castReady(profile)) return `Not ready for videos yet: ${needed.slice(0, 4).join(", ") || "add its pictures"}.`;
+      const soloReady = profile.readiness?.profile?.ready && profile.readiness?.voice?.ready;
+      if (eligibility === "solo_explainer" && !soloReady && profile.legacy_status !== "locked") {
+        return "Complete this character's profile and voice before choosing it. Front pictures can be added before rendering.";
+      }
+      if (eligibility !== "solo_explainer" && !castReady(profile)) return `Not ready for videos yet: ${needed.slice(0, 4).join(", ") || "add its pictures"}.`;
       return null;
     }
 

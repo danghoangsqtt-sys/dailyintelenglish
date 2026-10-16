@@ -332,6 +332,28 @@
 
     <form id="config-form" novalidate>
       <section class="card section-card">
+        <h2 class="section-title">Video format</h2>
+        <p class="section-hint">Choose how the episode addresses its audience.</p>
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label" for="presentation-mode">Presentation</label>
+            <select id="presentation-mode" name="presentation_mode">
+              <option value="classic">Conversation / classic</option>
+              <option value="solo_explainer">Solo Explainer — one presenter</option>
+            </select>
+          </div>
+          <div class="field" id="explainer-structure-row" hidden>
+          <label class="field-label" for="explainer-structure">Explanation structure</label>
+          <select id="explainer-structure" name="explainer_structure">
+            <option value="why">Why — explain causes and examples</option>
+            <option value="how">How — explain steps</option>
+            <option value="list">List — explain ordered ideas</option>
+          </select>
+            <p class="section-hint">One English-speaking presenter addresses the viewer. You can write the script before importing the front-facing picture pack.</p>
+          </div>
+        </div>
+      </section>
+      <section class="card section-card">
         <h2 class="section-title">Basics</h2>
         <p class="section-hint">What is this episode about?</p>
         <div class="field-row">

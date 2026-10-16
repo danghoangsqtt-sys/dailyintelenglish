@@ -1,10 +1,10 @@
 # Task 49.1 — Mode Solo, schema nền và migration an toàn
 
-- **Status:** in_progress · 2026-10-16, V48 technical/listening dependency satisfied.
+- **Status:** implemented_verified · 2026-10-16; foundation only, V49 visual/render gate remains pending.
 - **Dependencies:** 48.5
 - **Requirements:** R01, R11, R12.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
-- **Scope:** card này là kế hoạch, chưa có kết quả triển khai hay acceptance.
+- **Scope:** mode/schema/migration foundation implemented and technically verified. Solo script/render/editor arrive in later tasks, no feature-complete or release claim.
 
 ## Objective
 
@@ -34,6 +34,11 @@ Mode Solo, schema nền và migration an toàn. Hoàn thành contract tương �
 - .viepilot/HANDOFF.json
 - CHANGELOG.md
 - .viepilot/phases/49-solo-explainer/tasks/task-49.1.md
+- .viepilot/phases/49-solo-explainer/tasks/task-49.2.md
+- .viepilot/phases/49-solo-explainer/PLAN.md
+- .viepilot/phases/49-solo-explainer/SPEC.md
+- .viepilot/PLAN.md
+- .viepilot/SPEC.md
 
 ## File-Level Plan / allowed_files
 
@@ -80,4 +85,13 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Progress
 
-- 2026-10-16: planned; shipping code chưa sửa, tests triển khai chưa chạy.
+- 2026-10-16: V48 durable checkpoint881ffce pushed with clean tree/upstream/ahead0; task49.1 plan/state/tag opened before13 bounded source/test files applied.
+- Strict plan contracts, explicit mode/Why/How/List, one-presenter config/cast, merged update validation and read-only-after-script policy implemented. Profile/voice can be cast without front art for Solo; classic readiness unchanged. Mode/structure included in media revision.
+- Migration027 adds explicit defaults and current/history plan tables. Per-file transaction includes schema_migrations; historical018 wrappers normalized; verified pre027 duplicate-column skips only its individual statement,027+ strict. Rollback/restart/partial legacy/trigger-semicolon tests pass.
+- Isolated candidate **70 passed** after correcting a Pydantic discriminator-validator incompatibility and closing the character chooser in the browser test; current shipping-source focused suite **70 passed in16.21s**, final Step1 browser modules **10 passed in11.22s** after matching existing section/field styling. Ruff, both JS syntax and diff checks clean. Full workspace regression running; no task PASS yet.
+- Read-only online-backup copy verification:13 projects/25 speakers/290 script lines and every original table/column unchanged, all old projects defaultclassic, FK/integrity pass,2 restarts and backup restore verified. Evidence `data/tmp/evolve-20261016/drafts/solo-db-copy-0d6a95d18e87411384487c8f8fad3b4c/verification.json`. Source owner DB never opened for writes.
+- Owner chose Hoang — Why do we build habits?; preparatory front21 prompts/reference sent, real21-image pack and V49 still pending. Front registry, script, layout/editor and production rendering are later tasks.
+- Actual isolated source UI inspected at1280px; no JS page errors, mode Solo/Why and one-presenter lock correct. Screenshots/report `data/tmp/evolve-20261016/solo-ui-fbee3fdad0/`. Narrow390px check exposes existing desktop shell overflow; no mobile-support claim or unrelated shell refactor in this task.
+- First full gate stopped at697 passed because existing `test_music_upload_multi_browser.py` cleanup attempted to unlink `two.mp3` while its background analyser held a Windows handle. The unchanged module passed7/7 in7.38s when isolated. Retry the full gate on the same source snapshot; do not mark PASS from a partial run or alter unrelated music behavior merely to get green.
+
+- Final full retry **1728 passed in581.51s**, one existing Starlette warning. No music source/test changed: existing module's transient Windows file-handle failure7/7 isolated and full retry passed on the same source. Full log `data/tmp/evolve-20261016/task49.1-pytest-r2.log`. Ruff/both modified JS syntax/diff clean. No owner DB migration, EXE update or new release.

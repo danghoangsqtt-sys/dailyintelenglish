@@ -1,5 +1,6 @@
 """Async SQLite connection management (aiosqlite)."""
 
+import re
 import sqlite3
 from datetime import datetime, timezone
 
@@ -125,6 +126,72 @@ PREVIOUS_BUILTIN_CATEGORIES = {
 }
 
 
+
+
+def _migration_statements(script: str) -> list[str]:
+    """Split complete SQLite statements, retaining trigger bodies and quoted semicolons."""
+    statements: list[str] = []
+    pending = ""
+    for character in script:
+        pending += character
+        if character == ";" and sqlite3.complete_statement(pending):
+            statements.append(pending)
+            pending = ""
+    if _statement_sql(pending).strip():
+        if not sqlite3.complete_statement(pending + ";"):
+            raise sqlite3.OperationalError("Incomplete migration statement")
+        statements.append(pending)
+    return statements
+
+
+def _statement_sql(statement: str) -> str:
+    """Remove only leading comments for safe statement classification, without changing SQL strings."""
+    return re.sub(r"\A(?:\s|--[^\n]*(?:\n|$)|/\*.*?\*/)*", "", statement, flags=re.DOTALL).strip()
+
+
+async def _legacy_duplicate_column(
+    connection: aiosqlite.Connection, statement: str, filename: str, error: sqlite3.OperationalError,
+) -> bool:
+    """Resume untracked pre027 additive migrations one statement at a time, never swallow a whole file."""
+    if filename >= "027" or "duplicate column name" not in str(error).lower():
+        return False
+    match = re.fullmatch(r'ALTER\s+TABLE\s+(\w+)\s+ADD\s+COLUMN\s+(\w+)\s+.+?;?',
+                         _statement_sql(statement), flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        return False
+    table, column = match.groups()
+    cursor = await connection.execute(f'PRAGMA table_info("{table}")')
+    return any(row["name"] == column for row in await cursor.fetchall())
+
+
+async def _apply_migration(connection: aiosqlite.Connection, filename: str, script: str) -> None:
+    """Commit a migration and its tracking record together, or leave neither schema nor record behind."""
+    statements = _migration_statements(script)
+    await connection.execute("BEGIN IMMEDIATE")
+    try:
+        for statement in statements:
+            sql = _statement_sql(statement)
+            if not sql:
+                continue
+            # Historical018 owns BEGIN/COMMIT in its file. The runner now owns that transaction and tracking together.
+            if re.fullmatch(r"(?:BEGIN(?:\s+(?:DEFERRED|IMMEDIATE|EXCLUSIVE))?(?:\s+TRANSACTION)?|COMMIT|END)\s*;?",
+                            sql, flags=re.IGNORECASE):
+                continue
+            if re.match(r"(?:ROLLBACK|SAVEPOINT|RELEASE|ATTACH|DETACH|VACUUM|PRAGMA)\b", sql, flags=re.IGNORECASE):
+                raise sqlite3.OperationalError("Migration must not alter the runner's transaction or connection")
+            try:
+                await connection.execute(statement)
+            except sqlite3.OperationalError as exc:
+                if not await _legacy_duplicate_column(connection, statement, filename, exc):
+                    raise
+        await connection.execute("INSERT INTO schema_migrations (filename, applied_at) VALUES (?, ?)",
+                                 (filename, datetime.now(timezone.utc).isoformat()))
+        await connection.commit()
+    except BaseException:
+        await connection.rollback()
+        raise
+
+
 async def init_db() -> None:
     """Open the database connection and apply each migration file exactly once, in
     filename order, tracked in `schema_migrations`.
@@ -140,26 +207,14 @@ async def init_db() -> None:
     await connection.execute(
         "CREATE TABLE IF NOT EXISTS schema_migrations (filename TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
     )
+    await connection.commit()
     cursor = await connection.execute("SELECT filename FROM schema_migrations")
     applied = {row[0] for row in await cursor.fetchall()}
     for migration_file in sorted(MIGRATIONS_DIR.glob("*.sql")):
         if migration_file.name in applied:
             continue
         script = migration_file.read_text(encoding="utf-8")
-        try:
-            await connection.executescript(script)
-        except sqlite3.OperationalError as exc:
-            # A database that predates schema_migrations tracking may already have this
-            # migration's effect applied (e.g. an ALTER TABLE ADD COLUMN from before this
-            # fix existed) -- record it as applied and continue rather than crashing
-            # startup. Any other OperationalError is a real failure and must still raise.
-            message = str(exc)
-            if "duplicate column name" not in message and "already exists" not in message:
-                raise
-        await connection.execute(
-            "INSERT INTO schema_migrations (filename, applied_at) VALUES (?, ?)",
-            (migration_file.name, datetime.now(timezone.utc).isoformat()),
-        )
+        await _apply_migration(connection, migration_file.name, script)
     now = datetime.now(timezone.utc).isoformat()
     for slug, name, place, staging, category in BUILTIN_SCENES:
         await connection.execute(

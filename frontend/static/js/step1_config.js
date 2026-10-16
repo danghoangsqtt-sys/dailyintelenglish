@@ -59,6 +59,7 @@
     duration: DURATION_PRESETS[1],
     customDurationActive: false,
     genre: GENRES[7].value, // small_talk
+    presentationMode: "classic", explainerStructure: "why",
     accent: ACCENTS[0].value, // american
     speakers: [],
     profiles: [],  // Phase 33: the character profiles a speaker can be (Api.listProfiles)
@@ -251,6 +252,7 @@
     CharacterSelector.open({
       slots: state.speakers.map((speaker, i) => ({ index: i, label: slotLabel(i), characterId: speaker.character_id })),
       profiles: state.profiles,
+      eligibility: state.presentationMode,
       startSlot: index,
       onChoose: (slotIndex, profile) => applyProfile(slotIndex, profile),
     });
@@ -267,7 +269,7 @@
     renderSpeakerCards();
 
     numInput.addEventListener("input", (e) => {
-      const count = sanitizeSpeakerCount(e.target.value);
+      const count = state.presentationMode === "solo_explainer" ? 1 : sanitizeSpeakerCount(e.target.value);
       e.target.value = count;
       syncSpeakersToCount(count);
       renderSpeakerCards();
@@ -345,6 +347,8 @@
       state.customDurationActive = !DURATION_PRESETS.includes(duration);
     }
     state.genre = project.genre || state.genre;
+    state.presentationMode = project.presentation_mode || "classic";
+    state.explainerStructure = project.explainer_structure || "why";
     state.accent = project.accent || state.accent;
     state.languageFeatures = Object.fromEntries(
       LANGUAGE_FEATURES.map((feature) => [
@@ -370,10 +374,32 @@
     syncSpeakersToCount(speakerCount);
   }
 
+  function renderPresentation() {
+    const solo = state.presentationMode === "solo_explainer";
+    document.getElementById("presentation-mode").value = state.presentationMode;
+    document.getElementById("explainer-structure-row").hidden = !solo;
+    document.getElementById("explainer-structure").value = state.explainerStructure;
+    const count = document.getElementById("num-speakers");
+    count.disabled = solo;
+    if (solo) { count.value = 1; syncSpeakersToCount(1); renderSpeakerCards(); }
+  }
+
+  function setupPresentation() {
+    renderPresentation();
+    document.getElementById("presentation-mode").addEventListener("change", event => {
+      state.presentationMode = event.target.value;
+      renderPresentation();
+    });
+    document.getElementById("explainer-structure").addEventListener("change", event => {
+      state.explainerStructure = event.target.value;
+    });
+  }
+
   function renderForm() {
     renderCefr();
     renderDurationPresets();
     setupSpeakers();
+    setupPresentation();
     renderChipGrid("genre-grid", GENRES, state.genre, (value) => {
       state.genre = value;
     });
@@ -464,6 +490,8 @@
       cefr_level: state.cefr,
       duration_minutes: state.duration,
       num_speakers: state.speakers.length,
+      presentation_mode: state.presentationMode,
+      ...(state.presentationMode === "solo_explainer" ? {explainer_structure: state.explainerStructure} : {}),
       genre: state.genre,
       accent: state.accent,
       language_features: { ...state.languageFeatures },

@@ -1,8 +1,8 @@
 # PHASE-STATE — Phase 49: Solo Explainer và bộ presenter chính diện
 
-- **Status:** in_progress;49.1 opened after V48 source checkpoint.
+- **Status:** in_progress;49.1 verified,49.2 front21 registry/assets active.
 - **Planned at:** 2026-10-16, Asia/Bangkok.
-- **Tasks:** 0/10 verified, 1 in progress, 9 planned.
+- **Tasks:** 1/10 verified, 1 in progress, 8 planned.
 - **Gate V49:** not_started; technical verification và owner acceptance đều chưa có.
 - **Dependencies:** Phase 48 / Gate V48; schema → front assets và script → explainer plan → layout → preview → render → integrations → demo.
 - **Release:** current 1.4.0-rc.1; target 1.5.0 planned, chưa build.
@@ -10,8 +10,8 @@
 
 | Task | Nội dung | Status |
 |---|---|---|
-| [49.1](tasks/task-49.1.md) | Mode Solo, schema nền và migration an toàn | in_progress |
-| [49.2](tasks/task-49.2.md) | Front21 registry, prompt và version manifest | planned |
+| [49.1](tasks/task-49.1.md) | Mode Solo, schema nền và migration an toàn | implemented_verified |
+| [49.2](tasks/task-49.2.md) | Front21 registry, prompt và version manifest | in_progress |
 | [49.3](tasks/task-49.3.md) | Nhập, duyệt và quản lý bộ front trong UI | planned |
 | [49.4](tasks/task-49.4.md) | Kịch bản độc thoại Why / How / List theo CEFR | planned |
 | [49.5](tasks/task-49.5.md) | Explainer plan: đoạn, minh họa, locks và approval | planned |
