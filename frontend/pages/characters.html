@@ -57,6 +57,20 @@
     .slot-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 15px; }
     .slot-prompt { width: 100%; font-size: 14px; margin-top: 4px; resize: vertical; }
     .slot-actions { display: flex; gap: 8px; }
+    .profile-view-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 12px; }
+    .profile-view-tabs [aria-selected="true"] { background: var(--accent); color: white; }
+    .profile-pack-progress { margin: 8px 0; font-weight: 650; }
+    #profile-slots[aria-busy="true"] { opacity: .6; }
+    .profile-slots[data-view="front"] .slot-group:first-child .slot-card { grid-column: 1 / -1; }
+    @media (min-width: 1280px) {
+      .profile-slots[data-view="front"] .slot-group:first-child .slot-card { grid-template-columns: 220px minmax(0, 1fr); gap: 12px; }
+      .profile-slots[data-view="front"] .slot-group:first-child .slot-card-head { grid-column: 1 / -1; }
+      .profile-slots[data-view="front"] .slot-group:first-child .slot-drop { grid-column: 1; grid-row: 2 / 5; }
+      .profile-slots[data-view="front"] .slot-group:first-child .slot-steps { grid-column: 2; grid-row: 2; }
+      .profile-slots[data-view="front"] .slot-group:first-child .slot-note { grid-column: 2; grid-row: 3; }
+      .profile-slots[data-view="front"] .slot-group:first-child .slot-actions { grid-column: 2; grid-row: 4; }
+    }
+
     @media (max-width: 900px) {
       .profile-layout { grid-template-columns: 1fr; }
     }
@@ -191,6 +205,10 @@
                 <button id="profile-delete" class="btn btn-ghost btn-sm" type="button">Delete</button>
               </div>
             </div>
+            <div class="profile-view-tabs" role="tablist" aria-label="Picture view">
+              <button id="profile-view-native" class="btn btn-ghost btn-sm" role="tab" aria-selected="true" aria-controls="profile-slots" type="button" data-picture-view="native">Conversation · 29 pictures</button>
+              <button id="profile-view-front" class="btn btn-ghost btn-sm" role="tab" aria-selected="false" aria-controls="profile-slots" type="button" data-picture-view="front">Presenter · 21 pictures</button>
+            </div>
             <div id="profile-readiness" class="profile-readiness"></div>
             <details class="voice-choice" open>
               <summary>Character voice</summary>
@@ -209,8 +227,9 @@
               </form>
             </details>
             <div class="profile-slot-tools">
-              <h3>Pictures</h3>
-              <p class="library-hint">Make each picture with an outside AI from its card: attach the input picture, select the
+              <h3 id="profile-pack-heading">Conversation pictures</h3>
+              <p id="profile-pack-progress" class="profile-pack-progress" aria-live="polite"></p>
+              <p id="profile-pack-help" class="library-hint">Make each picture with an outside AI from its card: attach the input picture, select the
                 region, paste the prompt. Then drop the result on the same card; it is renamed and placed for you.</p>
               <div class="profile-actions">
                 <a id="profile-prompt-pack" class="btn btn-ghost btn-sm" href="#" download>Download prompt pack</a>
@@ -219,7 +238,7 @@
                 <button id="profile-approve-all" class="btn btn-primary btn-sm" type="button" hidden>Approve all pending</button>
               </div>
             </div>
-            <div id="profile-slots" class="profile-slots"></div>
+            <div id="profile-slots" class="profile-slots" role="tabpanel" aria-labelledby="profile-view-native"></div>
           </div>
         </div>
       </div>

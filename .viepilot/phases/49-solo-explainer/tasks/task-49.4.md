@@ -1,6 +1,6 @@
 # Task 49.4 — Kịch bản độc thoại Why / How / List theo CEFR
 
-- **Status:** planned · 2026-10-16.
+- **Status:** in_progress · 2026-10-16, after front21 UI checkpoint; depends49.1 satisfied.
 - **Dependencies:** 49.1
 - **Requirements:** R01, R12.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
@@ -20,6 +20,8 @@ Kịch bản độc thoại Why / How / List theo CEFR. Hoàn thành contract t�
 - backend/ai/prompts/script/section.txt
 - backend/schemas/script.py
 - backend/ai/prompts/script/solo_explainer.txt
+- backend/ai/prompts/script/repair.txt
+- backend/ai/prompts/script/regenerate_line.txt
 - tests/test_explainer_script.py
 - .viepilot/phases/49-solo-explainer/PHASE-STATE.md
 - .viepilot/TRACKER.md
@@ -37,6 +39,13 @@ Kịch bản độc thoại Why / How / List theo CEFR. Hoàn thành contract t�
 5. Ghi chú nguồn khi đầu vào có, không bịa URL/trích dẫn. Owner vẫn duyệt thông tin.
 
 **File mới dự kiến:** `backend/ai/prompts/script/solo_explainer.txt`, `tests/test_explainer_script.py`.
+
+### Execution refinement (isolated preparation during49.3 full gate)
+
+- Existing section/global validators already exempt a one-speaker script from turn-taking/balance, so keep those checks and classic behavior. Explicit Solo mode must reject a malformed multi-speaker configuration before a provider call; old single-speaker classic remains supported.
+- Add one bounded Jinja Solo block for Why/How/List, viewer-directed English knowledge explanation, everyday examples and a takeaway. Existing genre's dialogue instructions must not override Solo. Preserve CEFR ceiling, language-feature toggles, actual word budgets and one UUID/alias across direct generation, outline, sections, all repair purposes and single-line regeneration.
+- Add optional mode/structure context to prompt loader and template conditions with classic defaults. Repair and regeneration templates are within scope because otherwise rewritten text can lose the Solo purpose/structure. Do not rewrite transport, worker checkpoints or budget algorithms. Current config hashes already include full project mode/structure; verify this rather than adding another hash.
+- Tests cover Why/How/List ×A2/B1/C1 prompt constraints, one-speaker validation, bounded semantic/length repairs, regeneration ID preservation, classic prompt compatibility and section/global checks. Run a real LLM smoke in an isolated DB through current provider policy and record actual word counts/IDs/content limits; do not write owner scripts or certify facts/CEFR from model success alone.
 
 Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu phát hiện cần file khác, ghi lý do và mở rộng bounded scope trước code. Các file đã tạo bởi task trước trong Paths được tiếp tục sử dụng; không tự viết lại hệ thống lân cận.
 

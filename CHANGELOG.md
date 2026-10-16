@@ -8,12 +8,14 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
-### Added (source, Phase49 tasks49.1–49.2)
+### Added (source, Phase49 tasks49.1–49.3)
 
 - Explicit Classic/Solo project mode and Why/How/List structure, one-presenter Step1 controls and cast readiness before front assets. Bounded photo/diagram/text-card plan schemas, per-file atomic027 migration/tracking with strict rollback, defaultclassic legacy preservation, and mode-aware media publication revision. Full pytest1728, focused70/browser10, real DB online-backup copy with2 restarts/integrity/FK/restore verification. Solo script/front/editor/render work continues in later tasks; installed EXE unchanged.
 
-- Front21 backend:10 closed/open frontal poses plus blink, external-AI prompts with viewer-relative pointing and existing identity reference, full-body preparation without native crop, explicit native/front API view, separate readiness, guarded out-of-lock image staging and immutable pinned manifests with file hash verification. Native29 kept. Full pytest1740, front12/native28 regressions; real owner front art and UI49.3 remain pending.
+- Front21 backend:10 closed/open frontal poses plus blink, external-AI prompts with viewer-relative pointing and existing identity reference, full-body preparation without native crop, explicit native/front API view, separate readiness, guarded out-of-lock image staging and immutable pinned manifests with file hash verification. Native29 kept. Full pytest1740, front12/native28 regressions; real owner front art remains pending; source UI49.3 verified below.
 - Music upload browser tests now isolate each case's server/library and close the dependent browser before server teardown, removing Windows cross-test file deletion races without changing production music behavior.
+
+- Character profile native/front tabs,29/21 approved progress, wide front-neutral prompt/reference card, single/batch import/review, Solo selector readiness, async context/late-response guards, pending-operation locks and same-profile voice-draft preservation. Source26 API/browser flows and full1751 pass; actual copied-Hoang UI inspected. No owner data/EXE/release changes.
 
 ### Added (source, Phase48 tasks48.1–48.5)
 
@@ -25,7 +27,7 @@ Versioning: [SemVer](https://semver.org/)
 ### Feature milestone — target1.5.0 (planned2026-10-16; implementation underway)
 
 - Phase48: all5 source tasks verified; see entries above.
-- Phase49: Solo Explainer Why/How/List, externally generated front21 character pack, photos/diagrams/text cards, owner-reviewed layouts for16:9/9:16, shared Player/render scene, Shorts/thumbnail/export/EXE integration (49.1–49.2 verified,49.3 active; remaining7 planned).
+- Phase49: Solo Explainer Why/How/List, externally generated front21 character pack, photos/diagrams/text cards, owner-reviewed layouts for16:9/9:16, shared Player/render scene, Shorts/thumbnail/export/EXE integration (49.1–49.3 verified,49.4 active; remaining6 planned).
 - Canonical requirements and execution order: [.viepilot/SPEC.md](.viepilot/SPEC.md), [.viepilot/PLAN.md](.viepilot/PLAN.md). Current runtime/release remains1.4.0-rc.1; source implementation described above; no owner DB migration, EXE replacement or new release. Phase47 review and B-25/B-26/B-27/B-28 remain pending.
 
 ### Fixed

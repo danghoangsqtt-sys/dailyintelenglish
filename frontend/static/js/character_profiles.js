@@ -8,7 +8,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const state = { profiles: [], selectedId: null, creating: false, slots: null, filter: "active", query: "",
-    voicePicker: null, voiceProfileId: null, openToken: 0 };
+    voicePicker: null, voiceProfileId: null, openToken: 0, listToken: 0, view: "native", assetBusy: false, slotsLoading: false, createBusy: false };
   const GROUPS = [
     ["base", "Base picture"],
     ["expression", "Expressions"],
@@ -43,6 +43,8 @@
     if (readiness.talking_ready) items.push('<span class="profile-badge is-ok">Talking ready</span>');
     const pack = readiness.full_sprite_pack;
     items.push(`<span class="profile-badge">${pack.have}/${pack.need} pictures</span>`);
+    const front = readiness.front_presenter;
+    if (front?.have) items.push(`<span class="profile-badge${front.ready ? " is-ok" : ""}">Front ${front.have}/${front.need}</span>`);
     return items.join("");
   }
 
@@ -69,15 +71,21 @@
 
   async function loadProfiles(selectId = state.selectedId) {
     const query = new URLSearchParams({ state: state.filter, q: state.query });
-    state.profiles = await Api.listProfiles(query.toString());
-    if (selectId && !state.profiles.some((profile) => profile.id === selectId)) selectId = null;
-    state.selectedId = selectId;
+    const token = ++state.listToken, selectionToken = state.openToken;
+    const profiles = await Api.listProfiles(query.toString());
+    if (token !== state.listToken) return;
+    state.profiles = profiles;
+    if (selectionToken === state.openToken && !state.assetBusy) {
+      if (selectId && !state.profiles.some(profile => profile.id === selectId)) selectId = null;
+      state.selectedId = selectId;
+    }
     renderList();
   }
 
   // ------------------------------------------------------------------ Quick create (D79)
 
   async function showCreate() {
+    if (operationBlocked()) return;
     if (!(await canLeaveVoice(null))) return;
     await flushDetails();
     state.openToken += 1;
@@ -93,15 +101,23 @@
 
   async function submitCreate(event) {
     event.preventDefault();
-    const body = Object.fromEntries(new FormData(event.currentTarget));
+    if (state.createBusy || state.assetBusy) return;
+    const form = event.currentTarget;
+    const body = Object.fromEntries(new FormData(form));
+    state.createBusy = true;
+    Array.from(form.elements).forEach(element => { element.disabled = true; });
     try {
       const profile = await Api.createProfile(body);
       state.creating = false;
       notice(`${profile.name} created. Make the base picture first: copy its prompt below.`);
       await loadProfiles(profile.id);
+      state.createBusy = false;
       await openProfile(profile.id);
     } catch (error) {
       notice(error.message || "The character could not be created.", true);
+    } finally {
+      state.createBusy = false;
+      Array.from(form.elements).forEach(element => { element.disabled = false; });
     }
   }
 
@@ -130,7 +146,7 @@
 
   function updateVoiceSummary(profile) {
     $("profile-summary").textContent =
-      `${profile.gender} · ${profile.accent} · profile voice ${profile.voice.voice_id} · stands on the ${profile.gender === "male" ? "left" : "right"}, faces ${profile.sprite_facing}`;
+      `${profile.gender} · ${profile.accent} · profile voice ${profile.voice.voice_id} · ${state.view === "front" ? "front presenter, looking at the viewer" : `stands on the ${profile.gender === "male" ? "left" : "right"}, faces ${profile.sprite_facing}`}`;
     const index = state.profiles.findIndex(item => item.id === profile.id);
     if (index >= 0) state.profiles[index] = {...state.profiles[index], ...profile};
     renderList();
@@ -144,9 +160,7 @@
     state.voicePicker = VoicePicker.mount($("profile-voice-picker"), {
       ...voiceValues(profile), editParameters: true,
       savedMessage: "Profile voice saved. Existing videos keep their saved voice; use Apply profile voice in Audio Studio to update one.",
-      onDirtyChange: dirty => {
-        ["profile-duplicate", "profile-archive", "profile-delete"].forEach(key => { $(key).disabled = dirty; });
-      },
+      onDirtyChange: () => setAssetLocks(),
       onSave: async value => {
         const updated = await Api.patchProfile(id, {
           default_voice_id: value.voice_id, default_speed: value.speed, default_pitch: value.pitch,
@@ -163,21 +177,73 @@
     });
   }
 
-  async function openProfile(id) {
+  function operationBlocked() {
+    if (state.voicePicker?.isSaving()) {
+      notice("Wait until the voice finishes saving before switching characters.");
+      return true;
+    }
+    if (!state.assetBusy && !state.createBusy) return false;
+    notice("Wait until the current picture or character finishes saving before switching.");
+    return true;
+  }
+
+  function setAssetLocks() {
+    const busy = state.assetBusy || state.slotsLoading || state.createBusy || Boolean(state.voicePicker?.isSaving());
+    document.querySelectorAll("[data-picture-view], #profile-approve-all, #profile-bulk, #profile-search, #profile-filter").forEach(element => { element.disabled = busy; });
+    document.querySelectorAll(".slot-actions button, .slot-copy, .slot-drop input").forEach(element => {
+      const card = state.slots?.slots?.find(item => item.key === element.closest(".slot-card")?.dataset.slot);
+      element.disabled = busy || (element.tagName === "INPUT" && !card?.parent_ready);
+    });
+    document.querySelectorAll(".slot-drop").forEach(element => {
+      const card = state.slots?.slots?.find(item => item.key === element.closest(".slot-card")?.dataset.slot);
+      const disabled = busy || !card?.parent_ready;
+      element.classList.toggle("is-disabled", disabled);
+      element.setAttribute("aria-disabled", String(disabled));
+      element.tabIndex = disabled ? -1 : 0;
+    });
+    ["profile-new", "profile-duplicate", "profile-archive", "profile-delete"].forEach(key => {
+      $(key).disabled = busy || (key !== "profile-new" && Boolean(state.voicePicker?.hasUnsaved()));
+    });
+    Array.from($("profile-details-form").elements).forEach(element => { element.disabled = state.slotsLoading; });
+    $("profile-slots").setAttribute("aria-busy", String(busy));
+  }
+
+  async function openProfile(id, {assetRefresh = false} = {}) {
+    if (!assetRefresh && operationBlocked()) return;
     if (!(await canLeaveVoice(id))) return;
     await flushDetails();
-    const token = ++state.openToken;
+    const token = ++state.openToken, view = state.view;
     state.creating = false;
     state.selectedId = id;
+    state.slots = null;
+    state.slotsLoading = true;
+    state.voicePicker?.setDisabled(true);
     renderList();
+    renderSlots();
+    setAssetLocks();
     $("profile-create").hidden = true;
     $("profile-detail").hidden = false;
-    const [profile, slots] = await Promise.all([Api.getProfile(id), Api.listProfileSlots(id)]);
-    if (token !== state.openToken || state.selectedId !== id) return;
-    state.slots = slots;
-    renderDetail(profile);
-    mountVoicePicker(profile);
-    renderSlots();
+    try {
+      const [profile, slots] = await Promise.all([Api.getProfile(id), Api.listProfileSlots(id, view)]);
+      if (token !== state.openToken || state.selectedId !== id || view !== state.view) return;
+      state.slots = slots;
+      renderDetail(profile);
+      mountVoicePicker(profile);
+      renderSlots();
+    } finally {
+      if (token === state.openToken) {
+        state.slotsLoading = false;
+        state.voicePicker?.setDisabled(state.assetBusy || state.voiceProfileId !== state.selectedId);
+        setAssetLocks();
+      }
+    }
+  }
+
+  async function selectView(view) {
+    if (operationBlocked() || !state.selectedId) return;
+    state.view = view;
+    try { await openProfile(state.selectedId); }
+    catch (error) { notice(error.message || "Pictures could not load. Select the tab to retry.", true); }
   }
 
   function renderDetail(profile) {
@@ -186,15 +252,16 @@
     $("profile-archive").textContent = profile.archived ? "Restore" : "Archive";
     $("profile-delete").hidden = profile.is_seed;
     const readiness = profile.readiness;
-    const missing = ["profile", "voice", "core_visuals", "talking_starter"].flatMap((key) => readiness[key].missing || []);
+    const parts = state.view === "front" ? ["profile", "voice", "front_presenter"] : ["profile", "voice", "core_visuals", "talking_starter"];
+    const missing = parts.flatMap((key) => readiness[key]?.missing || []);
     $("profile-readiness").innerHTML = `
       <span class="profile-badges">${badges(readiness)}</span>
-      ${missing.length ? `<p class="library-hint">Still needed: ${escapeHtml(missing.slice(0, 8).join(", "))}${missing.length > 8 ? ` and ${missing.length - 8} more` : ""}.</p>` : '<p class="library-hint">Ready for talking videos.</p>'}`;
+      ${missing.length ? `<p class="library-hint">Still needed: ${escapeHtml(missing.slice(0, 8).join(", "))}${missing.length > 8 ? ` and ${missing.length - 8} more` : ""}.</p>` : `<p class="library-hint">${state.view === "front" ? "All front presenter pictures are approved." : "Ready for talking videos."}</p>`}`;
     const form = $("profile-details-form");
     form.elements.intro.value = profile.intro || "";
     form.elements.personality.value = (profile.personality || []).join(", ");
     form.elements.speaking_style.value = profile.speaking_style || "";
-    $("profile-prompt-pack").href = `/api/visuals/profiles/${profile.id}/prompt-pack.txt`;
+    $("profile-prompt-pack").href = Api.profilePromptPackUrl(profile.id, state.view);
   }
 
   function slotState(card) {
@@ -225,10 +292,10 @@
           <li>${card.parent ? (card.parent_ready
               ? `Attach <a href="${card.parent_input_url}" download>the input picture</a> (${escapeHtml(card.parent)}).`
               : `Attach the ${escapeHtml(card.parent)} picture once it is approved.`)
-            : "Start a new picture (no attachment)."}</li>
+            : card.identity_reference_url ? `Attach <a href="${card.identity_reference_url}" download>the existing identity picture</a>; turn the same person toward the camera.` : "Start a new picture from the profile description."}</li>
           ${card.region_text ? `<li>Select: ${escapeHtml(card.region_text)}.</li>` : ""}
           <li>Prompt <button type="button" class="btn btn-ghost btn-sm slot-copy">Copy</button>
-            <textarea class="slot-prompt" readonly rows="4">${escapeHtml(card.prompt)}</textarea></li>
+            <textarea class="slot-prompt" readonly rows="${state.view === "front" && card.key === "calm__closed" ? 12 : 4}">${escapeHtml(card.prompt)}</textarea></li>
         </ol>
         ${status === "needs_review" ? `
           <div class="slot-actions">
@@ -240,13 +307,29 @@
 
   function renderSlots() {
     const cards = state.slots?.slots || [];
+    const front = state.view === "front";
+    const total = front ? 21 : 29;
+    const approved = cards.filter(card => card.asset?.review_state === "approved").length;
+    document.querySelectorAll("[data-picture-view]").forEach(button => {
+      const selected = button.dataset.pictureView === state.view;
+      button.setAttribute("aria-selected", String(selected)); button.tabIndex = selected ? 0 : -1;
+    });
+    $("profile-slots").setAttribute("aria-labelledby", `profile-view-${state.view}`);
+    $("profile-pack-heading").textContent = front ? "Front-facing presenter pictures" : "Conversation pictures";
+    $("profile-pack-progress").textContent = state.slotsLoading && !state.slots ? "Loading pictures…" : `${approved}/${total} approved${approved === total ? " · complete" : ""}`;
+    $("profile-pack-help").textContent = front
+      ? "Create and approve the front neutral first. Then import and review the 9 closed gestures, followed by their open mouths and blink. Keep the same face and clothing. Screen-left/right means the viewer's screen."
+      : "Make each picture with an outside AI from its card: attach the input picture, select the region, paste the prompt. Drop the result on the same card; it is renamed and placed for you.";
     const pending = cards.filter((card) => card.asset && card.asset.review_state === "needs_review");
     $("profile-approve-all").hidden = !pending.length;
     $("profile-approve-all").textContent = `Approve all pending (${pending.length})`;
-    $("profile-slots").innerHTML = GROUPS.map(([group, title]) => {
+    $("profile-slots").dataset.view = state.view;
+    const groups = state.view === "front" ? [GROUPS[0], GROUPS[4], GROUPS[2], GROUPS[3]] : GROUPS;
+    $("profile-slots").innerHTML = groups.map(([group, title]) => {
       const inGroup = cards.filter((card) => card.group === group);
       return inGroup.length ? `<section class="slot-group"><h4>${title}</h4><div class="slot-grid">${inGroup.map(slotCard).join("")}</div></section>` : "";
     }).join("");
+    setAssetLocks();
   }
 
   async function refreshSelected(message) {
@@ -256,35 +339,49 @@
     if (message) notice(message);
   }
 
-  async function uploadToSlot(slotKey, file) {
-    const card = document.querySelector(`.slot-card[data-slot="${slotKey}"]`);
-    const drop = card?.querySelector(".slot-drop");
-    if (drop) {  // local preview at once; replaced by the stored, aligned picture after the response
-      drop.innerHTML = `<img src="${URL.createObjectURL(file)}" alt="" class="is-preview" /><span class="slot-busy">Placing and checking…</span>`;
-    }
+  async function assetAction(work, message) {
+    if (state.assetBusy || state.createBusy || state.slotsLoading || !state.slots) return;
+    if (state.voicePicker?.isSaving()) { notice("Wait until the voice finishes saving before changing pictures."); return; }
+    const id = state.selectedId, view = state.view;
+    state.assetBusy = true;
+    state.voicePicker?.setDisabled(true);
+    setAssetLocks();
     try {
-      await Api.uploadProfileSlot(state.selectedId, slotKey, file);
-      await refreshSelected(`${slotKey}.png stored. Check it, then approve.`);
+      await flushDetails();
+      const result = await work(id, view);
+      await openProfile(id, {assetRefresh: true});
+      notice(typeof message === "function" ? message(result) : message || "Saved.", Boolean(result?.failed?.length));
     } catch (error) {
-      notice(`${slotKey}: ${error.message || "the picture could not be stored"}`, true);
+      notice(error.message || "The picture change could not be saved. Try again.", true);
       renderSlots();
+    } finally {
+      state.assetBusy = false;
+      state.voicePicker?.setDisabled(state.voiceProfileId !== state.selectedId);
+      setAssetLocks();
     }
   }
 
-  async function review(assetId, decision) {
+  async function uploadToSlot(slotKey, file) {
+    if (state.assetBusy || state.slotsLoading) return;
+    const url = URL.createObjectURL(file);
     try {
-      await Api.reviewProfileAsset(state.selectedId, assetId, decision);
-      await refreshSelected(decision === "approve" ? "Approved." : "Rejected.");
-    } catch (error) {
-      notice(error.message || "The review could not be saved.", true);
-    }
+      await assetAction(async (id, view) => {
+        const drop = document.querySelector(`.slot-card[data-slot="${slotKey}"] .slot-drop`);
+        if (drop) drop.innerHTML = `<img src="${url}" alt="" class="is-preview" /><span class="slot-busy">Placing and checking…</span>`;
+        return Api.uploadProfileSlot(id, slotKey, file, view);
+      }, `${slotKey}.png stored. Check it, then approve.`);
+    } finally { URL.revokeObjectURL(url); }
+  }
+
+  async function review(assetId, decision) {
+    return assetAction((id, view) => Api.reviewProfileAsset(id, assetId, decision, view), decision === "approve" ? "Approved." : "Rejected.");
   }
 
   function setupSlotEvents() {
     const container = $("profile-slots");
     container.addEventListener("click", async (event) => {
       const card = event.target.closest(".slot-card");
-      if (!card || event.target.tagName === "INPUT") return;  // the file input's own click must not reopen it
+      if (!card || state.assetBusy || state.slotsLoading || !state.slots || event.target.tagName === "INPUT") return;  // the file input's own click must not reopen it
       const slot = state.slots.slots.find((item) => item.key === card.dataset.slot);
       if (event.target.closest(".slot-copy")) {
         await navigator.clipboard?.writeText(slot.prompt).catch(() => {});
@@ -298,7 +395,10 @@
     });
     container.addEventListener("change", (event) => {
       const input = event.target.closest(".slot-drop input");
-      if (input?.files?.[0]) uploadToSlot(input.closest(".slot-card").dataset.slot, input.files[0]);
+      if (input?.files?.[0]) {
+        const file = input.files[0]; input.value = "";
+        uploadToSlot(input.closest(".slot-card").dataset.slot, file);
+      }
     });
     container.addEventListener("keydown", (event) => {
       const drop = event.target.closest(".slot-drop");
@@ -364,11 +464,22 @@
   // ------------------------------------------------------------------ actions
 
   async function act(work, message) {
+    if (operationBlocked() || state.slotsLoading) return;
+    state.assetBusy = true;
+    state.voicePicker?.setDisabled(true);
+    setAssetLocks();
     try {
+      await flushDetails();
       await work();
-      await refreshSelected(message);
+      await loadProfiles(state.selectedId);
+      if (state.selectedId) await openProfile(state.selectedId, {assetRefresh: true});
+      notice(message || "Saved.");
     } catch (error) {
       notice(error.message || "That did not work.", true);
+    } finally {
+      state.assetBusy = false;
+      state.voicePicker?.setDisabled(state.voiceProfileId !== state.selectedId);
+      setAssetLocks();
     }
   }
 
@@ -386,6 +497,7 @@
     $("profile-new").addEventListener("click", () => showCreate().catch(error => notice(error.message, true)));
     $("profile-create-form").addEventListener("submit", submitCreate);
     $("profile-create-cancel").addEventListener("click", () => {
+      if (operationBlocked()) return;
       $("profile-create").hidden = true;
       state.creating = false;
     });
@@ -420,20 +532,34 @@
         $("profile-detail").hidden = true;
       }, "Deleted.");
     });
-    $("profile-approve-all").addEventListener("click", () => {
-      const ids = state.slots.slots.filter((card) => card.asset?.review_state === "needs_review").map((card) => card.asset.id);
-      act(() => Api.approveProfileAssets(state.selectedId, ids), `${ids.length} picture(s) approved.`);
+    document.querySelectorAll("[data-picture-view]").forEach(button => {
+      button.addEventListener("click", () => selectView(button.dataset.pictureView));
+      button.addEventListener("keydown", event => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        if (state.assetBusy || state.slotsLoading) return;
+        const next = event.key === "Home" ? "native" : event.key === "End" ? "front" : state.view === "native" ? "front" : "native";
+        $("profile-view-" + next).focus();
+        selectView(next);
+      });
     });
-    $("profile-bulk").addEventListener("change", (event) => {
+    window.addEventListener("beforeunload", event => {
+      if (!state.assetBusy && !state.createBusy) return;
+      event.preventDefault(); event.returnValue = "";
+    });
+    $("profile-approve-all").addEventListener("click", () => {
+      const ids = state.slots?.slots?.filter(card => card.asset?.review_state === "needs_review").map(card => card.asset.id) || [];
+      if (ids.length) assetAction((id, view) => Api.approveProfileAssets(id, ids, view), `${ids.length} picture(s) approved.`);
+    });
+    $("profile-bulk").addEventListener("change", event => {
       const files = [...(event.target.files || [])];
       event.target.value = "";
       if (!files.length) return;
-      act(async () => {
-        const result = await Api.uploadProfileSlotsBatch(state.selectedId, files);
+      assetAction((id, view) => Api.uploadProfileSlotsBatch(id, files, view), result => {
         const lines = [`${result.stored.length} stored`];
         if (result.unmatched.length) lines.push(`${result.unmatched.length} not named after a slot (drop them on their card)`);
-        if (result.failed.length) lines.push(`${result.failed.length} refused: ${result.failed.map((item) => `${item.file} (${item.reason})`).join("; ")}`);
-        setTimeout(() => notice(lines.join(" · "), Boolean(result.failed.length)), 0);
+        if (result.failed.length) lines.push(`${result.failed.length} refused: ${result.failed.map(item => `${item.file} (${item.reason})`).join("; ")}`);
+        return lines.join(" · ");
       });
     });
     $("profile-details-form").addEventListener("input", scheduleSave);

@@ -1,10 +1,10 @@
 # Task 49.3 — Nhập, duyệt và quản lý bộ front trong UI
 
-- **Status:** in_progress · 2026-10-16, after49.2 front backend checkpoint.
+- **Status:** implemented_verified · 2026-10-16; source front21 UI verified, real-art V49 remains pending.
 - **Dependencies:** 49.2
 - **Requirements:** R02, R08, R09.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
-- **Scope:** card này là kế hoạch, chưa có kết quả triển khai hay acceptance.
+- **Scope:** front21 profile UI implemented and technically verified. Real front art and Solo script/layout/render remain separate tasks/gates.
 
 ## Objective
 
@@ -29,6 +29,11 @@ Nhập, duyệt và quản lý bộ front trong UI. Hoàn thành contract tươn
 - .viepilot/HANDOFF.json
 - CHANGELOG.md
 - .viepilot/phases/49-solo-explainer/tasks/task-49.3.md
+- .viepilot/phases/49-solo-explainer/tasks/task-49.4.md
+- .viepilot/phases/49-solo-explainer/PLAN.md
+- .viepilot/phases/49-solo-explainer/SPEC.md
+- .viepilot/PLAN.md
+- .viepilot/SPEC.md
 
 ## File-Level Plan / allowed_files
 
@@ -73,4 +78,11 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Progress
 
-- 2026-10-16: planned; shipping code chưa sửa, tests triển khai chưa chạy.
+- 2026-10-16:49.2 checkpoint8d77b82 persisted/pushed and clean/upstream/ahead0 verified;6 bounded UI/test files applied afterward. Three modified JS syntax/Ruff/diff clean.
+- Native/front tabs near profile heading,29/21 progress, identity download, prompt copy/pack, single/batch upload, parent-first approval, targeted failure/status and Solo selector progress implemented. Front neutral has a wider prompt/reference card; front groups follow neutral→closed gestures→mouths→blink.
+- Profile/view/loading locks, captured async context, late response tokens, same-profile voice draft retention, beforeunload pending guard, local preview URL cleanup, create double-submit guard and disabled old fields during profile loading implemented. Native default API URLs unchanged.
+- Isolated candidate25 API/browser passes; initial harness relative download URL corrected, then voice-save wait message kept explicit for existing regression. Current source **26 passed in27.63s**:5 API +6 front browser +4 profile +9 voice +2 Solo config cases. Includes native row/file hashes unchanged after front upload, wrong identity/ownership, pending upload/create and late responses. Fixtures certify logic, not actual Hoang image/gesture quality.
+- Visual source smoke uses a separate copied Hoang profile/native reference; no owner data writes or real front generation. Reports/screenshots under `data/tmp/evolve-20261016/front-ui-visual-dd96763238/`; source voice catalog in that screenshot explicitly fixture-only. Full regression running before checkpoint; no task PASS yet.
+
+- Final full **1751 passed in715.41s**, one existing Starlette warning. Ruff/all3 modified JS syntax/diff clean. Source UI visually inspected in isolated copied Hoang profile, no JS errors, identity reference link verified; actual report at `data/tmp/evolve-20261016/front-ui-visual-dd96763238/`. Source profile/voice data and EXE unchanged. Next49.4, no real front pack or Solo render acceptance claimed.
+- Final visual capture explicitly waited for both view controls and local fonts to be ready: `data/tmp/evolve-20261016/front-ui-visual-8f0b37b451/`, zero JS errors,21 cards and native identity reference confirmed. Earlier images include the brief loading/disabled state.

@@ -134,10 +134,10 @@ const CharacterSelector = (() => {
         ${image ? `<img src="${image}" alt="${escapeHtml(profile.name)}" />` : '<span class="cs-empty" aria-hidden="true">?</span>'}
         <h3>${escapeHtml(profile.name)}</h3>
         <p>${escapeHtml(profile.gender)} · ${escapeHtml(profile.accent)} accent · profile voice ${escapeHtml(profile.voice?.voice_id || "accent/gender default")}
-          · stands on the ${profile.gender === "male" ? "left" : "right"}</p>
+          · ${eligibility === "solo_explainer" ? "front presenter, looking at the viewer" : `stands on the ${profile.gender === "male" ? "left" : "right"}`}</p>
         ${profile.intro ? `<p>${escapeHtml(profile.intro)}</p>` : ""}
         ${(profile.personality || []).length ? `<p class="cs-note">Personality: ${escapeHtml(profile.personality.join(", "))}</p>` : ""}
-        <p class="cs-note">${profile.readiness?.talking_ready ? "Ready for talking videos." : profile.readiness?.video_ready
+        <p class="cs-note">${eligibility === "solo_explainer" ? `${profile.readiness?.front_presenter?.have || 0}/21 front pictures approved. ${profile.readiness?.front_presenter?.ready ? "Front pack ready." : "You can write the script now; finish the front pack before rendering."}` : profile.readiness?.talking_ready ? "Ready for talking videos." : profile.readiness?.video_ready
           ? "Ready for videos; the talking characters mode needs its Tier 1 pictures." : ""}</p>
         ${reason ? `<p class="cs-warn">${escapeHtml(reason)}</p>` : ""}`;
       $("choose").disabled = Boolean(reason) || state.busy || slot?.characterId === profile.id;

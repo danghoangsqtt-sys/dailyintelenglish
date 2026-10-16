@@ -28,6 +28,7 @@ const Api = (() => {
     return envelope.data;
   }
 
+  const profileView = view => view === "front" ? "?view=front" : "";
   const json = (method, body) => ({ method, body: JSON.stringify(body) });
 
   return {
@@ -57,21 +58,22 @@ const Api = (() => {
     archiveProfile: (id) => request(`/api/visuals/profiles/${id}/archive`, { method: "POST" }),
     restoreProfile: (id) => request(`/api/visuals/profiles/${id}/restore`, { method: "POST" }),
     deleteProfile: (id) => request(`/api/visuals/profiles/${id}`, { method: "DELETE" }),
-    listProfileSlots: (id) => request(`/api/visuals/profiles/${id}/slots`),
-    uploadProfileSlot: (id, slotKey, file) => {
+    listProfileSlots: (id, view = "native") => request(`/api/visuals/profiles/${id}/slots${profileView(view)}`),
+    profilePromptPackUrl: (id, view = "native") => `/api/visuals/profiles/${id}/prompt-pack.txt${profileView(view)}`,
+    uploadProfileSlot: (id, slotKey, file, view = "native") => {
       const body = new FormData();
       body.append("file", file);
-      return request(`/api/visuals/profiles/${id}/slots/${encodeURIComponent(slotKey)}/upload`, { method: "POST", body });
+      return request(`/api/visuals/profiles/${id}/slots/${encodeURIComponent(slotKey)}/upload${profileView(view)}`, { method: "POST", body });
     },
-    uploadProfileSlotsBatch: (id, files) => {
+    uploadProfileSlotsBatch: (id, files, view = "native") => {
       const body = new FormData();
       files.forEach((file) => body.append("files", file));
-      return request(`/api/visuals/profiles/${id}/slots/upload-batch`, { method: "POST", body });
+      return request(`/api/visuals/profiles/${id}/slots/upload-batch${profileView(view)}`, { method: "POST", body });
     },
-    reviewProfileAsset: (id, assetId, decision) =>
-      request(`/api/visuals/profiles/${id}/assets/${assetId}/review`, { method: "PUT", body: JSON.stringify({ decision }) }),
-    approveProfileAssets: (id, assetIds) =>
-      request(`/api/visuals/profiles/${id}/assets/approve`, { method: "POST", body: JSON.stringify({ asset_ids: assetIds }) }),
+    reviewProfileAsset: (id, assetId, decision, view = "native") =>
+      request(`/api/visuals/profiles/${id}/assets/${assetId}/review${profileView(view)}`, { method: "PUT", body: JSON.stringify({ decision }) }),
+    approveProfileAssets: (id, assetIds, view = "native") =>
+      request(`/api/visuals/profiles/${id}/assets/approve${profileView(view)}`, { method: "POST", body: JSON.stringify({ asset_ids: assetIds }) }),
     listProjects: () => request("/api/projects"),
     createProject: (config) =>
       request("/api/projects", { method: "POST", body: JSON.stringify(config) }),
