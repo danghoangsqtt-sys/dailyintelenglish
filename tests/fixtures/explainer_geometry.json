@@ -1,0 +1,14 @@
+{
+  "metrics": {"canvasWidth":1280,"canvasHeight":1536,"alpha":{"x":0.15,"y":0.08,"width":0.70,"height":0.84}},
+  "safeCases": [
+    {"aspect":"16:9","rect":{"x":0.05,"y":0.15,"width":0.2,"height":0.3},"valid":true},
+    {"aspect":"16:9","rect":{"x":0.01,"y":0.15,"width":0.2,"height":0.3},"valid":false},
+    {"aspect":"9:16","rect":{"x":0.1,"y":0.2,"width":0.75,"height":0.2},"valid":true},
+    {"aspect":"9:16","rect":{"x":0.75,"y":0.45,"width":0.1,"height":0.1},"valid":false},
+    {"aspect":"9:16","rect":{"x":0.1,"y":0.6,"width":0.5,"height":0.2},"valid":false}
+  ],
+  "placements": [
+    {"aspect":"16:9","placement":{"anchor":"left","x":0.15,"y":0.69,"height":0.22}},
+    {"aspect":"9:16","placement":{"anchor":"right","x":0.72,"y":0.49,"height":0.12}}
+  ]
+}

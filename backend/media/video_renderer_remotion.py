@@ -412,11 +412,18 @@ async def _build_input_props(
     caption_style: str = "outline",
     visual_mode: str = "podcast_sprites",
     still_scene_id: str | None = None,
+    layout: str = "horizontal",
 ) -> dict[str, Any]:
     """Real per-project props for the `Episode`/`StillFrame` compositions -- mirrors
     the Phase 19 spike runner's `_build_input_props`, extended with real avatar
     resolution (via the service layer, not a raw DB column) and real learning-content
     camelCase conversion (D19.2/19.4/19.5/19.6 field shapes, unchanged)."""
+    if project.get("presentation_mode") == "solo_explainer":
+        from backend.library.explainer_media import production_props
+
+        props = await production_props(db, project["id"], "9:16" if layout == "vertical" else "16:9")
+        props["captionStyle"] = caption_style
+        return props
     word_timestamps_by_line = (
         [_words_to_props(entry["words"]) for entry in audio_job["word_timestamps"]]
         if audio_job["word_timestamps"]
@@ -539,6 +546,8 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path,
                     cwd=VIDEO_RENDERER_DIR,
                     capture_output=True,
                     text=True,
+                    encoding="utf-8",
+                    errors="replace",
                     timeout=remaining,
                 )
             except subprocess.TimeoutExpired as exc:
@@ -665,7 +674,7 @@ async def render_via_remotion(
     """
     project_id = project["id"]
     input_props = await _build_input_props(db, project, audio_job, learning, caption_style,
-                                           visual_mode=visual_mode, still_scene_id=still_scene_id)
+                                           visual_mode=visual_mode, still_scene_id=still_scene_id, layout=layout)
     # Private backend metadata is not part of the Remotion schema. Preserve it for
     # the caller, but never write it into the props JSON consumed by the renderer.
     activity_uses = input_props.get("sprites", {}).pop("_activityUses", [])
@@ -715,7 +724,7 @@ def outro_start_seconds(input_props: dict[str, Any]) -> float:
     """Where Episode.tsx starts the outro: intro frames + speech frames, in seconds."""
     fps = input_props["fps"]
     lines = input_props["lines"]
-    audio_seconds = lines[-1]["endSec"] if lines else 0
+    audio_seconds = input_props.get("durationSeconds", lines[-1]["endSec"] if lines else 0)
     return (round(input_props["introSec"] * fps) + round(audio_seconds * fps)) / fps
 
 
@@ -747,7 +756,7 @@ async def _add_brand(project_id: str, input_props: dict[str, Any]) -> list[tuple
 def composition_seconds(input_props: dict[str, Any]) -> float:
     """The exact length Root.tsx's calculateMetadata gives the Episode composition."""
     lines = input_props["lines"]
-    audio_seconds = lines[-1]["endSec"] if lines else 3
+    audio_seconds = input_props.get("durationSeconds", lines[-1]["endSec"] if lines else 3)
     total = input_props["introSec"] + audio_seconds + input_props["outroSec"]
     return max(1, math.ceil(total * input_props["fps"])) / input_props["fps"]
 

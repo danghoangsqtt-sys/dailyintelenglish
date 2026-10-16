@@ -2,6 +2,7 @@ import React from "react";
 import { AbsoluteFill } from "remotion";
 import { AudioWindowContent, MIDNIGHT_BACKGROUND } from "./Episode";
 import type { EpisodeInputProps } from "./types";
+import { SoloScene } from "./SoloScene";
 
 /**
  * Task 19.6 (D19.6-f): a separate composition that renders the exact same audio-window
@@ -13,7 +14,9 @@ import type { EpisodeInputProps } from "./types";
  * `npx remotion still --help`: frame selection is a CLI concern, not a `calculateMetadata`
  * one -- see task-19.6.md's D19.6-f finding).
  */
-export const StillFrame: React.FC<EpisodeInputProps> = ({
+export const StillFrame: React.FC<EpisodeInputProps> = (props) => {
+  if (props.presentationMode === "solo_explainer") return <SoloScene {...props}/>;
+  const {
   lines,
   speakers,
   learning,
@@ -24,7 +27,7 @@ export const StillFrame: React.FC<EpisodeInputProps> = ({
   visualMode,
   stillUrl,
   sprites,
-}) => {
+  } = props;
   const audioDurationSec = lines.length > 0 ? lines[lines.length - 1].endSec : 0;
 
   return (

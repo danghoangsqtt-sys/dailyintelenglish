@@ -75,6 +75,7 @@ const Api = (() => {
     approveProfileAssets: (id, assetIds, view = "native") =>
       request(`/api/visuals/profiles/${id}/assets/approve${profileView(view)}`, { method: "POST", body: JSON.stringify({ asset_ids: assetIds }) }),
     listProjects: () => request("/api/projects"),
+    copyProjectSettings: (id) => request(`/api/projects/${id}/copy-settings`, {method:"POST"}),
     createProject: (config) =>
       request("/api/projects", { method: "POST", body: JSON.stringify(config) }),
     getProject: (id) => request(`/api/projects/${id}`),
@@ -211,6 +212,8 @@ const Api = (() => {
     proposeStoryboard: (projectId) => request(`/api/projects/${projectId}/storyboard/propose`, { method: "POST" }),
     getExplainerPlan: (projectId) => request(`/api/projects/${projectId}/explainer-plan`),
     getExplainerHistory: (projectId) => request(`/api/projects/${projectId}/explainer-plan/history`),
+    arrangeExplainerPlan: (projectId, body) => request(`/api/projects/${projectId}/explainer-plan/layout`, json("POST", body)),
+    previewExplainerPlan: (projectId, aspect) => request(`/api/projects/${projectId}/explainer-plan/preview?aspect=${encodeURIComponent(aspect)}`),
     saveExplainerPlan: (projectId, body) => request(`/api/projects/${projectId}/explainer-plan`, json("PATCH", body)),
     proposeExplainerPlan: (projectId, body) => request(`/api/projects/${projectId}/explainer-plan/propose`, json("POST", body)),
     approveExplainerPlan: (projectId, body) => request(`/api/projects/${projectId}/explainer-plan/approve`, json("POST", body)),

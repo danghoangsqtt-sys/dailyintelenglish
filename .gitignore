@@ -20,6 +20,7 @@ build/
 # Local caches and IDE launch profiles
 .cache/
 .remotion/
+frontend/static/solo-preview/
 .claude/launch.json
 
 # Data (runtime — don't commit generated content)

@@ -184,6 +184,14 @@
 
   function seriesCard(series) {
     const cast = series.cast || [];
+    const solo = series.presentation_mode === "solo_explainer";
+    const mode = el("select", {"aria-label":"Series presentation mode", onchange:event=>act(()=>Api.updateChannelSeries(series.id,
+      {presentation_mode:event.target.value,cast:event.target.value==="solo_explainer"?cast.slice(0,1):cast}),"Mode saved.")},
+      [el("option",{value:"classic",textContent:"Conversation"}),el("option",{value:"solo_explainer",textContent:"Solo Explainer"})]);
+    mode.value=series.presentation_mode || "classic";
+    const structure=el("select",{"aria-label":"Explainer structure",onchange:event=>act(()=>Api.updateChannelSeries(series.id,{explainer_structure:event.target.value}),"Structure saved.")},
+      ["why","how","list"].map(value=>el("option",{value,textContent:value})));
+    structure.value=series.explainer_structure || "why";
     const setCast = (index, value) => {
       const next = [...cast];
       next[index] = value;
@@ -209,9 +217,9 @@
       ]),
       el("div", { className: "channel-hint", textContent: series.description }),
       el("div", { className: "series-meta" }, [
-        level, genre, "Cast:",
+        mode, ...(solo?[structure]:[]), level, genre, "Cast:",
         castSelect(cast[0], (value) => setCast(0, value), "Speaker 1"),
-        castSelect(cast[1], (value) => setCast(1, value), "Speaker 2"),
+        ...(!solo?[castSelect(cast[1], (value) => setCast(1, value), "Speaker 2")]:[]),
         saveOnChange(el("input", { className: "inline-input url", value: series.playlist_url || "",
           placeholder: "Series playlist link (optional)", "aria-label": "Series playlist link" }),
         (value) => Api.updateChannelSeries(series.id, { playlist_url: value })),
@@ -223,8 +231,8 @@
       el("div", { className: "row-actions" }, [
         el("button", { type: "button", className: "btn btn-primary btn-sm", dataset: { action: "create-projects" },
           textContent: planned ? `Create ${planned} project${planned === 1 ? "" : "s"}` : "All projects created",
-          disabled: !planned || cast.filter(Boolean).length < 2,
-          title: cast.filter(Boolean).length < 2 ? "Choose two characters first." : "",
+          disabled: !planned || (solo ? cast.filter(Boolean).length !== 1 : cast.filter(Boolean).length < 2),
+          title: solo ? "Choose one presenter." : "Choose two characters first.",
           onclick: () => act(() => Api.createSeriesProjects(series.id), "Projects created — open them from the table.") }),
         newEpisode,
         el("button", { type: "button", className: "btn btn-ghost btn-sm", textContent: "+ Episode",

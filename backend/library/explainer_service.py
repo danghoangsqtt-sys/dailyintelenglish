@@ -74,6 +74,8 @@ async def source_snapshot(db: aiosqlite.Connection, project_id: str, segments: l
                                    front_pack_revision=front["pack_revision"] if front else None,
                                    asset_ids=[item["asset_id"] for item in front["pictures"].values()] if front else [])
     audio = await audio_service.get_audio_job(db, project_id)
+    from backend.content import learning_service
+    learning = await learning_service.get_learning_content(db, project_id)
     assets = {}
     for segment in segments:
         if segment.visual.kind == "photo" and segment.visual.asset:
@@ -91,9 +93,10 @@ async def source_snapshot(db: aiosqlite.Connection, project_id: str, segments: l
         "audio": {key: audio.get(key) for key in ("id", "status", "mp3_path", "wav_path", "completed_at", "duration_seconds", "timestamps", "word_timestamps")} if audio else None,
         "illustrations": sorted(assets.values(), key=lambda item: (item["id"], item["version"])),
         "layout_rules_version": EXPLAINER_LAYOUT_RULES_VERSION,
+        "learning": {key: learning.get(key, []) for key in ("vocabulary", "idioms")} if learning else None,
     }
     return {"source": source, "fingerprint": fingerprint(source), "project": project, "lines": lines,
-            "presenter": presenter.model_dump(), "front": front, "audio": audio}
+            "presenter": presenter.model_dump(), "front": front, "audio": audio, "learning": learning}
 
 
 def source_issues(snapshot: dict, segments: list[ExplainerSegment]) -> list[str]:
@@ -348,6 +351,29 @@ async def approve_plan(db: aiosqlite.Connection, project_id: str, body: Explaine
         await db.execute("UPDATE project_explainer_plans SET revision=?,status='approved',plan_json=?,approved_revision=?,approved_snapshot_json=?,updated_at=? WHERE project_id=?",
                          (approved.revision, approved.model_dump_json(), approved.revision, json.dumps(pinned), now, project_id))
     return await get_plan(db, project_id)
+
+
+async def arrange_plan(db: aiosqlite.Connection, project_id: str, body: ExplainerApproval) -> dict:
+    """Return checked layout suggestions; owner PATCH remains the explicit save/lock action."""
+    from backend.library.explainer_layout_service import arrange
+
+    async with read_transaction():
+        row = await _row(db, project_id)
+        if not row or row["revision"] != body.expected_revision:
+            raise ConflictError("The plan changed; reload before arranging layouts")
+        plan = ExplainerPlan.model_validate_json(row["plan_json"])
+        snapshot = await source_snapshot(db, project_id, plan.segments)
+        if snapshot["fingerprint"] != body.source_fingerprint:
+            raise ConflictError("The source changed; reload and save a reviewed revision before arranging")
+    await presenter_asset_plan.manifest(db, plan.presenter.profile_id)
+    segments, geometry = await arrange(snapshot, plan)
+    async with read_transaction():
+        fresh = await _row(db, project_id)
+        current = await source_snapshot(db, project_id, plan.segments)
+        if not fresh or fresh["revision"] != body.expected_revision or current["fingerprint"] != body.source_fingerprint:
+            raise ConflictError("The source or plan changed during layout validation; reload before applying")
+    return {"segments": [segment.model_dump() for segment in segments], "geometry": geometry,
+            "expected_revision": body.expected_revision, "source_fingerprint": body.source_fingerprint}
 
 
 async def import_illustration(db: aiosqlite.Connection, project_id: str, content: bytes, filename: str) -> dict:

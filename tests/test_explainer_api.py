@@ -154,7 +154,7 @@ def test_approval_pins_real_immutable_front_files_and_refuses_missing_geometry(c
     reviewed = data(client.patch(f"/api/projects/{pid}/explainer-plan", json=body))["plan"]
     approval = {"expected_revision": reviewed["revision"], "source_fingerprint": reviewed["source_fingerprint"]}
     refused = client.post(f"/api/projects/{pid}/explainer-plan/approve", json=approval)
-    assert refused.status_code == 422 and "Layout validation is not available" in refused.text
+    assert refused.status_code == 422 and "missing layouts" in refused.text
 
     async def geometry_fixture(snapshot, plan):
         from backend.db.transactions import write_lock

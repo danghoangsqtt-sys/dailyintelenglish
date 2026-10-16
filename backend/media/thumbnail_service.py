@@ -125,8 +125,10 @@ def outside_prompt(project: dict, composition: dict, actions: list[str]) -> dict
         name = next((candidate for candidate in ("smile__open", "smile__closed", "calm__closed")
                      if candidate in character["names"]), None)
         if name:
+            front = character.get("front_pictures", {}).get(name)
             pictures.append({"name": character["name"], "number": number,
-                             "url": f"/api/visuals/library/sprites/{character['character_id']}/{name}/content"})
+                             "url": f"/api/visuals/profiles/{character['character_id']}/assets/{front['asset_id']}/content" if front else
+                             f"/api/visuals/library/sprites/{character['character_id']}/{name}/content"})
     # Walkthrough 2026-10-14 (owner tried it in ChatGPT): the app lays the headline over the left 45 %, so the people must
     # stand in the right part -- "Hoang on the left and Kim on the right" put them in the middle, under the title. The
     # composition follows the YouTube thumbnail guides: big faces, heads apart, nothing key in the corners the badge,
@@ -223,6 +225,8 @@ async def generate_suggestions(
         variant_count=variant_count,
     )
     router = router or build_ai_router_from_settings()
+    if project.get("presentation_mode") == "solo_explainer":
+        prompt += "\nSolo knowledge explainer by exactly one front-facing presenter. Base headlines on the topic; never invent a co-host or dialogue."
     request = GenerationRequest(
         prompt=prompt,
         json_schema=ThumbnailSuggestionPack.model_json_schema(),

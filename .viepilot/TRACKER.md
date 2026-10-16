@@ -1,5 +1,7 @@
 # TRACKER.md — Daily Intel English Studio
 
+**Latest checkpoint —2026-10-16:** Phase49 implementation delivered.49.1–49.9 technically verified;49.10 code/package checks verified, real owner art and V49 acceptance pending. Feature full pytest 1867 passed in779.20s. Post-Windows-UTF8 full run:1862 passed,5 legacy subprocess mock-signature failures; all40 video/bridge checks passed in7.95s after updating those5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending. [Report](../docs/operations/phase49-solo-explainer.md). Installed EXE and published release unchanged. Historical checkpoints below do not override this status.
+
 ## Kế hoạch mới — 2026-10-16
 
 **Recovery execution authorized:** owner invoked vp-evolve+vp-auto to fix BUG-042/043/044 and complete49.5b. Phase50 covers shared cancellation rollback and docs; BUG-043 is in49.5b. Bounded task plans written before edits; technical gates/acceptance/persistence remain separately recorded. [Phase50 plan](phases/50-audit-recovery/PLAN.md).

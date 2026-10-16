@@ -53,26 +53,47 @@ assert len(SLOT_KEYS) == 21
 
 def slot_prompt(profile: dict, slot: dict) -> str:
     """Generate outside-AI instructions keeping identity, clothing and frontal view."""
+    key = slot["key"]
+    identity = (f"CHARACTER: {profile['name']}. Nationality: {profile.get('nationality') or 'as in the identity reference'}. "
+                f"Appearance: {profile['appearance']}. EXACT outfit: {profile['outfit']}.")
+    invariants = ("One photorealistic adult only. FRONT VIEW: shoulders, hips and torso square to camera, head straight, "
+                  "same recognizable face, age, hairline, hairstyle, body proportions, clothing cut, colors, footwear and specified markings. "
+                  "No three-quarter view, side view, camera tilt, mirroring, extra person, extra limbs, extra fingers, cropped hands or feet, "
+                  "text, watermark, new accessories, furniture or new props. Preserve any clothing markings explicitly specified in the outfit.")
+    output = (f"OUTPUT: exactly one PNG named {key}.png, portrait1280x1536 (5:6), hair-to-soles full body, all fingers and both feet "
+              "inside the canvas. Neutral occupies about84% of canvas height, feet near92% height, at least8% top/bottom margin. "
+              "Flat pure green #00B140 background, no gradient/floor/hard shadow, soft even studio light. "
+              "For an edit, keep the parent canvas dimensions and exact pixel position/scale instead of reframing to new margins.")
     if slot["key"] == BASE:
-        person = "man" if profile["gender"] == "male" else "woman"
-        return (f"Use the attached reference of {profile['name']} to keep the same recognizable face, hair and clothing. "
-                f"Photorealistic adult {person}. Nationality: {profile.get('nationality') or 'as in the reference'}. Appearance: {profile['appearance']}. "
-                f"Wearing exactly {profile['outfit']}. Standing upright, shoulders and torso square to the viewer, "
-                "head facing straight forward, eyes looking directly at the camera. Calm friendly face, lips closed, "
-                "arms relaxed. Full body from hair to soles: head, feet and all fingers fully inside the picture with "
-                "clear margins. Portrait canvas (5:6). Soft even studio lighting. Flat pure green background #00B140, "
-                "no floor, shadow or gradient. Do not add text, props or logos; preserve the clothing markings explicitly "
-                "described above. Do not use the reference's three-quarter body angle.")
+        person = {"male": "man", "female": "woman"}.get(profile["gender"], "person")
+        action = (f"Create a photorealistic adult {person}, standing upright with weight balanced on both feet. "
+                  "Use the attached identity/outfit reference ONLY for likeness and clothing; turn the same person to face the viewer. "
+                  "ACTION: relaxed neutral rest, both arms comfortably down, hands visible, relaxed fingers. "
+                  "Keep both eyes looking directly at the camera, eyes open; calm friendly expression, lips gently closed, no visible teeth. "
+                  "This is the master front reference for every later slot; do not copy the reference's three-quarter body angle.")
+        return f"{identity}\nREFERENCE: existing identity/outfit picture if available.\n{action}\n{invariants}\n{output}"
     if slot["region"] == "arms":
         change = POSES[slot["key"].removeprefix("gesture-")]
     elif slot["region"] == "mouth":
         change = "part only the lips naturally during speech, showing some teeth; keep the same hand gesture"
     else:
         change = "close both eyes for a natural blink, keeping the lips closed"
-    return (f"Edit the attached FRONT-facing picture of {profile['name']}. Change only the {slot['region']}: {change}. "
-            "Make the change clearly visible, with every finger inside the canvas. Keep face identity, hairstyle, outfit, "
-            "camera-facing head/torso, full-body scale and position, background and lighting exactly unchanged. "
-            "Look directly at the viewer; never rotate into a three-quarter view. Do not mirror the picture.")
+    action = change
+    if slot["region"] == "arms":
+        action += (". Lips gently closed with no teeth; eyes open looking directly at the viewer. "
+                   "Keep shoulders, head, torso, hips, legs and feet fixed; edit arms/hands only. "
+                   "For count poses use one raised hand, exactly the requested number of extended fingers, all other fingers folded; "
+                   "do not combine counting and pointing. For point-left/right the hand and index finger aim toward the viewer's screen edge, not toward the viewer")
+    elif slot["region"] == "mouth":
+        action += (". Open the mouth only slightly, natural mid-speech shape, no exaggerated smile/yawn. "
+                   "Preserve both hands, every finger, gesture direction, eyes, face outline and body pixel-for-pixel outside the mouth region")
+    else:
+        action += ". Eyelids closed only; eyebrows, head, face outline, hands, posture and closed mouth remain exactly unchanged"
+    return (f"{identity}\nREFERENCE REQUIRED: attach the approved FRONT {slot['parent']}.png picture downloaded from this slot; "
+            "do not use the original side/three-quarter reference for this edit.\n"
+            f"EDIT ONLY: {slot['region']}. ACTION: {action}.\n{invariants}\n{output}\n"
+            "CHECK BEFORE SAVING: exact same identity/outfit, frontal camera, identical feet/head placement, intended gesture, "
+            "correct mouth state, correct finger count, no extra anatomy, no changed canvas. If any invariant changed, redo the edit.")
 
 
 def _root(character_id: str, version: int) -> Path:
@@ -94,7 +115,12 @@ async def list_slots(db: aiosqlite.Connection, character_id: str) -> dict[str, A
     for slot in SLOTS:
         asset = await _current(db, row, slot["key"])
         parent = await _current(db, row, slot["parent"]) if slot["parent"] else None
-        cards.append({**slot, "file_name": slot["key"] + ".png", "prompt": slot_prompt(native._profile_view(row), slot),
+        mouth = "Mouth open" if slot["region"] == "mouth" else "Mouth closed"
+        pose = slot["key"].removesuffix("__open").removeprefix("gesture-")
+        titles = {"calm__closed": "Neutral front", "calm": "Neutral front", "talk": "Explain with open hands", "point-left": "Point screen-left",
+                  "point-right": "Point screen-right", "emphasize": "Emphasize an idea", "count-1": "Count exactly one", "count-2": "Count exactly two",
+                  "count-3": "Count exactly three", "think": "Think", "wave": "Friendly wave", "blink": "Natural blink"}
+        cards.append({**slot, "title": f"{titles.get(pose, pose)} — {mouth}", "file_name": slot["key"] + ".png", "prompt": slot_prompt(native._profile_view(row), slot),
                       "identity_reference_url": identity_url if slot["key"] == BASE else None,
                       "region_text": native.REGIONS.get(slot["region"] or "", ""),
                       "parent_ready": not slot["parent"] or bool(parent and parent["review_state"] == "approved"),

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CAPTION_STYLES } from "./captionStyle";
 import { VISUAL_MODES } from "./podcastLayout";
+import { soloPayloadSchema } from "./soloTypes";
 
 /**
  * Phase 19 spike (Task 19.1) input-props shape, as a zod schema (Remotion's own recommended
@@ -150,6 +151,9 @@ export const episodeBrandSchema = z.object({
 });
 
 export const episodeInputPropsSchema = z.object({
+  presentationMode: z.enum(["classic", "solo_explainer"]).optional(),
+  solo: soloPayloadSchema.optional(),
+  durationSeconds: z.number().finite().positive().optional(),
   /** projects.id */
   episodeId: z.string(),
   lines: z.array(episodeLineSchema),

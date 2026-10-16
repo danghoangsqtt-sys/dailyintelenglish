@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -45,6 +46,8 @@ class TopicPatch(BaseModel):
 
 
 class SeriesInput(BaseModel):
+    presentation_mode: Literal["classic", "solo_explainer"] = "classic"
+    explainer_structure: Literal["why", "how", "list"] = "why"
     name: str = Field(min_length=1, max_length=100)
     description: str = Field(default="", max_length=600)
     genre: str = "small_talk"
@@ -59,6 +62,8 @@ class SeriesInput(BaseModel):
 
 
 class SeriesPatch(BaseModel):
+    presentation_mode: Literal["classic", "solo_explainer"] | None = None
+    explainer_structure: Literal["why", "how", "list"] | None = None
     name: str | None = Field(default=None, min_length=1, max_length=100)
     description: str | None = Field(default=None, max_length=600)
     genre: str | None = None

@@ -240,7 +240,8 @@ def packages(project: dict, clip: dict, learning: dict | None, hashtags: list[st
         title = f"{hook[:SHORTS_TITLE_LIMIT - 9].rstrip()} #Shorts"
     learn = _learning_lines(learning)
     tags = [tag for tag in hashtags if tag.lower() != "shorts"]
-    description = [f"{hook} — English conversation ({project['cefr_level'].upper()}) from Daily Beyond English."]
+    format_name = "knowledge explainer" if project.get("presentation_mode") == "solo_explainer" else "English conversation"
+    description = [f"{hook} — {format_name} ({project['cefr_level'].upper()}) from Daily Beyond English."]
     if learn:
         description.append("📚 Learn:\n" + "\n".join(f"• {line}" for line in learn))
     description.append(f"▶️ Full episode: {full_video_url}" if full_video_url else "▶️ Full episode on our channel.")

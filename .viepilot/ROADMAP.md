@@ -6,7 +6,7 @@ Owner invoked vp-evolve+vp-auto for BUG-042/043/044 and completion49.5b. [Phase5
 
 ## Planned extension — 2026-10-16, target 1.5.0
 
-**Add Feature; Phase48 verified, Phase49 executing.** [SPEC tổng](SPEC.md), [PLAN tổng](PLAN.md), [brainstorm](../docs/brainstorm/session-2026-10-16.md). 15 tasks:10 technically verified,0 in progress,5 planned. Bản phát hành1.4.0-rc.1 giữ nguyên.
+**Add Feature; Phase48 verified, Phase49 implementation verified, owner demo pending.** [SPEC tổng](SPEC.md), [PLAN tổng](PLAN.md), [brainstorm](../docs/brainstorm/session-2026-10-16.md). 15 tasks:14 technically verified;49.10 implementation checked, real-art/owner acceptance pending.0 planned implementation tasks. Owner has no front21 art; real demonstration and V49 sign-off remain pending. Bản phát hành1.4.0-rc.1 giữ nguyên.
 
 ### Phase 48 — Chọn giọng riêng cho nhân vật
 

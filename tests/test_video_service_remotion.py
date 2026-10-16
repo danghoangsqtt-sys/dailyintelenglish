@@ -44,7 +44,7 @@ def _fake_input_props() -> dict:
 def test_render_via_remotion_sync_success_produces_real_output(tmp_path, monkeypatch):
     output_path = tmp_path / "out.mp4"
 
-    def fake_run(command, cwd=None, capture_output=True, text=True, timeout=None):
+    def fake_run(command, cwd=None, capture_output=True, text=True, timeout=None, encoding=None, errors=None):
         Path(command[5]).write_bytes(b"fake-mp4-bytes")  # command[5] == output_path
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
@@ -59,7 +59,7 @@ def test_render_via_remotion_sync_success_produces_real_output(tmp_path, monkeyp
 
 
 def test_render_via_remotion_sync_raises_on_timeout(tmp_path, monkeypatch):
-    def fake_run(command, cwd=None, capture_output=True, text=True, timeout=None):
+    def fake_run(command, cwd=None, capture_output=True, text=True, timeout=None, encoding=None, errors=None):
         raise subprocess.TimeoutExpired(cmd=command, timeout=timeout)
 
     monkeypatch.setattr(video_renderer_remotion.subprocess, "run", fake_run)
@@ -69,7 +69,7 @@ def test_render_via_remotion_sync_raises_on_timeout(tmp_path, monkeypatch):
 
 
 def test_render_via_remotion_sync_raises_on_non_zero_exit(tmp_path, monkeypatch):
-    def fake_run(command, cwd=None, capture_output=True, text=True, timeout=None):
+    def fake_run(command, cwd=None, capture_output=True, text=True, timeout=None, encoding=None, errors=None):
         return subprocess.CompletedProcess(command, 1, stdout="", stderr="remotion blew up")
 
     monkeypatch.setattr(video_renderer_remotion.subprocess, "run", fake_run)
@@ -79,7 +79,7 @@ def test_render_via_remotion_sync_raises_on_non_zero_exit(tmp_path, monkeypatch)
 
 
 def test_render_via_remotion_sync_raises_on_missing_output_despite_exit_zero(tmp_path, monkeypatch):
-    def fake_run(command, cwd=None, capture_output=True, text=True, timeout=None):
+    def fake_run(command, cwd=None, capture_output=True, text=True, timeout=None, encoding=None, errors=None):
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")  # never wrote the file
 
     monkeypatch.setattr(video_renderer_remotion.subprocess, "run", fake_run)
@@ -171,7 +171,7 @@ def test_render_via_remotion_sync_hands_remotion_an_absolute_path(tmp_path, monk
     renderer_dir.mkdir()
     seen = {}
 
-    def fake_run(command, cwd=None, capture_output=True, text=True, timeout=None):
+    def fake_run(command, cwd=None, capture_output=True, text=True, timeout=None, encoding=None, errors=None):
         seen["output"], seen["cwd"] = command[5], cwd
         target = Path(command[5]) if Path(command[5]).is_absolute() else Path(cwd) / command[5]
         target.parent.mkdir(parents=True, exist_ok=True)

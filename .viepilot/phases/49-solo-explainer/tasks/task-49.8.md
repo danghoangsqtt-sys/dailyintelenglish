@@ -1,10 +1,10 @@
 # Task 49.8 — Render production, cử chỉ và motion theo approved plan
 
-- **Status:** planned · 2026-10-16.
+- **Status:** implemented_verified · 2026-10-16; owner acceptance remains separate.
 - **Dependencies:** 49.7
 - **Requirements:** R02, R03, R04, R05, R06, R07, R11, R13.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
-- **Scope:** card này là kế hoạch, chưa có kết quả triển khai hay acceptance.
+- **Scope:** implemented within the authorized plan; technical verification below does not imply owner acceptance.
 
 ## Objective
 
@@ -12,6 +12,11 @@ Render production, cử chỉ và motion theo approved plan. Hoàn thành contra
 
 ## Paths
 
+- backend/library/explainer_media.py
+- backend/content/project_service.py
+- renderer/src/StillFrame.tsx
+- renderer/src/soloTypes.ts
+- tests/test_explainer_layout.py
 - backend/media/video_renderer_remotion.py
 - backend/media/video_service.py
 - backend/api/video.py
@@ -66,11 +71,20 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Acceptance / handoff
 
-- [ ] Các bước trên có evidence thực, test commands và kết quả ghi vào card.
-- [ ] Error/race/compatibility cases liên quan được kiểm tra, không chỉ happy path.
-- [ ] Không ghi “done/pass” cho test hoặc owner gate chưa chạy.
+- [x] Các bước trên có evidence thực, test commands và kết quả ghi vào card.
+- [x] Error/race/compatibility cases liên quan được kiểm tra, không chỉ happy path.
+- [x] Không ghi “done/pass” cho test hoặc owner gate chưa chạy.
 - [ ] PM/owner nhận kết quả theo AR-06; ghi technical verification và owner acceptance riêng.
 
 ## Progress
 
-- 2026-10-16: planned; shipping code chưa sửa, tests triển khai chưa chạy.
+- 2026-10-16: bounded bridge scope: reuse verified payload for production, stage immutable assets per attempt, include plan/source in video CAS, and share SoloScene with StillFrame. Fixture media verification does not replace owner V49 acceptance.
+- 2026-10-16: initial plan recorded before implementation; final evidence below.
+
+## Final technical verification —2026-10-16
+
+Approved immutable media bridge, per-attempt verified image staging, deterministic poses/mouth/blink/rest, audio-tail duration and source/plan publication CAS. Actual content-window renders and frozen branded production API/SRT checked; Windows Unicode decoding fixed.
+
+Feature full pytest 1867 passed in779.20s. Post-Windows-UTF8 full run:1862 passed,5 legacy subprocess mock-signature failures; all40 video/bridge checks passed in7.95s after updating those5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
+
+[Evidence report](../../../../docs/operations/phase49-solo-explainer.md). Git persistence is recorded after the implementation checkpoint; no owner acceptance or release tag implied.

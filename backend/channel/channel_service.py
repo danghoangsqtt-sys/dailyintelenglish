@@ -135,6 +135,8 @@ async def create_series(db: aiosqlite.Connection, topic_id: str, body: SeriesInp
         (series_id, topic_id, body.name.strip(), body.description.strip(), body.genre, body.cefr_level, json.dumps(body.cast),
          body.duration_minutes, body.playlist_url,
          await _next_position(db, "channel_series", "WHERE topic_id = ?", (topic_id,)), now, now))
+    await db.execute("UPDATE channel_series SET presentation_mode=?,explainer_structure=? WHERE id=?",
+                     (body.presentation_mode, body.explainer_structure, series_id))
     return await get_series(db, series_id)
 
 
@@ -285,7 +287,10 @@ async def create_projects(db: aiosqlite.Connection, series_id: str) -> dict:
     from backend.library import project_visuals_service as project_visuals
 
     series = await get_series(db, series_id)
-    if len(series["cast"]) < 2:
+    solo = series["presentation_mode"] == "solo_explainer"
+    if solo and len(series["cast"]) != 1:
+        raise ValidationError("Choose exactly one presenter for this Solo series")
+    if not solo and len(series["cast"]) < 2:
         raise ValidationError("Choose at least two characters for the series first")
     speakers = await _speakers(db, series["cast"])
     cursor = await db.execute("SELECT * FROM channel_episodes WHERE series_id = ? AND project_id IS NULL ORDER BY number",
@@ -296,7 +301,9 @@ async def create_projects(db: aiosqlite.Connection, series_id: str) -> dict:
         project = await project_service.create_project(db, ScriptConfig(
             name=f"{series['name']} · Ep. {episode['number']}: {episode['title']}"[:200], topic=topic[:500],
             cefr_level=series["cefr_level"], duration_minutes=series["duration_minutes"], num_speakers=len(speakers),
-            genre=series["genre"], accent=speakers[0].accent, speakers=speakers), commit=False)
+            genre=series["genre"], accent=speakers[0].accent, speakers=speakers,
+            presentation_mode=series["presentation_mode"],
+            explainer_structure=series["explainer_structure"] if solo else None), commit=False)
         await project_visuals.set_cast(db, project["id"], [
             {"speaker_index": index, "character_id": character_id} for index, character_id in enumerate(series["cast"])])
         await db.execute("UPDATE channel_episodes SET project_id = ?, status = 'created', updated_at = ? WHERE id = ?",

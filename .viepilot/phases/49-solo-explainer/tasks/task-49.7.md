@@ -1,10 +1,10 @@
 # Task 49.7 — Player preview và editor duyệt bố cục trong Step 5
 
-- **Status:** planned · 2026-10-16.
+- **Status:** implemented_verified · 2026-10-16; owner acceptance remains separate.
 - **Dependencies:** 49.3, 49.6
 - **Requirements:** R03, R04, R05, R06, R07, R11.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
-- **Scope:** card này là kế hoạch, chưa có kết quả triển khai hay acceptance.
+- **Scope:** implemented within the authorized plan; technical verification below does not imply owner acceptance.
 
 ## Objective
 
@@ -12,6 +12,8 @@ Player preview và editor duyệt bố cục trong Step 5. Hoàn thành contract
 
 ## Paths
 
+- frontend/static/js/storyboard.js
+- tests/test_explainer_editor_browser.py
 - frontend/pages/step5_video.html
 - frontend/static/js/step5_video.js
 - frontend/static/js/api.js
@@ -33,6 +35,15 @@ Player preview và editor duyệt bố cục trong Step 5. Hoàn thành contract
 - renderer/src/ExplainerVisual.tsx
 - renderer/src/CaptionBand.tsx
 - tests/test_explainer_editor_browser.py
+- backend/api/explainer.py
+- backend/library/explainer_service.py
+- backend/library/explainer_media.py
+- renderer/src/soloTypes.ts
+- backend/library/presenter_asset_plan.py
+- frontend/static/js/character_profiles.js
+- frontend/pages/characters.html
+- tests/test_presenter_asset_plan.py
+- tests/test_presenter_assets_browser.py
 - .viepilot/phases/49-solo-explainer/PHASE-STATE.md
 - .viepilot/TRACKER.md
 - .viepilot/ROADMAP.md
@@ -57,6 +68,10 @@ Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu ph�
 
 ## Risks / guardrails
 
+### Owner refinement2026-10-16
+
+Owner confirms no real front21 art exists and asks21 clearly labeled upload slots with strict detailed per-action outside-AI prompts. Enhance existing front cards (do not duplicate profiles/native packs): names/instructions per closed/open/blink, approved parent input, full-body camera/identity/clothes/scale invariants, exact finger counts/viewer directions, negative constraints and per-slot checklist. Preserve upload/review race guards. Add a read-only draft preview props endpoint with verified front/images/audio and geometry outside DB lock; it does not approve content. Media helper resolves preview URLs vs production staging; share schema/components and frame origin. Pin player exactly to installed Remotion4.0.529, direct esbuild0.28.1, build static IIFE for vanilla mount/unmount. No dev server or runtime Node dependency for Player playback.
+
 staticFile URL và frame origin có thể khác giữa Player/render; truyền resolved media refs và frame offset rõ ràng.
 
 Dùng constants/path helpers hiện có, service layer async, validation API + semantic. Không giữ shared DB lock trong network/render/copy nặng. Không sửa dữ liệu production khi có thể dùng sandbox. Không thay đổi gate cũ hoặc phát hành chỉ vì task kỹ thuật chạy qua.
@@ -71,11 +86,19 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Acceptance / handoff
 
-- [ ] Các bước trên có evidence thực, test commands và kết quả ghi vào card.
-- [ ] Error/race/compatibility cases liên quan được kiểm tra, không chỉ happy path.
-- [ ] Không ghi “done/pass” cho test hoặc owner gate chưa chạy.
+- [x] Các bước trên có evidence thực, test commands và kết quả ghi vào card.
+- [x] Error/race/compatibility cases liên quan được kiểm tra, không chỉ happy path.
+- [x] Không ghi “done/pass” cho test hoặc owner gate chưa chạy.
 - [ ] PM/owner nhận kết quả theo AR-06; ghi technical verification và owner acceptance riêng.
 
 ## Progress
 
-- 2026-10-16: planned; shipping code chưa sửa, tests triển khai chưa chạy.
+- 2026-10-16: initial plan recorded before implementation; final evidence below.
+
+## Final technical verification —2026-10-16
+
+Strict per-action21 upload/prompt cards and static shared Player editor, serialized/trailing autosave, dirty/conflict guards and operation locks. Actual source/frozen UI,3 browser race cases, native/front regression and no-audio editor/reload checked.
+
+Feature full pytest 1867 passed in779.20s. Post-Windows-UTF8 full run:1862 passed,5 legacy subprocess mock-signature failures; all40 video/bridge checks passed in7.95s after updating those5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
+
+[Evidence report](../../../../docs/operations/phase49-solo-explainer.md). Git persistence is recorded after the implementation checkpoint; no owner acceptance or release tag implied.

@@ -401,3 +401,21 @@ h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); lett
   .roadmap-steps { grid-template-columns: 1fr; }
   .cockpit-calendar li { grid-template-columns: 1fr; }
 }
+/* Solo editor: a shared preview beside bounded content/layout fields. */
+.solo-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:12px 0; }
+.solo-editor-grid { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(280px,1fr); gap:20px; align-items:start; }
+.solo-fields { display:grid; gap:12px; min-width:0; }
+.solo-fields label { display:grid; gap:5px; }
+.solo-fields textarea,.solo-fields select,.solo-fields input[type="number"] { width:100%; box-sizing:border-box; padding:9px 11px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--text); font:inherit; }
+.solo-player-transport { display:flex; align-items:center; gap:8px; padding:8px 0; font-size:12px; }
+.solo-player-transport input { flex:1; min-width:40px; }
+.solo-player-transport span { white-space:nowrap; }
+.solo-fields fieldset { display:grid; gap:8px; }
+.solo-segments { display:grid; gap:6px; margin-top:12px; }
+.solo-segments button { text-align:left; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); }
+.solo-segments [aria-pressed="true"] { border-color:var(--accent); }
+.solo-annotation { position:relative; width:100%; touch-action:none; user-select:none; }
+.solo-annotation img { display:block; width:100%; height:auto; }
+.solo-annotation span { position:absolute; box-sizing:border-box; border:2px solid #efbd49; background:#efbd4920; pointer-events:none; }
+#solo-error { color:var(--danger,#e36b6b); }
+@media(max-width:1000px) { .solo-editor-grid { grid-template-columns:1fr; } }

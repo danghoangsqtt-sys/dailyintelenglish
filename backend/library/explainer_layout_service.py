@@ -1,0 +1,248 @@
+"""Deterministic Solo layout proof from immutable front pixels and shared frame rules."""
+from __future__ import annotations
+
+import asyncio
+import copy
+import json
+import math
+from pathlib import Path
+
+from PIL import Image
+
+from backend.core.exceptions import ValidationError
+from backend.core.paths import get_project_root
+from backend.library import presenter_asset_plan
+from backend.library.explainer_timing import ScriptIndex, resolve_timeline
+from backend.schemas.explainer import ExplainerPlan, SegmentLayout
+
+RULES = json.loads((get_project_root() / "frontend/static/explainer-layout-rules.json").read_text(encoding="utf-8"))
+EPSILON = 1e-8
+
+
+def intersects(a: dict, b: dict) -> bool:
+    """Strict overlap; touching edges are permitted before the explicit motion margin."""
+    return a["x"] < b["x"] + b["width"] - EPSILON and b["x"] < a["x"] + a["width"] - EPSILON and a["y"] < b["y"] + b["height"] - EPSILON and b["y"] < a["y"] + a["height"] - EPSILON
+
+
+def contains(outer: dict, inner: dict) -> bool:
+    """Contain finite positive rectangles, including their full edges."""
+    return (all(math.isfinite(float(v)) for v in inner.values()) and inner["width"] > 0 and inner["height"] > 0
+            and inner["x"] >= outer["x"] - EPSILON and inner["y"] >= outer["y"] - EPSILON
+            and inner["x"] + inner["width"] <= outer["x"] + outer["width"] + EPSILON
+            and inner["y"] + inner["height"] <= outer["y"] + outer["height"] + EPSILON)
+
+
+def inside_safe(rect: dict, aspect: str) -> bool:
+    """Use the existing vertical platform polygon, not the geometric frame centre."""
+    spec = RULES["aspects"][aspect]
+    column = spec.get("column")
+    return contains(spec["safe"], rect) and not (column and rect["y"] + rect["height"] > column["fromY"] + EPSILON and rect["x"] + rect["width"] > column["x"] + EPSILON)
+
+
+def envelope(a: dict, b: dict, margin: float = 0) -> dict:
+    """AABB contains every intermediate point of monotonic easing and idle margin."""
+    x, y = min(a["x"], b["x"]) - margin, min(a["y"], b["y"]) - margin
+    return {"x": x, "y": y, "width": max(a["x"] + a["width"], b["x"] + b["width"]) + margin - x,
+            "height": max(a["y"] + a["height"], b["y"] + b["height"]) + margin - y}
+
+
+def presenter_boxes(placement: dict, metrics: dict, aspect: str) -> tuple[dict, dict]:
+    """Place the union alpha centre/feet and derive an undistorted full PNG canvas."""
+    spec, alpha = RULES["aspects"][aspect], metrics["alpha"]
+    ch = placement["height"] / alpha["height"]
+    cw = ch * spec["height"] / spec["width"] * metrics["canvasWidth"] / metrics["canvasHeight"]
+    canvas = {"x": placement["x"] - (alpha["x"] + alpha["width"] / 2) * cw,
+              "y": placement["y"] - (alpha["y"] + alpha["height"]) * ch, "width": cw, "height": ch}
+    return ({"x": canvas["x"] + alpha["x"] * cw, "y": canvas["y"] + alpha["y"] * ch,
+             "width": alpha["width"] * cw, "height": placement["height"]}, canvas)
+
+
+def text_metrics(visual: dict, panel: dict, aspect: str) -> dict:
+    """Conservative character wrapping bounds shared with the actual card/grid renderer."""
+    spec = RULES["aspects"][aspect]
+    width, height = panel["width"] * spec["width"], panel["height"] * spec["height"]
+    padding, gap, font, title_font = (spec[k] for k in ("padding", "gap", "font", "titleFont"))
+    def lines(text: str, available: float, size: int) -> int:
+        # 1.1em per character bounds ordinary English including wide Latin glyphs.
+        capacity = max(1, math.floor(available / (size * 1.1)))
+        return sum(max(1, math.ceil(len(part) / capacity)) for part in text.split("\n")) if text else 0
+    title_height = lines(visual.get("title", ""), width - 2 * padding, title_font) * title_font * 1.25
+    available_height = height - 2 * padding - title_height - gap
+    if visual["kind"] == "photo":
+        return {"font": font, "titleFont": title_font, "padding": padding, "gap": gap, "columns": 1}
+    columns = min(2 if visual.get("template") == "comparison" else spec["columns"], len(visual.get("nodes", [1])))
+    if visual["kind"] == "text_card":
+        needed = sum(lines(text, width - 2 * padding - font, font) * font * 1.3 + gap for text in visual.get("bullets", []))
+        needed += lines(visual.get("emphasis", ""), width - 2 * padding, font) * font * 1.3
+    else:
+        node_width = (width - 2 * padding - gap * (columns - 1)) / columns
+        row_heights = []
+        for index in range(0, len(visual["nodes"]), columns):
+            row_heights.append(max((lines(node["label"], node_width - 2 * gap, font) * font * 1.3
+                                    + lines(node.get("detail", ""), node_width - 2 * gap, font) * font * 1.3 + 2 * gap)
+                                   for node in visual["nodes"][index:index + columns]))
+        needed = sum(row_heights) + gap * max(0, len(row_heights) - 1)
+        nodes = {node["id"]: node["label"] for node in visual["nodes"]}
+        for edge in visual.get("edges", []):
+            label = f"{nodes[edge['source']]} → {nodes[edge['target']]}" + (f": {edge['label']}" if edge.get("label") else "")
+            needed += gap + lines(label, width - 2 * padding, font) * font * 1.3
+    if width < 2 * padding + 4 * font or available_height < needed:
+        raise ValidationError("The card/diagram text cannot fit readably; shorten its title/details or reduce nodes")
+    return {"font": font, "titleFont": title_font, "padding": padding, "gap": gap, "columns": columns}
+
+
+def protected_regions(visual: dict, panel: dict, aspect: str, illustrations: dict) -> list[dict]:
+    """Map owner photo annotations through contain/cover and refuse important cropping."""
+    if visual["kind"] != "photo" or not visual.get("important_regions"):
+        if visual["kind"] == "photo" and visual.get("fit") == "cover":
+            raise ValidationError("Use contain for an unannotated photo, or mark all important regions before cropping")
+        return [panel]
+    ref = visual.get("asset")
+    image = illustrations.get((ref["asset_id"], ref["version"])) if ref else None
+    if not image:
+        raise ValidationError("Import/select the photo before validating its protected regions")
+    spec = RULES["aspects"][aspect]
+    pw, ph = panel["width"] * spec["width"], panel["height"] * spec["height"]
+    scale = (max if visual.get("fit") == "cover" else min)(pw / image["width"], ph / image["height"])
+    iw, ih = image["width"] * scale / spec["width"], image["height"] * scale / spec["height"]
+    origin = {"x": panel["x"] + (panel["width"] - iw) / 2, "y": panel["y"] + (panel["height"] - ih) / 2}
+    protected = [{"x": origin["x"] + r["x"] * iw, "y": origin["y"] + r["y"] * ih, "width": r["width"] * iw, "height": r["height"] * ih} for r in visual["important_regions"]]
+    if not all(contains(panel, box) for box in protected):
+        raise ValidationError("This crop removes an important photo region; choose contain or reframe it")
+    return protected
+
+
+def validate_segment(segment: dict, aspect: str, metrics: dict, illustrations: dict, previous: dict | None = None) -> dict:
+    """Prove endpoints and the entire motion envelope against content and reserved UI."""
+    layout = segment["layouts"].get(aspect)
+    if not layout or layout.get("rules_version") != RULES["version"]:
+        raise ValidationError("Resolve the missing or outdated layout before approval")
+    spec = RULES["aspects"][aspect]
+    panel, placement = layout["illustration"], layout["presenter"]
+    if not inside_safe(panel, aspect) or any(intersects(panel, spec[key]) for key in ("caption", "header")):
+        raise ValidationError("The illustration must stay inside the safe zone and outside captions/brand")
+    if not RULES["minHeight"] <= placement["height"] <= RULES["maxHeight"]:
+        raise ValidationError("Presenter height must remain within12–38%")
+    bounds, canvas = presenter_boxes(placement, metrics, aspect)
+    start = bounds
+    protected = protected_regions(segment["visual"], panel, aspect, illustrations)
+    obstacles = [*protected, spec["caption"], spec["header"]]
+    if layout["transition"] != "cut":
+        origin = layout.get("motion_from") or (previous or {}).get("presenter")
+        if previous and layout.get("motion_from") and layout["motion_from"] != previous["presenter"]:
+            raise ValidationError("The motion start no longer matches the previous segment")
+        if origin:
+            if not RULES["minHeight"] <= origin["height"] <= RULES["maxHeight"]:
+                raise ValidationError("The motion start has an invalid presenter size")
+            start, _ = presenter_boxes(origin, metrics, aspect)
+        if previous:
+            obstacles.extend(previous.get("protected", []))
+    swept = envelope(start, bounds, RULES["margin"])
+    if not inside_safe(swept, aspect) or any(intersects(swept, item) for item in obstacles):
+        raise ValidationError("Presenter or its movement crosses protected content/safe area; reposition, shrink, or use a boundary cut")
+    return {"id": segment["id"], "presenter": placement, "bounds": bounds, "canvas": canvas,
+            "motion_bounds": swept, "protected": protected, "text": text_metrics(segment["visual"], panel, aspect),
+            "transition": layout["transition"]}
+
+
+def measure_front(manifest: dict) -> dict:
+    """Measure every pose alpha, including hands, on one verified aligned canvas."""
+    union, dimensions = None, None
+    for asset in manifest["pictures"].values():
+        with Image.open(Path(asset["path"])) as source:
+            if dimensions and source.size != dimensions:
+                raise ValidationError("Front pictures must share one aligned canvas")
+            dimensions = source.size
+            alpha = source.convert("RGBA").getchannel("A")
+            bounds = alpha.point(lambda value: 255 if value > 4 else 0).getbbox()
+            if not bounds:
+                raise ValidationError("A front pose has no visible figure")
+            union = bounds if union is None else (min(union[0], bounds[0]), min(union[1], bounds[1]), max(union[2], bounds[2]), max(union[3], bounds[3]))
+    if not union or not dimensions:
+        raise ValidationError("Approve the full front21 pack before solving layouts")
+    w, h = dimensions
+    return {"canvasWidth": w, "canvasHeight": h, "alpha": {"x": union[0] / w, "y": union[1] / h,
+            "width": (union[2] - union[0]) / w, "height": (union[3] - union[1]) / h}}
+
+
+async def front_metrics(snapshot: dict) -> dict:
+    """Verify pinned pack bytes then measure outside the shared database lock."""
+    ref = snapshot.get("presenter")
+    if not ref or not ref.get("front_pack_revision"):
+        raise ValidationError("Approve the full front21 pack before solving layouts")
+    manifest = await presenter_asset_plan.resolve_manifest(ref["profile_id"], ref["identity_version"], ref["front_pack_revision"])
+    return await asyncio.to_thread(measure_front, manifest)
+
+
+def prove(snapshot: dict, plan: ExplainerPlan, metrics: dict) -> dict:
+    """Build a deterministic proof; no AI, filesystem or mutable runtime measurements."""
+    illustrations = {(item["id"], item["version"]): item for item in snapshot["source"]["illustrations"] if not item.get("missing")}
+    aspects = {}
+    for aspect in plan.aspects:
+        previous, records = None, []
+        for segment in plan.segments:
+            try:
+                record = validate_segment(segment.model_dump(), aspect, metrics, illustrations, previous)
+            except ValidationError as exc:
+                raise ValidationError(f"Segment {segment.id} ({aspect}): {exc}") from exc
+            records.append(record)
+            previous = record
+        spec = RULES["aspects"][aspect]
+        aspects[aspect] = {"safe": spec["safe"], "caption": spec["caption"], "header": spec["header"], "segments": records,
+                           "anchor_options": spec["anchors"]}
+    return {"rules_version": RULES["version"], "presenter_metrics": metrics, "aspects": aspects}
+
+
+async def validate_plan(snapshot: dict, plan: ExplainerPlan) -> dict:
+    """Production approval gate: actual front pixels, complete layouts and safe paths."""
+    if plan is None or any(aspect not in segment.layouts for segment in plan.segments for aspect in plan.aspects):
+        raise ValidationError("Resolve the missing layouts for all selected aspects before approval")
+    return prove(snapshot, plan, await front_metrics(snapshot))
+
+
+async def arrange(snapshot: dict, plan: ExplainerPlan) -> tuple[list, dict]:
+    """Suggest valid unlocked layouts; preserve owner locks and use cuts for unsafe paths."""
+    metrics = await front_metrics(snapshot)
+    illustrations = {(item["id"], item["version"]): item for item in snapshot["source"]["illustrations"] if not item.get("missing")}
+    timeline = resolve_timeline(ScriptIndex(snapshot["lines"]), snapshot["audio"]).segments(plan.segments)
+    segments = copy.deepcopy(plan.segments)
+    for aspect in plan.aspects:
+        previous = None
+        spec = RULES["aspects"][aspect]
+        for index, segment in enumerate(segments):
+            lock = segment.locks.layout_16_9 if aspect == "16:9" else segment.locks.layout_9_16
+            if lock:
+                previous = validate_segment(segment.model_dump(), aspect, metrics, illustrations, previous)
+                continue
+            anchors = ["left", "right", "center"]
+            preferred = anchors[index % 3]
+            if previous and timeline[index - 1]["end_sec"] - timeline[index - 1]["start_sec"] < RULES["minDwellSeconds"]:
+                preferred = previous["presenter"]["anchor"]
+            anchors.remove(preferred)
+            error = None
+            for anchor in [preferred, *anchors]:
+                for height in (0.22, 0.20, 0.18, 0.16, 0.14, 0.12):
+                    proposal = {"presenter": {"anchor": anchor, "x": spec["anchors"][anchor], "y": spec["presenterBottom"], "height": height},
+                                "illustration": spec["panels"][anchor], "transition": "ease", "transition_seconds": 0.4, "rules_version": RULES["version"]}
+                    if previous:
+                        proposal["motion_from"] = previous["presenter"]
+                    for transition in ("ease", "cut"):
+                        proposal["transition"] = transition
+                        if transition == "cut":
+                            proposal.pop("motion_from", None)
+                        segment.layouts[aspect] = SegmentLayout.model_validate(proposal)
+                        try:
+                            record = validate_segment(segment.model_dump(), aspect, metrics, illustrations, previous)
+                        except ValidationError as exc:
+                            error = exc
+                        else:
+                            previous, error = record, None
+                            break
+                    if error is None:
+                        break
+                if error is None:
+                    break
+            if error:
+                raise ValidationError(f"Segment {segment.id} ({aspect}): {error}") from error
+    candidate = plan.model_copy(update={"segments": segments})
+    return segments, prove(snapshot, candidate, metrics)

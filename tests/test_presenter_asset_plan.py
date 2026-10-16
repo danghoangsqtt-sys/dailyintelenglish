@@ -51,7 +51,12 @@ def test_registry21_dag_pairs_screen_directions_and_native29():
     profile = {"name": "Test", "gender": "female", "appearance": "dark hair", "outfit": "blue shirt"}
     assert "LEFT edge of the viewer's screen" in front.slot_prompt(profile, front.SLOTS_BY_KEY["gesture-point-left"])
     assert "RIGHT edge of the viewer's screen" in front.slot_prompt(profile, front.SLOTS_BY_KEY["gesture-point-right"])
-    assert "head, feet and all fingers" in front.slot_prompt(profile, front.SLOTS_BY_KEY[front.BASE])
+    assert "hair-to-soles full body" in front.slot_prompt(profile, front.SLOTS_BY_KEY[front.BASE])
+    for slot in front.SLOTS:
+        prompt = front.slot_prompt(profile, slot)
+        assert f"{slot['key']}.png" in prompt and "1280x1536" in prompt and "EXACT outfit" in prompt
+        if slot["parent"]:
+            assert f"{slot['parent']}.png" in prompt and "CHECK BEFORE SAVING" in prompt
 
 
 def test_front_image_preparation_keeps_feet_native_crop_unchanged():

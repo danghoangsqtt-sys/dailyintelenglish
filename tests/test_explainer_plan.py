@@ -253,7 +253,7 @@ async def test_missing_assets_audio_and_factual_review_block_approval(db, solo):
 
 
 async def test_missing_production_geometry_is_a_refusal_not_a_permissive_placeholder(solo):
-    with pytest.raises(ValidationError, match="Layout validation is not available"):
+    with pytest.raises(ValidationError, match="missing layouts"):
         await service._validate_geometry({}, None)
 
 

@@ -202,6 +202,38 @@ async def _plan(db: aiosqlite.Connection, project_id: str, items: list[str]) -> 
 
     project = await project_service.get_project(db, project_id)
     plan: list[tuple[str, Any, str]] = []
+    if project.get("presentation_mode") == "solo_explainer":
+        from backend.library import explainer_service
+        row = await explainer_service._row(db, project_id)
+        metadata = {"project_id": project_id, "presentation_mode": "solo_explainer",
+                    "explainer_structure": project.get("explainer_structure"),
+                    "revision": row["revision"] if row else None, "status": row["status"] if row else "draft"}
+        if row:
+            metadata["plan"] = json.loads(row["plan_json"])
+            from backend.schemas.explainer import ExplainerPlan
+            try:
+                snapshot = await explainer_service.source_snapshot(db, project_id, ExplainerPlan.model_validate(metadata["plan"]).segments)
+                if snapshot["fingerprint"] != row["source_fingerprint"]:
+                    metadata["status"] = "stale"
+            except (NotFoundError, ValidationError):
+                metadata["status"] = "stale"
+            metadata["plan"]["status"] = metadata["status"]
+            if metadata["status"] == "approved" and row["approved_snapshot_json"]:
+                pinned = json.loads(row["approved_snapshot_json"])
+                # Export only files pinned by approval, with portable relative references.
+                front = pinned["front"]
+                metadata["pictures"] = {}
+                for slot, image in front["pictures"].items():
+                    relative = f"explainer/front/{image['asset_id']}-{slot}.png"
+                    plan.append(("pinned_copy", image, relative))
+                    metadata["pictures"][slot] = {"path": relative, "content_hash": image["content_hash"]}
+                metadata["illustrations"] = []
+                for image in pinned.get("illustrations", []):
+                    relative = f"explainer/illustrations/{image['id']}-{image['version']}.png"
+                    plan.append(("pinned_copy", image, relative))
+                    metadata["illustrations"].append({"asset_id": image["id"], "version": image["version"], "path": relative, "content_hash": image["content_hash"]})
+                metadata["front_pack_revision"] = front["pack_revision"]
+        plan.append(("text", json.dumps(metadata, ensure_ascii=False, indent=2), "explainer/plan.json"))
     video = await video_service.get_video_job(db, project_id) if {"video", "video_vertical"} & set(items) else None
     if "video" in items and video and video.get("status") == "complete":
         plan += [("copy", video.get("mp4_path"), "video.mp4"), ("copy", video.get("srt_path"), "subtitles.srt")]
@@ -249,10 +281,23 @@ async def _plan(db: aiosqlite.Connection, project_id: str, items: list[str]) -> 
 
 
 def _write(folder: Path, plan: list[tuple[str, Any, str]]) -> list[str]:
+    import hashlib
+    # Preflight every immutable source before touching any exported file.
+    for kind, source, _ in plan:
+        if kind == "pinned_copy":
+            path = Path(source["path"])
+            if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != source["content_hash"]:
+                raise ValidationError("An approved explainer image changed; review and approve again before export")
     written = []
     for kind, source, relative in plan:
         target = folder / relative
-        if (_copy(source, target) if kind == "copy" else _text(source, target)):
+        if kind == "pinned_copy":
+            copied = _copy(source["path"], target)
+            if not target.is_file() or hashlib.sha256(target.read_bytes()).hexdigest() != source["content_hash"]:
+                raise ValidationError("An exported explainer image does not match its approved pin")
+        else:
+            copied = _copy(source, target) if kind == "copy" else _text(source, target)
+        if copied:
             written.append(relative)
     return written
 

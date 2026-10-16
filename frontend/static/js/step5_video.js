@@ -874,7 +874,7 @@
       state.audioReady = false; // 404 (no audio yet) is expected, not an error to surface
     }
 
-    if (!state.audioReady) {
+    if (!state.audioReady && state.project.presentation_mode !== "solo_explainer") {
       byId("loading-panel").hidden = true;
       byId("empty-state").hidden = false;
       renderTimeline();
@@ -912,12 +912,24 @@
       if (error.status !== 404) console.error("Failed to load existing video job:", error);
     }
 
-    await loadProjectVisuals();
+    if (state.project.presentation_mode === "solo_explainer") {
+      byId("project-visuals-section").hidden = true;
+      byId("storyboard-section").hidden = true;
+      byId("solo-explainer-section").hidden = false;
+      await ExplainerEditor.mount(byId("solo-explainer-section"), state.projectId);
+    } else {
+      await loadProjectVisuals();
+    }
     renderTimeline();
     renderInspector();
     setupCaptionStyleToggle();
-    setupVisualModes();
-    await loadStillScenes();
+    if (state.project.presentation_mode !== "solo_explainer") {
+      setupVisualModes();
+      await loadStillScenes();
+    } else {
+      byId("visual-mode-group").hidden = true;
+      byId("visual-mode-hint").hidden = true;
+    }
     renderRenderOptions();
     applyLocks();
     // Expose the workspace only after async options and renderer-dependent controls are ready.

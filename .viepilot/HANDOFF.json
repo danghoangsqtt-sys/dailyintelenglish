@@ -3,20 +3,20 @@
   "version": "1.4.0-rc.1",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase49_task49.5_implemented_verified_next49.6",
+  "status": "phase49_implementation_verified_owner_art_gate_pending",
   "current_phase": "49",
   "next_planned_phase": "49",
   "feature_plan": {
     "planned_at": "2026-10-16",
     "mode": "add_feature",
-    "status": "execution_started",
+    "status": "implementation_verified_owner_demo_pending",
     "target_version": "1.5.0",
     "spec": ".viepilot/SPEC.md",
     "plan": ".viepilot/PLAN.md",
     "brainstorm": "docs/brainstorm/session-2026-10-16.md",
     "tasks_total": 15,
-    "tasks_done": 10,
-    "next_task": "49.6",
+    "tasks_done": 14,
+    "next_task": "49.10",
     "next_command": "vp-auto --phase 49",
     "implementation_authorized_by_this_request": true,
     "execution_authorization": "Owner invoked vp-auto --from 48 on 2026-10-16; run planned tasks, retain owner listening/visual gates and no new release without release instruction.",
@@ -50,7 +50,9 @@
         "prepared_prompts": "data/tmp/evolve-20261016/hoang-front21/Hoang-front21-prompts.md"
       }
     },
-    "recovery_authorization": "Owner explicitly invoked vp-evolve+vp-auto2026-10-16 to fix BUG-042/043/044 and complete49.5b; no release instruction."
+    "recovery_authorization": "Owner explicitly invoked vp-evolve+vp-auto2026-10-16 to fix BUG-042/043/044 and complete49.5b; no release instruction.",
+    "code_implementation_complete": true,
+    "remaining_input": "Owner confirms no front21 pictures.21 strict prompt/upload slots are implemented; owner creates/imports/reviews the real pack before real V49 demo."
   },
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
@@ -96,27 +98,44 @@
     },
     "49": {
       "name": "Solo Explainer and front21 presenter pack",
-      "status": "in_progress",
-      "tasks_done": 5,
+      "status": "implementation_verified_owner_art_pending",
+      "tasks_done": 9,
       "tasks_total": 10,
-      "gate": "V49_not_started",
+      "gate": "V49_fixture_verified_owner_art_pending",
       "depends_on": [
         "48"
       ],
       "plan": ".viepilot/phases/49-solo-explainer/PLAN.md",
-      "note": "49.5b technically verified: full pytest 1848 passed in741.01s;175 focused in28.42s;104 renderer tests and TypeScript/Ruff/JS/diff clean. BUG-042 cancellation-safe shared rollback and BUG-043 PATCH422 fixed;BUG-044 docs reconciled. Two fresh process restarts preserved history/locks/idempotency;integrity/FK clean. Next49.6 geometry/layout; production approval refuses missing real geometry. Owner DB/EXE/release and V49/older gates unchanged.",
-      "active_subtask": null,
+      "note": "Feature full pytest 1867 passed in779.20s. Post-Windows-UTF8 full run:1862 passed,5 legacy subprocess mock-signature failures; all40 video/bridge checks passed in7.95s after updating those5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.",
+      "active_subtask": "49.10_real_art_demo_owner_acceptance",
       "last_verified_subtask": {
-        "id": "49.5b",
+        "id": "49.9",
         "status": "technically_verified",
-        "full_pytest": 1848,
-        "seconds": 741.01,
-        "focused_pytest": 175,
-        "renderer_tests": 104,
-        "evidence": "data/tmp/task49-5b-full-network-20261016.log",
-        "report": "docs/operations/task49-5b-recovery-20261016.md"
+        "full_pytest": 1867,
+        "seconds": 779.2,
+        "renderer_tests": 124,
+        "evidence": "data/tmp/phase49-pytest-full.log",
+        "report": "docs/operations/phase49-solo-explainer.md",
+        "post_windows_fix": {
+          "full_passed": 1862,
+          "legacy_mock_signature_failures": 5,
+          "affected_retest_passed": 40,
+          "remaining_failures": 0,
+          "retest_evidence": "data/tmp/phase49-video-retest.log"
+        }
       },
-      "next_task": "49.6"
+      "next_task": "49.10",
+      "summary": ".viepilot/phases/49-solo-explainer/SUMMARY.md",
+      "task49_10_technical": {
+        "status": "verified",
+        "real_owner_art_available": false,
+        "owner_acceptance": false,
+        "release_published": false,
+        "staged_exe": "data/tmp/phase49-exe-stage/DailyIntelEnglishStudio/DailyIntelEnglishStudio.exe",
+        "exe_sha256": "09d2ea4f7b5b4d6047598c15266f90f6149c76e968e136eaf194c8d08458fafe",
+        "frozen_restarts": 2,
+        "production_av_drift_seconds": 0.06
+      }
     },
     "47": {
       "name": "Caption continuity (BUG-041)",

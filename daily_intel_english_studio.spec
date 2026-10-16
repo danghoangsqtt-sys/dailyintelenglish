@@ -10,6 +10,10 @@ sys._MEIPASS at runtime.
 """
 
 from PyInstaller.utils.hooks import collect_all
+from pathlib import Path
+
+if not Path("frontend/static/solo-preview/player.js").is_file():
+    raise RuntimeError("Build the Solo preview first: npm --prefix renderer run build:preview")
 
 datas = [
     ("frontend", "frontend"),

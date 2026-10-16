@@ -277,10 +277,11 @@
     return `
       <article class="slot-card" data-slot="${card.key}" data-state="${status}">
         <header class="slot-card-head">
-          <strong>${escapeHtml(card.file_name)}</strong>
+          <strong>${escapeHtml(card.title || card.file_name)}</strong>
           <span class="slot-chip slot-chip-${status}">${STATE_LABELS[status] || status}</span>
           <span class="slot-tier">Tier ${card.tier}</span>
         </header>
+        ${state.view === "front" ? `<p class="slot-note">Save as <strong>${escapeHtml(card.file_name)}</strong> · Full body · Fixed camera · Same identity and outfit</p>` : ""}
         <div class="slot-drop${canUpload ? "" : " is-disabled"}" tabindex="${canUpload ? 0 : -1}" role="button"
           aria-disabled="${!canUpload}" aria-label="Add the ${escapeHtml(card.file_name)} picture">
           ${asset ? `<img src="${asset.url}?v=${encodeURIComponent(asset.updated_at || "")}" alt="${escapeHtml(card.key)}" />`
@@ -295,7 +296,7 @@
             : card.identity_reference_url ? `Attach <a href="${card.identity_reference_url}" download>the existing identity picture</a>; turn the same person toward the camera.` : "Start a new picture from the profile description."}</li>
           ${card.region_text ? `<li>Select: ${escapeHtml(card.region_text)}.</li>` : ""}
           <li>Prompt <button type="button" class="btn btn-ghost btn-sm slot-copy">Copy</button>
-            <textarea class="slot-prompt" readonly rows="${state.view === "front" && card.key === "calm__closed" ? 12 : 4}">${escapeHtml(card.prompt)}</textarea></li>
+            <textarea class="slot-prompt" aria-label="${escapeHtml(card.title || card.file_name)} strict prompt" readonly rows="${state.view === "front" ? 12 : 4}">${escapeHtml(card.prompt)}</textarea></li>
         </ol>
         ${status === "needs_review" ? `
           <div class="slot-actions">
@@ -384,8 +385,14 @@
       if (!card || state.assetBusy || state.slotsLoading || !state.slots || event.target.tagName === "INPUT") return;  // the file input's own click must not reopen it
       const slot = state.slots.slots.find((item) => item.key === card.dataset.slot);
       if (event.target.closest(".slot-copy")) {
-        await navigator.clipboard?.writeText(slot.prompt).catch(() => {});
-        event.target.textContent = "Copied";
+        try {
+          if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+          await navigator.clipboard.writeText(slot.prompt);
+          event.target.textContent = "Copied";
+        } catch {
+          card.querySelector("textarea")?.select();
+          notice("The browser could not copy. The prompt is selected; press Ctrl+C.", true);
+        }
         return;
       }
       if (event.target.closest(".slot-approve")) return review(slot.asset.id, "approve");

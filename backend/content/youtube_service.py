@@ -152,6 +152,10 @@ async def generate_package(
         transcript_text=transcript_text,
     )
     router = router or build_ai_router_from_settings()
+    if project.get("presentation_mode") == "solo_explainer":
+        prompt += ("\nFORMAT: A knowledge explainer monologue by one presenter. Describe the actual ideas and learning "
+                   "points in this transcript. Do not invent a dialogue, co-host, interview, or second speaker. "
+                   f"Presenter: {project['speakers'][0]['name']}. Structure: {project.get('explainer_structure', 'why')}.")
     request = GenerationRequest(
         prompt=prompt,
         json_schema=YouTubePackageOut.model_json_schema(),

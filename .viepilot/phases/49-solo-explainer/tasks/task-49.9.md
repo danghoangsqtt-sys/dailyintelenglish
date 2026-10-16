@@ -1,10 +1,10 @@
 # Task 49.9 — Shorts, thumbnail, series/copy và export cho Solo
 
-- **Status:** planned · 2026-10-16.
+- **Status:** implemented_verified · 2026-10-16; owner acceptance remains separate.
 - **Dependencies:** 49.8
 - **Requirements:** R11, R12, R13.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
-- **Scope:** card này là kế hoạch, chưa có kết quả triển khai hay acceptance.
+- **Scope:** implemented within the authorized plan; technical verification below does not imply owner acceptance.
 
 ## Objective
 
@@ -12,6 +12,14 @@ Shorts, thumbnail, series/copy và export cho Solo. Hoàn thành contract tươn
 
 ## Paths
 
+- backend/api/projects.py
+- frontend/static/js/api.js
+- frontend/static/js/dashboard.js
+- backend/db/migrations/029_solo_series.sql
+- backend/media/thumbnail_compose.py
+- renderer/src/SoloScene.tsx
+- renderer/src/ExplainerVisual.tsx
+- backend/library/explainer_layout_service.py
 - backend/content/shorts_service.py
 - backend/content/export_service.py
 - backend/content/youtube_service.py
@@ -63,11 +71,21 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Acceptance / handoff
 
-- [ ] Các bước trên có evidence thực, test commands và kết quả ghi vào card.
-- [ ] Error/race/compatibility cases liên quan được kiểm tra, không chỉ happy path.
-- [ ] Không ghi “done/pass” cho test hoặc owner gate chưa chạy.
+- [x] Các bước trên có evidence thực, test commands và kết quả ghi vào card.
+- [x] Error/race/compatibility cases liên quan được kiểm tra, không chỉ happy path.
+- [x] Không ghi “done/pass” cho test hoặc owner gate chưa chạy.
 - [ ] PM/owner nhận kết quả theo AR-06; ghi technical verification và owner acceptance riêng.
 
 ## Progress
 
-- 2026-10-16: planned; shipping code chưa sửa, tests triển khai chưa chạy.
+- Copy settings has no existing endpoint in this codebase. Add a bounded config-only copy action: new project/speaker IDs, current pinned voice settings and cast identity versions; no script, generated media, plan approval or owner acceptance is inherited.
+- 2026-10-16: bounded additions: additive series mode/structure migration; front-image paths in thumbnail composition; hook reserved header and diagram edge text included in the shared geometry budget. Shorts retain absolute parent anchors through frame-window rendering, avoiding a second, drifting timeline.
+- 2026-10-16: initial plan recorded before implementation; final evidence below.
+
+## Final technical verification —2026-10-16
+
+Additive029 series mode/structure; one-presenter independent projects; config-only draft copies preserving voices/cast pins; Solo thumbnail/monologue copy; absolute parent-frame Short timing; portable checked image export. Existing30–90s user Short policy unchanged.3 integration tests, native/classic regression and both Solo thumbnail sizes checked.
+
+Feature full pytest 1867 passed in779.20s. Post-Windows-UTF8 full run:1862 passed,5 legacy subprocess mock-signature failures; all40 video/bridge checks passed in7.95s after updating those5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
+
+[Evidence report](../../../../docs/operations/phase49-solo-explainer.md). Git persistence is recorded after the implementation checkpoint; no owner acceptance or release tag implied.

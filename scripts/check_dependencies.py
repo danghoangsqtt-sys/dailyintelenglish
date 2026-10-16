@@ -145,6 +145,12 @@ def check_data_dirs() -> tuple[bool, str]:
     return True, "all data directories present"
 
 
+def check_preview_bundle() -> tuple[bool, str]:
+    """Verify the embedded Player is available without a Node development server."""
+    path = PROJECT_ROOT / "frontend/static/solo-preview/player.js"
+    return path.is_file(), "Player bundle present" if path.is_file() else "Run npm --prefix renderer run build:preview"
+
+
 def main() -> int:
     """Run all checks and print a GREEN/RED report; exit 1 if any required check fails.
 
@@ -163,6 +169,7 @@ def main() -> int:
         # Task 35.5 (D89): Remotion is the only video renderer now, so these three are required.
         ("Node.js (video renderer)", check_node_version),
         ("renderer/ dependencies", check_video_renderer_deps),
+        ("Solo preview widget", check_preview_bundle),
         ("Chrome Headless Shell (video renderer)", check_remotion_browser),
     ]
     informational_checks = [

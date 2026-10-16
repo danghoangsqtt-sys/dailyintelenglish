@@ -1,5 +1,11 @@
 # Changelog — Daily Intel English Studio
 
+### Added (source, Phase49 tasks49.6–49.10; implementation verified, owner art/V49 pending)
+
+- Character profile Presenter21 slots now carry stricter per-action outside-AI prompts, fixed canvas/outfit/reference instructions and readable upload cards. Clipboard failures show a manual-copy fallback.
+- Safe layouts for16:9/9:16, actual21-pose alpha/motion proofs, editable illustrations/diagrams/cards, serialized autosave and a static Remotion Player with transport outside the picture. Preview/final/StillFrame share SoloScene and actual word timing; zero-length intro/outro and audio tails are handled.
+- Approved media staging and concurrent revision guards; Solo Shorts, one-front-presenter thumbnails, monologue publishing copy, series mode/structure, config-only draft copies and portable pinned-image export. Build generates the preview before PyInstaller. Real owner art/V49 acceptance and release remain pending.
+
 All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 Versioning: [SemVer](https://semver.org/)

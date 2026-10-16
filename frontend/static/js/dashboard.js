@@ -65,6 +65,7 @@
           <span class="project-date">${created}</span>
           <div class="project-actions">
             <button class="btn btn-ghost btn-sm" data-action="continue">Continue</button>
+            <button class="btn btn-ghost btn-sm" data-action="copy-settings">Copy settings</button>
             <button class="btn btn-ghost btn-sm btn-danger" data-action="delete">Delete</button>
           </div>
         </div>
@@ -194,6 +195,13 @@
       if (!button) return;
       const card = button.closest("[data-id]");
       const id = card.dataset.id;
+      if (button.disabled) return;
+      if (button.dataset.action === "copy-settings") {
+        const buttons=card.querySelectorAll("button");buttons.forEach(item=>{item.disabled=true;});
+        try {const copied=await Api.copyProjectSettings(id);window.location.href=`/step1?project_id=${encodeURIComponent(copied.id)}`;}
+        catch(error){showError(error.message);buttons.forEach(item=>{item.disabled=false;});}
+        return;
+      }
 
       if (button.dataset.action === "delete") {
         if (!(await ConfirmDialog.ask("Delete this project? This cannot be undone.", { confirmLabel: "Delete", danger: true }))) return;

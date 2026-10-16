@@ -94,6 +94,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Chuẩn bị trình duyệt render thất bạ
 Pop-Location
 ```
 
+Với mã nguồn Phase49 mới, chạy thêm `npm --prefix renderer run build:preview` tại thư mục gốc để tạo Player trong Step5. Mã nguồn tại tag phát hành1.4.0-rc.1 chưa có lệnh này; không áp dụng bước này cho tag cũ.
+
 `npm ci` cài theo lockfile của bản phát hành. `remotion browser ensure` tải/kiểm tra trình duyệt dành cho render; trình duyệt này khác với trình duyệt bạn dùng mở giao diện.
 
 Nếu PowerShell chặn `npm.ps1`/`npx.ps1`, dùng `npm.cmd` và `npx.cmd` tương ứng trong các lệnh trên.

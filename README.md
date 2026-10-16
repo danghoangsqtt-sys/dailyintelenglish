@@ -83,7 +83,7 @@ Sau khi thiết lập lần đầu, mở bằng **icon logo trên Desktop**. Ứ
 
 1. Cài Node.js ≥ 24 và FFmpeg/ffprobe.
 2. Tải mã nguồn đúng tag và gói Windows ở trên; giải nén theo hướng dẫn.
-3. Cài renderer bằng `npm ci`, chuẩn bị trình duyệt bằng `npx remotion browser ensure` trong thư mục `renderer`.
+3. Cài renderer bằng `npm ci`, chuẩn bị trình duyệt bằng `npx remotion browser ensure` trong thư mục `renderer`. Với mã nguồn Phase49, chạy thêm `npm run build:preview` để có Player trong Step5.
 4. Chạy `scripts/install_desktop.ps1` với thư mục staging để cài ứng dụng và tạo icon logo.
 5. Mở icon **Daily Beyond English Studio**, cấu hình AI trong Settings và thử một tập ngắn.
 

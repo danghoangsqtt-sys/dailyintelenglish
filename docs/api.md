@@ -388,6 +388,25 @@ Read immutable project revisions in order.
 - **Response body:** `object`
 - **Parameters:** `project_id`
 
+### `POST /api/projects/{project_id}/explainer-plan/layout`
+
+Arrange Plan
+
+Suggest collision-checked layouts without implicitly saving or approving a plan.
+
+- **Request body:** `ExplainerApproval`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `GET /api/projects/{project_id}/explainer-plan/preview`
+
+Preview Plan
+
+Resolve verified draft preview props without approving factual content.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`, `aspect` (optional)
+
 ### `POST /api/projects/{project_id}/explainer-plan/propose`
 
 Propose Plan
@@ -629,6 +648,15 @@ Apply a partial update to a project — also used as the auto-save endpoint.
 Delete Project
 
 Delete a project.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/copy-settings`
+
+Copy Project Settings
+
+Start a new draft from pinned configuration without copying media or approvals.
 
 - **Response body:** `object`
 - **Parameters:** `project_id`

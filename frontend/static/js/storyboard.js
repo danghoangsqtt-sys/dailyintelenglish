@@ -252,7 +252,7 @@
   }
 
   async function load() {
-    if (!state.projectId || !$("storyboard-section")) return;
+    if (!state.projectId || !$("storyboard-section") || $("storyboard-section").hidden) return;
     try {
       const [project, lines, visuals, scenes, storyboard] = await Promise.all([
         Api.getProject(state.projectId), Api.getScript(state.projectId), Api.getProjectVisuals(state.projectId),

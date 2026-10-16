@@ -27,6 +27,13 @@ async def plan_history(project_id: str, db: aiosqlite.Connection = Depends(get_d
     return ok(await explainer_service.history(db, project_id))
 
 
+@router.get("/preview")
+async def preview_plan(project_id: str, aspect: str = "16:9", db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Resolve verified draft preview props without approving factual content."""
+    from backend.library.explainer_media import preview
+    return ok(await preview(db, project_id, aspect))
+
+
 @router.patch("")
 async def save_plan(project_id: str, body: ExplainerPlanPatch, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Save an owner edit against both the expected revision and current source."""
@@ -44,6 +51,12 @@ async def propose_plan(project_id: str, body: ExplainerProposalRequest, db: aios
 async def approve_plan(project_id: str, body: ExplainerApproval, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Validate source/assets/audio/layouts before pinning the reviewed revision."""
     return ok(await explainer_service.approve_plan(db, project_id, body))
+
+
+@router.post("/layout")
+async def arrange_plan(project_id: str, body: ExplainerApproval, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Suggest collision-checked layouts without implicitly saving or approving a plan."""
+    return ok(await explainer_service.arrange_plan(db, project_id, body))
 
 
 @asset_router.get("")

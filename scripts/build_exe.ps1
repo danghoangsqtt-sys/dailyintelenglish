@@ -25,6 +25,21 @@ if ($LASTEXITCODE -ne 0) {
     if ($LASTEXITCODE -ne 0) { throw 'PyInstaller installation failed.' }
 }
 
+& npm --prefix renderer ci
+if ($LASTEXITCODE -ne 0) { throw 'Renderer dependency installation failed.' }
+& npm --prefix renderer run typecheck
+if ($LASTEXITCODE -ne 0) { throw 'Renderer typecheck failed.' }
+& npm --prefix renderer run build:preview
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath "$root\frontend\static\solo-preview\player.js" -PathType Leaf)) {
+    throw 'Solo preview bundle build failed.'
+}
+Push-Location (Join-Path $root 'renderer')
+try {
+    & npx remotion browser ensure
+    if ($LASTEXITCODE -ne 0) { throw 'Remotion browser preparation failed.' }
+} finally {
+    Pop-Location
+}
 & "$root\.venv\Scripts\pyinstaller.exe" daily_intel_english_studio.spec --noconfirm --distpath $buildOutputRoot
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $appExe -PathType Leaf)) { throw 'EXE build failed.' }
 $relativeWorkspace = & "$root\.venv\Scripts\python.exe" -c 'import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))' $root $appDir

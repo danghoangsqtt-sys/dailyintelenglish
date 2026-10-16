@@ -588,6 +588,21 @@ async def cleanup_project_artifacts(project_id: str) -> None:
         await asyncio.to_thread(_remove_project_directory_sync, category, project_id)
 
 
+async def copy_settings(db: aiosqlite.Connection, project_id: str) -> dict:
+    """Create a draft with the same mode, voices and cast pins; inherit no generated approvals."""
+    project = await get_project(db, project_id)
+    keys = ("name", "topic", "cefr_level", "duration_minutes", "num_speakers", "genre", "accent", "presentation_mode", "explainer_structure")
+    config = ScriptConfig.model_validate_json(_build_config_snapshot(
+        {key: project[key] for key in keys}, project["language_features"], project["speakers"],
+    ))
+    config.name = f"{project['name'][:190]} · Copy"
+    copied = await create_project(db, config, commit=False)
+    await db.execute("INSERT INTO project_cast(project_id,speaker_index,character_id,profile_version) "
+                     "SELECT ?,speaker_index,character_id,profile_version FROM project_cast WHERE project_id=?",
+                     (copied["id"], project_id))
+    return await get_project(db, copied["id"])
+
+
 async def media_input_revision(
     db: aiosqlite.Connection, project_id: str, *, include_audio: bool = False, include_cache: bool = True,
 ) -> str:
@@ -607,7 +622,19 @@ async def media_input_revision(
         )
         row = await cursor.fetchone()
         audio = dict(row) if row else None
-    return media_revision(project, lines, audio, include_cache=include_cache)
+    revision = media_revision(project, lines, audio, include_cache=include_cache)
+    if include_audio and project.get("presentation_mode") == "solo_explainer":
+        from backend.library import explainer_service
+        from backend.schemas.explainer import ExplainerPlan
+
+        row = await explainer_service._row(db, project_id)
+        current = None
+        if row:
+            plan = ExplainerPlan.model_validate_json(row["plan_json"])
+            snapshot = await explainer_service.source_snapshot(db, project_id, plan.segments)
+            current = {"revision": row["revision"], "status": row["status"], "source": snapshot["fingerprint"]}
+        return explainer_service.fingerprint({"media": revision, "explainer": current})
+    return revision
 
 
 async def media_revision_is_current(

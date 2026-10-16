@@ -1,10 +1,10 @@
 # Task 49.10 — Gate V49: demo thật, hồi quy, đóng gói và bàn giao
 
-- **Status:** planned · 2026-10-16.
+- **Status:** implementation_verified_owner_art_pending · 2026-10-16.
 - **Dependencies:** 49.9
 - **Requirements:** R01, R02, R03, R04, R05, R06, R07, R08, R09, R10, R11, R12, R13.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
-- **Scope:** card này là kế hoạch, chưa có kết quả triển khai hay acceptance.
+- **Scope:** code, packaging and fixture verification completed; real-art demo and owner V49 sign-off are still pending inputs.
 
 ## Objective
 
@@ -12,6 +12,11 @@ Gate V49: demo thật, hồi quy, đóng gói và bàn giao. Hoàn thành contra
 
 ## Paths
 
+- .viepilot/PLAN.md
+- .viepilot/phases/49-solo-explainer/PLAN.md
+- .viepilot/phases/49-solo-explainer/SUMMARY.md
+- scripts/verify_solo_media.py
+- tests/test_explainer_video_props.py
 - scripts/build_exe.ps1
 - daily_intel_english_studio.spec
 - scripts/check_dependencies.py
@@ -66,4 +71,13 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Progress
 
-- 2026-10-16: planned; shipping code chưa sửa, tests triển khai chưa chạy.
+- 2026-10-16: owner confirms no real front21 art exists. Complete code, isolated fixture video/browser/package checks and instructions for creating the21 images. Real-art demo and explicit owner V49 acceptance remain external pending inputs; no acceptance or release implied by fixture checks.
+- 2026-10-16: initial plan recorded before implementation; final evidence below.
+
+## Technical delivery —2026-10-16
+
+Feature full pytest 1867 passed in779.20s. Post-Windows-UTF8 full run:1862 passed,5 legacy subprocess mock-signature failures; all40 video/bridge checks passed in7.95s after updating those5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
+
+Staged EXE: `data/tmp/phase49-exe-stage/DailyIntelEnglishStudio/`. Embedded bundle1030320 bytes; both frozen restarts exercise actual Player play/pause/seek,21 cards and no-audio editor reload. Production API produced21.227s branded16:9/9:16 files plus SRT; complete decode, drift0.060s. User real-art demo remains unexecuted because owner explicitly reports no images.
+
+[Report](../../../../docs/operations/phase49-solo-explainer.md) · [User guide](../../../../docs/user/solo-explainer.md). No installed owner EXE replacement or release.

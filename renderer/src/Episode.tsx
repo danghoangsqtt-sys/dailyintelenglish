@@ -1,3 +1,6 @@
+import {CaptionBand, CAPTION_TEXT_STYLE} from "./CaptionBand";
+import {SoloScene} from "./SoloScene";
+import {resolvedMedia} from "./Presenter";
 import React, { useMemo } from "react";
 import { AbsoluteFill, Audio, Img, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { BrandIntro, BrandOutro } from "./Brand";
@@ -25,14 +28,7 @@ export const MIDNIGHT_BACKGROUND = "#0E0F15";
 /** Byte-identical to the 19.1 spike's plain-band text style -- Task 19.3 must not regress
  * font/size/shadow/position from the spike look (D19.3-b). Only the active karaoke word's
  * color deviates from this, applied as a single override per word span. */
-const CAPTION_TEXT_STYLE: React.CSSProperties = {
-  fontFamily: "Arial, sans-serif",
-  fontSize: 32,
-  fontWeight: 700,
-  color: "#FFFFFF",
-  textShadow: "0 0 6px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9)",
-  textAlign: "center",
-};
+
 
 /** Task 19.4 (D19.4-a): the app's own real per-speaker palette, dark-theme variant --
  * frontend/static/css/style.css's `--speaker-a`/`--speaker-b`, already used app-wide via an
@@ -134,69 +130,6 @@ function SpeakerChips({ speakers, activeId, layout = "horizontal" }: {
       ))}
     </div>
   );
-}
-
-function CaptionBand({
-  line,
-  currentTimeSec,
-  captionStyle,
-  layout = "horizontal",
-  protectedPhrases,
-}: {
-  line: EpisodeLine;
-  currentTimeSec: number;
-  captionStyle: CaptionStyle;
-  layout?: Layout;
-  protectedPhrases: readonly string[];
-}) {
-  // the script's punctuation back on Edge's bare words (walkthrough 2026-10-14)
-  const tokens = useMemo(() => withScriptPunctuation(buildKaraokeTokens(line), line.text), [line]);
-  // Task 20.2d: the selected treatment only overrides textShadow (and optionally wraps the
-  // span in a box) -- font/size/color/alignment stay the D19.3-b base style.
-  const spec = captionStyleSpec(captionStyle);
-  const textStyle = { ...CAPTION_TEXT_STYLE, ...spec.text, ...(spec.box ?? {}) };
-  const density = captionLayout(layout);
-  const pages = useMemo(() => paginateCaptionTokens(tokens, density.maxWords, density.maxCharacters, protectedPhrases),
-    [tokens, density.maxWords, density.maxCharacters, protectedPhrases]);
-    const now = currentTimeSec * 1000;
-    const shown = captionPageAtTime(pages, now);
-    const activeIndex = activeTokenIndex(shown, now);
-    const start = shown[0]?.fromMs ?? line.startSec * 1000;
-    const entrance = captionMotion(now, start);
-    const progress = readingProgress(now, start, shown.at(-1)?.toMs ?? line.endSec * 1000);
-    const variant = Math.floor(start / 1000) % 3;
-    return (
-      <div style={{ position: "relative", width: "100%", boxSizing: "border-box", padding: "14px 16px", borderRadius: 24,
-        background: "linear-gradient(145deg, rgba(17,47,35,0.94), rgba(5,18,15,0.96))",
-        border: "1px solid rgba(189,221,157,0.25)", boxShadow: "0 12px 32px rgba(0,0,0,0.28)",
-        opacity: entrance.opacity,
-        transform: `translate(${entrance.x.toFixed(2)}px, ${entrance.y.toFixed(2)}px) scale(${entrance.scale.toFixed(4)})`,
-        textAlign: "center" }}>
-        <div style={{ fontFamily: "Arial, sans-serif", fontSize: density.speakerSize, fontWeight: 700, color: "#E1C76D",
-          letterSpacing: 2, marginBottom: 8 }}>{line.speaker}</div>
-        <div style={{ ...textStyle, fontSize: density.fontSize, lineHeight: 1.3, fontWeight: 700 }}>
-          {shown.length ? shown.map((token, index) => {
-            const accent = wordAccent(now, token.fromMs, token.toMs, variant);
-            return (
-            <React.Fragment key={`${token.fromMs}-${token.text}`}>
-              <span style={{ display: "inline-block", padding: "0 3px", borderRadius: 8,
-                color: index === activeIndex ? "#102519" : "#FFFFFF",
-                background: index === activeIndex ? "#FFD54A" : "transparent",
-                textShadow: index === activeIndex ? "none" : textStyle.textShadow,
-                transform: `translateY(${accent.y.toFixed(2)}px) scale(${accent.scale.toFixed(4)})`,
-                boxShadow: index === activeIndex ? `0 2px ${accent.glow.toFixed(1)}px rgba(255,213,74,0.28)` : undefined }}>
-                {token.text.trim()}
-              </span>{index < shown.length - 1 ? " " : ""}
-            </React.Fragment>
-          ); }) : line.text}
-        </div>
-        <div style={{ position: "absolute", left: 20, right: 20, bottom: 5, height: 2, overflow: "hidden", borderRadius: 999,
-          background: "rgba(229,218,153,0.08)" }}>
-          <div style={{ width: "100%", height: "100%", background: "linear-gradient(90deg, #85BD73, #FFD54A)",
-            transform: `scaleX(${progress.toFixed(4)})`, transformOrigin: "0 50%" }} />
-        </div>
-      </div>
-    );
 }
 
 /** Task 19.5 (D19.5-d): ~200ms fade in/out rather than a pop cut, relative to the active
@@ -474,6 +407,11 @@ export function AudioWindowContent({
  * callers) -- fades in over `fadeInFrames`, holds, fades out over the last `fadeOutFrames`
  * of `totalFrames`. */
 export const Episode: React.FC<EpisodeInputProps> = ({
+  width,
+  height,
+  solo,
+  presentationMode,
+  durationSeconds,
   lines,
   speakers,
   learning,
@@ -498,7 +436,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
   // D19.6-a: total video = intro + audio + outro (Option B, extend). `audioDurationSec` is
   // the same "last line's endSec" measure Root.tsx's calculateMetadata already uses for the
   // pre-19.6 audio-only duration -- kept as a single source of truth between the two files.
-  const audioDurationSec = lines.length > 0 ? lines[lines.length - 1].endSec : 0;
+  const audioDurationSec = durationSeconds ?? (lines.length > 0 ? lines[lines.length - 1].endSec : 0);
   const introFrames = Math.round(introSec * fps);
   const audioFrames = Math.round(audioDurationSec * fps);
   const outroFrames = Math.round(outroSec * fps);
@@ -506,13 +444,16 @@ export const Episode: React.FC<EpisodeInputProps> = ({
   return (
     <AbsoluteFill style={{ backgroundColor: MIDNIGHT_BACKGROUND }}>
       {/* Task 22.4 (D51): the music bed spans intro + speech + outro, so it plays from frame 0. */}
-      {soundtrackPath ? <Audio src={staticFile(soundtrackPath)} startFrom={0} /> : null}
-      <Sequence from={0} durationInFrames={introFrames} name="Intro">
+      {soundtrackPath ? <Audio src={resolvedMedia(soundtrackPath)} startFrom={0} /> : null}
+      {introFrames > 0 ? <Sequence from={0} durationInFrames={introFrames} name="Intro">
         {/* Phase 42 (D121): the vertical video has its own intro, laid out inside the safe zone */}
         <BrandIntro title={title} topic={topic} cefrLevel={cefrLevel} speakers={speakers} brand={brand} layout={layout} />
-      </Sequence>
+      </Sequence> : null}
       <Sequence from={introFrames} durationInFrames={audioFrames} name="Audio">
-        <AudioWindowContent
+        {presentationMode === "solo_explainer" && solo ? <>
+          {!soundtrackPath ? <Audio src={resolvedMedia(audioPath)} /> : null}
+          <SoloScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" />
+        </> : <AudioWindowContent
           lines={lines}
           speakers={speakers}
           learning={learning}
@@ -528,11 +469,11 @@ export const Episode: React.FC<EpisodeInputProps> = ({
           layout={layout}
           hook={hook}
           hookAtSec={hookAtSec}
-        />
+        />}
       </Sequence>
-      <Sequence from={introFrames + audioFrames} durationInFrames={outroFrames} name="Outro">
+      {outroFrames > 0 ? <Sequence from={introFrames + audioFrames} durationInFrames={outroFrames} name="Outro">
         <BrandOutro brand={brand} layout={layout} />
-      </Sequence>
+      </Sequence> : null}
     </AbsoluteFill>
   );
 };

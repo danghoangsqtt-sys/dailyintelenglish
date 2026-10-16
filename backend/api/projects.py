@@ -77,6 +77,14 @@ async def create_project(
     return ok(project, started_at=started_at)
 
 
+@router.post("/{project_id}/copy-settings")
+async def copy_project_settings(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Start a new draft from pinned configuration without copying media or approvals."""
+    async with write_transaction(db):
+        project = await project_service.copy_settings(db, project_id)
+    return ok(project)
+
+
 @router.get("/{project_id}")
 async def get_project(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Fetch full project detail, including speakers."""

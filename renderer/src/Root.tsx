@@ -38,7 +38,7 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={defaultProps}
         calculateMetadata={async ({ props }) => {
           const lastLine = props.lines[props.lines.length - 1];
-          const audioDurationSec = lastLine ? lastLine.endSec : 3;
+          const audioDurationSec = props.durationSeconds ?? (lastLine ? lastLine.endSec : 3);
           // D19.6-a: total video = intro + audio + outro (Option B, extend) -- the same
           // per-props addition Episode.tsx itself uses for its <Sequence> boundaries.
           const totalDurationSec = props.introSec + audioDurationSec + props.outroSec;
@@ -65,7 +65,7 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={defaultProps}
         calculateMetadata={async ({ props }) => {
           const lastLine = props.lines[props.lines.length - 1];
-          const audioDurationSec = lastLine ? lastLine.endSec : 3;
+          const audioDurationSec = props.durationSeconds ?? (lastLine ? lastLine.endSec : 3);
           return {
             durationInFrames: Math.max(1, Math.ceil(audioDurationSec * props.fps)),
             fps: props.fps,

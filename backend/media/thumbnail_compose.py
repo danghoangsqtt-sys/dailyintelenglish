@@ -18,7 +18,7 @@ import aiosqlite
 from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 from backend.core.config import settings
-from backend.core.exceptions import NotFoundError
+from backend.core.exceptions import NotFoundError, ValidationError
 from backend.core.paths import get_project_root
 from backend.schemas.thumbnail import ThumbnailAspect, ThumbnailSuggestion
 
@@ -93,24 +93,37 @@ async def composition_inputs(db: aiosqlite.Connection, project: dict, episode: i
         add(row[0] if row else None)
 
     cast = await project_visuals.cast_rows(db, project_id)
+    solo = project.get("presentation_mode") == "solo_explainer"
     cursor = await db.execute(
         "SELECT sp.speaker_index, COUNT(*) FROM script_lines sl JOIN speakers sp ON sp.id = sl.speaker_id "
         "WHERE sl.project_id = ? GROUP BY sp.speaker_index", (project_id,))
     talk = {row[0]: row[1] for row in await cursor.fetchall()}
     ready = []
     for member in sorted(cast, key=lambda row: (-talk.get(row["speaker_index"], 0), row["speaker_index"])):
+        if solo:
+            from backend.library import presenter_asset_plan
+
+            pack = await presenter_asset_plan.manifest_snapshot(db, member["character_id"])
+            version = await (await db.execute("SELECT profile_version FROM project_cast WHERE project_id=? AND speaker_index=?",
+                                             (project_id, member["speaker_index"]))).fetchone()
+            if pack and version and pack["identity_version"] == version[0]:
+                ready.append({**member, "names": list(pack["pictures"]), "folder": "", "front_pictures": pack["pictures"]})
+            break
         sprite_set = sprite_service.load_set(member["character_id"])
         if sprite_service.usable(sprite_set):
             ready.append({**member, "names": sprite_set["names"], "folder": sprite_set["folder"]})
         if len(ready) == 2:
             break
     ready.sort(key=lambda row: row["speaker_index"])
+    if solo and len(ready) != 1:
+        raise ValidationError("Approve the presenter's complete front21 pack and review its cast identity before creating a Solo thumbnail")
     slots = sprite_placement([(row["speaker_index"], row.get("gender") or "male") for row in ready])
     characters = [{
         "character_id": row["character_id"], "name": row.get("name") or "", "gender": row.get("gender") or "",
         "folder": row["folder"], "names": row["names"],
+        **({"front_pictures": row["front_pictures"]} if solo else {}),
         "slot": slots[row["speaker_index"]],
-        "mirror": sprite_mirrored(slots[row["speaker_index"]], row.get("sprite_facing") or "", row.get("gender") or "male"),
+        "mirror": False if solo else sprite_mirrored(slots[row["speaker_index"]], row.get("sprite_facing") or "", row.get("gender") or "male"),
     } for row in ready]
     if episode is None:  # Task 36.5: the episode number of a project in the channel plan
         from backend.channel import channel_service
@@ -178,6 +191,12 @@ def _character(character: dict, variant_index: int, target_height: int) -> Image
     wanted = next((name for name in EXPRESSIONS[variant_index % len(EXPRESSIONS)] if name in names), None) \
         or next((name for name in FALLBACK_EXPRESSIONS if name in names), None)
     path = Path(character["folder"]) / f"{wanted}.png" if wanted else None
+    if wanted and character.get("front_pictures"):
+        import hashlib
+        image = character["front_pictures"][wanted]
+        path = Path(image["path"])
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != image["content_hash"]:
+            raise ValidationError("The pinned front presenter image changed; review the character pack again")
     if path is None or not path.is_file():
         return None
     with Image.open(path) as opened:
