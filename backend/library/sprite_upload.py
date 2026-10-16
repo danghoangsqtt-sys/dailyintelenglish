@@ -82,14 +82,14 @@ def key_out_green(rgb: Image.Image) -> Image.Image:
     return Image.fromarray(np.dstack([np.clip(data, 0, 255), alpha * 255]).astype(np.uint8), "RGBA")
 
 
-def _figure(picture: Image.Image) -> Image.Image:
+def _figure(picture: Image.Image, crop_fullbody: bool = True) -> Image.Image:
     figure = picture if _has_transparency(picture) else key_out_green(picture)
     alpha = np.asarray(figure.getchannel("A")) > 20
     if not alpha.any():
         raise UploadError("no figure was found in the picture")
     ys = np.where(alpha.any(axis=1))[0]
     top, bottom = int(ys.min()), int(ys.max())
-    if bottom < figure.height - 3:  # the feet are in the picture: a full-length picture, cut to the packs' mid-thigh framing
+    if crop_fullbody and bottom < figure.height - 3:  # the feet are in the picture: a full-length picture, cut to the packs' mid-thigh framing
         cut = top + int((bottom - top) * KNEE_UP_SHARE)
         figure = figure.copy()
         figure.paste((0, 0, 0, 0), (0, cut, figure.width, figure.height))
@@ -204,7 +204,7 @@ def _changed_share(candidate: Image.Image, parent: Image.Image) -> float:
     return float((np.linalg.norm(rgb_a - rgb_b, axis=2)[figure] > 60).mean())
 
 
-def prepare_edit(picture: Image.Image, parent: Image.Image, base: Image.Image) -> tuple[Image.Image, dict]:
+def prepare_edit(picture: Image.Image, parent: Image.Image, base: Image.Image, *, full_body: bool = False) -> tuple[Image.Image, dict]:
     """A region edit of `parent` (an RGBA canvas sprite) put back on the canvas where the parent is; `base` (calm__closed) is
     the reference for the fallback fit when the outside AI drew the whole picture again."""
     if not _has_transparency(picture):
@@ -221,7 +221,7 @@ def prepare_edit(picture: Image.Image, parent: Image.Image, base: Image.Image) -
             # can pass it. A region edit changes only a small part of the figure itself.
             if changed <= REDRAWN_SHARE:
                 return keyed, {"method": "region edit", "difference": round(error, 1), "changed": round(changed, 3)}
-    figure = _figure(picture)
+    figure = _figure(picture, crop_fullbody=not full_body)
     raw_alpha = np.asarray(figure.getchannel("A"))
     ref_alpha = np.asarray(base.getchannel("A"))
     ys, xs = np.where(raw_alpha > 20)
@@ -231,3 +231,19 @@ def prepare_edit(picture: Image.Image, parent: Image.Image, base: Image.Image) -
     dy = CANVAS[1] - scale * ys.max()
     scale, dx, dy = _refine(raw_alpha, ref_alpha, scale, dx, dy)
     return _place(figure, scale, dx, dy), {"method": "redrawn, fitted to the base", "scale": round(float(scale), 4)}
+
+
+def prepare_front_base(picture: Image.Image) -> tuple[Image.Image, dict]:
+    """Fit a standing full-body front presenter without native's mid-thigh crop, keeping clear limb margins."""
+    figure = _figure(picture, crop_fullbody=False)
+    from backend.library.sprite_service import EDGE_PIXELS
+
+    alpha = np.asarray(figure.getchannel("A")) > 20
+    if any(np.count_nonzero(edge) > EDGE_PIXELS for edge in (alpha[0], alpha[-1], alpha[:, 0], alpha[:, -1])):
+        raise UploadError("The front presenter is cut off by the source image: include the head, hands and feet with clear margins")
+    ys, xs = np.where(alpha)
+    height, width = ys.max() - ys.min() + 1, xs.max() - xs.min() + 1
+    scale = min((CANVAS[1] - FIGURE_TOP - EDGE_MARGIN) / height, (CANVAS[0] - 2 * EDGE_MARGIN) / width)
+    dx = CANVAS[0] / 2 - scale * (xs.min() + xs.max()) / 2
+    dy = CANVAS[1] - EDGE_MARGIN - scale * (ys.max() + 1)
+    return _place(figure, scale, dx, dy), {"method": "front full-body fit", "scale": round(float(scale), 4)}

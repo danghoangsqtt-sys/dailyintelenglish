@@ -7,33 +7,26 @@ from typing import AsyncGenerator
 import pytest
 from playwright.async_api import Browser, Page, async_playwright
 
-from backend.core.config import settings
 from tests.conftest import live_server
 
 VALID_MP3 = b"ID3\x04\x00\x00\x00\x00\x00\x00music-data"
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def live_server_url(tmp_path_factory: pytest.TempPathFactory):
+    # A closed page can leave an analyser holding an MP3 on Windows. A fresh library per
+    # test prevents deleting files still used by the previous case; server teardown waits
+    # for requests, and the dependent browser closes before that teardown.
     with live_server(tmp_path_factory, "music-multi") as url:
         yield url
 
 
 @pytest.fixture
-async def browser_instance() -> AsyncGenerator[Browser, None]:
+async def browser_instance(live_server_url: str) -> AsyncGenerator[Browser, None]:
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(headless=True, args=["--autoplay-policy=no-user-gesture-required"])
         yield browser
         await browser.close()
-
-
-@pytest.fixture(autouse=True)
-def clean_library():
-    folder = settings.DATA_DIR / "music_library"
-    if folder.exists():
-        for path in folder.iterdir():
-            path.unlink()
-    yield
 
 
 def _mp3(name: str, content: bytes = VALID_MP3) -> dict:

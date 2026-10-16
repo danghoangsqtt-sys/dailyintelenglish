@@ -1,6 +1,6 @@
 # PLAN — Phase 49: Solo Explainer và bộ presenter chính diện
 
-- Status: **executing49.2**, ngày2026-10-16;1/10 verified, foundation full regression and DB-copy migration verified. Owner demo:Hoang — Why do we build habits?.
+- Status: **executing49.3**, ngày2026-10-16;2/10 verified, Solo foundation and immutable front21 backend verified. Owner demo:Hoang — Why do we build habits?.
 - Đọc [SPEC](SPEC.md) và [PLAN tổng](../../PLAN.md) trước thực thi.
 - Độ lớn: XL. Không cam kết deadline trước khi có input/owner review.
 

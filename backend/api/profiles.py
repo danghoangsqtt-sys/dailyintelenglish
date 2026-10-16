@@ -4,6 +4,7 @@ A separate prefix (`/api/visuals/profiles`) keeps the legacy `/api/visuals/chara
 Library page working unchanged during the phase; the new library, Quick create and the selector use these routes.
 """
 
+import asyncio
 import time
 from pathlib import Path
 from typing import Literal
@@ -21,6 +22,7 @@ from backend.schemas.visuals import PROFILE_ACCENTS, ProfilePatch, ProfileQuickC
 from backend.library import character_asset_service as assets
 from backend.library import character_profile_service as profiles
 from backend.library import library_service as library
+from backend.library import presenter_asset_plan as front
 from backend.ai.tts import voice_catalog_service
 
 router = APIRouter(prefix="/api/visuals/profiles", tags=["character profiles"])
@@ -118,16 +120,17 @@ class ApproveManyInput(BaseModel):
     asset_ids: list[str] = Field(min_length=1, max_length=40)
 
 
-def _slot_from_filename(filename: str) -> str | None:
+def _slot_from_filename(filename: str, view: str = "native") -> str | None:
     """Optional bulk shortcut (D83): `gesture-wave__open.png` or `kai__gesture-wave__open.png` -> `gesture-wave__open`."""
+    registry = front.SLOTS_BY_KEY if view == "front" else assets.SLOTS_BY_KEY
     stem = Path(filename or "").name
     if not stem.lower().endswith(".png"):
         return None
     stem = stem[:-4]
-    if stem in assets.SLOTS_BY_KEY:
+    if stem in registry:
         return stem
     _, separator, rest = stem.partition("__")
-    return rest if separator and rest in assets.SLOTS_BY_KEY else None
+    return rest if separator and rest in registry else None
 
 
 async def _read_limited(file: UploadFile) -> bytes:
@@ -137,19 +140,42 @@ async def _read_limited(file: UploadFile) -> bytes:
     return content
 
 
-@router.get("/{character_id}/slots")
-async def list_slots(character_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+async def _upload_front(db: aiosqlite.Connection, character_id: str, slot_key: str, content: bytes,
+                        filename: str | None) -> dict:
     async with read_transaction():
-        result = await assets.list_slots(db, character_id)
+        snapshot = await front.upload_snapshot(db, character_id, slot_key)
+    staged = await front.stage_upload(snapshot, content, filename)
+    try:
+        async with write_transaction(db):
+            return await front.publish_upload(db, snapshot, staged)
+    except BaseException:
+        await asyncio.to_thread(Path(staged["path"]).unlink, missing_ok=True)
+        raise
+
+
+async def _check_review_view(db: aiosqlite.Connection, asset_ids: list[str], view: str) -> None:
+    for asset_id in asset_ids:
+        asset = await assets._asset_row(db, asset_id)
+        if (asset["facing"] == "front") != (view == "front"):
+            raise ValidationError("The picture belongs to another view; open its matching native/front pack")
+
+
+@router.get("/{character_id}/slots")
+async def list_slots(character_id: str, db: aiosqlite.Connection = Depends(get_db), view: Literal["native", "front"] = "native") -> dict:
+    async with read_transaction():
+        result = await (front if view == "front" else assets).list_slots(db, character_id)
     return ok(result)
 
 
 @router.post("/{character_id}/slots/{slot_key}/upload")
 async def upload_slot(
     character_id: str, slot_key: str, file: UploadFile = File(...), db: aiosqlite.Connection = Depends(get_db),
+    view: Literal["native", "front"] = "native",
 ) -> dict:
     """The slot comes from the card the picture was dropped on, never from the file name (D84)."""
     content = await _read_limited(file)
+    if view == "front":
+        return ok(await _upload_front(db, character_id, slot_key, content, file.filename))
     async with write_transaction(db):
         result = await assets.upload(db, character_id, slot_key, content, file.filename)
     return ok(result)
@@ -158,11 +184,12 @@ async def upload_slot(
 @router.post("/{character_id}/slots/upload-batch")
 async def upload_batch(
     character_id: str, files: list[UploadFile] = File(...), db: aiosqlite.Connection = Depends(get_db),
+    view: Literal["native", "front"] = "native",
 ) -> dict:
     """Bulk shortcut: files named after a slot go into it (the base first); every other file is listed, not guessed."""
     if len(files) > 40:
         raise ValidationError("drop at most 40 pictures at once")
-    named = [(file, _slot_from_filename(file.filename or "")) for file in files]
+    named = [(file, _slot_from_filename(file.filename or "", view)) for file in files]
     named.sort(key=lambda item: item[1] != assets.BASE)
     stored, unmatched, failed = [], [], []
     for file, slot_key in named:
@@ -171,6 +198,9 @@ async def upload_batch(
             continue
         try:
             content = await _read_limited(file)
+            if view == "front":
+                stored.append(await _upload_front(db, character_id, slot_key, content, file.filename))
+                continue
             async with write_transaction(db):
                 stored.append(await assets.upload(db, character_id, slot_key, content, file.filename))
         except (ValidationError, NotFoundError) as exc:
@@ -179,9 +209,9 @@ async def upload_batch(
 
 
 @router.get("/{character_id}/slots/{slot_key}/input.png")
-async def slot_input(character_id: str, slot_key: str, db: aiosqlite.Connection = Depends(get_db)) -> Response:
+async def slot_input(character_id: str, slot_key: str, db: aiosqlite.Connection = Depends(get_db), view: Literal["native", "front"] = "native") -> Response:
     async with read_transaction():
-        content = await assets.parent_input(db, character_id, slot_key)
+        content = await (front if view == "front" else assets).parent_input(db, character_id, slot_key)
     return Response(content, media_type="image/png",
                     headers={"Content-Disposition": f'attachment; filename="INPUT_{slot_key}.png"'})
 
@@ -189,18 +219,26 @@ async def slot_input(character_id: str, slot_key: str, db: aiosqlite.Connection 
 @router.put("/{character_id}/assets/{asset_id}/review")
 async def review_asset(
     character_id: str, asset_id: str, body: ReviewInput, db: aiosqlite.Connection = Depends(get_db),
+    view: Literal["native", "front"] = "native",
 ) -> dict:
     async with write_transaction(db):
-        result = await assets.review(db, character_id, asset_id, body.decision)
+        await _check_review_view(db, [asset_id], view)
+        result = await (front if view == "front" else assets).review(db, character_id, asset_id, body.decision)
+    if view == "front":
+        await front.manifest(db, character_id)
     return ok(result)
 
 
 @router.post("/{character_id}/assets/approve")
 async def approve_assets(
     character_id: str, body: ApproveManyInput, db: aiosqlite.Connection = Depends(get_db),
+    view: Literal["native", "front"] = "native",
 ) -> dict:
     async with write_transaction(db):
-        result = await assets.approve_many(db, character_id, body.asset_ids)
+        await _check_review_view(db, body.asset_ids, view)
+        result = await (front if view == "front" else assets).approve_many(db, character_id, body.asset_ids)
+    if view == "front":
+        await front.manifest(db, character_id)
     return ok(result)
 
 
@@ -212,7 +250,7 @@ async def asset_content(character_id: str, asset_id: str, db: aiosqlite.Connecti
 
 
 @router.get("/{character_id}/prompt-pack.txt")
-async def prompt_pack(character_id: str, db: aiosqlite.Connection = Depends(get_db)) -> PlainTextResponse:
+async def prompt_pack(character_id: str, db: aiosqlite.Connection = Depends(get_db), view: Literal["native", "front"] = "native") -> PlainTextResponse:
     async with read_transaction():
-        text = await assets.prompt_pack_text(db, character_id)
+        text = await (front if view == "front" else assets).prompt_pack_text(db, character_id)
     return PlainTextResponse(text, headers={"Content-Disposition": 'attachment; filename="prompt-pack.txt"'})

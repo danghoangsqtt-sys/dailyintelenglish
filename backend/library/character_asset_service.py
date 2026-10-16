@@ -327,7 +327,7 @@ async def review(db: aiosqlite.Connection, character_id: str, asset_id: str, dec
     """Approve or reject one picture. Approving a new base when another base was approved starts a new identity version:
     the other sprites were edits of the old base, so they must be made again (Phase 33 rule 10)."""
     asset = await _asset_row(db, asset_id)
-    if asset["character_id"] != character_id or not asset["is_current"]:
+    if asset["character_id"] != character_id or asset["facing"] == "front" or not asset["is_current"]:
         raise ConflictError("Only the current picture of a slot can be reviewed")
     state = {"approve": "approved", "reject": "rejected"}[decision]
     row = await _profile_row(db, character_id)

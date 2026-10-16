@@ -96,6 +96,13 @@ async def readiness(db: aiosqlite.Connection, row: dict) -> dict[str, Any]:
         "full_sprite_pack": _part(TIER3_SPRITES, sprites, "sprite"),
         "activities": {"count": activities},
     }
+    from backend.library import presenter_asset_plan
+
+    cursor = await db.execute("SELECT slot_key FROM character_assets WHERE character_id=? AND identity_version=? "
+                              "AND facing='front' AND is_current=1 AND review_state='approved'",
+                              (row["id"], row["identity_version"]))
+    front_slots = {item["slot_key"].removeprefix("sprite/") for item in await cursor.fetchall()}
+    result["front_presenter"] = _part(presenter_asset_plan.SLOT_KEYS, front_slots, "front picture")
     result["video_ready"] = all(result[key]["ready"] for key in ("profile", "voice", "core_visuals"))
     result["talking_ready"] = result["video_ready"] and result["talking_starter"]["ready"]
     return result

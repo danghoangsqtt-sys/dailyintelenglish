@@ -1,6 +1,6 @@
 # Task 49.3 — Nhập, duyệt và quản lý bộ front trong UI
 
-- **Status:** planned · 2026-10-16.
+- **Status:** in_progress · 2026-10-16, after49.2 front backend checkpoint.
 - **Dependencies:** 49.2
 - **Requirements:** R02, R08, R09.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
@@ -39,6 +39,14 @@ Nhập, duyệt và quản lý bộ front trong UI. Hoàn thành contract tươn
 5. Selector Solo cho biết front pack sẵn sàng; chưa đủ ảnh vẫn được viết script.
 
 **File mới dự kiến:** `tests/test_presenter_assets_api.py`, `tests/test_presenter_assets_browser.py`.
+
+### Execution refinement (isolated UI preparation during49.2 regression)
+
+- Add native/front tabs within the current profile, native default. Existing card groups, drops, keyboard/file input, copy prompt and approve actions are reused with an explicit captured view/profile ID. All view-sensitive API helpers remain in api.js; default native URLs unchanged for compatibility.
+- Separate approved progress29/native and21/front. Front neutral card exposes the existing identity reference when available; instructions require neutral → closed gestures → open mouths/blink with each parent approved first. A fully approved synthetic pack is logic evidence only, never real-face/gesture acceptance.
+- Lock asset operations and profile/view switching while upload/review/batch is active, prevent double submits and warn on unload. Clear/disable old slot cards while a new profile/view loads; request tokens must ignore late responses. Preserve same-profile unsaved voice edits across tab/asset refresh; optional details flush to their captured profile IDs.
+- Capture operation context before asynchronous work, keep the lock through refreshing its result, revoke local preview object URLs and show each batch result/error without delayed notices writing another profile. Quick-create and profile actions share navigation guards while operations are pending.
+- Solo selector shows front progress/readiness and that writing can start without art; classic eligibility unchanged. Add actual browser prompt/reference/import/review/reload/error/race checks plus backend batch/readiness/view checks. No global shell refactor or mobile-support claim.
 
 Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu phát hiện cần file khác, ghi lý do và mở rộng bounded scope trước code. Các file đã tạo bởi task trước trong Paths được tiếp tục sử dụng; không tự viết lại hệ thống lân cận.
 
