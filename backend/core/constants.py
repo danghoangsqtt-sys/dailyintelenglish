@@ -225,7 +225,7 @@ AI_TRANSIENT_BACKOFF_MAX_SECONDS = 4.0
 AI_BACKOFF_MIN_REMAINING_SECONDS = 5.0
 
 # Phase 13 -- durable AI generation jobs (backend/ai/llm/ai_job_service.py, ai_worker.py).
-AI_JOB_OPERATIONS = ("script", "learning")
+AI_JOB_OPERATIONS = ("script", "learning", "propose_explainer")
 AI_JOB_STATUSES = ("pending", "running", "validating", "complete", "error", "cancelled", "stale")
 # How long a worker's claim on a job is valid without a heartbeat before another
 # worker (or a restarted app) may treat it as abandoned and reclaim it.
@@ -347,3 +347,7 @@ EXPLAINER_IMAGE_MIN_SIDE = 256
 EXPLAINER_IMAGE_RENDER_MAX_SIDE = 2560
 # Permit only sub-frame provider rounding differences, never fabricated timing.
 EXPLAINER_TIMING_EPSILON_SECONDS = 0.002
+EXPLAINER_LAYOUT_RULES_VERSION = 1
+EXPLAINER_PROPOSAL_REPAIR_ATTEMPTS = 1
+EXPLAINER_PROPOSAL_TEMPERATURE = 0.2
+EXPLAINER_PLAN_MAX_ISSUES = 100

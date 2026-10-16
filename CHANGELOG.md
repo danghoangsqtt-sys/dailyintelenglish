@@ -8,6 +8,13 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Source recovery —49.5b and BUG-042/043/044 (2026-10-16)
+
+- Durable Solo explainer proposals, immutable plan/history, owner locks/unlocks, source/revision CAS and guarded approval snapshots. Two proposal entry points share safe snapshots; valid checkpoints resume without another provider call and lost leases/cancelled/stale jobs cannot publish. Real geometry approval remains unavailable until49.6.
+- Shared SQLite write transactions finish rollback before unlocking under cancellation, including repeated cancellation; malformed duplicate aspects/segment IDs return422 envelopes and preserve the old plan/history. Strict proposal revisions and bounded repair of duplicate AI IDs.
+- Reconciled source-vs-EXE architecture/metadata and production renderer docs; generated API reference now documents180 routes. Full **1848 passed in741.01s**,175 focused,104 renderer/TypeScript and two fresh-process persistence checks. Initial sandbox run hit blocked live Edge network; the isolated real probe and full outside-sandbox retry passed. No owner DB/EXE/release changes.
+
+
 ### Added (source, Phase49 tasks49.1–49.4 +49.5a)
 
 - Explicit Classic/Solo project mode and Why/How/List structure, one-presenter Step1 controls and cast readiness before front assets. Bounded photo/diagram/text-card plan schemas, per-file atomic027 migration/tracking with strict rollback, defaultclassic legacy preservation, and mode-aware media publication revision. Full pytest1728, focused70/browser10, real DB online-backup copy with2 restarts/integrity/FK/restore verification. Solo script/front/editor/render work continues in later tasks; installed EXE unchanged.

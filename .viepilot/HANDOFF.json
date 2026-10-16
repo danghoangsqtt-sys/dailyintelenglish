@@ -3,7 +3,7 @@
   "version": "1.4.0-rc.1",
   "crystallize_version": "0.8.0",
   "crystallized_at": "2026-09-10T07:56:00+07:00",
-  "status": "phase49_in_progress_task49.5_explainer_plans",
+  "status": "phase49_task49.5_implemented_verified_next49.6",
   "current_phase": "49",
   "next_planned_phase": "49",
   "feature_plan": {
@@ -15,9 +15,9 @@
     "plan": ".viepilot/PLAN.md",
     "brainstorm": "docs/brainstorm/session-2026-10-16.md",
     "tasks_total": 15,
-    "tasks_done": 9,
-    "next_task": "49.5",
-    "next_command": "vp-auto --from 48",
+    "tasks_done": 10,
+    "next_task": "49.6",
+    "next_command": "vp-auto --phase 49",
     "implementation_authorized_by_this_request": true,
     "execution_authorization": "Owner invoked vp-auto --from 48 on 2026-10-16; run planned tasks, retain owner listening/visual gates and no new release without release instruction.",
     "planning_validation": {
@@ -30,7 +30,7 @@
       "evidence": "data/tmp/evolve-20261016/validation.json",
       "implementation_tests": "not_run_planning_only"
     },
-    "note": "49.5a foundation verified: immutable project illustrations, exact token/real-audio timing and atomic028 job/asset migration. Full1809 passed in740.11s,143 related tests (34 new), Ruff/diff clean. Populated disposable copy preserved17 jobs/43 checkpoints and passed injected rollback/FK/integrity/2 restarts; actual Edge mapping25/25 tokens over11.54s.49.5 remains in_progress for proposal/locks/history/approval; owner DB/EXE/release unchanged.",
+    "note": "49.5b technically verified: full pytest 1848 passed in741.01s;175 focused in28.42s;104 renderer tests and TypeScript/Ruff/JS/diff clean. BUG-042 cancellation-safe shared rollback and BUG-043 PATCH422 fixed;BUG-044 docs reconciled. Two fresh process restarts preserved history/locks/idempotency;integrity/FK clean. Next49.6 geometry/layout; production approval refuses missing real geometry. Owner DB/EXE/release and V49/older gates unchanged.",
     "owner_feedback": {
       "listening": "four_examples_accepted",
       "voices": [
@@ -49,7 +49,8 @@
         "front21": "owner_external_AI_import_pending",
         "prepared_prompts": "data/tmp/evolve-20261016/hoang-front21/Hoang-front21-prompts.md"
       }
-    }
+    },
+    "recovery_authorization": "Owner explicitly invoked vp-evolve+vp-auto2026-10-16 to fix BUG-042/043/044 and complete49.5b; no release instruction."
   },
   "tech_stack": {
     "backend": "Python 3.11+ / FastAPI / Uvicorn",
@@ -70,6 +71,21 @@
     "os": "Windows"
   },
   "phases": {
+    "50": {
+      "name": "Audit recovery: cancellation rollback and truthful docs",
+      "status": "implemented_verified_pending_owner_review",
+      "tasks_done": 2,
+      "tasks_total": 2,
+      "plan": ".viepilot/phases/50-audit-recovery/PLAN.md",
+      "authorization": "Owner invoked vp-evolve and vp-auto2026-10-16 for BUG-042/043/044 and completion49.5b; BUG-043 is handled in49.5b. No release instruction.",
+      "report": "docs/operations/task49-5b-recovery-20261016.md",
+      "technical_verification": {
+        "full_pytest": 1848,
+        "seconds": 741.01,
+        "focused_pytest": 175,
+        "renderer_tests": 104
+      }
+    },
     "48": {
       "name": "Character voice selection",
       "status": "implemented_verified",
@@ -81,24 +97,26 @@
     "49": {
       "name": "Solo Explainer and front21 presenter pack",
       "status": "in_progress",
-      "tasks_done": 4,
+      "tasks_done": 5,
       "tasks_total": 10,
       "gate": "V49_not_started",
       "depends_on": [
         "48"
       ],
       "plan": ".viepilot/phases/49-solo-explainer/PLAN.md",
-      "note": "49.5a foundation verified: immutable project illustrations, exact token/real-audio timing and atomic028 job/asset migration. Full1809 passed in740.11s,143 related tests (34 new), Ruff/diff clean. Populated disposable copy preserved17 jobs/43 checkpoints and passed injected rollback/FK/integrity/2 restarts; actual Edge mapping25/25 tokens over11.54s.49.5 remains in_progress for proposal/locks/history/approval; owner DB/EXE/release unchanged.",
-      "active_subtask": "49.5b",
+      "note": "49.5b technically verified: full pytest 1848 passed in741.01s;175 focused in28.42s;104 renderer tests and TypeScript/Ruff/JS/diff clean. BUG-042 cancellation-safe shared rollback and BUG-043 PATCH422 fixed;BUG-044 docs reconciled. Two fresh process restarts preserved history/locks/idempotency;integrity/FK clean. Next49.6 geometry/layout; production approval refuses missing real geometry. Owner DB/EXE/release and V49/older gates unchanged.",
+      "active_subtask": null,
       "last_verified_subtask": {
-        "id": "49.5a",
-        "full_pytest": 1809,
-        "seconds": 740.11,
-        "related_pytest": 143,
-        "new_pytest": 34,
+        "id": "49.5b",
         "status": "technically_verified",
-        "evidence": "data/tmp/evolve-20261016/task49_5a-full.log"
-      }
+        "full_pytest": 1848,
+        "seconds": 741.01,
+        "focused_pytest": 175,
+        "renderer_tests": 104,
+        "evidence": "data/tmp/task49-5b-full-network-20261016.log",
+        "report": "docs/operations/task49-5b-recovery-20261016.md"
+      },
+      "next_task": "49.6"
     },
     "47": {
       "name": "Caption continuity (BUG-041)",

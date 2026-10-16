@@ -32,6 +32,14 @@ async def create_ai_job(
     job was returned instead -- both are explicitly allowed by the API contract.
     """
     started_at = time.perf_counter()
+    if body.operation == "propose_explainer":
+        from backend.library.explainer_service import enqueue_proposal
+        from backend.schemas.explainer import ExplainerProposalRequest
+
+        job, created = await enqueue_proposal(db, project_id, ExplainerProposalRequest(
+            expected_revision=body.expected_revision, idempotency_key=body.idempotency_key,
+        ))
+        return JSONResponse(status_code=202 if created else 200, content=ok(AIJobOut.model_validate(job).model_dump(), started_at=started_at))
     async with read_transaction():
         project = await project_service.get_project(db, project_id)
     async with write_transaction(db):

@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.api import (
-    ai_jobs, audio, channel, learning, music, profiles, projects, shorts, settings as settings_api, storyboard,
+    ai_jobs, audio, channel, explainer, learning, music, profiles, projects, shorts, settings as settings_api, storyboard,
     thumbnail, tts, video, visuals, youtube,
 )
 from backend.core.config import settings
@@ -20,6 +20,7 @@ from backend.core.responses import ok
 from backend.core.system_checks import check_ffmpeg, get_gpu_info, get_gpu_memory
 from backend.db.database import Database, close_db, init_db
 from backend.content import learning_pipeline, script_pipeline
+from backend.library import explainer_service
 from backend.core import settings_service
 from backend.ai.llm.router import AIRouter, CircuitBreaker, build_ai_router_from_settings
 from backend.ai.llm.ai_worker import AIWorker
@@ -70,6 +71,10 @@ async def _learning_job_handler(job: dict, worker: AIWorker) -> None:
     await learning_pipeline.make_handler(_build_ai_router())(job, worker)
 
 
+async def _explainer_job_handler(job: dict, worker: AIWorker) -> None:
+    await explainer_service.make_handler(_build_ai_router())(job, worker)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize the database and verify external tooling on startup.
@@ -102,6 +107,7 @@ async def lifespan(app: FastAPI):
 
     ai_worker.register_handler("script", _script_job_handler)
     ai_worker.register_handler("learning", _learning_job_handler)
+    ai_worker.register_handler("propose_explainer", _explainer_job_handler)
     # Phase 44 (D123): only the Qwen jobs remain (no SDXL candidates/sheets, no two-person project shots)
     image_job_runner.register_handler("scene_preview", visuals_pipelines.scene_preview)
     image_job_runner.register_handler("activity_illustrations", visuals_pipelines.activity_illustrations)
@@ -171,6 +177,8 @@ app.include_router(profiles.router)  # Phase 33: before visuals so /api/visuals/
 app.include_router(visuals.router)
 app.include_router(visuals.project_router)
 app.include_router(storyboard.router)
+app.include_router(explainer.router)
+app.include_router(explainer.asset_router)
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR / "static"), name="static")
 

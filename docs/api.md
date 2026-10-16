@@ -271,7 +271,7 @@ Approve Assets
 
 - **Request body:** `ApproveManyInput`
 - **Response body:** `object`
-- **Parameters:** `character_id`
+- **Parameters:** `character_id`, `view` (optional)
 
 ### `GET /api/visuals/profiles/{character_id}/assets/{asset_id}/content`
 
@@ -286,7 +286,7 @@ Review Asset
 
 - **Request body:** `ReviewInput`
 - **Response body:** `object`
-- **Parameters:** `character_id`, `asset_id`
+- **Parameters:** `character_id`, `asset_id`, `view` (optional)
 
 ### `GET /api/visuals/profiles/{character_id}/dependencies`
 
@@ -307,7 +307,7 @@ Duplicate Profile
 Prompt Pack
 
 - **Response body:** `object`
-- **Parameters:** `character_id`
+- **Parameters:** `character_id`, `view` (optional)
 
 ### `POST /api/visuals/profiles/{character_id}/restore`
 
@@ -321,7 +321,7 @@ Restore Profile
 List Slots
 
 - **Response body:** `object`
-- **Parameters:** `character_id`
+- **Parameters:** `character_id`, `view` (optional)
 
 ### `POST /api/visuals/profiles/{character_id}/slots/upload-batch`
 
@@ -330,14 +330,14 @@ Upload Batch
 Bulk shortcut: files named after a slot go into it (the base first); every other file is listed, not guessed.
 
 - **Response body:** `object`
-- **Parameters:** `character_id`
+- **Parameters:** `character_id`, `view` (optional)
 
 ### `GET /api/visuals/profiles/{character_id}/slots/{slot_key}/input.png`
 
 Slot Input
 
 - **Response body:** `object`
-- **Parameters:** `character_id`, `slot_key`
+- **Parameters:** `character_id`, `slot_key`, `view` (optional)
 
 ### `POST /api/visuals/profiles/{character_id}/slots/{slot_key}/upload`
 
@@ -346,7 +346,84 @@ Upload Slot
 The slot comes from the card the picture was dropped on, never from the file name (D84).
 
 - **Response body:** `object`
-- **Parameters:** `character_id`, `slot_key`
+- **Parameters:** `character_id`, `slot_key`, `view` (optional)
+
+## explainer
+
+### `GET /api/projects/{project_id}/explainer-plan`
+
+Get Plan
+
+Read a draft or approved version together with live source issues.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `PATCH /api/projects/{project_id}/explainer-plan`
+
+Save Plan
+
+Save an owner edit against both the expected revision and current source.
+
+- **Request body:** `ExplainerPlanPatch`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/explainer-plan/approve`
+
+Approve Plan
+
+Validate source/assets/audio/layouts before pinning the reviewed revision.
+
+- **Request body:** `ExplainerApproval`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `GET /api/projects/{project_id}/explainer-plan/history`
+
+Plan History
+
+Read immutable project revisions in order.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/explainer-plan/propose`
+
+Propose Plan
+
+Create or return the existing durable proposal job.
+
+- **Request body:** `ExplainerProposalRequest`
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `GET /api/projects/{project_id}/explainer/assets`
+
+List Assets
+
+List the project's available illustration versions.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `POST /api/projects/{project_id}/explainer/assets`
+
+Upload Asset
+
+Read a bounded multipart image; service owns decoding and guarded publication.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`
+
+### `GET /api/projects/{project_id}/explainer/assets/{asset_id}/{version}/content`
+
+Asset Content
+
+Serve only a scoped, verified immutable PNG version.
+
+- **Response body:** `object`
+- **Parameters:** `project_id`, `asset_id`, `version`
 
 ## export
 

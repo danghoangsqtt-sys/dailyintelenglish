@@ -9,12 +9,13 @@ PlainText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1
 RevisionHash = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
 Aspect = Literal["16:9", "9:16"]
 Gesture = Literal["calm", "talk", "point-left", "point-right", "emphasize", "count-1", "count-2", "count-3", "think", "wave"]
+LockGroup = Literal["content", "visual", "gestures", "layout_16_9", "layout_9_16"]
 
 
 class StrictModel(BaseModel):
     """A finite schema: unrecognized provider fields never become executable render payloads."""
 
-    model_config = ConfigDict(extra="forbid", validate_assignment=True)
+    model_config = ConfigDict(extra="forbid", validate_assignment=True, strict=True)
 
     @field_validator("*", mode="after")
     @classmethod
@@ -220,8 +221,22 @@ class ExplainerPlanPatch(StrictModel):
     """Owner edits carry the revision they were made against; server owns approval and fingerprint."""
 
     expected_revision: int = Field(ge=1)
+    expected_source_fingerprint: RevisionHash
     segments: list[ExplainerSegment] = Field(min_length=1, max_length=60)
     aspects: list[Aspect] = Field(default_factory=lambda: ["16:9", "9:16"], min_length=1, max_length=2)
+    unlock_fields: dict[Identifier, list[LockGroup]] = Field(default_factory=dict, max_length=60)
+
+    @model_validator(mode="after")
+    def bounded_unlocks(self) -> "ExplainerPlanPatch":
+        if len({segment.id for segment in self.segments}) != len(self.segments):
+            raise ValueError("Segment IDs must be unique.")
+        if len(set(self.aspects)) != len(self.aspects):
+            raise ValueError("Output aspects must be unique.")
+        if any(len(groups) > 5 or len(set(groups)) != len(groups) for groups in self.unlock_fields.values()):
+            raise ValueError("Choose each lock group at most once per segment.")
+        if set(self.unlock_fields) - {segment.id for segment in self.segments}:
+            raise ValueError("Unlock fields must refer to segments in this edit.")
+        return self
 
 
 class ExplainerApproval(StrictModel):
@@ -229,3 +244,35 @@ class ExplainerApproval(StrictModel):
 
     expected_revision: int = Field(ge=1)
     source_fingerprint: RevisionHash
+
+
+class ExplainerProposalRequest(StrictModel):
+    """A revision-aware durable proposal request; zero means no plan exists yet."""
+
+    expected_revision: int = Field(ge=0)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=100)
+
+
+class ProposedExplainerSegment(StrictModel):
+    """Provider data excludes owner locks, approval, revision and geometry."""
+
+    id: Identifier
+    intent: PlainText
+    line_ids: list[Identifier] = Field(min_length=1, max_length=200)
+    start: TokenAnchor
+    end: TokenAnchor
+    visual: Visual
+    gestures: list[GestureCue] = Field(default_factory=list, max_length=30)
+    source_notes: str = Field(default="", max_length=1200)
+
+
+class ExplainerProposal(StrictModel):
+    """Finite content-only response from the structured AI gateway."""
+
+    segments: list[ProposedExplainerSegment] = Field(min_length=1, max_length=60)
+
+    @model_validator(mode="after")
+    def unique_segment_ids(self) -> "ExplainerProposal":
+        if len({segment.id for segment in self.segments}) != len(self.segments):
+            raise ValueError("Segment IDs must be unique.")
+        return self

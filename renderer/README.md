@@ -1,52 +1,71 @@
-# renderer
+﻿# Studio video renderer
 
-Phase 19 (ENH-013) spike workspace — an isolated Node/TypeScript/React tree evaluating
-Remotion as a replacement video renderer. **Never imported by `app/`.** Invoked only as a
-subprocess, by `scripts/run_remotion_spike.py`.
+Production React/TypeScript/Remotion workspace for Daily Beyond English Studio.
+The Python backend invokes this Node workspace as a subprocess through
+`backend/media/video_renderer_remotion.py`. Remotion has been the sole video
+renderer since Phase35; FFmpeg still handles audio, probes and media validation.
 
-See `.viepilot/phases/19-remotion/tasks/task-19.1.md` for the full design record and
-`docs/operations/phase19-spike-remotion.md` for the measured results.
+The private package version is independent of the application release version.
+Published Windows trial:1.4.0-rc.1; source development target:1.5.0. The Solo
+layout/Player/render extensions in Phase49.6 onward are still planned.
 
 ## Install
 
+From the repository root in PowerShell:
+
+```powershell
+Set-Location renderer
+npm.cmd ci
+npx.cmd remotion browser ensure
 ```
-cd renderer
-npm install
+
+Requires Node.js>=24.0.0; `.npmrc` enforces the engine requirement. FFmpeg/ffprobe
+must be available to the backend. The Windows application links to this external
+runtime; it does not bundle the full renderer/browser in its Python EXE.
+
+## Compositions and inputs
+
+`src/index.ts` registers `src/Root.tsx`, which defines two compositions:
+
+- `Episode`: production video. `src/Episode.tsx` composes the selected podcast
+  visuals, talking sprites, captions, learning accents and intro/outro. Input
+  width/height/layout select horizontal or vertical output.
+- `StillFrame`: a still image from the same episode input contract, used through
+  Remotion's still-image path.
+
+`src/types.ts` defines `EpisodeInputProps` and its runtime schema.
+`calculateMetadata` derives dimensions, fps and duration from the inputs;
+Episode includes intro and outro around the spoken-audio window. Word timings
+come from actual project audio; the renderer does not synthesize replacement TTS.
+
+## Backend invocation
+
+The backend builds project props, stages required media under `public/` for
+`staticFile()` access and writes a temporary JSON props file. It runs Remotion
+from this directory with a bounded render deadline and diagnostics. It verifies
+and publishes the attempt output through the backend media revision guards;
+failed/stale attempts do not replace the previous valid project output.
+
+The production command shape is:
+
+```powershell
+npx.cmd remotion render src/index.ts Episode <outputPath> --props=<propsJsonPath>
 ```
 
-Requires Node `>=24.0.0` (owner's machine has v24.20.0) and npm (v11.19.0 tested). `engine-strict`
-is on in `.npmrc`, so `npm install` fails loudly on an older Node instead of silently proceeding.
+The backend owns extra browser/compositor/codec options, cleanup and retries; use
+the app's Video step for production rendering. The old Phase19 spike runner was
+removed and is not a runtime dependency.
 
-## Composition
+## Development checks
 
-One composition, `Episode` (`src/Root.tsx` / `src/Episode.tsx`): a solid-color background plus
-a bottom-third subtitle band showing the active line's `speaker: text`, driven entirely by
-input props (`src/types.ts`). Duration is computed from the input props' last line via
-`calculateMetadata` — there is no fixed timeline.
+From `renderer/`:
 
-## How it's invoked
-
-`scripts/run_remotion_spike.py` does all of this; nothing here is meant to be run by hand
-except for the typecheck below.
-
-1. Selects a real completed project from `data/app.db` (read-only) and builds an
-   `EpisodeInputProps` object.
-2. Copies the project's mixed MP3 into `public/spike-audio/<episodeId>.mp3` — Remotion has no
-   support for absolute filesystem paths as an asset `src`; every asset must live under
-   `public/` and be loaded with `staticFile()`.
-3. Writes the input props to a temp JSON file (never inline on the command line).
-4. Runs, from this directory:
-
-   ```
-   npx remotion render src/index.ts Episode <outputPath> --props=<tempPropsPath>
-   ```
-
-5. Measures wall time around that subprocess call and parses Remotion's own reported render
-   time and output size for the spike report.
-
-## Typecheck
-
+```powershell
+npm.cmd test
+npm.cmd run typecheck
 ```
-cd renderer
-npm run typecheck
-```
+
+Tests cover caption paging, karaoke, layout/safe zones, sprite timing, motion and
+other deterministic helpers. Passing them does not replace real render checks or
+owner visual acceptance. `@remotion/player` and the Solo editor bundle are future
+Phase49 work; this workspace currently exposes the render compositions above.

@@ -410,6 +410,16 @@ _storyboard_env = Environment(
 )
 
 
+async def render_explainer_prompt(**fields) -> str:
+    """Render the bounded Solo proposal/repair template outside the event loop."""
+    def render() -> str:
+        try:
+            return _storyboard_env.get_template("explainer.txt").render(**fields)
+        except TemplateNotFound as exc:
+            raise ValidationError("The Solo explainer prompt template is missing") from exc
+    return await asyncio.to_thread(render)
+
+
 def _render_storyboard_prompt_sync(**fields) -> str:
     """Blocking: render the Task 24.2 storyboard prompt (script lines, cast, scene library)."""
     try:

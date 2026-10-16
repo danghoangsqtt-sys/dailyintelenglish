@@ -7,7 +7,7 @@
 | **Project Name** | Daily Beyond English Studio (brand since Phase 27; technical name Daily Intel English Studio) |
 | **Slug** | DailyIntelEnglish |
 | **Version** | 1.4.0-rc.1 owner-authorized usage trial (2026-10-15); last stable 1.3.0 (2026-10-13) |
-| **Next Feature Target** | 1.5.0 planned (2026-10-16): Phase48 character voices, Phase49 Solo Explainer/front21; implementation not started; SPEC.md / PLAN.md |
+| **Next Feature Target** | 1.5.0 source in development (2026-10-16): Phase48 and49.1–49.5 technically verified;49.6–49.10 planned. Source additions are not in the published EXE; SPEC.md / PLAN.md / PHASE-STATE control progress |
 | **Inception Year** | 2026 |
 | **License** | MIT |
 | **Type** | AI-powered Local Web Application |

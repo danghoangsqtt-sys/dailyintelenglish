@@ -2,20 +2,20 @@
 
 <!-- crystallize_version: 0.8.0 -->
 
-*Current source includes Phase47 caption continuity; published trial1.4.0-rc.1, last stable1.3.0. Planned extension below was recorded2026-10-16 and is not implemented.*
+*Source snapshot2026-10-16: Phase47 captions, Phase48 voices and Phase49.1–49.5 are technically verified after recovery regression. Owner acceptance remains separate. Published trial remains1.4.0-rc.1; last stable1.3.0. Source additions are not included in that EXE.*
 
-## Planned architecture extension — Phase48/49
+## Architecture extension — Phase48/49: current source and remaining plan
 
-Source of truth: [SPEC](SPEC.md), [PLAN](PLAN.md). Existing architecture below describes the running app; the following additions are **planned**:
+Source of truth: [SPEC](SPEC.md), [PLAN](PLAN.md), [Phase49 state](phases/49-solo-explainer/PHASE-STATE.md). The overview below describes the base application. Extension status is:
 
-- Edge TTS catalog + independent audition cache; concrete profile/project voice IDs with computed revision, TTS fingerprint and targeted stale propagation. No new TTS engine.
-- `presentation_mode=classic|solo_explainer`, defaultclassic; one-speaker Why/How/List. Additive migration after026, verified atomic/resumable before real DB use.
-- Existing character_assets facing/version index supports independent native29/front21 packs. Prompt/reference → external AI → import/review; pin manifest revisions in render inputs.
-- Explainer plan service/API: token anchors, photo/diagram/card schema, per-aspect layouts, important regions, locks, optimistic revisions and approved source snapshots.
-- Pure layout validator + shared Remotion scene/presenter/caption components for Player preview and production. Player is a built static widget inside vanilla Step5, not a whole-app SPA migration.
-- Video/Shorts/thumbnail/series/copy/export carry mode, voice and asset revisions; classic paths keep defaults. Build preview bundle before frozen EXE packaging.
+- **Verified Phase48:** Edge TTS catalog + independent audition cache; pinned profile/project voice IDs, TTS fingerprints and targeted stale propagation. No new TTS engine.
+- **Verified49.1/49.4:** `presentation_mode=classic|solo_explainer`, default classic; one-presenter Why/How/List script generation/repair with CEFR budgets. Migration027 is atomic per SQL file and was verified on disposable legacy copies; this does not authorize applying it to owner data.
+- **Verified49.2/49.3:** independent native29/front21 packs, external-AI prompt/reference → import/review UI, immutable manifests with pinned versions and hashes. Real Hoang front21 art is still pending.
+- **Verified49.5a:** immutable project illustrations, exact end-exclusive script-token coverage, actual audio-word mapping and migration028 preserving durable jobs/checkpoints. Photo/diagram/card and per-aspect layout schemas are bounded data contracts, not a completed layout engine.
+- **Verified49.5b (1848 Python regressions):** explainer plan service/API, source/revision CAS, immutable history, owner locks, bounded proposal/repair worker and approval snapshot pinning. Approval deliberately refuses unavailable production geometry; synthetic validator tests only establish pin/CAS mechanics.
+- **Planned49.6–49.10:** real geometry/path validation, shared scene for embedded Remotion Player preview and production, Solo render/Shorts/thumbnail/series/copy/export and packaging. Build the static Player widget before future frozen packaging; the current renderer workspace does not include it.
 
-Native packs, existing videos and owner gates are retained. No schema/API/widget above is claimed available until its task is implemented and verified.
+Native packs and existing outputs are retained. Source verification and owner acceptance remain separate; Phase47 visual review, V49 and B-25/B-26/B-27/B-28 remain pending. Task50.1 addresses cancellation rollback in the shared DB helper; Phase50 does not change the connection architecture.
 
 ## System Overview
 

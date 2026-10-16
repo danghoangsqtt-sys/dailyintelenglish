@@ -1,10 +1,12 @@
 # PLAN — Phase 48/49, mục tiêu 1.5.0
 
-- Ngày lập: 2026-10-16 · Trạng thái: **Phase48 implemented_verified; Phase49 executing49.5**.
+- Ngày lập: 2026-10-16 · Trạng thái: **Phase48 implemented_verified; Phase49 technically verified49.5;49.6 next**.
 - Phạm vi: Add Feature từ [SPEC](SPEC.md) và [brainstorm](../docs/brainstorm/session-2026-10-16.md).
-- 15 task: **5 task Phase48 +10 task Phase49**;48.1–48.5 and49.1–49.4 implemented_verified,49.5 in_progress,5 planned. V48 technical verified + owner listening accepted;47 actual voice choices observed. Demo Hoang — Why do we build habits?; V49 still pending.
+- 15 task: **5 task Phase48 +10 task Phase49**;48.1–48.5 and49.1–49.5 implemented_verified,49.6–49.10 planned. V48 technical verified + owner listening accepted;47 actual voice choices observed. Demo Hoang — Why do we build habits?; V49 still pending.
 - Bản đang phát hành giữ **1.4.0-rc.1**; target 1.5.0. Không sửa version runtime, tạo EXE hay release trong phiên lập kế hoạch.
 - Phase 47 chờ owner visual review; B-25/B-26/B-27/B-28 vẫn pending, không dùng planning mới để tự đóng gate.
+
+**Recovery checkpoint2026-10-16:** 49.5b technically verified: full pytest 1848 passed in741.01s;175 focused in28.42s;104 renderer tests and TypeScript/Ruff/JS/diff clean. BUG-042 cancellation-safe shared rollback and BUG-043 PATCH422 fixed;BUG-044 docs reconciled. Two fresh process restarts preserved history/locks/idempotency;integrity/FK clean. Next49.6 geometry/layout; production approval refuses missing real geometry. Owner DB/EXE/release and V49/older gates unchanged. Phase50 tracks BUG-042/044 separately from the15 feature tasks; BUG-043 belongs49.5b. Current execution authorization supersedes historical planning-only notes below.
 
 ## 1. Trình tự thực hiện
 

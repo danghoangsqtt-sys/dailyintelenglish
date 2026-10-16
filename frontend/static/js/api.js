@@ -209,6 +209,17 @@ const Api = (() => {
       method: "PUT", body: JSON.stringify(storyboard),
     }),
     proposeStoryboard: (projectId) => request(`/api/projects/${projectId}/storyboard/propose`, { method: "POST" }),
+    getExplainerPlan: (projectId) => request(`/api/projects/${projectId}/explainer-plan`),
+    getExplainerHistory: (projectId) => request(`/api/projects/${projectId}/explainer-plan/history`),
+    saveExplainerPlan: (projectId, body) => request(`/api/projects/${projectId}/explainer-plan`, json("PATCH", body)),
+    proposeExplainerPlan: (projectId, body) => request(`/api/projects/${projectId}/explainer-plan/propose`, json("POST", body)),
+    approveExplainerPlan: (projectId, body) => request(`/api/projects/${projectId}/explainer-plan/approve`, json("POST", body)),
+    listExplainerAssets: (projectId) => request(`/api/projects/${projectId}/explainer/assets`),
+    uploadExplainerAsset: (projectId, file) => {
+      const body = new FormData();
+      body.append("file", file);
+      return request(`/api/projects/${projectId}/explainer/assets`, { method: "POST", body });
+    },
     setProjectCast: (projectId, cast) => request(`/api/projects/${projectId}/visuals/cast`, {
       method: "PUT", body: JSON.stringify(cast),
     }),

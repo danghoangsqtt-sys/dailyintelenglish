@@ -1,10 +1,10 @@
 # Task 49.5 — Explainer plan: đoạn, minh họa, locks và approval
 
-- **Status:** in_progress · 2026-10-16, after49.4 script checkpoint; depends49.2 satisfied.
+- **Status:** implemented_verified (technical) · 2026-10-16; owner acceptance separate, no V49 acceptance implied.
 - **Dependencies:** 49.2, 49.4
 - **Requirements:** R04, R06, R07, R12.
 - **Contract:** [SPEC tổng](../../../SPEC.md), [PLAN tổng](../../../PLAN.md), [phase SPEC](../SPEC.md), [phase PLAN](../PLAN.md).
-- **Scope:**49.5a foundation technically verified below;49.5b proposal/review integration remains in progress. Owner acceptance is separate.
+- **Scope:**49.5a/b foundation and proposal/review integration technically verified. Real geometry success belongs49.6; owner acceptance is separate.
 
 ## Objective
 
@@ -38,6 +38,10 @@ Explainer plan: đoạn, minh họa, locks và approval. Hoàn thành contract t
 - .viepilot/TRACKER.md
 - .viepilot/ROADMAP.md
 - .viepilot/HANDOFF.json
+- .viepilot/PLAN.md
+- docs/api.md
+- docs/operations/task49-5b-recovery-20261016.md
+- .viepilot/requests/BUG-043.md
 - CHANGELOG.md
 - .viepilot/phases/49-solo-explainer/tasks/task-49.5.md
 
@@ -67,9 +71,26 @@ Explainer plan: đoạn, minh họa, locks và approval. Hoàn thành contract t
 
 **49.5b — proposal, draft/history, locks and approval:** bounded plan/wire schemas, service/API/prompt, safe AI operation dispatch + worker registration, source fingerprints and revision CAS. Verify job/cancel/resume/error races and locked fields, missing real geometry/timing/assets/factual-review refusal, then full regression before task completion. Geometry success is verified with actual49.6; no permissive placeholder approval.
 
+49.5b implementation detail: proposal wire data excludes server approval/revision/fingerprint/locks/geometry; existing segment IDs/order must survive regeneration. Owner PATCH carries expected source fingerprint as well as revision, automatically locks edited groups, and has an explicit bounded unlock map. A new proposal always requires factual review for changed content/visuals. Approval creates another immutable history revision and pins validated file hashes/timings; the production geometry resolver raises an actionable refusal until49.6 implements it. Generic AI-job creation must route through the same snapshot builder as the dedicated propose endpoint. Keep scripts/learning behavior unchanged and keep image processing/file verification outside DB locks.
+
 Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu phát hiện cần file khác, ghi lý do và mở rộng bounded scope trước code. Các file đã tạo bởi task trước trong Paths được tiếp tục sử dụng; không tự viết lại hệ thống lân cận.
 
 ## Risks / guardrails
+
+### Recovery amendment2026-10-16 — owner evolve+auto authorization
+
+Owner explicitly requested implementing BUG-042/043/044 and reviewing/completing49.5b after recovery audit. Existing49.5 Paths remain the bounded product scope; add `docs/operations/task49-5b-recovery-20261016.md` and `.viepilot/requests/BUG-043.md` for evidence/request updates. BUG-042/shared helper and BUG-044 docs have separate Phase50 cards, approved by the same instruction.
+
+Master `.viepilot/PLAN.md` is included for synchronizing verified counts and next task after actual gates; do not change target scope15 or pending owner acceptance.
+
+`docs/api.md` is included for regeneration with existing `scripts/generate_api_docs.py` after the new explainer routes/schema; generated route documentation must reflect the actual source OpenAPI without starting lifespan or opening the owner DB. Generator code is read-only.
+
+- `backend/schemas/explainer.py`: move segment/aspect uniqueness checks to PATCH request semantic validation while keeping persisted plan validation; malformed owner input must be422 envelope.
+- `tests/test_explainer_api.py`, `tests/test_explainer_plan.py`: regression for both original500s, history unchanged on failure, good PATCH afterwards; extend uncovered cancel/recovery/approval/race cases found in review.
+- `backend/library/explainer_service.py`, prompt/API/job registration Paths above: review whole49.5b; fix only contract gaps, preserve source/CAS/locks/history and typed errors. Align future geometry import with49.6 card naming; continue refusing missing real geometry.
+- Verification: red/green targeted bugs; focused plan/API/timing/assets/jobs/front suites; full `pytest tests/ -x -q`; Ruff, modifiedJS syntax, renderer Vitest/TypeScript; record real commands/results. No Player/layout implementation, owner DB migration, EXE replacement or release.
+
+Risks: shared async cancellation, schema validation error translation, late provider publication and checkpoint recovery. Avoid permissive approval, guessed timing, blanket exception masking and unrelated refactoring. User instruction supplies execution approval; formal owner visual/factual acceptance stays distinct.
 
 Timestamp AI tự đoán sẽ lệch audio. Revision guard phải bao gồm thay đổi source, không chỉ form edits.
 
@@ -92,8 +113,14 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Progress
 
+- Recovery2026-10-16: red regressions **4 failed as expected** on old code (cancel during body/commit, duplicate aspects/IDs PATCH500). Shared helper now waits for shielded rollback before releasing its lock even under repeated cancellation; explainer uses this helper. PATCH validates uniqueness and generic proposal revisions reject bool/string coercion; duplicate AI IDs trigger bounded repair. Geometry import matches future `explainer_layout_service`; real checker still required.
+- Focused recovery verification: **175 passed in28.42s** across transactions/plan/API/worker/jobs/assets/timing/migration. Renderer **104 passed**, TypeScript/Ruff/modifiedJS/diff clean. Full suite started, result pending. Independent sandbox process smoke: **2 fresh process restarts**, revision history1/2 and edited visual lock retained, idempotent replay same job without provider call, stale PATCH409, approval422, FK/integrity clean. Evidence `data/tmp/task49-5b-smoke-9bffce74861b4f5894b0d71cba91bdf3/verification.json`.
+- First full run:1626 passed before the live Edge TTS test failed on sandbox network denial (`speech.platform.bing.com:443`, Access is denied),678.36s. Isolated required retry outside sandbox passed1/1 in1.53s,6 words with real3.312s audio. Full suite restarted outside sandbox on identical source; no test skipped/mocked to bypass the failure. Final result pending; logs retain both attempts.
+
 - 2026-10-16,49.5a technical verification:028 extends the durable operation CHECK and creates a separate immutable project illustration registry. Populated copy preserved17 jobs/43 checkpoints/13 projects/290 script lines; fault injection after table replacement fully rolled back schema/rows/tracking, FK/integrity and2 restarts verified. Owner DB was never opened for writing.
 - Illustration service verifies format/size/pixels, EXIF and alpha, stages/normalizes/hashes outside DB transactions, checks the live Solo project before metadata publication and cleans cancelled attempts. Explicit project deletion includes its explainer files; prior image IDs/versions remain immutable. API upload/serving is49.5b, not exposed yet.
 - Token index validates exact end-exclusive script coverage and in-segment gesture anchors. Timeline uses measured word events, handles split contractions and preserves actual pauses/lead/tail; rejects stale/missing/ambiguous/overlapping events instead of estimating seconds. Real prior Edge fixture resolved25/25 words over11.54s (mapping evidence only, not a Solo render).
 - Verification:34 new focused tests,143 related migration/jobs/projects/timing/image tests passed; `ruff check .` and `git diff --check` clean. Full `pytest tests/ -x -q`: **1809 passed**,1 existing Starlette warning,740.11s. No frontend JS/UI change in49.5a. Evidence:`data/tmp/evolve-20261016/task49_5a-full.log`, `drafts/explainer-migration-copy-1b30664a180b4a6fafd5ffacd9d597b4/verification.json`, `voice-media-dbc2312672/explainer-timing-verification.json` under the same run folder.
 -49.5 remains **in_progress**. Next49.5b: source/revision CAS, proposal/locks/history/approval APIs and worker integration. Approval remains unavailable until actual timing/front/assets/factual review and49.6 geometry validation succeed. Real Hoang front21 and V49 owner acceptance still pending; installed EXE/release unchanged.
+
+- Final recovery gate2026-10-16: **1848 passed in741.01s**,1 existing Starlette warning, full suite outside sandbox; no test deselected or mocked to bypass the live Edge case.175 focused,104 renderer,TypeScript/Ruff/JS and generated180-route API parity pass. 49.5b technically verified: full pytest 1848 passed in741.01s;175 focused in28.42s;104 renderer tests and TypeScript/Ruff/JS/diff clean. BUG-042 cancellation-safe shared rollback and BUG-043 PATCH422 fixed;BUG-044 docs reconciled. Two fresh process restarts preserved history/locks/idempotency;integrity/FK clean. Next49.6 geometry/layout; production approval refuses missing real geometry. Owner DB/EXE/release and V49/older gates unchanged. Full report:`docs/operations/task49-5b-recovery-20261016.md`. Git checkpoint follows actual persistence gate; no owner gate self-approved.

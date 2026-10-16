@@ -1,8 +1,12 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Audit recovery — Phase50, authorized2026-10-16
+
+Owner invoked vp-evolve+vp-auto for BUG-042/043/044 and completion49.5b. [Phase50 plan](phases/50-audit-recovery/PLAN.md):50.1 shared cancellation rollback and50.2 documentation implemented_verified;2/2 technical, PM review separate. BUG-043 belongs49.5b. Current_phase49, target1.5.0 and pending owner gates unchanged; no release/version bump.
+
 ## Planned extension — 2026-10-16, target 1.5.0
 
-**Add Feature; Phase48 verified, Phase49 executing.** [SPEC tổng](SPEC.md), [PLAN tổng](PLAN.md), [brainstorm](../docs/brainstorm/session-2026-10-16.md). 15 tasks:9 technically verified,1 in progress,5 planned. Bản phát hành1.4.0-rc.1 giữ nguyên.
+**Add Feature; Phase48 verified, Phase49 executing.** [SPEC tổng](SPEC.md), [PLAN tổng](PLAN.md), [brainstorm](../docs/brainstorm/session-2026-10-16.md). 15 tasks:10 technically verified,0 in progress,5 planned. Bản phát hành1.4.0-rc.1 giữ nguyên.
 
 ### Phase 48 — Chọn giọng riêng cho nhân vật
 
@@ -18,7 +22,7 @@
 - Dependencies:Phase48/V48; front21 và script là nền cho explainer plan/layout, sau đó Player/render/integrations.
 - Tasks49.1–49.10:[PLAN và cards](phases/49-solo-explainer/PLAN.md) · [SPEC](phases/49-solo-explainer/SPEC.md).
 - Acceptance: một pack thật21ảnh, video có ảnh/sơ đồ/thẻ chữ, bố cục hai aspect không che nội dung, lưu locks/revision đúng, full16:9/full9:16/Short và staged EXE verified, owner GateV49.
-- Status:**in_progress,4/10 verified;49.5 implementing**.49.4 full1775 passed; Why/How/List pipeline + real LLM structure/timing tested, draft factual/CEFR review still required. Owner demo:Hoang — Why do we build habits?; front21 imported/reviewed images required before V49. Isolated fixtures do not replace that visual gate.
+- Status:**in_progress,5/10 technically verified;49.6 next planned**.49.5b full 1848 passed in741.01s;175 focused,104 renderer; approval still requires actual49.6 geometry. Hoang front21 real art and V49 owner review remain pending. [Report](../docs/operations/task49-5b-recovery-20261016.md).
 
 **49.5a checkpoint (2026-10-16):** 49.5a foundation verified: immutable project illustrations, exact token/real-audio timing and atomic028 job/asset migration. Full1809 passed in740.11s,143 related tests (34 new), Ruff/diff clean. Populated disposable copy preserved17 jobs/43 checkpoints and passed injected rollback/FK/integrity/2 restarts; actual Edge mapping25/25 tokens over11.54s.49.5 remains in_progress for proposal/locks/history/approval; owner DB/EXE/release unchanged.
 

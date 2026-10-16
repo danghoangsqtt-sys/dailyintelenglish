@@ -13,6 +13,15 @@ class CreateAIJobRequest(BaseModel):
 
     operation: str = Field(pattern="^(" + "|".join(AI_JOB_OPERATIONS) + ")$")
     idempotency_key: str | None = None
+    expected_revision: int | None = Field(default=None, ge=0, strict=True)
+
+    @model_validator(mode="after")
+    def explainer_revision_required(self) -> "CreateAIJobRequest":
+        if self.operation == "propose_explainer" and self.expected_revision is None:
+            raise ValueError("An explainer proposal requires expected_revision.")
+        if self.operation == "propose_explainer" and self.idempotency_key is not None and not 1 <= len(self.idempotency_key) <= 100:
+            raise ValueError("An explainer idempotency key must contain 1–100 characters.")
+        return self
 
 
 class AIJobOut(BaseModel):
