@@ -65,6 +65,9 @@ def _open_browser_when_ready(url: str, expected: dict, timeout: float = 60.0) ->
             webbrowser.open(url)
             return
         time.sleep(0.2)
+    # Never open an unverified port: it may belong to another process. Leave a trace instead.
+    if sys.stderr is not None:
+        sys.stderr.write(f"Studio was not ready at {url} after {timeout:.0f} s; open it manually once startup finishes.\n")
 
 
 def main() -> None:

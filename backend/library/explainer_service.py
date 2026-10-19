@@ -277,13 +277,8 @@ async def enqueue_proposal(db: aiosqlite.Connection, project_id: str, body: Expl
 
 
 async def _validate_geometry(snapshot: dict, plan: ExplainerPlan) -> dict:
-    # The production checker arrives in49.6. An unavailable checker must never authorize a render.
-    try:
-        from backend.library.explainer_layout_service import validate_plan
-    except ModuleNotFoundError as exc:
-        if exc.name != "backend.library.explainer_layout_service":
-            raise
-        raise ValidationError("Layout validation is not available yet; finish reviewing after the layout engine is installed") from exc
+    from backend.library.explainer_layout_service import validate_plan
+
     return await validate_plan(snapshot, plan)
 
 

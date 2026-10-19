@@ -77,3 +77,19 @@ async def test_operation_flush_locks_double_submit_and_editing(editor):
     await editor.evaluate("window.hold=false;window.releaseSave()")
     await expect(purpose).to_be_enabled()
     assert await editor.evaluate("window.saved.length") == 1
+
+
+async def test_diagram_node_ids_follow_labels_so_edges_never_reconnect(editor):
+    await editor.evaluate("""async () => {
+      window.editor.destroy();
+      const segment=window.serverView.plan.segments[0];
+      segment.visual={kind:'diagram',template:'steps',title:'Habit loop',nodes:[{id:'a',label:'Cue'},{id:'b',label:'Routine'},{id:'c',label:'Reward'}],
+        edges:[{source:'b',target:'c'}]};
+      const node=document.createElement('div');document.body.replaceChildren(node);
+      window.editor=await ExplainerEditor.mount(node,'project-fixture');
+    }""")
+    await editor.locator('[data-field="nodes"]').fill("Routine\nReward\nCraving")
+    await editor.wait_for_function("window.saved.length===1")
+    visual = await editor.evaluate("window.saved[0].segments[0].visual")
+    assert [(n["id"], n["label"]) for n in visual["nodes"]] == [("b", "Routine"), ("c", "Reward"), ("node-1", "Craving")]
+    assert visual["edges"] == [{"source": "b", "target": "c"}]

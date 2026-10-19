@@ -97,3 +97,14 @@ def test_readiness_timeout_does_not_open_competing_process(monkeypatch):
     monkeypatch.setattr(launcher.webbrowser, "open", opened.append)
     launcher._open_browser_when_ready("http://localhost:8000", {"product": "studio", "build_id": "new", "instance_id": "owner"}, timeout=1)
     assert not opened
+
+
+def test_readiness_timeout_leaves_a_manual_open_hint(monkeypatch, capsys):
+    from backend import desktop_launcher as launcher
+
+    times = iter([0, 0, 2])
+    monkeypatch.setattr(launcher.time, "monotonic", lambda: next(times))
+    monkeypatch.setattr(launcher.time, "sleep", lambda delay: None)
+    monkeypatch.setattr(launcher, "_read_running_instance", lambda url: None)
+    launcher._open_browser_when_ready("http://localhost:8000", {"product": "studio", "build_id": "new", "instance_id": "owner"}, timeout=1)
+    assert "not ready at http://localhost:8000" in capsys.readouterr().err

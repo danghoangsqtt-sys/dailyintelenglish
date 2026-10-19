@@ -117,7 +117,11 @@ const ExplainerEditor = (() => {
       else if(field==="kind"){s.visual=value==="photo"?{kind:"photo",asset:null,prompt:"",fit:"contain",important_regions:[]}:value==="diagram"?{kind:"diagram",template:"steps",title:"",nodes:[{id:"n1",label:"First step"},{id:"n2",label:"Next step"}],edges:[]}:{kind:"text_card",title:"Key idea",bullets:[]};s.needs_fact_review=true;renderFields();}
       else if(field==="asset"){v.asset=value===""?null:state.assets[Number(value)].asset;renderFields();}
       else if(field==="bullets")v.bullets=value.split("\n").filter(Boolean);
-      else if(field==="nodes"){const old=v.nodes;v.nodes=value.split("\n").filter(Boolean).map((line,i)=>{const [label,...rest]=line.split("|");return{id:old[i]?.id||`node-${i+1}`,label:label.trim(),detail:rest.join("|").trim()};});v.edges=(v.edges??[]).filter(edge=>v.nodes.some(n=>n.id===edge.source)&&v.nodes.some(n=>n.id===edge.target));}
+      else if(field==="nodes"){const unused=[...v.nodes],ids=new Set(v.nodes.map(n=>n.id));let next=1;
+        // Keep a node's ID by label, not line position, so edges never reconnect to a neighbour.
+        v.nodes=value.split("\n").filter(Boolean).map(line=>{const [label,...rest]=line.split("|"),text=label.trim(),match=unused.findIndex(n=>n.label.trim()===text);
+          let id;if(match>=0)id=unused.splice(match,1)[0].id;else{while(ids.has(`node-${next}`))next++;id=`node-${next}`;ids.add(id);}
+          return{id,label:text,detail:rest.join("|").trim()};});v.edges=(v.edges??[]).filter(edge=>v.nodes.some(n=>n.id===edge.source)&&v.nodes.some(n=>n.id===edge.target));}
       else if(field==="gestures")s.gestures=value.split("\n").filter(Boolean).map(line=>{const [id,index,gesture]=line.split("|").map(x=>x.trim());return{at:{line_id:id,token_index:Number(index)},gesture};});
       else if(["x","y","height"].includes(field)&&l)l.presenter[field]=Number(value);
       else if(field==="anchor"&&l){l.presenter.anchor=value;const x=state.geometry?.aspects?.[state.aspect]?.anchor_options?.[value];if(x!==undefined)l.presenter.x=x;renderFields();}
