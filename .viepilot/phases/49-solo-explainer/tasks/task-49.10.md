@@ -37,11 +37,11 @@ Gate V49: demo thật, hồi quy, đóng gói và bàn giao. Hoàn thành contra
 ## File-Level Plan / allowed_files
 
 1. Thêm preview build có thể lặp lại trước PyInstaller, fail nếu thiếu bundle; frozen resources có widget. Cập nhật hướng dẫn cài source và user guide.
-2. Owner chọn topic/profile và chuẩn bị pack thật21/21; dựng một tập có ảnh, sơ đồ, thẻ chữ, nhiều vị trí/size/gesture và manual locks.
-3. Render đầy đủ16:9,9:16 và một Short trong staging; probe/decode/xem các đoạn khó, kiểm tra voice IDs, A/V và caption/safe area.
-4. Đo elapsed/props/frame count/hardware cùng baseline, ghi giới hạn performance và2D motion; không suy diễn phần trăm chưa đo.
+2. Owner chọn topic/profile và chuẩn bị pack thật 21/21; dựng một tập có ảnh, sơ đồ, thẻ chữ, nhiều vị trí/size/gesture và manual locks.
+3. Render đầy đủ 16:9,9:16 và một Short trong staging; probe/decode/xem các đoạn khó, kiểm tra voice IDs, A/V và caption/safe area.
+4. Đo elapsed/props/frame count/hardware cùng baseline, ghi giới hạn performance và 2D motion; không suy diễn phần trăm chưa đo.
 5. Full quality gates và EXE trial mở từ icon logo; Player/media chạy không cần dev server. Chưa ghi đè EXE owner hay publish nếu chưa có lệnh phát hành.
-6. Evidence gồm commands/logs/results/limits, tách technical và owner acceptance. Target1.5.0 chỉ thành candidate khi triển khai/duyệt; bản hiện tại vẫn1.4.0-rc.1.
+6. Evidence gồm commands/logs/results/limits, tách technical và owner acceptance. Target 1.5.0 chỉ thành candidate khi triển khai/duyệt; bản hiện tại vẫn 1.4.0-rc.1.
 
 **File mới dự kiến:** `docs/user/solo-explainer.md`, `docs/operations/phase49-solo-explainer.md`.
 
@@ -55,9 +55,9 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Verification / expected results
 
-1. Full pytest/Ruff, renderer Vitest/typecheck, JS syntax/browser regression; migration failure/restart, native29 và caption Phase 47 còn đúng.
-2. Pack21 ảnh thật approved, presenter mọi spoken frame, đủ ba visual types rõ; manual edits giữ sau reload và được render dùng.
-3. A/V drift và duration lệch tối đa0.10s theo SPEC, decode đầy đủ, safe area cả hai aspect/Short; concurrent edits không publish stale output.
+1. Full pytest/Ruff, renderer Vitest/typecheck, JS syntax/browser regression; migration failure/restart, native 29 và caption Phase 47 còn đúng.
+2. Pack 21 ảnh thật approved, presenter mọi spoken frame, đủ ba visual types rõ; manual edits giữ sau reload và được render dùng.
+3. A/V drift và duration lệch tối đa 0.10s theo SPEC, decode đầy đủ, safe area cả hai aspect/Short; concurrent edits không publish stale output.
 4. EXE trial trong folder mới mở từ branded icon, Player bundle/audio URL hoạt động; network errors rõ.
 5. Owner V49 visual/content sign-off explicit. B-25/B-26/B-27/B-28 và Phase 47 review ghi riêng, không tự đóng.
 6. `git diff --check`; review diff đúng Paths. Chạy quality gates theo SYSTEM-RULES và PLAN trước commit; explicit staging, tuân thủ PM/owner authorization.
@@ -71,13 +71,13 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 ## Progress
 
-- 2026-10-16: owner confirms no real front21 art exists. Complete code, isolated fixture video/browser/package checks and instructions for creating the21 images. Real-art demo and explicit owner V49 acceptance remain external pending inputs; no acceptance or release implied by fixture checks.
+- 2026-10-16: owner confirms no real front21 art exists. Complete code, isolated fixture video/browser/package checks and instructions for creating the 21 images. Real-art demo and explicit owner V49 acceptance remain external pending inputs; no acceptance or release implied by fixture checks.
 - 2026-10-16: initial plan recorded before implementation; final evidence below.
 
-## Technical delivery —2026-10-16
+## Technical delivery — 2026-10-16
 
-Feature full pytest 1867 passed in779.20s. Post-Windows-UTF8 full run:1862 passed,5 legacy subprocess mock-signature failures; all40 video/bridge checks passed in7.95s after updating those5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
+Feature full pytest 1867 passed in 779.20s. Post-Windows-UTF8 full run: 1862 passed, 5 legacy subprocess mock-signature failures; all 40 video/bridge checks passed in 7.95s after updating those 5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
 
-Staged EXE: `data/tmp/phase49-exe-stage/DailyIntelEnglishStudio/`. Embedded bundle1030320 bytes; both frozen restarts exercise actual Player play/pause/seek,21 cards and no-audio editor reload. Production API produced21.227s branded16:9/9:16 files plus SRT; complete decode, drift0.060s. User real-art demo remains unexecuted because owner explicitly reports no images.
+Staged EXE: `data/tmp/phase49-exe-stage/DailyIntelEnglishStudio/`. Embedded bundle 1030320 bytes; both frozen restarts exercise actual Player play/pause/seek, 21 cards and no-audio editor reload. Production API produced 21.227s branded 16:9/9:16 files plus SRT; complete decode, drift 0.060s. User real-art demo remains unexecuted because owner explicitly reports no images.
 
 [Report](../../../../docs/operations/phase49-solo-explainer.md) · [User guide](../../../../docs/user/solo-explainer.md). No installed owner EXE replacement or release.

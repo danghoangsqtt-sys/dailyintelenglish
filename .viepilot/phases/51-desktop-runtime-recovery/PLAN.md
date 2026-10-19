@@ -1,14 +1,14 @@
-# PLAN — Phase51: Desktop runtime recovery
+# PLAN — Phase 51: Desktop runtime recovery
 
 Status: **implemented_verified_pending_owner_review**, authorized by owner `vp-auto xử lý bug`,2026-10-16. This authorizes bug implementation and the local Desktop correction requested by the owner; no extra PM confirmation is needed. No publication or V49 acceptance implied.
 
 ## Objective
-Fix BUG-045: existing profiles must expose voice selection and all21 front presenter cards in the actual installed app. Fix recurring BUG-044 documentation after49.6–49.10 implementation.
+Fix BUG-045: existing profiles must expose voice selection and all 21 front presenter cards in the actual installed app. Fix recurring BUG-044 documentation after 49.6–49.10 implementation.
 
 ## Tasks / per-file plan
 1. **51.1 implemented_verified:** build identity module; lightweight readiness/build endpoint in main; launcher reuses only the same build/data instance, rejects old/unknown occupied ports with a clear safe update instruction. Settings displays running build. Regression tests cover old/same/unknown identity, startup race and metadata privacy.
 2. **51.2 implemented_verified:** offline/online consistent SQLite backup and idle-job preflight helper; installer safeguards before stopping only the exact installed EXE, preserves old distribution/shortcut. Disposable legacy-owner-copy migration + frozen old-profile browser rehearsal, then locally install and restart/verify actual Desktop build. Tests cover active jobs, WAL snapshot and upgrade integrity. No owner data edits beyond normal startup migrations.
-3. **51.3 implemented_verified:** reconcile architecture/project/renderer docs and state; retain historical evidence, published1.4.0-rc.1, feature49.10 real-art/owner gates. Record quality, install/rollback and persistence proof.
+3. **51.3 implemented_verified:** reconcile architecture/project/renderer docs and state; retain historical evidence, published 1.4.0-rc.1, feature 49.10 real-art/owner gates. Record quality, install/rollback and persistence proof.
 
 ## Paths / allowed_files
 - `backend/core/build_info.py`
@@ -54,4 +54,4 @@ Targeted pytest desktop/build/backup/health; node --check settings.js; PowerShel
 
 ## Result
 
-Full pytest1884 passed in787.66s;25 focused; local installed build468f9f7ce4b4 verified on5/5 existing profiles (47 voices,29/21 slots), original owner rows and289 native files preserved. Consistent rollback DBs/old EXE/shortcut retained. [Report](../../../docs/operations/desktop-recovery-20261016.md). Technical verification and owner/release gates remain separate.
+Full pytest 1884 passed in 787.66s; 25 focused; local installed build 468f9f7ce4b4 verified on 5/5 existing profiles (47 voices, 29/21 slots), original owner rows and 289 native files preserved. Consistent rollback DBs/old EXE/shortcut retained. [Report](../../../docs/operations/desktop-recovery-20261016.md). Technical verification and owner/release gates remain separate.

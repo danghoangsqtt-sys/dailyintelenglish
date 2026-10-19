@@ -46,8 +46,8 @@ Shorts, thumbnail, series/copy và export cho Solo. Hoàn thành contract tươn
 ## File-Level Plan / allowed_files
 
 1. Carry mode/structure/voice IDs/front pack refs qua copy và series episode creation; project mới có approval draft và fingerprint riêng.
-2. Shorts retime token anchors, clamp segments theo window, validate bố cục9:16, presenter/hook vẫn trong safe area.
-3. Thumbnail Solo có một front presenter và topic/illustration; không ép layout hai người. Giữ compositor9:16 safe area.
+2. Shorts retime token anchors, clamp segments theo window, validate bố cục 9:16, presenter/hook vẫn trong safe area.
+3. Thumbnail Solo có một front presenter và topic/illustration; không ép layout hai người. Giữ compositor 9:16 safe area.
 4. Export chứa mode/revision metadata và assets theo convention hiện có; giữ series/Episode folder tách biệt, title không chia Ep.2.
 5. YouTube copy phản ánh độc thoại kiến thức, không giới thiệu hai người không tồn tại. Không tự upload/publish.
 
@@ -64,7 +64,7 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 ## Verification / expected results
 
 1. Series/copy round-trip mode/voices/front pins, approval draft; channel classic không đổi.
-2. Short cắt giữa segment/word có anchors hợp lệ, không âm thời gian/nhân đôi audio; presenter/caption fit9:16.
+2. Short cắt giữa segment/word có anchors hợp lệ, không âm thời gian/nhân đôi audio; presenter/caption fit 9:16.
 3. Solo/classic thumbnail và export tests; hai Episode liên tiếp xuất hai folder, không ghi đè.
 4. Export copy ngoài DB lock còn hoạt động; lỗi giữ package tốt cũ.
 5. `git diff --check`; review diff đúng Paths. Chạy quality gates theo SYSTEM-RULES và PLAN trước commit; explicit staging, tuân thủ PM/owner authorization.
@@ -82,10 +82,10 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 - 2026-10-16: bounded additions: additive series mode/structure migration; front-image paths in thumbnail composition; hook reserved header and diagram edge text included in the shared geometry budget. Shorts retain absolute parent anchors through frame-window rendering, avoiding a second, drifting timeline.
 - 2026-10-16: initial plan recorded before implementation; final evidence below.
 
-## Final technical verification —2026-10-16
+## Final technical verification — 2026-10-16
 
-Additive029 series mode/structure; one-presenter independent projects; config-only draft copies preserving voices/cast pins; Solo thumbnail/monologue copy; absolute parent-frame Short timing; portable checked image export. Existing30–90s user Short policy unchanged.3 integration tests, native/classic regression and both Solo thumbnail sizes checked.
+Additive 029 series mode/structure; one-presenter independent projects; config-only draft copies preserving voices/cast pins; Solo thumbnail/monologue copy; absolute parent-frame Short timing; portable checked image export. Existing 30–90s user Short policy unchanged.3 integration tests, native/classic regression and both Solo thumbnail sizes checked.
 
-Feature full pytest 1867 passed in779.20s. Post-Windows-UTF8 full run:1862 passed,5 legacy subprocess mock-signature failures; all40 video/bridge checks passed in7.95s after updating those5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
+Feature full pytest 1867 passed in 779.20s. Post-Windows-UTF8 full run: 1862 passed, 5 legacy subprocess mock-signature failures; all 40 video/bridge checks passed in 7.95s after updating those 5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
 
 [Evidence report](../../../../docs/operations/phase49-solo-explainer.md). Git persistence is recorded after the implementation checkpoint; no owner acceptance or release tag implied.

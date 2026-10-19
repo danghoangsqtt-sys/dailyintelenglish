@@ -1,4 +1,4 @@
-# Task50.1 — BUG-042 cancellation-safe shared transactions
+# Task 50.1 — BUG-042 cancellation-safe shared transactions
 
 Status: implemented_verified (technical)2026-10-16. Owner authorized `vp-evolve`+`vp-auto` for audit bugs.
 
@@ -35,6 +35,6 @@ Shared helper high impact. aiosqlite worker may continue a queued SQL operation 
 
 First run `pytest tests/test_transactions.py -q` against old helper: targeted failure expected. After fix, focused transactions/worker/jobs/plan/API suites pass. Full `pytest tests/ -x -q`, Ruff, renderer tests/typecheck and JS syntax before final handoff. No real DB writes.
 
-## Verification result2026-10-16
+## Verification result 2026-10-16
 
-Full **1848 passed in741.01s**,175 focused,104 renderer/TypeScript/Ruff/JS passed;2 fresh-process persistence checks and doc/schema parity clean. See `docs/operations/task49-5b-recovery-20261016.md`. Technical verification is separate from owner acceptance and actual Git persistence; no release.
+Full **1848 passed in 741.01s**, 175 focused, 104 renderer/TypeScript/Ruff/JS passed; 2 fresh-process persistence checks and doc/schema parity clean. See `docs/operations/task49-5b-recovery-20261016.md`. Technical verification is separate from owner acceptance and actual Git persistence; no release.

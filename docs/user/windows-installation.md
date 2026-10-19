@@ -94,7 +94,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Chuẩn bị trình duyệt render thất bạ
 Pop-Location
 ```
 
-Với mã nguồn Phase49 mới, chạy thêm `npm --prefix renderer run build:preview` tại thư mục gốc để tạo Player trong Step5. Mã nguồn tại tag phát hành1.4.0-rc.1 chưa có lệnh này; không áp dụng bước này cho tag cũ.
+Với mã nguồn Phase 49 mới, chạy thêm `npm --prefix renderer run build:preview` tại thư mục gốc để tạo Player trong Step 5. Mã nguồn tại tag phát hành 1.4.0-rc.1 chưa có lệnh này; không áp dụng bước này cho tag cũ.
 
 `npm ci` cài theo lockfile của bản phát hành. `remotion browser ensure` tải/kiểm tra trình duyệt dành cho render; trình duyệt này khác với trình duyệt bạn dùng mở giao diện.
 
@@ -186,11 +186,11 @@ File `.env` là cấu hình tùy chọn tại thư mục gốc; nếu chưa có,
 Tài liệu được đối chiếu với mã nguồn, script cài và gói `v1.4.0-rc.1`. Gói đã được smoke test trên máy tham chiếu có runtime; **chưa có kiểm thử cài mới từ đầu trên một máy Windows sạch**. Những yêu cầu trên giúp chuẩn bị đúng thành phần, không thay thế kết quả kiểm thử máy đích.
 
 
-## Bản thử cục bộ và lỗi mở nhầm bản cũ (Phase51)
+## Bản thử cục bộ và lỗi mở nhầm bản cũ (Phase 51)
 
-ZIP phát hành `v1.4.0-rc.1` trên GitHub là gói ngày2026-10-15. Bản thử dựng từ mã nguồn mới có thể vẫn mang số1.4.0-rc.1. Xem **Settings → Desktop … Build …** để biết bản đang thực sự phục vụ trình duyệt; `/api/system/build` cung cấp cùng nhận diện mà không trả về đường dẫn dữ liệu.
+ZIP phát hành `v1.4.0-rc.1` trên GitHub là gói ngày 2026-10-15. Bản thử dựng từ mã nguồn mới có thể vẫn mang số 1.4.0-rc.1. Xem **Settings → Desktop … Build …** để biết bản đang thực sự phục vụ trình duyệt; `/api/system/build` cung cấp cùng nhận diện mà không trả về đường dẫn dữ liệu.
 
-Nếu hồ sơ cũ thiếu **Character voice** hoặc **Presenter · 21 pictures**, kiểm tra bản đang chạy. Chỉ cập nhật mã nguồn hoặc mở một EXE khác trong khi bản cũ giữ cổng8000 sẽ không nâng cấp tiến trình cũ. Launcher mới chỉ mở lại tiến trình khớp cả build và dữ liệu; nếu khác, nó báo cần hoàn tất tác vụ và cập nhật ứng dụng. Không tự dừng tác vụ khi bấm EXE.
+Nếu hồ sơ cũ thiếu **Character voice** hoặc **Presenter · 21 pictures**, kiểm tra bản đang chạy. Chỉ cập nhật mã nguồn hoặc mở một EXE khác trong khi bản cũ giữ cổng 8000 sẽ không nâng cấp tiến trình cũ. Launcher mới chỉ mở lại tiến trình khớp cả build và dữ liệu; nếu khác, nó báo cần hoàn tất tác vụ và cập nhật ứng dụng. Không tự dừng tác vụ khi bấm EXE.
 
 Từ đúng workspace mã nguồn mới, hoàn tất hoặc hủy tác vụ đang chạy, rồi dựng staging và cài:
 

@@ -49,7 +49,7 @@ Render production, cử chỉ và motion theo approved plan. Hoàn thành contra
 3. 10 pose cues theo ý: talk/point đúng phía/count/emphasize/think/wave/neutral, có rests. Mouth theo audio, blink và breathing nhẹ, seed/frame xác định.
 4. Uniform scale và trajectory đã validate; không dùng quarter-turn mirroring cho front. Presenter luôn hiện, không mất hình giữa mouth poses.
 5. Precompute/memo anchors/layout/timeline; không solver/provider/file I/O mỗi frame. Reuse ANGLE/timeout/retry và fingerprint check trước atomic publish.
-6. Giữ full portrait API flow hiện tại trừ khi có cập nhật scope được ghi rõ; hai aspect dùng bố cục riêng, không crop output16:9.
+6. Giữ full portrait API flow hiện tại trừ khi có cập nhật scope được ghi rõ; hai aspect dùng bố cục riêng, không crop output 16:9.
 
 **File mới dự kiến:** `renderer/src/presenterTimeline.ts`, `renderer/src/presenterTimeline.test.ts`, `tests/test_explainer_video_props.py`.
 
@@ -57,7 +57,7 @@ Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu ph�
 
 ## Risks / guardrails
 
-Cử chỉ vẫn là ảnh2D, không hứa skeletal animation. Mouth pair alignment và blink chỉ dùng pose tương thích để tránh bật khuôn mặt.
+Cử chỉ vẫn là ảnh 2D, không hứa skeletal animation. Mouth pair alignment và blink chỉ dùng pose tương thích để tránh bật khuôn mặt.
 
 Dùng constants/path helpers hiện có, service layer async, validation API + semantic. Không giữ shared DB lock trong network/render/copy nặng. Không sửa dữ liệu production khi có thể dùng sandbox. Không thay đổi gate cũ hoặc phát hành chỉ vì task kỹ thuật chạy qua.
 
@@ -81,10 +81,10 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 - 2026-10-16: bounded bridge scope: reuse verified payload for production, stage immutable assets per attempt, include plan/source in video CAS, and share SoloScene with StillFrame. Fixture media verification does not replace owner V49 acceptance.
 - 2026-10-16: initial plan recorded before implementation; final evidence below.
 
-## Final technical verification —2026-10-16
+## Final technical verification — 2026-10-16
 
 Approved immutable media bridge, per-attempt verified image staging, deterministic poses/mouth/blink/rest, audio-tail duration and source/plan publication CAS. Actual content-window renders and frozen branded production API/SRT checked; Windows Unicode decoding fixed.
 
-Feature full pytest 1867 passed in779.20s. Post-Windows-UTF8 full run:1862 passed,5 legacy subprocess mock-signature failures; all40 video/bridge checks passed in7.95s after updating those5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
+Feature full pytest 1867 passed in 779.20s. Post-Windows-UTF8 full run: 1862 passed, 5 legacy subprocess mock-signature failures; all 40 video/bridge checks passed in 7.95s after updating those 5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
 
 [Evidence report](../../../../docs/operations/phase49-solo-explainer.md). Git persistence is recorded after the implementation checkpoint; no owner acceptance or release tag implied.

@@ -68,7 +68,7 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 ## Progress
 
 - Final full pytest: **1,668 passed**, one existing warning,1,171.01s; focused **39 passed**, Ruff/diff clean. Evidence: `data/tmp/evolve-20261016/task48.1-pytest.log`. Commit/push checkpoint follows; no phase PASS claimed.
-- Owner feedback: Guy/Andrew differ, but both clearer differences and more natural intonation are required. Four further real auditions (Brian/Christopher/Roger/Ryan) prepared with the same question/example passage at1x speed/pitch0. GateV48 stays pending. No provider/engine change or unsupported emotion claim.
+- Owner feedback: Guy/Andrew differ, but both clearer differences and more natural intonation are required. Four further real auditions (Brian/Christopher/Roger/Ryan) prepared with the same question/example passage at1x speed/pitch0. Gate V48 stays pending. No provider/engine change or unsupported emotion claim.
 
 - Implemented English catalog, last-good disk cache, bounded network timeout, typed audition API and separate TTL/quota preview storage. Targeted tests **39 passed** (including legacy TTS routes); Ruff and diff check clean. One fixture setup issue (pre-created tts_cache directory) corrected; no product failure hidden.
 - Live service smoke:47 English voices, Guy/Andrew en-US male auditions generated, each14 word boundaries; both MP3s fully decoded (6.864s/5.256s). Isolated DATA_DIR did not create app.db. Evidence `data/tmp/evolve-20261016/voice-smoke/report.json`. Owner listening question sent asynchronously; this is not phase acceptance.

@@ -4,37 +4,37 @@
 
 Status: planned; 0/4 tasks. From `/vp-audit` 2026-10-19 (1884 pytest and 124 renderer tests passed; no failing behaviour). [Plan](phases/52-audit-hygiene/PLAN.md): 52.1 BUG-046 ignore `data/tts_preview/`, 52.2 ENH-036 Solo editor node IDs / direct layout import / launcher timeout, 52.3 BUG-048 text spacing + CHANGELOG order, 52.4 BUG-047 HANDOFF resume state. No version bump; owner gates and Phase 49.10 unchanged. Next: `/vp-auto --phase 52`.
 
-## Phase51 — Desktop runtime recovery (2026-10-16)
+## Phase 51 — Desktop runtime recovery (2026-10-16)
 
-Status: implemented_verified_pending_owner_review;3/3 technical tasks.51.1 build identity/port guard,51.2 consistent backup + legacy-copy rehearsal + local Desktop update,51.3 docs. Full1884 passed;5/5 old profiles verified,289 native files/original rows preserved. [Plan](phases/51-desktop-runtime-recovery/PLAN.md). No publication/V49 acceptance.
+Status: implemented_verified_pending_owner_review; 3/3 technical tasks.51.1 build identity/port guard, 51.2 consistent backup + legacy-copy rehearsal + local Desktop update, 51.3 docs. Full 1884 passed; 5/5 old profiles verified, 289 native files/original rows preserved. [Plan](phases/51-desktop-runtime-recovery/PLAN.md). No publication/V49 acceptance.
 
-## Audit recovery — Phase50, authorized2026-10-16
+## Audit recovery — Phase 50, authorized 2026-10-16
 
-Owner invoked vp-evolve+vp-auto for BUG-042/043/044 and completion49.5b. [Phase50 plan](phases/50-audit-recovery/PLAN.md):50.1 shared cancellation rollback and50.2 documentation implemented_verified;2/2 technical, PM review separate. BUG-043 belongs49.5b. Current_phase49, target1.5.0 and pending owner gates unchanged; no release/version bump.
+Owner invoked vp-evolve+vp-auto for BUG-042/043/044 and completion 49.5b. [Phase 50 plan](phases/50-audit-recovery/PLAN.md):50.1 shared cancellation rollback and 50.2 documentation implemented_verified; 2/2 technical, PM review separate. BUG-043 belongs 49.5b. Current_phase49, target 1.5.0 and pending owner gates unchanged; no release/version bump.
 
 ## Planned extension — 2026-10-16, target 1.5.0
 
-**Add Feature; Phase48 verified, Phase49 implementation verified, owner demo pending.** [SPEC tổng](SPEC.md), [PLAN tổng](PLAN.md), [brainstorm](../docs/brainstorm/session-2026-10-16.md). 15 tasks:14 technically verified;49.10 implementation checked, real-art/owner acceptance pending.0 planned implementation tasks. Owner has no front21 art; real demonstration and V49 sign-off remain pending. Bản phát hành1.4.0-rc.1 giữ nguyên.
+**Add Feature; Phase 48 verified, Phase 49 implementation verified, owner demo pending.** [SPEC tổng](SPEC.md), [PLAN tổng](PLAN.md), [brainstorm](../docs/brainstorm/session-2026-10-16.md). 15 tasks: 14 technically verified; 49.10 implementation checked, real-art/owner acceptance pending.0 planned implementation tasks. Owner has no front21 art; real demonstration and V49 sign-off remain pending. Bản phát hành 1.4.0-rc.1 giữ nguyên.
 
 ### Phase 48 — Chọn giọng riêng cho nhân vật
 
 - Goal: catalog English voice, nghe thử độc lập, lưu/áp giọng từng profile/speaker và cache đúng voice.
-- Tasks:48.1 catalog/audition →48.2 persistence →48.3 fingerprint/freshness →48.4 UI →48.5 GateV48.
+- Tasks: 48.1 catalog/audition →48.2 persistence →48.3 fingerprint/freshness →48.4 UI →48.5 Gate V48.
 - [SPEC](phases/48-character-voices/SPEC.md) · [PLAN và cards](phases/48-character-voices/PLAN.md).
 - Acceptance: hai nhân vật cùng gender/locale có hai voice ID thật, save/reload đúng, preview không đổi production cache; đổi giọng không phát lại audio cũ; owner nghe duyệt.
-- Status:**implemented_verified,5/5**. Owner listening accepted; full final1704,45 browser regressions, real47-choice UI/audio/render/export. [Summary](phases/48-character-voices/SUMMARY.md). Current EXE unchanged; no old owner gate closed.
+- Status:**implemented_verified, 5/5**. Owner listening accepted; full final 1704,45 browser regressions, real 47-choice UI/audio/render/export. [Summary](phases/48-character-voices/SUMMARY.md). Current EXE unchanged; no old owner gate closed.
 
 ### Phase 49 — Solo Explainer và presenter chính diện
 
 - Goal: một người giải thích tiếng Anh, nhìn camera, luôn hiện trước minh họa; auto position/scale, owner preview/edit/approve.
-- Dependencies:Phase48/V48; front21 và script là nền cho explainer plan/layout, sau đó Player/render/integrations.
-- Tasks49.1–49.10:[PLAN và cards](phases/49-solo-explainer/PLAN.md) · [SPEC](phases/49-solo-explainer/SPEC.md).
-- Acceptance: một pack thật21ảnh, video có ảnh/sơ đồ/thẻ chữ, bố cục hai aspect không che nội dung, lưu locks/revision đúng, full16:9/full9:16/Short và staged EXE verified, owner GateV49.
-- Status:**in_progress,5/10 technically verified;49.6 next planned**.49.5b full 1848 passed in741.01s;175 focused,104 renderer; approval still requires actual49.6 geometry. Hoang front21 real art and V49 owner review remain pending. [Report](../docs/operations/task49-5b-recovery-20261016.md).
+- Dependencies:Phase 48/V48; front21 và script là nền cho explainer plan/layout, sau đó Player/render/integrations.
+- Tasks 49.1–49.10:[PLAN và cards](phases/49-solo-explainer/PLAN.md) · [SPEC](phases/49-solo-explainer/SPEC.md).
+- Acceptance: một pack thật 21ảnh, video có ảnh/sơ đồ/thẻ chữ, bố cục hai aspect không che nội dung, lưu locks/revision đúng, full 16:9/full 9:16/Short và staged EXE verified, owner Gate V49.
+- Status:**in_progress, 5/10 technically verified; 49.6 next planned**.49.5b full 1848 passed in 741.01s; 175 focused, 104 renderer; approval still requires actual 49.6 geometry. Hoang front21 real art and V49 owner review remain pending. [Report](../docs/operations/task49-5b-recovery-20261016.md).
 
-**49.5a checkpoint (2026-10-16):** 49.5a foundation verified: immutable project illustrations, exact token/real-audio timing and atomic028 job/asset migration. Full1809 passed in740.11s,143 related tests (34 new), Ruff/diff clean. Populated disposable copy preserved17 jobs/43 checkpoints and passed injected rollback/FK/integrity/2 restarts; actual Edge mapping25/25 tokens over11.54s.49.5 remains in_progress for proposal/locks/history/approval; owner DB/EXE/release unchanged.
+**49.5a checkpoint (2026-10-16):** 49.5a foundation verified: immutable project illustrations, exact token/real-audio timing and atomic 028 job/asset migration. Full 1809 passed in 740.11s, 143 related tests (34 new), Ruff/diff clean. Populated disposable copy preserved 17 jobs/43 checkpoints and passed injected rollback/FK/integrity/2 restarts; actual Edge mapping 25/25 tokens over 11.54s.49.5 remains in_progress for proposal/locks/history/approval; owner DB/EXE/release unchanged.
 
-Phase47 owner review và B-25/B-26/B-27/B-28 vẫn pending, không bị thay thế bởi V48/V49. Mục tiêu1.5.0 chỉ là planned version, chưa đổi runtime hay tạo release.
+Phase 47 owner review và B-25/B-26/B-27/B-28 vẫn pending, không bị thay thế bởi V48/V49. Mục tiêu 1.5.0 chỉ là planned version, chưa đổi runtime hay tạo release.
 
 
 ## Current follow-up: Phase 47 — Caption continuity (BUG-041)
@@ -205,7 +205,7 @@ Owner authorized vp-evolve planning + immediate vp-auto execution on 2026-10-15.
   upload only, see Sub-task 1.7c, done); the actual lip-sync inference pipeline itself
   remains not started
   - `generate_video_avatar(project_id, avatar_images)` — per-speaker avatar lip-sync
-  - Side-by-side layout: speaker1 left, speaker2 right
+  - Side-by-side layout: speaker 1 left, speaker 2 right
   - Active speaker highlight (border glow on speaking turn)
   - Verify: lips-sync avatar video generates for 2-speaker dialogue
 
@@ -737,7 +737,7 @@ Progress-cancellation/LivePortrait precedent.
   `step1_config`, `step6_thumbnail`, `step7_youtube`) — `theme.js` already applied
   the correct default, this just stops the pre-JS flash.
 - [x] Added a real "Go to Dashboard" link to the "Missing project" error state on all
-  6 pipeline pages (step2-7) via a narrowly-scoped `showMissingProjectError()`
+  6 pipeline pages (step 2-7) via a narrowly-scoped `showMissingProjectError()`
   function per page — every other `showError()` call site verified unchanged.
 - [x] Styled the TTS speed/pitch/volume range sliders with the app's accent color
   (`accent-color: var(--accent)`) instead of each browser's default appearance —

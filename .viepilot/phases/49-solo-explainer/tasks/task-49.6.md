@@ -36,10 +36,10 @@ Bố cục hai tỷ lệ, vùng quan trọng và đường motion. Hoàn thành 
 ## File-Level Plan / allowed_files
 
 1. Pure layout solver cho left/right/center và uniform scale, normalized coordinates, hai variant riêng 16:9 và 9:16.
-2. Default height22%, khoảng12–38% thêm giới hạn width/safe area; xét important bounds, caption/logo, hợp nhất alpha bounds của pose và motion margin.
+2. Default height 22%, khoảng 12–38% thêm giới hạn width/safe area; xét important bounds, caption/logo, hợp nhất alpha bounds của pose và motion margin.
 3. Ảnh chưa annotation được contain vào panel riêng; owner sửa important rectangles, không dựa vào AI đoán góc trống.
 4. Đề xuất reflow/contain/scale khác; không fit thì có issues và không approve. Không ẩn presenter hoặc chồng lên chữ.
-5. Giữ vị trí khoảng2.5s khi phù hợp; kiểm tra đường easing, không có hành lang an toàn thì cut tại ranh giới đoạn và luôn có presenter.
+5. Giữ vị trí khoảng 2.5s khi phù hợp; kiểm tra đường easing, không có hành lang an toàn thì cut tại ranh giới đoạn và luôn có presenter.
 6. Backend validation và renderer helper dùng cùng versioned geometry fixtures; backend là nguồn quyết định hợp lệ, preview phản hồi nhanh.
 
 **File mới dự kiến:** `backend/library/explainer_layout_service.py`, `tests/test_explainer_layout.py`, `renderer/src/explainerLayout.ts`, `renderer/src/explainerLayout.test.ts`.
@@ -48,9 +48,9 @@ Chỉ sửa các Paths trên và cập nhật tiến độ card/phase. Nếu ph�
 
 ## Risks / guardrails
 
-### Execution refinement2026-10-16
+### Execution refinement 2026-10-16
 
-Shared normalized rules live in `frontend/static/explainer-layout-rules.json` (already included by frozen frontend data), imported by TS and loaded through project resource paths in Python. Geometry uses the union alpha bounds of all21 verified immutable front pictures, not guessed body proportions. Pure helpers check safe polygon, reserved caption/header, conservative text/grid capacity and the entire monotonic interpolation envelope. Invalid locked layouts refuse approval; auto arrangement preserves locks and chooses a cut when no collision-free path exists. POST `/explainer-plan/layout` returns revision/source-guarded suggestions without implicitly approving or saving them. Existing missing-checker tests become real missing-layout/invalid-geometry refusal tests; no permissive mock in production. Shared adversarial fixture cases verify Python/TS parity. Final full gates run after the remaining sequential implementation slices, with focused technical results recorded at each slice and Git persistence before formal workflow PASS.
+Shared normalized rules live in `frontend/static/explainer-layout-rules.json` (already included by frozen frontend data), imported by TS and loaded through project resource paths in Python. Geometry uses the union alpha bounds of all 21 verified immutable front pictures, not guessed body proportions. Pure helpers check safe polygon, reserved caption/header, conservative text/grid capacity and the entire monotonic interpolation envelope. Invalid locked layouts refuse approval; auto arrangement preserves locks and chooses a cut when no collision-free path exists. POST `/explainer-plan/layout` returns revision/source-guarded suggestions without implicitly approving or saving them. Existing missing-checker tests become real missing-layout/invalid-geometry refusal tests; no permissive mock in production. Shared adversarial fixture cases verify Python/TS parity. Final full gates run after the remaining sequential implementation slices, with focused technical results recorded at each slice and Git persistence before formal workflow PASS.
 
 Easing overshoot có thể vượt box; xét envelope hoặc dùng easing không overshoot. Safe-area centering khác tâm frame.
 
@@ -75,10 +75,10 @@ Dùng constants/path helpers hiện có, service layer async, validation API + s
 
 - 2026-10-16: initial plan recorded before implementation; final evidence below.
 
-## Final technical verification —2026-10-16
+## Final technical verification — 2026-10-16
 
-Shared JSON rules, actual21-pose alpha extents, text/protected-region budgets, both aspect safe polygons, full motion-envelope proof and lock-preserving layout suggestions.9 backend geometry checks plus8 renderer geometry cases; full regression below.
+Shared JSON rules, actual 21-pose alpha extents, text/protected-region budgets, both aspect safe polygons, full motion-envelope proof and lock-preserving layout suggestions.9 backend geometry checks plus 8 renderer geometry cases; full regression below.
 
-Feature full pytest 1867 passed in779.20s. Post-Windows-UTF8 full run:1862 passed,5 legacy subprocess mock-signature failures; all40 video/bridge checks passed in7.95s after updating those5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
+Feature full pytest 1867 passed in 779.20s. Post-Windows-UTF8 full run: 1862 passed, 5 legacy subprocess mock-signature failures; all 40 video/bridge checks passed in 7.95s after updating those 5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
 
 [Evidence report](../../../../docs/operations/phase49-solo-explainer.md). Git persistence is recorded after the implementation checkpoint; no owner acceptance or release tag implied.

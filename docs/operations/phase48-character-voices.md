@@ -77,6 +77,6 @@ Một server nguồn riêng dùng cùng sandbox, không thay ứng dụng đang 
 - Dữ liệu DB/media thật của owner không sửa; không thay EXE, shortcut hay release. Chỉ có renderer public staging/cache phục vụ thử nghiệm được tạo theo cơ chế hiện có.
 - Output/caches theo attempt được giữ để bảo vệ bản trước; chưa có tự dọn lịch sử media production. Catalog/audition có TTL/quota riêng. Không xóa `.remotion/` hoặc dữ liệu owner để làm sạch evidence.
 - Edge TTS cần mạng; không thêm engine trả phí/cloning. Voice không khả dụng báo lỗi, không âm thầm đổi sang voice khác.
-- Phase47 visual review và B-25/B-26/B-27/B-28 giữ pending. GateV49 cần front pack thật và demo Solo riêng.
+- Phase47 visual review và B-25/B-26/B-27/B-28 giữ pending. Gate V49 cần front pack thật và demo Solo riêng.
 
 Hướng dẫn: [Chọn giọng cho nhân vật](../user/character-voices.md). API được sinh từ OpenAPI thật ở [API reference](../api.md).

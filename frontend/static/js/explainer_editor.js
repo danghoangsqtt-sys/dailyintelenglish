@@ -6,7 +6,7 @@ const ExplainerEditor = (() => {
     const state = {view:null,segments:[],assets:[],selected:0,aspect:"16:9",dirty:false,edit:0,saving:null,busy:false,
       conflict:false,disposed:false,preview:null,previewToken:0,geometry:null,job:null,timer:null};
     container.innerHTML = `<div class="solo-editor"><h2>Solo Explainer</h2>
-      <p class="section-hint">Review knowledge claims, illustrations and both layouts. <a href="/characters">Create the21 front presenter pictures in Character Library</a>.</p>
+      <p class="section-hint">Review knowledge claims, illustrations and both layouts. <a href="/characters">Create the 21 front presenter pictures in Character Library</a>.</p>
       <div class="solo-toolbar"><button type="button" data-action="propose" class="btn btn-primary">Propose plan</button>
       <button type="button" data-action="save" class="btn btn-ghost">Save changes</button><button type="button" data-action="arrange" class="btn btn-ghost">Arrange layouts</button>
       <button type="button" data-action="preview" class="btn btn-ghost">Refresh preview</button><button type="button" data-action="approve" class="btn btn-primary">Approve reviewed plan</button>

@@ -1,6 +1,6 @@
 # PLAN — Phase 49: Solo Explainer và bộ presenter chính diện
 
-- Status: **implementation_verified_owner_art_pending**,2026-10-16;9/10 technical tasks verified,49.10 code/package checks verified and real-art V49 demonstration pending. Owner confirms no front21 art.
+- Status: **implementation_verified_owner_art_pending**, 2026-10-16;9/10 technical tasks verified, 49.10 code/package checks verified and real-art V49 demonstration pending. Owner confirms no front21 art.
 - Đọc [SPEC](SPEC.md) và [PLAN tổng](../../PLAN.md) trước thực thi.
 - Độ lớn: XL. Không cam kết deadline trước khi có input/owner review.
 
@@ -27,7 +27,7 @@ Mỗi card có repo-relative Paths và file-level plan. Scope mở rộng phải
 ## Cách kiểm tra
 
 - Task 49.1: new/old DB, fault injection migration, restart hai lần, default classic.
-- Task 49.2/49.3: native29/front21, versioned manifests, reference DAG, import/review/browser.
+- Task 49.2/49.3: native 29/front21, versioned manifests, reference DAG, import/review/browser.
 - Task 49.4: script Why/How/List, CEFR/budget, classic prompt/repair.
 - Task 49.5/49.6: anchors/tiling/revision/locks/stale; geometry/path constraints cả hai aspect.
 - Task 49.7: Player bundle, shared scene, editor/browser, no dev server.
@@ -43,4 +43,4 @@ Chạy tests tập trung trong từng task; quality gates đầy đủ theo SYST
 - Artifact tạm dự kiến: `data/tmp/phase49-solo/`.
 - Card/PHASE-STATE cập nhật kết quả thật; technical verification không thay owner acceptance.
 - Không tự đè EXE đang dùng, thay MP4/audio dự án thật hoặc phát hành chỉ để chứng minh task.
-- Gate V49 chưa chạy. Bản đang phát hành giữ1.4.0-rc.1, target 1.5.0 là kế hoạch.
+- Gate V49 chưa chạy. Bản đang phát hành giữ 1.4.0-rc.1, target 1.5.0 là kế hoạch.

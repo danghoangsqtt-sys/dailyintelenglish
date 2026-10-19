@@ -35,4 +35,4 @@ Chạy tests tập trung trong từng task; quality gates đầy đủ theo SYST
 - Artifact tạm dự kiến: `data/tmp/phase48-voices/`.
 - Card/PHASE-STATE cập nhật kết quả thật; technical verification không thay owner acceptance.
 - Không tự đè EXE đang dùng, thay MP4/audio dự án thật hoặc phát hành chỉ để chứng minh task.
-- GateV48 technical verified + owner listening accepted; xem [SUMMARY](SUMMARY.md). Bản đang phát hành giữ1.4.0-rc.1, target 1.5.0 là kế hoạch.
+- Gate V48 technical verified + owner listening accepted; xem [SUMMARY](SUMMARY.md). Bản đang phát hành giữ1.4.0-rc.1, target 1.5.0 là kế hoạch.

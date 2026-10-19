@@ -1,11 +1,11 @@
 # PHASE-STATE — Phase 49: Solo Explainer và bộ presenter chính diện
 
-- **Status:** implementation_verified_owner_art_pending;49.1–49.9 technically verified,49.10 code/package checks verified, real-art V49 demonstration pending.
+- **Status:** implementation_verified_owner_art_pending; 49.1–49.9 technically verified, 49.10 code/package checks verified, real-art V49 demonstration pending.
 - **Planned at:** 2026-10-16, Asia/Bangkok.
-- **Tasks:**9/10 technically verified;49.10 implementation verified but its real-art/owner gate remains pending. No implementation task is left planned.
+- **Tasks:**9/10 technically verified; 49.10 implementation verified but its real-art/owner gate remains pending. No implementation task is left planned.
 - **Gate V49:** fixture technical checks passed; real-art demonstration and explicit owner acceptance pending.
 - **Dependencies:** Phase 48 / Gate V48; schema → front assets và script → explainer plan → layout → preview → render → integrations → demo.
-- **Release:** published1.4.0-rc.1 unchanged; local source EXE installed/old profiles verified in Phase51 (Build468f9f7ce4b4); target1.5.0 unreleased.
+- **Release:** published 1.4.0-rc.1 unchanged; local source EXE installed/old profiles verified in Phase 51 (Build 468f9f7ce4b4); target 1.5.0 unreleased.
 - **Source:** [SPEC](SPEC.md), [PLAN](PLAN.md), [master PLAN](../../PLAN.md).
 
 | Task | Nội dung | Status |
@@ -21,9 +21,9 @@
 | [49.9](tasks/task-49.9.md) | Shorts, thumbnail, series/copy và export cho Solo | implemented_verified |
 | [49.10](tasks/task-49.10.md) | Gate V49: demo thật, hồi quy, đóng gói và bàn giao | implementation_verified_owner_art_pending |
 
-**49.5a checkpoint (2026-10-16):** 49.5a foundation verified: immutable project illustrations, exact token/real-audio timing and atomic028 job/asset migration. Full1809 passed in740.11s,143 related tests (34 new), Ruff/diff clean. Populated disposable copy preserved17 jobs/43 checkpoints and passed injected rollback/FK/integrity/2 restarts; actual Edge mapping25/25 tokens over11.54s.49.5 remains in_progress for proposal/locks/history/approval; owner DB/EXE/release unchanged.
+**49.5a checkpoint (2026-10-16):** 49.5a foundation verified: immutable project illustrations, exact token/real-audio timing and atomic 028 job/asset migration. Full 1809 passed in 740.11s, 143 related tests (34 new), Ruff/diff clean. Populated disposable copy preserved 17 jobs/43 checkpoints and passed injected rollback/FK/integrity/2 restarts; actual Edge mapping 25/25 tokens over 11.54s.49.5 remains in_progress for proposal/locks/history/approval; owner DB/EXE/release unchanged.
 
-**49.5b recovery verification (2026-10-16):** 49.5b technically verified: full pytest 1848 passed in741.01s;175 focused in28.42s;104 renderer tests and TypeScript/Ruff/JS/diff clean. BUG-042 cancellation-safe shared rollback and BUG-043 PATCH422 fixed;BUG-044 docs reconciled. Two fresh process restarts preserved history/locks/idempotency;integrity/FK clean. Next49.6 geometry/layout; production approval refuses missing real geometry. Owner DB/EXE/release and V49/older gates unchanged. [Report](../../../docs/operations/task49-5b-recovery-20261016.md). Git persistence is assessed separately before formal task PASS.
+**49.5b recovery verification (2026-10-16):** 49.5b technically verified: full pytest 1848 passed in 741.01s; 175 focused in 28.42s; 104 renderer tests and TypeScript/Ruff/JS/diff clean. BUG-042 cancellation-safe shared rollback and BUG-043 PATCH 422 fixed;BUG-044 docs reconciled. Two fresh process restarts preserved history/locks/idempotency;integrity/FK clean. Next 49.6 geometry/layout; production approval refuses missing real geometry. Owner DB/EXE/release and V49/older gates unchanged. [Report](../../../docs/operations/task49-5b-recovery-20261016.md). Git persistence is assessed separately before formal task PASS.
 
 ## Planning verification
 
@@ -31,16 +31,16 @@ SPEC/PLAN đã được viết từ yêu cầu owner và code inventory. Validat
 
 ## Owner inputs
 
-Owner đã chọn **Hoang — “Why do we build habits?”** ngày16/10/2026. Dùng profile Hoang hiện có làm identity/outfit reference, cấu trúc Why. Bộ21 ảnh front sẽ do owner tạo bằng AI ngoài rồi nhập/duyệt; vẫn cần trước GateV49. Fixture dùng để kiểm tra logic trước, không thay nghiệm thu hình thật.
+Owner đã chọn **Hoang — “Why do we build habits?”** ngày 16/10/2026. Dùng profile Hoang hiện có làm identity/outfit reference, cấu trúc Why. Bộ 21 ảnh front sẽ do owner tạo bằng AI ngoài rồi nhập/duyệt; vẫn cần trước Gate V49. Fixture dùng để kiểm tra logic trước, không thay nghiệm thu hình thật.
 
-Bản chuẩn bị prompt21 và ảnh tham chiếu đã được gửi owner tại `data/tmp/evolve-20261016/hoang-front21/`. Đọc từ bản sao DB đã kiểm chứng, không sửa profile/assets thật. Neutral front vẫn chờ owner tạo/duyệt; backend và UI front import/review đã verified; real owner art chưa nhập/duyệt. Solo script đã qua technical gate; layout/render vẫn đang triển khai. Hai real LLM drafts chưa owner/factual/CEFR accepted.
+Bản chuẩn bị prompt 21 và ảnh tham chiếu đã được gửi owner tại `data/tmp/evolve-20261016/hoang-front21/`. Đọc từ bản sao DB đã kiểm chứng, không sửa profile/assets thật. Neutral front vẫn chờ owner tạo/duyệt; backend và UI front import/review đã verified; real owner art chưa nhập/duyệt. Solo script đã qua technical gate; layout/render vẫn đang triển khai. Hai real LLM drafts chưa owner/factual/CEFR accepted.
 
 Phase 47 vẫn chờ visual review. Gate B-25/B-26/B-27/B-28 giữ pending.
 
-## Final implementation checkpoint —2026-10-16
+## Final implementation checkpoint — 2026-10-16
 
-Feature full pytest 1867 passed in779.20s. Post-Windows-UTF8 full run:1862 passed,5 legacy subprocess mock-signature failures; all40 video/bridge checks passed in7.95s after updating those5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
+Feature full pytest 1867 passed in 779.20s. Post-Windows-UTF8 full run: 1862 passed, 5 legacy subprocess mock-signature failures; all 40 video/bridge checks passed in 7.95s after updating those 5 mocks, with no further application-code change.124 renderer tests, TypeScript/Ruff/JS/diff clean. Actual Player/StillFrame6 comparisons, four decoded fixture MP4s, two frozen restarts and production landscape/portrait/SRT verified. Real owner art/V49 acceptance pending.
 
-[Report](../../../docs/operations/phase49-solo-explainer.md) · [Summary](SUMMARY.md). Start with Character Library → Presenter21 to create/import/review real owner pictures; then complete49.10 real demo/V49.
+[Report](../../../docs/operations/phase49-solo-explainer.md) · [Summary](SUMMARY.md). Start with Character Library → Presenter 21 to create/import/review real owner pictures; then complete 49.10 real demo/V49.
 
-**Git persistence:** source `c517eca6181578329af690fe7470c90682a329bf` and technical tags49.6–49.9 pushed and remote-verified. This documentation checkpoint records the result. No49.10 done/phase-complete/release tag; real V49 remains pending.
+**Git persistence:** source `c517eca6181578329af690fe7470c90682a329bf` and technical tags 49.6–49.9 pushed and remote-verified. This documentation checkpoint records the result. No 49.10 done/phase-complete/release tag; real V49 remains pending.

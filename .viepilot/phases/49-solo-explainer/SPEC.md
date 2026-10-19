@@ -1,9 +1,9 @@
 # SPEC — Phase 49: Solo Explainer và bộ presenter chính diện
 
-- Ngày: 2026-10-16 · Trạng thái: **executing49.5** (49.1–49.4 verified; V49 still pending).
+- Ngày: 2026-10-16 · Trạng thái: **executing 49.5** (49.1–49.4 verified; V49 still pending).
 - Mục tiêu: Video kiến thức tiếng Anh một người, front21, minh họa đa dạng, bố cục tự đề xuất và owner duyệt.
 - Dependency: Phase 48 / Gate V48; schema → front assets và script → explainer plan → layout → preview → render → integrations → demo.
-- Quy mô: XL ·10 task ·49.1–49.4 implemented_verified,49.5 in_progress,5 planned.
+- Quy mô: XL ·10 task ·49.1–49.4 implemented_verified, 49.5 in_progress, 5 planned.
 - Nguồn chuẩn: [SPEC tổng](../../SPEC.md), phần 5–8; [brainstorm](../../../docs/brainstorm/session-2026-10-16.md).
 - Thực thi: [phase PLAN](PLAN.md), [state](PHASE-STATE.md).
 
@@ -25,7 +25,7 @@
 ## Contract bắt buộc
 
 - Presentation mode explicit, default classic cho project cũ; Solo đúng một speaker nhưng viết script trước khi đủ ảnh được.
-- Front21 độc lập native29; 10 cặp miệng + blink; prompt → AI ngoài → owner import/review. Giữ identity/outfit và nhìn camera.
+- Front21 độc lập native 29; 10 cặp miệng + blink; prompt → AI ngoài → owner import/review. Giữ identity/outfit và nhìn camera.
 - Why/How/List theo CEFR; ảnh/sơ đồ/thẻ chữ là schema hữu hạn, không executable code từ AI.
 - Segment token anchors từ script; timestamp từ audio thật. Revision, source fingerprint, locks và approval snapshot là bắt buộc.
 - Presenter luôn hiện, trái/phải/giữa, scale linh hoạt. Hai aspect có layout riêng; xét important regions, caption, brand và cả đường motion.
@@ -35,10 +35,10 @@
 
 ## Gate V49
 
-1. Pack thật21/21 approved, một tập kiến thức owner chọn có đủ ảnh + diagram + card.
+1. Pack thật 21/21 approved, một tập kiến thức owner chọn có đủ ảnh + diagram + card.
 2. Presenter chính diện luôn hiện, cử chỉ/miệng/blink phù hợp, vị trí/scale linh hoạt không che nội dung.
 3. Preview sửa/khóa/tải lại/regenerate và production dùng đúng approved revision.
-4. Full16:9, full 9:16 và một Short decode đầy đủ; drift/duration theo SPEC≤0.10s, caption/safe area hợp lệ.
+4. Full 16:9, full 9:16 và một Short decode đầy đủ; drift/duration theo SPEC≤0.10s, caption/safe area hợp lệ.
 5. Migration/legacy/classic regression, Player bundle/frozen EXE one-click được kiểm tra.
 6. Owner duyệt hình/nội dung; technical pass và owner acceptance ghi riêng.
 
@@ -46,4 +46,4 @@
 
 Rig3D/LivePortrait, tự sinh bộ presenter bằng Qwen local, arbitrary diagram/HTML từ AI, fact-check tự động toàn bộ kiến thức, tự publish YouTube.
 
-Gate B-25/B-26/B-27/B-28 và Phase 47 owner review vẫn giữ nguyên. Bản phát hành hiện tại1.4.0-rc.1; target 1.5.0 chưa được build/phát hành.
+Gate B-25/B-26/B-27/B-28 và Phase 47 owner review vẫn giữ nguyên. Bản phát hành hiện tại 1.4.0-rc.1; target 1.5.0 chưa được build/phát hành.

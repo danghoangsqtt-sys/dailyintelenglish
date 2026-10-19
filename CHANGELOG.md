@@ -1,11 +1,5 @@
 # Changelog — Daily Intel English Studio
 
-### Added (source, Phase49 tasks49.6–49.10; implementation verified, owner art/V49 pending)
-
-- Character profile Presenter21 slots now carry stricter per-action outside-AI prompts, fixed canvas/outfit/reference instructions and readable upload cards. Clipboard failures show a manual-copy fallback.
-- Safe layouts for16:9/9:16, actual21-pose alpha/motion proofs, editable illustrations/diagrams/cards, serialized autosave and a static Remotion Player with transport outside the picture. Preview/final/StillFrame share SoloScene and actual word timing; zero-length intro/outro and audio tails are handled.
-- Approved media staging and concurrent revision guards; Solo Shorts, one-front-presenter thumbnails, monologue publishing copy, series mode/structure, config-only draft copies and portable pinned-image export. Build generates the preview before PyInstaller. Real owner art/V49 acceptance and release remain pending.
-
 All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 Versioning: [SemVer](https://semver.org/)
@@ -18,43 +12,49 @@ Versioning: [SemVer](https://semver.org/)
 
 - From `/vp-audit` 2026-10-19: ignore the voice preview cache (BUG-046), reconcile HANDOFF resume state (BUG-047), restore missing spaces in UI/docs and CHANGELOG order (BUG-048), Solo editor node IDs / direct layout import / launcher timeout feedback (ENH-036). Not implemented yet.
 
-### Fixed — local Desktop trial, Phase51
+### Fixed — local Desktop trial, Phase 51
 
 - Desktop launch now checks build/data identity instead of silently opening an older app occupying the port. Settings identifies the serving build; installation checks unfinished jobs and creates consistent SQLite/old-application/shortcut backups.
-- Updated the local Desktop installation and verified voice controls plus29 native/21 front picture slots on all five existing profiles; preserved13 projects and289 native files. Published ZIP and real-art V49 acceptance remain separate. Reconciled recurring BUG-044 source/renderer documentation.
+- Updated the local Desktop installation and verified voice controls plus 29 native/21 front picture slots on all five existing profiles; preserved 13 projects and 289 native files. Published ZIP and real-art V49 acceptance remain separate. Reconciled recurring BUG-044 source/renderer documentation.
 
-### Source recovery —49.5b and BUG-042/043/044 (2026-10-16)
+### Added (source, Phase 49 tasks 49.6–49.10; implementation verified, owner art/V49 pending)
 
-- Durable Solo explainer proposals, immutable plan/history, owner locks/unlocks, source/revision CAS and guarded approval snapshots. Two proposal entry points share safe snapshots; valid checkpoints resume without another provider call and lost leases/cancelled/stale jobs cannot publish. Real geometry approval remains unavailable until49.6.
-- Shared SQLite write transactions finish rollback before unlocking under cancellation, including repeated cancellation; malformed duplicate aspects/segment IDs return422 envelopes and preserve the old plan/history. Strict proposal revisions and bounded repair of duplicate AI IDs.
-- Reconciled source-vs-EXE architecture/metadata and production renderer docs; generated API reference now documents180 routes. Full **1848 passed in741.01s**,175 focused,104 renderer/TypeScript and two fresh-process persistence checks. Initial sandbox run hit blocked live Edge network; the isolated real probe and full outside-sandbox retry passed. No owner DB/EXE/release changes.
+- Character profile Presenter 21 slots now carry stricter per-action outside-AI prompts, fixed canvas/outfit/reference instructions and readable upload cards. Clipboard failures show a manual-copy fallback.
+- Safe layouts for 16:9/9:16, actual 21-pose alpha/motion proofs, editable illustrations/diagrams/cards, serialized autosave and a static Remotion Player with transport outside the picture. Preview/final/StillFrame share SoloScene and actual word timing; zero-length intro/outro and audio tails are handled.
+- Approved media staging and concurrent revision guards; Solo Shorts, one-front-presenter thumbnails, monologue publishing copy, series mode/structure, config-only draft copies and portable pinned-image export. Build generates the preview before PyInstaller. Real owner art/V49 acceptance and release remain pending.
+
+### Source recovery — 49.5b and BUG-042/043/044 (2026-10-16)
+
+- Durable Solo explainer proposals, immutable plan/history, owner locks/unlocks, source/revision CAS and guarded approval snapshots. Two proposal entry points share safe snapshots; valid checkpoints resume without another provider call and lost leases/cancelled/stale jobs cannot publish. Real geometry approval remains unavailable until 49.6.
+- Shared SQLite write transactions finish rollback before unlocking under cancellation, including repeated cancellation; malformed duplicate aspects/segment IDs return 422 envelopes and preserve the old plan/history. Strict proposal revisions and bounded repair of duplicate AI IDs.
+- Reconciled source-vs-EXE architecture/metadata and production renderer docs; generated API reference now documents 180 routes. Full **1848 passed in 741.01s**, 175 focused, 104 renderer/TypeScript and two fresh-process persistence checks. Initial sandbox run hit blocked live Edge network; the isolated real probe and full outside-sandbox retry passed. No owner DB/EXE/release changes.
 
 
-### Added (source, Phase49 tasks49.1–49.4 +49.5a)
+### Added (source, Phase 49 tasks 49.1–49.4 +49.5a)
 
-- Explicit Classic/Solo project mode and Why/How/List structure, one-presenter Step1 controls and cast readiness before front assets. Bounded photo/diagram/text-card plan schemas, per-file atomic027 migration/tracking with strict rollback, defaultclassic legacy preservation, and mode-aware media publication revision. Full pytest1728, focused70/browser10, real DB online-backup copy with2 restarts/integrity/FK/restore verification. Solo script/front/editor/render work continues in later tasks; installed EXE unchanged.
+- Explicit Classic/Solo project mode and Why/How/List structure, one-presenter Step 1 controls and cast readiness before front assets. Bounded photo/diagram/text-card plan schemas, per-file atomic 027 migration/tracking with strict rollback, defaultclassic legacy preservation, and mode-aware media publication revision. Full pytest 1728, focused 70/browser10, real DB online-backup copy with 2 restarts/integrity/FK/restore verification. Solo script/front/editor/render work continues in later tasks; installed EXE unchanged.
 
-- Front21 backend:10 closed/open frontal poses plus blink, external-AI prompts with viewer-relative pointing and existing identity reference, full-body preparation without native crop, explicit native/front API view, separate readiness, guarded out-of-lock image staging and immutable pinned manifests with file hash verification. Native29 kept. Full pytest1740, front12/native28 regressions; real owner front art remains pending; source UI49.3 verified below.
+- Front21 backend: 10 closed/open frontal poses plus blink, external-AI prompts with viewer-relative pointing and existing identity reference, full-body preparation without native crop, explicit native/front API view, separate readiness, guarded out-of-lock image staging and immutable pinned manifests with file hash verification. Native 29 kept. Full pytest 1740, front12/native28 regressions; real owner front art remains pending; source UI 49.3 verified below.
 - Music upload browser tests now isolate each case's server/library and close the dependent browser before server teardown, removing Windows cross-test file deletion races without changing production music behavior.
 
-- Character profile native/front tabs,29/21 approved progress, wide front-neutral prompt/reference card, single/batch import/review, Solo selector readiness, async context/late-response guards, pending-operation locks and same-profile voice-draft preservation. Source26 API/browser flows and full1751 pass; actual copied-Hoang UI inspected. No owner data/EXE/release changes.
+- Character profile native/front tabs, 29/21 approved progress, wide front-neutral prompt/reference card, single/batch import/review, Solo selector readiness, async context/late-response guards, pending-operation locks and same-profile voice-draft preservation. Source 26 API/browser flows and full 1751 pass; actual copied-Hoang UI inspected. No owner data/EXE/release changes.
 
-- Why/How/List English Solo script instructions flow through full generation, outline/sections, bounded repairs and single-line regeneration, retaining CEFR/word budgets and one presenter. Classic prompts compared unchanged. Focused238 and full1775 pass; two actual model drafts completed but remain editorial/factual/CEFR review inputs, not approved demo content.
+- Why/How/List English Solo script instructions flow through full generation, outline/sections, bounded repairs and single-line regeneration, retaining CEFR/word budgets and one presenter. Classic prompts compared unchanged. Focused 238 and full 1775 pass; two actual model drafts completed but remain editorial/factual/CEFR review inputs, not approved demo content.
 
-- Solo plan foundation: immutable project illustration versions with bounded image normalization/hash/path checks and cancelled-import cleanup; exact script-token coverage and actual word-event timing without guessed timestamps; atomic028 migration retains existing durable jobs/checkpoints and adds illustration metadata. Full1809 and143 related tests pass. Proposal/review APIs and layouts continue in49.5b onward; no new operation exposed yet.
+- Solo plan foundation: immutable project illustration versions with bounded image normalization/hash/path checks and cancelled-import cleanup; exact script-token coverage and actual word-event timing without guessed timestamps; atomic 028 migration retains existing durable jobs/checkpoints and adds illustration metadata. Full 1809 and 143 related tests pass. Proposal/review APIs and layouts continue in 49.5b onward; no new operation exposed yet.
 
-### Added (source, Phase48 tasks48.1–48.5)
+### Added (source, Phase 48 tasks 48.1–48.5)
 
-- English Edge voice catalog with last-good cache/freshness and independent, bounded voice auditions. Preview media never writes project audio/cache. Catalog verified with39 focused tests. Owner accepted Brian/Christopher/Roger/Ryan and requests about20 choices; actual English catalog47. V48 technical/UI/media evidence verified; owner listening examples accepted.
-- Pinned profile/project voice IDs, guarded revisions and explicit apply-profile action preserve project speed/pitch/volume; cast/series/Step1 round-trip keeps each selection. Focused45 and full pytest1675 pass. Current EXE/release unchanged.
-- Voice-aware TTS fingerprint sidecars and targeted invalidation; unchanged speakers reuse their cache. TTS/mix/render/Shorts write unique attempt paths and reject stale completion, retaining previous files. Soundtrack uses the selected voice stem; a fresh horizontal render cannot promote a stale vertical cut. Full pytest1694, renderer104 + TypeScript pass.
-- Shared voice picker in Character Library and Audio Studio: complete live English catalog (47 observed), locale/gender/search, isolated auditions, explicit save/reload/profile apply, duplicate notices and async/dirty-state guards. Full pytest1704,30 browser flows and a real47-entry UI smoke pass. Final phase QA/docs complete: full1704, source user/install guides and172-route API reference, real audio/render/ZIP evidence; installed EXE unchanged.
+- English Edge voice catalog with last-good cache/freshness and independent, bounded voice auditions. Preview media never writes project audio/cache. Catalog verified with 39 focused tests. Owner accepted Brian/Christopher/Roger/Ryan and requests about 20 choices; actual English catalog 47. V48 technical/UI/media evidence verified; owner listening examples accepted.
+- Pinned profile/project voice IDs, guarded revisions and explicit apply-profile action preserve project speed/pitch/volume; cast/series/Step1 round-trip keeps each selection. Focused 45 and full pytest 1675 pass. Current EXE/release unchanged.
+- Voice-aware TTS fingerprint sidecars and targeted invalidation; unchanged speakers reuse their cache. TTS/mix/render/Shorts write unique attempt paths and reject stale completion, retaining previous files. Soundtrack uses the selected voice stem; a fresh horizontal render cannot promote a stale vertical cut. Full pytest 1694, renderer 104 + TypeScript pass.
+- Shared voice picker in Character Library and Audio Studio: complete live English catalog (47 observed), locale/gender/search, isolated auditions, explicit save/reload/profile apply, duplicate notices and async/dirty-state guards. Full pytest 1704,30 browser flows and a real 47-entry UI smoke pass. Final phase QA/docs complete: full 1704, source user/install guides and 172-route API reference, real audio/render/ZIP evidence; installed EXE unchanged.
 
-### Feature milestone — target1.5.0 (planned2026-10-16; implementation underway)
+### Feature milestone — target 1.5.0 (planned 2026-10-16; implementation underway)
 
-- Phase48: all5 source tasks verified; see entries above.
-- Phase49: Solo Explainer Why/How/List, externally generated front21 character pack, photos/diagrams/text cards, owner-reviewed layouts for16:9/9:16, shared Player/render scene, Shorts/thumbnail/export/EXE integration (49.1–49.4 verified,49.5 active; remaining5 planned).
-- Canonical requirements and execution order: [.viepilot/SPEC.md](.viepilot/SPEC.md), [.viepilot/PLAN.md](.viepilot/PLAN.md). Current runtime/release remains1.4.0-rc.1; source implementation described above; no owner DB migration, EXE replacement or new release. Phase47 review and B-25/B-26/B-27/B-28 remain pending.
+- Phase 48: all 5 source tasks verified; see entries above.
+- Phase 49: Solo Explainer Why/How/List, externally generated front21 character pack, photos/diagrams/text cards, owner-reviewed layouts for 16:9/9:16, shared Player/render scene, Shorts/thumbnail/export/EXE integration (49.1–49.4 verified, 49.5 active; remaining 5 planned).
+- Canonical requirements and execution order: [.viepilot/SPEC.md](.viepilot/SPEC.md), [.viepilot/PLAN.md](.viepilot/PLAN.md). Current runtime/release remains 1.4.0-rc.1; source implementation described above; no owner DB migration, EXE replacement or new release. Phase 47 review and B-25/B-26/B-27/B-28 remain pending.
 
 ### Fixed
 - Video Studio now finishes async visual options and renderer-dependent locks before showing its workspace, avoiding briefly enabled controls or a missing readiness explanation during startup. A controlled delayed-load browser test proves the old failure and corrected behavior.
