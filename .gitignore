@@ -29,6 +29,7 @@ data/audio/
 data/video/
 data/thumbnails/
 data/tts_cache/
+data/tts_preview/
 data/tts_voice_catalog.json
 data/quality_reviews/
 data/tmp/

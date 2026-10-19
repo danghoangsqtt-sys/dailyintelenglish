@@ -1,6 +1,6 @@
 # Task 52.1 — BUG-046 ignore the voice preview cache
 
-Status: planned 2026-10-19.
+Status: implemented_verified 2026-10-19. `git check-ignore` matches `.gitignore:32`; `git status` clean of previews.
 
 ## Objective
 
