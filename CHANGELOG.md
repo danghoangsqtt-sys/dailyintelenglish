@@ -14,6 +14,10 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Planned — Phase 52 audit hygiene (2026-10-19)
+
+- From `/vp-audit` 2026-10-19: ignore the voice preview cache (BUG-046), reconcile HANDOFF resume state (BUG-047), restore missing spaces in UI/docs and CHANGELOG order (BUG-048), Solo editor node IDs / direct layout import / launcher timeout feedback (ENH-036). Not implemented yet.
+
 ### Fixed — local Desktop trial, Phase51
 
 - Desktop launch now checks build/data identity instead of silently opening an older app occupying the port. Settings identifies the serving build; installation checks unfinished jobs and creates consistent SQLite/old-application/shortcut backups.

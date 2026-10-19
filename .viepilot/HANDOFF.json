@@ -514,6 +514,20 @@
         "phase_complete_tag_created": false,
         "owner_V49_accepted": false
       }
+    },
+    "52": {
+      "name": "Audit hygiene",
+      "status": "planned",
+      "tasks_done": 0,
+      "tasks_total": 4,
+      "plan": ".viepilot/phases/52-audit-hygiene/PLAN.md",
+      "requests": [
+        "BUG-046",
+        "BUG-047",
+        "BUG-048",
+        "ENH-036"
+      ],
+      "note": "Planned 2026-10-19 by /vp-evolve after /vp-audit (1884 pytest passed). Refactor, no version bump. Next: /vp-auto --phase 52."
     }
   },
   "key_decisions": [
