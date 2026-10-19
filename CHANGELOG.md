@@ -8,9 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
-### Planned — Phase 52 audit hygiene (2026-10-19)
+### Fixed — Phase 52 audit hygiene (2026-10-19)
 
-- From `/vp-audit` 2026-10-19: ignore the voice preview cache (BUG-046), reconcile HANDOFF resume state (BUG-047), restore missing spaces in UI/docs and CHANGELOG order (BUG-048), Solo editor node IDs / direct layout import / launcher timeout feedback (ENH-036). Not implemented yet.
+- Solo explainer diagram editing keeps each node's ID by label, so removing or inserting a line no longer reconnects arrows to the wrong node; corrected the "21 front presenter pictures" hint.
+- The Desktop launcher writes a manual-open hint to `data/logs/desktop.log` when startup is not ready within 60 s (it still never opens a port it cannot verify).
+- Voice preview audio (`data/tts_preview/`) is no longer offered for commit; HANDOFF resume note matches the tracker; missing spaces before numbers restored across user and project docs; this changelog's Phase 49 entry moved under Unreleased.
 
 ### Fixed — local Desktop trial, Phase 51
 

@@ -1,8 +1,8 @@
 # ROADMAP.md — Daily Intel English Studio
 
-## Phase 52 — Audit hygiene (planned 2026-10-19)
+## Phase 52 — Audit hygiene (2026-10-19)
 
-Status: planned; 0/4 tasks. From `/vp-audit` 2026-10-19 (1884 pytest and 124 renderer tests passed; no failing behaviour). [Plan](phases/52-audit-hygiene/PLAN.md): 52.1 BUG-046 ignore `data/tts_preview/`, 52.2 ENH-036 Solo editor node IDs / direct layout import / launcher timeout, 52.3 BUG-048 text spacing + CHANGELOG order, 52.4 BUG-047 HANDOFF resume state. No version bump; owner gates and Phase 49.10 unchanged. Next: `/vp-auto --phase 52`.
+Status: implemented_verified_pending_owner_review; 4/4 technical tasks. From `/vp-audit` 2026-10-19 (1884 pytest and 124 renderer tests passed; no failing behaviour). [Plan](phases/52-audit-hygiene/PLAN.md): 52.1 BUG-046 ignore `data/tts_preview/`, 52.2 ENH-036 Solo editor node IDs / direct layout import / launcher timeout, 52.3 BUG-048 text spacing + CHANGELOG order, 52.4 BUG-047 HANDOFF resume state. No version bump; owner gates and Phase 49.10 unchanged. Full pytest 1886 passed in 789.26s (1884 + 2 new regression tests); renderer 124 Vitest passed; Ruff and `node --check` clean. [Summary](phases/52-audit-hygiene/SUMMARY.md).
 
 ## Phase 51 — Desktop runtime recovery (2026-10-16)
 

@@ -30,7 +30,7 @@
       "evidence": "data/tmp/evolve-20261016/validation.json",
       "implementation_tests": "not_run_planning_only"
     },
-    "note": "49.5b technically verified: full pytest 1848 passed in741.01s;175 focused in28.42s;104 renderer tests and TypeScript/Ruff/JS/diff clean. BUG-042 cancellation-safe shared rollback and BUG-043 PATCH422 fixed;BUG-044 docs reconciled. Two fresh process restarts preserved history/locks/idempotency;integrity/FK clean. Next49.6 geometry/layout; production approval refuses missing real geometry. Owner DB/EXE/release and V49/older gates unchanged.",
+    "note": "Phase 49: 49.1–49.9 technically verified; 49.10 code/package checks verified, owner real front21 art and V49 demo pending (next_task 49.10). Phase 51 updated the local Desktop (build 468f9f7ce4b4); published 1.4.0-rc.1 unchanged. Phases 46, 47, 50, 51 intentionally have no -complete tag until owner review.",
     "owner_feedback": {
       "listening": "four_examples_accepted",
       "voices": [
@@ -517,8 +517,8 @@
     },
     "52": {
       "name": "Audit hygiene",
-      "status": "planned",
-      "tasks_done": 0,
+      "status": "implemented_verified_pending_owner_review",
+      "tasks_done": 4,
       "tasks_total": 4,
       "plan": ".viepilot/phases/52-audit-hygiene/PLAN.md",
       "requests": [
@@ -527,7 +527,8 @@
         "BUG-048",
         "ENH-036"
       ],
-      "note": "Planned 2026-10-19 by /vp-evolve after /vp-audit (1884 pytest passed). Refactor, no version bump. Next: /vp-auto --phase 52."
+      "note": "Implemented 2026-10-19. Full pytest 1886 passed in 789.26s (1884 + 2 new regression tests); renderer 124 Vitest passed; Ruff and node --check clean. No -complete tag until owner review.",
+      "summary": ".viepilot/phases/52-audit-hygiene/SUMMARY.md"
     }
   },
   "key_decisions": [
