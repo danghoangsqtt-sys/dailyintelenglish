@@ -1,6 +1,6 @@
 # Task 53.2 — Show a refused upload's reason on its card
 
-Status: planned 2026-10-20.
+Status: implemented_verified 2026-10-20.
 
 ## Objective
 
@@ -23,3 +23,8 @@ When a slot upload is refused, the card shows why (e.g. "head changed …") inst
 ## Verification
 
 Browser test: a 422 from the upload endpoint shows its message inside that card; a later successful upload clears it. `node --check`; focused browser tests.
+
+## Verification result 2026-10-20
+
+- `state.slotErrors` keyed by profile/view/slot; single uploads record or clear their slot's reason, batch uploads use `stored[].slot` / `failed[].slot`. The card shows `Not stored: <reason>` (`.slot-refused`, `role="alert"`) under the drop zone; the panel notice is unchanged. Existing `.slot-note .is-error` style reused (no CSS change).
+- New browser test `test_a_refused_upload_shows_its_reason_on_the_card`: a 422 shows its reason on the card while it stays Empty; the next successful upload clears it. Profile UI browser suites 11 passed in 46.50 s; `node --check` clean.

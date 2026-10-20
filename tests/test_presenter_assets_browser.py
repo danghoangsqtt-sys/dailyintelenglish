@@ -188,3 +188,22 @@ async def test_loading_another_profile_disables_old_editable_fields(page, base_u
     await expect(page.locator("#profile-name")).to_have_text(second["name"])
     await expect(page.locator("#profile-intro")).to_be_enabled()
     await expect(page.locator(".slot-card")).to_have_count(21)
+
+
+async def test_a_refused_upload_shows_its_reason_on_the_card(page, base_url):
+    # BUG-049: the refusal was only shown at the top of the panel and the card fell back to Empty.
+    character = await profile(page, base_url, "Refused Upload")
+    await open_front(page, base_url, character)
+    reason = "the head changed (only 60% of it is unchanged; a gesture may change the arms only)"
+    async def refuse(route):
+        await route.fulfill(status=422, json={"success": False, "data": None, "error": reason})
+    upload = f"**/{character['id']}/slots/calm__closed/upload?view=front"
+    await page.route(upload, refuse)
+    card = page.locator(".slot-card[data-slot='calm__closed']")
+    await card.locator("input").set_input_files({"name": "base.png", "mimeType": "image/png", "buffer": figure_bytes()})
+    await expect(card.locator(".slot-refused")).to_have_text(f"Not stored: {reason}")
+    await expect(card).to_have_attribute("data-state", "empty")
+    await page.unroute(upload)
+    await card.locator("input").set_input_files({"name": "base.png", "mimeType": "image/png", "buffer": figure_bytes()})
+    await expect(card).to_have_attribute("data-state", "needs_review")
+    await expect(card.locator(".slot-refused")).to_have_count(0)

@@ -8,7 +8,8 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const state = { profiles: [], selectedId: null, creating: false, slots: null, filter: "active", query: "",
-    voicePicker: null, voiceProfileId: null, openToken: 0, listToken: 0, view: "native", assetBusy: false, slotsLoading: false, createBusy: false };
+    voicePicker: null, voiceProfileId: null, openToken: 0, listToken: 0, view: "native", assetBusy: false, slotsLoading: false, createBusy: false,
+    slotErrors: {} };  // "profile:view:slot" -> why the last upload to that card was refused (BUG-049)
   const GROUPS = [
     ["base", "Base picture"],
     ["expression", "Expressions"],
@@ -274,6 +275,7 @@
     const asset = card.asset;
     const problems = asset?.validation?.problems || [];
     const canUpload = card.parent_ready;
+    const refused = state.slotErrors[slotErrorKey(state.selectedId, state.view, card.key)];
     return `
       <article class="slot-card" data-slot="${card.key}" data-state="${status}">
         <header class="slot-card-head">
@@ -288,6 +290,7 @@
             : `<span>${canUpload ? "Drop the picture here or click" : `Approve ${escapeHtml(card.parent)} first`}</span>`}
           <input type="file" accept="image/png,image/jpeg,image/webp" hidden ${canUpload ? "" : "disabled"} />
         </div>
+        ${refused ? `<p class="slot-note slot-refused" role="alert"><span class="is-error">Not stored: ${escapeHtml(refused)}</span></p>` : ""}
         ${asset ? `<p class="slot-note">${escapeHtml(asset.validation?.method || "")}${problems.length ? ` — <span class="is-error">${escapeHtml(problems.join("; "))}</span>` : ""}</p>` : ""}
         <ol class="slot-steps">
           <li>${card.parent ? (card.parent_ready
@@ -340,7 +343,9 @@
     if (message) notice(message);
   }
 
-  async function assetAction(work, message) {
+  const slotErrorKey = (id, view, slot) => `${id}:${view}:${slot}`;
+
+  async function assetAction(work, message, slot = null) {
     if (state.assetBusy || state.createBusy || state.slotsLoading || !state.slots) return;
     if (state.voicePicker?.isSaving()) { notice("Wait until the voice finishes saving before changing pictures."); return; }
     const id = state.selectedId, view = state.view;
@@ -350,10 +355,14 @@
     try {
       await flushDetails();
       const result = await work(id, view);
+      if (slot) delete state.slotErrors[slotErrorKey(id, view, slot)];
+      for (const item of result?.stored || []) if (item.slot) delete state.slotErrors[slotErrorKey(id, view, item.slot)];
+      for (const item of result?.failed || []) if (item.slot) state.slotErrors[slotErrorKey(id, view, item.slot)] = item.reason;
       await openProfile(id, {assetRefresh: true});
       notice(typeof message === "function" ? message(result) : message || "Saved.", Boolean(result?.failed?.length));
     } catch (error) {
       notice(error.message || "The picture change could not be saved. Try again.", true);
+      if (slot) state.slotErrors[slotErrorKey(id, view, slot)] = error.message || "The picture could not be stored.";
       renderSlots();
     } finally {
       state.assetBusy = false;
@@ -370,7 +379,7 @@
         const drop = document.querySelector(`.slot-card[data-slot="${slotKey}"] .slot-drop`);
         if (drop) drop.innerHTML = `<img src="${url}" alt="" class="is-preview" /><span class="slot-busy">Placing and checking…</span>`;
         return Api.uploadProfileSlot(id, slotKey, file, view);
-      }, `${slotKey}.png stored. Check it, then approve.`);
+      }, `${slotKey}.png stored. Check it, then approve.`, slotKey);
     } finally { URL.revokeObjectURL(url); }
   }
 
