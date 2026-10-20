@@ -1,0 +1,75 @@
+{
+  "id": "debug-20261020T000000Z",
+  "status": "resolved_root_cause_fix_pending",
+  "created_at": "2026-10-20T00:00:00Z",
+  "updated_at": "2026-10-20T00:00:00Z",
+  "problem": {
+    "description": "Owner cannot upload Lina's front gesture-count pictures; browser shows 422 on /api/visuals/profiles/.../slots/{slot}/upload?view=front",
+    "symptoms": [
+      "calm__closed, talk, point-left/right, emphasize upload fine",
+      "gesture-count-1 (3 tries) and gesture-count-2 return 422",
+      "card falls back to Empty; no reason visible near the card"
+    ],
+    "error_messages": [
+      "POST .../e961d07c-da89-4395-beec-7741df69142d/slots/gesture-count-1/upload?view=front 422 (data/logs/desktop.log:2463-2556)"
+    ],
+    "affected_files": [
+      "backend/library/sprite_service.py",
+      "backend/library/presenter_asset_plan.py",
+      "frontend/static/js/character_profiles.js",
+      "frontend/pages/characters.html"
+    ]
+  },
+  "investigation": {
+    "hypotheses": [
+      {
+        "id": 1,
+        "description": "Parent/base not approved",
+        "status": "rejected",
+        "evidence": "calm__closed approved; count-1/2 parent is calm__closed"
+      },
+      {
+        "id": 2,
+        "description": "Canvas/transparency upload error",
+        "status": "rejected",
+        "evidence": "same outside-AI workflow passes for other gestures"
+      },
+      {
+        "id": 3,
+        "description": "sprite_service.measure head-zone check (top 20% of figure, HEAD_FRACTION=0.20, SILHOUETTE_LIMIT=4%) counts a hand raised near the shoulder as a changed head",
+        "status": "confirmed",
+        "evidence": "Lina base: head zone y150-422 (49,780 px). Synthetic 70x130 hand: 40px into zone -> 3.3% pass; 90px -> 10.3% fail ('head moved sideways +14px; head differs 10.3%'); 140px -> 17.0% fail. Count prompts say 'near the shoulder'. DB: no profile has ever approved count-1/2/3, think or wave."
+      },
+      {
+        "id": 4,
+        "description": "Error message is rendered in #profile-message at the top of the profile panel, off-screen while the owner works on lower cards",
+        "status": "confirmed",
+        "evidence": "character_profiles.js notice() -> #profile-message (characters.html:151); renderSlots() resets the card to Empty"
+      }
+    ],
+    "tests_run": [
+      {
+        "command": "read-only replay of _prepare+measure on front21-ai-20261020/final (scratchpad/front_check.py)",
+        "output": "that folder is not the uploaded set (all gestures fail vs current base); used only to see failure kinds",
+        "timestamp": "2026-10-20"
+      },
+      {
+        "command": "synthetic raised-hand measure on approved Lina base",
+        "output": "see hypothesis 3",
+        "timestamp": "2026-10-20"
+      }
+    ],
+    "findings": [
+      "Design conflict: prompt asks for hand near the shoulder, validator forbids any change in the top 20% of the figure",
+      "UX gap: rejection reason not shown on the card",
+      "Workaround: keep the counting hand at chest height, fingertips below the shoulder line (in Lina's canvas below y~380 of 1536); scroll to the top message after a failed drop to read the reason"
+    ]
+  },
+  "resolution": {
+    "root_cause": "Front gesture validator's head-zone silhouette check rejects raised-hand gestures that the slot prompts themselves request; reason displayed off-screen.",
+    "fix_applied": null,
+    "files_changed": [],
+    "verification": null,
+    "next": "BUG-049 -> /vp-evolve BUG-049 -> /vp-auto"
+  }
+}
