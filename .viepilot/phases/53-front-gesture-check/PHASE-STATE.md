@@ -1,6 +1,6 @@
 # PHASE-STATE — Phase 53: front gesture upload check
 
-- **Status:** implemented_verified_pending_owner_review 2026-10-20. Owner real-upload check pending (installed EXE predates the fix).
+- **Status:** implemented_verified_pending_owner_review 2026-10-20. Desktop updated to build ab087f7b68b5 on 2026-10-20 ([report](../../../docs/operations/desktop-update-20261020.md)); owner real-upload check pending.
 - **Tasks:** 2/2 technically verified.
 
 | Task | Scope | Status |
