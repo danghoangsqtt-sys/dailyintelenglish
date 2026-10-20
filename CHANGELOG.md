@@ -8,6 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Fixed — Phase 53 front gesture uploads (2026-10-20)
+
+- Front pictures with a hand raised beside the shoulder or face (count, think, wave) are no longer refused as a "changed head"; the check now compares the head's own pixels, so a redrawn or moved head is still refused (BUG-049).
+- A refused picture now shows its reason on its own card instead of only at the top of the profile panel.
+
 ### Fixed — Phase 52 audit hygiene (2026-10-19)
 
 - Solo explainer diagram editing keeps each node's ID by label, so removing or inserting a line no longer reconnects arrows to the wrong node; corrected the "21 front presenter pictures" hint.

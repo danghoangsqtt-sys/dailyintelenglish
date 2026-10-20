@@ -1,6 +1,6 @@
 {
   "id": "debug-20261020T000000Z",
-  "status": "resolved_root_cause_fix_pending",
+  "status": "resolved",
   "created_at": "2026-10-20T00:00:00Z",
   "updated_at": "2026-10-20T00:00:00Z",
   "problem": {
@@ -67,9 +67,14 @@
   },
   "resolution": {
     "root_cause": "Front gesture validator's head-zone silhouette check rejects raised-hand gestures that the slot prompts themselves request; reason displayed off-screen.",
-    "fix_applied": null,
-    "files_changed": [],
-    "verification": null,
+    "fix_applied": "Phase 53: colour-based gesture head check (GESTURE_HEAD_KEPT 0.75) and refusal reason on the slot card",
+    "files_changed": [
+      "backend/library/sprite_service.py",
+      "frontend/static/js/character_profiles.js",
+      "tests/test_sprite_service.py",
+      "tests/test_presenter_assets_browser.py"
+    ],
+    "verification": "Full pytest 1890 passed in 1032.11s (4 new tests); 15 approved front pictures still pass under the new rule.",
     "next": "BUG-049 -> /vp-evolve BUG-049 -> /vp-auto"
   }
 }

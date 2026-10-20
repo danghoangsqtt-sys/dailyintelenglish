@@ -1,6 +1,6 @@
 # TRACKER.md — Daily Intel English Studio
 
-**Planned 2026-10-20 — Phase 53 (BUG-049):** owner could not upload Lina's count-1/2 front pictures (422). Root cause: gesture head check counts a raised hand as a changed head; reason shown off-screen. [Plan](phases/53-front-gesture-check/PLAN.md), execution authorized by owner.
+**Latest checkpoint 2026-10-20 — Phase 53 (BUG-049) implemented_verified:** Full pytest 1890 passed in 1032.11s (4 new tests); 15 approved front pictures still pass under the new rule. Owner retry pending; installed EXE predates the fix. Original report: owner could not upload Lina's count-1/2 front pictures (422). Root cause: gesture head check counts a raised hand as a changed head; reason shown off-screen. [Plan](phases/53-front-gesture-check/PLAN.md), execution authorized by owner.
 
 **Latest checkpoint 2026-10-19 — Phase 52 audit hygiene implemented_verified:** `/vp-audit` found no failing behaviour (full pytest 1884 passed in 815.75s, 124 renderer tests, Ruff/TypeScript/JS clean) and logged BUG-046/047/048 and ENH-036. `/vp-evolve` planned [Phase 52](phases/52-audit-hygiene/PLAN.md) (refactor, 4 tasks, no version bump). `/vp-auto` implemented all 4 tasks. Full pytest 1886 passed in 789.26s (1884 + 2 new regression tests); renderer 124 Vitest passed; Ruff and `node --check` clean. BUG-047's "missing phases 47–50" was an audit false positive. Pending owner review; no `-complete` tag. Next feature gate: 49.10 owner real-art/V49. [Summary](phases/52-audit-hygiene/SUMMARY.md).
 

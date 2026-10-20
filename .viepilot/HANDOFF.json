@@ -532,13 +532,15 @@
     },
     "53": {
       "name": "Front gesture upload check",
-      "status": "planned",
-      "tasks_done": 0,
+      "status": "implemented_verified_pending_owner_review",
+      "tasks_done": 2,
       "tasks_total": 2,
       "plan": ".viepilot/phases/53-front-gesture-check/PLAN.md",
       "requests": [
         "BUG-049"
-      ]
+      ],
+      "summary": ".viepilot/phases/53-front-gesture-check/SUMMARY.md",
+      "note": "Full pytest 1890 passed in 1032.11s (4 new tests); 15 approved front pictures still pass under the new rule. Installed EXE predates the fix."
     }
   },
   "key_decisions": [
