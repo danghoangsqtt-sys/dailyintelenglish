@@ -529,6 +529,16 @@
       ],
       "note": "Implemented 2026-10-19. Full pytest 1886 passed in 789.26s (1884 + 2 new regression tests); renderer 124 Vitest passed; Ruff and node --check clean. No -complete tag until owner review.",
       "summary": ".viepilot/phases/52-audit-hygiene/SUMMARY.md"
+    },
+    "53": {
+      "name": "Front gesture upload check",
+      "status": "planned",
+      "tasks_done": 0,
+      "tasks_total": 2,
+      "plan": ".viepilot/phases/53-front-gesture-check/PLAN.md",
+      "requests": [
+        "BUG-049"
+      ]
     }
   },
   "key_decisions": [
