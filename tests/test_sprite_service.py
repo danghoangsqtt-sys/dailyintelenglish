@@ -107,3 +107,38 @@ def test_a_written_set_is_served_and_the_old_import_routes_are_gone(client, tmp_
     # deleting the character deletes its set
     assert client.delete(f"/api/visuals/characters/{alex}?force=true").status_code in (200, 204)
     assert sprites.load_set(alex) is None
+
+
+def _measure_gesture(draw_change) -> dict:
+    """BUG-049: measure one gesture drawn over the base figure against that base."""
+    import numpy as np
+    base = Image.new("RGBA", (1280, 1536), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(base)
+    draw.ellipse((500, 200, 780, 520), fill=(200, 160, 140, 255))
+    draw.rectangle((380, 520, 900, 1535), fill=(20, 30, 100, 255))
+    picture = base.copy()
+    draw_change(ImageDraw.Draw(picture))
+    return sprites.measure(np.asarray(picture), sprites.Reference(np.asarray(base)), True)
+
+
+def test_a_hand_raised_beside_the_head_is_not_a_changed_head():
+    # count-1 / wave: a hand with a raised finger next to the face, well inside the top fifth of the figure
+    result = _measure_gesture(lambda d: (d.rectangle((790, 260, 880, 420), fill=(220, 180, 160, 255)),
+                                         d.rectangle((815, 180, 840, 260), fill=(220, 180, 160, 255))))
+    assert result["problems"] == []
+    assert result["head_kept"] == 1.0
+
+
+def test_a_hand_in_front_of_the_chin_is_allowed_but_a_redrawn_head_is_not():
+    think = _measure_gesture(lambda d: d.rectangle((600, 440, 700, 520), fill=(220, 180, 160, 255)))
+    assert think["problems"] == []
+    redrawn = _measure_gesture(lambda d: d.ellipse((500, 200, 780, 520), fill=(120, 90, 80, 255)))
+    assert any("head changed" in problem for problem in redrawn["problems"])
+
+
+def test_a_gesture_with_the_head_moved_sideways_is_refused():
+    def moved(d):
+        d.rectangle((380, 0, 900, 519), fill=(0, 0, 0, 0))
+        d.ellipse((560, 200, 840, 520), fill=(200, 160, 140, 255))
+    result = _measure_gesture(moved)
+    assert any("head changed" in problem or "head moved sideways" in problem for problem in result["problems"])

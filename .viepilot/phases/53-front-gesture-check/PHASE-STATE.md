@@ -5,5 +5,5 @@
 
 | Task | Scope | Status |
 |---|---|---|
-| 53.1 | BUG-049 colour-based head check for gestures | planned |
+| 53.1 | BUG-049 colour-based head check for gestures | implemented_verified |
 | 53.2 | BUG-049 refusal reason on the slot card | planned |

@@ -42,6 +42,9 @@ EDGE_LIMIT = 8
 # owner 2026-10-08: a gesture changes the arms only. A body drawn again (bigger, smaller, shifted) is refused: at least this share of
 # the calm picture's body (below the head) must keep its colour (region-edited gestures keep 69 to 91%, expressions 99 to 100%)
 GESTURE_BODY_KEPT = 0.60
+# BUG-049: a gesture keeps the head's own pixels; a hand raised beside the shoulder or face is not a changed head.
+# Approved region edits keep 0.82-0.98 of them, another identity or a redrawn picture at most 0.66.
+GESTURE_HEAD_KEPT = 0.75
 SILHOUETTE_LIMIT = 4.0
 HEAD_FRACTION = 0.20
 EDGE_PIXELS = 8  # a figure touching the left, right or top edge of the canvas over more pixels than this is cut off (a hand, the hair)
@@ -84,6 +87,10 @@ class Reference:
         x0, self.top, x1, self.bottom = _bbox(self.alpha)
         self.head_end = self.top + int((self.bottom - self.top) * HEAD_FRACTION)
         self.head_x = float(np.where(self.alpha[:self.head_end])[1].mean())
+        self.head = self.alpha.copy()
+        self.head[self.head_end:] = False
+        head_columns = np.where(self.head.any(axis=0))[0]
+        self.head_x0, self.head_x1 = int(head_columns.min()), int(head_columns.max())
         self.left, self.right = _torso_edges(self.alpha, self.top, self.bottom)
 
 
@@ -94,6 +101,13 @@ def body_kept(rgba: np.ndarray, reference: Reference) -> float:
     both = body & (rgba[..., 3] > 200)
     difference = np.abs(rgba[..., :3].astype(np.float32) - reference.rgb).mean(axis=2)
     return float((difference[both] < 25).sum() / max(1, body.sum()))
+
+
+def head_kept(rgba: np.ndarray, reference: Reference) -> float:
+    """The share of the reference's head (its silhouette in the head zone) that keeps its colour in this picture."""
+    both = reference.head & (rgba[..., 3] > 200)
+    difference = np.abs(rgba[..., :3].astype(np.float32) - reference.rgb).mean(axis=2)
+    return float((difference[both] < 25).sum() / max(1, reference.head.sum()))
 
 
 def measure(rgba: np.ndarray, reference: Reference, gesture: bool) -> dict:
@@ -116,13 +130,21 @@ def measure(rgba: np.ndarray, reference: Reference, gesture: bool) -> dict:
     head_xor = float((alpha[:head_end] ^ ref_alpha[:head_end]).sum() / max(1, ref_alpha[:head_end].sum()) * 100)
     body_xor = float((alpha[head_end:] ^ ref_alpha[head_end:]).sum() / max(1, ref_alpha[head_end:].sum()) * 100)
     problems = [f"the figure is cut by the {side} edge of the canvas" for side in cut]
+    head_share = None
+    if gesture:
+        # Measure the head only over the reference head's own columns and silhouette, so a raised hand beside it does not count.
+        columns = alpha[:, reference.head_x0:reference.head_x1 + 1]
+        y0 = int(np.where(columns.any(axis=1))[0].min()) if columns.any() else y0
+        inside = alpha[:head_end] & reference.head[:head_end]
+        head_x = float(np.where(inside)[1].mean()) if inside.any() else -9999.0
     if abs(y0 - reference.top) > TOP_LIMIT:
         problems.append(f"head top moved {y0 - reference.top:+d}px")
     if abs(head_x - reference.head_x) > HEAD_SIDE_LIMIT:
         problems.append(f"head moved sideways {head_x - reference.head_x:+.0f}px")
     if gesture:
-        if head_xor > SILHOUETTE_LIMIT:
-            problems.append(f"head differs {head_xor:.1f}%")
+        head_share = head_kept(rgba, reference)
+        if head_share < GESTURE_HEAD_KEPT:
+            problems.append(f"the head changed (only {head_share:.0%} of it is unchanged; a gesture may change the arms only)")
         kept = body_kept(rgba, reference)
         if kept < GESTURE_BODY_KEPT:
             problems.append(f"the body was drawn again (only {kept:.0%} of it is unchanged; a gesture may change the arms only)")
@@ -133,7 +155,7 @@ def measure(rgba: np.ndarray, reference: Reference, gesture: bool) -> dict:
             problems.append(f"body differs {body_xor:.1f}%")
     return {
         "top": y0 - reference.top, "edge_shift": edge_shift, "body_diff": body_xor, "head_diff": head_xor,
-        "head_dx": head_x - reference.head_x, "head_dy": y0 - reference.top, "problems": problems,
+        "head_dx": head_x - reference.head_x, "head_dy": y0 - reference.top, "head_kept": head_share, "problems": problems,
     }
 
 
