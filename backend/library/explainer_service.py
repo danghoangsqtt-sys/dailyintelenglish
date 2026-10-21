@@ -25,7 +25,7 @@ from backend.ai.llm.contracts import GenerationRequest
 from backend.ai.llm.prompt_loader import render_explainer_prompt
 from backend.ai.llm.validation import parse_and_validate
 from backend.db.transactions import read_transaction, write_transaction as _write_transaction
-from backend.library import explainer_assets, presenter_asset_plan
+from backend.library import explainer_assets, explainer_stage, presenter_asset_plan
 from backend.library.explainer_timing import ScriptIndex, resolve_timeline
 from backend.media import audio_service
 from backend.schemas.explainer import (
@@ -85,6 +85,7 @@ async def source_snapshot(db: aiosqlite.Connection, project_id: str, segments: l
                 assets[(ref.asset_id, ref.version)] = {key: asset[key] for key in ("id", "version", "content_hash", "width", "height", "path")}
             except NotFoundError:
                 assets[(ref.asset_id, ref.version)] = {"id": ref.asset_id, "version": ref.version, "missing": True}
+    scenes, activities = await explainer_stage.references(db, segments, member["character_id"])
     source = {
         "project": {key: project.get(key) for key in ("id", "presentation_mode", "explainer_structure", "topic", "cefr_level", "language_features")},
         "speaker": {key: speaker.get(key) for key in ("id", "speaker_index", "tts_engine", "voice_id", "accent", "gender", "voice_description", "speed", "pitch", "volume")},
@@ -92,6 +93,7 @@ async def source_snapshot(db: aiosqlite.Connection, project_id: str, segments: l
         "cast": member, "presenter": presenter.model_dump(),
         "audio": {key: audio.get(key) for key in ("id", "status", "mp3_path", "wav_path", "completed_at", "duration_seconds", "timestamps", "word_timestamps")} if audio else None,
         "illustrations": sorted(assets.values(), key=lambda item: (item["id"], item["version"])),
+        "scenes": scenes, "activities": activities,
         "layout_rules_version": EXPLAINER_LAYOUT_RULES_VERSION,
         "learning": {key: learning.get(key, []) for key in ("vocabulary", "idioms")} if learning else None,
     }
@@ -117,6 +119,7 @@ def source_issues(snapshot: dict, segments: list[ExplainerSegment]) -> list[str]
         if segment.visual.kind == "photo" and not segment.visual.asset:
             issues.append(f"Segment {segment.id}: import or select its illustration")
     issues.extend(f"Illustration {asset['id']} is missing from this project" for asset in snapshot["source"]["illustrations"] if asset.get("missing"))
+    issues.extend(explainer_stage.issues(snapshot["source"], segments))
     return list(dict.fromkeys(issues))[:EXPLAINER_PLAN_MAX_ISSUES]
 
 
@@ -137,7 +140,7 @@ def merge_proposal(previous: list[ExplainerSegment], proposed: list[ExplainerSeg
                 for key in ("intent", "line_ids", "start", "end", "source_notes", "needs_fact_review"):
                     value[key] = original[key]
             if locks.visual:
-                value["visual"] = original["visual"]
+                value["visual"], value["scene"] = original["visual"], original["scene"]
             value["needs_fact_review"] = original["needs_fact_review"] if locks.content and locks.visual else True
             if locks.gestures:
                 value["gestures"] = original["gestures"]
@@ -214,7 +217,7 @@ async def save_plan(db: aiosqlite.Connection, project_id: str, body: ExplainerPl
                 value["locks"] = {key: value["locks"][key] or before["locks"][key] for key in before["locks"]}
             groups = {
                 "content": ("intent", "line_ids", "start", "end", "source_notes", "needs_fact_review"),
-                "visual": ("visual",), "gestures": ("gestures",),
+                "visual": ("visual", "scene"), "gestures": ("gestures",),
             }
             for group, keys in groups.items():
                 if before is None or any(value[key] != before[key] for key in keys):
@@ -269,9 +272,11 @@ async def enqueue_proposal(db: aiosqlite.Connection, project_id: str, body: Expl
                 except ValidationError as exc:
                     raise ValidationError(f"A locked segment lost its script anchors ({segment.id}); edit/unlock it first: {exc}") from exc
         available = await explainer_assets.list_assets(db, project_id)
+        stage = await explainer_stage.choices(db, source["source"]["cast"]["character_id"])
         snapshot = {"expected_revision": revision, "source_fingerprint": source["fingerprint"],
                     "source": source["source"], "previous": previous.model_dump() if previous else None,
-                    "available_assets": available}
+                    "available_assets": available, "available_scenes": stage["scenes"],
+                    "available_activities": stage["activities"]}
         return await ai_job_service.create_job(db, project_id, "propose_explainer", snapshot,
                                                idempotency_key=body.idempotency_key, requested_provider=settings.AI_MODE, commit=False)
 
@@ -323,6 +328,7 @@ async def approve_plan(db: aiosqlite.Connection, project_id: str, body: Explaine
                     raise ValidationError("An illustration reference does not match its immutable content hash")
                 images.append(asset)
     audio = await asyncio.to_thread(_audio_files, snapshot)
+    stage = await asyncio.to_thread(explainer_stage.pinned_files, snapshot["source"])
     # Ensure this revision's immutable manifest exists, then resolve/hash every pinned front picture.
     await presenter_asset_plan.manifest(db, plan.presenter.profile_id)
     front = await presenter_asset_plan.resolve_manifest(plan.presenter.profile_id, plan.presenter.identity_version, plan.presenter.front_pack_revision)
@@ -339,7 +345,8 @@ async def approve_plan(db: aiosqlite.Connection, project_id: str, body: Explaine
             raise ConflictError("The plan or source changed during approval; reload and review again")
         approved = plan.model_copy(update={"revision": plan.revision + 1, "status": "approved", "issues": []})
         pinned = {"schema_version": 1, "plan": approved.model_dump(), "source": current["source"], "audio_files": audio,
-                  "front": front, "illustrations": images, "timing": timeline, "geometry": geometry}
+                  "front": front, "illustrations": images, "timing": timeline, "geometry": geometry,
+                  "stage": stage}
         now = datetime.now(timezone.utc).isoformat()
         await db.execute("INSERT INTO project_explainer_plan_versions(project_id,revision,source_fingerprint,plan_json,created_at) VALUES(?,?,?,?,?)",
                          (project_id, approved.revision, approved.source_fingerprint, approved.model_dump_json(), now))
@@ -414,6 +421,7 @@ def _proposed_segments(text: str, previous: list[ExplainerSegment], snapshot: di
             actual = choices.get((ref.asset_id, ref.version))
             if actual is None or (ref.content_hash is not None and ref.content_hash != actual):
                 raise ValidationError("Use only the illustration versions listed in the proposal input")
+    explainer_stage.check_proposal(segments, snapshot)
     return segments
 
 
@@ -508,6 +516,7 @@ async def _run_proposal(job: dict, worker: "AIWorker", router: "AIRouter") -> No
                 lines=_prompt_lines(index, source["lines"]),
                 previous=captured["previous"], assets=captured["available_assets"], previous_error=error,
                 previous_output=last_output, output_schema=_PROPOSAL.json_schema(),
+                scenes=captured.get("available_scenes", []), activities=captured.get("available_activities", []),
             )
             request = GenerationRequest(prompt=prompt, json_schema=_PROPOSAL.json_schema(), temperature=EXPLAINER_PROPOSAL_TEMPERATURE,
                                         deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS, purpose="explainer_proposal_repair" if attempt else "explainer_proposal")

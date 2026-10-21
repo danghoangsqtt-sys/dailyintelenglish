@@ -117,7 +117,21 @@ class TextCardVisual(StrictModel):
     emphasis: str = Field(default="", max_length=80)
 
 
-Visual = Annotated[PhotoVisual | DiagramVisual | TextCardVisual, Field(discriminator="kind")]
+class ActivityVisual(StrictModel):
+    """Phase 55 (ENH-037): an approved Activity Library picture shown full-frame behind the presenter."""
+
+    kind: Literal["activity"]
+    activity_id: Identifier
+    caption: str = Field(default="", max_length=180)
+
+
+class SceneReference(StrictModel):
+    """Phase 55: the Scene Library place behind the presenter for one segment (its plate is pinned at approval)."""
+
+    scene_id: Identifier
+
+
+Visual = Annotated[PhotoVisual | DiagramVisual | TextCardVisual | ActivityVisual, Field(discriminator="kind")]
 
 
 class PresenterPlacement(StrictModel):
@@ -166,6 +180,7 @@ class ExplainerSegment(StrictModel):
     start: TokenAnchor
     end: TokenAnchor
     visual: Visual
+    scene: SceneReference | None = None
     gestures: list[GestureCue] = Field(default_factory=list, max_length=30)
     layouts: dict[Aspect, SegmentLayout] = Field(default_factory=dict, max_length=2)
     locks: SegmentLocks = Field(default_factory=SegmentLocks)
@@ -262,6 +277,7 @@ class ProposedExplainerSegment(StrictModel):
     start: TokenAnchor
     end: TokenAnchor
     visual: Visual
+    scene: SceneReference | None = None
     gestures: list[GestureCue] = Field(default_factory=list, max_length=30)
     source_notes: str = Field(default="", max_length=1200)
 

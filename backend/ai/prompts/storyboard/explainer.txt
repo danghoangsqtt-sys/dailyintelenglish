@@ -12,7 +12,14 @@ Never invent seconds, file paths, URLs, extra speakers or scene dialogue.
 Keep an existing plan's segment IDs and order. Regenerate the same segments; honor all locked fields.
 If no previous plan exists, choose short stable IDs such as idea-1, example-1, takeaway-1.
 
-Use a useful mixture of photos, supported diagrams and short text cards when appropriate.
+STAGE: the presenter stands waist-up in front of a real place, like a talk show. For EVERY segment choose
+scene.scene_id from AVAILABLE SCENES: a place that fits what is said (an office for work, a kitchen for cooking);
+keep the same scene for neighbouring segments unless the idea moves somewhere else.
+When a segment talks about an everyday action that one AVAILABLE ACTIVITY PICTURES item shows (driving, cooking,
+studying, exercise...), use visual {"kind": "activity", "activity_id": "<id>"}: that picture fills the screen behind
+the presenter. Prefer the presenter's own pictures (presenter_own: true) when the action matches. Use each activity
+at most once and only for a clear match; otherwise use a short text card or a diagram, which float beside the presenter.
+Use a useful mixture of activity pictures, supported diagrams and short text cards when appropriate.
 Photo: select only an asset_id/version from the available list or use asset:null plus an external-AI image prompt.
 Keep photos contain unless important regions are known. Important rectangles are normalized image coordinates.
 Diagram: only steps, comparison or cause_effect; 2–6 nodes, valid existing node IDs in edges, short labels/details.
@@ -28,12 +35,16 @@ SCRIPT AND EXACT SPOKEN TOKENS:
 {{ lines | tojson }}
 AVAILABLE PROJECT ILLUSTRATIONS:
 {{ assets | tojson }}
+AVAILABLE SCENES:
+{{ scenes | tojson }}
+AVAILABLE ACTIVITY PICTURES:
+{{ activities | tojson }}
 PREVIOUS OWNER PLAN (null for first proposal):
 {{ previous | tojson }}
 
 ## Output Format
 Return ONLY one JSON object (no markdown fences, no commentary) that validates against the JSON Schema below.
-Use exactly these field names. visual.kind is one of photo, diagram, text_card.
+Use exactly these field names. visual.kind is one of photo, diagram, text_card, activity.
 A segment that ends at the end of a line uses end.token_index equal to that line's token_count;
 the next segment then starts at token_index 0 of the next line.
 JSON SCHEMA:
@@ -41,7 +52,7 @@ JSON SCHEMA:
 SHAPE EXAMPLE (placeholders only, not content):
 {"segments": [{"id": "idea-1", "intent": "Explain the main cause", "line_ids": ["<line_id>"],
  "start": {"line_id": "<line_id>", "token_index": 0}, "end": {"line_id": "<line_id>", "token_index": <token_count>},
- "visual": {"kind": "text_card", "title": "Short title", "bullets": ["Short point"]},
+ "visual": {"kind": "text_card", "title": "Short title", "bullets": ["Short point"]}, "scene": {"scene_id": "<scene id>"},
  "gestures": [{"at": {"line_id": "<line_id>", "token_index": 3}, "gesture": "talk"}], "source_notes": ""}]}
 {% if previous_error %}
 Repair your previous response. Keep all coverage/lock/data rules above.

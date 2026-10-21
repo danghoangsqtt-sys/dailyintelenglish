@@ -1,6 +1,6 @@
 # Task 55.1 — Scene and activity per segment
 
-Status: planned 2026-10-21.
+Status: implemented_verified 2026-10-21.
 
 ## Paths
 - backend/schemas/explainer.py
@@ -16,3 +16,9 @@ Status: planned 2026-10-21.
 
 ## Verification
 Unit tests for unknown IDs, fingerprint change when a plate/activity changes, prompt lists scenes/activities; existing explainer suites.
+
+## Verification result 2026-10-21
+
+- `SceneReference`, `ActivityVisual` and `ExplainerSegment.scene` (also on the provider wire model; scene follows the visual lock). New `backend/library/explainer_stage.py`: offered choices (plated scenes; approved generic + presenter-own activities), DB references in the source fingerprint, review issues, proposal ID check, file pinning at approval (`stage` in the approved snapshot) and render-time comparison helper.
+- Prompt: STAGE instructions, AVAILABLE SCENES / AVAILABLE ACTIVITY PICTURES, `activity` kind and `scene` in the shape example.
+- Tests: offered lists exclude another character's pictures and keep the choice; unknown scene/activity refused after repair; activity bytes change the fingerprint; another character's activity reported. Explainer plan/API/project suites 54 passed; Ruff clean.

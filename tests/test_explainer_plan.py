@@ -264,7 +264,7 @@ async def test_valid_locked_anchors_allow_regeneration_of_an_extended_unlocked_s
     value = wire(solo)
     value["segments"][1]["end"]["token_index"] = 8
     job = await run(db, solo, Router(json.dumps(value)), 1)
-    assert job["status"] == "complete", job
+    assert job["status"] == "complete", (job["error_code"], job["error_message"])
     assert (await service.get_plan(db, solo.pid))["plan"]["segments"][0]["locks"]["content"]
 
 
@@ -335,3 +335,69 @@ async def test_cloud_prompt_states_the_output_format_and_token_counts(db, solo):
         assert field in prompt
     lines = json.loads(prompt.split("SCRIPT AND EXACT SPOKEN TOKENS:\n", 1)[1].split("\nAVAILABLE PROJECT ILLUSTRATIONS:", 1)[0])
     assert lines and all(line["token_count"] == len(line["tokens"]) for line in lines)
+
+
+# ---------------------------------------------------------------- Phase 55 (ENH-037): scene and activity per segment
+
+async def stage_library(db, solo, other_character=None):
+    await db.execute("UPDATE scenes SET preview_path=NULL")
+    await db.execute("INSERT OR REPLACE INTO scenes(id,name,place,staging,is_builtin,preview_path,created_at,updated_at) "
+                     "VALUES('builtin-office','Office','a modern bright office','seated',1,'data/library/scenes/builtin-office/preview.png','2026-10-21','2026-10-21')")
+    for activity_id, owner, sha in (("act-drive", None, "a" * 64), ("act-own", solo.profile["id"], "b" * 64),
+                                    ("act-other", other_character, "c" * 64)):
+        await db.execute("INSERT INTO activity_library(id,character_id,activity,path,content_sha,review_state,created_at,updated_at) "
+                         "VALUES(?,?,?,?,?,'approved','2026-10-21','2026-10-21')", (activity_id, owner, activity_id, f"data/library/activities/{activity_id}.png", sha))
+    await db.commit()
+
+
+def stage_wire(solo, scene="builtin-office", activity="act-drive"):
+    value = wire(solo)
+    for segment in value["segments"]:
+        segment["scene"] = {"scene_id": scene}
+    value["segments"][1]["visual"] = {"kind": "activity", "activity_id": activity}
+    return value
+
+
+async def test_proposal_offers_scenes_and_activities_and_keeps_the_choice(db, solo):
+    other = await character_profile_service.create_quick(db, ProfileQuickCreate(
+        name="Mai", gender="female", accent="american", appearance="long hair", outfit="blue dress"))
+    await stage_library(db, solo, other["id"])
+    prompts = []
+
+    class Capture(Router):
+        async def generate(self, request):
+            prompts.append(request.prompt)
+            return await super().generate(request)
+
+    job = await run(db, solo, Capture(json.dumps(stage_wire(solo))))
+    assert job["status"] == "complete", (job["error_code"], job["error_message"])
+    assert '"builtin-office"' in prompts[0] and '"act-drive"' in prompts[0] and '"act-own"' in prompts[0]
+    assert '"act-other"' not in prompts[0]  # another character's own picture is never offered
+    plan = (await service.get_plan(db, solo.pid))["plan"]
+    assert [segment["scene"] for segment in plan["segments"]] == [{"scene_id": "builtin-office"}] * 2
+    assert plan["segments"][1]["visual"] == {"kind": "activity", "activity_id": "act-drive", "caption": ""}
+
+
+@pytest.mark.parametrize("scene, activity", [("builtin-park", "act-drive"), ("builtin-office", "act-unknown")])
+async def test_unknown_scene_or_activity_is_refused(db, solo, scene, activity):
+    await stage_library(db, solo)
+    router = Router([json.dumps(stage_wire(solo, scene, activity))] * 2)
+    job = await run(db, solo, router)
+    assert job["status"] == "error" and job["error_code"] == "explainer_invalid_proposal"
+
+
+async def test_stage_pictures_join_the_source_fingerprint_and_review(db, solo):
+    await stage_library(db, solo)
+    other = await character_profile_service.create_quick(db, ProfileQuickCreate(
+        name="Mai", gender="female", accent="american", appearance="long hair", outfit="blue dress"))
+    await db.execute("UPDATE activity_library SET character_id=? WHERE id='act-other'", (other["id"],))
+    segments = copy.deepcopy(solo.segments)
+    segments[0].scene = {"scene_id": "builtin-office"}
+    segments[1].visual = {"kind": "activity", "activity_id": "act-drive"}
+    before = await service.source_snapshot(db, solo.pid, segments)
+    await db.execute("UPDATE activity_library SET content_sha=? WHERE id='act-drive'", ("d" * 64,))
+    after = await service.source_snapshot(db, solo.pid, segments)
+    assert before["fingerprint"] != after["fingerprint"]
+    segments[1].visual = {"kind": "activity", "activity_id": "act-other"}
+    issues = service.source_issues(await service.source_snapshot(db, solo.pid, segments), segments)
+    assert any("activity picture is not an approved picture" in issue for issue in issues)
