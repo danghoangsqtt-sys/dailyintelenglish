@@ -118,3 +118,15 @@ def test_stage_refuses_card_over_the_torso_head_outside_safe_and_old_rules():
     small = stage_segment("16:9", CARD, height=.22)
     with pytest.raises(ValidationError, match="Presenter size"):
         geometry.validate_segment(small, "16:9", STAGE_METRICS, {})
+
+
+def test_implied_step_edges_take_no_text_line_so_three_steps_fit_vertical():
+    steps = {"kind": "diagram", "template": "steps", "title": "Data Analyst Workflow",
+             "nodes": [{"id": "a", "label": "Collect", "detail": "Gather raw data"}, {"id": "b", "label": "Clean", "detail": "Fix errors"},
+                       {"id": "c", "label": "Analyze", "detail": "Find patterns"}],
+             "edges": [{"source": "a", "target": "b"}, {"source": "b", "target": "c"}]}
+    assert geometry.shown_edges(steps) == []
+    geometry.text_metrics(steps, geometry.RULES["aspects"]["9:16"]["panels"]["center"], "9:16")
+    labelled = {**steps, "edges": [{"source": "a", "target": "b", "label": "then"}, {"source": "c", "target": "a"}]}
+    assert len(geometry.shown_edges(labelled)) == 2, "labelled or non-consecutive edges still get their line"
+    assert len(geometry.shown_edges({**steps, "template": "comparison"})) == 2

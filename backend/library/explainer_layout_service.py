@@ -65,6 +65,15 @@ CORE_POSES = ("calm__closed", "calm__open", "blink")
 FULL_FRAME = {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0}
 
 
+def shown_edges(visual: dict) -> list[dict]:
+    """Edges worth a text line: steps/cause-effect already show consecutive order with numbers or arrows."""
+    order = [node["id"] for node in visual.get("nodes", [])]
+    implied = visual.get("template") in ("steps", "cause_effect")
+    return [edge for edge in visual.get("edges", [])
+            if edge.get("label") or not implied or edge["source"] not in order or edge["target"] not in order
+            or order.index(edge["target"]) != order.index(edge["source"]) + 1]
+
+
 def core_box(placement: dict, metrics: dict, aspect: str) -> dict:
     """Head and torso (the calm poses' alpha) on the same canvas as the full figure."""
     _, canvas = presenter_boxes(placement, metrics, aspect)
@@ -112,7 +121,7 @@ def text_metrics(visual: dict, panel: dict, aspect: str) -> dict:
                                    for node in visual["nodes"][index:index + columns]))
         needed = sum(row_heights) + gap * max(0, len(row_heights) - 1)
         nodes = {node["id"]: node["label"] for node in visual["nodes"]}
-        for edge in visual.get("edges", []):
+        for edge in shown_edges(visual):
             label = f"{nodes[edge['source']]} → {nodes[edge['target']]}" + (f": {edge['label']}" if edge.get("label") else "")
             needed += gap + lines(label, width - 2 * padding, font) * font * 1.3
     if width < 2 * padding + 4 * font or available_height < needed:

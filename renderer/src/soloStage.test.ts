@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SCENE_CROSSFADE_SEC, stagePlates } from "./SoloStage";
+import { shownEdges } from "./ExplainerVisual";
 import type { SoloPayload } from "./soloTypes";
 
 function payload(scenes: (string | null)[]): SoloPayload {
@@ -25,5 +26,15 @@ describe("Solo stage plates (Phase 55)", () => {
   });
   it("falls back to no plate when a segment has no scene", () => {
     expect(stagePlates(payload([null]), 0, 1)).toEqual({ previous: null, current: null, opacity: 1 });
+  });
+});
+
+describe("diagram edge lines match the backend text metrics", () => {
+  const nodes = [{ id: "a" }, { id: "b" }, { id: "c" }];
+  it("hides consecutive unlabeled edges of steps/cause-effect only", () => {
+    expect(shownEdges({ template: "steps", nodes, edges: [{ source: "a", target: "b" }, { source: "b", target: "c" }] })).toEqual([]);
+    expect(shownEdges({ template: "cause_effect", nodes, edges: [{ source: "c", target: "a" }] })).toHaveLength(1);
+    expect(shownEdges({ template: "steps", nodes, edges: [{ source: "a", target: "b", label: "then" }] })).toHaveLength(1);
+    expect(shownEdges({ template: "comparison", nodes, edges: [{ source: "a", target: "b" }] })).toHaveLength(1);
   });
 });

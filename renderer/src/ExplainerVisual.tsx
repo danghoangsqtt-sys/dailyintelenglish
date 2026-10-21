@@ -4,6 +4,13 @@ import { resolvedMedia } from "./Presenter";
 import type { GeometrySegment, SoloSegment } from "./soloTypes";
 import type { Aspect } from "./explainerLayout";
 
+/** Same rule as the backend text metrics: steps/cause-effect already show consecutive order, so only other edges get a line. */
+export function shownEdges(visual: {template?: string; nodes: {id: string}[]; edges?: {source: string; target: string; label?: string}[]}) {
+  const order = visual.nodes.map(node => node.id), implied = visual.template === "steps" || visual.template === "cause_effect";
+  return (visual.edges ?? []).filter(edge => edge.label || !implied || !order.includes(edge.source) || !order.includes(edge.target)
+    || order.indexOf(edge.target) !== order.indexOf(edge.source) + 1);
+}
+
 export function ExplainerVisual({segment, proof, aspect, progress=1}: {segment: SoloSegment; proof: GeometrySegment; aspect: Aspect; progress?:number}) {
   const {width, height} = useVideoConfig();
   const box = segment.layouts[aspect].illustration, visual = segment.visual, text = proof.text;
@@ -28,7 +35,7 @@ export function ExplainerVisual({segment, proof, aspect, progress=1}: {segment: 
         {node.detail ? <div>{node.detail}</div> : null}
         {visual.template === "cause_effect" && i < visual.nodes.length-1 ? <span style={{position:"absolute",right:2,bottom:0,fontSize:text.font}}>→</span> : null}
       </div>)}
-    </div>{visual.edges?.map((edge,i)=><div key={i} style={{fontSize:text.font,lineHeight:1.3,marginTop:text.gap}}>
+    </div>{shownEdges(visual).map((edge,i)=><div key={i} style={{fontSize:text.font,lineHeight:1.3,marginTop:text.gap}}>
       {visual.nodes.find(n=>n.id===edge.source)?.label} → {visual.nodes.find(n=>n.id===edge.target)?.label}{edge.label?`: ${edge.label}`:""}
     </div>)}</>}
   </div>;
