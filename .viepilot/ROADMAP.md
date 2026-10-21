@@ -2,7 +2,7 @@
 
 ## Phase 58 — Character / Music / Settings rework and app language (2026-10-22)
 
-Status: planned, execution authorized; 0/5 tasks. ENH-040: English / Tiếng Việt interface (English by default), character profile tabs, compact music list with one player, Settings left menu. [Plan](phases/58-libraries-language/PLAN.md).
+Status: implemented_verified_pending_owner_review; 5/5 tasks. ENH-040: English / Tiếng Việt interface (English by default), character profile tabs, compact music list with one player, Settings left menu. [Plan](phases/58-libraries-language/PLAN.md).
 
 ## Phase 57 — Step 1 video type, AI topic ideas, video from your material (2026-10-21)
 

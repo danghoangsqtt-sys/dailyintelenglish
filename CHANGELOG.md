@@ -8,6 +8,13 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added — Phase 58 app language, Character / Music / Settings rework (2026-10-22)
+
+- The interface can be shown in **Tiếng Việt** or English (English by default): the EN | VI switch in the top bar or Settings → General. Every interface text is translated; video content, names and the owner's own text stay as they are (ENH-040).
+- **Settings** has a left menu: General (language, light/dark theme, app version) · AI · AI providers, with a status dot per provider.
+- **Character Library**: the profile has a header with the character's picture and one tab row — Conversation pictures · Presenter pictures · Voice · Details.
+- **Music Library**: a compact upload bar (files can be dropped anywhere on the page), search and mood chips, one row per track with a ⚠ when its licence is missing, one shared player bar, and the details form as a side panel.
+
 ### Added — Phase 57 Step 1 video type, AI topic ideas, video from your material (2026-10-21)
 
 - Step 1 starts with two cards for the video type: **Conversation** (two characters) or **Solo presentation**, which has four kinds — a field or job, a product, a knowledge topic, a how-to — each with its own script guidance and default structure (ENH-039).

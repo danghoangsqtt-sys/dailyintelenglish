@@ -181,6 +181,22 @@
     }
   }
 
+  // Phase 58 (ENH-040): the status dot of each provider -- key saved, or not set up
+  function renderProviderDots(status) {
+    const dots = {
+      openrouter: status.cloud_configured ? `Key ending in ${status.cloud_last4}.` : "",
+      gemini: status.gemini?.configured ? `Key ending in ${status.gemini.key_last4}.` : "",
+      zen: status.opencode_zen?.configured ? `Key ending in ${status.opencode_zen.key_last4}.` : "",
+    };
+    Object.entries(dots).forEach(([name, saved]) => {
+      const dot = document.getElementById(`dot-${name}`);
+      if (!dot) return;
+      dot.dataset.state = saved ? "ok" : "none";
+      dot.textContent = saved ? "Key saved" : "Not set up";
+      dot.title = saved || "";
+    });
+  }
+
   async function loadStatus() {
     try {
       const status = await Api.getSettings();
@@ -190,6 +206,7 @@
       renderProviderOrder(status);
       renderGeminiForm(status);
       renderZenForm(status);
+      renderProviderDots(status);
       return status;
     } catch (error) {
       if (effectiveStatusEl) effectiveStatusEl.textContent = error.message || "Could not load current status.";
@@ -368,6 +385,38 @@
   clearGeminiKeyBtn?.addEventListener("click", handleClearGeminiKey);
   saveZenBtn?.addEventListener("click", handleSaveZen);
   clearZenKeyBtn?.addEventListener("click", handleClearZenKey);
+
+  // Phase 58 (ENH-040): one section at a time from the left menu (remembered in the address: #general, #ai, #providers)
+  const SECTIONS = ["general", "ai", "providers"];
+  function showSection(name, remember = true) {
+    const section = SECTIONS.includes(name) ? name : "general";
+    document.querySelectorAll(".settings-section").forEach((element) => { element.hidden = element.dataset.section !== section; });
+    document.querySelectorAll("#settings-nav button").forEach((button) => {
+      button.setAttribute("aria-current", String(button.dataset.section === section));
+    });
+    if (remember) {
+      try { history.replaceState(null, "", `#${section}`); } catch { /* keep the address */ }
+    }
+  }
+  document.querySelectorAll("#settings-nav button").forEach((button) => {
+    button.addEventListener("click", () => showSection(button.dataset.section));
+  });
+  document.querySelectorAll(".provider-pill").forEach((pill) => pill.addEventListener("click", () => {
+    document.getElementById(pill.dataset.target)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
+  showSection(location.hash.slice(1), false);
+  window.addEventListener("hashchange", () => showSection(location.hash.slice(1), false));
+
+  document.querySelectorAll("input[name=app-language]").forEach((input) => {
+    input.checked = input.value === (window.I18n ? I18n.lang() : "en");
+    input.addEventListener("change", () => input.checked && window.I18n && I18n.set(input.value));
+  });
+  document.querySelectorAll("input[name=app-theme]").forEach((input) => {
+    let theme = "light";
+    try { theme = localStorage.getItem("die-theme") || "light"; } catch { /* light */ }
+    input.checked = input.value === theme;
+    input.addEventListener("change", () => input.checked && Theme.set(input.value));
+  });
 
   loadStatus();
   loadFallbackRate();

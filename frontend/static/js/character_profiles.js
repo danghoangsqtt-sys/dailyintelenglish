@@ -240,8 +240,33 @@
     }
   }
 
+  // Phase 58 (ENH-040): the profile tabs -- "pictures" (the native or front pack, by state.view), "voice", "details"
+  function renderTabs() {
+    const tab = state.tab || "pictures";
+    $("profile-pictures-panel").hidden = tab !== "pictures";
+    $("profile-voice-panel").hidden = tab !== "voice";
+    $("profile-details-panel").hidden = tab !== "details";
+    document.querySelectorAll("[data-picture-view]").forEach(button => {
+      const selected = tab === "pictures" && button.dataset.pictureView === state.view;
+      button.setAttribute("aria-selected", String(selected)); button.tabIndex = selected ? 0 : -1;
+    });
+    document.querySelectorAll("[data-profile-tab]").forEach(button => {
+      const selected = button.dataset.profileTab === tab;
+      button.setAttribute("aria-selected", String(selected)); button.tabIndex = selected ? 0 : -1;
+    });
+  }
+
+  function selectTab(tab) {
+    state.tab = tab;
+    renderTabs();
+  }
+
   async function selectView(view) {
     if (operationBlocked() || !state.selectedId) return;
+    const sameView = state.view === view && state.slots;
+    state.tab = "pictures";
+    renderTabs();
+    if (sameView) return;
     state.view = view;
     try { await openProfile(state.selectedId); }
     catch (error) { notice(error.message || "Pictures could not load. Select the tab to retry.", true); }
@@ -249,6 +274,9 @@
 
   function renderDetail(profile) {
     $("profile-name").textContent = profile.name;
+    const avatar = cardPicture(profile);
+    $("profile-avatar").hidden = !avatar;
+    if (avatar) $("profile-avatar").src = avatar;
     updateVoiceSummary(profile);
     $("profile-archive").textContent = profile.archived ? "Restore" : "Archive";
     $("profile-delete").hidden = profile.is_seed;
@@ -314,10 +342,7 @@
     const front = state.view === "front";
     const total = front ? 21 : 29;
     const approved = cards.filter(card => card.asset?.review_state === "approved").length;
-    document.querySelectorAll("[data-picture-view]").forEach(button => {
-      const selected = button.dataset.pictureView === state.view;
-      button.setAttribute("aria-selected", String(selected)); button.tabIndex = selected ? 0 : -1;
-    });
+    renderTabs();
     $("profile-slots").setAttribute("aria-labelledby", `profile-view-${state.view}`);
     $("profile-pack-heading").textContent = front ? "Front-facing presenter pictures" : "Conversation pictures";
     $("profile-pack-progress").textContent = state.slotsLoading && !state.slots ? "Loading pictures…" : `${approved}/${total} approved${approved === total ? " · complete" : ""}`;
@@ -547,6 +572,9 @@
         destroyVoicePicker();
         $("profile-detail").hidden = true;
       }, "Deleted.");
+    });
+    document.querySelectorAll("[data-profile-tab]").forEach(button => {
+      button.addEventListener("click", () => selectTab(button.dataset.profileTab));
     });
     document.querySelectorAll("[data-picture-view]").forEach(button => {
       button.addEventListener("click", () => selectView(button.dataset.pictureView));

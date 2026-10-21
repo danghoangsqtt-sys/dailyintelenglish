@@ -6,6 +6,8 @@
   <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
   <title>Music Library — Daily Beyond English</title>
   <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="/static/js/i18n_vi.js"></script>
+  <script src="/static/js/i18n.js"></script>
   <style>
     body { margin: 0; }
 
@@ -19,10 +21,10 @@
 
 
     .upload-zone {
-      display: grid;
-      place-items: center;
-      min-height: 210px;
-      padding: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 18px;
       text-align: center;
       border: 2px dashed var(--surface-border);
       border-radius: var(--radius);
@@ -40,9 +42,10 @@
     }
 
     .upload-zone.is-uploading { cursor: wait; opacity: 0.7; }
-    .upload-icon { font-size: 42px; margin-bottom: 12px; }
-    .upload-title { margin: 0 0 8px; font-size: 18px; font-weight: 700; }
-    .upload-help { margin: 0 0 20px; color: var(--text-muted); font-size: 13px; }
+    .upload-zone > span { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 12px; }
+    .upload-icon { font-size: 22px; }
+    .upload-title { font-size: 14px; font-weight: 700; }
+    .upload-help { width: 100%; color: var(--text-muted); font-size: 12px; }
     #music-file-input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 
     .message {
@@ -64,15 +67,30 @@
 
     .library-header h2 { margin: 0; font-size: 21px; }
     .track-count { color: var(--text-muted); font-size: 13px; }
-    .track-list { display: grid; gap: 14px; }
+    .track-list { display: grid; gap: 6px; }
 
+    /* Phase 58 (ENH-040): one compact row per track */
     .track-card {
       display: grid;
-      grid-template-columns: minmax(180px, 1fr) minmax(320px, 2fr) auto;
+      grid-template-columns: auto minmax(180px, 1.3fr) minmax(140px, 1fr) auto;
       align-items: center;
-      gap: 18px;
-      padding: 18px;
+      gap: 14px;
+      padding: 10px 14px;
     }
+    .track-card[hidden] { display: none; }
+    .track-card.is-playing { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+    .track-card audio { display: none; }
+    .music-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 14px; }
+    .music-toolbar input[type="search"] { flex: 1 1 220px; padding: 8px 12px; border: 1px solid var(--surface-border); border-radius: 999px; background: var(--surface); color: inherit; font: inherit; }
+    .mood-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .mood-chip { padding: 6px 12px; border: 1px solid var(--surface-border); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+    .mood-chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+    .mood-chip .chip-count { margin-left: 5px; color: var(--text-muted); }
+    .music-player { position: sticky; bottom: 0; z-index: 6; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; margin-top: 18px; padding: 10px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: 0 -6px 18px rgba(0, 0, 0, .08); }
+    .music-player[hidden] { display: none; }
+    .music-player strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+    .music-player input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .music-player .player-time { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 
     .track-name {
       margin: 0 0 6px;
@@ -83,9 +101,10 @@
 
     .track-size { color: var(--text-muted); font-size: 12px; }
     .track-preview { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .track-card .track-playrow { display: contents; }
     .track-playrow { display: flex; align-items: center; gap: 12px; }
     .track-playrow .track-waveform { flex: 1 1 auto; min-width: 0; }
-    .track-play { flex: 0 0 auto; width: 46px; height: 46px; border: 0; border-radius: 50%; background: var(--btn-gradient); color: #fff; font-size: 15px; line-height: 1; cursor: pointer; box-shadow: 0 4px 14px rgba(31, 122, 46, .3); }
+    .track-play { flex: 0 0 auto; width: 38px; height: 38px; border: 0; border-radius: 50%; background: var(--btn-gradient); color: #fff; font-size: 15px; line-height: 1; cursor: pointer; box-shadow: 0 4px 14px rgba(31, 122, 46, .3); }
     .track-play:hover { filter: brightness(1.12); }
     .track-play:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
     .track-play[aria-pressed="true"] { background: var(--cta); box-shadow: 0 4px 14px rgba(201, 42, 37, .3); }
@@ -100,7 +119,7 @@
     .upload-queue li[data-state="skipped"], .upload-queue li[data-state="error"] { border-left-color: var(--danger); }
     .upload-queue li[data-state="skipped"] .queue-state, .upload-queue li[data-state="error"] .queue-state { color: var(--danger); }
     .upload-queue[hidden] { display: none; }
-    .track-waveform { display: block; width: 100%; height: 56px; border-radius: 8px; background: var(--surface); cursor: pointer; }
+    .track-waveform { display: block; width: 100%; height: 38px; border-radius: 8px; background: var(--surface); cursor: pointer; }
     .track-card audio { width: 100%; min-width: 0; }
     .delete-btn:hover { border-color: var(--danger); color: var(--danger); }
 
@@ -113,7 +132,7 @@
     .empty-state-icon { display: block; margin-bottom: 12px; font-size: 38px; }
 
     /* Task 22.7: track details. */
-    .track-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .track-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
     .track-badge { padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600;
       border: 1px solid var(--surface-border); background: var(--surface); color: var(--text-muted); }
     .track-badge.is-mood { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
@@ -121,10 +140,17 @@
     .track-badge.is-pace { color: var(--success); border-color: var(--success); }
     .analysis-note { margin: -8px 0 14px; color: var(--text-muted); font-size: 13px; }
     .track-badge.is-warning { color: var(--danger); border-color: var(--danger); background: rgba(248, 81, 73, 0.08); }
-    .track-buttons { display: flex; flex-direction: column; gap: 8px; }
-    .details-form { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px; padding-top: 14px; border-top: 1px solid var(--surface-border); text-align: left; }
+    .track-buttons { display: flex; gap: 6px; }
+    .track-buttons .btn { padding: 6px 12px; font-size: 13px; }
+    /* the details form opens as a side panel (it stays inside its row for the page's code) */
+    .details-form { position: fixed; top: 0; right: 0; bottom: 0; z-index: 40; width: min(420px, 100vw); overflow-y: auto;
+      display: grid; grid-template-columns: 1fr; align-content: start; gap: 12px; padding: 22px; box-sizing: border-box;
+      border-left: 1px solid var(--surface-border); background: var(--surface); box-shadow: -12px 0 30px rgba(0, 0, 0, .18); text-align: left; }
     .details-form[hidden] { display: none; }
+    .details-title { margin: 0; font-size: 17px; }
+    /* while a side panel is open the list moves left, so every row stays reachable */
+    body.has-side-panel .main { width: min(920px, calc(100% - 500px)); margin-left: 40px; }
+    .details-file { margin: -6px 0 4px; color: var(--text-muted); font-size: 12px; overflow-wrap: anywhere; }
     .detail-field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600;
       color: var(--text-muted); }
     .detail-field.is-wide { grid-column: 1 / -1; }
@@ -137,14 +163,15 @@
     .music-guide ul { margin: 8px 0; padding-left: 20px; }
     .music-guide p { margin: 0; color: var(--text-muted); }
     @media (max-width: 720px) {
-      .track-card { grid-template-columns: 1fr; }
-      .details-form { grid-template-columns: 1fr; }
+      .track-card { grid-template-columns: auto 1fr; }
+      .track-card .track-waveform { grid-column: 1 / -1; }
+      .track-buttons { grid-column: 1 / -1; }
     }
   </style>
 </head>
 <body>
   <aside id="app-sidebar" class="app-sidebar" aria-label="App navigation">
-    <a class="brand" href="/" aria-label="Daily Beyond English home"><img class="brand-logo" src="/static/brand/logo-64.png" width="36" height="36" alt="" /><span class="brand-word"><b>Daily Beyond</b><small>English</small></span></a>
+    <a class="brand" href="/" aria-label="Daily Beyond English home" translate="no"><img class="brand-logo" src="/static/brand/logo-64.png" width="36" height="36" alt="" /><span class="brand-word"><b>Daily Beyond</b><small>English</small></span></a>
     <nav class="side-nav" aria-label="Main"><a class="side-link" href="/" aria-label="Dashboard" title="Dashboard"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg><span class="side-label">Dashboard</span></a><a class="side-link" href="/channel" aria-label="Channel plan" title="Channel plan"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5M16 4v5M7 13h4M7 16.5h7"/></svg><span class="side-label">Channel plan</span></a><a class="side-link" href="/characters" aria-label="Character Library" title="Character Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><circle cx="17.2" cy="9.2" r="2.4"/><path d="M16.2 14.3c2.8.3 4.8 2.4 4.8 5.7"/></svg><span class="side-label">Character Library</span></a><a class="side-link" href="/activities" aria-label="Activity Library" title="Activity Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M8 5v4M16 5v4M8 15l2.5-3 2 2 2-2.5L18 15"/></svg><span class="side-label">Activity Library</span></a><a class="side-link" href="/music" aria-current="page" aria-label="Music Library" title="Music Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg><span class="side-label">Music Library</span></a><a class="side-link" href="/settings" aria-label="Settings" title="Settings"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span class="side-label">Settings</span></a></nav>
     <button id="sidebar-toggle" class="side-toggle" type="button" aria-expanded="true" aria-controls="app-sidebar" aria-label="Collapse sidebar" title="Collapse sidebar"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14.5 6-6 6 6 6"/></svg><span class="side-label">Collapse</span></button>
   </aside>
@@ -179,9 +206,9 @@
     <label id="upload-zone" class="upload-zone" for="music-file-input" tabindex="0">
       <span>
         <span class="upload-icon" aria-hidden="true">🎵</span>
+        <span id="upload-button" class="btn btn-primary btn-sm">⬆ Upload music</span>
         <span class="upload-title">Drop MP3, WAV, OGG or M4A files here</span>
         <span class="upload-help">Choose one file or many at once. Maximum 50 MB each. Existing tracks are preserved when names match.</span>
-        <span id="upload-button" class="btn btn-primary">Choose Music Files</span>
       </span>
       <input id="music-file-input" type="file" multiple accept=".mp3,.wav,.ogg,.m4a,audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/x-m4a" />
     </label>
@@ -196,10 +223,23 @@
         <span id="track-count" class="track-count">Loading…</span>
       </div>
       <p id="analysis-note" class="analysis-note" role="status" hidden>Analysing new tracks (pace, tempo, mood)…</p>
+      <div class="music-toolbar">
+        <input id="music-search" type="search" placeholder="Title, artist or tag" aria-label="Search music" autocomplete="off" />
+        <div id="mood-chips" class="mood-chips" role="group" aria-label="Mood"></div>
+      </div>
       <div id="track-list" class="track-list" aria-live="polite"></div>
+      <p id="no-match" class="empty-state" hidden>No tracks match.</p>
       <div id="empty-state" class="empty-state" hidden>
         <span class="empty-state-icon" aria-hidden="true">🎧</span>
         No music yet. Upload your first royalty-free track above.
+      </div>
+      <div id="music-player" class="music-player" role="region" aria-label="Music player" hidden>
+        <button id="player-toggle" class="track-play" type="button" aria-label="Play"><span aria-hidden="true">▶</span></button>
+        <div>
+          <strong id="player-title" translate="no">Nothing playing</strong>
+          <input id="player-seek" type="range" min="0" max="1000" value="0" aria-label="Position" />
+        </div>
+        <span id="player-time" class="player-time">0:00 / 0:00</span>
       </div>
     </section>
   </main>

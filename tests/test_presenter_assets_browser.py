@@ -52,7 +52,9 @@ async def test_front_prompt_import_review_reload_preserves_voice_draft_and_nativ
     assert "eyes looking directly at the camera" in await base.locator("textarea").input_value()
     await expect(page.locator(".slot-card[data-slot='gesture-point-left']")).to_have_attribute("data-state", "waiting")
     picker = page.locator("#profile-voice-picker")
+    await page.locator("#profile-tab-voice").click()  # Phase 58: the voice has its own profile tab
     await picker.locator(".voice-select").select_option("en-US-AndrewNeural")
+    await page.locator("#profile-view-front").click()
     await base.locator("input[type=file]").set_input_files({"name": "Hoang-front.png", "mimeType": "image/png", "buffer": figure_bytes()})
     await expect(base).to_have_attribute("data-state", "needs_review")
     await expect(picker.locator(".voice-select")).to_have_value("en-US-AndrewNeural")
@@ -67,6 +69,7 @@ async def test_front_prompt_import_review_reload_preserves_voice_draft_and_nativ
     await expect(page.locator(".slot-card")).to_have_count(29)
     await expect(page.locator("#profile-pack-progress")).to_have_text("0/29 approved")
     await expect(picker.locator(".voice-select")).to_have_value("en-US-AndrewNeural")
+    await page.locator("#profile-tab-voice").click()
     await picker.locator(".voice-reload").click()
     await page.reload()
     await page.locator(f".profile-card[data-id='{character['id']}']").click()

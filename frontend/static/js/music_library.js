@@ -56,7 +56,14 @@
     form.className = "details-form";
     form.hidden = true;
     form.noValidate = true;
-    form.append(
+    const heading = document.createElement("h3");
+    heading.className = "details-title";
+    heading.textContent = "Edit track";
+    const name = document.createElement("p");
+    name.className = "details-file";
+    name.setAttribute("translate", "no");
+    name.textContent = track.filename;
+    form.append(heading, name,
       textField("title", "Title", track.title, "Track title"),
       textField("artist", "Artist", track.artist, "Composer or artist"),
       selectField("mood", "Mood", options.moods, track.mood,
@@ -119,6 +126,7 @@
     }
     if (track.bpm) badges.append(badge(`~${Math.round(track.bpm)} BPM`));
     if (track.licence_label) badges.append(badge(track.licence_label));
+    else badges.append(badge("⚠ No licence", "is-warning"));
     if (track.needs_attribution) badges.append(badge("⚠ Credit needed", "is-warning"));
     return badges;
   }
@@ -132,12 +140,17 @@
       renderTracks(tracks); // the library itself changed meanwhile
       return;
     }
+    state.tracks = tracks;
     tracks.forEach((track) => {
       const card = cards.get(track.filename);
+      card.dataset.mood = track.mood_label || "";
+      card.dataset.search = [track.title, track.artist, track.filename, track.tags, track.mood_label].join(" ").toLowerCase();
       card.querySelector(".track-badges").replaceWith(buildBadges(track));
       const form = card.querySelector(".details-form");
       if (form && form.hidden) form.replaceWith(buildDetailsForm(track));
     });
+    renderMoodChips();
+    applyFilters();
   }
 
   function renderTracks(tracks) {
@@ -148,17 +161,22 @@
     count.textContent = `${tracks.length} ${tracks.length === 1 ? "track" : "tracks"}`;
     empty.hidden = tracks.length !== 0;
 
+    state.tracks = tracks;
     tracks.forEach((track) => {
       const card = document.createElement("article");
       card.className = "track-card card";
       card.dataset.filename = track.filename;
+      card.dataset.mood = track.mood_label || "";
+      card.dataset.search = [track.title, track.artist, track.filename, track.tags, track.mood_label].join(" ").toLowerCase();
 
       const details = document.createElement("div");
       const name = document.createElement("h3");
       name.className = "track-name";
+      name.setAttribute("translate", "no");
       name.textContent = track.artist ? `${track.title} — ${track.artist}` : track.title;
       const file = document.createElement("span");
       file.className = "track-size";
+      file.setAttribute("translate", "no");
       file.textContent = `${track.filename} · ${formatBytes(track.size_bytes)}`;
       details.append(name, file, buildBadges(track));
 
@@ -198,6 +216,7 @@
           if (other !== player && !other.paused) other.pause();
         });
         syncPlayButton();
+        attachPlayer(player, track, card);
       });
       ["pause", "ended"].forEach((name) => player.addEventListener(name, syncPlayButton));
       syncPlayButton();
@@ -220,10 +239,118 @@
       buttons.className = "track-buttons";
       buttons.append(editButton, deleteButton);
 
-      card.append(details, preview, buttons, buildDetailsForm(track));
+      // Phase 58: play button, title + badges, the small waveform, then the buttons -- one row
+      card.append(playButton, details, preview, buttons, buildDetailsForm(track));
+      playRow.remove();
+      preview.replaceChildren(waveformCanvas, player);
       list.append(card);
       // Rendered into the DOM first so the canvas has a real clientWidth to size against.
       Waveform.render(waveformCanvas, player.src, player);
+    });
+  }
+
+  // ---- Phase 58 (ENH-040): search, mood chips and the one shared player bar
+  const state = { tracks: [], mood: "", active: null };
+
+  function applyFilters() {
+    const query = document.getElementById("music-search").value.trim().toLowerCase();
+    let shown = 0;
+    document.querySelectorAll("#track-list .track-card").forEach((card) => {
+      const visible = (!state.mood || card.dataset.mood === state.mood) && (!query || card.dataset.search.includes(query));
+      card.hidden = !visible;
+      if (visible) shown += 1;
+    });
+    document.getElementById("no-match").hidden = shown > 0 || state.tracks.length === 0;
+  }
+
+  function renderMoodChips() {
+    const counts = new Map();
+    state.tracks.forEach((track) => {
+      if (track.mood_label) counts.set(track.mood_label, (counts.get(track.mood_label) || 0) + 1);
+    });
+    if (state.mood && !counts.has(state.mood)) state.mood = "";
+    const chip = (mood, label, count) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "mood-chip";
+      button.dataset.mood = mood;
+      button.setAttribute("aria-pressed", String(state.mood === mood));
+      const text = document.createElement("span");
+      text.textContent = label;
+      const number = document.createElement("span");
+      number.className = "chip-count";
+      number.textContent = String(count);
+      button.append(text, number);
+      button.addEventListener("click", () => {
+        state.mood = mood;
+        renderMoodChips();
+        applyFilters();
+      });
+      return button;
+    };
+    document.getElementById("mood-chips").replaceChildren(chip("", "All", state.tracks.length),
+      ...[...counts.entries()].sort().map(([mood, count]) => chip(mood, mood, count)));
+  }
+
+  function formatClock(seconds) {
+    if (!Number.isFinite(seconds)) return "0:00";
+    return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+  }
+
+  function syncPlayerBar() {
+    const bar = document.getElementById("music-player");
+    const audio = state.active;
+    if (!audio) return;
+    bar.hidden = false;
+    const playing = !audio.paused;
+    const toggle = document.getElementById("player-toggle");
+    toggle.firstElementChild.textContent = playing ? "❚❚" : "▶";
+    toggle.setAttribute("aria-label", playing ? "Pause" : "Play");
+    document.getElementById("player-time").textContent = `${formatClock(audio.currentTime)} / ${formatClock(audio.duration)}`;
+    const seek = document.getElementById("player-seek");
+    if (document.activeElement !== seek && audio.duration) seek.value = String(Math.round((audio.currentTime / audio.duration) * 1000));
+  }
+
+  /** The shared player bar follows the track that is playing (each row keeps its own audio source). */
+  function attachPlayer(audio, track, card) {
+    if (state.active !== audio) {
+      document.querySelectorAll("#track-list .track-card.is-playing").forEach((row) => row.classList.remove("is-playing"));
+      state.active = audio;
+      document.getElementById("player-title").textContent = track.artist ? `${track.title} — ${track.artist}` : track.title;
+      ["timeupdate", "pause", "play", "ended", "loadedmetadata"].forEach((name) => audio.addEventListener(name, () => {
+        if (state.active === audio) syncPlayerBar();
+      }));
+    }
+    card.classList.add("is-playing");
+    syncPlayerBar();
+  }
+
+  function syncSidePanel() {
+    document.body.classList.toggle("has-side-panel", !!document.querySelector("#track-list .details-form:not([hidden])"));
+  }
+
+  function setupPlayerAndFilters() {
+    document.getElementById("music-search").addEventListener("input", applyFilters);
+    document.getElementById("player-toggle").addEventListener("click", () => {
+      const audio = state.active;
+      if (!audio) return;
+      if (audio.paused) audio.play().catch((error) => console.error("Could not play the track:", error));
+      else audio.pause();
+    });
+    document.getElementById("player-seek").addEventListener("input", (event) => {
+      const audio = state.active;
+      if (audio && audio.duration) audio.currentTime = (Number(event.target.value) / 1000) * audio.duration;
+    });
+    // drop files anywhere on the page, not only on the upload bar
+    ["dragover", "drop"].forEach((name) => document.addEventListener(name, (event) => {
+      if (!event.dataTransfer || ![...event.dataTransfer.types].includes("Files")) return;
+      event.preventDefault();
+      if (name === "drop" && !event.target.closest("#upload-zone")) uploadFiles(event.dataTransfer.files);
+    }));
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      document.querySelectorAll("#track-list .details-form:not([hidden])").forEach((form) => { form.hidden = true; });
+      syncSidePanel();
     });
   }
 
@@ -233,6 +360,9 @@
       try {
         const tracks = await Api.listMusic();
         renderTracks(tracks);
+        renderMoodChips();
+        applyFilters();
+        syncSidePanel();
         if (tracks.some((track) => track.needs_analysis)) analyseTracks();
       } catch (error) {
         console.error("Failed to load music library:", error);
@@ -419,8 +549,13 @@
       const card = button.closest("[data-filename]");
       const form = card.querySelector(".details-form");
       if (button.dataset.action === "delete") deleteTrack(card.dataset.filename, button);
-      if (button.dataset.action === "edit-details") form.hidden = !form.hidden;
+      if (button.dataset.action === "edit-details") {
+        const opening = form.hidden;
+        document.querySelectorAll("#track-list .details-form").forEach((other) => { other.hidden = true; });
+        form.hidden = !opening;  // one side panel at a time
+      }
       if (button.dataset.action === "cancel-details") form.hidden = true;
+      syncSidePanel();
     });
     document.getElementById("track-list").addEventListener("submit", async (event) => {
       const form = event.target.closest(".details-form");
@@ -454,6 +589,7 @@
   document.addEventListener("DOMContentLoaded", async () => {
     setupUpload();
     setupDelete();
+    setupPlayerAndFilters();
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
     await loadOptions(); // the details form needs the mood / source / licence choices
     loadTracks();

@@ -29,7 +29,17 @@ const Theme = (() => {
     }
   }
 
-  return { init, toggle };
+  /** Phase 58 (ENH-040): choose a theme directly (Settings → General). */
+  function set(theme) {
+    apply(theme === "dark" ? "dark" : "light");
+    try {
+      localStorage.setItem(STORAGE_KEY, theme === "dark" ? "dark" : "light");
+    } catch {
+      /* ignore persistence failure */
+    }
+  }
+
+  return { init, toggle, set };
 })();
 
 document.addEventListener("DOMContentLoaded", Theme.init);

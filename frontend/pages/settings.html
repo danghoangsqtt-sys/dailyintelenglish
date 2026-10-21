@@ -6,16 +6,36 @@
   <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
   <title>Settings — Daily Beyond English</title>
   <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="/static/js/i18n_vi.js"></script>
+  <script src="/static/js/i18n.js"></script>
   <style>
     body { margin: 0; }
 
 
 
     .main {
-      width: min(640px, calc(100% - 80px));
+      width: min(980px, calc(100% - 48px));
       margin: 0 auto;
       padding: 48px 0 80px;
     }
+    /* Phase 58 (ENH-040): a left menu, one section at a time */
+    .settings-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 24px; align-items: start; }
+    .settings-nav { position: sticky; top: 16px; display: grid; gap: 4px; padding: 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+    .settings-nav button { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border: 0; border-radius: 9px; background: none; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+    .settings-nav button:hover { background: var(--accent-soft); }
+    .settings-nav button[aria-current="true"] { background: var(--accent-soft); font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
+    .settings-section[hidden] { display: none; }
+    .settings-choice { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 6px 0 4px; }
+    .settings-choice label { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; font-size: 14px; }
+    .settings-choice label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+    .provider-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+    .provider-pill { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+    .provider-pill strong { font-size: 14px; }
+    .status-dot { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+    .status-dot::before { width: 9px; height: 9px; border-radius: 50%; background: var(--border); content: ""; }
+    .status-dot[data-state="ok"]::before { background: var(--success, #2e9e5b); }
+    .settings-card h2 .status-dot { margin-left: 10px; font-weight: 400; }
+    @media (max-width: 760px) { .settings-layout { grid-template-columns: 1fr; } .settings-nav { position: static; grid-template-columns: repeat(3, 1fr); } .provider-summary { grid-template-columns: 1fr; } }
 
 
     .settings-card { padding: 24px; margin-bottom: 20px; }
@@ -52,7 +72,7 @@
 </head>
 <body>
   <aside id="app-sidebar" class="app-sidebar" aria-label="App navigation">
-    <a class="brand" href="/" aria-label="Daily Beyond English home"><img class="brand-logo" src="/static/brand/logo-64.png" width="36" height="36" alt="" /><span class="brand-word"><b>Daily Beyond</b><small>English</small></span></a>
+    <a class="brand" href="/" aria-label="Daily Beyond English home" translate="no"><img class="brand-logo" src="/static/brand/logo-64.png" width="36" height="36" alt="" /><span class="brand-word"><b>Daily Beyond</b><small>English</small></span></a>
     <nav class="side-nav" aria-label="Main"><a class="side-link" href="/" aria-label="Dashboard" title="Dashboard"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg><span class="side-label">Dashboard</span></a><a class="side-link" href="/channel" aria-label="Channel plan" title="Channel plan"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5M16 4v5M7 13h4M7 16.5h7"/></svg><span class="side-label">Channel plan</span></a><a class="side-link" href="/characters" aria-label="Character Library" title="Character Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><circle cx="17.2" cy="9.2" r="2.4"/><path d="M16.2 14.3c2.8.3 4.8 2.4 4.8 5.7"/></svg><span class="side-label">Character Library</span></a><a class="side-link" href="/activities" aria-label="Activity Library" title="Activity Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M8 5v4M16 5v4M8 15l2.5-3 2 2 2-2.5L18 15"/></svg><span class="side-label">Activity Library</span></a><a class="side-link" href="/music" aria-label="Music Library" title="Music Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg><span class="side-label">Music Library</span></a><a class="side-link" href="/settings" aria-current="page" aria-label="Settings" title="Settings"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span class="side-label">Settings</span></a></nav>
     <button id="sidebar-toggle" class="side-toggle" type="button" aria-expanded="true" aria-controls="app-sidebar" aria-label="Collapse sidebar" title="Collapse sidebar"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14.5 6-6 6 6 6"/></svg><span class="side-label">Collapse</span></button>
   </aside>
@@ -68,12 +88,41 @@
   <main class="main">
     <section class="page-heading">
       <h1>Settings</h1>
-      <p id="running-build" class="section-hint" aria-live="polite">Checking running application build…</p>
-      <p>Choose whether script, learning content, thumbnail, and YouTube package generation
-        run on your local Ollama model, or on a cloud provider first (with local as an
-        automatic fallback).</p>
     </section>
 
+    <div class="settings-layout">
+    <nav id="settings-nav" class="settings-nav" aria-label="Settings sections">
+      <button type="button" data-section="general" aria-current="true"><span aria-hidden="true">⚙️</span> General</button>
+      <button type="button" data-section="ai" aria-current="false"><span aria-hidden="true">🤖</span> AI</button>
+      <button type="button" data-section="providers" aria-current="false"><span aria-hidden="true">🔑</span> AI providers</button>
+    </nav>
+    <div class="settings-sections">
+    <section id="settings-general" class="settings-section" data-section="general">
+      <div class="card settings-card">
+        <h2>Language</h2>
+        <p class="section-hint">The language of the app's buttons and messages. Video content (scripts, vocabulary) stays in English.</p>
+        <div class="settings-choice" role="radiogroup" aria-label="Language" translate="no">
+          <label><input type="radio" name="app-language" value="en" /> English</label>
+          <label><input type="radio" name="app-language" value="vi" /> Tiếng Việt</label>
+        </div>
+      </div>
+      <div class="card settings-card">
+        <h2>Appearance (theme)</h2>
+        <div class="settings-choice" role="radiogroup" aria-label="Appearance (theme)">
+          <label><input type="radio" name="app-theme" value="light" /> Light</label>
+          <label><input type="radio" name="app-theme" value="dark" /> Dark</label>
+        </div>
+      </div>
+      <div class="card settings-card">
+        <h2>App version</h2>
+        <p id="running-build" class="section-hint" aria-live="polite">Checking running application build…</p>
+      </div>
+    </section>
+
+    <section id="settings-ai" class="settings-section" data-section="ai" hidden>
+    <p class="section-hint">Choose whether script, learning content, thumbnail, and YouTube package generation
+        run on your local Ollama model, or on a cloud provider first (with local as an
+        automatic fallback).</p>
     <section class="card settings-card">
       <h2>AI Provider</h2>
       <p class="section-hint">
@@ -103,8 +152,15 @@
         <div id="cloud-provider-order-status" class="settings-inline-note" aria-live="polite"></div>
       </div>
     </section>
+    </section>
 
-    <section class="card settings-card">
+    <section id="settings-providers" class="settings-section" data-section="providers" hidden>
+    <div class="provider-summary" aria-label="Provider status">
+      <button type="button" class="provider-pill" data-target="provider-openrouter"><strong>OpenRouter</strong><span id="dot-openrouter" class="status-dot">Not set up</span></button>
+      <button type="button" class="provider-pill" data-target="provider-gemini"><strong>Gemini</strong><span id="dot-gemini" class="status-dot">Not set up</span></button>
+      <button type="button" class="provider-pill" data-target="provider-zen"><strong>OpenCode Zen</strong><span id="dot-zen" class="status-dot">Not set up</span></button>
+    </div>
+    <section id="provider-openrouter" class="card settings-card">
       <h2>Cloud Provider — OpenRouter</h2>
       <p class="section-hint">
         An OpenAI-compatible endpoint. The key is write-only — it is never shown again after
@@ -144,7 +200,7 @@
       </p>
     </section>
 
-    <section class="card settings-card">
+    <section id="provider-gemini" class="card settings-card">
       <h2>Cloud Provider — Gemini</h2>
       <p class="section-hint">
         Dispatches each model below as its own chain entry with its own free-tier quota — the
@@ -172,7 +228,7 @@
       <div id="gemini-save-status" class="settings-inline-note" aria-live="polite"></div>
     </section>
 
-    <section class="card settings-card">
+    <section id="provider-zen" class="card settings-card">
       <h2>Cloud Provider — OpenCode Zen (advanced)</h2>
       <p class="section-hint">
         Not enabled by default — its free tier is restricted to the OpenCode client for most
@@ -199,6 +255,9 @@
       </div>
       <div id="zen-save-status" class="settings-inline-note" aria-live="polite"></div>
     </section>
+    </section>
+    </div>
+    </div>
   </main>
 
   <script src="/static/js/theme.js"></script>

@@ -55,6 +55,7 @@ async def create_profile(page, base, name="Voice Presenter"):
     }))
     await page.goto(base + "/characters")
     await page.locator(f".profile-card[data-id='{profile['id']}']").click()
+    await page.locator("#profile-tab-voice").click()  # Phase 58: the voice has its own profile tab
     picker = page.locator("#profile-voice-picker")
     await expect(picker.locator(".voice-count")).to_have_text("20 of 20 English voices")
     return profile, picker
@@ -209,8 +210,9 @@ async def test_profile_switch_confirms_discard_and_saves_details_to_the_original
         "name": "Second Presenter", "gender": "male", "accent": "american", "appearance": "short hair", "outfit": "blue shirt",
     }))
     first, picker = await create_profile(page, base_url, "First Presenter")
-    await page.locator(".profile-details summary").click()
+    await page.locator("#profile-tab-details").click()
     await page.locator("#profile-intro").fill("An introduction belonging only to the first presenter.")
+    await page.locator("#profile-tab-voice").click()
     await picker.locator(".voice-select").select_option(ANDREW)
     destination = page.locator(f".profile-card[data-id='{second['id']}']")
     await destination.click()

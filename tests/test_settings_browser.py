@@ -127,7 +127,7 @@ async def test_settings_page_loads_and_shows_current_status(browser_instance: Br
     await _mock_settings(page, DEFAULT_STATUS)
     await page.goto(f"{live_server_url}/settings")
 
-    await page.wait_for_selector("#effective-mode-status")
+    await page.wait_for_selector("#effective-mode-status", state="attached")
     assert await page.locator("#ai-mode-local").is_checked()
     assert "9999" in (await page.locator("#cloud-key-status").text_content())
     assert await page.locator("#cloud-base-url").input_value() == "https://openrouter.ai/api/v1"
@@ -143,8 +143,8 @@ async def test_settings_save_round_trips_and_shows_masked_key(browser_instance: 
         return saved_status
 
     await _mock_settings(page, DEFAULT_STATUS, on_put_cloud=on_put_cloud)
-    await page.goto(f"{live_server_url}/settings")
-    await page.wait_for_selector("#effective-mode-status")
+    await page.goto(f"{live_server_url}/settings#providers")
+    await page.wait_for_selector("#effective-mode-status", state="attached")
 
     await page.fill("#cloud-base-url", "https://custom.example.com/v1")
     await page.fill("#cloud-model", "m/x")
@@ -166,8 +166,8 @@ async def test_settings_clear_key_reverts_status_to_none(browser_instance: Brows
     cleared_status = {**DEFAULT_STATUS, "cloud_configured": False, "cloud_last4": None, "cloud_source": "none"}
 
     await _mock_settings(page, configured_status)
-    await page.goto(f"{live_server_url}/settings")
-    await page.wait_for_selector("#effective-mode-status")
+    await page.goto(f"{live_server_url}/settings#providers")
+    await page.wait_for_selector("#effective-mode-status", state="attached")
 
     await _mock_settings(page, cleared_status)  # GET refresh after clearing returns "none"
     await page.click("#clear-cloud-key-btn")
@@ -181,9 +181,9 @@ async def test_settings_cloud_first_disabled_and_noted_when_allow_cloud_false(br
     page = await browser_instance.new_page()
     status = {**DEFAULT_STATUS, "allow_cloud": False}
     await _mock_settings(page, status)
-    await page.goto(f"{live_server_url}/settings")
+    await page.goto(f"{live_server_url}/settings#ai")
 
-    await page.wait_for_selector("#effective-mode-status")
+    await page.wait_for_selector("#effective-mode-status", state="attached")
     assert await page.locator("#ai-mode-cloud-first").is_disabled()
     assert not await page.locator("#ai-mode-disabled-note").is_hidden()
     assert "DIE_AI_ALLOW_CLOUD" in (await page.locator("#ai-mode-disabled-note").text_content())
@@ -194,8 +194,8 @@ async def test_settings_cloud_first_disabled_and_noted_when_allow_cloud_false(br
 async def test_settings_test_connection_shows_ok_on_success(browser_instance: Browser, live_server_url: str):
     page = await browser_instance.new_page()
     await _mock_settings(page, DEFAULT_STATUS, on_test_connection=lambda: {"ok": True})
-    await page.goto(f"{live_server_url}/settings")
-    await page.wait_for_selector("#effective-mode-status")
+    await page.goto(f"{live_server_url}/settings#providers")
+    await page.wait_for_selector("#effective-mode-status", state="attached")
 
     await page.click("#test-connection-btn")
     await page.wait_for_function("document.getElementById('test-connection-result').textContent.trim() === 'OK'")
@@ -208,8 +208,8 @@ async def test_settings_test_connection_shows_error_class_and_status(browser_ins
     await _mock_settings(
         page, DEFAULT_STATUS, on_test_connection=lambda: {"ok": False, "error": "ProviderAuthError", "status": 401}
     )
-    await page.goto(f"{live_server_url}/settings")
-    await page.wait_for_selector("#effective-mode-status")
+    await page.goto(f"{live_server_url}/settings#providers")
+    await page.wait_for_selector("#effective-mode-status", state="attached")
 
     await page.click("#test-connection-btn")
     await page.wait_for_function(
@@ -239,8 +239,8 @@ async def test_settings_selecting_cloud_first_with_no_key_shows_effective_local_
         return after_select_status
 
     await _mock_settings(page, initial_status, on_put_ai_mode=on_put_ai_mode)
-    await page.goto(f"{live_server_url}/settings")
-    await page.wait_for_selector("#effective-mode-status")
+    await page.goto(f"{live_server_url}/settings#ai")
+    await page.wait_for_selector("#effective-mode-status", state="attached")
 
     await _mock_settings(page, after_select_status, on_put_ai_mode=on_put_ai_mode)  # GET refresh after the PUT
     await page.check("#ai-mode-cloud-first")
@@ -262,8 +262,8 @@ async def test_settings_fallback_models_field_loads_and_round_trips(browser_inst
         return saved_status
 
     await _mock_settings(page, DEFAULT_STATUS, on_put_cloud=on_put_cloud)
-    await page.goto(f"{live_server_url}/settings")
-    await page.wait_for_selector("#effective-mode-status")
+    await page.goto(f"{live_server_url}/settings#providers")
+    await page.wait_for_selector("#effective-mode-status", state="attached")
 
     assert await page.locator("#cloud-fallback-models").input_value() == "a/one:free, b/two:free"
 
@@ -281,8 +281,8 @@ async def test_settings_circuit_status_hidden_by_default(browser_instance: Brows
     page = await browser_instance.new_page()
     await _mock_settings(page, DEFAULT_STATUS)
     await _mock_ai_health(page, circuit_open_until=None)
-    await page.goto(f"{live_server_url}/settings")
-    await page.wait_for_selector("#effective-mode-status")
+    await page.goto(f"{live_server_url}/settings#ai")
+    await page.wait_for_selector("#effective-mode-status", state="attached")
 
     await page.wait_for_timeout(200)  # let the health fetch resolve
     assert await page.locator("#circuit-status").is_hidden()
@@ -295,8 +295,8 @@ async def test_settings_circuit_status_shows_paused_until_when_set(browser_insta
     page = await browser_instance.new_page()
     await _mock_settings(page, DEFAULT_STATUS)
     await _mock_ai_health(page, circuit_open_until="2026-09-25T03:30:00+00:00")
-    await page.goto(f"{live_server_url}/settings")
-    await page.wait_for_selector("#effective-mode-status")
+    await page.goto(f"{live_server_url}/settings#ai")
+    await page.wait_for_selector("#effective-mode-status", state="attached")
 
     await page.wait_for_function("!document.getElementById('circuit-status').hidden")
     text = await page.locator("#circuit-status").text_content()
@@ -315,8 +315,8 @@ async def test_settings_gemini_form_loads_and_saves(browser_instance: Browser, l
         return saved_gemini
 
     await _mock_settings(page, DEFAULT_STATUS, on_put_gemini=on_put_gemini)
-    await page.goto(f"{live_server_url}/settings")
-    await page.wait_for_selector("#effective-mode-status")
+    await page.goto(f"{live_server_url}/settings#providers")
+    await page.wait_for_selector("#effective-mode-status", state="attached")
 
     assert await page.locator("#gemini-models").input_value() == "gemini-3.1-flash-lite, gemini-flash-lite-latest"
 
@@ -340,8 +340,8 @@ async def test_settings_provider_order_field_loads_and_saves(browser_instance: B
         return {"cloud_provider_order": body.get("order")}
 
     await _mock_settings(page, DEFAULT_STATUS, on_put_order=on_put_order)
-    await page.goto(f"{live_server_url}/settings")
-    await page.wait_for_selector("#effective-mode-status")
+    await page.goto(f"{live_server_url}/settings#ai")
+    await page.wait_for_selector("#effective-mode-status", state="attached")
 
     assert await page.locator("#cloud-provider-order").input_value() == "openrouter, gemini"
 

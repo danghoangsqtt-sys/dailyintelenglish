@@ -441,3 +441,8 @@ h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); lett
 .step-guide-state { display: grid; gap: 2px; min-width: 0; font-size: 13.5px; }
 .step-guide-state span { color: var(--muted); }
 .step-guide-earlier { color: var(--warning); font-size: 12.5px; }
+
+/* Phase 58 (ENH-040): the EN / VI interface language switch in the top bar (i18n.js) */
+.lang-switch { display: inline-flex; margin-right: 8px; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.lang-switch button { padding: 5px 10px; border: 0; background: var(--surface); color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.lang-switch button[aria-pressed="true"] { background: var(--accent); color: #fff; }
