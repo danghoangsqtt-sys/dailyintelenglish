@@ -316,3 +316,22 @@ async def test_lost_worker_lease_cannot_publish_a_late_result(db, solo):
     assert job["lease_owner"] == "replacement-worker" and job["status"] == "running"
     assert len(await service.history(db, solo.pid)) == 1
     assert not await ai_job_service.get_valid_checkpoints(db, job["id"])
+
+
+async def test_cloud_prompt_states_the_output_format_and_token_counts(db, solo):
+    # BUG-050: cloud providers receive no schema field, so the prompt itself must carry the shape and token counts.
+    prompts = []
+
+    class Capture(Router):
+        async def generate(self, request):
+            prompts.append(request.prompt)
+            return await super().generate(request)
+
+    job = await run(db, solo, Capture(json.dumps(wire(solo))))
+    assert job["status"] == "complete"
+    prompt = prompts[0]
+    assert "## Output Format" in prompt and '"ProposedExplainerSegment"' in prompt
+    for field in ('"line_ids"', '"start"', '"token_index"', '"visual"', '"gestures"'):
+        assert field in prompt
+    lines = json.loads(prompt.split("SCRIPT AND EXACT SPOKEN TOKENS:\n", 1)[1].split("\nAVAILABLE PROJECT ILLUSTRATIONS:", 1)[0])
+    assert lines and all(line["token_count"] == len(line["tokens"]) for line in lines)

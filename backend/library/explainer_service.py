@@ -460,6 +460,15 @@ def make_handler(router: "AIRouter") -> "JobHandler":
     return handler
 
 
+def _prompt_lines(index: ScriptIndex, lines: list[dict]) -> list[dict]:
+    """Spoken tokens per line with their count: cloud models miscount long lines without it (BUG-050)."""
+    result = []
+    for line in lines:
+        tokens = [token.text for token in index.tokens if token.line_id == line["id"]]
+        result.append({"line_id": line["id"], "text": line["text"], "tokens": tokens, "token_count": len(tokens)})
+    return result
+
+
 async def _run_proposal(job: dict, worker: "AIWorker", router: "AIRouter") -> None:
     db = worker.get_db()
     captured = json.loads(job["input_snapshot_json"])
@@ -496,9 +505,9 @@ async def _run_proposal(job: dict, worker: "AIWorker", router: "AIRouter") -> No
             prompt = await render_explainer_prompt(
                 topic=source["project"]["topic"], cefr_level=source["project"]["cefr_level"],
                 structure=source["project"]["explainer_structure"],
-                lines=[{"line_id": line["id"], "text": line["text"], "tokens": [token.text for token in index.tokens if token.line_id == line["id"]]} for line in source["lines"]],
+                lines=_prompt_lines(index, source["lines"]),
                 previous=captured["previous"], assets=captured["available_assets"], previous_error=error,
-                previous_output=last_output,
+                previous_output=last_output, output_schema=_PROPOSAL.json_schema(),
             )
             request = GenerationRequest(prompt=prompt, json_schema=_PROPOSAL.json_schema(), temperature=EXPLAINER_PROPOSAL_TEMPERATURE,
                                         deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS, purpose="explainer_proposal_repair" if attempt else "explainer_proposal")

@@ -5,4 +5,4 @@
 
 | Task | Scope | Status |
 |---|---|---|
-| 54.1 | BUG-050 prompt output format + token counts | planned |
+| 54.1 | BUG-050 prompt output format + token counts | in_progress |

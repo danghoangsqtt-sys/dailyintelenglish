@@ -30,6 +30,19 @@ AVAILABLE PROJECT ILLUSTRATIONS:
 {{ assets | tojson }}
 PREVIOUS OWNER PLAN (null for first proposal):
 {{ previous | tojson }}
+
+## Output Format
+Return ONLY one JSON object (no markdown fences, no commentary) that validates against the JSON Schema below.
+Use exactly these field names. visual.kind is one of photo, diagram, text_card.
+A segment that ends at the end of a line uses end.token_index equal to that line's token_count;
+the next segment then starts at token_index 0 of the next line.
+JSON SCHEMA:
+{{ output_schema | tojson }}
+SHAPE EXAMPLE (placeholders only, not content):
+{"segments": [{"id": "idea-1", "intent": "Explain the main cause", "line_ids": ["<line_id>"],
+ "start": {"line_id": "<line_id>", "token_index": 0}, "end": {"line_id": "<line_id>", "token_index": <token_count>},
+ "visual": {"kind": "text_card", "title": "Short title", "bullets": ["Short point"]},
+ "gestures": [{"at": {"line_id": "<line_id>", "token_index": 3}, "gesture": "talk"}], "source_notes": ""}]}
 {% if previous_error %}
 Repair your previous response. Keep all coverage/lock/data rules above.
 Validation error: {{ previous_error }}
