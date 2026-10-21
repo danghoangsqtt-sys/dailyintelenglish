@@ -77,6 +77,26 @@ def test_the_board_today_and_roadmap_follow_the_episodes(client):  # noqa: F811
     first10 = {check["label"]: check for check in result["roadmap"]["stages"][2]["checks"]}
     assert first10["First episode complete (video + YouTube package)"]["done"]
     assert first10["10 episodes produced"]["progress"] == "1/10"
+    # Phase 56 (ENH-038): "Start here" -- continue an unfinished project at its next step; the next planned episode
+    start = result["start"]
+    assert start["has_plan"] and start["continue"]["project_id"] in (second, third)
+    expected = {second: ("/step4", 4, "Audio"), third: ("/step2", 2, "Script")}[start["continue"]["project_id"]]
+    assert start["continue"]["link"] == f"{expected[0]}?project_id={start['continue']['project_id']}"
+    assert (start["continue"]["step_number"], start["continue"]["step_label"]) == expected[1:]
+    other = tree["topics"][1]["series"][0]
+    assert start["next_episode"]["link"] == f"/channel#series-{other['id']}" and start["next_episode"]["number"] == 1
+
+    progress = data(client.get(f"/api/projects/{second}/progress"))
+    assert [step["number"] for step in progress["steps"]] == [1, 2, 3, 4, 5, 6, 7]
+    assert [step["done"] for step in progress["steps"]] == [True, True, True, False, False, False, False]
+    assert progress["next_open"] == 4 and progress["steps"][3]["todo"] == "generate the voice audio."
+    assert data(client.get(f"/api/projects/{first}/progress"))["next_open"] is None
+    assert client.get("/api/projects/missing/progress").status_code == 404
+
+
+def test_start_here_on_an_empty_channel(client):  # noqa: F811
+    start = data(client.get("/api/channel/dashboard"))["start"]
+    assert start == {"continue": None, "next_episode": None, "has_plan": False}
 
 
 def test_a_series_without_characters_and_pending_pictures_are_todays_actions(client):  # noqa: F811

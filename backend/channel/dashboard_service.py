@@ -19,6 +19,15 @@ STEPS = (
     ("video", "Video", "/step5"), ("thumbnail", "Thumbnail", "/step6"), ("youtube", "YouTube", "/step7"),
     ("published", "Publish", "/channel"),  # ready to publish, or published
 )
+# Phase 56 (ENH-038): what is still missing when a step is not done, for the step bar.
+STEP_TODO = {
+    "script": "generate or write the script.",
+    "learning": "generate the learning content (vocabulary, notes, quiz).",
+    "audio": "generate the voice audio.",
+    "video": "render the video.",
+    "thumbnail": "create and choose a thumbnail.",
+    "youtube": "prepare the YouTube package (title, description, tags).",
+}
 GOAL_FIRST = 10
 GOAL_GROW = 50
 
@@ -33,8 +42,8 @@ async def _scalar(db: aiosqlite.Connection, sql: str, params: tuple = ()) -> int
     return int(row[0] or 0) if row else 0
 
 
-async def _project_steps(db: aiosqlite.Connection) -> list[dict]:
-    """Every project with the steps it has done and its channel episode (if any)."""
+async def _project_steps(db: aiosqlite.Connection, project_id: str | None = None) -> list[dict]:
+    """Every project (or just one) with the steps it has done and its channel episode (if any)."""
     cursor = await db.execute(
         "SELECT p.id, p.name, p.updated_at, p.created_at, "
         "EXISTS(SELECT 1 FROM script_lines s WHERE s.project_id = p.id) AS script, "
@@ -47,7 +56,8 @@ async def _project_steps(db: aiosqlite.Connection) -> list[dict]:
         "s.name AS series_name, t2.name AS topic_name "
         "FROM projects p LEFT JOIN channel_episodes e ON e.project_id = p.id "
         "LEFT JOIN channel_series s ON s.id = e.series_id LEFT JOIN channel_topics t2 ON t2.id = s.topic_id "
-        "ORDER BY p.updated_at DESC")
+        + ("WHERE p.id = ? " if project_id is not None else "") + "ORDER BY p.updated_at DESC",
+        (project_id,) if project_id is not None else ())
     projects = []
     for row in await cursor.fetchall():
         item = dict(row)
@@ -64,6 +74,50 @@ def _card(project: dict) -> dict:
             "topic": project["topic_name"], "number": project["number"], "title": project["episode_title"],
             "publish_date": project["publish_date"], "step": project["step"], "link": link,
             "published": project["published"]}
+
+
+def _step_number(key: str) -> int:
+    """The page number of a production step: Config is Step 1, Script Step 2 … YouTube Step 7."""
+    return next(index for index, (step, _label, _page) in enumerate(STEPS) if step == key) + 2
+
+
+async def project_progress(db: aiosqlite.Connection, project_id: str) -> dict[str, Any] | None:
+    """Phase 56 (ENH-038): which of the seven steps one project has done, for the step bar. None if it does not exist."""
+    rows = await _project_steps(db, project_id)
+    if not rows:
+        return None
+    project = rows[0]
+    steps = [{"number": 1, "key": "config", "label": "Config", "path": "/step1", "done": True, "todo": None}]
+    steps += [{"number": _step_number(key), "key": key, "label": label, "path": page, "done": bool(project[key]),
+               "todo": None if project[key] else STEP_TODO[key]}
+              for key, label, page in STEPS if key != "published"]
+    first_open = next((step for step in steps if not step["done"]), None)
+    return {"project_id": project_id, "name": project["name"], "steps": steps,
+            "next_open": first_open["number"] if first_open else None}
+
+
+
+async def _start(db: aiosqlite.Connection, projects: list[dict]) -> dict[str, Any]:
+    """Phase 56 (ENH-038): the Dashboard's "Start here" -- the project to continue and the next planned episode."""
+    unfinished = next((project for project in projects if project["step"] != "published"), None)
+    continue_item = None
+    if unfinished:
+        label = next(label for key, label, _page in STEPS if key == unfinished["step"])
+        continue_item = {"project_id": unfinished["id"], "name": unfinished["name"], "step": unfinished["step"],
+                         "step_number": _step_number(unfinished["step"]), "step_label": label,
+                         "link": _card(unfinished)["link"]}
+    cursor = await db.execute(
+        "SELECT e.number, e.title, e.publish_date, s.id AS series_id, s.name AS series, t.name AS topic "
+        "FROM channel_episodes e JOIN channel_series s ON s.id = e.series_id JOIN channel_topics t ON t.id = s.topic_id "
+        "WHERE e.project_id IS NULL AND e.status = 'planned' "
+        "ORDER BY e.publish_date IS NULL, e.publish_date, t.position, s.position, e.number LIMIT 1")
+    row = await cursor.fetchone()
+    next_episode = None
+    if row:
+        next_episode = dict(row)
+        next_episode["link"] = f"/channel#series-{row['series_id']}"
+    return {"continue": continue_item, "next_episode": next_episode,
+            "has_plan": await _scalar(db, "SELECT COUNT(*) FROM channel_topics") > 0}
 
 
 async def dashboard(db: aiosqlite.Connection, today: date | None = None) -> dict[str, Any]:
@@ -107,7 +161,7 @@ async def dashboard(db: aiosqlite.Connection, today: date | None = None) -> dict
     pending = await _scalar(db, "SELECT COUNT(*) FROM activity_library WHERE review_state = 'pending'")
     if pending:
         actions.append({"label": f"{pending} illustration{'s' if pending != 1 else ''} waiting for your approval",
-                        "link": "/shots", "kind": "review"})
+                        "link": "/activities", "kind": "review"})
     cursor = await db.execute("SELECT name FROM channel_series WHERE json_array_length(cast_json) < 2 ORDER BY position")
     no_cast = [row[0] for row in await cursor.fetchall()]
     if no_cast:
@@ -185,4 +239,4 @@ async def dashboard(db: aiosqlite.Connection, today: date | None = None) -> dict
     end = (today + timedelta(days=13)).isoformat()
     calendar = [episode for episode in dated if today.isoformat() <= episode["publish_date"] <= end]
     return {"stats": stats, "next_publish": next_publish, "actions": actions[:8], "roadmap": roadmap,
-            "board": columns, "calendar": calendar, "today": today.isoformat()}
+            "board": columns, "calendar": calendar, "today": today.isoformat(), "start": await _start(db, projects)}

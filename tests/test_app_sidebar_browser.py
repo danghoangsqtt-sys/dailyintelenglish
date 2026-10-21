@@ -10,9 +10,10 @@ from tests.conftest import live_server
 
 PAGES = {
     "/": "Dashboard", "/characters": "Character Library", "/music": "Music Library", "/settings": "Settings",
+    "/activities": "Activity Library", "/channel": "Channel plan",
     "/step1": None, "/step2": None, "/step3": None, "/step4": None, "/step5": None, "/step6": None, "/step7": None,
 }
-LINKS = ["Dashboard", "Character Library", "Music Library", "Settings"]
+LINKS = ["Dashboard", "Character Library", "Activity Library", "Music Library", "Settings"]
 
 
 @pytest.fixture(scope="module")

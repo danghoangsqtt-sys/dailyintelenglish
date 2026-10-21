@@ -310,7 +310,7 @@ async def _build_sprite_props(db: aiosqlite.Connection, project: dict, lines: li
         member = cast_by_index[speaker_index]
         sprite_set = await asyncio.to_thread(sprite_service.load_set, member["character_id"])
         if not sprite_service.usable(sprite_set):
-            raise ValidationError(f"{member['name']} has no talking sprites yet: import the sprite pictures on the Shot Library page "
+            raise ValidationError(f"{member['name']} has no talking sprites yet: import the sprite pictures on the Character Library page "
                                   "(Talking sprites), or choose another video picture mode.")
         folder = Path(sprite_set["folder"])
         pictures: dict[str, str] = {}

@@ -43,4 +43,16 @@ async def test_the_cockpit_shows_the_plan_and_the_roadmap_stage(browser_instance
     assert await page.locator("#production-board .board-column").count() == 7
     assert "Nothing dated yet" in await page.locator("#cockpit-next").text_content()
     assert await page.locator("#new-project-btn").is_visible() and await page.locator("#project-grid").count() == 1
+    # Phase 56 (ENH-038): "Start here" -- nothing to continue yet, the first planned episode, a new video
+    cards = page.locator("#start-cards .start-card")
+    assert await cards.count() == 3
+    assert "Nothing in progress" in await cards.nth(0).text_content()
+    assert await cards.nth(2).get_by_role("link").get_attribute("href") == "/step1"
+    episode = cards.nth(1)
+    assert "Ep. 1" in await episode.text_content()
+    assert (await episode.get_by_role("link").get_attribute("href")).startswith("/channel#series-")
+    await episode.get_by_role("link", name="Create its project").click()
+    target = page.locator(".series-card.is-target")
+    await target.wait_for()
+    assert await target.locator(".series-episodes").evaluate("details => details.open")
     await page.close()

@@ -1,13 +1,14 @@
 /**
  * Task 36.5 (D103-D105): the channel plan page -- the AI channel map, the topic -> series -> episode tree and the
  * publishing calendar. All server calls go through Api.
+ * Phase 56 (ENH-038): the three sections are steps with a state, and one "Next:" line names the thing to do.
  */
 (() => {
   const CEFR = ["A1", "A2", "B1", "B2", "C1", "C2"];
   const GENRES = ["small_talk", "interview", "storytelling", "debate", "opinion", "informational", "instructions",
     "directions", "negotiation", "news"];
   const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const state = { channel: null, profiles: [], proposal: null, busy: false };
+  const state = { channel: null, profiles: [], proposal: null, busy: false, openSeries: new Set() };
   const $ = (id) => document.getElementById(id);
 
   function el(tag, props = {}, children = []) {
@@ -100,6 +101,7 @@
   function renderProposal() {
     const box = $("plan-proposal");
     box.hidden = !state.proposal;
+    if (state.channel) renderSteps();
     const tree = $("proposal-tree");
     tree.replaceChildren();
     if (!state.proposal) return;
@@ -207,10 +209,23 @@
     level.value = series.cefr_level;
     const planned = series.episodes.filter((episode) => !episode.project_id).length;
     const newEpisode = el("input", { className: "inline-input", placeholder: "New episode title", "aria-label": "New episode title" });
-    return el("div", { className: "series-card", dataset: { series: series.id } }, [
+    const castReady = castComplete(series);
+    const made = series.episodes.length - planned;
+    const status = el("span", { className: "series-status", dataset: { ok: String(castReady) },
+      textContent: castReady ? `${made}/${series.episodes.length} projects created` : solo ? "Choose the presenter" : "Choose 2 characters" });
+    const episodes = el("details", { className: "series-episodes", open: state.openSeries.has(series.id),
+      ontoggle: (event) => (event.currentTarget.open ? state.openSeries.add(series.id) : state.openSeries.delete(series.id)) }, [
+      el("summary", { textContent: `${series.episodes.length} episode${series.episodes.length === 1 ? "" : "s"} — titles, dates, projects and video links` }),
+      el("table", { className: "episode-table" }, [
+        el("thead", {}, el("tr", {}, ["#", "Title", "Status", "Date", "Project", "Video", ""].map((text) => el("th", { textContent: text })))),
+        el("tbody", {}, series.episodes.map(episodeRow)),
+      ]),
+    ]);
+    return el("div", { className: "series-card", id: `series-${series.id}`, dataset: { series: series.id } }, [
       el("div", { className: "series-head" }, [
         saveOnChange(el("input", { className: "inline-input name", value: series.name, "aria-label": "Series name" }),
           (value) => Api.updateChannelSeries(series.id, { name: value })),
+        status,
         el("button", { type: "button", className: "btn btn-ghost btn-sm", textContent: "Delete series",
           onclick: async () => (await ConfirmDialog.ask(`Delete the series "${series.name}"? Its projects are kept.`, { confirmLabel: "Delete", danger: true }))
             && act(() => Api.deleteChannelSeries(series.id), "Series deleted.") }),
@@ -224,14 +239,11 @@
           placeholder: "Series playlist link (optional)", "aria-label": "Series playlist link" }),
         (value) => Api.updateChannelSeries(series.id, { playlist_url: value })),
       ]),
-      el("table", { className: "episode-table" }, [
-        el("thead", {}, el("tr", {}, ["#", "Title", "Status", "Date", "Project", "Video", ""].map((text) => el("th", { textContent: text })))),
-        el("tbody", {}, series.episodes.map(episodeRow)),
-      ]),
+      episodes,
       el("div", { className: "row-actions" }, [
         el("button", { type: "button", className: "btn btn-primary btn-sm", dataset: { action: "create-projects" },
           textContent: planned ? `Create ${planned} project${planned === 1 ? "" : "s"}` : "All projects created",
-          disabled: !planned || (solo ? cast.filter(Boolean).length !== 1 : cast.filter(Boolean).length < 2),
+          disabled: !planned || !castReady,
           title: solo ? "Choose one presenter." : "Choose two characters first.",
           onclick: () => act(() => Api.createSeriesProjects(series.id), "Projects created — open them from the table.") }),
         newEpisode,
@@ -296,6 +308,87 @@
     await act(() => Api.scheduleChannel({ start_date: form.elements.start_date.value, weekdays }), "Publishing dates planned.");
   }
 
+  // ---------------------------------------------------------------- steps and the next thing to do
+
+  function castComplete(series) {
+    const chosen = (series.cast || []).filter(Boolean).length;
+    return series.presentation_mode === "solo_explainer" ? chosen === 1 : chosen >= 2;
+  }
+
+  function allSeries() {
+    return (state.channel?.topics || []).flatMap((topic) => topic.series);
+  }
+
+  function goTo(sectionId, seriesId = null) {
+    const section = $(sectionId);
+    section.open = true;
+    let target = section;
+    if (seriesId) {
+      state.openSeries.add(seriesId);
+      document.querySelectorAll(".series-card.is-target").forEach((card) => card.classList.remove("is-target"));
+      const card = document.getElementById(`series-${seriesId}`);
+      if (card) {
+        card.classList.add("is-target");
+        const episodes = card.querySelector(".series-episodes");
+        if (episodes) episodes.open = true;
+        target = card;
+      }
+    }
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function nextAction() {
+    const topics = state.channel?.topics || [];
+    const series = allSeries();
+    const episodes = series.flatMap((item) => item.episodes);
+    if (state.proposal) return { text: "Check the proposed map, then press “Add to the channel”.", section: "plan-section" };
+    if (!topics.length) return { label: "Start here:", text: "describe what the channel should cover and press “Propose a channel map” (or add a topic by hand in step 2).", section: "plan-section" };
+    if (!series.length) return { text: "Add a series to your topic.", section: "tree-section" };
+    const noCast = series.filter((item) => !castComplete(item));
+    if (noCast.length) {
+      const names = noCast.slice(0, 3).map((item) => item.name).join(", ");
+      return { text: `Choose the characters of ${noCast.length} series (${names}${noCast.length > 3 ? "…" : ""}).`,
+        section: "tree-section", series: noCast[0].id, button: "Choose characters" };
+    }
+    if (episodes.some((episode) => !episode.publish_date)) return { text: "Plan the publishing dates.", section: "calendar-section", button: "Plan dates" };
+    const toCreate = series.find((item) => item.episodes.some((episode) => !episode.project_id));
+    if (toCreate) return { text: `Create the projects of “${toCreate.name}”, then make each video from the Dashboard.`,
+      section: "tree-section", series: toCreate.id, button: "Create projects" };
+    return { text: "Every planned episode has its project: continue them from the Dashboard.", link: "/", button: "Open the Dashboard" };
+  }
+
+  function renderSteps() {
+    const topics = state.channel?.topics || [];
+    const series = allSeries();
+    const episodes = series.flatMap((item) => item.episodes);
+    const done = {
+      plan: topics.length > 0,
+      tree: series.length > 0 && topics.every((topic) => topic.series.length) && series.every(castComplete),
+      calendar: episodes.length > 0 && episodes.every((episode) => episode.publish_date),
+    };
+    const current = ["plan", "tree", "calendar"].find((key) => !done[key]) || null;
+    const steps = [
+      ["plan", "plan-section", "1. Plan with AI", done.plan ? `${topics.length} topic${topics.length === 1 ? "" : "s"}` : "describe the channel"],
+      ["tree", "tree-section", "2. Series & characters", done.tree ? `${series.length} series ready`
+        : `${series.filter((item) => !castComplete(item)).length || "no"} series to finish`],
+      ["calendar", "calendar-section", "3. Publishing dates", done.calendar ? "all episodes dated" : "dates to plan"],
+    ];
+    $("channel-steps").replaceChildren(...steps.map(([key, section, name, meta]) => el("li", {}, el("button", {
+      type: "button", dataset: { state: done[key] ? "done" : key === current ? "current" : "todo", step: key },
+      onclick: () => goTo(section),
+    }, [el("span", { className: "step-name", textContent: name }),
+      el("span", { className: "step-state", textContent: `${done[key] ? "✓ " : key === current ? "● " : ""}${meta}` })]))));
+    $("plan-summary").textContent = done.plan ? "Add more topics with AI" : "";
+    $("tree-summary").textContent = series.length ? `${topics.length} topics · ${series.length} series · ${episodes.length} episodes` : "";
+    $("calendar-summary").textContent = episodes.length ? `${episodes.filter((episode) => episode.publish_date).length}/${episodes.length} dated` : "";
+    const next = nextAction();
+    const button = next.link
+      ? el("a", { className: "btn btn-primary btn-sm", href: next.link, textContent: next.button })
+      : next.button ? el("button", { type: "button", className: "btn btn-primary btn-sm", textContent: next.button,
+        onclick: () => goTo(next.section, next.series) }) : null;
+    $("channel-next").replaceChildren(...[el("span", { textContent: `${next.label || "Next:"} ${next.text}` }), button].filter(Boolean));
+  }
+
   // ---------------------------------------------------------------- page
 
   function render() {
@@ -311,6 +404,7 @@
       : [el("p", { className: "channel-hint", textContent: "No topics yet: plan with AI above or add one below." })]));
     renderPlanForm();
     renderCalendar();
+    renderSteps();
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
@@ -328,6 +422,10 @@
     } catch (error) {
       message(error.message || "The channel plan could not load.", true);
     }
+    // with a plan, the planning form is folded; the page opens on the series and the dates
+    if (state.channel?.topics.length) $("plan-section").open = false;
     render();
+    const linked = /^#series-(.+)$/.exec(location.hash);  // the Dashboard links to the next series to produce
+    if (linked) goTo("tree-section", decodeURIComponent(linked[1]));
   });
 })();

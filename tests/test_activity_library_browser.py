@@ -60,7 +60,7 @@ async def test_activity_picture_import_edit_and_review_from_shot_library(
     assert "preparing dinner" in await card.first.locator(".shot-title").text_content()
     await card.first.get_by_role("button", name="Approve").click()
     await page.locator("#activity-grid .shot-card.is-approved").wait_for()
-    await page.select_option("#activity-filter-state", "approved")
+    await page.locator("#activity-review-chips [data-state='approved']").click()
     assert await page.locator("#activity-grid .shot-card").count() == 1
     await page.close()
 
@@ -243,12 +243,12 @@ async def test_select_arbitrary_activity_pictures_for_review_and_delete(
         assert "rejected" in await gamma.text_content()
         assert "approved" in await alpha.text_content()
 
-        await page.select_option("#activity-filter-state", "pending")
+        await page.locator("#activity-review-chips [data-state='pending']").click()
         await delta.wait_for()
         pending_count = await page.locator("#activity-grid .shot-card").count()
         await page.locator("#activity-select-all").check()
         assert await page.locator("#activity-selected-count").text_content() == f"{pending_count} selected"
-        await page.select_option("#activity-filter-state", "")
+        await page.locator("#activity-review-chips [data-state='']").click()
         await alpha.wait_for()
         assert await page.locator("#activity-selected-count").text_content() == "0 selected"
         await alpha.locator(".activity-select-checkbox").check()
@@ -280,3 +280,48 @@ async def test_select_arbitrary_activity_pictures_for_review_and_delete(
         assert await delta.count() == 1
         assert await page.locator("#activity-selected-count").text_content() == "0 selected"
         await page.close()
+
+
+@pytest.mark.asyncio
+async def test_activity_library_page_has_shelves_review_chips_and_a_backgrounds_tab(
+    activity_browser: Browser, activity_live_server_url: str,
+):
+    """Phase 56 (ENH-038): /activities is the renamed page; shelves and chips filter, backgrounds have their own tab."""
+    inbox = activities.inbox_dir()
+    inbox.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (1280, 720), (90, 60, 30)).save(inbox / "generic__reading__library__01.png")
+    page = await activity_browser.new_page()
+    await page.goto(f"{activity_live_server_url}/activities")
+    assert await page.title() == "Activity Library — Daily Beyond English"
+    current = page.locator('#app-sidebar a[aria-current="page"]')
+    assert (await current.text_content()).strip() == "Activity Library"
+    assert await current.get_attribute("href") == "/activities"
+    await page.locator("#activity-import-card summary").click()
+    await page.locator("#activity-import-btn").click()
+    await page.locator("#activity-grid .shot-card", has_text="reading").wait_for()
+    total = await page.locator("#activity-grid .shot-card").count()
+    all_shelf = page.locator('#activity-shelves [data-shelf=""]')
+    assert await all_shelf.get_attribute("aria-pressed") == "true"
+    assert (await all_shelf.locator(".shelf-count").text_content()) == str(total)
+    generic = page.locator('#activity-shelves [data-shelf="generic"]')
+    await generic.click()
+    assert await generic.get_attribute("aria-pressed") == "true"
+    assert await page.locator("#activity-grid .shot-card").count() == int(await generic.locator(".shelf-count").text_content())
+    pending_chip = page.locator("#activity-review-chips [data-state='pending']")
+    pending = int(await pending_chip.locator(".chip-count").text_content())
+    assert pending >= 1
+    await pending_chip.click()
+    assert await page.locator("#activity-grid .shot-card").count() == pending
+    assert await page.locator("#activity-grid .shot-card:not(.is-pending)").count() == 0
+    await page.locator("#tab-backgrounds").click()
+    assert await page.locator("#activity-panel").is_hidden()
+    await page.locator("#bg-import-btn").wait_for(state="visible")
+    assert await page.locator("#activity-upload-open").is_hidden()
+    assert page.url.endswith("#backgrounds")
+    await page.reload()
+    await page.locator("#bg-import-btn").wait_for(state="visible")
+    await page.locator("#tab-activities").click()
+    await page.locator("#activity-grid").wait_for(state="visible")
+    await page.goto(f"{activity_live_server_url}/shots")  # the old address still opens the page
+    assert await page.title() == "Activity Library — Daily Beyond English"
+    await page.close()

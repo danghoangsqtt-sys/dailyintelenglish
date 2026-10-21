@@ -1,6 +1,7 @@
 /**
  * Task 36.7 (D106-D108): the channel cockpit on the dashboard -- stats, the next episode to publish, today's actions, the
  * channel roadmap, the production board by step and the next two weeks. The project grid (dashboard.js) stays below.
+ * Phase 56 (ENH-038): "Start here" on top -- continue the latest project, the next planned episode, or a new video.
  */
 (() => {
   const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -38,6 +39,34 @@
           textContent: next.project_id ? "Open the episode" : "Create its project" })]
       : [el("p", { className: "cockpit-empty", textContent: "Nothing dated yet." }),
         el("a", { className: "btn btn-ghost btn-sm", href: "/channel", textContent: "Plan the publishing dates" })]));
+  }
+
+  function startCard(kind, title, lines, link, label) {
+    return el("article", { className: "start-card", dataset: { kind } }, [
+      el("h3", { textContent: title }),
+      ...lines.filter(Boolean).map((line, index) => el(index ? "p" : "strong", { textContent: line })),
+      el("a", { className: `btn ${kind === "new" ? "btn-ghost" : "btn-primary"} btn-sm`, href: link, textContent: label }),
+    ]);
+  }
+
+  function renderStart(start) {
+    const going = start.continue;
+    const next = start.next_episode;
+    $("start-cards").replaceChildren(
+      going
+        ? startCard("continue", "▶ Continue", [going.name, `Next: Step ${going.step_number} — ${going.step_label}`],
+          going.link, "Continue →")
+        : startCard("continue", "▶ Continue", ["Nothing in progress", "Every project is finished up to its YouTube package."],
+          "#project-grid", "See all projects"),
+      next
+        ? startCard("episode", "★ Next planned episode", [`${next.series} · Ep. ${next.number}: ${next.title}`,
+          next.publish_date ? `${day(next.publish_date)} · ${next.topic}` : next.topic], next.link, "Create its project →")
+        : start.has_plan
+          ? startCard("episode", "★ Next planned episode", ["Every planned episode has a project",
+            "Add more series or episodes to the channel plan."], "/channel", "Open the channel plan")
+          : startCard("episode", "★ Next planned episode", ["No channel plan yet",
+            "Plan topics and series with AI, then make their episodes one by one."], "/channel", "Plan the channel →"),
+      startCard("new", "＋ New video", ["Your own topic", "Choose the topic, level and characters in Step 1."], "/step1", "Start a new video"));
   }
 
   function renderActions(actions) {
@@ -94,6 +123,7 @@
   async function load() {
     try {
       const data = await Api.getChannelDashboard();
+      if (data.start) renderStart(data.start);
       renderStats(data.stats);
       renderNext(data.next_publish);
       renderActions(data.actions);
@@ -102,6 +132,7 @@
       renderCalendar(data.calendar);
     } catch (error) {
       $("cockpit-actions").replaceChildren(el("li", { className: "cockpit-empty", textContent: error.message || "The channel overview could not load." }));
+      $("start-cards").replaceChildren(startCard("new", "＋ New video", ["Your own topic"], "/step1", "Start a new video"));
     }
   }
 

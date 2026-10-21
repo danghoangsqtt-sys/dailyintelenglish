@@ -1,8 +1,9 @@
-/** Shot Library page: the Activity Library (generic pictures reused by the inserts) and the scene-background import.
- * Phase 44 (D123): the two-person shot library of the cast was removed with RealVisXL. */
+/** Activity Library page (/activities): the activity pictures reused by the inserts, on shelves (generic or one
+ * character) with review chips, and a tab for the scene-background import.
+ * Phase 44 (D123): the two-person shot library of the cast was removed with RealVisXL. Phase 56: renamed, tabs/shelves. */
 (() => {
   const state = { activities: [], characters: [], activityBusy: false,
-    activityEditing: null, selectedActivities: new Set(), activityFilters: { review_state: "" } };
+    activityEditing: null, selectedActivities: new Set(), shelf: "", reviewState: "" };
   const byId = (id) => document.getElementById(id);
 
   function badge(text, className = "") {
@@ -23,9 +24,59 @@
     return activity.character_id ? state.characters.find((character) => character.id === activity.character_id)?.name || "Character" : "Generic";
   }
 
+  function onShelf(activity, shelf = state.shelf) {
+    return !shelf || (shelf === "generic" ? !activity.character_id : activity.character_id === shelf);
+  }
+
   function visibleActivities() {
-    const scope = byId("activity-filter-scope").value;
-    return state.activities.filter((activity) => !scope || (scope === "generic" ? !activity.character_id : activity.character_id));
+    return state.activities.filter((activity) => onShelf(activity)
+      && (!state.reviewState || activity.review_state === state.reviewState));
+  }
+
+  function shelfButton(shelf, name, count, picture = "") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "activity-shelf";
+    button.dataset.shelf = shelf;
+    button.setAttribute("aria-pressed", String(state.shelf === shelf));
+    const icon = picture ? document.createElement("img") : document.createElement("span");
+    if (picture) { icon.src = picture; icon.alt = ""; } else {
+      icon.className = "shelf-icon";
+      icon.textContent = shelf === "" ? "▦" : shelf === "generic" ? "🖼️" : name.slice(0, 1).toUpperCase();
+    }
+    const label = document.createElement("span");
+    label.className = "shelf-name";
+    label.textContent = name;
+    const total = document.createElement("span");
+    total.className = "shelf-count";
+    total.textContent = String(count);
+    button.append(icon, label, total);
+    button.addEventListener("click", () => {
+      state.shelf = shelf;
+      state.selectedActivities.clear();
+      renderActivities();
+    });
+    return button;
+  }
+
+  function renderShelves() {
+    const count = (shelf) => state.activities.filter((activity) => onShelf(activity, shelf)).length;
+    const heading = document.createElement("h2");
+    heading.textContent = "Shelves";
+    byId("activity-shelves").replaceChildren(heading,
+      shelfButton("", "All pictures", state.activities.length),
+      shelfButton("generic", "Generic", count("generic")),
+      ...state.characters.map((character) => shelfButton(character.id, character.name, count(character.id),
+        character.face_url || character.reference_url || character.body_url || "")));
+    const shelfPictures = state.activities.filter((activity) => onShelf(activity));
+    byId("activity-review-chips").querySelectorAll(".review-chip").forEach((chip) => {
+      const value = chip.dataset.state;
+      chip.setAttribute("aria-pressed", String(value === state.reviewState));
+      let number = chip.querySelector(".chip-count");
+      if (!number) { number = document.createElement("span"); number.className = "chip-count"; chip.append(number); }
+      number.textContent = String(value ? shelfPictures.filter((activity) => activity.review_state === value).length : shelfPictures.length);
+    });
+    byId("tab-activities-count").textContent = state.activities.length ? String(state.activities.length) : "";
   }
 
   function showActivityMessage(text, kind = "error") {
@@ -36,6 +87,7 @@
   }
 
   function renderActivities() {
+    renderShelves();
     const grid = byId("activity-grid");
     grid.replaceChildren();
     const visible = visibleActivities();
@@ -108,14 +160,17 @@
       remove.disabled = state.activityBusy;
       remove.addEventListener("click", () => removeActivity(activity));
       actions.append(edit, approve, reject, remove);
-      card.append(selectionRow, image, title, meta, badges, actions);
+      const thumb = document.createElement("div");
+      thumb.className = "activity-thumb";
+      thumb.append(image, selectionRow);
+      card.append(thumb, title, meta, badges, actions);
       grid.append(card);
     });
   }
 
   async function refreshActivities() {
     try {
-      state.activities = await Api.listLibraryActivities(state.activityFilters);
+      state.activities = await Api.listLibraryActivities();
       const loadedIds = new Set(state.activities.map((activity) => activity.id));
       for (const id of state.selectedActivities) {
         if (!loadedIds.has(id)) state.selectedActivities.delete(id);
@@ -482,6 +537,8 @@
   function openActivityUpload() {
     byId("activity-upload-form").reset();
     clearActivityUploadPreview();
+    // a character shelf being browsed is the likely owner of the new pictures
+    byId("activity-upload-character").value = state.characters.some((character) => character.id === state.shelf) ? state.shelf : "";
     renderActivityTargets();
     byId("activity-upload-dialog").showModal();
   }
@@ -616,6 +673,7 @@
       const status = await Api.getLibraryBackgrounds();
       byId("bg-folder").textContent = status.folder;
       byId("bg-count").textContent = `${status.images} background picture${status.images === 1 ? "" : "s"} in the folder`;
+      byId("tab-backgrounds-count").textContent = status.images ? String(status.images) : "";
     } catch (error) {
       console.error("Failed to read the backgrounds folder:", error);
     }
@@ -654,13 +712,25 @@
     byId("activity-upload-form").addEventListener("submit", uploadActivity);
     byId("activity-upload-close").addEventListener("click", () => byId("activity-upload-dialog").close());
     byId("activity-upload-dialog").addEventListener("close", clearActivityUploadPreview);
-    byId("activity-filter-state").addEventListener("change", (event) => {
+    byId("activity-review-chips").addEventListener("click", (event) => {
+      const chip = event.target.closest(".review-chip");
+      if (!chip) return;
+      state.reviewState = chip.dataset.state;
       state.selectedActivities.clear();
-      state.activityFilters.review_state = event.target.value; refreshActivities();
+      renderActivities();
     });
-    byId("activity-filter-scope").addEventListener("change", () => {
-      state.selectedActivities.clear(); renderActivities();
-    });
+    const showTab = (name) => {
+      const backgrounds = name === "backgrounds";
+      byId("tab-activities").setAttribute("aria-selected", String(!backgrounds));
+      byId("tab-backgrounds").setAttribute("aria-selected", String(backgrounds));
+      byId("activity-panel").hidden = backgrounds;
+      byId("background-panel").hidden = !backgrounds;
+      byId("activity-upload-open").hidden = backgrounds;
+      try { history.replaceState(null, "", backgrounds ? "#backgrounds" : location.pathname + location.search); } catch { /* keep the URL */ }
+    };
+    byId("tab-activities").addEventListener("click", () => showTab("activities"));
+    byId("tab-backgrounds").addEventListener("click", () => showTab("backgrounds"));
+    if (location.hash === "#backgrounds") showTab("backgrounds");
     byId("activity-select-all").addEventListener("change", (event) => {
       visibleActivities().forEach((activity) => {
         if (event.target.checked) state.selectedActivities.add(activity.id);
@@ -678,8 +748,7 @@
     byId("activity-editor-form").addEventListener("submit", saveActivity);
     byId("activity-close-btn").addEventListener("click", () => byId("activity-dialog").close());
     refreshBackgrounds();
-    load();
-    refreshActivities();
+    load().then(refreshActivities);  // shelves and card names need the characters first
   }
 
   document.addEventListener("DOMContentLoaded", setup);

@@ -38,6 +38,9 @@ async def test_a_proposed_map_is_edited_applied_and_dated(browser_instance: Brow
 
     await page.route("**/api/channel/plan/propose", fake_propose)
     await page.goto(f"{live_server_url}/channel")
+    # Phase 56 (ENH-038): an empty channel starts at step 1 and says where to begin
+    await page.locator("#channel-steps button[data-state='current'][data-step='plan']").wait_for()
+    assert "Start here" in await page.locator("#channel-next").text_content()
     await page.locator("#plan-form textarea[name=focus]").fill("travel and work")
     await page.locator("#plan-propose").click()
     await page.locator("#plan-proposal:not([hidden])").wait_for()
@@ -51,6 +54,12 @@ async def test_a_proposed_map_is_edited_applied_and_dated(browser_instance: Brow
     titles = await page.locator(".episode-table input[aria-label^='Title of episode']").evaluate_all(
         "inputs => inputs.map(input => input.value)")
     assert titles == ["Choosing the Destination", "Booking a Cabin", "Packing Day"]
+    await page.locator("#channel-steps button[data-state='current'][data-step='tree']").wait_for()
+    assert "Choose the characters of 1 series" in await page.locator("#channel-next").text_content()
+    assert "Choose 2 characters" in await page.locator(".series-card .series-status").text_content()
+    assert not await page.locator(".series-episodes").first.evaluate("details => details.open")
+    await page.locator("#channel-next").get_by_role("button", name="Choose characters").click()
+    assert await page.locator(".series-episodes").first.evaluate("details => details.open")
     create = page.locator("[data-action='create-projects']")
     assert await create.is_disabled()  # no cast chosen yet
     assert "3 planned" in await page.locator("#channel-counts").text_content()

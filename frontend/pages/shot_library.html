@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
-  <title>Shot Library — Daily Beyond English</title>
+  <title>Activity Library — Daily Beyond English</title>
   <link rel="stylesheet" href="/static/css/style.css" />
   <style>
     body { margin: 0; }
@@ -37,8 +37,6 @@
     .message-error { color: var(--danger); background: rgba(248, 81, 73, 0.1); }
     .empty-state { padding: 54px 20px; text-align: center; color: var(--text-muted); }
     .delete-btn:hover { border-color: var(--danger); color: var(--danger); }
-    .activity-section { margin-top: 42px; padding-top: 28px; border-top: 1px solid var(--surface-border); }
-    .activity-section h2 { margin: 0 0 8px; font-size: 21px; }
     .activity-bulk-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 14px; }
     .activity-bulk-actions .shot-summary { margin: 0; }
     .activity-bulk-actions label, .activity-select-row label { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; font-size: 13px; }
@@ -110,12 +108,39 @@
     @media (max-width: 700px) { .activity-upload-workspace { grid-template-columns: 1fr; gap: 18px; } .activity-upload-dialog .activity-upload-preview-pane > img { max-height: 250px; } }
     @media (max-width: 500px) { .activity-upload-titlebar, .activity-upload-footer { padding-left: 16px; padding-right: 16px; } .activity-upload-workspace { padding: 16px; } .activity-upload-footer { flex-wrap: wrap; } }
     @media (max-width: 680px) { .activity-dialog-grid { grid-template-columns: 1fr; } }
+    .library-tabs { display: flex; gap: 6px; margin: -8px 0 18px; border-bottom: 1px solid var(--surface-border); }
+    .library-tab { padding: 10px 16px; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--text-muted); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .library-tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+    .library-tab-count { margin-left: 4px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); font-size: 12px; }
+    .library-tab-count:empty { display: none; }
+    .activity-section[hidden] { display: none; }
+    .activity-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 22px; align-items: start; }
+    .activity-shelves { position: sticky; top: 16px; display: grid; gap: 4px; padding: 8px; border: 1px solid var(--surface-border); border-radius: 12px; background: var(--surface); }
+    .activity-shelves h2 { margin: 4px 8px 6px; color: var(--text-muted); font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .activity-shelf { display: flex; align-items: center; gap: 9px; width: 100%; padding: 7px 9px; border: 0; border-radius: 9px; background: none; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+    .activity-shelf:hover { background: var(--accent-soft); }
+    .activity-shelf[aria-pressed="true"] { background: var(--accent-soft); font-weight: 700; box-shadow: inset 3px 0 0 var(--accent); }
+    .activity-shelf img, .activity-shelf .shelf-icon { flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%; object-fit: cover; display: grid; place-items: center; background: var(--accent-soft); font-size: 14px; }
+    .activity-shelf .shelf-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .activity-shelf .shelf-count { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+    .activity-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .review-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .review-chip { padding: 6px 12px; border: 1px solid var(--surface-border); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+    .review-chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+    .review-chip .chip-count { margin-left: 5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .activity-section .import-card h2 { margin: 0 0 6px; font-size: 18px; }
+    .background-steps { margin: 12px 0; padding-left: 20px; line-height: 1.7; }
+    .activity-main .import-card { margin-top: 28px; }
+    .activity-thumb { position: relative; }
+    .activity-thumb img { display: block; cursor: zoom-in; }
+    .activity-thumb .activity-select-row { position: absolute; top: 8px; left: 8px; min-height: 0; padding: 3px 9px; border-radius: 999px; background: rgba(0, 0, 0, .6); color: #fff; }
+    @media (max-width: 760px) { .activity-layout { grid-template-columns: 1fr; } .activity-shelves { position: static; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); } .activity-shelves h2 { grid-column: 1 / -1; } .library-heading { flex-direction: column; align-items: flex-start; } .main { width: calc(100% - 32px); } }
   </style>
 </head>
 <body>
   <aside id="app-sidebar" class="app-sidebar" aria-label="App navigation">
     <a class="brand" href="/" aria-label="Daily Beyond English home"><img class="brand-logo" src="/static/brand/logo-64.png" width="36" height="36" alt="" /><span class="brand-word"><b>Daily Beyond</b><small>English</small></span></a>
-    <nav class="side-nav" aria-label="Main"><a class="side-link" href="/" aria-label="Dashboard" title="Dashboard"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg><span class="side-label">Dashboard</span></a><a class="side-link" href="/channel" aria-label="Channel plan" title="Channel plan"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5M16 4v5M7 13h4M7 16.5h7"/></svg><span class="side-label">Channel plan</span></a><a class="side-link" href="/characters" aria-label="Character Library" title="Character Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><circle cx="17.2" cy="9.2" r="2.4"/><path d="M16.2 14.3c2.8.3 4.8 2.4 4.8 5.7"/></svg><span class="side-label">Character Library</span></a><a class="side-link" href="/shots" aria-current="page" aria-label="Shot Library" title="Shot Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M8 5v4M16 5v4M8 15l2.5-3 2 2 2-2.5L18 15"/></svg><span class="side-label">Shot Library</span></a><a class="side-link" href="/music" aria-label="Music Library" title="Music Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg><span class="side-label">Music Library</span></a><a class="side-link" href="/settings" aria-label="Settings" title="Settings"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span class="side-label">Settings</span></a></nav>
+    <nav class="side-nav" aria-label="Main"><a class="side-link" href="/" aria-label="Dashboard" title="Dashboard"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg><span class="side-label">Dashboard</span></a><a class="side-link" href="/channel" aria-label="Channel plan" title="Channel plan"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5M16 4v5M7 13h4M7 16.5h7"/></svg><span class="side-label">Channel plan</span></a><a class="side-link" href="/characters" aria-label="Character Library" title="Character Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><circle cx="17.2" cy="9.2" r="2.4"/><path d="M16.2 14.3c2.8.3 4.8 2.4 4.8 5.7"/></svg><span class="side-label">Character Library</span></a><a class="side-link" href="/activities" aria-current="page" aria-label="Activity Library" title="Activity Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M8 5v4M16 5v4M8 15l2.5-3 2 2 2-2.5L18 15"/></svg><span class="side-label">Activity Library</span></a><a class="side-link" href="/music" aria-label="Music Library" title="Music Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg><span class="side-label">Music Library</span></a><a class="side-link" href="/settings" aria-label="Settings" title="Settings"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span class="side-label">Settings</span></a></nav>
     <button id="sidebar-toggle" class="side-toggle" type="button" aria-expanded="true" aria-controls="app-sidebar" aria-label="Collapse sidebar" title="Collapse sidebar"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14.5 6-6 6 6 6"/></svg><span class="side-label">Collapse</span></button>
   </aside>
   <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
@@ -128,54 +153,72 @@
   </header>
 
   <main class="main">
-    <section class="page-heading">
-      <h1>Shot Library</h1>
-      <p>Pictures the videos reuse: generic activity illustrations (ordinary people doing an action, never a cast member's
-        face) shown during the inserts, and the scene backgrounds behind the talking characters.</p>
+    <section class="library-heading">
+      <div>
+        <h1>Activity Library</h1>
+        <p>Pictures the videos reuse: activity illustrations shown during the inserts (generic people, or one of your
+          characters) and the scene backgrounds behind the talking characters.</p>
+      </div>
+      <button id="activity-upload-open" class="btn btn-primary" type="button">＋ Add activity pictures</button>
     </section>
-    <details class="import-card" id="import-card">
-      <summary>Add scene backgrounds</summary>
-      <p><strong>Scene backgrounds</strong> (pictures without people): put <code>cafe.png</code> and its prompt <code>cafe.txt</code>
-        in the <code>assets</code> and <code>prompts</code> folders of <code id="bg-folder"></code>, named by scene key
-        (<code>docs/operations/scene-list-55.md</code>). A background replaces the picture of that scene.</p>
-      <div class="import-row">
-        <button id="bg-import-btn" class="btn btn-primary" type="button">Import backgrounds</button>
-        <span id="bg-count" class="shot-summary" role="status"></span>
-      </div>
-      <ul id="bg-result" class="import-result" role="status"></ul>
-    </details>
+    <div class="library-tabs" role="tablist" aria-label="Library sections">
+      <button id="tab-activities" class="library-tab" type="button" role="tab" aria-selected="true" aria-controls="activity-panel">Activity pictures <span id="tab-activities-count" class="library-tab-count"></span></button>
+      <button id="tab-backgrounds" class="library-tab" type="button" role="tab" aria-selected="false" aria-controls="background-panel">Scene backgrounds <span id="tab-backgrounds-count" class="library-tab-count"></span></button>
+    </div>
     <div id="shot-message" hidden role="alert"></div>
-    <section class="activity-section" aria-labelledby="activity-library-heading">
-      <div class="library-heading">
-        <div><h2 id="activity-library-heading">Activity Library</h2>
-          <p class="shot-summary">Choose the character (or Generic), then name the action shown in each picture. Approved names and aliases help the video find matching pictures.</p>
+
+    <section id="activity-panel" class="activity-section" role="tabpanel" aria-labelledby="tab-activities">
+      <div class="activity-layout">
+        <nav id="activity-shelves" class="activity-shelves" aria-label="Picture shelves"></nav>
+        <div class="activity-main">
+          <div class="activity-toolbar">
+            <div id="activity-review-chips" class="review-chips" role="group" aria-label="Review state">
+              <button type="button" class="review-chip" data-state="" aria-pressed="true">All</button>
+              <button type="button" class="review-chip" data-state="pending" aria-pressed="false">Needs review</button>
+              <button type="button" class="review-chip" data-state="approved" aria-pressed="false">Approved</button>
+              <button type="button" class="review-chip" data-state="rejected" aria-pressed="false">Rejected</button>
+            </div>
+            <button id="activity-approve-all-btn" class="btn btn-ghost btn-sm" type="button" disabled>Approve pending in view</button>
+          </div>
+          <div class="activity-bulk-actions" role="group" aria-label="Selected activity picture actions">
+            <label><input id="activity-select-all" type="checkbox" /> Select all in view</label>
+            <span id="activity-selected-count" class="shot-summary" role="status">0 selected</span>
+            <button id="activity-clear-selection" class="btn btn-ghost btn-sm" type="button" disabled>Clear selection</button>
+            <button id="activity-approve-selected" class="btn btn-primary btn-sm" type="button" disabled>Approve selected</button>
+            <button id="activity-reject-selected" class="btn btn-ghost btn-sm" type="button" disabled>Reject selected</button>
+            <button id="activity-delete-selected" class="btn btn-ghost btn-sm delete-btn" type="button" disabled>Delete selected</button>
+          </div>
+          <p id="activity-count" class="shot-summary" role="status"></p>
+          <p id="activity-message" hidden role="status"></p>
+          <div id="activity-grid" class="shot-grid"></div>
+          <div id="activity-empty" class="empty-state" hidden>No pictures here yet. Press “Add activity pictures” to add one.</div>
+          <details class="import-card" id="activity-import-card">
+            <summary>Advanced: import a prepared folder</summary>
+            <p>For bulk work, the filename format remains <code>generic__activity__context__variant.png</code> or
+              <code>alex__activity__context__variant.png</code> under <code>data/library/activities_inbox</code>.</p>
+            <div class="import-row"><button id="activity-import-btn" class="btn btn-primary" type="button">Import activity pictures</button></div>
+            <ul id="activity-import-result" class="import-result" role="status"></ul>
+          </details>
         </div>
-        <button id="activity-upload-open" class="btn btn-primary" type="button">Add activity pictures</button>
       </div>
-      <details class="import-card" id="activity-import-card">
-        <summary>Advanced: import a prepared folder</summary>
-        <p>For bulk work, the filename format remains <code>generic__activity__context__variant.png</code> or
-          <code>alex__activity__context__variant.png</code> under <code>data/library/activities_inbox</code>.</p>
-        <div class="import-row"><button id="activity-import-btn" class="btn btn-primary" type="button">Import activity pictures</button></div>
-        <ul id="activity-import-result" class="import-result" role="status"></ul>
-      </details>
-      <div class="shot-filters" role="group" aria-label="Activity filters">
-        <label>Scope <select id="activity-filter-scope"><option value="">All</option><option value="generic">Generic</option><option value="character">Character</option></select></label>
-        <label>Review <select id="activity-filter-state"><option value="">All</option><option value="pending">Needs review</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></label>
-        <button id="activity-approve-all-btn" class="btn btn-ghost" type="button" disabled>Approve pending in view</button>
+    </section>
+
+    <section id="background-panel" class="activity-section" role="tabpanel" aria-labelledby="tab-backgrounds" hidden>
+      <div class="import-card" id="import-card">
+        <h2>Scene backgrounds</h2>
+        <p>Pictures of places without people, shown behind the talking characters. A background replaces the picture of
+          its scene.</p>
+        <ol class="background-steps">
+          <li>Name the picture by its scene key, for example <code>cafe.png</code> (keys: <code>docs/operations/scene-list-55.md</code>).</li>
+          <li>Put it in the <code>assets</code> folder, and its prompt <code>cafe.txt</code> in the <code>prompts</code> folder, of <code id="bg-folder"></code>.</li>
+          <li>Press <strong>Import backgrounds</strong>. Pictures that are not 16:9 are cropped.</li>
+        </ol>
+        <div class="import-row">
+          <button id="bg-import-btn" class="btn btn-primary" type="button">Import backgrounds</button>
+          <span id="bg-count" class="shot-summary" role="status"></span>
+        </div>
+        <ul id="bg-result" class="import-result" role="status"></ul>
       </div>
-      <div class="activity-bulk-actions" role="group" aria-label="Selected activity picture actions">
-        <label><input id="activity-select-all" type="checkbox" /> Select all in view</label>
-        <span id="activity-selected-count" class="shot-summary" role="status">0 selected</span>
-        <button id="activity-clear-selection" class="btn btn-ghost btn-sm" type="button" disabled>Clear selection</button>
-        <button id="activity-approve-selected" class="btn btn-primary btn-sm" type="button" disabled>Approve selected</button>
-        <button id="activity-reject-selected" class="btn btn-ghost btn-sm" type="button" disabled>Reject selected</button>
-        <button id="activity-delete-selected" class="btn btn-ghost btn-sm delete-btn" type="button" disabled>Delete selected</button>
-      </div>
-      <p id="activity-count" class="shot-summary" role="status"></p>
-      <p id="activity-message" hidden role="status"></p>
-      <div id="activity-grid" class="shot-grid"></div>
-      <div id="activity-empty" class="empty-state" hidden>Press “Add activity pictures” to add the first reusable illustration.</div>
     </section>
   </main>
   <dialog id="activity-dialog" class="activity-dialog" aria-labelledby="activity-dialog-title">
@@ -234,6 +277,6 @@
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/confirm_dialog.js"></script>
   <script src="/static/js/api.js"></script>
-  <script src="/static/js/shot_library.js?v=20261009-upload-workspace"></script>
+  <script src="/static/js/shot_library.js?v=20261021-activity-library"></script>
 </body>
 </html>

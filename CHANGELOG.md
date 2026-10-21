@@ -8,6 +8,14 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Changed — Phase 56 guided start, Channel flow, Activity Library (2026-10-21)
+
+- The Dashboard opens with **Start here**: continue the latest unfinished project at its next step, create the next planned episode of the channel plan, or start a new video; the seven steps are listed below it (ENH-038).
+- Every step page ends with a bar that says whether the step is done, what is still missing, and links to the next step; the step list ticks only the steps really done.
+- The Channel plan page is a three-step flow (plan with AI, series and characters, publishing dates) with one "Next" line; extra planning numbers sit under "More options" and each series folds its episode table.
+- "Shot Library" is now the **Activity Library** (`/activities`; `/shots` still opens it): shelves for Generic and each character with counts, review chips, and the scene-background import in its own tab.
+- The owner's old channel plan (6 topics, 21 series, 203 episodes) was cleared on request after a database backup; all video projects were kept.
+
 ### Changed — Phase 55 Solo stage look (2026-10-21)
 
 - Solo videos stand the presenter waist-up in front of a real place: the AI picks a scene and, where it fits, an activity picture for each segment; text cards and diagrams float beside her. Step 5 can change the scene and activity per segment (ENH-037).

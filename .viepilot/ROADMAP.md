@@ -2,7 +2,7 @@
 
 ## Phase 56 — Guided start, Channel flow, Activity Library (2026-10-21)
 
-Status: planned, execution authorized; 0/5 tasks. ENH-038: channel plans reset (backup kept), Dashboard "Start here", a next-step bar on Steps 1–7, the Channel page as a three-step flow, "Shot Library" renamed and rebuilt as the Activity Library. [Plan](phases/56-guided-start/PLAN.md).
+Status: implemented_verified_pending_owner_review; 5/5 tasks. ENH-038: channel plans reset (backup kept), Dashboard "Start here", a next-step bar on Steps 1–7, the Channel page as a three-step flow, "Shot Library" renamed and rebuilt as the Activity Library. [Plan](phases/56-guided-start/PLAN.md).
 
 ## Phase 55 — Solo stage look (2026-10-21)
 

@@ -271,9 +271,10 @@ async def music_library() -> FileResponse:
     return FileResponse(FRONTEND_DIR / "pages" / "music_library.html")
 
 
-@app.get("/shots")
-async def shot_library() -> FileResponse:
-    """Serve the Shots page: the Activity Library and the scene-background import (Phase 44, D123)."""
+@app.get("/activities")
+@app.get("/shots")  # the page's name before Phase 56; old bookmarks keep working
+async def activity_library() -> FileResponse:
+    """Serve the Activity Library: activity pictures and the scene-background import (Phase 44 D123, Phase 56)."""
     return FileResponse(FRONTEND_DIR / "pages" / "shot_library.html")
 
 

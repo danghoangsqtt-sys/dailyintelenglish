@@ -131,7 +131,7 @@ async def draw_scenes(project: dict, composition: dict, indexes: list[int]) -> l
 
     references, names = references_for(composition)
     if not references:
-        raise ValueError("The episode's characters have no sprite pictures yet (Shot Library)")
+        raise ValueError("The episode's characters have no sprite pictures yet (Character Library)")
     folder = scenes_dir(project["id"])
     folder.mkdir(parents=True, exist_ok=True)
     prompt = recipes.qwen_thumbnail_scene_prompt(names, project["topic"])

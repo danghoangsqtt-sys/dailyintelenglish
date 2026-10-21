@@ -13,6 +13,7 @@ from backend.db.database import get_db
 from backend.db.transactions import read_transaction, write_transaction
 from backend.schemas.project import ProjectUpdate, ScriptConfig, SpeakerUpdate
 from backend.schemas.script import RegenerateLineRequest, ScriptUpdate
+from backend.channel import dashboard_service
 from backend.content import export_service, project_service, script_service
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -92,6 +93,16 @@ async def get_project(project_id: str, db: aiosqlite.Connection = Depends(get_db
     async with read_transaction():
         project = await project_service.get_project(db, project_id)
     return ok(project, started_at=started_at)
+
+
+@router.get("/{project_id}/progress")
+async def get_project_progress(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 56 (ENH-038): which of the seven steps the project has done, for the step pages' next-step bar."""
+    async with read_transaction():
+        progress = await dashboard_service.project_progress(db, project_id)
+    if progress is None:
+        raise NotFoundError(f"Project {project_id} not found")
+    return ok(progress)
 
 
 @router.put("/{project_id}")
