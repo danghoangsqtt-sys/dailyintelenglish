@@ -25,13 +25,22 @@ export function stagePlates(payload: SoloPayload, segmentIndex: number, time: nu
   return { previous, current, opacity: Math.max(0, Math.min(1, (time - start) / SCENE_CROSSFADE_SEC)) };
 }
 
+/** Phase 61 (ENH-043): the scene plate pushes in during each segment and settles back before the next one (the cards
+ * and the presenter stay where the layout proof put them). */
+export function stagePush(time: number, start: number, end: number): number {
+  const rise = Math.max(0, Math.min(1, (time - start) / 1.2)), fall = Math.max(0, Math.min(1, (end - time) / 0.6));
+  const t = Math.min(rise, fall);
+  return 1 + 0.05 * t * t * (3 - 2 * t);
+}
+
 export function SoloStage({ payload, segmentIndex, time, frame, fps }: {
   payload: SoloPayload; segmentIndex: number; time: number; frame: number; fps: number;
 }) {
   const plates = stagePlates(payload, segmentIndex, time);
   const motion = sceneMotion(frame, fps);
-  const zoom = `translate(${motion.x.toFixed(2)}px, ${motion.y.toFixed(2)}px) scale(${motion.scale.toFixed(4)})`;
   const segment = payload.plan.segments[segmentIndex], span = payload.timeline[segmentIndex];
+  const push = span ? stagePush(time, span.start_sec, span.end_sec) : 1;
+  const zoom = `translate(${motion.x.toFixed(2)}px, ${motion.y.toFixed(2)}px) scale(${(motion.scale * push).toFixed(4)})`;
   const activity = segment?.visual.kind === "activity" ? payload.activities?.[segment.visual.activity_id] : undefined;
   const reveal = activity && span ? insertMotion(time, span.start_sec, span.end_sec, segmentIndex) : null;
   return (

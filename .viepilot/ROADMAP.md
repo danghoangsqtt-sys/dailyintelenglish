@@ -2,7 +2,7 @@
 
 ## Phase 61 — Lively characters and rich VOX motion (2026-10-22)
 
-Status: planned; 0/5 tasks. ENH-043: livelier conversation characters and Solo presenter (phrase gestures, lean/bob/nod, quick pose crossfade, camera push-in) and VOX transitions, morphs, camera/parallax and per-element effects. [Plan](phases/61-lively-motion/PLAN.md).
+Status: implemented_verified_pending_owner_review; 5/5 tasks. Full pytest 1950 passed; renderer 152 Vitest, tsc clean; real sandbox renders (conversation clip, full VOX video). ENH-043: livelier conversation characters and Solo presenter (phrase gestures, lean/bob/nod, quick pose crossfade, camera push-in) and VOX transitions, morphs, camera/parallax and per-element effects. [Plan](phases/61-lively-motion/PLAN.md).
 
 ## Phase 60 — Greeting, topic preview, thanks + subscribe, smiles (2026-10-22)
 

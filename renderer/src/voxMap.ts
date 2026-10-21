@@ -89,6 +89,15 @@ export function project([lon, lat]: Position, view: MapView, width: number, heig
 export function countryPath(country: Country, view: MapView, width: number, height: number): string {
   return country.rings
     .filter((points) => points.some(([lon, lat]) => lon >= view.west - 20 && lon <= view.east + 20 && lat >= view.south - 20 && lat <= view.north + 20))
-    .map((points) => "M" + points.map((point) => project(point, view, width, height).map((v) => v.toFixed(1)).join(",")).join("L") + "Z")
+    // Phase 61: a ring that crosses the 180th meridian is broken there (no stroke across the whole world view)
+    .map((points) => {
+      let crosses = false;
+      const parts = points.map((point, index) => {
+        const jump = index > 0 && Math.abs(point[0] - points[index - 1][0]) > 180;
+        crosses ||= jump;
+        return (index === 0 || jump ? "M" : "L") + project(point, view, width, height).map((v) => v.toFixed(1)).join(",");
+      });
+      return parts.join("") + (crosses ? "" : "Z");
+    })
     .join("");
 }

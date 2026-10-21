@@ -6,7 +6,7 @@
 import React from "react";
 import { AbsoluteFill, Img, staticFile, useVideoConfig } from "remotion";
 import { BOTTOM_SHADE_STYLE } from "./captionStyle";
-import { activityCutawayAt, canvasBox, onStage, spriteBackground, spriteFrame, spriteTransform } from "./spriteTimeline";
+import { activityCutawayAt, cameraAt, canvasBox, onStage, poseFade, spriteBackground, spriteFrame, spriteTransform } from "./spriteTimeline";
 import { VERTICAL } from "./safeZone";
 import { cueEnvelope, insertMotion, sceneMotion } from "./verticalMotion";
 import { MotionAccents } from "./MotionAccents";
@@ -39,16 +39,25 @@ function Sprite({ character, frame, fps, lines, sprites, totalFrames, layout }: 
   const { width, height } = useVideoConfig();
   const box = canvasBox(character.slot, width, height, sprites.characters, layout);
   const state = spriteFrame(character, frame, fps, lines, sprites, totalFrames, width);
-  const alignment = pictureAlignment(character, state.picture, box.width, box.height);
+  const fade = poseFade(character, frame, fps, lines, sprites, totalFrames, width);
+  // Phase 61: each picture keeps its own head alignment; the previous pose fades out over the new one
+  const layer = (picture: string, opacity: number) => {
+    const alignment = pictureAlignment(character, picture, box.width, box.height);
+    return (
+      <div key={picture} data-sprite-picture={picture} style={{
+        position: "absolute", left: box.left, top: box.top, width: box.width, height: box.height,
+        transform: spriteTransform({ ...state, x: state.x + alignment.x, y: state.y + alignment.y }, character.mirror),
+        transformOrigin: "50% 85%", opacity, filter: `brightness(${state.brightness.toFixed(3)})`,
+      }}>
+        <Img src={staticFile(character.pictures[picture])} style={{ position: "absolute", width: "100%", height: "100%" }} />
+      </div>
+    );
+  };
   return (
-    <div style={{
-      position: "absolute", left: box.left, top: box.top, width: box.width, height: box.height,
-      transform: spriteTransform({ ...state, x: state.x + alignment.x, y: state.y + alignment.y }, character.mirror),
-      transformOrigin: state.rotation === undefined ? "50% 100%" : "50% 35%",
-      opacity: state.opacity, filter: `brightness(${state.brightness.toFixed(3)})`,
-    }}>
-      <Img src={staticFile(character.pictures[state.picture])} style={{ position: "absolute", width: "100%", height: "100%" }} />
-    </div>
+    <>
+      {layer(state.picture, state.opacity)}
+      {fade && fade.picture !== state.picture ? layer(fade.picture, state.opacity * fade.opacity) : null}
+    </>
   );
 }
 
@@ -57,7 +66,8 @@ export function SpriteStage({ sprites, lines, fps, frame, totalFrames, progress,
   layout?: Layout;
 }) {
   const background = spriteBackground(frame, fps, lines, sprites);
-  const { height } = useVideoConfig();
+  const { width, height } = useVideoConfig();
+  const camera = cameraAt(frame, fps, lines, sprites, width, height, layout);
   const cutaway = activityCutawayAt(frame / fps, sprites);
   const insertIndex = sprites.cutaways.findIndex((item) => frame / fps >= item.startSec && frame / fps < item.endSec);
   const insert = sprites.cutaways[insertIndex];
@@ -88,6 +98,9 @@ export function SpriteStage({ sprites, lines, fps, frame, totalFrames, progress,
   );
   return (
     <AbsoluteFill style={{ overflow: "hidden", backgroundColor: "#000000" }}>
+      {/* Phase 61: the camera pushes in toward the speaker; the shades stay put */}
+      <AbsoluteFill data-sprite-camera={camera.scale.toFixed(3)} style={{ transform: `scale(${camera.scale.toFixed(4)})`,
+        transformOrigin: `${camera.originX.toFixed(1)}px ${camera.originY.toFixed(1)}px` }}>
       {layout === "vertical" ? <AmbientScene {...background} /> : null}
       {layout === "vertical" ? (
         <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: VERTICAL.picture.height, overflow: "hidden",
@@ -107,6 +120,7 @@ export function SpriteStage({ sprites, lines, fps, frame, totalFrames, progress,
         <Sprite key={`${character.slot}-${character.name}-${character.fromSec}`} character={character} frame={frame} fps={fps}
           lines={lines} sprites={sprites} totalFrames={totalFrames} layout={layout} />
       ))}
+      </AbsoluteFill>
       <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: "18%",
         background: "linear-gradient(to bottom, rgba(0,0,0,0.45), rgba(0,0,0,0))" }} />
       {layout === "vertical" ? null : <div style={BOTTOM_SHADE_STYLE} />}

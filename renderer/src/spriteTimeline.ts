@@ -177,9 +177,10 @@ export function spriteFrame(
   const presence = Math.min(enter, leave);
   const eased = 1 - (1 - presence) * (1 - presence);
   const side = slot === 0 ? -1 : 1;
-  const articulated = line && conversationCues(timeline[index], line, character, speaking) !== null;
-  const body = articulated ? conversationBody(time, timeline[index].startSec, timeline[index].endSec, slot, speaking)
-    : { x: 0, y: 0, rotation: 0 };
+  // Phase 61 (ENH-043): every line moves the whole picture (lean, bob, nod), scaled to the video width
+  const unit = width / 1280;
+  const raw = line && line.slot !== null ? conversationBody(time, timeline[index], slot, speaking) : { x: 0, y: 0, rotation: 0 };
+  const body = { x: raw.x * unit, y: raw.y * unit, rotation: raw.rotation };
 
   return {
     picture,
@@ -187,8 +188,52 @@ export function spriteFrame(
     x: side * (1 - eased) * 0.35 * width + body.x,
     y: hop + breath + body.y,
     opacity: eased,
-    rotation: articulated ? body.rotation : undefined,
+    rotation: body.rotation,
   };
+}
+
+/** Phase 61: the pose of a picture -- its gesture or expression, without the mouth state; the blink has the calm face. */
+export function poseOf(picture: string): string {
+  return picture === "blink" ? "calm" : picture.replace(/__(open|closed)$/, "");
+}
+
+export const POSE_FADE_SEC = 0.15;
+
+/** Phase 61 (ENH-043): a pose or expression change cross-fades over 0.15 s -- the new picture is drawn whole and the
+ * previous one fades out over it (so the body never turns see-through). The mouth opening/closing and the blink stay
+ * direct swaps. Returns the previous picture and its opacity, or null. */
+export function poseFade(
+  character: SpriteCharacter, frame: number, fps: number, timeline: EpisodeLine[], sprites: EpisodeSprites,
+  totalFrames: number, width: number,
+): { picture: string; opacity: number } | null {
+  const frames = Math.max(1, Math.round(POSE_FADE_SEC * fps));
+  const pictureAt = (at: number) => spriteFrame(character, at, fps, timeline, sprites, totalFrames, width).picture;
+  let newer = pictureAt(frame);
+  for (let back = 1; back <= frames && frame - back >= 0; back += 1) {
+    const older = pictureAt(frame - back);
+    if (poseOf(older) !== poseOf(newer)) return { picture: older, opacity: 1 - back / (frames + 1) };
+    newer = older;
+  }
+  return null;
+}
+
+/** Phase 61 (ENH-043): the camera pushes in toward the speaker during each line, more on an emphatic line (! or ?), and
+ * is back at 1 between lines, so its origin moves only when it is not zoomed. */
+export function cameraAt(frame: number, fps: number, timeline: EpisodeLine[], sprites: EpisodeSprites, width: number,
+  height: number, layout: "horizontal" | "vertical" = "horizontal"): { scale: number; originX: number; originY: number } {
+  const time = frame / fps;
+  const index = heldLineIndex(time, timeline);
+  const line = index >= 0 ? sprites.lines[index] : undefined;
+  const speaker = line && line.slot !== null ? sprites.characters.find((character) => character.slot === line.slot) : undefined;
+  if (!line || !speaker) return { scale: 1, originX: width / 2, originY: height / 2 };
+  const span = timeline[index];
+  const rise = Math.min(1, Math.max(0, (time - span.startSec) / 0.8));
+  const fall = Math.min(1, Math.max(0, (span.endSec - time) / 0.5));
+  const t = Math.min(rise, fall), eased = t * t * (3 - 2 * t);
+  const emphatic = /[!?]/.test(span.text);
+  const strength = (layout === "vertical" ? 0.6 : 1) * (emphatic ? 0.06 : 0.035);
+  const box = canvasBox(speaker.slot, width, height, sprites.characters, layout);
+  return { scale: 1 + strength * eased, originX: box.left + box.width / 2, originY: box.top + (speaker.topFraction + 0.12) * box.height };
 }
 
 /** A listener that was the speaker of the previous line dims over the same 6 frames (no pop). */
