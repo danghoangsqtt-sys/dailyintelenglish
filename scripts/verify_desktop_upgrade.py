@@ -67,6 +67,7 @@ def browser_check(base: str, output: Path, *, destructive_fixture: bool) -> dict
         for index in range(len(names)):
             page.locator(".profile-card").nth(index).click()
             page.wait_for_function("document.querySelectorAll('.slot-card').length === 29")
+            page.locator("#profile-tab-voice").click()  # Phase 58: the voice has its own profile tab
             assert page.locator("#profile-voice-picker .voice-select").is_visible()
             page.wait_for_function("document.querySelectorAll('#profile-voice-picker .voice-select option').length > 1", timeout=60000)
             page.locator("#profile-view-front").click()
@@ -87,7 +88,7 @@ def browser_check(base: str, output: Path, *, destructive_fixture: bool) -> dict
             page.wait_for_function("document.querySelectorAll('.slot-card').length === 29")
         page.reload()
         page.locator(".profile-card").filter(has_text="Hoang").click()
-        page.wait_for_selector("#profile-voice-picker .voice-select")
+        page.wait_for_selector("#profile-voice-picker .voice-select", state="attached")
         page.locator("#profile-view-front").click()
         page.wait_for_function("document.querySelectorAll('.slot-card').length === 21")
         page.goto(base + "/settings")
