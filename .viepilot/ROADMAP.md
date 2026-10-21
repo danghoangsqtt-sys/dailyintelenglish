@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 58 — Character / Music / Settings rework and app language (2026-10-22)
+
+Status: planned, execution authorized; 0/5 tasks. ENH-040: English / Tiếng Việt interface (English by default), character profile tabs, compact music list with one player, Settings left menu. [Plan](phases/58-libraries-language/PLAN.md).
+
 ## Phase 57 — Step 1 video type, AI topic ideas, video from your material (2026-10-21)
 
 Status: implemented_verified_pending_owner_review; 6/6 tasks (incl. Amendment A: Solo sub-types, avoid list, vocabulary repair, photo privacy). Full pytest 1935 passed. ENH-039: two video-type cards on Step 1, six AI topic ideas, a video made from a pasted or photographed dialogue (word for word or rewritten) or a vocabulary list. [Plan](phases/57-step1-sources/PLAN.md).
