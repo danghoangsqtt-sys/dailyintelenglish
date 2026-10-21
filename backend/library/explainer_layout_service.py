@@ -1,4 +1,9 @@
-"""Deterministic Solo layout proof from immutable front pixels and shared frame rules."""
+"""Deterministic Solo layout proof from immutable front pixels and shared frame rules.
+
+Rules v2 (Phase 55, ENH-037): the presenter stands waist-up on a stage in front of the segment's scene, so the figure
+is taller than the frame and its legs run below it. The proof protects cards from the presenter's head and torso (the
+calm poses); gesturing hands may pass in front of a card because the presenter is drawn above it.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -12,7 +17,6 @@ from PIL import Image
 from backend.core.exceptions import ValidationError
 from backend.core.paths import get_project_root
 from backend.library import presenter_asset_plan
-from backend.library.explainer_timing import ScriptIndex, resolve_timeline
 from backend.schemas.explainer import ExplainerPlan, SegmentLayout
 
 RULES = json.loads((get_project_root() / "frontend/static/explainer-layout-rules.json").read_text(encoding="utf-8"))
@@ -57,6 +61,31 @@ def presenter_boxes(placement: dict, metrics: dict, aspect: str) -> tuple[dict, 
              "width": alpha["width"] * cw, "height": placement["height"]}, canvas)
 
 
+CORE_POSES = ("calm__closed", "calm__open", "blink")
+FULL_FRAME = {"x": 0.0, "y": 0.0, "width": 1.0, "height": 1.0}
+
+
+def core_box(placement: dict, metrics: dict, aspect: str) -> dict:
+    """Head and torso (the calm poses' alpha) on the same canvas as the full figure."""
+    _, canvas = presenter_boxes(placement, metrics, aspect)
+    core = metrics.get("core") or metrics["alpha"]
+    return {"x": canvas["x"] + core["x"] * canvas["width"], "y": canvas["y"] + core["y"] * canvas["height"],
+            "width": core["width"] * canvas["width"], "height": core["height"] * canvas["height"]}
+
+
+def head_box(placement: dict, metrics: dict, aspect: str) -> dict:
+    """The top of the core box: the face and hair that must stay inside the platform-safe area."""
+    core = core_box(placement, metrics, aspect)
+    return {**core, "height": min(core["height"], RULES["headFraction"] * placement["height"])}
+
+
+def visible(rect: dict) -> dict:
+    """Clip to the frame; the stage figure's legs lie below it."""
+    x, y = max(0.0, rect["x"]), max(0.0, rect["y"])
+    right, bottom = min(1.0, rect["x"] + rect["width"]), min(1.0, rect["y"] + rect["height"])
+    return {"x": x, "y": y, "width": max(0.0, right - x), "height": max(0.0, bottom - y)}
+
+
 def text_metrics(visual: dict, panel: dict, aspect: str) -> dict:
     """Conservative character wrapping bounds shared with the actual card/grid renderer."""
     spec = RULES["aspects"][aspect]
@@ -68,7 +97,7 @@ def text_metrics(visual: dict, panel: dict, aspect: str) -> dict:
         return sum(max(1, math.ceil(len(part) / capacity)) for part in text.split("\n")) if text else 0
     title_height = lines(visual.get("title", ""), width - 2 * padding, title_font) * title_font * 1.25
     available_height = height - 2 * padding - title_height - gap
-    if visual["kind"] == "photo":
+    if visual["kind"] in ("photo", "activity"):
         return {"font": font, "titleFont": title_font, "padding": padding, "gap": gap, "columns": 1}
     columns = min(2 if visual.get("template") == "comparison" else spec["columns"], len(visual.get("nodes", [1])))
     if visual["kind"] == "text_card":
@@ -93,6 +122,8 @@ def text_metrics(visual: dict, panel: dict, aspect: str) -> dict:
 
 def protected_regions(visual: dict, panel: dict, aspect: str, illustrations: dict) -> list[dict]:
     """Map owner photo annotations through contain/cover and refuse important cropping."""
+    if visual["kind"] == "activity":
+        return []  # a full-frame picture behind the presenter, like the conversation video's inserts
     if visual["kind"] != "photo" or not visual.get("important_regions"):
         if visual["kind"] == "photo" and visual.get("fit") == "cover":
             raise ValidationError("Use contain for an unannotated photo, or mark all important regions before cropping")
@@ -113,42 +144,52 @@ def protected_regions(visual: dict, panel: dict, aspect: str, illustrations: dic
 
 
 def validate_segment(segment: dict, aspect: str, metrics: dict, illustrations: dict, previous: dict | None = None) -> dict:
-    """Prove endpoints and the entire motion envelope against content and reserved UI."""
+    """Prove endpoints and the entire motion envelope against cards and reserved UI (rules v2 stage)."""
     layout = segment["layouts"].get(aspect)
     if not layout or layout.get("rules_version") != RULES["version"]:
         raise ValidationError("Resolve the missing or outdated layout before approval")
     spec = RULES["aspects"][aspect]
+    stage, activity = spec["stage"], segment["visual"]["kind"] == "activity"
     panel, placement = layout["illustration"], layout["presenter"]
-    if not inside_safe(panel, aspect) or any(intersects(panel, spec[key]) for key in ("caption", "header")):
-        raise ValidationError("The illustration must stay inside the safe zone and outside captions/brand")
-    if not RULES["minHeight"] <= placement["height"] <= RULES["maxHeight"]:
-        raise ValidationError("Presenter height must remain within12–38%")
+    if not activity and (not inside_safe(panel, aspect) or any(intersects(panel, spec[key]) for key in ("caption", "header"))):
+        raise ValidationError("The card/illustration must stay inside the safe zone and outside captions/brand")
+
+    def sized(value: dict) -> None:
+        if not stage["minHeight"] <= value["height"] <= stage["maxHeight"]:
+            raise ValidationError(f"Presenter size must stay within {stage['minHeight']}–{stage['maxHeight']} of the frame height")
+
+    sized(placement)
     bounds, canvas = presenter_boxes(placement, metrics, aspect)
-    start = bounds
+    core, head = core_box(placement, metrics, aspect), head_box(placement, metrics, aspect)
+    start_core, start_head = core, head
     protected = protected_regions(segment["visual"], panel, aspect, illustrations)
-    obstacles = [*protected, spec["caption"], spec["header"]]
+    obstacles = list(protected)
     if layout["transition"] != "cut":
         origin = layout.get("motion_from") or (previous or {}).get("presenter")
         if previous and layout.get("motion_from") and layout["motion_from"] != previous["presenter"]:
             raise ValidationError("The motion start no longer matches the previous segment")
         if origin:
-            if not RULES["minHeight"] <= origin["height"] <= RULES["maxHeight"]:
-                raise ValidationError("The motion start has an invalid presenter size")
-            start, _ = presenter_boxes(origin, metrics, aspect)
+            sized(origin)
+            start_core, start_head = core_box(origin, metrics, aspect), head_box(origin, metrics, aspect)
         if previous:
             obstacles.extend(previous.get("protected", []))
-    swept = envelope(start, bounds, RULES["margin"])
-    if not inside_safe(swept, aspect) or any(intersects(swept, item) for item in obstacles):
-        raise ValidationError("Presenter or its movement crosses protected content/safe area; reposition, shrink, or use a boundary cut")
-    return {"id": segment["id"], "presenter": placement, "bounds": bounds, "canvas": canvas,
+    swept_head = envelope(start_head, head, RULES["margin"])
+    if not inside_safe(swept_head, aspect) or intersects(swept_head, spec["header"]):
+        raise ValidationError("The presenter's head must stay inside the safe zone and below the brand line")
+    swept = visible(envelope(start_core, core, RULES["margin"]))
+    if swept["x"] <= 0 or swept["x"] + swept["width"] >= 1:
+        raise ValidationError("The presenter's body must stay inside the frame horizontally")
+    if any(intersects(swept, item) for item in obstacles):
+        raise ValidationError("Presenter or its movement crosses the card; move it to the other side, shrink it, or use a boundary cut")
+    return {"id": segment["id"], "presenter": placement, "bounds": bounds, "canvas": canvas, "core": core,
             "motion_bounds": swept, "protected": protected, "text": text_metrics(segment["visual"], panel, aspect),
             "transition": layout["transition"]}
 
 
 def measure_front(manifest: dict) -> dict:
     """Measure every pose alpha, including hands, on one verified aligned canvas."""
-    union, dimensions = None, None
-    for asset in manifest["pictures"].values():
+    union, core, dimensions = None, None, None
+    for key, asset in manifest["pictures"].items():
         with Image.open(Path(asset["path"])) as source:
             if dimensions and source.size != dimensions:
                 raise ValidationError("Front pictures must share one aligned canvas")
@@ -158,11 +199,17 @@ def measure_front(manifest: dict) -> dict:
             if not bounds:
                 raise ValidationError("A front pose has no visible figure")
             union = bounds if union is None else (min(union[0], bounds[0]), min(union[1], bounds[1]), max(union[2], bounds[2]), max(union[3], bounds[3]))
+            if key in CORE_POSES:
+                core = bounds if core is None else (min(core[0], bounds[0]), min(core[1], bounds[1]), max(core[2], bounds[2]), max(core[3], bounds[3]))
     if not union or not dimensions:
         raise ValidationError("Approve the full front21 pack before solving layouts")
     w, h = dimensions
-    return {"canvasWidth": w, "canvasHeight": h, "alpha": {"x": union[0] / w, "y": union[1] / h,
-            "width": (union[2] - union[0]) / w, "height": (union[3] - union[1]) / h}}
+    core = core or union
+
+    def fraction(box: tuple) -> dict:
+        return {"x": box[0] / w, "y": box[1] / h, "width": (box[2] - box[0]) / w, "height": (box[3] - box[1]) / h}
+
+    return {"canvasWidth": w, "canvasHeight": h, "alpha": fraction(union), "core": fraction(core)}
 
 
 async def front_metrics(snapshot: dict) -> dict:
@@ -201,29 +248,35 @@ async def validate_plan(snapshot: dict, plan: ExplainerPlan) -> dict:
 
 
 async def arrange(snapshot: dict, plan: ExplainerPlan) -> tuple[list, dict]:
-    """Suggest valid unlocked layouts; preserve owner locks and use cuts for unsafe paths."""
+    """Suggest valid unlocked stage layouts; preserve owner locks and use cuts for unsafe paths.
+
+    The presenter keeps one stage side for the whole video (like the conversation video's characters); cards float on
+    the other side and activity pictures fill the frame behind her.
+    """
     metrics = await front_metrics(snapshot)
     illustrations = {(item["id"], item["version"]): item for item in snapshot["source"]["illustrations"] if not item.get("missing")}
-    timeline = resolve_timeline(ScriptIndex(snapshot["lines"]), snapshot["audio"]).segments(plan.segments)
     segments = copy.deepcopy(plan.segments)
     for aspect in plan.aspects:
         previous = None
         spec = RULES["aspects"][aspect]
-        for index, segment in enumerate(segments):
+        stage = spec["stage"]
+        for segment in segments:
             lock = segment.locks.layout_16_9 if aspect == "16:9" else segment.locks.layout_9_16
             if lock:
                 previous = validate_segment(segment.model_dump(), aspect, metrics, illustrations, previous)
                 continue
-            anchors = ["left", "right", "center"]
-            preferred = anchors[index % 3]
-            if previous and timeline[index - 1]["end_sec"] - timeline[index - 1]["start_sec"] < RULES["minDwellSeconds"]:
-                preferred = previous["presenter"]["anchor"]
-            anchors.remove(preferred)
+            anchor = previous["presenter"]["anchor"] if previous else stage["anchor"]
+            anchors = [anchor, *[item for item in ("right", "left", "center") if item != anchor]]
+            heights = [value for value in (round(stage["defaultHeight"] - step * 0.05, 4) for step in range(40))
+                       if value >= stage["minHeight"]]
             error = None
-            for anchor in [preferred, *anchors]:
-                for height in (0.22, 0.20, 0.18, 0.16, 0.14, 0.12):
-                    proposal = {"presenter": {"anchor": anchor, "x": spec["anchors"][anchor], "y": spec["presenterBottom"], "height": height},
-                                "illustration": spec["panels"][anchor], "transition": "ease", "transition_seconds": 0.4, "rules_version": RULES["version"]}
+            for choice in anchors:
+                for height in heights:
+                    illustration = FULL_FRAME if segment.visual.kind == "activity" else spec["panels"][choice]
+                    proposal = {"presenter": {"anchor": choice, "x": spec["anchors"][choice], "y": stage["headTop"] + height,
+                                              "height": height},
+                                "illustration": illustration, "transition": "ease", "transition_seconds": 0.4,
+                                "rules_version": RULES["version"]}
                     if previous:
                         proposal["motion_from"] = previous["presenter"]
                     for transition in ("ease", "cut"):

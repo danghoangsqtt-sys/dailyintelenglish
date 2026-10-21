@@ -139,8 +139,9 @@ class PresenterPlacement(StrictModel):
 
     anchor: Literal["left", "right", "center"]
     x: float = Field(ge=0, le=1, allow_inf_nan=False)
-    y: float = Field(ge=0, le=1, allow_inf_nan=False)
-    height: float = Field(default=0.22, ge=0.12, le=0.38, allow_inf_nan=False)
+    # Phase 55 (rules v2): the waist-up stage figure is taller than the frame, so its feet line may lie below it.
+    y: float = Field(ge=0, le=4, allow_inf_nan=False)
+    height: float = Field(default=0.22, ge=0.12, le=3, allow_inf_nan=False)
 
 
 class SegmentLayout(StrictModel):

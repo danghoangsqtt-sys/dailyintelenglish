@@ -73,3 +73,48 @@ def test_real_geometry_arrange_save_approve_and_locked_collision(client, monkeyp
     assert refused.status_code == 422 and "Segment" in refused.text
     locked = client.post(f"/api/projects/{pid}/explainer-plan/layout", json={"expected_revision": changed["revision"], "source_fingerprint": changed["source_fingerprint"]})
     assert locked.status_code == 422, "automatic arrangement cannot overwrite an invalid owner lock"
+
+
+# ---------------------------------------------------------------- Phase 55 (ENH-037): rules v2 waist-up stage
+
+STAGE_METRICS = {"canvasWidth": 1280, "canvasHeight": 1536, "alpha": {"x": .2, "y": .1, "width": .65, "height": .89},
+                 "core": {"x": .34, "y": .1, "width": .32, "height": .88}}
+
+
+def stage_segment(aspect, visual, **presenter):
+    spec, stage = geometry.RULES["aspects"][aspect], geometry.RULES["aspects"][aspect]["stage"]
+    anchor = presenter.pop("anchor", stage["anchor"])
+    height = presenter.pop("height", stage["defaultHeight"])
+    placement = {"anchor": anchor, "x": spec["anchors"][anchor], "y": stage["headTop"] + height, "height": height, **presenter}
+    panel = geometry.FULL_FRAME if visual["kind"] == "activity" else spec["panels"][anchor]
+    return {"id": "s", "visual": visual, "layouts": {aspect: {"presenter": placement, "illustration": panel, "transition": "cut",
+                                                               "transition_seconds": .4, "rules_version": geometry.RULES["version"]}}}
+
+
+CARD = {"kind": "text_card", "title": "Start small", "bullets": ["One action"]}
+
+
+@pytest.mark.parametrize("aspect", ["16:9", "9:16"])
+def test_stage_default_fits_cards_and_full_frame_activities(aspect):
+    for visual in (CARD, {"kind": "activity", "activity_id": "act"}):
+        record = geometry.validate_segment(stage_segment(aspect, visual), aspect, STAGE_METRICS, {})
+        assert record["canvas"]["height"] > 1, "the waist-up figure is taller than the frame"
+        assert record["protected"] == ([] if visual["kind"] == "activity" else [stage_segment(aspect, visual)["layouts"][aspect]["illustration"]])
+
+
+def test_stage_refuses_card_over_the_torso_head_outside_safe_and_old_rules():
+    over = stage_segment("16:9", CARD)
+    over["layouts"]["16:9"]["illustration"] = geometry.RULES["aspects"]["16:9"]["panels"]["left"]  # the presenter's own side
+    with pytest.raises(ValidationError, match="crosses the card"):
+        geometry.validate_segment(over, "16:9", STAGE_METRICS, {})
+    high = stage_segment("16:9", CARD)
+    high["layouts"]["16:9"]["presenter"]["y"] -= .12  # head under the brand line
+    with pytest.raises(ValidationError, match="head must stay"):
+        geometry.validate_segment(high, "16:9", STAGE_METRICS, {})
+    old = stage_segment("16:9", CARD)
+    old["layouts"]["16:9"]["rules_version"] = 1
+    with pytest.raises(ValidationError, match="outdated layout"):
+        geometry.validate_segment(old, "16:9", STAGE_METRICS, {})
+    small = stage_segment("16:9", CARD, height=.22)
+    with pytest.raises(ValidationError, match="Presenter size"):
+        geometry.validate_segment(small, "16:9", STAGE_METRICS, {})

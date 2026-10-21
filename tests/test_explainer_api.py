@@ -12,6 +12,7 @@ import pytest
 
 from backend import main
 from backend.core.config import settings
+from backend.core.constants import EXPLAINER_LAYOUT_RULES_VERSION
 from backend.db.database import Database
 from backend.library import explainer_assets, explainer_service as service, presenter_asset_plan as front
 from backend.media import audio_service
@@ -159,7 +160,7 @@ def test_approval_pins_real_immutable_front_files_and_refuses_missing_geometry(c
     async def geometry_fixture(snapshot, plan):
         from backend.db.transactions import write_lock
         assert not write_lock.locked(), "geometry/image work must run outside the DB lock"
-        return {"rules_version": 1, "aspects": {aspect: {"fixture_only": True} for aspect in plan.aspects}}
+        return {"rules_version": EXPLAINER_LAYOUT_RULES_VERSION, "aspects": {aspect: {"fixture_only": True} for aspect in plan.aspects}}
 
     # Explicit validator double tests pin/CAS mechanics; it does not certify production geometry.
     async def incomplete_geometry(snapshot, plan):

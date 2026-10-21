@@ -1,39 +1,130 @@
 {
-  "version": 1,
+  "version": 2,
   "margin": 0.006,
-  "minHeight": 0.12,
-  "defaultHeight": 0.22,
-  "maxHeight": 0.38,
   "minDwellSeconds": 2.5,
+  "headFraction": 0.12,
   "aspects": {
     "16:9": {
-      "width": 1280, "height": 720,
-      "safe": {"x": 0.035, "y": 0.075, "width": 0.93, "height": 0.865},
-      "caption": {"x": 0.14, "y": 0.735, "width": 0.72, "height": 0.195},
-      "header": {"x": 0.04, "y": 0.075, "width": 0.92, "height": 0.06},
-      "presenterBottom": 0.69,
-      "anchors": {"left": 0.15, "right": 0.85, "center": 0.5},
-      "panels": {
-        "left": {"x": 0.30, "y": 0.16, "width": 0.64, "height": 0.51},
-        "right": {"x": 0.06, "y": 0.16, "width": 0.64, "height": 0.51},
-        "center": {"x": 0.08, "y": 0.15, "width": 0.84, "height": 0.29}
+      "width": 1280,
+      "height": 720,
+      "safe": {
+        "x": 0.035,
+        "y": 0.075,
+        "width": 0.93,
+        "height": 0.865
       },
-      "font": 22, "titleFont": 30, "padding": 20, "gap": 12, "columns": 3
+      "caption": {
+        "x": 0.14,
+        "y": 0.735,
+        "width": 0.72,
+        "height": 0.195
+      },
+      "header": {
+        "x": 0.04,
+        "y": 0.075,
+        "width": 0.92,
+        "height": 0.06
+      },
+      "stage": {
+        "headTop": 0.155,
+        "defaultHeight": 2.05,
+        "minHeight": 1.5,
+        "maxHeight": 2.6,
+        "anchor": "right"
+      },
+      "anchors": {
+        "left": 0.25,
+        "right": 0.75,
+        "center": 0.5
+      },
+      "panels": {
+        "left": {
+          "x": 0.47,
+          "y": 0.16,
+          "width": 0.49,
+          "height": 0.53
+        },
+        "right": {
+          "x": 0.04,
+          "y": 0.16,
+          "width": 0.49,
+          "height": 0.53
+        },
+        "center": {
+          "x": 0.08,
+          "y": 0.16,
+          "width": 0.84,
+          "height": 0.2
+        }
+      },
+      "font": 22,
+      "titleFont": 30,
+      "padding": 20,
+      "gap": 12,
+      "columns": 3
     },
     "9:16": {
-      "width": 1080, "height": 1920,
-      "safe": {"x": 0.06666666666666667, "y": 0.12083333333333333, "width": 0.8666666666666667, "height": 0.5666666666666667},
-      "column": {"x": 0.8, "fromY": 0.46875},
-      "caption": {"x": 0.09, "y": 0.52, "width": 0.68, "height": 0.15},
-      "header": {"x": 0.09, "y": 0.125, "width": 0.68, "height": 0.025},
-      "presenterBottom": 0.49,
-      "anchors": {"left": 0.15, "right": 0.72, "center": 0.435},
-      "panels": {
-        "left": {"x": 0.31, "y": 0.16, "width": 0.47, "height": 0.33},
-        "right": {"x": 0.09, "y": 0.16, "width": 0.47, "height": 0.33},
-        "center": {"x": 0.09, "y": 0.16, "width": 0.69, "height": 0.16}
+      "width": 1080,
+      "height": 1920,
+      "safe": {
+        "x": 0.06666666666666667,
+        "y": 0.12083333333333333,
+        "width": 0.8666666666666667,
+        "height": 0.5666666666666667
       },
-      "font": 30, "titleFont": 40, "padding": 24, "gap": 16, "columns": 2
+      "column": {
+        "x": 0.8,
+        "fromY": 0.46875
+      },
+      "caption": {
+        "x": 0.2,
+        "y": 0.41,
+        "width": 0.6,
+        "height": 0.13
+      },
+      "header": {
+        "x": 0.09,
+        "y": 0.125,
+        "width": 0.68,
+        "height": 0.025
+      },
+      "stage": {
+        "headTop": 0.545,
+        "defaultHeight": 1.08,
+        "minHeight": 0.85,
+        "maxHeight": 1.3,
+        "anchor": "center"
+      },
+      "anchors": {
+        "left": 0.3,
+        "right": 0.6,
+        "center": 0.43
+      },
+      "panels": {
+        "left": {
+          "x": 0.09,
+          "y": 0.165,
+          "width": 0.69,
+          "height": 0.235
+        },
+        "right": {
+          "x": 0.09,
+          "y": 0.165,
+          "width": 0.69,
+          "height": 0.235
+        },
+        "center": {
+          "x": 0.09,
+          "y": 0.165,
+          "width": 0.69,
+          "height": 0.235
+        }
+      },
+      "font": 30,
+      "titleFont": 40,
+      "padding": 24,
+      "gap": 16,
+      "columns": 2
     }
   }
 }

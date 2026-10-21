@@ -1,6 +1,6 @@
 # Task 55.2 — Layout rules v2: waist-up stage
 
-Status: planned 2026-10-21.
+Status: implemented_verified 2026-10-21.
 
 ## Paths
 - frontend/static/explainer-layout-rules.json
@@ -17,3 +17,10 @@ Status: planned 2026-10-21.
 
 ## Verification
 Python and TS proof tests for both aspects; v1 layouts reported outdated.
+
+## Verification result 2026-10-21
+
+- Rules `version: 2` with per-aspect `stage` (16:9: head top 0.155, figure 2.05× frame height, range 1.5–2.6, right side; 9:16: head top 0.545, 1.08×, 0.85–1.3, centre) and panels opposite the presenter; 9:16 caption moved between the card area and the presenter as in the conversation vertical video. `EXPLAINER_LAYOUT_RULES_VERSION = 2`; placement `y` ≤ 4 and `height` ≤ 3 in the schema.
+- `measure_front` adds a `core` alpha from calm/blink poses. Proof: card inside safe, outside caption/header and outside the presenter's core (clipped to the frame); head box (`headFraction` 0.12) inside safe and below the brand line; activity visuals have no card. `arrange` keeps one stage side and tries smaller sizes before switching side.
+- Real Lina pack (read-only): default 16:9 and 9:16 card/activity layouts prove; 16:9 torso spans x 0.544–0.889, card x 0.04–0.53.
+- Tests: 2 new stage tests (defaults fit both aspects; card over torso, head under brand, rules v1, small size refused); explainer layout/API/plan/project suites pass; Ruff clean.
