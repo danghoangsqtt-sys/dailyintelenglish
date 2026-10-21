@@ -544,13 +544,15 @@
     },
     "54": {
       "name": "Explainer proposal output format",
-      "status": "planned",
-      "tasks_done": 0,
+      "status": "implemented_verified_pending_owner_review",
+      "tasks_done": 1,
       "tasks_total": 1,
       "plan": ".viepilot/phases/54-explainer-proposal-format/PLAN.md",
       "requests": [
         "BUG-050"
-      ]
+      ],
+      "summary": ".viepilot/phases/54-explainer-proposal-format/SUMMARY.md",
+      "note": "Full pytest 1891 passed in 1212.26s; real Gemini replay 3/3 valid with the fixed code (0/3 before). Desktop build f1b0d664910d (source 157908c). First real Solo video rendered (docs/operations/solo-first-video-20261021.md)."
     }
   },
   "key_decisions": [

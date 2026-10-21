@@ -8,6 +8,10 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Fixed — Phase 54 Solo proposal with cloud AI (2026-10-21)
+
+- **Propose plan** now works with cloud AI: the prompt states the exact JSON shape and each line's token count, so plans no longer fail validation (BUG-050).
+
 ### Fixed — Phase 53 front gesture uploads (2026-10-20)
 
 - Front pictures with a hand raised beside the shoulder or face (count, think, wave) are no longer refused as a "changed head"; the check now compares the head's own pixels, so a redrawn or moved head is still refused (BUG-049).
