@@ -269,7 +269,7 @@ async def arrange(snapshot: dict, plan: ExplainerPlan) -> tuple[list, dict]:
             anchors = [anchor, *[item for item in ("right", "left", "center") if item != anchor]]
             heights = [value for value in (round(stage["defaultHeight"] - step * 0.05, 4) for step in range(40))
                        if value >= stage["minHeight"]]
-            error = None
+            error = first_error = None
             for choice in anchors:
                 for height in heights:
                     illustration = FULL_FRAME if segment.visual.kind == "activity" else spec["panels"][choice]
@@ -295,7 +295,8 @@ async def arrange(snapshot: dict, plan: ExplainerPlan) -> tuple[list, dict]:
                         break
                 if error is None:
                     break
+                first_error = first_error or error  # the preferred stage side explains the refusal best
             if error:
-                raise ValidationError(f"Segment {segment.id} ({aspect}): {error}") from error
+                raise ValidationError(f"Segment {segment.id} ({aspect}): {first_error}") from first_error
     candidate = plan.model_copy(update={"segments": segments})
     return segments, prove(snapshot, candidate, metrics)
