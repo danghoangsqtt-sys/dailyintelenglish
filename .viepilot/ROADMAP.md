@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 56 — Guided start, Channel flow, Activity Library (2026-10-21)
+
+Status: planned, execution authorized; 0/5 tasks. ENH-038: channel plans reset (backup kept), Dashboard "Start here", a next-step bar on Steps 1–7, the Channel page as a three-step flow, "Shot Library" renamed and rebuilt as the Activity Library. [Plan](phases/56-guided-start/PLAN.md).
+
 ## Phase 55 — Solo stage look (2026-10-21)
 
 Status: planned, execution authorized; 0/5 tasks. ENH-037: Solo video like the conversation video — per-segment scene backgrounds and activity inserts chosen by AI, waist-up presenter, floating cards. [Plan](phases/55-solo-stage/PLAN.md).
