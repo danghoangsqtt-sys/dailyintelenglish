@@ -8,6 +8,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Changed — Phase 61 lively characters and rich VOX motion (2026-10-22)
+
+- Conversation characters move with the speech: gestures change per phrase on every line (short lines too), the speaker leans toward the listener and bobs on stressed words, the listener nods and shifts its weight, a pose change cross-fades in 0.15 s (the mouth still swaps directly) and the camera pushes in toward the speaker, more on an emphatic line. Pictures are still never pasted on or distorted (ENH-043).
+- The Solo presenter changes gestures per phrase between the planned cues, bobs on word onsets inside the layout proof's margin and cross-fades its poses; the scene behind pushes in during each segment.
+- VOX: a different transition at each segment (paper slide, diagonal wipe, zoom-through, page flip, iris, whip-pan with blur), titles and a background shape morph between segments, the map flies in from the whole world, the board slowly pushes in and pans over parallax paper scraps and a drifting light; words bounce in, underlines and arrows look hand-drawn, chart numbers count up, map pins drop in and a "SUBSCRIBE" stamp lands when the narrator says it.
+
 ### Added — Phase 59 VOX explainer video (2026-10-22)
 
 - A third video type on Step 1, **VOX explainer**: a narrator's voice (a chosen character's voice; nobody on screen) over motion graphics on a paper board — kinetic text with a highlighter sweep, cut-out quotes, collage pictures with slow zoom and a drawn marker, animated diagrams, bar/line charts, timelines and a world map (Natural Earth data from `world-atlas`, bundled offline) (ENH-041).
