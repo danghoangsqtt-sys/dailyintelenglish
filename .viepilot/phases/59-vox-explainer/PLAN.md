@@ -19,3 +19,9 @@ Compatibility rules (from the PM hand-over):
 - Regression guard: `tests/test_explainer_*.py`, `tests/test_sprite_service.py`, renderer `soloStage.test.ts`, `presenterTimeline.test.ts`.
 
 Out of scope (follow-ups): VOX for Channel-plan series; photos from the internet (pictures come from the Activity Library, the Scene Library, the owner's uploads or local AI).
+
+## Amendment A — pictures you make or bring (owner, 2026-10-22)
+
+Owner: "thêm sự lựa chọn cho người dùng các prompt để tạo ảnh bằng AI ngoài hoặc lấy ảnh bên ngoài để đưa vào tham chiếu tạo video để video đạt kết quả đúng như mong muốn".
+- **59.2:** the VOX prompt asks the AI to give the key segments a `photo` with an outside-AI image prompt (`asset: null` + `prompt`) when no listed picture fits; the owner's uploaded project pictures are offered to the planner as AVAILABLE PROJECT ILLUSTRATIONS (existing path), so the plan uses them where they fit.
+- **59.4:** the VOX Step 5 editor gives every segment a "Picture for this segment" box: a ready outside-AI prompt in the VOX collage style (from the segment's idea, the topic and the scene; Copy button, works for ChatGPT/Gemini/Midjourney), and "Use my picture" (upload) that turns the segment into a collage photo of that picture; a "Reference pictures" uploader adds pictures the next proposal can use. No schema change: pictures are the existing project illustrations (`photo` visual with `asset`).
