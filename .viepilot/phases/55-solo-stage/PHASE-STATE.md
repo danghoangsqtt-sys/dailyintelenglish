@@ -9,4 +9,4 @@
 | 55.2 | Layout rules v2 (waist-up stage) | implemented_verified |
 | 55.3 | Renderer stage | implemented_verified |
 | 55.4 | Media bridge + Step 5 editor | implemented_verified |
-| 55.5 | Verification + Desktop + Lina re-render | planned |
+| 55.5 | Verification + Desktop + Lina re-render | in_progress |
