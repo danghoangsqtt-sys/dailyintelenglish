@@ -28,6 +28,7 @@ from backend.ai.llm.ai_worker import AIWorker
 from backend.ai.image.runner import ImageJobRunner
 from backend.ai.image import pipelines as visuals_pipelines
 from backend.api import export as export_api
+from backend.api import automation as automation_api
 
 PROJECT_ROOT = get_project_root()
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
@@ -114,9 +115,19 @@ async def lifespan(app: FastAPI):
     image_job_runner.register_handler("activity_illustrations", visuals_pipelines.activity_illustrations)
     await image_job_runner.start()
     await ai_worker.start()
+    # Phase 62 (ENH-044): automatic production in the night window (idle unless the owner turns it on)
+    from backend.automation.runner import AutomationRunner, set_runner
+
+    automation = AutomationRunner(app, lambda: Database.instance().connection) if settings.AUTOMATION_RUNNER else None
+    if automation is not None:
+        set_runner(automation)
+        await automation.start()
 
     yield
 
+    if automation is not None:
+        await automation.stop()
+        set_runner(None)
     await image_job_runner.stop()
     await ai_worker.stop()
     await close_db()
@@ -172,6 +183,7 @@ app.include_router(settings_api.router)
 app.include_router(ai_jobs.router)
 app.include_router(ai_jobs.health_router)
 app.include_router(channel.router)
+app.include_router(automation_api.router)  # Phase 62
 app.include_router(shorts.router)
 app.include_router(export_api.router)  # Phase 41
 app.include_router(profiles.router)  # Phase 33: before visuals so /api/visuals/profiles is never shadowed
@@ -282,6 +294,12 @@ async def activity_library() -> FileResponse:
 async def character_library() -> FileResponse:
     """Serve the global Character Library."""
     return FileResponse(FRONTEND_DIR / "pages" / "characters.html")
+
+
+@app.get("/automation")
+async def automation_page() -> FileResponse:
+    """Phase 62 (ENH-044): automatic production -- the night window, the queue and the report."""
+    return FileResponse(FRONTEND_DIR / "pages" / "automation.html")
 
 
 @app.get("/channel")

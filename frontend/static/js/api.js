@@ -33,6 +33,11 @@ const Api = (() => {
 
   return {
     // Task 36.5 (D103-D105): the channel plan -- topics -> series -> episodes, the AI map and the calendar.
+    // Phase 62 (ENH-044): automatic production
+    getAutomation: () => request("/api/automation"),
+    saveAutomationSettings: (patch) => request("/api/automation/settings", json("PUT", patch)),
+    runAutomationNow: () => request("/api/automation/run-now", { method: "POST" }),
+    stopAutomation: () => request("/api/automation/stop", { method: "POST" }),
     getChannel: () => request("/api/channel"),
     getChannelDashboard: () => request("/api/channel/dashboard"),
     proposeChannelPlan: (body) => request("/api/channel/plan/propose", json("POST", body)),

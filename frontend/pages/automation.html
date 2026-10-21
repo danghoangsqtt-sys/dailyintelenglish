@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
+  <title>Automation — Daily Beyond English</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="/static/js/i18n_vi.js"></script>
+  <script src="/static/js/i18n.js"></script>
+  <style>
+    .auto-main { width: min(1100px, calc(100% - 32px)); margin: 32px auto 80px; display: grid; gap: 18px; }
+    .auto-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+    .auto-head h1 { margin: 0; }
+    .auto-state { display: inline-flex; gap: 8px; align-items: center; font-weight: 700; }
+    .auto-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted, #888); }
+    .auto-dot.on { background: #1F7A4D; } .auto-dot.busy { background: #E0A100; }
+    .auto-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; align-items: end; }
+    .auto-form label { display: grid; gap: 5px; font-size: 13px; font-weight: 600; }
+    .auto-form input[type=time], .auto-form input[type=number] { padding: 8px 10px; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--surface); color: var(--text); }
+    .auto-form .check { display: flex; gap: 8px; align-items: center; font-weight: 600; }
+    .auto-hint { margin: 6px 0 0; font-size: 13px; color: var(--text-muted); }
+    .auto-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .auto-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+    .auto-list li { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 8px 12px; border: 1px solid var(--border);
+      border-radius: 10px; }
+    .auto-list .date { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 92px; }
+    .auto-list .grow { flex: 1 1 260px; }
+    .auto-badge { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); }
+    .auto-badge.waiting_review { background: rgba(31,122,77,0.16); color: #1F7A4D; }
+    .auto-badge.needs_attention { background: rgba(224,161,0,0.18); color: #9A6B00; }
+    .auto-badge.error { background: rgba(232,72,59,0.16); color: #C0392B; }
+    .auto-badge.running { background: rgba(80,140,190,0.18); color: #2B6CB0; }
+    .auto-run { margin-top: 12px; }
+    .auto-run h3 { margin: 0 0 4px; font-size: 15px; }
+    .auto-message { font-size: 13px; color: var(--text-muted); flex-basis: 100%; }
+    #auto-notice.is-error { color: #C0392B; }
+  </style>
+</head>
+<body>
+  <aside id="app-sidebar" class="app-sidebar" aria-label="App navigation">
+    <a class="brand" href="/" aria-label="Daily Beyond English home" translate="no"><img class="brand-logo" src="/static/brand/logo-64.png" width="36" height="36" alt="" /><span class="brand-word"><b>Daily Beyond</b><small>English</small></span></a>
+    <nav class="side-nav" aria-label="Main"><a class="side-link" href="/" aria-label="Dashboard" title="Dashboard"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg><span class="side-label">Dashboard</span></a><a class="side-link" href="/channel" aria-label="Channel plan" title="Channel plan"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 4v5M16 4v5M7 13h4M7 16.5h7"/></svg><span class="side-label">Channel plan</span></a><a class="side-link" href="/automation" aria-current="page" aria-label="Automation" title="Automation"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.6 2M9.5 2.8h5M12 2.8v2.7"/></svg><span class="side-label">Automation</span></a><a class="side-link" href="/characters" aria-label="Character Library" title="Character Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><circle cx="17.2" cy="9.2" r="2.4"/><path d="M16.2 14.3c2.8.3 4.8 2.4 4.8 5.7"/></svg><span class="side-label">Character Library</span></a><a class="side-link" href="/activities" aria-label="Activity Library" title="Activity Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M8 5v4M16 5v4M8 15l2.5-3 2 2 2-2.5L18 15"/></svg><span class="side-label">Activity Library</span></a><a class="side-link" href="/music" aria-label="Music Library" title="Music Library"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg><span class="side-label">Music Library</span></a><a class="side-link" href="/settings" aria-label="Settings" title="Settings"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span class="side-label">Settings</span></a></nav>
+    <button id="sidebar-toggle" class="side-toggle" type="button" aria-expanded="true" aria-controls="app-sidebar" aria-label="Collapse sidebar" title="Collapse sidebar"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14.5 6-6 6 6 6"/></svg><span class="side-label">Collapse</span></button>
+  </aside>
+  <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+  <script src="/static/js/app_sidebar.js"></script>
+  <header class="topbar">
+    <button id="sidebar-open" class="sidebar-opener" type="button" aria-controls="app-sidebar" aria-expanded="false" aria-label="Open menu"><svg class="side-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <div class="actions">
+      <button id="theme-toggle" class="icon-toggle" type="button" aria-label="Toggle dark/light mode">☀️</button>
+    </div>
+  </header>
+  <main class="auto-main" id="main">
+    <section class="auto-head">
+      <div><h1>Automation</h1><p class="auto-hint">The app makes the Channel plan's next episodes by itself at night — script, voice, visual plan, video, thumbnail and YouTube package — and stops each one at "waiting for review". It never uploads to YouTube.</p></div>
+      <span class="auto-state"><span id="auto-dot" class="auto-dot"></span><span id="auto-state-text">Off</span></span>
+    </section>
+    <section class="card" aria-labelledby="auto-settings-title">
+      <h2 id="auto-settings-title">Schedule</h2>
+      <form id="auto-form" class="auto-form">
+        <label class="check"><input id="auto-enabled" type="checkbox" /> Make videos automatically</label>
+        <label>From<input id="auto-start" type="time" required /></label>
+        <label>Until<input id="auto-end" type="time" required /></label>
+        <label>Episodes due within (days)<input id="auto-days" type="number" min="0" max="30" required /></label>
+        <label>At most videos per night<input id="auto-max" type="number" min="1" max="20" required /></label>
+        <label class="check"><input id="auto-awake" type="checkbox" /> Keep the computer awake in this window</label>
+        <label class="check"><input id="auto-startup" type="checkbox" /> Open the app with Windows</label>
+        <div class="auto-actions"><button class="btn btn-primary" type="submit">Save</button></div>
+      </form>
+      <p id="auto-startup-hint" class="auto-hint" hidden>Open with Windows works in the installed app only.</p>
+      <p class="auto-hint">Leave the computer on and signed in. AI, voices and costs follow Settings → AI. An episode with a problem, or with facts to check, stops at that step and waits for you.</p>
+      <p id="auto-notice" class="auto-hint" role="status"></p>
+    </section>
+    <section class="card" aria-labelledby="auto-queue-title">
+      <div class="auto-head"><h2 id="auto-queue-title">Next to make</h2>
+        <div class="auto-actions"><button id="auto-run-now" class="btn btn-ghost" type="button">Run now</button>
+          <button id="auto-stop" class="btn btn-ghost" type="button">Stop</button></div></div>
+      <p id="auto-current" class="auto-hint"></p>
+      <ol id="auto-queue" class="auto-list" aria-label="Next to make"></ol>
+      <p id="auto-queue-empty" class="auto-hint" hidden>Nothing is due. Give episodes publishing dates on the <a href="/channel">Channel plan</a>.</p>
+    </section>
+    <section class="card" aria-labelledby="auto-report-title">
+      <h2 id="auto-report-title">Report</h2>
+      <div id="auto-report"></div>
+      <p id="auto-report-empty" class="auto-hint" hidden>No run yet.</p>
+    </section>
+  </main>
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/automation.js"></script>
+</body>
+</html>

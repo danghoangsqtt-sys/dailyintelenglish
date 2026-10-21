@@ -234,5 +234,22 @@
     setupProjectActions();
     document.getElementById("theme-toggle").addEventListener("click", Theme.toggle);
     loadProjects();
+    loadAutomationLine();
   });
+
+  // Phase 62 (ENH-044): one line about the last automatic run of the past day, linking to its report
+  async function loadAutomationLine() {
+    try {
+      const view = await Api.getAutomation();
+      const run = view.runs[0];
+      if (!run || !run.items.length || Date.now() - new Date(run.started_at).getTime() > 36 * 3600 * 1000) return;
+      const ready = run.items.filter((item) => item.status === "waiting_review").length;
+      const stuck = run.items.length - ready;
+      const line = document.getElementById("automation-line");
+      line.querySelector("a").textContent = `Automatic run: ${ready} video(s) ready for review` + (stuck ? `, ${stuck} need your attention` : "");
+      line.hidden = false;
+    } catch {
+      /* the Dashboard works without it */
+    }
+  }
 })();

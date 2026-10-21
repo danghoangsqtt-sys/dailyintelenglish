@@ -400,6 +400,7 @@ h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); lett
 .start-here { margin: 0 0 16px; padding: 18px 20px; border: 2px solid var(--accent); }
 .start-here h2 { margin: 0 0 12px; font-size: 18px; }
 .start-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.automation-line { margin: 12px 0 0; font-weight: 700; } /* Phase 62: the last automatic run */
 .start-card { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
 .start-card h3 { margin: 0 0 4px; color: var(--accent); font-size: 13px; font-weight: 800; letter-spacing: .02em; text-transform: uppercase; }
 .start-card strong { font-size: 15.5px; line-height: 1.35; overflow-wrap: anywhere; }

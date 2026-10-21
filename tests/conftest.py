@@ -118,6 +118,8 @@ def _neutralize_cloud_config() -> None:
     config.settings.OPENCODE_ZEN_API_KEY = ""
     config.ENV_OPENCODE_ZEN_API_KEY = ""
     config.settings.OPENCODE_ZEN_BASE_URL = "https://opencode-zen.invalid/v1"
+    # Phase 62: no background production runner in tests (its DB lock would bind to a TestClient loop)
+    config.settings.AUTOMATION_RUNNER = False
 
 
 _neutralize_cloud_config()

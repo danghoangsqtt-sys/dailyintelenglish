@@ -8,6 +8,13 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added — Phase 62 automatic content production (2026-10-22)
+
+- An **Automation** page: turn it on and the app makes the Channel plan's next episodes by itself in a night window (default 23:00–06:00, episodes due within 3 days, at most 2 videos a night) — script, learning content, voices and audio mix, visual plan, render, thumbnail and YouTube package — and stops each one at "waiting for review". It never uploads to YouTube (ENH-044).
+- A Solo plan is approved automatically only when it shows no issue and no fact to check; any step that fails stops that episode with the reason (an AI answer failing a check is asked once more) and the next episode goes on. A stopped or interrupted episode continues from its step; done work is never redone.
+- "Run now" and "Stop", the queue of due episodes, and a report of the last runs with links to review; a line on the Dashboard after a run and a Windows notification.
+- The database is backed up before each run (the last 7 kept), the run does not start with less than 3 GB free, the computer is kept awake inside the window, and the installed app can open itself with Windows (no browser window) to wait for the night.
+
 ### Changed — Phase 61 lively characters and rich VOX motion (2026-10-22)
 
 - Conversation characters move with the speech: gestures change per phrase on every line (short lines too), the speaker leans toward the listener and bobs on stressed words, the listener nods and shifts its weight, a pose change cross-fades in 0.15 s (the mouth still swaps directly) and the camera pushes in toward the speaker, more on an emphatic line. Pictures are still never pasted on or distorted (ENH-043).

@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     REMOTION_RENDER_TIMEOUT_SECONDS: float = Field(default=3600.0, ge=60.0, le=7200.0)
     # On the tested Windows machine Chrome's automatic choice uses CPU SwiftShader.
     # Explicit ANGLE enables D3D11 compositing; auto remains an opt-out for drivers.
+    # Phase 62 (ENH-044): the automatic-production runner in the app lifespan (the test suite turns it off)
+    AUTOMATION_RUNNER: bool = True
     REMOTION_GL: Literal["auto", "angle", "swangle"] = "angle" if os.name == "nt" else "auto"
 
     # Phase 13 -- local-first AI reliability (docs/architecture/adr-001-local-first-ai.md).

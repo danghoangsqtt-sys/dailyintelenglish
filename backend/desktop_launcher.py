@@ -88,13 +88,17 @@ def main() -> None:
     url = f"http://{browser_host}:{port}"
     expected = get_instance_info(settings.DATA_DIR)
 
+    # Phase 62 (ENH-044): opened by the Startup shortcut -- no browser window; nothing to do if Studio already runs
+    autostart = "--autostart" in sys.argv[1:]
     if _is_port_open(host, port):
-        _reuse_existing_instance(url, expected)
+        if not autostart:
+            _reuse_existing_instance(url, expected)
         return
 
     from backend.main import app
 
-    threading.Thread(target=_open_browser_when_ready, args=(url, expected), daemon=True).start()
+    if not autostart:
+        threading.Thread(target=_open_browser_when_ready, args=(url, expected), daemon=True).start()
     uvicorn.run(app, host=host, port=port, reload=False)
 
 

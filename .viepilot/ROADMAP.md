@@ -2,7 +2,7 @@
 
 ## Phase 62 — Automatic content production (2026-10-22)
 
-Status: planned; 0/5 tasks. ENH-044: the app makes the Channel plan's upcoming episodes by itself in a night window (script → audio → plan → render → thumbnail → YouTube package), stops each at "waiting for review", reports in the app; opens with Windows and keeps the computer awake in the window. [Plan](phases/62-auto-production/PLAN.md).
+Status: implemented_verified_pending_owner_review; 5/5 tasks. Full pytest 1963 passed; 152 Vitest. Real sandbox runs: an episode made from nothing to "waiting for review" (resumed after a stop at the thumbnail), another stopped at Learning with the AI's reason. ENH-044: the app makes the Channel plan's upcoming episodes by itself in a night window (script → audio → plan → render → thumbnail → YouTube package), stops each at "waiting for review", reports in the app; opens with Windows and keeps the computer awake in the window. [Plan](phases/62-auto-production/PLAN.md).
 
 ## Phase 61 — Lively characters and rich VOX motion (2026-10-22)
 
