@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 63 — Viral Shorts: English news, text on blur (2026-10-22)
+
+Status: planned; 0/6 tasks. ENH-045: a 4th Step 1 card "Shorts viral" (9:16) with two templates built on the VOX pipeline — English news (pasted article, link or topic; pictures changing with a news band and ticker) and text on a blurred background. [Plan](phases/63-viral-shorts/PLAN.md).
+
 ## Phase 62 — Automatic content production (2026-10-22)
 
 Status: implemented_verified_pending_owner_review; 5/5 tasks. Full pytest 1963 passed; 152 Vitest. Real sandbox runs: an episode made from nothing to "waiting for review" (resumed after a stop at the thumbnail), another stopped at Learning with the AI's reason. ENH-044: the app makes the Channel plan's upcoming episodes by itself in a night window (script → audio → plan → render → thumbnail → YouTube package), stops each at "waiting for review", reports in the app; opens with Windows and keeps the computer awake in the window. [Plan](phases/62-auto-production/PLAN.md).

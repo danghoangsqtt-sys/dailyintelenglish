@@ -1,0 +1,16 @@
+# PLAN — Phase 63: viral Shorts — English news and text on a blurred background (ENH-045)
+
+Status: execution_authorized 2026-10-22 — scope from the owner's brainstorm decisions; the owner asked to go on ("tiếp tục với tính năng tạo các dạng video đi").
+
+Design: a Short is a **voice-only explainer** like VOX (Phase 59), so it reuses the whole pipeline — narrator voice from a character, AI script, audio, AI visual plan with the outside-AI prompt / own picture, approval, render, thumbnail, YouTube package and the Phase 62 automation. New `projects.explainer_style` values **`news`** and **`blur`** (VOX family); a Short's plan has the **9:16** aspect only and its main video is rendered vertical (1080×1920).
+
+| Task | Scope |
+|---|---|
+| 63.1 | Data + contracts: `explainer_style` ∈ presenter / vox / news / blur (schema, Step 1 validation, fingerprints only for the voice-only styles as VOX); `source_kind` `article` (the pasted news text, kept as the source); a link reader `POST /api/projects/read-link` (fetches a public http(s) page, returns its title and main text for the owner to check; size/time limits, no private addresses); voice-only helpers replace the VOX-only checks (no presenter pack, no character on the cover) |
+| 63.2 | Prompts: the Solo script block gets a SHORTS section — **news**: a 2–3 s hook headline, 3–6 short facts in the narrator's own words (never copying the article), only facts in the source or plainly general, "Source: …" said once when an article was given, a one-line call to follow; **blur**: a short story / quote narration with a strong first line, short sentences, an emotional turn and a one-line takeaway; both 20–60 s, a short sign-off instead of the long Phase 60 greeting. The visual-plan prompt for Shorts: news = one picture per fact (photo/activity/map/chart from the narration), blur = text cards with one emphasis line each |
+| 63.3 | Renderer: `NewsScene` (9:16) — pictures changing every segment with Ken Burns and the Phase 61 transitions, a "BREAKING · ENGLISH NEWS" band, headline lower-third, a scrolling ticker of the segment titles, key words popping up with the CEFR highlight, karaoke captions; `BlurScene` (9:16) — the picture (or brand gradient) heavily blurred and darkened, big centered words popping in with the narration, highlighted emphasis, gentle drift; both use the VOX geometry proof (board/caption) |
+| 63.4 | UI: the 4th Step 1 card **Shorts viral** with a template choice (English news · Text on blur); news offers "Paste the article" and "Read a link" (text shown before use) or just the topic; length 20–60 s; Step 5 VOX editor works for Shorts (9:16 only); Vietnamese strings |
+| 63.5 | Automation: Channel series may be Shorts (style + template), so their episodes run in the night window like the others; vertical main render for Shorts |
+| 63.6 | Tests (schema, link reader with a local fake page, prompts, renderer helpers in Vitest, browser Step 1), a real sandbox news Short and blur Short rendered and sent to the owner, full pytest + Vitest |
+
+Kept: Conversation, Solo presenter and VOX unchanged (their fingerprints and approved projects); no YouTube upload; no new image source (Pexels later). No version bump; CHANGELOG `[Unreleased]`.
