@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 55 — Solo stage look (2026-10-21)
+
+Status: planned, execution authorized; 0/5 tasks. ENH-037: Solo video like the conversation video — per-segment scene backgrounds and activity inserts chosen by AI, waist-up presenter, floating cards. [Plan](phases/55-solo-stage/PLAN.md).
+
 ## Phase 54 — Explainer proposal output format (2026-10-21)
 
 Status: implemented_verified_pending_owner_review; 1/1 task. Full pytest 1891 passed in 1212.26s; real Gemini replay 3/3 valid with the fixed code (0/3 before). First real Solo video rendered. BUG-050: Solo **Propose plan** always fails with cloud AI because the prompt never states the JSON shape. [Plan](phases/54-explainer-proposal-format/PLAN.md).

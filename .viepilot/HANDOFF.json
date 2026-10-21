@@ -553,6 +553,16 @@
       ],
       "summary": ".viepilot/phases/54-explainer-proposal-format/SUMMARY.md",
       "note": "Full pytest 1891 passed in 1212.26s; real Gemini replay 3/3 valid with the fixed code (0/3 before). Desktop build f1b0d664910d (source 157908c). First real Solo video rendered (docs/operations/solo-first-video-20261021.md)."
+    },
+    "55": {
+      "name": "Solo stage look",
+      "status": "planned",
+      "tasks_done": 0,
+      "tasks_total": 5,
+      "plan": ".viepilot/phases/55-solo-stage/PLAN.md",
+      "requests": [
+        "ENH-037"
+      ]
     }
   },
   "key_decisions": [
