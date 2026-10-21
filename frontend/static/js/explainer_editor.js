@@ -4,7 +4,7 @@ const ExplainerEditor = (() => {
   const escape = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   async function mount(container, projectId) {
     const state = {view:null,segments:[],assets:[],selected:0,aspect:"16:9",dirty:false,edit:0,saving:null,busy:false,
-      conflict:false,disposed:false,preview:null,previewToken:0,geometry:null,job:null,timer:null};
+      conflict:false,disposed:false,preview:null,previewToken:0,geometry:null,job:null,timer:null,stage:{scenes:[],activities:[]}};
     container.innerHTML = `<div class="solo-editor"><h2>Solo Explainer</h2>
       <p class="section-hint">Review knowledge claims, illustrations and both layouts. <a href="/characters">Create the 21 front presenter pictures in Character Library</a>.</p>
       <div class="solo-toolbar"><button type="button" data-action="propose" class="btn btn-primary">Propose plan</button>
@@ -40,8 +40,10 @@ const ExplainerEditor = (() => {
       const textarea=(name,label,value,rows=3)=>`<label>${label}<textarea data-field="${name}" rows="${rows}">${escape(value)}</textarea></label>`;
       $("solo-fields").innerHTML=`<h3>Segment ${state.selected+1}</h3>
         ${textarea("intent","Idea / purpose",s.intent,2)}
-        <label>Visual type <select data-field="kind">${["photo","diagram","text_card"].map(kind=>`<option ${v.kind===kind?"selected":""}>${kind}</option>`).join("")}</select></label>
-        ${v.kind==="photo"?`<label>Project illustration <select data-field="asset"><option value="">Not selected</option>${state.assets.map((item,i)=>`<option value="${i}" ${v.asset?.asset_id===item.asset.asset_id?"selected":""}>${escape(item.filename)}</option>`).join("")}</select></label>
+        <label>Scene behind the presenter <select data-field="scene"><option value="">No scene (plain background)</option>${state.stage.scenes.map(item=>`<option value="${escape(item.id)}" ${s.scene?.scene_id===item.id?"selected":""}>${escape(item.name)} · ${escape(item.category||"")}</option>`).join("")}</select></label>
+        <label>Visual type <select data-field="kind">${["activity","photo","diagram","text_card"].map(kind=>`<option ${v.kind===kind?"selected":""}>${kind}</option>`).join("")}</select></label>
+        ${v.kind==="activity"?`<label>Activity picture (full screen behind the presenter) <select data-field="activity"><option value="">Choose…</option>${state.stage.activities.map(item=>`<option value="${escape(item.id)}" ${v.activity_id===item.id?"selected":""}>${escape(item.activity)}${item.presenter_own?" · own":""}</option>`).join("")}</select></label>`:""}
+        ${v.kind==="activity"?"":v.kind==="photo"?`<label>Project illustration <select data-field="asset"><option value="">Not selected</option>${state.assets.map((item,i)=>`<option value="${i}" ${v.asset?.asset_id===item.asset.asset_id?"selected":""}>${escape(item.filename)}</option>`).join("")}</select></label>
           <label>Import illustration <input id="solo-upload" type="file" accept="image/png,image/jpeg,image/webp"></label>
           ${textarea("prompt","Outside-AI illustration prompt",v.prompt??"")}
           <label>Photo framing <select data-field="fit"><option ${v.fit!=="cover"?"selected":""}>contain</option><option ${v.fit==="cover"?"selected":""}>cover</option></select></label>
@@ -55,7 +57,7 @@ const ExplainerEditor = (() => {
         <label><input type="checkbox" data-field="reviewed" ${!s.needs_fact_review?"checked":""}> I checked the knowledge claims and illustration text</label>
         <fieldset><legend>${escape(state.aspect)} presenter placement</legend>${l?`
           <label>Anchor <select data-field="anchor">${["left","right","center"].map(a=>`<option ${l.presenter.anchor===a?"selected":""}>${a}</option>`).join("")}</select></label>
-          ${["x","y","height"].map(key=>`<label>${key} <input data-field="${key}" type="number" step="0.01" min="${key==="height"?.12:0}" max="${key==="height"?.38:1}" value="${l.presenter[key]}"></label>`).join("")}
+          ${["x","y","height"].map(key=>`<label>${key} <input data-field="${key}" type="number" step="0.01" min="${key==="height"?stageRange().min:0}" max="${key==="height"?stageRange().max:key==="y"?4:1}" value="${l.presenter[key]}"></label>`).join("")}
           <label>Transition <select data-field="transition">${["cut","ease","slide"].map(t=>`<option ${l.transition===t?"selected":""}>${t}</option>`).join("")}</select></label>`:"Arrange layouts after importing the approved front21 pack and generating audio."}</fieldset>
         <h4>Gestures anchored to actual speech</h4>${textarea("gestures","One cue per line: line_id | token_index | gesture",s.gestures.map(c=>`${c.at.line_id} | ${c.at.token_index} | ${c.gesture}`).join("\n"),3)}
         <details><summary>Script anchors</summary><p>${escape(s.line_ids.join(" · "))}</p><p>Tokens ${s.start.token_index}–${s.end.token_index} (end exclusive)</p></details>
@@ -82,7 +84,10 @@ const ExplainerEditor = (() => {
       }})().finally(()=>{state.saving=null;});
       try{return await state.saving;}catch(error){fail(error);throw error;}
     }
-    async function reload(){const view=await Api.getExplainerPlan(projectId);if(state.disposed)return;state.view=view;state.segments=structuredClone(view.plan?.segments??[]);state.assets=await Api.listExplainerAssets(projectId);state.selected=Math.min(state.selected,Math.max(0,state.segments.length-1));state.conflict=false;state.dirty=false;state.unlock={};render();}
+    // Phase 55: the presenter's height range comes from the shared rules (stage proof), not fixed numbers.
+    function stageRange(){const stage=state.rules?.aspects?.[state.aspect]?.stage;return {min:stage?.minHeight??.12,max:stage?.maxHeight??3};}
+    async function reload(){const view=await Api.getExplainerPlan(projectId);if(state.disposed)return;state.view=view;state.segments=structuredClone(view.plan?.segments??[]);state.assets=await Api.listExplainerAssets(projectId);state.stage=await Api.getExplainerStageChoices(projectId).catch(()=>state.stage);
+      state.rules??=await fetch("/static/explainer-layout-rules.json").then(response=>response.ok?response.json():null).catch(()=>null);state.selected=Math.min(state.selected,Math.max(0,state.segments.length-1));state.conflict=false;state.dirty=false;state.unlock={};render();}
     async function preview(){const token=++state.previewToken;const data=await Api.previewExplainerPlan(projectId,state.aspect);if(state.disposed||token!==state.previewToken)return;
       if(!window.SoloPreview)throw new Error("Preview bundle is missing. Rebuild the preview widget before starting the app.");
       state.geometry=data.props.solo.geometry;
@@ -114,7 +119,9 @@ const ExplainerEditor = (() => {
       const v=s.visual,value=e.target.value,l=s.layouts[state.aspect];
       if(["intent","source_notes"].includes(field))s[field]=value;
       else if(field==="reviewed")s.needs_fact_review=!e.target.checked;
-      else if(field==="kind"){s.visual=value==="photo"?{kind:"photo",asset:null,prompt:"",fit:"contain",important_regions:[]}:value==="diagram"?{kind:"diagram",template:"steps",title:"",nodes:[{id:"n1",label:"First step"},{id:"n2",label:"Next step"}],edges:[]}:{kind:"text_card",title:"Key idea",bullets:[]};s.needs_fact_review=true;renderFields();}
+      else if(field==="scene")s.scene=value?{scene_id:value}:null;
+      else if(field==="activity"){v.activity_id=value;}
+      else if(field==="kind"){s.visual=value==="activity"?{kind:"activity",activity_id:state.stage.activities[0]?.id??"",caption:""}:value==="photo"?{kind:"photo",asset:null,prompt:"",fit:"contain",important_regions:[]}:value==="diagram"?{kind:"diagram",template:"steps",title:"",nodes:[{id:"n1",label:"First step"},{id:"n2",label:"Next step"}],edges:[]}:{kind:"text_card",title:"Key idea",bullets:[]};s.needs_fact_review=true;renderFields();}
       else if(field==="asset"){v.asset=value===""?null:state.assets[Number(value)].asset;renderFields();}
       else if(field==="bullets")v.bullets=value.split("\n").filter(Boolean);
       else if(field==="nodes"){const unused=[...v.nodes],ids=new Set(v.nodes.map(n=>n.id));let next=1;

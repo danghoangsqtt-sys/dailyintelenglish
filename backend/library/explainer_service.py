@@ -101,6 +101,13 @@ async def source_snapshot(db: aiosqlite.Connection, project_id: str, segments: l
             "presenter": presenter.model_dump(), "front": front, "audio": audio, "learning": learning}
 
 
+async def stage_choices(db: aiosqlite.Connection, project_id: str) -> dict:
+    """Scene/activity choices for the Step 5 editor, scoped to the project's presenter."""
+    async with read_transaction():
+        source = await source_snapshot(db, project_id, [])
+        return await explainer_stage.choices(db, source["source"]["cast"]["character_id"])
+
+
 def source_issues(snapshot: dict, segments: list[ExplainerSegment]) -> list[str]:
     """Report actionable blockers while keeping an incomplete plan editable as a draft."""
     issues = []

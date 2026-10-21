@@ -93,3 +93,21 @@ async def test_diagram_node_ids_follow_labels_so_edges_never_reconnect(editor):
     visual = await editor.evaluate("window.saved[0].segments[0].visual")
     assert [(n["id"], n["label"]) for n in visual["nodes"]] == [("b", "Routine"), ("c", "Reward"), ("node-1", "Craving")]
     assert visual["edges"] == [{"source": "b", "target": "c"}]
+
+
+async def test_scene_and_activity_pickers_save_the_stage_choice(editor):
+    # Phase 55 (ENH-037): the owner can change the AI's scene and activity picture per segment.
+    await editor.evaluate("""async () => {
+      window.editor.destroy();
+      Api.getExplainerStageChoices=async()=>({scenes:[{id:'builtin-office',name:'Office',category:'work'},{id:'builtin-park',name:'Park',category:'city'}],
+        activities:[{id:'act-drive',activity:'driving',presenter_own:true}]});
+      const node=document.createElement('div');document.body.replaceChildren(node);
+      window.editor=await ExplainerEditor.mount(node,'project-fixture');
+    }""")
+    await editor.locator('[data-field="scene"]').select_option("builtin-park")
+    await editor.locator('[data-field="kind"]').select_option("activity")
+    await expect(editor.locator('[data-field="activity"]')).to_have_value("act-drive")
+    await editor.wait_for_function("window.saved.length>=1 && window.saved.at(-1).segments[0].visual.kind==='activity'")
+    segment = await editor.evaluate("window.saved.at(-1).segments[0]")
+    assert segment["scene"] == {"scene_id": "builtin-park"}
+    assert segment["visual"] == {"kind": "activity", "activity_id": "act-drive", "caption": ""}

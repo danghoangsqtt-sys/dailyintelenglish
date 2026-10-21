@@ -27,6 +27,12 @@ async def plan_history(project_id: str, db: aiosqlite.Connection = Depends(get_d
     return ok(await explainer_service.history(db, project_id))
 
 
+@router.get("/stage-choices")
+async def stage_choices(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 55: the scenes and activity pictures this Solo presenter may stand in front of."""
+    return ok(await explainer_service.stage_choices(db, project_id))
+
+
 @router.get("/preview")
 async def preview_plan(project_id: str, aspect: str = "16:9", db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Resolve verified draft preview props without approving factual content."""

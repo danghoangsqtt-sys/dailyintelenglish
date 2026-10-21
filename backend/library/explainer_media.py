@@ -11,7 +11,7 @@ import aiosqlite
 
 from backend.core.exceptions import ConflictError, ValidationError
 from backend.db.transactions import read_transaction
-from backend.library import explainer_service as plans, explainer_assets, presenter_asset_plan
+from backend.library import explainer_service as plans, explainer_assets, explainer_stage, presenter_asset_plan
 from backend.library.explainer_layout_service import validate_plan, RULES
 from backend.library.explainer_timing import ScriptIndex, resolve_timeline
 from backend.schemas.explainer import ExplainerPlan
@@ -43,6 +43,7 @@ async def build_payload(db: aiosqlite.Connection, project_id: str, aspect: str =
                   for item in snapshot["source"]["illustrations"] if not item.get("missing")]
         pinned = json.loads(row["approved_snapshot_json"]) if approved else None
     audio_files = await asyncio.to_thread(plans._audio_files, snapshot)
+    stage = await asyncio.to_thread(explainer_stage.pinned_files, snapshot["source"])
     await presenter_asset_plan.manifest(db, plan.presenter.profile_id)
     front = await presenter_asset_plan.resolve_manifest(plan.presenter.profile_id, plan.presenter.identity_version, plan.presenter.front_pack_revision)
     for asset in assets:
@@ -51,6 +52,8 @@ async def build_payload(db: aiosqlite.Connection, project_id: str, aspect: str =
     timeline = resolve_timeline(ScriptIndex(snapshot["lines"]), snapshot["audio"]).segments(plan.segments)
     if pinned and (pinned["audio_files"] != audio_files or pinned["front"] != front or pinned["geometry"] != geometry):
         raise ConflictError("An approved media file or geometry proof changed; review and approve again")
+    if pinned:
+        explainer_stage.verify_unchanged(pinned, stage)
     async with read_transaction():
         fresh = await plans._row(db, project_id)
         current = await plans.source_snapshot(db, project_id, plan.segments)
@@ -74,7 +77,9 @@ async def build_payload(db: aiosqlite.Connection, project_id: str, aspect: str =
              "durationSeconds": timeline[-1]["end_sec"],
              "solo": {"plan": plan.model_dump(), "geometry": geometry, "timeline": timeline,
                       "pictures": {key: f"/api/visuals/profiles/{plan.presenter.profile_id}/assets/{value['asset_id']}/content" for key, value in front["pictures"].items()},
-                      "photos": {f"{item['id']}:{item['version']}": explainer_assets.public(item)["preview_url"] for item in assets}}}
+                      "photos": {f"{item['id']}:{item['version']}": explainer_assets.public(item)["preview_url"] for item in assets},
+                      "scenes": {item["id"]: f"/api/visuals/scenes/{item['id']}/preview" for item in stage["scenes"]},
+                      "activities": {item["id"]: f"/api/visuals/library/activities/{item['id']}/content" for item in stage["activities"]}}}
     if snapshot.get("learning"):
         learning = snapshot["learning"]
         props["learning"] = {
@@ -85,7 +90,7 @@ async def build_payload(db: aiosqlite.Connection, project_id: str, aspect: str =
                         "exampleSentence": item["example_sentence"]} for item in learning["idioms"]],
         }
     return {"props": props, "source_fingerprint": plan.source_fingerprint, "revision": plan.revision,
-            "front": front, "illustrations": assets, "audio_files": audio_files}
+            "front": front, "illustrations": assets, "audio_files": audio_files, "stage": stage}
 
 
 async def preview(db: aiosqlite.Connection, project_id: str, aspect: str) -> dict:
@@ -117,5 +122,15 @@ async def production_props(db: aiosqlite.Connection, project_id: str, aspect: st
         target = root / f"photo-{image['id']}-{image['version']}.png"
         await asyncio.to_thread(copy_pinned, source, target, image["content_hash"])
         photos[f"{image['id']}:{image['version']}"] = f"remotion-render/visuals/{key}/{target.name}"
-    props["solo"].update(pictures=pictures, photos=photos)
+    scenes, activities = {}, {}
+    for kind, staged in (("scene", scenes), ("activity", activities)):
+        for image in payload["stage"]["scenes" if kind == "scene" else "activities"]:
+            source = Path(image["path"])
+            target = root / f"{kind}-{image['id']}{source.suffix.lower() or '.png'}"
+            await asyncio.to_thread(copy_pinned, source, target, image["content_hash"])
+            staged[image["id"]] = f"remotion-render/visuals/{key}/{target.name}"
+    props["solo"].update(pictures=pictures, photos=photos, scenes=scenes, activities=activities)
+    # Private: the video API records each rendered activity picture's use (never written into the Remotion props).
+    props["_activityUses"] = [{"activity_id": segment["visual"]["activity_id"], "beat_id": segment["id"]}
+                              for segment in props["solo"]["plan"]["segments"] if segment["visual"]["kind"] == "activity"]
     return props

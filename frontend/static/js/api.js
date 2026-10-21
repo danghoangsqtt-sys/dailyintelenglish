@@ -218,6 +218,7 @@ const Api = (() => {
     proposeExplainerPlan: (projectId, body) => request(`/api/projects/${projectId}/explainer-plan/propose`, json("POST", body)),
     approveExplainerPlan: (projectId, body) => request(`/api/projects/${projectId}/explainer-plan/approve`, json("POST", body)),
     listExplainerAssets: (projectId) => request(`/api/projects/${projectId}/explainer/assets`),
+    getExplainerStageChoices: (projectId) => request(`/api/projects/${projectId}/explainer-plan/stage-choices`),
     uploadExplainerAsset: (projectId, file) => {
       const body = new FormData();
       body.append("file", file);

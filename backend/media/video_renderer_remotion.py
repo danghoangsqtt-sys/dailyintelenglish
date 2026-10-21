@@ -677,7 +677,7 @@ async def render_via_remotion(
                                            visual_mode=visual_mode, still_scene_id=still_scene_id, layout=layout)
     # Private backend metadata is not part of the Remotion schema. Preserve it for
     # the caller, but never write it into the props JSON consumed by the renderer.
-    activity_uses = input_props.get("sprites", {}).pop("_activityUses", [])
+    activity_uses = input_props.pop("_activityUses", None) or input_props.get("sprites", {}).pop("_activityUses", [])
     staging_key = f"{project_id}-{project['_attempt_id']}" if project.get("_attempt_id") else project_id
     await asyncio.to_thread(_copy_audio_into_public, staging_key, audio_job["mp3_path"])
     input_props["audioPath"] = f"remotion-render/audio/{staging_key}.mp3"
