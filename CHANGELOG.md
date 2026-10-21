@@ -8,6 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Changed — Phase 55 Solo stage look (2026-10-21)
+
+- Solo videos stand the presenter waist-up in front of a real place: the AI picks a scene and, where it fits, an activity picture for each segment; text cards and diagrams float beside her. Step 5 can change the scene and activity per segment (ENH-037).
+- Diagrams with steps or cause-effect no longer repeat their order as extra text lines; vertical cards use slightly smaller text so short diagrams fit.
+
 ### Fixed — Phase 54 Solo proposal with cloud AI (2026-10-21)
 
 - **Propose plan** now works with cloud AI: the prompt states the exact JSON shape and each line's token count, so plans no longer fail validation (BUG-050).

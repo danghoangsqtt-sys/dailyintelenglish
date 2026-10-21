@@ -16,6 +16,10 @@ Máy hiện tại đã được cập nhật bản thử Desktop ngày 2026-10-1
 
 Không cần gửi ảnh lên nhà cung cấp AI từ Studio. Bạn tự chọn công cụ ngoài, đính kèm ảnh và tạo kết quả. Import chỉ kiểm tra kỹ thuật; người dùng cần kiểm tra khuôn mặt, trang phục, bàn tay và chất lượng ảnh. Bộ Conversation 29 ảnh được quản lý trong tab riêng.
 
+## Giao diện video Solo (từ Phase 55)
+
+Video Solo trông giống video hội thoại: người dẫn đứng **từ eo trở lên** trước một **cảnh nền thật** trong Scene Library; đoạn nào nói về một hoạt động quen thuộc (lái xe, nấu ăn, làm việc với laptop…) thì **ảnh hoạt động** trong Activity Library phủ kín khung phía sau người dẫn; thẻ chữ và sơ đồ nổi bán trong suốt ở phía bên kia. Khi **Propose plan**, AI chọn cảnh nền và ảnh hoạt động cho từng đoạn; ở Step 5 bạn đổi được **Scene behind the presenter** và loại hình **activity** cho mỗi đoạn. Ảnh hoạt động chỉ lấy từ ảnh dùng chung hoặc ảnh riêng của chính người dẫn đã được duyệt. Kế hoạch làm trước Phase 55 cần **Arrange layouts** lại rồi duyệt lại.
+
 ## Tạo và duyệt tập Solo
 
 Chọn **Solo Explainer** ở Step 1, một người dẫn và cấu trúc **Why / How / List**. Chọn hồ sơ nhân vật, viết hoặc tạo kịch bản, kiểm tra kiến thức và tạo audio. Bạn có thể bắt đầu biên tập kế hoạch ở Step 5 trước khi có audio/ảnh, nhưng bố cục, preview đồng bộ và duyệt sản xuất cần đủ ảnh 21/21 và audio có thời gian từ thực.
