@@ -7,9 +7,11 @@ import type { Aspect } from "./explainerLayout";
 export function ExplainerVisual({segment, proof, aspect, progress=1}: {segment: SoloSegment; proof: GeometrySegment; aspect: Aspect; progress?:number}) {
   const {width, height} = useVideoConfig();
   const box = segment.layouts[aspect].illustration, visual = segment.visual, text = proof.text;
+  if (visual.kind === "activity") return null;  // drawn full-frame by the stage behind the presenter
   const style: React.CSSProperties = {position:"absolute", left:box.x*width, top:box.y*height, width:box.width*width, height:box.height*height,
     boxSizing:"border-box", color:"#F3F4E6", fontFamily:"Arial,sans-serif", padding:text.padding, borderRadius:20,
-    background:"linear-gradient(145deg,#173F33,#0D2722)", border:"1px solid #709C79", overflowWrap:"anywhere", whiteSpace:"pre-wrap"};
+    background:"linear-gradient(145deg,rgba(23,63,51,0.86),rgba(9,32,27,0.82))", border:"1px solid rgba(163,200,150,0.75)",
+    boxShadow:"0 18px 40px rgba(0,0,0,0.35)", overflowWrap:"anywhere", whiteSpace:"pre-wrap"};
   if (visual.kind === "photo") return <div data-solo-visual="photo" style={{...style,padding:0,background:"#0E241E"}}>
     {/* URL is supplied through the scoped bridge, never user-supplied HTML or a filesystem path. */}
     {(segment as SoloSegment & {photoUrl?: string}).photoUrl ? <Img src={resolvedMedia((segment as SoloSegment & {photoUrl?: string}).photoUrl!)} style={{width:"100%",height:"100%",objectFit:visual.fit ?? "contain",borderRadius:20}} />

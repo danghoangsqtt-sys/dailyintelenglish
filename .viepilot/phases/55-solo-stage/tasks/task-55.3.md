@@ -1,6 +1,6 @@
 # Task 55.3 — Renderer stage
 
-Status: planned 2026-10-21.
+Status: implemented_verified 2026-10-21 (visual check in 55.5).
 
 ## Paths
 - renderer/src/SoloScene.tsx, Presenter.tsx, ExplainerVisual.tsx, soloTypes.ts (+ tests)
@@ -14,3 +14,9 @@ Status: planned 2026-10-21.
 
 ## Verification
 Vitest for layout math and payload schema; TypeScript; `npm run build:preview`.
+
+## Verification result 2026-10-21
+
+- New `renderer/src/SoloStage.tsx`: segment plate (cover) with the conversation `sceneMotion` drift, 0.6 s crossfade when the scene changes (`stagePlates`, pure), activity picture full-frame with the conversation `insertMotion` reveal, top shade for the brand line; `StageShade` over the legs under captions. `SoloScene` draws stage → card → presenter → shade → captions. Cards are translucent with a shadow; activity visuals draw no card.
+- `soloTypes`: `activity` visual, `scene`, payload `scenes`/`activities`; payload schema accepts rules 1 and 2.
+- Vitest 127 passed (new `soloStage.test.ts`: steady plate, crossfade + deterministic seek, no-scene fallback); `tsc --noEmit` clean; `npm run build:preview` built `frontend/static/solo-preview/player.js`.
