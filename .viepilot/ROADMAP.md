@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 62 — Automatic content production (2026-10-22)
+
+Status: planned; 0/5 tasks. ENH-044: the app makes the Channel plan's upcoming episodes by itself in a night window (script → audio → plan → render → thumbnail → YouTube package), stops each at "waiting for review", reports in the app; opens with Windows and keeps the computer awake in the window. [Plan](phases/62-auto-production/PLAN.md).
+
 ## Phase 61 — Lively characters and rich VOX motion (2026-10-22)
 
 Status: implemented_verified_pending_owner_review; 5/5 tasks. Full pytest 1950 passed; renderer 152 Vitest, tsc clean; real sandbox renders (conversation clip, full VOX video). ENH-043: livelier conversation characters and Solo presenter (phrase gestures, lean/bob/nod, quick pose crossfade, camera push-in) and VOX transitions, morphs, camera/parallax and per-element effects. [Plan](phases/61-lively-motion/PLAN.md).
