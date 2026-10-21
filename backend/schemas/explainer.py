@@ -133,6 +133,81 @@ class SceneReference(StrictModel):
 
 Visual = Annotated[PhotoVisual | DiagramVisual | TextCardVisual | ActivityVisual, Field(discriminator="kind")]
 
+Short = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+
+
+class QuoteVisual(StrictModel):
+    """Phase 59 (ENH-041, VOX): a cut-out quote revealed word by word, with one highlighted phrase."""
+
+    kind: Literal["quote"]
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=220)]
+    highlight: str = Field(default="", max_length=80)
+    attribution: str = Field(default="", max_length=80)
+
+    @model_validator(mode="after")
+    def highlight_is_part_of_the_text(self) -> "QuoteVisual":
+        if self.highlight and self.highlight.strip().lower() not in self.text.lower():
+            raise ValueError("The highlighted phrase must be part of the quote text.")
+        return self
+
+
+class ChartItem(StrictModel):
+    label: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=40)]
+    value: float = Field(ge=-1e12, le=1e12, allow_inf_nan=False)
+
+
+class ChartVisual(StrictModel):
+    """Phase 59 (VOX): a bar or line chart drawn with the narration; its numbers must come from the script."""
+
+    kind: Literal["chart"]
+    chart_type: Literal["bar", "line"] = "bar"
+    title: str = Field(default="", max_length=120)
+    unit: str = Field(default="", max_length=20)
+    items: list[ChartItem] = Field(min_length=2, max_length=8)
+
+
+class TimelineEvent(StrictModel):
+    when: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=30)]
+    label: Short
+
+
+class TimelineVisual(StrictModel):
+    """Phase 59 (VOX): dated events in order along a line."""
+
+    kind: Literal["timeline"]
+    title: str = Field(default="", max_length=120)
+    events: list[TimelineEvent] = Field(min_length=2, max_length=6)
+
+
+class MapPlace(StrictModel):
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
+    lat: float = Field(ge=-90, le=90, allow_inf_nan=False)
+    lon: float = Field(ge=-180, le=180, allow_inf_nan=False)
+
+
+class MapVisual(StrictModel):
+    """Phase 59 (VOX): a world map with highlighted countries, labelled places and an optional route between two."""
+
+    kind: Literal["map"]
+    title: str = Field(default="", max_length=120)
+    places: list[MapPlace] = Field(min_length=1, max_length=5)
+    highlight_countries: list[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]] = Field(
+        default_factory=list, max_length=6)
+    route: list[int] = Field(default_factory=list, max_length=2)
+
+    @model_validator(mode="after")
+    def route_between_two_places(self) -> "MapVisual":
+        if self.route and (len(self.route) != 2 or len(set(self.route)) != 2
+                           or any(not 0 <= index < len(self.places) for index in self.route)):
+            raise ValueError("A map route joins two different places of the list (their positions, from 0).")
+        return self
+
+
+VOX_KINDS = ("quote", "chart", "timeline", "map")
+# Stored plans accept every kind; a Solo (presenter) plan is checked to use only the four Solo kinds.
+AnyVisual = Annotated[PhotoVisual | DiagramVisual | TextCardVisual | ActivityVisual | QuoteVisual | ChartVisual
+                      | TimelineVisual | MapVisual, Field(discriminator="kind")]
+
 
 class PresenterPlacement(StrictModel):
     """Presenter position and uniform frame-relative height; collision checks happen in the layout service."""
@@ -180,7 +255,7 @@ class ExplainerSegment(StrictModel):
     line_ids: list[Identifier] = Field(min_length=1, max_length=200)
     start: TokenAnchor
     end: TokenAnchor
-    visual: Visual
+    visual: AnyVisual
     scene: SceneReference | None = None
     gestures: list[GestureCue] = Field(default_factory=list, max_length=30)
     layouts: dict[Aspect, SegmentLayout] = Field(default_factory=dict, max_length=2)
@@ -290,6 +365,25 @@ class ExplainerProposal(StrictModel):
 
     @model_validator(mode="after")
     def unique_segment_ids(self) -> "ExplainerProposal":
+        if len({segment.id for segment in self.segments}) != len(self.segments):
+            raise ValueError("Segment IDs must be unique.")
+        return self
+
+
+class VoxProposedSegment(ProposedExplainerSegment):
+    """Phase 59: a VOX segment proposal -- every visual kind, no presenter gestures (the Solo schema is unchanged)."""
+
+    visual: AnyVisual
+    gestures: list[GestureCue] = Field(default_factory=list, max_length=0)
+
+
+class VoxExplainerProposal(StrictModel):
+    """The VOX proposal schema sent to the model."""
+
+    segments: list[VoxProposedSegment] = Field(min_length=1, max_length=60)
+
+    @model_validator(mode="after")
+    def unique_segment_ids(self) -> "VoxExplainerProposal":
         if len({segment.id for segment in self.segments}) != len(self.segments):
             raise ValueError("Segment IDs must be unique.")
         return self

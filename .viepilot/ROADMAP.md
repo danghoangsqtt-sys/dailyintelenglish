@@ -6,7 +6,7 @@ Status: implemented_verified_pending_owner_review; 3/3 tasks. ENH-042: every scr
 
 ## Phase 59 — VOX explainer video (2026-10-22)
 
-Status: planned, execution authorized; 0/5 tasks. ENH-041: a third video type — voice-over only, kinetic text and highlights, collage pictures, animated diagrams/charts (owner's numbers only), world map and timelines. [Plan](phases/59-vox-explainer/PLAN.md).
+Status: implemented_verified_pending_owner_review; 5/5 tasks. ENH-041: a third video type — voice-over only, kinetic text and highlights, collage pictures, animated diagrams/charts (owner's numbers only), world map and timelines. [Plan](phases/59-vox-explainer/PLAN.md).
 
 ## Phase 58 — Character / Music / Settings rework and app language (2026-10-22)
 

@@ -29,7 +29,8 @@ async def build_payload(db: aiosqlite.Connection, project_id: str, aspect: str =
         snapshot = await plans.source_snapshot(db, project_id, plan.segments)
         if not snapshot["audio"] or snapshot["audio"]["status"] != "complete":
             raise ValidationError("Generate the actual audio mix before opening the synchronized preview")
-        if not plan.presenter.front_pack_revision:
+        vox = plans.is_vox(snapshot["source"]["project"])
+        if not plan.presenter.front_pack_revision and not vox:
             raise ValidationError("Import and approve the full front21 pack before preview/render")
         if snapshot["fingerprint"] != plan.source_fingerprint:
             raise ConflictError("The explainer source changed; save/review a fresh plan")
@@ -44,8 +45,10 @@ async def build_payload(db: aiosqlite.Connection, project_id: str, aspect: str =
         pinned = json.loads(row["approved_snapshot_json"]) if approved else None
     audio_files = await asyncio.to_thread(plans._audio_files, snapshot)
     stage = await asyncio.to_thread(explainer_stage.pinned_files, snapshot["source"])
-    await presenter_asset_plan.manifest(db, plan.presenter.profile_id)
-    front = await presenter_asset_plan.resolve_manifest(plan.presenter.profile_id, plan.presenter.identity_version, plan.presenter.front_pack_revision)
+    front = None
+    if not vox:  # Phase 59: a VOX narrator is never on screen
+        await presenter_asset_plan.manifest(db, plan.presenter.profile_id)
+        front = await presenter_asset_plan.resolve_manifest(plan.presenter.profile_id, plan.presenter.identity_version, plan.presenter.front_pack_revision)
     for asset in assets:
         await explainer_assets.verified_path(asset)
     geometry = await validate_plan(snapshot, plan)
@@ -61,7 +64,8 @@ async def build_payload(db: aiosqlite.Connection, project_id: str, aspect: str =
             raise ConflictError("The source or plan changed while preparing the preview/render")
     speaker, audio = snapshot["project"]["speakers"][0], snapshot["audio"]
     word_map = {entry["line_id"]: entry["words"] for entry in audio["word_timestamps"]}
-    lines = [{"startSec": entry["start_sec"], "endSec": entry["end_sec"], "speaker": speaker["name"],
+    # a VOX narrator is never shown, so the captions carry no speaker name
+    lines = [{"startSec": entry["start_sec"], "endSec": entry["end_sec"], "speaker": "" if vox else speaker["name"],
               "speakerId": speaker["id"], "text": line["text"], "words": [
                   {"text": word["text"], "startSec": word["start_sec"], "endSec": word["end_sec"]}
                   for word in word_map[line["id"]]]}
@@ -76,7 +80,9 @@ async def build_payload(db: aiosqlite.Connection, project_id: str, aspect: str =
              "layout": "vertical" if aspect == "9:16" else "horizontal", "presentationMode": "solo_explainer",
              "durationSeconds": timeline[-1]["end_sec"],
              "solo": {"plan": plan.model_dump(), "geometry": geometry, "timeline": timeline,
-                      "pictures": {key: f"/api/visuals/profiles/{plan.presenter.profile_id}/assets/{value['asset_id']}/content" for key, value in front["pictures"].items()},
+                      **({"style": "vox"} if vox else {}),
+                      "pictures": {key: f"/api/visuals/profiles/{plan.presenter.profile_id}/assets/{value['asset_id']}/content"
+                                   for key, value in (front or {"pictures": {}})["pictures"].items()},
                       "photos": {f"{item['id']}:{item['version']}": explainer_assets.public(item)["preview_url"] for item in assets},
                       "scenes": {item["id"]: f"/api/visuals/scenes/{item['id']}/preview" for item in stage["scenes"]},
                       "activities": {item["id"]: f"/api/visuals/library/activities/{item['id']}/content" for item in stage["activities"]}}}
@@ -113,7 +119,7 @@ async def production_props(db: aiosqlite.Connection, project_id: str, aspect: st
         if hashlib.sha256(target.read_bytes()).hexdigest() != digest:
             target.unlink(missing_ok=True)
             raise ConflictError("A pinned image changed while staging; review and approve again")
-    for slot, image in payload["front"]["pictures"].items():
+    for slot, image in (payload["front"] or {"pictures": {}})["pictures"].items():
         target = root / f"{slot}.png"
         await asyncio.to_thread(copy_pinned, Path(image["path"]), target, image["content_hash"])
         pictures[slot] = f"remotion-render/visuals/{key}/{target.name}"

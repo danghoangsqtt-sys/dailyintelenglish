@@ -8,6 +8,13 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added — Phase 59 VOX explainer video (2026-10-22)
+
+- A third video type on Step 1, **VOX explainer**: a narrator's voice (a chosen character's voice; nobody on screen) over motion graphics on a paper board — kinetic text with a highlighter sweep, cut-out quotes, collage pictures with slow zoom and a drawn marker, animated diagrams, bar/line charts, timelines and a world map (Natural Earth data from `world-atlas`, bundled offline) (ENH-041).
+- The AI plans VOX segments with these visuals; charts may only show numbers said in the narration (or the owner's material) and maps only places it names — otherwise the plan is repaired or flagged.
+- Pictures you make or bring: each VOX segment offers a ready outside-AI image prompt (Copy) and "Use my picture"; reference pictures uploaded on Step 5 are offered to the next proposal.
+- 16:9 and 9:16 VOX renders; the 9:16 captions sit lower so the graphics get the tall upper board. VOX thumbnails have no character.
+
 ### Changed — Phase 60 greeting and sign-off (2026-10-22)
 
 - Every new script opens by greeting the viewers, welcoming them to Daily Beyond English, saying who is speaking and previewing today's topic, and ends by thanking them for watching and inviting them to like, subscribe and comment (conversation, Solo and VOX) (ENH-042).

@@ -40,7 +40,8 @@
   const GENDERS = ["male", "female", "neutral"];
   // Phase 40 (D119): no default cast -- each slot is "Character N" until a character profile is chosen, and the speaker
   // then takes that character's name (used in the script and the video).
-  const slotLabel = (index) => `Character ${index + 1}`;
+  // Phase 59 (ENH-041): a VOX narrator is a character's voice only
+  const slotLabel = (index) => (state.explainerStyle === "vox" ? "Narrator (voice only)" : `Character ${index + 1}`);
   const DURATION_PRESETS = [5, 10, 15, 20];
   const MIN_SPEAKERS = 1;
   const MAX_SPEAKERS = 6;
@@ -59,7 +60,7 @@
     duration: DURATION_PRESETS[1],
     customDurationActive: false,
     genre: GENRES[7].value, // small_talk
-    presentationMode: "classic", explainerStructure: "why", explainerSubject: "topic",
+    presentationMode: "classic", explainerStructure: "why", explainerSubject: "topic", explainerStyle: "presenter",
     accent: ACCENTS[0].value, // american
     speakers: [],
     profiles: [],  // Phase 33: the character profiles a speaker can be (Api.listProfiles)
@@ -254,7 +255,7 @@
     CharacterSelector.open({
       slots: state.speakers.map((speaker, i) => ({ index: i, label: slotLabel(i), characterId: speaker.character_id })),
       profiles: state.profiles,
-      eligibility: state.presentationMode,
+      eligibility: state.presentationMode === "solo_explainer" && state.explainerStyle === "vox" ? "vox" : state.presentationMode,
       startSlot: index,
       onChoose: (slotIndex, profile) => applyProfile(slotIndex, profile),
     });
@@ -352,6 +353,7 @@
     state.presentationMode = project.presentation_mode || "classic";
     state.explainerStructure = project.explainer_structure || "why";
     state.explainerSubject = project.explainer_subject || "topic";
+    state.explainerStyle = project.explainer_style || "presenter";
     state.accent = project.accent || state.accent;
     state.languageFeatures = Object.fromEntries(
       LANGUAGE_FEATURES.map((feature) => [
@@ -386,7 +388,8 @@
     count.disabled = solo;
     if (solo) { count.value = 1; syncSpeakersToCount(1); renderSpeakerCards(); }
     document.querySelectorAll("#type-cards .type-card").forEach((card) => {
-      card.setAttribute("aria-checked", String(card.dataset.mode === state.presentationMode));
+      const mode = state.presentationMode === "solo_explainer" && state.explainerStyle === "vox" ? "vox" : state.presentationMode;
+      card.setAttribute("aria-checked", String(card.dataset.mode === mode));
     });
     document.getElementById("subject-cards").hidden = !solo;
     document.querySelectorAll("#subject-cards .subject-card").forEach((card) => {
@@ -480,8 +483,11 @@
 
   function setupSources() {
     document.querySelectorAll("#type-cards .type-card").forEach((card) => card.addEventListener("click", () => {
-      state.presentationMode = card.dataset.mode;
+      // VOX is a Solo presentation shown as a voice-over with motion graphics
+      state.presentationMode = card.dataset.mode === "vox" ? "solo_explainer" : card.dataset.mode;
+      state.explainerStyle = card.dataset.mode === "vox" ? "vox" : "presenter";
       renderPresentation();
+      renderSpeakerCards();
     }));
     document.querySelectorAll("#subject-cards .subject-card").forEach((card) => card.addEventListener("click", () => {
       state.explainerSubject = card.dataset.subject;
@@ -668,7 +674,8 @@
       num_speakers: state.speakers.length,
       presentation_mode: state.presentationMode,
       ...(state.presentationMode === "solo_explainer"
-        ? { explainer_structure: state.explainerStructure, explainer_subject: state.explainerSubject } : {}),
+        ? { explainer_structure: state.explainerStructure, explainer_subject: state.explainerSubject,
+          explainer_style: state.explainerStyle } : {}),
       genre: state.genre,
       accent: state.accent,
       language_features: { ...state.languageFeatures },

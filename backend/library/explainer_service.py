@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import re
 from contextlib import suppress
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,8 +30,8 @@ from backend.library import explainer_assets, explainer_stage, presenter_asset_p
 from backend.library.explainer_timing import ScriptIndex, resolve_timeline
 from backend.media import audio_service
 from backend.schemas.explainer import (
-    ExplainerApproval, ExplainerPlan, ExplainerPlanPatch, ExplainerProposal, ExplainerProposalRequest,
-    ExplainerSegment, PresenterReference, ProposedExplainerSegment,
+    VOX_KINDS, ExplainerApproval, ExplainerPlan, ExplainerPlanPatch, ExplainerProposal, ExplainerProposalRequest,
+    ExplainerSegment, PresenterReference, ProposedExplainerSegment, VoxExplainerProposal,
 )
 
 if TYPE_CHECKING:
@@ -38,6 +39,18 @@ if TYPE_CHECKING:
     from backend.ai.llm.router import AIRouter
 
 _PROPOSAL = TypeAdapter(ExplainerProposal)
+# Phase 59 (ENH-041): a VOX video (voice-over, motion graphics) proposes every visual kind and no presenter gestures
+_VOX_PROPOSAL = TypeAdapter(VoxExplainerProposal)
+
+
+def is_vox(project_or_source: dict) -> bool:
+    """A VOX Solo project: the narrator is never on screen, so no presenter picture pack is needed."""
+    return project_or_source.get("explainer_style") == "vox"
+
+
+def stage_owner(source: dict) -> str:
+    """Whose own activity pictures a plan may use: the presenter's, or nobody's in a VOX video."""
+    return "" if is_vox(source["project"]) else source["cast"]["character_id"]
 
 
 def fingerprint(value: dict) -> str:
@@ -68,7 +81,8 @@ async def source_snapshot(db: aiosqlite.Connection, project_id: str, segments: l
     if len(cast) != 1 or cast[0]["speaker_index"] != speaker["speaker_index"]:
         raise ValidationError("Select one character profile for this Solo presenter")
     member = dict(cast[0])
-    front = await presenter_asset_plan.manifest_snapshot(db, member["character_id"])
+    vox = is_vox(project)
+    front = None if vox else await presenter_asset_plan.manifest_snapshot(db, member["character_id"])
     presenter = PresenterReference(speaker_id=speaker["id"], profile_id=member["character_id"],
                                    identity_version=member["profile_version"],
                                    front_pack_revision=front["pack_revision"] if front else None,
@@ -85,9 +99,12 @@ async def source_snapshot(db: aiosqlite.Connection, project_id: str, segments: l
                 assets[(ref.asset_id, ref.version)] = {key: asset[key] for key in ("id", "version", "content_hash", "width", "height", "path")}
             except NotFoundError:
                 assets[(ref.asset_id, ref.version)] = {"id": ref.asset_id, "version": ref.version, "missing": True}
-    scenes, activities = await explainer_stage.references(db, segments, member["character_id"])
+    # Phase 59: nobody is on screen in a VOX video, so only generic activity pictures are offered or accepted
+    scenes, activities = await explainer_stage.references(db, segments, "" if vox else member["character_id"])
     source = {
-        "project": {key: project.get(key) for key in ("id", "presentation_mode", "explainer_structure", "topic", "cefr_level", "language_features")},
+        "project": {key: project.get(key) for key in ("id", "presentation_mode", "explainer_structure", "topic", "cefr_level", "language_features")}
+        # Phase 59: only a VOX project adds these keys, so every Solo fingerprint stays exactly as approved
+        | ({"explainer_style": "vox", "source_text": project.get("source_text") or ""} if vox else {}),
         "speaker": {key: speaker.get(key) for key in ("id", "speaker_index", "tts_engine", "voice_id", "accent", "gender", "voice_description", "speed", "pitch", "volume")},
         "lines": [{key: line.get(key) for key in ("id", "speaker_id", "text", "audio_cache_path")} for line in lines],
         "cast": member, "presenter": presenter.model_dump(),
@@ -105,7 +122,7 @@ async def stage_choices(db: aiosqlite.Connection, project_id: str) -> dict:
     """Scene/activity choices for the Step 5 editor, scoped to the project's presenter."""
     async with read_transaction():
         source = await source_snapshot(db, project_id, [])
-        return await explainer_stage.choices(db, source["source"]["cast"]["character_id"])
+        return await explainer_stage.choices(db, stage_owner(source["source"]))
 
 
 def source_issues(snapshot: dict, segments: list[ExplainerSegment]) -> list[str]:
@@ -116,7 +133,8 @@ def source_issues(snapshot: dict, segments: list[ExplainerSegment]) -> list[str]
         resolve_timeline(ScriptIndex(snapshot["lines"]), snapshot["audio"]).segments(segments)
     except ValidationError as exc:
         issues.append(str(exc))
-    if not snapshot["front"]:
+    vox = is_vox(snapshot["source"]["project"])
+    if not snapshot["front"] and not vox:
         issues.append("Import and approve the presenter's complete front21 pack before approval")
     if snapshot["source"]["cast"]["profile_version"] != snapshot["source"]["cast"]["current_identity_version"]:
         issues.append("The cast's pinned identity is older than its current profile; review and reselect the presenter")
@@ -125,6 +143,10 @@ def source_issues(snapshot: dict, segments: list[ExplainerSegment]) -> list[str]
             issues.append(f"Segment {segment.id}: review its knowledge claims and illustration text")
         if segment.visual.kind == "photo" and not segment.visual.asset:
             issues.append(f"Segment {segment.id}: import or select its illustration")
+        if not vox and segment.visual.kind in VOX_KINDS:
+            issues.append(f"Segment {segment.id}: a {segment.visual.kind} belongs to VOX videos; choose a card, diagram, photo or activity")
+    if vox:
+        issues.extend(vox_fact_issues(snapshot["source"], segments))
     issues.extend(f"Illustration {asset['id']} is missing from this project" for asset in snapshot["source"]["illustrations"] if asset.get("missing"))
     issues.extend(explainer_stage.issues(snapshot["source"], segments))
     return list(dict.fromkeys(issues))[:EXPLAINER_PLAN_MAX_ISSUES]
@@ -279,7 +301,7 @@ async def enqueue_proposal(db: aiosqlite.Connection, project_id: str, body: Expl
                 except ValidationError as exc:
                     raise ValidationError(f"A locked segment lost its script anchors ({segment.id}); edit/unlock it first: {exc}") from exc
         available = await explainer_assets.list_assets(db, project_id)
-        stage = await explainer_stage.choices(db, source["source"]["cast"]["character_id"])
+        stage = await explainer_stage.choices(db, stage_owner(source["source"]))
         snapshot = {"expected_revision": revision, "source_fingerprint": source["fingerprint"],
                     "source": source["source"], "previous": previous.model_dump() if previous else None,
                     "available_assets": available, "available_scenes": stage["scenes"],
@@ -336,9 +358,11 @@ async def approve_plan(db: aiosqlite.Connection, project_id: str, body: Explaine
                 images.append(asset)
     audio = await asyncio.to_thread(_audio_files, snapshot)
     stage = await asyncio.to_thread(explainer_stage.pinned_files, snapshot["source"])
-    # Ensure this revision's immutable manifest exists, then resolve/hash every pinned front picture.
-    await presenter_asset_plan.manifest(db, plan.presenter.profile_id)
-    front = await presenter_asset_plan.resolve_manifest(plan.presenter.profile_id, plan.presenter.identity_version, plan.presenter.front_pack_revision)
+    # Ensure this revision's immutable manifest exists, then resolve/hash every pinned front picture (not for VOX).
+    front = None
+    if not is_vox(snapshot["source"]["project"]):
+        await presenter_asset_plan.manifest(db, plan.presenter.profile_id)
+        front = await presenter_asset_plan.resolve_manifest(plan.presenter.profile_id, plan.presenter.identity_version, plan.presenter.front_pack_revision)
     for image in images:
         await explainer_assets.verified_path(image)
     geometry = await _validate_geometry(snapshot, plan)
@@ -374,7 +398,8 @@ async def arrange_plan(db: aiosqlite.Connection, project_id: str, body: Explaine
         snapshot = await source_snapshot(db, project_id, plan.segments)
         if snapshot["fingerprint"] != body.source_fingerprint:
             raise ConflictError("The source changed; reload and save a reviewed revision before arranging")
-    await presenter_asset_plan.manifest(db, plan.presenter.profile_id)
+    if not is_vox(snapshot["source"]["project"]):
+        await presenter_asset_plan.manifest(db, plan.presenter.profile_id)
     segments, geometry = await arrange(snapshot, plan)
     async with read_transaction():
         fresh = await _row(db, project_id)
@@ -417,8 +442,52 @@ async def list_illustrations(db: aiosqlite.Connection, project_id: str) -> list[
         return await explainer_assets.list_assets(db, project_id)
 
 
+def _proposal_adapter(source: dict) -> TypeAdapter:
+    return _VOX_PROPOSAL if is_vox(source["project"]) else _PROPOSAL
+
+
+_NUMBER = re.compile(r"(?<![\w.])[-+]?\d[\d,]*(?:\.\d+)?")
+_SCALE = {"thousand": 1e3, "million": 1e6, "billion": 1e9, "percent": 1, "%": 1}
+
+
+def _spoken_numbers(text: str) -> set[float]:
+    """Every number written in the narration (or the owner's material), also scaled by a following thousand/million/billion."""
+    found: set[float] = set()
+    for match in _NUMBER.finditer(text):
+        try:
+            value = float(match.group().replace(",", ""))
+        except ValueError:
+            continue
+        found.add(value)
+        after = text[match.end():match.end() + 10].strip().lower()
+        for word, scale in _SCALE.items():
+            if after.startswith(word):
+                found.add(value * scale)
+    return found
+
+
+def vox_fact_issues(source: dict, segments: list[ExplainerSegment]) -> list[str]:
+    """Phase 59 (owner rule): a VOX chart shows only numbers the narration or the owner's material gives, and a map only
+    places the narration names -- the AI never invents data."""
+    text = " ".join(line["text"] for line in source["lines"]) + " " + (source["project"].get("source_text") or "")
+    numbers, lowered = _spoken_numbers(text), text.lower()
+    issues = []
+    for segment in segments:
+        visual = segment.visual
+        if visual.kind == "chart":
+            missing = [item.label for item in visual.items if not any(abs(item.value - value) < 1e-9 for value in numbers)]
+            if missing:
+                issues.append(f"Segment {segment.id}: the chart values for {', '.join(missing)} are not numbers said in the "
+                              "narration; use only numbers from the script")
+        elif visual.kind == "map":
+            missing = [place.name for place in visual.places if place.name.lower() not in lowered]
+            if missing:
+                issues.append(f"Segment {segment.id}: the map places {', '.join(missing)} are not named in the narration")
+    return issues
+
+
 def _proposed_segments(text: str, previous: list[ExplainerSegment], snapshot: dict, lines: list[dict]) -> list[ExplainerSegment]:
-    wire = parse_and_validate(text, _PROPOSAL)
+    wire = parse_and_validate(text, _proposal_adapter(snapshot["source"]))
     segments = merge_proposal(previous, [ExplainerSegment.model_validate(item.model_dump()) for item in wire.segments])
     ScriptIndex(lines).validate_coverage(segments)
     choices = {(item["asset"]["asset_id"], item["asset"]["version"]): item["asset"]["content_hash"] for item in snapshot["available_assets"]}
@@ -429,6 +498,10 @@ def _proposed_segments(text: str, previous: list[ExplainerSegment], snapshot: di
             if actual is None or (ref.content_hash is not None and ref.content_hash != actual):
                 raise ValidationError("Use only the illustration versions listed in the proposal input")
     explainer_stage.check_proposal(segments, snapshot)
+    if is_vox(snapshot["source"]["project"]):
+        facts = vox_fact_issues({**snapshot["source"], "lines": lines}, segments)
+        if facts:
+            raise ValidationError("; ".join(facts))
     return segments
 
 
@@ -517,15 +590,18 @@ async def _run_proposal(job: dict, worker: "AIWorker", router: "AIRouter") -> No
                     return
                 await ai_job_service.update_progress(db, job["id"], "repair" if attempt else "proposal", 40 if attempt else 15, commit=False)
             index = ScriptIndex(source["lines"])
+            adapter = _proposal_adapter(captured["source"])
             prompt = await render_explainer_prompt(
+                vox=is_vox(captured["source"]["project"]),
+                source_text=captured["source"]["project"].get("source_text", ""),
                 topic=source["project"]["topic"], cefr_level=source["project"]["cefr_level"],
                 structure=source["project"]["explainer_structure"],
                 lines=_prompt_lines(index, source["lines"]),
                 previous=captured["previous"], assets=captured["available_assets"], previous_error=error,
-                previous_output=last_output, output_schema=_PROPOSAL.json_schema(),
+                previous_output=last_output, output_schema=adapter.json_schema(),
                 scenes=captured.get("available_scenes", []), activities=captured.get("available_activities", []),
             )
-            request = GenerationRequest(prompt=prompt, json_schema=_PROPOSAL.json_schema(), temperature=EXPLAINER_PROPOSAL_TEMPERATURE,
+            request = GenerationRequest(prompt=prompt, json_schema=adapter.json_schema(), temperature=EXPLAINER_PROPOSAL_TEMPERATURE,
                                         deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS, purpose="explainer_proposal_repair" if attempt else "explainer_proposal")
             try:
                 response = await router.generate(request)

@@ -124,6 +124,8 @@ class ScriptConfig(BaseModel):
     explainer_structure: Literal["why", "how", "list"] | None = None
     # Phase 57 (ENH-039): what a Solo presentation presents; None for a conversation
     explainer_subject: Literal["field", "product", "topic", "howto"] | None = None
+    # Phase 59 (ENH-041): a Solo presentation with the presenter on screen, or a VOX voice-over with motion graphics
+    explainer_style: Literal["presenter", "vox"] | None = None
     genre: str = "small_talk"
     accent: str = "american"
     language_features: LanguageFeatures = Field(default_factory=LanguageFeatures)
@@ -179,10 +181,13 @@ class ScriptConfig(BaseModel):
                 raise ValueError("Solo Explainer requires exactly one presenter.")
             if self.explainer_subject is None:
                 self.explainer_subject = "topic"
+            if self.explainer_style is None:
+                self.explainer_style = "presenter"
             if self.explainer_structure is None:
                 self.explainer_structure = SUBJECT_STRUCTURES[self.explainer_subject]
         else:
             self.explainer_subject = None
+            self.explainer_style = None
         if len(self.speakers) != self.num_speakers:
             raise ValueError(
                 f"speakers has {len(self.speakers)} entries but num_speakers={self.num_speakers}"
@@ -232,6 +237,7 @@ class ProjectUpdate(BaseModel):
     presentation_mode: Literal["classic", "solo_explainer"] | None = None
     explainer_structure: Literal["why", "how", "list"] | None = None
     explainer_subject: Literal["field", "product", "topic", "howto"] | None = None
+    explainer_style: Literal["presenter", "vox"] | None = None
     genre: str | None = None
     accent: str | None = None
     language_features: LanguageFeatures | None = None

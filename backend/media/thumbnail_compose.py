@@ -94,12 +94,13 @@ async def composition_inputs(db: aiosqlite.Connection, project: dict, episode: i
 
     cast = await project_visuals.cast_rows(db, project_id)
     solo = project.get("presentation_mode") == "solo_explainer"
+    vox = solo and project.get("explainer_style") == "vox"  # Phase 59: nobody on screen, so no character on the cover
     cursor = await db.execute(
         "SELECT sp.speaker_index, COUNT(*) FROM script_lines sl JOIN speakers sp ON sp.id = sl.speaker_id "
         "WHERE sl.project_id = ? GROUP BY sp.speaker_index", (project_id,))
     talk = {row[0]: row[1] for row in await cursor.fetchall()}
     ready = []
-    for member in sorted(cast, key=lambda row: (-talk.get(row["speaker_index"], 0), row["speaker_index"])):
+    for member in [] if vox else sorted(cast, key=lambda row: (-talk.get(row["speaker_index"], 0), row["speaker_index"])):
         if solo:
             from backend.library import presenter_asset_plan
 
@@ -115,7 +116,7 @@ async def composition_inputs(db: aiosqlite.Connection, project: dict, episode: i
         if len(ready) == 2:
             break
     ready.sort(key=lambda row: row["speaker_index"])
-    if solo and len(ready) != 1:
+    if solo and not vox and len(ready) != 1:
         raise ValidationError("Approve the presenter's complete front21 pack and review its cast identity before creating a Solo thumbnail")
     slots = sprite_placement([(row["speaker_index"], row.get("gender") or "male") for row in ready])
     characters = [{

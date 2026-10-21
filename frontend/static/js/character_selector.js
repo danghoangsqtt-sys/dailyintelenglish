@@ -98,10 +98,13 @@ const CharacterSelector = (() => {
       if (other) return `Already chosen for ${other.label}.`;
       const needed = missing(profile);
       const soloReady = profile.readiness?.profile?.ready && profile.readiness?.voice?.ready;
+      if (eligibility === "vox" && !soloReady && profile.legacy_status !== "locked") {
+        return "Complete this character's profile and voice before choosing it.";
+      }
       if (eligibility === "solo_explainer" && !soloReady && profile.legacy_status !== "locked") {
         return "Complete this character's profile and voice before choosing it. Front pictures can be added before rendering.";
       }
-      if (eligibility !== "solo_explainer" && !castReady(profile)) return `Not ready for videos yet: ${needed.slice(0, 4).join(", ") || "add its pictures"}.`;
+      if (eligibility !== "solo_explainer" && eligibility !== "vox" && !castReady(profile)) return `Not ready for videos yet: ${needed.slice(0, 4).join(", ") || "add its pictures"}.`;
       return null;
     }
 
@@ -134,10 +137,10 @@ const CharacterSelector = (() => {
         ${image ? `<img src="${image}" alt="${escapeHtml(profile.name)}" />` : '<span class="cs-empty" aria-hidden="true">?</span>'}
         <h3>${escapeHtml(profile.name)}</h3>
         <p>${escapeHtml(profile.gender)} · ${escapeHtml(profile.accent)} accent · profile voice ${escapeHtml(profile.voice?.voice_id || "accent/gender default")}
-          · ${eligibility === "solo_explainer" ? "front presenter, looking at the viewer" : `stands on the ${profile.gender === "male" ? "left" : "right"}`}</p>
+          · ${eligibility === "vox" ? "narrator: only the voice is used" : eligibility === "solo_explainer" ? "front presenter, looking at the viewer" : `stands on the ${profile.gender === "male" ? "left" : "right"}`}</p>
         ${profile.intro ? `<p>${escapeHtml(profile.intro)}</p>` : ""}
         ${(profile.personality || []).length ? `<p class="cs-note">Personality: ${escapeHtml(profile.personality.join(", "))}</p>` : ""}
-        <p class="cs-note">${eligibility === "solo_explainer" ? `${profile.readiness?.front_presenter?.have || 0}/21 front pictures approved. ${profile.readiness?.front_presenter?.ready ? "Front pack ready." : "You can write the script now; finish the front pack before rendering."}` : profile.readiness?.talking_ready ? "Ready for talking videos." : profile.readiness?.video_ready
+        <p class="cs-note">${eligibility === "vox" ? "A VOX video shows no character: this voice reads the narration." : eligibility === "solo_explainer" ? `${profile.readiness?.front_presenter?.have || 0}/21 front pictures approved. ${profile.readiness?.front_presenter?.ready ? "Front pack ready." : "You can write the script now; finish the front pack before rendering."}` : profile.readiness?.talking_ready ? "Ready for talking videos." : profile.readiness?.video_ready
           ? "Ready for videos; the talking characters mode needs its Tier 1 pictures." : ""}</p>
         ${reason ? `<p class="cs-warn">${escapeHtml(reason)}</p>` : ""}`;
       $("choose").disabled = Boolean(reason) || state.busy || slot?.characterId === profile.id;

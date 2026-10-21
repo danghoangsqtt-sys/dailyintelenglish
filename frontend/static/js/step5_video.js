@@ -916,7 +916,8 @@
       byId("project-visuals-section").hidden = true;
       byId("storyboard-section").hidden = true;
       byId("solo-explainer-section").hidden = false;
-      await ExplainerEditor.mount(byId("solo-explainer-section"), state.projectId);
+      await ExplainerEditor.mount(byId("solo-explainer-section"), state.projectId,
+        { style: state.project.explainer_style || "presenter", topic: state.project.topic || "" });
     } else {
       await loadProjectVisuals();
     }

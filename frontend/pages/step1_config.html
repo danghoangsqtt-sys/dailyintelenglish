@@ -298,7 +298,7 @@
       cursor: not-allowed;
       pointer-events: none;
     }
-    .type-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 6px 0 4px; }
+    .type-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 6px 0 4px; }
     .type-card { display: grid; gap: 4px; justify-items: start; padding: 14px 16px; border: 2px solid var(--border); border-radius: 12px;
       background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
     .type-card:hover { border-color: var(--accent); }
@@ -373,6 +373,9 @@
           <button type="button" class="type-card" role="radio" aria-checked="false" data-mode="solo_explainer">
             <span class="type-icon" aria-hidden="true">🎤</span><strong>Solo presentation</strong>
             <span>One presenter explains a field, a product or a subject.</span></button>
+          <button type="button" class="type-card" role="radio" aria-checked="false" data-mode="vox">
+            <span class="type-icon" aria-hidden="true">🎬</span><strong>VOX explainer</strong>
+            <span>A voice-over with motion graphics: kinetic text, pictures, charts and maps. Nobody on screen.</span></button>
         </div>
         <div id="subject-cards" class="subject-cards" role="radiogroup" aria-label="What the presentation presents" hidden>
           <button type="button" class="subject-card" role="radio" aria-checked="false" data-subject="field"><strong>💼 A field or job</strong><span>What people do, skills, a working day</span></button>

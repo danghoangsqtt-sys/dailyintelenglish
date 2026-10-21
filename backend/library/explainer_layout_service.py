@@ -106,7 +106,8 @@ def text_metrics(visual: dict, panel: dict, aspect: str) -> dict:
         return sum(max(1, math.ceil(len(part) / capacity)) for part in text.split("\n")) if text else 0
     title_height = lines(visual.get("title", ""), width - 2 * padding, title_font) * title_font * 1.25
     available_height = height - 2 * padding - title_height - gap
-    if visual["kind"] in ("photo", "activity"):
+    if visual["kind"] in ("photo", "activity", "quote", "chart", "timeline", "map"):
+        # bounded short texts; the VOX kinds (Phase 59) size themselves to their board in the renderer
         return {"font": font, "titleFont": title_font, "padding": padding, "gap": gap, "columns": 1}
     columns = min(2 if visual.get("template") == "comparison" else spec["columns"], len(visual.get("nodes", [1])))
     if visual["kind"] == "text_card":
@@ -249,8 +250,53 @@ def prove(snapshot: dict, plan: ExplainerPlan, metrics: dict) -> dict:
     return {"rules_version": RULES["version"], "presenter_metrics": metrics, "aspects": aspects}
 
 
+VOX_GAP = 0.015
+
+
+def vox_caption(aspect: str) -> dict:
+    """The VOX caption band: the Solo one in 16:9; in 9:16 (no presenter below it) it moves to the bottom of the safe area
+    so the graphics get the tall upper board."""
+    spec = RULES["aspects"][aspect]
+    if aspect != "9:16":
+        return spec["caption"]
+    safe, caption = spec["safe"], spec["caption"]
+    height = caption["height"]
+    return {**caption, "y": safe["y"] + safe["height"] - height - VOX_GAP}
+
+
+def vox_board(aspect: str) -> dict:
+    """Phase 59 (ENH-041): the VOX board -- the safe area between the brand line and the captions (no presenter)."""
+    spec = RULES["aspects"][aspect]
+    header, caption, safe = spec["header"], vox_caption(aspect), spec["safe"]
+    top = header["y"] + header["height"] + VOX_GAP
+    return {"x": safe["x"], "y": top, "width": safe["width"], "height": caption["y"] - VOX_GAP - top}
+
+
+def vox_proof(plan: ExplainerPlan) -> dict:
+    """The VOX geometry proof: one board per aspect and each segment's text metrics on it (no front pictures)."""
+    aspects = {}
+    for aspect in plan.aspects:
+        spec, board = RULES["aspects"][aspect], vox_board(aspect)
+        records = []
+        for segment in plan.segments:
+            try:
+                text = text_metrics(segment.visual.model_dump(), board, aspect)
+            except ValidationError as exc:
+                raise ValidationError(f"Segment {segment.id} ({aspect}): {exc}") from exc
+            records.append({"id": segment.id, "board": board, "text": text})
+        aspects[aspect] = {"safe": spec["safe"], "caption": vox_caption(aspect), "header": spec["header"], "board": board,
+                           "segments": records}
+    return {"rules_version": RULES["version"], "style": "vox", "aspects": aspects}
+
+
+def _vox(snapshot: dict) -> bool:
+    return snapshot["source"]["project"].get("explainer_style") == "vox"
+
+
 async def validate_plan(snapshot: dict, plan: ExplainerPlan) -> dict:
     """Production approval gate: actual front pixels, complete layouts and safe paths."""
+    if plan is not None and _vox(snapshot):
+        return vox_proof(plan)
     if plan is None or any(aspect not in segment.layouts for segment in plan.segments for aspect in plan.aspects):
         raise ValidationError("Resolve the missing layouts for all selected aspects before approval")
     return prove(snapshot, plan, await front_metrics(snapshot))
@@ -262,6 +308,8 @@ async def arrange(snapshot: dict, plan: ExplainerPlan) -> tuple[list, dict]:
     The presenter keeps one stage side for the whole video (like the conversation video's characters); cards float on
     the other side and activity pictures fill the frame behind her.
     """
+    if _vox(snapshot):  # no presenter to place: the VOX board is fixed
+        return copy.deepcopy(plan.segments), vox_proof(plan)
     metrics = await front_metrics(snapshot)
     illustrations = {(item["id"], item["version"]): item for item in snapshot["source"]["illustrations"] if not item.get("missing")}
     segments = copy.deepcopy(plan.segments)

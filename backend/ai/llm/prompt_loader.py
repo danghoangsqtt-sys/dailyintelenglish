@@ -422,11 +422,11 @@ _storyboard_env = Environment(
 )
 
 
-async def render_explainer_prompt(**fields) -> str:
-    """Render the bounded Solo proposal/repair template outside the event loop."""
+async def render_explainer_prompt(*, vox: bool = False, **fields) -> str:
+    """Render the bounded Solo proposal/repair template outside the event loop (Phase 59: the VOX variant)."""
     def render() -> str:
         try:
-            return _storyboard_env.get_template("explainer.txt").render(**fields)
+            return _storyboard_env.get_template("explainer_vox.txt" if vox else "explainer.txt").render(**fields)
         except TemplateNotFound as exc:
             raise ValidationError("The Solo explainer prompt template is missing") from exc
     return await asyncio.to_thread(render)

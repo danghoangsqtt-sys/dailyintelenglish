@@ -24,6 +24,7 @@ export function ExplainerVisual({segment, proof, aspect, progress=1}: {segment: 
     {(segment as SoloSegment & {photoUrl?: string}).photoUrl ? <Img src={resolvedMedia((segment as SoloSegment & {photoUrl?: string}).photoUrl!)} style={{width:"100%",height:"100%",objectFit:visual.fit ?? "contain",borderRadius:20}} />
       : <div style={{padding:text.padding,fontSize:text.font}}>Import this illustration before approval.</div>}
   </div>;
+  if (visual.kind !== "text_card" && visual.kind !== "diagram") return null;  // the VOX kinds are drawn by VoxVisual
   return <div data-solo-visual={visual.kind} style={style}>
     {visual.title ? <div style={{fontSize:text.titleFont,lineHeight:1.25,fontWeight:750,marginBottom:text.gap}}>{visual.title}</div> : null}
     {visual.kind === "text_card" ? <>
