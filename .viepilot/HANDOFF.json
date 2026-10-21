@@ -541,6 +541,16 @@
       ],
       "summary": ".viepilot/phases/53-front-gesture-check/SUMMARY.md",
       "note": "Full pytest 1890 passed in 1032.11s (4 new tests); 15 approved front pictures still pass under the new rule. Desktop updated 2026-10-20 to build ab087f7b68b5 (source 456e2c1); report docs/operations/desktop-update-20261020.md. Owner real upload retry pending."
+    },
+    "54": {
+      "name": "Explainer proposal output format",
+      "status": "planned",
+      "tasks_done": 0,
+      "tasks_total": 1,
+      "plan": ".viepilot/phases/54-explainer-proposal-format/PLAN.md",
+      "requests": [
+        "BUG-050"
+      ]
     }
   },
   "key_decisions": [

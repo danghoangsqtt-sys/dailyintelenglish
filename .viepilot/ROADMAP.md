@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 54 — Explainer proposal output format (2026-10-21)
+
+Status: planned, execution authorized; 0/1 task. BUG-050: Solo **Propose plan** always fails with cloud AI because the prompt never states the JSON shape. [Plan](phases/54-explainer-proposal-format/PLAN.md).
+
 ## Phase 53 — Front gesture upload check (2026-10-20)
 
 Status: implemented_verified_pending_owner_review; 2/2 tasks. Full pytest 1890 passed in 1032.11s (4 new tests); 15 approved front pictures still pass under the new rule. BUG-049: count/think/wave front pictures always refused (422) by the head-zone silhouette check; reason shown off-screen. [Plan](phases/53-front-gesture-check/PLAN.md). Unblocks 49.10.
