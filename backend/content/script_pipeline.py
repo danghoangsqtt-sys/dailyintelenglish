@@ -31,7 +31,7 @@ from backend.core.constants import (
     SCRIPT_SECTION_CARRY_CAP, SCRIPT_SECTION_TARGET_MINUTES, SCRIPT_SECTION_WORD_TOLERANCE,
     SCRIPT_SPEAKER_BALANCE_MAX_SHARE, SCRIPT_SPEAKER_BALANCE_MIN_SHARE, SCRIPT_SPEAKER_ID_MATCH_MIN_RATIO,
 )
-from backend.core.exceptions import ProviderError, SchemaValidationError
+from backend.core.exceptions import ProviderError, SchemaValidationError, ValidationError
 from backend.ai.llm.prompt_loader import SCRIPT_PROMPTS_DIR, load_cefr_block, load_genre_block, load_presentation_block
 from backend.db.transactions import read_transaction, write_transaction
 from backend.ai.llm import ai_job_service
@@ -444,6 +444,7 @@ def validate_global(
     known_speaker_ids: set[str],
     num_speakers: int,
     topic: str,
+    vocabulary: list[str] | None = None,
 ) -> tuple[list[str], list[str]]:
     """Whole-episode hard checks (word budget, balance, duplicates, repetition)
     plus soft warnings (topic relevance). Returns `(hard_errors, warnings)`."""
@@ -495,7 +496,36 @@ def validate_global(
     if topic_keywords and not (topic_keywords & set(normalized_words)):
         warnings.append("no topic keyword found anywhere in the script (heuristic, may be a false positive)")
 
+    # Phase 57 (ENH-039): the owner's vocabulary list -- a word the script never uses is a warning, never a reject
+    missing = missing_vocabulary(vocabulary or [], [line.text for line in lines])
+    if missing:
+        warnings.append(f"vocabulary not used: {', '.join(missing)}")
+
     return hard_errors, warnings
+
+
+def missing_vocabulary(vocabulary: list[str], texts: list[str]) -> list[str]:
+    """The words or phrases of `vocabulary` that none of `texts` contains (case-insensitive, whole words)."""
+    spoken = " ".join(" ".join(re.findall(r"[a-z0-9']+", text.casefold())) for text in texts)
+    return [item for item in vocabulary if (pattern := _vocabulary_pattern(item)) and not pattern.search(spoken)]
+
+
+def _word_forms(word: str) -> str:
+    """A regex for a word and its simple inflections: plural, -ed and -ing (with the e-drop, y→i and a doubled last
+    consonant), e.g. "deliver" matches delivers/delivered/delivering, "study" studies/studied."""
+    base = re.escape(word)
+    if word.endswith("e"):
+        return f"{re.escape(word[:-1])}(?:e|es|ed|ing)"
+    if word.endswith("y") and len(word) > 2:
+        return f"(?:{base}|{base}s|{base}ing|{re.escape(word[:-1])}(?:ies|ied))"
+    return f"{base}(?:s|es|ed|ing|{re.escape(word[-1])}(?:ed|ing))?"
+
+
+def _vocabulary_pattern(item: str) -> "re.Pattern[str] | None":
+    words = re.findall(r"[a-z0-9']+", item.casefold())
+    if not words:
+        return None
+    return re.compile(r"(?<![a-z0-9'])" + r"\s+".join(_word_forms(word) for word in words) + r"(?![a-z0-9'])")
 
 
 def _has_budget_error(errors: list[str]) -> bool:
@@ -603,13 +633,90 @@ async def _render(template_name: str, **context: object) -> str:
     return await asyncio.to_thread(_render_sync, template_name, **context)
 
 
+def _source_context(project: dict) -> dict:
+    """Phase 57 (ENH-039): the owner's material for the outline and section prompts (empty for most projects)."""
+    from backend.content.source_service import parse_vocabulary
+
+    kind = project.get("source_kind") or ""
+    text = project.get("source_text") or ""
+    words: list[str] = []
+    if kind == "vocabulary" and text:
+        try:
+            words = parse_vocabulary(text)
+        except ValidationError:
+            kind = ""
+    return {"source_kind": kind if text else "", "source_text": text, "source_words": words}
+
+
+async def _vocabulary_repair(
+    router: "AIRouter", project: dict, outline: ScriptOutline, all_lines: list[SectionLineOut], target_words: int,
+    known_speaker_ids: set[str], num_speakers: int, db, job_id: str,
+) -> list[SectionLineOut]:
+    """Phase 57 (ENH-039): one repair round when the script misses words of the owner's vocabulary list.
+
+    The section whose objective names the most missing items (else the last one) is rewritten once to use them; the
+    result is kept only when it uses more of the list and the whole script still passes validation. Never fails the
+    job: words still missing are shown on the Step 2 bar."""
+    words = _source_context(project)["source_words"]
+    missing = missing_vocabulary(words, [line.text for line in all_lines]) if words else []
+    if not missing:
+        return all_lines
+    section_checkpoints = await _load_section_checkpoints(db, job_id)
+    ordered = [(spec, _SECTION_LINES_ADAPTER.validate_json(section_checkpoints[spec.index]["result_json"]))
+               for spec in outline.sections if spec.index in section_checkpoints]
+    if not ordered:
+        return all_lines
+
+    def mentions(spec: OutlineSectionSpec) -> int:
+        return len(missing) - len(missing_vocabulary(missing, [spec.objective]))
+
+    target_spec, target_lines = max(reversed(ordered), key=lambda item: mentions(item[0]))
+    measured = section_word_count(target_lines)
+    spec = target_spec.model_copy(update={"target_words": measured})
+    min_words = round(measured * (1 - SCRIPT_SECTION_WORD_TOLERANCE))
+    max_words = round(measured * (1 + SCRIPT_SECTION_WORD_TOLERANCE))
+    errors = [f"the owner's vocabulary list is not fully used: use each of these words or phrases naturally at least "
+              f"once in this section: {', '.join(missing)}",
+              f"keep this section's length between {min_words} and {max_words} words and keep its meaning and order"]
+    try:
+        new_lines, structural_errors, _budget_errors = await _repair_section(
+            router, project, spec, target_lines, errors, known_speaker_ids, db, job_id,
+            purpose="script_section_vocabulary_repair",
+        )
+    except ProviderError:
+        return all_lines
+    if structural_errors:
+        return all_lines
+    candidate = [line for each_spec, lines in ordered
+                 for line in (new_lines if each_spec.index == target_spec.index else lines)]
+    still_missing = missing_vocabulary(words, [line.text for line in candidate])
+    hard_errors, _warnings = validate_global(candidate, target_words, known_speaker_ids, num_speakers, project["topic"])
+    if hard_errors or len(still_missing) >= len(missing):
+        return all_lines
+    checkpoint = section_checkpoints[target_spec.index]
+    try:
+        metrics = json.loads(checkpoint["metrics_json"]) or {}
+    except (TypeError, ValueError):
+        metrics = {}
+    async with write_transaction(db):
+        await ai_job_service.save_checkpoint(
+            db, job_id, target_spec.index, "section", "valid",
+            compute_config_hash({"section": target_spec.model_dump()}, "section"),
+            result_json=_SECTION_LINES_ADAPTER.dump_json(new_lines).decode("utf-8"),
+            metrics_json=json.dumps({**(metrics if isinstance(metrics, dict) else {}),
+                                     "words": section_word_count(new_lines), "vocabulary_repaired": True}),
+            commit=False,
+        )
+    return candidate
+
+
 # --- provider calls --------------------------------------------------------------------
 
 
 async def _generate_outline(
     router: "AIRouter", project: dict, target_words: int, num_sections: int, db, job_id: str
 ) -> ScriptOutline:
-    solo = await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]))
+    solo = await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]), project.get("explainer_subject"))
     genre_instructions = solo or await load_genre_block(project["genre"])
     cefr_constraints = await load_cefr_block(project["cefr_level"])
     prompt = await _render(
@@ -626,6 +733,7 @@ async def _generate_outline(
         genre_instructions=genre_instructions,
         cefr_constraints=cefr_constraints,
         presentation_mode=project.get("presentation_mode", "classic"),
+        **_source_context(project),
     )
     result = await _call_router(
         db, job_id, router,
@@ -683,9 +791,10 @@ async def _generate_section(
         num_speakers=len(project["speakers"]),
         max_consecutive_lines=SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER,
         presentation_mode=project.get("presentation_mode", "classic"),
-        solo_instructions=await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"])),
+        solo_instructions=await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]), project.get("explainer_subject")),
         cefr_constraints=cefr_constraints,
         language_features=project["language_features"],
+        **_source_context(project),
     )
     result = await _call_router(
         db, job_id, router,
@@ -740,7 +849,7 @@ async def _repair_section(
         speakers=project["speakers"],
         errors=errors,
         previous_output=previous_output,
-        solo_instructions=await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"])),
+        solo_instructions=await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]), project.get("explainer_subject")),
         cefr_constraints=await load_cefr_block(project["cefr_level"]) if project.get("presentation_mode") == "solo_explainer" else "",
     )
     result = await _call_router(
@@ -1379,6 +1488,9 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
     if hard_errors:
         await _fail(db, job_id, "global_validation_failed", hard_errors)
         return
+
+    all_lines = await _vocabulary_repair(router, project, outline, all_lines, target_words, known_speaker_ids,
+                                         num_speakers, db, job_id)
 
     async with read_transaction():
         final_project = await project_service.get_project(db, project_id)

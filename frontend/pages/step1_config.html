@@ -296,6 +296,36 @@
       cursor: not-allowed;
       pointer-events: none;
     }
+    .type-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 6px 0 4px; }
+    .type-card { display: grid; gap: 4px; justify-items: start; padding: 14px 16px; border: 2px solid var(--border); border-radius: 12px;
+      background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+    .type-card:hover { border-color: var(--accent); }
+    .type-card[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .type-card strong { font-size: 16px; }
+    .type-card > span:last-child { color: var(--muted); font-size: 13px; }
+    .type-icon { font-size: 24px; }
+    .source-choice, .material-kinds, .source-use { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 4px 0 12px; font-size: 14px; }
+    .source-choice label { padding: 7px 12px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; }
+    .source-choice label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+    .source-use { display: grid; gap: 6px; }
+    .source-panel { margin: 0 0 14px; padding: 12px 14px; border: 1px dashed var(--border); border-radius: 10px; }
+    .ideas-ask { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ideas-ask input { flex: 1 1 260px; }
+    .ideas-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+    .idea-card { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+      color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+    .idea-card:hover, .idea-card[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+    .idea-card span { color: var(--muted); font-size: 12.5px; }
+    #source-text { width: 100%; box-sizing: border-box; margin: 6px 0; font: inherit; }
+    .material-tools { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    #source-image-label.is-disabled { opacity: .5; pointer-events: none; }
+    .subject-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 10px 0 4px; }
+    .subject-card { display: grid; gap: 2px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+      color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+    .subject-card[aria-checked="true"] { border: 2px solid var(--accent); background: var(--accent-soft); }
+    .subject-card span { color: var(--muted); font-size: 12px; }
+    @media (max-width: 760px) { .subject-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 640px) { .type-cards { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -331,11 +361,25 @@
     <div id="status-banner" role="status" hidden></div>
 
     <form id="config-form" novalidate>
-      <section class="card section-card">
-        <h2 class="section-title">Video format</h2>
-        <p class="section-hint">Choose how the episode addresses its audience.</p>
+      <section class="card section-card" id="video-type-section">
+        <h2 class="section-title">1. Video type</h2>
+        <p class="section-hint">What kind of video is this?</p>
+        <div id="type-cards" class="type-cards" role="radiogroup" aria-label="Video type">
+          <button type="button" class="type-card" role="radio" aria-checked="true" data-mode="classic">
+            <span class="type-icon" aria-hidden="true">👥</span><strong>Conversation</strong>
+            <span>Two characters talk through an everyday or work situation.</span></button>
+          <button type="button" class="type-card" role="radio" aria-checked="false" data-mode="solo_explainer">
+            <span class="type-icon" aria-hidden="true">🎤</span><strong>Solo presentation</strong>
+            <span>One presenter explains a field, a product or a subject.</span></button>
+        </div>
+        <div id="subject-cards" class="subject-cards" role="radiogroup" aria-label="What the presentation presents" hidden>
+          <button type="button" class="subject-card" role="radio" aria-checked="false" data-subject="field"><strong>💼 A field or job</strong><span>What people do, skills, a working day</span></button>
+          <button type="button" class="subject-card" role="radio" aria-checked="false" data-subject="product"><strong>📦 A product</strong><span>What it is, how to use it, pros and cons</span></button>
+          <button type="button" class="subject-card" role="radio" aria-checked="true" data-subject="topic"><strong>💡 A knowledge topic</strong><span>Why or how something works</span></button>
+          <button type="button" class="subject-card" role="radio" aria-checked="false" data-subject="howto"><strong>🧭 A how-to</strong><span>A goal reached step by step</span></button>
+        </div>
         <div class="field-row">
-          <div class="field">
+          <div class="field" hidden>
             <label class="field-label" for="presentation-mode">Presentation</label>
             <select id="presentation-mode" name="presentation_mode">
               <option value="classic">Conversation / classic</option>
@@ -353,12 +397,46 @@
           </div>
         </div>
       </section>
-      <section class="card section-card">
-        <h2 class="section-title">Basics</h2>
-        <p class="section-hint">What is this episode about?</p>
+      <section class="card section-card" id="content-section">
+        <h2 class="section-title">2. What is the video about?</h2>
+        <p class="section-hint">Type a topic, let the AI suggest one, or start from your own material.</p>
+        <div id="source-choice" class="source-choice" role="radiogroup" aria-label="Content source">
+          <label><input type="radio" name="content_source" value="topic" checked /> Type a topic</label>
+          <label><input type="radio" name="content_source" value="ideas" /> ✨ AI topic ideas</label>
+          <label><input type="radio" name="content_source" value="material" /> 📄 From your material</label>
+        </div>
+        <div id="ideas-panel" class="source-panel" hidden>
+          <div class="ideas-ask">
+            <input type="text" id="ideas-hint" maxlength="200" aria-label="Direction for the ideas"
+              placeholder="Optional direction, e.g. banking, a coffee machine, job interviews" />
+            <button type="button" id="ideas-btn" class="btn btn-primary">✨ Suggest 6 ideas</button>
+          </div>
+          <p id="ideas-status" class="section-hint" role="status"></p>
+          <div id="ideas-list" class="ideas-list"></div>
+        </div>
+        <div id="material-panel" class="source-panel" hidden>
+          <div class="material-kinds" role="radiogroup" aria-label="Material type">
+            <label><input type="radio" name="source_kind" value="dialogue" checked /> A dialogue</label>
+            <label><input type="radio" name="source_kind" value="vocabulary" /> A vocabulary list</label>
+          </div>
+          <label class="field-label" for="source-text" id="source-text-label">Paste the dialogue (one turn per line, e.g. “A: Hello!”)</label>
+          <textarea id="source-text" rows="8" maxlength="12000"></textarea>
+          <div class="material-tools">
+            <label id="source-image-label" class="btn btn-ghost btn-sm" for="source-image">📷 Read a photo</label>
+            <input type="file" id="source-image" accept="image/png,image/jpeg,image/webp" hidden />
+            <span id="source-image-status" class="section-hint" role="status"></span>
+          </div>
+          <p id="source-image-note" class="section-hint">The photo is sent to the cloud AI (Gemini) to read its text. Only the
+            text you keep is saved with the video, never the photo.</p>
+          <div id="source-use-row" class="source-use" role="radiogroup" aria-label="How to use the dialogue">
+            <label><input type="radio" name="source_use" value="rewrite" checked /> Let the AI rewrite it for the level, length and characters</label>
+            <label><input type="radio" name="source_use" value="verbatim" /> Use it word for word (Step 2 shows it as the script)</label>
+          </div>
+          <p id="source-hint" class="section-hint"></p>
+        </div>
         <div class="field-row">
           <div class="field">
-            <label class="field-label" for="name">Project Name</label>
+            <label class="field-label" for="name">Video name</label>
             <input type="text" id="name" name="name" placeholder="e.g. AI in Daily Life" maxlength="200" />
           </div>
           <div class="field">
@@ -450,6 +528,6 @@
   <script src="/static/js/step_guide.js"></script>
   <script src="/static/js/keyboard_shortcuts.js"></script>
   <script src="/static/js/shell.js"></script>
-  <script src="/static/js/step1_config.js"></script>
+  <script src="/static/js/step1_config.js?v=20261021-sources"></script>
 </body>
 </html>

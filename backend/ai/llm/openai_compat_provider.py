@@ -269,7 +269,11 @@ class OpenAICompatProvider:
             self._raise(ProviderAuthError("OpenAI-compatible API key is not configured"), None)
 
         prompt_hash = hashlib.sha256(request.prompt.encode("utf-8")).hexdigest()[:16]
-        payload: dict[str, object] = {"messages": [{"role": "user", "content": request.prompt}]}
+        content: object = request.prompt
+        if request.images:  # Phase 57: a vision request -- the prompt plus each picture as an image part
+            content = [{"type": "text", "text": request.prompt},
+                       *({"type": "image_url", "image_url": {"url": image}} for image in request.images)]
+        payload: dict[str, object] = {"messages": [{"role": "user", "content": content}]}
         # Task 18.9 (D30, Amendment G): the real Gate B-10 cause -- `reasoning` and the
         # `models` array are OpenRouter-specific (Nemotron reasons before answering;
         # OpenRouter's own server-side chain-fallback). Gemini's OpenAI-compat endpoint

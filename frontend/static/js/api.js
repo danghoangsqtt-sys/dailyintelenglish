@@ -80,6 +80,14 @@ const Api = (() => {
       request("/api/projects", { method: "POST", body: JSON.stringify(config) }),
     getProject: (id) => request(`/api/projects/${id}`),
     getProjectProgress: (id) => request(`/api/projects/${encodeURIComponent(id)}/progress`),
+    // Phase 57 (ENH-039): Step 1 help -- AI topic ideas and the text of a photographed dialogue or word list
+    suggestTopicIdeas: (body) => request("/api/projects/topic-ideas", json("POST", body)),
+    readSourceImage: (file, kind) => {
+      const form = new FormData();
+      form.set("kind", kind);
+      form.set("file", file, file.name);
+      return request("/api/projects/read-image", { method: "POST", body: form });
+    },
     updateProject: (id, patch) =>
       request(`/api/projects/${id}`, { method: "PUT", body: JSON.stringify(patch) }),
     deleteProject: (id) => request(`/api/projects/${id}`, { method: "DELETE" }),

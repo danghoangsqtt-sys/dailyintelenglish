@@ -34,6 +34,9 @@
     const state = el("div", { className: "step-guide-state" }, [
       el("strong", { textContent: step.done ? `✓ Step ${current} — ${step.label} is done` : `Step ${current} — ${step.label}` }),
       step.done ? null : el("span", { textContent: `To finish this step: ${step.todo}` }),
+      current === 2 && progress.missing_vocabulary?.length
+        ? el("span", { className: "step-guide-earlier",
+          textContent: `Words from your list not used yet: ${progress.missing_vocabulary.join(", ")}` }) : null,
       earlier ? el("a", { className: "step-guide-earlier", href: href(earlier),
         textContent: `Step ${earlier.number} — ${earlier.label} is not done yet` }) : null,
     ]);

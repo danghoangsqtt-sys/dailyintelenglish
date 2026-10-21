@@ -30,6 +30,7 @@ YOUTUBE_PROMPTS_DIR = PROMPTS_DIR / "youtube"
 STORYBOARD_PROMPTS_DIR = PROMPTS_DIR / "storyboard"
 MUSIC_PROMPTS_DIR = PROMPTS_DIR / "music"
 CHANNEL_PROMPTS_DIR = PROMPTS_DIR / "channel"
+SOURCE_PROMPTS_DIR = PROMPTS_DIR / "source"
 
 _env = Environment(
     loader=FileSystemLoader(str(SCRIPT_PROMPTS_DIR)),
@@ -80,7 +81,8 @@ def _read_cefr_block_sync(cefr_level: str) -> str:
     return (SCRIPT_PROMPTS_DIR / f"cefr_{normalized.lower()}.txt").read_text(encoding="utf-8")
 
 
-def _render_presentation_block_sync(presentation_mode: str, explainer_structure: str | None, num_speakers: int) -> str:
+def _render_presentation_block_sync(presentation_mode: str, explainer_structure: str | None, num_speakers: int,
+                                    explainer_subject: str | None = None) -> str:
     """Validate explicit Solo configuration, then render its finite structure template."""
     if presentation_mode == "classic":
         return ""
@@ -95,13 +97,18 @@ def _render_presentation_block_sync(presentation_mode: str, explainer_structure:
         template = _env.get_template("solo_explainer.txt")
     except TemplateNotFound as exc:
         raise ValidationError(f"Prompt template not found: {exc}") from exc
-    return template.render(explainer_structure=structure)
+    subject = explainer_subject or "topic"
+    if subject not in ("field", "product", "topic", "howto"):
+        raise ValidationError("Solo subject must be field, product, topic or howto")
+    return template.render(explainer_structure=structure, explainer_subject=subject)
 
 
 async def load_presentation_block(presentation_mode: str = "classic", explainer_structure: str | None = None,
-                                  num_speakers: int = 1) -> str:
-    """Load Solo instructions off the event loop; a classic project keeps its existing prompt rules."""
-    return await asyncio.to_thread(_render_presentation_block_sync, presentation_mode, explainer_structure, num_speakers)
+                                  num_speakers: int = 1, explainer_subject: str | None = None) -> str:
+    """Load Solo instructions off the event loop; a classic project keeps its existing prompt rules.
+    Phase 57 (ENH-039): `explainer_subject` adds what the presentation presents (field, product, topic, how-to)."""
+    return await asyncio.to_thread(_render_presentation_block_sync, presentation_mode, explainer_structure, num_speakers,
+                                   explainer_subject)
 
 
 def _render_script_prompt_sync(*, genre: str, cefr_level: str, **context: object) -> str:
@@ -109,7 +116,8 @@ def _render_script_prompt_sync(*, genre: str, cefr_level: str, **context: object
     genre_instructions = _read_genre_block_sync(genre)
     mode = context.pop("presentation_mode", "classic")
     structure = context.pop("explainer_structure", None)
-    solo = _render_presentation_block_sync(mode, structure, int(context.get("num_speakers", 0)))
+    subject = context.pop("explainer_subject", None)
+    solo = _render_presentation_block_sync(mode, structure, int(context.get("num_speakers", 0)), subject)
     if solo and len(context.get("speakers", [])) != 1:
         raise ValidationError("Solo Explainer requires exactly one presenter")
     genre_instructions = solo or genre_instructions
@@ -187,7 +195,7 @@ async def render_script_prompt(*, genre: str, cefr_level: str, **context: object
 
 
 def _render_learning_prompt_sync(
-    *, topic: str, cefr_level: str, genre: str, transcript_text: str
+    *, topic: str, cefr_level: str, genre: str, transcript_text: str, required_vocabulary: list[str] | None = None
 ) -> str:
     """Blocking: validate cefr_level/genre, then render learning_pack.txt. Runs in a worker thread."""
     if cefr_level.upper() not in CEFR_LEVELS:
@@ -200,12 +208,13 @@ def _render_learning_prompt_sync(
         raise ValidationError(f"Prompt template not found: {exc}") from exc
 
     return template.render(
-        topic=topic, cefr_level=cefr_level, genre=genre, transcript_text=transcript_text
+        topic=topic, cefr_level=cefr_level, genre=genre, transcript_text=transcript_text,
+        required_vocabulary=required_vocabulary or [],
     )
 
 
 async def render_learning_prompt(
-    *, topic: str, cefr_level: str, genre: str, transcript_text: str
+    *, topic: str, cefr_level: str, genre: str, transcript_text: str, required_vocabulary: list[str] | None = None
 ) -> str:
     """Render the Learning Content generation prompt for one project's script.
 
@@ -215,6 +224,8 @@ async def render_learning_prompt(
         genre: One of backend.core.constants.GENRES.
         transcript_text: The full script transcript (all lines joined) that
             the learning pack must be extracted from.
+        required_vocabulary: Phase 57 (ENH-039) -- items of the owner's vocabulary list that the transcript uses;
+            the pack must teach them first.
 
     Returns:
         The fully rendered prompt text.
@@ -229,6 +240,7 @@ async def render_learning_prompt(
         cefr_level=cefr_level,
         genre=genre,
         transcript_text=transcript_text,
+        required_vocabulary=required_vocabulary,
     )
 
 
@@ -498,3 +510,23 @@ def _render_channel_prompt_sync(**fields) -> str:
 async def render_channel_prompt(*, request) -> str:
     """Task 36.5 (D104): the AI channel map prompt from the owner's direction (`models.channel.PlanRequest`)."""
     return await asyncio.to_thread(_render_channel_prompt_sync, request=request)
+
+
+_source_env = Environment(
+    loader=FileSystemLoader(str(SOURCE_PROMPTS_DIR)),
+    undefined=StrictUndefined,
+    keep_trailing_newline=True,
+)
+
+
+def _render_source_prompt_sync(name: str, **fields) -> str:
+    try:
+        template = _source_env.get_template(name)
+    except TemplateNotFound as exc:
+        raise ValidationError(f"Prompt template not found: {exc}") from exc
+    return template.render(**fields)
+
+
+async def render_source_prompt(name: str, **fields) -> str:
+    """Phase 57 (ENH-039): Step 1 help prompts -- topic ideas and reading a photographed dialogue or word list."""
+    return await asyncio.to_thread(_render_source_prompt_sync, name, **fields)

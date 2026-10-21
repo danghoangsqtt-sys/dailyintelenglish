@@ -24,6 +24,24 @@ YouTube channel for Vietnamese learners.
 
 ## CEFR {{ cefr_level }} Constraints
 {{ cefr_constraints }}
+{% if source_kind | default('') == 'dialogue' %}
+
+## Source Material: the Owner's Dialogue
+Base the episode on this dialogue: keep its situation, its main ideas and its useful expressions, and plan the
+sections so they follow it. {% if presentation_mode | default('classic') == 'solo_explainer' %}The episode is a solo talk, so the presenter explains and retells what happens in it.{% else %}The characters above replace the people in it.{% endif %} Rewrite it for CEFR {{ cefr_level }} and the target length; do not copy it word for word.
+
+"""
+{{ source_text }}
+"""
+{% elif source_kind | default('') == 'vocabulary' %}
+
+## Source Material: Vocabulary to Teach
+The episode must use every one of these words or phrases naturally at least once. Choose a situation{% if presentation_mode | default('classic') == 'solo_explainer' %} or subject{% endif %} that fits them, and
+mention in each section's `objective` which of the words it will use, so that together the sections use them all:
+{% for word in source_words %}
+- {{ word }}
+{% endfor %}
+{% endif %}
 
 ## Output Format
 Return ONLY a JSON object (no markdown fences, no commentary) with this shape:

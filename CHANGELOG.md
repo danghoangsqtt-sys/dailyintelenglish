@@ -8,6 +8,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added — Phase 57 Step 1 video type, AI topic ideas, video from your material (2026-10-21)
+
+- Step 1 starts with two cards for the video type: **Conversation** (two characters) or **Solo presentation**, which has four kinds — a field or job, a product, a knowledge topic, a how-to — each with its own script guidance and default structure (ENH-039).
+- **✨ AI topic ideas**: six ideas from the video type, the level and an optional direction, avoiding the topics of recent projects; a click fills the name and topic.
+- **📄 From your material**: paste (or read from a photo with the cloud AI) a dialogue or a vocabulary list. A dialogue can be the script word for word (conversation videos) or rewritten by the AI for the level, length and characters; a vocabulary list (up to 80 items) is written into a new script that uses every word (one repair round for missed words; the Step 2 bar lists any still missing), and Step 3 teaches those words first. Photos go to the cloud AI only when cloud AI is allowed; only the approved text and the photo's hash are kept.
+
 ### Changed — Phase 56 guided start, Channel flow, Activity Library (2026-10-21)
 
 - The Dashboard opens with **Start here**: continue the latest unfinished project at its next step, create the next planned episode of the channel plan, or start a new video; the seven steps are listed below it (ENH-038).

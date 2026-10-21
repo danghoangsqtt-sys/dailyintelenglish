@@ -219,12 +219,24 @@ async def _render_repair_prompt(**context: object) -> str:
     return await asyncio.to_thread(_render_repair_prompt_sync, **context)
 
 
+def _required_vocabulary(project: dict, transcript: str) -> list[str]:
+    """Phase 57 (ENH-039): the items of the owner's vocabulary list that the script uses (they lead the pack)."""
+    from backend.content.script_pipeline import _source_context, missing_vocabulary
+
+    words = _source_context(project)["source_words"]
+    if not words:
+        return []
+    missing = set(missing_vocabulary(words, [transcript]))
+    return [word for word in words if word not in missing]
+
+
 # --- provider calls --------------------------------------------------------------------
 
 
 async def _generate_pack(router: "AIRouter", project: dict, transcript: str, db, job_id: str) -> LearningPackOut:
     prompt = await render_learning_prompt(
-        topic=project["topic"], cefr_level=project["cefr_level"], genre=project["genre"], transcript_text=transcript
+        topic=project["topic"], cefr_level=project["cefr_level"], genre=project["genre"], transcript_text=transcript,
+        required_vocabulary=_required_vocabulary(project, transcript),
     )
     result = await _call_router(
         db, job_id, router,

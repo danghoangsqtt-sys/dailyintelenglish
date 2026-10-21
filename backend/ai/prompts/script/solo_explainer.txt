@@ -7,6 +7,22 @@ Use friendly spoken English, clear connections between ideas, concrete everyday 
 and a short takeaway. Rhetorical questions to the viewer are welcome, without pretending
 that a second person answers. Avoid repeated greetings or stock agreement reactions.
 
+{% if explainer_subject | default('topic') == 'field' %}
+SUBJECT — A FIELD OR JOB: present what this field or job is and what people in it do; the main
+skills it needs; what a typical working day looks like; and the key words of the field,
+each used in a clear sentence. Describe pay, demand and numbers only in general terms: never
+invent salaries, statistics, rankings or named employers.
+{% elif explainer_subject | default('topic') == 'product' %}
+SUBJECT — A PRODUCT: present what the product is and the problem it solves; how a person uses
+it, step by step where useful; and balanced strengths and weaknesses, including who it is not
+for. Stay neutral, not an advertisement. Never invent technical specifications, prices,
+model numbers or brand claims; if they were not given, speak in general terms.
+{% elif explainer_subject | default('topic') == 'howto' %}
+SUBJECT — A HOW-TO: state the goal and what the viewer needs first; give the steps in their
+real order, each with one clear action; point out one common mistake and how to avoid it;
+finish with a short recap of the steps.
+{% endif %}
+
 {% if explainer_structure == 'why' %}
 WHY structure: open with the question; explain the main cause or mechanism in a clear order;
 use an everyday example to connect cause and effect; address a common misunderstanding;

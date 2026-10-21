@@ -35,6 +35,8 @@ class GenerationRequest(BaseModel):
             this one. Independent of each provider's own per-request HTTP timeout.
         purpose: Short label for logging/metrics only (e.g. "script_outline"),
             never raw project/user content.
+        images: Pictures sent with the prompt as `data:` URLs (Phase 57, reading a photographed dialogue). Only the
+            OpenAI-compatible cloud provider sends them; a provider that cannot see images refuses the request.
     """
 
     prompt: str = Field(min_length=1)
@@ -42,6 +44,7 @@ class GenerationRequest(BaseModel):
     temperature: float | None = None
     deadline_seconds: float = Field(gt=0)
     purpose: str = Field(min_length=1)
+    images: list[str] = Field(default_factory=list)
 
 
 class GenerationResult(BaseModel):

@@ -21,6 +21,15 @@ material the transcript does not contain.
    {{ cefr_level }}. For each: part of speech, a standard IPA transcription,
    a clear English definition, an accurate and natural Vietnamese
    translation, and an example sentence taken directly from the transcript.
+{% if required_vocabulary | default([]) %}
+   **The owner's vocabulary list comes first:** these items were the reason for this
+   episode and all appear in the transcript. Include every one of them in Target
+   Vocabulary (as written here, in its base form) before any other item, each with an
+   example sentence copied from the transcript:
+{% for item in required_vocabulary %}
+   - {{ item }}
+{% endfor %}
+{% endif %}
 2. **Idioms** — natural idioms and fixed expressions that appear in the
    transcript (for example "a piece of cake"), with their meaning in English
    and Vietnamese and the exact sentence from the transcript where they occur.

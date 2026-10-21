@@ -24,10 +24,15 @@ logger = logging.getLogger(__name__)
 _PROJECT_ARTIFACT_CATEGORIES = ("avatars", "audio", "video", "thumbnails", "tts_cache", "visuals", "explainer")
 _DOWNSTREAM_STATUSES = frozenset({"audio_generated", "video_generated", "complete"})
 
-_LIST_COLUMNS = "id, name, status, cefr_level, genre, accent, presentation_mode, explainer_structure, created_at, updated_at"
+_LIST_COLUMNS = (
+    "id, name, status, cefr_level, genre, accent, presentation_mode, explainer_structure, explainer_subject, created_at, "
+    "updated_at"
+)
 _DETAIL_COLUMNS = (
     "id, name, status, topic, cefr_level, duration_minutes, num_speakers, "
-    "genre, accent, presentation_mode, explainer_structure, language_features, config_json, created_at, updated_at"
+    "genre, accent, presentation_mode, explainer_structure, explainer_subject, source_kind, source_text, source_use, "
+    "source_image_sha, language_features, "
+    "config_json, created_at, updated_at"
 )
 
 
@@ -129,7 +134,7 @@ def _build_config_snapshot(scalars: dict, language_features: dict, speakers: lis
 async def _sync_speaker_config(db: aiosqlite.Connection, project_id: str) -> None:
     """Keep the reusable config snapshot in sync with pinned speaker settings."""
     project = await get_project(db, project_id)
-    keys = ("name", "topic", "cefr_level", "duration_minutes", "num_speakers", "genre", "accent", "presentation_mode", "explainer_structure")
+    keys = ("name", "topic", "cefr_level", "duration_minutes", "num_speakers", "genre", "accent", "presentation_mode", "explainer_structure", "explainer_subject")
     snapshot = _build_config_snapshot(
         {key: project[key] for key in keys}, project["language_features"], project["speakers"],
     )
@@ -194,6 +199,7 @@ async def create_project(
         "accent": config.accent,
         "presentation_mode": config.presentation_mode,
         "explainer_structure": config.explainer_structure,
+        "explainer_subject": config.explainer_subject,
     }
     language_features = config.language_features.model_dump()
     resolved_speakers = _resolve_speaker_speeds(config.speakers, config.cefr_level)
@@ -202,8 +208,9 @@ async def create_project(
     )
     await db.execute(
         "INSERT INTO projects (id, name, status, topic, cefr_level, duration_minutes, "
-        "num_speakers, genre, accent, presentation_mode, explainer_structure, language_features, config_json, created_at, updated_at) "
-        "VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "num_speakers, genre, accent, presentation_mode, explainer_structure, explainer_subject, source_kind, "
+        "source_text, source_use, source_image_sha, language_features, config_json, created_at, updated_at) "
+        "VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             project_id,
             scalars["name"],
@@ -215,6 +222,11 @@ async def create_project(
             scalars["accent"],
             scalars["presentation_mode"],
             scalars["explainer_structure"],
+            scalars["explainer_subject"],
+            config.source_kind,
+            config.source_text,
+            config.source_use,
+            config.source_image_sha,
             json.dumps(language_features),
             config_json,
             now,
@@ -405,7 +417,7 @@ async def update_project(
 
     merged_scalars = {
         key: patch_fields.get(key, current[key])
-        for key in ("name", "topic", "cefr_level", "duration_minutes", "num_speakers", "genre", "accent", "presentation_mode", "explainer_structure")
+        for key in ("name", "topic", "cefr_level", "duration_minutes", "num_speakers", "genre", "accent", "presentation_mode", "explainer_structure", "explainer_subject")
     }
     merged_language_features = patch_fields.get("language_features", current["language_features"])
     resolved_patch_speakers = (
@@ -427,13 +439,15 @@ async def update_project(
                                                  "speakers": merged_speakers})
     except SchemaError as exc:
         raise ValidationError(str(exc)) from exc
-    mode_changed = any(effective.model_dump()[key] != current[key] for key in ("presentation_mode", "explainer_structure"))
+    mode_changed = any(effective.model_dump()[key] != current[key] for key in ("presentation_mode", "explainer_structure", "explainer_subject"))
     if mode_changed and await has_script(db, project_id):
         raise ValidationError("Presentation mode and structure are read-only after a script exists. Create a new project.")
-    merged_scalars.update(presentation_mode=effective.presentation_mode, explainer_structure=effective.explainer_structure)
+    merged_scalars.update(presentation_mode=effective.presentation_mode, explainer_structure=effective.explainer_structure,
+                          explainer_subject=effective.explainer_subject)
     set_fields = {key: value for key, value in patch_fields.items() if key != "language_features"}
     if mode_changed:
-        set_fields.update(presentation_mode=effective.presentation_mode, explainer_structure=effective.explainer_structure)
+        set_fields.update(presentation_mode=effective.presentation_mode, explainer_structure=effective.explainer_structure,
+                          explainer_subject=effective.explainer_subject)
     if "language_features" in patch_fields:
         set_fields["language_features"] = json.dumps(patch_fields["language_features"])
     set_fields["config_json"] = _build_config_snapshot(
@@ -591,7 +605,7 @@ async def cleanup_project_artifacts(project_id: str) -> None:
 async def copy_settings(db: aiosqlite.Connection, project_id: str) -> dict:
     """Create a draft with the same mode, voices and cast pins; inherit no generated approvals."""
     project = await get_project(db, project_id)
-    keys = ("name", "topic", "cefr_level", "duration_minutes", "num_speakers", "genre", "accent", "presentation_mode", "explainer_structure")
+    keys = ("name", "topic", "cefr_level", "duration_minutes", "num_speakers", "genre", "accent", "presentation_mode", "explainer_structure", "explainer_subject")
     config = ScriptConfig.model_validate_json(_build_config_snapshot(
         {key: project[key] for key in keys}, project["language_features"], project["speakers"],
     ))

@@ -10,6 +10,10 @@ from backend.core.constants import (
 )
 
 
+# Phase 57 (ENH-039): the structure a Solo presentation starts with for each subject (the owner can change it)
+SUBJECT_STRUCTURES = {"field": "list", "product": "list", "topic": "why", "howto": "how"}
+
+
 class LanguageFeatures(BaseModel):
     """Toggles controlling which language phenomena the script prompt should target."""
 
@@ -118,10 +122,18 @@ class ScriptConfig(BaseModel):
     num_speakers: int = Field(default=2, ge=MIN_SPEAKERS, le=MAX_SPEAKERS)
     presentation_mode: Literal["classic", "solo_explainer"] = "classic"
     explainer_structure: Literal["why", "how", "list"] | None = None
+    # Phase 57 (ENH-039): what a Solo presentation presents; None for a conversation
+    explainer_subject: Literal["field", "product", "topic", "howto"] | None = None
     genre: str = "small_talk"
     accent: str = "american"
     language_features: LanguageFeatures = Field(default_factory=LanguageFeatures)
     speakers: list[SpeakerConfig] = Field(default_factory=list)
+    # Phase 57 (ENH-039): the owner's own material -- a dialogue or a vocabulary list -- and, for a dialogue in a
+    # conversation video, whether it is the script word for word or the AI rewrites it.
+    source_kind: Literal["", "dialogue", "vocabulary"] = ""
+    source_text: str = Field(default="", max_length=12000)
+    source_use: Literal["rewrite", "verbatim"] = "rewrite"
+    source_image_sha: str = Field(default="", pattern=r"^([0-9a-f]{64})?$")
 
     @field_validator("name")
     @classmethod
@@ -165,13 +177,41 @@ class ScriptConfig(BaseModel):
         if self.presentation_mode == "solo_explainer":
             if self.num_speakers != 1:
                 raise ValueError("Solo Explainer requires exactly one presenter.")
+            if self.explainer_subject is None:
+                self.explainer_subject = "topic"
             if self.explainer_structure is None:
-                self.explainer_structure = "why"
+                self.explainer_structure = SUBJECT_STRUCTURES[self.explainer_subject]
+        else:
+            self.explainer_subject = None
         if len(self.speakers) != self.num_speakers:
             raise ValueError(
                 f"speakers has {len(self.speakers)} entries but num_speakers={self.num_speakers}"
             )
+        self.source_text = self.source_text.strip() if self.source_kind else ""
+        if self.source_kind and not self.source_text:
+            raise ValueError("paste the dialogue or the vocabulary list, or choose another content source")
+        if self.source_use == "verbatim" and (self.source_kind != "dialogue" or self.presentation_mode != "classic"):
+            raise ValueError("only a dialogue in a conversation video can be used word for word")
+        if not self.source_kind:
+            self.source_use = "rewrite"
+            self.source_image_sha = ""
         return self
+
+
+class TopicIdeasRequest(BaseModel):
+    """Phase 57 (ENH-039): ask the AI for six video ideas."""
+
+    presentation_mode: Literal["classic", "solo_explainer"] = "classic"
+    explainer_subject: Literal["field", "product", "topic", "howto"] | None = None
+    cefr_level: str = "B1"
+    hint: str = Field(default="", max_length=200)
+
+    @field_validator("cefr_level")
+    @classmethod
+    def validate_cefr_level(cls, value: str) -> str:
+        if value not in CEFR_LEVELS:
+            raise ValueError(f"cefr_level must be one of {CEFR_LEVELS}")
+        return value
 
 
 class ProjectUpdate(BaseModel):
@@ -191,6 +231,7 @@ class ProjectUpdate(BaseModel):
     num_speakers: int | None = Field(default=None, ge=MIN_SPEAKERS, le=MAX_SPEAKERS)
     presentation_mode: Literal["classic", "solo_explainer"] | None = None
     explainer_structure: Literal["why", "how", "list"] | None = None
+    explainer_subject: Literal["field", "product", "topic", "howto"] | None = None
     genre: str | None = None
     accent: str | None = None
     language_features: LanguageFeatures | None = None

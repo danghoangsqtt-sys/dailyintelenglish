@@ -18,7 +18,8 @@ from urllib.parse import urlparse
 import httpx
 
 from backend.core.exceptions import (
-    ProviderError, ProviderInvalidResponseError, ProviderTimeoutError, ProviderUnavailableError,
+    ProviderError, ProviderInvalidResponseError, ProviderRequestRejectedError, ProviderTimeoutError,
+    ProviderUnavailableError,
 )
 from backend.ai.llm.contracts import GenerationRequest, GenerationResult
 from backend.ai.image.gpu_model_manager import get_gpu_manager
@@ -67,6 +68,8 @@ class OllamaProvider:
 
     async def generate(self, request: GenerationRequest) -> GenerationResult:
         """Make exactly one `/api/generate` call. No internal retry loop."""
+        if request.images:  # Phase 57: the local text model cannot read pictures
+            raise ProviderRequestRejectedError("The local AI cannot read pictures")
         prompt_hash = hashlib.sha256(request.prompt.encode("utf-8")).hexdigest()[:16]
         options: dict[str, object] = {"num_ctx": self._num_ctx}
         if request.temperature is not None:

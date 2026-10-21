@@ -1,0 +1,9 @@
+The attached picture is a photo or screenshot of English learning material: {% if kind == 'vocabulary' %}a list of words or phrases to learn{% else %}a dialogue between people{% endif %}.
+Transcribe the English text in the picture exactly as written. Do not translate, correct, summarise or add anything.
+{% if kind == 'vocabulary' %}Write one word or phrase per line. If the picture gives a meaning or translation next to a word, keep only the English word or phrase.
+{% else %}Write one turn per line in the form "Name: words" using the speaker labels shown in the picture (for example "A:" and "B:"). If the picture shows no labels, alternate "A:" and "B:" by turn.
+{% endif %}Skip page numbers, headings, exercise instructions and any text that is not part of the {% if kind == 'vocabulary' %}list{% else %}dialogue{% endif %}.
+If the picture contains no readable English {% if kind == 'vocabulary' %}words{% else %}dialogue{% endif %}, return an empty text.
+
+Return JSON only (no markdown fences, no commentary), exactly in this shape:
+{"text": "the transcribed lines, separated by \n"}

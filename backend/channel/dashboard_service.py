@@ -93,8 +93,26 @@ async def project_progress(db: aiosqlite.Connection, project_id: str) -> dict[st
               for key, label, page in STEPS if key != "published"]
     first_open = next((step for step in steps if not step["done"]), None)
     return {"project_id": project_id, "name": project["name"], "steps": steps,
-            "next_open": first_open["number"] if first_open else None}
+            "next_open": first_open["number"] if first_open else None,
+            "missing_vocabulary": await _missing_vocabulary(db, project_id) if project["script"] else []}
 
+
+async def _missing_vocabulary(db: aiosqlite.Connection, project_id: str) -> list[str]:
+    """Phase 57 (ENH-039): words of the owner's vocabulary list that the script does not use yet."""
+    from backend.content.script_pipeline import missing_vocabulary
+    from backend.content.source_service import parse_vocabulary
+    from backend.core.exceptions import ValidationError
+
+    cursor = await db.execute("SELECT source_kind, source_text FROM projects WHERE id = ?", (project_id,))
+    row = await cursor.fetchone()
+    if not row or row["source_kind"] != "vocabulary":
+        return []
+    try:
+        words = parse_vocabulary(row["source_text"])
+    except ValidationError:
+        return []
+    cursor = await db.execute("SELECT text FROM script_lines WHERE project_id = ?", (project_id,))
+    return missing_vocabulary(words, [line[0] for line in await cursor.fetchall()])
 
 
 async def _start(db: aiosqlite.Connection, projects: list[dict]) -> dict[str, Any]:

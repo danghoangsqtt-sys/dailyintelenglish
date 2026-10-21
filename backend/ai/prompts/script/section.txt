@@ -64,6 +64,24 @@ use a category at all is controlled ONLY by the list below:
 {% if not (language_features.values() | select | list) %}
 - None requested — use plain, level-appropriate language only.
 {% endif %}
+{% if source_kind | default('') == 'dialogue' %}
+
+## Source Material: the Owner's Dialogue
+The episode is based on this dialogue. Use the part of it that matches this section's objective, keeping its ideas and
+useful expressions, rewritten for CEFR {{ cefr_level }} and the speakers above; do not copy it word for word.
+
+"""
+{{ source_text }}
+"""
+{% elif source_kind | default('') == 'vocabulary' %}
+
+## Source Material: Vocabulary to Teach
+Use naturally, in this section, the words or phrases of this list that the objective names (or that fit it); never
+force a word into a sentence where it sounds wrong:
+{% for word in source_words %}
+- {{ word }}
+{% endfor %}
+{% endif %}
 
 ## Rules
 1. Stay on topic: every line must relate to "{{ topic }}".

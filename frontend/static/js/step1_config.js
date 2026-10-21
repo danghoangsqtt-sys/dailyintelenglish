@@ -59,11 +59,13 @@
     duration: DURATION_PRESETS[1],
     customDurationActive: false,
     genre: GENRES[7].value, // small_talk
-    presentationMode: "classic", explainerStructure: "why",
+    presentationMode: "classic", explainerStructure: "why", explainerSubject: "topic",
     accent: ACCENTS[0].value, // american
     speakers: [],
     profiles: [],  // Phase 33: the character profiles a speaker can be (Api.listProfiles)
     languageFeatures: Object.fromEntries(LANGUAGE_FEATURES.map((f) => [f.key, f.default])),
+    // Phase 57 (ENH-039): where the content comes from -- "topic", "ideas" or "material"
+    contentSource: "topic", sourceKind: "dialogue", sourceUse: "rewrite", savedSource: null, sourceImageSha: "",
   };
 
   const projectId = new URLSearchParams(window.location.search).get("project_id");
@@ -349,6 +351,7 @@
     state.genre = project.genre || state.genre;
     state.presentationMode = project.presentation_mode || "classic";
     state.explainerStructure = project.explainer_structure || "why";
+    state.explainerSubject = project.explainer_subject || "topic";
     state.accent = project.accent || state.accent;
     state.languageFeatures = Object.fromEntries(
       LANGUAGE_FEATURES.map((feature) => [
@@ -382,6 +385,173 @@
     const count = document.getElementById("num-speakers");
     count.disabled = solo;
     if (solo) { count.value = 1; syncSpeakersToCount(1); renderSpeakerCards(); }
+    document.querySelectorAll("#type-cards .type-card").forEach((card) => {
+      card.setAttribute("aria-checked", String(card.dataset.mode === state.presentationMode));
+    });
+    document.getElementById("subject-cards").hidden = !solo;
+    document.querySelectorAll("#subject-cards .subject-card").forEach((card) => {
+      card.setAttribute("aria-checked", String(card.dataset.subject === state.explainerSubject));
+    });
+    renderSource();
+  }
+
+  // --- Phase 57 (ENH-039): content source -- a typed topic, AI ideas or the owner's material ---
+  function renderSource() {
+    const material = state.contentSource === "material";
+    document.getElementById("ideas-panel").hidden = state.contentSource !== "ideas";
+    document.getElementById("material-panel").hidden = !material;
+    const vocabulary = state.sourceKind === "vocabulary";
+    document.getElementById("source-text-label").textContent = vocabulary
+      ? "Paste the words or phrases to learn (one per line; “word - meaning” keeps only the word)"
+      : "Paste the dialogue (one turn per line, e.g. “A: Hello!”)";
+    const verbatimAllowed = !vocabulary && state.presentationMode === "classic";
+    if (!verbatimAllowed) state.sourceUse = "rewrite";
+    document.getElementById("source-use-row").hidden = !verbatimAllowed;
+    document.querySelectorAll("input[name=source_use]").forEach((input) => { input.checked = input.value === state.sourceUse; });
+    document.getElementById("source-hint").textContent = vocabulary
+      ? "The AI writes a new script that uses every word on the list."
+      : state.presentationMode === "solo_explainer"
+        ? "The AI turns the dialogue into a talk by your presenter."
+        : state.sourceUse === "verbatim"
+          ? "Labels become the characters in order (the first label is Character 1). Duration follows the dialogue's length."
+          : "The AI keeps the situation and useful expressions and rewrites it for the level, length and characters.";
+  }
+
+  function ideaCard(idea) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "idea-card";
+    card.setAttribute("aria-pressed", "false");
+    const title = document.createElement("strong");
+    title.textContent = idea.name;
+    const topic = document.createElement("span");
+    topic.textContent = idea.topic;
+    const practise = document.createElement("span");
+    practise.textContent = idea.description;
+    card.append(title, topic, practise);
+    card.addEventListener("click", () => {
+      document.getElementById("name").value = idea.name;
+      document.getElementById("topic").value = idea.topic;
+      document.querySelectorAll("#ideas-list .idea-card").forEach((other) => other.setAttribute("aria-pressed", String(other === card)));
+      document.getElementById("ideas-status").textContent = "Filled in below — edit the name and topic if you like.";
+    });
+    return card;
+  }
+
+  async function suggestIdeas() {
+    const button = document.getElementById("ideas-btn");
+    const status = document.getElementById("ideas-status");
+    button.disabled = true;
+    status.textContent = "The AI is thinking of ideas… (up to a minute)";
+    try {
+      const result = await Api.suggestTopicIdeas({
+        presentation_mode: state.presentationMode, cefr_level: state.cefr,
+        hint: document.getElementById("ideas-hint").value.trim(),
+        ...(state.presentationMode === "solo_explainer" ? { explainer_subject: state.explainerSubject } : {}),
+      });
+      document.getElementById("ideas-list").replaceChildren(...result.ideas.map(ideaCard));
+      status.textContent = "Click an idea to use it.";
+    } catch (error) {
+      status.textContent = error.message || "The AI could not suggest ideas; try again.";
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function readPhoto(event) {
+    const file = event.target.files[0];
+    event.target.value = "";
+    if (!file) return;
+    const status = document.getElementById("source-image-status");
+    status.textContent = "Reading the picture…";
+    try {
+      const result = await Api.readSourceImage(file, state.sourceKind);
+      state.sourceImageSha = result.image_sha || "";
+      const box = document.getElementById("source-text");
+      box.value = box.value.trim() ? `${box.value.trim()}\n${result.text}` : result.text;
+      status.textContent = "Done — check the text and correct it if needed.";
+    } catch (error) {
+      status.textContent = error.message || "The picture could not be read.";
+    }
+  }
+
+  // Phase 57 (ENH-039): the structure each kind of presentation starts with; the owner can still change it
+  const SUBJECT_STRUCTURES = { field: "list", product: "list", topic: "why", howto: "how" };
+
+  function setupSources() {
+    document.querySelectorAll("#type-cards .type-card").forEach((card) => card.addEventListener("click", () => {
+      state.presentationMode = card.dataset.mode;
+      renderPresentation();
+    }));
+    document.querySelectorAll("#subject-cards .subject-card").forEach((card) => card.addEventListener("click", () => {
+      state.explainerSubject = card.dataset.subject;
+      state.explainerStructure = SUBJECT_STRUCTURES[state.explainerSubject];
+      renderPresentation();
+    }));
+    document.querySelectorAll("input[name=content_source]").forEach((input) => input.addEventListener("change", () => {
+      state.contentSource = input.value;
+      renderSource();
+    }));
+    document.querySelectorAll("input[name=source_kind]").forEach((input) => input.addEventListener("change", () => {
+      state.sourceKind = input.value;
+      renderSource();
+    }));
+    document.querySelectorAll("input[name=source_use]").forEach((input) => input.addEventListener("change", () => {
+      state.sourceUse = input.value;
+      renderSource();
+    }));
+    document.getElementById("ideas-btn").addEventListener("click", suggestIdeas);
+    document.getElementById("source-image").addEventListener("change", readPhoto);
+    Api.getSettings().then((ai) => {
+      if (ai.allow_cloud && ai.effective_mode !== "local") return;
+      disablePhoto(ai.allow_cloud
+        ? "Reading a photo needs the cloud AI: choose a cloud mode in Settings → AI, or paste the text."
+        : "Reading photos is off because cloud AI is turned off on this computer (DIE_AI_ALLOW_CLOUD=false). Paste the text instead.");
+    }).catch(() => { /* the button stays; the server still refuses when cloud AI is off */ });
+  }
+
+  function disablePhoto(reason) {
+    document.getElementById("source-image").disabled = true;
+    document.getElementById("source-image-label").classList.add("is-disabled");
+    document.getElementById("source-image-label").setAttribute("aria-disabled", "true");
+    document.getElementById("source-image-note").textContent = reason;
+  }
+
+  function showSavedSource(project) {
+    // the material belongs to the project once it is created: shown, never edited here
+    if (!project.source_kind) {
+      document.getElementById("source-choice").hidden = true;
+      return;
+    }
+    state.contentSource = "material";
+    state.sourceKind = project.source_kind;
+    state.sourceUse = project.source_use || "rewrite";
+    state.savedSource = project.source_kind;
+    document.querySelector(`input[name=content_source][value=material]`).checked = true;
+    document.querySelector(`input[name=source_kind][value=${project.source_kind}]`).checked = true;
+    document.getElementById("source-text").value = project.source_text || "";
+    document.getElementById("material-panel").querySelectorAll("input, textarea, label.btn").forEach((control) => {
+      control.disabled = true;
+      control.classList.add("is-disabled");
+    });
+    document.getElementById("source-choice").querySelectorAll("input").forEach((input) => { input.disabled = true; });
+    renderSource();
+  }
+
+  function proposeTopicFromMaterial() {
+    // a topic is still required; with material and no topic, the material's first line proposes one
+    if (state.contentSource !== "material") return;
+    const text = document.getElementById("source-text").value.trim();
+    if (!text) return;
+    const first = text.split(/\n/)[0].replace(/^[^:]{1,30}:\s*/, "").trim().slice(0, 120);
+    const topic = document.getElementById("topic");
+    const name = document.getElementById("name");
+    if (!topic.value.trim()) {
+      topic.value = state.sourceKind === "vocabulary"
+        ? `Using these words: ${text.split(/[\n,;]+/).map((row) => row.split(/\s+[-–—=]\s+|\s*:\s+|\t/)[0].trim()).filter(Boolean).slice(0, 6).join(", ")}`
+        : first;
+    }
+    if (!name.value.trim()) name.value = topic.value.slice(0, 80);
   }
 
   function setupPresentation() {
@@ -400,6 +570,7 @@
     renderDurationPresets();
     setupSpeakers();
     setupPresentation();
+    setupSources();
     renderChipGrid("genre-grid", GENRES, state.genre, (value) => {
       state.genre = value;
     });
@@ -464,6 +635,11 @@
   // --- Validation + submit ---
   function validate() {
     const errors = [];
+    if (pageMode === "create") proposeTopicFromMaterial();
+    if (pageMode === "create" && state.contentSource === "material" && !document.getElementById("source-text").value.trim()) {
+      errors.push(state.sourceKind === "vocabulary" ? "Paste the vocabulary list (or read it from a photo)."
+        : "Paste the dialogue (or read it from a photo).");
+    }
     const name = document.getElementById("name").value.trim();
     if (!name) errors.push("Project name is required.");
 
@@ -491,10 +667,15 @@
       duration_minutes: state.duration,
       num_speakers: state.speakers.length,
       presentation_mode: state.presentationMode,
-      ...(state.presentationMode === "solo_explainer" ? {explainer_structure: state.explainerStructure} : {}),
+      ...(state.presentationMode === "solo_explainer"
+        ? { explainer_structure: state.explainerStructure, explainer_subject: state.explainerSubject } : {}),
       genre: state.genre,
       accent: state.accent,
       language_features: { ...state.languageFeatures },
+      ...(pageMode === "create" && state.contentSource === "material" ? {
+        source_kind: state.sourceKind, source_text: document.getElementById("source-text").value.trim(),
+        source_use: state.sourceUse, source_image_sha: state.sourceImageSha,
+      } : {}),
       speakers: state.speakers.map((speaker) => ({
         name: speaker.name.trim(),
         gender: speaker.gender,
@@ -549,7 +730,7 @@
       showError(
         pageMode === "edit"
           ? "We couldn't save the project. Please check your input and try again."
-          : "We couldn't create the project. Please check your input and try again."
+          : `We couldn't create the project. ${err.status === 422 && err.message ? err.message : "Please check your input and try again."}`
       );
       isSubmitting = false;
       setLoading(false);
@@ -595,6 +776,7 @@
         if (state.speakers[member.speaker_index]) state.speakers[member.speaker_index].character_id = member.character_id;
       });
       renderForm();
+      showSavedSource(project);
       if (project.status === "draft") {
         configureEditMode();
       } else {

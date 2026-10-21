@@ -105,6 +105,7 @@ async def generate_script(
         language_features=config["language_features"],
         presentation_mode=config.get("presentation_mode", "classic"),
         explainer_structure=config.get("explainer_structure"),
+        explainer_subject=config.get("explainer_subject"),
     )
 
     router = router or build_ai_router_from_settings()

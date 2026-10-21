@@ -3,7 +3,7 @@
 import time
 
 import aiosqlite
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from backend.core.responses import ok
 from backend.core.exceptions import ConflictError, NotFoundError, ValidationError
@@ -11,10 +11,10 @@ from backend.core.voice import profile_voice_settings, resolve_voice_id, voice_r
 from backend.ai.tts import voice_catalog_service
 from backend.db.database import get_db
 from backend.db.transactions import read_transaction, write_transaction
-from backend.schemas.project import ProjectUpdate, ScriptConfig, SpeakerUpdate
+from backend.schemas.project import ProjectUpdate, ScriptConfig, SpeakerUpdate, TopicIdeasRequest
 from backend.schemas.script import RegenerateLineRequest, ScriptUpdate
 from backend.channel import dashboard_service
-from backend.content import export_service, project_service, script_service
+from backend.content import export_service, project_service, script_service, source_service
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -75,7 +75,37 @@ async def create_project(
             await voice_catalog_service.require_voice(speaker.voice_id)
     async with write_transaction(db):
         project = await project_service.create_project(db, config, commit=False)
+        if config.source_use == "verbatim":
+            # Phase 57 (ENH-039): the owner's dialogue word for word is the script; Step 2 can still edit it
+            lines = source_service.parse_dialogue(config.source_text, project["speakers"])
+            await script_service.save_script(db, project["id"], lines, commit=False)
+            await _sync_status_after_script_change(db, project["id"])
+    if config.source_use == "verbatim":
+        async with read_transaction():
+            project = await project_service.get_project(db, project["id"])
     return ok(project, started_at=started_at)
+
+
+@router.post("/topic-ideas")
+async def topic_ideas(body: TopicIdeasRequest, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 57 (ENH-039): six AI ideas for a new video from its type, level and hint, avoiding the topics of the 60
+    most recent projects (nothing is saved)."""
+    async with read_transaction():
+        cursor = await db.execute(f"SELECT topic FROM projects ORDER BY updated_at DESC LIMIT {source_service.AVOID_MAX}")
+        recent = [row[0] for row in await cursor.fetchall()]
+    ideas = await source_service.topic_ideas(body.presentation_mode, body.cefr_level, body.hint,
+                                             body.explainer_subject, recent)
+    return ok({"ideas": ideas})
+
+
+@router.post("/read-image")
+async def read_image(kind: str = Form("dialogue"), file: UploadFile = File(...)) -> dict:
+    """Phase 57 (ENH-039): the English text of a photographed dialogue or word list, for Step 1 to edit.
+
+    The photo goes to the cloud AI and is not kept; Step 1 saves only the approved text and this SHA-256."""
+    content = await file.read(source_service.IMAGE_MAX_BYTES + 1)
+    text = await source_service.read_image(content, kind)
+    return ok({"text": text, "image_sha": source_service.image_sha(content)})
 
 
 @router.post("/{project_id}/copy-settings")

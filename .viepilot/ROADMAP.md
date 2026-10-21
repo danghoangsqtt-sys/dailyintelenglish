@@ -2,7 +2,7 @@
 
 ## Phase 57 — Step 1 video type, AI topic ideas, video from your material (2026-10-21)
 
-Status: planned, execution authorized; 0/6 tasks. ENH-039: two video-type cards on Step 1, six AI topic ideas, a video made from a pasted or photographed dialogue (word for word or rewritten) or a vocabulary list. [Plan](phases/57-step1-sources/PLAN.md).
+Status: implemented_verified_pending_owner_review; 6/6 tasks (incl. Amendment A: Solo sub-types, avoid list, vocabulary repair, photo privacy). Full pytest 1935 passed. ENH-039: two video-type cards on Step 1, six AI topic ideas, a video made from a pasted or photographed dialogue (word for word or rewritten) or a vocabulary list. [Plan](phases/57-step1-sources/PLAN.md).
 
 ## Phase 56 — Guided start, Channel flow, Activity Library (2026-10-21)
 
