@@ -1005,7 +1005,7 @@ async def test_pipeline_last_section_sign_off_instruction_is_conditional_on_is_l
     section1_prompt = gemini.calls[1].prompt
     section2_prompt = gemini.calls[2].prompt
 
-    sign_off_fragment = "end it with a short spoken sign-off"
+    sign_off_fragment = "END with a short, warm closing spoken to the viewers"
     rule5_exemption_fragment = "The one exception is the final section's sign-off"
 
     assert sign_off_fragment not in section1_prompt, "sign-off instruction must not appear for a non-last section"

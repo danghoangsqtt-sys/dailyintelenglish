@@ -17,13 +17,19 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
 - What happened just before this section: {{ prior_summary }}
   Continue naturally from this — do not repeat it, do not restart the topic.
 {% else %}
-- This is the FIRST section of the episode — open naturally (a brief intro is
-  fine here, but do not pad with unrelated small talk).
+- This is the FIRST section of the episode. It MUST open with a short welcome, in
+  this order: greet the viewers warmly and welcome them to Daily Beyond English;
+{% if num_speakers == 1 %}  the speaker briefly says who they are;
+{% else %}  the speakers greet each other and say their names;
+{% endif %}  then one or two sentences preview today's topic and what the viewer will
+  learn. Keep this opening to a few short lines, then move into the topic (no
+  unrelated small talk).
 {% endif %}
 {% if is_last_section %}
-- This is the LAST section of the episode — close it out naturally (a brief
-  outro/wrap-up is appropriate here), and end it with a short spoken sign-off
-  to the audience, not just a final piece of advice or a call to action alone.
+- This is the LAST section of the episode — close it out naturally with a brief
+  wrap-up, and END with a short, warm closing spoken to the viewers: thank them
+  for watching, invite them to like, subscribe and leave a comment, and say
+  goodbye / see you next time. Keep this closing to a few short lines.
 {% endif %}
 {% if avoid_phrases %}
 

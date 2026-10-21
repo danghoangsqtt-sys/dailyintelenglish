@@ -2,7 +2,7 @@
 
 ## Phase 60 — Greeting, topic preview, thanks + subscribe, smiles (2026-10-22)
 
-Status: planned, execution authorized; 0/3 tasks. ENH-042: every script opens by greeting the viewers and previewing today's topic and ends with thanks for watching and an invitation to subscribe; characters smile (conversation) or wave (Solo) there. [Plan](phases/60-greeting-signoff/PLAN.md).
+Status: implemented_verified_pending_owner_review; 3/3 tasks. ENH-042: every script opens by greeting the viewers and previewing today's topic and ends with thanks for watching and an invitation to subscribe; characters smile (conversation) or wave (Solo) there. [Plan](phases/60-greeting-signoff/PLAN.md).
 
 ## Phase 59 — VOX explainer video (2026-10-22)
 

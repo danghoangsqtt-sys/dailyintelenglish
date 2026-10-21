@@ -29,6 +29,7 @@ Do not invent references or pretend that factual claims were independently verif
 
 Choose a few meaningful gesture anchors (talk, point-left/right, emphasize, count-1/2/3, think, wave, calm).
 Gesture anchors must point to actual spoken tokens inside that segment. Include neutral rests; avoid a gesture at every word.
+The first segment's greeting and the last segment's goodbye each get a "wave" gesture anchored at the greeting/goodbye words.
 Pointing directions mean the viewer's left/right. Do not propose layout coordinates; the geometry engine handles placement.
 
 SCRIPT AND EXACT SPOKEN TOKENS:

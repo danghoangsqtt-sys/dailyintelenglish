@@ -8,6 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Changed — Phase 60 greeting and sign-off (2026-10-22)
+
+- Every new script opens by greeting the viewers, welcoming them to Daily Beyond English, saying who is speaking and previewing today's topic, and ends by thanking them for watching and inviting them to like, subscribe and comment (conversation, Solo and VOX) (ENH-042).
+- The storyboard gives the opening and closing beats a smiling expression; a Solo presenter waves at the greeting and the goodbye.
+
 ### Added — Phase 58 app language, Character / Music / Settings rework (2026-10-22)
 
 - The interface can be shown in **Tiếng Việt** or English (English by default): the EN | VI switch in the top bar or Settings → General. Every interface text is translated; video content, names and the owner's own text stay as they are (ENH-040).

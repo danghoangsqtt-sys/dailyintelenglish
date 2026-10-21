@@ -333,3 +333,32 @@ def test_one_vocabulary_repair_round_is_kept_only_when_it_helps(monkeypatch):
     saved.clear()
     monkeypatch.setattr(script_pipeline, "validate_global", lambda *args, **kwargs: (["too long"], []))
     assert run() == first + second and saved == []  # a repair that breaks the script is thrown away
+
+
+# ---------------------------------------------------------------------------- Phase 60 (ENH-042)
+
+
+@pytest.mark.parametrize("first,last", [(True, False), (False, True)])
+def test_the_first_section_welcomes_and_the_last_one_thanks_the_viewers(first, last):
+    context = {"prior_summary": "" if first else "They talked about coffee.", "is_last_section": last}
+    from backend.content import script_pipeline as pipeline
+
+    base = dict(topic="Cafe talk", genre="small_talk", cefr_level="B1", outline_title="T", section_index=1, section_count=3,
+                objective="o", min_words=1, max_words=2, avoid_phrases=[], max_consecutive_lines=3, solo_instructions="",
+                cefr_constraints="", language_features={}, presentation_mode="classic", num_speakers=2,
+                speakers=[{**s, "gender": "female", "accent": "american"} for s in SPEAKERS])
+    prompt = asyncio.run(pipeline._render("section.txt", **base, **context, **pipeline._source_context({})))
+    assert ("welcome them to Daily Beyond English" in prompt and "say their names" in prompt
+            and "preview today's topic" in prompt) == first
+    assert ("thank them" in prompt and "subscribe" in prompt and "see you next time" in prompt) == last
+
+
+def test_solo_and_storyboard_prompts_ask_for_the_welcome_the_thanks_and_a_smile():
+    from backend.ai.llm import prompt_loader
+    from backend.core.paths import PROMPTS_DIR
+
+    solo = asyncio.run(prompt_loader.load_presentation_block("solo_explainer", "why", 1, "topic"))
+    assert "welcoming them to Daily Beyond" in solo and "invite\nthem to like, subscribe" in solo
+    storyboard = (PROMPTS_DIR / "storyboard" / "storyboard.txt").read_text(encoding="utf-8")
+    assert "closing thanks/goodbye always use smile" in storyboard
+    assert '"wave" gesture' in (PROMPTS_DIR / "storyboard" / "explainer.txt").read_text(encoding="utf-8")

@@ -43,6 +43,8 @@ Rules:
 6. action: what the on-screen people are doing, at most 8 plain words, visual and simple
    (for example "pointing at a city map", "drinking coffee"). Use "" when they just talk.
 7. expression: one of calm, smile, laugh, surprised, thinking, worried, serious -- matching the mood.
+   The beat with the opening welcome and the beat with the closing thanks/goodbye always use smile
+   (or laugh when the line is playful): the characters greet and say goodbye with a happy face.
 8. Pictures cost GPU time and the total must be at most {{ image_cap }}. Each place used costs
    {{ framing }} picture and each insert 1; actions inside a place cost nothing extra.
    So use at most {{ max_places }} places in total. Count before answering, for example:

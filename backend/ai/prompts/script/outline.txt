@@ -13,6 +13,9 @@ YouTube channel for Vietnamese learners.
 - Split the episode into exactly {{ num_sections }} sections of roughly equal
   length, each covering one clear step or sub-topic that builds toward the whole
   episode. The total of every section's `target_words` MUST equal {{ target_words }}.
+- The first section's objective starts with welcoming the viewers to Daily Beyond
+  English and previewing today's topic; the last section's objective ends with
+  thanking the viewers for watching and inviting them to subscribe.
 
 ## Speakers
 {% for speaker in speakers %}
