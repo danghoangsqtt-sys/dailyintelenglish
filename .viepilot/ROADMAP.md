@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 71 — Lite edition for low-end machines (2026-10-22)
+
+Status: planned; 0/5 tasks. ENH-053: a Lite package and auto-detection hide the four local AI picture features on machines that cannot run them; a Settings switch. [Plan](phases/71-lite-edition/PLAN.md).
+
 ## Phase 70 — Library package, clean-up and release 1.5.0 (2026-10-22)
 
 Status: implemented_verified; 5/5 tasks; released as 1.5.0. ENH-052: export/import the characters and libraries between machines, clean the workspace of test data, release 1.5.0 with a hand-over folder for the laptop. [Plan](phases/70-release-handoff/PLAN.md).
