@@ -15,7 +15,8 @@ from tests.test_visuals_project_api import client, data  # noqa: F401
 # ---------------------------------------------------------------- rules
 
 def test_the_window_runs_across_midnight_and_a_full_day():
-    at = lambda hour, minute=0: datetime(2026, 10, 22, hour, minute)
+    def at(hour, minute=0):
+        return datetime(2026, 10, 22, hour, minute)
     assert rules.in_window(at(23, 30), "23:00", "06:00") and rules.in_window(at(5, 59), "23:00", "06:00")
     assert not rules.in_window(at(6), "23:00", "06:00") and not rules.in_window(at(12), "23:00", "06:00")
     assert rules.in_window(at(13), "09:00", "17:00") and not rules.in_window(at(8, 59), "09:00", "17:00")
@@ -242,7 +243,7 @@ class FakeProducer:
     outcomes: dict = {}
     made: list = []
 
-    def __init__(self, client, sleep=None):
+    def __init__(self, step_client, sleep=None):
         pass
 
     async def produce(self, episode, on_step):
