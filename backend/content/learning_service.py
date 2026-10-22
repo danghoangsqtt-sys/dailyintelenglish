@@ -90,6 +90,7 @@ async def generate_learning_pack(
         cefr_level=config["cefr_level"],
         genre=config["genre"],
         transcript_text=transcript_text,
+        audience_line=__import__("backend.content.audience", fromlist=["line"]).line(config.get("audience_effective")),
     )
 
     router = router or build_ai_router_from_settings()

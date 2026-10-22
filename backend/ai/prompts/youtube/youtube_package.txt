@@ -1,5 +1,9 @@
 You are writing YouTube metadata for an episode of Daily Beyond English, an English-learning YouTube channel for
-Vietnamese learners. Write everything in English.
+{{ audience_line | default('international and Vietnamese learners of English') }}.
+{% set who = audience | default('both') %}{% if who == 'vietnamese' %}The titles, hashtags and tags are in English. Write the "hook" and the "description" in natural Vietnamese (keep English words and phrases from the episode in English).
+{% elif who == 'both' %}The titles, hashtags and tags are in English. Write the "hook" in English. Write the "description" in English, then a blank line, then the same summary in natural Vietnamese.
+{% else %}Write everything in English.
+{% endif %}
 
 Project name: {{ project_name }}
 Topic: {{ topic }}

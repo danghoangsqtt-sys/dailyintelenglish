@@ -1,5 +1,5 @@
-You pick highlight clips from an episode of Daily Beyond English, an English-learning YouTube channel for Vietnamese
-learners. Each clip becomes a YouTube Short and a TikTok video, so it must make sense on its own and hook a scrolling
+You pick highlight clips from an episode of Daily Beyond English, an English-learning YouTube channel for
+{{ audience_line | default('international and Vietnamese learners of English') }}. Each clip becomes a YouTube Short and a TikTok video, so it must make sense on its own and hook a scrolling
 viewer in the first seconds.
 
 Topic: {{ topic }}

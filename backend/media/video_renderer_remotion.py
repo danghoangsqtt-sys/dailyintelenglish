@@ -502,6 +502,7 @@ async def _build_input_props(
                 }
                 for item in learning["idioms"]
             ],
+            "audience": project.get("audience_effective") or "both",  # Phase 72: how the cards explain the words
         }
     return props
 

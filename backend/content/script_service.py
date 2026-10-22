@@ -94,7 +94,10 @@ async def generate_script(
     _require_single_presenter(config)
     known_speaker_ids = {speaker["id"] for speaker in config["speakers"]}
 
+    from backend.content.audience import line  # Phase 72 (ENH-054)
+
     prompt = await render_script_prompt(
+        audience_line=line(config.get("audience_effective")),
         genre=config["genre"],
         cefr_level=config["cefr_level"],
         topic=config["topic"],

@@ -31,10 +31,10 @@ def _learning(size: int = 1) -> dict:
     }
 
 
-def test_the_description_has_every_part_in_order_with_vietnamese_meanings():
+def test_the_description_has_every_part_in_order_with_both_meanings():  # Phase 72: the default audience is both
     text = yt.compose_description(PACKAGE, _learning(), "🎵 Music: Morning")
-    order = [PACKAGE["hook"], PACKAGE["description"], "⏱ Chapters", "📚 Vocabulary", "• word0 (noun) — nghĩa",
-             "💬 Idioms", "• a piece of cake — dễ như ăn bánh", "🔗 Collocations", "🧩 Phrasal verbs", "• look forward to — mong chờ",
+    order = [PACKAGE["hook"], PACKAGE["description"], "⏱ Chapters", "📚 Vocabulary", "• word0 (noun) — d / nghĩa",
+             "💬 Idioms", "• a piece of cake — share / dễ như ăn bánh", "🔗 Collocations", "🧩 Phrasal verbs", "• look forward to — share / mong chờ",
              "🧱 Sentence patterns", "🎧 Listening practice", "1. Where are they going?", "A) The beach  B) The mountains",
              "📜 The full transcript", yt.SUBSCRIBE_LINE, "🎵 Music: Morning", "#LearnEnglish #EnglishConversation"]
     positions = [text.index(part) for part in order]

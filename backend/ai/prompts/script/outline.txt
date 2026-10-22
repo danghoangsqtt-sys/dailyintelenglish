@@ -4,7 +4,7 @@ addresses the viewer with a clear knowledge explanation, examples and a takeaway
 {% endif %}
 You are planning the outline for a {{ genre }} podcast episode at CEFR
 {{ cefr_level }} about "{{ topic }}" for Daily Beyond English, an English-learning
-YouTube channel for Vietnamese learners.
+YouTube channel for {{ audience_line | default('international and Vietnamese learners of English') }}.
 
 ## Episode Brief
 - Target duration: {{ duration_minutes }} minutes (~{{ target_words }} spoken words total)

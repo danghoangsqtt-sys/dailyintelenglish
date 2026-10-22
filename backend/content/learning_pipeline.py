@@ -233,10 +233,17 @@ def _required_vocabulary(project: dict, transcript: str) -> list[str]:
 # --- provider calls --------------------------------------------------------------------
 
 
+def _audience_line(project: dict) -> str:
+    from backend.content.audience import line  # Phase 72 (ENH-054)
+
+    return line(project.get("audience_effective"))
+
+
 async def _generate_pack(router: "AIRouter", project: dict, transcript: str, db, job_id: str) -> LearningPackOut:
     prompt = await render_learning_prompt(
         topic=project["topic"], cefr_level=project["cefr_level"], genre=project["genre"], transcript_text=transcript,
         required_vocabulary=_required_vocabulary(project, transcript),
+        audience_line=_audience_line(project),
     )
     result = await _call_router(
         db, job_id, router,

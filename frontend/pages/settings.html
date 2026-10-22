@@ -125,6 +125,18 @@
           <label><input type="radio" name="app-theme" value="dark" /> Dark</label>
         </div>
       </div>
+      <!-- Phase 72 (ENH-054): whom the channel is for -- how the vocabulary is explained -->
+      <div class="card settings-card">
+        <h2 data-icon="🌏">Channel audience</h2>
+        <p class="section-hint">How the vocabulary is explained on screen and in the YouTube description, and whom the AI writes for.
+          The voice is always English. A series or a video can choose its own.</p>
+        <div class="settings-choice" role="radiogroup" aria-label="Channel audience">
+          <label><input type="radio" name="channel-audience" value="international" /> International — English definitions</label>
+          <label><input type="radio" name="channel-audience" value="vietnamese" /> Vietnamese — Vietnamese meanings</label>
+          <label><input type="radio" name="channel-audience" value="both" /> Both — English with Vietnamese</label>
+        </div>
+        <p id="channel-audience-status" class="section-hint" aria-live="polite"></p>
+      </div>
       <!-- Phase 71 (ENH-053): the local AI picture features, shown or hidden for this computer -->
       <div class="card settings-card">
         <h2 data-icon="🖼️">AI pictures on this computer</h2>
@@ -317,5 +329,6 @@
   <script src="/static/js/api.js"></script>
   <script src="/static/js/settings.js"></script>
   <script src="/static/js/settings_data.js"></script>
+  <script src="/static/js/settings_audience.js"></script>
 </body>
 </html>

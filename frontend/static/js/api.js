@@ -36,6 +36,11 @@ const Api = (() => {
     // Phase 62 (ENH-044): automatic production
     getAutomation: () => request("/api/automation"),
     getAutomationBoard: () => request("/api/automation/board"),  // Phase 67: the review studio
+    // Phase 72 (ENH-054): the audience -- international, Vietnamese or both
+    getChannelAudience: () => request("/api/audience"),
+    setChannelAudience: (audience) => request("/api/audience", json("PUT", { audience })),
+    getProjectAudience: (projectId) => request(`/api/projects/${projectId}/audience`),
+    setProjectAudience: (projectId, audience) => request(`/api/projects/${projectId}/audience`, json("PUT", { audience: audience || null })),
     // Phase 70 (ENH-052): the library package
     getLibraryPackage: () => request("/api/library-package"),
     exportLibraryPackage: () => request("/api/library-package/export", { method: "POST" }),

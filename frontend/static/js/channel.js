@@ -219,6 +219,12 @@
       onchange: (event) => act(() => Api.updateChannelSeries(series.id, { cefr_level: event.target.value }), "Saved.") },
     CEFR.map((value) => el("option", { value, textContent: value })));
     level.value = series.cefr_level;
+    // Phase 72 (ENH-054): whom the series is for (empty = the channel's audience)
+    const audienceSelect = el("select", { "aria-label": "Series audience",
+      onchange: (event) => act(() => Api.updateChannelSeries(series.id, { audience: event.target.value }), "Audience saved.") },
+    [["channel", "Audience: as the channel"], ["international", "Audience: international"], ["vietnamese", "Audience: Vietnamese"],
+      ["both", "Audience: both"]].map(([value, textContent]) => el("option", { value, textContent })));
+    audienceSelect.value = series.audience || "channel";
     const planned = series.episodes.filter((episode) => !episode.project_id).length;
     const newEpisode = el("input", { className: "inline-input", placeholder: "New episode title", "aria-label": "New episode title" });
     const castReady = castComplete(series);
@@ -248,7 +254,7 @@
       ]),
       el("div", { className: "channel-hint", textContent: series.description }),
       el("div", { className: "series-meta" }, [
-        mode, ...(solo?[structure]:[]), level, genre, "Cast:",
+        mode, ...(solo?[structure]:[]), level, genre, audienceSelect, "Cast:",
         castSelect(cast[0], (value) => setCast(0, value), "Speaker 1"),
         ...(!solo?[castSelect(cast[1], (value) => setCast(1, value), "Speaker 2")]:[]),
         saveOnChange(el("input", { className: "inline-input url", value: series.playlist_url || "",

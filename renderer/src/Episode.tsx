@@ -21,6 +21,7 @@ import { podcastLayer, type VisualMode } from "./podcastLayout";
 import { VERTICAL } from "./safeZone";
 import { captionLayout } from "./motionLayout";
 import { captionMotion, learningMotion, readingProgress, speakingMeter, wordAccent } from "./verticalMotion";
+import { explains } from "./learnMath";
 import type {
   Chapter, EpisodeInputProps, EpisodeLearning, EpisodeLine, EpisodeSpeaker, EpisodeSprites, Layout,
 } from "./types";
@@ -160,10 +161,12 @@ function vocabCardOpacity(currentTimeSec: number, slotStartSec: number, slotEndS
  * opposite the speaker chips (top-left, 19.4) and the caption band (bottom, 19.1/19.3), so it
  * can never collide with either even when speaker chips wrap to a second row at 5-6 speakers.
  */
-function VocabCard({ item, opacity, position, layout = "horizontal", timeSec = 0, startSec = 0, endSec = 0 }: {
+function VocabCard({ item, opacity, position, layout = "horizontal", timeSec = 0, startSec = 0, endSec = 0, audience = "both" }: {
   item: LearningItem; opacity: number; position: "top-right" | "top-center"; layout?: Layout;
-  timeSec?: number; startSec?: number; endSec?: number;
+  timeSec?: number; startSec?: number; endSec?: number; audience?: string;
 }) {
+  // Phase 72 (ENH-054): an English dictionary definition, the Vietnamese meaning, or both
+  const show = explains(audience, Boolean(item.kind === "vocab" ? item.definitionVi : item.meaningVi));
   const motion = learningMotion(timeSec, startSec, endSec);
   return (
     <div
@@ -201,15 +204,15 @@ function VocabCard({ item, opacity, position, layout = "horizontal", timeSec = 0
             {item.word} <span style={{ fontSize: 18, fontWeight: 400, fontStyle: "italic" }}>({item.partOfSpeech})</span>
           </div>
           <div style={{ fontSize: 18, fontStyle: "italic", opacity: 0.8 }}>/{item.ipa}/</div>
-          <div style={{ fontSize: 18, marginTop: 6 }}>{item.definitionEn}</div>
-          <div style={{ fontSize: 18, opacity: 0.85 }}>{item.definitionVi}</div>
+          {show.en ? <div data-card-en="true" style={{ fontSize: 18, marginTop: 6 }}>{item.definitionEn}</div> : null}
+          {show.vi ? <div data-card-vi="true" style={{ fontSize: 18, opacity: 0.85, marginTop: show.en ? 0 : 6 }}>{item.definitionVi}</div> : null}
           <div style={{ fontSize: 18, fontStyle: "italic", marginTop: 6, opacity: 0.9 }}>{item.exampleSentence}</div>
         </>
       ) : (
         <>
           <div style={{ fontSize: 24, fontWeight: 700 }}>{item.phrase}</div>
-          <div style={{ fontSize: 18, marginTop: 6 }}>{item.meaningEn}</div>
-          <div style={{ fontSize: 18, opacity: 0.85 }}>{item.meaningVi}</div>
+          {show.en ? <div data-card-en="true" style={{ fontSize: 18, marginTop: 6 }}>{item.meaningEn}</div> : null}
+          {show.vi ? <div data-card-vi="true" style={{ fontSize: 18, opacity: 0.85, marginTop: show.en ? 0 : 6 }}>{item.meaningVi}</div> : null}
           <div style={{ fontSize: 18, fontStyle: "italic", marginTop: 6, opacity: 0.9 }}>{item.exampleSentence}</div>
         </>
       )}
@@ -386,6 +389,7 @@ export function AudioWindowContent({
           timeSec={currentTimeSec}
           startSec={activeLearningItem.slotStartSec}
           endSec={activeLearningItem.slotEndSec}
+          audience={learning?.audience}
         />
       ) : null}
       {line ? (

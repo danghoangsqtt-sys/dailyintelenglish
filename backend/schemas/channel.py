@@ -65,6 +65,8 @@ class SeriesInput(BaseModel):
 
 
 class SeriesPatch(BaseModel):
+    # Phase 72 (ENH-054): whom the series is for; "channel" = as the channel default
+    audience: Literal["channel", "international", "vietnamese", "both"] | None = None
     presentation_mode: Literal["classic", "solo_explainer"] | None = None
     explainer_structure: Literal["why", "how", "list"] | None = None
     explainer_style: ExplainerStyle | None = None
@@ -119,7 +121,7 @@ class EpisodePatch(BaseModel):
 class PlanRequest(BaseModel):
     """The owner's direction for the channel."""
 
-    audience: str = Field(default="Vietnamese learners of English", max_length=300)
+    audience: str = Field(default="", max_length=300)  # Phase 72: empty = the channel audience (Settings)
     focus: str = Field(default="", max_length=600)  # what the channel should cover, in the owner's words
     cefr_levels: list[str] = Field(default_factory=lambda: ["B1"], min_length=1, max_length=6)
     topics: int = Field(default=4, ge=1, le=8)

@@ -1,4 +1,4 @@
-You suggest video ideas for Daily Beyond English, an English-learning YouTube channel for Vietnamese learners.
+You suggest video ideas for Daily Beyond English, an English-learning YouTube channel for {{ audience_line | default('international and Vietnamese learners of English') }}.
 {% if presentation_mode == 'solo_explainer' %}
 Video type: a Solo presentation -- one presenter speaks to the viewer, with examples and a takeaway.
 {% if explainer_subject == 'field' %}Each idea presents a field or a job: what people in it do, the skills, a working day, its key words.

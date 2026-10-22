@@ -1,5 +1,5 @@
-You are writing the text of YouTube thumbnails for Daily Beyond English, an English-learning channel for Vietnamese
-learners. The thumbnail already shows the episode's characters and a picture of the topic; your words go on top.
+You are writing the text of YouTube thumbnails for Daily Beyond English, an English-learning channel for
+{{ audience_line | default('international and Vietnamese learners of English') }}. The thumbnail already shows the episode's characters and a picture of the topic; your words go on top.
 
 Project name: {{ project_name }}
 Topic: {{ topic }}

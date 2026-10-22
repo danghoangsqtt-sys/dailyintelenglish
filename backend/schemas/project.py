@@ -236,6 +236,7 @@ class TopicIdeasRequest(BaseModel):
     explainer_subject: Literal["field", "product", "topic", "howto"] | None = None
     cefr_level: str = "B1"
     hint: str = Field(default="", max_length=200)
+    audience: Literal["international", "vietnamese", "both"] | None = None  # Phase 72: None = the channel audience
 
     @field_validator("cefr_level")
     @classmethod

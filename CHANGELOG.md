@@ -8,6 +8,10 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added — Phase 72 audience: international, Vietnamese or both (2026-10-23)
+
+- One **Audience** setting decides how the vocabulary is explained: **International** (English dictionary definitions), **Vietnamese** (Vietnamese meanings) or **Both** (English with the Vietnamese under it, the default). Set it for the channel in Settings → General, for a series in the Channel plan, for a video in Step 1, and for a Shorts batch. It applies to the vocabulary cards of long videos and the quick-learning Shorts, the YouTube description (titles stay English; the summary and the vocabulary list follow the audience) and the learners the AI writes for. The voice stays English. The learning pack keeps both languages, so switching needs no new AI content; a rendered video shows the change after its next render (ENH-054).
+
 ## [1.6.0] - 2026-10-22
 
 ### Added — Phase 71 Lite edition (2026-10-22)

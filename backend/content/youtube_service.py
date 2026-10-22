@@ -150,6 +150,7 @@ async def generate_package(
         genre=project["genre"],
         cefr_level=project["cefr_level"],
         transcript_text=transcript_text,
+        audience=project.get("audience_effective"),
     )
     router = router or build_ai_router_from_settings()
     if project.get("presentation_mode") == "solo_explainer":
@@ -281,12 +282,32 @@ def normalize_hashtags(values: list[str]) -> list[str]:
     return result[:HASHTAG_LIMIT]
 
 
-def _learning_line(section: str, item: dict) -> str:
+# Phase 72 (ENH-054): the description in Vietnamese for a Vietnamese audience (the English learning items stay English)
+VI_HEADINGS = {"vocabulary": "📚 Từ vựng", "idioms": "💬 Thành ngữ", "collocations": "🔗 Cụm từ cố định",
+               "phrasal_verbs": "🧩 Cụm động từ", "patterns": "🧱 Mẫu câu"}
+VI_LINES = {
+    "listening": "🎧 Luyện nghe (đáp án ở bình luận ghim)",
+    "transcript": "📜 Toàn bộ lời thoại ở bình luận ghim.",
+    "subscribe": "🔔 Đăng ký Daily Beyond English để có một đoạn hội thoại tiếng Anh mới mỗi tuần.",
+}
+
+
+def _meaning(item: dict, english: str, vietnamese: str, audience: str) -> str:
+    """The English definition, the Vietnamese meaning, or both, for the audience."""
+    en, vi = (item.get(english) or "").strip(), (item.get(vietnamese) or "").strip()
+    if audience == "international":
+        return en or vi
+    if audience == "vietnamese":
+        return vi or en
+    return f"{en} / {vi}" if en and vi else en or vi
+
+
+def _learning_line(section: str, item: dict, audience: str = "vietnamese") -> str:
     if section == "vocabulary":
-        return f"• {item['word']} ({item['part_of_speech']}) — {item['definition_vi']}"
+        return f"• {item['word']} ({item['part_of_speech']}) — {_meaning(item, 'definition_en', 'definition_vi', audience)}"
     if section == "patterns":
-        return f"• {item['pattern']} — {item['use_vi']}"
-    return f"• {item['phrase']} — {item['meaning_vi']}"
+        return f"• {item['pattern']} — {_meaning(item, 'use_en', 'use_vi', audience)}"
+    return f"• {item['phrase']} — {_meaning(item, 'meaning_en', 'meaning_vi', audience)}"
 
 
 def _listening_questions(learning: dict | None, count: int = 3) -> list[dict]:
@@ -315,22 +336,24 @@ def _series_lines(episode: dict | None) -> tuple[str | None, str | None]:
     return head, "\n".join(links) or None
 
 
-def compose_description(package: dict, learning: dict | None, credit: str | None, episode: dict | None = None) -> str:
+def compose_description(package: dict, learning: dict | None, credit: str | None, episode: dict | None = None,
+                        audience: str = "both") -> str:
     """The description pasted into YouTube, within 5,000 characters. The fixed parts come first; the learning items fill
     what is left, section by section, so a long pack shortens the lists instead of breaking the limit."""
     series_head, series_links = _series_lines(episode)
     head = [part for part in (package.get("hook", "").strip(), package["description"].strip(), series_head) if part]
+    vietnamese = audience == "vietnamese"
     if package.get("chapters_text", "").strip():
-        head.append("⏱ Chapters\n" + package["chapters_text"].strip())
+        head.append(("⏱ Mục lục" if vietnamese else "⏱ Chapters") + "\n" + package["chapters_text"].strip())
     questions = _listening_questions(learning)
     tail = []
     if questions:
-        tail.append("🎧 Listening practice (answers in the pinned comment)\n"
+        tail.append((VI_LINES["listening"] if vietnamese else "🎧 Listening practice (answers in the pinned comment)") + "\n"
                     + "\n".join(_question_text(number, item) for number, item in enumerate(questions, start=1)))
-    tail.append("📜 The full transcript is in the pinned comment.")
+    tail.append(VI_LINES["transcript"] if vietnamese else "📜 The full transcript is in the pinned comment.")
     if series_links:
         tail.append(series_links)
-    tail.append(SUBSCRIBE_LINE)
+    tail.append(VI_LINES["subscribe"] if vietnamese else SUBSCRIBE_LINE)
     if credit:
         tail.append(credit.strip())
     hashtags = package.get("hashtags") or []
@@ -342,12 +365,13 @@ def compose_description(package: dict, learning: dict | None, credit: str | None
 
     middle: list[str] = []
     for section, heading, limit in LEARNING_SECTIONS:
+        heading = VI_HEADINGS[section] if vietnamese else heading
         lines: list[str] = []
         for item in ((learning or {}).get(section) or [])[:limit]:
-            candidate = "\n".join([heading, *lines, _learning_line(section, item)])
+            candidate = "\n".join([heading, *lines, _learning_line(section, item, audience)])
             if total(head + middle + [candidate] + tail) > DESCRIPTION_LIMIT:
                 break
-            lines.append(_learning_line(section, item))
+            lines.append(_learning_line(section, item, audience))
         if lines:
             middle.append("\n".join([heading, *lines]))
     text = "\n\n".join(head + middle + tail)
@@ -394,7 +418,8 @@ def compose(package: dict | None, project: dict, script_lines: list[dict], learn
     if package is None:
         return None
     result = {**package, "summary": package["description"], "music_credit": credit}
-    result["description"] = compose_description(package, learning, credit, episode)
+    result["description"] = compose_description(package, learning, credit, episode, project.get("audience_effective") or "both")
+    result["audience"] = project.get("audience_effective") or "both"
     result["episode"] = episode
     result["hashtags_text"] = " ".join(f"#{tag}" for tag in package.get("hashtags") or [])
     result["pinned_comments"] = pinned_comments(project, script_lines, learning)

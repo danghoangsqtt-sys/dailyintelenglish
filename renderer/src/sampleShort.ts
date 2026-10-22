@@ -97,8 +97,17 @@ function geometry() {
   return { rules_version: rules.version, style: "vox", aspects: { "9:16": { safe, caption, header, board, segments: [] } } };
 }
 
+/** Phase 72 (ENH-054): a sample learning pack, so the preview shows the cards of the chosen audience. */
+function sampleLearning(template: SampleTemplate, idea: SampleIdea, audience: string) {
+  const vietnamese = "nghĩa tiếng Việt";
+  const word = template === "wordday" ? (quoted(idea.title) ?? idea.title.split(/\s+/).slice(-1)[0].replace(/[^\p{L}'-]/gu, "") ?? "word") : "";
+  const vocab = word ? [{ word, partOfSpeech: "noun", ipa: "", definitionEn: idea.brief || "", definitionVi: vietnamese, exampleSentence: "" }] : [];
+  const idioms = template === "top5" ? [5, 4, 3, 2, 1].map((n) => ({ phrase: `Phrase number ${n}`, meaningEn: "", meaningVi: vietnamese, exampleSentence: "" })) : [];
+  return { vocab, idioms, audience };
+}
+
 /** Silent sample props of a Shorts template for one idea (9:16). */
-export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLevel = "B1"): EpisodeInputProps {
+export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLevel = "B1", audience = "both"): EpisodeInputProps {
   const common = { episodeId: "sample", audioPath: SILENCE, fps: FPS, width: 1080, height: 1920, title: idea.title, topic: idea.brief || idea.title,
     cefrLevel, chapters: [], introSec: 0, outroSec: 0, outroText: "", captionStyle: "outline", layout: "vertical" } as const;
   if (template === "chat" || template === "wyr") {
@@ -127,5 +136,5 @@ export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLeve
   const solo = { plan: { project_id: "sample", revision: 1, status: "approved", source_fingerprint: "sample", segments, aspects: ["9:16"] },
     style: template, geometry: geometry(), timeline, pictures: {}, photos: {}, scenes: {}, activities: {} };
   return { ...common, presentationMode: "solo_explainer", visualMode: "podcast_black", speakers: [{ id: "n", name: "Narrator", gender: "female" }],
-    lines, solo, durationSeconds: time + 0.4 } as unknown as EpisodeInputProps;
+    lines, solo, learning: sampleLearning(template, idea, audience), durationSeconds: time + 0.4 } as unknown as EpisodeInputProps;
 }

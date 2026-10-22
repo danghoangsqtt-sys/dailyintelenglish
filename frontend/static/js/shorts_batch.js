@@ -26,7 +26,7 @@
       const label = TEMPLATES.find(([key]) => key === state.template)?.[1] || state.template;
       $("preview-what").textContent = `${label} · ${idea.title}`;
       try {
-        const props = window.ShortsSample.props(state.template, idea, level);
+        const props = window.ShortsSample.props(state.template, idea, level, $("batch-audience").value || state.channelAudience || "both");
         if (state.player) state.player.update(props); else state.player = window.SoloPreview.mount(box, props);
         // show a moment with the template's content at once (frame 0 is still empty); Play shows the whole sample
         setTimeout(() => state.player?.seek(Math.round(props.fps * 2.2)), 120);
@@ -194,6 +194,7 @@
       const result = await Api.createBatch({ topic_name: $("batch-playlist").value.trim(), series_name: $("batch-series").value.trim(),
         template: state.template, cast, cefr_level: state.tab === "news" ? $("news-level").value : $("batch-level").value,
         start_date: $("batch-start").value, every_days: Number($("batch-every").value) || 1, make_projects: $("batch-make").checked,
+        ...($("batch-audience").value ? { audience: $("batch-audience").value } : {}),
         items: items.map(({ title, brief, source_text }) => ({ title: title.trim(), brief: (brief || "").trim(), source_text: source_text || "" })) });
       notice("batch-notice", `Created: ${result.episodes} Shorts dated ${result.first_date} → ${result.last_date}`
         + (result.projects ? `, ${result.projects} projects made.` : ". Automation makes them before their dates."));
@@ -203,6 +204,8 @@
   document.querySelectorAll("[data-tab]").forEach((button) => button.addEventListener("click", () => setTab(button.dataset.tab)));
   $("batch-template").addEventListener("change", () => { state.template = $("batch-template").value; renderCast(); refreshPreview(); });
   $("batch-level").addEventListener("change", refreshPreview);
+  $("batch-audience").addEventListener("change", refreshPreview);  // Phase 72 (ENH-054)
+  Api.getChannelAudience().then((data) => { state.channelAudience = data.audience; refreshPreview(); }).catch(() => {});
   $("news-level").addEventListener("change", refreshPreview);
   $("batch-topic").addEventListener("input", () => { if (!state.items.length) refreshPreview(); });
   $("news-load").addEventListener("click", loadNews);

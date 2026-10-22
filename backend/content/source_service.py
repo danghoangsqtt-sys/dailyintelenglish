@@ -149,7 +149,7 @@ def _normalized(text: str) -> str:
 
 
 async def topic_ideas(presentation_mode: str, cefr_level: str, hint: str = "", explainer_subject: str | None = None,
-                      avoid: list[str] | None = None, router: AIRouter | None = None) -> list[dict]:
+                      avoid: list[str] | None = None, router: AIRouter | None = None, audience: str | None = None) -> list[dict]:
     """Six ideas `{name, topic, description}` for a new video; raises a readable `ValidationError` on failure.
 
     `avoid` holds the topics of recent projects (at most 60): they go into the prompt, and an idea whose name or topic
@@ -157,7 +157,8 @@ async def topic_ideas(presentation_mode: str, cefr_level: str, hint: str = "", e
     avoid = [topic for topic in (avoid or []) if topic.strip()][:AVOID_MAX]
     prompt = await render_source_prompt(
         "topic_ideas.txt", presentation_mode=presentation_mode, cefr_level=cefr_level, hint=hint.strip(),
-        explainer_subject=(explainer_subject or "topic") if presentation_mode == "solo_explainer" else None, avoid=avoid)
+        explainer_subject=(explainer_subject or "topic") if presentation_mode == "solo_explainer" else None, avoid=avoid,
+        **({"audience_line": __import__("backend.content.audience", fromlist=["line"]).line(audience)} if audience else {}))
     router = router or build_ai_router_from_settings()
     try:
         result = await router.generate(GenerationRequest(

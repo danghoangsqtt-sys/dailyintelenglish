@@ -12,7 +12,7 @@ import { resolvedMedia } from "./Presenter";
 import { clamp01, easeOut, voxSegmentAt } from "./voxMath";
 import { easeOutBack, smoothProgress } from "./voxMotion";
 import { pictureFor, spanWords } from "./shortsMath";
-import { cardText, countdownNumber, isLearnStyle, learningFor, mistakePair, rightAt, templateLabel } from "./learnMath";
+import { cardText, countdownNumber, explains, isLearnStyle, learningFor, mistakePair, rightAt, templateLabel } from "./learnMath";
 import type { EpisodeInputProps } from "./types";
 
 const GREEN = "#1F7A4D", RED = "#E8483B", YELLOW = "#FFD84D", CREAM = "#FFFDF4", INK = "#14231C";
@@ -79,7 +79,8 @@ export function LearnScene(props: EpisodeInputProps) {
   } else if (style === "wordday" && index === 0 && visual.kind === "text_card") {
     const extra = learningFor(props.learning, text.title);
     const part = visual.bullets?.[0] || extra?.partOfSpeech || "";
-    const meaning = visual.bullets?.[1] ?? "";
+    const show = explains(props.learning?.audience, Boolean(extra?.meaningVi));  // Phase 72 (ENH-054)
+    const meaning = show.en ? visual.bullets?.[1] ?? "" : "";
     content = <div data-learn-word="true" style={{ display: "grid", gap: 18 * unit, justifyItems: "center", alignContent: "center", height: "100%",
       textAlign: "center", transform: `scale(${(0.8 + 0.2 * Math.max(0, enter)).toFixed(4)})`, opacity: fade }}>
       <div style={{ fontFamily: HEAVY, color: "#FFF", fontSize: (text.title.length > 14 ? 110 : 150) * unit, lineHeight: 1,
@@ -87,21 +88,22 @@ export function LearnScene(props: EpisodeInputProps) {
       {extra?.ipa ? <div style={{ fontFamily: SANS, color: YELLOW, fontSize: 52 * unit, fontWeight: 700 }}>{extra.ipa}</div> : null}
       {part ? <div style={{ fontFamily: SANS, color: "#DCEFE3", fontSize: 40 * unit, fontStyle: "italic" }}>{part}</div> : null}
       {meaning ? <div style={{ fontFamily: SANS, color: "#FFF", fontSize: 46 * unit, fontWeight: 700, maxWidth: box.width }}>{meaning}</div> : null}
-      {extra?.meaningVi ? <div data-learn-vi="true" style={{ background: CREAM, color: INK, borderRadius: 16 * unit, padding: `${10 * unit}px ${22 * unit}px`,
+      {show.vi && extra?.meaningVi ? <div data-learn-vi="true" style={{ background: CREAM, color: INK, borderRadius: 16 * unit, padding: `${10 * unit}px ${22 * unit}px`,
         fontFamily: SANS, fontWeight: 800, fontSize: 44 * unit, opacity: clamp01((progress - 0.3) / 0.15) }}><ViTag unit={unit} />{extra.meaningVi}</div> : null}
     </div>;
   } else if (number !== null) {
     const flip = easeOut(since / 0.45);
     const extra = learningFor(props.learning, text.title);
+    const show = explains(props.learning?.audience, Boolean(extra?.meaningVi));  // Phase 72 (ENH-054)
     content = <div style={{ display: "grid", gap: 26 * unit, justifyItems: "center", alignContent: "center", height: "100%", textAlign: "center" }}>
       <div data-learn-number={number} style={{ width: 230 * unit, height: 230 * unit, borderRadius: "50%", background: YELLOW, color: INK,
         display: "grid", placeItems: "center", fontFamily: HEAVY, fontSize: 150 * unit, boxShadow: "0 14px 34px rgba(0,0,0,0.3)",
         transform: `perspective(${900 * unit}px) rotateX(${((1 - flip) * 90).toFixed(2)}deg)` }}>{number}</div>
       <div style={{ fontFamily: HEAVY, color: "#FFF", fontSize: (text.title.length > 22 ? 70 : 88) * unit, lineHeight: 1.1, maxWidth: box.width,
         transform: `translateY(${((1 - clamp01(enter)) * 40 * unit).toFixed(1)}px)`, opacity: fade, textShadow: "0 8px 24px rgba(0,0,0,0.35)" }}>{text.title}</div>
-      {text.detail ? <div style={{ fontFamily: SANS, color: "#DCEFE3", fontSize: 46 * unit, fontWeight: 700, maxWidth: box.width,
+      {show.en && text.detail ? <div data-learn-en="true" style={{ fontFamily: SANS, color: "#DCEFE3", fontSize: 46 * unit, fontWeight: 700, maxWidth: box.width,
         opacity: clamp01((progress - 0.25) / 0.15) }}>{text.detail}</div> : null}
-      {extra?.meaningVi ? <div style={{ fontFamily: SANS, color: YELLOW, fontSize: 40 * unit, fontWeight: 700, opacity: clamp01((progress - 0.4) / 0.15) }}>
+      {show.vi && extra?.meaningVi ? <div data-learn-vi="true" style={{ fontFamily: SANS, color: YELLOW, fontSize: 40 * unit, fontWeight: 700, opacity: clamp01((progress - 0.4) / 0.15) }}>
         <ViTag unit={unit} />{extra.meaningVi}</div> : null}
       <div style={{ display: "flex", gap: 14 * unit }}>{Array.from({ length: segments.length - 2 }, (_, i) => <span key={i} style={{
         width: 22 * unit, height: 22 * unit, borderRadius: "50%", background: i <= index - 1 ? YELLOW : "rgba(255,255,255,0.3)" }} />)}</div>

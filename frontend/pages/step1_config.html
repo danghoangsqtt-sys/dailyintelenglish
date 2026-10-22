@@ -490,6 +490,16 @@
             <select id="cefr" name="cefr"></select>
           </div>
           <div class="field">
+            <!-- Phase 72 (ENH-054): how the vocabulary is explained in this video -->
+            <label class="field-label" for="audience">Audience</label>
+            <select id="audience" name="audience">
+              <option value="">As the series / channel</option>
+              <option value="international">International — English definitions</option>
+              <option value="vietnamese">Vietnamese — Vietnamese meanings</option>
+              <option value="both">Both — English with Vietnamese</option>
+            </select>
+          </div>
+          <div class="field">
             <label class="field-label">Duration</label>
             <div id="duration-presets" class="preset-row"></div>
             <input type="number" id="duration-custom" min="0.5" step="0.5" placeholder="Custom minutes" hidden />

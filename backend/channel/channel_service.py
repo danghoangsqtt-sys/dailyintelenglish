@@ -143,6 +143,10 @@ async def create_series(db: aiosqlite.Connection, topic_id: str, body: SeriesInp
 async def patch_series(db: aiosqlite.Connection, series_id: str, patch: SeriesPatch) -> dict:
     await get_series(db, series_id)
     fields = patch.model_dump(exclude_unset=True, exclude_none=True)
+    if "audience" in fields:  # Phase 72: "channel" stores NULL (inherit), which the generic patch cannot write
+        from backend.content import audience
+
+        await audience.set_series(db, series_id, fields.pop("audience"))
     if "cast" in fields:
         await _check_cast(db, fields["cast"])
         fields["cast_json"] = json.dumps(fields.pop("cast"))
@@ -226,7 +230,11 @@ async def propose_plan(db: aiosqlite.Connection, request: PlanRequest, router: A
     """The AI's channel map, checked; nothing is saved until the owner applies it."""
     cursor = await db.execute("SELECT name FROM channel_topics ORDER BY position")
     existing = [row[0] for row in await cursor.fetchall()]
-    prompt = await render_channel_prompt(request=request.model_copy(update={"existing_topics": existing}))
+    from backend.content import audience  # Phase 72 (ENH-054)
+
+    whom = audience.line(await audience.get_channel(db))
+    prompt = await render_channel_prompt(request=request.model_copy(update={
+        "existing_topics": existing, "audience": request.audience.strip() or whom}), audience_line=whom)
     router = router or build_ai_router_from_settings()
     try:
         result = await router.generate(GenerationRequest(prompt=prompt, json_schema=ChannelPlan.model_json_schema(),

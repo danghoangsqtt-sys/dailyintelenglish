@@ -224,6 +224,7 @@ async def generate_suggestions(
         template_name=template.id,
         template_description=template.description,
         variant_count=variant_count,
+        audience_line=__import__("backend.content.audience", fromlist=["line"]).line(project.get("audience_effective")),
     )
     router = router or build_ai_router_from_settings()
     if project.get("presentation_mode") == "solo_explainer" and project.get("explainer_style") == "news":

@@ -94,6 +94,7 @@ async def build_payload(db: aiosqlite.Connection, project_id: str, aspect: str =
                        "exampleSentence": item["example_sentence"]} for item in learning["vocabulary"]],
             "idioms": [{"phrase": item["phrase"], "meaningEn": item["meaning_en"], "meaningVi": item["meaning_vi"],
                         "exampleSentence": item["example_sentence"]} for item in learning["idioms"]],
+            "audience": snapshot["project"].get("audience_effective") or "both",  # Phase 72 (ENH-054)
         }
     return {"props": props, "source_fingerprint": plan.source_fingerprint, "revision": plan.revision,
             "front": front, "illustrations": assets, "audio_files": audio_files, "stage": stage}

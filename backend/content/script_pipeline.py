@@ -655,8 +655,10 @@ def _source_context(project: dict) -> dict:
             kind = ""
     # Phase 63 (ENH-045): a news / blur Short gets a hook opening and a one-line sign-off instead of the long welcome
     style = project.get("explainer_style") or ""
+    from backend.content.audience import line  # Phase 72 (ENH-054): whom the script is written for
+
     return {"source_kind": kind if text else "", "source_text": text, "source_words": words,
-            "short_style": style if style in SHORT_STYLES else ""}
+            "short_style": style if style in SHORT_STYLES else "", "audience_line": line(project.get("audience_effective"))}
 
 
 async def _vocabulary_repair(

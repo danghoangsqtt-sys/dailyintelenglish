@@ -273,6 +273,9 @@ async def get_project(db: aiosqlite.Connection, project_id: str) -> dict:
     speaker_rows = await speaker_cursor.fetchall()
     # Phase 35 (Task 35.4, D89): no uploaded speaker avatar any more -- a speaker's picture is its cast character's.
     project["speakers"] = [dict(speaker_row) for speaker_row in speaker_rows]
+    from backend.content import audience  # Phase 72 (ENH-054): whom this video is for
+
+    project["audience_effective"] = await audience.resolve(db, project_id)
     cast_cursor = await db.execute(
         "SELECT pc.speaker_index, pc.character_id, c.default_voice_id AS profile_voice_id "
         "FROM project_cast pc JOIN characters c ON c.id = pc.character_id WHERE pc.project_id = ?", (project_id,),

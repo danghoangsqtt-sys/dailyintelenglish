@@ -47,6 +47,14 @@ export function learningFor(learning: EpisodeLearning | undefined, phrase: strin
   return idiom ? { ipa: "", partOfSpeech: "", meaningVi: idiom.meaningVi } : null;
 }
 
+/** Phase 72 (ENH-054): which explanations a card shows for the audience. A missing Vietnamese meaning never leaves the
+ * card empty: the English one is shown instead. */
+export function explains(audience: string | undefined, hasVietnamese = true): { en: boolean; vi: boolean } {
+  if (audience === "international") return { en: true, vi: false };
+  if (audience === "vietnamese") return { en: !hasVietnamese, vi: hasVietnamese };
+  return { en: true, vi: hasVietnamese };
+}
+
 /** The title and the first bullet of a card (the phrase and its meaning). */
 export function cardText(visual: Visual): { title: string; detail: string; emphasis: string } {
   if (visual.kind === "text_card") return { title: visual.title, detail: visual.bullets?.[0] ?? "", emphasis: visual.emphasis ?? "" };

@@ -80,9 +80,14 @@ export const idiomItemSchema = z.object({
  * empty. No line-level anchor exists on either item shape -- attachment is derived from item
  * text vs. line text at composition time (see `vocab.ts`).
  */
+/** Phase 72 (ENH-054): whom the video is for -- an English definition, the Vietnamese meaning, or both. */
+export const audienceSchema = z.enum(["international", "vietnamese", "both"]);
+export type Audience = z.infer<typeof audienceSchema>;
+
 export const episodeLearningSchema = z.object({
   vocab: z.array(vocabItemSchema).default([]),
   idioms: z.array(idiomItemSchema).default([]),
+  audience: audienceSchema.optional(),  // absent = both
 });
 
 /**

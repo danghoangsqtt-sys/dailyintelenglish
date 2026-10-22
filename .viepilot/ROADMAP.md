@@ -2,7 +2,7 @@
 
 ## Phase 72 — Audience: international, Vietnamese or both (2026-10-22)
 
-Status: planned; 0/5 tasks. ENH-054: one Audience setting (channel › series › video) decides how vocabulary is explained on screen and in the YouTube description, and whom the AI writes for; the voice stays English. [Plan](phases/72-audience/PLAN.md).
+Status: implemented_verified_pending_owner_review; 5/5 tasks. ENH-054: one Audience setting (channel › series › video) decides how vocabulary is explained on screen and in the YouTube description, and whom the AI writes for; the voice stays English. [Plan](phases/72-audience/PLAN.md).
 
 ## Phase 71 — Lite edition for low-end machines (2026-10-22)
 

@@ -94,8 +94,11 @@ async def topic_ideas(body: TopicIdeasRequest, db: aiosqlite.Connection = Depend
     async with read_transaction():
         cursor = await db.execute(f"SELECT topic FROM projects ORDER BY updated_at DESC LIMIT {source_service.AVOID_MAX}")
         recent = [row[0] for row in await cursor.fetchall()]
+        from backend.content import audience  # Phase 72 (ENH-054)
+
+        whom = body.audience or await audience.get_channel(db)
     ideas = await source_service.topic_ideas(body.presentation_mode, body.cefr_level, body.hint,
-                                             body.explainer_subject, recent)
+                                             body.explainer_subject, recent, audience=whom)
     return ok({"ideas": ideas})
 
 

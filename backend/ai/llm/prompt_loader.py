@@ -200,7 +200,8 @@ async def render_script_prompt(*, genre: str, cefr_level: str, **context: object
 
 
 def _render_learning_prompt_sync(
-    *, topic: str, cefr_level: str, genre: str, transcript_text: str, required_vocabulary: list[str] | None = None
+    *, topic: str, cefr_level: str, genre: str, transcript_text: str, required_vocabulary: list[str] | None = None,
+    audience_line: str | None = None,
 ) -> str:
     """Blocking: validate cefr_level/genre, then render learning_pack.txt. Runs in a worker thread."""
     if cefr_level.upper() not in CEFR_LEVELS:
@@ -214,12 +215,13 @@ def _render_learning_prompt_sync(
 
     return template.render(
         topic=topic, cefr_level=cefr_level, genre=genre, transcript_text=transcript_text,
-        required_vocabulary=required_vocabulary or [],
+        required_vocabulary=required_vocabulary or [], **({"audience_line": audience_line} if audience_line else {}),
     )
 
 
 async def render_learning_prompt(
-    *, topic: str, cefr_level: str, genre: str, transcript_text: str, required_vocabulary: list[str] | None = None
+    *, topic: str, cefr_level: str, genre: str, transcript_text: str, required_vocabulary: list[str] | None = None,
+    audience_line: str | None = None,
 ) -> str:
     """Render the Learning Content generation prompt for one project's script.
 
@@ -246,6 +248,7 @@ async def render_learning_prompt(
         genre=genre,
         transcript_text=transcript_text,
         required_vocabulary=required_vocabulary,
+        audience_line=audience_line,
     )
 
 
@@ -258,6 +261,7 @@ def _render_thumbnail_prompt_sync(
     template_name: str,
     template_description: str,
     variant_count: int,
+    audience_line: str | None = None,
 ) -> str:
     """Blocking: validate inputs and render the thumbnail suggestion prompt."""
     if genre not in GENRES:
@@ -283,6 +287,7 @@ def _render_thumbnail_prompt_sync(
         template_name=template_name,
         template_description=template_description,
         variant_count=variant_count,
+        **({"audience_line": audience_line} if audience_line else {}),
     )
 
 
@@ -295,6 +300,7 @@ async def render_thumbnail_prompt(
     template_name: str,
     template_description: str,
     variant_count: int,
+    audience_line: str | None = None,
 ) -> str:
     """Render the Gemini text-suggestion prompt for a thumbnail generation batch."""
     return await asyncio.to_thread(
@@ -306,6 +312,7 @@ async def render_thumbnail_prompt(
         template_name=template_name,
         template_description=template_description,
         variant_count=variant_count,
+        audience_line=audience_line,
     )
 
 
@@ -386,7 +393,7 @@ async def render_regenerate_line_prompt(
 
 
 def _render_youtube_prompt_sync(
-    *, project_name: str, topic: str, genre: str, cefr_level: str, transcript_text: str
+    *, project_name: str, topic: str, genre: str, cefr_level: str, transcript_text: str, audience: str | None = None,
 ) -> str:
     """Blocking: validate genre/CEFR, then render youtube_package.txt."""
     if genre not in GENRES:
@@ -403,11 +410,21 @@ def _render_youtube_prompt_sync(
         genre=genre,
         cefr_level=cefr_level,
         transcript_text=transcript_text,
+        **_audience_fields(audience),
     )
 
 
+def _audience_fields(audience: str | None) -> dict:
+    """Phase 72 (ENH-054): the audience code and its prompt line, when known (the templates default to both)."""
+    if not audience:
+        return {}
+    from backend.content.audience import line
+
+    return {"audience": audience, "audience_line": line(audience)}
+
+
 async def render_youtube_prompt(
-    *, project_name: str, topic: str, genre: str, cefr_level: str, transcript_text: str
+    *, project_name: str, topic: str, genre: str, cefr_level: str, transcript_text: str, audience: str | None = None,
 ) -> str:
     """Render the YouTube package (titles/description/tags) generation prompt."""
     return await asyncio.to_thread(
@@ -417,6 +434,7 @@ async def render_youtube_prompt(
         genre=genre,
         cefr_level=cefr_level,
         transcript_text=transcript_text,
+        audience=audience,
     )
 
 
@@ -512,9 +530,10 @@ def _render_channel_prompt_sync(**fields) -> str:
     return template.render(**fields)
 
 
-async def render_channel_prompt(*, request) -> str:
+async def render_channel_prompt(*, request, audience_line: str | None = None) -> str:
     """Task 36.5 (D104): the AI channel map prompt from the owner's direction (`models.channel.PlanRequest`)."""
-    return await asyncio.to_thread(_render_channel_prompt_sync, request=request)
+    extra = {"audience_line": audience_line} if audience_line else {}
+    return await asyncio.to_thread(_render_channel_prompt_sync, request=request, **extra)
 
 
 _source_env = Environment(

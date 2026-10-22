@@ -495,6 +495,7 @@
       const result = await Api.suggestTopicIdeas({
         presentation_mode: state.presentationMode, cefr_level: state.cefr,
         hint: document.getElementById("ideas-hint").value.trim(),
+        ...(document.getElementById("audience").value ? { audience: document.getElementById("audience").value } : {}),
         ...(state.presentationMode === "solo_explainer" ? { explainer_subject: state.explainerSubject } : {}),
       });
       document.getElementById("ideas-list").replaceChildren(...result.ideas.map(ideaCard));
@@ -830,6 +831,9 @@
       await Api.setProjectCast(project.id, state.speakers.map((speaker, index) => ({
         speaker_index: index, character_id: speaker.character_id,
       })));
+      // Phase 72 (ENH-054): the video's own audience, saved only when it was changed here
+      const chosenAudience = document.getElementById("audience").value;
+      if (chosenAudience !== (state.loadedAudience || "")) await Api.setProjectAudience(project.id, chosenAudience);
       // Phase 41 (D120): the project's own output folder (optional)
       try {
         await state.folderPanel?.save(project.id);
@@ -885,6 +889,10 @@
     showStatus("Loading project configuration…");
     try {
       const project = await Api.getProject(projectId);
+      Api.getProjectAudience(projectId).then((data) => {
+        state.loadedAudience = data.audience || "";
+        document.getElementById("audience").value = state.loadedAudience;
+      }).catch(() => {});
       loadProjectIntoState(project);
       const visuals = await Api.getProjectVisuals(projectId).catch(() => null);
       (visuals?.cast || []).forEach((member) => {

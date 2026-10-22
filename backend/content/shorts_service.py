@@ -132,7 +132,9 @@ async def propose(db: aiosqlite.Connection, project_id: str, count: int = 3, rou
         [item["phrase"] for section in ("idioms", "collocations", "phrasal_verbs") for item in (learning or {}).get(section, [])]
     prompt = await asyncio.to_thread(_env.get_template("clip_proposal.txt").render, topic=project["topic"],
                                      cefr_level=project["cefr_level"], lines=lines, learning=words, count=count,
-                                     min_seconds=int(MIN_SECONDS), max_seconds=int(MAX_SECONDS))
+                                     min_seconds=int(MIN_SECONDS), max_seconds=int(MAX_SECONDS),
+                                     audience_line=__import__("backend.content.audience", fromlist=["line"]).line(
+                                         project.get("audience_effective")))
     router = router or build_ai_router_from_settings()
     try:
         result = await router.generate(GenerationRequest(prompt=prompt, json_schema=ClipProposal.model_json_schema(),

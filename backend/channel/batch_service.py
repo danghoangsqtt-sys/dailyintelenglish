@@ -85,6 +85,7 @@ class CreateRequest(BaseModel):
     every_days: int = Field(default=1, ge=1, le=14)
     items: list[BatchItem] = Field(min_length=1, max_length=12)
     make_projects: bool = False
+    audience: Literal["international", "vietnamese", "both"] | None = None  # Phase 72: None = as the channel
 
     @field_validator("cefr_level")
     @classmethod
@@ -170,6 +171,10 @@ async def create_batch(db: aiosqlite.Connection, request: CreateRequest) -> dict
         name=request.series_name, presentation_mode="classic" if conversation else "solo_explainer",
         explainer_style=request.template, cefr_level=request.cefr_level, cast=request.cast, duration_minutes=0.75,
         genre="small_talk" if conversation else "informational"))
+    if request.audience:
+        from backend.content import audience
+
+        await audience.set_series(db, series["id"], request.audience)
     dates = publishing_dates(request.start_date, request.every_days, len(request.items))
     for item, day in zip(request.items, dates, strict=True):
         episode = await channel_service.add_episode(db, series["id"], EpisodeInput(title=item.title, brief=item.brief))
