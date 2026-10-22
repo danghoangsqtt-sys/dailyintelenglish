@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 65 — Interactive Shorts (2026-10-22)
+
+Status: planned; 0/5 tasks. ENH-047: countdown quiz and listening challenge (one narrator), chat and would-you-rather (two voices, drawn from the script lines). [Plan](phases/65-interactive-shorts/PLAN.md).
+
 ## Phase 64 — Quick-learning Shorts (2026-10-22)
 
 Status: implemented_verified_pending_owner_review; 5/5 tasks. Full pytest 1979 passed + 1 known-flaky Settings browser test (passes alone 2/2); 163 Vitest. Three real sandbox Shorts rendered. ENH-046: three more 9:16 Short templates — Don't say / Say, Word of the day, Top 5 phrases — on the Phase 63 pipeline. [Plan](phases/64-learning-shorts/PLAN.md).
