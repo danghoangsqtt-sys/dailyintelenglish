@@ -447,3 +447,6 @@ h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); lett
 .lang-switch { display: inline-flex; margin-right: 8px; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
 .lang-switch button { padding: 5px 10px; border: 0; background: var(--surface); color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 .lang-switch button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+
+/* Phase 71 (ENH-053): the local AI picture features, hidden on a computer that cannot draw them */
+html[data-local-image-ai="off"] .needs-local-gpu { display: none !important; }

@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/static/css/style.css" />
   <script src="/static/js/i18n_vi.js"></script>
   <script src="/static/js/i18n.js"></script>
+  <script src="/static/js/capabilities.js"></script>
   <style>
     #error-banner {
       margin-bottom: 20px;
@@ -291,12 +292,12 @@
             <section class="section card generator-card" id="generator-section">
               <h2 class="section-title">1. Choose a thumbnail kind</h2>
               <div class="template-gallery" id="template-gallery"></div>
-              <div class="topic-picture-row" id="topic-picture-row">
+              <div class="topic-picture-row needs-local-gpu" id="topic-picture-row">
                 <button class="btn btn-ghost btn-sm" id="topic-picture-btn" type="button">🎨 Draw a topic picture with local AI</button>
                 <span class="helper-text" id="topic-picture-status" role="status">Qwen-Image-2.1 on this computer (about 1–2 minutes). The composed thumbnail then uses it as its background.</span>
                 <img id="topic-picture-preview" class="topic-picture-preview" alt="Topic picture drawn with local AI" hidden />
               </div>
-              <div class="ai-scene-panel" id="ai-scene-panel">
+              <div class="ai-scene-panel needs-local-gpu" id="ai-scene-panel">
                 <div class="topic-picture-row">
                   <button class="btn btn-ghost btn-sm" id="ai-scene-btn" type="button">🧑‍🤝‍🧑 Draw AI scenes with local Qwen</button>
                   <label class="helper-text">Pictures

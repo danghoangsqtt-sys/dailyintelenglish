@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/static/css/style.css" />
   <script src="/static/js/i18n_vi.js"></script>
   <script src="/static/js/i18n.js"></script>
+  <script src="/static/js/capabilities.js"></script>
   <style>
     .loading-panel { padding: 48px 24px; text-align: center; color: var(--muted); }
 
@@ -147,7 +148,7 @@
               <p id="activity-coverage" class="section-hint" role="status" hidden></p>
               <div id="activity-missing" class="activity-missing" hidden>
                 <div class="generate-row">
-                  <button id="draw-illustrations-btn" class="btn btn-ghost" type="button">Draw missing illustrations</button>
+                  <button id="draw-illustrations-btn" class="btn btn-ghost needs-local-gpu" type="button">Draw missing illustrations</button>
                   <span class="section-hint">Local GPU, one ordinary person doing the activity. Or make it with an outside AI below.</span>
                 </div>
                 <div id="activity-missing-list" class="activity-missing-list"></div>

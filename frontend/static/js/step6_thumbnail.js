@@ -121,6 +121,7 @@
       const button = document.createElement("button");
       button.type = "button";
       button.className = "card template-option";
+      button.classList.toggle("needs-local-gpu", template.id === "qwen_scene");  // Phase 71: hidden without a capable GPU
       button.classList.toggle("selected", template.id === state.selectedTemplate);
       button.dataset.templateId = template.id;
       button.setAttribute("aria-pressed", template.id === state.selectedTemplate ? "true" : "false");

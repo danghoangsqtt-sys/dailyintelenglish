@@ -165,7 +165,7 @@
       });
       const preview = document.createElement("button");
       preview.type = "button";
-      preview.className = "btn btn-ghost btn-sm";
+      preview.className = "btn btn-ghost btn-sm needs-local-gpu";  // Phase 71: drawn with Qwen on this computer
       preview.textContent = scene.preview_url ? "↻ Plate" : "Make plate";
       setGenerateButton(preview, true);
       preview.addEventListener("click", () => startJob(() => Api.generateScenePreview(scene.id)));

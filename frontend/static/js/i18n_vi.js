@@ -942,6 +942,17 @@ window.I18N_VI = {
     "Numbers": "Chỉ số",
     "Automation studio": "Studio tự động",
     "Automatic production is off — switch it on to make videos at night.": "Tự động đang tắt — bật công tắc để làm video vào ban đêm.",
+    // ---- Phase 71: Lite edition
+    "shown by the setting": "hiện theo cài đặt",
+    "hidden by the setting": "ẩn theo cài đặt",
+    "the Lite edition hides them": "bản Lite ẩn các tính năng này",
+    "no NVIDIA GPU was found": "không thấy GPU NVIDIA",
+    "the picture environment (.venv-image) is not installed": "chưa cài môi trường tạo ảnh (.venv-image)",
+    "this computer can draw them": "máy này vẽ được",
+    "AI pictures on this computer": "Ảnh AI trên máy này",
+    "Drawing a scene picture, missing activity illustrations, the topic picture and AI scene thumbnails need an NVIDIA GPU with 8 GB or more. Hide them on a smaller computer; pictures already in the library still work.": "Vẽ ảnh cảnh, ảnh minh hoạ hoạt động còn thiếu, ảnh chủ đề và thumbnail Cảnh AI cần GPU NVIDIA từ 8 GB. Hãy ẩn chúng trên máy yếu hơn; ảnh đã có trong thư viện vẫn dùng được.",
+    "Automatic": "Tự động",
+    "Hide": "Ẩn",
     // ---- Phase 70: library package
     "Data & sync": "Dữ liệu & đồng bộ",
     "Move characters and libraries": "Chuyển nhân vật và thư viện",
@@ -1451,6 +1462,9 @@ window.I18N_VI = {
     "Generic": "Chung",
   },
   patterns: [
+    // Phase 71: Lite edition
+    [/^(Lite|Full) edition · (Shown|Hidden): (.+)\.$/, (_m, ed, state, why) => `Bản ${ed} · ${state === "Shown" ? "Đang hiện" : "Đang ẩn"}: ${tr(why)}.`],
+    [/^this computer's GPU has (\d+) GB \(8 GB needed\)$/, "GPU của máy này có $1 GB (cần 8 GB)"],
     // Phase 70: library package
     [/^Saved (.+) \((.+)\) in (.+)$/, "Đã lưu $1 ($2) tại $3"],
     [/^files · (.+)$/, "file · $1"],

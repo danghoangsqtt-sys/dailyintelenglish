@@ -2,7 +2,7 @@
 
 ## Phase 71 — Lite edition for low-end machines (2026-10-22)
 
-Status: planned; 0/5 tasks. ENH-053: a Lite package and auto-detection hide the four local AI picture features on machines that cannot run them; a Settings switch. [Plan](phases/71-lite-edition/PLAN.md).
+Status: implemented_verified; 5/5 tasks; released as 1.6.0. Full pytest 2019 passed. ENH-053: a Lite package and auto-detection hide the four local AI picture features on machines that cannot run them; a Settings switch. [Plan](phases/71-lite-edition/PLAN.md).
 
 ## Phase 70 — Library package, clean-up and release 1.5.0 (2026-10-22)
 

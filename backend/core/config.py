@@ -63,6 +63,8 @@ class Settings(BaseSettings):
     # Explicit ANGLE enables D3D11 compositing; auto remains an opt-out for drivers.
     # Phase 62 (ENH-044): the automatic-production runner in the app lifespan (the test suite turns it off)
     AUTOMATION_RUNNER: bool = True
+    # Phase 71 (ENH-053): the edition of a source run; a packaged app reads it from build-info.json
+    EDITION: Literal["full", "lite"] = "full"
     REMOTION_GL: Literal["auto", "angle", "swangle"] = "angle" if os.name == "nt" else "auto"
 
     # Phase 13 -- local-first AI reliability (docs/architecture/adr-001-local-first-ai.md).

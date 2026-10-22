@@ -4,7 +4,7 @@
 
 **Áp dụng cho:** `v1.4.0-rc.1` · Windows x64 · Cập nhật 15/10/2026.
 
-> **Bản 1.5.0 (22/10/2026):** cài từ thư mục chuyển giao và đưa nhân vật/thư viện sang bằng Gói thư viện — xem [Cài lên máy thứ hai](second-machine-1.5.0.md). Các mục dưới đây vẫn đúng cho yêu cầu hệ thống và xử lý sự cố.
+> **Bản 1.5.0 (22/10/2026):** cài từ thư mục chuyển giao và đưa nhân vật/thư viện sang bằng Gói thư viện — xem [Cài lên máy thứ hai](second-machine.md). Các mục dưới đây vẫn đúng cho yêu cầu hệ thống và xử lý sự cố.
 
 > **Cập nhật mã nguồn 16/10/2026:** bộ chọn giọng riêng theo nhân vật/video thuộc Phase 48, hướng đến 1.5.0. [Hướng dẫn tính năng](character-voices.md) áp dụng khi chạy mã nguồn mới; gói EXE 1.4.0-rc.1 bên dưới chưa có bộ chọn này. Chỉ cập nhật thư mục mã nguồn không thay backend/frontend đã đóng trong EXE.
 

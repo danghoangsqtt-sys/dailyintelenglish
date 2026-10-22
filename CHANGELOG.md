@@ -8,6 +8,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-22
+
+### Added — Phase 71 Lite edition (2026-10-22)
+
+- Two packages from one source: **Full** and **Lite** (`scripts/build_exe.ps1 -Edition lite`). On a computer that cannot draw pictures with local AI, the four features that need an NVIDIA GPU with 8 GB or more are hidden: drawing a scene picture, drawing missing activity illustrations (Step 5), the topic picture and the AI scene thumbnail (Step 6). Lite hides them by default; Full hides them by itself when the computer has no such GPU or no picture environment. **Settings → General → AI pictures on this computer** (Automatic / Show / Hide) changes it, and says which edition runs and what was found. Pictures already in the library work as before (ENH-053).
+
 ## [1.5.0] - 2026-10-22
 
 Release for daily use and for a second machine: everything since 1.4.0-rc.1 (Phases 48–70), handed over by USB/Drive with the library package.

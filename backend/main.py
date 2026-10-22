@@ -31,6 +31,7 @@ from backend.api import export as export_api
 from backend.api import automation as automation_api
 from backend.api import shorts_batch as shorts_batch_api
 from backend.api import library_package as library_package_api
+from backend.api import capabilities as capabilities_api
 
 PROJECT_ROOT = get_project_root()
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
@@ -189,6 +190,7 @@ app.include_router(automation_api.router)  # Phase 62
 app.include_router(shorts_batch_api.router)  # Phase 66
 app.include_router(shorts_batch_api.news_router)
 app.include_router(library_package_api.router)  # Phase 70
+app.include_router(capabilities_api.router)  # Phase 71
 app.include_router(shorts.router)
 app.include_router(export_api.router)  # Phase 41
 app.include_router(profiles.router)  # Phase 33: before visuals so /api/visuals/profiles is never shadowed

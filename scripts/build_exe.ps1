@@ -3,7 +3,9 @@
 # Usage: powershell -File scripts\build_exe.ps1
 param(
     [string]$OutputRoot = 'dist',
-    [string]$Version = '1.5.0'
+    [string]$Version = '1.6.0',
+    # Phase 71 (ENH-053): 'lite' hides the local AI picture features by default (for computers without a large GPU)
+    [ValidateSet('full', 'lite')][string]$Edition = 'full'
 )
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
@@ -47,9 +49,9 @@ if ($LASTEXITCODE -ne 0) { throw 'Runtime locator generation failed.' }
 $runtime = @{ workspace_dir = $relativeWorkspace; data_dir = (Join-Path $relativeWorkspace 'data') }
 $utf8 = New-Object Text.UTF8Encoding($false)
 [IO.File]::WriteAllText((Join-Path $appDir 'studio-runtime.json'), ($runtime | ConvertTo-Json), $utf8)
-$metadata = @{ version = $Version; built_at_utc = [DateTime]::UtcNow.ToString('o'); source_commit = ((& git rev-parse HEAD) -join ''); source_dirty = [bool](& git status --porcelain) }
+$metadata = @{ version = $Version; edition = $Edition; built_at_utc = [DateTime]::UtcNow.ToString('o'); source_commit = ((& git rev-parse HEAD) -join ''); source_dirty = [bool](& git status --porcelain) }
 [IO.File]::WriteAllText((Join-Path $appDir 'build-info.json'), ($metadata | ConvertTo-Json), $utf8)
-[IO.File]::WriteAllText((Join-Path $appDir 'START-HERE.txt'), "Daily Beyond English Studio $Version`r`n`r`nPlace this complete folder under the repository's dist directory.`r`nDouble-click DailyIntelEnglishStudio.exe, or run scripts/install_desktop.ps1 to create a Desktop icon.`r`nKeep _internal and studio-runtime.json beside the EXE. The local renderer, Node.js, ffmpeg and existing image environment remain in the repository.`r`nProject data: ../../data. Startup log: ../../data/logs/desktop.log.`r`n", $utf8)
+[IO.File]::WriteAllText((Join-Path $appDir 'START-HERE.txt'), "Daily Beyond English Studio $Version ($Edition edition)`r`n`r`nPlace this complete folder under the repository's dist directory.`r`nDouble-click DailyIntelEnglishStudio.exe, or run scripts/install_desktop.ps1 to create a Desktop icon.`r`nKeep _internal and studio-runtime.json beside the EXE. The local renderer, Node.js, ffmpeg and existing image environment remain in the repository.`r`nProject data: ../../data. Startup log: ../../data/logs/desktop.log.`r`n", $utf8)
 
 Write-Host ""
 Write-Host "Build complete: $appExe"
