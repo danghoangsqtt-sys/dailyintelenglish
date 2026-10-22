@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 72 — Audience: international, Vietnamese or both (2026-10-22)
+
+Status: planned; 0/5 tasks. ENH-054: one Audience setting (channel › series › video) decides how vocabulary is explained on screen and in the YouTube description, and whom the AI writes for; the voice stays English. [Plan](phases/72-audience/PLAN.md).
+
 ## Phase 71 — Lite edition for low-end machines (2026-10-22)
 
 Status: implemented_verified; 5/5 tasks; released as 1.6.0. Full pytest 2019 passed. ENH-053: a Lite package and auto-detection hide the four local AI picture features on machines that cannot run them; a Settings switch. [Plan](phases/71-lite-edition/PLAN.md).
