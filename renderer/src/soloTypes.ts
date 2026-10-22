@@ -19,7 +19,7 @@ export type GeometrySegment = {id: string; presenter: SegmentLayout["presenter"]
   text: {font: number; titleFont: number; padding: number; gap: number; columns: number}; transition: string};
 export type SoloPayload = {plan: {project_id: string; revision: number; status: string; source_fingerprint: string; segments: SoloSegment[]; aspects: string[]};
   /** Phase 59: "vox" = voice-over with motion graphics (no presenter); absent for the presenter video. */
-  style?: "vox" | "news" | "blur";  // Phase 63: the news and blur Shorts are voice-only too, on the VOX proof
+  style?: "vox" | "news" | "blur" | "mistakes" | "wordday" | "top5";  // Phase 63: the news and blur Shorts are voice-only too, on the VOX proof
   geometry: {rules_version: number; style?: "vox"; presenter_metrics: FrontMetrics;
     aspects: Record<string, {safe: Rect; caption: Rect; header: Rect; board?: Rect; segments: GeometrySegment[]}>};
   timeline: {id: string; start_sec: number; end_sec: number; gestures?: {gesture: Gesture; at_sec: number}[]}[];
@@ -30,7 +30,7 @@ export type SoloPayload = {plan: {project_id: string; revision: number; status: 
 export const soloPayloadSchema = z.custom<SoloPayload>((value) => {
   if (!value || typeof value !== "object") return false;
   const data = value as SoloPayload;
-  const vox = data.style === "vox" || data.style === "news" || data.style === "blur";  // Phase 59: nobody on screen -- no presenter metrics, no front pictures
+  const vox = ["vox", "news", "blur", "mistakes", "wordday", "top5"].includes(data.style ?? "");  // Phase 59: nobody on screen -- no presenter metrics, no front pictures
   return !!data.plan && Array.isArray(data.plan.segments) && data.plan.segments.length > 0 && data.plan.segments.length <= 60 &&
     !!data.geometry && [1, 2].includes(data.geometry.rules_version) && (vox ? data.geometry.style === "vox" : !!data.geometry.presenter_metrics) &&
     Array.isArray(data.timeline) && data.timeline.length === data.plan.segments.length &&

@@ -16,6 +16,7 @@ from PIL import Image
 from pydantic import TypeAdapter
 from pydantic import ValidationError as PydanticValidationError
 
+from backend.schemas.project import VOICE_ONLY_STYLES
 from backend.core.config import settings
 from backend.core.constants import (
     THUMBNAIL_HEIGHT_16X9, THUMBNAIL_HEIGHT_9X16, THUMBNAIL_JPEG_QUALITY, THUMBNAIL_WIDTH_16X9, THUMBNAIL_WIDTH_9X16,
@@ -227,7 +228,7 @@ async def generate_suggestions(
     router = router or build_ai_router_from_settings()
     if project.get("presentation_mode") == "solo_explainer" and project.get("explainer_style") == "news":
         prompt += "\nAn English news Short: a narrator's voice over news pictures, nobody on screen. Base headlines on the news topic; never invent people, quotes or numbers."
-    elif project.get("presentation_mode") == "solo_explainer" and project.get("explainer_style") in ("vox", "blur"):
+    elif project.get("presentation_mode") == "solo_explainer" and project.get("explainer_style") in VOICE_ONLY_STYLES:
         prompt += "\nVOX-style explainer: a narrator's voice over motion graphics, nobody on screen. Base headlines on the topic; never invent people or dialogue."
     elif project.get("presentation_mode") == "solo_explainer":
         prompt += "\nSolo knowledge explainer by exactly one front-facing presenter. Base headlines on the topic; never invent a co-host or dialogue."

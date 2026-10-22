@@ -3,7 +3,7 @@
 import type { SoloPayload, SoloSegment, Visual } from "./soloTypes";
 import { clamp01 } from "./voxMath";
 
-export const VOICE_ONLY_STYLES = ["vox", "news", "blur"] as const;
+export const VOICE_ONLY_STYLES = ["vox", "news", "blur", "mistakes", "wordday", "top5"] as const;  // Phase 64: + learning Shorts
 export type VoiceOnlyStyle = (typeof VOICE_ONLY_STYLES)[number];
 export const isVoiceOnly = (style: unknown): style is VoiceOnlyStyle => VOICE_ONLY_STYLES.includes(style as VoiceOnlyStyle);
 

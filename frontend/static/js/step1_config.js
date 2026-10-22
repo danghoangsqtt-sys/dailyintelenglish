@@ -42,9 +42,10 @@
   // then takes that character's name (used in the script and the video).
   // Phase 59 (ENH-041): a VOX narrator is a character's voice only
   // Phase 63 (ENH-045): VOX and the news / blur Shorts are voice-only (a narrator's voice, nobody on screen)
-  const VOICE_ONLY = ["vox", "news", "blur"];
+  const SHORTS = ["news", "blur", "mistakes", "wordday", "top5"];  // Phase 64: + the quick-learning Shorts
+  const VOICE_ONLY = ["vox", ...SHORTS];
   const voiceOnly = () => state.presentationMode === "solo_explainer" && VOICE_ONLY.includes(state.explainerStyle);
-  const isShort = () => state.presentationMode === "solo_explainer" && ["news", "blur"].includes(state.explainerStyle);
+  const isShort = () => state.presentationMode === "solo_explainer" && SHORTS.includes(state.explainerStyle);
   const slotLabel = (index) => (voiceOnly() ? "Narrator (voice only)" : `Character ${index + 1}`);
   const DURATION_PRESETS = [5, 10, 15, 20];
   const SHORT_PRESETS = [0.5, 0.75, 1];
@@ -365,7 +366,7 @@
     state.explainerStructure = project.explainer_structure || "why";
     state.explainerSubject = project.explainer_subject || "topic";
     state.explainerStyle = project.explainer_style || "presenter";
-    if (["news", "blur"].includes(state.explainerStyle)) state.shortsTemplate = state.explainerStyle;
+    if (SHORTS.includes(state.explainerStyle)) state.shortsTemplate = state.explainerStyle;
     state.accent = project.accent || state.accent;
     state.languageFeatures = Object.fromEntries(
       LANGUAGE_FEATURES.map((feature) => [

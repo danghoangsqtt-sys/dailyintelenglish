@@ -6,6 +6,7 @@ import { SoloScene } from "./SoloScene";
 import { VoxScene } from "./VoxScene";
 import { NewsScene } from "./NewsScene";
 import { BlurScene } from "./BlurScene";
+import { LearnScene } from "./LearnScene";
 
 /**
  * Task 19.6 (D19.6-f): a separate composition that renders the exact same audio-window
@@ -23,6 +24,7 @@ export const StillFrame: React.FC<EpisodeInputProps> = (props) => {
     const style = props.solo?.style;
     if (style === "news") return <NewsScene {...props}/>;
     if (style === "blur") return <BlurScene {...props}/>;
+    if (style === "mistakes" || style === "wordday" || style === "top5") return <LearnScene {...props}/>;
     if (style === "vox") return <VoxScene {...props}/>;
     return <SoloScene {...props}/>;
   }

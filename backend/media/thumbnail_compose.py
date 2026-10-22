@@ -94,7 +94,9 @@ async def composition_inputs(db: aiosqlite.Connection, project: dict, episode: i
 
     cast = await project_visuals.cast_rows(db, project_id)
     solo = project.get("presentation_mode") == "solo_explainer"
-    vox = solo and project.get("explainer_style") in ("vox", "news", "blur")  # Phase 59: nobody on screen, so no character on the cover
+    from backend.schemas.project import VOICE_ONLY_STYLES
+
+    vox = solo and project.get("explainer_style") in VOICE_ONLY_STYLES  # Phase 59: nobody on screen, so no character on the cover
     cursor = await db.execute(
         "SELECT sp.speaker_index, COUNT(*) FROM script_lines sl JOIN speakers sp ON sp.id = sl.speaker_id "
         "WHERE sl.project_id = ? GROUP BY sp.speaker_index", (project_id,))

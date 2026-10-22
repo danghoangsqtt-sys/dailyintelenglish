@@ -295,7 +295,9 @@ async def create_projects(db: aiosqlite.Connection, series_id: str) -> dict:
     speakers = await _speakers(db, series["cast"])
     style = (series.get("explainer_style") or "presenter") if solo else None
     # Phase 63: a Short lasts at most 60 s
-    duration = min(series["duration_minutes"], 0.75) if style in ("news", "blur") else series["duration_minutes"]
+    from backend.schemas.project import SHORT_STYLES
+
+    duration = min(series["duration_minutes"], 0.75) if style in SHORT_STYLES else series["duration_minutes"]
     cursor = await db.execute("SELECT * FROM channel_episodes WHERE series_id = ? AND project_id IS NULL ORDER BY number",
                               (series_id,))
     created = []

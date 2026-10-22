@@ -67,3 +67,27 @@ async def test_the_shorts_card_makes_a_vertical_news_short_from_an_article(page,
     stored = await result(await page.request.get(base_url + f"/api/projects/{created['id']}"))
     assert (stored["presentation_mode"], stored["explainer_style"], stored["duration_minutes"]) == ("solo_explainer", "news", 1)
     assert (stored["source_kind"], stored["source_text"]) == ("article", ARTICLE)
+
+
+async def test_the_learning_templates_make_their_shorts(page, base_url):
+    profile = await result(await page.request.post(base_url + "/api/visuals/profiles", data={
+        "name": "Tip Teacher", "gender": "male", "accent": "american", "appearance": "short hair", "outfit": "green shirt",
+    }))
+    await page.goto(base_url + "/step1")
+    await page.locator(".type-card[data-mode='shorts']").click()
+    await expect(page.locator("#shorts-templates [data-template]")).to_have_count(5)
+    await page.locator("[data-template='top5']").click()
+    await expect(page.locator("[data-template='top5']")).to_have_attribute("aria-checked", "true")
+    await expect(page.locator("input[name=content_source][value=material]")).to_be_hidden()
+    await page.locator("#name").fill("Top 5 small talk")
+    await page.locator("#topic").fill("Phrases for small talk at work")
+    await page.locator("button[data-choose='0']").click()
+    await page.locator(f".cs-card[data-id='{profile['id']}']").click()
+    await page.locator("[data-cs='choose']").click()
+    await page.locator("[data-cs='close']").click()
+    await page.locator("#submit-btn").click()
+    await page.wait_for_url("**/step2?**")
+    projects = await result(await page.request.get(base_url + "/api/projects"))
+    created = next(item for item in projects if item["name"] == "Top 5 small talk")
+    stored = await result(await page.request.get(base_url + f"/api/projects/{created['id']}"))
+    assert (stored["explainer_style"], stored["duration_minutes"]) == ("top5", 0.75)

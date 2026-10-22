@@ -3,7 +3,8 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const STATUS = { running: "Working", waiting_review: "Waiting for review", needs_attention: "Needs your attention", error: "Error" };
-  const KIND = { classic: "Conversation", presenter: "Solo", vox: "VOX", news: "Short · news", blur: "Short · blur" };
+  const KIND = { classic: "Conversation", presenter: "Solo", vox: "VOX", news: "Short · news", blur: "Short · blur",
+    mistakes: "Short · don't say", wordday: "Short · word", top5: "Short · top 5" };
   const RUN = { running: "Running", done: "Finished", stopped: "Stopped", error: "Could not start" };
   let view = null;
   let timer = null;

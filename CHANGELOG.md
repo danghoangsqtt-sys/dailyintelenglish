@@ -8,6 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added — Phase 64 quick-learning Shorts (2026-10-22)
+
+- Three more **Shorts viral** templates (9:16): **Don't say / Say** — a red card with the mistake struck through, then a green card with the natural phrase; **Word of the day** — the word big with its IPA, part of speech, meaning and the Vietnamese meaning from the learning content, examples with the word highlighted and a memory tip; **Top 5 phrases** — a countdown from 5 to 1, each phrase with its meaning (ENH-046).
+- The AI writes each format (real common mistakes only; a hook first and a one-line invitation to follow) and plans it with the existing visuals, so Step 5 works as for the other Shorts. Channel plan series and the automatic production can use the three templates.
+
 ### Added — Phase 63 viral Shorts: English news and text on blur (2026-10-22)
 
 - A 4th video type on Step 1, **Shorts viral** (9:16, 30/45/60 s), with two templates built on the VOX pipeline: **English news** — a narrator reads the news in simple English over pictures that change with every fact, with a BREAKING band, the headline as a lower third, key words popping up, a ticker and karaoke captions; and **Text on blur** — big words pop in with the voice over a blurred picture, key words in yellow (ENH-045).

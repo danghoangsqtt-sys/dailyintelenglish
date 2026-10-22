@@ -291,7 +291,9 @@ def vox_proof(plan: ExplainerPlan) -> dict:
 
 def _vox(snapshot: dict) -> bool:
     # Phase 63: the news and blur Shorts use the VOX board and caption proof too
-    return snapshot["source"]["project"].get("explainer_style") in ("vox", "news", "blur")
+    from backend.schemas.project import VOICE_ONLY_STYLES
+
+    return snapshot["source"]["project"].get("explainer_style") in VOICE_ONLY_STYLES
 
 
 async def validate_plan(snapshot: dict, plan: ExplainerPlan) -> dict:

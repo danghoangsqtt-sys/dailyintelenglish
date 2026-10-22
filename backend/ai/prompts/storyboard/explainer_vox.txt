@@ -48,6 +48,22 @@ THIS IS A VERTICAL "TEXT ON A BLURRED BACKGROUND" SHORT (under one minute): the 
 segment per one or two short sentences (4–10 segments). Use ONLY text_card (a "title" of at most 6 words taken from
 the narration, no bullets, "emphasis" = the 1–4 key words of the line) or quote; give a scene for each (it is shown
 heavily blurred behind the words). The last segment's emphasis invites the viewer to follow.
+{% elif style | default('') == 'mistakes' %}
+THIS IS A VERTICAL "DON'T SAY / SAY" SHORT (under one minute): one segment for the hook (a text_card whose title is
+the hook in at most 7 words), then ONE segment per pair, each a diagram with template "comparison" and exactly two
+nodes: {"id": "dont", "label": "Don't say", "detail": "<the wrong phrase exactly as spoken>"} and {"id": "say",
+"label": "Say", "detail": "<the right phrase exactly as spoken>"} (no edges); a last text_card with "Follow for more
+English tips" as emphasis. Give every segment a scene (shown softly behind).
+{% elif style | default('') == 'wordday' %}
+THIS IS A VERTICAL "WORD OF THE DAY" SHORT (under one minute): the first segment is a text_card whose "title" is the
+word or phrase itself and whose bullets are [its part of speech, its meaning in at most 8 simple words]; example
+segments are quotes ("text" = the example sentence as spoken, "highlight" = the word as it appears in it); the tip
+segments are text_cards with a short title; a last text_card with "Follow for a new word every day" as emphasis.
+{% elif style | default('') == 'top5' %}
+THIS IS A VERTICAL "TOP 5 PHRASES" SHORT (under one minute): one segment for the hook (a text_card, title at most
+7 words), then exactly ONE segment per phrase in countdown order (five, four, three, two, one), each a text_card
+whose "title" is the phrase exactly as spoken and whose single bullet is its meaning in a few words; a last
+text_card with "Follow for more phrases" as emphasis.
 {% else %}
 The first segment (the welcome and today's topic) shows a quote or text card with the topic; the last segment (the
 thanks and the invitation to subscribe) shows a short text card such as "Thanks for watching" with "Subscribe" as emphasis.

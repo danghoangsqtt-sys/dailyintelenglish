@@ -113,8 +113,10 @@ class SpeakerUpdate(BaseModel):
 
 
 # Phase 63 (ENH-045): the voice-only explainer styles (nobody on screen, a narrator's voice) and the Shorts among them
-VOICE_ONLY_STYLES = ("vox", "news", "blur")
-SHORT_STYLES = ("news", "blur")
+# Phase 64 (ENH-046): and the quick-learning Shorts -- Don't say / Say, Word of the day, Top 5 phrases
+VOICE_ONLY_STYLES = ("vox", "news", "blur", "mistakes", "wordday", "top5")
+SHORT_STYLES = ("news", "blur", "mistakes", "wordday", "top5")
+ExplainerStyle = Literal["presenter", "vox", "news", "blur", "mistakes", "wordday", "top5"]
 SHORT_MAX_MINUTES = 1.0
 
 
@@ -132,7 +134,7 @@ class ScriptConfig(BaseModel):
     explainer_subject: Literal["field", "product", "topic", "howto"] | None = None
     # Phase 59 (ENH-041): a Solo presentation with the presenter on screen, or a VOX voice-over with motion graphics;
     # Phase 63 (ENH-045): or a 9:16 Short -- English news, or text on a blurred background
-    explainer_style: Literal["presenter", "vox", "news", "blur"] | None = None
+    explainer_style: ExplainerStyle | None = None
     genre: str = "small_talk"
     accent: str = "american"
     language_features: LanguageFeatures = Field(default_factory=LanguageFeatures)
@@ -248,7 +250,7 @@ class ProjectUpdate(BaseModel):
     presentation_mode: Literal["classic", "solo_explainer"] | None = None
     explainer_structure: Literal["why", "how", "list"] | None = None
     explainer_subject: Literal["field", "product", "topic", "howto"] | None = None
-    explainer_style: Literal["presenter", "vox", "news", "blur"] | None = None
+    explainer_style: ExplainerStyle | None = None
     genre: str | None = None
     accent: str | None = None
     language_features: LanguageFeatures | None = None

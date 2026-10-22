@@ -22,6 +22,7 @@ from typing import NamedTuple, TYPE_CHECKING
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateNotFound
 from pydantic import BaseModel, Field, TypeAdapter
 
+from backend.schemas.project import SHORT_STYLES
 from backend.core.config import settings
 from backend.core.constants import (
     CEFR_WORDS_PER_MINUTE, SCRIPT_GLOBAL_WORD_TOLERANCE, SCRIPT_LAST_SECTION_CARRY_CAP,
@@ -648,7 +649,7 @@ def _source_context(project: dict) -> dict:
     # Phase 63 (ENH-045): a news / blur Short gets a hook opening and a one-line sign-off instead of the long welcome
     style = project.get("explainer_style") or ""
     return {"source_kind": kind if text else "", "source_text": text, "source_words": words,
-            "short_style": style if style in ("news", "blur") else ""}
+            "short_style": style if style in SHORT_STYLES else ""}
 
 
 async def _vocabulary_repair(

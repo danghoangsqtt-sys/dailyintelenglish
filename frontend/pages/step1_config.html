@@ -299,7 +299,7 @@
       pointer-events: none;
     }
     .type-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 6px 0 4px; }
-    .shorts-templates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 10px 0 4px; }
+    .shorts-templates { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 10px 0 4px; }
     .link-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
     .link-row input { flex: 1 1 320px; min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
       background: var(--surface); color: var(--text); }
@@ -389,6 +389,10 @@
         <div id="shorts-templates" class="shorts-templates subject-cards" role="radiogroup" aria-label="Shorts template" hidden>
           <button type="button" class="subject-card" role="radio" aria-checked="true" data-template="news"><strong>📰 English news</strong><span>A news story read in simple English over changing pictures, with a news band and ticker</span></button>
           <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="blur"><strong>💬 Text on blur</strong><span>Big words appear with the voice over a blurred picture: a short story or a life lesson</span></button>
+          <!-- Phase 64 (ENH-046): the quick-learning Shorts -->
+          <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="mistakes"><strong>❌✅ Don't say / Say</strong><span>Two to four common mistakes, each with the natural way to say it</span></button>
+          <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="wordday"><strong>📖 Word of the day</strong><span>One useful word: meaning, pronunciation, examples and a memory tip</span></button>
+          <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="top5"><strong>🔢 Top 5 phrases</strong><span>A countdown of five phrases native speakers use, each with its meaning</span></button>
         </div>
         <div id="subject-cards" class="subject-cards" role="radiogroup" aria-label="What the presentation presents" hidden>
           <button type="button" class="subject-card" role="radio" aria-checked="false" data-subject="field"><strong>💼 A field or job</strong><span>What people do, skills, a working day</span></button>

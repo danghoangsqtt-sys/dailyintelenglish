@@ -48,12 +48,28 @@ For A2/B1 especially, prefer familiar verbs, concrete nouns and manageable sente
 Do not reach a word target by stacking adjectives/adverbs or restating abstract claims.
 If a length repair needs more words, add a useful causal step, an example, or a practical
 action. Every sentence should help the viewer understand the subject.
-{% if explainer_style | default('') in ('news', 'blur') %}
+{% if explainer_style | default('') in ('news', 'blur', 'mistakes', 'wordday', 'top5') %}
 {% if explainer_style == 'news' %}SHORT — ENGLISH NEWS (vertical video, under one minute), read by a news narrator:
 open with the headline as a one-sentence hook; then three to six short facts, each one or two simple
 sentences, in the narrator's own words; explain any difficult word in passing; when an article was given,
 say once where the news is from ("This news is from ..."); never invent facts, quotes, names or numbers;
 end with one line inviting the viewer to follow Daily Beyond English for more English news.
+This SHORT format replaces the structure above and the OPENING and CLOSING below.
+{% elif explainer_style == 'mistakes' %}SHORT — DON'T SAY / SAY (vertical video, under one minute), an English teacher's voice:
+open with a one-sentence hook naming the mistake area of the topic (for example "Stop saying this in English!");
+then two to four pairs, each said as "Don't say: <wrong phrase>. Say: <right phrase>." followed by ONE short
+sentence on why; only real, common learner mistakes about the topic, with the right phrase natural and correct;
+end with one line inviting the viewer to follow Daily Beyond English for more English tips.
+This SHORT format replaces the structure above and the OPENING and CLOSING below.
+{% elif explainer_style == 'wordday' %}SHORT — WORD OF THE DAY (vertical video, under one minute): one useful English word or
+phrase that fits the topic. Open with a hook ("Today's word is ... "); say what it means in simple English and
+its part of speech; give a short pronunciation tip; two natural example sentences that use it; one memory tip;
+end with one line inviting the viewer to follow Daily Beyond English for a new word every day.
+This SHORT format replaces the structure above and the OPENING and CLOSING below.
+{% elif explainer_style == 'top5' %}SHORT — TOP 5 PHRASES (vertical video, under one minute): five useful English phrases native
+speakers use about the topic, as a countdown. Open with a one-sentence hook ("Five phrases native speakers use
+for ..."); then "Number five: <phrase>", "Number four: ...", down to "Number one", each with its meaning in
+a few simple words and one short example; end with one line inviting the viewer to follow Daily Beyond English.
 This SHORT format replaces the structure above and the OPENING and CLOSING below.
 {% else %}SHORT — TEXT ON A BLURRED BACKGROUND (vertical video, under one minute): a short story, a life lesson
 or a meaningful quote about the topic, told by a narrator. Open with a strong first line that makes the

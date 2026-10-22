@@ -2,7 +2,7 @@
 
 ## Phase 64 — Quick-learning Shorts (2026-10-22)
 
-Status: planned; 0/5 tasks. ENH-046: three more 9:16 Short templates — Don't say / Say, Word of the day, Top 5 phrases — on the Phase 63 pipeline. [Plan](phases/64-learning-shorts/PLAN.md).
+Status: implemented_verified_pending_owner_review; 5/5 tasks. Full pytest 1979 passed + 1 known-flaky Settings browser test (passes alone 2/2); 163 Vitest. Three real sandbox Shorts rendered. ENH-046: three more 9:16 Short templates — Don't say / Say, Word of the day, Top 5 phrases — on the Phase 63 pipeline. [Plan](phases/64-learning-shorts/PLAN.md).
 
 ## Phase 63 — Viral Shorts: English news, text on blur (2026-10-22)
 
