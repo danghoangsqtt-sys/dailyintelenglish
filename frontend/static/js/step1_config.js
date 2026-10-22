@@ -42,10 +42,14 @@
   // then takes that character's name (used in the script and the video).
   // Phase 59 (ENH-041): a VOX narrator is a character's voice only
   // Phase 63 (ENH-045): VOX and the news / blur Shorts are voice-only (a narrator's voice, nobody on screen)
-  const SHORTS = ["news", "blur", "mistakes", "wordday", "top5"];  // Phase 64: + the quick-learning Shorts
-  const VOICE_ONLY = ["vox", ...SHORTS];
+  // Phase 64/65: + the quick-learning and the interactive Shorts; chat / would-you-rather are two-character conversations
+  const SOLO_SHORTS = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen"];
+  const CONVERSATION_SHORTS = ["chat", "wyr"];
+  const SHORTS = [...SOLO_SHORTS, ...CONVERSATION_SHORTS];
+  const VOICE_ONLY = ["vox", ...SOLO_SHORTS];
   const voiceOnly = () => state.presentationMode === "solo_explainer" && VOICE_ONLY.includes(state.explainerStyle);
-  const isShort = () => state.presentationMode === "solo_explainer" && SHORTS.includes(state.explainerStyle);
+  const conversationShort = () => state.presentationMode === "classic" && CONVERSATION_SHORTS.includes(state.explainerStyle);
+  const isShort = () => (state.presentationMode === "solo_explainer" && SOLO_SHORTS.includes(state.explainerStyle)) || conversationShort();
   const slotLabel = (index) => (voiceOnly() ? "Narrator (voice only)" : `Character ${index + 1}`);
   const DURATION_PRESETS = [5, 10, 15, 20];
   const SHORT_PRESETS = [0.5, 0.75, 1];
@@ -267,7 +271,7 @@
     CharacterSelector.open({
       slots: state.speakers.map((speaker, i) => ({ index: i, label: slotLabel(i), characterId: speaker.character_id })),
       profiles: state.profiles,
-      eligibility: voiceOnly() ? "vox" : state.presentationMode,
+      eligibility: voiceOnly() || conversationShort() ? "vox" : state.presentationMode,  // a chat Short needs only voices
       startSlot: index,
       onChoose: (slotIndex, profile) => applyProfile(slotIndex, profile),
     });
@@ -398,8 +402,9 @@
     document.getElementById("explainer-structure-row").hidden = !solo || isShort();
     document.getElementById("explainer-structure").value = state.explainerStructure;
     const count = document.getElementById("num-speakers");
-    count.disabled = solo;
+    count.disabled = solo || conversationShort();
     if (solo) { count.value = 1; syncSpeakersToCount(1); renderSpeakerCards(); }
+    if (conversationShort() && state.speakers.length !== 2) { count.value = 2; syncSpeakersToCount(2); renderSpeakerCards(); }
     document.querySelectorAll("#type-cards .type-card").forEach((card) => {
       const mode = isShort() ? "shorts" : state.presentationMode === "solo_explainer" && state.explainerStyle === "vox" ? "vox" : state.presentationMode;
       card.setAttribute("aria-checked", String(card.dataset.mode === mode));
@@ -526,7 +531,8 @@
       // VOX is a Solo presentation shown as a voice-over with motion graphics
       const wasShort = isShort();
       const mode = card.dataset.mode;
-      state.presentationMode = mode === "vox" || mode === "shorts" ? "solo_explainer" : mode;
+      const conversation = mode === "shorts" && CONVERSATION_SHORTS.includes(state.shortsTemplate);
+      state.presentationMode = conversation ? "classic" : mode === "vox" || mode === "shorts" ? "solo_explainer" : mode;
       state.explainerStyle = mode === "vox" ? "vox" : mode === "shorts" ? state.shortsTemplate : "presenter";
       // Phase 63: a Short lasts 30-60 s; going back to a long video restores a long length
       if (isShort() && !wasShort) { state.duration = 0.75; state.customDurationActive = false; }
@@ -537,7 +543,10 @@
     document.querySelectorAll("#shorts-templates [data-template]").forEach((card) => card.addEventListener("click", () => {
       state.shortsTemplate = card.dataset.template;
       state.explainerStyle = card.dataset.template;
+      // chat / would you rather are two-character conversations; the other Shorts have one narrator
+      state.presentationMode = CONVERSATION_SHORTS.includes(card.dataset.template) ? "classic" : "solo_explainer";
       renderPresentation();
+      renderSpeakerCards();
     }));
     document.getElementById("source-link-btn").addEventListener("click", readLink);
     document.querySelectorAll("#subject-cards .subject-card").forEach((card) => card.addEventListener("click", () => {
@@ -745,7 +754,7 @@
       presentation_mode: state.presentationMode,
       ...(state.presentationMode === "solo_explainer"
         ? { explainer_structure: state.explainerStructure, explainer_subject: state.explainerSubject,
-          explainer_style: state.explainerStyle } : {}),
+          explainer_style: state.explainerStyle } : conversationShort() ? { explainer_style: state.explainerStyle } : {}),
       genre: state.genre,
       accent: state.accent,
       language_features: { ...state.languageFeatures },

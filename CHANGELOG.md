@@ -8,6 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added — Phase 65 interactive Shorts (2026-10-22)
+
+- Four more **Shorts viral** templates (9:16): **Countdown quiz** — A/B/C options, a 3-2-1 ring timer, the right answer turning green; **Listening challenge** — the sentence is heard with the captions hidden (an ear and a sound wave), then revealed with its hardest words highlighted; **Chat** — two characters text each other, each message a bubble with their voice, typing dots and auto-scroll (a generic chat look); **Would you rather** — red and blue halves with the two options, a timer, then the other character's choice and reason (ENH-047).
+- Chat and Would-you-rather are two-character conversations drawn from the script lines (no visual plan, no character pictures needed); quiz and listening use one narrator like the other Shorts. Channel plan series and the automatic production can use all four.
+
 ### Added — Phase 64 quick-learning Shorts (2026-10-22)
 
 - Three more **Shorts viral** templates (9:16): **Don't say / Say** — a red card with the mistake struck through, then a green card with the natural phrase; **Word of the day** — the word big with its IPA, part of speech, meaning and the Vietnamese meaning from the learning content, examples with the word highlighted and a memory tip; **Top 5 phrases** — a countdown from 5 to 1, each phrase with its meaning (ENH-046).

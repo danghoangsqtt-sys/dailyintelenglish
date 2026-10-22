@@ -202,6 +202,8 @@ export const episodeInputPropsSchema = z.object({
    * few seconds from `hookAtSec` (speech time). */
   hook: z.string().optional(),
   hookAtSec: z.number().optional(),
+  /** Phase 65 (ENH-047): a two-character conversation Short drawn from its lines -- "chat" or "wyr" (would you rather). */
+  shortStyle: z.enum(["chat", "wyr"]).optional(),
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;

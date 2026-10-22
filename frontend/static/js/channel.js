@@ -190,15 +190,19 @@
     // Phase 63 (ENH-045): a Solo series can also be VOX or 9:16 Shorts (news, text on blur)
     const STYLES = {classic:["classic","presenter"],solo_explainer:["solo_explainer","presenter"],vox:["solo_explainer","vox"],
       news:["solo_explainer","news"],blur:["solo_explainer","blur"],mistakes:["solo_explainer","mistakes"],
-      wordday:["solo_explainer","wordday"],top5:["solo_explainer","top5"]};
+      wordday:["solo_explainer","wordday"],top5:["solo_explainer","top5"],quiz:["solo_explainer","quiz"],listen:["solo_explainer","listen"],
+      chat:["classic","chat"],wyr:["classic","wyr"]};
     const mode = el("select", {"aria-label":"Series presentation mode", onchange:event=>{const [presentation,style]=STYLES[event.target.value];
       act(()=>Api.updateChannelSeries(series.id,{presentation_mode:presentation,explainer_style:style,
         cast:presentation==="solo_explainer"?cast.slice(0,1):cast}),"Mode saved.");}},
       [el("option",{value:"classic",textContent:"Conversation"}),el("option",{value:"solo_explainer",textContent:"Solo Explainer"}),
         el("option",{value:"vox",textContent:"VOX explainer"}),el("option",{value:"news",textContent:"Short: English news"}),
         el("option",{value:"blur",textContent:"Short: text on blur"}),el("option",{value:"mistakes",textContent:"Short: Don't say / Say"}),
-        el("option",{value:"wordday",textContent:"Short: word of the day"}),el("option",{value:"top5",textContent:"Short: top 5 phrases"})]);
-    mode.value=series.presentation_mode==="solo_explainer"?(series.explainer_style&&series.explainer_style!=="presenter"?series.explainer_style:"solo_explainer"):"classic";
+        el("option",{value:"wordday",textContent:"Short: word of the day"}),el("option",{value:"top5",textContent:"Short: top 5 phrases"}),
+        el("option",{value:"quiz",textContent:"Short: countdown quiz"}),el("option",{value:"listen",textContent:"Short: listening challenge"}),
+        el("option",{value:"chat",textContent:"Short: chat (2 characters)"}),el("option",{value:"wyr",textContent:"Short: would you rather (2 characters)"})]);
+    mode.value=series.presentation_mode==="solo_explainer"?(series.explainer_style&&series.explainer_style!=="presenter"?series.explainer_style:"solo_explainer")
+      :["chat","wyr"].includes(series.explainer_style)?series.explainer_style:"classic";
     const structure=el("select",{"aria-label":"Explainer structure",onchange:event=>act(()=>Api.updateChannelSeries(series.id,{explainer_structure:event.target.value}),"Structure saved.")},
       ["why","how","list"].map(value=>el("option",{value,textContent:value})));
     structure.value=series.explainer_structure || "why";

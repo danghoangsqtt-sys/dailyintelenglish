@@ -10,7 +10,7 @@ const ExplainerEditor = (() => {
     if (style === "news") return `Realistic news photograph for an English news short about "${topic}": ${segment.intent}.`
       + `${sceneName ? ` Setting: ${sceneName}.` : ""} Natural light, documentary style, one clear subject, 9:16 vertical portrait.`
       + " No text, no letters, no logos, no watermark, no real famous people, no recognisable faces.";
-    if (["blur", "mistakes", "wordday", "top5"].includes(style)) return `Atmospheric background photo for a short inspirational video about "${topic}": ${segment.intent}.`
+    if (["blur", "mistakes", "wordday", "top5", "quiz", "listen"].includes(style)) return `Atmospheric background photo for a short inspirational video about "${topic}": ${segment.intent}.`
       + " Soft colours, simple shapes, plenty of empty space, 9:16 vertical portrait. No text, no logos, no people's faces.";
     return `Editorial paper-collage illustration for an explainer video about "${topic}": ${segment.intent}.`
       + `${sceneName ? ` Setting: ${sceneName}.` : ""} Cut-out photo elements on warm off-white paper, muted warm colours with one red accent,`
@@ -18,7 +18,8 @@ const ExplainerEditor = (() => {
       + " no real famous people.";
   }
   async function mount(container, projectId, options = {}) {
-    const SHORT_TITLES = {news:"English news Short",blur:"Text-on-blur Short",mistakes:"Don't say / Say Short",wordday:"Word of the day Short",top5:"Top 5 phrases Short"};
+    const SHORT_TITLES = {news:"English news Short",blur:"Text-on-blur Short",mistakes:"Don't say / Say Short",wordday:"Word of the day Short",top5:"Top 5 phrases Short",
+      quiz:"Countdown quiz Short",listen:"Listening challenge Short"};
     const short = options.style in SHORT_TITLES;  // Phase 63/64: the Shorts are voice-only like VOX
     const vox = short || options.style === "vox";
     const title = short ? SHORT_TITLES[options.style] : vox ? "VOX explainer" : "Solo Explainer";

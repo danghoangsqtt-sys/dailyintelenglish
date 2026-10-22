@@ -293,7 +293,8 @@ async def create_projects(db: aiosqlite.Connection, series_id: str) -> dict:
     if not solo and len(series["cast"]) < 2:
         raise ValidationError("Choose at least two characters for the series first")
     speakers = await _speakers(db, series["cast"])
-    style = (series.get("explainer_style") or "presenter") if solo else None
+    style = (series.get("explainer_style") or "presenter") if solo else (
+        series.get("explainer_style") if series.get("explainer_style") in ("chat", "wyr") else None)
     # Phase 63: a Short lasts at most 60 s
     from backend.schemas.project import SHORT_STYLES
 

@@ -95,9 +95,13 @@ async def generate_video(
         output_dir /= project["_attempt_id"]
     try:
         # Phase 63 (ENH-045): a Short's main video is the vertical 9:16 one
-        from backend.schemas.project import SHORT_STYLES
+        from backend.schemas.project import CONVERSATION_SHORT_STYLES, SOLO_SHORT_STYLES
 
-        short = project.get("presentation_mode") == "solo_explainer" and project.get("explainer_style") in SHORT_STYLES
+        style = project.get("explainer_style")
+        conversation_short = project.get("presentation_mode") != "solo_explainer" and style in CONVERSATION_SHORT_STYLES
+        short = conversation_short or (project.get("presentation_mode") == "solo_explainer" and style in SOLO_SHORT_STYLES)
+        if conversation_short:  # Phase 65: drawn from the script lines, no talking sprites
+            visual_mode = "podcast_black"
         result = await video_renderer_remotion.render_via_remotion(
             db, project, audio_job, learning, output_dir / "video_remotion.mp4", caption_style=caption_style,
             visual_mode=visual_mode, still_scene_id=still_scene_id, **({"layout": "vertical"} if short else {}),

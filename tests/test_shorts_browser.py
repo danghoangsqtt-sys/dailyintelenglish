@@ -75,7 +75,7 @@ async def test_the_learning_templates_make_their_shorts(page, base_url):
     }))
     await page.goto(base_url + "/step1")
     await page.locator(".type-card[data-mode='shorts']").click()
-    await expect(page.locator("#shorts-templates [data-template]")).to_have_count(5)
+    await expect(page.locator("#shorts-templates [data-template]")).to_have_count(9)
     await page.locator("[data-template='top5']").click()
     await expect(page.locator("[data-template='top5']")).to_have_attribute("aria-checked", "true")
     await expect(page.locator("input[name=content_source][value=material]")).to_be_hidden()
@@ -91,3 +91,31 @@ async def test_the_learning_templates_make_their_shorts(page, base_url):
     created = next(item for item in projects if item["name"] == "Top 5 small talk")
     stored = await result(await page.request.get(base_url + f"/api/projects/{created['id']}"))
     assert (stored["explainer_style"], stored["duration_minutes"]) == ("top5", 0.75)
+
+
+async def test_the_chat_template_makes_a_two_character_conversation_short(page, base_url):
+    ids = [(await result(await page.request.post(base_url + "/api/visuals/profiles", data={
+        "name": name, "gender": "female", "accent": "american", "appearance": "short hair", "outfit": "blue shirt",
+    })))["id"] for name in ("Chat One", "Chat Two")]
+    await page.goto(base_url + "/step1")
+    await page.locator(".type-card[data-mode='shorts']").click()
+    await expect(page.locator("#shorts-templates [data-template]")).to_have_count(9)
+    await page.locator("[data-template='chat']").click()
+    await expect(page.locator(".speaker-slot")).to_have_count(2)
+    await expect(page.locator("#num-speakers")).to_be_disabled()
+    await page.locator("#name").fill("Chat about lunch")
+    await page.locator("#topic").fill("Two friends plan lunch by text")
+    for slot, character in enumerate(ids):
+        await page.locator(f"button[data-choose='{slot}']").click()
+        await page.locator(f".cs-card[data-id='{character}']").click()
+        await page.locator("[data-cs='choose']").click()
+        await page.locator("[data-cs='close']").click()
+    await page.locator("#submit-btn").click()
+    try:
+        await page.wait_for_url("**/step2?**", timeout=8000)
+    except Exception:
+        raise AssertionError(await page.locator("#error-banner").inner_text())
+    projects = await result(await page.request.get(base_url + "/api/projects"))
+    created = next(item for item in projects if item["name"] == "Chat about lunch")
+    stored = await result(await page.request.get(base_url + f"/api/projects/{created['id']}"))
+    assert (stored["presentation_mode"], stored["explainer_style"], len(stored["speakers"])) == ("classic", "chat", 2)

@@ -456,6 +456,8 @@ async def _build_input_props(
 
     chapters = _parse_chapters_text(chapters_text)
     props: dict[str, Any] = {
+        # Phase 65 (ENH-047): a chat / would-you-rather Short is drawn from its lines
+        **({"shortStyle": project["explainer_style"]} if project.get("explainer_style") in ("chat", "wyr") else {}),
         "episodeId": project["id"],
         "lines": lines,
         "speakers": speakers_props,

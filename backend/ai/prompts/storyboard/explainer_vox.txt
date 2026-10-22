@@ -59,6 +59,17 @@ THIS IS A VERTICAL "WORD OF THE DAY" SHORT (under one minute): the first segment
 word or phrase itself and whose bullets are [its part of speech, its meaning in at most 8 simple words]; example
 segments are quotes ("text" = the example sentence as spoken, "highlight" = the word as it appears in it); the tip
 segments are text_cards with a short title; a last text_card with "Follow for a new word every day" as emphasis.
+{% elif style | default('') == 'quiz' %}
+THIS IS A VERTICAL COUNTDOWN QUIZ SHORT (under one minute): one segment for the hook (a text_card, title at most 7
+words), then exactly ONE segment per question (from "Question" to the end of its explanation), each a text_card
+whose "title" is the question as spoken, whose bullets are the three options as "A …", "B …", "C …" exactly as
+spoken, and whose "emphasis" is the right option exactly as it appears in the bullets; a last text_card with
+"Comment your score!" as emphasis.
+{% elif style | default('') == 'listen' %}
+THIS IS A VERTICAL LISTENING CHALLENGE SHORT (under one minute): one segment for the hook (a text_card, title at
+most 7 words), then exactly ONE segment per sentence (from "Listen." to the end of its tip), each a quote whose
+"text" is the sentence exactly as spoken and whose "highlight" is the 1–4 words that are hardest to hear; a last
+text_card with "How many did you get?" as emphasis.
 {% elif style | default('') == 'top5' %}
 THIS IS A VERTICAL "TOP 5 PHRASES" SHORT (under one minute): one segment for the hook (a text_card, title at most
 7 words), then exactly ONE segment per phrase in countdown order (five, four, three, two, one), each a text_card

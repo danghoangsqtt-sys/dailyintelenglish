@@ -4,7 +4,8 @@
   const $ = (id) => document.getElementById(id);
   const STATUS = { running: "Working", waiting_review: "Waiting for review", needs_attention: "Needs your attention", error: "Error" };
   const KIND = { classic: "Conversation", presenter: "Solo", vox: "VOX", news: "Short · news", blur: "Short · blur",
-    mistakes: "Short · don't say", wordday: "Short · word", top5: "Short · top 5" };
+    mistakes: "Short · don't say", wordday: "Short · word", top5: "Short · top 5", quiz: "Short · quiz", listen: "Short · listening",
+    chat: "Short · chat", wyr: "Short · would you rather" };
   const RUN = { running: "Running", done: "Finished", stopped: "Stopped", error: "Could not start" };
   let view = null;
   let timer = null;
@@ -56,7 +57,8 @@
     list.replaceChildren(...queue.map((item) => {
       const row = el("li");
       row.append(el("span", "date", item.publish_date || ""), el("span", "grow", `${item.series} · Ep. ${item.number}: ${item.title}`),
-        el("span", "auto-badge", KIND[item.presentation_mode === "solo_explainer" ? item.explainer_style || "presenter" : "classic"] || "Solo"));
+        el("span", "auto-badge", KIND[item.presentation_mode === "solo_explainer" ? item.explainer_style || "presenter"
+          : ["chat", "wyr"].includes(item.explainer_style) ? item.explainer_style : "classic"] || "Solo"));
       if (item.project_id) {
         const link = el("a", "", "Open");
         link.href = `/step2?project_id=${encodeURIComponent(item.project_id)}`;

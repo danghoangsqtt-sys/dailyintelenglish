@@ -2,7 +2,7 @@
 
 ## Phase 65 — Interactive Shorts (2026-10-22)
 
-Status: planned; 0/5 tasks. ENH-047: countdown quiz and listening challenge (one narrator), chat and would-you-rather (two voices, drawn from the script lines). [Plan](phases/65-interactive-shorts/PLAN.md).
+Status: implemented_verified_pending_owner_review; 5/5 tasks. Full pytest 1988 passed; 169 Vitest. Four real sandbox Shorts rendered (1080×1920). ENH-047: countdown quiz and listening challenge (one narrator), chat and would-you-rather (two voices, drawn from the script lines). [Plan](phases/65-interactive-shorts/PLAN.md).
 
 ## Phase 64 — Quick-learning Shorts (2026-10-22)
 

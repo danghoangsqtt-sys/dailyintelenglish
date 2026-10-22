@@ -1,0 +1,14 @@
+## Conversation Short — {{ explainer_style | upper }}
+{% if explainer_style == 'chat' %}SHORT — CHAT (a vertical video under one minute): the two characters text each other, and each
+script line is ONE chat message shown as a bubble. A real-life situation from the topic (making plans, asking for
+help, a small problem); short natural messages of 3–15 words, the way people really text in English (contractions,
+one or two common texting phrases, no emoji words); 8–14 messages, alternating mostly, with a small twist or a
+friendly ending. The first message opens the situation at once (the hook); the last message ends it warmly.
+Do not greet the viewers or mention the channel inside the chat: the narrator's lines are not used here.
+{% else %}SHORT — WOULD YOU RATHER (a vertical video under one minute) with the two characters:
+the FIRST character always asks, in exactly this form: "Would you rather <option A> or <option B>?" — two short,
+fun, everyday options about the topic (at most 6 words each); the SECOND character answers with "I'd rather ..."
+and one short reason using a useful English phrase; 2–3 rounds. Open with one line from the first character
+inviting the viewer to answer too ("Let's play would you rather!"); end with one line from the second character
+asking the viewer to comment their choice and follow for more. Never invent statistics or what most people chose.
+{% endif %}

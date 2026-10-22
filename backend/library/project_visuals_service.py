@@ -59,7 +59,9 @@ async def set_cast(db: aiosqlite.Connection, project_id: str, members: list[dict
         character = await library.get_character_row(db, member["character_id"])
         if character["status"] != "locked":  # Phase 33: a profile made from outside-AI pictures is never "locked"
             readiness = await character_profile_service.readiness(db, character)
-            required = ("profile", "voice") if project.get("presentation_mode") == "solo_explainer" else ("profile", "voice", "core_visuals")
+            # Phase 65: a chat / would-you-rather Short shows no character pictures, so only the voice matters
+            voices_only = project.get("presentation_mode") == "solo_explainer" or project.get("explainer_style") in ("chat", "wyr")
+            required = ("profile", "voice") if voices_only else ("profile", "voice", "core_visuals")
             if not all(readiness[key]["ready"] for key in required):
                 missing = [item for key in required for item in readiness[key]["missing"]]
                 raise ValidationError(f"{character['name']} is not ready for videos yet: {', '.join(missing[:4])}")

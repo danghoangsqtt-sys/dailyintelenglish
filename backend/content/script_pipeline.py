@@ -439,6 +439,11 @@ def validate_section(
     return validate_section_structure(lines, known_speaker_ids) + validate_section_word_budget(lines, target_words)
 
 
+def _repeats_by_design(project: dict) -> bool:
+    """Phase 65 (ENH-047): a listening-challenge Short repeats its sentences by design."""
+    return project.get("explainer_style") == "listen"
+
+
 def validate_global(
     lines: list[SectionLineOut],
     target_words: int,
@@ -446,6 +451,7 @@ def validate_global(
     num_speakers: int,
     topic: str,
     vocabulary: list[str] | None = None,
+    allow_repeats: bool = False,
 ) -> tuple[list[str], list[str]]:
     """Whole-episode hard checks (word budget, balance, duplicates, repetition)
     plus soft warnings (topic relevance). Returns `(hard_errors, warnings)`."""
@@ -482,11 +488,12 @@ def validate_global(
                 )
 
     normalized_lines = [normalize_text(line.text) for line in lines]
-    if len(normalized_lines) != len(set(normalized_lines)):
+    # Phase 65: a listening challenge says each sentence again on purpose, so repeats are allowed there
+    if len(normalized_lines) != len(set(normalized_lines)) and not allow_repeats:
         hard_errors.append("exact duplicate line(s) found")
 
     ratio = repeated_8gram_ratio(normalized_words)
-    if ratio >= SCRIPT_MAX_REPEATED_8GRAM_RATIO:
+    if ratio >= SCRIPT_MAX_REPEATED_8GRAM_RATIO and not allow_repeats:
         hard_errors.append(
             f"repeated 8-gram ratio {ratio:.2%} >= {SCRIPT_MAX_REPEATED_8GRAM_RATIO:.0%}"
         )
@@ -694,7 +701,8 @@ async def _vocabulary_repair(
     candidate = [line for each_spec, lines in ordered
                  for line in (new_lines if each_spec.index == target_spec.index else lines)]
     still_missing = missing_vocabulary(words, [line.text for line in candidate])
-    hard_errors, _warnings = validate_global(candidate, target_words, known_speaker_ids, num_speakers, project["topic"])
+    hard_errors, _warnings = validate_global(candidate, target_words, known_speaker_ids, num_speakers, project["topic"],
+                                          allow_repeats=_repeats_by_design(project))
     if hard_errors or len(still_missing) >= len(missing):
         return all_lines
     checkpoint = section_checkpoints[target_spec.index]
@@ -1313,7 +1321,8 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
         await ai_job_service.transition_status(db, job_id, "validating", commit=False)
 
     hard_errors, _warnings = validate_global(
-        all_lines, target_words, known_speaker_ids, num_speakers, project["topic"]
+        all_lines, target_words, known_speaker_ids, num_speakers, project["topic"],
+                    allow_repeats=_repeats_by_design(project),
     )
 
     # Task 17.1 (ENH-010): one shared, ordered, two-slot loop. Budget is checked
@@ -1404,7 +1413,8 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
                     if checkpoint is not None:
                         all_lines.extend(_SECTION_LINES_ADAPTER.validate_json(checkpoint["result_json"]))
                 hard_errors, _warnings = validate_global(
-                    all_lines, target_words, known_speaker_ids, num_speakers, project["topic"]
+                    all_lines, target_words, known_speaker_ids, num_speakers, project["topic"],
+                    allow_repeats=_repeats_by_design(project),
                 )
             continue
 
@@ -1483,7 +1493,8 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
                     all_lines.extend(new_worst_lines if section_index == worst_index else lines)
 
                 hard_errors, _warnings = validate_global(
-                    all_lines, target_words, known_speaker_ids, num_speakers, project["topic"]
+                    all_lines, target_words, known_speaker_ids, num_speakers, project["topic"],
+                    allow_repeats=_repeats_by_design(project),
                 )
             continue
 

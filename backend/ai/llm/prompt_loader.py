@@ -85,6 +85,9 @@ def _render_presentation_block_sync(presentation_mode: str, explainer_structure:
                                     explainer_subject: str | None = None, explainer_style: str | None = None) -> str:
     """Validate explicit Solo configuration, then render its finite structure template."""
     if presentation_mode == "classic":
+        # Phase 65 (ENH-047): a chat / would-you-rather Short gives the conversation its own format
+        if explainer_style in ("chat", "wyr"):
+            return _env.get_template("conversation_short.txt").render(explainer_style=explainer_style)
         return ""
     if presentation_mode != "solo_explainer":
         raise ValidationError("Unsupported presentation mode")
@@ -120,7 +123,7 @@ def _render_script_prompt_sync(*, genre: str, cefr_level: str, **context: object
     subject = context.pop("explainer_subject", None)
     style = context.pop("explainer_style", None)
     solo = _render_presentation_block_sync(mode, structure, int(context.get("num_speakers", 0)), subject, style)
-    if solo and len(context.get("speakers", [])) != 1:
+    if solo and mode == "solo_explainer" and len(context.get("speakers", [])) != 1:
         raise ValidationError("Solo Explainer requires exactly one presenter")
     genre_instructions = solo or genre_instructions
     cefr_constraints = _read_cefr_block_sync(cefr_level)

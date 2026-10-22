@@ -7,6 +7,8 @@ import { VoxScene } from "./VoxScene";
 import { NewsScene } from "./NewsScene";
 import { BlurScene } from "./BlurScene";
 import { LearnScene } from "./LearnScene";
+import { InteractScene } from "./InteractScene";
+import { ChatScene } from "./ChatScene";
 
 /**
  * Task 19.6 (D19.6-f): a separate composition that renders the exact same audio-window
@@ -19,12 +21,14 @@ import { LearnScene } from "./LearnScene";
  * one -- see task-19.6.md's D19.6-f finding).
  */
 export const StillFrame: React.FC<EpisodeInputProps> = (props) => {
+  if (props.shortStyle) return <ChatScene {...props}/>;  // Phase 65: a conversation Short
   if (props.presentationMode === "solo_explainer") {
     // Phase 63: each voice-only style has its own scene (a VOX/Short payload has no presenter for SoloScene)
     const style = props.solo?.style;
     if (style === "news") return <NewsScene {...props}/>;
     if (style === "blur") return <BlurScene {...props}/>;
     if (style === "mistakes" || style === "wordday" || style === "top5") return <LearnScene {...props}/>;
+    if (style === "quiz" || style === "listen") return <InteractScene {...props}/>;
     if (style === "vox") return <VoxScene {...props}/>;
     return <SoloScene {...props}/>;
   }

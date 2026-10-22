@@ -90,7 +90,9 @@ class Producer:
     async def solo_plan(self, project_id: str) -> dict:
         return await self.client.call("GET", f"/api/projects/{project_id}/explainer-plan")
 
-    async def has_visual_plan(self, project_id: str, solo: bool) -> bool:
+    async def has_visual_plan(self, project_id: str, solo: bool, style: str | None = None) -> bool:
+        if not solo and style in ("chat", "wyr"):  # Phase 65: drawn from the script lines, no storyboard
+            return True
         if solo:
             plan = (await self.solo_plan(project_id)).get("plan")
             return bool(plan and plan.get("status") == "approved")
@@ -169,7 +171,8 @@ class Producer:
                 raise StepError("The project for this episode could not be created")
         for _attempt in range(len(rules.STEPS) + 2):
             progress = await self.progress(project_id)
-            step = rules.next_step(progress, has_visual_plan=progress.get("video") or await self.has_visual_plan(project_id, solo))
+            step = rules.next_step(progress, has_visual_plan=progress.get("video") or await self.has_visual_plan(
+                project_id, solo, episode.get("explainer_style")))
             if step is None:
                 return project_id
             await on_step(step, project_id)

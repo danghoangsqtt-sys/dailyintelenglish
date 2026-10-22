@@ -4,6 +4,8 @@ import {VoxScene} from "./VoxScene";
 import {NewsScene} from "./NewsScene";
 import {BlurScene} from "./BlurScene";
 import {LearnScene} from "./LearnScene";
+import {InteractScene} from "./InteractScene";
+import {ChatScene} from "./ChatScene";
 import {resolvedMedia} from "./Presenter";
 import React, { useMemo } from "react";
 import { AbsoluteFill, Audio, Img, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
@@ -436,6 +438,7 @@ export const Episode: React.FC<EpisodeInputProps> = ({
   layout = "horizontal",
   hook,
   hookAtSec,
+  shortStyle,
 }) => {
   // D19.6-a: total video = intro + audio + outro (Option B, extend). `audioDurationSec` is
   // the same "last line's endSec" measure Root.tsx's calculateMetadata already uses for the
@@ -457,11 +460,12 @@ export const Episode: React.FC<EpisodeInputProps> = ({
         {presentationMode === "solo_explainer" && solo ? <>
           {!soundtrackPath ? <Audio src={resolvedMedia(audioPath)} /> : null}
           {solo.style === "news" ? <NewsScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
+          solo.style === "quiz" || solo.style === "listen" ? <InteractScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
           solo.style === "mistakes" || solo.style === "wordday" || solo.style === "top5" ? <LearnScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
           solo.style === "blur" ? <BlurScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
           solo.style === "vox" ? <VoxScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
           <SoloScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" />}
-        </> : <AudioWindowContent
+        </> : shortStyle ? <ChatScene {...{presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec,shortStyle}} episodeId="" outroText="" /> : <AudioWindowContent
           lines={lines}
           speakers={speakers}
           learning={learning}

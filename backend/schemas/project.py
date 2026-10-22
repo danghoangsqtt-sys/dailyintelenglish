@@ -114,9 +114,13 @@ class SpeakerUpdate(BaseModel):
 
 # Phase 63 (ENH-045): the voice-only explainer styles (nobody on screen, a narrator's voice) and the Shorts among them
 # Phase 64 (ENH-046): and the quick-learning Shorts -- Don't say / Say, Word of the day, Top 5 phrases
-VOICE_ONLY_STYLES = ("vox", "news", "blur", "mistakes", "wordday", "top5")
-SHORT_STYLES = ("news", "blur", "mistakes", "wordday", "top5")
-ExplainerStyle = Literal["presenter", "vox", "news", "blur", "mistakes", "wordday", "top5"]
+# Phase 65 (ENH-047): + the interactive Shorts -- quiz and listening challenge (one narrator), chat and would you
+# rather (a two-character conversation, drawn from its script lines)
+SOLO_SHORT_STYLES = ("news", "blur", "mistakes", "wordday", "top5", "quiz", "listen")
+CONVERSATION_SHORT_STYLES = ("chat", "wyr")
+VOICE_ONLY_STYLES = ("vox",) + SOLO_SHORT_STYLES
+SHORT_STYLES = SOLO_SHORT_STYLES + CONVERSATION_SHORT_STYLES
+ExplainerStyle = Literal["presenter", "vox", "news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "chat", "wyr"]
 SHORT_MAX_MINUTES = 1.0
 
 
@@ -192,9 +196,18 @@ class ScriptConfig(BaseModel):
                 self.explainer_subject = "topic"
             if self.explainer_style is None:
                 self.explainer_style = "presenter"
+            if self.explainer_style in CONVERSATION_SHORT_STYLES:
+                raise ValueError("A chat or would-you-rather Short is a conversation of two characters.")
             if self.explainer_structure is None:
                 self.explainer_structure = SUBJECT_STRUCTURES[self.explainer_subject]
             if self.explainer_style in SHORT_STYLES and self.duration_minutes > SHORT_MAX_MINUTES:
+                raise ValueError("A Short lasts at most 60 seconds.")
+        elif self.explainer_style in CONVERSATION_SHORT_STYLES:
+            # Phase 65: a conversation Short keeps its style (chat / would you rather)
+            self.explainer_subject = None
+            if self.num_speakers != 2:
+                raise ValueError("A chat or would-you-rather Short needs exactly two characters.")
+            if self.duration_minutes > SHORT_MAX_MINUTES:
                 raise ValueError("A Short lasts at most 60 seconds.")
         else:
             self.explainer_subject = None
