@@ -2,15 +2,15 @@
 
 [← Về README](../../README.md) · [Hướng dẫn cài Windows đầy đủ](windows-installation.md)
 
-**Áp dụng cho:** `v1.6.0` · Windows 10/11 x64 · Cập nhật 22/10/2026.
+**Áp dụng cho:** `v1.7.0` · Windows 10/11 x64 · Cập nhật 23/10/2026.
 
 Tài liệu này dùng **thư mục chuyển giao** chép từ máy chính sang qua USB hoặc Google Drive/OneDrive, không cần tải gói từ GitHub. Thư mục gồm:
 
 | Tệp | Là gì |
 |---|---|
-| `DailyBeyondEnglishStudio-1.6.0-source.zip` | Mã nguồn đúng phiên bản 1.6.0, tức tag `v1.6.0` |
-| `DailyBeyondEnglishStudio-1.6.0-lite-windows-x64.zip` | Ứng dụng bản **Lite**, cho máy không có GPU NVIDIA từ 8 GB (như laptop 4 GB VRAM) |
-| `DailyBeyondEnglishStudio-1.6.0-full-windows-x64.zip` | Ứng dụng bản **Full**, cho máy có GPU NVIDIA từ 8 GB và đã cài mô hình tạo ảnh |
+| `DailyBeyondEnglishStudio-1.7.0-source.zip` | Mã nguồn đúng phiên bản 1.7.0, tức tag `v1.7.0` |
+| `DailyBeyondEnglishStudio-1.7.0-lite-windows-x64.zip` | Ứng dụng bản **Lite**, cho máy không có GPU NVIDIA từ 8 GB (như laptop 4 GB VRAM) |
+| `DailyBeyondEnglishStudio-1.7.0-full-windows-x64.zip` | Ứng dụng bản **Full**, cho máy có GPU NVIDIA từ 8 GB và đã cài mô hình tạo ảnh |
 | `library-<ngày>.zip` | **Gói thư viện**: toàn bộ nhân vật (ảnh, sprite, giọng), thư viện hoạt động, cảnh nền, nhạc, giọng thương hiệu và kế hoạch kênh |
 | `SHA256SUMS.txt` | Mã kiểm tra các tệp trên |
 | `HUONG-DAN.md` | Bản sao của tài liệu này |
@@ -52,8 +52,8 @@ ffprobe -version
 ## 3. Giải nén
 
 1. Tạo thư mục `C:\Users\<tên-bạn>\Apps\DailyBeyondEnglishStudio`.
-2. Giải nén `DailyBeyondEnglishStudio-1.6.0-source.zip` vào đó. Thư mục này phải chứa **trực tiếp** `backend`, `frontend`, `renderer`, `scripts`.
-3. Giải nén gói ứng dụng (laptop dùng bản **Lite**: `DailyBeyondEnglishStudio-1.6.0-lite-windows-x64.zip`) vào `data\tmp\desktop-download`, để có `data\tmp\desktop-download\DailyIntelEnglishStudio\DailyIntelEnglishStudio.exe`.
+2. Giải nén `DailyBeyondEnglishStudio-1.7.0-source.zip` vào đó. Thư mục này phải chứa **trực tiếp** `backend`, `frontend`, `renderer`, `scripts`.
+3. Giải nén gói ứng dụng (laptop dùng bản **Lite**: `DailyBeyondEnglishStudio-1.7.0-lite-windows-x64.zip`) vào `data\tmp\desktop-download`, để có `data\tmp\desktop-download\DailyIntelEnglishStudio\DailyIntelEnglishStudio.exe`.
 
 ## 4. Cài phần dựng video và ứng dụng
 
@@ -80,8 +80,9 @@ Nếu PowerShell chặn `npm`, thay bằng `npm.cmd`. Lệnh cuối cài ứng d
 3. **Cài đặt → AI:** chọn **Cloud-first**.
 4. **Cài đặt → Dữ liệu & đồng bộ → Nhập một gói:** chọn `library-<ngày>.zip`, bấm **Nhập**. Gói khoảng 1,3 GB nên mất vài phút. Khi xong, trang hiện số mục đã thêm và đường dẫn bản sao lưu.
 5. Mở **Thư viện nhân vật** để kiểm tra: phải thấy Lina, Alex, Jack, Hoang, Kim cùng ảnh và giọng của từng người.
-6. **Cài đặt → Chung → Ảnh AI trên máy này** sẽ ghi "Bản Lite · Đang ẩn". Nếu sau này máy có GPU mạnh và đã cài mô hình tạo ảnh, chọn **Hiện**.
-7. Làm thử một Short ngắn, ví dụ "Đừng nói / Hãy nói" ở trang **Shorts hàng loạt**, để kiểm tra dựng video trên máy này.
+6. **Cài đặt → Chung → Khán giả của kênh:** chọn Quốc tế (giải nghĩa tiếng Anh), Việt Nam (nghĩa tiếng Việt) hoặc Cả hai. Mỗi series trong Kế hoạch kênh và mỗi video ở Bước 1 có thể chọn riêng. Giọng đọc luôn là tiếng Anh.
+7. **Cài đặt → Chung → Ảnh AI trên máy này** sẽ ghi "Bản Lite · Đang ẩn". Nếu sau này máy có GPU mạnh và đã cài mô hình tạo ảnh, chọn **Hiện**.
+8. Làm thử một Short ngắn, ví dụ "Đừng nói / Hãy nói" ở trang **Shorts hàng loạt**, để kiểm tra dựng video trên máy này.
 
 ## 6. Đồng bộ giữa hai máy
 

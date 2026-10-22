@@ -8,9 +8,9 @@
 
 Lên kế hoạch series · Viết kịch bản · Tạo giọng đọc · Dựng video · Chuẩn bị nội dung đăng YouTube
 
-[![Windows x64](https://img.shields.io/badge/Desktop-Windows_x64-0078D4?style=flat-square)](https://github.com/danghoangsqtt-sys/dailyintelenglish/tree/v1.6.0) [![Version 1.6.0](https://img.shields.io/badge/Version-1.6.0-26875B?style=flat-square)](https://github.com/danghoangsqtt-sys/dailyintelenglish/tree/v1.6.0) [![License MIT](https://img.shields.io/badge/License-MIT-26875B?style=flat-square)](LICENSE)
+[![Windows x64](https://img.shields.io/badge/Desktop-Windows_x64-0078D4?style=flat-square)](https://github.com/danghoangsqtt-sys/dailyintelenglish/tree/v1.7.0) [![Version 1.7.0](https://img.shields.io/badge/Version-1.7.0-26875B?style=flat-square)](https://github.com/danghoangsqtt-sys/dailyintelenglish/tree/v1.7.0) [![License MIT](https://img.shields.io/badge/License-MIT-26875B?style=flat-square)](LICENSE)
 
-**[Cài lên máy thứ hai (1.6.0, Full / Lite)](docs/user/second-machine.md)** · **[Hướng dẫn cài Windows đầy đủ](docs/user/windows-installation.md)** · **[Ghi chú phiên bản](CHANGELOG.md)**
+**[Cài lên máy thứ hai (1.7.0, Full / Lite)](docs/user/second-machine.md)** · **[Hướng dẫn cài Windows đầy đủ](docs/user/windows-installation.md)** · **[Ghi chú phiên bản](CHANGELOG.md)**
 
 </div>
 
@@ -22,7 +22,7 @@ Daily Beyond English Studio dành cho người sáng tạo nội dung học ti�
 
 Sau khi thiết lập lần đầu, mở bằng **icon logo trên Desktop**. Ứng dụng khởi động dịch vụ cục bộ và tự mở giao diện trong trình duyệt tại `http://localhost:8000`.
 
-> **Trạng thái:** phiên bản **1.6.0**, ngày **22/10/2026** (tag `v1.6.0`), có hai gói: **Full** cho máy có GPU NVIDIA ≥ 8 GB và **Lite** cho máy yếu hơn (ẩn 4 tính năng tạo ảnh AI trên máy). 1.5.0: Có thêm Shorts dọc (tin tức, học nhanh, tương tác), làm hàng loạt, sản xuất tự động ban đêm với studio duyệt video, giao diện studio, và **Gói thư viện** để chuyển nhân vật cùng thư viện sang máy khác. Bản ZIP 1.4.0-rc.1 cũ trên trang Releases không có các tính năng này. Các bản được chuyển giao bằng thư mục USB/Drive, xem [cài lên máy thứ hai](docs/user/second-machine.md).
+> **Trạng thái:** phiên bản **1.7.0**, ngày **23/10/2026** (tag `v1.7.0`): thêm thiết lập **Khán giả** (Quốc tế / Việt Nam / Cả hai) cho cách giải thích từ vựng. Có hai gói: **Full** cho máy có GPU NVIDIA ≥ 8 GB và **Lite** cho máy yếu hơn (ẩn 4 tính năng tạo ảnh AI trên máy). 1.5.0: Có thêm Shorts dọc (tin tức, học nhanh, tương tác), làm hàng loạt, sản xuất tự động ban đêm với studio duyệt video, giao diện studio, và **Gói thư viện** để chuyển nhân vật cùng thư viện sang máy khác. Bản ZIP 1.4.0-rc.1 cũ trên trang Releases không có các tính năng này. Các bản được chuyển giao bằng thư mục USB/Drive, xem [cài lên máy thứ hai](docs/user/second-machine.md).
 >
 > **Trước khi tải:** gói hiện tại là ZIP chứa ứng dụng và Python đi kèm, **chưa phải bộ Setup tự cài đầy đủ mọi phụ thuộc**. Máy mới cần thiết lập Node.js, renderer và FFmpeg một lần theo [hướng dẫn cài Windows](docs/user/windows-installation.md). Không cần cài Python riêng chỉ để mở EXE.
 
@@ -54,9 +54,9 @@ Sau khi thiết lập lần đầu, mở bằng **icon logo trên Desktop**. Ứ
 
 ## Tải xuống & cài trên máy khác
 
-### Phiên bản 1.6.0 — chuyển giao bằng USB/Drive
+### Phiên bản 1.7.0 — chuyển giao bằng USB/Drive
 
-Thư mục chuyển giao gồm mã nguồn tại tag `v1.6.0`, ZIP ứng dụng Windows x64 bản **Full** và bản **Lite**, Gói thư viện (nhân vật, hoạt động, cảnh, nhạc, kế hoạch kênh) và hướng dẫn. Xem **[Cài lên máy thứ hai và đồng bộ thư viện](docs/user/second-machine.md)**. Đồng bộ về sau: **Cài đặt → Dữ liệu & đồng bộ** (xuất/nhập gói, gộp không xoá).
+Thư mục chuyển giao gồm mã nguồn tại tag `v1.7.0`, ZIP ứng dụng Windows x64 bản **Full** và bản **Lite**, Gói thư viện (nhân vật, hoạt động, cảnh, nhạc, kế hoạch kênh) và hướng dẫn. Xem **[Cài lên máy thứ hai và đồng bộ thư viện](docs/user/second-machine.md)**. Đồng bộ về sau: **Cài đặt → Dữ liệu & đồng bộ** (xuất/nhập gói, gộp không xoá).
 
 ### Gói Windows cũ trên GitHub Releases (1.4.0-rc.1)
 
