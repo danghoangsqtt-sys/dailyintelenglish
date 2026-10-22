@@ -309,7 +309,11 @@ async def create_projects(db: aiosqlite.Connection, series_id: str) -> dict:
             cefr_level=series["cefr_level"], duration_minutes=duration, num_speakers=len(speakers),
             genre=series["genre"], accent=speakers[0].accent, speakers=speakers,
             presentation_mode=series["presentation_mode"],
-            explainer_structure=series["explainer_structure"] if solo else None, explainer_style=style), commit=False)
+            explainer_structure=series["explainer_structure"] if solo else None, explainer_style=style,
+            # Phase 66: a news episode made from today's news carries its article
+            **({"source_kind": "article", "source_text": episode["source_text"]}
+               if style == "news" and episode.get("source_kind") == "article" and episode.get("source_text") else {})),
+            commit=False)
         await project_visuals.set_cast(db, project["id"], [
             {"speaker_index": index, "character_id": character_id} for index, character_id in enumerate(series["cast"])])
         await db.execute("UPDATE channel_episodes SET project_id = ?, status = 'created', updated_at = ? WHERE id = ?",

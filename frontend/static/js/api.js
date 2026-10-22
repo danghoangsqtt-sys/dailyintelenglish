@@ -35,6 +35,14 @@ const Api = (() => {
     // Task 36.5 (D103-D105): the channel plan -- topics -> series -> episodes, the AI map and the calendar.
     // Phase 62 (ENH-044): automatic production
     getAutomation: () => request("/api/automation"),
+    // Phase 66 (ENH-048): Shorts in batches and today's news
+    proposeBatchIdeas: (body) => request("/api/shorts-batch/ideas", json("POST", body)),
+    createBatch: (body) => request("/api/shorts-batch/create", json("POST", body)),
+    getNewsFeeds: () => request("/api/news/feeds"),
+    saveNewsFeeds: (feeds) => request("/api/news/feeds", json("PUT", feeds)),
+    getTodayNews: () => request("/api/news/today"),
+    getNewsPicks: (body) => request("/api/news/picks", json("POST", body)),
+    readNewsArticles: (links) => request("/api/news/articles", json("POST", { links })),
     // Phase 63 (ENH-045): the text of a public news page for a news Short
     readLink: (url) => request("/api/projects/read-link", json("POST", { url })),
     saveAutomationSettings: (patch) => request("/api/automation/settings", json("PUT", patch)),

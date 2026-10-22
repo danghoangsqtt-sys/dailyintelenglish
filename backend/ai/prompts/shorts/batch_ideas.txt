@@ -1,0 +1,20 @@
+Propose {{ count }} ideas for English-learning Shorts (vertical videos under one minute) for the channel "Daily Beyond
+English", all about this topic, in the template below, for learners at CEFR {{ cefr_level }}.
+Topic: "{{ topic }}"
+{% if hint %}The owner's direction: "{{ hint }}"
+{% endif %}
+Template: {{ template_name }} — {{ template_rule }}
+
+Rules:
+- Every idea is different from the others: a different situation, word, mistake, question set or story. Never repeat
+  or only reword an idea.
+- "title" is the Short's title in at most 8 words, natural and catchy, in English; "brief" is one sentence (at most 30
+  words) saying exactly what this Short covers, so a script writer can make it without guessing.
+- Only real, correct English; no invented facts, statistics, quotes or real people.
+{% if avoid %}- These titles already exist in the channel; do not repeat them: {{ avoid | join('; ') }}
+{% endif %}
+
+## Output Format
+Return ONLY a JSON object (no markdown fences, no commentary) with exactly this shape:
+{"ideas": [{"title": "...", "brief": "..."}]}
+with exactly {{ count }} items in "ideas".

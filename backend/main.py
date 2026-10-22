@@ -29,6 +29,7 @@ from backend.ai.image.runner import ImageJobRunner
 from backend.ai.image import pipelines as visuals_pipelines
 from backend.api import export as export_api
 from backend.api import automation as automation_api
+from backend.api import shorts_batch as shorts_batch_api
 
 PROJECT_ROOT = get_project_root()
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
@@ -184,6 +185,8 @@ app.include_router(ai_jobs.router)
 app.include_router(ai_jobs.health_router)
 app.include_router(channel.router)
 app.include_router(automation_api.router)  # Phase 62
+app.include_router(shorts_batch_api.router)  # Phase 66
+app.include_router(shorts_batch_api.news_router)
 app.include_router(shorts.router)
 app.include_router(export_api.router)  # Phase 41
 app.include_router(profiles.router)  # Phase 33: before visuals so /api/visuals/profiles is never shadowed
@@ -294,6 +297,12 @@ async def activity_library() -> FileResponse:
 async def character_library() -> FileResponse:
     """Serve the global Character Library."""
     return FileResponse(FRONTEND_DIR / "pages" / "characters.html")
+
+
+@app.get("/shorts-batch")
+async def shorts_batch_page() -> FileResponse:
+    """Phase 66 (ENH-048): Shorts in batches and today's news."""
+    return FileResponse(FRONTEND_DIR / "pages" / "shorts_batch.html")
 
 
 @app.get("/automation")

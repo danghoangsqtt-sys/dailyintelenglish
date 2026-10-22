@@ -549,6 +549,7 @@
       renderSpeakerCards();
     }));
     document.getElementById("source-link-btn").addEventListener("click", readLink);
+    document.getElementById("today-news-btn").addEventListener("click", showTodayNews);
     document.querySelectorAll("#subject-cards .subject-card").forEach((card) => card.addEventListener("click", () => {
       state.explainerSubject = card.dataset.subject;
       state.explainerStructure = SUBJECT_STRUCTURES[state.explainerSubject];
@@ -574,6 +575,34 @@
         ? "Reading a photo needs the cloud AI: choose a cloud mode in Settings → AI, or paste the text."
         : "Reading photos is off because cloud AI is turned off on this computer (DIE_AI_ALLOW_CLOUD=false). Paste the text instead.");
     }).catch(() => { /* the button stays; the server still refuses when cloud AI is off */ });
+  }
+
+  // Phase 66 (ENH-048): today's stories from the news feeds; choosing one reads its page into the article box
+  async function showTodayNews() {
+    const list = document.getElementById("today-news");
+    const status = document.getElementById("source-link-status");
+    status.textContent = "Reading today's news…";
+    try {
+      const { stories } = await Api.getTodayNews();
+      list.replaceChildren(...stories.slice(0, 12).map((story) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "btn btn-ghost btn-sm";
+        button.textContent = `${story.title} · ${story.source}`;
+        button.addEventListener("click", () => {
+          document.getElementById("source-link").value = story.link;
+          list.hidden = true;
+          readLink();
+        });
+        const item = document.createElement("li");
+        item.append(button);
+        return item;
+      }));
+      list.hidden = !stories.length;
+      status.textContent = stories.length ? "Choose a story; its page is read below." : "No stories in the last 36 hours (check the feeds on the Shorts batch page).";
+    } catch (error) {
+      status.textContent = error.message || "Today's news could not be read.";
+    }
   }
 
   // Phase 63 (ENH-045): the title and text of a public news page, shown in the box for the owner to check
