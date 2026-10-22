@@ -9,3 +9,5 @@
 | 68.1 | Sample builder + bundle | implemented_verified |
 | 68.2 | Preview column on the page | implemented_verified |
 | 68.3 | Verification | implemented_verified |
+
+- **Layout amendment (owner 2026-10-22, "Điều chỉnh lại kích thước, bố cục"):** one 12-column form grid with fixed spans and 42 px controls, the tabs as a segmented control below the intro, card padding, a preview column that shrinks (270–340 px) before it stacks under 980 px. Checked at 1024, 1100 and 1600 px; full pytest 2000 passed.

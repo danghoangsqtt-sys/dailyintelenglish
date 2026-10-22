@@ -12,6 +12,8 @@ Versioning: [SemVer](https://semver.org/)
 
 - The Shorts batch page has a 9:16 **Preview** beside the list: it plays the chosen template with the selected idea (or the typed topic) in the browser — silent, nothing saved, no AI cost — and follows the template, the level, the selected row and its edits (ENH-050).
 
+- The Shorts batch page layout is tidier: even field sizes on one grid, the tabs as a segmented control, more space between the parts, and a preview column that fits narrower windows.
+
 ### Fixed — Phase 68
 
 - The video previews (Shorts batch and the Step 5 Solo / VOX editor) are no longer translated by the interface language switch; their English words stay English.
