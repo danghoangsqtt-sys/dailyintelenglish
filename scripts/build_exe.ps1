@@ -3,7 +3,7 @@
 # Usage: powershell -File scripts\build_exe.ps1
 param(
     [string]$OutputRoot = 'dist',
-    [string]$Version = '1.4.0-rc.1'
+    [string]$Version = '1.5.0'
 )
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot

@@ -184,3 +184,8 @@ main.studio-page.settings-main { width: min(1240px, calc(100% - 36px)); }
   .studio-page .settings-nav { grid-template-columns: minmax(0, 1fr); }
   .studio-page .series-card { margin-left: 10px; margin-right: 10px; }
 }
+
+/* Phase 70 (ENH-052): Settings -> Data & sync */
+.studio-page #package-counts { margin: 4px 0 4px; }
+.package-exports { margin: 12px 0 0; padding-left: 18px; font-size: 13px; }
+.package-exports:empty { display: none; }

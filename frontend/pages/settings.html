@@ -105,6 +105,7 @@
       <button type="button" data-section="general" aria-current="true"><span aria-hidden="true">⚙️</span><b>General</b><small>Language, theme, version</small></button>
       <button type="button" data-section="ai" aria-current="false"><span aria-hidden="true">🤖</span><b>AI</b><small>Local or cloud-first</small></button>
       <button type="button" data-section="providers" aria-current="false"><span aria-hidden="true">🔑</span><b>AI providers</b><small>Keys and models</small></button>
+      <button type="button" data-section="data" aria-current="false"><span aria-hidden="true">🔄</span><b>Data &amp; sync</b><small>Move characters and libraries</small></button>
     </nav>
     <div class="settings-sections">
     <section id="settings-general" class="settings-section" data-section="general">
@@ -266,6 +267,34 @@
       <div id="zen-save-status" class="settings-inline-note" aria-live="polite"></div>
     </section>
     </section>
+
+    <!-- Phase 70 (ENH-052): the library package, to move the characters and libraries to another machine -->
+    <section id="settings-data" class="settings-section" data-section="data" hidden>
+      <div class="card settings-card">
+        <h2 data-icon="📦">Library package</h2>
+        <p class="section-hint">One file with your characters (pictures, sprites, voices), the activity library, scene backgrounds,
+          music, the brand voice clips and the channel plan. Import it on the other machine to start working there at once.
+          API keys and projects are never in the package.</p>
+        <div id="package-counts" class="kpi-row" aria-live="polite"></div>
+        <div class="settings-form-actions">
+          <button id="package-export" class="btn btn-primary" type="button">Export the library package</button>
+          <span id="package-export-status" class="settings-inline-note" aria-live="polite"></span>
+        </div>
+        <ul id="package-exports" class="package-exports"></ul>
+      </div>
+      <div class="card settings-card">
+        <h2 data-icon="📥">Import a package</h2>
+        <p class="section-hint">Import merges, it never deletes: new characters and items are added, and an item that is already here
+          is replaced only when the package copy is newer. The database is backed up first. Wait for running jobs to finish.</p>
+        <div class="settings-form-actions">
+          <input id="package-file" type="file" accept=".zip" aria-label="Library package file" />
+          <button id="package-import" class="btn btn-primary" type="button" disabled>Import</button>
+        </div>
+        <p id="package-import-status" class="settings-inline-note" aria-live="polite"></p>
+        <p class="settings-privacy-note">For a large package on a USB stick you can also use the command line, with the app closed:
+          <code>python scripts/library_package.py import &lt;file.zip&gt;</code></p>
+      </div>
+    </section>
     </div>
     </div>
   </main>
@@ -274,5 +303,6 @@
   <script src="/static/js/confirm_dialog.js"></script>
   <script src="/static/js/api.js"></script>
   <script src="/static/js/settings.js"></script>
+  <script src="/static/js/settings_data.js"></script>
 </body>
 </html>

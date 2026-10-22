@@ -17,13 +17,25 @@ $utf8 = New-Object Text.UTF8Encoding($false)
 [IO.File]::WriteAllText((Join-Path $pending 'studio-runtime.json'), (@{ workspace_dir = '..\..'; data_dir = '..\..\data' } | ConvertTo-Json), $utf8)
 $database = Join-Path $studioRoot 'data\app.db'
 $upgradePython = Join-Path $studioRoot '.venv\Scripts\python.exe'
-if (Test-Path -LiteralPath $database -PathType Leaf) {
+# Phase 70 (ENH-052): a second machine runs only the EXE and has no Python of its own. There the app must be closed first,
+# and the database files are copied as they are (a closed SQLite database is consistent).
+$hasPython = Test-Path -LiteralPath $upgradePython -PathType Leaf
+$targetExe = Join-Path $target 'DailyIntelEnglishStudio.exe'
+if (-not $hasPython -and (Test-Path -LiteralPath $database -PathType Leaf)) {
+    if (Get-CimInstance Win32_Process -Filter "Name = 'DailyIntelEnglishStudio.exe'" | Where-Object { $_.ExecutablePath -eq $targetExe }) {
+        throw 'Close Daily Beyond English Studio (finish its jobs first), then run the installer again.'
+    }
+    foreach ($file in @('app.db', 'app.db-wal', 'app.db-shm')) {
+        $source = Join-Path (Join-Path $studioRoot 'data') $file
+        if (Test-Path -LiteralPath $source -PathType Leaf) { Copy-Item -LiteralPath $source -Destination (Join-Path $backup ($file -replace '^app', 'app.before-upgrade')) }
+    }
+}
+if ($hasPython -and (Test-Path -LiteralPath $database -PathType Leaf)) {
     & $upgradePython (Join-Path $PSScriptRoot 'desktop_upgrade.py') --database $database --backup (Join-Path $backup 'app.before-upgrade.db')
     if ($LASTEXITCODE -ne 0) { throw 'Database backup/idle-job preflight failed. The installed app was not stopped or replaced.' }
 }
-$targetExe = Join-Path $target 'DailyIntelEnglishStudio.exe'
 $running = Get-CimInstance Win32_Process -Filter "Name = 'DailyIntelEnglishStudio.exe'" | Where-Object { $_.ExecutablePath -eq $targetExe }
-if (Test-Path -LiteralPath $database -PathType Leaf) {
+if ($hasPython -and (Test-Path -LiteralPath $database -PathType Leaf)) {
     & $upgradePython (Join-Path $PSScriptRoot 'desktop_upgrade.py') --database $database
     if ($LASTEXITCODE -ne 0) { throw 'Studio has unfinished jobs. The installed app was not stopped or replaced.' }
 }
@@ -33,7 +45,7 @@ foreach ($process in $running) {
     if (-not $processHandle.WaitForExit(20000)) { throw 'The previous Studio process has not exited.' }
 }
 # Refresh the rollback snapshot after exit so even the last committed idle edit is retained.
-if (Test-Path -LiteralPath $database -PathType Leaf) {
+if ($hasPython -and (Test-Path -LiteralPath $database -PathType Leaf)) {
     & $upgradePython (Join-Path $PSScriptRoot 'desktop_upgrade.py') --database $database --backup (Join-Path $backup 'app.at-exit.db')
     if ($LASTEXITCODE -ne 0) { throw 'Final database backup failed. The installed distribution was not replaced.' }
 }

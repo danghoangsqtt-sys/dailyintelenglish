@@ -9,6 +9,7 @@ Usage:
     python scripts/cleanup_test_projects.py                      # dry-run (default)
     python scripts/cleanup_test_projects.py --apply               # back up, then delete
     python scripts/cleanup_test_projects.py --db PATH --data-dir DIR [--apply]
+    python scripts/cleanup_test_projects.py --all-projects [--apply]   # Phase 70: every project (a fresh start)
 
 Dry-run (the default -- no `--apply` needed) only reads: prints each of the 4 known
 fixture project names, its count, and the matching ids. Nothing is written.
@@ -53,9 +54,15 @@ FIXTURE_PROJECT_NAMES = (
 )
 
 
-async def find_matches(db: aiosqlite.Connection) -> dict[str, list[str]]:
-    """Exact-name matches only (never `LIKE`) for each of the 4 known fixture names."""
+async def find_matches(db: aiosqlite.Connection, all_projects: bool = False) -> dict[str, list[str]]:
+    """Exact-name matches only (never `LIKE`) for each of the 4 known fixture names; with `all_projects`, every project
+    by its name (Phase 70, ENH-052: the owner's fresh start before the 1.5.0 hand-over)."""
     matches: dict[str, list[str]] = {}
+    if all_projects:
+        cursor = await db.execute("SELECT id, name FROM projects ORDER BY created_at")
+        for row in await cursor.fetchall():
+            matches.setdefault(row[1], []).append(row[0])
+        return matches
     for name in FIXTURE_PROJECT_NAMES:
         cursor = await db.execute("SELECT id FROM projects WHERE name = ?", (name,))
         rows = await cursor.fetchall()
@@ -107,11 +114,11 @@ async def apply_deletions(db_path: Path, data_dir: Path, matches: dict[str, list
     return backup_path
 
 
-async def run(db_path: Path, data_dir: Path, apply: bool) -> str:
+async def run(db_path: Path, data_dir: Path, apply: bool, all_projects: bool = False) -> str:
     db = await aiosqlite.connect(db_path)
     db.row_factory = aiosqlite.Row
     try:
-        matches = await find_matches(db)
+        matches = await find_matches(db, all_projects)
     finally:
         await db.close()
 
@@ -154,6 +161,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--apply", action="store_true", help="Actually back up and delete (default is dry-run, writes nothing)"
     )
+    parser.add_argument("--all-projects", action="store_true", help="every project, not only the 4 fixture names")
     return parser
 
 
@@ -161,7 +169,7 @@ def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     db_path = args.db if args.db is not None else _default_db_path()
     data_dir = args.data_dir if args.data_dir is not None else _default_data_dir()
-    print(asyncio.run(run(db_path, data_dir, args.apply)))
+    print(asyncio.run(run(db_path, data_dir, args.apply, args.all_projects)))
 
 
 if __name__ == "__main__":

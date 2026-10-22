@@ -387,7 +387,7 @@
   clearZenKeyBtn?.addEventListener("click", handleClearZenKey);
 
   // Phase 58 (ENH-040): one section at a time from the left menu (remembered in the address: #general, #ai, #providers)
-  const SECTIONS = ["general", "ai", "providers"];
+  const SECTIONS = ["general", "ai", "providers", "data"];
   function showSection(name, remember = true) {
     const section = SECTIONS.includes(name) ? name : "general";
     document.querySelectorAll(".settings-section").forEach((element) => { element.hidden = element.dataset.section !== section; });

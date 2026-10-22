@@ -8,6 +8,17 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-22
+
+Release for daily use and for a second machine: everything since 1.4.0-rc.1 (Phases 48–70), handed over by USB/Drive with the library package.
+
+### Added — Phase 70 library package, clean-up and release (2026-10-22)
+
+- **Settings → Data & sync:** export one library package (characters with their pictures, sprites and voices; the activity library; scene backgrounds; music; brand voice clips; the channel plan) and import it on another machine. Import merges and never deletes: new items are added, an item already there is replaced only when the package copy is newer, and the database is backed up first. API keys and projects are never in the package. `scripts/library_package.py` does the same from the command line (ENH-052).
+- `scripts/cleanup_workspace.py` (dry-run first) clears temporary build stages, older app backups, render staging and the media of deleted projects; `scripts/cleanup_test_projects.py --all-projects` removes every project for a fresh start.
+- The installer works on a machine without its own Python: it asks for the app to be closed and copies the database aside before replacing the app.
+- Guide: [installing on a second machine and syncing](docs/user/second-machine-1.5.0.md).
+
 ### Changed — Phase 69, the studio look for the Dashboard, Channel plan and Settings (2026-10-22)
 
 - The Dashboard, Channel plan and Settings pages share the Automation studio look: a dark control bar with the main actions, coloured number tiles and cards with icon headers. The Dashboard shows the next two weeks as day columns, the production board as coloured columns and the 7 steps as a rail; the Channel plan shows each topic as a card with its series badged by kind (Conversation, Solo, VOX, Short 9:16) and the publishing dates as coloured rows; Settings has a menu of tiles with a short description (ENH-051).

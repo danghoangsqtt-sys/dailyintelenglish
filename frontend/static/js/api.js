@@ -36,6 +36,14 @@ const Api = (() => {
     // Phase 62 (ENH-044): automatic production
     getAutomation: () => request("/api/automation"),
     getAutomationBoard: () => request("/api/automation/board"),  // Phase 67: the review studio
+    // Phase 70 (ENH-052): the library package
+    getLibraryPackage: () => request("/api/library-package"),
+    exportLibraryPackage: () => request("/api/library-package/export", { method: "POST" }),
+    importLibraryPackage: (file) => {
+      const body = new FormData();
+      body.append("file", file);
+      return request("/api/library-package/import", { method: "POST", body });
+    },
     // Phase 66 (ENH-048): Shorts in batches and today's news
     proposeBatchIdeas: (body) => request("/api/shorts-batch/ideas", json("POST", body)),
     createBatch: (body) => request("/api/shorts-batch/create", json("POST", body)),

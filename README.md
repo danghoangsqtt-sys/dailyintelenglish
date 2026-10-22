@@ -8,9 +8,9 @@
 
 Lên kế hoạch series · Viết kịch bản · Tạo giọng đọc · Dựng video · Chuẩn bị nội dung đăng YouTube
 
-[![Windows x64](https://img.shields.io/badge/Desktop-Windows_x64-0078D4?style=flat-square)](https://github.com/danghoangsqtt-sys/dailyintelenglish/releases/tag/v1.4.0-rc.1) [![Trial 1.4.0-rc.1](https://img.shields.io/badge/Trial-1.4.0--rc.1-D4A843?style=flat-square)](https://github.com/danghoangsqtt-sys/dailyintelenglish/releases/tag/v1.4.0-rc.1) [![License MIT](https://img.shields.io/badge/License-MIT-26875B?style=flat-square)](LICENSE)
+[![Windows x64](https://img.shields.io/badge/Desktop-Windows_x64-0078D4?style=flat-square)](https://github.com/danghoangsqtt-sys/dailyintelenglish/tree/v1.5.0) [![Version 1.5.0](https://img.shields.io/badge/Version-1.5.0-26875B?style=flat-square)](https://github.com/danghoangsqtt-sys/dailyintelenglish/tree/v1.5.0) [![License MIT](https://img.shields.io/badge/License-MIT-26875B?style=flat-square)](LICENSE)
 
-**[Tải bản Windows](https://github.com/danghoangsqtt-sys/dailyintelenglish/releases/download/v1.4.0-rc.1/DailyBeyondEnglishStudio-1.4.0-rc.1-windows-x64.zip)** · **[Hướng dẫn cài đặt](docs/user/windows-installation.md)** · **[Ghi chú phát hành](https://github.com/danghoangsqtt-sys/dailyintelenglish/releases/tag/v1.4.0-rc.1)**
+**[Cài lên máy thứ hai (1.5.0)](docs/user/second-machine-1.5.0.md)** · **[Hướng dẫn cài Windows đầy đủ](docs/user/windows-installation.md)** · **[Ghi chú phiên bản](CHANGELOG.md)**
 
 </div>
 
@@ -22,11 +22,11 @@ Daily Beyond English Studio dành cho người sáng tạo nội dung học ti�
 
 Sau khi thiết lập lần đầu, mở bằng **icon logo trên Desktop**. Ứng dụng khởi động dịch vụ cục bộ và tự mở giao diện trong trình duyệt tại `http://localhost:8000`.
 
-> **Trạng thái:** bản Windows **1.4.0-rc.1**, phát hành ngày **15/10/2026**, đang trong giai đoạn dùng thử. README này mô tả bản phát hành đó; khi cài đặt hãy dùng mã nguồn tại tag `v1.4.0-rc.1`.
+> **Trạng thái:** phiên bản **1.5.0**, chốt ngày **22/10/2026** (tag `v1.5.0`). Có thêm Shorts dọc (tin tức, học nhanh, tương tác), làm hàng loạt, sản xuất tự động ban đêm với studio duyệt video, giao diện studio, và **Gói thư viện** để chuyển nhân vật cùng thư viện sang máy khác. Bản ZIP 1.4.0-rc.1 cũ trên trang Releases không có các tính năng này. Bản 1.5.0 được chuyển giao bằng thư mục USB/Drive, xem [cài lên máy thứ hai](docs/user/second-machine-1.5.0.md).
 >
 > **Trước khi tải:** gói hiện tại là ZIP chứa ứng dụng và Python đi kèm, **chưa phải bộ Setup tự cài đầy đủ mọi phụ thuộc**. Máy mới cần thiết lập Node.js, renderer và FFmpeg một lần theo [hướng dẫn cài Windows](docs/user/windows-installation.md). Không cần cài Python riêng chỉ để mở EXE.
 
-> **Mã nguồn mới — chọn giọng riêng:** Phase 48 bổ sung bộ chọn toàn bộ giọng tiếng Anh của Edge TTS, nghe thử và lưu riêng theo hồ sơ hoặc video. Lần kiểm tra 16/10/2026 có **47 giọng**. Xem [hướng dẫn chọn giọng](docs/user/character-voices.md). Tính năng này hướng đến 1.5.0 và **chưa có trong EXE 1.4.0-rc.1** ở liên kết tải phía trên.
+> **Chọn giọng riêng:** bộ chọn toàn bộ giọng tiếng Anh của Edge TTS, nghe thử và lưu riêng theo hồ sơ hoặc video (47 giọng lúc kiểm tra). Xem [hướng dẫn chọn giọng](docs/user/character-voices.md).
 
 ## Những gì bạn có thể làm
 
@@ -54,11 +54,15 @@ Sau khi thiết lập lần đầu, mở bằng **icon logo trên Desktop**. Ứ
 
 ## Tải xuống & cài trên máy khác
 
-### Gói Windows hiện có
+### Phiên bản 1.5.0 — chuyển giao bằng USB/Drive
+
+Thư mục chuyển giao gồm mã nguồn tại tag `v1.5.0`, ZIP ứng dụng Windows x64, Gói thư viện (nhân vật, hoạt động, cảnh, nhạc, kế hoạch kênh) và hướng dẫn. Xem **[Cài lên máy thứ hai và đồng bộ thư viện](docs/user/second-machine-1.5.0.md)**. Đồng bộ về sau: **Cài đặt → Dữ liệu & đồng bộ** (xuất/nhập gói, gộp không xoá).
+
+### Gói Windows cũ trên GitHub Releases (1.4.0-rc.1)
 
 | Thành phần | Thông tin |
 |---|---|
-| Phiên bản | `v1.4.0-rc.1` — Windows x64, bản dùng thử |
+| Phiên bản | `v1.4.0-rc.1` — Windows x64, bản dùng thử cũ |
 | Gói tải | [`DailyBeyondEnglishStudio-1.4.0-rc.1-windows-x64.zip`](https://github.com/danghoangsqtt-sys/dailyintelenglish/releases/download/v1.4.0-rc.1/DailyBeyondEnglishStudio-1.4.0-rc.1-windows-x64.zip) |
 | Dung lượng | Khoảng **140,5 MB** tải xuống / **320,8 MB** giải nén; chưa tính renderer, trình duyệt render, dữ liệu và model AI |
 | Mã nguồn tương ứng | [Source ZIP tại tag `v1.4.0-rc.1`](https://github.com/danghoangsqtt-sys/dailyintelenglish/archive/refs/tags/v1.4.0-rc.1.zip) |
