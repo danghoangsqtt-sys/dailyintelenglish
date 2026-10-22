@@ -2,7 +2,7 @@
 
 ## Phase 68 — Live preview on the Shorts batch page (2026-10-22)
 
-Status: planned; 0/3 tasks. ENH-050: a 9:16 player beside the batch list plays the chosen template with the selected idea (silent, in the browser, no AI cost). [Plan](phases/68-batch-preview/PLAN.md).
+Status: implemented_verified_pending_owner_review; 3/3 tasks. Full pytest 2000 passed; 179 Vitest. ENH-050: a 9:16 player beside the batch list plays the chosen template with the selected idea (silent, in the browser, no AI cost). [Plan](phases/68-batch-preview/PLAN.md).
 
 ## Phase 67 — Review studio (2026-10-22)
 

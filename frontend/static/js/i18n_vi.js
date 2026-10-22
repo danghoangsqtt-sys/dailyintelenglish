@@ -926,6 +926,13 @@ window.I18N_VI = {
     "Picture shelves": "Kệ ảnh",
     "All pictures": "Tất cả ảnh",
     "Generic": "Chung",
+    // ---- Phase 68: batch preview
+    "Preview": "Xem trước",
+    "A silent preview of the look with this idea. The real Short is written by the AI and voiced by the narrator.": "Bản xem trước không tiếng về giao diện với ý tưởng này. Short thật do AI viết và người kể đọc.",
+    "Preview player": "Trình xem trước",
+    "Your idea appears here": "Ý tưởng của bạn hiện ở đây",
+    "The preview player is not available.": "Không có trình xem trước.",
+    "The preview could not be drawn.": "Không vẽ được bản xem trước.",
     // ---- Phase 67: review studio
     "Next 14 days": "14 ngày tới",
     "Videos": "Video",

@@ -37,7 +37,7 @@ const ExplainerEditor = (() => {
       <button type="button" data-action="reload" class="btn btn-ghost">Reload</button><button type="button" data-action="cancel" class="btn btn-ghost" hidden>Cancel proposal</button>
       <label>Preview aspect <select id="solo-aspect">${short?"":"<option>16:9</option>"}<option>9:16</option></select></label></div>
       <p id="solo-status" role="status"></p><p id="solo-error" role="alert"></p><ul id="solo-issues"></ul>
-      <div class="solo-editor-grid"><div><div id="solo-player"></div><div id="solo-segments" class="solo-segments"></div></div>
+      <div class="solo-editor-grid"><div><div id="solo-player" translate="no"></div><div id="solo-segments" class="solo-segments"></div></div>
       <div id="solo-fields" class="solo-fields"></div></div></div>`;
     const $ = id => container.querySelector(`#${id}`);
     const message = (text,error=false) => {if(!state.disposed) $(error?"solo-error":"solo-status").textContent=text;};

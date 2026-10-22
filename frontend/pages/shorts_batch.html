@@ -9,7 +9,18 @@
   <script src="/static/js/i18n_vi.js"></script>
   <script src="/static/js/i18n.js"></script>
   <style>
-    .batch-main { width: min(1100px, calc(100% - 32px)); margin: 32px auto 80px; display: grid; gap: 18px; }
+    .batch-main { width: min(1500px, calc(100% - 32px)); margin: 32px auto 80px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+    /* Phase 68 (ENH-050): the list on the left, the live 9:16 preview on the right */
+    .batch-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 18px; align-items: start; }
+    .batch-left { display: grid; gap: 18px; min-width: 0; }
+    .batch-preview { position: sticky; top: 16px; display: grid; gap: 8px; }
+    .batch-preview .card { padding: 12px; }
+    .batch-preview h2 { margin: 0; font-size: 16px; }
+    #batch-player { width: 100%; }
+    #batch-player > div { max-width: 100% !important; margin: 0 auto; }
+    .batch-list li.is-selected { outline: 3px solid var(--accent, #1F7A4D); }
+    .batch-list li { cursor: pointer; }
+    @media (max-width: 1050px) { .batch-body { grid-template-columns: 1fr; } .batch-preview { position: static; } }
     .batch-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
     .batch-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; align-items: end; }
     .batch-form label { display: grid; gap: 5px; font-size: 13px; font-weight: 600; }
@@ -51,6 +62,7 @@
         <button id="tab-news" class="btn btn-ghost btn-sm" role="tab" aria-selected="false" type="button" data-tab="news">📰 Today's news</button>
       </div>
     </section>
+    <div class="batch-body"><div class="batch-left">
     <section class="card" id="topic-panel" aria-labelledby="topic-title">
       <h2 id="topic-title">1. Ideas from a topic</h2>
       <form id="ideas-form" class="batch-form">
@@ -97,9 +109,21 @@
       </form>
       <p id="batch-notice" class="batch-hint" role="status"></p>
     </section>
+    </div>
+    <aside class="batch-preview" aria-labelledby="preview-title">
+      <div class="card">
+        <h2 id="preview-title">Preview</h2>
+        <p id="preview-what" class="batch-hint"></p>
+        <div id="batch-player" aria-label="Preview player" translate="no"></div>
+        <p class="batch-hint">A silent preview of the look with this idea. The real Short is written by the AI and voiced by the narrator.</p>
+        <p id="preview-error" class="batch-hint" role="status"></p>
+      </div>
+    </aside>
+    </div>
   </main>
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/api.js"></script>
+  <script src="/static/solo-preview/player.js"></script>
   <script src="/static/js/shorts_batch.js"></script>
 </body>
 </html>

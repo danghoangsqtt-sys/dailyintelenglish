@@ -6,7 +6,36 @@
     ["top5", "Top 5 phrases"], ["quiz", "Countdown quiz"], ["listen", "Listening challenge"], ["chat", "Chat (2 characters)"],
     ["wyr", "Would you rather (2 characters)"]];
   const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
-  const state = { tab: "topic", template: "mistakes", items: [], stories: [], feeds: [], profiles: [] };
+  const state = { tab: "topic", template: "mistakes", items: [], stories: [], feeds: [], profiles: [], selected: 0, player: null, timer: null };
+
+  // Phase 68 (ENH-050): the live 9:16 preview of the template with the selected idea (silent, nothing saved)
+  function previewIdea() {
+    const item = state.items[state.selected];
+    if (item) return { title: item.title || "Your Short", brief: item.brief || "" };
+    const topic = ($("batch-topic")?.value || "").trim();
+    return { title: topic || "Your idea appears here", brief: state.tab === "news" ? "Today's story, told in simple English." : "Propose ideas to see them here." };
+  }
+
+  function refreshPreview() {
+    clearTimeout(state.timer);
+    state.timer = setTimeout(() => {
+      const box = $("batch-player");
+      if (!window.SoloPreview || !window.ShortsSample) { $("preview-error").textContent = "The preview player is not available."; return; }
+      const idea = previewIdea();
+      const level = state.tab === "news" ? $("news-level").value : $("batch-level").value;
+      const label = TEMPLATES.find(([key]) => key === state.template)?.[1] || state.template;
+      $("preview-what").textContent = `${label} · ${idea.title}`;
+      try {
+        const props = window.ShortsSample.props(state.template, idea, level);
+        if (state.player) state.player.update(props); else state.player = window.SoloPreview.mount(box, props);
+        // show a moment with the template's content at once (frame 0 is still empty); Play shows the whole sample
+        setTimeout(() => state.player?.seek(Math.round(props.fps * 2.2)), 120);
+        $("preview-error").textContent = "";
+      } catch (error) {
+        $("preview-error").textContent = error.message || "The preview could not be drawn.";
+      }
+    }, 250);
+  }
 
   const el = (tag, props = {}, children = []) => {
     const node = Object.assign(document.createElement(tag), props);
@@ -24,12 +53,25 @@
   function renderItems() {
     $("batch-items").replaceChildren(...state.items.map((item, index) => {
       const title = el("input", { type: "text", value: item.title, maxLength: 120, ariaLabel: "Title" });
-      title.addEventListener("input", () => { item.title = title.value; });
+      title.addEventListener("input", () => { item.title = title.value; if (index === state.selected) refreshPreview(); });
       const brief = el("input", { type: "text", value: item.brief, maxLength: 600, ariaLabel: "What it covers", className: "brief" });
-      brief.addEventListener("input", () => { item.brief = brief.value; });
+      brief.addEventListener("input", () => { item.brief = brief.value; if (index === state.selected) refreshPreview(); });
       const remove = el("button", { type: "button", className: "btn btn-ghost btn-sm", textContent: "Remove" });
-      remove.addEventListener("click", () => { state.items.splice(index, 1); renderItems(); });
-      const row = el("li", {}, [el("span", { className: "batch-badge", textContent: String(index + 1) }), title, remove, brief]);
+      remove.addEventListener("click", (event) => {
+        event.stopPropagation();
+        state.items.splice(index, 1);
+        state.selected = Math.min(state.selected, Math.max(0, state.items.length - 1));
+        renderItems();
+        refreshPreview();
+      });
+      const row = el("li", { className: index === state.selected ? "is-selected" : "" },
+        [el("span", { className: "batch-badge", textContent: String(index + 1) }), title, remove, brief]);
+      row.addEventListener("click", () => {
+        if (state.selected === index) return;
+        state.selected = index;
+        document.querySelectorAll("#batch-items li").forEach((other, at) => other.classList.toggle("is-selected", at === index));
+        refreshPreview();
+      });
       if (item.source_text) row.append(el("span", { className: "meta", textContent: `Article: ${item.source_text.split(/\s+/).length} words · ${item.url || ""}` }));
       if (item.error) row.append(el("span", { className: "meta", textContent: `⚠ ${item.error}` }));
       return row;
@@ -56,6 +98,7 @@
     });
     if (tab === "news") { state.template = "news"; renderCast(); if (!state.feeds.length) loadFeeds(); }
     else { state.template = $("batch-template").value; renderCast(); }
+    refreshPreview();
   }
 
   function storyRow(story, index) {
@@ -104,7 +147,9 @@
       const { articles } = await Api.readNewsArticles(chosen.map((story) => story.link));
       state.items = chosen.map((story, i) => ({ title: (story.title || "").slice(0, 120), brief: story.hook || story.summary || "",
         source_text: articles[i]?.text || "", url: story.link, error: articles[i]?.error || "" }));
+      state.selected = 0;
       renderItems();
+      refreshPreview();
       if (!$("batch-series").value) $("batch-series").value = `English News · ${new Date().toLocaleDateString()}`;
       const unread = articles.filter((article) => article.error).length;
       notice("news-notice", unread ? `${unread} article(s) could not be read; those Shorts use the headline only.` : "Articles read. Review the list below and create the batch.");
@@ -132,7 +177,9 @@
       const { ideas } = await Api.proposeBatchIdeas({ topic: $("batch-topic").value.trim(), template: $("batch-template").value,
         count: Number($("batch-count").value), cefr_level: $("batch-level").value, hint: $("batch-hint").value.trim() });
       state.items = ideas.map((idea) => ({ ...idea, source_text: "" }));
+      state.selected = 0;
       renderItems();
+      refreshPreview();
       if (!$("batch-series").value) $("batch-series").value = $("batch-topic").value.trim().slice(0, 100);
       notice("batch-notice", `${ideas.length} ideas. Edit or remove them, then create the batch.`);
     } catch (error) { notice("batch-notice", error.message || "The AI could not propose ideas.", true); }
@@ -154,7 +201,10 @@
   });
 
   document.querySelectorAll("[data-tab]").forEach((button) => button.addEventListener("click", () => setTab(button.dataset.tab)));
-  $("batch-template").addEventListener("change", () => { state.template = $("batch-template").value; renderCast(); });
+  $("batch-template").addEventListener("change", () => { state.template = $("batch-template").value; renderCast(); refreshPreview(); });
+  $("batch-level").addEventListener("change", refreshPreview);
+  $("news-level").addEventListener("change", refreshPreview);
+  $("batch-topic").addEventListener("input", () => { if (!state.items.length) refreshPreview(); });
   $("news-load").addEventListener("click", loadNews);
   $("news-picks").addEventListener("click", aiPicks);
   $("news-use").addEventListener("click", useStories);
@@ -176,5 +226,6 @@
   const tomorrow = new Date(Date.now() + 86400000);
   $("batch-start").value = tomorrow.toISOString().slice(0, 10);
   renderItems();
+  refreshPreview();
   Api.listProfiles("state=active").then((profiles) => { state.profiles = profiles; renderCast(); }).catch(() => renderCast());
 })();

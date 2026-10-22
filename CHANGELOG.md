@@ -8,6 +8,14 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added — Phase 68 live preview on the Shorts batch page (2026-10-22)
+
+- The Shorts batch page has a 9:16 **Preview** beside the list: it plays the chosen template with the selected idea (or the typed topic) in the browser — silent, nothing saved, no AI cost — and follows the template, the level, the selected row and its edits (ENH-050).
+
+### Fixed — Phase 68
+
+- The video previews (Shorts batch and the Step 5 Solo / VOX editor) are no longer translated by the interface language switch; their English words stay English.
+
 ### Changed — Phase 67 review studio (2026-10-22)
 
 - The **Automation** page is now a review studio: the next 14 days as a schedule strip (each episode with its thumbnail and a coloured state), a grid of the made videos with filter chips (waiting for review, needs attention, approved, published, all), and a panel on the right that plays the selected video and shows its YouTube titles, description, tags, hashtags and pinned comments (each with Copy), its thumbnails, script and details (ENH-049).
