@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 69 — Studio look for the Dashboard, Channel plan and Settings (2026-10-22)
+
+Status: planned; 0/5 tasks. ENH-051: the three main pages get the Automation studio look — a dark control bar, number tiles, card headers, rails and day strips; every id and feature kept. [Plan](phases/69-studio-pages/PLAN.md).
+
 ## Phase 68 — Live preview on the Shorts batch page (2026-10-22)
 
 Status: implemented_verified_pending_owner_review; 3/3 tasks. Full pytest 2000 passed; 179 Vitest. ENH-050: a 9:16 player beside the batch list plays the chosen template with the selected idea (silent, in the browser, no AI cost). [Plan](phases/68-batch-preview/PLAN.md).
