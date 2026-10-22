@@ -14,3 +14,14 @@ Layout (desktop; it stacks on narrow screens):
 | 67.3 | Tests: board API states and dates, review PATCH rules, browser test (strip shows the dated episodes, filter chips, selecting a card plays its video and shows the YouTube texts with Copy, Approve updates the card), a screenshot check in the sandbox with the real batch videos; full pytest + Vitest |
 
 Kept: Automation behaviour, settings, the Channel plan and the step pages unchanged; nothing uploads to YouTube. No version bump; CHANGELOG `[Unreleased]`.
+
+## Amendment A — the studio look (owner 2026-10-22)
+
+Owner: "sửa và bố cục lại trang TỰ ĐỘNG đẹp và trực quan chuyên nghiệp hơn như một studio". Execution authorized; same data and APIs, a new layout:
+
+| Task | Scope |
+|---|---|
+| 67.A1 | **Studio bar** (dark brand band): title, a live **On/Off switch** (saves `enabled`), the next run ("Tonight 23:00–06:00 · up to 2 videos" / "Running: <episode> — <step>"), Run now (primary), Stop, ⚙ Settings. **KPI tiles**: due in 14 days · being made · waiting for review · needs attention · published — a tile click filters the library |
+| 67.A2 | **Calendar**: day columns with the weekday and a big date number, today highlighted, a count, the episodes as thumbnail chips with a coloured state edge; arrow buttons scroll it. **Library**: cards with the state badge and the duration on the thumbnail, the kind as a chip, a play overlay on hover; segmented filters with counts |
+| 67.A3 | **Monitor** (dark, like an editor's program monitor): the player on black, the title and a state badge, the action bar right under the video (Approve · Needs changes · Mark published with the link · MP4 · Step 7), then the YouTube / Thumbnail / Script / Details tabs with tidy copy cards |
+| 67.A4 | **Settings slide-over** from the right (schedule form, queue, run log) instead of the bottom drawer; light and dark themes; Vietnamese strings; tests updated (the drawer opens from ⚙), full pytest + Vitest; screenshots at 1024 / 1440 px |
