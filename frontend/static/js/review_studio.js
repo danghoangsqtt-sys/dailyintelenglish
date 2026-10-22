@@ -13,6 +13,9 @@
     return node;
   };
   const dot = (state) => el("span", { className: `state-dot st-${state}` });
+  const KPIS = [["due", "Due in 14 days", "#5B8DEF"], ["making", "Being made", "#E0A100"], ["waiting_review", "Waiting for review", "#1F9D57"],
+    ["needs_attention", "Needs attention", "#E8483B"], ["published", "Published", "#3B4A44"]];
+  const matches = (card, filter) => filter === "all" || card.state === filter || (filter === "needs_attention" && card.state === "changes");
   const minutes = (seconds) => seconds ? `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, "0")}` : "";
   const dayLabel = (iso, index) => index === 0 ? "Today" : index === 1 ? "Tomorrow"
     : new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
@@ -22,29 +25,54 @@
     return card.thumbnail_url ? el("img", { src: card.thumbnail_url, alt: "", className, loading: "lazy" }) : el("span", { className: `ph ${className}` });
   }
 
+  function renderKpis() {
+    const days = studio.board.days, all = days.flatMap((day) => day.items);
+    const count = (key) => key === "due" ? all.length : studio.board.videos.filter((card) => matches(card, key)).length
+      + (key === "making" ? all.filter((card) => card.state === "making" && !card.project_id).length : 0);
+    $("studio-kpis").replaceChildren(...KPIS.map(([key, label, colour]) => {
+      const tile = el("button", { type: "button", className: "kpi" }, [el("b", { textContent: String(count(key)) }), el("span", { textContent: label })]);
+      tile.style.setProperty("--kpi", colour);
+      tile.dataset.kpi = key;
+      tile.setAttribute("aria-pressed", String(key === studio.filter));
+      tile.addEventListener("click", () => {
+        if (key === "due") { $("studio-strip").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+        studio.filter = key === "making" ? "all" : key;
+        renderGrid();
+        renderKpis();
+      });
+      return tile;
+    }));
+  }
+
   function renderStrip() {
-    $("studio-strip").replaceChildren(...studio.board.days.map((day, index) => el("div", { className: `strip-day${index === 0 ? " today" : ""}` }, [
-      el("h3", {}, [el("span", { textContent: dayLabel(day.date, index) }), el("small", { textContent: day.items.length ? String(day.items.length) : "" })]),
-      ...day.items.map((card) => {
-        const chip = el("button", { type: "button", className: "strip-chip", title: `${card.series} · ${card.title} — ${STATE[card.state] || card.state}` },
-          [thumb(card), el("span", {}, [dot(card.state), document.createTextNode(card.title)])]);
-        chip.dataset.state = card.state;
-        chip.addEventListener("click", () => select(card.episode_id));
-        return chip;
-      }),
-    ])));
+    $("studio-strip").replaceChildren(...studio.board.days.map((day, index) => {
+      const date = new Date(`${day.date}T00:00:00`);
+      const weekday = index === 0 ? "Today" : index === 1 ? "Tomorrow" : date.toLocaleDateString(undefined, { weekday: "short" });
+      return el("div", { className: `strip-day${index === 0 ? " today" : ""}` }, [
+        el("h3", {}, [el("span", { className: "num", textContent: String(date.getDate()) }), el("span", { className: "wd", textContent: weekday }),
+          day.items.length ? el("span", { className: "cnt", textContent: String(day.items.length) }) : null]),
+        ...(day.items.length ? day.items.map((card) => {
+          const chip = el("button", { type: "button", className: `strip-chip st-${card.state}`, title: `${card.series} · ${card.title} — ${STATE[card.state] || card.state}` },
+            [thumb(card), el("span", { textContent: card.title })]);
+          chip.dataset.state = card.state;
+          chip.addEventListener("click", () => select(card.episode_id));
+          return chip;
+        }) : [el("div", { className: "empty", textContent: "—" })]),
+      ]);
+    }));
   }
 
   function renderGrid() {
-    const shown = studio.board.videos.filter((card) => studio.filter === "all" || card.state === studio.filter
-      || (studio.filter === "needs_attention" && card.state === "changes"));
+    const shown = studio.board.videos.filter((card) => matches(card, studio.filter));
     $("studio-grid").replaceChildren(...shown.map((card) => {
-      const button = el("button", { type: "button", className: "video-card" }, [
+      const button = el("button", { type: "button", className: `video-card st-${card.state}` }, [
         el("div", { className: "thumb" }, [card.thumbnail_url ? el("img", { src: card.thumbnail_url, alt: "", loading: "lazy" })
           : el("span", { className: "ph", textContent: card.has_video ? "▶" : STATE[card.state] || "" }),
-          card.duration ? el("span", { className: "dur", textContent: minutes(card.duration) }) : null]),
+          el("span", { className: "badge", textContent: STATE[card.state] || card.state }),
+          card.duration ? el("span", { className: "dur", textContent: minutes(card.duration) }) : null,
+          card.has_video ? el("span", { className: "play", ariaHidden: "true" }) : null]),
         el("div", { className: "meta" }, [el("b", { textContent: card.title }),
-          el("small", {}, [dot(card.state), document.createTextNode(`${STATE[card.state] || card.state} · ${card.kind}`)]),
+          el("span", { className: "kind-chip", textContent: card.kind }),
           el("small", { textContent: [card.publish_date, card.series].filter(Boolean).join(" · ") }),
           card.message ? el("small", { textContent: `⚠ ${card.step ? `${card.step}: ` : ""}${card.message}` }) : null]),
       ]);
@@ -59,6 +87,8 @@
         || (chip.dataset.filter === "needs_attention" && card.state === "changes")).length;
       chip.setAttribute("aria-pressed", String(chip.dataset.filter === studio.filter));
       chip.dataset.count = String(count);
+      if (!chip.dataset.label) chip.dataset.label = chip.textContent.trim();
+      chip.replaceChildren(document.createTextNode(chip.dataset.label), el("span", { className: "n", textContent: String(count) }));
     });
   }
 
@@ -156,6 +186,7 @@
       studio.board = await Api.getAutomationBoard();
       renderStrip();
       renderGrid();
+      renderKpis();
       if (studio.selected) {
         const current = card();
         $("review-meta").replaceChildren(...(current ? [dot(current.state), document.createTextNode(`${STATE[current.state] || current.state} · ${current.kind} · ${current.publish_date || ""}`)] : []));
@@ -163,9 +194,12 @@
       const next = $("studio-next");
       const view = await Api.getAutomation().catch(() => null);
       if (view) {
-        const s = view.settings;
-        next.textContent = view.status.running ? "Running now." : s.enabled ? `Makes the due videos every night ${s.window_start}–${s.window_end}, at most ${s.max_per_night} a night.`
-          : "Automatic production is off — turn it on in the schedule settings below.";
+        const s = view.settings, current = view.status.current;
+        next.textContent = current ? `Running: ${current.title} — ${current.step || "starting"}`
+          : view.status.running ? "Running now."
+          : s.enabled ? `Makes the due videos every night ${s.window_start}–${s.window_end}, at most ${s.max_per_night} a night.`
+          : "Automatic production is off — switch it on to make videos at night.";
+        $("studio-switch").checked = Boolean(s.enabled);
       }
     } catch { /* the next refresh tries again */ }
   }
@@ -181,7 +215,26 @@
     } catch (error) { notice(error.message || "Could not save.", true); }
   }
 
-  document.querySelectorAll("#studio-filters [data-filter]").forEach((chip) => chip.addEventListener("click", () => { studio.filter = chip.dataset.filter; renderGrid(); }));
+  document.querySelectorAll("#studio-filters [data-filter]").forEach((chip) => chip.addEventListener("click", () => { studio.filter = chip.dataset.filter; renderGrid(); renderKpis(); }));
+  // the studio bar: the on/off switch saves through the settings form (automation.js), the drawer holds the settings
+  $("studio-switch").addEventListener("change", () => {
+    $("auto-enabled").checked = $("studio-switch").checked;
+    $("auto-form").requestSubmit();
+    setTimeout(refresh, 600);
+  });
+  const drawer = (open) => {
+    $("settings-drawer").classList.toggle("open", open);
+    $("settings-drawer").setAttribute("aria-hidden", String(!open));
+    $("settings-backdrop").hidden = !open;
+    $("open-settings").setAttribute("aria-expanded", String(open));
+    if (open) $("auto-enabled").focus();
+  };
+  $("open-settings").addEventListener("click", () => drawer(true));
+  $("close-settings").addEventListener("click", () => drawer(false));
+  $("settings-backdrop").addEventListener("click", () => drawer(false));
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape" && $("settings-drawer").classList.contains("open")) drawer(false); });
+  $("cal-prev").addEventListener("click", () => $("studio-strip").scrollBy({ left: -440 }));
+  $("cal-next").addEventListener("click", () => $("studio-strip").scrollBy({ left: 440 }));
   document.querySelectorAll("[data-review-tab]").forEach((tab) => tab.addEventListener("click", () => { studio.tab = tab.dataset.reviewTab; renderBody(); }));
   $("review-approve").addEventListener("click", () => review({ review_status: "approved", review_note: "" }, "Approved: ready to upload."));
   $("review-changes").addEventListener("click", () => {

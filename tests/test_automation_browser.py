@@ -35,7 +35,7 @@ async def test_the_page_saves_the_schedule_and_lists_the_due_episodes(page, base
     await result(await page.request.patch(base_url + f"/api/channel/episodes/{episode['id']}",
                                           data={"publish_date": date.today().isoformat()}))
     await page.goto(base_url + "/automation")
-    await page.locator("#settings-drawer summary").click()  # Phase 67: the settings live in the drawer
+    await page.locator("#open-settings").click()  # Phase 67 A: the settings live in the slide-over
     await expect(page.locator("#auto-queue li")).to_have_count(1)
     await expect(page.locator("#auto-queue li")).to_contain_text("Mornings · Ep. 1: Coffee")
     await expect(page.locator("#auto-state-text")).to_have_text("Off")
@@ -70,6 +70,13 @@ async def test_the_review_studio_shows_the_schedule_and_reviews_a_made_video(pag
     assert [item["title"] for item in board["days"][3]["items"]] == ["Bus stop"]
     assert today_items["Tea time"]["state"] == "planned" and board["videos"] == []  # no project yet
     await page.goto(base_url + "/automation")
+    await expect(page.locator("#studio-kpis .kpi")).to_have_count(5)
+    await expect(page.locator(".kpi[data-kpi='due'] b")).not_to_have_text("0")
+    await expect(page.locator("#settings-drawer")).not_to_have_class("settings-drawer open")
+    await page.locator("#open-settings").click()
+    await expect(page.locator("#settings-drawer")).to_have_class("settings-drawer open")
+    await page.keyboard.press("Escape")
+    await expect(page.locator("#settings-backdrop")).to_be_hidden()
     await expect(page.locator(".strip-day").first).to_contain_text("Tea time")
     await expect(page.locator(".strip-day").nth(3)).to_contain_text("Bus stop")
     await page.locator(".strip-chip", has_text="Tea time").click()

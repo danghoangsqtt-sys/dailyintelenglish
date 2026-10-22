@@ -8,6 +8,10 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Changed — Phase 67 Amendment A, the Automation studio look (2026-10-22)
+
+- The Automation page looks like a studio: a dark control bar with an on/off switch, Run now, Stop and Settings; five number tiles (due, being made, waiting for review, needs attention, published) that filter the library; a calendar with big date numbers and coloured thumbnails; library cards with the state and duration on the picture; a dark monitor with the review buttons right under the video; and the schedule settings in a panel that slides in from the right.
+
 ### Added — Phase 68 live preview on the Shorts batch page (2026-10-22)
 
 - The Shorts batch page has a 9:16 **Preview** beside the list: it plays the chosen template with the selected idea (or the typed topic) in the browser — silent, nothing saved, no AI cost — and follows the template, the level, the selected row and its edits (ENH-050).

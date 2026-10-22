@@ -9,3 +9,5 @@
 | 67.1 | Data + board API | implemented_verified |
 | 67.2 | Review studio page | implemented_verified |
 | 67.3 | Verification | implemented_verified |
+
+- **Amendment A (studio look), done 2026-10-22:** the studio bar with a live on/off switch and Run now / Stop / Settings, five KPI tiles that filter the library, the calendar with date numbers and state-edged thumbnail chips (arrow scrolling), library cards with state badges, duration and a play overlay, the dark monitor with the action bar under the video, and the settings as a slide-over (Esc / backdrop closes it). Checked at 1024 / 1440 / 1600 px, light and dark, EN and VI. Full pytest 2000 passed. (A full run before it had one known-flaky failure, `test_concurrent_script_saves_do_not_interleave`, which passes alone 3/3.)

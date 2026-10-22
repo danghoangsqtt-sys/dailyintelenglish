@@ -43,6 +43,8 @@
   function renderStatus(status, settings) {
     const busy = Boolean(status.current);
     $("auto-dot").className = `auto-dot${busy ? " busy" : settings.enabled || status.running ? " on" : ""}`;
+    const studioSwitch = document.getElementById("studio-switch");  // Phase 67 A: the studio bar's switch follows the setting
+    if (studioSwitch) studioSwitch.checked = Boolean(settings.enabled);
     $("auto-state-text").textContent = busy ? "Working" : status.running ? "Running" : settings.enabled
       ? `On · ${settings.window_start}–${settings.window_end}` : "Off";
     const current = status.current;
