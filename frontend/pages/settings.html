@@ -6,6 +6,7 @@
   <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
   <title>Settings — Daily Beyond English</title>
   <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/studio.css" />
   <script src="/static/js/i18n_vi.js"></script>
   <script src="/static/js/i18n.js"></script>
   <style>
@@ -85,21 +86,30 @@
     </div>
   </header>
 
-  <main class="main">
-    <section class="page-heading">
-      <h1>Settings</h1>
+  <main class="main studio-page settings-main">
+    <!-- Phase 69 (ENH-051): the studio look -->
+    <section class="studio-bar" aria-labelledby="settings-title">
+      <div>
+        <div class="kicker">Daily Beyond English</div>
+        <h1 id="settings-title">Settings</h1>
+        <p>The app's language and look, the AI that writes the videos, and the keys of its cloud providers.</p>
+      </div>
+      <div class="bar-right">
+        <a class="studio-btn" href="/">Open the Dashboard</a>
+        <a class="studio-btn" href="/automation">Review night videos</a>
+      </div>
     </section>
 
     <div class="settings-layout">
     <nav id="settings-nav" class="settings-nav" aria-label="Settings sections">
-      <button type="button" data-section="general" aria-current="true"><span aria-hidden="true">⚙️</span> General</button>
-      <button type="button" data-section="ai" aria-current="false"><span aria-hidden="true">🤖</span> AI</button>
-      <button type="button" data-section="providers" aria-current="false"><span aria-hidden="true">🔑</span> AI providers</button>
+      <button type="button" data-section="general" aria-current="true"><span aria-hidden="true">⚙️</span><b>General</b><small>Language, theme, version</small></button>
+      <button type="button" data-section="ai" aria-current="false"><span aria-hidden="true">🤖</span><b>AI</b><small>Local or cloud-first</small></button>
+      <button type="button" data-section="providers" aria-current="false"><span aria-hidden="true">🔑</span><b>AI providers</b><small>Keys and models</small></button>
     </nav>
     <div class="settings-sections">
     <section id="settings-general" class="settings-section" data-section="general">
       <div class="card settings-card">
-        <h2>Language</h2>
+        <h2 data-icon="🌐">Language</h2>
         <p class="section-hint">The language of the app's buttons and messages. Video content (scripts, vocabulary) stays in English.</p>
         <div class="settings-choice" role="radiogroup" aria-label="Language" translate="no">
           <label><input type="radio" name="app-language" value="en" /> English</label>
@@ -107,14 +117,14 @@
         </div>
       </div>
       <div class="card settings-card">
-        <h2>Appearance (theme)</h2>
+        <h2 data-icon="🎨">Appearance (theme)</h2>
         <div class="settings-choice" role="radiogroup" aria-label="Appearance (theme)">
           <label><input type="radio" name="app-theme" value="light" /> Light</label>
           <label><input type="radio" name="app-theme" value="dark" /> Dark</label>
         </div>
       </div>
       <div class="card settings-card">
-        <h2>App version</h2>
+        <h2 data-icon="📦">App version</h2>
         <p id="running-build" class="section-hint" aria-live="polite">Checking running application build…</p>
       </div>
     </section>
@@ -124,7 +134,7 @@
         run on your local Ollama model, or on a cloud provider first (with local as an
         automatic fallback).</p>
     <section class="card settings-card">
-      <h2>AI Provider</h2>
+      <h2 data-icon="🤖">AI Provider</h2>
       <p class="section-hint">
         "Cloud-first" tries your configured cloud provider first, and falls back to local
         automatically if it's unreachable or misconfigured.
@@ -161,7 +171,7 @@
       <button type="button" class="provider-pill" data-target="provider-zen"><strong>OpenCode Zen</strong><span id="dot-zen" class="status-dot">Not set up</span></button>
     </div>
     <section id="provider-openrouter" class="card settings-card">
-      <h2>Cloud Provider — OpenRouter</h2>
+      <h2 data-icon="🔀">Cloud Provider — OpenRouter</h2>
       <p class="section-hint">
         An OpenAI-compatible endpoint. The key is write-only — it is never shown again after
         saving, only its last 4 characters.
@@ -201,7 +211,7 @@
     </section>
 
     <section id="provider-gemini" class="card settings-card">
-      <h2>Cloud Provider — Gemini</h2>
+      <h2 data-icon="✨">Cloud Provider — Gemini</h2>
       <p class="section-hint">
         Dispatches each model below as its own chain entry with its own free-tier quota — the
         list order is the try order. The key is write-only.
@@ -229,7 +239,7 @@
     </section>
 
     <section id="provider-zen" class="card settings-card">
-      <h2>Cloud Provider — OpenCode Zen (advanced)</h2>
+      <h2 data-icon="🧪">Cloud Provider — OpenCode Zen (advanced)</h2>
       <p class="section-hint">
         Not enabled by default — its free tier is restricted to the OpenCode client for most
         models. Add "opencode-zen" to the provider order above to use it.

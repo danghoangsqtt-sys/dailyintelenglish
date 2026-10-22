@@ -6,6 +6,7 @@
   <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
   <title>Daily Beyond English</title>
   <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/studio.css" />
   <script src="/static/js/i18n_vi.js"></script>
   <script src="/static/js/i18n.js"></script>
 </head>
@@ -24,22 +25,26 @@
     </div>
   </header>
 
-  <main class="dashboard-main">
-    <!-- Task 36.7 (D106-D108): the channel cockpit; the project grid below keeps its IDs and behaviour. -->
-    <section class="cockpit-head" aria-labelledby="cockpit-title">
+  <main class="dashboard-main studio-page">
+    <!-- Task 36.7 (D106-D108): the channel cockpit; the project grid below keeps its IDs and behaviour.
+         Phase 69 (ENH-051): the studio look -- the control bar, number tiles and card headers of the Automation studio. -->
+    <section class="studio-bar" aria-labelledby="cockpit-title">
       <div>
-        <p class="hero-eyebrow">Daily Beyond English</p>
+        <div class="kicker">Daily Beyond English</div>
         <h1 id="cockpit-title">Channel dashboard</h1>
-        <div id="cockpit-stats" class="cockpit-stats" aria-live="polite"></div>
+        <p>What to make next, what is in production and what goes out in the next two weeks.</p>
       </div>
-      <div class="cockpit-head-actions">
-        <a class="btn btn-ghost" href="/channel">Channel plan</a>
-        <button id="new-project-btn" class="btn btn-primary">＋ New project</button>
+      <div class="bar-right">
+        <a class="studio-btn" href="/channel">Plan the channel</a>
+        <a class="studio-btn" href="/automation">Review night videos</a>
+        <a class="studio-btn" href="/shorts-batch">Make Shorts in batch</a>
+        <button id="new-project-btn" class="studio-btn primary">＋ New project</button>
       </div>
     </section>
+    <div id="cockpit-stats" class="cockpit-stats kpi-row" aria-live="polite" aria-label="Channel numbers"></div>
     <!-- Phase 56 (ENH-038): where to start -- continue, the next planned episode, or a new video. -->
-    <section class="card start-here" aria-labelledby="start-title">
-      <h2 id="start-title">Start here</h2>
+    <section class="studio-card start-here" aria-labelledby="start-title">
+      <header><h2 id="start-title" data-icon="🚀">Start here</h2><small>How a video is made: 7 steps</small></header>
       <div id="start-cards" class="start-cards"></div>
       <!-- Phase 62 (ENH-044): what the last automatic run made -->
       <p id="automation-line" class="automation-line" hidden><a href="/automation"></a></p>
@@ -53,40 +58,43 @@
         <li><b>7</b> YouTube<small>title, description, tags</small></li>
       </ol>
     </section>
-    <div class="cockpit-row">
-      <section class="card cockpit-card" aria-labelledby="next-title">
-        <h2 id="next-title">Next to publish</h2>
+    <div class="studio-cols">
+      <section class="studio-card cockpit-card" aria-labelledby="next-title">
+        <header><h2 id="next-title" data-icon="📅">Next to publish</h2></header>
         <div id="cockpit-next" class="cockpit-next"></div>
       </section>
-      <section class="card cockpit-card" aria-labelledby="today-title">
-        <h2 id="today-title">Today</h2>
+      <section class="studio-card cockpit-card" aria-labelledby="today-title">
+        <header><h2 id="today-title" data-icon="✅">Today</h2></header>
         <ul id="cockpit-actions" class="cockpit-actions"></ul>
       </section>
     </div>
-    <section class="card cockpit-card" aria-labelledby="roadmap-title">
-      <h2 id="roadmap-title">Channel roadmap</h2>
+    <section class="studio-card cockpit-card" aria-labelledby="calendar-title">
+      <header><h2 id="calendar-title" data-icon="🗓️">Next two weeks</h2><small>Publishing dates from the channel plan</small></header>
+      <ol id="cockpit-calendar" class="cockpit-calendar"></ol>
+    </section>
+    <section class="studio-card cockpit-card" aria-labelledby="board-title">
+      <header><h2 id="board-title" data-icon="🎬">Production board</h2><small>Each project sits at its next step</small></header>
+      <div id="production-board" class="production-board"></div>
+    </section>
+    <section class="studio-card cockpit-card" aria-labelledby="roadmap-title">
+      <header><h2 id="roadmap-title" data-icon="🧭">Channel roadmap</h2></header>
       <ol id="roadmap-steps" class="roadmap-steps"></ol>
       <div id="roadmap-detail" class="roadmap-detail"></div>
     </section>
-    <section class="card cockpit-card" aria-labelledby="board-title">
-      <h2 id="board-title">Production board</h2>
-      <div id="production-board" class="production-board"></div>
-    </section>
-    <section class="card cockpit-card" aria-labelledby="calendar-title">
-      <h2 id="calendar-title">Next two weeks</h2>
-      <ol id="cockpit-calendar" class="cockpit-calendar"></ol>
-    </section>
 
-    <h2 class="projects-title">All projects</h2>
-    <div class="toolbar">
-      <div class="filter-bar" aria-label="Project status filters">
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="draft">Draft</button>
-        <button class="filter-btn" data-filter="script_generated">In Progress</button>
-        <button class="filter-btn" data-filter="complete">Complete</button>
+    <section class="studio-card projects-card" aria-labelledby="projects-title">
+    <header>
+      <h2 id="projects-title" class="projects-title" data-icon="📁">All projects</h2>
+      <div class="toolbar">
+        <div class="filter-bar" aria-label="Project status filters">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="draft">Draft</button>
+          <button class="filter-btn" data-filter="script_generated">In Progress</button>
+          <button class="filter-btn" data-filter="complete">Complete</button>
+        </div>
+        <label class="search-box"><span class="visually-hidden">Search projects</span><input id="search-input" type="search" placeholder="Search projects..." /></label>
       </div>
-      <label class="search-box"><span class="visually-hidden">Search projects</span><input id="search-input" type="search" placeholder="Search projects..." /></label>
-    </div>
+    </header>
 
     <div id="error-banner" role="alert" hidden></div>
     <div id="project-grid" class="project-grid"></div>
@@ -96,12 +104,13 @@
       <button id="next-page-btn" class="btn btn-ghost" type="button">Next →</button>
     </nav>
     <div id="empty-state" class="empty-state" hidden><div class="empty-icon" aria-hidden="true">🎧</div><p>No projects yet. Create your first AI-powered podcast episode.</p></div>
+    </section>
   </main>
 
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/confirm_dialog.js"></script>
   <script src="/static/js/api.js"></script>
   <script src="/static/js/dashboard.js"></script>
-  <script src="/static/js/dashboard_channel.js?v=20261021-start"></script>
+  <script src="/static/js/dashboard_channel.js?v=20261022-studio"></script>
 </body>
 </html>

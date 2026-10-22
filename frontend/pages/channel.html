@@ -6,6 +6,7 @@
   <link rel="icon" href="/static/brand/logo-64.png" type="image/png" />
   <title>Channel Plan — Daily Beyond English</title>
   <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/studio.css" />
   <script src="/static/js/i18n_vi.js"></script>
   <script src="/static/js/i18n.js"></script>
   <style>
@@ -99,16 +100,25 @@
       <button id="theme-toggle" class="icon-toggle" type="button" aria-label="Toggle dark/light mode">☀️</button>
     </div>
   </header>
-  <main class="channel-main">
-    <section class="page-heading">
-      <h1>Channel plan</h1>
-      <p>Plan what the channel publishes: <strong>topics</strong> (your YouTube playlists) hold <strong>series</strong>,
-        and each series is a run of <strong>episodes</strong>. Three steps: plan with AI, choose each series' characters
-        and create its projects, then plan the publishing dates.</p>
+  <main class="channel-main studio-page">
+    <!-- Phase 69 (ENH-051): the studio look -->
+    <section class="studio-bar" aria-labelledby="channel-title">
+      <div>
+        <div class="kicker">Daily Beyond English</div>
+        <h1 id="channel-title">Channel plan</h1>
+        <p>Plan what the channel publishes: <strong>topics</strong> (your YouTube playlists) hold <strong>series</strong>,
+          and each series is a run of <strong>episodes</strong>. Three steps: plan with AI, choose each series' characters
+          and create its projects, then plan the publishing dates.</p>
+      </div>
+      <div class="bar-right">
+        <a class="studio-btn" href="/">Open the Dashboard</a>
+        <a class="studio-btn" href="/shorts-batch">Make Shorts in batch</a>
+        <a class="studio-btn primary" href="#plan-section" id="bar-plan">✨ Plan with AI</a>
+      </div>
     </section>
+    <div id="channel-counts" class="channel-counts kpi-row" aria-live="polite" aria-label="Channel numbers"></div>
     <ol id="channel-steps" class="channel-steps" aria-label="Channel plan steps"></ol>
     <div id="channel-next" class="channel-next" aria-live="polite"></div>
-    <div id="channel-counts" class="channel-counts" aria-live="polite"></div>
     <div id="channel-message" class="channel-message" role="status" hidden></div>
 
     <details id="plan-section" class="card channel-section" data-step="plan" open>

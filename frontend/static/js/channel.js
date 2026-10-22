@@ -233,8 +233,12 @@
         el("tbody", {}, series.episodes.map(episodeRow)),
       ]),
     ]);
-    return el("div", { className: "series-card", id: `series-${series.id}`, dataset: { series: series.id } }, [
+    // Phase 69 (ENH-051): a badge and a colour for the kind of video the series makes
+    const kind = ["classic", "solo_explainer", "vox"].includes(mode.value) ? (solo ? "solo" : "conversation") : "short";
+    const kindLabel = kind === "short" ? "Short 9:16" : mode.value === "vox" ? "VOX" : solo ? "Solo" : "Conversation";
+    return el("div", { className: "series-card", id: `series-${series.id}`, dataset: { series: series.id, kind } }, [
       el("div", { className: "series-head" }, [
+        el("span", { className: "series-kind", textContent: kindLabel }),
         saveOnChange(el("input", { className: "inline-input name", value: series.name, "aria-label": "Series name" }),
           (value) => Api.updateChannelSeries(series.id, { name: value })),
         status,
@@ -304,7 +308,7 @@
       if (episode.publish_date) rows.push({ topic, series, episode });
     })));
     rows.sort((a, b) => a.episode.publish_date.localeCompare(b.episode.publish_date));
-    $("calendar-list").replaceChildren(...rows.map(({ topic, series, episode }) => el("li", {}, [
+    $("calendar-list").replaceChildren(...rows.map(({ topic, series, episode }) => el("li", { dataset: { status: episode.status }, title: `${topic.name} — ${series.name} · Ep. ${episode.number}: ${episode.title}` }, [
       el("strong", { textContent: `${WEEKDAYS[(new Date(`${episode.publish_date}T00:00:00`).getDay() + 6) % 7]} ${episode.publish_date}` }),
       el("span", { textContent: topic.name }),
       el("span", { textContent: `${series.name} · Ep. ${episode.number}: ${episode.title}` }),
@@ -405,11 +409,15 @@
 
   function render() {
     const counts = state.channel?.counts || { planned: 0, created: 0, published: 0 };
-    $("channel-counts").replaceChildren(
-      el("span", { className: "status-chip", textContent: `${state.channel?.topics.length || 0} topics` }),
-      el("span", { className: "status-chip", textContent: `${counts.planned} planned` }),
-      el("span", { className: "status-chip", dataset: { status: "created" }, textContent: `${counts.created} in production` }),
-      el("span", { className: "status-chip", dataset: { status: "published" }, textContent: `${counts.published} published` }));
+    const series = allSeries();  // Phase 69 (ENH-051): number tiles
+    $("channel-counts").replaceChildren(...[
+      [state.channel?.topics.length || 0, "topics", "#1F7A4D"], [series.length, "series", "#7E6BE0"],
+      [counts.planned, "planned", "#5B8DEF"], [counts.created, "in production", "#E0A100"], [counts.published, "published", "#1F9D57"],
+    ].map(([value, label, colour]) => {
+      const tile = el("div", { className: "kpi" }, [el("b", { textContent: String(value) }), el("span", { textContent: label })]);
+      tile.style.setProperty("--kpi", colour);
+      return tile;
+    }));
     const tree = $("channel-tree");
     const topics = state.channel?.topics || [];
     tree.replaceChildren(...(topics.length ? topics.map(topicCard)
@@ -425,6 +433,7 @@
     $("plan-apply").addEventListener("click", applyProposal);
     $("plan-discard").addEventListener("click", () => { state.proposal = null; renderProposal(); });
     $("calendar-form").addEventListener("submit", plan);
+    $("bar-plan").addEventListener("click", (event) => { event.preventDefault(); goTo("plan-section"); });
     $("new-topic").addEventListener("click", () => {
       const name = $("new-topic-name").value.trim();
       if (name) act(() => Api.createChannelTopic({ name }), "Topic added.").then(() => { $("new-topic-name").value = ""; });

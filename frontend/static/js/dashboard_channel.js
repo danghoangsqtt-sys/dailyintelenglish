@@ -23,12 +23,15 @@
   const episodeName = (item) => (item.series ? `${item.series} · Ep. ${item.number}: ${item.title}` : item.name);
 
   function renderStats(stats) {
-    const entries = [
-      [stats.topics, "topics"], [stats.series, "series"], [stats.episodes.planned, "planned"],
-      [stats.episodes.created, "in production"], [stats.produced, "ready"], [stats.episodes.published, "published"],
+    const entries = [  // Phase 69 (ENH-051): number tiles, each with its colour
+      [stats.topics, "topics", "#1F7A4D"], [stats.series, "series", "#7E6BE0"], [stats.episodes.planned, "planned", "#5B8DEF"],
+      [stats.episodes.created, "in production", "#E0A100"], [stats.produced, "ready", "#1F9D57"], [stats.episodes.published, "published", "#3B4A44"],
     ];
-    $("cockpit-stats").replaceChildren(...entries.map(([value, label]) =>
-      el("div", { className: "cockpit-stat" }, [el("b", { textContent: value }), el("span", { textContent: label })])));
+    $("cockpit-stats").replaceChildren(...entries.map(([value, label, colour]) => {
+      const tile = el("div", { className: "cockpit-stat kpi" }, [el("b", { textContent: value }), el("span", { textContent: label })]);
+      tile.style.setProperty("--kpi", colour);
+      return tile;
+    }));
   }
 
   function renderNext(next) {
@@ -110,14 +113,23 @@
     ])));
   }
 
-  function renderCalendar(calendar) {
-    $("cockpit-calendar").replaceChildren(...(calendar.length
-      ? calendar.map((item) => el("li", {}, [
-        el("strong", { textContent: day(item.publish_date) }),
-        el("span", { textContent: `${item.topic} — ${item.series} · Ep. ${item.number}: ${item.title}` }),
-        el("span", { className: "status-chip", textContent: item.status }),
-      ]))
-      : [el("li", { className: "cockpit-empty", textContent: "No episode dated in the next two weeks." })]));
+  // Phase 69 (ENH-051): the next two weeks as day columns, each episode a chip coloured by its status
+  function renderCalendar(calendar, today) {
+    const start = new Date(`${today || new Date().toISOString().slice(0, 10)}T00:00:00`);
+    const iso = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const days = Array.from({ length: 14 }, (_, index) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + index));
+    $("cockpit-calendar").replaceChildren(...days.map((date, index) => {
+      const items = calendar.filter((item) => item.publish_date === iso(date));
+      return el("li", { className: `cal-day${index === 0 ? " today" : ""}` }, [
+        el("h3", {}, [el("span", { className: "num", textContent: String(date.getDate()) }),
+          el("span", { className: "wd", textContent: index === 0 ? "Today" : WEEKDAYS[date.getDay()] })]),
+        ...(items.length ? items.map((item) => el("a", {
+          className: "cal-chip", href: item.project_id ? `/step2?project_id=${item.project_id}` : "/channel",
+          title: `${item.topic} — ${item.series} · Ep. ${item.number}: ${item.title} (${item.status})`, dataset: { status: item.status },
+        }, [el("b", { textContent: `Ep. ${item.number}: ${item.title}` }), el("small", { textContent: item.series })]))
+          : [el("div", { className: "empty", textContent: "—" })]),
+      ]);
+    }));
   }
 
   async function load() {
@@ -129,7 +141,7 @@
       renderActions(data.actions);
       renderRoadmap(data.roadmap);
       renderBoard(data.board);
-      renderCalendar(data.calendar);
+      renderCalendar(data.calendar, data.today);
     } catch (error) {
       $("cockpit-actions").replaceChildren(el("li", { className: "cockpit-empty", textContent: error.message || "The channel overview could not load." }));
       $("start-cards").replaceChildren(startCard("new", "＋ New video", ["Your own topic"], "/step1", "Start a new video"));

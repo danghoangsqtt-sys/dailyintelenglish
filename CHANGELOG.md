@@ -8,6 +8,10 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Changed — Phase 69, the studio look for the Dashboard, Channel plan and Settings (2026-10-22)
+
+- The Dashboard, Channel plan and Settings pages share the Automation studio look: a dark control bar with the main actions, coloured number tiles and cards with icon headers. The Dashboard shows the next two weeks as day columns, the production board as coloured columns and the 7 steps as a rail; the Channel plan shows each topic as a card with its series badged by kind (Conversation, Solo, VOX, Short 9:16) and the publishing dates as coloured rows; Settings has a menu of tiles with a short description (ENH-051).
+
 ### Changed — Phase 67 Amendment A, the Automation studio look (2026-10-22)
 
 - The Automation page looks like a studio: a dark control bar with an on/off switch, Run now, Stop and Settings; five number tiles (due, being made, waiting for review, needs attention, published) that filter the library; a calendar with big date numbers and coloured thumbnails; library cards with the state and duration on the picture; a dark monitor with the review buttons right under the video; and the schedule settings in a panel that slides in from the right.

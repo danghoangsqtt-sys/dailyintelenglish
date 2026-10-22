@@ -62,7 +62,7 @@ async def test_a_proposed_map_is_edited_applied_and_dated(browser_instance: Brow
     assert await page.locator(".series-episodes").first.evaluate("details => details.open")
     create = page.locator("[data-action='create-projects']")
     assert await create.is_disabled()  # no cast chosen yet
-    assert "3 planned" in await page.locator("#channel-counts").text_content()
+    assert "3planned" in (await page.locator("#channel-counts").text_content()).replace(" ", "")
     await page.locator("#calendar-form input[name=start_date]").fill("2026-10-19")
     await page.locator("#calendar-form button[type=submit]").click()
     await page.wait_for_function("document.querySelectorAll('#calendar-list li').length === 3")
