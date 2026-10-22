@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 68 — Live preview on the Shorts batch page (2026-10-22)
+
+Status: planned; 0/3 tasks. ENH-050: a 9:16 player beside the batch list plays the chosen template with the selected idea (silent, in the browser, no AI cost). [Plan](phases/68-batch-preview/PLAN.md).
+
 ## Phase 67 — Review studio (2026-10-22)
 
 Status: implemented_verified_pending_owner_review; 3/3 tasks. Full pytest 2000 passed. Checked in the sandbox with the real batch videos (EN and VI). ENH-049: the Automation page becomes a review studio — a 14-day schedule strip, a grid of the made videos, and a right panel playing the selected video with its YouTube texts, thumbnail and script, to approve in place. [Plan](phases/67-review-studio/PLAN.md).
