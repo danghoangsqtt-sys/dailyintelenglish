@@ -224,6 +224,7 @@ async def test_settings_exports_a_package_from_the_data_and_sync_section(live_se
         assert await page.locator("#package-import").is_disabled()
         await page.locator("#package-export").click()
         await page.wait_for_function("document.getElementById('package-export-status').textContent.startsWith('Saved library-')")
+        await page.locator("#package-exports a").first.wait_for()  # the list reloads after the status line
         assert await page.locator("#package-exports a").count() == 1
         assert (await page.locator("#package-exports a").get_attribute("href")).startswith("/api/library-package/download/library-")
         await browser.close()

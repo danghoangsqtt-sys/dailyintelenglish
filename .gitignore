@@ -34,6 +34,7 @@ data/tts_voice_catalog.json
 data/quality_reviews/
 data/tmp/
 data/backups/
+data/exports/
 # Phase 20: generated character/scene library and per-project shots (user content)
 data/library/
 data/visuals/
