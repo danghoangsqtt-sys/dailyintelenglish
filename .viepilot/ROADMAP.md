@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 66 — Shorts in batches and today's news ideas (2026-10-22)
+
+Status: planned; 0/5 tasks. ENH-048: one topic → 5–10 Short ideas saved as a dated Channel series for the night automation; today's news from public feeds with the AI's picks and hooks, turned into news Shorts. [Plan](phases/66-batch-news/PLAN.md).
+
 ## Phase 65 — Interactive Shorts (2026-10-22)
 
 Status: implemented_verified_pending_owner_review; 5/5 tasks. Full pytest 1988 passed; 169 Vitest. Four real sandbox Shorts rendered (1080×1920). ENH-047: countdown quiz and listening challenge (one narrator), chat and would-you-rather (two voices, drawn from the script lines). [Plan](phases/65-interactive-shorts/PLAN.md).

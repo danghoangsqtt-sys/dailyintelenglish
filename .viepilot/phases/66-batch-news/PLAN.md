@@ -1,0 +1,17 @@
+# PLAN — Phase 66: Shorts in batches and today's news ideas (ENH-048)
+
+Status: execution_authorized 2026-10-22 — the owner asked for the brainstorm's last phase.
+
+Design:
+- **A batch is a Channel plan series of Shorts.** One topic + one Shorts template + 5–10 → the AI proposes that many distinct Short ideas (title + one-line brief); the owner edits the list, then **Create** saves them as a series (the template's style, the chosen narrator / two characters) with one publishing date per day (or every N days) from a start date. The Phase 62 automation then makes them at night, or "Create the projects now" makes the projects at once. Nothing new to learn: the batch shows up on the Channel plan like any series.
+- **Today's news comes from public news feeds (RSS/Atom), read by the app; the AI picks and pitches.** No AI provider here can browse the web reliably, so the app reads the owner's feeds (BBC World and NPR News by default; the owner can add or remove feeds) for the last 36 hours, and the AI chooses the best stories for an English-learning Short at the project's level and writes a one-line hook for each (without AI the headlines are still listed). A chosen story becomes a news Short: its link is read (Phase 63 link reader) into the article the AI retells in its own words. Several stories can become a news batch; each episode keeps its article, so the automation can make news Shorts too.
+
+| Task | Scope |
+|---|---|
+| 66.1 | Data: migration `034_batch_news.sql` — `channel_episodes.source_kind` / `source_text` (an episode's article; `create_projects` passes it to the project) and `news_feeds` (url, name, enabled; BBC World + NPR News seeded) |
+| 66.2 | Batch API: `POST /api/shorts-batch/ideas` (topic, template, count 5–10, level, hint → distinct ideas; prompt `shorts/batch_ideas.txt` with the template's format and "never repeat an idea"); `POST /api/shorts-batch/create` (topic name, series name, template, cast, level, start date, every N days, items with optional article → topic found or made, series with the style, episodes with dates and articles; optionally the projects) |
+| 66.3 | News API: `GET /api/news/feeds` / `PUT` (list, add, remove, enable); `GET /api/news/today` (feeds read through the public-address guard, ≤2 MB, 15 s, cached 30 min; RSS and Atom; items of the last 36 h, newest first, de-duplicated); `POST /api/news/picks` (the AI chooses up to N stories for the level with a hook and why; plain-text failure falls back to the headlines) |
+| 66.4 | UI: a **Shorts batch** page (sidebar) with two tabs — *From a topic* (topic, template, count, level, narrator(s), start date / every N days → ideas list editable → Create (+ make projects now)) and *Today's news* (headlines with the AI's picks and hooks, choose several → read their articles → Create a news batch); Step 1 news template gets "📰 Today's news" to fill one Short from a story; feeds managed on the page; Vietnamese strings |
+| 66.5 | Tests (feed parsing RSS/Atom, age filter, guard, ideas validation and repair of field names, create with dates and articles, create_projects with an article, browser test of the page), a real run in the sandbox (real feeds, AI picks, a 5-Short batch created and one made by the automation "Run now"), full pytest + Vitest |
+
+Kept: everything else unchanged; no automatic upload; articles are only retold in the AI's own words (Phase 63 rule). No version bump; CHANGELOG `[Unreleased]`.
