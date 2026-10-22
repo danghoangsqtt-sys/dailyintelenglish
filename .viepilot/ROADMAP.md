@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 67 — Review studio (2026-10-22)
+
+Status: planned; 0/3 tasks. ENH-049: the Automation page becomes a review studio — a 14-day schedule strip, a grid of the made videos, and a right panel playing the selected video with its YouTube texts, thumbnail and script, to approve in place. [Plan](phases/67-review-studio/PLAN.md).
+
 ## Phase 66 — Shorts in batches and today's news ideas (2026-10-22)
 
 Status: implemented_verified_pending_owner_review; 5/5 tasks. Full pytest 1997 passed; 169 Vitest. Real run: 40 stories from BBC + NPR, 5 AI picks, 5 batch ideas, two batches saved; the night run stopped the first batch Short at its visual plan (see PHASE-STATE: open owner decision). ENH-048: one topic → 5–10 Short ideas saved as a dated Channel series for the night automation; today's news from public feeds with the AI's picks and hooks, turned into news Shorts. [Plan](phases/66-batch-news/PLAN.md).
