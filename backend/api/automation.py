@@ -60,6 +60,15 @@ async def get_automation(db: aiosqlite.Connection = Depends(get_db)) -> dict:
     return ok(result, started_at=started_at)
 
 
+@router.get("/board")
+async def get_board(days: int = 14, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 67 (ENH-049): the review studio -- the schedule strip of the next days and the made videos."""
+    started_at = time.perf_counter()
+    async with read_transaction():
+        result = await service.board(db, date.today(), max(1, min(days, 31)))
+    return ok(result, started_at=started_at)
+
+
 @router.put("/settings")
 async def put_settings(body: AutomationSettingsPatch, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     started_at = time.perf_counter()

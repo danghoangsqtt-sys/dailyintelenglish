@@ -36,6 +36,59 @@
     .auto-run h3 { margin: 0 0 4px; font-size: 15px; }
     .auto-message { font-size: 13px; color: var(--text-muted); flex-basis: 100%; }
     #auto-notice.is-error { color: #C0392B; }
+    /* Phase 67 (ENH-049): the review studio */
+    .studio-main { width: min(1500px, calc(100% - 32px)); margin: 24px auto 60px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .studio-main > *, .studio-body > * { min-width: 0; }  /* the 14-day strip scrolls inside instead of widening the page */
+    .studio-top { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+    .studio-top h1 { margin: 0; font-size: 26px; }
+    .studio-next { font-size: 14px; color: var(--text-muted); }
+    .studio-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+    .strip-day { border: 1px solid var(--border); border-radius: 12px; padding: 8px; background: var(--surface); min-height: 120px; display: grid; align-content: start; gap: 6px; }
+    .strip-day.today { border-color: var(--accent, #1F7A4D); box-shadow: 0 0 0 2px rgba(31,122,77,0.25); }
+    .strip-day h3 { margin: 0; font-size: 13px; display: flex; justify-content: space-between; }
+    .strip-chip { display: grid; grid-template-columns: 44px 1fr; gap: 6px; align-items: center; padding: 4px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface-2); cursor: pointer; text-align: left; font: inherit; color: inherit; }
+    .strip-chip img, .strip-chip .ph { width: 44px; height: 30px; object-fit: cover; border-radius: 5px; background: #24443A; }
+    .strip-chip span { font-size: 11.5px; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .state-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    .st-planned { background: #9AA5A0; } .st-in_progress { background: #5B8DEF; } .st-making { background: #E0A100; }
+    .st-waiting_review { background: #1F7A4D; } .st-needs_attention, .st-changes { background: #E8483B; } .st-approved { background: #7B4FD6; } .st-published { background: #111; }
+    .studio-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 460px); gap: 16px; align-items: start; }
+    .studio-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .studio-filters button[aria-pressed="true"] { background: var(--accent, #1F7A4D); color: #fff; border-color: transparent; }
+    .studio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+    .video-card { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--surface); cursor: pointer; text-align: left;
+      padding: 0; font: inherit; color: inherit; display: grid; }
+    .video-card[aria-selected="true"] { outline: 3px solid var(--accent, #1F7A4D); }
+    .video-card .thumb { position: relative; aspect-ratio: 16 / 9; background: linear-gradient(160deg, #133b2a, #061813); }
+    .video-card .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .video-card .thumb .dur { position: absolute; right: 6px; bottom: 6px; background: rgba(0,0,0,0.75); color: #fff; font-size: 11px; padding: 1px 6px; border-radius: 4px; }
+    .video-card .thumb .ph { position: absolute; inset: 0; display: grid; place-items: center; color: #DCEFE3; font-size: 13px; padding: 8px; text-align: center; }
+    .video-card .meta { padding: 8px 10px 10px; display: grid; gap: 3px; }
+    .video-card .meta b { font-size: 13.5px; line-height: 1.25; }
+    .video-card .meta small { font-size: 12px; color: var(--text-muted); }
+    .review-panel { position: sticky; top: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); overflow: hidden; }
+    .review-video { background: #000; display: grid; place-items: center; max-height: 62vh; }
+    .review-video video { width: 100%; max-height: 62vh; display: block; }
+    .review-video.vertical video { width: auto; height: 48vh; max-width: 100%; }
+    .review-empty { padding: 40px 20px; text-align: center; color: var(--text-muted); }
+    .review-head { padding: 12px 14px 0; display: grid; gap: 4px; }
+    .review-head h2 { margin: 0; font-size: 17px; }
+    .review-tabs { display: flex; gap: 4px; padding: 10px 14px 0; border-bottom: 1px solid var(--border); }
+    .review-tabs button { border: 0; background: transparent; padding: 8px 10px; font: inherit; font-weight: 700; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; }
+    .review-tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent, #1F7A4D); }
+    .review-body { padding: 12px 14px; max-height: 34vh; overflow-y: auto; display: grid; gap: 10px; font-size: 13.5px; }
+    .copy-block { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; background: var(--surface-2); }
+    .copy-block header { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+    .copy-block pre { margin: 6px 0 0; white-space: pre-wrap; font: inherit; }
+    .thumb-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+    .thumb-row img { width: 100%; border-radius: 8px; border: 3px solid transparent; }
+    .thumb-row img.chosen { border-color: var(--accent, #1F7A4D); }
+    .review-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px 14px; border-top: 1px solid var(--border); align-items: center; }
+    .review-actions input { flex: 1 1 200px; min-width: 0; padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+    #studio-notice.is-error { color: #C0392B; }
+    details.studio-drawer > summary { cursor: pointer; font-weight: 800; padding: 6px 0; }
+    @media (max-width: 1100px) { .studio-body { grid-template-columns: 1fr; } .review-panel { position: static; } }
   </style>
 </head>
 <body>
@@ -52,12 +105,60 @@
       <button id="theme-toggle" class="icon-toggle" type="button" aria-label="Toggle dark/light mode">☀️</button>
     </div>
   </header>
-  <main class="auto-main" id="main">
-    <section class="auto-head">
-      <div><h1>Automation</h1><p class="auto-hint">The app makes the Channel plan's next episodes by itself at night — script, voice, visual plan, video, thumbnail and YouTube package — and stops each one at "waiting for review". It never uploads to YouTube.</p></div>
-      <span class="auto-state"><span id="auto-dot" class="auto-dot"></span><span id="auto-state-text">Off</span></span>
+  <main class="studio-main" id="main">
+    <!-- Phase 67 (ENH-049): the review studio -- the schedule, the made videos, and the selected video to review -->
+    <section class="studio-top">
+      <div><h1>Automation</h1><p id="studio-next" class="studio-next"></p></div>
+      <div class="auto-actions">
+        <span class="auto-state"><span id="auto-dot" class="auto-dot"></span><span id="auto-state-text">Off</span></span>
+        <button id="auto-run-now" class="btn btn-ghost" type="button">Run now</button>
+        <button id="auto-stop" class="btn btn-ghost" type="button">Stop</button>
+      </div>
     </section>
-    <section class="card" aria-labelledby="auto-settings-title">
+    <section aria-labelledby="strip-title">
+      <h2 id="strip-title" class="auto-hint" style="margin:0 0 8px;font-weight:800;color:var(--text)">Next 14 days</h2>
+      <div id="studio-strip" class="studio-strip" aria-label="Schedule"></div>
+    </section>
+    <div class="studio-body">
+      <section aria-labelledby="videos-title">
+        <h2 id="videos-title" style="margin:0 0 8px;font-size:18px">Videos</h2>
+        <div id="studio-filters" class="studio-filters" role="group" aria-label="Filter videos">
+          <button class="btn btn-ghost btn-sm" type="button" data-filter="waiting_review" aria-pressed="true">Waiting for review</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-filter="needs_attention" aria-pressed="false">Needs attention</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-filter="approved" aria-pressed="false">Approved</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-filter="published" aria-pressed="false">Published</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-filter="all" aria-pressed="false">All</button>
+        </div>
+        <div id="studio-grid" class="studio-grid" aria-label="Videos"></div>
+        <p id="studio-grid-empty" class="auto-hint" hidden>No video here yet.</p>
+      </section>
+      <aside id="review-panel" class="review-panel" aria-label="Review">
+        <div id="review-empty" class="review-empty">Choose a video to watch it here and review its YouTube texts.</div>
+        <div id="review-content" hidden>
+          <div id="review-video" class="review-video"></div>
+          <div class="review-head"><h2 id="review-title"></h2><span id="review-meta" class="auto-hint"></span></div>
+          <div class="review-tabs" role="tablist" aria-label="Review sections">
+            <button type="button" role="tab" data-review-tab="youtube" aria-selected="true">YouTube</button>
+            <button type="button" role="tab" data-review-tab="thumbnail" aria-selected="false">Thumbnail</button>
+            <button type="button" role="tab" data-review-tab="script" aria-selected="false">Script</button>
+            <button type="button" role="tab" data-review-tab="details" aria-selected="false">Details</button>
+          </div>
+          <div id="review-body" class="review-body"></div>
+          <div class="review-actions">
+            <button id="review-approve" class="btn btn-primary btn-sm" type="button">✓ Approve</button>
+            <button id="review-changes" class="btn btn-ghost btn-sm" type="button">Needs changes</button>
+            <a id="review-open" class="btn btn-ghost btn-sm" href="#">Open in Step 7</a>
+            <a id="review-download" class="btn btn-ghost btn-sm" href="#">⬇ MP4</a>
+            <input id="review-link" type="url" placeholder="YouTube link after uploading" aria-label="YouTube link" />
+            <button id="review-published" class="btn btn-ghost btn-sm" type="button">Mark published</button>
+          </div>
+          <p id="studio-notice" class="auto-hint" role="status" style="padding:0 14px 12px"></p>
+        </div>
+      </aside>
+    </div>
+    <details class="studio-drawer card" id="settings-drawer">
+      <summary>⚙ Schedule settings, queue and run log</summary>
+      <section class="card" aria-labelledby="auto-settings-title">
       <h2 id="auto-settings-title">Schedule</h2>
       <form id="auto-form" class="auto-form">
         <label class="check"><input id="auto-enabled" type="checkbox" /> Make videos automatically</label>
@@ -75,8 +176,7 @@
     </section>
     <section class="card" aria-labelledby="auto-queue-title">
       <div class="auto-head"><h2 id="auto-queue-title">Next to make</h2>
-        <div class="auto-actions"><button id="auto-run-now" class="btn btn-ghost" type="button">Run now</button>
-          <button id="auto-stop" class="btn btn-ghost" type="button">Stop</button></div></div>
+</div>
       <p id="auto-current" class="auto-hint"></p>
       <ol id="auto-queue" class="auto-list" aria-label="Next to make"></ol>
       <p id="auto-queue-empty" class="auto-hint" hidden>Nothing is due. Give episodes publishing dates on the <a href="/channel">Channel plan</a>.</p>
@@ -86,9 +186,11 @@
       <div id="auto-report"></div>
       <p id="auto-report-empty" class="auto-hint" hidden>No run yet.</p>
     </section>
+    </details>
   </main>
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/api.js"></script>
   <script src="/static/js/automation.js"></script>
+  <script src="/static/js/review_studio.js"></script>
 </body>
 </html>

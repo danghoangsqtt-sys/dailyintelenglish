@@ -8,6 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Changed — Phase 67 review studio (2026-10-22)
+
+- The **Automation** page is now a review studio: the next 14 days as a schedule strip (each episode with its thumbnail and a coloured state), a grid of the made videos with filter chips (waiting for review, needs attention, approved, published, all), and a panel on the right that plays the selected video and shows its YouTube titles, description, tags, hashtags and pinned comments (each with Copy), its thumbnails, script and details (ENH-049).
+- Review in place: **Approve** (ready to upload), **Needs changes** with a note, **Mark published** with the YouTube link, download the MP4 or open Step 7. The schedule settings, queue and run log are in the drawer below.
+
 ### Added — Phase 66 Shorts in batches and today's news (2026-10-22)
 
 - A **Shorts batch** page: give one topic and a Shorts template, and the AI proposes 5–10 different Short ideas; edit the list and **Create the batch** — it is saved as a Channel plan series with one publishing date per day (or every N days), so Automation makes the videos at night, or the projects are made at once (ENH-048).

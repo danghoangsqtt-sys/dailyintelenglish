@@ -35,6 +35,7 @@ const Api = (() => {
     // Task 36.5 (D103-D105): the channel plan -- topics -> series -> episodes, the AI map and the calendar.
     // Phase 62 (ENH-044): automatic production
     getAutomation: () => request("/api/automation"),
+    getAutomationBoard: () => request("/api/automation/board"),  // Phase 67: the review studio
     // Phase 66 (ENH-048): Shorts in batches and today's news
     proposeBatchIdeas: (body) => request("/api/shorts-batch/ideas", json("POST", body)),
     createBatch: (body) => request("/api/shorts-batch/create", json("POST", body)),

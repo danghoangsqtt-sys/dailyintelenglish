@@ -329,3 +329,17 @@ async def test_a_run_cut_by_a_restart_is_closed_on_start(db, episodes):
     await runner.stop()
     report = await service.report(db)
     assert report[0]["id"] == run["id"] and report[0]["status"] == "stopped"
+
+
+def test_the_board_state_and_kind_of_an_episode():
+    base = {"status": "created", "review_status": "", "finished": False, "project_id": "p"}
+    assert service.state_of({**base, "project_id": None}, None) == "planned"
+    assert service.state_of(base, None) == "in_progress"
+    assert service.state_of(base, {"status": "running"}) == "making"
+    assert service.state_of(base, {"status": "needs_attention"}) == "needs_attention"
+    assert service.state_of({**base, "finished": True}, {"status": "waiting_review"}) == "waiting_review"
+    assert service.state_of({**base, "finished": True, "review_status": "approved"}, None) == "approved"
+    assert service.state_of({**base, "review_status": "changes"}, None) == "changes"
+    assert service.state_of({**base, "status": "published", "review_status": "approved"}, None) == "published"
+    assert service.kind_of("classic", "presenter") == "Conversation" and service.kind_of("classic", "chat") == "Short · chat"
+    assert service.kind_of("solo_explainer", "presenter") == "Solo" and service.kind_of("solo_explainer", "quiz") == "Short · quiz"

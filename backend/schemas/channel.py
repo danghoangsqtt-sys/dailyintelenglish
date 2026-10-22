@@ -93,6 +93,9 @@ class EpisodePatch(BaseModel):
     status: str | None = None
     publish_date: str | None = None
     video_url: str | None = Field(default=None, max_length=300)
+    # Phase 67 (ENH-049): the owner's review in the studio
+    review_status: Literal["", "approved", "changes"] | None = None
+    review_note: str | None = Field(default=None, max_length=600)
 
     @field_validator("status")
     @classmethod
