@@ -60,7 +60,7 @@ def targets(root: Path = ROOT) -> list[tuple[str, Path]]:
     tmp = data / "tmp"
     if tmp.is_dir():
         for path in sorted(tmp.iterdir()):
-            if (path / ".git").is_file():  # a registered worktree: remove it with `git worktree remove`
+            if any(marker.is_file() for marker in (path / ".git", *path.glob("*/.git"))):  # a git worktree: `git worktree remove`
                 continue
             found.append(("temporary", path))
     backups = data / "backups"

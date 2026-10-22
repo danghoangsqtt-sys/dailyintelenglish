@@ -174,6 +174,8 @@ def test_workspace_cleanup_lists_leftovers_and_keeps_the_newest_backup(tmp_path)
     (data_dir / "tmp" / "phase-old-stage" / "big.bin").write_bytes(b"0" * 10)
     (data_dir / "tmp" / "worktree").mkdir()
     (data_dir / "tmp" / "worktree" / ".git").write_text("gitdir: elsewhere")
+    (data_dir / "tmp" / "nested" / "docs").mkdir(parents=True)
+    (data_dir / "tmp" / "nested" / "docs" / ".git").write_text("gitdir: elsewhere")
     for name in ("desktop-20261001-000000-000", "desktop-20261022-000000-000"):
         (data_dir / "backups" / name).mkdir(parents=True)
     (data_dir / "library" / "characters" / "keep").mkdir(parents=True)
