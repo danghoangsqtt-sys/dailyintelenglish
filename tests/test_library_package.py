@@ -115,7 +115,7 @@ def test_import_merges_newer_wins_older_is_kept_and_nothing_is_deleted(client):
             "status, base_seed, created_at, updated_at) VALUES ('char-only-here', 'Kim', 'female', 'adult', 'host', 'b', 'b', 'w', "
             "'t', 'w', 'b', 'locked', 1, 'then', 'then')")
     result = upload(client, old_package)
-    assert result["tables"]["characters"] == {"added": 0, "updated": 0, "kept": 1}
+    assert result["tables"]["characters"] == {"added": 0, "updated": 0, "kept": 1, "filled": 0}
     with sqlite3.connect(settings.db_path) as connection:
         names = dict(connection.execute("SELECT id, name FROM characters"))
     assert names == {"char-lina": "Lina (edited here)", "char-only-here": "Kim"}
@@ -183,6 +183,23 @@ def test_workspace_cleanup_lists_leftovers_and_keeps_the_newest_backup(tmp_path)
                      "build": "build work folder"}
 
 
+def test_a_row_kept_here_still_takes_the_picture_it_lacks(client):
+    plate = settings.DATA_DIR / "library" / "scenes" / "builtin-classroom" / "preview.png"
+    plate.parent.mkdir(parents=True, exist_ok=True)
+    plate.write_bytes(b"plate")
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute("UPDATE scenes SET preview_path = ?, updated_at = '2026-10-01' WHERE id = 'builtin-classroom'", (str(plate),))
+    package = export(client)
+    # a new machine: the built-in scene was just seeded (newer), with no picture
+    plate.unlink()
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute("UPDATE scenes SET preview_path = NULL, updated_at = '2026-10-22' WHERE id = 'builtin-classroom'")
+    result = upload(client, package)
+    assert result["tables"]["scenes"]["filled"] == 1 and plate.read_bytes() == b"plate"
+    with sqlite3.connect(settings.db_path) as connection:
+        stored = connection.execute("SELECT preview_path FROM scenes WHERE id = 'builtin-classroom'").fetchone()[0]
+    assert Path(stored).resolve() == plate.resolve()
+
 # ---------------------------------------------------------------- Settings -> Data & sync (browser)
 
 @pytest.fixture(scope="module")
@@ -210,3 +227,4 @@ async def test_settings_exports_a_package_from_the_data_and_sync_section(live_se
         assert await page.locator("#package-exports a").count() == 1
         assert (await page.locator("#package-exports a").get_attribute("href")).startswith("/api/library-package/download/library-")
         await browser.close()
+

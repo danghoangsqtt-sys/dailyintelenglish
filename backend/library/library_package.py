@@ -227,7 +227,7 @@ async def _merge_table(db: aiosqlite.Connection, table: str, rows: list[dict], p
     columns = await _columns(db, table)
     names = [column["name"] for column in columns]
     keys = [column["name"] for column in sorted(columns, key=lambda column: column["pk"]) if column["pk"]] or ["rowid"]
-    added = updated = kept = 0
+    added = updated = kept = filled = 0
     for incoming in rows:
         row = {name: incoming[name] for name in names if name in incoming}
         if not all(key in row for key in keys):
@@ -254,7 +254,14 @@ async def _merge_table(db: aiosqlite.Connection, table: str, rows: list[dict], p
             updated += 1
         else:
             kept += 1
-    return {"added": added, "updated": updated, "kept": kept}
+            # a row kept here still takes what it lacks (a new machine's built-in scene has no background picture yet)
+            empty = {name: value for name, value in row.items()
+                     if name not in keys and value not in (None, "") and existing.get(name) in (None, "")}
+            if empty:
+                sets = ",".join(f'"{name}" = ?' for name in empty)
+                await db.execute(f'UPDATE "{table}" SET {sets} WHERE {where}', [*empty.values(), *[row[key] for key in keys]])
+                filled += 1
+    return {"added": added, "updated": updated, "kept": kept, "filled": filled}
 
 
 def _keep_project_link(row: dict, existing: dict | None, projects: set[str]) -> None:
