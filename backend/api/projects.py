@@ -3,6 +3,7 @@
 import time
 
 import aiosqlite
+from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 
 from backend.core.responses import ok
@@ -106,6 +107,18 @@ async def read_image(kind: str = Form("dialogue"), file: UploadFile = File(...))
     content = await file.read(source_service.IMAGE_MAX_BYTES + 1)
     text = await source_service.read_image(content, kind)
     return ok({"text": text, "image_sha": source_service.image_sha(content)})
+
+
+class ReadLinkRequest(BaseModel):
+    url: str = Field(min_length=8, max_length=2000)
+
+
+@router.post("/read-link")
+async def read_link(body: ReadLinkRequest) -> dict:
+    """Phase 63 (ENH-045): the title and text of a public news page, for Step 1 to show before a news Short uses it."""
+    from backend.content.link_reader import read_link as read
+
+    return ok(await read(body.url))
 
 
 @router.post("/{project_id}/copy-settings")

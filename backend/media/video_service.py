@@ -94,9 +94,11 @@ async def generate_video(
     if project.get("_attempt_id"):
         output_dir /= project["_attempt_id"]
     try:
+        # Phase 63 (ENH-045): a Short's main video is the vertical 9:16 one
+        short = project.get("presentation_mode") == "solo_explainer" and project.get("explainer_style") in ("news", "blur")
         result = await video_renderer_remotion.render_via_remotion(
             db, project, audio_job, learning, output_dir / "video_remotion.mp4", caption_style=caption_style,
-            visual_mode=visual_mode, still_scene_id=still_scene_id,
+            visual_mode=visual_mode, still_scene_id=still_scene_id, **({"layout": "vertical"} if short else {}),
         )
     except RemotionRenderFailedError as exc:
         logger.warning("remotion_render_failed project_id=%s reason=%s", project_id, exc)

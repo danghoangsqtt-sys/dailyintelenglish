@@ -298,7 +298,12 @@
       cursor: not-allowed;
       pointer-events: none;
     }
-    .type-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 6px 0 4px; }
+    .type-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 6px 0 4px; }
+    .shorts-templates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 10px 0 4px; }
+    .link-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
+    .link-row input { flex: 1 1 320px; min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+      background: var(--surface); color: var(--text); }
+    @media (max-width: 1000px) { .type-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     .type-card { display: grid; gap: 4px; justify-items: start; padding: 14px 16px; border: 2px solid var(--border); border-radius: 12px;
       background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
     .type-card:hover { border-color: var(--accent); }
@@ -376,6 +381,14 @@
           <button type="button" class="type-card" role="radio" aria-checked="false" data-mode="vox">
             <span class="type-icon" aria-hidden="true">🎬</span><strong>VOX explainer</strong>
             <span>A voice-over with motion graphics: kinetic text, pictures, charts and maps. Nobody on screen.</span></button>
+          <button type="button" class="type-card" role="radio" aria-checked="false" data-mode="shorts">
+            <span class="type-icon" aria-hidden="true">📱</span><strong>Shorts viral</strong>
+            <span>A vertical 9:16 video under one minute for Shorts, TikTok and Reels.</span></button>
+        </div>
+        <!-- Phase 63 (ENH-045): the Shorts templates -->
+        <div id="shorts-templates" class="shorts-templates subject-cards" role="radiogroup" aria-label="Shorts template" hidden>
+          <button type="button" class="subject-card" role="radio" aria-checked="true" data-template="news"><strong>📰 English news</strong><span>A news story read in simple English over changing pictures, with a news band and ticker</span></button>
+          <button type="button" class="subject-card" role="radio" aria-checked="false" data-template="blur"><strong>💬 Text on blur</strong><span>Big words appear with the voice over a blurred picture: a short story or a life lesson</span></button>
         </div>
         <div id="subject-cards" class="subject-cards" role="radiogroup" aria-label="What the presentation presents" hidden>
           <button type="button" class="subject-card" role="radio" aria-checked="false" data-subject="field"><strong>💼 A field or job</strong><span>What people do, skills, a working day</span></button>
@@ -423,6 +436,12 @@
           <div class="material-kinds" role="radiogroup" aria-label="Material type">
             <label><input type="radio" name="source_kind" value="dialogue" checked /> A dialogue</label>
             <label><input type="radio" name="source_kind" value="vocabulary" /> A vocabulary list</label>
+            <label><input type="radio" name="source_kind" value="article" /> A news article</label>
+          </div>
+          <div id="link-row" class="link-row" hidden>
+            <input type="url" id="source-link" placeholder="https://… a news page" aria-label="News link" maxlength="2000" />
+            <button type="button" id="source-link-btn" class="btn btn-ghost btn-sm">🔗 Read the link</button>
+            <span id="source-link-status" class="section-hint" role="status"></span>
           </div>
           <label class="field-label" for="source-text" id="source-text-label">Paste the dialogue (one turn per line, e.g. “A: Hello!”)</label>
           <textarea id="source-text" rows="8" maxlength="12000"></textarea>

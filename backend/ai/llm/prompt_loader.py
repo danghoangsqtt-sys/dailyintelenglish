@@ -82,7 +82,7 @@ def _read_cefr_block_sync(cefr_level: str) -> str:
 
 
 def _render_presentation_block_sync(presentation_mode: str, explainer_structure: str | None, num_speakers: int,
-                                    explainer_subject: str | None = None) -> str:
+                                    explainer_subject: str | None = None, explainer_style: str | None = None) -> str:
     """Validate explicit Solo configuration, then render its finite structure template."""
     if presentation_mode == "classic":
         return ""
@@ -100,15 +100,16 @@ def _render_presentation_block_sync(presentation_mode: str, explainer_structure:
     subject = explainer_subject or "topic"
     if subject not in ("field", "product", "topic", "howto"):
         raise ValidationError("Solo subject must be field, product, topic or howto")
-    return template.render(explainer_structure=structure, explainer_subject=subject)
+    return template.render(explainer_structure=structure, explainer_subject=subject, explainer_style=explainer_style or "")
 
 
 async def load_presentation_block(presentation_mode: str = "classic", explainer_structure: str | None = None,
-                                  num_speakers: int = 1, explainer_subject: str | None = None) -> str:
+                                  num_speakers: int = 1, explainer_subject: str | None = None,
+                                  explainer_style: str | None = None) -> str:
     """Load Solo instructions off the event loop; a classic project keeps its existing prompt rules.
     Phase 57 (ENH-039): `explainer_subject` adds what the presentation presents (field, product, topic, how-to)."""
     return await asyncio.to_thread(_render_presentation_block_sync, presentation_mode, explainer_structure, num_speakers,
-                                   explainer_subject)
+                                   explainer_subject, explainer_style)
 
 
 def _render_script_prompt_sync(*, genre: str, cefr_level: str, **context: object) -> str:
@@ -117,7 +118,8 @@ def _render_script_prompt_sync(*, genre: str, cefr_level: str, **context: object
     mode = context.pop("presentation_mode", "classic")
     structure = context.pop("explainer_structure", None)
     subject = context.pop("explainer_subject", None)
-    solo = _render_presentation_block_sync(mode, structure, int(context.get("num_speakers", 0)), subject)
+    style = context.pop("explainer_style", None)
+    solo = _render_presentation_block_sync(mode, structure, int(context.get("num_speakers", 0)), subject, style)
     if solo and len(context.get("speakers", [])) != 1:
         raise ValidationError("Solo Explainer requires exactly one presenter")
     genre_instructions = solo or genre_instructions

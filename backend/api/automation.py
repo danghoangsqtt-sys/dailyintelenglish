@@ -46,7 +46,7 @@ async def _view(db: aiosqlite.Connection) -> dict:
         "settings": {**config, "start_with_windows": startup.is_enabled() if startup.available() else config["start_with_windows"]},
         "startup_available": startup.available(),
         "status": runner.status() if runner else {"running": False, "manual": False, "stop_requested": False, "current": None},
-        "queue": [{key: item[key] for key in ("id", "number", "title", "series", "publish_date", "project_id", "presentation_mode")}
+        "queue": [{key: item[key] for key in ("id", "number", "title", "series", "publish_date", "project_id", "presentation_mode", "explainer_style")}
                   for item in queue],
         "runs": await service.report(db),
     }

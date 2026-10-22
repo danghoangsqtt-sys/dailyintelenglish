@@ -44,7 +44,7 @@ async def episodes(db: aiosqlite.Connection) -> list[dict[str, Any]]:
     """Every Channel plan episode with its series, its project and whether the project is finished (YouTube package)."""
     cursor = await db.execute(
         "SELECT e.id, e.number, e.title, e.status, e.publish_date, e.project_id, e.series_id, s.name AS series, "
-        "s.presentation_mode, "
+        "s.presentation_mode, s.explainer_style, "
         "EXISTS(SELECT 1 FROM youtube_packages y WHERE y.project_id = e.project_id) AS finished "
         "FROM channel_episodes e JOIN channel_series s ON s.id = e.series_id")
     return [{**dict(row), "finished": bool(row["finished"])} for row in await cursor.fetchall()]

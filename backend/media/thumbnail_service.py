@@ -225,7 +225,9 @@ async def generate_suggestions(
         variant_count=variant_count,
     )
     router = router or build_ai_router_from_settings()
-    if project.get("presentation_mode") == "solo_explainer" and project.get("explainer_style") == "vox":
+    if project.get("presentation_mode") == "solo_explainer" and project.get("explainer_style") == "news":
+        prompt += "\nAn English news Short: a narrator's voice over news pictures, nobody on screen. Base headlines on the news topic; never invent people, quotes or numbers."
+    elif project.get("presentation_mode") == "solo_explainer" and project.get("explainer_style") in ("vox", "blur"):
         prompt += "\nVOX-style explainer: a narrator's voice over motion graphics, nobody on screen. Base headlines on the topic; never invent people or dialogue."
     elif project.get("presentation_mode") == "solo_explainer":
         prompt += "\nSolo knowledge explainer by exactly one front-facing presenter. Base headlines on the topic; never invent a co-host or dialogue."

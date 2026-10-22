@@ -645,7 +645,10 @@ def _source_context(project: dict) -> dict:
             words = parse_vocabulary(text)
         except ValidationError:
             kind = ""
-    return {"source_kind": kind if text else "", "source_text": text, "source_words": words}
+    # Phase 63 (ENH-045): a news / blur Short gets a hook opening and a one-line sign-off instead of the long welcome
+    style = project.get("explainer_style") or ""
+    return {"source_kind": kind if text else "", "source_text": text, "source_words": words,
+            "short_style": style if style in ("news", "blur") else ""}
 
 
 async def _vocabulary_repair(
@@ -716,7 +719,7 @@ async def _vocabulary_repair(
 async def _generate_outline(
     router: "AIRouter", project: dict, target_words: int, num_sections: int, db, job_id: str
 ) -> ScriptOutline:
-    solo = await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]), project.get("explainer_subject"))
+    solo = await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]), project.get("explainer_subject"), project.get("explainer_style"))
     genre_instructions = solo or await load_genre_block(project["genre"])
     cefr_constraints = await load_cefr_block(project["cefr_level"])
     prompt = await _render(
@@ -791,7 +794,7 @@ async def _generate_section(
         num_speakers=len(project["speakers"]),
         max_consecutive_lines=SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER,
         presentation_mode=project.get("presentation_mode", "classic"),
-        solo_instructions=await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]), project.get("explainer_subject")),
+        solo_instructions=await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]), project.get("explainer_subject"), project.get("explainer_style")),
         cefr_constraints=cefr_constraints,
         language_features=project["language_features"],
         **_source_context(project),
@@ -849,7 +852,7 @@ async def _repair_section(
         speakers=project["speakers"],
         errors=errors,
         previous_output=previous_output,
-        solo_instructions=await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]), project.get("explainer_subject")),
+        solo_instructions=await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]), project.get("explainer_subject"), project.get("explainer_style")),
         cefr_constraints=await load_cefr_block(project["cefr_level"]) if project.get("presentation_mode") == "solo_explainer" else "",
     )
     result = await _call_router(

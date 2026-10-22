@@ -2,7 +2,7 @@
 
 ## Phase 63 — Viral Shorts: English news, text on blur (2026-10-22)
 
-Status: planned; 0/6 tasks. ENH-045: a 4th Step 1 card "Shorts viral" (9:16) with two templates built on the VOX pipeline — English news (pasted article, link or topic; pictures changing with a news band and ticker) and text on a blurred background. [Plan](phases/63-viral-shorts/PLAN.md).
+Status: implemented_verified_pending_owner_review; 6/6 tasks. Full pytest 1973 passed; 158 Vitest. Real sandbox Shorts: an English news Short from a sample article and a text-on-blur Short, both 1080×1920, ~60 s. ENH-045: a 4th Step 1 card "Shorts viral" (9:16) with two templates built on the VOX pipeline — English news (pasted article, link or topic; pictures changing with a news band and ticker) and text on a blurred background. [Plan](phases/63-viral-shorts/PLAN.md).
 
 ## Phase 62 — Automatic content production (2026-10-22)
 

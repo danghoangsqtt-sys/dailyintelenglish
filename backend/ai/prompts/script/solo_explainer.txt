@@ -48,11 +48,27 @@ For A2/B1 especially, prefer familiar verbs, concrete nouns and manageable sente
 Do not reach a word target by stacking adjectives/adverbs or restating abstract claims.
 If a length repair needs more words, add a useful causal step, an example, or a practical
 action. Every sentence should help the viewer understand the subject.
+{% if explainer_style | default('') in ('news', 'blur') %}
+{% if explainer_style == 'news' %}SHORT — ENGLISH NEWS (vertical video, under one minute), read by a news narrator:
+open with the headline as a one-sentence hook; then three to six short facts, each one or two simple
+sentences, in the narrator's own words; explain any difficult word in passing; when an article was given,
+say once where the news is from ("This news is from ..."); never invent facts, quotes, names or numbers;
+end with one line inviting the viewer to follow Daily Beyond English for more English news.
+This SHORT format replaces the structure above and the OPENING and CLOSING below.
+{% else %}SHORT — TEXT ON A BLURRED BACKGROUND (vertical video, under one minute): a short story, a life lesson
+or a meaningful quote about the topic, told by a narrator. Open with a strong first line that makes the
+viewer stay; use short sentences that read well as big words on screen; build to one emotional turn or
+surprise; finish with a one-line takeaway and one line inviting the viewer to follow Daily Beyond English.
+Never attribute a quote to a real person unless the owner gave it. This SHORT format replaces the
+structure above and the OPENING and CLOSING below.
+{% endif %}
+{% else %}
 OPENING: begin the episode by greeting the viewers warmly and welcoming them to Daily Beyond
 English, saying who you are in a few words, and previewing today's topic in one or two sentences.
 CLOSING: finish with a takeaway about THIS topic, then thank the viewers for watching, invite
 them to like, subscribe and comment, and say goodbye / see you next time. Do not promise
 "language insights" or call this a grammar lesson unless language itself is the topic.
+{% endif %}
 
 Explain only what can be stated responsibly. Do not fabricate studies, precise statistics,
 URLs, quotations, or citations. Preserve any provided source information accurately;

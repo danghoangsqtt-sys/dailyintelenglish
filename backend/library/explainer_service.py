@@ -29,6 +29,7 @@ from backend.db.transactions import read_transaction, write_transaction as _writ
 from backend.library import explainer_assets, explainer_stage, presenter_asset_plan
 from backend.library.explainer_timing import ScriptIndex, resolve_timeline
 from backend.media import audio_service
+from backend.schemas.project import SHORT_STYLES, VOICE_ONLY_STYLES
 from backend.schemas.explainer import (
     VOX_KINDS, ExplainerApproval, ExplainerPlan, ExplainerPlanPatch, ExplainerProposal, ExplainerProposalRequest,
     ExplainerSegment, PresenterReference, ProposedExplainerSegment, VoxExplainerProposal,
@@ -44,8 +45,14 @@ _VOX_PROPOSAL = TypeAdapter(VoxExplainerProposal)
 
 
 def is_vox(project_or_source: dict) -> bool:
-    """A VOX Solo project: the narrator is never on screen, so no presenter picture pack is needed."""
-    return project_or_source.get("explainer_style") == "vox"
+    """A voice-only Solo project (VOX, and the Phase 63 news / blur Shorts): the narrator is never on screen, so no
+    presenter picture pack is needed."""
+    return project_or_source.get("explainer_style") in VOICE_ONLY_STYLES
+
+
+def is_short(project_or_source: dict) -> bool:
+    """Phase 63 (ENH-045): a 9:16 Short (news or text on blur)."""
+    return project_or_source.get("explainer_style") in SHORT_STYLES
 
 
 def stage_owner(source: dict) -> str:
@@ -104,7 +111,7 @@ async def source_snapshot(db: aiosqlite.Connection, project_id: str, segments: l
     source = {
         "project": {key: project.get(key) for key in ("id", "presentation_mode", "explainer_structure", "topic", "cefr_level", "language_features")}
         # Phase 59: only a VOX project adds these keys, so every Solo fingerprint stays exactly as approved
-        | ({"explainer_style": "vox", "source_text": project.get("source_text") or ""} if vox else {}),
+        | ({"explainer_style": project.get("explainer_style"), "source_text": project.get("source_text") or ""} if vox else {}),
         "speaker": {key: speaker.get(key) for key in ("id", "speaker_index", "tts_engine", "voice_id", "accent", "gender", "voice_description", "speed", "pitch", "volume")},
         "lines": [{key: line.get(key) for key in ("id", "speaker_id", "text", "audio_cache_path")} for line in lines],
         "cast": member, "presenter": presenter.model_dump(),
@@ -463,6 +470,49 @@ def _spoken_numbers(text: str) -> set[float]:
         for word, scale in _SCALE.items():
             if after.startswith(word):
                 found.add(value * scale)
+    return found | _worded_numbers(text)
+
+
+_UNITS = {word: index for index, word in enumerate(
+    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen "
+    "eighteen nineteen".split())}
+_TENS = {word: 10 * (index + 2) for index, word in enumerate("twenty thirty forty fifty sixty seventy eighty ninety".split())}
+_BIG = {"thousand": 1_000, "million": 1_000_000, "billion": 1_000_000_000}
+
+
+def _worded_numbers(text: str) -> set[float]:
+    """Phase 63: numbers the narration says in words ("eight", "twenty-five", "ten thousand", "two hundred and five"),
+    since a script for the voice spells them out."""
+    found: set[float] = set()
+    words = re.findall(r"[a-z]+", text.lower().replace("-", " "))
+    total = current = 0
+    active = False
+
+    def close() -> None:
+        nonlocal total, current, active
+        if active:
+            found.add(float(total + current))
+        total = current = 0
+        active = False
+
+    for word in words:
+        if word in _UNITS:
+            current += _UNITS[word]
+            active = True
+        elif word in _TENS:
+            current += _TENS[word]
+            active = True
+        elif word == "hundred" and active:
+            current = max(current, 1) * 100
+        elif word in _BIG and active:
+            total += max(current, 1) * _BIG[word]
+            current = 0
+            found.add(float(total))
+        elif word == "and" and active:
+            continue
+        else:
+            close()
+    close()
     return found
 
 
@@ -593,6 +643,7 @@ async def _run_proposal(job: dict, worker: "AIWorker", router: "AIRouter") -> No
             adapter = _proposal_adapter(captured["source"])
             prompt = await render_explainer_prompt(
                 vox=is_vox(captured["source"]["project"]),
+                style=captured["source"]["project"].get("explainer_style") or "",
                 source_text=captured["source"]["project"].get("source_text", ""),
                 topic=source["project"]["topic"], cefr_level=source["project"]["cefr_level"],
                 structure=source["project"]["explainer_structure"],
@@ -641,7 +692,9 @@ async def _run_proposal(job: dict, worker: "AIWorker", router: "AIRouter") -> No
             fresh = await ai_job_service.get_job(db, job["id"], job["project_id"])
             if fresh["status"] == "running":
                 await ai_job_service.transition_status(db, job["id"], "validating", commit=False)
-            await publish_draft(db, job["project_id"], segments, previous.aspects if previous else ["16:9", "9:16"], captured["expected_revision"])
+            # Phase 63: a Short is 9:16 only
+            first = ["9:16"] if is_short(captured["source"]["project"]) else ["16:9", "9:16"]
+            await publish_draft(db, job["project_id"], segments, previous.aspects if previous else first, captured["expected_revision"])
             await ai_job_service.transition_status(db, job["id"], "complete", commit=False)
     except (NotFoundError, ValidationError, ConflictError) as exc:
         async with _write_transaction(db):

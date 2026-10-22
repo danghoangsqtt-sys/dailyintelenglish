@@ -48,6 +48,8 @@ class TopicPatch(BaseModel):
 class SeriesInput(BaseModel):
     presentation_mode: Literal["classic", "solo_explainer"] = "classic"
     explainer_structure: Literal["why", "how", "list"] = "why"
+    # Phase 63 (ENH-045): a Solo series with the presenter, a VOX voice-over, or 9:16 Shorts (news / text on blur)
+    explainer_style: Literal["presenter", "vox", "news", "blur"] = "presenter"
     name: str = Field(min_length=1, max_length=100)
     description: str = Field(default="", max_length=600)
     genre: str = "small_talk"
@@ -64,6 +66,7 @@ class SeriesInput(BaseModel):
 class SeriesPatch(BaseModel):
     presentation_mode: Literal["classic", "solo_explainer"] | None = None
     explainer_structure: Literal["why", "how", "list"] | None = None
+    explainer_style: Literal["presenter", "vox", "news", "blur"] | None = None
     name: str | None = Field(default=None, min_length=1, max_length=100)
     description: str | None = Field(default=None, max_length=600)
     genre: str | None = None

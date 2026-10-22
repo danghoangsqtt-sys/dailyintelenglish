@@ -35,8 +35,23 @@ VISUALS — choose for every segment the one that shows what is said best, and v
   faces. Use this for at most a third of the segments.
 For EVERY segment also choose scene.scene_id from AVAILABLE SCENES: a place that fits the idea; it is shown faded
 behind the graphics. Keep neighbouring segments in the same scene unless the idea moves.
+{% if style | default('') == 'news' %}
+THIS IS A VERTICAL ENGLISH NEWS SHORT (under one minute): make one segment per news fact (3–7 segments), each
+SHORTER than in a normal video. Pictures change with every segment, so give most segments a picture: an
+activity or owner photo that fits, else photo with asset:null and a "prompt" for a realistic news-style photo of
+the scene (no text, no logos, no real people's faces) — here up to two thirds of the segments may use such a
+prompt. Use map / chart / timeline only for places, numbers and dates the narration says. The first segment (the
+headline hook) is a text_card whose "title" is the headline in at most 8 words; the last (follow the channel) is a
+short text_card with "Follow for more English news" as emphasis.
+{% elif style | default('') == 'blur' %}
+THIS IS A VERTICAL "TEXT ON A BLURRED BACKGROUND" SHORT (under one minute): the words are the picture. Make one
+segment per one or two short sentences (4–10 segments). Use ONLY text_card (a "title" of at most 6 words taken from
+the narration, no bullets, "emphasis" = the 1–4 key words of the line) or quote; give a scene for each (it is shown
+heavily blurred behind the words). The last segment's emphasis invites the viewer to follow.
+{% else %}
 The first segment (the welcome and today's topic) shows a quote or text card with the topic; the last segment (the
 thanks and the invitation to subscribe) shows a short text card such as "Thanks for watching" with "Subscribe" as emphasis.
+{% endif %}
 No gestures: "gestures" is always an empty list. Do not propose layout coordinates.
 All content is plain text. No HTML, JavaScript, SVG, Markdown images or custom diagram code.
 Do not invent references or pretend that factual claims were independently verified. Source notes may identify uncertainty.

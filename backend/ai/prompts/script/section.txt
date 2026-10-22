@@ -16,6 +16,11 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
 {% if prior_summary %}
 - What happened just before this section: {{ prior_summary }}
   Continue naturally from this — do not repeat it, do not restart the topic.
+{% elif short_style | default('') %}
+- This is the FIRST section of a SHORT (a vertical video under one minute). Open with
+  a HOOK line of one short sentence that makes the viewer stay ({% if short_style == 'news' %}the
+  headline of the news, said simply{% else %}a surprising or emotional first line{% endif %}). No long welcome: at most
+  "Welcome to Daily Beyond English" in a few words after the hook, or nothing.
 {% else %}
 - This is the FIRST section of the episode. It MUST open with a short welcome, in
   this order: greet the viewers warmly and welcome them to Daily Beyond English;
@@ -25,7 +30,10 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
   learn. Keep this opening to a few short lines, then move into the topic (no
   unrelated small talk).
 {% endif %}
-{% if is_last_section %}
+{% if is_last_section and short_style | default('') %}
+- This is the LAST section of a SHORT: end with one short line inviting the viewer to
+  follow Daily Beyond English for more{% if short_style == 'news' %} English news{% endif %} (no long thanks, no goodbye speech).
+{% elif is_last_section %}
 - This is the LAST section of the episode — close it out naturally with a brief
   wrap-up, and END with a short, warm closing spoken to the viewers: thank them
   for watching, invite them to like, subscribe and leave a comment, and say
@@ -75,6 +83,16 @@ use a category at all is controlled ONLY by the list below:
 ## Source Material: the Owner's Dialogue
 The episode is based on this dialogue. Use the part of it that matches this section's objective, keeping its ideas and
 useful expressions, rewritten for CEFR {{ cefr_level }} and the speakers above; do not copy it word for word.
+
+"""
+{{ source_text }}
+"""
+{% elif source_kind | default('') == 'article' %}
+
+## Source Material: the News Article
+The Short reports this news. Use only facts that are in the article (names, places, numbers, dates) and state
+them accurately; tell them in your OWN simple words for CEFR {{ cefr_level }} — never copy its sentences. Do not
+add facts, quotes or numbers that are not in it.
 
 """
 {{ source_text }}

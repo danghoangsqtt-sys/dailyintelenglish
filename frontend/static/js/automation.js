@@ -3,6 +3,7 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   const STATUS = { running: "Working", waiting_review: "Waiting for review", needs_attention: "Needs your attention", error: "Error" };
+  const KIND = { classic: "Conversation", presenter: "Solo", vox: "VOX", news: "Short · news", blur: "Short · blur" };
   const RUN = { running: "Running", done: "Finished", stopped: "Stopped", error: "Could not start" };
   let view = null;
   let timer = null;
@@ -54,7 +55,7 @@
     list.replaceChildren(...queue.map((item) => {
       const row = el("li");
       row.append(el("span", "date", item.publish_date || ""), el("span", "grow", `${item.series} · Ep. ${item.number}: ${item.title}`),
-        el("span", "auto-badge", item.presentation_mode === "solo_explainer" ? "Solo" : "Conversation"));
+        el("span", "auto-badge", KIND[item.presentation_mode === "solo_explainer" ? item.explainer_style || "presenter" : "classic"] || "Solo"));
       if (item.project_id) {
         const link = el("a", "", "Open");
         link.href = `/step2?project_id=${encodeURIComponent(item.project_id)}`;

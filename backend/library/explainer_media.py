@@ -80,7 +80,7 @@ async def build_payload(db: aiosqlite.Connection, project_id: str, aspect: str =
              "layout": "vertical" if aspect == "9:16" else "horizontal", "presentationMode": "solo_explainer",
              "durationSeconds": timeline[-1]["end_sec"],
              "solo": {"plan": plan.model_dump(), "geometry": geometry, "timeline": timeline,
-                      **({"style": "vox"} if vox else {}),
+                      **({"style": snapshot["project"].get("explainer_style") or "vox"} if vox else {}),
                       "pictures": {key: f"/api/visuals/profiles/{plan.presenter.profile_id}/assets/{value['asset_id']}/content"
                                    for key, value in (front or {"pictures": {}})["pictures"].items()},
                       "photos": {f"{item['id']}:{item['version']}": explainer_assets.public(item)["preview_url"] for item in assets},

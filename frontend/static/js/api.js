@@ -35,6 +35,8 @@ const Api = (() => {
     // Task 36.5 (D103-D105): the channel plan -- topics -> series -> episodes, the AI map and the calendar.
     // Phase 62 (ENH-044): automatic production
     getAutomation: () => request("/api/automation"),
+    // Phase 63 (ENH-045): the text of a public news page for a news Short
+    readLink: (url) => request("/api/projects/read-link", json("POST", { url })),
     saveAutomationSettings: (patch) => request("/api/automation/settings", json("PUT", patch)),
     runAutomationNow: () => request("/api/automation/run-now", { method: "POST" }),
     stopAutomation: () => request("/api/automation/stop", { method: "POST" }),

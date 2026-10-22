@@ -13,9 +13,15 @@ YouTube channel for Vietnamese learners.
 - Split the episode into exactly {{ num_sections }} sections of roughly equal
   length, each covering one clear step or sub-topic that builds toward the whole
   episode. The total of every section's `target_words` MUST equal {{ target_words }}.
+{% if short_style | default('') %}
+- This is a SHORT (vertical, under one minute): the first section's objective starts
+  with a one-sentence hook{% if short_style == 'news' %} (the headline){% endif %}; the last section's objective ends with a
+  one-line invitation to follow the channel. No long welcome or goodbye.
+{% else %}
 - The first section's objective starts with welcoming the viewers to Daily Beyond
   English and previewing today's topic; the last section's objective ends with
   thanking the viewers for watching and inviting them to subscribe.
+{% endif %}
 
 ## Speakers
 {% for speaker in speakers %}
@@ -32,6 +38,15 @@ YouTube channel for Vietnamese learners.
 ## Source Material: the Owner's Dialogue
 Base the episode on this dialogue: keep its situation, its main ideas and its useful expressions, and plan the
 sections so they follow it. {% if presentation_mode | default('classic') == 'solo_explainer' %}The episode is a solo talk, so the presenter explains and retells what happens in it.{% else %}The characters above replace the people in it.{% endif %} Rewrite it for CEFR {{ cefr_level }} and the target length; do not copy it word for word.
+
+"""
+{{ source_text }}
+"""
+{% elif source_kind | default('') == 'article' %}
+
+## Source Material: the News Article
+The Short reports this news: plan sections that follow its main facts in order, using only facts in it, retold in
+simple words for CEFR {{ cefr_level }} (never copied).
 
 """
 {{ source_text }}

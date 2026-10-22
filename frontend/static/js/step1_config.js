@@ -41,8 +41,15 @@
   // Phase 40 (D119): no default cast -- each slot is "Character N" until a character profile is chosen, and the speaker
   // then takes that character's name (used in the script and the video).
   // Phase 59 (ENH-041): a VOX narrator is a character's voice only
-  const slotLabel = (index) => (state.explainerStyle === "vox" ? "Narrator (voice only)" : `Character ${index + 1}`);
+  // Phase 63 (ENH-045): VOX and the news / blur Shorts are voice-only (a narrator's voice, nobody on screen)
+  const VOICE_ONLY = ["vox", "news", "blur"];
+  const voiceOnly = () => state.presentationMode === "solo_explainer" && VOICE_ONLY.includes(state.explainerStyle);
+  const isShort = () => state.presentationMode === "solo_explainer" && ["news", "blur"].includes(state.explainerStyle);
+  const slotLabel = (index) => (voiceOnly() ? "Narrator (voice only)" : `Character ${index + 1}`);
   const DURATION_PRESETS = [5, 10, 15, 20];
+  const SHORT_PRESETS = [0.5, 0.75, 1];
+  const presets = () => (isShort() ? SHORT_PRESETS : DURATION_PRESETS);
+  const presetLabel = (minutes) => (isShort() ? `${Math.round(minutes * 60)} s` : `${minutes} min`);
   const MIN_SPEAKERS = 1;
   const MAX_SPEAKERS = 6;
 
@@ -60,7 +67,7 @@
     duration: DURATION_PRESETS[1],
     customDurationActive: false,
     genre: GENRES[7].value, // small_talk
-    presentationMode: "classic", explainerStructure: "why", explainerSubject: "topic", explainerStyle: "presenter",
+    presentationMode: "classic", explainerStructure: "why", explainerSubject: "topic", explainerStyle: "presenter", shortsTemplate: "news",
     accent: ACCENTS[0].value, // american
     speakers: [],
     profiles: [],  // Phase 33: the character profiles a speaker can be (Api.listProfiles)
@@ -145,16 +152,18 @@
     const customInput = document.getElementById("duration-custom");
 
     function draw() {
-      container.innerHTML = DURATION_PRESETS.map(
+      container.innerHTML = presets().map(
         (minutes) =>
           `<button type="button" class="preset-btn" data-minutes="${minutes}" aria-pressed="${
             !state.customDurationActive && state.duration === minutes
-          }">${minutes} min</button>`
+          }">${presetLabel(minutes)}</button>`
       ).join("");
-      container.innerHTML += `<button type="button" class="preset-btn" id="duration-custom-toggle" aria-pressed="${state.customDurationActive}">Custom</button>`;
-      customInput.hidden = !state.customDurationActive;
+      // a Short has only the three lengths (at most 60 s)
+      if (!isShort()) container.innerHTML += `<button type="button" class="preset-btn" id="duration-custom-toggle" aria-pressed="${state.customDurationActive}">Custom</button>`;
+      customInput.hidden = !state.customDurationActive || isShort();
       if (state.customDurationActive) customInput.value = state.duration || "";
     }
+    redrawDuration = draw;
 
     container.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-minutes]");
@@ -178,6 +187,8 @@
 
     draw();
   }
+
+  let redrawDuration = () => {};
 
   // --- Speakers ---
   function syncSpeakersToCount(count) {
@@ -255,7 +266,7 @@
     CharacterSelector.open({
       slots: state.speakers.map((speaker, i) => ({ index: i, label: slotLabel(i), characterId: speaker.character_id })),
       profiles: state.profiles,
-      eligibility: state.presentationMode === "solo_explainer" && state.explainerStyle === "vox" ? "vox" : state.presentationMode,
+      eligibility: voiceOnly() ? "vox" : state.presentationMode,
       startSlot: index,
       onChoose: (slotIndex, profile) => applyProfile(slotIndex, profile),
     });
@@ -354,6 +365,7 @@
     state.explainerStructure = project.explainer_structure || "why";
     state.explainerSubject = project.explainer_subject || "topic";
     state.explainerStyle = project.explainer_style || "presenter";
+    if (["news", "blur"].includes(state.explainerStyle)) state.shortsTemplate = state.explainerStyle;
     state.accent = project.accent || state.accent;
     state.languageFeatures = Object.fromEntries(
       LANGUAGE_FEATURES.map((feature) => [
@@ -382,16 +394,35 @@
   function renderPresentation() {
     const solo = state.presentationMode === "solo_explainer";
     document.getElementById("presentation-mode").value = state.presentationMode;
-    document.getElementById("explainer-structure-row").hidden = !solo;
+    document.getElementById("explainer-structure-row").hidden = !solo || isShort();
     document.getElementById("explainer-structure").value = state.explainerStructure;
     const count = document.getElementById("num-speakers");
     count.disabled = solo;
     if (solo) { count.value = 1; syncSpeakersToCount(1); renderSpeakerCards(); }
     document.querySelectorAll("#type-cards .type-card").forEach((card) => {
-      const mode = state.presentationMode === "solo_explainer" && state.explainerStyle === "vox" ? "vox" : state.presentationMode;
+      const mode = isShort() ? "shorts" : state.presentationMode === "solo_explainer" && state.explainerStyle === "vox" ? "vox" : state.presentationMode;
       card.setAttribute("aria-checked", String(card.dataset.mode === mode));
     });
-    document.getElementById("subject-cards").hidden = !solo;
+    document.getElementById("subject-cards").hidden = !solo || isShort();
+    document.getElementById("shorts-templates").hidden = !isShort();
+    document.querySelectorAll("#shorts-templates [data-template]").forEach((card) => {
+      card.setAttribute("aria-checked", String(card.dataset.template === state.shortsTemplate));
+    });
+    // a news Short may start from an article; a blur Short from a topic or AI ideas only
+    const news = isShort() && state.shortsTemplate === "news";
+    document.querySelectorAll("input[name=source_kind]").forEach((input) => {
+      input.closest("label").hidden = isShort() ? input.value !== "article" : input.value === "article";
+    });
+    if (news && state.sourceKind !== "article") state.sourceKind = "article";
+    if (!news && state.sourceKind === "article") state.sourceKind = "dialogue";
+    document.querySelectorAll("input[name=source_kind]").forEach((input) => { input.checked = input.value === state.sourceKind; });
+    const materialChoice = document.querySelector("input[name=content_source][value=material]").closest("label");
+    materialChoice.hidden = isShort() && !news;
+    if (materialChoice.hidden && state.contentSource === "material") {
+      state.contentSource = "topic";
+      document.querySelector("input[name=content_source][value=topic]").checked = true;
+    }
+    redrawDuration();
     document.querySelectorAll("#subject-cards .subject-card").forEach((card) => {
       card.setAttribute("aria-checked", String(card.dataset.subject === state.explainerSubject));
     });
@@ -404,14 +435,22 @@
     document.getElementById("ideas-panel").hidden = state.contentSource !== "ideas";
     document.getElementById("material-panel").hidden = !material;
     const vocabulary = state.sourceKind === "vocabulary";
-    document.getElementById("source-text-label").textContent = vocabulary
+    const article = state.sourceKind === "article";
+    document.getElementById("source-text-label").textContent = article
+      ? "Paste the news article, or read it from a link (check the text before you continue)"
+      : vocabulary
       ? "Paste the words or phrases to learn (one per line; “word - meaning” keeps only the word)"
       : "Paste the dialogue (one turn per line, e.g. “A: Hello!”)";
+    document.getElementById("link-row").hidden = !article;
+    document.getElementById("source-image-label").hidden = article;
+    document.getElementById("source-image-note").hidden = article;
     const verbatimAllowed = !vocabulary && state.presentationMode === "classic";
     if (!verbatimAllowed) state.sourceUse = "rewrite";
     document.getElementById("source-use-row").hidden = !verbatimAllowed;
     document.querySelectorAll("input[name=source_use]").forEach((input) => { input.checked = input.value === state.sourceUse; });
-    document.getElementById("source-hint").textContent = vocabulary
+    document.getElementById("source-hint").textContent = article
+      ? "The AI tells the news in its own simple words for the level, using only the facts in the article."
+      : vocabulary
       ? "The AI writes a new script that uses every word on the list."
       : state.presentationMode === "solo_explainer"
         ? "The AI turns the dialogue into a talk by your presenter."
@@ -484,11 +523,22 @@
   function setupSources() {
     document.querySelectorAll("#type-cards .type-card").forEach((card) => card.addEventListener("click", () => {
       // VOX is a Solo presentation shown as a voice-over with motion graphics
-      state.presentationMode = card.dataset.mode === "vox" ? "solo_explainer" : card.dataset.mode;
-      state.explainerStyle = card.dataset.mode === "vox" ? "vox" : "presenter";
+      const wasShort = isShort();
+      const mode = card.dataset.mode;
+      state.presentationMode = mode === "vox" || mode === "shorts" ? "solo_explainer" : mode;
+      state.explainerStyle = mode === "vox" ? "vox" : mode === "shorts" ? state.shortsTemplate : "presenter";
+      // Phase 63: a Short lasts 30-60 s; going back to a long video restores a long length
+      if (isShort() && !wasShort) { state.duration = 0.75; state.customDurationActive = false; }
+      if (!isShort() && wasShort) { state.duration = DURATION_PRESETS[1]; state.customDurationActive = false; }
       renderPresentation();
       renderSpeakerCards();
     }));
+    document.querySelectorAll("#shorts-templates [data-template]").forEach((card) => card.addEventListener("click", () => {
+      state.shortsTemplate = card.dataset.template;
+      state.explainerStyle = card.dataset.template;
+      renderPresentation();
+    }));
+    document.getElementById("source-link-btn").addEventListener("click", readLink);
     document.querySelectorAll("#subject-cards .subject-card").forEach((card) => card.addEventListener("click", () => {
       state.explainerSubject = card.dataset.subject;
       state.explainerStructure = SUBJECT_STRUCTURES[state.explainerSubject];
@@ -514,6 +564,24 @@
         ? "Reading a photo needs the cloud AI: choose a cloud mode in Settings → AI, or paste the text."
         : "Reading photos is off because cloud AI is turned off on this computer (DIE_AI_ALLOW_CLOUD=false). Paste the text instead.");
     }).catch(() => { /* the button stays; the server still refuses when cloud AI is off */ });
+  }
+
+  // Phase 63 (ENH-045): the title and text of a public news page, shown in the box for the owner to check
+  async function readLink() {
+    const url = document.getElementById("source-link").value.trim();
+    const status = document.getElementById("source-link-status");
+    if (!url) { status.textContent = "Paste the link of a news page first."; return; }
+    status.textContent = "Reading the page…";
+    try {
+      const page = await Api.readLink(url);
+      document.getElementById("source-text").value = page.text;
+      const topic = document.getElementById("topic"), name = document.getElementById("name");
+      if (!topic.value.trim() && page.title) topic.value = page.title.slice(0, 500);
+      if (!name.value.trim() && page.title) name.value = page.title.slice(0, 200);
+      status.textContent = "Read. Check the text below before you continue.";
+    } catch (error) {
+      status.textContent = error.message || "The page could not be read; paste the article instead.";
+    }
   }
 
   function disablePhoto(reason) {
@@ -643,7 +711,8 @@
     const errors = [];
     if (pageMode === "create") proposeTopicFromMaterial();
     if (pageMode === "create" && state.contentSource === "material" && !document.getElementById("source-text").value.trim()) {
-      errors.push(state.sourceKind === "vocabulary" ? "Paste the vocabulary list (or read it from a photo)."
+      errors.push(state.sourceKind === "article" ? "Paste the news article (or read it from a link)."
+        : state.sourceKind === "vocabulary" ? "Paste the vocabulary list (or read it from a photo)."
         : "Paste the dialogue (or read it from a photo).");
     }
     const name = document.getElementById("name").value.trim();

@@ -290,7 +290,8 @@ def vox_proof(plan: ExplainerPlan) -> dict:
 
 
 def _vox(snapshot: dict) -> bool:
-    return snapshot["source"]["project"].get("explainer_style") == "vox"
+    # Phase 63: the news and blur Shorts use the VOX board and caption proof too
+    return snapshot["source"]["project"].get("explainer_style") in ("vox", "news", "blur")
 
 
 async def validate_plan(snapshot: dict, plan: ExplainerPlan) -> dict:

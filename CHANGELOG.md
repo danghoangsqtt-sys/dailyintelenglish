@@ -8,6 +8,13 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added — Phase 63 viral Shorts: English news and text on blur (2026-10-22)
+
+- A 4th video type on Step 1, **Shorts viral** (9:16, 30/45/60 s), with two templates built on the VOX pipeline: **English news** — a narrator reads the news in simple English over pictures that change with every fact, with a BREAKING band, the headline as a lower third, key words popping up, a ticker and karaoke captions; and **Text on blur** — big words pop in with the voice over a blurred picture, key words in yellow (ENH-045).
+- A news Short can start from a pasted article or **Read the link** (a public news page's title and text, shown for checking first); the AI tells it in its own words using only the article's facts. Scripts open with a hook and end with one line inviting viewers to follow.
+- Shorts render vertical (1080×1920) as their main video; Channel plan series can be VOX, news Shorts or blur Shorts, so automatic production makes them too.
+- Charts accept numbers the narration says in words ("eight", "ten thousand").
+
 ### Added — Phase 62 automatic content production (2026-10-22)
 
 - An **Automation** page: turn it on and the app makes the Channel plan's next episodes by itself in a night window (default 23:00–06:00, episodes due within 3 days, at most 2 videos a night) — script, learning content, voices and audio mix, visual plan, render, thumbnail and YouTube package — and stops each one at "waiting for review". It never uploads to YouTube (ENH-044).

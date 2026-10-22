@@ -5,17 +5,25 @@ const ExplainerEditor = (() => {
   // Phase 59 (ENH-041): the VOX kinds, and a ready outside-AI prompt for a segment's picture in the VOX collage style
   const VOX_KINDS = ["quote","text_card","diagram","chart","timeline","map","activity","photo"];
   const SOLO_KINDS = ["activity","photo","diagram","text_card"];
-  function voxPicturePrompt(segment, topic, sceneName) {
+  function voxPicturePrompt(segment, topic, sceneName, style = "vox") {
+    // Phase 63 (ENH-045): a news Short wants a realistic vertical news photo; a blur Short a calm vertical backdrop
+    if (style === "news") return `Realistic news photograph for an English news short about "${topic}": ${segment.intent}.`
+      + `${sceneName ? ` Setting: ${sceneName}.` : ""} Natural light, documentary style, one clear subject, 9:16 vertical portrait.`
+      + " No text, no letters, no logos, no watermark, no real famous people, no recognisable faces.";
+    if (style === "blur") return `Atmospheric background photo for a short inspirational video about "${topic}": ${segment.intent}.`
+      + " Soft colours, simple shapes, plenty of empty space, 9:16 vertical portrait. No text, no logos, no people's faces.";
     return `Editorial paper-collage illustration for an explainer video about "${topic}": ${segment.intent}.`
       + `${sceneName ? ` Setting: ${sceneName}.` : ""} Cut-out photo elements on warm off-white paper, muted warm colours with one red accent,`
       + " soft shadows, simple clear composition with space around the main subject, 16:9 landscape. No text, no letters, no logos, no watermark,"
       + " no real famous people.";
   }
   async function mount(container, projectId, options = {}) {
-    const vox = options.style === "vox";
-    const state = {view:null,segments:[],assets:[],selected:0,aspect:"16:9",dirty:false,edit:0,saving:null,busy:false,
+    const vox = ["vox", "news", "blur"].includes(options.style);  // Phase 63: the Shorts are voice-only like VOX
+    const short = ["news", "blur"].includes(options.style);
+    const title = options.style === "news" ? "English news Short" : options.style === "blur" ? "Text-on-blur Short" : vox ? "VOX explainer" : "Solo Explainer";
+    const state = {view:null,segments:[],assets:[],selected:0,aspect:short?"9:16":"16:9",dirty:false,edit:0,saving:null,busy:false,
       conflict:false,disposed:false,preview:null,previewToken:0,geometry:null,job:null,timer:null,stage:{scenes:[],activities:[]}};
-    container.innerHTML = `<div class="solo-editor${vox?" is-vox":""}"><h2>${vox?"VOX explainer":"Solo Explainer"}</h2>
+    container.innerHTML = `<div class="solo-editor${vox?" is-vox":""}"><h2>${title}</h2>
       ${vox?`<p class="section-hint">Review the knowledge claims, the numbers on charts and the pictures. Nobody is on screen: the narrator's voice reads the script over the graphics.</p>
       <div class="vox-references"><strong>Reference pictures</strong><span class="section-hint">Upload pictures you made with an outside AI or took yourself; the next proposal uses them where they fit, and any segment can show one.</span>
         <label class="btn btn-ghost btn-sm">⬆ Upload pictures<input id="vox-references" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden></label>
@@ -25,7 +33,7 @@ const ExplainerEditor = (() => {
       <button type="button" data-action="save" class="btn btn-ghost">Save changes</button>${vox?"":`<button type="button" data-action="arrange" class="btn btn-ghost">Arrange layouts</button>`}
       <button type="button" data-action="preview" class="btn btn-ghost">Refresh preview</button><button type="button" data-action="approve" class="btn btn-primary">Approve reviewed plan</button>
       <button type="button" data-action="reload" class="btn btn-ghost">Reload</button><button type="button" data-action="cancel" class="btn btn-ghost" hidden>Cancel proposal</button>
-      <label>Preview aspect <select id="solo-aspect"><option>16:9</option><option>9:16</option></select></label></div>
+      <label>Preview aspect <select id="solo-aspect">${short?"":"<option>16:9</option>"}<option>9:16</option></select></label></div>
       <p id="solo-status" role="status"></p><p id="solo-error" role="alert"></p><ul id="solo-issues"></ul>
       <div class="solo-editor-grid"><div><div id="solo-player"></div><div id="solo-segments" class="solo-segments"></div></div>
       <div id="solo-fields" class="solo-fields"></div></div></div>`;
@@ -101,7 +109,7 @@ const ExplainerEditor = (() => {
     }
     function picturePanel(s){
       const scene=state.stage.scenes.find(item=>item.id===s.scene?.scene_id)?.name??"";
-      const prompt=s.visual.kind==="photo"&&s.visual.prompt?s.visual.prompt:voxPicturePrompt(s,options.topic??"",scene);
+      const prompt=s.visual.kind==="photo"&&s.visual.prompt?s.visual.prompt:voxPicturePrompt(s,options.topic??"",scene,options.style);
       return `<fieldset class="vox-picture"><legend>Picture for this segment</legend>
         <p class="section-hint">Make it with an outside AI (ChatGPT, Gemini, Midjourney…) from this prompt, or use a picture of your own. The segment then shows it as a collage picture.</p>
         <textarea id="vox-picture-prompt" rows="5" readonly>${escape(prompt)}</textarea>

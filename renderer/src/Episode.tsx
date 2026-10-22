@@ -1,6 +1,8 @@
 import {CaptionBand, CAPTION_TEXT_STYLE} from "./CaptionBand";
 import {SoloScene} from "./SoloScene";
 import {VoxScene} from "./VoxScene";
+import {NewsScene} from "./NewsScene";
+import {BlurScene} from "./BlurScene";
 import {resolvedMedia} from "./Presenter";
 import React, { useMemo } from "react";
 import { AbsoluteFill, Audio, Img, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
@@ -453,7 +455,9 @@ export const Episode: React.FC<EpisodeInputProps> = ({
       <Sequence from={introFrames} durationInFrames={audioFrames} name="Audio">
         {presentationMode === "solo_explainer" && solo ? <>
           {!soundtrackPath ? <Audio src={resolvedMedia(audioPath)} /> : null}
-          {solo.style === "vox" ? <VoxScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
+          {solo.style === "news" ? <NewsScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
+          solo.style === "blur" ? <BlurScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
+          solo.style === "vox" ? <VoxScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" /> :
           <SoloScene {...{solo,presentationMode,durationSeconds,width,height,lines,speakers,learning,audioPath,fps,title,topic,cefrLevel,chapters,introSec,outroSec,captionStyle,visualMode,stillUrl,sprites,soundtrackPath,brand,layout,hook,hookAtSec}} episodeId={solo.plan.project_id} outroText="" />}
         </> : <AudioWindowContent
           lines={lines}
