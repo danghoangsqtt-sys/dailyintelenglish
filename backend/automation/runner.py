@@ -34,6 +34,11 @@ JOB_POLL_SECONDS = 3
 JOB_TIMEOUT_SECONDS = 1800
 MIN_FREE_BYTES = 3 * 1024 ** 3
 KEEP_BACKUPS = 7
+# Phase 66 (owner 2026-10-22): the English-teaching Shorts whose generic "review its knowledge claims" flag the night run
+# may accept (their content is English, not facts or numbers); news, VOX and Solo presenter videos still wait for a person,
+# and any specific issue (numbers not said, a missing picture...) always stops the episode.
+GENERIC_REVIEW = "review its knowledge claims and illustration text"
+SELF_REVIEW_STYLES = ("mistakes", "wordday", "top5", "quiz", "listen", "blur")
 THUMBNAIL_VARIANTS = THUMBNAIL_MIN_VARIANTS  # the composed template's smallest batch
 AI_ATTEMPTS = 2
 
@@ -99,7 +104,7 @@ class Producer:
         board = await self.client.call("GET", f"/api/projects/{project_id}/storyboard")
         return bool(board.get("beats"))
 
-    async def run_step(self, step: str, project_id: str, solo: bool) -> None:
+    async def run_step(self, step: str, project_id: str, solo: bool, style: str | None = None) -> None:
         call = self.client.call
         base = f"/api/projects/{project_id}"
         if step in ("script", "learning"):
@@ -116,7 +121,7 @@ class Producer:
                 await call("POST", f"{base}/tts/preview", {"line_id": line["id"], "reuse_cached": True})
             await call("POST", f"{base}/audio/generate", {"background_music": None})
         elif step == "visual_plan":
-            await (self.approve_solo(project_id) if solo else call("POST", f"{base}/storyboard/propose"))
+            await (self.approve_solo(project_id, style) if solo else call("POST", f"{base}/storyboard/propose"))
         elif step == "video":
             await call("POST", f"{base}/video/generate", {})
         elif step == "thumbnail":
@@ -126,7 +131,7 @@ class Producer:
         else:
             raise StepError(f"Unknown step {step}")
 
-    async def approve_solo(self, project_id: str) -> None:
+    async def approve_solo(self, project_id: str, style: str | None = None) -> None:
         """Propose a plan when there is none (or it went stale), then approve it -- only with no issue and no fact to check,
         exactly what a person could approve; otherwise stop for the owner. A plan the owner edited is kept, not redone."""
         view = await self.solo_plan(project_id)
@@ -139,6 +144,8 @@ class Producer:
             plan = view.get("plan")
         if not plan:
             raise StepError("The AI did not propose a visual plan")
+        if style in SELF_REVIEW_STYLES and plan.get("status") != "approved":
+            view, plan = await self.accept_generic_review(project_id, view)
         if view.get("issues"):
             raise StepError("Review the visual plan: " + "; ".join(map(str, view["issues"])))
         flagged = [segment.get("id") for segment in plan.get("segments", []) if segment.get("needs_fact_review")]
@@ -146,6 +153,21 @@ class Producer:
             raise StepError(f"Check the facts of {len(flagged)} segment(s) on Step 5, then approve the plan")
         await self.client.call("POST", f"/api/projects/{project_id}/explainer-plan/approve",
                                {"expected_revision": plan["revision"], "source_fingerprint": plan["source_fingerprint"]})
+
+    async def accept_generic_review(self, project_id: str, view: dict) -> tuple[dict, dict]:
+        """Save the plan with the generic fact-review flag cleared (as the owner would on Step 5), when that flag is the only
+        issue kind; any other issue is left for `approve_solo` to stop on."""
+        plan = view["plan"]
+        issues = [str(issue) for issue in view.get("issues") or []]
+        if not any(GENERIC_REVIEW in issue for issue in issues) and not any(s.get("needs_fact_review") for s in plan.get("segments", [])):
+            return view, plan
+        if any(GENERIC_REVIEW not in issue for issue in issues):
+            return view, plan
+        segments = [{**segment, "needs_fact_review": False} for segment in plan.get("segments", [])]
+        saved = await self.client.call("PATCH", f"/api/projects/{project_id}/explainer-plan", {
+            "expected_revision": plan["revision"], "expected_source_fingerprint": view["current_source_fingerprint"],
+            "segments": segments, "aspects": plan["aspects"]})
+        return saved, saved["plan"]
 
     async def thumbnail(self, project_id: str) -> None:
         base = f"/api/projects/{project_id}/thumbnails"
@@ -176,7 +198,7 @@ class Producer:
             if step is None:
                 return project_id
             await on_step(step, project_id)
-            await self.run_step(step, project_id, solo)
+            await self.run_step(step, project_id, solo, episode.get("explainer_style"))
         raise StepError("A step did not finish")
 
 

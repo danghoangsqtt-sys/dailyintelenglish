@@ -11,6 +11,7 @@ Versioning: [SemVer](https://semver.org/)
 ### Added — Phase 66 Shorts in batches and today's news (2026-10-22)
 
 - A **Shorts batch** page: give one topic and a Shorts template, and the AI proposes 5–10 different Short ideas; edit the list and **Create the batch** — it is saved as a Channel plan series with one publishing date per day (or every N days), so Automation makes the videos at night, or the projects are made at once (ENH-048).
+- Automation now finishes the English-teaching Shorts (Don't say / Say, Word of the day, Top 5, quiz, listening, text on blur) by itself: their general "review the content" flag is accepted; news, VOX and Solo videos still wait for your review, and any specific problem still stops the episode.
 - **Today's news**: the app reads your news feeds (BBC World and NPR News to start; add or remove feeds) for the last 36 hours; **AI picks** chooses the best stories for learners at your level with a one-line hook; the chosen stories' articles are read and become a news batch. On Step 1 the English news template has "📰 Today's news" to start one Short from a story.
 
 ### Added — Phase 65 interactive Shorts (2026-10-22)

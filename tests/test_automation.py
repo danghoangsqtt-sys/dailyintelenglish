@@ -195,6 +195,47 @@ async def test_a_failed_ai_job_is_asked_once_more_then_stops_the_episode():
         await Producer(stubborn, sleep=no_sleep).produce({"id": "e", "project_id": "p1"}, on_step)
 
 
+async def test_a_language_short_accepts_the_generic_review_flag_but_news_waits():
+    async def on_step(step, project_id):
+        pass
+
+    class Reviewing(FakeClient):
+        async def call(self, method, path, body=None):
+            tail = path.replace("/api/projects/p1", "")
+            if tail == "/explainer-plan" and method == "GET":
+                self.calls.append((method, tail, body))
+                flagged = self.plan and any(s["needs_fact_review"] for s in self.plan["segments"])
+                return {"plan": self.plan, "current_source_fingerprint": "f", "issues": self.issues + (
+                    ["Segment s1: review its knowledge claims and illustration text"] if flagged else [])}
+            if tail == "/explainer-plan" and method == "PATCH":
+                self.calls.append((method, tail, body))
+                self.plan = {**self.plan, "revision": 2, "segments": body["segments"], "aspects": body["aspects"]}
+                return {"plan": self.plan, "current_source_fingerprint": "f", "issues": self.issues}
+            if tail == "/explainer-plan/propose":
+                await super().call(method, path, body)
+                self.plan["aspects"] = ["9:16"]
+                return {"id": "job-plan"}
+            return await super().call(method, path, body)
+
+    mistakes = Reviewing(solo=True, flagged=True)
+    await Producer(mistakes, sleep=no_sleep).produce(
+        {"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer", "explainer_style": "mistakes"}, on_step)
+    patch = next(body for method, path, body in mistakes.calls if method == "PATCH")
+    assert all(not segment["needs_fact_review"] for segment in patch["segments"])
+    assert ("POST", "/explainer-plan/approve", {"expected_revision": 2, "source_fingerprint": "f"}) in mistakes.calls
+    assert mistakes.done["youtube"]
+    news = Reviewing(solo=True, flagged=True)
+    with pytest.raises(StepError, match="review its knowledge claims"):
+        await Producer(news, sleep=no_sleep).produce(
+            {"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer", "explainer_style": "news"}, on_step)
+    assert not any(method == "PATCH" for method, *_ in news.calls)
+    other = Reviewing(solo=True, flagged=True, issues=["Segment s1: import or select its illustration"])
+    with pytest.raises(StepError, match="import or select"):
+        await Producer(other, sleep=no_sleep).produce(
+            {"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer", "explainer_style": "quiz"}, on_step)
+    assert not any(method == "PATCH" for method, *_ in other.calls)
+
+
 # ---------------------------------------------------------------- runner
 
 class FakeProducer:
