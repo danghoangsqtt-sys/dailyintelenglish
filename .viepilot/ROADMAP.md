@@ -1,5 +1,21 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 76 — Topic / Series / video project folders (2026-10-23)
+
+Status: implemented and focused-verified in source; not packaged. Step 1 and Step 7 select a parent Topic folder, preview the resolved destination, and sync checked outputs. Existing per-project paths stay legacy until the user opts in; changing locations never moves or deletes old files. [Plan](phases/76-topic-project-folders/PLAN.md), [operator guide](../docs/operations/topic-project-folders.md).
+
+## Phase 75 — Optional local OmniVoice Voice Design TTS (2026-10-23)
+
+Status: Full/Lite version 2.0.0 packages built and verified; Full installed locally with backups. Local Python/model setup and RTX 3060 listening remain pending; no public release. Edge stays default. Step 4 offers per-speaker Edge/OmniVoice selection, editable Voice Design descriptions, and a sample audition. Production lines use an isolated worker under the shared GPU lease; native laughter/sigh are supported, ahem fails explicitly, and no word timings are invented. [Plan](phases/75-omnivoice-local-tts/PLAN.md), [setup guide](../docs/operations/omnivoice-local-tts.md).
+
+## Phase 74 ? AI vocal cues (implementation delivered; Edge listening superseded)
+
+Tasks 74.1?74.3 are technically verified (276 targeted tests). The owner heard and liked the OmniVoice Voice Design sample from the public Space, then authorized local integration in Phase 75. The Edge-specific listening gate 74.4 is superseded, not passed; its technical work and report remain historical. [Plan](phases/74-ai-vocal-cues/PLAN.md), [spec](phases/74-ai-vocal-cues/SPEC.md), [listening handoff](../docs/operations/phase74-listening.md).
+
+## Phase 73 - Scene Library and storyboard selection (2026-10-23)
+
+Status: implemented_verified_pending_owner_review; 4/4 technical tasks (including VI/EN scene requests, professional prompt drafting, local Qwen and external web image workflow). [Plan](phases/73-scene-library/PLAN.md), [summary](phases/73-scene-library/SUMMARY.md). Activity Library Scenes CRUD/AI/archive; per-beat active-library selection and historical compatibility.
+
 ## Phase 72 — Audience: international, Vietnamese or both (2026-10-22)
 
 Status: implemented_verified_pending_owner_review; 5/5 tasks. ENH-054: one Audience setting (channel › series › video) decides how vocabulary is explained on screen and in the YouTube description, and whom the AI writes for; the voice stays English. [Plan](phases/72-audience/PLAN.md).

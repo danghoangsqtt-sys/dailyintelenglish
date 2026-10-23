@@ -79,3 +79,55 @@ def test_the_description_explains_the_words_for_the_audience():
     # a missing Vietnamese meaning never leaves the line empty
     no_vi = {**LEARNING, "vocabulary": [{**LEARNING["vocabulary"][0], "definition_vi": ""}]}
     assert "• cabin (noun) — a small wooden house" in yt.compose_description(PACKAGE, no_vi, None, audience="vietnamese")
+
+
+def test_copy_settings_keeps_the_videos_own_audience(client):  # noqa: F811
+    from tests.test_projects_api import VALID_PAYLOAD
+
+    project = data(client.post("/api/projects", json=VALID_PAYLOAD))
+    data(client.put(f"/api/projects/{project['id']}/audience", json={"audience": "vietnamese"}))
+    copied = data(client.post(f"/api/projects/{project['id']}/copy-settings"))
+    assert data(client.get(f"/api/projects/{copied['id']}/audience"))["audience"] == "vietnamese"
+    plain = data(client.post("/api/projects", json=VALID_PAYLOAD))
+    assert data(client.get(f"/api/projects/{data(client.post(f'/api/projects/{plain['id']}/copy-settings'))['id']}/audience"))["audience"] is None
+
+
+# ---------------------------------------------------------------- Step 1 on a project past Draft (browser)
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture(scope="module")
+def step1_server_url(tmp_path_factory):
+    from tests.conftest import live_server
+
+    with live_server(tmp_path_factory, "audience_step1_browser") as url:
+        yield url
+
+
+@pytest.mark.asyncio
+async def test_a_locked_project_keeps_its_audience_editable_and_copies_to_a_draft(step1_server_url):
+    import httpx
+    from playwright.async_api import async_playwright
+    from tests.test_projects_api import VALID_PAYLOAD
+
+    async with httpx.AsyncClient(base_url=step1_server_url) as http:
+        project = (await http.post("/api/projects", json=VALID_PAYLOAD)).json()["data"]
+        assert (await http.put(f"/api/projects/{project['id']}", json={"status": "script_generated"})).status_code == 200
+    async with async_playwright() as playwright:
+        browser = await playwright.chromium.launch()
+        page = await browser.new_page()
+        await page.goto(f"{step1_server_url}/step1?project_id={project['id']}")
+        await page.locator("#copy-settings-btn").wait_for()
+        assert await page.locator("#cefr").is_disabled() and await page.locator("#name").is_disabled()
+        assert not await page.locator("#audience").is_disabled()
+        await page.select_option("#audience", "international")
+        await page.wait_for_function("document.getElementById('audience-note').textContent.startsWith('Audience saved')")
+        async with httpx.AsyncClient(base_url=step1_server_url) as http:
+            view = (await http.get(f"/api/projects/{project['id']}/audience")).json()["data"]
+        assert view["audience"] == "international"
+        await page.locator("#copy-settings-btn").click()
+        await page.wait_for_url(lambda url: "project_id=" in url and project["id"] not in url)
+        await page.locator("#submit-btn").wait_for(state="visible")
+        assert not await page.locator("#cefr").is_disabled() and await page.locator("#audience").input_value() == "international"
+        await browser.close()

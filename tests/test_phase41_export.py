@@ -202,7 +202,7 @@ def test_series_episodes_get_their_own_subfolder(client, tmp_path):  # noqa: F81
 
     # the next episode is offered the series folder, and writes beside episode 1, not over it
     offered = data(client.get(f"/api/projects/{second['id']}/export"))
-    assert offered["settings"] is None and offered["suggested_dir"] == str(series)
+    assert offered["settings"] is None and offered["legacy_suggested_dir"] == str(series)
     data(client.put(f"/api/projects/{second['id']}/export", json={"output_dir": str(series), "items": ["script"]}))
     assert (series / "Ep 02 - Shopping at the Market" / "script.txt").is_file()
     assert (series / "Ep 01 - Planning the Menu" / "script.txt").is_file()
@@ -217,7 +217,7 @@ def test_a_folder_already_named_after_the_episode_is_not_nested(client, tmp_path
     data(client.put(f"/api/projects/{project['id']}/export", json={"output_dir": str(own), "items": ["script"]}))
     assert (own / "script.txt").is_file() and not (own / "Ep 02 - Shopping at the Market").exists()
     # a sibling chose its own episode folder: the suggestion is the series folder above it
-    assert data(client.get(f"/api/projects/{other['id']}/export"))["suggested_dir"] == str(tmp_path / "Dinner Party")
+    assert data(client.get(f"/api/projects/{other['id']}/export"))["legacy_suggested_dir"] == str(tmp_path / "Dinner Party")
 
 
 def test_projects_outside_a_series_keep_the_chosen_folder(client, tmp_path):  # noqa: F811

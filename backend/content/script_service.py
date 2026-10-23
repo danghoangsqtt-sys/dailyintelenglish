@@ -15,6 +15,7 @@ from backend.ai.llm.prompt_loader import render_regenerate_line_prompt, render_s
 from backend.ai.llm.contracts import GenerationRequest
 from backend.ai.llm.router import AIRouter, build_ai_router_from_settings
 from backend.ai.llm.validation import parse_and_validate
+from backend.content.vocal_cue_annotation import annotate_script_lines
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +138,13 @@ async def generate_script(
             f"Gemini used speaker_id(s) not in project {project_id}: {unknown_speakers}"
         )
 
+    if config.get("_annotate_vocal_cues"):
+        annotated, warning = await annotate_script_lines(
+            [line.model_dump() for line in lines], config, router,
+        )
+        if warning:
+            logger.warning("project_id=%s %s", project_id, warning)
+        return [ScriptLineOut.model_validate(line) for line in annotated]
     return lines
 
 
@@ -214,6 +222,17 @@ async def regenerate_line(
 
     if config.get("presentation_mode") == "solo_explainer":
         line = line.model_copy(update={"id": line_id})  # the editor owns this existing line identity
+    if config.get("_annotate_vocal_cues"):
+        from backend.content.vocal_cue_annotation import count_cues
+
+        other_lines = [item for item in config.get("_existing_script_lines", []) if item.get("id") != line_id]
+        annotated, warning = await annotate_script_lines(
+            [line.model_dump()], config, router,
+            existing_count=count_cues(other_lines), min_gap_seconds=0,
+        )
+        if warning:
+            logger.warning("project_id=%s line_id=%s %s", project_id, line_id, warning)
+        line = ScriptLineOut.model_validate(annotated[0])
     return line
 
 

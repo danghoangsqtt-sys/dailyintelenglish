@@ -157,10 +157,10 @@ await generate_audio()
 
 ```
 feat(script): add B2 collocation validation in prompt
-fix(tts): handle OmniVoice VRAM overflow gracefully  
+fix(tts): report OmniVoice GPU memory refusal clearly
 fix(audio): correct silence gap between speakers
 feat(video): integrate LivePortrait lips-sync
-perf(tts): cache OmniVoice model between requests
+perf(tts): avoid holding OmniVoice VRAM between lines
 docs(api): update TTS endpoint documentation
 refactor(audio): extract AudioMixer to separate class
 test(script): add CEFR level vocabulary tests
@@ -205,15 +205,14 @@ test(script): add CEFR level vocabulary tests
 - NEVER log full prompt content in production (may contain sensitive topic)
 - Use `response_schema` (JSON mode) for structured outputs
 
-### OmniVoice Rules
-> **Not currently applicable** — the user decided 2026-09-13 not to pursue real OmniVoice
-> integration (its real API is voice cloning from a reference sample, not the
-> text-described voice design originally planned; Edge TTS is the sole official TTS
-> engine — see TRACKER.md Known Issues). Kept here in case that decision is revisited.
-- Load model ONCE at startup (not per-request) — 15-30s startup time
-- Use semaphore(2) for concurrent request limit
-- Catch `torch.cuda.OutOfMemoryError` → fallback to Edge TTS automatically
-- Clear GPU cache after each batch: `torch.cuda.empty_cache()`
+### OmniVoice Rules (Phase 75)
+- Edge TTS remains the default. OmniVoice is opt-in per speaker and must never silently fall back to Edge.
+- Keep OmniVoice and CUDA dependencies in `.venv-omnivoice`; never import Torch/OmniVoice in the FastAPI process or app venv.
+- Run one line in a one-shot child process inside the shared GPU lease. The process exits before the lease is released; do not hold the model resident between lines.
+- Use `DIE_OMNIVOICE_MIN_FREE_MB` as the configurable VRAM floor. GPU/model failures are actionable errors, not automatic engine changes.
+- Map only documented native cues (`[laughter]`, `[sigh]`). Reject `[hắng giọng]` for OmniVoice; do not synthesize a fake ahem or mix engines within a line.
+- OmniVoice does not provide word timings in this integration. Never invent word boundaries or write an empty/false timing sidecar.
+- Do not log dialogue or voice-design descriptions.
 
 ### SQLite Rules
 - Use `aiosqlite` for async access (NOT sqlite3 blocking)

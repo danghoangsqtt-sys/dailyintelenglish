@@ -18,7 +18,8 @@ from backend.library.library_service import data_path
 async def choices(db: aiosqlite.Connection, character_id: str) -> dict:
     """Scenes that have a plate, and approved activity pictures that are generic or the presenter's own."""
     scenes = [dict(row) for row in await (await db.execute(
-        "SELECT id, name, place, category FROM scenes WHERE preview_path IS NOT NULL AND preview_path <> '' ORDER BY category, name"
+        "SELECT id, name, place, category FROM scenes WHERE archived_at IS NULL "
+        "AND preview_path IS NOT NULL AND preview_path <> '' ORDER BY category, name"
     )).fetchall()]
     activities = []
     for row in await (await db.execute(

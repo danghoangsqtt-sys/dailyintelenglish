@@ -17,6 +17,7 @@ from backend.ai.llm.prompt_loader import render_storyboard_prompt
 from backend.db.transactions import read_transaction, write_transaction
 from backend.schemas.storyboard import EXPRESSIONS, BeatInput, StoryboardInput
 from backend.content import project_service
+from backend.library import library_service as library
 from backend.ai.llm.contracts import GenerationRequest
 from backend.ai.llm.router import AIRouter, build_ai_router_from_settings
 
@@ -95,7 +96,7 @@ def _speaker_warnings(beats: list[dict], line_speakers: list[int]) -> list[str]:
 
 
 async def validate_against_project(db: aiosqlite.Connection, project_id: str,
-                                  body: StoryboardInput) -> list[BeatInput]:
+                                  body: StoryboardInput, *, active_only: bool = False) -> list[BeatInput]:
     """The 24.1 project rules, shared by owner edits and AI proposals (one source of truth):
     beats tile every script line once, speakers are cast, scenes exist, images fit the cap."""
     line_speakers = await _line_speakers(db, project_id)
@@ -118,10 +119,16 @@ async def validate_against_project(db: aiosqlite.Connection, project_id: str,
     scene_ids = {beat.scene_id for beat in beats if beat.scene_id}
     if scene_ids:
         marks = ",".join("?" * len(scene_ids))
-        cursor = await db.execute(f"SELECT id FROM scenes WHERE id IN ({marks})", tuple(scene_ids))
-        missing = scene_ids - {row[0] for row in await cursor.fetchall()}
+        cursor = await db.execute(f"SELECT id, archived_at FROM scenes WHERE id IN ({marks})", tuple(scene_ids))
+        scenes = {row[0]: row[1] for row in await cursor.fetchall()}
+        missing = scene_ids - scenes.keys()
         if missing:
             raise ValidationError(f"Unknown scene(s): {sorted(missing)}")
+        archived = {scene_id for scene_id, archived_at in scenes.items() if archived_at is not None}
+        if archived and not active_only:
+            archived -= await library.project_scene_ids(db, project_id)
+        if archived:
+            raise ValidationError(f"Archived scene(s) cannot be selected: {sorted(archived)}")
     images = estimate_images(beats, len(cast))
     if images > settings.VISUALS_IMAGE_CAP:
         raise ValidationError(
@@ -135,7 +142,7 @@ async def replace_storyboard(db: aiosqlite.Connection, project_id: str, body: St
                              source: str) -> dict[str, Any]:
     """Validate the beats against the project, then replace its storyboard (caller holds the write
     transaction)."""
-    beats = await validate_against_project(db, project_id, body)
+    beats = await validate_against_project(db, project_id, body, active_only=source != "owner")
     now = _now()
     await db.execute("DELETE FROM project_beats WHERE project_id = ?", (project_id,))
     for position, beat in enumerate(beats):
@@ -167,17 +174,18 @@ def _most_active(line_speakers: list[int], cast: set[int]) -> list[int]:
 
 def rule_beats(line_speakers: list[int], cast: set[int], scene_ids: list[str]) -> list[BeatInput]:
     """Task 24.2 deterministic fallback: the lines split into k near-equal contiguous beats, one per
-    project scene (at most 3, and never more places than the image cap allows), each showing the
+    active library scene (at most 3, and never more places than the image cap allows), each showing the
     cast members who talk in it. Always passes `validate_against_project`."""
     framing = 1  # Phase 44: one scene picture per place
-    places = scene_ids or ["builtin-cafe"]
+    places = scene_ids or [None]
     count = max(1, min(len(places), 3, len(line_speakers), settings.VISUALS_IMAGE_CAP // framing))
     total = len(line_speakers)
     beats = []
     for index in range(count):
         start, end = round(index * total / count), round((index + 1) * total / count) - 1
         talking = _most_active(line_speakers[start:end + 1], cast)
-        beats.append(BeatInput(line_from=start, line_to=end, scene_id=places[index], speakers=talking))
+        beats.append(BeatInput(line_from=start, line_to=end, scene_id=places[index],
+                               new_place=None if places[index] else "a quiet conversation space", speakers=talking))
     return beats
 
 
@@ -298,12 +306,10 @@ async def _proposal_context(db: aiosqlite.Connection, project_id: str) -> dict[s
     names = {speaker["speaker_index"]: speaker["name"] for speaker in project["speakers"]}
     cast = [{"speaker_index": row[0], "speaker_name": names.get(row[0], f"Speaker {row[0] + 1}"),
              "character_name": row[1]} for row in await cursor.fetchall()]
-    cursor = await db.execute("SELECT id, name, place, category FROM scenes ORDER BY category, name")
-    scenes = [dict(zip(("id", "name", "place", "category"), row)) for row in await cursor.fetchall()]
     cursor = await db.execute(
-        "SELECT scene_id FROM project_scenes WHERE project_id = ? ORDER BY position", (project_id,),
+        "SELECT id, name, place, category FROM scenes WHERE archived_at IS NULL ORDER BY category, name, id"
     )
-    project_scene_ids = [row[0] for row in await cursor.fetchall()]
+    scenes = [dict(zip(("id", "name", "place", "category"), row)) for row in await cursor.fetchall()]
     cursor = await db.execute(
         "SELECT a.activity, c.name FROM activity_library a LEFT JOIN characters c ON c.id = a.character_id "
         "WHERE a.review_state = 'approved' ORDER BY a.activity, c.name"
@@ -315,8 +321,7 @@ async def _proposal_context(db: aiosqlite.Connection, project_id: str) -> dict[s
             names.append(character)
     cast_names = {member["character_name"] for member in cast}
     activities = [{"name": name, "characters": [who for who in names if who in cast_names]} for name, names in own.items()]
-    return {"project": project, "lines": lines, "cast": cast, "scenes": scenes,
-            "project_scene_ids": project_scene_ids, "activities": activities}
+    return {"project": project, "lines": lines, "cast": cast, "scenes": scenes, "activities": activities}
 
 
 async def propose_storyboard(db: aiosqlite.Connection, project_id: str,
@@ -350,17 +355,25 @@ async def propose_storyboard(db: aiosqlite.Connection, project_id: str,
             fitted, steps = fit_to_cap(body.beats, len(cast_indexes))
             body = body.model_copy(update={"beats": fitted})
             async with read_transaction():
-                await validate_against_project(db, project_id, body)
+                await validate_against_project(db, project_id, body, active_only=True)
         except (SchemaValidationError, ValidationError) as exc:
             previous_error = reason = str(exc)
             continue
         chosen, path = body, ("ai" if attempt == 0 else "ai_repaired")
         reason = f"trimmed to the image cap in {steps} step(s)" if steps else None
         break
-    if chosen is None:
-        line_speakers = [line["speaker_index"] for line in context["lines"]]
-        chosen = StoryboardInput(beats=rule_beats(line_speakers, cast_indexes, context["project_scene_ids"]))
     async with write_transaction(db):
+        if chosen is not None:
+            try:
+                await validate_against_project(db, project_id, chosen, active_only=True)
+            except ValidationError as exc:
+                chosen, path, reason = None, "rule", str(exc)
+        if chosen is None:
+            # AI I/O can outlive an archive/restore. Capture fallback choices under the save lock.
+            cursor = await db.execute("SELECT id FROM scenes WHERE archived_at IS NULL ORDER BY category, name, id")
+            scene_ids = [row[0] for row in await cursor.fetchall()]
+            line_speakers = [line["speaker_index"] for line in context["lines"]]
+            chosen = StoryboardInput(beats=rule_beats(line_speakers, cast_indexes, scene_ids))
         view = await replace_storyboard(db, project_id, chosen, "rule" if path == "rule" else "ai")
     view["proposal"] = {"path": path, "reason": reason}
     return view

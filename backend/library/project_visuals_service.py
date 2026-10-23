@@ -95,8 +95,11 @@ async def set_scenes(db: aiosqlite.Connection, project_id: str, scene_ids: list[
     await project_service.get_project(db, project_id)
     if not 1 <= len(scene_ids) <= 3 or len(set(scene_ids)) != len(scene_ids):
         raise ValidationError("Select one to three distinct scenes")
+    historical = await library.project_scene_ids(db, project_id)
     for scene_id in scene_ids:
-        await library.get_scene_row(db, scene_id)
+        scene = await library.get_scene_row(db, scene_id)
+        if scene["archived_at"] is not None and scene_id not in historical:
+            raise ValidationError("Archived scenes cannot be selected for a new project reference")
     await db.execute("DELETE FROM project_scenes WHERE project_id = ?", (project_id,))
     for position, scene_id in enumerate(scene_ids):
         await db.execute(

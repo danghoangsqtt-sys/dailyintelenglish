@@ -4,7 +4,7 @@
 
 **Project:** Daily Intel English Studio  
 **Type:** Local web app — AI podcast production tool  
-**Stack:** Python FastAPI + HTML/JS + cloud-first AI gateway (Gemini/OpenRouter, local Ollama fallback) + Edge TTS + Remotion
+**Stack:** Python FastAPI + HTML/JS + cloud-first AI gateway (Gemini/OpenRouter, local Ollama fallback) + Edge TTS default / optional local OmniVoice + Remotion
 **GPU:** RTX 3060 12GB (Qwen images and local Ollama, leased sequentially)
 
 ## File Map
@@ -32,6 +32,10 @@ For **TTS/audio tasks** → read:
 1. `ARCHITECTURE.md` (TTSService, AudioService sections)
 2. `SYSTEM-RULES.md` (async and media rules)
 3. `backend/ai/tts/tts_service.py`, `backend/media/audio_service.py`
+
+For **Phase 74 vocal cues** → read `.viepilot/phases/74-ai-vocal-cues/PLAN.md` and its task cards before changing script annotation. Its Edge rendering remains implemented; the Edge-specific listening gate is superseded by the owner's Phase 75 direction.
+
+For **OmniVoice TTS** → read `.viepilot/phases/75-omnivoice-local-tts/PLAN.md` and `docs/operations/omnivoice-local-tts.md`. Keep the model in a dedicated environment; use the GPU lease; preserve Edge defaults; never silently fall back or invent word timings. Local model inference/listening is a separate open gate.
 
 For **UI/frontend tasks** → read:
 1. `ARCHITECTURE.md` (API endpoints)

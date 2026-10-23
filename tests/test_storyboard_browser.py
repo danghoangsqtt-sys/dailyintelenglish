@@ -112,3 +112,50 @@ async def test_propose_edit_merge_save_reload_approve(browser_instance: Browser,
     await page.locator("#storyboard-approve").click()
     await page.wait_for_function("document.querySelector('#storyboard-summary').textContent.includes('approved')")
     assert await page.locator("#storyboard-error").inner_text() == ""
+
+
+async def test_library_scene_search_archive_and_refresh_preserve_draft(browser_instance: Browser, live_server_url: str):
+    page = await browser_instance.new_page()
+    project_id = await _project(page, live_server_url)
+    created = []
+    for index in range(4):
+        response = await page.request.post(f"{live_server_url}/api/visuals/scenes", data={
+            "name": f"Custom workshop {index}", "place": "a quiet workshop", "staging": "standing",
+            "category": "other", "time_of_day": "day",
+        })
+        assert response.ok, await response.text()
+        created.append((await response.json())["data"])
+    beats = [{"line_from": index, "line_to": index if index < 3 else 5, "kind": "scene",
+              "scene_id": scene["id"], "new_place": None, "speakers": [0, 1],
+              "action": "talking", "expression": "calm"} for index, scene in enumerate(created)]
+    response = await page.request.put(f"{live_server_url}/api/projects/{project_id}/storyboard",
+                                      data={"status": "draft", "beats": beats})
+    assert response.ok, await response.text()
+    response = await page.request.post(f"{live_server_url}/api/visuals/scenes/{created[0]['id']}/archive")
+    assert response.ok, await response.text()
+    await page.goto(f"{live_server_url}/step5?project_id={project_id}")
+    await page.locator("#beat-3-place").wait_for()
+    assert await page.locator("#visual-scene-options").count() == 0
+    assert await page.locator("#beat-0-place").input_value() == created[0]["id"]
+    assert "archived" in await page.locator(f"#beat-0-place option[value='{created[0]['id']}']").inner_text()
+    assert await page.locator(f"#beat-1-place option[value='{created[0]['id']}']").count() == 0
+    await page.locator("#beat-1-scene-search").fill("Custom workshop 2")
+    assert await page.locator("#beat-1-place option").count() == 3  # current, matching, new place
+    await page.locator("#beat-1-place").select_option(created[2]["id"])
+    await page.locator("#beat-1-action").fill("reading a book")
+    response = await page.request.post(f"{live_server_url}/api/visuals/scenes", data={
+        "name": "Fresh library room", "place": "a bright library", "staging": "standing",
+        "category": "other", "time_of_day": "day",
+    })
+    fresh = (await response.json())["data"]
+    await page.evaluate("window.dispatchEvent(new Event('focus'))")
+    await page.locator(f"#beat-1-place option[value='{fresh['id']}']").wait_for(state="attached")
+    assert await page.locator("#beat-1-action").input_value() == "reading a book"
+    assert "unsaved changes" in await page.locator("#storyboard-summary").inner_text()
+    await page.locator("#storyboard-save").click()
+    await page.wait_for_function("!document.querySelector('#storyboard-summary').textContent.includes('unsaved')")
+    await page.reload()
+    await page.locator("#beat-3-place").wait_for()
+    assert await page.locator("#beat-0-place").input_value() == created[0]["id"]
+    assert await page.locator("#beat-1-action").input_value() == "reading a book"
+    await page.close()

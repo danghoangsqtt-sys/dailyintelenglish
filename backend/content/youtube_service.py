@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 import aiosqlite
 from pydantic import TypeAdapter
 
+from backend.ai.tts.vocal_cues import caption_text
 from backend.core.config import settings
 from backend.core.constants import YOUTUBE_CHAPTER_MIN_LINES, YOUTUBE_CHAPTER_WORDS_PER_MINUTE
 from backend.core.exceptions import ProviderError, SchemaValidationError, ValidationError, YouTubePackageGenerationError
@@ -73,8 +74,8 @@ def estimate_chapters(script_lines: list[dict]) -> str:
         elif index % YOUTUBE_CHAPTER_MIN_LINES == 0:
             seconds = round(cumulative_words / YOUTUBE_CHAPTER_WORDS_PER_MINUTE * 60)
             minutes, secs = divmod(seconds, 60)
-            chapters.append(f"{minutes:02d}:{secs:02d} {_chapter_label(line['text'])}")
-        cumulative_words += len(line["text"].split())
+            chapters.append(f"{minutes:02d}:{secs:02d} {_chapter_label(caption_text(line['text']))}")
+        cumulative_words += len(caption_text(line["text"]).split())
     return "\n".join(chapters)
 
 
@@ -143,7 +144,7 @@ async def generate_package(
     if not script_lines:
         raise ValidationError("Cannot generate a YouTube package: script is empty")
 
-    transcript_text = "\n".join(line["text"] for line in script_lines)
+    transcript_text = "\n".join(caption_text(line["text"]) for line in script_lines)
     prompt = await render_youtube_prompt(
         project_name=project["name"],
         topic=project["topic"],
@@ -382,7 +383,7 @@ def pinned_comments(project: dict, script_lines: list[dict], learning: dict | No
     """The full transcript (and the listening answers) as pinned comment text, split at line breaks into parts that each
     fit one YouTube comment; a part says "(2/3)" when there is more than one."""
     names = {speaker["id"]: speaker["name"] for speaker in project["speakers"]}
-    lines = [f"{names.get(line['speaker_id'], line['speaker_id'])}: {line['text']}" for line in script_lines]
+    lines = [f"{names.get(line['speaker_id'], line['speaker_id'])}: {caption_text(line['text'])}" for line in script_lines]
     questions = _listening_questions(learning)
     answers = [f"{number}. {item.get('correct_answer') or item.get('explanation', '')}"
                for number, item in enumerate(questions, start=1)]
@@ -407,7 +408,7 @@ def pinned_comments(project: dict, script_lines: list[dict], learning: dict | No
 def transcript_text(project: dict, script_lines: list[dict]) -> str:
     names = {speaker["id"]: speaker["name"] for speaker in project["speakers"]}
     title = project.get("name") or "Daily Beyond English"
-    body = "\n".join(f"{names.get(line['speaker_id'], line['speaker_id'])}: {line['text']}" for line in script_lines)
+    body = "\n".join(f"{names.get(line['speaker_id'], line['speaker_id'])}: {caption_text(line['text'])}" for line in script_lines)
     return f"{title}\nDaily Beyond English\n\n{body}\n"
 
 
@@ -451,7 +452,7 @@ def _build_transcript_and_learning_text(
     for script_line in script_lines:
         speaker_id = script_line["speaker_id"]
         speaker_name = speaker_names_by_id.get(speaker_id, speaker_id)
-        lines.append(f"{speaker_name}: {script_line['text']}")
+        lines.append(f"{speaker_name}: {caption_text(script_line['text'])}")
 
     if learning_content is None:
         lines += ["", "Learning Content was not generated for this project."]

@@ -2,7 +2,15 @@
 
 <!-- crystallize_version: 0.8.0 -->
 
+## Architecture extension — Phase 76: Topic project output folders
+
+`project_exports` keeps the checked output components per project and an explicit `layout_mode`. Existing rows migrate as `legacy` and continue using their saved destination. New or opted-in projects use `topic_export_roots` to remember a shared parent folder keyed by Channel Plan Topic ID or normalized standalone Topic text. Their saved `relative_dir` fixes the resolved project folder so a later same-name project cannot displace it. The export service resolves Channel Plan episodes as Topic / Series / `Ep NN - title` and standalone projects as project Topic / project name. Existing sync hooks still copy checked deliverables outside the database transaction; changing a root never moves or deletes old files. The shared panel in Step 1 and Step 7 previews the server-resolved destination through the export API. See [Phase 76](phases/76-topic-project-folders/PLAN.md) and [operator guide](../docs/operations/topic-project-folders.md).
+
 *Source snapshot2026-10-16: Phase47 captions, Phase48 voices and Phase49.1–49.9 are technically verified;49.10 code/package checks are verified, with the real-art demonstration and owner V49 acceptance pending. Published trial remains1.4.0-rc.1; last stable1.3.0. The published ZIP predates these source additions. Phase51 separately tracks the local Desktop correction; consult its actual installation evidence.*
+
+## Architecture extension — Phase 74 implementation pending verification
+
+The [Phase 74 plan](phases/74-ai-vocal-cues/PLAN.md) adds an optional structured AI annotation pass **after** script repair/validation and **before** the final script write. The model chooses cue type, laugh variant and word boundary; server validation inserts markers without accepting rewritten dialogue. Failure leaves the validated clean script intact. The existing Edge TTS service interprets those markers as short same-voice interjections, briefly lowers prosody after ahem, joins measured segments and shifts WordBoundary timings. Shared caption stripping excludes the markers from published text. Code is implemented; automated and audible verification plus owner listening approval remain pending.
 
 ## Architecture extension — Phase48/49: current source and remaining plan
 
@@ -32,7 +40,7 @@ FastAPI Backend (Python 3.11+)
         │     (Nemotron → Gemma 4 → Dots3) → local Ollama qwen3.5:9b;
         │     kill switch DIE_AI_ALLOW_CLOUD=false / DIE_AI_MODE=local
         ├── Durable AI jobs + in-process worker (script, learning, storyboard)
-        ├── Edge TTS (the only engine, D56) + per-word timings
+        ├── Edge TTS (default, online) + optional local OmniVoice worker (Phase 75)
         ├── pydub + ffmpeg + pyloudnorm (audio mix, smart music bed)
         ├── Video: Remotion subprocess (the only renderer since Phase 35)
         ├── Visuals (backend/library/): character/scene/sprite/activity
@@ -43,9 +51,11 @@ FastAPI Backend (Python 3.11+)
         └── SQLite (aiosqlite, numbered migrations in backend/db/migrations/)
 ```
 
-**TTS note:** Edge TTS is the only engine (`TTS_ENGINES = ["edge_tts"]`, D56 2026-10-06).
-OmniVoice, Kokoro and StyleTTS 2 were investigated and removed; a legacy `"omnivoice"`
-value in old projects maps to Edge TTS (`LEGACY_TTS_ENGINES`).
+**TTS note:** Edge TTS remains the default. Phase 75 adds an explicit per-speaker OmniVoice
+Voice Design engine in a dedicated `.venv-omnivoice` subprocess. The worker runs under the
+shared GPU lease and exits after each whole line. It maps laughter/sigh to native tags,
+rejects unsupported ahem, and does not claim word-level timings. It never falls back to Edge
+silently. See [local OmniVoice setup](../docs/operations/omnivoice-local-tts.md).
 
 ## ViePilot Organization Context
 
@@ -265,10 +275,9 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
 
 ### 3. TTSService (`backend/ai/tts/tts_service.py`)
 - **Responsibility:** Convert script lines → audio files per speaker
-- **Engine: Edge TTS** (free, online, 10 accents x 3 genders) — the only engine (D56,
-  2026-10-06). OmniVoice, Kokoro and StyleTTS 2 were investigated and removed; a legacy
-  `"omnivoice"` value maps to Edge TTS. Edge TTS `WordBoundary` events give per-word
-  timestamps (Task 19.2) for karaoke captions and talking-sprite mouths.
+- **Engines:** Edge TTS (free, online; default) and optional local OmniVoice Voice Design
+  (Phase 75). Edge `WordBoundary` events provide per-word timestamps. OmniVoice produces
+  whole-line audio without word timings, so its captions have no per-word karaoke highlight.
 - **Outputs:** Per-line WAV/MP3 files in `data/tts_cache/`
 - **Voice mapping:** Each speaker → accent + gender → a concrete Edge TTS neural voice
   (`EDGE_TTS_VOICE_MAP`), plus speed/pitch/volume settings
@@ -397,7 +406,7 @@ Sections 1–8 are the original core services; each now calls the cloud-first AI
 | Backend framework | FastAPI | Async, fast, auto OpenAPI docs, Python ecosystem |
 | Frontend | Vanilla HTML/CSS/JS | Nhẹ, không dependency, dễ maintain |
 | AI engine | Cloud-first gateway with local fallback (Phase 18, D21/D31) | Gate B-11: ~45 s median B1 script vs ~127 s local; `DIE_AI_ALLOW_CLOUD=false` / `DIE_AI_MODE=local` forces 100% offline Ollama `qwen3.5:9b` |
-| TTS engine | Edge TTS only (D56) | Kokoro (D36) and StyleTTS 2 (D38) failed the owner's listening tests; OmniVoice is voice cloning, not voice design |
+| TTS engine | Edge TTS default; optional local OmniVoice Voice Design (Phase 75) | Owner accepted the public Voice Design laughter sample and authorized an explicit local option; no automatic fallback or voice cloning |
 | Audio processing | pydub + ffmpeg + pyloudnorm | Mature; real ITU-R BS.1770 loudness |
 | Video generation | Remotion (the only renderer since Phase 35) | Animated learning video (karaoke, cards, sprites); one renderer, no overlapping fallback (D89) |
 | Images | diffusers 0.41 in `.venv-image`: Qwen-Image-2.1-Turbo (illustrations, plates, topic pictures), Phase 39; Qwen-Image-Edit-2511 (AI-scene thumbnails), Phase 43; RealVisXL/SDXL removed in Phase 44 (D123) | Local GPU, isolated heavy dependencies; the benchmark (`docs/operations/phase39-image-benchmark.md`) chose per task; libraries reuse approved pictures to save GPU time |

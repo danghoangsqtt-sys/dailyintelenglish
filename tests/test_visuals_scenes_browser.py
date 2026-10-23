@@ -33,8 +33,10 @@ async def browser_instance() -> AsyncGenerator[Browser, None]:
 
 async def test_scene_fields_filter_duplicate_and_stale_warning(browser_instance: Browser, live_server_url: str):
     page = await browser_instance.new_page()
-    await page.goto(f"{live_server_url}/characters")
-    await page.locator("#scenes-tab").click()
+    await page.route("**/api/system/capabilities", lambda route: route.fulfill(json={
+        "success": True, "data": {"local_image_ai": True},
+    }))
+    await page.goto(f"{live_server_url}/activities?tab=scenes")
     grid = page.locator("#scene-grid")
     await grid.locator(".library-scene").first.wait_for()
     assert await grid.locator(".library-scene").count() == 55

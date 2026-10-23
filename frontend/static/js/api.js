@@ -122,6 +122,7 @@ const Api = (() => {
     deleteProject: (id) => request(`/api/projects/${id}`, { method: "DELETE" }),
     getProjectExport: (id) => request(`/api/projects/${id}/export`),
     saveProjectExport: (id, settings) => request(`/api/projects/${id}/export`, json("PUT", settings)),
+    previewProjectExport: (id, settings) => request(`/api/projects/${id}/export/preview`, json("POST", settings)),
     stopProjectExport: (id) => request(`/api/projects/${id}/export`, { method: "DELETE" }),
     openProjectExport: (id) => request(`/api/projects/${id}/export/open`, { method: "POST" }),
     chooseProjectFolder: (initial) => request("/api/system/choose-folder", json("POST", { initial })),
@@ -206,7 +207,20 @@ const Api = (() => {
       }),
     lockCharacter: (id) => request(`/api/visuals/characters/${id}/lock`, { method: "POST" }),
     unlockCharacter: (id) => request(`/api/visuals/characters/${id}/unlock`, { method: "POST" }),
-    listScenes: () => request("/api/visuals/scenes"),
+    listScenes: (options = {}) => {
+      const query = new URLSearchParams();
+      for (const key of ["include_archived", "project_id"]) {
+        if (options[key] !== undefined && options[key] !== null) query.set(key, options[key]);
+      }
+      return request(`/api/visuals/scenes${query.size ? `?${query}` : ""}`);
+    },
+    archiveScene: (id) => request(`/api/visuals/scenes/${encodeURIComponent(id)}/archive`, { method: "POST" }),
+    restoreScene: (id) => request(`/api/visuals/scenes/${encodeURIComponent(id)}/restore`, { method: "POST" }),
+    prepareScenePrompt: (brief) => request("/api/visuals/scenes/prompt", json("POST", { brief })),
+    getScenePrompt: (id) => request(`/api/visuals/scenes/${encodeURIComponent(id)}/prompt`),
+    uploadSceneBackground: (id, formData) => request(`/api/visuals/scenes/${encodeURIComponent(id)}/background`, {
+      method: "POST", body: formData,
+    }),
     // Task 29.7: the shot library of ready-made pictures.
     listLibraryActivities: (filters = {}) => {
       const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));

@@ -1,10 +1,7 @@
 /**
- * Phase 41 (D120): the project's own output folder. One panel, used in Step 1 (choose it when the video starts) and Step 7
- * (change it, open it, save now). The owner ticks which components are written there; the app then copies every new
- * version of the ticked components automatically.
- *
- *   const panel = ProjectFolder.mount(container, { projectId, actions: true });
- *   await panel.save(projectId);   // Step 1, after the project exists
+ * Topic-level project output settings, shared by Step 1 and Step 7.
+ * New projects use Topic / Series / video folders; existing legacy settings stay in place
+ * until the owner changes the folder or selects the hierarchical layout.
  */
 (() => {
   const COMPONENTS = [
@@ -21,69 +18,127 @@
   function mount(container, { projectId = null, actions = false } = {}) {
     container.innerHTML = `
       <div class="pf-row">
-        <input type="text" class="pf-path" id="pf-path" placeholder="e.g. D:\\Videos\\Daily Beyond English\\Dinner Party"
-               aria-label="Folder for this video project" />
+        <input type="text" class="pf-path" data-pf="path" placeholder="e.g. D:\\Videos\\Daily Beyond English"
+               aria-label="Parent folder for this Topic" />
         <button type="button" class="btn btn-ghost btn-sm" data-pf="choose">📁 Choose folder…</button>
       </div>
-      <p class="helper-text">For a series, choose its shared folder. Each episode is saved automatically in its own Ep NN - Title subfolder.</p>
+      <label class="pf-layout-label" for="pf-layout">Folder organization</label>
+      <select class="pf-layout" data-pf="layout" id="pf-layout">
+        <option value="topic_hierarchy">Organize under Topic / Series / video</option>
+        <option value="legacy">Use this folder directly for this project</option>
+      </select>
+      <p class="helper-text pf-hint">Choose a parent folder. The app creates a Topic folder, then Series and video folders when available.</p>
+      <p class="helper-text pf-preview" data-pf="preview" aria-live="polite"></p>
       <fieldset class="pf-items"><legend>Save these in the folder</legend>
         ${COMPONENTS.map(([key, label, checked]) => `
           <label class="pf-item"><input type="checkbox" value="${key}" ${checked ? "checked" : ""} /> ${label}</label>`).join("")}
       </fieldset>
       ${actions ? `<div class="pf-row">
         <button type="button" class="btn btn-primary btn-sm" data-pf="save">💾 Save settings &amp; copy now</button>
-        <button type="button" class="btn btn-ghost btn-sm" data-pf="open">📂 Open folder</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-pf="open">📂 Open video folder</button>
         <button type="button" class="btn btn-ghost btn-sm" data-pf="stop">Stop saving here</button>
       </div>` : ""}
       <p class="helper-text pf-status" role="status"></p>`;
+
     const $ = (selector) => container.querySelector(selector);
+    const pathInput = $('[data-pf="path"]');
+    const layoutInput = $('[data-pf="layout"]');
     const status = (text) => { $(".pf-status").textContent = text || ""; };
+    let originalDir = "";
+    let originalMode = "topic_hierarchy";
+    let previewRequest = 0;
+    let saving = false;
+
     const settings = () => ({
-      output_dir: $(".pf-path").value.trim(),
+      output_dir: pathInput.value.trim(),
+      layout_mode: layoutInput.value,
       items: [...container.querySelectorAll(".pf-items input:checked")].map((input) => input.value),
     });
 
-    // ENH-035: an episode of a series saves into its own "Ep 02 - …" subfolder of the chosen (series) folder; a new
-    // episode is offered the folder its series already uses.
-    function show(view) {
-      const saved = view?.settings;
-      if (!saved) {
-        if (view?.suggested_dir && !$(".pf-path").value) {
-          $(".pf-path").value = view.suggested_dir;
-          status("The folder of this series' other episodes: this episode gets its own subfolder inside it.");
-        }
+    async function refreshPreview() {
+      const wanted = settings();
+      const preview = $('[data-pf="preview"]');
+      if (!wanted.output_dir) {
+        preview.textContent = "Choose a parent folder to preview this project's destination.";
         return;
       }
-      $(".pf-path").value = saved.output_dir || "";
-      container.querySelectorAll(".pf-items input").forEach((input) => { input.checked = saved.items.includes(input.value); });
-      const when = saved.last_sync_at ? new Date(saved.last_sync_at).toLocaleString() : "not yet";
-      const where = view.folder && view.folder !== saved.output_dir ? ` · Files go to ${view.folder}` : "";
-      status((saved.last_error ? `Last copy failed: ${saved.last_error}` : `Last copied: ${when}`) + where);
+      if (!projectId) {
+        preview.textContent = wanted.layout_mode === "topic_hierarchy"
+          ? `Destination: ${wanted.output_dir} / Topic / Series / video`
+          : `Destination: ${wanted.output_dir}`;
+        return;
+      }
+      const requestId = ++previewRequest;
+      try {
+        const result = await Api.previewProjectExport(projectId, wanted);
+        if (requestId === previewRequest) preview.textContent = `Video folder: ${result.folder}`;
+      } catch (error) {
+        if (requestId === previewRequest) preview.textContent = `Folder preview unavailable: ${error.message}`;
+      }
+    }
+
+    function show(view) {
+      const saved = view?.settings;
+      const root = saved?.output_dir || view?.suggested_dir || "";
+      if (root) pathInput.value = root;
+      layoutInput.value = saved?.layout_mode || view?.layout_mode || "topic_hierarchy";
+      if (saved) {
+        originalDir = saved.output_dir || "";
+        originalMode = saved.layout_mode || "legacy";
+        container.querySelectorAll(".pf-items input").forEach((input) => {
+          input.checked = saved.items.includes(input.value);
+        });
+        const when = saved.last_sync_at ? new Date(saved.last_sync_at).toLocaleString() : "not yet";
+        status(saved.last_error ? `Last copy failed: ${saved.last_error}` : `Last copied: ${when}`);
+      } else if (view?.suggested_dir) {
+        originalDir = "";
+        originalMode = "topic_hierarchy";
+        status("Using the saved parent folder for this Topic. Save to start exporting this project.");
+      }
+      refreshPreview();
     }
 
     async function save(id) {
       const wanted = settings();
-      if (!wanted.output_dir) return null;  // no folder: nothing is exported (optional)
+      if (!wanted.output_dir) return null;
       if (!wanted.items.length) throw new Error("Tick at least one thing to save in the folder");
-      const view = await Api.saveProjectExport(id, wanted);
-      show(view);
-      const written = view.sync?.written || [];
-      const where = view.folder ? ` (${view.folder})` : "";
-      status(written.length ? `Saved ${written.length} file(s) in the folder${where}.`
-        : `Folder ready${where}: files are added as you make them.`);
-      return view;
+      if (saving) return null;
+      saving = true;
+      try {
+        const view = await Api.saveProjectExport(id, wanted);
+        show(view);
+        const written = view.sync?.written || [];
+        status(written.length ? `Saved ${written.length} file(s) in ${view.folder}.`
+          : `Folder ready at ${view.folder}; selected files will be added as they are made.`);
+        return view;
+      } finally {
+        saving = false;
+      }
     }
 
+    pathInput.addEventListener("input", () => {
+      if (originalMode === "legacy" && pathInput.value.trim() !== originalDir) {
+        layoutInput.value = "topic_hierarchy";
+        $(".pf-hint").textContent = "Changing this project's save location opts it into Topic / Series / video folders. Files in its old folder stay there.";
+      }
+      refreshPreview();
+    });
+    layoutInput.addEventListener("change", refreshPreview);
+
     $('[data-pf="choose"]').addEventListener("click", async () => {
-      status("Choose the folder in the window that opened…");
+      status("Choose the parent folder in the window that opened…");
       try {
-        const { path } = await Api.chooseProjectFolder($(".pf-path").value.trim() || null);
-        if (path) $(".pf-path").value = path;
+        const { path } = await Api.chooseProjectFolder(pathInput.value.trim() || null);
+        if (path) {
+          pathInput.value = path;
+          pathInput.dispatchEvent(new Event("input", { bubbles: true }));
+        }
         status(path ? "" : "No folder chosen: you can also type the path.");
       } catch (error) {
         status(error.message);
       }
     });
+
     if (actions) {
       $('[data-pf="save"]').addEventListener("click", async () => {
         try { await save(projectId); } catch (error) { status(error.message); }
@@ -94,14 +149,17 @@
       $('[data-pf="stop"]').addEventListener("click", async () => {
         try {
           await Api.stopProjectExport(projectId);
-          $(".pf-path").value = "";
-          status("This project no longer saves to a folder (the files already there are kept).");
-        } catch (error) {
-          status(error.message);
-        }
+          pathInput.value = "";
+          layoutInput.value = "topic_hierarchy";
+          originalDir = "";
+          originalMode = "topic_hierarchy";
+          status("This project no longer exports automatically. Files already saved are kept.");
+          refreshPreview();
+        } catch (error) { status(error.message); }
       });
     }
     if (projectId) Api.getProjectExport(projectId).then(show).catch(() => {});
+    else refreshPreview();
     return { save, settings };
   }
 

@@ -31,7 +31,18 @@ def qwen_activity_prompt(action: str, place: str = "") -> str:
             "realistic faces and hands, casual clothes. No text, no letters, no logo, no watermark.")
 
 
+SCENE_COMPOSITION = (
+    "Landscape 16:9 background plate, eye-level wide view with believable perspective and open foreground space "
+    "for characters added later. The place is completely empty: no people, faces, human figures or silhouettes. "
+    "No text, letters, signs, logos or watermarks."
+)
+
+
 def qwen_scene_prompt(scene: Mapping) -> str:
+    """One effective prompt for local generation and external copying, including background composition rules."""
+    custom = str(scene.get("image_prompt") or "").strip()
+    if custom:
+        return custom if custom.endswith(SCENE_COMPOSITION) else f"{custom}\n\n{SCENE_COMPOSITION}"
     light = TIME_OF_DAY_LIGHT.get(scene.get("time_of_day", "day"), "")
     return (f"{QWEN_PHOTO} A wide view of {scene['place']}{', ' + light if light else ''}. The place is completely empty, "
             "with no people at all. Realistic details. No text, no letters, no logo.")

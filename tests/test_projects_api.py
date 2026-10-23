@@ -254,6 +254,20 @@ def test_update_speaker_persists_engine_and_slider_changes(client):
     assert other["tts_engine"] == "edge_tts"
 
 
+def test_update_speaker_can_select_omnivoice_and_save_voice_design(client):
+    project = client.post("/api/projects", json=VALID_PAYLOAD).json()["data"]
+    speaker = project["speakers"][0]
+    response = client.patch(
+        f"/api/projects/{project['id']}/speakers/{speaker['id']}",
+        json={"tts_engine": "omnivoice", "voice_description": "Warm, clear narrator"},
+    )
+    assert response.status_code == 200, response.text
+    updated = next(s for s in response.json()["data"]["speakers"] if s["id"] == speaker["id"])
+    assert updated["tts_engine"] == "omnivoice"
+    assert updated["voice_id"] is None
+    assert updated["voice_description"] == "Warm, clear narrator"
+
+
 def test_update_speaker_partial_patch_leaves_other_fields_untouched(client):
     project = client.post("/api/projects", json=VALID_PAYLOAD).json()["data"]
     speaker_id = project["speakers"][0]["id"]

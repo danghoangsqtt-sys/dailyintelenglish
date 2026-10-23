@@ -185,16 +185,16 @@ async def _resolve_still_plate(db: aiosqlite.Connection, project_id: str, still_
             raise ValidationError("Choose a scene from the library: that scene does not exist.") from exc
         plate = await plate_of(scene)
         if plate is None:
-            raise ValidationError(f"The scene \"{scene['name']}\" has no plate yet: make its plate in the Character Library first.")
+            raise ValidationError(f"The scene \"{scene['name']}\" has no plate yet: make its plate in Activity Library → Scenes first.")
         return plate
     candidates = list(await project_visuals_service.scene_rows(db, project_id))
-    cursor = await db.execute("SELECT * FROM scenes ORDER BY is_builtin DESC, name")
+    cursor = await db.execute("SELECT * FROM scenes WHERE archived_at IS NULL ORDER BY is_builtin DESC, name")
     candidates += [dict(row) for row in await cursor.fetchall()]
     for scene in candidates:
         plate = await plate_of(scene)
         if plate is not None:
             return plate
-    raise ValidationError("No scene has a plate yet: make a scene plate in the Character Library, or choose another video picture mode.")
+    raise ValidationError("No scene has a plate yet: make a scene plate in Activity Library → Scenes, or choose another video picture mode.")
 
 
 def _copy_if_changed(source: Path, destination: Path) -> None:

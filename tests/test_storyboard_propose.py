@@ -2,10 +2,13 @@
 
 import json
 import re
+import sqlite3
+from contextlib import asynccontextmanager
 
 import pytest
 
 from backend.core.exceptions import ProviderError
+from backend.core.config import settings
 from backend.core.paths import get_project_root
 from backend.ai.llm.contracts import AIMode, GenerationResult
 from backend.ai.llm.fake_provider import FakeProvider
@@ -43,6 +46,11 @@ GOOD = {"beats": [
     {"line_from": 4, "line_to": 5, "kind": "scene", "scene_id": "builtin-park", "speakers": [0, 1],
      "action": "walking along the path", "expression": "calm"},
 ]}
+
+
+def _fallback_ids(api_client):
+    scenes = sorted(data(api_client.get("/api/visuals/scenes")), key=lambda scene: (scene["category"], scene["name"], scene["id"]))
+    return [scene["id"] for scene in scenes[:3]]
 
 
 def test_valid_ai_answer_is_saved(client, fake_ai):  # noqa: F811
@@ -124,10 +132,11 @@ def test_rule_violations_twice_fall_back_to_rule(client, fake_ai):  # noqa: F811
     assert saved["proposal"]["path"] == "rule" and saved["source"] == "rule"
     assert "gap at line 3" in provider.calls[1].prompt
     assert "they end at 4" in saved["proposal"]["reason"]
-    assert [(b["line_from"], b["line_to"], b["scene_id"]) for b in saved["beats"]] == [(0, 5, "builtin-cafe")]
+    assert [(b["line_from"], b["line_to"], b["scene_id"]) for b in saved["beats"]] == [
+        (0, 1, _fallback_ids(client)[0]), (2, 3, _fallback_ids(client)[1]), (4, 5, _fallback_ids(client)[2])]
 
 
-def test_provider_error_falls_back_to_project_scenes(client, fake_ai):  # noqa: F811
+def test_provider_error_falls_back_to_active_library(client, fake_ai):  # noqa: F811
     project = project_with_script(client)
     data(client.put(f"/api/projects/{project['id']}/visuals/scenes",
                     json=["builtin-classroom", "builtin-park", "builtin-farm"]))
@@ -135,7 +144,8 @@ def test_provider_error_falls_back_to_project_scenes(client, fake_ai):  # noqa: 
     saved = data(client.post(f"/api/projects/{project['id']}/storyboard/propose"))
     assert saved["proposal"] == {"path": "rule", "reason": "AI unavailable (ProviderError)"}
     assert [(b["line_from"], b["line_to"], b["scene_id"]) for b in saved["beats"]] == [
-        (0, 1, "builtin-classroom"), (2, 3, "builtin-park"), (4, 5, "builtin-farm")]
+        (0, 1, _fallback_ids(client)[0]), (2, 3, _fallback_ids(client)[1]), (4, 5, _fallback_ids(client)[2])]
+    assert [b["scene_id"] for b in saved["beats"]] != ["builtin-classroom", "builtin-park", "builtin-farm"]
     assert saved["estimate"]["images"] == 3
 
 
@@ -144,7 +154,73 @@ def test_rule_beats_tile_cap_and_talkers(monkeypatch):
     assert [(b.line_from, b.line_to, b.speakers) for b in beats] == [(0, 3, [0, 1]), (4, 6, [1])]
     monkeypatch.setattr(storyboard_service.settings, "VISUALS_IMAGE_CAP", 2)
     assert len(storyboard_service.rule_beats([0, 1] * 5, {0, 1}, ["a", "b", "c"])) == 2  # 3 places x 1 > 2
-    assert [b.scene_id for b in storyboard_service.rule_beats([0], set(), [])] == ["builtin-cafe"]
+    empty = storyboard_service.rule_beats([0], set(), [])
+    assert len(empty) == 1 and empty[0].scene_id is None and empty[0].new_place
+
+
+def test_proposals_exclude_archives_even_when_previously_referenced(client, fake_ai):  # noqa: F811
+    project = project_with_script(client)
+    scene = data(client.post("/api/visuals/scenes/builtin-cafe/duplicate"))
+    body = {"beats": [{"line_from": 0, "line_to": 5, "scene_id": scene["id"]}]}
+    data(client.put(f"/api/projects/{project['id']}/storyboard", json=body))
+    data(client.post(f"/api/visuals/scenes/{scene['id']}/archive"))
+    provider = fake_ai([_result(body), _result(body)])
+    saved = data(client.post(f"/api/projects/{project['id']}/storyboard/propose"))
+    assert saved["proposal"]["path"] == "rule"
+    assert "Archived scene" in saved["proposal"]["reason"]
+    assert all(beat["scene_id"] != scene["id"] for beat in saved["beats"])
+    assert scene["id"] not in provider.calls[0].prompt
+
+
+def test_empty_active_library_falls_back_to_new_place(client, fake_ai):  # noqa: F811
+    project = project_with_script(client)
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute("UPDATE scenes SET archived_at = 'now'")
+    fake_ai([ProviderError("down")])
+    saved = data(client.post(f"/api/projects/{project['id']}/storyboard/propose"))
+    assert saved["proposal"]["path"] == "rule" and saved["estimate"]["images"] == 1
+    assert len(saved["beats"]) == 1
+    beat = saved["beats"][0]
+    assert (beat["line_from"], beat["line_to"], beat["scene_id"]) == (0, 5, None)
+    assert beat["new_place"]
+
+
+def test_fallback_refreshes_active_library_after_ai_io(client, monkeypatch):  # noqa: F811
+    project = project_with_script(client)
+    old_ids = _fallback_ids(client)
+
+    class ArchivingRouter:
+        async def generate(self, request):
+            with sqlite3.connect(settings.db_path) as connection:
+                connection.executemany("UPDATE scenes SET archived_at = 'now' WHERE id = ?", [(sid,) for sid in old_ids])
+            raise ProviderError("down")
+
+    monkeypatch.setattr(storyboard_service, "build_ai_router_from_settings", ArchivingRouter)
+    saved = data(client.post(f"/api/projects/{project['id']}/storyboard/propose"))
+    assert [beat["scene_id"] for beat in saved["beats"]] == _fallback_ids(client)
+    assert not set(old_ids) & {beat["scene_id"] for beat in saved["beats"]}
+
+
+def test_ai_choice_archived_between_read_validation_and_save_falls_back(client, fake_ai, monkeypatch):  # noqa: F811
+    project = project_with_script(client)
+    scene = data(client.post("/api/visuals/scenes/builtin-cafe/duplicate"))
+    body = {"beats": [{"line_from": 0, "line_to": 5, "scene_id": scene["id"]}]}
+    data(client.put(f"/api/projects/{project['id']}/storyboard", json=body))
+    provider = fake_ai([_result(body)])
+    original_write = storyboard_service.write_transaction
+
+    @asynccontextmanager
+    async def archive_before_save(db):
+        async with original_write(db):
+            await db.execute("UPDATE scenes SET archived_at = 'now' WHERE id = ?", (scene["id"],))
+            yield
+
+    monkeypatch.setattr(storyboard_service, "write_transaction", archive_before_save)
+    saved = data(client.post(f"/api/projects/{project['id']}/storyboard/propose"))
+    assert len(provider.calls) == 1 and saved["proposal"]["path"] == "rule"
+    assert "Archived scene" in saved["proposal"]["reason"]
+    assert [beat["scene_id"] for beat in saved["beats"]] == _fallback_ids(client)
+    assert scene["id"] not in {beat["scene_id"] for beat in saved["beats"]}
 
 
 def test_propose_needs_a_script(client, fake_ai):  # noqa: F811

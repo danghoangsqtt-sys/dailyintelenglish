@@ -353,6 +353,37 @@ async def test_pipeline_model_returning_aliases_completes(db):
     assert gemini.call_count == 2  # outline + section -- no repair needed
 
 
+async def test_versioned_script_job_annotates_only_after_validation(db):
+    """New API job snapshots add one optional placement call after clean section output."""
+    project = await _project(db)
+    outline_json = json.dumps({
+        "title": "T", "sections": [{"index": 1, "objective": "cover the topic fully here", "target_words": 100}],
+    })
+    section_json = json.dumps([
+        {"speaker": "S1", "text": _words(25, 0)},
+        {"speaker": "S2", "text": _words(25, 25)},
+        {"speaker": "S1", "text": _words(25, 50)},
+        {"speaker": "S2", "text": _words(25, 75)},
+    ])
+    cues_json = json.dumps({"cues": [{"line_index": 0, "after_word_index": 3,
+                                      "cue_type": "laugh", "variant": "ha-ha"}]})
+    router, provider, _ = _build_router([_result(outline_json), _result(section_json), _result(cues_json)])
+    job, _ = await ai_job_service.create_job(db, project["id"], "script", {
+        "project": project, "operation": "script", "vocal_cues_version": 1,
+    })
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    await script_pipeline.make_handler(router)(claimed, AIWorker(db_getter=lambda: db))
+
+    final_job = await ai_job_service.get_job(db, job["id"], project["id"])
+    lines = await script_service.get_script(db, project["id"])
+    assert final_job["status"] == "complete"
+    assert provider.call_count == 3
+    assert "[cười:ha-ha]" in lines[0]["text"]
+    from backend.ai.tts.vocal_cues import caption_text
+
+    assert caption_text(lines[0]["text"]) == _words(25, 0)
+
+
 async def test_pipeline_model_returning_a_near_miss_uuid_resolves_and_completes(db, caplog):
     """Verification item 3: the model echoes a garbled/truncated UUID (the real
     trigger case) instead of the alias -- resolved via the safety net, the job

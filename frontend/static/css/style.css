@@ -267,7 +267,12 @@ h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); lett
 .speaker-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid; border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 700; }
 .line-text { margin: 0 -6px; border-radius: 6px; padding: 4px 6px; color: var(--text); font-size: 15px; line-height: 1.55; cursor: text; }
 .line-text:hover { background: var(--surface-2); }
+.line-text[role="button"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .line-text textarea { width: 100%; min-height: 60px; resize: vertical; border: 1px solid var(--accent); border-radius: 8px; padding: 8px 10px; background: var(--surface); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.5; }
+.vocal-cue-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; cursor: default; }
+.vocal-cue-toolbar-label { margin-right: 2px; font-weight: 650; }
+.vocal-cue-toolbar .btn { min-height: 40px; padding: 6px 10px; white-space: nowrap; }
+.vocal-cue-hint { display: block; margin-top: 7px; color: var(--muted); font-size: 12px; line-height: 1.45; cursor: default; }
 .notes-details { margin-top: 10px; font-size: 13px; }
 .notes-details summary { color: var(--muted); font-weight: 650; cursor: pointer; }
 .notes-body { display: grid; gap: 4px; margin-top: 8px; border-radius: 8px; padding: 10px 12px; background: var(--surface-2); color: var(--muted); }
@@ -450,3 +455,8 @@ h1, h2, h3, .section-title, .page-title { font-family: var(--font-display); lett
 
 /* Phase 71 (ENH-053): the local AI picture features, hidden on a computer that cannot draw them */
 html[data-local-image-ai="off"] .needs-local-gpu { display: none !important; }
+
+/* Phase 76: shared Topic / Series / video output folder controls */
+.pf-layout-label { display: block; margin-top: 10px; font-size: 13px; font-weight: 700; }
+.pf-layout { display: block; width: min(100%, 520px); margin-top: 4px; }
+.pf-preview { overflow-wrap: anywhere; color: var(--muted); }

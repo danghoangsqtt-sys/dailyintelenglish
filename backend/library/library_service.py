@@ -6,24 +6,36 @@ import asyncio
 import random
 import shutil
 import uuid
+import warnings
+from contextlib import suppress
 from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
 import aiosqlite
-from PIL import Image
+from fastapi import UploadFile
+from PIL import Image, ImageOps, UnidentifiedImageError
 from pydantic import ValidationError as PydanticValidationError
 
 from backend.core.config import settings
-from backend.core.exceptions import ConflictError, NotFoundError, ValidationError
+from backend.core.exceptions import AppError, ConflictError, NotFoundError, ValidationError
 from backend.schemas.visuals import CharacterInput, CharacterPatch, SceneInput, ScenePatch
+from backend.ai.image import recipes
 from backend.ai.image.recipes import SHEET_KINDS
+from backend.db.transactions import read_transaction, write_transaction
 
 CHARACTER_FIELDS = (
     "name", "gender", "age_group", "ethnicity", "role", "hair", "eyes", "extra",
     "top_color", "top_item", "bottom_color", "bottom_item",
 )
+
+_SCENE_UPLOAD_CHUNK_BYTES = 1024 * 1024
+_SCENE_MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+_SCENE_MAX_PIXELS = 24_000_000
+_SCENE_BACKGROUND_SIZE = (1280, 720)
+_SCENE_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 
 
 def _now() -> str:
@@ -242,11 +254,52 @@ async def remove_character_files(character_id: str) -> None:
     await asyncio.to_thread(shutil.rmtree, settings.DATA_DIR / "library" / "sprites" / character_id, ignore_errors=True)
 
 
-async def list_scenes(db: aiosqlite.Connection) -> list[dict]:
-    # Task 23.4: `used_count` = projects whose scene list contains the scene (one grouped query).
+# Keep usage and historical visibility on the same definition of a project reference.
+# Plan versions and approved snapshots remain usable after the current plan is edited.
+_SCENE_REFERENCES_CTE = """
+WITH explainer_documents AS (
+    SELECT project_id, plan_json FROM project_explainer_plans
+    UNION ALL
+    SELECT project_id, plan_json FROM project_explainer_plan_versions
+    UNION ALL
+    SELECT project_id, json_extract(approved_snapshot_json, '$.plan')
+    FROM project_explainer_plans WHERE approved_snapshot_json IS NOT NULL
+), scene_references AS (
+    SELECT project_id, scene_id FROM project_scenes
+    UNION
+    SELECT project_id, scene_id FROM project_beats WHERE scene_id IS NOT NULL
+    UNION
+    SELECT d.project_id, json_extract(segment.value, '$.scene.scene_id')
+    FROM explainer_documents d, json_each(d.plan_json, '$.segments') segment
+    WHERE json_type(segment.value, '$.scene.scene_id') = 'text'
+    UNION
+    SELECT p.project_id, json_extract(scene.value, '$.id')
+    FROM project_explainer_plans p, json_each(p.approved_snapshot_json, '$.stage.scenes') scene
+    WHERE json_type(scene.value, '$.id') = 'text'
+)
+"""
+
+
+async def project_scene_ids(db: aiosqlite.Connection, project_id: str) -> set[str]:
+    """Scene IDs already referenced by this project, including its saved history."""
     cursor = await db.execute(
-        "SELECT s.*, COUNT(DISTINCT ps.project_id) AS used_count FROM scenes s "
-        "LEFT JOIN project_scenes ps ON ps.scene_id = s.id GROUP BY s.id ORDER BY s.is_builtin DESC, s.name"
+        _SCENE_REFERENCES_CTE + "SELECT scene_id FROM scene_references WHERE project_id = ?", (project_id,),
+    )
+    return {row[0] for row in await cursor.fetchall()}
+
+
+async def list_scenes(
+    db: aiosqlite.Connection, include_archived: bool = False, project_id: str | None = None,
+) -> list[dict]:
+    """Active choices, optionally including all archives or only this project's historical ones."""
+    cursor = await db.execute(
+        _SCENE_REFERENCES_CTE
+        + "SELECT s.*, COUNT(DISTINCT refs.project_id) AS used_count FROM scenes s "
+        "LEFT JOIN scene_references refs ON refs.scene_id = s.id "
+        "WHERE s.archived_at IS NULL OR ? OR EXISTS ("
+        "SELECT 1 FROM scene_references own WHERE own.scene_id = s.id AND own.project_id = ?) "
+        "GROUP BY s.id ORDER BY s.is_builtin DESC, s.name",
+        (include_archived, project_id),
     )
     return [_scene_view(dict(row)) for row in await cursor.fetchall()]
 
@@ -262,10 +315,10 @@ async def duplicate_scene(db: aiosqlite.Connection, scene_id: str) -> dict:
         name, number = f"{base} {number}", number + 1
     new_id, now = str(uuid.uuid4()), _now()
     await db.execute(
-        "INSERT INTO scenes (id, name, place, staging, category, time_of_day, seed, created_at, updated_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO scenes (id, name, place, staging, category, time_of_day, seed, created_at, updated_at, "
+        "source_request, image_prompt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (new_id, name, row["place"], row["staging"], row["category"], row["time_of_day"],
-         random.randint(1, 2**31 - 2), now, now),
+         random.randint(1, 2**31 - 2), now, now, row["source_request"], row["image_prompt"]),
     )
     return _scene_view(await get_scene_row(db, new_id))
 
@@ -289,10 +342,10 @@ async def create_scene(db: aiosqlite.Connection, body: SceneInput) -> dict:
     scene_id, now = str(uuid.uuid4()), _now()
     try:
         await db.execute(
-            "INSERT INTO scenes (id, name, place, staging, category, time_of_day, seed, created_at, updated_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO scenes (id, name, place, staging, category, time_of_day, seed, created_at, updated_at, "
+            "source_request, image_prompt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (scene_id, body.name, body.place, body.staging, body.category, body.time_of_day,
-             random.randint(1, 2**31 - 2), now, now),
+             random.randint(1, 2**31 - 2), now, now, body.source_request, body.image_prompt),
         )
     except aiosqlite.IntegrityError as exc:
         raise ConflictError("Scene name already exists") from exc
@@ -301,16 +354,19 @@ async def create_scene(db: aiosqlite.Connection, body: SceneInput) -> dict:
 
 async def edit_scene(db: aiosqlite.Connection, scene_id: str, patch: ScenePatch) -> dict:
     row = await get_scene_row(db, scene_id)
+    _require_active_scene(row)
     fields = patch.model_dump(exclude_unset=True)
     if any(value is None for value in fields.values()):
         raise ValidationError("Scene fields cannot be null")
-    keys = ("name", "place", "staging", "category", "time_of_day")
+    keys = ("name", "place", "staging", "category", "time_of_day", "source_request", "image_prompt")
     merged = {key: fields.get(key, row[key]) for key in keys}
     # Task 23.2: the plate shows the place at a time of day; changing either makes it stale.
-    stale = merged["place"] != row["place"] or merged["time_of_day"] != row["time_of_day"]
+    stale = (merged["place"] != row["place"] or merged["time_of_day"] != row["time_of_day"]
+             or recipes.qwen_scene_prompt(merged) != recipes.qwen_scene_prompt(row))
     try:
         await db.execute(
             "UPDATE scenes SET name = ?, place = ?, staging = ?, category = ?, time_of_day = ?, "
+            "source_request = ?, image_prompt = ?, "
             "preview_path = CASE WHEN ? THEN NULL ELSE preview_path END, updated_at = ? WHERE id = ?",
             (*(merged[key] for key in keys), int(stale), _now(), scene_id),
         )
@@ -319,11 +375,118 @@ async def edit_scene(db: aiosqlite.Connection, scene_id: str, patch: ScenePatch)
     return _scene_view(await get_scene_row(db, scene_id))
 
 
+def _require_active_scene(row: dict) -> None:
+    if row["archived_at"] is not None:
+        raise ConflictError("Restore the archived scene before editing it or uploading a background")
+
+
+async def read_scene_upload(file: UploadFile) -> bytes:
+    """Read a bounded scene image upload and always close its temporary file handle."""
+    content = bytearray()
+    try:
+        if Path(file.filename or "").suffix.lower() not in _SCENE_IMAGE_SUFFIXES:
+            raise ValidationError("Scene backgrounds support PNG, JPEG and WebP")
+        while chunk := await file.read(_SCENE_UPLOAD_CHUNK_BYTES):
+            content.extend(chunk)
+            if len(content) > _SCENE_MAX_UPLOAD_BYTES:
+                raise ValidationError("Scene backgrounds must be 20 MB or smaller")
+        if not content:
+            raise ValidationError("Uploaded scene background is empty")
+        return bytes(content)
+    finally:
+        await file.close()
+
+
+def _encode_scene_background(content: bytes) -> bytes:
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(BytesIO(content), formats=("PNG", "JPEG", "WEBP")) as source:
+                if source.width * source.height > _SCENE_MAX_PIXELS:
+                    raise ValidationError("Scene background exceeds the 24 million pixel limit")
+                source.verify()
+            with Image.open(BytesIO(content), formats=("PNG", "JPEG", "WEBP")) as source:
+                image = ImageOps.exif_transpose(source).convert("RGBA")
+                background = Image.new("RGBA", image.size, "white")
+                background.alpha_composite(image)
+                fitted = ImageOps.fit(background.convert("RGB"), _SCENE_BACKGROUND_SIZE,
+                                      method=Image.Resampling.LANCZOS, centering=(0.5, 0.15))
+                encoded = BytesIO()
+                fitted.save(encoded, format="PNG")
+                return encoded.getvalue()
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
+        raise ValidationError("Scene background exceeds the pixel limit") from exc
+    except (OSError, ValueError, SyntaxError, UnidentifiedImageError) as exc:
+        raise ValidationError("Scene background must be a readable PNG, JPEG or WebP image") from exc
+
+
+def _write_scene_background(target: Path, content: bytes) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("xb") as output:
+        output.write(content)
+
+
+async def upload_scene_background(db: aiosqlite.Connection, scene_id: str, file: UploadFile) -> dict:
+    """Import a scene plate outside DB locks, then atomically publish its new version.
+
+    Owns its read/write transactions. Historical files remain intact, including on decode,
+    storage or commit failure; concurrent edits or archives require the owner to retry.
+    """
+    try:
+        async with read_transaction():
+            original = await get_scene_row(db, scene_id)
+            _require_active_scene(original)
+    except BaseException:
+        await file.close()
+        raise
+    content = await read_scene_upload(file)
+    encoded = await asyncio.to_thread(_encode_scene_background, content)
+    root = (settings.DATA_DIR / "library" / "scenes").resolve()
+    folder = (root / scene_id).resolve()
+    if folder.parent != root:
+        raise ValidationError("Invalid scene storage path")
+    target = folder / f"background-{uuid.uuid4().hex}.png"
+    try:
+        await asyncio.to_thread(_write_scene_background, target, encoded)
+        async with write_transaction(db):
+            current = await get_scene_row(db, scene_id)
+            _require_active_scene(current)
+            if current["updated_at"] != original["updated_at"]:
+                raise ConflictError("Scene changed during upload; reload and try again")
+            await db.execute("UPDATE scenes SET preview_path = ?, updated_at = ? WHERE id = ?",
+                             (str(target), _now(), scene_id))
+            result = _scene_view(await get_scene_row(db, scene_id))
+        return result
+    except BaseException as exc:
+        with suppress(OSError):
+            await asyncio.to_thread(target.unlink, missing_ok=True)
+        if isinstance(exc, (OSError, aiosqlite.Error)):
+            raise AppError("Could not save scene background; the previous background was kept") from exc
+        raise
+
+
 async def delete_scene(db: aiosqlite.Connection, scene_id: str) -> None:
     row = await get_scene_row(db, scene_id)
     if row["is_builtin"]:
         raise ConflictError("Built-in scenes cannot be deleted")
-    await db.execute("DELETE FROM scenes WHERE id = ?", (scene_id,))
+    await archive_scene(db, scene_id)
+
+
+async def archive_scene(db: aiosqlite.Connection, scene_id: str) -> dict:
+    """Archive a custom scene while retaining its plate and all project references."""
+    row = await get_scene_row(db, scene_id)
+    if row["is_builtin"]:
+        raise ConflictError("Built-in scenes cannot be archived")
+    # Lifecycle changes do not change the plate's version or invalidate approved render snapshots.
+    await db.execute("UPDATE scenes SET archived_at = COALESCE(archived_at, ?) WHERE id = ?", (_now(), scene_id))
+    return _scene_view(await get_scene_row(db, scene_id))
+
+
+async def restore_scene(db: aiosqlite.Connection, scene_id: str) -> dict:
+    """Make an archived scene available for new selections without changing its plate version."""
+    await get_scene_row(db, scene_id)
+    await db.execute("UPDATE scenes SET archived_at = NULL WHERE id = ?", (scene_id,))
+    return _scene_view(await get_scene_row(db, scene_id))
 
 
 def data_path(path: str) -> Path:

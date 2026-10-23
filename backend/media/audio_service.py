@@ -25,6 +25,7 @@ import numpy as np
 import pyloudnorm as pyln
 from pydub import AudioSegment
 
+from backend.ai.tts.vocal_cues import caption_text
 from backend.core.config import settings
 from backend.core.constants import (
     MP3_BITRATE, SILENCE_DIFFERENT_SPEAKER_MS, SILENCE_SAME_SPEAKER_MS, TARGET_LOUDNESS_LUFS, WAV_BIT_DEPTH,
@@ -176,7 +177,7 @@ def _mix_project_sync(
                 "end_sec": round(cursor_ms / 1000, 3),
                 "label": speaker_names_by_id.get(line["speaker_id"], line["speaker_id"]),
                 "speaker_id": line["speaker_id"],
-                "text": line.get("text", ""),
+                "text": caption_text(line.get("text", "")),
             }
         )
         word_timestamps.append(

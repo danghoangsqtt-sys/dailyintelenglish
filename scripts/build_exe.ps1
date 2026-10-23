@@ -3,7 +3,7 @@
 # Usage: powershell -File scripts\build_exe.ps1
 param(
     [string]$OutputRoot = 'dist',
-    [string]$Version = '1.7.0',
+    [string]$Version = '2.0.0',
     # Phase 71 (ENH-053): 'lite' hides the local AI picture features by default (for computers without a large GPU)
     [ValidateSet('full', 'lite')][string]$Edition = 'full'
 )

@@ -1,12 +1,10 @@
-"""Converts script lines to speech per speaker (Task 1.6, Sub-task 1.6a).
-
-Edge TTS is the only engine (D56, owner 2026-10-06). The never-integrated OmniVoice path, which
-always fell back to Edge, and the Kokoro / StyleTTS 2 experiments were removed.
-"""
+"""Synthesize script lines with the selected Edge TTS or local OmniVoice engine."""
 
 import asyncio
+import io
 import json
 import logging
+import os
 import uuid
 from asyncio import sleep
 from pathlib import Path
@@ -14,15 +12,26 @@ from typing import NamedTuple
 
 import aiosqlite
 import edge_tts
+from pydub import AudioSegment
 
+from backend.ai.tts.vocal_cues import has_vocal_cues, split_vocal_cues
+from backend.ai.tts.vocal_cues import to_omnivoice_text
+from backend.ai.tts import omnivoice_service
 from backend.core.config import settings
-from backend.core.constants import EDGE_TTS_VOICE_MAP
-from backend.core.exceptions import ConflictError, NotFoundError, TTSError
+from backend.core.constants import EDGE_TTS_PITCH_LIMIT_HZ, EDGE_TTS_VOICE_MAP, LEGACY_TTS_ENGINES
+from backend.core.exceptions import ConflictError, NotFoundError, TTSError, ValidationError
 
 from backend.core.voice import line_fingerprint, resolve_voice_id
 from backend.db.transactions import write_transaction
 
 logger = logging.getLogger(__name__)
+
+# pydub's converter and ffprobe lookup must also work when a preview reaches TTS
+# before the audio mixer module has been imported.
+AudioSegment.converter = settings.FFMPEG_PATH
+_ffmpeg_dir = str(Path(settings.FFMPEG_PATH).parent)
+if _ffmpeg_dir != "." and _ffmpeg_dir not in os.environ.get("PATH", "").split(os.pathsep):
+    os.environ["PATH"] = _ffmpeg_dir + os.pathsep + os.environ.get("PATH", "")
 
 class WordBoundary(NamedTuple):
     """One word's timing within its own line's audio (local time, not mix-aggregated).
@@ -54,13 +63,14 @@ def _volume_percent(volume: float) -> str:
     return f"{'+' if pct >= 0 else ''}{pct}%"
 
 
-def _pitch_hz(pitch: float) -> str:
+def _pitch_hz(pitch: float, *, delta_hz: int = 0) -> str:
     """Convert the speaker's normalized pitch (-1.0..1.0, SpeakerConfig) to an Edge TTS pitch string.
 
     -1.0/+1.0 map to -50Hz/+50Hz — audible but not distorted, roughly matching Azure's
     documented safe pitch-shift range for neural voices.
     """
-    value = round(pitch * 50)
+    requested = round(pitch * EDGE_TTS_PITCH_LIMIT_HZ) + delta_hz
+    value = max(-EDGE_TTS_PITCH_LIMIT_HZ, min(EDGE_TTS_PITCH_LIMIT_HZ, requested))
     return f"{'+' if value >= 0 else ''}{value}Hz"
 
 
@@ -72,7 +82,9 @@ EDGE_TTS_RETRY_DELAY_SECONDS = 0.5
 _TICKS_PER_SECOND = 10_000_000
 
 
-async def _synthesize_edge_tts(text: str, speaker: dict) -> tuple[bytes, list[WordBoundary]]:
+async def _synthesize_edge_tts(
+    text: str, speaker: dict, *, pitch_delta_hz: int = 0,
+) -> tuple[bytes, list[WordBoundary]]:
     """Synthesize speech via the Edge TTS online engine, capturing per-word timestamps.
 
     Edge TTS's free endpoint occasionally returns an empty stream under rapid-fire
@@ -93,7 +105,7 @@ async def _synthesize_edge_tts(text: str, speaker: dict) -> tuple[bytes, list[Wo
             voice,
             rate=_rate_percent(speaker["speed"]),
             volume=_volume_percent(speaker["volume"]),
-            pitch=_pitch_hz(speaker["pitch"]),
+            pitch=_pitch_hz(speaker["pitch"], delta_hz=pitch_delta_hz),
             boundary="WordBoundary",
         )
         chunks = bytearray()
@@ -154,6 +166,75 @@ def _write_word_boundaries_sync(path: Path, word_boundaries: list[WordBoundary])
     )
 
 
+def _join_vocal_parts_sync(
+    parts: list[tuple[str, bytes, list[WordBoundary]]],
+) -> tuple[bytes, list[WordBoundary]]:
+    """Decode each Edge MP3 to measure duration, then export one continuous MP3."""
+
+    combined: AudioSegment | None = None
+    boundaries: list[WordBoundary] = []
+    for kind, audio_bytes, words in parts:
+        segment = AudioSegment.from_file(io.BytesIO(audio_bytes), format="mp3")
+        if combined is not None:
+            segment = segment.set_frame_rate(combined.frame_rate).set_channels(combined.channels).set_sample_width(combined.sample_width)
+        offset_sec = combined.frame_count() / combined.frame_rate if combined is not None else 0.0
+        if kind == "speech":
+            boundaries.extend(
+                WordBoundary(word.text, round(offset_sec + word.offset_sec, 4), word.duration_sec)
+                for word in words
+            )
+        combined = segment if combined is None else combined + segment
+    assert combined is not None
+    output = io.BytesIO()
+    combined.export(output, format="mp3")
+    return output.getvalue(), boundaries
+
+
+async def _synthesize_with_vocal_cues(text: str, speaker: dict) -> tuple[bytes, list[WordBoundary]]:
+    """Use the speaker voice for both dialogue and audible cue approximations."""
+
+    if not has_vocal_cues(text):
+        return await _synthesize_edge_tts(text, speaker)
+    parts = split_vocal_cues(text)
+    generated = []
+    for part in parts:
+        if part.pitch_delta_hz:
+            audio, words = await _synthesize_edge_tts(part.text, speaker, pitch_delta_hz=part.pitch_delta_hz)
+        else:
+            audio, words = await _synthesize_edge_tts(part.text, speaker)
+        generated.append((part.kind, audio, words))
+    try:
+        return await asyncio.to_thread(_join_vocal_parts_sync, generated)
+    except Exception as exc:
+        raise TTSError(f"Could not combine vocal cues: {exc}") from exc
+
+
+def _wav_to_mp3_sync(wav_bytes: bytes, volume: float) -> bytes:
+    segment = AudioSegment.from_file(io.BytesIO(wav_bytes), format="wav")
+    if volume <= 0:
+        channels, sample_width = segment.channels, segment.sample_width
+        segment = AudioSegment.silent(duration=len(segment), frame_rate=segment.frame_rate)
+        segment = segment.set_channels(channels).set_sample_width(sample_width)
+    elif volume != 1.0:
+        import math
+
+        segment += 20 * math.log10(volume)
+    output = io.BytesIO()
+    segment.export(output, format="mp3", bitrate="192k")
+    return output.getvalue()
+
+
+async def _synthesize_omnivoice(text: str, speaker: dict) -> bytes:
+    try:
+        model_text = to_omnivoice_text(text)
+    except ValueError as exc:
+        raise TTSError(str(exc)) from exc
+    wav_bytes = await omnivoice_service.synthesize(model_text, speaker)
+    return await asyncio.to_thread(
+        _wav_to_mp3_sync, wav_bytes, float(speaker.get("volume") if speaker.get("volume") is not None else 1.0),
+    )
+
+
 def has_word_timings(audio_cache_path: str) -> bool:
     """Task 32.8c (BUG-030): a cached line is only reusable for a mix when its word-timing sidecar exists.
 
@@ -188,13 +269,21 @@ async def synthesize_line_audio(project: dict, line: dict) -> dict:
     """
     speaker = _find_speaker(project, line["speaker_id"])
 
-    audio_bytes, word_boundaries = await _synthesize_edge_tts(line["text"], speaker)
-    engine_used = "edge_tts"
+    engine = LEGACY_TTS_ENGINES.get(speaker.get("tts_engine") or "edge_tts", speaker.get("tts_engine") or "edge_tts")
+    if engine == "edge_tts":
+        audio_bytes, word_boundaries = await _synthesize_with_vocal_cues(line["text"], speaker)
+    elif engine == "omnivoice":
+        audio_bytes = await _synthesize_omnivoice(line["text"], speaker)
+        word_boundaries = []
+    else:
+        raise TTSError(f"Unsupported TTS engine: {engine}")
+    engine_used = engine
 
     cache_dir = settings.DATA_DIR / "tts_cache" / project["id"] / uuid.uuid4().hex
     audio_path = cache_dir / f"{line['id']}.mp3"
     await asyncio.to_thread(_write_audio_cache_sync, cache_dir, audio_path, audio_bytes)
-    await asyncio.to_thread(_write_word_boundaries_sync, _word_timestamps_path(audio_path), word_boundaries)
+    if engine == "edge_tts":
+        await asyncio.to_thread(_write_word_boundaries_sync, _word_timestamps_path(audio_path), word_boundaries)
 
     await asyncio.to_thread(
         audio_path.with_suffix(".tts.json").write_text,
@@ -284,13 +373,16 @@ def cache_matches(project: dict, line: dict, *, allow_legacy: bool = True) -> bo
     path = Path(stored)
     project_root = (settings.DATA_DIR / "tts_cache" / project["id"]).resolve()
     try:
-        if project_root not in path.resolve().parents or not path.is_file() or not has_word_timings(str(path)):
+        engine = line_fingerprint(project, line)["engine"]
+        needs_word_timings = engine == "edge_tts"
+        if (project_root not in path.resolve().parents or not path.is_file()
+                or (needs_word_timings and not has_word_timings(str(path)))):
             return False
         metadata = path.with_suffix(".tts.json")
         if not metadata.exists():
-            return allow_legacy
+            return allow_legacy and not has_vocal_cues(line["text"])
         return json.loads(metadata.read_text(encoding="utf-8")) == line_fingerprint(project, line)
-    except (OSError, ValueError):
+    except (OSError, ValueError, ValidationError):
         return False
 
 
@@ -305,7 +397,7 @@ async def assert_line_current(
     if line is None:
         raise ConflictError("The script line changed while speech was being generated. Generate it again.")
     cursor = await db.execute(
-        "SELECT id, tts_engine, voice_id, accent, gender, speed, pitch, volume FROM speakers WHERE project_id=? AND id=?",
+        "SELECT id, tts_engine, voice_id, voice_description, accent, gender, speed, pitch, volume FROM speakers WHERE project_id=? AND id=?",
         (project_id, line["speaker_id"]),
     )
     speaker = await cursor.fetchone()

@@ -1,9 +1,6 @@
-"""Tests for TTSService (Task 1.6, Sub-task 1.6a — Edge-TTS-first).
+"""Tests for Edge TTS and optional local OmniVoice synthesis.
 
-No real network calls: `tts_service._synthesize_edge_tts` is monkeypatched with a fake
-async function returning canned bytes, same pattern used for Gemini in
-test_script_service.py. Edge TTS is the only engine (D56); a legacy "omnivoice" value is
-normalised to "edge_tts".
+No real network calls or model inference: engine work is replaced with focused fakes.
 """
 
 import json
@@ -96,40 +93,62 @@ async def test_synthesize_line_uses_edge_tts_when_engine_is_edge_tts(db, monkeyp
     assert row["audio_cache_path"] == result["audio_path"]
 
 
-async def test_legacy_omnivoice_speaker_is_stored_and_spoken_as_edge_tts(db, monkeypatch, tmp_path):
-    """D56 (Edge TTS only): an older client may still send "omnivoice". It is accepted,
-    normalised to "edge_tts", and the line is spoken by Edge TTS."""
+async def test_omnivoice_speaker_uses_local_engine_without_word_timings(db, monkeypatch):
     project = await project_service.create_project(
         db,
         make_config(speakers=[SpeakerConfig(name="Alex", gender="male", accent="american", tts_engine="omnivoice")]),
     )
     speaker = project["speakers"][0]
-    assert speaker["tts_engine"] == "edge_tts"
-    line = await _insert_line(db, project["id"], speaker["id"])
+    assert speaker["tts_engine"] == "omnivoice"
+    line = await _insert_line(db, project["id"], speaker["id"], text="Hello [cười:ha-ha] there [thở dài]")
 
-    calls = {"edge_tts": 0}
+    calls = {"edge_tts": 0, "omnivoice": []}
 
     async def fake_edge_tts(text: str, spk: dict) -> tuple[bytes, list]:
         calls["edge_tts"] += 1
         return FAKE_MP3_BYTES, []
 
-    monkeypatch.setattr(tts_service, "_synthesize_edge_tts", fake_edge_tts)
+    async def fake_omnivoice(text: str, spk: dict) -> bytes:
+        calls["omnivoice"].append((text, spk))
+        return b"fake wav bytes"
 
+    monkeypatch.setattr(tts_service, "_synthesize_edge_tts", fake_edge_tts)
+    monkeypatch.setattr(tts_service.omnivoice_service, "synthesize", fake_omnivoice)
+    monkeypatch.setattr(tts_service, "_wav_to_mp3_sync", lambda wav, volume: FAKE_MP3_BYTES)
     result = await tts_service.synthesize_line(db, project, line)
 
-    assert result["engine_used"] == "edge_tts"
-    assert calls["edge_tts"] == 1
+    assert result["engine_used"] == "omnivoice"
+    assert calls["edge_tts"] == 0
+    assert calls["omnivoice"][0][0] == "Hello [laughter] there [sigh]"
     from pathlib import Path
 
     audio_path = Path(result["audio_path"])
-    audio_path.with_suffix(".words.json").unlink()  # Task 19.2 sidecar, written alongside the mp3
+    assert not audio_path.with_suffix(".words.json").exists()
+    assert tts_service.cache_matches(project, {**line, "audio_cache_path": str(audio_path)})
     audio_path.unlink()
 
 
-def test_only_edge_tts_is_offered_and_unknown_engines_are_refused():
+async def test_omnivoice_ahem_fails_without_edge_fallback(db, monkeypatch):
+    project = await project_service.create_project(
+        db,
+        make_config(speakers=[SpeakerConfig(name="Alex", gender="male", accent="american", tts_engine="omnivoice")]),
+    )
+    speaker = project["speakers"][0]
+    line = await _insert_line(db, project["id"], speaker["id"], text="[hắng giọng] Let's begin.")
+
+    async def forbidden(*args, **kwargs):
+        raise AssertionError("Unsupported ahem must fail before invoking either engine")
+
+    monkeypatch.setattr(tts_service, "_synthesize_edge_tts", forbidden)
+    monkeypatch.setattr(tts_service.omnivoice_service, "synthesize", forbidden)
+    with pytest.raises(TTSError, match=r"does not support \[hắng giọng\]"):
+        await tts_service.synthesize_line_audio(project, line)
+
+
+def test_supported_engines_and_unknown_engines_are_validated():
     from backend.schemas.project import SpeakerUpdate
 
-    assert SpeakerUpdate(tts_engine="omnivoice").tts_engine == "edge_tts"
+    assert SpeakerUpdate(tts_engine="omnivoice").tts_engine == "omnivoice"
     with pytest.raises(ValueError):
         SpeakerUpdate(tts_engine="kokoro")
     with pytest.raises(ValueError):

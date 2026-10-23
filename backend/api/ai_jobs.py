@@ -47,7 +47,9 @@ async def create_ai_job(
             db,
             project_id=project_id,
             operation=body.operation,
-            input_snapshot={"project": project, "operation": body.operation},
+            input_snapshot={"project": project, "operation": body.operation, **(
+                {"vocal_cues_version": 1} if body.operation == "script" else {}
+            )},
             idempotency_key=body.idempotency_key,
             requested_provider=settings.AI_MODE,
             commit=False,

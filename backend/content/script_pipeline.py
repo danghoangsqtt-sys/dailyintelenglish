@@ -15,6 +15,7 @@ import hashlib
 import json
 import logging
 import re
+from contextlib import suppress
 from collections import Counter
 from datetime import datetime, timezone
 from typing import NamedTuple, TYPE_CHECKING
@@ -40,6 +41,8 @@ from backend.content import project_service, script_service
 from backend.ai.llm.contracts import GenerationRequest, GenerationResult
 from backend.ai.llm.validation import parse_and_validate
 from backend.content.script_service import LanguageNotesOut
+from backend.content.vocal_cue_annotation import annotate_script_lines
+from backend.core.constants import AI_JOB_HEARTBEAT_SECONDS
 
 if TYPE_CHECKING:
     from backend.ai.llm.router import AIRouter
@@ -625,6 +628,16 @@ def compute_config_hash(project: dict, operation: str) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _job_project_hash(project: dict, job: dict) -> str:
+    """Preserve the submitted job's feature version when checking project staleness."""
+    snapshot = json.loads(job.get("input_snapshot_json") or "{}")
+    if not isinstance(snapshot, dict) or not snapshot:
+        return compute_config_hash(project, job["operation"])
+    snapshot["project"] = project
+    canonical = json.dumps(snapshot, sort_keys=True, default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 # --- prompt rendering (this module's own Jinja env -- backend/ai/llm/prompt_loader.py
 # is not in this task's allowed files, so its render_* wrappers aren't extended) --
 
@@ -1207,7 +1220,7 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
     async with read_transaction():
         project = await project_service.get_project(db, project_id)
 
-    if compute_config_hash(project, job["operation"]) != job["config_hash"]:
+    if _job_project_hash(project, job) != job["config_hash"]:
         async with write_transaction(db):
             await ai_job_service.mark_stale(db, job_id, commit=False)
         return
@@ -1509,16 +1522,6 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
     all_lines = await _vocabulary_repair(router, project, outline, all_lines, target_words, known_speaker_ids,
                                          num_speakers, db, job_id)
 
-    async with read_transaction():
-        final_project = await project_service.get_project(db, project_id)
-    if compute_config_hash(final_project, job["operation"]) != job["config_hash"]:
-        async with write_transaction(db):
-            await ai_job_service.mark_stale(db, job_id, commit=False)
-        return
-    if await _is_cancelled(db, job_id, project_id):
-        await _cancel(db, job_id)
-        return
-
     server_lines = [
         {
             "speaker_id": line.speaker_id,
@@ -1527,7 +1530,34 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
         }
         for line in all_lines
     ]
+    await _update_progress(db, job_id, "vocal_cues", 94)
+    snapshot = json.loads(job.get("input_snapshot_json") or "{}")
+    if isinstance(snapshot, dict) and snapshot.get("vocal_cues_version") == 1:
+        annotation_task = asyncio.create_task(annotate_script_lines(server_lines, project, router))
+        try:
+            while not annotation_task.done():
+                try:
+                    await asyncio.wait_for(asyncio.shield(annotation_task), timeout=AI_JOB_HEARTBEAT_SECONDS)
+                except TimeoutError:
+                    await worker.heartbeat(job_id)
+            server_lines, cue_warning = await annotation_task
+        finally:
+            if not annotation_task.done():
+                annotation_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await annotation_task
+        if cue_warning:
+            logger.warning("job_id=%s project_id=%s %s", job_id, project_id, cue_warning)
+        await worker.heartbeat(job_id)
+
     async with write_transaction(db):
+        final_project = await project_service.get_project(db, project_id)
+        if _job_project_hash(final_project, job) != job["config_hash"]:
+            await ai_job_service.mark_stale(db, job_id, commit=False)
+            return
+        if await _is_cancelled(db, job_id, project_id):
+            await ai_job_service.transition_status(db, job_id, "cancelled", commit=False)
+            return
         await script_service.save_script(db, project_id, server_lines, known_speaker_ids, commit=False)
         await project_service.mark_script_changed(db, project_id, commit=False)
         await ai_job_service.transition_status(db, job_id, "complete", commit=False)

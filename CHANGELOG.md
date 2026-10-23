@@ -8,6 +8,36 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [Unreleased]
 
+### Added — Phase 76 Topic / Series / video project folders
+
+- Step 1 and Step 7 can organize selected project outputs under a shared Topic parent, with automatic Series and numbered episode folders; standalone projects use Topic / project name.
+- Existing export paths remain in legacy mode until the user opts in. Checked outputs sync automatically, and previous folders are retained.
+
+## [2.0.0] - 2026-10-23 (local desktop build; not published)
+
+### Added — Phase 75 OmniVoice Voice Design (2026-10-23)
+
+- Step 4 can select local OmniVoice per speaker, edit a Voice Design description, and preview a sample. Edge remains the default.
+- Local lines run in an isolated CUDA worker under the shared GPU lease; laughter/sigh tags use model-native cues, unsupported ahem fails explicitly, and word timings are not fabricated.
+- Added a separate Python 3.11/CUDA setup script. Local inference and RTX 3060 audio review remain pending; the optional model stays outside the Full/Lite app packages.
+
+### Added — Phase 74 AI vocal cues (verified; Edge listening superseded by Phase 75, 2026-10-23)
+
+- AI may add sparse, editable laughter, sigh or throat-clear directions after script validation; invalid or unavailable annotation leaves the clean dialogue usable.
+- Step 2 can insert ha-ha and hi-hi variants. Edge TTS uses the selected voice for cue approximations and briefly lowers pitch after ahem; cue-bearing audio has versioned cache inputs.
+- Shared caption stripping removes the new tags from transcript consumers. 276 targeted automated checks passed; its Edge-specific listening gate was superseded by the owner's OmniVoice direction, with no Edge audio approval claimed.
+
+### Added - Phase 73 scene library (2026-10-23)
+
+- Scene requests in Vietnamese or English can be expanded into a detailed image prompt, edited/copied for external AI or used by local Qwen. Requests and prompts are saved with each scene; web-generated PNG/JPEG/WebP images can be uploaded as scene backgrounds.
+- Activity Library now has a Scenes tab for creating/editing/duplicating scenes, generating AI backgrounds, searching/filtering and archiving/restoring custom scenes. Archived scenes keep their pictures and historical project references.
+- Step 5 chooses scenes directly in each storyboard beat from the library, with search and a link to manage scenes. The project-level three-scene chip picker is removed; AI proposals and fallback use active library scenes.
+
+### Added — local desktop packages
+
+- Added versioned Full and Lite Windows x64 setup archives with SHA-256 checksums. The Full package is installed locally with a SQLite and prior-app backup; no public release was created.
+- OmniVoice local CUDA inference remains unverified on this machine; its isolated setup and model are not bundled.
+
 ## [1.7.0] - 2026-10-23
 
 ### Added — Phase 72 audience: international, Vietnamese or both (2026-10-23)

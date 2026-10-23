@@ -1,5 +1,5 @@
 /** Activity Library page (/activities): the activity pictures reused by the inserts, on shelves (generic or one
- * character) with review chips, and a tab for the scene-background import.
+ * character) with review chips, and a tab managed by scene_library.js.
  * Phase 44 (D123): the two-person shot library of the cast was removed with RealVisXL. Phase 56: renamed, tabs/shelves. */
 (() => {
   const state = { activities: [], characters: [], activityBusy: false,
@@ -673,7 +673,6 @@
       const status = await Api.getLibraryBackgrounds();
       byId("bg-folder").textContent = status.folder;
       byId("bg-count").textContent = `${status.images} background picture${status.images === 1 ? "" : "s"} in the folder`;
-      byId("tab-backgrounds-count").textContent = status.images ? String(status.images) : "";
     } catch (error) {
       console.error("Failed to read the backgrounds folder:", error);
     }
@@ -699,9 +698,11 @@
     }
     byId("bg-import-btn").disabled = false;
     await refreshBackgrounds();
+    window.dispatchEvent(new Event("dbe:scenes-changed"));
   }
 
   function setup() {
+    byId("theme-toggle").addEventListener("click", Theme.toggle);
     byId("bg-import-btn").addEventListener("click", importBackgrounds);
     byId("activity-import-btn").addEventListener("click", importActivities);
     byId("activity-upload-open").addEventListener("click", openActivityUpload);
@@ -720,17 +721,28 @@
       renderActivities();
     });
     const showTab = (name) => {
-      const backgrounds = name === "backgrounds";
+      const backgrounds = name === "scenes" || name === "backgrounds";
       byId("tab-activities").setAttribute("aria-selected", String(!backgrounds));
       byId("tab-backgrounds").setAttribute("aria-selected", String(backgrounds));
       byId("activity-panel").hidden = backgrounds;
       byId("background-panel").hidden = !backgrounds;
       byId("activity-upload-open").hidden = backgrounds;
-      try { history.replaceState(null, "", backgrounds ? "#backgrounds" : location.pathname + location.search); } catch { /* keep the URL */ }
+      if (name === "backgrounds") byId("import-card").open = true;
+      if (backgrounds) window.dispatchEvent(new Event("dbe:scenes-open"));
+      try {
+        const url = new URL(location.href);
+        url.hash = backgrounds ? name : "";
+        if (backgrounds) url.searchParams.set("tab", "scenes");
+        else url.searchParams.delete("tab");
+        history.replaceState(null, "", url);
+      } catch { /* keep the URL */ }
     };
     byId("tab-activities").addEventListener("click", () => showTab("activities"));
-    byId("tab-backgrounds").addEventListener("click", () => showTab("backgrounds"));
-    if (location.hash === "#backgrounds") showTab("backgrounds");
+    byId("tab-backgrounds").addEventListener("click", () => showTab("scenes"));
+    const tabFromHash = () => showTab(["#backgrounds", "#scenes"].includes(location.hash)
+      ? location.hash.slice(1) : new URLSearchParams(location.search).get("tab") === "scenes" ? "scenes" : "activities");
+    window.addEventListener("hashchange", tabFromHash);
+    tabFromHash();
     byId("activity-select-all").addEventListener("change", (event) => {
       visibleActivities().forEach((activity) => {
         if (event.target.checked) state.selectedActivities.add(activity.id);

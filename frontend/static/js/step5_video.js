@@ -48,9 +48,7 @@
     isGenerating: false,
     visuals: null,
     visualCharacters: [],
-    visualScenes: [],
     visualHealth: null,
-    visualSceneSelection: [],
     visualBusy: false,
     visualProgress: null,
     visualError: "",
@@ -381,56 +379,6 @@
     });
   }
 
-  function renderVisualScenes() {
-    const choices = byId("visual-scene-options");
-    choices.replaceChildren();
-    state.visualScenes.forEach((scene) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "btn btn-ghost btn-sm";
-      button.textContent = scene.name;
-      button.setAttribute("aria-pressed", String(state.visualSceneSelection.includes(scene.id)));
-      button.disabled = state.visualBusy;
-      button.addEventListener("click", async () => {
-        const selected = [...state.visualSceneSelection];
-        if (selected.includes(scene.id)) {
-          if (selected.length === 1) {
-            visualWarning("Choose at least one scene.");
-            return;
-          }
-          selected.splice(selected.indexOf(scene.id), 1);
-        } else if (selected.length < 3) {
-          selected.push(scene.id);
-        } else {
-          visualWarning("Choose up to three scenes.");
-          return;
-        }
-        state.visualBusy = true;
-        choices.querySelectorAll("button").forEach((control) => { control.disabled = true; });
-        try {
-          state.visuals = await Api.setProjectScenes(state.projectId, selected);
-          state.visualSceneSelection = selected;
-          state.visualError = "";
-        } catch (error) {
-          visualWarning(error.message || "Could not save scenes.");
-        } finally {
-          state.visualBusy = false;
-          renderProjectVisuals();
-        }
-      });
-      choices.append(button);
-    });
-    const order = byId("visual-scene-order");
-    order.replaceChildren();
-    state.visualSceneSelection.forEach((id, index) => {
-      const scene = state.visualScenes.find((item) => item.id === id);
-      if (!scene) return;
-      const chip = document.createElement("span");
-      chip.textContent = `${index + 1}. ${scene.name}`;
-      order.append(chip);
-    });
-  }
-
   async function renderActivityCoverage() {
     const line = byId("activity-coverage");
     if (!line || !state.projectId) return;
@@ -569,7 +517,6 @@
     if (!state.visuals) return;
     renderActivityCoverage();
     renderVisualCast();
-    renderVisualScenes();
     byId("visual-warnings").textContent = state.visualError;
   }
 
@@ -625,13 +572,12 @@
   async function loadProjectVisuals() {
     try {
       let characters, profiles;
-      [state.visuals, characters, state.visualScenes, state.visualHealth, profiles] = await Promise.all([
-        Api.getProjectVisuals(state.projectId), Api.listCharacters(), Api.listScenes(), Api.getVisualsHealth(),
+      [state.visuals, characters, state.visualHealth, profiles] = await Promise.all([
+        Api.getProjectVisuals(state.projectId), Api.listCharacters(), Api.getVisualsHealth(),
         Api.listProfiles("state=active"),
       ]);
       state.visualCharacters = castOptions(characters, profiles);
       state.visualProfiles = profiles;
-      state.visualSceneSelection = state.visuals.scenes.map((scene) => scene.id);
       renderProjectVisuals();
     } catch (error) {
       visualWarning(error.message || "Characters and scenes could not load.");

@@ -283,10 +283,10 @@ async def test_select_arbitrary_activity_pictures_for_review_and_delete(
 
 
 @pytest.mark.asyncio
-async def test_activity_library_page_has_shelves_review_chips_and_a_backgrounds_tab(
+async def test_activity_library_page_has_shelves_review_chips_and_a_scenes_tab(
     activity_browser: Browser, activity_live_server_url: str,
 ):
-    """Phase 56 (ENH-038): /activities is the renamed page; shelves and chips filter, backgrounds have their own tab."""
+    """Activity shelves and review chips coexist with Scenes and its advanced folder import."""
     inbox = activities.inbox_dir()
     inbox.mkdir(parents=True, exist_ok=True)
     Image.new("RGB", (1280, 720), (90, 60, 30)).save(inbox / "generic__reading__library__01.png")
@@ -315,10 +315,16 @@ async def test_activity_library_page_has_shelves_review_chips_and_a_backgrounds_
     assert await page.locator("#activity-grid .shot-card:not(.is-pending)").count() == 0
     await page.locator("#tab-backgrounds").click()
     assert await page.locator("#activity-panel").is_hidden()
+    await page.locator("#scene-form").wait_for(state="visible")
+    assert await page.locator("#bg-import-btn").is_hidden()
+    await page.locator("#import-card summary").click()
     await page.locator("#bg-import-btn").wait_for(state="visible")
     assert await page.locator("#activity-upload-open").is_hidden()
-    assert page.url.endswith("#backgrounds")
+    assert page.url.endswith("?tab=scenes#scenes")
     await page.reload()
+    await page.locator("#scene-form").wait_for(state="visible")
+    assert await page.locator("#bg-import-btn").is_hidden()
+    await page.locator("#import-card summary").click()
     await page.locator("#bg-import-btn").wait_for(state="visible")
     await page.locator("#tab-activities").click()
     await page.locator("#activity-grid").wait_for(state="visible")

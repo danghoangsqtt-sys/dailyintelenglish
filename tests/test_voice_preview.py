@@ -26,8 +26,12 @@ def client(tmp_path, monkeypatch):
     async def synth(text, speaker):
         return f"audio:{speaker['voice_id']}:{text}:{speaker['speed']}".encode(), []
 
+    async def synth_omnivoice(text, speaker):
+        return f"omnivoice:{speaker['gender']}:{text}:{speaker['speed']}".encode()
+
     monkeypatch.setattr(voice_catalog_service.edge_tts, "list_voices", voices)
     monkeypatch.setattr(tts_service, "_synthesize_edge_tts", synth)
+    monkeypatch.setattr(tts_service, "_synthesize_omnivoice", synth_omnivoice)
     with TestClient(app) as value:
         yield value
 
@@ -50,6 +54,20 @@ def test_routes_serve_typed_catalog_and_opaque_preview(client):
     assert media.headers["content-type"] == "audio/mpeg"
     assert PAYLOAD["voice_id"].encode() in media.content
     assert media.headers["cache-control"] == "no-store"
+
+
+def test_omnivoice_voice_design_audition_uses_local_synth_and_caches_design(client, monkeypatch):
+    response = client.post("/api/tts/voices/preview", json={
+        "engine": "omnivoice", "gender": "female", "accent": "british",
+        "voice_description": "Warm, gentle narrator", "text": "[laughter] Hello there.",
+    })
+    assert response.status_code == 200, response.text
+    result = response.json()["data"]
+    assert result["voice"]["engine"] == "omnivoice"
+    assert result["voice"]["voice_description"] == "Warm, gentle narrator"
+    media = client.get(result["audio_url"])
+    assert media.status_code == 200
+    assert media.content.startswith(b"omnivoice:female:")
 
 
 def test_audition_does_not_write_project_or_production_line_cache(client, tmp_path):

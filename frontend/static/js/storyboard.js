@@ -10,7 +10,7 @@
   const state = {
     projectId: new URLSearchParams(window.location.search).get("project_id"),
     lines: [], speakerNames: {}, lineSpeakers: [], cast: [], scenes: [],
-    beats: [], meta: {}, proposal: null, dirty: false, busy: false, cap: 12,
+    beats: [], meta: {}, proposal: null, dirty: false, busy: false, cap: 12, loaded: false, refreshing: false,
   };
   const $ = (id) => document.getElementById(id);
 
@@ -88,13 +88,15 @@
     box.replaceChildren(...(warnings || []).map((text) => element("p", { text })));
   }
 
-  function placeSelect(beat, index) {
+  function placeSelect(beat, index, query = "") {
     const select = element("select", { id: `beat-${index}-place`, name: "place" });
     const groups = new Map();
-    state.scenes.forEach((scene) => {
+    state.scenes.filter((scene) => (!scene.archived_at || scene.id === beat.scene_id)
+      && (scene.id === beat.scene_id || `${scene.name} ${scene.place} ${scene.category}`.toLowerCase().includes(query.toLowerCase())))
+      .forEach((scene) => {
       const category = scene.category || "other";
       if (!groups.has(category)) groups.set(category, element("optgroup", { label: category }));
-      groups.get(category).append(element("option", { value: scene.id, text: scene.name }));
+      groups.get(category).append(element("option", { value: scene.id, text: scene.name + (scene.archived_at ? " (archived)" : "") }));
     });
     [...groups.keys()].sort().forEach((key) => select.append(groups.get(key)));
     select.append(element("option", { value: NEW_PLACE, text: "New place…" }));
@@ -130,21 +132,31 @@
     kind.addEventListener("change", () => {
       beat.kind = kind.value;
       if (beat.kind === "insert") beat.scene_id = null;
-      else if (!beat.scene_id && !beat.new_place) beat.scene_id = state.scenes[0] ? state.scenes[0].id : null;
+      else if (!beat.scene_id && !beat.new_place) beat.scene_id = state.scenes.find((scene) => !scene.archived_at)?.id || null;
       markDirty();
       renderBeats();
     });
     fields.append(element("label", { htmlFor: kind.id, text: "Kind" }), kind);
 
     if (beat.kind === "scene") {
-      const place = placeSelect(beat, index);
-      place.addEventListener("change", () => {
+      let place = placeSelect(beat, index);
+      const search = element("input", { type: "search", id: `beat-${index}-scene-search`,
+        placeholder: "Search scenes", autocomplete: "off" });
+      search.addEventListener("input", () => {
+        const replacement = placeSelect(beat, index, search.value);
+        replacement.addEventListener("change", choosePlace);
+        place.replaceWith(replacement);
+        place = replacement;
+      });
+      function choosePlace() {
         beat.scene_id = place.value === NEW_PLACE ? null : place.value;
         if (beat.scene_id) beat.new_place = null;
         markDirty();
         renderBeats();
-      });
-      fields.append(element("label", { htmlFor: place.id, text: "Place" }), place);
+      }
+      place.addEventListener("change", choosePlace);
+      fields.append(element("label", { htmlFor: search.id, text: "Search scenes" }), search,
+        element("label", { htmlFor: place.id, text: "Place" }), place);
     }
     if (beat.kind === "insert" || !beat.scene_id) {
       const custom = element("input", {
@@ -256,7 +268,7 @@
     try {
       const [project, lines, visuals, scenes, storyboard] = await Promise.all([
         Api.getProject(state.projectId), Api.getScript(state.projectId), Api.getProjectVisuals(state.projectId),
-        Api.listScenes(), Api.getStoryboard(state.projectId),
+        Api.listScenes({ project_id: state.projectId }), Api.getStoryboard(state.projectId),
       ]);
       state.lines = lines;
       state.speakerNames = Object.fromEntries(project.speakers.map((speaker) => [speaker.id, speaker.name]));
@@ -266,10 +278,29 @@
       }));
       state.scenes = scenes;
       applyStoryboard(storyboard);
+      state.loaded = true;
     } catch (error) {
       $("storyboard-error").textContent = error.message || "The storyboard could not load.";
     }
   }
+
+  async function refreshScenes() {
+    if (!state.loaded || state.busy || state.refreshing || document.hidden) return;
+    state.refreshing = true;
+    try {
+      const scenes = await Api.listScenes({ project_id: state.projectId });
+      if (JSON.stringify(scenes) !== JSON.stringify(state.scenes)) {
+        state.scenes = scenes;
+        renderBeats();
+      }
+    } catch (error) {
+      $("storyboard-error").textContent = error.message || "Scenes could not refresh.";
+    } finally {
+      state.refreshing = false;
+    }
+  }
+  window.addEventListener("focus", refreshScenes);
+  document.addEventListener("visibilitychange", refreshScenes);
 
   document.addEventListener("DOMContentLoaded", () => {
     if (!$("storyboard-section")) return;

@@ -2,6 +2,16 @@
 
 <!-- crystallize_version: 0.8.0 -->
 
+## Project output folders — Phase 76 (2026-10-23)
+
+New hierarchical exports use a user-selected parent and resolve to Topic / Series / `Ep NN - video title`; standalone projects use project Topic / project name. The parent is remembered per Topic and checked outputs are synchronized automatically. Existing per-project output settings remain in legacy mode until the user changes the folder or selects the new layout. Old exported files are never moved or deleted. This exports selected deliverables, not the internal project database. See [Phase 76 plan](phases/76-topic-project-folders/PLAN.md) and [folder guide](../docs/operations/topic-project-folders.md).
+
+## Current TTS direction — Phase 75 (2026-10-23)
+
+Edge TTS remains the default. The owner accepted an OmniVoice Voice Design laughter audition made through the public Hugging Face Space and authorized integrating OmniVoice as an optional, explicit local engine. Phase 75 adds per-speaker selection, an editable voice description, local sample preview, native `[laughter]`/`[sigh]` cues, and an isolated GPU worker. Local model installation and RTX 3060 listening remain open. `[hắng giọng]` is not supported by OmniVoice and must produce an error without engine fallback. See [Phase 75](phases/75-omnivoice-local-tts/PLAN.md) and [setup guide](../docs/operations/omnivoice-local-tts.md).
+
+Phase 74's script annotation/editor and Edge cue rendering are implemented; its Edge listening gate is superseded by the owner's newer engine direction, not approved. See [Phase 74 state](phases/74-ai-vocal-cues/PHASE-STATE.md).
+
 ## ViePilot Active Profile
 
 profile_id: none / not configured
@@ -17,7 +27,7 @@ profile_id: none / not configured
 ### Core Value Proposition
 - **Tạo nội dung chuẩn xác**: AI với prompt nghiêm ngặt đảm bảo từ vựng, ngữ pháp, collocation đúng chuẩn Oxford/Cambridge theo từng cấp độ CEFR
 - **Pipeline hoàn chỉnh**: Từ ý tưởng → kịch bản → giọng đọc TTS → video podcast → YouTube description trong một app duy nhất
-- **Offline-first**: Hoạt động hoàn toàn không cần internet (OmniVoice + Piper TTS local)
+- **Local-first media**: generation and media storage run locally where supported. Edge TTS needs internet; OmniVoice is an optional local GPU engine after its separate model setup.
 - **Không lo copyright**: Thư viện nhạc nền do người dùng tự quản lý
 
 ### Phase Overview
@@ -100,11 +110,13 @@ Các accent khác nhau ảnh hưởng đến vocabulary choice và expressions:
 6. **Topic relevance**: Every line must be topically relevant — no off-topic small talk beyond intro/outro
 
 ### TTS Rules
-1. **OmniVoice first**: Always try OmniVoice; fallback to Edge TTS on GPU memory error
-2. **Cache first**: Always check `data/tts_cache/` before generating new TTS
-3. **Max concurrent TTS**: 2 lines at a time to avoid VRAM overflow on RTX 3060
-4. **Silence between lines**: 0.3s silence between same speaker, 0.5s between different speakers
-5. **Speed range**: 0.75x–1.5x allowed; default 1.0x
+1. **Explicit engine**: Edge TTS is the default; OmniVoice runs only for speakers who select it. Never silently switch engines.
+2. **Cache identity**: Include engine, voice, design description, settings, script text and cue recipe in the line fingerprint.
+3. **GPU sharing**: OmniVoice handles one line in a one-shot child process inside the shared GPU lease.
+4. **Supported cues**: Native OmniVoice `[laughter]` and `[sigh]`; `[h?ng gi?ng]` is unsupported and must fail with an actionable message.
+5. **Timings**: Edge supplies word boundaries; OmniVoice does not. Do not fabricate word timings.
+6. **Silence between lines**: 0.3s between same speaker, 0.5s between different speakers.
+7. **Speed range**: 0.75x?1.5x; new-speaker defaults are resolved from the project's CEFR level.
 
 ### Audio Rules
 1. **Background music volume**: Max -18dBFS when speech is playing (ducking)
@@ -133,7 +145,7 @@ Các accent khác nhau ảnh hưởng đến vocabulary choice và expressions:
 - Project folders: `data/projects/{uuid}/`
 - Audio files: `data/audio/{uuid}/{filename}`
 - Video files: `data/video/{uuid}/{filename}`
-- TTS cache: `data/tts_cache/{project_uuid}/{line_id}_{voice_hash}.wav`
+- TTS cache: `data/tts_cache/{project_uuid}/.../{line_id}.mp3` with a fingerprint sidecar; Edge word timings use a `.words.json` sidecar, while OmniVoice intentionally has none.
 
 ### Prompt Templates Naming
 - `prompts/script/{genre}_{cefr_level}.txt`
@@ -154,19 +166,15 @@ Các accent khác nhau ảnh hưởng đến vocabulary choice và expressions:
 }
 ```
 
-### Streaming Progress (SSE)
-```json
-{"event": "progress", "step": "tts_line_3", "percent": 45, "message": "Generating line 3/10..."}
-{"event": "complete", "file_path": "data/audio/uuid/final.mp3"}
-{"event": "error", "message": "OmniVoice VRAM exceeded, switching to Edge TTS"}
-```
+### Generation Progress
+Long-running AI/media tasks use job/status polling APIs. TTS line synthesis reports an engine error directly and does not perform automatic fallback.
 
 ---
 
 ## Constraints
 
 ### Hardware Constraints
-- GPU: RTX 3060 12GB VRAM — max 2 concurrent OmniVoice jobs
+- GPU: RTX 3060 12GB VRAM; local image generation and OmniVoice share one GPU lease. OmniVoice currently requests 8192 MiB free pending on-device measurement.
 - Disk: Audio/video files can be large — warn if disk < 5GB free
 - RAM: Pydub loads full audio into memory — max practical audio length ~45 min
 

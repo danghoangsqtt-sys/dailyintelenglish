@@ -112,5 +112,6 @@ def test_engines_endpoint_only_reports_real_dispatchable_engines(client: TestCli
     assert response.status_code == 200
     engines = {engine["id"]: engine for engine in response.json()["data"]}
 
-    assert set(engines) == {"edge_tts"}  # D56: Edge TTS is the only engine
+    assert set(engines) == {"edge_tts", "omnivoice"}
     assert engines["edge_tts"]["available"] is True
+    assert engines["omnivoice"]["kind"] == "local_gpu"

@@ -22,6 +22,7 @@
   const state = {
     projectId: null,
     project: null,
+    omnivoiceAvailable: false,
     lines: [],
     musicTracks: [],
     selectedMusic: "",
@@ -117,6 +118,12 @@
     document.querySelectorAll(".speaker-card input[type=range]").forEach(el => {
       el.disabled = state.isGenerating || state.voiceSaving.size > 0;
     });
+    document.querySelectorAll("[data-engine-speaker-id], .speaker-card textarea[data-field=voice_description]").forEach(el => {
+      el.disabled = state.isGenerating || state.voiceSaving.size > 0;
+    });
+    document.querySelectorAll(".omnivoice-preview").forEach(el => {
+      el.disabled = state.isGenerating || state.voiceSaving.size > 0 || state.linesInFlight.size > 0;
+    });
     document.querySelectorAll(".apply-profile-voice").forEach(el => {
       el.disabled = state.isGenerating || numericPending || voicePending;
     });
@@ -189,6 +196,7 @@
     actual.className = "speaker-actual-voice"; actual.dataset.speakerId = speaker.id;
     actual.textContent = "Project voice: " + voiceCaption(speaker);
     const details = document.createElement("details"); details.className = "voice-choice";
+    details.hidden = speaker.tts_engine === "omnivoice";
     const summary = document.createElement("summary"); summary.textContent = "Choose / listen to English voices";
     const hint = document.createElement("p"); hint.className = "library-hint";
     hint.textContent = "Save voice explicitly. After a change, Generate All rebuilds this speaker and the episode mix; previous exported files are kept.";
@@ -230,14 +238,92 @@
         state.voiceSaving.add(id); applyLocks(); clearError();
         try {
           const updated = await persistSpeaker(id, {apply_profile_voice: true, expected_voice_revision: speakerById(id).voice_revision});
+          renderSpeakers();
           const current = updated.speakers.find(item => item.id === id);
           state.voicePickers[id].setSaved({voiceId: current.voice_id || current.resolved_voice_id, revision: current.voice_revision,
             message: "Profile voice applied. Project speed, pitch and volume are kept. Generate All to rebuild audio/video."});
         } catch (error) { showError(error.message || "Profile voice could not be applied. Reload and try again."); }
         finally { state.voiceSaving.delete(id); applyLocks(); }
       });
-      details.append(apply);
+      card.append(apply);
     }
+  }
+
+  function buildEngineControls(card, speaker) {
+    const label = document.createElement("label");
+    label.className = "field-label";
+    label.textContent = "Speech engine";
+    const select = document.createElement("select");
+    select.dataset.engineSpeakerId = speaker.id;
+    [["edge_tts", "Edge TTS (online)"], ["omnivoice", "OmniVoice (local GPU)"]].forEach(([value, title]) => {
+      const option = new Option(title, value);
+      option.selected = (speaker.tts_engine || "edge_tts") === value;
+      select.append(option);
+    });
+    card.append(label, select);
+    const hint = document.createElement("p");
+    hint.className = "library-hint";
+    hint.textContent = state.omnivoiceAvailable
+      ? "OmniVoice uses a local voice design and supports native laughter and sigh cues."
+      : "OmniVoice needs its separate local model setup before it can generate speech.";
+    hint.hidden = speaker.tts_engine !== "omnivoice";
+    card.append(hint);
+    const descriptionLabel = document.createElement("label");
+    descriptionLabel.className = "field-label";
+    descriptionLabel.textContent = "Voice design (optional)";
+    const description = document.createElement("textarea");
+    description.rows = 2;
+    description.maxLength = 500;
+    description.placeholder = "Warm, clear, conversational voice with gentle emphasis";
+    description.value = speaker.voice_description || "";
+    description.dataset.field = "voice_description";
+    description.dataset.speakerId = speaker.id;
+    description.hidden = speaker.tts_engine !== "omnivoice";
+    descriptionLabel.hidden = description.hidden;
+    const preview = document.createElement("button");
+    preview.type = "button";
+    preview.className = "btn btn-ghost btn-sm omnivoice-preview";
+    preview.textContent = "Preview Voice Design";
+    preview.hidden = speaker.tts_engine !== "omnivoice";
+    const audio = document.createElement("audio");
+    audio.controls = true;
+    audio.hidden = true;
+    audio.className = "line-audio";
+    preview.addEventListener("click", async () => {
+      const current = speakerById(speaker.id);
+      preview.disabled = true;
+      preview.textContent = "Generating voice sample…";
+      clearError();
+      try {
+        const result = await Api.previewTtsVoice({
+          engine: "omnivoice", gender: current.gender, accent: current.accent,
+          voice_description: description.value.trim(), speed: current.speed,
+          pitch: current.pitch, volume: current.volume,
+        });
+        audio.src = result.audio_url;
+        audio.hidden = false;
+        await audio.play().catch(() => {});
+      } catch (error) {
+        showError(error.message || "OmniVoice voice preview failed.");
+      } finally {
+        preview.disabled = false;
+        preview.textContent = "Preview Voice Design";
+      }
+    });
+    card.append(descriptionLabel, description, preview, audio);
+  }
+
+  async function changeSpeakerEngine(speakerId, engine, select) {
+    const speaker = speakerById(speakerId);
+    if (!speaker || speaker.tts_engine === engine) return;
+    state.voiceSaving.add(speakerId); applyLocks(); clearError();
+    try {
+      await persistSpeaker(speakerId, {tts_engine: engine, voice_id: null, expected_voice_revision: speaker.voice_revision});
+      renderSpeakers();
+    } catch (error) {
+      select.value = speaker.tts_engine || "edge_tts";
+      showError(error.message || "Speech engine could not be changed.");
+    } finally { state.voiceSaving.delete(speakerId); applyLocks(); }
   }
 
   function setSpeakerStatus(speakerId, status, message = null) {
@@ -278,6 +364,7 @@
       meta.textContent = `${speaker.gender} · ${speaker.accent}`;
 
       card.append(nameRow, meta);
+      buildEngineControls(card, speaker);
       card.appendChild(buildSlider(speaker, "speed", "Speed", 0.75, 1.5, 0.05));
       card.appendChild(buildSlider(speaker, "pitch", "Pitch", -1, 1, 0.1));
       card.appendChild(buildSlider(speaker, "volume", "Volume", 0, 2, 0.1));
@@ -323,7 +410,7 @@
     const entry = state.speakerSave[speakerId];
     // Speed/pitch/volume are the only editable speaker fields now that TTS engine
     // choice was removed (Edge TTS is the sole official engine) — all numeric.
-    const value = Number(rawValue);
+    const value = ["speed", "pitch", "volume"].includes(field) ? Number(rawValue) : rawValue;
     entry.draft = { ...(entry.draft || {}), [field]: value };
 
     if (entry.timer) clearTimeout(entry.timer);
@@ -565,7 +652,7 @@
       state.previewedLineIds.add(lineId);
     } catch (error) {
       console.error("Failed to synthesize line preview:", error);
-      showError("We couldn't synthesize that line. Please try again.");
+      showError(error.message || "We couldn't synthesize that line. Please try again.");
     } finally {
       state.linesInFlight.delete(lineId);
       button.disabled = state.isGenerating;
@@ -739,7 +826,8 @@
       generationStatus.setProgress({ stageLabel: "Done — episode ready below.", progressPercent: 100, done: true });
     } catch (error) {
       console.error("Failed to generate audio:", error);
-      showError("We couldn't generate the full episode. Please try again.");
+      const detail = error.message?.startsWith("OmniVoice") ? ` ${error.message}` : "";
+      showError(`We couldn't generate the full episode. Please try again.${detail}`);
       generationStatus.destroy();
       progress.textContent = "";
     } finally {
@@ -764,6 +852,8 @@
 
     try {
       state.project = await Api.getProject(state.projectId);
+      const engines = await Api.listTtsEngines();
+      state.omnivoiceAvailable = Boolean(engines.find(engine => engine.id === "omnivoice")?.available);
       renderHeader();
     } catch (error) {
       console.error("Failed to load project:", error);
@@ -855,6 +945,10 @@
     // just re-debounces).
     byId("speaker-grid").addEventListener("input", handleSpeakerFieldChange);
     byId("speaker-grid").addEventListener("change", handleSpeakerFieldChange);
+    byId("speaker-grid").addEventListener("change", (event) => {
+      const speakerId = event.target.dataset.engineSpeakerId;
+      if (speakerId) changeSpeakerEngine(speakerId, event.target.value, event.target);
+    });
     window.addEventListener("beforeunload", (event) => {
       if (state.isGenerating || anySpeakerUnresolved()) {
         event.preventDefault();

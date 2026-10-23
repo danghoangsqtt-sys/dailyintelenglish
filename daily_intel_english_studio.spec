@@ -19,6 +19,8 @@ datas = [
     ("frontend", "frontend"),
     ("backend/ai/prompts", "backend/ai/prompts"),
     ("backend/db/migrations", "backend/db/migrations"),
+    # The separate CUDA interpreter needs a real script file outside PyInstaller's archive.
+    ("backend/ai/tts/omnivoice_worker.py", "backend/ai/tts"),
     ("renderer/public/brand", "renderer/public/brand"),
 ]
 binaries = []

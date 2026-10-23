@@ -39,6 +39,17 @@ _env = Environment(
     lstrip_blocks=True,
 )
 
+
+async def render_vocal_cue_prompt(*, topic: str, speakers: list[dict],
+                                  lines: list[dict], max_new_cues: int) -> str:
+    """Render the bounded optional dialogue-annotation prompt off the event loop."""
+    def render() -> str:
+        return _env.get_template("vocal_cue_annotation.txt").render(
+            topic=topic, speakers=speakers, lines=lines, max_new_cues=max_new_cues,
+        )
+
+    return await asyncio.to_thread(render)
+
 _learning_env = Environment(
     loader=FileSystemLoader(str(LEARNING_PROMPTS_DIR)),
     undefined=StrictUndefined,

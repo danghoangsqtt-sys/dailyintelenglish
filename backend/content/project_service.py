@@ -283,7 +283,10 @@ async def get_project(db: aiosqlite.Connection, project_id: str) -> dict:
     cast = {row["speaker_index"]: dict(row) for row in await cast_cursor.fetchall()}
     for speaker in project["speakers"]:
         speaker["voice_revision"] = voice_revision(speaker)
-        speaker["resolved_voice_id"] = speaker.get("voice_id") or resolve_voice_id(speaker)
+        speaker["resolved_voice_id"] = (
+            (speaker.get("voice_id") or resolve_voice_id(speaker))
+            if speaker.get("tts_engine", "edge_tts") == "edge_tts" else None
+        )
         member = cast.get(speaker["speaker_index"], {})
         speaker["character_id"] = member.get("character_id")
         speaker["profile_voice_id"] = member.get("profile_voice_id")
@@ -311,6 +314,8 @@ async def update_speaker(
         raise ConflictError("Speaker voice settings changed. Reload before saving.")
     fields = patch.model_dump(exclude_unset=True, exclude_none=True,
                               exclude={"expected_voice_revision", "apply_profile_voice"})
+    if "voice_id" in patch.model_fields_set:
+        fields["voice_id"] = patch.voice_id
     if fields:
         set_clause = ", ".join(f"{key} = ?" for key in fields)
         await db.execute(
@@ -374,11 +379,13 @@ async def apply_character_voice(db: aiosqlite.Connection, project_id: str, speak
     swapping Alex for Hoang gives Hoang's Canadian voice, not Alex's. Speed, pitch and volume stay the project's own (set
     for the level, as Step 1 keeps them). Profile fields left empty keep the speaker's value. Returns True when anything
     changed. Does not commit."""
+    character_engine = character.get("default_tts_engine") or speaker.get("tts_engine") or "edge_tts"
     wanted = {
         "gender": character.get("gender") or speaker.get("gender"),
         "accent": character.get("default_accent") or speaker.get("accent"),
-        "tts_engine": character.get("default_tts_engine") or speaker.get("tts_engine"),
-        "voice_id": character.get("default_voice_id") or speaker.get("voice_id"),
+        "tts_engine": character_engine,
+        "voice_id": (character.get("default_voice_id") or speaker.get("voice_id")) if character_engine == "edge_tts" else None,
+        "voice_description": character.get("default_voice_description") or speaker.get("voice_description") or "",
     }
     changes = {key: value for key, value in wanted.items() if value != speaker.get(key)}
     if not changes:
@@ -623,6 +630,9 @@ async def copy_settings(db: aiosqlite.Connection, project_id: str) -> dict:
     await db.execute("INSERT INTO project_cast(project_id,speaker_index,character_id,profile_version) "
                      "SELECT ?,speaker_index,character_id,profile_version FROM project_cast WHERE project_id=?",
                      (copied["id"], project_id))
+    # Phase 72 Amendment A: the copy keeps the video's own audience (NULL = it inherits, as the original did)
+    await db.execute("UPDATE projects SET audience = (SELECT audience FROM projects WHERE id = ?) WHERE id = ?",
+                     (project_id, copied["id"]))
     return await get_project(db, copied["id"])
 
 

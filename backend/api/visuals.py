@@ -18,15 +18,16 @@ from backend.db.transactions import read_transaction, write_transaction
 from backend.schemas.visuals import (
     AGE_GROUPS, BOTTOMS, COLORS, GENDERS, SCENE_CATEGORIES, TIMES_OF_DAY, TOPS, ActivityApproveBatchInput,
     ActivityMetadataInput, ActivityMetadataPatch, ActivityReviewInput, ApprovalInput, CastMemberInput, CharacterInput,
-    CharacterPatch, SceneInput, ScenePatch,
+    CharacterPatch, SceneBriefInput, SceneInput, ScenePatch,
 )
 from backend.content import export_service, project_service
-from backend.ai.image import jobs
+from backend.ai.image import jobs, recipes
 from backend.library import activity_library_service as activity_library
 from backend.library import activity_illustrations
 from backend.library import library_service as library
 from backend.library import project_visuals_service as project_visuals
 from backend.library import scene_backgrounds
+from backend.library import scene_prompts
 from backend.library import sprite_service
 from backend.ai.image.engine import IMAGE_PYTHON, require_generation
 
@@ -137,9 +138,12 @@ async def asset_content(asset_id: str, db: aiosqlite.Connection = Depends(get_db
 
 
 @router.get("/scenes")
-async def list_scenes(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+async def list_scenes(
+    include_archived: bool = False, project_id: str | None = None,
+    db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
     async with read_transaction():
-        rows = await library.list_scenes(db)
+        rows = await library.list_scenes(db, include_archived=include_archived, project_id=project_id)
     return ok(rows)
 
 
@@ -159,11 +163,44 @@ async def edit_scene(
     return ok(row)
 
 
+@router.post("/scenes/prompt")
+async def prepare_scene_prompt(body: SceneBriefInput) -> dict:
+    return ok(await scene_prompts.generate_scene_prompt(body.brief))
+
+
+@router.get("/scenes/{scene_id}/prompt")
+async def scene_prompt(scene_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with read_transaction():
+        row = await library.get_scene_row(db, scene_id)
+    return ok({"prompt": recipes.qwen_scene_prompt(row)})
+
+
+@router.post("/scenes/{scene_id}/background")
+async def upload_scene_background(
+    scene_id: str, file: UploadFile = File(...), db: aiosqlite.Connection = Depends(get_db),
+) -> dict:
+    return ok(await library.upload_scene_background(db, scene_id, file))
+
+
 @router.delete("/scenes/{scene_id}")
 async def delete_scene(scene_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     async with write_transaction(db):
         await library.delete_scene(db, scene_id)
     return ok({"deleted": scene_id})
+
+
+@router.post("/scenes/{scene_id}/archive")
+async def archive_scene(scene_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        row = await library.archive_scene(db, scene_id)
+    return ok(row)
+
+
+@router.post("/scenes/{scene_id}/restore")
+async def restore_scene(scene_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        row = await library.restore_scene(db, scene_id)
+    return ok(row)
 
 
 @router.post("/scenes/{scene_id}/duplicate")

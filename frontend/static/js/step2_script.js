@@ -269,7 +269,7 @@
             ${isRegenerating ? '<span class="spinner spinner-dark"></span> Regenerating…' : "🔄 Regenerate this line"}
           </button>
         </div>
-        <div class="line-text" data-action="edit-text">${escapeHtml(line.text)}</div>
+        <div class="line-text" data-action="edit-text" role="button" tabindex="0"><span class="visually-hidden">Edit dialogue and vocal cues: </span><span translate="no">${escapeHtml(line.text)}</span></div>
         <details class="notes-details">
           <summary>Language notes</summary>
           <div class="notes-body">
@@ -405,12 +405,20 @@
   // this line targets an id that still exists in the database.
   function syncLineIdsFromServer(saved) {
     const cards = document.querySelectorAll("#script-list [data-line-id]");
+    let idsChanged = false;
     state.lines.forEach((line, index) => {
       const savedLine = saved[index];
       if (!savedLine || savedLine.id === line.id) return;
+      if (state.selectedLineId === line.id) state.selectedLineId = savedLine.id;
       line.id = savedLine.id;
       if (cards[index]) cards[index].dataset.lineId = savedLine.id;
+      idsChanged = true;
     });
+    if (idsChanged) {
+      state.previewReadyLineId = null;
+      renderTimeline();
+      renderInspector();
+    }
   }
 
   async function runAutosave() {
@@ -458,10 +466,29 @@
     if (!line) return;
 
     textEl.classList.add("editing");
-    textEl.innerHTML = `<textarea>${escapeHtml(line.text)}</textarea>`;
+    textEl.removeAttribute("role");
+    textEl.removeAttribute("tabindex");
+    textEl.innerHTML = `<textarea aria-label="Edit dialogue and vocal cues" aria-describedby="vocal-cue-hint">${escapeHtml(line.text)}</textarea>
+      <div class="vocal-cue-toolbar" role="group" aria-label="Insert vocal cue at cursor">
+        <span class="vocal-cue-toolbar-label">Insert vocal cue:</span>
+        <button type="button" class="btn btn-ghost btn-sm" data-vocal-cue="[cười]" translate="no">[cười]</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-vocal-cue="[cười:ha-ha]" translate="no">[cười:ha-ha]</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-vocal-cue="[cười:hi-hi]" translate="no">[cười:hi-hi]</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-vocal-cue="[thở dài]" translate="no">[thở dài]</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-vocal-cue="[hắng giọng]" translate="no">[hắng giọng]</button>
+      </div>
+      <small class="vocal-cue-hint" id="vocal-cue-hint">Select a cue in the text to replace it, or delete it. Edge voices approximate these sounds; laughter may sound like spoken syllables. Leave the editor to save, then Listen to check.</small>`;
     const textarea = textEl.querySelector("textarea");
     textarea.focus();
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    textEl.querySelectorAll("[data-vocal-cue]").forEach((button) => {
+      button.addEventListener("mousedown", (event) => event.preventDefault());
+      button.addEventListener("click", () => {
+        textarea.setRangeText(button.dataset.vocalCue, textarea.selectionStart, textarea.selectionEnd, "end");
+        textarea.focus();
+      });
+    });
 
     function commit() {
       const newText = textarea.value.trim();
@@ -475,20 +502,37 @@
       }
     }
 
-    textarea.addEventListener("blur", commit);
+    textEl.addEventListener("focusout", (event) => {
+      if (!textEl.contains(event.relatedTarget)) commit();
+    });
     textarea.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         textarea.blur();
+        document.querySelectorAll('#script-list [data-action="edit-text"]')[state.lines.indexOf(line)]?.focus();
       } else if (e.key === "Escape") {
         textarea.value = line.text;
         textarea.blur();
+        document.querySelectorAll('#script-list [data-action="edit-text"]')[state.lines.indexOf(line)]?.focus();
       }
     });
   }
 
   async function handleListen(lineId) {
     if (state.previewingLineId || state.isGenerating) return;
+    const lineIndex = state.lines.findIndex((line) => line.id === lineId);
+    if (lineIndex < 0) return;
+    if (state.saveStatus === "dirty" || state.saveStatus === "failed") await runAutosave();
+    const saveDeadline = Date.now() + 10000;
+    while ((state.saveStatus === "saving" || state.saveQueued) && Date.now() < saveDeadline) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    if (state.saveStatus !== "saved" || state.saveQueued) {
+      showError("Save this line before listening to the updated voice.");
+      return;
+    }
+    lineId = state.lines[lineIndex].id;
+    if (state.selectedLineId !== lineId) return;
     state.previewingLineId = lineId;
     state.previewReadyLineId = null;
     clearError();
@@ -610,10 +654,7 @@
   function handleScriptListClick(e) {
     const editTarget = e.target.closest("[data-action='edit-text']");
     if (editTarget && !editTarget.classList.contains("editing")) {
-      const lineId = editTarget.closest("[data-line-id]").dataset.lineId;
-      selectLine(lineId);
-      const currentText = document.querySelector(`#script-list [data-line-id="${lineId}"] [data-action="edit-text"]`);
-      if (currentText) startEdit(currentText);
+      editLine(editTarget.closest("[data-line-id]").dataset.lineId);
       return;
     }
     const regenBtn = e.target.closest("[data-action='regenerate']");
@@ -625,6 +666,18 @@
     }
     const card = e.target.closest("[data-line-id]");
     if (card) selectLine(card.dataset.lineId);
+  }
+
+  function editLine(lineId) {
+    selectLine(lineId);
+    const currentText = document.querySelector(`#script-list [data-line-id="${lineId}"] [data-action="edit-text"]`);
+    if (currentText) startEdit(currentText);
+  }
+
+  function handleScriptListKeydown(e) {
+    if (e.target.dataset.action !== "edit-text" || (e.key !== "Enter" && e.key !== " ")) return;
+    e.preventDefault();
+    editLine(e.target.closest("[data-line-id]").dataset.lineId);
   }
 
   function handleInspectorClick(e) {
@@ -663,6 +716,7 @@
     document.getElementById("regenerate-all-btn").addEventListener("click", handleRegenerateAll);
     document.getElementById("next-step-btn").addEventListener("click", handleNextStep);
     document.getElementById("script-list").addEventListener("click", handleScriptListClick);
+    document.getElementById("script-list").addEventListener("keydown", handleScriptListKeydown);
 
     try {
       state.lines = await Api.getScript(state.projectId);

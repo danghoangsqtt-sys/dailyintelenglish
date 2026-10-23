@@ -15,7 +15,7 @@ from backend.core.voice import line_fingerprint
 from backend.db.database import get_db
 from backend.schemas.tts import PreviewLineRequest, VoiceCatalog, VoicePreviewRequest, VoicePreviewResult
 from backend.content import project_service, script_service
-from backend.ai.tts import tts_service, voice_catalog_service, voice_preview_service
+from backend.ai.tts import omnivoice_service, tts_service, voice_catalog_service, voice_preview_service
 
 router = APIRouter(prefix="/api/tts", tags=["tts"])
 preview_router = APIRouter(prefix="/api/projects/{project_id}/tts", tags=["tts"])
@@ -51,11 +51,12 @@ async def voice_preview_media(preview_id: str) -> Response:
 
 @router.get("/engines")
 async def list_engines() -> dict:
-    """Report the TTS engines this app can use: Edge TTS only (D56, owner 2026-10-06).
-    OmniVoice (never integrated), Kokoro and StyleTTS 2 were removed."""
+    """Report Edge TTS and whether the optional local OmniVoice install is ready."""
     started_at = time.perf_counter()
+    omnivoice_available = await asyncio.to_thread(omnivoice_service.is_available)
     engines = [
         {"id": "edge_tts", "available": True, "kind": "online_free"},
+        {"id": "omnivoice", "available": omnivoice_available, "kind": "local_gpu"},
     ]
     return ok(engines, started_at=started_at)
 
@@ -83,7 +84,7 @@ async def preview_line(
     if payload.reuse_cached and await asyncio.to_thread(tts_service.cache_matches, project, line):
         async with read_transaction():
             await tts_service.assert_line_current(db, project_id, payload.line_id, expected)
-        return ok({"audio_path": line["audio_cache_path"], "engine_used": "edge_tts", "reused": True},
+        return ok({"audio_path": line["audio_cache_path"], "engine_used": expected["engine"], "reused": True},
                   started_at=started_at)
     result = await tts_service.synthesize_line_audio(project, line)
     async with write_transaction(db):

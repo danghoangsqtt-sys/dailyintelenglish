@@ -1,0 +1,4 @@
+# Installed only into .venv-omnivoice by scripts/setup_omnivoice.ps1.
+# The matching CUDA 12.8 wheels are installed from the official PyTorch index first.
+omnivoice==0.2.1
+huggingface_hub>=0.30

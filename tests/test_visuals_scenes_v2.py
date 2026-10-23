@@ -6,9 +6,92 @@ import pytest
 
 from backend.core.config import settings
 from backend.ai.image.engine import FakeImageEngine
+from tests.test_storyboard_api import project_with_script
 from tests.test_visuals_project_api import client, data, setup_project, wait_job  # noqa: F401
 
 SIZE = (1344, 768)
+
+
+def test_archive_restore_delete_preserve_preview_and_protect_builtins(client):  # noqa: F811
+    scene = data(client.post("/api/visuals/scenes/builtin-cafe/duplicate"))
+    base = f"/api/visuals/scenes/{scene['id']}"
+    job = data(client.post(f"{base}/preview"))
+    wait_job(client, job)
+    before = next(s for s in data(client.get("/api/visuals/scenes")) if s["id"] == scene["id"])
+    preview = client.get(f"{base}/preview")
+    assert preview.status_code == 200
+    archived = data(client.post(f"{base}/archive"))
+    assert archived["archived_at"] and archived["preview_url"] == before["preview_url"]
+    assert data(client.post(f"{base}/archive"))["archived_at"] == archived["archived_at"]
+    assert scene["id"] not in {s["id"] for s in data(client.get("/api/visuals/scenes"))}
+    assert scene["id"] in {s["id"] for s in data(client.get("/api/visuals/scenes?include_archived=true"))}
+    assert client.get(f"{base}/preview").content == preview.content
+    restored = data(client.post(f"{base}/restore"))
+    assert restored["archived_at"] is None and restored["preview_url"] == before["preview_url"]
+    assert data(client.post(f"{base}/restore"))["archived_at"] is None
+    assert scene["id"] in {s["id"] for s in data(client.get("/api/visuals/scenes"))}
+    data(client.delete(base))
+    assert client.get(f"{base}/preview").content == preview.content
+    assert any(s["id"] == scene["id"] and s["archived_at"] for s in data(client.get("/api/visuals/scenes?include_archived=true")))
+    copy = data(client.post(f"{base}/duplicate"))
+    assert copy["archived_at"] is None and copy["preview_url"] is None
+    assert client.delete("/api/visuals/scenes/builtin-cafe").status_code == 409
+    assert client.post("/api/visuals/scenes/builtin-cafe/archive").status_code == 409
+    assert client.post("/api/visuals/scenes/missing/archive").status_code == 404
+    assert client.post("/api/visuals/scenes/missing/restore").status_code == 404
+
+
+@pytest.mark.parametrize("source", ["beat", "shortlist", "explainer", "none"])
+@pytest.mark.parametrize("operation", ["archive", "delete"])
+def test_storyboard_archive_choices_require_existing_project_reference(client, source, operation):  # noqa: F811
+    project = project_with_script(client, cast=0)
+    other = project_with_script(client, cast=0)
+    scene = data(client.post("/api/visuals/scenes/builtin-cafe/duplicate"))
+    body = {"beats": [{"line_from": 0, "line_to": 5, "scene_id": scene["id"]}], "status": "approved"}
+    base = f"/api/projects/{project['id']}/storyboard"
+    if source == "beat":
+        data(client.put(base, json=body))
+    elif source == "shortlist":
+        data(client.put(f"/api/projects/{project['id']}/visuals/scenes", json=[scene["id"]]))
+    elif source == "explainer":
+        import json
+
+        with sqlite3.connect(settings.db_path) as connection:
+            connection.execute(
+                "INSERT INTO project_explainer_plans "
+                "(project_id, revision, status, source_fingerprint, plan_json, updated_at) "
+                "VALUES (?, 1, 'draft', ?, ?, 'now')",
+                (project["id"], "a" * 64, json.dumps({"segments": [{"scene": {"scene_id": scene["id"]}}]})),
+            )
+    if operation == "archive":
+        data(client.post(f"/api/visuals/scenes/{scene['id']}/archive"))
+    else:
+        data(client.delete(f"/api/visuals/scenes/{scene['id']}"))
+    response = client.put(base, json=body)
+    scoped = {s["id"] for s in data(client.get("/api/visuals/scenes", params={"project_id": project["id"]}))}
+    if source == "none":
+        assert response.status_code == 422 and "Archived scene" in response.text
+        assert scene["id"] not in scoped
+    else:
+        assert data(response)["beats"][0]["scene_id"] == scene["id"]
+        assert scene["id"] in scoped
+        data(client.put(f"/api/projects/{project['id']}/visuals/scenes", json=[scene["id"]]))
+    other_base = f"/api/projects/{other['id']}"
+    assert client.put(f"{other_base}/storyboard", json=body).status_code == 422
+    assert client.put(f"{other_base}/visuals/scenes", json=[scene["id"]]).status_code == 422
+    assert scene["id"] not in {s["id"] for s in data(client.get("/api/visuals/scenes", params={"project_id": other["id"]}))}
+    data(client.post(f"/api/visuals/scenes/{scene['id']}/restore"))
+    assert data(client.put(f"{other_base}/storyboard", json=body))["beats"][0]["scene_id"] == scene["id"]
+
+
+def test_storyboard_uses_more_than_three_library_scenes_without_shortlist(client):  # noqa: F811
+    project = project_with_script(client, cast=0)
+    scenes = data(client.get("/api/visuals/scenes"))[:4]
+    body = {"beats": [{"line_from": index, "line_to": index if index < 3 else 5, "scene_id": scene["id"]}
+                      for index, scene in enumerate(scenes)]}
+    saved = data(client.put(f"/api/projects/{project['id']}/storyboard", json=body))
+    assert len({beat["scene_id"] for beat in saved["beats"]}) == saved["estimate"]["images"] == 4
+    assert data(client.get(f"/api/projects/{project['id']}/visuals"))["scenes"] == []
 
 
 @pytest.fixture

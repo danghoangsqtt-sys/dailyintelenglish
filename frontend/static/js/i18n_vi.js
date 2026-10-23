@@ -943,6 +943,10 @@ window.I18N_VI = {
     "Automation studio": "Studio tự động",
     "Automatic production is off — switch it on to make videos at night.": "Tự động đang tắt — bật công tắc để làm video vào ban đêm.",
     // ---- Phase 72: audience
+    "Copy settings to a new draft": "Chép cấu hình sang bản nháp mới",
+    "Audience saved. Render the video again to show it; the YouTube description follows at once.": "Đã lưu khán giả. Dựng lại video để thấy thay đổi; mô tả YouTube đổi ngay.",
+    "The settings could not be copied.": "Không chép được cấu hình.",
+    "The audience could not be saved.": "Không lưu được khán giả.",
     "Channel audience": "Khán giả của kênh",
     "How the vocabulary is explained on screen and in the YouTube description, and whom the AI writes for. The voice is always English. A series or a video can choose its own.": "Cách giải thích từ vựng trên video và trong mô tả YouTube, và AI viết cho ai. Giọng đọc luôn là tiếng Anh. Mỗi series hoặc video có thể chọn riêng.",
     "International — English definitions": "Quốc tế — giải nghĩa tiếng Anh",
@@ -1431,6 +1435,13 @@ window.I18N_VI = {
     "Position": "Vị trí",
     "Provider status": "Trạng thái nhà cung cấp",
     "🔄 Regenerate this line": "🔄 Tạo lại câu này",
+    "Edit dialogue and vocal cues": "Sửa lời thoại và dấu hiệu cảm xúc",
+    "Edit dialogue and vocal cues:": "Sửa lời thoại và dấu hiệu cảm xúc:",
+    "Insert vocal cue at cursor": "Chèn âm cảm xúc tại con trỏ",
+    "Insert vocal cue:": "Chèn cảm xúc:",
+    "The selected Edge voice speaks an approximation of each cue. Listen to check the result.": "Giọng Edge hiện tại sẽ đọc âm gần giống mỗi cảm xúc. Hãy nghe thử để kiểm tra.",
+    "Select a cue in the text to replace it, or delete it. Edge voices approximate these sounds; laughter may sound like spoken syllables. Leave the editor to save, then Listen to check.": "Chọn dấu hiệu cảm xúc trong lời thoại để thay hoặc xóa. Giọng Edge chỉ mô phỏng âm này; tiếng cười có thể nghe như đang đọc thành tiếng. Rời ô sửa để lưu, rồi bấm Nghe thử để kiểm tra.",
+    "Save this line before listening to the updated voice.": "Hãy lưu câu này trước khi nghe giọng mới.",
     "🔁 Regenerate": "🔁 Tạo lại",
     "Language notes": "Ghi chú ngôn ngữ",
     "Collocations:": "Cụm từ đi kèm:",
@@ -1646,3 +1657,78 @@ function tr(english) {
   return window.I18n ? window.I18n.translate(english) : english;
 }
 })();
+
+// Phase 73: scene management and per-beat storyboard choices. Keep prior dictionary additions intact.
+Object.assign(window.I18N_VI.text, {
+  "Pick a character and make its talking pictures with an outside AI.": "Chọn nhân vật và tạo ảnh biết nói bằng AI bên ngoài.",
+  "Choose each speaker's character. Choose a scene for each beat in the storyboard below.": "Chọn nhân vật cho từng người nói. Chọn cảnh cho từng nhịp trong bảng phân cảnh bên dưới.",
+  "Choose places from your library for each beat.": "Chọn địa điểm từ thư viện cho từng nhịp.",
+  "Manage scenes": "Quản lý cảnh",
+  "Search scenes": "Tìm cảnh",
+  "Name or place": "Tên hoặc địa điểm",
+  "(archived)": "(đã lưu trữ)",
+  "Plate": "Ảnh nền",
+  "All plates": "Tất cả ảnh nền",
+  "With plate": "Có ảnh nền",
+  "Without plate": "Chưa có ảnh nền",
+  "No scenes match these filters.": "Không có cảnh nào khớp các bộ lọc này.",
+  "Scene archived.": "Đã lưu trữ cảnh.",
+  "Scene restored.": "Đã khôi phục cảnh.",
+  "Cancellation requested.": "Đã yêu cầu hủy.",
+  "AI pictures are hidden on this computer.": "Tính năng tạo ảnh AI đang được ẩn trên máy này.",
+  "Advanced: import scene backgrounds from a folder": "Nâng cao: nhập ảnh nền cảnh từ thư mục",
+});
+window.I18N_VI.patterns.push(
+  [/^(\d+) of (\d+) scenes$/, "$1 / $2 cảnh"],
+  [/^Archive scene "(.+)"\? Existing videos and storyboard choices are kept\.$/, 'Lưu trữ cảnh "$1"? Video và lựa chọn trong bảng phân cảnh hiện có được giữ lại.'],
+  [/^(.+) \(archived\)$/, "$1 (đã lưu trữ)"],
+  [/^(.+) · Used in (\d+) projects?( · Archived)?$/, (_m, meta, count, archived) =>
+    `${meta} · Dùng trong ${count} dự án${archived ? " · Đã lưu trữ" : ""}`],
+);
+
+// Task 73.4: short requests, professional image prompts and external AI backgrounds.
+Object.assign(window.I18N_VI.text, {
+  "Describe your scene (Vietnamese or English)": "Mô tả cảnh (tiếng Việt hoặc tiếng Anh)",
+  "Describe the place, mood and lighting you want.": "Mô tả địa điểm, không khí và ánh sáng bạn muốn.",
+  "Prepare image prompt": "Soạn prompt tạo ảnh",
+  "Preparing image prompt…": "Đang soạn prompt tạo ảnh…",
+  "Preparation uses your configured text AI. It does not need a local image GPU.": "Prompt được soạn bằng AI văn bản đã cấu hình. Không cần GPU tạo ảnh trên máy.",
+  "Detailed image prompt": "Prompt tạo ảnh chi tiết",
+  "Copy prompt": "Chép prompt",
+  "Image prompt copied.": "Đã chép prompt tạo ảnh.",
+  "Image prompt prepared. Review the details, then save your scene.": "Đã soạn prompt tạo ảnh. Kiểm tra chi tiết rồi lưu cảnh.",
+  "The request changed. Prepare again to update the image prompt; your existing prompt is kept.": "Yêu cầu đã thay đổi. Soạn lại để cập nhật prompt tạo ảnh; prompt hiện có được giữ lại.",
+  "Your draft changed while preparing. Your edits were kept; prepare again when ready.": "Bạn đã sửa bản nháp trong lúc soạn prompt. Các chỉnh sửa được giữ lại; hãy soạn lại khi sẵn sàng.",
+  "Your draft changed while copying. Copy again to use your latest edits.": "Bạn đã sửa bản nháp trong lúc chép. Hãy chép lại để dùng nội dung mới nhất.",
+  "Could not prepare the image prompt. Check your text AI settings and try again.": "Không soạn được prompt tạo ảnh. Kiểm tra cấu hình AI văn bản rồi thử lại.",
+  "The text AI returned an incomplete scene draft. Please try again.": "AI văn bản trả về bản nháp cảnh chưa đầy đủ. Hãy thử lại.",
+  "Prepare or enter an image prompt first.": "Hãy soạn hoặc nhập prompt tạo ảnh trước.",
+  "Could not copy the image prompt.": "Không chép được prompt tạo ảnh.",
+  "The image prompt is too long. Keep it within 6000 characters including background constraints.": "Prompt tạo ảnh quá dài. Giữ trong 6000 ký tự, kể cả các ràng buộc cho ảnh nền.",
+  "Save the scene, then use Make plate on its card to generate with local Qwen, or use Upload image for a picture made with an outside AI. Copy prompt uses the same wide, empty background constraints.": "Lưu cảnh, rồi bấm Tạo ảnh nền trên thẻ để vẽ bằng Qwen trên máy, hoặc bấm Tải ảnh lên để dùng ảnh từ AI bên ngoài. Prompt được chép có cùng ràng buộc về ảnh nền rộng, không có người.",
+  "Save your scene changes before generating or uploading its background.": "Lưu các thay đổi của cảnh trước khi tạo hoặc tải ảnh nền lên.",
+  "Generate this saved scene's background with local Qwen.": "Tạo ảnh nền của cảnh đã lưu bằng Qwen trên máy.",
+  "Upload image": "Tải ảnh lên",
+  "Upload a PNG, JPEG or WebP background made with an outside AI.": "Tải ảnh nền PNG, JPEG hoặc WebP được tạo bằng AI bên ngoài lên.",
+  "Scene background uploaded.": "Đã tải ảnh nền cảnh lên.",
+});
+window.I18N_VI.patterns.push([/^Upload background for (.+)$/, "Tải ảnh nền cho $1 lên"]);
+Object.assign(window.I18N_VI.text, {
+  "Parent folder for this Topic": "Thư mục gốc cho Topic này",
+  "Folder organization": "Cách sắp xếp thư mục",
+  "Organize under Topic / Series / video": "Tự sắp xếp theo Topic / Series / video",
+  "Use this folder directly for this project": "Dùng trực tiếp thư mục này cho dự án",
+  "Choose a parent folder. The app creates a Topic folder, then Series and video folders when available.": "Chọn thư mục gốc. Ứng dụng tự tạo thư mục Topic, rồi Series và video nếu có.",
+  "Choose a parent folder to preview this project's destination.": "Chọn thư mục gốc để xem trước nơi lưu dự án.",
+  "Choose a parent folder. The app will create Topic / Series / video folders there.": "Chọn thư mục gốc. Ứng dụng sẽ tự tạo thư mục Topic / Series / video bên trong.",
+  "Open video folder": "Mở thư mục video",
+  "Using the saved parent folder for this Topic. Save to start exporting this project.": "Đang dùng thư mục gốc đã lưu cho Topic này. Bấm Lưu để bắt đầu xuất tệp dự án.",
+  "This project no longer exports automatically. Files already saved are kept.": "Dự án này sẽ không tự xuất tệp nữa. Các tệp đã lưu vẫn được giữ.",
+});
+window.I18N_VI.patterns.push(
+  [/^Destination: (.+) \/ Topic \/ Series \/ video$/, "Đích lưu: $1 / Topic / Series / video"],
+  [/^Destination: (.+)$/, "Đích lưu: $1"],
+  [/^Video folder: (.+)$/, "Thư mục video: $1"],
+  [/^Saved (\d+) file\(s\) in (.+)\.$/, "Đã lưu $1 tệp vào $2."],
+  [/^Folder ready at (.+); selected files will be added as they are made\.$/, "Đã sẵn sàng thư mục $1; các tệp đã chọn sẽ được thêm khi hoàn tất."],
+);

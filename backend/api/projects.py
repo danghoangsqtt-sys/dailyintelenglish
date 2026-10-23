@@ -16,6 +16,8 @@ from backend.schemas.project import ProjectUpdate, ScriptConfig, SpeakerUpdate, 
 from backend.schemas.script import RegenerateLineRequest, ScriptUpdate
 from backend.channel import dashboard_service
 from backend.content import export_service, project_service, script_service, source_service
+from backend.content.vocal_cue_annotation import count_cues, cue_quota
+from backend.ai.tts.vocal_cues import caption_text
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -72,7 +74,7 @@ async def create_project(
     """Create a new project from the Step 1 wizard config."""
     started_at = time.perf_counter()
     for speaker in config.speakers:
-        if speaker.voice_id:
+        if speaker.tts_engine == "edge_tts" and speaker.voice_id:
             await voice_catalog_service.require_voice(speaker.voice_id)
     async with write_transaction(db):
         project = await project_service.create_project(db, config, commit=False)
@@ -158,7 +160,7 @@ async def update_project(
     """Apply a partial update to a project — also used as the auto-save endpoint."""
     started_at = time.perf_counter()
     for speaker in patch.speakers or []:
-        if speaker.voice_id:
+        if speaker.tts_engine == "edge_tts" and speaker.voice_id:
             await voice_catalog_service.require_voice(speaker.voice_id)
     async with write_transaction(db):
         project = await project_service.update_project(db, project_id, patch, commit=False)
@@ -195,12 +197,21 @@ async def update_speaker(
             profile_revision = voice_revision(profile_voice_settings(profile_row))
     fields = patch.model_dump(exclude_unset=True, exclude_none=True,
                               exclude={"expected_voice_revision", "apply_profile_voice", "name"})
+    if "voice_id" in patch.model_fields_set:
+        fields["voice_id"] = patch.voice_id
+    if fields.get("tts_engine") == "omnivoice" and "voice_id" not in fields:
+        fields["voice_id"] = None
     if patch.apply_profile_voice:
         if patch.voice_id is not None:
             raise ValidationError("Choose either a project voice or apply the profile voice.")
-        fields["voice_id"] = profile_row.get("default_voice_id") or resolve_voice_id(profile_voice_settings(profile_row))
-        fields["tts_engine"] = "edge_tts"
-    if fields.get("voice_id"):
+        profile_voice = profile_voice_settings(profile_row)
+        fields["tts_engine"] = profile_voice["tts_engine"]
+        fields["voice_description"] = profile_voice["voice_description"]
+        fields["voice_id"] = (
+            profile_row.get("default_voice_id") or resolve_voice_id(profile_voice)
+            if profile_voice["tts_engine"] == "edge_tts" else None
+        )
+    if fields.get("voice_id") and fields.get("tts_engine", speaker["tts_engine"]) == "edge_tts":
         await voice_catalog_service.require_voice(fields["voice_id"])  # network outside shared transaction
     rename = None
     async with write_transaction(db):
@@ -268,7 +279,9 @@ async def generate_script(project_id: str, db: aiosqlite.Connection = Depends(ge
     started_at = time.perf_counter()
     async with read_transaction():
         project = await project_service.get_project(db, project_id)
-    lines = await script_service.generate_script(project_id, project)  # no lock held — provider gateway call
+    lines = await script_service.generate_script(
+        project_id, {**project, "_annotate_vocal_cues": True},
+    )  # no lock held — provider gateway calls
     saved = await _save_script_and_advance(
         db, project_id, project, [line.model_dump() for line in lines]
     )
@@ -285,10 +298,23 @@ async def regenerate_script_line(
     async with read_transaction():
         project = await project_service.get_project(db, project_id)
         current_line = await script_service.get_script_line(db, project_id, payload.line_id)
+        existing_lines = await script_service.get_script(db, project_id)
     new_line = await script_service.regenerate_line(  # no lock held — provider gateway call
-        project_id, project, payload.line_id, current_line["text"], current_line["speaker_id"]
+        project_id, {**project, "_annotate_vocal_cues": True, "_existing_script_lines": existing_lines}, payload.line_id,
+        current_line["text"], current_line["speaker_id"],
     )
     async with write_transaction(db):
+        live_project = await project_service.get_project(db, project_id)
+        relevant = ("topic", "genre", "cefr_level", "duration_minutes", "speakers")
+        if any(live_project[key] != project[key] for key in relevant):
+            raise ConflictError("Project settings changed while AI was regenerating the line; retry")
+        live_line = await script_service.get_script_line(db, project_id, payload.line_id)
+        if live_line["text"] != current_line["text"] or live_line["speaker_id"] != current_line["speaker_id"]:
+            raise ConflictError("Script line changed while AI was regenerating it; retry with the latest text")
+        live_lines = await script_service.get_script(db, project_id)
+        other_lines = [line for line in live_lines if line["id"] != payload.line_id]
+        if count_cues(other_lines) + count_cues([{"text": new_line.text}]) > cue_quota(project["duration_minutes"]):
+            new_line = new_line.model_copy(update={"text": caption_text(new_line.text)})
         updated = await script_service.update_script_line(
             db, project_id, payload.line_id, new_line.text, new_line.language_notes.model_dump(),
             commit=False,

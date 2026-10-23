@@ -14,6 +14,9 @@
     .library-main { width: min(1160px, calc(100% - 32px)); margin: 32px auto 80px; }
     .library-hint { color: var(--muted); }
     .library-tabs { display: flex; gap: 8px; margin: 20px 0; }
+    .library-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+    .library-message { margin: 12px 0; padding: 10px 14px; border-radius: 8px; background: var(--surface-2); }
+    .library-message[hidden] { display: none; }
     /* Phase 33 (Tasks 33.4/33.5): the Profiles tab -- one page scroll, large readable cards, no nested scrolling form. */
     .profile-layout { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 20px; align-items: start; }
     .profile-tools { display: grid; gap: 6px; margin-bottom: 14px; }
@@ -77,50 +80,6 @@
     @media (max-width: 900px) {
       .profile-layout { grid-template-columns: 1fr; }
     }
-    .library-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
-    .library-layout > .library-editor, .scene-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
-    .scene-browse { min-width: 0; }
-    .scene-side { display: grid; gap: 16px; }
-    .scene-detail { padding: 14px; }
-    .scene-detail[hidden] { display: none; }
-    .scene-detail-plate { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; }
-    .scene-detail-plate[hidden], .scene-detail .scene-placeholder[hidden] { display: none; }
-    .scene-detail h3 { margin: 12px 0 4px; }
-    .scene-detail p { margin: 0; color: var(--muted); }
-    .library-scene { cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
-    .library-scene:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
-    .library-scene[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-    .library-badge { display: inline-block; margin-top: 4px; padding: 3px 8px; border-radius: 999px;
-      background: var(--accent-soft); color: var(--accent); font-size: 12px; }
-    .library-editor { padding: 22px; min-width: 0; }
-    .library-editor h2 { margin: 0 0 18px; }
-    .library-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-    .library-fields label { display: grid; gap: 5px; font-size: 13px; font-weight: 600; }
-    .library-fields input, .library-fields select { min-width: 0; width: 100%; padding: 9px 10px;
-      border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
-    .library-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
-    .library-progress { min-height: 24px; margin: 16px 0; }
-    .library-progress:empty { display: none; }
-    .library-scene-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
-    .library-scene { padding: 14px; }
-    .library-scene img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 7px; }
-    .library-scene h3 { margin: 10px 0 5px; }
-    .library-scene p { margin: 0; color: var(--muted); }
-    .library-scene .scene-meta { margin-top: 4px; font-size: 0.86rem; }
-    .scene-placeholder { display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: 7px;
-      border: 1px dashed var(--border, #8884); color: var(--muted); font-size: 0.85rem; padding: 10px; text-align: center; }
-    .library-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
-    .library-chips button[aria-pressed="true"] { outline: 2px solid var(--accent, currentColor); }
-    .library-message { margin: 12px 0; padding: 10px 14px; border-radius: 8px; background: var(--surface-2); }
-    .library-message[hidden] { display: none; }
-    .library-message.error { color: var(--danger); }
-    @media (max-width: 900px) {
-      .library-layout { grid-template-columns: 1fr; }
-      .library-layout > .library-editor, .scene-side { position: static; max-height: none; overflow: visible; }
-    }
-    @media (max-width: 720px) {
-      .library-fields { grid-template-columns: 1fr; }
-    }
     /* Phase 58 (ENH-040): profile header with the picture, and one tab row */
     .profile-head { display: flex; align-items: center; gap: 14px; }
     .profile-head-text { flex: 1; min-width: 0; }
@@ -147,16 +106,11 @@
   </header>
   <main class="library-main">
     <div class="library-heading">
-      <div><h1>Character Library</h1><p>Pick a character, make its talking pictures with an outside AI, and manage the scenes.</p></div>
-    </div>
-    <div id="library-message" class="library-message" role="status" hidden></div>
-    <div class="library-actions">
-      <div id="library-progress" class="library-progress" aria-live="polite"></div>
-      <button id="cancel-library-job" class="btn btn-ghost btn-sm" type="button" hidden>Cancel</button>
+      <div><h1>Character Library</h1><p>Pick a character and make its talking pictures with an outside AI.</p></div>
     </div>
     <div class="library-tabs" role="tablist" aria-label="Library sections">
       <button id="profiles-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="true">Profiles</button>
-      <button id="scenes-tab" class="btn btn-ghost" type="button" role="tab" aria-selected="false">Scenes</button>
+      <a id="scenes-tab" class="btn btn-ghost" href="/activities?tab=scenes">Scenes</a>
     </div>
     <section id="profiles-panel" role="tabpanel" aria-labelledby="profiles-tab">
       <div id="profile-message" class="library-message" role="status" hidden></div>
@@ -261,41 +215,11 @@
         </div>
       </div>
     </section>
-    <section id="scenes-panel" role="tabpanel" aria-labelledby="scenes-tab" hidden>
-      <div class="library-layout scenes-layout">
-        <div class="scene-browse">
-          <div id="scene-filters" class="library-chips" role="group" aria-label="Filter scenes by category"></div>
-          <div id="scene-grid" class="library-scene-grid" aria-label="Scenes"></div>
-        </div>
-        <aside id="scene-side" class="scene-side" aria-label="Scene details">
-          <div id="scene-detail" class="card scene-detail" hidden>
-            <img id="scene-detail-plate" class="scene-detail-plate" alt="" hidden />
-            <p id="scene-detail-empty" class="scene-placeholder">No plate yet: it is made when the scene is first used, or press Plate.</p>
-            <h3 id="scene-detail-name"></h3>
-            <p id="scene-detail-place"></p>
-            <p id="scene-detail-meta" class="scene-meta"></p>
-          </div>
-        <div class="card library-editor">
-          <h2 id="scene-editor-title">New scene</h2>
-          <form id="scene-form" class="library-fields">
-            <label>Scene name<input name="name" required /></label>
-            <label>Place phrase<input name="place" maxlength="40" placeholder="a bright home kitchen" required /></label>
-            <label>Staging<select name="staging"><option value="standing">Standing</option><option value="seated">Seated</option></select></label>
-            <label>Category<select name="category"></select></label>
-            <label>Time of day<select name="time_of_day"></select></label>
-            <p id="scene-stale-warning" class="library-hint" role="status" hidden>Saving will clear this scene's plate; it is regenerated on next use.</p>
-            <div class="library-actions"><button id="save-scene" class="btn btn-primary" type="submit">Add scene</button><button id="cancel-scene-edit" class="btn btn-ghost" type="button" hidden>Cancel edit</button></div>
-          </form>
-          <p class="library-hint">The place phrase uses up to five words. Staging controls the wide conversation pose. The plate (an empty view of the place) keeps every shot in this scene looking like the same place.</p>
-        </div>
-        </aside>
-      </div>
-    </section>
+
   </main>
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/confirm_dialog.js"></script>
   <script src="/static/js/api.js"></script>
-  <script src="/static/js/generation_status.js"></script>
   <script src="/static/js/characters.js"></script>
   <script src="/static/js/voice_picker.js"></script>
   <script src="/static/js/character_profiles.js"></script>

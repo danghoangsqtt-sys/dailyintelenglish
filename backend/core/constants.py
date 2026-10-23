@@ -52,6 +52,15 @@ VIDEO_HEIGHT_STANDARD = 720
 MAX_CONCURRENT_TTS = 2
 TTS_SPEED_MIN = 0.75
 TTS_SPEED_MAX = 1.5
+# Phase 74: only recognized cue lines use this recipe revision in their cache key.
+VOCAL_CUE_RECIPE_VERSION = 1
+VOCAL_CUE_LOW_CLAUSE_MAX_WORDS = 6
+VOCAL_CUE_LOW_PITCH_DELTA_HZ = -10
+EDGE_TTS_PITCH_LIMIT_HZ = 50
+VOCAL_CUE_MAX_PER_MINUTE = 2
+VOCAL_CUE_MIN_GAP_SECONDS = 20.0
+VOCAL_CUE_PROMPT_MAX_LINES = 120
+VOCAL_CUE_PROMPT_MAX_WORDS_PER_LINE = 48
 
 # Phase 48: English voice catalog and isolated auditions.
 VOICE_CATALOG_TTL_SECONDS = 24 * 60 * 60
@@ -62,19 +71,15 @@ VOICE_PREVIEW_MAX_BYTES = 256 * 1024 * 1024
 VOICE_PREVIEW_MAX_TEXT_LENGTH = 500
 VOICE_PREVIEW_SAMPLE_TEXT = "A clear explanation begins with a simple example. Let us explore this idea together."
 TTS_SPEED_DEFAULT = 1.0
-# Only engines tts_service.py can actually dispatch to. "piper"/"google"/"azure" were
-# removed 2026-09-18 (found by an independent audit): they were accepted as valid
-# speaker.tts_engine values with real-looking validation, but tts_service.py has zero
-# synthesis code for any of them -- selecting one silently fell through to Edge TTS
-# with no error, no warning, and no honest fallback signal, unlike "omnivoice" (which
-# does have a real, documented, honestly-failing code path -- see tts_service.py's
-# module docstring). Advertising an engine choice that quietly does something
-# different than requested is exactly the "fake capability" this project's own rules
-# forbid.
-TTS_ENGINES = ["edge_tts"]
-# D56 (owner 2026-10-06): Edge TTS is the only engine. "omnivoice" (always fell back to Edge) is
-# still ACCEPTED from older clients/rows and normalised to "edge_tts", never rejected.
-LEGACY_TTS_ENGINES = {"omnivoice": "edge_tts"}
+# Only engines tts_service.py can actually dispatch to. Other advertised-but-unimplemented
+# engines (piper/google/azure, etc.) remain excluded so selection cannot silently behave
+# like Edge. OmniVoice is included only because Phase 75 now has a real isolated worker.
+TTS_ENGINES = ["edge_tts", "omnivoice"]
+# Only engines that no longer have an implementation belong here. OmniVoice now has
+# an isolated local worker and must remain a real, selectable engine.
+LEGACY_TTS_ENGINES: dict[str, str] = {}
+OMNIVOICE_MIN_FREE_MB = 8192  # conservative until the local RTX 3060 run is measured
+OMNIVOICE_REQUEST_TIMEOUT_SECONDS = 600
 
 # Edge TTS voice map: accent -> gender -> ShortName, verified live against
 # edge_tts.list_voices() on 2026-09-11. "scottish" has no distinct Edge TTS locale,

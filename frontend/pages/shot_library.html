@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/static/css/style.css" />
   <script src="/static/js/i18n_vi.js"></script>
   <script src="/static/js/i18n.js"></script>
+  <script src="/static/js/capabilities.js"></script>
   <style>
     body { margin: 0; }
     .main { width: min(1180px, calc(100% - 80px)); margin: 0 auto; padding: 48px 0 80px; }
@@ -137,6 +138,58 @@
     .activity-thumb img { display: block; cursor: zoom-in; }
     .activity-thumb .activity-select-row { position: absolute; top: 8px; left: 8px; min-height: 0; padding: 3px 9px; border-radius: 999px; background: rgba(0, 0, 0, .6); color: #fff; }
     @media (max-width: 760px) { .activity-layout { grid-template-columns: 1fr; } .activity-shelves { position: static; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); } .activity-shelves h2 { grid-column: 1 / -1; } .library-heading { flex-direction: column; align-items: flex-start; } .main { width: calc(100% - 32px); } }
+    .library-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+    .scene-browse .shot-filters input { padding: 8px 10px; border: 1px solid var(--surface-border); border-radius: 8px; color: var(--text); background: var(--surface); }
+    .library-hint { color: var(--muted); }
+    .library-scene.is-archived { border-style: dashed; }
+    .library-scene:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    .library-layout > .library-editor, .scene-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
+    .scene-browse { min-width: 0; }
+    .scene-side { display: grid; gap: 16px; }
+    .scene-detail { padding: 14px; }
+    .scene-detail[hidden] { display: none; }
+    .scene-detail-plate { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 10px; }
+    .scene-detail-plate[hidden], .scene-detail .scene-placeholder[hidden] { display: none; }
+    .scene-detail h3 { margin: 12px 0 4px; }
+    .scene-detail p { margin: 0; color: var(--muted); }
+    .library-scene { cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; }
+    .library-scene:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .library-scene[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .library-badge { display: inline-block; margin-top: 4px; padding: 3px 8px; border-radius: 999px;
+      background: var(--accent-soft); color: var(--accent); font-size: 12px; }
+    .library-editor { padding: 22px; min-width: 0; }
+    .library-editor h2 { margin: 0 0 18px; }
+    .library-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .library-fields label { display: grid; gap: 5px; font-size: 13px; font-weight: 600; }
+    .library-fields input, .library-fields select, .library-fields textarea { min-width: 0; width: 100%; box-sizing: border-box; padding: 9px 10px;
+      border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+    .library-fields textarea { resize: vertical; font: inherit; font-size: 15px; font-weight: 400; line-height: 1.55; }
+    .library-fields .scene-wide { grid-column: 1 / -1; }
+    .library-fields .library-actions { align-items: center; }
+    .scene-prompt-note { margin: 0; font-size: 14px; line-height: 1.5; }
+    .library-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+    .library-progress { min-height: 24px; margin: 16px 0; }
+    .library-progress:empty { display: none; }
+    .library-scene-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+    .library-scene { padding: 14px; }
+    .library-scene img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 7px; }
+    .library-scene h3 { margin: 10px 0 5px; }
+    .library-scene p { margin: 0; color: var(--muted); }
+    .library-scene .scene-meta { margin-top: 4px; font-size: 0.86rem; }
+    .scene-placeholder { display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: 7px;
+      border: 1px dashed var(--border, #8884); color: var(--muted); font-size: 0.85rem; padding: 10px; text-align: center; }
+    .library-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
+    .library-chips button[aria-pressed="true"] { outline: 2px solid var(--accent, currentColor); }
+    .library-message { margin: 12px 0; padding: 10px 14px; border-radius: 8px; background: var(--surface-2); }
+    .library-message[hidden] { display: none; }
+    .library-message.error { color: var(--danger); }
+    @media (max-width: 900px) {
+      .library-layout { grid-template-columns: 1fr; }
+      .library-layout > .library-editor, .scene-side { position: static; max-height: none; overflow: visible; }
+    }
+    @media (max-width: 720px) {
+      .library-fields { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -165,7 +218,7 @@
     </section>
     <div class="library-tabs" role="tablist" aria-label="Library sections">
       <button id="tab-activities" class="library-tab" type="button" role="tab" aria-selected="true" aria-controls="activity-panel">Activity pictures <span id="tab-activities-count" class="library-tab-count"></span></button>
-      <button id="tab-backgrounds" class="library-tab" type="button" role="tab" aria-selected="false" aria-controls="background-panel">Scene backgrounds <span id="tab-backgrounds-count" class="library-tab-count"></span></button>
+      <button id="tab-backgrounds" class="library-tab" type="button" role="tab" aria-selected="false" aria-controls="background-panel">Scenes <span id="tab-scenes-count" class="library-tab-count"></span></button>
     </div>
     <div id="shot-message" hidden role="alert"></div>
 
@@ -206,8 +259,56 @@
     </section>
 
     <section id="background-panel" class="activity-section" role="tabpanel" aria-labelledby="tab-backgrounds" hidden>
-      <div class="import-card" id="import-card">
-        <h2>Scene backgrounds</h2>
+      <div id="library-message" class="library-message" role="status" hidden></div>
+      <div class="library-actions">
+        <div id="library-progress" class="library-progress" aria-live="polite"></div>
+        <button id="cancel-library-job" class="btn btn-ghost btn-sm" type="button" hidden>Cancel</button>
+      </div>
+      <div class="library-layout scenes-layout">
+        <div class="scene-browse">
+          <div class="shot-filters">
+            <label>Search scenes<input id="scene-search" type="search" placeholder="Name or place" /></label>
+            <label>Plate<select id="scene-plate-filter"><option value="all">All plates</option><option value="ready">With plate</option><option value="missing">Without plate</option></select></label>
+            <label>Show<select id="scene-archive-filter"><option value="active">Active</option><option value="archived">Archived</option><option value="all">All</option></select></label>
+            <button id="new-scene" class="btn btn-primary" type="button">New scene</button>
+          </div>
+          <p id="scene-count" class="shot-summary" role="status"></p>
+          <p id="scene-empty" class="empty-state" hidden>No scenes match these filters.</p>
+          <div id="scene-filters" class="library-chips" role="group" aria-label="Filter scenes by category"></div>
+          <div id="scene-grid" class="library-scene-grid" aria-label="Scenes"></div>
+        </div>
+        <aside id="scene-side" class="scene-side" aria-label="Scene details">
+          <div id="scene-detail" class="card scene-detail" hidden>
+            <img id="scene-detail-plate" class="scene-detail-plate" alt="" hidden />
+            <p id="scene-detail-empty" class="scene-placeholder">No plate yet: it is made when the scene is first used, or press Plate.</p>
+            <h3 id="scene-detail-name"></h3>
+            <p id="scene-detail-place"></p>
+            <p id="scene-detail-meta" class="scene-meta"></p>
+          </div>
+        <div class="card library-editor">
+          <h2 id="scene-editor-title">New scene</h2>
+          <form id="scene-form" class="library-fields">
+            <label class="scene-wide">Describe your scene (Vietnamese or English)<textarea id="scene-source-request" name="source_request" maxlength="2000" rows="3" placeholder="Describe the place, mood and lighting you want."></textarea></label>
+            <div class="library-actions scene-wide"><button id="prepare-scene-prompt" class="btn btn-ghost" type="button">Prepare image prompt</button><span id="scene-prompt-status" class="library-hint" role="status"></span></div>
+            <p class="library-hint scene-wide scene-prompt-note">Preparation uses your configured text AI. It does not need a local image GPU.</p>
+            <label>Scene name<input name="name" required /></label>
+            <label>Place phrase<input name="place" maxlength="40" placeholder="a bright home kitchen" required /></label>
+            <label>Staging<select name="staging"><option value="standing">Standing</option><option value="seated">Seated</option></select></label>
+            <label>Category<select name="category"></select></label>
+            <label>Time of day<select name="time_of_day"></select></label>
+            <label class="scene-wide">Detailed image prompt<textarea id="scene-image-prompt" name="image_prompt" maxlength="6000" rows="9" spellcheck="false"></textarea></label>
+            <div class="library-actions scene-wide"><button id="copy-scene-prompt" class="btn btn-ghost" type="button">Copy prompt</button></div>
+            <p id="scene-request-stale" class="library-hint scene-wide scene-prompt-note" role="status" hidden>The request changed. Prepare again to update the image prompt; your existing prompt is kept.</p>
+            <p class="library-hint scene-wide scene-prompt-note">Save the scene, then use Make plate on its card to generate with local Qwen, or use Upload image for a picture made with an outside AI. Copy prompt uses the same wide, empty background constraints.</p>
+            <p id="scene-stale-warning" class="library-hint" role="status" hidden>Saving will clear this scene's plate; it is regenerated on next use.</p>
+            <div class="library-actions"><button id="save-scene" class="btn btn-primary" type="submit">Add scene</button><button id="cancel-scene-edit" class="btn btn-ghost" type="button" hidden>Cancel edit</button></div>
+          </form>
+          <p class="library-hint">The place phrase uses up to five words. Staging controls the wide conversation pose. The plate (an empty view of the place) keeps every shot in this scene looking like the same place.</p>
+        </div>
+        </aside>
+      </div>
+      <details class="import-card" id="import-card">
+        <summary>Advanced: import scene backgrounds from a folder</summary>
         <p>Pictures of places without people, shown behind the talking characters. A background replaces the picture of
           its scene.</p>
         <ol class="background-steps">
@@ -220,7 +321,7 @@
           <span id="bg-count" class="shot-summary" role="status"></span>
         </div>
         <ul id="bg-result" class="import-result" role="status"></ul>
-      </div>
+      </details>
     </section>
   </main>
   <dialog id="activity-dialog" class="activity-dialog" aria-labelledby="activity-dialog-title">
@@ -279,6 +380,8 @@
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/confirm_dialog.js"></script>
   <script src="/static/js/api.js"></script>
-  <script src="/static/js/shot_library.js?v=20261021-activity-library"></script>
+  <script src="/static/js/generation_status.js"></script>
+  <script src="/static/js/scene_library.js"></script>
+  <script src="/static/js/shot_library.js?v=73-scenes"></script>
 </body>
 </html>

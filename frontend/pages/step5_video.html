@@ -77,9 +77,6 @@
     .visual-cast-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
     .visual-cast-name { font-size: 13px; color: var(--muted); }
     .visual-cast-face { display: block; width: 58px; height: 58px; margin: 9px 0; border-radius: 50%; object-fit: cover; }
-    .visual-scene-options, .visual-scene-order { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-    .visual-scene-options button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
-    .visual-scene-order { color: var(--muted); font-size: 12px; }
     .visual-warning { color: var(--danger); }
     .storyboard-summary { margin: 10px 0; color: var(--muted); }
     .storyboard-summary .over-cap { color: var(--danger); font-weight: 700; }
@@ -138,12 +135,9 @@
             <section class="section" id="solo-explainer-section" hidden aria-label="Solo explainer editor"></section>
             <section class="section" id="project-visuals-section">
               <h2 class="section-title">Characters &amp; scenes</h2>
-              <p class="section-hint">Choose each speaker's character and up to three scenes. <a href="/characters">Open Character Library</a>. The characters talk on screen as sprites; illustrations come from the generic Activity Library or the local AI and never show a cast member's face.</p>
+              <p class="section-hint">Choose each speaker's character. Choose a scene for each beat in the storyboard below. <a href="/characters">Open Character Library</a>. The characters talk on screen as sprites; illustrations come from the generic Activity Library or the local AI and never show a cast member's face.</p>
               <h3>Cast</h3>
               <div id="visual-cast-grid" class="visual-cast-grid"></div>
-              <h3>Scenes</h3>
-              <div id="visual-scene-options" class="visual-scene-options" role="group" aria-label="Project scenes"></div>
-              <div id="visual-scene-order" class="visual-scene-order" aria-live="polite"></div>
               <div id="visual-warnings" class="visual-warning" role="status"></div>
               <p id="activity-coverage" class="section-hint" role="status" hidden></p>
               <div id="activity-missing" class="activity-missing" hidden>
@@ -158,6 +152,7 @@
 
             <section class="section" id="storyboard-section">
               <h2 class="section-title">Storyboard</h2>
+              <p class="section-hint">Choose places from your library for each beat. <a href="/activities?tab=scenes" target="_blank" rel="noopener">Manage scenes</a></p>
               <p class="section-hint">Story beats decide which picture shows during which lines: a place, who is on screen, what they do and how they feel. Let the AI propose, then edit and approve. Pictures follow places and actions, not duration.</p>
               <div class="generate-row">
                 <button id="storyboard-propose" class="btn btn-primary" type="button">Propose with AI</button>

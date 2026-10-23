@@ -10,15 +10,17 @@ subfolder "Ep 02 - <episode title>", so the episodes of one series no longer ove
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import re
 import shutil
+import unicodedata
 import uuid
 import weakref
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import aiosqlite
 from pydantic import BaseModel, Field, field_validator
@@ -51,6 +53,7 @@ def _sync_lock(project_id: str) -> asyncio.Lock:
 class ExportSettings(BaseModel):
     output_dir: str = Field(min_length=3, max_length=400)
     items: list[str] = Field(default_factory=lambda: list(DEFAULT_ITEMS))
+    layout_mode: Literal["legacy", "topic_hierarchy"] = "legacy"
 
     @field_validator("output_dir")
     @classmethod
@@ -85,6 +88,98 @@ def _check_folder(path: Path) -> None:
 
 
 _UNSAFE_NAME = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+_WINDOWS_RESERVED = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
+
+
+def _topic_key(value: str, channel_topic_id: str | None = None) -> str:
+    """Stable identity for a Channel Plan Topic or a freeform project topic."""
+    if channel_topic_id:
+        return f"channel:{channel_topic_id}"
+    normalized = " ".join(unicodedata.normalize("NFKC", value or "").split()).casefold()
+    return "project:" + hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:24]
+
+
+def _safe_component(value: str, fallback: str, limit: int = 80) -> str:
+    """Return a readable Windows-safe path component, including reserved device names."""
+    name = " ".join(_UNSAFE_NAME.sub(" ", unicodedata.normalize("NFKC", value or "")).split()).rstrip(". ")
+    if not name:
+        name = fallback
+    name = name[:limit].rstrip(". ") or fallback[:limit]
+    if name.split(".", 1)[0].upper() in _WINDOWS_RESERVED:
+        name = f"_{name}"
+    return name
+
+
+async def _project_folder_context(db: aiosqlite.Connection, project_id: str) -> dict:
+    """Return the names and stable identities used to resolve this project's Topic hierarchy."""
+    cursor = await db.execute(
+        "SELECT t.id, t.name, s.id, s.name, e.number, e.title "
+        "FROM channel_episodes e JOIN channel_series s ON s.id = e.series_id "
+        "JOIN channel_topics t ON t.id = s.topic_id "
+        "WHERE e.project_id = ? ORDER BY e.created_at DESC LIMIT 1", (project_id,))
+    row = await cursor.fetchone()
+    if row:
+        return {"topic_key": _topic_key(row[1], row[0]), "topic_name": row[1], "series_id": row[2],
+                "series_name": row[3], "episode_number": row[4], "video_name": row[5], "is_episode": True}
+    cursor = await db.execute("SELECT topic, name FROM projects WHERE id = ?", (project_id,))
+    row = await cursor.fetchone()
+    if not row:
+        raise NotFoundError("Project not found")
+    topic_name = (row[0] or "").strip() or "Untitled Topic"
+    return {"topic_key": _topic_key(topic_name), "topic_name": topic_name, "series_id": None,
+            "series_name": None, "episode_number": None, "video_name": row[1], "is_episode": False}
+
+
+async def topic_destination(db: aiosqlite.Connection, project_id: str, root: str | Path) -> Path:
+    """Resolve a readable Topic/Series/video path; the saved relative path stabilizes collisions."""
+    context = await _project_folder_context(db, project_id)
+    path = Path(root)
+    path /= _safe_component(context["topic_name"], "Untitled Topic")
+    if context["is_episode"]:
+        path /= _safe_component(context["series_name"], "Untitled Series")
+        number = int(context["episode_number"] or 0)
+        video_name = _safe_component(f"Ep {number:02d} - {context['video_name']}", f"Ep {number:02d}")
+    else:
+        video_name = _safe_component(context["video_name"], "Untitled Video")
+    return path / video_name
+
+
+async def _relative_dir_for_save(db: aiosqlite.Connection, project_id: str, root: str | Path) -> str:
+    """Reserve a stable readable destination at selection time so later projects cannot move an older one."""
+    cursor = await db.execute("SELECT output_dir, layout_mode, relative_dir FROM project_exports WHERE project_id = ?",
+                              (project_id,))
+    current = await cursor.fetchone()
+    if (current and current[1] == "topic_hierarchy" and current[2]
+            and current[0].casefold() == str(root).casefold()):
+        return current[2]
+
+    proposed = await topic_destination(db, project_id, root)
+    relative = proposed.relative_to(Path(root))
+    relative_text = str(relative)
+    digest = hashlib.sha256(project_id.encode("utf-8")).hexdigest()
+    for suffix_length in (0, 6, 10, 16, 24):
+        if suffix_length:
+            base = relative.parts[-1][: max(1, 80 - suffix_length - 3)].rstrip(". ")
+            final = _safe_component(f"{base} - {digest[:suffix_length]}", "Video")
+            candidate = str(Path(*relative.parts[:-1], final))
+        else:
+            candidate = relative_text
+        cursor = await db.execute(
+            "SELECT 1 FROM project_exports WHERE output_dir = ? COLLATE NOCASE AND layout_mode = 'topic_hierarchy' "
+            "AND relative_dir = ? COLLATE NOCASE AND project_id != ? LIMIT 1",
+            (str(root), candidate, project_id))
+        reserved = await cursor.fetchone()
+        if not reserved and not (Path(root) / candidate).exists():
+            return candidate
+    raise ValidationError("A folder with this name already exists. Change the video or series name before exporting.")
+
+
+async def preview_folder(db: aiosqlite.Connection, project_id: str, body: ExportSettings) -> Path:
+    """Preview the same destination the next save will reserve, without changing settings or creating folders."""
+    if body.layout_mode == "legacy":
+        return await resolved_folder(db, project_id, body.output_dir)
+    relative_dir = await _relative_dir_for_save(db, project_id, body.output_dir)
+    return Path(body.output_dir) / relative_dir
 
 
 def episode_folder_name(number: int, title: str) -> str:
@@ -113,13 +208,30 @@ async def resolved_folder(db: aiosqlite.Connection, project_id: str, root: str |
     return destination(root, await _episode(db, project_id))
 
 
+async def resolved_project_folder(db: aiosqlite.Connection, project_id: str, saved: dict) -> Path:
+    """Resolve the destination according to an explicit per-project layout mode."""
+    if saved.get("layout_mode", "legacy") == "topic_hierarchy":
+        if saved.get("relative_dir"):
+            return Path(saved["output_dir"]) / saved["relative_dir"]
+        return await topic_destination(db, project_id, saved["output_dir"])
+    return await resolved_folder(db, project_id, saved["output_dir"])
+
+
+async def _saved_topic_root(db: aiosqlite.Connection, project_id: str) -> str | None:
+    context = await _project_folder_context(db, project_id)
+    cursor = await db.execute("SELECT output_dir FROM topic_export_roots WHERE topic_key = ?", (context["topic_key"],))
+    row = await cursor.fetchone()
+    return row[0] if row else None
+
+
 async def _series_folder(db: aiosqlite.Connection, project_id: str, episode: dict | None) -> str | None:
     """The series folder another episode of the same series already uses (the newest), for a new episode's panel."""
     if not episode:
         return None
     cursor = await db.execute(
         "SELECT x.output_dir, e.number, e.title FROM project_exports x JOIN channel_episodes e ON e.project_id = x.project_id "
-        "WHERE e.series_id = ? AND x.project_id != ? ORDER BY x.updated_at DESC LIMIT 1", (episode["series_id"], project_id))
+        "WHERE e.series_id = ? AND x.project_id != ? AND COALESCE(x.layout_mode, 'legacy') = 'legacy' "
+        "ORDER BY x.updated_at DESC LIMIT 1", (episode["series_id"], project_id))
     row = await cursor.fetchone()
     if row is None:
         return None
@@ -130,32 +242,47 @@ async def _series_folder(db: aiosqlite.Connection, project_id: str, episode: dic
 
 async def get_settings(db: aiosqlite.Connection, project_id: str) -> dict | None:
     cursor = await db.execute(
-        "SELECT output_dir, items_json, last_sync_at, last_error, updated_at FROM project_exports WHERE project_id = ?",
+        "SELECT output_dir, items_json, last_sync_at, last_error, updated_at, layout_mode, relative_dir "
+        "FROM project_exports WHERE project_id = ?",
         (project_id,))
     row = await cursor.fetchone()
     if row is None:
         return None
     return {"output_dir": row[0], "items": json.loads(row[1] or "[]"), "last_sync_at": row[2],
-            "last_error": row[3], "updated_at": row[4]}
+            "last_error": row[3], "updated_at": row[4], "layout_mode": row[5] or "legacy", "relative_dir": row[6] or ""}
 
 
 async def public(db: aiosqlite.Connection, project_id: str) -> dict:
     saved = await get_settings(db, project_id)
     episode = await _episode(db, project_id)
+    suggested = None if saved else await _saved_topic_root(db, project_id)
+    folder = str(await resolved_project_folder(db, project_id, saved)) if saved else None
     return {"components": [{"key": key, "label": label} for key, label in ITEMS.items()], "default_items": DEFAULT_ITEMS,
-            "settings": saved, "folder": str(destination(saved["output_dir"], episode)) if saved else None,
-            "suggested_dir": None if saved else await _series_folder(db, project_id, episode)}
+            "settings": saved, "folder": folder, "suggested_dir": suggested,
+            "legacy_suggested_dir": None if saved else await _series_folder(db, project_id, episode),
+            "layout_mode": saved["layout_mode"] if saved else "topic_hierarchy",
+            "folder_context": await _project_folder_context(db, project_id)}
 
 
 async def save_settings(db: aiosqlite.Connection, project_id: str, body: ExportSettings) -> dict:
     cursor = await db.execute("SELECT 1 FROM projects WHERE id = ?", (project_id,))
     if await cursor.fetchone() is None:
         raise NotFoundError("Project not found")
+    context = await _project_folder_context(db, project_id)
+    relative_dir = await _relative_dir_for_save(db, project_id, body.output_dir) if body.layout_mode == "topic_hierarchy" else ""
     await db.execute(
-        "INSERT INTO project_exports (project_id, output_dir, items_json, updated_at) VALUES (?, ?, ?, ?) "
+        "INSERT INTO project_exports (project_id, output_dir, items_json, updated_at, layout_mode, relative_dir) "
+        "VALUES (?, ?, ?, ?, ?, ?) "
         "ON CONFLICT(project_id) DO UPDATE SET output_dir = excluded.output_dir, items_json = excluded.items_json, "
-        "updated_at = excluded.updated_at, last_sync_at = NULL, last_error = NULL",
-        (project_id, body.output_dir, json.dumps(body.items), _now()))
+        "updated_at = excluded.updated_at, last_sync_at = NULL, last_error = NULL, layout_mode = excluded.layout_mode, "
+        "relative_dir = excluded.relative_dir",
+        (project_id, body.output_dir, json.dumps(body.items), _now(), body.layout_mode, relative_dir))
+    if body.layout_mode == "topic_hierarchy":
+        await db.execute(
+            "INSERT INTO topic_export_roots (topic_key, topic_name, output_dir, updated_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(topic_key) DO UPDATE SET topic_name = excluded.topic_name, "
+            "output_dir = excluded.output_dir, updated_at = excluded.updated_at",
+            (context["topic_key"], context["topic_name"], body.output_dir, _now()))
     return await public(db, project_id)
 
 
@@ -312,7 +439,7 @@ async def sync(db: aiosqlite.Connection, project_id: str) -> dict:
             if not saved:
                 return {"written": [], "folder": None}
             plan = await _plan(db, project_id, saved["items"])
-            folder = await resolved_folder(db, project_id, saved["output_dir"])
+            folder = await resolved_project_folder(db, project_id, saved)
         error = None
         written: list[str] = []
         try:

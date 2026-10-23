@@ -53,8 +53,6 @@ async def test_step5_cast_and_scenes_without_drawn_shots(browser_instance: Brows
     project_id = (await response.json())["data"]["id"]
     first = locked_character("Nova", "yellow")
     second = locked_character("Mira", "green")
-    scenes_response = await page.request.get(f"{live_server_url}/api/visuals/scenes")
-    scene_names = [scene["name"] for scene in (await scenes_response.json())["data"][:2]]
     await page.route(
         f"**/api/projects/{project_id}/audio/status",
         lambda route: route.fulfill(json={"success": True, "data": {"status": "complete", "timestamps": []}}),
@@ -62,13 +60,8 @@ async def test_step5_cast_and_scenes_without_drawn_shots(browser_instance: Brows
     await page.goto(f"{live_server_url}/step5?project_id={project_id}")
     await choose_cast(page, 0, first)
     await choose_cast(page, 1, second)
-    await page.locator("#visual-scene-options button", has_text=scene_names[0]).click()
-    await page.wait_for_function("document.querySelectorAll('#visual-scene-order span').length === 1")
-    await page.locator("#visual-scene-options button", has_text=scene_names[1]).click()
-    await page.wait_for_function("document.querySelectorAll('#visual-scene-order span').length === 2")
-    assert await page.locator("#visual-scene-order span").all_text_contents() == [
-        f"1. {scene_names[0]}", f"2. {scene_names[1]}",
-    ]
+    assert await page.locator("#visual-scene-options").count() == 0
+    assert await page.get_by_role("link", name="Manage scenes").count() == 1
     assert await page.get_by_role("button", name="Generate shots").count() == 0
     assert await page.locator("#visual-shot-grid").count() == 0
     await page.close()

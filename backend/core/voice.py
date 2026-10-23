@@ -5,12 +5,16 @@ from __future__ import annotations
 import hashlib
 import json
 
-from backend.core.constants import EDGE_TTS_VOICE_MAP, LEGACY_TTS_ENGINES
+from backend.ai.tts.vocal_cues import has_vocal_cues
+from backend.core.constants import EDGE_TTS_VOICE_MAP, LEGACY_TTS_ENGINES, VOCAL_CUE_RECIPE_VERSION
 from backend.core.exceptions import ValidationError
 
 
 def resolve_voice_id(speaker: dict) -> str:
     """Resolve the pinned voice, falling back only when no explicit voice was stored."""
+    engine = LEGACY_TTS_ENGINES.get(speaker.get("tts_engine") or "edge_tts", speaker.get("tts_engine") or "edge_tts")
+    if engine != "edge_tts":
+        raise ValidationError("An Edge TTS voice ID cannot be resolved for this TTS engine.")
     own = speaker.get("voice_id")
     if own:
         if not isinstance(own, str) or not own.startswith("en-") or not own.endswith("Neural"):
@@ -22,15 +26,22 @@ def resolve_voice_id(speaker: dict) -> str:
 
 def voice_parameters(speaker: dict) -> dict:
     """The effective engine identity and synthesis settings, independent of display names."""
-    voice_id = resolve_voice_id(speaker)
     engine = speaker.get("tts_engine") or "edge_tts"
     engine = LEGACY_TTS_ENGINES.get(engine, engine)
-    return {
-        "engine": engine, "voice_id": voice_id, "locale": voice_id.rsplit("-", 1)[0],
+    result = {
+        "engine": engine,
         "speed": speaker.get("speed") if speaker.get("speed") is not None else 1.0,
         "pitch": speaker.get("pitch") if speaker.get("pitch") is not None else 0.0,
         "volume": speaker.get("volume") if speaker.get("volume") is not None else 1.0,
     }
+    if engine == "edge_tts":
+        voice_id = resolve_voice_id(speaker)
+        result.update(voice_id=voice_id, locale=voice_id.rsplit("-", 1)[0])
+    elif engine == "omnivoice":
+        result["voice_description"] = (speaker.get("voice_description") or "").strip()
+    else:
+        raise ValidationError(f"Unsupported TTS engine: {engine}")
+    return result
 
 
 def fingerprint(value: object) -> str:
@@ -41,7 +52,7 @@ def fingerprint(value: object) -> str:
 def voice_revision(speaker: dict) -> str:
     """Revision for optimistic edits; persona changes are included to detect stale defaults."""
     return fingerprint({key: speaker.get(key) for key in
-                        ("tts_engine", "voice_id", "accent", "gender", "speed", "pitch", "volume")})
+                        ("tts_engine", "voice_id", "voice_description", "accent", "gender", "speed", "pitch", "volume")})
 
 
 def profile_voice_settings(row: dict) -> dict:
@@ -49,6 +60,7 @@ def profile_voice_settings(row: dict) -> dict:
     return {
         "tts_engine": row.get("default_tts_engine") or "edge_tts",
         "voice_id": row.get("default_voice_id"), "accent": row.get("default_accent"),
+        "voice_description": row.get("default_voice_description") or "",
         "gender": row.get("gender"), "speed": row.get("default_speed", 1.0),
         "pitch": row.get("default_pitch", 0.0), "volume": row.get("default_volume", 1.0),
     }
@@ -59,10 +71,13 @@ def line_fingerprint(project: dict, line: dict) -> dict:
     speaker = next((item for item in project["speakers"] if item["id"] == line["speaker_id"]), None)
     if speaker is None:
         raise ValidationError("The line's speaker no longer belongs to this project.")
-    return {
-        "schema_version": 1, **voice_parameters(speaker),
+    result = {
+        "schema_version": 2, **voice_parameters(speaker),
         "text_hash": fingerprint(line["text"]), "speaker_id": line["speaker_id"],
     }
+    if has_vocal_cues(line["text"]):
+        result["vocal_cue_recipe_version"] = VOCAL_CUE_RECIPE_VERSION
+    return result
 
 
 def media_revision(project: dict, lines: list[dict], audio_job: dict | None = None, *, include_cache: bool = True) -> str:

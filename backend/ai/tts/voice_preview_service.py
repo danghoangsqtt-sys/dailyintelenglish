@@ -78,7 +78,6 @@ def _store(root: Path, preview_id: str, audio: bytes) -> None:
 
 async def preview_voice(payload: VoicePreviewRequest) -> dict:
     """Create or reuse one bounded audition and return its opaque media URL."""
-    voice = await voice_catalog_service.require_voice(payload.voice_id)
     values = payload.model_dump()
     preview_id = hashlib.sha256(
         json.dumps({"schema_version": 1, **values}, sort_keys=True, ensure_ascii=False).encode("utf-8")
@@ -86,19 +85,35 @@ async def preview_voice(payload: VoicePreviewRequest) -> dict:
     root = settings.DATA_DIR / "tts_preview"
     cached = await asyncio.to_thread(_read, root, preview_id)
     audio = cached
-    if cached is None:
+    if payload.engine == "edge_tts":
+        voice = await voice_catalog_service.require_voice(payload.voice_id)
         speaker = {
-            "voice_id": voice["voice_id"], "gender": voice["gender"], "accent": "american",
+            "voice_id": voice["voice_id"], "gender": voice["gender"], "accent": payload.accent,
             "speed": payload.speed, "pitch": payload.pitch, "volume": payload.volume,
         }
+        voice_info = voice
+    else:
+        speaker = {
+            "gender": payload.gender, "accent": payload.accent, "voice_description": payload.voice_description,
+            "speed": payload.speed, "pitch": payload.pitch, "volume": payload.volume,
+        }
+        voice_info = {
+            "engine": "omnivoice", "gender": payload.gender, "accent": payload.accent,
+            "voice_description": payload.voice_description,
+        }
+    if cached is None:
         try:
-            async with asyncio.timeout(VOICE_PREVIEW_TIMEOUT_SECONDS):
-                audio, _ = await tts_service._synthesize_edge_tts(payload.text, speaker)
+            timeout = settings.OMNIVOICE_TIMEOUT_SECONDS if payload.engine == "omnivoice" else VOICE_PREVIEW_TIMEOUT_SECONDS
+            async with asyncio.timeout(timeout):
+                if payload.engine == "edge_tts":
+                    audio, _ = await tts_service._synthesize_edge_tts(payload.text, speaker)
+                else:
+                    audio = await tts_service._synthesize_omnivoice(payload.text, speaker)
         except TimeoutError as exc:
-            raise TTSError("The voice preview timed out. Please try again.") from exc
+            raise TTSError(f"The {payload.engine} voice preview timed out. Please try again.") from exc
     await asyncio.to_thread(_store, root, preview_id, audio)
     return {
-        "id": preview_id, "voice": voice,
+        "id": preview_id, "voice": voice_info,
         "audio_url": f"/api/tts/voices/preview/{preview_id}.mp3",
         "parameters": {"speed": payload.speed, "pitch": payload.pitch, "volume": payload.volume},
         "expires_in_seconds": VOICE_PREVIEW_TTL_SECONDS,

@@ -744,6 +744,40 @@
         "depends on it; changes here would not regenerate downstream work."
     );
     lockForm();
+    // Phase 72 Amendment A: a new draft with these settings, where everything can be changed
+    const banner = document.getElementById("status-banner");
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.id = "copy-settings-btn";
+    copy.className = "btn btn-primary btn-sm";
+    copy.textContent = "Copy settings to a new draft";
+    copy.addEventListener("click", async () => {
+      copy.disabled = true;
+      try {
+        const copied = await Api.copyProjectSettings(projectId);
+        window.location.href = `/step1?project_id=${encodeURIComponent(copied.id)}`;
+      } catch (error) {
+        showError(error.message || "The settings could not be copied.");
+        copy.disabled = false;
+      }
+    });
+    banner.append(" ", copy);
+    // ... and the audience only changes how the words are shown, so it stays editable
+    const audienceSelect = document.getElementById("audience");
+    audienceSelect.disabled = false;
+    const note = document.createElement("small");
+    note.id = "audience-note";
+    note.className = "section-hint";
+    audienceSelect.after(note);
+    audienceSelect.addEventListener("change", async () => {
+      try {
+        await Api.setProjectAudience(projectId, audienceSelect.value);
+        state.loadedAudience = audienceSelect.value;
+        note.textContent = "Audience saved. Render the video again to show it; the YouTube description follows at once.";
+      } catch (error) {
+        note.textContent = error.message || "The audience could not be saved.";
+      }
+    });
   }
 
   // --- Validation + submit ---

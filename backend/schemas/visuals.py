@@ -103,6 +103,8 @@ class SceneInput(BaseModel):
     staging: Literal["standing", "seated"]
     category: Literal["home", "school", "work", "city", "countryside", "nature", "food", "travel", "other"] = "other"
     time_of_day: Literal["morning", "day", "sunset", "night"] = "day"
+    source_request: str = Field(default="", max_length=2000)
+    image_prompt: str = Field(default="", max_length=6000)
 
     @field_validator("name")
     @classmethod
@@ -124,6 +126,8 @@ class ScenePatch(BaseModel):
     staging: Literal["standing", "seated"] | None = None
     category: Literal["home", "school", "work", "city", "countryside", "nature", "food", "travel", "other"] | None = None
     time_of_day: Literal["morning", "day", "sunset", "night"] | None = None
+    source_request: str = Field(default="", max_length=2000)
+    image_prompt: str = Field(default="", max_length=6000)
 
     @field_validator("name")
     @classmethod
@@ -134,6 +138,20 @@ class ScenePatch(BaseModel):
     @classmethod
     def validate_place(cls, value: str | None) -> str | None:
         return SceneInput.validate_place(value) if value is not None else None
+
+
+class SceneBriefInput(BaseModel):
+    """A short owner request to expand into scene metadata and an image prompt."""
+
+    brief: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("brief")
+    @classmethod
+    def validate_brief(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("brief cannot be blank")
+        return value
 
 
 class ReferenceInput(BaseModel):

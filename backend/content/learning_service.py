@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 import aiosqlite
 from pydantic import TypeAdapter
 
+from backend.ai.tts.vocal_cues import caption_text
 from backend.core.config import settings
 from backend.core.exceptions import LearningGenerationError, NotFoundError, ProviderError, SchemaValidationError
 from backend.ai.llm.prompt_loader import render_learning_prompt
@@ -83,7 +84,7 @@ async def generate_learning_pack(
             f"Cannot generate learning content for project {project_id}: script is empty"
         )
 
-    transcript_text = "\n".join(line["text"] for line in script_lines)
+    transcript_text = "\n".join(caption_text(line["text"]) for line in script_lines)
 
     prompt = await render_learning_prompt(
         topic=config["topic"],
