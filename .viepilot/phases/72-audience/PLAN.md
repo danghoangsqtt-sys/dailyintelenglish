@@ -11,3 +11,12 @@ Status: execution_authorized 2026-10-22 — the owner asked to plan and build it
 | 72.5 | Tests (inheritance, API, prompts, description, renderer in the 3 modes, browser); real renders of a word-of-the-day Short in the 3 modes; full pytest + Vitest + tsc |
 
 Decided at planning (the brainstorm's open questions): news, text-on-blur, quiz and listening Shorts stay as they are; the pinned comment stays (English transcript). A video already rendered shows the new audience after a new render; its YouTube description's vocabulary list follows at once.
+
+## Amendment A (owner 2026-10-23) — Step 1 after Draft
+
+Owner: after making a project, Step 1's settings (accent, language features…) could not be changed. That lock is by design (the script, voices and video were made from them). Owner choice: **keep the Audience field editable on a locked project** (it only changes how words are shown; saved at once, shown after the next render), and **add "Copy settings to a new draft" on the lock notice** (the existing copy, now also copying the video's own audience), which opens the new draft in Step 1 where everything can be changed.
+
+| Task | Scope |
+|---|---|
+| 72.A1 | Step 1 locked mode: the Audience select stays enabled and saves on change with a short note; the lock notice gets the copy button (`/copy-settings` → `/step1?project_id=<new>`); `copy_settings` copies `audience` |
+| 72.A2 | Browser test (locked project: audience saves, other fields disabled, the copy button opens an editable draft) and the copy unit; full pytest |
