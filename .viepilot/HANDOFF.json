@@ -23,12 +23,17 @@
     "sha256_manifest": "dist/2.0/SHA256SUMS.txt",
     "installed_edition": "full",
     "installed_exe": "dist/DailyIntelEnglishStudio/DailyIntelEnglishStudio.exe",
-    "installer_backup_directory": "data/backups/desktop-20261023-160312-562",
+    "installer_backup_directory": "data/backups/desktop-20261023-175100-027",
     "focused_package_tests": "27 passed; ZIP CRC, SHA-256, worker inclusion verified",
-    "post_install_app_launch": "not run"
+    "post_install_app_launch": "not run",
+    "packages_rebuilt_with_phase76": true,
+    "rebuilt_package_hashes": {
+      "Full": "f25816bc90ba736c7a8bfe2f2bb12c397ba7f877af17d2a9465b7813b8921625",
+      "Lite": "3462426edbdaf09c23bfe543e7ede18b8218dc0464d1946787bcdceed6863bca"
+    }
   },
   "topic_project_folders_phase76": {
-    "status": "implemented_verified_source_not_packaged",
+    "status": "implemented_verified_packaged_and_installed_2_0_0_not_publicly_released",
     "planned_at": "2026-10-23",
     "implemented_at": "2026-10-23",
     "source": "docs/brainstorm/session-2026-10-23-project-folders.md",
@@ -39,10 +44,18 @@
     "tasks_total": 3,
     "tasks_done": 3,
     "execution_authorized": true,
-    "focused_tests": "20 passed",
+    "focused_tests": "243 passed across Phases 73-76",
     "static_checks": "Ruff, JavaScript syntax, HANDOFF JSON and git diff checks passed",
-    "package_built": false,
-    "previous_export_files_moved": false
+    "package_built": true,
+    "previous_export_files_moved": false,
+    "package_version": "2.0.0",
+    "package_directory": "dist/2.0",
+    "installed_full": true,
+    "installer_backup_directory": "data/backups/desktop-20261023-175100-027",
+    "archive_checks": "Full/Lite CRC, SHA-256, migration039 and project_folder.js verified",
+    "install_checks": "2.0.0 Full metadata, shortcut, live and backup SQLite integrity; 40 projects preserved",
+    "local_app_launch": "not run",
+    "public_release_published": false
   },
   "vocal_cues_phase74": {
     "status": "implemented_verified_pending_owner_audio_review",

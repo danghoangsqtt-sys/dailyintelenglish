@@ -6,14 +6,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ---
 
-## [Unreleased]
+## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
-### Added — Phase 76 Topic / Series / video project folders
+### Added — Phase 76 Topic / Series / video project folders (included in 2.0.0 rebuild)
 
 - Step 1 and Step 7 can organize selected project outputs under a shared Topic parent, with automatic Series and numbered episode folders; standalone projects use Topic / project name.
 - Existing export paths remain in legacy mode until the user opts in. Checked outputs sync automatically, and previous folders are retained.
-
-## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
 ### Added — Phase 75 OmniVoice Voice Design (2026-10-23)
 

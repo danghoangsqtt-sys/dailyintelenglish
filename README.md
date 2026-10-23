@@ -22,7 +22,7 @@ Daily Beyond English Studio dành cho người sáng tạo nội dung học ti�
 
 Sau khi thiết lập lần đầu, mở bằng **icon logo trên Desktop**. Ứng dụng khởi động dịch vụ cục bộ và tự mở giao diện trong trình duyệt tại `http://localhost:8000`.
 
-> **Trạng thái:** phiên bản **2.0.0** (bản desktop cài cục bộ ngày 23/10/2026; chưa phát hành công khai). Có hai gói Windows x64 **Full** và **Lite**. Bổ sung thư viện cảnh, chọn cảnh cho từng đoạn storyboard, gợi ý prompt ảnh AI, cảm xúc lời thoại và tùy chọn OmniVoice Voice Design. Edge TTS vẫn là mặc định; OmniVoice cần cài riêng Python/CUDA và model, chưa kiểm chứng chạy local trên máy này. Các ZIP là thư mục ứng dụng, chưa bao gồm workspace, renderer, FFmpeg hay model AI; xem [hướng dẫn cài đặt](docs/user/second-machine.md).
+> **Trạng thái:** phiên bản **2.0.0** (bản desktop cài cục bộ ngày 23/10/2026; chưa phát hành công khai). Có hai gói Windows x64 **Full** và **Lite**. Bổ sung thư viện cảnh, chọn cảnh cho từng đoạn storyboard, gợi ý prompt ảnh AI, cảm xúc lời thoại, tùy chọn OmniVoice Voice Design và xuất project theo Topic / Series / video. Edge TTS vẫn là mặc định; OmniVoice cần cài riêng Python/CUDA và model, chưa kiểm chứng chạy local trên máy này. Các ZIP là thư mục ứng dụng, chưa bao gồm workspace, renderer, FFmpeg hay model AI; xem [hướng dẫn cài đặt](docs/user/second-machine.md).
 >
 > **Trước khi tải:** gói hiện tại là ZIP chứa ứng dụng và Python đi kèm, **chưa phải bộ Setup tự cài đầy đủ mọi phụ thuộc**. Máy mới cần thiết lập Node.js, renderer và FFmpeg một lần theo [hướng dẫn cài Windows](docs/user/windows-installation.md). Không cần cài Python riêng chỉ để mở EXE.
 

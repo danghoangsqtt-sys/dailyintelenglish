@@ -1,6 +1,6 @@
 # PLAN — Phase 76: Topic / Series / Video project folders
 
-**Status:** implemented and focused-verified in source on 2026-10-23; not packaged. Source: [SPEC](SPEC.md), [brainstorm](../../../docs/brainstorm/session-2026-10-23-project-folders.md).
+**Status:** implemented, packaged and installed in local 2.0.0 after a later owner request; not publicly released. Source: [SPEC](SPEC.md), [brainstorm](../../../docs/brainstorm/session-2026-10-23-project-folders.md).
 
 ## Architecture and order
 
@@ -22,7 +22,7 @@ The existing API remains the single source for settings, preview, save, sync, op
 - Task 76.2: `frontend/static/js/project_folder.js`, `frontend/static/css/style.css`, `frontend/static/js/i18n_vi.js`, `tests/test_project_folder_browser.py`.
 - Task 76.3: `docs/operations/topic-project-folders.md`, `.viepilot/ARCHITECTURE.md`, `.viepilot/PROJECT-CONTEXT.md`, `.viepilot/ROADMAP.md`, `.viepilot/TRACKER.md`, `.viepilot/HANDOFF.json`, `.viepilot/phases/76-topic-project-folders/{PHASE-STATE.md,tasks/*.md}`, `docs/brainstorm/session-2026-10-23-project-folders.md`, `CHANGELOG.md`.
 
-Do not edit existing local package outputs or the prior phase 73–75 work. No commit, tag, push, packaging or installation is part of this request; the workspace contains unrelated uncommitted owner work.
+Original execution preserved the existing local package outputs and prior Phase 73–75 work. A later explicit owner request authorized a coherent 2.0.0 rebuild, local Full installation, commit and push on the current branch; no version bump, tag or public release was requested.
 
 ## Risks and verification
 

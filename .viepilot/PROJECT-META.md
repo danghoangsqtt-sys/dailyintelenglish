@@ -7,7 +7,7 @@
 | **Project Name** | Daily Beyond English Studio (brand since Phase 27; technical name Daily Intel English Studio) |
 | **Slug** | DailyIntelEnglish |
 | **Version** | 2.0.0 (2026-10-23, local Full/Lite desktop packages; scene library, vocal cues, optional OmniVoice; not publicly released); 1.7.0 (2026-10-23); 1.6.0 (2026-10-22, Lite edition); 1.5.0 (2026-10-22); previous 1.4.0-rc.1 trial (2026-10-15), 1.3.0 stable (2026-10-13) |
-| **Next Feature Target** | Phase 75 optional local OmniVoice setup/inference and owner audio review remain open; local Full/Lite 2.0.0 packages built and Full installed on 2026-10-23. Public release not published. |
+| **Next Feature Target** | Phase 75 optional local OmniVoice setup/inference and owner audio review remain open; local Full/Lite 2.0.0 packages include Phase 76 Topic folders and Full is installed on 2026-10-23. Public release not published. |
 | **Inception Year** | 2026 |
 | **License** | MIT |
 | **Type** | AI-powered Local Web Application |
