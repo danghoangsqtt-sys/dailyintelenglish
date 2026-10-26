@@ -23,3 +23,6 @@ No duplicated geometry: the sketch reuses `beat_preview.js`. Buttons disabled wh
 
 ## Verification
 `cd renderer && npx vitest run && npx tsc --noEmit`; `pytest tests/test_shorts.py tests/test_step5_shorts_after_render.py -q`; browser check of a clip card in the sandbox (sketch, live duration, approve with edited lines).
+
+## Result
+Done 2026-10-26. V1: `chipsOpacity` fades the speaker chips under a clip hook (re-rendered frame 3420 shows the hook alone; chips return at 3560). V2-V7: clip card = 9:16 video or sketch of its opening beat with hook + first line, labelled First/Last line/Hook fields (aria attributes set), live length with 30-90 s warning, reason below the fields, Approve sends the edited lines, texts in a collapsible group, inline vertical-episode player. V8: Short projects (SHORT_STYLES) get a 9:16 result player and a note instead of clip tools. Renderer `vitest` 184 passed, `tsc` clean; `pytest tests/test_step5_shorts_cards_browser.py tests/test_step5_shorts_after_render.py tests/test_shorts.py` 8 passed.

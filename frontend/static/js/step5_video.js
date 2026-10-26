@@ -56,6 +56,9 @@
 
   const byId = (id) => document.getElementById(id);
 
+  // a Short of these styles renders its main video in 9:16 (backend/schemas/project.py SHORT_STYLES)
+  const VERTICAL_MAIN_STYLES = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "chat", "wyr"];
+
   function showError(message) {
     const banner = byId("error-banner");
     banner.textContent = message;
@@ -747,6 +750,8 @@
   function renderResult(job) {
     byId("result-card").hidden = false;
     byId("no-result-yet").hidden = true;
+    // Phase 78 (V8): a Short's main video is 9:16 -- a full-width player made it 1920 px tall
+    byId("result-player").classList.toggle("is-vertical", VERTICAL_MAIN_STYLES.includes(state.project?.explainer_style));
     const cacheBust = Date.now();
     byId("result-player").src = `${Api.videoDownloadUrl(state.projectId, "mp4")}&t=${cacheBust}`;
     byId("download-mp4").href = `${Api.videoDownloadUrl(state.projectId, "mp4")}&t=${cacheBust}`;

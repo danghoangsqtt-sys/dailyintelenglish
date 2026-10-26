@@ -104,12 +104,12 @@ function SpeakerChip({ speaker, color, isActive, meter }: {
  * of overflowing the canvas (D19.4-c) -- not exercised by this task's 2-speaker demo, but
  * requires no different code path at higher counts.
  */
-function SpeakerChips({ speakers, activeId, layout = "horizontal" }: {
-  speakers: EpisodeSpeaker[]; activeId: string | null; layout?: Layout;
+function SpeakerChips({ speakers, activeId, layout = "horizontal", opacity = 1 }: {
+  speakers: EpisodeSpeaker[]; activeId: string | null; layout?: Layout; opacity?: number;
 }) {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  if (speakers.length === 0) {
+  if (speakers.length === 0 || opacity <= 0) {
     return null;
   }
   return (
@@ -124,6 +124,7 @@ function SpeakerChips({ speakers, activeId, layout = "horizontal" }: {
         display: "flex",
         flexWrap: "wrap",
         gap: 8,
+        opacity,
       }}
     >
       {speakers.map((speaker, index) => (
@@ -228,6 +229,11 @@ export function hookOpacity(currentTimeSec: number, hookAtSec: number): number {
   const fadeOut = interpolate(currentTimeSec, [hookAtSec + HOOK_SECONDS - 0.4, hookAtSec + HOOK_SECONDS], [1, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return Math.min(fadeIn, fadeOut);
+}
+
+/** Phase 78: the speaker chips give the top of the frame to a clip's hook banner while it shows. */
+export function chipsOpacity(hookShown: number): number {
+  return Math.max(0, Math.min(1, 1 - hookShown));
 }
 
 function HookBanner({ hook, opacity }: { hook: string; opacity: number }) {
@@ -377,7 +383,8 @@ export function AudioWindowContent({
       {playAudio ? <Audio src={staticFile(audioPath)} startFrom={0} /> : null}
       {captionStyleSpec(captionStyle).bottomShade && layout !== "vertical" ? <div style={BOTTOM_SHADE_STYLE} /> : null}
       <ChapterProgressBar frame={frame} fps={fps} audioDurationSec={audioDurationSec} chapters={chapters} />
-      <SpeakerChips speakers={speakers} activeId={activeId} layout={layout} />
+      {/* Phase 78 (V1): the hook banner covers the chips' row, so they step aside like the vocabulary card */}
+      <SpeakerChips speakers={speakers} activeId={activeId} layout={layout} opacity={chipsOpacity(hookShown)} />
       {activeLearningItem ? (
         <VocabCard
           item={activeLearningItem.item}
