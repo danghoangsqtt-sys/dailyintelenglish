@@ -81,6 +81,24 @@ async def _explainer_job_handler(job: dict, worker: AIWorker) -> None:
     await explainer_service.make_handler(_build_ai_router())(job, worker)
 
 
+def _quiet_connection_resets() -> None:
+    """BUG-055: on Windows the browser cancelling a video range request makes asyncio log a full ConnectionResetError
+    traceback from `_ProactorBasePipeTransport._call_connection_lost` (211 of them in one desktop.log). Drop exactly
+    that one; every other loop error is still logged."""
+    loop = asyncio.get_running_loop()
+    previous = loop.get_exception_handler()
+
+    def handler(loop: asyncio.AbstractEventLoop, context: dict) -> None:
+        if isinstance(context.get("exception"), ConnectionResetError) and "_call_connection_lost" in repr(context.get("handle")):
+            return
+        if previous is not None:
+            previous(loop, context)
+        else:
+            loop.default_exception_handler(context)
+
+    loop.set_exception_handler(handler)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize the database and verify external tooling on startup.
@@ -98,6 +116,7 @@ async def lifespan(app: FastAPI):
     ):
         (settings.DATA_DIR / subdir).mkdir(parents=True, exist_ok=True)
 
+    _quiet_connection_resets()
     await init_db()
     # Phase 33: Phase 32 sprite packs on disk become slot rows the first time (idempotent, a few milliseconds)
     from backend.library.character_asset_service import register_legacy_sprites
@@ -139,13 +158,54 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Daily Beyond English", lifespan=lifespan)
 
+# ENH-056: the pages call the API on their own origin, so no other site needs CORS. It used to allow any
+# http(s)://localhost:<port> with credentials, i.e. any other local web app could drive the studio.
+LOCAL_HOSTS = ("localhost", "127.0.0.1", "::1")
+WILDCARD_HOSTS = ("0.0.0.0", "::", "")
+
+
+def _allowed_hosts() -> set[str] | None:
+    """The Host names the studio answers to, or None when the owner chose to open it to the network (APP_HOST 0.0.0.0/::)."""
+    if settings.APP_HOST in WILDCARD_HOSTS:
+        return None
+    return {*LOCAL_HOSTS, settings.APP_HOST.strip("[]").lower(), "testserver"}
+
+
+def _host_name(header: str) -> str:
+    """`localhost:8000` -> `localhost`, `[::1]:8000` -> `::1`."""
+    header = header.strip().lower()
+    if header.startswith("["):
+        return header[1:header.find("]")] if "]" in header else header
+    return header.rsplit(":", 1)[0] if header.count(":") == 1 else header
+
+
+class LocalHostOnly:
+    """ENH-056: refuse requests whose Host header is not this computer's name (DNS rebinding: a web page whose own domain
+    resolves to 127.0.0.1 would otherwise be same-origin with the studio and could read projects or use the AI keys)."""
+
+    def __init__(self, app) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send) -> None:
+        allowed = _allowed_hosts()
+        if scope["type"] in ("http", "websocket") and allowed is not None:
+            host = dict(scope.get("headers") or []).get(b"host", b"").decode("latin-1")
+            if _host_name(host) not in allowed:
+                response = JSONResponse(status_code=400, content={"success": False, "data": None,
+                                                                  "error": "This address is not the studio's own."})
+                await response(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"^https?://localhost(:\d+)?$",
+    allow_origins=[f"http://{host}:{settings.APP_PORT}" for host in ("localhost", "127.0.0.1", "[::1]")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(LocalHostOnly)
 
 
 @app.exception_handler(AppError)

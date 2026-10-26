@@ -13,6 +13,7 @@
     Object.entries(props).forEach(([key, value]) => {
       if (key === "dataset") Object.assign(node.dataset, value);
       else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+      else if (key.startsWith("aria-")) node.setAttribute(key, value);  // not DOM properties: they were silently dropped
       else node[key] = value;
     });
     (Array.isArray(children) ? children : [children]).forEach((child) => child !== null && child !== undefined && node.append(child));

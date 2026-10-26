@@ -51,7 +51,7 @@ class StepClient:
     """The app's own API, called in process (no network, no port)."""
 
     def __init__(self, app: Any) -> None:
-        self._client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://automation",
+        self._client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://localhost",  # ENH-056: a local Host name
                                          timeout=httpx.Timeout(None))
 
     async def call(self, method: str, path: str, body: Any = None) -> Any:
