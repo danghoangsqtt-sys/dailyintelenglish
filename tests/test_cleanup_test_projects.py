@@ -15,6 +15,7 @@ import pytest
 from backend.schemas.project import ScriptConfig, SpeakerConfig
 from backend.content import project_service
 from tests.conftest import MIGRATIONS_DIR
+from backend.db.database import register_migration_functions
 
 import scripts.cleanup_test_projects as cleanup
 
@@ -36,6 +37,7 @@ async def _make_file_db(path: Path) -> aiosqlite.Connection:
     connection = await aiosqlite.connect(path)
     connection.row_factory = aiosqlite.Row
     await connection.execute("PRAGMA foreign_keys = ON")
+    await register_migration_functions(connection)
     for migration_file in sorted(MIGRATIONS_DIR.glob("*.sql")):
         await connection.executescript(migration_file.read_text(encoding="utf-8"))
     await connection.commit()

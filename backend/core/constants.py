@@ -66,9 +66,6 @@ TTS_SPEED_DEFAULT = 1.0
 # Owner decision 2026-10-24: plain Edge speech only. Legacy stored engines are
 # converted explicitly by migration040; new requests cannot select them.
 TTS_ENGINES = ["edge_tts"]
-LEGACY_TTS_ENGINES: dict[str, str] = {}
-OMNIVOICE_MIN_FREE_MB = 8192  # conservative until the local RTX 3060 run is measured
-OMNIVOICE_REQUEST_TIMEOUT_SECONDS = 600
 
 # Edge TTS voice map: accent -> gender -> ShortName, verified live against
 # edge_tts.list_voices() on 2026-09-11. "scottish" has no distinct Edge TTS locale,

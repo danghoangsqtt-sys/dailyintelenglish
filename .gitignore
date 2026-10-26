@@ -9,7 +9,6 @@ venv/
 # Task 20.2: isolated Python 3.14 environment for the SDXL image worker (keeps torch and
 # diffusers, ~5.5 GB, out of the main venv and the .exe). Set up via `backend/ai/image/requirements.txt`.
 .venv-image/
-.venv-omnivoice/
 *.egg-info/
 dist/
 build/
@@ -39,7 +38,6 @@ data/exports/
 # Phase 20: generated character/scene library and per-project shots (user content)
 data/library/
 data/visuals/
-data/models/omnivoice/
 
 # Keep music library structure but not files
 data/music_library/*

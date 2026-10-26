@@ -15,7 +15,7 @@ import { soloPayloadSchema } from "./soloTypes";
  * Task 19.3: one captured word, in mix-absolute seconds -- matches
  * `audio_jobs.word_timestamps_json`'s per-word shape exactly (D19.2-d). Empty array or
  * absent on `episodeLineSchema.words` means "no captured words for this line" -- render the
- * plain line-level fallback (older projects, omnivoice lines, Edge-TTS-empty edge case).
+ * plain line-level fallback (older projects, Edge-TTS-empty edge case).
  */
 export const episodeWordSchema = z.object({
   text: z.string(),

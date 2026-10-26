@@ -118,7 +118,7 @@ async def test_mix_project_aggregates_word_boundaries_onto_mixed_timeline(tmp_pa
 
 
 async def test_mix_project_word_timestamps_empty_for_line_with_no_sidecar(tmp_path):
-    """No `.words.json` sidecar (omnivoice line, or a line synthesized before Task 19.2)
+    """No `.words.json` sidecar (a line synthesized before Task 19.2)
     produces an empty `words` array for that line -- never `null`, never a crash."""
     lines = _lines_for(tmp_path, [("sp1", 440)])
 

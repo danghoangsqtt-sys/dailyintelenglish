@@ -13,7 +13,7 @@ import pytest
 import uvicorn
 
 from backend.core.paths import get_project_root
-from backend.db.database import Database
+from backend.db.database import Database, register_migration_functions
 
 MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "backend" / "db" / "migrations"
 
@@ -207,6 +207,7 @@ async def db() -> aiosqlite.Connection:
     connection = await aiosqlite.connect(":memory:")
     connection.row_factory = aiosqlite.Row
     await connection.execute("PRAGMA foreign_keys = ON")
+    await register_migration_functions(connection)
     for migration_file in sorted(MIGRATIONS_DIR.glob("*.sql")):
         await connection.executescript(migration_file.read_text(encoding="utf-8"))
     await connection.commit()

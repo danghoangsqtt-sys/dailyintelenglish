@@ -701,7 +701,7 @@ async def synthesize_all_lines(client: httpx.AsyncClient, project_id: str) -> li
     `previewTtsLine`), which this runner never called before, so
     `/audio/generate` always 500'd on a real (non-mocked) trial. Sequential,
     not concurrent -- matches how the UI itself drives it and avoids
-    hammering the local Edge TTS/OmniVoice backend with a burst of calls."""
+    hammering the Edge TTS backend with a burst of calls."""
     script_response = await client.get(f"/api/projects/{project_id}/script")
     script_response.raise_for_status()
     lines = script_response.json()["data"]

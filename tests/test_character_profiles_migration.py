@@ -13,7 +13,7 @@ from PIL import Image
 
 from backend.core.config import settings
 from backend.core.exceptions import ConflictError, ValidationError
-from backend.db.database import MIGRATIONS_DIR
+from backend.db.database import MIGRATIONS_DIR, migration_functions
 from backend.schemas.visuals import CharacterInput
 from backend.library import library_service, project_visuals_service
 from scripts.migrate_character_profiles_v2 import register_legacy_sprites
@@ -23,6 +23,8 @@ MIGRATION_018 = "018_character_profiles_v2.sql"
 
 
 def _apply(connection: sqlite3.Connection, *, until: str | None = None, only: str | None = None) -> None:
+    for name, arg_count, function in migration_functions():
+        connection.create_function(name, arg_count, function, deterministic=True)
     for migration in sorted(MIGRATIONS_DIR.glob("*.sql")):
         if only and migration.name != only:
             continue

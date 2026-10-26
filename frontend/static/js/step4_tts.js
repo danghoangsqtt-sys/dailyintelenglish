@@ -740,8 +740,7 @@
       generationStatus.setProgress({ stageLabel: "Done — episode ready below.", progressPercent: 100, done: true });
     } catch (error) {
       console.error("Failed to generate audio:", error);
-      const detail = error.message?.startsWith("OmniVoice") ? ` ${error.message}` : "";
-      showError(`We couldn't generate the full episode. Please try again.${detail}`);
+      showError("We couldn't generate the full episode. Please try again.");
       generationStatus.destroy();
       progress.textContent = "";
     } finally {

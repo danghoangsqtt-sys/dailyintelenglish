@@ -2,6 +2,7 @@
 
 import re
 import sqlite3
+from collections.abc import Callable
 from datetime import datetime, timezone
 
 import aiosqlite
@@ -164,16 +165,31 @@ async def _legacy_duplicate_column(
     return any(row["name"] == column for row in await cursor.fetchall())
 
 
+def migration_functions() -> list[tuple[str, int, Callable]]:
+    """SQL functions that data migrations call (040 strips retired emotion tags in Python).
+
+    Every runner registers them before replaying migrations: the app's `_apply_migration`
+    and the tests' raw `executescript` replays alike, or 040 fails with "no such function".
+    """
+    from backend.ai.tts.vocal_cues import caption_text
+    from backend.db.edge_only_restore import edge_voice_id, plain_config
+
+    return [
+        ("retired_cue_text", 1, caption_text),
+        ("edge_plain_config", 1, plain_config),
+        ("edge_restored_voice", 3, edge_voice_id),
+    ]
+
+
+async def register_migration_functions(connection: aiosqlite.Connection) -> None:
+    for name, arg_count, function in migration_functions():
+        await connection.create_function(name, arg_count, function, deterministic=True)
+
+
 async def _apply_migration(connection: aiosqlite.Connection, filename: str, script: str) -> None:
     """Commit a migration and its tracking record together, or leave neither schema nor record behind."""
     statements = _migration_statements(script)
-    if filename == "040_edge_plain_speech.sql":
-        from backend.ai.tts.vocal_cues import caption_text
-        from backend.db.edge_only_restore import edge_voice_id, plain_config
-
-        await connection.create_function("retired_cue_text", 1, caption_text, deterministic=True)
-        await connection.create_function("edge_plain_config", 1, plain_config, deterministic=True)
-        await connection.create_function("edge_restored_voice", 3, edge_voice_id, deterministic=True)
+    await register_migration_functions(connection)
     await connection.execute("BEGIN IMMEDIATE")
     try:
         for statement in statements:

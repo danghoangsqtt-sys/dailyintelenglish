@@ -27,7 +27,7 @@ PROJECT = {
             "name": "Alex",
             "gender": "male",
             "accent": "american",
-            "tts_engine": "omnivoice",
+            "tts_engine": "edge_tts",
             "voice_id": None,
             "voice_description": "",
             "speed": 1.0,
@@ -130,7 +130,6 @@ async def _default_routes(
         elif url.endswith("/api/tts/engines") and method == "GET":
             await route.fulfill(status=200, content_type="application/json", body=_envelope([
                 {"id": "edge_tts", "available": True, "kind": "online_free"},
-                {"id": "omnivoice", "available": False, "kind": "local_gpu"},
             ]))
         elif url.endswith("/audio/status") and method == "GET":
             if audio_job_status == 200:
@@ -213,44 +212,6 @@ async def test_speaker_slider_change_autosaves(browser_instance: Browser, live_s
     await page.wait_for_timeout(600)  # past the 400ms debounce
     assert len(patch_bodies) == 1
     assert patch_bodies[0]["speed"] == 1.25
-    await page.close()
-
-
-async def test_step4_offers_per_speaker_engine_and_voice_design_controls(browser_instance: Browser, live_server_url: str):
-    page = await browser_instance.new_page()
-    await _default_routes(page)
-    await page.goto(f"{live_server_url}/step4?project_id={PROJECT['id']}")
-    await page.wait_for_selector("#workspace:not([hidden])")
-
-    assert await page.locator(".speaker-card select[data-engine-speaker-id]").count() == len(PROJECT["speakers"])
-    assert await page.locator(".speaker-card textarea[data-field='voice_description']").nth(0).is_visible()
-    assert await page.locator(".speaker-card textarea[data-field='voice_description']").nth(1).is_hidden()
-    assert await page.locator(".speaker-card .voice-select").count() == len(PROJECT["speakers"])
-    await page.close()
-
-
-@pytest.mark.asyncio
-async def test_switching_speaker_to_omnivoice_shows_local_voice_design(browser_instance: Browser, live_server_url: str):
-    page = await browser_instance.new_page()
-    await _default_routes(page)
-    await page.goto(f"{live_server_url}/step4?project_id={PROJECT['id']}")
-    await page.wait_for_selector("#workspace:not([hidden])")
-
-    engine = page.locator("[data-engine-speaker-id='sp2']")
-    await engine.select_option("omnivoice")
-    await page.wait_for_timeout(100)
-    assert await page.locator("[data-field='voice_description'][data-speaker-id='sp2']").is_visible()
-    await page.close()
-
-
-@pytest.mark.asyncio
-async def test_voice_design_preview_button_calls_isolated_audition(browser_instance: Browser, live_server_url: str):
-    page = await browser_instance.new_page()
-    await _default_routes(page)
-    await page.goto(f"{live_server_url}/step4?project_id={PROJECT['id']}")
-    await page.wait_for_selector("#workspace:not([hidden])")
-    await page.locator(".omnivoice-preview").first.click()
-    await page.wait_for_selector(".speaker-card audio:not([hidden])")
     await page.close()
 
 

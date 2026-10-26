@@ -112,12 +112,6 @@ class Settings(BaseSettings):
     # by their own spikes (20.2, Phase 22), not guessed here.
     GPU_MANAGER_ENABLED: bool = True
     GPU_EVICT_OLLAMA: bool = True
-    # OmniVoice stays out of the main application environment. Install its pinned
-    # dependencies into a separate venv and keep model weights in DATA_DIR/models.
-    OMNIVOICE_PYTHON: Path | None = None
-    OMNIVOICE_MODEL_PATH: Path | None = None
-    OMNIVOICE_MIN_FREE_MB: int = Field(default=8192, ge=1024, le=49152)
-    OMNIVOICE_TIMEOUT_SECONDS: float = Field(default=600.0, ge=30.0, le=3600.0)
     AI_VISUALS_ENABLED: bool = True
     IMAGE_ENGINE: Literal["worker", "fake"] = "worker"
     # Phase 44 (D123): only Qwen draws (no RealVisXL/SDXL, no two-person shots, no fallback model).

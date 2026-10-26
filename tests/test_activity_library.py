@@ -15,6 +15,7 @@ from backend.core.config import settings
 from backend.core.exceptions import ConflictError, NotFoundError, ValidationError
 from backend.main import app
 from backend.library import activity_library_service as activities
+from backend.db.database import register_migration_functions
 
 MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "backend" / "db" / "migrations"
 
@@ -208,6 +209,7 @@ async def test_metadata_review_and_usage_survive_database_reopen(tmp_path, monke
     db = await aiosqlite.connect(database_path)
     db.row_factory = aiosqlite.Row
     await db.execute("PRAGMA foreign_keys = ON")
+    await register_migration_functions(db)
     for migration in sorted(MIGRATIONS_DIR.glob("*.sql")):
         await db.executescript(migration.read_text(encoding="utf-8"))
     await seed_project(db)

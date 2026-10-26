@@ -125,7 +125,7 @@ def _aggregate_word_boundaries(audio_cache_path: str, start_ms: int) -> list[dic
     aggregate onto the mixed timeline using `start_ms` -- the exact same offset already used
     for this line's `timestamps_json` entry above, not a second computation.
 
-    Returns an empty list, never `None`, when there's no sidecar (omnivoice lines, or any
+    Returns an empty list, never `None`, when there's no sidecar (any
     line synthesized before this task existed) -- both cases mean "no words available for
     this line" and are indistinguishable at aggregation time, which is fine (see design doc).
     """

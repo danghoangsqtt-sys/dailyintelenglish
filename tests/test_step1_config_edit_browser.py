@@ -49,7 +49,7 @@ DRAFT_PROJECT = {
             "name": "Sam",
             "gender": "female",
             "accent": "american",
-            "tts_engine": "omnivoice",
+            "tts_engine": "edge_tts",
             "voice_description": "Bright",
             "voice_id": "en-US-JennyNeural",
             "speed": 0.9,

@@ -155,7 +155,6 @@ const Api = (() => {
         method: "PATCH",
         body: JSON.stringify(patch),
       }),
-    listTtsEngines: () => request("/api/tts/engines"),
     listTtsVoices: (refresh = false) => request(`/api/tts/voices${refresh ? "?refresh=true" : ""}`),
     previewTtsVoice: (payload, options = {}) => request("/api/tts/voices/preview", {...json("POST", payload), ...options}),
     previewTtsLine: (projectId, lineId, options = {}) =>

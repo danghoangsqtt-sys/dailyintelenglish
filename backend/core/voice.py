@@ -6,14 +6,13 @@ import hashlib
 import json
 
 from backend.ai.tts.vocal_cues import caption_text
-from backend.core.constants import EDGE_TTS_VOICE_MAP, LEGACY_TTS_ENGINES
+from backend.core.constants import EDGE_TTS_VOICE_MAP
 from backend.core.exceptions import ValidationError
 
 
 def resolve_voice_id(speaker: dict) -> str:
     """Resolve the pinned voice, falling back only when no explicit voice was stored."""
-    engine = LEGACY_TTS_ENGINES.get(speaker.get("tts_engine") or "edge_tts", speaker.get("tts_engine") or "edge_tts")
-    if engine != "edge_tts":
+    if (speaker.get("tts_engine") or "edge_tts") != "edge_tts":
         raise ValidationError("An Edge TTS voice ID cannot be resolved for this TTS engine.")
     own = speaker.get("voice_id")
     if own:
@@ -27,7 +26,6 @@ def resolve_voice_id(speaker: dict) -> str:
 def voice_parameters(speaker: dict) -> dict:
     """The effective engine identity and synthesis settings, independent of display names."""
     engine = speaker.get("tts_engine") or "edge_tts"
-    engine = LEGACY_TTS_ENGINES.get(engine, engine)
     result = {
         "engine": engine,
         "speed": speaker.get("speed") if speaker.get("speed") is not None else 1.0,

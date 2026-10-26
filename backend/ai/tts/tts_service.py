@@ -15,7 +15,7 @@ from pydub import AudioSegment
 
 from backend.ai.tts.vocal_cues import caption_text, has_vocal_cues
 from backend.core.config import settings
-from backend.core.constants import EDGE_TTS_PITCH_LIMIT_HZ, EDGE_TTS_VOICE_MAP, LEGACY_TTS_ENGINES
+from backend.core.constants import EDGE_TTS_PITCH_LIMIT_HZ, EDGE_TTS_VOICE_MAP
 from backend.core.exceptions import ConflictError, NotFoundError, TTSError, ValidationError
 
 from backend.core.voice import line_fingerprint, resolve_voice_id
@@ -198,23 +198,20 @@ async def synthesize_line_audio(project: dict, line: dict) -> dict:
     """
     speaker = _find_speaker(project, line["speaker_id"])
 
-    engine = LEGACY_TTS_ENGINES.get(speaker.get("tts_engine") or "edge_tts", speaker.get("tts_engine") or "edge_tts")
-    if engine != "edge_tts":
+    if (speaker.get("tts_engine") or "edge_tts") != "edge_tts":
         raise TTSError("Only Edge TTS is supported. Reload the updated project settings.")
     audio_bytes, word_boundaries = await _synthesize_edge_tts(line["text"], speaker)
-    engine_used = "edge_tts"
 
     cache_dir = settings.DATA_DIR / "tts_cache" / project["id"] / uuid.uuid4().hex
     audio_path = cache_dir / f"{line['id']}.mp3"
     await asyncio.to_thread(_write_audio_cache_sync, cache_dir, audio_path, audio_bytes)
-    if engine == "edge_tts":
-        await asyncio.to_thread(_write_word_boundaries_sync, _word_timestamps_path(audio_path), word_boundaries)
+    await asyncio.to_thread(_write_word_boundaries_sync, _word_timestamps_path(audio_path), word_boundaries)
 
     await asyncio.to_thread(
         audio_path.with_suffix(".tts.json").write_text,
         json.dumps(line_fingerprint(project, line), sort_keys=True), encoding="utf-8",
     )
-    return {"audio_path": str(audio_path), "engine_used": engine_used}
+    return {"audio_path": str(audio_path), "engine_used": "edge_tts"}
 
 
 async def save_line_audio_cache(

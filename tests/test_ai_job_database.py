@@ -9,6 +9,7 @@ import pytest
 
 from backend.schemas.project import ScriptConfig, SpeakerConfig
 from backend.content import project_service
+from backend.db.database import register_migration_functions
 
 MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "backend" / "db" / "migrations"
 
@@ -63,6 +64,7 @@ async def test_migration_applies_cleanly_on_a_fresh_database():
     connection = await aiosqlite.connect(":memory:")
     connection.row_factory = aiosqlite.Row
     await connection.execute("PRAGMA foreign_keys = ON")
+    await register_migration_functions(connection)
     for migration_file in sorted(MIGRATIONS_DIR.glob("*.sql")):
         await connection.executescript(migration_file.read_text(encoding="utf-8"))
     await connection.commit()
