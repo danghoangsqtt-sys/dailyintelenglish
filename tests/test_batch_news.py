@@ -112,3 +112,22 @@ def test_a_batch_becomes_a_dated_series_and_its_articles_reach_the_projects(clie
     wrong = client.post("/api/shorts-batch/create", json={**body, "template": "chat"})
     assert wrong.status_code == 422 and "two characters" in wrong.json()["error"]
     assert batch_service.publishing_dates(date(2026, 10, 30), 3, 3) == [date(2026, 10, 30), date(2026, 11, 2), date(2026, 11, 5)]
+
+
+@pytest.mark.parametrize("template,mode,style,cast", [
+    ("conversation", "classic", None, 2), ("presenter", "solo_explainer", "presenter", 1), ("vox", "solo_explainer", "vox", 1)])
+def test_the_apps_video_types_become_short_projects(client, template, mode, style, cast):  # noqa: F811
+    """Phase 80 (owner 2026-10-26): conversation, Solo presenter and Vox in the batch -- as Shorts (9:16, <= 1 minute)."""
+    from backend.schemas.project import is_short_video
+
+    characters = [locked_character(f"C{index}", "red") for index in range(cast)]
+    body = {"topic_name": "Shorts", "series_name": f"{template} week", "template": template, "cast": characters, "cefr_level": "B1",
+            "start_date": "2026-10-27", "every_days": 1, "make_projects": True, "items": [{"title": "Ordering coffee", "brief": ""}]}
+    result = data(client.post("/api/shorts-batch/create", json=body))
+    tree = data(client.get("/api/channel"))
+    series = next(s for topic in tree["topics"] for s in topic["series"] if s["id"] == result["series_id"])
+    project = data(client.get(f"/api/projects/{series['episodes'][0]['project_id']}"))
+    assert (project["presentation_mode"], project["explainer_style"]) == (mode, style)
+    assert project["duration_minutes"] <= 1 and is_short_video(project)
+    wrong = client.post("/api/shorts-batch/create", json={**body, "cast": characters[:1] if cast == 2 else characters * 2})
+    assert wrong.status_code == 422

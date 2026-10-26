@@ -34,7 +34,14 @@ TEMPLATES = {
     "listen": ("Listening challenge", "two or three short everyday sentences in one situation, heard at natural speed"),
     "chat": ("Chat", "a short text-message conversation between two characters in one everyday situation"),
     "wyr": ("Would you rather", "two or three would-you-rather questions on one theme, answered by the second character"),
+    # Phase 80 (owner 2026-10-26): the app's existing video types, as Shorts (vertical, at most a minute)
+    "conversation": ("Conversation (2 talking characters)", "a short everyday conversation between two characters that teaches "
+                     "one useful phrase or situation"),
+    "presenter": ("Solo presenter", "one presenter explains one useful idea, phrase or tip to camera"),
+    "vox": ("Vox (voice over pictures)", "a narrator explains one interesting idea over pictures and on-screen text"),
 }
+TEMPLATE_KEYS = Literal["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "chat", "wyr", "conversation", "presenter", "vox"]
+TWO_CHARACTERS = (*CONVERSATION_SHORT_STYLES, "conversation")
 
 
 class Idea(BaseModel):
@@ -56,7 +63,7 @@ _IDEAS = TypeAdapter(Ideas)
 
 class IdeasRequest(BaseModel):
     topic: str = Field(min_length=2, max_length=300)
-    template: Literal["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "chat", "wyr"]
+    template: TEMPLATE_KEYS
     count: int = Field(default=7, ge=5, le=10)
     cefr_level: str = "B1"
     hint: str = Field(default="", max_length=300)
@@ -78,7 +85,7 @@ class BatchItem(BaseModel):
 class CreateRequest(BaseModel):
     topic_name: str = Field(min_length=1, max_length=80)
     series_name: str = Field(min_length=1, max_length=100)
-    template: Literal["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "chat", "wyr"]
+    template: TEMPLATE_KEYS
     cast: list[str] = Field(min_length=1, max_length=2)
     cefr_level: str = "B1"
     start_date: date
@@ -158,9 +165,9 @@ def publishing_dates(start: date, every_days: int, count: int) -> list[date]:
 async def create_batch(db: aiosqlite.Connection, request: CreateRequest) -> dict[str, Any]:
     """Save the batch as a series (topic found by name or made) with dated episodes; their articles are kept for the
     projects. With `make_projects`, the projects are made at once."""
-    conversation = request.template in CONVERSATION_SHORT_STYLES
+    conversation = request.template in TWO_CHARACTERS
     if conversation and len(request.cast) != 2:
-        raise ValidationError("A chat or would-you-rather batch needs two characters")
+        raise ValidationError("A conversation, chat or would-you-rather batch needs two characters")
     if not conversation and len(request.cast) != 1:
         raise ValidationError("Choose one narrator for this batch")
     cursor = await db.execute("SELECT id, name FROM channel_topics")
@@ -169,7 +176,9 @@ async def create_batch(db: aiosqlite.Connection, request: CreateRequest) -> dict
         topic_id = (await channel_service.create_topic(db, TopicInput(name=request.topic_name)))["id"]
     series = await channel_service.create_series(db, topic_id, SeriesInput(
         name=request.series_name, presentation_mode="classic" if conversation else "solo_explainer",
-        explainer_style=request.template, cefr_level=request.cefr_level, cast=request.cast, duration_minutes=0.75,
+        # Phase 80: a classic series ignores the style (talking characters), as every classic series does
+        explainer_style="presenter" if request.template == "conversation" else request.template, cefr_level=request.cefr_level,
+        cast=request.cast, duration_minutes=0.75,
         genre="small_talk" if conversation else "informational"))
     if request.audience:
         from backend.content import audience
@@ -186,4 +195,4 @@ async def create_batch(db: aiosqlite.Connection, request: CreateRequest) -> dict
             "first_date": dates[0].isoformat(), "last_date": dates[-1].isoformat()}
 
 
-assert set(TEMPLATES) == set(SHORT_STYLES), "every Shorts template has a batch rule"
+assert set(TEMPLATES) == {*SHORT_STYLES, "conversation", "presenter", "vox"}, "every Shorts template has a batch rule"

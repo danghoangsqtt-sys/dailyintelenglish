@@ -83,7 +83,7 @@ def _read_cefr_block_sync(cefr_level: str) -> str:
 
 
 def _render_presentation_block_sync(presentation_mode: str, explainer_structure: str | None, num_speakers: int,
-                                    explainer_subject: str | None = None, explainer_style: str | None = None) -> str:
+                                    explainer_subject: str | None = None, explainer_style: str | None = None, short: bool = False) -> str:
     """Validate explicit Solo configuration, then render its finite structure template."""
     if presentation_mode == "classic":
         # Phase 65 (ENH-047): a chat / would-you-rather Short gives the conversation its own format
@@ -104,7 +104,8 @@ def _render_presentation_block_sync(presentation_mode: str, explainer_structure:
     subject = explainer_subject or "topic"
     if subject not in ("field", "product", "topic", "howto"):
         raise ValidationError("Solo subject must be field, product, topic or howto")
-    return template.render(explainer_structure=structure, explainer_subject=subject, explainer_style=explainer_style or "")
+    return template.render(explainer_structure=structure, explainer_subject=subject, explainer_style=explainer_style or "",
+                           short_format=short)
 
 
 async def load_presentation_block(presentation_mode: str = "classic", explainer_structure: str | None = None,
@@ -123,7 +124,8 @@ def _render_script_prompt_sync(*, genre: str, cefr_level: str, **context: object
     structure = context.pop("explainer_structure", None)
     subject = context.pop("explainer_subject", None)
     style = context.pop("explainer_style", None)
-    solo = _render_presentation_block_sync(mode, structure, int(context.get("num_speakers", 0)), subject, style)
+    solo = _render_presentation_block_sync(mode, structure, int(context.get("num_speakers", 0)), subject, style,
+                                           short=bool(context.get("short_style")))  # Phase 80: a presenter / Vox Short
     if solo and mode == "solo_explainer" and len(context.get("speakers", [])) != 1:
         raise ValidationError("Solo Explainer requires exactly one presenter")
     genre_instructions = solo or genre_instructions

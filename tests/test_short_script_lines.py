@@ -26,3 +26,13 @@ def test_short_lines_stay_as_they_are():
 def test_the_short_prompt_asks_for_no_welcome():
     text = (SCRIPT_PROMPTS_DIR / "section.txt").read_text(encoding="utf-8")
     assert "No welcome and no\n  greeting" in text and "at most\n  \"Welcome to Daily Beyond English\"" not in text
+
+
+def test_a_presenter_or_vox_short_prompt_has_a_hook_and_no_episode_greeting():
+    from backend.ai.llm.prompt_loader import _render_presentation_block_sync
+
+    for style in ("presenter", "vox"):
+        short = _render_presentation_block_sync("solo_explainer", "why", 1, "topic", style, short=True)
+        assert "under one minute" in short and "no greeting" in short and "OPENING: begin the episode" not in short
+        episode = _render_presentation_block_sync("solo_explainer", "why", 1, "topic", style)
+        assert "OPENING: begin the episode" in episode

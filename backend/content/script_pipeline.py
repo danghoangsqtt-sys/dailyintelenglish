@@ -22,7 +22,7 @@ from typing import NamedTuple, TYPE_CHECKING
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateNotFound
 from pydantic import BaseModel, Field, TypeAdapter, field_validator
 
-from backend.schemas.project import SHORT_STYLES
+from backend.schemas.project import SHORT_STYLES, is_short_video
 from backend.core.config import settings
 from backend.core.constants import (
     CEFR_WORDS_PER_MINUTE, SCRIPT_GLOBAL_WORD_TOLERANCE, SCRIPT_LAST_SECTION_CARRY_CAP,
@@ -700,7 +700,9 @@ def _source_context(project: dict) -> dict:
     from backend.content.audience import line  # Phase 72 (ENH-054): whom the script is written for
 
     return {"source_kind": kind if text else "", "source_text": text, "source_words": words,
-            "short_style": style if style in SHORT_STYLES else "", "audience_line": line(project.get("audience_effective"))}
+            # Phase 80: a conversation / Solo presenter / Vox project of at most a minute is a Short too
+            "short_style": style if style in SHORT_STYLES else ((style or "conversation") if is_short_video(project) else ""),
+            "audience_line": line(project.get("audience_effective"))}
 
 
 async def _vocabulary_repair(
@@ -1018,7 +1020,7 @@ async def _run_section_pipeline(
     if structural_errors:
         await _fail(db, job_id, "section_validation_failed", structural_errors)
         return None
-    if len(known_speaker_ids) == 1 and project.get("explainer_style") in SHORT_STYLES:  # Phase 80: no one-paragraph Shorts
+    if len(known_speaker_ids) == 1 and is_short_video(project):  # Phase 80: no one-paragraph Shorts
         section_lines = split_short_paragraphs(section_lines)
 
     words = section_word_count(section_lines)

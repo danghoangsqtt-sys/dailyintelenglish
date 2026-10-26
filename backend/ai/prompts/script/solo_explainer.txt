@@ -90,6 +90,12 @@ surprise; finish with a one-line takeaway and one line inviting the viewer to fo
 Never attribute a quote to a real person unless the owner gave it. This SHORT format replaces the
 structure above and the OPENING and CLOSING below.
 {% endif %}
+{% elif short_format %}
+SHORT ({{ 'VOX: a narrator over pictures' if explainer_style == 'vox' else 'a presenter speaking to camera' }}, vertical video,
+under one minute): open with a one-sentence hook that makes the viewer stay (no greeting, no welcome, no
+introduction of yourself); then three or four short key points, each one or two simple sentences, with one concrete
+example; finish with a one-line takeaway and one line inviting the viewer to follow Daily Beyond English.
+This SHORT format replaces the OPENING and CLOSING below; keep the structure above in miniature.
 {% else %}
 OPENING: begin the episode by greeting the viewers warmly and welcoming them to Daily Beyond
 English, saying who you are in a few words, and previewing today's topic in one or two sentences.
