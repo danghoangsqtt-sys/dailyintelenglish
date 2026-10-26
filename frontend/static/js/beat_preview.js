@@ -28,8 +28,9 @@
 
   const pct = (value) => `${(value * 100).toFixed(3)}%`;
 
-  function image(url, className, style = {}) {
-    const node = el("img", className, { src: url, alt: "", loading: "lazy", decoding: "async", draggable: false });
+  function image(url, className, style = {}, lazy = false) {
+    // the scene and the characters are the sketch itself: load them at once; only the blurred backdrop may wait
+    const node = el("img", className, { src: url, alt: "", loading: lazy ? "lazy" : "eager", decoding: "async", draggable: false });
     Object.assign(node.style, style);
     return node;
   }
@@ -75,7 +76,7 @@
     if (!plate && !illustration) picture.append(el("div", "bp-empty", { text: item.scene ? `${item.scene.name}: no picture yet` : "No scene picture" }));
     if (vertical) {
       const ambient = el("div", "bp-ambient");
-      if (plate) ambient.append(image(plate, "bp-cover"));
+      if (plate) ambient.append(image(plate, "bp-cover", {}, true));
       root.append(ambient);
     }
     root.append(picture);

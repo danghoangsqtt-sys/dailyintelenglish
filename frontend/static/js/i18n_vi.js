@@ -635,6 +635,13 @@ window.I18N_VI = {
     "Podcast: black screen": "Podcast: màn hình đen",
     "Storyboard": "Storyboard",
     "Storyboard beats": "Các nhịp storyboard",
+    // Phase 78: numbered Step 5 sections
+    "1. Characters & scenes": "1. Nhân vật & cảnh",
+    "2. Storyboard": "2. Storyboard",
+    "3. Render the video": "3. Render video",
+    "4. Preview and download": "4. Xem trước và tải về",
+    "5. Shorts & TikTok (vertical)": "5. Shorts & TikTok (dọc)",
+    "Captions": "Phụ đề",
     // Phase 78: storyboard review with sketches
     "Sketch": "Phác thảo",
     "Loading sketch…": "Đang tải phác thảo…",

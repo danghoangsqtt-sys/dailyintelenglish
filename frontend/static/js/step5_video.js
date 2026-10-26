@@ -913,6 +913,8 @@
       resizerTop: byId("resizer-top"),
       collapseBtn: byId("sidebar-collapse-btn"),
     });
+    // Phase 78: at phone width the workflow list starts collapsed, so the stage keeps the width (it is not remembered)
+    if (window.matchMedia("(max-width: 779px)").matches) byId("sidebar-collapse-btn").click();
     byId("script-timeline").addEventListener("click", handleTimelineClick);
     byId("voice-timeline").addEventListener("click", handleTimelineClick);
     byId("generate-btn").addEventListener("click", generateVideo);
