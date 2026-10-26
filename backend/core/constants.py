@@ -52,15 +52,7 @@ VIDEO_HEIGHT_STANDARD = 720
 MAX_CONCURRENT_TTS = 2
 TTS_SPEED_MIN = 0.75
 TTS_SPEED_MAX = 1.5
-# Phase 74: only recognized cue lines use this recipe revision in their cache key.
-VOCAL_CUE_RECIPE_VERSION = 1
-VOCAL_CUE_LOW_CLAUSE_MAX_WORDS = 6
-VOCAL_CUE_LOW_PITCH_DELTA_HZ = -10
 EDGE_TTS_PITCH_LIMIT_HZ = 50
-VOCAL_CUE_MAX_PER_MINUTE = 2
-VOCAL_CUE_MIN_GAP_SECONDS = 20.0
-VOCAL_CUE_PROMPT_MAX_LINES = 120
-VOCAL_CUE_PROMPT_MAX_WORDS_PER_LINE = 48
 
 # Phase 48: English voice catalog and isolated auditions.
 VOICE_CATALOG_TTL_SECONDS = 24 * 60 * 60
@@ -71,12 +63,9 @@ VOICE_PREVIEW_MAX_BYTES = 256 * 1024 * 1024
 VOICE_PREVIEW_MAX_TEXT_LENGTH = 500
 VOICE_PREVIEW_SAMPLE_TEXT = "A clear explanation begins with a simple example. Let us explore this idea together."
 TTS_SPEED_DEFAULT = 1.0
-# Only engines tts_service.py can actually dispatch to. Other advertised-but-unimplemented
-# engines (piper/google/azure, etc.) remain excluded so selection cannot silently behave
-# like Edge. OmniVoice is included only because Phase 75 now has a real isolated worker.
-TTS_ENGINES = ["edge_tts", "omnivoice"]
-# Only engines that no longer have an implementation belong here. OmniVoice now has
-# an isolated local worker and must remain a real, selectable engine.
+# Owner decision 2026-10-24: plain Edge speech only. Legacy stored engines are
+# converted explicitly by migration040; new requests cannot select them.
+TTS_ENGINES = ["edge_tts"]
 LEGACY_TTS_ENGINES: dict[str, str] = {}
 OMNIVOICE_MIN_FREE_MB = 8192  # conservative until the local RTX 3060 run is measured
 OMNIVOICE_REQUEST_TIMEOUT_SECONDS = 600

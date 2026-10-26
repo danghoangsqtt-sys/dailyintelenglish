@@ -15,7 +15,7 @@ from backend.core.voice import line_fingerprint
 from backend.db.database import get_db
 from backend.schemas.tts import PreviewLineRequest, VoiceCatalog, VoicePreviewRequest, VoicePreviewResult
 from backend.content import project_service, script_service
-from backend.ai.tts import omnivoice_service, tts_service, voice_catalog_service, voice_preview_service
+from backend.ai.tts import tts_service, voice_catalog_service, voice_preview_service
 
 router = APIRouter(prefix="/api/tts", tags=["tts"])
 preview_router = APIRouter(prefix="/api/projects/{project_id}/tts", tags=["tts"])
@@ -51,12 +51,10 @@ async def voice_preview_media(preview_id: str) -> Response:
 
 @router.get("/engines")
 async def list_engines() -> dict:
-    """Report Edge TTS and whether the optional local OmniVoice install is ready."""
+    """Report the supported plain-speech engine."""
     started_at = time.perf_counter()
-    omnivoice_available = await asyncio.to_thread(omnivoice_service.is_available)
     engines = [
         {"id": "edge_tts", "available": True, "kind": "online_free"},
-        {"id": "omnivoice", "available": omnivoice_available, "kind": "local_gpu"},
     ]
     return ok(engines, started_at=started_at)
 

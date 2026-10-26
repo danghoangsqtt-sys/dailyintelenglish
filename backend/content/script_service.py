@@ -15,7 +15,7 @@ from backend.ai.llm.prompt_loader import render_regenerate_line_prompt, render_s
 from backend.ai.llm.contracts import GenerationRequest
 from backend.ai.llm.router import AIRouter, build_ai_router_from_settings
 from backend.ai.llm.validation import parse_and_validate
-from backend.content.vocal_cue_annotation import annotate_script_lines
+from backend.ai.tts.vocal_cues import caption_text
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,15 @@ class ScriptLineOut(BaseModel):
     speaker_id: str
     text: str = Field(min_length=1)
     language_notes: LanguageNotesOut = Field(default_factory=LanguageNotesOut)
+
+    @field_validator("text")
+    @classmethod
+    def plain_dialogue(cls, value: str) -> str:
+        """Retire editorial emotion tags without rewriting the spoken sentence."""
+        value = caption_text(value)
+        if not value.strip():
+            raise ValueError("Script lines must contain spoken dialogue.")
+        return value
 
     @field_validator("speaker_id")
     @classmethod
@@ -138,13 +147,6 @@ async def generate_script(
             f"Gemini used speaker_id(s) not in project {project_id}: {unknown_speakers}"
         )
 
-    if config.get("_annotate_vocal_cues"):
-        annotated, warning = await annotate_script_lines(
-            [line.model_dump() for line in lines], config, router,
-        )
-        if warning:
-            logger.warning("project_id=%s %s", project_id, warning)
-        return [ScriptLineOut.model_validate(line) for line in annotated]
     return lines
 
 
@@ -222,17 +224,6 @@ async def regenerate_line(
 
     if config.get("presentation_mode") == "solo_explainer":
         line = line.model_copy(update={"id": line_id})  # the editor owns this existing line identity
-    if config.get("_annotate_vocal_cues"):
-        from backend.content.vocal_cue_annotation import count_cues
-
-        other_lines = [item for item in config.get("_existing_script_lines", []) if item.get("id") != line_id]
-        annotated, warning = await annotate_script_lines(
-            [line.model_dump()], config, router,
-            existing_count=count_cues(other_lines), min_gap_seconds=0,
-        )
-        if warning:
-            logger.warning("project_id=%s line_id=%s %s", project_id, line_id, warning)
-        line = ScriptLineOut.model_validate(annotated[0])
     return line
 
 
@@ -310,6 +301,9 @@ async def save_script(
         if unknown:
             raise ValidationError(f"Unknown speaker_id(s) for project {project_id}: {unknown}")
 
+    lines = [{**line, "text": caption_text(line["text"])} for line in lines]
+    if any(not line["text"].strip() for line in lines):
+        raise ValidationError("Script lines must contain spoken dialogue.")
     await db.execute("DELETE FROM script_lines WHERE project_id = ?", (project_id,))
     for index, line in enumerate(lines):
         await db.execute(
@@ -349,6 +343,9 @@ async def update_script_line(
     Raises:
         NotFoundError: If no such line exists for this project.
     """
+    text = caption_text(text)
+    if not text.strip():
+        raise ValidationError("Script lines must contain spoken dialogue.")
     cursor = await db.execute(
         "UPDATE script_lines SET text = ?, language_notes = ?, "
         "audio_cache_path = NULL, duration_seconds = NULL "

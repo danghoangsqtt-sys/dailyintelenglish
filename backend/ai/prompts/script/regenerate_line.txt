@@ -1,3 +1,5 @@
+Write spoken English dialogue only. Do not insert bracketed emotion tags, vocal sound effects, laughter, sigh directions, or stage directions into the text field.
+
 You are rewriting ONE line of a {{ genre }} podcast script at CEFR {{ cefr_level }} about "{{ topic }}".
 The line is spoken by {{ speaker.name }} ({{ speaker.gender }}, {{ speaker.accent }} accent).
 Current line: "{{ current_text }}"

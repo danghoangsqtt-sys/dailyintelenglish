@@ -45,7 +45,7 @@ foreach ($edition in @('full', 'lite')) {
     }
     if (-not (Test-Path -LiteralPath (Join-Path $app '_internal') -PathType Container) -or
         -not (Test-Path -LiteralPath (Join-Path $app 'DailyIntelEnglishStudio.exe') -PathType Leaf) -or
-        -not (Test-Path -LiteralPath (Join-Path $app '_internal\backend\ai\tts\omnivoice_worker.py') -PathType Leaf)) {
+        -not (Test-Path -LiteralPath (Join-Path $app '_internal\backend\db\migrations\040_edge_plain_speech.sql') -PathType Leaf)) {
         throw "$name distribution is missing required runtime files."
     }
     $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
@@ -69,9 +69,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\install_desktop.ps
 
 Follow docs/user/windows-installation.md for the renderer, Node.js and FFmpeg setup.
 The Full edition enables local picture controls when compatible GPU/model components
-are present; Lite hides those controls. Edge TTS remains the default. OmniVoice is an
-optional separate CUDA/Python environment and model; its weights are not in this ZIP.
-See docs/operations/omnivoice-local-tts.md for setup and current limitations.
+are present; Lite hides those controls. Speech uses Edge TTS only. Script emotion
+insertion and local speech-engine selection have been removed by owner request.
+See docs/operations/edge-plain-speech.md for existing-project migration guidance.
 "@
     [IO.File]::WriteAllText((Join-Path $setupRoot 'SETUP.txt'), $instructions, $utf8)
     $zip = Join-Path $output "DailyBeyondEnglishStudio-$Version-$name-windows-x64.zip"

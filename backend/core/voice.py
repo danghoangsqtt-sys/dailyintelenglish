@@ -5,8 +5,8 @@ from __future__ import annotations
 import hashlib
 import json
 
-from backend.ai.tts.vocal_cues import has_vocal_cues
-from backend.core.constants import EDGE_TTS_VOICE_MAP, LEGACY_TTS_ENGINES, VOCAL_CUE_RECIPE_VERSION
+from backend.ai.tts.vocal_cues import caption_text
+from backend.core.constants import EDGE_TTS_VOICE_MAP, LEGACY_TTS_ENGINES
 from backend.core.exceptions import ValidationError
 
 
@@ -37,8 +37,6 @@ def voice_parameters(speaker: dict) -> dict:
     if engine == "edge_tts":
         voice_id = resolve_voice_id(speaker)
         result.update(voice_id=voice_id, locale=voice_id.rsplit("-", 1)[0])
-    elif engine == "omnivoice":
-        result["voice_description"] = (speaker.get("voice_description") or "").strip()
     else:
         raise ValidationError(f"Unsupported TTS engine: {engine}")
     return result
@@ -73,10 +71,8 @@ def line_fingerprint(project: dict, line: dict) -> dict:
         raise ValidationError("The line's speaker no longer belongs to this project.")
     result = {
         "schema_version": 2, **voice_parameters(speaker),
-        "text_hash": fingerprint(line["text"]), "speaker_id": line["speaker_id"],
+        "text_hash": fingerprint(caption_text(line["text"])), "speaker_id": line["speaker_id"],
     }
-    if has_vocal_cues(line["text"]):
-        result["vocal_cue_recipe_version"] = VOCAL_CUE_RECIPE_VERSION
     return result
 
 

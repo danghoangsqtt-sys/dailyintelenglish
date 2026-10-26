@@ -47,7 +47,7 @@ class VoicePreviewRequest(VoiceParameters):
 
     model_config = ConfigDict(extra="forbid")
 
-    engine: Literal["edge_tts", "omnivoice"] = "edge_tts"
+    engine: Literal["edge_tts"] = "edge_tts"
     voice_id: str | None = Field(default=None, min_length=1, max_length=80)
     gender: Literal["male", "female", "neutral"] = "neutral"
     accent: str = "american"
@@ -60,7 +60,6 @@ class VoicePreviewRequest(VoiceParameters):
             raise ValueError("Select an Edge TTS voice to preview.")
         if self.accent not in ACCENTS:
             raise ValueError(f"accent must be one of {ACCENTS}")
-        return self
         return self
 
     @field_validator("text")

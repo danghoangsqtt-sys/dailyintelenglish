@@ -15,13 +15,12 @@ import hashlib
 import json
 import logging
 import re
-from contextlib import suppress
 from collections import Counter
 from datetime import datetime, timezone
 from typing import NamedTuple, TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateNotFound
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter, field_validator
 
 from backend.schemas.project import SHORT_STYLES
 from backend.core.config import settings
@@ -41,8 +40,7 @@ from backend.content import project_service, script_service
 from backend.ai.llm.contracts import GenerationRequest, GenerationResult
 from backend.ai.llm.validation import parse_and_validate
 from backend.content.script_service import LanguageNotesOut
-from backend.content.vocal_cue_annotation import annotate_script_lines
-from backend.core.constants import AI_JOB_HEARTBEAT_SECONDS
+from backend.ai.tts.vocal_cues import caption_text
 
 if TYPE_CHECKING:
     from backend.ai.llm.router import AIRouter
@@ -89,6 +87,15 @@ class SectionLineOut(BaseModel):
     speaker_id: str
     text: str = Field(min_length=1)
     language_notes: LanguageNotesOut = Field(default_factory=LanguageNotesOut)
+
+    @field_validator("text")
+    @classmethod
+    def plain_dialogue(cls, value: str) -> str:
+        """Normalize old checkpoint/model directions before budgeting or saving."""
+        value = caption_text(value)
+        if not value.strip():
+            raise ValueError("Script lines must contain spoken dialogue.")
+        return value
 
 
 class SectionLineWire(BaseModel):
@@ -312,7 +319,7 @@ def _lines_to_wire_json(lines: list[SectionLineOut], speakers: list[dict]) -> st
     wire = [
         {
             "speaker": id_to_alias.get(line.speaker_id, line.speaker_id),
-            "text": line.text,
+            "text": caption_text(line.text),
             "language_notes": line.language_notes.model_dump(),
         }
         for line in lines
@@ -1530,26 +1537,6 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
         }
         for line in all_lines
     ]
-    await _update_progress(db, job_id, "vocal_cues", 94)
-    snapshot = json.loads(job.get("input_snapshot_json") or "{}")
-    if isinstance(snapshot, dict) and snapshot.get("vocal_cues_version") == 1:
-        annotation_task = asyncio.create_task(annotate_script_lines(server_lines, project, router))
-        try:
-            while not annotation_task.done():
-                try:
-                    await asyncio.wait_for(asyncio.shield(annotation_task), timeout=AI_JOB_HEARTBEAT_SECONDS)
-                except TimeoutError:
-                    await worker.heartbeat(job_id)
-            server_lines, cue_warning = await annotation_task
-        finally:
-            if not annotation_task.done():
-                annotation_task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await annotation_task
-        if cue_warning:
-            logger.warning("job_id=%s project_id=%s %s", job_id, project_id, cue_warning)
-        await worker.heartbeat(job_id)
-
     async with write_transaction(db):
         final_project = await project_service.get_project(db, project_id)
         if _job_project_hash(final_project, job) != job["config_hash"]:

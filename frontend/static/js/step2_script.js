@@ -269,7 +269,7 @@
             ${isRegenerating ? '<span class="spinner spinner-dark"></span> Regenerating…' : "🔄 Regenerate this line"}
           </button>
         </div>
-        <div class="line-text" data-action="edit-text" role="button" tabindex="0"><span class="visually-hidden">Edit dialogue and vocal cues: </span><span translate="no">${escapeHtml(line.text)}</span></div>
+        <div class="line-text" data-action="edit-text" role="button" tabindex="0"><span class="visually-hidden">Edit dialogue: </span><span translate="no">${escapeHtml(line.text)}</span></div>
         <details class="notes-details">
           <summary>Language notes</summary>
           <div class="notes-body">
@@ -468,27 +468,10 @@
     textEl.classList.add("editing");
     textEl.removeAttribute("role");
     textEl.removeAttribute("tabindex");
-    textEl.innerHTML = `<textarea aria-label="Edit dialogue and vocal cues" aria-describedby="vocal-cue-hint">${escapeHtml(line.text)}</textarea>
-      <div class="vocal-cue-toolbar" role="group" aria-label="Insert vocal cue at cursor">
-        <span class="vocal-cue-toolbar-label">Insert vocal cue:</span>
-        <button type="button" class="btn btn-ghost btn-sm" data-vocal-cue="[cười]" translate="no">[cười]</button>
-        <button type="button" class="btn btn-ghost btn-sm" data-vocal-cue="[cười:ha-ha]" translate="no">[cười:ha-ha]</button>
-        <button type="button" class="btn btn-ghost btn-sm" data-vocal-cue="[cười:hi-hi]" translate="no">[cười:hi-hi]</button>
-        <button type="button" class="btn btn-ghost btn-sm" data-vocal-cue="[thở dài]" translate="no">[thở dài]</button>
-        <button type="button" class="btn btn-ghost btn-sm" data-vocal-cue="[hắng giọng]" translate="no">[hắng giọng]</button>
-      </div>
-      <small class="vocal-cue-hint" id="vocal-cue-hint">Select a cue in the text to replace it, or delete it. Edge voices approximate these sounds; laughter may sound like spoken syllables. Leave the editor to save, then Listen to check.</small>`;
+    textEl.innerHTML = `<textarea aria-label="Edit dialogue">${escapeHtml(line.text)}</textarea>`;
     const textarea = textEl.querySelector("textarea");
     textarea.focus();
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-
-    textEl.querySelectorAll("[data-vocal-cue]").forEach((button) => {
-      button.addEventListener("mousedown", (event) => event.preventDefault());
-      button.addEventListener("click", () => {
-        textarea.setRangeText(button.dataset.vocalCue, textarea.selectionStart, textarea.selectionEnd, "end");
-        textarea.focus();
-      });
-    });
 
     function commit() {
       const newText = textarea.value.trim();
