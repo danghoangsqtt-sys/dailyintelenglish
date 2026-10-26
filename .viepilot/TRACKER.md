@@ -1,5 +1,9 @@
 # TRACKER.md — Daily Intel English Studio
 
+## Phase 78 — Step 5 Video studio redesign (2026-10-26)
+
+Status: planned. Owner asked to redesign the Step 5 Video page: storyboard review is hard to use and has no preview pictures, and 9:16 output has many bugs. Tasks: 78.1 beat preview API, 78.2 storyboard review with per-beat 16:9/9:16 previews, 78.3 9:16 repairs (hook banner over speaker chips, clip cards, vertical player), 78.4 layout/verification/records. [Plan](phases/78-video-studio-redesign/PLAN.md), [state](phases/78-video-studio-redesign/PHASE-STATE.md).
+
 ## Audit 2026-10-26 - 2.0 source
 
 `/vp-audit` of the 2.0 source: retired OmniVoice code removed, migration-040 function registration fixed for every runner, BUG-051 resolved (15 stale tests updated, 3 Step 4 UI bugs fixed), full pytest **2137 passed, 0 failed**. Phase 77, the karaoke repair and these fixes are now committed on `owner-runs/20261001-r9` (BUG-052); not pushed, no package rebuilt. Open: ENH-055 (ROADMAP drift), ENH-056 (CORS / error exposure). [Report](audit-report.md).

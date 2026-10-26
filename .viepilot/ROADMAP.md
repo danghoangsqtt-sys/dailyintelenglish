@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 78 — Step 5 Video studio redesign (2026-10-26)
+
+Status: planned. Owner asked to redesign the Step 5 Video page: storyboard review is hard to use and has no preview pictures, and 9:16 output has many bugs. Tasks: 78.1 beat preview API, 78.2 storyboard review with per-beat 16:9/9:16 previews, 78.3 9:16 repairs (hook banner over speaker chips, clip cards, vertical player), 78.4 layout/verification/records. [Plan](phases/78-video-studio-redesign/PLAN.md), [state](phases/78-video-studio-redesign/PHASE-STATE.md).
+
 ## Phase 77 - Restore plain Edge speech (2026-10-24)
 
 Owner requested returning to Edge and removing emotion insertion after auditioning Chatterbox. Source implementation removes annotation, cue controls and local-engine selection, retaining Edge voices and word timings. Migration040 cleans legacy tags/settings and marks affected media for regeneration. Full/Lite 2.0.0 rebuilt in dist/2.0-edge-plain-20261024, Full installed/restarted with backups, and migration040 cleaned 3 lines while preserving 40 projects. Affected audio/video need regeneration; no tests were requested/run. No git persistence or owner acceptance claimed. [Plan](phases/77-edge-plain-speech/PLAN.md), [state](phases/77-edge-plain-speech/PHASE-STATE.md).
