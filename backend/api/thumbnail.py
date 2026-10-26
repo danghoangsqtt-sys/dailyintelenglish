@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field
 
-from backend.core.exceptions import NotFoundError, ValidationError
+from backend.core.exceptions import NotFoundError, ThumbnailGenerationError, ValidationError
 
 from backend.db.transactions import read_transaction, write_transaction
 from backend.core.responses import ok
@@ -127,7 +127,7 @@ async def draw_topic_picture(project_id: str, db: aiosqlite.Connection = Depends
     """Phase 39 (D118): draw the episode's topic picture on the local GPU with Qwen-Image-2.1-Turbo (~1-2 min with the
     model load). The composed thumbnail then uses it as its background, under the characters, headline and badges."""
     from backend.ai.image import recipes
-    from backend.ai.image.engine import QwenUnavailable, get_image_engine
+    from backend.ai.image.engine import ImageWorkerError, QwenUnavailable, get_image_engine
 
     started_at = time.perf_counter()
     async with read_transaction():
@@ -141,6 +141,8 @@ async def draw_topic_picture(project_id: str, db: aiosqlite.Connection = Depends
         await get_image_engine().qwen_batch("qwen21", [item], "thumbnail_topic_picture")
     except QwenUnavailable as exc:
         raise ValidationError("The local image model (Qwen-Image-2.1-Turbo) is not installed on this computer") from exc
+    except ImageWorkerError as exc:  # BUG-053: a plain reason instead of an unhandled 500
+        raise ThumbnailGenerationError(str(exc)) from exc
     return ok({"preview_url": f"/api/projects/{project_id}/thumbnails/topic-picture", "prompt": item["prompt"]},
               started_at=started_at)
 
@@ -167,7 +169,7 @@ def _public_scene(project_id: str, scene: dict) -> dict:
 
 
 async def _draw_ai_scenes(db: aiosqlite.Connection, project_id: str, indexes: list[int], replace: bool) -> list[dict]:
-    from backend.ai.image.engine import QwenUnavailable
+    from backend.ai.image.engine import ImageWorkerError, QwenUnavailable
     from backend.media import ai_scene
 
     async with read_transaction():
@@ -179,6 +181,8 @@ async def _draw_ai_scenes(db: aiosqlite.Connection, project_id: str, indexes: li
         scenes = await ai_scene.draw_scenes(project, composition, indexes)
     except QwenUnavailable as exc:
         raise ValidationError("The local image model (Qwen-Image-Edit-2511) is not installed on this computer") from exc
+    except ImageWorkerError as exc:  # BUG-053
+        raise ThumbnailGenerationError(str(exc)) from exc
     except ValueError as exc:
         raise ValidationError(str(exc)) from exc
     return [_public_scene(project_id, scene) for scene in scenes]

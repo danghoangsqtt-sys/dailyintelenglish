@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import subprocess
 import uuid
@@ -16,6 +17,8 @@ from backend.core.config import settings
 from backend.core.exceptions import ConflictError
 from backend.core.paths import IMAGE_VENV_DIR, RUNTIME_ROOT
 from backend.ai.image.gpu_model_manager import get_gpu_manager
+
+logger = logging.getLogger(__name__)
 
 ROOT = RUNTIME_ROOT
 IMAGE_PYTHON = IMAGE_VENV_DIR / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
@@ -31,6 +34,28 @@ def require_generation() -> None:
         raise ConflictError("AI visuals generation is disabled")
     if settings.IMAGE_ENGINE == "worker" and not IMAGE_PYTHON.is_file():
         raise ConflictError("Image environment is missing (.venv-image)")
+
+
+class ImageWorkerError(RuntimeError):
+    """BUG-053: the local image worker failed. `str()` is a plain, actionable sentence for the owner; the worker's own
+    message is in `detail` (and in the log), never shown in the UI."""
+
+    def __init__(self, detail: str) -> None:
+        self.detail = detail
+        super().__init__(explain_worker_error(detail))
+
+
+def explain_worker_error(detail: str) -> str:
+    """What the owner can do about an image-worker failure, from the worker's raw message."""
+    text = detail.lower()
+    if "os error 1455" in text or "paging file" in text:
+        return ("Windows ran out of virtual memory while loading the local image model (the paging file is too small). "
+                "Close other programs or let Windows manage a larger paging file, then try again.")
+    if "out of memory" in text or "cuda error" in text or "cublas" in text:
+        return "The graphics card ran out of memory. Close other programs that use the GPU, then try again."
+    if "exited unexpectedly" in text:
+        return "The local image model stopped unexpectedly. Try again; the details are in the image worker log."
+    return "The local image model could not draw the picture. Try again; the details are in the app log."
 
 
 class ImageEngine(Protocol):
@@ -62,7 +87,9 @@ class _WorkerProcess:
         assert self.process.stdout is not None
         line = self.process.stdout.readline()
         if not line:
-            raise RuntimeError(f"image worker exited unexpectedly; see {self.stderr_file.name}")
+            detail = f"image worker exited unexpectedly; see {self.stderr_file.name}"
+            logger.warning("image_worker_failed detail=%s", detail)
+            raise ImageWorkerError(detail)
         return json.loads(line)
 
     def request(self, payload: dict[str, Any], *, allow_unavailable: bool = False) -> dict[str, Any]:
@@ -73,7 +100,9 @@ class _WorkerProcess:
         if allow_unavailable and response.get("status") == "unavailable":
             return response
         if response.get("status") != "ok":
-            raise RuntimeError(response.get("message", "image worker request failed"))
+            detail = response.get("message", "image worker request failed")
+            logger.warning("image_worker_failed detail=%s", detail)
+            raise ImageWorkerError(detail)
         return response
 
     def close(self, kill: bool = False) -> None:

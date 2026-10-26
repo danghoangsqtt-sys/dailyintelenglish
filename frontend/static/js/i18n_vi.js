@@ -623,6 +623,12 @@ window.I18N_VI = {
     "Preparing preview…": "Đang chuẩn bị nghe thử…",
     "Discard the unsaved voice selection?": "Bỏ lựa chọn giọng chưa lưu?",
 
+    // BUG-053: local image worker failures (Step 6 topic picture / AI scenes, image jobs)
+    "Windows ran out of virtual memory while loading the local image model (the paging file is too small). Close other programs or let Windows manage a larger paging file, then try again.": "Windows hết bộ nhớ ảo khi nạp mô hình vẽ ảnh cục bộ (paging file quá nhỏ). Hãy đóng bớt chương trình khác hoặc để Windows tự quản lý paging file lớn hơn, rồi thử lại.",
+    "The graphics card ran out of memory. Close other programs that use the GPU, then try again.": "Card đồ hoạ hết bộ nhớ. Hãy đóng các chương trình khác đang dùng GPU, rồi thử lại.",
+    "The local image model stopped unexpectedly. Try again; the details are in the image worker log.": "Mô hình vẽ ảnh cục bộ dừng bất ngờ. Hãy thử lại; chi tiết nằm trong log của image worker.",
+    "The local image model could not draw the picture. Try again; the details are in the app log.": "Mô hình vẽ ảnh cục bộ không vẽ được ảnh. Hãy thử lại; chi tiết nằm trong log của ứng dụng.",
+
     // ---- step 5 video
     "Step 5 of 7": "Bước 5 / 7",
     "Video workspace": "Không gian video",

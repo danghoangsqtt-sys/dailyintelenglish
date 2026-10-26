@@ -131,3 +131,28 @@ def test_without_qwen_the_topic_picture_says_so(client, qwen_log, monkeypatch): 
     response = client.post(f"/api/projects/{project['id']}/thumbnails/topic-picture")
     assert response.status_code == 422 and "not installed" in response.json()["error"]
     assert client.get(f"/api/projects/{project['id']}/thumbnails/topic-picture").status_code == 404
+
+
+def test_a_failing_image_worker_gives_a_plain_reason_not_a_500(client, qwen_log, monkeypatch):  # noqa: F811
+    """BUG-053: the owner's log showed `OSError: The paging file is too small ... (os error 1455)` as an unhandled 500."""
+    from backend.ai.image.engine import ImageWorkerError
+
+    async def failing(self, model, items, consumer, detect_faces=False):
+        raise ImageWorkerError("OSError: The paging file is too small for this operation to complete. (os error 1455)")
+
+    monkeypatch.setattr(FakeImageEngine, "qwen_batch", failing)
+    project = _project_with_inserts(client)
+    response = client.post(f"/api/projects/{project['id']}/thumbnails/topic-picture")
+    assert response.status_code == 502
+    message = response.json()["error"]
+    assert "paging file" in message and "os error" not in message.lower() and "OSError" not in message
+
+
+def test_worker_messages_become_actionable_sentences():
+    from backend.ai.image.engine import ImageWorkerError, explain_worker_error
+
+    assert "GPU" in explain_worker_error("RuntimeError: CUDA out of memory. Tried to allocate 2.00 GiB")
+    assert "stopped unexpectedly" in explain_worker_error("image worker exited unexpectedly; see x.log")
+    assert "could not draw" in explain_worker_error("ValueError: something odd")
+    error = ImageWorkerError("OSError: The paging file is too small (os error 1455)")
+    assert error.detail.endswith("(os error 1455)") and "virtual memory" in str(error)

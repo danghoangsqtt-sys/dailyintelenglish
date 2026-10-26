@@ -224,3 +224,17 @@ def test_without_the_model_the_ai_scenes_say_so(ai_api):
     engine.qwen_available = False
     response = client.post(f"/api/projects/{project['id']}/thumbnails/ai-scenes", json={"count": 1})
     assert response.status_code == 422 and "Qwen-Image-Edit-2511" in response.json()["error"]
+
+
+def test_a_failing_image_worker_is_reported_plainly_for_ai_scenes(ai_api, monkeypatch):
+    """BUG-053: the AI scenes endpoint caught only a missing model; any other worker failure was a 500."""
+    from backend.ai.image.engine import ImageWorkerError
+
+    client, project, engine = ai_api  # noqa: F811
+
+    async def failing(self, model, items, consumer, detect_faces=False):
+        raise ImageWorkerError("RuntimeError: CUDA out of memory. Tried to allocate 2.00 GiB")
+
+    monkeypatch.setattr(engine, "qwen_batch", failing)
+    response = client.post(f"/api/projects/{project['id']}/thumbnails/ai-scenes", json={"count": 1})
+    assert response.status_code == 502 and "graphics card ran out of memory" in response.json()["error"]
