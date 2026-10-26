@@ -8,6 +8,13 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Fixed — audit (Phase 79, 2026-10-26)
+
+- Drawing a thumbnail topic picture or AI scene with the local image model no longer fails with an unhandled error; the message says what to do (e.g. Windows paging file too small, GPU out of memory).
+- A new render removes the render it replaced (videos of 150–250 MB were kept forever).
+- The local API answers only to this computer's own names and the studio's own origin (CORS / DNS rebinding).
+- Harmless Windows connection-reset tracebacks no longer flood `desktop.log`.
+
 ### Changed — Step 5 Video studio redesign (Phase 78, 2026-10-26)
 
 - Storyboard review: every beat shows a sketch of what the video will show (scene plate, the speaking pair, the insert's illustration) in 16:9 or 9:16, notes on what is missing, its script lines (no longer collapsed) and a labelled, aligned form. Sketches follow edits. New read-only `POST /api/projects/{id}/storyboard/preview` uses the renderer's own rules.

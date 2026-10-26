@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 79 — Audit fixes (2026-10-26)
+
+Status: implemented_verified. BUG-053 image-worker failures give a plain reason (was a 500 in the owner's log), BUG-054 replaced renders are deleted (3 orphan folders / 0.63 GB left for the owner), ENH-056 own-origin CORS + local Host check, BUG-055 log noise filtered, ENH-055 ROADMAP drift fixed. Full pytest 2165 passed. Not pushed, not installed. [Plan](phases/79-audit-fixes/PLAN.md), [audit](audit-report.md).
+
 ## Phase 78 — Step 5 Video studio redesign (2026-10-26)
 
 Status: implemented, owner accepted the UI, Full 2.0.0 installed 2026-10-26 (backup `data/backups/desktop-20261026-120402-897`; full pytest 2143 passed; not pushed). Owner asked to redesign the Step 5 Video page: storyboard review is hard to use and has no preview pictures, and 9:16 output has many bugs. Tasks: 78.1 beat preview API, 78.2 storyboard review with per-beat 16:9/9:16 previews, 78.3 9:16 repairs (hook banner over speaker chips, clip cards, vertical player), 78.4 layout/verification/records. [Plan](phases/78-video-studio-redesign/PLAN.md), [state](phases/78-video-studio-redesign/PHASE-STATE.md).
