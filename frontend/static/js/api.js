@@ -261,6 +261,9 @@ const Api = (() => {
       method: "PUT", body: JSON.stringify(storyboard),
     }),
     proposeStoryboard: (projectId) => request(`/api/projects/${projectId}/storyboard/propose`, { method: "POST" }),
+    // Phase 78: per-beat sketches of the draft (null = the saved storyboard)
+    previewStoryboard: (projectId, beats = null) => request(`/api/projects/${projectId}/storyboard/preview`,
+      json("POST", beats ? { beats } : {})),
     getExplainerPlan: (projectId) => request(`/api/projects/${projectId}/explainer-plan`),
     getExplainerHistory: (projectId) => request(`/api/projects/${projectId}/explainer-plan/history`),
     arrangeExplainerPlan: (projectId, body) => request(`/api/projects/${projectId}/explainer-plan/layout`, json("POST", body)),

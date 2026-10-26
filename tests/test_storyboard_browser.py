@@ -159,3 +159,33 @@ async def test_library_scene_search_archive_and_refresh_preserve_draft(browser_i
     assert await page.locator("#beat-0-place").input_value() == created[0]["id"]
     assert await page.locator("#beat-1-action").input_value() == "reading a book"
     await page.close()
+
+
+async def test_each_beat_has_a_sketch_that_follows_edits_and_the_aspect(browser_instance: Browser, live_server_url: str):
+    """Phase 78 (78.2): a sketch per beat, its notes, the 16:9 / 9:16 switch, and a refresh after an edit."""
+    page = await browser_instance.new_page()
+    project_id = await _project(page, live_server_url)
+    response = await page.request.put(f"{live_server_url}/api/projects/{project_id}/storyboard", data={"status": "draft", "beats": [
+        {"line_from": 0, "line_to": 2, "kind": "scene", "scene_id": "builtin-cafe", "speakers": [0, 1], "action": "talking"},
+        {"line_from": 3, "line_to": 5, "kind": "insert", "new_place": "a busy subway", "speakers": [], "action": "riding the subway"},
+    ]})
+    assert response.ok, await response.text()
+    await page.goto(f"{live_server_url}/step5?project_id={project_id}")
+    await page.wait_for_function("document.querySelectorAll('#storyboard-beats .sb-frame-slot .bp-frame:not(.is-loading)').length === 2")
+    assert await page.locator("#storyboard-beats .bp-frame.is-horizontal").count() == 2
+    notes = await page.locator("#storyboard-beats .sb-notes").all_inner_texts()
+    assert "Cafe has no picture yet" in notes[0] and "No illustration yet" in notes[1]
+    assert await page.locator("#storyboard-beats .sb-lines").first.locator("li").count() == 3  # lines shown, not collapsed
+
+    await page.get_by_role("button", name="9:16 — Shorts").click()
+    assert await page.locator("#storyboard-beats .bp-frame.is-vertical").count() == 2
+    assert await page.locator("#storyboard-beats .bp-caption").first.inner_text()  # the first line as the caption band
+
+    requests = []
+    page.on("request", lambda request: requests.append(request.url) if request.url.endswith("/storyboard/preview") else None)
+    await page.locator("#beat-0-expression").select_option("laugh")
+    await page.wait_for_timeout(900)
+    assert requests, "an edit refreshes the sketches"
+    await page.reload()
+    await page.wait_for_function("document.querySelectorAll('#storyboard-beats .bp-frame.is-vertical').length === 2")  # remembered
+    await page.close()

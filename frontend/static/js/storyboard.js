@@ -2,26 +2,41 @@
  * Step 5 Storyboard (Task 24.4): the AI proposes story beats, the owner edits and approves.
  * Self-contained; all server calls go through Api. The server stays authoritative -- the image
  * estimate here only previews the server's `estimate_images` while editing.
+ *
+ * Phase 78 (Task 78.2): each beat shows a sketch of what the video will show (16:9 or 9:16, `BeatPreview`), its lines, and a
+ * labelled form; the sketches follow the edits (debounced POST /storyboard/preview) without rebuilding the form being typed in.
  */
 (function () {
   const EXPRESSIONS = ["calm", "smile", "laugh", "surprised", "thinking", "worried", "serious"];
   const GPU_MINUTES_PER_IMAGE = 1.5;  // Qwen-Image-2.1 (~90 s); a library match costs nothing
   const NEW_PLACE = "__new__";
+  const ASPECT_KEY = "dbe.storyboard.aspect";
+  const PREVIEW_DELAY_MS = 400;
   const state = {
     projectId: new URLSearchParams(window.location.search).get("project_id"),
     lines: [], speakerNames: {}, lineSpeakers: [], cast: [], scenes: [],
     beats: [], meta: {}, proposal: null, dirty: false, busy: false, cap: 12, loaded: false, refreshing: false,
+    previews: [], previewTimer: null, previewRequest: 0, aspect: readAspect(),
   };
   const $ = (id) => document.getElementById(id);
+
+  function readAspect() {
+    try {
+      return localStorage.getItem(ASPECT_KEY) === "9:16" ? "9:16" : "16:9";
+    } catch {
+      return "16:9";
+    }
+  }
 
   function element(tag, props = {}, children = []) {
     const node = document.createElement(tag);
     Object.entries(props).forEach(([key, value]) => {
       if (key === "text") node.textContent = value;
       else if (key === "dataset") Object.assign(node.dataset, value);
+      else if (key === "ariaLabel") node.setAttribute("aria-label", value);
       else node[key] = value;
     });
-    children.forEach((child) => node.append(child));
+    children.forEach((child) => child !== null && child !== undefined && node.append(child));
     return node;
   }
 
@@ -50,6 +65,7 @@
   function markDirty() {
     state.dirty = true;
     renderSummary();
+    schedulePreview();
   }
 
   function renderSummary() {
@@ -75,11 +91,14 @@
       text: `${images}/${state.cap} pictures · up to ~${Math.round(images * GPU_MINUTES_PER_IMAGE)} GPU min`,
     });
     const parts = [`${state.beats.length} beats · `, cost];
-    if (state.meta.status) parts.push(` · ${state.meta.status} (${state.meta.source})`);
+    if (state.meta.status) {
+      parts.push(" · ", element("span", { className: `status-chip storyboard-status is-${state.meta.status}`,
+        text: `${state.meta.status} (${state.meta.source})` }));
+    }
     if (state.proposal) {
       parts.push(` · proposal: ${state.proposal.path}${state.proposal.reason ? ` — ${state.proposal.reason}` : ""}`);
     }
-    if (state.dirty) parts.push(" · unsaved changes");
+    if (state.dirty) parts.push(element("span", { className: "storyboard-dirty", text: " · unsaved changes" }));
     summary.append(...parts);
   }
 
@@ -106,24 +125,53 @@
 
   function renderBeats() {
     const list = $("storyboard-beats");
+    list.dataset.aspect = state.aspect;
     list.replaceChildren();
     state.beats.forEach((beat, index) => list.append(beatCard(beat, index)));
     renderSummary();
+    renderPreviews();
+  }
+
+  /** A labelled field: the label above its control(s). */
+  function field(label, control, extra = [], wide = false) {
+    return element("div", { className: `sb-field${wide ? " is-wide" : ""}` }, [
+      element("label", { htmlFor: control.id, text: label }), ...extra, control,
+    ]);
+  }
+
+  function speakerName(item) {
+    return state.speakerNames[item.speaker_id] || "Speaker";
+  }
+
+  function linesList(beat) {
+    const list = element("ol", { className: "sb-lines", start: beat.line_from + 1 });
+    list.setAttribute("aria-label", "Script lines");
+    for (let line = beat.line_from; line <= beat.line_to; line += 1) {
+      const item = state.lines[line];
+      if (!item) continue;
+      list.append(element("li", {}, [
+        element("strong", { text: `${speakerName(item)}: ` }),
+        element("span", { text: item.text, translate: "no" }),
+      ]));
+    }
+    return list;
   }
 
   function beatCard(beat, index) {
-    const card = element("article", { className: "card storyboard-beat", dataset: { index: String(index) } });
+    const card = element("article", { className: "card storyboard-beat", dataset: { index: String(index), kind: beat.kind } });
     const where = beat.kind === "insert" ? `insert: ${beat.new_place || "illustration"}`
       : beat.scene_id ? sceneName(beat.scene_id) : beat.new_place || "new place";
-    card.append(element("h4", { text: `Beat ${index + 1} · lines ${beat.line_from + 1}–${beat.line_to + 1} · ${where}` }));
-    const details = element("details", {}, [element("summary", { text: "Script lines" })]);
-    for (let line = beat.line_from; line <= beat.line_to; line += 1) {
-      const item = state.lines[line];
-      if (item) details.append(element("p", { text: `${line + 1}. ${state.speakerNames[item.speaker_id] || "Speaker"}: ${item.text}` }));
-    }
-    card.append(details);
+    card.append(element("header", { className: "sb-head" }, [
+      element("h4", { text: `Beat ${index + 1} · lines ${beat.line_from + 1}–${beat.line_to + 1} · ${where}` }),
+      element("span", { className: "status-chip", text: beat.kind === "insert" ? "Insert" : "Scene" }),
+    ]));
 
-    const fields = element("div", { className: "storyboard-fields" });
+    const visual = element("div", { className: "sb-visual" }, [
+      element("div", { className: "sb-frame-slot", dataset: { index: String(index) } }),
+      element("ul", { className: "sb-notes", dataset: { index: String(index) } }),
+    ]);
+
+    const fields = element("div", { className: "sb-fields" });
     const kind = element("select", { id: `beat-${index}-kind`, name: "kind" }, [
       element("option", { value: "scene", text: "Scene (people in a place)" }),
       element("option", { value: "insert", text: "Insert (illustration)" }),
@@ -136,12 +184,18 @@
       markDirty();
       renderBeats();
     });
-    fields.append(element("label", { htmlFor: kind.id, text: "Kind" }), kind);
+    fields.append(field("Kind", kind));
+
+    const expression = element("select", { id: `beat-${index}-expression`, name: "expression" },
+      EXPRESSIONS.map((value) => element("option", { value, text: value })));
+    expression.value = beat.expression || "calm";
+    expression.addEventListener("change", () => { beat.expression = expression.value; markDirty(); });
+    fields.append(field("Expression", expression));
 
     if (beat.kind === "scene") {
       let place = placeSelect(beat, index);
-      const search = element("input", { type: "search", id: `beat-${index}-scene-search`,
-        placeholder: "Search scenes", autocomplete: "off" });
+      const search = element("input", { type: "search", id: `beat-${index}-scene-search`, className: "sb-search",
+        placeholder: "Search scenes", autocomplete: "off", ariaLabel: "Search scenes" });
       search.addEventListener("input", () => {
         const replacement = placeSelect(beat, index, search.value);
         replacement.addEventListener("change", choosePlace);
@@ -155,8 +209,7 @@
         renderBeats();
       }
       place.addEventListener("change", choosePlace);
-      fields.append(element("label", { htmlFor: search.id, text: "Search scenes" }), search,
-        element("label", { htmlFor: place.id, text: "Place" }), place);
+      fields.append(field("Place", place, [search], true));
     }
     if (beat.kind === "insert" || !beat.scene_id) {
       const custom = element("input", {
@@ -164,22 +217,16 @@
         placeholder: beat.kind === "insert" ? "what the picture shows" : "a short place, up to 5 words",
       });
       custom.addEventListener("input", () => { beat.new_place = custom.value.trim() || null; markDirty(); });
-      fields.append(element("label", { htmlFor: custom.id, text: beat.kind === "insert" ? "Shows" : "New place" }), custom);
+      fields.append(field(beat.kind === "insert" ? "Picture shows" : "New place", custom, [], true));
     }
     const action = element("input", {
       id: `beat-${index}-action`, name: "action", maxLength: 40, value: beat.action || "",
       placeholder: "e.g. drinking coffee",
     });
     action.addEventListener("input", () => { beat.action = action.value.trim(); markDirty(); });
-    fields.append(element("label", { htmlFor: action.id, text: "Action" }), action);
-    const expression = element("select", { id: `beat-${index}-expression`, name: "expression" },
-      EXPRESSIONS.map((value) => element("option", { value, text: value })));
-    expression.value = beat.expression || "calm";
-    expression.addEventListener("change", () => { beat.expression = expression.value; markDirty(); });
-    fields.append(element("label", { htmlFor: expression.id, text: "Expression" }), expression);
-    card.append(fields);
+    fields.append(field("Action", action, [], true));
 
-    const speakers = element("div", { className: "storyboard-speakers" }, [element("span", { text: "On screen:" })]);
+    const speakers = element("fieldset", { className: "sb-speakers" }, [element("legend", { text: "On screen" })]);
     state.cast.forEach((member) => {
       const box = element("input", {
         type: "checkbox", id: `beat-${index}-speaker-${member.speaker_index}`,
@@ -192,11 +239,12 @@
         beat.speakers = [...chosen].sort((a, b) => a - b);
         markDirty();
       });
-      speakers.append(element("label", { htmlFor: box.id }, [box, ` ${member.speaker_name}`]));
+      const name = element("span", { text: member.speaker_name });
+      name.setAttribute("translate", "no");
+      speakers.append(element("label", { htmlFor: box.id, className: "sb-chip" }, [box, name]));
     });
-    card.append(speakers);
 
-    const actions = element("div", { className: "library-actions" });
+    const actions = element("div", { className: "library-actions sb-actions" });
     if (beat.line_to > beat.line_from) {
       const at = element("select", { id: `beat-${index}-split-at`, ariaLabel: "Split before line" });
       for (let line = beat.line_from + 1; line <= beat.line_to; line += 1) {
@@ -207,23 +255,92 @@
         const cut = Number(at.value);
         state.beats.splice(index + 1, 0, { ...beat, line_from: cut, speakers: [...(beat.speakers || [])] });
         beat.line_to = cut - 1;
+        state.previews.splice(index + 1, 0, null);
         markDirty();
         renderBeats();
       });
-      actions.append(split, at);
+      actions.append(element("span", { className: "sb-split" }, [split, at]));
     }
     if (index < state.beats.length - 1) {
       const merge = element("button", { type: "button", className: "btn btn-ghost btn-sm", text: "Merge with next" });
       merge.addEventListener("click", () => {
         beat.line_to = state.beats[index + 1].line_to;
         state.beats.splice(index + 1, 1);
+        state.previews.splice(index + 1, 1);
         markDirty();
         renderBeats();
       });
       actions.append(merge);
     }
-    card.append(actions);
+
+    const editor = element("div", { className: "sb-editor" }, [linesList(beat), fields, speakers, actions]);
+    card.append(element("div", { className: "sb-body" }, [visual, editor]));
     return card;
+  }
+
+  function captionFor(beat) {
+    const item = state.lines[beat.line_from];
+    return item ? { speaker: speakerName(item), text: item.text } : null;
+  }
+
+  /** Draw the sketches into the cards (no form is rebuilt, so typing keeps its focus). */
+  function renderPreviews() {
+    document.querySelectorAll("#storyboard-beats .sb-frame-slot").forEach((slot) => {
+      const index = Number(slot.dataset.index);
+      const beat = state.beats[index];
+      const item = state.previews[index];
+      const frame = item ? BeatPreview.frame(item, {
+        aspect: state.aspect, caption: state.aspect === "9:16" ? captionFor(beat) : null,
+        label: `Beat ${index + 1} sketch`,
+      }) : element("div", { className: `bp-frame ${state.aspect === "9:16" ? "is-vertical" : "is-horizontal"} is-loading` },
+        [element("div", { className: "bp-empty", text: "Loading sketch…" })]);
+      slot.replaceChildren(frame);
+      const notes = document.querySelector(`#storyboard-beats .sb-notes[data-index="${index}"]`);
+      if (notes) notes.replaceChildren(...BeatPreview.notes(item).map((text) => element("li", { text })));
+    });
+  }
+
+  function previewPayload() {
+    return state.beats.map((beat) => ({
+      line_from: beat.line_from, line_to: beat.line_to, kind: beat.kind,
+      scene_id: beat.kind === "scene" ? beat.scene_id : null,
+      new_place: beat.new_place || null, speakers: beat.speakers || [], action: beat.action || "",
+      expression: beat.expression || "calm",
+    }));
+  }
+
+  async function refreshPreviews() {
+    if (!state.beats.length) return;
+    const request = ++state.previewRequest;
+    try {
+      const result = await Api.previewStoryboard(state.projectId, previewPayload());
+      if (request !== state.previewRequest) return;  // a newer edit already asked again
+      state.previews = result.beats;
+      renderPreviews();
+    } catch (error) {
+      if (request !== state.previewRequest) return;
+      state.previews = state.beats.map(() => ({ error: error.message || "The sketch could not load." }));
+      renderPreviews();
+    }
+  }
+
+  function schedulePreview() {
+    clearTimeout(state.previewTimer);
+    state.previewTimer = setTimeout(refreshPreviews, PREVIEW_DELAY_MS);
+  }
+
+  function renderAspect() {
+    document.querySelectorAll("#storyboard-aspect [data-aspect]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.aspect === state.aspect));
+    });
+  }
+
+  function setAspect(aspect) {
+    state.aspect = aspect;
+    try { localStorage.setItem(ASPECT_KEY, aspect); } catch { /* the choice just is not remembered */ }
+    renderAspect();
+    $("storyboard-beats").dataset.aspect = aspect;
+    renderPreviews();
   }
 
   function applyStoryboard(storyboard) {
@@ -232,8 +349,10 @@
     state.cap = storyboard.estimate ? storyboard.estimate.cap : state.cap;
     state.proposal = storyboard.proposal || null;
     state.dirty = false;
+    state.previews = [];
     renderWarnings(storyboard.warnings);
     renderBeats();
+    refreshPreviews();
   }
 
   async function run(kind, operation) {
@@ -292,6 +411,7 @@
       if (JSON.stringify(scenes) !== JSON.stringify(state.scenes)) {
         state.scenes = scenes;
         renderBeats();
+        schedulePreview();  // a scene may have its picture now
       }
     } catch (error) {
       $("storyboard-error").textContent = error.message || "Scenes could not refresh.";
@@ -307,6 +427,10 @@
     $("storyboard-propose").addEventListener("click", () => run("propose", () => Api.proposeStoryboard(state.projectId)));
     $("storyboard-save").addEventListener("click", () => run("save", () => Api.saveStoryboard(state.projectId, payload("draft"))));
     $("storyboard-approve").addEventListener("click", () => run("approve", () => Api.saveStoryboard(state.projectId, payload("approved"))));
+    document.querySelectorAll("#storyboard-aspect [data-aspect]").forEach((button) => {
+      button.addEventListener("click", () => setAspect(button.dataset.aspect));
+    });
+    renderAspect();
     // Step 5 keeps its workspace hidden (and requests no script) until the project has finished
     // audio; load only once the workspace is shown, so this section never bypasses that gate.
     const workspace = $("workspace");

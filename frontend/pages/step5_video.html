@@ -78,19 +78,52 @@
     .visual-cast-name { font-size: 13px; color: var(--muted); }
     .visual-cast-face { display: block; width: 58px; height: 58px; margin: 9px 0; border-radius: 50%; object-fit: cover; }
     .visual-warning { color: var(--danger); }
-    .storyboard-summary { margin: 10px 0; color: var(--muted); }
+    .storyboard-summary { margin: 10px 0; color: var(--muted); font-size: 13.5px; }
     .storyboard-summary .over-cap { color: var(--danger); font-weight: 700; }
-    .storyboard-beats { display: grid; gap: 10px; margin-top: 12px; }
-    .storyboard-beat { padding: 12px; }
-    .storyboard-beat h4 { margin: 0 0 6px; }
-    .storyboard-beat details { margin: 6px 0 10px; font-size: 13px; color: var(--muted); }
-    .storyboard-beat details p { margin: 3px 0; }
-    .storyboard-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
-    .storyboard-fields label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
-    .storyboard-fields input, .storyboard-fields select { padding: 7px; border: 1px solid var(--border); border-radius: 8px;
-      background: var(--surface, transparent); color: inherit; }
-    .storyboard-speakers { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13px; }
-    .storyboard-beat .library-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+    .storyboard-summary .storyboard-dirty { color: var(--warning); font-weight: 700; }
+    .storyboard-status.is-approved { border-color: var(--accent); color: var(--accent); }
+    /* Phase 78 (78.2): toolbar, then one card per beat: the sketch and its notes | the lines and an aligned form */
+    .storyboard-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 14px; }
+    .storyboard-toolbar .spacer { flex: 1 1 auto; }
+    .storyboard-aspect { display: inline-flex; gap: 6px; align-items: center; }
+    .storyboard-aspect .chip { padding: 6px 10px; font-size: 12.5px; }
+    .storyboard-beats { display: grid; gap: 14px; margin-top: 12px; }
+    .storyboard-beat { padding: 14px; }
+    .storyboard-beat[data-kind="insert"] { border-left: 4px solid var(--info); }
+    .sb-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .sb-head h4 { margin: 0; font-size: 15px; }
+    .sb-body { display: grid; grid-template-columns: minmax(240px, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
+    .storyboard-beats[data-aspect="9:16"] .sb-body { grid-template-columns: minmax(150px, 200px) minmax(0, 1fr); }
+    .sb-visual { display: grid; gap: 8px; }
+    .sb-notes { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .sb-notes:empty { display: none; }
+    .sb-editor { display: grid; gap: 12px; min-width: 0; }
+    .sb-lines { margin: 0; padding: 8px 12px 8px 34px; max-height: 9.5em; overflow-y: auto; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--surface-2); font-size: 13px; line-height: 1.5; }
+    .sb-lines li + li { margin-top: 3px; }
+    .sb-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+    .sb-field { display: grid; gap: 5px; align-content: start; min-width: 0; }
+    .sb-field.is-wide { grid-column: 1 / -1; }
+    .sb-field label { font-size: 12.5px; font-weight: 700; color: var(--text-2, var(--text)); }
+    .sb-field input, .sb-field select { width: 100%; min-width: 0; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--border);
+      border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; font-size: 13.5px; }
+    .sb-field.is-wide:has(.sb-search) { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+    .sb-field.is-wide:has(.sb-search) label { grid-column: 1 / -1; }
+    .sb-speakers { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; padding: 0; border: 0; }
+    .sb-speakers legend { float: left; margin-right: 6px; padding: 0; font-size: 12.5px; font-weight: 700; }
+    .sb-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px;
+      font-size: 13px; cursor: pointer; }
+    .sb-chip:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+    .sb-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 10px; border-top: 1px dashed var(--border); }
+    .sb-split { display: inline-flex; gap: 6px; align-items: center; }
+    .sb-split select { padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+    @media (max-width: 900px) {
+      .sb-body, .storyboard-beats[data-aspect="9:16"] .sb-body { grid-template-columns: 1fr; }
+      .storyboard-beats[data-aspect="9:16"] .sb-visual { max-width: 220px; }
+    }
+    @media (max-width: 520px) { .sb-fields { grid-template-columns: 1fr; } .sb-field.is-wide:has(.sb-search) { grid-template-columns: 1fr; } }
+    /* Phase 78: the next-step bar stays at the end of the stage instead of floating over the beats and clips */
+    .pane-stage > .step-guide { position: static; box-shadow: none; margin-top: 24px; }
   </style>
 </head>
 <body>
@@ -154,10 +187,16 @@
               <h2 class="section-title">Storyboard</h2>
               <p class="section-hint">Choose places from your library for each beat. <a href="/activities?tab=scenes" target="_blank" rel="noopener">Manage scenes</a></p>
               <p class="section-hint">Story beats decide which picture shows during which lines: a place, who is on screen, what they do and how they feel. Let the AI propose, then edit and approve. Pictures follow places and actions, not duration.</p>
-              <div class="generate-row">
+              <div class="storyboard-toolbar">
                 <button id="storyboard-propose" class="btn btn-primary" type="button">Propose with AI</button>
                 <button id="storyboard-save" class="btn btn-ghost" type="button" disabled>Save draft</button>
                 <button id="storyboard-approve" class="btn btn-ghost" type="button" disabled>Approve</button>
+                <span class="spacer"></span>
+                <div id="storyboard-aspect" class="storyboard-aspect" role="group" aria-label="Preview aspect ratio">
+                  <span class="section-hint" style="margin:0">Sketch</span>
+                  <button class="chip" type="button" data-aspect="16:9" aria-pressed="true">16:9 — YouTube</button>
+                  <button class="chip" type="button" data-aspect="9:16" aria-pressed="false">9:16 — Shorts</button>
+                </div>
               </div>
               <div id="storyboard-summary" class="storyboard-summary" aria-live="polite"></div>
               <div id="storyboard-error" class="visual-warning" role="alert"></div>
@@ -247,6 +286,7 @@
   <script src="/static/js/explainer_editor.js"></script>
   <script src="/static/js/step5_video.js"></script>
   <script src="/static/js/step5_shorts.js"></script>
+  <script src="/static/js/beat_preview.js"></script>
   <script src="/static/js/storyboard.js"></script>
 </body>
 </html>

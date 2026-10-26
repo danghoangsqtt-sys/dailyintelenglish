@@ -24,3 +24,6 @@ No innerHTML with data (build nodes); labels wrap controls; keyboard reachable; 
 
 ## Verification
 `pytest tests/test_storyboard_browser.py tests/test_video_studio_browser.py tests/test_video_shell_browser.py -q`; `node --check` on changed JS; browser check in the sandbox at 1440 px and 390 px.
+
+## Result
+Done 2026-10-26. New `frontend/static/js/beat_preview.js` (renderer geometry), `storyboard.js` cards = sketch + notes | lines + labelled 2-column form + On screen chips + Split/Merge row; debounced preview refresh keeps focus; aspect remembered per viewer. `.pane-stage > .step-guide` is static on Step 5. Vietnamese copy + patterns added (no new duplicate keys). Sandbox check on the Office Startup storyboard: Cafe/Office plates, Jack/Lina placement and the coffee insert illustration match the render; VI mode verified. `pytest tests/test_storyboard_browser.py tests/test_video_studio_browser.py tests/test_video_shell_browser.py tests/test_scene_library_browser.py tests/test_activity_coverage_browser.py` 30 passed before the new test; the new sketch test passes (storyboard browser 3/3).
