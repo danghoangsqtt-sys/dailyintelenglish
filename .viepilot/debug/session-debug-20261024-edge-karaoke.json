@@ -1,0 +1,49 @@
+{
+  "id": "debug-20261024-edge-karaoke",
+  "status": "resolved",
+  "updated_at": "2026-10-24T09:31:00+00:00",
+  "owner_listening_acceptance": false,
+  "problem": {
+    "description": "Owner reports Edge voice and karaoke out of sync after the Phase77 restoration and asks whether that change affected synchronization.",
+    "project_id": "5b1667a3-b47b-4c4b-b989-dddd3cb44b03",
+    "symptoms": ["Words appear ahead of spoken words in the newly regenerated video"],
+    "affected_files": ["backend/ai/tts/tts_service.py", "backend/media/audio_service.py", "backend/media/video_renderer_remotion.py", "renderer/src/karaoke.ts"]
+  },
+  "scope": "Owner explicitly authorized the fix through vp-debug. Bounded repair plan is phases/77-edge-plain-speech/SYNC-FIX.md. Source and actual media repaired; Full/Lite2.0.0 rebuilt, Full installed/restarted and live API verified. Owner listening review pending; no commit or push.",
+  "investigation": {
+    "hypotheses": [
+      {"id": 1, "description": "The owner is watching the old invalidated media", "status": "rejected", "evidence": "Current audio complete at 2026-10-24T08:12Z, video complete at 08:35Z, after the restoration; logs show downloads of that current video."},
+      {"id": 2, "description": "Phase77 directly changed renderer or Edge tick conversion", "status": "rejected", "evidence": "No diff in audio mixer, video renderer, karaoke/Episode; native Edge offset/duration / 10000000 conversion unchanged. TTS cleaning/dispatch/cache identity did change."},
+      {"id": 3, "description": "Native word boundaries lead decoded Edge audio", "status": "supported", "evidence": "Five current lines at speed0.9 have median Edge-minus-greedy-CTC word onsets -108 to -123ms; acoustic estimate, not human-labelled ground truth."},
+      {"id": 4, "description": "Final MP4 adds audio encoding/mux delay", "status": "confirmed", "evidence": "Cross-correlation against voice.wav in six windows from first to last line yields intro+7.8025..7.80275s; subtitle/intro clock is7.760s, leaving42.5..42.75ms audio lag."},
+      {"id": 5, "description": "The native Edge word lead was introduced only by Phase77", "status": "contradicted", "evidence": "Two plain-line caches referenced in the immutable pre-restoration backup already have median onset estimates -106.00ms and -105.54ms at the same speed0.9."}
+    ],
+    "tests_run": [
+      {"command": "data/tmp/edge-karaoke-diagnosis-20261024/inspect_sync.py", "output": "Read-only current-file diagnosis; six video/stem correlation windows, five per-line acoustic timing comparisons and word aggregation checks; report.json saved."},
+      {"command": "data/tmp/edge-karaoke-diagnosis-20261024/compare_before.py", "output": "Two pre-restore plain Edge cache comparisons; pre_restore_report.json saved."},
+      {"command": "calibrate.py and evaluate_matrix.py", "output": "16 English voice/rate captures: Christopher/Jenny/Ryan/Sonia at0.75/0.9/1.0/1.25. Calibration100ms/rate gives overall median of per-clip median residuals5.0ms, maximum absolute16.5ms against approximate greedy CTC onsets."},
+      {"command": "render_check.py and verify_fix.py", "output": "Real landscape and nonzero-frame portrait renders; decoded audio source/container residuals below1ms. No-music branding probes below1ms. Timing conversion idempotence checked; raw inputs unchanged."},
+      {"command": "repair_episode.py and verify_episode.py", "output": "Production25-line render with music, branding, sprites and calibrated word props. Six windows from first to last line give -0.167..+0.083ms audio residual. SRT uses frame-rounded intro7.766667s. The diagnostic reader initially needed explicit UTF-8 on Windows; rerun succeeded."},
+      {"command": "publish_fix.py", "output": "Idle SQLite backup, unchanged media input revision and video-row CAS checked; current project now points to repaired video/SRT; normal selected exports synchronized; old video preserved."},
+      {"command": "AST / scoped Ruff / git diff --check", "output": "Four touched production modules parse and pass scoped static checks. No unrelated historical test suite run."},
+      {"command": "package_fix.py / check_bundles.py / guarded installer / check_install.py", "output": "Full/Lite2.0.0 package exit0, ZIP CRC and SHA256 creation succeeded; all four production modules match source bytecode in both EXEs. Full installed with backups, PID30980 started, build identity matches installed EXE+metadata, dashboard200, live word correction111.111ms at0.9x, new video current, SQLite integrity ok,40projects retained."}
+    ],
+    "findings": [
+      "Current video is regenerated; a generic regenerate-again recommendation does not address the observed offset.",
+      "Native Edge timings do not by themselves guarantee perceptually synchronized karaoke.",
+      "The sampled current file has an estimated combined word lead around150-165ms, with no evidence of growing audio drift across the six windows.",
+      "The Phase77 handoff did not run end-to-end synchronization checks; its unchanged native timing path should not have been taken as verified sync.",
+      "Further correction must distinguish measured codec/mux delay from acoustic/word presentation calibration; do not claim a fixed150ms offset is valid for every voice, rate and output.",
+      "Repair preserves provider captures and stored raw timings, adds one idempotent rate-aware calibration at audio-job reads, and rebuilds final AAC from composition sources before atomic publication.",
+      "Container alignment below1ms does not establish sub-millisecond word onset accuracy. Owner listening acceptance remains pending."
+    ]
+  },
+  "resolution": {
+    "root_cause": "Native Edge word onsets preceded approximate acoustic onsets by a rate-dependent amount; final Remotion AAC also added a measured42.5-42.75ms lag without growing drift.",
+    "fix_applied": "Idempotent100ms/rate calibration on audio-job reads with raw timing preservation; source-based final AAC mux, lossless soundtrack and shared frame rounding. Current episode rendered and published with input/video CAS; Full/Lite2.0.0 rebuilt and Full installed.",
+    "files_changed": ["backend/core/constants.py", "backend/media/audio_service.py", "backend/media/render_audio.py", "backend/media/video_renderer_remotion.py"],
+    "verification": "16 voice/rate captures, real landscape/portrait/branding probes and six full-episode correlation windows, source-to-bundle bytecode match and live installed API evidence. Approximate word calibration is not a human-labelled accuracy guarantee; owner listening acceptance pending.",
+    "evidence": "docs/operations/edge-karaoke-diagnosis-20261024.md",
+    "runtime_evidence": "data/tmp/edge-karaoke-diagnosis-20261024/installed-check.json"
+  }
+}

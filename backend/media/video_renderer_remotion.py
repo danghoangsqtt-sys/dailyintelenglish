@@ -6,8 +6,8 @@ time, strict output-path validation, `cwd=renderer/`) rather than importing that
 script directly -- it's a standalone measurement tool with its own `sys.path` setup, not a
 module meant to be imported by `app/`.
 
-Real per-word timestamps (Task 19.2's `audio_jobs.word_timestamps_json`) are used exactly
-as captured when present; unlike the spike runner, this module never re-synthesizes via a
+Real per-word timestamps are calibrated by AudioService onto decoded Edge audio before
+building props; unlike the spike runner, this module never re-synthesizes via a
 fresh TTS call for missing word data -- that was a spike-only measurement-continuity
 convenience for a pre-Task-19.2 demo episode, not something a real render should pay for on
 every call. A line with no captured words simply renders the Task 19.3 (D19.3-c) plain-text
@@ -39,6 +39,7 @@ from backend.core.constants import VIDEO_FPS, VIDEO_HEIGHT_STANDARD, VIDEO_WIDTH
 from backend.core.exceptions import AudioMixError, NotFoundError, RemotionRenderFailedError, TTSError, ValidationError
 from backend.core.paths import RENDERER_DIR
 from backend.media import audio_service, brand_service
+from backend.media.render_audio import mux_timeline_audio, timeline_frame
 from backend.content import youtube_service
 from backend.library import activity_library_service as activity_library
 from backend.library import (
@@ -574,6 +575,8 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path,
 
     if not staging.is_file():
         raise RemotionRenderFailedError(f"Remotion render exited 0 but produced no output file{_diagnostic_note(diagnostics)}")
+    mux_timeline_audio(staging, input_props, VIDEO_RENDERER_DIR / "public", frames)
+    wall_time_seconds = time.monotonic() - start
     published = _publish(staging, output_path)
 
     return {
@@ -698,7 +701,8 @@ async def render_via_remotion(
         input_props.update(hook=clip.get("hook") or "", hookAtSec=input_props["lines"][clip["line_from"]]["startSec"])
     result = await asyncio.to_thread(_render_via_remotion_sync, input_props, output_path, frames)
     return {**result, "soundtrack": soundtrack is not None, "brand_voice": bool(voices),
-            "activity_uses": activity_uses, "intro_seconds": float(input_props.get("introSec") or 0.0)}
+            "activity_uses": activity_uses,
+            "intro_seconds": timeline_frame(input_props.get("introSec") or 0.0, input_props["fps"]) / input_props["fps"]}
 
 
 def _copy_brand_voice(source: str) -> str:
@@ -717,10 +721,11 @@ def clip_frames(input_props: dict[str, Any], line_from: int, line_to: int) -> tu
     lines, fps = input_props["lines"], input_props["fps"]
     if not 0 <= line_from <= line_to < len(lines):
         raise ValidationError("The clip's lines are outside the script")
-    start = input_props["introSec"] + lines[line_from]["startSec"] - CLIP_LEAD_S
-    end = input_props["introSec"] + lines[line_to]["endSec"] + CLIP_TAIL_S
+    intro = timeline_frame(input_props["introSec"], fps) / fps
+    start = intro + lines[line_from]["startSec"] - CLIP_LEAD_S
+    end = intro + lines[line_to]["endSec"] + CLIP_TAIL_S
     last = math.ceil(composition_seconds(input_props) * fps) - 1
-    return max(0, round(start * fps)), min(last, round(end * fps))
+    return max(0, timeline_frame(start, fps)), min(last, timeline_frame(end, fps))
 
 
 def outro_start_seconds(input_props: dict[str, Any]) -> float:
@@ -728,7 +733,7 @@ def outro_start_seconds(input_props: dict[str, Any]) -> float:
     fps = input_props["fps"]
     lines = input_props["lines"]
     audio_seconds = input_props.get("durationSeconds", lines[-1]["endSec"] if lines else 0)
-    return (round(input_props["introSec"] * fps) + round(audio_seconds * fps)) / fps
+    return (timeline_frame(input_props["introSec"], fps) + timeline_frame(audio_seconds, fps)) / fps
 
 
 async def _add_brand(project_id: str, input_props: dict[str, Any]) -> list[tuple[str, float]]:
@@ -768,10 +773,11 @@ async def _build_soundtrack(project_id: str, audio_job: dict, input_props: dict[
                             voices: list[tuple[str, float]] | None = None) -> str | None:
     """Task 22.4 (D51): with music, one soundtrack covers intro + speech + outro and fades out on the
     composition's last frame. Returns its public path, or None (no music / an old audio job)."""
-    output = REMOTION_AUDIO_DIR / f"{project_id}_soundtrack.mp3"
+    output = REMOTION_AUDIO_DIR / f"{project_id}_soundtrack.wav"
     try:
         built = await audio_service.build_soundtrack(
-            audio_job, input_props["introSec"], composition_seconds(input_props), output, voices,
+            audio_job, timeline_frame(input_props["introSec"], input_props["fps"]) / input_props["fps"],
+            composition_seconds(input_props), output, voices,
         )
     except AudioMixError as exc:
         raise RemotionRenderFailedError(str(exc)) from exc

@@ -332,6 +332,15 @@ LEARNING_MAX_QUESTIONS = 5
 LEARNING_GENERATION_TEMPERATURE = 0.2
 
 
+# Edge boundary-to-decoded-audio calibration, measured on four English voices at
+# rates 0.75, 0.9, 1.0 and 1.25. Approximate acoustic onset, not forced alignment.
+# Raw provider sidecars stay immutable. Apply once when reading a mixed audio job.
+EDGE_WORD_ONSET_BASE_SECONDS = 0.100
+EDGE_WORD_TIMING_RECIPE = "edge-decoded-onset-v1"
+RENDER_AUDIO_SAMPLE_RATE = 48000
+RENDER_AUDIO_BITRATE = "192k"
+RENDER_AUDIO_MUX_TIMEOUT_SECONDS = 300
+
 # Solo illustration import bounds apply before decode; output is normalized for rendering.
 EXPLAINER_IMAGE_CONCURRENCY = 2
 EXPLAINER_IMAGE_MAX_BYTES = 20 * 1024 * 1024

@@ -29,7 +29,7 @@ from backend.ai.tts.vocal_cues import caption_text
 from backend.core.config import settings
 from backend.core.constants import (
     MP3_BITRATE, SILENCE_DIFFERENT_SPEAKER_MS, SILENCE_SAME_SPEAKER_MS, TARGET_LOUDNESS_LUFS, WAV_BIT_DEPTH,
-    WAV_SAMPLE_RATE_HZ,
+    WAV_SAMPLE_RATE_HZ, EDGE_WORD_ONSET_BASE_SECONDS, EDGE_WORD_TIMING_RECIPE,
 )
 from backend.core.exceptions import AudioMixError
 from backend.media import music_bed
@@ -149,6 +149,7 @@ def _mix_project_sync(
     lines: list[dict],
     background_music_path: Path | None,
     output_dir: Path,
+    speaker_rates: dict[str, float] | None = None,
 ) -> dict:
     """Pure, blocking pydub/pyloudnorm work — must run off the event loop (asyncio.to_thread)."""
     segments: list[AudioSegment] = []
@@ -181,7 +182,8 @@ def _mix_project_sync(
             }
         )
         word_timestamps.append(
-            {"line_id": line["id"], "words": _aggregate_word_boundaries(line["audio_cache_path"], start_ms)}
+            {"line_id": line["id"], "speech_rate": (speaker_rates or {}).get(line["speaker_id"], 1.0),
+             "words": _aggregate_word_boundaries(line["audio_cache_path"], start_ms)}
         )
         previous_speaker_id = line["speaker_id"]
 
@@ -255,7 +257,10 @@ def _build_soundtrack_sync(voice_path: Path, music_path: Path, timestamps: list[
     bed = music_bed.build_bed(music_bed.decode(music_path), total, spans)
     soundtrack = music_bed.to_segment(music_bed.mix(placed, bed))
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    soundtrack.export(output_path, format="mp3", bitrate=MP3_BITRATE)
+    if output_path.suffix.lower() == ".wav":
+        soundtrack.export(output_path, format="wav")
+    else:
+        soundtrack.export(output_path, format="mp3", bitrate=MP3_BITRATE)
     return {"path": str(output_path), "duration_seconds": round(total / music_bed.SAMPLE_RATE, 3),
             "lead_in_seconds": lead_in_s}
 
@@ -342,7 +347,8 @@ async def mix_project(
 
     try:
         return await asyncio.to_thread(
-            _mix_project_sync, speaker_names_by_id, lines, background_music_path, output_dir
+            _mix_project_sync, speaker_names_by_id, lines, background_music_path, output_dir,
+            {speaker["id"]: speaker.get("speed", 1.0) for speaker in project["speakers"]},
         )
     except AudioMixError:
         raise
@@ -372,6 +378,33 @@ def _row_to_job(row: aiosqlite.Row) -> dict:
     return job
 
 
+def calibrate_word_timestamps(job: dict, speaker_rates: dict[str, float]) -> dict:
+    """Map raw Edge word times to decoded speech once, including legacy jobs.
+
+    Do not rewrite provider sidecars or the database on a GET. Mixed jobs capture
+    speech_rate; old jobs use the project's saved rate. The marker makes repeated
+    conversions idempotent, including an already converted job saved by a caller.
+    """
+    groups = []
+    for index, group in enumerate(job["word_timestamps"]):
+        if group.get("timing_recipe") == EDGE_WORD_TIMING_RECIPE or index >= len(job["timestamps"]):
+            groups.append(group)
+            continue
+        line = job["timestamps"][index]
+        rate = group.get("speech_rate") or speaker_rates.get(line.get("speaker_id"), 1.0)
+        rate = float(rate)
+        if not math.isfinite(rate) or rate <= 0:
+            rate = 1.0
+        shift = EDGE_WORD_ONSET_BASE_SECONDS / rate
+        words = []
+        for word in group["words"]:
+            start = min(line["end_sec"], max(line["start_sec"], word["start_sec"] + shift))
+            end = min(line["end_sec"], max(start, word["end_sec"] + shift))
+            words.append({**word, "start_sec": round(start, 6), "end_sec": round(end, 6)})
+        groups.append({**group, "words": words, "speech_rate": rate, "timing_recipe": EDGE_WORD_TIMING_RECIPE})
+    return {**job, "word_timestamps": groups}
+
+
 async def get_audio_job(db: aiosqlite.Connection, project_id: str) -> dict | None:
     """Fetch a project's audio job row, or None if audio has never been generated."""
     cursor = await db.execute(
@@ -381,7 +414,14 @@ async def get_audio_job(db: aiosqlite.Connection, project_id: str) -> dict | Non
         (project_id,),
     )
     row = await cursor.fetchone()
-    return None if row is None else _row_to_job(row)
+    if row is None:
+        return None
+    job = _row_to_job(row)
+    if not job["word_timestamps"]:
+        return job
+    cursor = await db.execute("SELECT id, speed FROM speakers WHERE project_id = ?", (project_id,))
+    rates = {item["id"]: item["speed"] or 1.0 for item in await cursor.fetchall()}
+    return calibrate_word_timestamps(job, rates)
 
 
 async def mark_audio_job_failed(
