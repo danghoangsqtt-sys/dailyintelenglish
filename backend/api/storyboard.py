@@ -6,8 +6,9 @@ from fastapi import APIRouter, Depends
 from backend.core.responses import ok
 from backend.db.database import get_db
 from backend.db.transactions import read_transaction, write_transaction
-from backend.schemas.storyboard import StoryboardInput
+from backend.schemas.storyboard import PreviewInput, StoryboardInput
 from backend.content import project_service
+from backend.library import storyboard_preview
 from backend.library import storyboard_service as storyboard
 
 router = APIRouter(prefix="/api/projects/{project_id}/storyboard", tags=["storyboard"])
@@ -33,3 +34,12 @@ async def propose_storyboard(project_id: str, db: aiosqlite.Connection = Depends
     async with read_transaction():
         await project_service.get_project(db, project_id)
     return ok(await storyboard.propose_storyboard(db, project_id))
+
+
+@router.post("/preview")
+async def preview_storyboard(project_id: str, body: PreviewInput, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 78: what the talking-characters video shows during each beat (draft beats allowed), for the Step 5 thumbnails."""
+    async with read_transaction():
+        await project_service.get_project(db, project_id)
+        beats = [beat.model_dump() for beat in body.beats] if body.beats is not None             else await storyboard_preview.saved_beats(db, project_id)
+        return ok(await storyboard_preview.preview(db, project_id, beats))

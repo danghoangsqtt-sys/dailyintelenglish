@@ -49,3 +49,20 @@ class BeatInput(BaseModel):
 class StoryboardInput(BaseModel):
     beats: list[BeatInput] = Field(min_length=1)
     status: Literal["draft", "approved"] = "draft"
+
+
+class PreviewBeat(BaseModel):
+    """Phase 78: a beat as the owner is editing it -- only what a thumbnail needs, nothing validated against the project."""
+    line_from: int = Field(ge=0)
+    line_to: int = Field(ge=0)
+    kind: Literal["scene", "insert"] = "scene"
+    scene_id: str | None = None
+    new_place: str | None = None
+    speakers: list[int] = Field(default_factory=list)
+    action: str = ""
+    expression: Literal["calm", "smile", "laugh", "surprised", "thinking", "worried", "serious"] = "calm"
+
+
+class PreviewInput(BaseModel):
+    """No beats: the saved storyboard."""
+    beats: list[PreviewBeat] | None = Field(default=None, max_length=200)

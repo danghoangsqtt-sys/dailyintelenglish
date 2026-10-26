@@ -24,3 +24,6 @@ Read-only (no writes, no file copies); reuse renderer helpers instead of copying
 
 ## Verification
 `pytest tests/test_storyboard_preview.py tests/test_storyboard_api.py -q`; `ruff check` on the changed files.
+
+## Result
+Done 2026-10-26. `backend/library/storyboard_preview.py` reuses `_beat_scene_per_line`, `sprite_segments`, `sprite_placement`, `sprite_mirrored`, `_figure_top` and `match_activity`; sandbox call on the Office Startup storyboard returns Cafe/Office plates, Jack left / Lina right and the matched insert illustrations, matching rendered 9:16 stills. `pytest tests/test_storyboard_preview.py tests/test_storyboard_api.py` 12 passed; Ruff clean.
