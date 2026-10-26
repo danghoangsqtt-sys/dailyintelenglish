@@ -40,6 +40,8 @@ async def test_ideas_from_a_topic_become_a_dated_series(page, base_url):
     await page.route("**/api/shorts-batch/ideas", fake_ideas)
     await page.goto(base_url + "/shorts-batch")
     await expect(page.locator("a.side-link[href='/shorts-batch']")).to_have_attribute("aria-current", "page")
+    await page.locator("#template-grid [data-template='mistakes']").click()  # Phase 80: kinds are cards
+    await expect(page.locator("#template-grid [data-template='mistakes']")).to_have_attribute("aria-checked", "true")
     await page.locator("#batch-topic").fill("Confusing words")
     await page.locator("#batch-count").fill("5")
     await page.locator("#ideas-form button[type=submit]").click()
@@ -51,9 +53,9 @@ async def test_ideas_from_a_topic_become_a_dated_series(page, base_url):
     await page.locator("#batch-items li").nth(2).locator(".batch-badge").click()
     await expect(page.locator("#preview-what")).to_have_text("Don't say / Say · Mistake 3")
     await expect(page.locator("#batch-items li").nth(2)).to_have_class("is-selected")
-    await page.locator("#batch-template").select_option("quiz")
+    await page.locator("#template-grid [data-template='quiz']").click()
     await expect(page.locator("#preview-what")).to_have_text("Countdown quiz · Mistake 3")
-    await page.locator("#batch-template").select_option("mistakes")
+    await page.locator("#template-grid [data-template='mistakes']").click()
     await page.locator("#batch-items li").first.locator(".batch-badge").click()
     await page.locator("#batch-items li").nth(4).get_by_role("button", name="Remove").click()
     await expect(page.locator("#batch-items li")).to_have_count(4)
@@ -61,7 +63,7 @@ async def test_ideas_from_a_topic_become_a_dated_series(page, base_url):
     await expect(page.locator("#batch-series")).to_have_value("Confusing words")
     await page.locator("#batch-cast-0").select_option(profile["id"])
     await page.locator("#batch-start").fill("2026-11-01")
-    await page.locator("#create-form button[type=submit]").click()
+    await page.locator("#plan-only").click()  # Phase 80: "make now" has its own button
     await expect(page.locator("#batch-notice")).to_contain_text("Created: 4 Shorts dated 2026-11-01 → 2026-11-04")
     tree = await result(await page.request.get(base_url + "/api/channel"))
     series = next(s for topic in tree["topics"] for s in topic["series"] if s["name"] == "Confusing words")
@@ -90,3 +92,18 @@ async def test_the_news_tab_lists_stories_and_reads_the_chosen_articles(page, ba
     await page.locator("#news-use").click()
     await expect(page.locator("#batch-items li")).to_have_count(1)
     await expect(page.locator("#batch-items li")).to_contain_text("Article: 7 words")
+
+
+
+async def test_kinds_save_place_make_now_and_results(page, base_url):
+    """Phase 80 (owner 2026-10-26): the video types as cards, where the videos go, make now and the results panel."""
+    await page.goto(base_url + "/shorts-batch")
+    await expect(page.locator("#template-grid .template-card")).to_have_count(12)
+    await page.locator("#template-grid [data-template='conversation']").click()
+    await expect(page.locator("#cast-two-label")).to_be_visible()
+    await expect(page.locator("#preview-error")).to_contain_text("No silent preview")
+    await page.locator("#template-grid [data-template='presenter']").click()
+    await expect(page.locator("#cast-note")).to_contain_text("front picture pack")
+    await expect(page.locator("#save-where")).to_contain_text("No main save folder yet")
+    await expect(page.locator("[data-main-folder] .main-folder-path")).to_have_text("Not chosen yet")
+    await expect(page.locator("#results-summary")).to_be_visible()

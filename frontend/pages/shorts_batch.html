@@ -64,6 +64,38 @@
       .batch-preview { position: static; max-width: 360px; width: 100%; justify-self: center; order: -1; }
     }
     @media (max-width: 620px) { .batch-form > *, .batch-form .span-3, .batch-form .span-4, .batch-form .span-6, .batch-form .span-8 { grid-column: span 12; } }
+    /* Phase 80 (owner 2026-10-26): a guided page -- 1 kind (cards), 2 ideas, 3 save and make, 4 results with players and folders */
+    .step-no { display: inline-grid; place-items: center; width: 28px; height: 28px; margin-right: 8px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 15px; vertical-align: 2px; }
+    .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+    .template-group { grid-column: 1 / -1; margin: 6px 0 0; font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+    .template-card { display: grid; gap: 4px; align-content: start; text-align: left; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px;
+      background: var(--surface); color: var(--text); cursor: pointer; font: inherit; min-height: 92px; }
+    .template-card:hover { border-color: var(--accent); }
+    .template-card[aria-checked="true"] { border: 2px solid var(--accent); background: var(--accent-soft); }
+    .template-card .t-name { font-weight: 800; font-size: 14.5px; }
+    .template-card .t-desc { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+    .template-card .t-cast { justify-self: start; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+    .list-title { margin: 18px 0 8px; font-size: 15px; }
+    .save-where { padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
+    .save-where:empty { display: none; }
+    .results-panel { padding: 22px 24px; }
+    .results-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+    .results-head h2 { margin: 0; font-size: 20px; }
+    .results-head .spacer { flex: 1 1 auto; }
+    .results-pick { display: flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 700; }
+    .results-pick select { height: 36px; max-width: 360px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); padding: 0 10px; }
+    .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-top: 14px; }
+    .result-tile { display: grid; gap: 8px; align-content: start; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+    .result-tile video, .result-tile .result-empty { width: 100%; aspect-ratio: 9 / 16; border-radius: 10px; background: #0B2A1E; object-fit: cover; }
+    .result-tile .result-empty { display: grid; place-items: center; padding: 12px; box-sizing: border-box; color: rgba(255,255,255,.85); font-size: 13px; text-align: center; }
+    .result-tile h3 { margin: 0; font-size: 14px; line-height: 1.3; }
+    .result-status { justify-self: start; font-size: 11.5px; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+    .result-status.is-waiting_review, .result-status.is-video_ready { background: var(--accent-soft); color: var(--accent); }
+    .result-status.is-running { background: #FFF4CC; color: #7A5A00; }
+    .result-status.is-needs_attention, .result-status.is-error { background: #FDE2E0; color: #9B2C24; }
+    .result-folder { margin: 0; font-size: 11.5px; color: var(--muted); word-break: break-all; }
+    .result-message { margin: 0; font-size: 12px; color: #9B2C24; }
+    .result-actions { display: flex; flex-wrap: wrap; gap: 6px; }
   </style>
 </head>
 <body>
@@ -83,51 +115,60 @@
   <main class="batch-main" id="main">
     <section class="batch-intro">
       <h1>Shorts batch</h1>
-      <p class="batch-hint">Make 5–10 Shorts in one go: from one topic, or from today's news. The batch is saved as a series on the <a href="/channel">Channel plan</a> with one publishing date per day, so <a href="/automation">Automation</a> makes the videos at night — or make the projects now.</p>
+      <p class="batch-hint">Make 5–10 vertical Shorts (at most a minute each) in one go: choose the kind of video, let the AI propose ideas from a topic or
+        today's news, review them, then make the videos now or let <a href="/automation">Automation</a> make them by their dates. Each Short is saved in its
+        own folder under the main save folder.</p>
+      <div data-main-folder class="main-folder-slot" style="margin-top: 14px"></div>
+    </section>
+    <div class="batch-body"><div class="batch-left">
+    <section class="card" id="kind-panel" aria-labelledby="kind-title">
+      <h2 id="kind-title"><span class="step-no">1</span> Kind of video</h2>
+      <div id="template-grid" class="template-grid" role="radiogroup" aria-label="Kind of video"></div>
+      <select id="batch-template" hidden aria-hidden="true" tabindex="-1"></select>
+    </section>
+    <section class="card" id="ideas-panel" aria-labelledby="ideas-title">
+      <h2 id="ideas-title"><span class="step-no">2</span> Ideas</h2>
       <div class="batch-tabs" role="tablist" aria-label="Batch source">
         <button id="tab-topic" class="btn btn-primary btn-sm" role="tab" aria-selected="true" type="button" data-tab="topic">From a topic</button>
         <button id="tab-news" class="btn btn-ghost btn-sm" role="tab" aria-selected="false" type="button" data-tab="news">📰 Today's news</button>
       </div>
-    </section>
-    <div class="batch-body"><div class="batch-left">
-    <section class="card" id="topic-panel" aria-labelledby="topic-title">
-      <h2 id="topic-title">1. Ideas from a topic</h2>
-      <form id="ideas-form" class="batch-form">
-        <label>Topic<input id="batch-topic" type="text" maxlength="300" placeholder="e.g. English for ordering food" required /></label>
-        <label class="span-6 wide-at-medium">Template<select id="batch-template"></select></label>
-        <label class="span-3">How many<input id="batch-count" type="number" min="5" max="10" value="7" /></label>
-        <label class="span-3">Level<select id="batch-level"></select></label>
+      <div id="topic-panel">
+        <form id="ideas-form" class="batch-form">
+          <label>Topic<input id="batch-topic" type="text" maxlength="300" placeholder="e.g. English for ordering food" required /></label>
+          <label class="span-3">How many<input id="batch-count" type="number" min="5" max="10" value="7" /></label>
+          <label class="span-3">Level<select id="batch-level"></select></label>
           <label class="span-6">Audience<select id="batch-audience">
             <option value="">As the channel</option><option value="international">International — English definitions</option>
             <option value="vietnamese">Vietnamese — Vietnamese meanings</option><option value="both">Both — English with Vietnamese</option>
           </select></label>
-        <label>Direction (optional)<input id="batch-hint" type="text" maxlength="300" placeholder="e.g. at a café, for beginners" /></label>
-        <div class="batch-actions"><button class="btn btn-primary" type="submit">✨ Propose ideas</button></div>
-      </form>
-    </section>
-    <section class="card" id="news-panel" aria-labelledby="news-title" hidden>
-      <h2 id="news-title">1. Today's news</h2>
-      <p class="batch-hint">Stories of the last 36 hours from your news feeds. The AI picks the best ones for learners; each chosen story's article is read and retold in the narrator's own simple words.</p>
-      <div class="batch-actions">
-        <label>Level <select id="news-level"></select></label>
-        <button id="news-load" class="btn btn-ghost" type="button">Load today's news</button>
-        <button id="news-picks" class="btn btn-primary" type="button">✨ AI picks</button>
-        <button id="news-use" class="btn btn-ghost" type="button">Read the chosen articles</button>
+          <label>Direction (optional)<input id="batch-hint" type="text" maxlength="300" placeholder="e.g. at a café, for beginners" /></label>
+          <div class="batch-actions"><button class="btn btn-primary" type="submit">✨ Propose ideas</button></div>
+        </form>
       </div>
-      <p id="news-notice" class="batch-hint" role="status"></p>
-      <ol id="news-list" class="batch-list" aria-label="Today's news"></ol>
-      <details id="feeds-box"><summary>News feeds</summary>
-        <ol id="feeds-list" class="batch-list" aria-label="News feeds"></ol>
-        <div class="batch-actions"><input id="feed-url" type="url" placeholder="https://… RSS or Atom feed" aria-label="Feed address" />
-          <input id="feed-name" type="text" placeholder="Name" aria-label="Feed name" maxlength="80" />
-          <button id="feed-add" class="btn btn-ghost btn-sm" type="button">Add</button>
-          <button id="feeds-save" class="btn btn-primary btn-sm" type="button">Save feeds</button></div>
-      </details>
+      <div id="news-panel" hidden>
+        <p class="batch-hint">Stories of the last 36 hours from your news feeds. The AI picks the best ones for learners; each chosen story's article is read and retold in the narrator's own simple words.</p>
+        <div class="batch-actions">
+          <label>Level <select id="news-level"></select></label>
+          <button id="news-load" class="btn btn-ghost" type="button">Load today's news</button>
+          <button id="news-picks" class="btn btn-primary" type="button">✨ AI picks</button>
+          <button id="news-use" class="btn btn-ghost" type="button">Read the chosen articles</button>
+        </div>
+        <p id="news-notice" class="batch-hint" role="status"></p>
+        <ol id="news-list" class="batch-list" aria-label="Today's news"></ol>
+        <details id="feeds-box"><summary>News feeds</summary>
+          <ol id="feeds-list" class="batch-list" aria-label="News feeds"></ol>
+          <div class="batch-actions"><input id="feed-url" type="url" placeholder="https://… RSS or Atom feed" aria-label="Feed address" />
+            <input id="feed-name" type="text" placeholder="Name" aria-label="Feed name" maxlength="80" />
+            <button id="feed-add" class="btn btn-ghost btn-sm" type="button">Add</button>
+            <button id="feeds-save" class="btn btn-primary btn-sm" type="button">Save feeds</button></div>
+        </details>
+      </div>
+      <h3 class="list-title">The Shorts of this batch</h3>
+      <ol id="batch-items" class="batch-list" aria-label="Shorts of the batch"></ol>
+      <p id="batch-empty" class="batch-hint">No ideas yet: propose them above.</p>
     </section>
     <section class="card" id="create-panel" aria-labelledby="create-title">
-      <h2 id="create-title">2. Review and create</h2>
-      <ol id="batch-items" class="batch-list" aria-label="Shorts of the batch"></ol>
-      <p id="batch-empty" class="batch-hint">No ideas yet.</p>
+      <h2 id="create-title"><span class="step-no">3</span> Save and make</h2>
       <form id="create-form" class="batch-form">
         <label class="span-4">Playlist (topic)<input id="batch-playlist" type="text" maxlength="80" value="Shorts" required /></label>
         <label class="span-8">Series name<input id="batch-series" type="text" maxlength="100" required /></label>
@@ -135,8 +176,12 @@
         <label id="cast-two-label" class="span-6" hidden>Second character<select id="batch-cast-1"></select></label>
         <label class="span-6">First publishing date<input id="batch-start" type="date" required /></label>
         <label class="span-6">Every … days<input id="batch-every" type="number" min="1" max="14" value="1" /></label>
-        <label class="check"><input id="batch-make" type="checkbox" /> Make the projects now (otherwise Automation makes them before their dates)</label>
-        <div class="batch-actions"><button class="btn btn-primary" type="submit">Create the batch</button></div>
+        <p id="cast-note" class="batch-hint"></p>
+        <p id="save-where" class="batch-hint save-where"></p>
+        <div class="batch-actions">
+          <button id="make-now" class="btn btn-primary" type="submit" data-make="now">🎬 Create and make the videos now</button>
+          <button id="plan-only" class="btn btn-ghost" type="submit" data-make="plan">Save to the plan — Automation makes them by date</button>
+        </div>
       </form>
       <p id="batch-notice" class="batch-hint" role="status"></p>
     </section>
@@ -146,14 +191,26 @@
         <h2 id="preview-title">Preview</h2>
         <p id="preview-what" class="batch-hint"></p>
         <div id="batch-player" aria-label="Preview player" translate="no"></div>
-        <p class="batch-hint">A silent preview of the look with this idea. The real Short is written by the AI and voiced by the narrator.</p>
+        <p class="batch-hint" id="preview-note">A silent preview of the look with this idea. The real Short is written by the AI and voiced by the narrator.</p>
         <p id="preview-error" class="batch-hint" role="status"></p>
       </div>
     </aside>
     </div>
+    <section class="card results-panel" id="results-panel" aria-labelledby="results-title">
+      <div class="results-head">
+        <h2 id="results-title"><span class="step-no">4</span> Results</h2>
+        <label class="results-pick">Batch <select id="results-series" aria-label="Batch to show"></select></label>
+        <span class="spacer"></span>
+        <button id="results-make" class="btn btn-primary btn-sm" type="button" hidden>🎬 Make the missing videos</button>
+        <button id="results-stop" class="btn btn-ghost btn-sm" type="button" hidden>Stop after this step</button>
+      </div>
+      <p id="results-summary" class="batch-hint" role="status">No batch yet.</p>
+      <div id="results-grid" class="results-grid" aria-live="polite"></div>
+    </section>
   </main>
   <script src="/static/js/theme.js"></script>
   <script src="/static/js/api.js"></script>
+  <script src="/static/js/main_folder.js"></script>
   <script src="/static/solo-preview/player.js"></script>
   <script src="/static/js/shorts_batch.js"></script>
 </body>

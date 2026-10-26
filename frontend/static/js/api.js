@@ -52,6 +52,11 @@ const Api = (() => {
     // Phase 66 (ENH-048): Shorts in batches and today's news
     proposeBatchIdeas: (body) => request("/api/shorts-batch/ideas", json("POST", body)),
     createBatch: (body) => request("/api/shorts-batch/create", json("POST", body)),
+    // Phase 80: make a batch's videos now, its results and the earlier batches
+    listBatches: () => request("/api/shorts-batch/series"),
+    makeBatch: (seriesId) => request(`/api/shorts-batch/series/${seriesId}/make`, { method: "POST" }),
+    stopBatch: (seriesId) => request(`/api/shorts-batch/series/${seriesId}/stop`, { method: "POST" }),
+    batchResults: (seriesId) => request(`/api/shorts-batch/series/${seriesId}/results`),
     getNewsFeeds: () => request("/api/news/feeds"),
     saveNewsFeeds: (feeds) => request("/api/news/feeds", json("PUT", feeds)),
     getTodayNews: () => request("/api/news/today"),

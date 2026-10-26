@@ -2,11 +2,27 @@
  *  reviewed list is saved as a dated Channel plan series (the night Automation makes it), optionally with projects now. */
 (function () {
   const $ = (id) => document.getElementById(id);
-  const TEMPLATES = [["news", "English news"], ["blur", "Text on blur"], ["mistakes", "Don't say / Say"], ["wordday", "Word of the day"],
-    ["top5", "Top 5 phrases"], ["quiz", "Countdown quiz"], ["listen", "Listening challenge"], ["chat", "Chat (2 characters)"],
-    ["wyr", "Would you rather (2 characters)"]];
+  // Phase 80 (owner 2026-10-26): the kinds of video as cards -- the app's video types, then the text templates
+  const KINDS = [
+    { key: "conversation", name: "Conversation", group: "Video types", cast: 2, desc: "Two talking characters in an everyday situation." },
+    { key: "presenter", name: "Solo presenter", group: "Video types", cast: 1, desc: "One presenter explains one idea to camera." },
+    { key: "vox", name: "Vox", group: "Video types", cast: 1, desc: "A narrator's voice over pictures and on-screen text." },
+    { key: "wordday", name: "Word of the day", group: "Text templates", cast: 1, desc: "One word: meaning, pronunciation, examples, a memory tip." },
+    { key: "mistakes", name: "Don't say / Say", group: "Text templates", cast: 1, desc: "Common learner mistakes and the natural phrase." },
+    { key: "top5", name: "Top 5 phrases", group: "Text templates", cast: 1, desc: "Five phrases for one situation, as a countdown." },
+    { key: "quiz", name: "Countdown quiz", group: "Text templates", cast: 1, desc: "Two or three questions with a countdown." },
+    { key: "listen", name: "Listening challenge", group: "Text templates", cast: 1, desc: "Everyday sentences at natural speed." },
+    { key: "blur", name: "Text on blur", group: "Text templates", cast: 1, desc: "A short story or lesson in big words." },
+    { key: "news", name: "English news", group: "Text templates", cast: 1, desc: "One news story in simple English." },
+    { key: "chat", name: "Chat", group: "Text templates", cast: 2, desc: "A text-message conversation of two characters." },
+    { key: "wyr", name: "Would you rather", group: "Text templates", cast: 2, desc: "Questions answered by the second character." },
+  ];
+  const TEMPLATES = KINDS.map((kind) => [kind.key, kind.name]);
+  const NO_SAMPLE = ["conversation", "presenter", "vox"];  // made with characters / a presenter / pictures: no silent sample
+  const POLL_MS = 3000;
   const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
-  const state = { tab: "topic", template: "mistakes", items: [], stories: [], feeds: [], profiles: [], selected: 0, player: null, timer: null };
+  const state = { tab: "topic", template: "wordday", items: [], stories: [], feeds: [], profiles: [], selected: 0, player: null, timer: null,
+    mainFolder: null, results: null, poll: null };
 
   // Phase 68 (ENH-050): the live 9:16 preview of the template with the selected idea (silent, nothing saved)
   function previewIdea() {
@@ -20,8 +36,15 @@
     clearTimeout(state.timer);
     state.timer = setTimeout(() => {
       const box = $("batch-player");
-      if (!window.SoloPreview || !window.ShortsSample) { $("preview-error").textContent = "The preview player is not available."; return; }
       const idea = previewIdea();
+      if (NO_SAMPLE.includes(state.template)) {  // Phase 80: these are drawn from characters, a presenter or pictures
+        $("preview-what").textContent = `${KINDS.find((kind) => kind.key === state.template).name} · ${idea.title}`;
+        $("batch-player").replaceChildren();
+        state.player = null;
+        $("preview-error").textContent = "No silent preview for this kind: make one video and watch it in the results.";
+        return;
+      }
+      if (!window.SoloPreview || !window.ShortsSample) { $("preview-error").textContent = "The preview player is not available."; return; }
       const level = state.tab === "news" ? $("news-level").value : $("batch-level").value;
       const label = TEMPLATES.find(([key]) => key === state.template)?.[1] || state.template;
       $("preview-what").textContent = `${label} · ${idea.title}`;
@@ -39,11 +62,11 @@
 
   const el = (tag, props = {}, children = []) => {
     const node = Object.assign(document.createElement(tag), props);
-    node.append(...children);
+    node.append(...children.filter((child) => child !== null && child !== undefined));  // Phase 80: no "null" text
     return node;
   };
   const notice = (id, text, error = false) => { $(id).textContent = text; $(id).classList.toggle("is-error", error); };
-  const twoCharacters = () => ["chat", "wyr"].includes(state.template);
+  const twoCharacters = () => (KINDS.find((kind) => kind.key === state.template)?.cast || 1) === 2;
 
   function fillSelect(select, options, value) {
     select.replaceChildren(...options.map(([key, label]) => el("option", { value: key, textContent: label })));
@@ -83,8 +106,46 @@
     const options = state.profiles.map((profile) => [profile.id, profile.name]);
     fillSelect($("batch-cast-0"), options, $("batch-cast-0").value);
     fillSelect($("batch-cast-1"), options, $("batch-cast-1").value || options[1]?.[0]);
-    $("cast-one-label").firstChild.textContent = twoCharacters() ? "First character" : "Narrator";
+    $("cast-one-label").firstChild.textContent = twoCharacters() ? "First character" : state.template === "presenter" ? "Presenter" : "Narrator";
     $("cast-two-label").hidden = !twoCharacters();
+    $("cast-note").textContent = state.template === "presenter"
+      ? "The presenter needs a complete front picture pack (Character Library)."
+      : state.template === "conversation" ? "Both characters need their talking pictures (Character Library)." : "";
+  }
+
+  function renderKinds() {
+    const grid = $("template-grid");
+    const nodes = [];
+    let group = "";
+    KINDS.forEach((kind) => {
+      if (kind.group !== group) { group = kind.group; nodes.push(el("p", { className: "template-group", textContent: group })); }
+      const card = el("button", { type: "button", className: "template-card", role: "radio" }, [
+        el("span", { className: "t-name", textContent: kind.name }), el("span", { className: "t-desc", textContent: kind.desc }),
+        el("span", { className: "t-cast", textContent: kind.cast === 2 ? "2 characters" : kind.key === "presenter" ? "presenter" : "narrator" })]);
+      card.dataset.template = kind.key;
+      card.setAttribute("aria-checked", String(kind.key === state.template));
+      card.addEventListener("click", () => setTemplate(kind.key));
+      nodes.push(card);
+    });
+    grid.replaceChildren(...nodes);
+  }
+
+  function setTemplate(key) {
+    if (state.tab === "news" && key !== "news") setTab("topic");
+    state.template = key;
+    $("batch-template").value = key;
+    document.querySelectorAll("#template-grid .template-card").forEach((card) => card.setAttribute("aria-checked", String(card.dataset.template === key)));
+    renderCast();
+    refreshPreview();
+  }
+
+  /** Where the batch's videos will be saved (the main save folder, by topic and series). */
+  function renderSaveWhere() {
+    const playlist = $("batch-playlist").value.trim() || "Shorts";
+    const series = $("batch-series").value.trim() || "Series";
+    $("save-where").textContent = state.mainFolder
+      ? `Saved in: ${state.mainFolder}\\${playlist}\\${series}\\Ep NN - title`
+      : "No main save folder yet: choose one above. Until then the videos stay inside the app; download them from the results.";
   }
 
   function setTab(tab) {
@@ -96,8 +157,11 @@
       button.setAttribute("aria-selected", String(selected));
       button.className = `btn btn-${selected ? "primary" : "ghost"} btn-sm`;
     });
-    if (tab === "news") { state.template = "news"; renderCast(); if (!state.feeds.length) loadFeeds(); }
-    else { state.template = $("batch-template").value; renderCast(); }
+    if (tab === "news") { state.template = "news"; if (!state.feeds.length) loadFeeds(); }
+    else if (state.template === "news") state.template = "wordday";
+    $("batch-template").value = state.template;
+    document.querySelectorAll("#template-grid .template-card").forEach((card) => card.setAttribute("aria-checked", String(card.dataset.template === state.template)));
+    renderCast();
     refreshPreview();
   }
 
@@ -174,13 +238,14 @@
     event.preventDefault();
     notice("batch-notice", "The AI is writing the ideas…");
     try {
-      const { ideas } = await Api.proposeBatchIdeas({ topic: $("batch-topic").value.trim(), template: $("batch-template").value,
+      const { ideas } = await Api.proposeBatchIdeas({ topic: $("batch-topic").value.trim(), template: state.template,
         count: Number($("batch-count").value), cefr_level: $("batch-level").value, hint: $("batch-hint").value.trim() });
       state.items = ideas.map((idea) => ({ ...idea, source_text: "" }));
       state.selected = 0;
       renderItems();
       refreshPreview();
       if (!$("batch-series").value) $("batch-series").value = $("batch-topic").value.trim().slice(0, 100);
+      renderSaveWhere();
       notice("batch-notice", `${ideas.length} ideas. Edit or remove them, then create the batch.`);
     } catch (error) { notice("batch-notice", error.message || "The AI could not propose ideas.", true); }
   });
@@ -190,19 +255,95 @@
     const items = state.items.filter((item) => item.title.trim());
     if (!items.length) { notice("batch-notice", "Propose or choose the Shorts first.", true); return; }
     const cast = [$("batch-cast-0").value, ...(twoCharacters() ? [$("batch-cast-1").value] : [])].filter(Boolean);
+    const now = event.submitter?.dataset.make !== "plan";
     try {
       const result = await Api.createBatch({ topic_name: $("batch-playlist").value.trim(), series_name: $("batch-series").value.trim(),
         template: state.template, cast, cefr_level: state.tab === "news" ? $("news-level").value : $("batch-level").value,
-        start_date: $("batch-start").value, every_days: Number($("batch-every").value) || 1, make_projects: $("batch-make").checked,
+        start_date: $("batch-start").value, every_days: Number($("batch-every").value) || 1, make_projects: now,
         ...($("batch-audience").value ? { audience: $("batch-audience").value } : {}),
         items: items.map(({ title, brief, source_text }) => ({ title: title.trim(), brief: (brief || "").trim(), source_text: source_text || "" })) });
       notice("batch-notice", `Created: ${result.episodes} Shorts dated ${result.first_date} → ${result.last_date}`
         + (result.projects ? `, ${result.projects} projects made.` : ". Automation makes them before their dates."));
+      if (now) {
+        await Api.makeBatch(result.series_id);
+        notice("batch-notice", `Making ${result.episodes} videos now, one after another. Follow them in the results below.`);
+      }
+      await loadBatches(result.series_id);
+      $("results-panel").scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (error) { notice("batch-notice", error.message || "The batch could not be created.", true); }
   });
 
+
+  // ---------------------------------------------------------------- results (Phase 80)
+  const STATUS = { planned: "Planned", running: "Making…", waiting_review: "Ready", video_ready: "Video made", needs_attention: "Needs you",
+    error: "Failed" };
+  const STEP = { project: "project", script: "script", learning: "lesson", audio: "voice", visual_plan: "visual plan", video: "video",
+    thumbnail: "thumbnail", youtube: "YouTube texts" };
+
+  async function loadBatches(select) {
+    try {
+      const { series } = await Api.listBatches();
+      const box = $("results-series");
+      box.replaceChildren(...series.map((item) => el("option", { value: item.id,
+        textContent: `${item.name} · ${item.episodes} · ${item.topic}${item.running ? " · making…" : ""}` })));
+      const chosen = select || series.find((item) => item.running)?.id || series[0]?.id;
+      if (chosen) { box.value = chosen; await showResults(chosen); }
+    } catch { /* the panel keeps "No batch yet" */ }
+  }
+
+  function tile(item) {
+    const media = item.video_url
+      ? el("video", { src: item.video_url, controls: true, preload: "metadata" })
+      : el("div", { className: "result-empty", textContent: item.status === "running" ? `Making the ${STEP[item.step] || "video"}…`
+        : item.status === "planned" ? "Not made yet" : item.status === "waiting_review" ? "Ready (no video file)" : "No video" });
+    const status = el("span", { className: `result-status is-${item.status}`, textContent: STATUS[item.status] || item.status });
+    const actions = el("div", { className: "result-actions" }, [
+      item.video_url ? el("a", { className: "btn btn-ghost btn-sm", href: item.video_url, download: "", textContent: "⬇ MP4" }) : null,
+      item.folder ? el("button", { type: "button", className: "btn btn-ghost btn-sm", textContent: "📂 Open folder",
+        onclick: () => Api.openProjectExport(item.project_id).catch((error) => { $("results-summary").textContent = error.message; }) }) : null,
+      item.project_id ? el("a", { className: "btn btn-ghost btn-sm", href: `/step5?project_id=${encodeURIComponent(item.project_id)}`,
+        textContent: "Open project" }) : null,
+    ]);
+    const folder = el("p", { className: "result-folder", textContent: item.folder ? item.folder : item.project_id ? "Saved inside the app (no folder)" : "" });
+    if (item.folder) folder.setAttribute("translate", "no");  // a real path is never translated
+    const title = el("h3", { textContent: `${item.number}. ${item.title}` });
+    title.setAttribute("translate", "no");
+    return el("article", { className: "result-tile" }, [media, title, status,
+      item.message && item.status !== "waiting_review" ? el("p", { className: "result-message", textContent: item.message }) : null, folder, actions]);
+  }
+
+  async function showResults(seriesId) {
+    clearTimeout(state.poll);
+    if (!seriesId) return;
+    try {
+      const view = await Api.batchResults(seriesId);
+      if ($("results-series").value !== seriesId) return;  // another batch was chosen meanwhile
+      state.results = view;
+      const ready = view.items.filter((item) => ["waiting_review", "video_ready"].includes(item.status)).length;
+      const missing = view.items.length - ready;
+      $("results-summary").textContent = view.running ? `Making the videos: ${ready} of ${view.items.length} ready.`
+        : `${ready} of ${view.items.length} ready.${view.main_folder ? "" : " No main save folder: the videos stay inside the app."}`;
+      $("results-make").hidden = view.running || missing === 0;
+      $("results-stop").hidden = !view.running;
+      $("results-grid").replaceChildren(...view.items.map(tile));
+      if (view.running) state.poll = setTimeout(() => showResults(seriesId), POLL_MS);
+    } catch (error) {
+      $("results-summary").textContent = error.message || "The results could not load.";
+    }
+  }
   document.querySelectorAll("[data-tab]").forEach((button) => button.addEventListener("click", () => setTab(button.dataset.tab)));
-  $("batch-template").addEventListener("change", () => { state.template = $("batch-template").value; renderCast(); refreshPreview(); });
+  $("batch-template").addEventListener("change", () => setTemplate($("batch-template").value));
+  ["batch-playlist", "batch-series"].forEach((id) => $(id).addEventListener("input", renderSaveWhere));
+  document.addEventListener("main-folder:changed", (event) => { state.mainFolder = event.detail?.output_dir || null; renderSaveWhere(); });
+  $("results-series").addEventListener("change", () => showResults($("results-series").value));
+  $("results-make").addEventListener("click", async () => {
+    try { await Api.makeBatch($("results-series").value); showResults($("results-series").value); }
+    catch (error) { $("results-summary").textContent = error.message || "The videos could not be started."; }
+  });
+  $("results-stop").addEventListener("click", async () => {
+    await Api.stopBatch($("results-series").value).catch(() => {});
+    $("results-summary").textContent = "Stopping after the current step…";
+  });
   $("batch-level").addEventListener("change", refreshPreview);
   $("batch-audience").addEventListener("change", refreshPreview);  // Phase 72 (ENH-054)
   Api.getChannelAudience().then((data) => { state.channelAudience = data.audience; refreshPreview(); }).catch(() => {});
@@ -224,6 +365,9 @@
   });
 
   fillSelect($("batch-template"), TEMPLATES, state.template);
+  renderKinds();
+  Api.getMainFolder().then((view) => { state.mainFolder = view.output_dir; renderSaveWhere(); }).catch(() => renderSaveWhere());
+  loadBatches();
   fillSelect($("batch-level"), LEVELS.map((level) => [level, level]), "B1");
   fillSelect($("news-level"), LEVELS.map((level) => [level, level]), "B1");
   const tomorrow = new Date(Date.now() + 86400000);

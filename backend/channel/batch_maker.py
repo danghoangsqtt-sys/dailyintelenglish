@@ -139,7 +139,7 @@ async def results(db: aiosqlite.Connection, series_id: str) -> dict[str, Any]:
             item = latest.get(episode["id"]) or {}
             items.append({"episode_id": episode["id"], "number": episode["number"], "title": episode["title"],
                           "publish_date": episode["publish_date"], "project_id": project_id,
-                          "status": item.get("status") or ("waiting_review" if episode["finished"] else "planned"),
+                          "status": item.get("status") or ("waiting_review" if episode["finished"] else "video_ready" if video else "planned"),
                           "step": item.get("step") or "", "message": item.get("message") or "",
                           "video_url": video, "folder": folder})
     return {"series_id": series_id, "running": running(series_id), "items": items,
