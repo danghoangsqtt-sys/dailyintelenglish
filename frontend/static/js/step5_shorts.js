@@ -115,9 +115,12 @@
     const tiktok = el("textarea", { readOnly: true, value: clip.packages.tiktok.caption, "aria-label": "TikTok caption" });
     const texts = el("details", { className: "short-texts", open: clip.status === "rendered" }, [
       el("summary", { textContent: "Texts for YouTube Shorts and TikTok" }),
-      el("strong", { textContent: "YouTube Shorts" }), shortsTitle, copyButton("Title", shortsTitle), shortsText,
-      copyButton("Description", shortsText),
-      el("strong", { textContent: "TikTok" }), tiktok, copyButton("Caption", tiktok),
+      // a <details> does not lay out its content as a grid itself: the body holds the rows
+      el("div", { className: "short-texts-body" }, [
+        el("strong", { textContent: "YouTube Shorts" }), shortsTitle, copyButton("Title", shortsTitle), shortsText,
+        copyButton("Description", shortsText),
+        el("strong", { textContent: "TikTok" }), tiktok, copyButton("Caption", tiktok),
+      ]),
     ]);
     return el("div", { className: "card short-card", dataset: { clip: clip.id, status: clip.status } }, [
       media,

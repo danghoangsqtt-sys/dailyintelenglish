@@ -10,3 +10,5 @@ Status: implemented_verified_pending_owner_review (2026-10-26). Owner request re
 | 78.4 | Layout, verification, records | done — numbered sections, render card, phone layout; related 124 passed; full pytest 2143 passed (24:35) |
 
 Verification: full `pytest` 2143 passed, 0 failed in 1475.51s; renderer Vitest 184 passed, `tsc --noEmit` clean; browser checks in the sandbox (port 8030, copied DB) at 1440×900 and 390×844, EN and VI. Not pushed, no package rebuilt, owner review pending.
+
+Owner-requested review run (2026-10-26, second turn): screenshots in `docs/operations/phase78-screens/`, real 9:16 clip render verified (1080x1920, 63.6 s, AAC; hook without chips) — see `docs/operations/phase78-step5-review.md`. Fixed the Shorts texts layout (copy button on the TikTok heading line). Related tests 21 passed.

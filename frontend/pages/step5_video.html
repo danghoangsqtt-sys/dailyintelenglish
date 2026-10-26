@@ -77,10 +77,12 @@
     .short-status.is-approved, .short-status.is-rendered { border-color: var(--accent); color: var(--accent); }
     .short-reason { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
     .short-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-    .short-texts { display: grid; gap: 6px; border-top: 1px dashed var(--border); padding-top: 8px; font-size: 13px; }
+    .short-texts { border-top: 1px dashed var(--border); padding-top: 8px; font-size: 13px; }
+    .short-texts-body { display: grid; gap: 6px; margin-top: 8px; }
+    .short-texts-body strong { margin-top: 6px; }
     .short-texts summary { cursor: pointer; color: var(--muted); font-weight: 700; }
     .short-texts textarea { width: 100%; box-sizing: border-box; min-height: 70px; font-size: 12.5px; resize: vertical; }
-    .short-texts .btn { justify-self: start; }
+    .short-texts-body .btn { justify-self: start; }
     .vertical-result { margin-top: 12px; }
     .vertical-result video, .result-player.is-vertical { display: block; width: auto; max-width: 100%; height: min(70vh, 640px);
       aspect-ratio: 9 / 16; margin: 0 auto 16px; border-radius: 10px; background: #000; }

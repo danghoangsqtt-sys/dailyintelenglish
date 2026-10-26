@@ -20,6 +20,7 @@ Versioning: [SemVer](https://semver.org/)
 - Approve on a clip keeps edited first/last lines (they were dropped unless Save was pressed first).
 - A Short project's 9:16 main video plays in a 9:16 player instead of a 1920 px tall one, and Step 5 explains why it has no highlight clips.
 - The Step 5 next-step bar no longer floats over the storyboard and clip cards.
+- The Shorts/TikTok texts of a clip: the copy buttons no longer share a line with the next heading.
 
 ### Fixed — source audit (2026-10-26)
 
