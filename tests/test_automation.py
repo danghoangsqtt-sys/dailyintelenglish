@@ -230,8 +230,33 @@ async def test_a_language_short_accepts_the_generic_review_flag_but_news_waits()
         await Producer(news, sleep=no_sleep).produce(
             {"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer", "explainer_style": "news"}, on_step)
     assert not any(method == "PATCH" for method, *_ in news.calls)
-    other = Reviewing(solo=True, flagged=True, issues=["Segment s1: import or select its illustration"])
-    with pytest.raises(StepError, match="import or select"):
+    # Phase 80 (owner 2026-10-26, make the batch's videos in one go): a language Short's photo nobody imported becomes a
+    # card of the narrator's own words instead of stopping the run; any other issue still stops it
+    class Photo(Reviewing):
+        async def call(self, method, path, body=None):
+            tail = path.replace("/api/projects/p1", "")
+            if tail == "/explainer-plan/propose":
+                job = await super().call(method, path, body)
+                self.plan["segments"] = [{"id": "s1", "needs_fact_review": True, "line_ids": ["l1"],
+                                          "visual": {"kind": "photo", "asset": None, "prompt": "a desk", "caption": ""}}]
+                self.issues = ["Segment s1: import or select its illustration"]
+                return job
+            if tail == "/explainer-plan" and method == "PATCH":
+                self.issues = []
+            if tail == "/script" and method == "GET":
+                self.calls.append((method, tail, body))
+                return [{"id": "l1", "text": "Keep it short and polite."}]
+            return await super().call(method, path, body)
+
+    photo = Photo(solo=True)
+    await Producer(photo, sleep=no_sleep).produce(
+        {"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer", "explainer_style": "quiz"}, on_step)
+    patch = next(body for method, path, body in photo.calls if method == "PATCH")
+    assert patch["segments"][0]["visual"] == {"kind": "text_card", "title": "Keep it short and polite.", "bullets": [],
+                                              "emphasis": ""}
+    assert any(path == "/explainer-plan/approve" for _, path, _ in photo.calls)
+    other = Reviewing(solo=True, flagged=True, issues=["Segment s1: a chart belongs to VOX videos"])
+    with pytest.raises(StepError, match="belongs to VOX"):
         await Producer(other, sleep=no_sleep).produce(
             {"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer", "explainer_style": "quiz"}, on_step)
     assert not any(method == "PATCH" for method, *_ in other.calls)

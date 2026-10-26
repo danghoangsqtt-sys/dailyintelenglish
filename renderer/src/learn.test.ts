@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { soloPayloadSchema } from "./soloTypes";
-import { cardText, countdownNumber, isLearnStyle, learningFor, mistakePair, rightAt, templateLabel } from "./learnMath";
+import { bulletAt, cardText, countdownNumber, isLearnStyle, learningFor, mistakePair, rightAt, templateLabel } from "./learnMath";
 import { isVoiceOnly } from "./shortsMath";
 
 const card = (title: string, bullets: string[] = [], emphasis = "") => ({ kind: "text_card", title, bullets, emphasis }) as never;
@@ -48,5 +48,13 @@ describe("Phase 64 quick-learning Shorts (ENH-046)", () => {
     expect(learningFor(learning, "other")).toBeNull();
     expect(learningFor(undefined, "x")).toBeNull();
     expect(cardText(card("Break the ice", ["start a talk"]))).toEqual({ title: "Break the ice", detail: "start a talk", emphasis: "" });
+  });
+});
+
+describe("bulletAt (Phase 80: a card's points appear one by one)", () => {
+  it("spreads the points over the first part of the segment, in order", () => {
+    expect(bulletAt(0, 3)).toBeCloseTo(0.15);
+    expect(bulletAt(1, 3)).toBeGreaterThan(bulletAt(0, 3));
+    expect(bulletAt(2, 3)).toBeLessThan(0.6);
   });
 });

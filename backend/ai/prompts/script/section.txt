@@ -21,8 +21,8 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
 {% elif short_style | default('') %}
 - This is the FIRST section of a SHORT (a vertical video under one minute). Open with
   a HOOK line of one short sentence that makes the viewer stay ({% if short_style == 'news' %}the
-  headline of the news, said simply{% else %}a surprising or emotional first line{% endif %}). No long welcome: at most
-  "Welcome to Daily Beyond English" in a few words after the hook, or nothing.
+  headline of the news, said simply{% else %}a surprising or emotional first line{% endif %}). No welcome and no
+  greeting: the content starts right after the hook. Write one or two sentences per line.
 {% else %}
 - This is the FIRST section of the episode. It MUST open with a short welcome, in
   this order: greet the viewers warmly and welcome them to Daily Beyond English;

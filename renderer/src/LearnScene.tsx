@@ -12,7 +12,7 @@ import { resolvedMedia } from "./Presenter";
 import { clamp01, easeOut, voxSegmentAt } from "./voxMath";
 import { easeOutBack, smoothProgress } from "./voxMotion";
 import { pictureFor, spanWords } from "./shortsMath";
-import { cardText, countdownNumber, explains, isLearnStyle, learningFor, mistakePair, rightAt, templateLabel } from "./learnMath";
+import { bulletAt, cardText, countdownNumber, explains, isLearnStyle, learningFor, mistakePair, rightAt, templateLabel } from "./learnMath";
 import type { EpisodeInputProps } from "./types";
 
 const GREEN = "#1F7A4D", RED = "#E8483B", YELLOW = "#FFD84D", CREAM = "#FFFDF4", INK = "#14231C";
@@ -121,13 +121,27 @@ export function LearnScene(props: EpisodeInputProps) {
       {text.emphasis && visual.kind !== "quote" ? <div style={{ background: YELLOW, color: INK, fontFamily: HEAVY, fontSize: 44 * unit,
         padding: `${8 * unit}px ${22 * unit}px`, borderRadius: 14 * unit, transform: `scale(${Math.max(0, easeOutBack((progress - 0.3) / 0.2)).toFixed(4)})` }}>
         {text.emphasis}</div> : null}
+      {/* Phase 80: a card's points were planned but never drawn ("Why it works" showed its title only) */}
+      {visual.kind === "text_card" && visual.bullets?.length ? <div data-learn-bullets="true" style={{ display: "grid", gap: 16 * unit,
+        width: "100%", maxWidth: box.width, marginTop: 8 * unit }}>
+        {visual.bullets.slice(0, 4).map((bullet, at) => {
+          const pop = clamp01((progress - bulletAt(at, visual.bullets?.length ?? 1)) / 0.12);
+          return <div key={`${at}-${bullet}`} style={{ display: "flex", alignItems: "center", gap: 18 * unit, textAlign: "left",
+            background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 20 * unit,
+            padding: `${16 * unit}px ${22 * unit}px`, opacity: pop, transform: `translateX(${((1 - pop) * 40 * unit).toFixed(1)}px)` }}>
+            <span style={{ flex: "0 0 auto", width: 46 * unit, height: 46 * unit, borderRadius: "50%", background: YELLOW, color: INK,
+              display: "grid", placeItems: "center", fontFamily: HEAVY, fontSize: 28 * unit }}>{at + 1}</span>
+            <span style={{ fontFamily: SANS, fontWeight: 800, color: "#FFF", fontSize: (bullet.length > 40 ? 38 : 46) * unit, lineHeight: 1.2 }}>{bullet}</span>
+          </div>;
+        })}
+      </div> : null}
     </div>;
   }
 
   const drift = Math.sin(time * Math.PI * 2 / 18) * 24;
   return <AbsoluteFill data-learn-scene={style} style={{ overflow: "hidden", background: `linear-gradient(170deg, #0F3D2A, ${GREEN} 55%, #0B2A1E)`, fontFamily: SANS }}>
-    {plate ? <Img src={resolvedMedia(plate)} style={{ position: "absolute", width: "100%", height: "100%", objectFit: "cover", opacity: 0.16,
-      filter: "blur(10px) saturate(0.8)", mixBlendMode: "luminosity", transform: `translateX(${drift.toFixed(1)}px) scale(1.15)` }} /> : null}
+    {plate ? <Img src={resolvedMedia(plate)} style={{ position: "absolute", width: "100%", height: "100%", objectFit: "cover", opacity: 0.34,
+      filter: "blur(3px) saturate(0.9)", mixBlendMode: "luminosity", transform: `translateX(${drift.toFixed(1)}px) scale(1.15)` }} /> : null}
     {/* soft shapes */}
     <div style={{ position: "absolute", left: -160 * unit, top: 260 * unit + drift, width: 520 * unit, height: 520 * unit, borderRadius: "50%", background: "rgba(255,216,77,0.12)" }} />
     <div style={{ position: "absolute", right: -140 * unit, top: 1180 * unit - drift, width: 460 * unit, height: 460 * unit, borderRadius: "42% 58% 60% 40%", background: "rgba(255,255,255,0.07)" }} />

@@ -61,3 +61,8 @@ export function cardText(visual: Visual): { title: string; detail: string; empha
   if (visual.kind === "quote") return { title: visual.text, detail: "", emphasis: visual.highlight ?? "" };
   return { title: "title" in visual && visual.title ? visual.title : "", detail: "", emphasis: "" };
 }
+
+/** Phase 80: when a card's point `index` (of `count`) appears, as a share of the segment -- spread over its first 60 %. */
+export function bulletAt(index: number, count: number): number {
+  return 0.15 + (0.45 * index) / Math.max(1, count);
+}

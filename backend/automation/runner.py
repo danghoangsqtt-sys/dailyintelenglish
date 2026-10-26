@@ -39,6 +39,7 @@ KEEP_BACKUPS = 7
 # and any specific issue (numbers not said, a missing picture...) always stops the episode.
 GENERIC_REVIEW = "review its knowledge claims and illustration text"
 SELF_REVIEW_STYLES = ("mistakes", "wordday", "top5", "quiz", "listen", "blur")
+MISSING_PHOTO = "import or select its illustration"  # explainer_service.source_issues
 THUMBNAIL_VARIANTS = THUMBNAIL_MIN_VARIANTS  # the composed template's smallest batch
 AI_ATTEMPTS = 2
 
@@ -159,11 +160,23 @@ class Producer:
         issue kind; any other issue is left for `approve_solo` to stop on."""
         plan = view["plan"]
         issues = [str(issue) for issue in view.get("issues") or []]
-        if not any(GENERIC_REVIEW in issue for issue in issues) and not any(s.get("needs_fact_review") for s in plan.get("segments", [])):
+        photos = [s for s in plan.get("segments", []) if (s.get("visual") or {}).get("kind") == "photo" and not s["visual"].get("asset")]
+        if (not any(GENERIC_REVIEW in issue for issue in issues) and not any(s.get("needs_fact_review") for s in plan.get("segments", []))
+                and not photos):
             return view, plan
-        if any(GENERIC_REVIEW not in issue for issue in issues):
+        if any(GENERIC_REVIEW not in issue and MISSING_PHOTO not in issue for issue in issues):
             return view, plan
-        segments = [{**segment, "needs_fact_review": False} for segment in plan.get("segments", [])]
+        texts = {line["id"]: line["text"] for line in await self.client.call("GET", f"/api/projects/{project_id}/script")} if photos else {}
+
+        def card(segment: dict) -> dict:
+            """Phase 80: a Short's photo nobody imported becomes a card of the narrator's own words (it stopped the run)."""
+            visual = segment.get("visual") or {}
+            if visual.get("kind") != "photo" or visual.get("asset"):
+                return visual
+            words = visual.get("caption") or " ".join(texts.get(line_id, "") for line_id in segment.get("line_ids", [])).strip()
+            return {"kind": "text_card", "title": (words or segment.get("intent") or "Remember")[:120], "bullets": [], "emphasis": ""}
+
+        segments = [{**segment, "needs_fact_review": False, "visual": card(segment)} for segment in plan.get("segments", [])]
         saved = await self.client.call("PATCH", f"/api/projects/{project_id}/explainer-plan", {
             "expected_revision": plan["revision"], "expected_source_fingerprint": view["current_source_fingerprint"],
             "segments": segments, "aspects": plan["aspects"]})

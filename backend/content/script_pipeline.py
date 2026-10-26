@@ -421,6 +421,28 @@ def merge_consecutive_lines(lines: list[SectionLineOut], limit: int) -> list[Sec
     return merged
 
 
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9\"'“])")
+SHORT_SENTENCES_PER_LINE = 2
+
+
+def split_short_paragraphs(lines: list[SectionLineOut], per_line: int = SHORT_SENTENCES_PER_LINE) -> list[SectionLineOut]:
+    """Phase 80: a Short's narrator line of many sentences becomes lines of at most `per_line` sentences.
+
+    The AI sometimes answers a Short with ONE paragraph (a 36 s Word of the day was a single line), so the video showed
+    one long caption and the visual plan had nothing to pair ideas with. Words and their order never change; the
+    language notes stay on the first piece."""
+    out: list[SectionLineOut] = []
+    for line in lines:
+        sentences = [piece.strip() for piece in _SENTENCE_END.split(line.text.strip()) if piece.strip()]
+        if len(sentences) <= per_line:
+            out.append(line)
+            continue
+        for start in range(0, len(sentences), per_line):
+            out.append(SectionLineOut(speaker_id=line.speaker_id, text=" ".join(sentences[start:start + per_line]),
+                                      language_notes=line.language_notes if start == 0 else LanguageNotesOut()))
+    return out
+
+
 def validate_section_word_budget(lines: list[SectionLineOut], target_words: int) -> list[str]:
     """Word-deviation check against `target_words` (Task 14.3: the caller passes
     the *effective*, not nominal, target). Empty `lines` returns no error here --
@@ -996,6 +1018,8 @@ async def _run_section_pipeline(
     if structural_errors:
         await _fail(db, job_id, "section_validation_failed", structural_errors)
         return None
+    if len(known_speaker_ids) == 1 and project.get("explainer_style") in SHORT_STYLES:  # Phase 80: no one-paragraph Shorts
+        section_lines = split_short_paragraphs(section_lines)
 
     words = section_word_count(section_lines)
 
