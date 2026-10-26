@@ -1,0 +1,77 @@
+{
+  "id": "debug-20261024-chatterbox-karaoke",
+  "status": "wontfix",
+  "created_at": "2026-10-24T00:00:00+07:00",
+  "updated_at": "2026-10-24T05:00:21.412397+00:00",
+  "problem": {
+    "description": "Owner accepts 12 voice profiles but rejects perceptual karaoke sync and several emotion sounds in the 32-second PoC video.",
+    "symptoms": [
+      "Karaoke appears faster than speech after an expression",
+      "Throat clearing and unusual styles sound wrong"
+    ],
+    "affected_files": [
+      "data/tmp/chatterbox-karaoke-poc-20261023/event_alignment.py",
+      "data/tmp/chatterbox-karaoke-poc-20261023/make_pack.py",
+      "renderer/src/karaoke.ts"
+    ]
+  },
+  "scope": "Investigate and revise isolated PoC; retain accepted voice bank; only laughter, sigh and anger in the next listening round; no shipping source or installed application change.",
+  "investigation": {
+    "hypotheses": [
+      {
+        "id": 1,
+        "description": "Remotion changes per-word times",
+        "status": "rejected",
+        "evidence": "Installed caption helper preserves all word times in 6 lines x 2 variants; composition uses frame/fps directly."
+      },
+      {
+        "id": 2,
+        "description": "Video audio is delayed/stretched relative to PCM mix",
+        "status": "confirmed",
+        "evidence": "Old MP4 audio has constant 42.75ms lag in six windows, not growing drift. Remux from PCM removes measured lag; this is only a confirmed component, not full explanation of owner perception."
+      },
+      {
+        "id": 3,
+        "description": "Wildcard event alignment swallows or misaligns speech",
+        "status": "inconclusive",
+        "evidence": "Greedy CTC matches the tested post-cue word onsets closely, but shares the acoustic model and cannot certify perceptual sync or rule out other failures."
+      }
+    ],
+    "tests_run": [
+      {
+        "command": "audit_sync.py",
+        "output": "Six old MP4 windows each lag source PCM by 42.75ms; four independent-from-transcript greedy CTC decodes saved in audit.json.",
+        "conclusion": "supports a constant audio mux delay, not cumulative drift"
+      },
+      {
+        "command": "check_renderer.cjs",
+        "output": "6 lines x 2 variants preserve supplied token timestamps.",
+        "conclusion": "contradicts helper retiming hypothesis"
+      },
+      {
+        "command": "verify.py",
+        "output": "16 MP3s / 244 words; 8 reused laugh/sigh clips byte-identical; 8 anger/control CTC text agreements; both revised MP4s measure 0ms audio shift in all six windows at 0.25ms resolution; no browser errors; ZIP CRC passes.",
+        "conclusion": "technical revision checks passed; owner perceptual acceptance pending"
+      }
+    ],
+    "findings": [
+      "Prior structural checks did not establish perceptual synchronization.",
+      "Turbo source ignores CFG/exaggeration controls; angry token existence alone does not establish controllable quality.",
+      "Owner accepts the 12-profile bank at audition level; retain it.",
+      "Only laugh/sigh acoustic events and angry speaking style remain in the new trial. Anger is not sent through the event wildcard.",
+      "Two R2 videos compare audio-time words versus intentionally 120ms delayed words; no new product default chosen."
+    ]
+  },
+  "resolution": {
+    "root_cause": "Confirmed constant audio mux delay in prior MP4; full cause of perceived post-expression lead remains unconfirmed.",
+    "fix_applied": "Isolated PoC remux from exact source PCM plus explicit 0ms/120ms visual calibration variants; no shipping fix applied.",
+    "files_changed": [
+      "data/tmp/chatterbox-karaoke-revision-20261024/",
+      "docs/brainstorm/chatterbox-karaoke-r2-2026-10-24.md"
+    ],
+    "verification": "Technical checks in data/exports/chatterbox-karaoke-r2-20261024/verification.json. Actual MP4 frames visually inspected. Waiting for owner to hear/watch revised sync and angry style.",
+    "owner_disposition": "Chatterbox/emotion integration abandoned by owner; Phase77 plain Edge restoration installed. No further expressive-TTS work active."
+  },
+  "owner_decision": "B video preferable, but male sighs may sound like another voice/animal growl and female emotion unclear; restore Edge and remove script emotion insertion entirely.",
+  "superseded_by": ".viepilot/phases/77-edge-plain-speech/PLAN.md"
+}

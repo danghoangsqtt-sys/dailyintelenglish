@@ -3,7 +3,7 @@
 ## Session Info
 
 - **Date:** 2026-10-23, Asia/Bangkok
-- **Status:** Phase 74 implemented and technically verified; owner audio review rejected Edge laughter quality; OmniVoice follow-up research in progress
+- **Status:** Reopened after the 2.0.0 rebuild: production still uses Edge; expressive engine/default voice and commercial-use decisions pending
 - **workflow_version:** 2.19.0
 - **Skill:** vp-brainstorm 1.1.0
 - **Language:** vi
@@ -77,7 +77,42 @@ Pipeline tạo kịch bản hiện hành (`backend/content/script_pipeline.py`) 
 
 Tiêu chí chấp nhận: kịch bản AI có 0–2 dấu/phút đúng ngữ cảnh; AI chọn được hai kiểu cười; người dùng sửa/xóa được; `[hắng giọng]` có tiếng ngắn và cụm tiếp theo trầm hơn; giọng quay về cấu hình gốc; phụ đề/transcript không chứa thẻ; preview và audio xuất dùng cùng kết quả; lỗi annotation không làm mất kịch bản.
 
+## Mở lại sau bản 2.0.0 — chênh lệch mẫu nghe và audio thực tế
+
+Ngày 2026-10-23, owner phản hồi chất lượng cười/thở dài/hắng giọng trong app không giống mẫu OmniVoice đã được nghe và hỏi có nên thay engine hiện tại bằng OmniVoice.
+
+### Bằng chứng từ workspace (chỉ đọc)
+
+- DB hiện có 80 speaker, tất cả `tts_engine=edge_tts`; 5 nhân vật đều mặc định Edge. Đây là trạng thái lưu trong DB, không phải phép nhận diện engine từ một file audio cụ thể owner đang nghe.
+- `.venv-omnivoice/Scripts/python.exe` chưa tồn tại; kiểm tra service báo OmniVoice chưa sẵn sàng. Bản 2.0 đã tích hợp UI/worker nhưng chưa hoàn thành môi trường/model và chưa có nghiệm thu inference local.
+- Mẫu được owner khen trước đó là cặp audio Voice Design từ Hugging Face Space, không phải output từ luồng Edge trong app.
+- `vocal_cues.py` biến dấu thành chữ `Ha, ha`, `Ahh`, `Ahem`; `tts_service.py` tổng hợp bằng Edge rồi ghép. Do đó chất lượng không tương đương âm phi ngôn ngữ gốc của OmniVoice.
+- Nhánh OmniVoice hiện gửi `instruct` cho mỗi câu; chưa lưu mẫu tham chiếu hoặc `VoiceClonePrompt` của nhân vật. Các kiểu ha-ha/hi-hi cùng đổi thành `[laughter]`, chưa điều khiển riêng hai kiểu cười.
+- RTX 3060 có 12 GiB VRAM; snapshot kiểm tra còn 9954 MiB trống. Chưa đo mức dùng thực tế hoặc tốc độ OmniVoice trên GPU này.
+
+### Nghiên cứu chính thức và giới hạn
+
+- [OmniVoice README](https://github.com/k2-fsa/OmniVoice#non-verbal--pronunciation-control): có `[laughter]`, `[sigh]`; danh sách công bố chưa có throat-clear/ahem. Không đồng nhất “hằn giọng” với “hắng giọng”: giọng căng/trầm là phong cách lời thoại; ahem là một âm riêng.
+- [Voice cloning](https://github.com/k2-fsa/OmniVoice#voice-cloning): dùng audio và transcript tham chiếu, có thể lưu `VoiceClonePrompt` để tái dùng. Đây là hướng đề xuất để giữ giọng nhân vật; chưa được chứng minh ổn định trong project này.
+- [Tips](https://github.com/k2-fsa/OmniVoice/blob/master/docs/tips.md): đoạn 1–2 giây có thể không ổn định khi thiếu tham chiếu. Không nên kỳ vọng chỉ lặp cùng mô tả Voice Design là luôn giữ đúng một giọng.
+- [Model card OmniVoice](https://huggingface.co/k2-fsa/OmniVoice#license) ghi code Apache-2.0 nhưng trọng số CC-BY-NC. Cần làm rõ quyền dùng theo mục đích kênh trước khi chọn làm engine sản xuất thương mại; đây là ghi nhận nội dung model card, chưa phải kết luận pháp lý về output.
+- [Chatterbox Turbo](https://huggingface.co/ResembleAI/chatterbox-turbo) là ứng viên đối chiếu nếu cần lựa chọn có model card MIT: tiếng Anh, tag `[laugh]`, `[chuckle]`, `[cough]`, dùng audio tham chiếu. Chưa thử trên máy, chưa xác nhận sigh/ahem. Không dùng cough thay ahem rồi coi như đã đáp ứng.
+
+### Đề xuất và quyết định còn chờ
+
+Đề xuất sinh trọn câu kèm cảm xúc bằng engine có hỗ trợ âm phi ngôn ngữ. Với mỗi nhân vật, chọn mẫu giọng được owner duyệt và tái sử dụng làm tham chiếu; preview và audio xuất đi cùng một đường tổng hợp. Chỉ chuyển mặc định sau khi nghe nghiệm thu bằng chính pipeline app. Test parser/API và đóng gói không thay thế nghiệm thu chất lượng âm thanh.
+
+Chưa có quyết định thay mặc định hoặc chuyển dữ liệu. Hai câu hỏi đã gửi owner: chấp nhận giọng OmniVoice mới hay cần gần giọng Edge hiện tại; kênh có dùng thương mại/kiếm tiền hay không. Việc chỉ đổi engine không tự tái tạo audio đã xuất hoặc bảo đảm đúng giọng Brian/Jenny.
+
 ## Phases
+
+### Owner decision superseding the speech experiments — 2026-10-24
+
+Owner found video B much better than A, but male sighs could change into an animal-like growl and female emotion was unclear. Owner requested returning the entire product to the old Edge voices and removing emotion insertion from scripts. [Phase 77](../../.viepilot/phases/77-edge-plain-speech/PLAN.md) implements this direction. Chatterbox/OmniVoice emotion integration is no longer an active follow-up; the audition recordings remain historical. The 12-profile bank's earlier listening preference is not authorization to ship those voices. No audition-only 120ms delay is adopted by the Edge renderer.
+
+### Điều chỉnh mới nhất — 2026-10-24
+
+Owner đánh giá bộ **12 hồ sơ giọng khá tốt**, nhưng từ chối karaoke của video PoC 32 giây: chữ chạy nhanh hơn giọng sau biểu cảm. Thu gọn phạm vi Chatterbox chỉ còn **cười, thở dài và tức giận**, loại hắng giọng và các sắc thái khác khỏi vòng thử tiếp theo. Tức giận là style lời thoại, không phải cue âm phi ngôn ngữ. [Bộ thử R2](chatterbox-karaoke-r2-2026-10-24.md) giữ nguyên audio cười/thở dài để đối chiếu, sửa độ trễ MP4 đo được và cung cấp hai phương án hiển thị timing; cả karaoke và tức giận còn chờ owner nghiệm thu. Đây là điều chỉnh cho hướng Chatterbox mới, không sửa lại lịch sử implementation Phase 74/75 hoặc tự đổi bản cài hiện tại.
 
 ### Phase 74 — AI vocal cues và Edge TTS prosody
 
@@ -86,9 +121,27 @@ Tiêu chí chấp nhận: kịch bản AI có 0–2 dấu/phút đúng ngữ c�
 - Step 2 cho đổi biến thể, nghe duyệt; cập nhật phụ đề/transcript và tài liệu.
 - Nghe nghiệm thu trên những giọng Edge được cấu hình, gồm nam/nữ và nhiều accent, trước khi đóng gói.
 
+### Bổ sung — Phase 1: Kiểm chứng engine cảm xúc và giọng nhân vật (đề xuất, chưa chốt)
+
+Nghiên cứu ba repository owner bổ sung được ghi tại [báo cáo so sánh engine](tts-engine-research-2026-10-23.md). Điều chỉnh đề xuất: đưa VieNeu v3 Turbo vào vòng nghe đối chiếu với OmniVoice vì có ánh xạ cả ba cue và model card công bố quyền dùng thương mại cho preset/weights; chưa kết luận chất lượng tiếng Anh. OmniVoice Studio là nguồn tham khảo workflow/adapter có LICENSE FSL; SEA-G2P là lớp phát âm đã nằm trong SDK VieNeu.
+
+Owner sau đó xác định **chỉ quan tâm tiếng Anh và cảm xúc/sắc thái**, yêu cầu đếm giọng, chọn dự án và tạo mẫu thật. [English audition](english-tts-audition-2026-10-23.md) cập nhật đề xuất sang Chatterbox Turbo: danh mục Edge live có 47 giọng; Chatterbox mở rộng bằng tham chiếu, không có danh mục cố định tương đương. Đã sinh local 32 mẫu Chatterbox và 32 mẫu Edge cho bốn giọng tham chiếu, xuất trang nghe A/B và MP3. Owner sau đó xác nhận Chatterbox có chất lượng cao hơn; chưa nghiệm thu riêng từng sắc thái hoặc thay engine sản phẩm. Yêu cầu tiếp theo là mở rộng giọng và hỗ trợ karaoke, được phân tích tại [thư viện giọng và karaoke](chatterbox-voices-karaoke-2026-10-23.md).
+
+- Chọn ứng viên theo nhu cầu sử dụng và thông tin giấy phép. Chuẩn bị giọng tham chiếu được phép dùng theo mục đích đã chọn.
+- Nghe đối chiếu ít nhất hai giọng trên câu thường, câu có cười và thở dài; đánh giá độ nhất quán qua nhiều câu, tiếng Anh dễ nghe, nhịp nối và việc đọc sai/bỏ từ.
+- Sinh qua đúng đường preview và production của app; so sánh WAV/MP3 đầu ra. Đo thời gian và đỉnh VRAM thực tế. Phân biệt hạ/trầm giọng với tiếng hắng giọng, kiểm chứng riêng khả năng từng hiệu ứng.
+
+### Bổ sung — Phase 2: Mặc định mới và chuyển project (đề xuất, phụ thuộc Phase 1)
+
+- Lưu giọng đã duyệt cho từng nhân vật, tái dùng cho các câu và các tập; không chỉ thiết kế lại giọng độc lập ở từng câu.
+- Chọn engine mặc định cho project mới theo kết quả nghe; project cũ chuyển theo thao tác rõ ràng và cần tái tạo audio. Cache phải xét engine, tham chiếu giọng và tham số tạo.
+- Thông báo cue không hỗ trợ và engine thực dùng. Owner đã yêu cầu karaoke với Chatterbox: bổ sung forced alignment từ audio thật vào sidecar hiện có, ưu tiên khảo sát WhisperX alignment tiếng Anh; nghe/nhìn kiểm chứng ở vị trí cười/thở dài/hắng giọng trước khi chuyển mặc định. Chi tiết và hai giai đoạn thư viện giọng/alignment ở tài liệu bổ sung trên.
+
+Owner tiếp tục yêu cầu “thử phương án này xem sao”. [PoC 2026-10-24](chatterbox-karaoke-poc-2026-10-24.md) tạo 12 hồ sơ lưu/nạp lại và 48 mẫu local, thử alignment CPU và xuất video bằng renderer hiện có. Phát hiện WhisperX thông thường kéo chữ qua tiếng cười; adapter CTC có cue là phần thử nghiệm riêng, chưa nghiệm thu production. Bộ xuất ở `data/exports/chatterbox-voices-karaoke-20261023/`; chưa thay cấu hình engine/project hay bản cài.
+
 ## Câu hỏi còn mở
 
-- Không có quyết định sản phẩm chặn crystallize. Chính xác phoneme, độ hạ pitch, khoảng ngắt và ngưỡng chấp nhận chất lượng âm cần quyết định bằng mẫu nghe thật theo giọng.
+- Sau phản hồi bản 2.0, cần chốt giọng mới cho từng nhân vật và mục đích sử dụng thương mại trước khi crystallize phần thay engine. Ngưỡng chấp nhận âm thanh phải quyết định bằng mẫu nghe từ đúng pipeline app.
 - Nếu thử nghe cho thấy Edge không đủ tự nhiên, quay lại owner để quyết định engine TTS mới; không tự động chuyển engine trong Phase 74.
 
 ## Project meta intake (FEAT-009)
