@@ -8,6 +8,19 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Changed — Step 5 Video studio redesign (Phase 78, 2026-10-26)
+
+- Storyboard review: every beat shows a sketch of what the video will show (scene plate, the speaking pair, the insert's illustration) in 16:9 or 9:16, notes on what is missing, its script lines (no longer collapsed) and a labelled, aligned form. Sketches follow edits. New read-only `POST /api/projects/{id}/storyboard/preview` uses the renderer's own rules.
+- Shorts & TikTok: a clip not rendered yet shows a 9:16 sketch of its opening with the hook; its length follows the edited lines (30–90 s check); the reason no longer covers the line inputs; fields have accessible names; the vertical episode plays inline.
+- Step 5 sections are numbered 1–5, the render options sit in one card, the stage has more room, and the page works at phone width. Vietnamese copy for all of it.
+
+### Fixed — 9:16 output (Phase 78)
+
+- A highlight clip's hook banner no longer covers the speaker chips (they fade out while it shows).
+- Approve on a clip keeps edited first/last lines (they were dropped unless Save was pressed first).
+- A Short project's 9:16 main video plays in a 9:16 player instead of a 1920 px tall one, and Step 5 explains why it has no highlight clips.
+- The Step 5 next-step bar no longer floats over the storyboard and clip cards.
+
 ### Fixed — source audit (2026-10-26)
 
 - Removed the retired OmniVoice engine code, settings and setup script left after Phase 77.
