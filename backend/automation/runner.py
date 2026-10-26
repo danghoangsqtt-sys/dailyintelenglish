@@ -296,7 +296,10 @@ class AutomationRunner:
             config = await service.get_settings(db)
         now = self.clock()
         inside = config["enabled"] and rules.in_window(now, config["window_start"], config["window_end"])
-        working = (inside or self.manual) and not self.stop_requested
+        from backend.channel import batch_maker  # lazy: batch_maker imports this module
+
+        # Phase 80: a Shorts batch being made now has the GPU, the AI and the renderer; the night run waits for it
+        working = (inside or self.manual) and not self.stop_requested and not batch_maker.busy()
         self._keep_awake(working and config["keep_awake"])
         if not working:
             if self.run_id:
