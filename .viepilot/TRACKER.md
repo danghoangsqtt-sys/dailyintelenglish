@@ -1,5 +1,14 @@
 # TRACKER.md — Daily Intel English Studio
 
+## Audit 2026-10-26 - 2.0 source
+
+`/vp-audit` of the 2.0 source: retired OmniVoice code removed, migration-040 function registration fixed for every runner, BUG-051 resolved (15 stale tests updated, 3 Step 4 UI bugs fixed), full pytest **2137 passed, 0 failed**. Phase 77, the karaoke repair and these fixes are now committed on `owner-runs/20261001-r9` (BUG-052); not pushed, no package rebuilt. Open: ENH-055 (ROADMAP drift), ENH-056 (CORS / error exposure). [Report](audit-report.md).
+
+## Phase 77 - Restore plain Edge speech (2026-10-24)
+
+Owner requested returning to Edge and removing emotion insertion after auditioning Chatterbox. Source implementation removes annotation, cue controls and local-engine selection, retaining Edge voices and word timings. Migration040 cleans legacy tags/settings and marks affected media for regeneration. Full/Lite 2.0.0 rebuilt in dist/2.0-edge-plain-20261024, Full installed/restarted with backups, and migration040 cleaned 3 lines while preserving 40 projects. Affected audio/video need regeneration; no tests were requested/run. No git persistence or owner acceptance claimed. [Plan](phases/77-edge-plain-speech/PLAN.md), [state](phases/77-edge-plain-speech/PHASE-STATE.md).
+
+
 **Current execution checkpoint 2026-10-23 — Phase 76 / Topic project folders:** included in the rebuilt local Full/Lite 2.0.0 packages and installed Full. Combined Phase 73–76 focused suite: 243 passed; Ruff, JS, HANDOFF, archive CRC/SHA and install DB-integrity checks passed. Legacy exports remain unchanged until opt-in. Backup: `data/backups/desktop-20261023-175100-027/`. Not publicly released. [Plan](phases/76-topic-project-folders/PLAN.md), [state](phases/76-topic-project-folders/PHASE-STATE.md).
 
 **Current execution checkpoint 2026-10-23 — Phase 75 / local 2.0.0 packaging:** Full and Lite Windows x64 ZIPs are in `dist/2.0/`; SHA-256 and ZIP contents verified. Full 2.0.0 is installed locally, with prior app and valid SQLite backups retained at `data/backups/desktop-20261023-175100-027/`. OmniVoice's worker is packaged; optional CUDA environment/model and local inference are not installed or verified. Edge stays default; no public release. [Plan](phases/75-omnivoice-local-tts/PLAN.md), [task](phases/75-omnivoice-local-tts/tasks/75.4.md).

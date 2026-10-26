@@ -1,5 +1,7 @@
 # OmniVoice local TTS
 
+> Retired by the owner on 2026-10-24. Phase 77 restores Edge-only plain speech and removes this option from the application. The instructions below are historical, not the supported setup; the worker, `scripts/setup_omnivoice.ps1` and the `DIE_OMNIVOICE_*` settings were deleted from source on 2026-10-26. See [plain Edge speech](edge-plain-speech.md).
+
 OmniVoice is an optional, per-speaker TTS engine in Step 4. Edge TTS remains the default. OmniVoice uses Voice Design from the speaker's gender, accent, pitch, and optional description; no reference recording or cloud service is sent. The model's `instruct` Voice Design and native non-verbal tags are documented in the [official OmniVoice README](https://github.com/k2-fsa/OmniVoice#python-api).
 
 ## Install on Windows

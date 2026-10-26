@@ -8,6 +8,27 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Fixed — source audit (2026-10-26)
+
+- Removed the retired OmniVoice engine code, settings and setup script left after Phase 77.
+- Migration 040's SQL helper functions are registered by every migration runner, not only the app's.
+- Step 4 Listen no longer shows raw provider error text; fixable problems (empty line, non-Edge engine) are reported as such.
+- Apply profile voice keeps the open voice picker and its confirmation message.
+- Full test suite reconciled with Phase 77 and the karaoke repair: 2137 passed. See `.viepilot/audit-report.md`.
+
+### Fixed — Edge karaoke timing (2026-10-24)
+
+- Calibrated native word onsets by the speech rate on audio-job reads, including existing mixes, while preserving raw provider captures and preventing repeated compensation.
+- Rebuilt the final MP4 AAC track from composition sources to preserve encoder priming metadata; retained music, branding and frame-range clips. Soundtracks use lossless WAV and the same frame rounding as the captions.
+- Re-rendered and updated The Office Startup. Six full-episode source/container measurements are within1ms; word calibration was measured on16 English voice/rate samples and still awaits owner listening review. See `docs/operations/edge-karaoke-diagnosis-20261024.md`.
+
+### Changed — Phase 77 plain Edge speech (2026-10-24)
+
+- Restored Edge TTS as the only supported speech engine, retaining the English voice catalogue and native word timing.
+- Removed AI emotion annotation, the script cue toolbar and local Voice Design selection/auditions.
+- Migration040 strips recognized legacy directions, restores saved voice settings and marks affected media for regeneration while keeping previous files. Unannotated dialogue is preserved.
+- No Chatterbox aligner or audition-only 120ms caption delay is added to production. Tests were not requested or run for this restoration; see the phase state for build/install evidence.
+
 ### Added — Phase 76 Topic / Series / video project folders (included in 2.0.0 rebuild)
 
 - Step 1 and Step 7 can organize selected project outputs under a shared Topic parent, with automatic Series and numbered episode folders; standalone projects use Topic / project name.

@@ -1,6 +1,25 @@
 {
+  "edge_karaoke_repair_20261024": {
+    "status": "implemented_verified_installed_pending_owner_listening_review",
+    "plan": ".viepilot/phases/77-edge-plain-speech/SYNC-FIX.md",
+    "evidence": "docs/operations/edge-karaoke-diagnosis-20261024.md",
+    "debug_session": "debug-20261024-edge-karaoke",
+    "word_recipe": "edge-decoded-onset-v1",
+    "voice_rate_samples": 16,
+    "actual_episode_audio_residual_max_ms": 0.167,
+    "owner_listening_acceptance": false,
+    "package_directory": "dist/2.0-edge-sync-20261024",
+    "version": "2.0.0",
+    "commit_or_push": false,
+    "installed_backup": "data/backups/desktop-20261024-163016-755",
+    "installed_pid": 30980,
+    "installed_build_id": "bb3a2e8f66cb08c8f68733e3e9405e295821ed6df0d7b936ef4db4e7cc905f70",
+    "full_sha256": "a2e8b7ce9654c3dea6cde2c661e4520c3c3077d504d0ea6554b62fc2d8e26d50",
+    "lite_sha256": "8b0cf8f7de10245f63ecc294ef147ea55e87b0e7775b2a58db6a08c82400516a",
+    "live_checks": "New packaged build identity, dashboard200, corrected audio-job words, repaired video path, SQLite integrity and40projects retained."
+  },
   "omnivoice_phase75": {
-    "status": "implemented_packaged_and_installed_pending_local_cuda_audio_review",
+    "status": "retired_by_owner_phase77_20261024",
     "planned_at": "2026-10-23",
     "source": "owner authorized integration after accepting the public Voice Design audition",
     "spec": ".viepilot/phases/75-omnivoice-local-tts/SPEC.md",
@@ -30,7 +49,8 @@
     "rebuilt_package_hashes": {
       "Full": "f25816bc90ba736c7a8bfe2f2bb12c397ba7f877af17d2a9465b7813b8921625",
       "Lite": "3462426edbdaf09c23bfe543e7ede18b8218dc0464d1946787bcdceed6863bca"
-    }
+    },
+    "superseded_by": "edge_plain_speech_phase77"
   },
   "topic_project_folders_phase76": {
     "status": "implemented_verified_packaged_and_installed_2_0_0_not_publicly_released",
@@ -58,7 +78,7 @@
     "public_release_published": false
   },
   "vocal_cues_phase74": {
-    "status": "implemented_verified_pending_owner_audio_review",
+    "status": "retired_by_owner_phase77_20261024",
     "planned_at": "2026-10-23",
     "implemented_at": "2026-10-23",
     "source": "docs/brainstorm/session-2026-10-23-tts-emotion.md",
@@ -75,7 +95,8 @@
     "live_edge_listening_done": false,
     "owner_listening_acceptance": false,
     "release_or_package_authorized": true,
-    "public_release_published": false
+    "public_release_published": false,
+    "superseded_by": "edge_plain_speech_phase77"
   },
   "scene_library_phase73": {
     "amendment_73_4": "implemented_verified: VI/EN brief, prompt preparation, local Qwen, external copy/upload; migration038; included in local 2.0.0 Full/Lite packages; no public release",
@@ -865,5 +886,38 @@
     "source_commit": "f8f76753b9c3d81edd179006c626fde985dc79d7",
     "release_url": "https://github.com/danghoangsqtt-sys/dailyintelenglish/releases/tag/v1.4.0-rc.1",
     "archive_sha256": "0abdb9616593ecc983c152d00c0ee08380ee7240c4aa54e6b94d7916eed91b09"
+  },
+  "edge_plain_speech_phase77": {
+    "status": "implemented_packaged_installed_pending_owner_review_tests_not_run",
+    "owner_decision_date": "2026-10-24",
+    "source": ".viepilot/phases/77-edge-plain-speech/PLAN.md",
+    "engines": [
+      "edge_tts"
+    ],
+    "script_emotion_insertion": false,
+    "prototype_caption_delay_integrated": false,
+    "tests_run": false,
+    "static_checks": "Ruff on touched Python files and JS syntax passed",
+    "version": "2.0.0",
+    "package_directory": "dist/2.0-edge-plain-20261024",
+    "installed": true,
+    "migration_applied": true,
+    "consistent_backup": "data/backups/edge-plain-speech-20261024/app.before-restoration.db",
+    "release_or_push": false,
+    "installed_backup": "data/backups/desktop-20261024-115726-342",
+    "application_restarted": true,
+    "normal_startup_observed": true,
+    "cleaned_lines": 3,
+    "remaining_tagged_lines": 0,
+    "projects_preserved": 40,
+    "characters_preserved": 5,
+    "speakers_edge": 80,
+    "affected_project_id": "5b1667a3-b47b-4c4b-b989-dddd3cb44b03",
+    "regeneration_needed": "Step 4 audio then Step 5 video for affected project",
+    "package_hashes": {
+      "Full": "17d15596b1fd98340e301ae50294b9c4b972af886cc4f3be3f20312a50aaa992",
+      "Lite": "c4deb543a10a9856c370f85f083fecbaa53fc5ac466872cc0ab4950cb8100e63"
+    },
+    "historical_feature_tests_updated": false
   }
 }

@@ -205,14 +205,13 @@ test(script): add CEFR level vocabulary tests
 - NEVER log full prompt content in production (may contain sensitive topic)
 - Use `response_schema` (JSON mode) for structured outputs
 
-### OmniVoice Rules (Phase 75)
-- Edge TTS remains the default. OmniVoice is opt-in per speaker and must never silently fall back to Edge.
-- Keep OmniVoice and CUDA dependencies in `.venv-omnivoice`; never import Torch/OmniVoice in the FastAPI process or app venv.
-- Run one line in a one-shot child process inside the shared GPU lease. The process exits before the lease is released; do not hold the model resident between lines.
-- Use `DIE_OMNIVOICE_MIN_FREE_MB` as the configurable VRAM floor. GPU/model failures are actionable errors, not automatic engine changes.
-- Map only documented native cues (`[laughter]`, `[sigh]`). Reject `[hắng giọng]` for OmniVoice; do not synthesize a fake ahem or mix engines within a line.
-- OmniVoice does not provide word timings in this integration. Never invent word boundaries or write an empty/false timing sidecar.
-- Do not log dialogue or voice-design descriptions.
+### Plain Edge speech (Phase 77, owner decision 2026-10-24)
+- Edge TTS is the only selectable and dispatchable speech engine. Reject new requests for local TTS engines.
+- Do not insert emotion tags into generated or regenerated scripts; do not expose a cue toolbar or synthesize vocal sound effects.
+- Strip only recognized retired directions from legacy/save/TTS text. Preserve ordinary dialogue and unrelated bracketed text.
+- Preserve pinned English Edge voice IDs and speed/pitch/volume; use the existing accent/gender defaults when a retired engine has no valid Edge ID.
+- Keep native Edge word timestamps for karaoke. Do not adopt the experimental Chatterbox aligner or a 120ms global delay from the audition.
+- Migration040 must clean old tags/settings transactionally, invalidate affected caches/media and retain previous exported files. Do not log dialogue.
 
 ### SQLite Rules
 - Use `aiosqlite` for async access (NOT sqlite3 blocking)

@@ -1,5 +1,10 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 77 - Restore plain Edge speech (2026-10-24)
+
+Owner requested returning to Edge and removing emotion insertion after auditioning Chatterbox. Source implementation removes annotation, cue controls and local-engine selection, retaining Edge voices and word timings. Migration040 cleans legacy tags/settings and marks affected media for regeneration. Full/Lite 2.0.0 rebuilt in dist/2.0-edge-plain-20261024, Full installed/restarted with backups, and migration040 cleaned 3 lines while preserving 40 projects. Affected audio/video need regeneration; no tests were requested/run. No git persistence or owner acceptance claimed. [Plan](phases/77-edge-plain-speech/PLAN.md), [state](phases/77-edge-plain-speech/PHASE-STATE.md).
+
+
 ## Phase 76 — Topic / Series / video project folders (2026-10-23)
 
 Status: implemented and focused-verified in source; not packaged. Step 1 and Step 7 select a parent Topic folder, preview the resolved destination, and sync checked outputs. Existing per-project paths stay legacy until the user opts in; changing locations never moves or deletes old files. [Plan](phases/76-topic-project-folders/PLAN.md), [operator guide](../docs/operations/topic-project-folders.md).
