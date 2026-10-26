@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BRAND_NAME, BRAND_PALETTE, LOGO_PATH, mix, mixColor, titleParts } from "./Brand";
+import { BRAND_NAME, BRAND_PALETTE, LOGO_PATH, mix, mixColor, shortEndCardOpacity, titleParts } from "./Brand";
 
 function luminance(hex: string): number {
   const channel = (i: number) => {
@@ -63,5 +63,14 @@ describe("titleParts (BUG-036)", () => {
   it("leaves other titles whole", () => {
     expect(titleParts("Ordering Coffee")).toEqual({ name: "Ordering Coffee" });
     expect(titleParts("Tea · Coffee: a guide")).toEqual({ name: "Tea · Coffee: a guide" });
+  });
+});
+
+describe("shortEndCardOpacity (Phase 80: a Short's ~2 s end card)", () => {
+  it("fades in quickly, holds, and fades out at the end", () => {
+    expect(shortEndCardOpacity(0, 30, 60)).toBe(0);
+    expect(shortEndCardOpacity(15, 30, 60)).toBe(1);
+    expect(shortEndCardOpacity(60, 30, 60)).toBe(0);
+    expect(shortEndCardOpacity(55, 30, 60)).toBeGreaterThan(0);
   });
 });

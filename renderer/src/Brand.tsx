@@ -239,7 +239,43 @@ function BrandIntroWide({ title, topic, cefrLevel, speakers, brand }: {
 }
 
 export function BrandOutro({ brand, layout = "horizontal" }: { brand?: EpisodeBrand; layout?: Layout }) {
+  if (brand?.short) return <ShortEndCard layout={layout} />;
   return layout === "vertical" ? <BrandOutroVertical brand={brand} /> : <BrandOutroWide brand={brand} />;
+}
+
+/** Phase 80 (owner 2026-10-26): where a Short's whole span is ~2 s -- the logo, the name and one follow line, inside the
+ * vertical safe zone (centred, above the bottom UI). */
+export function shortEndCardOpacity(frame: number, fps: number, durationInFrames: number): number {
+  const enter = interpolate(frame, [0, Math.round(0.25 * fps)], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const exit = interpolate(frame, [durationInFrames - Math.round(0.3 * fps), durationInFrames], [1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return Math.min(enter, exit);
+}
+
+function ShortEndCard({ layout }: { layout: Layout }) {
+  const frame = useCurrentFrame();
+  const { fps, durationInFrames } = useVideoConfig();
+  const pop = spring({ frame, fps, config: { damping: 12 } });
+  const vertical = layout === "vertical";
+  return (
+    <AbsoluteFill data-short-end-card="true" style={{ opacity: shortEndCardOpacity(frame, fps, durationInFrames),
+      background: `radial-gradient(circle at 50% 40%, ${BRAND_PALETTE.green}, #0B2A1E 70%)`, display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: vertical ? "flex-start" : "center", paddingTop: vertical ? 520 : 0, fontFamily: BRAND_FONT }}>
+      <Img src={staticFile(LOGO_PATH)} style={{ width: vertical ? 240 : 180, height: vertical ? 240 : 180, borderRadius: "50%",
+        objectFit: "cover", transform: `scale(${pop.toFixed(4)})`, boxShadow: "0 18px 40px rgba(0,0,0,0.35)" }} />
+      <div style={{ marginTop: 34, fontSize: vertical ? 64 : 52, fontWeight: 800, color: INK }}>Daily Beyond English</div>
+      <div style={{ marginTop: 22, padding: "14px 34px", borderRadius: 999, background: BRAND_PALETTE.subscribe, color: INK,
+        fontSize: vertical ? 44 : 34, fontWeight: 800, transform: `scale(${pop.toFixed(4)})` }}>Follow for more</div>
+    </AbsoluteFill>
+  );
+}
+
+/** Phase 80: the small logo a Short keeps in the corner while its content plays (top right, inside the safe zone). */
+export function ShortWatermark({ layout = "vertical" }: { layout?: Layout }) {
+  const vertical = layout === "vertical";
+  return <Img data-short-watermark="true" src={staticFile(LOGO_PATH)} style={{ position: "absolute", zIndex: 50,
+    top: vertical ? 150 : 28, right: vertical ? 80 : 28, width: vertical ? 92 : 72, height: vertical ? 92 : 72, borderRadius: "50%",
+    objectFit: "cover", opacity: 0.92, boxShadow: "0 6px 18px rgba(0,0,0,0.35)", border: "3px solid rgba(255,255,255,0.75)" }} />;
 }
 
 function BrandOutroWide({ brand }: { brand?: EpisodeBrand }) {

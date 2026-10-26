@@ -687,7 +687,9 @@ async def render_via_remotion(
     staging_key = f"{project_id}-{project['_attempt_id']}" if project.get("_attempt_id") else project_id
     await asyncio.to_thread(_copy_audio_into_public, staging_key, audio_job["mp3_path"])
     input_props["audioPath"] = f"remotion-render/audio/{staging_key}.mp3"
-    voices = await _add_brand(project_id, input_props)
+    from backend.schemas.project import is_short_video
+
+    voices = await _add_brand(project_id, input_props, short=is_short_video(project))
     soundtrack = await _build_soundtrack(staging_key, audio_job, input_props, voices)
     if soundtrack is not None:
         input_props["soundtrackPath"] = soundtrack
@@ -736,13 +738,19 @@ def outro_start_seconds(input_props: dict[str, Any]) -> float:
     return (timeline_frame(input_props["introSec"], fps) + timeline_frame(audio_seconds, fps)) / fps
 
 
-async def _add_brand(project_id: str, input_props: dict[str, Any]) -> list[tuple[str, float]]:
+SHORT_END_CARD_S = 2.0  # Phase 80 (owner 2026-10-26): a Short opens on its content and ends on a ~2 s follow card
+
+
+async def _add_brand(project_id: str, input_props: dict[str, Any], short: bool = False) -> list[tuple[str, float]]:
     """Phase 25 (D52/D53): Jenny's greeting + wish and farewell, and slide lengths that follow
     them. If Edge TTS is unreachable the branded slides still render, silent, at the minimum
     length -- a missing voice must never cost the whole video. Returns the voices on the video
     timeline (path, start seconds) for the soundtrack."""
     lines = brand_service.brand_lines(project_id)
     brand: dict[str, Any] = {"wish": lines["wish"], "farewellLine": lines["farewell_line"]}
+    if short:  # no intro slide and no greeting/farewell voices: the script's own last line already invites to follow
+        input_props.update(introSec=0.0, outroSec=SHORT_END_CARD_S, brand={**brand, "short": True})
+        return []
     try:
         audio = await brand_service.brand_audio(project_id)
     except TTSError as exc:

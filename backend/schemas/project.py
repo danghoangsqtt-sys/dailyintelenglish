@@ -120,6 +120,16 @@ VOICE_ONLY_STYLES = ("vox",) + SOLO_SHORT_STYLES
 SHORT_STYLES = SOLO_SHORT_STYLES + CONVERSATION_SHORT_STYLES
 ExplainerStyle = Literal["presenter", "vox", "news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "chat", "wyr"]
 SHORT_MAX_MINUTES = 1.0
+SHORT_FORMAT_STYLES = (None, "presenter", "vox")  # Phase 80: these become a Short at <= 1 minute (conversation, presenter, vox)
+
+
+def is_short_video(project: dict) -> bool:
+    """Phase 80: a Short -- vertical 9:16, at most a minute, with the short brand (no intro slide, a 2 s end card). The
+    Short templates always are; a conversation, Solo presenter or Vox project is when it lasts at most a minute."""
+    style = project.get("explainer_style")
+    if style in SHORT_STYLES:
+        return True
+    return style in SHORT_FORMAT_STYLES and float(project.get("duration_minutes") or 99) <= SHORT_MAX_MINUTES
 
 
 class ScriptConfig(BaseModel):

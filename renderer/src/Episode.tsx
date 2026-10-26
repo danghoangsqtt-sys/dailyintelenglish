@@ -9,7 +9,7 @@ import {ChatScene} from "./ChatScene";
 import {resolvedMedia} from "./Presenter";
 import React, { useMemo } from "react";
 import { AbsoluteFill, Audio, Img, Sequence, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import { BrandIntro, BrandOutro } from "./Brand";
+import { BrandIntro, BrandOutro, ShortWatermark } from "./Brand";
 import { computeProgressForFrame } from "./chapters";
 import { activeTokenIndex, buildKaraokeTokens, captionPageAtTime, paginateCaptionTokens, withScriptPunctuation } from "./karaoke";
 import { activeSpeakerId } from "./speakers";
@@ -494,6 +494,9 @@ export const Episode: React.FC<EpisodeInputProps> = ({
           hookAtSec={hookAtSec}
         />}
       </Sequence>
+      {brand?.short ? <Sequence from={introFrames} durationInFrames={audioFrames} name="Short logo">
+        <ShortWatermark layout={layout} />
+      </Sequence> : null}
       {outroFrames > 0 ? <Sequence from={introFrames + audioFrames} durationInFrames={outroFrames} name="Outro">
         <BrandOutro brand={brand} layout={layout} />
       </Sequence> : null}

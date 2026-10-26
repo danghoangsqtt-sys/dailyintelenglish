@@ -153,6 +153,8 @@ export const episodeBrandSchema = z.object({
   farewellStartSec: z.number().optional(),
   /** true when the full-video soundtrack already carries the voices (so they are not played twice). */
   voicesInSoundtrack: z.boolean().default(false),
+  /** Phase 80: a Short (<= 1 min) -- no intro slide, a small logo during the content and a ~2 s end card. */
+  short: z.boolean().optional(),
 });
 
 export const episodeInputPropsSchema = z.object({
