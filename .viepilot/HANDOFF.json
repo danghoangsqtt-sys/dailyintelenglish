@@ -1,6 +1,6 @@
 {
   "phase78_video_studio_redesign": {
-    "status": "implemented_verified_pending_owner_review",
+    "status": "implemented_verified_installed_owner_ui_accepted",
     "planned_at": "2026-10-26",
     "plan": ".viepilot/phases/78-video-studio-redesign/PLAN.md",
     "state": ".viepilot/phases/78-video-studio-redesign/PHASE-STATE.md",
@@ -15,9 +15,16 @@
     "new_endpoint": "POST /api/projects/{id}/storyboard/preview",
     "verification": "sandbox data dir D:/DataAdmin/p78-sandbox-data on port 8030 (copied DB, read-only library junctions); live app/data untouched",
     "pushed": false,
-    "package_rebuilt": false,
-    "owner_acceptance": false,
-    "review_run": "docs/operations/phase78-step5-review.md: screenshots + real 9:16 clip render in the sandbox (1080x1920, 63.6 s, AAC)"
+    "package_rebuilt": true,
+    "owner_acceptance": "UI accepted 2026-10-26 (\"Giao diện ổn\")",
+    "review_run": "docs/operations/phase78-step5-review.md: screenshots + real 9:16 clip render in the sandbox (1080x1920, 63.6 s, AAC)",
+    "package_directory": "dist/2.0-phase78-20261026",
+    "full_zip_sha256": "cf8056446717d5d600216b99cc9595e3a1c005091e8b13532b8c147ca1ceb8f5",
+    "installed_exe_sha256": "f8ef429b546f55d0d9640dbcde9ad1862eebddf65cbac712ea55b772f9470e4e",
+    "installed_from_commit": "c2a0fe3",
+    "installed_backup": "data/backups/desktop-20261026-120402-897",
+    "installed_pid": 23752,
+    "lite_rebuilt": false
   },
   "edge_karaoke_repair_20261024": {
     "status": "implemented_verified_installed_pending_owner_listening_review",
