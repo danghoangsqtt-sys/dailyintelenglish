@@ -11,7 +11,7 @@ Owner requested returning to Edge and removing emotion insertion after auditioni
 
 ## Phase 76 — Topic / Series / video project folders (2026-10-23)
 
-Status: implemented and focused-verified in source; not packaged. Step 1 and Step 7 select a parent Topic folder, preview the resolved destination, and sync checked outputs. Existing per-project paths stay legacy until the user opts in; changing locations never moves or deletes old files. [Plan](phases/76-topic-project-folders/PLAN.md), [operator guide](../docs/operations/topic-project-folders.md).
+Status: implemented and focused-verified; packaged in the local Full/Lite 2.0.0 builds (2026-10-23, ENH-055 reconciled 2026-10-26). Step 1 and Step 7 select a parent Topic folder, preview the resolved destination, and sync checked outputs. Existing per-project paths stay legacy until the user opts in; changing locations never moves or deletes old files. [Plan](phases/76-topic-project-folders/PLAN.md), [operator guide](../docs/operations/topic-project-folders.md).
 
 ## Phase 75 — Optional local OmniVoice Voice Design TTS (2026-10-23)
 
@@ -135,7 +135,7 @@ Owner invoked vp-evolve+vp-auto for BUG-042/043/044 and completion 49.5b. [Phase
 - Dependencies:Phase 48/V48; front21 và script là nền cho explainer plan/layout, sau đó Player/render/integrations.
 - Tasks 49.1–49.10:[PLAN và cards](phases/49-solo-explainer/PLAN.md) · [SPEC](phases/49-solo-explainer/SPEC.md).
 - Acceptance: một pack thật 21ảnh, video có ảnh/sơ đồ/thẻ chữ, bố cục hai aspect không che nội dung, lưu locks/revision đúng, full 16:9/full 9:16/Short và staged EXE verified, owner Gate V49.
-- Status:**in_progress, 5/10 technically verified; 49.6 next planned**.49.5b full 1848 passed in 741.01s; 175 focused, 104 renderer; approval still requires actual 49.6 geometry. Hoang front21 real art and V49 owner review remain pending. [Report](../docs/operations/task49-5b-recovery-20261016.md).
+- Status: **49.1–49.9 implemented_verified; 49.10 code/package verified** (TRACKER 2026-10-16; ENH-055 reconciled 2026-10-26). Earlier checkpoint: 49.5b full 1848 passed in 741.01s; 175 focused, 104 renderer. Hoang front21 real art and V49 owner review remain pending. [Report](../docs/operations/task49-5b-recovery-20261016.md).
 
 **49.5a checkpoint (2026-10-16):** 49.5a foundation verified: immutable project illustrations, exact token/real-audio timing and atomic 028 job/asset migration. Full 1809 passed in 740.11s, 143 related tests (34 new), Ruff/diff clean. Populated disposable copy preserved 17 jobs/43 checkpoints and passed injected rollback/FK/integrity/2 restarts; actual Edge mapping 25/25 tokens over 11.54s.49.5 remains in_progress for proposal/locks/history/approval; owner DB/EXE/release unchanged.
 

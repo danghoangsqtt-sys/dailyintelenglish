@@ -432,13 +432,13 @@ async def test_concurrent_script_saves_do_not_interleave(client):
     payload_b = {"lines": [{"speaker_id": speaker_ids[1], "text": f"B-{i}"} for i in range(5)]}
 
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as async_client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://localhost") as async_client:
         responses = await asyncio.gather(
             async_client.put(f"/api/projects/{project['id']}/script", json=payload_a),
             async_client.put(f"/api/projects/{project['id']}/script", json=payload_b),
         )
 
-    assert all(r.status_code == 200 for r in responses)
+    assert all(r.status_code == 200 for r in responses), [(r.status_code, r.text[:200]) for r in responses]
 
     final = client.get(f"/api/projects/{project['id']}/script").json()["data"]
     texts = [line["text"] for line in final]
