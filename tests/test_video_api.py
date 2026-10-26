@@ -284,3 +284,19 @@ def test_generate_video_forwards_caption_style_with_outline_default(
 
     assert response.status_code == 200
     assert seen["caption_style"] == expected
+
+
+def test_a_new_render_removes_the_render_it_replaced(client: TestClient):
+    """BUG-054: each render had its own attempt folder and the replaced ones stayed on disk forever."""
+    from pathlib import Path
+
+    project = create_project(client)
+    lines = save_script(client, project)
+    generate_audio(client, project, lines)
+    url = f"/api/projects/{project['id']}/video/generate"
+    first = Path(client.post(url, json={}).json()["data"]["mp4_path"])
+    assert first.is_file() and (first.parent / "subtitles.srt").is_file()
+    second = Path(client.post(url, json={}).json()["data"]["mp4_path"])
+    assert second.is_file() and second.parent != first.parent
+    assert not first.parent.exists()
+    assert client.get(f"/api/projects/{project['id']}/video/download?format=mp4").status_code == 200

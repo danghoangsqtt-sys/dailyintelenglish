@@ -4,6 +4,7 @@
 deviation as `backend/api/audio.py`'s `/status` route.
 """
 
+import asyncio
 import time
 import uuid
 
@@ -11,6 +12,7 @@ import aiosqlite
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 
+from backend.core.config import settings
 from backend.db.transactions import read_transaction, write_transaction
 from backend.core.exceptions import ConflictError, NotFoundError, ValidationError
 from backend.core.responses import ok
@@ -97,6 +99,9 @@ async def generate_video(
             await project_service.update_project(
                 db, project_id, ProjectUpdate(status="video_generated"), commit=False
             )
+    # BUG-054: the replaced episode's attempt folder (video, subtitles, render log) is not kept forever
+    await asyncio.to_thread(video_service.remove_superseded_attempt, (previous or {}).get("mp4_path"),
+                            settings.DATA_DIR / "video" / project_id, [job["mp4_path"], job["mp4_path_vertical"], job["srt_path"]])
     await export_service.sync_quietly(db, project_id)  # Phase 41 (D120): the project folder follows
     return ok(job, started_at=started_at)
 
@@ -125,8 +130,11 @@ async def generate_vertical(
     async with write_transaction(db):
         if not await project_service.media_revision_is_current(db, project_id, expected, include_audio=True):
             raise ConflictError("Voice, script or audio changed during rendering. The previous video has been kept.")
+        previous_vertical = job["mp4_path_vertical"]
         await video_service.set_vertical_path(db, project_id, result["mp4_path"])
         job = await video_service.get_video_job(db, project_id)
+    await asyncio.to_thread(video_service.remove_superseded_attempt, previous_vertical,  # BUG-054
+                            settings.DATA_DIR / "video" / project_id, [job["mp4_path"], job["mp4_path_vertical"], job["srt_path"]])
     await export_service.sync_quietly(db, project_id)  # Phase 41 (D120): the project folder follows
     return ok(job, started_at=started_at)
 

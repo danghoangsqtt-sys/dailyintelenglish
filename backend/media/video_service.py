@@ -8,6 +8,8 @@ mirroring the AudioService/TTSService responsibility split.
 
 import asyncio
 import logging
+import re
+import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -146,6 +148,32 @@ async def render_vertical(
     except RemotionRenderFailedError as exc:
         logger.warning("remotion_vertical_render_failed project_id=%s reason=%s", project_id, exc)
         raise VideoRenderError(f"The vertical video could not be rendered: {exc}") from exc
+
+
+_ATTEMPT_FOLDER = re.compile(r"^[0-9a-f]{32}$")
+
+
+def remove_superseded_attempt(previous: str | None, root: Path, keep: list[str | None]) -> bool:
+    """BUG-054: delete the attempt folder of a render that a newer one has just replaced as current.
+
+    `previous` is the output the database pointed at before the new render was committed; `root` the folder attempts are
+    made in (the project's video folder, or a clip's folder); `keep` every path the database points at now. Only a folder
+    named like an attempt id (32 hex), directly inside `root` and holding none of `keep`, is removed. Best effort: a file
+    still open (the Step 5 player streaming the old video) leaves the folder for next time."""
+    if not previous:
+        return False
+    folder = Path(previous).resolve().parent
+    if folder.parent != root.resolve() or not _ATTEMPT_FOLDER.match(folder.name) or not folder.is_dir():
+        return False
+    if any(path and Path(path).resolve().is_relative_to(folder) for path in keep):
+        return False
+    try:
+        shutil.rmtree(folder)
+    except OSError as exc:
+        logger.warning("superseded_render_kept folder=%s reason=%s", folder, exc)
+        return False
+    logger.info("superseded_render_removed folder=%s", folder)
+    return True
 
 
 async def set_vertical_path(db: aiosqlite.Connection, project_id: str, path: str) -> None:

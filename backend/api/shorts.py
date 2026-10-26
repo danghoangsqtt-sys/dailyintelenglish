@@ -123,6 +123,9 @@ async def render_clip(project_id: str, clip_id: str, body: RenderRequest, db: ai
         await db.execute("UPDATE short_clips SET status = 'rendered', mp4_path = ?, cover_path = ?, updated_at = ? WHERE id = ?",
                          (result["mp4_path"], cover, shorts_service._now(), clip_id))
         view = (await _views(db, project_id, [await shorts_service.get_clip(db, project_id, clip_id)]))[0]
+    for old in {current_clip["mp4_path"], current_clip["cover_path"]}:  # BUG-054: the replaced render's attempt folder
+        await asyncio.to_thread(video_service.remove_superseded_attempt, old, shorts_service.clip_folder(project_id, clip_id),
+                                [result["mp4_path"], cover])
     await export_service.sync_quietly(db, project_id)  # Phase 41 (D120): the project folder follows
     return ok(view, started_at=started_at)
 
