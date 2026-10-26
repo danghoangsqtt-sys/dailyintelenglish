@@ -124,7 +124,7 @@ async def test_mix_project_word_timestamps_empty_for_line_with_no_sidecar(tmp_pa
 
     result = await audio_service.mix_project(PROJECT, lines)
 
-    assert result["word_timestamps"] == [{"line_id": lines[0]["id"], "words": []}]
+    assert result["word_timestamps"] == [{"line_id": lines[0]["id"], "speech_rate": 1.0, "words": []}]
 
 
 async def test_mix_project_normalizes_loudness_near_target(tmp_path):

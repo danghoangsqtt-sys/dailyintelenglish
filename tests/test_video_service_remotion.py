@@ -41,6 +41,31 @@ def _fake_input_props() -> dict:
     return {"episodeId": "p1", "lines": [], "speakers": [], "audioPath": "x.mp3", "fps": 30, "width": 1280, "height": 720}
 
 
+@pytest.fixture(autouse=True)
+def mux_calls(monkeypatch):
+    """These tests cover the Remotion subprocess contract; the FFmpeg audio mux has its own tests."""
+    calls = []
+    monkeypatch.setattr(video_renderer_remotion, "mux_timeline_audio",
+                        lambda video, props, public_dir, frames=None: calls.append((video, props, public_dir, frames)))
+    return calls
+
+
+def test_render_muxes_audio_on_the_staged_video_before_publishing(tmp_path, monkeypatch, mux_calls):
+    def fake_run(command, cwd=None, capture_output=True, text=True, timeout=None, encoding=None, errors=None):
+        Path(command[5]).write_bytes(b"fake-mp4-bytes")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(video_renderer_remotion.subprocess, "run", fake_run)
+    props = _fake_input_props()
+    video_renderer_remotion._render_via_remotion_sync(props, tmp_path / "out.mp4", frames=(30, 59))
+
+    [(video, muxed_props, public_dir, frames)] = mux_calls
+    assert video != tmp_path / "out.mp4" and video.parent == tmp_path  # the staging file, not the published one
+    assert muxed_props is props
+    assert public_dir == video_renderer_remotion.VIDEO_RENDERER_DIR / "public"
+    assert frames == (30, 59)
+
+
 def test_render_via_remotion_sync_success_produces_real_output(tmp_path, monkeypatch):
     output_path = tmp_path / "out.mp4"
 

@@ -353,8 +353,8 @@ async def test_pipeline_model_returning_aliases_completes(db):
     assert gemini.call_count == 2  # outline + section -- no repair needed
 
 
-async def test_versioned_script_job_annotates_only_after_validation(db):
-    """New API job snapshots add one optional placement call after clean section output."""
+async def test_legacy_vocal_cue_job_snapshot_makes_no_annotation_call(db):
+    """Phase 77: a queued job saved with `vocal_cues_version` still completes with plain text only."""
     project = await _project(db)
     outline_json = json.dumps({
         "title": "T", "sections": [{"index": 1, "objective": "cover the topic fully here", "target_words": 100}],
@@ -365,9 +365,7 @@ async def test_versioned_script_job_annotates_only_after_validation(db):
         {"speaker": "S1", "text": _words(25, 50)},
         {"speaker": "S2", "text": _words(25, 75)},
     ])
-    cues_json = json.dumps({"cues": [{"line_index": 0, "after_word_index": 3,
-                                      "cue_type": "laugh", "variant": "ha-ha"}]})
-    router, provider, _ = _build_router([_result(outline_json), _result(section_json), _result(cues_json)])
+    router, provider, _ = _build_router([_result(outline_json), _result(section_json)])
     job, _ = await ai_job_service.create_job(db, project["id"], "script", {
         "project": project, "operation": "script", "vocal_cues_version": 1,
     })
@@ -377,11 +375,8 @@ async def test_versioned_script_job_annotates_only_after_validation(db):
     final_job = await ai_job_service.get_job(db, job["id"], project["id"])
     lines = await script_service.get_script(db, project["id"])
     assert final_job["status"] == "complete"
-    assert provider.call_count == 3
-    assert "[cười:ha-ha]" in lines[0]["text"]
-    from backend.ai.tts.vocal_cues import caption_text
-
-    assert caption_text(lines[0]["text"]) == _words(25, 0)
+    assert provider.call_count == 2
+    assert lines[0]["text"] == _words(25, 0)
 
 
 async def test_pipeline_model_returning_a_near_miss_uuid_resolves_and_completes(db, caplog):

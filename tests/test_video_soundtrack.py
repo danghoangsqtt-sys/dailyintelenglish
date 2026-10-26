@@ -40,8 +40,9 @@ async def test_remotion_soundtrack_matches_the_composition_length(tmp_path, monk
     job = await mixed_job(tmp_path, "bed.mp3")
     props = props_for(job)
     public = await video_renderer_remotion._build_soundtrack(PROJECT["id"], job, props)
-    assert public == f"remotion-render/audio/{PROJECT['id']}_soundtrack.mp3"
-    path = tmp_path / "public-audio" / f"{PROJECT['id']}_soundtrack.mp3"
+    # Lossless WAV: the final AAC is encoded once, by render_audio, from this source.
+    assert public == f"remotion-render/audio/{PROJECT['id']}_soundtrack.wav"
+    path = tmp_path / "public-audio" / f"{PROJECT['id']}_soundtrack.wav"
     seconds = video_renderer_remotion.composition_seconds(props)
     # Root.tsx: ceil((intro + last endSec + outro) * fps) frames.
     assert seconds * 30 == pytest.approx(round(seconds * 30))
@@ -72,4 +73,4 @@ async def test_remotion_render_sends_the_soundtrack_prop(tmp_path, monkeypatch):
     monkeypatch.setattr(video_renderer_remotion, "_copy_audio_into_public", lambda *args: None)
     result = await video_renderer_remotion.render_via_remotion(None, PROJECT, job, None, tmp_path / "v.mp4")
     assert result["soundtrack"] is True
-    assert captured["soundtrackPath"].endswith("_soundtrack.mp3")
+    assert captured["soundtrackPath"].endswith("_soundtrack.wav")

@@ -225,7 +225,7 @@ async def test_draft_save_uses_one_put_preserves_id_and_refetches_update(
         "gender": "male",
         "accent": "british",
         "tts_engine": "edge_tts",
-        "voice_description": "Warm and measured",
+        "voice_description": "",  # Phase 77: voice design retired, Step 1 clears it
         "voice_id": "en-GB-RyanNeural",
         "speed": 1.25,
         "pitch": 0.1,
@@ -259,7 +259,9 @@ async def test_progressed_project_is_read_only(
     assert await page.input_value("#name") == "Existing Draft"
     assert await page.locator("#submit-btn").is_hidden()
     assert await page.locator("#config-form input:not([disabled])").count() == 0
-    assert await page.locator("#config-form select:not([disabled])").count() == 0
+    # Phase 72 Amendment A: only the audience stays editable on a locked project.
+    assert await page.locator("#config-form select:not([disabled]):not(#audience)").count() == 0
+    assert await page.locator("#audience").is_enabled()
     assert await page.locator("#config-form button:not([disabled])").count() == 0
     await page.close()
 

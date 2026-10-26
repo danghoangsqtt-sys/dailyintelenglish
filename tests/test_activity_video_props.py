@@ -128,7 +128,7 @@ async def test_backend_usage_metadata_is_not_sent_to_remotion_but_returns_after_
     seen: dict = {}
 
     async def fake_props(*_args, **_kwargs):
-        return {"sprites": {"cutaways": [], "_activityUses": [
+        return {"fps": 30, "sprites": {"cutaways": [], "_activityUses": [
             {"activity_id": "activity-1", "beat_id": "beat-1"},
         ]}}
 

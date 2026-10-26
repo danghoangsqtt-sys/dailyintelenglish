@@ -230,7 +230,6 @@
         state.voiceSaving.add(id); applyLocks(); clearError();
         try {
           const updated = await persistSpeaker(id, {apply_profile_voice: true, expected_voice_revision: speakerById(id).voice_revision});
-          renderSpeakers();
           const current = updated.speakers.find(item => item.id === id);
           state.voicePickers[id].setSaved({voiceId: current.voice_id || current.resolved_voice_id, revision: current.voice_revision,
             message: "Profile voice applied. Project speed, pitch and volume are kept. Generate All to rebuild audio/video."});
@@ -566,7 +565,9 @@
       state.previewedLineIds.add(lineId);
     } catch (error) {
       console.error("Failed to synthesize line preview:", error);
-      showError(error.message || "We couldn't synthesize that line. Please try again.");
+      // App-written 4xx messages say what to fix; provider (5xx) text is never shown.
+      const fixable = error.status >= 400 && error.status < 500 && error.message;
+      showError(fixable ? error.message : "We couldn't synthesize that line. Please try again.");
     } finally {
       state.linesInFlight.delete(lineId);
       button.disabled = state.isGenerating;

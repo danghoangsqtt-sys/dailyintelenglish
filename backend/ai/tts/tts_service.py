@@ -198,8 +198,11 @@ async def synthesize_line_audio(project: dict, line: dict) -> dict:
     """
     speaker = _find_speaker(project, line["speaker_id"])
 
+    # Problems the user can fix are 422s whose message the UI shows; provider failures stay 502.
     if (speaker.get("tts_engine") or "edge_tts") != "edge_tts":
-        raise TTSError("Only Edge TTS is supported. Reload the updated project settings.")
+        raise ValidationError("Only Edge TTS is supported. Reload the updated project settings.")
+    if not caption_text(line["text"]).strip():
+        raise ValidationError("Enter spoken dialogue before generating audio.")
     audio_bytes, word_boundaries = await _synthesize_edge_tts(line["text"], speaker)
 
     cache_dir = settings.DATA_DIR / "tts_cache" / project["id"] / uuid.uuid4().hex

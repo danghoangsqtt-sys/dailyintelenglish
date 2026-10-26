@@ -85,7 +85,9 @@ window.VoicePicker = (() => {
     state.saved = currentValue();
 
     function dirty() { return currentValue() !== state.saved; }
+    let messageSeq = 0;
     function message(text, error = false) {
+      messageSeq += 1;
       $(".voice-status").textContent = text;
       $(".voice-status").classList.toggle("is-error", error);
     }
@@ -135,6 +137,7 @@ window.VoicePicker = (() => {
     async function load(refresh = false) {
       state.loading = true;
       message("Loading English voices…");
+      const loadingSeq = messageSeq;
       sync();
       try {
         const result = await catalog(refresh);
@@ -146,7 +149,8 @@ window.VoicePicker = (() => {
         locale.value = selectedLocale;
         if (!locale.value) locale.value = "";
         renderVoices();
-        message(result.stale ? "Offline: showing the last saved voice list. Refresh to check availability." :
+        // A status set while the list loaded (e.g. "Profile voice applied") is newer; keep it.
+        if (messageSeq === loadingSeq) message(result.stale ? "Offline: showing the last saved voice list. Refresh to check availability." :
           state.voiceId && !state.voices.some(v => v.voice_id === state.voiceId) ?
           "The saved voice is unavailable in this list. Refresh or select another voice." : "");
       } catch (error) {

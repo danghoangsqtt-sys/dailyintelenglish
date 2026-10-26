@@ -8,7 +8,7 @@ import json
 import pytest
 
 from backend.core.constants import ACCENTS, EDGE_TTS_VOICE_MAP, GENDERS
-from backend.core.exceptions import NotFoundError, TTSError
+from backend.core.exceptions import NotFoundError, TTSError, ValidationError
 from backend.schemas.project import ScriptConfig, SpeakerConfig
 from backend.content import project_service
 from backend.ai.tts import tts_service
@@ -111,6 +111,18 @@ async def test_synthesize_line_raises_not_found_for_unknown_speaker(db):
 
     with pytest.raises(NotFoundError):
         await tts_service.synthesize_line(db, project, line)
+
+
+async def test_line_with_only_retired_tags_is_a_fixable_422_without_a_provider_call(db, monkeypatch):
+    project = await project_service.create_project(db, make_config())
+    line = await _insert_line(db, project["id"], project["speakers"][0]["id"], text="[cười:ha-ha] [thở dài]")
+
+    async def forbidden(*_args, **_kwargs):
+        raise AssertionError("Edge TTS must not be called for an empty line")
+
+    monkeypatch.setattr(tts_service, "_synthesize_edge_tts", forbidden)
+    with pytest.raises(ValidationError, match="Enter spoken dialogue"):
+        await tts_service.synthesize_line_audio(project, line)
 
 
 async def test_synthesize_edge_tts_raises_tts_error_when_communicate_yields_no_audio(monkeypatch):
