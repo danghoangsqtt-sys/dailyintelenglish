@@ -326,6 +326,9 @@ async def create_projects(db: aiosqlite.Connection, series_id: str) -> dict:
             {"speaker_index": index, "character_id": character_id} for index, character_id in enumerate(series["cast"])])
         await db.execute("UPDATE channel_episodes SET project_id = ?, status = 'created', updated_at = ? WHERE id = ?",
                          (project["id"], _now(), episode["id"]))
+        from backend.content import export_service  # Phase 80: its folder under the main save folder, by Topic / Series
+
+        await export_service.apply_main_folder(db, project["id"])
         created.append({"episode_id": episode["id"], "number": episode["number"], "project_id": project["id"]})
     return {"created": created}
 

@@ -76,6 +76,7 @@ async def create_project(
             await voice_catalog_service.require_voice(speaker.voice_id)
     async with write_transaction(db):
         project = await project_service.create_project(db, config, commit=False)
+        await export_service.apply_main_folder(db, project["id"])  # Phase 80: Step 1 can still choose another folder
         if config.source_use == "verbatim":
             # Phase 57 (ENH-039): the owner's dialogue word for word is the script; Step 2 can still edit it
             lines = source_service.parse_dialogue(config.source_text, project["speakers"])

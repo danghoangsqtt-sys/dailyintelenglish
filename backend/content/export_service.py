@@ -290,6 +290,59 @@ async def clear_settings(db: aiosqlite.Connection, project_id: str) -> None:
     await db.execute("DELETE FROM project_exports WHERE project_id = ?", (project_id,))
 
 
+# ------------------------------------------------------------------------------------------------- the main folder
+
+MAIN_FOLDER_KEY = "main_output_dir"
+
+
+async def main_folder(db: aiosqlite.Connection) -> str | None:
+    """Phase 80 (owner 2026-10-26): the one folder under which every new project gets its Topic / Series / Episode folder."""
+    cursor = await db.execute("SELECT value FROM app_settings WHERE key = ?", (MAIN_FOLDER_KEY,))
+    row = await cursor.fetchone()
+    return row[0] if row and row[0] else None
+
+
+async def set_main_folder(db: aiosqlite.Connection, output_dir: str | None) -> str | None:
+    """Save (or clear with None) the main folder. Only a full path; the folder is created when missing."""
+    if output_dir:
+        try:
+            output_dir = ExportSettings(output_dir=output_dir).output_dir
+        except ValueError as exc:  # pydantic's error is a ValueError: say it plainly (it was a 500)
+            raise ValidationError(r"Choose a full folder path, for example D:\Videos") from exc
+        await asyncio.to_thread(_check_folder, Path(output_dir))
+        await db.execute(
+            "INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+            (MAIN_FOLDER_KEY, output_dir, _now()))
+    else:
+        await db.execute("DELETE FROM app_settings WHERE key = ?", (MAIN_FOLDER_KEY,))
+    return output_dir or None
+
+
+async def apply_main_folder(db: aiosqlite.Connection, project_id: str) -> bool:
+    """Give a project with no output folder its Topic / Series / Episode folder under the main folder (a Topic's own
+    remembered parent wins). A project that already has a folder is never changed. True when one was given."""
+    main = await main_folder(db)
+    if not main or await get_settings(db, project_id) is not None:  # without a main folder, Phase 76 only suggests
+        return False
+    root = await _saved_topic_root(db, project_id) or main
+    await save_settings(db, project_id, ExportSettings(output_dir=root, layout_mode="topic_hierarchy"))
+    return True
+
+
+async def projects_without_folder(db: aiosqlite.Connection) -> list[str]:
+    cursor = await db.execute("SELECT id FROM projects WHERE id NOT IN (SELECT project_id FROM project_exports) ORDER BY created_at")
+    return [row[0] for row in await cursor.fetchall()]
+
+
+async def apply_main_folder_to_all(db: aiosqlite.Connection) -> int:
+    """The owner's explicit "apply to projects without a folder": nothing already exported is moved."""
+    given = 0
+    for project_id in await projects_without_folder(db):
+        given += await apply_main_folder(db, project_id)
+    return given
+
+
 # ------------------------------------------------------------------------------------------------- what to write
 
 def _copy(source: str | Path | None, target: Path) -> bool:

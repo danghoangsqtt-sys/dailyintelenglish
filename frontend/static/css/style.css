@@ -485,3 +485,12 @@ html[data-local-image-ai="off"] .needs-local-gpu { display: none !important; }
 .bp-frame.is-vertical .bp-empty { bottom: auto; height: 43%; }
 .bp-frame.is-loading { animation: bp-pulse 1.2s ease-in-out infinite alternate; }
 @keyframes bp-pulse { from { opacity: .65; } to { opacity: 1; } }
+
+/* Phase 80: the main save folder panel (main_folder.js) */
+.main-folder { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+.main-folder-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.main-folder-path { flex: 1 1 260px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 6px 10px; border-radius: 8px; background: var(--surface-2); color: var(--text); font-size: 13px; }
+.main-folder-hint, .main-folder-status { margin: 0; color: var(--muted); font-size: 12.5px; }
+.main-folder-status:empty { display: none; }
+.main-folder-status.is-error { color: var(--danger); }
+.main-folder-actions { display: flex; flex-wrap: wrap; gap: 8px; }

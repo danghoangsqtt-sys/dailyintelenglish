@@ -629,6 +629,21 @@ window.I18N_VI = {
     "The local image model stopped unexpectedly. Try again; the details are in the image worker log.": "Mô hình vẽ ảnh cục bộ dừng bất ngờ. Hãy thử lại; chi tiết nằm trong log của image worker.",
     "The local image model could not draw the picture. Try again; the details are in the app log.": "Mô hình vẽ ảnh cục bộ không vẽ được ảnh. Hãy thử lại; chi tiết nằm trong log của ứng dụng.",
 
+    // Phase 80: the main save folder
+    "Main save folder": "Thư mục lưu chính",
+    "Not chosen yet": "Chưa chọn",
+    "Choose folder": "Chọn thư mục",
+    "Change folder": "Đổi thư mục",
+    "Stop using it": "Thôi dùng",
+    "New projects are saved in their own folder here, by topic: Topic / Series / Ep NN - title. A project that already has a folder keeps it.": "Dự án mới được lưu trong thư mục riêng tại đây, theo chủ đề: Chủ đề / Series / Ep NN - tiêu đề. Dự án đã có thư mục thì giữ nguyên.",
+    "Choose one folder: every new project (Step 1, Channel plan, Automation, Shorts batch) then gets its own folder there, by topic.": "Chọn một thư mục: mọi dự án mới (Bước 1, Kế hoạch kênh, Tự động, Shorts hàng loạt) sẽ có thư mục riêng ở đó, theo chủ đề.",
+    "The main folder could not load.": "Không tải được thư mục lưu chính.",
+    "The folder could not be chosen.": "Không chọn được thư mục.",
+    "The folder could not be saved.": "Không lưu được thư mục.",
+    "The main folder is no longer used for new projects.": "Dự án mới sẽ không dùng thư mục lưu chính nữa.",
+    "Choose the main save folder first.": "Hãy chọn thư mục lưu chính trước.",
+    "Choose a full folder path, for example D:\\Videos": "Hãy chọn đường dẫn thư mục đầy đủ, ví dụ D:\\Videos",
+
     // ---- step 5 video
     "Step 5 of 7": "Bước 5 / 7",
     "Video workspace": "Không gian video",
@@ -1711,6 +1726,8 @@ window.I18N_VI = {
     [/^Illustration from the library, shown for up to (\d+) s\.$/, "Ảnh minh hoạ từ thư viện, hiện tối đa $1 giây."],
     [/^(\d+(?:\.\d)?) s — a clip lasts 30–90 s$/, "$1 giây — clip dài 30–90 giây"],
     [/^(\d+\.\d) s$/, "$1 giây"],
+    [/^Give (\d+) project\(s\) without a folder their folder here$/, "Đưa $1 dự án chưa có thư mục vào thư mục này"],
+    [/^(\d+) project\(s\) now have their folder\.$/, "$1 dự án đã có thư mục."],
     // generic patterns last: they only wrap a text the rules above did not match
     [/^(Script|Learning|Audio|Video|Thumbnail|YouTube|Publish) \((\d+)\)$/, (_m, step, n) => `${tr(step)} (${n})`],
     [/^([✓●]) (.+)$/, (_m, mark, rest) => `${mark} ${tr(rest)}`],

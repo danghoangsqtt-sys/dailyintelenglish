@@ -126,6 +126,10 @@ const Api = (() => {
     stopProjectExport: (id) => request(`/api/projects/${id}/export`, { method: "DELETE" }),
     openProjectExport: (id) => request(`/api/projects/${id}/export/open`, { method: "POST" }),
     chooseProjectFolder: (initial) => request("/api/system/choose-folder", json("POST", { initial })),
+    // Phase 80: the main save folder for every new project
+    getMainFolder: () => request("/api/settings/main-folder"),
+    setMainFolder: (outputDir) => request("/api/settings/main-folder", json("PUT", { output_dir: outputDir })),
+    applyMainFolder: () => request("/api/settings/main-folder/apply", { method: "POST" }),
     listShorts: (id) => request(`/api/projects/${id}/shorts`),
     proposeShorts: (id, count) => request(`/api/projects/${id}/shorts/propose`, json("POST", { count })),
     updateShort: (id, clipId, patch) => request(`/api/projects/${id}/shorts/${clipId}`, json("PATCH", patch)),

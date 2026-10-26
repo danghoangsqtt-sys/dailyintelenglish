@@ -96,3 +96,37 @@ async def choose_folder(body: FolderRequest) -> dict:
     """The native folder picker on the owner's screen; `path` is null when cancelled or unavailable."""
     path = await asyncio.to_thread(export_service.choose_folder_dialog, body.initial)
     return ok({"path": path})
+
+
+class MainFolderRequest(BaseModel):
+    output_dir: str | None = None
+
+
+async def _main_folder_view(db: aiosqlite.Connection) -> dict:
+    return {"output_dir": await export_service.main_folder(db),
+            "projects_without_folder": len(await export_service.projects_without_folder(db)),
+            "layout": "<main folder>/<Topic>/<Series>/Ep NN - <title>/"}
+
+
+@router.get("/api/settings/main-folder")
+async def get_main_folder(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 80: the main save folder shared by Step 1, the Channel plan, Automation and the Shorts batch."""
+    async with read_transaction():
+        return ok(await _main_folder_view(db))
+
+
+@router.put("/api/settings/main-folder")
+async def put_main_folder(body: MainFolderRequest, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    async with write_transaction(db):
+        await export_service.set_main_folder(db, body.output_dir)
+        return ok(await _main_folder_view(db))
+
+
+@router.post("/api/settings/main-folder/apply")
+async def apply_main_folder(db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Give every project without an output folder its folder under the main folder (nothing is moved)."""
+    async with write_transaction(db):
+        if not await export_service.main_folder(db):
+            raise ValidationError("Choose the main save folder first.")
+        given = await export_service.apply_main_folder_to_all(db)
+        return ok({"given": given, **await _main_folder_view(db)})
