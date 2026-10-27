@@ -5,7 +5,13 @@
     "full_pytest": "2194 passed",
     "real_shorts": "conversation 41.5 s, presenter 35.7 s (1080x1920); vox waits for owner fact check",
     "pushed": false,
-    "installed": false
+    "installed": true,
+    "installed_from_commit": "a00322a",
+    "package_directory": "dist/2.0-phase80-20261027",
+    "full_zip_sha256": "8eb5cfcc307489c72f0a698c9ae5f7c30a6c7385aa00bdd98436beaa6ca6420c",
+    "installed_exe_sha256": "9d737d6614db86c5c01255dba74f37edf4ae567b0f0ee2cd5c4e23b99fac1822",
+    "installed_backup": "data/backups/desktop-20261027-153256-221",
+    "installed_pid": 27316
   },
   "phase79_audit_fixes": {
     "status": "implemented_verified",
@@ -14,7 +20,13 @@
     "full_pytest": "2165 passed",
     "orphan_renders_left": "3 folders, 0.63 GB (owner decides)",
     "pushed": false,
-    "installed": false
+    "installed": true,
+    "installed_from_commit": "a00322a",
+    "package_directory": "dist/2.0-phase80-20261027",
+    "full_zip_sha256": "8eb5cfcc307489c72f0a698c9ae5f7c30a6c7385aa00bdd98436beaa6ca6420c",
+    "installed_exe_sha256": "9d737d6614db86c5c01255dba74f37edf4ae567b0f0ee2cd5c4e23b99fac1822",
+    "installed_backup": "data/backups/desktop-20261027-153256-221",
+    "installed_pid": 27316
   },
   "phase78_video_studio_redesign": {
     "status": "implemented_verified_installed_owner_ui_accepted",
