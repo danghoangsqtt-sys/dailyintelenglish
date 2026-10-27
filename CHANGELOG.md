@@ -8,6 +8,19 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Changed — Shorts batch rework (Phase 80, 2026-10-26/27)
+
+- A Short opens on its content (no intro slide), keeps a small logo in the corner and ends on a 2 s follow card (was 16.7 s of intro/outro in a 53 s Short).
+- Short content: a one-paragraph script is split into lines; no welcome line; card points are drawn; the scene behind the text is visible.
+- The Shorts batch offers the app's video types as Shorts: 2-character conversation, Solo presenter, Vox.
+- One main save folder (Settings, Channel plan, Automation, Shorts batch): every new project gets `<main>/<Topic>/<Series>/Ep NN - <title>/`.
+- "Make videos now" makes a batch's videos at once, with a results panel (players, status, MP4, open folder); the page is a guided 4-step flow.
+
+### Fixed — Shorts and Solo plans (2026-10-27)
+
+- A Solo visual plan no longer fails with "use only an activity_id from AVAILABLE ACTIVITY PICTURES": the picture becomes a text card.
+- A presenter Short no longer stops on "idioms has 0 item(s)", on the generic fact flag, or on missing layouts.
+
 ### Fixed — audit (Phase 79, 2026-10-26)
 
 - Drawing a thumbnail topic picture or AI scene with the local image model no longer fails with an unhandled error; the message says what to do (e.g. Windows paging file too small, GPU out of memory).

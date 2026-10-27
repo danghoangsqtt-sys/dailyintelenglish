@@ -1,4 +1,12 @@
 {
+  "phase80_shorts_batch_rework": {
+    "status": "implemented_verified",
+    "plan": ".viepilot/phases/80-shorts-batch-rework/PLAN.md",
+    "full_pytest": "2194 passed",
+    "real_shorts": "conversation 41.5 s, presenter 35.7 s (1080x1920); vox waits for owner fact check",
+    "pushed": false,
+    "installed": false
+  },
   "phase79_audit_fixes": {
     "status": "implemented_verified",
     "plan": ".viepilot/phases/79-audit-fixes/PLAN.md",

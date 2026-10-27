@@ -1,5 +1,9 @@
 # TRACKER.md — Daily Intel English Studio
 
+## Phase 80 — Shorts batch rework (2026-10-26/27)
+
+Status: implemented_verified. Short brand (no intro, 2 s end card, logo), real Short content (line split, card points, visible scene), conversation / Solo presenter / Vox as batch Shorts, one main save folder with automatic Topic/Series/Episode project folders, 'Make videos now' with results panel, guided Shorts batch page. Solo plan with an unoffered activity is repaired. Full pytest 2194 passed. Not pushed, not installed. [Plan](phases/80-shorts-batch-rework/PLAN.md), [state](phases/80-shorts-batch-rework/PHASE-STATE.md).
+
 ## Phase 79 — Audit fixes (2026-10-26)
 
 Status: implemented_verified. BUG-053 image-worker failures give a plain reason (was a 500 in the owner's log), BUG-054 replaced renders are deleted (3 orphan folders / 0.63 GB left for the owner), ENH-056 own-origin CORS + local Host check, BUG-055 log noise filtered, ENH-055 ROADMAP drift fixed. Full pytest 2165 passed. Not pushed, not installed. [Plan](phases/79-audit-fixes/PLAN.md), [audit](audit-report.md).
