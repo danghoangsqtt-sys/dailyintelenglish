@@ -324,7 +324,7 @@ async def test_remotion_stages_audio_per_attempt(tmp_path, monkeypatch):
     async def props(*args, **kwargs):
         return {"episodeId": "project", "speakers": [], "lines": [], "audioPath": "old.mp3", "fps": 30}
 
-    async def no_brand(*args):
+    async def no_brand(*args, **kwargs):
         return []
 
     async def no_music(*args):
