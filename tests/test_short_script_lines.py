@@ -36,3 +36,14 @@ def test_a_presenter_or_vox_short_prompt_has_a_hook_and_no_episode_greeting():
         assert "under one minute" in short and "no greeting" in short and "OPENING: begin the episode" not in short
         episode = _render_presentation_block_sync("solo_explainer", "why", 1, "topic", style)
         assert "OPENING: begin the episode" in episode
+
+
+def test_a_short_lesson_needs_no_idiom():
+    """Phase 80: a Solo presenter Short stopped on "idioms has 0 item(s), need at least 1"."""
+    from backend.content.learning_pipeline import validate_counts
+    from backend.schemas.learning import LearningPackOut
+
+    fields = LearningPackOut.model_fields
+    pack = LearningPackOut.model_construct(**{name: [] for name in fields})
+    assert any("idioms" in error for error in validate_counts(pack))
+    assert not any("idioms" in error for error in validate_counts(pack, short=True))

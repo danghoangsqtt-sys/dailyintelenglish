@@ -145,15 +145,35 @@ class Producer:
             plan = view.get("plan")
         if not plan:
             raise StepError("The AI did not propose a visual plan")
-        if style in SELF_REVIEW_STYLES and plan.get("status") != "approved":
+        # Phase 80: a Solo presenter Short (<= 1 min, a batch Short teaching one phrase or tip) is reviewed like the
+        # language templates; a long presenter episode and Vox (knowledge facts) still wait for the owner
+        self_review = style in SELF_REVIEW_STYLES or (style == "presenter" and await self.is_short(project_id))
+        if self_review and plan.get("status") != "approved":
             view, plan = await self.accept_generic_review(project_id, view)
         if view.get("issues"):
             raise StepError("Review the visual plan: " + "; ".join(map(str, view["issues"])))
         flagged = [segment.get("id") for segment in plan.get("segments", []) if segment.get("needs_fact_review")]
         if flagged:
             raise StepError(f"Check the facts of {len(flagged)} segment(s) on Step 5, then approve the plan")
-        await self.client.call("POST", f"/api/projects/{project_id}/explainer-plan/approve",
-                               {"expected_revision": plan["revision"], "source_fingerprint": plan["source_fingerprint"]})
+        approve = {"expected_revision": plan["revision"], "source_fingerprint": plan["source_fingerprint"]}
+        try:
+            await self.client.call("POST", f"/api/projects/{project_id}/explainer-plan/approve", approve)
+        except StepError as exc:
+            if "missing layouts" not in str(exc):
+                raise
+            # Phase 80: a presenter plan needs its layouts arranged first -- what "Arrange layout" does on Step 5
+            arranged = await self.client.call("POST", f"/api/projects/{project_id}/explainer-plan/layout",
+                                              {"expected_revision": plan["revision"], "source_fingerprint": view["current_source_fingerprint"]})
+            saved = await self.client.call("PATCH", f"/api/projects/{project_id}/explainer-plan", {
+                "expected_revision": plan["revision"], "expected_source_fingerprint": view["current_source_fingerprint"],
+                "segments": arranged["segments"], "aspects": plan["aspects"]})
+            await self.client.call("POST", f"/api/projects/{project_id}/explainer-plan/approve",
+                                   {"expected_revision": saved["plan"]["revision"], "source_fingerprint": saved["plan"]["source_fingerprint"]})
+
+    async def is_short(self, project_id: str) -> bool:
+        from backend.schemas.project import is_short_video
+
+        return is_short_video(await self.client.call("GET", f"/api/projects/{project_id}") or {})
 
     async def accept_generic_review(self, project_id: str, view: dict) -> tuple[dict, dict]:
         """Save the plan with the generic fact-review flag cleared (as the owner would on Step 5), when that flag is the only

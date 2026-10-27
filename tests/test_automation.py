@@ -369,3 +369,41 @@ def test_the_board_state_and_kind_of_an_episode():
     assert service.state_of({**base, "status": "published", "review_status": "approved"}, None) == "published"
     assert service.kind_of("classic", "presenter") == "Conversation" and service.kind_of("classic", "chat") == "Short · chat"
     assert service.kind_of("solo_explainer", "presenter") == "Solo" and service.kind_of("solo_explainer", "quiz") == "Short · quiz"
+
+
+async def test_a_presenter_plan_is_arranged_when_approval_asks_for_layouts():
+    """Phase 80: approval refused "Resolve the missing layouts ..." and the batch stopped; Automation now arranges first."""
+    async def on_step(step, project_id):
+        pass
+
+    class Layouts(FakeClient):
+        refused = False
+
+        async def call(self, method, path, body=None):
+            tail = path.replace("/api/projects/p1", "")
+            if tail == "/explainer-plan/approve" and not self.refused:
+                self.refused = True
+                self.calls.append((method, tail, body))
+                raise StepError("Resolve the missing layouts for all selected aspects before approval")
+            if tail == "/explainer-plan" and method == "GET":
+                self.calls.append((method, tail, body))
+                return {"plan": self.plan, "current_source_fingerprint": "f", "issues": []}
+            if tail == "/explainer-plan/layout":
+                self.calls.append((method, tail, body))
+                return {"segments": [{"id": "s1", "layouts": {"9:16": {}}}], "geometry": {}}
+            if tail == "/explainer-plan" and method == "PATCH":
+                self.calls.append((method, tail, body))
+                self.plan = {**self.plan, "revision": 2, "segments": body["segments"]}
+                return {"plan": self.plan}
+            if tail == "/explainer-plan/propose":
+                job = await super().call(method, path, body)
+                self.plan["aspects"] = ["9:16"]
+                return job
+            return await super().call(method, path, body)
+
+    client = Layouts(solo=True)
+    await Producer(client, sleep=no_sleep).produce({"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer"}, on_step)
+    order = [(method, path) for method, path, _ in client.calls
+             if method != "GET" and path.endswith(("/explainer-plan/approve", "/explainer-plan/layout", "/explainer-plan"))]
+    assert [path.rsplit("/", 1)[-1] for _, path in order][-4:] == ["approve", "layout", "explainer-plan", "approve"]
+    assert client.done["youtube"]

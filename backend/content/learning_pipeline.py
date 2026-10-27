@@ -10,6 +10,8 @@ script pipeline (see task-13.4.md/task-13.5.md).
 
 from __future__ import annotations
 
+from backend.schemas.project import is_short_video
+
 import asyncio
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -48,12 +50,13 @@ _PACK_ADAPTER = TypeAdapter(LearningPackOut)
 # --- pure validators (no I/O -- unit-testable directly) ------------------------------
 
 
-def validate_counts(pack: LearningPackOut) -> list[str]:
-    """Requested-count hard checks. Ranges copied from the prompt's own text."""
+def validate_counts(pack: LearningPackOut, short: bool = False) -> list[str]:
+    """Requested-count hard checks. Ranges copied from the prompt's own text. Phase 80: a Short (<= 1 minute) often has
+    no idiom at all -- a Solo presenter Short stopped on "idioms has 0 item(s)" -- so it needs none."""
     errors: list[str] = []
     if len(pack.vocabulary) < LEARNING_MIN_VOCABULARY:
         errors.append(f"vocabulary has {len(pack.vocabulary)} item(s), need at least {LEARNING_MIN_VOCABULARY}")
-    if len(pack.idioms) < LEARNING_MIN_IDIOMS:
+    if not short and len(pack.idioms) < LEARNING_MIN_IDIOMS:
         errors.append(f"idioms has {len(pack.idioms)} item(s), need at least {LEARNING_MIN_IDIOMS}")
     if not (LEARNING_MIN_GRAMMAR_POINTS <= len(pack.grammar) <= LEARNING_MAX_GRAMMAR_POINTS):
         errors.append(
@@ -142,10 +145,10 @@ def prune_extras(pack: LearningPackOut, transcript: str) -> LearningPackOut:
     })
 
 
-def validate_pack(pack: LearningPackOut, transcript: str) -> list[str]:
+def validate_pack(pack: LearningPackOut, transcript: str, short: bool = False) -> list[str]:
     """All hard checks combined. Empty list means the pack is valid."""
     return (
-        validate_counts(pack)
+        validate_counts(pack, short)
         + validate_grounding(pack, transcript)
         + validate_duplicates(pack)
         + validate_answers(pack)
@@ -470,7 +473,7 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
         return
 
     dropped_items: list[dict] = []
-    errors = validate_pack(pack, transcript)
+    errors = validate_pack(pack, transcript, short=is_short_video(project))
     if errors:
         try:
             repaired_pack = await _repair_pack(router, transcript, pack, errors, db, job_id)
@@ -480,7 +483,7 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
         except ProviderError as exc:
             await _fail_provider(db, job_id, exc)
             return
-        repaired_errors = validate_pack(repaired_pack, transcript)
+        repaired_errors = validate_pack(repaired_pack, transcript, short=is_short_video(project))
         if repaired_errors:
             # Task 14.11 (D15): drop items that still fail grounding/answer checks
             # rather than failing the whole pack outright -- but only when dropping
@@ -492,7 +495,7 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
                 await _fail(db, job_id, "pack_validation_failed", repaired_errors)
                 return
             reduced_pack = drop_items(repaired_pack, removable)
-            final_errors = validate_pack(reduced_pack, transcript)
+            final_errors = validate_pack(reduced_pack, transcript, short=is_short_video(project))
             if final_errors:
                 dropped_summary = [
                     f"dropped {item['kind']} {item['key']!r}: {item['reason']}" for item in removable
