@@ -379,11 +379,17 @@ async def test_proposal_offers_scenes_and_activities_and_keeps_the_choice(db, so
 
 
 @pytest.mark.parametrize("scene, activity", [("builtin-park", "act-drive"), ("builtin-office", "act-unknown")])
-async def test_unknown_scene_or_activity_is_refused(db, solo, scene, activity):
+async def test_unknown_scene_or_activity_is_repaired_not_refused(db, solo, scene, activity):
+    """Owner 2026-10-27: an unoffered scene/activity no longer fails the plan; it gets an offered scene / a text card."""
     await stage_library(db, solo)
     router = Router([json.dumps(stage_wire(solo, scene, activity))] * 2)
     job = await run(db, solo, router)
-    assert job["status"] == "error" and job["error_code"] == "explainer_invalid_proposal"
+    assert job["status"] == "complete"
+    plan = (await service.get_plan(db, solo.pid))["plan"]
+    offered = {segment["scene"]["scene_id"] for segment in plan["segments"] if segment.get("scene")}
+    assert "builtin-park" not in offered
+    kinds = [segment["visual"]["kind"] for segment in plan["segments"]]
+    assert ("act-unknown" not in json.dumps(plan)) and (activity == "act-drive" or "text_card" in kinds)
 
 
 async def test_stage_pictures_join_the_source_fingerprint_and_review(db, solo):

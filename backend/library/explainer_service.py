@@ -51,8 +51,10 @@ def is_vox(project_or_source: dict) -> bool:
 
 
 def is_short(project_or_source: dict) -> bool:
-    """Phase 63 (ENH-045): a 9:16 Short (news or text on blur)."""
-    return project_or_source.get("explainer_style") in SHORT_STYLES
+    """Phase 63 (ENH-045): a 9:16 Short; Phase 80: also a Solo presenter / Vox project of at most a minute."""
+    from backend.schemas.project import is_short_video
+
+    return project_or_source.get("explainer_style") in SHORT_STYLES or is_short_video(project_or_source)
 
 
 def stage_owner(source: dict) -> str:
@@ -547,7 +549,7 @@ def _proposed_segments(text: str, previous: list[ExplainerSegment], snapshot: di
             actual = choices.get((ref.asset_id, ref.version))
             if actual is None or (ref.content_hash is not None and ref.content_hash != actual):
                 raise ValidationError("Use only the illustration versions listed in the proposal input")
-    explainer_stage.check_proposal(segments, snapshot)
+    explainer_stage.check_proposal(explainer_stage.repair_proposal(segments, snapshot), snapshot)
     if is_vox(snapshot["source"]["project"]):
         facts = vox_fact_issues({**snapshot["source"], "lines": lines}, segments)
         if facts:
