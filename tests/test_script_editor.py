@@ -46,6 +46,7 @@ async def test_a_script_that_scores_well_is_left_as_it_is(db):
     assert (result["outcome"], result["rewritten"], result["scores"]) == ("passed", False, GOOD)
     assert [line["text"] for line in await script_service.get_script(db, project["id"])] == before
     assert provider.call_count == 1 and "Small talk at work" in provider.calls[0].prompt
+    assert "NEVER ADD FACTS" in provider.calls[0].prompt  # real run: a rewrite invented a study
 
 
 async def test_a_weak_script_is_rewritten_once_and_kept_when_it_passes_the_checks(db):
@@ -69,7 +70,7 @@ async def test_a_rewrite_that_fails_a_check_keeps_the_original(db, lines):
     before = [line["text"] for line in await script_service.get_script(db, project["id"])]
     router, _ = _router({"scores": WEAK, "notes": "Open with a question."}, {"lines": lines})
     result = await script_editor.review(db, project["id"], router)
-    assert (result["outcome"], result["rewritten"]) == ("kept_original", False)
+    assert (result["outcome"], result["rewritten"]) == ("kept_original", False) and result["rejected_reason"]
     assert [line["text"] for line in await script_service.get_script(db, project["id"])] == before
 
 

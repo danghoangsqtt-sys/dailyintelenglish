@@ -651,6 +651,7 @@ window.I18N_VI = {
     "The editor's rewrite failed a check, so the original script was kept.": "Bản viết lại không qua bước kiểm tra nên kịch bản gốc được giữ.",
     "Automatic videos are reviewed by the AI editor; you can review this script too.": "Video tự động được biên tập viên AI đánh giá; bạn cũng có thể cho đánh giá kịch bản này.",
     "The editor could not review the script.": "Biên tập viên không đánh giá được kịch bản.",
+    "Why the rewrite was not kept:": "Lý do không giữ bản viết lại:",
     // Phase 83: the default folder while none is chosen
     "Default": "Mặc định",
     "Use the default folder": "Dùng thư mục mặc định",

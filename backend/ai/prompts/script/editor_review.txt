@@ -9,10 +9,18 @@ Target length: about {{ target_words }} spoken words
 Script:
 {% for line in lines %}{{ line.speaker }}: {{ line.text }}
 {% endfor %}
+NEVER ADD FACTS: do not add or ask for any fact, number, percentage, date, place, company, person, study, survey or
+quote that is not already in the script{% if source %} or in the owner's material below{% endif %}. Make points concrete
+with everyday situations and example sentences instead.
+{% if source %}The owner's material (the only source of facts):
+"""
+{{ source }}
+"""
+{% endif %}
 Score each from 1 (poor) to 5 (excellent):
 - hook: the first line makes a scrolling viewer stay (a question, a surprise, a clear promise), not a generic greeting.
 - message: the whole script carries ONE clear point or skill a viewer could repeat after watching.
-- examples: the points are shown with concrete examples, situations, numbers or sentences, not left abstract.
+- examples: the points are shown with concrete examples, everyday situations or sentences, not left abstract.
 - natural: the English sounds like real people speaking (contractions, short sentences, no textbook stiffness),
   with no repeated or filler lines.
 - level: vocabulary and grammar suit CEFR {{ cefr_level }}; harder words are explained or clear from context.

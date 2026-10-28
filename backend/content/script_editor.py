@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 _env = Environment(loader=FileSystemLoader(str(PROMPTS_DIR / "script")), undefined=StrictUndefined)
 CRITERIA = ("hook", "message", "examples", "natural", "level", "ending")
 PASS_SCORE = 4
+SOURCE_LIMIT = 6000
 # A flashcard deck and a slow podcast (with its translations) are built line by line: the editor leaves them alone
 SKIPPED_STYLES = ("flashcards", "slowpod")
 
@@ -117,13 +118,14 @@ async def review(db: aiosqlite.Connection, project_id: str, router: AIRouter | N
     target_words = script_pipeline.compute_target_words(project["cefr_level"], project["duration_minutes"])
     words_before = sum(len(line["text"].split()) for line in lines)
     context = {"topic": project["topic"], "cefr_level": project["cefr_level"], "short": is_short_video(project),
+               "source": (project.get("source_text") or "")[:SOURCE_LIMIT],
                "style": project.get("explainer_style") or "conversation", "target_words": target_words,
                "lines": [{"speaker": names.get(line["speaker_id"], "Narrator"), "text": line["text"]} for line in lines]}
     router = router or build_ai_router_from_settings()
     prompt = await asyncio.to_thread(_env.get_template("editor_review.txt").render, **context)
     verdict = await _ask(router, prompt, EditorReview, _REVIEW, "script_editor_review")
     scores = verdict.scores.model_dump()
-    rewritten, words_after, outcome = False, words_before, "passed"
+    rewritten, words_after, outcome, rejected = False, words_before, "passed", ""
     if min(scores.values()) < PASS_SCORE:
         outcome = "kept_original"
         prompt = await asyncio.to_thread(_env.get_template("editor_rewrite.txt").render, notes=verdict.notes,
@@ -140,7 +142,8 @@ async def review(db: aiosqlite.Connection, project_id: str, router: AIRouter | N
         except ValidationError as exc:
             problems = [str(exc)]
         if problems:
-            logger.info("script_editor_rewrite_rejected project_id=%s problems=%s", project_id, problems[:3])
+            rejected = "; ".join(problems[:3])[:500]
+            logger.warning("script_editor_rewrite_rejected project_id=%s problems=%s", project_id, rejected)
         else:
             for line in new_lines:
                 if not line["language_notes"]:
@@ -152,11 +155,13 @@ async def review(db: aiosqlite.Connection, project_id: str, router: AIRouter | N
             words_after = sum(len(line["text"].split()) for line in new_lines)
     async with write_transaction(db):
         await db.execute(
-            "INSERT INTO script_reviews (project_id, scores_json, notes, outcome, rewritten, words_before, words_after, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(project_id) DO UPDATE SET scores_json = excluded.scores_json, "
-            "notes = excluded.notes, outcome = excluded.outcome, rewritten = excluded.rewritten, "
-            "words_before = excluded.words_before, words_after = excluded.words_after, created_at = excluded.created_at",
-            (project_id, json.dumps(scores), verdict.notes.strip(), outcome, int(rewritten), words_before, words_after, _now()))
+            "INSERT INTO script_reviews (project_id, scores_json, notes, outcome, rewritten, words_before, words_after, "
+            "rejected_reason, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(project_id) DO UPDATE SET "
+            "scores_json = excluded.scores_json, notes = excluded.notes, outcome = excluded.outcome, "
+            "rewritten = excluded.rewritten, words_before = excluded.words_before, words_after = excluded.words_after, "
+            "rejected_reason = excluded.rejected_reason, created_at = excluded.created_at",
+            (project_id, json.dumps(scores), verdict.notes.strip(), outcome, int(rewritten), words_before, words_after,
+             rejected, _now()))
     if rewritten:
         await export_service.sync_quietly(db, project_id)
     async with read_transaction():

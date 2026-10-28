@@ -13,6 +13,14 @@ Editor's notes:
 Current script:
 {% for line in lines %}{{ line.speaker }}: {{ line.text }}
 {% endfor %}
+NEVER ADD FACTS: do not add or ask for any fact, number, percentage, date, place, company, person, study, survey or
+quote that is not already in the script{% if source %} or in the owner's material below{% endif %}. Make points concrete
+with everyday situations and example sentences instead.
+{% if source %}The owner's material (the only source of facts):
+"""
+{{ source }}
+"""
+{% endif %}
 Rules:
 - Use only these speakers, with exactly these names: {{ lines | map(attribute="speaker") | unique | join(", ") }}.
   Keep their share of the talk about the same and never put more than five lines in a row by one speaker.

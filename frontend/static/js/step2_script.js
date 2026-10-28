@@ -360,7 +360,8 @@
       ${review ? `<p class="editor-review-outcome">${escapeHtml(EDITOR_OUTCOMES[review.outcome] || "")}</p>
       <div class="editor-review-scores">${EDITOR_CRITERIA.map(([key, label]) =>
         `<span class="badge${scores[key] < 4 ? " badge-status-draft" : " badge-status-complete"}"><span>${escapeHtml(label)}</span> <span translate="no">${scores[key] ?? "–"}/5</span></span>`).join("")}</div>
-      ${review.notes ? `<p class="editor-review-notes" translate="no">${escapeHtml(review.notes)}</p>` : ""}`
+      ${review.notes ? `<p class="editor-review-notes" translate="no">${escapeHtml(review.notes)}</p>` : ""}
+      ${review.rejected_reason ? `<p class="editor-review-notes"><span>Why the rewrite was not kept:</span> <span translate="no">${escapeHtml(review.rejected_reason)}</span></p>` : ""}`
         : '<p class="editor-review-outcome">Automatic videos are reviewed by the AI editor; you can review this script too.</p>'}
       ${message ? `<p class="editor-review-status" role="status">${escapeHtml(message)}</p>` : ""}`;
   }

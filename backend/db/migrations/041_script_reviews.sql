@@ -7,5 +7,6 @@ CREATE TABLE IF NOT EXISTS script_reviews (
   rewritten INTEGER NOT NULL DEFAULT 0,
   words_before INTEGER NOT NULL DEFAULT 0,
   words_after INTEGER NOT NULL DEFAULT 0,
+  rejected_reason TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL
 );
