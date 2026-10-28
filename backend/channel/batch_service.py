@@ -39,8 +39,12 @@ TEMPLATES = {
                      "one useful phrase or situation"),
     "presenter": ("Solo presenter", "one presenter explains one useful idea, phrase or tip to camera"),
     "vox": ("Vox (voice over pictures)", "a narrator explains one interesting idea over pictures and on-screen text"),
+    # Phase 81 (owner 2026-10-28)
+    "slowpod": ("Slow English podcast", "a calm, slow monologue of eight to ten short everyday sentences about one small topic"),
+    "flashcards": ("Vocabulary flashcards", "eight to ten useful words or phrases for one everyday topic (one part of a deck)"),
 }
-TEMPLATE_KEYS = Literal["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "chat", "wyr", "conversation", "presenter", "vox"]
+TEMPLATE_KEYS = Literal["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "chat", "wyr",
+                        "conversation", "presenter", "vox"]
 TWO_CHARACTERS = (*CONVERSATION_SHORT_STYLES, "conversation")
 
 

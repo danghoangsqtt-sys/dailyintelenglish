@@ -48,7 +48,7 @@ For A2/B1 especially, prefer familiar verbs, concrete nouns and manageable sente
 Do not reach a word target by stacking adjectives/adverbs or restating abstract claims.
 If a length repair needs more words, add a useful causal step, an example, or a practical
 action. Every sentence should help the viewer understand the subject.
-{% if explainer_style | default('') in ('news', 'blur', 'mistakes', 'wordday', 'top5', 'quiz', 'listen') %}
+{% if explainer_style | default('') in ('news', 'blur', 'mistakes', 'wordday', 'top5', 'quiz', 'listen', 'slowpod', 'flashcards') %}
 {% if explainer_style == 'news' %}SHORT — ENGLISH NEWS (vertical video, under one minute), read by a news narrator:
 open with the headline as a one-sentence hook; then three to six short facts, each one or two simple
 sentences, in the narrator's own words; explain any difficult word in passing; when an article was given,
@@ -65,6 +65,19 @@ This SHORT format replaces the structure above and the OPENING and CLOSING below
 phrase that fits the topic. Open with a hook ("Today's word is ... "); say what it means in simple English and
 its part of speech; give a short pronunciation tip; two natural example sentences that use it; one memory tip;
 end with one line inviting the viewer to follow Daily Beyond English for a new word every day.
+This SHORT format replaces the structure above and the OPENING and CLOSING below.
+{% elif explainer_style == 'slowpod' %}SHORT — SLOW ENGLISH PODCAST (vertical video, under one minute, read slowly): a calm,
+friendly monologue about one small everyday topic, like a podcast host talking to one listener. Line 1 is exactly a
+greeting in this spirit: "Hi everyone, and welcome back to my slow English podcast." Then seven to nine short, simple
+sentences (at most twelve words each, A2–B1 words, present simple or past simple), ONE sentence per line, that say
+something real and concrete about the topic; the last line invites the viewer to follow Daily Beyond English for more
+slow English. For EVERY line also give language_notes.translation_vi: a natural Vietnamese translation of that line.
+This SHORT format replaces the structure above and the OPENING and CLOSING below.
+{% elif explainer_style == 'flashcards' %}SHORT — VOCABULARY FLASHCARDS (vertical video, under one minute): a deck of eight to ten
+useful English words or short phrases for one everyday topic (when the owner gave a word list, use exactly those
+items in that order, at most ten). Line 1 names the deck: "Vocabulary: <topic in a few words>." Then ONE line per
+card, the word or phrase said twice and nothing else, exactly like: "wash up. wash up." Use the dictionary form
+(verbs without "to"). The last line invites the viewer to follow Daily Beyond English for more words.
 This SHORT format replaces the structure above and the OPENING and CLOSING below.
 {% elif explainer_style == 'top5' %}SHORT — TOP 5 PHRASES (vertical video, under one minute): five useful English phrases native
 speakers use about the topic, as a countdown. Open with a one-sentence hook ("Five phrases native speakers use

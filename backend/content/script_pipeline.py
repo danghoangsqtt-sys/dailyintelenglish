@@ -373,7 +373,8 @@ def _merge_group(group: list[SectionLineOut]) -> SectionLineOut:
         speaker_id=group[0].speaker_id,
         text=" ".join(line.text for line in group),
         language_notes=LanguageNotesOut(
-            collocations=collocations, idioms=idioms, grammar_point=group[0].language_notes.grammar_point
+            collocations=collocations, idioms=idioms, grammar_point=group[0].language_notes.grammar_point,
+            translation_vi=" ".join(line.language_notes.translation_vi for line in group if line.language_notes.translation_vi),
         ),
     )
 
@@ -1020,7 +1021,8 @@ async def _run_section_pipeline(
     if structural_errors:
         await _fail(db, job_id, "section_validation_failed", structural_errors)
         return None
-    if len(known_speaker_ids) == 1 and is_short_video(project):  # Phase 80: no one-paragraph Shorts
+    # Phase 80: no one-paragraph Shorts (Phase 81: a flashcard line is one card; a slow-podcast line keeps its translation)
+    if len(known_speaker_ids) == 1 and is_short_video(project) and project.get("explainer_style") not in ("flashcards", "slowpod"):
         section_lines = split_short_paragraphs(section_lines)
 
     words = section_word_count(section_lines)

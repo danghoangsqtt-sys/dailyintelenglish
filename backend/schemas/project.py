@@ -114,11 +114,16 @@ class SpeakerUpdate(BaseModel):
 # Phase 64 (ENH-046): and the quick-learning Shorts -- Don't say / Say, Word of the day, Top 5 phrases
 # Phase 65 (ENH-047): + the interactive Shorts -- quiz and listening challenge (one narrator), chat and would you
 # rather (a two-character conversation, drawn from its script lines)
-SOLO_SHORT_STYLES = ("news", "blur", "mistakes", "wordday", "top5", "quiz", "listen")
+# Phase 81: + the slow English podcast and vocabulary flashcards (one narrator, drawn from their script lines)
+SOLO_SHORT_STYLES = ("news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards")
 CONVERSATION_SHORT_STYLES = ("chat", "wyr")
 VOICE_ONLY_STYLES = ("vox",) + SOLO_SHORT_STYLES
 SHORT_STYLES = SOLO_SHORT_STYLES + CONVERSATION_SHORT_STYLES
-ExplainerStyle = Literal["presenter", "vox", "news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "chat", "wyr"]
+ExplainerStyle = Literal["presenter", "vox", "news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards",
+                         "chat", "wyr"]
+# drawn from their script lines by the renderer: no visual plan to propose or approve
+LINE_DRAWN_STYLES = ("chat", "wyr", "slowpod", "flashcards")
+SLOWPOD_SPEED = 0.8  # Phase 81: the slow English podcast narrator's default speed
 SHORT_MAX_MINUTES = 1.0
 SHORT_FORMAT_STYLES = (None, "presenter", "vox")  # Phase 80: these become a Short at <= 1 minute (conversation, presenter, vox)
 

@@ -8,6 +8,8 @@ from typing import Any
 
 import aiosqlite
 
+from backend.schemas.project import SHORT_STYLES
+
 from backend.automation import rules
 
 SETTING_FIELDS = ("enabled", "window_start", "window_end", "days_ahead", "max_per_night", "start_with_windows", "keep_awake")
@@ -134,6 +136,7 @@ def _link(item: dict[str, Any]) -> str:
 
 KINDS = {"presenter": "Solo", "vox": "VOX", "news": "Short · English news", "blur": "Short · text on blur",
          "mistakes": "Short · Don't say / Say", "wordday": "Short · word of the day", "top5": "Short · top 5",
+         "slowpod": "Short · slow English podcast", "flashcards": "Short · vocabulary flashcards",
          "quiz": "Short · quiz", "listen": "Short · listening", "chat": "Short · chat", "wyr": "Short · would you rather"}
 
 
@@ -192,7 +195,7 @@ async def board(db: aiosqlite.Connection, today: date, days: int = 14) -> dict[s
         cards.append({
             "episode_id": episode["id"], "project_id": episode["project_id"], "title": episode["title"], "number": episode["number"],
             "series": episode["series"], "publish_date": episode["publish_date"], "kind": kind_of(episode["presentation_mode"], episode["explainer_style"]),
-            "vertical": episode["explainer_style"] in ("news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "chat", "wyr"),
+            "vertical": episode["explainer_style"] in SHORT_STYLES,
             "state": state_of(episode, item), "step": rules.STEP_LABELS.get(item["step"], "") if item else "",
             "message": item["message"] if item and item["status"] != "waiting_review" else "",
             "has_video": episode["has_video"], "duration": episode["duration"], "thumbnail_url": thumbs.get(episode["project_id"] or "", ""),

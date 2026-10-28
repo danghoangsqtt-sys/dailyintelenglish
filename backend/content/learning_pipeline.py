@@ -13,6 +13,7 @@ from __future__ import annotations
 from backend.schemas.project import is_short_video
 
 import asyncio
+import re
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -222,9 +223,23 @@ async def _render_repair_prompt(**context: object) -> str:
     return await asyncio.to_thread(_render_repair_prompt_sync, **context)
 
 
+def flashcard_words(transcript: str) -> list[str]:
+    """Phase 81: the card words of a flashcard script -- the lines that say one word or phrase twice ("wash up. wash up.")."""
+    words = []
+    for line in transcript.splitlines():
+        match = re.match(r"^\s*(.{1,60}?)[.!?]\s+\1[.!?]?\s*$", line.strip(), re.IGNORECASE)
+        if match and match.group(1).strip().lower() not in {word.lower() for word in words}:
+            words.append(match.group(1).strip())
+    return words
+
+
 def _required_vocabulary(project: dict, transcript: str) -> list[str]:
-    """Phase 57 (ENH-039): the items of the owner's vocabulary list that the script uses (they lead the pack)."""
+    """Phase 57 (ENH-039): the items of the owner's vocabulary list that the script uses (they lead the pack). Phase 81: a
+    flashcard Short needs every card word in the pack (its part of speech, IPA and meaning are shown on the card)."""
     from backend.content.script_pipeline import _source_context, missing_vocabulary
+
+    if project.get("explainer_style") == "flashcards":
+        return flashcard_words(transcript)
 
     words = _source_context(project)["source_words"]
     if not words:

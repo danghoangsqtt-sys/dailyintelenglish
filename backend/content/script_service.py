@@ -26,6 +26,8 @@ class LanguageNotesOut(BaseModel):
     collocations: list[str] = Field(default_factory=list)
     idioms: list[str] = Field(default_factory=list)
     grammar_point: str = ""
+    # Phase 81: the line's Vietnamese translation (shown under the English in a slow English podcast)
+    translation_vi: str = ""
 
 
 class ScriptLineOut(BaseModel):

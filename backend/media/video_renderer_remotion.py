@@ -419,7 +419,9 @@ async def _build_input_props(
     the Phase 19 spike runner's `_build_input_props`, extended with real avatar
     resolution (via the service layer, not a raw DB column) and real learning-content
     camelCase conversion (D19.2/19.4/19.5/19.6 field shapes, unchanged)."""
-    if project.get("presentation_mode") == "solo_explainer":
+    from backend.schemas.project import LINE_DRAWN_STYLES
+
+    if project.get("presentation_mode") == "solo_explainer" and project.get("explainer_style") not in LINE_DRAWN_STYLES:
         from backend.library.explainer_media import production_props
 
         props = await production_props(db, project["id"], "9:16" if layout == "vertical" else "16:9")
@@ -447,6 +449,11 @@ async def _build_input_props(
     ]
 
     project_id = project["id"]
+    if project.get("explainer_style") == "slowpod":  # Phase 81: each line's Vietnamese translation, shown under it
+        cursor = await db.execute("SELECT language_notes FROM script_lines WHERE project_id = ? ORDER BY line_index", (project_id,))
+        notes = [json.loads(row[0] or "{}") for row in await cursor.fetchall()]
+        for index, line in enumerate(lines):
+            line["translation"] = (notes[index] if index < len(notes) else {}).get("translation_vi", "")
     # Phase 44 (D123): the drawn-shot ("illustrated") video is gone; an old request for it gets talking characters
     visual_mode = "podcast_sprites" if visual_mode == "illustrated" else visual_mode
     still_plate = await _resolve_still_plate(db, project_id, still_scene_id) if visual_mode == "podcast_still" else None
@@ -458,7 +465,7 @@ async def _build_input_props(
     chapters = _parse_chapters_text(chapters_text)
     props: dict[str, Any] = {
         # Phase 65 (ENH-047): a chat / would-you-rather Short is drawn from its lines
-        **({"shortStyle": project["explainer_style"]} if project.get("explainer_style") in ("chat", "wyr") else {}),
+        **({"shortStyle": project["explainer_style"]} if project.get("explainer_style") in LINE_DRAWN_STYLES else {}),
         "episodeId": project["id"],
         "lines": lines,
         "speakers": speakers_props,

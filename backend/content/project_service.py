@@ -68,7 +68,7 @@ def _validate_status_transition(current_status: str, new_status: str) -> None:
         )
 
 
-def _resolve_speaker_speeds(speakers: list[SpeakerConfig], cefr_level: str) -> list[SpeakerConfig]:
+def _resolve_speaker_speeds(speakers: list[SpeakerConfig], cefr_level: str, style: str | None = None) -> list[SpeakerConfig]:
     """A speaker with no explicit `speed` (Task 14.10) gets the CEFR level's default.
 
     Called once, before a speaker list is used for both the `config_json` snapshot
@@ -76,7 +76,10 @@ def _resolve_speaker_speeds(speakers: list[SpeakerConfig], cefr_level: str) -> l
     stored `speed` (round-tripped from an existing project) is returned unchanged --
     this only ever fills in a `None`, never overwrites a real value.
     """
-    default_speed = CEFR_DEFAULT_TTS_SPEED[cefr_level]
+    from backend.schemas.project import SLOWPOD_SPEED
+
+    # Phase 81: a slow English podcast is read slowly
+    default_speed = SLOWPOD_SPEED if style == "slowpod" else CEFR_DEFAULT_TTS_SPEED[cefr_level]
     return [
         speaker if speaker.speed is not None else speaker.model_copy(update={"speed": default_speed})
         for speaker in speakers
@@ -205,7 +208,7 @@ async def create_project(
         "explainer_style": config.explainer_style,
     }
     language_features = config.language_features.model_dump()
-    resolved_speakers = _resolve_speaker_speeds(config.speakers, config.cefr_level)
+    resolved_speakers = _resolve_speaker_speeds(config.speakers, config.cefr_level, config.explainer_style)
     config_json = _build_config_snapshot(
         scalars, language_features, [speaker.model_dump() for speaker in resolved_speakers]
     )

@@ -97,7 +97,9 @@ class Producer:
         return await self.client.call("GET", f"/api/projects/{project_id}/explainer-plan")
 
     async def has_visual_plan(self, project_id: str, solo: bool, style: str | None = None) -> bool:
-        if not solo and style in ("chat", "wyr"):  # Phase 65: drawn from the script lines, no storyboard
+        from backend.schemas.project import LINE_DRAWN_STYLES
+
+        if style in LINE_DRAWN_STYLES:  # Phase 65 / 81: drawn from the script lines, no storyboard or visual plan
             return True
         if solo:
             plan = (await self.solo_plan(project_id)).get("plan")

@@ -18,6 +18,9 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
 {% if prior_summary %}
 - What happened just before this section: {{ prior_summary }}
   Continue naturally from this — do not repeat it, do not restart the topic.
+{% elif short_style | default('') in ('slowpod', 'flashcards') %}
+- This is the FIRST section of a SHORT (a vertical video under one minute): its first line is exactly the one the
+  SHORT format above gives (the podcast greeting / the deck name), then its lines in that format.
 {% elif short_style | default('') %}
 - This is the FIRST section of a SHORT (a vertical video under one minute). Open with
   a HOOK line of one short sentence that makes the viewer stay ({% if short_style == 'news' %}the
