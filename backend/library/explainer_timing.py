@@ -65,6 +65,42 @@ class ScriptIndex:
             raise ValidationError("Segment anchors are reversed")
         return [str(line["id"]) for line in self.lines[first:last + 1]]
 
+    def _start_anchor(self, boundary: int) -> TokenAnchor:
+        token = self.tokens[boundary]
+        return TokenAnchor(line_id=token.line_id, token_index=token.token_index)
+
+    def _end_anchor(self, boundary: int) -> TokenAnchor:
+        token = self.tokens[boundary - 1]  # end anchors are exclusive: just after the segment's last word
+        return TokenAnchor(line_id=token.line_id, token_index=token.token_index + 1)
+
+    def snap(self, segments: list[ExplainerSegment]) -> list[ExplainerSegment]:
+        """Phase 84 (real run 2026-10-28): the AI writes each segment's word anchors itself and one off-by-a-word anchor
+        ("overlaps the preceding script span" / "leaves a gap") failed the whole plan, stopping automatic videos. Chain
+        the segments instead: each starts where the previous ends, the first at the first word, the last ends at the last
+        word; a segment left with no words is merged away; line ids and gestures follow. Anchors naming lines that do not
+        exist are left for `validate_coverage` to explain."""
+        try:
+            ends = [self.boundary(segment.end) for segment in segments]
+        except ValidationError:
+            return segments
+        snapped: list[ExplainerSegment] = []
+        cursor, total = 0, len(self.tokens)
+        for position, (segment, end) in enumerate(zip(segments, ends)):
+            end = total if position == len(segments) - 1 else min(end, total)
+            if end <= cursor:
+                continue  # its words already belong to the previous segment
+            start_anchor, end_anchor = self._start_anchor(cursor), self._end_anchor(end)
+            gestures = [cue for cue in segment.gestures if cue.at.line_id in self.offsets
+                        and cue.at.token_index < self.counts[cue.at.line_id] and cursor <= self.boundary(cue.at) < end]
+            snapped.append(segment.model_copy(update={"start": start_anchor, "end": end_anchor, "gestures": gestures,
+                                                      "line_ids": self.line_ids(start_anchor, end_anchor)}))
+            cursor = end
+        if snapped and cursor < total:  # the last segment was dropped as empty: the one before takes the rest
+            last = snapped[-1]
+            end_anchor = self._end_anchor(total)
+            snapped[-1] = last.model_copy(update={"end": end_anchor, "line_ids": self.line_ids(last.start, end_anchor)})
+        return snapped or segments
+
     def validate_coverage(self, segments: list[ExplainerSegment]) -> list[tuple[int, int]]:
         """Require every spoken token exactly once, in script order, with no gaps/overlaps."""
         spans = []

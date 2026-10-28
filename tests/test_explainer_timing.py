@@ -102,3 +102,29 @@ def test_overlapping_provider_events_cannot_clip_the_previous_word():
     audio["word_timestamps"][1]["words"][0]["end_sec"] = 2.75
     with pytest.raises(ValidationError, match="out of order"):
         resolve_timeline(ScriptIndex(LINES), audio)
+
+
+@pytest.mark.parametrize("segments", [
+    [segment("s1", "L1", 1, "L1", 4), segment("s2", "L2", 0, "L2", 3)],                    # starts late
+    [segment("s1", "L1", 0, "L1", 3), segment("s2", "L2", 0, "L2", 3)],                    # gap before s2
+    [segment("s1", "L1", 0, "L1", 4), segment("s2", "L1", 3, "L2", 3, ["L1", "L2"])],      # overlap
+    [segment("s1", "L1", 0, "L1", 4)],                                                     # ends early
+    [segment("s1", "L1", 0, "L1", 4), segment("s2", "L1", 2, "L1", 3), segment("s3", "L2", 0, "L2", 2)],  # empty middle
+])
+def test_the_ai_anchors_are_snapped_into_one_complete_chain(segments):
+    """Phase 84 (real run 2026-10-28): an off-by-a-word anchor stopped the automatic Listen Short and Solo episode."""
+    index = ScriptIndex(LINES)
+    snapped = index.snap(segments)
+    assert index.validate_coverage(snapped) and snapped[0].id == "s1"
+    assert snapped[-1].end.line_id == "L2" and snapped[-1].end.token_index == 3
+    assert all(segment.line_ids == index.line_ids(segment.start, segment.end) for segment in snapped)
+
+
+def test_snapping_keeps_gestures_inside_and_leaves_unknown_lines_to_the_check():
+    index = ScriptIndex(LINES)
+    cue = {"at": {"line_id": "L1", "token_index": 0}, "gesture": "talk"}
+    late = {"at": {"line_id": "L2", "token_index": 2}, "gesture": "wave"}
+    snapped = index.snap([segment("s1", "L1", 1, "L1", 4, gestures=[cue]), segment("s2", "L1", 3, "L2", 3, ["L1", "L2"], [late])])
+    assert [cue.gesture for cue in snapped[0].gestures] == ["talk"] and [cue.gesture for cue in snapped[1].gestures] == ["wave"]
+    unknown = [segment("s1", "missing", 0, "missing", 1)]
+    assert index.snap(unknown) is unknown

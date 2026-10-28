@@ -541,6 +541,7 @@ def vox_fact_issues(source: dict, segments: list[ExplainerSegment]) -> list[str]
 def _proposed_segments(text: str, previous: list[ExplainerSegment], snapshot: dict, lines: list[dict]) -> list[ExplainerSegment]:
     wire = parse_and_validate(text, _proposal_adapter(snapshot["source"]))
     segments = merge_proposal(previous, [ExplainerSegment.model_validate(item.model_dump()) for item in wire.segments])
+    segments = ScriptIndex(lines).snap(segments)  # Phase 84: an off-by-a-word anchor no longer fails the whole plan
     ScriptIndex(lines).validate_coverage(segments)
     choices = {(item["asset"]["asset_id"], item["asset"]["version"]): item["asset"]["content_hash"] for item in snapshot["available_assets"]}
     for segment in segments:
