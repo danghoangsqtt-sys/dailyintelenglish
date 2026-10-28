@@ -91,7 +91,7 @@ class FakeClient:
         self.done = dict.fromkeys(("script", "learning", "audio", "video", "thumbnail", "youtube"), False)
         self.plan = None
         self.issues, self.flagged, self.fail_on = issues or [], flagged, fail_on
-        self.beats = []
+        self.beats, self.board_status = [], "draft"
 
     async def call(self, method, path, body=None):
         self.calls.append((method, path.replace("/api/projects/p1", ""), body))
@@ -109,10 +109,13 @@ class FakeClient:
             return [{"id": "l1"}, {"id": "l2"}]
         if tail == "/audio/generate":
             self.done["audio"] = True
+        if tail == "/storyboard" and method == "PUT":  # Phase 84: the Producer approves what it proposed
+            self.beats, self.board_status = body["beats"], body["status"]
+            return {"beats": self.beats, "status": self.board_status}
         if tail == "/storyboard":
-            return {"beats": self.beats}
+            return {"beats": self.beats, "status": self.board_status}
         if tail == "/storyboard/propose":
-            self.beats = [{"id": "b"}]
+            self.beats, self.board_status = [{"id": "b", "line_from": 0, "line_to": 1, "kind": "scene"}], "draft"
         if tail == "/explainer-plan":
             return {"plan": self.plan, "issues": self.issues}
         if tail == "/explainer-plan/propose":
@@ -152,7 +155,7 @@ async def test_a_conversation_is_made_in_order_up_to_the_youtube_package():
     assert project == "p1"
     assert steps == ["script", "learning", "audio", "visual_plan", "video", "thumbnail", "youtube"]
     writes = [path for method, path, _ in fake.calls if method != "GET"]
-    assert writes == ["/ai-jobs", "/script/editor-review", "/ai-jobs", "/tts/preview", "/tts/preview", "/audio/generate", "/storyboard/propose",  # Phase 84: + editor
+    assert writes == ["/ai-jobs", "/script/editor-review", "/ai-jobs", "/tts/preview", "/tts/preview", "/audio/generate", "/storyboard/propose", "/storyboard",  # Phase 84: + editor, approve
                       "/video/generate", "/thumbnails/generate", "/thumbnails/t1/favorite", "/youtube/generate"]
     # a second pass finds everything made and does nothing
     fake.calls.clear()
@@ -485,3 +488,21 @@ async def test_a_checked_vox_plan_turns_invented_chart_data_into_a_card():
     patch = next(body for method, path, body in vox.calls if method == "PATCH")
     assert patch["segments"][0]["visual"] == {"kind": "text_card", "title": "Sleep by age", "bullets": [], "emphasis": ""}
     assert vox.done["youtube"]
+
+
+async def test_the_conversation_storyboard_is_approved_not_left_as_a_draft():
+    """Real run 2026-10-28: automation only proposed the storyboard; the render uses only an approved one, so the automatic
+    16:9 conversation played on the default background with none of its scenes or picture inserts."""
+    async def on_step(step, project_id):
+        pass
+
+    fake = FakeClient()
+    await Producer(fake, sleep=no_sleep).produce({"id": "e", "project_id": "p1"}, on_step)
+    put = next(body for method, path, body in fake.calls if method == "PUT" and path == "/storyboard")
+    assert put == {"beats": [{"line_from": 0, "line_to": 1, "kind": "scene"}], "status": "approved"}
+    left = FakeClient()  # a project an earlier run left with a draft storyboard and no video
+    left.beats = [{"id": "x", "line_from": 0, "line_to": 1, "kind": "insert", "action": "cooking"}]
+    await Producer(left, sleep=no_sleep).produce({"id": "e", "project_id": "p1"}, on_step)
+    assert ("PUT", "/storyboard", {"beats": [{"line_from": 0, "line_to": 1, "kind": "insert", "action": "cooking"}],
+                                   "status": "approved"}) in left.calls
+    assert not any(path == "/storyboard/propose" for _, path, _ in left.calls)  # its own beats are kept

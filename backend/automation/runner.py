@@ -117,7 +117,8 @@ class Producer:
             plan = (await self.solo_plan(project_id)).get("plan")
             return bool(plan and plan.get("status") == "approved")
         board = await self.client.call("GET", f"/api/projects/{project_id}/storyboard")
-        return bool(board.get("beats"))
+        # Real run 2026-10-28: a proposed (draft) storyboard is not used by the render -- only an approved one counts
+        return bool(board.get("beats")) and board.get("status") == "approved"
 
     async def run_step(self, step: str, project_id: str, solo: bool, style: str | None = None, fresh: bool = False) -> None:
         call = self.client.call
@@ -139,7 +140,7 @@ class Producer:
                 await call("POST", f"{base}/tts/preview", {"line_id": line["id"], "reuse_cached": True})
             await call("POST", f"{base}/audio/generate", {"background_music": None})
         elif step == "visual_plan":
-            await (self.approve_solo(project_id, style, fresh) if solo else call("POST", f"{base}/storyboard/propose"))
+            await (self.approve_solo(project_id, style, fresh) if solo else self.approve_storyboard(project_id, fresh))
         elif step == "video":
             await call("POST", f"{base}/video/generate", {})
         elif step == "thumbnail":
@@ -148,6 +149,22 @@ class Producer:
             await call("POST", f"{base}/youtube/generate")
         else:
             raise StepError(f"Unknown step {step}")
+
+    async def approve_storyboard(self, project_id: str, fresh: bool = False) -> None:
+        """Propose the conversation's storyboard (when it has none, or afresh on a second try) and approve it as the owner
+        would on Step 5. Real run 2026-10-28: automation only proposed it, the render uses only an approved storyboard,
+        and the automatic 16:9 conversation played on the default background with none of its scenes or picture inserts."""
+        base = f"/api/projects/{project_id}/storyboard"
+        board = await self.client.call("GET", base)
+        if fresh or not board.get("beats"):
+            await self.client.call("POST", f"{base}/propose")
+            board = await self.client.call("GET", base)
+        beats = (board or {}).get("beats") or []
+        if not beats:
+            raise StepError("The AI did not propose a storyboard")
+        keys = ("line_from", "line_to", "kind", "scene_id", "new_place", "speakers", "action", "expression")
+        await self.client.call("PUT", base, {"beats": [{key: beat.get(key) for key in keys if key in beat} for beat in beats],
+                                             "status": "approved"})
 
     async def edit_script(self, project_id: str, style: str | None) -> None:
         """Phase 84 (owner 2026-10-28): the editor pass -- scores the new script and rewrites it once when it falls short.
