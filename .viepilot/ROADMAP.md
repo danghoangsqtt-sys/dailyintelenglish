@@ -2,7 +2,7 @@
 
 ## Phase 86 — VOX videos on the viral explainer formula (2026-10-28)
 
-Status: planned. Cold open on an English example and one question, evidence blocks, a visual every 5-8 s, evidence cards, collage object pictures, a recap ending; no intro slide for VOX. [Plan](phases/86-vox-formula/PLAN.md).
+Status: implemented_verified (installed app: VOX why / how / list / Short made automatically into D:\Videos\Kiểm tra VOX 2026-10-28, cold open, evidence quotes, recap ending; seven real-run problems fixed on the way; full pytest 2254 passed; Full 2.0.0 from d4ba5bc installed, backup `data/backups/desktop-20261029-030114-271`; not pushed). Cold open on an English example and one question, evidence blocks, a visual every 5-8 s, evidence cards, collage object pictures, a recap ending; no intro slide for VOX. [Plan](phases/86-vox-formula/PLAN.md).
 
 ## Phase 85 — Pictures in 16:9 videos, and the 16:9 test set (2026-10-28)
 

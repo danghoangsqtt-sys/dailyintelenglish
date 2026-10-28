@@ -1,4 +1,15 @@
 {
+  "phase86_vox_formula": {
+    "status": "implemented_verified",
+    "plan": ".viepilot/phases/86-vox-formula/PLAN.md",
+    "test_videos": "D:\\Videos\\Kiểm tra VOX 2026-10-28 (why v2, how v2, list v3, Short v2)",
+    "installed_from_commit": "d4ba5bc",
+    "installed_backup": "data/backups/desktop-20261029-030114-271",
+    "package_directory": "dist/2.0-phase86d-20261029",
+    "full_zip_sha256": "3babd4267c25f7e3bf88b60c141a91d09a1fce666ffb57b9d629f10f672deb43",
+    "full_pytest": "2254 passed",
+    "pushed": false
+  },
   "phase85_pictures_in_16x9": {
     "status": "implemented_verified",
     "plan": ".viepilot/phases/85-pictures-in-16x9/PLAN.md",

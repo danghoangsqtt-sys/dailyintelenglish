@@ -8,6 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Changed — VOX videos on the viral explainer formula (Phase 86, 2026-10-29)
+
+- A VOX video opens cold on an English example and a question (no intro slide or greeting), shows the evidence as highlighted quotes with a new picture every few seconds, and ends on the answer instead of a "Thanks for watching" card.
+- VOX pictures drawn by the local model are paper cut-out collages; collage pictures move like stop-motion paper.
+
 ### Added — Pictures in 16:9 videos (Phase 85, 2026-10-28)
 
 - Automatic presenter and VOX videos show pictures: library pictures first, then the local Qwen model draws the rest (no presenter face); drawn pictures are kept in the Activity Library.
