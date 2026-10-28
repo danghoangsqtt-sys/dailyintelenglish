@@ -86,8 +86,8 @@ def test_the_queue_lists_the_due_channel_episodes(client):  # noqa: F811
 class FakeClient:
     """The app API as the producer sees it: each step call marks its step done."""
 
-    def __init__(self, solo=False, issues=None, flagged=False, fail_on=None):
-        self.calls, self.solo = [], solo
+    def __init__(self, solo=False, issues=None, flagged=False, fail_on=None, facts="doubtful"):
+        self.calls, self.solo, self.facts = [], solo, facts
         self.done = dict.fromkeys(("script", "learning", "audio", "video", "thumbnail", "youtube"), False)
         self.plan = None
         self.issues, self.flagged, self.fail_on = issues or [], flagged, fail_on
@@ -121,6 +121,10 @@ class FakeClient:
             return {"id": "job-plan"}
         if tail == "/explainer-plan/approve":
             self.plan = {**self.plan, "status": "approved"}
+        if tail == "/explainer-plan/fact-check":  # Phase 84: the AI fact check
+            doubtful = [] if self.facts == "ok" else [{"id": "s1", "verdict": "doubtful",
+                                                       "reason": "The 40 % figure is not in the material"}]
+            return {"all_ok": not doubtful, "doubtful": doubtful, "verdicts": doubtful or [{"id": "s1", "verdict": "ok"}]}
         if tail == "/video/generate":
             self.done["video"] = True
         if tail == "/thumbnails":
@@ -164,7 +168,7 @@ async def test_a_solo_plan_is_approved_only_without_issues_or_facts_to_check():
     await Producer(fake, sleep=no_sleep).produce({"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer"}, on_step)
     assert ("POST", "/explainer-plan/approve", {"expected_revision": 1, "source_fingerprint": "f"}) in fake.calls
     flagged = FakeClient(solo=True, flagged=True)
-    with pytest.raises(StepError, match="Check the facts"):
+    with pytest.raises(StepError, match="fact check doubts: s1: The 40 % figure"):
         await Producer(flagged, sleep=no_sleep).produce({"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer"}, on_step)
     assert not any(path == "/explainer-plan/approve" for _, path, _ in flagged.calls)
     troubled = FakeClient(solo=True, issues=["A segment has no anchor"])
@@ -225,11 +229,19 @@ async def test_a_language_short_accepts_the_generic_review_flag_but_news_waits()
     assert all(not segment["needs_fact_review"] for segment in patch["segments"])
     assert ("POST", "/explainer-plan/approve", {"expected_revision": 2, "source_fingerprint": "f"}) in mistakes.calls
     assert mistakes.done["youtube"]
+    # Phase 84 (owner 2026-10-28): news waits only when the AI fact check doubts a claim
     news = Reviewing(solo=True, flagged=True)
-    with pytest.raises(StepError, match="review its knowledge claims"):
+    with pytest.raises(StepError, match="fact check doubts"):
         await Producer(news, sleep=no_sleep).produce(
             {"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer", "explainer_style": "news"}, on_step)
     assert not any(method == "PATCH" for method, *_ in news.calls)
+    assert [path for _, path, _ in news.calls].count("/explainer-plan/propose") == 1  # a doubtful fact is not retried
+    checked = Reviewing(solo=True, flagged=True, facts="ok")
+    await Producer(checked, sleep=no_sleep).produce(
+        {"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer", "explainer_style": "news"}, on_step)
+    assert ("POST", "/explainer-plan/fact-check", None) in checked.calls and checked.done["youtube"]
+    patch = next(body for method, path, body in checked.calls if method == "PATCH")
+    assert all(not segment["needs_fact_review"] for segment in patch["segments"])
     # Phase 80 (owner 2026-10-26, make the batch's videos in one go): a language Short's photo nobody imported becomes a
     # card of the narrator's own words instead of stopping the run; any other issue still stops it
     class Photo(Reviewing):
@@ -434,3 +446,42 @@ async def test_a_failed_step_is_run_once_more_before_the_episode_stops():
     with pytest.raises(StepError, match="leaves a gap"):
         await Producer(troubled, sleep=no_sleep).produce({"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer"}, on_step)
     assert [path for _, path, _ in troubled.calls].count("/explainer-plan/propose") == 2  # proposed afresh once
+
+
+async def test_a_checked_vox_plan_turns_invented_chart_data_into_a_card():
+    """Phase 84: after the AI fact check, a VOX chart whose numbers the narration never says becomes a card of the
+    narration instead of stopping the run (the AI never invents data)."""
+    async def on_step(step, project_id):
+        pass
+
+    issue = "Segment s1: the chart values for Teens are not numbers said in the narration; use only numbers from the script"
+
+    class Vox(FakeClient):
+        async def call(self, method, path, body=None):
+            tail = path.replace("/api/projects/p1", "")
+            if tail == "/explainer-plan" and method == "GET":
+                self.calls.append((method, tail, body))
+                return {"plan": self.plan, "current_source_fingerprint": "f", "issues": self.issues}
+            if tail == "/explainer-plan" and method == "PATCH":
+                self.calls.append((method, tail, body))
+                self.issues = []
+                self.plan = {**self.plan, "revision": 2, "segments": body["segments"], "aspects": body["aspects"]}
+                return {"plan": self.plan, "current_source_fingerprint": "f", "issues": []}
+            if tail == "/explainer-plan/propose":
+                job = await super().call(method, path, body)
+                self.plan["aspects"] = ["16:9"]
+                self.plan["segments"] = [{"id": "s1", "needs_fact_review": True, "line_ids": ["l1"],
+                                          "visual": {"kind": "chart", "title": "Sleep by age", "items": [{"label": "Teens", "value": 9}]}}]
+                self.issues = [issue, "Segment s1: review its knowledge claims and illustration text"]
+                return job
+            if tail == "/script" and method == "GET":
+                self.calls.append((method, tail, body))
+                return [{"id": "l1", "text": "Teenagers need more sleep than adults."}]
+            return await super().call(method, path, body)
+
+    vox = Vox(solo=True, facts="ok")
+    await Producer(vox, sleep=no_sleep).produce(
+        {"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer", "explainer_style": "vox"}, on_step)
+    patch = next(body for method, path, body in vox.calls if method == "PATCH")
+    assert patch["segments"][0]["visual"] == {"kind": "text_card", "title": "Sleep by age", "bullets": [], "emphasis": ""}
+    assert vox.done["youtube"]

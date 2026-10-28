@@ -59,6 +59,13 @@ async def approve_plan(project_id: str, body: ExplainerApproval, db: aiosqlite.C
     return ok(await explainer_service.approve_plan(db, project_id, body))
 
 
+@router.post("/fact-check")
+async def fact_check_plan(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 84: the AI's ok / doubtful verdict per segment (nothing is saved; automation approves only when all are ok)."""
+    from backend.library import fact_check
+    return ok(await fact_check.check(db, project_id))
+
+
 @router.post("/layout")
 async def arrange_plan(project_id: str, body: ExplainerApproval, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Suggest collision-checked layouts without implicitly saving or approving a plan."""

@@ -40,6 +40,8 @@ KEEP_BACKUPS = 7
 GENERIC_REVIEW = "review its knowledge claims and illustration text"
 SELF_REVIEW_STYLES = ("mistakes", "wordday", "top5", "quiz", "listen", "blur")
 MISSING_PHOTO = "import or select its illustration"  # explainer_service.source_issues
+# Phase 84: a VOX chart / map using numbers or places the narration never says (explainer_service.vox_fact_issues)
+VOX_DATA_ISSUES = ("are not numbers said in the narration", "are not named in the narration")
 THUMBNAIL_VARIANTS = THUMBNAIL_MIN_VARIANTS  # the composed template's smallest batch
 AI_ATTEMPTS = 2
 
@@ -162,6 +164,15 @@ class Producer:
         self_review = style in SELF_REVIEW_STYLES or (style == "presenter" and await self.is_short(project_id))
         if self_review and plan.get("status") != "approved":
             view, plan = await self.accept_generic_review(project_id, view)
+        elif plan.get("status") != "approved" and self.needs_facts(view):
+            # Phase 84 (owner 2026-10-28): News, VOX and long presenter videos are checked by the AI fact check; they
+            # finish by themselves when every segment is ok and stop for the owner on a doubtful claim
+            checked = await self.client.call("POST", f"/api/projects/{project_id}/explainer-plan/fact-check")
+            if not checked["all_ok"]:
+                raise OwnerStop("The AI fact check doubts: " + "; ".join(
+                    f"{item['id']}: {item['reason'] or 'unclear'}" for item in checked["doubtful"])
+                    + ". Check them on Step 5, then approve the plan")
+            view, plan = await self.accept_generic_review(project_id, view, checked=True)
         if view.get("issues"):
             raise StepError("Review the visual plan: " + "; ".join(map(str, view["issues"])))
         flagged = [segment.get("id") for segment in plan.get("segments", []) if segment.get("needs_fact_review")]
@@ -187,22 +198,39 @@ class Producer:
 
         return is_short_video(await self.client.call("GET", f"/api/projects/{project_id}") or {})
 
-    async def accept_generic_review(self, project_id: str, view: dict) -> tuple[dict, dict]:
+    @staticmethod
+    def needs_facts(view: dict) -> bool:
+        """Phase 84: the plan still waits for a fact review (the generic flag, a flagged segment or invented VOX data)."""
+        issues = [str(issue) for issue in view.get("issues") or []]
+        return (any(GENERIC_REVIEW in issue or any(marker in issue for marker in VOX_DATA_ISSUES) for issue in issues)
+                or any(s.get("needs_fact_review") for s in (view.get("plan") or {}).get("segments", [])))
+
+    async def accept_generic_review(self, project_id: str, view: dict, checked: bool = False) -> tuple[dict, dict]:
         """Save the plan with the generic fact-review flag cleared (as the owner would on Step 5), when that flag is the only
-        issue kind; any other issue is left for `approve_solo` to stop on."""
+        issue kind; any other issue is left for `approve_solo` to stop on. After the AI fact check (`checked`), a VOX
+        chart or map with numbers or places the narration never says becomes a card of the narration (Phase 84)."""
         plan = view["plan"]
         issues = [str(issue) for issue in view.get("issues") or []]
+        allowed = (GENERIC_REVIEW, MISSING_PHOTO, *(VOX_DATA_ISSUES if checked else ()))
+        invented = {issue.split(":", 1)[0].removeprefix("Segment ").strip() for issue in issues
+                    if checked and any(marker in issue for marker in VOX_DATA_ISSUES)}
         photos = [s for s in plan.get("segments", []) if (s.get("visual") or {}).get("kind") == "photo" and not s["visual"].get("asset")]
         if (not any(GENERIC_REVIEW in issue for issue in issues) and not any(s.get("needs_fact_review") for s in plan.get("segments", []))
-                and not photos):
+                and not photos and not invented):
             return view, plan
-        if any(GENERIC_REVIEW not in issue and MISSING_PHOTO not in issue for issue in issues):
+        if any(not any(marker in issue for marker in allowed) for issue in issues):
             return view, plan
-        texts = {line["id"]: line["text"] for line in await self.client.call("GET", f"/api/projects/{project_id}/script")} if photos else {}
+        texts = {line["id"]: line["text"] for line in await self.client.call("GET", f"/api/projects/{project_id}/script")} \
+            if photos or invented else {}
 
         def card(segment: dict) -> dict:
-            """Phase 80: a Short's photo nobody imported becomes a card of the narrator's own words (it stopped the run)."""
+            """Phase 80: a Short's photo nobody imported becomes a card of the narrator's own words (it stopped the run);
+            Phase 84: so does a VOX chart or map whose data the narration never gives (the AI never invents data)."""
             visual = segment.get("visual") or {}
+            if segment.get("id") in invented:
+                words = " ".join(texts.get(line_id, "") for line_id in segment.get("line_ids", [])).strip()
+                return {"kind": "text_card", "title": (visual.get("title") or words or segment.get("intent") or "Remember")[:120],
+                        "bullets": [], "emphasis": ""}
             if visual.get("kind") != "photo" or visual.get("asset"):
                 return visual
             words = visual.get("caption") or " ".join(texts.get(line_id, "") for line_id in segment.get("line_ids", [])).strip()
