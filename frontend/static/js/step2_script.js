@@ -270,6 +270,8 @@
           </button>
         </div>
         <div class="line-text" data-action="edit-text" role="button" tabindex="0"><span class="visually-hidden">Edit dialogue: </span><span translate="no">${escapeHtml(line.text)}</span></div>
+        ${state.project?.explainer_style === "slowpod" ? `<label class="line-translation">Vietnamese translation
+          <input type="text" data-action="translation" maxlength="600" translate="no" value="${escapeHtml(notes.translation_vi || "")}" /></label>` : ""}
         <details class="notes-details">
           <summary>Language notes</summary>
           <div class="notes-body">
@@ -634,6 +636,15 @@
     }
   }
 
+  /** Phase 81: a slow-podcast line's Vietnamese translation, saved with the line (language_notes.translation_vi). */
+  function handleTranslationInput(e) {
+    if (e.target.dataset.action !== "translation") return;
+    const line = state.lines.find((item) => item.id === e.target.closest("[data-line-id]").dataset.lineId);
+    if (!line) return;
+    line.language_notes = { collocations: [], idioms: [], grammar_point: "", ...(line.language_notes || {}), translation_vi: e.target.value };
+    autosave();
+  }
+
   function handleScriptListClick(e) {
     const editTarget = e.target.closest("[data-action='edit-text']");
     if (editTarget && !editTarget.classList.contains("editing")) {
@@ -699,6 +710,7 @@
     document.getElementById("regenerate-all-btn").addEventListener("click", handleRegenerateAll);
     document.getElementById("next-step-btn").addEventListener("click", handleNextStep);
     document.getElementById("script-list").addEventListener("click", handleScriptListClick);
+    document.getElementById("script-list").addEventListener("change", handleTranslationInput);
     document.getElementById("script-list").addEventListener("keydown", handleScriptListKeydown);
 
     try {

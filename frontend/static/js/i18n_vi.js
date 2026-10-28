@@ -644,6 +644,22 @@ window.I18N_VI = {
     "Choose the main save folder first.": "Hãy chọn thư mục lưu chính trước.",
     "Choose a full folder path, for example D:\\Videos": "Hãy chọn đường dẫn thư mục đầy đủ, ví dụ D:\\Videos",
 
+    // Phase 81: slow English podcast and vocabulary flashcards
+    "🎙️ Slow English podcast": "🎙️ Podcast tiếng Anh nói chậm",
+    "A slow, calm monologue: one sentence per screen with its Vietnamese translation": "Độc thoại chậm, nhẹ nhàng: mỗi màn hình một câu kèm bản dịch tiếng Việt",
+    "🗂️ Vocabulary flashcards": "🗂️ Flashcard từ vựng",
+    "A deck of 8–10 words: word, part of speech, IPA and Vietnamese meaning; each word read twice": "Bộ 8–10 từ: từ, loại từ, IPA và nghĩa tiếng Việt; mỗi từ đọc hai lần",
+    "Short: slow English podcast": "Short: podcast tiếng Anh nói chậm",
+    "Short: vocabulary flashcards": "Short: flashcard từ vựng",
+    "Short · slow podcast": "Short · podcast chậm",
+    "Short · flashcards": "Short · flashcard",
+    "Slow English podcast": "Podcast tiếng Anh nói chậm",
+    "A slow monologue, one sentence per screen with its Vietnamese.": "Độc thoại chậm, mỗi màn hình một câu kèm tiếng Việt.",
+    "Vocabulary flashcards": "Flashcard từ vựng",
+    "8–10 word cards: part of speech, IPA, Vietnamese meaning.": "8–10 thẻ từ: loại từ, IPA, nghĩa tiếng Việt.",
+    "Slow English podcast Short": "Short podcast tiếng Anh nói chậm",
+    "Vocabulary flashcards Short": "Short flashcard từ vựng",
+    "Vietnamese translation": "Bản dịch tiếng Việt",
     // Phase 80: the Shorts batch page
     "Make 5–10 vertical Shorts (at most a minute each) in one go: choose the kind of video, let the AI propose ideas from a topic or today's news, review them, then make the videos now or let": "Làm 5–10 Short dọc (mỗi video tối đa một phút) trong một lần: chọn loại video, để AI đề xuất ý tưởng từ một chủ đề hoặc tin hôm nay, duyệt lại, rồi làm video ngay hoặc để",
     "make them by their dates. Each Short is saved in its own folder under the main save folder.": "làm theo ngày đăng. Mỗi Short được lưu trong thư mục riêng dưới thư mục lưu chính.",

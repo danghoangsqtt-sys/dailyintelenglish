@@ -57,7 +57,9 @@
   const byId = (id) => document.getElementById(id);
 
   // a Short of these styles renders its main video in 9:16 (backend/schemas/project.py SHORT_STYLES)
-  const VERTICAL_MAIN_STYLES = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "chat", "wyr"];
+  const VERTICAL_MAIN_STYLES = ["news", "blur", "mistakes", "wordday", "top5", "quiz", "listen", "slowpod", "flashcards", "chat", "wyr"];
+  // drawn from their script lines (backend LINE_DRAWN_STYLES): nothing to plan on this page
+  const LINE_DRAWN = { chat: "Chat Short", wyr: "Would you rather Short", slowpod: "Slow English podcast Short", flashcards: "Vocabulary flashcards Short" };
 
   function showError(message) {
     const banner = byId("error-banner");
@@ -863,26 +865,28 @@
       if (error.status !== 404) console.error("Failed to load existing video job:", error);
     }
 
-    if (state.project.presentation_mode === "solo_explainer") {
+    if (LINE_DRAWN[state.project.explainer_style]) {
+      // Phase 65 / 81: a Short drawn from its script lines -- nothing to plan here
+      byId("project-visuals-section").hidden = true;
+      byId("storyboard-section").hidden = true;
+      byId("solo-explainer-section").hidden = false;
+      byId("solo-explainer-section").replaceChildren(
+        Object.assign(document.createElement("h2"), { textContent: LINE_DRAWN[state.project.explainer_style] }),
+        Object.assign(document.createElement("p"), { className: "section-hint",
+          textContent: "This Short is drawn from the script lines themselves (vertical 9:16). No visual plan is needed: render the video." }));
+    } else if (state.project.presentation_mode === "solo_explainer") {
       byId("project-visuals-section").hidden = true;
       byId("storyboard-section").hidden = true;
       byId("solo-explainer-section").hidden = false;
       await ExplainerEditor.mount(byId("solo-explainer-section"), state.projectId,
         { style: state.project.explainer_style || "presenter", topic: state.project.topic || "" });
-    } else if (["chat", "wyr"].includes(state.project.explainer_style)) {
-      // Phase 65 (ENH-047): a chat / would-you-rather Short is drawn from its script lines -- nothing to plan here
-      byId("project-visuals-section").hidden = true;
-      byId("storyboard-section").hidden = true;
-      byId("solo-explainer-section").hidden = false;
-      byId("solo-explainer-section").innerHTML = `<h2>${state.project.explainer_style === "chat" ? "Chat Short" : "Would you rather Short"}</h2>
-        <p class="section-hint">This Short is drawn from the script lines themselves (vertical 9:16). No visual plan is needed: render the video.</p>`;
     } else {
       await loadProjectVisuals();
     }
     renderTimeline();
     renderInspector();
     setupCaptionStyleToggle();
-    if (state.project.presentation_mode !== "solo_explainer" && !["chat", "wyr"].includes(state.project.explainer_style)) {
+    if (state.project.presentation_mode !== "solo_explainer" && !LINE_DRAWN[state.project.explainer_style]) {
       setupVisualModes();
       await loadStillScenes();
     } else {

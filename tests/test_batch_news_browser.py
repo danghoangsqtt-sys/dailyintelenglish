@@ -98,7 +98,12 @@ async def test_the_news_tab_lists_stories_and_reads_the_chosen_articles(page, ba
 async def test_kinds_save_place_make_now_and_results(page, base_url):
     """Phase 80 (owner 2026-10-26): the video types as cards, where the videos go, make now and the results panel."""
     await page.goto(base_url + "/shorts-batch")
-    await expect(page.locator("#template-grid .template-card")).to_have_count(12)
+    await expect(page.locator("#template-grid .template-card")).to_have_count(14)
+    # Phase 81: the slow English podcast and flashcards have a silent preview like the other text templates
+    for kind in ("slowpod", "flashcards"):
+        await page.locator(f"#template-grid [data-template='{kind}']").click()
+        await expect(page.locator("#batch-player [aria-label='Preview frame']")).to_be_attached()
+        await expect(page.locator("#preview-error")).to_have_text("")
     await page.locator("#template-grid [data-template='conversation']").click()
     await expect(page.locator("#cast-two-label")).to_be_visible()
     await expect(page.locator("#preview-error")).to_contain_text("No silent preview")

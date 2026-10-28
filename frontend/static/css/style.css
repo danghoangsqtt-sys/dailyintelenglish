@@ -494,3 +494,7 @@ html[data-local-image-ai="off"] .needs-local-gpu { display: none !important; }
 .main-folder-status:empty { display: none; }
 .main-folder-status.is-error { color: var(--danger); }
 .main-folder-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Phase 81: a slow-podcast line's Vietnamese translation in Step 2 */
+.line-translation { display: grid; gap: 4px; margin-top: 8px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.line-translation input { width: 100%; box-sizing: border-box; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; font-weight: 500; font-size: 14px; }

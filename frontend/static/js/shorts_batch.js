@@ -14,6 +14,8 @@
     { key: "listen", name: "Listening challenge", group: "Text templates", cast: 1, desc: "Everyday sentences at natural speed." },
     { key: "blur", name: "Text on blur", group: "Text templates", cast: 1, desc: "A short story or lesson in big words." },
     { key: "news", name: "English news", group: "Text templates", cast: 1, desc: "One news story in simple English." },
+    { key: "slowpod", name: "Slow English podcast", group: "Text templates", cast: 1, desc: "A slow monologue, one sentence per screen with its Vietnamese." },
+    { key: "flashcards", name: "Vocabulary flashcards", group: "Text templates", cast: 1, desc: "8–10 word cards: part of speech, IPA, Vietnamese meaning." },
     { key: "chat", name: "Chat", group: "Text templates", cast: 2, desc: "A text-message conversation of two characters." },
     { key: "wyr", name: "Would you rather", group: "Text templates", cast: 2, desc: "Questions answered by the second character." },
   ];
