@@ -8,6 +8,11 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Changed — Shorts that carry their message (Phase 82, 2026-10-28)
+
+- News, text on blur, Don't say / Say, Top 5, presenter and Vox Shorts use a full 57 s (was 45 s) with a clear structure: hook, context, two or three points with examples, takeaway.
+- Clips cut from a 16:9 episode stand on their own: they never open on a reply ("I agree…", "Exactly…") or close on the episode's goodbye or an unanswered question.
+
 ### Added — Slow English podcast and Vocabulary flashcard Shorts (Phase 81, 2026-10-28)
 
 - Slow English podcast: a calm monologue read slowly (speed 0.8), one sentence per screen on beige paper with its Vietnamese translation (editable in Step 2).

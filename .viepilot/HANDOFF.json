@@ -1,4 +1,20 @@
 {
+  "phase82_short_message_clarity": {
+    "status": "implemented_verified",
+    "plan": ".viepilot/phases/82-short-message-clarity/PLAN.md",
+    "real_checks": "news Short 55.0 s audio + 2 s end card; Office Startup clips 3-8, 10-13, 17-18 self-contained",
+    "full_pytest": "2204 passed + 3 length tests updated; 1 Step 1 browser flake passes alone",
+    "commits": [
+      "8b5f81d",
+      "0618f81",
+      "6b94348",
+      "d975e9a",
+      "fc5776e",
+      "3bf9b3e"
+    ],
+    "pushed": false,
+    "installed": false
+  },
   "phase81_slow_podcast_flashcards": {
     "status": "implemented_verified",
     "plan": ".viepilot/phases/81-slow-podcast-flashcards/PLAN.md",
