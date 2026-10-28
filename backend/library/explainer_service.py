@@ -166,9 +166,12 @@ def source_issues(snapshot: dict, segments: list[ExplainerSegment]) -> list[str]
 
 
 def merge_proposal(previous: list[ExplainerSegment], proposed: list[ExplainerSegment]) -> list[ExplainerSegment]:
-    """Preserve stable segment IDs and every owner-locked group, regardless of model output."""
+    """Preserve stable segment IDs and every owner-locked group, regardless of model output. Phase 86 (real run
+    2026-10-29): a plan nobody edited (no locked group) is replaced freely -- the VOX split adds segments ("idea-2-b")
+    the AI never reproduces, so every re-proposal of such a plan failed on its IDs."""
     old = {segment.id: segment for segment in previous}
-    if previous and [segment.id for segment in proposed] != [segment.id for segment in previous]:
+    owner_edited = any(any(segment.locks.model_dump().values()) for segment in previous)
+    if previous and owner_edited and [segment.id for segment in proposed] != [segment.id for segment in previous]:
         raise ValidationError("Regeneration must preserve existing segment IDs and order; unlock/edit segmentation explicitly")
     result = []
     for segment in proposed:

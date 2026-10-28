@@ -555,3 +555,39 @@ async def test_photo_slots_and_inserts_get_pictures_drawn_before_approval():
     await Producer(broken, sleep=no_sleep).produce({"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer",
                                                     "explainer_style": "presenter"}, on_step)
     assert broken.done["youtube"]
+
+
+
+async def test_a_broken_fact_check_answer_is_asked_once_more():
+    """Phase 86 (real run 2026-10-29): one broken JSON answer from the fact check stopped a VOX video."""
+    async def on_step(step, project_id):
+        pass
+
+    class Flaky(FakeClient):
+        broken = 1
+
+        async def call(self, method, path, body=None):
+            tail = path.replace("/api/projects/p1", "")
+            if tail == "/explainer-plan/fact-check":
+                self.calls.append((method, tail, body))
+                if self.broken:
+                    self.broken -= 1
+                    raise StepError("The AI's fact check was not usable (Provider response is not valid JSON)")
+            if tail == "/explainer-plan" and method == "GET":
+                self.calls.append((method, tail, body))
+                return {"plan": self.plan, "current_source_fingerprint": "f", "issues": []}
+            if tail == "/explainer-plan" and method == "PATCH":
+                self.calls.append((method, tail, body))
+                self.plan = {**self.plan, "revision": 2, "segments": body["segments"]}
+                return {"plan": {**self.plan, "aspects": ["16:9"]}, "current_source_fingerprint": "f", "issues": []}
+            if tail == "/explainer-plan/propose":
+                job = await super().call(method, path, body)
+                self.plan["aspects"] = ["16:9"]
+                return job
+            return await super().call(method, path, body)
+
+    flaky = Flaky(solo=True, flagged=True, facts="ok")
+    await Producer(flaky, sleep=no_sleep).produce({"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer",
+                                                   "explainer_style": "vox"}, on_step)
+    assert flaky.broken == 0 and flaky.done["youtube"]  # the broken answer was asked again, and the video was made
+    assert [path for _, path, _ in flaky.calls].count("/explainer-plan/propose") == 1  # no fresh plan was needed

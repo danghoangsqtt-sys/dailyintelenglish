@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from backend.core.constants import EXPLAINER_TIMING_EPSILON_SECONDS as TIMING_EPSILON_SECONDS
 from backend.core.exceptions import ValidationError
-from backend.schemas.explainer import ExplainerSegment, TokenAnchor
+from backend.schemas.explainer import ExplainerSegment, QuoteVisual, TokenAnchor
 
 
 def normalized_word(text: str) -> str:
@@ -154,10 +154,32 @@ class ScriptIndex:
         start, end = self.boundary(last.start), self.boundary(last.end)
         words = " ".join(token.text for token in self.tokens[start:end])
         if not closing.search(words) or (last.locks.content or last.locks.visual):
-            return segments
+            return self.recap_ending(segments, closing)
         merged = before.model_copy(update={"end": last.end, "line_ids": self.line_ids(before.start, last.end),
                                            "gestures": [*before.gestures, *last.gestures]})
-        return [*segments[:-2], merged]
+        return self.recap_ending([*segments[:-2], merged], closing)
+
+    def recap_ending(self, segments: list[ExplainerSegment], closing: "re.Pattern[str]") -> list[ExplainerSegment]:
+        """Phase 86 (real run 2026-10-29): when the tip and the follow line share one script line, the last segment
+        still carried a "Thanks for watching / Subscribe" card. Such a card becomes a quote of the narrator's own last
+        point (the sentences before the follow line), so the video ends on the answer."""
+        if not segments:
+            return segments
+        last = segments[-1]
+        if last.locks.visual or not closing.search(last.visual.model_dump_json()):
+            return segments
+        start, end = self.boundary(last.start), self.boundary(last.end)
+        words = " ".join(token.text for token in self.tokens[start:end])
+        sentences = [part for part in re.split(r"(?<=[.!?])\s+", words) if part and not closing.search(part)]
+        text = " ".join(sentences).strip() or (last.intent or "").strip()
+        if not text:
+            return segments
+        if len(text) > 220:
+            text = text[:220].rsplit(" ", 1)[0]
+        plain = [word.strip(".,!?;:\"'”’“‘()") for word in text.split()]
+        highlight = max(plain, key=len) if plain else ""
+        recap = last.model_copy(update={"visual": QuoteVisual(kind="quote", text=text, highlight=highlight if len(highlight) >= 4 else "")})
+        return [*segments[:-1], recap]
 
     def validate_coverage(self, segments: list[ExplainerSegment]) -> list[tuple[int, int]]:
         """Require every spoken token exactly once, in script order, with no gaps/overlaps."""

@@ -243,3 +243,23 @@ def test_both_proposal_entries_reject_invalid_revisions(client, revision):  # no
         assert response.status_code == 422, response.text
         assert response.json()["success"] is False
     assert data(client.get(f"/api/projects/{pid}/explainer-plan/history")) == []
+
+
+
+def test_a_plan_nobody_edited_can_be_proposed_again_with_new_segments():
+    """Phase 86 (real run 2026-10-29): the VOX split adds segments the AI never reproduces, so a re-proposal of an
+    unedited plan failed on its IDs; an owner-locked plan still keeps its IDs."""
+    import pytest
+
+    from backend.core.exceptions import ValidationError
+    from backend.library.explainer_service import merge_proposal
+    from backend.schemas.explainer import ExplainerSegment
+
+    def seg(name, locked=False):
+        return ExplainerSegment(id=name, intent="Explain this idea", line_ids=["L1"], start={"line_id": "L1", "token_index": 0},
+                                end={"line_id": "L1", "token_index": 2}, visual={"kind": "text_card", "title": "Idea"},
+                                locks={"visual": locked})
+
+    assert [s.id for s in merge_proposal([seg("idea-1"), seg("idea-1-b")], [seg("idea-1")])] == ["idea-1"]
+    with pytest.raises(ValidationError, match="preserve existing segment IDs"):
+        merge_proposal([seg("idea-1", locked=True), seg("idea-2")], [seg("idea-1")])

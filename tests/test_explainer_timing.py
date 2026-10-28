@@ -163,3 +163,22 @@ def test_a_vox_follow_line_joins_the_recap_segment():
     assert index.merge_closing([recap], VOX_CLOSING) == [recap]
     other = segment("idea-2", "L2", 0, "L2", 7)
     assert len(index.merge_closing([recap, other.model_copy(update={"id": "x"})], VOX_CLOSING)) == 1  # words decide, not the card
+
+
+def test_a_shared_tip_and_follow_line_ends_on_a_recap_quote_not_a_thanks_card():
+    """Phase 86 (real run 2026-10-29): the tip and the follow line in one line kept a 'Thanks for watching' card."""
+    from backend.library.explainer_service import VOX_CLOSING
+
+    lines = [{"id": "L1", "text": "Words drift over time."},
+             {"id": "L2", "text": "Check an etymology dictionary for strange words. Follow Daily Beyond English for more."}]
+    index = ScriptIndex(lines)
+    first = segment("idea-1", "L1", 0, "L1", 4)
+    last = ExplainerSegment(id="outro-1", intent="Close", line_ids=["L2"], start={"line_id": "L2", "token_index": 0},
+                            end={"line_id": "L2", "token_index": 13},
+                            visual={"kind": "text_card", "title": "Thanks for watching", "emphasis": "Subscribe"})
+    ended = index.merge_closing([first, last], VOX_CLOSING)
+    assert ended[-1].id == "idea-1" or ended[-1].visual.kind == "quote"
+    final = ended[-1]
+    if final.visual.kind == "quote":
+        assert final.visual.text == "Check an etymology dictionary for strange words." and "Follow" not in final.visual.text
+    assert "thank" not in final.visual.model_dump_json().lower()

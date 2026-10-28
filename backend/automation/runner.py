@@ -237,7 +237,10 @@ class Producer:
         elif plan.get("status") != "approved" and self.needs_facts(view):
             # Phase 84 (owner 2026-10-28): News, VOX and long presenter videos are checked by the AI fact check; they
             # finish by themselves when every segment is ok and stop for the owner on a doubtful claim
-            checked = await self.client.call("POST", f"/api/projects/{project_id}/explainer-plan/fact-check")
+            try:
+                checked = await self.client.call("POST", f"/api/projects/{project_id}/explainer-plan/fact-check")
+            except StepError:  # Phase 86 (real run): one broken JSON answer stopped a VOX video -- ask once more
+                checked = await self.client.call("POST", f"/api/projects/{project_id}/explainer-plan/fact-check")
             if not checked["all_ok"]:
                 raise OwnerStop("The AI fact check doubts: " + "; ".join(
                     f"{item['id']}: {item['reason'] or 'unclear'}" for item in checked["doubtful"])
