@@ -13,7 +13,12 @@
       "3bf9b3e"
     ],
     "pushed": false,
-    "installed": false
+    "installed": true,
+    "installed_from_commit": "b48885d",
+    "package_directory": "dist/2.0-phase82-20261028",
+    "full_zip_sha256": "402b793e58b0aefe24231fcb13e3087ff7800b2ce42a39395fead4a9e6dce5f9",
+    "installed_backup": "data/backups/desktop-20261028-100748-641",
+    "installed_pid": 14272
   },
   "phase81_slow_podcast_flashcards": {
     "status": "implemented_verified",

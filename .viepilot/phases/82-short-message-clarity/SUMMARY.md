@@ -1,6 +1,6 @@
 # Phase 82 summary — Shorts that carry their message
 
-Done 2026-10-28 on `owner-runs/20261001-r9` (not pushed, not installed).
+Done 2026-10-28 on `owner-runs/20261001-r9` (not pushed).
 
 - Knowledge and news Shorts (news, text on blur, Don't say / Say, Top 5, presenter, Vox) are written for 0.95 min
   (57 s + the 2 s end card) instead of 0.75. Quick templates stay at 45 s. Step 1 offers 30 / 45 / 57 s and picks 57 s
@@ -17,3 +17,12 @@ Done 2026-10-28 on `owner-runs/20261001-r9` (not pushed, not installed).
   a goodbye was kept when dropping it left 29.99 s; fixed in `d975e9a`.
 - Full pytest: 2204 passed after updating three tests that pinned 0.75 min; `test_progressed_project_is_read_only`
   failed once while the page was still loading and passes alone (known timing flake, not Phase 82).
+
+## Install (2026-10-28)
+
+- Built from `b48885d` into `dist/2.0-phase82-20261028`; installed with `scripts/install_desktop.ps1` (data counts the
+  same before and after; previous build kept at `data/backups/desktop-20261028-100748-641`).
+- The installed app answered on port 8000 after about 2 minutes (slow first start, as with Phase 81): Step 1 200, the
+  57 s preset served, 66 projects; the shipped prompts carry the message-first and self-contained clip rules.
+- ZIP `DailyBeyondEnglishStudio-2.0.0-Full-windows-x64.zip` (138,705,470 bytes), SHA256
+  `402b793e58b0aefe24231fcb13e3087ff7800b2ce42a39395fead4a9e6dce5f9`.
