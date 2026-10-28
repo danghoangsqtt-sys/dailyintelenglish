@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -69,10 +70,60 @@ def check_range(timestamps: list[dict], line_from: int, line_to: int) -> None:
         raise ValidationError(f"A clip lasts {MIN_SECONDS:.0f}-{MAX_SECONDS:.0f} s; this one is {seconds:.1f} s")
 
 
+# Phase 82 (owner 2026-10-28): a clip cut from a 16:9 episode must make sense to a stranger -- it may not open on a
+# reply to talk the viewer never heard, nor close on the episode's goodbye
+_DEPENDENT_START = re.compile(
+    r"^\W*(i\s+(certainly\s+|totally\s+|completely\s+|really\s+|do\s+)?(agree|disagree)|precisely|exactly|absolutely|"
+    r"definitely|indeed|that\b|this is (so|exactly|why)|yes\b|yeah\b|no,|so,|and\b|but\b|also,|well,|right,|true,|"
+    r"good point|great point|me too|same here|of course)", re.IGNORECASE)
+_SIGN_OFF = re.compile(
+    r"(hope (these|this|you|that)|thanks? (you )?(so much )?for (watching|listening|joining)|see you|until next time|"
+    r"that'?s (all|it) for (today|this|now)|don'?t forget to (subscribe|like|follow)|\bsubscribe\b)", re.IGNORECASE)
+MAX_LINES_BACK = 3
+
+
+def _text(timestamps: list[dict], index: int) -> str:
+    return str(timestamps[index].get("text") or "").strip()
+
+
+def depends_on_earlier(text: str) -> bool:
+    return bool(_DEPENDENT_START.match(text))
+
+
+def self_contained(clip: ProposedClip, timestamps: list[dict]) -> ProposedClip | None:
+    """Move the clip's edges so it stands on its own, or None when it cannot.
+
+    A first line that answers earlier talk pulls the start back (up to three lines, within 90 s); an episode sign-off
+    at the end is dropped while the clip stays 30 s or longer; a last line asking the other speaker a question takes
+    the answer too (within 90 s). A clip that still opens on a reply is dropped."""
+    first, last = clip.line_from, clip.line_to
+    if not 0 <= first <= last < len(timestamps):
+        return clip  # check_range explains the problem
+    for _ in range(MAX_LINES_BACK):
+        if first == 0 or not depends_on_earlier(_text(timestamps, first)) \
+                or clip_seconds(timestamps, first - 1, last) > MAX_SECONDS:
+            break
+        first -= 1
+    while last > first and _SIGN_OFF.search(_text(timestamps, last)) \
+            and clip_seconds(timestamps, first, last - 1) >= MIN_SECONDS:
+        last -= 1
+    if _text(timestamps, last).endswith("?") and last + 1 < len(timestamps) \
+            and timestamps[last + 1].get("label") != timestamps[last].get("label") \
+            and clip_seconds(timestamps, first, last + 1) <= MAX_SECONDS:
+        last += 1
+    if depends_on_earlier(_text(timestamps, first)):
+        return None
+    return clip.model_copy(update={"line_from": first, "line_to": last})
+
+
 def valid_clips(proposal: ClipProposal, timestamps: list[dict]) -> list[ProposedClip]:
-    """Keep the proposed clips that are in range, 30-90 s long and do not overlap an earlier one."""
+    """Keep the proposed clips that stand on their own (edges moved when needed), are in range, 30-90 s long and do
+    not overlap an earlier one."""
     kept: list[ProposedClip] = []
-    for clip in proposal.clips:
+    for proposed in proposal.clips:
+        clip = self_contained(proposed, timestamps)
+        if clip is None:
+            continue
         try:
             check_range(timestamps, clip.line_from, clip.line_to)
         except ValidationError:

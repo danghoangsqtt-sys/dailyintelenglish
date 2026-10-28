@@ -50,6 +50,39 @@ def test_the_ai_clips_are_kept_only_when_complete_and_30_to_90_seconds(client, m
     assert "[2] 16.0-23.5" in provider.calls[0].prompt and "between\n   30 and 90 seconds" in provider.calls[0].prompt
 
 
+def _talk(*texts: str) -> list[dict]:
+    """Lines of 8 s each, alternating speakers."""
+    return [{"start_sec": 8.0 * index, "end_sec": 8.0 * index + 7.5, "label": "Jack" if index % 2 == 0 else "Mia",
+             "text": text} for index, text in enumerate(texts)]
+
+
+def _edges(timestamps: list[dict], line_from: int, line_to: int):
+    clip = shorts_service.self_contained(shorts_service.ProposedClip(line_from=line_from, line_to=line_to, hook="h"),
+                                         timestamps)
+    return None if clip is None else (clip.line_from, clip.line_to)
+
+
+def test_a_clip_from_the_episode_stands_on_its_own():
+    """Phase 82 (owner 2026-10-28): real clips opened on "I certainly agree with that perspective, Jack." and closed on
+    "We truly hope these practical strategies help" -- confusing to a viewer who never saw the episode."""
+    stamps = _talk("Welcome to the show.", "How do you start a small office?", "First, you rent a shared space.",
+                   "I certainly agree with that perspective, Jack.", "Shared desks save money.", "You also meet people.",
+                   "Do you know a good one downtown?", "Yes, the one near the station.", "Right.",
+                   "We truly hope these practical strategies help you.", "Thanks for watching!")
+    assert shorts_service.depends_on_earlier("Precisely, and that is why...")
+    assert not shorts_service.depends_on_earlier("Thanks to remote work, offices changed.")
+    assert _edges(stamps, 3, 7) == (2, 7)      # opens on a reply: starts at the statement it answers
+    assert _edges(stamps, 1, 6) == (1, 7)      # ends on a question to the other speaker: takes the answer
+    assert _edges(stamps, 4, 9) == (4, 8)      # the episode's goodbye is dropped while the clip stays >= 30 s
+    assert _edges(stamps, 6, 9) == (6, 9)      # ...but not below 30 s
+    replies = _talk("Intro.", "Exactly.", "Yes, totally.", "And that's why.", "So, true.", "But also this.", "More.", "End.")
+    assert _edges(replies, 5, 7) is None       # still a reply three lines back: dropped
+    clips = shorts_service.valid_clips(shorts_service.ClipProposal(clips=[
+        shorts_service.ProposedClip(line_from=3, line_to=7, hook="Shared offices"),
+        shorts_service.ProposedClip(line_from=2, line_to=6, hook="Overlaps once moved")]), stamps)
+    assert [(clip.line_from, clip.line_to) for clip in clips] == [(2, 7)]
+
+
 def test_the_owner_edits_approves_and_cannot_render_a_proposed_clip(client):  # noqa: F811
     project = _with_audio(client)
     url = f"/api/projects/{project['id']}/shorts"

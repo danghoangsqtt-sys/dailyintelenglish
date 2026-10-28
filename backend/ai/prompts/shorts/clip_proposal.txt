@@ -15,6 +15,10 @@ Rules:
    {{ min_seconds }} and {{ max_seconds }} seconds (end of line_to minus start of line_from).
 2. A clip is a complete little moment: it starts where a new idea starts and ends on a natural close (an answer, a
    joke, a conclusion) -- never in the middle of an exchange. Prefer passages that use the words and phrases above.
+   A viewer who never saw the episode must understand it: line_from may NOT be a reply to earlier talk (lines that
+   open with "I agree", "Exactly", "Precisely", "That's right", "Yes,", "So,", "And", "But" ...) -- start at the
+   question or statement it answers instead. line_to may NOT be the episode's goodbye ("We hope these tips help",
+   "Thanks for watching", "See you next time") and may NOT be a question left unanswered.
 3. Clips do not overlap.
 4. "hook": a short, punchy English title for the top of the video (at most 7 words), curiosity-driven and truthful,
    for example "Don't say this to a new neighbor!" or "3 ways to ask for help".
