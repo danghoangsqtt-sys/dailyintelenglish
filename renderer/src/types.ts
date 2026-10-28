@@ -36,6 +36,8 @@ export const episodeLineSchema = z.object({
   speakerId: z.string(),
   text: z.string(),
   words: z.array(episodeWordSchema).optional().default([]),
+  /** Phase 81: the line's Vietnamese translation (slow English podcast). */
+  translation: z.string().optional(),
 });
 
 /**
@@ -210,7 +212,7 @@ export const episodeInputPropsSchema = z.object({
   hook: z.string().optional(),
   hookAtSec: z.number().optional(),
   /** Phase 65 (ENH-047): a two-character conversation Short drawn from its lines -- "chat" or "wyr" (would you rather). */
-  shortStyle: z.enum(["chat", "wyr"]).optional(),
+  shortStyle: z.enum(["chat", "wyr", "slowpod", "flashcards"]).optional(),
 });
 
 export type EpisodeWord = z.infer<typeof episodeWordSchema>;

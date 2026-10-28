@@ -7,7 +7,7 @@ import rules from "../../frontend/static/explainer-layout-rules.json";
 import type { EpisodeInputProps, EpisodeLine } from "./types";
 import type { SoloPayload, Visual } from "./soloTypes";
 
-export type SampleTemplate = "news" | "blur" | "mistakes" | "wordday" | "top5" | "quiz" | "listen" | "chat" | "wyr";
+export type SampleTemplate = "news" | "blur" | "mistakes" | "wordday" | "top5" | "quiz" | "listen" | "chat" | "wyr" | "slowpod" | "flashcards";
 export type SampleIdea = { title: string; brief?: string };
 export const SILENCE = "/static/media/silence.mp3";  // 1 s of silence: the preview has no voice
 const WORD_SEC = 0.34, LINE_GAP = 0.3, SEGMENT_GAP = 0.2, FPS = 30, GAP = 0.015;
@@ -23,7 +23,7 @@ export function quoted(text: string): string | null {
 const sentence = (text: string) => { const clean = text.trim().replace(/\s+/g, " "); return /[.!?]$/.test(clean) ? clean : `${clean}.`; };
 
 /** The sample segments of a voice-only template (the visuals the AI plan would use). */
-export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr">, idea: SampleIdea): Part[] {
+export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards">, idea: SampleIdea): Part[] {
   const title = idea.title.trim() || "Your Short", brief = (idea.brief || "").trim() || "The AI writes this part from your idea.";
   const card = (cardTitle: string, bullets: string[] = [], emphasis = ""): Visual => ({ kind: "text_card", title: cardTitle, bullets, emphasis }) as Visual;
   const follow = (text: string): Part => ({ visual: card("Daily Beyond English", [], text), lines: [`${text}!`] });
@@ -74,15 +74,15 @@ export function sampleParts(template: Exclude<SampleTemplate, "chat" | "wyr">, i
   }
 }
 
-function timed(texts: Array<{ text: string; speakerId: string; speaker: string }>, start: number): EpisodeLine[] {
+function timed(texts: Array<{ text: string; speakerId: string; speaker: string; translation?: string }>, start: number): EpisodeLine[] {
   let time = start;
-  return texts.map(({ text, speakerId, speaker }) => {
+  return texts.map(({ text, speakerId, speaker, translation }) => {
     const words = text.split(/\s+/).filter(Boolean).map((word) => {
       const item = { text: word.replace(/[^\p{L}\p{N}'’-]/gu, "") || word, startSec: time, endSec: time + WORD_SEC * 0.85 };
       time += WORD_SEC;
       return item;
     });
-    const line = { startSec: words[0]?.startSec ?? time, endSec: time, speaker, speakerId, text, words };
+    const line = { startSec: words[0]?.startSec ?? time, endSec: time, speaker, speakerId, text, words, ...(translation ? { translation } : {}) };
     time += LINE_GAP;
     return line;
   });
@@ -121,7 +121,23 @@ export function sampleProps(template: SampleTemplate, idea: SampleIdea, cefrLeve
     return { ...common, presentationMode: "classic", shortStyle: template, visualMode: "podcast_black", speakers, lines,
       durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
   }
-  const parts = sampleParts(template, idea);
+  if (template === "slowpod" || template === "flashcards") {  // Phase 81: drawn from their lines, like chat
+    const topic = (idea.title || "Daily routines").trim();
+    const say: [string, string][] = template === "slowpod"
+      ? [["Hi everyone, and welcome back to my slow English podcast.", "Chào mọi người, chào mừng trở lại với podcast tiếng Anh nói chậm."],
+        [sentence(topic), "Chủ đề hôm nay."], ["The AI writes eight short and easy sentences.", "AI viết tám câu ngắn, dễ hiểu."],
+        ["Follow Daily Beyond English for more slow English.", "Theo dõi Daily Beyond English để nghe thêm."]]
+      : [[`Vocabulary: ${topic}.`, ""], ["wash up. wash up.", ""], ["make the bed. make the bed.", ""], ["brush your teeth. brush your teeth.", ""],
+        ["Follow Daily Beyond English for more words.", ""]];
+    const lines = timed(say.map(([text, translation]) => ({ text, translation, speakerId: "n", speaker: "Narrator" })), 0.3);
+    const vocab = [["wash up", "phrasal verb", "/wɑːʃ ʌp/", "Rửa tay rửa mặt"], ["make the bed", "phrase", "/meɪk ðə bed/", "Dọn giường"],
+      ["brush your teeth", "phrase", "/brʌʃ jɔːr tiːθ/", "Đánh răng"]]
+      .map(([word, partOfSpeech, ipa, definitionVi]) => ({ word, partOfSpeech, ipa, definitionEn: "", definitionVi, exampleSentence: "" }));
+    return { ...common, presentationMode: "classic", shortStyle: template, visualMode: "podcast_black",
+      speakers: [{ id: "n", name: "Narrator", gender: "female" }], lines, learning: { vocab, idioms: [], audience },
+      durationSeconds: lines.at(-1)!.endSec + 0.6 } as unknown as EpisodeInputProps;
+  }
+  const parts = sampleParts(template as Exclude<SampleTemplate, "chat" | "wyr" | "slowpod" | "flashcards">, idea);
   const lines: EpisodeLine[] = [], timeline: SoloPayload["timeline"] = [], segments: unknown[] = [];
   let time = 0.3;
   parts.forEach((part, index) => {
