@@ -4,15 +4,14 @@
     "plan": ".viepilot/phases/84-automatic-quality/PLAN.md",
     "automatic_run": "15/17 finished into D:\\Videos\\Tự động 2026-10-28; long 1920x1080; 2 clips",
     "full_pytest": "2231 passed",
-    "installed_from_commit": "2f86226",
-    "installed_backup": "data/backups/desktop-20261028-161758-401",
-    "not_installed_yet": [
-      "slow podcast translations fill (after 2f86226)"
-    ],
+    "installed_from_commit": "97f2f02",
+    "installed_backup": "data/backups/desktop-20261028-164825-856",
+    "not_installed_yet": [],
     "pushed": false,
-    "package_directory": "dist/2.0-phase84b-20261028",
-    "full_zip_sha256": "c4cdfe6030a2e51b68d2be0e71db3a16eb6698fca9a99bdcc3ad7c0cbf229552",
-    "resumed": "slow podcast 47.8 s and VOX 16:9 156.6 s (1920x1080) finished by themselves: 17/17"
+    "package_directory": "dist/2.0-phase84c-20261028",
+    "full_zip_sha256": "5ccf6758dbbc90323023ba15bcec957e2d813702db39e67d22e849d3b23dd1eb",
+    "resumed": "slow podcast 47.8 s and VOX 16:9 156.6 s (1920x1080) finished by themselves: 17/17",
+    "slowpod_v2": "8 of 8 lines translated, 47.9 s, Vietnamese shown"
   },
   "phase82_short_message_clarity": {
     "status": "implemented_verified",

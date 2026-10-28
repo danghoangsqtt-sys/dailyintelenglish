@@ -42,3 +42,11 @@ Done 2026-10-28 on `owner-runs/20261001-r9` (not pushed).
   (it passed the AI fact check after the editor's rewrite). 17 of 17 kinds now finish automatically.
 - Found then: both slow podcast Shorts had no Vietnamese translations (the AI left them out); fixed after this install
   with a translation pass in the script job.
+
+## Third install (2026-10-28)
+
+- Built from `97f2f02` into `dist/2.0-phase84c-20261028` (ZIP 138,736,990 bytes, SHA256
+  `5ccf6758dbbc90323023ba15bcec957e2d813702db39e67d22e849d3b23dd1eb`); installed, backup
+  `data/backups/desktop-20261028-164825-856`; data counts unchanged.
+- A fresh automatic slow podcast Short ("Auto — Short slowpod v2") finished in 80 s with 8 of 8 lines translated;
+  the Vietnamese shows under each sentence. Everything in Phase 84 is now installed.
