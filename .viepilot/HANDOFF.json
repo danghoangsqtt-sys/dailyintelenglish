@@ -1,4 +1,12 @@
 {
+  "phase81_slow_podcast_flashcards": {
+    "status": "implemented_verified",
+    "plan": ".viepilot/phases/81-slow-podcast-flashcards/PLAN.md",
+    "real_shorts": "slowpod 43.1 s, flashcards 38.9 s (1080x1920)",
+    "full_pytest": "2201 passed + 3 fixed",
+    "pushed": false,
+    "installed": false
+  },
   "phase80_shorts_batch_rework": {
     "status": "implemented_verified",
     "plan": ".viepilot/phases/80-shorts-batch-rework/PLAN.md",

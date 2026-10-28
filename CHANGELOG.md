@@ -8,6 +8,12 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Added — Slow English podcast and Vocabulary flashcard Shorts (Phase 81, 2026-10-28)
+
+- Slow English podcast: a calm monologue read slowly (speed 0.8), one sentence per screen on beige paper with its Vietnamese translation (editable in Step 2).
+- Vocabulary flashcards: a deck of 8–10 words (AI or your list), each read twice; cards show N / total, the word, part of speech, IPA and the Vietnamese meaning.
+- Both in Step 1, the Channel plan, Automation and the Shorts batch (with a silent preview), made with "Make videos now".
+
 ### Changed — Shorts batch rework (Phase 80, 2026-10-26/27)
 
 - A Short opens on its content (no intro slide), keeps a small logo in the corner and ends on a 2 s follow card (was 16.7 s of intro/outro in a 53 s Short).
