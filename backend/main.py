@@ -136,6 +136,7 @@ async def lifespan(app: FastAPI):
     # Phase 44 (D123): only the Qwen jobs remain (no SDXL candidates/sheets, no two-person project shots)
     image_job_runner.register_handler("scene_preview", visuals_pipelines.scene_preview)
     image_job_runner.register_handler("activity_illustrations", visuals_pipelines.activity_illustrations)
+    image_job_runner.register_handler("explainer_illustrations", visuals_pipelines.explainer_illustrations)  # Phase 85
     await image_job_runner.start()
     await ai_worker.start()
     # Phase 62 (ENH-044): automatic production in the night window (idle unless the owner turns it on)

@@ -66,6 +66,18 @@ async def fact_check_plan(project_id: str, db: aiosqlite.Connection = Depends(ge
     return ok(await fact_check.check(db, project_id))
 
 
+@router.post("/illustrate")
+async def illustrate_plan(project_id: str, db: aiosqlite.Connection = Depends(get_db)) -> dict:
+    """Phase 85: the local Qwen model draws the plan's photo slots that have no picture (an image job; None when none)."""
+    from backend.ai.image.pipelines import explainer_photo_slots
+    from backend.api.visuals import _enqueue
+
+    view = await explainer_service.get_plan(db, project_id)
+    if not explainer_photo_slots(view.get("plan")):
+        return ok(None)
+    return await _enqueue(db, "explainer_illustrations", project_id)
+
+
 @router.post("/layout")
 async def arrange_plan(project_id: str, body: ExplainerApproval, db: aiosqlite.Connection = Depends(get_db)) -> dict:
     """Suggest collision-checked layouts without implicitly saving or approving a plan."""

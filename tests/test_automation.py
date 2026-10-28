@@ -506,3 +506,52 @@ async def test_the_conversation_storyboard_is_approved_not_left_as_a_draft():
     assert ("PUT", "/storyboard", {"beats": [{"line_from": 0, "line_to": 1, "kind": "insert", "action": "cooking"}],
                                    "status": "approved"}) in left.calls
     assert not any(path == "/storyboard/propose" for _, path, _ in left.calls)  # its own beats are kept
+
+
+async def test_photo_slots_and_inserts_get_pictures_drawn_before_approval():
+    """Phase 85 (owner 2026-10-28): library first, then Qwen draws; drawn pictures are used right away."""
+    async def on_step(step, project_id):
+        pass
+
+    class Drawing(FakeClient):
+        job_polls = 0
+
+        async def call(self, method, path, body=None):
+            tail = path.replace("/api/projects/p1", "")
+            if tail == "/explainer-plan/illustrate":
+                self.calls.append((method, tail, body))
+                self.plan["segments"] = [{"id": "s1", "needs_fact_review": False, "visual": {"kind": "photo", "asset": {"asset_id": "a", "version": 1}}}]
+                return {"id": "job1", "status": "pending"}
+            if path == "/api/visuals/jobs/job1":
+                self.calls.append((method, path, body))
+                self.job_polls += 1
+                return {"id": "job1", "status": "complete" if self.job_polls > 1 else "running"}
+            if tail == "/visuals/activity-coverage":
+                self.calls.append((method, tail, body))
+                drawn = any(path == "/visuals/activity-illustrations" for _, path, _ in self.calls)
+                return {"to_draw": 0 if drawn else 1, "items": [{"status": "missing", "pending": {"id": "pic1"} if drawn else None}]}
+            if tail == "/visuals/activity-illustrations":
+                self.calls.append((method, tail, body))
+                return {"id": "job1", "status": "pending"}
+            return await super().call(method, path, body)
+
+    solo = Drawing(solo=True)
+    await Producer(solo, sleep=no_sleep).produce({"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer",
+                                                  "explainer_style": "presenter"}, on_step)
+    paths = [path for _, path, _ in solo.calls]
+    assert paths.index("/explainer-plan/illustrate") < paths.index("/explainer-plan/approve") and solo.done["youtube"]
+    talk = Drawing()
+    await Producer(talk, sleep=no_sleep).produce({"id": "e", "project_id": "p1"}, on_step)
+    assert ("POST", "/api/visuals/library/activities/approve-batch", {"ids": ["pic1"]}) in talk.calls
+    assert talk.done["video"]
+
+    class Broken(FakeClient):  # no image model: the episode goes on with cards / characters
+        async def call(self, method, path, body=None):
+            if path.endswith("/explainer-plan/illustrate"):
+                raise StepError("Image environment is missing (.venv-image)")
+            return await super().call(method, path, body)
+
+    broken = Broken(solo=True)
+    await Producer(broken, sleep=no_sleep).produce({"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer",
+                                                    "explainer_style": "presenter"}, on_step)
+    assert broken.done["youtube"]

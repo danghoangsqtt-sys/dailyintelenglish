@@ -165,6 +165,41 @@ class Producer:
         keys = ("line_from", "line_to", "kind", "scene_id", "new_place", "speakers", "action", "expression")
         await self.client.call("PUT", base, {"beats": [{key: beat.get(key) for key in keys if key in beat} for beat in beats],
                                              "status": "approved"})
+        await self.picture_inserts(project_id)
+
+    async def picture_inserts(self, project_id: str) -> None:
+        """Phase 85 (owner 2026-10-28): every storyboard insert with no library picture is drawn by Qwen (D102) and
+        approved right away, so it shows a picture instead of the talking characters (the owner chose: used at once,
+        kept in the library). A picture that cannot be drawn leaves the insert to the characters, as before."""
+        coverage = await self.client.call("GET", f"/api/projects/{project_id}/visuals/activity-coverage")
+        if (coverage or {}).get("to_draw"):
+            await self.draw(project_id, "visuals/activity-illustrations")
+            coverage = await self.client.call("GET", f"/api/projects/{project_id}/visuals/activity-coverage")
+        waiting = [item["pending"]["id"] for item in (coverage or {}).get("items", [])
+                   if item.get("status") == "missing" and item.get("pending")]
+        if waiting:
+            await self.client.call("POST", "/api/visuals/library/activities/approve-batch", {"ids": waiting})
+
+    async def draw(self, project_id: str, path: str) -> bool:
+        """Phase 85: start a local Qwen image job and wait for it; True when it finished. A failure (no image model, a GPU
+        error) is logged and the episode goes on with cards / characters instead of pictures."""
+        try:
+            job = await self.client.call("POST", f"/api/projects/{project_id}/{path}")
+            if not job:
+                return False
+            waited = 0.0
+            while job.get("status") in ("pending", "running"):
+                if waited >= JOB_TIMEOUT_SECONDS:
+                    raise StepError("The pictures took too long")
+                await self.sleep(JOB_POLL_SECONDS)
+                waited += JOB_POLL_SECONDS
+                job = await self.client.call("GET", f"/api/visuals/jobs/{job['id']}")
+            if job.get("status") != "complete":
+                raise StepError(job.get("error") or f"The picture job ended: {job.get('status')}")
+            return True
+        except StepError as exc:
+            logger.warning("automation_pictures_skipped project_id=%s path=%s reason=%s", project_id, path, exc)
+            return False
 
     async def edit_script(self, project_id: str, style: str | None) -> None:
         """Phase 84 (owner 2026-10-28): the editor pass -- scores the new script and rewrites it once when it falls short.
@@ -191,6 +226,9 @@ class Producer:
             plan = view.get("plan")
         if not plan:
             raise StepError("The AI did not propose a visual plan")
+        if plan.get("status") != "approved" and await self.draw(project_id, "explainer-plan/illustrate"):
+            view = await self.solo_plan(project_id)  # Phase 85: the photo slots now carry Qwen's pictures
+            plan = view.get("plan") or plan
         # Phase 80: a Solo presenter Short (<= 1 min, a batch Short teaching one phrase or tip) is reviewed like the
         # language templates; a long presenter episode and Vox (knowledge facts) still wait for the owner
         self_review = style in SELF_REVIEW_STYLES or (style == "presenter" and await self.is_short(project_id))

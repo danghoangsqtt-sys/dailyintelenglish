@@ -31,6 +31,15 @@ def qwen_activity_prompt(action: str, place: str = "") -> str:
             "realistic faces and hands, casual clothes. No text, no letters, no logo, no watermark.")
 
 
+def qwen_illustration_prompt(description: str) -> str:
+    """Phase 85 (owner 2026-10-28): the picture a Solo / VOX segment asked for -- an everyday photo of ordinary people or
+    objects (D123: never the presenter or any cast face)."""
+    what = " ".join(str(description or "").split()).rstrip(".") or "an everyday scene that fits the lesson"
+    return (f"{QWEN_PHOTO} {what}. Ordinary everyday people of different ages and looks, or simply the objects and the "
+            "place, natural and believable, landscape composition with the subject clearly visible. No text, no letters, "
+            "no logo, no watermark, no famous person.")
+
+
 SCENE_COMPOSITION = (
     "Landscape 16:9 background plate, eye-level wide view with believable perspective and open foreground space "
     "for characters added later. The place is completely empty: no people, faces, human figures or silhouettes. "
