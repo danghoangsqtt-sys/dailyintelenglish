@@ -74,6 +74,14 @@ async def test_the_job_draws_imports_sets_and_keeps_each_picture(monkeypatch, tm
             return False
 
     monkeypatch.setattr(pipelines, "write_transaction", lambda db: NoLock())
+    monkeypatch.setattr(pipelines, "read_transaction", lambda: NoLock())
+
+    async def get_project(db, project_id):
+        return {"explainer_style": "presenter"}
+
+    from backend.content import project_service
+
+    monkeypatch.setattr(project_service, "get_project", get_project)
     result = await pipelines.explainer_illustrations({"id": "j", "target_id": "p1"}, Runner())
     assert result == {"drawn": ["idea-1"]}
     body = saved["body"]
@@ -81,3 +89,10 @@ async def test_the_job_draws_imports_sets_and_keeps_each_picture(monkeypatch, tm
     assert body.segments[1].visual.kind == "text_card"
     assert kept == [{"activity": "two colleagues chatting", "context_tags": ["qwen"]}] and approved == [("lib-1", "approved")]
     assert not any((tmp_path / "visuals" / "p1" / "explainer_drafts").iterdir())  # drafts removed
+
+
+def test_a_vox_picture_is_drawn_as_a_paper_collage_of_objects():
+    """Phase 86: the Vox look -- cut-out objects on kraft paper, no faces, not a photograph."""
+    prompt = recipes.qwen_collage_prompt("an old dictionary and a quill")
+    assert "paper cut-out collage" in prompt and "an old dictionary and a quill." in prompt and "No faces" in prompt
+    assert "Photorealistic" not in prompt

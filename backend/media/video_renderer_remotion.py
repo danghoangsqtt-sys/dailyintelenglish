@@ -698,7 +698,8 @@ async def render_via_remotion(
     input_props["audioPath"] = f"remotion-render/audio/{staging_key}.mp3"
     from backend.schemas.project import is_short_video
 
-    voices = await _add_brand(project_id, input_props, short=is_short_video(project))
+    voices = await _add_brand(project_id, input_props, short=is_short_video(project),
+                              cold_open=project.get("explainer_style") == "vox")
     soundtrack = await _build_soundtrack(staging_key, audio_job, input_props, voices)
     if soundtrack is not None:
         input_props["soundtrackPath"] = soundtrack
@@ -750,7 +751,8 @@ def outro_start_seconds(input_props: dict[str, Any]) -> float:
 SHORT_END_CARD_S = 2.0  # Phase 80 (owner 2026-10-26): a Short opens on its content and ends on a ~2 s follow card
 
 
-async def _add_brand(project_id: str, input_props: dict[str, Any], short: bool = False) -> list[tuple[str, float]]:
+async def _add_brand(project_id: str, input_props: dict[str, Any], short: bool = False,
+                     cold_open: bool = False) -> list[tuple[str, float]]:
     """Phase 25 (D52/D53): Jenny's greeting + wish and farewell, and slide lengths that follow
     them. If Edge TTS is unreachable the branded slides still render, silent, at the minimum
     length -- a missing voice must never cost the whole video. Returns the voices on the video
@@ -765,7 +767,7 @@ async def _add_brand(project_id: str, input_props: dict[str, Any], short: bool =
     except TTSError as exc:
         logger.warning("brand_voice_unavailable project_id=%s reason=%s", project_id, exc)
         timing = brand_service.brand_timing(None, None)
-        input_props.update(introSec=timing["intro_s"], outroSec=timing["outro_s"], brand=brand)
+        input_props.update(introSec=0.0 if cold_open else timing["intro_s"], outroSec=timing["outro_s"], brand=brand)
         return []
     brand.update(
         greetingPath=await asyncio.to_thread(_copy_brand_voice, audio["greeting"]["path"]),
@@ -773,6 +775,12 @@ async def _add_brand(project_id: str, input_props: dict[str, Any], short: bool =
         greetingStartSec=audio["greeting_start_s"], farewellStartSec=audio["farewell_start_s"],
         voicesInSoundtrack=False,
     )
+    if cold_open:
+        # Phase 86 (owner 2026-10-28, the viral explainer formula): a VOX episode opens on its first line -- an English
+        # example and a question -- with no intro slide or greeting; the branded ending stays
+        brand.pop("greetingPath"), brand.pop("greetingStartSec")
+        input_props.update(introSec=0.0, outroSec=audio["outro_s"], brand=brand)
+        return [(audio["farewell"]["path"], outro_start_seconds(input_props) + audio["farewell_start_s"])]
     input_props.update(introSec=audio["intro_s"], outroSec=audio["outro_s"], brand=brand)
     return [(audio["greeting"]["path"], audio["greeting_start_s"]),
             (audio["farewell"]["path"], outro_start_seconds(input_props) + audio["farewell_start_s"])]

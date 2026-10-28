@@ -40,6 +40,14 @@ def qwen_illustration_prompt(description: str) -> str:
             "no logo, no watermark, no famous person.")
 
 
+def qwen_collage_prompt(description: str) -> str:
+    """Phase 86 (VOX): the picture as an editorial paper cut-out collage of objects -- the Vox look, not a photograph."""
+    what = " ".join(str(description or "").split()).rstrip(".") or "objects that show the lesson's idea"
+    return ("Editorial paper cut-out collage illustration on warm kraft paper, like a magazine explainer: " f"{what}. "
+            "Cut-out objects with torn paper edges and soft shadows, muted warm colours with one green accent, simple and "
+            "uncluttered, landscape composition. No faces, no people in close-up, no text, no letters, no logo, no watermark.")
+
+
 SCENE_COMPOSITION = (
     "Landscape 16:9 background plate, eye-level wide view with believable perspective and open foreground space "
     "for characters added later. The place is completely empty: no people, faces, human figures or silhouettes. "

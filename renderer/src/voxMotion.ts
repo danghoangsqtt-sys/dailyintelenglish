@@ -174,3 +174,16 @@ export function stampAt(time: number, span: Span, words: Array<Word & { text: st
   const t = clamp01(age / 0.28);
   return { scale: 2.4 - 1.4 * easeOutBack(t), opacity: easeOut(t * 2) };
 }
+
+/** Phase 86 (the Vox look): collage pieces move in stepped stop-motion -- a slight paper jitter that changes 12 times a
+ * second, not every frame. Deterministic per step and seed (the same frame always renders the same). */
+export const STOP_MOTION_FPS = 12;
+
+export function paperJitter(frame: number, fps: number, seed: number): { x: number; y: number; rotate: number } {
+  const step = Math.floor((frame * STOP_MOTION_FPS) / fps);
+  const noise = (k: number) => {
+    const v = Math.sin((step + 1) * 12.9898 + seed * 78.233 + k * 37.719) * 43758.5453;
+    return (v - Math.floor(v)) * 2 - 1;
+  };
+  return { x: noise(1) * 1.4, y: noise(2) * 1.4, rotate: noise(3) * 0.35 };
+}

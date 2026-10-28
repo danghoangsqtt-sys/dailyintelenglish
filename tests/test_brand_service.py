@@ -160,3 +160,13 @@ async def test_remotion_renders_silent_brand_slides_when_edge_is_down(monkeypatc
     assert await video_renderer_remotion._add_brand("proj", props) == []
     assert props["introSec"] == brand_service.MIN_SLIDE_S and "greetingPath" not in props["brand"]
     assert props["brand"]["wish"] in brand_service.WISHES
+
+
+async def test_a_vox_episode_opens_cold_and_keeps_its_branded_ending(tmp_path, monkeypatch, fake_edge):
+    """Phase 86 (the viral explainer formula): no intro slide or greeting before a VOX episode's first line."""
+    monkeypatch.setattr(video_renderer_remotion, "REMOTION_BRAND_DIR", tmp_path / "brand")
+    props = {"lines": [{"endSec": 100.0}], "fps": 30, "introSec": 2.5, "outroSec": 5.0}
+    voices = await video_renderer_remotion._add_brand("proj-vox", props, cold_open=True)
+    assert props["introSec"] == 0.0 and props["outroSec"] >= brand_service.MIN_SLIDE_S
+    assert "greetingPath" not in props["brand"] and props["brand"]["farewellPath"]
+    assert len(voices) == 1 and voices[0][1] == pytest.approx(100.0 + 0.5, abs=1e-6)  # only the farewell, after the audio

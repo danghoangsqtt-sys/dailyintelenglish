@@ -53,10 +53,15 @@ async def explainer_illustrations(job: dict, runner: ImageJobRunner) -> dict:
     from backend.library import explainer_service
     from backend.schemas.explainer import ExplainerPlanPatch
 
+    from backend.content import project_service
+
     db = runner.get_db()
     project_id = job["target_id"]
     view = await explainer_service.get_plan(db, project_id)
     todo = explainer_photo_slots(view.get("plan"))
+    async with read_transaction():
+        style = (await project_service.get_project(db, project_id)).get("explainer_style")
+    prompt_of = recipes.qwen_collage_prompt if style == "vox" else recipes.qwen_illustration_prompt  # Phase 86
     if not todo:
         return {"drawn": []}
     folder = settings.DATA_DIR / "visuals" / project_id / "explainer_drafts"
@@ -64,8 +69,7 @@ async def explainer_illustrations(job: dict, runner: ImageJobRunner) -> dict:
     paths = {segment["id"]: folder / f"{segment['id']}.png" for segment in todo}
     await runner.boundary(job["id"], f"illustrations 0/{len(todo)}", 0)
     await _qwen_pictures(get_image_engine(), [
-        {"prompt": recipes.qwen_illustration_prompt(segment["visual"].get("prompt") or segment["visual"].get("caption")
-                                                    or segment.get("intent") or ""),
+        {"prompt": prompt_of(segment["visual"].get("prompt") or segment["visual"].get("caption") or segment.get("intent") or ""),
          "seed": random.randint(1, 2**31 - 1), "width": SIZE[0], "height": SIZE[1], "output_path": str(paths[segment["id"]])}
         for segment in todo
     ], "explainer_illustrations")

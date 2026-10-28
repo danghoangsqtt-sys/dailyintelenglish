@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   TRANSITIONS, WORLD_VIEW, arrowPaths, boardCamera, countUp, easeInOut, easeOutBack, easeOutBounce, mapViewAt, shapeAt, shapeFor,
-  smoothProgress, stampAt, transitionAt, transitionFor, transitionStyles, wobblyPath, wordAppear,
+  paperJitter, smoothProgress, stampAt, transitionAt, transitionFor, transitionStyles, wobblyPath, wordAppear,
 } from "./voxMotion";
 
 const timeline = [0, 6, 12, 18, 24, 30, 36, 42].map((start) => ({ start_sec: start, end_sec: start + 6 }));
@@ -93,5 +93,18 @@ describe("Phase 61 VOX morph, camera and effects", () => {
     expect(stampAt(44.5, span, [{ text: "Subscribe", startSec: 44, endSec: 44.5 }])).toEqual({ scale: expect.closeTo(1, 5), opacity: 1 });
     expect(stampAt(45.9, span, [])).toBeNull();
     expect(stampAt(46.05, span, [])!.scale).toBeGreaterThan(1.2);
+  });
+});
+
+describe("paperJitter (Phase 86)", () => {
+  it("holds still within a 1/12 s step and moves a little between steps", () => {
+    const a = paperJitter(0, 30, 1), b = paperJitter(1, 30, 1), c = paperJitter(3, 30, 1);
+    expect(b).toEqual(a);                      // frames 0 and 1 are the same step at 30 fps
+    expect(c).not.toEqual(a);                  // frame 3 is the next step
+    for (const frame of [0, 7, 40, 300]) {
+      const j = paperJitter(frame, 30, 2);
+      expect(Math.abs(j.x)).toBeLessThanOrEqual(1.4);
+      expect(Math.abs(j.rotate)).toBeLessThanOrEqual(0.35);
+    }
   });
 });

@@ -6,7 +6,7 @@
  * that flies in from the whole world; the title is drawn by the scene (`VoxTitle`) so it can morph between segments.
  */
 import React from "react";
-import { Img } from "remotion";
+import { Img, useCurrentFrame, useVideoConfig } from "remotion";
 import { resolvedMedia } from "./Presenter";
 import type { Rect } from "./explainerLayout";
 import type { SoloSegment, Visual } from "./soloTypes";
@@ -14,7 +14,7 @@ import {
   REVEAL_SHARE, chartHeights, clamp01, collageTilt, easeOut, formatValue, highlightRange, highlightSweep, kenBurns,
   staggered, timelinePositions,
 } from "./voxMath";
-import { arrowPaths, countUp, easeOutBack, easeOutBounce, mapViewAt, wobblyPath, wordAppear } from "./voxMotion";
+import { arrowPaths, countUp, easeOutBack, easeOutBounce, mapViewAt, paperJitter, wobblyPath, wordAppear } from "./voxMotion";
 import { countries, countryName, countryPath, project, viewFor } from "./voxMap";
 
 export const INK = "#1E2A26", PAPER = "#F6EFDF", ACCENT = "#E8483B", HIGHLIGHT = "#FFD84D", GREEN = "#1F7A4D";
@@ -55,6 +55,7 @@ function Collage({ url, caption, progress, index, box, region }: {
   url?: string; caption?: string; progress: number; index: number; box: Box; region?: Rect;
 }) {
   const motion = kenBurns(progress, index), tilt = collageTilt(index);
+  const { fps } = useVideoConfig(), jitter = paperJitter(useCurrentFrame(), fps, index);  // Phase 86: stop-motion paper
   const width = Math.min(box.width * 0.72, box.height * 1.55), height = width / (16 / 9);
   const left = box.left + (box.width - width) / 2, top = box.top + (box.height - height - (caption ? box.height * 0.12 : 0)) / 2;
   const marker = region ?? { x: 0.58, y: 0.3, width: 0.26, height: 0.4 };
@@ -68,7 +69,8 @@ function Collage({ url, caption, progress, index, box, region }: {
   const stroke = Math.max(3, width * 0.006);
   return <>
     <div data-vox-visual="collage" style={{ position: "absolute", left, top, width, height, padding: width * 0.018, background: "#FFFFFF",
-      boxShadow: "0 18px 38px rgba(30,42,38,0.32)", transform: `rotate(${tilt}deg) scale(${(0.8 + 0.2 * enter).toFixed(4)})`,
+      boxShadow: "0 18px 38px rgba(30,42,38,0.32)",
+      transform: `translate(${jitter.x.toFixed(2)}px, ${jitter.y.toFixed(2)}px) rotate(${(tilt + jitter.rotate).toFixed(3)}deg) scale(${(0.8 + 0.2 * enter).toFixed(4)})`,
       opacity: clamp01(progress / 0.05), boxSizing: "border-box" }}>
       <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative", background: "#D9CDB3" }}>
         {url ? <Img src={resolvedMedia(url)} style={{ width: "100%", height: "100%", objectFit: "cover",
