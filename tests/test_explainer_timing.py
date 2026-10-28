@@ -128,3 +128,20 @@ def test_snapping_keeps_gestures_inside_and_leaves_unknown_lines_to_the_check():
     assert [cue.gesture for cue in snapped[0].gestures] == ["talk"] and [cue.gesture for cue in snapped[1].gestures] == ["wave"]
     unknown = [segment("s1", "missing", 0, "missing", 1)]
     assert index.snap(unknown) is unknown
+
+
+def test_a_long_vox_segment_is_split_into_a_quote_at_a_sentence_end():
+    """Phase 86 (VOX pace): a picture changes at least every ~8 s."""
+    lines = [{"id": "L1", "text": "Knight has a silent letter. Nobody says the K today. It was spoken a thousand years ago."},
+             {"id": "L2", "text": "Then the sound slowly disappeared from English."}]
+    index = ScriptIndex(lines)
+    long = ExplainerSegment(id="idea-1", intent="Explain the silent K", line_ids=["L1", "L2"],
+                            start={"line_id": "L1", "token_index": 0}, end={"line_id": "L2", "token_index": 7},
+                            visual={"kind": "text_card", "title": "Silent K", "bullets": ["knight"]})
+    parts = index.split_long([long], max_tokens=10)
+    assert [part.id for part in parts][:2] == ["idea-1", "idea-1-b"] and len(parts) >= 2
+    index.validate_coverage(parts)  # still one complete chain
+    assert parts[0].visual.kind == "text_card" and parts[1].visual.kind == "quote"
+    assert parts[1].visual.highlight and parts[1].visual.highlight.lower() in parts[1].visual.text.lower()
+    assert all(index.boundary(p.end) - index.boundary(p.start) <= 10 or p is parts[-1] for p in parts)
+    assert index.split_long([long], max_tokens=40) == [long]  # short enough: unchanged

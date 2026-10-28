@@ -33,6 +33,17 @@ VISUALS — choose for every segment the one that shows what is said best, and v
   that nothing listed shows, use asset:null with "prompt" = an image prompt the owner can paste into an outside image
   AI: an editorial paper-collage illustration of the idea, muted warm colours, no text, no logos, no real people's
   faces. Use this for at most a third of the segments.
+PACE AND EVIDENCE (the viral explainer formula):
+- One segment per one or two sentences: about 5-8 seconds each, never more than about 20 spoken words. A new picture
+  or card every few seconds keeps the viewer watching.
+- Evidence first: when the narration says an English example (a word, a phrase, a sentence), that segment shows it as
+  a quote with the example highlighted. The first segment (the cold open) is a quote of the opening example.
+- A text_card always carries an example word or sentence in its bullets or emphasis -- never a title alone.
+- The opening example comes back: the segment that answers the question repeats the opening example in its quote.
+- The last segment recaps the answer in a few words (text_card with the answer as emphasis); never a "Thanks for
+  watching" or "Subscribe" card -- the video adds its own ending.
+- Photo prompts describe paper cut-out OBJECTS that show the idea (a dictionary, a quill, an old map, a letter K),
+  never crowds of faces.
 For EVERY segment also choose scene.scene_id from AVAILABLE SCENES: a place that fits the idea; it is shown faded
 behind the graphics. Keep neighbouring segments in the same scene unless the idea moves.
 {% if style | default('') == 'news' %}

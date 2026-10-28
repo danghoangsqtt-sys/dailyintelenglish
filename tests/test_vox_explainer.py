@@ -175,3 +175,11 @@ def test_a_vox_script_follows_the_viral_explainer_formula():
     assert "first line is the COLD OPEN" in render(1, False, True) and "greet the viewers warmly" not in render(1, False, True)
     assert "greet the viewers warmly" in render(1, False, False)
     assert "CALLBACK to the opening example" in render(3, True, True) and "thank them" not in render(3, True, True)
+
+
+def test_the_vox_plan_asks_for_evidence_pace_and_a_recap():
+    from backend.core.paths import PROMPTS_DIR
+
+    text = (PROMPTS_DIR / "storyboard" / "explainer_vox.txt").read_text(encoding="utf-8")
+    assert "PACE AND EVIDENCE" in text and "never more than about 20 spoken words" in text
+    assert "never a title alone" in text and 'never a "Thanks for' in text and "paper cut-out OBJECTS" in text

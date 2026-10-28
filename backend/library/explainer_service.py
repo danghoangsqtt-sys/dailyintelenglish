@@ -44,6 +44,9 @@ _PROPOSAL = TypeAdapter(ExplainerProposal)
 _VOX_PROPOSAL = TypeAdapter(VoxExplainerProposal)
 
 
+VOX_MAX_SEGMENT_WORDS = 24  # Phase 86: about 8 s of narration at a learner's pace
+
+
 def is_vox(project_or_source: dict) -> bool:
     """A voice-only Solo project (VOX, and the Phase 63 news / blur Shorts): the narrator is never on screen, so no
     presenter picture pack is needed."""
@@ -542,6 +545,8 @@ def _proposed_segments(text: str, previous: list[ExplainerSegment], snapshot: di
     wire = parse_and_validate(text, _proposal_adapter(snapshot["source"]))
     segments = merge_proposal(previous, [ExplainerSegment.model_validate(item.model_dump()) for item in wire.segments])
     segments = ScriptIndex(lines).snap(segments)  # Phase 84: an off-by-a-word anchor no longer fails the whole plan
+    if is_vox(snapshot["source"]["project"]):  # Phase 86: a VOX picture changes at least every ~8 s
+        segments = ScriptIndex(lines).split_long(segments, VOX_MAX_SEGMENT_WORDS)
     ScriptIndex(lines).validate_coverage(segments)
     choices = {(item["asset"]["asset_id"], item["asset"]["version"]): item["asset"]["content_hash"] for item in snapshot["available_assets"]}
     for segment in segments:

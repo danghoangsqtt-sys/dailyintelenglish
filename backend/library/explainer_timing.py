@@ -101,6 +101,49 @@ class ScriptIndex:
             snapped[-1] = last.model_copy(update={"end": end_anchor, "line_ids": self.line_ids(last.start, end_anchor)})
         return snapped or segments
 
+    def split_long(self, segments: list[ExplainerSegment], max_tokens: int, min_part: int = 6) -> list[ExplainerSegment]:
+        """Phase 86 (VOX pace): a segment of more than `max_tokens` spoken words is cut at the sentence end nearest its
+        middle; the later part becomes a quote of its own words with one highlighted word, so the picture changes at
+        least every ~8 s. Segments already chained by `snap`; a locked owner segment or one without a sentence end to
+        cut at is kept whole."""
+        result: list[ExplainerSegment] = []
+        queue = list(segments)
+        taken = {segment.id for segment in segments}
+        while queue:
+            segment = queue.pop(0)
+            start, end = self.boundary(segment.start), self.boundary(segment.end)
+            cuts = [b for b in range(start + min_part, end - min_part + 1)
+                    if self.tokens[b - 1].text.rstrip("\"'”’)").endswith((".", "!", "?"))]
+            locked = segment.locks.content or segment.locks.visual
+            if end - start <= max_tokens or not cuts or locked:
+                result.append(segment)
+                continue
+            cut = min(cuts, key=lambda b: abs(b - (start + end) / 2))
+            words = [token.text for token in self.tokens[cut:end]]
+            text = " ".join(words)
+            if len(text) > 220:
+                text = text[:220].rsplit(" ", 1)[0]
+            plain = [word.strip(".,!?;:\"'”’“‘()") for word in text.split()]
+            highlight = max(plain, key=len) if plain else ""
+            number, new_id = 2, f"{segment.id}-b"
+            while new_id in taken:
+                number += 1
+                new_id = f"{segment.id}-b{number}"
+            taken.add(new_id)
+            first_end, second_start = self._end_anchor(cut), self._start_anchor(cut)
+            first = segment.model_copy(update={
+                "end": first_end, "line_ids": self.line_ids(segment.start, first_end),
+                "gestures": [cue for cue in segment.gestures if self.boundary(cue.at) < cut]})
+            second = ExplainerSegment.model_validate({
+                "id": new_id, "intent": segment.intent, "start": second_start.model_dump(), "end": segment.end.model_dump(),
+                "line_ids": self.line_ids(second_start, segment.end),
+                "visual": {"kind": "quote", "text": text, "highlight": highlight if len(highlight) >= 4 else ""},
+                "scene": segment.scene.model_dump() if segment.scene else None,
+                "gestures": [cue.model_dump() for cue in segment.gestures if self.boundary(cue.at) >= cut],
+                "source_notes": segment.source_notes})
+            queue[:0] = [first, second]
+        return result
+
     def validate_coverage(self, segments: list[ExplainerSegment]) -> list[tuple[int, int]]:
         """Require every spoken token exactly once, in script order, with no gaps/overlaps."""
         spans = []
