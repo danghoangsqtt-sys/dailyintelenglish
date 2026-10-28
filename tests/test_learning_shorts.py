@@ -33,7 +33,7 @@ async def test_the_script_prompts_describe_each_format():
     top5 = await load_presentation_block("solo_explainer", "why", 1, "topic", "top5")
     assert "Number five" in top5 and "Number one" in top5
     for text in (mistakes, word, top5):
-        assert "OPENING: begin the episode" not in text and "replaces the structure above" in text
+        assert "OPENING (the first section only): begin the episode" not in text and "replaces the structure above" in text
 
 
 async def test_the_plan_prompts_map_each_format_to_existing_visuals():
