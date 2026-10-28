@@ -8,10 +8,47 @@ import sys
 from pathlib import Path
 
 
+SEM_FAILCRITICALERRORS, SEM_NOGPFAULTERRORBOX, SEM_NOOPENFILEERRORBOX = 0x0001, 0x0002, 0x8000
+
+
+def quiet_child_processes(popen: type | None = None, kernel32: object | None = None) -> bool:
+    """Phase 84 (real run 2026-10-28): an ffmpeg that could not start (0xC0000142, "the application was unable to start
+    correctly") showed a Windows dialog that held an automatic video for 55 minutes until the owner clicked it.
+
+    The error mode makes such a child fail at once (children inherit it), so the Producer's second try follows within
+    seconds; and child programs (ffmpeg, node) start without a console of their own (CREATE_NO_WINDOW) unless the caller
+    chose flags -- a windowed app gave each of them a hidden console, the usual cause of that start failure. Windows
+    only; True when applied."""
+    if os.name != "nt":
+        return False
+    import subprocess
+
+    popen = popen or subprocess.Popen
+    if getattr(popen, "_studio_quiet", False):
+        return True
+    if kernel32 is None:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+    kernel32.SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX)
+    original = popen.__init__
+    no_window = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+
+    def __init__(self, *args, **kwargs):
+        if not kwargs.get("creationflags"):
+            kwargs["creationflags"] = no_window
+        original(self, *args, **kwargs)
+
+    popen.__init__ = __init__
+    popen._studio_quiet = True
+    return True
+
+
 def configure_desktop_runtime() -> None:
     """Load the EXE's relative workspace/data locator, preserving explicit env overrides."""
     if not getattr(sys, "frozen", False):
         return
+    quiet_child_processes()
     directory = Path(sys.executable).resolve().parent
     locator = directory / "studio-runtime.json"
     if locator.is_file():

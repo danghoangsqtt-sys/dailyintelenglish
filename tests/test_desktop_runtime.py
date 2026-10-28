@@ -13,6 +13,9 @@ from backend.core.desktop_runtime import configure_desktop_runtime
 def frozen(monkeypatch, tmp_path, values):
     monkeypatch.chdir(os.getcwd())  # restore cwd after the real bootstrap changes it
     monkeypatch.setattr(sys, "frozen", True, raising=False)
+    # Phase 84: the frozen bootstrap quiets child processes; never patch the test runner's own subprocess.Popen
+    from backend.core import desktop_runtime
+    monkeypatch.setattr(desktop_runtime, "quiet_child_processes", lambda *args, **kwargs: False)
     directory = tmp_path / "dist" / "Studio"
     directory.mkdir(parents=True)
     monkeypatch.setattr(sys, "executable", str(directory / "Studio.exe"))
@@ -108,3 +111,33 @@ def test_readiness_timeout_leaves_a_manual_open_hint(monkeypatch, capsys):
     monkeypatch.setattr(launcher, "_read_running_instance", lambda url: None)
     launcher._open_browser_when_ready("http://localhost:8000", {"product": "studio", "build_id": "new", "instance_id": "owner"}, timeout=1)
     assert "not ready at http://localhost:8000" in capsys.readouterr().err
+
+
+def test_child_processes_start_without_a_console_or_an_error_dialog():
+    """Phase 84 (real run 2026-10-28): an ffmpeg start failure showed a Windows dialog that held a video for 55 minutes."""
+    import os
+
+    import pytest
+
+    from backend.core import desktop_runtime
+
+    if os.name != "nt":
+        pytest.skip("Windows only")
+
+    class FakeKernel:
+        mode = None
+
+        def SetErrorMode(self, mode):
+            self.mode = mode
+
+    class FakePopen:
+        def __init__(self, *args, **kwargs):
+            self.kwargs = kwargs
+
+    kernel = FakeKernel()
+    assert desktop_runtime.quiet_child_processes(FakePopen, kernel)
+    assert kernel.mode == 0x0001 | 0x0002 | 0x8000
+    assert FakePopen(["ffmpeg"]).kwargs["creationflags"] == 0x08000000
+    assert FakePopen(["node"], creationflags=0x200).kwargs["creationflags"] == 0x200  # a caller's own flags stay
+    assert desktop_runtime.quiet_child_processes(FakePopen, kernel)  # once only
+    assert FakePopen(["ffmpeg"]).kwargs["creationflags"] == 0x08000000
