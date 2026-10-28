@@ -32,3 +32,16 @@ def test_a_locked_owner_visual_is_left_alone():
     segment = _segment("owner-picture", locked=True)
     explainer_stage.repair_proposal([segment], {"available_scenes": None, "available_activities": []})
     assert segment.visual.kind == "activity" and segment.scene.scene_id == "cafe"
+
+
+def test_a_repaired_activity_card_shows_the_narrators_words_not_the_planning_note():
+    """Phase 84 (real run 2026-10-28): "Provide concrete examples of changing blunt commands..." reached the screen."""
+    segment = _segment("not-offered", intent="Provide concrete examples of changing blunt commands to polite requests")
+    segment.line_ids = ["l1"]
+    lines = [{"id": line_id, "text": "Instead of 'send me that report', say 'could you send me that report?' It sounds kinder."}
+             for line_id in segment.line_ids]
+    explainer_stage.repair_proposal([segment], {"available_scenes": [], "available_activities": []}, lines)
+    assert segment.visual.kind == "text_card"
+    assert segment.visual.title == "Instead of 'send me that report', say 'could you send me that report?'"
+    assert explainer_stage.card_title("word " * 40).endswith("…") and len(explainer_stage.card_title("word " * 40)) <= 121
+    assert explainer_stage.card_title("", "Fallback note") == "Fallback note"

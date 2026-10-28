@@ -66,22 +66,36 @@ def issues(source: dict, segments: list) -> list[str]:
     return result
 
 
-def repair_proposal(segments: list, captured: dict) -> list:
+def card_title(words: str, fallback: str = "") -> str:
+    """Phase 84: a card's title from the narrator's own words -- the first sentence, cut at a word within 120 characters."""
+    import re
+
+    text = " ".join(str(words or "").split())
+    first = re.split(r"(?<=[.!?])\s+|(?<=[.!?]['\"’”])\s+", text, maxsplit=1)[0] if text else ""
+    if len(first) > 120:
+        first = first[:120].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+    return first or " ".join(str(fallback or "").split())[:120] or "Key idea"
+
+
+def repair_proposal(segments: list, captured: dict, lines: list[dict] | None = None) -> list:
     """Owner 2026-10-27: an AI proposal that names a scene or activity picture it was not offered used to fail the whole
     plan ("use only an activity_id from AVAILABLE ACTIVITY PICTURES") even after its one repair. Keep the plan instead:
     an unoffered activity becomes a short text card of the segment's intent, an unoffered scene the first offered one
-    (or none). A locked owner visual is never touched. Returns the segments (changed in place where needed)."""
+    (or none). A locked owner visual is never touched. Returns the segments (changed in place where needed).
+    Phase 84 (real run 2026-10-28): the card shows the narrator's words for that segment -- its intent is a planning note
+    ("Provide concrete examples of changing blunt commands...") that reached the screen."""
     from backend.schemas.explainer import SceneReference, TextCardVisual
 
     offered_scenes = captured.get("available_scenes")
     offered_activities = captured.get("available_activities")
     scene_ids = [item["id"] for item in offered_scenes or []]
     activity_ids = {item["id"] for item in offered_activities or []}
+    texts = {str(line["id"]): line.get("text") or "" for line in lines or []}
     for segment in segments:
         if segment.scene and offered_scenes is not None and segment.scene.scene_id not in scene_ids:
             segment.scene = SceneReference(scene_id=scene_ids[0]) if scene_ids else None
         if segment.visual.kind == "activity" and segment.visual.activity_id not in activity_ids and not segment.locks.visual:
-            title = " ".join(str(segment.intent or "").split())[:120] or "Key idea"
+            title = card_title(" ".join(texts.get(str(line_id), "") for line_id in getattr(segment, "line_ids", [])), segment.intent)
             segment.visual = TextCardVisual(kind="text_card", title=title, bullets=[], emphasis="")
     return segments
 

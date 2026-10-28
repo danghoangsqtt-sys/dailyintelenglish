@@ -242,14 +242,16 @@ class Producer:
             """Phase 80: a Short's photo nobody imported becomes a card of the narrator's own words (it stopped the run);
             Phase 84: so does a VOX chart or map whose data the narration never gives (the AI never invents data)."""
             visual = segment.get("visual") or {}
+            from backend.library.explainer_stage import card_title
+
+            words = " ".join(texts.get(line_id, "") for line_id in segment.get("line_ids", [])).strip()
             if segment.get("id") in invented:
-                words = " ".join(texts.get(line_id, "") for line_id in segment.get("line_ids", [])).strip()
-                return {"kind": "text_card", "title": (visual.get("title") or words or segment.get("intent") or "Remember")[:120],
+                return {"kind": "text_card", "title": visual.get("title") or card_title(words, segment.get("intent")),
                         "bullets": [], "emphasis": ""}
             if visual.get("kind") != "photo" or visual.get("asset"):
                 return visual
             words = visual.get("caption") or " ".join(texts.get(line_id, "") for line_id in segment.get("line_ids", [])).strip()
-            return {"kind": "text_card", "title": (words or segment.get("intent") or "Remember")[:120], "bullets": [], "emphasis": ""}
+            return {"kind": "text_card", "title": card_title(words, segment.get("intent")), "bullets": [], "emphasis": ""}
 
         segments = [{**segment, "needs_fact_review": False, "visual": card(segment)} for segment in plan.get("segments", [])]
         saved = await self.client.call("PATCH", f"/api/projects/{project_id}/explainer-plan", {

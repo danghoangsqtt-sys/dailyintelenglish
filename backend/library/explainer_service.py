@@ -550,7 +550,7 @@ def _proposed_segments(text: str, previous: list[ExplainerSegment], snapshot: di
             actual = choices.get((ref.asset_id, ref.version))
             if actual is None or (ref.content_hash is not None and ref.content_hash != actual):
                 raise ValidationError("Use only the illustration versions listed in the proposal input")
-    explainer_stage.check_proposal(explainer_stage.repair_proposal(segments, snapshot), snapshot)
+    explainer_stage.check_proposal(explainer_stage.repair_proposal(segments, snapshot, lines), snapshot)
     if is_vox(snapshot["source"]["project"]):
         facts = vox_fact_issues({**snapshot["source"], "lines": lines}, segments)
         if facts:
