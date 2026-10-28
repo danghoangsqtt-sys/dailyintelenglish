@@ -4,13 +4,16 @@ fixes the editor's notes, keeping everything that already works.
 Topic: {{ topic }}
 Kind: {{ style }}{% if short %} (a vertical Short of about one minute){% else %} (a long 16:9 episode){% endif %}
 Learners' level: CEFR {{ cefr_level }}
-Length: about {{ target_words }} spoken words in total (stay within 10 percent)
+Length: the current script has {{ lines | length }} lines and {{ current_words }} spoken words. Return about
+{{ lines | length }} lines (within 10 percent) and {{ target_words }} words in total (within 10 percent): improve the
+lines, do not shorten the script.
 
 Editor's scores (1-5): {% for name, value in scores.items() %}{{ name }} {{ value }}{% if not loop.last %}, {% endif %}{% endfor %}
 Editor's notes:
 {{ notes }}
 
-Current script:
+{% if length_note | default("") %}{{ length_note }}
+{% endif %}Current script:
 {% for line in lines %}{{ line.speaker }}: {{ line.text }}
 {% endfor %}
 NEVER ADD FACTS: do not add or ask for any fact, number, percentage, date, place, company, person, study, survey or
@@ -26,7 +29,9 @@ Rules:
   Keep their share of the talk about the same and never put more than five lines in a row by one speaker.
 - Keep the same kind of script and its format: the same parts in the same order (for a quiz the question and its
   options, for a listening challenge each sentence said twice, for a text chat short messages, and so on).
-- Keep the closing follow / subscribe line if there is one.
+- Keep every fact, news point, example and key phrase the current script gives (a news Short must still report the
+  news); change how they are said, not what is said, unless a note asks for it.
+- Keep the closing follow / subscribe line if there is one.{% if not short %} Keep the greeting at the start.{% endif %}
 - Every line is spoken text only: no stage directions, no emojis, no speaker names inside the text.
 - Natural spoken English at CEFR {{ cefr_level }}; no line repeated word for word{% if style == "listen" %} (except the deliberate repeats){% endif %}.
 

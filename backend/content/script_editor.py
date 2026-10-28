@@ -129,18 +129,31 @@ async def review(db: aiosqlite.Connection, project_id: str, router: AIRouter | N
     if min(scores.values()) < PASS_SCORE:
         outcome = "kept_original"
         prompt = await asyncio.to_thread(_env.get_template("editor_rewrite.txt").render, notes=verdict.notes,
-                                         scores=scores, **context)
-        try:
-            answer = await _ask(router, prompt, Rewrite, _REWRITE, "script_editor_rewrite")
-            old_notes = {line["text"].strip(): line.get("language_notes") for line in lines}
-            new_lines = [{"speaker_id": ids.get(line.speaker.strip().casefold()), "text": " ".join(line.text.split()),
-                          "language_notes": old_notes.get(" ".join(line.text.split()))} for line in answer.lines]
-            if any(line["speaker_id"] is None for line in new_lines):
-                problems = ["the rewrite named a speaker who is not in the cast"]
-            else:
-                problems = _rewrite_problems(project, new_lines, target_words)
-        except ValidationError as exc:
-            problems = [str(exc)]
+                                         scores=scores, current_words=words_before, **context)
+        old_notes = {line["text"].strip(): line.get("language_notes") for line in lines}
+
+        async def attempt(text: str) -> tuple[list[dict], list[str]]:
+            try:
+                answer = await _ask(router, text, Rewrite, _REWRITE, "script_editor_rewrite")
+            except ValidationError as exc:
+                return [], [str(exc)]
+            written = [{"speaker_id": ids.get(line.speaker.strip().casefold()), "text": " ".join(line.text.split()),
+                        "language_notes": old_notes.get(" ".join(line.text.split()))} for line in answer.lines]
+            if any(line["speaker_id"] is None for line in written):
+                return written, ["the rewrite named a speaker who is not in the cast"]
+            return written, _rewrite_problems(project, written, target_words)
+
+        new_lines, problems = await attempt(prompt)
+        if problems and all(problem.startswith("total word count") for problem in problems):
+            # Real run 2026-10-28: a long rewrite came back 10 % short (contractions shrink a script); it is asked once
+            # to fit the length, saying how far off it is
+            have = sum(len(line["text"].split()) for line in new_lines)
+            note = (f"LENGTH: your previous rewrite had {have} words but the script needs about {target_words}. "
+                    f"{'Add about ' + str(target_words - have) + ' words of natural lines and everyday examples' if have < target_words else 'Remove about ' + str(have - target_words) + ' words'}"
+                    ", keeping every improvement.")
+            retry = await asyncio.to_thread(_env.get_template("editor_rewrite.txt").render, notes=verdict.notes, scores=scores,
+                                            current_words=words_before, length_note=note, **context)
+            new_lines, problems = await attempt(retry)
         if problems:
             rejected = "; ".join(problems[:3])[:500]
             logger.warning("script_editor_rewrite_rejected project_id=%s problems=%s", project_id, rejected)

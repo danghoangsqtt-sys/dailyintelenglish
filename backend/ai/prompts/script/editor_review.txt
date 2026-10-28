@@ -18,7 +18,9 @@ with everyday situations and example sentences instead.
 """
 {% endif %}
 Score each from 1 (poor) to 5 (excellent):
-- hook: the first line makes a scrolling viewer stay (a question, a surprise, a clear promise), not a generic greeting.
+- hook: {% if short %}the first line makes a scrolling viewer stay (a question, a surprise, a clear promise), not a
+  generic greeting{% else %}right after the greeting (a long episode greets its viewers first, by design), the opening
+  lines promise clearly what the viewer will learn or why it matters{% endif %}.
 - message: the whole script carries ONE clear point or skill a viewer could repeat after watching.
 - examples: the points are shown with concrete examples, everyday situations or sentences, not left abstract.
 - natural: the English sounds like real people speaking (contractions, short sentences, no textbook stiffness),

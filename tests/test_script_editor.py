@@ -57,6 +57,7 @@ async def test_a_weak_script_is_rewritten_once_and_kept_when_it_passes_the_check
     assert (result["outcome"], result["rewritten"]) == ("rewritten", True)
     assert [line["text"] for line in await script_service.get_script(db, project["id"])] == [line["text"] for line in rewrite]
     assert "Open with a question." in provider.calls[1].prompt
+    assert "do not shorten the script" in provider.calls[1].prompt and "Keep every fact" in provider.calls[1].prompt
     assert (await project_service.get_project(db, project["id"]))["status"] == "script_generated"
     assert (await script_editor.get_review(db, project["id"]))["notes"] == "Open with a question."
 
@@ -68,7 +69,7 @@ async def test_a_weak_script_is_rewritten_once_and_kept_when_it_passes_the_check
 async def test_a_rewrite_that_fails_a_check_keeps_the_original(db, lines):
     project, _ = await _project(db)
     before = [line["text"] for line in await script_service.get_script(db, project["id"])]
-    router, _ = _router({"scores": WEAK, "notes": "Open with a question."}, {"lines": lines})
+    router, _ = _router({"scores": WEAK, "notes": "Open with a question."}, {"lines": lines}, {"lines": lines})  # + length retry
     result = await script_editor.review(db, project["id"], router)
     assert (result["outcome"], result["rewritten"]) == ("kept_original", False) and result["rejected_reason"]
     assert [line["text"] for line in await script_service.get_script(db, project["id"])] == before
@@ -79,3 +80,14 @@ async def test_flashcards_and_slow_podcasts_are_left_alone(db):
     router, _ = _router({"scores": GOOD, "notes": ""})
     with pytest.raises(ValidationError, match="line by line"):
         await script_editor.review(db, project["id"], router)
+
+
+async def test_a_rewrite_that_only_misses_the_length_is_asked_once_to_fit_it(db):
+    """Real run 2026-10-28: a long rewrite came back 549 words for 625 and was thrown away."""
+    project, target = await _project(db)
+    short = [{"speaker": "Lina", "text": text} for text in _sentences(round(target / 20), start=500)]
+    fitted = [{"speaker": "Lina", "text": text} for text in _sentences(round(target / 10), start=900)]
+    router, provider = _router({"scores": WEAK, "notes": "Use contractions."}, {"lines": short}, {"lines": fitted})
+    result = await script_editor.review(db, project["id"], router)
+    assert (result["outcome"], result["rewritten"]) == ("rewritten", True) and provider.call_count == 3
+    assert "LENGTH: your previous rewrite had" in provider.calls[2].prompt
