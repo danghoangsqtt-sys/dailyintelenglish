@@ -226,3 +226,35 @@ def test_projects_outside_a_series_keep_the_chosen_folder(client, tmp_path):  # 
                                                                           "items": ["script"]}))
     assert view["folder"] == str(tmp_path / "solo") and (tmp_path / "solo" / "script.txt").is_file()
     assert data(client.get(f"/api/projects/{_project(client, names=('Mia', 'Tom'))['id']}/export"))["suggested_dir"] is None
+
+
+def test_an_approved_plan_without_a_presenter_still_exports_the_video(client, tmp_path, monkeypatch):  # noqa: F811
+    """Phase 83 (real run 2026-10-28): text-on-blur, quiz, Top 5 and word-of-the-day Shorts pin no presenter
+    ("front": null); the export stopped on it and their finished videos never reached the folder."""
+    from types import SimpleNamespace
+
+    from backend.library import explainer_service
+    from backend.schemas import explainer
+
+    project = data(client.post("/api/projects", json={
+        "name": "Blur short", "topic": "Saying no politely", "cefr_level": "B1", "duration_minutes": 0.95, "num_speakers": 1,
+        "genre": "informational", "accent": "american", "presentation_mode": "solo_explainer", "explainer_style": "blur",
+        "speakers": [{"name": "Lina", "gender": "female", "accent": "american"}]}))
+    _video(project["id"], tmp_path)
+    fingerprint = "a" * 64
+    with sqlite3.connect(settings.db_path) as connection:
+        connection.execute(
+            "INSERT INTO project_explainer_plans (project_id, revision, status, source_fingerprint, plan_json, approved_revision, "
+            "approved_snapshot_json, updated_at) VALUES (?, 1, 'approved', ?, '{\"segments\": []}', 1, ?, 'now')",
+            (project["id"], fingerprint, json.dumps({"schema_version": 1, "front": None, "illustrations": []})))
+
+    async def snapshot(db, project_id, segments):
+        return {"fingerprint": fingerprint}
+
+    monkeypatch.setattr(explainer_service, "source_snapshot", snapshot)
+    monkeypatch.setattr(explainer.ExplainerPlan, "model_validate", classmethod(lambda cls, value: SimpleNamespace(segments=[])))
+    folder = tmp_path / "Blur"
+    view = data(client.put(f"/api/projects/{project['id']}/export", json={"output_dir": str(folder), "items": ["video"]}))
+    assert "video.mp4" in view["sync"]["written"] and (folder / "video.mp4").read_bytes() == b"mp4-bytes"
+    plan = json.loads((folder / "explainer" / "plan.json").read_text(encoding="utf-8"))
+    assert plan["status"] == "approved" and plan["pictures"] == {}

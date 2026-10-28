@@ -421,9 +421,11 @@ async def _plan(db: aiosqlite.Connection, project_id: str, items: list[str]) -> 
             if metadata["status"] == "approved" and row["approved_snapshot_json"]:
                 pinned = json.loads(row["approved_snapshot_json"])
                 # Export only files pinned by approval, with portable relative references.
-                front = pinned["front"]
+                # Phase 83 (real run 2026-10-28): a Short with no presenter (text on blur, quiz, Top 5, word of the day)
+                # pins no front pack; reading it as one stopped the whole export, so the video never reached the folder
+                front = pinned.get("front") or {}
                 metadata["pictures"] = {}
-                for slot, image in front["pictures"].items():
+                for slot, image in (front.get("pictures") or {}).items():
                     relative = f"explainer/front/{image['asset_id']}-{slot}.png"
                     plan.append(("pinned_copy", image, relative))
                     metadata["pictures"][slot] = {"path": relative, "content_hash": image["content_hash"]}
@@ -432,7 +434,7 @@ async def _plan(db: aiosqlite.Connection, project_id: str, items: list[str]) -> 
                     relative = f"explainer/illustrations/{image['id']}-{image['version']}.png"
                     plan.append(("pinned_copy", image, relative))
                     metadata["illustrations"].append({"asset_id": image["id"], "version": image["version"], "path": relative, "content_hash": image["content_hash"]})
-                metadata["front_pack_revision"] = front["pack_revision"]
+                metadata["front_pack_revision"] = front.get("pack_revision")
         plan.append(("text", json.dumps(metadata, ensure_ascii=False, indent=2), "explainer/plan.json"))
     video = await video_service.get_video_job(db, project_id) if {"video", "video_vertical"} & set(items) else None
     if "video" in items and video and video.get("status") == "complete":
