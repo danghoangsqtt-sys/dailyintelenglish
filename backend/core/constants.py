@@ -262,6 +262,9 @@ CEFR_DEFAULT_TTS_SPEED = {"A1": 0.75, "A2": 0.75, "B1": 0.85, "B2": 0.90, "C1": 
 SCRIPT_SECTION_TARGET_MINUTES = 1.5
 SCRIPT_SECTION_WORD_TOLERANCE = 0.15
 SCRIPT_GLOBAL_WORD_TOLERANCE = 0.10
+# Phase 84 (real run 2026-10-28): +-10 % of a ~120-word Short is +-12 words and stopped an automatic Vox Short
+# twice; a Short is checked at +-20 % (its <= 60 s rule is unchanged). The two pinned values above stay.
+SCRIPT_SHORT_WORD_TOLERANCE = 0.20
 SCRIPT_SPEAKER_BALANCE_MIN_SHARE = 0.35
 SCRIPT_SPEAKER_BALANCE_MAX_SHARE = 0.65
 # Same value already hardcoded in script_base.txt's prose "no monologues" rule --

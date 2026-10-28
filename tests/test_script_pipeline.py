@@ -2534,7 +2534,7 @@ async def test_pipeline_repetition_repair_still_failing_hard_fails(db):
     assert await script_service.get_script(db, project["id"]) == []
 
 
-async def test_pipeline_mixed_global_failure_triggers_budget_then_repetition_repair(db):
+async def test_pipeline_mixed_global_failure_triggers_budget_then_repetition_repair(db, monkeypatch):
     """Task 17.1 (ENH-010), required behaviour #3: a global failure that is
     *both* a word-count miss and a repetition failure now gets the budget
     repair first, then the repetition repair if repetition is still failing
@@ -2557,6 +2557,8 @@ async def test_pipeline_mixed_global_failure_triggers_budget_then_repetition_rep
     repair of the existing lines -- `is_repair=False`, so it doesn't add to
     `repair_count` on its own. Only the repetition repair that fires next is a
     true repair; `repair_count` is 1, not 2."""
+    # Phase 84: a <= 1 min project is a Short (+-20 %); this test pins the long-script +-10 % repair order
+    monkeypatch.setattr(script_pipeline, "word_tolerance", lambda project: 0.10)
     project = await _project(db)  # duration_minutes=0.8 -> target_words=100 (Task 14.10)
     alex_id, maya_id = (speaker["id"] for speaker in project["speakers"])
 
@@ -2785,3 +2787,19 @@ async def test_call_router_local_mode_never_retries_since_nothing_is_primary_ser
     assert result.text == "not valid json"  # returned as-is -- no retry attempted
     assert result.fallback_used is False
     assert fallback.call_count == 1  # only the one original call, no retry
+
+
+def test_a_short_script_is_checked_at_twenty_percent():
+    """Phase 84 (real run 2026-10-28): a 140-word automatic Vox Short against a 119-word target stopped twice at +-10 %."""
+    from backend.core import constants
+
+    short = {"explainer_style": "vox", "duration_minutes": 0.95}
+    long = {"explainer_style": "presenter", "duration_minutes": 5}
+    assert script_pipeline.word_tolerance(short) == constants.SCRIPT_SHORT_WORD_TOLERANCE == 0.20
+    assert script_pipeline.word_tolerance(long) == constants.SCRIPT_GLOBAL_WORD_TOLERANCE == 0.10
+    lines = [script_pipeline.SectionLineOut(speaker_id="a", text=_words(70, 0)),
+             script_pipeline.SectionLineOut(speaker_id="a", text=_words(70, 70))]
+    pinned, _ = script_pipeline.validate_global(lines, 119, {"a"}, 1, "procrastination")
+    assert any("±10% of target 119" in error for error in pinned)
+    relaxed, _ = script_pipeline.validate_global(lines, 119, {"a"}, 1, "procrastination", tolerance_share=0.20)
+    assert not any(error.startswith("total word count") for error in relaxed)

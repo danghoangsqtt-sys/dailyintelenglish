@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field, TypeAdapter, field_validator
 from backend.schemas.project import SHORT_STYLES, is_short_video
 from backend.core.config import settings
 from backend.core.constants import (
-    CEFR_WORDS_PER_MINUTE, SCRIPT_GLOBAL_WORD_TOLERANCE, SCRIPT_LAST_SECTION_CARRY_CAP,
+    CEFR_WORDS_PER_MINUTE, SCRIPT_GLOBAL_WORD_TOLERANCE, SCRIPT_LAST_SECTION_CARRY_CAP, SCRIPT_SHORT_WORD_TOLERANCE,
     SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER, SCRIPT_MAX_REPEATED_8GRAM_RATIO,
     SCRIPT_PIPELINE_MAX_GLOBAL_BUDGET_REPAIRS, SCRIPT_PIPELINE_MAX_LENGTH_REPAIRS,
     SCRIPT_PIPELINE_MAX_REPETITION_REPAIRS, SCRIPT_PIPELINE_MAX_STRUCTURAL_FIXES, SCRIPT_SECTION_AVOID_PHRASES_MAX,
@@ -477,6 +477,11 @@ def _repeats_by_design(project: dict) -> bool:
     return project.get("explainer_style") == "listen"
 
 
+def word_tolerance(project: dict) -> float:
+    """Phase 84: the whole-script word budget -- +-20 % for a Short, the pinned +-10 % otherwise."""
+    return SCRIPT_SHORT_WORD_TOLERANCE if is_short_video(project) else SCRIPT_GLOBAL_WORD_TOLERANCE
+
+
 def validate_global(
     lines: list[SectionLineOut],
     target_words: int,
@@ -485,6 +490,7 @@ def validate_global(
     topic: str,
     vocabulary: list[str] | None = None,
     allow_repeats: bool = False,
+    tolerance_share: float = SCRIPT_GLOBAL_WORD_TOLERANCE,
 ) -> tuple[list[str], list[str]]:
     """Whole-episode hard checks (word budget, balance, duplicates, repetition)
     plus soft warnings (topic relevance). Returns `(hard_errors, warnings)`."""
@@ -502,11 +508,11 @@ def validate_global(
         words_by_speaker[line.speaker_id] = words_by_speaker.get(line.speaker_id, 0) + len(line_words)
 
     total_words = sum(words_by_speaker.values())
-    tolerance = target_words * SCRIPT_GLOBAL_WORD_TOLERANCE
+    tolerance = target_words * tolerance_share
     if not (target_words - tolerance <= total_words <= target_words + tolerance):
         hard_errors.append(
             f"{_GLOBAL_BUDGET_ERROR_PREFIX} {total_words} is outside "
-            f"±{int(SCRIPT_GLOBAL_WORD_TOLERANCE * 100)}% of target {target_words}"
+            f"±{round(tolerance_share * 100)}% of target {target_words}"
         )
 
     # Speaker-balance is only well-defined for exactly two speakers (matches the
@@ -749,7 +755,7 @@ async def _vocabulary_repair(
                  for line in (new_lines if each_spec.index == target_spec.index else lines)]
     still_missing = missing_vocabulary(words, [line.text for line in candidate])
     hard_errors, _warnings = validate_global(candidate, target_words, known_speaker_ids, num_speakers, project["topic"],
-                                          allow_repeats=_repeats_by_design(project))
+                                          allow_repeats=_repeats_by_design(project), tolerance_share=word_tolerance(project))
     if hard_errors or len(still_missing) >= len(missing):
         return all_lines
     checkpoint = section_checkpoints[target_spec.index]
@@ -1451,7 +1457,7 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
 
     hard_errors, _warnings = validate_global(
         all_lines, target_words, known_speaker_ids, num_speakers, project["topic"],
-                    allow_repeats=_repeats_by_design(project),
+                    allow_repeats=_repeats_by_design(project), tolerance_share=word_tolerance(project),
     )
 
     # Task 17.1 (ENH-010): one shared, ordered, two-slot loop. Budget is checked
@@ -1543,7 +1549,7 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
                         all_lines.extend(_SECTION_LINES_ADAPTER.validate_json(checkpoint["result_json"]))
                 hard_errors, _warnings = validate_global(
                     all_lines, target_words, known_speaker_ids, num_speakers, project["topic"],
-                    allow_repeats=_repeats_by_design(project),
+                    allow_repeats=_repeats_by_design(project), tolerance_share=word_tolerance(project),
                 )
             continue
 
@@ -1623,7 +1629,7 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
 
                 hard_errors, _warnings = validate_global(
                     all_lines, target_words, known_speaker_ids, num_speakers, project["topic"],
-                    allow_repeats=_repeats_by_design(project),
+                    allow_repeats=_repeats_by_design(project), tolerance_share=word_tolerance(project),
                 )
             continue
 
