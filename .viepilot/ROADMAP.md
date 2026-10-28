@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 86 — VOX videos on the viral explainer formula (2026-10-28)
+
+Status: planned. Cold open on an English example and one question, evidence blocks, a visual every 5-8 s, evidence cards, collage object pictures, a recap ending; no intro slide for VOX. [Plan](phases/86-vox-formula/PLAN.md).
+
 ## Phase 85 — Pictures in 16:9 videos, and the 16:9 test set (2026-10-28)
 
 Status: implemented_verified (installed app run: presenter how 7/11 and list 5/9 segments with pictures, VOX 3-4, 0 before; own-script conversation 19/19 lines identical; 2 fact-check stops; the two-episodes script bug fixed after; full pytest 2239 passed; Full 2.0.0 from 8263eb5 installed, backup `data/backups/desktop-20261028-190959-869`; Presenter why re-made with one welcome and one goodbye, 5/8 pictures; not pushed). Automatic 16:9 presenter and VOX videos had no picture and the automatic conversation ignored its storyboard; the planner uses library pictures, the local Qwen model draws the rest (used right away, kept in the library), conversation inserts get pictures; then presenter / VOX / own-script tests. [Plan](phases/85-pictures-in-16x9/PLAN.md).
