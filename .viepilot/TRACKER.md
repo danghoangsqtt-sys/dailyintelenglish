@@ -1,5 +1,9 @@
 # TRACKER.md — Daily Intel English Studio
 
+## Phase 82 — Shorts that carry their message (2026-10-28)
+
+Status: planned. Knowledge/news Shorts get a full ~57 s with a hook → context → key points → takeaway structure; clips cut from 16:9 are made self-contained (start moved back from dependent openers, episode sign-offs dropped). [Plan](phases/82-short-message-clarity/PLAN.md).
+
 ## Phase 81 — Slow English podcast & Vocabulary flashcard Shorts (2026-10-28)
 
 Status: implemented_verified (real Shorts: slow podcast 43.1 s, flashcards 38.9 s; full pytest green; Full 2.0.0 installed 2026-10-28, backup `data/backups/desktop-20261028-081715-544`; not pushed). Two new Short templates drawn from their script lines: `slowpod` (slow English voice, Vietnamese shown) and `flashcards` (word read twice; part of speech, IPA, meaning). Tasks 81.1 backend, 81.2 renderer, 81.3 UI, 81.4 verify. [Plan](phases/81-slow-podcast-flashcards/PLAN.md).
