@@ -407,3 +407,30 @@ async def test_a_presenter_plan_is_arranged_when_approval_asks_for_layouts():
              if method != "GET" and path.endswith(("/explainer-plan/approve", "/explainer-plan/layout", "/explainer-plan"))]
     assert [path.rsplit("/", 1)[-1] for _, path in order][-4:] == ["approve", "layout", "explainer-plan", "approve"]
     assert client.done["youtube"]
+
+
+async def test_a_failed_step_is_run_once_more_before_the_episode_stops():
+    """Phase 84 (real run 2026-10-28): a one-off ffmpeg crash stopped an automatic Short; its retry then worked."""
+    class Crashy(FakeClient):
+        crashes = 1
+
+        async def call(self, method, path, body=None):
+            if path.endswith("/audio/generate") and self.crashes:
+                self.crashes -= 1
+                raise StepError("Audio mixing failed: ffmpeg returned error code 3221225794")
+            return await super().call(method, path, body)
+
+    async def on_step(step, project_id):
+        pass
+
+    crashy = Crashy()
+    assert await Producer(crashy, sleep=no_sleep).produce({"id": "e", "project_id": "p1"}, on_step) == "p1"
+    assert crashy.done["youtube"]
+    broken = FakeClient(fail_on="/video/generate")
+    with pytest.raises(StepError, match="render failed"):
+        await Producer(broken, sleep=no_sleep).produce({"id": "e", "project_id": "p1"}, on_step)
+    assert [path for _, path, _ in broken.calls].count("/video/generate") == 2  # tried twice, then stopped
+    troubled = FakeClient(solo=True, issues=["Segment idea-4 leaves a gap before the preceding script span"])
+    with pytest.raises(StepError, match="leaves a gap"):
+        await Producer(troubled, sleep=no_sleep).produce({"id": "e", "project_id": "p1", "presentation_mode": "solo_explainer"}, on_step)
+    assert [path for _, path, _ in troubled.calls].count("/explainer-plan/propose") == 2  # proposed afresh once

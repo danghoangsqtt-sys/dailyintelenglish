@@ -48,6 +48,16 @@ class StepError(Exception):
     """A step that cannot go on by itself: the item stops with this message for the owner."""
 
 
+class OwnerStop(StepError):
+    """Phase 84: a stop only a person can resolve (a doubtful fact): never tried again."""
+
+
+# Phase 84 (real run 2026-10-28): a one-off ffmpeg crash stopped an automatic Short whose retry then worked; these
+# steps are run once more before the episode stops (an AI step already gets AI_ATTEMPTS). A visual plan is proposed
+# afresh on its second try.
+RETRY_STEPS = ("audio", "visual_plan", "video", "thumbnail")
+
+
 class StepClient:
     """The app's own API, called in process (no network, no port)."""
 
@@ -107,7 +117,7 @@ class Producer:
         board = await self.client.call("GET", f"/api/projects/{project_id}/storyboard")
         return bool(board.get("beats"))
 
-    async def run_step(self, step: str, project_id: str, solo: bool, style: str | None = None) -> None:
+    async def run_step(self, step: str, project_id: str, solo: bool, style: str | None = None, fresh: bool = False) -> None:
         call = self.client.call
         base = f"/api/projects/{project_id}"
         if step in ("script", "learning"):
@@ -124,7 +134,7 @@ class Producer:
                 await call("POST", f"{base}/tts/preview", {"line_id": line["id"], "reuse_cached": True})
             await call("POST", f"{base}/audio/generate", {"background_music": None})
         elif step == "visual_plan":
-            await (self.approve_solo(project_id, style) if solo else call("POST", f"{base}/storyboard/propose"))
+            await (self.approve_solo(project_id, style, fresh) if solo else call("POST", f"{base}/storyboard/propose"))
         elif step == "video":
             await call("POST", f"{base}/video/generate", {})
         elif step == "thumbnail":
@@ -134,12 +144,12 @@ class Producer:
         else:
             raise StepError(f"Unknown step {step}")
 
-    async def approve_solo(self, project_id: str, style: str | None = None) -> None:
+    async def approve_solo(self, project_id: str, style: str | None = None, fresh: bool = False) -> None:
         """Propose a plan when there is none (or it went stale), then approve it -- only with no issue and no fact to check,
         exactly what a person could approve; otherwise stop for the owner. A plan the owner edited is kept, not redone."""
         view = await self.solo_plan(project_id)
         plan = view.get("plan")
-        if not plan or plan.get("status") == "stale":
+        if not plan or plan.get("status") == "stale" or (fresh and plan.get("status") != "approved"):
             job = await self.client.call("POST", f"/api/projects/{project_id}/explainer-plan/propose",
                                          {"expected_revision": plan["revision"] if plan else 0})
             await self.wait_job(project_id, job)
@@ -156,7 +166,7 @@ class Producer:
             raise StepError("Review the visual plan: " + "; ".join(map(str, view["issues"])))
         flagged = [segment.get("id") for segment in plan.get("segments", []) if segment.get("needs_fact_review")]
         if flagged:
-            raise StepError(f"Check the facts of {len(flagged)} segment(s) on Step 5, then approve the plan")
+            raise OwnerStop(f"Check the facts of {len(flagged)} segment(s) on Step 5, then approve the plan")
         approve = {"expected_revision": plan["revision"], "source_fingerprint": plan["source_fingerprint"]}
         try:
             await self.client.call("POST", f"/api/projects/{project_id}/explainer-plan/approve", approve)
@@ -226,14 +236,24 @@ class Producer:
             project_id = next((item["project_id"] for item in created.get("created", []) if item["episode_id"] == episode["id"]), None)
             if not project_id:
                 raise StepError("The project for this episode could not be created")
-        for _attempt in range(len(rules.STEPS) + 2):
+        retried: set[str] = set()
+        for _attempt in range(2 * len(rules.STEPS) + 2):
             progress = await self.progress(project_id)
             step = rules.next_step(progress, has_visual_plan=progress.get("video") or await self.has_visual_plan(
                 project_id, solo, episode.get("explainer_style")))
             if step is None:
                 return project_id
             await on_step(step, project_id)
-            await self.run_step(step, project_id, solo, episode.get("explainer_style"))
+            try:
+                await self.run_step(step, project_id, solo, episode.get("explainer_style"), fresh=step in retried)
+            except OwnerStop:
+                raise
+            except StepError as exc:
+                if step not in RETRY_STEPS or step in retried:
+                    raise
+                retried.add(step)
+                logger.warning("automation_step_retry step=%s project_id=%s reason=%s", step, project_id, exc)
+                await self.sleep(JOB_POLL_SECONDS)
         raise StepError("A step did not finish")
 
 
