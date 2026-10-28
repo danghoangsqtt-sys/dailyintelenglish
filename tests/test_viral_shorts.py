@@ -179,7 +179,7 @@ def test_a_channel_series_of_shorts_makes_short_news_projects(client):  # noqa: 
     data(client.post(f"/api/channel/series/{series['id']}/episodes", json={"title": "Storm on the coast"}))
     created = data(client.post(f"/api/channel/series/{series['id']}/projects"))["created"]
     project = data(client.get(f"/api/projects/{created[0]['project_id']}"))
-    assert (project["explainer_style"], project["duration_minutes"]) == ("news", 0.75)
+    assert (project["explainer_style"], project["duration_minutes"]) == ("news", 0.95)
     patched = data(client.patch(f"/api/channel/series/{series['id']}", json={"explainer_style": "blur"}))
     assert patched["explainer_style"] == "blur"
 
