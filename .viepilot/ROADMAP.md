@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 83 — A default save folder (2026-10-28)
+
+Status: planned. When no main save folder is chosen, new projects are saved under a default one (D:\Videos, else the user's Videos folder); then one test video of each kind is made in D:\Videos. [Plan](phases/83-default-save-folder/PLAN.md).
+
 ## Phase 82 — Shorts that carry their message (2026-10-28)
 
 Status: implemented_verified (real news Short: 55.0 s audio + 2 s end card, hook → context → points → takeaway; real clip proposal on The Office Startup: 3 clips, none opening on a reply or closing on the goodbye; full pytest 2204 passed + 3 length tests updated, 1 known Step 1 browser flake; Full 2.0.0 installed 2026-10-28, backup `data/backups/desktop-20261028-100748-641`; not pushed). Knowledge/news Shorts (news, blur, mistakes, top5, presenter, vox) are written for 0.95 min with a message-first structure; clips cut from 16:9 are made self-contained in code and in the prompt. [Plan](phases/82-short-message-clarity/PLAN.md).
