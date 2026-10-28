@@ -627,3 +627,12 @@ def test_a_narrated_episode_needs_no_idiom_and_a_short_two_questions():
     assert len(two.questions) == 2
     assert any("questions" in error for error in learning_pipeline.validate_counts(two))
     assert not any("questions" in error for error in learning_pipeline.validate_counts(two, short=True))
+
+
+def test_too_many_grammar_points_or_questions_are_trimmed_not_failed():
+    """Phase 86 (real run 2026-10-29): 'grammar has 3 point(s), need 1-2' stopped an automatic VOX video."""
+    pack = _pack()
+    many = pack.model_copy(update={"grammar": pack.grammar * 3, "questions": (pack.questions or []) * 4})
+    trimmed = learning_pipeline.trim_over_counts(many)
+    assert len(trimmed.grammar) <= 2 and len(trimmed.questions) <= 5
+    assert not any(e.startswith("grammar has") for e in learning_pipeline.validate_counts(trimmed))

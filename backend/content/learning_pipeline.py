@@ -147,6 +147,13 @@ def prune_extras(pack: LearningPackOut, transcript: str) -> LearningPackOut:
     })
 
 
+def trim_over_counts(pack: LearningPackOut) -> LearningPackOut:
+    """Phase 86 (real run 2026-10-29): "grammar has 3 point(s), need 1-2" stopped an automatic video. Too many items
+    need no AI: the first ones are kept. Too few still fail (a missing item cannot be invented here)."""
+    return pack.model_copy(update={"grammar": pack.grammar[:LEARNING_MAX_GRAMMAR_POINTS],
+                                   "questions": pack.questions[:LEARNING_MAX_QUESTIONS]})
+
+
 def validate_pack(pack: LearningPackOut, transcript: str, short: bool = False, solo: bool = False) -> list[str]:
     """All hard checks combined. Empty list means the pack is valid."""
     return (
@@ -489,6 +496,7 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
         return
 
     dropped_items: list[dict] = []
+    pack = trim_over_counts(pack)
     errors = validate_pack(pack, transcript, short=is_short_video(project), solo=project.get("presentation_mode") == "solo_explainer")
     if errors:
         try:
@@ -499,6 +507,7 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
         except ProviderError as exc:
             await _fail_provider(db, job_id, exc)
             return
+        repaired_pack = trim_over_counts(repaired_pack)
         repaired_errors = validate_pack(repaired_pack, transcript, short=is_short_video(project), solo=project.get("presentation_mode") == "solo_explainer")
         if repaired_errors:
             # Task 14.11 (D15): drop items that still fail grounding/answer checks
