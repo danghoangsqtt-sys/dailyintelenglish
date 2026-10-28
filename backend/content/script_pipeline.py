@@ -1327,6 +1327,41 @@ async def _run_flashcard_job(db, job: dict, project: dict, router: "AIRouter") -
     await export_service.sync_quietly(db, project_id)
 
 
+class _Translations(BaseModel):
+    translations: list[str] = Field(min_length=1, max_length=200)
+
+
+_TRANSLATIONS_ADAPTER = TypeAdapter(_Translations)
+
+
+async def fill_translations(router: "AIRouter", lines: list[SectionLineOut]) -> list[SectionLineOut]:
+    """Phase 84 (real run 2026-10-28): the slow podcast prompt asks for a Vietnamese translation of every line, but the
+    AI sometimes leaves them out and the Short then played without Vietnamese. Missing ones are asked for in one call;
+    an unusable answer leaves the lines as they were (the owner can still type them on Step 2)."""
+    missing = [index for index, line in enumerate(lines) if not line.language_notes.translation_vi.strip()]
+    if not missing:
+        return lines
+    prompt = ("Translate each English sentence into natural, simple Vietnamese for learners (keep the meaning, not word "
+              "for word). Return JSON only: {\"translations\": [...]} with exactly one translation per sentence, in order.\n"
+              + "\n".join(f"{number}. {lines[index].text}" for number, index in enumerate(missing, start=1)))
+    try:
+        result = await router.generate(GenerationRequest(prompt=prompt, json_schema=_Translations.model_json_schema(),
+                                                         deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS,
+                                                         purpose="slowpod_translations"))
+        answer = parse_and_validate(result.text, _TRANSLATIONS_ADAPTER)
+    except (ProviderError, SchemaValidationError) as exc:
+        logger.warning("slowpod_translations_failed reason=%s", exc)
+        return lines
+    if len(answer.translations) != len(missing):
+        logger.warning("slowpod_translations_count expected=%s got=%s", len(missing), len(answer.translations))
+        return lines
+    filled = list(lines)
+    for index, text in zip(missing, answer.translations):
+        notes = filled[index].language_notes.model_copy(update={"translation_vi": " ".join(text.split())})
+        filled[index] = filled[index].model_copy(update={"language_notes": notes})
+    return filled
+
+
 async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> None:
     """Implements the controlling plan's 8-step checkpointed script pipeline."""
     db = worker.get_db()
@@ -1641,6 +1676,8 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
 
     all_lines = await _vocabulary_repair(router, project, outline, all_lines, target_words, known_speaker_ids,
                                          num_speakers, db, job_id)
+    if project.get("explainer_style") == "slowpod":
+        all_lines = await fill_translations(router, all_lines)
 
     server_lines = [
         {

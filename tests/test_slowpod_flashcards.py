@@ -137,3 +137,20 @@ def test_message_shorts_get_a_full_minute_and_a_message_structure(client):  # no
     tree = data(client.get("/api/channel"))
     series = next(s for topic in tree["topics"] for s in topic["series"] if s["id"] == result["series_id"])
     assert data(client.get(f"/api/projects/{series['episodes'][0]['project_id']}"))["duration_minutes"] == 0.95
+
+
+async def test_missing_slow_podcast_translations_are_filled_in_one_call():
+    """Phase 84 (real run 2026-10-28): the AI left out every translation_vi and the slow podcast played without Vietnamese."""
+    from backend.content.script_pipeline import SectionLineOut, fill_translations
+    from backend.content.script_service import LanguageNotesOut
+    from tests.test_script_pipeline import _build_router, _result
+
+    lines = [SectionLineOut(speaker_id="s", text="I drink water first.", language_notes=LanguageNotesOut()),
+             SectionLineOut(speaker_id="s", text="Then I stretch.", language_notes=LanguageNotesOut(translation_vi="Rồi tôi giãn cơ.")),
+             SectionLineOut(speaker_id="s", text="It helps me wake up.", language_notes=LanguageNotesOut())]
+    router, provider, _ = _build_router([_result(json.dumps({"translations": ["Tôi uống nước trước.", "Nó giúp tôi tỉnh táo."]}))])
+    filled = await fill_translations(router, lines)
+    assert [line.language_notes.translation_vi for line in filled] == ["Tôi uống nước trước.", "Rồi tôi giãn cơ.", "Nó giúp tôi tỉnh táo."]
+    assert provider.call_count == 1 and "Then I stretch." not in provider.calls[0].prompt
+    wrong, _, _ = _build_router([_result(json.dumps({"translations": ["only one"]}))])
+    assert await fill_translations(wrong, lines) == lines  # a wrong count changes nothing
