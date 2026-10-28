@@ -614,3 +614,16 @@ def test_extras_with_an_example_outside_the_transcript_are_dropped_not_failed():
     assert [item.phrase for item in pruned.collocations] == ["hit the ground running"]
     assert pruned.phrasal_verbs == [] and len(pruned.patterns) == 1
     assert learning_pipeline.validate_pack(pruned, TRANSCRIPT) == []
+
+
+def test_a_narrated_episode_needs_no_idiom_and_a_short_two_questions():
+    """Phase 84 (real run 2026-10-28): an automatic VOX episode stopped on "idioms has 0 item(s)" (the AI's invented
+    idiom was refused by the grounding check) and a slow podcast Short on "questions has 2 item(s), need 3-5"."""
+    no_idiom = _pack(idioms=[])
+    assert any("idioms" in error for error in learning_pipeline.validate_counts(no_idiom))
+    assert not any("idioms" in error for error in learning_pipeline.validate_counts(no_idiom, solo=True))
+    two = _pack()
+    two = two.model_copy(update={"questions": two.questions[:2] if len(two.questions) >= 2 else two.questions * 2})
+    assert len(two.questions) == 2
+    assert any("questions" in error for error in learning_pipeline.validate_counts(two))
+    assert not any("questions" in error for error in learning_pipeline.validate_counts(two, short=True))

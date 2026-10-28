@@ -23,7 +23,8 @@ from pydantic import TypeAdapter
 from backend.core.config import settings
 from backend.core.constants import (
     LEARNING_GENERATION_TEMPERATURE, LEARNING_MAX_GRAMMAR_POINTS, LEARNING_MAX_QUESTIONS, LEARNING_MIN_GRAMMAR_POINTS,
-    LEARNING_MIN_IDIOMS, LEARNING_MIN_QUESTIONS, LEARNING_MIN_VOCABULARY,
+    LEARNING_MIN_IDIOMS, LEARNING_MIN_QUESTIONS,
+    LEARNING_MIN_QUESTIONS_SHORT, LEARNING_MIN_VOCABULARY,
 )
 from backend.core.exceptions import ProviderError, SchemaValidationError
 from backend.ai.llm.prompt_loader import LEARNING_PROMPTS_DIR, render_learning_prompt
@@ -51,24 +52,24 @@ _PACK_ADAPTER = TypeAdapter(LearningPackOut)
 # --- pure validators (no I/O -- unit-testable directly) ------------------------------
 
 
-def validate_counts(pack: LearningPackOut, short: bool = False) -> list[str]:
+def validate_counts(pack: LearningPackOut, short: bool = False, solo: bool = False) -> list[str]:
     """Requested-count hard checks. Ranges copied from the prompt's own text. Phase 80: a Short (<= 1 minute) often has
-    no idiom at all -- a Solo presenter Short stopped on "idioms has 0 item(s)" -- so it needs none."""
+    no idiom at all -- a Solo presenter Short stopped on "idioms has 0 item(s)" -- so it needs none. Phase 84 (real run
+    2026-10-28): neither does a narrated Solo / VOX episode (the AI invented one the grounding check then refused), and a
+    Short needs 2-5 questions, not 3-5."""
     errors: list[str] = []
     if len(pack.vocabulary) < LEARNING_MIN_VOCABULARY:
         errors.append(f"vocabulary has {len(pack.vocabulary)} item(s), need at least {LEARNING_MIN_VOCABULARY}")
-    if not short and len(pack.idioms) < LEARNING_MIN_IDIOMS:
+    if not (short or solo) and len(pack.idioms) < LEARNING_MIN_IDIOMS:
         errors.append(f"idioms has {len(pack.idioms)} item(s), need at least {LEARNING_MIN_IDIOMS}")
     if not (LEARNING_MIN_GRAMMAR_POINTS <= len(pack.grammar) <= LEARNING_MAX_GRAMMAR_POINTS):
         errors.append(
             f"grammar has {len(pack.grammar)} point(s), need "
             f"{LEARNING_MIN_GRAMMAR_POINTS}-{LEARNING_MAX_GRAMMAR_POINTS}"
         )
-    if not (LEARNING_MIN_QUESTIONS <= len(pack.questions) <= LEARNING_MAX_QUESTIONS):
-        errors.append(
-            f"questions has {len(pack.questions)} item(s), need "
-            f"{LEARNING_MIN_QUESTIONS}-{LEARNING_MAX_QUESTIONS}"
-        )
+    least = LEARNING_MIN_QUESTIONS_SHORT if short else LEARNING_MIN_QUESTIONS
+    if not (least <= len(pack.questions) <= LEARNING_MAX_QUESTIONS):
+        errors.append(f"questions has {len(pack.questions)} item(s), need {least}-{LEARNING_MAX_QUESTIONS}")
     return errors
 
 
@@ -146,10 +147,10 @@ def prune_extras(pack: LearningPackOut, transcript: str) -> LearningPackOut:
     })
 
 
-def validate_pack(pack: LearningPackOut, transcript: str, short: bool = False) -> list[str]:
+def validate_pack(pack: LearningPackOut, transcript: str, short: bool = False, solo: bool = False) -> list[str]:
     """All hard checks combined. Empty list means the pack is valid."""
     return (
-        validate_counts(pack, short)
+        validate_counts(pack, short, solo)
         + validate_grounding(pack, transcript)
         + validate_duplicates(pack)
         + validate_answers(pack)
@@ -488,7 +489,7 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
         return
 
     dropped_items: list[dict] = []
-    errors = validate_pack(pack, transcript, short=is_short_video(project))
+    errors = validate_pack(pack, transcript, short=is_short_video(project), solo=project.get("presentation_mode") == "solo_explainer")
     if errors:
         try:
             repaired_pack = await _repair_pack(router, transcript, pack, errors, db, job_id)
@@ -498,7 +499,7 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
         except ProviderError as exc:
             await _fail_provider(db, job_id, exc)
             return
-        repaired_errors = validate_pack(repaired_pack, transcript, short=is_short_video(project))
+        repaired_errors = validate_pack(repaired_pack, transcript, short=is_short_video(project), solo=project.get("presentation_mode") == "solo_explainer")
         if repaired_errors:
             # Task 14.11 (D15): drop items that still fail grounding/answer checks
             # rather than failing the whole pack outright -- but only when dropping
@@ -510,7 +511,7 @@ async def _run_learning_job(job: dict, worker: "AIWorker", router: "AIRouter") -
                 await _fail(db, job_id, "pack_validation_failed", repaired_errors)
                 return
             reduced_pack = drop_items(repaired_pack, removable)
-            final_errors = validate_pack(reduced_pack, transcript, short=is_short_video(project))
+            final_errors = validate_pack(reduced_pack, transcript, short=is_short_video(project), solo=project.get("presentation_mode") == "solo_explainer")
             if final_errors:
                 dropped_summary = [
                     f"dropped {item['kind']} {item['key']!r}: {item['reason']}" for item in removable
