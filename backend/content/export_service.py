@@ -40,7 +40,8 @@ ITEMS = {
     "script": "Script",
     "learning": "Learning pack (transcript, vocabulary, idioms…)",
 }
-DEFAULT_ITEMS = ["video", "thumbnail", "youtube"]
+# Phase 83 (owner 2026-10-28): clips cut from an episode are videos too -- they go to the episode folder by default
+DEFAULT_ITEMS = ["video", "thumbnail", "youtube", "shorts"]
 _sync_locks: weakref.WeakKeyDictionary = weakref.WeakKeyDictionary()
 
 

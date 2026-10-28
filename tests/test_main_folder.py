@@ -55,6 +55,7 @@ def test_without_a_choice_new_projects_go_to_the_default_folder(client, tmp_path
     project = data(client.post("/api/projects", json=PROJECT))
     export = data(client.get(f"/api/projects/{project['id']}/export"))
     assert export["settings"]["output_dir"] == str(default) and default.is_dir()  # made on first use
+    assert "shorts" in export["settings"]["items"]  # clips cut from the episode go to its folder too
     chosen = tmp_path / "Mine"
     assert data(client.put("/api/settings/main-folder", json={"output_dir": str(chosen)}))["is_default"] is False
     back = data(client.put("/api/settings/main-folder", json={"output_dir": None}))  # "Use the default folder"
