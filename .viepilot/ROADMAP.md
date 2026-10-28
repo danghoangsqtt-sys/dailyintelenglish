@@ -1,5 +1,9 @@
 # ROADMAP.md — Daily Intel English Studio
 
+## Phase 85 — Pictures in 16:9 videos, and the 16:9 test set (2026-10-28)
+
+Status: planned. Automatic 16:9 presenter and VOX videos had no picture and the automatic conversation ignored its storyboard; the planner uses library pictures, the local Qwen model draws the rest (used right away, kept in the library), conversation inserts get pictures; then presenter / VOX / own-script tests. [Plan](phases/85-pictures-in-16x9/PLAN.md).
+
 ## Phase 84 — Automatic videos, long and Short, at the best quality (2026-10-28)
 
 Status: implemented_verified (automatic run in the installed app: 15 of 17 videos finished by themselves into D:\Videos\Tự động 2026-10-28, long videos 1920x1080, clips cut; the 2 learning-step stops and 2 more real-run problems fixed after; full pytest 2231 passed; Full 2.0.0 from 97f2f02 installed 2026-10-28, backup `data/backups/desktop-20261028-164825-856`; 17/17 kinds finish automatically; slow podcast translations checked (8/8); not pushed). Fixes every stop seen in the Phase 83 run (plan boundaries, Short script length, one more try per step), an AI fact check so News / VOX / long presenter videos finish by themselves unless a claim is doubtful, an editor review with one rewrite for every automatic script, and 1080p long videos. [Plan](phases/84-automatic-quality/PLAN.md).
