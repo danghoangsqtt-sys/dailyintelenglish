@@ -4,14 +4,15 @@
     "plan": ".viepilot/phases/84-automatic-quality/PLAN.md",
     "automatic_run": "15/17 finished into D:\\Videos\\Tự động 2026-10-28; long 1920x1080; 2 clips",
     "full_pytest": "2231 passed",
-    "installed_from_commit": "9597292",
-    "installed_backup": "data/backups/desktop-20261028-132401-410",
+    "installed_from_commit": "2f86226",
+    "installed_backup": "data/backups/desktop-20261028-161758-401",
     "not_installed_yet": [
-      "e3ff771 learning counts",
-      "2c6d25a card titles",
-      "5068275 Windows start-failure dialog"
+      "slow podcast translations fill (after 2f86226)"
     ],
-    "pushed": false
+    "pushed": false,
+    "package_directory": "dist/2.0-phase84b-20261028",
+    "full_zip_sha256": "c4cdfe6030a2e51b68d2be0e71db3a16eb6698fca9a99bdcc3ad7c0cbf229552",
+    "resumed": "slow podcast 47.8 s and VOX 16:9 156.6 s (1920x1080) finished by themselves: 17/17"
   },
   "phase82_short_message_clarity": {
     "status": "implemented_verified",

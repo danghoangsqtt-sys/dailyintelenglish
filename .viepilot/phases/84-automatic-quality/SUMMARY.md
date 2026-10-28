@@ -32,3 +32,13 @@ Done 2026-10-28 on `owner-runs/20261001-r9` (not pushed).
   reviewed scripts; long videos 1920x1080; 2 clips cut. Stopped: slow podcast (2 questions) and VOX 16:9 (no idiom) —
   both fixed in `e3ff771`, not installed yet. The Phase 83 folders received their 5 held-back videos and 2 clips.
 - Full pytest 2231 passed.
+
+## Second install (2026-10-28)
+
+- Built from `2f86226` into `dist/2.0-phase84b-20261028` (ZIP 138,734,224 bytes, SHA256
+  `c4cdfe6030a2e51b68d2be0e71db3a16eb6698fca9a99bdcc3ad7c0cbf229552`); installed, backup
+  `data/backups/desktop-20261028-161758-401`; data counts unchanged.
+- The two stopped videos resumed and finished by themselves: slow podcast Short 47.8 s, VOX 16:9 156.6 s at 1920x1080
+  (it passed the AI fact check after the editor's rewrite). 17 of 17 kinds now finish automatically.
+- Found then: both slow podcast Shorts had no Vietnamese translations (the AI left them out); fixed after this install
+  with a translation pass in the script job.

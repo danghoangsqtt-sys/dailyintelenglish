@@ -2,7 +2,7 @@
 
 ## Phase 84 — Automatic videos, long and Short, at the best quality (2026-10-28)
 
-Status: implemented_verified (automatic run in the installed app: 15 of 17 videos finished by themselves into D:\Videos\Tự động 2026-10-28, long videos 1920x1080, clips cut; the 2 learning-step stops and 2 more real-run problems fixed after; full pytest 2231 passed; Full 2.0.0 from 9597292 installed 2026-10-28, backup `data/backups/desktop-20261028-132401-410`; the later fixes not installed yet; not pushed). Fixes every stop seen in the Phase 83 run (plan boundaries, Short script length, one more try per step), an AI fact check so News / VOX / long presenter videos finish by themselves unless a claim is doubtful, an editor review with one rewrite for every automatic script, and 1080p long videos. [Plan](phases/84-automatic-quality/PLAN.md).
+Status: implemented_verified (automatic run in the installed app: 15 of 17 videos finished by themselves into D:\Videos\Tự động 2026-10-28, long videos 1920x1080, clips cut; the 2 learning-step stops and 2 more real-run problems fixed after; full pytest 2231 passed; Full 2.0.0 from 2f86226 installed 2026-10-28, backup `data/backups/desktop-20261028-161758-401`; the 2 stopped videos then finished (17/17); the slow podcast translation fix not installed yet; not pushed). Fixes every stop seen in the Phase 83 run (plan boundaries, Short script length, one more try per step), an AI fact check so News / VOX / long presenter videos finish by themselves unless a claim is doubtful, an editor review with one rewrite for every automatic script, and 1080p long videos. [Plan](phases/84-automatic-quality/PLAN.md).
 
 ## Phase 83 — A default save folder (2026-10-28)
 
