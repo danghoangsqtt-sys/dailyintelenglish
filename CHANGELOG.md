@@ -8,6 +8,17 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Added — Automatic videos at the best quality (Phases 83-84, 2026-10-28)
+
+- A default save folder (D:\Videos) while none is chosen; clips cut from an episode go to its folder too.
+- An AI editor reviews every automatic script (hook, one message, examples, natural English, level, ending) and rewrites it once when it falls short, never adding facts; the review shows on Step 2.
+- An AI fact check lets News, VOX and long presenter videos finish by themselves unless a claim is doubtful.
+- Long 16:9 videos at 1920x1080.
+
+### Fixed — Automatic production (Phases 83-84)
+
+- Videos of Shorts without a presenter now reach their folder; plan boundaries, Short script length, learning counts and one-off ffmpeg failures no longer stop an automatic video; on-screen cards never show the AI's planning notes.
+
 ### Changed — Shorts that carry their message (Phase 82, 2026-10-28)
 
 - News, text on blur, Don't say / Say, Top 5, presenter and Vox Shorts use a full 57 s (was 45 s) with a clear structure: hook, context, two or three points with examples, takeaway.

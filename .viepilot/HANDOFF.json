@@ -1,4 +1,18 @@
 {
+  "phase84_automatic_quality": {
+    "status": "implemented_verified",
+    "plan": ".viepilot/phases/84-automatic-quality/PLAN.md",
+    "automatic_run": "15/17 finished into D:\\Videos\\Tự động 2026-10-28; long 1920x1080; 2 clips",
+    "full_pytest": "2231 passed",
+    "installed_from_commit": "9597292",
+    "installed_backup": "data/backups/desktop-20261028-132401-410",
+    "not_installed_yet": [
+      "e3ff771 learning counts",
+      "2c6d25a card titles",
+      "5068275 Windows start-failure dialog"
+    ],
+    "pushed": false
+  },
   "phase82_short_message_clarity": {
     "status": "implemented_verified",
     "plan": ".viepilot/phases/82-short-message-clarity/PLAN.md",
@@ -1009,5 +1023,9 @@
       "Lite": "c4deb543a10a9856c370f85f083fecbaa53fc5ac466872cc0ab4950cb8100e63"
     },
     "historical_feature_tests_updated": false
+  },
+  "phase83_default_save_folder": {
+    "status": "implemented_verified",
+    "installed_with": "phase84 build 9597292"
   }
 }

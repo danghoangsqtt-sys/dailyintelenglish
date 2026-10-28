@@ -1,6 +1,6 @@
 # Phase 84 state
 
-Status: in_progress (2026-10-28).
+Status: implemented_verified (2026-10-28).
 
 | Task | Scope | Status |
 |---|---|---|
@@ -10,4 +10,4 @@ Status: in_progress (2026-10-28).
 | 84.4 | AI fact check | done — POST explainer-plan/fact-check; automation approves News / VOX / long presenter plans only when every segment is ok; invented VOX chart / map data becomes a card |
 | 84.5 | Editor pass | done — script_editor: 6 scores, one rewrite under 4 kept only when it passes every check; script_reviews (041); Step 2 card + manual run; Producer runs it after the script |
 | 84.6 | Long videos at 1080p | done — Remotion --scale=1.5; real render 1920x1080, 258 s, 11 min; IPA double slashes fixed |
-| 84.7 | Verify | in_progress |
+| 84.7 | Verify | done — automatic run 15/17 finished; learning counts, planning-note cards and the Windows start-failure dialog fixed after; full pytest 2231 passed |
