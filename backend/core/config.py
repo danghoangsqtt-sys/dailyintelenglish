@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     DATA_DIR: Path = Field(default_factory=_default_data_dir)
+    # Phase 83 (owner 2026-10-28): the main save folder used while the owner has not chosen one -- "auto"
+    # (D:\Videos when drive D: exists, else <user>\Videos\Daily Beyond English), a full path, or "off"
+    DEFAULT_OUTPUT_DIR: str = "auto"
 
     FFMPEG_PATH: str = "ffmpeg"
 
@@ -166,6 +169,18 @@ class Settings(BaseSettings):
     def db_path(self) -> Path:
         """Path to the SQLite database file inside DATA_DIR."""
         return self.DATA_DIR / "app.db"
+
+    @property
+    def default_output_dir(self) -> Path | None:
+        """Phase 83: the folder new projects are saved under while no main folder is chosen (None when "off")."""
+        value = (self.DEFAULT_OUTPUT_DIR or "").strip()
+        if value.lower() == "off":
+            return None
+        if value and value.lower() != "auto":
+            return Path(value)
+        if os.name == "nt" and Path("D:/").exists():
+            return Path("D:/Videos")
+        return Path.home() / "Videos" / "Daily Beyond English"
 
 
 settings = Settings()

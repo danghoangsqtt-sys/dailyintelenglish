@@ -103,7 +103,9 @@ class MainFolderRequest(BaseModel):
 
 
 async def _main_folder_view(db: aiosqlite.Connection) -> dict:
-    return {"output_dir": await export_service.main_folder(db),
+    chosen = await export_service.chosen_main_folder(db)
+    return {"output_dir": chosen or export_service.default_main_folder(),
+            "is_default": not chosen, "default_dir": export_service.default_main_folder(),  # Phase 83
             "projects_without_folder": len(await export_service.projects_without_folder(db)),
             "layout": "<main folder>/<Topic>/<Series>/Ep NN - <title>/"}
 

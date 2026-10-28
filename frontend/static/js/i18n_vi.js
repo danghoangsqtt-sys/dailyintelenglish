@@ -635,6 +635,10 @@ window.I18N_VI = {
     "Choose folder": "Chọn thư mục",
     "Change folder": "Đổi thư mục",
     "Stop using it": "Thôi dùng",
+    // Phase 83: the default folder while none is chosen
+    "Default": "Mặc định",
+    "Use the default folder": "Dùng thư mục mặc định",
+    "The default folder is used again.": "Đã quay lại dùng thư mục mặc định.",
     "New projects are saved in their own folder here, by topic: Topic / Series / Ep NN - title. A project that already has a folder keeps it.": "Dự án mới được lưu trong thư mục riêng tại đây, theo chủ đề: Chủ đề / Series / Ep NN - tiêu đề. Dự án đã có thư mục thì giữ nguyên.",
     "Choose one folder: every new project (Step 1, Channel plan, Automation, Shorts batch) then gets its own folder there, by topic.": "Chọn một thư mục: mọi dự án mới (Bước 1, Kế hoạch kênh, Tự động, Shorts hàng loạt) sẽ có thư mục riêng ở đó, theo chủ đề.",
     "The main folder could not load.": "Không tải được thư mục lưu chính.",

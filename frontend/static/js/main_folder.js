@@ -22,15 +22,17 @@
     const folder = view?.output_dir || "";
     const path = el("code", { className: "main-folder-path", textContent: folder || "Not chosen yet", title: folder });
     path.setAttribute("translate", "no");
+    // Phase 83: with no folder chosen, the default folder is used (videos made by themselves never stay hidden in the app)
+    const badge = folder && view?.is_default ? el("span", { className: "badge badge-status-draft", textContent: "Default" }) : null;
     const choose = el("button", { type: "button", className: "btn btn-primary btn-sm", textContent: folder ? "Change folder" : "Choose folder",
       onclick: () => pick(root, folder) });
-    const clear = folder ? el("button", { type: "button", className: "btn btn-ghost btn-sm", textContent: "Stop using it",
-      onclick: () => save(root, null) }) : null;
+    const clear = folder && !view?.is_default ? el("button", { type: "button", className: "btn btn-ghost btn-sm",
+      textContent: view?.default_dir ? "Use the default folder" : "Stop using it", onclick: () => save(root, null) }) : null;
     const missing = view?.projects_without_folder || 0;
     const apply = folder && missing ? el("button", { type: "button", className: "btn btn-ghost btn-sm",
       textContent: `Give ${missing} project(s) without a folder their folder here`, onclick: () => applyAll(root) }) : null;
     root.replaceChildren(
-      el("div", { className: "main-folder-head" }, [el("strong", { textContent: "Main save folder" }), path]),
+      el("div", { className: "main-folder-head" }, [el("strong", { textContent: "Main save folder" }), path, badge]),
       el("p", { className: "main-folder-hint", textContent: folder
         ? "New projects are saved in their own folder here, by topic: Topic / Series / Ep NN - title. A project that already has a folder keeps it."
         : "Choose one folder: every new project (Step 1, Channel plan, Automation, Shorts batch) then gets its own folder there, by topic." }),
@@ -65,7 +67,8 @@
 
   async function save(root, path) {
     try {
-      refreshAll(await Api.setMainFolder(path), path ? "Saved." : "The main folder is no longer used for new projects.");
+      const view = await Api.setMainFolder(path);
+      refreshAll(view, path ? "Saved." : (view.output_dir ? "The default folder is used again." : "The main folder is no longer used for new projects."));
     } catch (error) {
       await load(root);
       root.querySelector(".main-folder-status").textContent = error.message || "The folder could not be saved.";

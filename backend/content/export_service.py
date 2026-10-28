@@ -25,6 +25,7 @@ from typing import Any, Literal
 import aiosqlite
 from pydantic import BaseModel, Field, field_validator
 
+from backend.core.config import settings
 from backend.core.exceptions import NotFoundError, ValidationError
 
 logger = logging.getLogger(__name__)
@@ -295,15 +296,28 @@ async def clear_settings(db: aiosqlite.Connection, project_id: str) -> None:
 MAIN_FOLDER_KEY = "main_output_dir"
 
 
-async def main_folder(db: aiosqlite.Connection) -> str | None:
-    """Phase 80 (owner 2026-10-26): the one folder under which every new project gets its Topic / Series / Episode folder."""
+async def chosen_main_folder(db: aiosqlite.Connection) -> str | None:
+    """The main folder the owner chose (None when not chosen)."""
     cursor = await db.execute("SELECT value FROM app_settings WHERE key = ?", (MAIN_FOLDER_KEY,))
     row = await cursor.fetchone()
     return row[0] if row and row[0] else None
 
 
+def default_main_folder() -> str | None:
+    """Phase 83 (owner 2026-10-28): while no main folder is chosen, new projects are saved under this one."""
+    folder = settings.default_output_dir
+    return str(folder) if folder else None
+
+
+async def main_folder(db: aiosqlite.Connection) -> str | None:
+    """Phase 80 (owner 2026-10-26): the one folder under which every new project gets its Topic / Series / Episode folder
+    -- the owner's choice, else the default (Phase 83: automatic videos were left inside the app's data folder)."""
+    return await chosen_main_folder(db) or default_main_folder()
+
+
 async def set_main_folder(db: aiosqlite.Connection, output_dir: str | None) -> str | None:
-    """Save (or clear with None) the main folder. Only a full path; the folder is created when missing."""
+    """Save the main folder, or clear the choice with None (the default folder is then used). Only a full path; the
+    folder is created when missing."""
     if output_dir:
         try:
             output_dir = ExportSettings(output_dir=output_dir).output_dir
@@ -325,6 +339,12 @@ async def apply_main_folder(db: aiosqlite.Connection, project_id: str) -> bool:
     main = await main_folder(db)
     if not main or await get_settings(db, project_id) is not None:  # without a main folder, Phase 76 only suggests
         return False
+    if not await chosen_main_folder(db):  # Phase 83: the default folder is made on first use; unusable -> as before
+        try:
+            await asyncio.to_thread(_check_folder, Path(main))
+        except ValidationError:
+            logger.warning("default_main_folder_unusable folder=%s", main)
+            return False
     root = await _saved_topic_root(db, project_id) or main
     await save_settings(db, project_id, ExportSettings(output_dir=root, layout_mode="topic_hierarchy"))
     return True

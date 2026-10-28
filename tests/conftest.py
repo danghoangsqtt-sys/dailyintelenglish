@@ -1,5 +1,6 @@
 """Shared pytest fixtures — an in-memory database with migrations applied."""
 
+import os
 import socket
 import threading
 import time
@@ -213,6 +214,18 @@ async def db() -> aiosqlite.Connection:
     await connection.commit()
     yield connection
     await connection.close()
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _no_default_save_folder():
+    """Phase 83: the app saves new projects under a default folder (D:\\Videos) when none is chosen; tests never write
+    there -- the tests of that default point it at a tmp folder themselves."""
+    from backend.core.config import settings
+
+    original, settings.DEFAULT_OUTPUT_DIR = settings.DEFAULT_OUTPUT_DIR, "off"
+    os.environ["DIE_DEFAULT_OUTPUT_DIR"] = "off"  # servers started in a subprocess
+    yield
+    settings.DEFAULT_OUTPUT_DIR = original
 
 
 @pytest.fixture(autouse=True)

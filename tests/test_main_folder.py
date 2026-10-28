@@ -44,6 +44,36 @@ def test_a_project_with_its_own_folder_keeps_it(client, tmp_path):  # noqa: F811
     assert data(client.get(f"/api/projects/{project['id']}/export"))["settings"]["output_dir"] == str(own)
 
 
+def test_without_a_choice_new_projects_go_to_the_default_folder(client, tmp_path, monkeypatch):  # noqa: F811
+    """Phase 83 (owner 2026-10-28): automatic videos stayed inside the app's data folder when no main folder was chosen."""
+    from backend.core.config import settings
+
+    default = tmp_path / "Videos"
+    monkeypatch.setattr(settings, "DEFAULT_OUTPUT_DIR", str(default))
+    view = data(client.get("/api/settings/main-folder"))
+    assert (view["output_dir"], view["is_default"], view["default_dir"]) == (str(default), True, str(default))
+    project = data(client.post("/api/projects", json=PROJECT))
+    export = data(client.get(f"/api/projects/{project['id']}/export"))
+    assert export["settings"]["output_dir"] == str(default) and default.is_dir()  # made on first use
+    chosen = tmp_path / "Mine"
+    assert data(client.put("/api/settings/main-folder", json={"output_dir": str(chosen)}))["is_default"] is False
+    back = data(client.put("/api/settings/main-folder", json={"output_dir": None}))  # "Use the default folder"
+    assert (back["output_dir"], back["is_default"]) == (str(default), True)
+    assert data(client.get(f"/api/projects/{project['id']}/export"))["settings"]["output_dir"] == str(default)  # kept
+
+
+def test_the_default_folder_setting(monkeypatch):
+    from pathlib import Path as P
+
+    from backend.core.config import settings
+
+    monkeypatch.setattr(settings, "DEFAULT_OUTPUT_DIR", "off")
+    assert settings.default_output_dir is None
+    monkeypatch.setattr(settings, "DEFAULT_OUTPUT_DIR", "auto")
+    expected = P("D:/Videos") if P("D:/").exists() else P.home() / "Videos" / "Daily Beyond English"
+    assert settings.default_output_dir == expected
+
+
 def test_relative_paths_are_refused_and_the_folder_can_be_cleared(client, tmp_path):  # noqa: F811
     assert client.put("/api/settings/main-folder", json={"output_dir": "Videos"}).status_code == 422
     data(client.put("/api/settings/main-folder", json={"output_dir": str(tmp_path / "M")}))
