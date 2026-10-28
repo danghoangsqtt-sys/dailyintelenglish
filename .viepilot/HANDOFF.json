@@ -5,7 +5,12 @@
     "real_shorts": "slowpod 43.1 s, flashcards 38.9 s (1080x1920)",
     "full_pytest": "2201 passed + 3 fixed",
     "pushed": false,
-    "installed": false
+    "installed": true,
+    "installed_from_commit": "e1cb759",
+    "package_directory": "dist/2.0-phase81-20261028",
+    "full_zip_sha256": "6ade9db79d13d11862c62d6dac0b2643154751520c30426a1f0df181e4d5803f",
+    "installed_backup": "data/backups/desktop-20261028-081715-544",
+    "installed_pid": 42060
   },
   "phase80_shorts_batch_rework": {
     "status": "implemented_verified",

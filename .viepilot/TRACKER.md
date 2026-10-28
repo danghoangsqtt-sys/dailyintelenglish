@@ -2,7 +2,7 @@
 
 ## Phase 81 — Slow English podcast & Vocabulary flashcard Shorts (2026-10-28)
 
-Status: implemented_verified (real Shorts: slow podcast 43.1 s, flashcards 38.9 s; full pytest green; not pushed, not installed). Two new Short templates drawn from their script lines: `slowpod` (slow English voice, Vietnamese shown) and `flashcards` (word read twice; part of speech, IPA, meaning). Tasks 81.1 backend, 81.2 renderer, 81.3 UI, 81.4 verify. [Plan](phases/81-slow-podcast-flashcards/PLAN.md).
+Status: implemented_verified (real Shorts: slow podcast 43.1 s, flashcards 38.9 s; full pytest green; Full 2.0.0 installed 2026-10-28, backup `data/backups/desktop-20261028-081715-544`; not pushed). Two new Short templates drawn from their script lines: `slowpod` (slow English voice, Vietnamese shown) and `flashcards` (word read twice; part of speech, IPA, meaning). Tasks 81.1 backend, 81.2 renderer, 81.3 UI, 81.4 verify. [Plan](phases/81-slow-podcast-flashcards/PLAN.md).
 
 ## Phase 80 — Shorts batch rework (2026-10-26/27)
 
