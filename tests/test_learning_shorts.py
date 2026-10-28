@@ -53,6 +53,6 @@ def test_a_channel_series_can_be_a_learning_short(client):  # noqa: F811
     data(client.post(f"/api/channel/series/{series['id']}/episodes", json={"title": "Bored or boring"}))
     created = data(client.post(f"/api/channel/series/{series['id']}/projects"))["created"]
     project = data(client.get(f"/api/projects/{created[0]['project_id']}"))
-    assert (project["explainer_style"], project["duration_minutes"]) == ("mistakes", 0.75)
+    assert (project["explainer_style"], project["duration_minutes"]) == ("mistakes", 0.95)  # Phase 82: a knowledge Short gets a full minute
     for style in ("wordday", "top5"):
         assert data(client.patch(f"/api/channel/series/{series['id']}", json={"explainer_style": style}))["explainer_style"] == style
