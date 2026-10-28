@@ -8,6 +8,15 @@ Versioning: [SemVer](https://semver.org/)
 
 ## [2.0.0] - 2026-10-23 (local desktop build; not published)
 
+### Added — Pictures in 16:9 videos (Phase 85, 2026-10-28)
+
+- Automatic presenter and VOX videos show pictures: library pictures first, then the local Qwen model draws the rest (no presenter face); drawn pictures are kept in the Activity Library.
+- The automatic conversation uses its storyboard (scenes and picture inserts); inserts with no library picture are drawn.
+
+### Fixed — Phase 85
+
+- A long script can no longer contain two episodes (a goodbye in the middle and a second welcome).
+
 ### Added — Automatic videos at the best quality (Phases 83-84, 2026-10-28)
 
 - A default save folder (D:\Videos) while none is chosen; clips cut from an episode go to its folder too.
