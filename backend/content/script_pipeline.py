@@ -1246,6 +1246,81 @@ def make_handler(router: "AIRouter") -> "JobHandler":
     return _handler
 
 
+class FlashcardDeck(BaseModel):
+    """Phase 81: a vocabulary flashcard Short's deck -- the spoken deck name and its words, in order."""
+
+    deck_name: str = Field(min_length=1, max_length=60)
+    words: list[str] = Field(min_length=4, max_length=12)
+
+
+_DECK_ADAPTER = TypeAdapter(FlashcardDeck)
+FLASHCARD_MAX_CARDS = 10
+FLASHCARD_FOLLOW = "Follow Daily Beyond English for more words."
+
+
+def _clean_card_word(word: str) -> str:
+    word = " ".join(str(word).replace('"', "").split()).strip(" .,!?;:")
+    return word[3:] if word.lower().startswith("to ") and len(word) > 4 else word
+
+
+def flashcard_lines(deck_name: str, words: list[str], speaker_id: str) -> list[dict]:
+    """The deck name line, one "word. word." line per card (at most ten, no repeats) and the follow line."""
+    seen: set[str] = set()
+    cards = []
+    for word in map(_clean_card_word, words):
+        if word and word.lower() not in seen:
+            seen.add(word.lower())
+            cards.append(word)
+    name = _clean_card_word(deck_name) or "everyday words"
+    texts = [f"Vocabulary: {name}.", *[f"{word}. {word}." for word in cards[:FLASHCARD_MAX_CARDS]], FLASHCARD_FOLLOW]
+    return [{"speaker_id": speaker_id, "text": text, "language_notes": LanguageNotesOut().model_dump()} for text in texts]
+
+
+async def _run_flashcard_job(db, job: dict, project: dict, router: "AIRouter") -> None:
+    """Phase 81 (real run 2026-10-28): the prose pipeline ignored the card format and wrote a paragraph, so a flashcard
+    script is built from a schema-checked deck instead -- the owner's pasted list as given, or the AI's words."""
+    job_id, project_id = job["id"], project["id"]
+    owner_words = _source_context(project)["source_words"]
+    await _update_progress(db, job_id, "deck", 20)
+    prompt = (
+        "You prepare a vocabulary flashcard deck for a one-minute English learning Short (CEFR "
+        f"{project['cefr_level']}).\nTopic: {project['topic']}\n"
+        + (f"Use exactly these words, in this order: {json.dumps(owner_words[:FLASHCARD_MAX_CARDS], ensure_ascii=False)}\n"
+           if owner_words else
+           f"Choose eight to ten useful, common English words or short phrases for this topic, simple enough for "
+           f"{project['cefr_level']} learners, all different, dictionary form (verbs without 'to').\n")
+        + "deck_name: the topic in two to four plain English words (it is read aloud).\n"
+        "Return ONLY a JSON object that validates against the schema: {\"deck_name\": str, \"words\": [str, ...]}."
+    )
+    request = GenerationRequest(prompt=prompt, json_schema=FlashcardDeck.model_json_schema(),
+                                deadline_seconds=settings.AI_REQUEST_DEADLINE_SECONDS, purpose="flashcard_deck")
+    try:
+        result = await _call_router(db, job_id, router, request, section_index=None, is_repair=False, adapter=_DECK_ADAPTER)
+        deck = parse_and_validate(result.text, _DECK_ADAPTER)
+    except ProviderError as exc:
+        await _fail_provider(db, job_id, exc)
+        return
+    except SchemaValidationError as exc:
+        await _fail(db, job_id, "flashcard_deck_invalid", [str(exc)[:300]])
+        return
+    speaker_id = project["speakers"][0]["id"]
+    server_lines = flashcard_lines(deck.deck_name, owner_words or deck.words, speaker_id)
+    async with write_transaction(db):
+        final_project = await project_service.get_project(db, project_id)
+        if _job_project_hash(final_project, job) != job["config_hash"]:
+            await ai_job_service.mark_stale(db, job_id, commit=False)
+            return
+        if await _is_cancelled(db, job_id, project_id):
+            await ai_job_service.transition_status(db, job_id, "cancelled", commit=False)
+            return
+        await ai_job_service.transition_status(db, job_id, "validating", commit=False)
+        await script_service.save_script(db, project_id, server_lines, {speaker_id}, commit=False)
+        await project_service.mark_script_changed(db, project_id, commit=False)
+        await ai_job_service.transition_status(db, job_id, "complete", commit=False)
+    from backend.content import export_service
+    await export_service.sync_quietly(db, project_id)
+
+
 async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> None:
     """Implements the controlling plan's 8-step checkpointed script pipeline."""
     db = worker.get_db()
@@ -1261,6 +1336,10 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
         return
     if await _is_cancelled(db, job_id, project_id):
         await _cancel(db, job_id)
+        return
+
+    if project.get("explainer_style") == "flashcards":  # Phase 81: a deck, not prose
+        await _run_flashcard_job(db, job, project, router)
         return
 
     known_speaker_ids = {speaker["id"] for speaker in project["speakers"]}

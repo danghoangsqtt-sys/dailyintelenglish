@@ -84,3 +84,38 @@ def test_the_batch_makes_both_kinds(client, template):  # noqa: F811
     assert project["explainer_style"] == template and is_short_video(project)
     assert (project["speakers"][0]["speed"] == SLOWPOD_SPEED) is (template == "slowpod")
     assert json.dumps(project)  # serialisable view
+
+
+def test_flashcard_lines_are_clean_cards():
+    from backend.content.script_pipeline import flashcard_lines
+
+    lines = flashcard_lines("daily routines", ["to wash up", "Make the bed.", "make the bed", '"brush teeth"', ""] + [f"w{n}" for n in range(12)], "s1")
+    texts = [line["text"] for line in lines]
+    assert texts[0] == "Vocabulary: daily routines." and texts[-1].startswith("Follow Daily Beyond English")
+    assert texts[1:4] == ["wash up. wash up.", "Make the bed. Make the bed.", "brush teeth. brush teeth."]
+    assert len(texts) == 12  # name + at most ten cards + follow
+    assert flashcard_words("\n".join(texts))[:3] == ["wash up", "Make the bed", "brush teeth"]
+
+
+async def test_a_flashcard_script_job_builds_cards_from_the_ai_deck(db):
+    """Real run 2026-10-28: the prose pipeline wrote a paragraph instead of cards; the job now asks only for a deck."""
+    from backend.ai.llm import ai_job_service
+    from backend.ai.llm.ai_worker import AIWorker
+    from backend.content import project_service, script_pipeline, script_service
+    from backend.schemas.project import ScriptConfig, SpeakerConfig
+    from tests.test_script_pipeline import _build_router, _result
+
+    project = await project_service.create_project(db, ScriptConfig(
+        name="Deck", topic="Sinh hoạt hằng ngày (P1)", cefr_level="A2", duration_minutes=0.75, num_speakers=1, genre="informational",
+        accent="american", presentation_mode="solo_explainer", explainer_style="flashcards",
+        speakers=[SpeakerConfig(name="Lina", gender="female", accent="american")]))
+    deck = {"deck_name": "daily routines", "words": ["wake up", "wash up", "make the bed", "brush your teeth", "get dressed"]}
+    router, provider, _ = _build_router([_result(json.dumps(deck))])
+    job, _ = await ai_job_service.create_job(db, project["id"], "script", {"project": project, "operation": "script"})
+    claimed = await ai_job_service.claim_job(db, job["id"], "worker-1")
+    await script_pipeline.make_handler(router)(claimed, AIWorker(db_getter=lambda: db))
+    final = await ai_job_service.get_job(db, job["id"], project["id"])
+    assert final["status"] == "complete", final.get("error_message")
+    texts = [line["text"] for line in await script_service.get_script(db, project["id"])]
+    assert texts[0] == "Vocabulary: daily routines." and texts[1] == "wake up. wake up." and len(texts) == 7
+    assert provider.call_count == 1
