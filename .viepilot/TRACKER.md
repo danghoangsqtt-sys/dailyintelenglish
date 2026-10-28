@@ -1,8 +1,12 @@
 # TRACKER.md — Daily Intel English Studio
 
+## Phase 84 — Automatic videos, long and Short, at the best quality (2026-10-28)
+
+Status: planned. Fixes every stop seen in the Phase 83 run (plan boundaries, Short script length, one more try per step), an AI fact check so News / VOX / long presenter videos finish by themselves unless a claim is doubtful, an editor review with one rewrite for every automatic script, and 1080p long videos. [Plan](phases/84-automatic-quality/PLAN.md).
+
 ## Phase 83 — A default save folder (2026-10-28)
 
-Status: planned. When no main save folder is chosen, new projects are saved under a default one (D:\Videos, else the user's Videos folder); then one test video of each kind is made in D:\Videos. [Plan](phases/83-default-save-folder/PLAN.md).
+Status: implemented_verified (full pytest 2209 passed; not installed). When no main save folder is chosen, new projects are saved under a default one (D:\Videos, else the user's Videos folder); then one test video of each kind is made in D:\Videos. [Plan](phases/83-default-save-folder/PLAN.md).
 
 ## Phase 82 — Shorts that carry their message (2026-10-28)
 
