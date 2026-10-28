@@ -35,7 +35,7 @@ from typing import Any
 import aiosqlite
 
 from backend.core.config import settings
-from backend.core.constants import VIDEO_FPS, VIDEO_HEIGHT_STANDARD, VIDEO_WIDTH_STANDARD
+from backend.core.constants import VIDEO_FPS, VIDEO_HEIGHT_STANDARD, VIDEO_RENDER_SCALE_16X9, VIDEO_WIDTH_STANDARD
 from backend.core.exceptions import AudioMixError, NotFoundError, RemotionRenderFailedError, TTSError, ValidationError
 from backend.core.paths import RENDERER_DIR
 from backend.media import audio_service, brand_service
@@ -544,6 +544,8 @@ def _render_via_remotion_sync(input_props: dict[str, Any], output_path: Path,
             command.append(f"--gl={settings.REMOTION_GL}")
         if frames is not None:  # Phase 37 (D99): a highlight clip is a frame range of the vertical episode
             command.append(f"--frames={frames[0]}-{frames[1]}")
+        if input_props.get("layout") != "vertical" and VIDEO_RENDER_SCALE_16X9 != 1:  # Phase 84: 16:9 at 1920x1080
+            command.append(f"--scale={VIDEO_RENDER_SCALE_16X9:g}")
         start = time.monotonic()
         for attempt in range(1, REMOTION_MAX_RENDER_ATTEMPTS + 1):
             remaining = REMOTION_RENDER_TIMEOUT_SECONDS - (time.monotonic() - start)

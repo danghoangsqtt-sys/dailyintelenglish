@@ -206,7 +206,7 @@ function VocabCard({ item, opacity, position, layout = "horizontal", timeSec = 0
           <div style={{ fontSize: 24, fontWeight: 700 }}>
             {item.word} <span style={{ fontSize: 18, fontWeight: 400, fontStyle: "italic" }}>({item.partOfSpeech})</span>
           </div>
-          <div style={{ fontSize: 18, fontStyle: "italic", opacity: 0.8 }}>/{item.ipa}/</div>
+          <div style={{ fontSize: 18, fontStyle: "italic", opacity: 0.8 }}>/{String(item.ipa).trim().replace(/^\/+|\/+$/g, "").trim()}/</div>{/* Phase 84: the lesson's IPA often has its own slashes ("//kjʊəri/ /" on screen) */}
           {show.en ? <div data-card-en="true" style={{ fontSize: 18, marginTop: 6 }}>{item.definitionEn}</div> : null}
           {show.vi ? <div data-card-vi="true" style={{ fontSize: 18, opacity: 0.85, marginTop: show.en ? 0 : 6 }}>{item.definitionVi}</div> : null}
           <div style={{ fontSize: 18, fontStyle: "italic", marginTop: 6, opacity: 0.9 }}>{item.exampleSentence}</div>

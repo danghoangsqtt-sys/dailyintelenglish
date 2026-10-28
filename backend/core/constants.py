@@ -47,6 +47,9 @@ THUMBNAIL_TEMPLATE_IDS = (
 VIDEO_FPS = 30
 VIDEO_WIDTH_STANDARD = 1280
 VIDEO_HEIGHT_STANDARD = 720
+# Phase 84 (owner 2026-10-28): long 16:9 videos are delivered at 1920x1080 -- the 1280x720 layout drawn at 1.5x by
+# Remotion (--scale), so text and pictures stay sharp without a second layout
+VIDEO_RENDER_SCALE_16X9 = 1.5
 
 # TTS
 MAX_CONCURRENT_TTS = 2

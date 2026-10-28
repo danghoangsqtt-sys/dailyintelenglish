@@ -370,3 +370,20 @@ def test_render_uses_the_configured_compositor_without_changing_encoder(tmp_path
     assert [part for part in command if part.startswith("--gl=")] == ([] if gl == "auto" else [f"--gl={gl}"])
     assert "--frames=30-59" in command
     assert not any(part.startswith(("--codec", "--crf", "--video-bitrate")) for part in command)
+
+
+def test_a_long_video_renders_at_1080p_and_a_vertical_one_stays_1080x1920(tmp_path, monkeypatch):
+    """Phase 84 (owner 2026-10-28): long 16:9 videos are delivered at 1920x1080 (the 1280x720 layout drawn at 1.5x)."""
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        Path(command[5]).write_bytes(b"finished")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(video_renderer_remotion.subprocess, "run", fake_run)
+    video_renderer_remotion._render_via_remotion_sync(_fake_input_props(), tmp_path / "long.mp4")
+    video_renderer_remotion._render_via_remotion_sync({**_fake_input_props(), "layout": "vertical", "width": 1080, "height": 1920},
+                                                      tmp_path / "short.mp4")
+    assert "--scale=1.5" in calls[0]
+    assert not any(part.startswith("--scale") for part in calls[1])
