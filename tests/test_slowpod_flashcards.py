@@ -36,7 +36,7 @@ def test_flashcard_card_words_and_required_vocabulary():
 
 def test_the_prompts_describe_both_formats():
     slow = _render_presentation_block_sync("solo_explainer", "why", 1, "topic", "slowpod")
-    assert "SLOW ENGLISH PODCAST" in slow and "translation_vi" in slow and "OPENING: begin the episode" not in slow
+    assert "SLOW ENGLISH PODCAST" in slow and "translation_vi" in slow and "OPENING (the first section only): begin the episode" not in slow
     cards = _render_presentation_block_sync("solo_explainer", "why", 1, "topic", "flashcards")
     assert "VOCABULARY FLASHCARDS" in cards and '"wash up. wash up."' in cards
 

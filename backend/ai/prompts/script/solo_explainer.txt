@@ -110,9 +110,9 @@ introduction of yourself); then three or four short key points, each one or two 
 example; finish with a one-line takeaway and one line inviting the viewer to follow Daily Beyond English.
 This SHORT format replaces the OPENING and CLOSING below; keep the structure above in miniature.
 {% else %}
-OPENING: begin the episode by greeting the viewers warmly and welcoming them to Daily Beyond
+OPENING (the first section only): begin the episode by greeting the viewers warmly and welcoming them to Daily Beyond
 English, saying who you are in a few words, and previewing today's topic in one or two sentences.
-CLOSING: finish with a takeaway about THIS topic, then thank the viewers for watching, invite
+CLOSING (the last section only): finish with a takeaway about THIS topic, then thank the viewers for watching, invite
 them to like, subscribe and comment, and say goodbye / see you next time. Do not promise
 "language insights" or call this a grammar lesson unless language itself is the topic.
 {% endif %}

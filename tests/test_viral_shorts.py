@@ -45,11 +45,11 @@ def test_a_short_is_a_voice_only_solo_video_of_at_most_a_minute():
 
 async def test_the_short_script_prompts_open_with_a_hook_and_report_only_the_article():
     news = await load_presentation_block("solo_explainer", "why", 1, "topic", "news")
-    assert "SHORT — ENGLISH NEWS" in news and "OPENING: begin the episode" not in news
+    assert "SHORT — ENGLISH NEWS" in news and "OPENING (the first section only): begin the episode" not in news
     blur = await load_presentation_block("solo_explainer", "why", 1, "topic", "blur")
     assert "TEXT ON A BLURRED BACKGROUND" in blur and "Never attribute a quote" in blur
     presenter = await load_presentation_block("solo_explainer", "why", 1, "topic", "presenter")
-    assert "OPENING: begin the episode" in presenter and "SHORT —" not in presenter
+    assert "OPENING (the first section only): begin the episode" in presenter and "SHORT —" not in presenter
     context = script_pipeline._source_context({"explainer_style": "news", "source_kind": "article", "source_text": ARTICLE})
     assert context["short_style"] == "news" and context["source_kind"] == "article"
     section = script_pipeline._env.get_template("section.txt")

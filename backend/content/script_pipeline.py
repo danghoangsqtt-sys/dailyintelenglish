@@ -482,6 +482,24 @@ def word_tolerance(project: dict) -> float:
     return SCRIPT_SHORT_WORD_TOLERANCE if is_short_video(project) else SCRIPT_GLOBAL_WORD_TOLERANCE
 
 
+# Phase 85 (real run 2026-10-28): a 3-minute presenter script came back as two whole episodes -- a goodbye in the middle
+# ("Thanks for watching, please hit subscribe") and a second welcome ("Hello, welcome to Daily Beyond English. I am Lina")
+_MIDDLE_GOODBYE = re.compile(r"thanks? (you )?(so much )?for watching|\bsee you next time\b|hit (the )?subscribe", re.IGNORECASE)
+_MIDDLE_WELCOME = re.compile(r"\bwelcome (back )?to daily beyond english\b", re.IGNORECASE)
+
+
+def misplaced_framing(lines: list[SectionLineOut]) -> list[str]:
+    """A goodbye before the last two lines, or a channel welcome after the first two, means two episodes in one."""
+    errors: list[str] = []
+    if len(lines) < 5:
+        return errors
+    if any(_MIDDLE_GOODBYE.search(line.text) for line in lines[:-2]):
+        errors.append("the episode says goodbye before its end (a sign-off in the middle)")
+    if any(_MIDDLE_WELCOME.search(line.text) for line in lines[2:]):
+        errors.append("the episode welcomes the viewers again after it started (a second opening)")
+    return errors
+
+
 def validate_global(
     lines: list[SectionLineOut],
     target_words: int,
@@ -525,6 +543,8 @@ def validate_global(
                     f"speaker {speaker_id} word share {share:.0%} outside "
                     f"{SCRIPT_SPEAKER_BALANCE_MIN_SHARE:.0%}-{SCRIPT_SPEAKER_BALANCE_MAX_SHARE:.0%}"
                 )
+
+    hard_errors.extend(misplaced_framing(lines))
 
     normalized_lines = [normalize_text(line.text) for line in lines]
     # Phase 65: a listening challenge says each sentence again on purpose, so repeats are allowed there

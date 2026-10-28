@@ -33,9 +33,9 @@ def test_a_presenter_or_vox_short_prompt_has_a_hook_and_no_episode_greeting():
 
     for style in ("presenter", "vox"):
         short = _render_presentation_block_sync("solo_explainer", "why", 1, "topic", style, short=True)
-        assert "under one minute" in short and "no greeting" in short and "OPENING: begin the episode" not in short
+        assert "under one minute" in short and "no greeting" in short and "OPENING (the first section only): begin the episode" not in short
         episode = _render_presentation_block_sync("solo_explainer", "why", 1, "topic", style)
-        assert "OPENING: begin the episode" in episode
+        assert "OPENING (the first section only): begin the episode" in episode
 
 
 def test_a_short_lesson_needs_no_idiom():

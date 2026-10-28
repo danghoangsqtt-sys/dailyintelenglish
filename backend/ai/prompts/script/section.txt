@@ -44,6 +44,13 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
   for watching, invite them to like, subscribe and leave a comment, and say
   goodbye / see you next time. Keep this closing to a few short lines.
 {% endif %}
+{% if section_index > 1 and not short_style | default('') %}
+- This is NOT the first section: do NOT greet, welcome or introduce anyone again -- the episode is already running.
+{% endif %}
+{% if not is_last_section %}
+- This is NOT the last section: do NOT wrap up, thank the viewers, ask them to like or subscribe, or say goodbye --
+  the episode goes on after this section.
+{% endif %}
 {% if avoid_phrases %}
 
 ## Avoid Repeating These Phrases

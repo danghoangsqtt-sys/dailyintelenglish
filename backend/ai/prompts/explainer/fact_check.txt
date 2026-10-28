@@ -23,6 +23,7 @@ For each segment answer "ok" or "doubtful":
 - "doubtful": a statement is false or misleading; a number, date, name, quote or study is not in the owner's material
   and is not common, stable knowledge; the screen shows a figure the narration does not say; a news claim goes beyond
   the material; or the advice could harm someone (health, money, law) without care.
+Judge facts only: style, wording, structure or repetition never make a segment doubtful.
 "reason": for "doubtful", name the exact claim and why in one short sentence; for "ok", leave it empty.
 
 Return JSON only, one entry per segment, in this shape:

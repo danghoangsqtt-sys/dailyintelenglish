@@ -2803,3 +2803,35 @@ def test_a_short_script_is_checked_at_twenty_percent():
     assert any("±10% of target 119" in error for error in pinned)
     relaxed, _ = script_pipeline.validate_global(lines, 119, {"a"}, 1, "procrastination", tolerance_share=0.20)
     assert not any(error.startswith("total word count") for error in relaxed)
+
+
+def test_a_long_script_may_not_say_goodbye_in_the_middle_and_greet_again():
+    """Phase 85 (real run 2026-10-28): a 3-minute presenter script came back as two whole episodes."""
+    def line(text):
+        return script_pipeline.SectionLineOut(speaker_id="a", text=text)
+
+    twice = [line("Hi everyone, I am Lina."), line("Small talk builds trust."), line("Here is an example."),
+             line("Thanks for watching, please hit subscribe."), line("Hello, welcome to Daily Beyond English. I am Lina."),
+             line("Think about a colleague."), line("That is all."), line("See you next time!")]
+    errors = script_pipeline.misplaced_framing(twice)
+    assert len(errors) == 2 and "goodbye before its end" in errors[0] and "welcomes the viewers again" in errors[1]
+    once = [line("Hello, welcome to Daily Beyond English."), *twice[1:3], line("One more idea."), line("A last tip."),
+            line("Thanks for watching and see you next time!")]
+    assert script_pipeline.misplaced_framing(once) == []
+    assert script_pipeline.misplaced_framing(twice[:4]) == []  # too short to judge
+
+
+def test_a_middle_section_is_told_not_to_greet_or_say_goodbye():
+    from backend.content.script_pipeline import _env as section_env
+
+    def render(index, count):
+        return section_env.get_template("section.txt").render(
+            presentation_mode="solo_explainer", genre="informational", cefr_level="B1", topic="t", outline_title="T",
+            section_index=index, section_count=count, objective="o", min_words=50, max_words=80, prior_summary="before",
+            is_last_section=index == count, num_speakers=1, avoid_phrases=[], vocabulary=[], cefr_constraints="",
+            language_features={}, max_consecutive_lines=5, short_style="", solo_instructions="", source_kind="",
+            source_text="", source_words=[],
+            speakers=[{"name": "Lina", "gender": "female", "accent": "american"}])
+
+    assert "This is NOT the first section" in render(2, 3) and "This is NOT the last section" in render(2, 3)
+    assert "This is NOT the first section" not in render(1, 3) and "This is NOT the last section" not in render(3, 3)
