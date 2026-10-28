@@ -52,7 +52,10 @@
   const isShort = () => (state.presentationMode === "solo_explainer" && SOLO_SHORTS.includes(state.explainerStyle)) || conversationShort();
   const slotLabel = (index) => (voiceOnly() ? "Narrator (voice only)" : `Character ${index + 1}`);
   const DURATION_PRESETS = [5, 10, 15, 20];
-  const SHORT_PRESETS = [0.5, 0.75, 1];
+  const SHORT_PRESETS = [0.5, 0.75, 0.95];  // Phase 82: 57 s leaves room for the 2 s end card under a minute
+  // knowledge / news Shorts are written for a full minute (backend MESSAGE_SHORT_STYLES)
+  const MESSAGE_SHORTS = ["news", "blur", "mistakes", "top5"];
+  const shortDefault = () => (MESSAGE_SHORTS.includes(state.shortsTemplate) ? 0.95 : 0.75);
   const presets = () => (isShort() ? SHORT_PRESETS : DURATION_PRESETS);
   const presetLabel = (minutes) => (isShort() ? `${Math.round(minutes * 60)} s` : `${minutes} min`);
   const MIN_SPEAKERS = 1;
@@ -536,7 +539,7 @@
       state.presentationMode = conversation ? "classic" : mode === "vox" || mode === "shorts" ? "solo_explainer" : mode;
       state.explainerStyle = mode === "vox" ? "vox" : mode === "shorts" ? state.shortsTemplate : "presenter";
       // Phase 63: a Short lasts 30-60 s; going back to a long video restores a long length
-      if (isShort() && !wasShort) { state.duration = 0.75; state.customDurationActive = false; }
+      if (isShort() && !wasShort) { state.duration = shortDefault(); state.customDurationActive = false; }
       if (!isShort() && wasShort) { state.duration = DURATION_PRESETS[1]; state.customDurationActive = false; }
       renderPresentation();
       renderSpeakerCards();
@@ -546,6 +549,7 @@
       state.explainerStyle = card.dataset.template;
       // chat / would you rather are two-character conversations; the other Shorts have one narrator
       state.presentationMode = CONVERSATION_SHORTS.includes(card.dataset.template) ? "classic" : "solo_explainer";
+      state.duration = shortDefault();  // Phase 82: a full minute for news / knowledge, 45 s for the quick templates
       renderPresentation();
       renderSpeakerCards();
     }));

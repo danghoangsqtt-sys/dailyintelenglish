@@ -50,7 +50,7 @@ If a length repair needs more words, add a useful causal step, an example, or a 
 action. Every sentence should help the viewer understand the subject.
 {% if explainer_style | default('') in ('news', 'blur', 'mistakes', 'wordday', 'top5', 'quiz', 'listen', 'slowpod', 'flashcards') %}
 {% if explainer_style == 'news' %}SHORT — ENGLISH NEWS (vertical video, under one minute), read by a news narrator:
-open with the headline as a one-sentence hook; then three to six short facts, each one or two simple
+open with the headline as a one-sentence hook; then three or four short facts, each one or two simple
 sentences, in the narrator's own words; explain any difficult word in passing; when an article was given,
 say once where the news is from ("This news is from ..."); never invent facts, quotes, names or numbers;
 end with one line inviting the viewer to follow Daily Beyond English for more English news.
@@ -117,6 +117,13 @@ them to like, subscribe and comment, and say goodbye / see you next time. Do not
 "language insights" or call this a grammar lesson unless language itself is the topic.
 {% endif %}
 
+{% if explainer_style | default('') in ('news', 'blur', 'mistakes', 'top5') or short_format | default(false) %}
+MESSAGE FIRST (this Short must make ONE clear point that a stranger scrolling past understands without any other
+video): line 1 is the hook -- a question or a surprising claim; line 2 gives the context in one sentence (what it is
+about and why it matters to the viewer); then two or three key points, each with one concrete example, number or fact
+(from the article when one was given); the last content line is the takeaway that answers the hook in plain words;
+then the follow line. Each line follows from the one before; never leave a point half explained or end on a new idea.
+{% endif %}
 Explain only what can be stated responsibly. Do not fabricate studies, precise statistics,
 URLs, quotations, or citations. Preserve any provided source information accurately;
 otherwise use plain explanations and examples without invented references. Avoid

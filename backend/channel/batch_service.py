@@ -21,7 +21,7 @@ from backend.core.config import settings
 from backend.core.exceptions import ProviderError, SchemaValidationError, ValidationError
 from backend.schemas.channel import EpisodeInput, SeriesInput, TopicInput
 from backend.core.constants import CEFR_LEVELS
-from backend.schemas.project import CONVERSATION_SHORT_STYLES, SHORT_STYLES
+from backend.schemas.project import CONVERSATION_SHORT_STYLES, SHORT_STYLES, short_minutes
 
 # What each template asks of an idea (shown to the AI)
 TEMPLATES = {
@@ -182,7 +182,7 @@ async def create_batch(db: aiosqlite.Connection, request: CreateRequest) -> dict
         name=request.series_name, presentation_mode="classic" if conversation else "solo_explainer",
         # Phase 80: a classic series ignores the style (talking characters), as every classic series does
         explainer_style="presenter" if request.template == "conversation" else request.template, cefr_level=request.cefr_level,
-        cast=request.cast, duration_minutes=0.75,
+        cast=request.cast, duration_minutes=short_minutes(None if request.template == "conversation" else request.template),
         genre="small_talk" if conversation else "informational"))
     if request.audience:
         from backend.content import audience

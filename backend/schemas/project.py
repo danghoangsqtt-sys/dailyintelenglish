@@ -125,6 +125,18 @@ ExplainerStyle = Literal["presenter", "vox", "news", "blur", "mistakes", "wordda
 LINE_DRAWN_STYLES = ("chat", "wyr", "slowpod", "flashcards")
 SLOWPOD_SPEED = 0.8  # Phase 81: the slow English podcast narrator's default speed
 SHORT_MAX_MINUTES = 1.0
+# Phase 82 (owner 2026-10-28): knowledge / news Shorts use a full minute to carry their message (57 s + the 2 s end card);
+# the quick-learning templates stay short
+MESSAGE_SHORT_STYLES = ("news", "blur", "mistakes", "top5", "presenter", "vox")
+MESSAGE_SHORT_MINUTES = 0.95
+QUICK_SHORT_MINUTES = 0.75
+
+
+def short_minutes(style: str | None) -> float:
+    """The length a new Short of this style is written for."""
+    return MESSAGE_SHORT_MINUTES if style in MESSAGE_SHORT_STYLES else QUICK_SHORT_MINUTES
+
+
 SHORT_FORMAT_STYLES = (None, "presenter", "vox")  # Phase 80: these become a Short at <= 1 minute (conversation, presenter, vox)
 
 

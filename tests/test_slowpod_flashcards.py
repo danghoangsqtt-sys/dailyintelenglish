@@ -119,3 +119,21 @@ async def test_a_flashcard_script_job_builds_cards_from_the_ai_deck(db):
     texts = [line["text"] for line in await script_service.get_script(db, project["id"])]
     assert texts[0] == "Vocabulary: daily routines." and texts[1] == "wake up. wake up." and len(texts) == 7
     assert provider.call_count == 1
+
+
+def test_message_shorts_get_a_full_minute_and_a_message_structure(client):  # noqa: F811
+    """Phase 82 (owner 2026-10-28): knowledge / news Shorts were too short to carry their message."""
+    from backend.schemas.project import short_minutes
+
+    assert short_minutes("news") == short_minutes("presenter") == 0.95 and short_minutes("wordday") == short_minutes(None) == 0.75
+    news = _render_presentation_block_sync("solo_explainer", "why", 1, "topic", "news")
+    assert "MESSAGE FIRST" in news and "takeaway that answers the hook" in news and "three or four short facts" in news
+    assert "MESSAGE FIRST" in _render_presentation_block_sync("solo_explainer", "why", 1, "topic", "presenter", short=True)
+    assert "MESSAGE FIRST" not in _render_presentation_block_sync("solo_explainer", "why", 1, "topic", "wordday")
+    narrator = locked_character("Anchor", "red")
+    result = data(client.post("/api/shorts-batch/create", json={
+        "topic_name": "Shorts", "series_name": "News week", "template": "news", "cast": [narrator], "cefr_level": "B1",
+        "start_date": "2026-10-29", "every_days": 1, "make_projects": True, "items": [{"title": "Storm", "brief": ""}]}))
+    tree = data(client.get("/api/channel"))
+    series = next(s for topic in tree["topics"] for s in topic["series"] if s["id"] == result["series_id"])
+    assert data(client.get(f"/api/projects/{series['episodes'][0]['project_id']}"))["duration_minutes"] == 0.95

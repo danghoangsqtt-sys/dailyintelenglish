@@ -1,4 +1,4 @@
-"""Phase 63 (ENH-045): the "Shorts viral" card on Step 1 -- templates, the 30/45/60 s lengths, a news article source."""
+"""Phase 63 (ENH-045): the "Shorts viral" card on Step 1 -- templates, the 30/45/57 s lengths (Phase 82), a news article source."""
 import pytest
 from playwright.async_api import async_playwright, expect
 
@@ -38,8 +38,9 @@ async def test_the_shorts_card_makes_a_vertical_news_short_from_an_article(page,
     await expect(page.locator(".type-card[data-mode='shorts']")).to_have_attribute("aria-checked", "true")
     await expect(page.locator("#shorts-templates")).to_be_visible()
     await expect(page.locator("#subject-cards")).to_be_hidden()
-    await expect(page.locator("#duration-presets button")).to_have_text(["30 s", "45 s", "60 s"])
-    await expect(page.locator("#duration-presets button[aria-pressed='true']")).to_have_text("45 s")
+    await expect(page.locator("#duration-presets button")).to_have_text(["30 s", "45 s", "57 s"])
+    # Phase 82: a news Short (the first template) is written for a full minute
+    await expect(page.locator("#duration-presets button[aria-pressed='true']")).to_have_text("57 s")
     await expect(page.locator(".speaker-slot").first).to_have_text("Narrator (voice only)")
     # a blur Short has no material source; a news Short takes an article
     await page.locator("[data-template='blur']").click()
@@ -55,7 +56,7 @@ async def test_the_shorts_card_makes_a_vertical_news_short_from_an_article(page,
     await page.locator("#source-text").fill(ARTICLE)
     await page.locator("#name").fill("Storm news")
     await page.locator("#topic").fill("A storm reaches the coast")
-    await page.locator("#duration-presets button", has_text="60 s").click()
+    await page.locator("#duration-presets button", has_text="57 s").click()
     await page.locator("button[data-choose='0']").click()
     await page.locator(f".cs-card[data-id='{profile['id']}']").click()
     await page.locator("[data-cs='choose']").click()
@@ -65,7 +66,7 @@ async def test_the_shorts_card_makes_a_vertical_news_short_from_an_article(page,
     projects = await result(await page.request.get(base_url + "/api/projects"))
     created = next(item for item in projects if item["name"] == "Storm news")
     stored = await result(await page.request.get(base_url + f"/api/projects/{created['id']}"))
-    assert (stored["presentation_mode"], stored["explainer_style"], stored["duration_minutes"]) == ("solo_explainer", "news", 1)
+    assert (stored["presentation_mode"], stored["explainer_style"], stored["duration_minutes"]) == ("solo_explainer", "news", 0.95)
     assert (stored["source_kind"], stored["source_text"]) == ("article", ARTICLE)
 
 
@@ -90,7 +91,7 @@ async def test_the_learning_templates_make_their_shorts(page, base_url):
     projects = await result(await page.request.get(base_url + "/api/projects"))
     created = next(item for item in projects if item["name"] == "Top 5 small talk")
     stored = await result(await page.request.get(base_url + f"/api/projects/{created['id']}"))
-    assert (stored["explainer_style"], stored["duration_minutes"]) == ("top5", 0.75)
+    assert (stored["explainer_style"], stored["duration_minutes"]) == ("top5", 0.95)  # Phase 82: a knowledge Short
 
 
 async def test_the_chat_template_makes_a_two_character_conversation_short(page, base_url):

@@ -306,7 +306,10 @@ async def create_projects(db: aiosqlite.Connection, series_id: str) -> dict:
     # Phase 63: a Short lasts at most 60 s
     from backend.schemas.project import SHORT_STYLES
 
-    duration = min(series["duration_minutes"], 0.75) if style in SHORT_STYLES else series["duration_minutes"]
+    from backend.schemas.project import short_minutes
+
+    # Phase 82: a Short template is written for its own length (a full minute for news / knowledge, 45 s for quick ones)
+    duration = short_minutes(style) if style in SHORT_STYLES else series["duration_minutes"]
     if style == "slowpod":  # Phase 81: the narrator reads a slow English podcast slowly, whatever the profile's speed
         from backend.schemas.project import SLOWPOD_SPEED
 
