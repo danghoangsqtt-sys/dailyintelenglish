@@ -45,3 +45,12 @@ def test_a_repaired_activity_card_shows_the_narrators_words_not_the_planning_not
     assert segment.visual.title == "Instead of 'send me that report', say 'could you send me that report?'"
     assert explainer_stage.card_title("word " * 40).endswith("…") and len(explainer_stage.card_title("word " * 40)) <= 121
     assert explainer_stage.card_title("", "Fallback note") == "Fallback note"
+
+
+async def test_the_presenter_plan_asks_for_pictures_in_about_every_second_segment():
+    """Phase 85 (real run 2026-10-28): offered 133 library pictures, the planner chose only cards and diagrams."""
+    from backend.ai.llm.prompt_loader import render_explainer_prompt
+
+    prompt = await render_explainer_prompt(topic="Small talk at work", structure="how", cefr_level="B1", lines=[], assets=[],
+                                           scenes=[], activities=[], previous=None, output_schema={}, previous_error="")
+    assert "PICTURES MATTER" in prompt and "a loose match is fine" in prompt and '"asset": null' in prompt

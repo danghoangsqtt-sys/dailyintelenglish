@@ -18,9 +18,14 @@ keep the same scene for neighbouring segments unless the idea moves somewhere el
 When a segment talks about an everyday action that one AVAILABLE ACTIVITY PICTURES item shows (driving, cooking,
 studying, exercise...), use visual {"kind": "activity", "activity_id": "<id>"}: that picture fills the screen behind
 the presenter. Prefer the presenter's own pictures (presenter_own: true) when the action matches. Use each activity
-at most once and only for a clear match; otherwise use a short text card or a diagram, which float beside the presenter.
-Use a useful mixture of activity pictures, supported diagrams and short text cards when appropriate.
-Photo: select only an asset_id/version from the available list or use asset:null plus an external-AI image prompt.
+at most once.
+PICTURES MATTER: a viewer should see a picture behind the presenter in about every second segment, not only cards.
+Use an activity picture when its action is close to what is said -- a loose match is fine ("discuss document" for a
+meeting, "drinking coffee" for small talk at work). When no offered picture fits a segment that describes a situation,
+place or action, use {"kind": "photo", "asset": null, "prompt": "..."} with one sentence describing a realistic,
+everyday photo of ordinary people or objects (no text in the picture, never the presenter): it is drawn for you.
+Keep text cards and diagrams, which float beside the presenter, for lists, steps, rules and comparisons.
+Photo: select only an asset_id/version from the available list or use asset:null plus an image prompt.
 Keep photos contain unless important regions are known. Important rectangles are normalized image coordinates.
 Diagram: only steps, comparison or cause_effect; 2–6 nodes, valid existing node IDs in edges, short labels/details.
 Text card: clear short title and at most 5 short bullets. Do not copy a full spoken paragraph onto a card.
