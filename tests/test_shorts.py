@@ -73,8 +73,9 @@ def test_a_clip_from_the_episode_stands_on_its_own():
     assert not shorts_service.depends_on_earlier("Thanks to remote work, offices changed.")
     assert _edges(stamps, 3, 7) == (2, 7)      # opens on a reply: starts at the statement it answers
     assert _edges(stamps, 1, 6) == (1, 7)      # ends on a question to the other speaker: takes the answer
-    assert _edges(stamps, 4, 9) == (4, 8)      # the episode's goodbye is dropped while the clip stays >= 30 s
-    assert _edges(stamps, 6, 9) == (6, 9)      # ...but not below 30 s
+    assert _edges(stamps, 4, 9) == (4, 8)      # the episode's goodbye is dropped
+    assert _edges(stamps, 6, 9) == (5, 8)      # ...and the start moves back when the clip falls under 30 s
+    assert _edges(stamps, 9, 10) is None       # nothing but the goodbye
     replies = _talk("Intro.", "Exactly.", "Yes, totally.", "And that's why.", "So, true.", "But also this.", "More.", "End.")
     assert _edges(replies, 5, 7) is None       # still a reply three lines back: dropped
     clips = shorts_service.valid_clips(shorts_service.ClipProposal(clips=[

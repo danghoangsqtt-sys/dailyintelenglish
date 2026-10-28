@@ -93,25 +93,28 @@ def depends_on_earlier(text: str) -> bool:
 def self_contained(clip: ProposedClip, timestamps: list[dict]) -> ProposedClip | None:
     """Move the clip's edges so it stands on its own, or None when it cannot.
 
-    A first line that answers earlier talk pulls the start back (up to three lines, within 90 s); an episode sign-off
-    at the end is dropped while the clip stays 30 s or longer; a last line asking the other speaker a question takes
-    the answer too (within 90 s). A clip that still opens on a reply is dropped."""
+    The episode's sign-off at the end is dropped, and the start moves back when the clip falls under 30 s (real run
+    2026-10-28: dropping it left 29.99 s, so the goodbye stayed); a first line that answers earlier talk pulls the start
+    back (up to three lines, within 90 s); a last line asking the other speaker a question takes the answer too (within
+    90 s). A clip that still opens on a reply or closes on the goodbye is dropped."""
     first, last = clip.line_from, clip.line_to
     if not 0 <= first <= last < len(timestamps):
         return clip  # check_range explains the problem
+    while last > first and _SIGN_OFF.search(_text(timestamps, last)):
+        last -= 1
+    while first > 0 and clip_seconds(timestamps, first, last) < MIN_SECONDS \
+            and clip_seconds(timestamps, first - 1, last) <= MAX_SECONDS:
+        first -= 1
     for _ in range(MAX_LINES_BACK):
         if first == 0 or not depends_on_earlier(_text(timestamps, first)) \
                 or clip_seconds(timestamps, first - 1, last) > MAX_SECONDS:
             break
         first -= 1
-    while last > first and _SIGN_OFF.search(_text(timestamps, last)) \
-            and clip_seconds(timestamps, first, last - 1) >= MIN_SECONDS:
-        last -= 1
     if _text(timestamps, last).endswith("?") and last + 1 < len(timestamps) \
             and timestamps[last + 1].get("label") != timestamps[last].get("label") \
             and clip_seconds(timestamps, first, last + 1) <= MAX_SECONDS:
         last += 1
-    if depends_on_earlier(_text(timestamps, first)):
+    if depends_on_earlier(_text(timestamps, first)) or _SIGN_OFF.search(_text(timestamps, last)):
         return None
     return clip.model_copy(update={"line_from": first, "line_to": last})
 
