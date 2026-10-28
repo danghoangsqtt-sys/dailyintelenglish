@@ -103,6 +103,21 @@ surprise; finish with a one-line takeaway and one line inviting the viewer to fo
 Never attribute a quote to a real person unless the owner gave it. This SHORT format replaces the
 structure above and the OPENING and CLOSING below.
 {% endif %}
+{% elif explainer_style == 'vox' %}
+VOX FORMULA ({{ 'a vertical Short under one minute' if short_format else 'a narrated episode' }}): a voice over pictures, like a
+viral Vox explainer -- evidence first, then context. Write the whole script in this order:
+1. COLD OPEN (line 1): say one concrete English example aloud (a word, a phrase or a short sentence) and ask ONE
+   curious question about it, for example "Knight. Why do we write a K that nobody says?" -- no greeting, no welcome,
+   no introduction of the narrator, no channel name.
+2. PROMISE (line 2): one sentence saying what the viewer will understand by the end.
+3. EVIDENCE: {{ 'two' if short_format else 'three' }} blocks. Each block first says one English example aloud (a word,
+   a phrase or a short sentence the viewer can reuse), then explains it in one or two short sentences.
+4. CALLBACK: come back to the opening example and answer the question in plain words.
+5. TIP: one simple way to remember or use it.
+6. FOLLOW: one short line inviting the viewer to follow Daily Beyond English (no long thanks, no goodbye speech).
+Keep every line under 20 words and one idea per line. Use only facts, dates and numbers that are widely known and
+stable, or given in the owner's material; never invent a study, a percentage or a quote.
+This VOX format replaces the structure's opening and sign-off and the OPENING and CLOSING below.
 {% elif short_format %}
 SHORT ({{ 'VOX: a narrator over pictures' if explainer_style == 'vox' else 'a presenter speaking to camera' }}, vertical video,
 under one minute): open with a one-sentence hook that makes the viewer stay (no greeting, no welcome, no
@@ -117,7 +132,7 @@ them to like, subscribe and comment, and say goodbye / see you next time. Do not
 "language insights" or call this a grammar lesson unless language itself is the topic.
 {% endif %}
 
-{% if explainer_style | default('') in ('news', 'blur', 'mistakes', 'top5') or short_format | default(false) %}
+{% if explainer_style | default('') in ('news', 'blur', 'mistakes', 'top5') or (short_format | default(false) and explainer_style | default('') != 'vox') %}
 MESSAGE FIRST (this Short must make ONE clear point that a stranger scrolling past understands without any other
 video): line 1 is the hook -- a question or a surprising claim; line 2 gives the context in one sentence (what it is
 about and why it matters to the viewer); then two or three key points, each with one concrete example, number or fact

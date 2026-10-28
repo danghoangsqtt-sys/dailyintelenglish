@@ -35,7 +35,10 @@ def test_a_presenter_or_vox_short_prompt_has_a_hook_and_no_episode_greeting():
         short = _render_presentation_block_sync("solo_explainer", "why", 1, "topic", style, short=True)
         assert "under one minute" in short and "no greeting" in short and "OPENING (the first section only): begin the episode" not in short
         episode = _render_presentation_block_sync("solo_explainer", "why", 1, "topic", style)
-        assert "OPENING (the first section only): begin the episode" in episode
+        if style == "presenter":
+            assert "OPENING (the first section only): begin the episode" in episode
+        else:  # Phase 86: a VOX episode opens cold on an English example and a question
+            assert "COLD OPEN" in episode and "OPENING (the first section only): begin the episode" not in episode
 
 
 def test_a_short_lesson_needs_no_idiom():

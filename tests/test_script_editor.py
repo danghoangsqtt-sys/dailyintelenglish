@@ -91,3 +91,12 @@ async def test_a_rewrite_that_only_misses_the_length_is_asked_once_to_fit_it(db)
     result = await script_editor.review(db, project["id"], router)
     assert (result["outcome"], result["rewritten"]) == ("rewritten", True) and provider.call_count == 3
     assert "LENGTH: your previous rewrite had" in provider.calls[2].prompt
+
+
+async def test_the_editor_keeps_a_vox_cold_open(db):
+    """Phase 86: a long VOX script opens on an English example and a question; the editor must not add a greeting."""
+    project, target = await _project(db, style="vox")
+    rewrite = [{"speaker": "Lina", "text": text} for text in _sentences(round(target / 10), start=700)]
+    router, provider = _router({"scores": WEAK, "notes": "Sharper hook."}, {"lines": rewrite})
+    await script_editor.review(db, project["id"], router)
+    assert "Keep the cold open" in provider.calls[1].prompt and "Keep the greeting at the start" not in provider.calls[1].prompt

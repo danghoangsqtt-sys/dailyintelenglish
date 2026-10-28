@@ -119,6 +119,7 @@ async def review(db: aiosqlite.Connection, project_id: str, router: AIRouter | N
     words_before = sum(len(line["text"].split()) for line in lines)
     context = {"topic": project["topic"], "cefr_level": project["cefr_level"], "short": is_short_video(project),
                "source": (project.get("source_text") or "")[:SOURCE_LIMIT],
+               "cold_open": project.get("explainer_style") == "vox",  # Phase 86: a VOX script opens on an example, no greeting
                "style": project.get("explainer_style") or "conversation", "target_words": target_words,
                "lines": [{"speaker": names.get(line["speaker_id"], "Narrator"), "text": line["text"]} for line in lines]}
     router = router or build_ai_router_from_settings()

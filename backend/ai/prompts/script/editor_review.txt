@@ -18,7 +18,7 @@ with everyday situations and example sentences instead.
 """
 {% endif %}
 Score each from 1 (poor) to 5 (excellent):
-- hook: {% if short %}the first line makes a scrolling viewer stay (a question, a surprise, a clear promise), not a
+- hook: {% if short or cold_open %}the first line makes a scrolling viewer stay (a question, a surprise, a clear promise), not a
   generic greeting{% else %}right after the greeting (a long episode greets its viewers first, by design), the opening
   lines promise clearly what the viewer will learn or why it matters{% endif %}.
 - message: the whole script carries ONE clear point or skill a viewer could repeat after watching.
@@ -26,7 +26,7 @@ Score each from 1 (poor) to 5 (excellent):
 - natural: the English sounds like real people speaking (contractions, short sentences, no textbook stiffness),
   with no repeated or filler lines.
 - level: vocabulary and grammar suit CEFR {{ cefr_level }}; harder words are explained or clear from context.
-- ending: {% if short %}the last content line answers the hook in plain words before the follow line{% else %}the episode wraps up what was learned and closes warmly{% endif %}.
+- ending: {% if short or cold_open %}the last content line answers the hook in plain words before the follow line{% else %}the episode wraps up what was learned and closes warmly{% endif %}.
 {% if style in ("quiz", "listen", "wyr", "chat", "mistakes", "wordday", "top5") %}
 This is a "{{ style }}" template with its own fixed format: judge the content inside the format, not the format itself.
 {% endif %}

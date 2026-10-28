@@ -21,6 +21,9 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
 {% elif short_style | default('') in ('slowpod', 'flashcards') %}
 - This is the FIRST section of a SHORT (a vertical video under one minute): its first line is exactly the one the
   SHORT format above gives (the podcast greeting / the deck name), then its lines in that format.
+{% elif voice_over | default(false) %}
+- This is the FIRST section of a VOX episode: its first line is the COLD OPEN of the VOX FORMULA (an English example
+  said aloud and one curious question), then the PROMISE line. No greeting, no welcome, no introduction.
 {% elif short_style | default('') %}
 - This is the FIRST section of a SHORT (a vertical video under one minute). Open with
   a HOOK line of one short sentence that makes the viewer stay ({% if short_style == 'news' %}the
@@ -38,6 +41,9 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
 {% if is_last_section and short_style | default('') %}
 - This is the LAST section of a SHORT: end with one short line inviting the viewer to
   follow Daily Beyond English for more{% if short_style == 'news' %} English news{% endif %} (no long thanks, no goodbye speech).
+{% elif is_last_section and voice_over | default(false) %}
+- This is the LAST section of a VOX episode: the CALLBACK to the opening example with the answer in plain words, one
+  TIP, then one short line inviting the viewer to follow Daily Beyond English (no long thanks, no goodbye speech).
 {% elif is_last_section %}
 - This is the LAST section of the episode — close it out naturally with a brief
   wrap-up, and END with a short, warm closing spoken to the viewers: thank them

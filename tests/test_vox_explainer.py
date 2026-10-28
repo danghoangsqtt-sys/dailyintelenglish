@@ -149,3 +149,29 @@ def test_the_vox_plan_shows_the_welcome_and_the_thanks():
 
     prompt = (PROMPTS_DIR / "storyboard" / "explainer_vox.txt").read_text(encoding="utf-8")
     assert "Thanks for watching" in prompt and "Subscribe" in prompt
+
+
+def test_a_vox_script_follows_the_viral_explainer_formula():
+    """Phase 86 (owner 2026-10-28): cold open on an English example and one question, evidence blocks, a callback with
+    the answer, a tip and one follow line -- no greeting, no 'thanks for watching' speech."""
+    from jinja2 import Environment, FileSystemLoader
+
+    from backend.ai.llm.prompt_loader import _render_presentation_block_sync
+    from backend.core.paths import PROMPTS_DIR
+
+    episode = _render_presentation_block_sync("solo_explainer", "why", 1, "topic", "vox")
+    short = _render_presentation_block_sync("solo_explainer", "why", 1, "topic", "vox", short=True)
+    for text in (episode, short):
+        assert "COLD OPEN" in text and "CALLBACK" in text and "no greeting" in text and "MESSAGE FIRST" not in text
+    assert "three blocks" in episode and "two blocks" in short
+    section = Environment(loader=FileSystemLoader(str(PROMPTS_DIR / "script")))
+
+    def render(index, last, voice_over):
+        return section.get_template("section.txt").render(
+            presentation_mode="solo_explainer", section_index=index, section_count=3, is_last_section=last, voice_over=voice_over,
+            speakers=[{"name": "Lina", "gender": "female", "accent": "american"}], num_speakers=1, language_features={},
+            avoid_phrases=[], prior_summary="" if index == 1 else "before")
+
+    assert "first line is the COLD OPEN" in render(1, False, True) and "greet the viewers warmly" not in render(1, False, True)
+    assert "greet the viewers warmly" in render(1, False, False)
+    assert "CALLBACK to the opening example" in render(3, True, True) and "thank them" not in render(3, True, True)

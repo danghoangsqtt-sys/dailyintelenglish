@@ -876,6 +876,7 @@ async def _generate_section(
         num_speakers=len(project["speakers"]),
         max_consecutive_lines=SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER,
         presentation_mode=project.get("presentation_mode", "classic"),
+        voice_over=project.get("explainer_style") == "vox",  # Phase 86: a VOX episode opens cold and ends on its recap
         solo_instructions=await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]), project.get("explainer_subject"), project.get("explainer_style")),
         cefr_constraints=cefr_constraints,
         language_features=project["language_features"],
