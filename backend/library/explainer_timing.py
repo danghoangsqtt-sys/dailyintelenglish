@@ -144,6 +144,21 @@ class ScriptIndex:
             queue[:0] = [first, second]
         return result
 
+    def merge_closing(self, segments: list[ExplainerSegment], closing: "re.Pattern[str]") -> list[ExplainerSegment]:
+        """Phase 86 (real run 2026-10-29): a VOX plan still ended on a "Thanks for watching / Subscribe" card for the
+        follow line. The last segment, when its words are only that follow line, joins the segment before it, so the
+        video ends on the recap of the answer (the renderer adds its own Subscribe stamp)."""
+        if len(segments) < 2:
+            return segments
+        last, before = segments[-1], segments[-2]
+        start, end = self.boundary(last.start), self.boundary(last.end)
+        words = " ".join(token.text for token in self.tokens[start:end])
+        if not closing.search(words) or (last.locks.content or last.locks.visual):
+            return segments
+        merged = before.model_copy(update={"end": last.end, "line_ids": self.line_ids(before.start, last.end),
+                                           "gestures": [*before.gestures, *last.gestures]})
+        return [*segments[:-2], merged]
+
     def validate_coverage(self, segments: list[ExplainerSegment]) -> list[tuple[int, int]]:
         """Require every spoken token exactly once, in script order, with no gaps/overlaps."""
         spans = []

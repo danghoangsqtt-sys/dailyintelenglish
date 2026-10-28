@@ -2835,3 +2835,34 @@ def test_a_middle_section_is_told_not_to_greet_or_say_goodbye():
 
     assert "This is NOT the first section" in render(2, 3) and "This is NOT the last section" in render(2, 3)
     assert "This is NOT the first section" not in render(1, 3) and "This is NOT the last section" not in render(3, 3)
+
+
+def test_a_vox_follow_line_in_the_middle_means_two_episodes_in_one():
+    """Phase 86 (sandbox run 2026-10-29): each section of a long VOX script wrote the whole formula, follow line included."""
+    def line(text):
+        return script_pipeline.SectionLineOut(speaker_id="a", text=text)
+
+    twice = [line("Knight. Why do we write a K?"), line("You will see why."), line("Write. Long ago people said the W."),
+             line("Follow Daily Beyond English for more stories."), line("Knight. Why do we write a silent K?"),
+             line("Take the word debt."), line("So we keep the K."), line("Follow Daily Beyond English for more.")]
+    assert any("goodbye before its end" in error for error in script_pipeline.misplaced_framing(twice))
+    assert script_pipeline.misplaced_framing(twice[4:] + twice[:0]) == []
+
+
+def test_a_second_vox_promise_means_a_second_opening():
+    def line(text):
+        return script_pipeline.SectionLineOut(speaker_id="a", text=text)
+
+    twice = [line("Knight. Why the K?"), line("By the end of this video, you will know."), line("Write."), line("Knee."),
+             line("Knight again. Why the K?"), line("By the end of this, you will see why."), line("So that is why."), line("Follow us.")]
+    assert any("second opening" in error for error in script_pipeline.misplaced_framing(twice))
+
+
+async def test_a_long_vox_script_is_written_in_one_section(db):
+    """Phase 86 (sandbox runs 2026-10-29): split into sections, the VOX formula restarted in every section."""
+    from tests.test_script_pipeline import _build_router  # noqa: F401  (same module helpers)
+
+    assert script_pipeline.plan_sections(375, "B1") != [375]  # a presenter script of 3 minutes still has sections
+    source = (script_pipeline.__file__)
+    text = open(source, encoding="utf-8").read()
+    assert 'if vox:' in text and "section_budgets = [target_words]" in text and 'objective=" Then: ".join' in text

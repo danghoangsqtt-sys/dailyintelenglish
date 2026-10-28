@@ -24,6 +24,10 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
 {% elif voice_over | default(false) %}
 - This is the FIRST section of a VOX episode: its first line is the COLD OPEN of the VOX FORMULA (an English example
   said aloud and one curious question), then the PROMISE line. No greeting, no welcome, no introduction.
+- LENGTH: write one EVIDENCE block for EVERY example the objective names ({{ vox_blocks | default(3) }} blocks), each about
+  {{ vox_block_words | default(70) }} words (the example said aloud, three or four sentences of explanation with an
+  everyday situation, one more example sentence), then the callback, the tip and the follow line. Count your blocks
+  before answering: a block you skip makes the video too short.
 {% elif short_style | default('') %}
 - This is the FIRST section of a SHORT (a vertical video under one minute). Open with
   a HOOK line of one short sentence that makes the viewer stay ({% if short_style == 'news' %}the
@@ -52,6 +56,12 @@ You are writing ONE section of a {{ genre }} podcast episode at CEFR
 {% endif %}
 {% if section_index > 1 and not short_style | default('') %}
 - This is NOT the first section: do NOT greet, welcome or introduce anyone again -- the episode is already running.
+{% if voice_over | default(false) %}
+- VOX: continue with the NEXT evidence blocks of the VOX FORMULA. No new cold open, no new question, no promise.
+{% endif %}
+{% endif %}
+{% if not is_last_section and voice_over | default(false) %}
+- VOX: this is not the last section -- no callback, no tip, no follow line yet.
 {% endif %}
 {% if not is_last_section %}
 - This is NOT the last section: do NOT wrap up, thank the viewers, ask them to like or subscribe, or say goodbye --

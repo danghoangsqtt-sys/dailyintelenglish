@@ -145,3 +145,21 @@ def test_a_long_vox_segment_is_split_into_a_quote_at_a_sentence_end():
     assert parts[1].visual.highlight and parts[1].visual.highlight.lower() in parts[1].visual.text.lower()
     assert all(index.boundary(p.end) - index.boundary(p.start) <= 10 or p is parts[-1] for p in parts)
     assert index.split_long([long], max_tokens=40) == [long]  # short enough: unchanged
+
+
+def test_a_vox_follow_line_joins_the_recap_segment():
+    """Phase 86 (real run 2026-10-29): the VOX Short still ended on a 'Thanks for watching / Subscribe' card."""
+    from backend.library.explainer_service import VOX_CLOSING
+
+    lines = [{"id": "L1", "text": "So OK means all correct."}, {"id": "L2", "text": "Please follow Daily Beyond English for more."}]
+    index = ScriptIndex(lines)
+    recap = segment("takeaway-1", "L1", 0, "L1", 5)
+    thanks = ExplainerSegment(id="outro-1", intent="Thank", line_ids=["L2"], start={"line_id": "L2", "token_index": 0},
+                              end={"line_id": "L2", "token_index": 7},
+                              visual={"kind": "text_card", "title": "Thanks for watching", "emphasis": "Subscribe"})
+    merged = index.merge_closing([recap, thanks], VOX_CLOSING)
+    assert [s.id for s in merged] == ["takeaway-1"] and merged[0].line_ids == ["L1", "L2"]
+    index.validate_coverage(merged)
+    assert index.merge_closing([recap], VOX_CLOSING) == [recap]
+    other = segment("idea-2", "L2", 0, "L2", 7)
+    assert len(index.merge_closing([recap, other.model_copy(update={"id": "x"})], VOX_CLOSING)) == 1  # words decide, not the card

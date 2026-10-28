@@ -105,13 +105,17 @@ structure above and the OPENING and CLOSING below.
 {% endif %}
 {% elif explainer_style == 'vox' %}
 VOX FORMULA ({{ 'a vertical Short under one minute' if short_format else 'a narrated episode' }}): a voice over pictures, like a
-viral Vox explainer -- evidence first, then context. Write the whole script in this order:
+viral Vox explainer -- evidence first, then context. The WHOLE episode follows this order ONCE{{ '' if short_format else
+' -- across all its sections together: only the first section has the cold open and promise, only the last one the
+callback, tip and follow line, and the sections in between carry the next evidence blocks' }}:
 1. COLD OPEN (line 1): say one concrete English example aloud (a word, a phrase or a short sentence) and ask ONE
    curious question about it, for example "Knight. Why do we write a K that nobody says?" -- no greeting, no welcome,
    no introduction of the narrator, no channel name.
 2. PROMISE (line 2): one sentence saying what the viewer will understand by the end.
-3. EVIDENCE: {{ 'two' if short_format else 'three' }} blocks. Each block first says one English example aloud (a word,
-   a phrase or a short sentence the viewer can reuse), then explains it in one or two short sentences.
+3. EVIDENCE: {{ 'two blocks' if short_format else 'as many blocks as the length needs (three to five)' }}. Each block
+   first says one English example aloud (a word, a phrase or a short sentence the viewer can reuse), then explains it in
+   {{ 'one or two short sentences' if short_format else 'three or four short sentences with an everyday situation, then uses it in one more example sentence' }}.{% if not short_format %}
+   Fill the planned length with more blocks and fuller explanations, never with greetings or repeated points.{% endif %}
 4. CALLBACK: come back to the opening example and answer the question in plain words.
 5. TIP: one simple way to remember or use it.
 6. FOLLOW: one short line inviting the viewer to follow Daily Beyond English (no long thanks, no goodbye speech).

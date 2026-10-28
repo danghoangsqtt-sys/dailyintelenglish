@@ -163,7 +163,8 @@ def test_a_vox_script_follows_the_viral_explainer_formula():
     short = _render_presentation_block_sync("solo_explainer", "why", 1, "topic", "vox", short=True)
     for text in (episode, short):
         assert "COLD OPEN" in text and "CALLBACK" in text and "no greeting" in text and "MESSAGE FIRST" not in text
-    assert "three blocks" in episode and "two blocks" in short
+    assert "as many blocks as the length needs (three to five)" in episode and "two blocks" in short
+    assert "Fill the planned length" in episode and "Fill the planned length" not in short
     section = Environment(loader=FileSystemLoader(str(PROMPTS_DIR / "script")))
 
     def render(index, last, voice_over):
@@ -175,6 +176,9 @@ def test_a_vox_script_follows_the_viral_explainer_formula():
     assert "first line is the COLD OPEN" in render(1, False, True) and "greet the viewers warmly" not in render(1, False, True)
     assert "greet the viewers warmly" in render(1, False, False)
     assert "CALLBACK to the opening example" in render(3, True, True) and "thank them" not in render(3, True, True)
+    middle = render(2, False, True)  # Phase 86 sandbox run: each section wrote the whole formula
+    assert "continue with the NEXT evidence blocks" in middle and "no callback, no tip, no follow line yet" in middle
+    assert "ONCE" in episode and "only the first section has the cold open" in episode
 
 
 def test_the_vox_plan_asks_for_evidence_pace_and_a_recap():
@@ -183,3 +187,12 @@ def test_the_vox_plan_asks_for_evidence_pace_and_a_recap():
     text = (PROMPTS_DIR / "storyboard" / "explainer_vox.txt").read_text(encoding="utf-8")
     assert "PACE AND EVIDENCE" in text and "never more than about 20 spoken words" in text
     assert "never a title alone" in text and 'never a "Thanks for' in text and "paper cut-out OBJECTS" in text
+
+
+def test_a_vox_script_gets_named_blocks_that_fill_its_length_and_a_dense_tolerance():
+    """Phase 86 (sandbox runs 2026-10-29): VOX scripts came back short; a number of named blocks fills the length."""
+    from backend.content import script_pipeline
+
+    assert [script_pipeline.vox_blocks(words) for words in (119, 375, 500, 750)] == [3, 5, 7, 8]
+    assert script_pipeline.word_tolerance({"explainer_style": "vox", "duration_minutes": 3}) == 0.20
+    assert script_pipeline.word_tolerance({"explainer_style": "presenter", "duration_minutes": 3}) == 0.10

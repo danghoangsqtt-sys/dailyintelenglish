@@ -45,6 +45,7 @@ _VOX_PROPOSAL = TypeAdapter(VoxExplainerProposal)
 
 
 VOX_MAX_SEGMENT_WORDS = 24  # Phase 86: about 8 s of narration at a learner's pace
+VOX_CLOSING = re.compile(r"\bfollow daily beyond english\b|\bsubscribe\b|thanks? (you )?for watching", re.IGNORECASE)
 
 
 def is_vox(project_or_source: dict) -> bool:
@@ -545,8 +546,9 @@ def _proposed_segments(text: str, previous: list[ExplainerSegment], snapshot: di
     wire = parse_and_validate(text, _proposal_adapter(snapshot["source"]))
     segments = merge_proposal(previous, [ExplainerSegment.model_validate(item.model_dump()) for item in wire.segments])
     segments = ScriptIndex(lines).snap(segments)  # Phase 84: an off-by-a-word anchor no longer fails the whole plan
-    if is_vox(snapshot["source"]["project"]):  # Phase 86: a VOX picture changes at least every ~8 s
+    if is_vox(snapshot["source"]["project"]):  # Phase 86: a VOX picture changes at least every ~8 s; it ends on the recap
         segments = ScriptIndex(lines).split_long(segments, VOX_MAX_SEGMENT_WORDS)
+        segments = ScriptIndex(lines).merge_closing(segments, VOX_CLOSING)
     ScriptIndex(lines).validate_coverage(segments)
     choices = {(item["asset"]["asset_id"], item["asset"]["version"]): item["asset"]["content_hash"] for item in snapshot["available_assets"]}
     for segment in segments:

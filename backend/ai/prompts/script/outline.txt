@@ -13,7 +13,15 @@ YouTube channel for {{ audience_line | default('international and Vietnamese lea
 - Split the episode into exactly {{ num_sections }} sections of roughly equal
   length, each covering one clear step or sub-topic that builds toward the whole
   episode. The total of every section's `target_words` MUST equal {{ target_words }}.
-{% if short_style | default('') %}
+{% if voice_over | default(false) %}
+- This is a VOX episode (a narrator over pictures, the viral explainer formula), written as ONE section. Its objective
+  lists, in order: the COLD OPEN example and its curious question; the promise; then exactly
+  {{ vox_blocks | default(4) }} EVIDENCE examples, each NAMED (the English word, phrase or sentence) with what it shows;
+  the callback that answers the question with the opening example; one tip; one follow line. No welcome, no thanks,
+  no "subscribe". Example objective: "Cold open: 'knight' -- why the silent K? Promise: how spelling froze. Evidence:
+  1 'knight' (old pronunciation), 2 'write' (lost W sound), 3 'doubt' (Latin B), 4 'island' (S added by scholars).
+  Callback: knight's K is history on paper. Tip: picture the word. Follow line."
+{% elif short_style | default('') %}
 - This is a SHORT (vertical, under one minute): the first section's objective starts
   with a one-sentence hook{% if short_style == 'news' %} (the headline){% endif %}; the last section's objective ends with a
   one-line invitation to follow the channel. No long welcome or goodbye.

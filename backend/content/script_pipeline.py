@@ -129,6 +129,15 @@ def compute_target_words(cefr_level: str, duration_minutes: float) -> int:
     return round(wpm * duration_minutes)
 
 
+VOX_BLOCK_WORDS = 70  # Phase 86: one evidence block -- the example, three or four sentences, one example sentence
+
+
+def vox_blocks(target_words: int) -> int:
+    """Phase 86 (sandbox runs 2026-10-29): asked for a word count, a VOX script came back 30-40 % short; a number of
+    evidence blocks of a known size fills the length (the opening and the callback take about one block)."""
+    return max(3, min(8, round(target_words / VOX_BLOCK_WORDS)))
+
+
 def plan_sections(target_words: int, cefr_level: str) -> list[int]:
     """Split `target_words` into `SCRIPT_SECTION_TARGET_MINUTES`-sized budgets.
 
@@ -478,24 +487,31 @@ def _repeats_by_design(project: dict) -> bool:
 
 
 def word_tolerance(project: dict) -> float:
-    """Phase 84: the whole-script word budget -- +-20 % for a Short, the pinned +-10 % otherwise."""
-    return SCRIPT_SHORT_WORD_TOLERANCE if is_short_video(project) else SCRIPT_GLOBAL_WORD_TOLERANCE
+    """Phase 84: the whole-script word budget -- +-20 % for a Short, the pinned +-10 % otherwise. Phase 86 (sandbox runs
+    2026-10-29): a VOX script is dense by design (short lines, one example per block) and came back 12-15 % under its
+    target in four runs out of six, so it is judged like a Short."""
+    if is_short_video(project) or project.get("explainer_style") == "vox":
+        return SCRIPT_SHORT_WORD_TOLERANCE
+    return SCRIPT_GLOBAL_WORD_TOLERANCE
 
 
 # Phase 85 (real run 2026-10-28): a 3-minute presenter script came back as two whole episodes -- a goodbye in the middle
 # ("Thanks for watching, please hit subscribe") and a second welcome ("Hello, welcome to Daily Beyond English. I am Lina")
-_MIDDLE_GOODBYE = re.compile(r"thanks? (you )?(so much )?for watching|\bsee you next time\b|hit (the )?subscribe", re.IGNORECASE)
+_MIDDLE_GOODBYE = re.compile(r"thanks? (you )?(so much )?for watching|\bsee you next time\b|hit (the )?subscribe"
+                             r"|\bfollow daily beyond english\b", re.IGNORECASE)  # Phase 86: a VOX follow line mid-script
 _MIDDLE_WELCOME = re.compile(r"\bwelcome (back )?to daily beyond english\b", re.IGNORECASE)
+_PROMISE = re.compile(r"\bby the end of this\b", re.IGNORECASE)  # Phase 86: a VOX promise said twice = a second opening
 
 
 def misplaced_framing(lines: list[SectionLineOut]) -> list[str]:
-    """A goodbye before the last two lines, or a channel welcome after the first two, means two episodes in one."""
+    """A goodbye before the last two lines, a channel welcome after the first two, or the promise said twice means two
+    episodes in one."""
     errors: list[str] = []
     if len(lines) < 5:
         return errors
     if any(_MIDDLE_GOODBYE.search(line.text) for line in lines[:-2]):
         errors.append("the episode says goodbye before its end (a sign-off in the middle)")
-    if any(_MIDDLE_WELCOME.search(line.text) for line in lines[2:]):
+    if any(_MIDDLE_WELCOME.search(line.text) for line in lines[2:]) or sum(bool(_PROMISE.search(line.text)) for line in lines) > 1:
         errors.append("the episode welcomes the viewers again after it started (a second opening)")
     return errors
 
@@ -816,6 +832,8 @@ async def _generate_outline(
         target_words=target_words,
         num_sections=num_sections,
         genre_instructions=genre_instructions,
+        voice_over=project.get("explainer_style") == "vox" and not is_short_video(project),  # Phase 86
+        vox_blocks=vox_blocks(target_words),
         cefr_constraints=cefr_constraints,
         presentation_mode=project.get("presentation_mode", "classic"),
         **_source_context(project),
@@ -876,7 +894,8 @@ async def _generate_section(
         num_speakers=len(project["speakers"]),
         max_consecutive_lines=SCRIPT_MAX_CONSECUTIVE_LINES_PER_SPEAKER,
         presentation_mode=project.get("presentation_mode", "classic"),
-        voice_over=project.get("explainer_style") == "vox",  # Phase 86: a VOX episode opens cold and ends on its recap
+        voice_over=project.get("explainer_style") == "vox" and not is_short_video(project),  # Phase 86: a long VOX opens cold, ends on its recap
+        vox_blocks=vox_blocks(section_spec.target_words), vox_block_words=VOX_BLOCK_WORDS,
         solo_instructions=await load_presentation_block(project.get("presentation_mode", "classic"), project.get("explainer_structure"), len(project["speakers"]), project.get("explainer_subject"), project.get("explainer_style")),
         cefr_constraints=cefr_constraints,
         language_features=project["language_features"],
@@ -1408,6 +1427,11 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
     num_speakers = len(project["speakers"])
     target_words = compute_target_words(project["cefr_level"], project["duration_minutes"])
     section_budgets = plan_sections(target_words, project["cefr_level"])
+    vox = project.get("explainer_style") == "vox"
+    if vox:
+        # Phase 86 (sandbox runs 2026-10-29): split into sections, a long VOX script restarted its formula in every one
+        # (two cold opens, a follow line in the middle); one arc from question to answer is written in one section
+        section_budgets = [target_words]
 
     async with read_transaction():
         existing = await ai_job_service.get_valid_checkpoints(db, job_id)
@@ -1429,6 +1453,11 @@ async def _run_script_job(job: dict, worker: "AIWorker", router: "AIRouter") -> 
                 compute_config_hash(project, "outline"),
                 result_json=outline.model_dump_json(), commit=False,
             )
+
+    if vox and len(outline.sections) > 1:
+        outline = outline.model_copy(update={"sections": [OutlineSectionSpec(
+            index=1, objective=" Then: ".join(spec.objective for spec in outline.sections),
+            target_words=sum(spec.target_words for spec in outline.sections))]})
 
     all_lines: list[SectionLineOut] = []
     prior_summary = ""
